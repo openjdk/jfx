@@ -26,6 +26,7 @@
 #include "config.h"
 #include "LazyLoadImageObserver.h"
 
+#include "DocumentInlines.h"
 #include "HTMLImageElement.h"
 #include "IntersectionObserverCallback.h"
 #include "IntersectionObserverEntry.h"
@@ -68,7 +69,7 @@ private:
 void LazyLoadImageObserver::observe(Element& element)
 {
     auto& observer = element.document().lazyLoadImageObserver();
-    auto* intersectionObserver = observer.intersectionObserver(element.document());
+    auto* intersectionObserver = observer.intersectionObserver(element.protectedDocument());
     if (!intersectionObserver)
         return;
     intersectionObserver->observe(element);

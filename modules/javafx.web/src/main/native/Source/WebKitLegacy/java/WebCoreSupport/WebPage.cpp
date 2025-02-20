@@ -110,6 +110,7 @@
 #include <wtf/RunLoop.h>
 #include <wtf/java/JavaRef.h>
 #include <wtf/text/WTFString.h>
+#include <wtf/text/MakeString.h>
 #include <wtf/text/StringToIntegerConversion.h>
 
 // FIXME: Move dependency of runtime_root to BridgeUtils
@@ -674,7 +675,7 @@ bool WebPage::propagateScroll(ScrollDirection scrollDirection,
 
 LocalFrame* WebPage::focusedWebCoreFrame()
 {
-    return &m_page->focusController().focusedOrMainFrame();
+    return m_page->focusController().focusedOrMainFrame();
 }
 
 Node* WebPage::focusedWebCoreNode()
@@ -702,8 +703,18 @@ static String agentOS()
 #endif
 #elif OS(UNIX)
     struct utsname name;
-    if (uname(&name) != -1)
-        return makeString(name.sysname, ' ', name.machine);
+    if (uname(&name) != -1) {
+    const char* sysname = name.sysname;
+        const char* machine = name.machine;
+        // Convert to std::span<const char8_t>
+        auto sysnameSpan = std::span<const char8_t>(reinterpret_cast<const char8_t*>(sysname), std::strlen(sysname));
+        auto machineSpan = std::span<const char8_t>(reinterpret_cast<const char8_t*>(machine), std::strlen(machine));
+
+        // Use fromUTF8 to convert to String
+        String sysnameString = String::fromUTF8(sysnameSpan);
+        String machineString = String::fromUTF8(machineSpan);
+        return makeString(sysnameString, ' ', machineString);
+    }
 #elif OS(WINDOWS)
     return windowsVersionForUAString();
 #else
@@ -716,10 +727,10 @@ static String defaultUserAgent()
 {
     static const NeverDestroyed userAgentString = [] {
         String wkVersion = makeString(
-                              WEBKIT_MAJOR_VERSION, ".", WEBKIT_MINOR_VERSION,
-                              " (KHTML, like Gecko) JavaFX/", JAVAFX_RELEASE_VERSION,
-                              " Safari/", WEBKIT_MAJOR_VERSION, ".",  WEBKIT_MINOR_VERSION);
-        return makeString("Mozilla/5.0 (", agentOS(), ") AppleWebKit/", wkVersion);
+                              WTF::String::number(WEBKIT_MAJOR_VERSION), WTF::String::fromLatin1("."), WTF::String::number(WEBKIT_MINOR_VERSION),
+                              WTF::String::fromLatin1(" (KHTML, like Gecko) JavaFX/"), WTF::String::fromLatin1(JAVAFX_RELEASE_VERSION),
+                              WTF::String::fromLatin1(" Safari/"), WTF::String::number(WEBKIT_MAJOR_VERSION), WTF::String::fromLatin1("."),  WTF::String::number(WEBKIT_MINOR_VERSION));
+        return makeString(WTF::String::fromLatin1("Mozilla/5.0 ("), agentOS(), WTF::String::fromLatin1(") AppleWebKit/"), wkVersion);
     }();
     return userAgentString;
 }
@@ -825,22 +836,23 @@ private:
             return nullptr;
         return sessionStorageNamespaces.add(topLevelOrigin.data(), WebKit::StorageNamespaceImpl::createSessionStorageNamespace(sessionStorageQuota(), page.sessionID())).iterator->value;
     }
-    return sessionStorageNamespaceIt->value;
-        }
+        return sessionStorageNamespaceIt->value;
+    }
 
-    void copySessionStorageNamespace(WebCore::Page& srcPage, WebCore::Page& dstPage) override{
+    void cloneSessionStorageNamespaceForPage(WebCore::Page& srcPage, WebCore::Page& dstPage) override
+    {
         auto& srcSessionStorageNamespaces = static_cast<WebStorageNamespaceProviderJava&>(srcPage.storageNamespaceProvider()).m_sessionStorageNamespaces;
-    auto srcPageIt = srcSessionStorageNamespaces.find(srcPage);
-    if (srcPageIt == srcSessionStorageNamespaces.end())
-        return;
+        auto srcPageIt = srcSessionStorageNamespaces.find(srcPage);
+        if (srcPageIt == srcSessionStorageNamespaces.end())
+            return;
 
-    auto& srcPageSessionStorageNamespaces = srcPageIt->value;
-    HashMap<SecurityOriginData, RefPtr<StorageNamespace>> dstPageSessionStorageNamespaces;
-    for (auto& [origin, srcNamespace] : srcPageSessionStorageNamespaces)
+        auto& srcPageSessionStorageNamespaces = srcPageIt->value;
+        HashMap<SecurityOriginData, RefPtr<StorageNamespace>> dstPageSessionStorageNamespaces;
+        for (auto& [origin, srcNamespace] : srcPageSessionStorageNamespaces)
         dstPageSessionStorageNamespaces.set(origin, srcNamespace->copy(dstPage));
 
-    auto& dstSessionStorageNamespaces = static_cast<WebStorageNamespaceProviderJava&>(dstPage.storageNamespaceProvider()).m_sessionStorageNamespaces;
-        }
+        auto& dstSessionStorageNamespaces = static_cast<WebStorageNamespaceProviderJava&>(dstPage.storageNamespaceProvider()).m_sessionStorageNamespaces;
+    }
 
     Ref<StorageNamespace> createLocalStorageNamespace(unsigned quota, PAL::SessionID sessionID) override
     {
@@ -916,8 +928,12 @@ JNIEXPORT jlong JNICALL Java_com_sun_webkit_WebPage_twkCreatePage
     pc.storageNamespaceProvider = adoptRef(new WebStorageNamespaceProviderJava());
     pc.visitedLinkStore = VisitedLinkStoreJava::create();
 
-    pc.clientForMainFrame = UniqueRef<LocalFrameLoaderClient>(makeUniqueRef<FrameLoaderClientJava>(jlself));
-
+    //pc.clientForMainFrame = UniqueRef<LocalFrameLoaderClient>(makeUniqueRef<FrameLoaderClientJava>(jlself));
+    pc.clientCreatorForMainFrame = CompletionHandler<UniqueRef<LocalFrameLoaderClient>(LocalFrame&)>(
+        [client = makeUniqueRef<FrameLoaderClientJava>(jlself)](LocalFrame& frame) mutable -> UniqueRef<LocalFrameLoaderClient> {
+            return WTFMove(client);
+        }
+    );
     pc.progressTrackerClient = makeUniqueRef<ProgressTrackerClientJava>(jlself);
 
     pc.backForwardClient = BackForwardList::create();
@@ -945,7 +961,6 @@ JNIEXPORT void JNICALL Java_com_sun_webkit_WebPage_twkInit
     settings.setAcceleratedCompositingEnabled(s_useCSS3D);
     settings.setScriptEnabled(true);
     settings.setJavaScriptCanOpenWindowsAutomatically(true);
-    settings.setPluginsEnabled(usePlugins);
     settings.setDefaultFixedFontSize(13);
     settings.setDefaultFontSize(16);
     settings.setContextMenuEnabled(true);
@@ -1185,7 +1200,8 @@ JNIEXPORT void JNICALL Java_com_sun_webkit_WebPage_twkLoad
 
     const char* stringChars = env->GetStringUTFChars(text, JNI_FALSE);
     size_t stringLen = (size_t)env->GetStringUTFLength(text);
-    RefPtr<SharedBuffer> buffer = SharedBuffer::create(stringChars, (int)stringLen);
+    std::span<const uint8_t> byteSpan(reinterpret_cast<const uint8_t*>(stringChars), stringLen);
+    RefPtr<SharedBuffer> buffer = SharedBuffer::create(byteSpan);
 
     static const URL emptyUrl({ }, ""_s);
     ResourceResponse response(URL(), String(env, contentType), stringLen, "UTF-8"_s);
@@ -1291,11 +1307,11 @@ JNIEXPORT jboolean JNICALL Java_com_sun_webkit_WebPage_twkFindInPage
     if (page) {
         FindOptions opts;
         if (!matchCase)
-            opts.add(CaseInsensitive);
+            opts.add(FindOption::CaseInsensitive);
         if (!forward)
-            opts.add(Backwards);
+            opts.add(FindOption::Backwards);
         if (wrap)
-            opts.add(WrapAround);
+            opts.add(FindOption::WrapAround);
         return bool_to_jbool(page->findString(String(env, toFind), opts));
     }
     return JNI_FALSE;
@@ -1311,13 +1327,13 @@ JNIEXPORT jboolean JNICALL Java_com_sun_webkit_WebPage_twkFindInFrame
         //utatodo: support for the rest of FindOptionFlag
         FindOptions opts;
         if (!matchCase)
-            opts.add(CaseInsensitive);
+            opts.add(FindOption::CaseInsensitive);
         if (!forward)
-            opts.add(Backwards);
+            opts.add(FindOption::Backwards);
         if (wrap)
-            opts.add(WrapAround);
+            opts.add(FindOption::WrapAround);
         return bool_to_jbool(frame->page()->findString(
-            String(env, toFind), opts | StartInSelection));
+            String(env, toFind), opts | FindOption::StartInSelection));
     }
     return JNI_FALSE;
 }
@@ -1357,8 +1373,6 @@ JNIEXPORT void JNICALL Java_com_sun_webkit_WebPage_twkOverridePreference
         settings.setScriptEnabled(parseIntegerAllowingTrailingJunk<int>(nativePropertyString).value());
     } else if (nativePropertyName == "WebKitJavaScriptCanOpenWindowsAutomatically"_s) {
         settings.setJavaScriptCanOpenWindowsAutomatically(parseIntegerAllowingTrailingJunk<int>(nativePropertyString).value());
-    } else if (nativePropertyName == "WebKitPluginsEnabled"_s) {
-        settings.setPluginsEnabled(parseIntegerAllowingTrailingJunk<int>(nativePropertyString).value());
     } else if (nativePropertyName == "WebKitDefaultFixedFontSize"_s) {
         settings.setDefaultFixedFontSize(parseIntegerAllowingTrailingJunk<int>(nativePropertyString).value());
     } else if (nativePropertyName == "WebKitContextMenuEnabled"_s) {
@@ -1390,11 +1404,11 @@ JNIEXPORT void JNICALL Java_com_sun_webkit_WebPage_twkOverridePreference
         // removed from Chrome, Firefox, and the HTML specification in 2017.
         // https://trac.webkit.org/changeset/248960/webkit
         DeprecatedGlobalSettings::setKeygenElementEnabled(nativePropertyValue == "true"_s);
-    } */else if (nativePropertyName == "CSSCustomPropertiesAndValuesEnabled"_s) {
+    } else if (nativePropertyName == "CSSCustomPropertiesAndValuesEnabled"_s) {
         settings.setCSSCustomPropertiesAndValuesEnabled(nativePropertyValue == "true"_s);
     } else if (nativePropertyName == "experimental:CSSCustomPropertiesAndValuesEnabled"_s) {
         settings.setCSSCustomPropertiesAndValuesEnabled(nativePropertyValue == "true"_s);
-    } else if (nativePropertyName == "IntersectionObserverEnabled"_s) {
+    } */else if (nativePropertyName == "IntersectionObserverEnabled"_s) {
 #if ENABLE(INTERSECTION_OBSERVER)
         settings.setIntersectionObserverEnabled(nativePropertyValue == "true"_s);
 #endif
@@ -1451,7 +1465,7 @@ JNIEXPORT void JNICALL Java_com_sun_webkit_WebPage_twkResetToConsistentStateBefo
     settings.setShouldPrintBackgrounds(true);
     // settings.setCacheModel(WebCacheModelDocumentBrowser);
     //settings.setXSSAuditorEnabled(false); //
-    settings.setPluginsEnabled(true);
+   // settings.setPluginsEnabled(true);
     settings.setTextAreasAreResizable(true);
     settings.setUsesBackForwardCache(false);
     settings.setCSSOMViewScrollingAPIEnabled(true);
@@ -1954,7 +1968,7 @@ JNIEXPORT jboolean JNICALL Java_com_sun_webkit_WebPage_twkProcessInputTextChange
 {
     Page* page = WebPage::pageFromJLong(pPage);
 
-    LocalFrame* frame = (LocalFrame*)&page->focusController().focusedOrMainFrame();
+    LocalFrame* frame = page->focusController().focusedOrMainFrame();
     ASSERT(frame);
 
     if (!frame || !frame->editor().canEdit()) {
@@ -1999,7 +2013,7 @@ JNIEXPORT jboolean JNICALL Java_com_sun_webkit_WebPage_twkProcessCaretPositionCh
 {
     Page* page = WebPage::pageFromJLong(pPage);
 
-    LocalFrame* frame = (LocalFrame*)&page->focusController().focusedOrMainFrame();
+    LocalFrame* frame = page->focusController().focusedOrMainFrame();
 
     ASSERT(frame);
 
@@ -2066,7 +2080,7 @@ JNIEXPORT jint JNICALL Java_com_sun_webkit_WebPage_twkGetLocationOffset
             RenderObject* renderer = node->renderer();
             IntRect content = renderer->absoluteBoundingBoxRect();
             VisiblePosition targetPosition(renderer->positionForPoint(LayoutPoint(point.x() - content.x(),
-                                                                            point.y() - content.y()), nullptr)); // TODO-java: recheck nullptr
+                                                                            point.y() - content.y()), HitTestSource::User)); // TODO-java: recheck nullptr
             offset = targetPosition.deepEquivalent().offsetInContainerNode();
             if (offset >= (jint)editor.compositionStart() && offset < (jint)editor.compositionEnd()) {
                 offset -= editor.compositionStart();
@@ -2157,7 +2171,7 @@ JNIEXPORT jstring JNICALL Java_com_sun_webkit_WebPage_twkGetCommittedText
                 if (s.length() == length) {
                     t = s;
                 } else {
-                    t = s + t.substring(end, length - start);
+                    t = makeString(s, t.substring(end, length - start));
                 }
             }
             text = t.toJavaString(env).releaseLocal();
@@ -2295,8 +2309,10 @@ JNIEXPORT jint JNICALL Java_com_sun_webkit_WebPage_twkProcessDrag
 
 static Editor* getEditor(Page* page) {
     ASSERT(page);
-    LocalFrame& frame = page->focusController().focusedOrMainFrame();
-    return &frame.editor();
+    LocalFrame* framePtr = page->focusController().focusedOrMainFrame();
+    if (framePtr) {
+        return &framePtr->editor();
+    }
 }
 
 JNIEXPORT jboolean JNICALL Java_com_sun_webkit_WebPage_twkExecuteCommand

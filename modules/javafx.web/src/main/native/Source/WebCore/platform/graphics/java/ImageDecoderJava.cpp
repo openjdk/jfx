@@ -116,7 +116,7 @@ void ImageDecoderJava::setData(const FragmentedSharedBuffer& data, bool allDataR
         JLByteArray jArray(env->NewByteArray(length));
         if (jArray && !WTF::CheckAndClearException(env)) {
             // not OOME in Java
-            env->SetByteArrayRegion(jArray, 0, length, (const jbyte*)someData.data());
+            env->SetByteArrayRegion(jArray, 0, length, (const jbyte*)someData.span().data());
             env->CallVoidMethod(m_nativeDecoder, midAddImageData, (jbyteArray)jArray);
             WTF::CheckAndClearException(env);
         }
@@ -335,12 +335,6 @@ String ImageDecoderJava::filenameExtension() const
 }
 
 std::optional<IntPoint> ImageDecoderJava::hotSpot() const
-{
-    notImplemented();
-    return { };
-}
-
-ImageDecoder::FrameMetadata ImageDecoderJava::frameMetadataAtIndex(size_t) const
 {
     notImplemented();
     return { };

@@ -28,7 +28,9 @@
 #import <wtf/FastMalloc.h>
 #import <wtf/Ref.h>
 #import <wtf/RefCounted.h>
+#import <wtf/TZoneMalloc.h>
 #import <wtf/WeakPtr.h>
+#import <wtf/threads/BinarySemaphore.h>
 
 struct WGPUCommandBufferImpl {
 };
@@ -39,11 +41,11 @@ class Device;
 
 // https://gpuweb.github.io/gpuweb/#gpucommandbuffer
 class CommandBuffer : public WGPUCommandBufferImpl, public RefCounted<CommandBuffer>, public CanMakeWeakPtr<CommandBuffer> {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_ALLOCATED(CommandBuffer);
 public:
-    static Ref<CommandBuffer> create(id<MTLCommandBuffer> commandBuffer, Device& device)
+    static Ref<CommandBuffer> create(id<MTLCommandBuffer> commandBuffer, id<MTLSharedEvent> event, Device& device)
     {
-        return adoptRef(*new CommandBuffer(commandBuffer, device));
+        return adoptRef(*new CommandBuffer(commandBuffer, event, device));
     }
     static Ref<CommandBuffer> createInvalid(Device& device)
     {
@@ -60,19 +62,25 @@ public:
 
     Device& device() const { return m_device; }
     void makeInvalid(NSString*);
+    void makeInvalidDueToCommit(NSString*);
     void setBufferMapCount(int);
     int bufferMapCount() const;
     NSString* lastError() const;
+    void waitForCompletion();
 
 private:
-    CommandBuffer(id<MTLCommandBuffer>, Device&);
+    CommandBuffer(id<MTLCommandBuffer>, id<MTLSharedEvent>, Device&);
     CommandBuffer(Device&);
 
     id<MTLCommandBuffer> m_commandBuffer { nil };
+    id<MTLSharedEvent> m_abortEvent { nil };
+    id<MTLCommandBuffer> m_cachedCommandBuffer { nil };
     int m_bufferMapCount { 0 };
 
     const Ref<Device> m_device;
     NSString* m_lastErrorString { nil };
+    // FIXME: we should not need this semaphore - https://bugs.webkit.org/show_bug.cgi?id=272353
+    BinarySemaphore m_commandBufferComplete;
 };
 
 } // namespace WebGPU

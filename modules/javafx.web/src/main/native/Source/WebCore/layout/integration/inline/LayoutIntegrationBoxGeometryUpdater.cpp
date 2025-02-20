@@ -66,13 +66,18 @@ BoxGeometryUpdater::BoxGeometryUpdater(BoxTree& boxTree, Layout::LayoutState& la
 {
 }
 
+BoxGeometryUpdater::BoxGeometryUpdater(Layout::LayoutState& layoutState)
+    : m_layoutState(layoutState)
+{
+}
+
 void BoxGeometryUpdater::updateListMarkerDimensions(const RenderListMarker& listMarker, std::optional<Layout::IntrinsicWidthMode> intrinsicWidthMode)
 {
     updateLayoutBoxDimensions(listMarker, intrinsicWidthMode);
     if (intrinsicWidthMode)
         return;
 
-    auto& layoutBox = boxTree().layoutBoxForRenderer(listMarker);
+    auto& layoutBox = *listMarker.layoutBox();
     if (layoutBox.isListMarkerOutside()) {
         auto* ancestor = listMarker.containingBlock();
         auto offsetFromParentListItem = [&] {
@@ -165,10 +170,10 @@ enum class IsPartOfFormattingContext : bool { No, Yes };
 static inline Layout::BoxGeometry::Edges logicalBorder(const RenderBoxModelObject& renderer, bool isLeftToRightInlineDirection, BlockFlowDirection blockFlowDirection, UseComputedValues useComputedValues = UseComputedValues::No, IsPartOfFormattingContext isPartOfFormattingContext = IsPartOfFormattingContext::No, bool retainBorderStart = true, bool retainBorderEnd = true)
 {
     auto& style = renderer.style();
-    auto borderLeft = useComputedValues == UseComputedValues::No ? renderer.borderLeft() : LayoutUnit(style.borderLeft().width());
-    auto borderRight = useComputedValues == UseComputedValues::No ? renderer.borderRight() : LayoutUnit(style.borderRight().width());
-    auto borderTop = useComputedValues == UseComputedValues::No ? renderer.borderTop() : LayoutUnit(style.borderTop().width());
-    auto borderBottom = useComputedValues == UseComputedValues::No ? renderer.borderBottom() : LayoutUnit(style.borderBottom().width());
+    auto borderLeft = useComputedValues == UseComputedValues::No ? renderer.borderLeft() : LayoutUnit(style.borderLeftWidth());
+    auto borderRight = useComputedValues == UseComputedValues::No ? renderer.borderRight() : LayoutUnit(style.borderRightWidth());
+    auto borderTop = useComputedValues == UseComputedValues::No ? renderer.borderTop() : LayoutUnit(style.borderTopWidth());
+    auto borderBottom = useComputedValues == UseComputedValues::No ? renderer.borderBottom() : LayoutUnit(style.borderBottomWidth());
 
     if (blockFlowDirection == BlockFlowDirection::TopToBottom || blockFlowDirection == BlockFlowDirection::BottomToTop) {
         if (isLeftToRightInlineDirection)
@@ -218,7 +223,7 @@ static inline LayoutSize scrollbarLogicalSize(const RenderBox& renderer)
 
 void BoxGeometryUpdater::updateLayoutBoxDimensions(const RenderBox& renderBox, std::optional<Layout::IntrinsicWidthMode> intrinsicWidthMode)
 {
-    auto& layoutBox = boxTree().layoutBoxForRenderer(renderBox);
+    auto& layoutBox = const_cast<Layout::ElementBox&>(*renderBox.layoutBox());
     auto isLeftToRightInlineDirection = renderBox.parent()->style().isLeftToRightDirection();
     auto blockFlowDirection = writingModeToBlockFlowDirection(renderBox.parent()->style().writingMode());
     auto isHorizontalWritingMode = blockFlowDirection == BlockFlowDirection::TopToBottom || blockFlowDirection == BlockFlowDirection::BottomToTop;
@@ -231,7 +236,11 @@ void BoxGeometryUpdater::updateLayoutBoxDimensions(const RenderBox& renderBox, s
 
     if (intrinsicWidthMode) {
         boxGeometry.setHorizontalSpaceForScrollbar(scrollbarSize.width());
-        boxGeometry.setContentBoxWidth(*intrinsicWidthMode == Layout::IntrinsicWidthMode::Minimum ? renderBox.minPreferredLogicalWidth() : renderBox.maxPreferredLogicalWidth());
+        auto contentBoxLogicalWidth = [&] {
+            auto preferredWidth = *intrinsicWidthMode == Layout::IntrinsicWidthMode::Minimum ? renderBox.minPreferredLogicalWidth() : renderBox.maxPreferredLogicalWidth();
+            return preferredWidth - (border.horizontal.start + border.horizontal.end + padding.horizontal.start + padding.horizontal.end);
+        };
+        boxGeometry.setContentBoxWidth(contentBoxLogicalWidth());
         boxGeometry.setHorizontalMargin(inlineMargin);
         boxGeometry.setHorizontalBorder(border.horizontal);
         boxGeometry.setHorizontalPadding(padding.horizontal);
@@ -250,8 +259,8 @@ void BoxGeometryUpdater::updateLayoutBoxDimensions(const RenderBox& renderBox, s
     boxGeometry.setPadding(padding);
 
     auto hasNonSyntheticBaseline = [&] {
-        if (is<RenderListMarker>(renderBox))
-            return !downcast<RenderListMarker>(renderBox).isImage();
+        if (auto* renderListMarker = dynamicDowncast<RenderListMarker>(renderBox))
+            return !renderListMarker->isImage();
 
         if ((is<RenderReplaced>(renderBox) && renderBox.style().display() == DisplayType::Inline)
             || is<RenderListBox>(renderBox)
@@ -271,15 +280,15 @@ void BoxGeometryUpdater::updateLayoutBoxDimensions(const RenderBox& renderBox, s
             // These are special RenderBlock renderers that override the default baseline position behavior of the inline block box.
             return true;
         }
-        if (!is<RenderBlockFlow>(renderBox))
+        auto* blockFlow = dynamicDowncast<RenderBlockFlow>(renderBox);
+        if (!blockFlow)
             return false;
-        auto& blockFlow = downcast<RenderBlockFlow>(renderBox);
-        auto hasAppareance = blockFlow.style().hasEffectiveAppearance() && !blockFlow.theme().isControlContainer(blockFlow.style().effectiveAppearance());
-        return hasAppareance || !blockFlow.childrenInline() || blockFlow.hasLines() || blockFlow.hasLineIfEmpty();
+        auto hasAppareance = blockFlow->style().hasUsedAppearance() && !blockFlow->theme().isControlContainer(blockFlow->style().usedAppearance());
+        return hasAppareance || !blockFlow->childrenInline() || blockFlow->hasLines() || blockFlow->hasLineIfEmpty();
     }();
     if (hasNonSyntheticBaseline) {
         auto baseline = renderBox.baselinePosition(AlphabeticBaseline, false /* firstLine */, blockFlowDirection == BlockFlowDirection::TopToBottom || blockFlowDirection == BlockFlowDirection::BottomToTop ? HorizontalLine : VerticalLine, PositionOnContainingLine);
-        layoutBox.setBaselineForIntegration(roundToInt(baseline));
+        layoutBox.setBaselineForIntegration(baseline);
     }
 
     if (auto* shapeOutsideInfo = renderBox.shapeOutsideInfo())
@@ -289,7 +298,7 @@ void BoxGeometryUpdater::updateLayoutBoxDimensions(const RenderBox& renderBox, s
 void BoxGeometryUpdater::updateLineBreakBoxDimensions(const RenderLineBreak& lineBreakBox)
 {
     // This is just a box geometry reset (see InlineFormattingContext::layoutInFlowContent).
-    auto& boxGeometry = layoutState().ensureGeometryForBox(boxTree().layoutBoxForRenderer(lineBreakBox));
+    auto& boxGeometry = layoutState().ensureGeometryForBox(*lineBreakBox.layoutBox());
 
     boxGeometry.setHorizontalMargin({ });
     boxGeometry.setBorder({ });
@@ -302,7 +311,7 @@ void BoxGeometryUpdater::updateLineBreakBoxDimensions(const RenderLineBreak& lin
 
 void BoxGeometryUpdater::updateInlineBoxDimensions(const RenderInline& renderInline, std::optional<Layout::IntrinsicWidthMode> intrinsicWidthMode)
 {
-    auto& boxGeometry = layoutState().ensureGeometryForBox(boxTree().layoutBoxForRenderer(renderInline));
+    auto& boxGeometry = layoutState().ensureGeometryForBox(*renderInline.layoutBox());
 
     // Check if this renderer is part of a continuation and adjust horizontal margin/border/padding accordingly.
     auto shouldNotRetainBorderPaddingAndMarginStart = renderInline.isContinuation();
@@ -334,22 +343,13 @@ void BoxGeometryUpdater::setGeometriesForLayout()
     for (auto walker = InlineWalker(downcast<RenderBlockFlow>(boxTree().rootRenderer())); !walker.atEnd(); walker.advance()) {
         auto& renderer = *walker.current();
 
-        if (is<RenderReplaced>(renderer) || is<RenderTable>(renderer) || is<RenderListItem>(renderer) || is<RenderBlock>(renderer) || is<RenderFrameSet>(renderer)) {
-            updateLayoutBoxDimensions(downcast<RenderBox>(renderer));
+        if (is<RenderText>(renderer))
             continue;
-        }
-        if (is<RenderListMarker>(renderer)) {
-            updateListMarkerDimensions(downcast<RenderListMarker>(renderer));
+
+        if (renderer.isFloating())
             continue;
-        }
-        if (is<RenderLineBreak>(renderer)) {
-            updateLineBreakBoxDimensions(downcast<RenderLineBreak>(renderer));
-            continue;
-        }
-        if (is<RenderInline>(renderer)) {
-            updateInlineBoxDimensions(downcast<RenderInline>(renderer));
-            continue;
-        }
+
+        updateGeometryAfterLayout(downcast<RenderElement>(renderer));
     }
 }
 
@@ -358,15 +358,26 @@ void BoxGeometryUpdater::setGeometriesForIntrinsicWidth(Layout::IntrinsicWidthMo
     for (auto walker = InlineWalker(downcast<RenderBlockFlow>(boxTree().rootRenderer())); !walker.atEnd(); walker.advance()) {
         auto& renderer = *walker.current();
 
-        if (is<RenderLineBreak>(renderer)) {
-            updateLineBreakBoxDimensions(downcast<RenderLineBreak>(renderer));
+        if (is<RenderText>(renderer))
+            continue;
+
+        if (auto* renderLineBreak = dynamicDowncast<RenderLineBreak>(renderer)) {
+            updateLineBreakBoxDimensions(*renderLineBreak);
             continue;
         }
-        if (is<RenderInline>(renderer)) {
-            updateInlineBoxDimensions(downcast<RenderInline>(renderer), intrinsicWidthMode);
+        if (auto* renderInline = dynamicDowncast<RenderInline>(renderer)) {
+            updateInlineBoxDimensions(*renderInline, intrinsicWidthMode);
             continue;
         }
-        ASSERT(is<RenderText>(renderer));
+        if (auto* renderListMarker = dynamicDowncast<RenderListMarker>(renderer)) {
+            updateListMarkerDimensions(*renderListMarker, intrinsicWidthMode);
+            continue;
+        }
+        if (auto* renderBox = dynamicDowncast<RenderBox>(renderer)) {
+            // FIXME: Add support for flexing boxes.
+            ASSERT(renderBox->style().logicalWidth().isFixed());
+            updateLayoutBoxDimensions(*renderBox, intrinsicWidthMode);
+        }
     }
 }
 
@@ -402,6 +413,26 @@ Layout::ConstraintsForInlineContent BoxGeometryUpdater::updateInlineContentConst
     createRootGeometryIfNeeded();
 
     return { { horizontalConstraints, contentBoxTop }, visualLeft };
+}
+
+void BoxGeometryUpdater::updateGeometryAfterLayout(const Layout::ElementBox& box)
+{
+    updateGeometryAfterLayout(*dynamicDowncast<RenderBox>(box.rendererForIntegration()));
+}
+
+void BoxGeometryUpdater::updateGeometryAfterLayout(const RenderElement& renderer)
+{
+    if (is<RenderReplaced>(renderer) || is<RenderTable>(renderer) || is<RenderListItem>(renderer) || is<RenderBlock>(renderer) || is<RenderFrameSet>(renderer))
+        updateLayoutBoxDimensions(downcast<RenderBox>(renderer));
+
+    if (auto* renderListMarker = dynamicDowncast<RenderListMarker>(renderer))
+        updateListMarkerDimensions(*renderListMarker);
+
+    if (auto* renderLineBreak = dynamicDowncast<RenderLineBreak>(renderer))
+        updateLineBreakBoxDimensions(*renderLineBreak);
+
+    if (auto* renderInline = dynamicDowncast<RenderInline>(renderer))
+        updateInlineBoxDimensions(*renderInline);
 }
 
 const Layout::ElementBox& BoxGeometryUpdater::rootLayoutBox() const

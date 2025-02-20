@@ -35,6 +35,10 @@
 #include <wtf/MonotonicTime.h>
 #include <wtf/OptionSet.h>
 
+#if PLATFORM(GTK) || PLATFORM(WPE)
+#include "GLFence.h"
+#endif
+
 namespace WebCore {
 
 class TextureMapperPlatformLayerBuffer : public TextureMapperPlatformLayer {
@@ -65,6 +69,8 @@ public:
     virtual ~TextureMapperPlatformLayerBuffer();
 
     void paintToTextureMapper(TextureMapper&, const FloatRect&, const TransformationMatrix& modelViewMatrix = TransformationMatrix(), float opacity = 1.0) override;
+
+    bool isHolePunchBuffer() const override;
 
     bool canReuseWithoutReset(const IntSize&, GLint internalFormat);
     BitmapTexture& texture() { return *m_texture; }
@@ -99,6 +105,10 @@ public:
 
     void setHolePunchClient(std::unique_ptr<HolePunchClient>&& client) { m_holePunchClient = WTFMove(client); }
 
+#if PLATFORM(GTK) || PLATFORM(WPE)
+    void setFence(std::unique_ptr<GLFence>&& fence) { m_fence = WTFMove(fence); }
+#endif
+
     const TextureVariant& textureVariant() const { return m_variant; }
     IntSize size() const { return m_size; }
 
@@ -115,6 +125,10 @@ private:
     bool m_hasManagedTexture;
     std::unique_ptr<UnmanagedBufferDataHolder> m_unmanagedBufferDataHolder;
     std::unique_ptr<HolePunchClient> m_holePunchClient;
+
+#if PLATFORM(GTK) || PLATFORM(WPE)
+    std::unique_ptr<GLFence> m_fence;
+#endif
 };
 
 } // namespace WebCore

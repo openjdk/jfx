@@ -37,12 +37,13 @@
 #include "RenderView.h"
 #include "TextTrackCueGeneric.h"
 #include "VTTCue.h"
-#include <wtf/IsoMallocInlines.h>
+#include <wtf/Ref.h>
 #include <wtf/StackStats.h>
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
-WTF_MAKE_ISO_ALLOCATED_IMPL(RenderVTTCue);
+WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(RenderVTTCue);
 
 RenderVTTCue::RenderVTTCue(VTTCueBox& element, RenderStyle&& style)
     : RenderBlockFlow(Type::VTTCue, element, WTFMove(style))
@@ -51,6 +52,8 @@ RenderVTTCue::RenderVTTCue(VTTCueBox& element, RenderStyle&& style)
     ASSERT(m_cue);
     ASSERT(isRenderVTTCue());
 }
+
+RenderVTTCue::~RenderVTTCue() = default;
 
 void RenderVTTCue::layout()
 {

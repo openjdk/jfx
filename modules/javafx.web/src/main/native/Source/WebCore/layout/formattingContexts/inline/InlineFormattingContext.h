@@ -31,7 +31,7 @@
 #include "InlineLayoutState.h"
 #include "InlineQuirks.h"
 #include "IntrinsicWidthHandler.h"
-#include <wtf/IsoMalloc.h>
+#include <wtf/TZoneMalloc.h>
 
 namespace WebCore {
 namespace Layout {
@@ -53,15 +53,15 @@ struct InlineLayoutResult {
 // This class implements the layout logic for inline formatting context.
 // https://www.w3.org/TR/CSS22/visuren.html#inline-formatting
 class InlineFormattingContext {
-    WTF_MAKE_ISO_ALLOCATED(InlineFormattingContext);
+    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(InlineFormattingContext);
 public:
     InlineFormattingContext(const ElementBox& formattingContextRoot, LayoutState&, BlockLayoutState& parentBlockLayoutState);
 
-    InlineLayoutResult layout(const ConstraintsForInlineContent&, const InlineDamage* = nullptr);
+    InlineLayoutResult layout(const ConstraintsForInlineContent&, InlineDamage* = nullptr);
 
-    std::pair<LayoutUnit, LayoutUnit> minimumMaximumContentSize(const InlineDamage* = nullptr);
-    LayoutUnit minimumContentSize(const InlineDamage* = nullptr);
-    LayoutUnit maximumContentSize(const InlineDamage* = nullptr);
+    std::pair<LayoutUnit, LayoutUnit> minimumMaximumContentSize(InlineDamage* = nullptr);
+    LayoutUnit minimumContentSize(InlineDamage* = nullptr);
+    LayoutUnit maximumContentSize(InlineDamage* = nullptr);
 
     const ElementBox& root() const { return m_rootBlockContainer; }
     const InlineFormattingUtils& formattingUtils() const { return m_inlineFormattingUtils; }
@@ -70,6 +70,8 @@ public:
 
     InlineLayoutState& layoutState() { return m_inlineLayoutState; }
     const InlineLayoutState& layoutState() const { return m_inlineLayoutState; }
+
+    void layoutWithFormattingContextForBox(const ElementBox&, std::optional<LayoutUnit> widthConstraint = { });
 
     enum class EscapeReason {
         InkOverflowNeedsInitialContiningBlockForStrokeWidth
@@ -89,13 +91,13 @@ private:
     bool createDisplayContentForLineFromCachedContent(const ConstraintsForInlineContent&, InlineLayoutResult&);
     void createDisplayContentForEmptyInlineContent(const ConstraintsForInlineContent&, InlineLayoutResult&);
     void initializeInlineLayoutState(const LayoutState&);
-    bool rebuildInlineItemListIfNeeded(const InlineDamage*);
+    void rebuildInlineItemListIfNeeded(InlineDamage*);
 
     InlineContentCache& inlineContentCache() { return m_inlineContentCache; }
 
 private:
     const ElementBox& m_rootBlockContainer;
-    LayoutState& m_layoutState;
+    LayoutState& m_globalLayoutState;
     const FloatingContext m_floatingContext;
     const InlineFormattingUtils m_inlineFormattingUtils;
     const InlineQuirks m_inlineQuirks;

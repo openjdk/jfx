@@ -1,5 +1,5 @@
 // Copyright 2014 The Chromium Authors. All rights reserved.
-// Copyright (C) 2016 Apple Inc. All rights reserved.
+// Copyright (C) 2016-2024 Apple Inc. All rights reserved.
 //
 // Redistribution and use in source and binary forms, with or without
 // modification, are permitted provided that the following conditions are
@@ -105,11 +105,26 @@ void CSSParserTokenRange::consumeComponentValue()
     } while (nestingLevel && m_first < m_last);
 }
 
-String CSSParserTokenRange::serialize() const
+void CSSParserTokenRange::trimTrailingWhitespace()
+{
+    for (; m_last > m_first; --m_last) {
+        if (!CSSTokenizer::isWhitespace((m_last - 1)->type()))
+            return;
+    }
+}
+
+const CSSParserToken& CSSParserTokenRange::consumeLast()
+{
+    if (atEnd())
+        eofToken();
+    return *--m_last;
+}
+
+String CSSParserTokenRange::serialize(CSSParserToken::SerializationMode mode) const
 {
     StringBuilder builder;
     for (const CSSParserToken* it = m_first; it < m_last; ++it)
-        it->serialize(builder, it + 1 == m_last ? nullptr : it + 1);
+        it->serialize(builder, it + 1 == m_last ? nullptr : it + 1, mode);
     return builder.toString();
 }
 

@@ -50,6 +50,7 @@
 #include <wtf/Scope.h>
 #include <wtf/StdLibExtras.h>
 #include <wtf/WorkQueue.h>
+#include <wtf/text/MakeString.h>
 
 namespace WebCore {
 
@@ -133,16 +134,16 @@ void BlobRegistryImpl::registerInternalFileBlobURL(const URL& url, Ref<BlobDataF
     addBlobData(url.string(), WTFMove(blobData));
 }
 
-static FileSystem::MappedFileData storeInMappedFileData(const String& path, const uint8_t* data, size_t size)
+static FileSystem::MappedFileData storeInMappedFileData(const String& path, std::span<const uint8_t> data)
 {
-    auto mappedFileData = FileSystem::createMappedFileData(path, size);
+    auto mappedFileData = FileSystem::createMappedFileData(path, data.size());
     if (!mappedFileData)
         return { };
     FileSystem::deleteFile(path);
 
-    memcpy(const_cast<void*>(mappedFileData.data()), data, size);
+    memcpySpan(mappedFileData.mutableSpan(), data);
 
-    FileSystem::finalizeMappedFileData(mappedFileData, size);
+    FileSystem::finalizeMappedFileData(mappedFileData, data.size());
     return mappedFileData;
 }
 
@@ -155,10 +156,10 @@ Ref<DataSegment> BlobRegistryImpl::createDataSegment(Vector<uint8_t>&& movedData
         return data;
 
     static uint64_t blobMappingFileCounter;
-    static NeverDestroyed<Ref<WorkQueue>> workQueue(WorkQueue::create("BlobRegistryImpl Data Queue"));
-    auto filePath = FileSystem::pathByAppendingComponent(m_fileDirectory, makeString("mapping-file-", ++blobMappingFileCounter, ".blob"));
+    static NeverDestroyed<Ref<WorkQueue>> workQueue(WorkQueue::create("BlobRegistryImpl Data Queue"_s));
+    auto filePath = FileSystem::pathByAppendingComponent(m_fileDirectory, makeString("mapping-file-"_s, ++blobMappingFileCounter, ".blob"_s));
     workQueue.get()->dispatch([blobData = Ref { blobData }, data, filePath = WTFMove(filePath).isolatedCopy()]() mutable {
-        auto mappedFileData = storeInMappedFileData(filePath, data->data(), data->size());
+        auto mappedFileData = storeInMappedFileData(filePath, data->span());
         if (!mappedFileData)
             return;
         ASSERT(mappedFileData.size() == data->size());
@@ -301,6 +302,14 @@ BlobData* BlobRegistryImpl::getBlobDataFromURL(const URL& url, const std::option
     return blobData;
 }
 
+String BlobRegistryImpl::blobType(const URL& url)
+{
+    ASSERT(isMainThread());
+    if (RefPtr data = getBlobDataFromURL(url))
+        return data->contentType();
+    return emptyString();
+}
+
 unsigned long long BlobRegistryImpl::blobSize(const URL& url)
 {
     ASSERT(isMainThread());
@@ -317,8 +326,8 @@ unsigned long long BlobRegistryImpl::blobSize(const URL& url)
 
 static WorkQueue& blobUtilityQueue()
 {
-    static auto& queue = WorkQueue::create("org.webkit.BlobUtility", WorkQueue::QOS::Utility).leakRef();
-    return queue;
+    static NeverDestroyed<Ref<WorkQueue>> queue(WorkQueue::create("org.webkit.BlobUtility"_s, WorkQueue::QOS::Utility));
+    return queue.get();
 }
 
 bool BlobRegistryImpl::populateBlobsForFileWriting(const Vector<String>& blobURLs, Vector<BlobForFileWriting>& blobsForWriting)
@@ -361,7 +370,7 @@ static bool writeFilePathsOrDataBuffersToFile(const Vector<std::pair<String, Ref
     for (auto& part : filePathsOrDataBuffers) {
         if (part.second) {
             int length = part.second->size();
-            if (FileSystem::writeToFile(file, part.second->data(), length) != length) {
+            if (FileSystem::writeToFile(file, part.second->span()) != length) {
                 LOG_ERROR("Failed writing a Blob to temporary file");
                 return false;
             }
@@ -387,8 +396,7 @@ void BlobRegistryImpl::writeBlobsToTemporaryFilesForIndexedDB(const Vector<Strin
     blobUtilityQueue().dispatch([blobsForWriting = WTFMove(blobsForWriting), completionHandler = WTFMove(completionHandler)]() mutable {
         Vector<String> filePaths;
         for (auto& blob : blobsForWriting) {
-            FileSystem::PlatformFileHandle file;
-            String tempFilePath = FileSystem::openTemporaryFile("Blob"_s, file);
+            auto [tempFilePath, file] = FileSystem::openTemporaryFile("Blob"_s);
             if (!writeFilePathsOrDataBuffersToFile(blob.filePathsOrDataBuffers, file, tempFilePath)) {
                 filePaths.clear();
                 break;

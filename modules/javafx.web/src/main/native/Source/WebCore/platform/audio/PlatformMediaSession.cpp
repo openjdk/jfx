@@ -27,6 +27,7 @@
 #include "PlatformMediaSession.h"
 
 #if ENABLE(VIDEO) || ENABLE(WEB_AUDIO)
+
 #include "HTMLMediaElement.h"
 #include "Logging.h"
 #include "MediaPlayer.h"
@@ -34,6 +35,7 @@
 #include "PlatformMediaSessionManager.h"
 #include <wtf/MediaTime.h>
 #include <wtf/SetForScope.h>
+#include <wtf/text/MakeString.h>
 
 namespace WebCore {
 
@@ -77,6 +79,25 @@ String convertEnumerationToString(PlatformMediaSession::InterruptionType type)
     static_assert(static_cast<size_t>(PlatformMediaSession::InterruptionType::PlaybackSuspended) == 7, "PlatformMediaSession::PlaybackSuspended is not 7 as expected");
     ASSERT(static_cast<size_t>(type) < std::size(values));
     return values[static_cast<size_t>(type)];
+}
+
+String convertEnumerationToString(PlatformMediaSession::MediaType mediaType)
+{
+    static const NeverDestroyed<String> values[] = {
+        MAKE_STATIC_STRING_IMPL("None"),
+        MAKE_STATIC_STRING_IMPL("Video"),
+        MAKE_STATIC_STRING_IMPL("VideoAudio"),
+        MAKE_STATIC_STRING_IMPL("Audio"),
+        MAKE_STATIC_STRING_IMPL("WebAudio"),
+    };
+    static_assert(!static_cast<size_t>(PlatformMediaSession::MediaType::None), "PlatformMediaSession::MediaType::None is not 0 as expected");
+    static_assert(static_cast<size_t>(PlatformMediaSession::MediaType::Video) == 1, "PlatformMediaSession::MediaType::Video is not 1 as expected");
+    static_assert(static_cast<size_t>(PlatformMediaSession::MediaType::VideoAudio) == 2, "PlatformMediaSession::MediaType::VideoAudio is not 2 as expected");
+    static_assert(static_cast<size_t>(PlatformMediaSession::MediaType::Audio) == 3, "PlatformMediaSession::MediaType::Audio is not 3 as expected");
+    static_assert(static_cast<size_t>(PlatformMediaSession::MediaType::WebAudio) == 4, "PlatformMediaSession::MediaType::WebAudio is not 4 as expected");
+
+    ASSERT(static_cast<size_t>(mediaType) < std::size(values));
+    return values[static_cast<size_t>(mediaType)];
 }
 
 String convertEnumerationToString(PlatformMediaSession::RemoteControlCommandType command)
@@ -128,10 +149,6 @@ std::unique_ptr<PlatformMediaSession> PlatformMediaSession::create(PlatformMedia
 PlatformMediaSession::PlatformMediaSession(PlatformMediaSessionManager&, PlatformMediaSessionClient& client)
     : m_client(client)
     , m_mediaSessionIdentifier(MediaSessionIdentifier::generate())
-#if !RELEASE_LOG_DISABLED
-    , m_logger(client.logger())
-    , m_logIdentifier(uniqueLogIdentifier())
-#endif
 {
 }
 
@@ -164,46 +181,65 @@ void PlatformMediaSession::setState(State state)
     PlatformMediaSessionManager::sharedManager().sessionStateChanged(*this);
 }
 
+size_t PlatformMediaSession::activeInterruptionCount() const
+{
+    size_t count = 0;
+    for (auto& interruption : m_interruptionStack) {
+        if (!interruption.ignored)
+            count++;
+    }
+    return count;
+}
+
+PlatformMediaSession::InterruptionType PlatformMediaSession::interruptionType() const
+{
+    if (!m_interruptionStack.size())
+        return InterruptionType::NoInterruption;
+
+    return m_interruptionStack.last().type;
+}
+
 void PlatformMediaSession::beginInterruption(InterruptionType type)
 {
-    ALWAYS_LOG(LOGIDENTIFIER, "state = ", m_state, ", interruption type = ", type, ", interruption count = ", m_interruptionCount);
+    ASSERT(type != InterruptionType::NoInterruption);
 
-    // When interruptions are overridden, m_interruptionType doesn't get set.
-    // Give nested interruptions a chance when the previous interruptions were overridden.
-    if (++m_interruptionCount > 1 && m_interruptionType != InterruptionType::NoInterruption)
-        return;
+    ALWAYS_LOG(LOGIDENTIFIER, "state = ", m_state, ", interruption count = ", m_interruptionStack.size(), ", type = ", type);
 
-    if (client().shouldOverrideBackgroundPlaybackRestriction(type)) {
-        ALWAYS_LOG(LOGIDENTIFIER, "returning early because client says to override interruption");
+    if (activeInterruptionCount()) {
+        m_interruptionStack.append({ type, true });
         return;
     }
+    if (client().shouldOverrideBackgroundPlaybackRestriction(type)) {
+        ALWAYS_LOG(LOGIDENTIFIER, "returning early because client says to override interruption");
+        m_interruptionStack.append({ type, true });
+        return;
+    }
+    m_interruptionStack.append({ type, false });
 
     m_stateToRestore = state();
     m_notifyingClient = true;
     setState(State::Interrupted);
-    m_interruptionType = type;
     client().suspendPlayback();
     m_notifyingClient = false;
 }
 
 void PlatformMediaSession::endInterruption(OptionSet<EndInterruptionFlags> flags)
 {
-    ALWAYS_LOG(LOGIDENTIFIER, "flags = ", (int)flags.toRaw(), ", stateToRestore = ", m_stateToRestore, ", interruption count = ", m_interruptionCount);
-
-    if (!m_interruptionCount) {
+    if (m_interruptionStack.isEmpty()) {
         ALWAYS_LOG(LOGIDENTIFIER, "!! ignoring spurious interruption end !!");
         return;
     }
 
-    if (--m_interruptionCount)
+    auto interruption = m_interruptionStack.takeLast();
+    ALWAYS_LOG(LOGIDENTIFIER, "flags = ", (int)flags.toRaw(), ", interruption count = ", m_interruptionStack.size(), " type = ", interruptionType());
+
+    if (activeInterruptionCount() || interruption.ignored)
         return;
 
-    if (m_interruptionType == InterruptionType::NoInterruption)
-        return;
+    ALWAYS_LOG(LOGIDENTIFIER, "restoring state ", m_stateToRestore);
 
     State stateToRestore = m_stateToRestore;
     m_stateToRestore = State::Idle;
-    m_interruptionType = InterruptionType::NoInterruption;
     setState(stateToRestore);
 
     if (stateToRestore == State::Autoplaying)
@@ -358,16 +394,17 @@ void PlatformMediaSession::isPlayingToWirelessPlaybackTargetChanged(bool isWirel
 
     m_isPlayingToWirelessPlaybackTarget = isWireless;
 
-    // Save and restore the interruption count so it doesn't get out of sync if beginInterruption is called because
-    // if we in the background.
-    int interruptionCount = m_interruptionCount;
     PlatformMediaSessionManager::sharedManager().sessionIsPlayingToWirelessPlaybackTargetChanged(*this);
-    m_interruptionCount = interruptionCount;
 }
 
 PlatformMediaSession::DisplayType PlatformMediaSession::displayType() const
 {
     return m_client.displayType();
+}
+
+bool PlatformMediaSession::blockedBySystemInterruption() const
+{
+    return activeInterruptionCount() && interruptionType() == PlatformMediaSession::InterruptionType::SystemInterruption;
 }
 
 bool PlatformMediaSession::activeAudioSessionRequired() const
@@ -431,13 +468,47 @@ bool PlatformMediaSession::shouldOverridePauseDuringRouteChange() const
 
 std::optional<NowPlayingInfo> PlatformMediaSession::nowPlayingInfo() const
 {
-    return { };
+    return client().nowPlayingInfo();
+}
+
+bool PlatformMediaSession::isNowPlayingEligible() const
+{
+    return client().isNowPlayingEligible();
+};
+
+WeakPtr<PlatformMediaSession> PlatformMediaSession::selectBestMediaSession(const Vector<WeakPtr<PlatformMediaSession>>& sessions, PlaybackControlsPurpose purpose)
+{
+    return client().selectBestMediaSession(sessions, purpose);
+}
+
+void PlatformMediaSession::setActiveNowPlayingSession(bool isActiveNowPlayingSession)
+{
+    if (isActiveNowPlayingSession == m_isActiveNowPlayingSession)
+        return;
+
+    m_isActiveNowPlayingSession = isActiveNowPlayingSession;
+    client().isActiveNowPlayingSessionChanged();
 }
 
 #if !RELEASE_LOG_DISABLED
+const Logger& PlatformMediaSession::logger() const
+{
+    return client().logger();
+}
+
+const void* PlatformMediaSession::logIdentifier() const
+{
+    return client().logIdentifier();
+}
+
 WTFLogChannel& PlatformMediaSession::logChannel() const
 {
     return LogMedia;
+}
+
+String PlatformMediaSession::description() const
+{
+    return makeString(convertEnumerationToString(mediaType()), ", "_s, convertEnumerationToString(state()));
 }
 #endif
 
@@ -446,6 +517,11 @@ MediaTime PlatformMediaSessionClient::mediaSessionDuration() const
     return MediaTime::invalidTime();
 }
 
+std::optional<NowPlayingInfo> PlatformMediaSessionClient::nowPlayingInfo() const
+{
+    return { };
 }
 
-#endif
+} // namespace WebCore
+
+#endif // ENABLE(VIDEO) || ENABLE(WEB_AUDIO)

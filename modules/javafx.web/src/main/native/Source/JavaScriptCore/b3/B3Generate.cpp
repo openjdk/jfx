@@ -39,6 +39,7 @@
 #include "B3HoistLoopInvariantValues.h"
 #include "B3InferSwitches.h"
 #include "B3LegalizeMemoryOffsets.h"
+#include "B3LowerInt64.h"
 #include "B3LowerMacros.h"
 #include "B3LowerMacrosAfterOptimizations.h"
 #include "B3LowerToAir.h"
@@ -54,7 +55,7 @@ namespace JSC { namespace B3 {
 
 void prepareForGeneration(Procedure& procedure)
 {
-    CompilerTimingScope timingScope("Total B3+Air", "prepareForGeneration");
+    CompilerTimingScope timingScope("Total B3+Air"_s, "prepareForGeneration"_s);
 
     generateToAir(procedure);
     Air::prepareForGeneration(procedure.code());
@@ -67,7 +68,7 @@ void generate(Procedure& procedure, CCallHelpers& jit)
 
 void generateToAir(Procedure& procedure)
 {
-    CompilerTimingScope timingScope("Total B3", "generateToAir");
+    CompilerTimingScope timingScope("Total B3"_s, "generateToAir"_s);
 
     if ((shouldDumpIR(procedure, B3Mode) || Options::dumpGraphAfterParsing()) && !shouldDumpIRAtEachPhase(B3Mode)) {
         dataLog(tierName, "Initial B3:\n");
@@ -83,8 +84,6 @@ void generateToAir(Procedure& procedure)
     if (procedure.optLevel() >= 2) {
         reduceDoubleToFloat(procedure);
         reduceStrength(procedure);
-        // FIXME: Re-enable B3 hoistLoopInvariantValues
-        // https://bugs.webkit.org/show_bug.cgi?id=212651
         if (Options::useB3HoistLoopInvariantValues())
             hoistLoopInvariantValues(procedure);
         if (eliminateCommonSubexpressions(procedure))
@@ -105,6 +104,10 @@ void generateToAir(Procedure& procedure)
     // This puts the IR in quirks mode.
     lowerMacros(procedure);
 
+#if USE(JSVALUE32_64)
+    lowerInt64(procedure);
+#endif
+
     if (procedure.optLevel() >= 2) {
         optimizeAssociativeExpressionTrees(procedure);
         reduceStrength(procedure);
@@ -117,9 +120,9 @@ void generateToAir(Procedure& procedure)
     legalizeMemoryOffsets(procedure);
     moveConstants(procedure);
     legalizeMemoryOffsets(procedure);
+    eliminateDeadCode(procedure);
     if (Options::useB3CanonicalizePrePostIncrements() && procedure.optLevel() >= 2)
         canonicalizePrePostIncrements(procedure);
-    eliminateDeadCode(procedure);
 
     // FIXME: We should run pureCSE here to clean up some platform specific changes from the previous phases.
     // https://bugs.webkit.org/show_bug.cgi?id=164873

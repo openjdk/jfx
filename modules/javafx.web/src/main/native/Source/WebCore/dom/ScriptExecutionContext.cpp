@@ -41,7 +41,6 @@
 #include "FrameDestructionObserverInlines.h"
 #include "JSDOMExceptionHandling.h"
 #include "JSDOMPromiseDeferred.h"
-#include "JSLocalDOMWindow.h"
 #include "JSWorkerGlobalScope.h"
 #include "JSWorkletGlobalScope.h"
 #include "LegacySchemeRegistry.h"
@@ -86,6 +85,7 @@
 #include <wtf/MainThread.h>
 #include <wtf/Ref.h>
 #include <wtf/SetForScope.h>
+#include <wtf/text/MakeString.h>
 
 namespace WebCore {
 using namespace Inspector;
@@ -288,14 +288,14 @@ void ScriptExecutionContext::forEachActiveDOMObject(const Function<ShouldContinu
     SetForScope activeDOMObjectAdditionForbiddenScope(m_activeDOMObjectAdditionForbidden, true);
 
     // Make a frozen copy of the objects so we can iterate while new ones might be destroyed.
-    auto possibleActiveDOMObjects = copyToVector(m_activeDOMObjects);
+    auto possibleActiveDOMObjects = copyToVectorOf<RefPtr<ActiveDOMObject>>(m_activeDOMObjects);
 
-    for (auto* activeDOMObject : possibleActiveDOMObjects) {
+    for (auto& activeDOMObject : possibleActiveDOMObjects) {
         // Check if this object was deleted already. If so, just skip it.
         // Calling contains on a possibly-already-deleted object is OK because we guarantee
         // no new object can be added, so even if a new object ends up allocated with the
         // same address, that will be *after* this function exits.
-        if (!m_activeDOMObjects.contains(activeDOMObject))
+        if (!m_activeDOMObjects.contains(activeDOMObject.get()))
             continue;
 
         if (apply(*activeDOMObject) == ShouldContinue::No)
@@ -459,7 +459,7 @@ bool ScriptExecutionContext::canIncludeErrorDetails(CachedScript* script, const 
         ASSERT(securityOrigin()->toString() == script->origin()->toString());
         return script->isCORSSameOrigin();
     }
-    return securityOrigin()->canRequest(completeSourceURL, OriginAccessPatternsForWebProcess::singleton());
+    return protectedSecurityOrigin()->canRequest(completeSourceURL, OriginAccessPatternsForWebProcess::singleton());
 }
 
 void ScriptExecutionContext::reportException(const String& errorMessage, int lineNumber, int columnNumber, const String& sourceURL, JSC::Exception* exception, RefPtr<ScriptCallStack>&& callStack, CachedScript* cachedScript, bool fromModule)
@@ -501,7 +501,7 @@ void ScriptExecutionContext::reportUnhandledPromiseRejection(JSC::JSGlobalObject
 
     auto tryMakeErrorString = [&] (unsigned length) -> String {
         bool addEllipsis = length != resultMessage.length();
-        return tryMakeString("Unhandled Promise Rejection: ", StringView(resultMessage).left(length), addEllipsis ? "..." : "");
+        return tryMakeString("Unhandled Promise Rejection: "_s, StringView(resultMessage).left(length), addEllipsis ? "..."_s : ""_s);
     };
 
     if (!!resultMessage && !scope.exception()) {
@@ -673,11 +673,6 @@ bool ScriptExecutionContext::allowsMediaDevices() const
 #else
     return false;
 #endif
-}
-
-ServiceWorker* ScriptExecutionContext::activeServiceWorker() const
-{
-    return m_activeServiceWorker.get();
 }
 
 void ScriptExecutionContext::setActiveServiceWorker(RefPtr<ServiceWorker>&& serviceWorker)

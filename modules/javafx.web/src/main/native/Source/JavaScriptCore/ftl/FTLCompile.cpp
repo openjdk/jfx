@@ -39,6 +39,8 @@
 #include "DFGGraphSafepoint.h"
 #include "FTLJITCode.h"
 #include "JITThunks.h"
+#include "LLIntEntrypoint.h"
+#include "LLIntThunks.h"
 #include "LinkBuffer.h"
 #include "PCToCodeOriginMap.h"
 #include "ThunkGenerators.h"
@@ -127,7 +129,7 @@ void compile(State& state, Safepoint::Result& safepointResult)
     CCallHelpers jit(codeBlock);
     {
         SetForScope disallowFreeze { state.graph.m_frozenValuesAreFinalized, true };
-        GraphSafepoint safepoint(state.graph, safepointResult);
+        GraphSafepoint safepoint(state.graph, safepointResult, true);
     B3::generate(*state.proc, jit);
     }
     if (safepointResult.didGetCancelled())
@@ -136,32 +138,97 @@ void compile(State& state, Safepoint::Result& safepointResult)
     // Emit the exception handler.
     *state.exceptionHandler = jit.label();
     jit.jumpThunk(CodeLocationLabel(vm.getCTIStub(CommonJITThunkID::HandleException).template retaggedCode<NoPtrTag>()));
-    state.finalizer->b3CodeLinkBuffer = makeUnique<LinkBuffer>(jit, codeBlock, LinkBuffer::Profile::FTL, JITCompilationCanFail);
 
-    if (state.finalizer->b3CodeLinkBuffer->didFailToAllocate()) {
+    CCallHelpers::Label mainPathLabel = state.proc->code().entrypointLabel(0);
+    CCallHelpers::Label entryLabel = mainPathLabel;
+    CCallHelpers::Label arityCheckLabel = mainPathLabel;
+
+    // Generating entrypoints.
+    switch (state.graph.m_plan.mode()) {
+    case JITCompilationMode::FTL: {
+        bool requiresArityFixup = codeBlock->numParameters() != 1;
+        if (codeBlock->codeType() == FunctionCode && requiresArityFixup) {
+            CCallHelpers::JumpList mainPathJumps;
+
+            arityCheckLabel = jit.label();
+            jit.load32(CCallHelpers::calleeFramePayloadSlot(CallFrameSlot::argumentCountIncludingThis).withOffset(sizeof(CallerFrameAndPC) - prologueStackPointerDelta()), GPRInfo::argumentGPR2);
+            mainPathJumps.append(jit.branch32(CCallHelpers::AboveOrEqual, GPRInfo::argumentGPR2, CCallHelpers::TrustedImm32(codeBlock->numParameters())));
+
+            unsigned numberOfParameters = codeBlock->numParameters();
+            CCallHelpers::JumpList stackOverflowWithEntry;
+            jit.getArityPadding(vm, numberOfParameters, GPRInfo::argumentGPR2, GPRInfo::argumentGPR0, GPRInfo::argumentGPR1, GPRInfo::argumentGPR3, stackOverflowWithEntry);
+
+#if CPU(X86_64)
+            jit.pop(GPRInfo::argumentGPR1);
+#else
+            jit.tagPtr(NoPtrTag, CCallHelpers::linkRegister);
+            jit.move(CCallHelpers::linkRegister, GPRInfo::argumentGPR1);
+#endif
+            jit.nearCallThunk(CodeLocationLabel { LLInt::arityFixup() });
+#if CPU(X86_64)
+            jit.push(GPRInfo::argumentGPR1);
+#else
+            jit.move(GPRInfo::argumentGPR1, CCallHelpers::linkRegister);
+            jit.untagPtr(NoPtrTag, CCallHelpers::linkRegister);
+            jit.validateUntaggedPtr(CCallHelpers::linkRegister, GPRInfo::argumentGPR0);
+#endif
+            mainPathJumps.append(jit.jump());
+
+            stackOverflowWithEntry.link(&jit);
+            jit.emitFunctionPrologue();
+            jit.move(CCallHelpers::TrustedImmPtr(codeBlock), GPRInfo::argumentGPR0);
+            jit.storePtr(GPRInfo::callFrameRegister, &vm.topCallFrame);
+            jit.callOperation<OperationPtrTag>(operationThrowStackOverflowError);
+            jit.jumpThunk(CodeLocationLabel(vm.getCTIStub(CommonJITThunkID::HandleExceptionWithCallFrameRollback).retaggedCode<NoPtrTag>()));
+            mainPathJumps.linkTo(mainPathLabel, &jit);
+        }
+        break;
+    }
+
+    case JITCompilationMode::FTLForOSREntry: {
+        // We jump to here straight from DFG code, after having boxed up all of the
+        // values into the scratch buffer. Everything should be good to go - at this
+        // point we've even done the stack check. Basically we just have to make the
+        // call to the B3-generated code.
+        entryLabel = jit.label();
+        arityCheckLabel = entryLabel;
+        jit.emitFunctionEpilogue();
+        jit.untagReturnAddress();
+        jit.jump().linkTo(mainPathLabel, &jit);
+        break;
+    }
+
+    default:
+        RELEASE_ASSERT_NOT_REACHED();
+        break;
+    }
+
+    state.b3CodeLinkBuffer = makeUnique<LinkBuffer>(jit, codeBlock, LinkBuffer::Profile::FTL, JITCompilationCanFail);
+
+    if (state.b3CodeLinkBuffer->didFailToAllocate()) {
         state.allocationFailed = true;
         return;
     }
 
     if (vm.shouldBuilderPCToCodeOriginMapping()) {
         B3::PCToOriginMap originMap = state.proc->releasePCToOriginMap();
-        state.jitCode->common.m_pcToCodeOriginMap = makeUnique<PCToCodeOriginMap>(PCToCodeOriginMapBuilder(PCToCodeOriginMapBuilder::JSCodeOriginMap, vm, WTFMove(originMap)), *state.finalizer->b3CodeLinkBuffer);
+        state.jitCode->common.m_pcToCodeOriginMap = makeUnique<PCToCodeOriginMap>(PCToCodeOriginMapBuilder(PCToCodeOriginMapBuilder::JSCodeOriginMap, vm, WTFMove(originMap)), *state.b3CodeLinkBuffer);
     }
 
-    CodeLocationLabel<JSEntryPtrTag> label = state.finalizer->b3CodeLinkBuffer->locationOf<JSEntryPtrTag>(state.proc->code().entrypointLabel(0));
-    state.generatedFunction = label;
+    state.jitCode->initializeAddressForCall(state.b3CodeLinkBuffer->locationOf<JSEntryPtrTag>(entryLabel));
+    state.jitCode->initializeAddressForArityCheck(state.b3CodeLinkBuffer->locationOf<JSEntryPtrTag>(arityCheckLabel));
     state.jitCode->initializeB3Byproducts(state.proc->releaseByproducts());
 
     for (auto pair : state.graph.m_entrypointIndexToCatchBytecodeIndex) {
         BytecodeIndex catchBytecodeIndex = pair.value;
         unsigned entrypointIndex = pair.key;
         Vector<FlushFormat> argumentFormats = state.graph.m_argumentFormats[entrypointIndex];
-        state.graph.appendCatchEntrypoint(catchBytecodeIndex, state.finalizer->b3CodeLinkBuffer->locationOf<ExceptionHandlerPtrTag>(state.proc->code().entrypointLabel(entrypointIndex)), WTFMove(argumentFormats));
+        state.graph.appendCatchEntrypoint(catchBytecodeIndex, state.b3CodeLinkBuffer->locationOf<ExceptionHandlerPtrTag>(state.proc->code().entrypointLabel(entrypointIndex)), WTFMove(argumentFormats));
     }
     state.jitCode->common.finalizeCatchEntrypoints(WTFMove(state.graph.m_catchEntrypoints));
 
     if (shouldDumpDisassembly())
-        state.dumpDisassembly(WTF::dataFile());
+        state.dumpDisassembly(WTF::dataFile(), *state.b3CodeLinkBuffer);
 
     Profiler::Compilation* compilation = graph.compilation();
     if (UNLIKELY(compilation)) {
@@ -172,7 +239,7 @@ void compile(State& state, Safepoint::Result& safepointResult)
         graph.ensureSSADominators();
         graph.ensureSSANaturalLoops();
 
-        const char* prefix = "    ";
+        constexpr auto prefix = "    "_s;
 
         DumpContext dumpContext;
         StringPrintStream out;
@@ -218,7 +285,7 @@ void compile(State& state, Safepoint::Result& safepointResult)
         compilation->addDescription(Profiler::OriginStack(), out.toCString());
         out.reset();
 
-        state.dumpDisassembly(out, scopedLambda<void(Node*)>([&] (Node*) {
+        state.dumpDisassembly(out, *state.b3CodeLinkBuffer, scopedLambda<void(Node*)>([&] (Node*) {
             compilation->addDescription({ }, out.toCString());
             out.reset();
         }));

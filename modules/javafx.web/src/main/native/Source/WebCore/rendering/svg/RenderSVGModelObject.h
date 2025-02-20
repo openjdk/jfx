@@ -31,7 +31,6 @@
 
 #pragma once
 
-#if ENABLE(LAYER_BASED_SVG_ENGINE)
 #include "RenderBox.h"
 #include "RenderLayerModelObject.h"
 #include "SVGBoundingBoxComputation.h"
@@ -47,8 +46,11 @@ namespace WebCore {
 class SVGElement;
 
 class RenderSVGModelObject : public RenderLayerModelObject {
-    WTF_MAKE_ISO_ALLOCATED(RenderSVGModelObject);
+    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(RenderSVGModelObject);
+    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(RenderSVGModelObject);
 public:
+    virtual ~RenderSVGModelObject();
+
     bool requiresLayer() const override { return true; }
 
     void styleDidChange(StyleDifference, const RenderStyle* oldStyle) override;
@@ -100,8 +102,7 @@ protected:
     void absoluteQuads(Vector<FloatQuad>&, bool* wasFixed) const override;
 
     void addFocusRingRects(Vector<LayoutRect>&, const LayoutPoint& additionalOffset, const RenderLayerModelObject* paintContainer = 0) const override;
-    // FIXME: [LBSE] Upstream SVG outline painting functionality
-    // void paintSVGOutline(PaintInfo&, const LayoutPoint& adjustedPaintOffset);
+    void paintSVGOutline(PaintInfo&, const LayoutPoint& adjustedPaintOffset);
 
     // Returns false if the rect has no intersection with the applied clip rect. When the context specifies edge-inclusive
     // intersection, this return value allows distinguishing between no intersection and zero-area intersection.
@@ -116,5 +117,3 @@ private:
 } // namespace WebCore
 
 SPECIALIZE_TYPE_TRAITS_RENDER_OBJECT(RenderSVGModelObject, isRenderSVGModelObject())
-
-#endif // ENABLE(LAYER_BASED_SVG_ENGINE)

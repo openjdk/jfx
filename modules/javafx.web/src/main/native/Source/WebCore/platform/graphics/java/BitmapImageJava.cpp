@@ -54,16 +54,16 @@ Ref<Image> BitmapImage::createFromName(const char* name)
     SharedBufferBuilder bufferBuilder;
     //RefPtr<SharedBuffer> dataBuffer(SharedBuffer::create());
     //img->m_source->ensureDecoderAvailable(dataBuffer.get());
-    img->m_source->ensureDecoderAvailable(bufferBuilder.take().ptr());
-    env->CallVoidMethod(
+    //img->m_source->ensureDecoderAvailable(bufferBuilder.take().ptr());    //revisit
+  /*  env->CallVoidMethod(
         static_cast<ImageDecoderJava*>(img->m_source->m_decoder.get())->nativeDecoder(),
         midLoadFromResource,
         (jstring)String::fromLatin1(name).toJavaString(env));
-    WTF::CheckAndClearException(env);
+    WTF::CheckAndClearException(env); */
 
     // we have to make this call in order to initialize
     // internal flags that indicates the image readiness
-    img->encodedDataStatus();
+   // img->encodedDataStatus();
 
     // Absence if the image size indicates some problem with
     // the availability of the resource referred by the name.
@@ -108,7 +108,7 @@ JNIEXPORT void JNICALL Java_com_sun_webkit_graphics_WCGraphicsManager_append
     SharedBufferBuilder* pBuffer = static_cast<SharedBufferBuilder*>jlong_to_ptr(sharedBufferPtr);
 
     void *cbits = env->GetPrimitiveArrayCritical(jbits, 0);
-    pBuffer->append(static_cast<char*>(cbits), count);
+    pBuffer->append(std::span<const uint8_t>(static_cast<const uint8_t*>(cbits), count));
     env->ReleasePrimitiveArrayCritical(jbits, cbits, JNI_ABORT);
 }
 

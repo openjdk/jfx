@@ -230,6 +230,7 @@ public:
     virtual String defaultValue() const; // Checked after even fallbackValue, only when the valueWithDefault function is called.
     virtual WallTime valueAsDate() const;
     virtual ExceptionOr<void> setValueAsDate(WallTime) const;
+    virtual WallTime accessibilityValueAsDate() const;
     virtual double valueAsDouble() const;
     virtual ExceptionOr<void> setValueAsDouble(double, TextFieldEventBehavior) const;
     virtual ExceptionOr<void> setValueAsDecimal(const Decimal&, TextFieldEventBehavior) const;
@@ -411,8 +412,12 @@ protected:
     }
 
     HTMLInputElement* element() const { return m_element.get(); }
+    RefPtr<HTMLInputElement> protectedElement() const { return m_element.get(); }
     Chrome* chrome() const;
     Decimal parseToNumberOrNaN(const String&) const;
+
+    // Derive the step base, following the HTML algorithm steps.
+    Decimal findStepBase(const Decimal&) const;
 
 private:
     // Helper for stepUp()/stepDown(). Adds step value * count to the current value.

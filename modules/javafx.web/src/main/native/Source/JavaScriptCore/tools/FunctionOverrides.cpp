@@ -34,6 +34,7 @@
 #include <wtf/SafeStrerror.h>
 #include <wtf/WTFProcess.h>
 #include <wtf/text/CString.h>
+#include <wtf/text/MakeString.h>
 #include <wtf/text/StringBuilder.h>
 #include <wtf/text/StringHash.h>
 
@@ -219,7 +220,7 @@ static String parseClause(const char* keyword, size_t keywordLength, FILE* file,
         FAIL_WITH_ERROR(SYNTAX_ERROR, ("Missing { after '", keyword, "' clause start delimiter:\n", line, "\n"));
 
     size_t delimiterLength = delimiterEnd - delimiterStart;
-    String delimiter(delimiterStart, delimiterLength);
+    String delimiter({ delimiterStart, delimiterLength });
 
     if (hasDisallowedCharacters(delimiterStart, delimiterLength))
         FAIL_WITH_ERROR(SYNTAX_ERROR, ("Delimiter '", delimiter, "' cannot have '{', '}', or whitespace:\n", line, "\n"));
@@ -235,10 +236,10 @@ static String parseClause(const char* keyword, size_t keywordLength, FILE* file,
             if (p[strlen(terminator)] != '\n')
                 FAIL_WITH_ERROR(SYNTAX_ERROR, ("Unexpected characters after '", keyword, "' clause end delimiter '", delimiter, "':\n", line, "\n"));
 
-            builder.appendCharacters(line, p - line + 1);
+            builder.append(std::span { line, p + 1 });
             return builder.toString();
         }
-        builder.append(line);
+        builder.append(span(line));
 
     } while ((line = fgets(buffer, bufferSize, file)));
 

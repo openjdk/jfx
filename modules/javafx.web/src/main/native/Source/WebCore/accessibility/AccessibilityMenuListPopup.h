@@ -56,14 +56,18 @@ private:
     void addChildren() override;
     void handleChildrenChanged();
     bool computeAccessibilityIsIgnored() const override;
-    AccessibilityChildrenVector selectedChildren() final;
+    std::optional<AccessibilityChildrenVector> selectedChildren() final;
 
     AccessibilityMenuListOption* menuListOptionAccessibilityObject(HTMLElement*) const;
 };
 
 } // namespace WebCore
 
-SPECIALIZE_TYPE_TRAITS_BEGIN(WebCore::AccessibilityMenuListPopup) \
-    static bool isType(const WebCore::AccessibilityObject& object) { return object.isMenuListPopup(); } \
-    static bool isType(const WebCore::AXCoreObject& object) { return object.isAccessibilityObject() && downcast<WebCore::AccessibilityObject>(object).isMenuListPopup(); } \
+SPECIALIZE_TYPE_TRAITS_BEGIN(WebCore::AccessibilityMenuListPopup)
+    static bool isType(const WebCore::AccessibilityObject& object) { return object.isMenuListPopup(); }
+    static bool isType(const WebCore::AXCoreObject& object)
+    {
+        auto* accessibilityObject = dynamicDowncast<WebCore::AccessibilityObject>(object);
+        return accessibilityObject && accessibilityObject->isMenuListPopup();
+    }
 SPECIALIZE_TYPE_TRAITS_END()

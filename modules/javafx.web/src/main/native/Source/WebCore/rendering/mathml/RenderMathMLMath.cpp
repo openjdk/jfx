@@ -33,19 +33,21 @@
 #include "RenderBoxInlines.h"
 #include "RenderBoxModelObjectInlines.h"
 #include "RenderStyleInlines.h"
-#include <wtf/IsoMallocInlines.h>
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
 using namespace MathMLNames;
 
-WTF_MAKE_ISO_ALLOCATED_IMPL(RenderMathMLMath);
+WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(RenderMathMLMath);
 
 RenderMathMLMath::RenderMathMLMath(MathMLRowElement& element, RenderStyle&& style)
     : RenderMathMLRow(Type::MathMLMath, element, WTFMove(style))
 {
     ASSERT(isRenderMathMLMath());
 }
+
+RenderMathMLMath::~RenderMathMLMath() = default;
 
 void RenderMathMLMath::centerChildren(LayoutUnit contentWidth)
 {
@@ -80,6 +82,7 @@ void RenderMathMLMath::layoutBlock(bool relayoutChildren, LayoutUnit pageLogical
         return;
 
     recomputeLogicalWidth();
+    computeAndSetBlockDirectionMarginsOfChildren();
 
     setLogicalHeight(borderAndPaddingLogicalHeight() + scrollbarLogicalHeight());
 
@@ -94,8 +97,9 @@ void RenderMathMLMath::layoutBlock(bool relayoutChildren, LayoutUnit pageLogical
         centerChildren(width);
     else
         setLogicalWidth(width);
+    shiftRowItems(0_lu, borderAndPaddingBefore());
 
-    setLogicalHeight(borderTop() + paddingTop() + ascent + descent + borderBottom() + paddingBottom() + horizontalScrollbarHeight());
+    setLogicalHeight(ascent + descent + borderAndPaddingLogicalHeight() + horizontalScrollbarHeight());
     updateLogicalHeight();
 
     layoutPositionedObjects(relayoutChildren);

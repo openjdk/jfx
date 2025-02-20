@@ -20,12 +20,11 @@
 #include "config.h"
 #include "RenderSVGResourcePaintServer.h"
 
-#if ENABLE(LAYER_BASED_SVG_ENGINE)
-#include <wtf/IsoMallocInlines.h>
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
-WTF_MAKE_ISO_ALLOCATED_IMPL(RenderSVGResourcePaintServer);
+WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(RenderSVGResourcePaintServer);
 
 RenderSVGResourcePaintServer::RenderSVGResourcePaintServer(Type type, SVGElement& element, RenderStyle&& style)
     : RenderSVGResourceContainer(type, element, WTFMove(style))
@@ -37,4 +36,3 @@ RenderSVGResourcePaintServer::~RenderSVGResourcePaintServer() = default;
 
 }
 
-#endif // ENABLE(LAYER_BASED_SVG_ENGINE)

@@ -31,9 +31,17 @@
 };
 
 [
+    Conditional=APPLE_PAY_DISBURSEMENTS,
+] enum ApplePayDisbursementLineItemType {
+    "disbursement",
+    "instantFundsOutFee"
+};
+
+[
     Conditional=APPLE_PAY,
     ExportMacro=WEBCORE_EXPORT,
     JSGenerateToJSObject,
+    JSGenerateToNativeObject
 ] dictionary ApplePayLineItem {
     ApplePayLineItemType type = "final";
     DOMString label;
@@ -49,4 +57,6 @@
     [Conditional=APPLE_PAY_DEFERRED_LINE_ITEM] Date deferredPaymentDate;
 
     [Conditional=APPLE_PAY_AUTOMATIC_RELOAD_LINE_ITEM] DOMString automaticReloadPaymentThresholdAmount; // required
+
+    [Conditional=APPLE_PAY_DISBURSEMENTS] ApplePayDisbursementLineItemType disbursementLineItemType;
 };

@@ -25,6 +25,7 @@
 
 #pragma once
 
+#include "CustomElementDefaultARIA.h"
 #include "DocumentInlines.h"
 #include "Element.h"
 #include "ElementData.h"
@@ -67,6 +68,11 @@ inline Element* Node::parentElement() const
     return dynamicDowncast<Element>(parentNode());
 }
 
+inline RefPtr<Element> Node::protectedParentElement() const
+{
+    return parentElement();
+}
+
 inline const Element* Element::rootElement() const
 {
     if (isConnected())
@@ -91,6 +97,26 @@ inline const AtomString& Element::attributeWithoutSynchronization(const Qualifie
             return attribute->value();
     }
     return nullAtom();
+}
+
+inline const AtomString& Element::attributeWithDefaultARIA(const QualifiedName& name) const
+{
+    auto& value = attributeWithoutSynchronization(name);
+    if (!value.isNull())
+        return value;
+
+    auto* defaultARIA = customElementDefaultARIAIfExists();
+    return defaultARIA ? defaultARIA->valueForAttribute(*this, name) : nullAtom();
+}
+
+inline String Element::attributeTrimmedWithDefaultARIA(const QualifiedName& name) const
+{
+    const auto& originalValue = attributeWithDefaultARIA(name);
+    if (originalValue.isEmpty())
+        return { };
+
+    auto value = originalValue.string();
+    return value.trim(isASCIIWhitespace).simplifyWhiteSpace(isASCIIWhitespace);
 }
 
 inline URL Element::getURLAttributeForBindings(const QualifiedName& name) const
@@ -132,6 +158,13 @@ inline const SpaceSplitString& Element::classNames() const
     ASSERT(hasClass());
     ASSERT(elementData());
     return elementData()->classNames();
+}
+
+inline bool Element::hasClassName(const AtomString& className) const
+{
+    if (!elementData())
+        return false;
+    return elementData()->classNames().contains(className);
 }
 
 inline unsigned Element::attributeCount() const

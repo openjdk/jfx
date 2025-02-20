@@ -370,7 +370,7 @@ namespace JSC {
         bool usesThis() const { return m_scopeNode->usesThis(); }
         bool isFunctionNode() const { return m_scopeNode->isFunctionNode(); }
         bool hasShadowsArgumentsCodeFeature() const { return m_scopeNode->hasShadowsArgumentsFeature(); }
-        LexicalScopeFeatures lexicalScopeFeatures() const { return m_scopeNode->lexicalScopeFeatures(); }
+        LexicallyScopedFeatures lexicallyScopedFeatures() const { return m_scopeNode->lexicallyScopedFeatures(); }
         PrivateBrandRequirement privateBrandRequirement() const { return m_codeBlock->privateBrandRequirement(); }
         ConstructorKind constructorKind() const { return m_codeBlock->constructorKind(); }
         SuperBinding superBinding() const { return m_codeBlock->superBinding(); }
@@ -475,6 +475,13 @@ namespace JSC {
             return emitNodeInTailPosition(dst, n);
         }
 
+        void emitNodeInIgnoreResultPosition(StatementNode* n)
+        {
+            SetForScope tailPositionPoisoner(m_allowTailCallOptimization, false);
+            SetForScope callIgnoreResultPositionPoisoner(m_allowCallIgnoreResultOptimization, m_defaultAllowCallIgnoreResultOptimization); // Revert it to default value.
+            return emitNodeInTailPosition(ignoredResult(), n);
+        }
+
         void emitNodeInTailPosition(RegisterID* dst, StatementNode* n)
         {
             // Node::emitCode assumes that dst, if provided, is either a local or a referenced temporary.
@@ -525,6 +532,13 @@ namespace JSC {
         {
             SetForScope tailPositionPoisoner(m_allowTailCallOptimization, false);
             return emitNodeInTailPosition(dst, n);
+        }
+
+        RegisterID* emitNodeInIgnoreResultPosition(ExpressionNode* n)
+        {
+            SetForScope tailPositionPoisoner(m_allowTailCallOptimization, false);
+            SetForScope callIgnoreResultPositionPoisoner(m_allowCallIgnoreResultOptimization, m_defaultAllowCallIgnoreResultOptimization); // Revert it to default value.
+            return emitNodeInTailPosition(ignoredResult(), n);
         }
 
         RegisterID* emitNodeInTailPosition(RegisterID* dst, ExpressionNode* n)
@@ -764,6 +778,7 @@ namespace JSC {
         RegisterID* emitInById(RegisterID* dst, RegisterID* base, const Identifier& property);
 
         RegisterID* emitTryGetById(RegisterID* dst, RegisterID* base, const Identifier& property);
+        RegisterID* emitGetLength(RegisterID* dst, RegisterID* base);
         RegisterID* emitGetById(RegisterID* dst, RegisterID* base, const Identifier& property);
         RegisterID* emitGetById(RegisterID* dst, RegisterID* base, RegisterID* thisVal, const Identifier& property);
         RegisterID* emitDirectGetById(RegisterID* dst, RegisterID* base, const Identifier& property);
@@ -854,14 +869,14 @@ namespace JSC {
         RegisterID* emitGetTemplateObject(RegisterID* dst, TaggedTemplateNode*);
         RegisterID* emitGetGlobalPrivate(RegisterID* dst, const Identifier& property);
 
-        enum class ReturnFrom { Normal, Finally };
-        RegisterID* emitReturn(RegisterID* src, ReturnFrom = ReturnFrom::Normal);
+        RegisterID* emitReturn(RegisterID* src);
         RegisterID* emitEnd(RegisterID* src);
 
         RegisterID* emitConstruct(RegisterID* dst, RegisterID* func, RegisterID* lazyThis, ExpectedFunction, CallArguments&, const JSTextPosition& divot, const JSTextPosition& divotStart, const JSTextPosition& divotEnd);
         RegisterID* emitStrcat(RegisterID* dst, RegisterID* src, int count);
         void emitToPrimitive(RegisterID* dst, RegisterID* src);
         RegisterID* emitToPropertyKey(RegisterID* dst, RegisterID* src);
+        RegisterID* emitToPropertyKeyOrNumber(RegisterID* dst, RegisterID* src);
 
         ResolveType resolveType();
         RegisterID* emitResolveConstantLocal(RegisterID* dst, const Variable&);
@@ -948,6 +963,8 @@ namespace JSC {
 
         void pushClassHeadLexicalScope(VariableEnvironment&);
         void popClassHeadLexicalScope(VariableEnvironment&);
+
+        std::optional<Variable> tryResolveVariable(ExpressionNode*);
 
     private:
         static constexpr int CurrentLexicalScopeIndex = -2;
@@ -1042,7 +1059,7 @@ namespace JSC {
 
         CodeType codeType() const { return m_codeType; }
 
-        bool shouldBeConcernedWithCompletionValue() const { return m_codeType != FunctionCode; }
+        bool shouldBeConcernedWithCompletionValue() const { return !m_defaultAllowCallIgnoreResultOptimization; }
 
         bool shouldEmitDebugHooks() const { return m_codeGenerationMode.contains(CodeGenerationMode::Debugger) && !m_isBuiltinFunction; }
         bool shouldEmitTypeProfilerHooks() const { return m_codeGenerationMode.contains(CodeGenerationMode::TypeProfiler); }
@@ -1128,6 +1145,8 @@ namespace JSC {
         // expected functions have identical behavior for both call and construct
         // (i.e. "Object()" is identical to "new Object()").
         ExpectedFunction emitExpectedFunctionSnippet(RegisterID* dst, RegisterID* func, ExpectedFunction, CallArguments&, Label& done);
+
+        LexicallyScopedFeatures computeFeaturesForCallDirectEval();
 
         template<typename CallOp>
         RegisterID* emitCall(RegisterID* dst, RegisterID* func, ExpectedFunction, CallArguments&, const JSTextPosition& divot, const JSTextPosition& divotStart, const JSTextPosition& divotEnd, DebuggableCall);
@@ -1358,6 +1377,7 @@ namespace JSC {
 
         VM& m_vm;
 
+        bool m_defaultAllowCallIgnoreResultOptimization { false };
         bool m_usesExceptions { false };
         bool m_expressionTooDeep { false };
         bool m_isBuiltinFunction { false };

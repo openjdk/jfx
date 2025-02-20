@@ -72,6 +72,7 @@ private:
     public:
         NamedCaptureGroups()
         {
+            m_nestedCaptureGroupNames.grow(1);
             m_activeCaptureGroupNames.grow(1);
         }
 
@@ -88,16 +89,19 @@ private:
         void reset()
         {
             m_captureGroupNames.clear();
+            m_nestedCaptureGroupNames.clear();
+            m_nestedCaptureGroupNames.grow(1);
             m_activeCaptureGroupNames.clear();
             m_activeCaptureGroupNames.grow(1);
         }
 
         void nextAlternative()
         {
+            m_nestedCaptureGroupNames.last().formUnion(m_activeCaptureGroupNames.last());
             m_activeCaptureGroupNames.last().clear();
 
             // For nested parenthesis, we need to seed the new alternative with the already seen
-            // named captures for the encompassing alternative.
+            // named captures from the containing alternative.
             if (m_activeCaptureGroupNames.size() > 1)
                 m_activeCaptureGroupNames.last().formUnion(m_activeCaptureGroupNames[m_activeCaptureGroupNames.size() - 2]);
         }
@@ -105,23 +109,37 @@ private:
         void pushParenthesis()
         {
             auto currentTop = m_activeCaptureGroupNames.last();
+            m_nestedCaptureGroupNames.append(GroupNameHashSet());
             m_activeCaptureGroupNames.append(currentTop);
         }
 
         void popParenthesis()
         {
+            ASSERT(m_nestedCaptureGroupNames.size() > 1);
             ASSERT(m_activeCaptureGroupNames.size() > 1);
+            m_nestedCaptureGroupNames.last().formUnion(m_activeCaptureGroupNames.last());
+
+            // Add all the names seen in this parenthesis to the containing alternative.
+            m_activeCaptureGroupNames[m_activeCaptureGroupNames.size() - 2].formUnion(m_nestedCaptureGroupNames.last());
+
+            m_nestedCaptureGroupNames.removeLast();
             m_activeCaptureGroupNames.removeLast();
         }
 
         GroupNameHashSet::AddResult add(String name)
         {
             m_captureGroupNames.add(name);
+
+            // If the name is not new, the caller should flag a syntax error.
             return m_activeCaptureGroupNames.last().add(name);
         }
 
     private:
+        // Names seen in the whole expression up to this point.
         GroupNameHashSet m_captureGroupNames;
+        // All active names from prior alternatives at this nesting level.
+        Vector<GroupNameHashSet, 1> m_nestedCaptureGroupNames;
+        // Names seen in containing disjunction / alternative and the current alternative.
         Vector<GroupNameHashSet, 1> m_activeCaptureGroupNames;
     };
 
@@ -774,7 +792,7 @@ private:
 
     Parser(Delegate& delegate, StringView pattern, CompileMode compileMode, unsigned backReferenceLimit, bool isNamedForwardReferenceAllowed)
         : m_delegate(delegate)
-        , m_data(pattern.characters<CharType>())
+        , m_data(pattern.span<CharType>().data())
         , m_size(pattern.length())
         , m_compileMode(compileMode)
         , m_backReferenceLimit(backReferenceLimit)
@@ -1554,11 +1572,6 @@ private:
         ASSERT(!hasError(m_errorCode));
         ASSERT(min <= max);
 
-        if (min == UINT_MAX) {
-            m_errorCode = ErrorCode::QuantifierTooLarge;
-            return;
-        }
-
         if (lastTokenType == TokenType::Atom)
             m_delegate.quantifyAtom(min, max, !tryConsume('?'));
         else if (lastTokenType == TokenType::Lookbehind)
@@ -1662,16 +1675,20 @@ private:
 
                 consume();
                 if (peekIsDigit()) {
-                    unsigned min = consumeNumber();
-                    unsigned max = min;
+                    uint64_t min = consumeNumber64();
+                    uint64_t max = min;
 
                     if (tryConsume(','))
-                        max = peekIsDigit() ? consumeNumber() : quantifyInfinite;
+                        max = peekIsDigit() ? consumeNumber64() : quantifyInfinite64;
 
                     if (tryConsume('}')) {
-                        if (min <= max)
-                            parseQuantifier(lastTokenType, min, max);
-                        else
+                        if (min == quantifyInfinite64) {
+                            m_errorCode = ErrorCode::QuantifierTooLarge;
+                        } else if (min <= max) {
+                            min = std::min<uint64_t>(min, quantifyInfinite);
+                            max = std::min<uint64_t>(max, quantifyInfinite);
+                            parseQuantifier(lastTokenType, static_cast<unsigned>(min), static_cast<unsigned>(max));
+                        } else
                             m_errorCode = ErrorCode::QuantifierOutOfOrder;
                         lastTokenType = TokenType::NotAtom;
                         break;
@@ -1935,6 +1952,14 @@ private:
         while (peekIsDigit())
             n = n * 10 + consumeDigit();
         return n.hasOverflowed() ? quantifyInfinite : n.value();
+    }
+
+    uint64_t consumeNumber64()
+    {
+        CheckedUint64 n = consumeDigit();
+        while (peekIsDigit())
+            n = n * static_cast<uint64_t>(10) + consumeDigit();
+        return n.hasOverflowed() ? quantifyInfinite64 : n.value();
     }
 
     // https://tc39.es/ecma262/#prod-annexB-LegacyOctalEscapeSequence

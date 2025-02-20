@@ -22,14 +22,14 @@
 #include "config.h"
 #include "RenderSVGResourceLinearGradient.h"
 
-#if ENABLE(LAYER_BASED_SVG_ENGINE)
 #include "RenderSVGModelObjectInlines.h"
 #include "RenderSVGResourceLinearGradientInlines.h"
-#include <wtf/IsoMallocInlines.h>
+#include "SVGElementTypeHelpers.h"
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
-WTF_MAKE_ISO_ALLOCATED_IMPL(RenderSVGResourceLinearGradient);
+WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(RenderSVGResourceLinearGradient);
 
 RenderSVGResourceLinearGradient::RenderSVGResourceLinearGradient(SVGLinearGradientElement& element, RenderStyle&& style)
     : RenderSVGResourceGradient(Type::SVGResourceLinearGradient, element, WTFMove(style))
@@ -43,10 +43,11 @@ void RenderSVGResourceLinearGradient::collectGradientAttributesIfNeeded()
     if (m_attributes.has_value())
         return;
 
-    linearGradientElement().synchronizeAllAttributes();
+    Ref linearGradientElement = this->linearGradientElement();
+    linearGradientElement->synchronizeAllAttributes();
 
     auto attributes = LinearGradientAttributes { };
-    if (linearGradientElement().collectGradientAttributes(attributes))
+    if (linearGradientElement->collectGradientAttributes(attributes))
         m_attributes = WTFMove(attributes);
 }
 
@@ -55,8 +56,9 @@ RefPtr<Gradient> RenderSVGResourceLinearGradient::createGradient(const RenderSty
     if (!m_attributes)
         return nullptr;
 
-    auto startPoint = SVGLengthContext::resolvePoint(&linearGradientElement(), m_attributes->gradientUnits(), m_attributes->x1(), m_attributes->y1());
-    auto endPoint = SVGLengthContext::resolvePoint(&linearGradientElement(), m_attributes->gradientUnits(), m_attributes->x2(), m_attributes->y2());
+    Ref linearGradientElement = this->linearGradientElement();
+    auto startPoint = SVGLengthContext::resolvePoint(linearGradientElement.ptr(), m_attributes->gradientUnits(), m_attributes->x1(), m_attributes->y1());
+    auto endPoint = SVGLengthContext::resolvePoint(linearGradientElement.ptr(), m_attributes->gradientUnits(), m_attributes->x2(), m_attributes->y2());
 
     return Gradient::create(
         Gradient::LinearData { startPoint, endPoint },
@@ -69,4 +71,3 @@ RefPtr<Gradient> RenderSVGResourceLinearGradient::createGradient(const RenderSty
 
 }
 
-#endif // ENABLE(LAYER_BASED_SVG_ENGINE)

@@ -27,6 +27,7 @@
 
 #include "Token.h"
 #include <wtf/ASCIICType.h>
+#include <wtf/text/StringParsingBuffer.h>
 #include <wtf/text/WTFString.h>
 
 namespace WGSL {
@@ -36,17 +37,15 @@ class Lexer {
 public:
     Lexer(const String& wgsl)
     {
-        if constexpr (std::is_same<T, LChar>::value) {
-            m_code = wgsl.characters8();
-            m_codeEnd = m_code + wgsl.sizeInBytes();
-        } else {
+        if constexpr (std::is_same<T, LChar>::value)
+            m_code = wgsl.span8();
+        else {
             static_assert(std::is_same<T, UChar>::value, "The lexer expects its template parameter to be either LChar or UChar");
-            m_code = wgsl.characters16();
+            m_code = wgsl.span16();
             ASSERT(!(wgsl.sizeInBytes() % 2));
-            m_codeEnd = m_code + wgsl.sizeInBytes() / 2;
         }
 
-        m_current = (m_code != m_codeEnd) ? *m_code : 0;
+        m_current = m_code.hasCharactersRemaining() ? m_code[0] : 0;
         m_currentPosition = { 1, 0, 0 };
     }
 
@@ -63,10 +62,16 @@ private:
     {
         return { type, m_tokenStartingPosition, currentTokenLength() };
     }
-    Token makeLiteralToken(TokenType type, double literalValue)
+    Token makeFloatToken(TokenType type, double floatValue)
     {
-        return { type, m_tokenStartingPosition, currentTokenLength(), literalValue };
+        return { type, m_tokenStartingPosition, currentTokenLength(), floatValue };
     }
+
+    Token makeIntegerToken(TokenType type, int64_t integerValue)
+    {
+        return { type, m_tokenStartingPosition, currentTokenLength(), integerValue };
+    }
+
     Token makeIdentifierToken(String&& identifier)
     {
         return { WGSL::TokenType::Identifier, m_tokenStartingPosition, currentTokenLength(), WTFMove(identifier) };
@@ -79,12 +84,8 @@ private:
     void skipLineComment();
     bool skipWhitespaceAndComments();
 
-    static bool isIdentifierStart(T character) { return isASCIIAlpha(character) || character == '_'; }
-    static bool isIdentifierContinue(T character) { return isASCIIAlphanumeric(character) || character == '_'; }
-
     T m_current;
-    const T* m_code;
-    const T* m_codeEnd;
+    StringParsingBuffer<T> m_code;
     SourcePosition m_currentPosition { 0, 0, 0 };
     SourcePosition m_tokenStartingPosition { 0, 0, 0 };
 };

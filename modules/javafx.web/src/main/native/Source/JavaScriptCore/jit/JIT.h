@@ -47,6 +47,7 @@ namespace JSC {
     enum OpcodeID : unsigned;
 
     class ArrayAllocationProfile;
+    class BaselineJITPlan;
     class CallLinkInfo;
     class CodeBlock;
     class FunctionExecutable;
@@ -163,20 +164,17 @@ namespace JSC {
         using Base = JSInterfaceJIT;
 
     public:
-        JIT(VM&, CodeBlock*, BytecodeIndex loopOSREntryBytecodeOffset);
+        JIT(VM&, BaselineJITPlan&, CodeBlock*);
         ~JIT();
 
         VM& vm() { return *JSInterfaceJIT::vm(); }
 
-        std::tuple<std::unique_ptr<LinkBuffer>, RefPtr<BaselineJITCode>> compileAndLinkWithoutFinalizing(JITCompilationEffort);
-        static CompilationResult finalizeOnMainThread(CodeBlock*, LinkBuffer&, RefPtr<BaselineJITCode>);
+        RefPtr<BaselineJITCode> compileAndLinkWithoutFinalizing(JITCompilationEffort);
+        static CompilationResult finalizeOnMainThread(CodeBlock*, BaselineJITPlan&, RefPtr<BaselineJITCode>);
 
         static void doMainThreadPreparationBeforeCompile(VM&);
 
-        static CompilationResult compile(VM& vm, CodeBlock* codeBlock, JITCompilationEffort effort)
-        {
-            return JIT(vm, codeBlock, BytecodeIndex(0)).privateCompile(codeBlock, effort);
-        }
+        static CompilationResult compileSync(VM&, CodeBlock*, JITCompilationEffort);
 
         static unsigned frameRegisterCountFor(UnlinkedCodeBlock*);
         static unsigned frameRegisterCountFor(CodeBlock*);
@@ -186,15 +184,11 @@ namespace JSC {
         JS_EXPORT_PRIVATE static HashMap<CString, Seconds> compileTimeStats();
         JS_EXPORT_PRIVATE static Seconds totalCompileTime();
 
-        static constexpr GPRReg s_metadataGPR = LLInt::Registers::metadataTableGPR;
-        static constexpr GPRReg s_constantsGPR = LLInt::Registers::pbGPR;
-
     private:
         void privateCompileMainPass();
         void privateCompileLinkPass();
         void privateCompileSlowCases();
         RefPtr<BaselineJITCode> link(LinkBuffer&);
-        CompilationResult privateCompile(CodeBlock*, JITCompilationEffort);
 
         // Add a call out from JIT code, without an exception check.
         Call appendCall(const CodePtr<CFunctionPtrTag> function)
@@ -208,15 +202,6 @@ namespace JSC {
         {
             call(function, OperationPtrTag);
         }
-
-#if OS(WINDOWS) && CPU(X86_64)
-        Call appendCallWithUGPRPair(const CodePtr<CFunctionPtrTag> function)
-        {
-            Call functionCall = callWithUGPRPair(OperationPtrTag);
-            m_farCalls.append(FarCallRecord(functionCall, function.retagged<OperationPtrTag>()));
-            return functionCall;
-        }
-#endif
 
         template <typename Bytecode>
         void loadPtrFromMetadata(const Bytecode&, size_t offset, GPRReg);
@@ -243,7 +228,7 @@ namespace JSC {
     private:
         void loadGlobalObject(GPRReg);
 
-        // Assuming s_constantsGPR is available.
+        // Assuming GPRInfo::jitDataRegister is available.
         static void loadGlobalObject(CCallHelpers&, GPRReg);
         static void loadConstant(CCallHelpers&, unsigned constantIndex, GPRReg);
         static void loadStructureStubInfo(CCallHelpers&, StructureStubInfoIndex, GPRReg);
@@ -403,6 +388,7 @@ namespace JSC {
         void emit_op_beloweq(const JSInstruction*);
         void emit_op_try_get_by_id(const JSInstruction*);
         void emit_op_get_by_id(const JSInstruction*);
+        void emit_op_get_length(const JSInstruction*);
         void emit_op_get_by_id_with_this(const JSInstruction*);
         void emit_op_get_by_id_direct(const JSInstruction*);
         void emit_op_get_by_val(const JSInstruction*);
@@ -485,6 +471,10 @@ namespace JSC {
         void emit_op_new_async_generator_func_exp(const JSInstruction*);
         void emit_op_new_object(const JSInstruction*);
         void emit_op_new_regexp(const JSInstruction*);
+        void emit_op_create_lexical_environment(const JSInstruction*);
+        void emit_op_create_direct_arguments(const JSInstruction*);
+        void emit_op_create_scoped_arguments(const JSInstruction*);
+        void emit_op_create_cloned_arguments(const JSInstruction*);
         void emit_op_not(const JSInstruction*);
         void emit_op_nstricteq(const JSInstruction*);
         void emit_op_dec(const JSInstruction*);
@@ -525,6 +515,7 @@ namespace JSC {
         void emit_op_log_shadow_chicken_prologue(const JSInstruction*);
         void emit_op_log_shadow_chicken_tail(const JSInstruction*);
         void emit_op_to_property_key(const JSInstruction*);
+        void emit_op_to_property_key_or_number(const JSInstruction*);
 
         template<typename OpcodeType>
         void generateGetByValSlowCase(const OpcodeType&, Vector<SlowCaseEntry>::iterator&);
@@ -550,6 +541,7 @@ namespace JSC {
         void emitSlow_op_get_callee(const JSInstruction*, Vector<SlowCaseEntry>::iterator&);
         void emitSlow_op_try_get_by_id(const JSInstruction*, Vector<SlowCaseEntry>::iterator&);
         void emitSlow_op_get_by_id(const JSInstruction*, Vector<SlowCaseEntry>::iterator&);
+        void emitSlow_op_get_length(const JSInstruction*, Vector<SlowCaseEntry>::iterator&);
         void emitSlow_op_get_by_id_with_this(const JSInstruction*, Vector<SlowCaseEntry>::iterator&);
         void emitSlow_op_get_by_id_direct(const JSInstruction*, Vector<SlowCaseEntry>::iterator&);
         void emitSlow_op_get_by_val(const JSInstruction*, Vector<SlowCaseEntry>::iterator&);
@@ -595,7 +587,9 @@ namespace JSC {
         void emitSlow_op_sub(const JSInstruction*, Vector<SlowCaseEntry>::iterator&);
 
         void emit_op_resolve_scope(const JSInstruction*);
+        void emitSlow_op_resolve_scope(const JSInstruction*, Vector<SlowCaseEntry>::iterator&);
         void emit_op_get_from_scope(const JSInstruction*);
+        void emitSlow_op_get_from_scope(const JSInstruction*, Vector<SlowCaseEntry>::iterator&);
         void emit_op_put_to_scope(const JSInstruction*);
         void emit_op_get_from_arguments(const JSInstruction*);
         void emit_op_put_to_arguments(const JSInstruction*);
@@ -681,111 +675,95 @@ namespace JSC {
             return hasAnySlowCases(m_slowCases, iter, m_bytecodeIndex);
         }
 
+        template<typename OperationType>
         MacroAssembler::Call appendCallWithExceptionCheck(const CodePtr<CFunctionPtrTag>);
+        template<typename OperationType>
         void appendCallWithExceptionCheck(Address);
+        template<typename OperationType>
         MacroAssembler::Call appendCallWithExceptionCheckSetJSValueResult(const CodePtr<CFunctionPtrTag>, VirtualRegister result);
+        template<typename OperationType>
         void appendCallWithExceptionCheckSetJSValueResult(Address, VirtualRegister result);
-        template<typename Bytecode>
+        template<typename OperationType>
+        MacroAssembler::Call appendCallSetJSValueResult(const CodePtr<CFunctionPtrTag>, VirtualRegister result);
+        template<typename OperationType>
+        void appendCallSetJSValueResult(Address, VirtualRegister result);
+        template<typename OperationType, typename Bytecode>
         MacroAssembler::Call appendCallWithExceptionCheckSetJSValueResultWithProfile(const Bytecode&, const CodePtr<CFunctionPtrTag>, VirtualRegister result);
-        template<typename Bytecode>
+        template<typename OperationType, typename Bytecode>
         void appendCallWithExceptionCheckSetJSValueResultWithProfile(const Bytecode&, Address, VirtualRegister result);
 
         template<typename OperationType, typename... Args>
-        std::enable_if_t<FunctionTraits<OperationType>::hasResult, MacroAssembler::Call>
-        callOperation(OperationType operation, VirtualRegister result, Args... args)
+        requires OperationHasResult<OperationType>
+        MacroAssembler::Call callOperation(OperationType operation, VirtualRegister result, Args... args)
         {
             setupArguments<OperationType>(args...);
-            return appendCallWithExceptionCheckSetJSValueResult(operation, result);
+            return appendCallWithExceptionCheckSetJSValueResult<OperationType>(operation, result);
         }
 
         template<typename OperationType, typename... Args>
-        std::enable_if_t<FunctionTraits<OperationType>::hasResult, void>
-        callOperation(Address target, VirtualRegister result, Args... args)
+        requires OperationHasResult<OperationType>
+        void callOperation(Address target, VirtualRegister result, Args... args)
         {
             setupArgumentsForIndirectCall<OperationType>(target, args...);
-            return appendCallWithExceptionCheckSetJSValueResult(Address(GPRInfo::nonArgGPR0, target.offset), result);
+            return appendCallWithExceptionCheckSetJSValueResult<OperationType>(Address(GPRInfo::nonArgGPR0, target.offset), result);
         }
 
-#if OS(WINDOWS) && CPU(X86_64)
-        template<typename Type>
-        struct is64BitType {
-            static constexpr bool value = sizeof(Type) <= 8;
-        };
+        template<typename OperationType, typename... Args>
+        requires OperationHasResult<OperationType>
+        MacroAssembler::Call callOperationNoExceptionCheck(OperationType operation, VirtualRegister result, Args... args)
+        {
+            setupArguments<OperationType>(args...);
+            return appendCallSetJSValueResult<OperationType>(operation, result);
+        }
 
-        template<>
-        struct is64BitType<void> {
-            static constexpr bool value = true;
-        };
+        template<typename OperationType, typename... Args>
+        requires OperationHasResult<OperationType>
+        void callOperationNoExceptionCheck(Address target, VirtualRegister result, Args... args)
+        {
+            setupArgumentsForIndirectCall<OperationType>(target, args...);
+            return appendCallSetJSValueResult<OperationType>(Address(GPRInfo::nonArgGPR0, target.offset), result);
+        }
 
         template<typename OperationType, typename... Args>
         MacroAssembler::Call callOperation(OperationType operation, Args... args)
         {
             setupArguments<OperationType>(args...);
-            // x64 Windows cannot use standard call when the return type is larger than 64 bits.
-            if constexpr (is64BitType<typename FunctionTraits<OperationType>::ResultType>::value)
-                return appendCallWithExceptionCheck(operation);
-            updateTopCallFrame();
-            MacroAssembler::Call call = appendCallWithUGPRPair(operation);
-            exceptionCheck();
-            return call;
+            return appendCallWithExceptionCheck<OperationType>(operation);
         }
-#else // OS(WINDOWS) && CPU(X86_64)
-        template<typename OperationType, typename... Args>
-        MacroAssembler::Call callOperation(OperationType operation, Args... args)
-        {
-            setupArguments<OperationType>(args...);
-            return appendCallWithExceptionCheck(operation);
-        }
-#endif // OS(WINDOWS) && CPU(X86_64)
 
         template<typename OperationType, typename... Args>
         void callOperation(Address target, Args... args)
         {
-#if OS(WINDOWS) && CPU(X86_64)
-            // x64 Windows cannot use standard call when the return type is larger than 64 bits.
-            static_assert(is64BitType<typename FunctionTraits<OperationType>::ResultType>::value);
-#endif
             setupArgumentsForIndirectCall<OperationType>(target, args...);
-            appendCallWithExceptionCheck(Address(GPRInfo::nonArgGPR0, target.offset));
+            appendCallWithExceptionCheck<OperationType>(Address(GPRInfo::nonArgGPR0, target.offset));
         }
 
         template<typename Bytecode, typename OperationType, typename... Args>
-        std::enable_if_t<FunctionTraits<OperationType>::hasResult, MacroAssembler::Call>
-        callOperationWithProfile(const Bytecode& bytecode, OperationType operation, VirtualRegister result, Args... args)
+        requires OperationHasResult<OperationType>
+        MacroAssembler::Call callOperationWithProfile(const Bytecode& bytecode, OperationType operation, VirtualRegister result, Args... args)
         {
             setupArguments<OperationType>(args...);
-            return appendCallWithExceptionCheckSetJSValueResultWithProfile(bytecode, operation, result);
+            return appendCallWithExceptionCheckSetJSValueResultWithProfile<OperationType>(bytecode, operation, result);
         }
 
         template<typename OperationType, typename Bytecode, typename... Args>
-        std::enable_if_t<FunctionTraits<OperationType>::hasResult, void>
-        callOperationWithProfile(const Bytecode& bytecode, Address target, VirtualRegister result, Args... args)
+        requires OperationHasResult<OperationType>
+        void callOperationWithProfile(const Bytecode& bytecode, Address target, VirtualRegister result, Args... args)
         {
             setupArgumentsForIndirectCall<OperationType>(target, args...);
-            return appendCallWithExceptionCheckSetJSValueResultWithProfile(bytecode, Address(GPRInfo::nonArgGPR0, target.offset), result);
+            return appendCallWithExceptionCheckSetJSValueResultWithProfile<OperationType>(bytecode, Address(GPRInfo::nonArgGPR0, target.offset), result);
         }
 
         template<typename OperationType, typename... Args>
+        requires OperationHasResult<OperationType>
         MacroAssembler::Call callOperationWithResult(OperationType operation, JSValueRegs resultRegs, Args... args)
         {
             setupArguments<OperationType>(args...);
-            auto result = appendCallWithExceptionCheck(operation);
+            auto result = appendCallWithExceptionCheck<OperationType>(operation);
             setupResults(resultRegs);
             return result;
         }
 
-#if OS(WINDOWS) && CPU(X86_64)
-        template<typename OperationType, typename... Args>
-        MacroAssembler::Call callOperationNoExceptionCheck(OperationType operation, Args... args)
-        {
-            setupArguments<OperationType>(args...);
-            updateTopCallFrame();
-            // x64 Windows cannot use standard call when the return type is larger than 64 bits.
-            if constexpr (is64BitType<typename FunctionTraits<OperationType>::ResultType>::value)
-                return appendCall(operation);
-            return appendCallWithUGPRPair(operation);
-        }
-#else // OS(WINDOWS) && CPU(X86_64)
         template<typename OperationType, typename... Args>
         MacroAssembler::Call callOperationNoExceptionCheck(OperationType operation, Args... args)
         {
@@ -793,7 +771,6 @@ namespace JSC {
             updateTopCallFrame();
             return appendCall(operation);
         }
-#endif // OS(WINDOWS) && CPU(X86_64)
 
         template<typename OperationType, typename... Args>
         MacroAssembler::Call callThrowOperationWithCallFrameRollback(OperationType operation, Args... args)
@@ -871,6 +848,7 @@ namespace JSC {
         std::tuple<BaselineUnlinkedStructureStubInfo*, StructureStubInfoIndex> addUnlinkedStructureStubInfo();
         BaselineUnlinkedCallLinkInfo* addUnlinkedCallLinkInfo();
 
+        BaselineJITPlan& m_plan;
         Vector<FarCallRecord> m_farCalls;
         Vector<Label> m_labels;
         HashMap<BytecodeIndex, Label> m_checkpointLabels;
@@ -925,7 +903,6 @@ namespace JSC {
 
         bool m_canBeOptimized;
         bool m_shouldEmitProfiling;
-        BytecodeIndex m_loopOSREntryBytecodeIndex;
 
         CodeBlock* const m_profiledCodeBlock { nullptr };
         UnlinkedCodeBlock* const m_unlinkedCodeBlock { nullptr };

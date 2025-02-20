@@ -314,7 +314,7 @@ void GraphicsLayerTextureMapper::setContentsToImage(Image* image)
         // Make the decision about whether the image has changed.
         // This code makes the assumption that pointer equality on a PlatformImagePtr is a valid way to tell if the image is changed.
         // This assumption is true for the GTK+ port.
-        auto newNativeImage = image->nativeImageForCurrentFrame();
+        auto newNativeImage = image->currentNativeImage();
         if (!newNativeImage)
             return;
 
@@ -607,12 +607,7 @@ bool GraphicsLayerTextureMapper::filtersCanBeComposited(const FilterOperations& 
     if (!filters.size())
         return false;
 
-    for (const auto& filterOperation : filters.operations()) {
-        if (filterOperation->type() == FilterOperation::Type::Reference)
-            return false;
-    }
-
-    return true;
+    return !filters.hasReferenceFilter();
 }
 
 bool GraphicsLayerTextureMapper::addAnimation(const KeyframeValueList& valueList, const FloatSize& boxSize, const Animation* anim, const String& keyframesName, double timeOffset)

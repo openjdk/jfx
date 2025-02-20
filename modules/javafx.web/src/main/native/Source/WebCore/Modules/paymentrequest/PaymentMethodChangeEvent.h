@@ -40,7 +40,7 @@ class JSObject;
 namespace WebCore {
 
 class PaymentMethodChangeEvent final : public PaymentRequestUpdateEvent {
-    WTF_MAKE_ISO_ALLOCATED(PaymentMethodChangeEvent);
+    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(PaymentMethodChangeEvent);
 public:
     template<typename... Args> static Ref<PaymentMethodChangeEvent> create(Args&&... args)
     {
@@ -53,9 +53,6 @@ public:
     const String& methodName() const { return m_methodName; }
     const MethodDetailsType& methodDetails() const { return m_methodDetails; }
     JSValueInWrappedObject& cachedMethodDetails() { return m_cachedMethodDetails; }
-
-    // Event
-    EventInterface eventInterface() const override;
 
     struct Init final : PaymentRequestUpdateEventInit {
         String methodName;

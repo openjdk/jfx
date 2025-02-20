@@ -33,7 +33,7 @@
 #include <WebCore/DOMSelection.h>
 #include <WebCore/DOMWindow.h>
 #include <WebCore/Document.h>
-#include <WebCore/Element.h>
+#include <WebCore/HTMLFrameOwnerElement.h>
 #include <WebCore/Event.h>
 #include <WebCore/EventListener.h>
 #include <WebCore/EventTarget.h>
@@ -64,7 +64,7 @@ JNIEXPORT void JNICALL Java_com_sun_webkit_dom_DOMWindowImpl_dispose(JNIEnv*, jc
 JNIEXPORT jlong JNICALL Java_com_sun_webkit_dom_DOMWindowImpl_getFrameElementImpl(JNIEnv* env, jclass, jlong peer)
 {
     WebCore::JSMainThreadNullState state;
-    return JavaReturn<Element>(env, WTF::getPtr(IMPL->frameElement()));
+    return JavaReturn<HTMLFrameOwnerElement>(env, WTF::getPtr(IMPL->frameElement()));
 }
 
 JNIEXPORT jboolean JNICALL Java_com_sun_webkit_dom_DOMWindowImpl_getOffscreenBufferingImpl(JNIEnv*, jclass, jlong peer)
@@ -1358,7 +1358,7 @@ JNIEXPORT jstring JNICALL Java_com_sun_webkit_dom_DOMWindowImpl_atobImpl(JNIEnv*
     , jstring string)
 {
     WebCore::JSMainThreadNullState state;
-    return JavaReturn<String>(env, raiseOnDOMError(env, IMPL->atob(AtomString{String(env, string)})));
+    return JavaReturn<String>(env, raiseOnDOMError(env, IMPL->DOMWindow::atob(AtomString{String(env, string)})));
 }
 
 
@@ -1366,7 +1366,7 @@ JNIEXPORT jstring JNICALL Java_com_sun_webkit_dom_DOMWindowImpl_btoaImpl(JNIEnv*
     , jstring string)
 {
     WebCore::JSMainThreadNullState state;
-    return JavaReturn<String>(env, raiseOnDOMError(env, IMPL->btoa(AtomString{String(env, string)})));
+    return JavaReturn<String>(env, raiseOnDOMError(env, IMPL->DOMWindow::atob(AtomString{String(env, string)})));
 }
 
 

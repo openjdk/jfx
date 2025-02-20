@@ -47,12 +47,12 @@ namespace JSC {
 
 const ClassInfo ScriptExecutable::s_info = { "ScriptExecutable"_s, &ExecutableBase::s_info, nullptr, nullptr, CREATE_METHOD_TABLE(ScriptExecutable) };
 
-ScriptExecutable::ScriptExecutable(Structure* structure, VM& vm, const SourceCode& source, LexicalScopeFeatures lexicalScopeFeatures, DerivedContextType derivedContextType, bool isInArrowFunctionContext, bool isInsideOrdinaryFunction, EvalContextType evalContextType, Intrinsic intrinsic)
+ScriptExecutable::ScriptExecutable(Structure* structure, VM& vm, const SourceCode& source, LexicallyScopedFeatures lexicallyScopedFeatures, DerivedContextType derivedContextType, bool isInArrowFunctionContext, bool isInsideOrdinaryFunction, EvalContextType evalContextType, Intrinsic intrinsic)
     : ExecutableBase(vm, structure)
     , m_source(source)
     , m_intrinsic(intrinsic)
     , m_features(NoFeatures)
-    , m_lexicalScopeFeatures(lexicalScopeFeatures)
+    , m_lexicallyScopedFeatures(lexicallyScopedFeatures)
     , m_hasCapturedVariables(false)
     , m_neverInline(false)
     , m_neverOptimize(false)
@@ -115,13 +115,24 @@ void ScriptExecutable::clearCode(IsoCellSet& clearableCodeSet)
 
 void ScriptExecutable::installCode(CodeBlock* codeBlock)
 {
-    installCode(codeBlock->vm(), codeBlock, codeBlock->codeType(), codeBlock->specializationKind());
+    installCode(codeBlock->vm(), codeBlock, codeBlock->codeType(), codeBlock->specializationKind(), Profiler::JettisonReason::NotJettisoned);
 }
 
-void ScriptExecutable::installCode(VM& vm, CodeBlock* genericCodeBlock, CodeType codeType, CodeSpecializationKind kind)
+void ScriptExecutable::installCode(VM& vm, CodeBlock* genericCodeBlock, CodeType codeType, CodeSpecializationKind kind, Profiler::JettisonReason reason)
 {
-    if (genericCodeBlock)
+    if (genericCodeBlock) {
         CODEBLOCK_LOG_EVENT(genericCodeBlock, "installCode", ());
+        switch (reason) {
+        case Profiler::JettisonReason::JettisonDueToWeakReference:
+        case Profiler::JettisonReason::JettisonDueToOldAge: {
+            if (genericCodeBlock && !vm.heap.isMarked(genericCodeBlock))
+                genericCodeBlock = nullptr;
+            break;
+        }
+        default:
+            break;
+        }
+    }
 
     CodeBlock* oldCodeBlock = nullptr;
 
@@ -301,7 +312,7 @@ CodeBlock* ScriptExecutable::newCodeBlockFor(CodeSpecializationKind kind, JSFunc
             executable->parseMode());
     recordParse(
         executable->m_unlinkedExecutable->features(),
-        executable->m_unlinkedExecutable->lexicalScopeFeatures(),
+        executable->m_unlinkedExecutable->lexicallyScopedFeatures(),
         executable->m_unlinkedExecutable->hasCapturedVariables(),
         lastLine(), endColumn());
     if (!unlinkedCodeBlock) {
@@ -366,7 +377,7 @@ static void setupLLInt(CodeBlock* codeBlock)
 static void setupJIT(VM& vm, CodeBlock* codeBlock)
 {
 #if ENABLE(JIT)
-    CompilationResult result = JIT::compile(vm, codeBlock, JITCompilationMustSucceed);
+    CompilationResult result = JIT::compileSync(vm, codeBlock, JITCompilationMustSucceed);
     RELEASE_ASSERT(result == CompilationSuccessful);
 #else
     UNUSED_PARAM(vm);
@@ -409,7 +420,7 @@ void ScriptExecutable::prepareForExecutionImpl(VM& vm, JSFunction* function, JSS
             setupJIT(vm, codeBlock);
     }
 
-    installCode(vm, codeBlock, codeBlock->codeType(), codeBlock->specializationKind());
+    installCode(vm, codeBlock, codeBlock->codeType(), codeBlock->specializationKind(), Profiler::JettisonReason::NotJettisoned);
 }
 
 ScriptExecutable* ScriptExecutable::topLevelExecutable()
@@ -497,15 +508,15 @@ unsigned ScriptExecutable::typeProfilingEndOffset() const
     return source().length() - 1;
 }
 
-void ScriptExecutable::recordParse(CodeFeatures features, LexicalScopeFeatures lexicalScopeFeatures, bool hasCapturedVariables, int lastLine, unsigned endColumn)
+void ScriptExecutable::recordParse(CodeFeatures features, LexicallyScopedFeatures lexicallyScopedFeatures, bool hasCapturedVariables, int lastLine, unsigned endColumn)
 {
     switch (type()) {
     case FunctionExecutableType:
         // Since UnlinkedFunctionExecutable holds the information to calculate lastLine and endColumn, we do not need to remember them in ScriptExecutable's fields.
-        jsCast<FunctionExecutable*>(this)->recordParse(features, lexicalScopeFeatures, hasCapturedVariables);
+        jsCast<FunctionExecutable*>(this)->recordParse(features, lexicallyScopedFeatures, hasCapturedVariables);
         return;
     default:
-        jsCast<GlobalExecutable*>(this)->recordParse(features, lexicalScopeFeatures, hasCapturedVariables, lastLine, endColumn);
+        jsCast<GlobalExecutable*>(this)->recordParse(features, lexicallyScopedFeatures, hasCapturedVariables, lastLine, endColumn);
         return;
     }
 }

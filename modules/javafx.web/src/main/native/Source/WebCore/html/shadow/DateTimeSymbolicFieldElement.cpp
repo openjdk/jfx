@@ -35,15 +35,15 @@
 #include "RenderBlock.h"
 #include "RenderStyleInlines.h"
 #include "RenderStyleSetters.h"
-#include <wtf/IsoMallocInlines.h>
+#include <wtf/TZoneMallocInlines.h>
 #include <wtf/text/StringBuilder.h>
 #include <wtf/text/TextBreakIterator.h>
 
 namespace WebCore {
 
-WTF_MAKE_ISO_ALLOCATED_IMPL(DateTimeSymbolicFieldElement);
+WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(DateTimeSymbolicFieldElement);
 
-DateTimeSymbolicFieldElement::DateTimeSymbolicFieldElement(Document& document, FieldOwner& fieldOwner, const Vector<String>& symbols, int placeholderIndex)
+DateTimeSymbolicFieldElement::DateTimeSymbolicFieldElement(Document& document, DateTimeFieldElementFieldOwner& fieldOwner, const Vector<String>& symbols, int placeholderIndex)
     : DateTimeFieldElement(document, fieldOwner)
     , m_symbols(symbols)
     , m_placeholderIndex(placeholderIndex)
@@ -107,11 +107,6 @@ String DateTimeSymbolicFieldElement::value() const
 String DateTimeSymbolicFieldElement::placeholderValue() const
 {
     return m_symbols[m_placeholderIndex];
-}
-
-int DateTimeSymbolicFieldElement::valueAsInteger() const
-{
-    return m_selectedIndex;
 }
 
 void DateTimeSymbolicFieldElement::handleKeyboardEvent(KeyboardEvent& keyboardEvent)

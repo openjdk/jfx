@@ -36,11 +36,11 @@
 #include "RenderQuote.h"
 #include "RenderStyleInlines.h"
 #include "StyleResolver.h"
-#include <wtf/IsoMallocInlines.h>
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
-WTF_MAKE_ISO_ALLOCATED_IMPL(PseudoElement);
+WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(PseudoElement);
 
 const QualifiedName& pseudoElementTagName()
 {
@@ -86,7 +86,7 @@ bool PseudoElement::rendererIsNeeded(const RenderStyle& style)
         return true;
 
     if (RefPtr element = m_hostElement.get()) {
-        if (auto* stack = element->keyframeEffectStack(pseudoId()))
+        if (auto* stack = element->keyframeEffectStack(Style::PseudoElementIdentifier { pseudoId() }))
             return stack->requiresPseudoElement();
     }
     return false;

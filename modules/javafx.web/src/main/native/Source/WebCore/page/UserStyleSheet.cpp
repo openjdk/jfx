@@ -26,14 +26,14 @@
 #include "config.h"
 #include "UserStyleSheet.h"
 
-#include <wtf/text/StringConcatenateNumbers.h>
+#include <wtf/text/MakeString.h>
 
 namespace WebCore {
 
 static WTF::URL generateUserStyleUniqueURL()
 {
     static uint64_t identifier;
-    return { { }, makeString("user-style:", ++identifier) };
+    return { { }, makeString("user-style:"_s, ++identifier) };
 }
 
 UserStyleSheet::UserStyleSheet(const String& source, const URL& url, Vector<String>&& allowlist, Vector<String>&& blocklist, UserContentInjectedFrames injectedFrames, UserStyleLevel level, std::optional<PageIdentifier> pageID)

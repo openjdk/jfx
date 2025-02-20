@@ -191,10 +191,9 @@ public:
     ~ScopedWebGLRestoreFramebuffer()
     {
         RefPtr gl = m_context.graphicsContextGL();
-        if (m_context.isWebGL2()) {
-            auto& context2 = downcast<WebGL2RenderingContext>(m_context);
-            gl->bindFramebuffer(GraphicsContextGL::READ_FRAMEBUFFER, objectOrZero(context2.m_readFramebufferBinding));
-            gl->bindFramebuffer(GraphicsContextGL::DRAW_FRAMEBUFFER, objectOrZero(context2.m_framebufferBinding));
+        if (auto* gl2Ccontext = dynamicDowncast<WebGL2RenderingContext>(m_context)) {
+            gl->bindFramebuffer(GraphicsContextGL::READ_FRAMEBUFFER, objectOrZero(gl2Ccontext->m_readFramebufferBinding));
+            gl->bindFramebuffer(GraphicsContextGL::DRAW_FRAMEBUFFER, objectOrZero(gl2Ccontext->m_framebufferBinding));
         } else
             gl->bindFramebuffer(GraphicsContextGL::FRAMEBUFFER, objectOrZero(m_context.m_framebufferBinding));
     }
@@ -327,7 +326,7 @@ private:
 class ScopedClearStencilAndMask {
     WTF_MAKE_NONCOPYABLE(ScopedClearStencilAndMask);
 public:
-    explicit ScopedClearStencilAndMask(WebGLRenderingContextBase& context, GCGLint clear, GCGLenum face, GCGLuint mask, bool enabled)
+    explicit ScopedClearStencilAndMask(WebGLRenderingContextBase& context, GCGLint clear, GCGLuint mask, bool enabled)
         : m_context(enabled ? &context : nullptr) // NOLINT
     {
         if (!m_context)
@@ -335,7 +334,7 @@ public:
 
         RefPtr gl = m_context->protectedGraphicsContextGL();
         gl->clearStencil(clear);
-        gl->stencilMaskSeparate(face, mask);
+        gl->stencilMaskSeparate(GraphicsContextGL::FRONT, mask);
     }
 
     ~ScopedClearStencilAndMask()

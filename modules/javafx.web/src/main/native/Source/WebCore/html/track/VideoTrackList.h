@@ -54,12 +54,10 @@ public:
     void append(Ref<VideoTrack>&&);
 
     // EventTarget
-    EventTargetInterface eventTargetInterface() const override;
+    enum EventTargetInterfaceType eventTargetInterface() const override;
 
 private:
     VideoTrackList(ScriptExecutionContext*);
-
-    const char* activeDOMObjectName() const final;
 };
 static_assert(sizeof(VideoTrackList) == sizeof(TrackListBase));
 

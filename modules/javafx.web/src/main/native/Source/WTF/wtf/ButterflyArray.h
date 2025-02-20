@@ -64,8 +64,8 @@ public:
         return memoryOffsetForDerived(leadingSize) + offsetOfTrailingData() + trailingSize * sizeof(TrailingType);
     }
 
-    static ptrdiff_t offsetOfLeadingSize() { return OBJECT_OFFSETOF(Derived, m_leadingSize); }
-    static ptrdiff_t offsetOfTrailingSize() { return OBJECT_OFFSETOF(Derived, m_trailingSize); }
+    static constexpr ptrdiff_t offsetOfLeadingSize() { return OBJECT_OFFSETOF(Derived, m_leadingSize); }
+    static constexpr ptrdiff_t offsetOfTrailingSize() { return OBJECT_OFFSETOF(Derived, m_trailingSize); }
     static constexpr ptrdiff_t offsetOfTrailingData()
     {
         return WTF::roundUpToMultipleOf<alignof(TrailingType)>(sizeof(Derived));
@@ -78,22 +78,22 @@ public:
 
     std::span<LeadingType> leadingSpan()
     {
-        return std::span { leadingData(), leadingData() + m_leadingSize };
+        return std::span { leadingData(), m_leadingSize };
     }
 
     std::span<const LeadingType> leadingSpan() const
     {
-        return std::span { leadingData(), leadingData() + m_leadingSize };
+        return std::span { leadingData(), m_leadingSize };
     }
 
     std::span<TrailingType> trailingSpan()
     {
-        return std::span { trailingData(), trailingData() + m_trailingSize };
+        return std::span { trailingData(), m_trailingSize };
     }
 
     std::span<const TrailingType> trailingSpan() const
     {
-        return std::span { trailingData(), trailingData() + m_trailingSize };
+        return std::span { trailingData(), m_trailingSize };
     }
 
     void operator delete(ButterflyArray* base, std::destroying_delete_t)

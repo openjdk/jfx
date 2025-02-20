@@ -29,7 +29,7 @@
 #include "HTTPHeaderNames.h"
 #include "HTTPStatusCodes.h"
 #include "Logging.h"
-#include "PublicSuffix.h"
+#include "PublicSuffixStore.h"
 #include "RegistrableDomain.h"
 #include "ResourceRequest.h"
 #include "ResourceResponse.h"
@@ -185,6 +185,54 @@ ResourceRequest ResourceRequestBase::redirectedRequest(const ResourceResponse& r
     request.m_requestData.m_httpHeaderFields.remove(HTTPHeaderName::ProxyAuthorization);
 
     return request;
+}
+
+bool ResourceRequestBase::upgradeInsecureRequest(URL& url)
+{
+    if (!url.protocolIs("http"_s) && !url.protocolIs("ws"_s))
+        return false;
+
+    if (url.protocolIs("http"_s))
+        url.setProtocol("https"_s);
+    else {
+        ASSERT(url.protocolIs("ws"_s));
+        url.setProtocol("wss"_s);
+    }
+
+    if (url.port() == 80)
+        url.setPort(std::nullopt);
+
+    return true;
+}
+
+bool ResourceRequestBase::upgradeInsecureRequestIfNeeded(URL& url, ShouldUpgradeLocalhostAndIPAddress shouldUpgradeLocalhostAndIPAddress, const std::optional<uint16_t>& upgradePort)
+{
+    if (!url.protocolIs("http"_s) && !url.protocolIs("ws"_s))
+        return false;
+
+    // Do not automatically upgrade localhost or IP address connections unless the CSP policy requires it.
+    bool isHostLocalhostOrIPaddress = SecurityOrigin::isLocalhostAddress(url.host()) || URL::hostIsIPAddress(url.host());
+    if (isHostLocalhostOrIPaddress && shouldUpgradeLocalhostAndIPAddress == ShouldUpgradeLocalhostAndIPAddress::No)
+        return false;
+
+    if (!upgradeInsecureRequest(url))
+        return false;
+
+    if (url.port() && upgradePort)
+        url.setPort(*upgradePort);
+
+    return true;
+}
+
+void ResourceRequestBase::upgradeInsecureRequestIfNeeded(ShouldUpgradeLocalhostAndIPAddress shouldUpgradeLocalhostAndIPAddress, const std::optional<uint16_t>& upgradePort)
+{
+    bool wasUpgraded = upgradeInsecureRequestIfNeeded(m_requestData.m_url, shouldUpgradeLocalhostAndIPAddress, upgradePort);
+    setWasSchemeOptimisticallyUpgraded(wasUpgraded);
+}
+
+void ResourceRequestBase::upgradeInsecureRequest()
+{
+    upgradeInsecureRequest(m_requestData.m_url);
 }
 
 void ResourceRequestBase::removeCredentials()
@@ -418,7 +466,7 @@ void ResourceRequestBase::setExistingHTTPReferrerToOriginString()
     if (!hasHTTPReferrer())
         return;
 
-    setHTTPHeaderField(HTTPHeaderName::Referer, SecurityPolicy::referrerToOriginString(httpReferrer()));
+    setHTTPHeaderField(HTTPHeaderName::Referer, SecurityPolicy::referrerToOriginString(URL { httpReferrer() }));
 }
 
 void ResourceRequestBase::clearHTTPReferrer()
@@ -679,6 +727,11 @@ void ResourceRequestBase::setIsPrivateTokenUsageByThirdPartyAllowed(bool isPriva
     m_requestData.m_isPrivateTokenUsageByThirdPartyAllowed = isPrivateTokenUsageByThirdPartyAllowed;
 }
 
+void ResourceRequestBase::setWasSchemeOptimisticallyUpgraded(bool wasSchemeOptimisticallyUpgraded)
+{
+    m_requestData.m_wasSchemeOptimisticallyUpgraded = wasSchemeOptimisticallyUpgraded;
+}
+
 bool equalIgnoringHeaderFields(const ResourceRequestBase& a, const ResourceRequestBase& b)
 {
     if (a.url() != b.url())
@@ -793,18 +846,6 @@ void ResourceRequestBase::updateResourceRequest(HTTPBodyUpdatePolicy bodyPolicy)
     }
 }
 
-void ResourceRequestBase::upgradeToHTTPS()
-{
-    const URL& originalURL = url();
-    ASSERT(originalURL.protocolIs("http"_s));
-
-    URL newURL = originalURL;
-    newURL.setProtocol("https"_s);
-    if (originalURL.port() && WTF::isDefaultPortForProtocol(originalURL.port().value(), originalURL.protocol()))
-        newURL.setPort(std::nullopt);
-    setURL(newURL);
-}
-
 #if !PLATFORM(COCOA) && !USE(SOUP)
 unsigned initializeMaximumHTTPConnectionCountPerHost()
 {
@@ -827,20 +868,12 @@ void ResourceRequestBase::setCachePartition(const String& cachePartition)
 
 String ResourceRequestBase::partitionName(const String& domain)
 {
-#if ENABLE(PUBLIC_SUFFIX_LIST)
     if (domain.isNull())
         return emptyString();
-    String highLevel = topPrivatelyControlledDomain(domain);
+    auto highLevel = PublicSuffixStore::singleton().topPrivatelyControlledDomain(domain);
     if (highLevel.isNull())
         return emptyString();
     return highLevel;
-#else
-    UNUSED_PARAM(domain);
-#if ENABLE(CACHE_PARTITIONING)
-#error Cache partitioning requires PUBLIC_SUFFIX_LIST
-#endif
-    return emptyString();
-#endif
 }
 
 bool ResourceRequestBase::isThirdParty() const

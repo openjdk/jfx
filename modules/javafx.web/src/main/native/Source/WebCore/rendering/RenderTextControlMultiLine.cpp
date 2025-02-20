@@ -32,11 +32,11 @@
 #include "ShadowRoot.h"
 #include "StyleInheritedData.h"
 #include "TextControlInnerElements.h"
-#include <wtf/IsoMallocInlines.h>
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
-WTF_MAKE_ISO_ALLOCATED_IMPL(RenderTextControlMultiLine);
+WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(RenderTextControlMultiLine);
 
 RenderTextControlMultiLine::RenderTextControlMultiLine(HTMLTextAreaElement& element, RenderStyle&& style)
     : RenderTextControl(Type::TextControlMultiLine, element, WTFMove(style))
@@ -86,8 +86,10 @@ LayoutUnit RenderTextControlMultiLine::preferredContentLogicalWidth(float charWi
 {
     float width = ceilf(charWidth * textAreaElement().cols());
 
+    auto overflow = style().isHorizontalWritingMode() ? style().overflowY() : style().overflowX();
+
     // We are able to have a vertical scrollbar if the overflow style is scroll or auto
-    if ((style().overflowY() == Overflow::Scroll) || (style().overflowY() == Overflow::Auto))
+    if ((overflow == Overflow::Scroll) || (overflow == Overflow::Auto))
         width += scrollbarThickness();
 
     return LayoutUnit(width);

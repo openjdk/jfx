@@ -28,14 +28,13 @@
 #if ENABLE(WEBGL)
 #include "OESVertexArrayObject.h"
 
-
-#include <wtf/IsoMallocInlines.h>
 #include <wtf/Lock.h>
 #include <wtf/Locker.h>
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
-WTF_MAKE_ISO_ALLOCATED_IMPL(OESVertexArrayObject);
+WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(OESVertexArrayObject);
 
 OESVertexArrayObject::OESVertexArrayObject(WebGLRenderingContext& context)
     : WebGLExtension(context, WebGLExtensionName::OESVertexArrayObject)
@@ -71,7 +70,7 @@ void OESVertexArrayObject::deleteVertexArrayOES(WebGLVertexArrayObjectOES* array
         return;
 
     if (!arrayObject->validate(context)) {
-        context.synthesizeGLError(GraphicsContextGL::INVALID_OPERATION, "delete", "object does not belong to this context");
+        context.synthesizeGLError(GraphicsContextGL::INVALID_OPERATION, "delete"_s, "object does not belong to this context"_s);
         return;
     }
 
@@ -104,7 +103,7 @@ void OESVertexArrayObject::bindVertexArrayOES(WebGLVertexArrayObjectOES* arrayOb
     Locker locker { context.objectGraphLock() };
 
     // Checks for already deleted objects and objects from other contexts.
-    if (!context.validateNullableWebGLObject("bindVertexArrayOES", arrayObject))
+    if (!context.validateNullableWebGLObject("bindVertexArrayOES"_s, arrayObject))
         return;
 
     RefPtr contextGL = context.graphicsContextGL();

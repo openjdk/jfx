@@ -15,6 +15,12 @@ list(APPEND WTF_PUBLIC_HEADERS
     unicode/java/UnicodeJava.h
 )
 
+if (UNIX)
+    list(APPEND WTF_PUBLIC_HEADERS
+        unix/UnixFileDescriptor.h
+    )
+endif ()
+
 list(APPEND WTF_SOURCES
     java/FileSystemJava.cpp
     java/JavaEnv.cpp
@@ -105,6 +111,7 @@ elseif (WIN32)
         win/RunLoopWin.cpp
         win/ThreadingWin.cpp
         win/Win32Handle.cpp
+        win/SignalsWin.cpp
     )
 
     list(APPEND WTF_PUBLIC_HEADERS

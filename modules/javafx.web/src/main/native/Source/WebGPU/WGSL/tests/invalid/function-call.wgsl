@@ -1,6 +1,8 @@
 // RUN: %not %wgslc | %check
 
-fn f1(x: f32) -> f32 { return x; }
+fn f1(x: f32) -> f32 {
+    // CHECK-L: missing return at end of function
+}
 
 fn f2() {
     // CHECK-L: unresolved call target 'f0'
@@ -27,4 +29,33 @@ fn f3() { }
 fn f4() {
     // CHECK-L: cannot initialize variable with expression of type 'void'
     let x = f3();
+}
+
+@group(0) @binding(0) var<storage, read_write> x: array<f32>;
+fn f5()
+{
+    let arrayLength = 1;
+    // CHECK-L: cannot call value of type 'i32'
+    _ = arrayLength(&x);
+}
+
+fn f6()
+{
+    let array = 1f;
+    // CHECK-L: cannot call value of type 'f32'
+    _ = array<i32, 1>(1);
+}
+
+fn f7()
+{
+    let vec2 = 1u;
+    // CHECK-L: cannot call value of type 'u32'
+    _ = vec2<i32>(1);
+}
+
+fn f8()
+{
+    let bitcast = 1h;
+    // CHECK-L: cannot call value of type 'f16'
+    _ = bitcast<i32>(1);
 }

@@ -493,7 +493,7 @@ GraphicsContextGLCVCocoa::GraphicsContextGLCVCocoa(GraphicsContextGLCocoa& owner
 
     const bool useTexture2D = m_owner.drawingBufferTextureTarget() == GL_TEXTURE_2D;
 
-#if PLATFORM(MAC) || PLATFORM(MACCATALYST)
+#if PLATFORM(MAC)
     if (!useTexture2D) {
         GL_RequestExtensionANGLE("GL_ANGLE_texture_rectangle");
         GL_RequestExtensionANGLE("GL_EXT_texture_format_BGRA8888");
@@ -611,7 +611,6 @@ bool GraphicsContextGLCVCocoa::copyVideoSampleToTexture(const VideoFrameCV& vide
     }
     if (!m_context || !GraphicsContextGLCocoa::makeCurrent(m_display, m_context))
         return false;
-
     // Compute transform that undoes the `orientation`, e.g. moves the origin to top left.
     // Even number of operations (flipX, flipY, swapXY) means a rotation.
     // Odd number of operations means a rotation and a flip.

@@ -27,9 +27,11 @@
 namespace WebCore {
 
 class RenderCombineText final : public RenderText {
-    WTF_MAKE_ISO_ALLOCATED(RenderCombineText);
+    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(RenderCombineText);
+    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(RenderCombineText);
 public:
     RenderCombineText(Text&, const String&);
+    virtual ~RenderCombineText();
 
     Text& textNode() const { return downcast<Text>(nodeForNonAnonymous()); }
 

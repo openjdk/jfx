@@ -69,7 +69,7 @@ struct PerformanceMarkOptions;
 struct PerformanceMeasureOptions;
 
 class Performance final : public RefCounted<Performance>, public ContextDestructionObserver, public EventTarget {
-    WTF_MAKE_ISO_ALLOCATED(Performance);
+    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(Performance);
 public:
     static Ref<Performance> create(ScriptExecutionContext* context, MonotonicTime timeOrigin) { return adoptRef(*new Performance(context, timeOrigin)); }
     ~Performance();
@@ -81,10 +81,10 @@ public:
     PerformanceNavigation* navigation();
     PerformanceTiming* timing();
 
-    Vector<RefPtr<PerformanceEntry>> getEntries() const;
-    Vector<RefPtr<PerformanceEntry>> getEntriesByType(const String& entryType) const;
-    Vector<RefPtr<PerformanceEntry>> getEntriesByName(const String& name, const String& entryType) const;
-    void appendBufferedEntriesByType(const String& entryType, Vector<RefPtr<PerformanceEntry>>&, PerformanceObserver&) const;
+    Vector<Ref<PerformanceEntry>> getEntries() const;
+    Vector<Ref<PerformanceEntry>> getEntriesByType(const String& entryType) const;
+    Vector<Ref<PerformanceEntry>> getEntriesByName(const String& name, const String& entryType) const;
+    void appendBufferedEntriesByType(const String& entryType, Vector<Ref<PerformanceEntry>>&, PerformanceObserver&) const;
 
     void clearResourceTimings();
     void setResourceTimingBufferSize(unsigned);
@@ -127,7 +127,7 @@ private:
 
     void contextDestroyed() override;
 
-    EventTargetInterface eventTargetInterface() const final { return PerformanceEventTargetInterfaceType; }
+    enum EventTargetInterfaceType eventTargetInterface() const final { return EventTargetInterfaceType::Performance; }
 
     void refEventTarget() final { ref(); }
     void derefEventTarget() final { deref(); }
@@ -141,12 +141,12 @@ private:
     mutable RefPtr<PerformanceNavigation> m_navigation;
     mutable RefPtr<PerformanceTiming> m_timing;
 
-    // https://w3c.github.io/resource-timing/#extensions-performance-interface recommends size of 150.
-    Vector<RefPtr<PerformanceEntry>> m_resourceTimingBuffer;
-    unsigned m_resourceTimingBufferSize { 150 };
+    // https://w3c.github.io/resource-timing/#sec-extensions-performance-interface recommends initial buffer size of 250.
+    Vector<Ref<PerformanceEntry>> m_resourceTimingBuffer;
+    unsigned m_resourceTimingBufferSize { 250 };
 
     Timer m_resourceTimingBufferFullTimer;
-    Vector<RefPtr<PerformanceEntry>> m_backupResourceTimingBuffer;
+    Vector<Ref<PerformanceEntry>> m_backupResourceTimingBuffer;
 
     // https://w3c.github.io/resource-timing/#dfn-resource-timing-buffer-full-flag
     bool m_resourceTimingBufferFullFlag { false };

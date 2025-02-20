@@ -38,14 +38,14 @@
 #include "RenderTreeBuilder.h"
 #include "RenderView.h"
 #include "StyleInheritedData.h"
-#include <wtf/IsoMallocInlines.h>
 #include <wtf/StackStats.h>
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
 using namespace HTMLNames;
 
-WTF_MAKE_ISO_ALLOCATED_IMPL(RenderTableRow);
+WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(RenderTableRow);
 
 RenderTableRow::RenderTableRow(Element& element, RenderStyle&& style)
     : RenderBox(Type::TableRow, element, WTFMove(style))
@@ -63,9 +63,11 @@ RenderTableRow::RenderTableRow(Document& document, RenderStyle&& style)
     ASSERT(isRenderTableRow());
 }
 
-void RenderTableRow::willBeRemovedFromTree(IsInternalMove isInternalMove)
+RenderTableRow::~RenderTableRow() = default;
+
+void RenderTableRow::willBeRemovedFromTree()
 {
-    RenderBox::willBeRemovedFromTree(isInternalMove);
+    RenderBox::willBeRemovedFromTree();
 
     section()->setNeedsCellRecalc();
 }
@@ -83,7 +85,7 @@ void RenderTableRow::styleDidChange(StyleDifference diff, const RenderStyle* old
     ASSERT(style().display() == DisplayType::TableRow);
 
     RenderBox::styleDidChange(diff, oldStyle);
-    propagateStyleToAnonymousChildren(PropagateToAllChildren);
+    propagateStyleToAnonymousChildren(StylePropagationType::AllChildren);
 
     if (section() && oldStyle && style().logicalHeight() != oldStyle->logicalHeight())
         section()->rowLogicalHeightChanged(rowIndex());
@@ -200,13 +202,17 @@ bool RenderTableRow::nodeAtPoint(const HitTestRequest& request, HitTestResult& r
 {
     // Table rows cannot ever be hit tested.  Effectively they do not exist.
     // Just forward to our children always.
+    auto* section = this->section();
+    if (!section)
+        return false;
+
     for (RenderTableCell* cell = lastCell(); cell; cell = cell->previousCell()) {
         // FIXME: We have to skip over inline flows, since they can show up inside table rows
         // at the moment (a demoted inline <form> for example). If we ever implement a
         // table-specific hit-test method (which we should do for performance reasons anyway),
         // then we can remove this check.
         if (!cell->hasSelfPaintingLayer()) {
-            LayoutPoint cellPoint = flipForWritingModeForChild(*cell, accumulatedOffset);
+            auto cellPoint = section->flipForWritingModeForChild(*cell, accumulatedOffset);
             if (cell->nodeAtPoint(request, result, locationInContainer, cellPoint, action)) {
                 updateHitTestResult(result, locationInContainer.point() - toLayoutSize(cellPoint));
                 return true;
@@ -221,7 +227,7 @@ void RenderTableRow::paintOutlineForRowIfNeeded(PaintInfo& paintInfo, const Layo
 {
     LayoutPoint adjustedPaintOffset = paintOffset + location();
     PaintPhase paintPhase = paintInfo.phase;
-    if ((paintPhase == PaintPhase::Outline || paintPhase == PaintPhase::SelfOutline) && style().visibility() == Visibility::Visible)
+    if ((paintPhase == PaintPhase::Outline || paintPhase == PaintPhase::SelfOutline) && style().usedVisibility() == Visibility::Visible)
         paintOutline(paintInfo, LayoutRect(adjustedPaintOffset, size()));
 }
 
@@ -233,7 +239,7 @@ void RenderTableRow::paint(PaintInfo& paintInfo, const LayoutPoint& paintOffset)
     for (RenderTableCell* cell = firstCell(); cell; cell = cell->nextCell()) {
         // Paint the row background behind the cell.
         if (paintInfo.phase == PaintPhase::BlockBackground || paintInfo.phase == PaintPhase::ChildBlockBackground)
-            cell->paintBackgroundsBehindCell(paintInfo, paintOffset, this);
+            cell->paintBackgroundsBehindCell(paintInfo, paintOffset, this, paintOffset);
         if (!cell->hasSelfPaintingLayer())
             cell->paint(paintInfo, paintOffset);
     }
@@ -242,6 +248,8 @@ void RenderTableRow::paint(PaintInfo& paintInfo, const LayoutPoint& paintOffset)
 void RenderTableRow::imageChanged(WrappedImagePtr, const IntRect*)
 {
     // FIXME: Examine cells and repaint only the rect the image paints in.
+    if (!parent())
+        return;
     repaint();
 }
 
@@ -259,7 +267,7 @@ RenderPtr<RenderTableRow> RenderTableRow::createAnonymousWithParentRenderer(cons
 
 bool RenderTableRow::requiresLayer() const
 {
-    return hasNonVisibleOverflow() || hasTransformRelatedProperty() || hasHiddenBackface() || hasClipPath() || createsGroup() || isStickilyPositioned();
+    return hasNonVisibleOverflow() || hasTransformRelatedProperty() || hasHiddenBackface() || hasClipPath() || createsGroup() || isStickilyPositioned() || requiresRenderingConsolidationForViewTransition();
 }
 
 RenderPtr<RenderBox> RenderTableRow::createAnonymousBoxWithSameTypeAs(const RenderBox& renderer) const

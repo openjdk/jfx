@@ -119,7 +119,7 @@ void AccessibilityImageMapLink::accessibilityText(Vector<AccessibilityText>& tex
 
 String AccessibilityImageMapLink::description() const
 {
-    const auto& ariaLabel = getAttribute(aria_labelAttr);
+    auto ariaLabel = getAttributeTrimmed(aria_labelAttr);
     if (!ariaLabel.isEmpty())
         return ariaLabel;
 
@@ -147,13 +147,9 @@ RenderElement* AccessibilityImageMapLink::imageMapLinkRenderer() const
     if (!m_mapElement || !m_areaElement)
         return nullptr;
 
-    RenderElement* renderer = nullptr;
-    if (is<AccessibilityRenderObject>(m_parent))
-        renderer = downcast<RenderElement>(downcast<AccessibilityRenderObject>(*m_parent).renderer());
-    else
-        renderer = m_mapElement->renderer();
-
-    return renderer;
+    if (auto* parent = dynamicDowncast<AccessibilityRenderObject>(m_parent.get()))
+        return downcast<RenderElement>(parent->renderer());
+    return m_mapElement->renderer();
 }
 
 void AccessibilityImageMapLink::detachFromParent()

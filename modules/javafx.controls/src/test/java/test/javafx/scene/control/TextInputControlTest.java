@@ -25,11 +25,6 @@
 
 package test.javafx.scene.control;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertNull;
-import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.junit.jupiter.api.Assertions.fail;
 import java.util.Collection;
 import java.util.List;
 import javafx.beans.property.BooleanProperty;
@@ -56,6 +51,7 @@ import org.junit.jupiter.params.provider.MethodSource;
 import com.sun.javafx.tk.Toolkit;
 import test.com.sun.javafx.pgstub.StubToolkit;
 import test.com.sun.javafx.scene.control.infrastructure.KeyEventFirer;
+import static org.junit.jupiter.api.Assertions.*;
 
 /**
  */
@@ -109,6 +105,39 @@ public class TextInputControlTest {
     public void textDefaultsToEmptyString(Class<?> type) {
         setup(type);
         assertEquals("", textInput.getText());
+    }
+
+    @ParameterizedTest
+    @MethodSource("parameters")
+    public void bindPromptTextWithoutLineBreaks(Class<?> type) {
+        setup(type);
+        String promptWithoutLinebreaks = "Prompt without\tlinebreaks";
+        StringProperty promptProperty = new SimpleStringProperty(promptWithoutLinebreaks);
+        textInput.promptTextProperty().bind(promptProperty);
+        assertEquals(promptWithoutLinebreaks, textInput.getPromptText());
+        textInput.promptTextProperty().unbind();
+    }
+
+    @ParameterizedTest
+    @MethodSource("parameters")
+    public void bindPromptTextWithLineBreaks(Class<?> type) {
+        setup(type);
+        String promptWithLinebreaks = "Prompt\nwith\nLineBreaks\nand\nmixed\tcharacters \uD83C\uDF0D";
+        StringProperty promptProperty = new SimpleStringProperty(promptWithLinebreaks);
+        textInput.promptTextProperty().bind(promptProperty);
+        String expectedPromptWithoutLineBreaks = promptWithLinebreaks.replace("\n", "");
+        assertEquals(expectedPromptWithoutLineBreaks, textInput.getPromptText());
+        textInput.promptTextProperty().unbind();
+    }
+
+    @ParameterizedTest
+    @MethodSource("parameters")
+    public void bindPromptTextWithNull(Class<?> type) {
+        setup(type);
+        StringProperty promptPropertyNull = new SimpleStringProperty(null);
+        textInput.promptTextProperty().bind(promptPropertyNull);
+        assertNull(textInput.getPromptText());
+        textInput.promptTextProperty().unbind();
     }
 
     @ParameterizedTest

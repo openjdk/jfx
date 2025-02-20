@@ -105,8 +105,7 @@ class GraphicsLayer;
 class NativeImage;
 class TextureMapper;
 enum class TextureMapperFlags : uint16_t;
-
-class BitmapTexture final : public RefCounted<BitmapTexture> {
+class BitmapTexture final : public ThreadSafeRefCounted<BitmapTexture> {
 public:
     enum class Flags : uint8_t {
         SupportsAlpha = 1 << 0,
@@ -144,6 +143,8 @@ public:
     ClipStack& clipStack() { return m_clipStack; }
 
     void copyFromExternalTexture(GLuint textureID);
+    void copyFromExternalTexture(BitmapTexture& sourceTexture, const IntRect& sourceRect, const IntSize& destinationOffset);
+    void copyFromExternalTexture(GLuint sourceTextureID, const IntRect& targetRect, const IntSize& sourceOffset);
 
     OptionSet<TextureMapperFlags> colorConvertFlags() const { return m_colorConvertFlags; }
 
