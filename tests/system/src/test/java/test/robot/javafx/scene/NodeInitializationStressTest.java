@@ -404,7 +404,6 @@ public class NodeInitializationStressTest extends RobotTestBase {
         });
     }
 
-    @Disabled("JDK-8349105") // FIX
     @Test
     public void pagination() {
         assumeFalse(SKIP_TEST);
@@ -416,9 +415,10 @@ public class NodeInitializationStressTest extends RobotTestBase {
             c.setPageFactory((pageIndex) -> {
                 return new Label(pageIndex + " " + nextString());
             });
-            c.setPageCount(100);
-            c.setCurrentPageIndex(nextInt(100));
+            int mx = 1 + nextInt(100);
             accessControl(c);
+            c.setPageCount(mx);
+            c.setCurrentPageIndex(nextInt(mx));
         });
     }
 
@@ -547,7 +547,6 @@ public class NodeInitializationStressTest extends RobotTestBase {
         });
     }
 
-    @Disabled("JDK-8349098") // FIX
     @Test
     public void tabPane() {
         assumeFalse(SKIP_TEST);
@@ -633,7 +632,6 @@ public class NodeInitializationStressTest extends RobotTestBase {
         });
     }
 
-    @Disabled("JDK-8349255") // FIX
     @Test
     public void titledPane() {
         assumeFalse(SKIP_TEST);
@@ -642,10 +640,11 @@ public class NodeInitializationStressTest extends RobotTestBase {
             c.setSkin(new TitledPaneSkin(c));
             return c;
         }, (c) -> {
+            accessControl(c);
             c.setAnimated(nextBoolean());
             c.setExpanded(nextBoolean());
+            c.setCollapsible(nextBoolean(0.9));
             c.setContent(new Label(nextString()));
-            accessControl(c);
         });
     }
 
