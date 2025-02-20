@@ -317,16 +317,14 @@ public abstract class TextInputControl extends Control {
     private StringProperty promptText = new SimpleStringProperty(this, "promptText", "") {
         @Override protected void invalidated() {
             String txt = get();
-            if (isBound()) {
-                unbind();
-            }
-            if (TextInputControl.this instanceof TextArea) {
-                set(txt);
-            } else {
-                if (txt != null && txt.contains("\n")) {
-                    txt = txt.replace("\n", "");
-                    set(txt);
+            if (txt != null && txt.contains("\n")) {
+                if (isBound()) {
+                    unbind();
                 }
+                if (!(TextInputControl.this instanceof TextArea)) {
+                    txt = txt.replace("\n", "");
+                }
+                set(txt);
             }
         }
     };
