@@ -32,6 +32,7 @@
 #include "MediaKeySystemRequestIdentifier.h"
 #include <wtf/CompletionHandler.h>
 #include <wtf/Forward.h>
+#include <wtf/Identified.h>
 #include <wtf/ObjectIdentifier.h>
 #include <wtf/UniqueRef.h>
 
@@ -42,13 +43,16 @@ class MediaKeySystem;
 
 template <typename IDLType> class DOMPromiseDeferred;
 
-class MediaKeySystemRequest : public RefCounted<MediaKeySystemRequest>, public ActiveDOMObject {
+class MediaKeySystemRequest : public RefCounted<MediaKeySystemRequest>, public ActiveDOMObject, public Identified<MediaKeySystemRequestIdentifier> {
 public:
     WEBCORE_EXPORT static Ref<MediaKeySystemRequest> create(Document&, const String& keySystem, Ref<DeferredPromise>&&);
     virtual ~MediaKeySystemRequest();
 
+    // ActiveDOMObject.
+    void ref() const final { RefCounted::ref(); }
+    void deref() const final { RefCounted::deref(); }
+
     void setAllowCallback(CompletionHandler<void(Ref<DeferredPromise>&&)>&& callback) { m_allowCompletionHandler = WTFMove(callback); }
-    MediaKeySystemRequestIdentifier identifier() const { return m_identifier; }
     WEBCORE_EXPORT void start();
 
     WEBCORE_EXPORT void allow();
@@ -62,10 +66,8 @@ public:
 private:
     MediaKeySystemRequest(Document&, const String& keySystem, Ref<DeferredPromise>&&);
 
+    // ActiveDOMObject.
     void stop() final;
-    const char* activeDOMObjectName() const final;
-
-    MediaKeySystemRequestIdentifier m_identifier;
 
     String m_keySystem;
     Ref<DeferredPromise> m_promise;

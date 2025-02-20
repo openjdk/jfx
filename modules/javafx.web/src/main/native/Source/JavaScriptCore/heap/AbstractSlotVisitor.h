@@ -49,6 +49,7 @@ class VM;
 class VerifierSlotVisitor;
 template<typename T> class Weak;
 template<typename T, typename Traits> class WriteBarrierBase;
+template<typename T, typename Traits> class WriteBarrier;
 class WriteBarrierStructureID;
 
 class AbstractSlotVisitor {
@@ -148,6 +149,7 @@ public:
     void append(const WriteBarrierStructureID&);
     void appendHidden(const WriteBarrierStructureID&);
     template<typename Iterator> void append(Iterator begin , Iterator end);
+    ALWAYS_INLINE void appendValues(std::span<const WriteBarrier<Unknown, RawValueTraits<Unknown>>>);
     ALWAYS_INLINE void appendValues(const WriteBarrierBase<Unknown, RawValueTraits<Unknown>>*, size_t count);
     ALWAYS_INLINE void appendValuesHidden(const WriteBarrierBase<Unknown, RawValueTraits<Unknown>>*, size_t count);
 
@@ -194,7 +196,9 @@ public:
     virtual void reportExternalMemoryVisited(size_t) = 0;
 #endif
 
-    virtual void dump(PrintStream&) const = 0;
+    // This can't be pure virtual as it breaks our Dumpable concept.
+    // FIXME: Make this virtual after we stop suppporting the Montery Clang.
+    virtual void dump(PrintStream&) const { }
 
     RootMarkReason rootMarkReason() const { return m_rootMarkReason; }
     void setRootMarkReason(RootMarkReason reason) { m_rootMarkReason = reason; }

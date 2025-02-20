@@ -44,13 +44,6 @@ Ref<AccessCase> ProxyableAccessCase::create(VM& vm, JSCell* owner, AccessType ty
     return adoptRef(*new ProxyableAccessCase(vm, owner, type, identifier, offset, structure, conditionSet, viaGlobalProxy, additionalSet, WTFMove(prototypeAccessChain)));
 }
 
-Ref<AccessCase> ProxyableAccessCase::cloneImpl() const
-{
-    auto result = adoptRef(*new ProxyableAccessCase(*this));
-    result->resetState();
-    return result;
-}
-
 void ProxyableAccessCase::dumpImpl(PrintStream& out, CommaPrinter& comma, Indenter& indent) const
 {
     Base::dumpImpl(out, comma, indent);

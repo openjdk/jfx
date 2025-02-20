@@ -35,9 +35,7 @@ namespace JSC { namespace FTL {
 
 WTF_MAKE_TZONE_ALLOCATED_IMPL(LazySlowPath);
 
-LazySlowPath::~LazySlowPath()
-{
-}
+LazySlowPath::~LazySlowPath() = default;
 
 void LazySlowPath::initialize(
     CodeLocationJump<JSInternalPtrTag> patchableJump, CodeLocationLabel<JSInternalPtrTag> done,
@@ -68,8 +66,8 @@ void LazySlowPath::generate(CodeBlock* codeBlock)
     params.doneJumps.linkThunk(m_done, &jit);
     if (m_exceptionTarget)
         exceptionJumps.linkThunk(m_exceptionTarget, &jit);
-    LinkBuffer linkBuffer(jit, codeBlock, LinkBuffer::Profile::FTL, JITCompilationMustSucceed);
-    m_stub = FINALIZE_CODE_FOR(codeBlock, linkBuffer, JITStubRoutinePtrTag, "Lazy slow path call stub");
+    LinkBuffer linkBuffer(jit, codeBlock, LinkBuffer::Profile::FTLThunk, JITCompilationMustSucceed);
+    m_stub = FINALIZE_CODE_FOR(codeBlock, linkBuffer, JITStubRoutinePtrTag, nullptr, "Lazy slow path call stub");
 
     MacroAssembler::repatchJump(m_patchableJump, CodeLocationLabel<JITStubRoutinePtrTag>(m_stub.code()));
 }

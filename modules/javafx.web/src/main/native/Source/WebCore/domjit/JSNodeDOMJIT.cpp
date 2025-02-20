@@ -48,7 +48,7 @@ Ref<JSC::Snippet> checkSubClassSnippetForJSNode()
 enum class IsContainerGuardRequirement { Required, NotRequired };
 
 template<typename WrappedNode, typename ToWrapperOperation>
-static Ref<JSC::DOMJIT::CallDOMGetterSnippet> createCallDOMGetterForOffsetAccess(ptrdiff_t offset, ToWrapperOperation operation, IsContainerGuardRequirement isContainerGuardRequirement)
+static Ref<JSC::DOMJIT::CallDOMGetterSnippet> createCallDOMGetterForOffsetAccess(ptrdiff_t offset, ToWrapperOperation operation, IsContainerGuardRequirement isContainerGuardRequirement, std::optional<uintptr_t> mask = std::nullopt)
 {
     Ref<JSC::DOMJIT::CallDOMGetterSnippet> snippet = JSC::DOMJIT::CallDOMGetterSnippet::create();
     snippet->numGPScratchRegisters = 1;
@@ -68,6 +68,8 @@ static Ref<JSC::DOMJIT::CallDOMGetterSnippet> createCallDOMGetterForOffsetAccess
             nullCases.append(jit.branchTest16(CCallHelpers::Zero, CCallHelpers::Address(scratch, Node::typeFlagsMemoryOffset()), CCallHelpers::TrustedImm32(Node::flagIsContainer())));
 
         jit.loadPtr(CCallHelpers::Address(scratch, offset), scratch);
+        if (mask)
+            jit.andPtr(CCallHelpers::TrustedImmPtr(*mask), scratch);
         nullCases.append(jit.branchTestPtr(CCallHelpers::Zero, scratch));
 
         DOMJIT::toWrapper<WrappedNode>(jit, params, scratch, globalObject, result, operation, globalObjectValue);
@@ -104,7 +106,7 @@ Ref<JSC::DOMJIT::CallDOMGetterSnippet> compileNodeNextSiblingAttribute()
 
 Ref<JSC::DOMJIT::CallDOMGetterSnippet> compileNodePreviousSiblingAttribute()
 {
-    auto snippet = createCallDOMGetterForOffsetAccess<Node>(Node::previousSiblingMemoryOffset(), DOMJIT::operationToJSNode, IsContainerGuardRequirement::NotRequired);
+    auto snippet = createCallDOMGetterForOffsetAccess<Node>(Node::previousSiblingMemoryOffset(), DOMJIT::operationToJSNode, IsContainerGuardRequirement::NotRequired, Node::previousSiblingPointerMask());
     snippet->effect = JSC::DOMJIT::Effect::forDef(DOMJIT::AbstractHeapRepository::Node_previousSibling);
     return snippet;
 }

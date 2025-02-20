@@ -67,6 +67,8 @@ ScrollingStateScrollingNode::ScrollingStateScrollingNode(
     MouseLocationState&& mouseLocationState,
     ScrollbarHoverState&& scrollbarHoverState,
     ScrollbarEnabledState&& scrollbarEnabledState,
+    UserInterfaceLayoutDirection scrollbarLayoutDirection,
+    ScrollbarWidth scrollbarWidth,
     RequestedKeyboardScrollData&& keyboardScrollData
 ) : ScrollingStateNode(nodeType, nodeID, WTFMove(children), changedProperties, layerID)
     , m_scrollableAreaSize(scrollableAreaSize)
@@ -90,6 +92,8 @@ ScrollingStateScrollingNode::ScrollingStateScrollingNode(
 #if ENABLE(SCROLLING_THREAD)
     , m_synchronousScrollingReasons(synchronousScrollingReasons)
 #endif
+    , m_scrollbarLayoutDirection(scrollbarLayoutDirection)
+    , m_scrollbarWidth(scrollbarWidth)
     , m_isMonitoringWheelEvents(isMonitoringWheelEvents)
     , m_mouseIsOverContentArea(mouseIsOverContentArea)
 {
@@ -117,6 +121,8 @@ ScrollingStateScrollingNode::ScrollingStateScrollingNode(const ScrollingStateScr
 #if ENABLE(SCROLLING_THREAD)
     , m_synchronousScrollingReasons(stateNode.synchronousScrollingReasons())
 #endif
+    , m_scrollbarLayoutDirection(stateNode.scrollbarLayoutDirection())
+    , m_scrollbarWidth(stateNode.scrollbarWidth())
     , m_isMonitoringWheelEvents(stateNode.isMonitoringWheelEvents())
     , m_mouseIsOverContentArea(stateNode.mouseIsOverContentArea())
 {
@@ -326,7 +332,6 @@ void ScrollingStateScrollingNode::setVerticalScrollbarLayer(const LayerRepresent
 {
     if (layer == m_verticalScrollbarLayer)
         return;
-
     m_verticalScrollbarLayer = layer;
     setPropertyChanged(Property::VerticalScrollbarLayer);
 }
@@ -372,6 +377,23 @@ void ScrollingStateScrollingNode::setScrollbarEnabledState(ScrollbarOrientation 
         m_scrollbarEnabledState.verticalScrollbarIsEnabled = enabled;
 
     setPropertyChanged(Property::ScrollbarEnabledState);
+}
+
+void ScrollingStateScrollingNode::setScrollbarLayoutDirection(UserInterfaceLayoutDirection scrollbarLayoutDirection)
+{
+    if (scrollbarLayoutDirection == m_scrollbarLayoutDirection)
+        return;
+
+    m_scrollbarLayoutDirection = scrollbarLayoutDirection;
+    setPropertyChanged(Property::ScrollbarLayoutDirection);
+}
+
+void ScrollingStateScrollingNode::setScrollbarWidth(ScrollbarWidth scrollbarWidth)
+{
+    if (scrollbarWidth == m_scrollbarWidth)
+        return;
+    m_scrollbarWidth = scrollbarWidth;
+    setPropertyChanged(Property::ScrollbarWidth);
 }
 
 void ScrollingStateScrollingNode::dumpProperties(TextStream& ts, OptionSet<ScrollingStateTreeAsTextBehavior> behavior) const

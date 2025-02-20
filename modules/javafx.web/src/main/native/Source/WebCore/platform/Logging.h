@@ -128,13 +128,16 @@ namespace WebCore {
     M(StyleSheets) \
     M(SVG) \
     M(TextAutosizing) \
+    M(TextDecoding) \
     M(TextFragment) \
     M(TextManipulation) \
     M(TextShaping) \
     M(Tiling) \
     M(Threading) \
+    M(WritingTools) \
     M(URLParser) \
     M(Viewports) \
+    M(ViewTransitions) \
     M(VirtualMemory) \
     M(WebAudio) \
     M(WebGL) \

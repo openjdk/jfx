@@ -211,14 +211,14 @@ static void computedExpansions(const Line::RunList& runs, WTF::Range<size_t> run
                 }
                 std::tie(expansionOpportunitiesInRun, runIsAfterExpansion) = FontCascade::expansionOpportunityCount(StringView(downcast<InlineTextBox>(run.layoutBox()).content()).substring(textContent.start, length), run.inlineDirection(), expansionBehavior);
             }
-        } else if (run.isBox())
+        } else if (run.isAtomicInlineBox())
             runIsAfterExpansion = false;
 
         expansionInfo.behaviorList[index] = expansionBehavior;
         expansionInfo.opportunityList[index] = expansionOpportunitiesInRun;
         expansionInfo.opportunityCount += expansionOpportunitiesInRun;
 
-        if (run.isText() || run.isBox())
+        if (run.isText() || run.isAtomicInlineBox())
             lastExpansionIndexWithContent = index;
     }
     // Forbid right expansion in the last run to prevent trailing expansion at the end of the line.
@@ -279,7 +279,7 @@ InlineLayoutUnit InlineContentAligner::applyTextAlignJustify(Line::RunList& runs
     return applyExpansionOnRange(runs, fullRange, expansion, spaceToDistribute);
 }
 
-InlineLayoutUnit InlineContentAligner::applyRubyAlignSpaceAround(Line::RunList& runs, WTF::Range<size_t> range, InlineLayoutUnit spaceToDistribute)
+InlineLayoutUnit InlineContentAligner::applyRubyAlign(RubyAlign rubyAlign, Line::RunList& runs, WTF::Range<size_t> range, InlineLayoutUnit spaceToDistribute)
 {
     if (runs.isEmpty()) {
         ASSERT_NOT_REACHED();
@@ -302,16 +302,36 @@ InlineLayoutUnit InlineContentAligner::applyRubyAlignSpaceAround(Line::RunList& 
     if (!rangeHasInlineContent())
         return { };
 
+    switch (rubyAlign) {
+    case RubyAlign::Start:
+        return { };
+    case RubyAlign::Center:
+        return spaceToDistribute / 2;
+    case RubyAlign::SpaceBetween: {
+        // The ruby content expands as defined for normal text justification (as defined by text-justify), except that if there are no
+        // justification opportunities the content is centered.
+        auto expansion = ExpansionInfo { };
+        computedExpansions(runs, range, { }, expansion, IgnoreRubyRange::No);
+        // Anything to distribute?
+        if (!expansion.opportunityCount)
+            return spaceToDistribute / 2;
+        applyExpansionOnRange(runs, range, expansion, spaceToDistribute);
+        return { };
+    }
+    case RubyAlign::SpaceAround: {
     auto expansion = ExpansionInfo { };
     computedExpansions(runs, range, { }, expansion, IgnoreRubyRange::No);
     // Anything to distribute?
     if (!expansion.opportunityCount)
         return spaceToDistribute / 2;
-    // FIXME: ruby-align: space-around only
     // As for space-between except that there exists an extra justification opportunities whose space is distributed half before and half after the ruby content.
     auto extraExpansionOpportunitySpace = spaceToDistribute / (expansion.opportunityCount + 1);
     applyExpansionOnRange(runs, range, expansion, spaceToDistribute - extraExpansionOpportunitySpace);
     return extraExpansionOpportunitySpace / 2;
+    }
+    default:
+        return { };
+    }
 }
 
 void InlineContentAligner::applyRubyBaseAlignmentOffset(InlineDisplay::Boxes& displayBoxes, const HashMap<const Box*, InlineLayoutUnit>& alignmentOffsetList, AdjustContentOnlyInsideRubyBase adjustContentOnlyInsideRubyBase, InlineFormattingContext& inlineFormattingContext)

@@ -29,19 +29,21 @@
 #include "ASTDeclaration.h"
 #include "ASTDirective.h"
 #include "ASTIdentityExpression.h"
+#include "CallGraph.h"
 #include "TypeStore.h"
 #include "WGSL.h"
 #include "WGSLEnums.h"
 
 #include <wtf/HashSet.h>
 #include <wtf/OptionSet.h>
+#include <wtf/TZoneMallocInlines.h>
 #include <wtf/text/StringHash.h>
 #include <wtf/text/WTFString.h>
 
 namespace WGSL {
 
 class ShaderModule {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_ALLOCATED_INLINE(ShaderModule);
 public:
     explicit ShaderModule(const String& source)
         : ShaderModule(source, { })
@@ -60,6 +62,12 @@ public:
     TypeStore& types() { return m_types; }
     AST::Builder& astBuilder() { return m_astBuilder; }
 
+    const CallGraph& callGraph() const { return *m_callGraph; }
+    void setCallGraph(CallGraph&& callGraph)
+    {
+        m_callGraph = WTFMove(callGraph);
+    }
+
     bool usesExternalTextures() const { return m_usesExternalTextures; }
     void setUsesExternalTextures() { m_usesExternalTextures = true; }
     void clearUsesExternalTextures() { m_usesExternalTextures = false; }
@@ -71,6 +79,14 @@ public:
     bool usesUnpackArray() const { return m_usesUnpackArray; }
     void setUsesUnpackArray() { m_usesUnpackArray = true; }
     void clearUsesUnpackArray() { m_usesUnpackArray = false; }
+
+    bool usesPackVector() const { return m_usesPackVector; }
+    void setUsesPackVector() { m_usesPackVector = true; }
+    void clearUsesPackVector() { m_usesPackVector = false; }
+
+    bool usesUnpackVector() const { return m_usesUnpackVector; }
+    void setUsesUnpackVector() { m_usesUnpackVector = true; }
+    void clearUsesUnpackVector() { m_usesUnpackVector = false; }
 
     bool usesWorkgroupUniformLoad() const { return m_usesWorkgroupUniformLoad; }
     void setUsesWorkgroupUniformLoad() { m_usesWorkgroupUniformLoad = true; }
@@ -89,6 +105,7 @@ public:
 
     bool usesAtomicCompareExchange() const { return m_usesAtomicCompareExchange; }
     void setUsesAtomicCompareExchange() { m_usesAtomicCompareExchange = true; }
+
     bool usesFragDepth() const { return m_usesFragDepth; }
     void setUsesFragDepth() { m_usesFragDepth = true; }
 
@@ -121,6 +138,10 @@ public:
 
     bool usesExtractBits() const { return m_usesExtractBits; }
     void setUsesExtractBits() { m_usesExtractBits = true; }
+
+    bool usesPackedVec3() const { return m_usesPackedVec3; }
+    void setUsesPackedVec3() { m_usesPackedVec3 = true; }
+    void clearUsesPackedVec3() { m_usesPackedVec3 = false; }
 
     template<typename T>
     std::enable_if_t<std::is_base_of_v<AST::Node, T>, void> replace(T* current, T&& replacement)
@@ -251,6 +272,8 @@ private:
     bool m_usesExternalTextures { false };
     bool m_usesPackArray { false };
     bool m_usesUnpackArray { false };
+    bool m_usesPackVector { false };
+    bool m_usesUnpackVector { false };
     bool m_usesWorkgroupUniformLoad { false };
     bool m_usesDivision { false };
     bool m_usesModulo { false };
@@ -268,6 +291,7 @@ private:
     bool m_usesDot4I8Packed { false };
     bool m_usesDot4U8Packed { false };
     bool m_usesExtractBits { false };
+    bool m_usesPackedVec3 { false };
     OptionSet<Extension> m_enabledExtensions;
     OptionSet<LanguageFeature> m_requiredFeatures;
     Configuration m_configuration;
@@ -275,6 +299,7 @@ private:
     AST::Directive::List m_directives;
     TypeStore m_types;
     AST::Builder m_astBuilder;
+    std::optional<CallGraph> m_callGraph;
     Vector<std::function<void()>> m_replacements;
     HashSet<uint32_t, DefaultHash<uint32_t>, WTF::UnsignedWithZeroKeyHashTraits<uint32_t>> m_pipelineOverrideIds;
 };

@@ -26,13 +26,13 @@
 #include "config.h"
 #include "NotificationEvent.h"
 
-#include <wtf/IsoMallocInlines.h>
+#include <wtf/TZoneMallocInlines.h>
 
 #if ENABLE(NOTIFICATION_EVENT)
 
 namespace WebCore {
 
-WTF_MAKE_ISO_ALLOCATED_IMPL(NotificationEvent);
+WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(NotificationEvent);
 
 Ref<NotificationEvent> NotificationEvent::create(const AtomString& type, Init&& init, IsTrusted isTrusted)
 {
@@ -48,15 +48,13 @@ Ref<NotificationEvent> NotificationEvent::create(const AtomString& type, Notific
 }
 
 NotificationEvent::NotificationEvent(const AtomString& type, NotificationEventInit&& eventInit, Notification* notification, const String& action, IsTrusted isTrusted)
-    : ExtendableEvent(type, WTFMove(eventInit), isTrusted)
+    : ExtendableEvent(EventInterfaceType::NotificationEvent, type, WTFMove(eventInit), isTrusted)
     , m_notification(notification)
     , m_action(action)
 {
 }
 
-NotificationEvent::~NotificationEvent()
-{
-}
+NotificationEvent::~NotificationEvent() = default;
 
 } // namespace WebCore
 

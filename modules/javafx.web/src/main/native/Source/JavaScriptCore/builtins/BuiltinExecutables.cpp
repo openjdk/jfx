@@ -39,7 +39,7 @@ WTF_MAKE_TZONE_ALLOCATED_IMPL(BuiltinExecutables);
 
 BuiltinExecutables::BuiltinExecutables(VM& vm)
     : m_vm(vm)
-    , m_combinedSourceProvider(StringSourceProvider::create(StringImpl::createWithoutCopying(s_JSCCombinedCode, s_JSCCombinedCodeLength), { }, String(), SourceTaintedOrigin::Untainted))
+    , m_combinedSourceProvider(StringSourceProvider::create(StringImpl::createWithoutCopying({ s_JSCCombinedCode, s_JSCCombinedCodeLength }), { }, String(), SourceTaintedOrigin::Untainted))
 {
 }
 
@@ -90,12 +90,12 @@ UnlinkedFunctionExecutable* BuiltinExecutables::createExecutable(VM& vm, const S
     StringView view = source.view();
     RELEASE_ASSERT(!view.isNull());
     RELEASE_ASSERT(view.is8Bit());
-    auto* characters = view.characters8();
+    auto characters = view.span8();
     const char* regularFunctionBegin = "(function (";
     const char* asyncFunctionBegin = "(async function (";
     RELEASE_ASSERT(view.length() >= strlen("(function (){})"));
-    bool isAsyncFunction = view.length() >= strlen("(async function (){})") && !memcmp(characters, asyncFunctionBegin, strlen(asyncFunctionBegin));
-    RELEASE_ASSERT(isAsyncFunction || !memcmp(characters, regularFunctionBegin, strlen(regularFunctionBegin)));
+    bool isAsyncFunction = view.length() >= strlen("(async function (){})") && !memcmp(characters.data(), asyncFunctionBegin, strlen(asyncFunctionBegin));
+    RELEASE_ASSERT(isAsyncFunction || !memcmp(characters.data(), regularFunctionBegin, strlen(regularFunctionBegin)));
 
     unsigned asyncOffset = isAsyncFunction ? strlen("async ") : 0;
     unsigned parametersStart = strlen("function (") + asyncOffset;
@@ -166,7 +166,7 @@ UnlinkedFunctionExecutable* BuiltinExecutables::createExecutable(VM& vm, const S
         if (!isInStrictContext && (characters[i] == '"' || characters[i] == '\'')) {
             const unsigned useStrictLength = strlen("use strict");
             if (i + 1 + useStrictLength < view.length()) {
-                if (!memcmp(characters + i + 1, "use strict", useStrictLength)) {
+                if (!memcmp(characters.data() + i + 1, "use strict", useStrictLength)) {
                     isInStrictContext = true;
                     i += 1 + useStrictLength;
                 }
@@ -208,7 +208,7 @@ UnlinkedFunctionExecutable* BuiltinExecutables::createExecutable(VM& vm, const S
 
     FunctionMetadataNode metadata(
         start, end, startColumn, endColumn, source.startOffset() + functionKeywordStart, source.startOffset() + functionNameStart, source.startOffset() + parametersStart, implementationVisibility,
-        isInStrictContext ? StrictModeLexicalFeature : NoLexicalFeatures, constructorKind, constructorKind == ConstructorKind::Extends ? SuperBinding::Needed : SuperBinding::NotNeeded,
+        isInStrictContext ? StrictModeLexicallyScopedFeature : NoLexicallyScopedFeatures, constructorKind, constructorKind == ConstructorKind::Extends ? SuperBinding::Needed : SuperBinding::NotNeeded,
         parameterCount, parseMode, isArrowFunctionBodyExpression);
 
     metadata.finishParsing(newSource, Identifier(), FunctionMode::FunctionExpression);
@@ -219,10 +219,10 @@ UnlinkedFunctionExecutable* BuiltinExecutables::createExecutable(VM& vm, const S
         JSTextPosition positionBeforeLastNewlineFromParser;
         ParserError error;
         JSParserBuiltinMode builtinMode = isBuiltinDefaultClassConstructor ? JSParserBuiltinMode::NotBuiltin : JSParserBuiltinMode::Builtin;
-        std::unique_ptr<ProgramNode> program = parse<ProgramNode>(
-            vm, source, Identifier(), implementationVisibility, builtinMode,
-            JSParserStrictMode::NotStrict, JSParserScriptMode::Classic, SourceParseMode::ProgramMode, FunctionMode::None, SuperBinding::NotNeeded, error,
-            &positionBeforeLastNewlineFromParser, constructorKind);
+        std::unique_ptr<ProgramNode> program = parseRootNode<ProgramNode>(
+            vm, source, implementationVisibility, builtinMode,
+            NoLexicallyScopedFeatures, JSParserScriptMode::Classic, SourceParseMode::ProgramMode, error,
+            constructorKind, &positionBeforeLastNewlineFromParser);
 
         if (program) {
             StatementNode* exprStatement = program->singleStatement();
@@ -265,12 +265,20 @@ UnlinkedFunctionExecutable* BuiltinExecutables::createExecutable(VM& vm, const S
     return functionExecutable;
 }
 
-void BuiltinExecutables::finalizeUnconditionally(CollectionScope)
+template<typename Visitor>
+void BuiltinExecutables::visitAggregateImpl(Visitor& visitor)
 {
     for (auto*& unlinkedExecutable : m_unlinkedExecutables) {
-        if (unlinkedExecutable && !m_vm.heap.isMarked(unlinkedExecutable))
-            unlinkedExecutable = nullptr;
+        if (unlinkedExecutable)
+            visitor.appendUnbarriered(unlinkedExecutable);
     }
+}
+
+DEFINE_VISIT_AGGREGATE(BuiltinExecutables);
+
+void BuiltinExecutables::clear()
+{
+    std::fill(std::begin(m_unlinkedExecutables), std::end(m_unlinkedExecutables), nullptr);
 }
 
 #define DEFINE_BUILTIN_EXECUTABLES(name, functionName, overrideName, length) \

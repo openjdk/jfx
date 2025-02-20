@@ -33,9 +33,13 @@
 #include "ThreadTimers.h"
 #include <limits>
 #include <math.h>
-#include <wtf/IsoMallocInlines.h>
 #include <wtf/MainThread.h>
+#include <wtf/TZoneMallocInlines.h>
 #include <wtf/Vector.h>
+
+#if PLATFORM(IOS_FAMILY)
+#include "WebCoreThread.h"
+#endif
 
 #if PLATFORM(COCOA)
 #include <wtf/cocoa/RuntimeApplicationChecksCocoa.h>
@@ -57,7 +61,7 @@ static ThreadTimerHeap& threadGlobalTimerHeap()
 }
 #endif
 
-WTF_MAKE_ISO_ALLOCATED_IMPL(ThreadTimerHeapItem);
+WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(ThreadTimerHeapItem);
 
 inline ThreadTimerHeapItem::ThreadTimerHeapItem(TimerBase& timer, MonotonicTime time, unsigned insertionOrder)
     : time(time)
@@ -282,6 +286,9 @@ static_assert(sizeof(DeferrableOneShotTimer) == sizeof(SameSizeAsDeferrableOneSh
 
 TimerBase::TimerBase()
 {
+#if USE(WEB_THREAD)
+    RELEASE_ASSERT(WebThreadIsLockedOrDisabledInMainOrWebThread());
+#endif
 }
 
 TimerBase::~TimerBase()
@@ -501,6 +508,9 @@ void TimerBase::updateHeapIfNeeded(MonotonicTime oldTime)
 
 void TimerBase::setNextFireTime(MonotonicTime newTime)
 {
+#if USE(WEB_THREAD)
+    RELEASE_ASSERT(WebThreadIsLockedOrDisabledInMainOrWebThread());
+#endif
     ASSERT(canCurrentThreadAccessThreadLocalData(m_thread));
     RELEASE_ASSERT(canCurrentThreadAccessThreadLocalData(m_thread) || shouldSuppressThreadSafetyCheck());
     bool timerHasBeenDeleted = m_unalignedNextFireTime.isNaN();

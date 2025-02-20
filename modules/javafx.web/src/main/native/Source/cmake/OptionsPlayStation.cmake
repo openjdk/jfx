@@ -15,13 +15,8 @@ add_definitions(-DSCE_LIBC_DISABLE_CPP14_HEADER_WARNING= -DSCE_LIBC_DISABLE_CPP1
 # bug-224462
 WEBKIT_PREPEND_GLOBAL_COMPILER_FLAGS(-Wno-dll-attribute-on-redeclaration)
 
-# Disable warning for builtin-macro-redefinition
-# The redef wass necessary because our library provides a definition for __cpp_char8_t which
-# other code then assumes we have things like std::u8string which we do not.
-WEBKIT_PREPEND_GLOBAL_COMPILER_FLAGS(-Wno-builtin-macro-redefined)
-
 # Set the standard libary version
-WEBKIT_PREPEND_GLOBAL_COMPILER_FLAGS(-sce-stdlib=v1)
+WEBKIT_PREPEND_GLOBAL_COMPILER_FLAGS(-sce-stdlib=v2)
 
 set(ENABLE_WEBKIT_LEGACY OFF)
 set(ENABLE_WEBINSPECTORUI OFF)
@@ -102,7 +97,6 @@ if (ENABLE_WEBCORE)
 
     find_package(Brotli OPTIONAL_COMPONENTS dec)
     find_package(CURL 7.85.0 REQUIRED)
-    find_package(Cairo REQUIRED)
     find_package(EGL REQUIRED)
     find_package(Fontconfig REQUIRED)
     find_package(Freetype REQUIRED)
@@ -114,7 +108,6 @@ if (ENABLE_WEBCORE)
     list(APPEND PlayStationModule_TARGETS
         Brotli::dec
         CURL::libcurl
-        Cairo::Cairo
         Fontconfig::Fontconfig
         Freetype::Freetype
         HarfBuzz::HarfBuzz
@@ -164,7 +157,8 @@ SET_AND_EXPOSE_TO_BUILD(ENABLE_DEVELOPER_MODE ${DEVELOPER_MODE})
 if (ENABLE_DEVELOPER_MODE)
     WEBKIT_OPTION_DEFAULT_PORT_VALUE(ENABLE_API_TESTS PRIVATE ON)
     WEBKIT_OPTION_DEFAULT_PORT_VALUE(ENABLE_LAYOUT_TESTS PUBLIC ${USE_WPE_BACKEND_PLAYSTATION})
-    WEBKIT_OPTION_DEFAULT_PORT_VALUE(ENABLE_MINIBROWSER PUBLIC ${ENABLE_WEBKIT})
+    # FIXME: Temprarily turn off MiniBrowser due to STL migration
+    WEBKIT_OPTION_DEFAULT_PORT_VALUE(ENABLE_MINIBROWSER PUBLIC OFF)
 endif ()
 
 # PlayStation Specific Options
@@ -193,8 +187,6 @@ endif ()
 
 # Experimental features
 WEBKIT_OPTION_DEFAULT_PORT_VALUE(ENABLE_APPLICATION_MANIFEST PRIVATE ${ENABLE_EXPERIMENTAL_FEATURES})
-WEBKIT_OPTION_DEFAULT_PORT_VALUE(ENABLE_CSS_PAINTING_API PRIVATE ${ENABLE_EXPERIMENTAL_FEATURES})
-WEBKIT_OPTION_DEFAULT_PORT_VALUE(ENABLE_LAYER_BASED_SVG_ENGINE PRIVATE ${ENABLE_EXPERIMENTAL_FEATURES})
 
 if (USE_WPE_BACKEND_PLAYSTATION)
     WEBKIT_OPTION_DEFAULT_PORT_VALUE(ENABLE_GAMEPAD PRIVATE ${ENABLE_EXPERIMENTAL_FEATURES})
@@ -211,6 +203,7 @@ endif ()
 #
 # Features that require additional implementation pieces
 WEBKIT_OPTION_DEFAULT_PORT_VALUE(USE_AVIF PRIVATE OFF)
+WEBKIT_OPTION_DEFAULT_PORT_VALUE(USE_LCMS PRIVATE OFF)
 WEBKIT_OPTION_DEFAULT_PORT_VALUE(USE_JPEGXL PRIVATE OFF)
 
 # Features that are temporarily turned off because an implementation is not
@@ -231,6 +224,7 @@ WEBKIT_OPTION_DEFAULT_PORT_VALUE(ENABLE_NOTIFICATIONS PRIVATE OFF)
 WEBKIT_OPTION_DEFAULT_PORT_VALUE(ENABLE_USER_MESSAGE_HANDLERS PRIVATE OFF)
 WEBKIT_OPTION_DEFAULT_PORT_VALUE(ENABLE_WEBGL PRIVATE OFF)
 WEBKIT_OPTION_DEFAULT_PORT_VALUE(ENABLE_XSLT PRIVATE OFF)
+WEBKIT_OPTION_DEFAULT_PORT_VALUE(USE_WOFF2 PRIVATE OFF)
 
 WEBKIT_OPTION_END()
 
@@ -257,18 +251,47 @@ set(CMAKE_CXX_STANDARD_LIBRARIES
 SET_AND_EXPOSE_TO_BUILD(HAVE_PTHREAD_SETNAME_NP ON)
 SET_AND_EXPOSE_TO_BUILD(HAVE_MAP_ALIGNED OFF)
 
+if (CMAKE_SYSTEM_NAME STREQUAL "PlayStation4")
+    SET_AND_EXPOSE_TO_BUILD(HAVE_MISSING_U8STRING ON)
+else ()
+    SET_AND_EXPOSE_TO_BUILD(HAVE_MISSING_U8STRING OFF)
+endif ()
+
 # Platform options
 SET_AND_EXPOSE_TO_BUILD(USE_INSPECTOR_SOCKET_SERVER ${ENABLE_REMOTE_INSPECTOR})
 SET_AND_EXPOSE_TO_BUILD(USE_UNIX_DOMAIN_SOCKETS ON)
 
 if (ENABLE_WEBCORE)
-    SET_AND_EXPOSE_TO_BUILD(USE_CAIRO ON)
     SET_AND_EXPOSE_TO_BUILD(USE_CURL ON)
-    SET_AND_EXPOSE_TO_BUILD(USE_FREETYPE ON)
     SET_AND_EXPOSE_TO_BUILD(USE_HARFBUZZ ON)
     SET_AND_EXPOSE_TO_BUILD(USE_LIBWPE ON)
     SET_AND_EXPOSE_TO_BUILD(USE_OPENSSL ON)
-    SET_AND_EXPOSE_TO_BUILD(USE_WEBP ON)
+
+    if (NOT USE_SKIA)
+        find_package(Cairo REQUIRED)
+        list(APPEND PlayStationModule_TARGETS Cairo::Cairo)
+
+        SET_AND_EXPOSE_TO_BUILD(USE_CAIRO ON)
+        SET_AND_EXPOSE_TO_BUILD(USE_FREETYPE ON)
+    endif ()
+
+    if (USE_LCMS)
+        set(LCMS2_NAMES SceVshLCMS2)
+        find_package(LCMS2)
+        if (NOT LCMS2_FOUND)
+            message(FATAL_ERROR "libcms2 is required for USE_LCMS.")
+       endif ()
+       list(APPEND PlayStationModule_TARGETS LCMS2::LCMS2)
+    endif ()
+
+    if (USE_JPEGXL)
+        set(JPEGXL_NAMES SceVshJxl)
+        find_package(JPEGXL 0.7.0)
+        if (NOT JPEGXL_FOUND)
+            message(FATAL_ERROR "libjxl is required for USE_JPEGXL")
+        endif ()
+        list(APPEND PlayStationModule_TARGETS JPEGXL::jxl)
+    endif ()
 
     # See if OpenSSL implementation is BoringSSL
     cmake_push_check_state()
@@ -284,9 +307,12 @@ if (ENABLE_WEBCORE)
     endif ()
 
     # Rendering options
-    SET_AND_EXPOSE_TO_BUILD(USE_EGL ON)
     SET_AND_EXPOSE_TO_BUILD(USE_TEXTURE_MAPPER ON)
-    SET_AND_EXPOSE_TO_BUILD(USE_WPE_RENDERER ${USE_WPE_BACKEND_PLAYSTATION})
+
+    if (USE_WPE_BACKEND_PLAYSTATION)
+        SET_AND_EXPOSE_TO_BUILD(USE_WPE_RENDERER ON)
+        SET_AND_EXPOSE_TO_BUILD(HAVE_DISPLAY_LINK ON)
+    endif ()
 
     if (ENABLE_GPU_PROCESS)
         SET_AND_EXPOSE_TO_BUILD(USE_GRAPHICS_LAYER_TEXTURE_MAPPER ON)
@@ -312,6 +338,12 @@ if (ENABLE_MINIBROWSER)
     if (NOT TOOLKIT_LIBRARY)
         message(FATAL_ERROR "ToolKit library required to run MiniBrowser")
     endif ()
+
+    # ToolKitten has a dependency on Cairo so find it here but don't turn on Cairo
+    if (USE_SKIA)
+        find_package(Cairo REQUIRED)
+        list(APPEND PlayStationModule_TARGETS Cairo::Cairo)
+    endif ()
 endif ()
 
 # Create a shared JavaScriptCore with WTF and bmalloc exposed through it.
@@ -335,6 +367,9 @@ endif ()
 set(PAL_LIBRARY_TYPE OBJECT)
 set(WebCore_LIBRARY_TYPE OBJECT)
 set(WebKit_LIBRARY_TYPE SHARED)
+
+find_library(MEMORY_EXTRA_LIB MemoryExtra)
+find_path(MEMORY_EXTRA_INCLUDE_DIR NAMES memory-extra)
 
 # Enable multi process builds for Visual Studio
 if (NOT ${CMAKE_GENERATOR} MATCHES "Ninja")
@@ -438,7 +473,3 @@ check_symbol_exists(memmem string.h HAVE_MEMMEM)
 if (HAVE_MEMMEM)
     add_definitions(-DHAVE_MEMMEM=1)
 endif ()
-
-# FIXME: gtest assumes that you will have u8string if __cpp_char8_t
-# (feature test macro) is defined.
-add_compile_options(-U__cpp_char8_t)

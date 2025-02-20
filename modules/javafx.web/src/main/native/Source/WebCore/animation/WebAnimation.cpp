@@ -38,6 +38,7 @@
 #include "ComputedStyleExtractor.h"
 #include "DOMPromiseProxy.h"
 #include "Document.h"
+#include "DocumentInlines.h"
 #include "DocumentTimeline.h"
 #include "Element.h"
 #include "EventLoop.h"
@@ -55,14 +56,14 @@
 #include "StyledElement.h"
 #include "WebAnimationTypes.h"
 #include "WebAnimationUtilities.h"
-#include <wtf/IsoMallocInlines.h>
 #include <wtf/NeverDestroyed.h>
+#include <wtf/TZoneMallocInlines.h>
 #include <wtf/text/TextStream.h>
 #include <wtf/text/WTFString.h>
 
 namespace WebCore {
 
-WTF_MAKE_ISO_ALLOCATED_IMPL(WebAnimation);
+WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(WebAnimation);
 
 HashSet<WebAnimation*>& WebAnimation::instances()
 {
@@ -706,7 +707,7 @@ Seconds WebAnimation::effectEndTime() const
     return m_effect ? m_effect->endTime() : 0_s;
 }
 
-void WebAnimation::cancel()
+void WebAnimation::cancel(Silently silently)
 {
     LOG_WITH_STREAM(Animations, stream << "WebAnimation " << this << " cancel() (current time is " << currentTime() << ")");
 
@@ -762,7 +763,7 @@ void WebAnimation::cancel()
     // 3. Make animation's start time unresolved.
     m_startTime = std::nullopt;
 
-    timingDidChange(DidSeek::No, SynchronouslyNotify::No);
+    timingDidChange(DidSeek::No, SynchronouslyNotify::No, silently);
 
     invalidateEffect();
 
@@ -1378,14 +1379,15 @@ void WebAnimation::tick()
         m_effect->animationDidTick();
 }
 
-void WebAnimation::resolve(RenderStyle& targetStyle, const Style::ResolutionContext& resolutionContext, std::optional<Seconds> startTime)
+OptionSet<AnimationImpact> WebAnimation::resolve(RenderStyle& targetStyle, const Style::ResolutionContext& resolutionContext, std::optional<Seconds> startTime)
 {
     if (!m_shouldSkipUpdatingFinishedStateWhenResolving)
         updateFinishedState(DidSeek::No, SynchronouslyNotify::No);
     m_shouldSkipUpdatingFinishedStateWhenResolving = false;
 
     if (auto keyframeEffect = dynamicDowncast<KeyframeEffect>(m_effect.get()))
-        keyframeEffect->apply(targetStyle, resolutionContext, startTime);
+        return keyframeEffect->apply(targetStyle, resolutionContext, startTime);
+    return { };
 }
 
 void WebAnimation::setSuspended(bool isSuspended)
@@ -1413,11 +1415,6 @@ WebAnimation& WebAnimation::readyPromiseResolve()
 WebAnimation& WebAnimation::finishedPromiseResolve()
 {
     return *this;
-}
-
-const char* WebAnimation::activeDOMObjectName() const
-{
-    return "Animation";
 }
 
 void WebAnimation::suspend(ReasonForSuspension)
@@ -1556,7 +1553,7 @@ ExceptionOr<void> WebAnimation::commitStyles()
         return Exception { ExceptionCode::NoModificationAllowedError };
 
     // 2.2 If, after applying any pending style changes, target is not being rendered, throw an "InvalidStateError" DOMException and abort these steps.
-    styledElement->document().updateStyleIfNeeded();
+    styledElement->protectedDocument()->updateStyleIfNeeded();
     auto* renderer = styledElement->renderer();
     if (!renderer)
         return Exception { ExceptionCode::InvalidStateError };
@@ -1584,7 +1581,7 @@ ExceptionOr<void> WebAnimation::commitStyles()
         return styleDeclaration->copyProperties();
     }();
 
-    auto& keyframeStack = styledElement->ensureKeyframeEffectStack(PseudoId::None);
+    auto& keyframeStack = styledElement->ensureKeyframeEffectStack({ });
 
     auto commitProperty = [&](AnimatableCSSProperty property) {
         // 1. Let partialEffectStack be a copy of the effect stack for property on target.
@@ -1612,12 +1609,12 @@ ExceptionOr<void> WebAnimation::commitStyles()
         return WTF::switchOn(property,
             [&] (CSSPropertyID propertyId) {
                 if (auto cssValue = computedStyleExtractor.valueForPropertyInStyle(*animatedStyle, propertyId, nullptr, ComputedStyleExtractor::PropertyValueType::Computed))
-                    return inlineStyle->setProperty(propertyId, cssValue->cssText(), false, { styledElement->document() });
+                    return inlineStyle->setProperty(propertyId, cssValue->cssText(), { styledElement->document() });
                 return false;
             },
             [&] (const AtomString& customProperty) {
                 if (auto cssValue = computedStyleExtractor.customPropertyValue(customProperty))
-                    return inlineStyle->setCustomProperty(customProperty, cssValue->cssText(), false, { styledElement->document() });
+                    return inlineStyle->setCustomProperty(customProperty, cssValue->cssText(), { styledElement->document() });
                 return false;
             }
         );

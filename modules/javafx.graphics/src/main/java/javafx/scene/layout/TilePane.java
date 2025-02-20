@@ -472,7 +472,7 @@ public class TilePane extends Pane {
 
     /**
      * The preferred width of each tile.
-     * If equal to USE_COMPUTED_SIZE (the default) the tile width wlll be
+     * If equal to USE_COMPUTED_SIZE (the default) the tile width will be
      * automatically recomputed by the tilepane when the preferred size of children
      * changes to accommodate the widest child.  If the application sets this property
      * to value greater than 0, then tiles will be set to that width and the tilepane
@@ -513,7 +513,7 @@ public class TilePane extends Pane {
 
     /**
      * The preferred height of each tile.
-     * If equal to USE_COMPUTED_SIZE (the default) the tile height wlll be
+     * If equal to USE_COMPUTED_SIZE (the default) the tile height will be
      * automatically recomputed by the tilepane when the preferred size of children
      * changes to accommodate the tallest child.  If the application sets this property
      * to value greater than 0, then tiles will be set to that height and the tilepane

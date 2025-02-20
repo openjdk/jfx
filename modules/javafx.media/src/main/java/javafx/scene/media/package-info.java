@@ -224,7 +224,7 @@
  * class documentation. Some things which should be noted are:
  * <ul>
  *     <li>One <code>Media</code> object may be shared among multiple <code>MediaPlayer</code>s.
- *     <li>One <code>MediaPlayer</code> may be shared amoung multiple <code>MediaView</code>s.
+ *     <li>One <code>MediaPlayer</code> may be shared among multiple <code>MediaView</code>s.
  *     <li>Media may be played directly by a <code>MediaPlayer</code>
  *         without creating a <code>MediaView</code> although a view is required for display.</li>
  *     <li>Instead of <code>MediaPlayer.play()</code>,

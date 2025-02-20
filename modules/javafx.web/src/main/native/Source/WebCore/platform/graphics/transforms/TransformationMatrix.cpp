@@ -1651,6 +1651,20 @@ void TransformationMatrix::makeAffine()
     m_matrix[3][3] = 1;
 }
 
+void TransformationMatrix::flatten()
+{
+    m_matrix[0][2] = 0;
+
+    m_matrix[1][2] = 0;
+
+    m_matrix[2][0] = 0;
+    m_matrix[2][1] = 0;
+    m_matrix[2][2] = 1;
+    m_matrix[2][3] = 0;
+
+    m_matrix[3][2] = 0;
+}
+
 AffineTransform TransformationMatrix::toAffineTransform() const
 {
     return AffineTransform(m_matrix[0][0], m_matrix[0][1], m_matrix[1][0],
@@ -1923,6 +1937,12 @@ bool TransformationMatrix::isBackFaceVisible() const
     return zComponentOfTransformedNormal < 0;
 }
 
+TransformationMatrix TransformationMatrix::transpose() const
+{
+    TransformationMatrix transpose;
+    transposeMatrix4(m_matrix, transpose.m_matrix);
+    return transpose;
+}
 TextStream& operator<<(TextStream& ts, const TransformationMatrix& transform)
 {
     TextStream::IndentScope indentScope(ts);

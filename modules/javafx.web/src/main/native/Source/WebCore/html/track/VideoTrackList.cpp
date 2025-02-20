@@ -109,14 +109,9 @@ VideoTrack* VideoTrackList::selectedItem() const
     return item(selectedIndex);
 }
 
-EventTargetInterface VideoTrackList::eventTargetInterface() const
+enum EventTargetInterfaceType VideoTrackList::eventTargetInterface() const
 {
-    return VideoTrackListEventTargetInterfaceType;
-}
-
-const char* VideoTrackList::activeDOMObjectName() const
-{
-    return "VideoTrackList";
+    return EventTargetInterfaceType::VideoTrackList;
 }
 
 } // namespace WebCore

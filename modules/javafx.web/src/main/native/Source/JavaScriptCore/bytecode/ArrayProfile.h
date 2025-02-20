@@ -52,7 +52,9 @@ const ArrayModes Int8ArrayMode = 1U << 16;
 const ArrayModes Int16ArrayMode = 1U << 17;
 const ArrayModes Int32ArrayMode = 1U << 18;
 const ArrayModes Uint8ArrayMode = 1U << 19;
-const ArrayModes Uint8ClampedArrayMode = 1U << 20; // 21 - 25 are used for CoW arrays.
+const ArrayModes Uint8ClampedArrayMode = 1U << 20;
+// 21, 23, 25 are used for CoW arrays.
+const ArrayModes Float16ArrayMode = 1U << 22;
 const ArrayModes Uint16ArrayMode = 1U << 26;
 const ArrayModes Uint32ArrayMode = 1U << 27;
 const ArrayModes Float32ArrayMode = 1U << 28;
@@ -75,6 +77,7 @@ constexpr ArrayModes asArrayModesIgnoringTypedArrays(IndexingType indexingMode)
     | Uint8ClampedArrayMode   \
     | Uint16ArrayMode         \
     | Uint32ArrayMode         \
+    | Float16ArrayMode        \
     | Float32ArrayMode        \
     | Float64ArrayMode        \
     | BigInt64ArrayMode       \
@@ -220,8 +223,8 @@ public:
     StructureID* addressOfLastSeenStructureID() { return &m_lastSeenStructureID; }
     ArrayModes* addressOfArrayModes() { return &m_observedArrayModes; }
 
-    static ptrdiff_t offsetOfArrayProfileFlags() { return OBJECT_OFFSETOF(ArrayProfile, m_arrayProfileFlags); }
-    static ptrdiff_t offsetOfLastSeenStructureID() { return OBJECT_OFFSETOF(ArrayProfile, m_lastSeenStructureID); }
+    static constexpr ptrdiff_t offsetOfArrayProfileFlags() { return OBJECT_OFFSETOF(ArrayProfile, m_arrayProfileFlags); }
+    static constexpr ptrdiff_t offsetOfLastSeenStructureID() { return OBJECT_OFFSETOF(ArrayProfile, m_lastSeenStructureID); }
 
     void setOutOfBounds() { m_arrayProfileFlags.add(ArrayProfileFlag::OutOfBounds); }
 

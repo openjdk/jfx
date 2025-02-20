@@ -39,21 +39,18 @@ namespace JSC { namespace DFG {
 
 WTF_MAKE_TZONE_ALLOCATED_IMPL(JITFinalizer);
 
-JITFinalizer::JITFinalizer(Plan& plan, Ref<DFG::JITCode>&& jitCode, std::unique_ptr<LinkBuffer> linkBuffer, CodePtr<JSEntryPtrTag> withArityCheck)
+JITFinalizer::JITFinalizer(Plan& plan, Ref<DFG::JITCode>&& jitCode, CodePtr<JSEntryPtrTag> withArityCheck)
     : Finalizer(plan)
     , m_jitCode(WTFMove(jitCode))
-    , m_linkBuffer(WTFMove(linkBuffer))
     , m_withArityCheck(withArityCheck)
 {
 }
 
-JITFinalizer::~JITFinalizer()
-{
-}
+JITFinalizer::~JITFinalizer() = default;
 
 size_t JITFinalizer::codeSize()
 {
-    return m_linkBuffer->size();
+    return m_jitCode->size();
 }
 
 bool JITFinalizer::finalize()
@@ -62,7 +59,7 @@ bool JITFinalizer::finalize()
 
     WTF::crossModifyingCodeFence();
 
-    m_linkBuffer->runMainThreadFinalizationTasks();
+    m_plan.runMainThreadFinalizationTasks();
 
     CodeBlock* codeBlock = m_plan.codeBlock();
 

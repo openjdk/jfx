@@ -40,20 +40,21 @@
 #include "NotificationClient.h"
 #include "NotificationPermission.h"
 #include "PushEvent.h"
+#include "PushNotificationEvent.h"
 #include "ServiceWorker.h"
 #include "ServiceWorkerContainer.h"
 #include "ServiceWorkerGlobalScope.h"
 #include "ServiceWorkerTypes.h"
 #include "WebCoreOpaqueRoot.h"
 #include "WorkerGlobalScope.h"
-#include <wtf/IsoMallocInlines.h>
+#include <wtf/TZoneMallocInlines.h>
 
 #define REGISTRATION_RELEASE_LOG(fmt, ...) RELEASE_LOG(ServiceWorker, "%p - ServiceWorkerRegistration::" fmt, this, ##__VA_ARGS__)
 #define REGISTRATION_RELEASE_LOG_ERROR(fmt, ...) RELEASE_LOG_ERROR(ServiceWorker, "%p - ServiceWorkerRegistration::" fmt, this, ##__VA_ARGS__)
 
 namespace WebCore {
 
-WTF_MAKE_ISO_ALLOCATED_IMPL(ServiceWorkerRegistration);
+WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(ServiceWorkerRegistration);
 
 Ref<ServiceWorkerRegistration> ServiceWorkerRegistration::getOrCreate(ScriptExecutionContext& context, Ref<ServiceWorkerContainer>&& container, ServiceWorkerRegistrationData&& data)
 {
@@ -81,7 +82,7 @@ ServiceWorkerRegistration::ServiceWorkerRegistration(ScriptExecutionContext& con
     if (m_registrationData.activeWorker)
         m_activeWorker = ServiceWorker::getOrCreate(context, WTFMove(*m_registrationData.activeWorker));
 
-    REGISTRATION_RELEASE_LOG("ServiceWorkerRegistration: ID %llu, installing=%llu, waiting=%llu, active=%llu", identifier().toUInt64(), m_installingWorker ? m_installingWorker->identifier().toUInt64() : 0, m_waitingWorker ? m_waitingWorker->identifier().toUInt64() : 0, m_activeWorker ? m_activeWorker->identifier().toUInt64() : 0);
+    REGISTRATION_RELEASE_LOG("ServiceWorkerRegistration: ID %" PRIu64 ", installing=%" PRIu64 ", waiting=%" PRIu64 ", active=%" PRIu64, identifier().toUInt64(), m_installingWorker ? m_installingWorker->identifier().toUInt64() : 0, m_waitingWorker ? m_waitingWorker->identifier().toUInt64() : 0, m_activeWorker ? m_activeWorker->identifier().toUInt64() : 0);
 
     m_container->addRegistration(*this);
 
@@ -220,15 +221,15 @@ void ServiceWorkerRegistration::updateStateFromServer(ServiceWorkerRegistrationS
 {
     switch (state) {
     case ServiceWorkerRegistrationState::Installing:
-        REGISTRATION_RELEASE_LOG("updateStateFromServer: Setting registration %llu installing worker to %llu", identifier().toUInt64(), serviceWorker ? serviceWorker->identifier().toUInt64() : 0);
+        REGISTRATION_RELEASE_LOG("updateStateFromServer: Setting registration %" PRIu64 " installing worker to %" PRIu64, identifier().toUInt64(), serviceWorker ? serviceWorker->identifier().toUInt64() : 0);
         m_installingWorker = WTFMove(serviceWorker);
         break;
     case ServiceWorkerRegistrationState::Waiting:
-        REGISTRATION_RELEASE_LOG("updateStateFromServer: Setting registration %llu waiting worker to %llu", identifier().toUInt64(), serviceWorker ? serviceWorker->identifier().toUInt64() : 0);
+        REGISTRATION_RELEASE_LOG("updateStateFromServer: Setting registration %" PRIu64 " waiting worker to %" PRIu64, identifier().toUInt64(), serviceWorker ? serviceWorker->identifier().toUInt64() : 0);
         m_waitingWorker = WTFMove(serviceWorker);
         break;
     case ServiceWorkerRegistrationState::Active:
-        REGISTRATION_RELEASE_LOG("updateStateFromServer: Setting registration %llu active worker to %llu", identifier().toUInt64(), serviceWorker ? serviceWorker->identifier().toUInt64() : 0);
+        REGISTRATION_RELEASE_LOG("updateStateFromServer: Setting registration %" PRIu64 " active worker to %" PRIu64, identifier().toUInt64(), serviceWorker ? serviceWorker->identifier().toUInt64() : 0);
         m_activeWorker = WTFMove(serviceWorker);
         break;
     }
@@ -239,24 +240,19 @@ void ServiceWorkerRegistration::queueTaskToFireUpdateFoundEvent()
     if (isContextStopped())
         return;
 
-    REGISTRATION_RELEASE_LOG("fireUpdateFoundEvent: Firing updatefound event for registration %llu", identifier().toUInt64());
+    REGISTRATION_RELEASE_LOG("fireUpdateFoundEvent: Firing updatefound event for registration %" PRIu64, identifier().toUInt64());
 
     queueTaskToDispatchEvent(*this, TaskSource::DOMManipulation, Event::create(eventNames().updatefoundEvent, Event::CanBubble::No, Event::IsCancelable::No));
 }
 
-EventTargetInterface ServiceWorkerRegistration::eventTargetInterface() const
+enum EventTargetInterfaceType ServiceWorkerRegistration::eventTargetInterface() const
 {
-    return ServiceWorkerRegistrationEventTargetInterfaceType;
+    return EventTargetInterfaceType::ServiceWorkerRegistration;
 }
 
 ScriptExecutionContext* ServiceWorkerRegistration::scriptExecutionContext() const
 {
     return ActiveDOMObject::scriptExecutionContext();
-}
-
-const char* ServiceWorkerRegistration::activeDOMObjectName() const
-{
-    return "ServiceWorkerRegistration";
 }
 
 void ServiceWorkerRegistration::stop()

@@ -27,16 +27,23 @@
 
 #if ENABLE(MEDIA_STREAM) && ENABLE(WEB_CODECS)
 
+#include "CSSStyleImageValue.h"
 #include "ContextDestructionObserverInlines.h"
+#include "HTMLCanvasElement.h"
+#include "HTMLImageElement.h"
+#include "HTMLVideoElement.h"
+#include "ImageBitmap.h"
 #include "JSWebCodecsVideoFrame.h"
 #include "Logging.h"
+#include "OffscreenCanvas.h"
 #include "ReadableStream.h"
-#include <wtf/IsoMallocInlines.h>
+#include "SVGImageElement.h"
 #include <wtf/Seconds.h>
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
-WTF_MAKE_ISO_ALLOCATED_IMPL(MediaStreamTrackProcessor);
+WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(MediaStreamTrackProcessor);
 
 ExceptionOr<Ref<MediaStreamTrackProcessor>> MediaStreamTrackProcessor::create(ScriptExecutionContext& context, Init&& init)
 {
@@ -119,7 +126,7 @@ MediaStreamTrackProcessor::VideoFrameObserverWrapper::VideoFrameObserverWrapper(
 
 void MediaStreamTrackProcessor::VideoFrameObserverWrapper::start()
 {
-    callOnMainThread([protectedThis = Ref { *this }] {
+    callOnMainThreadAndWait([protectedThis = Ref { *this }] {
         protectedThis->m_observer->start();
     });
 }
@@ -184,7 +191,7 @@ void MediaStreamTrackProcessor::VideoFrameObserver::videoFrameAvailable(VideoFra
 }
 
 using MediaStreamTrackProcessorSource = MediaStreamTrackProcessor::Source;
-WTF_MAKE_ISO_ALLOCATED_IMPL(MediaStreamTrackProcessorSource);
+WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(MediaStreamTrackProcessorSource);
 
 MediaStreamTrackProcessor::Source::Source(Ref<MediaStreamTrack>&& track, MediaStreamTrackProcessor& processor)
     : m_track(WTFMove(track))

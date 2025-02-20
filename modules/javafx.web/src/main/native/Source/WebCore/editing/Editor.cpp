@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2006-2020 Apple Inc. All rights reserved.
+ * Copyright (C) 2006-2024 Apple Inc. All rights reserved.
  * Copyright (C) 2008 Nokia Corporation and/or its subsidiary(-ies)
  *
  * Redistribution and use in source and binary forms, with or without
@@ -96,6 +96,7 @@
 #include "RenderBlock.h"
 #include "RenderBlockFlow.h"
 #include "RenderImage.h"
+#include "RenderInline.h"
 #include "RenderLayer.h"
 #include "RenderTextControl.h"
 #include "RenderedDocumentMarker.h"
@@ -124,11 +125,13 @@
 #include "TypingCommand.h"
 #include "UserTypingGestureIndicator.h"
 #include "VisibleUnits.h"
+#include "WritingSuggestionData.h"
 #include "markup.h"
 #include <pal/FileSizeFormatter.h>
 #include <pal/text/KillRing.h>
 #include <wtf/Scope.h>
 #include <wtf/SetForScope.h>
+#include <wtf/text/MakeString.h>
 #include <wtf/unicode/CharacterNames.h>
 
 #if PLATFORM(MAC)
@@ -530,18 +533,6 @@ bool Editor::canCopy() const
     return selection.isRange() && (!selection.isInPasswordField() || selection.isInAutoFilledAndViewableField());
 }
 
-bool Editor::canPaste() const
-{
-    RefPtr localFrame = dynamicDowncast<LocalFrame>(document().frame()->mainFrame());
-    if (!localFrame)
-        return false;
-
-    if (localFrame->loader().shouldSuppressTextInputFromEditing())
-        return false;
-
-    return canEdit();
-}
-
 bool Editor::canDelete() const
 {
     const VisibleSelection& selection = document().selection().selection();
@@ -806,11 +797,9 @@ bool Editor::tryDHTMLCut()
 
 bool Editor::shouldInsertText(const String& text, const std::optional<SimpleRange>& range, EditorInsertAction action) const
 {
+    // FIXME(273431): shouldSuppressTextInputFromEditing does not work with site isolation.
     RefPtr localFrame = dynamicDowncast<LocalFrame>(document().frame()->mainFrame());
-    if (!localFrame)
-        return false;
-
-    if (localFrame->loader().shouldSuppressTextInputFromEditing() && action == EditorInsertAction::Typed)
+    if (localFrame && localFrame->loader().shouldSuppressTextInputFromEditing() && action == EditorInsertAction::Typed)
         return false;
 
     return client() && client()->shouldInsertText(text, range, action);
@@ -983,8 +972,6 @@ RefPtr<Element> Editor::findEventTargetFrom(const VisibleSelection& selection) c
     RefPtr target { selection.start().anchorElementAncestor() };
     if (!target)
         target = document().bodyOrFrameset();
-    if (!target)
-        return nullptr;
 
     return target;
 }
@@ -1206,6 +1193,13 @@ static void dispatchInputEvents(RefPtr<Element> startRoot, RefPtr<Element> endRo
 
 bool Editor::willApplyEditing(CompositeEditCommand& command, Vector<RefPtr<StaticRange>>&& targetRanges)
 {
+#if ENABLE(WRITING_TOOLS)
+    if (suppressEditingForWritingTools()) {
+        RELEASE_LOG(Editing, "Editor %p suppressed editing for Writing Tools", this);
+        return false;
+    }
+#endif
+
     m_hasHandledAnyEditing = true;
 
     if (!command.shouldDispatchInputEvents())
@@ -1295,6 +1289,9 @@ void Editor::unappliedEditing(EditCommandComposition& composition)
     updateEditorUINowIfScheduled();
 
     m_alternativeTextController->respondToUnappliedEditing(&composition);
+#if ENABLE(WRITING_TOOLS)
+    protectedDocument()->page()->respondToUnappliedWritingToolsEditing(&composition);
+#endif
 
     m_lastEditCommand = nullptr;
     if (auto* client = this->client())
@@ -1318,6 +1315,10 @@ void Editor::reappliedEditing(EditCommandComposition& composition)
     dispatchInputEvents(composition.startingRootEditableElement(), composition.endingRootEditableElement(), "historyRedo"_s, IsInputMethodComposing::No);
 
     updateEditorUINowIfScheduled();
+
+#if ENABLE(WRITING_TOOLS)
+    protectedDocument()->page()->respondToReappliedWritingToolsEditing(&composition);
+#endif
 
     m_lastEditCommand = nullptr;
     if (auto* client = this->client())
@@ -1609,7 +1610,7 @@ void Editor::paste(Pasteboard& pasteboard, FromMenuOrKeyBinding fromMenuOrKeyBin
 
     if (!dispatchClipboardEvent(findEventTargetFromSelection(), ClipboardEventKind::Paste))
         return; // DHTML did the whole operation
-    if (!canPaste())
+    if (!canEdit())
         return;
     updateMarkersForWordsAffectedByEditing(false);
     ResourceCacheValidationSuppressor validationSuppressor(document().cachedResourceLoader());
@@ -1625,7 +1626,7 @@ void Editor::pasteAsPlainText(FromMenuOrKeyBinding fromMenuOrKeyBinding)
 
     if (!dispatchClipboardEvent(findEventTargetFromSelection(), ClipboardEventKind::PasteAsPlainText))
         return;
-    if (!canPaste())
+    if (!canEdit())
         return;
     updateMarkersForWordsAffectedByEditing(false);
     pasteAsPlainTextWithPasteboard(*Pasteboard::createForCopyAndPaste(PagePasteboardContext::create(document().pageID())));
@@ -1637,7 +1638,7 @@ void Editor::pasteAsQuotation(FromMenuOrKeyBinding fromMenuOrKeyBinding)
 
     if (!dispatchClipboardEvent(findEventTargetFromSelection(), ClipboardEventKind::PasteAsQuotation))
         return;
-    if (!canPaste())
+    if (!canEdit())
         return;
     updateMarkersForWordsAffectedByEditing(false);
     Ref document = protectedDocument();
@@ -1655,7 +1656,7 @@ void Editor::pasteFont(FromMenuOrKeyBinding fromMenuOrKeyBinding)
 
     if (!dispatchClipboardEvent(findEventTargetFromSelection(), ClipboardEventKind::PasteFont))
         return;
-    if (!canPaste())
+    if (!canEdit())
         return;
     updateMarkersForWordsAffectedByEditing(false);
     ResourceCacheValidationSuppressor validationSuppressor(document().cachedResourceLoader());
@@ -2060,7 +2061,7 @@ void Editor::setBaseWritingDirection(WritingDirection direction)
     }
 
     auto style = MutableStyleProperties::create();
-    style->setProperty(CSSPropertyDirection, direction == WritingDirection::LeftToRight ? "ltr"_s : direction == WritingDirection::RightToLeft ? "rtl"_s : "inherit"_s, false);
+    style->setProperty(CSSPropertyDirection, direction == WritingDirection::LeftToRight ? "ltr"_s : direction == WritingDirection::RightToLeft ? "rtl"_s : "inherit"_s);
     applyParagraphStyleToSelection(style.ptr(), EditAction::SetBlockWritingDirection);
 }
 
@@ -2108,8 +2109,57 @@ void Editor::selectComposition()
     document().selection().setSelection(selection, { });
 }
 
+Node* Editor::nodeBeforeWritingSuggestions() const
+{
+    Ref document = protectedDocument();
+    if (!document->selection().isCaret())
+        return nullptr;
+
+    auto position = document->selection().selection().end();
+    RefPtr container = position.containerNode();
+    if (!container)
+        return nullptr;
+
+    if (RefPtr text = dynamicDowncast<Text>(container))
+        return text.get();
+
+    return position.computeNodeBeforePosition();
+}
+
+Element* Editor::writingSuggestionsContainerElement() const
+{
+    RefPtr node = nodeBeforeWritingSuggestions();
+    if (!node)
+        return nullptr;
+
+    return node->parentElement();
+}
+
+void Editor::removeWritingSuggestionIfNeeded()
+{
+    Ref document = protectedDocument();
+    document->updateStyleIfNeeded();
+
+    m_customCompositionAnnotations = { };
+    m_isHandlingAcceptedCandidate = false;
+
+    RefPtr selectedElement = writingSuggestionsContainerElement();
+    if (!selectedElement)
+        return;
+
+    m_writingSuggestionData = nullptr;
+    selectedElement->invalidateStyleAndRenderersForSubtree();
+}
+
 void Editor::confirmComposition()
 {
+#if PLATFORM(MAC)
+    if (m_isHandlingAcceptedCandidate) {
+        removeWritingSuggestionIfNeeded();
+        return;
+    }
+#endif
+
     if (!m_compositionNode)
         return;
     setComposition(m_compositionNode->data().substring(m_compositionStart, m_compositionEnd - m_compositionStart), ConfirmComposition);
@@ -2138,6 +2188,13 @@ void Editor::confirmOrCancelCompositionAndNotifyClient()
 
 void Editor::cancelComposition()
 {
+#if PLATFORM(MAC)
+    if (m_isHandlingAcceptedCandidate) {
+        removeWritingSuggestionIfNeeded();
+        return;
+    }
+#endif
+
     if (!m_compositionNode)
         return;
     setComposition(emptyString(), CancelComposition);
@@ -2218,6 +2275,75 @@ void Editor::setComposition(const String& text, SetCompositionMode mode)
         TypingCommand::closeTyping(document);
     }
 }
+
+void Editor::closeTyping()
+{
+    TypingCommand::closeTyping(m_document);
+}
+
+RenderInline* Editor::writingSuggestionRenderer() const
+{
+    return m_writingSuggestionRenderer.get();
+}
+
+void Editor::setWritingSuggestionRenderer(RenderInline& renderer)
+{
+    m_writingSuggestionRenderer = renderer;
+}
+
+#if PLATFORM(COCOA)
+void Editor::setWritingSuggestion(const String& fullTextWithPrediction, const CharacterRange& selection)
+{
+    Ref document = protectedDocument();
+    document->updateStyleIfNeeded();
+
+    RefPtr selectedElement = writingSuggestionsContainerElement();
+    if (!selectedElement)
+        return;
+
+    if (!selectedElement->hasEditableStyle())
+        return;
+
+    auto range = document->selection().selection().firstRange();
+    if (!range)
+        return;
+    range->start.offset = 0;
+
+    m_isHandlingAcceptedCandidate = true;
+
+    auto newText = fullTextWithPrediction.substring(0, selection.location);
+    auto suggestionText = fullTextWithPrediction.substring(selection.location);
+
+    auto currentText = m_writingSuggestionData ? m_writingSuggestionData->currentText() : emptyString();
+
+    ASSERT(newText.isEmpty() || newText.startsWith(currentText));
+    auto textDelta = newText.isEmpty() ? emptyString() : newText.substring(currentText.length());
+
+    auto offset = WebCore::characterCount(*range);
+    auto offsetWithDelta = currentText.isEmpty() ? offset : offset + textDelta.length();
+
+    if (!suggestionText.isEmpty()) {
+        String originalPrefix;
+        String originalSuffix;
+        if (m_writingSuggestionData) {
+            originalPrefix = m_writingSuggestionData->originalPrefix();
+            originalSuffix = m_writingSuggestionData->originalSuffix();
+        } else {
+            originalPrefix = WebCore::plainTextReplacingNoBreakSpace(*range);
+            originalSuffix = suggestionText;
+        }
+
+        m_writingSuggestionData = makeUnique<WritingSuggestionData>(WTFMove(suggestionText), WTFMove(newText), WTFMove(offsetWithDelta), WTFMove(originalPrefix), WTFMove(originalSuffix), Editor::writingSuggestionsSupportsSuffix());
+    } else
+        m_writingSuggestionData = nullptr;
+
+    if (!currentText.isEmpty()) {
+        SetForScope isInsertingTextForWritingSuggestionScope { m_isInsertingTextForWritingSuggestion, true };
+        insertText(textDelta, nullptr, TextEventInputKeyboard);
+    } else
+        selectedElement->invalidateStyleAndRenderersForSubtree();
+}
+#endif
 
 void Editor::setComposition(const String& text, const Vector<CompositionUnderline>& underlines, const Vector<CompositionHighlight>& highlights, const HashMap<String, Vector<CharacterRange>>& annotations, unsigned selectionStart, unsigned selectionEnd)
 {
@@ -2327,6 +2453,7 @@ void Editor::setComposition(const String& text, const Vector<CompositionUnderlin
                 highlight.startOffset += baseOffset;
                 highlight.endOffset += baseOffset;
             }
+
             m_customCompositionAnnotations = annotations;
             for (auto it = m_customCompositionAnnotations.begin(); it != m_customCompositionAnnotations.end(); ++it) {
                 for (auto& range : it->value)
@@ -3286,13 +3413,16 @@ void Editor::updateMarkersForWordsAffectedByEditing(bool doNotRemoveIfSelectionA
 
     OptionSet<DocumentMarker::Type> markerTypesToRemove {
         DocumentMarker::Type::CorrectionIndicator,
-        DocumentMarker::Type::DictationAlternatives,
         DocumentMarker::Type::SpellCheckingExemption,
         DocumentMarker::Type::Spelling,
 #if !PLATFORM(IOS_FAMILY)
         DocumentMarker::Type::Grammar,
 #endif
     };
+
+    if (CheckedPtr client = this->client(); client && client->shouldRemoveDictationAlternativesAfterEditing())
+        markerTypesToRemove.add(DocumentMarker::Type::DictationAlternatives);
+
     adjustMarkerTypesToRemoveForWordsAffectedByEditing(markerTypesToRemove);
 
     removeMarkers(wordRange, markerTypesToRemove, RemovePartiallyOverlappingMarker::Yes);
@@ -3574,7 +3704,7 @@ static inline void collapseCaretWidth(IntRect& rect)
 
 IntRect Editor::firstRectForRange(const SimpleRange& range) const
 {
-    range.start.document().updateLayout();
+    range.start.protectedDocument()->updateLayout();
 
     VisiblePosition start(makeDeprecatedLegacyPosition(range.start));
 
@@ -3696,10 +3826,10 @@ bool Editor::findString(const String& target, FindOptions options)
     if (!resultRange)
         return false;
 
-    if (!options.contains(DoNotSetSelection))
+    if (!options.contains(FindOption::DoNotSetSelection))
         document->selection().setSelection(VisibleSelection(*resultRange));
 
-    if (!(options.contains(DoNotRevealSelection)))
+    if (!(options.contains(FindOption::DoNotRevealSelection)))
         document->selection().revealSelection();
 
     return true;
@@ -3707,22 +3837,22 @@ bool Editor::findString(const String& target, FindOptions options)
 
 template<typename T> static auto& start(T& range, FindOptions options)
 {
-    return options.contains(Backwards) ? range.end : range.start;
+    return options.contains(FindOption::Backwards) ? range.end : range.start;
 }
 
 template<typename T> static auto& end(T& range, FindOptions options)
 {
-    return options.contains(Backwards) ? range.start : range.end;
+    return options.contains(FindOption::Backwards) ? range.start : range.end;
 }
 
 static BoundaryPoint makeBoundaryPointAfterNodeContents(Node& node, FindOptions options)
 {
-    return options.contains(Backwards) ? makeBoundaryPointBeforeNodeContents(node) : makeBoundaryPointAfterNodeContents(node);
+    return options.contains(FindOption::Backwards) ? makeBoundaryPointBeforeNodeContents(node) : makeBoundaryPointAfterNodeContents(node);
 }
 
 static std::optional<BoundaryPoint> makeBoundaryPointAfterNode(Node& node, FindOptions options)
 {
-    return options.contains(Backwards) ? makeBoundaryPointBeforeNode(node) : makeBoundaryPointAfterNode(node);
+    return options.contains(FindOption::Backwards) ? makeBoundaryPointBeforeNode(node) : makeBoundaryPointAfterNode(node);
 }
 
 static SimpleRange collapseIfRootsDiffer(SimpleRange&& range)
@@ -3740,7 +3870,7 @@ std::optional<SimpleRange> Editor::rangeOfString(const String& target, const std
     // Start from an edge of the reference range, if there's a reference range that's not in shadow content. Which edge
     // is used depends on whether we're searching forward or backward, and whether startInSelection is set.
 
-    bool startInReferenceRange = referenceRange && options.contains(StartInSelection);
+    bool startInReferenceRange = referenceRange && options.contains(FindOption::StartInSelection);
     auto shadowTreeRoot = referenceRange ? referenceRange->startContainer().containingShadowRoot() : nullptr;
 
     Ref document = protectedDocument();
@@ -3772,7 +3902,7 @@ std::optional<SimpleRange> Editor::rangeOfString(const String& target, const std
 
     // If we didn't find anything and we're wrapping, search again in the entire document (this will
     // redundantly re-search the area already searched in some cases).
-    if (resultRange.collapsed() && options.contains(WrapAround)) {
+    if (resultRange.collapsed() && options.contains(FindOption::WrapAround)) {
         resultRange = collapseIfRootsDiffer(findPlainText(makeRangeSelectingNodeContents(document), target, options));
         // We used to return false here if we ended up with the same range that we started with
         // (e.g., the reference range was already the only instance of this text). But we decided that
@@ -3811,7 +3941,7 @@ unsigned Editor::countMatchesForText(const String& target, const std::optional<S
 
     unsigned matchCount = 0;
     do {
-        auto resultRange = findPlainText(*searchRange, target, options - Backwards);
+        auto resultRange = findPlainText(*searchRange, target, options - FindOption::Backwards);
         if (resultRange.collapsed()) {
             if (!resultRange.start.container->isInShadowTree())
                 break;
@@ -3870,6 +4000,41 @@ void Editor::respondToChangedSelection(const VisibleSelection&, OptionSet<FrameS
 #endif
 
     Ref document = protectedDocument();
+
+#if PLATFORM(IOS_FAMILY)
+    auto continueDisplayingSuggestion = [&] {
+        if (!m_writingSuggestionData)
+            return false;
+
+        auto newSelection = document->selection().selection();
+
+        auto range = newSelection.firstRange();
+        if (!range)
+            return false;
+
+        range->start.offset = 0;
+
+        auto completion = makeString(m_writingSuggestionData->originalPrefix(), m_writingSuggestionData->originalSuffix());
+        auto content = plainTextReplacingNoBreakSpace(*range);
+
+        auto currentFullText = makeString(content, m_writingSuggestionData->content());
+
+        if (completion == content)
+            return false;
+
+        if (completion != currentFullText)
+            return false;
+
+        if (content.length() <= m_writingSuggestionData->originalPrefix().length())
+            return false;
+
+        return completion.startsWith(content);
+    }();
+
+    if (m_writingSuggestionData && !continueDisplayingSuggestion)
+        removeWritingSuggestionIfNeeded();
+#endif
+
     if (client())
         client()->respondToChangedSelection(document->frame());
 
@@ -3911,15 +4076,15 @@ static Vector<SimpleRange> scanForTelephoneNumbers(const SimpleRange& range)
 
     auto text = plainText(range);
     Vector<SimpleRange> result;
-    unsigned length = text.length();
-    unsigned scannerPosition = 0;
     int relativeStartPosition = 0;
     int relativeEndPosition = 0;
     auto characters = StringView { text }.upconvertedCharacters();
-    while (scannerPosition < length && TelephoneNumberDetector::find(&characters[scannerPosition], length - scannerPosition, &relativeStartPosition, &relativeEndPosition)) {
-        ASSERT(scannerPosition + relativeEndPosition <= length);
+    auto span = characters.span();
+    while (!span.empty() && TelephoneNumberDetector::find(span, &relativeStartPosition, &relativeEndPosition)) {
+        auto scannerPosition = span.data() - characters.span().data();
+        ASSERT(scannerPosition + relativeEndPosition <= text.length());
         result.append(resolveCharacterRange(range, CharacterRange(scannerPosition + relativeStartPosition, relativeEndPosition - relativeStartPosition)));
-        scannerPosition += relativeEndPosition;
+        span = span.subspan(relativeEndPosition);
     }
     return result;
 }
@@ -4090,8 +4255,8 @@ bool Editor::selectionStartHasMarkerFor(DocumentMarker::Type markerType, int fro
     if (!markers)
         return false;
 
-    unsigned int startOffset = static_cast<unsigned int>(from);
-    unsigned int endOffset = static_cast<unsigned int>(from + length);
+    unsigned startOffset = static_cast<unsigned>(from);
+    unsigned endOffset = static_cast<unsigned>(from + length);
     for (auto& marker : markers->markersFor(*node)) {
         if (marker->startOffset() <= startOffset && endOffset <= marker->endOffset() && marker->type() == markerType)
             return true;
@@ -4354,13 +4519,12 @@ PromisedAttachmentInfo Editor::promisedAttachmentInfo(Element& element)
     if (!attachment)
         return { };
 
-    Vector<String> additionalTypes;
-    Vector<RefPtr<SharedBuffer>> additionalData;
+    Vector<std::pair<String, RefPtr<WebCore::SharedBuffer>>>  additionalTypesAndData;
 #if PLATFORM(COCOA)
-    getPasteboardTypesAndDataForAttachment(element, additionalTypes, additionalData);
+    getPasteboardTypesAndDataForAttachment(element, additionalTypesAndData);
 #endif
 
-    return { attachment->uniqueIdentifier(), WTFMove(additionalTypes), WTFMove(additionalData) };
+    return { attachment->uniqueIdentifier(), WTFMove(additionalTypesAndData) };
 }
 
 void Editor::registerAttachmentIdentifier(const String& identifier, const String& contentType, const String& preferredFileName, Ref<FragmentedSharedBuffer>&& data)

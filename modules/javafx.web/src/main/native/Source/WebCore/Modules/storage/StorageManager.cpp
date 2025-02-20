@@ -38,11 +38,11 @@
 #include "SecurityOrigin.h"
 #include "WorkerGlobalScope.h"
 #include "WorkerStorageConnection.h"
-#include <wtf/IsoMallocInlines.h>
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
-WTF_MAKE_ISO_ALLOCATED_IMPL(StorageManager);
+WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(StorageManager);
 
 Ref<StorageManager> StorageManager::create(NavigatorBase& navigator)
 {
@@ -53,6 +53,8 @@ StorageManager::StorageManager(NavigatorBase& navigator)
     : m_navigator(navigator)
 {
 }
+
+StorageManager::~StorageManager() = default;
 
 struct ConnectionInfo {
     StorageConnection& connection;

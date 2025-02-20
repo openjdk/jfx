@@ -22,5 +22,5 @@
 ] interface DOMParser {
     [CallWith=CurrentDocument] constructor();
 
-    [NewObject] Document parseFromString(DOMString string, [AtomString] DOMString contentType);
+    [NewObject] Document parseFromString((TrustedHTML or DOMString) string, [AtomString] DOMString contentType);
 };

@@ -48,7 +48,7 @@ static std::optional<Vector<uint8_t>> gcryptSign(gcry_sexp_t keySexp, const Vect
         if (!digest)
             return std::nullopt;
 
-        digest->addBytes(data.data(), data.size());
+        digest->addBytes(data);
         dataHash = digest->computeHash();
     }
 
@@ -99,7 +99,7 @@ static std::optional<bool> gcryptVerify(gcry_sexp_t keySexp, const Vector<uint8_
         if (!digest)
             return std::nullopt;
 
-        digest->addBytes(data.data(), data.size());
+        digest->addBytes(data);
         dataHash = digest->computeHash();
     }
 

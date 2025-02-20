@@ -483,9 +483,7 @@ Color RenderThemeJava::platformInactiveSelectionForegroundColor(OptionSet<StyleC
 #if ENABLE(VIDEO)
 Vector<String, 2> RenderThemeJava::mediaControlsScripts()
 {
-
-    return { String(ModernMediaControlsJavaScript, sizeof(ModernMediaControlsJavaScript)) };
-
+    return { StringImpl::createWithoutCopying(ModernMediaControlsJavaScript) };
 }
 
 String RenderThemeJava::extraMediaControlsStyleSheet()
@@ -550,7 +548,7 @@ bool RenderThemeJava::paintMediaControl(jint type, const RenderObject&, const Pa
 
 String RenderThemeJava::mediaControlsStyleSheet()
 {
-    return String(ModernMediaControlsUserAgentStyleSheet, sizeof(ModernMediaControlsUserAgentStyleSheet));
+    return StringImpl::createWithoutCopying(ModernMediaControlsUserAgentStyleSheet);
 }
 
 String RenderThemeJava::mediaControlsBase64StringForIconNameAndType(const String& iconName, const String& iconType)

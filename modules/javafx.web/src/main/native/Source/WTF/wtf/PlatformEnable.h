@@ -87,7 +87,7 @@
 
 /* --------- Windows port --------- */
 #if PLATFORM(WIN)
-#include <wtf/PlatformEnableWinCairo.h>
+#include <wtf/PlatformEnableWin.h>
 #endif
 
 /* --------- PlayStation port --------- */
@@ -104,12 +104,16 @@
 
 /* Do not use PLATFORM() tests in this section ! */
 
-#if !defined(ENABLE_3D_TRANSFORMS)
-#define ENABLE_3D_TRANSFORMS 0
+#if !defined(ENABLE_CONJECTURE_ASSERT)
+#define ENABLE_CONJECTURE_ASSERT 0
 #endif
 
 #if !defined(ENABLE_ACCESSIBILITY_ANIMATION_CONTROL)
 #define ENABLE_ACCESSIBILITY_ANIMATION_CONTROL 0
+#endif
+
+#if !defined(ENABLE_ACCESSIBILITY_NON_BLINKING_CURSOR)
+#define ENABLE_ACCESSIBILITY_NON_BLINKING_CURSOR 0
 #endif
 
 #if !defined(ENABLE_ADVANCED_PRIVACY_PROTECTIONS)
@@ -208,10 +212,6 @@
 #define ENABLE_DESTINATION_COLOR_SPACE_DISPLAY_P3 0
 #endif
 
-#if !defined(ENABLE_DESTINATION_COLOR_SPACE_LINEAR_SRGB)
-#define ENABLE_DESTINATION_COLOR_SPACE_LINEAR_SRGB 1
-#endif
-
 #if !defined(ENABLE_DRAG_SUPPORT)
 #define ENABLE_DRAG_SUPPORT 1
 #endif
@@ -292,6 +292,10 @@
 #define ENABLE_INPUT_TYPE_WEEK 0
 #endif
 
+#if !defined(ENABLE_INPUT_TYPE_WEEK_PICKER)
+#define ENABLE_INPUT_TYPE_WEEK_PICKER 0
+#endif
+
 #if !defined(ENABLE_IOS_GESTURE_EVENTS)
 #define ENABLE_IOS_GESTURE_EVENTS 0
 #endif
@@ -323,10 +327,6 @@
 #define ENABLE_KINETIC_SCROLLING 0
 #endif
 
-#if !defined(ENABLE_LAYER_BASED_SVG_ENGINE)
-#define ENABLE_LAYER_BASED_SVG_ENGINE 0
-#endif
-
 #if !defined(ENABLE_LLVM_PROFILE_GENERATION)
 #define ENABLE_LLVM_PROFILE_GENERATION 0
 #endif
@@ -349,6 +349,10 @@
 
 #if !defined(ENABLE_MEDIA_SOURCE)
 #define ENABLE_MEDIA_SOURCE 0
+#endif
+
+#if !defined(ENABLE_MEDIA_SOURCE_IN_WORKERS)
+#define ENABLE_MEDIA_SOURCE_IN_WORKERS 0
 #endif
 
 #if !defined(ENABLE_MEDIA_STATISTICS)
@@ -557,12 +561,24 @@
 #define ENABLE_WEBXR_HANDS 0
 #endif
 
+#if !defined(ENABLE_WEBXR_LAYERS)
+#define ENABLE_WEBXR_LAYERS (PLATFORM(COCOA) && ENABLE_WEBXR)
+#endif
+
 #if !defined(ENABLE_WHEEL_EVENT_LATCHING)
 #define ENABLE_WHEEL_EVENT_LATCHING 0
 #endif
 
 #if !defined(ENABLE_WHEEL_EVENT_REGIONS)
 #define ENABLE_WHEEL_EVENT_REGIONS 0
+#endif
+
+#if !defined(ENABLE_WRITING_TOOLS)
+#define ENABLE_WRITING_TOOLS 0
+#endif
+
+#if !defined(ENABLE_WRITING_TOOLS_UI)
+#define ENABLE_WRITING_TOOLS_UI 0
 #endif
 
 #if !defined(ENABLE_WKPDFVIEW)
@@ -601,6 +617,11 @@
 #if !defined(JSC_OBJC_API_ENABLED)
 #define JSC_OBJC_API_ENABLED 0
 #endif
+#endif
+
+/* wyhash-based StringHasher */
+#if !defined(ENABLE_WYHASH_STRING_HASHER) && PLATFORM(MAC)
+#define ENABLE_WYHASH_STRING_HASHER 1
 #endif
 
 /* The JIT is enabled by default on all x86-64 & ARM64 platforms. */
@@ -734,7 +755,7 @@
 #undef ENABLE_B3_JIT
 #define ENABLE_B3_JIT 1
 #undef ENABLE_WEBASSEMBLY_OMGJIT
-#define ENABLE_WEBASSEMBLY_OMGJIT 0
+#define ENABLE_WEBASSEMBLY_OMGJIT 1
 #undef ENABLE_WEBASSEMBLY_BBQJIT
 #define ENABLE_WEBASSEMBLY_BBQJIT 1
 #endif
@@ -743,6 +764,10 @@
 #define ENABLE_WEBASSEMBLY 1
 #define ENABLE_WEBASSEMBLY_OMGJIT 1
 #define ENABLE_WEBASSEMBLY_BBQJIT 1
+#endif
+
+#if !defined(ENABLE_WEBASSEMBLY) && CPU(ADDRESS64) && PLATFORM(COCOA) && !ENABLE(C_LOOP)
+#define ENABLE_WEBASSEMBLY 1
 #endif
 
 /* The SamplingProfiler is the probabilistic and low-overhead profiler used by
@@ -784,7 +809,8 @@
     || (PLATFORM(MACCATALYST) && __IPHONE_OS_VERSION_MAX_ALLOWED >= 180000) \
     || (PLATFORM(IOS) && __IPHONE_OS_VERSION_MAX_ALLOWED >= 180000) \
     || (PLATFORM(APPLETV) && __TV_OS_VERSION_MAX_ALLOWED >= 180000) \
-    || (PLATFORM(WATCHOS) && __WATCH_OS_VERSION_MAX_ALLOWED >= 110000)
+    || (PLATFORM(WATCHOS) && __WATCH_OS_VERSION_MAX_ALLOWED >= 110000) \
+    || (PLATFORM(VISION) && __VISION_OS_VERSION_MAX_ALLOWED >= 20000)
 // Linkers from older SDKs causes wrong linking. ref: rdar://96556827
 #define ENABLE_OFFLINE_ASM_ALT_ENTRY 1
 #endif
@@ -805,14 +831,19 @@
 #endif
 
 /* Enable JIT'ing Regular Expressions that have nested parenthesis . */
-#if ENABLE(YARR_JIT) && (CPU(ARM64) || (CPU(X86_64) && !OS(WINDOWS)) || CPU(RISCV64))
+#if ENABLE(YARR_JIT) && (CPU(ARM64) || CPU(X86_64) || CPU(RISCV64))
 #define ENABLE_YARR_JIT_ALL_PARENS_EXPRESSIONS 1
 #define ENABLE_YARR_JIT_REGEXP_TEST_INLINE 1
 #endif
 
-/* Enable JIT'ing Regular Expressions that have nested back references. */
-#if ENABLE(YARR_JIT) && (CPU(ARM64) || (CPU(X86_64) && !OS(WINDOWS)) || CPU(RISCV64))
+/* Enable JIT'ing Regular Expressions that have back references. */
+#if ENABLE(YARR_JIT) && (CPU(ARM64) || CPU(X86_64) || CPU(RISCV64))
 #define ENABLE_YARR_JIT_BACKREFERENCES 1
+#if CPU(ARM64) || CPU(X86_64)
+#define ENABLE_YARR_JIT_BACKREFERENCES_FOR_16BIT_EXPRS 1
+#else
+#define ENABLE_YARR_JIT_BACKREFERENCES_FOR_16BIT_EXPRS 0
+#endif
 #endif
 
 #if ENABLE(YARR_JIT) && (CPU(ARM64) || CPU(X86_64) || CPU(RISCV64))
@@ -848,26 +879,12 @@
 #define ENABLE_SIGNAL_BASED_VM_TRAPS 1
 #endif
 
-/* The unified Config record feature is not available for Windows because the
-   Windows port puts WTF in a separate DLL, and the offlineasm code accessing
-   the config record expects the config record to be directly accessible like
-   a global variable (and not have to go thru DLL shenanigans). C++ code would
-   resolve these DLL bindings automatically, but offlineasm does not.
-
-   The permanently freezing feature also currently relies on the Config records
-   being unified, and the Windows port also does not currently have an
-   implementation for the freezing mechanism anyway. For simplicity, we just
-   disable both the use of unified Config record and config freezing for the
-   Windows port.
-*/
-#if OS(WINDOWS)
-#define ENABLE_UNIFIED_AND_FREEZABLE_CONFIG_RECORD 0
-#else
-#define ENABLE_UNIFIED_AND_FREEZABLE_CONFIG_RECORD 1
+#if !defined(ENABLE_MPROTECT_RX_TO_RWX)
+#define ENABLE_MPROTECT_RX_TO_RWX 0
 #endif
 
 /* CSS Selector JIT Compiler */
-#if !defined(ENABLE_CSS_SELECTOR_JIT) && ((CPU(X86_64) || CPU(ARM64) || (CPU(ARM_THUMB2) && OS(DARWIN))) && ENABLE(JIT) && (OS(DARWIN) || OS(WINDOWS) || PLATFORM(GTK) || PLATFORM(WPE)))
+#if !defined(ENABLE_CSS_SELECTOR_JIT) && ((CPU(X86_64) || CPU(ARM64)) && ENABLE(JIT))
 #define ENABLE_CSS_SELECTOR_JIT 1
 #endif
 
@@ -905,10 +922,18 @@
 #if OS(DARWIN) && CPU(ADDRESS64) && ENABLE(JIT) && (ENABLE(JIT_CAGE) || ASSERT_ENABLED)
 #define ENABLE_JIT_OPERATION_VALIDATION 1
 #endif
+#endif
 
 #if USE(APPLE_INTERNAL_SDK) && ENABLE(DISASSEMBLER) && CPU(ARM64E) && HAVE(DLADDR)
 #define ENABLE_JIT_OPERATION_DISASSEMBLY 1
 #endif
+
+#if CPU(ARM64E)
+#define ENABLE_JIT_SIGN_ASSEMBLER_BUFFER 1
+#endif
+
+#if !defined(ENABLE_JIT_SCAN_ASSEMBLER_BUFFER_FOR_ZEROES) && CPU(X86_64) && PLATFORM(MAC)
+#define ENABLE_JIT_SCAN_ASSEMBLER_BUFFER_FOR_ZEROES 1
 #endif
 
 #if !defined(ENABLE_BINDING_INTEGRITY) && !OS(WINDOWS)
@@ -963,10 +988,6 @@
 #error "ENABLE(DESTINATION_COLOR_SPACE_DISPLAY_P3) requires HAVE(CORE_GRAPHICS_DISPLAY_P3_COLOR_SPACE) on platforms using CoreGraphics"
 #endif
 
-#if ENABLE(DESTINATION_COLOR_SPACE_LINEAR_SRGB) && !HAVE(CORE_GRAPHICS_LINEAR_SRGB_COLOR_SPACE)
-#error "ENABLE(DESTINATION_COLOR_SPACE_LINEAR_SRGB) requires HAVE(CORE_GRAPHICS_LINEAR_SRGB_COLOR_SPACE) on platforms using CoreGraphics"
-#endif
-
 #endif
 
 #if ENABLE(PREDEFINED_COLOR_SPACE_DISPLAY_P3) && !ENABLE(DESTINATION_COLOR_SPACE_DISPLAY_P3)
@@ -975,6 +996,10 @@
 
 #if ENABLE(WEBXR_HANDS) && !ENABLE(WEBXR)
 #error "ENABLE(WEBXR_HANDS) requires ENABLE(WEBXR)"
+#endif
+
+#if ENABLE(WEBXR_LAYERS) && !ENABLE(WEBXR)
+#error "ENABLE(WEBXR_LAYERS) requires ENABLE(WEBXR)"
 #endif
 
 #if !defined(ENABLE_WEBPROCESS_CACHE)
@@ -991,4 +1016,14 @@
 #if !defined(ENABLE_EXTENSION_CAPABILITIES) \
     && USE(EXTENSIONKIT)
 #define ENABLE_EXTENSION_CAPABILITIES 1
+#endif
+
+#if !defined(ENABLE_LINEAR_MEDIA_PLAYER) \
+    && USE(LINEARMEDIAKIT)
+#define ENABLE_LINEAR_MEDIA_PLAYER 1
+#endif
+
+#if !defined(ENABLE_WRITING_SUGGESTIONS) \
+    && (PLATFORM(COCOA) && HAVE(INLINE_PREDICTIONS) && !PLATFORM(MACCATALYST))
+#define ENABLE_WRITING_SUGGESTIONS 1
 #endif

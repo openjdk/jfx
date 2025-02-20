@@ -41,6 +41,15 @@
 #include <wtf/WeakPtr.h>
 
 namespace WebCore {
+class MediaSessionObserver;
+}
+
+namespace WTF {
+template<typename T> struct IsDeprecatedWeakRefSmartPointerException;
+template<> struct IsDeprecatedWeakRefSmartPointerException<WebCore::MediaSessionObserver> : std::true_type { };
+}
+
+namespace WebCore {
 
 class Document;
 class HTMLMediaElement;
@@ -49,6 +58,21 @@ class MediaSessionCoordinator;
 class MediaSessionCoordinatorPrivate;
 class Navigator;
 template<typename> class DOMPromiseDeferred;
+struct NowPlayingInfo;
+
+class MediaSessionObserver : public CanMakeWeakPtr<MediaSessionObserver> {
+public:
+    virtual ~MediaSessionObserver() = default;
+
+    virtual void metadataChanged(const RefPtr<MediaMetadata>&) { }
+    virtual void positionStateChanged(const std::optional<MediaPositionState>&) { }
+    virtual void playbackStateChanged(MediaSessionPlaybackState) { }
+    virtual void actionHandlersChanged() { }
+
+#if ENABLE(MEDIA_SESSION_COORDINATOR)
+    virtual void readyStateChanged(MediaSessionReadyState) { }
+#endif
+};
 
 class MediaSession : public RefCounted<MediaSession>, public ActiveDOMObject, public CanMakeWeakPtr<MediaSession> {
     WTF_MAKE_FAST_ALLOCATED;
@@ -56,14 +80,18 @@ public:
     static Ref<MediaSession> create(Navigator&);
     ~MediaSession();
 
+    // ActiveDOMObject.
+    void ref() const final { RefCounted::ref(); }
+    void deref() const final { RefCounted::deref(); }
+
     MediaMetadata* metadata() const { return m_metadata.get(); };
     void setMetadata(RefPtr<MediaMetadata>&&);
-    void metadataUpdated();
+    void metadataUpdated(const MediaMetadata&);
 
     MediaSessionPlaybackState playbackState() const { return m_playbackState; };
     void setPlaybackState(MediaSessionPlaybackState);
 
-    void setActionHandler(MediaSessionAction, RefPtr<MediaSessionActionHandler>&&);
+    ExceptionOr<void> setActionHandler(MediaSessionAction, RefPtr<MediaSessionActionHandler>&&);
 
     void callActionHandler(const MediaSessionActionDetails&, DOMPromiseDeferred<void>&&);
 
@@ -87,7 +115,7 @@ public:
 
 #if ENABLE(MEDIA_SESSION_PLAYLIST)
     const Vector<Ref<MediaMetadata>>& playlist() const { return m_playlist; }
-    ExceptionOr<void> setPlaylist(ScriptExecutionContext&, Vector<RefPtr<MediaMetadata>>&&);
+    ExceptionOr<void> setPlaylist(ScriptExecutionContext&, Vector<Ref<MediaMetadata>>&&);
 #endif
 
     bool hasActiveActionHandlers() const;
@@ -102,23 +130,13 @@ public:
     const Logger& logger() const { return *m_logger.get(); }
 #endif
 
-    class Observer : public CanMakeWeakPtr<Observer> {
-    public:
-        virtual ~Observer() = default;
-
-        virtual void metadataChanged(const RefPtr<MediaMetadata>&) { }
-        virtual void positionStateChanged(const std::optional<MediaPositionState>&) { }
-        virtual void playbackStateChanged(MediaSessionPlaybackState) { }
-        virtual void actionHandlersChanged() { }
-
-#if ENABLE(MEDIA_SESSION_COORDINATOR)
-        virtual void readyStateChanged(MediaSessionReadyState) { }
-#endif
-    };
-    void addObserver(Observer&);
-    void removeObserver(Observer&);
+    bool hasObserver(MediaSessionObserver&) const;
+    void addObserver(MediaSessionObserver&);
+    void removeObserver(MediaSessionObserver&);
 
     RefPtr<HTMLMediaElement> activeMediaElement() const;
+
+    void updateNowPlayingInfo(NowPlayingInfo&);
 
 private:
     explicit MediaSession(Navigator&);
@@ -127,21 +145,21 @@ private:
 
     void updateReportedPosition();
 
-    void forEachObserver(const Function<void(Observer&)>&);
-    void notifyMetadataObservers();
+    void forEachObserver(const Function<void(MediaSessionObserver&)>&);
+    void notifyMetadataObservers(const RefPtr<MediaMetadata>&);
     void notifyPositionStateObservers();
     void notifyPlaybackStateObservers();
     void notifyActionHandlerObservers();
     void notifyReadyStateObservers();
 
-    // ActiveDOMObject
-    const char* activeDOMObjectName() const final { return "MediaSession"; }
+    // ActiveDOMObject.
     void suspend(ReasonForSuspension) final;
     void stop() final;
     bool virtualHasPendingActivity() const final;
 
     WeakPtr<Navigator> m_navigator;
     RefPtr<MediaMetadata> m_metadata;
+    RefPtr<MediaMetadata> m_defaultMetadata;
     MediaSessionPlaybackState m_playbackState { MediaSessionPlaybackState::None };
     std::optional<MediaPositionState> m_positionState;
     std::optional<double> m_lastReportedPosition;
@@ -150,7 +168,7 @@ private:
     RefPtr<const Logger> m_logger;
     const void* m_logIdentifier;
 
-    WeakHashSet<Observer> m_observers;
+    WeakHashSet<MediaSessionObserver> m_observers;
 
 #if ENABLE(MEDIA_SESSION_COORDINATOR)
     MediaSessionReadyState m_readyState { MediaSessionReadyState::Havenothing };
@@ -161,6 +179,7 @@ private:
     Vector<Ref<MediaMetadata>> m_playlist;
 #endif
     mutable Lock m_actionHandlersLock;
+    mutable bool m_defaultArtworkAttempted { false };
 };
 
 String convertEnumerationToString(MediaSessionPlaybackState);

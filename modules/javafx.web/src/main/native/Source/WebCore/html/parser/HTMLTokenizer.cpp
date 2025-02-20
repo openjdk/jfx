@@ -28,11 +28,12 @@
 #include "config.h"
 #include "HTMLTokenizer.h"
 
+#include "CSSTokenizerInputStream.h"
 #include "HTMLEntityParser.h"
 #include "HTMLNames.h"
 #include "MarkupTokenizerInlines.h"
+#include <wtf/text/MakeString.h>
 #include <wtf/text/StringBuilder.h>
-
 
 namespace WebCore {
 
@@ -847,7 +848,7 @@ bool HTMLTokenizer::processToken(SegmentedString& source)
             m_token.appendToAttributeValue(decodedEntity.span());
         // We're supposed to switch back to the attribute value state that
         // we were in when we were switched into this state. Rather than
-        // keeping track of this explictly, we observe that the previous
+        // keeping track of this explicitly, we observe that the previous
         // state can be determined by m_additionalAllowedCharacter.
         if (m_additionalAllowedCharacter == '"')
             SWITCH_TO(AttributeValueDoubleQuotedState);
@@ -903,7 +904,7 @@ bool HTMLTokenizer::processToken(SegmentedString& source)
 
     BEGIN_STATE(MarkupDeclarationOpenState)
         if (character == '-') {
-            auto result = source.advancePast("--");
+            auto result = source.advancePast("--"_s);
             if (result == SegmentedString::DidMatch) {
                 m_token.beginComment();
                 SWITCH_TO(CommentStartState);
@@ -911,13 +912,13 @@ bool HTMLTokenizer::processToken(SegmentedString& source)
             if (result == SegmentedString::NotEnoughCharacters)
                 RETURN_IN_CURRENT_STATE(haveBufferedCharacterToken());
         } else if (isASCIIAlphaCaselessEqual(character, 'd')) {
-            auto result = source.advancePastLettersIgnoringASCIICase("doctype");
+            auto result = source.advancePastLettersIgnoringASCIICase("doctype"_s);
             if (result == SegmentedString::DidMatch)
                 SWITCH_TO(DOCTYPEState);
             if (result == SegmentedString::NotEnoughCharacters)
                 RETURN_IN_CURRENT_STATE(haveBufferedCharacterToken());
         } else if (character == '[' && shouldAllowCDATA()) {
-            auto result = source.advancePast("[CDATA[");
+            auto result = source.advancePast("[CDATA["_s);
             if (result == SegmentedString::DidMatch)
                 SWITCH_TO(CDATASectionState);
             if (result == SegmentedString::NotEnoughCharacters)
@@ -1076,13 +1077,13 @@ bool HTMLTokenizer::processToken(SegmentedString& source)
             return emitAndReconsumeInDataState();
         }
         if (isASCIIAlphaCaselessEqual(character, 'p')) {
-            auto result = source.advancePastLettersIgnoringASCIICase("public");
+            auto result = source.advancePastLettersIgnoringASCIICase("public"_s);
             if (result == SegmentedString::DidMatch)
                 SWITCH_TO(AfterDOCTYPEPublicKeywordState);
             if (result == SegmentedString::NotEnoughCharacters)
                 RETURN_IN_CURRENT_STATE(haveBufferedCharacterToken());
         } else if (isASCIIAlphaCaselessEqual(character, 's')) {
-            auto result = source.advancePastLettersIgnoringASCIICase("system");
+            auto result = source.advancePastLettersIgnoringASCIICase("system"_s);
             if (result == SegmentedString::DidMatch)
                 SWITCH_TO(AfterDOCTYPESystemKeywordState);
             if (result == SegmentedString::NotEnoughCharacters)
@@ -1375,12 +1376,7 @@ bool HTMLTokenizer::processToken(SegmentedString& source)
 String HTMLTokenizer::bufferedCharacters() const
 {
     // FIXME: Add an assert about m_state.
-    StringBuilder characters;
-    characters.reserveCapacity(numberOfBufferedCharacters());
-    characters.append('<');
-    characters.append('/');
-    characters.appendCharacters(m_temporaryBuffer.data(), m_temporaryBuffer.size());
-    return characters.toString();
+    return makeString("</"_s, m_temporaryBuffer);
 }
 
 void HTMLTokenizer::updateStateFor(const AtomString& tagName)
@@ -1410,7 +1406,7 @@ inline bool HTMLTokenizer::temporaryBufferIs(ASCIILiteral expectedString)
 {
     if (m_temporaryBuffer.size() != expectedString.length())
         return false;
-    return equal(m_temporaryBuffer.data(), expectedString.characters8(), m_temporaryBuffer.size());
+    return equal(m_temporaryBuffer.data(), expectedString.span8());
 }
 
 inline void HTMLTokenizer::appendToPossibleEndTag(UChar character)
@@ -1423,7 +1419,7 @@ inline bool HTMLTokenizer::isAppropriateEndTag() const
 {
     if (m_bufferedEndTagName.size() != m_appropriateEndTagName.size())
         return false;
-    return equal(m_bufferedEndTagName.data(), m_appropriateEndTagName.data(), m_bufferedEndTagName.size());
+    return equal(m_bufferedEndTagName.data(), m_appropriateEndTagName.span());
 }
 
 inline void HTMLTokenizer::parseError()
