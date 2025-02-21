@@ -27,7 +27,6 @@
     -fx-button-placement: right;
     -fx-button-vertical-alignment: stretch;
     -fx-button-default-height: 29;
-    -fx-allow-rtl: true;
 }
 
 .iconify-button,

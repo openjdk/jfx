@@ -36,13 +36,11 @@ import javafx.beans.property.SimpleObjectProperty;
 import javafx.beans.value.ObservableValue;
 import javafx.css.CssMetaData;
 import javafx.css.PseudoClass;
-import javafx.css.SimpleStyleableBooleanProperty;
 import javafx.css.SimpleStyleableDoubleProperty;
 import javafx.css.SimpleStyleableIntegerProperty;
 import javafx.css.SimpleStyleableObjectProperty;
 import javafx.css.StyleConverter;
 import javafx.css.Styleable;
-import javafx.css.StyleableBooleanProperty;
 import javafx.css.StyleableDoubleProperty;
 import javafx.css.StyleableIntegerProperty;
 import javafx.css.StyleableObjectProperty;
@@ -104,12 +102,6 @@ import java.util.stream.Stream;
  *             <td style="white-space: break-line">
  *                 Specifies the default height of the header buttons, which is used when the application
  *                 does not specify a preferred button height.
- *             </td>
- *         </tr>
- *         <tr>
- *             <th>-fx-allow-rtl</th><td>&lt;boolean&gt;</td><td>true</td>
- *             <td style="white-space: break-line">
- *                 Specifies whether the iconify/maximize/close buttons support right-to-left orientations.
  *             </td>
  *         </tr>
  *     </tbody>
@@ -192,25 +184,11 @@ public final class HeaderButtonOverlay extends Region {
             }
         };
 
-    private static final CssMetaData<HeaderButtonOverlay, Boolean> ALLOW_RTL_METADATA =
-        new CssMetaData<>("-fx-allow-rtl", StyleConverter.getBooleanConverter(), true) {
-            @Override
-            public boolean isSettable(HeaderButtonOverlay overlay) {
-                return true;
-            }
-
-            @Override
-            public StyleableProperty<Boolean> getStyleableProperty(HeaderButtonOverlay overlay) {
-                return overlay.allowRtl;
-            }
-        };
-
     private static final List<CssMetaData<?, ?>> METADATA =
         Stream.concat(getClassCssMetaData().stream(),
         Stream.of(BUTTON_DEFAULT_HEIGHT_METADATA,
                   BUTTON_PLACEMENT_METADATA,
-                  BUTTON_VERTICAL_ALIGNMENT_METADATA,
-                  ALLOW_RTL_METADATA)).toList();
+                  BUTTON_VERTICAL_ALIGNMENT_METADATA)).toList();
 
     private static final PseudoClass HOVER_PSEUDOCLASS = PseudoClass.getPseudoClass("hover");
     private static final PseudoClass PRESSED_PSEUDOCLASS = PseudoClass.getPseudoClass("pressed");
@@ -265,22 +243,6 @@ public final class HeaderButtonOverlay extends Region {
         new SimpleStyleableObjectProperty<>(
                 BUTTON_VERTICAL_ALIGNMENT_METADATA, this, "buttonVerticalAlignment",
                 ButtonVerticalAlignment.CENTER) {
-            @Override
-            protected void invalidated() {
-                requestLayout();
-            }
-        };
-
-    /**
-     * Specifies whether the iconify/maximize/close buttons support right-to-left orientations.
-     * <p>
-     * If this property is {@code true} and the effective node orientation is right-to-left, the
-     * header buttons are mirrored to the other side of the window.
-     * <p>
-     * This property corresponds to the {@code -fx-allow-rtl} CSS property.
-     */
-    private final StyleableBooleanProperty allowRtl =
-        new SimpleStyleableBooleanProperty(ALLOW_RTL_METADATA, this, "allowRtl", true) {
             @Override
             protected void invalidated() {
                 requestLayout();
@@ -529,7 +491,7 @@ public final class HeaderButtonOverlay extends Region {
         boolean left;
         Region button1, button2, button3;
 
-        if (allowRtl.get() && rightToLeft) {
+        if (rightToLeft) {
             button1 = orderedButtons.get(2);
             button2 = orderedButtons.get(1);
             button3 = orderedButtons.get(0);

@@ -329,31 +329,6 @@ public class HeaderButtonOverlayTest {
         assertTrue(children.getFirst().getStyleClass().contains("close-button"));
     }
 
-    /**
-     * Asserts that the buttons are laid out on the right, even though the node orientation is right-to-left.
-     */
-    @Test
-    void disallowRightToLeft() {
-        var overlay = new HeaderButtonOverlay(getStylesheet("""
-                .header-button-container { -fx-button-placement: right;
-                                           -fx-button-vertical-alignment: stretch;
-                                           -fx-allow-rtl: false; }
-                .header-button { -fx-pref-width: 20; -fx-pref-height: 10; }
-            """), false, true);
-
-        var unused = new Scene(overlay);
-        var children = overlay.getChildrenUnmodifiable();
-        overlay.resize(200, 100);
-        overlay.applyCss();
-        overlay.layout();
-
-        assertLayoutBounds(children.get(0), 140, 0, 20, 10);
-        assertLayoutBounds(children.get(1), 160, 0, 20, 10);
-        assertLayoutBounds(children.get(2), 180, 0, 20, 10);
-        assertEquals(EMPTY, overlay.metricsProperty().get().leftInset());
-        assertEquals(new Dimension2D(60, 10), overlay.metricsProperty().get().rightInset());
-    }
-
     @Test
     void activePseudoClassCorrespondsToStageFocusedProperty() {
         var overlay = new HeaderButtonOverlay(getStylesheet("""
