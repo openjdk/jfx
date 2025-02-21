@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2025, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -22,54 +22,42 @@
  * or visit www.oracle.com if you need additional information or have any
  * questions.
  */
-
 package com.sun.javafx.text;
 
 import java.util.concurrent.atomic.AtomicBoolean;
 import com.sun.javafx.font.PrismFontFactory;
-import com.sun.javafx.scene.text.TextLayout;
-import com.sun.javafx.scene.text.TextLayoutFactory;
 
-public class PrismTextLayoutFactory implements TextLayoutFactory {
-    private static final PrismTextLayoutFactory factory = new PrismTextLayoutFactory();
-    /* Same strategy as GlyphLayout */
-    private static final TextLayout reusableTL = factory.createLayout();
+/* This class creates a singleton GlyphLayout which is checked out
+ * for use. Callers who find its checked out create one that after use
+ * is discarded. This means that in a MT-rendering environment,
+ * there's no need to synchronise except for that one instance.
+ * Fewer threads will then need to synchronise, perhaps helping
+ * throughput on a MP system. If for some reason the reusable
+ * GlyphLayout is checked out for a long time (or never returned?) then
+ * we would end up always creating new ones. That situation should not
+ * occur and if if did, it would just lead to some extra garbage being
+ * created.
+ */
+public class GlyphLayoutManager {
+    private static GlyphLayout reusableGL = newInstance();
     private static final AtomicBoolean guard = new AtomicBoolean(false);
 
-    private PrismTextLayoutFactory() {
+    private static GlyphLayout newInstance() {
+        PrismFontFactory factory = PrismFontFactory.getFontFactory();
+        return factory.createGlyphLayout();
     }
 
-    @Override
-    public TextLayout createLayout() {
-        return new PrismTextLayout(PrismFontFactory.cacheLayoutSize) {
-            @Override
-            protected GlyphLayout glyphLayout() {
-                return GlyphLayoutManager.getInstance();
-            }
-        };
-    }
-
-    @Override
-    public TextLayout getLayout() {
+    public static GlyphLayout getInstance() {
         if (guard.compareAndSet(false, true)) {
-            reusableTL.setAlignment(0);
-            reusableTL.setWrapWidth(0);
-            reusableTL.setDirection(0);
-            reusableTL.setContent(null);
-            return reusableTL;
+            return reusableGL;
         } else {
-            return createLayout();
+            return newInstance();
         }
     }
 
-    @Override
-    public void disposeLayout(TextLayout layout) {
-        if (layout == reusableTL) {
+    public static void dispose(GlyphLayout la) {
+        if (la == reusableGL) {
             guard.set(false);
         }
-    }
-
-    public static PrismTextLayoutFactory getFactory() {
-        return factory;
     }
 }
