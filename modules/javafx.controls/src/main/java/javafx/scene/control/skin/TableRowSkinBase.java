@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -40,6 +40,7 @@ import javafx.geometry.Pos;
 import javafx.scene.Node;
 import javafx.scene.Parent;
 import javafx.scene.control.*;
+import javafx.scene.layout.Region;
 import javafx.util.Duration;
 
 import com.sun.javafx.tk.Toolkit;
@@ -114,10 +115,6 @@ public abstract class TableRowSkinBase<T,
     final List<R> cells = new ArrayList<>();
 
     boolean isDirty = false;
-
-    // FIXME: replace cached values with direct lookup - JDK-8277000
-    double fixedCellSize;
-    boolean fixedCellSizeEnabled;
 
 
     /* *************************************************************************
@@ -304,6 +301,7 @@ public abstract class TableRowSkinBase<T,
         if (index < 0/* || row >= itemsProperty().get().size()*/) return;
 
         VirtualFlow<C> virtualFlow = getVirtualFlow();
+        double fixedCellSize = getFixedCellSize();
         for (int column = 0, max = cells.size(); column < max; column++) {
             R tableCell = cells.get(column);
             TableColumnBase<T, ?> tableColumn = getTableColumn(tableCell);
@@ -311,7 +309,7 @@ public abstract class TableRowSkinBase<T,
             width = snapSizeX(tableColumn.getWidth());
 
             boolean isVisible = true;
-            if (fixedCellSizeEnabled) {
+            if (fixedCellSize > 0) {
                 // we determine if the cell is visible, and if not we have the
                 // ability to take it out of the scenegraph to help improve
                 // performance. However, we only do this when there is a
@@ -413,6 +411,10 @@ public abstract class TableRowSkinBase<T,
         }
     }
 
+    double getFixedCellSize() {
+        return Region.USE_COMPUTED_SIZE;
+    }
+
     int getIndentationLevel(C control) {
         return 0;
     }
@@ -512,7 +514,8 @@ public abstract class TableRowSkinBase<T,
 
     /** {@inheritDoc} */
     @Override protected double computePrefHeight(double width, double topInset, double rightInset, double bottomInset, double leftInset) {
-        if (fixedCellSizeEnabled) {
+        double fixedCellSize = getFixedCellSize();
+        if (fixedCellSize > 0) {
             return fixedCellSize;
         }
 
@@ -545,7 +548,8 @@ public abstract class TableRowSkinBase<T,
 
     /** {@inheritDoc} */
     @Override protected double computeMinHeight(double width, double topInset, double rightInset, double bottomInset, double leftInset) {
-        if (fixedCellSizeEnabled) {
+        double fixedCellSize = getFixedCellSize();
+        if (fixedCellSize > 0) {
             return fixedCellSize;
         }
 
@@ -575,7 +579,8 @@ public abstract class TableRowSkinBase<T,
 
     /** {@inheritDoc} */
     @Override protected double computeMaxHeight(double width, double topInset, double rightInset, double bottomInset, double leftInset) {
-        if (fixedCellSizeEnabled) {
+        double fixedCellSize = getFixedCellSize();
+        if (fixedCellSize > 0) {
             return fixedCellSize;
         }
         return super.computeMaxHeight(width, topInset, rightInset, bottomInset, leftInset);

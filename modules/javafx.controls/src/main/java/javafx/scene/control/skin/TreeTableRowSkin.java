@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -106,7 +106,6 @@ public class TreeTableRowSkin<T> extends TableRowSkinBase<TreeItem<T>, TreeTable
         setupTreeTableViewListeners();
     }
 
-    // FIXME: replace listener to fixedCellSize with direct lookup - JDK-8277000
     private void setupTreeTableViewListeners() {
         TreeTableView<T> treeTableView = getSkinnable().getTreeTableView();
         if (treeTableView == null) {
@@ -119,32 +118,22 @@ public class TreeTableRowSkin<T> extends TableRowSkinBase<TreeItem<T>, TreeTable
                 updateLeafColumns();
             });
 
-            registerChangeListener(getTreeTableView().fixedCellSizeProperty(), e -> {
-                VirtualFlow<TreeTableRow<T>> virtualFlow = getVirtualFlow();
-                if (virtualFlow != null) {
-                    unregisterChangeListeners(virtualFlow.widthProperty());
-                }
-
-                updateCachedFixedSize();
-            });
-            updateCachedFixedSize();
+            VirtualFlow<TreeTableRow<T>> virtualFlow = getVirtualFlow();
+            if (virtualFlow != null) {
+                registerChangeListener(virtualFlow.widthProperty(), _ -> requestLayoutWhenFixedCellSizeSet());
+            }
         }
     }
 
-    private void updateCachedFixedSize() {
-        if (getSkinnable() != null) {
-            TreeTableView<T> t = getSkinnable().getTreeTableView();
-            if (t != null) {
-                fixedCellSize = t.getFixedCellSize();
-                fixedCellSizeEnabled = fixedCellSize > 0.0;
-
-                if (fixedCellSizeEnabled) {
-                    VirtualFlow<TreeTableRow<T>> virtualFlow = getTableViewSkin().getVirtualFlow();
-                    if (virtualFlow != null) {
-                        registerChangeListener(virtualFlow.widthProperty(), ev -> getSkinnable().requestLayout());
-                    }
-                }
-            }
+    /**
+     * When we have a fixed cell size set, we must request layout when the width of the virtual flow changed,
+     * because we might need to add or remove cells that are now visible or not anymore.
+     * <br>
+     * See also: JDK-8144500 and JDK-8185887.
+     */
+    private void requestLayoutWhenFixedCellSizeSet() {
+        if (getFixedCellSize() > 0) {
+            getSkinnable().requestLayout();
         }
     }
 
@@ -317,6 +306,12 @@ public class TreeTableRowSkin<T> extends TableRowSkinBase<TreeItem<T>, TreeTable
 
     private TreeTableView<T> getTreeTableView() {
         return getSkinnable().getTreeTableView();
+    }
+
+    @Override
+    double getFixedCellSize() {
+        TreeTableView<T> treeTableView = getTreeTableView();
+        return treeTableView != null ? treeTableView.getFixedCellSize() : super.getFixedCellSize();
     }
 
     private void updateDisclosureNodeAndGraphic() {
