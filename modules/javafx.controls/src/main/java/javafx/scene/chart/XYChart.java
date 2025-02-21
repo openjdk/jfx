@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -1732,4 +1732,15 @@ public abstract class XYChart<X,Y> extends Chart {
         }
     }
 
+    @Override
+    void updateSymbolFocusable(boolean on) {
+        for (Series<X, Y> s : getData()) {
+            for (Data<X, Y> d : s.getData()) {
+                Node n = d.getNode();
+                if (n != null) {
+                    n.setFocusTraversable(on);
+                }
+            }
+        }
+    }
 }

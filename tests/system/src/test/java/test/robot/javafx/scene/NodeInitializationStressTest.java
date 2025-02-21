@@ -179,7 +179,6 @@ public class NodeInitializationStressTest extends RobotTestBase {
         });
     }
 
-    @Disabled("JDK-8349091") // FIX
     @Test
     public void areaChart() {
         assumeFalse(SKIP_TEST);
@@ -188,26 +187,28 @@ public class NodeInitializationStressTest extends RobotTestBase {
             c.getData().setAll(createNumberSeries());
             return c;
         }, (c) -> {
-            c.getData().setAll(createNumberSeries());
             accessChart(c);
+            c.getData().setAll(createNumberSeries());
+            c.getData().setAll(createNumberSeries());
         });
     }
 
-    @Disabled("JDK-8349091") // FIX
     @Test
     public void barChart() {
         assumeFalse(SKIP_TEST);
         test(() -> {
             BarChart c = new BarChart(createCategoryAxis("x"), createNumberAxis("y"));
-            c.getData().setAll(createCategorySeries());
+            if (nextBoolean()) {
+                c.getData().setAll(createCategorySeries());
+            }
             return c;
         }, (c) -> {
-            c.getData().setAll(createCategorySeries());
             accessChart(c);
+            c.getData().setAll(createCategorySeries());
+            c.getData().setAll(createCategorySeries());
         });
     }
 
-    @Disabled("JDK-8349091") // FIX
     @Test
     public void bubbleChart() {
         assumeFalse(SKIP_TEST);
@@ -216,8 +217,9 @@ public class NodeInitializationStressTest extends RobotTestBase {
             c.getData().setAll(createNumberSeries());
             return c;
         }, (c) -> {
-            c.getData().setAll(createNumberSeries());
             accessChart(c);
+            c.getData().setAll(createNumberSeries());
+            c.getData().setAll(createNumberSeries());
         });
     }
 
@@ -358,7 +360,6 @@ public class NodeInitializationStressTest extends RobotTestBase {
         });
     }
 
-    @Disabled("JDK-8349091") // FIX
     @Test
     public void lineChart() {
         assumeFalse(SKIP_TEST);
@@ -367,8 +368,9 @@ public class NodeInitializationStressTest extends RobotTestBase {
             c.getData().setAll(createNumberSeries());
             return c;
         }, (c) -> {
-            c.getData().setAll(createNumberSeries());
             accessChart(c);
+            c.getData().setAll(createNumberSeries());
+            c.getData().setAll(createNumberSeries());
         });
     }
 
@@ -434,7 +436,6 @@ public class NodeInitializationStressTest extends RobotTestBase {
         });
     }
 
-    @Disabled("JDK-8349090") // FIX
     @Test
     public void pieChart() {
         assumeFalse(SKIP_TEST);
@@ -461,7 +462,6 @@ public class NodeInitializationStressTest extends RobotTestBase {
         });
     }
 
-    @Disabled("JDK-8349091") // FIX
     @Test
     public void scatterChart() {
         assumeFalse(SKIP_TEST);
@@ -470,8 +470,9 @@ public class NodeInitializationStressTest extends RobotTestBase {
             c.getData().setAll(createNumberSeries());
             return c;
         }, (c) -> {
-            c.getData().setAll(createNumberSeries());
             accessChart(c);
+            c.getData().setAll(createNumberSeries());
+            c.getData().setAll(createNumberSeries());
         });
     }
 
@@ -518,7 +519,6 @@ public class NodeInitializationStressTest extends RobotTestBase {
         });
     }
 
-    @Disabled("JDK-8349091") // FIX
     @Test
     public void stackedAreaChart() {
         assumeFalse(SKIP_TEST);
@@ -527,12 +527,12 @@ public class NodeInitializationStressTest extends RobotTestBase {
             c.getData().setAll(createNumberSeries());
             return c;
         }, (c) -> {
-            c.getData().setAll(createNumberSeries());
             accessChart(c);
+            c.getData().setAll(createNumberSeries());
+            c.getData().setAll(createNumberSeries());
         });
     }
 
-    @Disabled("JDK-8349091") // FIX
     @Test
     public void stackedBarChart() {
         assumeFalse(SKIP_TEST);
@@ -541,6 +541,7 @@ public class NodeInitializationStressTest extends RobotTestBase {
             c.getData().setAll(createCategorySeries());
             return c;
         }, (c) -> {
+            c.getData().setAll(createCategorySeries());
             c.getData().setAll(createCategorySeries());
             accessChart(c);
         });
@@ -760,7 +761,7 @@ public class NodeInitializationStressTest extends RobotTestBase {
     private void accessChart(Chart c) {
         String title = c.getClass().getSimpleName();
         c.setTitle(title);
-        c.setAnimated(true);
+        c.setAnimated(nextBoolean());
         accessRegion(c);
     }
 
