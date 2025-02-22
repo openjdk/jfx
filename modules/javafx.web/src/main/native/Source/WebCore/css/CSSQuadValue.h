@@ -37,10 +37,11 @@ public:
 
     String customCSSText() const;
     bool equals(const CSSQuadValue&) const;
+    bool canBeCoalesced() const;
 
 private:
     explicit CSSQuadValue(Quad);
-
+    bool m_coalesceIdenticalValues { true };
     Quad m_quad;
 };
 

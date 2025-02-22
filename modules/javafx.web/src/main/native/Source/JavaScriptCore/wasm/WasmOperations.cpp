@@ -1677,7 +1677,7 @@ JSC_DEFINE_NOEXCEPT_JIT_OPERATION(operationWasmArrayNew, EncodedJSValue, (JSWebA
     CallFrame* callFrame = DECLARE_WASM_CALL_FRAME(instance);
     VM& vm = instance->vm();
     NativeCallFrameTracer tracer(vm, callFrame);
-    return arrayNew(instance, typeIndex, size, value);
+    return JSValue::encode(arrayNew(instance, typeIndex, size, value));
 }
 
 JSC_DEFINE_NOEXCEPT_JIT_OPERATION(operationWasmArrayNewVector, EncodedJSValue, (JSWebAssemblyInstance* instance, uint32_t typeIndex, uint32_t size, uint64_t lane0, uint64_t lane1))
@@ -1685,7 +1685,7 @@ JSC_DEFINE_NOEXCEPT_JIT_OPERATION(operationWasmArrayNewVector, EncodedJSValue, (
     CallFrame* callFrame = DECLARE_WASM_CALL_FRAME(instance);
     VM& vm = instance->vm();
     NativeCallFrameTracer tracer(vm, callFrame);
-    return arrayNew(instance, typeIndex, size, v128_t { lane0, lane1 });
+    return JSValue::encode(arrayNew(instance, typeIndex, size, v128_t { lane0, lane1 }));
 }
 
 JSC_DEFINE_NOEXCEPT_JIT_OPERATION(operationWasmArrayNewData, EncodedJSValue, (JSWebAssemblyInstance* instance, uint32_t typeIndex, uint32_t dataSegmentIndex, uint32_t arraySize, uint32_t offset))
@@ -1724,59 +1724,9 @@ JSC_DEFINE_NOEXCEPT_JIT_OPERATION(operationWasmArrayNewEmpty, EncodedJSValue, (J
         return JSValue::encode(jsNull());
 
     // Create a default-initialized array with the right element type and length
-    JSWebAssemblyArray* array = nullptr;
-    if (fieldType.type.is<PackedType>()) {
-        switch (fieldType.type.as<PackedType>()) {
-        case Wasm::PackedType::I8: {
-        FixedVector<uint8_t> v(size);
-        v.fill(0); // Prevent GC from tracing uninitialized array slots
-            array = JSWebAssemblyArray::tryCreate(vm, globalObject->webAssemblyArrayStructure(), fieldType, size, WTFMove(v), arrayRTT);
-        break;
-    }
-        case Wasm::PackedType::I16: {
-        FixedVector<uint16_t> v(size);
-        v.fill(0);
-            array = JSWebAssemblyArray::tryCreate(vm, globalObject->webAssemblyArrayStructure(), fieldType, size, WTFMove(v), arrayRTT);
-        break;
-    }
-        }
-        return JSValue::encode(array);
-    }
+    return JSValue::encode(JSWebAssemblyArray::create(vm, globalObject->webAssemblyArrayStructure(), fieldType, size, arrayRTT));
 
-    ASSERT(fieldType.type.is<Type>());
-    switch (fieldType.type.as<Type>().kind) {
-    case Wasm::TypeKind::I32:
-    case Wasm::TypeKind::F32: {
-        FixedVector<uint32_t> v(size);
-        v.fill(0);
-        array = JSWebAssemblyArray::tryCreate(vm, globalObject->webAssemblyArrayStructure(), fieldType, size, WTFMove(v), arrayRTT);
-        break;
-    }
-    case Wasm::TypeKind::I64:
-    case Wasm::TypeKind::F64: {
-        FixedVector<uint64_t> v(size);
-        v.fill(0);
-        array = JSWebAssemblyArray::tryCreate(vm, globalObject->webAssemblyArrayStructure(), fieldType, size, WTFMove(v), arrayRTT);
-        break;
-    }
-    case Wasm::TypeKind::Ref:
-    case Wasm::TypeKind::RefNull: {
-        FixedVector<uint64_t> v(size);
-        v.fill(JSValue::encode(jsNull()));
-        array = JSWebAssemblyArray::tryCreate(vm, globalObject->webAssemblyArrayStructure(), fieldType, size, WTFMove(v), arrayRTT);
-        break;
-    }
-    case Wasm::TypeKind::V128: {
-        FixedVector<v128_t> v(size);
-        v.fill(vectorAllZeros());
-        array = JSWebAssemblyArray::tryCreate(vm, globalObject->webAssemblyArrayStructure(), fieldType, size, WTFMove(v), arrayRTT);
-        break;
-    }
-    default:
-        RELEASE_ASSERT_NOT_REACHED();
-    }
 
-    return JSValue::encode(array ? array : jsNull());
 }
 
 JSC_DEFINE_NOEXCEPT_JIT_OPERATION(operationWasmArrayGet, EncodedJSValue, (JSWebAssemblyInstance* instance, uint32_t typeIndex, EncodedJSValue arrayValue, uint32_t index))

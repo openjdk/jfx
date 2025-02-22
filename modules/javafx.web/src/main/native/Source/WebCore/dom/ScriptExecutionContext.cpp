@@ -771,6 +771,23 @@ bool ScriptExecutionContext::ensureOnContextThread(ScriptExecutionContextIdentif
     return true;
 }
 
+bool ScriptExecutionContext::ensureOnContextThreadForCrossThreadTask(ScriptExecutionContextIdentifier identifier, CrossThreadTask&& crossThreadTask)
+{
+    {
+        Locker locker { allScriptExecutionContextsMapLock };
+        auto context = allScriptExecutionContextsMap().get(identifier);
+        if (!context)
+            return false;
+        if (!context->isContextThread()) {
+            context->postTask([crossThreadTask = WTFMove(crossThreadTask)](ScriptExecutionContext&) mutable {
+                crossThreadTask.performTask();
+            });
+            return true;
+        }
+    }
+    crossThreadTask.performTask();
+    return true;
+}
 void ScriptExecutionContext::postTaskToResponsibleDocument(Function<void(Document&)>&& callback)
 {
     if (auto* document = dynamicDowncast<Document>(*this)) {

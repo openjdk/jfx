@@ -597,7 +597,8 @@ void Navigation::abortOngoingNavigation(NavigateEvent& event)
     auto exception = Exception(ExceptionCode::AbortError, "Navigation aborted"_s);
     auto domException = createDOMException(*globalObject, exception.isolatedCopy());
 
-    event.signal()->signalAbort(domException);
+    if (RefPtr signal = event.signal())
+        signal->signalAbort(domException);
 
     m_ongoingNavigateEvent = nullptr;
 

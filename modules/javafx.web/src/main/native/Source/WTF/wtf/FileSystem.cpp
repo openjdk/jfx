@@ -531,8 +531,7 @@ std::optional<Salt> readOrMakeSalt(const String& path)
     return salt;
 }
 
-#if HAVE(STD_FILESYSTEM) || HAVE(STD_EXPERIMENTAL_FILESYSTEM)
-
+#if !PLATFORM(JAVA)
 std::optional<Vector<uint8_t>> readEntireFile(PlatformFileHandle handle)
 {
     if (!FileSystem::isHandleValid(handle))
@@ -613,7 +612,8 @@ void deleteAllFilesModifiedSince(const String& directory, WallTime time)
 
     FileSystem::deleteEmptyDirectory(directory);
 }
-
+#endif
+#if HAVE(STD_FILESYSTEM) || HAVE(STD_EXPERIMENTAL_FILESYSTEM)
 
 bool deleteEmptyDirectory(const String& path)
 {
@@ -653,6 +653,8 @@ bool moveFile(const String& oldPath, const String& newPath)
     std::filesystem::rename(fsOldPath, fsNewPath, ec);
     if (!ec)
         return true;
+    if (isAncestor(oldPath, newPath))
+        return false;
 
     // Fall back to copying and then deleting source as rename() does not work across volumes.
     ec = { };
@@ -833,6 +835,16 @@ String lexicallyNormal(const String& path)
     return fromStdFileSystemPath(toStdFileSystemPath(path).lexically_normal());
 }
 
+bool isAncestor(const String& possibleAncestor, const String& possibleChild)
+{
+    auto possibleChildLexicallyNormal = lexicallyNormal(possibleChild);
+    auto possibleAncestorLexicallyNormal = lexicallyNormal(possibleAncestor);
+    if (possibleChildLexicallyNormal.endsWith(std::filesystem::path::preferred_separator))
+        possibleChildLexicallyNormal = possibleChildLexicallyNormal.left(possibleChildLexicallyNormal.length() - 1);
+    if (possibleAncestorLexicallyNormal.endsWith(std::filesystem::path::preferred_separator))
+        possibleAncestorLexicallyNormal = possibleAncestorLexicallyNormal.left(possibleAncestorLexicallyNormal.length() - 1);
+    return possibleChildLexicallyNormal.startsWith(possibleAncestorLexicallyNormal) && possibleChildLexicallyNormal.length() != possibleAncestorLexicallyNormal.length();
+}
 String createTemporaryFile(StringView prefix, StringView suffix)
 {
     auto [path, handle] = openTemporaryFile(prefix, suffix);

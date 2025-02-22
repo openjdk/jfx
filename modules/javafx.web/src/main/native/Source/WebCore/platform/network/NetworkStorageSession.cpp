@@ -144,9 +144,13 @@ bool NetworkStorageSession::shouldBlockCookies(const URL& firstPartyForCookies, 
     if (!m_isTrackingPreventionEnabled)
         return false;
 
+    if (!firstPartyForCookies.isValid())
+        return true;
     RegistrableDomain firstPartyDomain { firstPartyForCookies };
     if (firstPartyDomain.isEmpty())
         return false;
+    if (!resource.isValid())
+        return true;
 
     RegistrableDomain resourceDomain { resource };
     if (resourceDomain.isEmpty())

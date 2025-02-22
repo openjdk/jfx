@@ -501,6 +501,10 @@ Inspector::Protocol::ErrorStringOr<std::tuple<RefPtr<JSON::ArrayOf<Inspector::Pr
                 if (pseudoId == PseudoId::Backdrop && !element->isInTopLayer())
                     continue;
 
+                if (pseudoId == PseudoId::ViewTransition && (!element->document().activeViewTransition() || element != element->document().documentElement()))
+                    continue;
+                if (isNamedViewTransitionPseudoElement(Style::PseudoElementIdentifier { pseudoId }))
+                    continue;
                 if (auto protocolPseudoId = protocolValueForPseudoId(pseudoId)) {
                     auto matchedRules = styleResolver.pseudoStyleRulesForElement(element, pseudoId, Style::Resolver::AllCSSRules);
                     if (!matchedRules.isEmpty()) {

@@ -234,6 +234,8 @@ MediaResource::~MediaResource()
 {
     assertIsMainThread();
 
+    if (m_resource)
+        protectedResource()->removeClient(*this);
     protectedLoader()->removeResource(*this);
 }
 

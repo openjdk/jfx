@@ -695,7 +695,6 @@ css/CSSValueList.cpp
 css/CSSValueList.h
 css/CSSVariableReferenceValue.cpp
 css/ComputedStyleExtractor.cpp
-css/DOMCSSPaintWorklet.cpp
 css/DeprecatedCSSOMPrimitiveValue.cpp
 css/FontFaceSet.cpp
 css/FontVariantBuilder.cpp
@@ -979,8 +978,6 @@ inspector/agents/page/PageCanvasAgent.cpp
 inspector/agents/page/PageDOMDebuggerAgent.cpp
 inspector/agents/page/PageDebuggerAgent.cpp
 inspector/agents/page/PageNetworkAgent.cpp
-inspector/agents/page/PageWorkerAgent.cpp
-inspector/agents/worker/WorkerWorkerAgent.cpp
 layout/formattingContexts/inline/InlineItemsBuilder.cpp
 layout/formattingContexts/inline/InlineLineBoxBuilder.cpp
 layout/formattingContexts/inline/text/TextUtil.cpp

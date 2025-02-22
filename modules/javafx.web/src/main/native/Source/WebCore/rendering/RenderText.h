@@ -226,8 +226,7 @@ private:
 
     void setSelectionState(HighlightState) final;
     LayoutRect selectionRectForRepaint(const RenderLayerModelObject* repaintContainer, bool clipToVisibleContent = true) final;
-    LayoutRect clippedOverflowRect(const RenderLayerModelObject* repaintContainer, VisibleRectContext) const final;
-    RepaintRects rectsForRepaintingAfterLayout(const RenderLayerModelObject* repaintContainer, RepaintOutlineBounds) const final;
+    RepaintRects localRectsForRepaint(RepaintOutlineBounds) const final;
 
     void computePreferredLogicalWidths(float leadWidth, SingleThreadWeakHashSet<const Font>& fallbackFonts, GlyphOverflow&, bool forcedMinMaxWidthComputation = false);
 

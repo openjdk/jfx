@@ -198,7 +198,7 @@ template<typename K, typename V> struct JSConverter<IDLRecord<K, V>> {
             auto esValue = toJS<V>(lexicalGlobalObject, globalObject, keyValuePair.value);
 
             // 3. Let created be ! CreateDataProperty(result, esKey, esValue).
-            bool created = result->putDirect(vm, JSC::Identifier::fromString(vm, keyValuePair.key), esValue);
+            bool created = result->createDataProperty(&lexicalGlobalObject, JSC::Identifier::fromString(vm, keyValuePair.key), esValue, true);
 
             // 4. Assert: created is true.
             ASSERT_UNUSED(created, created);

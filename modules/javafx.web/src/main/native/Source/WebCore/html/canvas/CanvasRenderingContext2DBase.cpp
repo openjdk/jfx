@@ -2183,6 +2183,8 @@ ExceptionOr<RefPtr<CanvasPattern>> CanvasRenderingContext2DBase::createPattern(H
     if (!cachedImage || !imageElement.complete())
         return nullptr;
 
+    if (cachedImage->errorOccurred())
+        return Exception { ExceptionCode::InvalidStateError };
     if (cachedImage->status() == CachedResource::LoadError)
         return Exception { ExceptionCode::InvalidStateError };
 
