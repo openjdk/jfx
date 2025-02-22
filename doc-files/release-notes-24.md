@@ -153,8 +153,6 @@ Issue Key | Summary | Subcomponent
 Issue Key | Summary | Subcomponent
 --------- | ------- | ------------
 [JDK-8336331](https://bugs.openjdk.org/browse/JDK-8336331) | Doc: Clarification in AccessibleAttribute, AccessibleRole | accessibility
-[JDK-8342459](https://bugs.openjdk.org/browse/JDK-8342459) | Remove calls to doPrivileged in javafx.base | base
-[JDK-8342994](https://bugs.openjdk.org/browse/JDK-8342994) | Remove security manager calls in com.sun.javafx.reflect | base
 [JDK-8340829](https://bugs.openjdk.org/browse/JDK-8340829) | Generated API docs should clearly identify EA builds | build
 [JDK-8345136](https://bugs.openjdk.org/browse/JDK-8345136) | Update JDK_DOCS property to point to JDK 23 docs | build
 [JDK-8218745](https://bugs.openjdk.org/browse/JDK-8218745) | TableView: visual glitch at borders on horizontal scrolling | controls
@@ -179,9 +177,6 @@ Issue Key | Summary | Subcomponent
 [JDK-8340405](https://bugs.openjdk.org/browse/JDK-8340405) | JavaFX shutdown hook can hang preventing app from exiting | graphics
 [JDK-8341010](https://bugs.openjdk.org/browse/JDK-8341010) | TriangleMesh.vertexFormat Property default value is wrong | graphics
 [JDK-8341418](https://bugs.openjdk.org/browse/JDK-8341418) | Prism/es2 DrawableInfo is never freed (leak) | graphics
-[JDK-8342453](https://bugs.openjdk.org/browse/JDK-8342453) | Remove calls to doPrivileged in javafx.graphics/com.sun.javafx.tk | graphics
-[JDK-8342454](https://bugs.openjdk.org/browse/JDK-8342454) | Remove calls to doPrivileged in javafx.graphics/com.sun.glass | graphics
-[JDK-8342456](https://bugs.openjdk.org/browse/JDK-8342456) | Remove calls to doPrivileged in javafx.graphics/other | graphics
 [JDK-8342703](https://bugs.openjdk.org/browse/JDK-8342703) | CSS transition is not started when initial value was not specified | graphics
 [JDK-8183521](https://bugs.openjdk.org/browse/JDK-8183521) | Unable to type characters with tilde with swiss german keyboard layout | localization
 [JDK-8336277](https://bugs.openjdk.org/browse/JDK-8336277) | Colors are incorrect when playing H.265/HEVC on Windows 11 | media
@@ -191,15 +186,6 @@ Issue Key | Summary | Subcomponent
 [JDK-8338701](https://bugs.openjdk.org/browse/JDK-8338701) | Provide media support for libavcodec version 61 | media
 [JDK-8346228](https://bugs.openjdk.org/browse/JDK-8346228) | Update GStreamer to 1.24.10 | media
 [JDK-8346229](https://bugs.openjdk.org/browse/JDK-8346229) | Update Glib to 2.82.4 | media
-[JDK-8342457](https://bugs.openjdk.org/browse/JDK-8342457) | Remove calls to doPrivileged in swing | other
-[JDK-8342911](https://bugs.openjdk.org/browse/JDK-8342911) | Remove calls to doPrivileged in controls | other
-[JDK-8342912](https://bugs.openjdk.org/browse/JDK-8342912) | Remove calls to doPrivileged in fxml | other
-[JDK-8342913](https://bugs.openjdk.org/browse/JDK-8342913) | Remove calls to doPrivileged in media | other
-[JDK-8342914](https://bugs.openjdk.org/browse/JDK-8342914) | Remove calls to doPrivileged in swt | other
-[JDK-8342992](https://bugs.openjdk.org/browse/JDK-8342992) | Security manager check should not use deprecated methods | other
-[JDK-8342993](https://bugs.openjdk.org/browse/JDK-8342993) | Remove uses of AccessController and AccessControlContext from JavaFX | other
-[JDK-8342997](https://bugs.openjdk.org/browse/JDK-8342997) | Remove use of System::getSecurityManager and SecurityManager from JavaFX | other
-[JDK-8342998](https://bugs.openjdk.org/browse/JDK-8342998) | Remove all uses of AccessControlException | other
 [JDK-8344367](https://bugs.openjdk.org/browse/JDK-8344367) | Fix mistakes in FX API docs | other
 [JDK-8288893](https://bugs.openjdk.org/browse/JDK-8288893) | Popup and its subclasses cannot input text from InputMethod | scenegraph
 [JDK-8335470](https://bugs.openjdk.org/browse/JDK-8335470) | [XWayland] JavaFX tests that use AWT Robot fail on Wayland | swing
@@ -211,8 +197,6 @@ Issue Key | Summary | Subcomponent
 [JDK-8337481](https://bugs.openjdk.org/browse/JDK-8337481) | File API: file.name contains path instead of name | web
 [JDK-8338307](https://bugs.openjdk.org/browse/JDK-8338307) | Additional WebKit 619.1 fixes from WebKitGTK 2.44.3 | web
 [JDK-8340208](https://bugs.openjdk.org/browse/JDK-8340208) | Additional WebKit 619.1 fixes from WebKitGTK 2.44.4 | web
-[JDK-8342460](https://bugs.openjdk.org/browse/JDK-8342460) | Remove calls to doPrivileged in javafx.web | web
-[JDK-8342461](https://bugs.openjdk.org/browse/JDK-8342461) | Remove calls to doPrivileged in javafx.web/{android,ios} | web
 [JDK-8087863](https://bugs.openjdk.org/browse/JDK-8087863) | Mac: "Select All" within ListView/TreeView is handled differently depending on the useSystemMenuBar value | window-toolkit
 [JDK-8273743](https://bugs.openjdk.org/browse/JDK-8273743) | KeyCharacterCombination for "+" does not work on US QWERTY keyboard layout | window-toolkit
 [JDK-8319779](https://bugs.openjdk.org/browse/JDK-8319779) | SystemMenu: memory leak due to listener never being removed | window-toolkit
