@@ -2636,7 +2636,7 @@ ExceptionOr<RefPtr<Frame>> LocalDOMWindow::createWindow(const String& urlString,
     if (!newFrame)
         return RefPtr<Frame> { nullptr };
 #if !PLATFORM(JAVA)
-	bool noopener = windowFeatures.wantsNoOpener();
+    bool noopener = windowFeatures.wantsNoOpener();
 #else
     bool noopener = windowFeatures.noreferrer;
 #endif
