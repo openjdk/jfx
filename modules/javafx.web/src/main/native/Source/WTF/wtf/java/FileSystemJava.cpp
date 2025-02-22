@@ -523,21 +523,25 @@ bool fileIDsAreEqual(std::optional<PlatformFileID> a, std::optional<PlatformFile
 
 int overwriteEntireFile(const String& path, std::span<const uint8_t>)
 {
+    fprintf(stderr, "overwriteEntireFile(const String& path, std::span<const uint8_t>) NOT IMPLEMENTED\n");
     return 0;
 }
 
 int64_t writeToFile(PlatformFileHandle, std::span<const uint8_t> data)
 {
+     fprintf(stderr, "writeToFile(PlatformFileHandle, std::span<const uint8_t> data) NOT IMPLEMENTED\n");
      return 0;
 }
 
 int64_t readFromFile(PlatformFileHandle, std::span<uint8_t> data)
 {
+      fprintf(stderr, "readFromFile(PlatformFileHandle, std::span<uint8_t> data) NOT IMPLEMENTED\n");
       return 0;
 }
 
 std::pair<String, PlatformFileHandle> openTemporaryFile(StringView prefix, StringView suffix)
 {
+     fprintf(stderr, "openTemporaryFile(StringView prefix, StringView suffix) return { String(), nullptr}\n");
      return { String(), nullptr};
 }
 
