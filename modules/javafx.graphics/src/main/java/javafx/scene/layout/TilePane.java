@@ -855,7 +855,7 @@ public class TilePane extends Pane {
             }
             if (vertBias) {
                 // widest may depend on height of tile
-                h = computeMaxPrefAreaHeight(managed, marginAccessor, -1, getTileAlignmentInternal().getVpos());
+                h = computeMaxPrefAreaHeight(managed, marginAccessor, -1, true, getTileAlignmentInternal().getVpos());
             }
             return snapSizeX(computeMaxPrefAreaWidth(managed, marginAccessor, h, true));
         }
@@ -879,7 +879,7 @@ public class TilePane extends Pane {
                 // tallest may depend on width of tile
                 w = computeMaxPrefAreaWidth(managed, marginAccessor);
             }
-            return snapSizeY(computeMaxPrefAreaHeight(managed, marginAccessor, w, getTileAlignmentInternal().getVpos()));
+            return snapSizeY(computeMaxPrefAreaHeight(managed, marginAccessor, w, true, getTileAlignmentInternal().getVpos()));
         }
         return snapSizeY(preftileheight);
     }
