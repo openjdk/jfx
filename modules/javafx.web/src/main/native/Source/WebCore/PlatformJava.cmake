@@ -68,7 +68,7 @@ set(WebCore_USER_AGENT_SCRIPTS
     ${WebCore_DERIVED_SOURCES_DIR}/ModernMediaControls.js
 )
 
-add_definitions(-DMAX_DOM_TREE_DEPTH=2000)
+add_definitions(-DMAX_XML_TREE_DEPTH=2000)
 
 set(WebCore_USER_AGENT_SCRIPTS_DEPENDENCIES ${WEBCORE_DIR}/platform/java/RenderThemeJava.cpp)
 

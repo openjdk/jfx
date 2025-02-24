@@ -36,6 +36,7 @@
 #include "ServiceWorkerUpdateViaCache.h"
 #include "WorkerFetchResult.h"
 #include "WorkerType.h"
+#include <wtf/text/MakeString.h>
 
 namespace WebCore {
 
@@ -83,7 +84,7 @@ void SWServerJobQueue::scriptFetchFinished(const ServiceWorkerJobDataIdentifier&
 
     if (!result.error.isNull()) {
         // Invoke Reject Job Promise with job and TypeError.
-        server->rejectJob(job, ExceptionData { ExceptionCode::TypeError, makeString("Script URL ", job.scriptURL.string(), " fetch resulted in error: ", result.error.localizedDescription()) });
+        server->rejectJob(job, ExceptionData { ExceptionCode::TypeError, makeString("Script URL "_s, job.scriptURL.string(), " fetch resulted in error: "_s, result.error.localizedDescription()) });
 
         // If newestWorker is null, invoke Clear Registration algorithm passing registration as its argument.
         if (!newestWorker)
@@ -110,7 +111,7 @@ void SWServerJobQueue::scriptFetchFinished(const ServiceWorkerJobDataIdentifier&
 
         // FIXME: for non classic scripts, check the script’s module record's [[ECMAScriptCode]].
 
-        RELEASE_LOG(ServiceWorker, "%p - SWServerJobQueue::scriptFetchFinished, script, certificate and imported scripts are matching for registrationID=%llu", this, registration->identifier().toUInt64());
+        RELEASE_LOG(ServiceWorker, "%p - SWServerJobQueue::scriptFetchFinished, script, certificate and imported scripts are matching for registrationID=%" PRIu64, this, registration->identifier().toUInt64());
         scriptAndImportedScriptsFetchFinished(job, *registration);
         return;
     }
@@ -131,7 +132,7 @@ void SWServerJobQueue::importedScriptsFetchFinished(const ServiceWorkerJobDataId
 
     RefPtr newestWorker = registration->getNewestWorker();
     if (newestWorker && newestWorker->matchingImportedScripts(importedScripts)) {
-        RELEASE_LOG(ServiceWorker, "%p - SWServerJobQueue::importedScriptsFetchFinished, script, certificate and imported scripts are matching for registrationID=%llu", this, registration->identifier().toUInt64());
+        RELEASE_LOG(ServiceWorker, "%p - SWServerJobQueue::importedScriptsFetchFinished, script, certificate and imported scripts are matching for registrationID=%" PRIu64, this, registration->identifier().toUInt64());
         scriptAndImportedScriptsFetchFinished(job, *registration);
         return;
     }
@@ -226,7 +227,7 @@ void SWServerJobQueue::didResolveRegistrationPromise()
         return;
     }
 
-    RELEASE_LOG(ServiceWorker, "%p - SWServerJobQueue::didResolveRegistrationPromise: RegistrationID=%llu. Now proceeding with install", this, registration->identifier().toUInt64());
+    RELEASE_LOG(ServiceWorker, "%p - SWServerJobQueue::didResolveRegistrationPromise: RegistrationID=%" PRIu64 ". Now proceeding with install", this, registration->identifier().toUInt64());
 
     // Queue a task to fire an event named updatefound at all the ServiceWorkerRegistration objects
     // for all the service worker clients whose creation URL matches registration's scope url and
@@ -331,7 +332,7 @@ void SWServerJobQueue::runRegisterJob(const ServiceWorkerJobData& job)
     if (RefPtr registration = server->getRegistration(m_registrationKey)) {
         RefPtr newestWorker = registration->getNewestWorker();
         if (newestWorker && equalIgnoringFragmentIdentifier(job.scriptURL, newestWorker->scriptURL()) && job.workerType == newestWorker->type() && job.registrationOptions->updateViaCache == registration->updateViaCache()) {
-            RELEASE_LOG(ServiceWorker, "%p - SWServerJobQueue::runRegisterJob: Found directly reusable registration %llu for job %s (DONE)", this, registration->identifier().toUInt64(), job.identifier().loggingString().utf8().data());
+            RELEASE_LOG(ServiceWorker, "%p - SWServerJobQueue::runRegisterJob: Found directly reusable registration %" PRIu64 " for job %s (DONE)", this, registration->identifier().toUInt64(), job.identifier().loggingString().utf8().data());
             server->resolveRegistrationJob(job, registration->data(), ShouldNotifyWhenResolved::No);
             finishCurrentJob();
             return;
@@ -339,7 +340,7 @@ void SWServerJobQueue::runRegisterJob(const ServiceWorkerJobData& job)
         // This is not specified yet (https://github.com/w3c/ServiceWorker/issues/1189).
         if (registration->updateViaCache() != job.registrationOptions->updateViaCache)
             registration->setUpdateViaCache(job.registrationOptions->updateViaCache);
-        RELEASE_LOG(ServiceWorker, "%p - SWServerJobQueue::runRegisterJob: Found registration %llu for job %s but it needs updating", this, registration->identifier().toUInt64(), job.identifier().loggingString().utf8().data());
+        RELEASE_LOG(ServiceWorker, "%p - SWServerJobQueue::runRegisterJob: Found registration %" PRIu64 " for job %s but it needs updating", this, registration->identifier().toUInt64(), job.identifier().loggingString().utf8().data());
     } else {
         Ref newRegistration = SWServerRegistration::create(server.get(), m_registrationKey, job.registrationOptions->updateViaCache, job.scopeURL, job.scriptURL, job.serviceWorkerPageIdentifier(), NavigationPreloadState::defaultValue());
         server->addRegistration(WTFMove(newRegistration));

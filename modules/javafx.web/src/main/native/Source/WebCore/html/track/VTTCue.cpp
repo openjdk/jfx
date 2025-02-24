@@ -59,16 +59,15 @@
 #include "VTTScanner.h"
 #include "WebVTTElement.h"
 #include "WebVTTParser.h"
-#include <wtf/IsoMallocInlines.h>
 #include <wtf/Language.h>
 #include <wtf/MathExtras.h>
+#include <wtf/TZoneMallocInlines.h>
 #include <wtf/text/StringBuilder.h>
-#include <wtf/text/StringConcatenateNumbers.h>
 
 namespace WebCore {
 
-WTF_MAKE_ISO_ALLOCATED_IMPL(VTTCue);
-WTF_MAKE_ISO_ALLOCATED_IMPL(VTTCueBox);
+WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(VTTCue);
+WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(VTTCueBox);
 
 static const CSSValueID displayWritingModeMap[] = {
     CSSValueHorizontalTb, CSSValueVerticalRl, CSSValueVerticalLr
@@ -208,7 +207,7 @@ void VTTCueBox::applyCSSProperties()
     // is not a true viewport, but it is a container, so they serve the same purpose.
 
     // the 'writing-mode' property must be set to writing-mode
-    setInlineStyleProperty(CSSPropertyWritingMode, cue->getCSSWritingMode(), false);
+    setInlineStyleProperty(CSSPropertyWritingMode, cue->getCSSWritingMode());
 
     // the 'top' property must be set to top
     std::visit(WTF::makeVisitor([&] (double top) {
@@ -257,7 +256,7 @@ void VTTCueBox::applyCSSProperties()
     // The font shorthand property on the (root) list of WebVTT Node Objects
     // must be set to 5vh sans-serif. [CSS-VALUES]
     // NOTE: We use 'cqh' rather than 'vh' as the video element is not a proper viewport.
-    setInlineStyleProperty(CSSPropertyFontSize, cue->fontSize(), CSSUnitType::CSS_CQMIN, cue->fontSizeIsImportant());
+    setInlineStyleProperty(CSSPropertyFontSize, cue->fontSize(), CSSUnitType::CSS_CQMIN, cue->fontSizeIsImportant() ? IsImportant::Yes : IsImportant::No);
 
     if (!cue->snapToLines()) {
         setInlineStyleProperty(CSSPropertyWhiteSpaceCollapse, CSSValuePreserve);
@@ -956,7 +955,8 @@ void VTTCue::obtainCSSBoxes()
     // background box.
 
     // Note: This is contained by default in m_cueHighlightBox.
-    m_cueHighlightBox->setUserAgentPart(UserAgentParts::cue());
+    displayTree->setUserAgentPart(UserAgentParts::cue());
+    m_cueHighlightBox->setUserAgentPart(UserAgentParts::internalCueBackground());
 
     m_cueBackdropBox->setUserAgentPart(UserAgentParts::webkitMediaTextTrackDisplayBackdrop());
     m_cueBackdropBox->appendChild(m_cueHighlightBox);
@@ -1007,10 +1007,6 @@ void VTTCue::markFutureAndPastNodes(ContainerNode* root, const MediaTime& previo
         }
 
         if (auto* childElement = dynamicDowncast<WebVTTElement>(*child))
-            childElement->setIsPastNode(isPastNode);
-        else if (auto* childElement = dynamicDowncast<WebVTTRubyElement>(*child))
-            childElement->setIsPastNode(isPastNode);
-        else if (auto* childElement = dynamicDowncast<WebVTTRubyTextElement>(*child))
             childElement->setIsPastNode(isPastNode);
 
         // Make an element id match a cue id for style matching purposes.
@@ -1215,11 +1211,11 @@ void VTTCue::setCueSettings(const String& inputString)
                     if (!input.scan(','))
                         break;
 
-                    if (input.scan(startKeyword().characters8(), startKeyword().length()))
+                    if (input.scan(startKeyword().span8()))
                         alignment = LineAlignSetting::Start;
-                    else if (input.scan(centerKeyword().characters8(), centerKeyword().length()))
+                    else if (input.scan(centerKeyword().span8()))
                         alignment = LineAlignSetting::Center;
-                    else if (input.scan(endKeyword().characters8(), endKeyword().length()))
+                    else if (input.scan(endKeyword().span8()))
                         alignment = LineAlignSetting::End;
                     else {
                         ERROR_LOG(LOGIDENTIFIER, "Invalid line setting alignment");
@@ -1288,11 +1284,11 @@ void VTTCue::setCueSettings(const String& inputString)
                     return false;
 
                 // 2.2 One of the following strings: "line-left", "center", "line-right"
-                if (input.scan(lineLeftKeyword().characters8(), lineLeftKeyword().length()))
+                if (input.scan(lineLeftKeyword().span8()))
                     alignment = PositionAlignSetting::LineLeft;
-                else if (input.scan(centerKeyword().characters8(), centerKeyword().length()))
+                else if (input.scan(centerKeyword().span8()))
                     alignment = PositionAlignSetting::Center;
-                else if (input.scan(lineRightKeyword().characters8(), lineRightKeyword().length()))
+                else if (input.scan(lineRightKeyword().span8()))
                     alignment = PositionAlignSetting::LineRight;
                 else {
                     ERROR_LOG(LOGIDENTIFIER, "Invalid position setting alignment");
@@ -1444,17 +1440,17 @@ void VTTCue::prepareToSpeak(SpeechSynthesis& speechSynthesis, double rate, doubl
         return;
     }
 
-    auto& track = *this->track();
+    Ref track = *this->track();
     m_speechSynthesis = &speechSynthesis;
-    m_speechUtterance = SpeechSynthesisUtterance::create(track.document(), m_content, [protectedThis = Ref { *this }, completion = WTFMove(completion)](const SpeechSynthesisUtterance&) {
+    m_speechUtterance = SpeechSynthesisUtterance::create(Ref { *track->scriptExecutionContext() }, m_content, [protectedThis = Ref { *this }, completion = WTFMove(completion)](const SpeechSynthesisUtterance&) {
         protectedThis->m_speechUtterance = nullptr;
         protectedThis->m_speechSynthesis = nullptr;
         completion(protectedThis.get());
     });
 
-    auto trackLanguage = track.validBCP47Language();
+    auto trackLanguage = track->validBCP47Language();
     if (trackLanguage.isEmpty())
-        trackLanguage = track.language();
+        trackLanguage = track->language();
 
     m_speechUtterance->setLang(trackLanguage);
     m_speechUtterance->setVolume(volume);

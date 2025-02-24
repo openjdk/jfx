@@ -38,6 +38,7 @@
 #include "RenderStyleInlines.h"
 #include "StyleGridData.h"
 #include <cstdlib>
+#include <wtf/text/MakeString.h>
 
 namespace WebCore {
 
@@ -56,9 +57,9 @@ static inline GridTrackSizingDirection directionFromSide(GridPositionSide side)
     return side == GridPositionSide::ColumnStartSide || side == GridPositionSide::ColumnEndSide ? GridTrackSizingDirection::ForColumns : GridTrackSizingDirection::ForRows;
 }
 
-static const String implicitNamedGridLineForSide(const String& lineName, GridPositionSide side)
+static String implicitNamedGridLineForSide(const String& lineName, GridPositionSide side)
 {
-    return lineName + (isStartSide(side) ? "-start" : "-end");
+    return makeString(lineName, isStartSide(side) ? "-start"_s : "-end"_s);
 }
 
 static unsigned explicitGridSizeForSide(const RenderGrid& gridContainer, GridPositionSide side)
@@ -252,7 +253,7 @@ NamedLineCollection::NamedLineCollection(const RenderGrid& initialGrid, const St
         }
         direction = directionFromSide(currentSide);
 
-            auto span = currentAncestorSubgridParent->gridSpanForChild(currentAncestorSubgrid, direction);
+            auto span = currentAncestorSubgridParent->gridSpanForGridItem(currentAncestorSubgrid, direction);
             search.translateTo(span, GridLayoutFunctions::isSubgridReversedDirection(*currentAncestorSubgridParent, direction, currentAncestorSubgrid));
 
         auto convertToInitialSpace = [&](unsigned i) {
@@ -396,8 +397,8 @@ unsigned GridPositionsResolver::explicitGridColumnCount(const RenderGrid& gridCo
 {
     if (gridContainer.isSubgridColumns()) {
         const RenderGrid& parent = *downcast<RenderGrid>(gridContainer.parent());
-        GridTrackSizingDirection direction = GridLayoutFunctions::flowAwareDirectionForChild(parent, gridContainer, GridTrackSizingDirection::ForColumns);
-        return parent.gridSpanForChild(gridContainer, direction).integerSpan();
+        GridTrackSizingDirection direction = GridLayoutFunctions::flowAwareDirectionForGridItem(parent, gridContainer, GridTrackSizingDirection::ForColumns);
+        return parent.gridSpanForGridItem(gridContainer, direction).integerSpan();
     }
     return std::min<unsigned>(std::max(gridContainer.style().gridColumnTrackSizes().size() + gridContainer.autoRepeatCountForDirection(GridTrackSizingDirection::ForColumns), gridContainer.style().namedGridAreaColumnCount()), GridPosition::max());
 }
@@ -406,8 +407,8 @@ unsigned GridPositionsResolver::explicitGridRowCount(const RenderGrid& gridConta
 {
     if (gridContainer.isSubgridRows()) {
         const RenderGrid& parent = *downcast<RenderGrid>(gridContainer.parent());
-        GridTrackSizingDirection direction = GridLayoutFunctions::flowAwareDirectionForChild(parent, gridContainer, GridTrackSizingDirection::ForRows);
-        return parent.gridSpanForChild(gridContainer, direction).integerSpan();
+        GridTrackSizingDirection direction = GridLayoutFunctions::flowAwareDirectionForGridItem(parent, gridContainer, GridTrackSizingDirection::ForRows);
+        return parent.gridSpanForGridItem(gridContainer, direction).integerSpan();
     }
     return std::min<unsigned>(std::max(gridContainer.style().gridRowTrackSizes().size() + gridContainer.autoRepeatCountForDirection(GridTrackSizingDirection::ForRows), gridContainer.style().namedGridAreaRowCount()), GridPosition::max());
 }

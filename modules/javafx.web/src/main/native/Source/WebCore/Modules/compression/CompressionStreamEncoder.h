@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2022 Apple Inc. All rights reserved.
+ * Copyright (C) 2022-2024 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -44,7 +44,7 @@ public:
         return adoptRef(*new CompressionStreamEncoder(format));
     }
 
-    ExceptionOr<RefPtr<Uint8Array>> encode(const BufferSource&& input);
+    ExceptionOr<RefPtr<Uint8Array>> encode(const BufferSource&&);
     ExceptionOr<RefPtr<Uint8Array>> flush();
 
     ~CompressionStreamEncoder()
@@ -59,7 +59,7 @@ public:
 private:
     bool didDeflateFinish(int) const;
 
-    ExceptionOr<RefPtr<JSC::ArrayBuffer>> compress(const uint8_t* input, const size_t inputLength);
+    ExceptionOr<Ref<JSC::ArrayBuffer>> compress(std::span<const uint8_t>);
     ExceptionOr<bool> initialize();
 
     explicit CompressionStreamEncoder(unsigned char format)

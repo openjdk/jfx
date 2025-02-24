@@ -118,6 +118,8 @@ public:
     void toggleMediaLoopPlayback() const;
     void toggleShowMediaStats() const;
     WEBCORE_EXPORT bool mediaIsInFullscreen() const;
+    bool mediaIsInVideoViewer() const;
+    void toggleVideoViewer() const;
     void toggleMediaFullscreenState() const;
     void enterFullscreenForVideo() const;
     bool mediaControlsEnabled() const;
@@ -156,7 +158,9 @@ public:
     Vector<String> dictationAlternatives() const;
 
     Node* targetNode() const { return innerNode(); }
+    WEBCORE_EXPORT RefPtr<Node> protectedTargetNode() const;
     WEBCORE_EXPORT Element* targetElement() const;
+    RefPtr<Element> protectedTargetElement() const;
 
 private:
     NodeSet& mutableListBasedTestResult(); // See above.

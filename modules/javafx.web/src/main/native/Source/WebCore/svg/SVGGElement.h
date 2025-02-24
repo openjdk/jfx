@@ -26,7 +26,8 @@
 namespace WebCore {
 
 class SVGGElement final : public SVGGraphicsElement {
-    WTF_MAKE_ISO_ALLOCATED(SVGGElement);
+    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(SVGGElement);
+    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(SVGGElement);
 public:
     static Ref<SVGGElement> create(const QualifiedName&, Document&);
     static Ref<SVGGElement> create(Document&);

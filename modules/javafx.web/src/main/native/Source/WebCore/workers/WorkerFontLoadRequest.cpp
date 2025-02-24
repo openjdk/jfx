@@ -83,7 +83,7 @@ bool WorkerFontLoadRequest::ensureCustomFontData()
         convertWOFFToSfntIfNecessary(contiguousData);
 #endif
         if (contiguousData) {
-            m_fontCustomPlatformData = createFontCustomPlatformData(*contiguousData, m_url.fragmentIdentifier().toString());
+            m_fontCustomPlatformData = FontCustomPlatformData::create(*contiguousData, m_url.fragmentIdentifier().toString());
             m_data = WTFMove(contiguousData);
             if (!m_fontCustomPlatformData)
                 m_errorOccurred = true;
@@ -110,7 +110,7 @@ void WorkerFontLoadRequest::setClient(FontLoadRequestClient* client)
     }
 }
 
-void WorkerFontLoadRequest::didReceiveResponse(ResourceLoaderIdentifier, const ResourceResponse& response)
+void WorkerFontLoadRequest::didReceiveResponse(ScriptExecutionContextIdentifier, ResourceLoaderIdentifier, const ResourceResponse& response)
 {
     if (response.httpStatusCode() / 100 != 2 && response.httpStatusCode())
         m_errorOccurred = true;
@@ -124,7 +124,7 @@ void WorkerFontLoadRequest::didReceiveData(const SharedBuffer& buffer)
     m_data.append(buffer);
 }
 
-void WorkerFontLoadRequest::didFinishLoading(ResourceLoaderIdentifier, const NetworkLoadMetrics&)
+void WorkerFontLoadRequest::didFinishLoading(ScriptExecutionContextIdentifier, ResourceLoaderIdentifier, const NetworkLoadMetrics&)
 {
     m_isLoading = false;
 
@@ -136,7 +136,7 @@ void WorkerFontLoadRequest::didFinishLoading(ResourceLoaderIdentifier, const Net
     }
 }
 
-void WorkerFontLoadRequest::didFail(const ResourceError&)
+void WorkerFontLoadRequest::didFail(ScriptExecutionContextIdentifier, const ResourceError&)
 {
     m_errorOccurred = true;
     if (m_fontLoadRequestClient)

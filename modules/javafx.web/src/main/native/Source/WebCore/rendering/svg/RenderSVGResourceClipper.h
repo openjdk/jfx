@@ -20,8 +20,6 @@
 
 #pragma once
 
-#if ENABLE(LAYER_BASED_SVG_ENGINE)
-
 #include "RenderSVGResourceContainer.h"
 #include "SVGUnitTypes.h"
 
@@ -32,14 +30,15 @@ class SVGClipPathElement;
 class SVGGraphicsElement;
 
 class RenderSVGResourceClipper final : public RenderSVGResourceContainer {
-    WTF_MAKE_ISO_ALLOCATED(RenderSVGResourceClipper);
+    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(RenderSVGResourceClipper);
+    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(RenderSVGResourceClipper);
 public:
     RenderSVGResourceClipper(SVGClipPathElement&, RenderStyle&&);
     virtual ~RenderSVGResourceClipper();
 
-    inline SVGClipPathElement& clipPathElement() const;
+    inline Ref<SVGClipPathElement> protectedClipPathElement() const;
 
-    SVGGraphicsElement* shouldApplyPathClipping() const;
+    RefPtr<SVGGraphicsElement> shouldApplyPathClipping() const;
     void applyPathClipping(GraphicsContext&, const RenderLayerModelObject& targetRenderer, const FloatRect& objectBoundingBox, SVGGraphicsElement&);
     void applyMaskClipping(PaintInfo&, const RenderLayerModelObject& targetRenderer, const FloatRect& objectBoundingBox);
 
@@ -59,10 +58,11 @@ private:
     void updateFromStyle() final;
 
     ASCIILiteral renderName() const final { return "RenderSVGResourceClipper"_s; }
+
+    void styleDidChange(StyleDifference, const RenderStyle* oldStyle) final;
 };
 
 }
 
 SPECIALIZE_TYPE_TRAITS_RENDER_OBJECT(RenderSVGResourceClipper, isRenderSVGResourceClipper())
 
-#endif // ENABLE(LAYER_BASED_SVG_ENGINE)

@@ -30,7 +30,8 @@ namespace WebCore {
 class SVGForeignObjectElement;
 
 class LegacyRenderSVGForeignObject final : public RenderSVGBlock {
-    WTF_MAKE_ISO_ALLOCATED(LegacyRenderSVGForeignObject);
+    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(LegacyRenderSVGForeignObject);
+    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(LegacyRenderSVGForeignObject);
 public:
     LegacyRenderSVGForeignObject(SVGForeignObjectElement&, RenderStyle&&);
     virtual ~LegacyRenderSVGForeignObject();
@@ -60,9 +61,7 @@ private:
     const AffineTransform& localToParentTransform() const override;
     AffineTransform localTransform() const override { return m_localTransform; }
 
-#if ENABLE(LAYER_BASED_SVG_ENGINE)
     LayoutSize offsetFromContainer(RenderElement&, const LayoutPoint&, bool* offsetDependsOnPoint = nullptr) const override;
-#endif
 
     AffineTransform m_localTransform;
     mutable AffineTransform m_localToParentTransform;

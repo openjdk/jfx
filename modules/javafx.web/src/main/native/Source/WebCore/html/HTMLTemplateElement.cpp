@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2012, 2013 Google Inc. All rights reserved.
+ * Copyright (C) 2013-2024 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -42,11 +43,11 @@
 #include "SlotAssignmentMode.h"
 #include "TemplateContentDocumentFragment.h"
 #include "markup.h"
-#include <wtf/IsoMallocInlines.h>
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
-WTF_MAKE_ISO_ALLOCATED_IMPL(HTMLTemplateElement);
+WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(HTMLTemplateElement);
 
 using namespace HTMLNames;
 
@@ -143,20 +144,18 @@ void HTMLTemplateElement::attachAsDeclarativeShadowRootIfNeeded(Element& host)
         return;
     }
 
-    auto modeString = attributeWithoutSynchronization(HTMLNames::shadowrootmodeAttr);
-    std::optional<ShadowRootMode> mode;
-
-    if (equalLettersIgnoringASCIICase(modeString, "closed"_s))
-        mode = ShadowRootMode::Closed;
-    else if (equalLettersIgnoringASCIICase(modeString, "open"_s))
-        mode = ShadowRootMode::Open;
-
-    if (!mode)
+    auto modeString = shadowRootMode();
+    if (modeString.isEmpty())
         return;
 
-    bool delegatesFocus = hasAttributeWithoutSynchronization(HTMLNames::shadowrootdelegatesfocusAttr);
+    ASSERT(modeString == "closed"_s || modeString == "open"_s);
+    auto mode = modeString == "closed"_s ? ShadowRootMode::Closed : ShadowRootMode::Open;
 
-    auto exceptionOrShadowRoot = host.attachDeclarativeShadow(*mode, delegatesFocus);
+    auto delegatesFocus = hasAttributeWithoutSynchronization(HTMLNames::shadowrootdelegatesfocusAttr) ? ShadowRootDelegatesFocus::Yes : ShadowRootDelegatesFocus::No;
+    auto clonable = hasAttributeWithoutSynchronization(HTMLNames::shadowrootclonableAttr) ? ShadowRootClonable::Yes : ShadowRootClonable::No;
+    auto serializable = hasAttributeWithoutSynchronization(HTMLNames::shadowrootserializableAttr) ? ShadowRootSerializable::Yes : ShadowRootSerializable::No;
+
+    auto exceptionOrShadowRoot = host.attachDeclarativeShadow(mode, delegatesFocus, clonable, serializable);
     if (exceptionOrShadowRoot.hasException())
         return;
 

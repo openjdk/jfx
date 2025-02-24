@@ -96,7 +96,12 @@ void BackForwardController::goBackOrForward(int distance)
     if (!historyItem)
         return;
 
-    protectedPage()->goToItem(*historyItem, FrameLoadType::IndexedBackForward, ShouldTreatAsContinuingLoad::No);
+    Ref page { protectedPage() };
+    RefPtr localMainFrame = dynamicDowncast<LocalFrame>(page->mainFrame());
+    if (!localMainFrame)
+        return;
+
+    page->goToItem(*localMainFrame, *historyItem, FrameLoadType::IndexedBackForward, ShouldTreatAsContinuingLoad::No);
 }
 
 bool BackForwardController::goBack()
@@ -105,7 +110,12 @@ bool BackForwardController::goBack()
     if (!historyItem)
         return false;
 
-    protectedPage()->goToItem(*historyItem, FrameLoadType::Back, ShouldTreatAsContinuingLoad::No);
+    Ref page { protectedPage() };
+    RefPtr localMainFrame = dynamicDowncast<LocalFrame>(page->mainFrame());
+    if (!localMainFrame)
+        return false;
+
+    page->goToItem(*localMainFrame, *historyItem, FrameLoadType::Back, ShouldTreatAsContinuingLoad::No);
     return true;
 }
 
@@ -115,13 +125,18 @@ bool BackForwardController::goForward()
     if (!historyItem)
         return false;
 
-    protectedPage()->goToItem(*historyItem, FrameLoadType::Forward, ShouldTreatAsContinuingLoad::No);
+    Ref page { protectedPage() };
+    RefPtr localMainFrame = dynamicDowncast<LocalFrame>(page->mainFrame());
+    if (!localMainFrame)
+        return false;
+
+    page->goToItem(*localMainFrame, *historyItem, FrameLoadType::Forward, ShouldTreatAsContinuingLoad::No);
     return true;
 }
 
-void BackForwardController::addItem(Ref<HistoryItem>&& item)
+void BackForwardController::addItem(FrameIdentifier targetFrameID, Ref<HistoryItem>&& item)
 {
-    protectedClient()->addItem(WTFMove(item));
+    protectedClient()->addItem(targetFrameID, WTFMove(item));
 }
 
 void BackForwardController::setCurrentItem(HistoryItem& item)
@@ -153,6 +168,17 @@ unsigned BackForwardController::forwardCount() const
 RefPtr<HistoryItem> BackForwardController::itemAtIndex(int i)
 {
     return protectedClient()->itemAtIndex(i);
+}
+
+Vector<Ref<HistoryItem>> BackForwardController::allItems()
+{
+    Vector<Ref<HistoryItem>> historyItems;
+    for (int index = -1 * static_cast<int>(backCount()); index <= static_cast<int>(forwardCount()); index++) {
+        if (RefPtr item = itemAtIndex(index))
+            historyItems.append(item.releaseNonNull());
+    }
+
+    return historyItems;
 }
 
 void BackForwardController::close()

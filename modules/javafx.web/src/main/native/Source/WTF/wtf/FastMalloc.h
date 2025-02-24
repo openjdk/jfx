@@ -28,16 +28,18 @@
 namespace WTF {
 
 // There are several malloc-related macros to annotate class / struct. If these annotations are attached,
-// allocation is handled by bmalloc if bmalloc is available.
+// allocation is handled by libpas or bmalloc, depending on which if any of these memory allocators is available.
 //
 // TLDR; Here is a quick guidance.
-//
-//   1. If your class / struct is derived from a base class which uses WTF_MAKE_ISO_ALLOCATED / WTF_MAKE_ISO_ALLOCATED_EXPORT,
-//      you must use WTF_MAKE_ISO_ALLOCATED / WTF_MAKE_ISO_ALLOCATED_EXPORT.
-//   2. If your class / struct is a DOM object, use WTF_MAKE_ISO_ALLOCATED.
-//   3. If your class / struct is particularly memory consuming and if you think tracking footprint of your class is helpful for memory-reduction work,
+//   1. If your class / struct is derived from a base class which uses WTF_MAKE_TZONE_ALLOCATED / WTF_MAKE_TZONE_ALLOCATED_EXPORT,
+//      you must use WTF_MAKE_TZONE_ALLOCATED / WTF_MAKE_TZONE_ALLOCATED_EXPORT.
+//   2. If your class / struct is derived from a base class which uses WTF_MAKE_TZONE_OR_ISO_ALLOCATED / WTF_MAKE_TZONE_OR_ISO_ALLOCATED_EXPORT,
+//      you must use WTF_MAKE_TZONE_OR_ISO_ALLOCATED / WTF_MAKE_TZONE_OR_ISO_ALLOCATED_EXPORT.
+//   3. If your class / struct is a DOM object, use WTF_MAKE_TZONE_OR_ISO_ALLOCATED.
+//   4. If your class / struct is particularly memory consuming and if you think tracking footprint of your class is helpful for memory-reduction work,
 //      use WTF_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER / WTF_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER.
-//   4. Otherwise, use WTF_MAKE_FAST_ALLOCATED / WTF_MAKE_STRUCT_FAST_ALLOCATED.
+//   5. For classes / structs that are fixed sized, use WTF_MAKE_TZONE_ALLOCATED / WTF_MAKE_TZONE_ALLOCATED_EXPORT.
+//   6. Otherwise, use WTF_MAKE_FAST_ALLOCATED / WTF_MAKE_STRUCT_FAST_ALLOCATED.
 //
 // Let's explain the differences in detail.
 //
@@ -59,8 +61,25 @@ namespace WTF {
 //     To enable MallocHeapBreakdown, set ENABLE_MALLOC_HEAP_BREAKDOWN in WTF and BENABLE_MALLOC_HEAP_BREAKDOWN in bmalloc.
 //     For the details of MallocHeapBreakdown, please look at ChangeLog of https://trac.webkit.org/changeset/253987/webkit.
 //
+// - WTF_MAKE_TZONE_ALLOCATED(ClassName)
+// - WTF_MAKE_TZONE_ALLOCATED_EXPORT(ClassName, exportMacro)
+//     class / struct is allocated from a fixed set of shared libpas heaps with the same size and alignment. Each set of shared heaps is know as a
+//     TZoneTypeBuckets. The particular bucket, is selected using SHA 256 hashing using a process startup value along with particulars of the class / struct
+//     being allocated. This sharing provides protections from type confusion and use-after-free bugs, but with less memory address space overhead of
+//     IsoHeap allocated objects. This is the preferred allocation method.
+//     For example, if Event is annotated with WTF_MAKE_TZONE_ALLOCATED(Event), all derived classes of Event must be annotated with
+//     WTF_MAKE_TZONE_ALLOCATED(XXX). When you annotate a class with WTF_MAKE_TZONE_ALLOCATED(XXX), you need to add WTF_MAKE_TZONE_ALLOCATED_IMPL(XXX)
+//     in cpp file side.
+//     Because WTF_MAKE_TZONE_ALLOCATED_IMPL defines functions in cpp side, you sometimes need to annotate these functions with export macros when your
+//     class is used outside of the component defining your class (e.g. your class is in WebCore and it is also used in WebKit). In this case,
+//     you can use WTF_MAKE_TZONE_ALLOCATED_EXPORT(XXX). to annotate these functions with appropriate export macros:
+//        e.g. WTF_MAKE_TZONE_ALLOCATED_EXPORT(Special, JS_EXPORT_PRIVATE)).
+//     The WTF_MAKE_TZONE_OR_ISO_ALLOCATED family of macros is just like WTF_MAKE_TZONE_ALLOCATED, except they will fall back to WTF_MAKE_ISO_ALLOCATED,
+//     when TZone allocation is disabled, but IsoHeap allocation is enabled.
+//
 // - WTF_MAKE_ISO_ALLOCATED(ClassName)
 // - WTF_MAKE_ISO_ALLOCATED_EXPORT(ClassName, exportMacro)
+//     Note, these annotations are legacy and should not be used for new code.
 //     class / struct is allocated from bmalloc IsoHeap. IsoHeap assigns virtual address only for particular type,
 //     so that this avoids use-after-free based type punning. We are adopting IsoHeap mainly for class / struct which is exposed to user JavaScript (e.g. DOM objects).
 //     For example , all the derived classes of ScriptWrappable must be allocated in IsoHeap.
@@ -137,6 +156,8 @@ WTF_EXPORT_PRIVATE void fastDecommitAlignedMemory(void*, size_t);
 WTF_EXPORT_PRIVATE void fastEnableMiniMode();
 
 WTF_EXPORT_PRIVATE void fastDisableScavenger();
+
+WTF_EXPORT_PRIVATE void forceEnablePGM();
 
 class ForbidMallocUseForCurrentThreadScope {
 public:
@@ -406,14 +427,10 @@ using WTF::tryFastCompactMalloc;
 using WTF::tryFastCompactZeroedMalloc;
 using WTF::fastCompactAlignedMalloc;
 
-#if COMPILER(GCC_COMPATIBLE) && OS(DARWIN)
+#if OS(DARWIN)
 #define WTF_PRIVATE_INLINE __private_extern__ inline __attribute__((always_inline))
-#elif COMPILER(GCC_COMPATIBLE)
-#define WTF_PRIVATE_INLINE inline __attribute__((always_inline))
-#elif COMPILER(MSVC)
-#define WTF_PRIVATE_INLINE __forceinline
 #else
-#define WTF_PRIVATE_INLINE inline
+#define WTF_PRIVATE_INLINE inline __attribute__((always_inline))
 #endif
 
 #define WTF_MAKE_FAST_ALLOCATED_IMPL \
@@ -448,7 +465,7 @@ using WTF::fastCompactAlignedMalloc;
     { \
         ::WTF::fastFree(p); \
     } \
-    using webkitFastMalloced = int; \
+    using WTFIsFastAllocated = int; \
 
 #define WTF_MAKE_FAST_COMPACT_ALLOCATED_IMPL \
     WTF_ALLOW_COMPACT_POINTERS_IMPL; \
@@ -483,7 +500,7 @@ using WTF::fastCompactAlignedMalloc;
     { \
         ::WTF::fastFree(p); \
     } \
-    using webkitFastMalloced = int; \
+    using WTFIsFastAllocated = int; \
 
 // FIXME: WTF_MAKE_FAST_ALLOCATED should take class name so that we can create malloc_zone per this macro.
 // https://bugs.webkit.org/show_bug.cgi?id=205702
@@ -541,7 +558,7 @@ using __thisIsHereToForceASemicolonAfterThisMacro UNUSED_TYPE_ALIAS = int
     { \
         classname##Malloc::free(p); \
     } \
-    using webkitFastMalloced = int; \
+    using WTFIsFastAllocated = int; \
 
 #define WTF_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(classname) \
 public: \
@@ -563,7 +580,7 @@ using __thisIsHereToForceASemicolonAfterThisMacro UNUSED_TYPE_ALIAS = int
     WTF_ALLOW_STRUCT_COMPACT_POINTERS; \
     WTF_MAKE_STRUCT_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(className)
 
-#else
+#else // ENABLE(MALLOC_HEAP_BREAKDOWN)
 
 #define WTF_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER_IMPL(className) \
     WTF_MAKE_FAST_ALLOCATED_IMPL
@@ -593,4 +610,30 @@ public: \
     WTF_MAKE_FAST_COMPACT_ALLOCATED_WITH_HEAP_IDENTIFIER_IMPL(className) \
 using __thisIsHereToForceASemicolonAfterThisMacro UNUSED_TYPE_ALIAS = int
 
-#endif
+#endif // ENABLE(MALLOC_HEAP_BREAKDOWN)
+
+// delete(T*, std::destroying_delete_t, size_t) is preferred over delete(void*)
+// in overload resolution, so we can use it to interpose before calling delete(void*).
+// Note: WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR must be declared in every subclass.
+#define WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR_IMPL(T) \
+void operator delete(T* object, std::destroying_delete_t, size_t size) { \
+    ASSERT(sizeof(T) == size); \
+    object->T::~T(); \
+    if (UNLIKELY(object->ptrCountWithoutThreadCheck())) { \
+        memset(static_cast<void*>(object), 0, size); \
+        return; \
+    } \
+    T::operator delete(object); \
+} \
+using WTFDidOverrideDeleteForCheckedPtr = int;
+
+// Note: WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR must be declared in the most derived subclass.
+#define WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(ClassName) \
+public: \
+    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR_IMPL(ClassName) \
+private: \
+using __thisIsHereToForceASemicolonAfterWTFOverrideDelete UNUSED_TYPE_ALIAS = int
+
+#define WTF_STRUCT_OVERRIDE_DELETE_FOR_CHECKED_PTR(ClassName) \
+    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR_IMPL(ClassName) \
+using __thisIsHereToForceASemicolonAfterWTFOverrideDelete UNUSED_TYPE_ALIAS = int

@@ -36,6 +36,14 @@
 #include <wtf/Ref.h>
 #include <wtf/RefPtr.h>
 
+// SFINAE depends on overload resolution. We indicate the overload we'd prefer
+// (if it can compile) using a higher priorty type (int), and the overload
+// to fall back to using a lower priority type (long). 0 can convert to int
+// or long, so we can trigger overload resolution using 0. C++ is awesome!
+#define SFINAE_OVERLOAD 0
+#define SFINAE_OVERLOAD_DEFAULT long
+#define SFINAE_OVERLOAD_PREFERRED int
+
 namespace WTF {
 
 namespace detail {
@@ -92,34 +100,49 @@ struct RemoveSmartPointerHelper<T, Ref<Pointee>> {
 template<typename T>
 struct RemoveSmartPointer : detail::RemoveSmartPointerHelper<T, std::remove_cv_t<T>> { };
 
-// HasRefCountMethods implementation
+// HasRefPtrMethods implementation
 namespace detail {
 
 template<typename>
 struct SFINAE1True : std::true_type { };
 
 template<class T>
-static auto HasRefCountMethodsTest(int) -> SFINAE1True<decltype(std::declval<T>().ref(), std::declval<T>().deref())>;
+static auto HasRefPtrMethodsTest(SFINAE_OVERLOAD_PREFERRED) -> SFINAE1True<decltype(static_cast<std::remove_cv_t<T>*>(nullptr)->ref(), static_cast<std::remove_cv_t<T>*>(nullptr)->deref())>;
 template<class>
-static auto HasRefCountMethodsTest(long) -> std::false_type;
+static auto HasRefPtrMethodsTest(SFINAE_OVERLOAD_DEFAULT) -> std::false_type;
 
 } // namespace detail
 
 template<class T>
-struct HasRefCountMethods : decltype(detail::HasRefCountMethodsTest<T>(0)) { };
+struct HasRefPtrMethods : decltype(detail::HasRefPtrMethodsTest<T>(SFINAE_OVERLOAD)) { };
+
+// HasCheckedPtrMethods implementation
+namespace detail {
+
+template<class T>
+static auto HasCheckedPtrMethodsTest(SFINAE_OVERLOAD_PREFERRED) -> SFINAE1True<decltype(static_cast<std::remove_cv_t<T>*>(nullptr)->incrementPtrCount(), static_cast<std::remove_cv_t<T>*>(nullptr)->decrementPtrCount())>;
+template<class>
+static auto HasCheckedPtrMethodsTest(SFINAE_OVERLOAD_DEFAULT) -> std::false_type;
+
+} // namespace detail
+
+template<class T>
+struct HasCheckedPtrMethods : decltype(detail::HasCheckedPtrMethodsTest<T>(SFINAE_OVERLOAD)) { };
 
 // HasIsolatedCopy()
 namespace detail {
 
+// FIXME: This test is incorrectly false for RefCounted objects because
+// substitution for std::declval<T>() fails when the constructor is private.
 template<class T>
-static auto HasIsolatedCopyTest(int) -> SFINAE1True<decltype(std::declval<T>().isolatedCopy())>;
+static auto HasIsolatedCopyTest(SFINAE_OVERLOAD_PREFERRED) -> SFINAE1True<decltype(std::declval<T>().isolatedCopy())>;
 template<class>
-static auto HasIsolatedCopyTest(long) -> std::false_type;
+static auto HasIsolatedCopyTest(SFINAE_OVERLOAD_DEFAULT) -> std::false_type;
 
 } // namespace detail
 
 template<class T>
-struct HasIsolatedCopy : decltype(detail::HasIsolatedCopyTest<T>(0)) { };
+struct HasIsolatedCopy : decltype(detail::HasIsolatedCopyTest<T>(SFINAE_OVERLOAD)) { };
 
 // LooksLikeRCSerialDispatcher implementation
 namespace detail {
@@ -128,22 +151,20 @@ template <bool b, typename>
 struct SFINAE1If : std::integral_constant<bool, b> { };
 
 template <bool b, class T>
-static auto LooksLikeRCSerialDispatcherTest(int)
+static auto LooksLikeRCSerialDispatcherTest(SFINAE_OVERLOAD_PREFERRED)
     -> SFINAE1If<b, decltype(std::declval<T>().ref(), std::declval<T>().deref())>;
 
 template <bool, typename>
-static auto LooksLikeRCSerialDispatcherTest(long) -> std::false_type;
+static auto LooksLikeRCSerialDispatcherTest(SFINAE_OVERLOAD_DEFAULT) -> std::false_type;
 
 } // namespace detail
 
 template <class T>
-struct LooksLikeRCSerialDispatcher : decltype(detail::LooksLikeRCSerialDispatcherTest<std::is_base_of_v<SerialFunctionDispatcher, T>, T>(0)) { };
+struct LooksLikeRCSerialDispatcher : decltype(detail::LooksLikeRCSerialDispatcherTest<std::is_base_of_v<SerialFunctionDispatcher, T>, T>(SFINAE_OVERLOAD)) { };
 
 class NativePromiseBase;
 class ConvertibleToNativePromise;
 
-// The use of C++20 concepts causes a crash with the current msvc (see webkit.org/b/261598)
-#if !COMPILER(MSVC)
 template <typename T>
 concept IsNativePromise = std::is_base_of<NativePromiseBase, T>::value;
 
@@ -157,20 +178,6 @@ concept RelatedNativePromise = requires(T, U)
     { IsConvertibleToNativePromise<U> };
     { std::is_same<typename T::PromiseType, typename U::PromiseType>::value };
 };
-#else
-template <typename T>
-constexpr bool IsNativePromise = std::is_base_of<NativePromiseBase, T>::value;
-
-template <typename T>
-constexpr bool IsConvertibleToNativePromise = std::is_base_of<ConvertibleToNativePromise, T>::value;
-
-// The test isn't as exhaustive as concept's version.
-// It will prevent having more user-friendly compilation error should mix&match of NativePromise is used.
-// This will do for now.
-template <typename T, typename U>
-constexpr bool RelatedNativePromise = IsConvertibleToNativePromise<T> && IsConvertibleToNativePromise<U>;
-#endif
-
 
 template <typename T>
 struct IsExpected : std::false_type { };

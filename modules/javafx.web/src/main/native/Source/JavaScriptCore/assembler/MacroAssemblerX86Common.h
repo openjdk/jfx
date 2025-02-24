@@ -25,7 +25,7 @@
 
 #pragma once
 
-#if ENABLE(ASSEMBLER) && (CPU(X86) || CPU(X86_64))
+#if ENABLE(ASSEMBLER) && CPU(X86_64)
 
 #include "X86Assembler.h"
 #include "AbstractMacroAssembler.h"
@@ -39,9 +39,9 @@ class MacroAssemblerX86Common : public AbstractMacroAssembler<Assembler> {
 public:
     static constexpr size_t nearJumpRange = 2 * GB;
 
-#if CPU(X86_64)
     // Use this directly only if you're not generating code with it.
     static constexpr X86Registers::RegisterID s_scratchRegister = X86Registers::r11;
+    static constexpr X86Registers::XMMRegisterID fpTempRegister = X86Registers::xmm15;
 
     // Use this when generating code so that we get enforcement of the disallowing of scratch register
     // usage.
@@ -50,7 +50,6 @@ public:
         RELEASE_ASSERT(m_allowScratchRegister);
         return s_scratchRegister;
     }
-#endif
 
 protected:
     static constexpr int DoubleConditionBitInvert = 0x10;
@@ -119,7 +118,7 @@ public:
     //
     // Operations are typically two operand - operation(source, srcDst)
     // For many operations the source may be an TrustedImm32, the srcDst operand
-    // may often be a memory location (explictly described using an Address
+    // may often be a memory location (explicitly described using an Address
     // object).
 
     void add32(RegisterID src, RegisterID dest)
@@ -433,12 +432,10 @@ public:
         zeroExtend16To32(dst, dst);
     }
 
-#if CPU(X86_64)
     void byteSwap64(RegisterID dst)
     {
         m_assembler.bswapq_r(dst);
     }
-#endif
 
     // Only used for testing purposes.
     void illegalInstruction()
@@ -892,10 +889,20 @@ public:
         sub32(right, dest);
     }
 
-    void sub32(RegisterID left, TrustedImm32 right, RegisterID dest)
+    void sub32(RegisterID src, TrustedImm32 imm, RegisterID dest)
     {
-        move(left, dest);
-        sub32(right, dest);
+        if (!imm.m_value) {
+            zeroExtend32ToWord(src, dest);
+            return;
+        }
+
+        if (src == dest) {
+            sub32(imm, dest);
+            return;
+        }
+
+        // Add a negative using lea
+        m_assembler.leal_mr(WTF::negate(imm.m_value), src, dest);
     }
 
     void sub32(TrustedImm32 imm, RegisterID dest)
@@ -1510,39 +1517,11 @@ public:
 
     void store8(RegisterID src, BaseIndex address)
     {
-#if CPU(X86)
-        // On 32-bit x86 we can only store from the first 4 registers;
-        // esp..edi are mapped to the 'h' registers!
-        if (src >= 4) {
-            // Pick a temporary register.
-            RegisterID temp = getUnusedRegister(address);
-
-            // Swap to the temporary register to perform the store.
-            swap(src, temp);
-            m_assembler.movb_rm(temp, address.offset, address.base, address.index, address.scale);
-            swap(src, temp);
-            return;
-        }
-#endif
         m_assembler.movb_rm(src, address.offset, address.base, address.index, address.scale);
     }
 
     void store8(RegisterID src, Address address)
     {
-#if CPU(X86)
-        // On 32-bit x86 we can only store from the first 4 registers;
-        // esp..edi are mapped to the 'h' registers!
-        if (src >= 4) {
-            // Pick a temporary register.
-            RegisterID temp = getUnusedRegister(address);
-
-            // Swap to the temporary register to perform the store.
-            swap(src, temp);
-            m_assembler.movb_rm(temp, address.offset, address.base);
-            swap(src, temp);
-            return;
-        }
-#endif
         m_assembler.movb_rm(src, address.offset, address.base);
     }
 
@@ -1580,12 +1559,8 @@ public:
 
     void loadDouble(TrustedImmPtr address, FPRegisterID dest)
     {
-#if CPU(X86)
-        m_assembler.movsd_mr(address.asPtr(), dest);
-#else
         move(address, scratchRegister());
         loadDouble(Address(scratchRegister()), dest);
-#endif
     }
 
     void loadDouble(Address address, FPRegisterID dest)
@@ -1606,12 +1581,8 @@ public:
 
     void loadFloat(TrustedImmPtr address, FPRegisterID dest)
     {
-#if CPU(X86)
-        m_assembler.movss_mr(address.asPtr(), dest);
-#else
         move(address, scratchRegister());
         loadFloat(Address(scratchRegister()), dest);
-#endif
     }
 
     void loadFloat(Address address, FPRegisterID dest)
@@ -1829,7 +1800,12 @@ public:
             m_assembler.vdivsd_rrr(op2, op1, dest);
         else {
         // B := A / B is invalid.
-        ASSERT(op1 == dest || op2 != dest);
+            if (op1 != dest && op2 == dest) {
+                moveDouble(op2, fpTempRegister);
+                moveDouble(op1, dest);
+                divDouble(fpTempRegister, dest);
+                return;
+            }
         moveDouble(op1, dest);
         divDouble(op2, dest);
     }
@@ -1867,7 +1843,12 @@ public:
             m_assembler.vdivss_rrr(op2, op1, dest);
         else {
             // B := A / B is invalid.
-            ASSERT(op1 == dest || op2 != dest);
+            if (op1 != dest && op2 == dest) {
+                moveDouble(op2, fpTempRegister);
+                moveDouble(op1, dest);
+                divFloat(fpTempRegister, dest);
+                return;
+            }
             moveDouble(op1, dest);
             divFloat(op2, dest);
         }
@@ -1885,7 +1866,12 @@ public:
             m_assembler.vsubsd_rrr(op2, op1, dest);
         else {
             // B := A - B is invalid.
-            ASSERT(op1 == dest || op2 != dest);
+            if (op1 != dest && op2 == dest) {
+                moveDouble(op2, fpTempRegister);
+                moveDouble(op1, dest);
+                m_assembler.subsd_rr(fpTempRegister, dest);
+                return;
+            }
             moveDouble(op1, dest);
             m_assembler.subsd_rr(op2, dest);
         }
@@ -1929,7 +1915,12 @@ public:
             m_assembler.vsubss_rrr(op2, op1, dest);
         else {
             // B := A - B is invalid.
-            ASSERT(op1 == dest || op2 != dest);
+            if (op1 != dest && op2 == dest) {
+                moveDouble(op2, fpTempRegister);
+                moveDouble(op1, dest);
+                m_assembler.subss_rr(fpTempRegister, dest);
+                return;
+            }
             moveDouble(op1, dest);
             m_assembler.subss_rr(op2, dest);
         }
@@ -2365,7 +2356,6 @@ public:
         m_assembler.cvttsd2si_rr(src, dest);
 
         // If the result is zero, it might have been -0.0, and the double comparison won't catch this!
-#if CPU(X86_64)
         if (negZeroCheck) {
             Jump valueIsNonZero = branchTest32(NonZero, dest);
             if (supportsAVX())
@@ -2375,10 +2365,6 @@ public:
             failureCases.append(branchTest32(NonZero, scratchRegister(), TrustedImm32(1)));
             valueIsNonZero.link(this);
         }
-#else
-        if (negZeroCheck)
-            failureCases.append(branchTest32(Zero, dest));
-#endif
 
         // Convert the integer result back to float & compare to the original value - if not equal or unordered (NaN) then jump.
         convertInt32ToDouble(dest, fpTemp);
@@ -2494,7 +2480,6 @@ public:
             m_assembler.movl_i32r(imm.m_value, dest);
     }
 
-#if CPU(X86_64)
     void move(RegisterID src, RegisterID dest)
     {
         // Note: on 64-bit this is is a full register move; perhaps it would be
@@ -2685,97 +2670,6 @@ public:
     {
         m_assembler.movl_i32r(src.m_value, dest);
     }
-#else
-    void move(RegisterID src, RegisterID dest)
-    {
-        if (src != dest)
-            m_assembler.movl_rr(src, dest);
-    }
-
-    void move(TrustedImmPtr imm, RegisterID dest)
-    {
-        if (!imm.m_value)
-            m_assembler.xorl_rr(dest, dest);
-        else
-            m_assembler.movl_i32r(imm.asIntptr(), dest);
-    }
-
-    // Only here for templates!
-    void move(TrustedImm64, RegisterID)
-    {
-        UNREACHABLE_FOR_PLATFORM();
-    }
-
-    void moveConditionallyDouble(DoubleCondition cond, FPRegisterID left, FPRegisterID right, RegisterID src, RegisterID dest)
-    {
-        if (cond & DoubleConditionBitInvert) {
-            if (supportsAVX())
-                m_assembler.vucomisd_rr(left, right);
-            else
-            m_assembler.ucomisd_rr(left, right);
-        } else {
-            if (supportsAVX())
-                m_assembler.vucomisd_rr(right, left);
-        else
-            m_assembler.ucomisd_rr(right, left);
-        }
-
-        if (cond == DoubleEqualAndOrdered) {
-            if (left == right) {
-                m_assembler.cmovnpl_rr(src, dest);
-                return;
-            }
-
-            Jump isUnordered(m_assembler.jp());
-            m_assembler.cmovel_rr(src, dest);
-            isUnordered.link(this);
-            return;
-        }
-
-        if (cond == DoubleNotEqualOrUnordered) {
-            if (left == right) {
-                m_assembler.cmovpl_rr(src, dest);
-                return;
-            }
-
-            m_assembler.cmovpl_rr(src, dest);
-            m_assembler.cmovnel_rr(src, dest);
-            return;
-        }
-
-        ASSERT(!(cond & DoubleConditionBitSpecial));
-        m_assembler.cmovl_rr(static_cast<X86Assembler::Condition>(cond & ~DoubleConditionBits), src, dest);
-    }
-
-    void swap(RegisterID reg1, RegisterID reg2)
-    {
-        if (reg1 != reg2)
-            m_assembler.xchgl_rr(reg1, reg2);
-    }
-
-    void swapDouble(FPRegisterID reg1, FPRegisterID reg2)
-    {
-        if (reg1 == reg2)
-            return;
-
-        // FIXME: This is kinda a hack since we don't use xmm7 as a temp.
-        ASSERT(reg1 != FPRegisterID::xmm7);
-        ASSERT(reg2 != FPRegisterID::xmm7);
-        moveDouble(reg1, FPRegisterID::xmm7);
-        moveDouble(reg2, reg1);
-        moveDouble(FPRegisterID::xmm7, reg2);
-    }
-
-    void signExtend32ToPtr(RegisterID src, RegisterID dest)
-    {
-        move(src, dest);
-    }
-
-    void zeroExtend32ToWord(RegisterID src, RegisterID dest)
-    {
-        move(src, dest);
-    }
-#endif
 
     void swap32(RegisterID src, RegisterID dest)
     {
@@ -3008,6 +2902,13 @@ public:
         return Jump(m_assembler.jCC(x86Condition(cond)));
     }
 
+    Jump branch16(RelationalCondition cond, Address left, TrustedImm32 right)
+    {
+        TrustedImm32 right16(static_cast<int16_t>(right.m_value));
+        m_assembler.cmpw_im(right16.m_value, left.offset, left.base);
+        return Jump(m_assembler.jCC(x86Condition(cond)));
+    }
+
     Jump branch32(RelationalCondition cond, RegisterID left, RegisterID right)
     {
         m_assembler.cmpl_rr(right, left);
@@ -3179,6 +3080,13 @@ public:
     {
         TrustedImm32 right8(static_cast<int8_t>(right.m_value));
         m_assembler.cmpb_im(right8.m_value, left.offset, left.base, left.index, left.scale);
+        return Jump(m_assembler.jCC(x86Condition(cond)));
+    }
+
+    Jump branch16(RelationalCondition cond, BaseIndex left, TrustedImm32 right)
+    {
+        TrustedImm32 right16(static_cast<int16_t>(right.m_value));
+        m_assembler.cmpw_im(right16.m_value, left.offset, left.base, left.index, left.scale);
         return Jump(m_assembler.jCC(x86Condition(cond)));
     }
 
@@ -3604,93 +3512,121 @@ public:
         m_assembler.orl_im(0, 0, X86Registers::esp);
     }
 
+    ALWAYS_INLINE RegisterID checkAliasOfEAX(RegisterID newValue)
+    {
+        if (newValue != X86Registers::eax)
+            return newValue;
+
+        RegisterID tempNewValue = scratchRegister();
+        move(newValue, tempNewValue);
+        return tempNewValue;
+    }
+
     void atomicStrongCAS8(StatusCondition cond, RegisterID expectedAndResult, RegisterID newValue, Address address, RegisterID result)
     {
+        newValue = checkAliasOfEAX(newValue);
         atomicStrongCAS(cond, expectedAndResult, result, address, [&] { m_assembler.cmpxchgb_rm(newValue, address.offset, address.base); });
     }
 
     void atomicStrongCAS8(StatusCondition cond, RegisterID expectedAndResult, RegisterID newValue, BaseIndex address, RegisterID result)
     {
+        newValue = checkAliasOfEAX(newValue);
         atomicStrongCAS(cond, expectedAndResult, result, address, [&] { m_assembler.cmpxchgb_rm(newValue, address.offset, address.base, address.index, address.scale); });
     }
 
     void atomicStrongCAS16(StatusCondition cond, RegisterID expectedAndResult, RegisterID newValue, Address address, RegisterID result)
     {
+        newValue = checkAliasOfEAX(newValue);
         atomicStrongCAS(cond, expectedAndResult, result, address, [&] { m_assembler.cmpxchgw_rm(newValue, address.offset, address.base); });
     }
 
     void atomicStrongCAS16(StatusCondition cond, RegisterID expectedAndResult, RegisterID newValue, BaseIndex address, RegisterID result)
     {
+        newValue = checkAliasOfEAX(newValue);
         atomicStrongCAS(cond, expectedAndResult, result, address, [&] { m_assembler.cmpxchgw_rm(newValue, address.offset, address.base, address.index, address.scale); });
     }
 
     void atomicStrongCAS32(StatusCondition cond, RegisterID expectedAndResult, RegisterID newValue, Address address, RegisterID result)
     {
+        newValue = checkAliasOfEAX(newValue);
         atomicStrongCAS(cond, expectedAndResult, result, address, [&] { m_assembler.cmpxchgl_rm(newValue, address.offset, address.base); });
     }
 
     void atomicStrongCAS32(StatusCondition cond, RegisterID expectedAndResult, RegisterID newValue, BaseIndex address, RegisterID result)
     {
+        newValue = checkAliasOfEAX(newValue);
         atomicStrongCAS(cond, expectedAndResult, result, address, [&] { m_assembler.cmpxchgl_rm(newValue, address.offset, address.base, address.index, address.scale); });
     }
 
     void atomicStrongCAS8(RegisterID expectedAndResult, RegisterID newValue, Address address)
     {
+        newValue = checkAliasOfEAX(newValue);
         atomicStrongCAS(expectedAndResult, address, [&] { m_assembler.cmpxchgb_rm(newValue, address.offset, address.base); });
     }
 
     void atomicStrongCAS8(RegisterID expectedAndResult, RegisterID newValue, BaseIndex address)
     {
+        newValue = checkAliasOfEAX(newValue);
         atomicStrongCAS(expectedAndResult, address, [&] { m_assembler.cmpxchgb_rm(newValue, address.offset, address.base, address.index, address.scale); });
     }
 
     void atomicStrongCAS16(RegisterID expectedAndResult, RegisterID newValue, Address address)
     {
+        newValue = checkAliasOfEAX(newValue);
         atomicStrongCAS(expectedAndResult, address, [&] { m_assembler.cmpxchgw_rm(newValue, address.offset, address.base); });
     }
 
     void atomicStrongCAS16(RegisterID expectedAndResult, RegisterID newValue, BaseIndex address)
     {
+        newValue = checkAliasOfEAX(newValue);
         atomicStrongCAS(expectedAndResult, address, [&] { m_assembler.cmpxchgw_rm(newValue, address.offset, address.base, address.index, address.scale); });
     }
 
     void atomicStrongCAS32(RegisterID expectedAndResult, RegisterID newValue, Address address)
     {
+        newValue = checkAliasOfEAX(newValue);
         atomicStrongCAS(expectedAndResult, address, [&] { m_assembler.cmpxchgl_rm(newValue, address.offset, address.base); });
     }
 
     void atomicStrongCAS32(RegisterID expectedAndResult, RegisterID newValue, BaseIndex address)
     {
+        newValue = checkAliasOfEAX(newValue);
         atomicStrongCAS(expectedAndResult, address, [&] { m_assembler.cmpxchgl_rm(newValue, address.offset, address.base, address.index, address.scale); });
     }
 
     Jump branchAtomicStrongCAS8(StatusCondition cond, RegisterID expectedAndResult, RegisterID newValue, Address address)
     {
+        newValue = checkAliasOfEAX(newValue);
         return branchAtomicStrongCAS(cond, expectedAndResult, address, [&] { m_assembler.cmpxchgb_rm(newValue, address.offset, address.base); });
     }
 
     Jump branchAtomicStrongCAS8(StatusCondition cond, RegisterID expectedAndResult, RegisterID newValue, BaseIndex address)
     {
+        newValue = checkAliasOfEAX(newValue);
         return branchAtomicStrongCAS(cond, expectedAndResult, address, [&] { m_assembler.cmpxchgb_rm(newValue, address.offset, address.base, address.index, address.scale); });
     }
 
     Jump branchAtomicStrongCAS16(StatusCondition cond, RegisterID expectedAndResult, RegisterID newValue, Address address)
     {
+        newValue = checkAliasOfEAX(newValue);
         return branchAtomicStrongCAS(cond, expectedAndResult, address, [&] { m_assembler.cmpxchgw_rm(newValue, address.offset, address.base); });
     }
 
     Jump branchAtomicStrongCAS16(StatusCondition cond, RegisterID expectedAndResult, RegisterID newValue, BaseIndex address)
     {
+        newValue = checkAliasOfEAX(newValue);
         return branchAtomicStrongCAS(cond, expectedAndResult, address, [&] { m_assembler.cmpxchgw_rm(newValue, address.offset, address.base, address.index, address.scale); });
     }
 
     Jump branchAtomicStrongCAS32(StatusCondition cond, RegisterID expectedAndResult, RegisterID newValue, Address address)
     {
+        newValue = checkAliasOfEAX(newValue);
         return branchAtomicStrongCAS(cond, expectedAndResult, address, [&] { m_assembler.cmpxchgl_rm(newValue, address.offset, address.base); });
     }
 
     Jump branchAtomicStrongCAS32(StatusCondition cond, RegisterID expectedAndResult, RegisterID newValue, BaseIndex address)
     {
+        newValue = checkAliasOfEAX(newValue);
         return branchAtomicStrongCAS(cond, expectedAndResult, address, [&] { m_assembler.cmpxchgl_rm(newValue, address.offset, address.base, address.index, address.scale); });
     }
 
@@ -4492,28 +4428,13 @@ protected:
 
     void set32(X86Assembler::Condition cond, RegisterID dest)
     {
-#if CPU(X86)
-        // On 32-bit x86 we can only set the first 4 registers;
-        // esp..edi are mapped to the 'h' registers!
-        if (dest >= 4) {
-            m_assembler.xchgl_rr(dest, X86Registers::eax);
-            m_assembler.setCC_r(cond, X86Registers::eax);
-            m_assembler.movzbl_rr(X86Registers::eax, X86Registers::eax);
-            m_assembler.xchgl_rr(dest, X86Registers::eax);
-            return;
-        }
-#endif
         m_assembler.setCC_r(cond, dest);
         m_assembler.movzbl_rr(dest, dest);
     }
 
     void cmov(X86Assembler::Condition cond, RegisterID src, RegisterID dest)
     {
-#if CPU(X86_64)
         m_assembler.cmovq_rr(cond, src, dest);
-#else
-        m_assembler.cmovl_rr(cond, src, dest);
-#endif
     }
 
     static bool supportsLZCNT()
@@ -4683,7 +4604,6 @@ private:
         m_assembler.movl_rr(src, dest);
     }
 
-#if CPU(X86_64)
     void moveConditionallyAfterFloatingPointCompare(DoubleCondition cond, FPRegisterID left, FPRegisterID right, RegisterID src, RegisterID dest)
     {
         if (cond == DoubleEqualAndOrdered) {
@@ -4712,7 +4632,6 @@ private:
         ASSERT(!(cond & DoubleConditionBitSpecial));
         cmov(static_cast<X86Assembler::Condition>(cond & ~DoubleConditionBits), src, dest);
     }
-#endif
 
     using CPUID = std::array<unsigned, 4>;
     static CPUID getCPUID(unsigned level);
@@ -4732,4 +4651,4 @@ private:
 
 } // namespace JSC
 
-#endif // ENABLE(ASSEMBLER) && (CPU(X86) || CPU(X86_64))
+#endif // ENABLE(ASSEMBLER) && CPU(X86_64)

@@ -26,6 +26,7 @@
 #include "config.h"
 #include "CachedPage.h"
 
+#include "BackForwardController.h"
 #include "Document.h"
 #include "DocumentLoader.h"
 #include "Element.h"
@@ -36,6 +37,7 @@
 #include "LocalFrame.h"
 #include "LocalFrameLoaderClient.h"
 #include "LocalFrameView.h"
+#include "Navigation.h"
 #include "Node.h"
 #include "Page.h"
 #include "PageTransitionEvent.h"
@@ -60,7 +62,10 @@ CachedPage::CachedPage(Page& page)
     : m_page(page)
     , m_expirationTime(MonotonicTime::now() + page.settings().backForwardCacheExpirationInterval())
     , m_cachedMainFrame(makeUnique<CachedFrame>(page.mainFrame()))
-    , m_loadedSubresourceDomains(is<LocalFrame>(page.mainFrame()) ? downcast<LocalFrame>(page.mainFrame()).loader().client().loadedSubresourceDomains() : Vector<RegistrableDomain>())
+    , m_loadedSubresourceDomains([&] {
+        auto* localFrame = dynamicDowncast<LocalFrame>(page.mainFrame());
+        return localFrame ? localFrame->loader().client().loadedSubresourceDomains() : Vector<RegistrableDomain>();
+    }())
 {
 #ifndef NDEBUG
     cachedPageCounter.increment();
@@ -134,7 +139,11 @@ void CachedPage::restore(Page& page)
 
     // Restore the focus appearance for the focused element.
     // FIXME: Right now we don't support pages w/ frames in the b/f cache.  This may need to be tweaked when we add support for that.
-    RefPtr focusedDocument = CheckedRef(page.focusController())->focusedOrMainFrame().document();
+    RefPtr focusedOrMainFrame = page.checkedFocusController()->focusedOrMainFrame();
+    if (!focusedOrMainFrame)
+        return;
+
+    RefPtr focusedDocument = focusedOrMainFrame->document();
     if (RefPtr element = focusedDocument->focusedElement()) {
 #if PLATFORM(IOS_FAMILY)
         // We don't want focused nodes changing scroll position when restoring from the cache
@@ -171,6 +180,12 @@ void CachedPage::restore(Page& page)
     if (m_needsUpdateContentsSize) {
         if (RefPtr frameView = mainFrame->virtualView())
             frameView->updateContentsSize();
+    }
+
+    if (auto& backForwardController = page.backForward(); page.settings().navigationAPIEnabled() && focusedDocument->domWindow() && backForwardController.currentItem()) {
+        Ref currentItem = *backForwardController.currentItem();
+        auto allItems = backForwardController.allItems();
+        focusedDocument->domWindow()->navigation().updateForReactivation(allItems, currentItem);
     }
 
     firePageShowEvent(page);

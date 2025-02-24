@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2023, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -26,45 +26,27 @@
 package test.robot.javafx.scene.control.behavior;
 
 import java.util.HashMap;
-import java.util.concurrent.CountDownLatch;
 import java.util.function.BooleanSupplier;
-import javafx.application.Application;
 import javafx.application.Platform;
 import javafx.event.EventHandler;
 import javafx.geometry.Point2D;
-import javafx.scene.Scene;
 import javafx.scene.control.Control;
 import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyEvent;
-import javafx.scene.input.MouseButton;
-import javafx.scene.layout.BorderPane;
-import javafx.scene.robot.Robot;
-import javafx.stage.Stage;
-import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Assertions;
-import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import com.sun.javafx.PlatformUtil;
+import test.robot.testharness.RobotTestBase;
 import test.util.Util;
 
 /**
  * Base class for testing behaviors with Robot.
  */
-public abstract class BehaviorRobotTestBase<C extends Control> {
+public abstract class BehaviorRobotTestBase<C extends Control> extends RobotTestBase {
 
-    protected static final int STAGE_WIDTH = 400;
-    protected static final int STAGE_HEIGHT = 300;
     /** causes the execute() function to wait for idle */
     protected static final Object PULSE = new Object();
-    private static CountDownLatch startupLatch;
-    /** Scene valid only during test */
-    protected static Scene scene;
-    /** Stage valid only during test */
-    protected static Stage stage;
-    protected static BorderPane content;
-    /** The Robot instance */
-    protected static Robot robot;
     private int step;
     private static HashMap<Character,KeyCode> keyCodes;
     protected final C control;
@@ -74,48 +56,20 @@ public abstract class BehaviorRobotTestBase<C extends Control> {
         this.control = c;
     }
 
-    public static class App extends Application {
-        @Override
-        public void start(Stage primaryStage) throws Exception {
-            stage = primaryStage;
-            robot = new Robot();
-            content = new BorderPane();
-            scene = new Scene(content);
-            stage.setScene(scene);
-            stage.setWidth(STAGE_WIDTH);
-            stage.setHeight(STAGE_HEIGHT);
-            stage.setOnShown(l -> {
-                Platform.runLater(() -> startupLatch.countDown());
-            });
-            stage.show();
-        }
-    }
-
     @BeforeEach
     public void beforeEach() {
         Platform.runLater(() -> {
             step = 0;
-            content.setCenter(control);
+            contentPane.setCenter(control);
         });
     }
 
     @AfterEach
     public void afterEach() {
         Platform.runLater(() -> {
-            content.setCenter(null);
+            contentPane.setCenter(null);
         });
-        content.removeEventFilter(KeyEvent.ANY, keyListener);
-    }
-
-    @BeforeAll
-    public static void initFX() throws Exception {
-        startupLatch = new CountDownLatch(1);
-        Util.launch(startupLatch, App.class);
-    }
-
-    @AfterAll
-    public static void teardownOnce() {
-        Util.shutdown();
+        contentPane.removeEventFilter(KeyEvent.ANY, keyListener);
     }
 
     /**
@@ -343,86 +297,8 @@ public abstract class BehaviorRobotTestBase<C extends Control> {
         };
     }
 
-    /**
-     * Triggers and waits for 10 pulses to complete in this test's scene.
-     */
-    protected void waitForIdle() {
-        Util.waitForIdle(scene);
-    }
-
-    /**
-     * Performs the mouse click with the {@code MouseButton.PRIMARY} via Robot.
-     * Must be called from the FX Application thread.
-     */
-    protected void mouseClick() {
-        mouseClick(MouseButton.PRIMARY);
-    }
-
-    /**
-     * Performs the mouse click with the specified button via Robot.
-     * Must be called from the FX Application thread.
-     * @param b the button
-     */
-    protected void mouseClick(MouseButton b) {
-        robot.mouseClick(b);
-    }
-
-    /**
-     * Performs the mouse press with the {@code MouseButton.PRIMARY} via Robot.
-     * Must be called from the FX Application thread.
-     */
-    protected void mousePress() {
-        mousePress(MouseButton.PRIMARY);
-    }
-
-    /**
-     * Performs the mouse press with the specified button via Robot.
-     * Must be called from the FX Application thread.
-     * @param b the button
-     */
-    protected void mousePress(MouseButton b) {
-        robot.mousePress(b);
-    }
-
-    /**
-     * Performs the mouse release with the {@code MouseButton.PRIMARY} via Robot.
-     * Must be called from the FX Application thread.
-     */
-    protected void mouseRelease() {
-        mouseRelease(MouseButton.PRIMARY);
-    }
-
-    /**
-     * Performs the mouse release with the specified button via Robot.
-     * Must be called from the FX Application thread.
-     * @param b the button
-     */
-    protected void mouseRelease(MouseButton b) {
-        robot.mouseRelease(b);
-    }
-
     protected void mouseMove(double x, double y) {
         Point2D p = control.localToScreen(x, y);
         robot.mouseMove(p.getX(), p.getY());
-    }
-
-    /**
-     * To be used only for debugging, to be able to observe the intermediate state of the UI.
-     * Please do not use this method in the actual tests.
-     * @param seconds the number of seconds to sleep
-     * @return the Runnable
-     */
-    protected Runnable sleep(int seconds) {
-        return exe(() -> {
-            try {
-                Thread.sleep(seconds * 1000L);
-            } catch (Exception e) {
-            }
-        });
-    }
-
-    // debugging aid
-    protected void p(Object v) {
-        System.out.println(v);
     }
 }

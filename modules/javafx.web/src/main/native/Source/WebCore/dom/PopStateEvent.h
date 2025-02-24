@@ -35,7 +35,7 @@ class History;
 class SerializedScriptValue;
 
 class PopStateEvent final : public Event {
-    WTF_MAKE_ISO_ALLOCATED(PopStateEvent);
+    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(PopStateEvent);
 public:
     virtual ~PopStateEvent();
     static Ref<PopStateEvent> create(RefPtr<SerializedScriptValue>&&, History*);
@@ -55,15 +55,13 @@ public:
 
     History* history() const { return m_history.get(); }
 
-    // FIXME(https://bugs.webkit.org/show_bug.cgi?id=264748): add logic to determine hasUAVisualTransition value.
     bool hasUAVisualTransition() const { return m_hasUAVisualTransition; }
+    void setHasUAVisualTransition(bool hasUAVisualTransition) { m_hasUAVisualTransition = hasUAVisualTransition; }
 
 private:
-    PopStateEvent() = default;
+    PopStateEvent();
     PopStateEvent(const AtomString&, const Init&, IsTrusted);
     PopStateEvent(RefPtr<SerializedScriptValue>&&, History*);
-
-    EventInterface eventInterface() const final;
 
     JSValueInWrappedObject m_state;
     RefPtr<SerializedScriptValue> m_serializedState;

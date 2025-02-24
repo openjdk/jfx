@@ -33,7 +33,8 @@ class SVGRect;
 class SVGMatrix;
 
 class SVGGraphicsElement : public SVGElement, public SVGTransformable, public SVGTests {
-    WTF_MAKE_ISO_ALLOCATED(SVGGraphicsElement);
+    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(SVGGraphicsElement);
+    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(SVGGraphicsElement);
 public:
     virtual ~SVGGraphicsElement();
 
@@ -68,6 +69,7 @@ public:
     using PropertyRegistry = SVGPropertyOwnerRegistry<SVGGraphicsElement, SVGElement, SVGTests>;
 
     const SVGTransformList& transform() const { return m_transform->currentValue(); }
+    Ref<const SVGTransformList> protectedTransform() const;
     SVGAnimatedTransformList& transformAnimated() { return m_transform; }
 
 protected:
@@ -76,6 +78,8 @@ protected:
     void attributeChanged(const QualifiedName&, const AtomString& oldValue, const AtomString& newValue, AttributeModificationReason) override;
     void svgAttributeChanged(const QualifiedName&) override;
     void didAttachRenderers() override;
+
+    void invalidateResourceImageBuffersIfNeeded();
 
 private:
     bool isSVGGraphicsElement() const override { return true; }

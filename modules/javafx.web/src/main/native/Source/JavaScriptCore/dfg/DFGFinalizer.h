@@ -28,9 +28,14 @@
 #if ENABLE(DFG_JIT)
 
 #include <wtf/Noncopyable.h>
+#include <wtf/RefPtr.h>
 #include <wtf/TZoneMalloc.h>
 
-namespace JSC { namespace DFG {
+namespace JSC {
+
+class JITCode;
+
+namespace DFG {
 
 class Plan;
 
@@ -44,6 +49,8 @@ public:
     virtual size_t codeSize() = 0;
     virtual bool finalize() = 0;
     virtual bool isFailed() = 0;
+
+    virtual RefPtr<JSC::JITCode> jitCode();
 
 protected:
     Plan& m_plan;

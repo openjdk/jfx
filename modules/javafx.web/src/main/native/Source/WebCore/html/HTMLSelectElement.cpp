@@ -59,12 +59,12 @@
 #include "RenderTheme.h"
 #include "Settings.h"
 #include "SpatialNavigation.h"
-#include <wtf/IsoMallocInlines.h>
-#include <wtf/text/StringConcatenateNumbers.h>
+#include <wtf/TZoneMallocInlines.h>
+#include <wtf/text/MakeString.h>
 
 namespace WebCore {
 
-WTF_MAKE_ISO_ALLOCATED_IMPL(HTMLSelectElement);
+WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(HTMLSelectElement);
 
 using namespace WTF::Unicode;
 
@@ -157,10 +157,10 @@ bool HTMLSelectElement::hasPlaceholderLabelOption() const
 
     int listIndex = optionToListIndex(0);
     ASSERT(listIndex >= 0);
-    if (listIndex < 0)
+    if (listIndex)
         return false;
-    HTMLOptionElement& option = downcast<HTMLOptionElement>(*listItems()[listIndex]);
-    return !listIndex && option.value().isEmpty();
+    Ref option = downcast<HTMLOptionElement>(*listItems()[listIndex]);
+    return option->value().isEmpty();
 }
 
 String HTMLSelectElement::validationMessage() const
@@ -265,7 +265,7 @@ void HTMLSelectElement::setValue(const String& value)
     // Find the option with value() matching the given parameter and make it the current selection.
     unsigned optionIndex = 0;
     for (auto& item : listItems()) {
-        if (auto* option = dynamicDowncast<HTMLOptionElement>(item.get())) {
+        if (RefPtr option = dynamicDowncast<HTMLOptionElement>(item.get())) {
             if (option->value() == value) {
                 setSelectedIndex(optionIndex);
                 return;
@@ -397,7 +397,7 @@ CompletionHandlerCallingScope HTMLSelectElement::optionToSelectFromChildChangeSc
         if (auto* option = dynamicDowncast<HTMLOptionElement>(*change.siblingChanged)) {
             if (option->selectedWithoutUpdate())
                 optionToSelect = option;
-        } else if (auto* optGroup = dynamicDowncast<HTMLOptGroupElement>(change.siblingChanged); !parentOptGroup && optGroup)
+        } else if (RefPtr optGroup = dynamicDowncast<HTMLOptGroupElement>(change.siblingChanged); !parentOptGroup && optGroup)
             optionToSelect = getLastSelectedOption(*optGroup);
     } else if (parentOptGroup && change.type == ContainerNode::ChildChange::Type::AllChildrenReplaced)
         optionToSelect = getLastSelectedOption(*parentOptGroup);
@@ -475,7 +475,7 @@ ExceptionOr<void> HTMLSelectElement::setItem(unsigned index, HTMLOptionElement* 
 
     // If we are adding options, we should check 'index > maxSelectItems' first to avoid integer overflow.
     if (index > length() && index >= maxSelectItems) {
-        protectedDocument()->addConsoleMessage(MessageSource::Other, MessageLevel::Warning, makeString("Unable to expand the option list and set an option at index. The maximum list length is ", maxSelectItems, '.'));
+        protectedDocument()->addConsoleMessage(MessageSource::Other, MessageLevel::Warning, makeString("Unable to expand the option list and set an option at index. The maximum list length is "_s, maxSelectItems, '.'));
         return { };
     }
 
@@ -508,7 +508,7 @@ ExceptionOr<void> HTMLSelectElement::setLength(unsigned newLength)
 {
     // If we are adding options, we should check 'index > maxSelectItems' first to avoid integer overflow.
     if (newLength > length() && newLength > maxSelectItems) {
-        protectedDocument()->addConsoleMessage(MessageSource::Other, MessageLevel::Warning, makeString("Unable to expand the option list to length ", newLength, " items. The maximum number of items allowed is ", maxSelectItems, '.'));
+        protectedDocument()->addConsoleMessage(MessageSource::Other, MessageLevel::Warning, makeString("Unable to expand the option list to length "_s, newLength, " items. The maximum number of items allowed is "_s, maxSelectItems, '.'));
         return { };
     }
 
@@ -848,15 +848,15 @@ void HTMLSelectElement::recalcListItems(bool updateSelectedStates, AllowStyleInv
         }
     };
 
-    for (auto& child : childrenOfType<HTMLElement>(*const_cast<HTMLSelectElement*>(this))) {
-        if (is<HTMLOptGroupElement>(child)) {
-            m_listItems.append(&child);
-            for (Ref option : childrenOfType<HTMLOptionElement>(child))
+    for (Ref child : childrenOfType<HTMLElement>(*const_cast<HTMLSelectElement*>(this))) {
+        if (is<HTMLOptGroupElement>(child.get())) {
+            m_listItems.append(&child.get());
+            for (Ref option : childrenOfType<HTMLOptionElement>(child.get()))
                 handleOptionElement(option);
-        } else if (RefPtr option = dynamicDowncast<HTMLOptionElement>(child))
+        } else if (RefPtr option = dynamicDowncast<HTMLOptionElement>(child.get()))
             handleOptionElement(*option);
-        else if (is<HTMLHRElement>(child))
-            m_listItems.append(&child);
+        else if (is<HTMLHRElement>(child.get()))
+            m_listItems.append(&child.get());
     }
 
     if (!foundSelected && m_size <= 1 && firstOption && !firstOption->selected())
@@ -1025,7 +1025,7 @@ size_t HTMLSelectElement::searchOptionsForValue(const String& value, size_t list
     auto& items = listItems();
     size_t loopEndIndex = std::min(items.size(), listIndexEnd);
     for (size_t i = listIndexStart; i < loopEndIndex; ++i) {
-        auto* option = dynamicDowncast<HTMLOptionElement>(*items[i]);
+        RefPtr option = dynamicDowncast<HTMLOptionElement>(*items[i]);
         if (!option)
             continue;
         if (option->value() == value)
@@ -1656,8 +1656,7 @@ void HTMLSelectElement::accessKeySetSelectedIndex(int index)
     auto& items = listItems();
     int listIndex = optionToListIndex(index);
     if (listIndex >= 0) {
-        auto& element = *items[listIndex];
-        if (RefPtr option = dynamicDowncast<HTMLOptionElement>(element)) {
+        if (RefPtr option = dynamicDowncast<HTMLOptionElement>(*items[listIndex])) {
             if (option->selected())
                 option->setSelectedState(false);
             else

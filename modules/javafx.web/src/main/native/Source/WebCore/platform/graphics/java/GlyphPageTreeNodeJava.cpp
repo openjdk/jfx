@@ -31,7 +31,7 @@
 
 namespace WebCore {
 
-bool GlyphPage::fill(UChar* buffer, unsigned bufferLength)
+bool GlyphPage::fill(std::span<const UChar> characterBuffer)
 {
     JNIEnv* env = WTF::GetJavaEnv();
 
@@ -39,7 +39,7 @@ bool GlyphPage::fill(UChar* buffer, unsigned bufferLength)
     if (!jFont)
         return false;
 
-    JLocalRef<jcharArray> jchars(env->NewCharArray(bufferLength));
+    JLocalRef<jcharArray> jchars(env->NewCharArray(characterBuffer.size()));
     WTF::CheckAndClearException(env); // OOME
     ASSERT(jchars);
     if (!jchars)
@@ -47,7 +47,7 @@ bool GlyphPage::fill(UChar* buffer, unsigned bufferLength)
 
     jchar* chars = (jchar*)env->GetPrimitiveArrayCritical(jchars, NULL);
     ASSERT(chars);
-    memcpy(chars, buffer, bufferLength * 2);
+    memcpy(chars, characterBuffer.data(), characterBuffer.size() * 2);
     env->ReleasePrimitiveArrayCritical(jchars, chars, 0);
 
     static jmethodID mid = env->GetMethodID(PG_GetFontClass(env), "getGlyphCodes", "([C)[I");
@@ -62,9 +62,9 @@ bool GlyphPage::fill(UChar* buffer, unsigned bufferLength)
     ASSERT(glyphs);
 
     unsigned step;  // 1 for BMP, 2 for non-BMP
-    if (bufferLength == GlyphPage::size) {
+    if (characterBuffer.size() == GlyphPage::size) {
         step = 1;
-    } else if (bufferLength == 2 * GlyphPage::size) {
+    } else if (characterBuffer.size() == 2 * GlyphPage::size) {
         step = 2;
     } else {
         ASSERT_NOT_REACHED();

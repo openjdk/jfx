@@ -1446,7 +1446,7 @@ public abstract class Transform implements Cloneable, EventTarget {
      * The coordinates are stored in the arrays starting at the specified
      * offset in the order <code>[x0, y0, z0, x1, y1, z1, ..., xn, yn, zn]</code>.
      * @param srcPts the array containing the source point coordinates.
-     * Each point is stored as a tiplet of x,&nbsp;y,&nbsp;z coordinates.
+     * Each point is stored as a triplet of x,&nbsp;y,&nbsp;z coordinates.
      * @param srcOff the offset to the first point to be transformed
      * in the source array
      * @param dstPts the array into which the transformed point coordinates

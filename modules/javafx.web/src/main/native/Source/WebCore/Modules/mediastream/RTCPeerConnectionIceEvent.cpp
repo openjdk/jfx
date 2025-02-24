@@ -29,11 +29,11 @@
 
 #include "EventNames.h"
 #include "RTCIceCandidate.h"
-#include <wtf/IsoMallocInlines.h>
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
-WTF_MAKE_ISO_ALLOCATED_IMPL(RTCPeerConnectionIceEvent);
+WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(RTCPeerConnectionIceEvent);
 
 Ref<RTCPeerConnectionIceEvent> RTCPeerConnectionIceEvent::create(CanBubble canBubble, IsCancelable cancelable, RefPtr<RTCIceCandidate>&& candidate, String&& serverURL)
 {
@@ -47,7 +47,7 @@ Ref<RTCPeerConnectionIceEvent> RTCPeerConnectionIceEvent::create(const AtomStrin
 }
 
 RTCPeerConnectionIceEvent::RTCPeerConnectionIceEvent(const AtomString& type, CanBubble canBubble, IsCancelable cancelable, RefPtr<RTCIceCandidate>&& candidate, String&& serverURL)
-    : Event(type, canBubble, cancelable)
+    : Event(EventInterfaceType::RTCPeerConnectionIceEvent, type, canBubble, cancelable)
     , m_candidate(WTFMove(candidate))
     , m_url(WTFMove(serverURL))
 {
@@ -58,11 +58,6 @@ RTCPeerConnectionIceEvent::~RTCPeerConnectionIceEvent() = default;
 RTCIceCandidate* RTCPeerConnectionIceEvent::candidate() const
 {
     return m_candidate.get();
-}
-
-EventInterface RTCPeerConnectionIceEvent::eventInterface() const
-{
-    return RTCPeerConnectionIceEventInterfaceType;
 }
 
 } // namespace WebCore

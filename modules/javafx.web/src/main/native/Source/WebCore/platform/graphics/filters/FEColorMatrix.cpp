@@ -33,6 +33,10 @@
 #include "FEColorMatrixCoreImageApplier.h"
 #endif
 
+#if USE(SKIA)
+#include "FEColorMatrixSkiaApplier.h"
+#endif
+
 namespace WebCore {
 
 Ref<FEColorMatrix> FEColorMatrix::create(ColorMatrixType type, Vector<float>&& values, DestinationColorSpace colorSpace)
@@ -124,6 +128,9 @@ OptionSet<FilterRenderingMode> FEColorMatrix::supportedFilterRenderingModes() co
     if (FEColorMatrixCoreImageApplier::supportsCoreImageRendering(*this))
         modes.add(FilterRenderingMode::Accelerated);
 #endif
+#if USE(SKIA)
+    modes.add(FilterRenderingMode::Accelerated);
+#endif
 #if HAVE(CGSTYLE_COLORMATRIX_BLUR)
     if (m_type == ColorMatrixType::FECOLORMATRIX_TYPE_MATRIX)
         modes.add(FilterRenderingMode::GraphicsContext);
@@ -135,6 +142,8 @@ std::unique_ptr<FilterEffectApplier> FEColorMatrix::createAcceleratedApplier() c
 {
 #if USE(CORE_IMAGE)
     return FilterEffectApplier::create<FEColorMatrixCoreImageApplier>(*this);
+#elif USE(SKIA)
+    return FilterEffectApplier::create<FEColorMatrixSkiaApplier>(*this);
 #else
     return nullptr;
 #endif
@@ -142,10 +151,14 @@ std::unique_ptr<FilterEffectApplier> FEColorMatrix::createAcceleratedApplier() c
 
 std::unique_ptr<FilterEffectApplier> FEColorMatrix::createSoftwareApplier() const
 {
+#if USE(SKIA)
+    return FilterEffectApplier::create<FEColorMatrixSkiaApplier>(*this);
+#else
     return FilterEffectApplier::create<FEColorMatrixSoftwareApplier>(*this);
+#endif
 }
 
-std::optional<GraphicsStyle> FEColorMatrix::createGraphicsStyle(const Filter&) const
+std::optional<GraphicsStyle> FEColorMatrix::createGraphicsStyle(GraphicsContext&, const Filter&) const
 {
     std::array<float, 20> values;
     std::copy_n(m_values.begin(), std::min<size_t>(m_values.size(), 20), values.begin());

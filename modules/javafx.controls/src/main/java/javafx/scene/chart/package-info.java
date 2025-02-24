@@ -28,7 +28,7 @@
  * are a very convenient way for data visualization. Application
  * developers can make use of these off-the-rack graphical charts
  * provided by the JavaFX runtime, to visualize a wide variety of data.</P>
- * <P>Commom types of charts such as {@link javafx.scene.chart.BarChart
+ * <P>Common types of charts such as {@link javafx.scene.chart.BarChart
  * Bar}, {@link javafx.scene.chart.LineChart Line}, {@link
  * javafx.scene.chart.AreaChart Area}, {@link
  * javafx.scene.chart.PieChart Pie}, {@link
@@ -111,7 +111,7 @@
  *         <TD>
  *             <P>Plots symbols for the data points in a series. This type of
  *             chart is useful in viewing distribution of data and its
- *             corelation, if there is any clustering.</P>
+ *             correlation, if there is any clustering.</P>
  *         </TD>
  *     </TR>
  * </TABLE>

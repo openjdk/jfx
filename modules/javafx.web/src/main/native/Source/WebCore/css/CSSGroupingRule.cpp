@@ -119,13 +119,13 @@ ExceptionOr<void> CSSGroupingRule::deleteRule(unsigned index)
 
 void CSSGroupingRule::appendCSSTextForItemsInternal(StringBuilder& builder, StringBuilder& rules) const
 {
-    builder.append(" {");
+    builder.append(" {"_s);
     if (rules.isEmpty()) {
-        builder.append("\n}");
+        builder.append("\n}"_s);
         return;
     }
 
-        builder.append(static_cast<StringView>(rules), "\n}");
+    builder.append(static_cast<StringView>(rules), "\n}"_s);
 }
 
 void CSSGroupingRule::appendCSSTextForItems(StringBuilder& builder) const
@@ -140,7 +140,7 @@ void CSSGroupingRule::cssTextForRules(StringBuilder& rules) const
     auto& childRules = m_groupRule->childRules();
     for (unsigned index = 0; index < childRules.size(); index++) {
         auto wrappedRule = item(index);
-        rules.append("\n  ", wrappedRule->cssText());
+        rules.append("\n  "_s, wrappedRule->cssText());
                 }
 }
 
@@ -156,7 +156,7 @@ void CSSGroupingRule::cssTextForRulesWithReplacementURLs(StringBuilder& rules, c
     auto& childRules = m_groupRule->childRules();
     for (unsigned index = 0; index < childRules.size(); index++) {
         auto wrappedRule = item(index);
-        rules.append("\n  ", wrappedRule->cssTextWithReplacementURLs(replacementURLStrings, replacementURLStringsForCSSStyleSheet));
+        rules.append("\n  "_s, wrappedRule->cssTextWithReplacementURLs(replacementURLStrings, replacementURLStringsForCSSStyleSheet));
     }
 }
 
@@ -165,12 +165,9 @@ RefPtr<StyleRuleWithNesting> CSSGroupingRule::prepareChildStyleRuleForNesting(St
     CSSStyleSheet::RuleMutationScope scope(this);
     auto& rules = m_groupRule->m_childRules;
     for (size_t i = 0 ; i < rules.size() ; i++) {
-        auto& rule = rules[i];
-        if (rule.ptr() == &styleRule) {
+        if (rules[i].ptr() == &styleRule) {
             auto styleRuleWithNesting = StyleRuleWithNesting::create(WTFMove(styleRule));
             rules[i] = styleRuleWithNesting;
-            if (auto* styleSheet = parentStyleSheet())
-                styleSheet->contents().setHasNestingRules();
             return styleRuleWithNesting;
         }
     }

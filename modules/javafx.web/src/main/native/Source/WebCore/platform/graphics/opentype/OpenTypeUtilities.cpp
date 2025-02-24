@@ -29,6 +29,7 @@
 
 #include "FontMemoryResource.h"
 #include "SharedBuffer.h"
+#include <wtf/StdLibExtras.h>
 
 namespace WebCore {
 
@@ -188,8 +189,8 @@ void EOTHeader::appendBigEndianString(const BigEndianUShort* string, unsigned sh
 
 void EOTHeader::appendPaddingShort()
 {
-    unsigned short padding = 0;
-    m_buffer.append(reinterpret_cast<uint8_t*>(&padding), sizeof(padding));
+    std::array<uint8_t, sizeof(unsigned short)> padding = { };
+    m_buffer.append(std::span { padding });
 }
 
 // adds fontName to the font table in fontData, and writes the new font table to rewrittenFontTable
@@ -197,7 +198,7 @@ void EOTHeader::appendPaddingShort()
 bool renameFont(const SharedBuffer& fontData, const String& fontName, Vector<uint8_t>& rewrittenFontData)
 {
     size_t originalDataSize = fontData.size();
-    const sfntHeader* sfnt = reinterpret_cast<const sfntHeader*>(fontData.data());
+    const sfntHeader* sfnt = reinterpret_cast<const sfntHeader*>(fontData.span().data());
 
     // Abort if the data is too small to be a font header with a "tables" entry.
     if (originalDataSize < offsetof(sfntHeader, tables))
@@ -221,16 +222,16 @@ bool renameFont(const SharedBuffer& fontData, const String& fontName, Vector<uin
     size_t nameTableSize = ((offsetof(nameTable, nameRecords) + nameRecordCount * sizeof(nameRecord) + fontName.length() * sizeof(UChar)) & ~3) + 4;
 
     rewrittenFontData.resize(fontData.size() + nameTableSize);
-    auto* data = rewrittenFontData.data();
-    memcpy(data, fontData.data(), originalDataSize);
+    auto dataSpan = rewrittenFontData.mutableSpan();
+    memcpySpan(dataSpan, fontData.span());
 
     // Make the table directory entry point to the new 'name' table.
-    sfntHeader* rewrittenSfnt = reinterpret_cast<sfntHeader*>(data);
+    sfntHeader* rewrittenSfnt = reinterpret_cast<sfntHeader*>(dataSpan.data());
     rewrittenSfnt->tables[t].length = nameTableSize;
     rewrittenSfnt->tables[t].offset = originalDataSize;
 
     // Write the new 'name' table after the original font data.
-    nameTable* name = reinterpret_cast<nameTable*>(data + originalDataSize);
+    nameTable* name = reinterpret_cast<nameTable*>(dataSpan.subspan(originalDataSize).data());
     name->format = 0;
     name->count = nameRecordCount;
     name->stringOffset = offsetof(nameTable, nameRecords) + nameRecordCount * sizeof(nameRecord);
@@ -249,8 +250,9 @@ bool renameFont(const SharedBuffer& fontData, const String& fontName, Vector<uin
     name->nameRecords[3].nameID = 4;
     name->nameRecords[4].nameID = 6;
 
+    auto fontSpan = spanReinterpretCast<BigEndianUShort>(dataSpan.subspan(originalDataSize + name->stringOffset));
     for (unsigned i = 0; i < fontName.length(); ++i)
-        reinterpret_cast<BigEndianUShort*>(data + originalDataSize + name->stringOffset)[i] = fontName[i];
+        fontSpan[i] = fontName[i];
 
     // Update the table checksum in the directory entry.
     rewrittenSfnt->tables[t].checkSum = 0;

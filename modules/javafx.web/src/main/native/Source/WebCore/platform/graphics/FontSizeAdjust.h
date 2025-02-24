@@ -49,22 +49,18 @@ struct FontSizeAdjust {
         std::optional<float> metricValue;
         switch (metric) {
         case FontSizeAdjust::Metric::CapHeight:
-            if (fontMetrics.hasCapHeight())
-                metricValue = fontMetrics.floatCapHeight();
+            metricValue = fontMetrics.capHeight();
             break;
         case FontSizeAdjust::Metric::ChWidth:
-            if (fontMetrics.zeroWidth())
                 metricValue = fontMetrics.zeroWidth();
             break;
         // FIXME: Are ic-height and ic-width the same? Gecko treats them the same.
         case FontSizeAdjust::Metric::IcWidth:
         case FontSizeAdjust::Metric::IcHeight:
-            if (fontMetrics.ideogramWidth() > 0)
                 metricValue = fontMetrics.ideogramWidth();
             break;
         case FontSizeAdjust::Metric::ExHeight:
         default:
-            if (fontMetrics.hasXHeight())
                 metricValue = fontMetrics.xHeight();
         }
 
@@ -75,6 +71,7 @@ struct FontSizeAdjust {
 
     bool isNone() const { return !value && type != ValueType::FromFont; }
     bool isFromFont() const { return type == ValueType::FromFont; }
+    bool shouldResolveFromFont() const { return isFromFont() && !value; }
 
     Metric metric { Metric::ExHeight };
     ValueType type { ValueType::Number };
@@ -83,7 +80,7 @@ struct FontSizeAdjust {
 
 inline void add(Hasher& hasher, const FontSizeAdjust& fontSizeAdjust)
 {
-    add(hasher, fontSizeAdjust.metric, fontSizeAdjust.type, *fontSizeAdjust.value);
+    add(hasher, fontSizeAdjust.metric, fontSizeAdjust.type, fontSizeAdjust.value.unsafeValue());
 }
 
 inline TextStream& operator<<(TextStream& ts, const FontSizeAdjust& fontSizeAdjust)

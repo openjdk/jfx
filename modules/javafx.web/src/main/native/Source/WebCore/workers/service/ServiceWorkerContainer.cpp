@@ -56,11 +56,12 @@
 #include "ServiceWorkerProvider.h"
 #include "ServiceWorkerThread.h"
 #include "SharedWorkerGlobalScope.h"
+#include "TrustedType.h"
 #include "WorkerFetchResult.h"
 #include "WorkerSWClientConnection.h"
-#include <wtf/IsoMallocInlines.h>
 #include <wtf/RunLoop.h>
 #include <wtf/Scope.h>
+#include <wtf/TZoneMallocInlines.h>
 #include <wtf/URL.h>
 
 #define CONTAINER_RELEASE_LOG(fmt, ...) RELEASE_LOG(ServiceWorker, "%p - ServiceWorkerContainer::" fmt, this, ##__VA_ARGS__)
@@ -73,7 +74,7 @@ static inline SWClientConnection& mainThreadConnection()
     return ServiceWorkerProvider::singleton().serviceWorkerConnection();
 }
 
-WTF_MAKE_ISO_ALLOCATED_IMPL(ServiceWorkerContainer);
+WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(ServiceWorkerContainer);
 
 UniqueRef<ServiceWorkerContainer> ServiceWorkerContainer::create(ScriptExecutionContext* context, NavigatorBase& navigator)
 {
@@ -102,6 +103,16 @@ void ServiceWorkerContainer::refEventTarget()
 }
 
 void ServiceWorkerContainer::derefEventTarget()
+{
+    m_navigator.deref();
+}
+
+void ServiceWorkerContainer::ref() const
+{
+    m_navigator.ref();
+}
+
+void ServiceWorkerContainer::deref() const
 {
     m_navigator.deref();
 }
@@ -135,14 +146,23 @@ ServiceWorker* ServiceWorkerContainer::controller() const
     return context ? context->activeServiceWorker() : nullptr;
 }
 
-void ServiceWorkerContainer::addRegistration(const String& relativeScriptURL, const RegistrationOptions& options, Ref<DeferredPromise>&& promise)
+void ServiceWorkerContainer::addRegistration(std::variant<RefPtr<TrustedScriptURL>, String>&& relativeScriptURL, const RegistrationOptions& options, Ref<DeferredPromise>&& promise)
 {
+    auto stringValueHolder = trustedTypeCompliantString(*scriptExecutionContext(), WTFMove(relativeScriptURL), "ServiceWorkerContainer register"_s);
+
+    if (stringValueHolder.hasException()) {
+        promise->reject(stringValueHolder.releaseException());
+        return;
+    }
+
+    auto trustedRelativeScriptURL = stringValueHolder.releaseReturnValue();
+
     if (m_isStopped) {
         promise->reject(Exception(ExceptionCode::InvalidStateError));
         return;
     }
 
-    if (relativeScriptURL.isEmpty()) {
+    if (trustedRelativeScriptURL.isEmpty()) {
         promise->reject(Exception { ExceptionCode::TypeError, "serviceWorker.register() cannot be called with an empty script URL"_s });
         return;
     }
@@ -150,7 +170,7 @@ void ServiceWorkerContainer::addRegistration(const String& relativeScriptURL, co
     ServiceWorkerJobData jobData(ensureSWClientConnection().serverConnectionIdentifier(), contextIdentifier());
 
     auto& context = *scriptExecutionContext();
-    jobData.scriptURL = context.completeURL(relativeScriptURL);
+    jobData.scriptURL = context.completeURL(trustedRelativeScriptURL);
 
     RefPtr document = dynamicDowncast<Document>(context);
     CheckedPtr contentSecurityPolicy = document ? document->contentSecurityPolicy() : nullptr;
@@ -565,11 +585,6 @@ void ServiceWorkerContainer::destroyJob(ServiceWorkerJob& job)
     ASSERT(m_creationThread.ptr() == &Thread::current());
     ASSERT(m_jobMap.contains(job.identifier()));
     m_jobMap.remove(job.identifier());
-}
-
-const char* ServiceWorkerContainer::activeDOMObjectName() const
-{
-    return "ServiceWorkerContainer";
 }
 
 SWClientConnection& ServiceWorkerContainer::ensureSWClientConnection()

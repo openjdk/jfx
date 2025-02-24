@@ -44,8 +44,10 @@ EGLDisplay PlatformDisplay::angleEGLDisplay() const
 
     Vector<EGLint> displayAttributes {
         EGL_PLATFORM_ANGLE_TYPE_ANGLE, EGL_PLATFORM_ANGLE_TYPE_OPENGLES_ANGLE,
+#if !defined(__ANDROID__) && !defined(ANDROID)
         EGL_PLATFORM_ANGLE_DEVICE_TYPE_ANGLE, EGL_PLATFORM_ANGLE_DEVICE_TYPE_EGL_ANGLE,
         EGL_PLATFORM_ANGLE_NATIVE_PLATFORM_TYPE_ANGLE, m_anglePlatform.value(),
+#endif
         EGL_NONE,
     };
 
@@ -114,7 +116,7 @@ void PlatformDisplay::clearANGLESharingGLContext()
 
     ASSERT(m_angleEGLDisplay);
     ASSERT(m_sharingGLContext);
-    GLContext::ScopedGLContextCurrent scopedCurrent(*m_sharingGLContext);
+    EGL_MakeCurrent(m_angleEGLDisplay, EGL_NO_SURFACE, EGL_NO_SURFACE, EGL_NO_CONTEXT);
     EGL_DestroyContext(m_angleEGLDisplay, m_angleSharingGLContext);
     m_angleSharingGLContext = EGL_NO_CONTEXT;
 }

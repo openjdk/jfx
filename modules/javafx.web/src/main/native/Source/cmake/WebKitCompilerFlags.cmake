@@ -1,76 +1,116 @@
+# Checks whether all the given compiler flags are supported by the compiler.
+# The _compiler may be either "C" or "CXX", and the result from the check
+# will be stored in the variable named by _result.
+function(WEBKIT_CHECK_COMPILER_FLAGS _compiler _result)
+    string(TOUPPER "${_compiler}" _compiler)
+    set(${_result} FALSE PARENT_SCOPE)
+    foreach (_flag IN LISTS ARGN)
+        # If an equals (=) character is present in a variable name, it will
+        # not be cached correctly, and the check will be retried ad nauseam.
+        string(REPLACE "=" "__" _cachevar "${_compiler}_COMPILER_SUPPORTS_${_flag}")
+        if (${_compiler} STREQUAL CXX)
+            check_cxx_compiler_flag("${_flag}" "${_cachevar}")
+        elseif (${_compiler} STREQUAL C)
+            check_c_compiler_flag("${_flag}" "${_cachevar}")
+        else ()
+            set(${_cachevar} FALSE CACHE INTERNAL "" FORCE)
+            message(WARNING "WEBKIT_CHECK_COMPILER_FLAGS: unknown compiler '${_compiler}'")
+            return()
+        endif ()
+        if (NOT ${_cachevar})
+            return()
+        endif ()
+    endforeach ()
+    set(${_result} TRUE PARENT_SCOPE)
+endfunction()
+
+# Appends, prepends, or sets (_op = APPEND, PREPEND, SET) flags supported
+# by the C or CXX _compiler to a string _variable.
+function(WEBKIT_VAR_ADD_COMPILER_FLAGS _compiler _op _variable)
+    if (NOT (_op STREQUAL APPEND OR _op STREQUAL PREPEND OR _op STREQUAL SET))
+        message(FATAL_ERROR "Unrecognized operation '${_op}'")
+    endif ()
+
+    if (_op STREQUAL SET)
+        set(flags "")
+        set(_op APPEND)
+    else ()
+        set(flags ${${_variable}})
+    endif ()
+
+    foreach (flag IN LISTS ARGN)
+        WEBKIT_CHECK_COMPILER_FLAGS(${_compiler} flag_supported "${flag}")
+        if (flag_supported)
+            list(${_op} flags "${flag}")
+        endif ()
+    endforeach ()
+
+    # Turn back into a plain string
+    list(JOIN flags " " flags_string)
+    set(${_variable} "${flags_string}" PARENT_SCOPE)
+endfunction()
+
 # Prepends flags to CMAKE_C_FLAGS if supported by the C compiler. Almost all
 # flags should be prepended to allow the user to override them.
 macro(WEBKIT_PREPEND_GLOBAL_C_FLAGS)
-    foreach (_flag ${ARGN})
-        check_c_compiler_flag("${_flag}" C_COMPILER_SUPPORTS_${_flag})
-        if (C_COMPILER_SUPPORTS_${_flag})
-            set(CMAKE_C_FLAGS "${_flag} ${CMAKE_C_FLAGS}")
-        endif ()
-    endforeach ()
+    WEBKIT_VAR_ADD_COMPILER_FLAGS(C PREPEND CMAKE_C_FLAGS ${ARGN})
 endmacro()
 
 # Appends flags to CMAKE_C_FLAGS if supported by the C compiler. This macro
 # should be used sparingly. Only append flags if the user must not be allowed to
 # override them.
 macro(WEBKIT_APPEND_GLOBAL_C_FLAGS)
-    foreach (_flag ${ARGN})
-        check_c_compiler_flag("${_flag}" C_COMPILER_SUPPORTS_${_flag})
-        if (C_COMPILER_SUPPORTS_${_flag})
-            set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${_flag}")
-        endif ()
-    endforeach ()
+    WEBKIT_VAR_ADD_COMPILER_FLAGS(C APPEND CMAKE_C_FLAGS ${ARGN})
 endmacro()
 
 # Prepends flags to CMAKE_CXX_FLAGS if supported by the C++ compiler. Almost all
 # flags should be prepended to allow the user to override them.
 macro(WEBKIT_PREPEND_GLOBAL_CXX_FLAGS)
-    foreach (_flag ${ARGN})
-        check_cxx_compiler_flag("${_flag}" CXX_COMPILER_SUPPORTS_${_flag})
-        if (CXX_COMPILER_SUPPORTS_${_flag})
-            set(CMAKE_CXX_FLAGS "${_flag} ${CMAKE_CXX_FLAGS}")
-        endif ()
-    endforeach ()
+    WEBKIT_VAR_ADD_COMPILER_FLAGS(CXX PREPEND CMAKE_CXX_FLAGS ${ARGN})
 endmacro()
 
 # Appends flags to CMAKE_CXX_FLAGS if supported by the C++ compiler. This macro
 # should be used sparingly. Only append flags if the user must not be allowed to
 # override them.
 macro(WEBKIT_APPEND_GLOBAL_CXX_FLAGS)
-    foreach (_flag ${ARGN})
-        check_cxx_compiler_flag("${_flag}" CXX_COMPILER_SUPPORTS_${_flag})
-        if (CXX_COMPILER_SUPPORTS_${_flag})
-            set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${_flag}")
-        endif ()
-    endforeach ()
+    WEBKIT_VAR_ADD_COMPILER_FLAGS(CXX APPEND CMAKE_CXX_FLAGS ${ARGN})
 endmacro()
 
 # Prepends flags to CMAKE_C_FLAGS and CMAKE_CXX_FLAGS if supported by the C
 # or C++ compiler, respectively. Almost all flags should be prepended to allow
 # the user to override them.
 macro(WEBKIT_PREPEND_GLOBAL_COMPILER_FLAGS)
-    WEBKIT_PREPEND_GLOBAL_C_FLAGS(${ARGN})
-    WEBKIT_PREPEND_GLOBAL_CXX_FLAGS(${ARGN})
+    WEBKIT_VAR_ADD_COMPILER_FLAGS(C PREPEND CMAKE_C_FLAGS ${ARGN})
+    WEBKIT_VAR_ADD_COMPILER_FLAGS(CXX PREPEND CMAKE_CXX_FLAGS ${ARGN})
 endmacro()
 
 # Appends flags to CMAKE_C_FLAGS and CMAKE_CXX_FLAGS if supported by the C or
 # C++ compiler, respectively. This macro should be used sparingly. Only append
 # flags if the user must not be allowed to override them.
 macro(WEBKIT_APPEND_GLOBAL_COMPILER_FLAGS)
-    WEBKIT_APPEND_GLOBAL_C_FLAGS(${ARGN})
-    WEBKIT_APPEND_GLOBAL_CXX_FLAGS(${ARGN})
+    WEBKIT_VAR_ADD_COMPILER_FLAGS(C APPEND CMAKE_C_FLAGS ${ARGN})
+    WEBKIT_VAR_ADD_COMPILER_FLAGS(CXX APPEND CMAKE_CXX_FLAGS ${ARGN})
 endmacro()
+
+# Appends flags to COMPILE_OPTIONS of _subject if supported by the C
+# or CXX _compiler. The _subject argument depends on its _kind, it may be
+# a target name (with TARGET as _kind), or a path (with SOURCE or DIRECTORY
+# as _kind).
+function(WEBKIT_ADD_COMPILER_FLAGS _compiler _kind _subject)
+    foreach (_flag IN LISTS ARGN)
+        WEBKIT_CHECK_COMPILER_FLAGS(${_compiler} flag_supported "${_flag}")
+        if (flag_supported)
+            set_property(${_kind} ${_subject} APPEND PROPERTY COMPILE_OPTIONS "${_flag}")
+        endif ()
+    endforeach ()
+endfunction()
 
 # Appends flags to COMPILE_FLAGS of _target if supported by the C compiler.
 # Note that it is simply not possible to pass different C and C++ flags, unless
 # we drop support for the Visual Studio backend and use the COMPILE_LANGUAGE
 # generator expression. This is a very serious limitation.
 macro(WEBKIT_ADD_TARGET_C_FLAGS _target)
-    foreach (_flag ${ARGN})
-        check_c_compiler_flag("${_flag}" C_COMPILER_SUPPORTS_${_flag})
-        if (C_COMPILER_SUPPORTS_${_flag})
-            target_compile_options(${_target} PRIVATE ${_flag})
-        endif ()
-    endforeach ()
+    WEBKIT_ADD_COMPILER_FLAGS(C TARGET ${_target} ${ARGN})
 endmacro()
 
 # Appends flags to COMPILE_FLAGS of _target if supported by the C++ compiler.
@@ -78,12 +118,7 @@ endmacro()
 # we drop support for the Visual Studio backend and use the COMPILE_LANGUAGE
 # generator expression. This is a very serious limitation.
 macro(WEBKIT_ADD_TARGET_CXX_FLAGS _target)
-    foreach (_flag ${ARGN})
-        check_cxx_compiler_flag("${_flag}" CXX_COMPILER_SUPPORTS_${_flag})
-        if (CXX_COMPILER_SUPPORTS_${_flag})
-            target_compile_options(${_target} PRIVATE ${_flag})
-        endif ()
-    endforeach ()
+    WEBKIT_ADD_COMPILER_FLAGS(CXX TARGET ${_target} ${ARGN})
 endmacro()
 
 
@@ -119,6 +154,8 @@ if (COMPILER_IS_GCC_OR_CLANG)
     else ()
         WEBKIT_APPEND_GLOBAL_COMPILER_FLAGS(-fno-exceptions)
         WEBKIT_APPEND_GLOBAL_CXX_FLAGS(-fno-rtti)
+        WEBKIT_APPEND_GLOBAL_CXX_FLAGS(-fcoroutines)
+        WEBKIT_PREPEND_GLOBAL_CXX_FLAGS(-fasynchronous-unwind-tables)
 
         WEBKIT_PREPEND_GLOBAL_COMPILER_FLAGS(-Wno-tautological-compare)
 
@@ -184,7 +221,7 @@ if (COMPILER_IS_GCC_OR_CLANG)
         WEBKIT_PREPEND_GLOBAL_COMPILER_FLAGS(-msse2 -mfpmath=sse)
         include(DetectSSE2)
         if (NOT SSE2_SUPPORT_FOUND)
-            message(FATAL_ERROR "SSE2 support is required to compile WebKit")
+            message(STATUS "SSE2 support is required to compile WebKit")
         endif ()
     endif ()
 
@@ -412,7 +449,7 @@ int main() {
         #include <filesystem>
         int main() { std::filesystem::path p1(\"\"); std::filesystem::status(p1); }
     ")
-    set(CMAKE_REQUIRED_FLAGS "--std=c++2a")
+    set(CMAKE_REQUIRED_FLAGS "--std=c++2b")
     check_cxx_source_compiles("${FILESYSTEM_TEST_SOURCE}" STD_FILESYSTEM_IS_AVAILABLE)
     if (NOT STD_FILESYSTEM_IS_AVAILABLE)
         set(EXPERIMENTAL_FILESYSTEM_TEST_SOURCE "
@@ -429,6 +466,19 @@ int main() {
     unset(CMAKE_REQUIRED_FLAGS)
 endif ()
 
+if (NOT WTF_PLATFORM_COCOA)
+  set(FLOAT16_TEST_SOURCE "
+int main() {
+  _Float16 f;
+
+  f += static_cast<_Float16>(1.0);
+
+  return 0;
+}
+  ")
+  check_cxx_source_compiles("${FLOAT16_TEST_SOURCE}" HAVE_FLOAT16)
+endif ()
+
 if (CMAKE_CXX_COMPILER_ID MATCHES "GNU" AND WTF_CPU_MIPS)
     # Work around https://gcc.gnu.org/bugzilla/show_bug.cgi?id=78176.
     # This only manifests when executing 32-bit code on a 64-bit
@@ -437,22 +487,8 @@ if (CMAKE_CXX_COMPILER_ID MATCHES "GNU" AND WTF_CPU_MIPS)
     WEBKIT_PREPEND_GLOBAL_COMPILER_FLAGS(-mno-lxc1-sxc1)
 endif ()
 
-if (CMAKE_CXX_COMPILER_ID MATCHES "GNU")
-    set(CMAKE_REQUIRED_FLAGS "--std=c++2a")
-
-    set(REMOVE_CVREF_TEST_SOURCE "
-        #include <type_traits>
-        int main() {
-            using type = std::remove_cvref_t<int&>;
-        }
-    ")
-    check_cxx_source_compiles("${REMOVE_CVREF_TEST_SOURCE}" STD_REMOVE_CVREF_IS_AVAILABLE)
-
-    unset(CMAKE_REQUIRED_FLAGS)
-endif ()
-
 if (COMPILER_IS_GCC_OR_CLANG)
-    set(COMPILE_C_AS_CXX "-xc++;-std=c++2a")
+    set(COMPILE_C_AS_CXX "-xc++;-std=c++2b")
 endif ()
 
 # FIXME: Enable pre-compiled headers for all ports <https://webkit.org/b/139438>

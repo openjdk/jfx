@@ -42,14 +42,14 @@
 #include "ScriptDisallowedScope.h"
 #include "Text.h"
 #include "UserAgentParts.h"
-#include <wtf/IsoMallocInlines.h>
+#include <wtf/TZoneMallocInlines.h>
 #include <wtf/text/StringBuilder.h>
 
 namespace WebCore {
 
 using namespace HTMLNames;
 
-WTF_MAKE_ISO_ALLOCATED_IMPL(DateTimeEditElement);
+WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(DateTimeEditElement);
 
 class DateTimeEditBuilder final : private DateTimeFormat::TokenHandler {
     WTF_MAKE_NONCOPYABLE(DateTimeEditBuilder);
@@ -191,9 +191,9 @@ void DateTimeEditBuilder::visitLiteral(String&& text)
     m_editElement.fieldsWrapperElement().appendChild(element);
 }
 
-DateTimeEditElement::EditControlOwner::~EditControlOwner() = default;
+DateTimeEditElementEditControlOwner::~DateTimeEditElementEditControlOwner() = default;
 
-DateTimeEditElement::DateTimeEditElement(Document& document, EditControlOwner& editControlOwner)
+DateTimeEditElement::DateTimeEditElement(Document& document, DateTimeEditElementEditControlOwner& editControlOwner)
     : HTMLDivElement(divTag, document)
     , m_editControlOwner(editControlOwner)
 {
@@ -205,7 +205,7 @@ DateTimeEditElement::~DateTimeEditElement() = default;
 inline Element& DateTimeEditElement::fieldsWrapperElement() const
 {
     ASSERT(firstChild());
-    return checkedDowncast<Element>(*firstChild());
+    return downcast<Element>(*firstChild());
 }
 
 void DateTimeEditElement::addField(Ref<DateTimeFieldElement> field)
@@ -236,7 +236,7 @@ DateTimeFieldElement* DateTimeEditElement::focusedFieldElement() const
     return m_fields[fieldIndex].ptr();
 }
 
-Ref<DateTimeEditElement> DateTimeEditElement::create(Document& document, EditControlOwner& editControlOwner)
+Ref<DateTimeEditElement> DateTimeEditElement::create(Document& document, DateTimeEditElementEditControlOwner& editControlOwner)
 {
     auto element = adoptRef(*new DateTimeEditElement(document, editControlOwner));
     ScriptDisallowedScope::EventAllowedScope eventAllowedScope { element };
@@ -252,13 +252,13 @@ void DateTimeEditElement::layout(const LayoutParameters& layoutParameters)
         element->setUserAgentPart(UserAgentParts::webkitDatetimeEditFieldsWrapper());
     }
 
-    Element& fieldsWrapper = fieldsWrapperElement();
-    auto* focusedField = focusedFieldElement();
+    Ref fieldsWrapper = fieldsWrapperElement();
+    RefPtr focusedField = focusedFieldElement();
 
     DateTimeEditBuilder builder(*this, layoutParameters);
-    Node* lastChildToBeRemoved = fieldsWrapper.lastChild();
+    RefPtr lastChildToBeRemoved = fieldsWrapper->lastChild();
     if (!builder.build(layoutParameters.dateTimeFormat) || m_fields.isEmpty()) {
-        lastChildToBeRemoved = fieldsWrapper.lastChild();
+        lastChildToBeRemoved = fieldsWrapper->lastChild();
         builder.build(layoutParameters.fallbackDateTimeFormat);
     }
 
@@ -279,8 +279,8 @@ void DateTimeEditElement::layout(const LayoutParameters& layoutParameters)
     }
 
     if (lastChildToBeRemoved) {
-        while (auto* childNode = fieldsWrapper.firstChild()) {
-            fieldsWrapper.removeChild(*childNode);
+        while (RefPtr childNode = fieldsWrapper->firstChild()) {
+            fieldsWrapper->removeChild(*childNode);
             if (childNode == lastChildToBeRemoved)
                 break;
         }
@@ -404,11 +404,16 @@ String DateTimeEditElement::value() const
     return m_editControlOwner ? m_editControlOwner->formatDateTimeFieldsState(valueAsDateTimeFieldsState()) : emptyString();
 }
 
-DateTimeFieldsState DateTimeEditElement::valueAsDateTimeFieldsState() const
+String DateTimeEditElement::placeholderValue() const
+{
+    return m_editControlOwner ? m_editControlOwner->formatDateTimeFieldsState(valueAsDateTimeFieldsState(DateTimePlaceholderIfNoValue::Yes)) : emptyString();
+}
+
+DateTimeFieldsState DateTimeEditElement::valueAsDateTimeFieldsState(DateTimePlaceholderIfNoValue placeholderIfNoValue) const
 {
     DateTimeFieldsState dateTimeFieldsState;
     for (auto& field : m_fields)
-        field->populateDateTimeFieldsState(dateTimeFieldsState);
+        field->populateDateTimeFieldsState(dateTimeFieldsState, placeholderIfNoValue);
     return dateTimeFieldsState;
 }
 

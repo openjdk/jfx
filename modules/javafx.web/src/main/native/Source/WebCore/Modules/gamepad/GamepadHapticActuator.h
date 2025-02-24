@@ -50,6 +50,9 @@ public:
     static Ref<GamepadHapticActuator> create(Document*, Type, Gamepad&);
     ~GamepadHapticActuator();
 
+    void ref() const final { RefCounted::ref(); }
+    void deref() const final { RefCounted::deref(); }
+
     Type type() const { return m_type; }
     bool canPlayEffectType(EffectType) const;
     void playEffect(EffectType, GamepadEffectParameters&&, Ref<DeferredPromise>&&);
@@ -65,7 +68,6 @@ private:
     RefPtr<DeferredPromise>& promiseForEffectType(EffectType);
 
     // ActiveDOMObject.
-    const char* activeDOMObjectName() const final;
     void suspend(ReasonForSuspension) final;
     void stop() final;
 

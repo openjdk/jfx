@@ -27,15 +27,16 @@
 #include "CSSUnicodeRangeValue.h"
 
 #include <wtf/HexNumber.h>
+#include <wtf/text/MakeString.h>
 
 namespace WebCore {
 
 String CSSUnicodeRangeValue::customCSSText() const
 {
     if (m_from == m_to)
-        return makeString("U+", hex(m_from, Lowercase));
+        return makeString("U+"_s, hex(m_from, Lowercase));
 
-    return makeString("U+", hex(m_from, Lowercase), '-', hex(m_to, Lowercase));
+    return makeString("U+"_s, hex(m_from, Lowercase), '-', hex(m_to, Lowercase));
 }
 
 bool CSSUnicodeRangeValue::equals(const CSSUnicodeRangeValue& other) const

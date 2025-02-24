@@ -33,7 +33,6 @@ namespace WebCore {
 class AudioDestination;
 class AudioIOCallback;
 class CDMFactory;
-struct NowPlayingInfo;
 class NowPlayingManager;
 
 class WEBCORE_EXPORT MediaStrategy {
@@ -44,6 +43,7 @@ public:
 #endif
     virtual std::unique_ptr<NowPlayingManager> createNowPlayingManager() const;
     void resetMediaEngines();
+    virtual bool hasThreadSafeMediaSourceSupport() const;
 #if ENABLE(MEDIA_SOURCE)
     virtual void enableMockMediaSource();
     bool mockMediaSourceEnabled() const;

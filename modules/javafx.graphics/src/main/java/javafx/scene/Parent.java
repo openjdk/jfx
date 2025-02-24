@@ -721,8 +721,8 @@ public abstract non-sealed class Parent extends Node {
      * restored. An {@link IllegalArgumentException} is thrown in this case.
      *
      * <p>
-     * If this {@link Parent} node is attached to a {@link Scene} attached to a {@link Window}
-     * that is showning ({@link javafx.stage.Window#isShowing()}), then its
+     * If this {@link Parent} node is attached to a {@link Scene} attached to a {@link Window},
+     * that is, showing ({@link javafx.stage.Window#isShowing()}), then its
      * list of children must only be modified on the JavaFX Application Thread.
      * An {@link IllegalStateException} is thrown if this restriction is
      * violated.

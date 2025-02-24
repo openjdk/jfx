@@ -27,6 +27,7 @@
 
 #include <pal/text/TextCodec.h>
 #include <pal/text/TextEncodingRegistry.h>
+#include <wtf/text/MakeString.h>
 
 namespace WebCore {
 
@@ -53,12 +54,10 @@ ExceptionOr<Ref<TextDecoder>> TextDecoder::create(const String& label, Options o
 ExceptionOr<String> TextDecoder::decode(std::optional<BufferSource::VariantType> input, DecodeOptions options)
 {
     std::optional<BufferSource> inputBuffer;
-    const uint8_t* data = nullptr;
-    size_t length = 0;
+    std::span<const uint8_t> data;
     if (input) {
         inputBuffer = BufferSource(WTFMove(input.value()));
-        data = inputBuffer->data();
-        length = inputBuffer->length();
+        data = inputBuffer->span();
     }
 
     if (!m_codec) {
@@ -67,8 +66,12 @@ ExceptionOr<String> TextDecoder::decode(std::optional<BufferSource::VariantType>
             m_codec->stripByteOrderMark();
     }
 
+    m_decodedBytes += data.size();
+    if (m_decodedBytes > String::MaxLength)
+        return Exception { ExceptionCode::RangeError };
+
     bool sawError = false;
-    String result = m_codec->decode(reinterpret_cast<const char*>(data), length, !options.stream, m_options.fatal, sawError);
+    String result = m_codec->decode(data, !options.stream, m_options.fatal, sawError);
 
     if (!options.stream && !m_options.ignoreBOM)
         m_codec->stripByteOrderMark();

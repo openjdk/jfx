@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2019-2023 Apple Inc. All rights reserved.
+ * Copyright (C) 2019-2024 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -69,7 +69,7 @@ public:
 #endif
     static constexpr FPRReg wasmScratchFPR = FPRInfo::nonPreservedNonArgumentFPR0;
 
-#if CPU(X86) || CPU(X86_64)
+#if CPU(X86_64)
     static constexpr GPRReg shiftRCX = X86Registers::ecx;
 #else
     static constexpr GPRReg shiftRCX = InvalidGPRReg;
@@ -702,7 +702,7 @@ public:
     using Stack = FunctionParser<BBQJIT>::Stack;
     using ControlStack = FunctionParser<BBQJIT>::ControlStack;
 
-    unsigned stackCheckSize() const { return WTF::roundUpToMultipleOf(stackAlignmentBytes(), m_maxCalleeStackSize + m_frameSize); }
+    unsigned stackCheckSize() const { return alignedFrameSize(m_maxCalleeStackSize + m_frameSize); }
 
 private:
     unsigned m_loggingIndent = 0;
@@ -889,6 +889,8 @@ public:
     PartialResult WARN_UNUSED_RETURN getLocal(uint32_t localIndex, Value& result);
 
     PartialResult WARN_UNUSED_RETURN setLocal(uint32_t localIndex, Value value);
+
+    PartialResult WARN_UNUSED_RETURN teeLocal(uint32_t localIndex, Value, Value& result);
 
     // Globals
 
@@ -1171,8 +1173,8 @@ public:
 
     PartialResult WARN_UNUSED_RETURN addArrayNewDefault(uint32_t typeIndex, ExpressionType size, ExpressionType& result);
 
-    using arraySegmentOperation = EncodedJSValue (&)(JSC::Wasm::Instance*, uint32_t, uint32_t, uint32_t, uint32_t);
-    void pushArrayNewFromSegment(arraySegmentOperation operation, uint32_t typeIndex, uint32_t segmentIndex, ExpressionType arraySize, ExpressionType offset, ExceptionType exceptionType, ExpressionType& result);
+    using ArraySegmentOperation = EncodedJSValue SYSV_ABI (&)(JSC::JSWebAssemblyInstance*, uint32_t, uint32_t, uint32_t, uint32_t);
+    void pushArrayNewFromSegment(ArraySegmentOperation operation, uint32_t typeIndex, uint32_t segmentIndex, ExpressionType arraySize, ExpressionType offset, ExceptionType exceptionType, ExpressionType& result);
 
     PartialResult WARN_UNUSED_RETURN addArrayNewData(uint32_t typeIndex, uint32_t dataIndex, ExpressionType arraySize, ExpressionType offset, ExpressionType& result);
 
@@ -1404,8 +1406,22 @@ public:
 
     enum class MinOrMax { Min, Max };
 
-    template<typename FloatType, MinOrMax IsMinOrMax>
+    template<MinOrMax IsMinOrMax, typename FloatType>
     void emitFloatingPointMinOrMax(FPRReg left, FPRReg right, FPRReg result);
+
+    template<MinOrMax IsMinOrMax, typename FloatType>
+    constexpr FloatType computeFloatingPointMinOrMax(FloatType left, FloatType right)
+    {
+        if (std::isnan(left))
+            return left;
+        if (std::isnan(right))
+            return right;
+
+        if constexpr (IsMinOrMax == MinOrMax::Min)
+            return std::min<FloatType>(left, right);
+        else
+            return std::max<FloatType>(left, right);
+    }
 
     PartialResult WARN_UNUSED_RETURN addF32Min(Value lhs, Value rhs, Value& result);
 
@@ -1679,7 +1695,7 @@ public:
 
     StackMap makeStackMap(const ControlData& data, Stack& enclosingStack);
 
-    void emitLoopTierUpCheck(const ControlData& data, Stack& enclosingStack, unsigned loopIndex);
+    void emitLoopTierUpCheckAndOSREntryData(const ControlData& data, Stack& enclosingStack, unsigned loopIndex);
 
     PartialResult WARN_UNUSED_RETURN addLoop(BlockSignature signature, Stack& enclosingStack, ControlType& result, Stack& newStack, uint32_t loopIndex);
 
@@ -1729,7 +1745,7 @@ public:
 
     PartialResult WARN_UNUSED_RETURN addEndToUnreachable(ControlEntry& entry, Stack& stack, bool unreachable = true);
 
-    int alignedFrameSize(int frameSize);
+    int alignedFrameSize(int frameSize) const;
 
     PartialResult WARN_UNUSED_RETURN endTopLevel(BlockSignature, const Stack&);
 
@@ -1762,9 +1778,13 @@ public:
     template<typename Func, size_t N>
     void emitCCall(Func function, const Vector<Value, N>& arguments, Value& result);
 
+    void emitTailCall(unsigned functionIndex, const TypeDefinition& signature, Vector<Value>& arguments);
     PartialResult WARN_UNUSED_RETURN addCall(unsigned functionIndex, const TypeDefinition& signature, Vector<Value>& arguments, ResultList& results, CallType callType = CallType::Call);
 
-    void emitIndirectCall(const char* opcode, const Value& calleeIndex, GPRReg calleeInstance, GPRReg calleeCode, GPRReg jsCalleeAnchor, const TypeDefinition& signature, Vector<Value>& arguments, ResultList& results, CallType callType = CallType::Call);
+    void emitIndirectCall(const char* opcode, const Value& calleeIndex, GPRReg calleeInstance, GPRReg calleeCode, const TypeDefinition& signature, Vector<Value>& arguments, ResultList& results);
+    void emitIndirectTailCall(const Value& calleeIndex, GPRReg calleeInstance, GPRReg calleeCode, const TypeDefinition& signature, Vector<Value>& arguments);
+    void addRTTSlowPathJump(TypeIndex, GPRReg);
+    void emitSlowPathRTTCheck(MacroAssembler::Label, TypeIndex, GPRReg);
 
     PartialResult WARN_UNUSED_RETURN addCallIndirect(unsigned tableIndex, const TypeDefinition& originalSignature, Vector<Value>& args, ResultList& results, CallType callType = CallType::Call);
 
@@ -1775,6 +1795,8 @@ public:
     PartialResult WARN_UNUSED_RETURN addCrash();
 
     ALWAYS_INLINE void willParseOpcode();
+
+    ALWAYS_INLINE void willParseExtendedOpcode();
 
     ALWAYS_INLINE void didParseOpcode();
 
@@ -1832,7 +1854,7 @@ public:
 
     void dump(const ControlStack&, const Stack*);
     void didFinishParsingLocals();
-    void didPopValueFromStack(ExpressionType, String);
+    void didPopValueFromStack(ExpressionType, ASCIILiteral);
 
     void finalize();
 
@@ -1913,6 +1935,7 @@ private:
 
     void unbind(Value value, Location loc);
 
+    void unbindAllRegisters();
     template<typename Register>
     static Register fromJSCReg(Reg reg)
     {
@@ -2155,17 +2178,22 @@ private:
         template<typename... Args>
         void initializedPreservedSet(RegisterSet registers, Args... args)
         {
-            for (JSC::Reg reg : registers) {
+            for (JSC::Reg reg : registers)
+                initializedPreservedSet(reg);
+            initializedPreservedSet(args...);
+        }
+
+        template<typename... Args>
+        void initializedPreservedSet(JSC::Reg reg, Args... args)
+        {
                 if (reg.isGPR())
                     m_preserved.add(reg.gpr(), IgnoreVectors);
                 else
                     m_preserved.add(reg.fpr(), Width::Width128);
-            }
             initializedPreservedSet(args...);
         }
 
-        inline void initializedPreservedSet()
-        { }
+        inline void initializedPreservedSet() { }
 
         BBQJIT& m_generator;
         GPRReg m_tempGPRs[GPRs];
@@ -2221,6 +2249,7 @@ private:
     uint32_t m_lastUseTimestamp; // Monotonically increasing integer incrementing with each register use.
     Vector<RefPtr<SharedTask<void(BBQJIT&, CCallHelpers&)>>, 8> m_latePaths; // Late paths to emit after the rest of the function body.
 
+    // FIXME: All uses of this are to restore sp, so we should emit these as a patchable sub instruction rather than move.
     Vector<DataLabelPtr, 1> m_frameSizeLabels;
     int m_frameSize { 0 };
     int m_maxCalleeStackSize { 0 };
@@ -2239,6 +2268,8 @@ private:
     std::array<JumpList, numberOfExceptionTypes> m_exceptions { };
     Vector<UnlinkedHandlerInfo> m_exceptionHandlers;
     Vector<CCallHelpers::Label> m_catchEntrypoints;
+
+    Vector<std::tuple<Jump, MacroAssembler::Label, TypeIndex, GPRReg>> m_rttSlowPathJumps;
 
     PCToCodeOriginMapBuilder m_pcToCodeOriginMapBuilder;
     std::unique_ptr<BBQDisassembler> m_disassembler;

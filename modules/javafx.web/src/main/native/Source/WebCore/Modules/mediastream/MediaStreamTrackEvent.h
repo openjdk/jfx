@@ -34,7 +34,7 @@ namespace WebCore {
 class MediaStreamTrack;
 
 class MediaStreamTrackEvent final : public Event {
-    WTF_MAKE_ISO_ALLOCATED(MediaStreamTrackEvent);
+    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(MediaStreamTrackEvent);
 public:
     virtual ~MediaStreamTrackEvent();
 
@@ -46,9 +46,6 @@ public:
     static Ref<MediaStreamTrackEvent> create(const AtomString& type, const Init&, IsTrusted = IsTrusted::No);
 
     MediaStreamTrack* track() const;
-
-    // Event
-    EventInterface eventInterface() const override;
 
 private:
     MediaStreamTrackEvent(const AtomString& type, CanBubble, IsCancelable, RefPtr<MediaStreamTrack>&&);

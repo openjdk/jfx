@@ -205,7 +205,7 @@ static LayoutRect computeCaretRectForText(const InlineBoxAndOffset& boxAndOffset
 
         auto selectionRect = LayoutRect { textBox->logicalLeftIgnoringInlineDirection(), 0, 0, 0 };
         auto textRun = textBox->textRun(InlineIterator::TextRunMode::Editing);
-        textBox->fontCascade().adjustSelectionRectForText(textRun, selectionRect, startOffset, endOffset);
+        textBox->fontCascade().adjustSelectionRectForText(textBox->renderer().canUseSimplifiedTextMeasuring().value_or(false), textRun, selectionRect, startOffset, endOffset);
         return snapRectToDevicePixelsWithWritingDirection(selectionRect, textBox->renderer().document().deviceScaleFactor(), textRun.ltr()).maxX();
     };
 
@@ -275,7 +275,7 @@ static LayoutRect computeCaretRectForBox(const RenderBox& renderer, const Inline
     // <rdar://problem/3777804> Deleting all content in a document can result in giant tall-as-window insertion point
     //
     // FIXME: ignoring :first-line, missing good reason to take care of
-    LayoutUnit fontHeight = renderer.style().metricsOfPrimaryFont().height();
+    auto fontHeight = renderer.style().metricsOfPrimaryFont().height();
     if (fontHeight > rect.height() || (!renderer.isReplacedOrInlineBlock() && !renderer.isRenderTable()))
         rect.setHeight(fontHeight);
 
