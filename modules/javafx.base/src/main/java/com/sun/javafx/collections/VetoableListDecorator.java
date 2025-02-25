@@ -120,8 +120,7 @@ public abstract class VetoableListDecorator<E> implements ObservableList<E>, Sor
 
     @Override
     public boolean setAll(Collection<? extends E> col) {
-        List<E> list = col instanceof List<?> ? (List<E>)col : new ArrayList<>(col);
-        return setAllImpl(Collections.unmodifiableList(list));
+        return setAllImpl(unmodifiableList(col));
     }
 
     private boolean setAllImpl(List<E> unmodifiableList) {
