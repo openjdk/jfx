@@ -149,6 +149,9 @@ import test.robot.testharness.RobotTestBase;
  * Each such thread makes repeated accesses of its own node for the duration
  * of test.
  *
+ * Some tests employ repeated actions, such as setting the chart data, in order to exercise both addition
+ * and removal code paths.
+ *
  * Also, the visible node gets accessed periodically in the FX application thread just to shake things up.
  *
  * NOTE: I suspect this test might be a bit unstable and/or platform-dependent, due to its multi-threaded nature.

@@ -55,6 +55,7 @@ import javafx.scene.Scene;
 import javafx.scene.control.Label;
 import javafx.scene.layout.Pane;
 import javafx.scene.layout.Region;
+import javafx.stage.Window;
 import com.sun.javafx.charts.ChartLayoutAnimator;
 import com.sun.javafx.charts.Legend;
 import com.sun.javafx.scene.NodeHelper;
@@ -101,7 +102,8 @@ public abstract class Chart extends Region {
     /** Animator for animating stuff on the chart */
     private final ChartLayoutAnimator animator = new ChartLayoutAnimator(chartContent);
 
-    private SimpleBooleanProperty accessibilityActive;
+    // SimpleBooleanProperty or ObjectBinding
+    private volatile Object accessibilityActive;
 
     // -------------- PUBLIC PROPERTIES --------------------------------------------------------------------------------
 
@@ -533,32 +535,47 @@ public abstract class Chart extends Region {
      * @return
      */
     // package protected: custom charts must handle accessbility on their own
-    boolean isAccessibilityActive() {
+    final boolean isAccessibilityActive() {
         if (Platform.isFxApplicationThread()) {
-            if (accessibilityActive == null) {
+            if (accessibilityActive instanceof SimpleBooleanProperty p) {
+                return p.get();
+            } else {
                 boolean aa = Platform.accessibilityActiveProperty().get();
-                accessibilityActive = new SimpleBooleanProperty(aa);
-                accessibilityActive.bind(Platform.accessibilityActiveProperty());
-                accessibilityActive.addListener((src, prev, on) -> {
+                SimpleBooleanProperty active = new SimpleBooleanProperty(aa);
+                accessibilityActive = active;
+                active.bind(Platform.accessibilityActiveProperty());
+                active.addListener((src, prev, on) -> {
                     handleAccessibilityActive(on);
                 });
+                return active.get();
             }
-            return accessibilityActive.get();
         } else {
             // chart and its data are allowed to be constructed in a background thread
-            ChangeListener<Scene> li = new ChangeListener<>() {
-                @Override
-                public void changed(ObservableValue<? extends Scene> src, Scene prev, Scene scene) {
-                    if (scene != null) {
-                        if (isAccessibilityActive()) {
-                            handleAccessibilityActive(true);
+            if (accessibilityActive == null) {
+                // set up a listener which, once the chart gets connected to a window (always in the context of
+                // the fx application thread), calls isAccessibilityActive() again,
+                // which in turn installs the listener on the Platform.accessibilityActiveProperty.
+                ObservableValue<Window> winProp = sceneProperty().flatMap(Scene::windowProperty);
+                accessibilityActive = winProp; // keep the reference so it won't get gc
+
+                // lambda cannot be used in place of a ChangeListener in removeListener()
+                ChangeListener<Window> li = new ChangeListener<>() {
+                    @Override
+                    public void changed(ObservableValue<? extends Window> src, Window old, Window win) {
+                        if (win != null) {
+                            if (accessibilityActive == winProp) {
+                                accessibilityActive = null;
+                            }
+                            if (isAccessibilityActive()) {
+                                handleAccessibilityActive(true);
+                            }
+                            winProp.removeListener(this);
                         }
-                        sceneProperty().removeListener(this);
                     }
-                }
-            };
-            sceneProperty().addListener(li);
+                };
+                winProp.addListener(li);
+            }
+            return false;
         }
-        return false;
     }
 }
