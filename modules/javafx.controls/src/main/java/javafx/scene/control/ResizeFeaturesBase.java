@@ -27,7 +27,6 @@ package javafx.scene.control;
 
 import javafx.beans.NamedArg;
 
-
 /**
  * A wrapper class for use by the column resize policies offered by
  * controls such as {@link TableView} and {@link TreeTableView}.
@@ -96,7 +95,25 @@ public abstract class ResizeFeaturesBase<S> {
    *
    * @since 20
    */
-  public void setColumnWidth(TableColumnBase<S,?> col, double width) {
-      col.doSetWidth(width);
+  public void setColumnWidth(TableColumnBase<S, ?> col, double width) {
+      Control c = getTableControl();
+      if (c.isSnapToPixel()) {
+          double min = c.snapSizeX(col.getMinWidth());
+          double max = c.snapSizeX(col.getMaxWidth());
+          if (width < min) {
+              width = min;
+          } else if (width > max) {
+              width = max;
+              if (width < min) {
+                  // safety check in case max < min
+                  width = min;
+              }
+          } else {
+              width = c.snapPositionX(width);
+          }
+          col.setWidth(width);
+      } else {
+          col.doSetWidth(width);
+      }
   }
 }
