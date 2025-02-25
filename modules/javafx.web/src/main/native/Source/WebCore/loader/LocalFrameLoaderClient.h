@@ -100,6 +100,7 @@ enum class LoadWillContinueInAnotherProcess : bool;
 enum class LockBackForwardList : bool;
 enum class UsedLegacyTLS : bool;
 enum class WasPrivateRelayed : bool;
+enum class FromDownloadAttribute : bool { No , Yes };
 
 struct StringWithDirection;
 
@@ -193,7 +194,7 @@ public:
 
     virtual void setMainFrameDocumentReady(bool) = 0;
 
-    virtual void startDownload(const ResourceRequest&, const String& suggestedName = String()) = 0;
+    virtual void startDownload(const ResourceRequest&, const String& suggestedName = String(), FromDownloadAttribute = FromDownloadAttribute::No) = 0;
 
     virtual void willChangeTitle(DocumentLoader*) = 0;
     virtual void didChangeTitle(DocumentLoader*) = 0;
@@ -208,11 +209,6 @@ public:
     virtual void updateGlobalHistoryRedirectLinks() = 0;
 
     virtual bool shouldGoToHistoryItem(HistoryItem&) const = 0;
-
-    // This frame has set its opener to null, disowning it for the lifetime of the frame.
-    // See http://html.spec.whatwg.org/#dom-opener.
-    // FIXME: JSC should allow disowning opener. - <https://bugs.webkit.org/show_bug.cgi?id=103913>.
-    virtual void didDisownOpener() { }
 
     // This frame has displayed inactive content (such as an image) from an
     // insecure source.  Inactive content cannot spread to other frames.
@@ -269,7 +265,8 @@ public:
 #if PLATFORM(IOS_FAMILY)
     virtual void didRestoreFrameHierarchyForCachedFrame() = 0;
 #endif
-    virtual void transitionToCommittedForNewPage() = 0;
+    enum class InitializingIframe : bool { No, Yes };
+    virtual void transitionToCommittedForNewPage(InitializingIframe) = 0;
 
     virtual void didRestoreFromBackForwardCache() = 0;
 
@@ -290,6 +287,7 @@ public:
 #if PLATFORM(COCOA)
     // Allow an accessibility object to retrieve a Frame parent if there's no PlatformWidget.
     virtual RemoteAXObjectRef accessibilityRemoteObject() = 0;
+    virtual IntPoint accessibilityRemoteFrameOffset() = 0;
 #if ENABLE(ACCESSIBILITY_ISOLATED_TREE)
     virtual void setAXIsolatedTreeRoot(AXCoreObject*) = 0;
 #endif
@@ -300,8 +298,6 @@ public:
 #if PLATFORM(JAVA)
     virtual bool isJavaFrameLoaderClient() = 0;
 #endif
-
-    virtual bool shouldAlwaysUsePluginDocument(const String& /*mimeType*/) const { return false; }
     virtual bool shouldLoadMediaElementURL(const URL&) const { return true; }
 
     virtual void didChangeScrollOffset() { }
@@ -375,7 +371,6 @@ public:
     virtual void modelInlinePreviewUUIDs(CompletionHandler<void(Vector<String>)>&&) const { }
 #endif
 
-    virtual void broadcastFrameRemovalToOtherProcesses() = 0;
     virtual void broadcastMainFrameURLChangeToOtherProcesses(const URL&) = 0;
 
     virtual void dispatchLoadEventToOwnerElementInAnotherProcess() = 0;
@@ -384,7 +379,9 @@ public:
     virtual void didAccessWindowProxyPropertyViaOpener(SecurityOriginData&&, WindowProxyProperty) { }
 #endif
 
-    virtual void documentLoaderDetached(uint64_t, LoadWillContinueInAnotherProcess) { }
+    virtual void documentLoaderDetached(NavigationIdentifier, LoadWillContinueInAnotherProcess) { }
+
+    virtual void frameNameChanged(const String&) { }
 };
 
 } // namespace WebCore

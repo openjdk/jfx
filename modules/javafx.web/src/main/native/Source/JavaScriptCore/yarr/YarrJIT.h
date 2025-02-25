@@ -238,7 +238,7 @@ private:
     Vector<UniqueRef<BoyerMooreBitmap::Map>> m_maps;
 };
 
-class YarrCodeBlock : public YarrBoyerMooreData {
+class YarrCodeBlock final : public YarrBoyerMooreData {
     struct InlineStats {
         InlineStats()
             : m_insnCount(0)
@@ -276,12 +276,14 @@ class YarrCodeBlock : public YarrBoyerMooreData {
     WTF_MAKE_NONCOPYABLE(YarrCodeBlock);
 
 public:
-    using YarrJITCode8 = UGPRPair (*)(const LChar* input, UCPURegister start, UCPURegister length, int* output, MatchingContextHolder*) YARR_CALL;
-    using YarrJITCode16 = UGPRPair (*)(const UChar* input, UCPURegister start, UCPURegister length, int* output, MatchingContextHolder*) YARR_CALL;
-    using YarrJITCodeMatchOnly8 = UGPRPair (*)(const LChar* input, UCPURegister start, UCPURegister length, void*, MatchingContextHolder*) YARR_CALL;
-    using YarrJITCodeMatchOnly16 = UGPRPair (*)(const UChar* input, UCPURegister start, UCPURegister length, void*, MatchingContextHolder*) YARR_CALL;
+    using YarrJITCode8 = UGPRPair SYSV_ABI (*)(const LChar* input, UCPURegister start, UCPURegister length, int* output, MatchingContextHolder*) YARR_CALL;
+    using YarrJITCode16 = UGPRPair SYSV_ABI (*)(const UChar* input, UCPURegister start, UCPURegister length, int* output, MatchingContextHolder*) YARR_CALL;
+    using YarrJITCodeMatchOnly8 = UGPRPair SYSV_ABI (*)(const LChar* input, UCPURegister start, UCPURegister length, void*, MatchingContextHolder*) YARR_CALL;
+    using YarrJITCodeMatchOnly16 = UGPRPair SYSV_ABI (*)(const UChar* input, UCPURegister start, UCPURegister length, void*, MatchingContextHolder*) YARR_CALL;
 
-    YarrCodeBlock() = default;
+    YarrCodeBlock(RegExp* regExp)
+        : m_regExp(regExp)
+    { }
 
     void setFallBackWithFailureReason(JITFailureReason failureReason) { m_failureReason = failureReason; }
     std::optional<JITFailureReason> failureReason() { return m_failureReason; }
@@ -330,44 +332,44 @@ public:
     InlineStats& get8BitInlineStats() { return m_matchOnly8Stats; }
     InlineStats& get16BitInlineStats() { return  m_matchOnly16Stats; }
 
-    MatchResult execute(const LChar* input, unsigned start, unsigned length, int* output, MatchingContextHolder* matchingContext)
+    MatchResult execute(std::span<const LChar> input, unsigned start, int* output, MatchingContextHolder* matchingContext)
     {
         ASSERT(has8BitCode());
 #if CPU(ARM64E)
         if (Options::useJITCage())
-            return MatchResult(vmEntryToYarrJIT(input, start, length, output, matchingContext, retagCodePtr<Yarr8BitPtrTag, YarrEntryPtrTag>(m_ref8.code().taggedPtr())));
+            return MatchResult(vmEntryToYarrJIT(input.data(), start, input.size(), output, matchingContext, retagCodePtr<Yarr8BitPtrTag, YarrEntryPtrTag>(m_ref8.code().taggedPtr())));
 #endif
-        return MatchResult(untagCFunctionPtr<YarrJITCode8, Yarr8BitPtrTag>(m_ref8.code().taggedPtr())(input, start, length, output, matchingContext));
+        return MatchResult(untagCFunctionPtr<YarrJITCode8, Yarr8BitPtrTag>(m_ref8.code().taggedPtr())(input.data(), start, input.size(), output, matchingContext));
     }
 
-    MatchResult execute(const UChar* input, unsigned start, unsigned length, int* output, MatchingContextHolder* matchingContext)
+    MatchResult execute(std::span<const UChar> input, unsigned start, int* output, MatchingContextHolder* matchingContext)
     {
         ASSERT(has16BitCode());
 #if CPU(ARM64E)
         if (Options::useJITCage())
-            return MatchResult(vmEntryToYarrJIT(input, start, length, output, matchingContext, retagCodePtr<Yarr16BitPtrTag, YarrEntryPtrTag>(m_ref16.code().taggedPtr())));
+            return MatchResult(vmEntryToYarrJIT(input.data(), start, input.size(), output, matchingContext, retagCodePtr<Yarr16BitPtrTag, YarrEntryPtrTag>(m_ref16.code().taggedPtr())));
 #endif
-        return MatchResult(untagCFunctionPtr<YarrJITCode16, Yarr16BitPtrTag>(m_ref16.code().taggedPtr())(input, start, length, output, matchingContext));
+        return MatchResult(untagCFunctionPtr<YarrJITCode16, Yarr16BitPtrTag>(m_ref16.code().taggedPtr())(input.data(), start, input.size(), output, matchingContext));
     }
 
-    MatchResult execute(const LChar* input, unsigned start, unsigned length, MatchingContextHolder* matchingContext)
+    MatchResult execute(std::span<const LChar> input, unsigned start, MatchingContextHolder* matchingContext)
     {
         ASSERT(has8BitCodeMatchOnly());
 #if CPU(ARM64E)
         if (Options::useJITCage())
-            return MatchResult(vmEntryToYarrJIT(input, start, length, nullptr, matchingContext, retagCodePtr<YarrMatchOnly8BitPtrTag, YarrEntryPtrTag>(m_matchOnly8.code().taggedPtr())));
+            return MatchResult(vmEntryToYarrJIT(input.data(), start, input.size(), nullptr, matchingContext, retagCodePtr<YarrMatchOnly8BitPtrTag, YarrEntryPtrTag>(m_matchOnly8.code().taggedPtr())));
 #endif
-        return MatchResult(untagCFunctionPtr<YarrJITCodeMatchOnly8, YarrMatchOnly8BitPtrTag>(m_matchOnly8.code().taggedPtr())(input, start, length, nullptr, matchingContext));
+        return MatchResult(untagCFunctionPtr<YarrJITCodeMatchOnly8, YarrMatchOnly8BitPtrTag>(m_matchOnly8.code().taggedPtr())(input.data(), start, input.size(), nullptr, matchingContext));
     }
 
-    MatchResult execute(const UChar* input, unsigned start, unsigned length, MatchingContextHolder* matchingContext)
+    MatchResult execute(std::span<const UChar> input, unsigned start, MatchingContextHolder* matchingContext)
     {
         ASSERT(has16BitCodeMatchOnly());
 #if CPU(ARM64E)
         if (Options::useJITCage())
-            return MatchResult(vmEntryToYarrJIT(input, start, length, nullptr, matchingContext, retagCodePtr<YarrMatchOnly16BitPtrTag, YarrEntryPtrTag>(m_matchOnly16.code().taggedPtr())));
+            return MatchResult(vmEntryToYarrJIT(input.data(), start, input.size(), nullptr, matchingContext, retagCodePtr<YarrMatchOnly16BitPtrTag, YarrEntryPtrTag>(m_matchOnly16.code().taggedPtr())));
 #endif
-        return MatchResult(untagCFunctionPtr<YarrJITCodeMatchOnly16, YarrMatchOnly16BitPtrTag>(m_matchOnly16.code().taggedPtr())(input, start, length, nullptr, matchingContext));
+        return MatchResult(untagCFunctionPtr<YarrJITCodeMatchOnly16, YarrMatchOnly16BitPtrTag>(m_matchOnly16.code().taggedPtr())(input.data(), start, input.size(), nullptr, matchingContext));
     }
 
 #if ENABLE(REGEXP_TRACING)
@@ -419,6 +421,8 @@ public:
         clearMaps();
     }
 
+    void dumpSimpleName(PrintStream&) const;
+
 private:
     MacroAssemblerCodeRef<Yarr8BitPtrTag> m_ref8;
     MacroAssemblerCodeRef<Yarr16BitPtrTag> m_ref16;
@@ -426,6 +430,7 @@ private:
     MacroAssemblerCodeRef<YarrMatchOnly16BitPtrTag> m_matchOnly16;
     InlineStats m_matchOnly8Stats;
     InlineStats m_matchOnly16Stats;
+    RegExp* m_regExp { nullptr };
 
     bool m_usesPatternContextBuffer { false };
     std::optional<JITFailureReason> m_failureReason;
@@ -443,7 +448,11 @@ void jitCompile(YarrPattern&, StringView patternString, CharSize, std::optional<
 
 class YarrJITRegisters;
 
-void jitCompileInlinedTest(StackCheck*, StringView, OptionSet<Yarr::Flags>, CharSize, const VM*, YarrBoyerMooreData&, CCallHelpers&, YarrJITRegisters&);
+void jitCompileInlinedTest(StackCheck*, StringView, OptionSet<Yarr::Flags>, CharSize, VM*, YarrBoyerMooreData&, CCallHelpers&, YarrJITRegisters&);
+#endif
+
+#if ENABLE(YARR_JIT_BACKREFERENCES_FOR_16BIT_EXPRS)
+MacroAssemblerCodeRef<JITThunkPtrTag> areCanonicallyEquivalentThunkGenerator(VM&);
 #endif
 
 } } // namespace JSC::Yarr

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -2196,9 +2196,8 @@ public class TableViewTest {
         table.getColumns().addAll(first);
 
         // get the cell at (0,0)
-        VirtualFlowTestUtils.BLOCK_STAGE_LOADER_DISPOSE = true;
+        stageLoader = new StageLoader(table);
         TableCell cell = (TableCell) VirtualFlowTestUtils.getCell(table, 0, 0);
-        VirtualFlowTestUtils.BLOCK_STAGE_LOADER_DISPOSE = false;
         assertTrue(cell.getSkin() instanceof TableCellSkin);
         assertNull(cell.getGraphic());
         assertEquals("John", cell.getText());

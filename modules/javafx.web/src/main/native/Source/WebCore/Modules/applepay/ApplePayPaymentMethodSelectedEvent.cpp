@@ -29,24 +29,19 @@
 #if ENABLE(APPLE_PAY)
 
 #include "PaymentMethod.h"
-#include <wtf/IsoMallocInlines.h>
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
-WTF_MAKE_ISO_ALLOCATED_IMPL(ApplePayPaymentMethodSelectedEvent);
+WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(ApplePayPaymentMethodSelectedEvent);
 
 ApplePayPaymentMethodSelectedEvent::ApplePayPaymentMethodSelectedEvent(const AtomString& type, const PaymentMethod& paymentMethod)
-    : Event(type, CanBubble::No, IsCancelable::No)
+    : Event(EventInterfaceType::ApplePayPaymentMethodSelectedEvent, type, CanBubble::No, IsCancelable::No)
     , m_paymentMethod(paymentMethod.toApplePayPaymentMethod())
 {
 }
 
 ApplePayPaymentMethodSelectedEvent::~ApplePayPaymentMethodSelectedEvent() = default;
-
-EventInterface ApplePayPaymentMethodSelectedEvent::eventInterface() const
-{
-    return ApplePayPaymentMethodSelectedEventInterfaceType;
-}
 
 }
 

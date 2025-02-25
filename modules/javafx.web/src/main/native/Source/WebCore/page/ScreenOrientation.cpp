@@ -37,11 +37,11 @@
 #include "LocalDOMWindow.h"
 #include "Page.h"
 #include "VisibilityState.h"
-#include <wtf/IsoMallocInlines.h>
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
-WTF_MAKE_ISO_ALLOCATED_IMPL(ScreenOrientation);
+WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(ScreenOrientation);
 
 Ref<ScreenOrientation> ScreenOrientation::create(Document* document)
 {
@@ -239,11 +239,6 @@ bool ScreenOrientation::shouldListenForChangeNotification() const
 void ScreenOrientation::screenOrientationDidChange(ScreenOrientationType)
 {
     queueTaskToDispatchEvent(*this, TaskSource::DOMManipulation, Event::create(eventNames().changeEvent, Event::CanBubble::No, Event::IsCancelable::No));
-}
-
-const char* ScreenOrientation::activeDOMObjectName() const
-{
-    return "ScreenOrientation";
 }
 
 void ScreenOrientation::suspend(ReasonForSuspension)

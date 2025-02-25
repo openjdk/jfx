@@ -25,7 +25,9 @@
 
 #include "config.h"
 #include "CSSValuePair.h"
+
 #include <wtf/Hasher.h>
+#include <wtf/text/MakeString.h>
 #include <wtf/text/WTFString.h>
 
 namespace WebCore {

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2020, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -644,6 +644,7 @@ public class SkinCleanupTest {
     @Test
     public void testTableRowVirtualFlowWidthListenerReplaceSkin() {
         TableView<Person> tableView = createPersonTable(false);
+        tableView.setFixedCellSize(24);
         showControl(tableView, true);
         VirtualFlow<?> flow = getVirtualFlow(tableView);
         TableRow<?> tableRow = (TableRow<?>) getCell(tableView, 1);
@@ -661,6 +662,7 @@ public class SkinCleanupTest {
     @Test
     public void testTableRowVirtualFlowWidthListener() {
         TableView<Person> tableView = createPersonTable(false);
+        tableView.setFixedCellSize(24);
         showControl(tableView, true);
         VirtualFlow<?> flow = getVirtualFlow(tableView);
         TableRow<?> tableRow = (TableRow<?>) getCell(tableView, 1);

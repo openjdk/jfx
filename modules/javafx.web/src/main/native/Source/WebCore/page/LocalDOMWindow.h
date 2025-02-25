@@ -30,11 +30,9 @@
 #include "ContextDestructionObserverInlines.h"
 #include "DOMWindow.h"
 #include "ExceptionOr.h"
-#include "ImageBitmap.h"
 #include "LocalFrame.h"
 #include "ReducedResolutionSeconds.h"
 #include "ScrollToOptions.h"
-#include "ScrollTypes.h"
 #include "Supplementable.h"
 #include "WindowOrWorkerGlobalScope.h"
 #include "WindowPostMessageOptions.h"
@@ -46,6 +44,15 @@
 #include <wtf/MonotonicTime.h>
 #include <wtf/WeakPtr.h>
 
+namespace WebCore {
+class LocalDOMWindowObserver;
+}
+
+namespace WTF {
+template<typename T> struct IsDeprecatedWeakRefSmartPointerException;
+template<> struct IsDeprecatedWeakRefSmartPointerException<WebCore::LocalDOMWindowObserver> : std::true_type { };
+}
+
 namespace JSC {
 class CallFrame;
 class JSObject;
@@ -54,53 +61,18 @@ class JSValue;
 
 namespace WebCore {
 
-class BarProp;
-class CSSRuleList;
-class CSSStyleDeclaration;
-class CookieStore;
-class Crypto;
-class CustomElementRegistry;
-class DOMApplicationCache;
-class DOMSelection;
-class DOMWrapperWorld;
-class Document;
-class Element;
-class EventListener;
-class FloatRect;
-class History;
-class IdleRequestCallback;
-class LocalDOMWindowProperty;
-class Location;
-class MediaQueryList;
-class Navigation;
-class Navigator;
-class Node;
-class NodeList;
-class Page;
-class Performance;
-class RequestAnimationFrameCallback;
-class RequestIdleCallback;
-class ScheduledAction;
-class Screen;
-class Storage;
-class StyleMedia;
-class VisualViewport;
-class WebCoreOpaqueRoot;
-class WebKitNamespace;
-class WebKitPoint;
-class WindowProxy;
-
-#if ENABLE(DEVICE_ORIENTATION)
-class DeviceMotionController;
-class DeviceOrientationController;
-#endif
-
-struct IdleRequestOptions;
-struct ImageBitmapOptions;
-struct MessageWithMessagePorts;
-struct WindowFeatures;
-
 enum class IncludeTargetOrigin : bool { No, Yes };
+
+class LocalDOMWindowObserver : public CanMakeWeakPtr<LocalDOMWindowObserver> {
+public:
+    virtual ~LocalDOMWindowObserver() { }
+
+    virtual void suspendForBackForwardCache() { }
+    virtual void resumeFromBackForwardCache() { }
+    virtual void willDestroyGlobalObjectInCachedFrame() { }
+    virtual void willDestroyGlobalObjectInFrame() { }
+    virtual void willDetachGlobalObjectFromFrame() { }
+};
 
 class LocalDOMWindow final
     : public DOMWindow
@@ -108,7 +80,7 @@ class LocalDOMWindow final
     , public Base64Utilities
     , public WindowOrWorkerGlobalScope
     , public Supplementable<LocalDOMWindow> {
-    WTF_MAKE_ISO_ALLOCATED(LocalDOMWindow);
+    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(LocalDOMWindow);
 public:
 
     static Ref<LocalDOMWindow> create(Document& document) { return adoptRef(*new LocalDOMWindow(document)); }
@@ -123,19 +95,8 @@ public:
     // the network load. See also SecurityContext::isSecureTransitionTo.
     void didSecureTransitionTo(Document&);
 
-    class Observer : public CanMakeWeakPtr<Observer> {
-    public:
-        virtual ~Observer() { }
-
-        virtual void suspendForBackForwardCache() { }
-        virtual void resumeFromBackForwardCache() { }
-        virtual void willDestroyGlobalObjectInCachedFrame() { }
-        virtual void willDestroyGlobalObjectInFrame() { }
-        virtual void willDetachGlobalObjectFromFrame() { }
-    };
-
-    WEBCORE_EXPORT void registerObserver(Observer&);
-    WEBCORE_EXPORT void unregisterObserver(Observer&);
+    WEBCORE_EXPORT void registerObserver(LocalDOMWindowObserver&);
+    WEBCORE_EXPORT void unregisterObserver(LocalDOMWindowObserver&);
 
     void resetUnlessSuspendedForDocumentSuspension();
     void suspendForBackForwardCache();
@@ -159,7 +120,7 @@ public:
     WEBCORE_EXPORT void setCanShowModalDialogOverride(bool);
 
     Screen& screen();
-    History& history();
+    WEBCORE_EXPORT History& history();
     Crypto& crypto() const;
     BarProp& locationbar();
     BarProp& menubar();
@@ -168,6 +129,7 @@ public:
     BarProp& statusbar();
     BarProp& toolbar();
     WEBCORE_EXPORT Navigator& navigator();
+    Ref<Navigator> protectedNavigator();
     Navigator* optionalNavigator() const { return m_navigator.get(); }
 
     WEBCORE_EXPORT static void overrideTransientActivationDurationForTesting(std::optional<Seconds>&&);
@@ -183,7 +145,8 @@ public:
 
     DOMSelection* getSelection();
 
-    Element* frameElement() const;
+    HTMLFrameOwnerElement* frameElement() const;
+    RefPtr<HTMLFrameOwnerElement> protectedFrameElement() const;
 
     WEBCORE_EXPORT void focus(bool allowFocus = false);
     void focus(LocalDOMWindow& incumbentWindow);
@@ -198,7 +161,7 @@ public:
 
     void prewarmLocalStorageIfNecessary();
 
-    void alert(const String& message = emptyString());
+    void alert(const String& message);
     bool confirmForBindings(const String& message);
     String prompt(const String& message, const String& defaultValue);
 
@@ -260,10 +223,6 @@ public:
     String crossDomainAccessErrorMessage(const LocalDOMWindow& activeWindow, IncludeTargetOrigin);
 
     ExceptionOr<void> postMessage(JSC::JSGlobalObject&, LocalDOMWindow& incumbentWindow, JSC::JSValue message, WindowPostMessageOptions&&);
-    ExceptionOr<void> postMessage(JSC::JSGlobalObject& globalObject, LocalDOMWindow& incumbentWindow, JSC::JSValue message, String&& targetOrigin, Vector<JSC::Strong<JSC::JSObject>>&& transfer)
-    {
-        return postMessage(globalObject, incumbentWindow, message, WindowPostMessageOptions { WTFMove(targetOrigin), WTFMove(transfer) });
-    }
     WEBCORE_EXPORT void postMessageFromRemoteFrame(JSC::JSGlobalObject&, RefPtr<WindowProxy>&& source, const String& sourceOrigin, std::optional<WebCore::SecurityOriginData>&& targetOrigin, const WebCore::MessageWithMessagePorts&);
 
     void languagesChanged();
@@ -324,9 +283,6 @@ public:
     ExceptionOr<Storage*> localStorage();
     Storage* optionalSessionStorage() const { return m_sessionStorage.get(); }
     Storage* optionalLocalStorage() const { return m_localStorage.get(); }
-
-    DOMApplicationCache& applicationCache();
-    DOMApplicationCache* optionalApplicationCache() const { return m_applicationCache.get(); }
 
     CustomElementRegistry* customElementRegistry() { return m_customElementRegistry.get(); }
     CustomElementRegistry& ensureCustomElementRegistry();
@@ -416,15 +372,13 @@ private:
 
     ScriptExecutionContext* scriptExecutionContext() const final { return ContextDestructionObserver::scriptExecutionContext(); }
 
-    bool isLocalDOMWindow() const final { return true; }
-    bool isRemoteDOMWindow() const final { return false; }
     void closePage() final;
     void eventListenersDidChange() final;
-    void setLocation(LocalDOMWindow& activeWindow, const URL& completedURL, SetLocationLocking) final;
+    void setLocation(LocalDOMWindow& activeWindow, const URL& completedURL, NavigationHistoryBehavior, SetLocationLocking) final;
 
     bool allowedToChangeWindowGeometry() const;
 
-    static ExceptionOr<RefPtr<LocalFrame>> createWindow(const String& urlString, const AtomString& frameName, const WindowFeatures&, LocalDOMWindow& activeWindow, LocalFrame& firstFrame, LocalFrame& openerFrame, const Function<void(LocalDOMWindow&)>& prepareDialogFunction = nullptr);
+    static ExceptionOr<RefPtr<Frame>> createWindow(const String& urlString, const AtomString& frameName, const WindowFeatures&, LocalDOMWindow& activeWindow, LocalFrame& firstFrame, LocalFrame& openerFrame, const Function<void(LocalDOMWindow&)>& prepareDialogFunction = nullptr);
     bool isInsecureScriptAccess(LocalDOMWindow& activeWindow, const String& urlString);
 
 #if ENABLE(DEVICE_ORIENTATION)
@@ -446,7 +400,7 @@ private:
     bool m_isSuspendingObservers { false };
     std::optional<bool> m_canShowModalDialogOverride;
 
-    WeakHashSet<Observer> m_observers;
+    WeakHashSet<LocalDOMWindowObserver> m_observers;
 
     mutable RefPtr<Crypto> m_crypto;
     mutable RefPtr<History> m_history;
@@ -482,7 +436,6 @@ private:
 
     mutable RefPtr<Storage> m_sessionStorage;
     mutable RefPtr<Storage> m_localStorage;
-    mutable RefPtr<DOMApplicationCache> m_applicationCache;
 
     RefPtr<CustomElementRegistry> m_customElementRegistry;
 
@@ -521,5 +474,5 @@ inline String LocalDOMWindow::defaultStatus() const
 
 SPECIALIZE_TYPE_TRAITS_BEGIN(WebCore::LocalDOMWindow)
     static bool isType(const WebCore::DOMWindow& window) { return window.isLocalDOMWindow(); }
-    static bool isType(const WebCore::EventTarget& target) { return target.eventTargetInterface() == WebCore::LocalDOMWindowEventTargetInterfaceType; }
+    static bool isType(const WebCore::EventTarget& target) { return target.eventTargetInterface() == WebCore::EventTargetInterfaceType::DOMWindow; }
 SPECIALIZE_TYPE_TRAITS_END()

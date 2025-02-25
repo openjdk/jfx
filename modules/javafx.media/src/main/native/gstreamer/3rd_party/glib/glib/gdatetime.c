@@ -1495,7 +1495,7 @@ parse_iso8601_time (const gchar *text, gsize length,
  *
  * Creates a #GDateTime corresponding to the given
  * [ISO 8601 formatted string](https://en.wikipedia.org/wiki/ISO_8601)
- * @text. ISO 8601 strings of the form <date><sep><time><tz> are supported, with
+ * @text. ISO 8601 strings of the form `<date><sep><time><tz>` are supported, with
  * some extensions from [RFC 3339](https://tools.ietf.org/html/rfc3339) as
  * mentioned below.
  *
@@ -1503,11 +1503,11 @@ parse_iso8601_time (const gchar *text, gsize length,
  * in an ISO-8601 string will be ignored, so a `23:59:60` time would be parsed as
  * `23:59:59`.
  *
- * <sep> is the separator and can be either 'T', 't' or ' '. The latter two
+ * `<sep>` is the separator and can be either 'T', 't' or ' '. The latter two
  * separators are an extension from
  * [RFC 3339](https://tools.ietf.org/html/rfc3339#section-5.6).
  *
- * <date> is in the form:
+ * `<date>` is in the form:
  *
  * - `YYYY-MM-DD` - Year/month/day, e.g. 2016-08-24.
  * - `YYYYMMDD` - Same as above without dividers.
@@ -1517,12 +1517,12 @@ parse_iso8601_time (const gchar *text, gsize length,
  *   e.g. 2016-W34-3.
  * - `YYYYWwwD` - Same as above without dividers.
  *
- * <time> is in the form:
+ * `<time>` is in the form:
  *
  * - `hh:mm:ss(.sss)` - Hours, minutes, seconds (subseconds), e.g. 22:10:42.123.
  * - `hhmmss(.sss)` - Same as above without dividers.
  *
- * <tz> is an optional timezone suffix of the form:
+ * `<tz>` is an optional timezone suffix of the form:
  *
  * - `Z` - UTC.
  * - `+hh:mm` or `-hh:mm` - Offset from UTC in hours and minutes, e.g. +12:00.
@@ -3109,7 +3109,7 @@ format_number (GString     *str,
     "0", "1", "2", "3", "4", "5", "6", "7", "8", "9"
   };
   const gchar * const *digits = ascii_digits;
-  const gchar *tmp[10];
+  const gchar *tmp[10] = { NULL, };
   gint i = 0;
 #ifdef HAVE_LANGINFO_OUTDIGIT
   static GMutex alt_digits_mutex;
@@ -3273,7 +3273,7 @@ g_date_time_format_utf8 (GDateTime   *datetime,
        GString     *outstr,
        gboolean     locale_is_utf8)
 {
-  guint     len;
+  size_t len;
   guint     colons;
   gunichar  c;
   gboolean  alt_digits = FALSE;

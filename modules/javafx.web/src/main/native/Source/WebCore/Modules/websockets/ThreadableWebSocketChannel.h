@@ -32,6 +32,7 @@
 
 #include "WebSocketIdentifier.h"
 #include <wtf/Forward.h>
+#include <wtf/Identified.h>
 #include <wtf/Noncopyable.h>
 #include <wtf/ObjectIdentifier.h>
 #include <wtf/URL.h>
@@ -52,9 +53,9 @@ class WebSocketChannel;
 class WebSocketChannelInspector;
 class WebSocketChannelClient;
 
-using WebSocketChannelIdentifier = AtomicObjectIdentifier<WebSocketChannel>;
+using WebSocketChannelIdentifier = LegacyNullableAtomicObjectIdentifier<WebSocketChannel>;
 
-class ThreadableWebSocketChannel {
+class ThreadableWebSocketChannel : public Identified<WebSocketIdentifier> {
     WTF_MAKE_NONCOPYABLE(ThreadableWebSocketChannel);
 public:
     static RefPtr<ThreadableWebSocketChannel> create(Document&, WebSocketChannelClient&, SocketProvider&);
@@ -63,8 +64,6 @@ public:
 
     void ref() { refThreadableWebSocketChannel(); }
     void deref() { derefThreadableWebSocketChannel(); }
-
-    WebSocketIdentifier identifier() const { return m_identifier; };
 
     enum class ConnectStatus { KO, OK };
     virtual ConnectStatus connect(const URL&, const String& protocol) = 0;
@@ -123,8 +122,6 @@ protected:
     };
     WEBCORE_EXPORT static std::optional<ValidatedURL> validateURL(Document&, const URL&);
     WEBCORE_EXPORT static std::optional<ResourceRequest> webSocketConnectRequest(Document&, const URL&);
-
-    WebSocketIdentifier m_identifier;
 };
 
 } // namespace WebCore

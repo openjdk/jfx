@@ -20,6 +20,7 @@
 #include "config.h"
 #include "SVGTextLayoutAttributes.h"
 
+#include "RenderSVGInlineText.h"
 #include <stdio.h>
 #include <wtf/text/CString.h>
 
@@ -33,7 +34,7 @@ SVGTextLayoutAttributes::SVGTextLayoutAttributes(RenderSVGInlineText& context)
 void SVGTextLayoutAttributes::clear()
 {
     m_characterDataMap.clear();
-    m_textMetricsValues.clear();
+    m_textMetricsValues.resize(0);
 }
 
 float SVGTextLayoutAttributes::emptyValue()
@@ -42,4 +43,6 @@ float SVGTextLayoutAttributes::emptyValue()
     return s_emptyValue;
 }
 
+RenderSVGInlineText& SVGTextLayoutAttributes::context() { return m_context.get(); }
+const RenderSVGInlineText& SVGTextLayoutAttributes::context() const { return m_context.get(); }
 }

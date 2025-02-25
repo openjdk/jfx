@@ -34,15 +34,16 @@
 #include "CSSAnimationEvent.h"
 #include "CSSParserContext.h"
 #include "CSSPropertyNames.h"
-#include "CSSSelector.h"
-#include "CSSSelectorParserContext.h"
+#include "CSSSelectorParser.h"
 #include "CSSTransition.h"
 #include "CSSTransitionEvent.h"
 #include "Element.h"
 #include "KeyframeEffectStack.h"
 #include "ScriptExecutionContext.h"
 #include "StyleOriginatedAnimation.h"
+#include "ViewTransition.h"
 #include "WebAnimation.h"
+#include <wtf/text/MakeString.h>
 
 namespace WebCore {
 
@@ -61,11 +62,12 @@ static bool compareStyleOriginatedAnimationOwningElementPositionsInDocumentTreeO
     //     - any other pseudo-elements not mentioned specifically in this list, sorted in ascending order by the Unicode codepoints that make up each selector
     //     - ::after
     //     - element children
-    enum SortingIndex : uint8_t { NotPseudo, Marker, Before, FirstLetter, FirstLine, GrammarError, Highlight, WebKitScrollbar, Selection, SpellingError, After, Other };
-    auto sortingIndex = [](PseudoId pseudoId) -> SortingIndex {
-        switch (pseudoId) {
-        case PseudoId::None:
+    enum SortingIndex : uint8_t { NotPseudo, Marker, Before, FirstLetter, FirstLine, GrammarError, Highlight, WebKitScrollbar, Selection, SpellingError, TargetText, After, ViewTransition, ViewTransitionGroup, ViewTransitionImagePair, ViewTransitionOld, ViewTransitionNew, Other };
+    auto sortingIndex = [](const std::optional<Style::PseudoElementIdentifier>& pseudoElementIdentifier) -> SortingIndex {
+        if (!pseudoElementIdentifier)
             return NotPseudo;
+
+        switch (pseudoElementIdentifier->pseudoId) {
         case PseudoId::Marker:
             return Marker;
         case PseudoId::Before:
@@ -84,8 +86,20 @@ static bool compareStyleOriginatedAnimationOwningElementPositionsInDocumentTreeO
             return Selection;
         case PseudoId::SpellingError:
             return SpellingError;
+        case PseudoId::TargetText:
+            return TargetText;
         case PseudoId::After:
             return After;
+        case PseudoId::ViewTransition:
+            return ViewTransition;
+        case PseudoId::ViewTransitionGroup:
+            return ViewTransitionGroup;
+        case PseudoId::ViewTransitionImagePair:
+            return ViewTransitionImagePair;
+        case PseudoId::ViewTransitionOld:
+            return ViewTransitionOld;
+        case PseudoId::ViewTransitionNew:
+            return ViewTransitionNew;
         default:
             ASSERT_NOT_REACHED();
             return Other;
@@ -96,8 +110,20 @@ static bool compareStyleOriginatedAnimationOwningElementPositionsInDocumentTreeO
     auto& bReferenceElement = b.element;
 
     if (&aReferenceElement == &bReferenceElement) {
-        auto aSortingIndex = sortingIndex(a.pseudoId);
-        auto bSortingIndex = sortingIndex(b.pseudoId);
+        if (isNamedViewTransitionPseudoElement(a.pseudoElementIdentifier) && isNamedViewTransitionPseudoElement(b.pseudoElementIdentifier) && a.pseudoElementIdentifier->nameArgument != b.pseudoElementIdentifier->nameArgument) {
+            RefPtr activeViewTransition = aReferenceElement.document().activeViewTransition();
+            ASSERT(activeViewTransition);
+            for (auto& key : activeViewTransition->namedElements().keys()) {
+                if (key == a.pseudoElementIdentifier->nameArgument)
+                    return true;
+                if (key == b.pseudoElementIdentifier->nameArgument)
+                    return false;
+            }
+            return false;
+        }
+
+        auto aSortingIndex = sortingIndex(a.pseudoElementIdentifier);
+        auto bSortingIndex = sortingIndex(b.pseudoElementIdentifier);
         ASSERT(aSortingIndex != bSortingIndex);
         return aSortingIndex < bSortingIndex;
     }
@@ -212,8 +238,8 @@ static std::optional<bool> compareStyleOriginatedAnimationEvents(const Animation
     if (aTarget == bTarget)
         return false;
 
-    auto aStyleable = Styleable(*checkedDowncast<Element>(aTarget), aAsDStyleOriginatedAnimationEventAnimationEvent->pseudoId());
-    auto bStyleable = Styleable(*checkedDowncast<Element>(bTarget), bAsDStyleOriginatedAnimationEventAnimationEvent->pseudoId());
+    auto aStyleable = Styleable(*downcast<Element>(aTarget), aAsDStyleOriginatedAnimationEventAnimationEvent->pseudoElementIdentifier());
+    auto bStyleable = Styleable(*downcast<Element>(bTarget), bAsDStyleOriginatedAnimationEventAnimationEvent->pseudoElementIdentifier());
     return compareStyleOriginatedAnimationOwningElementPositionsInDocumentTreeOrder(aStyleable, bStyleable);
 }
 
@@ -285,24 +311,23 @@ bool compareAnimationEventsByCompositeOrder(const AnimationEventBase& a, const A
 }
 
 // FIXME: This should be owned by CSSSelector.
-String pseudoIdAsString(PseudoId pseudoId)
+// FIXME: Generate this function.
+String pseudoElementIdentifierAsString(const std::optional<Style::PseudoElementIdentifier>& pseudoElementIdentifier)
 {
+    if (!pseudoElementIdentifier)
+        return emptyString();
     static NeverDestroyed<const String> after(MAKE_STATIC_STRING_IMPL("::after"));
     static NeverDestroyed<const String> before(MAKE_STATIC_STRING_IMPL("::before"));
     static NeverDestroyed<const String> firstLetter(MAKE_STATIC_STRING_IMPL("::first-letter"));
     static NeverDestroyed<const String> firstLine(MAKE_STATIC_STRING_IMPL("::first-line"));
     static NeverDestroyed<const String> grammarError(MAKE_STATIC_STRING_IMPL("::grammar-error"));
-    static NeverDestroyed<const String> highlight(MAKE_STATIC_STRING_IMPL("::highlight"));
     static NeverDestroyed<const String> marker(MAKE_STATIC_STRING_IMPL("::marker"));
     static NeverDestroyed<const String> selection(MAKE_STATIC_STRING_IMPL("::selection"));
     static NeverDestroyed<const String> spellingError(MAKE_STATIC_STRING_IMPL("::spelling-error"));
+    static NeverDestroyed<const String> targetText(MAKE_STATIC_STRING_IMPL("::target-text"));
     static NeverDestroyed<const String> viewTransition(MAKE_STATIC_STRING_IMPL("::view-transition"));
-    static NeverDestroyed<const String> viewTransitionGroup(MAKE_STATIC_STRING_IMPL("::view-transition-group"));
-    static NeverDestroyed<const String> viewTransitionImagePair(MAKE_STATIC_STRING_IMPL("::view-transition-image-pair"));
-    static NeverDestroyed<const String> viewTransitionOld(MAKE_STATIC_STRING_IMPL("::view-transition-old"));
-    static NeverDestroyed<const String> viewTransitionNew(MAKE_STATIC_STRING_IMPL("::view-transition-new"));
     static NeverDestroyed<const String> webkitScrollbar(MAKE_STATIC_STRING_IMPL("::-webkit-scrollbar"));
-    switch (pseudoId) {
+    switch (pseudoElementIdentifier->pseudoId) {
     case PseudoId::After:
         return after;
     case PseudoId::Before:
@@ -314,23 +339,25 @@ String pseudoIdAsString(PseudoId pseudoId)
     case PseudoId::GrammarError:
         return grammarError;
     case PseudoId::Highlight:
-        return highlight;
+        return makeString("::highlight"_s, '(', pseudoElementIdentifier->nameArgument, ')');
     case PseudoId::Marker:
         return marker;
     case PseudoId::Selection:
         return selection;
     case PseudoId::SpellingError:
         return spellingError;
+    case PseudoId::TargetText:
+        return targetText;
     case PseudoId::ViewTransition:
         return viewTransition;
     case PseudoId::ViewTransitionGroup:
-        return viewTransitionGroup;
+        return makeString("::view-transition-group"_s, '(', pseudoElementIdentifier->nameArgument, ')');
     case PseudoId::ViewTransitionImagePair:
-        return viewTransitionImagePair;
+        return makeString("::view-transition-image-pair"_s, '(', pseudoElementIdentifier->nameArgument, ')');
     case PseudoId::ViewTransitionOld:
-        return viewTransitionOld;
+        return makeString("::view-transition-old"_s, '(', pseudoElementIdentifier->nameArgument, ')');
     case PseudoId::ViewTransitionNew:
-        return viewTransitionNew;
+        return makeString("::view-transition-new"_s, '(', pseudoElementIdentifier->nameArgument, ')');
     case PseudoId::WebKitScrollbar:
         return webkitScrollbar;
     default:
@@ -338,15 +365,16 @@ String pseudoIdAsString(PseudoId pseudoId)
     }
 }
 
-std::optional<PseudoId> pseudoIdFromString(const String& pseudoElement)
+// bool represents whether parsing was successful, std::optional<Style::PseudoElementIdentifier> is the result of the parsing when successful.
+std::pair<bool, std::optional<Style::PseudoElementIdentifier>> pseudoElementIdentifierFromString(const String& pseudoElement, Document* document)
 {
     // https://drafts.csswg.org/web-animations-1/#dom-keyframeeffect-pseudoelement
     if (pseudoElement.isNull())
-        return PseudoId::None;
+        return { true, std::nullopt };
 
-    // FIXME: This parserContext should include a document to get the proper settings.
-    CSSSelectorParserContext parserContext { CSSParserContext { HTMLStandardMode } };
-    return CSSSelector::parsePseudoElement(pseudoElement, parserContext);
+    // FIXME: We should always have a document for accurate settings.
+    auto parserContext = document ? CSSSelectorParserContext { *document } : CSSSelectorParserContext { CSSParserContext { HTMLStandardMode } };
+    return CSSSelectorParser::parsePseudoElement(pseudoElement, parserContext);
 }
 
 AtomString animatablePropertyAsString(AnimatableCSSProperty property)

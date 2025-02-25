@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2022, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -550,24 +550,30 @@ public abstract class StyledTextModel {
      */
     public final TextPos clamp(TextPos p) {
         Objects.nonNull(p);
+        int len;
         int ct = size();
         int ix = p.index();
         if (ix < 0) {
             return TextPos.ZERO;
         } else if (ix < ct) {
-            int len = getParagraphLength(ix);
+            len = getParagraphLength(ix);
             if (p.offset() < len) {
                 return p;
             }
-            return TextPos.ofLeading(ix, len);
         } else {
             if (ct == 0) {
                 return TextPos.ZERO;
             } else {
                 ix = ct - 1;
-                int len = getParagraphLength(ix);
-                return TextPos.ofLeading(ix, len);
+                len = getParagraphLength(ix);
             }
+        }
+
+        int cix = len - 1;
+        if (cix < 0) {
+            return TextPos.ofLeading(ix, len);
+        } else {
+            return new TextPos(ix, len, cix, false);
         }
     }
 

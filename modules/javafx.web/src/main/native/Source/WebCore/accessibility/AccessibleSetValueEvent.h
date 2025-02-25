@@ -26,11 +26,12 @@
 #pragma once
 
 #include "Event.h"
+#include <wtf/TZoneMalloc.h>
 
 namespace WebCore {
 
 class AccessibleSetValueEvent final : public Event {
-    WTF_MAKE_ISO_ALLOCATED(AccessibleSetValueEvent);
+    WTF_MAKE_TZONE_ALLOCATED(AccessibleSetValueEvent);
 public:
     static Ref<AccessibleSetValueEvent> create(const AtomString& type, const AtomString& value)
     {
@@ -43,9 +44,6 @@ public:
 
 private:
     AccessibleSetValueEvent(const AtomString& type, const AtomString& value);
-
-    // Event.
-    EventInterface eventInterface() const override { return AccessibleSetValueEventInterfaceType; }
 
     const AtomString m_value;
 };

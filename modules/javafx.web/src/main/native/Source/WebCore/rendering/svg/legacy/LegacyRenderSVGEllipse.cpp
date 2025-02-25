@@ -32,11 +32,11 @@
 #include "SVGElementTypeHelpers.h"
 #include "SVGEllipseElement.h"
 #include "SVGRenderStyle.h"
-#include <wtf/IsoMallocInlines.h>
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
-WTF_MAKE_ISO_ALLOCATED_IMPL(LegacyRenderSVGEllipse);
+WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(LegacyRenderSVGEllipse);
 
 LegacyRenderSVGEllipse::LegacyRenderSVGEllipse(SVGGraphicsElement& element, RenderStyle&& style)
     : LegacyRenderSVGShape(Type::LegacySVGEllipse, element, WTFMove(style))
@@ -82,17 +82,18 @@ void LegacyRenderSVGEllipse::updateShapeFromElement()
 
 void LegacyRenderSVGEllipse::calculateRadiiAndCenter()
 {
-    SVGLengthContext lengthContext(&graphicsElement());
+    Ref graphicsElement = this->graphicsElement();
+    SVGLengthContext lengthContext(graphicsElement.ptr());
     m_center = FloatPoint(
         lengthContext.valueForLength(style().svgStyle().cx(), SVGLengthMode::Width),
         lengthContext.valueForLength(style().svgStyle().cy(), SVGLengthMode::Height));
-    if (is<SVGCircleElement>(graphicsElement())) {
+    if (is<SVGCircleElement>(graphicsElement)) {
         float radius = lengthContext.valueForLength(style().svgStyle().r());
         m_radii = FloatSize(radius, radius);
         return;
     }
 
-    ASSERT(is<SVGEllipseElement>(graphicsElement()));
+    ASSERT(is<SVGEllipseElement>(graphicsElement));
 
     Length rx = style().svgStyle().rx();
     Length ry = style().svgStyle().ry();

@@ -47,7 +47,7 @@ JSRunLoopTimer::Manager::PerVMData::PerVMData(Manager& manager, RunLoop& runLoop
 {
 #if USE(GLIB_EVENT_LOOP)
     timer->setPriority(RunLoopSourcePriority::JavascriptTimer);
-    timer->setName("[JavaScriptCore] JSRunLoopTimer");
+    timer->setName("[JavaScriptCore] JSRunLoopTimer"_s);
 #endif
 }
 
@@ -241,9 +241,7 @@ JSRunLoopTimer::JSRunLoopTimer(VM& vm)
 {
 }
 
-JSRunLoopTimer::~JSRunLoopTimer()
-{
-}
+JSRunLoopTimer::~JSRunLoopTimer() = default;
 
 std::optional<Seconds> JSRunLoopTimer::timeUntilFire()
 {

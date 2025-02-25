@@ -32,20 +32,18 @@
 #include "InbandTextTrack.h"
 #include "InbandTextTrackPrivate.h"
 #include "LoadableTextTrack.h"
-#include <wtf/IsoMallocInlines.h>
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
-WTF_MAKE_ISO_ALLOCATED_IMPL(TextTrackList);
+WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(TextTrackList);
 
 TextTrackList::TextTrackList(ScriptExecutionContext* context)
     : TrackListBase(context, TrackListBase::TextTrackList)
 {
 }
 
-TextTrackList::~TextTrackList()
-{
-}
+TextTrackList::~TextTrackList() = default;
 
 unsigned TextTrackList::length() const
 {
@@ -258,14 +256,9 @@ bool TextTrackList::contains(TrackBase& track) const
     return tracks->find(&track) != notFound;
 }
 
-EventTargetInterface TextTrackList::eventTargetInterface() const
+enum EventTargetInterfaceType TextTrackList::eventTargetInterface() const
 {
-    return TextTrackListEventTargetInterfaceType;
-}
-
-const char* TextTrackList::activeDOMObjectName() const
-{
-    return "TextTrackList";
+    return EventTargetInterfaceType::TextTrackList;
 }
 
 } // namespace WebCore

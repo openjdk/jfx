@@ -806,7 +806,7 @@ GLIB_VAR const gchar * const g_utf8_skip;
  * Before using this macro, use g_utf8_validate() to validate strings
  * that may contain invalid UTF-8.
  */
-#define g_utf8_next_char(p) (char *)((p) + g_utf8_skip[*(const guchar *)(p)])
+#define g_utf8_next_char(p) ((p) + g_utf8_skip[*(const guchar *)(p)])
 
 GLIB_AVAILABLE_IN_ALL
 gunichar g_utf8_get_char           (const gchar  *p) G_GNUC_PURE;

@@ -81,8 +81,8 @@ struct ModuleInformation : public ThreadSafeRefCounted<ModuleInformation> {
     uint32_t importExceptionCount() const { return importExceptionTypeIndices.size(); }
     uint32_t internalExceptionCount() const { return internalExceptionTypeIndices.size(); }
 
-    // Currently, our wasm implementation allows only one memory and table.
-    // If we need to remove this limitation, we would have MemoryInformation and TableInformation in the Vectors.
+    // Currently, our wasm implementation allows only one memory.
+    // If we need to remove this limitation, we would have MemoryInformation in the Vectors.
     uint32_t memoryCount() const { return memory ? 1 : 0; }
     uint32_t tableCount() const { return tables.size(); }
     uint32_t elementCount() const { return elements.size(); }
@@ -90,6 +90,7 @@ struct ModuleInformation : public ThreadSafeRefCounted<ModuleInformation> {
     uint32_t dataSegmentsCount() const { return numberOfDataSegments.value_or(0); }
 
     const TableInformation& table(unsigned index) const { return tables[index]; }
+    const GlobalInformation& global(unsigned index) const { return globals[index]; }
 
     void initializeFunctionTrackers() const
     {
@@ -135,7 +136,7 @@ struct ModuleInformation : public ThreadSafeRefCounted<ModuleInformation> {
         ASSERT(functions[index].finishedValidating);
 
         // See also: B3Procedure::usesSIMD().
-        if (!Options::useWebAssemblySIMD())
+        if (!Options::useWasmSIMD())
             return false;
         if (Options::forceAllFunctionsToUseSIMD())
             return true;
@@ -194,6 +195,7 @@ struct ModuleInformation : public ThreadSafeRefCounted<ModuleInformation> {
     std::optional<uint32_t> numberOfDataSegments;
     Vector<RefPtr<const RTT>> rtts;
     Vector<Vector<uint8_t>> constantExpressions;
+    Name sourceMappingURL;
 
     BitVector m_declaredFunctions;
     BitVector m_declaredExceptions;

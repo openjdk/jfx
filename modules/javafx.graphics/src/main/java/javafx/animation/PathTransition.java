@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -221,7 +221,7 @@ public final class PathTransition extends Transition {
     public static enum OrientationType {
 
         /**
-         * The targeted {@code node}'s rotation matrix stays unchange along the
+         * The targeted {@code node}'s rotation matrix stays unchanged along the
          * geometric path.
          */
         NONE,

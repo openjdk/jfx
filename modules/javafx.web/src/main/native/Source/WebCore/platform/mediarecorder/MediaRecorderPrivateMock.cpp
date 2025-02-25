@@ -36,10 +36,6 @@
 
 namespace WebCore {
 
-Ref<MediaRecorderPrivateMock> MediaRecorderPrivateMock::create(MediaStreamPrivate& stream)
-{
-    return adoptRef(*new MediaRecorderPrivateMock(stream));
-}
 
 MediaRecorderPrivateMock::MediaRecorderPrivateMock(MediaStreamPrivate& stream)
 {
@@ -76,8 +72,7 @@ void MediaRecorderPrivateMock::resumeRecording(CompletionHandler<void()>&& compl
 void MediaRecorderPrivateMock::videoFrameAvailable(VideoFrame&, VideoFrameTimeMetadata)
 {
     Locker locker { m_bufferLock };
-    m_buffer.append("Video Track ID: ");
-    m_buffer.append(m_videoTrackID);
+    m_buffer.append("Video Track ID: "_s, m_videoTrackID);
     generateMockCounterString();
 }
 
@@ -87,14 +82,13 @@ void MediaRecorderPrivateMock::audioSamplesAvailable(const MediaTime&, const Pla
     // explicitly allow the following allocation(s).
     DisableMallocRestrictionsForCurrentThreadScope disableMallocRestrictions;
     Locker locker { m_bufferLock };
-    m_buffer.append("Audio Track ID: ");
-    m_buffer.append(m_audioTrackID);
+    m_buffer.append("Audio Track ID: "_s, m_audioTrackID);
     generateMockCounterString();
 }
 
 void MediaRecorderPrivateMock::generateMockCounterString()
 {
-    m_buffer.append(" Counter: ", ++m_counter, "\r\n---------\r\n");
+    m_buffer.append(" Counter: "_s, ++m_counter, "\r\n---------\r\n"_s);
 }
 
 void MediaRecorderPrivateMock::fetchData(FetchDataCallback&& completionHandler)
@@ -102,7 +96,7 @@ void MediaRecorderPrivateMock::fetchData(FetchDataCallback&& completionHandler)
     RefPtr<FragmentedSharedBuffer> buffer;
     {
         Locker locker { m_bufferLock };
-        Vector<uint8_t> value { m_buffer.characters8(), m_buffer.length() };
+        Vector<uint8_t> value(m_buffer.span<uint8_t>());
         m_buffer.clear();
         buffer = SharedBuffer::create(WTFMove(value));
     }

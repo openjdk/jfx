@@ -24,18 +24,17 @@
 #include "config.h"
 #include "RenderSVGViewportContainer.h"
 
-#if ENABLE(LAYER_BASED_SVG_ENGINE)
 #include "RenderLayer.h"
 #include "RenderSVGModelObjectInlines.h"
 #include "RenderSVGRoot.h"
 #include "SVGContainerLayout.h"
 #include "SVGElementTypeHelpers.h"
 #include "SVGSVGElement.h"
-#include <wtf/IsoMallocInlines.h>
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
-WTF_MAKE_ISO_ALLOCATED_IMPL(RenderSVGViewportContainer);
+WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(RenderSVGViewportContainer);
 
 RenderSVGViewportContainer::RenderSVGViewportContainer(RenderSVGRoot& parent, RenderStyle&& style)
     : RenderSVGContainer(Type::SVGViewportContainer, parent.document(), WTFMove(style))
@@ -50,6 +49,8 @@ RenderSVGViewportContainer::RenderSVGViewportContainer(SVGSVGElement& element, R
     ASSERT(isRenderSVGViewportContainer());
 }
 
+RenderSVGViewportContainer::~RenderSVGViewportContainer() = default;
+
 SVGSVGElement& RenderSVGViewportContainer::svgSVGElement() const
 {
     if (isOutermostSVGViewportContainer()) {
@@ -59,14 +60,19 @@ SVGSVGElement& RenderSVGViewportContainer::svgSVGElement() const
     return downcast<SVGSVGElement>(RenderSVGContainer::element());
 }
 
+Ref<SVGSVGElement> RenderSVGViewportContainer::protectedSVGSVGElement() const
+{
+    return svgSVGElement();
+}
+
 FloatPoint RenderSVGViewportContainer::computeViewportLocation() const
 {
     if (isOutermostSVGViewportContainer())
         return { };
 
-    auto& useSVGSVGElement = svgSVGElement();
-    SVGLengthContext lengthContext(&useSVGSVGElement);
-    return { useSVGSVGElement.x().value(lengthContext), useSVGSVGElement.y().value(lengthContext) };
+    Ref useSVGSVGElement = svgSVGElement();
+    SVGLengthContext lengthContext(useSVGSVGElement.ptr());
+    return { useSVGSVGElement->x().value(lengthContext), useSVGSVGElement->y().value(lengthContext) };
 }
 
 FloatSize RenderSVGViewportContainer::computeViewportSize() const
@@ -74,9 +80,9 @@ FloatSize RenderSVGViewportContainer::computeViewportSize() const
     if (isOutermostSVGViewportContainer())
         return downcast<RenderSVGRoot>(*parent()).computeViewportSize();
 
-    auto& useSVGSVGElement = svgSVGElement();
-    SVGLengthContext lengthContext(&useSVGSVGElement);
-    return { useSVGSVGElement.width().value(lengthContext), useSVGSVGElement.height().value(lengthContext) };
+    Ref useSVGSVGElement = svgSVGElement();
+    SVGLengthContext lengthContext(useSVGSVGElement.ptr());
+    return { useSVGSVGElement->width().value(lengthContext), useSVGSVGElement->height().value(lengthContext) };
 }
 
 bool RenderSVGViewportContainer::updateLayoutSizeIfNeeded()
@@ -88,12 +94,12 @@ bool RenderSVGViewportContainer::updateLayoutSizeIfNeeded()
 
 bool RenderSVGViewportContainer::needsHasSVGTransformFlags() const
 {
-    auto& useSVGSVGElement = svgSVGElement();
-    if (useSVGSVGElement.hasTransformRelatedAttributes())
+    Ref useSVGSVGElement = svgSVGElement();
+    if (useSVGSVGElement->hasTransformRelatedAttributes())
         return true;
 
     if (isOutermostSVGViewportContainer())
-        return !useSVGSVGElement.currentTranslateValue().isZero() || useSVGSVGElement.renderer()->style().effectiveZoom() != 1;
+        return !useSVGSVGElement->currentTranslateValue().isZero() || useSVGSVGElement->renderer()->style().usedZoom() != 1;
 
     return false;
 }
@@ -116,27 +122,27 @@ void RenderSVGViewportContainer::updateLayerTransform()
     ASSERT(hasLayer());
 
     // First update the supplemental layer transform.
-    auto& useSVGSVGElement = svgSVGElement();
+    Ref useSVGSVGElement = svgSVGElement();
     auto viewportSize = this->viewportSize();
 
     m_supplementalLayerTransform.makeIdentity();
 
     if (isOutermostSVGViewportContainer()) {
         // Handle pan - set on outermost <svg> element.
-        if (auto translation = useSVGSVGElement.currentTranslateValue(); !translation.isZero())
+        if (auto translation = useSVGSVGElement->currentTranslateValue(); !translation.isZero())
             m_supplementalLayerTransform.translate(translation);
 
         // Handle zoom - take effective zoom from outermost <svg> element.
-        if (auto scale = useSVGSVGElement.renderer()->style().effectiveZoom(); scale != 1) {
+        if (auto scale = useSVGSVGElement->renderer()->style().usedZoom(); scale != 1) {
             m_supplementalLayerTransform.scale(scale);
             viewportSize.scale(1.0 / scale);
         }
     } else if (!m_viewport.location().isZero())
         m_supplementalLayerTransform.translate(m_viewport.location());
 
-    if (useSVGSVGElement.hasAttribute(SVGNames::viewBoxAttr)) {
+    if (useSVGSVGElement->hasAttribute(SVGNames::viewBoxAttr)) {
         // An empty viewBox disables the rendering -- dirty the visible descendant status!
-        if (useSVGSVGElement.hasEmptyViewBox())
+        if (useSVGSVGElement->hasEmptyViewBox())
             layer()->dirtyVisibleContentStatus();
         else if (auto viewBoxTransform = viewBoxToViewTransform(useSVGSVGElement, viewportSize); !viewBoxTransform.isIdentity()) {
             if (m_supplementalLayerTransform.isIdentity())
@@ -152,18 +158,18 @@ void RenderSVGViewportContainer::updateLayerTransform()
 
 void RenderSVGViewportContainer::applyTransform(TransformationMatrix& transform, const RenderStyle& style, const FloatRect& boundingBox, OptionSet<RenderStyle::TransformOperationOption> options) const
 {
-    applySVGTransform(transform, svgSVGElement(), style, boundingBox, m_supplementalLayerTransform.isIdentity() ? std::nullopt : std::make_optional(m_supplementalLayerTransform), std::nullopt, options);
+    applySVGTransform(transform, protectedSVGSVGElement(), style, boundingBox, m_supplementalLayerTransform.isIdentity() ? std::nullopt : std::make_optional(m_supplementalLayerTransform), std::nullopt, options);
 }
 
 LayoutRect RenderSVGViewportContainer::overflowClipRect(const LayoutPoint& location, RenderFragmentContainer*, OverlayScrollbarSizeRelevancy, PaintPhase) const
 {
     // Overflow for the outermost <svg> element is handled in RenderSVGRoot, not here.
     ASSERT(!isOutermostSVGViewportContainer());
-    auto& useSVGSVGElement = svgSVGElement();
+    Ref useSVGSVGElement = svgSVGElement();
 
     auto clipRect = enclosingLayoutRect(viewport());
-    if (useSVGSVGElement.hasAttribute(SVGNames::viewBoxAttr)) {
-        if (useSVGSVGElement.hasEmptyViewBox())
+    if (useSVGSVGElement->hasAttribute(SVGNames::viewBoxAttr)) {
+        if (useSVGSVGElement->hasEmptyViewBox())
             return { };
 
         if (auto viewBoxTransform = viewBoxToViewTransform(useSVGSVGElement, viewportSize()); !viewBoxTransform.isIdentity())
@@ -176,4 +182,3 @@ LayoutRect RenderSVGViewportContainer::overflowClipRect(const LayoutPoint& locat
 
 }
 
-#endif // ENABLE(LAYER_BASED_SVG_ENGINE)

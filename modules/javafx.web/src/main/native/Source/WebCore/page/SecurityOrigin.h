@@ -30,7 +30,6 @@
 
 #include "SecurityOriginData.h"
 #include <wtf/ArgumentCoder.h>
-#include <wtf/EnumTraits.h>
 #include <wtf/Hasher.h>
 #include <wtf/ThreadSafeRefCounted.h>
 #include <wtf/text/WTFString.h>
@@ -51,6 +50,7 @@ public:
     WEBCORE_EXPORT static Ref<SecurityOrigin> create(const URL&);
     WEBCORE_EXPORT static Ref<SecurityOrigin> createForBlobURL(const URL&);
     WEBCORE_EXPORT static Ref<SecurityOrigin> createOpaque();
+    WEBCORE_EXPORT static SecurityOrigin& opaqueOrigin();
 
     WEBCORE_EXPORT static Ref<SecurityOrigin> createFromString(const String&);
     WEBCORE_EXPORT static Ref<SecurityOrigin> create(const String& protocol, const String& host, std::optional<uint16_t> port);
@@ -201,6 +201,7 @@ public:
     void setIsPotentiallyTrustworthy(bool value) { m_isPotentiallyTrustworthy = value; }
 
     WEBCORE_EXPORT static bool isLocalHostOrLoopbackIPAddress(StringView);
+    WEBCORE_EXPORT static bool isLocalhostAddress(StringView);
 
     const SecurityOriginData& data() const { return m_data; }
 
@@ -212,8 +213,7 @@ private:
     explicit SecurityOrigin(SecurityOriginData&&);
     void initializeShared(const URL&);
 
-    // FIXME: Rename this function to something more semantic.
-    bool passesFileCheck(const SecurityOrigin&) const;
+    bool hasLocalUnseparatedPath(const SecurityOrigin&) const;
 
     // This method checks that the scheme for this origin is an HTTP-family
     // scheme, e.g. HTTP and HTTPS.

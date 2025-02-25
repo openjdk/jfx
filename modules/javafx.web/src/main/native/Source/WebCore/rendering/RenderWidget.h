@@ -63,13 +63,15 @@ inline void WidgetHierarchyUpdatesSuspensionScope::scheduleWidgetToMove(Widget& 
 }
 
 class RenderWidget : public RenderReplaced, private OverlapTestRequestClient, public RefCounted<RenderWidget> {
-    WTF_MAKE_ISO_ALLOCATED(RenderWidget);
+    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(RenderWidget);
+    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(RenderWidget);
 public:
     virtual ~RenderWidget();
 
     HTMLFrameOwnerElement& frameOwnerElement() const { return downcast<HTMLFrameOwnerElement>(nodeForNonAnonymous()); }
 
     Widget* widget() const { return m_widget.get(); }
+    RefPtr<Widget> protectedWidget() const { return m_widget; }
     WEBCORE_EXPORT void setWidget(RefPtr<Widget>&&);
 
     static RenderWidget* find(const Widget&);

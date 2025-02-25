@@ -85,14 +85,14 @@ InlineDisplayLineBuilder::EnclosingLineGeometry InlineDisplayLineBuilder::collec
         return rect;
     }();
     for (auto& inlineLevelBox : lineBox.nonRootInlineLevelBoxes()) {
-        if (!inlineLevelBox.isAtomicInlineLevelBox() && !inlineLevelBox.isInlineBox() && !inlineLevelBox.isLineBreakBox())
+        if (!inlineLevelBox.isAtomicInlineBox() && !inlineLevelBox.isInlineBox() && !inlineLevelBox.isLineBreakBox())
             continue;
 
         auto& layoutBox = inlineLevelBox.layoutBox();
         auto borderBox = InlineRect { };
 
-        if (inlineLevelBox.isAtomicInlineLevelBox()) {
-            borderBox = lineBox.logicalBorderBoxForAtomicInlineLevelBox(layoutBox, formattingContext().geometryForBox(layoutBox));
+        if (inlineLevelBox.isAtomicInlineBox()) {
+            borderBox = lineBox.logicalBorderBoxForAtomicInlineBox(layoutBox, formattingContext().geometryForBox(layoutBox));
             borderBox.moveBy(lineBoxRect.topLeft());
         } else if (inlineLevelBox.isInlineBox()) {
             auto& boxGeometry = formattingContext().geometryForBox(layoutBox);
@@ -259,7 +259,7 @@ static float truncateOverflowingDisplayBoxes(InlineDisplay::Boxes& boxes, size_t
             }
             isFirstContentRun = false;
         }
-        ASSERT_UNUSED(lineEndingEllipsisPolicy, lineEndingEllipsisPolicy != LineEndingEllipsisPolicy::WhenContentOverflowsInInlineDirection || truncateRight.has_value() || right(boxes.last()) == visualRightForContentEnd);
+        ASSERT_UNUSED(lineEndingEllipsisPolicy, lineEndingEllipsisPolicy != LineEndingEllipsisPolicy::WhenContentOverflowsInInlineDirection || truncateRight.has_value() || right(boxes.last()) == visualRightForContentEnd || boxes.last().isInlineBox());
         return truncateRight.value_or(right(boxes.last()));
     }
 
@@ -294,7 +294,7 @@ std::optional<FloatRect> InlineDisplayLineBuilder::trailingEllipsisVisualRectAft
         case LineEndingEllipsisPolicy::NoEllipsis:
             return false;
         case LineEndingEllipsisPolicy::WhenContentOverflowsInInlineDirection:
-            return displayLine.contentLogicalWidth() > displayLine.lineBoxLogicalRect().width();
+            return displayLine.contentLogicalWidth() && displayLine.contentLogicalWidth() > displayLine.lineBoxLogicalRect().width();
         case LineEndingEllipsisPolicy::WhenContentOverflowsInBlockDirection:
             if (isLastLineWithInlineContent)
                 return false;
@@ -312,7 +312,7 @@ std::optional<FloatRect> InlineDisplayLineBuilder::trailingEllipsisVisualRectAft
     ASSERT(displayBoxes[0].isRootInlineBox());
     auto& rootInlineBox = displayBoxes[0];
     auto& rootStyle = rootInlineBox.style();
-    auto ellipsisWidth = rootStyle.fontCascade().width(TextUtil::ellipsisTextRun());
+    auto ellipsisWidth = std::max(0.f, rootStyle.fontCascade().width(TextUtil::ellipsisTextRun()));
 
     auto contentNeedsTruncation = [&] {
         switch (lineEndingEllipsisPolicy) {
@@ -339,7 +339,7 @@ std::optional<FloatRect> InlineDisplayLineBuilder::trailingEllipsisVisualRectAft
         }
     } else {
         auto lineBoxVisualLeft = rootStyle.isHorizontalWritingMode() ? displayLine.left() : displayLine.top();
-        auto lineBoxVisualRight = rootStyle.isHorizontalWritingMode() ? displayLine.right() : displayLine.bottom();
+        auto lineBoxVisualRight = std::max(rootStyle.isHorizontalWritingMode() ? displayLine.right() : displayLine.bottom(), lineBoxVisualLeft);
         ellipsisStart = truncateOverflowingDisplayBoxes(displayBoxes, 0, displayBoxes.size() - 1, lineBoxVisualLeft, lineBoxVisualRight, ellipsisWidth, rootStyle, lineEndingEllipsisPolicy);
     }
 
@@ -433,8 +433,10 @@ void InlineDisplayLineBuilder::addLineClampTrailingLinkBoxIfApplicable(const Inl
         return { };
     }();
 
-    if (!insertionPosition) {
-        ASSERT_NOT_REACHED();
+    if (!insertionPosition || !*insertionPosition || *insertionPosition >= displayBoxes.size() - 1) {
+        // Unexpected cases where the insertion point is at the leading/trailing box. They both indicate incorrect line-clamp
+        // position and would produce incorrect rendering.
+        ASSERT_NOT_REACHED_WITH_SECURITY_IMPLICATION();
         return;
     }
     auto& clampedLine = displayLines[*clampedLineIndex];

@@ -35,6 +35,7 @@
 #include "MultiCacheQueryOptions.h"
 #include "ScriptExecutionContext.h"
 #include "SecurityOrigin.h"
+#include <wtf/text/MakeString.h>
 
 namespace WebCore {
 
@@ -177,14 +178,14 @@ void DOMCacheStorage::retrieveCaches(CompletionHandler<void(std::optional<Except
         callback(convertToExceptionAndLog(scriptExecutionContext(), DOMCacheEngine::Error::Stopped));
         return;
     }
-
-    m_connection->retrieveCaches(*origin, m_updateCounter, [this, callback = WTFMove(callback), pendingActivity = makePendingActivity(*this), connectionStorageLock = makeUnique<ConnectionStorageLock>(m_connection.copyRef(), *origin)](DOMCacheEngine::CacheInfosOrError&& result) mutable {
+    auto retrieveCachesPromise = m_connection->retrieveCaches(*origin, m_updateCounter);
+    scriptExecutionContext()->enqueueTaskWhenSettled(WTFMove(retrieveCachesPromise), TaskSource::DOMManipulation, [this, callback = WTFMove(callback), pendingActivity = makePendingActivity(*this), connectionStorageLock = makeUnique<ConnectionStorageLock>(m_connection.copyRef(), *origin)] (auto&& result) mutable {
         if (m_isStopped) {
             callback(DOMCacheEngine::convertToException(DOMCacheEngine::Error::Stopped));
             return;
         }
         RefPtr context = scriptExecutionContext();
-        if (!result.has_value()) {
+        if (!result) {
             callback(DOMCacheEngine::convertToExceptionAndLog(context.get(), result.error()));
             return;
         }
@@ -203,6 +204,8 @@ void DOMCacheStorage::retrieveCaches(CompletionHandler<void(std::optional<Except
             });
         }
         callback(std::nullopt);
+    }, [] (auto&& callback) {
+        callback(makeUnexpected(DOMCacheEngine::Error::Stopped));
     });
 }
 
@@ -211,7 +214,7 @@ static void logConsolePersistencyError(ScriptExecutionContext* context, const St
     if (!context)
         return;
 
-    context->addConsoleMessage(MessageSource::JS, MessageLevel::Error, makeString("There was an error making ", cacheName, " persistent on the filesystem"));
+    context->addConsoleMessage(MessageSource::JS, MessageLevel::Error, makeString("There was an error making "_s, cacheName, " persistent on the filesystem"_s));
 }
 
 void DOMCacheStorage::open(const String& name, DOMPromiseDeferred<IDLInterface<DOMCache>>&& promise)
@@ -239,9 +242,10 @@ void DOMCacheStorage::doOpen(const String& name, DOMPromiseDeferred<IDLInterface
         return;
     }
 
-    context->enqueueTaskWhenSettled(m_connection->open(*origin(), name), TaskSource::DOMManipulation, [this, name, promise = WTFMove(promise), pendingActivity = makePendingActivity(*this), connectionStorageLock = makeUnique<ConnectionStorageLock>(m_connection.copyRef(), *origin())](const DOMCacheEngine::CacheIdentifierOrError& result) mutable {
+    auto openPromise = m_connection->open(*origin(), name);
+    context->enqueueTaskWhenSettled(WTFMove(openPromise), TaskSource::DOMManipulation, [this, name, promise = WTFMove(promise), pendingActivity = makePendingActivity(*this), connectionStorageLock = makeUnique<ConnectionStorageLock>(m_connection.copyRef(), *origin())] (auto&& result) mutable {
         RefPtr context = scriptExecutionContext();
-        if (!result.has_value()) {
+        if (!result) {
             promise.reject(DOMCacheEngine::convertToExceptionAndLog(context.get(), result.error()));
             return;
         }
@@ -276,8 +280,8 @@ void DOMCacheStorage::doRemove(const String& name, DOMPromiseDeferred<IDLBoolean
         return;
     }
 
-    m_connection->remove(m_caches[position]->identifier(), [this, name, promise = WTFMove(promise), pendingActivity = makePendingActivity(*this)](const auto& result) mutable {
-        if (!result.has_value())
+    scriptExecutionContext()->enqueueTaskWhenSettled(m_connection->remove(m_caches[position]->identifier()), TaskSource::DOMManipulation, [this, promise = WTFMove(promise), pendingActivity = makePendingActivity(*this)](const auto& result) mutable {
+        if (!result)
             promise.reject(DOMCacheEngine::convertToExceptionAndLog(scriptExecutionContext(), result.error()));
         else
             promise.resolve(result.value());
@@ -301,11 +305,6 @@ void DOMCacheStorage::keys(KeysPromise&& promise)
 void DOMCacheStorage::stop()
 {
     m_isStopped = true;
-}
-
-const char* DOMCacheStorage::activeDOMObjectName() const
-{
-    return "CacheStorage";
 }
 
 } // namespace WebCore

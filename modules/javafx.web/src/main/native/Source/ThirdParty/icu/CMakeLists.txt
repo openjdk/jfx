@@ -1,4 +1,14 @@
 # http://userguide.icu-project.org/howtouseicu#TOC-C-With-Your-Own-Build-System
+if(WIN32)
+set(CMAKE_CXX_FLAGS "" CACHE STRING "Clear CXX flags for this sub-project" FORCE)
+set(CMAKE_CXX_COMPILER "${MSVC_BIN_DIR}/cl.exe")
+#set(CMAKE_C_COMPILER "${MSVC_BIN_DIR}/cl.exe")
+set(CMAKE_LINKER "${MSVC_BIN_DIR}/link.exe")
+set(CMAKE_PROGRAM "${MSVC_BIN_DIR}/nmake.exe")
+set(CMAKE_AR "${MSVC_BIN_DIR}/lib.exe")
+add_compile_options(/FS)
+endif()
+
 set(ICU_PUBLIC_DEFINES
     "U_ENABLE_DYLOAD=0"
     "U_STATIC_IMPLEMENTATION"
@@ -637,5 +647,4 @@ add_library(icudata STATIC ${ICU_DATA_SYMBOL_FILE})
 # Be explicit about the which linker to use, otherwise fails on Windows
 # when creating icudata.lib.
 set_target_properties(icudata PROPERTIES LINKER_LANGUAGE C)
-
 ###### data END ####

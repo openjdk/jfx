@@ -44,18 +44,19 @@
 #include "KeyboardEvent.h"
 #include "LocalFrame.h"
 #include "LocalFrameLoaderClient.h"
+#include "MouseEvent.h"
 #include "NodeList.h"
 #include "Page.h"
 #include "RawDataDocumentParser.h"
 #include "ScriptController.h"
 #include "ShadowRoot.h"
 #include "TypedElementDescendantIteratorInlines.h"
-#include <wtf/IsoMallocInlines.h>
+#include <wtf/TZoneMallocInlines.h>
 #include <wtf/text/StringBuilder.h>
 
 namespace WebCore {
 
-WTF_MAKE_ISO_ALLOCATED_IMPL(MediaDocument);
+WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(MediaDocument);
 
 using namespace HTMLNames;
 
@@ -74,44 +75,43 @@ private:
     {
     }
 
-    void appendBytes(DocumentWriter&, const uint8_t*, size_t) final;
+    void appendBytes(DocumentWriter&, std::span<const uint8_t>) final;
     void createDocumentStructure();
 
-    WeakPtr<HTMLMediaElement, WeakPtrImplWithEventTargetData> m_mediaElement;
+    WeakPtr<HTMLMediaElement> m_mediaElement;
     String m_outgoingReferrer;
 };
 
 void MediaDocumentParser::createDocumentStructure()
 {
-    auto& document = *this->document();
+    Ref document = *this->document();
 
-    auto rootElement = HTMLHtmlElement::create(document);
-    document.appendChild(rootElement);
-    document.setCSSTarget(rootElement.ptr());
-    rootElement->insertedByParser();
+    Ref rootElement = HTMLHtmlElement::create(document);
+    document->appendChild(rootElement);
+    document->setCSSTarget(rootElement.ptr());
 
-    if (document.frame())
-        document.frame()->injectUserScripts(UserScriptInjectionTime::DocumentStart);
+    if (RefPtr frame = document->frame())
+        frame->injectUserScripts(UserScriptInjectionTime::DocumentStart);
 
 #if PLATFORM(IOS_FAMILY)
-    auto headElement = HTMLHeadElement::create(document);
+    Ref headElement = HTMLHeadElement::create(document);
     rootElement->appendChild(headElement);
 
-    auto metaElement = HTMLMetaElement::create(document);
+    Ref metaElement = HTMLMetaElement::create(document);
     metaElement->setAttributeWithoutSynchronization(nameAttr, "viewport"_s);
     metaElement->setAttributeWithoutSynchronization(contentAttr, "width=device-width,initial-scale=1"_s);
     headElement->appendChild(metaElement);
 #endif
 
-    auto body = HTMLBodyElement::create(document);
+    Ref body = HTMLBodyElement::create(document);
     rootElement->appendChild(body);
 
-    auto videoElement = HTMLVideoElement::create(document);
+    Ref videoElement = HTMLVideoElement::create(document);
     m_mediaElement = videoElement.get();
     videoElement->setAttributeWithoutSynchronization(controlsAttr, emptyAtom());
     videoElement->setAttributeWithoutSynchronization(autoplayAttr, emptyAtom());
-    videoElement->setAttributeWithoutSynchronization(srcAttr, AtomString { document.url().string() });
-    if (RefPtr loader = document.loader())
+    videoElement->setAttributeWithoutSynchronization(srcAttr, AtomString { document->url().string() });
+    if (RefPtr loader = document->loader())
         videoElement->setAttributeWithoutSynchronization(typeAttr, AtomString { loader->responseMIMEType() });
 
 #if !ENABLE(MODERN_MEDIA_CONTROLS)
@@ -119,17 +119,17 @@ void MediaDocumentParser::createDocumentStructure()
 #endif // !ENABLE(MODERN_MEDIA_CONTROLS)
 
     body->appendChild(videoElement);
-    document.setHasVisuallyNonEmptyCustomContent();
+    document->setHasVisuallyNonEmptyCustomContent();
 
-    RefPtr frame = document.frame();
+    RefPtr frame = document->frame();
     if (!frame)
         return;
 
-    frame->loader().activeDocumentLoader()->setMainResourceDataBufferingPolicy(DataBufferingPolicy::DoNotBufferData);
-    frame->loader().setOutgoingReferrer(document.completeURL(m_outgoingReferrer));
+    frame->loader().protectedActiveDocumentLoader()->setMainResourceDataBufferingPolicy(DataBufferingPolicy::DoNotBufferData);
+    frame->checkedLoader()->setOutgoingReferrer(document->completeURL(m_outgoingReferrer));
 }
 
-void MediaDocumentParser::appendBytes(DocumentWriter&, const uint8_t*, size_t)
+void MediaDocumentParser::appendBytes(DocumentWriter&, std::span<const uint8_t>)
 {
     if (m_mediaElement)
         return;
@@ -147,9 +147,7 @@ MediaDocument::MediaDocument(LocalFrame* frame, const Settings& settings, const 
         m_outgoingReferrer = frame->loader().outgoingReferrer();
 }
 
-MediaDocument::~MediaDocument()
-{
-}
+MediaDocument::~MediaDocument() = default;
 
 Ref<DocumentParser> MediaDocument::createParser()
 {
@@ -185,7 +183,7 @@ void MediaDocument::defaultEventHandler(Event& event)
         return;
 
     if (RefPtr video = ancestorVideoElement(targetNode)) {
-        if (event.type() == eventNames().clickEvent) {
+        if (isAnyClick(event)) {
             if (!video->canPlay()) {
                 video->pause();
                 event.setDefaultHandled();

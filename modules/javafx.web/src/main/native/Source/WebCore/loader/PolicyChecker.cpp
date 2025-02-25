@@ -50,6 +50,7 @@
 #include "LocalFrame.h"
 #include "LocalFrameLoaderClient.h"
 #include "Logging.h"
+#include "Navigation.h"
 #include "ThreadableBlobRegistry.h"
 #include "URLKeepingBlobAlive.h"
 #include <wtf/CompletionHandler.h>
@@ -87,7 +88,7 @@ static bool shouldExecuteJavaScriptURLSynchronously(const URL& url)
     return url == "javascript:''"_s || url == "javascript:\"\""_s;
 }
 
-FrameLoader::PolicyChecker::PolicyChecker(LocalFrame& frame)
+PolicyChecker::PolicyChecker(LocalFrame& frame)
     : m_frame(frame)
     , m_delegateIsDecidingNavigationPolicy(false)
     , m_delegateIsHandlingUnimplementablePolicy(false)
@@ -95,12 +96,12 @@ FrameLoader::PolicyChecker::PolicyChecker(LocalFrame& frame)
 {
 }
 
-void FrameLoader::PolicyChecker::checkNavigationPolicy(ResourceRequest&& newRequest, const ResourceResponse& redirectResponse, NavigationPolicyDecisionFunction&& function)
+void PolicyChecker::checkNavigationPolicy(ResourceRequest&& newRequest, const ResourceResponse& redirectResponse, NavigationPolicyDecisionFunction&& function)
 {
     checkNavigationPolicy(WTFMove(newRequest), redirectResponse, m_frame->loader().protectedActiveDocumentLoader().get(), { }, WTFMove(function));
 }
 
-URLKeepingBlobAlive FrameLoader::PolicyChecker::extendBlobURLLifetimeIfNecessary(const ResourceRequest& request, const Document& document, PolicyDecisionMode mode) const
+URLKeepingBlobAlive PolicyChecker::extendBlobURLLifetimeIfNecessary(const ResourceRequest& request, const Document& document, PolicyDecisionMode mode) const
 {
     if (mode != PolicyDecisionMode::Asynchronous || !request.url().protocolIsBlob())
         return { };
@@ -110,7 +111,7 @@ URLKeepingBlobAlive FrameLoader::PolicyChecker::extendBlobURLLifetimeIfNecessary
     return { request.url(), topOrigin };
 }
 
-void FrameLoader::PolicyChecker::checkNavigationPolicy(ResourceRequest&& request, const ResourceResponse& redirectResponse, DocumentLoader* loader, RefPtr<FormState>&& formState, NavigationPolicyDecisionFunction&& function, PolicyDecisionMode policyDecisionMode)
+void PolicyChecker::checkNavigationPolicy(ResourceRequest&& request, const ResourceResponse& redirectResponse, DocumentLoader* loader, RefPtr<FormState>&& formState, NavigationPolicyDecisionFunction&& function, PolicyDecisionMode policyDecisionMode)
 {
     NavigationAction action = loader->triggeringAction();
     Ref frame = m_frame.get();
@@ -206,6 +207,16 @@ void FrameLoader::PolicyChecker::checkNavigationPolicy(ResourceRequest&& request
     bool isInitialEmptyDocumentLoad = !frameLoader->stateMachine().committedFirstRealDocumentLoad() && request.url().protocolIsAbout() && !substituteData.isValid();
     m_delegateIsDecidingNavigationPolicy = true;
     String suggestedFilename = action.downloadAttribute().isEmpty() ? nullAtom() : action.downloadAttribute();
+    FromDownloadAttribute fromDownloadAttribute = action.downloadAttribute().isNull() ? FromDownloadAttribute::No : FromDownloadAttribute::Yes;
+    if (!action.downloadAttribute().isNull()) {
+        RefPtr document = frame->document();
+        if (document && document->settings().navigationAPIEnabled()) {
+            if (RefPtr domWindow = document->domWindow()) {
+                if (!domWindow->protectedNavigation()->dispatchDownloadNavigateEvent(request.url(), action.downloadAttribute()))
+                    return function({ }, nullptr, NavigationPolicyDecision::IgnoreLoad);
+            }
+        }
+    }
     FramePolicyFunction decisionHandler = [
         this,
         weakThis = WeakPtr { *this },
@@ -215,7 +226,8 @@ void FrameLoader::PolicyChecker::checkNavigationPolicy(ResourceRequest&& request
         formState = std::exchange(formState, nullptr),
         suggestedFilename = WTFMove(suggestedFilename),
         blobURLLifetimeExtension = WTFMove(blobURLLifetimeExtension),
-        isInitialEmptyDocumentLoad
+        isInitialEmptyDocumentLoad,
+        fromDownloadAttribute
     ] (PolicyAction policyAction) mutable {
         if (!weakThis)
             return function({ }, nullptr, NavigationPolicyDecision::IgnoreLoad);
@@ -228,7 +240,7 @@ void FrameLoader::PolicyChecker::checkNavigationPolicy(ResourceRequest&& request
         case PolicyAction::Download:
             if (!(frameLoader->effectiveSandboxFlags() & SandboxDownloads)) {
                 frameLoader->setOriginalURLForDownloadRequest(request);
-                frameLoader->client().startDownload(request, suggestedFilename);
+                frameLoader->client().startDownload(request, suggestedFilename, fromDownloadAttribute);
             } else if (RefPtr document = frame->document())
                 document->addConsoleMessage(MessageSource::Security, MessageLevel::Error, "Not allowed to download due to sandboxing"_s);
             FALLTHROUGH;
@@ -276,8 +288,8 @@ void FrameLoader::PolicyChecker::checkNavigationPolicy(ResourceRequest&& request
 
     auto documentLoader = frameLoader->loaderForWebsitePolicies();
     auto clientRedirectSourceForHistory = documentLoader ? documentLoader->clientRedirectSourceForHistory() : String();
-    auto navigationID = documentLoader ? documentLoader->navigationID() : 0;
-    bool hasOpener = !!frameLoader->opener();
+    auto navigationID = documentLoader ? documentLoader->navigationID() : std::nullopt;
+    bool hasOpener = !!frame->opener();
     auto sandboxFlags = frameLoader->effectiveSandboxFlags();
 
     if (isInitialEmptyDocumentLoad) {
@@ -288,12 +300,12 @@ void FrameLoader::PolicyChecker::checkNavigationPolicy(ResourceRequest&& request
         frameLoader->client().dispatchDecidePolicyForNavigationAction(action, request, redirectResponse, formState.get(), clientRedirectSourceForHistory, navigationID, hitTestResult(action), hasOpener, sandboxFlags, policyDecisionMode, WTFMove(decisionHandler));
 }
 
-Ref<LocalFrame> FrameLoader::PolicyChecker::protectedFrame() const
+Ref<LocalFrame> PolicyChecker::protectedFrame() const
 {
     return m_frame.get();
 }
 
-std::optional<HitTestResult> FrameLoader::PolicyChecker::hitTestResult(const NavigationAction& action)
+std::optional<HitTestResult> PolicyChecker::hitTestResult(const NavigationAction& action)
 {
     auto& mouseEventData = action.mouseEventData();
     if (!mouseEventData)
@@ -302,7 +314,7 @@ std::optional<HitTestResult> FrameLoader::PolicyChecker::hitTestResult(const Nav
     return protectedFrame()->checkedEventHandler()->hitTestResultAtPoint(mouseEventData->absoluteLocation, hitType);
 }
 
-void FrameLoader::PolicyChecker::checkNewWindowPolicy(NavigationAction&& navigationAction, ResourceRequest&& request, RefPtr<FormState>&& formState, const AtomString& frameName, NewWindowPolicyDecisionFunction&& function)
+void PolicyChecker::checkNewWindowPolicy(NavigationAction&& navigationAction, ResourceRequest&& request, RefPtr<FormState>&& formState, const AtomString& frameName, NewWindowPolicyDecisionFunction&& function)
 {
     if (m_frame->document() && m_frame->document()->isSandboxed(SandboxPopups))
         return function({ }, nullptr, { }, { }, ShouldContinuePolicyCheck::No);
@@ -338,18 +350,18 @@ void FrameLoader::PolicyChecker::checkNewWindowPolicy(NavigationAction&& navigat
     });
 }
 
-void FrameLoader::PolicyChecker::stopCheck()
+void PolicyChecker::stopCheck()
 {
     m_javaScriptURLPolicyCheckIdentifier++;
     protectedFrame()->checkedLoader()->client().cancelPolicyCheck();
 }
 
-void FrameLoader::PolicyChecker::cannotShowMIMEType(const ResourceResponse& response)
+void PolicyChecker::cannotShowMIMEType(const ResourceResponse& response)
 {
     handleUnimplementablePolicy(protectedFrame()->checkedLoader()->client().cannotShowMIMETypeError(response));
 }
 
-void FrameLoader::PolicyChecker::handleUnimplementablePolicy(const ResourceError& error)
+void PolicyChecker::handleUnimplementablePolicy(const ResourceError& error)
 {
     m_delegateIsHandlingUnimplementablePolicy = true;
     protectedFrame()->checkedLoader()->client().dispatchUnableToImplementPolicy(error);

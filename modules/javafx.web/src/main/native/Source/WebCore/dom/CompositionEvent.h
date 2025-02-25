@@ -31,7 +31,7 @@
 namespace WebCore {
 
 class CompositionEvent final : public UIEvent {
-    WTF_MAKE_ISO_ALLOCATED(CompositionEvent);
+    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(CompositionEvent);
 public:
     static Ref<CompositionEvent> create(const AtomString& type, RefPtr<WindowProxy>&& view, const String& data)
     {
@@ -57,8 +57,6 @@ public:
     void initCompositionEvent(const AtomString& type, bool canBubble, bool cancelable, RefPtr<WindowProxy>&&, const String& data);
 
     String data() const { return m_data; }
-
-    EventInterface eventInterface() const override;
 
 private:
     CompositionEvent();

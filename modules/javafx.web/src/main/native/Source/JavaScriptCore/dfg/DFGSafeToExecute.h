@@ -67,10 +67,13 @@ public:
         case RegExpObjectUse:
         case PromiseObjectUse:
         case ProxyObjectUse:
+        case GlobalProxyUse:
         case DerivedArrayUse:
         case DateObjectUse:
         case MapObjectUse:
         case SetObjectUse:
+        case MapIteratorObjectUse:
+        case SetIteratorObjectUse:
         case WeakMapObjectUse:
         case WeakSetObjectUse:
         case DataViewObjectUse:
@@ -222,6 +225,7 @@ bool safeToExecute(AbstractStateType& state, Graph& graph, Node* node, bool igno
     case ArithPow:
     case ArithSqrt:
     case ArithFRound:
+    case ArithF16Round:
     case ArithRound:
     case ArithFloor:
     case ArithCeil:
@@ -238,6 +242,7 @@ bool safeToExecute(AbstractStateType& state, Graph& graph, Node* node, bool igno
     case SkipScope:
     case GetGlobalObject:
     case GetGlobalThis:
+    case UnwrapGlobalProxy:
     case GetClosureVar:
     case GetGlobalVar:
     case GetGlobalLexicalVariable:
@@ -261,6 +266,7 @@ bool safeToExecute(AbstractStateType& state, Graph& graph, Node* node, bool igno
     case ToLength:
     case OverridesHasInstance:
     case IsEmpty:
+    case IsEmptyStorage:
     case TypeOfIsUndefined:
     case TypeOfIsObject:
     case TypeOfIsFunction:
@@ -312,11 +318,16 @@ bool safeToExecute(AbstractStateType& state, Graph& graph, Node* node, bool igno
     case StringSlice:
     case StringSubstring:
     case ToLowerCase:
-    case GetMapBucket:
-    case GetMapBucketHead:
-    case GetMapBucketNext:
-    case LoadKeyFromMapBucket:
-    case LoadValueFromMapBucket:
+    case MapGet:
+    case LoadMapValue:
+    case MapStorage:
+    case MapIterationNext:
+    case MapIterationEntry:
+    case MapIterationEntryKey:
+    case MapIterationEntryValue:
+    case MapIteratorNext:
+    case MapIteratorKey:
+    case MapIteratorValue:
     case ExtractValueFromWeakMapGet:
     case WeakMapGet:
     case AtomicsIsLockFree:
@@ -387,6 +398,7 @@ bool safeToExecute(AbstractStateType& state, Graph& graph, Node* node, bool igno
     case GetByValMegamorphic:
     case GetIndexedPropertyStorage:
     case GetArrayLength:
+    case GetUndetachedTypeArrayLength:
     case GetTypedArrayLengthAsInt52:
     case GetVectorLength:
     case ArrayPop:
@@ -632,10 +644,12 @@ bool safeToExecute(AbstractStateType& state, Graph& graph, Node* node, bool igno
     case ProfileType:
     case ProfileControlFlow:
     case InstanceOf:
+    case InstanceOfMegamorphic:
     case InstanceOfCustom:
     case CallObjectConstructor:
     case ToPrimitive:
     case ToPropertyKey:
+    case ToPropertyKeyOrNumber:
     case ToNumber:
     case ToNumeric:
     case ToObject:
@@ -644,7 +658,9 @@ bool safeToExecute(AbstractStateType& state, Graph& graph, Node* node, bool igno
     case SetFunctionName:
     case NewStringObject:
     case InByVal:
+    case InByValMegamorphic:
     case InById:
+    case InByIdMegamorphic:
     case EnumeratorInByVal:
     case EnumeratorHasOwnProperty:
     case HasPrivateName:

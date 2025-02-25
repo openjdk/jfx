@@ -27,12 +27,13 @@
 #include "FormattingState.h"
 
 #include "LayoutBoxGeometry.h"
-#include <wtf/IsoMallocInlines.h>
+#include "RenderObject.h"
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 namespace Layout {
 
-WTF_MAKE_ISO_ALLOCATED_IMPL(FormattingState);
+WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(FormattingState);
 
 FormattingState::FormattingState(Type type, LayoutState& layoutState)
     : m_layoutState(layoutState)

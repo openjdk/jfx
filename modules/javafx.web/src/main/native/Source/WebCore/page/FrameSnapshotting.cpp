@@ -96,6 +96,10 @@ RefPtr<ImageBuffer> snapshotFrameRectWithClip(LocalFrame& frame, const IntRect& 
 
     ScopedFramePaintingState state(frame, nullptr);
 
+    OptionSet<ImageBufferOptions> bufferOptions;
+    if (options.flags.contains(SnapshotFlags::Accelerated))
+        bufferOptions.add(ImageBufferOptions::Accelerated);
+
     auto paintBehavior = state.paintBehavior;
     if (options.flags.contains(SnapshotFlags::ForceBlackText))
         paintBehavior.add(PaintBehavior::ForceBlackText);
@@ -105,6 +109,8 @@ RefPtr<ImageBuffer> snapshotFrameRectWithClip(LocalFrame& frame, const IntRect& 
         paintBehavior.add(PaintBehavior::SelectionAndBackgroundsOnly);
     if (options.flags.contains(SnapshotFlags::PaintEverythingExcludingSelection))
         paintBehavior.add(PaintBehavior::ExcludeSelection);
+    if (options.flags.contains(SnapshotFlags::ExcludeReplacedContent))
+        paintBehavior.add(PaintBehavior::ExcludeReplacedContent);
 
     // Other paint behaviors are set by paintContentsForSnapshot.
     frame.view()->setPaintBehavior(paintBehavior);
@@ -120,7 +126,7 @@ RefPtr<ImageBuffer> snapshotFrameRectWithClip(LocalFrame& frame, const IntRect& 
     auto purpose = options.flags.contains(SnapshotFlags::Shareable) ? RenderingPurpose::ShareableSnapshot : RenderingPurpose::Snapshot;
     auto hostWindow = (document->view() && document->view()->root()) ? document->view()->root()->hostWindow() : nullptr;
 
-    auto buffer = ImageBuffer::create(imageRect.size(), purpose, scaleFactor, options.colorSpace, options.pixelFormat, { }, hostWindow);
+    auto buffer = ImageBuffer::create(imageRect.size(), purpose, scaleFactor, options.colorSpace, options.pixelFormat, bufferOptions, hostWindow);
     if (!buffer)
         return nullptr;
 
@@ -180,8 +186,8 @@ Color estimatedBackgroundColorForRange(const SimpleRange& range, const LocalFram
     RenderElement* renderer = nullptr;
     auto commonAncestor = commonInclusiveAncestor<ComposedTree>(range);
     while (commonAncestor) {
-        if (is<RenderElement>(commonAncestor->renderer())) {
-            renderer = downcast<RenderElement>(commonAncestor->renderer());
+        if (auto* renderElement = dynamicDowncast<RenderElement>(commonAncestor->renderer())) {
+            renderer = renderElement;
             break;
         }
         commonAncestor = commonAncestor->parentOrShadowHostElement();

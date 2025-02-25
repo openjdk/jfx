@@ -44,11 +44,11 @@
 #include "SVGNames.h"
 #include "SVGSMILElement.h"
 #include "XLinkNames.h"
-#include <wtf/IsoMallocInlines.h>
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
-WTF_MAKE_ISO_ALLOCATED_IMPL(SVGAElement);
+WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(SVGAElement);
 
 inline SVGAElement::SVGAElement(const QualifiedName& tagName, Document& document)
     : SVGGraphicsElement(tagName, document, makeUniqueRef<PropertyRegistry>(*this))
@@ -61,6 +61,8 @@ inline SVGAElement::SVGAElement(const QualifiedName& tagName, Document& document
         PropertyRegistry::registerProperty<SVGNames::targetAttr, &SVGAElement::m_target>();
     });
 }
+
+SVGAElement::~SVGAElement() = default;
 
 Ref<SVGAElement> SVGAElement::create(const QualifiedName& tagName, Document& document)
 {
@@ -81,11 +83,11 @@ String SVGAElement::title() const
 void SVGAElement::attributeChanged(const QualifiedName& name, const AtomString& oldValue, const AtomString& newValue, AttributeModificationReason attributeModificationReason)
 {
     if (name == SVGNames::targetAttr) {
-        m_target->setBaseValInternal(newValue);
+        Ref { m_target }->setBaseValInternal(newValue);
         return;
     } else if (name == SVGNames::relAttr) {
         if (m_relList)
-            m_relList->associatedAttributeValueChanged(newValue);
+            m_relList->associatedAttributeValueChanged();
     }
 
     SVGURIReference::parseAttribute(name, newValue);
@@ -105,14 +107,13 @@ void SVGAElement::svgAttributeChanged(const QualifiedName& attrName)
 
 RenderPtr<RenderElement> SVGAElement::createElementRenderer(RenderStyle&& style, const RenderTreePosition&)
 {
-    auto* svgParent = dynamicDowncast<SVGElement>(parentNode());
+    RefPtr svgParent = dynamicDowncast<SVGElement>(parentNode());
     if (svgParent && svgParent->isTextContent())
         return createRenderer<RenderSVGInline>(RenderObject::Type::SVGInline, *this, WTFMove(style));
 
-#if ENABLE(LAYER_BASED_SVG_ENGINE)
     if (document().settings().layerBasedSVGEngineEnabled())
         return createRenderer<RenderSVGTransformableContainer>(*this, WTFMove(style));
-#endif
+
     return createRenderer<LegacyRenderSVGTransformableContainer>(*this, WTFMove(style));
 }
 
@@ -141,10 +142,8 @@ void SVGAElement::defaultEventHandler(Event& event)
                 target = blankTargetFrameName();
             event.setDefaultHandled();
 
-            RefPtr frame = document().frame();
-            if (!frame)
-                return;
-            frame->loader().changeLocation(document().completeURL(url), target, &event, ReferrerPolicy::EmptyString, document().shouldOpenExternalURLsPolicyToPropagate());
+            if (RefPtr frame = document().frame())
+                frame->checkedLoader()->changeLocation(protectedDocument()->completeURL(url), target, &event, ReferrerPolicy::EmptyString, document().shouldOpenExternalURLsPolicyToPropagate());
             return;
         }
     }

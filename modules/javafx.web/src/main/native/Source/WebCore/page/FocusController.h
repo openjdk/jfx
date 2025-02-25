@@ -49,8 +49,9 @@ class TreeScope;
 
 struct FocusCandidate;
 
-class FocusController : public CanMakeCheckedPtr {
+class FocusController final : public CanMakeCheckedPtr<FocusController> {
     WTF_MAKE_FAST_ALLOCATED;
+    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(FocusController);
 public:
     explicit FocusController(Page&, OptionSet<ActivityState>);
 
@@ -58,7 +59,7 @@ public:
     WEBCORE_EXPORT void setFocusedFrame(Frame*, BroadcastFocusedFrame = BroadcastFocusedFrame::Yes);
     Frame* focusedFrame() const { return m_focusedFrame.get(); }
     LocalFrame* focusedLocalFrame() const { return dynamicDowncast<LocalFrame>(m_focusedFrame.get()); }
-    WEBCORE_EXPORT LocalFrame& focusedOrMainFrame() const;
+    WEBCORE_EXPORT LocalFrame* focusedOrMainFrame() const;
 
     WEBCORE_EXPORT bool setInitialFocus(FocusDirection, KeyboardEvent*);
     bool advanceFocus(FocusDirection, KeyboardEvent*, bool initialFocus = false);
@@ -120,8 +121,9 @@ private:
     void findFocusCandidateInContainer(Node& container, const LayoutRect& startingRect, FocusDirection, KeyboardEvent*, FocusCandidate& closest);
 
     void focusRepaintTimerFired();
+    Ref<Page> protectedPage() const;
 
-    Page& m_page;
+    WeakRef<Page> m_page;
     WeakPtr<Frame> m_focusedFrame;
     bool m_isChangingFocusedFrame;
     OptionSet<ActivityState> m_activityState;

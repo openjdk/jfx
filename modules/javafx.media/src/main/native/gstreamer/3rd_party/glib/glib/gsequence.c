@@ -1732,6 +1732,7 @@ node_get_by_pos (GSequenceNode *node,
         {
           node = node->left;
         }
+      g_assert (node != NULL);
     }
 
   return node;

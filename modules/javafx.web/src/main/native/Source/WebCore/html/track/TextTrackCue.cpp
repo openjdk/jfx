@@ -54,16 +54,16 @@
 #include "VTTRegionList.h"
 #include <limits.h>
 #include <wtf/HexNumber.h>
-#include <wtf/IsoMallocInlines.h>
 #include <wtf/MathExtras.h>
 #include <wtf/NeverDestroyed.h>
 #include <wtf/OptionSet.h>
-#include <wtf/text/StringConcatenateNumbers.h>
+#include <wtf/TZoneMallocInlines.h>
+#include <wtf/text/MakeString.h>
 
 namespace WebCore {
 
-WTF_MAKE_ISO_ALLOCATED_IMPL(TextTrackCue);
-WTF_MAKE_ISO_ALLOCATED_IMPL(TextTrackCueBox);
+WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(TextTrackCue);
+WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(TextTrackCueBox);
 
 Ref<TextTrackCueBox> TextTrackCueBox::create(Document& document, TextTrackCue& cue)
 {
@@ -105,7 +105,7 @@ static inline bool isLegalNode(Node& node)
 
 static Exception invalidNodeException(Node& node)
 {
-    return Exception { ExceptionCode::InvalidNodeTypeError, makeString("Invalid node type: ", node.nodeName()) };
+    return Exception { ExceptionCode::InvalidNodeTypeError, makeString("Invalid node type: "_s, node.nodeName()) };
 }
 
 static ExceptionOr<void> checkForInvalidNodeTypes(Node& root)
@@ -268,7 +268,12 @@ void TextTrackCue::didChange(bool affectOrder)
 
 TextTrack* TextTrackCue::track() const
 {
-    return m_track;
+    return m_track.get();
+}
+
+RefPtr<TextTrack> TextTrackCue::protectedTrack() const
+{
+    return m_track.get();
 }
 
 void TextTrackCue::setTrack(TextTrack* track)
@@ -515,7 +520,7 @@ void TextTrackCue::rebuildDisplayTree()
         if (auto page = document->page()) {
             auto style = HTMLStyleElement::create(HTMLNames::styleTag, *document, false);
             style->setTextContent(makeString(page->captionUserPreferencesStyleSheet(),
-                " ::", UserAgentParts::cue(), "{font-size:", m_fontSize, m_fontSizeIsImportant ? "px !important}" : "px}"));
+                " ::"_s, UserAgentParts::cue(), "{font-size:"_s, m_fontSize, m_fontSizeIsImportant ? "px !important}"_s : "px}"_s));
             m_displayTree->appendChild(style);
         }
     }
@@ -531,11 +536,6 @@ void TextTrackCue::rebuildDisplayTree()
     }
 
     m_displayTreeNeedsUpdate = false;
-}
-
-const char* TextTrackCue::activeDOMObjectName() const
-{
-    return "TextTrackCue";
 }
 
 } // namespace WebCore

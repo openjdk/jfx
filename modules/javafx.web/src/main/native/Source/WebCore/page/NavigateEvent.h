@@ -25,10 +25,12 @@
 
 #pragma once
 
+#include "AbortController.h"
 #include "AbortSignal.h"
 #include "DOMFormData.h"
 #include "Event.h"
 #include "EventInit.h"
+#include "JSValueInWrappedObject.h"
 #include "LocalDOMWindowProperty.h"
 #include "NavigationDestination.h"
 #include "NavigationInterceptHandler.h"
@@ -36,8 +38,15 @@
 
 namespace WebCore {
 
+enum class InterceptionState : uint8_t {
+    Intercepted,
+    Committed,
+    Scrolled,
+    Finished,
+};
+
 class NavigateEvent final : public Event {
-    WTF_MAKE_ISO_ALLOCATED(NavigateEvent);
+    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(NavigateEvent);
 public:
     struct Init : EventInit {
         NavigationNavigationType navigationType { NavigationNavigationType::Push };
@@ -64,41 +73,56 @@ public:
 
     struct NavigationInterceptOptions {
         RefPtr<NavigationInterceptHandler> handler;
-        NavigationFocusReset focusReset;
-        NavigationScrollBehavior scroll;
+        std::optional<NavigationFocusReset> focusReset;
+        std::optional<NavigationScrollBehavior> scroll;
     };
 
     static Ref<NavigateEvent> create(const AtomString& type, const Init&);
+    static Ref<NavigateEvent> create(const AtomString& type, const Init&, AbortController*);
 
-    NavigationNavigationType navigationType() const { return m_navigationType; };
-    bool canIntercept() const { return m_canIntercept; };
-    bool userInitiated() const { return m_userInitiated; };
-    bool hashChange() const { return m_hashChange; };
-    bool hasUAVisualTransition() const { return m_hasUAVisualTransition; };
-    RefPtr<NavigationDestination> destination() { return m_destination; };
-    RefPtr<AbortSignal> signal() { return m_signal; };
-    RefPtr<DOMFormData> formData() { return m_formData; };
-    String downloadRequest() { return m_downloadRequest; };
-    JSC::JSValue info() { return m_info; };
+    NavigationNavigationType navigationType() const { return m_navigationType; }
+    bool canIntercept() const { return m_canIntercept; }
+    bool userInitiated() const { return m_userInitiated; }
+    bool hashChange() const { return m_hashChange; }
+    bool hasUAVisualTransition() const { return m_hasUAVisualTransition; }
+    NavigationDestination* destination() { return m_destination.get(); }
+    AbortSignal* signal() { return m_signal.get(); }
+    DOMFormData* formData() { return m_formData.get(); }
+    String downloadRequest() { return m_downloadRequest; }
+    JSC::JSValue info() { return m_info.getValue(); }
+    JSValueInWrappedObject& infoWrapper() { return m_info; }
 
-    void intercept(NavigationInterceptOptions&&);
-    void scroll();
+    ExceptionOr<void> intercept(Document&, NavigationInterceptOptions&&);
+    ExceptionOr<void> scroll(Document&);
+
+    bool wasIntercepted() const { return m_interceptionState.has_value(); }
+    void setCanIntercept(bool canIntercept) { m_canIntercept = canIntercept; }
+    void setInterceptionState(InterceptionState interceptionState) { m_interceptionState = interceptionState; }
+
+    void finish();
+
+    Vector<Ref<NavigationInterceptHandler>>& handlers() { return m_handlers; }
 
 private:
-    NavigateEvent(const AtomString& type, const Init&);
+    NavigateEvent(const AtomString& type, const Init&, AbortController*);
 
-    EventInterface eventInterface() const override;
+    ExceptionOr<void> sharedChecks(Document&);
 
     NavigationNavigationType m_navigationType;
     RefPtr<NavigationDestination> m_destination;
     RefPtr<AbortSignal> m_signal;
     RefPtr<DOMFormData> m_formData;
     String m_downloadRequest;
-    JSC::JSValue m_info;
+    Vector<Ref<NavigationInterceptHandler>> m_handlers;
+    JSValueInWrappedObject m_info;
     bool m_canIntercept { false };
     bool m_userInitiated { false };
     bool m_hashChange { false };
     bool m_hasUAVisualTransition { false };
+    std::optional<InterceptionState> m_interceptionState;
+    std::optional<NavigationFocusReset> m_focusReset;
+    std::optional<NavigationScrollBehavior> m_scrollBehavior;
+    RefPtr<AbortController> m_abortController;
 };
 
 } // namespace WebCore

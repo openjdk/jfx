@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -207,9 +207,23 @@ public class VetoableObservableListTest {
     }
 
     @Test
+    public void testAddAll_subList() {
+        list.addAll(list.subList(0, 2));
+        assertEquals(List.of("foo", "bar", "ham", "eggs", "foo", "bar"), list);
+        assertSingleCall(new String[] {"foo", "bar"}, new int[] {4, 4});
+    }
+
+    @Test
     public void testAddAll_indexed() {
         list.addAll(1, Arrays.asList("a", "b"));
         assertSingleCall(new String[] {"a", "b"}, new int[] {1,1});
+    }
+
+    @Test
+    public void testAddAll_indexed_subList() {
+        list.addAll(1, list.subList(0, 2));
+        assertEquals(List.of("foo", "foo", "bar", "bar", "ham", "eggs"), list);
+        assertSingleCall(new String[] {"foo", "bar"}, new int[] {1, 1});
     }
 
     @Test
@@ -234,12 +248,50 @@ public class VetoableObservableListTest {
     public void testRemoveAll() {
         list.removeAll(Arrays.asList("bar", "eggs", "foobar"));
         assertSingleCall(new String[0], new int[] {1,2,3,4});
+
+        list.setAll("a", "b", "c", "d", "e", "f");
+        calls.clear();
+        list.removeAll(List.of("b", "c", "d"));
+        assertEquals(List.of("a", "e", "f"), list);
+        assertSingleCall(new String[0], new int[] {1, 4});
+
+        list.setAll("a", "b", "c", "d", "e", "f");
+        calls.clear();
+        list.removeAll(List.of("a", "b", "d", "e", "f"));
+        assertEquals(List.of("c"), list);
+        assertSingleCall(new String[0], new int[] {0, 2, 3, 6});
+    }
+
+    @Test
+    public void testRemoveAll_subList() {
+        list.removeAll(list.subList(0, 1));
+        assertEquals(List.of("bar", "ham", "eggs"), list);
+        assertSingleCall(new String[0], new int[] {0, 1});
     }
 
     @Test
     public void testRetainAll() {
         list.retainAll(Arrays.asList("foo", "barfoo", "ham"));
         assertSingleCall(new String[0], new int[] {1,2,3,4});
+
+        list.setAll("a", "b", "c", "d", "e", "f");
+        calls.clear();
+        list.retainAll(List.of("a", "f"));
+        assertEquals(List.of("a", "f"), list);
+        assertSingleCall(new String[0], new int[] {1, 5});
+
+        list.setAll("a", "b", "c", "d", "e", "f");
+        calls.clear();
+        list.retainAll(List.of("c"));
+        assertEquals(List.of("c"), list);
+        assertSingleCall(new String[0], new int[] {0, 2, 3, 6});
+    }
+
+    @Test
+    public void testRetainAll_subList() {
+        list.retainAll(list.subList(0, 2));
+        assertEquals(List.of("foo", "bar"), list);
+        assertSingleCall(new String[0], new int[] {2, 4});
     }
 
     @Test
@@ -252,6 +304,13 @@ public class VetoableObservableListTest {
     public void testSetAll() {
         list.setAll("a", "b");
         assertSingleCall(new String[] {"a", "b"}, new int[] {0, 4});
+    }
+
+    @Test
+    public void testSetAll_subList() {
+        list.setAll(list.subList(0, 2));
+        assertEquals(List.of("foo", "bar"), list);
+        assertSingleCall(new String[] {"foo", "bar"}, new int[] {0, 4});
     }
 
     @Test
@@ -289,6 +348,22 @@ public class VetoableObservableListTest {
     }
 
     @Test
+    public void testSubList_addAll_subList() {
+        var subList = list.subList(0, 3);
+        subList.addAll(subList.subList(0, 2));
+        assertEquals(List.of("foo", "bar", "ham", "foo", "bar"), subList);
+        assertSingleCall(new String[] {"foo", "bar"}, new int[] {3, 3});
+    }
+
+    @Test
+    public void testSubList_addAll_indexed_subList() {
+        var subList = list.subList(0, 3);
+        subList.addAll(1, subList.subList(0, 2));
+        assertEquals(List.of("foo", "foo", "bar", "bar", "ham"), subList);
+        assertSingleCall(new String[] {"foo", "bar"}, new int[] {1, 1});
+    }
+
+    @Test
     public void testSubList_clear() {
         list.subList(0, 1).clear();
         assertSingleCall(new String[0], new int[] {0, 1});
@@ -307,9 +382,25 @@ public class VetoableObservableListTest {
     }
 
     @Test
+    public void testSubList_removeAll_subList() {
+        var subList = list.subList(0, 3);
+        subList.removeAll(subList.subList(0, 1));
+        assertEquals(List.of("bar", "ham"), subList);
+        assertSingleCall(new String[0], new int[] {0, 1});
+    }
+
+    @Test
     public void testSubList_retainAll() {
         list.subList(0, 1).retainAll(Arrays.asList("foo", "bar"));
         assert(calls.isEmpty());
+    }
+
+    @Test
+    public void testSubList_retainAll_subList() {
+        var subList = list.subList(0, 3);
+        subList.retainAll(subList.subList(0, 1));
+        assertEquals(List.of("foo"), subList);
+        assertSingleCall(new String[0], new int[] {1, 3});
     }
 
     @Test

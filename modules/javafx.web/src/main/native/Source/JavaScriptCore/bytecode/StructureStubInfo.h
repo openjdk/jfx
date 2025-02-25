@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008-2023 Apple Inc. All rights reserved.
+ * Copyright (C) 2008-2024 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -98,16 +98,6 @@ enum class AccessType : int8_t {
 static constexpr unsigned numberOfAccessTypes = 0 JSC_FOR_EACH_STRUCTURE_STUB_INFO_ACCESS_TYPE(JSC_INCREMENT_ACCESS_TYPE);
 #undef JSC_INCREMENT_ACCESS_TYPE
 
-enum class CacheType : int8_t {
-    Unset,
-    GetByIdSelf,
-    PutByIdReplace,
-    InByIdSelf,
-    Stub,
-    ArrayLength,
-    StringLength
-};
-
 struct UnlinkedStructureStubInfo;
 struct BaselineUnlinkedStructureStubInfo;
 
@@ -141,8 +131,9 @@ public:
     void deref();
     void aboutToDie();
 
-    void initializeFromUnlinkedStructureStubInfo(VM&, const BaselineUnlinkedStructureStubInfo&);
-    void initializeFromDFGUnlinkedStructureStubInfo(const DFG::UnlinkedStructureStubInfo&);
+    void initializeFromUnlinkedStructureStubInfo(VM&, CodeBlock*, const BaselineUnlinkedStructureStubInfo&);
+    void initializeFromDFGUnlinkedStructureStubInfo(CodeBlock*, const DFG::UnlinkedStructureStubInfo&);
+    void initializePredefinedRegisters();
 
     DECLARE_VISIT_AGGREGATE;
 
@@ -238,7 +229,9 @@ public:
         return m_inlineAccessBaseStructureID.get();
     }
 
-    CallLinkInfo* callLinkInfoAt(const ConcurrentJSLocker&, unsigned index);
+    CallLinkInfo* callLinkInfoAt(const ConcurrentJSLocker&, unsigned index, const AccessCase&);
+
+    bool useHandlerIC() const { return useDataIC && Options::useHandlerIC(); }
 
 private:
     ALWAYS_INLINE bool considerRepatchingCacheImpl(VM& vm, CodeBlock* codeBlock, Structure* structure, CacheableIdentifier impl)
@@ -300,9 +293,34 @@ private:
             // the base's structure. That seems unlikely for the canonical use of instanceof, where
             // the prototype is fixed.
             bool isNewlyAdded = false;
+            StructureID structureID = structure->id();
             {
                 Locker locker { m_bufferedStructuresLock };
-                isNewlyAdded = m_bufferedStructures.add({ structure, impl }).isNewEntry;
+                if (std::holds_alternative<std::monostate>(m_bufferedStructures)) {
+                    if (m_identifier)
+                        m_bufferedStructures = Vector<StructureID>();
+                    else
+                        m_bufferedStructures = Vector<std::tuple<StructureID, CacheableIdentifier>>();
+                }
+                WTF::switchOn(m_bufferedStructures,
+                    [&](std::monostate) { },
+                    [&](Vector<StructureID>& structures) {
+                        for (auto bufferedStructureID : structures) {
+                            if (bufferedStructureID == structureID)
+                                return;
+                        }
+                        structures.append(structureID);
+                        isNewlyAdded = true;
+                    },
+                    [&](Vector<std::tuple<StructureID, CacheableIdentifier>>& structures) {
+                        ASSERT(!m_identifier);
+                        for (auto& [bufferedStructureID, bufferedCacheableIdentifier] : structures) {
+                            if (bufferedStructureID == structureID && bufferedCacheableIdentifier == impl)
+                                return;
+                        }
+                        structures.append(std::tuple { structureID, impl });
+                        isNewlyAdded = true;
+                    });
             }
             if (isNewlyAdded)
                 vm.writeBarrier(codeBlock);
@@ -317,68 +335,37 @@ private:
     void clearBufferedStructures()
     {
         Locker locker { m_bufferedStructuresLock };
-        m_bufferedStructures.clear();
-    }
-
-    class BufferedStructure {
-    public:
-        static constexpr uintptr_t hashTableDeletedValue = 0x2;
-        BufferedStructure() = default;
-
-        BufferedStructure(Structure* structure, CacheableIdentifier byValId)
-            : m_structure(structure)
-            , m_byValId(byValId)
-        { }
-        BufferedStructure(WTF::HashTableDeletedValueType)
-            : m_structure(bitwise_cast<Structure*>(hashTableDeletedValue))
-        { }
-
-        bool isHashTableDeletedValue() const { return bitwise_cast<uintptr_t>(m_structure) == hashTableDeletedValue; }
-
-        unsigned hash() const
-        {
-            unsigned hash = PtrHash<Structure*>::hash(m_structure);
-            if (m_byValId)
-                hash += m_byValId.hash();
-            return hash;
-        }
-
-        friend bool operator==(const BufferedStructure&, const BufferedStructure&) = default;
-
-        struct Hash {
-            static unsigned hash(const BufferedStructure& key)
-            {
-                return key.hash();
+        WTF::switchOn(m_bufferedStructures,
+            [&](std::monostate) { },
+            [&](Vector<StructureID>& structures) {
+                structures.shrink(0);
+            },
+            [&](Vector<std::tuple<StructureID, CacheableIdentifier>>& structures) {
+                structures.shrink(0);
+            });
             }
 
-            static bool equal(const BufferedStructure& a, const BufferedStructure& b)
-            {
-                return a == b;
-            }
-
-            static constexpr bool safeToCompareToEmptyOrDeleted = false;
-        };
-        using KeyTraits = SimpleClassHashTraits<BufferedStructure>;
-        static_assert(KeyTraits::emptyValueIsZero, "Structure* and CacheableIdentifier are empty if they are zero-initialized");
-
-        Structure* structure() const { return m_structure; }
-        const CacheableIdentifier& byValId() const { return m_byValId; }
-
-    private:
-        Structure* m_structure { nullptr };
-        CacheableIdentifier m_byValId;
-    };
+    void setInlinedHandler(CodeBlock*, Ref<InlineCacheHandler>&&);
+    void clearInlinedHandler(CodeBlock*);
+    void initializeWithUnitHandler(CodeBlock*, Ref<InlineCacheHandler>&&);
+    void prependHandler(CodeBlock*, Ref<InlineCacheHandler>&&, bool isMegamorphic);
+    void rewireStubAsJumpInAccess(CodeBlock*, Ref<InlineCacheHandler>&&);
 
 public:
-    static ptrdiff_t offsetOfByIdSelfOffset() { return OBJECT_OFFSETOF(StructureStubInfo, byIdSelfOffset); }
-    static ptrdiff_t offsetOfInlineAccessBaseStructureID() { return OBJECT_OFFSETOF(StructureStubInfo, m_inlineAccessBaseStructureID); }
-    static ptrdiff_t offsetOfCodePtr() { return OBJECT_OFFSETOF(StructureStubInfo, m_codePtr); }
-    static ptrdiff_t offsetOfDoneLocation() { return OBJECT_OFFSETOF(StructureStubInfo, doneLocation); }
-    static ptrdiff_t offsetOfSlowPathStartLocation() { return OBJECT_OFFSETOF(StructureStubInfo, slowPathStartLocation); }
-    static ptrdiff_t offsetOfSlowOperation() { return OBJECT_OFFSETOF(StructureStubInfo, m_slowOperation); }
-    static ptrdiff_t offsetOfCountdown() { return OBJECT_OFFSETOF(StructureStubInfo, countdown); }
-    static ptrdiff_t offsetOfCallSiteIndex() { return OBJECT_OFFSETOF(StructureStubInfo, callSiteIndex); }
-    static ptrdiff_t offsetOfHandler() { return OBJECT_OFFSETOF(StructureStubInfo, m_handler); }
+    static constexpr ptrdiff_t offsetOfByIdSelfOffset() { return OBJECT_OFFSETOF(StructureStubInfo, byIdSelfOffset); }
+    static constexpr ptrdiff_t offsetOfInlineAccessBaseStructureID() { return OBJECT_OFFSETOF(StructureStubInfo, m_inlineAccessBaseStructureID); }
+    static constexpr ptrdiff_t offsetOfInlineHolder() { return OBJECT_OFFSETOF(StructureStubInfo, m_inlineHolder); }
+    static constexpr ptrdiff_t offsetOfDoneLocation() { return OBJECT_OFFSETOF(StructureStubInfo, doneLocation); }
+    static constexpr ptrdiff_t offsetOfSlowPathStartLocation() { return OBJECT_OFFSETOF(StructureStubInfo, slowPathStartLocation); }
+    static constexpr ptrdiff_t offsetOfSlowOperation() { return OBJECT_OFFSETOF(StructureStubInfo, m_slowOperation); }
+    static constexpr ptrdiff_t offsetOfCountdown() { return OBJECT_OFFSETOF(StructureStubInfo, countdown); }
+    static constexpr ptrdiff_t offsetOfCallSiteIndex() { return OBJECT_OFFSETOF(StructureStubInfo, callSiteIndex); }
+    static constexpr ptrdiff_t offsetOfHandler() { return OBJECT_OFFSETOF(StructureStubInfo, m_handler); }
+    static constexpr ptrdiff_t offsetOfGlobalObject() { return OBJECT_OFFSETOF(StructureStubInfo, m_globalObject); }
+
+    JSGlobalObject* globalObject() const { return m_globalObject; }
+
+    void resetStubAsJumpInAccess(CodeBlock*);
 
     GPRReg thisGPR() const { return m_extraGPR; }
     GPRReg prototypeGPR() const { return m_extraGPR; }
@@ -410,6 +397,7 @@ public:
     CodeOrigin codeOrigin { };
     PropertyOffset byIdSelfOffset;
     WriteBarrierStructureID m_inlineAccessBaseStructureID;
+    JSCell* m_inlineHolder { nullptr };
     CacheableIdentifier m_identifier;
     // This is either the start of the inline IC for *byId caches. or the location of patchable jump for 'instanceof' caches.
     // If useDataIC is true, then it is nullptr.
@@ -422,15 +410,16 @@ public:
         CodePtr<OperationPtrTag> m_slowOperation;
     };
 
-    CodePtr<JITStubRoutinePtrTag> m_codePtr;
+    JSGlobalObject* m_globalObject { nullptr };
     std::unique_ptr<PolymorphicAccess> m_stub;
-    RefPtr<InlineCacheHandler> m_handler;
 private:
+    RefPtr<InlineCacheHandler> m_inlinedHandler;
+    RefPtr<InlineCacheHandler> m_handler;
     // Represents those structures that already have buffered AccessCases in the PolymorphicAccess.
     // Note that it's always safe to clear this. If we clear it prematurely, then if we see the same
     // structure again during this buffering countdown, we will create an AccessCase object for it.
     // That's not so bad - we'll get rid of the redundant ones once we regenerate.
-    HashSet<BufferedStructure, BufferedStructure::Hash, BufferedStructure::KeyTraits> m_bufferedStructures WTF_GUARDED_BY_LOCK(m_bufferedStructuresLock);
+    std::variant<std::monostate, Vector<StructureID>, Vector<std::tuple<StructureID, CacheableIdentifier>>> m_bufferedStructures WTF_GUARDED_BY_LOCK(m_bufferedStructuresLock);
 public:
 
     ScalarRegisterSet usedRegisters;
@@ -456,6 +445,7 @@ public:
 private:
     CacheType m_cacheType { CacheType::Unset };
 public:
+    CacheType preconfiguredCacheType { CacheType::Unset };
     // We repatch only when this is zero. If not zero, we decrement.
     // Setting 1 for a totally clear stub, we'll patch it after the first execution.
     uint8_t countdown { 1 };
@@ -470,12 +460,10 @@ public:
     bool everConsidered : 1 { false };
     bool prototypeIsKnownObject : 1 { false }; // Only relevant for InstanceOf.
     bool sawNonCell : 1 { false };
-    bool hasConstantIdentifier : 1 { true };
     bool propertyIsString : 1 { false };
     bool propertyIsInt32 : 1 { false };
     bool propertyIsSymbol : 1 { false };
     bool canBeMegamorphic : 1 { false };
-    bool isEnumerator : 1 { false };
     bool useDataIC : 1 { false };
 };
 
@@ -543,16 +531,54 @@ inline auto appropriatePutByIdOptimizeFunction(AccessType type) -> decltype(&ope
     return nullptr;
 }
 
-struct UnlinkedStructureStubInfo {
+inline bool hasConstantIdentifier(AccessType accessType)
+{
+    switch (accessType) {
+    case AccessType::DeleteByValStrict:
+    case AccessType::DeleteByValSloppy:
+    case AccessType::GetByVal:
+    case AccessType::GetPrivateName:
+    case AccessType::InstanceOf:
+    case AccessType::InByVal:
+    case AccessType::HasPrivateName:
+    case AccessType::HasPrivateBrand:
+    case AccessType::GetByValWithThis:
+    case AccessType::PutByValStrict:
+    case AccessType::PutByValSloppy:
+    case AccessType::PutByValDirectStrict:
+    case AccessType::PutByValDirectSloppy:
+    case AccessType::DefinePrivateNameByVal:
+    case AccessType::SetPrivateNameByVal:
+    case AccessType::SetPrivateBrand:
+    case AccessType::CheckPrivateBrand:
+        return false;
+    case AccessType::DeleteByIdStrict:
+    case AccessType::DeleteByIdSloppy:
+    case AccessType::InById:
+    case AccessType::TryGetById:
+    case AccessType::GetByIdDirect:
+    case AccessType::GetById:
+    case AccessType::GetPrivateNameById:
+    case AccessType::GetByIdWithThis:
+    case AccessType::PutByIdStrict:
+    case AccessType::PutByIdSloppy:
+    case AccessType::PutByIdDirectStrict:
+    case AccessType::PutByIdDirectSloppy:
+    case AccessType::DefinePrivateNameById:
+    case AccessType::SetPrivateNameById:
+        return true;
+    }
+    return false;
+}
 
+struct UnlinkedStructureStubInfo {
     AccessType accessType;
-    ECMAMode ecmaMode { ECMAMode::sloppy() };
+    CacheType preconfiguredCacheType { CacheType::Unset };
     bool propertyIsInt32 : 1 { false };
     bool propertyIsString : 1 { false };
     bool propertyIsSymbol : 1 { false };
     bool prototypeIsKnownObject : 1 { false };
     bool canBeMegamorphic : 1 { false };
-    bool isEnumerator : 1 { false };
     CacheableIdentifier m_identifier; // This only comes from already marked one. Thus, we do not mark it via GC.
     CodeLocationLabel<JSInternalPtrTag> doneLocation;
     CodeLocationLabel<JITStubRoutinePtrTag> slowPathStartLocation;
@@ -562,166 +588,22 @@ struct BaselineUnlinkedStructureStubInfo : JSC::UnlinkedStructureStubInfo {
     BytecodeIndex bytecodeIndex;
 };
 
-class SharedJITStubSet {
-    WTF_MAKE_FAST_ALLOCATED(SharedJITStubSet);
-public:
-    SharedJITStubSet() = default;
+using StubInfoMap = HashMap<CodeOrigin, StructureStubInfo*, CodeOriginApproximateHash>;
 
-    struct Hash {
-        struct Key {
-            Key() = default;
-
-            Key(GPRReg baseGPR, GPRReg valueGPR, GPRReg extraGPR, GPRReg extra2GPR, GPRReg stubInfoGPR, GPRReg arrayProfileGPR, ScalarRegisterSet usedRegisters, PolymorphicAccessJITStubRoutine* wrapped)
-                : m_wrapped(wrapped)
-                , m_baseGPR(baseGPR)
-                , m_valueGPR(valueGPR)
-                , m_extraGPR(extraGPR)
-                , m_extra2GPR(extra2GPR)
-                , m_stubInfoGPR(stubInfoGPR)
-                , m_arrayProfileGPR(arrayProfileGPR)
-                , m_usedRegisters(usedRegisters)
-            { }
-
-            Key(WTF::HashTableDeletedValueType)
-                : m_wrapped(bitwise_cast<PolymorphicAccessJITStubRoutine*>(static_cast<uintptr_t>(1)))
-            { }
-
-            bool isHashTableDeletedValue() const { return m_wrapped == bitwise_cast<PolymorphicAccessJITStubRoutine*>(static_cast<uintptr_t>(1)); }
-
-            friend bool operator==(const Key&, const Key&) = default;
-
-            PolymorphicAccessJITStubRoutine* m_wrapped { nullptr };
-            GPRReg m_baseGPR;
-            GPRReg m_valueGPR;
-            GPRReg m_extraGPR;
-            GPRReg m_extra2GPR;
-            GPRReg m_stubInfoGPR;
-            GPRReg m_arrayProfileGPR;
-            ScalarRegisterSet m_usedRegisters;
-        };
-
-        using KeyTraits = SimpleClassHashTraits<Key>;
-
-        static unsigned hash(const Key& p)
-        {
-            if (!p.m_wrapped)
-                return 1;
-            return p.m_wrapped->hash();
-        }
-
-        static bool equal(const Key& a, const Key& b)
-        {
-            return a == b;
-        }
-
-        static constexpr bool safeToCompareToEmptyOrDeleted = false;
-    };
-
-    struct Searcher {
-        struct Translator {
-            static unsigned hash(const Searcher& searcher)
-            {
-                return PolymorphicAccessJITStubRoutine::computeHash(searcher.m_cases, searcher.m_weakStructures);
-            }
-
-            static bool equal(const Hash::Key a, const Searcher& b)
-            {
-                if (a.m_baseGPR == b.m_baseGPR
-                    && a.m_valueGPR == b.m_valueGPR
-                    && a.m_extraGPR == b.m_extraGPR
-                    && a.m_extra2GPR == b.m_extra2GPR
-                    && a.m_stubInfoGPR == b.m_stubInfoGPR
-                    && a.m_arrayProfileGPR == b.m_arrayProfileGPR
-                    && a.m_usedRegisters == b.m_usedRegisters) {
-                    // FIXME: The ordering of cases does not matter for sharing capabilities.
-                    // We can potentially increase success rate by making this comparison / hashing non ordering sensitive.
-                    const auto& aCases = a.m_wrapped->cases();
-                    const auto& bCases = b.m_cases;
-                    if (aCases.size() != bCases.size())
-                        return false;
-                    for (unsigned index = 0; index < bCases.size(); ++index) {
-                        if (!AccessCase::canBeShared(*aCases[index], *bCases[index]))
-                            return false;
-                    }
-                    const auto& aWeak = a.m_wrapped->weakStructures();
-                    const auto& bWeak = b.m_weakStructures;
-                    if (aWeak.size() != bWeak.size())
-                        return false;
-                    for (unsigned i = 0, size = aWeak.size(); i < size; ++i) {
-                        if (aWeak[i] != bWeak[i])
-                            return false;
-                    }
-                    return true;
-                }
-                return false;
-            }
-        };
-
-        GPRReg m_baseGPR;
-        GPRReg m_valueGPR;
-        GPRReg m_extraGPR;
-        GPRReg m_extra2GPR;
-        GPRReg m_stubInfoGPR;
-        GPRReg m_arrayProfileGPR;
-        ScalarRegisterSet m_usedRegisters;
-        const FixedVector<RefPtr<AccessCase>>& m_cases;
-        const FixedVector<StructureID>& m_weakStructures;
-    };
-
-    struct PointerTranslator {
-        static unsigned hash(const PolymorphicAccessJITStubRoutine* stub)
-        {
-            return stub->hash();
-        }
-
-        static bool equal(const Hash::Key& key, const PolymorphicAccessJITStubRoutine* stub)
-        {
-            return key.m_wrapped == stub;
-        }
-    };
-
-    void add(Hash::Key&& key)
-    {
-        m_stubs.add(WTFMove(key));
-    }
-
-    void remove(PolymorphicAccessJITStubRoutine* stub)
-    {
-        auto iter = m_stubs.find<PointerTranslator>(stub);
-        if (iter != m_stubs.end())
-            m_stubs.remove(iter);
-    }
-
-    PolymorphicAccessJITStubRoutine* find(const Searcher& searcher)
-    {
-        auto entry = m_stubs.find<SharedJITStubSet::Searcher::Translator>(searcher);
-        if (entry != m_stubs.end())
-            return entry->m_wrapped;
-        return nullptr;
-    }
-
-    RefPtr<PolymorphicAccessJITStubRoutine> getMegamorphic(AccessType) const;
-    void setMegamorphic(AccessType, Ref<PolymorphicAccessJITStubRoutine>);
-
-    RefPtr<InlineCacheHandler> getSlowPathHandler(AccessType) const;
-    void setSlowPathHandler(AccessType, Ref<InlineCacheHandler>);
-
-private:
-    HashSet<Hash::Key, Hash, Hash::KeyTraits> m_stubs;
-
-    RefPtr<PolymorphicAccessJITStubRoutine> m_getByValMegamorphic;
-    RefPtr<PolymorphicAccessJITStubRoutine> m_getByValWithThisMegamorphic;
-    RefPtr<PolymorphicAccessJITStubRoutine> m_putByValMegamorphic;
-    std::array<RefPtr<InlineCacheHandler>, numberOfAccessTypes> m_fallbackHandlers { };
-    std::array<RefPtr<InlineCacheHandler>, numberOfAccessTypes> m_slowPathHandlers { };
-};
-
-#else
-
-class StructureStubInfo;
-
-#endif // ENABLE(JIT)
-
-typedef HashMap<CodeOrigin, StructureStubInfo*, CodeOriginApproximateHash> StubInfoMap;
+#endif
 
 } // namespace JSC
+
+namespace WTF {
+
+#if ENABLE(JIT)
+
+template<typename T> struct DefaultHash;
+template<> struct DefaultHash<JSC::AccessType> : public IntHash<JSC::AccessType> { };
+
+template<typename T> struct HashTraits;
+template<> struct HashTraits<JSC::AccessType> : public StrongEnumHashTraits<JSC::AccessType> { };
+
+#endif
+
+} // namespace WTF
