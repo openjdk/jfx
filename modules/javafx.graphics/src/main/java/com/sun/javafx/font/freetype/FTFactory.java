@@ -26,7 +26,6 @@
 package com.sun.javafx.font.freetype;
 
 import java.util.ArrayList;
-
 import com.sun.javafx.PlatformUtil;
 import com.sun.javafx.font.FontConfigManager;
 import com.sun.javafx.font.FontFallbackInfo;
@@ -36,6 +35,7 @@ import com.sun.javafx.font.PGFont;
 import com.sun.javafx.font.PrismFontFactory;
 import com.sun.javafx.font.PrismFontFile;
 import com.sun.javafx.text.GlyphLayout;
+import com.sun.javafx.text.GlyphLayoutManager;
 import com.sun.javafx.text.TextRun;
 
 public class FTFactory extends PrismFontFactory {
@@ -91,7 +91,7 @@ public class FTFactory extends PrismFontFactory {
         if (OSFreetype.isHarfbuzzEnabled()) {
             return new HBGlyphLayout();
         }
-        return new StubGlyphLayout();
+        return new FTStubGlyphLayout();
     }
 
     @Override
@@ -119,13 +119,18 @@ public class FTFactory extends PrismFontFactory {
         return true;
     }
 
-    private static class StubGlyphLayout extends GlyphLayout {
+    private static class FTStubGlyphLayout extends GlyphLayout {
 
-        public StubGlyphLayout() {
+        public FTStubGlyphLayout() {
         }
 
         @Override
         public void layout(TextRun run, PGFont font, FontStrike strike, char[] text) {
+        }
+
+        @Override
+        public void dispose() {
+            GlyphLayoutManager.dispose(this);
         }
     }
 
