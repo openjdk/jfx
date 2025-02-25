@@ -321,6 +321,7 @@ public:
     WEBCORE_EXPORT static bool postTaskTo(ScriptExecutionContextIdentifier, Task&&);
     WEBCORE_EXPORT static bool postTaskForModeToWorkerOrWorklet(ScriptExecutionContextIdentifier, Task&&, const String&);
     WEBCORE_EXPORT static bool ensureOnContextThread(ScriptExecutionContextIdentifier, Task&&);
+    WEBCORE_EXPORT static bool ensureOnContextThreadForCrossThreadTask(ScriptExecutionContextIdentifier, CrossThreadTask&&);
 
     ScriptExecutionContextIdentifier identifier() const { return m_identifier; }
 

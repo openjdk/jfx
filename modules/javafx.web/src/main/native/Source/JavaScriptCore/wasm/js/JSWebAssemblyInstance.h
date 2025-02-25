@@ -131,8 +131,8 @@ public:
     const Wasm::Element* elementAt(unsigned) const;
 
     void initElementSegment(uint32_t tableIndex, const Wasm::Element& segment, uint32_t dstOffset, uint32_t srcOffset, uint32_t length);
-    bool copyDataSegment(uint32_t segmentIndex, uint32_t offset, uint32_t lengthInBytes, uint8_t* values);
-    void copyElementSegment(const Wasm::Element& segment, uint32_t srcOffset, uint32_t length, uint64_t* values);
+    bool copyDataSegment(JSWebAssemblyArray*, uint32_t segmentIndex, uint32_t offset, uint32_t lengthInBytes, uint8_t* values);
+    void copyElementSegment(JSWebAssemblyArray*, const Wasm::Element& segment, uint32_t srcOffset, uint32_t length, uint64_t* values);
 
     bool isImportFunction(uint32_t functionIndex) const
     {
