@@ -252,10 +252,10 @@ class WinSystemClipboard extends SystemClipboard {
             if (TEXT_TYPE.equals(mime) || URI_TYPE.equals(mime)) {
                 try {
                     // JDK-8118474 - internal Windows data null terminated
-                    // JDK-8281384 - buffer might be larger than data and null terminator not at the end
+                    // buffer might be larger than data and null terminator not at the end
                     int nullTerm = data.length - 2;
-                    for (int i = 0; i < data.length; i += 2) {
-                        if (data[i] == 0) {
+                    for (int i = 0; i < data.length - 1; i += 2) {
+                        if (data[i] == 0 && data[i + 1] == 0) {
                             nullTerm = i;
                             break;
                         }
