@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014, 2023, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2014, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -292,6 +292,7 @@ public class Dialog<R> implements EventTarget {
      * this brings up a non-blocking dialog). Users of this API must either
      * poll the {@link #resultProperty() result property}, or else add a listener
      * to the result property to be informed of when it is set.
+     *
      * @throws IllegalStateException if this method is called on a thread
      *     other than the JavaFX Application Thread.
      */
@@ -351,8 +352,12 @@ public class Dialog<R> implements EventTarget {
     /**
      * Closes this {@code Dialog}.
      * This call is equivalent to {@link #hide}.
+     *
+     * @throws IllegalStateException if this method is called on a thread
+     * other than the JavaFX Application Thread.
      */
     public final void close() {
+        Toolkit.getToolkit().checkFxUserThread();
         if (isClosing) return;
         isClosing = true;
 
