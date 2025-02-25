@@ -1774,11 +1774,6 @@ void HTMLMediaElement::loadResource(const URL& initialURL, const ContentType& in
         return;
     }
 
-    if (!m_player) {
-        ASSERT_NOT_REACHED("It should not be possible to enter loadResource without a valid m_player object");
-        mediaLoadingFailed(MediaPlayer::NetworkState::FormatError);
-        return;
-    }
     URL url = initialURL;
 #if PLATFORM(COCOA)
     if (url.protocolIsFile() && !frame->loader().willLoadMediaElementURL(url, *this)) {
@@ -2772,7 +2767,9 @@ void HTMLMediaElement::mediaLoadingFailedFatally(MediaPlayer::NetworkState error
     // https://html.spec.whatwg.org/#loading-the-media-resource:dom-media-have_nothing-2
     // 17 March 2021
 
-    const String playerErrMsg = m_player ? m_player->lastErrorMessage() : ""_s;
+    // 1 - The user agent should cancel the fetching process.
+    stopPeriodicTimers();
+    m_loadState = WaitingForSource;
 
     const auto getErrorMessage = [&] (String&& defaultMessage) {
         String message = WTFMove(defaultMessage);
@@ -2786,10 +2783,8 @@ void HTMLMediaElement::mediaLoadingFailedFatally(MediaPlayer::NetworkState error
         return makeString(message, ": "_s, lastErrorMessage);
     };
 
-    ERROR_LOG(LOGIDENTIFIER, "error = ", static_cast<int>(error));
 
     // 1 - The user agent should cancel the fetching process.
-    clearMediaPlayer();
 
     // 2 - Set the error attribute to a new MediaError object whose code attribute is
     // set to MEDIA_ERR_NETWORK/MEDIA_ERR_DECODE.
@@ -2799,6 +2794,9 @@ void HTMLMediaElement::mediaLoadingFailedFatally(MediaPlayer::NetworkState error
         m_error = MediaError::create(MediaError::MEDIA_ERR_DECODE, getErrorMessage("Media failed to decode"_s));
     else
         ASSERT_NOT_REACHED();
+#if ENABLE(MEDIA_SOURCE)
+    detachMediaSource();
+#endif
 
     // 3 - Set the element's networkState attribute to the NETWORK_IDLE value.
     m_networkState = NETWORK_IDLE;
