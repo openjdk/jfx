@@ -207,7 +207,7 @@ private:
 
     bool shouldBypassMainWorldContentSecurityPolicy() const final { return m_shouldBypassMainWorldContentSecurityPolicy; }
 
-    std::optional<Vector<uint8_t>> wrapCryptoKey(const Vector<uint8_t>& key); //revisit
+    std::optional<Vector<uint8_t>> wrapCryptoKey(const Vector<uint8_t>& key);
     std::optional<Vector<uint8_t>> unwrapCryptoKey(const Vector<uint8_t>& wrappedKey);
 
     // ReportingClient.
