@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -31,15 +31,12 @@ import java.util.BitSet;
 import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
-
-import com.sun.javafx.scene.control.skin.resources.ControlResources;
 import javafx.animation.Animation;
 import javafx.animation.FadeTransition;
 import javafx.animation.Interpolator;
 import javafx.animation.KeyFrame;
 import javafx.animation.KeyValue;
 import javafx.animation.Timeline;
-import javafx.application.Platform;
 import javafx.beans.binding.StringBinding;
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.DoubleProperty;
@@ -54,6 +51,13 @@ import javafx.beans.property.StringPropertyBase;
 import javafx.collections.FXCollections;
 import javafx.collections.ListChangeListener;
 import javafx.collections.ObservableList;
+import javafx.css.CssMetaData;
+import javafx.css.Styleable;
+import javafx.css.StyleableBooleanProperty;
+import javafx.css.StyleableDoubleProperty;
+import javafx.css.StyleableProperty;
+import javafx.css.converter.BooleanConverter;
+import javafx.css.converter.SizeConverter;
 import javafx.event.ActionEvent;
 import javafx.event.EventHandler;
 import javafx.geometry.NodeOrientation;
@@ -71,20 +75,10 @@ import javafx.scene.shape.Path;
 import javafx.scene.text.Text;
 import javafx.scene.transform.Scale;
 import javafx.util.Duration;
-
 import com.sun.javafx.charts.Legend;
 import com.sun.javafx.charts.Legend.LegendItem;
 import com.sun.javafx.collections.NonIterableChange;
-
-import javafx.css.StyleableBooleanProperty;
-import javafx.css.StyleableDoubleProperty;
-import javafx.css.CssMetaData;
-
-import javafx.css.converter.BooleanConverter;
-import javafx.css.converter.SizeConverter;
-
-import javafx.css.Styleable;
-import javafx.css.StyleableProperty;
+import com.sun.javafx.scene.control.skin.resources.ControlResources;
 
 /**
  * Displays a PieChart. The chart content is populated by pie slices based on
@@ -416,6 +410,7 @@ public class PieChart extends Chart {
     }
 
     private void dataItemAdded(final Data item, int index) {
+        item.textNode.setFocusTraversable(isAccessibilityActive());
         // create shape
         Node shape = createArcRegion(item);
         final Text text = createPieLabel(item);
@@ -999,13 +994,12 @@ public class PieChart extends Chart {
          * @param name  name for Pie
          * @param value pie value
          */
-        public Data(java.lang.String name, double value) {
+        public Data(String name, double value) {
             setName(name);
             setPieValue(value);
             textNode.getStyleClass().addAll("text", "chart-pie-label");
             textNode.setAccessibleRole(AccessibleRole.TEXT);
             textNode.setAccessibleRoleDescription("slice");
-            textNode.focusTraversableProperty().bind(Platform.accessibilityActiveProperty());
             textNode.accessibleTextProperty().bind( new StringBinding() {
                 {bind(nameProperty(), currentPieValueProperty());}
                 @Override protected String computeValue() {
@@ -1128,6 +1122,12 @@ public class PieChart extends Chart {
         return getClassCssMetaData();
     }
 
+    @Override
+    void updateSymbolFocusable(boolean on) {
+        for (Data d : getData()) {
+            d.textNode.setFocusTraversable(on);
+        }
+    }
 }
 
 
