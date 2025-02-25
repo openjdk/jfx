@@ -40,6 +40,7 @@ import java.util.function.Supplier;
 import javafx.application.Platform;
 import javafx.beans.property.SimpleObjectProperty;
 import javafx.collections.ObservableList;
+import javafx.embed.swing.SwingNode;
 import javafx.geometry.HPos;
 import javafx.geometry.Insets;
 import javafx.geometry.Orientation;
@@ -199,9 +200,7 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Disabled;
-import org.junit.jupiter.api.MethodOrderer;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.TestMethodOrder;
 import test.robot.testharness.RobotTestBase;
 
 /**
@@ -221,7 +220,6 @@ import test.robot.testharness.RobotTestBase;
  *
  * Also, the visible node gets accessed periodically in the FX application thread just to shake things up.
  */
-@TestMethodOrder(MethodOrderer.MethodName.class)
 public class NodeInitializationStressTest extends RobotTestBase {
     /* debugging aid: set this flag to true and comment out assumeFalse(SKIP_TEST) to run specific test(s). */
     private static final boolean SKIP_TEST = false;
@@ -325,7 +323,7 @@ public class NodeInitializationStressTest extends RobotTestBase {
             Node n = createNode();
             c.setCenter(n);
             BorderPane.setAlignment(n, nextEnum(Pos.class));
-            accessNode(c);
+            accessRegion(c);
         });
     }
 
@@ -734,7 +732,6 @@ public class NodeInitializationStressTest extends RobotTestBase {
             accessNode(c);
             c.setFitHeight(nextDouble(200));
             c.setFitWidth(nextDouble(200));
-            //c.setMediaPlayer(new MediaPlayer(new Media("no-data-url-support")));
             c.setPreserveRatio(nextBoolean());
             c.setSmooth(nextBoolean());
             c.setViewport(new Rectangle2D(nextDouble(100), nextDouble(100), nextDouble(100), nextDouble(100)));
@@ -1121,14 +1118,14 @@ public class NodeInitializationStressTest extends RobotTestBase {
         });
     }
 
-    //@Test disabled because it times out
+    @Test
     public void swingNode() {
-        //assumeFalse(SKIP_TEST);
-//        test(() -> {
-//            return new SwingNode();
-//        }, (c) -> {
-//            accessNode(c);
-//        });
+        assumeFalse(SKIP_TEST);
+        test(() -> {
+            return new SwingNode();
+        }, (c) -> {
+            accessNode(c);
+        });
     }
 
     @Test
@@ -1385,6 +1382,7 @@ public class NodeInitializationStressTest extends RobotTestBase {
     }
 
     private static void accessPane(Pane p, Consumer<Node> onChild) {
+        accessRegion(p);
         ObservableList<Node> children = p.getChildren();
         children.setAll(createNodes());
         children.setAll(createNodes());
@@ -1420,10 +1418,11 @@ public class NodeInitializationStressTest extends RobotTestBase {
         c.setCullFace(nextEnum(CullFace.class));
         c.setDrawMode(nextEnum(DrawMode.class));
         PhongMaterial m = new PhongMaterial();
-        //m.setSelfIlluminationMap(Image); // what is expected?
+        m.setSelfIlluminationMap(nextImage());
         m.setSpecularColor(nextColor());
-        //m.setSpecularMap(Image); // what is expected?
-        m.setSpecularPower(nextDouble(100)); // what is the acceptable range?
+        m.setSpecularMap(nextImage());
+        // there is technically no upper limit, but 1.0 - 200.0 is a good range
+        m.setSpecularPower(1.0 + nextDouble(199));
         c.setMaterial(m);
     }
 
@@ -1668,8 +1667,8 @@ public class NodeInitializationStressTest extends RobotTestBase {
     }
 
     private static PathElement createPathElement() {
-            switch (nextInt(7)) {
-            case 0:
+        switch (nextInt(7)) {
+        case 0:
             {
                 double radiusX = nextDouble(100);
                 double radiusY = nextDouble(100);
@@ -1680,7 +1679,7 @@ public class NodeInitializationStressTest extends RobotTestBase {
                 boolean sweepFlag = nextBoolean();
                 return new ArcTo(radiusX, radiusY, xAxisRotation, x, y, largeArcFlag, sweepFlag);
             }
-            case 1:
+        case 1:
             {
                 double controlX1 = nextDouble(100);
                 double controlY1 = nextDouble(100);
@@ -1690,13 +1689,13 @@ public class NodeInitializationStressTest extends RobotTestBase {
                 double y = nextDouble(100);
                 return new CubicCurveTo(controlX1, controlY1, controlX2, controlY2, x, y);
             }
-            case 2:
-                return new HLineTo(nextDouble(100));
-            case 3:
-                return new LineTo(nextDouble(100), nextDouble(100));
-            case 4:
-                return new MoveTo(nextDouble(100), nextDouble(100));
-            case 5:
+        case 2:
+            return new HLineTo(nextDouble(100));
+        case 3:
+            return new LineTo(nextDouble(100), nextDouble(100));
+        case 4:
+            return new MoveTo(nextDouble(100), nextDouble(100));
+        case 5:
             {
                 double controlX = nextDouble(100);
                 double controlY = nextDouble(100);
@@ -1704,8 +1703,8 @@ public class NodeInitializationStressTest extends RobotTestBase {
                 double y = nextDouble(100);
                 return new QuadCurveTo(controlX, controlY, x, y);
             }
-            default:
-                return new VLineTo(nextDouble(100));
+        default:
+            return new VLineTo(nextDouble(100));
         }
     }
 
@@ -1752,7 +1751,7 @@ public class NodeInitializationStressTest extends RobotTestBase {
     }
 
     private static String createSvgPath() {
-        switch(nextInt(4)) {
+        switch (nextInt(4)) {
         case 0:
             // Arc
             return "M 5 310 L 100 210 A 25 45 0 0 1 162 164 L 175 155 A 35 45 -40 0 1 210 110 L 310 10";
