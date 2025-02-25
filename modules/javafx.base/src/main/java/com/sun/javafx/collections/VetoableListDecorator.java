@@ -25,6 +25,7 @@
 
 package com.sun.javafx.collections;
 
+import com.sun.javafx.UnmodifiableArrayList;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -35,7 +36,6 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.ListIterator;
 import java.util.Objects;
-
 import javafx.beans.InvalidationListener;
 import javafx.collections.ListChangeListener;
 import javafx.collections.ObservableList;
@@ -105,14 +105,7 @@ public abstract class VetoableListDecorator<E> implements ObservableList<E>, Sor
     public final void doSort(Comparator<? super E> comparator) {
         var sortedList = new ArrayList<>(list);
         sortedList.sort(comparator);
-        onProposedChange(Collections.unmodifiableList(sortedList), 0, size());
-        try {
-            modCount++;
-            list.setAll(sortedList);
-        } catch(Exception e) {
-            modCount--;
-            throw e;
-        }
+        setAllImpl(Collections.unmodifiableList(sortedList));
     }
 
     @Override
@@ -122,16 +115,21 @@ public abstract class VetoableListDecorator<E> implements ObservableList<E>, Sor
 
     @Override
     public boolean setAll(E... elements) {
-        return setAll(Arrays.asList(elements));
+        return setAllImpl(new UnmodifiableArrayList<>(elements, elements.length));
     }
 
     @Override
     public boolean setAll(Collection<? extends E> col) {
-        Objects.requireNonNull(col);
-        onProposedChange(Collections.unmodifiableList(new ArrayList<>(col)), 0, size());
+        List<E> list = col instanceof List<?> ? (List<E>)col : new ArrayList<>(col);
+        return setAllImpl(Collections.unmodifiableList(list));
+    }
+
+    private boolean setAllImpl(List<E> unmodifiableList) {
+        onProposedChange(unmodifiableList, 0, size());
+
         try {
             modCount++;
-            return list.setAll(col);
+            return list.setAll(unmodifiableList);
         } catch(Exception e) {
             modCount--;
             throw e;
