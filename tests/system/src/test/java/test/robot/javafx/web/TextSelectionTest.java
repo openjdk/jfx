@@ -29,7 +29,6 @@ import java.util.concurrent.CountDownLatch;
 
 import javafx.application.Application;
 import javafx.concurrent.Worker;
-import javafx.scene.input.MouseButton;
 import javafx.scene.paint.Color;
 import javafx.scene.robot.Robot;
 import javafx.scene.Scene;
@@ -97,25 +96,14 @@ public class TextSelectionTest {
         int x = (int)(scene.getWindow().getX() + scene.getX() + 22);
         int y = (int)(scene.getWindow().getY() + scene.getY() + 15);
 
-        Util.runAndWait(() -> {
-            robot.mouseMove(1, 1);
-            colorBefore = robot.getPixelColor(x, y);
+        Util.parkCursor(robot);
+        Util.runAndWait(() -> colorBefore = robot.getPixelColor(x, y));
 
-            robot.mouseMove(x, y);
+        Util.doubleClick(robot, x, y);
+        Util.sleep(500); // Wait for the selection highlight to be drawn
 
-            robot.mousePress(MouseButton.PRIMARY);
-            robot.mouseRelease(MouseButton.PRIMARY);
-            Util.sleep(50);
-            robot.mousePress(MouseButton.PRIMARY);
-            robot.mouseRelease(MouseButton.PRIMARY);
-        });
-
-        Util.sleep(500);
-
-        Util.runAndWait(() -> {
-            robot.mouseMove(1, 1);
-            colorAfter = robot.getPixelColor(x, y);
-        });
+        Util.parkCursor(robot);
+        Util.runAndWait(() -> colorAfter = robot.getPixelColor(x, y));
 
         Assertions.assertNotEquals(colorBefore, colorAfter,
             "Selection color did not change after double click");
