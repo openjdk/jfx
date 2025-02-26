@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2023, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -23,24 +23,15 @@
  * questions.
  */
 
-#import <Cocoa/Cocoa.h>
-#import <jni.h>
+#import "AccessibleBase.h"
+#import <AppKit/AppKit.h>
 
-#define INCREMENT @"AXIncrement"
-#define DECREMENT @"AXDecrement"
+@interface JFXSliderAccessibility : AccessibleBase <NSAccessibilitySlider> {
 
-@interface AccessibleBase : NSAccessibilityElement {
-@private
-jobject jAccessible;
-id parent;
-}
-- (id)initWithEnv:(JNIEnv*)env accessible:(jobject)jAccessible;
-- (jobject)getJAccessible;
-- (NSRect)accessibilityFrame;
-- (id)accessibilityParent;
-- (BOOL)isAccessibilityElement;
-- (BOOL)performAccessibleAction:(NSString*)actionId;
-+ (void) initializeRolesMap;
+};
+- (NSAccessibilityRole)accessibilityRole;
+- (NSString *)accessibilityLabel;
+- (id)accessibilityValue;
+- (BOOL)accessibilityPerformDecrement;
+- (BOOL)accessibilityPerformIncrement;
 @end
-
-jmethodID jAccessibilityAttributeNames;

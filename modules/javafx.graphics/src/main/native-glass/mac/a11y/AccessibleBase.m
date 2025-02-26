@@ -40,7 +40,7 @@ static NSMutableDictionary * rolesMap;
      * All JavaFX roles and corresponding available properties are defined in
      * enum javafx.scene.AccessibleRole
      */
-    rolesMap = [[NSMutableDictionary alloc] initWithCapacity:9];
+    rolesMap = [[NSMutableDictionary alloc] initWithCapacity:11];
 
     [rolesMap setObject:@"JFXButtonAccessibility" forKey:@"BUTTON"];
     [rolesMap setObject:@"JFXButtonAccessibility" forKey:@"DECREMENT_BUTTON"];
@@ -53,6 +53,8 @@ static NSMutableDictionary * rolesMap;
     [rolesMap setObject:@"JFXCheckboxAccessibility" forKey:@"CHECK_BOX"];
     [rolesMap setObject:@"JFXCheckboxAccessibility" forKey:@"TOGGLE_BUTTON"];
     [rolesMap setObject:@"JFXStaticTextAccessibility" forKey:@"TEXT"];
+    [rolesMap setObject:@"JFXStepperAccessibility" forKey:@"SPINNER"];
+    [rolesMap setObject:@"JFXSliderAccessibility" forKey:@"SLIDER"];
 
 }
 
@@ -105,6 +107,28 @@ static NSMutableDictionary * rolesMap;
     return variantToID(env, jresult);
 }
 
+- (id)accessibilityMinValue
+{
+    jobject jresult = NULL;
+    GET_MAIN_JENV;
+    if (env == NULL) return NULL;
+    jresult = (jobject)(*env)->CallLongMethod(env, self->jAccessible,
+                                              jAccessibilityAttributeValue, (jlong)@"AXMinValue");
+    GLASS_CHECK_EXCEPTION(env);
+    return variantToID(env, jresult);
+}
+
+- (id)accessibilityMaxValue
+{
+    jobject jresult = NULL;
+    GET_MAIN_JENV;
+    if (env == NULL) return NULL;
+    jresult = (jobject)(*env)->CallLongMethod(env, self->jAccessible,
+                                              jAccessibilityAttributeValue, (jlong)@"AXMaxValue");
+    GLASS_CHECK_EXCEPTION(env);
+    return variantToID(env, jresult);
+}
+
 - (NSString *)accessibilityLabel
 {
     jobject jresult = NULL;
@@ -128,6 +152,30 @@ static NSMutableDictionary * rolesMap;
     }
     return parent;
 }
+
+- (id)accessibilityTitle
+{
+    jobject jresult = NULL;
+    GET_MAIN_JENV;
+    if (env == NULL) return NULL;
+    jresult = (jobject)(*env)->CallLongMethod(env, self->jAccessible,
+                                              jAccessibilityAttributeValue, (jlong)@"AXTitle");
+    GLASS_CHECK_EXCEPTION(env);
+    return variantToID(env, jresult);
+}
+
+- (id)accessibilityTitleUIElement
+{
+    jobject jresult = NULL;
+    GET_MAIN_JENV;
+    if (env == NULL) return NULL;
+    jresult = (jobject)(*env)->CallLongMethod(env, self->jAccessible, jAccessibilityAttributeValue,
+                                              (jlong)@"AXTitleUIElement");
+    GLASS_CHECK_EXCEPTION(env);
+    return variantToID(env, jresult);
+}
+
+
 
 // Actions support
 - (BOOL)performAccessibleAction:(NSString *)action
