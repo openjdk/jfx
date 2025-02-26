@@ -30,7 +30,6 @@ import java.util.List;
 import javafx.css.PseudoClass;
 import javafx.scene.Group;
 import javafx.scene.Node;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -212,7 +211,6 @@ public class Parent_structuralPseudoClasses_Test {
     }
 
     @Test
-    @Disabled("JDK-8233179")
     void multipleNodes_permutation() {
         var group = new Group();
         var child1 = new Group();
