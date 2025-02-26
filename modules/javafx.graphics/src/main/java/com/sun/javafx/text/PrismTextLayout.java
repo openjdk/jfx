@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -30,8 +30,6 @@ import java.text.BreakIterator;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Hashtable;
-import javafx.scene.shape.LineTo;
-import javafx.scene.shape.MoveTo;
 import javafx.scene.shape.PathElement;
 import com.sun.javafx.font.CharToGlyphMapper;
 import com.sun.javafx.font.FontResource;
@@ -310,8 +308,7 @@ public class PrismTextLayout implements TextLayout {
     }
 
     @Override
-    public PathElement[] getCaretShape(int offset, boolean isLeading,
-                                       float x, float y) {
+    public float[] getCaretGeometry(int offset, boolean isLeading) {
         ensureLayout();
         int lineIndex = 0;
         int lineCount = getLineCount();
@@ -382,8 +379,7 @@ public class PrismTextLayout implements TextLayout {
         if (isMirrored()) {
             lineX = getMirroringWidth() - lineX;
         }
-        lineX += x;
-        lineY += y;
+
         if (splitCaretOffset != -1) {
             for (int i = 0; i < runs.length; i++) {
                 TextRun run = runs[i];
@@ -401,21 +397,23 @@ public class PrismTextLayout implements TextLayout {
                         if (isMirrored()) {
                             lineX2 = getMirroringWidth() - lineX2;
                         }
-                        lineX2 += x;
-                        PathElement[] result = new PathElement[4];
-                        result[0] = new MoveTo(lineX, lineY);
-                        result[1] = new LineTo(lineX, lineY + lineHeight / 2);
-                        result[2] = new MoveTo(lineX2, lineY + lineHeight / 2);
-                        result[3] = new LineTo(lineX2, lineY + lineHeight);
-                        return result;
+                        // split caret
+                        return new float[] {
+                            lineX,
+                            lineY,
+                            lineX2,
+                            lineHeight
+                        };
                     }
                 }
             }
         }
-        PathElement[] result = new PathElement[2];
-        result[0] = new MoveTo(lineX, lineY);
-        result[1] = new LineTo(lineX, lineY + lineHeight);
-        return result;
+        // regular caret
+        return new float[] {
+            lineX,
+            lineY,
+            lineHeight
+        };
     }
 
     @Override
@@ -478,8 +476,7 @@ public class PrismTextLayout implements TextLayout {
     }
 
     @Override
-    public PathElement[] getRange(int start, int end, int type,
-                                  float x, float y) {
+    public void getRange(int start, int end, int type, GeometryCallback client) {
         ensureLayout();
         int lineCount = getLineCount();
         ArrayList<PathElement> result = new ArrayList<>();
@@ -575,11 +572,7 @@ public class PrismTextLayout implements TextLayout {
                                 l = width - l;
                                 r = width - r;
                             }
-                            result.add(new MoveTo(x + l,  y + top));
-                            result.add(new LineTo(x + r, y + top));
-                            result.add(new LineTo(x + r, y + bottom));
-                            result.add(new LineTo(x + l,  y + bottom));
-                            result.add(new LineTo(x + l,  y + top));
+                            client.addRectangle(l, top, r, bottom);
                         }
                         left = runLeft;
                         right = runRight;
@@ -592,11 +585,7 @@ public class PrismTextLayout implements TextLayout {
                             l = width - l;
                             r = width - r;
                         }
-                        result.add(new MoveTo(x + l,  y + top));
-                        result.add(new LineTo(x + r, y + top));
-                        result.add(new LineTo(x + r, y + bottom));
-                        result.add(new LineTo(x + l,  y + bottom));
-                        result.add(new LineTo(x + l,  y + top));
+                        client.addRectangle(l, top, r, bottom);
                     }
                 }
                 lineX += runWidth;
@@ -604,7 +593,6 @@ public class PrismTextLayout implements TextLayout {
             }
             lineY += lineBounds.getHeight() + spacing;
         }
-        return result.toArray(new PathElement[result.size()]);
     }
 
     @Override
