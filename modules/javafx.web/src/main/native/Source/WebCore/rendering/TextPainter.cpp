@@ -194,9 +194,9 @@ void TextPainter::paintTextAndEmphasisMarksIfNeeded(const TextRun& textRun, cons
 
     FloatPoint boxOrigin = boxRect.location();
     updateGraphicsContext(m_context, paintStyle, UseEmphasisMarkColor);
-    static NeverDestroyed<TextRun> objectReplacementCharacterTextRun(StringView(&objectReplacementCharacter, 1));
+    static NeverDestroyed<TextRun> objectReplacementCharacterTextRun(StringView { span(objectReplacementCharacter) });
     const TextRun& emphasisMarkTextRun = m_combinedText ? objectReplacementCharacterTextRun.get() : textRun;
-    FloatPoint emphasisMarkTextOrigin = m_combinedText ? FloatPoint(boxOrigin.x() + boxRect.width() / 2, boxOrigin.y() + m_font.metricsOfPrimaryFont().ascent()) : textOrigin;
+    FloatPoint emphasisMarkTextOrigin = m_combinedText ? FloatPoint(boxOrigin.x() + boxRect.width() / 2, boxOrigin.y() + m_font.metricsOfPrimaryFont().intAscent()) : textOrigin;
     if (m_combinedText)
         m_context.concatCTM(rotation(boxRect, RotationDirection::Clockwise));
 
@@ -214,20 +214,14 @@ void TextPainter::paintRange(const TextRun& textRun, const FloatRect& boxRect, c
     paintTextAndEmphasisMarksIfNeeded(textRun, boxRect, textOrigin, start, end, m_style, m_shadow, m_shadowColorFilter);
 }
 
-static bool forceUseGlyphDisplayListForTesting = false;
-
 bool TextPainter::shouldUseGlyphDisplayList(const PaintInfo& paintInfo)
 {
-#if USE(GLYPH_DISPLAY_LIST_CACHE)
-    return !paintInfo.context().paintingDisabled() && paintInfo.enclosingSelfPaintingLayer() && (paintInfo.enclosingSelfPaintingLayer()->paintingFrequently() || forceUseGlyphDisplayListForTesting);
-#else
-    return !paintInfo.context().paintingDisabled() && paintInfo.enclosingSelfPaintingLayer() && forceUseGlyphDisplayListForTesting;
-#endif
+    return !paintInfo.context().paintingDisabled() && paintInfo.enclosingSelfPaintingLayer();
 }
 
 void TextPainter::setForceUseGlyphDisplayListForTesting(bool enabled)
 {
-    forceUseGlyphDisplayListForTesting = enabled;
+    GlyphDisplayListCache::singleton().setForceUseGlyphDisplayListForTesting(enabled);
 }
 
 void TextPainter::clearGlyphDisplayListCacheForTesting()

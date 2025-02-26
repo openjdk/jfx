@@ -40,7 +40,7 @@ struct SourceProviderCacheItemCreationParameters {
     unsigned lastTokenLineStartOffset { 0 };
     unsigned endFunctionOffset { 0 };
     unsigned parameterCount { 0 };
-    LexicalScopeFeatures lexicalScopeFeatures { 0 };
+    LexicallyScopedFeatures lexicallyScopedFeatures { 0 };
     InnerArrowFunctionCodeFeatures innerArrowFunctionFeatures { 0 };
     Vector<UniquedStringImpl*, 8> usedVariables;
     JSTokenType tokenType { CLOSEBRACE };
@@ -52,11 +52,6 @@ struct SourceProviderCacheItemCreationParameters {
     bool needsSuperBinding : 1 { false };
     bool isBodyArrowExpression : 1 { false };
 };
-
-#if COMPILER(MSVC)
-#pragma warning(push)
-#pragma warning(disable: 4200) // Disable "zero-sized array in struct/union" warning
-#endif
 
 DECLARE_ALLOCATOR_WITH_HEAP_IDENTIFIER(SourceProviderCacheItem);
 class SourceProviderCacheItem {
@@ -79,11 +74,13 @@ public:
         return token;
     }
 
-    LexicalScopeFeatures lexicalScopeFeatures() const
+    LexicallyScopedFeatures lexicallyScopedFeatures() const
     {
-        LexicalScopeFeatures features = NoLexicalFeatures;
+        LexicallyScopedFeatures features = NoLexicallyScopedFeatures;
         if (strictMode)
-            features |= StrictModeLexicalFeature;
+            features |= StrictModeLexicallyScopedFeature;
+        if (taintedByWithScope)
+            features |= TaintedByWithScopeLexicallyScopedFeature;
         return features;
     }
 
@@ -97,6 +94,7 @@ public:
     unsigned lastTokenEndOffset: 31;
     bool needsSuperBinding: 1;
     unsigned parameterCount : 31;
+    bool taintedByWithScope : 1;
     unsigned lastTokenLineStartOffset : 31;
     bool isBodyArrowExpression : 1;
     unsigned usedVariablesCount;
@@ -132,12 +130,13 @@ inline SourceProviderCacheItem::SourceProviderCacheItem(const SourceProviderCach
     , endFunctionOffset(parameters.endFunctionOffset)
     , usesEval(parameters.usesEval)
     , lastTokenLine(parameters.lastTokenLine)
-    , strictMode(parameters.lexicalScopeFeatures & StrictModeLexicalFeature)
+    , strictMode(parameters.lexicallyScopedFeatures & StrictModeLexicallyScopedFeature)
     , lastTokenStartOffset(parameters.lastTokenStartOffset)
     , expectedSuperBinding(static_cast<unsigned>(parameters.expectedSuperBinding))
     , lastTokenEndOffset(parameters.lastTokenEndOffset)
     , needsSuperBinding(parameters.needsSuperBinding)
     , parameterCount(parameters.parameterCount)
+    , taintedByWithScope(parameters.lexicallyScopedFeatures & TaintedByWithScopeLexicallyScopedFeature)
     , lastTokenLineStartOffset(parameters.lastTokenLineStartOffset)
     , isBodyArrowExpression(parameters.isBodyArrowExpression)
     , usedVariablesCount(parameters.usedVariables.size())
@@ -156,9 +155,5 @@ inline SourceProviderCacheItem::SourceProviderCacheItem(const SourceProviderCach
         m_variables[i] = pointer;
     }
 }
-
-#if COMPILER(MSVC)
-#pragma warning(pop)
-#endif
 
 } // namespace JSC

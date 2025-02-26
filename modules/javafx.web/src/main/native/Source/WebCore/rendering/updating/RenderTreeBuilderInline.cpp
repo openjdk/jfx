@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2018 Apple Inc. All rights reserved.
+ * Copyright (C) 2018-2024 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -153,7 +153,7 @@ void RenderTreeBuilder::Inline::insertChildToContinuation(RenderInline& parent, 
     bool childInline = newChildIsInline(parent, *child);
     // The goal here is to match up if we can, so that we can coalesce and create the
     // minimal # of continuations needed for the inline.
-    if (childInline == beforeChildAncestor->isInline())
+    if (childInline == beforeChildAncestor->isInline() || (beforeChild && beforeChild->isInline()))
         return m_builder.attachIgnoringContinuation(*beforeChildAncestor, WTFMove(child), beforeChild);
     if (flow->isInline() == childInline)
         return m_builder.attachIgnoringContinuation(*flow, WTFMove(child)); // Just treat like an append.
@@ -239,8 +239,9 @@ void RenderTreeBuilder::Inline::splitFlow(RenderInline& parent, RenderObject* be
         RenderObject* o = boxFirst;
         while (o) {
             RenderObject* no = o;
+            auto internalMoveScope = SetForScope { m_builder.m_internalMovesType, IsInternalMove::Yes };
             o = no->nextSibling();
-            auto childToMove = m_builder.detachFromRenderElement(*block, *no);
+            auto childToMove = m_builder.detachFromRenderElement(*block, *no, WillBeDestroyed::No);
             m_builder.attachToRenderElementInternal(*pre, WTFMove(childToMove));
             no->setNeedsLayoutAndPrefWidthsRecalc();
         }
@@ -267,7 +268,7 @@ void RenderTreeBuilder::Inline::splitFlow(RenderInline& parent, RenderObject* be
 
 void RenderTreeBuilder::Inline::splitInlines(RenderInline& parent, RenderBlock* fromBlock, RenderBlock* toBlock, RenderBlock* middleBlock, RenderObject* beforeChild, RenderBoxModelObject* oldCont)
 {
-    auto internalMoveScope = SetForScope { m_builder.m_internalMovesType, RenderObject::IsInternalMove::Yes };
+    auto internalMoveScope = SetForScope { m_builder.m_internalMovesType, IsInternalMove::Yes };
     // Create a clone of this inline.
     RenderPtr<RenderInline> cloneInline = cloneAsContinuation(parent);
 
@@ -390,7 +391,7 @@ void RenderTreeBuilder::Inline::childBecameNonInline(RenderInline& parent, Rende
         oldContinuation->removeFromContinuationChain();
     newBox->insertIntoContinuationChainAfter(parent);
     auto* beforeChild = child.nextSibling();
-    auto removedChild = m_builder.detachFromRenderElement(parent, child);
+    auto removedChild = m_builder.detachFromRenderElement(parent, child, WillBeDestroyed::No);
     splitFlow(parent, beforeChild, WTFMove(newBox), WTFMove(removedChild), oldContinuation);
 }
 

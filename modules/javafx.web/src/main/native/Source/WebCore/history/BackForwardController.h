@@ -25,9 +25,10 @@
 
 #pragma once
 
+#include "FrameIdentifier.h"
 #include <wtf/CheckedPtr.h>
-#include <wtf/Noncopyable.h>
 #include <wtf/Forward.h>
+#include <wtf/Noncopyable.h>
 #include <wtf/RefPtr.h>
 #include <wtf/WeakRef.h>
 
@@ -37,8 +38,10 @@ class BackForwardClient;
 class HistoryItem;
 class Page;
 
-class BackForwardController : public CanMakeCheckedPtr {
-    WTF_MAKE_NONCOPYABLE(BackForwardController); WTF_MAKE_FAST_ALLOCATED;
+class BackForwardController final : public CanMakeCheckedPtr<BackForwardController> {
+    WTF_MAKE_NONCOPYABLE(BackForwardController);
+    WTF_MAKE_FAST_ALLOCATED;
+    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(BackForwardController);
 public:
     BackForwardController(Page&, Ref<BackForwardClient>&&);
     ~BackForwardController();
@@ -52,7 +55,7 @@ public:
     WEBCORE_EXPORT bool goBack();
     WEBCORE_EXPORT bool goForward();
 
-    void addItem(Ref<HistoryItem>&&);
+    void addItem(FrameIdentifier, Ref<HistoryItem>&&);
     void setCurrentItem(HistoryItem&);
 
     unsigned count() const;
@@ -67,6 +70,8 @@ public:
     WEBCORE_EXPORT RefPtr<HistoryItem> backItem();
     WEBCORE_EXPORT RefPtr<HistoryItem> currentItem();
     WEBCORE_EXPORT RefPtr<HistoryItem> forwardItem();
+
+    Vector<Ref<HistoryItem>> allItems();
 
 private:
     Ref<Page> protectedPage() const;

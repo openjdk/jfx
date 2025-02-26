@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -209,11 +209,6 @@ public class VirtualFlowTestUtils {
 
             int _column = column;
 
-            // we need to account for TreeTableView having LabeledText node in the TreeTableRow
-            if (indexedCell instanceof TreeTableRow) {
-                _column++;
-            }
-
             IndexedCell cell = (IndexedCell) indexedCell.getChildrenUnmodifiable().get(_column);
             assertEquals(expected, cell.getText());
             return null;
@@ -336,14 +331,10 @@ public class VirtualFlowTestUtils {
         }
     }
 
-    public static boolean BLOCK_STAGE_LOADER_DISPOSE = false;
-
     public static VirtualFlow<?> getVirtualFlow(Control control) {
         StageLoader sl = null;
-        boolean stageLoaderCreated = false;
         if (control.getScene() == null) {
             sl = new StageLoader(control);
-            stageLoaderCreated = true;
         }
 
         VirtualFlow<?> flow;
@@ -355,7 +346,7 @@ public class VirtualFlowTestUtils {
 
         flow = (VirtualFlow<?>)control.lookup("#virtual-flow");
 
-        if (stageLoaderCreated && sl != null && ! BLOCK_STAGE_LOADER_DISPOSE) {
+        if (sl != null) {
             sl.dispose();
         }
 

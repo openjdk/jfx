@@ -41,37 +41,37 @@
 
 namespace WebCore {
 
-static Length parseLength(const UChar* data, unsigned length)
+static Length parseLength(std::span<const UChar> data)
 {
-    if (length == 0)
+    if (data.empty())
         return Length(1, LengthType::Relative);
 
     unsigned i = 0;
-    while (i < length && deprecatedIsSpaceOrNewline(data[i]))
+    while (i < data.size() && deprecatedIsSpaceOrNewline(data[i]))
         ++i;
-    if (i < length && (data[i] == '+' || data[i] == '-'))
+    if (i < data.size() && (data[i] == '+' || data[i] == '-'))
         ++i;
-    while (i < length && isASCIIDigit(data[i]))
+    while (i < data.size() && isASCIIDigit(data[i]))
         ++i;
     unsigned intLength = i;
-    while (i < length && (isASCIIDigit(data[i]) || data[i] == '.'))
+    while (i < data.size() && (isASCIIDigit(data[i]) || data[i] == '.'))
         ++i;
     unsigned doubleLength = i;
 
     // IE quirk: Skip whitespace between the number and the % character (20 % => 20%).
-    while (i < length && deprecatedIsSpaceOrNewline(data[i]))
+    while (i < data.size() && deprecatedIsSpaceOrNewline(data[i]))
         ++i;
 
     bool ok;
-    UChar next = (i < length) ? data[i] : ' ';
+    UChar next = (i < data.size()) ? data[i] : ' ';
     if (next == '%') {
         // IE quirk: accept decimal fractions for percentages.
-        double r = charactersToDouble(data, doubleLength, &ok);
+        double r = charactersToDouble(data.first(doubleLength), &ok);
         if (ok)
             return Length(r, LengthType::Percent);
         return Length(1, LengthType::Relative);
     }
-    auto r = parseInteger<int>({ data, intLength });
+    auto r = parseInteger<int>(data.first(intLength));
     if (next == '*')
         return Length(r.value_or(1), LengthType::Relative);
     if (r)
@@ -105,15 +105,15 @@ UniqueArray<Length> newLengthArray(const String& string, int& len)
 
     auto upconvertedCharacters = StringView(str.get()).upconvertedCharacters();
     while ((pos2 = str->find(',', pos)) != notFound) {
-        r[i++] = parseLength(upconvertedCharacters + pos, pos2 - pos);
+        r[i++] = parseLength(upconvertedCharacters.span().subspan(pos, pos2 - pos));
         pos = pos2+1;
     }
 
     ASSERT(i == len - 1);
 
     // IE Quirk: If the last comma is the last char skip it and reduce len by one.
-    if (str->length()-pos > 0)
-        r[i] = parseLength(upconvertedCharacters + pos, str->length() - pos);
+    if (str->length() - pos > 0)
+        r[i] = parseLength(upconvertedCharacters.span().subspan(pos));
     else
         len--;
 
@@ -132,25 +132,18 @@ public:
 
 private:
     struct Entry {
-        uint64_t referenceCountMinusOne;
-        CalculationValue* value;
-        Entry();
-        Entry(CalculationValue&);
+        uint64_t referenceCountMinusOne { 0 };
+        RefPtr<CalculationValue> value;
+        Entry() = default;
+        Entry(Ref<CalculationValue>&&);
     };
 
     unsigned m_nextAvailableHandle;
     HashMap<unsigned, Entry> m_map;
 };
 
-inline CalculationValueMap::Entry::Entry()
-    : referenceCountMinusOne(0)
-    , value(nullptr)
-{
-}
-
-inline CalculationValueMap::Entry::Entry(CalculationValue& value)
-    : referenceCountMinusOne(0)
-    , value(&value)
+inline CalculationValueMap::Entry::Entry(Ref<CalculationValue>&& value)
+    : value(WTFMove(value))
 {
 }
 
@@ -163,12 +156,11 @@ inline unsigned CalculationValueMap::insert(Ref<CalculationValue>&& value)
 {
     ASSERT(m_nextAvailableHandle);
 
-    // The leakRef below is balanced by the adoptRef in the deref member function.
-    Entry leakedValue = value.leakRef();
+    Entry entry(WTFMove(value));
 
     // FIXME: This monotonically increasing handle generation scheme is potentially wasteful
     // of the handle space. Consider reusing empty handles. https://bugs.webkit.org/show_bug.cgi?id=80489
-    while (!m_map.isValidKey(m_nextAvailableHandle) || !m_map.add(m_nextAvailableHandle, leakedValue).isNewEntry)
+    while (!m_map.isValidKey(m_nextAvailableHandle) || !m_map.add(m_nextAvailableHandle, entry).isNewEntry)
         ++m_nextAvailableHandle;
 
     return m_nextAvailableHandle++;
@@ -198,9 +190,6 @@ inline void CalculationValueMap::deref(unsigned handle)
         return;
     }
 
-    // The adoptRef here is balanced by the leakRef in the insert member function.
-    Ref<CalculationValue> value { adoptRef(*it->value.value) };
-
     m_map.remove(it);
 }
 
@@ -220,6 +209,11 @@ CalculationValue& Length::calculationValue() const
 {
     ASSERT(isCalculated());
     return calculationValues().get(m_calculationValueHandle);
+}
+
+Ref<CalculationValue> Length::protectedCalculationValue() const
+{
+    return calculationValue();
 }
 
 void Length::ref() const
@@ -271,16 +265,22 @@ LengthType Length::typeFromIndex(const IPCData& data)
 Length::Length(IPCData&& data)
     : m_type(typeFromIndex(data))
 {
-    WTF::switchOn(data, [&] (auto data) {
-        WTF::switchOn(data.value, [&] (float value) {
+    WTF::switchOn(data,
+        [&] (auto data) {
+            WTF::switchOn(data.value,
+                [&] (float value) {
             m_isFloat = true;
             m_floatValue = value;
-        }, [&] (int value) {
+                },
+                [&] (int value) {
             m_isFloat = false;
             m_intValue = value;
-        });
+                }
+            );
         m_hasQuirk = data.hasQuirk;
-    }, [] (auto emptyData) requires std::is_empty_v<decltype(emptyData)> { });
+        },
+        []<typename EmptyData> (EmptyData) requires std::is_empty_v<EmptyData> { }
+    );
 }
 
 auto Length::ipcData() const -> IPCData
@@ -330,7 +330,7 @@ auto Length::floatOrInt() const -> FloatOrInt
 float Length::nonNanCalculatedValue(float maxValue) const
 {
     ASSERT(isCalculated());
-    float result = calculationValue().evaluate(maxValue);
+    float result = protectedCalculationValue()->evaluate(maxValue);
     if (std::isnan(result))
         return 0;
     return result;
@@ -382,14 +382,20 @@ static Length blendMixedTypes(const Length& from, const Length& to, const Blendi
     if (context.compositeOperation != CompositeOperation::Replace)
         return makeCalculated(CalcOperator::Add, from, to);
 
+    if (from.isIntrinsicOrAuto() || to.isIntrinsicOrAuto()) {
+        ASSERT(context.isDiscrete);
+        ASSERT(!context.progress || context.progress == 1);
+        return context.progress ? to : from;
+    }
+
+    if (from.isRelative() || to.isRelative())
+        return { 0, LengthType::Fixed };
+
     if (!to.isCalculated() && !from.isPercent() && (context.progress == 1 || from.isZero()))
         return blend(Length(0, to.type()), to, context);
 
     if (!from.isCalculated() && !to.isPercent() && (!context.progress || to.isZero()))
         return blend(from, Length(0, from.type()), context);
-
-    if (from.isIntrinsicOrAuto() || to.isIntrinsicOrAuto() || from.isRelative() || to.isRelative())
-        return { 0, LengthType::Fixed };
 
     auto blend = makeUnique<CalcExpressionBlendLength>(from, to, context.progress);
     return Length(CalculationValue::create(WTFMove(blend), ValueRange::All));
@@ -488,7 +494,7 @@ TextStream& operator<<(TextStream& ts, Length length)
         ts << TextStream::FormatNumberRespectingIntegers(length.percent()) << "%";
         break;
     case LengthType::Calculated:
-        ts << length.calculationValue();
+        ts << length.protectedCalculationValue();
         break;
     }
 

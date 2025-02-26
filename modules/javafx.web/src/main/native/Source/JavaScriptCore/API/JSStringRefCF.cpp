@@ -41,18 +41,18 @@ JSStringRef JSStringCreateWithCFString(CFStringRef string)
     // it can hold.  (<rdar://problem/6806478>)
     size_t length = CFStringGetLength(string);
     if (!length)
-        return &OpaqueJSString::create(reinterpret_cast<const LChar*>(""), 0).leakRef();
+        return &OpaqueJSString::create(""_span).leakRef();
 
     Vector<LChar, 1024> lcharBuffer(length);
     CFIndex usedBufferLength;
     CFIndex convertedSize = CFStringGetBytes(string, CFRangeMake(0, length), kCFStringEncodingISOLatin1, 0, false, lcharBuffer.data(), length, &usedBufferLength);
     if (static_cast<size_t>(convertedSize) == length && static_cast<size_t>(usedBufferLength) == length)
-        return &OpaqueJSString::create(lcharBuffer.data(), length).leakRef();
+        return &OpaqueJSString::create(lcharBuffer.span()).leakRef();
 
     Vector<UniChar> buffer(length);
     CFStringGetCharacters(string, CFRangeMake(0, length), buffer.data());
     static_assert(sizeof(UniChar) == sizeof(UChar), "UniChar and UChar must be same size");
-    return &OpaqueJSString::create(reinterpret_cast<UChar*>(buffer.data()), length).leakRef();
+    return &OpaqueJSString::create({ reinterpret_cast<UChar*>(buffer.data()), length }).leakRef();
 }
 
 CFStringRef JSStringCopyCFString(CFAllocatorRef allocator, JSStringRef string)
@@ -60,8 +60,10 @@ CFStringRef JSStringCopyCFString(CFAllocatorRef allocator, JSStringRef string)
     if (!string || !string->length())
         return CFSTR("");
 
-    if (string->is8Bit())
-        return CFStringCreateWithBytes(allocator, reinterpret_cast<const UInt8*>(string->characters8()), string->length(), kCFStringEncodingISOLatin1, false);
-
-    return CFStringCreateWithCharacters(allocator, reinterpret_cast<const UniChar*>(string->characters16()), string->length());
+    if (string->is8Bit()) {
+        auto characters = string->span8();
+        return CFStringCreateWithBytes(allocator, reinterpret_cast<const UInt8*>(characters.data()), characters.size(), kCFStringEncodingISOLatin1, false);
+    }
+    auto characters = string->span16();
+    return CFStringCreateWithCharacters(allocator, reinterpret_cast<const UniChar*>(characters.data()), characters.size());
 }

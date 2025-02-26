@@ -33,7 +33,7 @@
 #include "StyleInheritedData.h"
 #include "StyleResolver.h"
 #include "StyleScope.h"
-#include <wtf/text/StringConcatenateNumbers.h>
+#include <wtf/text/MakeString.h>
 
 namespace WebCore {
 
@@ -88,7 +88,7 @@ FloatBoxExtent PrintContext::computedPageMargin(FloatBoxExtent printMargin)
 {
     if (!frame() || !frame()->document())
         return printMargin;
-    if (!frame()->settings().pageAtRuleSupportEnabled())
+    if (!frame()->settings().pageAtRuleMarginDescriptorsEnabled())
         return printMargin;
     // FIXME Currently no pseudo class is supported.
     auto style = frame()->document()->styleScope().resolver().styleForPage(0);
@@ -253,7 +253,7 @@ void PrintContext::spoolPage(GraphicsContext& ctx, int pageNumber, float width)
     ctx.translate(-pageRect.x(), -pageRect.y());
     ctx.clip(pageRect);
     frame.view()->paintContents(ctx, pageRect);
-    outputLinkedDestinations(ctx, *frame.document(), pageRect);
+    outputLinkedDestinations(ctx, *frame.protectedDocument(), pageRect);
     ctx.restore();
 }
 
@@ -364,11 +364,11 @@ String PrintContext::pageProperty(LocalFrame* frame, const char* propertyName, i
 
     Ref protectedFrame { *frame };
 
-    auto& document = *frame->document();
+    RefPtr document = frame->document();
     PrintContext printContext(frame);
     printContext.begin(800); // Any width is OK here.
-    document.updateLayout();
-    auto style = document.styleScope().resolver().styleForPage(pageNumber);
+    document->updateLayout();
+    auto style = document->styleScope().resolver().styleForPage(pageNumber);
 
     // Implement formatters for properties we care about.
     if (!strcmp(propertyName, "margin-left")) {
@@ -385,7 +385,7 @@ String PrintContext::pageProperty(LocalFrame* frame, const char* propertyName, i
     if (!strcmp(propertyName, "size"))
         return makeString(style->pageSize().width.value(), ' ', style->pageSize().height.value());
 
-    return makeString("pageProperty() unimplemented for: ", propertyName);
+    return makeString("pageProperty() unimplemented for: "_s, span(propertyName));
 }
 
 bool PrintContext::isPageBoxVisible(LocalFrame* frame, int pageNumber)
@@ -398,7 +398,7 @@ String PrintContext::pageSizeAndMarginsInPixels(LocalFrame* frame, int pageNumbe
     IntSize pageSize(width, height);
     frame->document()->pageSizeAndMarginsInPixels(pageNumber, pageSize, marginTop, marginRight, marginBottom, marginLeft);
 
-    return makeString('(', pageSize.width(), ", ", pageSize.height(), ") ", marginTop, ' ', marginRight, ' ', marginBottom, ' ', marginLeft);
+    return makeString('(', pageSize.width(), ", "_s, pageSize.height(), ") "_s, marginTop, ' ', marginRight, ' ', marginBottom, ' ', marginLeft);
 }
 
 bool PrintContext::beginAndComputePageRectsWithPageSize(LocalFrame& frame, const FloatSize& pageSizeInPixels)

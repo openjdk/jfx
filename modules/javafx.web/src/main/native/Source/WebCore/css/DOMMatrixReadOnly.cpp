@@ -37,12 +37,13 @@
 #include <JavaScriptCore/GenericTypedArrayViewInlines.h>
 #include <JavaScriptCore/HeapInlines.h>
 #include <JavaScriptCore/JSGenericTypedArrayViewInlines.h>
-#include <wtf/IsoMallocInlines.h>
+#include <wtf/TZoneMallocInlines.h>
+#include <wtf/text/MakeString.h>
 #include <wtf/text/StringBuilder.h>
 
 namespace WebCore {
 
-WTF_MAKE_ISO_ALLOCATED_IMPL(DOMMatrixReadOnly);
+WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(DOMMatrixReadOnly);
 
 // https://drafts.fxtf.org/geometry/#dom-dommatrixreadonly-dommatrixreadonly
 ExceptionOr<Ref<DOMMatrixReadOnly>> DOMMatrixReadOnly::create(ScriptExecutionContext& scriptExecutionContext, std::optional<std::variant<String, Vector<double>>>&& init)
@@ -227,7 +228,7 @@ ExceptionOr<DOMMatrixReadOnly::AbstractMatrix> DOMMatrixReadOnly::parseStringInt
         return AbstractMatrix { };
 
     auto styleDeclaration = MutableStyleProperties::create();
-    if (CSSParser::parseValue(styleDeclaration, CSSPropertyTransform, string, true, HTMLStandardMode) == CSSParser::ParseResult::Error)
+    if (CSSParser::parseValue(styleDeclaration, CSSPropertyTransform, string, IsImportant::Yes, HTMLStandardMode) == CSSParser::ParseResult::Error)
         return Exception { ExceptionCode::SyntaxError };
 
     // Convert to TransformOperations. This can fail if a property requires style (i.e., param uses 'ems' or 'exs')
@@ -242,7 +243,7 @@ ExceptionOr<DOMMatrixReadOnly::AbstractMatrix> DOMMatrixReadOnly::parseStringInt
         return Exception { ExceptionCode::SyntaxError };
 
     AbstractMatrix matrix;
-    for (auto& operation : operations->operations()) {
+    for (auto& operation : *operations) {
         if (operation->apply(matrix.matrix, { 0, 0 }))
             return Exception { ExceptionCode::SyntaxError };
         if (operation->is3DOperation())
@@ -412,9 +413,9 @@ ExceptionOr<String> DOMMatrixReadOnly::toString() const
         return Exception { ExceptionCode::InvalidStateError, "Matrix contains non-finite values"_s };
 
     if (is2D())
-        return makeString("matrix(", m_matrix.a(), ", ", m_matrix.b(), ", ", m_matrix.c(), ", ", m_matrix.d(), ", ", m_matrix.e(), ", ", m_matrix.f(), ')');
+        return makeString("matrix("_s, m_matrix.a(), ", "_s, m_matrix.b(), ", "_s, m_matrix.c(), ", "_s, m_matrix.d(), ", "_s, m_matrix.e(), ", "_s, m_matrix.f(), ')');
 
-    return makeString("matrix3d(", m_matrix.m11(), ", ", m_matrix.m12(), ", ", m_matrix.m13(), ", ", m_matrix.m14(), ", ", m_matrix.m21(), ", ", m_matrix.m22(), ", ", m_matrix.m23(), ", ", m_matrix.m24(), ", ", m_matrix.m31(), ", ", m_matrix.m32(), ", ", m_matrix.m33(), ", ", m_matrix.m34(), ", ", m_matrix.m41(), ", ", m_matrix.m42(), ", ", m_matrix.m43(), ", ", m_matrix.m44(), ')');
+    return makeString("matrix3d("_s, m_matrix.m11(), ", "_s, m_matrix.m12(), ", "_s, m_matrix.m13(), ", "_s, m_matrix.m14(), ", "_s, m_matrix.m21(), ", "_s, m_matrix.m22(), ", "_s, m_matrix.m23(), ", "_s, m_matrix.m24(), ", "_s, m_matrix.m31(), ", "_s, m_matrix.m32(), ", "_s, m_matrix.m33(), ", "_s, m_matrix.m34(), ", "_s, m_matrix.m41(), ", "_s, m_matrix.m42(), ", "_s, m_matrix.m43(), ", "_s, m_matrix.m44(), ')');
 }
 
 } // namespace WebCore

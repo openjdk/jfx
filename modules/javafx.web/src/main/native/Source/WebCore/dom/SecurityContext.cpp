@@ -41,9 +41,15 @@ SecurityContext::~SecurityContext() = default;
 
 void SecurityContext::setSecurityOriginPolicy(RefPtr<SecurityOriginPolicy>&& securityOriginPolicy)
 {
+    auto currentOrigin = securityOrigin() ? securityOrigin()->data() : SecurityOriginData { };
+    bool haveInitializedSecurityOrigin = std::exchange(m_haveInitializedSecurityOrigin, true);
+
     m_securityOriginPolicy = WTFMove(securityOriginPolicy);
-    m_haveInitializedSecurityOrigin = true;
     m_hasEmptySecurityOriginPolicy = false;
+
+    auto origin = securityOrigin() ? securityOrigin()->data() : SecurityOriginData { };
+    if (!haveInitializedSecurityOrigin || currentOrigin != origin)
+        securityOriginDidChange();
 }
 
 ContentSecurityPolicy* SecurityContext::contentSecurityPolicy()
@@ -166,7 +172,7 @@ SandboxFlags SecurityContext::parseSandboxPolicy(StringView policy, String& inva
             flags &= ~SandboxStorageAccessByUserActivation;
         else {
             if (numberOfTokenErrors)
-                tokenErrors.append(", '");
+                tokenErrors.append(", '"_s);
             else
                 tokenErrors.append('\'');
             tokenErrors.append(sandboxToken, '\'');
@@ -178,9 +184,9 @@ SandboxFlags SecurityContext::parseSandboxPolicy(StringView policy, String& inva
 
     if (numberOfTokenErrors) {
         if (numberOfTokenErrors > 1)
-            tokenErrors.append(" are invalid sandbox flags.");
+            tokenErrors.append(" are invalid sandbox flags."_s);
         else
-            tokenErrors.append(" is an invalid sandbox flag.");
+            tokenErrors.append(" is an invalid sandbox flag."_s);
         invalidTokensErrorMessage = tokenErrors.toString();
     }
 

@@ -25,9 +25,21 @@
 
 #pragma once
 
+#include "LayerHostingContextIdentifier.h"
 #include "PlatformLayerIdentifier.h"
+#include "TransformationMatrix.h"
 #include <wtf/Forward.h>
 #include <wtf/WeakPtr.h>
+
+namespace WebCore {
+class FloatPoint3D;
+class ModelPlayerClient;
+}
+
+namespace WTF {
+template<typename T> struct IsDeprecatedWeakRefSmartPointerException;
+template<> struct IsDeprecatedWeakRefSmartPointerException<WebCore::ModelPlayerClient> : std::true_type { };
+}
 
 namespace WebCore {
 
@@ -38,8 +50,13 @@ class WEBCORE_EXPORT ModelPlayerClient : public CanMakeWeakPtr<ModelPlayerClient
 public:
     virtual ~ModelPlayerClient();
 
+    virtual void didUpdateLayerHostingContextIdentifier(ModelPlayer&, LayerHostingContextIdentifier) = 0;
     virtual void didFinishLoading(ModelPlayer&) = 0;
     virtual void didFailLoading(ModelPlayer&, const ResourceError&) = 0;
+#if ENABLE(MODEL_PROCESS)
+    virtual void didUpdateEntityTransform(ModelPlayer&, const TransformationMatrix&) = 0;
+    virtual void didUpdateBoundingBox(ModelPlayer&, const FloatPoint3D&, const FloatPoint3D&) = 0;
+#endif
     virtual PlatformLayerIdentifier platformLayerID() = 0;
 };
 

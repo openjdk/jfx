@@ -26,6 +26,7 @@
 #pragma once
 
 #include "IDBError.h"
+#include "IDBObjectStoreIdentifier.h"
 #include "IDBResourceIdentifier.h"
 #include "IDBTransactionInfo.h"
 #include "IndexedDB.h"
@@ -58,16 +59,18 @@ public:
     IDBError commit();
     IDBError abort();
 
-    std::unique_ptr<SQLiteIDBCursor> maybeOpenBackingStoreCursor(uint64_t objectStoreID, uint64_t indexID, const IDBKeyRangeData&);
+    std::unique_ptr<SQLiteIDBCursor> maybeOpenBackingStoreCursor(IDBObjectStoreIdentifier, uint64_t indexID, const IDBKeyRangeData&);
     SQLiteIDBCursor* maybeOpenCursor(const IDBCursorInfo&);
 
     void closeCursor(SQLiteIDBCursor&);
-    void notifyCursorsOfChanges(int64_t objectStoreID);
+    void notifyCursorsOfChanges(IDBObjectStoreIdentifier);
 
     IDBTransactionMode mode() const { return m_info.mode(); }
     IDBTransactionDurability durability() const { return m_info.durability(); }
     bool inProgress() const;
+    bool inProgressOrReadOnly() const;
 
+    SQLiteDatabase* sqliteDatabase() const;
     SQLiteTransaction* sqliteTransaction() const { return m_sqliteTransaction.get(); }
     SQLiteIDBBackingStore& backingStore() { return m_backingStore; }
 
@@ -80,10 +83,12 @@ private:
 
     void moveBlobFilesIfNecessary();
     void deleteBlobFilesIfNecessary();
+    bool isReadOnly() const { return mode() == IDBTransactionMode::Readonly; }
 
     IDBTransactionInfo m_info;
 
     SQLiteIDBBackingStore& m_backingStore;
+    CheckedPtr<SQLiteDatabase> m_sqliteDatabase;
     std::unique_ptr<SQLiteTransaction> m_sqliteTransaction;
     HashMap<IDBResourceIdentifier, std::unique_ptr<SQLiteIDBCursor>> m_cursors;
     HashSet<SQLiteIDBCursor*> m_backingStoreCursors;

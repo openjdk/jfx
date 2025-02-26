@@ -29,20 +29,21 @@
 #if ENABLE(WEB_CRYPTO)
 #include "CryptoKeyOKP.h"
 #include "NotImplemented.h"
+#include "ScriptExecutionContext.h"
 #include <JavaScriptCore/JSCJSValueInlines.h>
 #include <wtf/CrossThreadCopier.h>
 
 namespace WebCore {
 
 #if !PLATFORM(COCOA) && !USE(GCRYPT)
-ExceptionOr<Vector<uint8_t>> CryptoAlgorithmEd25519::platformSign(const CryptoKeyOKP&, const Vector<uint8_t>&)
+ExceptionOr<Vector<uint8_t>> CryptoAlgorithmEd25519::platformSign(const CryptoKeyOKP&, const Vector<uint8_t>&, UseCryptoKit)
 {
     ASSERT_NOT_REACHED();
     notImplemented();
     return Exception { ExceptionCode::NotSupportedError };
 }
 
-ExceptionOr<bool> CryptoAlgorithmEd25519::platformVerify(const CryptoKeyOKP&, const Vector<uint8_t>&, const Vector<uint8_t>&)
+ExceptionOr<bool> CryptoAlgorithmEd25519::platformVerify(const CryptoKeyOKP&, const Vector<uint8_t>&, const Vector<uint8_t>&, UseCryptoKit)
 {
     ASSERT_NOT_REACHED();
     notImplemented();
@@ -80,9 +81,10 @@ void CryptoAlgorithmEd25519::sign(const CryptoAlgorithmParameters&, Ref<CryptoKe
         exceptionCallback(ExceptionCode::InvalidAccessError);
         return;
     }
+    UseCryptoKit useCryptoKit = context.settingsValues().cryptoKitEnabled ? UseCryptoKit::Yes : UseCryptoKit::No;
     dispatchOperationInWorkQueue(workQueue, context, WTFMove(callback), WTFMove(exceptionCallback),
-        [key = WTFMove(key), data = WTFMove(data)] {
-            return platformSign(downcast<CryptoKeyOKP>(key.get()), data);
+        [key = WTFMove(key), data = WTFMove(data), useCryptoKit] {
+            return platformSign(downcast<CryptoKeyOKP>(key.get()), data, useCryptoKit);
     });
 }
 
@@ -92,13 +94,14 @@ void CryptoAlgorithmEd25519::verify(const CryptoAlgorithmParameters&, Ref<Crypto
         exceptionCallback(ExceptionCode::InvalidAccessError);
         return;
     }
+    UseCryptoKit useCryptoKit = context.settingsValues().cryptoKitEnabled ? UseCryptoKit::Yes : UseCryptoKit::No;
     dispatchOperationInWorkQueue(workQueue, context, WTFMove(callback), WTFMove(exceptionCallback),
-        [key = WTFMove(key), signature = WTFMove(signature), data = WTFMove(data)] {
-            return platformVerify(downcast<CryptoKeyOKP>(key.get()), signature, data);
+        [key = WTFMove(key), signature = WTFMove(signature), data = WTFMove(data), useCryptoKit] {
+            return platformVerify(downcast<CryptoKeyOKP>(key.get()), signature, data, useCryptoKit);
         });
 }
 
-void CryptoAlgorithmEd25519::importKey(CryptoKeyFormat format, KeyData&& data, const CryptoAlgorithmParameters&, bool extractable, CryptoKeyUsageBitmap usages, KeyCallback&& callback, ExceptionCallback&& exceptionCallback)
+void CryptoAlgorithmEd25519::importKey(CryptoKeyFormat format, KeyData&& data, const CryptoAlgorithmParameters&, bool extractable, CryptoKeyUsageBitmap usages, KeyCallback&& callback, ExceptionCallback&& exceptionCallback, UseCryptoKit)
 {
     RefPtr<CryptoKeyOKP> result;
     switch (format) {
@@ -144,7 +147,7 @@ void CryptoAlgorithmEd25519::importKey(CryptoKeyFormat format, KeyData&& data, c
     callback(*result);
 }
 
-void CryptoAlgorithmEd25519::exportKey(CryptoKeyFormat format, Ref<CryptoKey>&& key, KeyDataCallback&& callback, ExceptionCallback&& exceptionCallback)
+void CryptoAlgorithmEd25519::exportKey(CryptoKeyFormat format, Ref<CryptoKey>&& key, KeyDataCallback&& callback, ExceptionCallback&& exceptionCallback, UseCryptoKit)
 {
     const auto& okpKey = downcast<CryptoKeyOKP>(key.get());
     if (!okpKey.keySizeInBits()) {

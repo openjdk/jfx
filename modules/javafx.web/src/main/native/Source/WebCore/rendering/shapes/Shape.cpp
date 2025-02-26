@@ -30,7 +30,7 @@
 #include "config.h"
 #include "Shape.h"
 
-#include "BasicShapeFunctions.h"
+#include "BasicShapeConversion.h"
 #include "BasicShapes.h"
 #include "BoxShape.h"
 #include "GraphicsContext.h"
@@ -105,7 +105,7 @@ Ref<const Shape> Shape::createShape(const BasicShape& basicShape, const LayoutPo
         const auto& circle = uncheckedDowncast<BasicShapeCircle>(basicShape);
         float centerX = floatValueForCenterCoordinate(circle.centerX(), boxWidth);
         float centerY = floatValueForCenterCoordinate(circle.centerY(), boxHeight);
-        float radius = circle.floatValueForRadiusInBox(boxWidth, boxHeight, { centerX, centerY });
+        float radius = circle.floatValueForRadiusInBox({ boxWidth, boxHeight }, { centerX, centerY });
         FloatPoint logicalCenter = physicalPointToLogical(FloatPoint(centerX, centerY), logicalBoxSize.height(), writingMode);
         logicalCenter.moveBy(borderBoxOffset);
 
@@ -117,12 +117,11 @@ Ref<const Shape> Shape::createShape(const BasicShape& basicShape, const LayoutPo
         const auto& ellipse = uncheckedDowncast<BasicShapeEllipse>(basicShape);
         float centerX = floatValueForCenterCoordinate(ellipse.centerX(), boxWidth);
         float centerY = floatValueForCenterCoordinate(ellipse.centerY(), boxHeight);
-        float radiusX = ellipse.floatValueForRadiusInBox(ellipse.radiusX(), centerX, boxWidth);
-        float radiusY = ellipse.floatValueForRadiusInBox(ellipse.radiusY(), centerY, boxHeight);
-        FloatPoint logicalCenter = physicalPointToLogical(FloatPoint(centerX, centerY), logicalBoxSize.height(), writingMode);
+        auto center = FloatPoint { centerX, centerY };
+        auto radius = ellipse.floatSizeForRadiusInBox({ boxWidth, boxHeight }, center);
+        FloatPoint logicalCenter = physicalPointToLogical(center, logicalBoxSize.height(), writingMode);
         logicalCenter.moveBy(borderBoxOffset);
-
-        shape = createEllipseShape(logicalCenter, FloatSize(radiusX, radiusY));
+        shape = createEllipseShape(logicalCenter, radius);
         break;
     }
 
@@ -185,7 +184,7 @@ Ref<const Shape> Shape::createRasterShape(Image* image, float threshold, const L
     IntRect marginRect = snappedIntRect(marginR);
     auto intervals = makeUnique<RasterShapeIntervals>(marginRect.height(), -marginRect.y());
     // FIXME (149420): This buffer should not be unconditionally unaccelerated.
-    auto imageBuffer = ImageBuffer::create(imageRect.size(), RenderingPurpose::Unspecified, 1, DestinationColorSpace::SRGB(), PixelFormat::BGRA8);
+    auto imageBuffer = ImageBuffer::create(imageRect.size(), RenderingPurpose::Unspecified, 1, DestinationColorSpace::SRGB(), ImageBufferPixelFormat::BGRA8);
 
     auto createShape = [&]() {
         auto rasterShape = adoptRef(*new RasterShape(WTFMove(intervals), marginRect.size()));
@@ -209,14 +208,13 @@ Ref<const Shape> Shape::createRasterShape(Image* image, float threshold, const L
     if (!pixelBuffer)
         return createShape();
 
-    unsigned pixelArrayLength = pixelBuffer->sizeInBytes();
+    if (imageRect.area() * 4 == pixelBuffer->bytes().size()) {
     unsigned pixelArrayOffset = 3; // Each pixel is four bytes: RGBA.
     uint8_t alphaPixelThreshold = static_cast<uint8_t>(lroundf(clampTo<float>(threshold, 0, 1) * 255.0f));
 
     int minBufferY = std::max(0, marginRect.y() - imageRect.y());
     int maxBufferY = std::min(imageRect.height(), marginRect.maxY() - imageRect.y());
 
-    if ((imageRect.area() * 4) == pixelArrayLength) {
         for (int y = minBufferY; y < maxBufferY; ++y) {
             int startX = -1;
             for (int x = 0; x < imageRect.width(); ++x, pixelArrayOffset += 4) {

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -446,7 +446,7 @@ JNIEXPORT jstring JNICALL Java_com_sun_webkit_dom_JSObject_toStringImpl
     JSC::JSLockHolder lock(JSGlobalObject);
 
     return toJS(object)->toString(JSGlobalObject)->value(JSGlobalObject)
-        .toJavaString(env).releaseLocal();
+        ->toJavaString(env).releaseLocal();
 }
 
 JNIEXPORT jobject JNICALL Java_com_sun_webkit_dom_JSObject_callImpl

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -525,9 +525,9 @@ public final class RadialGradient extends Paint {
      * &lt;point&gt; = [ [ &lt;length&gt; &lt;length&gt; ] | [ &lt;percentage&gt; | &lt;percentage&gt; ] ]
      * &lt;color-stop&gt; = [ &lt;color&gt; [ &lt;percentage&gt; | &lt;length&gt;]? ]
      * </pre>
-     * <p>Currently length can be only specified in px, the specification of unit can be omited.
+     * <p>Currently length can be only specified in px, the specification of unit can be omitted.
      * Format of color representation is the one used in {@link Color#web(String color)}.
-     * The radial-gradient keyword can be omited.
+     * The radial-gradient keyword can be omitted.
      * For additional information about the format of string representation, see the
      * <a href="../doc-files/cssref.html">CSS Reference Guide</a>.
      * </p>

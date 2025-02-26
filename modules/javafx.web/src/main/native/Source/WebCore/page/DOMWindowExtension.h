@@ -36,7 +36,7 @@ namespace WebCore {
 class DOMWrapperWorld;
 class LocalFrame;
 
-class DOMWindowExtension final : public RefCounted<DOMWindowExtension>, public LocalDOMWindow::Observer {
+class DOMWindowExtension final : public RefCounted<DOMWindowExtension>, public LocalDOMWindowObserver {
 public:
     static Ref<DOMWindowExtension> create(LocalDOMWindow* window, DOMWrapperWorld& world)
     {
@@ -52,6 +52,7 @@ public:
     void willDetachGlobalObjectFromFrame() final;
 
     WEBCORE_EXPORT LocalFrame* frame() const;
+    RefPtr<LocalFrame> protectedFrame() const;
     DOMWrapperWorld& world() const { return m_world; }
 
 private:

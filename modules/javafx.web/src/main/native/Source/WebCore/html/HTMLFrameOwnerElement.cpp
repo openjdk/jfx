@@ -33,12 +33,12 @@
 #include "ScriptController.h"
 #include "ShadowRoot.h"
 #include "StyleTreeResolver.h"
-#include <wtf/IsoMallocInlines.h>
 #include <wtf/Ref.h>
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
-WTF_MAKE_ISO_ALLOCATED_IMPL(HTMLFrameOwnerElement);
+WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(HTMLFrameOwnerElement);
 
 HTMLFrameOwnerElement::HTMLFrameOwnerElement(const QualifiedName& tagName, Document& document, OptionSet<TypeFlag> constructionType)
     : HTMLElement(tagName, document, constructionType)
@@ -78,17 +78,22 @@ void HTMLFrameOwnerElement::clearContentFrame()
 void HTMLFrameOwnerElement::disconnectContentFrame()
 {
     if (RefPtr frame = m_contentFrame.get()) {
-        if (frame->settings().siteIsolationEnabled())
-            frame->broadcastFrameRemovalToOtherProcesses();
         frame->frameDetached();
+        if (frame == m_contentFrame.get())
         frame->disconnectOwnerElement();
+        RELEASE_ASSERT_WITH_SECURITY_IMPLICATION(frame != m_contentFrame.get());
     }
 }
 
 HTMLFrameOwnerElement::~HTMLFrameOwnerElement()
 {
-    if (m_contentFrame)
-        m_contentFrame->disconnectOwnerElement();
+    if (RefPtr contentFrame = m_contentFrame.get())
+        contentFrame->disconnectOwnerElement();
+}
+
+RefPtr<Frame> HTMLFrameOwnerElement::protectedContentFrame() const
+{
+    return m_contentFrame.get();
 }
 
 Document* HTMLFrameOwnerElement::contentDocument() const

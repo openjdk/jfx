@@ -101,6 +101,7 @@ protected:
     virtual void recordDrawSystemImage(SystemImage&, const FloatRect&) = 0;
     virtual void recordDrawPattern(RenderingResourceIdentifier, const FloatRect& destRect, const FloatRect& tileRect, const AffineTransform&, const FloatPoint& phase, const FloatSize& spacing, ImagePaintingOptions = { }) = 0;
     virtual void recordBeginTransparencyLayer(float) = 0;
+    virtual void recordBeginTransparencyLayer(CompositeOperator, BlendMode) = 0;
     virtual void recordEndTransparencyLayer() = 0;
     virtual void recordDrawRect(const FloatRect&, float) = 0;
     virtual void recordDrawLine(const FloatPoint& point1, const FloatPoint& point2) = 0;
@@ -110,10 +111,10 @@ protected:
     virtual void recordDrawPath(const Path&) = 0;
     virtual void recordDrawFocusRingPath(const Path&, float outlineWidth, const Color&) = 0;
     virtual void recordDrawFocusRingRects(const Vector<FloatRect>&, float outlineOffset, float outlineWidth, const Color&) = 0;
-    virtual void recordFillRect(const FloatRect&) = 0;
+    virtual void recordFillRect(const FloatRect&, RequiresClipToRect) = 0;
     virtual void recordFillRectWithColor(const FloatRect&, const Color&) = 0;
     virtual void recordFillRectWithGradient(const FloatRect&, Gradient&) = 0;
-    virtual void recordFillRectWithGradientAndSpaceTransform(const FloatRect&, Gradient&, const AffineTransform&) = 0;
+    virtual void recordFillRectWithGradientAndSpaceTransform(const FloatRect&, Gradient&, const AffineTransform&, RequiresClipToRect) = 0;
     virtual void recordFillCompositedRect(const FloatRect&, const Color&, CompositeOperator, BlendMode) = 0;
     virtual void recordFillRoundedRect(const FloatRoundedRect&, const Color&, BlendMode) = 0;
     virtual void recordFillRectWithRoundedHole(const FloatRect&, const FloatRoundedRect&, const Color&) = 0;
@@ -215,10 +216,10 @@ private:
     WEBCORE_EXPORT void setLineJoin(LineJoin) final;
     WEBCORE_EXPORT void setMiterLimit(float) final;
 
-    WEBCORE_EXPORT void fillRect(const FloatRect&) final;
+    WEBCORE_EXPORT void fillRect(const FloatRect&, RequiresClipToRect) final;
     WEBCORE_EXPORT void fillRect(const FloatRect&, const Color&) final;
     WEBCORE_EXPORT void fillRect(const FloatRect&, Gradient&) final;
-    WEBCORE_EXPORT void fillRect(const FloatRect&, Gradient&, const AffineTransform&) final;
+    WEBCORE_EXPORT void fillRect(const FloatRect&, Gradient&, const AffineTransform&, RequiresClipToRect) final;
     WEBCORE_EXPORT void fillRect(const FloatRect&, const Color&, CompositeOperator, BlendMode) final;
     WEBCORE_EXPORT void fillRoundedRect(const FloatRoundedRect&, const Color&, BlendMode) final;
     WEBCORE_EXPORT void fillRectWithRoundedHole(const FloatRect&, const FloatRoundedRect& roundedHoleRect, const Color&) final;
@@ -273,6 +274,7 @@ private:
     WEBCORE_EXPORT AffineTransform getCTM(GraphicsContext::IncludeDeviceScale = PossiblyIncludeDeviceScale) const final;
 
     WEBCORE_EXPORT void beginTransparencyLayer(float opacity) final;
+    WEBCORE_EXPORT void beginTransparencyLayer(CompositeOperator, BlendMode) final;
     WEBCORE_EXPORT void endTransparencyLayer() final;
 
     WEBCORE_EXPORT void resetClip() final;

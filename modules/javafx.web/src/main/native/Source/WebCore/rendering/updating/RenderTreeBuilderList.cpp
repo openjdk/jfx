@@ -30,7 +30,6 @@
 #include "RenderListMarker.h"
 #include "RenderMenuList.h"
 #include "RenderMultiColumnFlow.h"
-#include "RenderRuby.h"
 #include "RenderTable.h"
 
 namespace WebCore {
@@ -57,7 +56,7 @@ static RenderBlock* getParentOfFirstLineBox(RenderBlock& current, RenderObject& 
         if (child.isFloating() || child.isOutOfFlowPositioned() || is<RenderMenuList>(child))
             continue;
 
-        if (!is<RenderBlock>(child) || is<RenderTable>(child) || is<RenderRubyAsBlock>(child))
+        if (!is<RenderBlock>(child) || is<RenderTable>(child))
             break;
 
         if (auto* renderBox = dynamicDowncast<RenderBox>(child); renderBox && renderBox->isWritingModeRoot())
@@ -127,7 +126,7 @@ void RenderTreeBuilder::List::updateItemMarker(RenderListItem& listItemRenderer)
         return;
 
     if (currentParent)
-        m_builder.attach(*newParent, m_builder.detach(*currentParent, *markerRenderer, RenderTreeBuilder::CanCollapseAnonymousBlock::No), firstNonMarkerChild(*newParent));
+        m_builder.attach(*newParent, m_builder.detach(*currentParent, *markerRenderer, WillBeDestroyed::No, RenderTreeBuilder::CanCollapseAnonymousBlock::No), firstNonMarkerChild(*newParent));
     else
         m_builder.attach(*newParent, WTFMove(newMarkerRenderer), firstNonMarkerChild(*newParent));
 

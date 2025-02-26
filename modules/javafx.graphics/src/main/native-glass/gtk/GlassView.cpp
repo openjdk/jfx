@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -102,7 +102,7 @@ JNIEXPORT jint JNICALL Java_com_sun_glass_ui_gtk_GtkView__1getX
 
     GlassView* view = JLONG_TO_GLASSVIEW(ptr);
     if (view && view->current_window) {
-        return view->current_window->get_frame_extents().left;
+        return view->current_window->get_geometry().view_x;
     }
     return 0;
 }
@@ -120,7 +120,7 @@ JNIEXPORT jint JNICALL Java_com_sun_glass_ui_gtk_GtkView__1getY
 
     GlassView* view = JLONG_TO_GLASSVIEW(ptr);
     if (view && view->current_window) {
-        return view->current_window->get_frame_extents().top;
+        return view->current_window->get_geometry().view_y;
     }
     return 0;
 }

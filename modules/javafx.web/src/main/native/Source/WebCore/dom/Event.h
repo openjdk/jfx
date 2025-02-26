@@ -45,7 +45,7 @@ class EventTarget;
 class ScriptExecutionContext;
 
 class Event : public ScriptWrappable, public RefCounted<Event> {
-    WTF_MAKE_ISO_ALLOCATED(Event);
+    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(Event);
 public:
     using IsTrusted = EventIsTrusted;
     using CanBubble = EventCanBubble;
@@ -71,6 +71,8 @@ public:
 
     const AtomString& type() const { return m_type; }
     void setType(const AtomString& type) { m_type = type; }
+
+    enum EventInterfaceType interfaceType() const { return static_cast<enum EventInterfaceType>(m_eventInterface); }
 
     EventTarget* target() const { return m_target.get(); }
     void setTarget(RefPtr<EventTarget>&&);
@@ -102,16 +104,14 @@ public:
     bool legacyReturnValue() const { return !m_wasCanceled; }
     void setLegacyReturnValue(bool);
 
-    virtual EventInterface eventInterface() const { return EventInterfaceType; }
-
     virtual bool isBeforeTextInsertedEvent() const { return false; }
     virtual bool isBeforeUnloadEvent() const { return false; }
     virtual bool isClipboardEvent() const { return false; }
+    virtual bool isCommandEvent() const { return false; }
     virtual bool isCompositionEvent() const { return false; }
     virtual bool isErrorEvent() const { return false; }
     virtual bool isFocusEvent() const { return false; }
     virtual bool isInputEvent() const { return false; }
-    virtual bool isInvokeEvent() const { return false; }
     virtual bool isKeyboardEvent() const { return false; }
     virtual bool isMouseEvent() const { return false; }
     virtual bool isPointerEvent() const { return false; }
@@ -159,17 +159,17 @@ public:
     virtual String debugDescription() const;
 
 protected:
-    explicit Event(IsTrusted = IsTrusted::No);
-    Event(const AtomString& type, CanBubble, IsCancelable, IsComposed = IsComposed::No);
-    Event(const AtomString& type, CanBubble, IsCancelable, IsComposed, MonotonicTime timestamp, IsTrusted isTrusted = IsTrusted::Yes);
-    Event(const AtomString& type, const EventInit&, IsTrusted);
+    explicit Event(enum EventInterfaceType, IsTrusted = IsTrusted::No);
+    Event(enum EventInterfaceType, const AtomString& type, CanBubble, IsCancelable, IsComposed = IsComposed::No);
+    Event(enum EventInterfaceType, const AtomString& type, CanBubble, IsCancelable, IsComposed, MonotonicTime timestamp, IsTrusted isTrusted = IsTrusted::Yes);
+    Event(enum EventInterfaceType, const AtomString& type, const EventInit&, IsTrusted);
 
     virtual void receivedTarget() { }
 
     bool isConstructedFromInitializer() const { return m_isConstructedFromInitializer; }
 
 private:
-    explicit Event(MonotonicTime createTime, const AtomString& type, IsTrusted, CanBubble, IsCancelable, IsComposed);
+    explicit Event(MonotonicTime createTime, enum EventInterfaceType, const AtomString& type, IsTrusted, CanBubble, IsCancelable, IsComposed);
 
     void setCanceledFlagIfPossible();
 
@@ -192,6 +192,10 @@ private:
     // We consult this flag since the EventInit dictionary takes priority in initializing event attribute values.
     // See step 4 of https://dom.spec.whatwg.org/#inner-event-creation-steps
     unsigned m_isConstructedFromInitializer : 1 { false };
+
+    unsigned m_eventInterface : 7 { 0 };
+
+    // 10-bits left.
 
     AtomString m_type;
 

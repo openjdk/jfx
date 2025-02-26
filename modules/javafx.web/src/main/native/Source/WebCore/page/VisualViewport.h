@@ -32,12 +32,12 @@
 namespace WebCore {
 
 class VisualViewport final : public RefCounted<VisualViewport>, public EventTarget, public LocalDOMWindowProperty {
-    WTF_MAKE_ISO_ALLOCATED(VisualViewport);
+    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(VisualViewport);
 public:
     static Ref<VisualViewport> create(LocalDOMWindow& window) { return adoptRef(*new VisualViewport(window)); }
 
     // EventTarget
-    EventTargetInterface eventTargetInterface() const final;
+    enum EventTargetInterfaceType eventTargetInterface() const final;
     ScriptExecutionContext* scriptExecutionContext() const final;
     bool addEventListener(const AtomString& eventType, Ref<EventListener>&&, const AddEventListenerOptions&) final;
 

@@ -64,10 +64,42 @@ struct  _GRealThread
  * with the normal `futex` syscall. This can happen if newer kernel headers
  * are used than the kernel that is actually running.
  *
+ * The `futex_time64` syscall is also skipped in favour of `futex` if the
+ * Android runtime’s API level is lower than 30, as it’s blocked by seccomp
+ * there and using it will cause the app to be terminated:
+ *   https://android-review.googlesource.com/c/platform/bionic/+/1094758
+ *   https://github.com/aosp-mirror/platform_bionic/commit/ee7bc3002dc3127faac110167d28912eb0e86a20
+ *
  * This must not be called with a timeout parameter as that differs
  * in size between the two syscall variants!
  */
-#if defined(__NR_futex) && defined(__NR_futex_time64)
+#if defined(HAVE_FUTEX) && defined(HAVE_FUTEX_TIME64)
+#if defined(__ANDROID__)
+#define g_futex_simple(uaddr, futex_op, ...)                                     \
+  G_STMT_START                                                                   \
+  {                                                                              \
+    int saved_errno = errno;                                                     \
+    int res = 0;                                                                 \
+    if (__builtin_available (android 30, *))                                     \
+      {                                                                          \
+        res = syscall (__NR_futex_time64, uaddr, (gsize) futex_op, __VA_ARGS__); \
+        if (res < 0 && errno == ENOSYS)                                          \
+          {                                                                      \
+            errno = saved_errno;                                                 \
+            res = syscall (__NR_futex, uaddr, (gsize) futex_op, __VA_ARGS__);    \
+          }                                                                      \
+      }                                                                          \
+    else                                                                         \
+      {                                                                          \
+        res = syscall (__NR_futex, uaddr, (gsize) futex_op, __VA_ARGS__);        \
+      }                                                                          \
+    if (res < 0 && errno == EAGAIN)                                              \
+      {                                                                          \
+        errno = saved_errno;                                                     \
+      }                                                                          \
+  }                                                                              \
+  G_STMT_END
+#else
 #define g_futex_simple(uaddr, futex_op, ...)                                     \
   G_STMT_START                                                                   \
   {                                                                              \
@@ -84,7 +116,8 @@ struct  _GRealThread
       }                                                                          \
   }                                                                              \
   G_STMT_END
-#elif defined(__NR_futex_time64)
+#endif /* defined(__ANDROID__) */
+#elif defined(HAVE_FUTEX_TIME64)
 #define g_futex_simple(uaddr, futex_op, ...)                                     \
   G_STMT_START                                                                   \
   {                                                                              \
@@ -96,7 +129,7 @@ struct  _GRealThread
       }                                                                          \
   }                                                                              \
   G_STMT_END
-#elif defined(__NR_futex)
+#elif defined(HAVE_FUTEX)
 #define g_futex_simple(uaddr, futex_op, ...)                              \
   G_STMT_START                                                            \
   {                                                                       \
@@ -108,9 +141,9 @@ struct  _GRealThread
       }                                                                   \
   }                                                                       \
   G_STMT_END
-#else /* !defined(__NR_futex) && !defined(__NR_futex_time64) */
-#error "Neither __NR_futex nor __NR_futex_time64 are defined but were found by meson"
-#endif /* defined(__NR_futex) && defined(__NR_futex_time64) */
+#else /* !defined(HAVE_FUTEX) && !defined(HAVE_FUTEX_TIME64) */
+#error "Neither __NR_futex nor __NR_futex_time64 are available"
+#endif /* defined(HAVE_FUTEX) && defined(HAVE_FUTEX_TIME64) */
 
 #endif
 

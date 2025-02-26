@@ -37,11 +37,11 @@
 #include "CSSParserToken.h"
 #include "CSSPrimitiveValue.h"
 #include <cmath>
-#include <wtf/IsoMallocInlines.h>
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
-WTF_MAKE_ISO_ALLOCATED_IMPL(CSSUnitValue);
+WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(CSSUnitValue);
 
 CSSUnitType CSSUnitValue::parseUnit(const String& unit)
 {
@@ -175,8 +175,8 @@ RefPtr<CSSValue> CSSUnitValue::toCSSValue() const
 // FIXME: This function could be mostly generated from CSSProperties.json.
 static bool isValueOutOfRangeForProperty(CSSPropertyID propertyID, double value, CSSUnitType unit)
 {
-    bool acceptsNegativeNumbers = true;
-    if (CSSParserFastPaths::isSimpleLengthPropertyID(propertyID, acceptsNegativeNumbers) && !acceptsNegativeNumbers && value < 0)
+    ValueRange valueRange = ValueRange::All;
+    if (CSSParserFastPaths::isSimpleLengthPropertyID(propertyID, valueRange) && valueRange == ValueRange::NonNegative && value < 0)
         return true;
 
     switch (propertyID) {

@@ -65,4 +65,6 @@
     boolean zoom = true;
     boolean torch = true;
 
+    boolean backgroundBlur = true;
+    boolean powerEfficient = true;
 };

@@ -36,7 +36,17 @@
 #include "ResourceResponse.h"
 #include "ServiceWorkerRegistrationKey.h"
 #include "ServiceWorkerTypes.h"
+#include <wtf/Identified.h>
 #include <wtf/WeakPtr.h>
+
+namespace WebCore {
+class BackgroundFetch;
+}
+
+namespace WTF {
+template<typename T> struct IsDeprecatedWeakRefSmartPointerException;
+template<> struct IsDeprecatedWeakRefSmartPointerException<WebCore::BackgroundFetch> : std::true_type { };
+}
 
 namespace WebCore {
 
@@ -64,13 +74,13 @@ public:
 
     using RetrieveRecordResponseCallback = CompletionHandler<void(Expected<ResourceResponse, ExceptionData>&&)>;
     using RetrieveRecordResponseBodyCallback = Function<void(Expected<RefPtr<SharedBuffer>, ResourceError>&&)>;
-    using CreateLoaderCallback = Function<std::unique_ptr<BackgroundFetchRecordLoader>(BackgroundFetchRecordLoader::Client&, const BackgroundFetchRequest&, size_t responseDataSize, const ClientOrigin&)>;
+    using CreateLoaderCallback = Function<std::unique_ptr<BackgroundFetchRecordLoader>(BackgroundFetchRecordLoaderClient&, const BackgroundFetchRequest&, size_t responseDataSize, const ClientOrigin&)>;
 
     bool pausedFlagIsSet() const { return m_pausedFlag; }
     void pause();
     void resume(const CreateLoaderCallback&);
 
-    class Record final : public BackgroundFetchRecordLoader::Client, public RefCounted<Record> {
+    class Record final : public BackgroundFetchRecordLoaderClient, public RefCounted<Record>, private Identified<BackgroundFetchRecordIdentifier> {
         WTF_MAKE_FAST_ALLOCATED;
     public:
         static Ref<Record> create(BackgroundFetch& fetch, BackgroundFetchRequest&& request, size_t size) { return adoptRef(*new Record(fetch, WTFMove(request), size)); }
@@ -103,7 +113,6 @@ public:
         void didFinish(const ResourceError&) final;
 
         WeakPtr<BackgroundFetch> m_fetch;
-        BackgroundFetchRecordIdentifier m_identifier;
         String m_fetchIdentifier;
         ServiceWorkerRegistrationKey m_registrationKey;
         BackgroundFetchRequest m_request;

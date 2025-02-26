@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023 Apple Inc. All rights reserved.
+ * Copyright (C) 2023-2024 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -40,7 +40,6 @@
 #include "WasmCallee.h"
 #include "WasmCallingConvention.h"
 #include "WasmFunctionCodeBlockGenerator.h"
-#include "WasmInstance.h"
 #include "WasmLLIntBuiltin.h"
 #include "WasmLLIntGenerator.h"
 #include "WasmModuleInformation.h"
@@ -92,7 +91,7 @@ static inline bool shouldJIT(Wasm::IPIntCallee* callee, RequiredWasmJIT required
     return true;
 }
 
-static inline bool jitCompileAndSetHeuristics(Wasm::IPIntCallee* callee, Wasm::Instance* instance)
+static inline bool jitCompileAndSetHeuristics(Wasm::IPIntCallee* callee, JSWebAssemblyInstance* instance)
 {
     ASSERT(!instance->module().moduleInformation().usesSIMD(callee->functionIndex()));
 
@@ -102,7 +101,8 @@ static inline bool jitCompileAndSetHeuristics(Wasm::IPIntCallee* callee, Wasm::I
         return false;
     }
 
-    if (callee->replacement(instance->memory()->mode()))  {
+    MemoryMode memoryMode = instance->memory()->mode();
+    if (callee->replacement(memoryMode))  {
         dataLogLnIf(Options::verboseOSR(), "    Code was already compiled.");
         tierUpCounter.optimizeSoon();
         return true;
@@ -111,10 +111,10 @@ static inline bool jitCompileAndSetHeuristics(Wasm::IPIntCallee* callee, Wasm::I
     bool compile = false;
     {
         Locker locker { tierUpCounter.m_lock };
-        switch (tierUpCounter.m_compilationStatus) {
+        switch (tierUpCounter.compilationStatus(memoryMode)) {
         case Wasm::IPIntTierUpCounter::CompilationStatus::NotCompiled:
             compile = true;
-            tierUpCounter.m_compilationStatus = Wasm::IPIntTierUpCounter::CompilationStatus::Compiling;
+            tierUpCounter.setCompilationStatus(memoryMode, Wasm::IPIntTierUpCounter::CompilationStatus::Compiling);
             break;
         case Wasm::IPIntTierUpCounter::CompilationStatus::Compiling:
             tierUpCounter.optimizeAfterWarmUp();
@@ -130,7 +130,7 @@ static inline bool jitCompileAndSetHeuristics(Wasm::IPIntCallee* callee, Wasm::I
         if (Options::wasmIPIntTiersUpToBBQ() && Wasm::BBQPlan::ensureGlobalBBQAllowlist().containsWasmFunction(functionIndex))
             plan = adoptRef(*new Wasm::BBQPlan(instance->vm(), const_cast<Wasm::ModuleInformation&>(instance->module().moduleInformation()), functionIndex, callee->hasExceptionHandlers(), instance->calleeGroup(), Wasm::Plan::dontFinalize()));
         else // No need to check OMG allow list: if we didn't want to compile this function, shouldJIT should have returned false.
-            plan = adoptRef(*new Wasm::OMGPlan(instance->vm(), Ref<Wasm::Module>(instance->module()), functionIndex, callee->hasExceptionHandlers(), instance->memory()->mode(), Wasm::Plan::dontFinalize()));
+            plan = adoptRef(*new Wasm::OMGPlan(instance->vm(), Ref<Wasm::Module>(instance->module()), functionIndex, callee->hasExceptionHandlers(), memoryMode, Wasm::Plan::dontFinalize()));
 
         Wasm::ensureWorklist().enqueue(*plan);
         if (UNLIKELY(!Options::useConcurrentJIT()))
@@ -139,7 +139,7 @@ static inline bool jitCompileAndSetHeuristics(Wasm::IPIntCallee* callee, Wasm::I
             tierUpCounter.optimizeAfterWarmUp();
     }
 
-    return !!callee->replacement(instance->memory()->mode());
+    return !!callee->replacement(memoryMode);
 }
 
 WASM_IPINT_EXTERN_CPP_DECL(prologue_osr, CallFrame* callFrame)
@@ -166,7 +166,7 @@ WASM_IPINT_EXTERN_CPP_DECL(loop_osr, CallFrame* callFrame, uint32_t pc, uint64_t
     Wasm::IPIntCallee* callee = IPINT_CALLEE();
     Wasm::IPIntTierUpCounter& tierUpCounter = callee->tierUpCounter();
 
-    if (!Options::useWebAssemblyOSR() || !Options::useWasmIPIntLoopOSR() || !shouldJIT(callee, RequiredWasmJIT::OMG)) {
+    if (!Options::useWasmOSR() || !Options::useWasmIPIntLoopOSR() || !shouldJIT(callee, RequiredWasmJIT::OMG)) {
         ipint_extern_prologue_osr(instance, callFrame);
         WASM_RETURN_TWO(nullptr, nullptr);
     }
@@ -246,16 +246,17 @@ WASM_IPINT_EXTERN_CPP_DECL(loop_osr, CallFrame* callFrame, uint32_t pc, uint64_t
             WASM_RETURN_TWO(buffer, osrEntryCallee->entrypoint().taggedPtr());
         };
 
-        if (auto* osrEntryCallee = callee->osrEntryCallee(instance->memory()->mode()))
+        MemoryMode memoryMode = instance->memory()->mode();
+        if (auto* osrEntryCallee = callee->osrEntryCallee(memoryMode))
             return doOSREntry(osrEntryCallee);
 
         bool compile = false;
         {
             Locker locker { tierUpCounter.m_lock };
-            switch (tierUpCounter.m_loopCompilationStatus) {
+            switch (tierUpCounter.loopCompilationStatus(memoryMode)) {
             case Wasm::IPIntTierUpCounter::CompilationStatus::NotCompiled:
                 compile = true;
-                tierUpCounter.m_loopCompilationStatus = Wasm::IPIntTierUpCounter::CompilationStatus::Compiling;
+                tierUpCounter.setLoopCompilationStatus(memoryMode, Wasm::IPIntTierUpCounter::CompilationStatus::Compiling);
                 break;
             case Wasm::IPIntTierUpCounter::CompilationStatus::Compiling:
                 tierUpCounter.optimizeAfterWarmUp();
@@ -266,7 +267,7 @@ WASM_IPINT_EXTERN_CPP_DECL(loop_osr, CallFrame* callFrame, uint32_t pc, uint64_t
         }
 
         if (compile) {
-            Ref<Wasm::Plan> plan = adoptRef(*static_cast<Wasm::Plan*>(new Wasm::OSREntryPlan(instance->vm(), Ref<Wasm::Module>(instance->module()), Ref<Wasm::Callee>(*callee), callee->functionIndex(), callee->hasExceptionHandlers(), osrEntryData.loopIndex, instance->memory()->mode(), Wasm::Plan::dontFinalize())));
+            Ref<Wasm::Plan> plan = adoptRef(*static_cast<Wasm::Plan*>(new Wasm::OSREntryPlan(instance->vm(), Ref<Wasm::Module>(instance->module()), Ref<Wasm::Callee>(*callee), callee->functionIndex(), callee->hasExceptionHandlers(), osrEntryData.loopIndex, memoryMode, Wasm::Plan::dontFinalize())));
             Wasm::ensureWorklist().enqueue(plan.copyRef());
             if (UNLIKELY(!Options::useConcurrentJIT()))
                 plan->waitForCompletion();
@@ -274,7 +275,7 @@ WASM_IPINT_EXTERN_CPP_DECL(loop_osr, CallFrame* callFrame, uint32_t pc, uint64_t
                 tierUpCounter.optimizeAfterWarmUp();
         }
 
-        if (auto* osrEntryCallee = callee->osrEntryCallee(instance->memory()->mode()))
+        if (auto* osrEntryCallee = callee->osrEntryCallee(memoryMode))
             return doOSREntry(osrEntryCallee);
 
         WASM_RETURN_TWO(nullptr, nullptr);
@@ -469,7 +470,7 @@ WASM_IPINT_EXTERN_CPP_DECL(table_grow, int32_t tableIndex, EncodedJSValue fill, 
 WASM_IPINT_EXTERN_CPP_DECL_1P(current_memory)
 {
 #if CPU(ARM64) || CPU(X86_64)
-    size_t size = instance->memory()->handle().size() >> 16;
+    size_t size = instance->memory()->memory().handle().size() >> 16;
     WASM_RETURN_TWO(bitwise_cast<void*>(size), 0);
 #else
     UNUSED_PARAM(instance);
@@ -566,14 +567,14 @@ WASM_IPINT_EXTERN_CPP_DECL(table_size, int32_t tableIndex)
 #endif
 }
 
-static inline UGPRPair doWasmCall(Wasm::Instance* instance, unsigned functionIndex)
+static inline UGPRPair doWasmCall(JSWebAssemblyInstance* instance, unsigned functionIndex)
 {
     uint32_t importFunctionCount = instance->module().moduleInformation().importFunctionCount();
 
     CodePtr<WasmEntryPtrTag> codePtr;
 
     if (functionIndex < importFunctionCount) {
-        Wasm::Instance::ImportFunctionInfo* functionInfo = instance->importFunctionInfo(functionIndex);
+        JSWebAssemblyInstance::ImportFunctionInfo* functionInfo = instance->importFunctionInfo(functionIndex);
         codePtr = functionInfo->importFunctionStub;
     } else {
         // Target is a wasm function within the same instance

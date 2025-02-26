@@ -74,6 +74,18 @@ AXCoreObject* AccessibilityTableColumn::columnHeader()
         return nullptr;
 }
 
+void AccessibilityTableColumn::setColumnIndex(unsigned columnIndex)
+{
+    if (m_columnIndex == columnIndex)
+        return;
+    m_columnIndex = columnIndex;
+
+#if ENABLE(ACCESSIBILITY_ISOLATED_TREE)
+    if (auto* cache = axObjectCache())
+        cache->columnIndexChanged(*this);
+#endif
+}
+
 bool AccessibilityTableColumn::computeAccessibilityIsIgnored() const
 {
     if (!m_parent)
@@ -91,21 +103,21 @@ void AccessibilityTableColumn::addChildren()
     ASSERT(!m_childrenInitialized);
     m_childrenInitialized = true;
 
-    auto* parentTable = dynamicDowncast<AccessibilityTable>(m_parent.get());
+    RefPtr parentTable = dynamicDowncast<AccessibilityTable>(m_parent.get());
     if (!parentTable || !parentTable->isExposable())
         return;
 
     int numRows = parentTable->rowCount();
     for (int i = 0; i < numRows; ++i) {
-        auto* cell = parentTable->cellForColumnAndRow(m_columnIndex, i);
+        RefPtr cell = parentTable->cellForColumnAndRow(m_columnIndex, i);
         if (!cell)
             continue;
 
         // make sure the last one isn't the same as this one (rowspan cells)
-        if (m_children.size() > 0 && m_children.last() == cell)
+        if (m_children.size() > 0 && m_children.last() == cell.get())
             continue;
 
-        addChild(cell);
+        addChild(cell.get());
     }
 }
 

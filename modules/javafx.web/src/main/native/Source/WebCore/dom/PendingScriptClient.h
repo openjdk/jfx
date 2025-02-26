@@ -31,9 +31,15 @@ namespace WebCore {
 
 class PendingScript;
 
-class PendingScriptClient : public CanMakeCheckedPtr {
+class PendingScriptClient {
 public:
     virtual ~PendingScriptClient() = default;
+
+    // CheckedPtr interface
+    virtual uint32_t ptrCount() const = 0;
+    virtual uint32_t ptrCountWithoutThreadCheck() const = 0;
+    virtual void incrementPtrCount() const = 0;
+    virtual void decrementPtrCount() const = 0;
 
     virtual void notifyFinished(PendingScript&) = 0;
 };

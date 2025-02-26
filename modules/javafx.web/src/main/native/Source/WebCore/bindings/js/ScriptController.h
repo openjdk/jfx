@@ -78,8 +78,9 @@ enum class ReasonForCallingCanExecuteScripts : uint8_t {
 
 using ValueOrException = Expected<JSC::JSValue, ExceptionDetails>;
 
-class ScriptController : public CanMakeWeakPtr<ScriptController>, public CanMakeCheckedPtr {
+class ScriptController final : public CanMakeWeakPtr<ScriptController>, public CanMakeCheckedPtr<ScriptController> {
     WTF_MAKE_FAST_ALLOCATED;
+    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(ScriptController);
 
     using RootObjectMap = HashMap<void*, Ref<JSC::Bindings::RootObject>>;
 
@@ -129,6 +130,7 @@ public:
 
     void setEvalEnabled(bool, const String& errorMessage = String());
     void setWebAssemblyEnabled(bool, const String& errorMessage = String());
+    void setRequiresTrustedTypes(bool);
 
     static bool canAccessFromCurrentOrigin(LocalFrame*, Document& accessingDocument);
     WEBCORE_EXPORT bool canExecuteScripts(ReasonForCallingCanExecuteScripts);

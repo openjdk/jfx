@@ -30,6 +30,7 @@
 #include <wtf/HashSet.h>
 #include <wtf/Vector.h>
 #include <wtf/WeakHashMap.h>
+#include <wtf/WeakHashSet.h>
 #include <wtf/WeakPtr.h>
 #include <wtf/text/AtomString.h>
 #include <wtf/text/AtomStringHash.h>
@@ -106,8 +107,6 @@ private:
     struct Slot {
         WTF_MAKE_FAST_ALLOCATED;
     public:
-        Slot() { }
-
         bool hasSlotElements() { return !!elementCount; }
         bool hasDuplicatedSlotElements() { return elementCount > 1; }
         bool shouldResolveSlotElement() { return !element && elementCount; }

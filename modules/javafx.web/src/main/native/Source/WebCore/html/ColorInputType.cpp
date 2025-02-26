@@ -144,12 +144,13 @@ void ColorInputType::createShadowSubtree()
     ASSERT(element());
     ASSERT(element()->shadowRoot());
 
-    Document& document = element()->document();
-    auto wrapperElement = HTMLDivElement::create(document);
-    auto colorSwatch = HTMLDivElement::create(document);
+    Ref document = element()->document();
+    Ref wrapperElement = HTMLDivElement::create(document);
+    Ref colorSwatch = HTMLDivElement::create(document);
 
-    ScriptDisallowedScope::EventAllowedScope eventAllowedScope { *element()->userAgentShadowRoot() };
-    element()->userAgentShadowRoot()->appendChild(ContainerNode::ChildChange::Source::Parser, wrapperElement);
+    Ref shadowRoot = *element()->userAgentShadowRoot();
+    ScriptDisallowedScope::EventAllowedScope eventAllowedScope { shadowRoot };
+    shadowRoot->appendChild(ContainerNode::ChildChange::Source::Parser, wrapperElement);
 
     wrapperElement->appendChild(ContainerNode::ChildChange::Source::Parser, colorSwatch);
     wrapperElement->setUserAgentPart(UserAgentParts::webkitColorSwatchWrapper());
@@ -175,8 +176,8 @@ void ColorInputType::attributeChanged(const QualifiedName& name)
     if (name == valueAttr) {
         updateColorSwatch();
 
-        if (auto* cache = element()->document().existingAXObjectCache())
-            cache->valueChanged(element());
+        if (CheckedPtr cache = element()->document().existingAXObjectCache())
+            cache->valueChanged(*element());
     }
 
     InputType::attributeChanged(name);
@@ -252,8 +253,8 @@ void ColorInputType::didChooseColor(const Color& color)
     updateColorSwatch();
     element()->dispatchFormControlChangeEvent();
 
-    if (auto* cache = element()->document().existingAXObjectCache())
-        cache->valueChanged(element());
+    if (CheckedPtr cache = element()->document().existingAXObjectCache())
+        cache->valueChanged(*element());
 }
 
 void ColorInputType::didEndChooser()
@@ -276,17 +277,17 @@ void ColorInputType::updateColorSwatch()
         return;
 
     ASSERT(element());
-    colorSwatch->setInlineStyleProperty(CSSPropertyBackgroundColor, element()->value(), false);
+    colorSwatch->setInlineStyleProperty(CSSPropertyBackgroundColor, element()->value());
 }
 
 HTMLElement* ColorInputType::shadowColorSwatch() const
 {
     ASSERT(element());
-    RefPtr<ShadowRoot> shadow = element()->userAgentShadowRoot();
+    RefPtr shadow = element()->userAgentShadowRoot();
     if (!shadow)
         return nullptr;
 
-    auto wrapper = childrenOfType<HTMLDivElement>(*shadow).first();
+    RefPtr wrapper = childrenOfType<HTMLDivElement>(*shadow).first();
     if (!wrapper)
         return nullptr;
 

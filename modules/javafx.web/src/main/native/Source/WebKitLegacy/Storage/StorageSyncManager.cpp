@@ -29,6 +29,7 @@
 #include <wtf/FileSystem.h>
 #include <wtf/MainThread.h>
 #include <wtf/text/CString.h>
+#include <wtf/text/MakeString.h>
 
 namespace WebCore {
 
@@ -60,7 +61,7 @@ String StorageSyncManager::fullDatabaseFilename(const String& databaseIdentifier
         return String();
     }
 
-    return FileSystem::pathByAppendingComponent(m_path, makeString(databaseIdentifier, ".localstorage"));
+    return FileSystem::pathByAppendingComponent(m_path, makeString(databaseIdentifier, ".localstorage"_s));
 }
 
 void StorageSyncManager::dispatch(Function<void ()>&& function)

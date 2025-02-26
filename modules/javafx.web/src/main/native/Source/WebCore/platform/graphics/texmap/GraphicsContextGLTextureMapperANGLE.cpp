@@ -54,12 +54,18 @@
 #include "GraphicsContextGLGBMTextureMapper.h"
 #endif
 
+#if PLATFORM(GTK) || PLATFORM(WPE)
+#include "GLFence.h"
+#endif
+
 namespace WebCore {
 
 GraphicsContextGLANGLE::~GraphicsContextGLANGLE()
 {
     if (!makeContextCurrent())
         return;
+
+    GL_Disable(DEBUG_OUTPUT);
 
     if (m_texture)
         GL_DeleteTextures(1, &m_texture);
@@ -95,7 +101,16 @@ GraphicsContextGLANGLE::~GraphicsContextGLANGLE()
 
 bool GraphicsContextGLANGLE::makeContextCurrent()
 {
-    return !!EGL_MakeCurrent(m_displayObj, m_surfaceObj, m_surfaceObj, m_contextObj);
+    auto* texmapContext = static_cast<GraphicsContextGLTextureMapperANGLE*>(this);
+    if (texmapContext->isCurrent())
+        return true;
+
+    if (EGL_MakeCurrent(m_displayObj, m_surfaceObj, m_surfaceObj, m_contextObj)) {
+        texmapContext->didMakeContextCurrent();
+        return true;
+    }
+
+    return false;
 }
 
 void GraphicsContextGLANGLE::checkGPUStatus()
@@ -111,10 +126,10 @@ RefPtr<PixelBuffer> GraphicsContextGLTextureMapperANGLE::readCompositedResults()
     return readRenderingResults();
 }
 
-RefPtr<GraphicsContextGL> createWebProcessGraphicsContextGL(const GraphicsContextGLAttributes& attributes, SerialFunctionDispatcher*)
+RefPtr<GraphicsContextGL> createWebProcessGraphicsContextGL(const GraphicsContextGLAttributes& attributes)
 {
 #if USE(ANGLE_GBM)
-    auto& eglExtensions = PlatformDisplay::sharedDisplayForCompositing().eglExtensions();
+    auto& eglExtensions = PlatformDisplay::sharedDisplay().eglExtensions();
     if (eglExtensions.KHR_image_base && eglExtensions.EXT_image_dma_buf_import)
         return GraphicsContextGLGBMTextureMapper::create(GraphicsContextGLAttributes { attributes });
 #endif
@@ -171,7 +186,7 @@ bool GraphicsContextGLTextureMapperANGLE::platformInitializeContext()
 {
     m_isForWebGL2 = contextAttributes().isWebGL2;
 
-    auto& sharedDisplay = PlatformDisplay::sharedDisplayForCompositing();
+    auto& sharedDisplay = PlatformDisplay::sharedDisplay();
     m_displayObj = sharedDisplay.angleEGLDisplay();
     if (m_displayObj == EGL_NO_DISPLAY)
         return false;
@@ -301,6 +316,7 @@ void GraphicsContextGLTextureMapperANGLE::swapCompositorTexture()
 #if USE(NICOSIA)
     std::swap(m_textureID, m_compositorTextureID);
 #endif
+    m_isCompositorTextureInitialized = true;
 
     if (m_preserveDrawingBufferTexture) {
         // The context requires the use of an intermediate texture in order to implement preserveDrawingBuffer:true without antialiasing.
@@ -321,10 +337,6 @@ void GraphicsContextGLTextureMapperANGLE::swapCompositorTexture()
         GL_BindFramebuffer(GraphicsContextGL::FRAMEBUFFER, m_state.boundDrawFBO);
 }
 
-void GraphicsContextGLTextureMapperANGLE::setContextVisibility(bool)
-{
-}
-
 bool GraphicsContextGLTextureMapperANGLE::reshapeDrawingBuffer()
 {
     auto attrs = contextAttributes();
@@ -341,6 +353,8 @@ bool GraphicsContextGLTextureMapperANGLE::reshapeDrawingBuffer()
     GL_BindTexture(textureTarget, m_texture);
     GL_TexImage2D(textureTarget, 0, internalColorFormat, width, height, 0, colorFormat, GL_UNSIGNED_BYTE, 0);
 
+    m_isCompositorTextureInitialized = false;
+
     return true;
 }
 
@@ -351,7 +365,41 @@ void GraphicsContextGLTextureMapperANGLE::prepareForDisplay()
 
     prepareTexture();
     swapCompositorTexture();
+
+#if PLATFORM(GTK) || PLATFORM(WPE)
+    m_frameFence = GLFence::create();
+#endif
 }
+
+GLContextWrapper::Type GraphicsContextGLTextureMapperANGLE::type() const
+{
+    return GLContextWrapper::Type::Angle;
+}
+
+bool GraphicsContextGLTextureMapperANGLE::makeCurrentImpl()
+{
+    return !!EGL_MakeCurrent(m_displayObj, m_surfaceObj, m_surfaceObj, m_contextObj);
+}
+
+bool GraphicsContextGLTextureMapperANGLE::unmakeCurrentImpl()
+{
+    return !!EGL_MakeCurrent(m_displayObj, EGL_NO_SURFACE, EGL_NO_SURFACE, EGL_NO_CONTEXT);
+}
+
+#if ENABLE(WEBXR)
+bool GraphicsContextGLTextureMapperANGLE::addFoveation(IntSize, IntSize, IntSize, std::span<const GCGLfloat>, std::span<const GCGLfloat>, std::span<const GCGLfloat>)
+{
+    return false;
+}
+
+void GraphicsContextGLTextureMapperANGLE::enableFoveation(GCGLuint)
+{
+}
+
+void GraphicsContextGLTextureMapperANGLE::disableFoveation()
+{
+}
+#endif
 
 } // namespace WebCore
 

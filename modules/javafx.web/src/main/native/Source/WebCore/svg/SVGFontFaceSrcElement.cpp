@@ -28,11 +28,11 @@
 #include "SVGFontFaceNameElement.h"
 #include "SVGFontFaceUriElement.h"
 #include "SVGNames.h"
-#include <wtf/IsoMallocInlines.h>
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
-WTF_MAKE_ISO_ALLOCATED_IMPL(SVGFontFaceSrcElement);
+WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(SVGFontFaceSrcElement);
 
 using namespace SVGNames;
 
@@ -51,10 +51,10 @@ Ref<CSSValueList> SVGFontFaceSrcElement::createSrcValue() const
 {
     CSSValueListBuilder list;
     for (auto& child : childrenOfType<SVGElement>(*this)) {
-        if (auto* element = dynamicDowncast<SVGFontFaceUriElement>(child)) {
+        if (RefPtr element = dynamicDowncast<SVGFontFaceUriElement>(child)) {
             if (auto srcValue = element->createSrcValue(); !srcValue->isEmpty())
                 list.append(WTFMove(srcValue));
-        } else if (auto* element = dynamicDowncast<SVGFontFaceNameElement>(child)) {
+        } else if (RefPtr element = dynamicDowncast<SVGFontFaceNameElement>(child)) {
             if (auto srcValue = element->createSrcValue(); !srcValue->isEmpty())
                 list.append(WTFMove(srcValue));
     }

@@ -39,15 +39,18 @@ class PlatformMouseEvent;
 class RenderBox;
 class RenderObject;
 
-enum AutoscrollType {
-    NoAutoscroll,
-    AutoscrollForDragAndDrop,
-    AutoscrollForSelection,
+enum class AutoscrollType : uint8_t {
+    None,
+    DragAndDrop,
+    Selection,
 #if ENABLE(PAN_SCROLLING)
-    AutoscrollForPanCanStop,
-    AutoscrollForPan,
+    PanCanStop,
+    Pan,
 #endif
 };
+
+// When the autoscroll or the panScroll is triggered when do the scroll every 50ms to make it smooth.
+constexpr Seconds autoscrollInterval { 50_ms };
 
 // AutscrollController handles autoscroll and pan scroll for EventHandler.
 class AutoscrollController {
@@ -78,7 +81,7 @@ private:
 
     Timer m_autoscrollTimer;
     SingleThreadWeakPtr<RenderBox> m_autoscrollRenderer;
-    AutoscrollType m_autoscrollType { NoAutoscroll };
+    AutoscrollType m_autoscrollType { AutoscrollType::None };
     IntPoint m_dragAndDropAutoscrollReferencePosition;
     WallTime m_dragAndDropAutoscrollStartTime;
 #if ENABLE(PAN_SCROLLING)

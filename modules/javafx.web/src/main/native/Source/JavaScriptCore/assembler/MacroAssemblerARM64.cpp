@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2013-2021 Apple Inc. All rights reserved.
+ * Copyright (C) 2013-2024 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -29,6 +29,7 @@
 #include "MacroAssembler.h"
 
 #include "JSCPtrTag.h"
+#include "OperationResult.h"
 #include "ProbeContext.h"
 #include <wtf/InlineASM.h>
 #include <wtf/TZoneMallocInlines.h>
@@ -60,14 +61,12 @@ namespace JSC {
 
 WTF_MAKE_TZONE_ALLOCATED_IMPL(MacroAssemblerARM64);
 
-JSC_DECLARE_JIT_OPERATION(ctiMasmProbeTrampoline, void, ());
+JSC_DECLARE_NOEXCEPT_JIT_OPERATION(ctiMasmProbeTrampoline, void, ());
 JSC_ANNOTATE_JIT_OPERATION_PROBE(ctiMasmProbeTrampoline);
-JSC_DECLARE_JIT_OPERATION(ctiMasmProbeTrampolineSIMD, void, ());
+JSC_DECLARE_NOEXCEPT_JIT_OPERATION(ctiMasmProbeTrampolineSIMD, void, ());
 JSC_ANNOTATE_JIT_OPERATION_PROBE(ctiMasmProbeTrampolineSIMD);
 
 using namespace ARM64Registers;
-
-#if COMPILER(GCC_COMPATIBLE)
 
 // The following are offsets for Probe::State fields accessed
 // by the ctiMasmProbeTrampoline stub.
@@ -532,7 +531,7 @@ asm (
     "xpaci     x28" "\n"
     "cmp       x28, x27" "\n"
     "beq     " LOCAL_LABEL_STRING(ctiMasmProbeTrampolinePCAuthDone) "\n"
-    "brk       #0xc471" "\n"
+    "brk       #" STRINGIZE_VALUE_OF(WTF_FATAL_CRASH_CODE) "\n"
     LOCAL_LABEL_STRING(ctiMasmProbeTrampolinePCAuthDone) ":" "\n"
 #endif
     "sub       x27, x27, #" STRINGIZE_VALUE_OF(2 * GPREG_SIZE) "\n" // The return point PC is at 2 instructions before the end of the probe.
@@ -559,7 +558,7 @@ asm (
     "xpaci     x27" "\n"
     "cmp       x27, x28" "\n"
     "beq     " LOCAL_LABEL_STRING(ctiMasmProbeTrampolinePCAuthDone2) "\n"
-    "brk       #0xc471" "\n"
+    "brk       #" STRINGIZE_VALUE_OF(WTF_FATAL_CRASH_CODE) "\n"
     LOCAL_LABEL_STRING(ctiMasmProbeTrampolinePCAuthDone2) ":" "\n"
     "add       x27, x30, #48" "\n" // Compute sp at return point.
     "pacib     x28, x27" "\n"
@@ -785,7 +784,7 @@ asm (
     "xpaci     x28" "\n"
     "cmp       x28, x27" "\n"
     "beq     " LOCAL_LABEL_STRING(ctiMasmProbeTrampolinePCAuthDoneSIMD) "\n"
-    "brk       #0xc471" "\n"
+    "brk       #" STRINGIZE_VALUE_OF(WTF_FATAL_CRASH_CODE) "\n"
     LOCAL_LABEL_STRING(ctiMasmProbeTrampolinePCAuthDoneSIMD) ":" "\n"
 #endif
     "sub       x27, x27, #" STRINGIZE_VALUE_OF(2 * GPREG_SIZE) "\n" // The return point PC is at 2 instructions before the end of the probe.
@@ -812,7 +811,7 @@ asm (
     "xpaci     x27" "\n"
     "cmp       x27, x28" "\n"
     "beq     " LOCAL_LABEL_STRING(ctiMasmProbeTrampolinePCAuthDone2SIMD) "\n"
-    "brk       #0xc471" "\n"
+    "brk       #" STRINGIZE_VALUE_OF(WTF_FATAL_CRASH_CODE) "\n"
     LOCAL_LABEL_STRING(ctiMasmProbeTrampolinePCAuthDone2SIMD) ":" "\n"
     "add       x27, x30, #48" "\n" // Compute sp at return point.
     "pacib     x28, x27" "\n"
@@ -834,7 +833,6 @@ asm (
 #endif
     ".previous" "\n"
 );
-#endif // COMPILER(GCC_COMPATIBLE)
 
 void MacroAssembler::probe(Probe::Function function, void* arg, SavedFPWidth savedFPWidth)
 {
@@ -877,12 +875,21 @@ void MacroAssemblerARM64::collectCPUFeatures()
 #define HWCAP_ATOMICS (1 << 8)
 #endif
 
+#if !defined(HWCAP_FPHP)
+#define HWCAP_FPHP (1 << 9)
+#endif
+
+#if !defined(HWCAP_ASIMDHP)
+#define HWCAP_ASIMDHP (1 << 10)
+#endif
+
 #if !defined(HWCAP_JSCVT)
 #define HWCAP_JSCVT (1 << 13)
 #endif
 
         s_lseCheckState = (hwcaps & HWCAP_ATOMICS) ? CPUIDCheckState::Set : CPUIDCheckState::Clear;
         s_jscvtCheckState = (hwcaps & HWCAP_JSCVT) ? CPUIDCheckState::Set : CPUIDCheckState::Clear;
+        s_float16CheckState = ((hwcaps & HWCAP_FPHP) && (hwcaps & HWCAP_ASIMDHP)) ? CPUIDCheckState::Set : CPUIDCheckState::Clear;
     });
 #endif
 
@@ -901,10 +908,19 @@ void MacroAssemblerARM64::collectCPUFeatures()
     s_jscvtCheckState = CPUIDCheckState::Clear;
 #endif
     }
+
+    if (s_float16CheckState == CPUIDCheckState::NotChecked) {
+#if HAVE(FLOAT16_INSTRUCTION)
+        s_float16CheckState = CPUIDCheckState::Set;
+#else
+        s_float16CheckState = CPUIDCheckState::Clear;
+#endif
+    }
 }
 
 MacroAssemblerARM64::CPUIDCheckState MacroAssemblerARM64::s_lseCheckState = CPUIDCheckState::NotChecked;
 MacroAssemblerARM64::CPUIDCheckState MacroAssemblerARM64::s_jscvtCheckState = CPUIDCheckState::NotChecked;
+MacroAssemblerARM64::CPUIDCheckState MacroAssemblerARM64::s_float16CheckState = CPUIDCheckState::NotChecked;
 
 } // namespace JSC
 

@@ -38,11 +38,12 @@ namespace WebCore {
 class DeviceClient;
 class Page;
 
-class DeviceController : public Supplement<Page>, public CanMakeCheckedPtr {
+class DeviceController : public Supplement<Page>, public CanMakeCheckedPtr<DeviceController> {
     WTF_MAKE_FAST_ALLOCATED;
+    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(DeviceController);
 public:
     explicit DeviceController(DeviceClient&);
-    virtual ~DeviceController() = default;
+    virtual ~DeviceController();
 
     void addDeviceEventListener(LocalDOMWindow&);
     void removeDeviceEventListener(LocalDOMWindow&);
@@ -51,7 +52,7 @@ public:
 
     void dispatchDeviceEvent(Event&);
     bool isActive() { return !m_listeners.isEmpty(); }
-    DeviceClient& client() { return m_client; }
+    DeviceClient& client();
 
     virtual bool hasLastData() { return false; }
     virtual RefPtr<Event> getLastEvent() { return nullptr; }
@@ -61,7 +62,7 @@ protected:
 
     HashCountedSet<RefPtr<LocalDOMWindow>> m_listeners;
     HashCountedSet<RefPtr<LocalDOMWindow>> m_lastEventListeners;
-    DeviceClient& m_client;
+    WeakRef<DeviceClient> m_client;
     Timer m_timer;
 };
 

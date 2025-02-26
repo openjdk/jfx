@@ -29,6 +29,7 @@
 #if ENABLE(WEB_CRYPTO)
 #include "CryptoAlgorithmHkdfParams.h"
 #include "CryptoKeyRaw.h"
+#include "ScriptExecutionContext.h"
 #include <JavaScriptCore/JSCJSValueInlines.h>
 #include <wtf/CrossThreadCopier.h>
 
@@ -44,20 +45,21 @@ CryptoAlgorithmIdentifier CryptoAlgorithmHKDF::identifier() const
     return s_identifier;
 }
 
-void CryptoAlgorithmHKDF::deriveBits(const CryptoAlgorithmParameters& parameters, Ref<CryptoKey>&& baseKey, size_t length, VectorCallback&& callback, ExceptionCallback&& exceptionCallback, ScriptExecutionContext& context, WorkQueue& workQueue)
+void CryptoAlgorithmHKDF::deriveBits(const CryptoAlgorithmParameters& parameters, Ref<CryptoKey>&& baseKey, std::optional<size_t> length, VectorCallback&& callback, ExceptionCallback&& exceptionCallback, ScriptExecutionContext& context, WorkQueue& workQueue)
 {
-    if (!length || length % 8) {
+    if (!length || !(*length) || *length % 8) {
         exceptionCallback(ExceptionCode::OperationError);
         return;
     }
 
+    UseCryptoKit useCryptoKit = context.settingsValues().cryptoKitEnabled ? UseCryptoKit::Yes : UseCryptoKit::No;
     dispatchOperationInWorkQueue(workQueue, context, WTFMove(callback), WTFMove(exceptionCallback),
-        [parameters = crossThreadCopy(downcast<CryptoAlgorithmHkdfParams>(parameters)), baseKey = WTFMove(baseKey), length] {
-            return platformDeriveBits(parameters, downcast<CryptoKeyRaw>(baseKey.get()), length);
+        [parameters = crossThreadCopy(downcast<CryptoAlgorithmHkdfParams>(parameters)), baseKey = WTFMove(baseKey), length, useCryptoKit] {
+            return platformDeriveBits(parameters, downcast<CryptoKeyRaw>(baseKey.get()), *length, useCryptoKit);
         });
 }
 
-void CryptoAlgorithmHKDF::importKey(CryptoKeyFormat format, KeyData&& data, const CryptoAlgorithmParameters& parameters, bool extractable, CryptoKeyUsageBitmap usages, KeyCallback&& callback, ExceptionCallback&& exceptionCallback)
+void CryptoAlgorithmHKDF::importKey(CryptoKeyFormat format, KeyData&& data, const CryptoAlgorithmParameters& parameters, bool extractable, CryptoKeyUsageBitmap usages, KeyCallback&& callback, ExceptionCallback&& exceptionCallback, UseCryptoKit)
 {
     if (format != CryptoKeyFormat::Raw) {
         exceptionCallback(ExceptionCode::NotSupportedError);

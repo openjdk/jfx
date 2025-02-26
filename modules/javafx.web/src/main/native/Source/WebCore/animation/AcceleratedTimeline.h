@@ -37,9 +37,8 @@ class Document;
 class Element;
 struct Styleable;
 
-DECLARE_ALLOCATOR_WITH_HEAP_IDENTIFIER(AcceleratedTimeline);
 class AcceleratedTimeline {
-    WTF_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(AcceleratedTimeline);
+    WTF_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(Animation);
 public:
     AcceleratedTimeline(Document&);
 
@@ -51,7 +50,7 @@ public:
 protected:
 
 private:
-    using HashedStyleable = std::pair<Element*, unsigned>;
+    using HashedStyleable = std::pair<Element*, std::optional<Style::PseudoElementIdentifier>>;
     HashSet<HashedStyleable> m_targetsPendingUpdate;
     Seconds m_timeOrigin;
 };

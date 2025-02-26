@@ -63,21 +63,10 @@ ALWAYS_INLINE void objectAssignIndexedPropertiesFast(JSGlobalObject* globalObjec
     RETURN_IF_EXCEPTION(scope, void());
 }
 
-ALWAYS_INLINE bool objectCloneFast(VM& vm, JSFinalObject* target, JSObject* source)
+ALWAYS_INLINE bool checkStrucureForClone(Structure* structure)
 {
     static constexpr bool verbose = false;
 
-    Structure* targetStructure = target->structure();
-    Structure* sourceStructure = source->structure();
-
-    ASSERT(sourceStructure->canPerformFastPropertyEnumerationCommon());
-
-    if (targetStructure->seenProperties().bits()) {
-        dataLogLnIf(verbose, "target already has properties");
-        return false;
-    }
-
-    auto checkStrucure = [&](Structure* structure) ALWAYS_INLINE_LAMBDA {
         if (structure->typeInfo().type() != FinalObjectType) {
             dataLogLnIf(verbose, "target is not final object");
             return false;
@@ -144,9 +133,24 @@ ALWAYS_INLINE bool objectCloneFast(VM& vm, JSFinalObject* target, JSObject* sour
         }
 
         return true;
-    };
+}
 
-    if (!checkStrucure(targetStructure))
+
+ALWAYS_INLINE bool objectCloneFast(VM& vm, JSFinalObject* target, JSObject* source)
+{
+    static constexpr bool verbose = false;
+
+    Structure* targetStructure = target->structure();
+    Structure* sourceStructure = source->structure();
+
+    ASSERT(sourceStructure->canPerformFastPropertyEnumerationCommon());
+
+    if (targetStructure->seenProperties().bits()) {
+        dataLogLnIf(verbose, "target already has properties");
+        return false;
+    }
+
+    if (!checkStrucureForClone(targetStructure))
         return false;
 
     if (targetStructure->transitionWatchpointSetIsStillValid()) {
@@ -174,7 +178,7 @@ ALWAYS_INLINE bool objectCloneFast(VM& vm, JSFinalObject* target, JSObject* sour
         }
     }
 
-    if (!checkStrucure(sourceStructure))
+    if (!checkStrucureForClone(sourceStructure))
         return false;
 
     if (!sourceStructure->didTransition()) {
@@ -202,7 +206,8 @@ ALWAYS_INLINE bool objectCloneFast(VM& vm, JSFinalObject* target, JSObject* sour
     unsigned propertyCapacity = sourceStructure->outOfLineCapacity();
     if (propertyCapacity) {
         Butterfly* newButterfly = Butterfly::createUninitialized(vm, target, 0, propertyCapacity, /* hasIndexingHeader */ false, 0);
-        gcSafeMemcpy(newButterfly->propertyStorage() - propertyCapacity, source->butterfly()->propertyStorage() - propertyCapacity, propertyCapacity * sizeof(EncodedJSValue));
+        // memcpy is fine since newButterfly is not tied to any object yet.
+        memcpy(newButterfly->propertyStorage() - propertyCapacity, source->butterfly()->propertyStorage() - propertyCapacity, propertyCapacity * sizeof(EncodedJSValue));
         gcSafeMemcpy(target->inlineStorage(), source->inlineStorage(), sourceStructure->inlineCapacity() * sizeof(EncodedJSValue));
         target->nukeStructureAndSetButterfly(vm, targetStructure->id(), newButterfly);
     } else
@@ -212,6 +217,66 @@ ALWAYS_INLINE bool objectCloneFast(VM& vm, JSFinalObject* target, JSObject* sour
     vm.writeBarrier(target);
 
     return true;
+}
+
+ALWAYS_INLINE JSObject* tryCreateObjectViaCloning(VM& vm, JSGlobalObject* globalObject, JSObject* source)
+{
+    static constexpr bool verbose = false;
+
+    Structure* sourceStructure = source->structure();
+
+    ASSERT(sourceStructure->canPerformFastPropertyEnumerationCommon());
+
+    // If the sourceStructure is frozen, we retrieve the last one before freezing.
+    if (sourceStructure->transitionKind() == TransitionKind::Freeze) {
+        dataLogLnIf(verbose, "source was frozen. Let's look into the previous structure");
+        sourceStructure = sourceStructure->previousID();
+        if (!sourceStructure)
+            return nullptr;
+
+        dataLogLnIf(verbose, "source should have ArrayStorage since it was frozen. Let's see whether it is empty and we can quickly get the previous structure without ArrayStorage.");
+        if (sourceStructure->transitionKind() == TransitionKind::AllocateArrayStorage && !source->canHaveExistingOwnIndexedProperties()) {
+            sourceStructure = sourceStructure->previousID();
+            if (!sourceStructure)
+                return nullptr;
+        }
+    }
+
+    if (!checkStrucureForClone(sourceStructure))
+        return nullptr;
+
+    if (!sourceStructure->didTransition()) {
+        dataLogLnIf(verbose, "source didn't do some transition, indicating pure empty structure, not trying to use the fast path since we would like to see target as transitioned before at final form");
+        return nullptr;
+    }
+
+    if (globalObject != sourceStructure->globalObject()) {
+        dataLogLnIf(verbose, "source and target has different globalObject");
+        return nullptr;
+    }
+
+    if (sourceStructure->storedPrototype() != globalObject->objectPrototype()) {
+        dataLogLnIf(verbose, "__proto__ is different");
+        return nullptr;
+    }
+
+    dataLogLnIf(verbose, "Use fast cloning!");
+
+    DeferGC deferGC(vm);
+
+    unsigned propertyCapacity = sourceStructure->outOfLineCapacity();
+    Butterfly* newButterfly = nullptr;
+    if (propertyCapacity) {
+        newButterfly = Butterfly::createUninitialized(vm, nullptr, 0, propertyCapacity, /* hasIndexingHeader */ false, 0);
+        // memcpy is fine since newButterfly is not tied to any object yet.
+        memcpy(newButterfly->propertyStorage() - propertyCapacity, source->butterfly()->propertyStorage() - propertyCapacity, propertyCapacity * sizeof(EncodedJSValue));
+    }
+    JSFinalObject* target = JSFinalObject::createWithButterfly(vm, sourceStructure, newButterfly);
+    if (sourceStructure->inlineCapacity() > 0)
+        gcSafeMemcpy(target->inlineStorage(), source->inlineStorage(), sourceStructure->inlineCapacity() * sizeof(EncodedJSValue));
+    vm.writeBarrier(target);
+
+    return target;
 }
 
 ALWAYS_INLINE bool objectAssignFast(JSGlobalObject* globalObject, JSFinalObject* target, JSObject* source, Vector<RefPtr<UniquedStringImpl>, 8>& properties, MarkedArgumentBuffer& values)

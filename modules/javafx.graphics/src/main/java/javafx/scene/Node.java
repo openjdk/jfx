@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -596,6 +596,11 @@ public abstract sealed class Node
             }
 
             @Override
+            public boolean isInitialCssState(Node node) {
+                return node.initialCssState;
+            }
+
+            @Override
             public void recalculateRelativeSizeProperties(Node node, Font fontForRelativeSizes) {
                 node.recalculateRelativeSizeProperties(fontForRelativeSizes);
             }
@@ -1010,6 +1015,8 @@ public abstract sealed class Node
                     }
                     updateDisabled();
                     computeDerivedDepthTest();
+                    resetInitialCssStateFlag();
+
                     final Parent newParent = get();
 
                     // Update the focus bits before calling reapplyCss(), as the focus bits can affect CSS styling.
@@ -1104,8 +1111,14 @@ public abstract sealed class Node
             getClip().setScenes(newScene, newSubScene);
         }
         if (sceneChanged) {
+            if (oldScene != null) {
+                oldScene.unregisterClearInitialCssStageFlag(this);
+            }
+
             if (newScene == null) {
                 completeTransitionTimers();
+            } else {
+                resetInitialCssStateFlag();
             }
             updateCanReceiveFocus();
             if (isFocusTraversable()) {
@@ -2683,8 +2696,8 @@ public abstract sealed class Node
      *                                                                         *
      **************************************************************************/
     /**
-     * Defines whether or not this node's layout will be managed by it's parent.
-     * If the node is managed, it's parent will factor the node's geometry
+     * Defines whether or not this node's layout will be managed by its parent.
+     * If the node is managed, its parent will factor the node's geometry
      * into its own preferred size and {@link #layoutBoundsProperty layoutBounds}
      * calculations and will lay it
      * out during the scene's layout pass.  If a managed node's layoutBounds
@@ -9066,6 +9079,7 @@ public abstract sealed class Node
      * a running {@link TransitionTimer} with this {@code Node}. This allows the node
      * to keep track of running timers that are targeting its properties.
      *
+     * @param propertyName the CSS name of the targeted property
      * @param timer the transition timer
      */
     private void addTransitionTimer(String propertyName, TransitionTimer timer) {
@@ -9083,7 +9097,7 @@ public abstract sealed class Node
      * This method is called by animatable {@link StyleableProperty} implementations
      * when their {@link TransitionTimer} has completed.
      *
-     * @param timer the transition timer
+     * @param propertyName the CSS name of the targeted property
      */
     private void removeTransitionTimer(String propertyName) {
         var transitionTimers = miscProperties != null ? miscProperties.transitionTimers : null;
@@ -10083,6 +10097,25 @@ public abstract sealed class Node
         }
     }
 
+    /**
+     * A node is considered to be in its initial CSS state if it wasn't shown in a scene graph before.
+     * This flag is cleared after CSS processing was completed in a Scene pulse event. Note that manual
+     * calls to {@link #applyCss()} or similar methods will not clear this flag, since we consider all
+     * CSS processing before the Scene pulse to be part of the node's initial state.
+     */
+    private boolean initialCssState = true;
+
+    private void resetInitialCssStateFlag() {
+        initialCssState = true;
+        Scene scene = getScene();
+        if (scene != null) {
+            scene.registerClearInitialCssStateFlag(this);
+        }
+    }
+
+    void clearInitialCssStateFlag() {
+        initialCssState = false;
+    }
 
     /**
      * A StyleHelper for this node.

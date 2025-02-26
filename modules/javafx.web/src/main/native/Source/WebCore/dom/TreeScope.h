@@ -27,6 +27,7 @@
 #pragma once
 
 #include "ExceptionOr.h"
+#include "HitTestSource.h"
 #include <memory>
 #include <wtf/Forward.h>
 #include <wtf/UniqueRef.h>
@@ -67,15 +68,8 @@ public:
     TreeScope* parentTreeScope() const { return m_parentTreeScope; }
     void setParentTreeScope(TreeScope&);
 
-    // For CheckedPtr / CheckedRef use.
-    void incrementPtrCount() const;
-    void decrementPtrCount() const;
-#if CHECKED_POINTER_DEBUG
-    void registerCheckedPtr(const void*) const;
-    void copyCheckedPtr(const void* source, const void* destination) const;
-    void moveCheckedPtr(const void* source, const void* destination) const;
-    void unregisterCheckedPtr(const void*) const;
-#endif // CHECKED_POINTER_DEBUG
+    void ref() const;
+    void deref() const;
 
     Element* focusedElementInScope();
     Element* pointerLockElement() const;
@@ -97,7 +91,7 @@ public:
 
     Document& documentScope() const { return m_documentScope.get(); }
     Ref<Document> protectedDocumentScope() const;
-    static ptrdiff_t documentScopeMemoryOffset() { return OBJECT_OFFSETOF(TreeScope, m_documentScope); }
+    static constexpr ptrdiff_t documentScopeMemoryOffset() { return OBJECT_OFFSETOF(TreeScope, m_documentScope); }
 
     // https://dom.spec.whatwg.org/#retarget
     Ref<Node> retargetToScope(Node&) const;
@@ -119,9 +113,8 @@ public:
     void removeLabel(const AtomString& forAttributeValue, HTMLLabelElement&);
     const Vector<WeakRef<Element, WeakPtrImplWithEventTargetData>>* labelElementsForId(const AtomString& forAttributeValue);
 
-    WEBCORE_EXPORT RefPtr<Element> elementFromPoint(double clientX, double clientY);
-    WEBCORE_EXPORT Vector<RefPtr<Element>> elementsFromPoint(double clientX, double clientY);
-    WEBCORE_EXPORT Vector<RefPtr<Element>> elementsFromPoint(const FloatPoint&);
+    WEBCORE_EXPORT RefPtr<Element> elementFromPoint(double clientX, double clientY, HitTestSource = HitTestSource::Script);
+    WEBCORE_EXPORT Vector<RefPtr<Element>> elementsFromPoint(double clientX, double clientY, HitTestSource = HitTestSource::Script);
 
     // Find first anchor with the given name.
     // First searches for an element with the given ID, but if that fails, then looks
@@ -130,7 +123,7 @@ public:
     // quirks mode for historical compatibility reasons.
     RefPtr<Element> findAnchor(StringView name);
 
-    ContainerNode& rootNode() const { return m_rootNode; }
+    inline ContainerNode& rootNode() const; // Defined in ContainerNode.h
     Ref<ContainerNode> protectedRootNode() const;
 
     inline IdTargetObserverRegistry& idTargetObserverRegistry();
@@ -139,8 +132,8 @@ public:
     RadioButtonGroups& radioButtonGroups();
 
     JSC::JSValue adoptedStyleSheetWrapper(JSDOMGlobalObject&);
-    std::span<const RefPtr<CSSStyleSheet>> adoptedStyleSheets() const;
-    ExceptionOr<void> setAdoptedStyleSheets(Vector<RefPtr<CSSStyleSheet>>&&);
+    std::span<const Ref<CSSStyleSheet>> adoptedStyleSheets() const;
+    ExceptionOr<void> setAdoptedStyleSheets(Vector<Ref<CSSStyleSheet>>&&);
 
     void addSVGResource(const AtomString& id, LegacyRenderSVGResourceContainer&);
     void removeSVGResource(const AtomString& id);
@@ -166,7 +159,7 @@ protected:
         m_documentScope = document;
     }
 
-    RefPtr<Node> nodeFromPoint(const LayoutPoint& clientPoint, LayoutPoint* localPoint);
+    RefPtr<Node> nodeFromPoint(const LayoutPoint& clientPoint, LayoutPoint* localPoint, HitTestSource);
 
 private:
     IdTargetObserverRegistry& ensureIdTargetObserverRegistry();
@@ -175,7 +168,7 @@ private:
     SVGResourcesMap& svgResourcesMap() const;
     bool isElementWithPendingSVGResources(SVGElement&) const;
 
-    ContainerNode& m_rootNode;
+    CheckedRef<ContainerNode> m_rootNode;
     std::reference_wrapper<Document> m_documentScope;
     TreeScope* m_parentTreeScope;
 
