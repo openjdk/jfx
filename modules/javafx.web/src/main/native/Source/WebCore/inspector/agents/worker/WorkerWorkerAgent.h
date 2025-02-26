@@ -26,14 +26,18 @@
 #pragma once
 
 #include "InspectorWorkerAgent.h"
+#include <wtf/FastMalloc.h>
+#include <wtf/TZoneMalloc.h>
 
 namespace WebCore {
 
 class WorkerOrWorkletGlobalScope;
 
 class WorkerWorkerAgent final : public InspectorWorkerAgent {
+    WTF_MAKE_TZONE_ALLOCATED(WorkerWorkerAgent);
+    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(WorkerWorkerAgent);
 public:
-    WorkerWorkerAgent(WorkerAgentContext&);
+    explicit WorkerWorkerAgent(WorkerAgentContext&);
     ~WorkerWorkerAgent();
 
 private:
