@@ -164,6 +164,18 @@ static NSMutableDictionary * rolesMap;
     return variantToID(env, jresult);
 }
 
+- (id)accessibilityTitleUIElement
+{
+    jobject jresult = NULL;
+    GET_MAIN_JENV;
+    if (env == NULL) return NULL;
+    jresult = (jobject)(*env)->CallLongMethod(env, self->jAccessible, jAccessibilityAttributeValue,
+                                              (jlong)@"AXTitleUIElement");
+    GLASS_CHECK_EXCEPTION(env);
+    return variantToID(env, jresult);
+}
+
+
 
 // Actions support
 - (BOOL)performAccessibleAction:(NSString *)action
