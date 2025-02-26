@@ -22,11 +22,12 @@
 #include "DOMWrapperWorld.h"
 
 #include "CommonVM.h"
-#include "JSDOMWindow.h"
 #include "WebCoreJSClientData.h"
 #include "WindowProxy.h"
+#include <JavaScriptCore/HeapCellInlines.h>
+#include <JavaScriptCore/SlotVisitorInlines.h>
+#include <JavaScriptCore/WeakInlines.h>
 #include <wtf/MainThread.h>
-
 
 namespace WebCore {
 using namespace JSC;

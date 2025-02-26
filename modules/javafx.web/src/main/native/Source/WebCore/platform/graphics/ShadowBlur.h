@@ -31,6 +31,7 @@
 #include "Color.h"
 #include "FloatRect.h"
 #include "FloatRoundedRect.h"
+#include "GraphicsStyle.h"
 #include <wtf/Function.h>
 #include <wtf/Noncopyable.h>
 
@@ -52,7 +53,7 @@ public:
 
     ShadowBlur();
     ShadowBlur(const FloatSize& radius, const FloatSize& offset, const Color&, bool shadowsIgnoreTransforms = false);
-    ShadowBlur(const DropShadow&, bool shadowsIgnoreTransforms = false);
+    ShadowBlur(const GraphicsDropShadow&, bool shadowsIgnoreTransforms = false);
 
     void setShadowValues(const FloatSize&, const FloatSize& , const Color&, bool ignoreTransforms = false);
 
@@ -74,7 +75,7 @@ public:
     void drawInsetShadow(const AffineTransform&, const IntRect& clipBounds, const FloatRect& fullRect, const FloatRoundedRect& holeRect, const DrawBufferCallback&, const DrawImageCallback&, const FillRectWithHoleCallback&);
     void drawShadowLayer(const AffineTransform&, const IntRect& clipBounds, const FloatRect& layerArea, const DrawShadowCallback&, const DrawBufferCallback&);
 
-    void blurLayerImage(unsigned char*, const IntSize&, int stride);
+    void blurLayerImage(std::span<uint8_t>, const IntSize&, int stride);
 
     void clear();
 

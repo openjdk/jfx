@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2021 Apple Inc. All rights reserved.
+ * Copyright (C) 2024 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -25,28 +25,25 @@
 
 #pragma once
 
-#include <Foundation/Foundation.h>
-#include <wtf/RetainPtr.h>
-#include <wtf/Span.h>
+#include <span>
 
 namespace WTF {
 
-inline Span<const std::byte> asBytes(NSData *data)
+inline std::span<const uint8_t> span(NSData *data)
 {
-    return { reinterpret_cast<const std::byte*>(data.bytes), data.length };
+    if (!data)
+        return { };
+    return { static_cast<const uint8_t*>(data.bytes), data.length };
 }
 
-inline Span<const std::byte> asBytes(const RetainPtr<NSData>& data)
+#ifdef __OBJC__
+inline RetainPtr<NSData> toNSData(std::span<const uint8_t> span)
 {
-    return asBytes(data.get());
+    return adoptNS([[NSData alloc] initWithBytes:span.data() length:span.size()]);
 }
+#endif
 
-inline Span<const uint8_t> asUInt8Span(NSData* data)
-{
-    return { reinterpret_cast<const uint8_t*>(data.bytes), data.length };
-}
+} // namespace WTF
 
-}
-
-using WTF::asBytes;
-using WTF::asUInt8Span;
+using WTF::span;
+using WTF::toNSData;

@@ -28,6 +28,7 @@
 
 #include "IdentifierInlines.h"
 #include "JSCJSValueInlines.h"
+#include <wtf/text/MakeString.h>
 
 namespace JSC {
 
@@ -57,7 +58,7 @@ JSCustomSetterFunction* JSCustomSetterFunction::create(VM& vm, JSGlobalObject* g
     JSCustomSetterFunction* function = new (NotNull, allocateCell<JSCustomSetterFunction>(vm)) JSCustomSetterFunction(vm, executable, globalObject, structure, propertyName, setter);
 
     // Can't do this during initialization because getHostFunction might do a GC allocation.
-    auto name = makeString("set ", propertyName.publicName());
+    auto name = makeString("set "_s, propertyName.publicName());
     function->finishCreation(vm, executable, 1, name);
     return function;
 }

@@ -26,7 +26,6 @@
 #include "config.h"
 #include "JSEventTarget.h"
 
-#include "DOMWindow.h"
 #include "EventTarget.h"
 #include "EventTargetHeaders.h"
 #include "EventTargetInterfaces.h"
@@ -35,6 +34,7 @@
 #include "JSEventListener.h"
 #include "JSWindowProxy.h"
 #include "JSWorkerGlobalScope.h"
+#include "LocalDOMWindow.h"
 #include "WorkerGlobalScope.h"
 
 #if ENABLE(OFFSCREEN_CANVAS)
@@ -62,15 +62,15 @@ EventTarget* JSEventTarget::toWrapped(VM&, JSValue value)
     return nullptr;
 }
 
-std::unique_ptr<JSEventTargetWrapper> jsEventTargetCast(VM& vm, JSValue thisValue)
+JSEventTargetWrapper jsEventTargetCast(VM& vm, JSValue thisValue)
 {
     if (auto* target = jsDynamicCast<JSEventTarget*>(thisValue))
-        return makeUnique<JSEventTargetWrapper>(target->wrapped(), *target);
+        return { target->wrapped(), *target };
     if (auto* window = toJSDOMGlobalObject<JSDOMWindow>(vm, thisValue))
-        return makeUnique<JSEventTargetWrapper>(window->wrapped(), *window);
+        return { window->wrapped(), *window };
     if (auto* scope = toJSDOMGlobalObject<JSWorkerGlobalScope>(vm, thisValue))
-        return makeUnique<JSEventTargetWrapper>(scope->wrapped(), *scope);
-    return nullptr;
+        return { scope->wrapped(), *scope };
+    return { };
 }
 
 template<typename Visitor>

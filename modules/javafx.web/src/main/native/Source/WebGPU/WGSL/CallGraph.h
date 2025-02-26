@@ -25,42 +25,44 @@
 
 #pragma once
 
-// FIXME: move Stage out of StageAttribute so we don't need to include this
 #include "ASTForward.h"
-#include "ASTStageAttribute.h"
+#include "WGSLEnums.h"
 #include <wtf/HashMap.h>
 #include <wtf/Vector.h>
+#include <wtf/text/WTFString.h>
 
 namespace WGSL {
 
 class ShaderModule;
+struct PipelineLayout;
+struct PrepareResult;
 
 class CallGraph {
     friend class CallGraphBuilder;
 
 public:
     struct Callee {
-        AST::Function* m_target;
-        Vector<AST::CallExpression*> m_callSites;
+        AST::Function* target;
+        Vector<std::tuple<AST::Function*, AST::CallExpression*>> callSites;
     };
 
     struct EntryPoint {
-        AST::Function& m_function;
-        AST::StageAttribute::Stage m_stage;
+        AST::Function& function;
+        ShaderStage stage;
+        String originalName;
     };
 
-    ShaderModule& ast() const { return m_ast; }
     const Vector<EntryPoint>& entrypoints() const { return m_entrypoints; }
+    const Vector<Callee>& callees(AST::Function& function) const { return m_calleeMap.find(&function)->value; }
 
 private:
-    CallGraph(ShaderModule&);
+    CallGraph() { }
 
-    ShaderModule& m_ast;
     Vector<EntryPoint> m_entrypoints;
     HashMap<String, AST::Function*> m_functionsByName;
-    HashMap<AST::Function*, Vector<Callee>> m_callees;
+    HashMap<AST::Function*, Vector<Callee>> m_calleeMap;
 };
 
-CallGraph buildCallGraph(ShaderModule&);
+void buildCallGraph(ShaderModule&);
 
 } // namespace WGSL

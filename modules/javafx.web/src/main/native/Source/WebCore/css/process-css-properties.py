@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 #
 # Copyright (C) 2022-2023 Apple Inc. All rights reserved.
+# Copyright (C) 2024 Samuel Weinig <sam@webkit.org>
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions
@@ -333,6 +334,9 @@ class Value:
                 print(f"SKIPPED value {json_value['value']} in {key_path} due to '{json_value['status']}' status designation.")
             return None
 
+        if json_value.get("status", None) != "internal" and json_value["value"].startswith("-internal-"):
+            raise Exception(f'Value "{json_value["value"]}" starts with "-internal-" but does not have "status": "internal" set.')
+
         return Value(**json_value)
 
     @property
@@ -478,7 +482,7 @@ class StylePropertyCodeGenProperties:
         Schema.Entry("parser-grammar-comment", allowed_types=[str]),
         Schema.Entry("parser-grammar-unused", allowed_types=[str]),
         Schema.Entry("parser-grammar-unused-reason", allowed_types=[str]),
-        Schema.Entry("related-property", allowed_types=[str]),
+        Schema.Entry("cascade-alias", allowed_types=[str]),
         Schema.Entry("separator", allowed_types=[str]),
         Schema.Entry("setter", allowed_types=[str]),
         Schema.Entry("settings-flag", allowed_types=[str]),
@@ -488,7 +492,6 @@ class StylePropertyCodeGenProperties:
         Schema.Entry("skip-parser", allowed_types=[bool], default_value=False),
         Schema.Entry("status", allowed_types=[str]),
         Schema.Entry("svg", allowed_types=[bool], default_value=False),
-        Schema.Entry("synonym", allowed_types=[str]),
         Schema.Entry("top-priority", allowed_types=[bool], default_value=False),
         Schema.Entry("url", allowed_types=[str]),
         Schema.Entry("visited-link-color-support", allowed_types=[bool], default_value=False),
@@ -568,13 +571,11 @@ class StylePropertyCodeGenProperties:
             if json_value.get("longhands") is not None:
                 raise Exception(f"{key_path} is a shorthand, but has sink priority.")
 
-        if json_value.get("related-property"):
-            if json_value.get("related-property") == name:
-                raise Exception(f"{key_path} can't have itself as a related property.")
+        if json_value.get("cascade-alias"):
+            if json_value.get("cascade-alias") == name:
+                raise Exception(f"{key_path} can't have itself as a cascade alias property.")
             if json_value.get("longhands"):
-                raise Exception(f"{key_path} can't have both a related property and be a shorthand.")
-            if json_value.get("high-priority", False):
-                raise Exception(f"{key_path} can't have both a related property and be high priority.")
+                raise Exception(f"{key_path} can't be both a cascade alias and a shorthand.")
 
         if json_value.get("parser-grammar"):
             for entry_name in ["parser-function", "parser-function-requires-additional-parameters", "parser-function-requires-context", "parser-function-requires-context-mode", "parser-function-requires-current-shorthand", "parser-function-requires-current-property", "parser-function-requires-quirks-mode", "parser-function-requires-value-pool", "skip-parser", "longhands"]:
@@ -618,11 +619,6 @@ class StylePropertyCodeGenProperties:
                     return True
         return False
 
-    @property
-    def is_deferred(self):
-        return self.related_property or self.logical_property_group
-
-
 class StyleProperty:
     schema = Schema(
         Schema.Entry("animatable", allowed_types=[bool], default_value=False),
@@ -636,7 +632,6 @@ class StyleProperty:
     def __init__(self, **dictionary):
         StyleProperty.schema.set_attributes_from_dictionary(dictionary, instance=self)
         self.property_name = self.codegen_properties.property_name
-        self.synonymous_properties = []
 
     def __str__(self):
         return self.name
@@ -681,36 +676,20 @@ class StyleProperty:
 
         return StyleProperty(**json_value)
 
-    def perform_fixups_for_synonyms(self, all_properties):
-        # If 'synonym' was specified, replace the name with references to the Property object, and vice-versa a back-reference on that Property object back to this.
-        if self.codegen_properties.synonym:
-            if self.codegen_properties.synonym not in all_properties.all_by_name:
-                raise Exception(f"Property {self.name} has an unknown synonym: {self.codegen_properties.synonym}.")
-
-            original = all_properties.all_by_name[self.codegen_properties.synonym]
-            original.synonymous_properties.append(self)
-
-            self.codegen_properties.synonym = original
-
     def perform_fixups_for_longhands(self, all_properties):
         # If 'longhands' was specified, replace the names with references to the Property objects.
         if self.codegen_properties.longhands:
             self.codegen_properties.longhands = [all_properties.all_by_name[longhand.value] for longhand in self.codegen_properties.longhands]
 
-    def perform_fixups_for_related_properties(self, all_properties):
-        # If 'related-property' was specified, validate the relationship and replace the name with a reference to the Property object.
-        if self.codegen_properties.related_property:
-            if self.codegen_properties.related_property not in all_properties.all_by_name:
-                raise Exception(f"Property {self.name} has an unknown related property: {self.codegen_properties.related_property}.")
+    def perform_fixups_for_cascade_alias_properties(self, all_properties):
+        if self.codegen_properties.cascade_alias:
+            if self.codegen_properties.cascade_alias not in all_properties.all_by_name:
+                raise Exception(f"Property {self.name} is a cascade alias for an unknown property: {self.codegen_properties.cascade_alias}.")
 
-            related_property = all_properties.all_by_name[self.codegen_properties.related_property]
-            if type(related_property.codegen_properties.related_property) is str:
-                if related_property.codegen_properties.related_property != self.name:
-                    raise Exception(f"Property {self.name} has {related_property.name} as a related property, but it's not reciprocal.")
-            else:
-                if related_property.codegen_properties.related_property.name != self.name:
-                    raise Exception(f"Property {self.name} has {related_property.name} as a related property, but it's not reciprocal.")
-            self.codegen_properties.related_property = related_property
+            if not self.codegen_properties.skip_builder:
+                raise Exception(f"Property {self.name} is a cascade alias and should also set skip-builder.")
+
+            self.codegen_properties.cascade_alias = all_properties.all_by_name[self.codegen_properties.cascade_alias]
 
     def perform_fixups_for_logical_property_groups(self, all_properties):
         if self.codegen_properties.logical_property_group:
@@ -736,9 +715,8 @@ class StyleProperty:
             all_properties.logical_property_groups[group_name][logic][resolver] = self
 
     def perform_fixups(self, all_properties):
-        self.perform_fixups_for_synonyms(all_properties)
         self.perform_fixups_for_longhands(all_properties)
-        self.perform_fixups_for_related_properties(all_properties)
+        self.perform_fixups_for_cascade_alias_properties(all_properties)
         self.perform_fixups_for_logical_property_groups(all_properties)
 
     @property
@@ -785,7 +763,7 @@ class StyleProperty:
         if not self.codegen_properties.computable:
             return True
 
-        if self.codegen_properties.skip_builder and not self.codegen_properties.is_logical:
+        if self.codegen_properties.skip_builder and not self.codegen_properties.is_logical and not self.codegen_properties.cascade_alias:
             return True
 
         if self.codegen_properties.longhands is not None:
@@ -951,12 +929,12 @@ class StyleProperties:
         if not a_is_high_priority and b_is_high_priority:
             return 1
 
-        # Sort deferred longhands to the back, before shorthands.
-        a_is_deferred = a.codegen_properties.is_deferred
-        b_is_deferred = b.codegen_properties.is_deferred
-        if a_is_deferred and not b_is_deferred:
+        # Sort longhands in a logical property group to the back, before shorthands.
+        a_is_in_logical_property_group = a.codegen_properties.logical_property_group
+        b_is_in_logical_property_group = b.codegen_properties.logical_property_group
+        if a_is_in_logical_property_group and not b_is_in_logical_property_group:
             return 1
-        if not a_is_deferred and b_is_deferred:
+        if not a_is_in_logical_property_group and b_is_in_logical_property_group:
             return -1
 
         # Sort sunken names at the end of their priority bucket.
@@ -1020,7 +998,7 @@ class DescriptorCodeGenProperties:
         self.top_priority = None
         self.high_priority = None
         self.sink_priority = None
-        self.is_deferred = None
+        self.logical_property_group = None
 
     def __str__(self):
         return f"DescriptorCodeGenProperties {vars(self)}"
@@ -2411,6 +2389,18 @@ class GenerationContext:
         to.write(f"}}")
         to.newline()
 
+    def generate_property_id_bit_set(self, *, to, name, iterable, mapping_to_property=lambda p: p):
+        to.write(f"const WTF::BitSet<numCSSProperties> {name} = ([]() -> WTF::BitSet<numCSSProperties> {{")
+
+        with to.indent():
+            to.write(f"WTF::BitSet<numCSSProperties> result;")
+
+            for item in iterable:
+                to.write(f"result.set({mapping_to_property(item).id});")
+
+            to.write(f"return result;")
+        to.write(f"}})();")
+        to.newline()
 
 # Generates `CSSPropertyNames.h` and `CSSPropertyNames.cpp`.
 class GenerateCSSPropertyNames:
@@ -2586,8 +2576,7 @@ class GenerateCSSPropertyNames:
                     }
                     *nextCharacter++ = character;
                 }
-                unsigned length = nextCharacter - characters;
-                return { characters, length };
+                return std::span<const LChar> { characters, nextCharacter };
             }
 
             """)
@@ -2756,12 +2745,12 @@ class GenerateCSSPropertyNames:
         to.newline()
 
     def _generate_css_property_settings_hasher(self, *, to):
-        first, *middle, last = (f"settings.{flag} << {i}" for (i, flag) in enumerate(self.properties_and_descriptors.settings_flags))
+        first, *middle, last = (f'{"(uint64_t) " if i >= 32 else ""}settings.{flag} << {i}' for (i, flag) in enumerate(self.properties_and_descriptors.settings_flags))
 
         to.write(f"void add(Hasher& hasher, const CSSPropertySettings& settings)")
         to.write(f"{{")
         with to.indent():
-            to.write(f"unsigned bits = {first}")
+            to.write(f"uint64_t bits = {first}")
             with to.indent():
                 to.write_lines((f"| {expression}" for expression in middle))
                 to.write(f"| {last};")
@@ -2825,10 +2814,10 @@ class GenerateCSSPropertyNames:
 
             self.generation_context.generate_property_id_switch_function(
                 to=writer,
-                signature="CSSPropertyID relatedProperty(CSSPropertyID id)",
-                iterable=(p for p in self.properties_and_descriptors.style_properties.all if p.codegen_properties.related_property),
-                mapping=lambda p: f"return {p.codegen_properties.related_property.id};",
-                default="return CSSPropertyID::CSSPropertyInvalid;"
+                signature="CSSPropertyID cascadeAliasProperty(CSSPropertyID id)",
+                iterable=(p for p in self.properties_and_descriptors.style_properties.all if p.codegen_properties.cascade_alias),
+                mapping=lambda p: f"return {p.codegen_properties.cascade_alias.id};",
+                default="return id;"
             )
 
             self.generation_context.generate_property_id_switch_function(
@@ -2839,10 +2828,23 @@ class GenerateCSSPropertyNames:
                 default="return { };"
             )
 
-            self.generation_context.generate_property_id_switch_function_bool(
+            self.generation_context.generate_property_id_bit_set(
                 to=writer,
-                signature="bool CSSProperty::isColorProperty(CSSPropertyID id)",
+                name="CSSProperty::colorProperties",
                 iterable=(p for p in self.properties_and_descriptors.style_properties.all if p.codegen_properties.color_property)
+            )
+
+            physical_properties = []
+            for _, property_group in sorted(self.generation_context.properties_and_descriptors.style_properties.logical_property_groups.items(), key=lambda x: x[0]):
+                kind = property_group["kind"]
+                destinations = LogicalPropertyGroup.logical_property_group_resolvers["physical"][kind]
+                for property in [property_group["physical"][a_destination] for a_destination in destinations]:
+                    physical_properties.append(property)
+
+            self.generation_context.generate_property_id_bit_set(
+                to=writer,
+                name="CSSProperty::physicalProperties",
+                iterable=sorted(list(set(physical_properties)), key=lambda x: x.id)
             )
 
             self.generation_context.generate_property_id_switch_function(
@@ -2933,8 +2935,8 @@ class GenerateCSSPropertyNames:
             last_high_priority_property = None
             first_low_priority_property = None
             last_low_priority_property = None
-            first_deferred_property = None
-            last_deferred_property = None
+            first_logical_group_property = None
+            last_logical_group_property = None
 
             for property in self.properties_and_descriptors.all_unique:
                 if property.codegen_properties.longhands:
@@ -2949,14 +2951,14 @@ class GenerateCSSPropertyNames:
                     if not first_high_priority_property:
                         first_high_priority_property = property
                     last_high_priority_property = property
-                elif not property.codegen_properties.is_deferred:
+                elif not property.codegen_properties.logical_property_group:
                     if not first_low_priority_property:
                         first_low_priority_property = property
                     last_low_priority_property = property
                 else:
-                    if not first_deferred_property:
-                        first_deferred_property = property
-                    last_deferred_property = property
+                    if not first_logical_group_property:
+                        first_logical_group_property = property
+                    last_logical_group_property = property
 
                 to.write(f"{property.id_without_scope} = {count},")
 
@@ -2977,8 +2979,8 @@ class GenerateCSSPropertyNames:
         to.write(f"constexpr auto lastHighPriorityProperty = {last_high_priority_property.id};")
         to.write(f"constexpr auto firstLowPriorityProperty = {first_low_priority_property.id};")
         to.write(f"constexpr auto lastLowPriorityProperty = {last_low_priority_property.id};")
-        to.write(f"constexpr auto firstDeferredProperty = {first_deferred_property.id};")
-        to.write(f"constexpr auto lastDeferredProperty = {last_deferred_property.id};")
+        to.write(f"constexpr auto firstLogicalGroupProperty = {first_logical_group_property.id};")
+        to.write(f"constexpr auto lastLogicalGroupProperty = {last_logical_group_property.id};")
         to.write(f"constexpr auto firstShorthandProperty = {first_shorthand_property.id};")
         to.write(f"constexpr auto lastShorthandProperty = {last_shorthand_property.id};")
         to.write(f"constexpr uint16_t numCSSPropertyLonghands = firstShorthandProperty - firstCSSProperty;")
@@ -2987,7 +2989,7 @@ class GenerateCSSPropertyNames:
         to.newline()
 
     def _generate_css_property_names_h_property_settings(self, *, to):
-        settings_variable_declarations = (f"bool {flag} {{ false }};" for flag in self.properties_and_descriptors.settings_flags)
+        settings_variable_declarations = (f"bool {flag} : 1 {{ false }};" for flag in self.properties_and_descriptors.settings_flags)
 
         to.write(f"struct CSSPropertySettings {{")
         with to.indent():
@@ -3003,7 +3005,6 @@ class GenerateCSSPropertyNames:
         to.newline()
 
         to.write(f"bool operator==(const CSSPropertySettings&, const CSSPropertySettings&);")
-        to.write(f"inline bool operator!=(const CSSPropertySettings& a, const CSSPropertySettings& b) {{ return !(a == b); }}")
         to.write(f"void add(Hasher&, const CSSPropertySettings&);")
         to.newline()
 
@@ -3021,7 +3022,7 @@ class GenerateCSSPropertyNames:
             const AtomString& nameString(CSSPropertyID);
             String nameForIDL(CSSPropertyID);
 
-            CSSPropertyID relatedProperty(CSSPropertyID);
+            CSSPropertyID cascadeAliasProperty(CSSPropertyID);
 
             template<CSSPropertyID first, CSSPropertyID last> struct CSSPropertiesRange {
                 struct Iterator {
@@ -3029,14 +3030,13 @@ class GenerateCSSPropertyNames:
                     constexpr CSSPropertyID operator*() const { return static_cast<CSSPropertyID>(index); }
                     constexpr Iterator& operator++() { ++index; return *this; }
                     constexpr bool operator==(std::nullptr_t) const { return index > static_cast<uint16_t>(last); }
-                    constexpr bool operator!=(std::nullptr_t) const { return index <= static_cast<uint16_t>(last); }
                 };
                 static constexpr Iterator begin() { return { }; }
                 static constexpr std::nullptr_t end() { return nullptr; }
                 static constexpr uint16_t size() { return last - first + 1; }
             };
             using AllCSSPropertiesRange = CSSPropertiesRange<static_cast<CSSPropertyID>(firstCSSProperty), lastShorthandProperty>;
-            using AllLonghandCSSPropertiesRange = CSSPropertiesRange<static_cast<CSSPropertyID>(firstCSSProperty), lastDeferredProperty>;
+            using AllLonghandCSSPropertiesRange = CSSPropertiesRange<static_cast<CSSPropertyID>(firstCSSProperty), lastLogicalGroupProperty>;
             constexpr AllCSSPropertiesRange allCSSProperties() { return { }; }
             constexpr AllLonghandCSSPropertiesRange allLonghandCSSProperties() { return { }; }
 
@@ -3174,7 +3174,7 @@ class GenerateCSSStyleDeclarationPropertyNames:
             if property.codegen_properties.settings_flag:
                 extended_attributes_values += [f"EnabledBySetting={property.codegen_properties.settings_flag}"]
 
-            to.write(f"[CEReactions, {', '.join(extended_attributes_values)}] attribute [LegacyNullToEmptyString] CSSOMString {idl_attribute_name};")
+            to.write(f"[CEReactions=Needed, {', '.join(extended_attributes_values)}] attribute [LegacyNullToEmptyString] CSSOMString {idl_attribute_name};")
 
     def generate_css_style_declaration_property_names_idl(self):
         with open('CSSStyleDeclaration+PropertyNames.idl', 'w') as output_file:
@@ -3288,10 +3288,14 @@ class GenerateStyleBuilderGenerated:
     # Color property setters.
 
     def _generate_color_property_initial_value_setter(self, to, property):
+        if property.codegen_properties.initial == "currentColor":
+            initial_function = "StyleColor::currentColor"
+        else:
+            initial_function = "RenderStyle::" + property.codegen_properties.initial
         to.write(f"if (builderState.applyPropertyToRegularStyle())")
-        to.write(f"    builderState.style().{property.codegen_properties.setter}(RenderStyle::{property.codegen_properties.initial}());")
+        to.write(f"    builderState.style().{property.codegen_properties.setter}({initial_function}());")
         to.write(f"if (builderState.applyPropertyToVisitedLinkStyle())")
-        to.write(f"    builderState.style().setVisitedLink{property.name_for_methods}(RenderStyle::{property.codegen_properties.initial}());")
+        to.write(f"    builderState.style().setVisitedLink{property.name_for_methods}({initial_function}());")
 
     def _generate_color_property_inherit_value_setter(self, to, property):
         to.write(f"if (builderState.applyPropertyToRegularStyle())")
@@ -3331,10 +3335,10 @@ class GenerateStyleBuilderGenerated:
     def _generate_animation_property_value_setter(self, to, property):
         to.write(f"auto& list = builderState.style().{property.method_name_for_ensure_animations_or_transitions}();")
         to.write(f"size_t childIndex = 0;")
-        to.write(f"if (is<CSSValueList>(value)) {{")
+        to.write(f"if (auto* valueList = dynamicDowncast<CSSValueList>(value)) {{")
         to.write(f"    // Walk each value and put it into an animation, creating new animations as needed.")
-        to.write(f"    for (auto& currentValue : downcast<CSSValueList>(value)) {{")
-        to.write(f"        if (childIndex <= list.size())")
+        to.write(f"    for (auto& currentValue : *valueList) {{")
+        to.write(f"        if (childIndex >= list.size())")
         to.write(f"            list.append(Animation::create());")
         to.write(f"        builderState.styleMap().mapAnimation{property.name_for_methods}(list.animation(childIndex), currentValue);")
         to.write(f"        ++childIndex;")
@@ -3401,9 +3405,9 @@ class GenerateStyleBuilderGenerated:
     def _generate_fill_layer_property_value_setter(self, to, property):
         to.write(f"auto* child = &builderState.style().{property.method_name_for_ensure_layers}();")
         to.write(f"FillLayer* previousChild = nullptr;")
-        to.write(f"if (is<CSSValueList>(value)) {{")
+        to.write(f"if (auto* valueList = dynamicDowncast<CSSValueList>(value)) {{")
         to.write(f"    // Walk each value and put it into a layer, creating new layers as needed.")
-        to.write(f"    for (auto& item : downcast<CSSValueList>(value)) {{")
+        to.write(f"    for (auto& item : *valueList) {{")
         to.write(f"        if (!child) {{")
         to.write(f"            previousChild->setNext(FillLayer::create({property.enum_name_for_layers_type}));")
         to.write(f"            child = previousChild->next();")
@@ -3521,14 +3525,14 @@ class GenerateStyleBuilderGenerated:
                     return "fromCSSValueDeducingType(value)"
 
             if property in self.style_properties.all_by_name["font"].codegen_properties.longhands and "Initial" not in property.codegen_properties.custom and not property.codegen_properties.converter:
-                to.write(f"if (is<CSSPrimitiveValue>(value) && CSSPropertyParserHelpers::isSystemFontShorthand(downcast<CSSPrimitiveValue>(value).valueID())) {{")
+                to.write(f"if (CSSPropertyParserHelpers::isSystemFontShorthand(value.valueID())) {{")
                 with to.indent():
                     to.write(f"applyInitial{property.id_without_prefix}(builderState);")
                     to.write(f"return;")
                 to.write(f"}}")
 
             if property.codegen_properties.auto_functions:
-                to.write(f"if (downcast<CSSPrimitiveValue>(value).valueID() == CSSValueAuto) {{")
+                to.write(f"if (value.valueID() == CSSValueAuto) {{")
                 with to.indent():
                     to.write(f"builderState.style().setHasAuto{property.name_for_methods}();")
                     to.write(f"return;")
@@ -3575,8 +3579,6 @@ class GenerateStyleBuilderGenerated:
                     continue
                 if property.codegen_properties.skip_builder:
                     continue
-                if property.codegen_properties.synonym:
-                    continue
 
                 if property.codegen_properties.is_logical:
                     raise Exception(f"Property '{property.name}' is logical but doesn't have skip-builder.")
@@ -3592,18 +3594,13 @@ class GenerateStyleBuilderGenerated:
 
     def _generate_style_builder_generated_cpp_builder_generated_apply(self, *, to):
         to.write_block("""
-            void BuilderGenerated::applyProperty(CSSPropertyID id, BuilderState& builderState, CSSValue& value, bool isInitial, bool isInherit, const CSSRegisteredCustomProperty* registered)
+            void BuilderGenerated::applyProperty(CSSPropertyID id, BuilderState& builderState, CSSValue& value, ApplyValueType valueType)
             {
                 switch (id) {
                 case CSSPropertyID::CSSPropertyInvalid:
                     break;
                 case CSSPropertyID::CSSPropertyCustom:
-                    if (isInitial)
-                        BuilderCustom::applyInitialCustomProperty(builderState, registered, downcast<CSSCustomPropertyValue>(value).name());
-                    else if (isInherit)
-                        BuilderCustom::applyInheritCustomProperty(builderState, registered, downcast<CSSCustomPropertyValue>(value).name());
-                    else
-                        BuilderCustom::applyValueCustomProperty(builderState, registered, downcast<CSSCustomPropertyValue>(value));
+                    ASSERT_NOT_REACHED();
                     break;""")
 
         with to.indent():
@@ -3619,13 +3616,7 @@ class GenerateStyleBuilderGenerated:
                         to.write(f"break;")
                     continue
                 
-                if property.codegen_properties.synonym:
-                    continue
-
                 to.write(f"case {property.id}:")
-
-                for synonymous_property in property.synonymous_properties:
-                    to.write(f"case {synonymous_property.id}:")
 
                 with to.indent():
                     if property.codegen_properties.longhands:
@@ -3638,15 +3629,20 @@ class GenerateStyleBuilderGenerated:
                         if property.codegen_properties.fill_layer_property:
                             apply_value_arguments.insert(0, "id")
 
-                        to.write(f"if (isInitial)")
+                        to.write(f"switch (valueType) {{")
+                        to.write(f"case ApplyValueType::Initial:")
                         with to.indent():
                             to.write(f"{scope_for_function(property, 'Initial')}::applyInitial{property.id_without_prefix}({', '.join(apply_initial_arguments)});")
-                        to.write(f"else if (isInherit)")
+                            to.write(f"break;")
+                        to.write(f"case ApplyValueType::Inherit:")
                         with to.indent():
                             to.write(f"{scope_for_function(property, 'Inherit')}::applyInherit{property.id_without_prefix}({', '.join(apply_inherit_arguments)});")
-                        to.write(f"else")
+                            to.write(f"break;")
+                        to.write("case ApplyValueType::Value:")
                         with to.indent():
                             to.write(f"{scope_for_function(property, 'Value')}::applyValue{property.id_without_prefix}({', '.join(apply_value_arguments)});")
+                            to.write(f"break;")
+                        to.write(f"}}")
 
                     to.write(f"break;")
 
@@ -3672,7 +3668,7 @@ class GenerateStyleBuilderGenerated:
                 headers=[
                     "CSSPrimitiveValueMappings.h",
                     "CSSProperty.h",
-                    "RenderStyle.h",
+                    "RenderStyleSetters.h",
                     "StyleBuilderConverter.h",
                     "StyleBuilderCustom.h",
                     "StyleBuilderState.h",
@@ -3939,6 +3935,21 @@ class GenerateCSSPropertyParsing:
                     "CSSParserContext.h",
                     "CSSParserIdioms.h",
                     "CSSPropertyParser.h",
+                    "CSSPropertyParserConsumer+Angle.h",
+                    "CSSPropertyParserConsumer+Color.h",
+                    "CSSPropertyParserConsumer+Ident.h",
+                    "CSSPropertyParserConsumer+Integer.h",
+                    "CSSPropertyParserConsumer+Image.h",
+                    "CSSPropertyParserConsumer+Length.h",
+                    "CSSPropertyParserConsumer+List.h",
+                    "CSSPropertyParserConsumer+Number.h",
+                    "CSSPropertyParserConsumer+Percent.h",
+                    "CSSPropertyParserConsumer+Position.h",
+                    "CSSPropertyParserConsumer+Primitives.h",
+                    "CSSPropertyParserConsumer+Resolution.h",
+                    "CSSPropertyParserConsumer+String.h",
+                    "CSSPropertyParserConsumer+Time.h",
+                    "CSSPropertyParserConsumer+URL.h",
                     "CSSPropertyParserWorkerSafe.h",
                     "CSSValuePool.h",
                     "DeprecatedGlobalSettings.h",
@@ -4408,7 +4419,7 @@ class TermGeneratorReferenceTerm(TermGenerator):
                 return f"{builtin.consume_function_name}({range_string}, {context_string}.mode, {builtin.unitless}, PositionSyntax::Position)"
             elif isinstance(builtin, BuiltinColorConsumer):
                 if builtin.quirky_colors:
-                    return f"{builtin.consume_function_name}({range_string}, {context_string}, {context_string}.mode == HTMLQuirksMode)"
+                    return f"{builtin.consume_function_name}({range_string}, {context_string}, {{ .acceptQuirkyColors = ({context_string}.mode == HTMLQuirksMode) }})"
                 return f"{builtin.consume_function_name}({range_string}, {context_string})"
             else:
                 assert(not self.requires_context)
@@ -4487,7 +4498,7 @@ class TermGeneratorNonFastPathKeywordTerm(TermGenerator):
                 else:
                     conditions.append(f"!{context_string}.{keyword_term.settings_flag}")
             if keyword_term.status == "internal":
-                conditions.append(f"!isValueAllowedInMode(keyword, {context_string}.mode)")
+                conditions.append(f"!isUASheetBehavior({context_string}.mode)")
 
             if keyword_term.aliased_to:
                 return_value = keyword_term.aliased_to.id
@@ -4596,7 +4607,7 @@ class KeywordFastPathGenerator:
                     else:
                         return_expression.append(f"context.{keyword_term.settings_flag}")
                 if keyword_term.status == "internal":
-                    return_expression.append("isValueAllowedInMode(keyword, context.mode)")
+                    return_expression.append("isUASheetBehavior(context.mode)")
 
                 keyword_term_and_return_expressions.append(KeywordTermReturnExpression(keyword_term, return_expression))
 
@@ -6105,7 +6116,7 @@ def main():
     parser.add_argument('--check-unused-grammars-values', action='store_true')
     args = parser.parse_args()
 
-    with open(args.properties, "r") as properties_file:
+    with open(args.properties, "r", encoding="utf-8") as properties_file:
         properties_json = json.load(properties_file)
 
     parsing_context = ParsingContext(properties_json, defines_string=args.defines, parsing_for_codegen=True, check_unused_grammars_values=args.check_unused_grammars_values, verbose=args.verbose)

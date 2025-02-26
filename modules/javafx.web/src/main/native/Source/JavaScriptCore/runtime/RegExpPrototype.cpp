@@ -45,6 +45,7 @@ static JSC_DECLARE_HOST_FUNCTION(regExpProtoGetterMultiline);
 static JSC_DECLARE_HOST_FUNCTION(regExpProtoGetterDotAll);
 static JSC_DECLARE_HOST_FUNCTION(regExpProtoGetterSticky);
 static JSC_DECLARE_HOST_FUNCTION(regExpProtoGetterUnicode);
+static JSC_DECLARE_HOST_FUNCTION(regExpProtoGetterUnicodeSets);
 static JSC_DECLARE_HOST_FUNCTION(regExpProtoGetterSource);
 static JSC_DECLARE_HOST_FUNCTION(regExpProtoGetterFlags);
 
@@ -69,6 +70,7 @@ void RegExpPrototype::finishCreation(VM& vm, JSGlobalObject* globalObject)
     JSC_NATIVE_GETTER_WITHOUT_TRANSITION(vm.propertyNames->multiline, regExpProtoGetterMultiline, PropertyAttribute::DontEnum | PropertyAttribute::Accessor);
     JSC_NATIVE_GETTER_WITHOUT_TRANSITION(vm.propertyNames->sticky, regExpProtoGetterSticky, PropertyAttribute::DontEnum | PropertyAttribute::Accessor);
     JSC_NATIVE_GETTER_WITHOUT_TRANSITION(vm.propertyNames->unicode, regExpProtoGetterUnicode, PropertyAttribute::DontEnum | PropertyAttribute::Accessor);
+    JSC_NATIVE_GETTER_WITHOUT_TRANSITION(vm.propertyNames->unicodeSets, regExpProtoGetterUnicodeSets, PropertyAttribute::DontEnum | PropertyAttribute::Accessor);
     JSC_NATIVE_GETTER_WITHOUT_TRANSITION(vm.propertyNames->source, regExpProtoGetterSource, PropertyAttribute::DontEnum | PropertyAttribute::Accessor);
     JSC_NATIVE_GETTER_WITHOUT_TRANSITION(vm.propertyNames->flags, regExpProtoGetterFlags, PropertyAttribute::DontEnum | PropertyAttribute::Accessor);
     JSC_BUILTIN_FUNCTION_WITHOUT_TRANSITION(vm.propertyNames->matchSymbol, regExpPrototypeMatchCodeGenerator, static_cast<unsigned>(PropertyAttribute::DontEnum));
@@ -331,6 +333,22 @@ JSC_DEFINE_HOST_FUNCTION(regExpProtoGetterUnicode, (JSGlobalObject* globalObject
     return JSValue::encode(jsBoolean(regexp->regExp()->unicode()));
 }
 
+JSC_DEFINE_HOST_FUNCTION(regExpProtoGetterUnicodeSets, (JSGlobalObject* globalObject, CallFrame* callFrame))
+{
+    VM& vm = globalObject->vm();
+    auto scope = DECLARE_THROW_SCOPE(vm);
+
+    JSValue thisValue = callFrame->thisValue();
+    auto* regexp = jsDynamicCast<RegExpObject*>(thisValue);
+    if (UNLIKELY(!regexp)) {
+        if (thisValue == globalObject->regExpPrototype())
+            return JSValue::encode(jsUndefined());
+        return throwVMTypeError(globalObject, scope, "The RegExp.prototype.unicodeSets getter can only be called on a RegExp object"_s);
+    }
+
+    return JSValue::encode(jsBoolean(regexp->regExp()->unicodeSets()));
+}
+
 JSC_DEFINE_HOST_FUNCTION(regExpProtoGetterFlags, (JSGlobalObject* globalObject, CallFrame* callFrame))
 {
     VM& vm = globalObject->vm();
@@ -370,7 +388,7 @@ JSC_DEFINE_HOST_FUNCTION(regExpProtoFuncSearchFast, (JSGlobalObject* globalObjec
     RegExp* regExp = jsCast<RegExpObject*>(thisValue)->regExp();
 
     JSString* string = callFrame->uncheckedArgument(0).toString(globalObject);
-    String s = string->value(globalObject);
+    auto s = string->value(globalObject);
     RETURN_IF_EXCEPTION(scope, encodedJSValue());
 
     MatchResult result = globalObject->regExpGlobalData().performMatch(globalObject, regExp, string, s, 0);
@@ -392,13 +410,12 @@ enum SplitControl {
 
 template<typename ControlFunc, typename PushFunc>
 void genericSplit(
-    JSGlobalObject* globalObject, RegExp* regexp, const String& input, unsigned inputSize, unsigned& position,
+    JSGlobalObject* globalObject, RegExp* regexp, JSString* inputString, const String& input, unsigned inputSize, unsigned& position,
     unsigned& matchPosition, bool regExpIsSticky, bool regExpIsUnicode,
     const ControlFunc& control, const PushFunc& push)
 {
     VM& vm = globalObject->vm();
     auto scope = DECLARE_THROW_SCOPE(vm);
-    Vector<int> ovector;
 
     while (matchPosition < inputSize) {
         {
@@ -408,11 +425,12 @@ void genericSplit(
                 return;
         }
 
-        ovector.shrink(0);
+        int* ovector;
 
         // a. Perform ? Set(splitter, "lastIndex", q, true).
         // b. Let z be ? RegExpExec(splitter, S).
-        int mpos = regexp->match(globalObject, input, matchPosition, ovector);
+        MatchResult result = globalObject->regExpGlobalData().performMatch(globalObject, regexp, inputString, input, matchPosition, &ovector);
+        int mpos = result.start;
         RETURN_IF_EXCEPTION(scope, void());
 
         // c. If z is null, let q be AdvanceStringIndex(S, q, unicodeMatching).
@@ -491,9 +509,9 @@ JSC_DEFINE_HOST_FUNCTION(regExpProtoFuncSplitFast, (JSGlobalObject* globalObject
 
     // 3. [handled by JS builtin] Let S be ? ToString(string).
     JSString* inputString = callFrame->argument(0).toString(globalObject);
-    String input = inputString->value(globalObject);
+    auto input = inputString->value(globalObject);
     RETURN_IF_EXCEPTION(scope, { });
-    ASSERT(!input.isNull());
+    ASSERT(!input->isNull());
 
     // 4. [handled by JS builtin] Let C be ? SpeciesConstructor(rx, %RegExp%).
     // 5. [handled by JS builtin] Let flags be ? ToString(? Get(rx, "flags")).
@@ -513,7 +531,7 @@ JSC_DEFINE_HOST_FUNCTION(regExpProtoFuncSplitFast, (JSGlobalObject* globalObject
     RETURN_IF_EXCEPTION(scope, { });
 
     // 14. Let size be the number of elements in S.
-    unsigned inputSize = input.length();
+    unsigned inputSize = input->length();
 
     // 15. Let p = 0.
     unsigned position = 0;
@@ -523,7 +541,7 @@ JSC_DEFINE_HOST_FUNCTION(regExpProtoFuncSplitFast, (JSGlobalObject* globalObject
         RELEASE_AND_RETURN(scope, JSValue::encode(constructEmptyArray(globalObject, nullptr)));
 
     // 17. If size == 0, then
-    if (input.isEmpty()) {
+    if (input->isEmpty()) {
         // a. Let z be ? RegExpExec(splitter, S).
         // b. If z is not null, return A.
         // c. Perform ! CreateDataProperty(A, "0", S).
@@ -543,7 +561,7 @@ JSC_DEFINE_HOST_FUNCTION(regExpProtoFuncSplitFast, (JSGlobalObject* globalObject
     unsigned matchPosition = position;
     // 19. Repeat, while q < size
     bool regExpIsSticky = regexp->sticky();
-    bool regExpIsUnicode = regexp->unicode();
+    bool regExpIsUnicode = regexp->eitherUnicode();
 
     unsigned maxSizeForDirectPath = 100000;
     JSArray* result = JSArray::tryCreate(vm, globalObject->arrayStructureForIndexingTypeDuringAllocation(ArrayWithContiguous), 1);
@@ -553,7 +571,7 @@ JSC_DEFINE_HOST_FUNCTION(regExpProtoFuncSplitFast, (JSGlobalObject* globalObject
     }
 
     genericSplit(
-        globalObject, regexp, input, inputSize, position, matchPosition, regExpIsSticky, regExpIsUnicode,
+        globalObject, regexp, inputString, input, inputSize, position, matchPosition, regExpIsSticky, regExpIsUnicode,
         [&] () -> SplitControl {
             if (resultLength >= maxSizeForDirectPath)
                 return AbortSplit;
@@ -585,7 +603,7 @@ JSC_DEFINE_HOST_FUNCTION(regExpProtoFuncSplitFast, (JSGlobalObject* globalObject
     unsigned savedMatchPosition = matchPosition;
     unsigned dryRunCount = 0;
     genericSplit(
-        globalObject, regexp, input, inputSize, position, matchPosition, regExpIsSticky, regExpIsUnicode,
+        globalObject, regexp, inputString, input, inputSize, position, matchPosition, regExpIsSticky, regExpIsUnicode,
         [&] () -> SplitControl {
             if (resultLength + dryRunCount > MAX_STORAGE_VECTOR_LENGTH)
                 return AbortSplit;
@@ -609,7 +627,7 @@ JSC_DEFINE_HOST_FUNCTION(regExpProtoFuncSplitFast, (JSGlobalObject* globalObject
     matchPosition = savedMatchPosition;
 
     genericSplit(
-        globalObject, regexp, input, inputSize, position, matchPosition, regExpIsSticky, regExpIsUnicode,
+        globalObject, regexp, inputString, input, inputSize, position, matchPosition, regExpIsSticky, regExpIsUnicode,
         [&] () -> SplitControl {
             return ContinueSplit;
         },

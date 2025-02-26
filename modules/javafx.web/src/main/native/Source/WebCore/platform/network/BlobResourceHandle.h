@@ -51,7 +51,7 @@ public:
     static void loadResourceSynchronously(BlobData*, const ResourceRequest&, ResourceError&, ResourceResponse&, Vector<uint8_t>& data);
 
     void start();
-    int readSync(uint8_t*, int);
+    int readSync(std::span<uint8_t>);
 
     bool aborted() const { return m_aborted; }
 
@@ -78,21 +78,21 @@ private:
 
     void doStart();
     void getSizeForNext();
-    void seek();
-    void consumeData(const uint8_t* data, int bytesRead);
+    std::optional<Error> seek();
+    void consumeData(std::span<const uint8_t>);
     void failed(Error);
 
     void readAsync();
     void readDataAsync(const BlobDataItem&);
     void readFileAsync(const BlobDataItem&);
 
-    int readDataSync(const BlobDataItem&, void*, int);
-    int readFileSync(const BlobDataItem&, void*, int);
+    int readDataSync(const BlobDataItem&, std::span<uint8_t>);
+    int readFileSync(const BlobDataItem&, std::span<uint8_t>);
 
     void notifyResponse();
     void notifyResponseOnSuccess();
     void notifyResponseOnError();
-    void notifyReceiveData(const uint8_t*, int);
+    void notifyReceiveData(std::span<const uint8_t>);
     void notifyFail(Error);
     void notifyFinish();
 
@@ -108,9 +108,9 @@ private:
     Vector<long long> m_itemLengthList;
     Error m_errorCode { Error::NoError };
     bool m_aborted { false };
-    long long m_rangeOffset { kPositionNotSpecified };
+    bool m_isRangeRequest { false };
+    long long m_rangeStart { kPositionNotSpecified };
     long long m_rangeEnd { kPositionNotSpecified };
-    long long m_rangeSuffixLength { kPositionNotSpecified };
     long long m_totalSize { 0 };
     long long m_totalRemainingSize { 0 };
     long long m_currentItemReadSize { 0 };

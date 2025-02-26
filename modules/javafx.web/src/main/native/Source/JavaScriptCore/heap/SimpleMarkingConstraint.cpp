@@ -25,8 +25,11 @@
 
 #include "config.h"
 #include "SimpleMarkingConstraint.h"
+#include <wtf/TZoneMallocInlines.h>
 
 namespace JSC {
+
+WTF_MAKE_TZONE_ALLOCATED_IMPL(SimpleMarkingConstraint);
 
 SimpleMarkingConstraint::SimpleMarkingConstraint(
     CString abbreviatedName, CString name,
@@ -38,9 +41,7 @@ SimpleMarkingConstraint::SimpleMarkingConstraint(
 {
 }
 
-SimpleMarkingConstraint::~SimpleMarkingConstraint()
-{
-}
+SimpleMarkingConstraint::~SimpleMarkingConstraint() = default;
 
 template<typename Visitor>
 void SimpleMarkingConstraint::executeImplImpl(Visitor& visitor)

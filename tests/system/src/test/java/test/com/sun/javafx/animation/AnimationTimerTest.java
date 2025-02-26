@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2023, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,88 +25,34 @@
 
 package test.com.sun.javafx.animation;
 
-import java.util.concurrent.CountDownLatch;
+import org.junit.jupiter.api.Test;
+
 import javafx.animation.AnimationTimer;
-import javafx.application.Application;
-import javafx.application.Platform;
-import javafx.stage.Stage;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.Test;
 import test.util.Util;
 
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
-import static org.junit.jupiter.api.Assertions.assertThrows;
-
-public class AnimationTimerTest {
-
-    private static final CountDownLatch startupLatch = new CountDownLatch(1);
-
-    private static Stage primaryStage;
-
-    public static class TestApp extends Application {
-
-        @Override
-        public void init() throws Exception {
-            assertFalse(Platform.isFxApplicationThread());
-        }
-
-        @Override
-        public void start(Stage stage) throws Exception {
-            primaryStage = stage;
-            assertTrue(Platform.isFxApplicationThread());
-
-            startupLatch.countDown();
-        }
-
-    }
-
-    @BeforeClass
-    public static void setup() throws Exception {
-        Util.launch(startupLatch, TestApp.class);
-    }
-
-    @AfterClass
-    public static void shutdown() {
-        Util.shutdown(primaryStage);
-    }
+public class AnimationTimerTest extends SynchronizationTest {
 
     @Test
-    public void animationTimerOnFXThreadTest() throws InterruptedException {
-        final CountDownLatch frameCounter = new CountDownLatch(3);
-        Platform.runLater(() -> {
-            AnimationTimer timer = new AnimationTimer() {
-                @Override public void handle(long l) {
-                    frameCounter.countDown();
-                    if (frameCounter.getCount() == 0L) {
-                        stop();
-                    }
-                }
-            };
-            assertTrue(Platform.isFxApplicationThread());
-            timer.start();
-        });
-        frameCounter.await();
+    public void testAnimationTimer() throws InterruptedException {
+        runTest(this::startAnimationTimer);
     }
 
-    @Test
-    public void startAnimationTimerNotOnFXThreadTest() {
-        assertFalse(Platform.isFxApplicationThread());
-        AnimationTimer timer = new AnimationTimer() {
-            @Override public void handle(long l) {}
-        };
-        assertThrows(IllegalStateException.class, timer::start);
-    }
+    private void startAnimationTimer() {
+        var timer = new AnimationTimer() {
 
-    @Test
-    public void stopAnimationTimerNotOnFXThreadTest() {
-        assertFalse(Platform.isFxApplicationThread());
-        AnimationTimer timer = new AnimationTimer() {
-            @Override public void handle(long l) {
-                assertThrows(IllegalStateException.class, () -> stop());
+            @Override
+            public void handle(long now) {
+                // Simulate intensive processing
+                Util.sleep(10);
             }
         };
-        Platform.runLater(timer::start);
+
+        // Start and stop continuously until aborted by the test harness
+        while (true) {
+            timer.start();
+            Util.sleep(10);
+            timer.stop();
+            Util.sleep(10);
+        }
     }
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2023, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -726,7 +726,7 @@ public class Region extends Parent {
                 // we can repaint the region.
                 if (b != null) {
                     for (BackgroundImage i : b.getImages()) {
-                        final Image image = i.image;
+                        final Image image = i.getImage();
                         final Toolkit.ImageAccessor acc = Toolkit.getImageAccessor();
                         if (acc.isAnimation(image) || image.getProgress() < 1) {
                             addImageListener(image);
@@ -737,7 +737,7 @@ public class Region extends Parent {
                 // And we must remove this listener from any old images
                 if (old != null) {
                     for (BackgroundImage i : old.getImages()) {
-                        removeImageListener(i.image);
+                        removeImageListener(i.getImage());
                     }
                 }
 
@@ -785,7 +785,7 @@ public class Region extends Parent {
                 // we can repaint the region.
                 if (b != null) {
                     for (BorderImage i : b.getImages()) {
-                        final Image image = i.image;
+                        final Image image = i.getImage();
                         final Toolkit.ImageAccessor acc = Toolkit.getImageAccessor();
                         if (acc.isAnimation(image) || image.getProgress() < 1) {
                             addImageListener(image);
@@ -796,7 +796,7 @@ public class Region extends Parent {
                 // And we must remove this listener from any old images
                 if (old != null) {
                     for (BorderImage i : old.getImages()) {
-                        removeImageListener(i.image);
+                        removeImageListener(i.getImage());
                     }
                 }
 
@@ -1184,7 +1184,7 @@ public class Region extends Parent {
      * doesn't meet the application's layout needs.
      * <p>
      * Defaults to the <code>USE_COMPUTED_SIZE</code> flag, which means that
-     * <code>getPrefWidth(forHeight)</code> will return the region's internally
+     * <code>prefWidth(forHeight)</code> will return the region's internally
      * computed preferred width.
      */
     private DoubleProperty prefWidth;
@@ -1209,7 +1209,7 @@ public class Region extends Parent {
      * doesn't meet the application's layout needs.
      * <p>
      * Defaults to the <code>USE_COMPUTED_SIZE</code> flag, which means that
-     * <code>getPrefHeight(forWidth)</code> will return the region's internally
+     * <code>prefHeight(forWidth)</code> will return the region's internally
      * computed preferred width.
      */
     private DoubleProperty prefHeight;
@@ -1249,11 +1249,11 @@ public class Region extends Parent {
      * doesn't meet the application's layout needs.
      * <p>
      * Defaults to the <code>USE_COMPUTED_SIZE</code> flag, which means that
-     * <code>getMaxWidth(forHeight)</code> will return the region's internally
+     * <code>maxWidth(forHeight)</code> will return the region's internally
      * computed maximum width.
      * <p>
      * Setting this value to the <code>USE_PREF_SIZE</code> flag will cause
-     * <code>getMaxWidth(forHeight)</code> to return the region's preferred width,
+     * <code>maxWidth(forHeight)</code> to return the region's preferred width,
      * enabling applications to easily restrict the resizability of the region.
      */
     private DoubleProperty maxWidth;
@@ -1278,11 +1278,11 @@ public class Region extends Parent {
      * doesn't meet the application's layout needs.
      * <p>
      * Defaults to the <code>USE_COMPUTED_SIZE</code> flag, which means that
-     * <code>getMaxHeight(forWidth)</code> will return the region's internally
+     * <code>maxHeight(forWidth)</code> will return the region's internally
      * computed maximum height.
      * <p>
      * Setting this value to the <code>USE_PREF_SIZE</code> flag will cause
-     * <code>getMaxHeight(forWidth)</code> to return the region's preferred height,
+     * <code>maxHeight(forWidth)</code> to return the region's preferred height,
      * enabling applications to easily restrict the resizability of the region.
      */
     private DoubleProperty maxHeight;
@@ -3229,7 +3229,7 @@ public class Region extends Parent {
                 }
 
                 final StrokeType type = bss.getType();
-                double sw = Math.max(bs.getWidths().top, 0d);
+                double sw = Math.max(bs.getWidths().getTop(), 0d);
                 StrokeLineCap cap = bss.getLineCap();
                 StrokeLineJoin join = bss.getLineJoin();
                 float miterlimit = (float) Math.max(bss.getMiterLimit(), 1d);
@@ -3300,9 +3300,9 @@ public class Region extends Parent {
         // since Parent's computeGeomBounds does handle 3D correctly.
         BaseBounds cb = RegionHelper.superComputeGeomBounds(this, bounds, tx);
         /*
-         * This is a work around for RT-7680. Parent returns invalid bounds from
+         * This is a work around for JDK-8109407. Parent returns invalid bounds from
          * computeGeomBoundsImpl when it has no children or if all its children
-         * have invalid bounds. If RT-7680 were fixed, then we could omit this
+         * have invalid bounds. If JDK-8109407 were fixed, then we could omit this
          * first branch of the if and only use the else since the correct value
          * would be computed.
          */

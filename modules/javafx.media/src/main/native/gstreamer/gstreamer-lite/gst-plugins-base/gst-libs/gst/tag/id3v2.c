@@ -29,7 +29,7 @@
 
 #define HANDLE_INVALID_SYNCSAFE
 
-static gboolean id3v2_frames_to_tag_list (ID3TagsWorking * work, guint size);
+static gboolean id3v2_frames_to_tag_list (ID3TagsWorking * work);
 
 #ifndef GST_DISABLE_GST_DEBUG
 
@@ -183,7 +183,7 @@ id3v2_ununsync_data (const guint8 * unsync_data, guint32 * size)
  * Creates a new tag list that contains the information parsed out of a
  * ID3 tag.
  *
- * Returns: A new #GstTagList with all tags that could be extracted from the
+ * Returns: (transfer full) (nullable): A new #GstTagList with all tags that could be extracted from the
  *          given vorbiscomment buffer or NULL on error.
  */
 GstTagList *
@@ -258,7 +258,7 @@ gst_tag_list_from_id3v2_tag (GstBuffer * buffer)
     GST_MEMDUMP ("ID3v2 tag (un-unsyced)", uu_data, work.hdr.frame_data_size);
   }
 
-  id3v2_frames_to_tag_list (&work, work.hdr.frame_data_size);
+  id3v2_frames_to_tag_list (&work);
 
   g_free (uu_data);
 
@@ -313,67 +313,67 @@ static const struct ID3v2FrameIDConvert
 } frame_id_conversions[] = {
   /* 2.3.x frames */
   {
-  "TORY", "TDOR"}, {
-  "TYER", "TDRC"},
-      /* 2.2.x frames */
+      "TORY", "TDOR"}, {
+      "TYER", "TDRC"},
+  /* 2.2.x frames */
   {
-  "BUF", "RBUF"}, {
-  "CNT", "PCNT"}, {
-  "COM", "COMM"}, {
-  "CRA", "AENC"}, {
-  "ETC", "ETCO"}, {
-  "GEO", "GEOB"}, {
-  "IPL", "TIPL"}, {
-  "MCI", "MCDI"}, {
-  "MLL", "MLLT"}, {
-  "PIC", "APIC"}, {
-  "POP", "POPM"}, {
-  "REV", "RVRB"}, {
-  "SLT", "SYLT"}, {
-  "STC", "SYTC"}, {
-  "TAL", "TALB"}, {
-  "TBP", "TBPM"}, {
-  "TCM", "TCOM"}, {
-  "TCO", "TCON"}, {
-  "TCR", "TCOP"}, {
-  "TDA", "TDAT"}, {             /* obsolete, but we need to parse it anyway */
-  "TDY", "TDLY"}, {
-  "TEN", "TENC"}, {
-  "TFT", "TFLT"}, {
-  "TKE", "TKEY"}, {
-  "TLA", "TLAN"}, {
-  "TLE", "TLEN"}, {
-  "TMT", "TMED"}, {
-  "TOA", "TOAL"}, {
-  "TOF", "TOFN"}, {
-  "TOL", "TOLY"}, {
-  "TOR", "TDOR"}, {
-  "TOT", "TOAL"}, {
-  "TP1", "TPE1"}, {
-  "TP2", "TPE2"}, {
-  "TP3", "TPE3"}, {
-  "TP4", "TPE4"}, {
-  "TPA", "TPOS"}, {
-  "TPB", "TPUB"}, {
-  "TRC", "TSRC"}, {
-  "TRD", "TDRC"}, {
-  "TRK", "TRCK"}, {
-  "TSS", "TSSE"}, {
-  "TT1", "TIT1"}, {
-  "TT2", "TIT2"}, {
-  "TT3", "TIT3"}, {
-  "TXT", "TOLY"}, {
-  "TXX", "TXXX"}, {
-  "TYE", "TDRC"}, {
-  "UFI", "UFID"}, {
-  "ULT", "USLT"}, {
-  "WAF", "WOAF"}, {
-  "WAR", "WOAR"}, {
-  "WAS", "WOAS"}, {
-  "WCM", "WCOM"}, {
-  "WCP", "WCOP"}, {
-  "WPB", "WPUB"}, {
-  "WXX", "WXXX"}
+      "BUF", "RBUF"}, {
+      "CNT", "PCNT"}, {
+      "COM", "COMM"}, {
+      "CRA", "AENC"}, {
+      "ETC", "ETCO"}, {
+      "GEO", "GEOB"}, {
+      "IPL", "TIPL"}, {
+      "MCI", "MCDI"}, {
+      "MLL", "MLLT"}, {
+      "PIC", "APIC"}, {
+      "POP", "POPM"}, {
+      "REV", "RVRB"}, {
+      "SLT", "SYLT"}, {
+      "STC", "SYTC"}, {
+      "TAL", "TALB"}, {
+      "TBP", "TBPM"}, {
+      "TCM", "TCOM"}, {
+      "TCO", "TCON"}, {
+      "TCR", "TCOP"}, {
+      "TDA", "TDAT"}, {         /* obsolete, but we need to parse it anyway */
+      "TDY", "TDLY"}, {
+      "TEN", "TENC"}, {
+      "TFT", "TFLT"}, {
+      "TKE", "TKEY"}, {
+      "TLA", "TLAN"}, {
+      "TLE", "TLEN"}, {
+      "TMT", "TMED"}, {
+      "TOA", "TOAL"}, {
+      "TOF", "TOFN"}, {
+      "TOL", "TOLY"}, {
+      "TOR", "TDOR"}, {
+      "TOT", "TOAL"}, {
+      "TP1", "TPE1"}, {
+      "TP2", "TPE2"}, {
+      "TP3", "TPE3"}, {
+      "TP4", "TPE4"}, {
+      "TPA", "TPOS"}, {
+      "TPB", "TPUB"}, {
+      "TRC", "TSRC"}, {
+      "TRD", "TDRC"}, {
+      "TRK", "TRCK"}, {
+      "TSS", "TSSE"}, {
+      "TT1", "TIT1"}, {
+      "TT2", "TIT2"}, {
+      "TT3", "TIT3"}, {
+      "TXT", "TOLY"}, {
+      "TXX", "TXXX"}, {
+      "TYE", "TDRC"}, {
+      "UFI", "UFID"}, {
+      "ULT", "USLT"}, {
+      "WAF", "WOAF"}, {
+      "WAR", "WOAR"}, {
+      "WAS", "WOAS"}, {
+      "WCM", "WCOM"}, {
+      "WCP", "WCOP"}, {
+      "WPB", "WPUB"}, {
+      "WXX", "WXXX"}
 };
 
 static gboolean
@@ -440,12 +440,17 @@ id3v2_add_id3v2_frame_blob_to_taglist (ID3TagsWorking * work,
 }
 
 static gboolean
-id3v2_frames_to_tag_list (ID3TagsWorking * work, guint size)
+id3v2_frames_to_tag_list (ID3TagsWorking * work)
 {
   guint frame_hdr_size;
 
   /* Extended header if present */
   if (work->hdr.flags & ID3V2_HDR_FLAG_EXTHDR) {
+    if (work->hdr.frame_data_size < 4) {
+      GST_DEBUG ("Tag has no extended header data. Broken tag");
+      return FALSE;
+    }
+
     work->hdr.ext_hdr_size = id3v2_read_synch_uint (work->hdr.frame_data, 4);
 
     /* In id3v2.4.x the header size is the size of the *whole*

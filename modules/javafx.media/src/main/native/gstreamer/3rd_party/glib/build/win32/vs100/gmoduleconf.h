@@ -1,6 +1,8 @@
 /* GMODULE - GLIB wrapper code for dynamic module loading
  * Copyright (C) 1998 Tim Janik
  *
+ * SPDX-License-Identifier: LGPL-2.1-or-later
+ *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
  * License as published by the Free Software Foundation; either
@@ -26,11 +28,19 @@ extern "C" {
 #define G_MODULE_IMPL_NONE  0
 #define G_MODULE_IMPL_DL    1
 #define G_MODULE_IMPL_WIN32 3
-#define G_MODULE_IMPL_DYLD  6
 #define G_MODULE_IMPL_AR    7
 
 #define G_MODULE_IMPL       G_MODULE_IMPL_WIN32
 #undef  G_MODULE_HAVE_DLERROR
+#if     (1)
+#define G_MODULE_HAVE_DLERROR
+#endif
+#if     (0)
+#define G_MODULE_NEED_USCORE
+#endif
+#if     (0)
+#define G_MODULE_BROKEN_RTLD_GLOBAL
+#endif
 
 #ifdef __cplusplus
 }

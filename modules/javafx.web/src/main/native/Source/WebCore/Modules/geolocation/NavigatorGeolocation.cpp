@@ -26,10 +26,10 @@
 
 #include "NavigatorGeolocation.h"
 
-#include "DOMWindow.h"
 #include "Document.h"
-#include "Frame.h"
 #include "Geolocation.h"
+#include "LocalDOMWindow.h"
+#include "LocalFrame.h"
 #include "Navigator.h"
 
 namespace WebCore {
@@ -41,9 +41,9 @@ NavigatorGeolocation::NavigatorGeolocation(Navigator& navigator)
 
 NavigatorGeolocation::~NavigatorGeolocation() = default;
 
-const char* NavigatorGeolocation::supplementName()
+ASCIILiteral NavigatorGeolocation::supplementName()
 {
-    return "NavigatorGeolocation";
+    return "NavigatorGeolocation"_s;
 }
 
 NavigatorGeolocation* NavigatorGeolocation::from(Navigator& navigator)

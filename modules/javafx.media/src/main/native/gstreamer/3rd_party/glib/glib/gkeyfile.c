@@ -7,6 +7,8 @@
  * Written by Ray Strode <rstrode@redhat.com>
  *            Matthias Clasen <mclasen@redhat.com>
  *
+ * SPDX-License-Identifier: LGPL-2.1-or-later
+ *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
  * License as published by the Free Software Foundation; either
@@ -51,6 +53,10 @@
 
 #endif  /* G_OS_WIN23 */
 
+#ifndef O_CLOEXEC
+#define O_CLOEXEC 0
+#endif
+
 #include "gconvert.h"
 #include "gdataset.h"
 #include "gerror.h"
@@ -68,23 +74,22 @@
 
 
 /**
- * SECTION:keyfile
- * @title: Key-value file parser
- * @short_description: parses .ini-like config files
+ * GKeyFile:
  *
- * #GKeyFile lets you parse, edit or create files containing groups of
+ * `GKeyFile` parses .ini-like config files.
+ *
+ * `GKeyFile` lets you parse, edit or create files containing groups of
  * key-value pairs, which we call "key files" for lack of a better name.
  * Several freedesktop.org specifications use key files now, e.g the
  * [Desktop Entry Specification](http://freedesktop.org/Standards/desktop-entry-spec)
- * and the
- * [Icon Theme Specification](http://freedesktop.org/Standards/icon-theme-spec).
+ * and the [Icon Theme Specification](http://freedesktop.org/Standards/icon-theme-spec).
  *
  * The syntax of key files is described in detail in the
  * [Desktop Entry Specification](http://freedesktop.org/Standards/desktop-entry-spec),
- * here is a quick summary: Key files
- * consists of groups of key-value pairs, interspersed with comments.
+ * here is a quick summary: Key files consists of groups of key-value pairs, interspersed
+ * with comments.
  *
- * |[
+ * ```txt
  * # this is just an example
  * # there can be comments before the first group
  *
@@ -97,14 +102,13 @@
  * Welcome[de]=Hallo
  * Welcome[fr_FR]=Bonjour
  * Welcome[it]=Ciao
- * Welcome[be@latin]=Hello
  *
  * [Another Group]
  *
  * Numbers=2;20;-200;0
  *
  * Booleans=true;false;true;true
- * ]|
+ * ```
  *
  * Lines beginning with a '#' and blank lines are considered comments.
  *
@@ -112,15 +116,13 @@
  * in '[' and ']', and ended implicitly by the start of the next group or
  * the end of the file. Each key-value pair must be contained in a group.
  *
- * Key-value pairs generally have the form `key=value`, with the
- * exception of localized strings, which have the form
- * `key[locale]=value`, with a locale identifier of the
- * form `lang_COUNTRY@MODIFIER` where `COUNTRY` and `MODIFIER`
- * are optional.
- * Space before and after the '=' character are ignored. Newline, tab,
- * carriage return and backslash characters in value are escaped as \n,
- * \t, \r, and \\\\, respectively. To preserve leading spaces in values,
- * these can also be escaped as \s.
+ * Key-value pairs generally have the form `key=value`, with the exception
+ * of localized strings, which have the form `key[locale]=value`, with a
+ * locale identifier of the form `lang_COUNTRY@MODIFIER` where `COUNTRY`
+ * and `MODIFIER` are optional. Space before and after the '=' character
+ * are ignored. Newline, tab, carriage return and backslash characters in
+ * value are escaped as `\n`, `\t`, `\r`, and `\\\\`, respectively. To preserve
+ * leading spaces in values, these can also be escaped as `\s`.
  *
  * Key files can store strings (possibly with localized variants), integers,
  * booleans and lists of these. Lists are separated by a separator character,
@@ -147,14 +149,14 @@
  *
  * Note that in contrast to the
  * [Desktop Entry Specification](http://freedesktop.org/Standards/desktop-entry-spec),
- * groups in key files may contain the same
- * key multiple times; the last entry wins. Key files may also contain
- * multiple groups with the same name; they are merged together.
- * Another difference is that keys and group names in key files are not
+ * groups in key files may contain the same key multiple times; the last entry wins.
+ * Key files may also contain multiple groups with the same name; they are merged
+ * together. Another difference is that keys and group names in key files are not
  * restricted to ASCII characters.
  *
  * Here is an example of loading a key file and reading a value:
- * |[<!-- language="C" -->
+ *
+ * ```c
  * g_autoptr(GError) error = NULL;
  * g_autoptr(GKeyFile) key_file = g_key_file_new ();
  *
@@ -177,10 +179,11 @@
  *     // Fall back to a default value.
  *     val = g_strdup ("default-value");
  *   }
- * ]|
+ * ```
  *
  * Here is an example of creating and saving a key file:
- * |[<!-- language="C" -->
+ *
+ * ```c
  * g_autoptr(GKeyFile) key_file = g_key_file_new ();
  * const gchar *val = ...;
  * g_autoptr(GError) error = NULL;
@@ -203,7 +206,7 @@
  *     return;
  *   }
  * g_autoptr(GBytes) bytes = g_bytes_new_take (g_steal_pointer (&data), data_len);
- * ]|
+ * ```
  */
 
 /**
@@ -491,12 +494,6 @@
 
 typedef struct _GKeyFileGroup GKeyFileGroup;
 
-/**
- * GKeyFile:
- *
- * The GKeyFile struct contains only private data
- * and should not be accessed directly.
- */
 struct _GKeyFile
 {
   GList *groups;
@@ -522,8 +519,6 @@ typedef struct _GKeyFileKeyValuePair GKeyFileKeyValuePair;
 struct _GKeyFileGroup
 {
   const gchar *name;  /* NULL for above first group (which will be comments) */
-
-  GKeyFileKeyValuePair *comment; /* Special comment that is stuck to the top of a group */
 
   GList *key_value_pairs;
 
@@ -567,13 +562,15 @@ static void                  g_key_file_remove_key_value_pair_node (GKeyFile    
 
 static void                  g_key_file_add_key_value_pair     (GKeyFile               *key_file,
                                                                 GKeyFileGroup          *group,
-                                                                GKeyFileKeyValuePair   *pair);
+                                                                GKeyFileKeyValuePair   *pair,
+                                                                GList                  *sibling);
 static void                  g_key_file_add_key                (GKeyFile               *key_file,
                 GKeyFileGroup          *group,
                 const gchar            *key,
                 const gchar            *value);
 static void                  g_key_file_add_group              (GKeyFile               *key_file,
-                const gchar            *group_name);
+                                                                const gchar            *group_name,
+                                                                gboolean                created);
 static gboolean              g_key_file_is_group_name          (const gchar *name);
 static gboolean              g_key_file_is_key_name            (const gchar *name,
                                                                 gsize        len);
@@ -632,7 +629,7 @@ G_DEFINE_QUARK (g-key-file-error-quark, g_key_file_error)
 static void
 g_key_file_init (GKeyFile *key_file)
 {
-  key_file->current_group = g_slice_new0 (GKeyFileGroup);
+  key_file->current_group = g_new0 (GKeyFileGroup, 1);
   key_file->groups = g_list_prepend (NULL, key_file->current_group);
   key_file->group_hash = NULL;
   key_file->start_group = NULL;
@@ -694,7 +691,7 @@ g_key_file_new (void)
 {
   GKeyFile *key_file;
 
-  key_file = g_slice_new0 (GKeyFile);
+  key_file = g_new0 (GKeyFile, 1);
   key_file->ref_count = 1;
   g_key_file_init (key_file);
 
@@ -759,7 +756,7 @@ find_file_in_data_dirs (const gchar   *file,
           path = g_build_filename (data_dir, sub_dir,
                                    candidate_file, NULL);
 
-          fd = g_open (path, O_RDONLY, 0);
+          fd = g_open (path, O_RDONLY | O_CLOEXEC, 0);
 
           if (fd == -1)
             {
@@ -915,7 +912,7 @@ g_key_file_load_from_file (GKeyFile       *key_file,
   g_return_val_if_fail (key_file != NULL, FALSE);
   g_return_val_if_fail (file != NULL, FALSE);
 
-  fd = g_open (file, O_RDONLY, 0);
+  fd = g_open (file, O_RDONLY | O_CLOEXEC, 0);
   errsv = errno;
 
   if (fd == -1)
@@ -1199,7 +1196,7 @@ g_key_file_free (GKeyFile *key_file)
   g_key_file_clear (key_file);
 
   if (g_atomic_int_dec_and_test (&key_file->ref_count))
-    g_slice_free (GKeyFile, key_file);
+    g_free_sized (key_file, sizeof (GKeyFile));
   else
     g_key_file_init (key_file);
 }
@@ -1221,7 +1218,7 @@ g_key_file_unref (GKeyFile *key_file)
   if (g_atomic_int_dec_and_test (&key_file->ref_count))
     {
       g_key_file_clear (key_file);
-      g_slice_free (GKeyFile, key_file);
+      g_free_sized (key_file, sizeof (GKeyFile));
     }
 }
 
@@ -1311,7 +1308,7 @@ g_key_file_parse_comment (GKeyFile     *key_file,
 
   g_warn_if_fail (key_file->current_group != NULL);
 
-  pair = g_slice_new (GKeyFileKeyValuePair);
+  pair = g_new (GKeyFileKeyValuePair, 1);
 #ifdef GSTREAMER_LITE
   if (pair == NULL) {
     g_warn_if_fail(pair != NULL);
@@ -1354,7 +1351,7 @@ g_key_file_parse_group (GKeyFile     *key_file,
       return;
     }
 
-  g_key_file_add_group (key_file, group_name);
+  g_key_file_add_group (key_file, group_name, FALSE);
   g_free (group_name);
 }
 
@@ -1442,7 +1439,7 @@ g_key_file_parse_key_value_pair (GKeyFile     *key_file,
     {
       GKeyFileKeyValuePair *pair;
 
-      pair = g_slice_new (GKeyFileKeyValuePair);
+      pair = g_new (GKeyFileKeyValuePair, 1);
 #ifdef GSTREAMER_LITE
       if (pair == NULL) {
         if (locale != NULL) {
@@ -1454,7 +1451,8 @@ g_key_file_parse_key_value_pair (GKeyFile     *key_file,
       pair->key = g_steal_pointer (&key);
       pair->value = g_strndup (value_start, value_len);
 
-      g_key_file_add_key_value_pair (key_file, key_file->current_group, pair);
+      g_key_file_add_key_value_pair (key_file, key_file->current_group, pair,
+                                     key_file->current_group->key_value_pairs);
     }
 
       g_free (key);
@@ -1617,14 +1615,6 @@ g_key_file_to_data (GKeyFile  *key_file,
       GKeyFileGroup *group;
 
       group = (GKeyFileGroup *) group_node->data;
-
-      /* separate groups by at least an empty line */
-      if (data_string->len >= 2 &&
-          data_string->str[data_string->len - 2] != '\n')
-        g_string_append_c (data_string, '\n');
-
-      if (group->comment != NULL)
-        g_string_append_printf (data_string, "%s\n", group->comment->value);
 
       if (group->name != NULL)
         g_string_append_printf (data_string, "[%s]\n", group->name);
@@ -1918,7 +1908,7 @@ g_key_file_set_value (GKeyFile    *key_file,
 
   if (!group)
     {
-      g_key_file_add_group (key_file, group_name);
+      g_key_file_add_group (key_file, group_name, TRUE);
       group = (GKeyFileGroup *) key_file->groups->data;
 
       g_key_file_add_key (key_file, group, key, value);
@@ -3380,7 +3370,7 @@ g_key_file_set_key_comment (GKeyFile     *key_file,
 
   /* Now we can add our new comment
    */
-  pair = g_slice_new (GKeyFileKeyValuePair);
+  pair = g_new (GKeyFileKeyValuePair, 1);
 #ifdef GSTREAMER_LITE
   if (pair == NULL) {
     return FALSE;
@@ -3391,52 +3381,6 @@ g_key_file_set_key_comment (GKeyFile     *key_file,
 
   key_node = g_list_insert (key_node, pair, 1);
   (void) key_node;
-
-  return TRUE;
-}
-
-static gboolean
-g_key_file_set_group_comment (GKeyFile     *key_file,
-                              const gchar  *group_name,
-                              const gchar  *comment,
-                              GError      **error)
-{
-  GKeyFileGroup *group;
-
-  g_return_val_if_fail (group_name != NULL && g_key_file_is_group_name (group_name), FALSE);
-
-  group = g_key_file_lookup_group (key_file, group_name);
-  if (!group)
-    {
-      g_set_error (error, G_KEY_FILE_ERROR,
-                   G_KEY_FILE_ERROR_GROUP_NOT_FOUND,
-                   _("Key file does not have group '%s'"),
-                   group_name ? group_name : "(null)");
-
-      return FALSE;
-    }
-
-  /* First remove any existing comment
-   */
-  if (group->comment)
-    {
-      g_key_file_key_value_pair_free (group->comment);
-      group->comment = NULL;
-    }
-
-  if (comment == NULL)
-    return TRUE;
-
-  /* Now we can add our new comment
-   */
-  group->comment = g_slice_new (GKeyFileKeyValuePair);
-#ifdef GSTREAMER_LITE
-  if (group->comment == NULL) {
-    return FALSE;
-  }
-#endif // GSTREAMER_LITE
-  group->comment->key = NULL;
-  group->comment->value = g_key_file_parse_comment_as_value (key_file, comment);
 
   return TRUE;
 }
@@ -3467,7 +3411,7 @@ g_key_file_set_top_comment (GKeyFile     *key_file,
   if (comment == NULL)
      return TRUE;
 
-  pair = g_slice_new (GKeyFileKeyValuePair);
+  pair = g_new (GKeyFileKeyValuePair, 1);
 #ifdef GSTREAMER_LITE
   if (pair == NULL) {
     return FALSE;
@@ -3478,6 +3422,70 @@ g_key_file_set_top_comment (GKeyFile     *key_file,
 
   group->key_value_pairs =
     g_list_prepend (group->key_value_pairs, pair);
+
+  return TRUE;
+}
+
+static gboolean
+g_key_file_set_group_comment (GKeyFile     *key_file,
+                              const gchar  *group_name,
+                              const gchar  *comment,
+                              GError      **error)
+{
+  GKeyFileGroup *group;
+  GList *group_node;
+  GKeyFileKeyValuePair *pair;
+
+  g_return_val_if_fail (group_name != NULL && g_key_file_is_group_name (group_name), FALSE);
+
+  group = g_key_file_lookup_group (key_file, group_name);
+  if (!group)
+    {
+      g_set_error (error, G_KEY_FILE_ERROR,
+                   G_KEY_FILE_ERROR_GROUP_NOT_FOUND,
+                   _("Key file does not have group “%s”"),
+                   group_name);
+
+      return FALSE;
+    }
+
+  if (group == key_file->start_group)
+    return g_key_file_set_top_comment (key_file, comment, error);
+
+  /* First remove any existing comment
+   */
+  group_node = g_key_file_lookup_group_node (key_file, group_name);
+#ifdef GSTREAMER_LITE
+  if (group_node == NULL || group_node->next == NULL || group_node->next->data == NULL) {
+    return FALSE;
+  }
+#endif // GSTREAMER_LITE
+  group = group_node->next->data;
+  for (GList *lp = group->key_value_pairs; lp != NULL; )
+    {
+      GList *lnext = lp->next;
+      pair = lp->data;
+      if (pair->key != NULL)
+        break;
+
+      g_key_file_remove_key_value_pair_node (key_file, group, lp);
+      lp = lnext;
+    }
+
+  if (comment == NULL)
+    return TRUE;
+
+  /* Now we can add our new comment
+   */
+  pair = g_new (GKeyFileKeyValuePair, 1);
+#ifdef GSTREAMER_LITE
+  if (pair == NULL) {
+    return FALSE;
+  }
+#endif // GSTREAMER_LITE
+  pair->key = NULL;
+  pair->value = g_key_file_parse_comment_as_value (key_file, comment);
+  group->key_value_pairs = g_list_prepend (group->key_value_pairs, pair);
 
   return TRUE;
 }
@@ -3606,10 +3614,7 @@ g_key_file_get_key_comment (GKeyFile     *key_file,
     }
 
   if (string != NULL)
-    {
-      comment = string->str;
-      g_string_free (string, FALSE);
-    }
+    comment = g_string_free_and_steal (g_steal_pointer (&string));
   else
     comment = NULL;
 
@@ -3687,9 +3692,6 @@ g_key_file_get_group_comment (GKeyFile     *key_file,
 
       return NULL;
     }
-
-  if (group->comment)
-    return g_strdup (group->comment->value);
 
   group_node = g_key_file_lookup_group_node (key_file, group_name);
   group_node = group_node->next;
@@ -3889,7 +3891,8 @@ g_key_file_has_key (GKeyFile     *key_file,
 
 static void
 g_key_file_add_group (GKeyFile    *key_file,
-          const gchar *group_name)
+                      const gchar *group_name,
+                      gboolean created)
 {
   GKeyFileGroup *group;
 
@@ -3903,14 +3906,33 @@ g_key_file_add_group (GKeyFile    *key_file,
       return;
     }
 
-  group = g_slice_new0 (GKeyFileGroup);
+  group = g_new0 (GKeyFileGroup, 1);
   group->name = g_strdup (group_name);
   group->lookup_map = g_hash_table_new (g_str_hash, g_str_equal);
   key_file->groups = g_list_prepend (key_file->groups, group);
   key_file->current_group = group;
 
   if (key_file->start_group == NULL)
-    key_file->start_group = group;
+    {
+      key_file->start_group = group;
+    }
+  else if (!(key_file->flags & G_KEY_FILE_KEEP_COMMENTS) || created)
+    {
+      /* separate groups by a blank line if we don't keep comments or group is created */
+      GKeyFileGroup *next_group = key_file->groups->next->data;
+      GKeyFileKeyValuePair *pair;
+      if (next_group->key_value_pairs != NULL)
+        pair = next_group->key_value_pairs->data;
+
+      if (next_group->key_value_pairs == NULL ||
+          (pair->key != NULL && !g_strstr_len (pair->value, -1, "\n")))
+        {
+          GKeyFileKeyValuePair *pair = g_new (GKeyFileKeyValuePair, 1);
+          pair->key = NULL;
+          pair->value = g_strdup ("");
+          next_group->key_value_pairs = g_list_prepend (next_group->key_value_pairs, pair);
+        }
+    }
 
   if (!key_file->group_hash)
     key_file->group_hash = g_hash_table_new (g_str_hash, g_str_equal);
@@ -3925,7 +3947,7 @@ g_key_file_key_value_pair_free (GKeyFileKeyValuePair *pair)
     {
       g_free (pair->key);
       g_free (pair->value);
-      g_slice_free (GKeyFileKeyValuePair, pair);
+      g_free_sized (pair, sizeof (GKeyFileKeyValuePair));
     }
 }
 
@@ -4021,12 +4043,6 @@ g_key_file_remove_group_node (GKeyFile *key_file,
 
   g_warn_if_fail (group->key_value_pairs == NULL);
 
-  if (group->comment)
-    {
-      g_key_file_key_value_pair_free (group->comment);
-      group->comment = NULL;
-    }
-
   if (group->lookup_map)
     {
       g_hash_table_destroy (group->lookup_map);
@@ -4034,7 +4050,7 @@ g_key_file_remove_group_node (GKeyFile *key_file,
     }
 
   g_free ((gchar *) group->name);
-  g_slice_free (GKeyFileGroup, group);
+  g_free_sized (group, sizeof (GKeyFileGroup));
   g_list_free_1 (group_node);
 }
 
@@ -4080,10 +4096,11 @@ g_key_file_remove_group (GKeyFile     *key_file,
 static void
 g_key_file_add_key_value_pair (GKeyFile             *key_file,
                                GKeyFileGroup        *group,
-                               GKeyFileKeyValuePair *pair)
+                               GKeyFileKeyValuePair *pair,
+                               GList                *sibling)
 {
   g_hash_table_replace (group->lookup_map, pair->key, pair);
-  group->key_value_pairs = g_list_prepend (group->key_value_pairs, pair);
+  group->key_value_pairs = g_list_insert_before (group->key_value_pairs, sibling, pair);
 }
 
 static void
@@ -4093,8 +4110,9 @@ g_key_file_add_key (GKeyFile      *key_file,
         const gchar   *value)
 {
   GKeyFileKeyValuePair *pair;
+  GList *lp;
 
-  pair = g_slice_new (GKeyFileKeyValuePair);
+  pair = g_new (GKeyFileKeyValuePair, 1);
 #ifdef GSTREAMER_LITE
   if (pair == NULL) {
     return;
@@ -4103,7 +4121,12 @@ g_key_file_add_key (GKeyFile      *key_file,
   pair->key = g_strdup (key);
   pair->value = g_strdup (value);
 
-  g_key_file_add_key_value_pair (key_file, group, pair);
+  /* skip group comment */
+  lp = group->key_value_pairs;
+  while (lp != NULL && ((GKeyFileKeyValuePair *) lp->data)->key == NULL)
+    lp = lp->next;
+
+  g_key_file_add_key_value_pair (key_file, group, pair, lp);
 }
 
 /**
@@ -4359,7 +4382,10 @@ g_key_file_parse_value_as_string (GKeyFile     *key_file,
           GError      **error)
 {
   gchar *string_value, *q0, *q;
+  GSList *tmp_pieces = NULL;
   const gchar *p;
+
+  g_assert (pieces == NULL || *pieces == NULL);
 
   string_value = g_new (gchar, strlen (value) + 1);
 
@@ -4398,7 +4424,7 @@ g_key_file_parse_value_as_string (GKeyFile     *key_file,
                                    G_KEY_FILE_ERROR_INVALID_VALUE,
                                    _("Key file contains escape character "
                                      "at end of line"));
-        break;
+        goto error;
 
       default:
               if (pieces && *p == key_file->list_separator)
@@ -4420,6 +4446,7 @@ g_key_file_parse_value_as_string (GKeyFile     *key_file,
                                    G_KEY_FILE_ERROR_INVALID_VALUE,
                                    _("Key file contains invalid escape "
                                    "sequence '%s'"), sequence);
+                      goto error;
                     }
                 }
               break;
@@ -4430,7 +4457,7 @@ g_key_file_parse_value_as_string (GKeyFile     *key_file,
           *q = *p;
           if (pieces && (*p == key_file->list_separator))
             {
-              *pieces = g_slist_prepend (*pieces, g_strndup (q0, q - q0));
+              tmp_pieces = g_slist_prepend (tmp_pieces, g_strndup (q0, q - q0));
               q0 = q + 1;
             }
         }
@@ -4444,13 +4471,19 @@ g_key_file_parse_value_as_string (GKeyFile     *key_file,
 
   *q = '\0';
   if (pieces)
-  {
-    if (q0 < q)
-      *pieces = g_slist_prepend (*pieces, g_strndup (q0, q - q0));
-    *pieces = g_slist_reverse (*pieces);
-  }
+    {
+      if (q0 < q)
+        tmp_pieces = g_slist_prepend (tmp_pieces, g_strndup (q0, q - q0));
+      *pieces = g_slist_reverse (tmp_pieces);
+    }
 
   return string_value;
+
+error:
+  g_free (string_value);
+  g_slist_free_full (tmp_pieces, g_free);
+
+  return NULL;
 }
 
 static gchar *

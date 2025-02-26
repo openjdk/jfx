@@ -25,13 +25,13 @@
 
 #pragma once
 
-#if ENABLE(WEBASSEMBLY)
+#if ENABLE(WEBASSEMBLY) && ENABLE(JIT)
 
 #include "InternalFunction.h"
-#include "WasmB3IRGenerator.h"
 #include "WasmFormat.h"
 #include "WasmMemory.h"
 #include "WasmModuleInformation.h"
+#include "WasmOMGIRGenerator.h"
 #include "WasmTypeDefinition.h"
 #include <wtf/Forward.h>
 
@@ -42,10 +42,13 @@ class CCallHelpers;
 namespace Wasm {
 
 struct CallInformation;
+class JSEntrypointCallee;
 
-void marshallJSResult(CCallHelpers& jit, const TypeDefinition&, const CallInformation& wasmFrameConvention, const RegisterAtOffsetList& savedResultRegisters);
-std::unique_ptr<InternalFunction> createJSToWasmWrapper(CCallHelpers&, Callee&, const TypeDefinition&, Vector<UnlinkedWasmToWasmCall>*, const ModuleInformation&, MemoryMode, uint32_t functionIndex);
+void marshallJSResult(CCallHelpers& jit, const TypeDefinition&, const CallInformation& wasmFrameConvention, const RegisterAtOffsetList& savedResultRegisters, CCallHelpers::JumpList& exceptionChecks);
+std::shared_ptr<InternalFunction> createJSToWasmJITInterpreterCrashForSIMDParameters();
+std::shared_ptr<InternalFunction> createJSToWasmJITInterpreter();
+std::unique_ptr<InternalFunction> createJSToWasmWrapper(CCallHelpers&, JSEntrypointCallee&, Callee*, const TypeDefinition&, Vector<UnlinkedWasmToWasmCall>*, const ModuleInformation&, MemoryMode, uint32_t functionIndex);
 
 } } // namespace JSC::Wasm
 
-#endif // ENABLE(WEBASSEMBLY)
+#endif // ENABLE(WEBASSEMBLY) && ENABLE(JIT)

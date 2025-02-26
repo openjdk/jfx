@@ -25,7 +25,7 @@
 
 #pragma once
 
-#if ENABLE(WEBASSEMBLY_B3JIT)
+#if ENABLE(WEBASSEMBLY_OMGJIT)
 
 #include "WasmCallee.h"
 #include "WasmContext.h"
@@ -54,7 +54,7 @@ private:
     // For some reason friendship doesn't extend to parent classes...
     using Base::m_lock;
 
-    void dumpDisassembly(CompilationContext&, LinkBuffer&);
+    void dumpDisassembly(CompilationContext&, LinkBuffer&, unsigned functionIndex, const TypeDefinition&, unsigned functionIndexSpace);
     bool isComplete() const final { return m_completed; }
     void complete() WTF_REQUIRES_LOCK(m_lock) final
     {
@@ -73,4 +73,4 @@ private:
 
 } } // namespace JSC::Wasm
 
-#endif // ENABLE(WEBASSEMBLY_B3JIT)
+#endif // ENABLE(WEBASSEMBLY_OMGJIT)

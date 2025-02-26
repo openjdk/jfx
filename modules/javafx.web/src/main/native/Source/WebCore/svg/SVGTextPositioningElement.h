@@ -26,7 +26,8 @@
 namespace WebCore {
 
 class SVGTextPositioningElement : public SVGTextContentElement {
-    WTF_MAKE_ISO_ALLOCATED(SVGTextPositioningElement);
+    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(SVGTextPositioningElement);
+    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(SVGTextPositioningElement);
 public:
     static SVGTextPositioningElement* elementFromRenderer(RenderBoxModelObject&);
 
@@ -47,7 +48,7 @@ public:
 protected:
     SVGTextPositioningElement(const QualifiedName&, Document&, UniqueRef<SVGPropertyRegistry>&&);
 
-    void parseAttribute(const QualifiedName&, const AtomString&) override;
+    void attributeChanged(const QualifiedName&, const AtomString& oldValue, const AtomString& newValue, AttributeModificationReason) override;
     void svgAttributeChanged(const QualifiedName&) override;
 
 private:

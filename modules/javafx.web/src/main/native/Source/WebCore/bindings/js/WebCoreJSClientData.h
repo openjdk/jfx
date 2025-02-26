@@ -33,13 +33,24 @@
 #include <wtf/WeakPtr.h>
 
 namespace WebCore {
+class JSVMClientDataClient;
+}
+
+namespace WTF {
+template<typename T> struct IsDeprecatedWeakRefSmartPointerException;
+template<> struct IsDeprecatedWeakRefSmartPointerException<WebCore::JSVMClientDataClient> : std::true_type { };
+}
+
+namespace WebCore {
 
 class ExtendedDOMClientIsoSubspaces;
 class ExtendedDOMIsoSubspaces;
 
+DECLARE_ALLOCATOR_WITH_HEAP_IDENTIFIER(JSHeapData);
+
 class JSHeapData {
     WTF_MAKE_NONCOPYABLE(JSHeapData);
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(JSHeapData);
     friend class JSVMClientData;
 public:
     JSHeapData(JSC::Heap&);
@@ -68,17 +79,12 @@ private:
 public:
     JSC::IsoHeapCellType m_heapCellTypeForJSDOMWindow;
     JSC::IsoHeapCellType m_heapCellTypeForJSDedicatedWorkerGlobalScope;
-    JSC::IsoHeapCellType m_heapCellTypeForJSRemoteDOMWindow;
     JSC::IsoHeapCellType m_heapCellTypeForJSWorkerGlobalScope;
     JSC::IsoHeapCellType m_heapCellTypeForJSSharedWorkerGlobalScope;
     JSC::IsoHeapCellType m_heapCellTypeForJSShadowRealmGlobalScope;
-#if ENABLE(SERVICE_WORKER)
     JSC::IsoHeapCellType m_heapCellTypeForJSServiceWorkerGlobalScope;
-#endif
     JSC::IsoHeapCellType m_heapCellTypeForJSWorkletGlobalScope;
-#if ENABLE(CSS_PAINTING_API)
     JSC::IsoHeapCellType m_heapCellTypeForJSPaintWorkletGlobalScope;
-#endif
 #if ENABLE(WEB_AUDIO)
     JSC::IsoHeapCellType m_heapCellTypeForJSAudioWorkletGlobalScope;
 #endif
@@ -100,9 +106,17 @@ private:
     Vector<JSC::IsoSubspace*> m_outputConstraintSpaces;
 };
 
+DECLARE_ALLOCATOR_WITH_HEAP_IDENTIFIER(JSVMClientData);
+
+class JSVMClientDataClient : public CanMakeWeakPtr<JSVMClientDataClient> {
+public:
+    virtual ~JSVMClientDataClient() = default;
+    virtual void willDestroyVM() = 0;
+};
 
 class JSVMClientData : public JSC::VM::ClientData {
-    WTF_MAKE_NONCOPYABLE(JSVMClientData); WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_NONCOPYABLE(JSVMClientData);
+    WTF_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(JSVMClientData);
     friend class VMWorldIterator;
 
 public:
@@ -148,12 +162,7 @@ public:
 
     ExtendedDOMClientIsoSubspaces& clientSubspaces() { return *m_clientSubspaces.get(); }
 
-    class Client : public CanMakeWeakPtr<Client> {
-    public:
-        virtual ~Client() = default;
-        virtual void willDestroyVM() = 0;
-    };
-    void addClient(Client& client) { m_clients.add(client); }
+    void addClient(JSVMClientDataClient& client) { m_clients.add(client); }
 
 private:
     HashSet<DOMWrapperWorld*> m_worldSet;
@@ -176,11 +185,11 @@ private:
 
     std::unique_ptr<ExtendedDOMClientIsoSubspaces> m_clientSubspaces;
 
-    WeakHashSet<Client> m_clients;
+    WeakHashSet<JSVMClientDataClient> m_clients;
 };
 
 
-enum class UseCustomHeapCellType { Yes, No };
+enum class UseCustomHeapCellType : bool { No, Yes };
 
 template<typename T, UseCustomHeapCellType useCustomHeapCellType, typename GetClient, typename SetClient, typename GetServer, typename SetServer>
 ALWAYS_INLINE JSC::GCClient::IsoSubspace* subspaceForImpl(JSC::VM& vm, GetClient getClient, SetClient setClient, GetServer getServer, SetServer setServer, JSC::HeapCellType& (*getCustomHeapCellType)(JSHeapData&) = nullptr)

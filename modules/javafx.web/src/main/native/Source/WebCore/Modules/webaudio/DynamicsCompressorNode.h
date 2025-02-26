@@ -35,7 +35,7 @@ namespace WebCore {
 class DynamicsCompressor;
 
 class DynamicsCompressorNode final : public AudioNode {
-    WTF_MAKE_ISO_ALLOCATED(DynamicsCompressorNode);
+    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(DynamicsCompressorNode);
 public:
     static ExceptionOr<Ref<DynamicsCompressorNode>> create(BaseAudioContext&, const DynamicsCompressorOptions& = { });
 
@@ -68,6 +68,8 @@ private:
     double tailTime() const final;
     double latencyTime() const final;
     bool requiresTailProcessing() const final;
+
+    float noiseInjectionMultiplier() const final { return 0.01; }
 
     std::unique_ptr<DynamicsCompressor> m_dynamicsCompressor;
     Ref<AudioParam> m_threshold;

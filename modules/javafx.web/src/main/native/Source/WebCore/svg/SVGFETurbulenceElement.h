@@ -91,7 +91,8 @@ struct SVGPropertyTraits<TurbulenceType> {
 };
 
 class SVGFETurbulenceElement final : public SVGFilterPrimitiveStandardAttributes {
-    WTF_MAKE_ISO_ALLOCATED(SVGFETurbulenceElement);
+    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(SVGFETurbulenceElement);
+    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(SVGFETurbulenceElement);
 public:
     static Ref<SVGFETurbulenceElement> create(const QualifiedName&, Document&);
 
@@ -114,7 +115,7 @@ private:
 
     using PropertyRegistry = SVGPropertyOwnerRegistry<SVGFETurbulenceElement, SVGFilterPrimitiveStandardAttributes>;
 
-    void parseAttribute(const QualifiedName&, const AtomString&) override;
+    void attributeChanged(const QualifiedName&, const AtomString& oldValue, const AtomString& newValue, AttributeModificationReason) override;
     void svgAttributeChanged(const QualifiedName&) override;
 
     bool setFilterEffectAttribute(FilterEffect&, const QualifiedName& attrName) override;

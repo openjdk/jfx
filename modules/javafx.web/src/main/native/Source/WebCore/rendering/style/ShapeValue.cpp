@@ -59,7 +59,7 @@ bool ShapeValue::canBlend(const ShapeValue& to) const
     if (m_cssBox != to.cssBox())
         return false;
 
-    if (auto* toShape = to.shape())
+    if (RefPtr toShape = to.shape())
         return m_shape && m_shape->canBlend(*toShape);
 
     return false;
@@ -69,6 +69,13 @@ Ref<ShapeValue> ShapeValue::blend(const ShapeValue& to, const BlendingContext& c
 {
     ASSERT(m_shape && to.shape());
     return ShapeValue::create(to.shape()->blend(*m_shape, context), m_cssBox);
+}
+
+CSSBoxType ShapeValue::effectiveCSSBox() const
+{
+    if (m_cssBox == CSSBoxType::BoxMissing)
+        return m_type == ShapeValue::Type::Image ? CSSBoxType::ContentBox : CSSBoxType::MarginBox;
+    return m_cssBox;
 }
 
 } // namespace WebCore

@@ -115,7 +115,7 @@ public:
     size_t displayHeight() const { return m_data.displayHeight; }
     std::optional<uint64_t> duration() const { return m_data.duration; }
     int64_t timestamp() const { return m_data.timestamp; }
-    VideoColorSpace* colorSpace() const;
+    VideoColorSpace& colorSpace() const;
 
     struct CopyToOptions {
         std::optional<DOMRectInit> rect;
@@ -143,8 +143,8 @@ private:
     explicit WebCodecsVideoFrame(ScriptExecutionContext&);
     WebCodecsVideoFrame(ScriptExecutionContext&, WebCodecsVideoFrameData&&);
 
-    static ExceptionOr<Ref<WebCodecsVideoFrame>> initializeFrameFromOtherFrame(ScriptExecutionContext&, Ref<WebCodecsVideoFrame>&&, Init&&);
-    static ExceptionOr<Ref<WebCodecsVideoFrame>> initializeFrameFromOtherFrame(ScriptExecutionContext&, Ref<VideoFrame>&&, Init&&);
+    static ExceptionOr<Ref<WebCodecsVideoFrame>> initializeFrameFromOtherFrame(ScriptExecutionContext&, Ref<WebCodecsVideoFrame>&&, Init&&, VideoFrame::ShouldCloneWithDifferentTimestamp);
+    static ExceptionOr<Ref<WebCodecsVideoFrame>> initializeFrameFromOtherFrame(ScriptExecutionContext&, Ref<VideoFrame>&&, Init&&, VideoFrame::ShouldCloneWithDifferentTimestamp);
     static ExceptionOr<Ref<WebCodecsVideoFrame>> initializeFrameWithResourceAndSize(ScriptExecutionContext&, Ref<NativeImage>&&, Init&&);
 
     WebCodecsVideoFrameData m_data;

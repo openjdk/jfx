@@ -38,15 +38,16 @@
 #include "CSSFontSelector.h"
 #include "CSSPropertyParserHelpers.h"
 #include "CSSPropertyParserWorkerSafe.h"
+#include "InspectorInstrumentation.h"
 #include "RenderStyle.h"
 #include "ScriptExecutionContext.h"
 #include "StyleResolveForFontRaw.h"
 #include "TextMetrics.h"
-#include <wtf/IsoMallocInlines.h>
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
-WTF_MAKE_ISO_ALLOCATED_IMPL(OffscreenCanvasRenderingContext2D);
+WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(OffscreenCanvasRenderingContext2D);
 
 bool OffscreenCanvasRenderingContext2D::enabledForContext(ScriptExecutionContext& context)
 {
@@ -58,6 +59,16 @@ bool OffscreenCanvasRenderingContext2D::enabledForContext(ScriptExecutionContext
 
     ASSERT(context.isDocument());
     return true;
+}
+
+
+std::unique_ptr<OffscreenCanvasRenderingContext2D> OffscreenCanvasRenderingContext2D::create(CanvasBase& canvas, CanvasRenderingContext2DSettings&& settings)
+{
+    auto renderingContext = std::unique_ptr<OffscreenCanvasRenderingContext2D>(new OffscreenCanvasRenderingContext2D(canvas, WTFMove(settings)));
+
+    InspectorInstrumentation::didCreateCanvasRenderingContext(*renderingContext);
+
+    return renderingContext;
 }
 
 OffscreenCanvasRenderingContext2D::OffscreenCanvasRenderingContext2D(CanvasBase& canvas, CanvasRenderingContext2DSettings&& settings)
@@ -104,6 +115,21 @@ void OffscreenCanvasRenderingContext2D::setFont(const String& newFont)
         ASSERT(context.cssFontSelector());
         modifiableState().font.initialize(*context.cssFontSelector(), *fontCascade);
     }
+}
+
+RefPtr<ImageBuffer> OffscreenCanvasRenderingContext2D::transferToImageBuffer()
+{
+    if (!canvasBase().hasCreatedImageBuffer())
+        return canvasBase().allocateImageBuffer();
+    auto* buffer = canvasBase().buffer();
+    if (!buffer)
+        return nullptr;
+    // As the canvas context state is stored in GraphicsContext, which is owned
+    // by buffer(), to avoid resetting the context state, we have to make a copy and
+    // clear the original buffer rather than returning the original buffer.
+    RefPtr result = buffer->clone();
+    clearCanvas();
+    return result;
 }
 
 CanvasDirection OffscreenCanvasRenderingContext2D::direction() const

@@ -30,12 +30,21 @@
 #include <wtf/Vector.h>
 
 namespace WebCore {
+class MessagePortChannelProvider;
+}
+
+namespace WTF {
+template<typename T> struct IsDeprecatedWeakRefSmartPointerException;
+template<> struct IsDeprecatedWeakRefSmartPointerException<WebCore::MessagePortChannelProvider> : std::true_type { };
+}
+
+namespace WebCore {
 
 class ScriptExecutionContext;
 struct MessagePortIdentifier;
 struct MessageWithMessagePorts;
 
-class MessagePortChannelProvider {
+class MessagePortChannelProvider : public CanMakeWeakPtr<MessagePortChannelProvider> {
 public:
     static MessagePortChannelProvider& fromContext(ScriptExecutionContext&);
     static MessagePortChannelProvider& singleton();

@@ -32,6 +32,7 @@
 #include "PropertySetCSSStyleDeclaration.h"
 #include "StyleProperties.h"
 #include "StylePropertiesInlines.h"
+#include <wtf/text/MakeString.h>
 #include <wtf/text/StringBuilder.h>
 
 namespace WebCore {
@@ -63,9 +64,12 @@ StyleRuleKeyframe::~StyleRuleKeyframe() = default;
 
 MutableStyleProperties& StyleRuleKeyframe::mutableProperties()
 {
-    if (!is<MutableStyleProperties>(m_properties))
-        m_properties = m_properties->mutableCopy();
-    return downcast<MutableStyleProperties>(m_properties.get());
+    if (auto* mutableProperties = dynamicDowncast<MutableStyleProperties>(m_properties.get()))
+        return *mutableProperties;
+    Ref mutableProperties = m_properties->mutableCopy();
+    auto& mutablePropertiesRef = mutableProperties.get();
+    m_properties = WTFMove(mutableProperties);
+    return mutablePropertiesRef;
 }
 
 String StyleRuleKeyframe::keyText() const
@@ -92,8 +96,8 @@ bool StyleRuleKeyframe::setKeyText(const String& keyText)
 String StyleRuleKeyframe::cssText() const
 {
     if (auto declarations = m_properties->asText(); !declarations.isEmpty())
-        return makeString(keyText(), " { ", declarations, " }");
-    return makeString(keyText(), " { }");
+        return makeString(keyText(), " { "_s, declarations, " }"_s);
+    return makeString(keyText(), " { }"_s);
 }
 
 CSSKeyframeRule::CSSKeyframeRule(StyleRuleKeyframe& keyframe, CSSKeyframesRule* parent)

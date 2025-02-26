@@ -41,12 +41,14 @@ IsoSubspacePerVM::~IsoSubspacePerVM()
     UNREACHABLE_FOR_PLATFORM();
 }
 
-IsoSubspace& IsoSubspacePerVM::isoSubspaceforHeap(LockHolder&, Heap& heap)
+IsoSubspace& IsoSubspacePerVM::isoSubspaceforHeap(Locker<Lock>&, JSC::Heap& heap)
 {
     auto result = m_subspacePerHeap.add(&heap, nullptr);
     if (result.isNewEntry) {
         SubspaceParameters params = m_subspaceParameters(heap);
-        result.iterator->value = new IsoSubspace(params.name, heap, *params.heapCellType, params.size, 0);
+        constexpr bool usePreciseAllocationsOnly = false;
+        constexpr uint8_t numberOfLowerTierPreciseCells = 0;
+        result.iterator->value = new IsoSubspace(params.name, heap, *params.heapCellType, params.size, usePreciseAllocationsOnly, numberOfLowerTierPreciseCells);
 
         Locker locker { heap.lock() };
         heap.perVMIsoSubspaces.append(this);
@@ -68,7 +70,7 @@ GCClient::IsoSubspace& IsoSubspacePerVM::clientIsoSubspaceforVM(VM& vm)
     return *result.iterator->value;
 }
 
-void IsoSubspacePerVM::releaseIsoSubspace(Heap& heap)
+void IsoSubspacePerVM::releaseIsoSubspace(JSC::Heap& heap)
 {
     IsoSubspace* subspace;
     {

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2023, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,9 +25,11 @@
 
 package test.com.sun.javafx.binding;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+
 
 import java.util.BitSet;
 import java.util.List;
@@ -35,8 +37,8 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import com.sun.javafx.binding.ExpressionHelper;
 import com.sun.javafx.binding.ExpressionHelperShim;
@@ -67,7 +69,7 @@ public class ExpressionHelperTest {
     private InvalidationListenerMock[] invalidationListener;
     private ChangeListenerMock<Object>[] changeListener;
 
-    @Before
+    @BeforeEach
     public void setUp() {
         helper = null;
         observable = new ObservableValueStub(DATA_1);
@@ -79,34 +81,46 @@ public class ExpressionHelperTest {
         };
     }
 
-    @Test (expected = NullPointerException.class)
+    @Test
     public void testAddInvalidation_Null_X() {
-        ExpressionHelper.addListener(helper, null, invalidationListener[0]);
+        assertThrows(NullPointerException.class, () -> {
+            ExpressionHelper.addListener(helper, null, invalidationListener[0]);
+        });
     }
 
-    @Test (expected = NullPointerException.class)
+    @Test
     public void testAddInvalidation_X_Null() {
-        ExpressionHelper.addListener(helper, observable, (InvalidationListener) null);
+        assertThrows(NullPointerException.class, () -> {
+            ExpressionHelper.addListener(helper, observable, (InvalidationListener) null);
+        });
     }
 
-    @Test (expected = NullPointerException.class)
+    @Test
     public void testRemoveInvalidation_Null() {
-        ExpressionHelper.removeListener(helper, (InvalidationListener) null);
+        assertThrows(NullPointerException.class, () -> {
+            ExpressionHelper.removeListener(helper, (InvalidationListener) null);
+        });
     }
 
-    @Test (expected = NullPointerException.class)
+    @Test
     public void testAddChange_Null_X() {
-        ExpressionHelper.addListener(helper, null, changeListener[0]);
+        assertThrows(NullPointerException.class, () -> {
+            ExpressionHelper.addListener(helper, null, changeListener[0]);
+        });
     }
 
-    @Test (expected = NullPointerException.class)
+    @Test
     public void testAddChange_X_Null() {
-        ExpressionHelper.addListener(helper, observable, (ChangeListener) null);
+        assertThrows(NullPointerException.class, () -> {
+            ExpressionHelper.addListener(helper, observable, (ChangeListener) null);
+        });
     }
 
-    @Test (expected = NullPointerException.class)
+    @Test
     public void testRemoveChange_Null() {
-        ExpressionHelper.removeListener(helper, (ChangeListener) null);
+        assertThrows(NullPointerException.class, () -> {
+            ExpressionHelper.removeListener(helper, (ChangeListener) null);
+        });
     }
 
     @Test
@@ -682,7 +696,7 @@ public class ExpressionHelperTest {
         StringProperty p = new SimpleStringProperty("a") {
             @Override
             protected void invalidated() {
-                removeListener(invalidationListener);
+                removeListener(invalidationListener);  // this removal occurs before notification
             }
         };
 
@@ -693,6 +707,56 @@ public class ExpressionHelperTest {
 
         assertFalse(invalidated.get());  // false because the invalidation listener was removed before called
         assertEquals("b", currentValue.get());
+
+        p.set("a");  // if current value wasn't copied correctly (it is still "a") then this wouldn't trigger a change
+
+        assertEquals("a", currentValue.get());
+    }
+
+    @Test
+    public void shouldNotForgetCurrentValueWhenMovingFromChangeListenerAndInvalidationListenerToSingleChangeListener() {
+        AtomicReference<String> currentValue = new AtomicReference<>();
+        StringProperty p = new SimpleStringProperty("a");
+        InvalidationListener invalidationListener = new InvalidationListener() {
+            @Override
+            public void invalidated(Observable obs) {
+                p.removeListener(this);  // this removal occurs during notification
+            }
+        };
+
+        p.addListener(invalidationListener);
+        p.addListener((obs, old, current) -> currentValue.set(current));
+
+        p.set("b");
+
+        assertEquals("b", currentValue.get());
+
+        p.set("a");  // if current value wasn't copied correctly (it is still "a") then this wouldn't trigger a change
+
+        assertEquals("a", currentValue.get());
+    }
+
+    @Test
+    public void shouldNotForgetCurrentValueWhenMovingFromTwoChangeListenersToSingleChangeListener() {
+        AtomicReference<String> currentValue = new AtomicReference<>();
+        StringProperty p = new SimpleStringProperty("a");
+        ChangeListener<String> changeListener = new ChangeListener<>() {
+            @Override
+            public void changed(ObservableValue<? extends String> observable, String oldValue, String newValue) {
+                p.removeListener(this);
+            }
+        };
+
+        p.addListener(changeListener);
+        p.addListener((obs, old, current) -> currentValue.set(current));
+
+        p.set("b");
+
+        assertEquals("b", currentValue.get());
+
+        p.set("a");  // if current value wasn't copied correctly (it is still "a") then this wouldn't trigger a change
+
+        assertEquals("a", currentValue.get());
     }
 
     @Test

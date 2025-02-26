@@ -26,16 +26,17 @@
 #include "config.h"
 #include "FileSystemDirectoryHandle.h"
 
+#include "ContextDestructionObserverInlines.h"
 #include "FileSystemHandleCloseScope.h"
 #include "FileSystemStorageConnection.h"
 #include "JSDOMPromiseDeferred.h"
 #include "JSFileSystemDirectoryHandle.h"
 #include "JSFileSystemFileHandle.h"
-#include <wtf/IsoMallocInlines.h>
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
-WTF_MAKE_ISO_ALLOCATED_IMPL(FileSystemDirectoryHandle);
+WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(FileSystemDirectoryHandle);
 
 Ref<FileSystemDirectoryHandle> FileSystemDirectoryHandle::create(ScriptExecutionContext& context, String&& name, FileSystemHandleIdentifier identifier, Ref<FileSystemStorageConnection>&& connection)
 {
@@ -52,16 +53,15 @@ FileSystemDirectoryHandle::FileSystemDirectoryHandle(ScriptExecutionContext& con
 void FileSystemDirectoryHandle::getFileHandle(const String& name, const FileSystemDirectoryHandle::GetFileOptions& options, DOMPromiseDeferred<IDLInterface<FileSystemFileHandle>>&& promise)
 {
     if (isClosed())
-        return promise.reject(Exception { InvalidStateError, "Handle is closed"_s });
+        return promise.reject(Exception { ExceptionCode::InvalidStateError, "Handle is closed"_s });
 
-    connection().getFileHandle(identifier(), name, options.create, [weakThis = ThreadSafeWeakPtr { *this }, connection = Ref { connection() }, name, promise = WTFMove(promise)](auto result) mutable {
+    connection().getFileHandle(identifier(), name, options.create, [weakContext = WeakPtr { *scriptExecutionContext() }, connection = Ref { connection() }, name, promise = WTFMove(promise)](auto result) mutable {
         if (result.hasException())
             return promise.reject(result.releaseException());
 
-        auto strongThis = weakThis.get();
-        auto* context = strongThis ? strongThis->scriptExecutionContext() : nullptr;
+        RefPtr context = weakContext.get();
         if (!context)
-            return promise.reject(Exception { InvalidStateError, "Context has stopped"_s });
+            return promise.reject(Exception { ExceptionCode::InvalidStateError, "Context has stopped"_s });
 
         auto [identifier, isDirectory] = result.returnValue()->release();
         ASSERT(!isDirectory);
@@ -72,16 +72,15 @@ void FileSystemDirectoryHandle::getFileHandle(const String& name, const FileSyst
 void FileSystemDirectoryHandle::getDirectoryHandle(const String& name, const FileSystemDirectoryHandle::GetDirectoryOptions& options, DOMPromiseDeferred<IDLInterface<FileSystemDirectoryHandle>>&& promise)
 {
     if (isClosed())
-        return promise.reject(Exception { InvalidStateError, "Handle is closed"_s });
+        return promise.reject(Exception { ExceptionCode::InvalidStateError, "Handle is closed"_s });
 
-    connection().getDirectoryHandle(identifier(), name, options.create, [weakThis = ThreadSafeWeakPtr { *this }, connection = Ref { connection() }, name, promise = WTFMove(promise)](auto result) mutable {
+    connection().getDirectoryHandle(identifier(), name, options.create, [weakContext = WeakPtr { *scriptExecutionContext() }, connection = Ref { connection() }, name, promise = WTFMove(promise)](auto result) mutable {
         if (result.hasException())
             return promise.reject(result.releaseException());
 
-        auto strongThis = weakThis.get();
-        auto* context = strongThis ? strongThis->scriptExecutionContext() : nullptr;
+        RefPtr context = weakContext.get();
         if (!context)
-            return promise.reject(Exception { InvalidStateError, "Context has stopped"_s });
+            return promise.reject(Exception { ExceptionCode::InvalidStateError, "Context has stopped"_s });
 
         auto [identifier, isDirectory] = result.returnValue()->release();
         ASSERT(isDirectory);
@@ -92,7 +91,7 @@ void FileSystemDirectoryHandle::getDirectoryHandle(const String& name, const Fil
 void FileSystemDirectoryHandle::removeEntry(const String& name, const FileSystemDirectoryHandle::RemoveOptions& options, DOMPromiseDeferred<void>&& promise)
 {
     if (isClosed())
-        return promise.reject(Exception { InvalidStateError, "Handle is closed"_s });
+        return promise.reject(Exception { ExceptionCode::InvalidStateError, "Handle is closed"_s });
 
     connection().removeEntry(identifier(), name, options.recursive, [promise = WTFMove(promise)](auto result) mutable {
         promise.settle(WTFMove(result));
@@ -102,7 +101,7 @@ void FileSystemDirectoryHandle::removeEntry(const String& name, const FileSystem
 void FileSystemDirectoryHandle::resolve(const FileSystemHandle& handle, DOMPromiseDeferred<IDLSequence<IDLUSVString>>&& promise)
 {
     if (isClosed())
-        return promise.reject(Exception { InvalidStateError, "Handle is closed"_s });
+        return promise.reject(Exception { ExceptionCode::InvalidStateError, "Handle is closed"_s });
 
     connection().resolve(identifier(), handle.identifier(), [promise = WTFMove(promise)](auto result) mutable {
         promise.settle(WTFMove(result));
@@ -112,7 +111,7 @@ void FileSystemDirectoryHandle::resolve(const FileSystemHandle& handle, DOMPromi
 void FileSystemDirectoryHandle::getHandleNames(CompletionHandler<void(ExceptionOr<Vector<String>>&&)>&& completionHandler)
 {
     if (isClosed())
-        return completionHandler(Exception { InvalidStateError, "Handle is closed"_s });
+        return completionHandler(Exception { ExceptionCode::InvalidStateError, "Handle is closed"_s });
 
     connection().getHandleNames(identifier(), WTFMove(completionHandler));
 }
@@ -120,17 +119,16 @@ void FileSystemDirectoryHandle::getHandleNames(CompletionHandler<void(ExceptionO
 void FileSystemDirectoryHandle::getHandle(const String& name, CompletionHandler<void(ExceptionOr<Ref<FileSystemHandle>>&&)>&& completionHandler)
 {
     if (isClosed())
-        return completionHandler(Exception { InvalidStateError, "Handle is closed"_s });
+        return completionHandler(Exception { ExceptionCode::InvalidStateError, "Handle is closed"_s });
 
-    connection().getHandle(identifier(), name, [weakThis = ThreadSafeWeakPtr { *this }, name, connection = Ref { connection() }, completionHandler = WTFMove(completionHandler)](auto result) mutable {
+    connection().getHandle(identifier(), name, [weakContext = WeakPtr { *scriptExecutionContext() }, name, connection = Ref { connection() }, completionHandler = WTFMove(completionHandler)](auto result) mutable {
         if (result.hasException())
             return completionHandler(result.releaseException());
 
         auto [identifier, isDirectory] = result.returnValue()->release();
-        auto strongThis = weakThis.get();
-        auto* context = strongThis ? strongThis->scriptExecutionContext() : nullptr;
+        RefPtr context = weakContext.get();
         if (!context)
-            return completionHandler(Exception { InvalidStateError, "Context has stopped"_s });
+            return completionHandler(Exception { ExceptionCode::InvalidStateError, "Context has stopped"_s });
 
         if (isDirectory) {
             Ref<FileSystemHandle> handle = FileSystemDirectoryHandle::create(*context, String { name }, identifier, WTFMove(connection));

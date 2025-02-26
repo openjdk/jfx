@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,25 +25,22 @@
 
 package test.javafx.scene;
 
-import java.util.Arrays;
-import java.util.Collection;
+import java.util.stream.Stream;
 
 import javafx.scene.image.Image;
 import test.javafx.scene.image.TestImages;
-
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
-import org.junit.runners.Parameterized.Parameters;
 
 import test.com.sun.javafx.pgstub.CursorSizeConverter;
 import test.com.sun.javafx.pgstub.StubToolkit;
 import com.sun.javafx.tk.Toolkit;
 import javafx.scene.ImageCursor;
 
-@RunWith(Parameterized.class)
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
+
 public final class ImageCursor_findBestImage_Test {
     private static final Image[] TEST_CURSOR_IMAGES = {
         TestImages.TEST_IMAGE_32x32,
@@ -55,15 +52,6 @@ public final class ImageCursor_findBestImage_Test {
     private static StubToolkit toolkit;
     private static CursorSizeConverter oldCursorSizeConverter;
 
-    private final int bestWidth;
-    private final int bestHeight;
-    private final float hotspotX;
-    private final float hotspotY;
-
-    private final int expectedIndex;
-    private final float expectedHotspotX;
-    private final float expectedHotspotY;
-
 
     /*
      * Parameters: [bestWidth], [bestHeight], [hotspotX], [hotspotY],
@@ -71,50 +59,39 @@ public final class ImageCursor_findBestImage_Test {
      *             [expected hotspotX],
      *             [expected hotspotY]
      */
-    @Parameters
-    public static Collection data() {
-        return Arrays.asList(new Object[][] {
-            { 32, 64, 0, 0, 2, 0, 0 },
-            { 64, 32, 32, 32, 3, 63, 31 },
-            { 48, 64, 16, 16, 2, 16, 32 },
-            { 64, 48, 16, 16, 3, 32, 16 },
-            { 92, 92, 16, 4, 1, 32, 8 },
-            { 16, 16, 4, 16, 0, 4, 16 },
-            { 16, 32, 0, 0, 0, 0, 0 },
-            { 32, 16, 0, 0, 0, 0, 0 }
-        });
+    public static Stream<Arguments> data() {
+        return Stream.of(
+            Arguments.of( 32, 64, 0, 0, 2, 0, 0 ),
+            Arguments.of( 64, 32, 32, 32, 3, 63, 31 ),
+            Arguments.of( 48, 64, 16, 16, 2, 16, 32 ),
+            Arguments.of( 64, 48, 16, 16, 3, 32, 16 ),
+            Arguments.of( 92, 92, 16, 4, 1, 32, 8 ),
+            Arguments.of( 16, 16, 4, 16, 0, 4, 16 ),
+            Arguments.of( 16, 32, 0, 0, 0, 0, 0 ),
+            Arguments.of( 32, 16, 0, 0, 0, 0, 0 )
+        );
     }
 
-    @BeforeClass
+    @BeforeAll
     public static void setUpClass() {
         toolkit = (StubToolkit) Toolkit.getToolkit();
         oldCursorSizeConverter = toolkit.getCursorSizeConverter();
     }
 
-    @AfterClass
+    @AfterAll
     public static void tearDownClass() {
         toolkit.setCursorSizeConverter(oldCursorSizeConverter);
     }
 
-    public ImageCursor_findBestImage_Test(final int bestWidth,
-                                              final int bestHeight,
-                                              final float hotspotX,
-                                              final float hotspotY,
-                                              final int expectedIndex,
-                                              final float expectedHotspotX,
-                                              final float expectedHotspotY) {
-        this.bestWidth = bestWidth;
-        this.bestHeight = bestHeight;
-        this.hotspotX = hotspotX;
-        this.hotspotY = hotspotY;
-
-        this.expectedIndex = expectedIndex;
-        this.expectedHotspotX = expectedHotspotX;
-        this.expectedHotspotY = expectedHotspotY;
-    }
-
-    @Test
-    public void findBestImageTest() {
+    @ParameterizedTest
+    @MethodSource("data")
+    public void findBestImageTest(int bestWidth,
+                                  int bestHeight,
+                                  float hotspotX,
+                                  float hotspotY,
+                                  int expectedIndex,
+                                  float expectedHotspotX,
+                                  float expectedHotspotY) {
         toolkit.setCursorSizeConverter(
                 CursorSizeConverter.createConstantConverter(bestWidth,
                                                             bestHeight));

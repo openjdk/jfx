@@ -26,7 +26,7 @@
 #include "config.h"
 #include "JSNodeCustom.h"
 #include "JSUndoItem.h"
-#include "WebCoreOpaqueRoot.h"
+#include "WebCoreOpaqueRootInlines.h"
 #include <JavaScriptCore/JSCJSValueInlines.h>
 
 namespace WebCore {
@@ -40,10 +40,10 @@ void JSUndoItem::visitAdditionalChildren(Visitor& visitor)
 
 DEFINE_VISIT_ADDITIONAL_CHILDREN(JSUndoItem);
 
-bool JSUndoItemOwner::isReachableFromOpaqueRoots(JSC::Handle<JSC::Unknown> handle, void*, JSC::AbstractSlotVisitor& visitor, const char** reason)
+bool JSUndoItemOwner::isReachableFromOpaqueRoots(JSC::Handle<JSC::Unknown> handle, void*, JSC::AbstractSlotVisitor& visitor, ASCIILiteral* reason)
 {
     if (UNLIKELY(reason))
-        *reason = "Document is an opaque root.";
+        *reason = "Document is an opaque root."_s;
 
     auto* documentForUndoItem = JSC::jsCast<JSUndoItem*>(handle.slot()->asCell())->wrapped().document();
     return containsWebCoreOpaqueRoot(visitor, documentForUndoItem);

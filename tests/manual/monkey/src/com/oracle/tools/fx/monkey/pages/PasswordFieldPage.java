@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2023, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,13 +25,22 @@
 
 package com.oracle.tools.fx.monkey.pages;
 
+import javafx.scene.AccessibleAttribute;
 import javafx.scene.control.PasswordField;
+import com.oracle.tools.fx.monkey.Loggers;
 
 /**
- * PasswordField page uses the fact that PasswordField is a TextField.
+ * PasswordField Page uses the fact that PasswordField is a TextField.
  */
 public class PasswordFieldPage extends TextFieldPage {
     public PasswordFieldPage() {
-        super(new PasswordField(), "PasswordFieldPage");
+        super(new PasswordField() {
+            @Override
+            public Object queryAccessibleAttribute(AccessibleAttribute a, Object... ps) {
+                Object v = super.queryAccessibleAttribute(a, ps);
+                Loggers.accessibility.log(a, v);
+                return v;
+            }
+        }, "PasswordFieldPage");
     }
 }

@@ -29,13 +29,29 @@
 
 #include <memory>
 #include <wtf/CompletionHandler.h>
-#include <wtf/EnumTraits.h>
 #include <wtf/NeverDestroyed.h>
 #include <wtf/Noncopyable.h>
 #include <wtf/Observer.h>
 #include <wtf/UniqueRef.h>
 #include <wtf/WeakHashSet.h>
 #include <wtf/text/WTFString.h>
+
+namespace WebCore {
+class AudioSessionInterruptionObserver;
+class AudioSessionRoutingArbitrationClient;
+class AudioSessionConfigurationChangeObserver;
+}
+
+namespace WTF {
+template<typename T> struct IsDeprecatedWeakRefSmartPointerException;
+template<> struct IsDeprecatedWeakRefSmartPointerException<WebCore::AudioSessionInterruptionObserver> : std::true_type { };
+template<> struct IsDeprecatedWeakRefSmartPointerException<WebCore::AudioSessionRoutingArbitrationClient> : std::true_type { };
+template<> struct IsDeprecatedWeakRefSmartPointerException<WebCore::AudioSessionConfigurationChangeObserver> : std::true_type { };
+}
+
+namespace WTF {
+class Logger;
+}
 
 namespace WebCore {
 
@@ -56,7 +72,32 @@ enum class AudioSessionCategory : uint8_t {
     AudioProcessing,
 };
 
+enum class AudioSessionMode : uint8_t {
+    // FIXME: This is not exhaustive.
+    Default,
+    VideoChat,
+    MoviePlayback,
+};
+
+enum class AudioSessionSoundStageSize : uint8_t {
+    Automatic,
+    Small,
+    Medium,
+    Large,
+};
+
+class AudioSession;
 class AudioSessionRoutingArbitrationClient;
+class AudioSessionInterruptionObserver;
+
+class AudioSessionConfigurationChangeObserver : public CanMakeWeakPtr<AudioSessionConfigurationChangeObserver> {
+public:
+    virtual ~AudioSessionConfigurationChangeObserver() = default;
+
+    virtual void hardwareMutedStateDidChange(const AudioSession&) = 0;
+    virtual void bufferSizeDidChange(const AudioSession&) { }
+    virtual void sampleRateDidChange(const AudioSession&) { }
+};
 
 class WEBCORE_EXPORT AudioSession {
     WTF_MAKE_FAST_ALLOCATED;
@@ -74,8 +115,10 @@ public:
     virtual ~AudioSession();
 
     using CategoryType = AudioSessionCategory;
-    virtual void setCategory(CategoryType, RouteSharingPolicy);
     virtual CategoryType category() const;
+    using Mode = AudioSessionMode;
+    virtual Mode mode() const;
+    virtual void setCategory(CategoryType, Mode, RouteSharingPolicy);
 
     virtual void setCategoryOverride(CategoryType);
     virtual CategoryType categoryOverride() const;
@@ -93,17 +136,8 @@ public:
     virtual size_t preferredBufferSize() const;
     virtual void setPreferredBufferSize(size_t);
 
-    class ConfigurationChangeObserver : public CanMakeWeakPtr<ConfigurationChangeObserver> {
-    public:
-        virtual ~ConfigurationChangeObserver() = default;
-
-        virtual void hardwareMutedStateDidChange(const AudioSession&) = 0;
-        virtual void bufferSizeDidChange(const AudioSession&) { }
-        virtual void sampleRateDidChange(const AudioSession&) { }
-    };
-
-    virtual void addConfigurationChangeObserver(ConfigurationChangeObserver&);
-    virtual void removeConfigurationChangeObserver(ConfigurationChangeObserver&);
+    virtual void addConfigurationChangeObserver(AudioSessionConfigurationChangeObserver&);
+    virtual void removeConfigurationChangeObserver(AudioSessionConfigurationChangeObserver&);
 
     virtual void audioOutputDeviceChanged();
     virtual void setIsPlayingToBluetoothOverride(std::optional<bool>);
@@ -117,17 +151,10 @@ public:
 
     virtual void beginInterruptionForTesting() { beginInterruption(); }
     virtual void endInterruptionForTesting() { endInterruption(MayResume::Yes); }
+    virtual void clearInterruptionFlagForTesting() { }
 
-    class InterruptionObserver : public CanMakeWeakPtr<InterruptionObserver> {
-    public:
-        virtual ~InterruptionObserver() = default;
-
-        virtual void beginAudioSessionInterruption() = 0;
-        virtual void endAudioSessionInterruption(MayResume) = 0;
-        virtual void activeStateChanged() { }
-    };
-    virtual void addInterruptionObserver(InterruptionObserver&);
-    virtual void removeInterruptionObserver(InterruptionObserver&);
+    virtual void addInterruptionObserver(AudioSessionInterruptionObserver&);
+    virtual void removeInterruptionObserver(AudioSessionInterruptionObserver&);
 
     virtual bool isActive() const { return m_active; }
 
@@ -141,6 +168,13 @@ public:
 
     bool isInterrupted() const { return m_isInterrupted; }
 
+    virtual void setSceneIdentifier(const String&) { }
+    virtual const String& sceneIdentifier() const { return nullString(); }
+
+    using SoundStageSize = AudioSessionSoundStageSize;
+    virtual void setSoundStageSize(SoundStageSize) { }
+    virtual SoundStageSize soundStageSize() const { return SoundStageSize::Automatic; }
+
 protected:
     friend class NeverDestroyed<AudioSession>;
     AudioSession();
@@ -148,7 +182,14 @@ protected:
     virtual bool tryToSetActiveInternal(bool);
     void activeStateChanged();
 
-    WeakHashSet<InterruptionObserver> m_interruptionObservers;
+    Logger& logger();
+    ASCIILiteral logClassName() const { return "AudioSession"_s; }
+    WTFLogChannel& logChannel() const;
+    const void* logIdentifier() const { return nullptr; }
+
+    mutable RefPtr<Logger> m_logger;
+
+    WeakHashSet<AudioSessionInterruptionObserver> m_interruptionObservers;
 
     WeakPtr<AudioSessionRoutingArbitrationClient> m_routingArbitrationClient;
     AudioSession::CategoryType m_categoryOverride { AudioSession::CategoryType::None };
@@ -156,6 +197,15 @@ protected:
     bool m_isInterrupted { false };
 
     static bool s_shouldManageAudioSessionCategory;
+};
+
+class AudioSessionInterruptionObserver : public CanMakeWeakPtr<AudioSessionInterruptionObserver> {
+public:
+    virtual ~AudioSessionInterruptionObserver() = default;
+
+    virtual void beginAudioSessionInterruption() = 0;
+    virtual void endAudioSessionInterruption(AudioSession::MayResume) = 0;
+    virtual void audioSessionActiveStateChanged() { }
 };
 
 enum class AudioSessionRoutingArbitrationError : uint8_t { None, Failed, Cancelled };
@@ -172,13 +222,18 @@ public:
     virtual void beginRoutingArbitrationWithCategory(AudioSession::CategoryType, ArbitrationCallback&&) = 0;
     virtual void leaveRoutingAbritration() = 0;
 
+    virtual const void* logIdentifier() const = 0;
+    virtual bool canLog() const = 0;
+
     using WeakValueType = AudioSessionRoutingArbitrationClient;
 };
 
 WEBCORE_EXPORT String convertEnumerationToString(RouteSharingPolicy);
 WEBCORE_EXPORT String convertEnumerationToString(AudioSession::CategoryType);
+WEBCORE_EXPORT String convertEnumerationToString(AudioSession::Mode);
 WEBCORE_EXPORT String convertEnumerationToString(AudioSessionRoutingArbitrationClient::RoutingArbitrationError);
 WEBCORE_EXPORT String convertEnumerationToString(AudioSessionRoutingArbitrationClient::DefaultRouteChanged);
+WEBCORE_EXPORT String convertEnumerationToString(AudioSession::SoundStageSize);
 
 } // namespace WebCore
 
@@ -204,17 +259,34 @@ struct LogArgument<WebCore::AudioSession::CategoryType> {
 };
 
 template <>
+struct LogArgument<WebCore::AudioSession::Mode> {
+    static String toString(const WebCore::AudioSession::Mode mode)
+    {
+        return convertEnumerationToString(mode);
+    }
+};
+
+template <>
 struct LogArgument<WebCore::AudioSessionRoutingArbitrationClient::RoutingArbitrationError> {
     static String toString(const WebCore::AudioSessionRoutingArbitrationClient::RoutingArbitrationError error)
     {
         return convertEnumerationToString(error);
     }
 };
+
 template <>
 struct LogArgument<WebCore::AudioSessionRoutingArbitrationClient::DefaultRouteChanged> {
     static String toString(const WebCore::AudioSessionRoutingArbitrationClient::DefaultRouteChanged changed)
     {
         return convertEnumerationToString(changed);
+    }
+};
+
+template <>
+struct LogArgument<WebCore::AudioSession::SoundStageSize> {
+    static String toString(const WebCore::AudioSession::SoundStageSize size)
+    {
+        return convertEnumerationToString(size);
     }
 };
 

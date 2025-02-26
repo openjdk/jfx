@@ -24,8 +24,6 @@
  */
 
 #include "config.h"
-
-#if ENABLE(SERVICE_WORKER)
 #include "ServiceWorkerWindowClient.h"
 
 #include "JSDOMPromiseDeferred.h"
@@ -34,6 +32,7 @@
 #include "ServiceWorkerClients.h"
 #include "ServiceWorkerGlobalScope.h"
 #include "ServiceWorkerThread.h"
+#include <wtf/text/MakeString.h>
 
 namespace WebCore {
 
@@ -47,7 +46,7 @@ void ServiceWorkerWindowClient::focus(ScriptExecutionContext& context, Ref<Defer
     auto& serviceWorkerContext = downcast<ServiceWorkerGlobalScope>(context);
 
     if (context.settingsValues().serviceWorkersUserGestureEnabled && !serviceWorkerContext.isProcessingUserGesture()) {
-        promise->reject(Exception { InvalidAccessError, "WindowClient focus requires a user gesture"_s });
+        promise->reject(Exception { ExceptionCode::InvalidAccessError, "WindowClient focus requires a user gesture"_s });
         return;
     }
 
@@ -61,7 +60,7 @@ void ServiceWorkerWindowClient::focus(ScriptExecutionContext& context, Ref<Defer
 
                 // FIXME: Check isFocused state and reject if not focused.
                 if (!result) {
-                    promise->reject(Exception { TypeError, "WindowClient focus failed"_s });
+                    promise->reject(Exception { ExceptionCode::TypeError, "WindowClient focus failed"_s });
                     return;
                 }
 
@@ -76,12 +75,12 @@ void ServiceWorkerWindowClient::navigate(ScriptExecutionContext& context, const 
     auto url = context.completeURL(urlString);
 
     if (!url.isValid()) {
-        promise->reject(Exception { TypeError, makeString("URL string ", urlString, " cannot successfully be parsed") });
+        promise->reject(Exception { ExceptionCode::TypeError, makeString("URL string "_s, urlString, " cannot successfully be parsed"_s) });
         return;
     }
 
     if (url.protocolIsAbout()) {
-        promise->reject(Exception { TypeError, makeString("ServiceWorkerClients.navigate() cannot be called with URL ", url.string()) });
+        promise->reject(Exception { ExceptionCode::TypeError, makeString("ServiceWorkerClients.navigate() cannot be called with URL "_s, url.string()) });
         return;
     }
 
@@ -116,5 +115,3 @@ void ServiceWorkerWindowClient::navigate(ScriptExecutionContext& context, const 
 }
 
 } // namespace WebCore
-
-#endif // ENABLE(SERVICE_WORKER)

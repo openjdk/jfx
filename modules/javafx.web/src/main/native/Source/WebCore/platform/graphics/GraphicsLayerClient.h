@@ -49,9 +49,7 @@ enum class AnimatedProperty : uint8_t {
     Opacity,
     BackgroundColor,
     Filter,
-#if ENABLE(FILTERS_LEVEL_2)
     WebkitBackdropFilter,
-#endif
 };
 
 enum class GraphicsLayerPaintingPhase {
@@ -70,12 +68,11 @@ enum class PlatformLayerTreeAsTextFlags : uint8_t {
     IncludeModels = 1 << 2,
 };
 
-enum GraphicsLayerPaintFlags {
-    GraphicsLayerPaintNormal                    = 0,
-    GraphicsLayerPaintSnapshotting              = 1 << 0,
-    GraphicsLayerPaintFirstTilePaint            = 1 << 1,
+// See WebCore::PaintBehavior.
+enum class GraphicsLayerPaintBehavior : uint8_t {
+    DefaultAsynchronousImageDecode = 1 << 0,
+    ForceSynchronousImageDecode = 1 << 1,
 };
-typedef unsigned GraphicsLayerPaintBehavior;
 
 class GraphicsLayerClient {
 public:
@@ -91,10 +88,10 @@ public:
     // to appear on the screen.
     virtual void notifyFlushRequired(const GraphicsLayer*) { }
 
-    // Notification that this layer requires a flush before the next display refresh.
-    virtual void notifyFlushBeforeDisplayRefresh(const GraphicsLayer*) { }
+    // Notification that this layer requires a flush on the next display refresh.
+    virtual void notifySubsequentFlushRequired(const GraphicsLayer*) { }
 
-    virtual void paintContents(const GraphicsLayer*, GraphicsContext&, const FloatRect& /* inClip */, GraphicsLayerPaintBehavior) { }
+    virtual void paintContents(const GraphicsLayer*, GraphicsContext&, const FloatRect& /* inClip */, OptionSet<GraphicsLayerPaintBehavior>) { }
     virtual void didChangePlatformLayerForLayer(const GraphicsLayer*) { }
 
     // Provides current transform (taking transform-origin and animations into account). Input matrix has been
@@ -111,19 +108,21 @@ public:
     virtual float pageScaleFactor() const { return 1; }
     virtual float zoomedOutPageScaleFactor() const { return 0; }
 
+    virtual std::optional<float> customContentsScale(const GraphicsLayer*) const { return { }; }
+
     virtual float contentsScaleMultiplierForNewTiles(const GraphicsLayer*) const { return 1; }
     virtual bool paintsOpaquelyAtNonIntegralScales(const GraphicsLayer*) const { return false; }
 
     virtual bool isTrackingRepaints() const { return false; }
 
     virtual bool shouldSkipLayerInDump(const GraphicsLayer*, OptionSet<LayerTreeAsTextOptions>) const { return false; }
-    virtual bool shouldDumpPropertyForLayer(const GraphicsLayer*, const char*, OptionSet<LayerTreeAsTextOptions>) const { return true; }
+    virtual bool shouldDumpPropertyForLayer(const GraphicsLayer*, ASCIILiteral, OptionSet<LayerTreeAsTextOptions>) const { return true; }
 
     virtual bool shouldAggressivelyRetainTiles(const GraphicsLayer*) const { return false; }
     virtual bool shouldTemporarilyRetainTileCohorts(const GraphicsLayer*) const { return true; }
 
     virtual bool useGiantTiles() const { return false; }
-    virtual bool useCSS3DTransformInteroperability() const { return false; }
+    virtual bool cssUnprefixedBackdropFilterEnabled() const { return false; }
 
     virtual bool needsPixelAligment() const { return false; }
 
@@ -134,6 +133,8 @@ public:
     virtual TransformationMatrix transformMatrixForProperty(AnimatedProperty) const { return { }; }
 
     virtual bool layerContainsBitmapOnly(const GraphicsLayer*) const { return false; }
+
+    virtual bool layerNeedsPlatformContext(const GraphicsLayer*) const { return false; }
 
 #ifndef NDEBUG
     // RenderLayerBacking overrides this to verify that it is not

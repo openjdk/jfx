@@ -25,8 +25,6 @@
 
 #pragma once
 
-#if ENABLE(SERVICE_WORKER)
-
 #include "ActiveDOMObject.h"
 #include "ContextDestructionObserver.h"
 #include "EventTarget.h"
@@ -42,18 +40,18 @@ class JSValue;
 
 namespace WebCore {
 
-class Frame;
+class LocalFrame;
 class SWClientConnection;
 
 struct StructuredSerializeOptions;
 
 class ServiceWorker final : public RefCounted<ServiceWorker>, public EventTarget, public ActiveDOMObject {
-    WTF_MAKE_ISO_ALLOCATED(ServiceWorker);
+    WTF_MAKE_TZONE_OR_ISO_ALLOCATED_EXPORT(ServiceWorker, WEBCORE_EXPORT);
 public:
     using State = ServiceWorkerState;
     static Ref<ServiceWorker> getOrCreate(ScriptExecutionContext&, ServiceWorkerData&&);
 
-    virtual ~ServiceWorker();
+    WEBCORE_EXPORT virtual ~ServiceWorker();
 
     const URL& scriptURL() const { return m_data.scriptURL; }
 
@@ -67,8 +65,9 @@ public:
     ServiceWorkerRegistrationIdentifier registrationIdentifier() const { return m_data.registrationIdentifier; }
     WorkerType workerType() const { return m_data.type; }
 
-    using RefCounted::ref;
-    using RefCounted::deref;
+    // ActiveDOMObject.
+    void ref() const final { RefCounted::ref(); }
+    void deref() const final { RefCounted::deref(); }
 
     const ServiceWorkerData& data() const { return m_data; }
 
@@ -76,13 +75,12 @@ private:
     ServiceWorker(ScriptExecutionContext&, ServiceWorkerData&&);
     void updatePendingActivityForEventDispatch();
 
-    EventTargetInterface eventTargetInterface() const final;
+    enum EventTargetInterfaceType eventTargetInterface() const final;
     ScriptExecutionContext* scriptExecutionContext() const final;
     void refEventTarget() final { ref(); }
     void derefEventTarget() final { deref(); }
 
     // ActiveDOMObject.
-    const char* activeDOMObjectName() const final;
     void stop() final;
 
     SWClientConnection& swConnection();
@@ -93,5 +91,3 @@ private:
 };
 
 } // namespace WebCore
-
-#endif // ENABLE(SERVICE_WORKER)

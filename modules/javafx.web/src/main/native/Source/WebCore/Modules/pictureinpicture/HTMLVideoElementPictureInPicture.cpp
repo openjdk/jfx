@@ -38,11 +38,11 @@
 #include "PictureInPictureSupport.h"
 #include "PictureInPictureWindow.h"
 #include "VideoTrackList.h"
-#include <wtf/IsoMallocInlines.h>
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
-WTF_MAKE_ISO_ALLOCATED_IMPL(HTMLVideoElementPictureInPicture);
+WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(HTMLVideoElementPictureInPicture);
 
 HTMLVideoElementPictureInPicture::HTMLVideoElementPictureInPicture(HTMLVideoElement& videoElement)
     : m_videoElement(videoElement)
@@ -53,13 +53,13 @@ HTMLVideoElementPictureInPicture::HTMLVideoElementPictureInPicture(HTMLVideoElem
 #endif
 {
     ALWAYS_LOG(LOGIDENTIFIER);
-    m_videoElement.setPictureInPictureObserver(this);
+    m_videoElement->setPictureInPictureObserver(this);
 }
 
 HTMLVideoElementPictureInPicture::~HTMLVideoElementPictureInPicture()
 {
     ALWAYS_LOG(LOGIDENTIFIER);
-    m_videoElement.setPictureInPictureObserver(nullptr);
+    m_videoElement->setPictureInPictureObserver(nullptr);
 }
 
 HTMLVideoElementPictureInPicture* HTMLVideoElementPictureInPicture::from(HTMLVideoElement& videoElement)
@@ -81,23 +81,23 @@ void HTMLVideoElementPictureInPicture::providePictureInPictureTo(HTMLVideoElemen
 void HTMLVideoElementPictureInPicture::requestPictureInPicture(HTMLVideoElement& videoElement, Ref<DeferredPromise>&& promise)
 {
     if (!supportsPictureInPicture()) {
-        promise->reject(NotSupportedError, "The Picture-in-Picture mode is not supported."_s);
+        promise->reject(ExceptionCode::NotSupportedError, "The Picture-in-Picture mode is not supported."_s);
         return;
     }
 
     if (videoElement.readyState() == HTMLMediaElementEnums::HAVE_NOTHING) {
-        promise->reject(InvalidStateError, "The video element is not ready to enter the Picture-in-Picture mode."_s);
+        promise->reject(ExceptionCode::InvalidStateError, "The video element is not ready to enter the Picture-in-Picture mode."_s);
         return;
     }
 
     if (!videoElement.videoTracks() || !videoElement.videoTracks()->length()) {
-        promise->reject(InvalidStateError, "The video element does not have a video track or it has not detected a video track yet."_s);
+        promise->reject(ExceptionCode::InvalidStateError, "The video element does not have a video track or it has not detected a video track yet."_s);
         return;
     }
 
     bool userActivationRequired = !videoElement.document().pictureInPictureElement();
     if (userActivationRequired && !UserGestureIndicator::processingUserGesture()) {
-        promise->reject(NotAllowedError, "The request is not triggered by a user activation."_s);
+        promise->reject(ExceptionCode::NotAllowedError, "The request is not triggered by a user activation."_s);
         return;
     }
 
@@ -108,7 +108,7 @@ void HTMLVideoElementPictureInPicture::requestPictureInPicture(HTMLVideoElement&
     }
 
     if (videoElementPictureInPicture->m_enterPictureInPicturePromise || videoElementPictureInPicture->m_exitPictureInPicturePromise) {
-        promise->reject(NotAllowedError, "The video element is processing a Picture-in-Picture request."_s);
+        promise->reject(ExceptionCode::NotAllowedError, "The video element is processing a Picture-in-Picture request."_s);
         return;
     }
 
@@ -116,7 +116,7 @@ void HTMLVideoElementPictureInPicture::requestPictureInPicture(HTMLVideoElement&
         videoElementPictureInPicture->m_enterPictureInPicturePromise = WTFMove(promise);
         videoElement.webkitSetPresentationMode(HTMLVideoElement::VideoPresentationMode::PictureInPicture);
     } else
-        promise->reject(NotSupportedError, "The video element does not support the Picture-in-Picture mode."_s);
+        promise->reject(ExceptionCode::NotSupportedError, "The video element does not support the Picture-in-Picture mode."_s);
 }
 
 bool HTMLVideoElementPictureInPicture::autoPictureInPicture(HTMLVideoElement& videoElement)
@@ -143,24 +143,24 @@ void HTMLVideoElementPictureInPicture::exitPictureInPicture(Ref<DeferredPromise>
 {
     INFO_LOG(LOGIDENTIFIER);
     if (m_enterPictureInPicturePromise || m_exitPictureInPicturePromise) {
-        promise->reject(NotAllowedError);
+        promise->reject(ExceptionCode::NotAllowedError);
         return;
     }
 
     m_exitPictureInPicturePromise = WTFMove(promise);
-    m_videoElement.webkitSetPresentationMode(HTMLVideoElement::VideoPresentationMode::Inline);
+    m_videoElement->webkitSetPresentationMode(HTMLVideoElement::VideoPresentationMode::Inline);
 }
 
 void HTMLVideoElementPictureInPicture::didEnterPictureInPicture(const IntSize& windowSize)
 {
     INFO_LOG(LOGIDENTIFIER);
-    m_videoElement.document().setPictureInPictureElement(&m_videoElement);
+    m_videoElement->document().setPictureInPictureElement(m_videoElement.ptr());
     m_pictureInPictureWindow->setSize(windowSize);
 
     PictureInPictureEvent::Init initializer;
     initializer.bubbles = true;
     initializer.pictureInPictureWindow = m_pictureInPictureWindow;
-    m_videoElement.scheduleEvent(PictureInPictureEvent::create(eventNames().enterpictureinpictureEvent, WTFMove(initializer)));
+    m_videoElement->scheduleEvent(PictureInPictureEvent::create(eventNames().enterpictureinpictureEvent, WTFMove(initializer)));
 
     if (m_enterPictureInPicturePromise) {
         m_enterPictureInPicturePromise->resolve<IDLInterface<PictureInPictureWindow>>(*m_pictureInPictureWindow);
@@ -172,12 +172,12 @@ void HTMLVideoElementPictureInPicture::didExitPictureInPicture()
 {
     INFO_LOG(LOGIDENTIFIER);
     m_pictureInPictureWindow->close();
-    m_videoElement.document().setPictureInPictureElement(nullptr);
+    m_videoElement->document().setPictureInPictureElement(nullptr);
 
     PictureInPictureEvent::Init initializer;
     initializer.bubbles = true;
     initializer.pictureInPictureWindow = m_pictureInPictureWindow;
-    m_videoElement.scheduleEvent(PictureInPictureEvent::create(eventNames().leavepictureinpictureEvent, WTFMove(initializer)));
+    m_videoElement->scheduleEvent(PictureInPictureEvent::create(eventNames().leavepictureinpictureEvent, WTFMove(initializer)));
 
     if (m_exitPictureInPicturePromise) {
         m_exitPictureInPicturePromise->resolve();

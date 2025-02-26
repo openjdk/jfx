@@ -27,9 +27,10 @@
 #pragma once
 
 #include "ExceptionOr.h"
-#include "TreeScopeOrderedMap.h"
+#include "HitTestSource.h"
 #include <memory>
 #include <wtf/Forward.h>
+#include <wtf/UniqueRef.h>
 #include <wtf/Vector.h>
 #include <wtf/text/AtomString.h>
 
@@ -50,10 +51,15 @@ class HTMLImageElement;
 class HTMLLabelElement;
 class HTMLMapElement;
 class LayoutPoint;
+class LegacyRenderSVGResourceContainer;
 class IdTargetObserverRegistry;
 class Node;
 class RadioButtonGroups;
+class SVGElement;
 class ShadowRoot;
+class TreeScopeOrderedMap;
+class WeakPtrImplWithEventTargetData;
+struct SVGResourcesMap;
 
 class TreeScope {
     friend class Document;
@@ -62,26 +68,30 @@ public:
     TreeScope* parentTreeScope() const { return m_parentTreeScope; }
     void setParentTreeScope(TreeScope&);
 
+    void ref() const;
+    void deref() const;
+
     Element* focusedElementInScope();
     Element* pointerLockElement() const;
 
-    WEBCORE_EXPORT Element* getElementById(const AtomString&) const;
-    WEBCORE_EXPORT Element* getElementById(const String&) const;
-    Element* getElementById(StringView) const;
-    const Vector<Element*>* getAllElementsById(const AtomString&) const;
-    bool hasElementWithId(const AtomStringImpl&) const;
-    bool containsMultipleElementsWithId(const AtomString& id) const;
-    void addElementById(const AtomStringImpl& elementId, Element&, bool notifyObservers = true);
-    void removeElementById(const AtomStringImpl& elementId, Element&, bool notifyObservers = true);
+    WEBCORE_EXPORT RefPtr<Element> getElementById(const AtomString&) const;
+    WEBCORE_EXPORT RefPtr<Element> getElementById(const String&) const;
+    RefPtr<Element> getElementById(StringView) const;
+    const Vector<WeakRef<Element, WeakPtrImplWithEventTargetData>>* getAllElementsById(const AtomString&) const;
+    inline bool hasElementWithId(const AtomString&) const; // Defined in TreeScopeInlines.h.
+    inline bool containsMultipleElementsWithId(const AtomString& id) const; // Defined in TreeScopeInlines.h.
+    void addElementById(const AtomString& elementId, Element&, bool notifyObservers = true);
+    void removeElementById(const AtomString& elementId, Element&, bool notifyObservers = true);
 
-    WEBCORE_EXPORT Element* getElementByName(const AtomString&) const;
-    bool hasElementWithName(const AtomStringImpl&) const;
-    bool containsMultipleElementsWithName(const AtomString&) const;
-    void addElementByName(const AtomStringImpl&, Element&);
-    void removeElementByName(const AtomStringImpl&, Element&);
+    WEBCORE_EXPORT RefPtr<Element> getElementByName(const AtomString&) const;
+    inline bool hasElementWithName(const AtomString&) const; // Defined in TreeScopeInlines.h.
+    inline bool containsMultipleElementsWithName(const AtomString&) const; // Defined in TreeScopeInlines.h.
+    void addElementByName(const AtomString&, Element&);
+    void removeElementByName(const AtomString&, Element&);
 
     Document& documentScope() const { return m_documentScope.get(); }
-    static ptrdiff_t documentScopeMemoryOffset() { return OBJECT_OFFSETOF(TreeScope, m_documentScope); }
+    Ref<Document> protectedDocumentScope() const;
+    static constexpr ptrdiff_t documentScopeMemoryOffset() { return OBJECT_OFFSETOF(TreeScope, m_documentScope); }
 
     // https://dom.spec.whatwg.org/#retarget
     Ref<Node> retargetToScope(Node&) const;
@@ -91,38 +101,52 @@ public:
 
     void addImageMap(HTMLMapElement&);
     void removeImageMap(HTMLMapElement&);
-    HTMLMapElement* getImageMap(const AtomString&) const;
+    RefPtr<HTMLMapElement> getImageMap(const AtomString&) const;
 
-    void addImageElementByUsemap(const AtomStringImpl&, HTMLImageElement&);
-    void removeImageElementByUsemap(const AtomStringImpl&, HTMLImageElement&);
-    HTMLImageElement* imageElementByUsemap(const AtomStringImpl&) const;
+    void addImageElementByUsemap(const AtomString&, HTMLImageElement&);
+    void removeImageElementByUsemap(const AtomString&, HTMLImageElement&);
+    RefPtr<HTMLImageElement> imageElementByUsemap(const AtomString&) const;
 
     // For accessibility.
     bool shouldCacheLabelsByForAttribute() const { return !!m_labelsByForAttribute; }
-    void addLabel(const AtomStringImpl& forAttributeValue, HTMLLabelElement&);
-    void removeLabel(const AtomStringImpl& forAttributeValue, HTMLLabelElement&);
-    HTMLLabelElement* labelElementForId(const AtomString& forAttributeValue);
+    void addLabel(const AtomString& forAttributeValue, HTMLLabelElement&);
+    void removeLabel(const AtomString& forAttributeValue, HTMLLabelElement&);
+    const Vector<WeakRef<Element, WeakPtrImplWithEventTargetData>>* labelElementsForId(const AtomString& forAttributeValue);
 
-    WEBCORE_EXPORT RefPtr<Element> elementFromPoint(double clientX, double clientY);
-    WEBCORE_EXPORT Vector<RefPtr<Element>> elementsFromPoint(double clientX, double clientY);
-    WEBCORE_EXPORT Vector<RefPtr<Element>> elementsFromPoint(const FloatPoint&);
+    WEBCORE_EXPORT RefPtr<Element> elementFromPoint(double clientX, double clientY, HitTestSource = HitTestSource::Script);
+    WEBCORE_EXPORT Vector<RefPtr<Element>> elementsFromPoint(double clientX, double clientY, HitTestSource = HitTestSource::Script);
 
     // Find first anchor with the given name.
     // First searches for an element with the given ID, but if that fails, then looks
     // for an anchor with the given name. ID matching is always case sensitive, but
     // Anchor name matching is case sensitive in strict mode and not case sensitive in
     // quirks mode for historical compatibility reasons.
-    Element* findAnchor(StringView name);
+    RefPtr<Element> findAnchor(StringView name);
 
-    ContainerNode& rootNode() const { return m_rootNode; }
+    inline ContainerNode& rootNode() const; // Defined in ContainerNode.h
+    Ref<ContainerNode> protectedRootNode() const;
 
-    IdTargetObserverRegistry& idTargetObserverRegistry() const { return *m_idTargetObserverRegistry.get(); }
+    inline IdTargetObserverRegistry& idTargetObserverRegistry();
+    IdTargetObserverRegistry* idTargetObserverRegistryIfExists() { return m_idTargetObserverRegistry.get(); }
 
     RadioButtonGroups& radioButtonGroups();
 
     JSC::JSValue adoptedStyleSheetWrapper(JSDOMGlobalObject&);
-    const Vector<RefPtr<CSSStyleSheet>>& adoptedStyleSheets() const;
-    ExceptionOr<void> setAdoptedStyleSheets(Vector<RefPtr<CSSStyleSheet>>&&);
+    std::span<const Ref<CSSStyleSheet>> adoptedStyleSheets() const;
+    ExceptionOr<void> setAdoptedStyleSheets(Vector<Ref<CSSStyleSheet>>&&);
+
+    void addSVGResource(const AtomString& id, LegacyRenderSVGResourceContainer&);
+    void removeSVGResource(const AtomString& id);
+    LegacyRenderSVGResourceContainer* lookupLegacySVGResoureById(const AtomString& id) const;
+
+    void addPendingSVGResource(const AtomString& id, SVGElement&);
+    bool isIdOfPendingSVGResource(const AtomString& id) const;
+    bool isPendingSVGResource(SVGElement&, const AtomString& id) const;
+    void clearHasPendingSVGResourcesIfPossible(SVGElement&);
+    void removeElementFromPendingSVGResources(SVGElement&);
+    WeakHashSet<SVGElement, WeakPtrImplWithEventTargetData> removePendingSVGResource(const AtomString&);
+    void markPendingSVGResourcesForRemoval(const AtomString&);
+    RefPtr<SVGElement> takeElementFromPendingSVGResourcesForRemovalMap(const AtomString&);
 
 protected:
     TreeScope(ShadowRoot&, Document&);
@@ -135,11 +159,16 @@ protected:
         m_documentScope = document;
     }
 
-    RefPtr<Node> nodeFromPoint(const LayoutPoint& clientPoint, LayoutPoint* localPoint);
+    RefPtr<Node> nodeFromPoint(const LayoutPoint& clientPoint, LayoutPoint* localPoint, HitTestSource);
 
 private:
+    IdTargetObserverRegistry& ensureIdTargetObserverRegistry();
+    CSSStyleSheetObservableArray& ensureAdoptedStyleSheets();
 
-    ContainerNode& m_rootNode;
+    SVGResourcesMap& svgResourcesMap() const;
+    bool isElementWithPendingSVGResources(SVGElement&) const;
+
+    CheckedRef<ContainerNode> m_rootNode;
     std::reference_wrapper<Document> m_documentScope;
     TreeScope* m_parentTreeScope;
 
@@ -152,28 +181,10 @@ private:
     std::unique_ptr<IdTargetObserverRegistry> m_idTargetObserverRegistry;
 
     std::unique_ptr<RadioButtonGroups> m_radioButtonGroups;
-    Ref<CSSStyleSheetObservableArray> m_adoptedStyleSheets;
+    RefPtr<CSSStyleSheetObservableArray> m_adoptedStyleSheets;
+
+    std::unique_ptr<SVGResourcesMap> m_svgResourcesMap;
 };
-
-inline bool TreeScope::hasElementWithId(const AtomStringImpl& id) const
-{
-    return m_elementsById && m_elementsById->contains(id);
-}
-
-inline bool TreeScope::containsMultipleElementsWithId(const AtomString& id) const
-{
-    return m_elementsById && id.impl() && m_elementsById->containsMultiple(*id.impl());
-}
-
-inline bool TreeScope::hasElementWithName(const AtomStringImpl& id) const
-{
-    return m_elementsByName && m_elementsByName->contains(id);
-}
-
-inline bool TreeScope::containsMultipleElementsWithName(const AtomString& name) const
-{
-    return m_elementsByName && name.impl() && m_elementsByName->containsMultiple(*name.impl());
-}
 
 TreeScope* commonTreeScope(Node*, Node*);
 

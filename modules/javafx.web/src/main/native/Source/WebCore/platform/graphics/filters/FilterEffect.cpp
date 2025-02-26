@@ -34,6 +34,19 @@
 
 namespace WebCore {
 
+FilterEffect::FilterEffect(Type type, DestinationColorSpace colorSpace, std::optional<RenderingResourceIdentifier> renderingResourceIdentifier)
+    : FilterFunction(type, renderingResourceIdentifier)
+    , m_operatingColorSpace(colorSpace)
+{
+}
+
+bool FilterEffect::operator==(const FilterEffect& other) const
+{
+    if (filterType() != other.filterType())
+        return false;
+    return m_operatingColorSpace == other.m_operatingColorSpace;
+}
+
 FilterImageVector FilterEffect::takeImageInputs(FilterImageVector& stack) const
 {
     unsigned inputsSize = numberOfImageInputs();
@@ -45,7 +58,7 @@ FilterImageVector FilterEffect::takeImageInputs(FilterImageVector& stack) const
     inputs.reserveInitialCapacity(inputsSize);
 
     for (; inputsSize; --inputsSize)
-        inputs.uncheckedAppend(stack.takeLast());
+        inputs.append(stack.takeLast());
 
     return inputs;
 }
@@ -64,7 +77,7 @@ static Vector<FloatRect> inputImageRects(const FilterImageVector& inputs)
     });
 }
 
-FloatRect FilterEffect::calculatePrimitiveSubregion(const Filter& filter, Span<const FloatRect> inputPrimitiveSubregions, const std::optional<FilterEffectGeometry>& geometry) const
+FloatRect FilterEffect::calculatePrimitiveSubregion(const Filter& filter, std::span<const FloatRect> inputPrimitiveSubregions, const std::optional<FilterEffectGeometry>& geometry) const
 {
     // This function implements https://www.w3.org/TR/filter-effects-1/#FilterPrimitiveSubRegion.
     FloatRect primitiveSubregion;
@@ -91,7 +104,7 @@ FloatRect FilterEffect::calculatePrimitiveSubregion(const Filter& filter, Span<c
     return primitiveSubregion;
 }
 
-FloatRect FilterEffect::calculateImageRect(const Filter& filter, Span<const FloatRect> inputImageRects, const FloatRect& primitiveSubregion) const
+FloatRect FilterEffect::calculateImageRect(const Filter& filter, std::span<const FloatRect> inputImageRects, const FloatRect& primitiveSubregion) const
 {
     if (inputImageRects.empty())
         return filter.maxEffectRect(primitiveSubregion);
@@ -178,19 +191,19 @@ RefPtr<FilterImage> FilterEffect::apply(const Filter& filter, const FilterImageV
     return result;
 }
 
-FilterStyleVector FilterEffect::createFilterStyles(const Filter& filter, const FilterStyle& input) const
+FilterStyleVector FilterEffect::createFilterStyles(GraphicsContext& context, const Filter& filter, const FilterStyle& input) const
 {
-    return { createFilterStyle(filter, input) };
+    return { createFilterStyle(context, filter, input) };
 }
 
-FilterStyle FilterEffect::createFilterStyle(const Filter& filter, const FilterStyle& input, const std::optional<FilterEffectGeometry>& geometry) const
+FilterStyle FilterEffect::createFilterStyle(GraphicsContext& context, const Filter& filter, const FilterStyle& input, const std::optional<FilterEffectGeometry>& geometry) const
 {
     ASSERT(supportedFilterRenderingModes().contains(FilterRenderingMode::GraphicsContext));
 
     auto primitiveSubregion = calculatePrimitiveSubregion(filter, { &input.primitiveSubregion, 1 }, geometry);
     auto imageRect = calculateImageRect(filter, { &input.imageRect, 1 }, primitiveSubregion);
 
-    auto style = createGraphicsStyle(filter);
+    auto style = createGraphicsStyle(context, filter);
     return FilterStyle { style, primitiveSubregion, imageRect };
 }
 

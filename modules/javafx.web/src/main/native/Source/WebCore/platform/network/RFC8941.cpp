@@ -55,7 +55,7 @@ template<typename CharType> static StringView parseKey(StringParsingBuffer<CharT
     auto keyStart = buffer.position();
     ++buffer;
     skipUntil<isEndOfKey>(buffer);
-    return StringView(keyStart, buffer.position() - keyStart);
+    return std::span(keyStart, buffer.position() - keyStart);
 }
 
 // Parsing a String (https://datatracker.ietf.org/doc/html/rfc8941#section-4.2.5).
@@ -92,7 +92,7 @@ template<typename CharType> static std::optional<Token> parseToken(StringParsing
         return std::nullopt;
     auto tokenStart = buffer.position();
     skipUntil<isEndOfToken>(buffer);
-    return Token { String(tokenStart, buffer.position() - tokenStart) };
+    return Token { String({ tokenStart, buffer.position() }) };
 }
 
 // Parsing a Boolean (https://datatracker.ietf.org/doc/html/rfc8941#section-4.2.8).
@@ -218,12 +218,12 @@ template<typename CharType> static std::optional<HashMap<String, std::pair<ItemO
             member = std::pair { WTFMove(value), WTFMove(*parameters) };
         }
         dictionary.set(key.toString(), WTFMove(member));
-        skipWhile<RFC7230::isWhitespace>(buffer);
+        skipWhile<isTabOrSpace>(buffer);
         if (buffer.atEnd())
             return dictionary;
         if (!skipExactly(buffer, ','))
             return std::nullopt;
-        skipWhile<RFC7230::isWhitespace>(buffer);
+        skipWhile<isTabOrSpace>(buffer);
         if (buffer.atEnd())
             return std::nullopt;
     }

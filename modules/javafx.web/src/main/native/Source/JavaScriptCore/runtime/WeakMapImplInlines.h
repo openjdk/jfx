@@ -25,7 +25,7 @@
 
 #pragma once
 
-#include "HashMapImplInlines.h"
+#include "HashMapHelper.h"
 #include "WeakMapImpl.h"
 
 namespace JSC {
@@ -72,7 +72,7 @@ ALWAYS_INLINE void WeakMapImpl<WeakMapBucket>::add(VM& vm, JSCell* key, JSValue 
 
 // Note that this function can be executed in parallel as long as the mutator stops.
 template<typename WeakMapBucket>
-void WeakMapImpl<WeakMapBucket>::finalizeUnconditionally(VM& vm)
+void WeakMapImpl<WeakMapBucket>::finalizeUnconditionally(VM& vm, CollectionScope)
 {
     auto* buffer = this->buffer();
     for (uint32_t index = 0; index < m_capacity; ++index) {
@@ -101,7 +101,7 @@ void WeakMapImpl<WeakMapBucket>::rehash(RehashMode mode)
     // in auxiliary buffer.
 
     uint32_t oldCapacity = m_capacity;
-    MallocPtr<WeakMapBufferType, JSValueMalloc> oldBuffer = WTFMove(m_buffer);
+    MallocPtr<WeakMapBufferType> oldBuffer = WTFMove(m_buffer);
 
     uint32_t capacity = m_capacity;
     if (mode == RehashMode::RemoveBatching) {

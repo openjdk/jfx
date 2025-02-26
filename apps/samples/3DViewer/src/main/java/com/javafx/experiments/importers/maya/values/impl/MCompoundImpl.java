@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2014, Oracle and/or its affiliates.
+ * Copyright (c) 2010, 2024, Oracle and/or its affiliates.
  * All rights reserved. Use is subject to license terms.
  *
  * This file is available and licensed under the following license:
@@ -54,14 +54,17 @@ public class MCompoundImpl extends MDataImpl implements MCompound {
         }
     }
 
+    @Override
     public MCompoundType getCompoundType() {
         return (MCompoundType) getType();
     }
 
+    @Override
     public MData getFieldData(String fieldName) {
         return getFieldData(getCompoundType().getFieldIndex(fieldName));
     }
 
+    @Override
     public MData getFieldData(int fieldIndex) {
         if (fieldIndex < 0) {
             return null;
@@ -69,14 +72,17 @@ public class MCompoundImpl extends MDataImpl implements MCompound {
         return fieldData[fieldIndex];
     }
 
+    @Override
     public void set(int fieldIndex, MData value) {
         fieldData[fieldIndex] = value;
     }
 
+    @Override
     public void set(String fieldName, MData data) {
         set(getCompoundType().getFieldIndex(fieldName), data);
     }
 
+    @Override
     public void parse(Iterator<String> data) {
         for (int i = 0; i < getCompoundType().getNumFields(); i++) {
             MData fdata = getFieldData(i);
@@ -86,6 +92,7 @@ public class MCompoundImpl extends MDataImpl implements MCompound {
         }
     }
 
+    @Override
     public String toString() {
         String result = "";
         for (int i = 0; i < fieldData.length; i++) {

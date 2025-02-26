@@ -81,7 +81,7 @@ static UText* uTextLatin1Clone(UText* destination, const UText* source, UBool de
     result->context = source->context;
     result->a = source->a;
     result->pFuncs = &uTextLatin1Funcs;
-    result->chunkContents = (UChar*)result->pExtra;
+    result->chunkContents = static_cast<UChar*>(result->pExtra);
     memset(const_cast<UChar*>(result->chunkContents), 0, sizeof(UChar) * UTextWithBufferInlineCapacity);
 
     return result;
@@ -140,7 +140,7 @@ static UBool uTextLatin1Access(UText* uText, int64_t index, UBool forward)
     }
     uText->chunkLength = static_cast<int32_t>(uText->chunkNativeLimit - uText->chunkNativeStart);
 
-    StringImpl::copyCharacters(const_cast<UChar*>(uText->chunkContents), static_cast<const LChar*>(uText->context) + uText->chunkNativeStart, uText->chunkLength);
+    StringImpl::copyCharacters(const_cast<UChar*>(uText->chunkContents), { static_cast<const LChar*>(uText->context) + uText->chunkNativeStart, static_cast<size_t>(uText->chunkLength) });
 
     uText->nativeIndexingLimit = uText->chunkLength;
 
@@ -178,7 +178,7 @@ static int32_t uTextLatin1Extract(UText* uText, int64_t start, int64_t limit, UC
         if (trimmedLength > destCapacity)
             trimmedLength = destCapacity;
 
-        StringImpl::copyCharacters(dest, static_cast<const LChar*>(uText->context) + start, trimmedLength);
+        StringImpl::copyCharacters(dest, { static_cast<const LChar*>(uText->context) + start, static_cast<size_t>(trimmedLength) });
     }
 
     if (length < destCapacity) {
@@ -211,11 +211,11 @@ static void uTextLatin1Close(UText* uText)
     uText->context = nullptr;
 }
 
-UText* openLatin1UTextProvider(UTextWithBuffer* utWithBuffer, const LChar* string, unsigned length, UErrorCode* status)
+UText* openLatin1UTextProvider(UTextWithBuffer* utWithBuffer, std::span<const LChar> string, UErrorCode* status)
 {
     if (U_FAILURE(*status))
         return nullptr;
-    if (!string || length > static_cast<unsigned>(std::numeric_limits<int32_t>::max())) {
+    if (!string.data() || string.size() > static_cast<unsigned>(std::numeric_limits<int32_t>::max())) {
         *status = U_ILLEGAL_ARGUMENT_ERROR;
         return nullptr;
     }
@@ -225,10 +225,10 @@ UText* openLatin1UTextProvider(UTextWithBuffer* utWithBuffer, const LChar* strin
         return nullptr;
     }
 
-    text->context = string;
-    text->a = length;
+    text->context = string.data();
+    text->a = string.size();
     text->pFuncs = &uTextLatin1Funcs;
-    text->chunkContents = (UChar*)text->pExtra;
+    text->chunkContents = static_cast<UChar*>(text->pExtra);
     memset(const_cast<UChar*>(text->chunkContents), 0, sizeof(UChar) * UTextWithBufferInlineCapacity);
 
     return text;
@@ -272,14 +272,14 @@ static inline UTextProviderContext textLatin1ContextAwareGetCurrentContext(const
 static void textLatin1ContextAwareMoveInPrimaryContext(UText* text, int64_t nativeIndex, int64_t nativeLength, UBool forward)
 {
     ASSERT(text->chunkContents == text->pExtra);
+    ASSERT(forward ? nativeIndex >= text->b : nativeIndex > text->b);
+    ASSERT(nativeIndex <= nativeLength);
     if (forward) {
-        ASSERT(nativeIndex >= text->b && nativeIndex < nativeLength);
         text->chunkNativeStart = nativeIndex;
         text->chunkNativeLimit = nativeIndex + text->extraSize / sizeof(UChar);
         if (text->chunkNativeLimit > nativeLength)
             text->chunkNativeLimit = nativeLength;
     } else {
-        ASSERT(nativeIndex > text->b && nativeIndex <= nativeLength);
         text->chunkNativeLimit = nativeIndex;
         text->chunkNativeStart = nativeIndex - text->extraSize / sizeof(UChar);
         if (text->chunkNativeStart < text->b)
@@ -291,7 +291,7 @@ static void textLatin1ContextAwareMoveInPrimaryContext(UText* text, int64_t nati
     text->chunkLength = length < std::numeric_limits<int32_t>::max() ? static_cast<int32_t>(length) : 0;
     text->nativeIndexingLimit = text->chunkLength;
     text->chunkOffset = forward ? 0 : text->chunkLength;
-    StringImpl::copyCharacters(const_cast<UChar*>(text->chunkContents), static_cast<const LChar*>(text->p) + (text->chunkNativeStart - text->b), text->chunkLength);
+    StringImpl::copyCharacters(const_cast<UChar*>(text->chunkContents), { static_cast<const LChar*>(text->p) + (text->chunkNativeStart - text->b), static_cast<size_t>(text->chunkLength) });
 }
 
 static void textLatin1ContextAwareSwitchToPrimaryContext(UText* text, int64_t nativeIndex, int64_t nativeLength, UBool forward)
@@ -304,9 +304,8 @@ static void textLatin1ContextAwareSwitchToPrimaryContext(UText* text, int64_t na
 static void textLatin1ContextAwareMoveInPriorContext(UText* text, int64_t nativeIndex, int64_t nativeLength, UBool forward)
 {
     ASSERT(text->chunkContents == text->q);
-    ASSERT(forward ? nativeIndex < text->b : nativeIndex <= text->b);
-    ASSERT_UNUSED(nativeLength, forward ? nativeIndex < nativeLength : nativeIndex <= nativeLength);
-    ASSERT_UNUSED(forward, forward ? nativeIndex < nativeLength : nativeIndex <= nativeLength);
+    ASSERT_UNUSED(forward, forward ? nativeIndex < text->b : nativeIndex <= text->b);
+    ASSERT_UNUSED(nativeLength, nativeIndex <= nativeLength);
     text->chunkNativeStart = 0;
     text->chunkNativeLimit = text->b;
     text->chunkLength = text->b;
@@ -374,11 +373,11 @@ static void uTextLatin1ContextAwareClose(UText* text)
     text->context = nullptr;
 }
 
-UText* openLatin1ContextAwareUTextProvider(UTextWithBuffer* utWithBuffer, const LChar* string, unsigned length, const UChar* priorContext, int priorContextLength, UErrorCode* status)
+UText* openLatin1ContextAwareUTextProvider(UTextWithBuffer* utWithBuffer, std::span<const LChar> string, std::span<const UChar> priorContext, UErrorCode* status)
 {
     if (U_FAILURE(*status))
         return nullptr;
-    if (!string || length > static_cast<unsigned>(std::numeric_limits<int32_t>::max())) {
+    if (!string.data() || string.size() > static_cast<unsigned>(std::numeric_limits<int32_t>::max())) {
         *status = U_ILLEGAL_ARGUMENT_ERROR;
         return nullptr;
     }
@@ -388,7 +387,7 @@ UText* openLatin1ContextAwareUTextProvider(UTextWithBuffer* utWithBuffer, const 
         return nullptr;
     }
 
-    initializeContextAwareUTextProvider(text, &textLatin1ContextAwareFuncs, string, length, priorContext, priorContextLength);
+    initializeContextAwareUTextProvider(text, &textLatin1ContextAwareFuncs, string, priorContext);
     return text;
 }
 

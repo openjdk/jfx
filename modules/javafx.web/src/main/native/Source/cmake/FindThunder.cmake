@@ -45,18 +45,18 @@
 # framework doesn't provide a .pc file. But alternate (swap-in) implementations might, so try with
 # pkg-config first.
 
-find_package(PkgConfig)
+find_package(PkgConfig QUIET)
 pkg_check_modules(PC_THUNDER QUIET thunder)
 
 find_path(THUNDER_INCLUDE_DIR
     NAMES open_cdm.h
     HINTS ${PC_THUNDER_INCLUDEDIR}
           ${PC_THUNDER_INCLUDE_DIRS}
-    PATH_SUFFIXES "WPEFramework/ocdm/"
+    PATH_SUFFIXES "WPEFramework/ocdm/" "Thunder/ocdm/"
 )
 
 find_library(THUNDER_LIBRARY
-    NAMES ocdm
+    NAMES ocdm ClientOCDM
     HINTS ${PC_THUNDER_LIBDIR}
           ${PC_THUNDER_LIBRARY_DIRS}
 )

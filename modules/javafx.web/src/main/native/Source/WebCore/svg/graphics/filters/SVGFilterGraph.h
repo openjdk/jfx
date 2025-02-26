@@ -1,5 +1,6 @@
 /*
- * Copyright (C) 2022-2023 Apple Inc.  All rights reserved.
+ * Copyright (C) 2022-2024 Apple Inc.  All rights reserved.
+ * Copyright (C) 2014 Google Inc.  All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -47,7 +48,8 @@ public:
         m_sourceNodes.add(SourceGraphic::effectName(), WTFMove(sourceGraphic));
         m_sourceNodes.add(SourceAlpha::effectName(), WTFMove(sourceAlpha));
 
-        setNodeInputs(*this->sourceAlpha(), NodeVector { *this->sourceGraphic() });
+        setNodeInputs(Ref { *this->sourceGraphic() }, NodeVector { });
+        setNodeInputs(Ref { *this->sourceAlpha() }, NodeVector { *this->sourceGraphic() });
     }
 
     NodeType* sourceGraphic() const
@@ -76,20 +78,22 @@ public:
 
     RefPtr<NodeType> getNamedNode(const AtomString& id) const
     {
-        if (id.isEmpty()) {
-            if (m_lastNode)
-                return m_lastNode;
+        if (!id.isEmpty()) {
+            if (auto sourceNode = m_sourceNodes.get(id))
+                return sourceNode;
 
-            return sourceGraphic();
+            if (auto namedNode = m_namedNodes.get(id))
+                return namedNode;
         }
 
-        if (m_sourceNodes.contains(id))
-            return m_sourceNodes.get(id);
+        if (m_lastNode)
+            return m_lastNode;
 
-        return m_namedNodes.get(id);
+        // Fallback to the 'sourceGraphic' input.
+        return sourceGraphic();
     }
 
-    std::optional<NodeVector> getNamedNodes(Span<const AtomString> names) const
+    std::optional<NodeVector> getNamedNodes(std::span<const AtomString> names) const
     {
         NodeVector nodes;
 
@@ -97,7 +101,7 @@ public:
 
         for (auto& name : names) {
             if (auto node = getNamedNode(name))
-            nodes.uncheckedAppend(node.releaseNonNull());
+                nodes.append(node.releaseNonNull());
             else if (!isSourceName(name))
                 return std::nullopt;
         }
@@ -113,6 +117,13 @@ public:
     NodeVector getNodeInputs(NodeType& node) const
     {
         return m_nodeInputs.get(node);
+    }
+
+    NodeVector nodes() const
+    {
+        return WTF::map(m_nodeInputs, [] (auto& pair) -> Ref<NodeType> {
+            return pair.key;
+        });
     }
 
     NodeType* lastNode() const { return m_lastNode.get(); }

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011,2012 Google Inc. All rights reserved.
+ * Copyright (C) 2011-2016 Google Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -297,7 +297,7 @@ unsigned Locale::matchedDecimalSymbolIndex(const String& input, unsigned& positi
 String Locale::convertFromLocalizedNumber(const String& localized)
 {
     initializeLocaleData();
-    String input = localized.stripWhiteSpace();
+    auto input = localized.trim(deprecatedIsSpaceOrNewline);
     if (!m_hasLocaleData || input.isEmpty())
         return input;
 
@@ -306,6 +306,10 @@ String Locale::convertFromLocalizedNumber(const String& localized)
     unsigned endIndex;
     if (!detectSignAndGetDigitRange(input, isNegative, startIndex, endIndex))
         return input;
+
+    // Ignore leading '+', but will reject '+'-only string later.
+    if (!isNegative && endIndex - startIndex >= 2 && input[startIndex] == '+')
+        ++startIndex;
 
     StringBuilder builder;
     builder.reserveCapacity(input.length());
@@ -322,7 +326,11 @@ String Locale::convertFromLocalizedNumber(const String& localized)
         else
             builder.append(static_cast<UChar>('0' + symbolIndex));
     }
-    return builder.toString();
+    String converted = builder.toString();
+    // Ignore trailing '.', but will reject '.'-only string later.
+    if (converted.length() >= 2 && converted[converted.length() - 1] == '.')
+        converted = converted.left(converted.length() - 1);
+    return converted;
 }
 
 #if ENABLE(DATE_AND_TIME_INPUT_TYPES)

@@ -26,10 +26,11 @@
 #include "ReferrerPolicy.h"
 
 #include "HTTPParsers.h"
+#include "JSFetchReferrerPolicy.h"
 
 namespace WebCore {
 
-enum class ShouldParseLegacyKeywords { No, Yes };
+enum class ShouldParseLegacyKeywords : bool { No, Yes };
 
 static std::optional<ReferrerPolicy> parseReferrerPolicyToken(StringView policy, ShouldParseLegacyKeywords shouldParseLegacyKeywords)
 {
@@ -73,7 +74,7 @@ std::optional<ReferrerPolicy> parseReferrerPolicy(StringView policyString, Refer
         // Implementing https://www.w3.org/TR/2017/CR-referrer-policy-20170126/#parse-referrer-policy-from-header.
         std::optional<ReferrerPolicy> result;
         for (auto tokenView : policyString.split(',')) {
-            auto token = parseReferrerPolicyToken(stripLeadingAndTrailingHTTPSpaces(tokenView), ShouldParseLegacyKeywords::No);
+            auto token = parseReferrerPolicyToken(tokenView.trim(isASCIIWhitespaceWithoutFF<UChar>), ShouldParseLegacyKeywords::No);
             if (token && token.value() != ReferrerPolicy::EmptyString)
                 result = token.value();
         }
@@ -90,28 +91,7 @@ std::optional<ReferrerPolicy> parseReferrerPolicy(StringView policyString, Refer
 
 String referrerPolicyToString(const ReferrerPolicy& referrerPolicy)
 {
-    switch (referrerPolicy) {
-    case ReferrerPolicy::NoReferrer:
-        return "no-referrer"_s;
-    case ReferrerPolicy::UnsafeUrl:
-        return "unsafe-url"_s;
-    case ReferrerPolicy::Origin:
-        return "origin"_s;
-    case ReferrerPolicy::OriginWhenCrossOrigin:
-        return "origin-when-cross-origin"_s;
-    case ReferrerPolicy::SameOrigin:
-        return "same-origin"_s;
-    case ReferrerPolicy::StrictOrigin:
-        return "strict-origin"_s;
-    case ReferrerPolicy::StrictOriginWhenCrossOrigin:
-        return "strict-origin-when-cross-origin"_s;
-    case ReferrerPolicy::NoReferrerWhenDowngrade:
-        return "no-referrer-when-downgrade"_s;
-    case ReferrerPolicy::EmptyString:
-        return { };
-    }
-    ASSERT_NOT_REACHED();
-    return { };
+    return convertEnumerationToString(referrerPolicy);
 }
 
 } // namespace WebCore

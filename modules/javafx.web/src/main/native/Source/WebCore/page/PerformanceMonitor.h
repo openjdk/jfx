@@ -40,7 +40,7 @@ public:
 
     void didStartProvisionalLoad();
     void didFinishLoad();
-    void activityStateChanged(OptionSet<ActivityState::Flag> oldState, OptionSet<ActivityState::Flag> newState);
+    void activityStateChanged(OptionSet<ActivityState> oldState, OptionSet<ActivityState> newState);
 
 private:
     void measurePostLoadCPUUsage();
@@ -52,7 +52,7 @@ private:
     void processMayBecomeInactiveTimerFired();
     static void updateProcessStateForMemoryPressure();
 
-    Page& m_page;
+    WeakRef<Page> m_page;
 
     Timer m_postPageLoadCPUUsageTimer;
     std::optional<CPUTime> m_postLoadCPUTime;

@@ -27,7 +27,8 @@
 namespace WebCore {
 
 class RenderTextControlMultiLine final : public RenderTextControl {
-    WTF_MAKE_ISO_ALLOCATED(RenderTextControlMultiLine);
+    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(RenderTextControlMultiLine);
+    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(RenderTextControlMultiLine);
 public:
     RenderTextControlMultiLine(HTMLTextAreaElement&, RenderStyle&&);
     virtual ~RenderTextControlMultiLine();
@@ -35,10 +36,7 @@ public:
     HTMLTextAreaElement& textAreaElement() const;
 
 private:
-    void willBeDestroyed() override;
     void element() const = delete;
-
-    bool isTextArea() const override { return true; }
 
     bool nodeAtPoint(const HitTestRequest&, HitTestResult&, const HitTestLocation& locationInContainer, const LayoutPoint& accumulatedOffset, HitTestAction) override;
 
@@ -57,4 +55,4 @@ inline RenderTextControlMultiLine* HTMLTextAreaElement::renderer() const
 
 } // namespace WebCore
 
-SPECIALIZE_TYPE_TRAITS_RENDER_OBJECT(RenderTextControlMultiLine, isTextArea())
+SPECIALIZE_TYPE_TRAITS_RENDER_OBJECT(RenderTextControlMultiLine, isRenderTextControlMultiLine())

@@ -26,15 +26,35 @@
 #include "config.h"
 #include "WasmOpcodeOrigin.h"
 
-#if ENABLE(WEBASSEMBLY_B3JIT)
+#include <wtf/text/MakeString.h>
+
+#if ENABLE(WEBASSEMBLY_OMGJIT)
 
 namespace JSC { namespace Wasm {
 
 void OpcodeOrigin::dump(PrintStream& out) const
 {
+    switch (opcode()) {
+#if USE(JSVALUE64)
+    case OpType::ExtGC:
+        out.print("{opcode: ", makeString(gcOpcode()), ", location: ", RawHex(location()), "}");
+        break;
+    case OpType::Ext1:
+        out.print("{opcode: ", makeString(ext1Opcode()), ", location: ", RawHex(location()), "}");
+        break;
+    case OpType::ExtSIMD:
+        out.print("{opcode: ", makeString(simdOpcode()), ", location: ", RawHex(location()), "}");
+        break;
+    case OpType::ExtAtomic:
+        out.print("{opcode: ", makeString(atomicOpcode()), ", location: ", RawHex(location()), "}");
+        break;
+#endif
+    default:
     out.print("{opcode: ", makeString(opcode()), ", location: ", RawHex(location()), "}");
+        break;
+    }
 }
 
 } } // namespace JSC::Wasm
 
-#endif // ENABLE(WEBASSEMBLY_B3JIT)
+#endif // ENABLE(WEBASSEMBLY_OMGJIT)

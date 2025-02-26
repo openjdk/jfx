@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2023, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -343,6 +343,19 @@ public class TextRun implements GlyphList {
     }
 
     public float getAdvance(int glyphIndex) {
+
+        /*
+         * When positions is null it means that the TextRun only contains
+         * a line break, assuming that the class is used correctly ("shape"
+         * must be called before calling this method, unless the class user is
+         * sure that the run is empty). This class could benefit from better
+         * encapsulation to make it easier to reason about.
+         */
+
+        if (positions == null) {
+            return 0;
+        }
+
         if ((flags & FLAGS_COMPACT) != 0) {
             return positions[start + glyphIndex];
         } else {

@@ -38,7 +38,7 @@ JSPropertyNameEnumerator* JSPropertyNameEnumerator::create(VM& vm, Structure* st
     unsigned propertyNamesBufferSizeInBytes = Checked<unsigned>(propertyNamesSize) * sizeof(WriteBarrier<JSString>);
     WriteBarrier<JSString>* propertyNamesBuffer = nullptr;
     if (propertyNamesBufferSizeInBytes) {
-        propertyNamesBuffer = static_cast<WriteBarrier<JSString>*>(vm.jsValueGigacageAuxiliarySpace().allocate(vm, propertyNamesBufferSizeInBytes, nullptr, AllocationFailureMode::Assert));
+        propertyNamesBuffer = static_cast<WriteBarrier<JSString>*>(vm.auxiliarySpace().allocate(vm, propertyNamesBufferSizeInBytes, nullptr, AllocationFailureMode::Assert));
         for (unsigned i = 0; i < propertyNamesSize; ++i)
             propertyNamesBuffer[i].clear();
     }
@@ -49,8 +49,8 @@ JSPropertyNameEnumerator* JSPropertyNameEnumerator::create(VM& vm, Structure* st
 
 JSPropertyNameEnumerator::JSPropertyNameEnumerator(VM& vm, Structure* structure, uint32_t indexedLength, uint32_t numberStructureProperties, WriteBarrier<JSString>* propertyNamesBuffer, unsigned propertyNamesSize)
     : JSCell(vm, vm.propertyNameEnumeratorStructure.get())
-    , m_propertyNames(vm, this, propertyNamesBuffer)
-    , m_cachedStructureID(vm, this, structure, WriteBarrierStructureID::MayBeNull)
+    , m_propertyNames(propertyNamesBuffer, WriteBarrierEarlyInit)
+    , m_cachedStructureID(structure, WriteBarrierEarlyInit)
     , m_indexedLength(indexedLength)
     , m_endStructurePropertyIndex(numberStructureProperties)
     , m_endGenericPropertyIndex(propertyNamesSize)

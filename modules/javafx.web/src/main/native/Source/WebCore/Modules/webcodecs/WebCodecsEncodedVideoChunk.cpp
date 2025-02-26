@@ -28,19 +28,21 @@
 
 #if ENABLE(WEB_CODECS)
 
+#include <wtf/StdLibExtras.h>
+
 namespace WebCore {
 
 WebCodecsEncodedVideoChunk::WebCodecsEncodedVideoChunk(Init&& init)
-    : m_storage { WebCodecsEncodedVideoChunkStorage::create(init.type, init.timestamp, init.duration, Span<const uint8_t> { init.data.data(), init.data.length() }) }
+    : m_storage { WebCodecsEncodedVideoChunkStorage::create(init.type, init.timestamp, init.duration, init.data.span()) }
 {
 }
 
 ExceptionOr<void> WebCodecsEncodedVideoChunk::copyTo(BufferSource&& source)
 {
     if (source.length() < byteLength())
-        return Exception { TypeError, "buffer is too small"_s };
+        return Exception { ExceptionCode::TypeError, "buffer is too small"_s };
 
-    std::memcpy(source.mutableData(), data(), byteLength());
+    memcpySpan(source.mutableSpan(), span());
     return { };
 }
 

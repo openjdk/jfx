@@ -30,10 +30,11 @@ namespace WebCore {
 
 class HTMLSelectElement;
 
-enum class AllowStyleInvalidation { Yes, No };
+enum class AllowStyleInvalidation : bool { No, Yes };
 
 class HTMLOptionElement final : public HTMLElement {
-    WTF_MAKE_ISO_ALLOCATED(HTMLOptionElement);
+    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(HTMLOptionElement);
+    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(HTMLOptionElement);
 public:
     static Ref<HTMLOptionElement> create(Document&);
     static Ref<HTMLOptionElement> create(const QualifiedName&, Document&);
@@ -55,7 +56,7 @@ public:
     WEBCORE_EXPORT HTMLSelectElement* ownerSelectElement() const;
 
     WEBCORE_EXPORT String label() const;
-    String displayLabel() const;
+    WEBCORE_EXPORT String displayLabel() const;
     WEBCORE_EXPORT void setLabel(const AtomString&);
 
     bool ownElementDisabled() const { return m_disabled; }
@@ -74,7 +75,7 @@ private:
     bool rendererIsNeeded(const RenderStyle&) final { return false; }
     bool matchesDefaultPseudoClass() const final;
 
-    void parseAttribute(const QualifiedName&, const AtomString&) final;
+    void attributeChanged(const QualifiedName&, const AtomString& oldValue, const AtomString& newValue, AttributeModificationReason) final;
 
     bool accessKeyAction(bool) final;
 

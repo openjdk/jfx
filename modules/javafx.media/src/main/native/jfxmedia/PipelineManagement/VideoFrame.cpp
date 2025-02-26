@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2014, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2023, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -23,6 +23,10 @@
  * questions.
  */
 
+// For UINT_MAX, we cannot use GLib here, since it is shared code between
+// GStreamer and AVFoundation.
+#include <limits.h>
+
 #include "VideoFrame.h"
 #include <Common/VSMemory.h>
 
@@ -30,43 +34,40 @@
 //********** class CVideoFrame
 //*************************************************************************************************
 CVideoFrame::CVideoFrame()
-:   m_iWidth(0),
-    m_iHeight(0),
-    m_iEncodedWidth(0),
-    m_iEncodedHeight(0),
+:   m_uiWidth(0),
+    m_uiHeight(0),
+    m_uiEncodedWidth(0),
+    m_uiEncodedHeight(0),
     m_typeFrame(UNKNOWN),
     m_bHasAlpha(false),
     m_dTime(0.0),
-    m_FrameDirty(false),
-    m_iPlaneCount(1)
+    m_FrameDirty(false)
 {
-    m_piPlaneStrides[0] = m_piPlaneStrides[1] = m_piPlaneStrides[2] = m_piPlaneStrides[3] = 0;
-    m_pulPlaneSize[0] = m_pulPlaneSize[1] = m_pulPlaneSize[2] = m_pulPlaneSize[3] = 0;
-    m_pvPlaneData[0] = m_pvPlaneData[1] = m_pvPlaneData[2] = m_pvPlaneData[3] = NULL;
+    Reset();
 }
 
 CVideoFrame::~CVideoFrame()
 {
 }
 
-int CVideoFrame::GetWidth()
+unsigned int CVideoFrame::GetWidth()
 {
-    return m_iWidth;
+    return m_uiWidth;
 }
 
-int CVideoFrame::GetHeight()
+unsigned int CVideoFrame::GetHeight()
 {
-    return m_iHeight;
+    return m_uiHeight;
 }
 
-int CVideoFrame::GetEncodedWidth()
+unsigned int CVideoFrame::GetEncodedWidth()
 {
-    return m_iEncodedWidth;
+    return m_uiEncodedWidth;
 }
 
-int CVideoFrame::GetEncodedHeight()
+unsigned int CVideoFrame::GetEncodedHeight()
 {
-    return m_iEncodedHeight;
+    return m_uiEncodedHeight;
 }
 
 CVideoFrame::FrameType CVideoFrame::GetType()
@@ -84,31 +85,41 @@ double CVideoFrame::GetTime()
     return m_dTime;
 }
 
-int CVideoFrame::GetPlaneCount()
+unsigned int CVideoFrame::GetPlaneCount()
 {
-    return m_iPlaneCount;
+    return m_uiPlaneCount;
 }
 
-void* CVideoFrame::GetDataForPlane(int planeIndex)
+void CVideoFrame::SetPlaneCount(unsigned int count)
 {
-    if (planeIndex < 4 && planeIndex >= 0) {
+    if (count <= MAX_PLANE_COUNT) {
+        m_uiPlaneCount = count;
+    } else {
+        // Should never happen
+        m_uiPlaneCount = MAX_PLANE_COUNT;
+    }
+}
+
+void* CVideoFrame::GetDataForPlane(unsigned int planeIndex)
+{
+    if (planeIndex < MAX_PLANE_COUNT) {
         return m_pvPlaneData[planeIndex];
     }
     return NULL;
 }
 
-unsigned long CVideoFrame::GetSizeForPlane(int planeIndex)
+unsigned long CVideoFrame::GetSizeForPlane(unsigned int planeIndex)
 {
-    if (planeIndex < 4 && planeIndex >= 0) {
+    if (planeIndex < MAX_PLANE_COUNT) {
         return m_pulPlaneSize[planeIndex];
     }
     return 0;
 }
 
-int CVideoFrame::GetStrideForPlane(int planeIndex)
+unsigned int CVideoFrame::GetStrideForPlane(unsigned int planeIndex)
 {
-    if (planeIndex < 4 && planeIndex >= 0) {
-        return m_piPlaneStrides[planeIndex];
+    if (planeIndex < MAX_PLANE_COUNT) {
+        return m_puiPlaneStrides[planeIndex];
     }
     return 0;
 }
@@ -118,12 +129,22 @@ CVideoFrame *CVideoFrame::ConvertToFormat(FrameType type)
     return NULL;
 }
 
-void CVideoFrame::SwapPlanes(int aa, int bb)
+void CVideoFrame::Reset()
 {
-    if (aa != bb && aa >= 0 && aa < m_iPlaneCount && bb >= 0 && bb < m_iPlaneCount) {
-        int stride = m_piPlaneStrides[aa];
-        m_piPlaneStrides[aa] = m_piPlaneStrides[bb];
-        m_piPlaneStrides[bb] = stride;
+    m_uiPlaneCount = 0;
+    for (int i = 0; i < MAX_PLANE_COUNT; i++) {
+        m_puiPlaneStrides[i] = 0;
+        m_pulPlaneSize[i] = 0;
+        m_pvPlaneData[i] = NULL;
+    }
+}
+
+void CVideoFrame::SwapPlanes(unsigned int aa, unsigned int bb)
+{
+    if (aa != bb && aa < m_uiPlaneCount && bb < m_uiPlaneCount) {
+        unsigned int stride = m_puiPlaneStrides[aa];
+        m_puiPlaneStrides[aa] = m_puiPlaneStrides[bb];
+        m_puiPlaneStrides[bb] = stride;
 
         unsigned long size = m_pulPlaneSize[aa];
         m_pulPlaneSize[aa] = m_pulPlaneSize[bb];
@@ -133,4 +154,54 @@ void CVideoFrame::SwapPlanes(int aa, int bb)
         m_pvPlaneData[aa] = m_pvPlaneData[bb];
         m_pvPlaneData[bb] = vptr;
     }
+}
+
+unsigned long CVideoFrame::CalcSize(unsigned int a, unsigned int b, bool *pbValid)
+{
+    if (pbValid == NULL || *(pbValid) == false) {
+        return 0;
+    }
+
+    if (b > 0 && a <= (UINT_MAX / b)) {
+        return (a * b);
+    }
+
+    *(pbValid) = false;
+    return 0;
+}
+
+unsigned long CVideoFrame::AddSize(unsigned long a, unsigned long b, bool *pbValid)
+{
+    if (pbValid == NULL || *(pbValid) == false) {
+        return 0;
+    }
+
+    // unsigned long can be 32-bit or 64-bit, make sure it is no more then UINT_MAX
+    if (a <= UINT_MAX && b <= UINT_MAX && a <= (UINT_MAX - b)) {
+        return (a + b);
+    }
+
+    *(pbValid) = false;
+    return 0;
+}
+
+void* CVideoFrame::CalcPlanePointer(intptr_t baseAddress, unsigned int offset,
+                                    unsigned long planeSize, unsigned long baseSize,
+                                    bool *pbValid)
+{
+    if (pbValid == NULL || *(pbValid) == false) {
+        return NULL;
+    }
+
+    // We will read planeSize bytes from baseAddress starting with offset, so
+    // make sure we do not read pass baseSize.
+    unsigned long endOfPlane = AddSize(offset, planeSize, pbValid);
+    if (*(pbValid)) { // Make sure AddSize() did not failed.
+        if (endOfPlane <= baseSize) {
+            return (void*)(baseAddress + offset);
+        }
+    }
+
+    *(pbValid) = false;
+    return NULL;
 }

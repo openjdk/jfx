@@ -47,8 +47,20 @@ public:
 
     const Vector<PlatformTouchPoint>& touchPoints() const { return m_touchPoints; }
 
+    const Vector<PlatformTouchEvent>& coalescedEvents() const { return m_coalescedEvents; }
+
+    const Vector<PlatformTouchEvent>& predictedEvents() const { return m_predictedEvents; }
+
+#if PLATFORM(WPE)
+    // FIXME: since WPE currently does not send touch stationary events, we need to be able to set
+    // TouchCancelled touchPoints subsequently
+    void setTouchPoints(Vector<PlatformTouchPoint>& touchPoints) { m_touchPoints = touchPoints; }
+#endif
+
 protected:
     Vector<PlatformTouchPoint> m_touchPoints;
+    Vector<PlatformTouchEvent> m_coalescedEvents;
+    Vector<PlatformTouchEvent> m_predictedEvents;
 };
 
 }

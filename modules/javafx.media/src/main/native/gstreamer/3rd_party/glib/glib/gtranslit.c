@@ -1,6 +1,8 @@
 /*
  * Copyright (C) 2014 Canonical Limited
  *
+ * SPDX-License-Identifier: LGPL-2.1-or-later
+ *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
  * License as published by the Free Software Foundation; either
@@ -185,11 +187,11 @@ lookup_item_id_for_locale (const gchar *locale)
 {
   gchar key[MAX_LOCALE_NAME + 1];
   const gchar *language;
-  guint language_len;
+  size_t language_len;
   const gchar *territory = NULL;
-  guint territory_len = 0;
+  size_t territory_len = 0;
   const gchar *modifier = NULL;
-  guint modifier_len = 0;
+  size_t modifier_len = 0;
   const gchar *next_char;
   guint id;
 

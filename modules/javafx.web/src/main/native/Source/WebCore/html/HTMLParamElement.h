@@ -27,20 +27,13 @@
 namespace WebCore {
 
 class HTMLParamElement final : public HTMLElement {
-    WTF_MAKE_ISO_ALLOCATED(HTMLParamElement);
+    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(HTMLParamElement);
+    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(HTMLParamElement);
 public:
     static Ref<HTMLParamElement> create(const QualifiedName&, Document&);
 
-    AtomString name() const;
-    AtomString value() const;
-
-    static bool isURLParameter(const String&);
-
 private:
     HTMLParamElement(const QualifiedName&, Document&);
-
-    bool isURLAttribute(const Attribute&) const final;
-    void addSubresourceAttributeURLs(ListHashSet<URL>&) const final;
 };
 
 } // namespace WebCore

@@ -35,7 +35,7 @@
 namespace WebCore {
 
 class DateTimeNumericFieldElement : public DateTimeFieldElement {
-    WTF_MAKE_ISO_ALLOCATED(DateTimeNumericFieldElement);
+    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(DateTimeNumericFieldElement);
 public:
     struct Range {
         Range(int minimum, int maximum)
@@ -48,18 +48,19 @@ public:
     };
 
 protected:
-    DateTimeNumericFieldElement(Document&, FieldOwner&, const Range&, int placeholder);
+    DateTimeNumericFieldElement(Document&, DateTimeFieldElementFieldOwner&, const Range&, int placeholder);
 
     int maximum() const;
 
     // DateTimeFieldElement functions:
     bool hasValue() const final;
-    void initialize(const AtomString&);
     void setEmptyValue(EventBehavior = DispatchNoEvent) final;
     void setValueAsInteger(int, EventBehavior = DispatchNoEvent) final;
     void stepDown() final;
     void stepUp() final;
-    int valueAsInteger() const final;
+    int valueAsInteger() const final { return m_hasValue ? m_value : -1; }
+    int placeholderValueAsInteger() const final { return m_placeholderValue; }
+
 
 private:
     // DateTimeFieldElement functions:
@@ -71,9 +72,11 @@ private:
 
     String formatValue(int) const;
     void setValueAsIntegerByStepping(int);
+    void setARIAValueAttributesWithInteger(int);
 
     const Range m_range;
     const String m_placeholder;
+    int m_placeholderValue { 0 };
     int m_value { 0 };
     bool m_hasValue { false };
     StringBuilder m_typeAheadBuffer;

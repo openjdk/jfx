@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2023, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -28,14 +28,15 @@ import com.sun.glass.events.KeyEvent;
 import com.sun.glass.ui.*;
 import com.sun.glass.ui.CommonDialogs.ExtensionFilter;
 import com.sun.glass.ui.CommonDialogs.FileChooserResult;
+import com.sun.javafx.application.preferences.PreferenceMapping;
 import com.sun.javafx.util.Logging;
+import javafx.scene.paint.Color;
 
 import java.io.File;
 import java.nio.ByteBuffer;
 import java.nio.IntBuffer;
 
-import java.security.AccessController;
-import java.security.PrivilegedAction;
+import java.util.Map;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 
@@ -43,28 +44,55 @@ final class MacApplication extends Application implements InvokeLaterDispatcher.
 
     private native static void _initIDs(boolean disableSyncRendering);
     static {
-        @SuppressWarnings("removal")
-        var dummy = AccessController.doPrivileged((PrivilegedAction<Void>) () -> {
-            Application.loadNativeLibrary();
-            return null;
-        });
-        @SuppressWarnings("removal")
-        boolean disableSyncRendering = AccessController
-                .doPrivileged((PrivilegedAction<Boolean>) () ->
-                        Boolean.getBoolean("glass.disableSyncRendering"));
+        Application.loadNativeLibrary();
+        boolean disableSyncRendering =
+            Boolean.getBoolean("glass.disableSyncRendering");
         _initIDs(disableSyncRendering);
     }
 
     native static int _getMacKey(int code);
 
+    private String applicationClassName;
     private boolean isTaskbarApplication = false;
     private final InvokeLaterDispatcher invokeLaterDispatcher;
 
+    private static final CountDownLatch keepAliveLatch = new CountDownLatch(1);
+
+    /**
+     * Starts a non-daemon KeepAlive thread to ensure that the
+     * JavaFX toolkit keeps running until the toolkit exits. On
+     * other platforms, the JavaFX Application Thread is created
+     * as a non-daemon Java thread when the toolkit starts. On
+     * macOS, we use the existing AppKit thread as the JavaFX
+     * Application thread, and attach it to the JVM as a daemon
+     * thread. In the case of Swing / JavaFX interop, AWT attaches
+     * the AppKit thread as a daemon thread. Since there is no other
+     * non-daemon thread, we create one so that the JavaFX toolkit
+     * will not exit prematurely.
+     */
+    private static void startKeepAliveThread() {
+        Thread thr = new Thread(() -> {
+            try {
+                keepAliveLatch.await();
+            } catch (InterruptedException ex) {
+                throw new RuntimeException("Unexpected exception: ", ex);
+            }
+        });
+        thr.setName("JavaFX-KeepAlive");
+        thr.setDaemon(false);
+        thr.start();
+    }
+
+    /**
+     * Terminates the KeepAlive thread.
+     */
+    private static void finishKeepAliveThread() {
+        keepAliveLatch.countDown();
+    }
+
     MacApplication() {
         // Embedded in SWT, with shared event thread
-        @SuppressWarnings("removal")
-        boolean isEventThread = AccessController
-                .doPrivileged((PrivilegedAction<Boolean>) () -> Boolean.getBoolean("javafx.embed.isEventThread"));
+        boolean isEventThread = Boolean.getBoolean("javafx.embed.isEventThread");
         if (!isEventThread) {
             invokeLaterDispatcher = new InvokeLaterDispatcher(this);
             invokeLaterDispatcher.start();
@@ -75,8 +103,12 @@ final class MacApplication extends Application implements InvokeLaterDispatcher.
 
     private Menu appleMenu;
 
-    native void _runLoop(ClassLoader classLoader, Runnable launchable,
-                         boolean isTaskbarApplication);
+    private long delegateHandle;
+
+    native long _initDelegate(ClassLoader classLoader, Runnable launchable, boolean isTaskbarApplication);
+
+    native void _runLoop(long delegate);
+
     @Override
     protected void runLoop(final Runnable launchable) {
         // For normal (not embedded) taskbar applications the masOS activation
@@ -88,19 +120,20 @@ final class MacApplication extends Application implements InvokeLaterDispatcher.
             if (isTriggerReactivation()) {
                 waitForReactivation();
             }
+
+            applicationClassName = _getApplicationClassName();
             launchable.run();
         };
 
-        @SuppressWarnings("removal")
-        boolean tmp =
-            AccessController.doPrivileged((PrivilegedAction<Boolean>) () -> {
-                String taskbarAppProp = System.getProperty("glass.taskbarApplication");
-                return  !"false".equalsIgnoreCase(taskbarAppProp);
-            });
-        isTaskbarApplication = tmp;
+        String taskbarAppProp = System.getProperty("glass.taskbarApplication");
+        isTaskbarApplication = !"false".equalsIgnoreCase(taskbarAppProp);
+        // Create a non-daemon KeepAlive thread so the FX toolkit
+        // doesn't exit prematurely.
+        startKeepAliveThread();
 
         ClassLoader classLoader = MacApplication.class.getClassLoader();
-        _runLoop(classLoader, wrappedRunnable, isTaskbarApplication);
+        delegateHandle = _initDelegate(classLoader, wrappedRunnable, isTaskbarApplication);
+        _runLoop(delegateHandle);
     }
 
     private final CountDownLatch reactivationLatch = new CountDownLatch(1);
@@ -126,10 +159,11 @@ final class MacApplication extends Application implements InvokeLaterDispatcher.
         eventLoop.enter();
     }
 
-    native private void _finishTerminating();
+    native private void _finishTerminating(long delegateHandle);
     @Override
     protected void finishTerminating() {
-        _finishTerminating();
+        _finishTerminating(delegateHandle);
+        finishKeepAliveThread();
 
         super.finishTerminating();
     }
@@ -384,8 +418,114 @@ final class MacApplication extends Application implements InvokeLaterDispatcher.
     }
 
     @Override
-    protected native int _getKeyCodeForChar(char c);
+    protected native int _getKeyCodeForChar(char c, int hint);
 
     @Override
     protected native int _isKeyLocked(int keyCode);
+
+    private native String _getApplicationClassName();
+
+    private native Map<String, Object> _getPlatformPreferences(long delegateHandle);
+
+    @Override
+    public Map<String, Object> getPlatformPreferences() {
+        return _getPlatformPreferences(delegateHandle);
+    }
+
+    @Override
+    public Map<String, PreferenceMapping<?, ?>> getPlatformKeyMappings() {
+        return Map.of(
+            "macOS.NSColor.textColor", new PreferenceMapping<>("foregroundColor", Color.class),
+            "macOS.NSColor.textBackgroundColor", new PreferenceMapping<>("backgroundColor", Color.class),
+            "macOS.NSColor.controlAccentColor", new PreferenceMapping<>("accentColor", Color.class),
+            "macOS.NSWorkspace.accessibilityDisplayShouldReduceMotion", new PreferenceMapping<>("reducedMotion", Boolean.class),
+            "macOS.NSWorkspace.accessibilityDisplayShouldReduceTransparency", new PreferenceMapping<>("reducedTransparency", Boolean.class),
+            "macOS.NSScroller.preferredScrollerStyle", new PreferenceMapping<>("persistentScrollBars", String.class, "NSScrollerStyleLegacy"::equals),
+            "macOS.NWPathMonitor.currentPathConstrained", new PreferenceMapping<>("reducedData", Boolean.class)
+        );
+    }
+
+    // This list needs to be kept in sync with PlatformSupport.m in the Glass toolkit for macOS.
+    @Override
+    public Map<String, Class<?>> getPlatformKeys() {
+        return Map.ofEntries(
+            Map.entry("macOS.NSColor.labelColor", Color.class),
+            Map.entry("macOS.NSColor.secondaryLabelColor", Color.class),
+            Map.entry("macOS.NSColor.tertiaryLabelColor", Color.class),
+            Map.entry("macOS.NSColor.quaternaryLabelColor", Color.class),
+            Map.entry("macOS.NSColor.textColor", Color.class),
+            Map.entry("macOS.NSColor.placeholderTextColor", Color.class),
+            Map.entry("macOS.NSColor.selectedTextColor", Color.class),
+            Map.entry("macOS.NSColor.textBackgroundColor", Color.class),
+            Map.entry("macOS.NSColor.selectedTextBackgroundColor", Color.class),
+            Map.entry("macOS.NSColor.keyboardFocusIndicatorColor", Color.class),
+            Map.entry("macOS.NSColor.unemphasizedSelectedTextColor", Color.class),
+            Map.entry("macOS.NSColor.unemphasizedSelectedTextBackgroundColor", Color.class),
+            Map.entry("macOS.NSColor.linkColor", Color.class),
+            Map.entry("macOS.NSColor.separatorColor", Color.class),
+            Map.entry("macOS.NSColor.selectedContentBackgroundColor", Color.class),
+            Map.entry("macOS.NSColor.unemphasizedSelectedContentBackgroundColor", Color.class),
+            Map.entry("macOS.NSColor.selectedMenuItemTextColor", Color.class),
+            Map.entry("macOS.NSColor.gridColor", Color.class),
+            Map.entry("macOS.NSColor.headerTextColor", Color.class),
+            Map.entry("macOS.NSColor.alternatingContentBackgroundColors", Color[].class),
+            Map.entry("macOS.NSColor.controlAccentColor", Color.class),
+            Map.entry("macOS.NSColor.controlColor", Color.class),
+            Map.entry("macOS.NSColor.controlBackgroundColor", Color.class),
+            Map.entry("macOS.NSColor.controlTextColor", Color.class),
+            Map.entry("macOS.NSColor.disabledControlTextColor", Color.class),
+            Map.entry("macOS.NSColor.selectedControlColor", Color.class),
+            Map.entry("macOS.NSColor.selectedControlTextColor", Color.class),
+            Map.entry("macOS.NSColor.alternateSelectedControlTextColor", Color.class),
+            Map.entry("macOS.NSColor.currentControlTint", String.class),
+            Map.entry("macOS.NSColor.windowBackgroundColor", Color.class),
+            Map.entry("macOS.NSColor.windowFrameTextColor", Color.class),
+            Map.entry("macOS.NSColor.underPageBackgroundColor", Color.class),
+            Map.entry("macOS.NSColor.findHighlightColor", Color.class),
+            Map.entry("macOS.NSColor.highlightColor", Color.class),
+            Map.entry("macOS.NSColor.shadowColor", Color.class),
+            Map.entry("macOS.NSColor.systemBlueColor", Color.class),
+            Map.entry("macOS.NSColor.systemBrownColor", Color.class),
+            Map.entry("macOS.NSColor.systemGrayColor", Color.class),
+            Map.entry("macOS.NSColor.systemGreenColor", Color.class),
+            Map.entry("macOS.NSColor.systemIndigoColor", Color.class),
+            Map.entry("macOS.NSColor.systemOrangeColor", Color.class),
+            Map.entry("macOS.NSColor.systemPinkColor", Color.class),
+            Map.entry("macOS.NSColor.systemPurpleColor", Color.class),
+            Map.entry("macOS.NSColor.systemRedColor", Color.class),
+            Map.entry("macOS.NSColor.systemTealColor", Color.class),
+            Map.entry("macOS.NSColor.systemYellowColor", Color.class),
+            Map.entry("macOS.NSWorkspace.accessibilityDisplayShouldReduceMotion", Boolean.class),
+            Map.entry("macOS.NSWorkspace.accessibilityDisplayShouldReduceTransparency", Boolean.class),
+            Map.entry("macOS.NSScroller.preferredScrollerStyle", String.class),
+            Map.entry("macOS.NWPathMonitor.currentPathConstrained", Boolean.class),
+            Map.entry("macOS.NWPathMonitor.currentPathExpensive", Boolean.class)
+        );
+    }
+
+    private static final String SUPPRESS_AWT_WARNING_PROPERTY = "javafx.preferences.suppressAppleAwtWarning";
+    private static final String AWT_APPEARANCE_PROPERTY = "apple.awt.application.appearance";
+    private static final String AWT_APPLICATION_CLASS = "NSApplicationAWT";
+    private static final String AWT_SYSTEM_APPEARANCE = "system";
+
+    private boolean checkSystemAppearance = !Boolean.getBoolean(SUPPRESS_AWT_WARNING_PROPERTY);
+
+    @Override
+    public void checkPlatformPreferencesSupport() {
+        if (checkSystemAppearance && AWT_APPLICATION_CLASS.equals(applicationClassName)) {
+            String awtAppearanceProperty = System.getProperty(AWT_APPEARANCE_PROPERTY);
+
+            if (!AWT_SYSTEM_APPEARANCE.equals(awtAppearanceProperty)) {
+                Logging.getJavaFXLogger().warning(String.format(
+                    "Reported preferences may not reflect macOS system preferences unless the system%n" +
+                    "property %s=%s is set. This warning can be disabled by%n" +
+                    "setting %s=true.",
+                    AWT_APPEARANCE_PROPERTY,
+                    AWT_SYSTEM_APPEARANCE,
+                    SUPPRESS_AWT_WARNING_PROPERTY));
+            }
+        }
+
+        checkSystemAppearance = false;
+    }
 }

@@ -23,12 +23,13 @@
 #include "config.h"
 #include "HTMLFormControlsCollection.h"
 
+#include "CachedHTMLCollectionInlines.h"
 #include "FormListedElement.h"
 #include "HTMLFormElement.h"
 #include "HTMLImageElement.h"
 #include "HTMLNames.h"
 #include "ScriptDisallowedScope.h"
-#include <wtf/IsoMallocInlines.h>
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
@@ -37,10 +38,10 @@ using namespace HTMLNames;
 // Since the collections are to be "live", we have to do the
 // calculation every time if anything has changed.
 
-WTF_MAKE_ISO_ALLOCATED_IMPL(HTMLFormControlsCollection);
+WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(HTMLFormControlsCollection);
 
 HTMLFormControlsCollection::HTMLFormControlsCollection(ContainerNode& ownerNode)
-    : CachedHTMLCollection(ownerNode, FormControls)
+    : CachedHTMLCollection(ownerNode, CollectionType::FormControls)
     , m_cachedElement(nullptr)
     , m_cachedElementOffsetInArray(0)
 {
@@ -158,6 +159,11 @@ void HTMLFormControlsCollection::invalidateCacheForDocument(Document& document)
     CachedHTMLCollection::invalidateCacheForDocument(document);
     m_cachedElement = nullptr;
     m_cachedElementOffsetInArray = 0;
+}
+
+HTMLElement* HTMLFormControlsCollection::item(unsigned offset) const
+{
+    return downcast<HTMLElement>(CachedHTMLCollection::item(offset));
 }
 
 }

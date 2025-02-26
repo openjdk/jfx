@@ -28,6 +28,7 @@
 #include "ModuleScriptLoader.h"
 #include "ResourceLoaderIdentifier.h"
 #include "ScriptBuffer.h"
+#include "ScriptExecutionContextIdentifier.h"
 #include "WorkerScriptFetcher.h"
 #include "WorkerScriptLoaderClient.h"
 #include <wtf/Ref.h>
@@ -50,9 +51,10 @@ public:
 
     virtual ~WorkerModuleScriptLoader();
 
-    bool load(ScriptExecutionContext&, URL&& sourceURL);
+    void load(ScriptExecutionContext&, URL&& sourceURL);
 
     WorkerScriptLoader& scriptLoader() { return m_scriptLoader.get(); }
+    Ref<WorkerScriptLoader> protectedScriptLoader();
 
     static String taskMode();
     ReferrerPolicy referrerPolicy();
@@ -66,8 +68,8 @@ public:
 private:
     WorkerModuleScriptLoader(ModuleScriptLoaderClient&, DeferredPromise&, WorkerScriptFetcher&, RefPtr<JSC::ScriptFetchParameters>&&);
 
-    void didReceiveResponse(ResourceLoaderIdentifier, const ResourceResponse&) final { }
-    void notifyFinished() final;
+    void didReceiveResponse(ScriptExecutionContextIdentifier, ResourceLoaderIdentifier, const ResourceResponse&) final { }
+    void notifyFinished(ScriptExecutionContextIdentifier) final;
 
     void notifyClientFinished();
 

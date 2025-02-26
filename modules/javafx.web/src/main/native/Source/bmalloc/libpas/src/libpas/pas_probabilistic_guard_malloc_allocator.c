@@ -45,6 +45,8 @@
 
 static size_t free_wasted_mem  = PAS_PGM_MAX_WASTED_MEMORY;
 static size_t free_virtual_mem = PAS_PGM_MAX_VIRTUAL_MEMORY;
+static pas_ptr_hash_map_entry *pgm_metadata_vector[MAX_PGM_HASH_ENTRIES];
+static size_t pgm_metadata_head_index = 0, pgm_metadata_tail_index = 0, pgm_metadata_count = 0;
 
 uint16_t pas_probabilistic_guard_malloc_random;
 uint16_t pas_probabilistic_guard_malloc_counter = 0;
@@ -58,16 +60,23 @@ bool pas_probabilistic_guard_malloc_is_initialized = false;
  * value : metadata for tracking that allocation (pas_pgm_storage)
  */
 pas_ptr_hash_map pas_pgm_hash_map = PAS_HASHTABLE_INITIALIZER;
+pas_ptr_hash_map_in_flux_stash pas_pgm_hash_map_in_flux_stash;
 
 static void pas_probabilistic_guard_malloc_debug_info(const void* key, const pas_pgm_storage* value, const char* operation);
+static void pas_probabilistic_guard_malloc_manage_metadata(pas_ptr_hash_map_entry * entry);
+
+static void pas_probabilistic_guard_malloc_pgm_metadata_buffer_add(pas_ptr_hash_map_entry * entry);
+static void pas_probabilistic_guard_malloc_pgm_metadata_buffer_remove(void);
+static bool pas_probabilistic_guard_malloc_pgm_metadata_buffer_full(void);
+static bool pas_probabilistic_guard_malloc_pgm_metadata_buffer_empty(void);
 
 #if PAS_COMPILER(CLANG)
 #pragma mark -
 #pragma mark ALLOC/DEALLOC
 #endif
 
-pas_allocation_result pas_probabilistic_guard_malloc_allocate(pas_large_heap* large_heap, size_t size, const pas_heap_config* heap_config,
-                                                              pas_physical_memory_transaction* transaction)
+pas_allocation_result pas_probabilistic_guard_malloc_allocate(pas_large_heap* large_heap, size_t size, pas_allocation_mode allocation_mode,
+                                                              const pas_heap_config* heap_config, pas_physical_memory_transaction* transaction)
 {
     pas_heap_lock_assert_held();
     static const bool verbose = false;
@@ -96,7 +105,7 @@ pas_allocation_result pas_probabilistic_guard_malloc_allocate(pas_large_heap* la
     if (mem_to_alloc > free_virtual_mem)
         return result;
 
-    result = pas_large_heap_try_allocate_and_forget(large_heap, mem_to_alloc, page_size,heap_config, transaction);
+    result = pas_large_heap_try_allocate_and_forget(large_heap, mem_to_alloc, page_size, allocation_mode, heap_config, transaction);
     if (!result.did_succeed)
         return result;
 
@@ -129,33 +138,38 @@ pas_allocation_result pas_probabilistic_guard_malloc_allocate(pas_large_heap* la
     /*
      * the key is the location where the user's starting memory address is located.
      * allocations are right aligned, so the end backs up to the upper guard page.
+     *
+     * Take random decision to right align or left align in order to be able to catch
+     * overflow and underflow conditions with equal probability.
      */
-    void * key = (void*) (result.begin + page_size + mem_to_waste);
+    uint8_t right_align = pas_get_fast_random(2);
+
+    uintptr_t key = (right_align ? (result.begin + page_size + mem_to_waste) : (result.begin + page_size));
+    PAS_PROFILE(PGM_ALLOCATE, key);
 
     /* create struct to hold hash map value */
     pas_pgm_storage *value = pas_utility_heap_try_allocate(sizeof(pas_pgm_storage), "pas_pgm_hash_map_VALUE");
     PAS_ASSERT(value);
 
-    value->mem_to_alloc              = mem_to_alloc;
     value->mem_to_waste              = mem_to_waste;
     value->size_of_data_pages        = size + mem_to_waste;
-    value->lower_guard_page          = lower_guard_page;
-    value->upper_guard_page          = upper_guard_page;
     value->start_of_data_pages       = result.begin + page_size;
     value->allocation_size_requested = size;
+    value->page_size                 = page_size;
     value->large_heap                = large_heap;
+    value->right_align               = right_align;
 
-    pas_ptr_hash_map_add_result add_result = pas_ptr_hash_map_add(&pas_pgm_hash_map, key, NULL, &pas_large_utility_free_heap_allocation_config);
+    pas_ptr_hash_map_add_result add_result = pas_ptr_hash_map_add(&pas_pgm_hash_map, (void*)key, NULL, &pas_large_utility_free_heap_allocation_config);
     PAS_ASSERT(add_result.is_new_entry);
 
-    add_result.entry->key = key;
+    add_result.entry->key = (void*)key;
     add_result.entry->value = value;
 
     free_wasted_mem  -= mem_to_waste;
     free_virtual_mem -= mem_to_alloc;
 
     if (verbose)
-        pas_probabilistic_guard_malloc_debug_info(key, value, "Allocating memory");
+        pas_probabilistic_guard_malloc_debug_info((void*)key, value, "Allocating memory");
 
     result.begin = (uintptr_t)key;
 
@@ -174,9 +188,10 @@ void pas_probabilistic_guard_malloc_deallocate(void* mem)
     if (verbose)
         printf("Memory Address Requested to Deallocate %p\n", mem);
 
-    uintptr_t * key = (uintptr_t *) mem;
+    uintptr_t key = (uintptr_t) mem;
+    PAS_PROFILE(PGM_DEALLOCATE, key);
 
-    pas_ptr_hash_map_entry * entry = pas_ptr_hash_map_find(&pas_pgm_hash_map, key);
+    pas_ptr_hash_map_entry * entry = pas_ptr_hash_map_find(&pas_pgm_hash_map, (void*)key);
     if (!entry || !entry->value)
         return;
 
@@ -184,27 +199,27 @@ void pas_probabilistic_guard_malloc_deallocate(void* mem)
     int mprotect_res = mprotect( (void *) value->start_of_data_pages, value->size_of_data_pages, PROT_NONE);
     PAS_ASSERT(!mprotect_res);
 
-    // ensure physical addresses are released
-    // TODO: investigate using MADV_FREE_REUSABLE instead
-#if BOS(LINUX)
-    int madvise_res = madvise((void *) value->start_of_data_pages, value->size_of_data_pages, MADV_DONTNEED);
-#else
+    /*
+     * ensure physical addresses are released
+     * TODO: investigate using MADV_FREE_REUSABLE instead
+     */
     int madvise_res = madvise((void *) value->start_of_data_pages, value->size_of_data_pages, MADV_FREE);
-#endif
     PAS_ASSERT(!madvise_res);
 
-    bool removed = pas_ptr_hash_map_remove(&pas_pgm_hash_map, key, NULL, &pas_large_utility_free_heap_allocation_config);
-    PAS_ASSERT(removed);
-
     free_wasted_mem  += value->mem_to_waste;
-    free_virtual_mem += value->mem_to_alloc;
+    free_virtual_mem += (2 * value->page_size) + value->allocation_size_requested + value->mem_to_waste;
+
+    /*
+     * Mark the physical memory status free and check if the max entries reached.
+     * If so deallocate the space for metadata as well
+     */
+    value->free_status = true;
+    pas_probabilistic_guard_malloc_manage_metadata(entry);
 
     if (verbose)
-        pas_probabilistic_guard_malloc_debug_info(key, value, "Deallocating Memory");
+        pas_probabilistic_guard_malloc_debug_info((void*)key, value, "Deallocating Memory");
 
     pas_probabilistic_guard_malloc_can_use = true;
-
-    pas_utility_heap_deallocate(value);
 }
 
 bool pas_probabilistic_guard_malloc_check_exists(uintptr_t mem)
@@ -257,11 +272,30 @@ size_t pas_probabilistic_guard_malloc_get_free_wasted_memory(void)
     return free_wasted_mem;
 }
 
+pas_ptr_hash_map_entry** pas_probabilistic_guard_malloc_get_metadata_array(void)
+{
+    return pgm_metadata_vector;
+}
+
 /*
  * During heap creation we want to check whether we should enable PGM.
  * PGM being enabled in the heap config does not mean it will be enabled at runtime.
  * This function will be run once for all heaps (ISO, bmalloc, JIT, etc...), but only those with
  * pgm_enabled config will ultimately be called.
+ *
+ * PGM has two layers before an allocation is called. The first layer is the activation check, which is called once on process initialization.
+ * This will determine if PGM will be enabled while the process is alive. This is currently set to 1 in 1000, but
+ * from benchmarking turning this on 100% of the time will not cause any noticeable memory or performance degradation.
+ * If the activation check fails then PGM will never be enabled during the process' lifetime.
+ *
+ * The second layer is the probability check, which is set to perform a PGM allocation between every 1 in 4000 to 1 in 5000 times.
+ * The probability check will be performed every time an allocation is made. The implementation is a simple counter, which is incremented
+ * every allocation. Once it hits the calculated probability randomly generated number we will perform a PGM allocation. Having a slight variation
+ * in how often we call PGM will hopefully help to catch issues more quickly.
+ *
+ * These numbers are set to correlate with macOS's system malloc, but these can be tuned as needed. Just to note that
+ * increasing these numbers may increase the number of duplicate crashes seen. On the other hand, decreasing the probability
+ * may result in issues being missed.
  */
 void pas_probabilistic_guard_malloc_initialize_pgm(void)
 {
@@ -273,9 +307,75 @@ void pas_probabilistic_guard_malloc_initialize_pgm(void)
             return;
         }
 
-        /* PGM will be called between every 4,000 to 5,000 times an allocation is tried. */
         pas_probabilistic_guard_malloc_random = pas_get_secure_random(1000) + 4000;
     }
+}
+
+/*
+ * This function shall be called for testing PGM behavior, since PGM enablement will be non-deterministic otherwise.
+ */
+void pas_probabilistic_guard_malloc_initialize_pgm_as_enabled(void)
+{
+    pas_probabilistic_guard_malloc_is_initialized = true;
+    pas_probabilistic_guard_malloc_can_use = true;
+    pas_probabilistic_guard_malloc_random = 1;
+    pas_probabilistic_guard_malloc_counter = 0;
+}
+
+/*
+ * Adding the entries into 'tail' index and removing the items from 'head' (FIFO)
+ */
+bool pas_probabilistic_guard_malloc_pgm_metadata_buffer_full(void)
+{
+    return (pgm_metadata_count >= MAX_PGM_HASH_ENTRIES);
+}
+
+bool pas_probabilistic_guard_malloc_pgm_metadata_buffer_empty(void)
+{
+    return (pgm_metadata_count == 0);
+}
+
+void pas_probabilistic_guard_malloc_pgm_metadata_buffer_add(pas_ptr_hash_map_entry * entry)
+{
+    PAS_ASSERT(!pas_probabilistic_guard_malloc_pgm_metadata_buffer_full());
+
+    size_t index = pgm_metadata_tail_index;
+    if (index >= MAX_PGM_HASH_ENTRIES)
+        index = 0;
+    pgm_metadata_vector[index] = entry;
+    pgm_metadata_tail_index = index + 1;
+    pgm_metadata_count++;
+}
+
+void pas_probabilistic_guard_malloc_pgm_metadata_buffer_remove(void)
+{
+    PAS_ASSERT(!pas_probabilistic_guard_malloc_pgm_metadata_buffer_empty());
+
+    size_t index = pgm_metadata_head_index;
+    if (index >= MAX_PGM_HASH_ENTRIES)
+        index = 0;
+
+    pas_ptr_hash_map_entry *entry = pgm_metadata_vector[index];
+    if (entry && entry->value) {
+        pas_pgm_storage *value = (pas_pgm_storage *) entry->value;
+        bool removed = pas_ptr_hash_map_remove(&pas_pgm_hash_map, (void*)entry->key, NULL, &pas_large_utility_free_heap_allocation_config);
+        PAS_ASSERT(removed);
+        pas_utility_heap_deallocate(value);
+    }
+    pgm_metadata_head_index = index + 1;
+    pgm_metadata_count--;
+}
+
+void pas_probabilistic_guard_malloc_manage_metadata(pas_ptr_hash_map_entry * entry)
+{
+    /*
+     * Check if PGM metadata circular buffer is full if so free first metadata entry per "FIFO".
+     * Note the length of metadata liveness will depend on how long it takes to fill all 10 entries.
+     */
+    if (pas_probabilistic_guard_malloc_pgm_metadata_buffer_full())
+        pas_probabilistic_guard_malloc_pgm_metadata_buffer_remove();
+
+    pas_probabilistic_guard_malloc_pgm_metadata_buffer_add(entry);
 }
 
 void pas_probabilistic_guard_malloc_debug_info(const void* key, const pas_pgm_storage* value, const char* operation)
@@ -288,24 +388,24 @@ void pas_probabilistic_guard_malloc_debug_info(const void* key, const pas_pgm_st
         "\n"
         " Allocation\n"
         " Allocation Size Requested : %zu \n"
-        " Memory Allocated          : %zu \n"
-        " Memory Wasted             : %zu \n"
+        " Page Size                 : %hu \n"
+        " Memory Wasted             : %hu \n"
         " Size of Data Pages        : %zu \n"
-        " Lower Guard Page Address  : %p  \n"
-        " Upper Guard Page Address  : %p  \n"
         " Start of Data Pages       : %p  \n"
+        " Lower Guard Page          : %p  \n"
+        " Upper Guard Page          : %p  \n"
         " Memory Address for User   : %p  \n"
         "******************************************************\n\n\n",
         operation,
         free_wasted_mem,
         free_virtual_mem,
         value->allocation_size_requested,
-        value->mem_to_alloc,
+        value->page_size,
         value->mem_to_waste,
         value->size_of_data_pages,
-        (uintptr_t*) value->lower_guard_page,
-        (uintptr_t*) value->upper_guard_page,
         (uintptr_t*) value->start_of_data_pages,
+        (uintptr_t*) value->start_of_data_pages - value->page_size,
+        (uintptr_t*) value->start_of_data_pages + value->size_of_data_pages,
         key);
 }
 

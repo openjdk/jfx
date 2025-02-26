@@ -27,7 +27,8 @@
 namespace WebCore {
 
 class SVGLineElement final : public SVGGeometryElement {
-    WTF_MAKE_ISO_ALLOCATED(SVGLineElement);
+    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(SVGLineElement);
+    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(SVGLineElement);
 public:
     static Ref<SVGLineElement> create(const QualifiedName&, Document&);
 
@@ -46,7 +47,7 @@ private:
 
     using PropertyRegistry = SVGPropertyOwnerRegistry<SVGLineElement, SVGGeometryElement>;
 
-    void parseAttribute(const QualifiedName&, const AtomString&) final;
+    void attributeChanged(const QualifiedName&, const AtomString& oldValue, const AtomString& newValue, AttributeModificationReason) final;
     void svgAttributeChanged(const QualifiedName&) final;
 
     bool isValid() const final { return SVGTests::isValid(); }

@@ -27,7 +27,8 @@ namespace WebCore {
 class HTMLMeterElement;
 
 class RenderMeter final : public RenderBlockFlow {
-    WTF_MAKE_ISO_ALLOCATED(RenderMeter);
+    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(RenderMeter);
+    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(RenderMeter);
 public:
     RenderMeter(HTMLElement&, RenderStyle&&);
     virtual ~RenderMeter();
@@ -40,9 +41,8 @@ private:
     LogicalExtentComputedValues computeLogicalHeight(LayoutUnit logicalHeight, LayoutUnit logicalTop) const override;
 
     ASCIILiteral renderName() const override { return "RenderMeter"_s; }
-    bool isMeter() const override { return true; }
 };
 
 } // namespace WebCore
 
-SPECIALIZE_TYPE_TRAITS_RENDER_OBJECT(RenderMeter, isMeter())
+SPECIALIZE_TYPE_TRAITS_RENDER_OBJECT(RenderMeter, isRenderMeter())

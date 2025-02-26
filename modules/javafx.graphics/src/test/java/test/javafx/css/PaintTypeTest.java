@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -41,8 +41,9 @@ import javafx.css.SizeUnits;
 import javafx.css.Stylesheet;
 import javafx.css.converter.PaintConverter;
 import javafx.css.converter.StopConverter;
-import org.junit.Test;
-import static org.junit.Assert.assertEquals;
+
+import org.junit.jupiter.api.Test;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 
 public class PaintTypeTest {
@@ -180,7 +181,7 @@ public class PaintTypeTest {
 
             for(int j=0; j<paints.length; j++) {
                 String msg = Integer.toString(i) + "." + Integer.toString(j);
-                assertEquals(msg, expResults[i][j], paints[j][0]);
+                assertEquals(expResults[i][j], paints[j][0], msg);
             }
         }
 

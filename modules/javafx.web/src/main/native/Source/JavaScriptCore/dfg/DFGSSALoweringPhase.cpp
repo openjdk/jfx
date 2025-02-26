@@ -40,7 +40,7 @@ class SSALoweringPhase : public Phase {
 
 public:
     SSALoweringPhase(Graph& graph)
-        : Phase(graph, "SSA lowering")
+        : Phase(graph, "SSA lowering"_s)
         , m_insertionSet(graph)
     {
     }
@@ -90,6 +90,9 @@ private:
             lowerBoundsCheck(m_graph.varArgChild(m_node, 0), m_graph.varArgChild(m_node, 1), m_graph.varArgChild(m_node, 2));
             break;
         }
+
+        case EnumeratorPutByVal:
+            break;
 
         case PutByVal:
         case PutByValDirect: {

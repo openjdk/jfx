@@ -1,7 +1,7 @@
 /*
  *  Copyright (C) 1999-2001 Harri Porten (porten@kde.org)
  *  Copyright (C) 2001 Peter Kelly (pmk@post.com)
- *  Copyright (C) 2003-2021 Apple Inc. All rights reserved.
+ *  Copyright (C) 2003-2023 Apple Inc. All rights reserved.
  *
  *  This library is free software; you can redistribute it and/or
  *  modify it under the terms of the GNU Library General Public
@@ -76,7 +76,21 @@ template<typename T> void* tryAllocateCell(VM&, GCDeferralContext*, size_t = siz
     public:                                                                  \
         static constexpr const ::JSC::ClassInfo* info() { return &s_info; }
 
+#if ASSERT_ENABLED
+#define DECLARE_DEFAULT_FINISH_CREATION \
+    ALWAYS_INLINE void finishCreation(JSC::VM& vm) \
+    { \
+        Base::finishCreation(vm); \
+        ASSERT(inherits(info())); \
+    } \
+    static constexpr int __unusedFooterAfterDefaultFinishCreation = 0
+#else
+#define DECLARE_DEFAULT_FINISH_CREATION \
+    using Base::finishCreation
+#endif
+
 class JSCell : public HeapCell {
+    WTF_ALLOW_COMPACT_POINTERS;
     friend class JSValue;
     friend class MarkedBlock;
     template<typename T>
@@ -87,7 +101,8 @@ public:
 
     static constexpr bool needsDestruction = false;
 
-    static constexpr uint8_t numberOfLowerTierCells = 8;
+    static constexpr bool usePreciseAllocationsOnly = false;
+    static constexpr uint8_t numberOfLowerTierPreciseCells = 8;
 
     static constexpr size_t atomSize = 16; // This needs to be larger or equal to 16.
 
@@ -97,6 +112,8 @@ public:
 
     enum CreatingEarlyCellTag { CreatingEarlyCell };
     JSCell(CreatingEarlyCellTag);
+    enum CreatingWellDefinedBuiltinCellTag { CreatingWellDefinedBuiltinCell };
+    JSCell(CreatingWellDefinedBuiltinCellTag, StructureID, int32_t typeInfoBlob);
 
     JS_EXPORT_PRIVATE static void destroy(JSCell*);
 
@@ -166,6 +183,9 @@ public:
     JS_EXPORT_PRIVATE double toNumber(JSGlobalObject*) const;
     JSObject* toObject(JSGlobalObject*) const;
 
+    JSString* toStringInline(JSGlobalObject*) const;
+    JS_EXPORT_PRIVATE JSString* toStringSlowCase(JSGlobalObject*) const;
+
     void dump(PrintStream&) const;
     JS_EXPORT_PRIVATE static void dumpToStream(const JSCell*, PrintStream&);
 
@@ -208,17 +228,17 @@ public:
         return WTF::atomicCompareExchangeStrong(&m_cellState, oldState, newState);
     }
 
-    static ptrdiff_t structureIDOffset()
+    static constexpr ptrdiff_t structureIDOffset()
     {
         return OBJECT_OFFSETOF(JSCell, m_structureID);
     }
 
-    static ptrdiff_t typeInfoFlagsOffset()
+    static constexpr ptrdiff_t typeInfoFlagsOffset()
     {
         return OBJECT_OFFSETOF(JSCell, m_flags);
     }
 
-    static ptrdiff_t typeInfoTypeOffset()
+    static constexpr ptrdiff_t typeInfoTypeOffset()
     {
         return OBJECT_OFFSETOF(JSCell, m_type);
     }
@@ -226,12 +246,12 @@ public:
     // DO NOT store to this field. Always use a CAS loop, since some bits are flipped using CAS
     // from other threads due to the internal lock. One exception: you don't need the CAS if the
     // object has not escaped yet.
-    static ptrdiff_t indexingTypeAndMiscOffset()
+    static constexpr ptrdiff_t indexingTypeAndMiscOffset()
     {
         return OBJECT_OFFSETOF(JSCell, m_indexingTypeAndMisc);
     }
 
-    static ptrdiff_t cellStateOffset()
+    static constexpr ptrdiff_t cellStateOffset()
     {
         return OBJECT_OFFSETOF(JSCell, m_cellState);
     }

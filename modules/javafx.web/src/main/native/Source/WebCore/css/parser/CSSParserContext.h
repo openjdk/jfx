@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2018-2022 Apple Inc. All rights reserved.
+ * Copyright (C) 2018-2023 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -55,10 +55,7 @@ inline bool operator==(const ResolvedURL& a, const ResolvedURL& b)
     return a.specifiedURLString == b.specifiedURLString && a.resolvedURL == b.resolvedURL;
 }
 
-inline bool operator!=(const ResolvedURL& a, const ResolvedURL& b)
-{
-    return !(a == b);
-}
+bool mayDependOnBaseURL(const ResolvedURL&);
 
 struct CSSParserContext {
     WTF_MAKE_STRUCT_FAST_ALLOCATED;
@@ -67,48 +64,57 @@ struct CSSParserContext {
     String charset;
     CSSParserMode mode { HTMLStandardMode };
     std::optional<StyleRuleType> enclosingRuleType;
-    bool isHTMLDocument { false };
+    bool isHTMLDocument : 1 { false };
 
     // This is only needed to support getMatchedCSSRules.
-    bool hasDocumentSecurityOrigin { false };
+    bool hasDocumentSecurityOrigin : 1 { false };
 
-    bool isContentOpaque { false };
-    bool useSystemAppearance { false };
-    bool shouldIgnoreImportRules { false };
+    bool isContentOpaque : 1 { false };
+    bool useSystemAppearance : 1 { false };
+    bool shouldIgnoreImportRules : 1 { false };
 
     // Settings, excluding those affecting properties.
-    bool colorContrastEnabled { false };
-    bool colorMixEnabled { false };
-    bool constantPropertiesEnabled { false };
-    bool counterStyleAtRuleImageSymbolsEnabled { false };
-    bool cssColor4 { false };
-    bool relativeColorSyntaxEnabled { false };
-    bool springTimingFunctionEnabled { false };
+    bool colorContrastEnabled : 1 { false };
+    bool counterStyleAtRuleImageSymbolsEnabled : 1 { false };
+    bool springTimingFunctionEnabled : 1 { false };
 #if ENABLE(CSS_TRANSFORM_STYLE_OPTIMIZED_3D)
-    bool transformStyleOptimized3DEnabled { false };
+    bool transformStyleOptimized3DEnabled : 1 { false };
 #endif
-    bool useLegacyBackgroundSizeShorthandBehavior { false };
-    bool focusVisibleEnabled { false };
-    bool hasPseudoClassEnabled { false };
-    bool cascadeLayersEnabled { false };
-    bool overflowClipEnabled { false };
-    bool gradientPremultipliedAlphaInterpolationEnabled { false };
-    bool gradientInterpolationColorSpacesEnabled { false };
-    bool subgridEnabled { false };
-    bool masonryEnabled { false };
-    bool cssNestingEnabled { false };
-    bool cssPaintingAPIEnabled { false };
+    bool masonryEnabled : 1 { false };
+    bool cssNestingEnabled : 1 { false };
+    bool cssPaintingAPIEnabled : 1 { false };
+    bool cssScopeAtRuleEnabled : 1 { false };
+    bool cssShapeFunctionEnabled : 1 { false };
+    bool cssStartingStyleAtRuleEnabled : 1 { false };
+    bool cssStyleQueriesEnabled : 1 { false };
+    bool cssTextUnderlinePositionLeftRightEnabled : 1 { false };
+    bool cssBackgroundClipBorderAreaEnabled : 1 { false };
+    bool cssWordBreakAutoPhraseEnabled : 1 { false };
+    bool popoverAttributeEnabled : 1 { false };
+    bool sidewaysWritingModesEnabled : 1 { false };
+    bool cssTextWrapPrettyEnabled : 1 { false };
+    bool highlightAPIEnabled : 1 { false };
+    bool grammarAndSpellingPseudoElementsEnabled : 1 { false };
+    bool customStateSetEnabled : 1 { false };
+    bool thumbAndTrackPseudoElementsEnabled : 1 { false };
+#if ENABLE(SERVICE_CONTROLS)
+    bool imageControlsEnabled : 1 { false };
+#endif
+    bool colorLayersEnabled : 1 { false };
+    bool lightDarkEnabled : 1 { false };
+    bool targetTextPseudoElementEnabled : 1 { false };
+    bool viewTransitionTypesEnabled : 1 { false };
 
     // Settings, those affecting properties.
     CSSPropertySettings propertySettings;
 
     CSSParserContext(CSSParserMode, const URL& baseURL = URL());
-    WEBCORE_EXPORT CSSParserContext(const Document&, const URL& baseURL = URL(), const String& charset = emptyString());
+    WEBCORE_EXPORT CSSParserContext(const Document&);
+    CSSParserContext(const Document&, const URL& baseURL, const String& charset = emptyString());
     ResolvedURL completeURL(const String&) const;
-};
 
-bool operator==(const CSSParserContext&, const CSSParserContext&);
-inline bool operator!=(const CSSParserContext& a, const CSSParserContext& b) { return !(a == b); }
+    bool operator==(const CSSParserContext&) const = default;
+};
 
 void add(Hasher&, const CSSParserContext&);
 

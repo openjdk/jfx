@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2021 Apple Inc. All rights reserved.
+ * Copyright (C) 2021-2024 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -35,21 +35,22 @@ namespace WebCore {
 
 class RTCDtlsTransport;
 
-class RTCSctpTransport final : public RefCounted<RTCSctpTransport>, public ActiveDOMObject, public EventTarget, public RTCSctpTransportBackend::Client {
-    WTF_MAKE_ISO_ALLOCATED(RTCSctpTransport);
+class RTCSctpTransport final : public RefCounted<RTCSctpTransport>, public ActiveDOMObject, public EventTarget, public RTCSctpTransportBackendClient {
+    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(RTCSctpTransport);
 public:
     static Ref<RTCSctpTransport> create(ScriptExecutionContext&, UniqueRef<RTCSctpTransportBackend>&&, Ref<RTCDtlsTransport>&&);
     ~RTCSctpTransport();
 
-    using RefCounted<RTCSctpTransport>::ref;
-    using RefCounted<RTCSctpTransport>::deref;
+    // ActiveDOMObject.
+    void ref() const final { RefCounted::ref(); }
+    void deref() const final { RefCounted::deref(); }
 
     RTCDtlsTransport& transport() { return m_transport.get(); }
     RTCSctpTransportState state() const { return m_state; }
-    double maxMessageSize() const { return m_maxMessageSize; }
+    double maxMessageSize() const { return m_maxMessageSize.value_or(std::numeric_limits<double>::infinity()); }
     std::optional<unsigned short>  maxChannels() const { return m_maxChannels; }
 
-    void update() { }
+    void updateMaxMessageSize(std::optional<double>);
 
     const RTCSctpTransportBackend& backend() const { return m_backend.get(); }
 
@@ -57,14 +58,13 @@ private:
     RTCSctpTransport(ScriptExecutionContext&, UniqueRef<RTCSctpTransportBackend>&&, Ref<RTCDtlsTransport>&&);
 
     // EventTarget
-    EventTargetInterface eventTargetInterface() const final { return RTCSctpTransportEventTargetInterfaceType; }
+    enum EventTargetInterfaceType eventTargetInterface() const final { return EventTargetInterfaceType::RTCSctpTransport; }
     ScriptExecutionContext* scriptExecutionContext() const final { return ActiveDOMObject::scriptExecutionContext(); }
     void refEventTarget() final { ref(); }
     void derefEventTarget() final { deref(); }
 
     // ActiveDOMObject
     void stop() final;
-    const char* activeDOMObjectName() const final { return "RTCSctpTransport"; }
     bool virtualHasPendingActivity() const final;
 
     // RTCSctpTransport::Client
@@ -73,7 +73,7 @@ private:
     UniqueRef<RTCSctpTransportBackend> m_backend;
     Ref<RTCDtlsTransport> m_transport;
     RTCSctpTransportState m_state { RTCSctpTransportState::Connecting };
-    double m_maxMessageSize { std::numeric_limits<double>::max() };
+    std::optional<double> m_maxMessageSize;
     std::optional<unsigned short> m_maxChannels;
 };
 

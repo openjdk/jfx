@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -33,11 +33,11 @@ import javafx.scene.Node;
 import javafx.scene.Parent;
 import javafx.scene.Scene;
 
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
 import java.util.function.IntPredicate;
-import java.util.stream.Collectors;
 
 class ControlUtils {
     private ControlUtils() { }
@@ -54,20 +54,26 @@ class ControlUtils {
         });
     }
 
-    static void requestFocusOnControlOnlyIfCurrentFocusOwnerIsChild(Control c) {
+    static boolean controlShouldRequestFocusIfCurrentFocusOwnerIsChild(Control c) {
         Scene scene = c.getScene();
         final Node focusOwner = scene == null ? null : scene.getFocusOwner();
         if (focusOwner == null) {
-            c.requestFocus();
+            return true;
         } else if (! c.equals(focusOwner)) {
             Parent p = focusOwner.getParent();
             while (p != null) {
                 if (c.equals(p)) {
-                    c.requestFocus();
-                    break;
+                    return true;
                 }
                 p = p.getParent();
             }
+        }
+        return false;
+    }
+
+    static void requestFocusOnControlOnlyIfCurrentFocusOwnerIsChild(Control c) {
+        if (controlShouldRequestFocusIfCurrentFocusOwnerIsChild(c)) {
+            c.requestFocus();
         }
     }
 
@@ -161,24 +167,27 @@ class ControlUtils {
         sm.selectedIndices._beginChange();
 
         while (c.next()) {
-            // it may look like all we are doing here is collecting the removed elements (and
-            // counting the added elements), but the call to 'peek' is also crucial - it is
-            // ensuring that the selectedIndices bitset is correctly updated.
-
             sm.startAtomic();
-            final List<Integer> removed = c.getRemoved().stream()
+
+            final List<Integer> removed = new ArrayList<>(c.getRemovedSize());
+            c.getRemoved().stream()
                     .mapToInt(TablePositionBase::getRow)
                     .distinct()
                     .filter(removeRowFilter)
-                    .boxed()
-                    .peek(sm.selectedIndices::clear)
-                    .collect(Collectors.toList());
+                    .forEach(row -> {
+                        removed.add(row);
+                        sm.selectedIndices.clear(row);
+                    });
 
-            final int addedSize = (int)c.getAddedSubList().stream()
+            final int[] addedSize = new int[1];
+            c.getAddedSubList().stream()
                     .mapToInt(TablePositionBase::getRow)
                     .distinct()
-                    .peek(sm.selectedIndices::set)
-                    .count();
+                    .forEach(row -> {
+                        addedSize[0]++;
+                        sm.selectedIndices.set(row);
+                    });
+
             sm.stopAtomic();
 
             int from = c.getFrom();
@@ -188,7 +197,7 @@ class ControlUtils {
                 int tpRow = c.getList().get(from).getRow();
                 from = sm.selectedIndices.indexOf(tpRow);
             }
-            final int to = from + addedSize;
+            final int to = from + addedSize[0];
 
             if (c.wasReplaced()) {
                 sm.selectedIndices._nextReplace(from, to, removed);
@@ -205,12 +214,12 @@ class ControlUtils {
             return;
         }
 
-        // Fix for RT-31577 - the selectedItems list was going to
+        // Fix for JDK-8123234 - the selectedItems list was going to
         // empty, but the selectedItem property was staying non-null.
         // There is a unit test for this, so if a more elegant solution
         // can be found in the future and this code removed, the unit
         // test will fail if it isn't fixed elsewhere.
-        // makeAtomic toggle added to resolve RT-32618
+        // makeAtomic toggle added to resolve JDK-8117117
         if (sm.getSelectedItems().isEmpty() && sm.getSelectedItem() != null) {
             sm.setSelectedItem(null);
         }

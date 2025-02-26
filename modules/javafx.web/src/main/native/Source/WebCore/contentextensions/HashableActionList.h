@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015 Apple Inc. All rights reserved.
+ * Copyright (C) 2015-2023 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -45,7 +45,7 @@ struct HashableActionList {
         , state(Valid)
     {
         std::sort(actions.begin(), actions.end());
-        StringHasher hasher;
+        SuperFastHash hasher;
         hasher.addCharactersAssumingAligned(reinterpret_cast<const UChar*>(actions.data()), actions.size() * sizeof(uint64_t) / sizeof(UChar));
         hash = hasher.hash();
     }
@@ -56,11 +56,6 @@ struct HashableActionList {
     bool operator==(const HashableActionList& other) const
     {
         return state == other.state && actions == other.actions;
-    }
-
-    bool operator!=(const HashableActionList& other) const
-    {
-        return !(*this == other);
     }
 
     Vector<uint64_t> actions;

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2017, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -39,16 +39,19 @@ public class HTMLMapElementImpl extends HTMLElementImpl implements HTMLMapElemen
 
 
 // Attributes
+    @Override
     public HTMLCollection getAreas() {
         return HTMLCollectionImpl.getImpl(getAreasImpl(getPeer()));
     }
     native static long getAreasImpl(long peer);
 
+    @Override
     public String getName() {
         return getNameImpl(getPeer());
     }
     native static String getNameImpl(long peer);
 
+    @Override
     public void setName(String value) {
         setNameImpl(getPeer(), value);
     }

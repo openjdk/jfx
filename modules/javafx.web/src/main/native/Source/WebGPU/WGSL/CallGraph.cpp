@@ -29,73 +29,102 @@
 #include "AST.h"
 #include "ASTVisitor.h"
 #include "WGSLShaderModule.h"
+#include <wtf/Deque.h>
 
 namespace WGSL {
-
-CallGraph::CallGraph(ShaderModule& shaderModule)
-    : m_ast(shaderModule)
-{
-}
 
 class CallGraphBuilder : public AST::Visitor {
 public:
     CallGraphBuilder(ShaderModule& shaderModule)
-        : m_callGraph(shaderModule)
+        : m_shaderModule(shaderModule)
     {
     }
 
-    CallGraph build();
+    void build();
 
-    // FIXME: we also need to visit function calls when we add support for them
     void visit(AST::Function&) override;
+    void visit(AST::CallExpression&) override;
 
 private:
     void initializeMappings();
 
+    ShaderModule& m_shaderModule;
     CallGraph m_callGraph;
-    AST::Function* m_currentFunction;
+    HashMap<AST::Function*, unsigned> m_calleeBuildingMap;
+    Vector<CallGraph::Callee>* m_callees { nullptr };
+    AST::Function* m_currentFunction { nullptr };
+    Deque<AST::Function*> m_queue;
 };
 
-CallGraph CallGraphBuilder::build()
+void CallGraphBuilder::build()
 {
     initializeMappings();
-    return m_callGraph;
+    m_shaderModule.setCallGraph(WTFMove(m_callGraph));
 }
 
 void CallGraphBuilder::initializeMappings()
 {
-    for (auto& functionDecl : m_callGraph.m_ast.functions()) {
-        const auto& name = functionDecl.name();
+    for (auto& declaration : m_shaderModule.declarations()) {
+        auto* function = dynamicDowncast<AST::Function>(declaration);
+        if (!function)
+            continue;
+
+        const auto& name = function->name();
         {
-            auto result = m_callGraph.m_functionsByName.add(name, &functionDecl);
+            auto result = m_callGraph.m_functionsByName.add(name, function);
             ASSERT_UNUSED(result, result.isNewEntry);
         }
 
-        {
-            auto result = m_callGraph.m_callees.add(&functionDecl, Vector<CallGraph::Callee>());
-            ASSERT_UNUSED(result, result.isNewEntry);
-        }
+        if (!function->stage())
+            continue;
 
-        for (auto& attribute : functionDecl.attributes()) {
-            if (is<AST::StageAttribute>(attribute)) {
-                auto stage = downcast<AST::StageAttribute>(attribute).stage();
-                m_callGraph.m_entrypoints.append({ functionDecl, stage });
-                break;
+        m_callGraph.m_entrypoints.append({ *function, *function->stage(), function->name() });
+        m_queue.append(function);
             }
-        }
-    }
+
+    while (!m_queue.isEmpty())
+        visit(*m_queue.takeFirst());
 }
 
-void CallGraphBuilder::visit(AST::Function& functionDecl)
+void CallGraphBuilder::visit(AST::Function& function)
 {
-    m_currentFunction = &functionDecl;
-    checkErrorAndVisit(functionDecl.body());
+    auto result = m_callGraph.m_calleeMap.add(&function, Vector<CallGraph::Callee>());
+    if (!result.isNewEntry)
+        return;
+
+    ASSERT(!m_callees);
+    m_callees = &result.iterator->value;
+    m_currentFunction = &function;
+    AST::Visitor::visit(function);
+    m_calleeBuildingMap.clear();
     m_currentFunction = nullptr;
+    m_callees = nullptr;
 }
 
-CallGraph buildCallGraph(ShaderModule& shaderModule)
+void CallGraphBuilder::visit(AST::CallExpression& call)
 {
-    return CallGraphBuilder(shaderModule).build();
+    for (auto& argument : call.arguments())
+        AST::Visitor::visit(argument);
+
+    auto* target = dynamicDowncast<AST::IdentifierExpression>(call.target());
+    if (!target)
+        return;
+
+    auto it = m_callGraph.m_functionsByName.find(target->identifier());
+    if (it == m_callGraph.m_functionsByName.end())
+        return;
+
+    m_queue.append(it->value);
+    auto result = m_calleeBuildingMap.add(it->value, m_callees->size());
+    if (result.isNewEntry)
+        m_callees->append(CallGraph::Callee { it->value, { { m_currentFunction, &call } } });
+    else
+        m_callees->at(result.iterator->value).callSites.append({ m_currentFunction, &call });
+}
+
+void buildCallGraph(ShaderModule& shaderModule)
+{
+    CallGraphBuilder(shaderModule).build();
 }
 
 } // namespace WGSL

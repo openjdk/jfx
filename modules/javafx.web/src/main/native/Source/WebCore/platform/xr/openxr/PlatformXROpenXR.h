@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2020 Igalia, S.L.
+ * Copyright (C) 2020-2023 Apple Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Library General Public
@@ -21,7 +22,7 @@
 
 #if ENABLE(WEBXR) && USE(OPENXR)
 
-#include "GLContextEGL.h"
+#include "GLContext.h"
 #include "OpenXRLayer.h"
 #include "OpenXRUtils.h"
 #include "PlatformXR.h"
@@ -52,7 +53,7 @@ class OpenXRInput;
 class OpenXRDevice final : public Device {
 public:
     static Ref<OpenXRDevice> create(XrInstance, XrSystemId, Ref<WorkQueue>&&, const OpenXRExtensions&, CompletionHandler<void()>&&);
-    ~OpenXRDevice();
+    virtual ~OpenXRDevice() = default;
 
 private:
     OpenXRDevice(XrInstance, XrSystemId, Ref<WorkQueue>&&, const OpenXRExtensions&);
@@ -92,7 +93,7 @@ private:
     XrSession m_session { XR_NULL_HANDLE };
     XrSessionState m_sessionState { XR_SESSION_STATE_UNKNOWN };
     XrGraphicsBindingEGLMNDX m_graphicsBinding;
-    std::unique_ptr<WebCore::GLContextEGL> m_egl;
+    std::unique_ptr<WebCore::GLContext> m_egl;
     RefPtr<WebCore::GraphicsContextGL> m_gl;
     XrFrameState m_frameState;
     Vector<XrView> m_frameViews;
@@ -109,7 +110,7 @@ private:
     XrSpace m_localSpace { XR_NULL_HANDLE };
     XrSpace m_viewSpace { XR_NULL_HANDLE };
     XrSpace m_stageSpace { XR_NULL_HANDLE };
-    Device::FrameData::StageParameters m_stageParameters;
+    FrameData::StageParameters m_stageParameters;
 };
 
 } // namespace PlatformXR

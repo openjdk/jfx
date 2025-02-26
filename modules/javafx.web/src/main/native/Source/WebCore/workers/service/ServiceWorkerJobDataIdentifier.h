@@ -25,9 +25,9 @@
 
 #pragma once
 
-#if ENABLE(SERVICE_WORKER)
-
 #include "ServiceWorkerTypes.h"
+
+#include <wtf/text/MakeString.h>
 
 namespace WebCore {
 
@@ -35,42 +35,12 @@ struct ServiceWorkerJobDataIdentifier {
     SWServerConnectionIdentifier connectionIdentifier;
     ServiceWorkerJobIdentifier jobIdentifier;
 
+    friend bool operator==(const ServiceWorkerJobDataIdentifier&, const ServiceWorkerJobDataIdentifier&) = default;
+
     String loggingString() const
     {
-        return connectionIdentifier.loggingString() + "-" + jobIdentifier.loggingString();
+        return makeString(connectionIdentifier.loggingString(), '-', jobIdentifier.loggingString());
     }
-
-    template<class Encoder> void encode(Encoder&) const;
-    template<class Decoder> static std::optional<ServiceWorkerJobDataIdentifier> decode(Decoder&);
 };
 
-inline bool operator==(const ServiceWorkerJobDataIdentifier& a, const ServiceWorkerJobDataIdentifier& b)
-{
-    return a.connectionIdentifier == b.connectionIdentifier && a.jobIdentifier == b.jobIdentifier;
-}
-
-template<class Encoder>
-void ServiceWorkerJobDataIdentifier::encode(Encoder& encoder) const
-{
-    encoder << connectionIdentifier << jobIdentifier;
-}
-
-template<class Decoder>
-std::optional<ServiceWorkerJobDataIdentifier> ServiceWorkerJobDataIdentifier::decode(Decoder& decoder)
-{
-    std::optional<SWServerConnectionIdentifier> connectionIdentifier;
-    decoder >> connectionIdentifier;
-    if (!connectionIdentifier)
-        return std::nullopt;
-
-    std::optional<ServiceWorkerJobIdentifier> jobIdentifier;
-    decoder >> jobIdentifier;
-    if (!jobIdentifier)
-        return std::nullopt;
-
-    return { { WTFMove(*connectionIdentifier), WTFMove(*jobIdentifier) } };
-}
-
 } // namespace WebCore
-
-#endif // ENABLE(SERVICE_WORKER)

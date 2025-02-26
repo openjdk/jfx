@@ -29,7 +29,7 @@
 
 namespace WebCore {
 
-enum class MediaSessionAction {
+enum class MediaSessionAction : uint8_t {
     Play,
     Pause,
     Seekbackward,
@@ -39,29 +39,12 @@ enum class MediaSessionAction {
     Skipad,
     Stop,
     Seekto,
+    Togglemicrophone,
+    Togglecamera,
+    Togglescreenshare,
     Settrack,
 };
 
 } // namespace WebCore
-
-namespace WTF {
-
-template<> struct EnumTraits<WebCore::MediaSessionAction> {
-    using values = EnumValues<
-        WebCore::MediaSessionAction,
-        WebCore::MediaSessionAction::Play,
-        WebCore::MediaSessionAction::Pause,
-        WebCore::MediaSessionAction::Seekbackward,
-        WebCore::MediaSessionAction::Seekforward,
-        WebCore::MediaSessionAction::Previoustrack,
-        WebCore::MediaSessionAction::Nexttrack,
-        WebCore::MediaSessionAction::Skipad,
-        WebCore::MediaSessionAction::Stop,
-        WebCore::MediaSessionAction::Seekto,
-        WebCore::MediaSessionAction::Settrack
-    >;
-};
-
-}
 
 #endif // ENABLE(MEDIA_SESSION)

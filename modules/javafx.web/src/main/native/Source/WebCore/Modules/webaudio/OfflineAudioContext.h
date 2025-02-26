@@ -37,7 +37,7 @@ namespace WebCore {
 struct OfflineAudioContextOptions;
 
 class OfflineAudioContext final : public BaseAudioContext {
-    WTF_MAKE_ISO_ALLOCATED(OfflineAudioContext);
+    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(OfflineAudioContext);
 public:
     static ExceptionOr<Ref<OfflineAudioContext>> create(ScriptExecutionContext&, const OfflineAudioContextOptions&);
     static ExceptionOr<Ref<OfflineAudioContext>> create(ScriptExecutionContext&, unsigned numberOfChannels, unsigned length, float sampleRate);
@@ -56,10 +56,12 @@ public:
 private:
     OfflineAudioContext(Document&, const OfflineAudioContextOptions&);
 
+    void lazyInitialize() final;
+    void increaseNoiseMultiplierIfNeeded();
+
     AudioBuffer* renderTarget() const { return destination().renderTarget(); }
 
     // ActiveDOMObject
-    const char* activeDOMObjectName() const final;
     bool virtualHasPendingActivity() const final;
 
     void settleRenderingPromise(ExceptionOr<Ref<AudioBuffer>>&&);

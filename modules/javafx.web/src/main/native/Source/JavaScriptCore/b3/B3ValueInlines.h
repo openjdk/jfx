@@ -75,6 +75,10 @@ namespace JSC { namespace B3 {
     case SExt8: \
     case SExt16: \
     case Trunc: \
+    case TruncHigh: \
+    case Stitch: \
+    case SExt8To64: \
+    case SExt16To64: \
     case SExt32: \
     case ZExt32: \
     case FloatToDouble: \
@@ -211,6 +215,7 @@ namespace JSC { namespace B3 {
     case VectorFloor: \
     case VectorTrunc: \
     case VectorTruncSat: \
+    case VectorRelaxedTruncSat: \
     case VectorConvert: \
     case VectorConvertLow: \
     case VectorNearest: \
@@ -228,13 +233,17 @@ namespace JSC { namespace B3 {
     case VectorExtaddPairwise: \
     case VectorMulSat: \
     case VectorSwizzle: \
+    case VectorRelaxedSwizzle: \
     case VectorMulByElement: \
+    case VectorShiftByVector: \
+    case VectorRelaxedMAdd: \
+    case VectorRelaxedNMAdd: \
         return MACRO(SIMDValue); \
     default: \
         RELEASE_ASSERT_NOT_REACHED(); \
     }
 
-ALWAYS_INLINE size_t Value::adjacencyListOffset() const
+ALWAYS_INLINE size_t Value::computeAdjacencyListOffset() const
 {
 #define VALUE_TYPE_SIZE(ValueType) sizeof(ValueType)
     DISPATCH_ON_KIND(VALUE_TYPE_SIZE);
@@ -400,11 +409,11 @@ inline bool Value::isNegativeZero() const
 {
     if (hasDouble()) {
         double value = asDouble();
-        return !value && std::signbit(value);
+        return value == 0.0 && std::signbit(value);
     }
     if (hasFloat()) {
         float value = asFloat();
-        return !value && std::signbit(value);
+        return value == 0.0f && std::signbit(value);
     }
     return false;
 }
@@ -414,13 +423,13 @@ inline bool Value::isRepresentableAs() const
 {
     switch (opcode()) {
     case Const32:
-        return B3::isRepresentableAs<T>(asInt32());
+        return WTF::isRepresentableAs<T>(asInt32());
     case Const64:
-        return B3::isRepresentableAs<T>(asInt64());
+        return WTF::isRepresentableAs<T>(asInt64());
     case ConstDouble:
-        return B3::isRepresentableAs<T>(asDouble());
+        return WTF::isRepresentableAs<T>(asDouble());
     case ConstFloat:
-        return B3::isRepresentableAs<T>(asFloat());
+        return WTF::isRepresentableAs<T>(asFloat());
     default:
         return false;
     }

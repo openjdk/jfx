@@ -27,11 +27,16 @@
 #pragma once
 
 #include <optional>
-#include <wtf/Span.h>
+#include <span>
+#include <wtf/Forward.h>
 #include <wtf/SystemFree.h>
 
 #if HAVE(BACKTRACE_SYMBOLS) || HAVE(BACKTRACE)
 #include <execinfo.h>
+#endif
+
+#if USE(LIBBACKTRACE)
+#include <backtrace.h>
 #endif
 
 #if HAVE(DLADDR)
@@ -48,19 +53,26 @@ namespace WTF {
 
 class PrintStream;
 
+#if USE(LIBBACKTRACE)
+WTF_EXPORT_PRIVATE char** symbolize(void* const*, int);
+#endif
+
 class StackTrace {
     WTF_MAKE_FAST_ALLOCATED;
 public:
     WTF_EXPORT_PRIVATE NEVER_INLINE static std::unique_ptr<StackTrace> captureStackTrace(size_t maxFrames, size_t framesToSkip = 0);
 
-    Span<void* const> stack() const
+    std::span<void* const> stack() const
     {
-        return Span<void* const> { m_stack + m_initialFrame, m_size };
+        return std::span<void* const> { m_stack + m_initialFrame, m_size };
     }
 
     void dump(PrintStream&) const;
-private:
+    template<typename Functor> // void Functor(int frameNumber, void* stackFrame, const char* name)
+    void forEachFrame(Functor) const;
+    WTF_EXPORT_PRIVATE String toString() const;
 
+private:
     StackTrace(size_t size, size_t initialFrame)
         : m_size(size)
         , m_initialFrame(initialFrame)
@@ -74,7 +86,7 @@ private:
 
 class StackTraceSymbolResolver {
 public:
-    StackTraceSymbolResolver(Span<void* const> stack)
+    StackTraceSymbolResolver(std::span<void* const> stack)
         : m_stack(stack)
     {
     }
@@ -105,7 +117,11 @@ public:
     template<typename Functor>
     void forEach(Functor functor) const
     {
-#if HAVE(BACKTRACE_SYMBOLS)
+#if USE(LIBBACKTRACE)
+        char** symbols = symbolize(m_stack.data(), m_stack.size());
+        if (!symbols)
+            return;
+#elif HAVE(BACKTRACE_SYMBOLS)
         char** symbols = backtrace_symbols(m_stack.data(), m_stack.size());
         if (!symbols)
             return;
@@ -123,7 +139,7 @@ public:
             if (demangled)
                 name = demangled->demangledName() ? demangled->demangledName() : demangled->mangledName();
 #if HAVE(BACKTRACE_SYMBOLS)
-            if (!name)
+            if (!name || !strcmp(name, "<redacted>"))
                 name = symbols[i];
 #elif OS(WINDOWS)
             if (!name && DbgHelper::SymFromAddress(hProc, reinterpret_cast<DWORD64>(m_stack[i]), nullptr, symbolInfo))
@@ -132,17 +148,21 @@ public:
             functor(i + 1, m_stack[i], name);
         }
 
-#if HAVE(BACKTRACE_SYMBOLS)
+#if USE(LIBBACKTRACE)
+        for (size_t i = 0; i < m_stack.size(); ++i)
+            free(symbols[i]);
+        free(symbols);
+#elif HAVE(BACKTRACE_SYMBOLS)
         free(symbols);
 #endif
     }
 private:
-    Span<void* const> m_stack;
+    std::span<void* const> m_stack;
 };
 
 class StackTracePrinter {
 public:
-    StackTracePrinter(Span<void* const> stack, const char* prefix = "")
+    StackTracePrinter(std::span<void* const> stack, const char* prefix = "")
         : m_stack(stack)
         , m_prefix(prefix)
     {
@@ -157,13 +177,19 @@ public:
     WTF_EXPORT_PRIVATE void dump(PrintStream&) const;
 
 private:
-    const Span<void* const> m_stack;
+    const std::span<void* const> m_stack;
     const char* const m_prefix;
 };
 
 inline void StackTrace::dump(PrintStream& out) const
 {
     StackTracePrinter { *this }.dump(out);
+}
+
+template<typename Functor>
+void StackTrace::forEachFrame(Functor functor) const
+{
+    StackTraceSymbolResolver { *this }.forEach(functor);
 }
 
 } // namespace WTF

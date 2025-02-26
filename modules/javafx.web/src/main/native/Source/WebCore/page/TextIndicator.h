@@ -27,7 +27,6 @@
 
 #include "FloatRect.h"
 #include "Image.h"
-#include <wtf/EnumTraits.h>
 #include <wtf/OptionSet.h>
 #include <wtf/RefCounted.h>
 #include <wtf/Seconds.h>
@@ -35,8 +34,8 @@
 
 namespace WebCore {
 
-class Frame;
 class GraphicsContext;
+class LocalFrame;
 
 struct SimpleRange;
 
@@ -121,6 +120,9 @@ enum class TextIndicatorOption : uint16_t {
     // By default, TextIndicator does not consider the user-select property.
     // If this option is set, expand the range to include the highest `user-select: all` ancestor.
     UseUserSelectAllCommonAncestor = 1 << 12,
+
+    // If this option is set, exclude all content that is replaced by a separate render pass, like images, media, etc.
+    SkipReplacedContent = 1 << 13,
 };
 
 struct TextIndicatorData {
@@ -146,7 +148,7 @@ public:
     constexpr static float defaultVerticalMargin { 1 };
 
     WEBCORE_EXPORT static Ref<TextIndicator> create(const TextIndicatorData&);
-    WEBCORE_EXPORT static RefPtr<TextIndicator> createWithSelectionInFrame(Frame&, OptionSet<TextIndicatorOption>, TextIndicatorPresentationTransition, FloatSize margin = FloatSize(defaultHorizontalMargin, defaultVerticalMargin));
+    WEBCORE_EXPORT static RefPtr<TextIndicator> createWithSelectionInFrame(LocalFrame&, OptionSet<TextIndicatorOption>, TextIndicatorPresentationTransition, FloatSize margin = FloatSize(defaultHorizontalMargin, defaultVerticalMargin));
     WEBCORE_EXPORT static RefPtr<TextIndicator> createWithRange(const SimpleRange&, OptionSet<TextIndicatorOption>, TextIndicatorPresentationTransition, FloatSize margin = FloatSize(defaultHorizontalMargin, defaultVerticalMargin));
 
     WEBCORE_EXPORT ~TextIndicator();
@@ -157,6 +159,7 @@ public:
     float contentImageScaleFactor() const { return m_data.contentImageScaleFactor; }
     Image* contentImageWithHighlight() const { return m_data.contentImageWithHighlight.get(); }
     Image* contentImage() const { return m_data.contentImage.get(); }
+    RefPtr<Image> protectedContentImage() const { return contentImage(); }
 
     TextIndicatorPresentationTransition presentationTransition() const { return m_data.presentationTransition; }
     void setPresentationTransition(TextIndicatorPresentationTransition transition) { m_data.presentationTransition = transition; }
@@ -170,36 +173,3 @@ private:
 };
 
 } // namespace WebKit
-
-namespace WTF {
-
-template<> struct EnumTraits<WebCore::TextIndicatorOption> {
-    using values = EnumValues<
-        WebCore::TextIndicatorOption,
-        WebCore::TextIndicatorOption::RespectTextColor,
-        WebCore::TextIndicatorOption::PaintBackgrounds,
-        WebCore::TextIndicatorOption::PaintAllContent,
-        WebCore::TextIndicatorOption::IncludeSnapshotWithSelectionHighlight,
-        WebCore::TextIndicatorOption::TightlyFitContent,
-        WebCore::TextIndicatorOption::UseBoundingRectAndPaintAllContentForComplexRanges,
-        WebCore::TextIndicatorOption::IncludeMarginIfRangeMatchesSelection,
-        WebCore::TextIndicatorOption::ExpandClipBeyondVisibleRect,
-        WebCore::TextIndicatorOption::DoNotClipToVisibleRect,
-        WebCore::TextIndicatorOption::IncludeSnapshotOfAllVisibleContentWithoutSelection,
-        WebCore::TextIndicatorOption::UseSelectionRectForSizing,
-        WebCore::TextIndicatorOption::ComputeEstimatedBackgroundColor,
-        WebCore::TextIndicatorOption::UseUserSelectAllCommonAncestor
-    >;
-};
-
-template<> struct EnumTraits<WebCore::TextIndicatorPresentationTransition> {
-    using values = EnumValues<
-        WebCore::TextIndicatorPresentationTransition,
-        WebCore::TextIndicatorPresentationTransition::None,
-        WebCore::TextIndicatorPresentationTransition::Bounce,
-        WebCore::TextIndicatorPresentationTransition::BounceAndCrossfade,
-        WebCore::TextIndicatorPresentationTransition::FadeIn
-    >;
-};
-
-} // namespace WTF

@@ -123,7 +123,11 @@
 #include "gstplugins-lite.h"
 #endif // GSTREAMER_LITE
 
-#include "gst-i18n-lib.h"
+#ifdef GST_FULL_STATIC_COMPILATION
+void gst_init_static_plugins ();
+#endif
+
+#include <glib/gi18n-lib.h>
 #include <locale.h>             /* for LC_ALL */
 
 #include "gst.h"
@@ -142,7 +146,7 @@ gboolean fxavplugins_init (GstPlugin * plugin);
 
 static gboolean gst_initialized = FALSE;
 static gboolean gst_deinitialized = FALSE;
-static GMutex init_lock;
+static GRecMutex init_lock;
 
 GstClockTime _priv_gst_start_time;
 
@@ -179,16 +183,6 @@ static gboolean parse_goption_arg (const gchar * s_opt,
 
 GSList *_priv_gst_preload_plugins = NULL;
 
-static void
-debug_log_handler (const gchar * log_domain,
-    GLogLevelFlags log_level, const gchar * message, gpointer user_data)
-{
-  g_log_default_handler (log_domain, log_level, message, user_data);
-  /* FIXME: do we still need this ? fatal errors these days are all
-   * other than core errors */
-  /* g_on_error_query (NULL); */
-}
-
 enum
 {
   ARG_VERSION = 1,
@@ -201,7 +195,6 @@ enum
   ARG_DEBUG_COLOR_MODE,
   ARG_DEBUG_HELP,
 #endif
-  ARG_PLUGIN_SPEW,
   ARG_PLUGIN_PATH,
   ARG_PLUGIN_LOAD,
   ARG_SEGTRAP_DISABLE,
@@ -216,24 +209,21 @@ enum
  */
 
 #ifndef GSTREAMER_LITE
-#ifdef G_OS_WIN32
+#if defined(G_OS_WIN32) && !defined(GST_STATIC_COMPILATION)
 /* Note: DllMain is only called when DLLs are loaded or unloaded, so this will
  * never be called if libgstreamer-1.0 is linked statically. Do not add any code
  * here to, say, initialize variables or set things up since that will only
  * happen for dynamically-built GStreamer.
- *
- * Also, ideally this should not be defined when GStreamer is built statically.
- * i.e., it should be conditional on #ifdef DLL_EXPORT. It will be ignored, but
- * if other libraries make the same mistake of defining it when building
- * statically, there will be a symbol collision during linking. Fixing this
- * requires one to build two object files: one for static linking and another
- * for dynamic linking. */
+ */
 BOOL WINAPI DllMain (HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpvReserved);
 BOOL WINAPI
 DllMain (HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpvReserved)
 {
-  if (fdwReason == DLL_PROCESS_ATTACH)
+  if (fdwReason == DLL_PROCESS_ATTACH) {
     _priv_gst_dll_handle = (HMODULE) hinstDLL;
+    priv_gst_clock_init ();
+  }
+
   return TRUE;
 }
 
@@ -294,10 +284,6 @@ gst_init_get_option_group (void)
     {"gst-debug-disable", 0, G_OPTION_FLAG_NO_ARG, G_OPTION_ARG_CALLBACK,
         (gpointer) parse_goption_arg, N_("Disable debugging"), NULL},
 #endif
-    {"gst-plugin-spew", 0, G_OPTION_FLAG_NO_ARG, G_OPTION_ARG_CALLBACK,
-          (gpointer) parse_goption_arg,
-          N_("Enable verbose plugin loading diagnostics"),
-        NULL},
     {"gst-plugin-path", 0, 0, G_OPTION_ARG_CALLBACK,
           (gpointer) parse_goption_arg,
         N_("Colon-separated paths containing plugins"), N_("PATHS")},
@@ -428,7 +414,7 @@ gst_init_check (int *argc, char **argv[], GError ** error)
 #endif
   gboolean res;
 
-  g_mutex_lock (&init_lock);
+  g_rec_mutex_lock (&init_lock);
 
 #ifdef GSTREAMER_LITE
 #ifdef ENABLE_VISUAL_STUDIO_MEMORY_LEAKS_DETECTION
@@ -441,7 +427,7 @@ gst_init_check (int *argc, char **argv[], GError ** error)
 
   if (gst_initialized) {
     GST_DEBUG ("already initialized gst");
-    g_mutex_unlock (&init_lock);
+    g_rec_mutex_unlock (&init_lock);
     return TRUE;
   }
 #ifndef GST_DISABLE_OPTION_PARSING
@@ -460,7 +446,7 @@ gst_init_check (int *argc, char **argv[], GError ** error)
 
   gst_initialized = res;
 
-  g_mutex_unlock (&init_lock);
+  g_rec_mutex_unlock (&init_lock);
 
   return res;
 }
@@ -483,11 +469,6 @@ gst_init_check (int *argc, char **argv[], GError ** error)
  * WARNING: This function will terminate your program if it was unable to
  * initialize GStreamer for some reason. If you want your program to fall back,
  * use gst_init_check() instead.
- *
- * WARNING: This function does not work in the same way as corresponding
- * functions in other glib-style libraries, such as gtk_init\(\). In
- * particular, unknown command line options cause this function to
- * abort program execution.
  */
 void
 gst_init (int *argc, char **argv[])
@@ -582,6 +563,8 @@ init_pre (GOptionContext * context, GOptionGroup * group, gpointer data,
   g_type_init ();
 #endif // GSTREAMER_LITE
 
+  priv_gst_clock_init ();
+
   find_executable_path ();
 
   _priv_gst_start_time = gst_util_get_timestamp ();
@@ -669,6 +652,9 @@ gst_register_core_elements (GstPlugin * plugin)
 static void
 init_static_plugins (void)
 {
+#ifdef GST_FULL_STATIC_COMPILATION
+  gst_init_static_plugins ();
+#else
   GModule *module;
 
   /* Call gst_init_static_plugins() defined in libgstreamer-full-1.0 in the case
@@ -682,6 +668,7 @@ init_static_plugins (void)
     }
     g_module_close (module);
   }
+#endif
 }
 
 /*
@@ -699,16 +686,10 @@ static gboolean
 init_post (GOptionContext * context, GOptionGroup * group, gpointer data,
     GError ** error)
 {
-  GLogLevelFlags llf;
-
   if (gst_initialized) {
     GST_DEBUG ("already initialized");
     return TRUE;
   }
-
-  llf = G_LOG_LEVEL_CRITICAL | G_LOG_LEVEL_ERROR | G_LOG_FLAG_FATAL;
-  /* TODO: should we also set up a handler for the other gst libs/domains? */
-  g_log_set_handler (G_LOG_DOMAIN, llf, debug_log_handler, NULL);
 
   _priv_gst_mini_object_initialize ();
   _priv_gst_quarks_initialize ();
@@ -862,21 +843,15 @@ init_post (GOptionContext * context, GOptionGroup * group, gpointer data,
 #endif // STATIC_BUILD
 #endif // GSTREAMER_LITE
 
-  init_static_plugins ();
-
   /*
    * Any errors happening below this point are non-fatal, we therefore mark
    * gstreamer as being initialized, since it is the case from a plugin point of
    * view.
-   *
-   * If anything fails, it will be put back to %FALSE in gst_init_check().
-   * This allows some special plugins that would call gst_init() to not cause a
-   * looping effect (i.e. initializing GStreamer twice).
    */
   gst_initialized = TRUE;
 
-  if (!gst_update_registry ())
-    return FALSE;
+  init_static_plugins ();
+  gst_update_registry ();
 
   GST_INFO ("GLib runtime version: %d.%d.%d", glib_major_version,
       glib_minor_version, glib_micro_version);
@@ -888,7 +863,7 @@ init_post (GOptionContext * context, GOptionGroup * group, gpointer data,
    * environment variable */
   _priv_gst_plugin_feature_rank_initialize ();
 
-#ifndef GST_DISABLE_GST_DEBUG
+#ifndef GST_DISABLE_GST_TRACER_HOOKS
   _priv_gst_tracing_init ();
 #endif
 
@@ -1063,8 +1038,6 @@ parse_one_option (gint opt, const gchar * arg, GError ** err)
       gst_debug_help ();
       exit (0);
 #endif
-    case ARG_PLUGIN_SPEW:
-      break;
     case ARG_PLUGIN_PATH:
 #ifndef GST_DISABLE_REGISTRY
       if (!_priv_gst_disable_registry)
@@ -1118,7 +1091,6 @@ parse_goption_arg (const gchar * opt,
     "--gst-debug-help", ARG_DEBUG_HELP},
 #endif
     {
-    "--gst-plugin-spew", ARG_PLUGIN_SPEW}, {
     "--gst-plugin-path", ARG_PLUGIN_PATH}, {
     "--gst-plugin-load", ARG_PLUGIN_LOAD}, {
     "--gst-disable-segtrap", ARG_SEGTRAP_DISABLE}, {
@@ -1156,12 +1128,11 @@ void
 gst_deinit (void)
 {
   GstBinClass *bin_class;
-  GstClock *clock;
 
-  g_mutex_lock (&init_lock);
+  g_rec_mutex_lock (&init_lock);
 
   if (!gst_initialized) {
-    g_mutex_unlock (&init_lock);
+    g_rec_mutex_unlock (&init_lock);
     return;
   }
   if (gst_deinitialized) {
@@ -1193,9 +1164,9 @@ gst_deinit (void)
     _gst_executable_path = NULL;
   }
 
-  clock = gst_system_clock_obtain ();
+  GstClock *clock = gst_system_clock_obtain ();
   gst_object_unref (clock);
-  gst_object_unref (clock);
+  gst_clear_object (&clock);
 
   _priv_gst_registry_cleanup ();
   _priv_gst_allocator_cleanup ();
@@ -1316,12 +1287,14 @@ gst_deinit (void)
 
   gst_deinitialized = TRUE;
   GST_INFO ("deinitialized GStreamer");
-  g_mutex_unlock (&init_lock);
+  g_rec_mutex_unlock (&init_lock);
 
+#ifndef GST_DISABLE_GST_DEBUG
   /* Doing this as the very last step to allow the above GST_INFO() to work
    * correctly. It's of course making the above statement a lie: for a short
    * while we're not deinitialized yet */
   _priv_gst_debug_cleanup ();
+#endif
 }
 
 /**

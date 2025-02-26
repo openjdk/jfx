@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2023, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,92 +25,30 @@
 
 package test.com.sun.javafx.animation;
 
-import javafx.animation.PauseTransition;
-import javafx.application.Application;
-import javafx.application.Platform;
-import javafx.stage.Stage;
+import org.junit.jupiter.api.Test;
+
+import javafx.animation.Animation;
+import javafx.animation.StrokeTransition;
 import javafx.util.Duration;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.Test;
 import test.util.Util;
 
-import java.util.concurrent.CountDownLatch;
+public class AnimationTest extends SynchronizationTest {
 
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
-import static org.junit.jupiter.api.Assertions.assertThrows;
+    @Test
+    public void testAnimation() throws InterruptedException {
+        runTest(this::startAnimation);
+    }
 
-public class AnimationTest {
+    private void startAnimation() {
+        var anim = new StrokeTransition(Duration.millis(10));
+        anim.setCycleCount(Animation.INDEFINITE);
 
-    private static final CountDownLatch startupLatch = new CountDownLatch(1);
-
-    private static Stage primaryStage;
-
-    public static class TestApp extends Application {
-
-        @Override
-        public void init() throws Exception {
-            assertFalse(Platform.isFxApplicationThread());
+        // Start and stop continuously until aborted by the test harness
+        while (true) {
+            anim.play();
+            Util.sleep(10);
+            anim.stop();
+            Util.sleep(10);
         }
-
-        @Override
-        public void start(Stage stage) throws Exception {
-            primaryStage = stage;
-            assertTrue(Platform.isFxApplicationThread());
-
-            startupLatch.countDown();
-        }
-
-    }
-
-    @BeforeClass
-    public static void setup() throws Exception {
-        Util.launch(startupLatch, TestApp.class);
-    }
-
-    @AfterClass
-    public static void shutdown() {
-        Util.shutdown(primaryStage);
-    }
-
-    @Test
-    public void animationOnFXThreadTest() throws InterruptedException {
-        final CountDownLatch l = new CountDownLatch(1);
-        Platform.runLater(() -> {
-            assertTrue(Platform.isFxApplicationThread());
-            PauseTransition pause = new PauseTransition(Duration.seconds(1));
-            pause.play();
-            pause.pause();
-            pause.stop();
-            l.countDown();
-        });
-        l.await();
-    }
-
-    @Test
-    public void startAnimationNotOnFXThreadTest() {
-        assertFalse(Platform.isFxApplicationThread());
-        PauseTransition pause = new PauseTransition(Duration.seconds(1));
-        assertThrows(IllegalStateException.class, pause::play);
-    }
-
-    @Test
-    public void pauseAnimationNotOnFXThreadTest() {
-        assertFalse(Platform.isFxApplicationThread());
-        PauseTransition pause = new PauseTransition(Duration.seconds(1));
-        Platform.runLater(pause::play);
-        assertThrows(IllegalStateException.class, pause::pause);
-    }
-
-    @Test
-    public void stopAnimationNotOnFXThreadTest() {
-        assertFalse(Platform.isFxApplicationThread());
-        PauseTransition pause = new PauseTransition(Duration.seconds(1));
-        Platform.runLater(() -> {
-            pause.play();
-            pause.pause();
-        });
-        assertThrows(IllegalStateException.class, pause::stop);
     }
 }

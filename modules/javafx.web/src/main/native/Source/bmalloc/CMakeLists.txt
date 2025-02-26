@@ -36,6 +36,8 @@ set(bmalloc_SOURCES
     bmalloc/ObjectTypeTable.cpp
     bmalloc/PerProcess.cpp
     bmalloc/Scavenger.cpp
+    bmalloc/TZoneHeap.cpp
+    bmalloc/TZoneHeapManager.cpp
     bmalloc/bmalloc.cpp
 
     libpas/src/libpas/bmalloc_heap.c
@@ -56,6 +58,7 @@ set(bmalloc_SOURCES
     libpas/src/libpas/pas_alignment.c
     libpas/src/libpas/pas_all_heaps.c
     libpas/src/libpas/pas_allocation_callbacks.c
+    libpas/src/libpas/pas_allocation_result.c
     libpas/src/libpas/pas_all_shared_page_directories.c
     libpas/src/libpas/pas_baseline_allocator.c
     libpas/src/libpas/pas_baseline_allocator_table.c
@@ -149,6 +152,7 @@ set(bmalloc_SOURCES
     libpas/src/libpas/pas_random.c
     libpas/src/libpas/pas_red_black_tree.c
     libpas/src/libpas/pas_redundant_local_allocator_node.c
+    libpas/src/libpas/pas_report_crash.c
     libpas/src/libpas/pas_reserved_memory_provider.c
     libpas/src/libpas/pas_root.c
     libpas/src/libpas/pas_scavenger.c
@@ -190,6 +194,8 @@ set(bmalloc_PUBLIC_HEADERS
     bmalloc/Algorithm.h
     bmalloc/AllIsoHeaps.h
     bmalloc/AllIsoHeapsInlines.h
+    bmalloc/AllocationCounts.h
+    bmalloc/CompactAllocationMode.h
     bmalloc/Allocator.h
     bmalloc/AvailableMemory.h
     bmalloc/BAssert.h
@@ -281,6 +287,9 @@ set(bmalloc_PUBLIC_HEADERS
     bmalloc/SmallPage.h
     bmalloc/StaticPerProcess.h
     bmalloc/StdLibExtras.h
+    bmalloc/TZoneHeap.h
+    bmalloc/TZoneHeapInlines.h
+    bmalloc/TZoneHeapManager.h
     bmalloc/VMAllocate.h
     bmalloc/Vector.h
     bmalloc/Zone.h
@@ -319,6 +328,7 @@ set(bmalloc_PUBLIC_HEADERS
     libpas/src/libpas/pas_allocation_callbacks.h
     libpas/src/libpas/pas_allocation_config.h
     libpas/src/libpas/pas_allocation_kind.h
+    libpas/src/libpas/pas_allocation_mode.h
     libpas/src/libpas/pas_allocation_result.h
     libpas/src/libpas/pas_allocator_counts.h
     libpas/src/libpas/pas_allocator_index.h
@@ -567,6 +577,8 @@ set(bmalloc_PUBLIC_HEADERS
     libpas/src/libpas/pas_reallocate_heap_teleport_rule.h
     libpas/src/libpas/pas_red_black_tree.h
     libpas/src/libpas/pas_redundant_local_allocator_node.h
+    libpas/src/libpas/pas_report_crash.h
+    libpas/src/libpas/pas_report_crash_pgm_report.h
     libpas/src/libpas/pas_reserved_memory_provider.h
     libpas/src/libpas/pas_root.h
     libpas/src/libpas/pas_scavenger.h
@@ -676,6 +688,11 @@ set(bmalloc_INTERFACE_DEPENDENCIES bmalloc_CopyHeaders)
 
 
 add_definitions(-D_GNU_SOURCE)
+add_definitions(-DPAS_BMALLOC=1)
+
+if (MSVC)
+    add_compile_options(/wd4206)
+endif ()
 
 set_source_files_properties(
     libpas/src/libpas/pas_bitfit_page_config_kind.c
@@ -684,7 +701,7 @@ set_source_files_properties(
     libpas/src/libpas/bmalloc_heap_config.c
     libpas/src/libpas/pas_heap_config_kind.c
     libpas/src/libpas/pas_segregated_page_config_kind.c
-    PROPERTIES COMPILE_OPTIONS "${COMPILE_C_AS_CXX}"
+    PROPERTIES LANGUAGE CXX
 )
 
 WEBKIT_FRAMEWORK_DECLARE(bmalloc)

@@ -47,19 +47,9 @@ struct CompositedClipData {
     {
     }
 
-    bool operator==(const CompositedClipData& other) const
-    {
-        return clippingLayer == other.clippingLayer
-            && clipRect == other.clipRect
-            && isOverflowScroll == other.isOverflowScroll;
-    }
+    friend bool operator==(const CompositedClipData&, const CompositedClipData&) = default;
 
-    bool operator!=(const CompositedClipData& other) const
-    {
-        return !(*this == other);
-    }
-
-    WeakPtr<RenderLayer> clippingLayer; // For scroller entries, the scrolling layer. For other entries, the most-descendant layer that has a clip.
+    SingleThreadWeakPtr<RenderLayer> clippingLayer; // For scroller entries, the scrolling layer. For other entries, the most-descendant layer that has a clip.
     RoundedRect clipRect; // In the coordinate system of the RenderLayer that owns the stack.
     bool isOverflowScroll { false };
 };
@@ -91,7 +81,7 @@ public:
 
     struct ClippingStackEntry {
         CompositedClipData clipData;
-        ScrollingNodeID overflowScrollProxyNodeID { 0 }; // The node for repositioning the scrolling proxy layer.
+        ScrollingNodeID overflowScrollProxyNodeID; // The node for repositioning the scrolling proxy layer.
         RefPtr<GraphicsLayer> clippingLayer;
         RefPtr<GraphicsLayer> scrollingLayer; // Only present for scrolling entries.
 

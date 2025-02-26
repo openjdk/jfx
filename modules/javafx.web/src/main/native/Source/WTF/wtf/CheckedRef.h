@@ -27,8 +27,12 @@
 
 #include <atomic>
 #include <wtf/Forward.h>
+#include <wtf/HashMap.h>
 #include <wtf/HashTraits.h>
 #include <wtf/RawPtrTraits.h>
+#include <wtf/SingleThreadIntegralWrapper.h>
+#include <wtf/StackTrace.h>
+#include <wtf/text/WTFString.h>
 
 #if ASSERT_ENABLED
 #include <wtf/Threading.h>
@@ -54,17 +58,25 @@ public:
         PtrTraits::unwrap(m_ptr)->incrementPtrCount();
     }
 
+    enum AdoptTag { Adopt };
+    CheckedRef(T& object, AdoptTag)
+        : m_ptr(&object)
+    {
+    }
+
     ALWAYS_INLINE CheckedRef(const CheckedRef& other)
         : m_ptr { PtrTraits::unwrap(other.m_ptr) }
     {
-        PtrTraits::unwrap(m_ptr)->incrementPtrCount();
+        auto* ptr = PtrTraits::unwrap(m_ptr);
+        ptr->incrementPtrCount();
     }
 
     template<typename OtherType, typename OtherPtrTraits>
     CheckedRef(const CheckedRef<OtherType, OtherPtrTraits>& other)
         : m_ptr { PtrTraits::unwrap(other.m_ptr) }
     {
-        PtrTraits::unwrap(m_ptr)->incrementPtrCount();
+        auto* ptr = PtrTraits::unwrap(m_ptr);
+        ptr->incrementPtrCount();
     }
 
     ALWAYS_INLINE CheckedRef(CheckedRef&& other)
@@ -90,16 +102,25 @@ public:
     const T* ptrAllowingHashTableEmptyValue() const { ASSERT(m_ptr || isHashTableEmptyValue()); return PtrTraits::unwrap(m_ptr); }
     T* ptrAllowingHashTableEmptyValue() { ASSERT(m_ptr || isHashTableEmptyValue()); return PtrTraits::unwrap(m_ptr); }
 
-    ALWAYS_INLINE const T* ptr() const { return PtrTraits::unwrap(m_ptr); }
-    ALWAYS_INLINE T* ptr() { return PtrTraits::unwrap(m_ptr); }
-    ALWAYS_INLINE const T& get() const { ASSERT(ptr()); return *ptr(); }
-    ALWAYS_INLINE T& get() { ASSERT(ptr()); return *ptr(); }
-    ALWAYS_INLINE const T* operator->() const { return ptr(); }
-    ALWAYS_INLINE T* operator->() { return ptr(); }
+    ALWAYS_INLINE T* ptr() const
+    {
+        // In normal execution, a CheckedPtr always points to an object with a non-zero ptrCount().
+        // When it detects a dangling pointer, WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR scribbles an object with zeroes and then leaks it.
+        // When we check ptrCountWithoutThreadCheck() here, we're checking for a scribbled object.
+        ASSERT(PtrTraits::unwrap(m_ptr)->ptrCountWithoutThreadCheck());
+        return PtrTraits::unwrap(m_ptr);
+    }
 
-    ALWAYS_INLINE operator const T&() const { return get(); }
-    ALWAYS_INLINE operator T&() { return get(); }
-    ALWAYS_INLINE bool operator!() const { return !get(); }
+    ALWAYS_INLINE T& get() const
+    {
+        ASSERT(ptr());
+        return *ptr();
+    }
+
+    ALWAYS_INLINE T* operator->() const { return ptr(); }
+
+    ALWAYS_INLINE operator T&() const { return get(); }
+    ALWAYS_INLINE explicit operator bool() const { return get(); }
 
     CheckedRef& operator=(T& reference)
     {
@@ -175,13 +196,15 @@ private:
 
 template <typename T, typename PtrTraits>
 struct GetPtrHelper<CheckedRef<T, PtrTraits>> {
-    typedef T* PtrType;
+    using PtrType = T*;
+    using UnderlyingType = T;
     static T* getPtr(const CheckedRef<T, PtrTraits>& p) { return const_cast<T*>(p.ptr()); }
 };
 
 template <typename T, typename U>
 struct IsSmartPtr<CheckedRef<T, U>> {
     static constexpr bool value = true;
+    static constexpr bool isNullable = true;
 };
 
 template<typename ExpectedType, typename ArgType, typename ArgPtrTraits>
@@ -194,6 +217,24 @@ template<typename ExpectedType, typename ArgType, typename ArgPtrTraits>
 inline bool is(const CheckedRef<ArgType, ArgPtrTraits>& source)
 {
     return is<ExpectedType>(source.get());
+}
+
+template<typename ExpectedType, typename ArgType, typename ArgPtrTraits>
+inline ExpectedType& downcast(CheckedRef<ArgType, ArgPtrTraits>& source)
+{
+    return downcast<ExpectedType>(source.get());
+}
+
+template<typename ExpectedType, typename ArgType, typename ArgPtrTraits>
+inline const ExpectedType& downcast(const CheckedRef<ArgType, ArgPtrTraits>& source)
+{
+    return downcast<ExpectedType>(source.get());
+}
+
+template<typename ExpectedType, typename ArgType, typename ArgPtrTraits>
+inline const ExpectedType& downcast(CheckedRef<const ArgType, ArgPtrTraits>& source)
+{
+    return downcast<ExpectedType>(source.get());
 }
 
 template<typename P> struct CheckedRefHashTraits : SimpleClassHashTraits<CheckedRef<P>> {
@@ -227,79 +268,56 @@ template<typename P> struct DefaultHash<CheckedRef<P>> : PtrHash<CheckedRef<P>> 
 
 template <typename StorageType, typename PtrCounterType> class CanMakeCheckedPtrBase {
 public:
-    ~CanMakeCheckedPtrBase() { RELEASE_ASSERT(!m_count); }
+    CanMakeCheckedPtrBase() = default;
+    CanMakeCheckedPtrBase(CanMakeCheckedPtrBase&&) { }
+    CanMakeCheckedPtrBase& operator=(CanMakeCheckedPtrBase&&) { return *this; }
+    CanMakeCheckedPtrBase(const CanMakeCheckedPtrBase&) { }
+    CanMakeCheckedPtrBase& operator=(const CanMakeCheckedPtrBase&) { return *this; }
+
+    ~CanMakeCheckedPtrBase() = default;
 
     PtrCounterType ptrCount() const { return m_count; }
     void incrementPtrCount() const { ++m_count; }
-    void decrementPtrCount() const { ASSERT(m_count); --m_count; }
+    void decrementPtrCount() const
+    {
+        // In normal execution, a CheckedPtr always points to an object with a non-zero ptrCount().
+        // When it detects a dangling pointer, WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR scribbles an object with zeroes and then leaks it.
+        // When we check ptrCountWithoutThreadCheck() here, we're checking for a scribbled object.
+        RELEASE_ASSERT(ptrCountWithoutThreadCheck());
+        --m_count;
+    }
+
+    ALWAYS_INLINE PtrCounterType ptrCountWithoutThreadCheck() const
+        {
+        if constexpr (std::is_same_v<StorageType, std::atomic<uint32_t>>)
+            return m_count;
+        else
+            return m_count.valueWithoutThreadCheck();
+        }
+
+    friend bool operator==(const CanMakeCheckedPtrBase&, const CanMakeCheckedPtrBase&) { return true; }
 
 private:
     mutable StorageType m_count { 0 };
 };
 
-template <typename IntegralType>
-class SingleThreadIntegralWrapper {
+template<typename T> class CanMakeCheckedPtr : public CanMakeCheckedPtrBase<SingleThreadIntegralWrapper<uint32_t>, uint32_t> {
 public:
-    SingleThreadIntegralWrapper(IntegralType);
-
-    operator IntegralType() const;
-    bool operator!() const;
-    SingleThreadIntegralWrapper& operator++();
-    SingleThreadIntegralWrapper& operator--();
-
-private:
-#if ASSERT_ENABLED && !USE(WEB_THREAD)
-    void assertThread() const { ASSERT(m_thread.ptr() == &Thread::current()); }
-#else
-    constexpr void assertThread() const { }
-#endif
-
-    IntegralType m_value;
-#if ASSERT_ENABLED && !USE(WEB_THREAD)
-    Ref<Thread> m_thread;
-#endif
+    ~CanMakeCheckedPtr()
+    {
+        static_assert(std::is_same<typename T::WTFIsFastAllocated, int>::value, "Objects that use CanMakeCheckedPtr must use FastMalloc (WTF_MAKE_FAST_ALLOCATED)");
+        static_assert(std::is_same<typename T::WTFDidOverrideDeleteForCheckedPtr, int>::value, "Objects that use CanMakeCheckedPtr must use WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR");
+    }
 };
 
-template <typename IntegralType>
-inline SingleThreadIntegralWrapper<IntegralType>::SingleThreadIntegralWrapper(IntegralType value)
-    : m_value { value }
-#if ASSERT_ENABLED && !USE(WEB_THREAD)
-    , m_thread { Thread::current() }
-#endif
-{ }
-
-template <typename IntegralType>
-inline SingleThreadIntegralWrapper<IntegralType>::operator IntegralType() const
-{
-    assertThread();
-    return m_value;
-}
-
-template <typename IntegralType>
-inline bool SingleThreadIntegralWrapper<IntegralType>::operator!() const
-{
-    assertThread();
-    return !m_value;
-}
-
-template <typename IntegralType>
-inline SingleThreadIntegralWrapper<IntegralType>& SingleThreadIntegralWrapper<IntegralType>::operator++()
-{
-    assertThread();
-    m_value++;
-    return *this;
-}
-
-template <typename IntegralType>
-inline SingleThreadIntegralWrapper<IntegralType>& SingleThreadIntegralWrapper<IntegralType>::operator--()
-{
-    assertThread();
-    m_value--;
-    return *this;
-}
-
-using CanMakeCheckedPtr = CanMakeCheckedPtrBase<SingleThreadIntegralWrapper<uint32_t>, uint32_t>;
-using CanMakeThreadSafeCheckedPtr = CanMakeCheckedPtrBase<std::atomic<uint32_t>, uint32_t>;
+template<typename T> class CanMakeThreadSafeCheckedPtr : public CanMakeCheckedPtrBase<std::atomic<uint32_t>, uint32_t> {
+public:
+    ~CanMakeThreadSafeCheckedPtr()
+    {
+        static_assert(std::is_same<typename T::WTFIsFastAllocated, int>::value, "Objects that use CanMakeCheckedPtr must use FastMalloc (WTF_MAKE_FAST_ALLOCATED)");
+        static_assert(std::is_same<typename T::WTFDidOverrideDeleteForCheckedPtr, int>::value, "Objects that use CanMakeCheckedPtr must use WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR");
+    }
+};
 
 } // namespace WTF
 

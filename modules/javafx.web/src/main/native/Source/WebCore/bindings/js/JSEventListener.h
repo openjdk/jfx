@@ -19,11 +19,11 @@
 
 #pragma once
 
-#include "DOMWindow.h"
 #include "DOMWrapperWorld.h"
 #include "EventListener.h"
 #include "EventNames.h"
 #include "HTMLElement.h"
+#include "LocalDOMWindow.h"
 #include "WebCoreJSClientData.h"
 #include <JavaScriptCore/StrongInlines.h>
 #include <JavaScriptCore/Weak.h>
@@ -35,7 +35,7 @@
 
 namespace WebCore {
 
-class JSEventListener : public EventListener, public JSVMClientData::Client {
+class JSEventListener : public EventListener, public JSVMClientDataClient {
 public:
     WEBCORE_EXPORT static Ref<JSEventListener> create(JSC::JSObject& listener, JSC::JSObject& wrapper, bool isAttribute, DOMWrapperWorld&);
 
@@ -62,7 +62,8 @@ public:
     void replaceJSFunctionForAttributeListener(JSC::JSObject* function, JSC::JSObject* wrapper);
     static bool wasCreatedFromMarkup(const EventListener& listener)
     {
-        return is<JSEventListener>(listener) && downcast<JSEventListener>(listener).wasCreatedFromMarkup();
+        auto* jsEventListener = dynamicDowncast<JSEventListener>(listener);
+        return jsEventListener && jsEventListener->wasCreatedFromMarkup();
     }
 
 private:
@@ -73,7 +74,7 @@ private:
     void visitJSFunction(JSC::SlotVisitor&) final;
     virtual String code() const { return String(); }
 
-    // JSVMClientData::Client
+    // JSVMClientDataClient
     void willDestroyVM() final;
 
 protected:

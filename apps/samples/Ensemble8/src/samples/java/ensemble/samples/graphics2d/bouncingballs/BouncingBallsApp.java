@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008, 2016, Oracle and/or its affiliates.
+ * Copyright (c) 2008, 2024, Oracle and/or its affiliates.
  * All rights reserved. Use is subject to license terms.
  *
  * This file is available and licensed under the following license:
@@ -32,16 +32,13 @@
 package ensemble.samples.graphics2d.bouncingballs;
 
 import javafx.application.Application;
-import javafx.stage.Stage;
+import javafx.event.ActionEvent;
+import javafx.geometry.Insets;
 import javafx.scene.Parent;
 import javafx.scene.Scene;
-import javafx.scene.paint.Color;
-import javafx.scene.Group;
-import javafx.scene.layout.VBox;
 import javafx.scene.control.Button;
-import javafx.event.ActionEvent;
-import javafx.event.EventHandler;
-import javafx.geometry.Insets;
+import javafx.scene.layout.VBox;
+import javafx.stage.Stage;
 
 /**
  * A sample that shows animated bouncing balls.

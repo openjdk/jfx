@@ -28,24 +28,27 @@ namespace WebCore {
 
 class RenderStyle;
 
-enum TextSizeAdjustmentType { AutoTextSizeAdjustment = -1, NoTextSizeAdjustment = -2 };
-
 class TextSizeAdjustment {
 public:
-    TextSizeAdjustment() : m_value(AutoTextSizeAdjustment) { }
-    TextSizeAdjustment(float value) : m_value(value) { }
+    static constexpr TextSizeAdjustment autoAdjust() { return TextSizeAdjustment(true); }
+    static constexpr TextSizeAdjustment none() { return TextSizeAdjustment(false); }
 
-    float percentage() const { return m_value; }
-    float multiplier() const { return m_value / 100; }
+    constexpr TextSizeAdjustment() : m_value(Auto) { }
+    constexpr TextSizeAdjustment(float value) : m_value(value) { ASSERT_UNDER_CONSTEXPR_CONTEXT(m_value >= 0); }
 
-    bool isAuto() const { return m_value == AutoTextSizeAdjustment; }
-    bool isNone() const { return m_value == NoTextSizeAdjustment; }
-    bool isPercentage() const { return m_value >= 0; }
+    constexpr float percentage() const { ASSERT_UNDER_CONSTEXPR_CONTEXT(m_value >= 0); return m_value; }
+    constexpr float multiplier() const { ASSERT_UNDER_CONSTEXPR_CONTEXT(m_value >= 0); return m_value / 100; }
 
-    bool operator==(const TextSizeAdjustment& anAdjustment) const { return m_value == anAdjustment.m_value; }
-    bool operator!=(const TextSizeAdjustment& anAdjustment) const { return m_value != anAdjustment.m_value; }
+    constexpr bool isAuto() const { return m_value == Auto; }
+    constexpr bool isNone() const { return m_value == None; }
+    constexpr bool isPercentage() const { return m_value >= 0; }
+
+    friend constexpr bool operator==(TextSizeAdjustment, TextSizeAdjustment) = default;
 
 private:
+    static constexpr float Auto = -1;
+    static constexpr float None = -2;
+    constexpr TextSizeAdjustment(bool isAuto) : m_value(isAuto ? Auto : None) { }
     float m_value;
 };
 
@@ -60,13 +63,12 @@ public:
         // Adding new values requires giving RenderStyle::InheritedFlags::autosizeStatus additional bits.
     };
 
-    AutosizeStatus(OptionSet<Fields>);
-    OptionSet<Fields> fields() const { return m_fields; }
+    constexpr AutosizeStatus(OptionSet<Fields>);
+    constexpr OptionSet<Fields> fields() const { return m_fields; }
 
-    bool contains(Fields) const;
+    constexpr bool contains(Fields) const;
 
-    bool operator==(const AutosizeStatus& other) const { return fields() == other.fields(); }
-    bool operator!=(const AutosizeStatus& other) const { return !(*this == other); }
+    friend constexpr bool operator==(AutosizeStatus, AutosizeStatus) = default;
 
     static float idempotentTextSize(float specifiedSize, float pageScale);
     static AutosizeStatus computeStatus(const RenderStyle&);
@@ -78,6 +80,15 @@ private:
     OptionSet<Fields> m_fields;
 };
 
+constexpr AutosizeStatus::AutosizeStatus(OptionSet<Fields> fields)
+    : m_fields(fields)
+{
+}
+
+constexpr bool AutosizeStatus::contains(Fields fields) const
+{
+    return m_fields.contains(fields);
+}
 
 } // namespace WebCore
 

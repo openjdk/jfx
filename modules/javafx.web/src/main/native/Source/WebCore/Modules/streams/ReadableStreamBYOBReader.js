@@ -26,8 +26,14 @@ function initializeReadableStreamBYOBReader(stream)
 {
     "use strict";
 
-    if (!@isReadableStream(stream))
+    if (!@isReadableStream(stream)) {
+        // FIXME: We should pass a single type.
+        let potentialInternalStream = @getInternalReadableStream(stream);
+        if (potentialInternalStream === @undefined)
         @throwTypeError("ReadableStreamBYOBReader needs a ReadableStream");
+        stream = potentialInternalStream;
+    }
+
     if (!@isReadableByteStreamController(@getByIdDirectPrivate(stream, "readableStreamController")))
         @throwTypeError("ReadableStreamBYOBReader needs a ReadableByteStreamController");
     if (@isReadableStreamLocked(stream))
@@ -98,5 +104,5 @@ function closed()
     if (!@isReadableStreamBYOBReader(this))
         return @Promise.@reject(@makeGetterTypeError("ReadableStreamBYOBReader", "closed"));
 
-    return @getByIdDirectPrivate(this, "closedPromiseCapability").@promise;
+    return @getByIdDirectPrivate(this, "closedPromiseCapability").promise;
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2021 Apple Inc. All rights reserved.
+ * Copyright (C) 2021-2023 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -36,6 +36,16 @@ String GPUExternalTexture::label() const
 void GPUExternalTexture::setLabel(String&& label)
 {
     m_backing->setLabel(WTFMove(label));
+}
+
+void GPUExternalTexture::destroy()
+{
+    m_backing->destroy();
+}
+
+void GPUExternalTexture::undestroy()
+{
+    m_backing->undestroy();
 }
 
 }

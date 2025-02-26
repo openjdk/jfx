@@ -44,7 +44,7 @@ class PhantomInsertionPhase : public Phase {
     static constexpr bool verbose = false;
 public:
     PhantomInsertionPhase(Graph& graph)
-        : Phase(graph, "phantom insertion")
+        : Phase(graph, "phantom insertion"_s)
         , m_insertionSet(graph)
         , m_values(OperandsLike, graph.block(0)->variablesAtHead)
     {
@@ -102,6 +102,7 @@ private:
 
             switch (node->op()) {
             case MovHint:
+            case ZombieHint:
                 m_values.operand(node->unlinkedOperand()) = node->child1().node();
                 break;
 

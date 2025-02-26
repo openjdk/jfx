@@ -37,6 +37,19 @@ class GregorianDateTime final {
 public:
     GregorianDateTime() = default;
     WTF_EXPORT_PRIVATE explicit GregorianDateTime(double ms, LocalTimeOffset);
+    explicit GregorianDateTime(int year, int month, int yearDay, int monthDay, int weekDay, int hour, int minute, int second, int utcOffsetInMinute, bool isDST)
+        : m_year(year)
+        , m_month(month)
+        , m_yearDay(yearDay)
+        , m_monthDay(monthDay)
+        , m_weekDay(weekDay)
+        , m_hour(hour)
+        , m_minute(minute)
+        , m_second(second)
+        , m_utcOffsetInMinute(utcOffsetInMinute)
+        , m_isDST(isDST)
+    {
+    }
 
     inline int year() const { return m_year; }
     inline int month() const { return m_month; }
@@ -60,16 +73,16 @@ public:
     inline void setUTCOffsetInMinute(int utcOffsetInMinute) { m_utcOffsetInMinute = utcOffsetInMinute; }
     inline void setIsDST(int isDST) { m_isDST = isDST; }
 
-    static ptrdiff_t offsetOfYear() { return OBJECT_OFFSETOF(GregorianDateTime, m_year); }
-    static ptrdiff_t offsetOfMonth() { return OBJECT_OFFSETOF(GregorianDateTime, m_month); }
-    static ptrdiff_t offsetOfYearDay() { return OBJECT_OFFSETOF(GregorianDateTime, m_yearDay); }
-    static ptrdiff_t offsetOfMonthDay() { return OBJECT_OFFSETOF(GregorianDateTime, m_monthDay); }
-    static ptrdiff_t offsetOfWeekDay() { return OBJECT_OFFSETOF(GregorianDateTime, m_weekDay); }
-    static ptrdiff_t offsetOfHour() { return OBJECT_OFFSETOF(GregorianDateTime, m_hour); }
-    static ptrdiff_t offsetOfMinute() { return OBJECT_OFFSETOF(GregorianDateTime, m_minute); }
-    static ptrdiff_t offsetOfSecond() { return OBJECT_OFFSETOF(GregorianDateTime, m_second); }
-    static ptrdiff_t offsetOfUTCOffsetInMinute() { return OBJECT_OFFSETOF(GregorianDateTime, m_utcOffsetInMinute); }
-    static ptrdiff_t offsetOfIsDST() { return OBJECT_OFFSETOF(GregorianDateTime, m_isDST); }
+    static constexpr ptrdiff_t offsetOfYear() { return OBJECT_OFFSETOF(GregorianDateTime, m_year); }
+    static constexpr ptrdiff_t offsetOfMonth() { return OBJECT_OFFSETOF(GregorianDateTime, m_month); }
+    static constexpr ptrdiff_t offsetOfYearDay() { return OBJECT_OFFSETOF(GregorianDateTime, m_yearDay); }
+    static constexpr ptrdiff_t offsetOfMonthDay() { return OBJECT_OFFSETOF(GregorianDateTime, m_monthDay); }
+    static constexpr ptrdiff_t offsetOfWeekDay() { return OBJECT_OFFSETOF(GregorianDateTime, m_weekDay); }
+    static constexpr ptrdiff_t offsetOfHour() { return OBJECT_OFFSETOF(GregorianDateTime, m_hour); }
+    static constexpr ptrdiff_t offsetOfMinute() { return OBJECT_OFFSETOF(GregorianDateTime, m_minute); }
+    static constexpr ptrdiff_t offsetOfSecond() { return OBJECT_OFFSETOF(GregorianDateTime, m_second); }
+    static constexpr ptrdiff_t offsetOfUTCOffsetInMinute() { return OBJECT_OFFSETOF(GregorianDateTime, m_utcOffsetInMinute); }
+    static constexpr ptrdiff_t offsetOfIsDST() { return OBJECT_OFFSETOF(GregorianDateTime, m_isDST); }
 
     WTF_EXPORT_PRIVATE void setToCurrentLocalTime();
 

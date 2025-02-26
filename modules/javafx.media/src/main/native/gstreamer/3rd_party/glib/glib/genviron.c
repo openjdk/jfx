@@ -1,6 +1,8 @@
 /* GLIB - Library of useful routines for C programming
  * Copyright (C) 1995-1998  Peter Mattis, Spencer Kimball and Josh MacDonald
  *
+ * SPDX-License-Identifier: LGPL-2.1-or-later
+ *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
  * License as published by the Free Software Foundation; either
@@ -645,7 +647,7 @@ g_get_environ (void)
 {
   gunichar2 *strings;
   gchar **result;
-  gint i, n;
+  size_t i, n;
 
   strings = GetEnvironmentStringsW ();
   for (n = 0, i = 0; strings[n]; i++)

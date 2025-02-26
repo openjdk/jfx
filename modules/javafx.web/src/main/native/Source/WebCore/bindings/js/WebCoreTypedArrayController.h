@@ -25,8 +25,8 @@
 
 #pragma once
 
-#include <JavaScriptCore/JSGlobalObject.h>
 #include <JavaScriptCore/TypedArrayController.h>
+#include <JavaScriptCore/WeakHandleOwner.h>
 
 namespace JSC {
 class WeakHandleOwner;
@@ -40,7 +40,7 @@ public:
     virtual ~WebCoreTypedArrayController();
 
     JSC::JSArrayBuffer* toJS(JSC::JSGlobalObject*, JSC::JSGlobalObject*, JSC::ArrayBuffer*) override;
-    void registerWrapper(JSC::JSGlobalObject*, ArrayBuffer*, JSC::JSArrayBuffer*) override;
+    void registerWrapper(JSC::JSGlobalObject*, JSC::ArrayBuffer*, JSC::JSArrayBuffer*) override;
     bool isAtomicsWaitAllowedOnCurrentThread() override;
 
     JSC::WeakHandleOwner* wrapperOwner() { return &m_owner; }
@@ -48,7 +48,7 @@ public:
 private:
     class JSArrayBufferOwner : public JSC::WeakHandleOwner {
     public:
-        bool isReachableFromOpaqueRoots(JSC::Handle<JSC::Unknown>, void* context, JSC::AbstractSlotVisitor&, const char**) override;
+        bool isReachableFromOpaqueRoots(JSC::Handle<JSC::Unknown>, void* context, JSC::AbstractSlotVisitor&, ASCIILiteral*) override;
         void finalize(JSC::Handle<JSC::Unknown>, void* context) override;
     };
 

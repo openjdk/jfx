@@ -28,24 +28,19 @@
 #if ENABLE(WEBGL)
 #include "EXTFloatBlend.h"
 
-#include <wtf/IsoMallocInlines.h>
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
-WTF_MAKE_ISO_ALLOCATED_IMPL(EXTFloatBlend);
+WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(EXTFloatBlend);
 
 EXTFloatBlend::EXTFloatBlend(WebGLRenderingContextBase& context)
-    : WebGLExtension(context)
+    : WebGLExtension(context, WebGLExtensionName::EXTFloatBlend)
 {
-    context.graphicsContextGL()->ensureExtensionEnabled("GL_EXT_float_blend"_s);
+    context.protectedGraphicsContextGL()->ensureExtensionEnabled("GL_EXT_float_blend"_s);
 }
 
 EXTFloatBlend::~EXTFloatBlend() = default;
-
-WebGLExtension::ExtensionName EXTFloatBlend::getName() const
-{
-    return EXTFloatBlendName;
-}
 
 bool EXTFloatBlend::supported(GraphicsContextGL& context)
 {

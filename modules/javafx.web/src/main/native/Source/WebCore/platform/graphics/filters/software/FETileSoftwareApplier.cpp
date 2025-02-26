@@ -35,8 +35,8 @@ bool FETileSoftwareApplier::apply(const Filter& filter, const FilterImageVector&
 {
     auto& input = inputs[0].get();
 
-    auto resultImage = result.imageBuffer();
-    auto inputImage = input.imageBuffer();
+    RefPtr resultImage = result.imageBuffer();
+    RefPtr inputImage = input.imageBuffer();
     if (!resultImage || !inputImage)
         return false;
 
@@ -49,7 +49,7 @@ bool FETileSoftwareApplier::apply(const Filter& filter, const FilterImageVector&
     auto maxResultRect = result.maxEffectRect(filter);
     maxResultRect.scale(filter.filterScale());
 
-    auto tileImage = ImageBuffer::create(tileRect.size(), RenderingPurpose::Unspecified, 1, DestinationColorSpace::SRGB(), PixelFormat::BGRA8, bufferOptionsForRendingMode(filter.renderingMode()));
+    auto tileImage = ImageBuffer::create(tileRect.size(), RenderingPurpose::Unspecified, 1, DestinationColorSpace::SRGB(), ImageBufferPixelFormat::BGRA8, bufferOptionsForRendingMode(filter.renderingMode()));
     if (!tileImage)
         return false;
 

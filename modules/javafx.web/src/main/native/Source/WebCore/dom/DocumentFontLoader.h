@@ -30,6 +30,7 @@
 #include "Document.h"
 #include "Timer.h"
 #include <wtf/Vector.h>
+#include <wtf/WeakRef.h>
 
 namespace WebCore {
 
@@ -41,6 +42,8 @@ public:
     DocumentFontLoader(Document&);
     ~DocumentFontLoader();
 
+    void ref() const { m_document->ref(); }
+    void deref() const { m_document->deref(); }
     CachedFont* cachedFont(URL&&, bool, bool, LoadedFromOpaqueSource);
     void beginLoadingFontSoon(CachedFont&);
 
@@ -53,7 +56,7 @@ public:
 private:
     void fontLoadingTimerFired();
 
-    Document& m_document;
+    WeakRef<Document, WeakPtrImplWithEventTargetData> m_document;
     Timer m_fontLoadingTimer;
     Vector<CachedResourceHandle<CachedFont>> m_fontsToBeginLoading;
     bool m_isFontLoadingSuspended { false };

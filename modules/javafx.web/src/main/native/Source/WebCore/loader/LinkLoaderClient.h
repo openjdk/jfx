@@ -31,9 +31,20 @@
 
 #pragma once
 
+#include <wtf/WeakPtr.h>
+
+namespace WebCore {
+class LinkLoaderClient;
+}
+
+namespace WTF {
+template<typename T> struct IsDeprecatedWeakRefSmartPointerException;
+template<> struct IsDeprecatedWeakRefSmartPointerException<WebCore::LinkLoaderClient> : std::true_type { };
+}
+
 namespace WebCore {
 
-class LinkLoaderClient {
+class LinkLoaderClient : public CanMakeWeakPtr<LinkLoaderClient> {
 public:
     virtual ~LinkLoaderClient() = default;
 

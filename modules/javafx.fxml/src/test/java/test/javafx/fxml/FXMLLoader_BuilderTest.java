@@ -1,6 +1,5 @@
-package test.javafx.fxml;
 /*
- * Copyright (c) 2011, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -23,11 +22,12 @@ package test.javafx.fxml;
  * or visit www.oracle.com if you need additional information or have any
  * questions.
  */
+package test.javafx.fxml;
 
 import javafx.scene.shape.TriangleMesh;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 
 import java.io.IOException;
 import javafx.fxml.FXMLLoader;

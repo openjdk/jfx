@@ -21,7 +21,7 @@
 
 #if ENABLE(GEOLOCATION)
 
-#include "DOMWindowProperty.h"
+#include "LocalDOMWindowProperty.h"
 #include "Supplementable.h"
 
 namespace WebCore {
@@ -44,7 +44,7 @@ public:
 #endif // PLATFORM(IOS_FAMILY)
 
 private:
-    static const char* supplementName();
+    static ASCIILiteral supplementName();
 
     mutable RefPtr<Geolocation> m_geolocation;
     Navigator& m_navigator;

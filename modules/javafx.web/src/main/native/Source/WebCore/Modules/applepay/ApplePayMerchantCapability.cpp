@@ -33,7 +33,7 @@ namespace WebCore {
 ExceptionOr<ApplePaySessionPaymentRequest::MerchantCapabilities> convertAndValidate(const Vector<ApplePayMerchantCapability>& merchantCapabilities)
 {
     if (merchantCapabilities.isEmpty())
-        return Exception { TypeError, "At least one merchant capability must be provided."_s };
+        return Exception { ExceptionCode::TypeError, "At least one merchant capability must be provided."_s };
 
     ApplePaySessionPaymentRequest::MerchantCapabilities result;
 
@@ -51,6 +51,11 @@ ExceptionOr<ApplePaySessionPaymentRequest::MerchantCapabilities> convertAndValid
         case ApplePayMerchantCapability::SupportsDebit:
             result.supportsDebit = true;
             break;
+#if ENABLE(APPLE_PAY_DISBURSEMENTS)
+        case ApplePayMerchantCapability::SupportsInstantFundsOut:
+            result.supportsInstantFundsOut = true;
+            break;
+#endif
         }
     }
 

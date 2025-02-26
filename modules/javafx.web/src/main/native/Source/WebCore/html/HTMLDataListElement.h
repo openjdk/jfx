@@ -33,15 +33,16 @@
 
 #if ENABLE(DATALIST_ELEMENT)
 
-#include "ElementIterator.h"
 #include "HTMLElement.h"
+#include "TypedElementDescendantIterator.h"
 
 namespace WebCore {
 
 class HTMLCollection;
 
 class HTMLDataListElement final : public HTMLElement {
-    WTF_MAKE_ISO_ALLOCATED(HTMLDataListElement);
+    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(HTMLDataListElement);
+    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(HTMLDataListElement);
 public:
     static Ref<HTMLDataListElement> create(const QualifiedName&, Document&);
     ~HTMLDataListElement();
@@ -51,10 +52,13 @@ public:
     void optionElementChildrenChanged();
 
     static bool isSuggestion(const HTMLOptionElement& descendant);
-    auto suggestions() const { return filteredDescendants<HTMLOptionElement, isSuggestion>(*this); }
+    using SuggestionRange = FilteredElementDescendantRange<HTMLOptionElement, isSuggestion>;
+    SuggestionRange suggestions() const;
 
 private:
     void didMoveToNewDocument(Document& oldDocument, Document& newDocument) final;
+
+    void childrenChanged(const ChildChange&) final;
 
     HTMLDataListElement(const QualifiedName&, Document&);
 };

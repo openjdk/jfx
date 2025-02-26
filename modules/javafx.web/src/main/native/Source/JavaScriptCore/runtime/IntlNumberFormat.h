@@ -1,7 +1,7 @@
 /*
  * Copyright (C) 2015 Andy VanWagoner (andy@vanwagoner.family)
  * Copyright (C) 2020 Sony Interactive Entertainment Inc.
- * Copyright (C) 2021-2022 Apple Inc. All rights reserved.
+ * Copyright (C) 2021-2023 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -31,6 +31,7 @@
 #include "MathCommon.h"
 #include "TemporalObject.h"
 #include <unicode/unum.h>
+#include <wtf/TZoneMalloc.h>
 #include <wtf/unicode/icu/ICUHelpers.h>
 
 #if !defined(HAVE_ICU_U_NUMBER_FORMATTER)
@@ -64,6 +65,7 @@ enum class RelevantExtensionKey : uint8_t;
 
 enum class IntlRoundingType : uint8_t { FractionDigits, SignificantDigits, MorePrecision, LessPrecision };
 enum class IntlRoundingPriority : uint8_t { Auto, MorePrecision, LessPrecision };
+enum class IntlTrailingZeroDisplay : uint8_t { Auto, StripIfInteger };
 enum class IntlNotation : uint8_t { Standard, Scientific, Engineering, Compact };
 template<typename IntlType> void setNumberFormatDigitOptions(JSGlobalObject*, IntlType*, JSObject*, unsigned minimumFractionDigitsDefault, unsigned maximumFractionDigitsDefault, IntlNotation);
 template<typename IntlType> void appendNumberFormatDigitOptionsToSkeleton(IntlType*, StringBuilder&);
@@ -81,7 +83,7 @@ struct UNumberRangeFormatterDeleter {
 #endif
 
 class IntlMathematicalValue {
-    WTF_MAKE_FAST_ALLOCATED(IntlMathematicalValue);
+    WTF_MAKE_TZONE_ALLOCATED(IntlMathematicalValue);
 public:
     enum class NumberType { Integer, Infinity, NaN, };
     using Value = std::variant<double, CString>;
@@ -100,6 +102,8 @@ public:
         , m_sign(sign)
     {
     }
+
+    static IntlMathematicalValue parseString(JSGlobalObject*, StringView);
 
     void ensureNonDouble()
     {
@@ -210,11 +214,12 @@ public:
 
     static IntlNumberFormat* unwrapForOldFunctions(JSGlobalObject*, JSValue);
 
+    static ASCIILiteral roundingModeString(RoundingMode);
     static ASCIILiteral roundingPriorityString(IntlRoundingType);
 
 private:
     IntlNumberFormat(VM&, Structure*);
-    void finishCreation(VM&);
+    DECLARE_DEFAULT_FINISH_CREATION;
     DECLARE_VISIT_CHILDREN;
 
     static Vector<String> localeData(const String&, RelevantExtensionKey);
@@ -224,7 +229,6 @@ private:
     enum class UnitDisplay : uint8_t { Short, Narrow, Long };
     enum class CompactDisplay : uint8_t { Short, Long };
     enum class SignDisplay : uint8_t { Auto, Never, Always, ExceptZero, Negative };
-    enum class TrailingZeroDisplay : uint8_t { Auto, StripIfInteger };
     enum class UseGrouping : uint8_t { False, Min2, Auto, Always };
 
     static ASCIILiteral styleString(Style);
@@ -233,8 +237,7 @@ private:
     static ASCIILiteral unitDisplayString(UnitDisplay);
     static ASCIILiteral compactDisplayString(CompactDisplay);
     static ASCIILiteral signDisplayString(SignDisplay);
-    static ASCIILiteral roundingModeString(RoundingMode);
-    static ASCIILiteral trailingZeroDisplayString(TrailingZeroDisplay);
+    static ASCIILiteral trailingZeroDisplayString(IntlTrailingZeroDisplay);
     static JSValue useGroupingValue(VM&, UseGrouping);
 
     WriteBarrier<JSBoundFunction> m_boundFormat;
@@ -264,7 +267,7 @@ private:
     CompactDisplay m_compactDisplay;
     IntlNotation m_notation { IntlNotation::Standard };
     SignDisplay m_signDisplay;
-    TrailingZeroDisplay m_trailingZeroDisplay { TrailingZeroDisplay::Auto };
+    IntlTrailingZeroDisplay m_trailingZeroDisplay { IntlTrailingZeroDisplay::Auto };
     UseGrouping m_useGrouping { UseGrouping::Always };
     RoundingMode m_roundingMode { RoundingMode::HalfExpand };
     IntlRoundingType m_roundingType { IntlRoundingType::FractionDigits };

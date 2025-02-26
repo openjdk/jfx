@@ -155,7 +155,7 @@ public:
     };
 
     static RefPtr<InputType> createIfDifferent(HTMLInputElement&, const AtomString&, InputType* currentInputType = nullptr);
-    static Ref<InputType> createText(HTMLInputElement&);
+
     virtual ~InputType();
 
     void detachFromElement() { m_element = nullptr; }
@@ -176,6 +176,7 @@ public:
     // scattered code with special cases for various types.
 
     bool isCheckbox() const { return m_type == Type::Checkbox; }
+    bool isSwitch() const { return isCheckbox() && m_element && m_element->hasSwitchAttribute(); }
     bool isColorControl() const { return m_type == Type::Color; }
     bool isDateField() const { return m_type == Type::Date; }
     bool isDateTimeLocalField() const { return m_type == Type::DateTimeLocal; }
@@ -208,8 +209,12 @@ public:
     bool isInteractiveContent() const;
     bool isLabelable() const;
     bool isEnumeratable() const;
-    bool needsShadowSubtree() const { return !nonShadowRootTypes.contains(m_type); }
+    bool needsShadowSubtree() const { return !nonShadowRootTypes.contains(m_type) || isSwitch(); }
     bool hasCreatedShadowSubtree() const { return m_hasCreatedShadowSubtree; }
+
+#if ENABLE(TOUCH_EVENTS)
+    bool hasTouchEventHandler() const;
+#endif
 
     // Form value functions.
 
@@ -225,6 +230,7 @@ public:
     virtual String defaultValue() const; // Checked after even fallbackValue, only when the valueWithDefault function is called.
     virtual WallTime valueAsDate() const;
     virtual ExceptionOr<void> setValueAsDate(WallTime) const;
+    virtual WallTime accessibilityValueAsDate() const;
     virtual double valueAsDouble() const;
     virtual ExceptionOr<void> setValueAsDouble(double, TextFieldEventBehavior) const;
     virtual ExceptionOr<void> setValueAsDecimal(const Decimal&, TextFieldEventBehavior) const;
@@ -232,11 +238,11 @@ public:
     // Validation functions.
 
     virtual String validationMessage() const;
-    virtual bool typeMismatchFor(const String&) const;
+    virtual bool typeMismatchFor(const String&) const { return false; }
     virtual bool supportsRequired() const;
-    virtual bool valueMissing(const String&) const;
-    virtual bool hasBadInput() const;
-    virtual bool patternMismatch(const String&) const;
+    virtual bool valueMissing(const String&) const { return false; }
+    virtual bool hasBadInput() const { return false; }
+    virtual bool patternMismatch(const String&) const { return false; }
     bool rangeUnderflow(const String&) const;
     bool rangeOverflow(const String&) const;
     bool isInRange(const String&) const;
@@ -261,7 +267,7 @@ public:
 
     // Type check for the current input value. We do nothing for some types
     // though typeMismatchFor() does something for them because of value sanitization.
-    virtual bool typeMismatch() const;
+    virtual bool typeMismatch() const { return false; }
 
     // Return value of null string means "use the default value".
     // This function must be called only by HTMLInputElement::sanitizeValue().
@@ -269,11 +275,12 @@ public:
 
     // Event handlers.
 
-    virtual void handleClickEvent(MouseEvent&);
-    virtual void handleMouseDownEvent(MouseEvent&);
-    virtual void willDispatchClick(InputElementClickState&);
-    virtual void didDispatchClick(Event&, const InputElementClickState&);
-    virtual void handleDOMActivateEvent(Event&);
+    virtual void handleClickEvent(MouseEvent&) { }
+    virtual void handleMouseDownEvent(MouseEvent&) { }
+    virtual void handleMouseMoveEvent(MouseEvent&) { }
+    virtual void willDispatchClick(InputElementClickState&) { }
+    virtual void didDispatchClick(Event&, const InputElementClickState&) { }
+    virtual void handleDOMActivateEvent(Event&) { }
 
     virtual bool allowsShowPickerAcrossFrames();
     virtual void showPicker();
@@ -287,7 +294,7 @@ public:
     virtual void forwardEvent(Event&);
 
 #if ENABLE(TOUCH_EVENTS)
-    virtual void handleTouchEvent(TouchEvent&);
+    virtual void handleTouchEvent(TouchEvent&) { }
 #endif
 
     // Helpers for event handlers.
@@ -306,15 +313,11 @@ public:
 
     virtual void elementDidBlur() { }
 
-#if ENABLE(TOUCH_EVENTS)
-    virtual bool hasTouchEventHandler() const;
-#endif
-
     // Shadow tree handling.
 
     void createShadowSubtreeIfNeeded();
     virtual void createShadowSubtree();
-    virtual void destroyShadowSubtree();
+    virtual void removeShadowSubtree();
 
     virtual HTMLElement* containerElement() const { return nullptr; }
     virtual HTMLElement* innerBlockElement() const { return nullptr; }
@@ -358,13 +361,13 @@ public:
     virtual void updateAutoFillButton();
     virtual String defaultToolTip() const;
     virtual bool matchesIndeterminatePseudoClass() const;
-    virtual bool shouldAppearIndeterminate() const;
     virtual bool isPresentingAttachedView() const;
     virtual bool supportsSelectionAPI() const;
+    virtual bool dirAutoUsesValue() const;
 #if ENABLE(DATALIST_ELEMENT)
     virtual bool isFocusingWithDataListDropdown() const { return false; };
 #endif
-    virtual void willUpdateCheckedness(bool /*nowChecked*/) { }
+    virtual void willUpdateCheckedness(bool /*nowChecked*/, WasSetByJavaScript) { }
 
     // Parses the specified string for the type, and return
     // the Decimal value for the parsing result if the parsing
@@ -409,8 +412,12 @@ protected:
     }
 
     HTMLInputElement* element() const { return m_element.get(); }
+    RefPtr<HTMLInputElement> protectedElement() const { return m_element.get(); }
     Chrome* chrome() const;
     Decimal parseToNumberOrNaN(const String&) const;
+
+    // Derive the step base, following the HTML algorithm steps.
+    Decimal findStepBase(const Decimal&) const;
 
 private:
     // Helper for stepUp()/stepDown(). Adds step value * count to the current value.
@@ -421,13 +428,6 @@ private:
     // m_element is null if this InputType is no longer associated with an element (either the element died or changed input type).
     WeakPtr<HTMLInputElement, WeakPtrImplWithEventTargetData> m_element;
 };
-
-template<typename DowncastedType>
-ALWAYS_INLINE bool isInvalidInputType(const InputType& baseInputType, const String& value)
-{
-    auto& inputType = static_cast<const DowncastedType&>(baseInputType);
-    return inputType.typeMismatch() || inputType.stepMismatch(value) || inputType.rangeUnderflow(value) || inputType.rangeOverflow(value) || inputType.patternMismatch(value) || inputType.valueMissing(value) || inputType.hasBadInput();
-}
 
 } // namespace WebCore
 

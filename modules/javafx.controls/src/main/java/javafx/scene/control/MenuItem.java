@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2023, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -294,7 +294,7 @@ public class MenuItem implements EventTarget, Styleable {
     /**
      * The action, which is invoked whenever the MenuItem is fired. This
      * may be due to the user clicking on the button with the mouse, or by
-     * a touch event, or by a key press, or if the developer programatically
+     * a touch event, or by a key press, or if the developer programmatically
      * invokes the {@link #fire()} method.
      */
     private ObjectProperty<EventHandler<ActionEvent>> onAction;
@@ -577,7 +577,7 @@ public class MenuItem implements EventTarget, Styleable {
 
     /** {@inheritDoc} */
     @Override public Node getStyleableNode() {
-        // Fix for RT-20582. We dive into the visual representation
+        // Fix for JDK-8118568. We dive into the visual representation
         // of this MenuItem so that we may return it to the caller.
         ContextMenu parentPopup = MenuItem.this.getParentPopup();
         if (parentPopup == null || ! (parentPopup.getSkin() instanceof ContextMenuSkin)) return null;

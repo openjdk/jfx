@@ -86,7 +86,7 @@
     transform-origin: 0 0;
 }
 
-:host(:-webkit-animating-full-screen-transition) .media-controls {
+:host(:-internal-animating-fullscreen-transition) .media-controls {
     display: none;
 }
 
@@ -124,6 +124,10 @@
 .media-controls .status-label {
     color: var(--secondary-glyph-color);
     mix-blend-mode: plus-lighter;
+}
+
+.backdrop {
+    pointer-events: none;
 }
 
 .stats-container {

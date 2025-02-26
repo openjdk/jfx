@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,7 +25,9 @@
 
 package javafx.scene.control.skin;
 
-import com.sun.javafx.scene.control.Properties;
+import java.lang.ref.WeakReference;
+import java.util.ArrayList;
+import java.util.List;
 import javafx.beans.InvalidationListener;
 import javafx.beans.Observable;
 import javafx.beans.WeakInvalidationListener;
@@ -36,25 +38,30 @@ import javafx.collections.ObservableMap;
 import javafx.event.EventHandler;
 import javafx.event.EventType;
 import javafx.event.WeakEventHandler;
+import javafx.geometry.NodeOrientation;
 import javafx.scene.AccessibleAction;
 import javafx.scene.AccessibleAttribute;
 import javafx.scene.Node;
-import javafx.scene.control.*;
+import javafx.scene.control.Control;
+import javafx.scene.control.FocusModel;
+import javafx.scene.control.MultipleSelectionModel;
+import javafx.scene.control.ScrollBar;
+import javafx.scene.control.SelectionModel;
+import javafx.scene.control.TreeCell;
+import javafx.scene.control.TreeItem;
 import javafx.scene.control.TreeItem.TreeModificationEvent;
+import javafx.scene.control.TreeView;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.StackPane;
-import java.lang.ref.WeakReference;
-import java.security.AccessController;
-import java.security.PrivilegedAction;
-import java.util.ArrayList;
-import java.util.List;
-
+import com.sun.javafx.scene.control.Properties;
 import com.sun.javafx.scene.control.behavior.TreeViewBehavior;
 
 /**
  * Default skin implementation for the {@link TreeView} control.
  *
+ * @param <T> the type of the item contained within the {@code TreeItem} value
+ *      property for all tree items in this TreeView
  * @see TreeView
  * @since 9
  */
@@ -66,14 +73,12 @@ public class TreeViewSkin<T> extends VirtualContainerBase<TreeView<T>, TreeCell<
      *                                                                         *
      **************************************************************************/
 
-    // RT-34744 : IS_PANNABLE will be false unless
+    // JDK-8094803 : IS_PANNABLE will be false unless
     // javafx.scene.control.skin.TreeViewSkin.pannable
     // is set to true. This is done in order to make TreeView functional
     // on embedded systems with touch screens which do not generate scroll
     // events for touch drag gestures.
-    @SuppressWarnings("removal")
-    private static final boolean IS_PANNABLE =
-            AccessController.doPrivileged((PrivilegedAction<Boolean>) () -> Boolean.getBoolean("javafx.scene.control.skin.TreeViewSkin.pannable"));
+    private static final boolean IS_PANNABLE = Boolean.getBoolean("javafx.scene.control.skin.TreeViewSkin.pannable");
 
 
 
@@ -105,7 +110,7 @@ public class TreeViewSkin<T> extends VirtualContainerBase<TreeView<T>, TreeCell<
 
     private EventHandler<TreeModificationEvent<T>> rootListener = e -> {
         if (e.wasAdded() && e.wasRemoved() && e.getAddedSize() == e.getRemovedSize()) {
-            // Fix for RT-14842, where the children of a TreeItem were changing,
+            // Fix for JDK-8114432, where the children of a TreeItem were changing,
             // but because the overall item count was staying the same, there was
             // no event being fired to the skin to be informed that the items
             // had changed. So, here we just watch for the case where the number
@@ -113,10 +118,10 @@ public class TreeViewSkin<T> extends VirtualContainerBase<TreeView<T>, TreeCell<
             markItemCountDirty();
             getSkinnable().requestLayout();
         } else if (e.getEventType().equals(TreeItem.valueChangedEvent())) {
-            // Fix for RT-14971 and RT-15338.
+            // Fix for JDK-8114657 and JDK-8114610.
             requestRebuildCells();
         } else {
-            // Fix for RT-20090. We are checking to see if the event coming
+            // Fix for JDK-8115929. We are checking to see if the event coming
             // from the TreeItem root is an event where the count has changed.
             EventType<?> eventType = e.getEventType();
             while (eventType != null) {
@@ -129,7 +134,7 @@ public class TreeViewSkin<T> extends VirtualContainerBase<TreeView<T>, TreeCell<
             }
         }
 
-        // fix for RT-37853
+        // fix for JDK-8094887
         getSkinnable().edit(null);
     };
 
@@ -191,6 +196,8 @@ public class TreeViewSkin<T> extends VirtualContainerBase<TreeView<T>, TreeCell<
         behavior.setOnScrollPageUp(this::onScrollPageUp);
         behavior.setOnSelectPreviousRow(() -> { onSelectPreviousCell(); });
         behavior.setOnSelectNextRow(() -> { onSelectNextCell(); });
+        behavior.setOnHorizontalUnitScroll(this::horizontalUnitScroll);
+        behavior.setOnVerticalUnitScroll(this::verticalUnitScroll);
 
         registerChangeListener(control.rootProperty(), e -> setRoot(getSkinnable().getRoot()));
         registerChangeListener(control.showRootProperty(), e -> {
@@ -397,7 +404,7 @@ public class TreeViewSkin<T> extends VirtualContainerBase<TreeView<T>, TreeCell<
 
         // Ideally we would be more nuanced above, toggling a cheaper needs*
         // field, but if we do we hit issues such as those identified in
-        // RT-27852, where the expended item count of the new root equals the
+        // JDK-8124052, where the expended item count of the new root equals the
         // EIC of the old root, which would lead to the visuals not updating
         // properly.
         getSkinnable().requestLayout();
@@ -459,7 +466,7 @@ public class TreeViewSkin<T> extends VirtualContainerBase<TreeView<T>, TreeCell<
 
                             // the item is a Node, and the graphic exists, so
                             // we must insert both into an HBox and present that
-                            // to the user (see RT-15910)
+                            // to the user (see JDK-8115941)
                             if (hbox == null) {
                                 hbox = new HBox(3);
                             }
@@ -608,5 +615,26 @@ public class TreeViewSkin<T> extends VirtualContainerBase<TreeView<T>, TreeCell<
         int newSelectionIndex = firstVisibleCell.getIndex();
         flow.scrollTo(firstVisibleCell);
         return newSelectionIndex;
+    }
+
+    private void horizontalUnitScroll(boolean right) {
+        if (getSkinnable().getEffectiveNodeOrientation() == NodeOrientation.RIGHT_TO_LEFT) {
+            right = !right;
+        }
+        ScrollBar sb = flow.getHbar();
+        if (right) {
+            sb.increment();
+        } else {
+            sb.decrement();
+        }
+    }
+
+    private void verticalUnitScroll(boolean down) {
+        ScrollBar sb = flow.getVbar();
+        if (down) {
+            sb.increment();
+        } else {
+            sb.decrement();
+        }
     }
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2009, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2009, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -90,7 +90,7 @@ public class PrEffectHelper {
             // process the effect with an identity (2D) transform, and then
             // render the resulting image using the current (3D) modelview
             // and/or projection transform
-            // RT-27555
+            // JDK-8090833
             // TODO: this will not work if the effect is applied to a Group
             // that has children with 3D transforms (relative to the Group),
             // but at least it's good enough for simple effects applied to
@@ -133,7 +133,7 @@ public class PrEffectHelper {
 
         Screen screen = g.getAssociatedScreen();
         FilterContext fctx;
-        // RT-27555
+        // JDK-8090833
         if (screen == null) {
             ResourceFactory factory = g.getResourceFactory();
             fctx = PrFilterContext.getPrinterContext(factory);

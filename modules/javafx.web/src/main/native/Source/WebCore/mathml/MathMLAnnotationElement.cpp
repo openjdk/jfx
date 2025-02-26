@@ -37,11 +37,11 @@
 #include "RenderMathMLBlock.h"
 #include "SVGElementTypeHelpers.h"
 #include "SVGSVGElement.h"
-#include <wtf/IsoMallocInlines.h>
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
-WTF_MAKE_ISO_ALLOCATED_IMPL(MathMLAnnotationElement);
+WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(MathMLAnnotationElement);
 
 using namespace MathMLNames;
 
@@ -62,7 +62,7 @@ RenderPtr<RenderElement> MathMLAnnotationElement::createElementRenderer(RenderSt
         return MathMLElement::createElementRenderer(WTFMove(style), insertionPosition);
 
     ASSERT(hasTagName(annotation_xmlTag));
-    return createRenderer<RenderMathMLBlock>(*this, WTFMove(style));
+    return createRenderer<RenderMathMLBlock>(RenderObject::Type::MathMLBlock, *this, WTFMove(style));
 }
 
 bool MathMLAnnotationElement::childShouldCreateRenderer(const Node& child) const
@@ -71,36 +71,14 @@ bool MathMLAnnotationElement::childShouldCreateRenderer(const Node& child) const
     if (hasTagName(MathMLNames::annotationTag))
         return child.isTextNode();
 
-    // For <annotation-xml>, we follow these definitions from the HTML5 RelaxNG schema:
-    // - annotation-xml.model.mathml
-    // - annotation-xml.model.svg
-    // - annotation-xml.model.xhtml
-
     ASSERT(hasTagName(annotation_xmlTag));
-    auto& value = attributeWithoutSynchronization(encodingAttr);
-
-    if (is<MathMLElement>(child) && (MathMLSelectElement::isMathMLEncoding(value) || MathMLSelectElement::isHTMLEncoding(value))) {
-        auto& mathmlElement = downcast<MathMLElement>(child);
-        return is<MathMLMathElement>(mathmlElement);
-    }
-
-    if (is<SVGElement>(child) && (MathMLSelectElement::isSVGEncoding(value) || MathMLSelectElement::isHTMLEncoding(value))) {
-        auto& svgElement = downcast<SVGElement>(child);
-        return is<SVGSVGElement>(svgElement);
-    }
-
-    if (is<HTMLElement>(child) && MathMLSelectElement::isHTMLEncoding(value)) {
-        auto& htmlElement = downcast<HTMLElement>(child);
-        return is<HTMLHtmlElement>(htmlElement) || (isFlowContent(htmlElement) && StyledElement::childShouldCreateRenderer(child));
-    }
-
-    return false;
+    return StyledElement::childShouldCreateRenderer(child);
 }
 
 void MathMLAnnotationElement::attributeChanged(const QualifiedName& name, const AtomString& oldValue, const AtomString& newValue, AttributeModificationReason reason)
 {
     if (name == MathMLNames::srcAttr || name == MathMLNames::encodingAttr) {
-        auto* parent = parentElement();
+        RefPtr parent = parentElement();
         if (is<MathMLElement>(parent) && parent->hasTagName(semanticsTag))
             downcast<MathMLElement>(*parent).updateSelectedChild();
     }

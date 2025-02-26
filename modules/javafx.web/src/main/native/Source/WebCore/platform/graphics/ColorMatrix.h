@@ -37,7 +37,7 @@ class ColorMatrix {
 public:
     template<typename ...Ts>
     explicit constexpr ColorMatrix(Ts ...input)
-        : m_matrix {{ input ... }}
+        : m_matrix {{ static_cast<float>(input) ... }}
     {
         static_assert(sizeof...(Ts) == RowCount * ColumnCount);
     }
@@ -50,31 +50,15 @@ public:
         return m_matrix[(row * ColumnCount) + column];
     }
 
+    friend bool operator==(const ColorMatrix&, const ColorMatrix&) = default;
+
 private:
     std::array<float, RowCount * ColumnCount> m_matrix;
 };
 
-template<size_t ColumnCount, size_t RowCount>
-constexpr bool operator==(const ColorMatrix<ColumnCount, RowCount>& a, const ColorMatrix<ColumnCount, RowCount>& b)
-{
-    for (size_t row = 0; row < RowCount; ++row) {
-        for (size_t column = 0; column < ColumnCount; ++column) {
-            if (a.at(row, column) != b.at(row, column))
-                return false;
-        }
-    }
-    return true;
-}
-
-template<size_t ColumnCount, size_t RowCount>
-constexpr bool operator!=(const ColorMatrix<ColumnCount, RowCount>& a, const ColorMatrix<ColumnCount, RowCount>& b)
-{
-    return !(a == b);
-}
-
 constexpr ColorMatrix<3, 3> brightnessColorMatrix(float amount)
 {
-    // Brightness is specified as a compontent transfer function: https://www.w3.org/TR/filter-effects-1/#brightnessEquivalent
+    // Brightness is specified as a component transfer function: https://www.w3.org/TR/filter-effects-1/#brightnessEquivalent
     // which is equivalent to the following matrix.
     amount = std::max(amount, 0.0f);
     return ColorMatrix<3, 3> {
@@ -86,7 +70,7 @@ constexpr ColorMatrix<3, 3> brightnessColorMatrix(float amount)
 
 constexpr ColorMatrix<5, 4> contrastColorMatrix(float amount)
 {
-    // Contrast is specified as a compontent transfer function: https://www.w3.org/TR/filter-effects-1/#contrastEquivalent
+    // Contrast is specified as a component transfer function: https://www.w3.org/TR/filter-effects-1/#contrastEquivalent
     // which is equivalent to the following matrix.
     amount = std::max(amount, 0.0f);
     float intercept = -0.5f * amount + 0.5f;
@@ -112,7 +96,7 @@ constexpr ColorMatrix<3, 3> grayscaleColorMatrix(float amount)
 
 constexpr ColorMatrix<5, 4> invertColorMatrix(float amount)
 {
-    // Invert is specified as a compontent transfer function: https://www.w3.org/TR/filter-effects-1/#invertEquivalent
+    // Invert is specified as a component transfer function: https://www.w3.org/TR/filter-effects-1/#invertEquivalent
     // which is equivalent to the following matrix.
     amount = std::clamp(amount, 0.0f, 1.0f);
     float multiplier = 1.0f - amount * 2.0f;
@@ -126,7 +110,7 @@ constexpr ColorMatrix<5, 4> invertColorMatrix(float amount)
 
 constexpr ColorMatrix<5, 4> opacityColorMatrix(float amount)
 {
-    // Opacity is specified as a compontent transfer function: https://www.w3.org/TR/filter-effects-1/#opacityEquivalent
+    // Opacity is specified as a component transfer function: https://www.w3.org/TR/filter-effects-1/#opacityEquivalent
     // which is equivalent to the following matrix.
     amount = std::clamp(amount, 0.0f, 1.0f);
     return ColorMatrix<5, 4> {

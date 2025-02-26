@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2020-2021 Apple Inc. All rights reserved.
+ * Copyright (C) 2020-2023 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -74,12 +74,6 @@ Structure* IntlListFormat::createStructure(VM& vm, JSGlobalObject* globalObject,
 IntlListFormat::IntlListFormat(VM& vm, Structure* structure)
     : Base(vm, structure)
 {
-}
-
-void IntlListFormat::finishCreation(VM& vm)
-{
-    Base::finishCreation(vm);
-    ASSERT(inherits(info()));
 }
 
 // https://tc39.es/proposal-intl-list-format/#sec-Intl.ListFormat
@@ -236,7 +230,7 @@ JSValue IntlListFormat::formatToParts(JSGlobalObject* globalObject, JSValue list
     const UChar* formattedStringPointer = ufmtval_getString(formattedValue, &formattedStringLength, &status);
     if (U_FAILURE(status))
         return throwTypeError(globalObject, scope, "failed to format list of strings"_s);
-    StringView resultStringView(formattedStringPointer, formattedStringLength);
+    StringView resultStringView(std::span(formattedStringPointer, formattedStringLength));
 
     auto iterator = std::unique_ptr<UConstrainedFieldPosition, ICUDeleter<ucfpos_close>>(ucfpos_open(&status));
     if (U_FAILURE(status))

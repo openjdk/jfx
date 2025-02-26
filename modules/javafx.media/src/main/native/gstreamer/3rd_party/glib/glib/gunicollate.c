@@ -2,6 +2,8 @@
  *
  *  Copyright 2001,2005 Red Hat, Inc.
  *
+ * SPDX-License-Identifier: LGPL-2.1-or-later
+ *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
  * License as published by the Free Software Foundation; either
@@ -398,6 +400,8 @@ g_utf8_collate_key (const gchar *str,
   g_return_val_if_fail (str != NULL, NULL);
 
   str_norm = _g_utf8_normalize_wc (str, len, G_NORMALIZE_ALL_COMPOSE);
+
+  g_return_val_if_fail (str_norm != NULL, NULL);
 
   xfrm_len = wcsxfrm (NULL, (wchar_t *)str_norm, 0);
   result_wc = g_new (wchar_t, xfrm_len + 1);

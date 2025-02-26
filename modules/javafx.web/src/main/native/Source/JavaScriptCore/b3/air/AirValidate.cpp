@@ -96,7 +96,7 @@ public:
                         VALIDATE(&arg <= &inst.args.last(), ("At ", arg, " in ", inst, " in ", *block));
 
                         // FIXME: replace with a check for wasm simd instructions.
-                        VALIDATE(Options::useWebAssemblySIMD()
+                        VALIDATE(Options::useWasmSIMD()
                             || !Arg::isAnyUse(role)
                             || width <= Width64, ("At ", inst, " in ", *block, " arg ", arg));
                     });
@@ -115,6 +115,14 @@ public:
                 case VectorExtendHigh:
                     VALIDATE(elementByteSize(inst.args[0].simdInfo().lane) <= 8, ("At ", inst, " in ", *block));
                     VALIDATE(elementByteSize(inst.args[0].simdInfo().lane) >= 2, ("At ", inst, " in ", *block));
+                    break;
+                case ExtractRegister64:
+                    VALIDATE(inst.args[2].isImm(), ("At ", inst, " in ", *block));
+                    VALIDATE(inst.args[2].asTrustedImm32().m_value < 64, ("At ", inst, " in ", *block));
+                    break;
+                case ExtractRegister32:
+                    VALIDATE(inst.args[2].isImm(), ("At ", inst, " in ", *block));
+                    VALIDATE(inst.args[2].asTrustedImm32().m_value < 32, ("At ", inst, " in ", *block));
                     break;
                 default:
                     break;

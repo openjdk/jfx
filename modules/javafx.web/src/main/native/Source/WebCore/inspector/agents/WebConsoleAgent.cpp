@@ -28,10 +28,10 @@
 #include "WebConsoleAgent.h"
 
 #include "CommandLineAPIHost.h"
-#include "DOMWindow.h"
 #include "InspectorNetworkAgent.h"
 #include "InspectorWebAgentBase.h"
 #include "JSExecState.h"
+#include "LocalDOMWindow.h"
 #include "Logging.h"
 #include "ResourceError.h"
 #include "ResourceResponse.h"
@@ -39,27 +39,30 @@
 #include <JavaScriptCore/ConsoleMessage.h>
 #include <JavaScriptCore/JSCInlines.h>
 #include <JavaScriptCore/ScriptArguments.h>
+#include <wtf/text/MakeString.h>
 #include <wtf/text/StringBuilder.h>
 
 namespace WebCore {
 
 using namespace Inspector;
 
-#if USE(APPLE_INTERNAL_SDK) && __has_include(<WebKitAdditions/WebConsoleAgentAdditions.cpp>)
-#include <WebKitAdditions/WebConsoleAgentAdditions.cpp>
-#else
-static String networkConnectionIntegrityErrorMessage(const ResourceError&)
+static String blockedTrackerErrorMessage(const ResourceError& error)
 {
+#if ENABLE(ADVANCED_PRIVACY_PROTECTIONS)
+    if (error.blockedKnownTracker())
+        return "Blocked connection to known tracker"_s;
+#else
+    UNUSED_PARAM(error);
+#endif
     return { };
 }
-#endif
 
 WebConsoleAgent::WebConsoleAgent(WebAgentContext& context)
     : InspectorConsoleAgent(context)
 {
 }
 
-void WebConsoleAgent::frameWindowDiscarded(DOMWindow& window)
+void WebConsoleAgent::frameWindowDiscarded(LocalDOMWindow& window)
 {
     if (auto* document = window.document()) {
         for (auto& message : m_consoleMessages) {
@@ -73,7 +76,7 @@ void WebConsoleAgent::frameWindowDiscarded(DOMWindow& window)
 void WebConsoleAgent::didReceiveResponse(ResourceLoaderIdentifier requestIdentifier, const ResourceResponse& response)
 {
     if (response.httpStatusCode() >= 400) {
-        auto message = makeString("Failed to load resource: the server responded with a status of ", response.httpStatusCode(), " (", ScriptArguments::truncateStringForConsoleMessage(response.httpStatusText()), ')');
+        auto message = makeString("Failed to load resource: the server responded with a status of "_s, response.httpStatusCode(), " ("_s, ScriptArguments::truncateStringForConsoleMessage(response.httpStatusText()), ')');
         addMessageToConsole(makeUnique<ConsoleMessage>(MessageSource::Network, MessageType::Log, MessageLevel::Error, message, response.url().string(), 0, 0, nullptr, requestIdentifier.toUInt64()));
     }
 }
@@ -88,9 +91,9 @@ void WebConsoleAgent::didFailLoading(ResourceLoaderIdentifier requestIdentifier,
         return;
 
     auto level = MessageLevel::Error;
-    auto message = networkConnectionIntegrityErrorMessage(error);
+    auto message = blockedTrackerErrorMessage(error);
     if (message.isEmpty())
-        message = makeString("Failed to load resource", error.localizedDescription().isEmpty() ? "" : ": ", error.localizedDescription());
+        message = makeString("Failed to load resource"_s, error.localizedDescription().isEmpty() ? ""_s : ": "_s, error.localizedDescription());
     else
         level = MessageLevel::Info;
 

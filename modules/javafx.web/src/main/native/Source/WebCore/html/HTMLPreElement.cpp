@@ -27,11 +27,11 @@
 #include "CSSValueKeywords.h"
 #include "HTMLNames.h"
 #include "MutableStyleProperties.h"
-#include <wtf/IsoMallocInlines.h>
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
-WTF_MAKE_ISO_ALLOCATED_IMPL(HTMLPreElement);
+WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(HTMLPreElement);
 
 using namespace HTMLNames;
 
@@ -54,9 +54,10 @@ bool HTMLPreElement::hasPresentationalHintsForAttribute(const QualifiedName& nam
 
 void HTMLPreElement::collectPresentationalHintsForAttribute(const QualifiedName& name, const AtomString& value, MutableStyleProperties& style)
 {
-    if (name == wrapAttr)
-        style.setProperty(CSSPropertyWhiteSpace, CSSValuePreWrap);
-    else
+    if (name == wrapAttr) {
+        style.setProperty(CSSPropertyWhiteSpaceCollapse, CSSValuePreserve);
+        style.setProperty(CSSPropertyTextWrapMode, CSSValueWrap);
+    } else
         HTMLElement::collectPresentationalHintsForAttribute(name, value, style);
 }
 

@@ -33,4 +33,11 @@ enum class NotificationDirection : uint8_t {
     Rtl
 };
 
+static inline bool isValidNotificationDirection(uint8_t value)
+{
+    return value == static_cast<uint8_t>(NotificationDirection::Auto)
+        || value == static_cast<uint8_t>(NotificationDirection::Ltr)
+        || value == static_cast<uint8_t>(NotificationDirection::Rtl);
 }
+
+} // namespace WebCore

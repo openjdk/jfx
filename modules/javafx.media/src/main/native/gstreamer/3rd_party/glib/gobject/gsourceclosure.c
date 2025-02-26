@@ -1,6 +1,8 @@
 /* GObject - GLib Type, Object, Parameter and Signal Library
  * Copyright (C) 2001 Red Hat, Inc.
  *
+ * SPDX-License-Identifier: LGPL-2.1-or-later
+ *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
  * License as published by the Free Software Foundation; either
@@ -34,7 +36,7 @@ g_io_condition_get_type (void)
 {
   static GType etype = 0;
 
-  if (g_once_init_enter (&etype))
+  if (g_once_init_enter_pointer (&etype))
     {
       static const GFlagsValue values[] = {
   { G_IO_IN,   "G_IO_IN",   "in" },
@@ -46,7 +48,7 @@ g_io_condition_get_type (void)
   { 0, NULL, NULL }
       };
       GType type_id = g_flags_register_static ("GIOCondition", values);
-      g_once_init_leave (&etype, type_id);
+      g_once_init_leave_pointer (&etype, type_id);
     }
   return etype;
 }

@@ -30,12 +30,12 @@
 #include "JSBigInt.h"
 #include "JSCInlines.h"
 #include "NumberObject.h"
+#include "NumberPrototype.h"
 #include "ParseInt.h"
 #include "TypeError.h"
+#include <wtf/text/MakeString.h>
 
 namespace JSC {
-
-const ASCIILiteral SymbolCoercionError { "Cannot convert a symbol to a string"_s };
 
 double JSValue::toIntegerPreserveNaN(JSGlobalObject* globalObject) const
 {
@@ -48,6 +48,8 @@ uint64_t JSValue::toLength(JSGlobalObject* globalObject) const
 {
     // ECMA 7.1.15
     // http://www.ecma-international.org/ecma-262/6.0/#sec-tolength
+    if (isInt32())
+        return static_cast<uint64_t>(std::max<int32_t>(asInt32(), 0));
     double d = toIntegerOrInfinity(globalObject);
     if (d <= 0)
         return 0;
@@ -381,14 +383,10 @@ JSString* JSValue::toStringSlowCase(JSGlobalObject* globalObject, bool returnEmp
     };
 
     ASSERT(!isString());
-    if (isInt32()) {
-        auto integer = asInt32();
-        if (static_cast<unsigned>(integer) <= 9)
-            return vm.smallStrings.singleCharacterString(integer + '0');
-        return jsNontrivialString(vm, vm.numericStrings.add(integer));
-    }
+    if (isInt32())
+        return int32ToString(vm, asInt32(), 10);
     if (isDouble())
-        return jsString(vm, vm.numericStrings.add(asDouble()));
+        return JSC::numberToString(vm, asDouble(), 10);
     if (isTrue())
         return vm.smallStrings.trueString();
     if (isFalse())
@@ -398,34 +396,12 @@ JSString* JSValue::toStringSlowCase(JSGlobalObject* globalObject, bool returnEmp
     if (isUndefined())
         return vm.smallStrings.undefinedString();
 #if USE(BIGINT32)
-    if (isBigInt32()) {
-        auto integer = bigInt32AsInt32();
-        if (static_cast<unsigned>(integer) <= 9)
-            return vm.smallStrings.singleCharacterString(integer + '0');
-        return jsNontrivialString(vm, vm.numericStrings.add(integer));
-    }
+    if (isBigInt32())
+        return int32ToString(vm, bigInt32AsInt32(), 10);
 #endif
-    if (isHeapBigInt()) {
-        JSBigInt* bigInt = asHeapBigInt();
-        // FIXME: we should rather have two cases here: one-character string vs jsNonTrivialString for everything else.
-        auto string = bigInt->toString(globalObject, 10);
-        RETURN_IF_EXCEPTION(scope, errorValue());
-        JSString* returnString = JSString::create(vm, string.releaseImpl().releaseNonNull());
+    JSString* returnString = asCell()->toStringInline(globalObject);
         RETURN_IF_EXCEPTION(scope, errorValue());
         return returnString;
-    }
-    if (isSymbol()) {
-        throwTypeError(globalObject, scope, SymbolCoercionError);
-        return errorValue();
-    }
-
-    ASSERT(isObject()); // String, Symbol, and HeapBigInt are already handled.
-    JSValue value = asObject(asCell())->toPrimitive(globalObject, PreferString);
-    RETURN_IF_EXCEPTION(scope, errorValue());
-    ASSERT(!value.isObject());
-    JSString* result = value.toString(globalObject);
-    RETURN_IF_EXCEPTION(scope, errorValue());
-    return result;
 }
 
 String JSValue::toWTFStringSlowCase(JSGlobalObject* globalObject) const
@@ -449,27 +425,20 @@ String JSValue::toWTFStringSlowCase(JSGlobalObject* globalObject) const
     RELEASE_AND_RETURN(scope, string->value(globalObject));
 }
 
-#if !COMPILER(GCC_COMPATIBLE)
-// This makes the argument opaque from the compiler.
-NEVER_INLINE void ensureStillAliveHere(JSValue)
-{
-}
-#endif
-
 WTF::String JSValue::toWTFStringForConsole(JSGlobalObject* globalObject) const
 {
     VM& vm = globalObject->vm();
     auto scope = DECLARE_THROW_SCOPE(vm);
     JSString* string = toString(globalObject);
     RETURN_IF_EXCEPTION(scope, { });
-    String result = string->value(globalObject);
+    auto result = string->value(globalObject);
     RETURN_IF_EXCEPTION(scope, { });
     if (isString())
-        return tryMakeString('"', result, '"');
+        return tryMakeString('"', result.data, '"');
     if (jsDynamicCast<JSArray*>(*this))
-        return tryMakeString('[', result, ']');
+        return tryMakeString('[', result.data, ']');
     if (jsDynamicCast<JSBigInt*>(*this))
-        return tryMakeString(result, 'n');
+        return tryMakeString(result.data, 'n');
     return result;
 }
 

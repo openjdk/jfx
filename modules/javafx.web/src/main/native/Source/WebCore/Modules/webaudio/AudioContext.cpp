@@ -30,15 +30,21 @@
 #include "AudioContext.h"
 #include "AudioContextOptions.h"
 #include "AudioTimestamp.h"
-#include "DOMWindow.h"
+#include "DOMAudioSession.h"
 #include "DocumentInlines.h"
 #include "JSDOMPromiseDeferred.h"
+#include "LocalDOMWindow.h"
 #include "Logging.h"
+#include "MediaSession.h"
+#include "Navigator.h"
+#include "NavigatorAudioSession.h"
+#include "NavigatorMediaSession.h"
+#include "NowPlayingInfo.h"
 #include "PageInlines.h"
 #include "Performance.h"
 #include "PlatformMediaSessionManager.h"
 #include "Quirks.h"
-#include <wtf/IsoMallocInlines.h>
+#include <wtf/TZoneMallocInlines.h>
 
 #if ENABLE(MEDIA_STREAM)
 #include "MediaStream.h"
@@ -54,6 +60,10 @@
 #include "MediaElementAudioSourceOptions.h"
 #endif
 
+#if PLATFORM(VISION) && ENABLE(WEBXR)
+#include "Page.h"
+#endif
+
 namespace WebCore {
 
 #define AUDIOCONTEXT_RELEASE_LOG(fmt, ...) RELEASE_LOG(Media, "%p - AudioContext::" fmt, this, ##__VA_ARGS__)
@@ -63,7 +73,7 @@ namespace WebCore {
 constexpr unsigned maxHardwareContexts = 4;
 #endif
 
-WTF_MAKE_ISO_ALLOCATED_IMPL(AudioContext);
+WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(AudioContext);
 
 #if OS(WINDOWS)
 static unsigned hardwareContextCount;
@@ -81,7 +91,7 @@ static bool shouldDocumentAllowWebAudioToAutoPlay(const Document& document)
         return true;
     if (document.quirks().shouldAutoplayWebAudioForArbitraryUserGesture() && document.topDocument().hasHadUserInteraction())
         return true;
-    auto* window = document.domWindow();
+    RefPtr window = document.domWindow();
     return window && window->hasTransientActivation();
 }
 
@@ -95,11 +105,11 @@ ExceptionOr<Ref<AudioContext>> AudioContext::create(Document& document, AudioCon
     ASSERT(isMainThread());
 #if OS(WINDOWS)
     if (hardwareContextCount >= maxHardwareContexts)
-        return Exception { QuotaExceededError, "Reached maximum number of hardware contexts on this platform"_s };
+        return Exception { ExceptionCode::QuotaExceededError, "Reached maximum number of hardware contexts on this platform"_s };
 #endif
 
     if (!document.isFullyActive())
-        return Exception { InvalidStateError, "Document is not fully active"_s };
+        return Exception { ExceptionCode::InvalidStateError, "Document is not fully active"_s };
 
     // FIXME: Figure out where latencyHint should go.
 
@@ -107,7 +117,7 @@ ExceptionOr<Ref<AudioContext>> AudioContext::create(Document& document, AudioCon
         contextOptions.sampleRate = *defaultSampleRateForTesting();
 
     if (contextOptions.sampleRate && !isSupportedSampleRate(*contextOptions.sampleRate))
-        return Exception { NotSupportedError, "sampleRate is not in range"_s };
+        return Exception { ExceptionCode::NotSupportedError, "sampleRate is not in range"_s };
 
     auto audioContext = adoptRef(*new AudioContext(document, contextOptions));
     audioContext->suspendIfNeeded();
@@ -118,6 +128,7 @@ AudioContext::AudioContext(Document& document, const AudioContextOptions& contex
     : BaseAudioContext(document)
     , m_destinationNode(makeUniqueRef<DefaultAudioDestinationNode>(*this, contextOptions.sampleRate))
     , m_mediaSession(PlatformMediaSession::create(PlatformMediaSessionManager::sharedManager(), *this))
+    , m_currentIdentifier(MediaUniqueIdentifier::generate())
 {
     constructCommon();
 
@@ -150,7 +161,7 @@ void AudioContext::constructCommon()
 
 AudioContext::~AudioContext()
 {
-    if (auto* document = this->document())
+    if (RefPtr document = this->document())
         document->removeAudioProducer(*this);
 }
 
@@ -194,7 +205,7 @@ AudioTimestamp AudioContext::getOutputTimestamp()
 void AudioContext::close(DOMPromiseDeferred<void>&& promise)
 {
     if (isStopped()) {
-        promise.reject(InvalidStateError);
+        promise.reject(ExceptionCode::InvalidStateError);
         return;
     }
 
@@ -217,7 +228,7 @@ void AudioContext::close(DOMPromiseDeferred<void>&& promise)
 void AudioContext::suspendRendering(DOMPromiseDeferred<void>&& promise)
 {
     if (isStopped() || state() == State::Closed) {
-        promise.reject(Exception { InvalidStateError, "Context is closed"_s });
+        promise.reject(Exception { ExceptionCode::InvalidStateError, "Context is closed"_s });
         return;
     }
 
@@ -243,7 +254,7 @@ void AudioContext::suspendRendering(DOMPromiseDeferred<void>&& promise)
 void AudioContext::resumeRendering(DOMPromiseDeferred<void>&& promise)
 {
     if (isStopped() || state() == State::Closed) {
-        promise.reject(Exception { InvalidStateError, "Context is closed"_s });
+        promise.reject(Exception { ExceptionCode::InvalidStateError, "Context is closed"_s });
         return;
     }
 
@@ -265,7 +276,7 @@ void AudioContext::resumeRendering(DOMPromiseDeferred<void>&& promise)
         // Since we update the state asynchronously, we may have been interrupted after the
         // call to resume() and before this lambda runs. In this case, we don't want to
         // reset the state to running.
-        bool interrupted = m_mediaSession->state() == PlatformMediaSession::Interrupted;
+        bool interrupted = m_mediaSession->state() == PlatformMediaSession::State::Interrupted;
         setState(interrupted ? State::Interrupted : State::Running);
         if (interrupted)
             addReaction(State::Running, WTFMove(promise));
@@ -324,7 +335,7 @@ void AudioContext::lazyInitialize()
 
 bool AudioContext::willPausePlayback()
 {
-    auto* document = this->document();
+    RefPtr document = this->document();
     if (!document)
         return false;
 
@@ -348,10 +359,12 @@ bool AudioContext::willPausePlayback()
 
 MediaProducerMediaStateFlags AudioContext::mediaState() const
 {
-    if (!isStopped() && destination().isPlayingAudio())
-        return MediaProducerMediaState::IsPlayingAudio;
+    return isAudible() ? MediaProducerMediaState::IsPlayingAudio : MediaProducer::IsNotPlaying;
+}
 
-    return MediaProducer::IsNotPlaying;
+bool AudioContext::isAudible() const
+{
+    return !isStopped() && destination().isPlayingAudio();
 }
 
 void AudioContext::mayResumePlayback(bool shouldResume)
@@ -363,6 +376,9 @@ void AudioContext::mayResumePlayback(bool shouldResume)
         setState(State::Suspended);
         return;
     }
+
+    if (m_wasSuspendedByScript)
+        return;
 
     if (!willBeginPlayback())
         return;
@@ -376,7 +392,7 @@ void AudioContext::mayResumePlayback(bool shouldResume)
 
 bool AudioContext::willBeginPlayback()
 {
-    auto* document = this->document();
+    RefPtr document = this->document();
     if (!document)
         return false;
 
@@ -411,7 +427,7 @@ void AudioContext::suspend(ReasonForSuspension)
     if (isClosed() || m_wasSuspendedByScript)
         return;
 
-    m_mediaSession->beginInterruption(PlatformMediaSession::PlaybackSuspended);
+    m_mediaSession->beginInterruption(PlatformMediaSession::InterruptionType::PlaybackSuspended);
     document()->updateIsPlayingMedia();
 }
 
@@ -420,13 +436,8 @@ void AudioContext::resume()
     if (isClosed() || m_wasSuspendedByScript)
         return;
 
-    m_mediaSession->endInterruption(PlatformMediaSession::MayResumePlaying);
+    m_mediaSession->endInterruption(PlatformMediaSession::EndInterruptionFlags::MayResumePlaying);
     document()->updateIsPlayingMedia();
-}
-
-const char* AudioContext::activeDOMObjectName() const
-{
-    return "AudioContext";
 }
 
 void AudioContext::suspendPlayback()
@@ -440,15 +451,151 @@ void AudioContext::suspendPlayback()
         if (exception)
             return;
 
-        bool interrupted = m_mediaSession->state() == PlatformMediaSession::Interrupted;
+        bool interrupted = m_mediaSession->state() == PlatformMediaSession::State::Interrupted;
         setState(interrupted ? State::Interrupted : State::Suspended);
     });
 }
 
+bool AudioContext::canReceiveRemoteControlCommands() const
+{
+#if ENABLE(DOM_AUDIO_SESSION)
+    return isNowPlayingEligible();
+#else
+    return false;
+#endif
+}
+
+void AudioContext::didReceiveRemoteControlCommand(PlatformMediaSession::RemoteControlCommandType command, const PlatformMediaSession::RemoteCommandArgument&)
+{
+    switch (command) {
+    case PlatformMediaSession::RemoteControlCommandType::PlayCommand:
+        mayResumePlayback(true);
+        break;
+    case PlatformMediaSession::RemoteControlCommandType::StopCommand:
+    case PlatformMediaSession::RemoteControlCommandType::PauseCommand:
+        suspendPlayback();
+        break;
+    case PlatformMediaSession::RemoteControlCommandType::TogglePlayPauseCommand:
+        if (state() == State::Interrupted || state() == State::Suspended)
+            mayResumePlayback(true);
+        else
+            suspendPlayback();
+        break;
+    case PlatformMediaSession::RemoteControlCommandType::BeginSeekingBackwardCommand:
+    case PlatformMediaSession::RemoteControlCommandType::BeginSeekingForwardCommand:
+    case PlatformMediaSession::RemoteControlCommandType::EndSeekingBackwardCommand:
+    case PlatformMediaSession::RemoteControlCommandType::EndSeekingForwardCommand:
+    case PlatformMediaSession::RemoteControlCommandType::BeginScrubbingCommand:
+    case PlatformMediaSession::RemoteControlCommandType::EndScrubbingCommand:
+    case PlatformMediaSession::RemoteControlCommandType::SkipForwardCommand:
+    case PlatformMediaSession::RemoteControlCommandType::SkipBackwardCommand:
+    case PlatformMediaSession::RemoteControlCommandType::SeekToPlaybackPositionCommand:
+    default:
+        ASSERT_NOT_REACHED();
+    }
+}
+
 MediaSessionGroupIdentifier AudioContext::mediaSessionGroupIdentifier() const
 {
-    auto* document = downcast<Document>(scriptExecutionContext());
+    RefPtr document = downcast<Document>(scriptExecutionContext());
     return document && document->page() ? document->page()->mediaSessionGroupIdentifier() : MediaSessionGroupIdentifier { };
+}
+
+static bool hasPlayBackAudioSession(Document* document)
+{
+#if ENABLE(DOM_AUDIO_SESSION)
+    RefPtr window = document ? document->domWindow() : nullptr;
+
+    RefPtr navigator = window ? window->optionalNavigator() : nullptr;
+    RefPtr audioSession = navigator ? NavigatorAudioSession::audioSession(*navigator) : nullptr;
+
+    auto audioSessionType = audioSession ? audioSession->type() : DOMAudioSessionType::Auto;
+    return audioSessionType == DOMAudioSessionType::Playback || audioSessionType == DOMAudioSessionType::PlayAndRecord;
+#else
+    UNUSED_PARAM(document);
+    return false;
+#endif
+}
+
+bool AudioContext::isNowPlayingEligible() const
+{
+    if (!destination().isConnected() || m_wasSuspendedByScript)
+        return false;
+
+    RefPtr document = this->document();
+    if (!document)
+        return false;
+
+    RefPtr page = document->page();
+    if (page && page->mediaPlaybackIsSuspended())
+        return false;
+
+    return hasPlayBackAudioSession(document.get());
+}
+
+std::optional<NowPlayingInfo> AudioContext::nowPlayingInfo() const
+{
+    if (!isNowPlayingEligible())
+        return { };
+
+    RefPtr document = this->document();
+    RefPtr page = document ? document->page() : nullptr;
+    RefPtr window = document ? document->domWindow() : nullptr;
+    if (!page || !window)
+        return { };
+
+    NowPlayingInfo nowPlayingInfo {
+        {
+            { },
+            { },
+            { },
+            { },
+            { }
+        },
+        MediaPlayer::invalidTime(),
+        MediaPlayer::invalidTime(),
+        1.0,
+        false,
+        m_currentIdentifier,
+        isPlaying(),
+        !page->isVisibleAndActive()
+    };
+
+    if (page->usesEphemeralSession() && !document->settings().allowPrivacySensitiveOperationsInNonPersistentDataStores())
+        return nowPlayingInfo;
+
+#if ENABLE(MEDIA_SESSION)
+    if (RefPtr mediaSession = NavigatorMediaSession::mediaSessionIfExists(window->protectedNavigator()))
+        mediaSession->updateNowPlayingInfo(nowPlayingInfo);
+#endif
+
+    if (nowPlayingInfo.metadata.title.isEmpty()) {
+        RegistrableDomain domain { document->securityOrigin().data() };
+        if (!domain.isEmpty())
+            nowPlayingInfo.metadata.title = domain.string();
+    }
+
+    return nowPlayingInfo;
+}
+
+WeakPtr<PlatformMediaSession> AudioContext::selectBestMediaSession(const Vector<WeakPtr<PlatformMediaSession>>& sessions, PlatformMediaSession::PlaybackControlsPurpose purpose)
+{
+    if (purpose != PlatformMediaSession::PlaybackControlsPurpose::NowPlaying)
+        return nullptr;
+
+    WeakPtr<PlatformMediaSession> audibleSession;
+    for (auto& session : sessions) {
+        if (!isNowPlayingEligible())
+            continue;
+
+        if (!audibleSession)
+            audibleSession = session;
+
+        if (session->isPlaying())
+            return session;
+    }
+
+    return audibleSession;
 }
 
 bool AudioContext::isSuspended() const
@@ -483,28 +630,54 @@ void AudioContext::isPlayingAudioDidChange()
     // Make sure to call Document::updateIsPlayingMedia() on the main thread, since
     // we could be on the audio I/O thread here and the call into WebCore could block.
     callOnMainThread([protectedThis = Ref { *this }] {
-        if (auto* document = protectedThis->document())
+        if (RefPtr document = protectedThis->document())
             document->updateIsPlayingMedia();
     });
 }
 
 bool AudioContext::shouldOverrideBackgroundPlaybackRestriction(PlatformMediaSession::InterruptionType interruption) const
 {
-    return m_canOverrideBackgroundPlaybackRestriction && interruption == PlatformMediaSession::InterruptionType::EnteringBackground && !destination().isConnected();
+    if (interruption != PlatformMediaSession::InterruptionType::EnteringBackground)
+        return false;
+
+    if (m_canOverrideBackgroundPlaybackRestriction && !destination().isConnected())
+        return true;
+
+    RefPtr document = this->document();
+    if (!document)
+        return false;
+
+#if PLATFORM(VISION) && ENABLE(WEBXR)
+    RefPtr page = document->page();
+    if (page && page->hasActiveImmersiveSession())
+        return true;
+#endif
+
+    return hasPlayBackAudioSession(document.get());
 }
 
 void AudioContext::defaultDestinationWillBecomeConnected()
 {
     // We might need to interrupt if we previously overrode a background interruption.
-    if (!PlatformMediaSessionManager::sharedManager().isApplicationInBackground() || m_mediaSession->state() == PlatformMediaSession::Interrupted)
+    if (!PlatformMediaSessionManager::sharedManager().isApplicationInBackground() || m_mediaSession->state() == PlatformMediaSession::State::Interrupted) {
+        PlatformMediaSessionManager::updateNowPlayingInfoIfNecessary();
         return;
+    }
 
     // We end the overriden interruption (if any) to get the right count of interruptions and start a new interruption.
     m_mediaSession->endInterruption(PlatformMediaSession::EndInterruptionFlags::NoFlags);
 
     m_canOverrideBackgroundPlaybackRestriction = false;
-    m_mediaSession->beginInterruption(PlatformMediaSession::EnteringBackground);
+    m_mediaSession->beginInterruption(PlatformMediaSession::InterruptionType::EnteringBackground);
     m_canOverrideBackgroundPlaybackRestriction = true;
+}
+
+void AudioContext::isActiveNowPlayingSessionChanged()
+{
+    if (RefPtr document = this->document()) {
+        if (RefPtr page = document->protectedPage())
+            page->hasActiveNowPlayingSessionChanged();
+    }
 }
 
 #if !RELEASE_LOG_DISABLED

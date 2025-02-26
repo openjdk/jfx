@@ -55,6 +55,8 @@ LinkRelAttribute::LinkRelAttribute(Document& document, StringView rel)
         isDNSPrefetch = true;
     else if (document.settings().linkPreconnectEnabled() && equalLettersIgnoringASCIICase(rel, "preconnect"_s))
         isLinkPreconnect = true;
+    else if (document.settings().linkModulePreloadEnabled() && equalLettersIgnoringASCIICase(rel, "modulepreload"_s))
+        isLinkModulePreload = true;
     else if (document.settings().linkPreloadEnabled() && equalLettersIgnoringASCIICase(rel, "preload"_s))
         isLinkPreload = true;
     else if (document.settings().linkPrefetchEnabled() && equalLettersIgnoringASCIICase(rel, "prefetch"_s))
@@ -66,7 +68,9 @@ LinkRelAttribute::LinkRelAttribute(Document& document, StringView rel)
     } else if (equalLettersIgnoringASCIICase(rel, "manifest"_s)) {
         isApplicationManifest = true;
 #endif
-    } else {
+    } else if (equalLettersIgnoringASCIICase(rel, "expect"_s))
+        isInternalResourceLink = true;
+    else {
         // Tokenize the rel attribute and set bits based on specific keywords that we find.
         for (auto line : rel.split('\n')) {
             for (auto word : line.split(' ')) {
@@ -101,6 +105,9 @@ bool LinkRelAttribute::isSupported(Document& document, StringView attribute)
     }
 
     if (document.settings().linkPreconnectEnabled() && equalLettersIgnoringASCIICase(attribute, "preconnect"_s))
+        return true;
+
+    if (document.settings().linkModulePreloadEnabled() && equalLettersIgnoringASCIICase(attribute, "modulepreload"_s))
         return true;
 
     if (document.settings().linkPreloadEnabled() && equalLettersIgnoringASCIICase(attribute, "preload"_s))

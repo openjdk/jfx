@@ -28,13 +28,13 @@
 
 #include "ExceptionOr.h"
 #include <wtf/FixedVector.h>
-#include <wtf/IsoMallocInlines.h>
+#include <wtf/TZoneMallocInlines.h>
 #include <wtf/text/StringBuilder.h>
 #include <wtf/text/WTFString.h>
 
 namespace WebCore {
 
-WTF_MAKE_ISO_ALLOCATED_IMPL(CSSNumericArray);
+WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(CSSNumericArray);
 
 Ref<CSSNumericArray> CSSNumericArray::create(FixedVector<CSSNumberish>&& numberishes)
 {
@@ -51,15 +51,10 @@ CSSNumericArray::CSSNumericArray(Vector<Ref<CSSNumericValue>>&& values)
 {
 }
 
-CSSNumericArray::CSSNumericArray(FixedVector<Ref<CSSNumericValue>>&& values)
-    : m_array(WTFMove(values))
-{
-}
-
-ExceptionOr<Ref<CSSNumericValue>> CSSNumericArray::item(size_t index)
+RefPtr<CSSNumericValue> CSSNumericArray::item(size_t index)
 {
     if (index >= m_array.size())
-        return Exception { RangeError, makeString("Index ", index, " exceeds index range for CSSNumericArray.") };
+        return nullptr;
     return m_array[index].copyRef();
 }
 

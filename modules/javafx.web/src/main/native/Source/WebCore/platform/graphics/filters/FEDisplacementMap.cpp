@@ -31,17 +31,25 @@
 
 namespace WebCore {
 
-Ref<FEDisplacementMap> FEDisplacementMap::create(ChannelSelectorType xChannelSelector, ChannelSelectorType yChannelSelector, float scale)
+Ref<FEDisplacementMap> FEDisplacementMap::create(ChannelSelectorType xChannelSelector, ChannelSelectorType yChannelSelector, float scale, DestinationColorSpace colorSpace)
 {
-    return adoptRef(*new FEDisplacementMap(xChannelSelector, yChannelSelector, scale));
+    return adoptRef(*new FEDisplacementMap(xChannelSelector, yChannelSelector, scale, colorSpace));
 }
 
-FEDisplacementMap::FEDisplacementMap(ChannelSelectorType xChannelSelector, ChannelSelectorType yChannelSelector, float scale)
-    : FilterEffect(FilterEffect::Type::FEDisplacementMap)
+FEDisplacementMap::FEDisplacementMap(ChannelSelectorType xChannelSelector, ChannelSelectorType yChannelSelector, float scale, DestinationColorSpace colorSpace)
+    : FilterEffect(FilterEffect::Type::FEDisplacementMap, colorSpace)
     , m_xChannelSelector(xChannelSelector)
     , m_yChannelSelector(yChannelSelector)
     , m_scale(scale)
 {
+}
+
+bool FEDisplacementMap::operator==(const FEDisplacementMap& other) const
+{
+    return FilterEffect::operator==(other)
+        && m_xChannelSelector == other.m_xChannelSelector
+        && m_yChannelSelector == other.m_yChannelSelector
+        && m_scale == other.m_scale;
 }
 
 bool FEDisplacementMap::setXChannelSelector(const ChannelSelectorType xChannelSelector)
@@ -68,7 +76,7 @@ bool FEDisplacementMap::setScale(float scale)
     return true;
 }
 
-FloatRect FEDisplacementMap::calculateImageRect(const Filter& filter, Span<const FloatRect>, const FloatRect& primitiveSubregion) const
+FloatRect FEDisplacementMap::calculateImageRect(const Filter& filter, std::span<const FloatRect>, const FloatRect& primitiveSubregion) const
 {
     return filter.maxEffectRect(primitiveSubregion);
 }
@@ -97,19 +105,19 @@ std::unique_ptr<FilterEffectApplier> FEDisplacementMap::createSoftwareApplier() 
 static TextStream& operator<<(TextStream& ts, const ChannelSelectorType& type)
 {
     switch (type) {
-    case CHANNEL_UNKNOWN:
+    case ChannelSelectorType::CHANNEL_UNKNOWN:
         ts << "UNKNOWN";
         break;
-    case CHANNEL_R:
+    case ChannelSelectorType::CHANNEL_R:
         ts << "RED";
         break;
-    case CHANNEL_G:
+    case ChannelSelectorType::CHANNEL_G:
         ts << "GREEN";
         break;
-    case CHANNEL_B:
+    case ChannelSelectorType::CHANNEL_B:
         ts << "BLUE";
         break;
-    case CHANNEL_A:
+    case ChannelSelectorType::CHANNEL_A:
         ts << "ALPHA";
         break;
     }

@@ -27,6 +27,7 @@
 
 #include "ExecutableBase.h"
 #include "ParserModes.h"
+#include "ProfilerJettisonReason.h"
 
 namespace JSC {
 
@@ -50,6 +51,7 @@ public:
     const SourceOrigin& sourceOrigin() const { return m_source.provider()->sourceOrigin(); }
     // This is NOT the path that should be used for computing relative paths from a script. Use SourceOrigin's URL for that, the values may or may not be the same... This should only be used for `error.sourceURL` and stack traces.
     const String& sourceURL() const { return m_source.provider()->sourceURL(); }
+    const String& sourceURLStripped() const { return m_source.provider()->sourceURLStripped(); }
     const String& preRedirectURL() const { return m_source.provider()->preRedirectURL(); }
     int firstLine() const { return m_source.firstLine().oneBasedInt(); }
     JS_EXPORT_PRIVATE int lastLine() const;
@@ -57,14 +59,14 @@ public:
     JS_EXPORT_PRIVATE unsigned endColumn() const;
 
     std::optional<int> overrideLineNumber(VM&) const;
-    unsigned typeProfilingStartOffset(VM&) const;
-    unsigned typeProfilingEndOffset(VM&) const;
+    unsigned typeProfilingStartOffset() const;
+    unsigned typeProfilingEndOffset() const;
 
     bool usesArguments() const { return m_features & ArgumentsFeature; }
     bool isArrowFunctionContext() const { return m_isArrowFunctionContext; }
     DerivedContextType derivedContextType() const { return static_cast<DerivedContextType>(m_derivedContextType); }
     EvalContextType evalContextType() const { return static_cast<EvalContextType>(m_evalContextType); }
-    bool isInStrictContext() const { return m_lexicalScopeFeatures & StrictModeLexicalFeature; }
+    bool isInStrictContext() const { return m_lexicallyScopedFeatures & StrictModeLexicallyScopedFeature; }
     bool usesNonSimpleParameterList() const { return m_features & NonSimpleParameterListFeature; }
 
     void setNeverInline(bool value) { m_neverInline = value; }
@@ -84,12 +86,14 @@ public:
     bool* addressOfDidTryToEnterInLoop() { return &m_didTryToEnterInLoop; }
 
     CodeFeatures features() const { return m_features; }
+    LexicallyScopedFeatures lexicallyScopedFeatures() { return static_cast<LexicallyScopedFeatures>(m_lexicallyScopedFeatures); }
+    void setTaintedByWithScope() { m_lexicallyScopedFeatures |= TaintedByWithScopeLexicallyScopedFeature; }
 
     DECLARE_EXPORT_INFO;
 
-    void recordParse(CodeFeatures, LexicalScopeFeatures, bool hasCapturedVariables, int lastLine, unsigned endColumn);
+    void recordParse(CodeFeatures, LexicallyScopedFeatures, bool hasCapturedVariables, int lastLine, unsigned endColumn);
     void installCode(CodeBlock*);
-    void installCode(VM&, CodeBlock*, CodeType, CodeSpecializationKind);
+    void installCode(VM&, CodeBlock*, CodeType, CodeSpecializationKind, Profiler::JettisonReason);
     CodeBlock* newCodeBlockFor(CodeSpecializationKind, JSFunction*, JSScope*);
     CodeBlock* newReplacementCodeBlockFor(CodeSpecializationKind);
 
@@ -130,12 +134,12 @@ private:
     TemplateObjectMap& ensureTemplateObjectMap(VM&);
 
 protected:
-    ScriptExecutable(Structure*, VM&, const SourceCode&, LexicalScopeFeatures, DerivedContextType, bool isInArrowFunctionContext, bool isInsideOrdinaryFunction, EvalContextType, Intrinsic);
+    ScriptExecutable(Structure*, VM&, const SourceCode&, LexicallyScopedFeatures, DerivedContextType, bool isInArrowFunctionContext, bool isInsideOrdinaryFunction, EvalContextType, Intrinsic);
 
-    void recordParse(CodeFeatures features, LexicalScopeFeatures lexicalScopeFeatures, bool hasCapturedVariables)
+    void recordParse(CodeFeatures features, LexicallyScopedFeatures lexicallyScopedFeatures, bool hasCapturedVariables)
     {
         m_features = features;
-        m_lexicalScopeFeatures = lexicalScopeFeatures;
+        m_lexicallyScopedFeatures = lexicallyScopedFeatures;
         m_hasCapturedVariables = hasCapturedVariables;
     }
 
@@ -151,7 +155,7 @@ protected:
     Intrinsic m_intrinsic { NoIntrinsic };
     bool m_didTryToEnterInLoop { false };
     CodeFeatures m_features;
-    unsigned m_lexicalScopeFeatures : bitWidthOfLexicalScopeFeatures;
+    LexicallyScopedFeatures m_lexicallyScopedFeatures : bitWidthOfLexicallyScopedFeatures;
     OptionSet<CodeGenerationMode> m_codeGenerationModeForGeneratorBody;
     bool m_hasCapturedVariables : 1;
     bool m_neverInline : 1;

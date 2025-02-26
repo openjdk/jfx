@@ -29,6 +29,7 @@
 #include "CSSCustomPropertyValue.h"
 #include "CSSParser.h"
 #include "CSSValuePool.h"
+#include "ImmutableStyleProperties.h"
 #include "PropertySetCSSStyleDeclaration.h"
 #include "StylePropertiesInlines.h"
 #include "StylePropertyShorthand.h"
@@ -53,8 +54,8 @@ MutableStyleProperties::~MutableStyleProperties() = default;
 MutableStyleProperties::MutableStyleProperties(const StyleProperties& other)
     : StyleProperties(other.cssParserMode())
 {
-    if (is<MutableStyleProperties>(other))
-        m_propertyVector = downcast<MutableStyleProperties>(other).m_propertyVector;
+    if (auto* mutableProperties = dynamicDowncast<MutableStyleProperties>(other))
+        m_propertyVector = mutableProperties->m_propertyVector;
     else {
         m_propertyVector = WTF::map(downcast<ImmutableStyleProperties>(other), [](auto property) {
             return property.toCSSProperty();
@@ -82,8 +83,18 @@ Ref<MutableStyleProperties> MutableStyleProperties::createEmpty()
     return adoptRef(*new MutableStyleProperties({ }));
 }
 
+Ref<ImmutableStyleProperties> MutableStyleProperties::immutableCopy() const
+{
+    return ImmutableStyleProperties::create(m_propertyVector.data(), m_propertyVector.size(), cssParserMode());
+}
+
+Ref<ImmutableStyleProperties> MutableStyleProperties::immutableDeduplicatedCopy() const
+{
+    return ImmutableStyleProperties::createDeduplicating(m_propertyVector.data(), m_propertyVector.size(), cssParserMode());
+}
+
 // FIXME: Change StylePropertyShorthand::properties to return a Span and delete this.
-static inline Span<const CSSPropertyID> span(const StylePropertyShorthand& shorthand)
+static inline std::span<const CSSPropertyID> span(const StylePropertyShorthand& shorthand)
 {
     return { shorthand.properties(), shorthand.length() };
 }
@@ -130,12 +141,11 @@ bool MutableStyleProperties::removeCustomProperty(const String& propertyName, St
     return removePropertyAtIndex(findCustomPropertyIndex(propertyName), returnText);
 }
 
-bool MutableStyleProperties::setProperty(CSSPropertyID propertyID, const String& value, bool important, CSSParserContext parserContext, bool* didFailParsing)
+bool MutableStyleProperties::setProperty(CSSPropertyID propertyID, const String& value, CSSParserContext parserContext, IsImportant important, bool* didFailParsing)
 {
     if (!isExposed(propertyID, &parserContext.propertySettings) && !isInternal(propertyID)) {
         // Allow internal properties as we use them to handle certain DOM-exposed values
         // (e.g. -webkit-font-size-delta from execCommand('FontSizeDelta')).
-        ASSERT_NOT_REACHED();
         return false;
     }
 
@@ -153,13 +163,13 @@ bool MutableStyleProperties::setProperty(CSSPropertyID propertyID, const String&
     return parseResult == CSSParser::ParseResult::Changed;
 }
 
-bool MutableStyleProperties::setProperty(CSSPropertyID propertyID, const String& value, bool important, bool* didFailParsing)
+bool MutableStyleProperties::setProperty(CSSPropertyID propertyID, const String& value, IsImportant important, bool* didFailParsing)
 {
     CSSParserContext parserContext(cssParserMode());
-    return setProperty(propertyID, value, important, parserContext, didFailParsing);
+    return setProperty(propertyID, value, parserContext, important, didFailParsing);
 }
 
-bool MutableStyleProperties::setCustomProperty(const String& propertyName, const String& value, bool important, CSSParserContext parserContext)
+bool MutableStyleProperties::setCustomProperty(const String& propertyName, const String& value, CSSParserContext parserContext, IsImportant important)
 {
     // Setting the value to an empty string just removes the property in both IE and Gecko.
     // Setting it to null seems to produce less consistent results, but we treat it just the same.
@@ -172,7 +182,7 @@ bool MutableStyleProperties::setCustomProperty(const String& propertyName, const
     return CSSParser::parseCustomPropertyValue(*this, AtomString { propertyName }, value, important, parserContext) == CSSParser::ParseResult::Changed;
 }
 
-void MutableStyleProperties::setProperty(CSSPropertyID propertyID, RefPtr<CSSValue>&& value, bool important)
+void MutableStyleProperties::setProperty(CSSPropertyID propertyID, RefPtr<CSSValue>&& value, IsImportant important)
 {
     if (isLonghand(propertyID)) {
         setProperty(CSSProperty(propertyID, WTFMove(value), important));
@@ -225,7 +235,7 @@ bool MutableStyleProperties::setProperty(const CSSProperty& property, CSSPropert
     return true;
 }
 
-bool MutableStyleProperties::setProperty(CSSPropertyID propertyID, CSSValueID identifier, bool important)
+bool MutableStyleProperties::setProperty(CSSPropertyID propertyID, CSSValueID identifier, IsImportant important)
 {
     ASSERT(isLonghand(propertyID));
     return setProperty(CSSProperty(propertyID, CSSPrimitiveValue::create(identifier), important));
@@ -264,10 +274,12 @@ bool MutableStyleProperties::addParsedProperty(const CSSProperty& property)
     return setProperty(property);
 }
 
-void MutableStyleProperties::mergeAndOverrideOnConflict(const StyleProperties& other)
+bool MutableStyleProperties::mergeAndOverrideOnConflict(const StyleProperties& other)
 {
+    bool changed = false;
     for (auto property : other)
-        addParsedProperty(property.toCSSProperty());
+        changed |= addParsedProperty(property.toCSSProperty());
+    return changed;
 }
 
 void MutableStyleProperties::clear()
@@ -275,7 +287,7 @@ void MutableStyleProperties::clear()
     m_propertyVector.clear();
 }
 
-bool MutableStyleProperties::removeProperties(Span<const CSSPropertyID> properties)
+bool MutableStyleProperties::removeProperties(std::span<const CSSPropertyID> properties)
 {
     if (m_propertyVector.isEmpty())
         return false;
@@ -294,7 +306,7 @@ int MutableStyleProperties::findPropertyIndex(CSSPropertyID propertyID) const
     // Convert here propertyID into an uint16_t to compare it with the metadata's m_propertyID to avoid
     // the compiler converting it to an int multiple times in the loop.
     auto* properties = m_propertyVector.data();
-    uint16_t id = static_cast<uint16_t>(propertyID);
+    uint16_t id = enumToUnderlyingType(propertyID);
     for (int n = m_propertyVector.size() - 1 ; n >= 0; --n) {
         if (properties[n].metadata().m_propertyID == id)
             return n;

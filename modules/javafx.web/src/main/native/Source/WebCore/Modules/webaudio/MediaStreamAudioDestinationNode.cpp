@@ -32,18 +32,18 @@
 #include "Document.h"
 #include "MediaStream.h"
 #include "MediaStreamAudioSource.h"
-#include <wtf/IsoMallocInlines.h>
 #include <wtf/Locker.h>
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
-WTF_MAKE_ISO_ALLOCATED_IMPL(MediaStreamAudioDestinationNode);
+WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(MediaStreamAudioDestinationNode);
 
 ExceptionOr<Ref<MediaStreamAudioDestinationNode>> MediaStreamAudioDestinationNode::create(BaseAudioContext& context, const AudioNodeOptions& options)
 {
     // This behavior is not part of the specification. This is done for consistency with Blink.
     if (context.isStopped() || !context.scriptExecutionContext())
-        return Exception { NotAllowedError, "Cannot create a MediaStreamAudioDestinationNode in a detached frame"_s };
+        return Exception { ExceptionCode::NotAllowedError, "Cannot create a MediaStreamAudioDestinationNode in a detached frame"_s };
 
     auto node = adoptRef(*new MediaStreamAudioDestinationNode(context));
 

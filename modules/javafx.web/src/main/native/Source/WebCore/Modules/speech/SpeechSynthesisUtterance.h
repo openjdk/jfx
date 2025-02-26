@@ -27,18 +27,17 @@
 
 #if ENABLE(SPEECH_SYNTHESIS)
 
-#include "ContextDestructionObserver.h"
+#include "ActiveDOMObject.h"
 #include "EventTarget.h"
 #include "PlatformSpeechSynthesisUtterance.h"
-#include "ScriptExecutionContext.h"
 #include "SpeechSynthesisErrorCode.h"
 #include "SpeechSynthesisVoice.h"
 #include <wtf/RefCounted.h>
 
 namespace WebCore {
 
-class WEBCORE_EXPORT SpeechSynthesisUtterance final : public PlatformSpeechSynthesisUtteranceClient, public RefCounted<SpeechSynthesisUtterance>, public EventTarget {
-    WTF_MAKE_ISO_ALLOCATED(SpeechSynthesisUtterance);
+class WEBCORE_EXPORT SpeechSynthesisUtterance final : public PlatformSpeechSynthesisUtteranceClient, public RefCounted<SpeechSynthesisUtterance>, public ActiveDOMObject, public EventTarget {
+    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(SpeechSynthesisUtterance);
 public:
     using UtteranceCompletionHandler = Function<void(const SpeechSynthesisUtterance&)>;
     static Ref<SpeechSynthesisUtterance> create(ScriptExecutionContext&, const String&, UtteranceCompletionHandler&&);
@@ -70,26 +69,56 @@ public:
     MonotonicTime startTime() const { return m_platformUtterance->startTime(); }
     void setStartTime(MonotonicTime startTime) { m_platformUtterance->setStartTime(startTime); }
 
-    using RefCounted::ref;
-    using RefCounted::deref;
+    // ActiveDOMObject.
+    void ref() const final { RefCounted::ref(); }
+    void deref() const final { RefCounted::deref(); }
 
     PlatformSpeechSynthesisUtterance* platformUtterance() const { return m_platformUtterance.get(); }
 
     void eventOccurred(const AtomString& type, unsigned long charIndex, unsigned long charLength, const String& name);
     void errorEventOccurred(const AtomString& type, SpeechSynthesisErrorCode);
+    void setIsActiveForEventDispatch(bool);
 
 private:
     SpeechSynthesisUtterance(ScriptExecutionContext&, const String&, UtteranceCompletionHandler&&);
+    void dispatchEventAndUpdateState(Event&);
+    void incrementActivityCountForEventDispatch();
+    void decrementActivityCountForEventDispatch();
 
-    ScriptExecutionContext* scriptExecutionContext() const final { return m_scriptExecutionContext.get(); }
-    EventTargetInterface eventTargetInterface() const final { return SpeechSynthesisUtteranceEventTargetInterfaceType; }
+    // ActiveDOMObject
+    bool virtualHasPendingActivity() const final;
+
+    // EventTarget
+    ScriptExecutionContext* scriptExecutionContext() const final { return ActiveDOMObject::scriptExecutionContext(); }
+    enum EventTargetInterfaceType eventTargetInterface() const final { return EventTargetInterfaceType::SpeechSynthesisUtterance; }
     void refEventTarget() final { ref(); }
     void derefEventTarget() final { deref(); }
 
+    friend class SpeechSynthesisUtteranceActivity;
     RefPtr<PlatformSpeechSynthesisUtterance> m_platformUtterance;
     RefPtr<SpeechSynthesisVoice> m_voice;
-    WeakPtr<ScriptExecutionContext> m_scriptExecutionContext;
     UtteranceCompletionHandler m_completionHandler;
+    unsigned m_activityCountForEventDispatch { 0 };
+};
+
+class SpeechSynthesisUtteranceActivity {
+    WTF_MAKE_FAST_ALLOCATED;
+public:
+    SpeechSynthesisUtteranceActivity(Ref<SpeechSynthesisUtterance>&& utterance)
+        : m_utterance(utterance)
+    {
+        m_utterance->incrementActivityCountForEventDispatch();
+    }
+
+    ~SpeechSynthesisUtteranceActivity()
+    {
+        m_utterance->decrementActivityCountForEventDispatch();
+    }
+
+    SpeechSynthesisUtterance& utterance() { return m_utterance.get(); }
+
+private:
+    Ref<SpeechSynthesisUtterance> m_utterance;
 };
 
 } // namespace WebCore

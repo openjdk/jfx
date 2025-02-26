@@ -3,6 +3,8 @@
  *
  * Win32 GMODULE implementation
  * Copyright (C) 1998 Tor Lillqvist
+*
+ * SPDX-License-Identifier: LGPL-2.1-or-later
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -203,7 +205,7 @@ static gchar*
 _g_module_build_path (const gchar *directory,
           const gchar *module_name)
 {
-  gint k;
+  size_t k;
 
   k = strlen (module_name);
 

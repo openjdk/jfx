@@ -34,7 +34,7 @@ class Document;
 class WeakPtrImplWithEventTargetData;
 class SVGCursorElement;
 
-enum class LoadedFromOpaqueSource : uint8_t;
+enum class LoadedFromOpaqueSource : bool;
 
 class StyleCursorImage final : public StyleMultiImage {
     WTF_MAKE_FAST_ALLOCATED;
@@ -58,7 +58,7 @@ private:
     Ref<CSSValue> computedStyleValue(const RenderStyle&) const final;
     ImageWithScale selectBestFitImage(const Document&) final;
 
-    SVGCursorElement* updateCursorElement(const Document&);
+    RefPtr<SVGCursorElement> updateCursorElement(const Document&);
 
     Ref<StyleImage> m_image;
     std::optional<IntPoint> m_hotSpot;

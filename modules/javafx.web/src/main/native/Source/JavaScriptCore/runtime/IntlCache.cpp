@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2020 Apple Inc. All rights reserved.
+ * Copyright (C) 2020-2023 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -26,10 +26,12 @@
 #include "config.h"
 #include "IntlCache.h"
 
-#include "IntlDisplayNames.h"
+#include <wtf/TZoneMallocInlines.h>
 #include <wtf/Vector.h>
 
 namespace JSC {
+
+WTF_MAKE_TZONE_ALLOCATED_IMPL(IntlCache);
 
 UDateTimePatternGenerator* IntlCache::cacheSharedPatternGenerator(const CString& locale, UErrorCode& status)
 {
@@ -41,14 +43,14 @@ UDateTimePatternGenerator* IntlCache::cacheSharedPatternGenerator(const CString&
     return m_cachedDateTimePatternGenerator.get();
 }
 
-Vector<UChar, 32> IntlCache::getBestDateTimePattern(const CString& locale, const UChar* skeleton, unsigned skeletonSize, UErrorCode& status)
+Vector<UChar, 32> IntlCache::getBestDateTimePattern(const CString& locale, std::span<const UChar> skeleton, UErrorCode& status)
 {
     // Always use ICU date format generator, rather than our own pattern list and matcher.
     auto sharedGenerator = getSharedPatternGenerator(locale, status);
     if (U_FAILURE(status))
         return { };
     Vector<UChar, 32> patternBuffer;
-    status = callBufferProducingFunction(udatpg_getBestPatternWithOptions, sharedGenerator, skeleton, skeletonSize, UDATPG_MATCH_HOUR_FIELD_LENGTH, patternBuffer);
+    status = callBufferProducingFunction(udatpg_getBestPatternWithOptions, sharedGenerator, skeleton.data(), skeleton.size(), UDATPG_MATCH_HOUR_FIELD_LENGTH, patternBuffer);
     if (U_FAILURE(status))
         return { };
     return patternBuffer;

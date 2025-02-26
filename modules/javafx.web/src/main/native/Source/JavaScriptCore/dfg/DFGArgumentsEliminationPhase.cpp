@@ -55,7 +55,7 @@ static constexpr bool verbose = false;
 class ArgumentsEliminationPhase : public Phase {
 public:
     ArgumentsEliminationPhase(Graph& graph)
-        : Phase(graph, "arguments elimination")
+        : Phase(graph, "arguments elimination"_s)
     {
     }
 
@@ -342,6 +342,7 @@ private:
                         escape(node->child1(), node);
                     break;
 
+                case GetUndetachedTypeArrayLength:
                 case GetTypedArrayLengthAsInt52:
                     // This node is only used for TypedArrays, so should not be relevant for arguments elimination
                     escape(node->child2(), node);
@@ -501,7 +502,7 @@ private:
     // object's payload. Conservatively this means that the stack region doesn't get stored to.
     void eliminateCandidatesThatInterfere()
     {
-        performLivenessAnalysis(m_graph);
+        performGraphPackingAndLivenessAnalysis(m_graph);
         m_graph.initializeNodeOwners();
         CombinedLiveness combinedLiveness(m_graph);
 

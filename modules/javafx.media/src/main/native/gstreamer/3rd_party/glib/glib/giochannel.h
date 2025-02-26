@@ -1,6 +1,8 @@
 /* GLIB - Library of useful routines for C programming
  * Copyright (C) 1995-1997  Peter Mattis, Spencer Kimball and Josh MacDonald
  *
+ * SPDX-License-Identifier: LGPL-2.1-or-later
+ *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
  * License as published by the Free Software Foundation; either
@@ -83,6 +85,7 @@ typedef enum
 
 typedef enum
 {
+  G_IO_FLAG_NONE GLIB_AVAILABLE_ENUMERATOR_IN_2_74 = 0,
   G_IO_FLAG_APPEND = 1 << 0,
   G_IO_FLAG_NONBLOCK = 1 << 1,
   G_IO_FLAG_IS_READABLE = 1 << 2, /* Read only flag */
@@ -115,7 +118,7 @@ struct _GIOChannel
   /* Group the flags together, immediately after partial_write_buf, to save memory */
 
   guint use_buffer     : 1; /* The encoding uses the buffers */
-  guint do_encode      : 1; /* The encoding uses the GIConv coverters */
+  guint do_encode      : 1; /* The encoding uses the GIConv converters */
   guint close_on_unref : 1; /* Close the channel on final unref */
   guint is_readable    : 1; /* Cached GIOFlag */
   guint is_writeable   : 1; /* ditto */
@@ -367,7 +370,7 @@ GIOChannel *g_io_channel_win32_new_messages (guint hwnd);
 #endif
 
 /* Create an IO channel for C runtime (emulated Unix-like) file
- * descriptors. After calling g_io_add_watch() on a IO channel
+ * descriptors. After calling g_io_add_watch() on an IO channel
  * returned by this function, you shouldn't call read() on the file
  * descriptor. This is because adding polling for a file descriptor is
  * implemented on Win32 by starting a thread that sits blocked in a

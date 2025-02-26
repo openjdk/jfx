@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2019, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -26,12 +26,13 @@
 package test.javafx.geometry;
 
 import javafx.geometry.Point3D;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class Point3DTest {
 
@@ -82,10 +83,12 @@ public class Point3DTest {
         assertEquals(new Point3D(1, 7, 13), p1.add(-1, 3, 5));
     }
 
-    @Test(expected=NullPointerException.class)
+    @Test
     public void testAddNull() {
-        Point3D point = new Point3D(1, 2, 3);
-        point.add(null);
+        assertThrows(NullPointerException.class, () -> {
+            Point3D point = new Point3D(1, 2, 3);
+            point.add(null);
+        });
     }
 
     @Test
@@ -97,10 +100,12 @@ public class Point3DTest {
         assertEquals(new Point3D(3, 1, 2), p1.subtract(-1, 3, 6));
     }
 
-    @Test(expected=NullPointerException.class)
+    @Test
     public void testSubtractNull() {
-        Point3D point = new Point3D(1, 2, 3);
-        point.subtract(null);
+        assertThrows(NullPointerException.class, () -> {
+            Point3D point = new Point3D(1, 2, 3);
+            point.subtract(null);
+        });
     }
 
     @Test
@@ -138,10 +143,12 @@ public class Point3DTest {
         assertEquals(new Point3D(0.5, -1, 1.5), p1.midpoint(1, -2, 3));
     }
 
-    @Test(expected=NullPointerException.class)
+    @Test
     public void testMidpointNull() {
-        Point3D point = new Point3D(1, 2, 3);
-        point.midpoint(null);
+        assertThrows(NullPointerException.class, () -> {
+            Point3D point = new Point3D(1, 2, 3);
+            point.midpoint(null);
+        });
     }
 
     @Test
@@ -160,10 +167,12 @@ public class Point3DTest {
         assertEquals(135, p2.angle(-1, 0, -1), 0.000001);
     }
 
-    @Test(expected=NullPointerException.class)
+    @Test
     public void testVectorAngleNull() {
-        Point3D point = new Point3D(1, 2, 3);
-        point.angle(null);
+        assertThrows(NullPointerException.class, () -> {
+            Point3D point = new Point3D(1, 2, 3);
+            point.angle(null);
+        });
     }
 
     @Test
@@ -197,16 +206,20 @@ public class Point3DTest {
         assertEquals(Double.NaN, p2.angle(p2, p4), 0.000001);
     }
 
-    @Test(expected=NullPointerException.class)
+    @Test
     public void testPointAngle1Null() {
-        Point3D point = new Point3D(1, 2, 3);
-        point.angle(null, new Point3D(2, 8, 4));
+        assertThrows(NullPointerException.class, () -> {
+            Point3D point = new Point3D(1, 2, 3);
+            point.angle(null, new Point3D(2, 8, 4));
+        });
     }
 
-    @Test(expected=NullPointerException.class)
+    @Test
     public void testPointAngle2Null() {
-        Point3D point = new Point3D(1, 2, 3);
-        point.angle(new Point3D(8, 5, 3), null);
+        assertThrows(NullPointerException.class, () -> {
+            Point3D point = new Point3D(1, 2, 3);
+            point.angle(new Point3D(8, 5, 3), null);
+        });
     }
 
     @Test
@@ -251,10 +264,12 @@ public class Point3DTest {
         assertEquals(20, p3.dotProduct(-4, -5, 6), 0.000001);
     }
 
-    @Test(expected=NullPointerException.class)
+    @Test
     public void testDotProductNull() {
-        Point3D point = new Point3D(1, 2, 3);
-        point.dotProduct(null);
+        assertThrows(NullPointerException.class, () -> {
+            Point3D point = new Point3D(1, 2, 3);
+            point.dotProduct(null);
+        });
     }
 
     @Test
@@ -269,10 +284,12 @@ public class Point3DTest {
         assertEquals(new Point3D(6, 0, 0), p3.crossProduct(p2));
     }
 
-    @Test(expected=NullPointerException.class)
+    @Test
     public void testCrossProductNull() {
-        Point3D point = new Point3D(1, 2, 3);
-        point.crossProduct(null);
+        assertThrows(NullPointerException.class, () -> {
+            Point3D point = new Point3D(1, 2, 3);
+            point.crossProduct(null);
+        });
     }
 
     @Test
@@ -280,8 +297,8 @@ public class Point3DTest {
         Point3D p1 = new Point3D(1, 0, 3.5);
         Point3D p2 = new Point3D(0, -1, -1);
 
-        assertEquals("t=0: should return the initial point", p1, p1.interpolate(p2, 0));
-        assertEquals("t=1: should return the final point", p2, p1.interpolate(p2, 1));
+        assertEquals(p1, p1.interpolate(p2, 0), "t=0: should return the initial point");
+        assertEquals(p2, p1.interpolate(p2, 1), "t=1: should return the final point");
         testNearEquality("t=0.25: should return 25% from the inital point", 0.75, -0.25, 2.375, p1.interpolate(p2, 0.25));
         testNearEquality("t=0.5: should return 50% from the inital point", 0.5, -0.5, 1.25, p1.interpolate(p2, 0.5));
         testNearEquality("t=0.75: should return 75% from the inital point", 0.25, -0.75, 0.125, p1.interpolate(p2, 0.75));
@@ -292,9 +309,9 @@ public class Point3DTest {
     }
 
     private void testNearEquality(String message, double expectedX, double expectedY, double expectedZ, Point3D result) {
-        assertEquals(message, expectedX, result.getX(), 1e-15);
-        assertEquals(message, expectedY, result.getY(), 1e-15);
-        assertEquals(message, expectedZ, result.getZ(), 1e-15);
+        assertEquals(expectedX, result.getX(), 1e-15, message);
+        assertEquals(expectedY, result.getY(), 1e-15, message);
+        assertEquals(expectedZ, result.getZ(), 1e-15, message);
     }
 
     @Test

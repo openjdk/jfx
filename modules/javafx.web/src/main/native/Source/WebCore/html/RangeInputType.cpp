@@ -34,7 +34,7 @@
 
 #include "Decimal.h"
 #include "DocumentInlines.h"
-#include "ElementChildIterator.h"
+#include "ElementChildIteratorInlines.h"
 #include "ElementRareData.h"
 #include "EventNames.h"
 #include "HTMLCollection.h"
@@ -43,14 +43,15 @@
 #include "InputTypeNames.h"
 #include "KeyboardEvent.h"
 #include "MouseEvent.h"
+#include "NodeName.h"
 #include "PlatformMouseEvent.h"
 #include "RenderSlider.h"
 #include "ScopedEventQueue.h"
 #include "ScriptDisallowedScope.h"
-#include "ShadowPseudoIds.h"
 #include "ShadowRoot.h"
 #include "SliderThumbElement.h"
 #include "StepRange.h"
+#include "UserAgentParts.h"
 #include <limits>
 #include <wtf/MathExtras.h>
 
@@ -118,13 +119,15 @@ bool RangeInputType::supportsRequired() const
 StepRange RangeInputType::createStepRange(AnyStepHandling anyStepHandling) const
 {
     ASSERT(element());
+    const Decimal stepBase = findStepBase(rangeDefaultStepBase);
     const Decimal minimum = parseToNumber(element()->attributeWithoutSynchronization(minAttr), rangeDefaultMinimum);
     const Decimal maximum = ensureMaximum(parseToNumber(element()->attributeWithoutSynchronization(maxAttr), rangeDefaultMaximum), minimum);
 
     const Decimal step = StepRange::parseStep(anyStepHandling, rangeStepDescription, element()->attributeWithoutSynchronization(stepAttr));
-    return StepRange(minimum, RangeLimitations::Valid, minimum, maximum, step, rangeStepDescription);
+    return StepRange(stepBase, RangeLimitations::Valid, minimum, maximum, step, rangeStepDescription);
 }
 
+// FIXME: Should this work for untrusted input?
 void RangeInputType::handleMouseDownEvent(MouseEvent& event)
 {
     ASSERT(element());
@@ -135,16 +138,17 @@ void RangeInputType::handleMouseDownEvent(MouseEvent& event)
     if (element()->isDisabledFormControl())
         return;
 
-    if (event.button() != LeftButton || !is<Node>(event.target()))
+    RefPtr targetNode = dynamicDowncast<Node>(event.target());
+    if (!targetNode)
         return;
+
     ASSERT(element()->shadowRoot());
-    auto& targetNode = downcast<Node>(*event.target());
-    if (&targetNode != element() && !targetNode.isDescendantOf(element()->userAgentShadowRoot().get()))
+    if (targetNode != element() && !targetNode->isDescendantOf(element()->protectedUserAgentShadowRoot().get()))
         return;
-    auto& thumb = typedSliderThumbElement();
-    if (&targetNode == &thumb)
+    Ref thumb = typedSliderThumbElement();
+    if (targetNode == thumb.ptr())
         return;
-    thumb.dragFrom(event.absoluteLocation());
+    thumb->dragFrom(event.absoluteLocation());
 }
 
 #if ENABLE(TOUCH_EVENTS)
@@ -155,7 +159,7 @@ void RangeInputType::handleTouchEvent(TouchEvent& event)
     if (!hasCreatedShadowSubtree())
         return;
 
-#if PLATFORM(IOS_FAMILY)
+#if ENABLE(IOS_TOUCH_EVENTS)
     typedSliderThumbElement().handleTouchEvent(event);
 #else
 
@@ -172,15 +176,8 @@ void RangeInputType::handleTouchEvent(TouchEvent& event)
         typedSliderThumbElement().setPositionFromPoint(touches->item(0)->absoluteLocation());
         event.setDefaultHandled();
     }
-#endif
+#endif // ENABLE(IOS_TOUCH_EVENTS)
 }
-
-#if !PLATFORM(IOS_FAMILY)
-bool RangeInputType::hasTouchEventHandler() const
-{
-    return true;
-}
-#endif
 #endif // ENABLE(TOUCH_EVENTS)
 
 void RangeInputType::disabledStateChanged()
@@ -211,7 +208,7 @@ auto RangeInputType::handleKeydownEvent(KeyboardEvent& event) -> ShouldCallBaseE
 
     bool isVertical = false;
     if (auto* renderer = element()->renderer())
-        isVertical = renderer->style().effectiveAppearance() == StyleAppearance::SliderVertical;
+        isVertical = renderer->style().usedAppearance() == StyleAppearance::SliderVertical;
 
     Decimal newValue;
     if (key == "Up"_s)
@@ -250,16 +247,17 @@ void RangeInputType::createShadowSubtree()
     ASSERT(element());
     ASSERT(element()->userAgentShadowRoot());
 
-    Document& document = element()->document();
+    Ref document = element()->document();
 
-    ScriptDisallowedScope::EventAllowedScope eventAllowedScope { *element()->userAgentShadowRoot() };
+    Ref shadowRoot = *element()->userAgentShadowRoot();
+    ScriptDisallowedScope::EventAllowedScope eventAllowedScope { shadowRoot };
 
-    auto track = HTMLDivElement::create(document);
-    auto container = SliderContainerElement::create(document);
-    element()->userAgentShadowRoot()->appendChild(ContainerNode::ChildChange::Source::Parser, container);
+    Ref track = HTMLDivElement::create(document);
+    Ref container = SliderContainerElement::create(document);
+    shadowRoot->appendChild(ContainerNode::ChildChange::Source::Parser, container);
     container->appendChild(ContainerNode::ChildChange::Source::Parser, track);
 
-    track->setPseudo(ShadowPseudoIds::webkitSliderRunnableTrack());
+    track->setUserAgentPart(UserAgentParts::webkitSliderRunnableTrack());
     track->appendChild(ContainerNode::ChildChange::Source::Parser, SliderThumbElement::create(document));
 }
 
@@ -270,16 +268,16 @@ HTMLElement* RangeInputType::sliderTrackElement() const
     if (!hasCreatedShadowSubtree())
         return nullptr;
 
-    ASSERT(element()->userAgentShadowRoot());
-    ASSERT(element()->userAgentShadowRoot()->firstChild()); // container
-    ASSERT(element()->userAgentShadowRoot()->firstChild()->isHTMLElement());
-    ASSERT(element()->userAgentShadowRoot()->firstChild()->firstChild()); // track
+    RefPtr root = element()->userAgentShadowRoot();
+    ASSERT(root);
+    ASSERT(root->firstChild()); // container
+    ASSERT(root->firstChild()->isHTMLElement());
+    ASSERT(root->firstChild()->firstChild()); // track
 
-    RefPtr<ShadowRoot> root = element()->userAgentShadowRoot();
     if (!root)
         return nullptr;
 
-    auto* container = childrenOfType<SliderContainerElement>(*root).first();
+    RefPtr container = childrenOfType<SliderContainerElement>(*root).first();
     if (!container)
         return nullptr;
 
@@ -327,7 +325,10 @@ bool RangeInputType::accessKeyAction(bool sendMouseEvents)
 
 void RangeInputType::attributeChanged(const QualifiedName& name)
 {
-    if (name == maxAttr || name == minAttr || name == valueAttr) {
+    switch (name.nodeName()) {
+    case AttributeNames::maxAttr:
+    case AttributeNames::minAttr:
+    case AttributeNames::valueAttr:
         // Sanitize the value.
         if (auto* element = this->element()) {
             if (element->hasDirtyValue())
@@ -335,6 +336,9 @@ void RangeInputType::attributeChanged(const QualifiedName& name)
         }
         if (hasCreatedShadowSubtree())
             typedSliderThumbElement().setPositionFromValue();
+        break;
+    default:
+        break;
     }
     InputType::attributeChanged(name);
 }

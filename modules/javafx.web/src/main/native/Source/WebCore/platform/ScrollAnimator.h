@@ -76,8 +76,8 @@ public:
     // The base class implementation always scrolls immediately, never animates.
     bool singleAxisScroll(ScrollEventAxis, float delta, OptionSet<ScrollBehavior>);
 
-    bool scrollToPositionWithoutAnimation(const FloatPoint&, ScrollClamping = ScrollClamping::Clamped);
-    bool scrollToPositionWithAnimation(const FloatPoint&, ScrollClamping = ScrollClamping::Clamped);
+    WEBCORE_EXPORT bool scrollToPositionWithoutAnimation(const FloatPoint&, ScrollClamping = ScrollClamping::Clamped);
+    WEBCORE_EXPORT bool scrollToPositionWithAnimation(const FloatPoint&, ScrollClamping = ScrollClamping::Clamped);
 
     void retargetRunningAnimation(const FloatPoint& newPosition);
 
@@ -104,9 +104,7 @@ public:
 
     void contentsSizeChanged();
 
-    enum NotifyScrollableArea : bool {
-        No, Yes
-    };
+    enum NotifyScrollableArea : bool { No, Yes };
     void setCurrentPosition(const FloatPoint&, NotifyScrollableArea = NotifyScrollableArea::No);
     const FloatPoint& currentPosition() const { return m_currentPosition; }
 
@@ -162,8 +160,9 @@ private:
     bool isPinnedOnSide(BoxSide) const final;
 #endif
 
-    void deferWheelEventTestCompletionForReason(WheelEventTestMonitor::ScrollableAreaIdentifier, WheelEventTestMonitor::DeferReason) const final;
-    void removeWheelEventTestCompletionDeferralForReason(WheelEventTestMonitor::ScrollableAreaIdentifier, WheelEventTestMonitor::DeferReason) const final;
+    void deferWheelEventTestCompletionForReason(ScrollingNodeID, WheelEventTestMonitor::DeferReason) const final;
+    void removeWheelEventTestCompletionDeferralForReason(ScrollingNodeID, WheelEventTestMonitor::DeferReason) const final;
+    ScrollingNodeID scrollingNodeIDForTesting() const final;
 
 #if PLATFORM(GTK) || USE(NICOSIA)
     bool scrollAnimationEnabled() const final;

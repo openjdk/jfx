@@ -27,8 +27,11 @@
 
 #if ENABLE(IMAGE_ANALYSIS)
 
+#if ENABLE(IMAGE_ANALYSIS_ENHANCEMENTS)
 OBJC_CLASS NSAttributedString;
+OBJC_CLASS NSData;
 OBJC_CLASS VKCImageAnalysis;
+#endif
 
 #if ENABLE(DATA_DETECTION)
 OBJC_CLASS DDScannerResult;
@@ -56,24 +59,26 @@ struct TextRecognitionWordData {
 };
 
 struct TextRecognitionLineData {
-    TextRecognitionLineData(FloatQuad&& quad, Vector<TextRecognitionWordData>&& theChildren, bool newline)
+    TextRecognitionLineData(FloatQuad&& quad, Vector<TextRecognitionWordData>&& theChildren, bool newline, bool isVertical)
         : normalizedQuad(WTFMove(quad))
         , children(WTFMove(theChildren))
         , hasTrailingNewline(newline)
+        , isVertical(isVertical)
     {
     }
 
     FloatQuad normalizedQuad;
     Vector<TextRecognitionWordData> children;
     bool hasTrailingNewline { true };
+    bool isVertical { false };
 };
 
 #if ENABLE(DATA_DETECTION)
 
 struct TextRecognitionDataDetector {
     TextRecognitionDataDetector() = default;
-    TextRecognitionDataDetector(DDScannerResult *scannerResult, Vector<FloatQuad>&& quads)
-        : result(scannerResult)
+    TextRecognitionDataDetector(RetainPtr<DDScannerResult>&& scannerResult, Vector<FloatQuad>&& quads)
+        : result(WTFMove(scannerResult))
         , normalizedQuads(WTFMove(quads))
     {
     }
@@ -105,7 +110,10 @@ struct TextRecognitionResult {
     Vector<TextRecognitionBlockData> blocks;
 
 #if ENABLE(IMAGE_ANALYSIS_ENHANCEMENTS)
-    RetainPtr<VKCImageAnalysis> platformData;
+    RetainPtr<NSData> imageAnalysisData;
+
+    WEBCORE_EXPORT static RetainPtr<NSData> encodeVKCImageAnalysis(RetainPtr<VKCImageAnalysis>);
+    WEBCORE_EXPORT static RetainPtr<VKCImageAnalysis> decodeVKCImageAnalysis(RetainPtr<NSData>);
 #endif
 
     bool isEmpty() const

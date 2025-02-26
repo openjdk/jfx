@@ -26,7 +26,6 @@
 
 #pragma once
 
-#include <wtf/EnumTraits.h>
 #include <wtf/URL.h>
 #include <wtf/text/WTFString.h>
 
@@ -36,6 +35,14 @@ class ResourceError;
 
 WEBCORE_EXPORT extern const ASCIILiteral errorDomainWebKitInternal; // Used for errors that won't be exposed to clients.
 WEBCORE_EXPORT extern const ASCIILiteral errorDomainWebKitServiceWorker; // Used for errors that happen when loading a resource from a service worker.
+
+enum class ResourceErrorBaseType : uint8_t {
+    Null,
+    General,
+    AccessControl,
+    Cancellation,
+    Timeout
+};
 
 class ResourceErrorBase {
     WTF_MAKE_FAST_ALLOCATED;
@@ -49,13 +56,8 @@ public:
 
     String sanitizedDescription() const { return m_isSanitized  == IsSanitized::Yes ? m_localizedDescription : "Load failed"_s; }
 
-    enum class Type : uint8_t {
-        Null,
-        General,
-        AccessControl,
-        Cancellation,
-        Timeout
-    };
+    using Type = ResourceErrorBaseType;
+
     enum class IsSanitized : bool { No, Yes };
 
     enum class ErrorRecoveryMethod : bool {
@@ -109,24 +111,13 @@ private:
     const ResourceError& asResourceError() const;
 };
 
-WEBCORE_EXPORT ResourceError internalError(const URL&);
+// FIXME: Replace this with std::source_location when libc++ on the macOS and iOS bots is new enough to support C++ 20.
+// WEBCORE_EXPORT ResourceError internalError(const URL&, std::source_location = std::source_location::current());
+WEBCORE_EXPORT ResourceError createInternalError(const URL&, ASCIILiteral filename, uint32_t line, ASCIILiteral functionName);
+#define internalError(url) createInternalError(url, ASCIILiteral::fromLiteralUnsafe(__FILE__), __LINE__, ASCIILiteral::fromLiteralUnsafe(__FUNCTION__))
+
+WEBCORE_EXPORT ResourceError badResponseHeadersError(const URL&);
 
 inline bool operator==(const ResourceError& a, const ResourceError& b) { return ResourceErrorBase::compare(a, b); }
-inline bool operator!=(const ResourceError& a, const ResourceError& b) { return !(a == b); }
 
 } // namespace WebCore
-
-namespace WTF {
-
-template<> struct EnumTraits<WebCore::ResourceErrorBase::Type> {
-    using values = EnumValues<
-        WebCore::ResourceErrorBase::Type,
-        WebCore::ResourceErrorBase::Type::Null,
-        WebCore::ResourceErrorBase::Type::General,
-        WebCore::ResourceErrorBase::Type::AccessControl,
-        WebCore::ResourceErrorBase::Type::Cancellation,
-        WebCore::ResourceErrorBase::Type::Timeout
-    >;
-};
-
-} // namespace WTF

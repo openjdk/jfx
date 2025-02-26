@@ -45,16 +45,16 @@ inline StyleProperties::StyleProperties(CSSParserMode mode, unsigned immutableAr
 
 inline StyleProperties::PropertyReference StyleProperties::propertyAt(unsigned index) const
 {
-    if (is<MutableStyleProperties>(*this))
-        return downcast<MutableStyleProperties>(*this).propertyAt(index);
-    return downcast<ImmutableStyleProperties>(*this).propertyAt(index);
+    if (m_isMutable)
+        return uncheckedDowncast<MutableStyleProperties>(*this).propertyAt(index);
+    return uncheckedDowncast<ImmutableStyleProperties>(*this).propertyAt(index);
 }
 
 inline unsigned StyleProperties::propertyCount() const
 {
-    if (is<MutableStyleProperties>(*this))
-        return downcast<MutableStyleProperties>(*this).propertyCount();
-    return downcast<ImmutableStyleProperties>(*this).propertyCount();
+    if (m_isMutable)
+        return uncheckedDowncast<MutableStyleProperties>(*this).propertyCount();
+    return uncheckedDowncast<ImmutableStyleProperties>(*this).propertyCount();
 }
 
 inline void StyleProperties::deref() const
@@ -62,26 +62,26 @@ inline void StyleProperties::deref() const
     if (!derefBase())
         return;
 
-    if (is<MutableStyleProperties>(*this))
-        delete downcast<MutableStyleProperties>(this);
-    else if (is<ImmutableStyleProperties>(*this))
-        delete downcast<ImmutableStyleProperties>(this);
+    if (auto* mutableProperties = dynamicDowncast<MutableStyleProperties>(*this))
+        delete mutableProperties;
+    else if (auto* immutableProperties = dynamicDowncast<ImmutableStyleProperties>(*this))
+        delete immutableProperties;
     else
         RELEASE_ASSERT_NOT_REACHED();
 }
 
 inline int StyleProperties::findPropertyIndex(CSSPropertyID propertyID) const
 {
-    if (is<MutableStyleProperties>(*this))
-        return downcast<MutableStyleProperties>(*this).findPropertyIndex(propertyID);
-    return downcast<ImmutableStyleProperties>(*this).findPropertyIndex(propertyID);
+    if (m_isMutable)
+        return uncheckedDowncast<MutableStyleProperties>(*this).findPropertyIndex(propertyID);
+    return uncheckedDowncast<ImmutableStyleProperties>(*this).findPropertyIndex(propertyID);
 }
 
 inline int StyleProperties::findCustomPropertyIndex(StringView propertyName) const
 {
-    if (is<MutableStyleProperties>(*this))
-        return downcast<MutableStyleProperties>(*this).findCustomPropertyIndex(propertyName);
-    return downcast<ImmutableStyleProperties>(*this).findCustomPropertyIndex(propertyName);
+    if (m_isMutable)
+        return uncheckedDowncast<MutableStyleProperties>(*this).findCustomPropertyIndex(propertyName);
+    return uncheckedDowncast<ImmutableStyleProperties>(*this).findCustomPropertyIndex(propertyName);
 }
 
 inline bool StyleProperties::isEmpty() const

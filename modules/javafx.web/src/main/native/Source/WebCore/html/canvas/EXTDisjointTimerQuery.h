@@ -26,16 +26,20 @@
 #pragma once
 
 #include "WebGLExtension.h"
+#include "WebGLRenderingContext.h"
+#include <wtf/Noncopyable.h>
+#include <wtf/TZoneMalloc.h>
 
 namespace WebCore {
 
-class EXTDisjointTimerQuery final : public WebGLExtension {
-    WTF_MAKE_ISO_ALLOCATED(EXTDisjointTimerQuery);
-public:
-    explicit EXTDisjointTimerQuery(WebGLRenderingContextBase&);
-    virtual ~EXTDisjointTimerQuery();
+class WebGLTimerQueryEXT;
 
-    ExtensionName getName() const override;
+class EXTDisjointTimerQuery final : public WebGLExtension<WebGLRenderingContext> {
+    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(EXTDisjointTimerQuery);
+    WTF_MAKE_NONCOPYABLE(EXTDisjointTimerQuery);
+public:
+    explicit EXTDisjointTimerQuery(WebGLRenderingContext&);
+    ~EXTDisjointTimerQuery();
 
     static bool supported(GraphicsContextGL&);
 

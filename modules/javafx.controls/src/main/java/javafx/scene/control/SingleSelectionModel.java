@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -218,7 +218,7 @@ public abstract class SingleSelectionModel<T> extends SelectionModel<T> {
             // no-op: the current selection isn't in the underlying data model -
             // we should keep the selected item as the new index is -1
         } else {
-            // we don't use newIndex here, to prevent RT-32139 (which has a unit
+            // we don't use newIndex here, to prevent JDK-8123070 (which has a unit
             // test developed to prevent regressions in the future)
             setSelectedItem(getModelItem(getSelectedIndex()));
         }

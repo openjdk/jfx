@@ -30,14 +30,12 @@
 namespace WGSL {
 
 class ShaderModule;
+struct ConstantValue;
+struct PrepareResult;
 
 namespace Metal {
 
-struct RenderMetalFunctionEntryPoints {
-    String mangledVertexEntryPointName;
-    String mangledFragmentEntryPointName;
-};
-RenderMetalFunctionEntryPoints emitMetalFunctions(StringBuilder&, ShaderModule&);
+void emitMetalFunctions(StringBuilder&, ShaderModule&, PrepareResult&, const HashMap<String, ConstantValue>&);
 
 } // namespace Metal
 } // namespace WGSL

@@ -44,9 +44,9 @@ using JITWriteSeparateHeapsFunction = void (*)(off_t, const void*, size_t);
 struct Config {
     static Config& singleton();
 
-    JS_EXPORT_PRIVATE static void disableFreezingForTesting();
+    static void disableFreezingForTesting() { g_wtfConfig.disableFreezingForTesting(); }
     JS_EXPORT_PRIVATE static void enableRestrictedOptions();
-    static void permanentlyFreeze() { WTF::Config::permanentlyFreeze(); }
+    static void finalize() { WTF::Config::finalize(); }
 
     static void configureForTesting()
     {
@@ -60,8 +60,8 @@ struct Config {
     // All the fields in this struct should be chosen such that their
     // initial value is 0 / null / falsy because Config is instantiated
     // as a global singleton.
+    // FIXME: We should use a placement new constructor from JSC::initialize so we can use default initializers.
 
-    bool disabledFreezingForTesting;
     bool restrictedOptionsEnabled;
     bool jitDisabled;
     bool vmCreationDisallowed;
@@ -90,6 +90,8 @@ struct Config {
     uintptr_t startOfFixedWritableMemoryPool;
     uintptr_t startOfStructureHeap;
     uintptr_t sizeOfStructureHeap;
+    void* defaultCallThunk;
+    void* arityFixupThunk;
 
 #if ENABLE(SEPARATED_WX_HEAP)
     JITWriteSeparateHeapsFunction jitWriteSeparateHeaps;
@@ -114,8 +116,6 @@ struct Config {
 #endif
 };
 
-#if ENABLE(UNIFIED_AND_FREEZABLE_CONFIG_RECORD)
-
 constexpr size_t alignmentOfJSCConfig = std::alignment_of<JSC::Config>::value;
 
 static_assert(WTF::offsetOfWTFConfigExtension + sizeof(JSC::Config) <= WTF::ConfigSizeToProtect);
@@ -123,18 +123,14 @@ static_assert(roundUpToMultipleOf<alignmentOfJSCConfig>(WTF::offsetOfWTFConfigEx
 
 #define g_jscConfig (*bitwise_cast<JSC::Config*>(&g_wtfConfig.spaceForExtensions))
 
-#else // not ENABLE(UNIFIED_AND_FREEZABLE_CONFIG_RECORD)
-
-extern "C" JS_EXPORT_PRIVATE Config g_jscConfig;
-
-#endif // ENABLE(UNIFIED_AND_FREEZABLE_CONFIG_RECORD)
-
 constexpr size_t offsetOfJSCConfigInitializeHasBeenCalled = offsetof(JSC::Config, initializeHasBeenCalled);
 constexpr size_t offsetOfJSCConfigGateMap = offsetof(JSC::Config, llint.gateMap);
 constexpr size_t offsetOfJSCConfigStartOfStructureHeap = offsetof(JSC::Config, startOfStructureHeap);
+constexpr size_t offsetOfJSCConfigDefaultCallThunk = offsetof(JSC::Config, defaultCallThunk);
+
+ALWAYS_INLINE PURE_FUNCTION uintptr_t startOfStructureHeap()
+{
+    return g_jscConfig.startOfStructureHeap;
+}
 
 } // namespace JSC
-
-#if !ENABLE(UNIFIED_AND_FREEZABLE_CONFIG_RECORD)
-using JSC::g_jscConfig;
-#endif

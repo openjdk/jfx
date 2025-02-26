@@ -27,22 +27,19 @@
 #include "AudioScheduledSourceNode.h"
 #include "OscillatorOptions.h"
 #include "OscillatorType.h"
+#include "PeriodicWave.h"
 #include <wtf/Lock.h>
 
 namespace WebCore {
 
-class PeriodicWave;
-
 // OscillatorNode is an audio generator of periodic waveforms.
 
 class OscillatorNode final : public AudioScheduledSourceNode {
-    WTF_MAKE_ISO_ALLOCATED(OscillatorNode);
+    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(OscillatorNode);
 public:
     static ExceptionOr<Ref<OscillatorNode>> create(BaseAudioContext&, const OscillatorOptions& = { });
 
     virtual ~OscillatorNode();
-
-    const char* activeDOMObjectName() const final { return "OscillatorNode"; }
 
     OscillatorType typeForBindings() const { ASSERT(isMainThread()); return m_type; }
     ExceptionOr<void> setTypeForBindings(OscillatorType);
@@ -67,6 +64,8 @@ private:
     double processKRate(int, float* destP, double virtualReadIndex) WTF_REQUIRES_LOCK(m_processLock);
 
     bool propagatesSilence() const final;
+
+    float noiseInjectionMultiplier() const final { return 0.01; }
 
     // One of the waveform types defined in the enum.
     OscillatorType m_type; // Only used on the main thread.

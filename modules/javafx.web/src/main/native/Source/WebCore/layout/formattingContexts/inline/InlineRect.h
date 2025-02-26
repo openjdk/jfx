@@ -73,6 +73,8 @@ public:
     void inflate(InlineLayoutUnit);
     void inflate(InlineLayoutUnit top, InlineLayoutUnit right, InlineLayoutUnit bottom, InlineLayoutUnit left);
 
+    bool intersects(const InlineRect other) { return m_rect.intersects(other); }
+
     bool isEmpty() const;
 
     operator InlineLayoutRect() const;
@@ -99,6 +101,11 @@ private:
 #endif // ASSERT_ENABLED
     InlineLayoutRect m_rect;
 };
+
+inline bool operator==(const InlineRect& a, const InlineRect& b)
+{
+    return static_cast<InlineLayoutRect>(a) == static_cast<InlineLayoutRect>(b);
+}
 
 inline InlineRect::InlineRect(InlineLayoutUnit top, InlineLayoutUnit left, InlineLayoutUnit width, InlineLayoutUnit height)
     : m_rect(left, top, width, height)

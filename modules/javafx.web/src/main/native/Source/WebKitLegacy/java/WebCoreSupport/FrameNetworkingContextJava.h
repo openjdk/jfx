@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2019, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -37,7 +37,7 @@ namespace WebCore {
 
 class FrameNetworkingContextJava final : public FrameNetworkingContext {
 public:
-    static Ref<FrameNetworkingContextJava> create(Frame* frame)
+    static Ref<FrameNetworkingContextJava> create(LocalFrame* frame)
     {
         return adoptRef(*new FrameNetworkingContextJava(frame));
     }
@@ -53,7 +53,7 @@ public:
     }
 
 private:
-    FrameNetworkingContextJava(Frame* frame)
+    FrameNetworkingContextJava(LocalFrame* frame)
         : FrameNetworkingContext(frame)
     {
     }

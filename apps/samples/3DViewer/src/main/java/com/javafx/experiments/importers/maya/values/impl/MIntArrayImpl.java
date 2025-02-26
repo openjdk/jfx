@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2014, Oracle and/or its affiliates.
+ * Copyright (c) 2010, 2024, Oracle and/or its affiliates.
  * All rights reserved. Use is subject to license terms.
  *
  * This file is available and licensed under the following license:
@@ -73,14 +73,17 @@ public class MIntArrayImpl extends MDataImpl implements MIntArray {
             this.length = length;
         }
 
+        @Override
         public void setSize(int size) {
             array.setSize(base + size);
         }
 
+        @Override
         public int getSize() {
             return length;
         }
 
+        @Override
         public void set(int index, int x) {
             if (index >= length) {
                 throw new ArrayIndexOutOfBoundsException(index);
@@ -88,15 +91,18 @@ public class MIntArrayImpl extends MDataImpl implements MIntArray {
             array.set(base + index, x);
         }
 
+        @Override
         public int[] get() {
             // FIXME
             throw new RuntimeException("Probably shouldn't fetch the data behind a slice");
         }
 
+        @Override
         public int get(int index) {
             return array.get(base + index);
         }
 
+        @Override
         public void parse(Iterator<String> elements) {
             new Parser(this).parse(elements);
         }
@@ -106,6 +112,7 @@ public class MIntArrayImpl extends MDataImpl implements MIntArray {
         super(type);
     }
 
+    @Override
     public void setSize(int size) {
         if (data == null || size > data.length) {
             int[] newdata = new int[size];
@@ -116,35 +123,43 @@ public class MIntArrayImpl extends MDataImpl implements MIntArray {
         }
     }
 
+    @Override
     public void set(int index, int x) {
         setSize(index + 1);
         data[index] = x;
     }
 
+    @Override
     public int[] get() {
         return data;
     }
 
+    @Override
     public int get(int index) {
         return data[index];
     }
 
+    @Override
     public MData getData(int index) {
         return getData(index, index + 1);
     }
 
+    @Override
     public int getSize() {
         return data == null ? 0 : data.length;
     }
 
+    @Override
     public MData getData(int start, int end) {
         return new MIntArraySlice(this, start, end - start + 1);
     }
 
+    @Override
     public void parse(Iterator<String> elements) {
         new Parser(this).parse(elements);
     }
 
+    @Override
     public String toString() {
         String result = getType().getName();
         String sep = " ";

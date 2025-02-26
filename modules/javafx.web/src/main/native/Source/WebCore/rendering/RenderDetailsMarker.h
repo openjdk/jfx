@@ -26,9 +26,12 @@
 namespace WebCore {
 
 class RenderDetailsMarker final : public RenderBlockFlow {
-    WTF_MAKE_ISO_ALLOCATED(RenderDetailsMarker);
+    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(RenderDetailsMarker);
+    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(RenderDetailsMarker);
 public:
     RenderDetailsMarker(DetailsMarkerControl&, RenderStyle&&);
+    virtual ~RenderDetailsMarker();
+
     DetailsMarkerControl& element() const { return static_cast<DetailsMarkerControl&>(nodeForNonAnonymous()); }
 
     enum Orientation { Up, Down, Left, Right };
@@ -36,7 +39,6 @@ public:
 
 private:
     ASCIILiteral renderName() const override { return "RenderDetailsMarker"_s; }
-    bool isDetailsMarker() const override { return true; }
     void paint(PaintInfo&, const LayoutPoint&) override;
 
     bool isOpen() const;
@@ -46,4 +48,4 @@ private:
 
 } // namespace WebCore
 
-SPECIALIZE_TYPE_TRAITS_RENDER_OBJECT(RenderDetailsMarker, isDetailsMarker())
+SPECIALIZE_TYPE_TRAITS_RENDER_OBJECT(RenderDetailsMarker, isRenderDetailsMarker())

@@ -26,9 +26,8 @@
 // https://gpuweb.github.io/gpuweb/#enumdef-gpufiltermode
 
 [
-    EnabledBySetting=WebGPU
-]
-enum GPUMipmapFilterMode {
+    EnabledBySetting=WebGPUEnabled
+] enum GPUMipmapFilterMode {
     "nearest",
     "linear"
 };

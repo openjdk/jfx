@@ -28,7 +28,8 @@ class ProgressValueElement;
 class RenderProgress;
 
 class HTMLProgressElement final : public HTMLElement {
-    WTF_MAKE_ISO_ALLOCATED(HTMLProgressElement);
+    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(HTMLProgressElement);
+    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(HTMLProgressElement);
 public:
     static const double IndeterminatePosition;
     static const double InvalidPosition;
@@ -47,14 +48,14 @@ private:
     HTMLProgressElement(const QualifiedName&, Document&);
     virtual ~HTMLProgressElement();
 
-    bool shouldAppearIndeterminate() const final;
+    bool matchesIndeterminatePseudoClass() const final;
     bool isLabelable() const final { return true; }
 
     RenderPtr<RenderElement> createElementRenderer(RenderStyle&&, const RenderTreePosition&) final;
     bool childShouldCreateRenderer(const Node&) const final;
     RenderProgress* renderProgress() const;
 
-    void parseAttribute(const QualifiedName&, const AtomString&) final;
+    void attributeChanged(const QualifiedName&, const AtomString& oldValue, const AtomString& newValue, AttributeModificationReason) final;
 
     void didAttachRenderers() final;
 
@@ -65,7 +66,7 @@ private:
 
     bool canContainRangeEndPoint() const final { return false; }
 
-    ProgressValueElement* m_value;
+    WeakPtr<ProgressValueElement, WeakPtrImplWithEventTargetData> m_value;
     bool m_isDeterminate { false };
 };
 

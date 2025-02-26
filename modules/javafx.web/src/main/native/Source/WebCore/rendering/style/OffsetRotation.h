@@ -33,7 +33,7 @@ struct BlendingContext;
 
 class OffsetRotation {
 public:
-    OffsetRotation(bool hasAuto = false, float angle = 0);
+    constexpr OffsetRotation(bool hasAuto = false, float angle = 0) : m_angle(angle), m_hasAuto(hasAuto) { }
 
     bool hasAuto() const { return m_hasAuto; }
     float angle() const { return m_angle; }
@@ -41,8 +41,7 @@ public:
     bool canBlend(const OffsetRotation&) const;
     OffsetRotation blend(const OffsetRotation&, const BlendingContext&) const;
 
-    bool operator==(const OffsetRotation&) const;
-    bool operator!=(const OffsetRotation& o) const { return !(*this == o); }
+    friend bool operator==(const OffsetRotation&, const OffsetRotation&) = default;
 
 private:
     float m_angle { 0 };

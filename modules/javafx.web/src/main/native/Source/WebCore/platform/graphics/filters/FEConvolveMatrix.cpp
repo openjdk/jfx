@@ -31,13 +31,13 @@
 
 namespace WebCore {
 
-Ref<FEConvolveMatrix> FEConvolveMatrix::create(const IntSize& kernelSize, float divisor, float bias, const IntPoint& targetOffset, EdgeModeType edgeMode, const FloatPoint& kernelUnitLength, bool preserveAlpha, const Vector<float>& kernelMatrix)
+Ref<FEConvolveMatrix> FEConvolveMatrix::create(const IntSize& kernelSize, float divisor, float bias, const IntPoint& targetOffset, EdgeModeType edgeMode, const FloatPoint& kernelUnitLength, bool preserveAlpha, const Vector<float>& kernelMatrix, DestinationColorSpace colorSpace)
 {
-    return adoptRef(*new FEConvolveMatrix(kernelSize, divisor, bias, targetOffset, edgeMode, kernelUnitLength, preserveAlpha, kernelMatrix));
+    return adoptRef(*new FEConvolveMatrix(kernelSize, divisor, bias, targetOffset, edgeMode, kernelUnitLength, preserveAlpha, kernelMatrix, colorSpace));
 }
 
-FEConvolveMatrix::FEConvolveMatrix(const IntSize& kernelSize, float divisor, float bias, const IntPoint& targetOffset, EdgeModeType edgeMode, const FloatPoint& kernelUnitLength, bool preserveAlpha, const Vector<float>& kernelMatrix)
-    : FilterEffect(FilterEffect::Type::FEConvolveMatrix)
+FEConvolveMatrix::FEConvolveMatrix(const IntSize& kernelSize, float divisor, float bias, const IntPoint& targetOffset, EdgeModeType edgeMode, const FloatPoint& kernelUnitLength, bool preserveAlpha, const Vector<float>& kernelMatrix, DestinationColorSpace colorSpace)
+    : FilterEffect(FilterEffect::Type::FEConvolveMatrix, colorSpace)
     , m_kernelSize(kernelSize)
     , m_divisor(divisor)
     , m_bias(bias)
@@ -50,6 +50,19 @@ FEConvolveMatrix::FEConvolveMatrix(const IntSize& kernelSize, float divisor, flo
     ASSERT(m_kernelSize.width() > 0);
     ASSERT(m_kernelSize.height() > 0);
     ASSERT(IntRect(IntPoint::zero(), kernelSize).contains(targetOffset));
+}
+
+bool FEConvolveMatrix::operator==(const FEConvolveMatrix& other) const
+{
+    return FilterEffect::operator==(other)
+        && m_kernelSize == other.m_kernelSize
+        && m_divisor == other.m_divisor
+        && m_bias == other.m_bias
+        && m_targetOffset == other.m_targetOffset
+        && m_edgeMode == other.m_edgeMode
+        && m_kernelUnitLength == other.m_kernelUnitLength
+        && m_preserveAlpha == other.m_preserveAlpha
+        && m_kernelMatrix == other.m_kernelMatrix;
 }
 
 void FEConvolveMatrix::setKernelSize(const IntSize& kernelSize)
@@ -115,7 +128,7 @@ bool FEConvolveMatrix::setPreserveAlpha(bool preserveAlpha)
     return true;
 }
 
-FloatRect FEConvolveMatrix::calculateImageRect(const Filter& filter, Span<const FloatRect>, const FloatRect& primitiveSubregion) const
+FloatRect FEConvolveMatrix::calculateImageRect(const Filter& filter, std::span<const FloatRect>, const FloatRect& primitiveSubregion) const
 {
     return filter.maxEffectRect(primitiveSubregion);
 }

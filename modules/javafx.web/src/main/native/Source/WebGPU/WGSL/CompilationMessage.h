@@ -26,13 +26,13 @@
 #pragma once
 
 #include "SourceSpan.h"
-#include <wtf/FastMalloc.h>
+#include <wtf/TZoneMalloc.h>
 #include <wtf/text/WTFString.h>
 
 namespace WGSL {
 
 class CompilationMessage {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_ALLOCATED(CompilationMessage);
 public:
     CompilationMessage(String&& message, SourceSpan span)
         : m_message(WTFMove(message))
@@ -43,10 +43,10 @@ public:
     void dump(PrintStream& out) const;
 
     const String& message() const { return m_message; }
-    unsigned lineNumber() const { return m_span.m_line; }
-    unsigned lineOffset() const { return m_span.m_lineOffset; }
-    unsigned offset() const { return m_span.m_offset; }
-    unsigned length() const { return m_span.m_length; }
+    unsigned lineNumber() const { return m_span.line; }
+    unsigned lineOffset() const { return m_span.lineOffset; }
+    unsigned offset() const { return m_span.offset; }
+    unsigned length() const { return m_span.length; }
 
 private:
     String m_message;

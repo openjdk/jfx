@@ -38,6 +38,7 @@ video::-webkit-media-text-track-container {
     text-decoration: none;
     pointer-events: none;
     -webkit-user-select: none;
+    container-type: size;
 
     flex: 1 1 auto;
 
@@ -48,38 +49,58 @@ video[controls]::-webkit-media-text-track-container.visible-controls-bar {
     height: calc(100% - var(--inline-controls-bar-height) - var(--inline-controls-inside-margin));
 }
 
-video::cue {
-    background-color: rgba(0, 0, 0, 0.8);
-}
+/* https://w3c.github.io/webvtt/#applying-css-properties
+   7.4. Applying CSS properties to WebVTT Node Objects */
 
-video::-webkit-media-text-track-display {
+/* These properties are not allowed via ::cue */
+[useragentpart="cue"] {
     position: absolute;
-    overflow: hidden;
-    white-space: pre-wrap;
-    box-sizing: border-box;
-    font: 22px sans-serif; /* Keep in sync with `DEFAULTCAPTIONFONTSIZE`. */
+    unicode-bidi: plaintext;
+    writing-mode: writing-mode;
+    overflow-wrap: break-word;
+    text-wrap: balance;
 }
 
-video::-webkit-media-text-track-display-backdrop {
+[useragentpart="cue"] .hidden { display: none; }
+[useragentpart="cue"] ruby { display: ruby; }
+[useragentpart="cue"] ruby > rt { display: ruby-text; }
+
+::cue {
+    font: 5cqmin/1 sans-serif;
+    color: rgba(255, 255, 255, 1);
+    background: rgba(0, 0, 0, 0.8);
+    white-space: pre-line;
+}
+
+::cue(rt) {
+    background: rgba(0, 0, 0, 0.8);
+    font-size: -webkit-ruby-text;
+}
+
+::cue(i) { font-style: italic; }
+::cue(b) { font-weight: bold; }
+::cue(u) { text-decoration: underline; }
+::cue(rt) { white-space: nowrap; }
+
+::-webkit-media-text-track-display-backdrop {
     display: inline-block;
 }
 
-video::cue(:future) {
+::-webkit-media-text-track-region {
+    position: absolute;
+    writing-mode: horizontal-tb;
+    background: rgba(0,0,0,0.8);
+    overflow-wrap: break-word;
+    font: 5cqmin sans-serif;
+    color: rgba(255,255,255,1);
+    overflow: hidden;
+    min-height: 0px;
+    display: inline-flex;
+    flex-flow: column;
+    justify-content: flex-end;
+}
+
+::cue(:future) {
     color: gray;
 }
 
-video::-webkit-media-text-track-container b {
-    font-weight: bold;
-}
-
-video::-webkit-media-text-track-container u {
-    text-decoration: underline;
-}
-
-video::-webkit-media-text-track-container i {
-    font-style: italic;
-}
-
-video::-webkit-media-text-track-container .hidden {
-    display: none;
-}

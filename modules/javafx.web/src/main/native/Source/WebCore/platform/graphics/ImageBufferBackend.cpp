@@ -33,15 +33,6 @@
 
 namespace WebCore {
 
-IntSize ImageBufferBackend::calculateBackendSize(const Parameters& parameters)
-{
-    FloatSize scaledSize = { ceilf(parameters.resolutionScale * parameters.logicalSize.width()), ceilf(parameters.resolutionScale * parameters.logicalSize.height()) };
-    if (scaledSize.isEmpty() || !scaledSize.isExpressibleAsIntSize())
-        return { };
-
-    return IntSize(scaledSize);
-}
-
 size_t ImageBufferBackend::calculateMemoryCost(const IntSize& backendSize, unsigned bytesPerRow)
 {
     ASSERT(!backendSize.isEmpty());
@@ -55,24 +46,21 @@ ImageBufferBackend::ImageBufferBackend(const Parameters& parameters)
 
 ImageBufferBackend::~ImageBufferBackend() = default;
 
-RefPtr<NativeImage> ImageBufferBackend::copyNativeImageForDrawing(BackingStoreCopy copyBehavior) const
-{
-    return copyNativeImage(copyBehavior);
-}
-
 RefPtr<NativeImage> ImageBufferBackend::sinkIntoNativeImage()
 {
-    return copyNativeImage(DontCopyBackingStore);
+    return createNativeImageReference();
 }
 
 void ImageBufferBackend::convertToLuminanceMask()
 {
+    IntRect sourceRect { { }, size() };
     PixelBufferFormat format { AlphaPremultiplication::Unpremultiplied, PixelFormat::RGBA8, colorSpace() };
-    auto pixelBuffer = getPixelBuffer(format, logicalRect());
+    auto pixelBuffer = ImageBufferAllocator().createPixelBuffer(format, sourceRect.size());
     if (!pixelBuffer)
         return;
+    getPixelBuffer(sourceRect, *pixelBuffer);
 
-    unsigned pixelArrayLength = pixelBuffer->sizeInBytes();
+    unsigned pixelArrayLength = pixelBuffer->bytes().size();
     for (unsigned pixelOffset = 0; pixelOffset < pixelArrayLength; pixelOffset += 4) {
         uint8_t a = pixelBuffer->item(pixelOffset + 3);
         if (!a)
@@ -85,100 +73,98 @@ void ImageBufferBackend::convertToLuminanceMask()
         pixelBuffer->set(pixelOffset + 3, luma);
     }
 
-    putPixelBuffer(*pixelBuffer, logicalRect(), IntPoint::zero(), AlphaPremultiplication::Premultiplied);
+    putPixelBuffer(*pixelBuffer, sourceRect, IntPoint::zero(), AlphaPremultiplication::Premultiplied);
 }
 
-RefPtr<PixelBuffer> ImageBufferBackend::getPixelBuffer(const PixelBufferFormat& destinationFormat, const IntRect& sourceRect, void* data, const ImageBufferAllocator& allocator) const
+void ImageBufferBackend::getPixelBuffer(const IntRect& sourceRect, const uint8_t* sourceData, PixelBuffer& destinationPixelBuffer)
 {
-    ASSERT(PixelBuffer::supportedPixelFormat(destinationFormat.pixelFormat));
-
-    auto sourceRectScaled = toBackendCoordinates(sourceRect);
-
-    auto pixelBuffer = allocator.createPixelBuffer(destinationFormat, sourceRectScaled.size());
-    if (!pixelBuffer)
-        return nullptr;
-
-    auto sourceRectClipped = intersection(backendRect(), sourceRectScaled);
+    IntRect backendRect { { }, size() };
+    auto sourceRectClipped = intersection(backendRect, sourceRect);
     IntRect destinationRect { IntPoint::zero(), sourceRectClipped.size() };
 
-    if (sourceRectScaled.x() < 0)
-        destinationRect.setX(-sourceRectScaled.x());
+    if (sourceRect.x() < 0)
+        destinationRect.setX(-sourceRect.x());
 
-    if (sourceRectScaled.y() < 0)
-        destinationRect.setY(-sourceRectScaled.y());
+    if (sourceRect.y() < 0)
+        destinationRect.setY(-sourceRect.y());
 
-    if (destinationRect.size() != sourceRectScaled.size())
-        pixelBuffer->zeroFill();
+    if (destinationRect.size() != sourceRect.size())
+        destinationPixelBuffer.zeroFill();
 
+    unsigned sourceBytesPerRow = bytesPerRow();
     ConstPixelBufferConversionView source {
-        { AlphaPremultiplication::Premultiplied, pixelFormat(), colorSpace() },
-        bytesPerRow(),
-        static_cast<uint8_t*>(data) + sourceRectClipped.y() * source.bytesPerRow + sourceRectClipped.x() * 4
+        { AlphaPremultiplication::Premultiplied, convertToPixelFormat(pixelFormat()), colorSpace() },
+        sourceBytesPerRow,
+        sourceData + sourceRectClipped.y() * sourceBytesPerRow + sourceRectClipped.x() * 4
     };
-
+    unsigned destinationBytesPerRow = static_cast<unsigned>(4u * sourceRect.width());
     PixelBufferConversionView destination {
-        destinationFormat,
-        static_cast<unsigned>(4 * sourceRectScaled.width()),
-        pixelBuffer->bytes() + destinationRect.y() * destination.bytesPerRow + destinationRect.x() * 4
+        destinationPixelBuffer.format(),
+        destinationBytesPerRow,
+        destinationPixelBuffer.bytes().data() + destinationRect.y() * destinationBytesPerRow + destinationRect.x() * 4
     };
 
     convertImagePixels(source, destination, destinationRect.size());
-
-    return pixelBuffer;
 }
 
-void ImageBufferBackend::putPixelBuffer(const PixelBuffer& sourcePixelBuffer, const IntRect& sourceRect, const IntPoint& destinationPoint, AlphaPremultiplication destinationAlphaFormat, void* data)
+void ImageBufferBackend::putPixelBuffer(const PixelBuffer& sourcePixelBuffer, const IntRect& sourceRect, const IntPoint& destinationPoint, AlphaPremultiplication destinationAlphaFormat, uint8_t* destinationData)
 {
-    auto sourceRectScaled = toBackendCoordinates(sourceRect);
-    auto destinationPointScaled = toBackendCoordinates(destinationPoint);
-
-    auto sourceRectClipped = intersection({ IntPoint::zero(), sourcePixelBuffer.size() }, sourceRectScaled);
+    IntRect backendRect { { }, size() };
+    auto sourceRectClipped = intersection({ IntPoint::zero(), sourcePixelBuffer.size() }, sourceRect);
     auto destinationRect = sourceRectClipped;
-    destinationRect.moveBy(destinationPointScaled);
+    destinationRect.moveBy(destinationPoint);
 
-    if (sourceRectScaled.x() < 0)
-        destinationRect.setX(destinationRect.x() - sourceRectScaled.x());
+    if (sourceRect.x() < 0)
+        destinationRect.setX(destinationRect.x() - sourceRect.x());
 
-    if (sourceRectScaled.y() < 0)
-        destinationRect.setY(destinationRect.y() - sourceRectScaled.y());
+    if (sourceRect.y() < 0)
+        destinationRect.setY(destinationRect.y() - sourceRect.y());
 
-    destinationRect.intersect(backendRect());
+    destinationRect.intersect(backendRect);
     sourceRectClipped.setSize(destinationRect.size());
 
+    unsigned sourceBytesPerRow = static_cast<unsigned>(4u * sourcePixelBuffer.size().width());
     ConstPixelBufferConversionView source {
         sourcePixelBuffer.format(),
-        static_cast<unsigned>(4 * sourcePixelBuffer.size().width()),
-        sourcePixelBuffer.bytes() + sourceRectClipped.y() * source.bytesPerRow + sourceRectClipped.x() * 4
+        sourceBytesPerRow,
+        sourcePixelBuffer.bytes().data() + sourceRectClipped.y() * sourceBytesPerRow + sourceRectClipped.x() * 4
     };
-
+    unsigned destinationBytesPerRow = bytesPerRow();
     PixelBufferConversionView destination {
-        { destinationAlphaFormat, pixelFormat(), colorSpace() },
-        bytesPerRow(),
-        static_cast<uint8_t*>(data) + destinationRect.y() * destination.bytesPerRow + destinationRect.x() * 4
+        { destinationAlphaFormat, convertToPixelFormat(pixelFormat()), colorSpace() },
+        destinationBytesPerRow,
+        destinationData + destinationRect.y() * destinationBytesPerRow + destinationRect.x() * 4
     };
 
     convertImagePixels(source, destination, destinationRect.size());
 }
 
-AffineTransform ImageBufferBackend::calculateBaseTransform(const Parameters& parameters, bool originAtBottomLeftCorner)
+AffineTransform ImageBufferBackend::calculateBaseTransform(const Parameters& parameters)
 {
     AffineTransform baseTransform;
-
-    if (originAtBottomLeftCorner) {
+#if USE(CG)
+    // CoreGraphics origin is at bottom left corner. GraphicsContext origin is at top left corner. Flip the drawing with GraphicsContext base
+    // transform.
         baseTransform.scale(1, -1);
-        baseTransform.translate(0, -calculateBackendSize(parameters).height());
-    }
-
+        baseTransform.translate(0, -parameters.backendSize.height());
+#endif
     baseTransform.scale(parameters.resolutionScale);
-
     return baseTransform;
 }
 
-void ImageBufferBackend::applyBaseTransformToContext() const
+TextStream& operator<<(TextStream& ts, VolatilityState state)
 {
-    auto& context = this->context();
-    context.applyDeviceScaleFactor(m_parameters.resolutionScale);
-    context.setCTM(calculateBaseTransform(m_parameters, originAtBottomLeftCorner()));
+    switch (state) {
+    case VolatilityState::NonVolatile: ts << "non-volatile"; break;
+    case VolatilityState::Volatile: ts << "volatile"; break;
+    }
+    return ts;
+}
+
+TextStream& operator<<(TextStream& ts, const ImageBufferBackend& imageBufferBackend)
+{
+    ts << imageBufferBackend.debugDescription();
+    return ts;
 }
 
 } // namespace WebCore

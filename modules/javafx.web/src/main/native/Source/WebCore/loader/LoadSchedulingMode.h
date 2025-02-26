@@ -25,8 +25,6 @@
 
 #pragma once
 
-#include <wtf/EnumTraits.h>
-
 namespace WebCore {
 
 enum class LoadSchedulingMode : uint8_t {
@@ -34,14 +32,4 @@ enum class LoadSchedulingMode : uint8_t {
     Prioritized // Low priority loads may get delayed in favor of higher priority ones.
 };
 
-}
-
-namespace WTF {
-template<> struct EnumTraits<WebCore::LoadSchedulingMode> {
-    using values = EnumValues<
-        WebCore::LoadSchedulingMode,
-        WebCore::LoadSchedulingMode::Direct,
-        WebCore::LoadSchedulingMode::Prioritized
-    >;
-};
 }

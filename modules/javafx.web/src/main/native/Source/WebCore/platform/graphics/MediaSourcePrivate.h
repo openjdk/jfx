@@ -33,50 +33,115 @@
 #if ENABLE(MEDIA_SOURCE)
 
 #include "MediaPlayer.h"
+#include "PlatformTimeRanges.h"
 #include <wtf/Forward.h>
-#include <wtf/RefCounted.h>
+#include <wtf/ThreadSafeWeakPtr.h>
 #include <wtf/Vector.h>
 
 namespace WebCore {
 
 class ContentType;
 class SourceBufferPrivate;
+#if ENABLE(LEGACY_ENCRYPTED_MEDIA)
+class LegacyCDMSession;
+#endif
+enum class MediaSourceReadyState;
 
-class MediaSourcePrivate : public RefCounted<MediaSourcePrivate> {
-public:
-    typedef Vector<String> CodecsArray;
-
-    MediaSourcePrivate() = default;
-    virtual ~MediaSourcePrivate() = default;
-
-    enum class AddStatus : uint8_t {
+enum class MediaSourcePrivateAddStatus : uint8_t {
         Ok,
         NotSupported,
         ReachedIdLimit
-    };
+};
+
+enum class MediaSourcePrivateEndOfStreamStatus : uint8_t {
+    NoError,
+    NetworkError,
+    DecodeError
+};
+
+class WEBCORE_EXPORT MediaSourcePrivate
+    : public ThreadSafeRefCountedAndCanMakeThreadSafeWeakPtr<MediaSourcePrivate> {
+public:
+    typedef Vector<String> CodecsArray;
+
+    using AddStatus = MediaSourcePrivateAddStatus;
+    using EndOfStreamStatus = MediaSourcePrivateEndOfStreamStatus;
+
+    explicit MediaSourcePrivate(MediaSourcePrivateClient&);
+    virtual ~MediaSourcePrivate();
+
+    RefPtr<MediaSourcePrivateClient> client() const;
+    virtual RefPtr<MediaPlayerPrivateInterface> player() const = 0;
+
+    virtual constexpr MediaPlatformType platformType() const = 0;
     virtual AddStatus addSourceBuffer(const ContentType&, bool webMParserEnabled, RefPtr<SourceBufferPrivate>&) = 0;
-    virtual void durationChanged(const MediaTime&) = 0;
-    virtual void bufferedChanged(const PlatformTimeRanges&) { }
-    enum EndOfStreamStatus { EosNoError, EosNetworkError, EosDecodeError };
-    virtual void markEndOfStream(EndOfStreamStatus) = 0;
-    virtual void unmarkEndOfStream() = 0;
-    virtual bool isEnded() const = 0;
+    virtual void removeSourceBuffer(SourceBufferPrivate&);
+    void sourceBufferPrivateDidChangeActiveState(SourceBufferPrivate&, bool active);
+    virtual void notifyActiveSourceBuffersChanged() = 0;
+    virtual void durationChanged(const MediaTime&); // Base class method must be called in overrides. Must be thread-safe
+    virtual void bufferedChanged(const PlatformTimeRanges&); // Base class method must be called in overrides. Must be thread-safe.
+    virtual void trackBufferedChanged(SourceBufferPrivate&, Vector<PlatformTimeRanges>&&);
 
-    virtual MediaPlayer::ReadyState readyState() const = 0;
-    virtual void setReadyState(MediaPlayer::ReadyState) = 0;
+    virtual MediaPlayer::ReadyState mediaPlayerReadyState() const = 0;
+    virtual void setMediaPlayerReadyState(MediaPlayer::ReadyState) = 0;
+    virtual void markEndOfStream(EndOfStreamStatus) { m_isEnded = true; }
+    virtual void unmarkEndOfStream() { m_isEnded = false; }
+    bool isEnded() const { return m_isEnded; }
 
-    virtual void setIsSeeking(bool isSeeking) { m_isSeeking = isSeeking; }
-    virtual void waitForSeekCompleted() = 0;
-    virtual void seekCompleted() = 0;
+    virtual MediaSourceReadyState readyState() const { return m_readyState; }
+    virtual void setReadyState(MediaSourceReadyState readyState) { m_readyState = readyState; }
+    void setLiveSeekableRange(const PlatformTimeRanges&);
+    const PlatformTimeRanges& liveSeekableRange() const;
+    void clearLiveSeekableRange();
+
+    MediaTime currentTime() const;
+
+    Ref<MediaTimePromise> waitForTarget(const SeekTarget&);
+    Ref<MediaPromise> seekToTime(const MediaTime&);
 
     virtual void setTimeFudgeFactor(const MediaTime& fudgeFactor) { m_timeFudgeFactor = fudgeFactor; }
-
     MediaTime timeFudgeFactor() const { return m_timeFudgeFactor; }
-    bool isSeeking() const { return m_isSeeking; }
+
+    MediaTime duration() const;
+    PlatformTimeRanges buffered() const;
+    PlatformTimeRanges seekable() const;
+
+    bool hasBufferedData() const;
+    bool hasFutureTime(const MediaTime& currentTime) const;
+    bool timeIsProgressing() const;
+    static constexpr MediaTime futureDataThreshold() { return MediaTime { 1001, 24000 }; }
+    bool hasFutureTime(const MediaTime& currentTime, const MediaTime& threshold) const;
+    bool hasAudio() const;
+    bool hasVideo() const;
+
+    void setStreaming(bool value) { m_streaming = value; }
+    bool streaming() const { return m_streaming; }
+    void setStreamingAllowed(bool value) { m_streamingAllowed = value; }
+    bool streamingAllowed() const { return m_streamingAllowed; }
+
+#if ENABLE(LEGACY_ENCRYPTED_MEDIA)
+    void setCDMSession(LegacyCDMSession*);
+#endif
+
+protected:
+    MediaSourcePrivate(MediaSourcePrivateClient&, RefCountedSerialFunctionDispatcher&);
+    void ensureOnDispatcher(Function<void()>&&) const;
+
+    Vector<RefPtr<SourceBufferPrivate>> m_sourceBuffers;
+    Vector<SourceBufferPrivate*> m_activeSourceBuffers;
+    std::atomic<bool> m_isEnded { false }; // Set on MediaSource's dispatcher.
+    std::atomic<MediaSourceReadyState> m_readyState; // Set on MediaSource's dispatcher.
+    const Ref<RefCountedSerialFunctionDispatcher> m_dispatcher; // SerialFunctionDispatcher the SourceBufferPrivate/MediaSourcePrivate is running on.
 
 private:
+    mutable Lock m_lock;
+    MediaTime m_duration WTF_GUARDED_BY_LOCK(m_lock) { MediaTime::invalidTime() };
+    PlatformTimeRanges m_buffered WTF_GUARDED_BY_LOCK(m_lock);
+    PlatformTimeRanges m_liveSeekable WTF_GUARDED_BY_LOCK(m_lock);
+    std::atomic<bool> m_streaming { false };
+    std::atomic<bool> m_streamingAllowed { false };
     MediaTime m_timeFudgeFactor;
-    bool m_isSeeking { false };
+    const ThreadSafeWeakPtr<MediaSourcePrivateClient> m_client;
 };
 
 String convertEnumerationToString(MediaSourcePrivate::AddStatus);
@@ -102,15 +167,6 @@ struct LogArgument<WebCore::MediaSourcePrivate::EndOfStreamStatus> {
     {
         return convertEnumerationToString(status);
     }
-};
-
-template<> struct EnumTraits<WebCore::MediaSourcePrivate::AddStatus> {
-    using values = EnumValues<
-        WebCore::MediaSourcePrivate::AddStatus,
-        WebCore::MediaSourcePrivate::AddStatus::Ok,
-        WebCore::MediaSourcePrivate::AddStatus::NotSupported,
-        WebCore::MediaSourcePrivate::AddStatus::ReachedIdLimit
-    >;
 };
 
 } // namespace WTF

@@ -44,19 +44,20 @@ public:
     virtual ~AudioTrackList();
 
     AudioTrack* getTrackById(const AtomString&) const;
+    AudioTrack* getTrackById(TrackID) const;
 
+    bool isSupportedPropertyIndex(unsigned index) const { return index < m_inbandTracks.size(); }
     AudioTrack* item(unsigned index) const;
     AudioTrack* lastItem() const { return item(length() - 1); }
+    AudioTrack* firstEnabled() const;
     void append(Ref<AudioTrack>&&);
     void remove(TrackBase&, bool scheduleEvent = true) final;
 
     // EventTarget
-    EventTargetInterface eventTargetInterface() const override;
+    enum EventTargetInterfaceType eventTargetInterface() const override;
 
 private:
     AudioTrackList(ScriptExecutionContext*);
-
-    const char* activeDOMObjectName() const final;
 };
 static_assert(sizeof(AudioTrackList) == sizeof(TrackListBase));
 

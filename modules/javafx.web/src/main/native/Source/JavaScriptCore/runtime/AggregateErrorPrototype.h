@@ -26,13 +26,6 @@
 #pragma once
 
 #include "ErrorPrototype.h"
-#include "IsoSubspace.h"
-#include "JSCJSValue.h"
-#include "JSCell.h"
-#include "JSGlobalObject.h"
-#include "JSTypeInfo.h"
-#include "Structure.h"
-#include "VM.h"
 
 namespace JSC {
 
@@ -47,10 +40,7 @@ public:
         return &vm.plainObjectSpace();
     }
 
-    static Structure* createStructure(VM& vm, JSGlobalObject* globalObject, JSValue prototype)
-    {
-        return Structure::create(vm, globalObject, prototype, TypeInfo(ObjectType, StructureFlags), info());
-    }
+    inline static Structure* createStructure(VM&, JSGlobalObject*, JSValue);
 
     static AggregateErrorPrototype* create(VM& vm, Structure* structure)
     {

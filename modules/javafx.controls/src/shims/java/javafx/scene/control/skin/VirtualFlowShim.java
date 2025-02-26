@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015, 2023, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2015, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -31,17 +31,13 @@ import javafx.scene.Node;
 import javafx.scene.control.IndexedCell;
 import javafx.scene.control.ScrollBar;
 import javafx.scene.control.Skin;
+import javafx.scene.layout.Region;
 import javafx.scene.layout.StackPane;
 
 public class VirtualFlowShim<T extends IndexedCell> extends VirtualFlow<T> {
 
     public final ArrayLinkedList<T> cells = super.cells;
     public final ObservableList<Node> sheetChildren = super.sheetChildren;
-
-    @Override
-    public double getViewportLength() {
-        return super.getViewportLength();
-    }
 
     @Override
     public void setViewportLength(double value) {
@@ -56,6 +52,11 @@ public class VirtualFlowShim<T extends IndexedCell> extends VirtualFlow<T> {
     @Override
     public double getCellPosition(T cell) {
         return super.getCellPosition(cell);
+    }
+
+    @Override
+    public double getCellSize(int idx) {
+        return super.getCellSize(idx);
     }
 
     @Override
@@ -84,7 +85,7 @@ public class VirtualFlowShim<T extends IndexedCell> extends VirtualFlow<T> {
         return super.computeCurrentIndex();
     }
 
-    public ClippedContainer get_clipView() {
+    public Region get_clipView() {
         return super.clipView;
     }
 

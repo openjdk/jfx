@@ -29,7 +29,6 @@
 #ifndef MultiChannelResampler_h
 #define MultiChannelResampler_h
 
-#include "AudioArray.h"
 #include <memory>
 #include <wtf/Function.h>
 #include <wtf/Vector.h>
@@ -49,7 +48,7 @@ public:
     void process(AudioBus* destination, size_t framesToProcess);
 
 private:
-    void provideInputForChannel(float* buffer, size_t framesToProcess, unsigned channelIndex);
+    void provideInputForChannel(std::span<float> buffer, size_t framesToProcess, unsigned channelIndex);
 
     // FIXME: the mac port can have a more highly optimized implementation based on CoreAudio
     // instead of SincResampler. For now the default implementation will be used on all ports.
@@ -62,7 +61,6 @@ private:
     size_t m_outputFramesReady { 0 };
     Function<void(AudioBus*, size_t framesToProcess)> m_provideInput;
     RefPtr<AudioBus> m_multiChannelBus;
-    Vector<std::unique_ptr<AudioFloatArray>> m_channelsMemory;
 };
 
 } // namespace WebCore

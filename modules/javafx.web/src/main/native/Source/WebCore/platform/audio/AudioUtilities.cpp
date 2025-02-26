@@ -27,7 +27,10 @@
 #if ENABLE(WEB_AUDIO)
 
 #include "AudioUtilities.h"
+#include <random>
+#include <wtf/HashFunctions.h>
 #include <wtf/MathExtras.h>
+#include <wtf/WeakRandomNumber.h>
 
 namespace WebCore {
 
@@ -74,6 +77,31 @@ size_t timeToSampleFrame(double time, double sampleRate, SampleFrameRounding rou
 
     return static_cast<size_t>(frame);
 }
+
+void applyNoise(float* values, size_t numberOfElementsToProcess, float standardDeviation)
+{
+    std::random_device device;
+    std::mt19937 generator(device());
+    std::normal_distribution<float> distribution(1, standardDeviation);
+
+    constexpr auto maximumTableSize = 2048;
+    constexpr auto minimumTableSize = 1024;
+
+    size_t unusedCellCount = weakRandomNumber<uint32_t>() % (maximumTableSize - minimumTableSize);
+    size_t tableSize = maximumTableSize - unusedCellCount;
+
+    // Avoid heap allocations on the rendering thread.
+    std::array<float, maximumTableSize> multipliers;
+    multipliers.fill(std::numeric_limits<float>::infinity());
+
+    for (size_t i = 0; i < numberOfElementsToProcess; ++i) {
+        auto& multiplier = multipliers[DefaultHash<double>::hash(values[i]) % tableSize];
+        if (std::isinf(multiplier))
+            multiplier = distribution(generator);
+        values[i] *= multiplier;
+    }
+}
+
 } // AudioUtilites
 
 } // WebCore

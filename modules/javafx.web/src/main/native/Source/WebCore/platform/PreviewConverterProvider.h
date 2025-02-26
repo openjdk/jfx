@@ -28,12 +28,21 @@
 #include <wtf/WeakPtr.h>
 
 namespace WebCore {
+struct PreviewConverterProvider;
+}
+
+namespace WTF {
+template<typename T> struct IsDeprecatedWeakRefSmartPointerException;
+template<> struct IsDeprecatedWeakRefSmartPointerException<WebCore::PreviewConverterProvider> : std::true_type { };
+}
+
+namespace WebCore {
 
 struct PreviewConverterProvider : CanMakeWeakPtr<PreviewConverterProvider> {
     virtual ~PreviewConverterProvider() = default;
 
     virtual void provideMainResourceForPreviewConverter(PreviewConverter&, CompletionHandler<void(Ref<FragmentedSharedBuffer>&&)>&&) = 0;
-    virtual void providePasswordForPreviewConverter(PreviewConverter&, CompletionHandler<void(const String&)>&&) = 0;
+    virtual void providePasswordForPreviewConverter(PreviewConverter&, Function<void(const String&)>&&) = 0;
 };
 
 } // namespace WebCore

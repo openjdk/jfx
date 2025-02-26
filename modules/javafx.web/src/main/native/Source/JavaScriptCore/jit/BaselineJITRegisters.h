@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2013-2021 Apple Inc. All rights reserved.
+ * Copyright (C) 2013-2023 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -35,372 +35,289 @@ namespace JSC {
 namespace BaselineJITRegisters {
 
 namespace Call {
-    constexpr JSValueRegs calleeJSR { JSRInfo::jsRegT10 };
-    constexpr GPRReg calleeGPR { GPRInfo::regT0 };
-    constexpr GPRReg callLinkInfoGPR { GPRInfo::regT2 };
+    static constexpr JSValueRegs calleeJSR { JSRInfo::jsRegT10 };
+    static constexpr GPRReg calleeGPR { GPRInfo::regT0 };
+    static constexpr GPRReg callLinkInfoGPR { GPRInfo::regT2 };
+    static constexpr GPRReg callTargetGPR { GPRInfo::regT5 };
 }
 
 namespace CallDirectEval {
     namespace SlowPath {
-        constexpr GPRReg calleeFrameGPR { GPRInfo::regT0 };
+        static constexpr GPRReg calleeFrameGPR { GPRInfo::regT0 };
 #if USE(JSVALUE64)
-        constexpr GPRReg scopeGPR { GPRInfo::regT1 };
-        constexpr JSValueRegs thisValueJSR { GPRInfo::regT2 };
+        static constexpr GPRReg scopeGPR { GPRInfo::regT1 };
+        static constexpr JSValueRegs thisValueJSR { GPRInfo::regT2 };
 #else
-        constexpr GPRReg scopeGPR { GPRInfo::regT1 };
-        constexpr JSValueRegs thisValueJSR { JSRInfo::jsRegT32 };
+        static constexpr GPRReg scopeGPR { GPRInfo::regT1 };
+        static constexpr JSValueRegs thisValueJSR { JSRInfo::jsRegT32 };
 #endif
     }
 }
 
 namespace CheckTraps {
-    constexpr GPRReg bytecodeOffsetGPR { GPRInfo::nonArgGPR0 };
+    static constexpr GPRReg bytecodeOffsetGPR { GPRInfo::nonArgGPR0 };
 }
 
 namespace Enter {
-    constexpr GPRReg canBeOptimizedGPR { GPRInfo::regT0 };
-    constexpr GPRReg localsToInitGPR { GPRInfo::regT1 };
+    static constexpr GPRReg scratch1GPR { GPRInfo::regT4 };
+    static constexpr GPRReg scratch2GPR { GPRInfo::regT5 };
+    static constexpr JSValueRegs scratch3JSR { JSRInfo::jsRegT32 };
 }
 
 namespace Instanceof {
     using SlowOperation = decltype(operationInstanceOfOptimize);
 
     // Registers used on both Fast and Slow paths
-    constexpr JSValueRegs resultJSR { JSRInfo::returnValueJSR };
-    constexpr JSValueRegs valueJSR { preferredArgumentJSR<SlowOperation, 2>() };
-    constexpr JSValueRegs protoJSR { preferredArgumentJSR<SlowOperation, 3>() };
-
-    // Fast path only registers
-    namespace FastPath {
-        constexpr GPRReg stubInfoGPR { GPRInfo::argumentGPR1 };
-        static_assert(noOverlap(valueJSR, protoJSR, stubInfoGPR), "Required for DataIC");
-    }
-
-    // Slow path only registers
-    namespace SlowPath {
-        constexpr GPRReg globalObjectGPR { preferredArgumentGPR<SlowOperation, 0>() };
-        constexpr GPRReg stubInfoGPR { preferredArgumentGPR<SlowOperation, 1>() };
-        static_assert(noOverlap(globalObjectGPR, stubInfoGPR, valueJSR, protoJSR), "Required for call to slow operation");
-    }
+    static constexpr JSValueRegs resultJSR { JSRInfo::returnValueJSR };
+    static constexpr JSValueRegs valueJSR { preferredArgumentJSR<SlowOperation, 0>() };
+    static constexpr JSValueRegs protoJSR { preferredArgumentJSR<SlowOperation, 1>() };
+    static constexpr GPRReg stubInfoGPR { preferredArgumentGPR<SlowOperation, 2>() };
+    static constexpr auto scratchRegisters = allocatedScratchRegisters<GPRInfo, valueJSR, protoJSR, stubInfoGPR, GPRInfo::handlerGPR>;
+    static constexpr GPRReg scratch1GPR { scratchRegisters[0] };
+    static_assert(noOverlap(stubInfoGPR, valueJSR, protoJSR, GPRInfo::handlerGPR, scratch1GPR), "Required for call to slow operation");
+    static_assert(noOverlap(resultJSR, stubInfoGPR));
 }
 
 namespace JFalse {
-    constexpr JSValueRegs valueJSR { JSRInfo::jsRegT32 };
+    static constexpr JSValueRegs valueJSR { JSRInfo::jsRegT32 };
+    static constexpr GPRReg scratch1GPR { GPRInfo::regT5 };
+    static_assert(noOverlap(valueJSR, scratch1GPR));
 }
 
 namespace JTrue {
-    constexpr JSValueRegs valueJSR { JSRInfo::jsRegT32 };
+    static constexpr JSValueRegs valueJSR { JSRInfo::jsRegT32 };
+    static constexpr GPRReg scratch1GPR { GPRInfo::regT5 };
+    static_assert(noOverlap(valueJSR, scratch1GPR));
 }
 
 namespace Throw {
     using SlowOperation = decltype(operationThrow);
 
-    constexpr GPRReg globalObjectGPR { preferredArgumentGPR<SlowOperation, 0>() };
-    constexpr JSValueRegs thrownValueJSR { preferredArgumentJSR<SlowOperation, 1>() };
-    constexpr GPRReg bytecodeOffsetGPR { GPRInfo::nonArgGPR0 };
+    static constexpr GPRReg globalObjectGPR { preferredArgumentGPR<SlowOperation, 0>() };
+    static constexpr JSValueRegs thrownValueJSR { preferredArgumentJSR<SlowOperation, 1>() };
+    static constexpr GPRReg bytecodeOffsetGPR { GPRInfo::nonArgGPR0 };
     static_assert(noOverlap(thrownValueJSR, bytecodeOffsetGPR), "Required for call to CTI thunk");
     static_assert(noOverlap(globalObjectGPR, thrownValueJSR), "Required for call to slow operation");
 }
 
 namespace ResolveScope {
-    constexpr GPRReg metadataGPR { GPRInfo::regT2 };
-    constexpr GPRReg scopeGPR { GPRInfo::regT0 };
-    constexpr GPRReg bytecodeOffsetGPR { GPRInfo::regT3 };
-    static_assert(noOverlap(metadataGPR, scopeGPR, bytecodeOffsetGPR), "Required for call to CTI thunk");
+    static constexpr GPRReg metadataGPR { GPRInfo::regT2 };
+    static constexpr GPRReg scopeGPR { GPRInfo::regT0 };
+    static constexpr GPRReg bytecodeOffsetGPR { GPRInfo::regT3 };
+    static constexpr GPRReg scratch1GPR { GPRInfo::regT5 };
+    static_assert(noOverlap(metadataGPR, scopeGPR, bytecodeOffsetGPR, scratch1GPR), "Required for call to CTI thunk");
 }
 
 namespace GetFromScope {
-    constexpr GPRReg metadataGPR { GPRInfo::regT4 };
-    constexpr GPRReg scopeGPR { GPRInfo::regT2 };
-    constexpr GPRReg bytecodeOffsetGPR { GPRInfo::regT3 };
-    static_assert(noOverlap(metadataGPR, scopeGPR, bytecodeOffsetGPR), "Required for call to CTI thunk");
+    static constexpr GPRReg metadataGPR { GPRInfo::regT4 };
+    static constexpr GPRReg scopeGPR { GPRInfo::regT2 };
+    static constexpr GPRReg bytecodeOffsetGPR { GPRInfo::regT3 };
+    static constexpr GPRReg scratch1GPR { GPRInfo::regT5 };
+    static_assert(noOverlap(metadataGPR, scopeGPR, bytecodeOffsetGPR, scratch1GPR), "Required for call to CTI thunk");
 }
 
 namespace PutToScope {
-    constexpr GPRReg bytecodeOffsetGPR { GPRInfo::argumentGPR2 };
+    static constexpr GPRReg bytecodeOffsetGPR { GPRInfo::argumentGPR2 };
 }
 
 namespace GetById {
     // Registers used on both Fast and Slow paths
-    constexpr JSValueRegs resultJSR { JSRInfo::returnValueJSR };
-    constexpr JSValueRegs baseJSR { JSRInfo::returnValueJSR };
+    using SlowOperation = decltype(operationGetByIdOptimize);
 
-    // Fast path only registers
-    namespace FastPath {
-        constexpr GPRReg stubInfoGPR { GPRInfo::regT2 };
-        constexpr GPRReg scratchGPR { GPRInfo::regT3 };
-        constexpr JSValueRegs dontClobberJSR { JSRInfo::jsRegT54 };
-        static_assert(noOverlap(baseJSR, stubInfoGPR, scratchGPR, dontClobberJSR), "Required for DataIC");
-    }
+    static constexpr JSValueRegs resultJSR { JSRInfo::returnValueJSR };
+    static constexpr JSValueRegs baseJSR { preferredArgumentJSR<SlowOperation, 0>() };
+    static constexpr GPRReg stubInfoGPR { preferredArgumentGPR<SlowOperation, 1>() };
 
-    // Slow path only registers
-    namespace SlowPath {
-        constexpr GPRReg globalObjectGPR { GPRInfo::regT2 };
-        constexpr GPRReg bytecodeOffsetGPR { globalObjectGPR };
-        constexpr GPRReg stubInfoGPR { GPRInfo::regT3 };
-        constexpr GPRReg propertyGPR { GPRInfo::regT4 };
-        static_assert(noOverlap(baseJSR, bytecodeOffsetGPR, stubInfoGPR, propertyGPR), "Required for call to CTI thunk");
-        static_assert(noOverlap(baseJSR, globalObjectGPR, stubInfoGPR, propertyGPR), "Required for call to slow operation");
-    }
+    static constexpr auto scratchRegisters = allocatedScratchRegisters<GPRInfo, baseJSR, stubInfoGPR, GPRInfo::handlerGPR>;
+    static constexpr GPRReg scratch1GPR { scratchRegisters[0] };
+    static constexpr GPRReg scratch2GPR { scratchRegisters[1] };
+    static constexpr GPRReg scratch3GPR { scratchRegisters[2] };
+    static constexpr GPRReg scratch4GPR { scratchRegisters[3] };
+
+    static_assert(noOverlap(baseJSR, stubInfoGPR), "Required for DataIC");
+    static_assert(noOverlap(resultJSR, stubInfoGPR));
+    static_assert(noOverlap(baseJSR, stubInfoGPR, scratch1GPR, scratch2GPR, scratch3GPR, scratch4GPR), "Required for HandlerIC");
 }
 
 namespace GetByIdWithThis {
     // Registers used on both Fast and Slow paths
-    constexpr JSValueRegs resultJSR { JSRInfo::returnValueJSR };
-    constexpr JSValueRegs baseJSR { JSRInfo::jsRegT10 };
-    constexpr JSValueRegs thisJSR { JSRInfo::jsRegT32 };
+    using SlowOperation = decltype(operationGetByIdWithThisOptimize);
 
-    // Fast path only registers
-    namespace FastPath {
-        constexpr GPRReg stubInfoGPR { GPRInfo::regT4 };
-        constexpr GPRReg scratchGPR { GPRInfo::regT5 };
-        static_assert(noOverlap(baseJSR, thisJSR, stubInfoGPR, scratchGPR), "Required for DataIC");
-    }
-
-    // Slow path only registers
-    namespace SlowPath {
-        constexpr GPRReg globalObjectGPR { GPRInfo::regT4 };
-        constexpr GPRReg bytecodeOffsetGPR { globalObjectGPR };
-        constexpr GPRReg stubInfoGPR { GPRInfo::regT5 };
-        constexpr GPRReg propertyGPR {
-#if USE(JSVALUE64)
-            GPRInfo::regT1
-#elif USE(JSVALUE32_64)
-            GPRInfo::regT6
-#endif
-        };
-        static_assert(noOverlap(baseJSR, thisJSR, bytecodeOffsetGPR, stubInfoGPR, propertyGPR), "Required for call to CTI thunk");
-        static_assert(noOverlap(baseJSR, thisJSR, globalObjectGPR, stubInfoGPR, propertyGPR), "Required for call to slow operation");
-    }
+    static constexpr JSValueRegs resultJSR { JSRInfo::returnValueJSR };
+    static constexpr JSValueRegs baseJSR { preferredArgumentJSR<SlowOperation, 0>() };
+    static constexpr JSValueRegs thisJSR { preferredArgumentJSR<SlowOperation, 1>() };
+    static constexpr GPRReg stubInfoGPR { preferredArgumentGPR<SlowOperation, 2>() };
+    static constexpr auto scratchRegisters = allocatedScratchRegisters<GPRInfo, baseJSR, thisJSR, stubInfoGPR, GPRInfo::handlerGPR>;
+    static constexpr GPRReg scratch1GPR { scratchRegisters[0] };
+    static constexpr GPRReg scratch2GPR { scratchRegisters[1] };
+    static_assert(noOverlap(baseJSR, thisJSR, stubInfoGPR, scratch1GPR, scratch2GPR), "Required for call to slow operation");
+    static_assert(noOverlap(resultJSR, stubInfoGPR));
 }
 
 namespace GetByVal {
     // Registers used on both Fast and Slow paths
-    constexpr JSValueRegs resultJSR { JSRInfo::returnValueJSR };
-    constexpr JSValueRegs baseJSR { JSRInfo::jsRegT10 };
-    constexpr JSValueRegs propertyJSR { JSRInfo::jsRegT32 };
+    using SlowOperation = decltype(operationGetByValOptimize);
 
-    // Fast path only registers
-    namespace FastPath {
-        constexpr GPRReg stubInfoGPR { GPRInfo::regT4 };
-        constexpr GPRReg scratchGPR { GPRInfo::regT5 };
-        static_assert(noOverlap(baseJSR, propertyJSR, stubInfoGPR, scratchGPR), "Required for DataIC");
-    }
+    static constexpr JSValueRegs resultJSR { JSRInfo::returnValueJSR };
+    static constexpr JSValueRegs baseJSR { preferredArgumentJSR<SlowOperation, 0>() };
+    static constexpr JSValueRegs propertyJSR { preferredArgumentJSR<SlowOperation, 1>() };
+    static constexpr GPRReg stubInfoGPR { preferredArgumentGPR<SlowOperation, 2>() };
+    static constexpr GPRReg profileGPR { preferredArgumentGPR<SlowOperation, 3>() };
 
-    // Slow path only registers
-    namespace SlowPath {
-        constexpr GPRReg globalObjectGPR { GPRInfo::regT4 };
-        constexpr GPRReg bytecodeOffsetGPR { globalObjectGPR };
-        constexpr GPRReg stubInfoGPR { GPRInfo::regT5 };
-        constexpr GPRReg profileGPR {
+    static_assert(noOverlap(baseJSR, propertyJSR, stubInfoGPR, profileGPR), "Required for DataIC");
+    static constexpr auto scratchRegisters = allocatedScratchRegisters<GPRInfo, baseJSR, propertyJSR, stubInfoGPR, profileGPR, GPRInfo::handlerGPR>;
+    static constexpr GPRReg scratch1GPR { scratchRegisters[0] };
 #if USE(JSVALUE64)
-            GPRInfo::regT1
-#elif USE(JSVALUE32_64)
-            GPRInfo::regT6
+    static constexpr GPRReg scratch2GPR { scratchRegisters[1] };
+    static constexpr GPRReg scratch3GPR { scratchRegisters[2] };
+    static_assert(noOverlap(baseJSR, propertyJSR, stubInfoGPR, profileGPR, scratch1GPR, scratch2GPR, scratch3GPR), "Required for DataIC");
 #endif
-        };
-        static_assert(noOverlap(baseJSR, propertyJSR, bytecodeOffsetGPR, stubInfoGPR, profileGPR), "Required for call to CTI thunk");
-        static_assert(noOverlap(baseJSR, propertyJSR, globalObjectGPR, stubInfoGPR, profileGPR), "Required for call to slow operation");
-    }
+    static_assert(noOverlap(resultJSR, stubInfoGPR));
 }
 
 #if USE(JSVALUE64)
 namespace EnumeratorGetByVal {
     // We rely on using the same registers when linking a CodeBlock and initializing registers
     // for a GetByVal StubInfo.
-    static constexpr JSValueRegs baseJSR { GetByVal::baseJSR };
-    static constexpr JSValueRegs propertyJSR { GetByVal::propertyJSR };
-    static constexpr JSValueRegs resultJSR { GetByVal::resultJSR };
-    static constexpr GPRReg stubInfoGPR { GetByVal::FastPath::stubInfoGPR };
-    static constexpr GPRReg scratch1 { GPRInfo::regT1 };
-    static constexpr GPRReg scratch2 { GPRInfo::regT3 };
-    static constexpr GPRReg scratch3 { GPRInfo::regT5 };
-    static_assert(noOverlap(baseJSR, propertyJSR, stubInfoGPR, scratch1, scratch2, scratch3));
+    using GetByVal::resultJSR;
+    using GetByVal::baseJSR;
+    using GetByVal::propertyJSR;
+    using GetByVal::stubInfoGPR;
+    using GetByVal::profileGPR;
+    using GetByVal::scratch1GPR;
+    using GetByVal::scratch2GPR;
+    using GetByVal::scratch3GPR;
+    static_assert(noOverlap(baseJSR, propertyJSR, stubInfoGPR, profileGPR, scratch1GPR, scratch2GPR, scratch3GPR));
+    static_assert(noOverlap(resultJSR, stubInfoGPR));
 }
 #endif
 
 #if USE(JSVALUE64)
 namespace GetByValWithThis {
     // Registers used on both Fast and Slow paths
-    constexpr JSValueRegs resultJSR { JSRInfo::returnValueJSR };
-    constexpr JSValueRegs baseJSR { GPRInfo::regT0 };
-    constexpr JSValueRegs propertyJSR { GPRInfo::regT1 };
-    constexpr JSValueRegs thisJSR { GPRInfo::regT2 };
+    using SlowOperation = decltype(operationGetByValWithThisOptimize);
 
-    // Fast path only registers
-    namespace FastPath {
-        constexpr GPRReg stubInfoGPR { GPRInfo::regT3 };
-        constexpr GPRReg scratchGPR { GPRInfo::regT5 };
-        static_assert(noOverlap(baseJSR, propertyJSR, thisJSR, stubInfoGPR, scratchGPR), "Required for DataIC");
-    }
-
-    // Slow path only registers
-    namespace SlowPath {
-        constexpr GPRReg globalObjectGPR { GPRInfo::regT3 };
-        constexpr GPRReg bytecodeOffsetGPR { globalObjectGPR };
-        constexpr GPRReg stubInfoGPR { GPRInfo::regT4 };
-        constexpr GPRReg profileGPR { GPRInfo::regT5 };
-        static_assert(noOverlap(baseJSR, propertyJSR, thisJSR, bytecodeOffsetGPR, stubInfoGPR, profileGPR), "Required for call to CTI thunk");
-        static_assert(noOverlap(baseJSR, propertyJSR, thisJSR, globalObjectGPR, stubInfoGPR, profileGPR), "Required for call to slow operation");
-    }
+    static constexpr JSValueRegs resultJSR { JSRInfo::returnValueJSR };
+    static constexpr JSValueRegs baseJSR { preferredArgumentJSR<SlowOperation, 0>() };
+    static constexpr JSValueRegs propertyJSR { preferredArgumentJSR<SlowOperation, 1>() };
+    static constexpr JSValueRegs thisJSR { preferredArgumentJSR<SlowOperation, 2>() };
+    static constexpr GPRReg stubInfoGPR { preferredArgumentGPR<SlowOperation, 3>() };
+    static constexpr GPRReg profileGPR { preferredArgumentGPR<SlowOperation, 4>() };
+    static constexpr auto scratchRegisters = allocatedScratchRegisters<GPRInfo, baseJSR, propertyJSR, thisJSR, stubInfoGPR, profileGPR, GPRInfo::handlerGPR>;
+    static constexpr GPRReg scratch1GPR { scratchRegisters[0] };
+    static_assert(noOverlap(baseJSR, propertyJSR, thisJSR, stubInfoGPR, profileGPR, GPRInfo::handlerGPR, scratch1GPR), "Required for call to slow operation");
+    static_assert(noOverlap(resultJSR, stubInfoGPR));
 }
 #endif
 
 namespace PutById {
     // Registers used on both Fast and Slow paths
-    constexpr JSValueRegs baseJSR { JSRInfo::jsRegT10 };
-    constexpr JSValueRegs valueJSR { JSRInfo::jsRegT32 };
+    using SlowOperation = decltype(operationPutByIdStrictOptimize);
 
-    // Fast path only registers
-    namespace FastPath {
-        constexpr GPRReg stubInfoGPR { GPRInfo::regT4 };
-        constexpr GPRReg scratchGPR { GPRInfo::regT5 };
-        // Fine to use regT1, which also yields better code size on ARM_THUMB2
-        constexpr GPRReg scratch2GPR { GPRInfo::regT1 };
-        static_assert(noOverlap(baseJSR, valueJSR, stubInfoGPR, scratchGPR), "Required for DataIC");
-        static_assert(noOverlap(baseJSR.payloadGPR(), valueJSR, stubInfoGPR, scratchGPR, scratch2GPR), "Required for DataIC");
-    }
+    static constexpr JSValueRegs valueJSR { preferredArgumentJSR<SlowOperation, 0>() };
+    static constexpr JSValueRegs baseJSR { preferredArgumentJSR<SlowOperation, 1>() };
+    static constexpr GPRReg stubInfoGPR { preferredArgumentGPR<SlowOperation, 2>() };
+    static constexpr auto scratchRegisters = allocatedScratchRegisters<GPRInfo, valueJSR, baseJSR, stubInfoGPR, GPRInfo::handlerGPR>;
+    static constexpr GPRReg scratch1GPR { scratchRegisters[0] };
+    static_assert(noOverlap(baseJSR, valueJSR, stubInfoGPR, scratch1GPR), "Required for DataIC");
+    static_assert(noOverlap(baseJSR, valueJSR, stubInfoGPR, GPRInfo::handlerGPR, scratch1GPR), "Required for call to slow operation");
 
-    // Slow path only registers
-    namespace SlowPath {
-        constexpr GPRReg globalObjectGPR {
 #if USE(JSVALUE64)
-            GPRInfo::regT1
-#elif USE(JSVALUE32_64)
-            GPRInfo::regT6
+    static constexpr GPRReg scratch2GPR { scratchRegisters[1] };
+    static constexpr GPRReg scratch3GPR { scratchRegisters[2] };
+    static constexpr GPRReg scratch4GPR { scratchRegisters[3] };
+    static_assert(noOverlap(baseJSR, valueJSR, stubInfoGPR, GPRInfo::handlerGPR, scratch1GPR, scratch2GPR, scratch3GPR, scratch4GPR), "Required for HandlerIC");
 #endif
-        };
-        constexpr GPRReg bytecodeOffsetGPR { globalObjectGPR };
-        constexpr GPRReg stubInfoGPR { GPRInfo::regT4 };
-        constexpr GPRReg propertyGPR { GPRInfo::regT5 };
-
-        static_assert(noOverlap(baseJSR, valueJSR, bytecodeOffsetGPR, stubInfoGPR, propertyGPR), "Required for call to CTI thunk");
-        static_assert(noOverlap(baseJSR, valueJSR, globalObjectGPR, stubInfoGPR, propertyGPR), "Required for call to slow operation");
-    }
 }
 
 namespace PutByVal {
-    constexpr JSValueRegs baseJSR { JSRInfo::jsRegT10 };
-    constexpr JSValueRegs propertyJSR { JSRInfo::jsRegT32 };
-    constexpr JSValueRegs valueJSR { JSRInfo::jsRegT54 };
-    constexpr GPRReg profileGPR {
+    using SlowOperation = decltype(operationPutByValStrictOptimize);
+    static constexpr JSValueRegs baseJSR { preferredArgumentJSR<SlowOperation, 0>() };
+    static constexpr JSValueRegs propertyJSR { preferredArgumentJSR<SlowOperation, 1>() };
+    static constexpr JSValueRegs valueJSR { preferredArgumentJSR<SlowOperation, 2>() };
+    static constexpr GPRReg stubInfoGPR { preferredArgumentGPR<SlowOperation, 3>() };
+    static constexpr GPRReg profileGPR { preferredArgumentGPR<SlowOperation, 4>() };
 #if USE(JSVALUE64)
-        GPRInfo::regT1
-#elif USE(JSVALUE32_64)
-        GPRInfo::regT6
+    static constexpr auto scratchRegisters = allocatedScratchRegisters<GPRInfo, baseJSR, propertyJSR, valueJSR, stubInfoGPR, profileGPR, GPRInfo::handlerGPR>;
+    static constexpr GPRReg scratch1GPR { scratchRegisters[0] };
+    static constexpr GPRReg scratch2GPR { scratchRegisters[1] };
+    static_assert(noOverlap(baseJSR, propertyJSR, valueJSR, stubInfoGPR, profileGPR, scratch1GPR, GPRInfo::handlerGPR), "Required for call to slow operation");
+    static_assert(noOverlap(baseJSR, propertyJSR, valueJSR, stubInfoGPR, profileGPR, scratch1GPR, scratch2GPR), "Required for HandlerIC");
+#else
+    static constexpr auto scratchRegisters = allocatedScratchRegisters<GPRInfo, baseJSR, propertyJSR, valueJSR, stubInfoGPR, profileGPR>;
+    static constexpr GPRReg scratch1GPR { scratchRegisters[0] };
 #endif
-    };
-    constexpr GPRReg stubInfoGPR {
-#if USE(JSVALUE64)
-        GPRInfo::regT3
-#elif USE(JSVALUE32_64)
-        GPRInfo::regT7
-#endif
-    };
-
-    static_assert(noOverlap(baseJSR, propertyJSR, valueJSR, profileGPR, stubInfoGPR), "Required for DataIC");
-
-    // Slow path only registers
-    namespace SlowPath {
-        constexpr GPRReg globalObjectGPR {
-#if USE(JSVALUE64)
-            GPRInfo::regT5
-#elif CPU(ARM_THUMB2)
-            // We are a bit short on registers on ARM_THUMB2, but we can just about get away with this
-            MacroAssemblerARMv7::s_scratchRegister
-#else // Other JSVALUE32_64
-            GPRInfo::regT8
-#endif
-        };
-        constexpr GPRReg bytecodeOffsetGPR { globalObjectGPR };
-        static_assert(noOverlap(baseJSR, propertyJSR, valueJSR, profileGPR, bytecodeOffsetGPR, stubInfoGPR), "Required for call to CTI thunk");
-        static_assert(noOverlap(baseJSR, propertyJSR, valueJSR, profileGPR, globalObjectGPR, stubInfoGPR), "Required for call to slow operation");
-    }
 }
 
+#if USE(JSVALUE64)
+namespace EnumeratorPutByVal {
+    // We rely on using the same registers when linking a CodeBlock and initializing registers
+    // for a PutByVal StubInfo.
+    using PutByVal::baseJSR;
+    using PutByVal::propertyJSR;
+    using PutByVal::valueJSR;
+    using PutByVal::profileGPR;
+    using PutByVal::stubInfoGPR;
+    using PutByVal::scratch1GPR;
+    using PutByVal::scratch2GPR;
+}
+#endif
+
 namespace InById {
-    constexpr JSValueRegs baseJSR { GetById::baseJSR };
-    constexpr JSValueRegs resultJSR { JSRInfo::returnValueJSR };
-    constexpr GPRReg stubInfoGPR { GetById::FastPath::stubInfoGPR };
-    constexpr GPRReg scratchGPR { GetById::FastPath::scratchGPR };
+    using GetById::resultJSR;
+    using GetById::baseJSR;
+    using GetById::stubInfoGPR;
+    using GetById::scratch1GPR;
+    static_assert(noOverlap(resultJSR, stubInfoGPR));
 }
 
 namespace InByVal {
-    constexpr JSValueRegs resultJSR { JSRInfo::returnValueJSR };
-    constexpr JSValueRegs baseJSR { JSRInfo::jsRegT10 };
-    constexpr JSValueRegs propertyJSR { JSRInfo::jsRegT32 };
-    constexpr GPRReg stubInfoGPR { GPRInfo::regT4 };
-    constexpr GPRReg scratchGPR { GPRInfo::regT5 };
-    static_assert(baseJSR == GetByVal::baseJSR);
-    static_assert(propertyJSR == GetByVal::propertyJSR);
+    using GetByVal::resultJSR;
+    using GetByVal::baseJSR;
+    using GetByVal::propertyJSR;
+    using GetByVal::stubInfoGPR;
+    using GetByVal::profileGPR;
+    using GetByVal::scratch1GPR;
+    static_assert(noOverlap(resultJSR, stubInfoGPR));
 }
 
 namespace DelById {
     // Registers used on both Fast and Slow paths
-    constexpr JSValueRegs baseJSR { JSRInfo::jsRegT32 };
+    using SlowOperation = decltype(operationDeleteByIdStrictOptimize);
 
-    // Fast path only registers
-    namespace FastPath {
-        constexpr JSValueRegs resultJSR { JSRInfo::returnValueJSR };
-        constexpr GPRReg stubInfoGPR { GPRInfo::regT4 };
-        static_assert(noOverlap(baseJSR, stubInfoGPR), "Required for DataIC");
-    }
+    static constexpr JSValueRegs resultJSR { JSRInfo::returnValueJSR };
+    static constexpr JSValueRegs baseJSR { preferredArgumentJSR<SlowOperation, 0>() };
+    static constexpr GPRReg stubInfoGPR { preferredArgumentGPR<SlowOperation, 1>() };
+    static constexpr auto scratchRegisters = allocatedScratchRegisters<GPRInfo, baseJSR, stubInfoGPR, GPRInfo::handlerGPR>;
+    static constexpr GPRReg scratch1GPR { scratchRegisters[0] };
+    static constexpr GPRReg scratch2GPR { scratchRegisters[1] };
+    static constexpr GPRReg scratch3GPR { scratchRegisters[2] };
 
-    // Slow path only registers
-    namespace SlowPath {
-        constexpr GPRReg globalObjectGPR { GPRInfo::regT0 };
-        constexpr GPRReg bytecodeOffsetGPR { globalObjectGPR };
-        constexpr GPRReg stubInfoGPR { GPRInfo::regT1 };
-        constexpr GPRReg propertyGPR { GPRInfo::regT4 };
-        constexpr GPRReg ecmaModeGPR { GPRInfo::regT5 };
-        static_assert(noOverlap(baseJSR, bytecodeOffsetGPR, stubInfoGPR, propertyGPR, ecmaModeGPR), "Required for call to CTI thunk");
-        static_assert(noOverlap(baseJSR, globalObjectGPR, stubInfoGPR, propertyGPR, ecmaModeGPR), "Required for call to slow operation");
-    }
+    static_assert(noOverlap(baseJSR, stubInfoGPR, scratch1GPR, scratch2GPR, scratch3GPR, GPRInfo::handlerGPR), "Required for call to slow operation");
+    static_assert(noOverlap(resultJSR.payloadGPR(), stubInfoGPR));
 }
 
 namespace DelByVal {
     // Registers used on both Fast and Slow paths
-    constexpr JSValueRegs baseJSR { JSRInfo::jsRegT32 };
-    constexpr JSValueRegs propertyJSR { JSRInfo::jsRegT10 };
-
-    // Fast path only registers
-    namespace FastPath {
-        constexpr JSValueRegs resultJSR { JSRInfo::returnValueJSR };
-        constexpr GPRReg stubInfoGPR { GPRInfo::regT4 };
-        static_assert(noOverlap(baseJSR, propertyJSR, stubInfoGPR), "Required for DataIC");
-    }
-
-    // Slow path only registers
-    namespace SlowPath {
-        constexpr GPRReg globalObjectGPR { GPRInfo::regT4 };
-        constexpr GPRReg bytecodeOffsetGPR { globalObjectGPR };
-        constexpr GPRReg stubInfoGPR { GPRInfo::regT5 };
-        constexpr GPRReg ecmaModeGPR {
-#if USE(JSVALUE64)
-            GPRInfo::regT1
-#elif USE(JSVALUE32_64)
-            GPRInfo::regT6
-#endif
-        };
-        static_assert(noOverlap(baseJSR, propertyJSR, bytecodeOffsetGPR, stubInfoGPR, ecmaModeGPR), "Required for call to CTI thunk");
-        static_assert(noOverlap(baseJSR, propertyJSR, globalObjectGPR, stubInfoGPR, ecmaModeGPR), "Required for call to slow operation");
-    }
+    using SlowOperation = decltype(operationDeleteByValStrictOptimize);
+    static constexpr JSValueRegs resultJSR { JSRInfo::returnValueJSR };
+    static constexpr JSValueRegs baseJSR { preferredArgumentJSR<SlowOperation, 0>() };
+    static constexpr JSValueRegs propertyJSR { preferredArgumentJSR<SlowOperation, 1>() };
+    static constexpr GPRReg stubInfoGPR { preferredArgumentGPR<SlowOperation, 2>() };
+    static constexpr auto scratchRegisters = allocatedScratchRegisters<GPRInfo, baseJSR, propertyJSR, stubInfoGPR, GPRInfo::handlerGPR>;
+    static constexpr GPRReg scratch1GPR { scratchRegisters[0] };
+    static constexpr GPRReg scratch2GPR { scratchRegisters[1] };
+    static constexpr GPRReg scratch3GPR { scratchRegisters[2] };
+    static_assert(noOverlap(baseJSR, propertyJSR, stubInfoGPR, scratch1GPR, scratch2GPR, scratch3GPR, GPRInfo::handlerGPR), "Required for call to slow operation");
+    static_assert(noOverlap(resultJSR.payloadGPR(), stubInfoGPR));
 }
 
 namespace PrivateBrand {
-    constexpr JSValueRegs baseJSR { GetByVal::baseJSR }; // Required by shared slow path thunk
-    constexpr JSValueRegs brandJSR { GetByVal::propertyJSR }; // Required by shared slow path thunk
-
-    namespace FastPath {
-        constexpr GPRReg stubInfoGPR { GetByVal::FastPath::stubInfoGPR };
-        static_assert(noOverlap(baseJSR, brandJSR, stubInfoGPR), "Required for DataIC");
-    }
-
-    namespace SlowPath {
-        constexpr GPRReg bytecodeOffsetGPR { GetByVal::SlowPath::bytecodeOffsetGPR }; // Required by shared slow path thunk
-        constexpr GPRReg stubInfoGPR { GetByVal::SlowPath::stubInfoGPR }; // Required by shared slow path thunk
-        static_assert(noOverlap(baseJSR, brandJSR, bytecodeOffsetGPR, stubInfoGPR), "Required for call to CTI thunk");
-    }
+    using GetByVal::baseJSR;
+    using GetByVal::propertyJSR;
+    using GetByVal::stubInfoGPR;
+    using GetByVal::scratch1GPR;
+    static_assert(noOverlap(baseJSR, propertyJSR, stubInfoGPR), "Required for DataIC");
 }
 
 } // namespace BaselineJITRegisters

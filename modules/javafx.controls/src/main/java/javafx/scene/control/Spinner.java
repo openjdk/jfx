@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014, 2023, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2014, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -153,7 +153,7 @@ public class Spinner<T> extends Control {
 
         value.addListener((o, oldValue, newValue) -> setText(newValue));
 
-        // Fix for RT-29885
+        // Fix for JDK-8115009
         getProperties().addListener((MapChangeListener<Object, Object>) change -> {
             if (change.wasAdded()) {
                 if (change.getKey() == "FOCUSED") {
@@ -162,11 +162,15 @@ public class Spinner<T> extends Control {
                 }
             }
         });
-        // End of fix for RT-29885
+        // End of fix for JDK-8115009
 
         focusedProperty().addListener(o -> {
             if (!isFocused()) {
-                commitValue();
+                try {
+                    commitValue();
+                } catch (Exception e) {
+                    cancelEdit();
+                }
             }
         });
     }
@@ -769,7 +773,7 @@ public class Spinner<T> extends Control {
             }
         }
 
-        notifyAccessibleAttributeChanged(AccessibleAttribute.TEXT);
+        notifyAccessibleAttributeChanged(AccessibleAttribute.VALUE_STRING);
         if (text == null) {
             if (value == null) {
                 getEditor().clear();
@@ -786,40 +790,39 @@ public class Spinner<T> extends Control {
      * Convenience method to support wrapping values around their min / max
      * constraints. Used by the SpinnerValueFactory implementations when
      * the Spinner wrapAround property is true.
+     *
+     * This method accepts negative values, wrapping around in the other direction.
      */
     static int wrapValue(int value, int min, int max) {
-        if (max == 0) {
-            throw new RuntimeException();
+        int span = max - min + 1;
+
+        if (value < 0) {
+            value = max + value % span + 1;
         }
 
-        int r = value % max;
-        if (r > min && max < min) {
-            r = r + max - min;
-        } else if (r < min && max > min) {
-            r = r + max - min;
-        }
-        return r;
+        return min + (value - min) % span;
     }
 
     /*
      * Convenience method to support wrapping values around their min / max
      * constraints. Used by the SpinnerValueFactory implementations when
      * the Spinner wrapAround property is true.
+     *
+     * This method accepts negative values, wrapping around in the other direction.
      */
-    static BigDecimal wrapValue(BigDecimal value, BigDecimal min, BigDecimal max) {
-        if (max.doubleValue() == 0) {
-            throw new RuntimeException();
+    static BigDecimal wrapValue(BigDecimal currentValue, BigDecimal newValue, BigDecimal min, BigDecimal max) {
+        if (newValue.compareTo(min) >= 0 && newValue.compareTo(max) <= 0) {
+            return newValue;
         }
 
-        // note that this wrap method differs from the others where we take the
-        // difference - in this approach we wrap to the min or max - it feels better
-        // to go from 1 to 0, rather than 1 to 0.05 (where max is 1 and step is 0.05).
-        if (value.compareTo(min) < 0) {
-            return max;
-        } else if (value.compareTo(max) > 0) {
-            return min;
+        BigDecimal span = max.subtract(min);
+        BigDecimal remainder = newValue.remainder(span);
+
+        if (remainder.compareTo(BigDecimal.ZERO) == 0) {
+            return newValue.compareTo(currentValue) >= 0 ? max : min;
         }
-        return value;
+
+        return newValue.compareTo(max) > 0 ? min.add(remainder) : max.add(remainder);
     }
 
 
@@ -834,7 +837,7 @@ public class Spinner<T> extends Control {
     @Override
     public Object queryAccessibleAttribute(AccessibleAttribute attribute, Object... parameters) {
         switch (attribute) {
-            case TEXT: {
+            case VALUE_STRING: {
                 T value = getValue();
                 SpinnerValueFactory<T> factory = getValueFactory();
                 if (factory != null) {
@@ -845,6 +848,15 @@ public class Spinner<T> extends Control {
                 }
                 return value != null ? value.toString() : "";
             }
+
+            case TEXT: {
+                String accText = getAccessibleText();
+                return (accText != null) ? accText : "";
+            }
+
+            case EDITABLE:
+                return isEditable();
+
             default: return super.queryAccessibleAttribute(attribute, parameters);
         }
     }

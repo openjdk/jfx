@@ -30,17 +30,20 @@
 #include "GPUPresentationContextDescriptor.h"
 #include "JSDOMPromiseDeferred.h"
 #include "JSGPUAdapter.h"
+#include "JSWGSLLanguageFeatures.h"
+#include "WGSLLanguageFeatures.h"
 
 namespace WebCore {
 
-GPU::GPU(Ref<PAL::WebGPU::GPU>&& backing)
+GPU::GPU(Ref<WebGPU::GPU>&& backing)
     : m_backing(WTFMove(backing))
+    , m_wgslLanguageFeatures(WGSLLanguageFeatures::create())
 {
 }
 
 GPU::~GPU() = default;
 
-static PAL::WebGPU::RequestAdapterOptions convertToBacking(const std::optional<GPURequestAdapterOptions>& options)
+static WebGPU::RequestAdapterOptions convertToBacking(const std::optional<GPURequestAdapterOptions>& options)
 {
     if (!options)
         return { std::nullopt, false };
@@ -55,7 +58,7 @@ struct GPU::PendingRequestAdapterArguments {
 
 void GPU::requestAdapter(const std::optional<GPURequestAdapterOptions>& options, RequestAdapterPromise&& promise)
 {
-    m_backing->requestAdapter(convertToBacking(options), [promise = WTFMove(promise)] (RefPtr<PAL::WebGPU::Adapter>&& adapter) mutable {
+    m_backing->requestAdapter(convertToBacking(options), [promise = WTFMove(promise)](RefPtr<WebGPU::Adapter>&& adapter) mutable {
         if (!adapter) {
             promise.resolve(nullptr);
             return;
@@ -64,19 +67,30 @@ void GPU::requestAdapter(const std::optional<GPURequestAdapterOptions>& options,
     });
 }
 
-GPUTextureFormat GPU::getPreferredCanvasFormat()
+GPUTextureFormat GPU::getPreferredCanvasFormat() const
 {
     return GPUTextureFormat::Bgra8unorm;
 }
 
-Ref<GPUPresentationContext> GPU::createPresentationContext(const GPUPresentationContextDescriptor& presentationContextDescriptor)
+Ref<WGSLLanguageFeatures> GPU::wgslLanguageFeatures() const
 {
-    return GPUPresentationContext::create(m_backing->createPresentationContext(presentationContextDescriptor.convertToBacking()));
+    return m_wgslLanguageFeatures;
 }
 
-Ref<GPUCompositorIntegration> GPU::createCompositorIntegration()
+RefPtr<GPUPresentationContext> GPU::createPresentationContext(const GPUPresentationContextDescriptor& presentationContextDescriptor)
 {
-    return GPUCompositorIntegration::create(m_backing->createCompositorIntegration());
+    RefPtr context = m_backing->createPresentationContext(presentationContextDescriptor.convertToBacking());
+    if (!context)
+        return nullptr;
+    return GPUPresentationContext::create(context.releaseNonNull());
+}
+
+RefPtr<GPUCompositorIntegration> GPU::createCompositorIntegration()
+{
+    RefPtr integration = m_backing->createCompositorIntegration();
+    if (!integration)
+        return nullptr;
+    return GPUCompositorIntegration::create(integration.releaseNonNull());
 }
 
 } // namespace WebCore

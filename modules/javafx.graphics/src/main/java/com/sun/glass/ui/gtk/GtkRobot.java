@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2018, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -24,6 +24,7 @@
  */
 package com.sun.glass.ui.gtk;
 
+import com.sun.glass.ui.gtk.screencast.ScreencastHelper;
 import javafx.scene.input.KeyCode;
 import javafx.scene.input.MouseButton;
 import javafx.scene.paint.Color;
@@ -33,6 +34,20 @@ import com.sun.glass.ui.GlassRobot;
 import com.sun.glass.ui.Screen;
 
 final class GtkRobot extends GlassRobot {
+
+    private static final String screenshotMethod;
+    private static final String METHOD_GTK = "gtk";
+    private static final String METHOD_SCREENCAST = "dbusScreencast";
+
+    static {
+        String waylandDisplay = System.getenv("WAYLAND_DISPLAY");
+        boolean isOnWayland = waylandDisplay != null && !waylandDisplay.isBlank();
+
+        String method =
+            System.getProperty("javafx.robot.screenshotMethod",
+                isOnWayland ? METHOD_SCREENCAST : METHOD_GTK);
+        screenshotMethod = method;
+    }
 
     @Override
     public void create() {
@@ -115,7 +130,11 @@ final class GtkRobot extends GlassRobot {
         x = (int) Math.floor((x + 0.5) * mainScreen.getPlatformScaleX());
         y = (int) Math.floor((y + 0.5) * mainScreen.getPlatformScaleY());
         int[] result = new int[1];
-        _getScreenCapture((int) x, (int) y, 1, 1, result);
+        if (METHOD_SCREENCAST.equals(screenshotMethod)) {
+            ScreencastHelper.getRGBPixels((int) x, (int) y, 1, 1, result);
+        } else {
+            _getScreenCapture((int) x, (int) y, 1, 1, result);
+        }
         return GlassRobot.convertFromIntArgb(result[0]);
     }
 
@@ -124,6 +143,10 @@ final class GtkRobot extends GlassRobot {
     @Override
     public void getScreenCapture(int x, int y, int width, int height, int[] data, boolean scaleToFit) {
         Application.checkEventThread();
-        _getScreenCapture(x, y, width, height, data);
+        if (METHOD_SCREENCAST.equals(screenshotMethod)) {
+            ScreencastHelper.getRGBPixels(x, y, width, height, data);
+        } else {
+            _getScreenCapture(x, y, width, height, data);
+        }
     }
 }

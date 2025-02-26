@@ -25,11 +25,13 @@
 
 #pragma once
 
+#include <wtf/text/WTFString.h>
+
 namespace WGSL {
 
-class CallGraph;
-struct PrepareResult;
+class ShaderModule;
+struct PipelineLayout;
 
-void rewriteEntryPoints(CallGraph&, PrepareResult&);
+void rewriteEntryPoints(ShaderModule&, const HashMap<String, PipelineLayout*>&);
 
 } // namespace WGSL

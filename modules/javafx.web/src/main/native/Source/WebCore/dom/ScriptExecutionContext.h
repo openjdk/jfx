@@ -38,10 +38,14 @@
 #include <JavaScriptCore/ConsoleTypes.h>
 #include <JavaScriptCore/HandleTypes.h>
 #include <pal/SessionID.h>
+#include <wtf/CheckedRef.h>
+#include <wtf/CompletionHandler.h>
 #include <wtf/CrossThreadTask.h>
 #include <wtf/Function.h>
 #include <wtf/HashSet.h>
+#include <wtf/NativePromise.h>
 #include <wtf/ObjectIdentifier.h>
+#include <wtf/OptionSet.h>
 #include <wtf/URL.h>
 #include <wtf/WeakPtr.h>
 #include <wtf/text/WTFString.h>
@@ -71,36 +75,45 @@ class EventQueue;
 class EventLoopTaskGroup;
 class EventTarget;
 class FontLoadRequest;
+class GraphicsClient;
 class MessagePort;
 class NotificationClient;
 class PublicURLManager;
 class RejectedPromiseTracker;
 class RTCDataChannelRemoteHandlerConnection;
 class ResourceRequest;
+class ServiceWorker;
+class ServiceWorkerContainer;
 class SocketProvider;
 class WebCoreOpaqueRoot;
-enum class LoadedFromOpaqueSource : uint8_t;
+enum class AdvancedPrivacyProtections : uint16_t;
+enum class LoadedFromOpaqueSource : bool;
 enum class TaskSource : uint8_t;
 
 #if ENABLE(NOTIFICATIONS)
 class NotificationClient;
 #endif
 
-#if ENABLE(SERVICE_WORKER)
-class ServiceWorker;
-class ServiceWorkerContainer;
-#endif
-
 namespace IDBClient {
 class IDBConnectionProxy;
 }
 
-class ScriptExecutionContext : public SecurityContext, public CanMakeWeakPtr<ScriptExecutionContext> {
+enum class ScriptExecutionContextType : uint8_t {
+    Document,
+    WorkerOrWorkletGlobalScope,
+    EmptyScriptExecutionContext
+};
+
+class ScriptExecutionContext : public SecurityContext, public TimerAlignment {
 public:
-    explicit ScriptExecutionContext(ScriptExecutionContextIdentifier = { });
+    using Type = ScriptExecutionContextType;
+
+    explicit ScriptExecutionContext(Type, ScriptExecutionContextIdentifier = { });
     virtual ~ScriptExecutionContext();
 
-    virtual bool isDocument() const { return false; }
+    bool isDocument() const { return m_type == Type::Document; }
+    bool isWorkerOrWorkletGlobalScope() const { return m_type == Type::WorkerOrWorkletGlobalScope; }
+    bool isEmptyScriptExecutionContext() const { return m_type == Type::EmptyScriptExecutionContext; }
     virtual bool isWorkerGlobalScope() const { return false; }
     virtual bool isServiceWorkerGlobalScope() const { return false; }
     virtual bool isWorkletGlobalScope() const { return false; }
@@ -109,9 +122,10 @@ public:
     virtual bool isJSExecutionForbidden() const = 0;
 
     virtual EventLoopTaskGroup& eventLoop() = 0;
+    CheckedRef<EventLoopTaskGroup> checkedEventLoop();
 
     virtual const URL& url() const = 0;
-    enum class ForceUTF8 { No, Yes };
+    enum class ForceUTF8 : bool { No, Yes };
     virtual URL completeURL(const String& url, ForceUTF8 = ForceUTF8::No) const = 0;
 
     virtual String userAgent(const URL&) const = 0;
@@ -123,10 +137,16 @@ public:
 
     virtual void disableEval(const String& errorMessage) = 0;
     virtual void disableWebAssembly(const String& errorMessage) = 0;
+    virtual void setRequiresTrustedTypes(bool required) = 0;
 
     virtual IDBClient::IDBConnectionProxy* idbConnectionProxy() = 0;
 
     virtual SocketProvider* socketProvider() = 0;
+
+    virtual GraphicsClient* graphicsClient() { return nullptr; }
+
+    virtual OptionSet<AdvancedPrivacyProtections> advancedPrivacyProtections() const = 0;
+    virtual std::optional<uint64_t> noiseInjectionHashSalt() const = 0;
 
     virtual RefPtr<RTCDataChannelRemoteHandlerConnection> createRTCDataChannelRemoteHandlerConnection();
 
@@ -185,8 +205,10 @@ public:
     WEBCORE_EXPORT static void setCrossOriginMode(CrossOriginMode);
     static CrossOriginMode crossOriginMode();
 
-    void ref() { refScriptExecutionContext(); }
-    void deref() { derefScriptExecutionContext(); }
+    WEBCORE_EXPORT void ref();
+    WEBCORE_EXPORT void deref();
+    WEBCORE_EXPORT void refAllowingPartiallyDestroyed();
+    WEBCORE_EXPORT void derefAllowingPartiallyDestroyed();
 
     class Task {
         WTF_MAKE_FAST_ALLOCATED;
@@ -236,17 +258,21 @@ public:
     // Gets the next id in a circular sequence from 1 to 2^31-1.
     int circularSequentialID();
 
-    bool addTimeout(int timeoutId, DOMTimer& timer) { return m_timeouts.add(timeoutId, timer).isNewEntry; }
-    void removeTimeout(int timeoutId) { m_timeouts.remove(timeoutId); }
+    bool addTimeout(int timeoutId, DOMTimer& timer) { return m_timeouts.add(timeoutId, &timer).isNewEntry; }
+    RefPtr<DOMTimer> takeTimeout(int timeoutId) { return m_timeouts.take(timeoutId); }
     DOMTimer* findTimeout(int timeoutId) { return m_timeouts.get(timeoutId); }
 
     virtual JSC::VM& vm() = 0;
+    virtual Ref<JSC::VM> protectedVM();
 
     void adjustMinimumDOMTimerInterval(Seconds oldMinimumTimerInterval);
     virtual Seconds minimumDOMTimerInterval() const;
 
     void didChangeTimerAlignmentInterval();
     virtual Seconds domTimerAlignmentInterval(bool hasReachedMaxNestingLevel) const;
+
+    // TimerAlignment
+    WEBCORE_EXPORT std::optional<MonotonicTime> alignedFireTime(bool hasReachedMaxNestingLevel, MonotonicTime fireTime) const final;
 
     virtual EventTarget* errorEventTarget() = 0;
 
@@ -257,8 +283,8 @@ public:
     // These two methods are used when CryptoKeys are serialized into IndexedDB. As a side effect, it is also
     // used for things that utilize the same structure clone algorithm, for example, message passing between
     // worker and document.
-    virtual bool wrapCryptoKey(const Vector<uint8_t>& key, Vector<uint8_t>& wrappedKey) = 0;
-    virtual bool unwrapCryptoKey(const Vector<uint8_t>& wrappedKey, Vector<uint8_t>& key) = 0;
+    virtual std::optional<Vector<uint8_t>> wrapCryptoKey(const Vector<uint8_t>& key) = 0;
+    virtual std::optional<Vector<uint8_t>> unwrapCryptoKey(const Vector<uint8_t>& wrappedKey) = 0;
 #endif
 
     int timerNestingLevel() const { return m_timerNestingLevel; }
@@ -282,8 +308,7 @@ public:
     void setDomainForCachePartition(String&& domain) { m_domainForCachePartition = WTFMove(domain); }
 
     bool allowsMediaDevices() const;
-#if ENABLE(SERVICE_WORKER)
-    ServiceWorker* activeServiceWorker() const;
+    ServiceWorker* activeServiceWorker() const { return m_activeServiceWorker.get(); }
     void setActiveServiceWorker(RefPtr<ServiceWorker>&&);
 
     void registerServiceWorker(ServiceWorker&);
@@ -293,10 +318,10 @@ public:
     ServiceWorkerContainer* serviceWorkerContainer();
     ServiceWorkerContainer* ensureServiceWorkerContainer();
     virtual void updateServiceWorkerClientData() { ASSERT_NOT_REACHED(); }
-#endif
     WEBCORE_EXPORT static bool postTaskTo(ScriptExecutionContextIdentifier, Task&&);
     WEBCORE_EXPORT static bool postTaskForModeToWorkerOrWorklet(ScriptExecutionContextIdentifier, Task&&, const String&);
     WEBCORE_EXPORT static bool ensureOnContextThread(ScriptExecutionContextIdentifier, Task&&);
+    WEBCORE_EXPORT static bool ensureOnContextThreadForCrossThreadTask(ScriptExecutionContextIdentifier, CrossThreadTask&&);
 
     ScriptExecutionContextIdentifier identifier() const { return m_identifier; }
 
@@ -319,13 +344,39 @@ public:
     WEBCORE_EXPORT HasResourceAccess canAccessResource(ResourceType) const;
 
     enum NotificationCallbackIdentifierType { };
-    using NotificationCallbackIdentifier = ObjectIdentifier<NotificationCallbackIdentifierType>;
+    using NotificationCallbackIdentifier = LegacyNullableAtomicObjectIdentifier<NotificationCallbackIdentifierType>;
 
     WEBCORE_EXPORT NotificationCallbackIdentifier addNotificationCallback(CompletionHandler<void()>&&);
     WEBCORE_EXPORT CompletionHandler<void()> takeNotificationCallback(NotificationCallbackIdentifier);
 
     void addDeferredPromise(Ref<DeferredPromise>&&);
     RefPtr<DeferredPromise> takeDeferredPromise(DeferredPromise*);
+
+    template<typename Promise, typename Task>
+    void enqueueTaskWhenSettled(Ref<Promise>&& promise, TaskSource taskSource, Task&& task)
+    {
+        auto request = makeUnique<NativePromiseRequest>();
+        WeakPtr weakRequest { *request };
+        auto command = promise->whenSettled(nativePromiseDispatcher(), [weakThis = WeakPtr { *this }, taskSource, task = WTFMove(task), request = WTFMove(request)] (auto&& result) mutable {
+            request->complete();
+            RefPtr protectedThis = weakThis.get();
+            if (!protectedThis)
+                return;
+            protectedThis->eventLoop().queueTask(taskSource, [task = WTFMove(task), result = WTFMove(result)] () mutable {
+                task(WTFMove(result));
+            });
+        });
+        if (weakRequest) {
+            m_nativePromiseRequests.add(*weakRequest);
+            command->track(*weakRequest);
+        }
+    }
+
+    template<typename Promise, typename Task, typename Finalizer>
+    void enqueueTaskWhenSettled(Ref<Promise>&& promise, TaskSource taskSource, Task&& task, Finalizer&& finalizer)
+    {
+        enqueueTaskWhenSettled(WTFMove(promise), taskSource, CompletionHandlerWithFinalizer<void(typename Promise::Result&&)>(WTFMove(task), WTFMove(finalizer)));
+    }
 
 protected:
     class AddConsoleMessageTask : public Task {
@@ -354,6 +405,9 @@ protected:
     void regenerateIdentifier();
 
 private:
+
+    std::unique_ptr<ContentSecurityPolicy> makeEmptyContentSecurityPolicy() final;
+
     // The following addMessage function is deprecated.
     // Callers should try to create the ConsoleMessage themselves.
     virtual void addMessage(MessageSource, MessageLevel, const String& message, const String& sourceURL, unsigned lineNumber, unsigned columnNumber, RefPtr<Inspector::ScriptCallStack>&&, JSC::JSGlobalObject* = nullptr, unsigned long requestIdentifier = 0) = 0;
@@ -361,29 +415,27 @@ private:
 
     bool dispatchErrorEvent(const String& errorMessage, int lineNumber, int columnNumber, const String& sourceURL, JSC::Exception*, CachedScript*, bool);
 
-    virtual void refScriptExecutionContext() = 0;
-    virtual void derefScriptExecutionContext() = 0;
-
     void dispatchMessagePortEvents();
 
-    enum class ShouldContinue { No, Yes };
+    enum class ShouldContinue : bool { No, Yes };
     void forEachActiveDOMObject(const Function<ShouldContinue(ActiveDOMObject&)>&) const;
 
     RejectedPromiseTracker* ensureRejectedPromiseTrackerSlow();
 
     void checkConsistency() const;
+    WEBCORE_EXPORT RefCountedSerialFunctionDispatcher& nativePromiseDispatcher();
 
     HashSet<MessagePort*> m_messagePorts;
     HashSet<ContextDestructionObserver*> m_destructionObservers;
     HashSet<ActiveDOMObject*> m_activeDOMObjects;
 
-    HashMap<int, Ref<DOMTimer>> m_timeouts;
+    HashMap<int, RefPtr<DOMTimer>> m_timeouts;
 
     struct PendingException;
     std::unique_ptr<Vector<std::unique_ptr<PendingException>>> m_pendingExceptions;
     std::unique_ptr<RejectedPromiseTracker> m_rejectedPromiseTracker;
 
-    std::unique_ptr<PublicURLManager> m_publicURLManager;
+    RefPtr<PublicURLManager> m_publicURLManager;
 
     RefPtr<DatabaseContext> m_databaseContext;
 
@@ -396,10 +448,8 @@ private:
     bool m_inScriptExecutionContextDestructor { false };
 #endif
 
-#if ENABLE(SERVICE_WORKER)
     RefPtr<ServiceWorker> m_activeServiceWorker;
     HashMap<ServiceWorkerIdentifier, ServiceWorker*> m_serviceWorkers;
-#endif
 
     String m_domainForCachePartition;
     mutable ScriptExecutionContextIdentifier m_identifier;
@@ -410,12 +460,16 @@ private:
     StorageBlockingPolicy m_storageBlockingPolicy { StorageBlockingPolicy::AllowAll };
     ReasonForSuspension m_reasonForSuspendingActiveDOMObjects { static_cast<ReasonForSuspension>(-1) };
 
+    Type m_type;
     bool m_activeDOMObjectsAreSuspended { false };
     bool m_activeDOMObjectsAreStopped { false };
     bool m_inDispatchErrorEvent { false };
     mutable bool m_activeDOMObjectAdditionForbidden { false };
     bool m_willprocessMessageWithMessagePortsSoon { false };
     bool m_hasLoggedAuthenticatedEncryptionWarning { false };
+
+    RefPtr<RefCountedSerialFunctionDispatcher> m_nativePromiseDispatcher;
+    WeakHashSet<NativePromiseRequest> m_nativePromiseRequests;
 };
 
 WebCoreOpaqueRoot root(ScriptExecutionContext*);

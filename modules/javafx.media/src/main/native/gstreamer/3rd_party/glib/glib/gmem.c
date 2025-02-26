@@ -1,6 +1,8 @@
 /* GLIB - Library of useful routines for C programming
  * Copyright (C) 1995-1997  Peter Mattis, Spencer Kimball and Josh MacDonald
  *
+ * SPDX-License-Identifier: LGPL-2.1-or-later
+ *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
  * License as published by the Free Software Foundation; either
@@ -75,36 +77,6 @@ static GMemVTable glib_mem_vtable = {
   realloc,
 };
 
-/**
- * SECTION:memory
- * @Short_Description: general memory-handling
- * @Title: Memory Allocation
- *
- * These functions provide support for allocating and freeing memory.
- *
- * If any call to allocate memory using functions g_new(), g_new0(), g_renew(),
- * g_malloc(), g_malloc0(), g_malloc0_n(), g_realloc(), and g_realloc_n()
- * fails, the application is terminated. This also means that there is no
- * need to check if the call succeeded. On the other hand, the `g_try_...()` family
- * of functions returns %NULL on failure that can be used as a check
- * for unsuccessful memory allocation. The application is not terminated
- * in this case.
- *
- * As all GLib functions and data structures use `g_malloc()` internally, unless
- * otherwise specified, any allocation failure will result in the application
- * being terminated.
- *
- * It's important to match g_malloc() (and wrappers such as g_new()) with
- * g_free(), g_slice_alloc() (and wrappers such as g_slice_new()) with
- * g_slice_free(), plain malloc() with free(), and (if you're using C++)
- * new with delete and new[] with delete[]. Otherwise bad things can happen,
- * since these allocators may use different memory pools (and new/delete call
- * constructors and destructors).
- *
- * Since GLib 2.46 g_malloc() is hardcoded to always use the system malloc
- * implementation.
- */
-
 /* --- functions --- */
 /**
  * g_malloc:
@@ -112,6 +84,9 @@ static GMemVTable glib_mem_vtable = {
  *
  * Allocates @n_bytes bytes of memory.
  * If @n_bytes is 0 it returns %NULL.
+ *
+ * If the allocation fails (because the system is out of memory),
+ * the program is terminated.
  *
  * Returns: a pointer to the allocated memory
  */
@@ -142,6 +117,9 @@ g_malloc (gsize n_bytes)
  *
  * Allocates @n_bytes bytes of memory, initialized to 0's.
  * If @n_bytes is 0 it returns %NULL.
+ *
+ * If the allocation fails (because the system is out of memory),
+ * the program is terminated.
  *
  * Returns: a pointer to the allocated memory
  */
@@ -177,6 +155,9 @@ g_malloc0 (gsize n_bytes)
  * have zero-length. @n_bytes may be 0, in which case %NULL will be returned
  * and @mem will be freed unless it is %NULL.
  *
+ * If the allocation fails (because the system is out of memory),
+ * the program is terminated.
+ *
  * Returns: the new address of the allocated memory
  */
 gpointer
@@ -209,21 +190,61 @@ g_realloc (gpointer mem,
  *
  * Frees the memory pointed to by @mem.
  *
+ * If you know the allocated size of @mem, calling g_free_sized() may be faster,
+ * depending on the libc implementation in use.
+ *
+ * Starting from GLib 2.78, this may happen automatically in case a GCC
+ * compatible compiler is used with some optimization level and the allocated
+ * size is known at compile time (see [documentation of
+ * `__builtin_object_size()`](https://gcc.gnu.org/onlinedocs/gcc/Object-Size-Checking.html)
+ * to understand its caveats).
+ *
  * If @mem is %NULL it simply returns, so there is no need to check @mem
  * against %NULL before calling this function.
  */
 void
-g_free (gpointer mem)
+(g_free) (gpointer mem)
 {
   free (mem);
   TRACE(GLIB_MEM_FREE((void*) mem));
 }
 
 /**
+ * g_free_sized:
+ * @mem: (nullable): the memory to free
+ * @size: size of @mem, in bytes
+ *
+ * Frees the memory pointed to by @mem, assuming it is has the given @size.
+ *
+ * If @mem is %NULL this is a no-op (and @size is ignored).
+ *
+ * It is an error if @size doesn’t match the size passed when @mem was
+ * allocated. @size is passed to this function to allow optimizations in the
+ * allocator. If you don’t know the allocation size, use g_free() instead.
+ *
+ * In case a GCC compatible compiler is used, this function may be used
+ * automatically via g_free() if the allocated size is known at compile time,
+ * since GLib 2.78.
+ *
+ * Since: 2.76
+ */
+void
+g_free_sized (void   *mem,
+              size_t  size)
+{
+#ifdef HAVE_FREE_SIZED
+  free_sized (mem, size);
+#else
+  free (mem);
+#endif
+  TRACE (GLIB_MEM_FREE ((void*) mem));
+}
+
+/**
  * g_clear_pointer: (skip)
- * @pp: (not nullable): a pointer to a variable, struct member etc. holding a
- *    pointer
- * @destroy: a function to which a gpointer can be passed, to destroy *@pp
+ * @pp: (nullable) (not optional) (inout) (transfer full): a pointer to a
+ *   variable, struct member etc. holding a pointer
+ * @destroy: a function to which a gpointer can be passed, to destroy `*pp`
  *
  * Clears a reference to a variable.
  *
@@ -236,9 +257,32 @@ g_free (gpointer mem)
  * A macro is also included that allows this function to be used without
  * pointer casts. This will mask any warnings about incompatible function types
  * or calling conventions, so you must ensure that your @destroy function is
- * compatible with being called as `GDestroyNotify` using the standard calling
- * convention for the platform that GLib was compiled for; otherwise the program
- * will experience undefined behaviour.
+ * compatible with being called as [callback@GLib.DestroyNotify] using the
+ * standard calling convention for the platform that GLib was compiled for;
+ * otherwise the program will experience undefined behaviour.
+ *
+ * Examples of this kind of undefined behaviour include using many Windows Win32
+ * APIs, as well as many if not all OpenGL and Vulkan calls on 32-bit Windows,
+ * which typically use the `__stdcall` calling convention rather than the
+ * `__cdecl` calling convention.
+ *
+ * The affected functions can be used by wrapping them in a
+ * [callback@GLib.DestroyNotify] that is declared with the standard calling
+ * convention:
+ *
+ * ```c
+ * // Wrapper needed to avoid mismatched calling conventions on Windows
+ * static void
+ * destroy_sync (void *sync)
+ * {
+ *   glDeleteSync (sync);
+ * }
+ *
+ * // …
+ *
+ * g_clear_pointer (&sync, destroy_sync);
+ * ```
+
  *
  * Since: 2.34
  **/
@@ -347,6 +391,9 @@ g_try_realloc (gpointer mem,
  * This function is similar to g_malloc(), allocating (@n_blocks * @n_block_bytes) bytes,
  * but care is taken to detect possible overflow during multiplication.
  *
+ * If the allocation fails (because the system is out of memory),
+ * the program is terminated.
+ *
  * Since: 2.24
  * Returns: a pointer to the allocated memory
  */
@@ -370,6 +417,9 @@ g_malloc_n (gsize n_blocks,
  *
  * This function is similar to g_malloc0(), allocating (@n_blocks * @n_block_bytes) bytes,
  * but care is taken to detect possible overflow during multiplication.
+ *
+ * If the allocation fails (because the system is out of memory),
+ * the program is terminated.
  *
  * Since: 2.24
  * Returns: a pointer to the allocated memory
@@ -395,6 +445,9 @@ g_malloc0_n (gsize n_blocks,
  *
  * This function is similar to g_realloc(), allocating (@n_blocks * @n_block_bytes) bytes,
  * but care is taken to detect possible overflow during multiplication.
+ *
+ * If the allocation fails (because the system is out of memory),
+ * the program is terminated.
  *
  * Since: 2.24
  * Returns: the new address of the allocated memory
@@ -554,8 +607,11 @@ g_mem_profile (void)
  * alignment value. Additionally, it will detect possible overflow during
  * multiplication.
  *
+ * If the allocation fails (because the system is out of memory),
+ * the program is terminated.
+ *
  * Aligned memory allocations returned by this function can only be
- * freed using g_aligned_free().
+ * freed using g_aligned_free_sized() or g_aligned_free().
  *
  * Returns: (transfer full): the allocated memory
  *
@@ -678,4 +734,34 @@ void
 g_aligned_free (gpointer mem)
 {
   aligned_free (mem);
+}
+
+/**
+ * g_aligned_free_sized:
+ * @mem: (nullable): the memory to free
+ * @alignment: alignment of @mem
+ * @size: size of @mem, in bytes
+ *
+ * Frees the memory pointed to by @mem, assuming it is has the given @size and
+ * @alignment.
+ *
+ * If @mem is %NULL this is a no-op (and @size is ignored).
+ *
+ * It is an error if @size doesn’t match the size, or @alignment doesn’t match
+ * the alignment, passed when @mem was allocated. @size and @alignment are
+ * passed to this function to allow optimizations in the allocator. If you
+ * don’t know either of them, use g_aligned_free() instead.
+ *
+ * Since: 2.76
+ */
+void
+g_aligned_free_sized (void   *mem,
+                      size_t  alignment,
+                      size_t  size)
+{
+#ifdef HAVE_FREE_ALIGNED_SIZED
+  free_aligned_sized (mem, alignment, size);
+#else
+  aligned_free (mem);
+#endif
 }

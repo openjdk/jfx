@@ -104,7 +104,7 @@ enum class SerializationArguments : uint8_t {
 };
 
 class CSSStyleValue : public RefCounted<CSSStyleValue>, public ScriptWrappable {
-    WTF_MAKE_ISO_ALLOCATED(CSSStyleValue);
+    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(CSSStyleValue);
 public:
     String toString() const;
     virtual void serialize(StringBuilder&, OptionSet<SerializationArguments> = { }) const;
@@ -116,8 +116,8 @@ IGNORE_GCC_WARNINGS_END
 
     virtual CSSStyleValueType getType() const { return CSSStyleValueType::CSSStyleValue; }
 
-    static ExceptionOr<Ref<CSSStyleValue>> parse(const AtomString&, const String&);
-    static ExceptionOr<Vector<Ref<CSSStyleValue>>> parseAll(const AtomString&, const String&);
+    static ExceptionOr<Ref<CSSStyleValue>> parse(const Document&, const AtomString&, const String&);
+    static ExceptionOr<Vector<Ref<CSSStyleValue>>> parseAll(const Document&, const AtomString&, const String&);
 
     static Ref<CSSStyleValue> create(RefPtr<CSSValue>&&, String&& = String());
     static Ref<CSSStyleValue> create();

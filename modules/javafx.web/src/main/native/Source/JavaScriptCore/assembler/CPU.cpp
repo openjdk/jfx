@@ -26,7 +26,7 @@
 #include "config.h"
 #include "CPU.h"
 
-#if (CPU(X86) || CPU(X86_64) || CPU(ARM64E)) && OS(DARWIN)
+#if (CPU(X86) || CPU(X86_64) || CPU(ARM64)) && OS(DARWIN)
 #include <mutex>
 #include <sys/sysctl.h>
 #endif
@@ -36,6 +36,15 @@
 #endif
 
 namespace JSC {
+
+#if PLATFORM(MAC) || PLATFORM(MACCATALYST)
+bool isKernOpenSource()
+{
+    uint32_t val = 0;
+    size_t valSize = sizeof(val);
+    return !sysctlbyname("kern.opensource_kernel", &val, &valSize, nullptr, 0) && val;
+}
+#endif
 
 #if (CPU(X86) || CPU(X86_64)) && OS(DARWIN)
 bool isKernTCSMAvailable()
@@ -128,7 +137,6 @@ bool isARM64E_FPAC()
 #if CPU(X86_64)
 bool isX86_64_AVX()
 {
-    // We need runtime check since macOS Rosetta2 does not support AVX.
 #if ENABLE(ASSEMBLER)
     return MacroAssembler::supportsAVX();
 #else

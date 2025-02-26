@@ -29,40 +29,43 @@
 
 #include "RenderStyleConstants.h"
 #include <wtf/OptionSet.h>
+#include <wtf/text/TextStream.h>
 
 namespace WebCore {
 
 class StyleColorScheme {
 public:
-    StyleColorScheme() { }
+    constexpr StyleColorScheme() = default;
 
-    StyleColorScheme(OptionSet<ColorScheme> colorScheme, bool allowsTransformations)
+    constexpr StyleColorScheme(OptionSet<ColorScheme> colorScheme, bool allowsTransformations)
         : m_colorScheme(colorScheme)
         , m_allowsTransformations(allowsTransformations)
     { }
 
-    bool operator==(const StyleColorScheme& other) const
-    {
-        return m_colorScheme == other.m_colorScheme && m_allowsTransformations == other.m_allowsTransformations;
-    }
+    friend constexpr bool operator==(const StyleColorScheme&, const StyleColorScheme&) = default;
 
-    bool operator!=(const StyleColorScheme& other) const { return !(*this == other); }
+    constexpr bool isNormal() const { return m_colorScheme.isEmpty() && m_allowsTransformations; }
+    constexpr bool isOnly() const { return m_colorScheme.isEmpty() && !m_allowsTransformations; }
 
-    bool isNormal() const { return m_colorScheme.isEmpty() && m_allowsTransformations; }
-    bool isOnly() const { return m_colorScheme.isEmpty() && !m_allowsTransformations; }
-
-    OptionSet<ColorScheme> colorScheme() const { return m_colorScheme; }
+    constexpr OptionSet<ColorScheme> colorScheme() const { return m_colorScheme; }
 
     void add(ColorScheme colorScheme) { m_colorScheme.add(colorScheme); }
-    bool contains(ColorScheme colorScheme) const { return m_colorScheme.contains(colorScheme); }
+    constexpr bool contains(ColorScheme colorScheme) const { return m_colorScheme.contains(colorScheme); }
 
     void setAllowsTransformations(bool allow) { m_allowsTransformations = allow; }
-    bool allowsTransformations() const { return m_allowsTransformations; }
+    constexpr bool allowsTransformations() const { return m_allowsTransformations; }
 
 private:
     OptionSet<ColorScheme> m_colorScheme;
     bool m_allowsTransformations { true };
 };
+
+inline WTF::TextStream& operator<<(WTF::TextStream& ts, const StyleColorScheme& styleColorScheme)
+{
+    ts.dumpProperty("color-scheme", styleColorScheme.colorScheme());
+    ts.dumpProperty("allows-transformations", styleColorScheme.allowsTransformations());
+    return ts;
+}
 
 } // namespace WebCore
 

@@ -26,30 +26,39 @@
 
 #include "AbstractRange.h"
 #include "RangeBoundaryPoint.h"
+#include <wtf/CheckedRef.h>
+#include <wtf/WeakPtr.h>
 
 namespace WebCore {
 
 class DOMRect;
 class DOMRectList;
-class DOMWindow;
 class DocumentFragment;
+class LocalDOMWindow;
 class NodeWithIndex;
 class Text;
+class TrustedHTML;
 
 struct SimpleRange;
 
-class Range final : public AbstractRange {
-    WTF_MAKE_ISO_ALLOCATED(Range);
+class Range final : public AbstractRange, public CanMakeSingleThreadWeakPtr<Range> {
+    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(Range);
+    WTF_MAKE_NONCOPYABLE(Range);
 public:
     WEBCORE_EXPORT static Ref<Range> create(Document&);
     WEBCORE_EXPORT ~Range();
 
     Node& startContainer() const final { return m_start.container(); }
+    Ref<Node> protectedStartContainer() const;
     unsigned startOffset() const final { return m_start.offset(); }
     Node& endContainer() const final { return m_end.container(); }
+    Ref<Node> protectedEndContainer() const;
     unsigned endOffset() const final { return m_end.offset(); }
     bool collapsed() const final { return m_start == m_end; }
     WEBCORE_EXPORT Node* commonAncestorContainer() const;
+
+    void resetDidChangeForHighlight() { m_didChangeForHighlight = false; }
+    bool didChangeForHighlight() const { return m_didChangeForHighlight; }
 
     WEBCORE_EXPORT ExceptionOr<void> setStart(Ref<Node>&&, unsigned offset);
     WEBCORE_EXPORT ExceptionOr<void> setEnd(Ref<Node>&&, unsigned offset);
@@ -82,7 +91,7 @@ public:
     Ref<DOMRectList> getClientRects() const;
     Ref<DOMRect> getBoundingClientRect() const;
 
-    WEBCORE_EXPORT ExceptionOr<Ref<DocumentFragment>> createContextualFragment(const String& fragment);
+    WEBCORE_EXPORT ExceptionOr<Ref<DocumentFragment>> createContextualFragment(std::variant<RefPtr<TrustedHTML>, String>&& fragment);
 
     // Expand range to a unit (word or sentence or block or document) boundary.
     // Please refer to https://bugs.webkit.org/show_bug.cgi?id=27632 comment #5 for details.
@@ -106,10 +115,16 @@ public:
     void didDisassociateFromSelection() { m_isAssociatedWithSelection = false; }
     void updateFromSelection(const SimpleRange&);
 
-    // For use by garbage collection. Returns nullptr for ranges not assocated with selection.
-    DOMWindow* window() const;
+    void didAssociateWithHighlight()
+    {
+        m_isAssociatedWithHighlight = true;
+        m_didChangeForHighlight = true;
+    }
 
-    static ExceptionOr<Node*> checkNodeOffsetPair(Node&, unsigned offset);
+    // For use by garbage collection. Returns nullptr for ranges not assocated with selection.
+    LocalDOMWindow* window() const;
+
+    static ExceptionOr<RefPtr<Node>> checkNodeOffsetPair(Node&, unsigned offset);
 
 #if ENABLE(TREE_DEBUGGING)
     String debugDescription() const;
@@ -126,12 +141,16 @@ private:
 
     void updateDocument();
     void updateAssociatedSelection();
+    void updateAssociatedHighlight();
     ExceptionOr<RefPtr<DocumentFragment>> processContents(ActionType);
+    Ref<Document> protectedOwnerDocument();
 
     Ref<Document> m_ownerDocument;
     RangeBoundaryPoint m_start;
     RangeBoundaryPoint m_end;
     bool m_isAssociatedWithSelection { false };
+    bool m_didChangeForHighlight { false };
+    bool m_isAssociatedWithHighlight { false };
 };
 
 WEBCORE_EXPORT SimpleRange makeSimpleRange(const Range&);

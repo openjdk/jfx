@@ -3,6 +3,8 @@
  *  Copyright (C) 1999, 2000 Tom Tromey
  *  Copyright 2000, 2005 Red Hat, Inc.
  *
+ * SPDX-License-Identifier: LGPL-2.1-or-later
+ *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
  * License as published by the Free Software Foundation; either
@@ -202,13 +204,18 @@ typedef enum
  * @G_UNICODE_BREAK_EMOJI_BASE: Emoji Base (EB). Since: 2.50
  * @G_UNICODE_BREAK_EMOJI_MODIFIER: Emoji Modifier (EM). Since: 2.50
  * @G_UNICODE_BREAK_ZERO_WIDTH_JOINER: Zero Width Joiner (ZWJ). Since: 2.50
+ * @G_UNICODE_BREAK_AKSARA: Aksara (AK). Since: 2.80
+ * @G_UNICODE_BREAK_AKSARA_PRE_BASE (AP). Since: 2.80
+ * @G_UNICODE_BREAK_AKSARA_START (AS). Since: 2.80
+ * @G_UNICODE_BREAK_VIRAMA_FINAL (VF). Since: 2.80
+ * @G_UNICODE_BREAK_VIRAMA (VI). Since: 2.80
  *
  * These are the possible line break classifications.
  *
- * Since new unicode versions may add new types here, applications should be ready
+ * Since new Unicode versions may add new types here, applications should be ready
  * to handle unknown values. They may be regarded as %G_UNICODE_BREAK_UNKNOWN.
  *
- * See [Unicode Line Breaking Algorithm](http://www.unicode.org/unicode/reports/tr14/).
+ * See [Unicode Line Breaking Algorithm](https://www.unicode.org/reports/tr14/).
  */
 typedef enum
 {
@@ -255,7 +262,12 @@ typedef enum
   G_UNICODE_BREAK_REGIONAL_INDICATOR,
   G_UNICODE_BREAK_EMOJI_BASE,
   G_UNICODE_BREAK_EMOJI_MODIFIER,
-  G_UNICODE_BREAK_ZERO_WIDTH_JOINER
+  G_UNICODE_BREAK_ZERO_WIDTH_JOINER,
+  G_UNICODE_BREAK_AKSARA,
+  G_UNICODE_BREAK_AKSARA_PRE_BASE,
+  G_UNICODE_BREAK_AKSARA_START,
+  G_UNICODE_BREAK_VIRAMA_FINAL,
+  G_UNICODE_BREAK_VIRAMA
 } GUnicodeBreakType;
 
 /**
@@ -436,6 +448,8 @@ typedef enum
  * @G_UNICODE_SCRIPT_TOTO:                 Toto. Since: 2.72
  * @G_UNICODE_SCRIPT_VITHKUQI:             Vithkuqi. Since: 2.72
  * @G_UNICODE_SCRIPT_MATH:                 Mathematical notation. Since: 2.72
+ * @G_UNICODE_SCRIPT_KAWI:                 Kawi. Since 2.74
+ * @G_UNICODE_SCRIPT_NAG_MUNDARI:          Nag Mundari. Since 2.74
  *
  * The #GUnicodeScript enumeration identifies different writing
  * systems. The values correspond to the names as defined in the
@@ -644,6 +658,10 @@ typedef enum
 
   /* not really a Unicode script, but part of ISO 15924 */
   G_UNICODE_SCRIPT_MATH,                   /* Zmth */
+
+  /* Unicode 15.0 additions */
+  G_UNICODE_SCRIPT_KAWI GLIB_AVAILABLE_ENUMERATOR_IN_2_74,          /* Kawi */
+  G_UNICODE_SCRIPT_NAG_MUNDARI GLIB_AVAILABLE_ENUMERATOR_IN_2_74,   /* Nag Mundari */
 } GUnicodeScript;
 
 GLIB_AVAILABLE_IN_ALL
@@ -788,7 +806,7 @@ GLIB_VAR const gchar * const g_utf8_skip;
  * Before using this macro, use g_utf8_validate() to validate strings
  * that may contain invalid UTF-8.
  */
-#define g_utf8_next_char(p) (char *)((p) + g_utf8_skip[*(const guchar *)(p)])
+#define g_utf8_next_char(p) ((p) + g_utf8_skip[*(const guchar *)(p)])
 
 GLIB_AVAILABLE_IN_ALL
 gunichar g_utf8_get_char           (const gchar  *p) G_GNUC_PURE;
@@ -824,6 +842,10 @@ GLIB_AVAILABLE_IN_ALL
 gchar   *g_utf8_strncpy           (gchar       *dest,
                                    const gchar *src,
                                    gsize        n);
+
+GLIB_AVAILABLE_IN_2_78
+gchar   *g_utf8_truncate_middle   (const gchar *string,
+                                   gsize        truncate_length);
 
 /* Find the UTF-8 character corresponding to ch, in string p. These
    functions are equivalants to strchr and strrchr */

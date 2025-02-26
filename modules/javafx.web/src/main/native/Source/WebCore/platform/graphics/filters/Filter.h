@@ -66,14 +66,14 @@ public:
     bool clampFilterRegionIfNeeded();
 
     WEBCORE_EXPORT RefPtr<FilterImage> apply(ImageBuffer* sourceImage, const FloatRect& sourceImageRect, FilterResults&);
-    WEBCORE_EXPORT FilterStyleVector createFilterStyles(const FloatRect& sourceImageRect) const;
+    WEBCORE_EXPORT FilterStyleVector createFilterStyles(GraphicsContext&, const FloatRect& sourceImageRect) const;
 
 protected:
-    using FilterFunction::FilterFunction;
-    Filter(Filter::Type, const FloatSize& filterScale, const FloatRect& filterRegion = { });
+    Filter(Filter::Type, std::optional<RenderingResourceIdentifier> = std::nullopt);
+    Filter(Filter::Type, const FloatSize& filterScale, const FloatRect& filterRegion = { }, std::optional<RenderingResourceIdentifier> = std::nullopt);
 
     virtual RefPtr<FilterImage> apply(FilterImage* sourceImage, FilterResults&) = 0;
-    virtual FilterStyleVector createFilterStyles(const FilterStyle& sourceStyle) const = 0;
+    virtual FilterStyleVector createFilterStyles(GraphicsContext&, const FilterStyle& sourceStyle) const = 0;
 
 private:
     OptionSet<FilterRenderingMode> m_filterRenderingModes { FilterRenderingMode::Software };
@@ -84,5 +84,5 @@ private:
 } // namespace WebCore
 
 SPECIALIZE_TYPE_TRAITS_BEGIN(WebCore::Filter)
-    static bool isType(const WebCore::FilterFunction& function) { return function.isFilter(); }
+    static bool isType(const WebCore::RenderingResource& renderingResource) { return renderingResource.isFilter(); }
 SPECIALIZE_TYPE_TRAITS_END()

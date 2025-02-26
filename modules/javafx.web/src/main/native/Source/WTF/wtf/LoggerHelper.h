@@ -35,7 +35,7 @@ public:
     virtual ~LoggerHelper() = default;
 
     virtual const Logger& logger() const = 0;
-    virtual const char* logClassName() const = 0;
+    virtual ASCIILiteral logClassName() const = 0;
     virtual WTFLogChannel& logChannel() const = 0;
     virtual const void* logIdentifier() const = 0;
 
@@ -71,6 +71,15 @@ public:
 #define INFO_LOG_IF_POSSIBLE(...)       if (loggerPtr()) loggerPtr()->info(logChannel(), __VA_ARGS__)
 #define DEBUG_LOG_IF_POSSIBLE(...)      if (loggerPtr()) loggerPtr()->debug(logChannel(), __VA_ARGS__)
 #define WILL_LOG_IF_POSSIBLE(_level_)   if (loggerPtr()) loggerPtr()->willLog(logChannel(), _level_)
+
+#if defined(__OBJC__)
+#define OBJC_LOGIDENTIFIER WTF::Logger::LogSiteIdentifier(__PRETTY_FUNCTION__, self.logIdentifier)
+#define OBJC_ALWAYS_LOG(...)     if (self.loggerPtr && self.logChannel) self.loggerPtr->logAlways(*self.logChannel, __VA_ARGS__)
+#define OBJC_ERROR_LOG(...)      if (self.loggerPtr && self.logChannel) self.loggerPtr->error(*self.logChannel, __VA_ARGS__)
+#define OBJC_WARNING_LOG(...)    if (self.loggerPtr && self.logChannel) self.loggerPtr->warning(*self.logChannel, __VA_ARGS__)
+#define OBJC_INFO_LOG(...)       if (self.loggerPtr && self.logChannel) self.loggerPtr->info(*self.logChannel, __VA_ARGS__)
+#define OBJC_DEBUG_LOG(...)      if (self.loggerPtr && self.logChannel) self.loggerPtr->debug(*self.logChannel, __VA_ARGS__)
+#endif
 
     static const void* childLogIdentifier(const void* parentIdentifier, uint64_t childIdentifier)
     {

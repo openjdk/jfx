@@ -41,14 +41,16 @@ class RenderVideo;
 class PictureInPictureObserver;
 class VideoFrameRequestCallback;
 
-enum class PixelFormat : uint8_t;
+enum class ImageBufferPixelFormat : uint8_t;
 enum class RenderingMode : bool;
 
 class HTMLVideoElement final : public HTMLMediaElement, public Supplementable<HTMLVideoElement> {
-    WTF_MAKE_ISO_ALLOCATED(HTMLVideoElement);
+    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(HTMLVideoElement);
+    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(HTMLVideoElement);
 public:
     WEBCORE_EXPORT static Ref<HTMLVideoElement> create(Document&);
     static Ref<HTMLVideoElement> create(const QualifiedName&, Document&, bool createdByParser);
+    ~HTMLVideoElement();
 
     WEBCORE_EXPORT unsigned videoWidth() const;
     WEBCORE_EXPORT unsigned videoHeight() const;
@@ -74,7 +76,7 @@ public:
     void requestFullscreen(FullscreenOptions&&, RefPtr<DeferredPromise>&&) override;
 #endif
 
-    RefPtr<ImageBuffer> createBufferForPainting(const FloatSize&, RenderingMode, const DestinationColorSpace&, PixelFormat) const;
+    RefPtr<ImageBuffer> createBufferForPainting(const FloatSize&, RenderingMode, const DestinationColorSpace&, ImageBufferPixelFormat) const;
 
     // Used by canvas to gain raw pixel access
     void paintCurrentFrameInContext(GraphicsContext&, const FloatRect&);
@@ -89,10 +91,11 @@ public:
     RenderPtr<RenderElement> createElementRenderer(RenderStyle&&, const RenderTreePosition&) final;
 
 #if ENABLE(VIDEO_PRESENTATION_MODE)
-    enum class VideoPresentationMode { Inline, Fullscreen, PictureInPicture };
+    enum class VideoPresentationMode { Inline, Fullscreen, PictureInPicture, InWindow };
     static VideoPresentationMode toPresentationMode(HTMLMediaElementEnums::VideoFullscreenMode);
     WEBCORE_EXPORT bool webkitSupportsPresentationMode(VideoPresentationMode) const;
     VideoPresentationMode webkitPresentationMode() const;
+    VideoPresentationMode webkitPresentationModeForBindings() const;
     void webkitSetPresentationMode(VideoPresentationMode);
 
     WEBCORE_EXPORT void setPresentationMode(VideoPresentationMode);
@@ -112,6 +115,8 @@ public:
 #endif
 
     RenderVideo* renderer() const;
+    void acceleratedRenderingStateChanged();
+    bool supportsAcceleratedRendering() const;
 
     bool shouldServiceRequestVideoFrameCallbacks() const { return !m_videoFrameRequests.isEmpty(); }
     void serviceRequestVideoFrameCallbacks(ReducedResolutionSeconds);
@@ -119,14 +124,24 @@ public:
     unsigned requestVideoFrameCallback(Ref<VideoFrameRequestCallback>&&);
     void cancelVideoFrameCallback(unsigned);
 
+    WEBCORE_EXPORT void setVideoFullscreenStandby(bool);
+
+#if USE(GSTREAMER)
+    void enableGStreamerHolePunching() { m_enableGStreamerHolePunching = true; }
+    bool isGStreamerHolePunchingEnabled() const final { return m_enableGStreamerHolePunching; }
+#endif
+
+    // ActiveDOMObject
+    void stop() final;
+
 private:
     HTMLVideoElement(const QualifiedName&, Document&, bool createdByParser);
 
-    void scheduleResizeEvent() final;
-    void scheduleResizeEventIfSizeChanged() final;
+    void scheduleResizeEvent(const FloatSize&) final;
+    void scheduleResizeEventIfSizeChanged(const FloatSize&) final;
     bool rendererIsNeeded(const RenderStyle&) final;
     void didAttachRenderers() final;
-    void parseAttribute(const QualifiedName&, const AtomString&) final;
+    void attributeChanged(const QualifiedName&, const AtomString& oldValue, const AtomString& newValue, AttributeModificationReason) final;
     bool hasPresentationalHintsForAttribute(const QualifiedName&) const final;
     void collectPresentationalHintsForAttribute(const QualifiedName&, const AtomString&, MutableStyleProperties&) final;
     bool isVideo() const final { return true; }
@@ -142,14 +157,22 @@ private:
 
     PlatformMediaSession::MediaType presentationType() const final { return PlatformMediaSession::MediaType::Video; }
 
+    bool mediaPlayerRenderingCanBeAccelerated() final { return m_renderingCanBeAccelerated; }
+    void mediaPlayerRenderingModeChanged() final;
     void mediaPlayerEngineUpdated() final;
+
+    void computeAcceleratedRenderingStateAndUpdateMediaPlayer() final;
+#if PLATFORM(IOS_FAMILY)
+    bool canShowWhileLocked() const final;
+#endif
 
     std::unique_ptr<HTMLImageLoader> m_imageLoader;
 
     AtomString m_defaultPosterURL;
 
-    unsigned m_lastReportedVideoWidth { 0 };
-    unsigned m_lastReportedVideoHeight { 0 };
+    FloatSize m_lastReportedNaturalSize { };
+
+    bool m_renderingCanBeAccelerated { false };
 
 #if ENABLE(VIDEO_PRESENTATION_MODE)
     bool m_enteringPictureInPicture { false };
@@ -157,7 +180,7 @@ private:
 #endif
 
 #if ENABLE(PICTURE_IN_PICTURE_API)
-    PictureInPictureObserver* m_pictureInPictureObserver { nullptr };
+    WeakPtr<PictureInPictureObserver> m_pictureInPictureObserver;
 #endif
 
     struct VideoFrameRequest {
@@ -169,20 +192,26 @@ private:
         }
 
         unsigned identifier { 0 };
-        Ref<VideoFrameRequestCallback> callback;
-        bool cancelled { false };
+        RefPtr<VideoFrameRequestCallback> callback;
     };
     Vector<UniqueRef<VideoFrameRequest>> m_videoFrameRequests;
     Vector<UniqueRef<VideoFrameRequest>> m_servicedVideoFrameRequests;
     unsigned m_nextVideoFrameRequestIndex { 0 };
+
+#if USE(GSTREAMER)
+    bool m_enableGStreamerHolePunching { false };
+#endif
 };
 
 } // namespace WebCore
 
 SPECIALIZE_TYPE_TRAITS_BEGIN(WebCore::HTMLVideoElement)
-    static bool isType(const WebCore::HTMLMediaElement& element) { return element.hasTagName(WebCore::HTMLNames::videoTag); }
-    static bool isType(const WebCore::Element& element) { return is<WebCore::HTMLMediaElement>(element) && isType(downcast<WebCore::HTMLMediaElement>(element)); }
-    static bool isType(const WebCore::Node& node) { return is<WebCore::HTMLMediaElement>(node) && isType(downcast<WebCore::HTMLMediaElement>(node)); }
+    static bool isType(const WebCore::HTMLElement& element) { return element.hasTagName(WebCore::HTMLNames::videoTag); }
+    static bool isType(const WebCore::Node& node)
+    {
+        auto* element = dynamicDowncast<WebCore::HTMLElement>(node);
+        return element && isType(*element);
+    }
 SPECIALIZE_TYPE_TRAITS_END()
 
 #endif // ENABLE(VIDEO)

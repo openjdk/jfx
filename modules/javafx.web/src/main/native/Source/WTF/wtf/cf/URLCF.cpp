@@ -60,11 +60,13 @@ RetainPtr<CFURLRef> URL::createCFURL() const
         return emptyCFURL();
 
     RetainPtr<CFURLRef> result;
-    if (LIKELY(m_string.is8Bit() && m_string.isAllASCII()))
-        result = adoptCF(CFURLCreateAbsoluteURLWithBytes(nullptr, m_string.characters8(), m_string.length(), kCFStringEncodingUTF8, nullptr, true));
-    else {
+    if (LIKELY(m_string.is8Bit() && m_string.containsOnlyASCII())) {
+        auto characters = m_string.span8();
+        result = adoptCF(CFURLCreateAbsoluteURLWithBytes(nullptr, characters.data(), characters.size(), kCFStringEncodingUTF8, nullptr, true));
+    } else {
         CString utf8 = m_string.utf8();
-        result = adoptCF(CFURLCreateAbsoluteURLWithBytes(nullptr, utf8.dataAsUInt8Ptr(), utf8.length(), kCFStringEncodingUTF8, nullptr, true));
+        auto utf8Span = utf8.span();
+        result = adoptCF(CFURLCreateAbsoluteURLWithBytes(nullptr, utf8Span.data(), utf8Span.size(), kCFStringEncodingUTF8, nullptr, true));
     }
 
     if (protocolIsInHTTPFamily() && !isSameOrigin(result.get(), *this))
@@ -73,18 +75,15 @@ RetainPtr<CFURLRef> URL::createCFURL() const
     return result;
 }
 
+#if !PLATFORM(WIN)
 String URL::fileSystemPath() const
 {
     auto cfURL = createCFURL();
     if (!cfURL)
         return String();
 
-#if PLATFORM(WIN)
-    CFURLPathStyle pathStyle = kCFURLWindowsPathStyle;
-#else
-    CFURLPathStyle pathStyle = kCFURLPOSIXPathStyle;
-#endif
-    return adoptCF(CFURLCopyFileSystemPath(cfURL.get(), pathStyle)).get();
+    return adoptCF(CFURLCopyFileSystemPath(cfURL.get(), kCFURLPOSIXPathStyle)).get();
 }
+#endif
 
 }

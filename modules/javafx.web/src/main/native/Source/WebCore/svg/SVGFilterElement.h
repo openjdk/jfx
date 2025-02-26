@@ -30,7 +30,8 @@
 namespace WebCore {
 
 class SVGFilterElement final : public SVGElement, public SVGURIReference {
-    WTF_MAKE_ISO_ALLOCATED(SVGFilterElement);
+    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(SVGFilterElement);
+    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(SVGFilterElement);
 public:
     static Ref<SVGFilterElement> create(const QualifiedName&, Document&);
 
@@ -53,7 +54,7 @@ private:
 
     using PropertyRegistry = SVGPropertyOwnerRegistry<SVGFilterElement, SVGElement, SVGURIReference>;
 
-    void parseAttribute(const QualifiedName&, const AtomString&) final;
+    void attributeChanged(const QualifiedName&, const AtomString& oldValue, const AtomString& newValue, AttributeModificationReason) final;
     void svgAttributeChanged(const QualifiedName&) final;
     void childrenChanged(const ChildChange&) final;
 

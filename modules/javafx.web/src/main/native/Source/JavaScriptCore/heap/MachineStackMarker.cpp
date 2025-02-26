@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2003-2017 Apple Inc. All rights reserved.
+ *  Copyright (C) 2003-2023 Apple Inc. All rights reserved.
  *  Copyright (C) 2007 Eric Seidel <eric@webkit.org>
  *  Copyright (C) 2009 Acision BV. All rights reserved.
  *
@@ -27,8 +27,11 @@
 #include <wtf/BitVector.h>
 #include <wtf/PageBlock.h>
 #include <wtf/StdLibExtras.h>
+#include <wtf/TZoneMallocInlines.h>
 
 namespace JSC {
+
+WTF_MAKE_TZONE_ALLOCATED_IMPL(MachineThreads);
 
 MachineThreads::MachineThreads()
     : m_threadGroup(ThreadGroup::create())
@@ -50,7 +53,6 @@ void MachineThreads::gatherFromCurrentThread(ConservativeRoots& conservativeRoot
 static inline int osRedZoneAdjustment()
 {
     int redZoneAdjustment = 0;
-#if !OS(WINDOWS)
 #if CPU(X86_64)
     // See http://people.freebsd.org/~obrien/amd64-elf-abi.pdf Section 3.2.2.
     redZoneAdjustment = -128;
@@ -58,7 +60,6 @@ static inline int osRedZoneAdjustment()
     // See https://developer.apple.com/library/ios/documentation/Xcode/Conceptual/iPhoneOSABIReference/Articles/ARM64FunctionCallingConventions.html#//apple_ref/doc/uid/TP40013702-SW7
     redZoneAdjustment = -128;
 #endif
-#endif // !OS(WINDOWS)
     return redZoneAdjustment;
 }
 

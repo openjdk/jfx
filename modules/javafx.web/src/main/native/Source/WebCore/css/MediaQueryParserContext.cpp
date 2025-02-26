@@ -33,14 +33,16 @@
 namespace WebCore {
 
 MediaQueryParserContext::MediaQueryParserContext(const CSSParserContext& context)
+    : useSystemAppearance(context.useSystemAppearance)
+    , cssStyleQueriesEnabled(context.cssStyleQueriesEnabled)
+    , mode(context.mode)
 {
-    useSystemAppearance = context.useSystemAppearance;
-    mode = context.mode;
 }
 
 MediaQueryParserContext::MediaQueryParserContext(const Document& document)
+    : useSystemAppearance(document.page() && document.page()->useSystemAppearance())
+    , cssStyleQueriesEnabled(document.settings().cssStyleQueriesEnabled())
 {
-    useSystemAppearance = document.page() ? document.page()->useSystemAppearance() : false;
 }
 
 } // namespace WebCore

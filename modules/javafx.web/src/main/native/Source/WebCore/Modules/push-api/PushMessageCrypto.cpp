@@ -26,9 +26,8 @@
 #include "config.h"
 #include "PushMessageCrypto.h"
 
-#if ENABLE(SERVICE_WORKER)
-
 #include "PushCrypto.h"
+#include <array>
 #include <wtf/ByteOrder.h>
 #include <wtf/CryptographicallyRandomNumber.h>
 
@@ -43,12 +42,12 @@ static constexpr size_t sharedAuthSecretLength = 16;
 
 ClientKeys ClientKeys::generate()
 {
-    uint8_t sharedAuthSecret[sharedAuthSecretLength];
-    cryptographicallyRandomValues(sharedAuthSecret, sizeof(sharedAuthSecret));
+    std::array<uint8_t, sharedAuthSecretLength> sharedAuthSecret;
+    cryptographicallyRandomValues(sharedAuthSecret);
 
     return ClientKeys {
         P256DHKeyPair::generate(),
-        Vector<uint8_t> { sharedAuthSecret, sizeof(sharedAuthSecret) }
+        Vector<uint8_t> { sharedAuthSecret }
     };
 }
 
@@ -81,7 +80,7 @@ static size_t computeAES128GCMPaddingLength(const uint8_t *begin, size_t length)
     return end - cur;
 }
 
-std::optional<Vector<uint8_t>> decryptAES128GCMPayload(const ClientKeys& clientKeys, Span<const uint8_t> payload)
+std::optional<Vector<uint8_t>> decryptAES128GCMPayload(const ClientKeys& clientKeys, std::span<const uint8_t> payload)
 {
     if (!areClientKeyLengthsValid(clientKeys))
         return std::nullopt;
@@ -138,7 +137,7 @@ std::optional<Vector<uint8_t>> decryptAES128GCMPayload(const ClientKeys& clientK
     memcpy(keyInfo.clientKey, clientKeys.clientP256DHKeyPair.publicKey.data(), p256dhPublicKeyLength);
     memcpy(keyInfo.serverKey, header.serverPublicKey, p256dhPublicKeyLength);
 
-    auto ikm = hmacSHA256(prkKey, Span(reinterpret_cast<uint8_t*>(&keyInfo), sizeof(keyInfo)));
+    auto ikm = hmacSHA256(prkKey, std::span(reinterpret_cast<uint8_t*>(&keyInfo), sizeof(keyInfo)));
 
     /*
      * # HKDF-Extract(salt, IKM)
@@ -152,7 +151,7 @@ std::optional<Vector<uint8_t>> decryptAES128GCMPayload(const ClientKeys& clientK
      * CEK = HMAC-SHA-256(PRK, cek_info || 0x01)[0..15]
      */
     static const uint8_t cekInfo[] = "Content-Encoding: aes128gcm\x00\x01";
-    auto cek = hmacSHA256(prk, Span(cekInfo, sizeof(cekInfo) - 1));
+    auto cek = hmacSHA256(prk, std::span(cekInfo, sizeof(cekInfo) - 1));
     cek.shrink(16);
 
     /*
@@ -161,11 +160,11 @@ std::optional<Vector<uint8_t>> decryptAES128GCMPayload(const ClientKeys& clientK
      * NONCE = HMAC-SHA-256(PRK, nonce_info || 0x01)[0..11]
      */
     static const uint8_t nonceInfo[] = "Content-Encoding: nonce\x00\x01";
-    auto nonce = hmacSHA256(prk, Span(nonceInfo, sizeof(nonceInfo) - 1));
+    auto nonce = hmacSHA256(prk, std::span(nonceInfo, sizeof(nonceInfo) - 1));
     nonce.shrink(12);
 
     // Finally, decrypt with AES128GCM and return the unpadded plaintext.
-    auto cipherText = Span(payload.data() + sizeof(header), payload.size() - sizeof(header));
+    auto cipherText = std::span(payload.data() + sizeof(header), payload.size() - sizeof(header));
     auto plainTextResult = decryptAES128GCM(cek, nonce, cipherText);
     if (!plainTextResult)
         return std::nullopt;
@@ -212,7 +211,7 @@ static size_t computeAESGCMPaddingLength(const uint8_t *begin, size_t length)
     return cur - begin;
 }
 
-std::optional<Vector<uint8_t>> decryptAESGCMPayload(const ClientKeys& clientKeys, Span<const uint8_t> serverP256DHPublicKey, Span<const uint8_t> salt, Span<const uint8_t> payload)
+std::optional<Vector<uint8_t>> decryptAESGCMPayload(const ClientKeys& clientKeys, std::span<const uint8_t> serverP256DHPublicKey, std::span<const uint8_t> salt, std::span<const uint8_t> payload)
 {
     if (!areClientKeyLengthsValid(clientKeys) || serverP256DHPublicKey.size() != p256dhPublicKeyLength || salt.size() != saltLength)
         return std::nullopt;
@@ -239,7 +238,7 @@ std::optional<Vector<uint8_t>> decryptAESGCMPayload(const ClientKeys& clientKeys
      */
     static const uint8_t authInfo[] = "Content-Encoding: auth\x00\x01";
     auto prkCombine = hmacSHA256(clientKeys.sharedAuthSecret, *ecdhSecretResult);
-    auto ikm = hmacSHA256(prkCombine, Span(authInfo, sizeof(authInfo) - 1));
+    auto ikm = hmacSHA256(prkCombine, std::span(authInfo, sizeof(authInfo) - 1));
     auto prk = hmacSHA256(salt, ikm);
 
     /*
@@ -297,9 +296,7 @@ std::optional<Vector<uint8_t>> decryptAESGCMPayload(const ClientKeys& clientKeys
     if (paddingLength == SIZE_MAX)
         return std::nullopt;
 
-    return Vector<uint8_t> { plainText.data() + paddingLength, plainText.size() - paddingLength };
+    return plainText.subvector(paddingLength);
 }
 
 } // namespace WebCore::PushCrypto
-
-#endif // ENABLE(SERVICE_WORKER)

@@ -132,7 +132,7 @@ template<typename VectorElementType, typename CFType> Vector<VectorElementType> 
         constexpr const VectorElementType* typedNull = nullptr;
         if (CFType element = dynamic_cf_cast<CFType>(CFArrayGetValueAtIndex(array, i))) {
             if (auto vectorElement = makeVectorElement(typedNull, element))
-                vector.uncheckedAppend(WTFMove(*vectorElement));
+                vector.append(WTFMove(*vectorElement));
         }
     }
     vector.shrinkToFit();
@@ -153,16 +153,26 @@ template<typename MapLambdaType> Vector<typename LambdaTypeTraits<MapLambdaType>
     for (CFIndex i = 0; i < count; ++i) {
         if (CFType element = dynamic_cf_cast<CFType>(CFArrayGetValueAtIndex(array, i))) {
             if (auto vectorElement = std::invoke(std::forward<MapLambdaType>(lambda), element))
-                vector.uncheckedAppend(WTFMove(*vectorElement));
+                vector.append(WTFMove(*vectorElement));
         }
     }
     vector.shrinkToFit();
     return vector;
 }
 
-inline Vector<uint8_t> vectorFromCFData(CFDataRef data)
+inline std::span<const uint8_t> span(CFDataRef data)
 {
-    return { reinterpret_cast<const uint8_t*>(CFDataGetBytePtr(data)), Checked<size_t>(CFDataGetLength(data)) };
+    return { static_cast<const uint8_t*>(CFDataGetBytePtr(data)), Checked<size_t>(CFDataGetLength(data)) };
+}
+
+inline RetainPtr<CFDataRef> toCFData(std::span<const uint8_t> span)
+{
+    return adoptCF(CFDataCreate(kCFAllocatorDefault, span.data(), span.size()));
+}
+
+inline Vector<uint8_t> makeVector(CFDataRef data)
+{
+    return span(data);
 }
 
 // Conversion function implementations. See also StringCF.cpp.
@@ -183,6 +193,7 @@ inline std::optional<float> makeVectorElement(const float*, CFNumberRef cfNumber
 
 using WTF::createCFArray;
 using WTF::makeVector;
-using WTF::vectorFromCFData;
+using WTF::span;
+using WTF::toCFData;
 
 #endif // USE(CF)

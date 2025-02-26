@@ -43,7 +43,7 @@ namespace WebCore {
 
 template<typename IDLType> class DOMPromiseProxyWithResolveCallback;
 
-class FontFace final : public RefCounted<FontFace>, public ActiveDOMObject, public CSSFontFace::Client {
+class FontFace final : public RefCounted<FontFace>, public ActiveDOMObject, public CSSFontFaceClient {
 public:
     struct Descriptors {
         String style;
@@ -52,7 +52,11 @@ public:
         String unicodeRange;
         String featureSettings;
         String display;
+        String sizeAdjust;
     };
+
+    using RefCounted::ref;
+    using RefCounted::deref;
 
     using Source = std::variant<String, RefPtr<JSC::ArrayBuffer>, RefPtr<JSC::ArrayBufferView>>;
     static Ref<FontFace> create(ScriptExecutionContext&, const String& family, Source&&, const Descriptors&);
@@ -66,6 +70,7 @@ public:
     ExceptionOr<void> setUnicodeRange(ScriptExecutionContext&, const String&);
     ExceptionOr<void> setFeatureSettings(ScriptExecutionContext&, const String&);
     ExceptionOr<void> setDisplay(ScriptExecutionContext&, const String&);
+    ExceptionOr<void> setSizeAdjust(ScriptExecutionContext&, const String&);
 
     String family() const;
     String style() const;
@@ -74,6 +79,7 @@ public:
     String unicodeRange() const;
     String featureSettings() const;
     String display() const;
+    String sizeAdjust() const;
 
     enum class LoadStatus { Unloaded, Loading, Loaded, Error };
     LoadStatus status() const;
@@ -88,15 +94,15 @@ public:
 
     void fontStateChanged(CSSFontFace&, CSSFontFace::Status oldState, CSSFontFace::Status newState) final;
 
-    void ref() final { RefCounted::ref(); }
-    void deref() final { RefCounted::deref(); }
+    // ActiveDOMObject.
+    void ref() const final { RefCounted::ref(); }
+    void deref() const final { RefCounted::deref(); }
 
 private:
     explicit FontFace(CSSFontSelector&);
     explicit FontFace(ScriptExecutionContext*, CSSFontFace&);
 
     // ActiveDOMObject.
-    const char* activeDOMObjectName() const final;
     bool virtualHasPendingActivity() const final;
 
     // Callback for LoadedPromise.

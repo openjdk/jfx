@@ -43,7 +43,7 @@ public:
     LocalAllocator(BlockDirectory*);
     JS_EXPORT_PRIVATE ~LocalAllocator();
 
-    void* allocate(Heap&, GCDeferralContext*, AllocationFailureMode);
+    void* allocate(Heap&, size_t cellSize, GCDeferralContext*, AllocationFailureMode);
 
     unsigned cellSize() const { return m_freeList.cellSize(); }
 
@@ -52,8 +52,8 @@ public:
     void resumeAllocating();
     void stopAllocatingForGood();
 
-    static ptrdiff_t offsetOfFreeList();
-    static ptrdiff_t offsetOfCellSize();
+    static constexpr ptrdiff_t offsetOfFreeList();
+    static constexpr ptrdiff_t offsetOfCellSize();
 
     bool isFreeListedCell(const void*) const;
 
@@ -63,11 +63,11 @@ private:
     friend class BlockDirectory;
 
     void reset();
-    JS_EXPORT_PRIVATE void* allocateSlowCase(Heap&, GCDeferralContext*, AllocationFailureMode);
+    JS_EXPORT_PRIVATE void* allocateSlowCase(Heap&, size_t, GCDeferralContext*, AllocationFailureMode);
     void didConsumeFreeList();
-    void* tryAllocateWithoutCollecting();
-    void* tryAllocateIn(MarkedBlock::Handle*);
-    void* allocateIn(MarkedBlock::Handle*);
+    void* tryAllocateWithoutCollecting(size_t);
+    void* tryAllocateIn(MarkedBlock::Handle*, size_t);
+    void* allocateIn(MarkedBlock::Handle*, size_t cellSize);
     ALWAYS_INLINE void doTestCollectionsIfNeeded(Heap&, GCDeferralContext*);
 
     BlockDirectory* m_directory;
@@ -81,12 +81,12 @@ private:
     unsigned m_allocationCursor { 0 }; // Points to the next block that is a candidate for allocation.
 };
 
-inline ptrdiff_t LocalAllocator::offsetOfFreeList()
+inline constexpr ptrdiff_t LocalAllocator::offsetOfFreeList()
 {
     return OBJECT_OFFSETOF(LocalAllocator, m_freeList);
 }
 
-inline ptrdiff_t LocalAllocator::offsetOfCellSize()
+inline constexpr ptrdiff_t LocalAllocator::offsetOfCellSize()
 {
     return OBJECT_OFFSETOF(LocalAllocator, m_freeList) + FreeList::offsetOfCellSize();
 }

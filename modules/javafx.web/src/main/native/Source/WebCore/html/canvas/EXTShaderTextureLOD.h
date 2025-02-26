@@ -26,16 +26,18 @@
 #pragma once
 
 #include "WebGLExtension.h"
+#include "WebGLRenderingContextBase.h"
+#include <wtf/Noncopyable.h>
+#include <wtf/TZoneMalloc.h>
 
 namespace WebCore {
 
-class EXTShaderTextureLOD final : public WebGLExtension {
-    WTF_MAKE_ISO_ALLOCATED(EXTShaderTextureLOD);
+class EXTShaderTextureLOD final : public WebGLExtension<WebGLRenderingContextBase> {
+    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(EXTShaderTextureLOD);
+    WTF_MAKE_NONCOPYABLE(EXTShaderTextureLOD);
 public:
     explicit EXTShaderTextureLOD(WebGLRenderingContextBase&);
-    virtual ~EXTShaderTextureLOD();
-
-    ExtensionName getName() const override;
+    ~EXTShaderTextureLOD();
 
     static bool supported(GraphicsContextGL&);
 };

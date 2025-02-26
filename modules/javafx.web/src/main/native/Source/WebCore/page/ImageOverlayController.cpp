@@ -30,18 +30,18 @@
 #include "ChromeClient.h"
 #include "Document.h"
 #include "Editor.h"
-#include "Frame.h"
 #include "FrameSelection.h"
 #include "GraphicsContext.h"
 #include "HTMLElement.h"
 #include "ImageOverlay.h"
 #include "IntRect.h"
 #include "LayoutRect.h"
+#include "LocalFrame.h"
 #include "Page.h"
 #include "PageOverlayController.h"
 #include "PlatformMouseEvent.h"
 #include "RenderElement.h"
-#include "RenderStyle.h"
+#include "RenderStyleInlines.h"
 #include "SimpleRange.h"
 #include "VisiblePosition.h"
 
@@ -54,9 +54,9 @@ ImageOverlayController::ImageOverlayController(Page& page)
 {
 }
 
-void ImageOverlayController::selectionQuadsDidChange(Frame& frame, const Vector<FloatQuad>& quads)
+void ImageOverlayController::selectionQuadsDidChange(LocalFrame& frame, const Vector<FloatQuad>& quads)
 {
-    if (!m_page || !m_page->chrome().client().needsImageOverlayControllerForSelectionPainting())
+    if (!m_page || !protectedPage()->chrome().client().needsImageOverlayControllerForSelectionPainting())
         return;
 
     if (frame.editor().ignoreSelectionChanges() || frame.editor().isGettingDictionaryPopupInfo())
@@ -131,7 +131,7 @@ PageOverlay& ImageOverlayController::installPageOverlayIfNeeded()
         return *m_overlay;
 
     m_overlay = PageOverlay::create(*this, PageOverlay::OverlayType::Document);
-    m_page->pageOverlayController().installPageOverlay(*m_overlay, PageOverlay::FadeMode::DoNotFade);
+    protectedPage()->pageOverlayController().installPageOverlay(*protectedOverlay(), PageOverlay::FadeMode::DoNotFade);
     return *m_overlay;
 }
 
@@ -150,7 +150,12 @@ void ImageOverlayController::uninstallPageOverlay()
     if (!m_page || !overlayToUninstall)
         return;
 
-    m_page->pageOverlayController().uninstallPageOverlay(*overlayToUninstall, PageOverlay::FadeMode::DoNotFade);
+    protectedPage()->pageOverlayController().uninstallPageOverlay(*overlayToUninstall, PageOverlay::FadeMode::DoNotFade);
+}
+
+RefPtr<Page> ImageOverlayController::protectedPage() const
+{
+    return m_page.get();
 }
 
 void ImageOverlayController::uninstallPageOverlayIfNeeded()
@@ -207,7 +212,7 @@ bool ImageOverlayController::platformHandleMouseEvent(const PlatformMouseEvent&)
     return false;
 }
 
-void ImageOverlayController::elementUnderMouseDidChange(Frame&, Element*)
+void ImageOverlayController::elementUnderMouseDidChange(LocalFrame&, Element*)
 {
 }
 

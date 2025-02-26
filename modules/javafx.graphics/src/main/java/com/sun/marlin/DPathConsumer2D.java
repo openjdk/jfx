@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2007, 2018, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2007, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -26,13 +26,41 @@
 package com.sun.marlin;
 
 public interface DPathConsumer2D {
-    public void moveTo(double x0, double y0);
-    public void lineTo(double x1, double y1);
-    public void quadTo(double xc, double yc,
-                       double x1, double y1);
-    public void curveTo(double xc0, double yc0,
-                        double xc1, double yc1,
-                        double x1, double y1);
+    /**
+     * @see java.awt.geom.Path2D.Double#moveTo
+     */
+    public void moveTo(double x, double y);
+
+    /**
+     * @see java.awt.geom.Path2D.Double#lineTo
+     */
+    public void lineTo(double x, double y);
+
+    /**
+     * @see java.awt.geom.Path2D.Double#quadTo
+     */
+    public void quadTo(double x1, double y1,
+                       double x2, double y2);
+
+    /**
+     * @see java.awt.geom.Path2D.Double#curveTo
+     */
+    public void curveTo(double x1, double y1,
+                        double x2, double y2,
+                        double x3, double y3);
+
+    /**
+     * @see java.awt.geom.Path2D.Double#closePath
+     */
     public void closePath();
+
+    /**
+     * Called after the last segment of the last subpath when the
+     * iteration of the path segments is completely done.  This
+     * method serves to trigger the end of path processing in the
+     * consumer that would normally be triggered when a
+     * {@link java.awt.geom.PathIterator PathIterator}
+     * returns {@code true} from its {@code done} method.
+     */
     public void pathDone();
 }

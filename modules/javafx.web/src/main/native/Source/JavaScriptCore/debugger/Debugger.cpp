@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2008-2022 Apple Inc. All rights reserved.
+ *  Copyright (C) 2008-2023 Apple Inc. All rights reserved.
  *  Copyright (C) 1999-2001 Harri Porten (porten@kde.org)
  *  Copyright (C) 2001 Peter Kelly (pmk@post.com)
  *
@@ -29,17 +29,22 @@
 #include "JSCInlines.h"
 #include "MarkedSpaceInlines.h"
 #include "Microtask.h"
-#include "VMEntryScope.h"
+#include "VMEntryScopeInlines.h"
 #include "VMTrapsInlines.h"
+#include <wtf/ForbidHeapAllocation.h>
 #include <wtf/HashMap.h>
 #include <wtf/HashSet.h>
 #include <wtf/RefPtr.h>
+#include <wtf/TZoneMallocInlines.h>
 #include <wtf/Vector.h>
 #include <wtf/text/TextPosition.h>
 
 namespace JSC {
 
+WTF_MAKE_TZONE_ALLOCATED_IMPL(Debugger);
+
 class DebuggerPausedScope {
+    WTF_FORBID_HEAP_ALLOCATION;
 public:
     DebuggerPausedScope(Debugger& debugger)
         : m_debugger(debugger)
@@ -108,9 +113,7 @@ void Debugger::TemporarilyDisableExceptionBreakpoints::restore()
 }
 
 
-Debugger::ProfilingClient::~ProfilingClient()
-{
-}
+Debugger::ProfilingClient::~ProfilingClient() = default;
 
 Debugger::Debugger(VM& vm)
     : m_vm(vm)
@@ -150,6 +153,7 @@ void Debugger::attach(JSGlobalObject* globalObject)
     // Call `sourceParsed` after iterating because it will execute JavaScript in Web Inspector.
     HashSet<RefPtr<SourceProvider>> sourceProviders;
     {
+        JSLockHolder locker(m_vm);
         HeapIterationScope iterationScope(m_vm.heap);
         m_vm.heap.objectSpace().forEachLiveCell(iterationScope, [&] (HeapCell* heapCell, HeapCell::Kind kind) {
             if (isJSCellKind(kind)) {
@@ -848,7 +852,8 @@ void Debugger::breakProgram(RefPtr<Breakpoint>&& specialBreakpoint)
 
 void Debugger::continueProgram()
 {
-    clearNextPauseState();
+    resetImmediatePauseState();
+    resetEventualPauseState();
     m_deferredBreakpoints.clear();
 
     if (!m_isPaused)
@@ -945,12 +950,18 @@ void Debugger::pauseIfNeeded(JSGlobalObject* globalObject)
         return;
 
     SourceID sourceID = DebuggerCallFrame::sourceIDForCallFrame(m_currentCallFrame);
+    TextPosition position = DebuggerCallFrame::positionForCallFrame(vm, m_currentCallFrame);
 
-    auto blackboxTypeIterator = m_blackboxedScripts.find(sourceID);
-    if (blackboxTypeIterator != m_blackboxedScripts.end() && blackboxTypeIterator->value == BlackboxType::Ignored)
+    BlackboxFlags relevantBlackboxFlags;
+    if (const auto it = m_blackboxConfigurations.find(sourceID); it != m_blackboxConfigurations.end()) {
+        for (const auto& [blackboxRange, blackboxFlags] : it->value) {
+            if (position < blackboxRange.first || position >= blackboxRange.second)
+                continue;
+            relevantBlackboxFlags.add(blackboxFlags);
+            if (relevantBlackboxFlags.contains(BlackboxFlag::Ignore))
         return;
-
-    DebuggerPausedScope debuggerPausedScope(*this);
+        }
+    }
 
     bool afterBlackboxedScript = m_afterBlackboxedScript;
     bool pauseNow = false;
@@ -962,8 +973,6 @@ void Debugger::pauseIfNeeded(JSGlobalObject* globalObject)
         pauseNow = true;
         didPauseForStep = true;
     }
-
-    TextPosition position = DebuggerCallFrame::positionForCallFrame(vm, m_currentCallFrame);
 
     if (auto breakpoint = didHitBreakpoint(sourceID, position)) {
         pauseNow = true;
@@ -980,17 +989,21 @@ void Debugger::pauseIfNeeded(JSGlobalObject* globalObject)
     if (!pauseNow)
         return;
 
-    clearNextPauseState();
+    DebuggerPausedScope debuggerPausedScope(*this);
+
+    resetImmediatePauseState();
+
+    // Don't clear the `m_pauseOnCallFrame` if we've not hit it yet, as we may have encountered a breakpoint that won't pause.
+    bool atDesiredCallFrame = !m_pauseOnCallFrame || m_pauseOnCallFrame == m_currentCallFrame;
+    if (atDesiredCallFrame)
+        resetEventualPauseState();
 
     // Make sure we are not going to pause again on breakpoint actions by
     // reseting the pause state before executing any breakpoint actions.
     TemporaryPausedState pausedState(*this);
 
     auto shouldDeferPause = [&] () {
-        if (blackboxTypeIterator == m_blackboxedScripts.end())
-            return false;
-
-        if (blackboxTypeIterator->value != BlackboxType::Deferred)
+        if (!relevantBlackboxFlags.contains(BlackboxFlag::Defer))
             return false;
 
         m_afterBlackboxedScript = true;
@@ -1052,6 +1065,10 @@ void Debugger::pauseIfNeeded(JSGlobalObject* globalObject)
 
     if (!m_blackboxBreakpointEvaluations && shouldDeferPause())
         return;
+
+    // Clear `m_pauseOnCallFrame` as we're actually pausing at this point.
+    if (!atDesiredCallFrame)
+        resetEventualPauseState();
 
     {
         auto reason = m_reasonForPause;
@@ -1293,19 +1310,24 @@ void Debugger::didExecuteProgram(CallFrame* callFrame)
 
     // Do not continue stepping into an unknown future program.
     if (!m_currentCallFrame) {
-        clearNextPauseState();
+        resetImmediatePauseState();
+        resetEventualPauseState();
         m_deferredBreakpoints.clear();
     }
 }
 
-void Debugger::clearNextPauseState()
+void Debugger::resetImmediatePauseState()
 {
-    m_pauseOnCallFrame = nullptr;
     m_pauseAtNextOpportunity = false;
-    m_pauseOnStepNext = false;
-    m_pauseOnStepOut = false;
     m_afterBlackboxedScript = false;
     m_specialBreakpoint = nullptr;
+}
+
+void Debugger::resetEventualPauseState()
+{
+    m_pauseOnCallFrame = nullptr;
+    m_pauseOnStepNext = false;
+    m_pauseOnStepOut = false;
 }
 
 void Debugger::didReachDebuggerStatement(CallFrame* callFrame)
@@ -1350,12 +1372,12 @@ DebuggerCallFrame& Debugger::currentDebuggerCallFrame()
     return *m_currentDebuggerCallFrame;
 }
 
-void Debugger::setBlackboxType(SourceID sourceID, std::optional<BlackboxType> type)
+void Debugger::setBlackboxConfiguration(SourceID sourceID, BlackboxConfiguration&& blackboxConfiguration)
 {
-    if (type)
-        m_blackboxedScripts.set(sourceID, type.value());
+    if (blackboxConfiguration.isEmpty())
+        m_blackboxConfigurations.remove(sourceID);
     else
-        m_blackboxedScripts.remove(sourceID);
+        m_blackboxConfigurations.set(sourceID, WTFMove(blackboxConfiguration));
 }
 
 void Debugger::setBlackboxBreakpointEvaluations(bool blackboxBreakpointEvaluations)
@@ -1365,7 +1387,7 @@ void Debugger::setBlackboxBreakpointEvaluations(bool blackboxBreakpointEvaluatio
 
 void Debugger::clearBlackbox()
 {
-    m_blackboxedScripts.clear();
+    m_blackboxConfigurations.clear();
 }
 
 } // namespace JSC

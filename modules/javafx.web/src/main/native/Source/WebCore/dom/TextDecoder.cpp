@@ -25,9 +25,9 @@
 #include "config.h"
 #include "TextDecoder.h"
 
-#include "HTMLParserIdioms.h"
 #include <pal/text/TextCodec.h>
 #include <pal/text/TextEncodingRegistry.h>
+#include <wtf/text/MakeString.h>
 
 namespace WebCore {
 
@@ -41,25 +41,23 @@ TextDecoder::~TextDecoder() = default;
 
 ExceptionOr<Ref<TextDecoder>> TextDecoder::create(const String& label, Options options)
 {
-    String strippedLabel = stripLeadingAndTrailingHTMLSpaces(label);
+    auto trimmedLabel = label.trim(isASCIIWhitespace);
     const UChar nullCharacter = '\0';
-    if (strippedLabel.contains(nullCharacter))
-        return Exception { RangeError };
-    auto decoder = adoptRef(*new TextDecoder(strippedLabel, options));
+    if (trimmedLabel.contains(nullCharacter))
+        return Exception { ExceptionCode::RangeError };
+    auto decoder = adoptRef(*new TextDecoder(trimmedLabel, options));
     if (!decoder->m_textEncoding.isValid() || !strcmp(decoder->m_textEncoding.name(), "replacement"))
-        return Exception { RangeError };
+        return Exception { ExceptionCode::RangeError };
     return decoder;
 }
 
 ExceptionOr<String> TextDecoder::decode(std::optional<BufferSource::VariantType> input, DecodeOptions options)
 {
     std::optional<BufferSource> inputBuffer;
-    const uint8_t* data = nullptr;
-    size_t length = 0;
+    std::span<const uint8_t> data;
     if (input) {
         inputBuffer = BufferSource(WTFMove(input.value()));
-        data = inputBuffer->data();
-        length = inputBuffer->length();
+        data = inputBuffer->span();
     }
 
     if (!m_codec) {
@@ -68,14 +66,18 @@ ExceptionOr<String> TextDecoder::decode(std::optional<BufferSource::VariantType>
             m_codec->stripByteOrderMark();
     }
 
+    m_decodedBytes += data.size();
+    if (m_decodedBytes > String::MaxLength)
+        return Exception { ExceptionCode::RangeError };
+
     bool sawError = false;
-    String result = m_codec->decode(reinterpret_cast<const char*>(data), length, !options.stream, m_options.fatal, sawError);
+    String result = m_codec->decode(data, !options.stream, m_options.fatal, sawError);
 
     if (!options.stream && !m_options.ignoreBOM)
         m_codec->stripByteOrderMark();
 
     if (sawError && m_options.fatal)
-        return Exception { TypeError };
+        return Exception { ExceptionCode::TypeError };
     return result;
 }
 

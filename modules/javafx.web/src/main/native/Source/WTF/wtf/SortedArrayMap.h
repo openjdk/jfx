@@ -115,7 +115,7 @@ public:
     template<unsigned size> constexpr PackedASCIISubsetLiteral(const char (&characters)[size]);
     constexpr StorageInteger value() const { return m_value; }
 
-    template<typename CharacterType> static std::optional<PackedASCIISubsetLiteral> parse(Span<const CharacterType>);
+    template<typename CharacterType> static std::optional<PackedASCIISubsetLiteral> parse(std::span<const CharacterType>);
 
 private:
     template<unsigned size> static constexpr StorageInteger pack(const char (&characters)[size]);
@@ -234,13 +234,16 @@ constexpr int strcmpConstExpr(const char* a, const char* b)
     return *a == *b ? 0 : *a < *b ? -1 : 1;
 }
 
-template<typename CharacterType> inline bool lessThanASCIICaseFolding(const CharacterType* characters, unsigned length, const char* literalWithNoUppercase)
+template<typename CharacterType> inline bool lessThanASCIICaseFolding(std::span<const CharacterType> characters, const char* literalWithNoUppercase)
 {
-    for (unsigned i = 0; i < length; ++i) {
-        if (!literalWithNoUppercase[i])
+    for (auto character : characters) {
+        auto literalCharacter = *literalWithNoUppercase;
+        if (!literalCharacter)
             return false;
-        if (auto character = toASCIILower(characters[i]); character != literalWithNoUppercase[i])
-            return character < literalWithNoUppercase[i];
+        character = toASCIILower(character);
+        if (character != literalCharacter)
+            return character < literalCharacter;
+        ++literalWithNoUppercase;
     }
     return true;
 }
@@ -248,17 +251,20 @@ template<typename CharacterType> inline bool lessThanASCIICaseFolding(const Char
 inline bool lessThanASCIICaseFolding(StringView string, const char* literalWithNoUppercase)
 {
     if (string.is8Bit())
-        return lessThanASCIICaseFolding(string.characters8(), string.length(), literalWithNoUppercase);
-    return lessThanASCIICaseFolding(string.characters16(), string.length(), literalWithNoUppercase);
+        return lessThanASCIICaseFolding(string.span8(), literalWithNoUppercase);
+    return lessThanASCIICaseFolding(string.span16(), literalWithNoUppercase);
 }
 
-template<typename CharacterType> inline bool lessThanASCIICaseFolding(const char* literalWithNoUppercase, const CharacterType* characters, unsigned length)
+template<typename CharacterType> inline bool lessThanASCIICaseFolding(const char* literalWithNoUppercase, std::span<const CharacterType> characters)
 {
-    for (unsigned i = 0; i < length; ++i) {
-        if (!literalWithNoUppercase[i])
+    for (auto character : characters) {
+        auto literalCharacter = *literalWithNoUppercase;
+        if (!literalCharacter)
             return true;
-        if (auto character = toASCIILower(characters[i]); character != literalWithNoUppercase[i])
-            return literalWithNoUppercase[i] < character;
+        character = toASCIILower(character);
+        if (character != literalCharacter)
+            return literalCharacter < character;
+        ++literalWithNoUppercase;
     }
     return false;
 }
@@ -266,8 +272,8 @@ template<typename CharacterType> inline bool lessThanASCIICaseFolding(const char
 inline bool lessThanASCIICaseFolding(const char* literalWithNoUppercase, StringView string)
 {
     if (string.is8Bit())
-        return lessThanASCIICaseFolding(literalWithNoUppercase, string.characters8(), string.length());
-    return lessThanASCIICaseFolding(literalWithNoUppercase, string.characters16(), string.length());
+        return lessThanASCIICaseFolding(literalWithNoUppercase, string.span8());
+    return lessThanASCIICaseFolding(literalWithNoUppercase, string.span16());
 }
 
 template<ASCIISubset subset> constexpr bool operator==(ComparableASCIISubsetLiteral<subset> a, ComparableASCIISubsetLiteral<subset> b)
@@ -355,7 +361,7 @@ template<typename StorageInteger, ASCIISubset subset> template<unsigned size> co
     return result;
 }
 
-template<typename StorageInteger, ASCIISubset subset> template<typename CharacterType> auto PackedASCIISubsetLiteral<StorageInteger, subset>::parse(Span<const CharacterType> span) -> std::optional<PackedASCIISubsetLiteral>
+template<typename StorageInteger, ASCIISubset subset> template<typename CharacterType> auto PackedASCIISubsetLiteral<StorageInteger, subset>::parse(std::span<const CharacterType> span) -> std::optional<PackedASCIISubsetLiteral>
 {
     if (span.size() > sizeof(StorageInteger))
         return std::nullopt;
@@ -387,7 +393,7 @@ template<ASCIISubset subset> struct SortedArrayKeyTraits<ComparableASCIISubsetLi
 };
 
 template<typename StorageInteger, ASCIISubset subset> struct SortedArrayKeyTraits<PackedASCIISubsetLiteral<StorageInteger, subset>> {
-    template<typename CharacterType> static std::optional<PackedASCIISubsetLiteral<StorageInteger, subset>> parse(Span<const CharacterType> span)
+    template<typename CharacterType> static std::optional<PackedASCIISubsetLiteral<StorageInteger, subset>> parse(std::span<const CharacterType> span)
     {
         return PackedASCIISubsetLiteral<StorageInteger, subset>::parse(span);
     }

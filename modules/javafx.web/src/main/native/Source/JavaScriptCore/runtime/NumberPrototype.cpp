@@ -29,9 +29,11 @@
 #include "Operations.h"
 #include "ParseInt.h"
 #include "Uint16WithFraction.h"
-#include <wtf/dtoa.h>
 #include <wtf/Assertions.h>
+#include <wtf/dragonbox/dragonbox_to_chars.h>
+#include <wtf/dtoa.h>
 #include <wtf/dtoa/double-conversion.h>
+#include <wtf/text/MakeString.h>
 
 using DoubleToStringConverter = WTF::double_conversion::DoubleToStringConverter;
 
@@ -106,7 +108,7 @@ static ALWAYS_INLINE EncodedJSValue throwVMToThisNumberError(JSGlobalObject* glo
 {
     auto typeString = jsTypeStringForValue(globalObject, thisValue)->value(globalObject);
     scope.assertNoException();
-    return throwVMTypeError(globalObject, scope, WTF::makeString("thisNumberValue called on incompatible ", typeString));
+    return throwVMTypeError(globalObject, scope, WTF::makeString("thisNumberValue called on incompatible "_s, typeString.data));
 }
 
 // The largest finite floating point number is 1.mantissa * 2^(0x7fe-0x3ff).
@@ -353,14 +355,14 @@ static String toStringWithRadixInternal(int32_t number, unsigned radix)
     do {
         uint32_t index = positiveNumber % radix;
         ASSERT(index < sizeof(radixDigits));
-        *--p = static_cast<LChar>(radixDigits[index]);
+        *--p = radixDigits[index];
         positiveNumber /= radix;
     } while (positiveNumber);
 
     if (negative)
         *--p = '-';
 
-    return String(p, static_cast<unsigned>(end - p));
+    return String({ p, end });
 }
 
 String toStringWithRadix(double doubleValue, int32_t radix)
@@ -406,12 +408,13 @@ JSC_DEFINE_HOST_FUNCTION(numberProtoFuncToExponential, (JSGlobalObject* globalOb
     // Round if the argument is not undefined, always format as exponential.
     NumberToStringBuffer buffer;
     DoubleConversionStringBuilder builder { &buffer[0], sizeof(buffer) };
-    const DoubleToStringConverter& converter = DoubleToStringConverter::EcmaScriptConverter();
     builder.Reset();
     if (arg.isUndefined())
-        converter.ToExponential(x, -1, &builder);
-    else
+        WTF::dragonbox::ToExponential(x, &builder);
+    else {
+        const DoubleToStringConverter& converter = DoubleToStringConverter::EcmaScriptConverter();
         converter.ToExponential(x, decimalPlaces, &builder);
+    }
     return JSValue::encode(jsString(vm, String::fromLatin1(builder.Finalize())));
 }
 
@@ -436,7 +439,7 @@ JSC_DEFINE_HOST_FUNCTION(numberProtoFuncToFixed, (JSGlobalObject* globalObject, 
     // 15.7.4.5.7 states "If x >= 10^21, then let m = ToString(x)"
     // This also covers Ininity, and structure the check so that NaN
     // values are also handled by numberToString
-    if (!(fabs(x) < 1e+21))
+    if (!(std::abs(x) < 1e+21))
         return JSValue::encode(jsString(vm, String::number(x)));
 
     // The check above will return false for NaN or Infinity, these will be
@@ -478,21 +481,68 @@ JSC_DEFINE_HOST_FUNCTION(numberProtoFuncToPrecision, (JSGlobalObject* globalObje
     if (significantFigures < 1 || significantFigures > 100)
         return throwVMRangeError(globalObject, scope, "toPrecision() argument must be between 1 and 100"_s);
 
-    return JSValue::encode(jsString(vm, String::numberToStringFixedPrecision(x, significantFigures, KeepTrailingZeros)));
+    return JSValue::encode(jsString(vm, String::numberToStringFixedPrecision(x, significantFigures, TrailingZerosPolicy::Keep)));
+}
+
+JSString* NumericStrings::addJSString(VM& vm, int i)
+{
+    if (static_cast<unsigned>(i) < cacheSize) {
+        auto& entry = lookupSmallString(static_cast<unsigned>(i));
+        if (entry.jsString)
+            return entry.jsString;
+        entry.jsString = jsNontrivialString(vm, entry.value);
+        return entry.jsString;
+    }
+    auto& entry = lookup(i);
+    if (i != entry.key || entry.value.isNull()) {
+        entry.key = i;
+        entry.value = String::number(i);
+    } else {
+        if (entry.jsString)
+            return entry.jsString;
+    }
+    entry.jsString = jsNontrivialString(vm, entry.value);
+    return entry.jsString;
+}
+
+JSString* NumericStrings::addJSString(VM& vm, double value)
+{
+    auto& entry = lookup(value);
+    if (value != entry.key || entry.value.isNull()) {
+        entry.key = value;
+        entry.value = String::number(value);
+    } else {
+        if (entry.jsString)
+            return entry.jsString;
+    }
+    entry.jsString = jsNontrivialString(vm, entry.value);
+    return entry.jsString;
+}
+
+void NumericStrings::initializeSmallIntCache(VM& vm)
+{
+    for (int i = 0; i < 10; ++i) {
+        auto* string = vm.smallStrings.singleCharacterString(i + '0');
+        auto& entry = lookupSmallString(static_cast<unsigned>(i));
+        entry.jsString = string;
+        ASSERT(string->tryGetValueImpl());
+        entry.value = string->tryGetValue();
+    }
 }
 
 static ALWAYS_INLINE JSString* int32ToStringInternal(VM& vm, int32_t value, int32_t radix)
 {
     ASSERT(!(radix < 2 || radix > 36));
+
+    if (radix == 10)
+        return vm.numericStrings.addJSString(vm, value);
+
     // A negative value casted to unsigned would be bigger than 36 (the max radix).
     if (static_cast<unsigned>(value) < static_cast<unsigned>(radix)) {
         ASSERT(value <= 36);
         ASSERT(value >= 0);
         return vm.smallStrings.singleCharacterString(radixDigits[value]);
     }
-
-    if (radix == 10)
-        return jsNontrivialString(vm, vm.numericStrings.add(value));
 
     return jsNontrivialString(vm, toStringWithRadixInternal(value, radix));
 
@@ -507,7 +557,7 @@ static ALWAYS_INLINE JSString* numberToStringInternal(VM& vm, double doubleValue
         return int32ToStringInternal(vm, integerValue, radix);
 
     if (radix == 10)
-        return jsString(vm, vm.numericStrings.add(doubleValue));
+        return vm.numericStrings.addJSString(vm, doubleValue);
 
     if (!std::isfinite(doubleValue))
         return jsNontrivialString(vm, String::number(doubleValue));
@@ -530,6 +580,9 @@ JSString* int52ToString(VM& vm, int64_t value, int32_t radix)
         ASSERT(value >= 0);
         return vm.smallStrings.singleCharacterString(radixDigits[value]);
     }
+
+    if (isInRange<int64_t>(value, INT32_MIN, INT32_MAX))
+        return int32ToString(vm, static_cast<int32_t>(value), radix);
 
     if (radix == 10)
         return jsNontrivialString(vm, vm.numericStrings.add(static_cast<double>(value)));
@@ -573,9 +626,17 @@ JSC_DEFINE_HOST_FUNCTION(numberProtoFuncToLocaleString, (JSGlobalObject* globalO
     if (!toThisNumber(callFrame->thisValue(), x))
         return throwVMToThisNumberError(globalObject, scope, callFrame->thisValue());
 
-    auto* numberFormat = IntlNumberFormat::create(vm, globalObject->numberFormatStructure());
-    numberFormat->initializeNumberFormat(globalObject, callFrame->argument(0), callFrame->argument(1));
-    RETURN_IF_EXCEPTION(scope, encodedJSValue());
+    JSValue locales = callFrame->argument(0);
+    JSValue options = callFrame->argument(1);
+    IntlNumberFormat* numberFormat = nullptr;
+    if (locales.isUndefined() && options.isUndefined())
+        numberFormat = globalObject->defaultNumberFormat();
+    else {
+        numberFormat = IntlNumberFormat::create(vm, globalObject->numberFormatStructure());
+        numberFormat->initializeNumberFormat(globalObject, locales, options);
+    }
+    RETURN_IF_EXCEPTION(scope, { });
+
     RELEASE_AND_RETURN(scope, JSValue::encode(numberFormat->format(globalObject, x)));
 }
 

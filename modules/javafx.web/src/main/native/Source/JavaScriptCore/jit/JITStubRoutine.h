@@ -25,8 +25,6 @@
 
 #pragma once
 
-#if ENABLE(JIT)
-
 #include "ExecutableAllocator.h"
 #include "MacroAssemblerCodeRef.h"
 #include "StructureID.h"
@@ -41,7 +39,8 @@ class GCAwareJITStubRoutineWithExceptionHandler;
 class PolymorphicAccessJITStubRoutine;
 class PolymorphicCallStubRoutine;
 class MarkingGCAwareJITStubRoutine;
-
+class CallLinkInfo;
+class ConcurrentJSLocker;
 class AccessCase;
 
 // This is a base-class for JIT stub routines, and also the class you want
@@ -61,10 +60,12 @@ public:
     enum class Type : uint8_t {
         JITStubRoutineType,
         GCAwareJITStubRoutineType,
-        PolymorphicAccessJITStubRoutineType,
         PolymorphicCallStubRoutineType,
+#if ENABLE(JIT)
+        PolymorphicAccessJITStubRoutineType,
         MarkingGCAwareJITStubRoutineType,
         GCAwareJITStubRoutineWithExceptionHandlerType,
+#endif
     };
 
     friend class GCAwareJITStubRoutine;
@@ -126,6 +127,7 @@ public:
     }
 
     bool visitWeak(VM&);
+    CallLinkInfo* callLinkInfoAt(const ConcurrentJSLocker&, unsigned);
     void markRequiredObjects(AbstractSlotVisitor&);
     void markRequiredObjects(SlotVisitor&);
 
@@ -137,10 +139,18 @@ protected:
     ALWAYS_INLINE void markRequiredObjectsImpl(AbstractSlotVisitor&) { }
     ALWAYS_INLINE void markRequiredObjectsImpl(SlotVisitor&) { }
 
+    template<typename Derived>
+    static void destroy(Derived* derived)
+    {
+        std::destroy_at(derived);
+        std::decay_t<decltype(*derived)>::freeAfterDestruction(derived);
+    }
+
     // Return true if you are still valid after. Return false if you are now invalid. If you return
     // false, you will usually not do any clearing because the idea is that you will simply be
     // destroyed.
     ALWAYS_INLINE bool visitWeakImpl(VM&) { return true; }
+    ALWAYS_INLINE CallLinkInfo* callLinkInfoAtImpl(const ConcurrentJSLocker&, unsigned) { return nullptr; }
 
     template<typename Func>
     ALWAYS_INLINE void runWithDowncast(const Func& function);
@@ -152,9 +162,7 @@ protected:
 };
 
 // Helper for the creation of simple stub routines that need no help from the GC.
-#define FINALIZE_CODE_FOR_STUB(codeBlock, patchBuffer, resultPtrTag, ...) \
-    (adoptRef(new JITStubRoutine(FINALIZE_CODE_FOR((codeBlock), (patchBuffer), (resultPtrTag), __VA_ARGS__))))
+#define FINALIZE_CODE_FOR_STUB(codeBlock, patchBuffer, resultPtrTag, simpleName, ...) \
+    (adoptRef(new JITStubRoutine(FINALIZE_CODE_FOR((codeBlock), (patchBuffer), (resultPtrTag), (simpleName), __VA_ARGS__))))
 
 } // namespace JSC
-
-#endif // ENABLE(JIT)

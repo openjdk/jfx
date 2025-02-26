@@ -26,15 +26,18 @@
 #pragma once
 
 #include "ContextDestructionObserver.h"
+#include "EventTarget.h"
 #include "QualifiedName.h"
 #include <wtf/Lock.h>
 #include <wtf/RobinHoodHashMap.h>
 #include <wtf/RobinHoodHashSet.h>
+#include <wtf/WeakPtr.h>
 #include <wtf/text/AtomString.h>
 #include <wtf/text/AtomStringHash.h>
 
 namespace JSC {
 
+class JSGlobalObject;
 class JSObject;
 class JSValue;
 
@@ -43,7 +46,7 @@ class JSValue;
 namespace WebCore {
 
 class CustomElementRegistry;
-class DOMWindow;
+class LocalDOMWindow;
 class DeferredPromise;
 class Document;
 class Element;
@@ -53,7 +56,7 @@ class QualifiedName;
 
 class CustomElementRegistry : public RefCounted<CustomElementRegistry>, public ContextDestructionObserver {
 public:
-    static Ref<CustomElementRegistry> create(DOMWindow&, ScriptExecutionContext*);
+    static Ref<CustomElementRegistry> create(LocalDOMWindow&, ScriptExecutionContext*);
     ~CustomElementRegistry();
 
     Document* document() const;
@@ -65,10 +68,11 @@ public:
     JSCustomElementInterface* findInterface(const Element&) const;
     JSCustomElementInterface* findInterface(const QualifiedName&) const;
     JSCustomElementInterface* findInterface(const AtomString&) const;
-    JSCustomElementInterface* findInterface(const JSC::JSObject*) const;
+    RefPtr<JSCustomElementInterface> findInterface(const JSC::JSObject*) const;
     bool containsConstructor(const JSC::JSObject*) const;
 
     JSC::JSValue get(const AtomString&);
+    String getName(JSC::JSValue);
     void upgrade(Node& root);
 
     MemoryCompactRobinHoodHashMap<AtomString, Ref<DeferredPromise>>& promiseMap() { return m_promiseMap; }
@@ -76,9 +80,9 @@ public:
 
     template<typename Visitor> void visitJSCustomElementInterfaces(Visitor&) const;
 private:
-    CustomElementRegistry(DOMWindow&, ScriptExecutionContext*);
+    CustomElementRegistry(LocalDOMWindow&, ScriptExecutionContext*);
 
-    DOMWindow& m_window;
+    WeakPtr<LocalDOMWindow, WeakPtrImplWithEventTargetData> m_window;
     HashMap<AtomString, Ref<JSCustomElementInterface>> m_nameMap;
     HashMap<const JSC::JSObject*, JSCustomElementInterface*> m_constructorMap WTF_GUARDED_BY_LOCK(m_constructorMapLock);
     MemoryCompactRobinHoodHashMap<AtomString, Ref<DeferredPromise>> m_promiseMap;

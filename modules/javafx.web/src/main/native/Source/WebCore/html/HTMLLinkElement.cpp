@@ -40,21 +40,26 @@
 #include "Event.h"
 #include "EventNames.h"
 #include "EventSender.h"
-#include "Frame.h"
 #include "FrameLoader.h"
-#include "FrameLoaderClient.h"
 #include "FrameTree.h"
-#include "FrameView.h"
 #include "HTMLAnchorElement.h"
 #include "HTMLNames.h"
 #include "HTMLParserIdioms.h"
+#include "IdTargetObserver.h"
+#include "JSRequestPriority.h"
+#include "LocalFrame.h"
+#include "LocalFrameLoaderClient.h"
+#include "LocalFrameView.h"
 #include "Logging.h"
 #include "MediaQueryEvaluator.h"
 #include "MediaQueryParser.h"
 #include "MediaQueryParserContext.h"
 #include "MouseEvent.h"
+#include "NodeName.h"
+#include "Page.h"
 #include "ParsedContentType.h"
 #include "RenderStyle.h"
+#include "RequestPriority.h"
 #include "SecurityOrigin.h"
 #include "Settings.h"
 #include "StyleInheritedData.h"
@@ -62,15 +67,17 @@
 #include "StyleScope.h"
 #include "StyleSheetContents.h"
 #include "SubresourceIntegrity.h"
-#include <wtf/IsoMallocInlines.h>
+#include "TreeScopeInlines.h"
 #include <wtf/Ref.h>
 #include <wtf/Scope.h>
 #include <wtf/StdLibExtras.h>
+#include <wtf/TZoneMallocInlines.h>
+#include <wtf/text/MakeString.h>
 #include <wtf/text/TextStream.h>
 
 namespace WebCore {
 
-WTF_MAKE_ISO_ALLOCATED_IMPL(HTMLLinkElement);
+WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(HTMLLinkElement);
 
 using namespace HTMLNames;
 
@@ -78,6 +85,30 @@ static LinkEventSender& linkLoadEventSender()
 {
     static NeverDestroyed<LinkEventSender> sharedLoadEventSender;
     return sharedLoadEventSender;
+}
+
+class ExpectIdTargetObserver final : public IdTargetObserver {
+    WTF_MAKE_FAST_ALLOCATED;
+    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(ExpectIdTargetObserver);
+public:
+    ExpectIdTargetObserver(const AtomString& id, HTMLLinkElement&);
+
+    void idTargetChanged() override;
+
+private:
+    WeakPtr<HTMLLinkElement, WeakPtrImplWithEventTargetData> m_element;
+};
+
+ExpectIdTargetObserver::ExpectIdTargetObserver(const AtomString& id, HTMLLinkElement& element)
+    : IdTargetObserver(element.treeScope().idTargetObserverRegistry(), id)
+    , m_element(element)
+{
+}
+
+void ExpectIdTargetObserver::idTargetChanged()
+{
+    if (m_element)
+        m_element->processInternalResourceLink();
 }
 
 inline HTMLLinkElement::HTMLLinkElement(const QualifiedName& tagName, Document& document, bool createdByParser)
@@ -153,62 +184,69 @@ void HTMLLinkElement::setDisabledState(bool disabled)
     else {
         ASSERT(m_styleScope);
         m_styleScope->didChangeActiveStyleSheetCandidates();
+        if (m_sheet)
+            clearSheet();
     }
 }
 
-void HTMLLinkElement::parseAttribute(const QualifiedName& name, const AtomString& value)
+void HTMLLinkElement::attributeChanged(const QualifiedName& name, const AtomString& oldValue, const AtomString& newValue, AttributeModificationReason attributeModificationReason)
 {
-    if (name == relAttr) {
-        auto parsedRel = LinkRelAttribute(document(), value);
+    switch (name.nodeName()) {
+    case AttributeNames::relAttr: {
+        auto parsedRel = LinkRelAttribute(document(), newValue);
         auto didMutateRel = parsedRel != m_relAttribute;
         m_relAttribute = WTFMove(parsedRel);
         if (m_relList)
-            m_relList->associatedAttributeValueChanged(value);
+            m_relList->associatedAttributeValueChanged();
         if (didMutateRel)
             process();
-        return;
+        break;
     }
-    if (name == hrefAttr) {
+    case AttributeNames::hrefAttr: {
         URL url = getNonEmptyURLAttribute(hrefAttr);
         if (url == m_url)
             return;
         m_url = WTFMove(url);
         process();
-        return;
+        break;
     }
-    if (name == typeAttr) {
-        if (value == m_type)
+    case AttributeNames::typeAttr:
+        if (newValue == m_type)
             return;
-        m_type = value;
+        m_type = newValue;
         process();
-        return;
-    }
-    if (name == sizesAttr) {
+        break;
+    case AttributeNames::sizesAttr:
         if (m_sizes)
-            m_sizes->associatedAttributeValueChanged(value);
+            m_sizes->associatedAttributeValueChanged();
         process();
-        return;
-    }
-    if (name == mediaAttr) {
-        auto media = value.string().convertToASCIILowercase();
+        break;
+    case AttributeNames::blockingAttr:
+        if (m_blockingList)
+            m_blockingList->associatedAttributeValueChanged();
+        process();
+        break;
+    case AttributeNames::mediaAttr: {
+        auto media = newValue.string().convertToASCIILowercase();
         if (media == m_media)
             return;
         m_media = WTFMove(media);
         process();
         if (m_sheet && !isDisabled())
             m_styleScope->didChangeActiveStyleSheetCandidates();
-        return;
+        break;
     }
-    if (name == disabledAttr) {
-        setDisabledState(!value.isNull());
-        return;
-    }
-    if (name == titleAttr) {
+    case AttributeNames::disabledAttr:
+        setDisabledState(!newValue.isNull());
+        break;
+    case AttributeNames::titleAttr:
         if (m_sheet && !isInShadowTree())
-            m_sheet->setTitle(value);
-        return;
+            m_sheet->setTitle(newValue);
+        break;
+    default:
+        HTMLElement::attributeChanged(name, oldValue, newValue, attributeModificationReason);
+        break;
     }
-    HTMLElement::parseAttribute(name, value);
 }
 
 bool HTMLLinkElement::shouldLoadLink()
@@ -256,6 +294,11 @@ void HTMLLinkElement::process()
     if (m_isHandlingBeforeLoad)
         return;
 
+    processInternalResourceLink();
+    if (m_relAttribute.isInternalResourceLink)
+        return;
+
+    Ref document = this->document();
     LinkLoadParameters params {
         m_relAttribute,
         m_url,
@@ -267,9 +310,10 @@ void HTMLLinkElement::process()
         attributeWithoutSynchronization(imagesizesAttr),
         nonce(),
         referrerPolicy(),
+        fetchPriorityHint(),
     };
 
-    m_linkLoader.loadLink(params, document());
+    m_linkLoader.loadLink(params, document);
 
     bool treatAsStyleSheet = false;
     if (m_relAttribute.isStyleSheet) {
@@ -279,19 +323,18 @@ void HTMLLinkElement::process()
             treatAsStyleSheet = equalLettersIgnoringASCIICase(parsedContentType->mimeType(), "text/css"_s);
     }
     if (!treatAsStyleSheet)
-        treatAsStyleSheet = document().settings().treatsAnyTextCSSLinkAsStylesheet() && m_type.containsIgnoringASCIICase("text/css"_s);
+        treatAsStyleSheet = document->settings().treatsAnyTextCSSLinkAsStylesheet() && m_type.containsIgnoringASCIICase("text/css"_s);
 
     LOG_WITH_STREAM(StyleSheets, stream << "HTMLLinkElement " << this << " process() - treatAsStyleSheet " << treatAsStyleSheet);
 
-    if (m_disabledState != Disabled && treatAsStyleSheet && document().frame() && m_url.isValid()) {
+    if (m_disabledState != Disabled && treatAsStyleSheet && document->frame() && m_url.isValid()) {
         String charset = attributeWithoutSynchronization(charsetAttr);
         if (!PAL::TextEncoding { charset }.isValid())
-            charset = document().charset();
+            charset = document->charset();
 
-        if (m_cachedSheet) {
+        if (CachedResourceHandle cachedSheet = std::exchange(m_cachedSheet, nullptr)) {
             removePendingSheet();
-            m_cachedSheet->removeClient(*this);
-            m_cachedSheet = nullptr;
+            cachedSheet->removeClient(*this);
         }
 
         {
@@ -319,21 +362,22 @@ void HTMLLinkElement::process()
         ResourceLoaderOptions options = CachedResourceLoader::defaultCachedResourceOptions();
         options.nonce = nonce();
         options.sameOriginDataURLFlag = SameOriginDataURLFlag::Set;
-        if (document().contentSecurityPolicy()->allowStyleWithNonce(options.nonce))
+        if (document->checkedContentSecurityPolicy()->allowStyleWithNonce(options.nonce))
             options.contentSecurityPolicyImposition = ContentSecurityPolicyImposition::SkipPolicyCheck;
         options.integrity = m_integrityMetadataForPendingSheetRequest;
         options.referrerPolicy = params.referrerPolicy;
+        options.fetchPriorityHint = fetchPriorityHint();
 
-        auto request = createPotentialAccessControlRequest(m_url, WTFMove(options), document(), crossOrigin());
+        auto request = createPotentialAccessControlRequest(m_url, WTFMove(options), document, crossOrigin());
         request.setPriority(WTFMove(priority));
         request.setCharset(WTFMove(charset));
         request.setInitiator(*this);
 
         ASSERT_WITH_SECURITY_IMPLICATION(!m_cachedSheet);
-        m_cachedSheet = document().cachedResourceLoader().requestCSSStyleSheet(WTFMove(request)).value_or(nullptr);
+        m_cachedSheet = document->protectedCachedResourceLoader()->requestCSSStyleSheet(WTFMove(request)).value_or(nullptr);
 
-        if (m_cachedSheet)
-            m_cachedSheet->addClient(*this);
+        if (CachedResourceHandle cachedSheet = m_cachedSheet)
+            cachedSheet->addClient(*this);
         else {
             // The request may have been denied if (for example) the stylesheet is local and the document is remote.
             m_loading = false;
@@ -353,7 +397,7 @@ void HTMLLinkElement::process()
 
 #if ENABLE(APPLICATION_MANIFEST)
     if (isApplicationManifest()) {
-        if (RefPtr loader = document().loader())
+        if (RefPtr loader = document->loader())
             loader->loadApplicationManifest({ });
         return;
     }
@@ -366,6 +410,51 @@ void HTMLLinkElement::clearSheet()
     ASSERT(m_sheet->ownerNode() == this);
     m_sheet->clearOwnerNode();
     m_sheet = nullptr;
+}
+
+// https://html.spec.whatwg.org/multipage/links.html#process-internal-resource-link
+void HTMLLinkElement::processInternalResourceLink(HTMLAnchorElement* anchor)
+{
+    if (document().wasRemovedLastRefCalled())
+        return;
+
+    if (!m_relAttribute.isInternalResourceLink) {
+        unblockRendering();
+        return;
+    }
+
+    if (!equalIgnoringFragmentIdentifier(m_url, document().url())) {
+        unblockRendering();
+        return;
+    }
+
+    RefPtr<Element> indicatedElement;
+    // If the change originated from an anchor, then we can just check if that's
+    // the right one instead doing a tree search using the name
+    if (anchor) {
+        if (anchor->name() == m_url.fragmentIdentifier())
+            indicatedElement = anchor;
+    } else
+        indicatedElement = document().findAnchor(m_url.fragmentIdentifier());
+
+    // FIXME: "is on a stack of open elements of an HTML parser whose associated Document is doc"
+    if (document().readyState() == Document::ReadyState::Loading && isConnected() && mediaAttributeMatches() && blocking().contains("render"_s) && !indicatedElement) {
+        if (!m_isRenderBlocking) {
+            document().blockRenderingOn(*this);
+            m_isRenderBlocking = true;
+        }
+        if (!m_expectIdTargetObserver)
+            m_expectIdTargetObserver = makeUnique<ExpectIdTargetObserver>(makeAtomString(m_url.fragmentIdentifier()), *this);
+    } else
+        unblockRendering();
+}
+
+void HTMLLinkElement::unblockRendering()
+{
+    if (m_isRenderBlocking) {
+        document().unblockRenderingOn(*this);
+        m_isRenderBlocking = false;
+    }
 }
 
 Node::InsertedIntoAncestorResult HTMLLinkElement::insertedIntoAncestor(InsertionType insertionType, ContainerNode& parentOfInsertedTree)
@@ -406,6 +495,8 @@ void HTMLLinkElement::removedFromAncestor(RemovalType removalType, ContainerNode
         m_styleScope->removeStyleSheetCandidateNode(*this);
         m_styleScope = nullptr;
     }
+
+    processInternalResourceLink();
 }
 
 void HTMLLinkElement::finishParsingChildren()
@@ -420,6 +511,11 @@ void HTMLLinkElement::initializeStyleSheet(Ref<StyleSheetContents>&& styleSheet,
     std::optional<bool> originClean;
     if (cachedStyleSheet.options().mode == FetchOptions::Mode::Cors)
         originClean = cachedStyleSheet.isCORSSameOrigin();
+
+    if (m_sheet) {
+        ASSERT(m_sheet->ownerNode() == this);
+        m_sheet->clearOwnerNode();
+    }
 
     m_sheet = CSSStyleSheet::create(WTFMove(styleSheet), *this, originClean);
     m_sheet->setMediaQueries(MQ::MediaQueryParser::parse(m_media, context));
@@ -444,7 +540,7 @@ void HTMLLinkElement::setCSSStyleSheet(const String& href, const URL& baseURL, c
     Ref<HTMLLinkElement> protectedThis(*this);
 
     if (!cachedStyleSheet->errorOccurred() && !matchIntegrityMetadata(*cachedStyleSheet, m_integrityMetadataForPendingSheetRequest)) {
-        document().addConsoleMessage(MessageSource::Security, MessageLevel::Error, makeString("Cannot load stylesheet ", integrityMismatchDescription(*cachedStyleSheet, m_integrityMetadataForPendingSheetRequest)));
+        document().addConsoleMessage(MessageSource::Security, MessageLevel::Error, makeString("Cannot load stylesheet "_s, integrityMismatchDescription(*cachedStyleSheet, m_integrityMetadataForPendingSheetRequest)));
 
         m_loading = false;
         sheetLoaded();
@@ -498,7 +594,7 @@ bool HTMLLinkElement::styleSheetIsLoading() const
 DOMTokenList& HTMLLinkElement::sizes()
 {
     if (!m_sizes)
-        m_sizes = makeUnique<DOMTokenList>(*this, sizesAttr);
+        m_sizes = makeUniqueWithoutRefCountedCheck<DOMTokenList>(*this, sizesAttr);
     return *m_sizes;
 }
 
@@ -553,10 +649,23 @@ void HTMLLinkElement::dispatchPendingEvent(LinkEventSender* eventSender, const A
 DOMTokenList& HTMLLinkElement::relList()
 {
     if (!m_relList)
-        m_relList = makeUnique<DOMTokenList>(*this, HTMLNames::relAttr, [](Document& document, StringView token) {
+        m_relList = makeUniqueWithoutRefCountedCheck<DOMTokenList>(*this, HTMLNames::relAttr, [](Document& document, StringView token) {
             return LinkRelAttribute::isSupported(document, token);
         });
     return *m_relList;
+}
+
+// https://html.spec.whatwg.org/multipage/semantics.html#dom-link-blocking
+DOMTokenList& HTMLLinkElement::blocking()
+{
+    if (!m_blockingList) {
+        m_blockingList = makeUniqueWithoutRefCountedCheck<DOMTokenList>(*this, HTMLNames::blockingAttr, [](Document&, StringView token) {
+            if (equalLettersIgnoringASCIICase(token, "render"_s))
+                return true;
+            return false;
+        });
+    }
+    return *m_blockingList;
 }
 
 void HTMLLinkElement::notifyLoadedSheetAndAllCriticalSubresources(bool errorOccurred)
@@ -602,15 +711,23 @@ std::optional<LinkIconType> HTMLLinkElement::iconType() const
     return m_relAttribute.iconType;
 }
 
+static bool mayFetchResource(LinkRelAttribute relAttribute)
+{
+    // https://html.spec.whatwg.org/multipage/links.html#linkTypes
+    return relAttribute.isStyleSheet
+        || relAttribute.isLinkModulePreload
+        || relAttribute.isLinkPreload
+#if ENABLE(APPLICATION_MANIFEST)
+        || relAttribute.isApplicationManifest
+#endif
+        || !!relAttribute.iconType;
+}
+
 void HTMLLinkElement::addSubresourceAttributeURLs(ListHashSet<URL>& urls) const
 {
     HTMLElement::addSubresourceAttributeURLs(urls);
 
-    // Favicons are handled by a special case in LegacyWebArchive::create()
-    if (m_relAttribute.iconType)
-        return;
-
-    if (!m_relAttribute.isStyleSheet)
+    if (!mayFetchResource(m_relAttribute))
         return;
 
     // Append the URL of this link element.
@@ -666,14 +783,29 @@ String HTMLLinkElement::referrerPolicyForBindings() const
 
 ReferrerPolicy HTMLLinkElement::referrerPolicy() const
 {
-    if (document().settings().referrerPolicyAttributeEnabled())
         return parseReferrerPolicy(attributeWithoutSynchronization(referrerpolicyAttr), ReferrerPolicySource::ReferrerPolicyAttribute).value_or(ReferrerPolicy::EmptyString);
-    return ReferrerPolicy::EmptyString;
 }
 
 String HTMLLinkElement::debugDescription() const
 {
     return makeString(HTMLElement::debugDescription(), ' ', type(), ' ', href().string());
+}
+
+void HTMLLinkElement::setFetchPriorityForBindings(const AtomString& value)
+{
+    setAttributeWithoutSynchronization(fetchpriorityAttr, value);
+}
+
+String HTMLLinkElement::fetchPriorityForBindings() const
+{
+    return convertEnumerationToString(fetchPriorityHint());
+}
+
+RequestPriority HTMLLinkElement::fetchPriorityHint() const
+{
+    if (document().settings().fetchPriorityEnabled())
+        return parseEnumerationFromString<RequestPriority>(attributeWithoutSynchronization(fetchpriorityAttr)).value_or(RequestPriority::Auto);
+    return RequestPriority::Auto;
 }
 
 } // namespace WebCore

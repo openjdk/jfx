@@ -103,9 +103,9 @@ private:
     SpeculationRecoveryType m_type;
 };
 
-JSC_DECLARE_JIT_OPERATION(operationCompileOSRExit, void, (CallFrame*, void*));
-JSC_DECLARE_JIT_OPERATION(operationDebugPrintSpeculationFailure, void, (CallFrame*, void*, void*));
-JSC_DECLARE_JIT_OPERATION(operationMaterializeOSRExitSideState, void, (VM*, const OSRExitBase*, EncodedJSValue*));
+JSC_DECLARE_NOEXCEPT_JIT_OPERATION(operationCompileOSRExit, void, (CallFrame*, void*));
+JSC_DECLARE_NOEXCEPT_JIT_OPERATION(operationDebugPrintSpeculationFailure, void, (Probe::Context&));
+JSC_DECLARE_NOEXCEPT_JIT_OPERATION(operationMaterializeOSRExitSideState, void, (VM*, const OSRExitBase*, EncodedJSValue*));
 
 // === OSRExit ===
 //
@@ -129,17 +129,17 @@ struct OSRExit : public OSRExitBase {
         OSRExitBase::considerAddingAsFrequentExitSite(profiledCodeBlock, ExitFromDFG);
     }
 
-    static void compileExit(CCallHelpers&, VM&, const OSRExit&, const Operands<ValueRecovery>&, SpeculationRecovery*);
+    static void compileExit(CCallHelpers&, VM&, const OSRExit&, const Operands<ValueRecovery>&, SpeculationRecovery*, uint32_t osrExitIndex);
 
 private:
     static void emitRestoreArguments(CCallHelpers&, VM&, const Operands<ValueRecovery>&);
-    friend void JIT_OPERATION_ATTRIBUTES operationDebugPrintSpeculationFailure(CallFrame*, void*, void*);
 };
 
 struct SpeculationFailureDebugInfo {
     WTF_MAKE_STRUCT_FAST_ALLOCATED;
     CodeBlock* codeBlock;
     ExitKind kind;
+    uint32_t exitIndex;
     BytecodeIndex bytecodeIndex;
 };
 

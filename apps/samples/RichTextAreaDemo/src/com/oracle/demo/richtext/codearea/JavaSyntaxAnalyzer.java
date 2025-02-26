@@ -1,0 +1,900 @@
+/*
+ * Copyright (c) 2023, 2024, Oracle and/or its affiliates.
+ * All rights reserved. Use is subject to license terms.
+ *
+ * This file is available and licensed under the following license:
+ *
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions
+ * are met:
+ *
+ *  - Redistributions of source code must retain the above copyright
+ *    notice, this list of conditions and the following disclaimer.
+ *  - Redistributions in binary form must reproduce the above copyright
+ *    notice, this list of conditions and the following disclaimer in
+ *    the documentation and/or other materials provided with the distribution.
+ *  - Neither the name of Oracle Corporation nor the names of its
+ *    contributors may be used to endorse or promote products derived
+ *    from this software without specific prior written permission.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+ * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+ * LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
+ * A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
+ * OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
+ * SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
+ * LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+ * DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
+ * THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+ * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ */
+
+package com.oracle.demo.richtext.codearea;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+
+/**
+ * A simple Java syntax analyzer implemented as a recursive descent parser.
+ * This is just a demo, as it has no link to the real compiler, does not understand Java language,
+ * does not take into account version-specific language features, and reports no errors.
+ * It also does not check validity of numeric literals, allowing malformed octal or binary numbers,
+ * or values that are too large to be represented.
+ *
+ * @author Andy Goryachev
+ */
+public class JavaSyntaxAnalyzer {
+    private boolean DEBUG = false;
+
+    /** Encapsulates a paragraph containing segments with syntax highlighting */
+    public static class Line {
+        private ArrayList<Segment> segments = new ArrayList<>();
+
+        /**
+         * The constructor.
+         */
+        public Line() {
+        }
+
+        /**
+         * Adds a segment.
+         * @param type the segment type
+         * @param text the segment text
+         */
+        public void addSegment(Type type, String text) {
+            segments.add(new Segment(type, text));
+        }
+
+        /**
+         * Returns the list of segments.
+         * @return the list of segments
+         */
+        public List<Segment> getSegments() {
+            return segments;
+        }
+
+        @Override
+        public String toString() {
+            return segments.toString();
+        }
+
+        @Override
+        public boolean equals(Object x) {
+            if (x == this) {
+                return true;
+            } else if (x instanceof Line n) {
+                return segments.equals(n.segments);
+            }
+            return false;
+        }
+
+        @Override
+        public int hashCode() {
+            return 0; // we only need equals, don't put a hash table!
+        }
+    }
+
+    /**
+     * Encapsulates a text segment with the same syntax highlight type.
+     */
+    public static class Segment {
+        private final Type type;
+        private final String text;
+
+        /**
+         * The constructor.
+         * @param type the segment type
+         * @param text the segment text
+         */
+        public Segment(Type type, String text) {
+            this.type = type;
+            this.text = text;
+        }
+
+        /**
+         * Returns the segment type.
+         * @return the segment type
+         */
+        public Type getType() {
+            return type;
+        }
+
+        /**
+         * Returns the segment text.
+         * @return the segment text
+         */
+        public String getText() {
+            return text;
+        }
+
+        @Override
+        public String toString() {
+            return type + ":[" + text + "]";
+        }
+
+        @Override
+        public boolean equals(Object x) {
+            if (x == this) {
+                return true;
+            } else if (x instanceof Segment s) {
+                return
+                    (type == s.type) &&
+                    (text.equals(s.text));
+            }
+            return false;
+        }
+
+        @Override
+        public int hashCode() {
+            return 0; // we only need equals, don't put a hash table!
+        }
+    }
+
+    /**
+     * Defines the segment type generated by this analyzer
+     */
+    public enum Type {
+        CHARACTER,
+        COMMENT,
+        KEYWORD,
+        NUMBER,
+        OTHER,
+        STRING,
+    }
+
+    private enum State {
+        COMMENT_BLOCK,
+        COMMENT_LINE,
+        EOF,
+        EOL,
+        KEYWORD,
+        OTHER,
+        STRING,
+        TEXT_BLOCK,
+        WHITESPACE,
+    }
+
+    private static final int EOF = -1;
+    private static Pattern KEYWORDS;
+    private static Pattern CHARS;
+    static { init(); }
+
+    private final String text;
+    private final Matcher keywordMatcher;
+    private final Matcher charsMatcher;
+    private int pos;
+    private int start;
+    private boolean blockComment;
+    private State state = State.OTHER;
+    private int tokenLength;
+    private ArrayList<Line> lines;
+    private Line currentLine;
+
+    /**
+     * Creates the syntax analyzer initialized with the specified text.
+     * The text must have newline ({@code /n}) characters as line delimiters.
+     * @param text the input text
+     */
+    public JavaSyntaxAnalyzer(String text) {
+        this.text = text;
+        this.keywordMatcher = KEYWORDS.matcher(text);
+        this.charsMatcher = CHARS.matcher(text);
+    }
+
+    private static void init() {
+        String[] keywords = {
+            "abstract",
+            "assert",
+            "boolean",
+            "break",
+            "byte",
+            "case",
+            "catch",
+            "char",
+            "class",
+            "const",
+            "continue",
+            "default",
+            "do",
+            "double",
+            "else",
+            "enum",
+            "extends",
+            "false",
+            "final",
+            "finally",
+            "float",
+            "for",
+            "goto",
+            "if",
+            "implements",
+            "import",
+            "instanceof",
+            "int",
+            "interface",
+            "long",
+            "native",
+            "new",
+            "package",
+            "private",
+            "protected",
+            "public",
+            "return",
+            "short",
+            "static",
+            "strictfpv",
+            "super",
+            "switch",
+            "synchronized",
+            "this",
+            "throw",
+            "throws",
+            "transient",
+            "true",
+            "try",
+            "var",
+            "void",
+            "volatile",
+            "while"
+        };
+
+        StringBuilder sb = new StringBuilder();
+        sb.append("\\G"); // match at start of the input in match(pos);
+        sb.append("("); // capturing group
+        boolean sep = false;
+        for (String k : keywords) {
+            if (sep) {
+                sb.append("|");
+            } else {
+                sep = true;
+            }
+            sb.append("("); // capturing group
+            sb.append(k);
+            // TODO add a post-match check instead
+            sb.append("\\b"); // word boundary
+            sb.append(")"); // capturing group
+        }
+        sb.append(")"); // capturing group
+
+        KEYWORDS = Pattern.compile(sb.toString());
+
+        String charsPattern =
+            "(\\G\\\\[bfnrt'\"\\\\]')|" +  // \b' + \f' + \n' + \r' + \t' + \'' + \"' +  \\'
+            "(\\G[^\\\\u]')|" + // any char followed by ', except u and \
+            "(\\G\\\\u[0-9a-fA-F][0-9a-fA-F][0-9a-fA-F][0-9a-fA-F]')" // unicode escapes
+            ;
+        CHARS = Pattern.compile(charsPattern);
+    }
+
+    // returns the length of java keyword, 0 if not a java keyword
+    private int matchJavaKeyword() {
+        int c = charAt(-1);
+        if (Character.isJavaIdentifierPart(c)) {
+            return 0;
+        }
+
+        c = charAt(0);
+        switch (c) {
+        case 'a':
+        case 'b':
+        case 'c':
+        case 'd':
+        case 'e':
+        case 'f':
+        case 'g':
+        case 'i':
+        case 'l':
+        case 'n':
+        case 'p':
+        case 'r':
+        case 's':
+        case 't':
+        case 'v':
+        case 'w':
+            break;
+        default:
+            return 0;
+        };
+
+        if (keywordMatcher.find(pos)) {
+            int start = keywordMatcher.start();
+            int end = keywordMatcher.end();
+            switch (charAt(end - pos)) {
+            case '.':
+                return 0;
+            }
+
+            return (end - start);
+        }
+        return 0;
+    }
+
+    // returns the length of the character, or 0 if not a character
+    private int matchCharacter() {
+        if(charsMatcher.find(pos + 1)) {
+            int start = charsMatcher.start();
+            int end = charsMatcher.end();
+            return (end - start);
+        }
+        return 0;
+    }
+
+    private int peek() {
+        if (pos < text.length()) {
+            return text.charAt(pos);
+        }
+        return EOF;
+    }
+
+    private Type type(State s) {
+        switch(s) {
+        case COMMENT_BLOCK:
+            return Type.COMMENT;
+        case COMMENT_LINE:
+            return Type.COMMENT;
+        case EOF:
+            return Type.OTHER;
+        case EOL:
+            return Type.OTHER;
+        case KEYWORD:
+            return Type.KEYWORD;
+        case OTHER:
+            return Type.OTHER;
+        case STRING:
+            return Type.STRING;
+        case TEXT_BLOCK:
+            return Type.STRING;
+        case WHITESPACE:
+            return Type.OTHER;
+        default:
+            throw new Error("?" + s);
+        }
+    }
+
+    private void addSegment() {
+        Type type = type(state);
+        addSegment(type);
+    }
+
+    private void addSegment(Type type) {
+        if (pos > start) {
+            String s = text.substring(start, pos);
+
+            if (currentLine == null) {
+                currentLine = new Line();
+            }
+            currentLine.addSegment(type, s);
+
+            start = pos;
+            if(DEBUG) System.out.println("  " + type + ":[" + s + "]"); // FIX
+        }
+    }
+
+    private void addNewLine() {
+        if (currentLine == null) {
+            currentLine = new Line();
+        }
+        lines.add(currentLine);
+        currentLine = null;
+        if(DEBUG) System.out.println("  <NL>"); // FIX
+    }
+
+    private boolean match(String pattern) {
+        for (int i = 0; i < pattern.length(); i++) {
+            if (charAt(i) != pattern.charAt(i)) {
+                return false;
+            }
+        }
+        tokenLength = pattern.length();
+        return true;
+    }
+
+    // relative to 'pos'
+    private int charAt(int ix) {
+        ix += pos;
+        if ((ix >= 0) && (ix < text.length())) {
+            return text.charAt(ix);
+        }
+        return EOF;
+    }
+
+    // leading: """(whitespace)\n  trailing: """(whitespace);
+    private boolean isTextBlock(boolean leading) {
+        for (int i = 0; ; i++) {
+            int c = charAt(i);
+            switch (c) {
+            case '"':
+                if (i >= 3) {
+                    return false;
+                }
+                break;
+            case ' ':
+            case '\t':
+                if (i < 3) {
+                    return false;
+                }
+                break;
+            case '\n':
+                if (leading) {
+                    tokenLength = i;
+                    return true;
+                } else {
+                    return false;
+                }
+            case ';':
+                if (i < 3) {
+                    return false;
+                }
+                if (!leading) {
+                    tokenLength = i;
+                    return true;
+                }
+            case -1:
+            default:
+                return false;
+            }
+        }
+    }
+
+    // relative to pos
+    private boolean isBoundedByDigit(boolean hex, int ix, boolean increase) {
+        for(;;) {
+            int c = charAt(ix);
+            switch (c) {
+            case '0':
+            case '1':
+            case '2':
+            case '3':
+            case '4':
+            case '5':
+            case '6':
+            case '7':
+            case '8':
+            case '9':
+                return true;
+            case 'a':
+            case 'A':
+            case 'b':
+            case 'B':
+            case 'c':
+            case 'C':
+            case 'd':
+            case 'D':
+            case 'e':
+            case 'E':
+            case 'f':
+            case 'F':
+                return hex ? true : false;
+            case '_':
+                break;
+            default:
+                return false;
+            }
+
+            ix += (increase ? 1 : -1);
+        }
+    }
+
+    // TODO move up
+    private enum Phase {
+        S_BEG, // beginning of significand, before period
+        S_PER, // decimal point in the significand
+        S_END, // after period in significand
+        E_DIV, // exponent divider ('e' or 'E')
+        E_SIG, // exponent sign
+        E_BEG, // exponent before decimal point
+        E_END, // after decimal point in the exponent
+        HEX,   // hexadecimal literal
+        BIN,   // binary literal
+        UNKNOWN
+    }
+    private Phase phase;
+    private boolean hasSignificand;
+    private boolean hasExponent;
+
+    private int matchNumber() {
+        int c = charAt(0);
+        switch (c) {
+        case '0':
+        case '1':
+        case '2':
+        case '3':
+        case '4':
+        case '5':
+        case '6':
+        case '7':
+        case '8':
+        case '9':
+            c = charAt(-1);
+            switch (c) {
+            case -1:
+                break;
+            default:
+                if (Character.isJavaIdentifierPart(c)) {
+                    return 0;
+                }
+            }
+            break;
+        case '.':
+            break;
+        default:
+            return 0;
+        }
+
+        phase = Phase.UNKNOWN;
+        hasSignificand = false;
+        hasExponent = false;
+
+        for (int i = 0; ; i++) {
+            c = charAt(i);
+            char ch = (char)c; // FIX
+            switch (c) {
+            case '0':
+            case '1':
+            case '2':
+            case '3':
+            case '4':
+            case '5':
+            case '6':
+            case '7':
+            case '8':
+            case '9':
+                switch (phase) {
+                case HEX:
+                case BIN:
+                    // not validating binary literals
+                    hasSignificand = true;
+                    break;
+                case UNKNOWN:
+                    phase = Phase.S_BEG;
+                    hasSignificand = true;
+                    break;
+                case S_BEG:
+                    hasSignificand = true;
+                    break;
+                case S_PER:
+                    phase = Phase.S_END;
+                    hasSignificand = true;
+                    break;
+                case E_DIV:
+                case E_SIG:
+                    phase = Phase.E_BEG;
+                    hasExponent = true;
+                    break;
+                }
+                break;
+            case 'a':
+            case 'A':
+            case 'c':
+            case 'C':
+                switch (phase) {
+                case HEX:
+                    hasSignificand = true;
+                    break;
+                default:
+                    return 0;
+                }
+                break;
+            case '.':
+                switch (phase) {
+                case UNKNOWN:
+                case S_BEG:
+                    phase = Phase.S_PER;
+                    break;
+                default:
+                    return 0;
+                }
+                break;
+            case '_':
+                switch (phase) {
+                case HEX:
+                    if (!(isBoundedByDigit(true, i - 1, false) && isBoundedByDigit(true, i + 1, true))) {
+                        return 0;
+                    }
+                    break;
+                case BIN:
+                case S_BEG:
+                case S_END:
+                case E_BEG:
+                case E_END:
+                    if (!(isBoundedByDigit(false, i - 1, false) && isBoundedByDigit(false, i + 1, true))) {
+                        return 0;
+                    }
+                    break;
+                default:
+                    return 0;
+                }
+                break;
+            case 'e':
+            case 'E':
+                switch (phase) {
+                case HEX:
+                    hasSignificand = true;
+                    break;
+                case S_PER:
+                    if(!hasSignificand) {
+                        return 0;
+                    }
+                    // fall through
+                case S_BEG:
+                case S_END:
+                    phase = Phase.E_DIV;
+                    break;
+                default:
+                    return 0;
+                }
+                break;
+            case 'd':
+            case 'D':
+            case 'f':
+            case 'F':
+                switch (phase) {
+                case HEX:
+                    hasSignificand = true;
+                    break;
+                case S_BEG:
+                case S_PER:
+                case S_END:
+                    return hasSignificand ? (i + 1) : 0;
+                case E_BEG:
+                case E_END:
+                    return hasExponent ? (i + 1) : 0;
+                default:
+                    return 0;
+                }
+                break;
+            case '+':
+            case '-':
+                switch (phase) {
+                case E_DIV:
+                    phase = Phase.E_SIG;
+                    break;
+                case S_BEG:
+                case S_END:
+                case S_PER:
+                    return i;
+                default:
+                    return 0;
+                }
+                break;
+            case 'l':
+            case 'L':
+                switch (phase) {
+                case HEX:
+                case BIN:
+                case S_BEG:
+                    return i + 1;
+                }
+                return 0;
+            case 'x':
+            case 'X':
+                if ((i == 1) && (charAt(i - 1) == '0')) {
+                    phase = Phase.HEX;
+                    hasSignificand = false;
+                } else {
+                    return 0;
+                }
+                break;
+            case 'b':
+            case 'B':
+                switch (phase) {
+                case HEX:
+                    hasSignificand = true;
+                    break;
+                default:
+                    if ((i == 1) && (charAt(i - 1) == '0')) {
+                        phase = Phase.BIN;
+                        hasSignificand = false;
+                    } else {
+                        return 0;
+                    }
+                }
+                break;
+            case -1:
+            default:
+                switch (phase) {
+                case S_PER:
+                case HEX:
+                case BIN:
+                    return hasSignificand ? i : 0;
+                case S_BEG:
+                case S_END:
+                case E_BEG:
+                case E_END:
+                    return i;
+                default:
+                    return 0;
+                }
+            }
+        }
+    }
+
+    /**
+     * Analyzes the input text, producing a list of {@code Line}s containing syntax information.
+     * @return the list of lines with syntax highlighting
+     */
+    public List<Line> analyze() {
+        if(DEBUG) System.out.println("analyze"); // FIX
+        lines = new ArrayList<>();
+        start = 0;
+
+        for (;;) {
+            tokenLength = 0;
+            int c = peek();
+
+            switch (c) {
+            case '*':
+                switch (state) {
+                case COMMENT_BLOCK:
+                    if (match("*/")) {
+                        pos += tokenLength;
+                        addSegment();
+                        state = State.OTHER;
+                        continue;
+                    }
+                }
+                break;
+            case '\n':
+                addSegment();
+                addNewLine();
+                pos++;
+                start = pos;
+                switch (state) {
+                case COMMENT_BLOCK:
+                case TEXT_BLOCK:
+                    break;
+                default:
+                    state = State.OTHER;
+                    break;
+                }
+                continue;
+            case '/':
+                switch(state) {
+                case COMMENT_BLOCK:
+                case COMMENT_LINE:
+                case STRING:
+                case TEXT_BLOCK:
+                    break;
+                default:
+                    if (match("/*")) {
+                        addSegment();
+                        pos += tokenLength;
+                        state = State.COMMENT_BLOCK;
+                        continue;
+                    } else if (match("//")) {
+                        addSegment();
+                        pos += tokenLength;
+                        state = State.COMMENT_LINE;
+                        continue;
+                    }
+                }
+                break;
+            case '"':
+                switch(state) {
+                case COMMENT_BLOCK:
+                case COMMENT_LINE:
+                    break;
+                case TEXT_BLOCK:
+                    if(isTextBlock(false)) {
+                        pos += tokenLength;
+                        addSegment();
+                        state = State.OTHER;
+                        continue;
+                    }
+                    break;
+                case STRING:
+                    pos++;
+                    addSegment();
+                    state = State.OTHER;
+                    continue;
+                default:
+                    if(isTextBlock(true)) {
+                        addSegment();
+                        pos += tokenLength;
+                        state = State.TEXT_BLOCK;
+                        continue;
+                    } else {
+                        addSegment();
+                        state = State.STRING;
+                    }
+                    break;
+                }
+                break;
+            case '\'':
+                switch(state) {
+                case COMMENT_BLOCK:
+                case COMMENT_LINE:
+                case STRING:
+                    break;
+                default:
+                    switch (charAt(1)) {
+                    case '\n':
+                        pos++;
+                        continue;
+                    }
+                    tokenLength = matchCharacter();
+                    if (tokenLength > 0) {
+                        addSegment();
+                        pos += (tokenLength + 1);
+                        addSegment(Type.CHARACTER);
+                        state = State.OTHER;
+                        continue;
+                    }
+                    break;
+                }
+                break;
+            case '\\':
+                switch (state) {
+                case STRING:
+                    switch (charAt(1)) {
+                    case '\n':
+                        break;
+                    default:
+                        pos++;
+                        break;
+                    }
+                    break;
+                }
+                break;
+            case EOF:
+                addSegment();
+                if (currentLine != null) {
+                    lines.add(currentLine);
+                }
+                if (lines.size() == 0) {
+                    lines.add(new Line());
+                }
+                return lines;
+            default:
+                switch (state) {
+                case OTHER:
+                    tokenLength = matchJavaKeyword();
+                    if (tokenLength > 0) {
+                        addSegment();
+                        pos += tokenLength;
+                        addSegment(Type.KEYWORD);
+                        state = State.OTHER;
+                        continue;
+                    }
+                    tokenLength = matchNumber();
+                    if (tokenLength > 0) {
+                        addSegment();
+                        pos += tokenLength;
+                        addSegment(Type.NUMBER);
+                        state = State.OTHER;
+                        continue;
+                    }
+                    break;
+                default:
+                    break;
+                }
+                break;
+            }
+
+            pos++;
+        }
+    }
+}

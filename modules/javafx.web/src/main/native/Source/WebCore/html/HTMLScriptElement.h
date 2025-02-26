@@ -23,20 +23,35 @@
 
 #pragma once
 
+#include "DOMTokenList.h"
 #include "HTMLElement.h"
 #include "ScriptElement.h"
 
 namespace WebCore {
 
+class TrustedScript;
+class TrustedScriptURL;
+
+enum class RequestPriority : uint8_t;
+
 class HTMLScriptElement final : public HTMLElement, public ScriptElement {
-    WTF_MAKE_ISO_ALLOCATED(HTMLScriptElement);
+    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(HTMLScriptElement);
+    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(HTMLScriptElement);
 public:
     static Ref<HTMLScriptElement> create(const QualifiedName&, Document&, bool wasInsertedByParser, bool alreadyStarted = false);
 
     String text() const { return scriptContent(); }
     WEBCORE_EXPORT void setText(String&&);
+    ExceptionOr<void> setText(std::variant<RefPtr<TrustedScript>, String>&&);
 
-    URL src() const;
+    using Node::setTextContent;
+    ExceptionOr<void> setTextContent(std::optional<std::variant<RefPtr<TrustedScript>, String>>&&);
+
+    using HTMLElement::setInnerText;
+    ExceptionOr<void> setInnerText(std::variant<RefPtr<TrustedScript>, String>&&);
+
+    String src() const;
+    ExceptionOr<void> setSrc(std::variant<RefPtr<TrustedScriptURL>, String>&&);
 
     WEBCORE_EXPORT void setAsync(bool);
     WEBCORE_EXPORT bool async() const;
@@ -53,13 +68,27 @@ public:
 
     static bool supports(StringView type) { return type == "classic"_s || type == "module"_s || type == "importmap"_s; }
 
+    void setFetchPriorityForBindings(const AtomString&);
+    String fetchPriorityForBindings() const;
+    RequestPriority fetchPriorityHint() const override;
+
+    WEBCORE_EXPORT DOMTokenList& blocking();
+
 private:
     HTMLScriptElement(const QualifiedName&, Document&, bool wasInsertedByParser, bool alreadyStarted);
 
-    void parseAttribute(const QualifiedName&, const AtomString&) final;
+    void attributeChanged(const QualifiedName&, const AtomString& oldValue, const AtomString& newValue, AttributeModificationReason) final;
     InsertedIntoAncestorResult insertedIntoAncestor(InsertionType, ContainerNode&) final;
     void didFinishInsertingNode() final;
     void childrenChanged(const ChildChange&) final;
+    void finishParsingChildren() final;
+    void removedFromAncestor(RemovalType, ContainerNode&) final;
+
+    void potentiallyBlockRendering() final;
+    void unblockRendering() final;
+    bool isImplicitlyPotentiallyRenderBlocking() const;
+
+    ExceptionOr<void> setTextContent(ExceptionOr<String>);
 
     bool isURLAttribute(const Attribute&) const final;
 
@@ -69,8 +98,6 @@ private:
     String charsetAttributeValue() const final;
     String typeAttributeValue() const final;
     String languageAttributeValue() const final;
-    String forAttributeValue() const final;
-    String eventAttributeValue() const final;
     bool hasAsyncAttribute() const final;
     bool hasDeferAttribute() const final;
     bool hasNoModuleAttribute() const final;
@@ -78,7 +105,12 @@ private:
 
     void dispatchLoadEvent() final;
 
+    bool isScriptPreventedByAttributes() const final;
+
     Ref<Element> cloneElementWithoutAttributesAndChildren(Document&) final;
+
+    std::unique_ptr<DOMTokenList> m_blockingList;
+    bool m_isRenderBlocking { false };
 };
 
 } //namespace

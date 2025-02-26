@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2021 Apple Inc. All rights reserved.
+ * Copyright (C) 2021-2023 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -27,8 +27,9 @@
 
 #include "GPUFeatureName.h"
 #include "GPUObjectDescriptorBase.h"
+#include "GPUQueueDescriptor.h"
+#include "WebGPUDeviceDescriptor.h"
 #include <cstdint>
-#include <pal/graphics/WebGPU/WebGPUDeviceDescriptor.h>
 #include <wtf/HashMap.h>
 #include <wtf/KeyValuePair.h>
 #include <wtf/RefPtr.h>
@@ -37,11 +38,11 @@
 namespace WebCore {
 
 struct GPUDeviceDescriptor : public GPUObjectDescriptorBase {
-    PAL::WebGPU::DeviceDescriptor convertToBacking() const
+    WebGPU::DeviceDescriptor convertToBacking() const
     {
         return {
             { label },
-            requiredFeatures.map([] (const auto& requiredFeature) {
+            requiredFeatures.map([](const auto& requiredFeature) {
                 return WebCore::convertToBacking(requiredFeature);
             }),
             requiredLimits,
@@ -50,6 +51,7 @@ struct GPUDeviceDescriptor : public GPUObjectDescriptorBase {
 
     Vector<GPUFeatureName> requiredFeatures;
     Vector<KeyValuePair<String, uint64_t>> requiredLimits;
+    GPUQueueDescriptor defaultQueue;
 };
 
 }

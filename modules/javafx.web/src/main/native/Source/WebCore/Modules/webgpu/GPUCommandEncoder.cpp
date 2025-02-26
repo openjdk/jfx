@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2021-2022 Apple Inc. All rights reserved.
+ * Copyright (C) 2021-2023 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -41,14 +41,20 @@ void GPUCommandEncoder::setLabel(String&& label)
     m_backing->setLabel(WTFMove(label));
 }
 
-Ref<GPURenderPassEncoder> GPUCommandEncoder::beginRenderPass(const GPURenderPassDescriptor& renderPassDescriptor)
+ExceptionOr<Ref<GPURenderPassEncoder>> GPUCommandEncoder::beginRenderPass(const GPURenderPassDescriptor& renderPassDescriptor)
 {
-    return GPURenderPassEncoder::create(m_backing->beginRenderPass(renderPassDescriptor.convertToBacking()));
+    RefPtr encoder = m_backing->beginRenderPass(renderPassDescriptor.convertToBacking());
+    if (!encoder)
+        return Exception { ExceptionCode::InvalidStateError, "GPUCommandEncoder.beginRenderPass: Unable to begin render pass."_s };
+    return GPURenderPassEncoder::create(encoder.releaseNonNull());
 }
 
-Ref<GPUComputePassEncoder> GPUCommandEncoder::beginComputePass(const std::optional<GPUComputePassDescriptor>& computePassDescriptor)
+ExceptionOr<Ref<GPUComputePassEncoder>> GPUCommandEncoder::beginComputePass(const std::optional<GPUComputePassDescriptor>& computePassDescriptor)
 {
-    return GPUComputePassEncoder::create(m_backing->beginComputePass(computePassDescriptor ? std::optional { computePassDescriptor->convertToBacking() } : std::nullopt));
+    RefPtr computePass = m_backing->beginComputePass(computePassDescriptor ? std::optional { computePassDescriptor->convertToBacking() } : std::nullopt);
+    if (!computePass)
+        return Exception { ExceptionCode::InvalidStateError, "GPUCommandEncoder.beginComputePass: Unable to begin compute pass."_s };
+    return GPUComputePassEncoder::create(computePass.releaseNonNull());
 }
 
 void GPUCommandEncoder::copyBufferToBuffer(
@@ -88,10 +94,10 @@ void GPUCommandEncoder::copyTextureToTexture(
 
 void GPUCommandEncoder::clearBuffer(
     const GPUBuffer& buffer,
-    GPUSize64 offset,
+    std::optional<GPUSize64> offset,
     std::optional<GPUSize64> size)
 {
-    m_backing->clearBuffer(buffer.backing(), offset, size);
+    m_backing->clearBuffer(buffer.backing(), offset.value_or(0), size);
 }
 
 void GPUCommandEncoder::pushDebugGroup(String&& groupLabel)
@@ -124,7 +130,7 @@ void GPUCommandEncoder::resolveQuerySet(
     m_backing->resolveQuerySet(querySet.backing(), firstQuery, queryCount, destination.backing(), destinationOffset);
 }
 
-static PAL::WebGPU::CommandBufferDescriptor convertToBacking(const std::optional<GPUCommandBufferDescriptor>& commandBufferDescriptor)
+static WebGPU::CommandBufferDescriptor convertToBacking(const std::optional<GPUCommandBufferDescriptor>& commandBufferDescriptor)
 {
     if (!commandBufferDescriptor)
         return { };
@@ -132,9 +138,12 @@ static PAL::WebGPU::CommandBufferDescriptor convertToBacking(const std::optional
     return commandBufferDescriptor->convertToBacking();
 }
 
-Ref<GPUCommandBuffer> GPUCommandEncoder::finish(const std::optional<GPUCommandBufferDescriptor>& commandBufferDescriptor)
+ExceptionOr<Ref<GPUCommandBuffer>> GPUCommandEncoder::finish(const std::optional<GPUCommandBufferDescriptor>& commandBufferDescriptor)
 {
-    return GPUCommandBuffer::create(m_backing->finish(convertToBacking(commandBufferDescriptor)));
+    RefPtr buffer = m_backing->finish(convertToBacking(commandBufferDescriptor));
+    if (!buffer)
+        return Exception { ExceptionCode::InvalidStateError, "GPUCommandEncoder.finish: Unable to finish."_s };
+    return GPUCommandBuffer::create(buffer.releaseNonNull());
 }
 
 }

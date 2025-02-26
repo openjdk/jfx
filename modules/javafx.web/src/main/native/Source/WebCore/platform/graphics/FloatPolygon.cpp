@@ -32,7 +32,6 @@
 
 #include <wtf/HexNumber.h>
 #include <wtf/MathExtras.h>
-#include <wtf/text/StringConcatenateNumbers.h>
 
 namespace WebCore {
 
@@ -86,11 +85,10 @@ static unsigned findNextEdgeVertexIndex(const FloatPolygon& polygon, unsigned ve
 FloatPolygon::FloatPolygon(Vector<FloatPoint>&& vertices, WindRule fillRule)
     : m_vertices(WTFMove(vertices))
     , m_fillRule(fillRule)
+    , m_empty(m_vertices.size() < 3)
+    , m_edges(m_vertices.size())
 {
     unsigned nVertices = numberOfVertices();
-    m_edges.resize(nVertices);
-    m_empty = nVertices < 3;
-
     if (nVertices)
         m_boundingBox.setLocation(vertexAt(0));
 
@@ -129,7 +127,7 @@ FloatPolygon::FloatPolygon(Vector<FloatPoint>&& vertices, WindRule fillRule)
         }
     }
 
-    m_edges.resize(edgeIndex);
+    m_edges.shrink(edgeIndex);
     m_empty = m_edges.size() < 3;
 
     if (m_empty)
@@ -193,33 +191,6 @@ bool FloatPolygon::contains(const FloatPoint& point) const
     if (!m_boundingBox.contains(point))
         return false;
     return fillRule() == WindRule::NonZero ? containsNonZero(point) : containsEvenOdd(point);
-}
-
-bool VertexPair::overlapsRect(const FloatRect& rect) const
-{
-    bool boundsOverlap = (minX() < rect.maxX()) && (maxX() > rect.x()) && (minY() < rect.maxY()) && (maxY() > rect.y());
-    if (!boundsOverlap)
-        return false;
-
-    float leftSideValues[4] = {
-        leftSide(vertex1(), vertex2(), rect.minXMinYCorner()),
-        leftSide(vertex1(), vertex2(), rect.maxXMinYCorner()),
-        leftSide(vertex1(), vertex2(), rect.minXMaxYCorner()),
-        leftSide(vertex1(), vertex2(), rect.maxXMaxYCorner())
-    };
-
-    int currentLeftSideSign = 0;
-    for (unsigned i = 0; i < 4; ++i) {
-        if (!leftSideValues[i])
-            continue;
-        int leftSideSign = leftSideValues[i] > 0 ? 1 : -1;
-        if (!currentLeftSideSign)
-            currentLeftSideSign = leftSideSign;
-        else if (currentLeftSideSign != leftSideSign)
-            return true;
-    }
-
-    return false;
 }
 
 bool VertexPair::intersection(const VertexPair& other, FloatPoint& point) const

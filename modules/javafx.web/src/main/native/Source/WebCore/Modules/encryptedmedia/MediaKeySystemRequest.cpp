@@ -28,11 +28,12 @@
 #if ENABLE(ENCRYPTED_MEDIA)
 
 #include "Document.h"
-#include "Frame.h"
 #include "JSDOMPromiseDeferred.h"
 #include "JSMediaKeySystemAccess.h"
+#include "LocalFrame.h"
 #include "Logging.h"
 #include "MediaKeySystemController.h"
+#include "Page.h"
 #include "PlatformMediaSessionManager.h"
 #include "Settings.h"
 #include "WindowEventLoop.h"
@@ -48,7 +49,6 @@ Ref<MediaKeySystemRequest> MediaKeySystemRequest::create(Document& document, con
 
 MediaKeySystemRequest::MediaKeySystemRequest(Document& document, const String& keySystem, Ref<DeferredPromise>&& promise)
     : ActiveDOMObject(document)
-    , m_identifier(MediaKeySystemRequestIdentifier::generate())
     , m_keySystem(keySystem)
     , m_promise(WTFMove(promise))
 {
@@ -62,13 +62,13 @@ MediaKeySystemRequest::~MediaKeySystemRequest()
 
 SecurityOrigin* MediaKeySystemRequest::topLevelDocumentOrigin() const
 {
-    auto* context = scriptExecutionContext();
+    RefPtr context = scriptExecutionContext();
     return context ? &context->topOrigin() : nullptr;
 }
 
 void MediaKeySystemRequest::start()
 {
-    auto* context = scriptExecutionContext();
+    RefPtr context = scriptExecutionContext();
     ASSERT(context);
     if (!context) {
         deny();
@@ -85,12 +85,14 @@ void MediaKeySystemRequest::start()
     controller->requestMediaKeySystem(*this);
 }
 
-void MediaKeySystemRequest::allow(CompletionHandler<void()>&& completionHandler)
+void MediaKeySystemRequest::allow()
 {
-    queueTaskKeepingObjectAlive(*this, TaskSource::UserInteraction, [this, handler = WTFMove(completionHandler)]() mutable {
-        auto completionHandler = WTFMove(m_allowCompletionHandler);
-        completionHandler(WTFMove(m_promise));
-        handler();
+    if (!scriptExecutionContext())
+        return;
+
+    queueTaskKeepingObjectAlive(*this, TaskSource::UserInteraction, [this] {
+        if (auto allowCompletionHandler = std::exchange(m_allowCompletionHandler, { }))
+            allowCompletionHandler(WTFMove(m_promise));
     });
 }
 
@@ -99,7 +101,7 @@ void MediaKeySystemRequest::deny(const String& message)
     if (!scriptExecutionContext())
         return;
 
-    ExceptionCode code = NotSupportedError;
+    ExceptionCode code = ExceptionCode::NotSupportedError;
     if (!message.isEmpty())
         m_promise->reject(code, message);
     else
@@ -111,11 +113,6 @@ void MediaKeySystemRequest::stop()
     auto& document = downcast<Document>(*scriptExecutionContext());
     if (auto* controller = MediaKeySystemController::from(document.page()))
         controller->cancelMediaKeySystemRequest(*this);
-}
-
-const char* MediaKeySystemRequest::activeDOMObjectName() const
-{
-    return "MediaKeySystemRequest";
 }
 
 Document* MediaKeySystemRequest::document() const

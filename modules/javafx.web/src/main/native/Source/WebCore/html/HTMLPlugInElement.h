@@ -40,7 +40,8 @@ class PluginViewBase;
 class RenderWidget;
 
 class HTMLPlugInElement : public HTMLFrameOwnerElement {
-    WTF_MAKE_ISO_ALLOCATED(HTMLPlugInElement);
+    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(HTMLPlugInElement);
+    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(HTMLPlugInElement);
 public:
     virtual ~HTMLPlugInElement();
 
@@ -75,7 +76,7 @@ public:
     WEBCORE_EXPORT bool isReplacementObscured();
 
 protected:
-    HTMLPlugInElement(const QualifiedName& tagName, Document&);
+    HTMLPlugInElement(const QualifiedName& tagName, Document&, OptionSet<TypeFlag> = { });
 
     bool canContainRangeEndPoint() const override { return false; }
     void willDetachRenderers() override;
@@ -83,6 +84,9 @@ protected:
     void collectPresentationalHintsForAttribute(const QualifiedName&, const AtomString&, MutableStyleProperties&) override;
 
     virtual bool useFallbackContent() const { return false; }
+
+    InsertedIntoAncestorResult insertedIntoAncestor(InsertionType, ContainerNode& parentOfInsertedTree) override;
+    void removedFromAncestor(RemovalType, ContainerNode& oldParentOfRemovedTree) override;
 
     void defaultEventHandler(Event&) final;
 

@@ -32,9 +32,11 @@
 
 namespace JSC { namespace B3 {
 
-StackmapValue::~StackmapValue()
-{
+namespace B3StackmapValueInternal {
+constexpr bool dumpRegisters = false;
 }
+
+StackmapValue::~StackmapValue() = default;
 
 void StackmapValue::append(Value* value, const ValueRep& rep)
 {
@@ -86,8 +88,11 @@ void StackmapValue::dumpChildren(CommaPrinter& comma, PrintStream& out) const
 void StackmapValue::dumpMeta(CommaPrinter& comma, PrintStream& out) const
 {
     out.print(
-        comma, "generator = ", RawPointer(m_generator.get()), ", earlyClobbered = ", m_earlyClobbered,
+        comma, "generator = ", RawPointer(m_generator.get()));
+    if constexpr (B3StackmapValueInternal::dumpRegisters) {
+        out.print(", earlyClobbered = ", m_earlyClobbered,
         ", lateClobbered = ", m_lateClobbered, ", usedRegisters = ", m_usedRegisters);
+    }
 }
 
 StackmapValue::StackmapValue(CheckedOpcodeTag, Kind kind, Type type, Origin origin)

@@ -25,12 +25,23 @@
 
 #pragma once
 
-#include "InlineDisplayBox.h"
-#include "InlineDisplayLine.h"
+
+#include "InlineDisplayContent.h"
 #include <wtf/HashMap.h>
 #include <wtf/IteratorRange.h>
 #include <wtf/Vector.h>
 #include <wtf/WeakPtr.h>
+
+namespace WebCore {
+namespace LayoutIntegration {
+struct InlineContent;
+}
+}
+
+namespace WTF {
+template<typename T> struct IsDeprecatedWeakRefSmartPointerException;
+template<> struct IsDeprecatedWeakRefSmartPointerException<WebCore::LayoutIntegration::InlineContent> : std::true_type { };
+}
 
 namespace WebCore {
 
@@ -54,16 +65,15 @@ struct InlineContent : public CanMakeWeakPtr<InlineContent> {
     WTF_MAKE_STRUCT_FAST_ALLOCATED;
 
     InlineContent(const LineLayout&);
-    ~InlineContent();
 
-    using Boxes = Vector<InlineDisplay::Box>;
-    using Lines = Vector<InlineDisplay::Line>;
-
-    Boxes boxes;
-    Lines lines;
+    InlineDisplay::Content& displayContent() { return m_displayContent; }
+    const InlineDisplay::Content& displayContent() const { return m_displayContent; }
 
     float clearGapBeforeFirstLine { 0 };
     float clearGapAfterLastLine { 0 };
+    float firstLinePaginationOffset { 0 };
+
+    bool isPaginated { false };
     bool hasMultilinePaintOverlap { false };
 
     bool hasContent() const;
@@ -71,14 +81,13 @@ struct InlineContent : public CanMakeWeakPtr<InlineContent> {
     bool hasVisualOverflow() const { return m_hasVisualOverflow; }
     void setHasVisualOverflow() { m_hasVisualOverflow = true; }
 
-    const InlineDisplay::Line& lineForBox(const InlineDisplay::Box& box) const { return lines[box.lineIndex()]; }
+    const InlineDisplay::Line& lineForBox(const InlineDisplay::Box& box) const { return displayContent().lines[box.lineIndex()]; }
 
     IteratorRange<const InlineDisplay::Box*> boxesForRect(const LayoutRect&) const;
 
     void shrinkToFit();
 
     const LineLayout& lineLayout() const { return *m_lineLayout; }
-    const RenderObject& rendererForLayoutBox(const Layout::Box&) const;
     const RenderBlockFlow& formattingContextRoot() const;
 
     size_t indexForBox(const InlineDisplay::Box&) const;
@@ -94,6 +103,7 @@ struct InlineContent : public CanMakeWeakPtr<InlineContent> {
 private:
     CheckedPtr<const LineLayout> m_lineLayout;
 
+    InlineDisplay::Content m_displayContent;
     using FirstBoxIndexCache = HashMap<CheckedRef<const Layout::Box>, size_t>;
     mutable std::unique_ptr<FirstBoxIndexCache> m_firstBoxIndexCache;
 
@@ -105,7 +115,7 @@ private:
 template<typename Function> void InlineContent::traverseNonRootInlineBoxes(const Layout::Box& layoutBox, Function&& function)
 {
     for (auto index : nonRootInlineBoxIndexesForLayoutBox(layoutBox))
-        function(boxes[index]);
+        function(displayContent().boxes[index]);
 }
 
 }

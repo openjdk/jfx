@@ -28,6 +28,8 @@
 #if ENABLE(APPLE_PAY) && ENABLE(PAYMENT_REQUEST)
 
 #include "ApplePayAutomaticReloadPaymentRequest.h"
+#include "ApplePayDeferredPaymentRequest.h"
+#include "ApplePayDisbursementRequest.h"
 #include "ApplePayLineItem.h"
 #include "ApplePayPaymentMethodType.h"
 #include "ApplePayPaymentTokenContext.h"
@@ -54,6 +56,14 @@ struct ApplePayModifier {
 
 #if ENABLE(APPLE_PAY_MULTI_MERCHANT_PAYMENTS)
     std::optional<Vector<ApplePayPaymentTokenContext>> multiTokenContexts;
+#endif
+
+#if ENABLE(APPLE_PAY_DEFERRED_PAYMENTS)
+    std::optional<ApplePayDeferredPaymentRequest> deferredPaymentRequest;
+#endif
+
+#if ENABLE(APPLE_PAY_DISBURSEMENTS)
+    std::optional<ApplePayDisbursementRequest> disbursementRequest;
 #endif
 };
 

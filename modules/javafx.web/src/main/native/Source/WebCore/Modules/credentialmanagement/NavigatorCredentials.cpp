@@ -30,7 +30,7 @@
 #if ENABLE(WEB_AUTHN)
 
 #include "Document.h"
-#include "Frame.h"
+#include "LocalFrame.h"
 #include "Navigator.h"
 
 namespace WebCore {
@@ -39,9 +39,9 @@ NavigatorCredentials::NavigatorCredentials() = default;
 
 NavigatorCredentials::~NavigatorCredentials() = default;
 
-const char* NavigatorCredentials::supplementName()
+ASCIILiteral NavigatorCredentials::supplementName()
 {
-    return "NavigatorCredentials";
+    return "NavigatorCredentials"_s;
 }
 
 CredentialsContainer* NavigatorCredentials::credentials(WeakPtr<Document, WeakPtrImplWithEventTargetData>&& document)

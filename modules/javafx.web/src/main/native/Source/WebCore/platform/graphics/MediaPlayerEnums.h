@@ -25,6 +25,7 @@
 
 #pragma once
 
+#include <wtf/OptionSet.h>
 #include <wtf/text/WTFString.h>
 
 namespace WebCore {
@@ -51,7 +52,8 @@ enum class MediaPlayerMovieLoadType : uint8_t {
         Unknown,
         Download,
         StoredStream,
-        LiveStream
+    LiveStream,
+    HttpLiveStream,
 };
 
 enum class MediaPlayerPreload : uint8_t {
@@ -104,6 +106,19 @@ enum class MediaPlayerPitchCorrectionAlgorithm : uint8_t {
         BestForSpeech,
 };
 
+enum class MediaPlayerNeedsRenderingModeChanged : bool {
+    No,
+    Yes,
+};
+
+enum class MediaPlayerVideoPlaybackConfigurationOption : uint8_t {
+    Mono = 1 << 0,
+    Stereo = 1 << 1,
+    StereoMultiview = 1 << 2,
+    Spatial = 1 << 3,
+};
+using MediaPlayerVideoPlaybackConfiguration = OptionSet<MediaPlayerVideoPlaybackConfigurationOption>;
+
 class MediaPlayerEnums {
 public:
     using NetworkState = MediaPlayerNetworkState;
@@ -116,20 +131,27 @@ public:
     using MediaEngineIdentifier = MediaPlayerMediaEngineIdentifier;
     using WirelessPlaybackTargetType = MediaPlayerWirelessPlaybackTargetType;
     using PitchCorrectionAlgorithm = MediaPlayerPitchCorrectionAlgorithm;
+    using NeedsRenderingModeChanged = MediaPlayerNeedsRenderingModeChanged;
+    using VideoPlaybackConfigurationOption = MediaPlayerVideoPlaybackConfigurationOption;
+    using VideoPlaybackConfiguration = MediaPlayerVideoPlaybackConfiguration;
 
     enum {
         VideoFullscreenModeNone = 0,
         VideoFullscreenModeStandard = 1 << 0,
         VideoFullscreenModePictureInPicture = 1 << 1,
+        VideoFullscreenModeInWindow = 1 << 2,
+        VideoFullscreenModeAllValidBitsMask = (VideoFullscreenModeStandard | VideoFullscreenModePictureInPicture | VideoFullscreenModeInWindow)
     };
     typedef uint32_t VideoFullscreenMode;
 };
 
+WEBCORE_EXPORT WTF::TextStream& operator<<(WTF::TextStream&, MediaPlayerEnums::VideoGravity);
 WEBCORE_EXPORT String convertEnumerationToString(MediaPlayerEnums::ReadyState);
 String convertEnumerationToString(MediaPlayerEnums::NetworkState);
 String convertEnumerationToString(MediaPlayerEnums::Preload);
 String convertEnumerationToString(MediaPlayerEnums::SupportsType);
 String convertEnumerationToString(MediaPlayerEnums::BufferingPolicy);
+WEBCORE_EXPORT String convertOptionSetToString(const MediaPlayerEnums::VideoPlaybackConfiguration&);
 
 } // namespace WebCore
 
@@ -160,6 +182,14 @@ struct LogArgument<WebCore::MediaPlayerEnums::BufferingPolicy> {
     static String toString(const WebCore::MediaPlayerEnums::BufferingPolicy policy)
     {
         return convertEnumerationToString(policy);
+    }
+};
+
+template <>
+struct LogArgument<WebCore::MediaPlayerEnums::VideoPlaybackConfiguration> {
+    static String toString(const WebCore::MediaPlayerEnums::VideoPlaybackConfiguration& configuration)
+    {
+        return convertOptionSetToString(configuration);
     }
 };
 

@@ -1,6 +1,6 @@
 /*
  *  Copyright (C) 1999-2000 Harri Porten (porten@kde.org)
- *  Copyright (C) 2008-2022 Apple Inc. All rights reserved.
+ *  Copyright (C) 2008-2023 Apple Inc. All rights reserved.
  *
  *  This library is free software; you can redistribute it and/or
  *  modify it under the terms of the GNU Lesser General Public
@@ -27,7 +27,7 @@ namespace JSC {
 class BooleanObject : public JSWrapperObject {
 protected:
     JS_EXPORT_PRIVATE BooleanObject(VM&, Structure*);
-    JS_EXPORT_PRIVATE void finishCreation(VM&);
+    DECLARE_DEFAULT_FINISH_CREATION;
 
 public:
     using Base = JSWrapperObject;
@@ -47,10 +47,7 @@ public:
 
     DECLARE_EXPORT_INFO;
 
-    static Structure* createStructure(VM& vm, JSGlobalObject* globalObject, JSValue prototype)
-    {
-        return Structure::create(vm, globalObject, prototype, TypeInfo(BooleanObjectType, StructureFlags), info());
-    }
+    inline static Structure* createStructure(VM&, JSGlobalObject*, JSValue);
 };
 static_assert(sizeof(BooleanObject) == sizeof(JSWrapperObject));
 

@@ -26,26 +26,42 @@
 #include "config.h"
 #include "DeviceOrientationEvent.h"
 
-#include "DOMWindow.h"
 #include "DeviceOrientationAndMotionAccessController.h"
 #include "DeviceOrientationData.h"
 #include "Document.h"
 #include "JSDOMPromiseDeferred.h"
-#include <wtf/IsoMallocInlines.h>
+#include "LocalDOMWindow.h"
+#include <wtf/TZoneMallocInlines.h>
+#include <wtf/text/MakeString.h>
 
 namespace WebCore {
 
-WTF_MAKE_ISO_ALLOCATED_IMPL(DeviceOrientationEvent);
+WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(DeviceOrientationEvent);
 
 DeviceOrientationEvent::~DeviceOrientationEvent() = default;
 
 DeviceOrientationEvent::DeviceOrientationEvent()
-    : m_orientation(DeviceOrientationData::create())
+#if ENABLE(DEVICE_ORIENTATION)
+    : Event(EventInterfaceType::DeviceOrientationEvent)
+#else
+    // FIXME: ENABLE(DEVICE_ORIENTATION) seems to be in a strange state where
+    // it is half-guarded by #ifdefs. DeviceOrientationEvent.idl is guarded
+    // but DeviceOrientationEvent.cpp itself is required by unguarded code.
+    : Event(EventInterfaceType::Event)
+#endif
+    , m_orientation(DeviceOrientationData::create())
 {
 }
 
 DeviceOrientationEvent::DeviceOrientationEvent(const AtomString& eventType, DeviceOrientationData* orientation)
-    : Event(eventType, CanBubble::No, IsCancelable::No)
+#if ENABLE(DEVICE_ORIENTATION)
+    : Event(EventInterfaceType::DeviceOrientationEvent, eventType, CanBubble::No, IsCancelable::No)
+#else
+    // FIXME: ENABLE(DEVICE_ORIENTATION) seems to be in a strange state where
+    // it is half-guarded by #ifdefs. DeviceOrientationEvent.idl is guarded
+    // but DeviceOrientationEvent.cpp itself is required by unguarded code.
+    : Event(EventInterfaceType::Event, eventType, CanBubble::No, IsCancelable::No)
+#endif
     , m_orientation(orientation)
 {
 }
@@ -104,35 +120,22 @@ void DeviceOrientationEvent::initDeviceOrientationEvent(const AtomString& type, 
 
 #endif
 
-EventInterface DeviceOrientationEvent::eventInterface() const
-{
-#if ENABLE(DEVICE_ORIENTATION)
-    return DeviceOrientationEventInterfaceType;
-#else
-    // FIXME: ENABLE(DEVICE_ORIENTATION) seems to be in a strange state where
-    // it is half-guarded by #ifdefs. DeviceOrientationEvent.idl is guarded
-    // but DeviceOrientationEvent.cpp itself is required by ungarded code.
-    return EventInterfaceType;
-#endif
-}
-
 #if ENABLE(DEVICE_ORIENTATION)
 void DeviceOrientationEvent::requestPermission(Document& document, PermissionPromise&& promise)
 {
-    auto* window = document.domWindow();
-    auto* page = document.page();
-    if (!window || !page)
-        return promise.reject(Exception { InvalidStateError, "No browsing context"_s });
+    RefPtr window = document.domWindow();
+    if (!window || !document.page())
+        return promise.reject(Exception { ExceptionCode::InvalidStateError, "No browsing context"_s });
 
     String errorMessage;
     if (!window->isAllowedToUseDeviceOrientation(errorMessage)) {
-        document.addConsoleMessage(MessageSource::JS, MessageLevel::Warning, makeString("Call to requestPermission() failed, reason: ", errorMessage, "."));
+        document.addConsoleMessage(MessageSource::JS, MessageLevel::Warning, makeString("Call to requestPermission() failed, reason: "_s, errorMessage, '.'));
         return promise.resolve(PermissionState::Denied);
     }
 
     document.deviceOrientationAndMotionAccessController().shouldAllowAccess(document, [promise = WTFMove(promise)](PermissionState permissionState) mutable {
         if (permissionState == PermissionState::Prompt)
-            return promise.reject(Exception { NotAllowedError, "Requesting device orientation access requires a user gesture to prompt"_s });
+            return promise.reject(Exception { ExceptionCode::NotAllowedError, "Requesting device orientation access requires a user gesture to prompt"_s });
         promise.resolve(permissionState);
     });
 }

@@ -31,9 +31,9 @@
 
 #if ENABLE(ASYNC_SCROLLING) && USE(NICOSIA)
 
-#include "FrameView.h"
+#include "LocalFrameView.h"
 #include "Logging.h"
-#include "NicosiaPlatformLayer.h"
+#include "NicosiaCompositionLayer.h"
 #include "ScrollingStateFrameScrollingNode.h"
 #include "ScrollingTreeScrollingNodeDelegateNicosia.h"
 #include "ThreadedScrollingTree.h"
@@ -117,7 +117,9 @@ void ScrollingTreeFrameScrollingNodeNicosia::currentScrollPositionChanged(Scroll
 void ScrollingTreeFrameScrollingNodeNicosia::repositionScrollingLayers()
 {
     auto* scrollLayer = static_cast<Nicosia::PlatformLayer*>(scrolledContentsLayer());
-    ASSERT(scrollLayer);
+    if (!scrollLayer)
+        return;
+
     auto& compositionLayer = downcast<Nicosia::CompositionLayer>(*scrollLayer);
 
     auto scrollPosition = currentScrollPosition();
@@ -156,11 +158,11 @@ void ScrollingTreeFrameScrollingNodeNicosia::repositionRelatedLayers()
         m_insetClipLayer->accessPending(
             [&scrollPosition, &topContentInset](Nicosia::CompositionLayer::LayerState& state)
             {
-                state.position = { state.position.x(), FrameView::yPositionForInsetClipLayer(scrollPosition, topContentInset) };
+                state.position = { state.position.x(), LocalFrameView::yPositionForInsetClipLayer(scrollPosition, topContentInset) };
                 state.delta.positionChanged = true;
             });
 
-        auto rootContentsPosition = FrameView::positionForRootContentLayer(scrollPosition, scrollOrigin(), topContentInset, headerHeight());
+        auto rootContentsPosition = LocalFrameView::positionForRootContentLayer(scrollPosition, scrollOrigin(), topContentInset, headerHeight());
         applyLayerPosition(*m_rootContentsLayer, rootContentsPosition);
         if (m_contentShadowLayer)
             applyLayerPosition(*m_contentShadowLayer, rootContentsPosition);
@@ -172,9 +174,9 @@ void ScrollingTreeFrameScrollingNodeNicosia::repositionRelatedLayers()
         // then we should recompute layoutViewport.x() for the banner with a scale factor of 1.
         float horizontalScrollOffsetForBanner = layoutViewport.x();
         if (m_headerLayer)
-            applyLayerPosition(*m_headerLayer, FloatPoint(horizontalScrollOffsetForBanner, FrameView::yPositionForHeaderLayer(scrollPosition, topContentInset)));
+            applyLayerPosition(*m_headerLayer, FloatPoint(horizontalScrollOffsetForBanner, LocalFrameView::yPositionForHeaderLayer(scrollPosition, topContentInset)));
         if (m_footerLayer)
-            applyLayerPosition(*m_footerLayer, FloatPoint(horizontalScrollOffsetForBanner, FrameView::yPositionForFooterLayer(scrollPosition, topContentInset, totalContentsSize().height(), footerHeight())));
+            applyLayerPosition(*m_footerLayer, FloatPoint(horizontalScrollOffsetForBanner, LocalFrameView::yPositionForFooterLayer(scrollPosition, topContentInset, totalContentsSize().height(), footerHeight())));
     }
 
     delegate().updateVisibleLengths();

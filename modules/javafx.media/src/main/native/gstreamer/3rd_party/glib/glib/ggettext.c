@@ -1,6 +1,8 @@
 /* GLIB - Library of useful routines for C programming
  * Copyright (C) 1995-1998  Peter Mattis, Spencer Kimball and Josh MacDonald
  *
+ * SPDX-License-Identifier: LGPL-2.1-or-later
+ *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
  * License as published by the Free Software Foundation; either
@@ -365,12 +367,12 @@ _g_dgettext_should_translate (void)
  * translations for the current locale.
  *
  * The advantage of using this function over dgettext() proper is that
- * libraries using this function (like GTK+) will not use translations
+ * libraries using this function (like GTK) will not use translations
  * if the application using the library does not have translations for
  * the current locale.  This results in a consistent English-only
  * interface instead of one having partial translations.  For this
  * feature to work, the call to textdomain() and setlocale() should
- * precede any g_dgettext() invocations.  For GTK+, it means calling
+ * precede any g_dgettext() invocations.  For GTK, it means calling
  * textdomain() before gtk_init or its variants.
  *
  * This function disables translations if and only if upon its first
@@ -388,7 +390,7 @@ _g_dgettext_should_translate (void)
  *
  * Note that this behavior may not be desired for example if an application
  * has its untranslated messages in a language other than English. In those
- * cases the application should call textdomain() after initializing GTK+.
+ * cases the application should call textdomain() after initializing GTK.
  *
  * Applications should normally not use this function directly,
  * but use the _() macro for translations.
@@ -465,6 +467,57 @@ g_dngettext (const gchar *domain,
   return dngettext (domain, msgid, msgid_plural, n);
 }
 
+
+
+/**
+ * SECTION:i18n
+ * @title: Internationalization
+ * @short_description: gettext support macros
+ * @see_also: the gettext manual
+ *
+ * GLib doesn't force any particular localization method upon its users.
+ * But since GLib itself is localized using the gettext() mechanism, it seems
+ * natural to offer the de-facto standard gettext() support macros in an
+ * easy-to-use form.
+ *
+ * In order to use these macros in an application, you must include
+ * `<glib/gi18n.h>`. For use in a library, you must include
+ * `<glib/gi18n-lib.h>`
+ * after defining the %GETTEXT_PACKAGE macro suitably for your library:
+ * |[<!-- language="C" -->
+ * #define GETTEXT_PACKAGE "gtk20"
+ * #include <glib/gi18n-lib.h>
+ * ]|
+ * For an application, note that you also have to call bindtextdomain(),
+ * bind_textdomain_codeset(), textdomain() and setlocale() early on in your
+ * main() to make gettext() work. For example:
+ * |[<!-- language="C" -->
+ * #include <glib/gi18n.h>
+ * #include <locale.h>
+ *
+ * int
+ * main (int argc, char **argv)
+ * {
+ *   setlocale (LC_ALL, "");
+ *   bindtextdomain (GETTEXT_PACKAGE, DATADIR "/locale");
+ *   bind_textdomain_codeset (GETTEXT_PACKAGE, "UTF-8");
+ *   textdomain (GETTEXT_PACKAGE);
+ *
+ *   // Rest of your application.
+ * }
+ * ]|
+ * where `DATADIR` is as typically provided by automake or Meson.
+ *
+ * For a library, you only have to call bindtextdomain() and
+ * bind_textdomain_codeset() in your initialization function. If your library
+ * doesn't have an initialization function, you can call the functions before
+ * the first translated message.
+ *
+ * The
+ * [gettext manual](http://www.gnu.org/software/gettext/manual/gettext.html#Maintainers)
+ * covers details of how to integrate gettext into a project’s build system and
+ * workflow.
+ */
 
 /**
  * SECTION:i18n

@@ -52,7 +52,7 @@ CString FileSystem::fileSystemRepresentation(const String& path)
         return CString();
     }
 
-    return CString(buffer.data(), strlen(buffer.data()));
+    return buffer.data();
 }
 
 String FileSystem::stringFromFileSystemRepresentation(const char* fileSystemRepresentation)
@@ -62,13 +62,7 @@ String FileSystem::stringFromFileSystemRepresentation(const char* fileSystemRepr
 
 RetainPtr<CFURLRef> FileSystem::pathAsURL(const String& path)
 {
-    CFURLPathStyle pathStyle;
-#if PLATFORM(WIN)
-    pathStyle = kCFURLWindowsPathStyle;
-#else
-    pathStyle = kCFURLPOSIXPathStyle;
-#endif
-    return adoptCF(CFURLCreateWithFileSystemPath(nullptr, path.createCFString().get(), pathStyle, FALSE));
+    return adoptCF(CFURLCreateWithFileSystemPath(nullptr, path.createCFString().get(), kCFURLPOSIXPathStyle, FALSE));
 }
 
 } // namespace WTF

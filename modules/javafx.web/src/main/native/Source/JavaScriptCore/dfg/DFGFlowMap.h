@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2016-2018 Apple Inc. All Rights Reserved.
+ * Copyright (C) 2016-2023 Apple Inc. All Rights Reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -30,6 +30,7 @@
 #include "DFGFlowIndexing.h"
 #include "DFGGraph.h"
 #include "DFGNode.h"
+#include <wtf/TZoneMalloc.h>
 
 namespace JSC { namespace DFG {
 
@@ -38,7 +39,7 @@ namespace JSC { namespace DFG {
 // values of Phis. This makes it easy to do both of those things.
 template<typename T>
 class FlowMap {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_ALLOCATED(FlowMap);
 public:
     FlowMap(Graph& graph)
         : m_graph(graph)
@@ -107,6 +108,13 @@ public:
     ALWAYS_INLINE const T& at(Node* node, NodeFlowProjection::Kind kind) const { return const_cast<FlowMap*>(this)->at(node, kind); }
     ALWAYS_INLINE const T& at(NodeFlowProjection projection) const { return const_cast<FlowMap*>(this)->at(projection); }
 
+    ALWAYS_INLINE void clear()
+    {
+        m_map.clear();
+        m_shadowMap.clear();
+        resize();
+    }
+
 private:
     Graph& m_graph;
     Vector<T, 0, UnsafeVectorOverflow> m_map;
@@ -124,13 +132,13 @@ void printInternal(PrintStream& out, const JSC::DFG::FlowMap<T>& map)
     for (unsigned i = 0; i < map.graph().maxNodeCount(); ++i) {
         if (JSC::DFG::Node* node = map.graph().nodeAt(i)) {
             if (const T& value = map.at(node))
-                out.print(comma, node, "=>", value);
+                out.print(comma, node, "=>"_s, value);
         }
     }
     for (unsigned i = 0; i < map.graph().maxNodeCount(); ++i) {
         if (JSC::DFG::Node* node = map.graph().nodeAt(i)) {
             if (const T& value = map.atShadow(node))
-                out.print(comma, "shadow(", node, ")=>", value);
+                out.print(comma, "shadow("_s, node, ")=>"_s, value);
         }
     }
 }

@@ -27,13 +27,14 @@
 namespace WebCore {
 
 class HTMLDivElement : public HTMLElement {
-    WTF_MAKE_ISO_ALLOCATED(HTMLDivElement);
+    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(HTMLDivElement);
+    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(HTMLDivElement);
 public:
     WEBCORE_EXPORT static Ref<HTMLDivElement> create(Document&);
     static Ref<HTMLDivElement> create(const QualifiedName&, Document&);
 
 protected:
-    HTMLDivElement(const QualifiedName&, Document&);
+    HTMLDivElement(const QualifiedName&, Document&, OptionSet<TypeFlag> = { });
 
 private:
     void collectPresentationalHintsForAttribute(const QualifiedName&, const AtomString&, MutableStyleProperties&) final;

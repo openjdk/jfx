@@ -38,10 +38,7 @@ bool tryToDisassemble(const CodePtr<DisassemblyPtrTag>& codePtr, size_t size, vo
     csh handle;
     cs_insn* instructions;
 
-#if CPU(X86)
-    if (cs_open(CS_ARCH_X86, CS_MODE_32, &handle) != CS_ERR_OK)
-        return false;
-#elif CPU(X86_64)
+#if CPU(X86_64)
     if (cs_open(CS_ARCH_X86, CS_MODE_64, &handle) != CS_ERR_OK)
         return false;
 #elif CPU(ARM_THUMB2)
@@ -52,14 +49,11 @@ bool tryToDisassemble(const CodePtr<DisassemblyPtrTag>& codePtr, size_t size, vo
 #elif CPU(ARM64)
     if (cs_open(CS_ARCH_ARM64, CS_MODE_ARM, &handle) != CS_ERR_OK)
         return false;
-#elif CPU(MIPS)
-    if (cs_open(CS_ARCH_MIPS, CS_MODE_MIPS32, &handle) != CS_ERR_OK)
-        return false;
 #else
     return false;
 #endif
 
-#if CPU(X86) || CPU(X86_64)
+#if CPU(X86_64)
     if (cs_option(handle, CS_OPT_SYNTAX, CS_OPT_SYNTAX_ATT) != CS_ERR_OK) {
         cs_close(&handle);
         return false;

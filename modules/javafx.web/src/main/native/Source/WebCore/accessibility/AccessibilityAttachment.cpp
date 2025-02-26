@@ -38,12 +38,12 @@ namespace WebCore {
 
 using namespace HTMLNames;
 
-AccessibilityAttachment::AccessibilityAttachment(RenderAttachment* renderer)
+AccessibilityAttachment::AccessibilityAttachment(RenderAttachment& renderer)
     : AccessibilityRenderObject(renderer)
 {
 }
 
-Ref<AccessibilityAttachment> AccessibilityAttachment::create(RenderAttachment* renderer)
+Ref<AccessibilityAttachment> AccessibilityAttachment::create(RenderAttachment& renderer)
 {
     return adoptRef(*new AccessibilityAttachment(renderer));
 }
@@ -68,10 +68,7 @@ float AccessibilityAttachment::valueForRange() const
 HTMLAttachmentElement* AccessibilityAttachment::attachmentElement() const
 {
     ASSERT(is<HTMLAttachmentElement>(node()));
-    if (!is<HTMLAttachmentElement>(node()))
-        return nullptr;
-
-    return downcast<HTMLAttachmentElement>(node());
+    return dynamicDowncast<HTMLAttachmentElement>(node());
 }
 
 String AccessibilityAttachment::roleDescription() const
@@ -86,12 +83,12 @@ bool AccessibilityAttachment::computeAccessibilityIsIgnored() const
 
 void AccessibilityAttachment::accessibilityText(Vector<AccessibilityText>& textOrder) const
 {
-    HTMLAttachmentElement* attachmentElement = this->attachmentElement();
+    RefPtr attachmentElement = this->attachmentElement();
     if (!attachmentElement)
         return;
 
     auto title = attachmentElement->attachmentTitle();
-    auto& subtitle = getAttribute(subtitleAttr);
+    auto& subtitle = attachmentElement->attachmentSubtitle();
     auto& action = getAttribute(actionAttr);
 
     if (action.length())

@@ -30,6 +30,7 @@
 
 #include "SerializedPlatformDataCue.h"
 #include "TextTrackCue.h"
+#include <JavaScriptCore/Strong.h>
 #include <wtf/MediaTime.h>
 #include <wtf/TypeCasts.h>
 
@@ -43,11 +44,11 @@ namespace WebCore {
 class ScriptExecutionContext;
 
 class DataCue final : public TextTrackCue {
-    WTF_MAKE_ISO_ALLOCATED(DataCue);
+    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(DataCue);
 public:
     static Ref<DataCue> create(Document&, double start, double end, ArrayBuffer& data);
     static Ref<DataCue> create(Document&, double start, double end, JSC::JSValue, const String& type);
-    static Ref<DataCue> create(Document&, const MediaTime& start, const MediaTime& end, const void* data, unsigned length);
+    static Ref<DataCue> create(Document&, const MediaTime& start, const MediaTime& end, std::span<const uint8_t> data);
     static Ref<DataCue> create(Document&, const MediaTime& start, const MediaTime& end, Ref<SerializedPlatformDataCue>&&, const String& type);
 
     virtual ~DataCue();
@@ -65,7 +66,7 @@ public:
 
 private:
     DataCue(Document&, const MediaTime& start, const MediaTime& end, ArrayBuffer&, const String&);
-    DataCue(Document&, const MediaTime& start, const MediaTime& end, const void*, unsigned);
+    DataCue(Document&, const MediaTime& start, const MediaTime& end, std::span<const uint8_t>);
     DataCue(Document&, const MediaTime& start, const MediaTime& end, Ref<SerializedPlatformDataCue>&&, const String&);
     DataCue(Document&, const MediaTime& start, const MediaTime& end, JSC::JSValue, const String&);
 

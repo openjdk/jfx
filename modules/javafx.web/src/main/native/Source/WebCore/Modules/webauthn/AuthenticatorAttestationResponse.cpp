@@ -35,10 +35,11 @@
 #include "WebAuthenticationUtils.h"
 
 namespace WebCore {
+static constexpr auto useCryptoKit = UseCryptoKit::Yes;
 
 static std::optional<cbor::CBORValue> coseKeyForAttestationObject(Ref<ArrayBuffer> attObj)
 {
-    auto decodedResponse = cbor::CBORReader::read(convertArrayBufferToVector(attObj.ptr()));
+    auto decodedResponse = cbor::CBORReader::read(attObj->toVector());
     if (!decodedResponse || !decodedResponse->isMap()) {
         ASSERT_NOT_REACHED();
         return std::nullopt;
@@ -61,7 +62,6 @@ static std::optional<cbor::CBORValue> coseKeyForAttestationObject(Ref<ArrayBuffe
 
     const size_t cosePublicKeyLength = authData.size() - cosePublicKeyOffset;
     Vector<uint8_t> cosePublicKey;
-    cosePublicKey.reserveInitialCapacity(cosePublicKeyLength);
     auto beginIt = authData.begin() + cosePublicKeyOffset;
     cosePublicKey.appendRange(beginIt, beginIt + cosePublicKeyLength);
 
@@ -75,7 +75,7 @@ Ref<AuthenticatorAttestationResponse> AuthenticatorAttestationResponse::create(R
 
 Ref<AuthenticatorAttestationResponse> AuthenticatorAttestationResponse::create(const Vector<uint8_t>& rawId, const Vector<uint8_t>& attestationObject, AuthenticatorAttachment attachment, Vector<AuthenticatorTransport>&& transports)
 {
-    return create(ArrayBuffer::create(rawId.data(), rawId.size()), ArrayBuffer::create(attestationObject.data(), attestationObject.size()), attachment, WTFMove(transports));
+    return create(ArrayBuffer::create(rawId), ArrayBuffer::create(attestationObject), attachment, WTFMove(transports));
 }
 
 AuthenticatorAttestationResponse::AuthenticatorAttestationResponse(Ref<ArrayBuffer>&& rawId, Ref<ArrayBuffer>&& attestationObject, AuthenticatorAttachment attachment, Vector<AuthenticatorTransport>&& transports)
@@ -96,7 +96,7 @@ AuthenticatorResponseData AuthenticatorAttestationResponse::data() const
 
 RefPtr<ArrayBuffer> AuthenticatorAttestationResponse::getAuthenticatorData() const
 {
-    auto decodedResponse = cbor::CBORReader::read(convertArrayBufferToVector(m_attestationObject.ptr()));
+    auto decodedResponse = cbor::CBORReader::read(m_attestationObject->toVector());
     if (!decodedResponse || !decodedResponse->isMap()) {
         ASSERT_NOT_REACHED();
         return nullptr;
@@ -108,7 +108,7 @@ RefPtr<ArrayBuffer> AuthenticatorAttestationResponse::getAuthenticatorData() con
         return nullptr;
     }
     auto authData = it->second.getByteString();
-    return ArrayBuffer::tryCreate(authData.data(), authData.size());
+    return ArrayBuffer::tryCreate(authData);
 }
 
 int64_t AuthenticatorAttestationResponse::getPublicKeyAlgorithm() const
@@ -170,12 +170,12 @@ RefPtr<ArrayBuffer> AuthenticatorAttestationResponse::getPublicKey() const
             return nullptr;
         }
         auto y = it->second.getByteString();
+        auto peerKey = CryptoKeyEC::importRaw(CryptoAlgorithmIdentifier::ECDH, "P-256"_s, encodeRawPublicKey(x, y), true, CryptoKeyUsageDeriveBits, useCryptoKit);
 
-        auto peerKey = CryptoKeyEC::importRaw(CryptoAlgorithmIdentifier::ECDH, "P-256"_s, encodeRawPublicKey(x, y), true, CryptoKeyUsageDeriveBits);
         if (!peerKey)
             return nullptr;
-        auto keySpki = peerKey->exportSpki().releaseReturnValue();
-        return ArrayBuffer::tryCreate(keySpki.data(), keySpki.size());
+        auto keySpki = peerKey->exportSpki(useCryptoKit).releaseReturnValue();
+        return ArrayBuffer::tryCreate(keySpki);
     }
     default:
         break;

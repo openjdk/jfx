@@ -1,6 +1,5 @@
 /*
- * Copyright (C) 2010 University of Szeged
- * Copyright (C) 2010 Zoltan Herczeg
+ * Copyright (C) 2024 Apple Inc.  All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -11,10 +10,10 @@
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
  *
- * THIS SOFTWARE IS PROVIDED BY UNIVERSITY OF SZEGED ``AS IS'' AND ANY
+ * THIS SOFTWARE IS PROVIDED BY APPLE INC. ``AS IS'' AND ANY
  * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
- * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL UNIVERSITY OF SZEGED OR
+ * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE INC. OR
  * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
  * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
  * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
@@ -26,29 +25,26 @@
 
 #pragma once
 
-#include "RenderSVGResourceFilter.h"
+#include "RenderSVGHiddenContainer.h"
 
 namespace WebCore {
 
 class FilterEffect;
+
 class SVGFilterPrimitiveStandardAttributes;
 
-class RenderSVGResourceFilterPrimitive final : public LegacyRenderSVGHiddenContainer {
-    WTF_MAKE_ISO_ALLOCATED(RenderSVGResourceFilterPrimitive);
+class RenderSVGResourceFilterPrimitive final : public RenderSVGHiddenContainer {
+    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(RenderSVGResourceFilterPrimitive);
 public:
     RenderSVGResourceFilterPrimitive(SVGFilterPrimitiveStandardAttributes&, RenderStyle&&);
     SVGFilterPrimitiveStandardAttributes& filterPrimitiveElement() const;
 
-    void styleDidChange(StyleDifference, const RenderStyle*) override;
-
-    ASCIILiteral renderName() const override { return "RenderSVGResourceFilterPrimitive"_s; }
-
     void markFilterEffectForRepaint(FilterEffect*);
     void markFilterEffectForRebuild();
 
-private:
-    bool isSVGResourceFilterPrimitive() const override { return true; }
-    void element() const = delete;
+    void styleDidChange(StyleDifference, const RenderStyle*) override;
 };
 
 } // namespace WebCore
+
+SPECIALIZE_TYPE_TRAITS_RENDER_OBJECT(RenderSVGResourceFilterPrimitive, isRenderSVGResourceFilterPrimitive())

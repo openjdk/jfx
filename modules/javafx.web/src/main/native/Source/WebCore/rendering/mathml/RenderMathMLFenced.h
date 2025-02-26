@@ -35,9 +35,11 @@ namespace WebCore {
 class MathMLRowElement;
 
 class RenderMathMLFenced final : public RenderMathMLRow {
-    WTF_MAKE_ISO_ALLOCATED(RenderMathMLFenced);
+    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(RenderMathMLFenced);
+    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(RenderMathMLFenced);
 public:
     RenderMathMLFenced(MathMLRowElement&, RenderStyle&&);
+    virtual ~RenderMathMLFenced();
 
     StringImpl* separators() const { return m_separators.get(); }
     String openingBrace() const { return m_open; }
@@ -49,14 +51,13 @@ public:
     void updateFromElement();
 
 private:
-    bool isRenderMathMLFenced() const final { return true; }
     ASCIILiteral renderName() const final { return "RenderMathMLFenced"_s; }
 
     String m_open;
     String m_close;
     RefPtr<StringImpl> m_separators;
 
-    WeakPtr<RenderMathMLFencedOperator> m_closeFenceRenderer;
+    SingleThreadWeakPtr<RenderMathMLFencedOperator> m_closeFenceRenderer;
 };
 
 }

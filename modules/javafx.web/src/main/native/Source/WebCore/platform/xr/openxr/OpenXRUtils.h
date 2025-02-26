@@ -21,26 +21,19 @@
 
 #if ENABLE(WEBXR) && USE(OPENXR)
 
-#if USE(EGL)
 // EGL symbols required by openxr_platform.h
 #if USE(LIBEPOXY)
 #define __GBM__ 1
-#include "EpoxyEGL.h"
+#include <epoxy/egl.h>
 #else
-#if PLATFORM(WAYLAND)
-#include <wayland-egl.h>
-#endif
 #include <EGL/egl.h>
 #endif
-
-#endif // USE(EGL)
 
 #include "Logging.h"
 #include "PlatformXR.h"
 #include <openxr/openxr.h>
 #include <openxr/openxr_platform.h>
-
-#include <wtf/text/StringConcatenateNumbers.h>
+#include <wtf/text/MakeString.h>
 #include <wtf/text/WTFString.h>
 
 namespace PlatformXR {
@@ -61,7 +54,7 @@ inline String resultToString(XrResult value, XrInstance instance)
     XrResult result = xrResultToString(instance, value, buffer);
     if (result == XR_SUCCESS)
         return String::fromLatin1(buffer);
-    return makeString("<unknown ", int(value), ">");
+    return makeString("<unknown "_s, int(value), '>');
 }
 
 #define RETURN_IF_FAILED(call, label, instance, ...)                                                      \
@@ -87,18 +80,18 @@ inline String resultToString(XrResult value, XrInstance instance)
         LOG(XR, "%s %s: %s\n", __func__, call, resultToString(result, instance).utf8().data());
 
 
-inline Device::FrameData::Pose XrPosefToPose(XrPosef pose)
+inline FrameData::Pose XrPosefToPose(XrPosef pose)
 {
-    Device::FrameData::Pose result;
+    FrameData::Pose result;
     result.orientation = { pose.orientation.x, pose.orientation.y, pose.orientation.z, pose.orientation.w };
     result.position = { pose.position.x, pose.position.y, pose.position.z };
     return result;
 }
 
-inline Device::FrameData::View xrViewToPose(XrView view)
+inline FrameData::View xrViewToPose(XrView view)
 {
-    Device::FrameData::View pose;
-    pose.projection = Device::FrameData::Fov { fabs(view.fov.angleUp), fabs(view.fov.angleDown), fabs(view.fov.angleLeft), fabs(view.fov.angleRight) };
+    FrameData::View pose;
+    pose.projection = FrameData::Fov { std::abs(view.fov.angleUp), std::abs(view.fov.angleDown), std::abs(view.fov.angleLeft), std::abs(view.fov.angleRight) };
     pose.offset = XrPosefToPose(view.pose);
     return pose;
 }

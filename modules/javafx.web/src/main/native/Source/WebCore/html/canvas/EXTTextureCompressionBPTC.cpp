@@ -28,16 +28,16 @@
 #if ENABLE(WEBGL)
 #include "EXTTextureCompressionBPTC.h"
 
-#include <wtf/IsoMallocInlines.h>
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
-WTF_MAKE_ISO_ALLOCATED_IMPL(EXTTextureCompressionBPTC);
+WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(EXTTextureCompressionBPTC);
 
 EXTTextureCompressionBPTC::EXTTextureCompressionBPTC(WebGLRenderingContextBase& context)
-    : WebGLExtension(context)
+    : WebGLExtension(context, WebGLExtensionName::EXTTextureCompressionBPTC)
 {
-    context.graphicsContextGL()->ensureExtensionEnabled("GL_EXT_texture_compression_bptc"_s);
+    context.protectedGraphicsContextGL()->ensureExtensionEnabled("GL_EXT_texture_compression_bptc"_s);
 
     context.addCompressedTextureFormat(GraphicsContextGL::COMPRESSED_RGBA_BPTC_UNORM_EXT);
     context.addCompressedTextureFormat(GraphicsContextGL::COMPRESSED_SRGB_ALPHA_BPTC_UNORM_EXT);
@@ -46,11 +46,6 @@ EXTTextureCompressionBPTC::EXTTextureCompressionBPTC(WebGLRenderingContextBase& 
 }
 
 EXTTextureCompressionBPTC::~EXTTextureCompressionBPTC() = default;
-
-WebGLExtension::ExtensionName EXTTextureCompressionBPTC::getName() const
-{
-    return EXTTextureCompressionBPTCName;
-}
 
 bool EXTTextureCompressionBPTC::supported(GraphicsContextGL& context)
 {

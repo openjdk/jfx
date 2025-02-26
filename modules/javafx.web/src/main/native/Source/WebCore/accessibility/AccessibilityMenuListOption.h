@@ -25,13 +25,14 @@
 
 #pragma once
 
+#include "AccessibilityNodeObject.h"
 #include "AccessibilityObject.h"
 
 namespace WebCore {
 
 class HTMLOptionElement;
 
-class AccessibilityMenuListOption final : public AccessibilityObject {
+class AccessibilityMenuListOption final : public AccessibilityNodeObject {
 public:
     static Ref<AccessibilityMenuListOption> create(HTMLOptionElement&);
     void setParent(AccessibilityObject* parent) { m_parent = parent; }
@@ -41,27 +42,27 @@ private:
 
     bool isMenuListOption() const final { return true; }
 
-    AccessibilityRole roleValue() const final { return AccessibilityRole::MenuListOption; }
+    AccessibilityRole determineAccessibilityRole() final { return AccessibilityRole::MenuListOption; }
     bool canHaveChildren() const final { return false; }
-    AccessibilityObject* parentObject() const final { return m_parent; }
+    AccessibilityObject* parentObject() const final { return m_parent.get(); }
 
+    HTMLOptionElement* optionElement() const;
     Element* actionElement() const final;
-    Node* node() const final;
     bool isEnabled() const final;
     bool isVisible() const final;
     bool isOffScreen() const final;
     bool isSelected() const final;
-    String nameForMSAA() const final;
     void setSelected(bool) final;
     bool canSetSelectedAttribute() const final;
     LayoutRect elementRect() const final;
     String stringValue() const final;
     bool computeAccessibilityIsIgnored() const final;
 
-    WeakPtr<HTMLOptionElement, WeakPtrImplWithEventTargetData> m_element;
-    AccessibilityObject* m_parent;
+    WeakPtr<AccessibilityObject> m_parent;
 };
 
 } // namespace WebCore
 
-SPECIALIZE_TYPE_TRAITS_ACCESSIBILITY(AccessibilityMenuListOption, isMenuListOption())
+SPECIALIZE_TYPE_TRAITS_BEGIN(WebCore::AccessibilityMenuListOption) \
+    static bool isType(const WebCore::AccessibilityObject& object) { return object.isMenuListOption(); } \
+SPECIALIZE_TYPE_TRAITS_END()

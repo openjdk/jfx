@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2014, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -63,7 +63,7 @@ public class PrReflectionPeer extends EffectPeer {
         int irefH = irefY2 - irefY1;
 
         int dstH = (irefY2 > srcH) ? irefY2 : srcH;
-        // RT-27389: take clipping into account...
+        // JDK-8090465: take clipping into account...
         PrDrawable dst = (PrDrawable)getRenderer().getCompatibleImage(srcW, dstH);
         if (!inputs[0].validate(fctx) || dst == null) {
             return new ImageData(fctx, null, inputbounds);

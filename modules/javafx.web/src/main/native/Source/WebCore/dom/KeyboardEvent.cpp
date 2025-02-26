@@ -2,7 +2,8 @@
  * Copyright (C) 2001 Peter Kelly (pmk@post.com)
  * Copyright (C) 2001 Tobias Anton (anton@stud.fbi.fh-darmstadt.de)
  * Copyright (C) 2006 Samuel Weinig (sam.weinig@gmail.com)
- * Copyright (C) 2003-2018 Apple Inc. All rights reserved.
+ * Copyright (C) 2003-2024 Apple Inc. All rights reserved.
+ * Copyright (C) 2017 Google Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Library General Public
@@ -23,19 +24,19 @@
 #include "config.h"
 #include "KeyboardEvent.h"
 
-#include "DOMWindow.h"
 #include "Document.h"
 #include "Editor.h"
 #include "EventHandler.h"
 #include "EventNames.h"
-#include "Frame.h"
+#include "LocalDOMWindow.h"
+#include "LocalFrame.h"
 #include "PlatformKeyboardEvent.h"
 #include "WindowsKeyboardCodes.h"
-#include <wtf/IsoMallocInlines.h>
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
-WTF_MAKE_ISO_ALLOCATED_IMPL(KeyboardEvent);
+WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(KeyboardEvent);
 
 static inline const AtomString& eventTypeForKeyboardEventType(PlatformEvent::Type type)
 {
@@ -100,10 +101,21 @@ static inline KeyboardEvent::KeyLocationCode keyLocationCode(const PlatformKeybo
     }
 }
 
-inline KeyboardEvent::KeyboardEvent() = default;
+inline KeyboardEvent::KeyboardEvent()
+     : UIEventWithKeyState(EventInterfaceType::KeyboardEvent)
+{
+}
+
+static bool viewIsCompositing(WindowProxy* view)
+{
+    if (!view)
+        return false;
+    auto* window = dynamicDowncast<LocalDOMWindow>(view->window());
+    return window && window->frame() && window->frame()->editor().hasComposition();
+}
 
 inline KeyboardEvent::KeyboardEvent(const PlatformKeyboardEvent& key, RefPtr<WindowProxy>&& view)
-    : UIEventWithKeyState(eventTypeForKeyboardEventType(key.type()), CanBubble::Yes, IsCancelable::Yes, IsComposed::Yes,
+    : UIEventWithKeyState(EventInterfaceType::KeyboardEvent, eventTypeForKeyboardEventType(key.type()), CanBubble::Yes, IsCancelable::Yes, IsComposed::Yes,
         key.timestamp().approximateMonotonicTime(), view.copyRef(), 0, key.modifiers(), IsTrusted::Yes)
     , m_underlyingPlatformEvent(makeUnique<PlatformKeyboardEvent>(key))
     , m_key(key.key())
@@ -111,7 +123,7 @@ inline KeyboardEvent::KeyboardEvent(const PlatformKeyboardEvent& key, RefPtr<Win
     , m_keyIdentifier(AtomString { key.keyIdentifier() })
     , m_location(keyLocationCode(key))
     , m_repeat(key.isAutoRepeat())
-    , m_isComposing(view && is<DOMWindow>(view->window()) && downcast<DOMWindow>(*view->window()).frame() && downcast<DOMWindow>(*view->window()).frame()->editor().hasComposition())
+    , m_isComposing(viewIsCompositing(view.get()))
 #if USE(APPKIT) || PLATFORM(IOS_FAMILY)
     , m_handledByInputMethod(key.handledByInputMethod())
 #endif
@@ -122,11 +134,11 @@ inline KeyboardEvent::KeyboardEvent(const PlatformKeyboardEvent& key, RefPtr<Win
 }
 
 inline KeyboardEvent::KeyboardEvent(const AtomString& eventType, const Init& initializer, IsTrusted isTrusted)
-    : UIEventWithKeyState(eventType, initializer, isTrusted)
+    : UIEventWithKeyState(EventInterfaceType::KeyboardEvent, eventType, initializer, isTrusted)
     , m_key(initializer.key)
     , m_code(initializer.code)
     , m_keyIdentifier(initializer.keyIdentifier)
-    , m_location(initializer.keyLocation ? *initializer.keyLocation : initializer.location)
+    , m_location(initializer.location)
     , m_repeat(initializer.repeat)
     , m_isComposing(initializer.isComposing)
     , m_charCode(initializer.charCode)
@@ -153,7 +165,7 @@ Ref<KeyboardEvent> KeyboardEvent::create(const AtomString& type, const Init& ini
 }
 
 void KeyboardEvent::initKeyboardEvent(const AtomString& type, bool canBubble, bool cancelable, RefPtr<WindowProxy>&& view,
-    const AtomString& keyIdentifier, unsigned location, bool ctrlKey, bool altKey, bool shiftKey, bool metaKey, bool altGraphKey)
+    const AtomString& keyIdentifier, unsigned location, bool ctrlKey, bool altKey, bool shiftKey, bool metaKey)
 {
     if (isBeingDispatched())
         return;
@@ -163,7 +175,7 @@ void KeyboardEvent::initKeyboardEvent(const AtomString& type, bool canBubble, bo
     m_keyIdentifier = keyIdentifier;
     m_location = location;
 
-    setModifierKeys(ctrlKey, altKey, shiftKey, metaKey, altGraphKey);
+    setModifierKeys(ctrlKey, altKey, shiftKey, metaKey);
 
     m_charCode = std::nullopt;
     m_isComposing = false;
@@ -205,18 +217,13 @@ int KeyboardEvent::charCode() const
     // Firefox: 0 for keydown/keyup events, character code for keypress
     // We match Firefox, unless in backward compatibility mode, where we always return the character code.
     bool backwardCompatibilityMode = false;
-    auto* window = view() ? view()->window() : nullptr;
-    if (is<DOMWindow>(window) && downcast<DOMWindow>(*window).frame())
-        backwardCompatibilityMode = downcast<DOMWindow>(*window).frame()->eventHandler().needsKeyboardEventDisambiguationQuirks();
+    RefPtr window = dynamicDowncast<LocalDOMWindow>(view() ? view()->window() : nullptr);
+    if (window && window->frame())
+        backwardCompatibilityMode = window->frame()->eventHandler().needsKeyboardEventDisambiguationQuirks();
 
     if (!m_underlyingPlatformEvent || (type() != eventNames().keypressEvent && !backwardCompatibilityMode))
         return 0;
     return m_underlyingPlatformEvent->text().characterStartingAt(0);
-}
-
-EventInterface KeyboardEvent::eventInterface() const
-{
-    return KeyboardEventInterfaceType;
 }
 
 bool KeyboardEvent::isKeyboardEvent() const
@@ -224,13 +231,13 @@ bool KeyboardEvent::isKeyboardEvent() const
     return true;
 }
 
-int KeyboardEvent::which() const
+unsigned KeyboardEvent::which() const
 {
     // Netscape's "which" returns a virtual key code for keydown and keyup, and a character code for keypress.
     // That's exactly what IE's "keyCode" returns. So they are the same for keyboard events.
     if (m_which)
         return m_which.value();
-    return keyCode();
+    return static_cast<unsigned>(keyCode());
 }
 
 } // namespace WebCore

@@ -40,7 +40,7 @@ constexpr size_t mediumCutoff = 4 * 1024;
 
 // This is a forwards loop so gcSafeMemmove can rely on the direction.
 template <typename T>
-ALWAYS_INLINE void gcSafeMemcpy(T* dst, T* src, size_t bytes)
+ALWAYS_INLINE void gcSafeMemcpy(T* dst, const T* src, size_t bytes)
 {
     static_assert(sizeof(T) == sizeof(JSValue));
     RELEASE_ASSERT(bytes % 8 == 0);
@@ -53,7 +53,7 @@ ALWAYS_INLINE void gcSafeMemcpy(T* dst, T* src, size_t bytes)
             bitwise_cast<volatile uint64_t*>(dst)[i] = bitwise_cast<volatile uint64_t*>(src)[i];
     };
 
-#if COMPILER(GCC_COMPATIBLE) && (CPU(X86_64) || CPU(ARM64))
+#if CPU(X86_64) || CPU(ARM64)
     if (bytes <= smallCutoff)
         slowPathForwardMemcpy();
     else if (isARM64() || bytes <= mediumCutoff) {
@@ -92,34 +92,33 @@ ALWAYS_INLINE void gcSafeMemcpy(T* dst, T* src, size_t bytes)
             : "xmm0", "xmm1", "xmm2", "xmm3", "memory", "cc"
         );
 #elif CPU(ARM64)
-        uint64_t alignedBytes = (static_cast<uint64_t>(bytes) / 16) * 16;
-        size_t offset = 0;
+        uint64_t alignedBytes = (static_cast<uint64_t>(bytes) / 32) * 32;
 
         uint64_t dstPtr = static_cast<uint64_t>(bitwise_cast<uintptr_t>(dst));
         uint64_t srcPtr = static_cast<uint64_t>(bitwise_cast<uintptr_t>(src));
+        uint64_t end = dstPtr + bytes;
+        uint64_t alignedEnd = dstPtr + alignedBytes;
 
         asm volatile(
             "1:\t\n"
-            "cmp %x[offset], %x[alignedBytes]\t\n"
+            "cmp %x[dstPtr], %x[alignedEnd]\t\n"
             "b.eq 2f\t\n"
-            "ldr q0, [%x[srcPtr], %x[offset]]\t\n"
-            "str q0, [%x[dstPtr], %x[offset]]\t\n"
-            "add %x[offset], %x[offset], #0x10\t\n"
+            "ldp q0, q1, [%x[srcPtr]], #0x20\t\n"
+            "stp q0, q1, [%x[dstPtr]], #0x20\t\n"
             "b 1b\t\n"
 
             "2:\t\n"
-            "cmp %x[offset], %x[bytes]\t\n"
+            "cmp %x[dstPtr], %x[end]\t\n"
             "b.eq 3f\t\n"
-            "ldr d0, [%x[srcPtr], %x[offset]]\t\n"
-            "str d0, [%x[dstPtr], %x[offset]]\t\n"
-            "add %x[offset], %x[offset], #0x8\t\n"
+            "ldr d0, [%x[srcPtr]], #0x8\t\n"
+            "str d0, [%x[dstPtr]], #0x8\t\n"
             "b 2b\t\n"
 
             "3:\t\n"
 
-            : [alignedBytes] "+r" (alignedBytes), [bytes] "+r" (bytes), [offset] "+r" (offset), [dstPtr] "+r" (dstPtr), [srcPtr] "+r" (srcPtr)
+            : [end] "+r" (end), [alignedEnd] "+r" (alignedEnd), [dstPtr] "+r" (dstPtr), [srcPtr] "+r" (srcPtr)
             :
-            : "d0", "d1", "memory"
+            : "d0", "d1", "memory", "cc"
         );
 #endif // CPU(X86_64)
     } else {
@@ -137,14 +136,14 @@ ALWAYS_INLINE void gcSafeMemcpy(T* dst, T* src, size_t bytes)
     }
 #else
     slowPathForwardMemcpy();
-#endif // COMPILER(GCC_COMPATIBLE) && (CPU(X86_64) || CPU(ARM64))
+#endif // CPU(X86_64) || CPU(ARM64)
 #else
     memcpy(dst, src, bytes);
 #endif // USE(JSVALUE64)
 }
 
 template <typename T>
-ALWAYS_INLINE void gcSafeMemmove(T* dst, T* src, size_t bytes)
+ALWAYS_INLINE void gcSafeMemmove(T* dst, const T* src, size_t bytes)
 {
     static_assert(sizeof(T) == sizeof(JSValue));
     RELEASE_ASSERT(bytes % 8 == 0);
@@ -166,7 +165,7 @@ ALWAYS_INLINE void gcSafeMemmove(T* dst, T* src, size_t bytes)
             bitwise_cast<volatile uint64_t*>(dst)[i] = bitwise_cast<volatile uint64_t*>(src)[i];
     };
 
-#if COMPILER(GCC_COMPATIBLE) && (CPU(X86_64) || CPU(ARM64))
+#if CPU(X86_64) || CPU(ARM64)
     if (bytes <= smallCutoff)
         slowPathBackwardsMemmove();
     else {
@@ -209,37 +208,38 @@ ALWAYS_INLINE void gcSafeMemmove(T* dst, T* src, size_t bytes)
             : "xmm0", "xmm1", "xmm2", "xmm3", "memory", "cc"
         );
 #elif CPU(ARM64)
-        uint64_t alignedBytes = (static_cast<uint64_t>(bytes) / 16) * 16;
-        uint64_t dstPtr = static_cast<uint64_t>(bitwise_cast<uintptr_t>(dst));
-        uint64_t srcPtr = static_cast<uint64_t>(bitwise_cast<uintptr_t>(src));
+        uint64_t alignedBytes = (static_cast<uint64_t>(bytes) / 32) * 32;
+        uint64_t dstPtr = static_cast<uint64_t>(bitwise_cast<uintptr_t>(dst) + static_cast<uint64_t>(bytes));
+        uint64_t srcPtr = static_cast<uint64_t>(bitwise_cast<uintptr_t>(src) + static_cast<uint64_t>(bytes));
+        uint64_t alignedEnd = bitwise_cast<uintptr_t>(dst) + alignedBytes;
+        uint64_t end = bitwise_cast<uintptr_t>(dst);
 
         asm volatile(
             "1:\t\n"
-            "cmp %x[alignedBytes], %x[bytes]\t\n"
+            "cmp %x[dstPtr], %x[alignedEnd]\t\n"
             "b.eq 2f\t\n"
-            "sub %x[bytes], %x[bytes], #0x8\t\n"
-            "ldr d0, [%x[srcPtr], %x[bytes]]\t\n"
-            "str d0, [%x[dstPtr], %x[bytes]]\t\n"
+            "ldr d0, [%x[srcPtr], #-0x8]!\t\n"
+            "str d0, [%x[dstPtr], #-0x8]!\t\n"
             "b 1b\t\n"
 
             "2:\t\n"
-            "cbz %x[alignedBytes], 3f\t\n"
-            "sub %x[alignedBytes], %x[alignedBytes], #0x10\t\n"
-            "ldr q0, [%x[srcPtr], %x[alignedBytes]]\t\n"
-            "str q0, [%x[dstPtr], %x[alignedBytes]]\t\n"
+            "cmp %x[dstPtr], %x[end]\t\n"
+            "b.eq 3f\t\n"
+            "ldp q0, q1, [%x[srcPtr], #-0x20]!\t\n"
+            "stp q0, q1, [%x[dstPtr], #-0x20]!\t\n"
             "b 2b\t\n"
 
             "3:\t\n"
 
-            : [alignedBytes] "+r" (alignedBytes), [bytes] "+r" (bytes), [dstPtr] "+r" (dstPtr), [srcPtr] "+r" (srcPtr)
+            : [alignedEnd] "+r" (alignedEnd), [end] "+r" (end), [dstPtr] "+r" (dstPtr), [srcPtr] "+r" (srcPtr)
             :
-            : "d0", "d1", "memory"
+            : "d0", "d1", "memory", "cc"
         );
 #endif // CPU(X86_64)
     }
 #else
     slowPathBackwardsMemmove();
-#endif // COMPILER(GCC_COMPATIBLE) && (CPU(X86_64) || CPU(ARM64))
+#endif // CPU(X86_64) || CPU(ARM64)
 #else
     memmove(dst, src, bytes);
 #endif // USE(JSVALUE64)
@@ -251,7 +251,6 @@ ALWAYS_INLINE void gcSafeZeroMemory(T* dst, size_t bytes)
     static_assert(sizeof(T) == sizeof(JSValue));
     RELEASE_ASSERT(bytes % 8 == 0);
 #if USE(JSVALUE64)
-#if COMPILER(GCC_COMPATIBLE) && (CPU(X86_64) || CPU(ARM64))
 #if CPU(X86_64)
     uint64_t zero = 0;
     size_t count = bytes / 8;
@@ -289,14 +288,13 @@ ALWAYS_INLINE void gcSafeZeroMemory(T* dst, size_t bytes)
 
         : [alignedBytes] "+r" (alignedBytes), [bytes] "+r" (bytes), [dstPtr] "+r" (dstPtr), [end] "+r" (end), [alignedEnd] "+r" (alignedEnd)
         :
-        : "d0", "d1", "memory"
+        : "d0", "d1", "memory", "cc"
     );
-#endif // CPU(X86_64)
 #else
     size_t count = bytes / 8;
     for (size_t i = 0; i < count; ++i)
         bitwise_cast<volatile uint64_t*>(dst)[i] = 0;
-#endif // COMPILER(GCC_COMPATIBLE) && (CPU(X86_64) || CPU(ARM64))
+#endif
 #else
     memset(reinterpret_cast<char*>(dst), 0, bytes);
 #endif // USE(JSVALUE64)

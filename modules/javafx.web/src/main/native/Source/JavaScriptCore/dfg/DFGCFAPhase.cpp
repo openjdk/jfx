@@ -44,7 +44,7 @@ namespace JSC { namespace DFG {
 class CFAPhase : public Phase {
 public:
     CFAPhase(Graph& graph)
-        : Phase(graph, "control flow analysis")
+        : Phase(graph, "control flow analysis"_s)
         , m_state(graph)
         , m_interpreter(graph, m_state)
         , m_verbose(Options::verboseCFA())
@@ -55,7 +55,7 @@ public:
     {
         ASSERT(m_graph.m_form == ThreadedCPS || m_graph.m_form == SSA);
         ASSERT(m_graph.m_unificationState == GloballyUnified);
-        ASSERT(m_graph.m_refCountState == EverythingIsLive);
+        ASSERT(m_graph.m_refCountState == EverythingIsLive || (Options::validateAbstractInterpreterState() && m_graph.m_refCountState == ExactRefCount));
 
         m_count = 0;
 
@@ -220,7 +220,7 @@ private:
         for (unsigned i = 0; i < block->size(); ++i) {
             Node* node = block->at(i);
             if (m_verbose) {
-                dataLogF("      %s @%u: ", Graph::opName(node->op()), node->index());
+                dataLogF("      %s @%u: ", Graph::opName(node->op()).characters(), node->index());
 
                 if (!safeToExecute(m_state, m_graph, node))
                     dataLog("(UNSAFE) ");

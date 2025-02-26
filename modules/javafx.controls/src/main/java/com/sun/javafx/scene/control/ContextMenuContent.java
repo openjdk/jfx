@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2023, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,10 +25,10 @@
 
 package com.sun.javafx.scene.control;
 
-import com.sun.javafx.scene.NodeHelper;
-import com.sun.javafx.scene.control.behavior.TwoLevelFocusPopupBehavior;
-import com.sun.javafx.scene.control.skin.Utils;
-import com.sun.javafx.scene.traversal.Direction;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+import java.util.Optional;
 import javafx.animation.Animation.Status;
 import javafx.animation.KeyFrame;
 import javafx.animation.Timeline;
@@ -36,7 +36,6 @@ import javafx.beans.InvalidationListener;
 import javafx.beans.WeakInvalidationListener;
 import javafx.beans.property.ReadOnlyBooleanProperty;
 import javafx.beans.value.ChangeListener;
-import javafx.beans.value.ObservableValue;
 import javafx.collections.ListChangeListener;
 import javafx.collections.ObservableList;
 import javafx.css.CssMetaData;
@@ -44,13 +43,26 @@ import javafx.css.PseudoClass;
 import javafx.css.Styleable;
 import javafx.event.ActionEvent;
 import javafx.event.EventHandler;
-import javafx.geometry.*;
+import javafx.geometry.Bounds;
+import javafx.geometry.HPos;
+import javafx.geometry.NodeOrientation;
+import javafx.geometry.Orientation;
+import javafx.geometry.Side;
+import javafx.geometry.VPos;
 import javafx.scene.AccessibleAction;
 import javafx.scene.AccessibleAttribute;
 import javafx.scene.AccessibleRole;
 import javafx.scene.Node;
 import javafx.scene.Parent;
-import javafx.scene.control.*;
+import javafx.scene.control.CheckMenuItem;
+import javafx.scene.control.ContextMenu;
+import javafx.scene.control.CustomMenuItem;
+import javafx.scene.control.Label;
+import javafx.scene.control.Menu;
+import javafx.scene.control.MenuItem;
+import javafx.scene.control.RadioMenuItem;
+import javafx.scene.control.SeparatorMenuItem;
+import javafx.scene.control.Skin;
 import javafx.scene.input.KeyEvent;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.input.ScrollEvent;
@@ -60,11 +72,10 @@ import javafx.scene.layout.VBox;
 import javafx.scene.shape.Rectangle;
 import javafx.stage.Window;
 import javafx.util.Duration;
-
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
-import java.util.Optional;
+import com.sun.javafx.scene.NodeHelper;
+import com.sun.javafx.scene.control.behavior.TwoLevelFocusPopupBehavior;
+import com.sun.javafx.scene.control.skin.Utils;
+import com.sun.javafx.scene.traversal.Direction;
 
 /**
  * This is a the SkinBase for ContextMenu based controls so that the CSS parts
@@ -130,7 +141,7 @@ public class ContextMenuContent extends Region {
         initialize();
         setUpBinds();
         updateItems();
-        // RT-20197 add menuitems only on first show.
+        // JDK-8127239 add menuitems only on first show.
         popupMenu.showingProperty().addListener(weakPopupShowingListener);
 
         /*
@@ -217,7 +228,7 @@ public class ContextMenuContent extends Region {
             }
         }
 
-        // Fix for RT-38838.
+        // Fix for JDK-8092793.
         // This fixes the issue where CSS is applied to a menu after it has been
         // showing, resulting in its bounds changing. In this case, we need to
         // shift the submenu such that it is properly aligned with its parent menu.
@@ -282,7 +293,7 @@ public class ContextMenuContent extends Region {
             getProperties().put(Menu.class, item.getParentMenu());
         }
 
-        // RT-36513 made this applyCss(). Modified by RT-36995 to NodeHelper.reapplyCSS()
+        // JDK-8094435 made this applyCss(). Modified by JDK-8093654 to NodeHelper.reapplyCSS()
         NodeHelper.reapplyCSS(this);
     }
 
@@ -471,7 +482,7 @@ public class ContextMenuContent extends Region {
     private double ty;
 
     private void initialize() {
-        // RT-19624 calling requestFocus inside layout was casuing repeated layouts.
+        // JDK-8127198 calling requestFocus inside layout was casuing repeated layouts.
         contextMenu.addEventHandler(Menu.ON_SHOWN, event -> {
             currentFocusedIndex = -1;
             for (Node child : itemsContainer.getChildren()) {
@@ -494,7 +505,7 @@ public class ContextMenuContent extends Region {
 //        // get called as expected, so I've just put the important code below.
         // We use setOnKeyPressed here as we are not adding a listener to a public
         // event type (ContextMenuContent is not public API), and without this
-        // we get the issue shown in RT-34429
+        // we get the issue shown in JDK-8119487
         setOnKeyPressed(new EventHandler<KeyEvent>() {
             @Override public void handle(KeyEvent ke) {
                 switch (ke.getCode()) {
@@ -520,7 +531,7 @@ public class ContextMenuContent extends Region {
                         // menu - this will move focus up to the parent menu
                         // as required. In the case of the parent being a
                         // menubar button we special case in the conditional code
-                        // beneath this switch statement. See RT-34429 for more context.
+                        // beneath this switch statement. See JDK-8119487 for more context.
                         final Node ownerNode = contextMenu.getOwnerNode();
                         if (! (ownerNode instanceof MenuBarButton)) {
                             contextMenu.hide();
@@ -644,7 +655,7 @@ public class ContextMenuContent extends Region {
                     if (menu.isDisable()) return;
                     selectedBackground = ((MenuItemContainer)n);
 
-                    // RT-15103
+                    // JDK-8114597
                     // if submenu for this menu is already showing then do nothing
                     // Menubar will process the right key and move to the next menu
                     if (openSubmenu == menu && submenu != null && submenu.isShowing()) {
@@ -789,7 +800,7 @@ public class ContextMenuContent extends Region {
 
         // Listener to items in PopupMenu to update items in PopupMenuContent
         itemsDirty = true;
-        updateItems(); // RT-29761
+        updateItems(); // JDK-8124669
     };
 
     private ChangeListener<Boolean> menuItemVisibleListener = (observable, oldValue, newValue) -> {
@@ -877,7 +888,7 @@ public class ContextMenuContent extends Region {
         submenu.hide();
         openSubmenu = null;
 
-        // Fix for RT-37022 - we dispose content so that we do not process CSS
+        // Fix for JDK-8094989 - we dispose content so that we do not process CSS
         // on hidden submenus
         disposeContextMenu(submenu);
         submenu = null;
@@ -926,7 +937,7 @@ public class ContextMenuContent extends Region {
         // translation should never be greater than the preferred height of the
         // menu content (otherwise the menu content will be detaching from the
         // bottom of the menu).
-        // RT-37185: We check the direction of the scroll, to prevent it locking
+        // JDK-8093506: We check the direction of the scroll, to prevent it locking
         // up when scrolling upwards from the very bottom (using the on-screen
         // up arrow).
         if (delta < 0 && (getHeight() - newTy) > itemsContainer.getHeight() - downArrow.getHeight()) {
@@ -1290,7 +1301,7 @@ public class ContextMenuContent extends Region {
                 getChildren().add(label);
 
                 listener.unregisterChangeListeners(focusedProperty());
-                // RT-19546 update currentFocusedIndex when MenuItemContainer gets focused.
+                // JDK-8127539 update currentFocusedIndex when MenuItemContainer gets focused.
                 // e.g this happens when you press the Right key to open a submenu; the first
                 // menuitem is focused.
                 listener.registerChangeListener(focusedProperty(), e -> {
@@ -1320,7 +1331,7 @@ public class ContextMenuContent extends Region {
                         mouseEnteredEventHandler = event -> {
                             if (openSubmenu != null && item != openSubmenu) {
                                 // if a submenu of a different menu is already
-                                // open then close it (RT-15049)
+                                // open then close it (JDK-8114380)
                                 hideSubmenu();
                             }
 

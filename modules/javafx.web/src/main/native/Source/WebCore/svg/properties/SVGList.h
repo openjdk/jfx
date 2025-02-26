@@ -137,6 +137,8 @@ public:
         return { };
     }
 
+    bool isSupportedPropertyIndex(unsigned index) const { return index < m_items.size(); }
+
     // Parsers and animators need to have a direct access to the items.
     Vector<ItemType>& items() { return m_items; }
     const Vector<ItemType>& items() const { return m_items; }
@@ -155,14 +157,14 @@ protected:
     ExceptionOr<bool> canAlterList() const
     {
         if (isReadOnly())
-            return Exception { NoModificationAllowedError };
+            return Exception { ExceptionCode::NoModificationAllowedError };
         return true;
     }
 
     ExceptionOr<bool> canGetItem(unsigned index)
     {
         if (index >= m_items.size())
-            return Exception { IndexSizeError };
+            return Exception { ExceptionCode::IndexSizeError };
         return true;
     }
 
@@ -174,7 +176,7 @@ protected:
         ASSERT(result.releaseReturnValue());
 
         if (index >= m_items.size())
-            return Exception { IndexSizeError };
+            return Exception { ExceptionCode::IndexSizeError };
         return true;
     }
 
@@ -186,7 +188,7 @@ protected:
         ASSERT(result.releaseReturnValue());
 
         if (index >= m_items.size())
-            return Exception { IndexSizeError };
+            return Exception { ExceptionCode::IndexSizeError };
         return true;
     }
 

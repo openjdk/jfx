@@ -31,12 +31,8 @@
 
 #include <wtf/ExportMacros.h>
 
-#if PLATFORM(JAVA) && !OS(WINDOWS)
 
-#define WEBCORE_EXPORT
-#define WEBCORE_TESTSUPPORT_EXPORT
 
-#else
 
 #if !defined(WEBCORE_EXPORT)
 
@@ -58,4 +54,3 @@
 
 #endif
 
-#endif

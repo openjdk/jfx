@@ -47,7 +47,7 @@ static String stripLeadingWhiteSpace(const String& string)
     unsigned length = string.length();
     unsigned i;
     for (i = 0; i < length; ++i) {
-        if (string[i] != noBreakSpace && !isSpaceOrNewline(string[i]))
+        if (string[i] != noBreakSpace && !deprecatedIsSpaceOrNewline(string[i]))
             break;
     }
     return string.substring(i, length - i);
@@ -76,7 +76,7 @@ int TypeAhead::handleEvent(KeyboardEvent* event, MatchModeFlags matchMode)
     if (matchMode & CycleFirstChar && c == m_repeatingChar) {
         // The user is likely trying to cycle through all the items starting
         // with this character, so just search on the character.
-        prefix = String(&c, 1);
+        prefix = span(c);
         m_repeatingChar = c;
     } else if (matchMode & MatchPrefix) {
         prefix = m_buffer.toString();

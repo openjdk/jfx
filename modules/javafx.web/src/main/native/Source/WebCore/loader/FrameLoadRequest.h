@@ -25,6 +25,7 @@
 
 #pragma once
 
+#include "AdvancedPrivacyProtections.h"
 #include "FrameLoaderTypes.h"
 #include "ReferrerPolicy.h"
 #include "ResourceRequest.h"
@@ -35,13 +36,13 @@
 namespace WebCore {
 
 class Document;
-class Frame;
+class LocalFrame;
 class SecurityOrigin;
 
 class FrameLoadRequest {
 public:
-    WEBCORE_EXPORT FrameLoadRequest(Document&, SecurityOrigin&, ResourceRequest&&, const AtomString& frameName, InitiatedByMainFrame, const AtomString& downloadAttribute = { }, const SystemPreviewInfo& = { });
-    WEBCORE_EXPORT FrameLoadRequest(Frame&, const ResourceRequest&, const SubstituteData& = SubstituteData());
+    WEBCORE_EXPORT FrameLoadRequest(Ref<Document>&&, SecurityOrigin&, ResourceRequest&&, const AtomString& frameName, InitiatedByMainFrame, const AtomString& downloadAttribute = { });
+    WEBCORE_EXPORT FrameLoadRequest(LocalFrame&, const ResourceRequest&, const SubstituteData& = SubstituteData());
 
     WEBCORE_EXPORT ~FrameLoadRequest();
 
@@ -50,8 +51,10 @@ public:
 
     bool isEmpty() const { return m_resourceRequest.isEmpty(); }
 
-    Document& requester();
+    WEBCORE_EXPORT Document& requester();
+    Ref<Document> protectedRequester() const;
     const SecurityOrigin& requesterSecurityOrigin() const;
+    Ref<SecurityOrigin> protectedRequesterSecurityOrigin() const;
 
     ResourceRequest& resourceRequest() { return m_resourceRequest; }
     const ResourceRequest& resourceRequest() const { return m_resourceRequest; }
@@ -102,12 +105,14 @@ public:
 
     InitiatedByMainFrame initiatedByMainFrame() const { return m_initiatedByMainFrame; }
 
-    bool isSystemPreview() const { return m_systemPreviewInfo.isPreview; }
-    const SystemPreviewInfo& systemPreviewInfo() const { return m_systemPreviewInfo; }
-
     void setIsRequestFromClientOrUserInput() { m_isRequestFromClientOrUserInput = true; }
     bool isRequestFromClientOrUserInput() const { return m_isRequestFromClientOrUserInput; }
 
+    void setAdvancedPrivacyProtections(OptionSet<AdvancedPrivacyProtections> policy) { m_advancedPrivacyProtections = policy; }
+    std::optional<OptionSet<AdvancedPrivacyProtections>> advancedPrivacyProtections() const { return m_advancedPrivacyProtections; }
+
+    NavigationHistoryBehavior navigationHistoryBehavior() const { return m_navigationHistoryBehavior; }
+    void setNavigationHistoryBehavior(NavigationHistoryBehavior historyHandling) { m_navigationHistoryBehavior = historyHandling; }
 private:
     Ref<Document> m_requester;
     Ref<SecurityOrigin> m_requesterSecurityOrigin;
@@ -127,9 +132,10 @@ private:
     ShouldOpenExternalURLsPolicy m_shouldOpenExternalURLsPolicy { ShouldOpenExternalURLsPolicy::ShouldNotAllow };
     AtomString m_downloadAttribute;
     InitiatedByMainFrame m_initiatedByMainFrame { InitiatedByMainFrame::Unknown };
-    SystemPreviewInfo m_systemPreviewInfo;
     bool m_isRequestFromClientOrUserInput { false };
     bool m_isInitialFrameSrcLoad { false };
+    std::optional<OptionSet<AdvancedPrivacyProtections>> m_advancedPrivacyProtections;
+    NavigationHistoryBehavior m_navigationHistoryBehavior { NavigationHistoryBehavior::Auto };
 };
 
 } // namespace WebCore

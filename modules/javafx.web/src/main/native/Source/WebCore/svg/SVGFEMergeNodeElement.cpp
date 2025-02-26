@@ -22,15 +22,15 @@
 #include "config.h"
 #include "SVGFEMergeNodeElement.h"
 
-#include "RenderSVGResource.h"
+#include "LegacyRenderSVGResource.h"
 #include "SVGFilterElement.h"
 #include "SVGFilterPrimitiveStandardAttributes.h"
 #include "SVGNames.h"
-#include <wtf/IsoMallocInlines.h>
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
-WTF_MAKE_ISO_ALLOCATED_IMPL(SVGFEMergeNodeElement);
+WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(SVGFEMergeNodeElement);
 
 inline SVGFEMergeNodeElement::SVGFEMergeNodeElement(const QualifiedName& tagName, Document& document)
     : SVGElement(tagName, document, makeUniqueRef<PropertyRegistry>(*this))
@@ -48,14 +48,12 @@ Ref<SVGFEMergeNodeElement> SVGFEMergeNodeElement::create(const QualifiedName& ta
     return adoptRef(*new SVGFEMergeNodeElement(tagName, document));
 }
 
-void SVGFEMergeNodeElement::parseAttribute(const QualifiedName& name, const AtomString& value)
+void SVGFEMergeNodeElement::attributeChanged(const QualifiedName& name, const AtomString& oldValue, const AtomString& newValue, AttributeModificationReason attributeModificationReason)
 {
-    if (name == SVGNames::inAttr) {
-        m_in1->setBaseValInternal(value);
-        return;
-    }
+    if (name == SVGNames::inAttr)
+        Ref { m_in1 }->setBaseValInternal(newValue);
 
-    SVGElement::parseAttribute(name, value);
+    SVGElement::attributeChanged(name, oldValue, newValue, attributeModificationReason);
 }
 
 void SVGFEMergeNodeElement::svgAttributeChanged(const QualifiedName& attrName)

@@ -44,7 +44,7 @@ CMAKE_DEPENDENT_OPTION(USE_LD_LLD "Use LLD linker" ON
                        "TRY_USE_LD_LLD;NOT WIN32" OFF)
 if (USE_LD_LLD)
     execute_process(COMMAND ${CMAKE_C_COMPILER} -fuse-ld=lld -Wl,--version ERROR_QUIET OUTPUT_VARIABLE LD_VERSION)
-    if (LD_VERSION MATCHES "^LLD ")
+    if (LD_VERSION MATCHES "(^|[ \t])LLD ")
         string(APPEND CMAKE_EXE_LINKER_FLAGS " -fuse-ld=lld")
         string(APPEND CMAKE_SHARED_LINKER_FLAGS " -fuse-ld=lld")
         string(APPEND CMAKE_MODULE_LINKER_FLAGS " -fuse-ld=lld")
@@ -94,11 +94,15 @@ unset(LD_VERSION)
 
 set(LD_SUPPORTS_GDB_INDEX FALSE)
 set(LD_SUPPORTS_DISABLE_NEW_DTAGS FALSE)
+set(LD_SUPPORTS_GC_SECTIONS FALSE)
 if (LD_USAGE MATCHES "--gdb-index")
     set(LD_SUPPORTS_GDB_INDEX TRUE)
 endif ()
 if (LD_USAGE MATCHES "--disable-new-dtags")
     set(LD_SUPPORTS_DISABLE_NEW_DTAGS TRUE)
+endif ()
+if (LD_USAGE MATCHES "--gc-sections")
+    set(LD_SUPPORTS_GC_SECTIONS TRUE)
 endif ()
 unset(LD_USAGE)
 
@@ -107,6 +111,8 @@ message(STATUS "  Linker supports thin archives - ${LD_SUPPORTS_THIN_ARCHIVES}")
 message(STATUS "  Linker supports split debug info - ${LD_SUPPORTS_SPLIT_DEBUG}")
 message(STATUS "  Linker supports --gdb-index - ${LD_SUPPORTS_GDB_INDEX}")
 message(STATUS "  Linker supports --disable-new-dtags - ${LD_SUPPORTS_DISABLE_NEW_DTAGS}")
+message(STATUS "  Linker supports --gc-sections - ${LD_SUPPORTS_GC_SECTIONS}")
+
 # Determine whether the archiver in use supports thin archives.
 separate_arguments(AR_VERSION_COMMAND UNIX_COMMAND "${CMAKE_AR} -V")
 execute_process(
@@ -133,6 +139,14 @@ unset(AR_VERSION)
 unset(AR_STATUS)
 message(STATUS "Archiver variant in use: ${AR_VARIANT}")
 message(STATUS "  Archiver supports thin archives - ${AR_SUPPORTS_THIN_ARCHIVES}")
+
+# Remove unused sections to reduce the binary size when supported.
+if (LD_SUPPORTS_GC_SECTIONS)
+    WEBKIT_APPEND_GLOBAL_COMPILER_FLAGS(-ffunction-sections -fdata-sections)
+    string(APPEND CMAKE_EXE_LINKER_FLAGS " -Wl,--gc-sections")
+    string(APPEND CMAKE_SHARED_LINKER_FLAGS " -Wl,--gc-sections")
+    string(APPEND CMAKE_MODULE_LINKER_FLAGS " -Wl,--gc-sections")
+endif ()
 
 # Use --disable-new-dtags to ensure that the rpath set by CMake when building
 # will use a DT_RPATH entry in the ELF headers, to ensure that the build
@@ -168,7 +182,7 @@ endif ()
 
 set(ENABLE_DEBUG_FISSION_DEFAULT OFF)
 if (ENABLE_DEVELOPER_MODE AND (CMAKE_BUILD_TYPE STREQUAL "Debug" OR CMAKE_BUILD_TYPE STREQUAL "RelWithDebInfo") AND NOT CMAKE_GENERATOR MATCHES "Visual Studio")
-    check_cxx_compiler_flag(-gsplit-dwarf CXX_COMPILER_SUPPORTS_GSPLIT_DWARF)
+    WEBKIT_CHECK_COMPILER_FLAGS(CXX CXX_COMPILER_SUPPORTS_GSPLIT_DWARF -gsplit-dwarf)
     if (CXX_COMPILER_SUPPORTS_GSPLIT_DWARF AND LD_SUPPORTS_SPLIT_DEBUG)
         set(ENABLE_DEBUG_FISSION_DEFAULT ON)
     endif ()
@@ -212,6 +226,17 @@ if (NOT PORT STREQUAL "GTK" AND NOT PORT STREQUAL "WPE")
     set(LIBEXEC_INSTALL_DIR "${CMAKE_INSTALL_PREFIX}/bin" CACHE PATH "Absolute path to install executables executed by the library")
 endif ()
 
+set(ENABLE_ASSERTS "AUTO" CACHE STRING "Enable or disable assertions regardless of build type")
+set_property(CACHE ENABLE_ASSERTS PROPERTY STRINGS "AUTO" "ON" "OFF")
+
+if (ENABLE_ASSERTS STREQUAL "AUTO")
+    # The default value is handled by the NDEBUG define which is generally set by the toolchain module used by CMake.
+elseif (ENABLE_ASSERTS)
+    WEBKIT_PREPEND_GLOBAL_COMPILER_FLAGS(-DASSERT_ENABLED=1)
+elseif (NOT ENABLE_ASSERTS)
+    WEBKIT_PREPEND_GLOBAL_COMPILER_FLAGS(-DASSERT_ENABLED=0)
+endif ()
+
 # Check whether features.h header exists.
 # Including glibc's one defines __GLIBC__, that is used in Platform.h
 WEBKIT_CHECK_HAVE_INCLUDE(HAVE_FEATURES_H features.h)
@@ -227,9 +252,12 @@ WEBKIT_CHECK_HAVE_INCLUDE(HAVE_SYS_TIMEB_H sys/timeb.h)
 WEBKIT_CHECK_HAVE_INCLUDE(HAVE_LINUX_MEMFD_H linux/memfd.h)
 
 # Check for functions
+# _GNU_SOURCE=1 is required to expose statx
+list(APPEND CMAKE_REQUIRED_DEFINITIONS "-D_GNU_SOURCE=1")
 WEBKIT_CHECK_HAVE_FUNCTION(HAVE_ALIGNED_MALLOC _aligned_malloc malloc.h)
 WEBKIT_CHECK_HAVE_FUNCTION(HAVE_LOCALTIME_R localtime_r time.h)
 WEBKIT_CHECK_HAVE_FUNCTION(HAVE_MALLOC_TRIM malloc_trim malloc.h)
+WEBKIT_CHECK_HAVE_FUNCTION(HAVE_STATX statx sys/stat.h)
 WEBKIT_CHECK_HAVE_FUNCTION(HAVE_STRNSTR strnstr string.h)
 WEBKIT_CHECK_HAVE_FUNCTION(HAVE_TIMEGM timegm time.h)
 WEBKIT_CHECK_HAVE_FUNCTION(HAVE_VASPRINTF vasprintf stdio.h)
@@ -269,7 +297,6 @@ elseif (STD_EXPERIMENTAL_FILESYSTEM_IS_AVAILABLE)
     SET_AND_EXPOSE_TO_BUILD(HAVE_STD_EXPERIMENTAL_FILESYSTEM TRUE)
 endif ()
 endif()
-
 if (STD_REMOVE_CVREF_IS_AVAILABLE)
     SET_AND_EXPOSE_TO_BUILD(HAVE_STD_REMOVE_CVREF TRUE)
 endif ()

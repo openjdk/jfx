@@ -1,6 +1,8 @@
 /* gmain.h - the GLib Main loop
  * Copyright (C) 1998-2000 Red Hat, Inc.
  *
+ * SPDX-License-Identifier: LGPL-2.1-or-later
+ *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
  * License as published by the Free Software Foundation; either
@@ -46,8 +48,8 @@ typedef enum /*< flags >*/
  * `g_main_context_{prepare,query,check,dispatch}` to integrate GMainContext in
  * other event loops.
  *
- * Flags to pass to g_main_context_new_with_flags() which affect the behaviour
- * of a #GMainContext.
+ * Flags to pass to [ctor@GLib.MainContext.new_with_flags] which affect the
+ * behaviour of a [struct@GLib.MainContext].
  *
  * Since: 2.72
  */
@@ -71,7 +73,7 @@ typedef struct _GMainContext            GMainContext;
  * GMainLoop:
  *
  * The `GMainLoop` struct is an opaque data type
- * representing the main event loop of a GLib or GTK+ application.
+ * representing the main event loop of a GLib or GTK application.
  */
 typedef struct _GMainLoop               GMainLoop;
 
@@ -119,15 +121,17 @@ typedef struct _GSourceCallbackFuncs    GSourceCallbackFuncs;
  *     %TRUE in either its @prepare or its @check function, or if a ready time
  *     has been reached. The @dispatch function receives a callback function and
  *     user data. The callback function may be %NULL if the source was never
- *     connected to a callback using g_source_set_callback(). The @dispatch
- *     function should call the callback function with @user_data and whatever
- *     additional parameters are needed for this type of event source. The
- *     return value of the @dispatch function should be %G_SOURCE_REMOVE if the
- *     source should be removed or %G_SOURCE_CONTINUE to keep it.
+ *     connected to a callback using [method@GLib.Source.set_callback]. The
+ *     @dispatch function should call the callback function with @user_data and
+ *     whatever additional parameters are needed for this type of event source.
+ *     The return value of the @dispatch function should be
+ *     [const@GLib.SOURCE_REMOVE] if the source should be removed or
+ *     [const@GLib.SOURCE_CONTINUE] to keep it.
  * @finalize: Called when the source is finalized. At this point, the source
  *     will have been destroyed, had its callback cleared, and have been removed
- *     from its #GMainContext, but it will still have its final reference count,
- *     so methods can be called on it from within this function.
+ *     from its [struct@GLib.MainContext], but it will still have its final
+ *     reference count, so methods can be called on it from within this
+ *     function.
  *
  * The `GSourceFuncs` struct contains a table of
  * functions used to handle event sources in a generic manner.
@@ -180,31 +184,48 @@ typedef struct _GSourceFuncs            GSourceFuncs;
  * @user_data: data passed to the function, set when the source was
  *     created with one of the above functions
  *
- * Specifies the type of function passed to g_timeout_add(),
- * g_timeout_add_full(), g_idle_add(), and g_idle_add_full().
+ * Specifies the type of function passed to [func@GLib.timeout_add],
+ * [func@GLib.timeout_add_full], [func@GLib.idle_add], and
+ * [func@GLib.idle_add_full].
  *
- * When calling g_source_set_callback(), you may need to cast a function of a
- * different type to this type. Use G_SOURCE_FUNC() to avoid warnings about
- * incompatible function types.
+ * When calling [method@GLib.Source.set_callback], you may need to cast a
+ * function of a different type to this type. Use [func@GLib.SOURCE_FUNC] to
+ * avoid warnings about incompatible function types.
  *
- * Returns: %FALSE if the source should be removed. %G_SOURCE_CONTINUE and
- * %G_SOURCE_REMOVE are more memorable names for the return value.
+ * Returns: %FALSE if the source should be removed.
+ * [const@GLib.SOURCE_CONTINUE] and [const@GLib.SOURCE_REMOVE] are more
+ * memorable names for the return value.
  */
 typedef gboolean (*GSourceFunc)       (gpointer user_data);
+
+/**
+ * GSourceOnceFunc:
+ * @user_data: data passed to the function, set when the source was
+ *   created
+ *
+ * A source function that is only called once before being removed from the main
+ * context automatically.
+ *
+ * See: [func@GLib.idle_add_once], [func@GLib.timeout_add_once]
+ *
+ * Since: 2.74
+ */
+typedef void (* GSourceOnceFunc) (gpointer user_data);
 
 /**
  * G_SOURCE_FUNC:
  * @f: a function pointer.
  *
- * Cast a function pointer to a #GSourceFunc, suppressing warnings from GCC 8
- * onwards with `-Wextra` or `-Wcast-function-type` enabled about the function
- * types being incompatible.
+ * Cast a function pointer to a [callback@GLib.SourceFunc], suppressing
+ * warnings from GCC 8 onwards with `-Wextra` or `-Wcast-function-type` enabled
+ * about the function types being incompatible.
  *
  * For example, the correct type of callback for a source created by
- * g_child_watch_source_new() is #GChildWatchFunc, which accepts more arguments
- * than #GSourceFunc. Casting the function with `(GSourceFunc)` to call
- * g_source_set_callback() will trigger a warning, even though it will be cast
- * back to the correct type before it is called by the source.
+ * [func@GLib.child_watch_source_new] is #GChildWatchFunc, which accepts more
+ * arguments than [callback@GLib.SourceFunc]. Casting the function with
+ * `(GSourceFunc)` to call [method@GLib.Source.set_callback] will trigger a
+ * warning, even though it will be cast back to the correct type before it is
+ * called by the source.
  *
  * Since: 2.58
  */
@@ -215,13 +236,13 @@ typedef gboolean (*GSourceFunc)       (gpointer user_data);
  * @pid: the process id of the child process
  * @wait_status: Status information about the child process, encoded
  *               in a platform-specific manner
- * @user_data: user data passed to g_child_watch_add()
+ * @user_data: user data passed to [func@GLib.child_watch_add]
  *
  * Prototype of a #GChildWatchSource callback, called when a child
  * process has exited.
  *
- * To interpret @wait_status, see the documentation
- * for g_spawn_check_wait_status(). In particular,
+ * To interpret @wait_status, see the documentation for
+ * [func@GLib.spawn_check_wait_status]. In particular,
  * on Unix platforms, note that it is usually not equal
  * to the integer passed to `exit()` or returned from `main()`.
  */
@@ -234,8 +255,8 @@ typedef void     (*GChildWatchFunc)   (GPid     pid,
  * GSourceDisposeFunc:
  * @source: #GSource that is currently being disposed
  *
- * Dispose function for @source. See g_source_set_dispose_function() for
- * details.
+ * Dispose function for @source. See [method@GLib.Source.set_dispose_function]
+ * for details.
  *
  * Since: 2.64
  */
@@ -285,15 +306,101 @@ struct _GSourceCallbackFuncs
  */
 typedef void (*GSourceDummyMarshal) (void);
 
+/**
+ * GSourceFuncsPrepareFunc:
+ * @source: The #GSource
+ * @timeout_: (out) (optional): the maximum timeout (in milliseconds) which should be passed to the poll call
+ *
+ * Checks the source for readiness.
+ *
+ * Called before all the file descriptors are polled. If the
+ * source can determine that it is ready here (without waiting for the
+ * results of the poll call) it should return %TRUE. It can also return
+ * a @timeout_ value which should be the maximum timeout (in milliseconds)
+ * which should be passed to the poll call. The actual timeout used will
+ * be `-1` if all sources returned `-1`, or it will be the minimum of all
+ * the @timeout_ values returned which were greater than or equal to `0`.
+ * If the prepare function returns a timeout and the source also has a
+ * ready time set, then the lower of the two will be used.
+ *
+ * Since 2.36 this may be `NULL`, in which case the effect is as if the
+ * function always returns `FALSE` with a timeout of `-1`.
+ *
+ * Returns: %TRUE if the source is ready, %FALSE otherwise
+ *
+ * Since: 2.82
+ */
+typedef gboolean (*GSourceFuncsPrepareFunc) (GSource *source,
+                                             gint    *timeout_);
+
+/**
+ * GSourceFuncsCheckFunc:
+ * @source: The #GSource
+ *
+ * Checks if the source is ready to be dispatched.
+ *
+ * Called after all the file descriptors are polled. The source
+ * should return %TRUE if it is ready to be dispatched. Note that some
+ * time may have passed since the previous prepare function was called,
+ * so the source should be checked again here.
+ *
+ * Since 2.36 this may be `NULL`, in which case the effect is
+ * as if the function always returns `FALSE`.
+ *
+ * Returns: %TRUE if ready to be dispatched, %FALSE otherwise
+ *
+ * Since: 2.82
+ */
+typedef gboolean (*GSourceFuncsCheckFunc) (GSource *source);
+
+/**
+ * GSourceFuncsDispatchFunc:
+ * @source: The #GSource
+ * @callback: (nullable): The #GSourceFunc to call
+ * @user_data: (nullable): data to pass to @callback
+ *
+ * Dispatches the source callback.
+ *
+ * Called to dispatch the event source, after it has returned
+ * `TRUE` in either its prepare or its check function, or if a ready time
+ * has been reached. The dispatch function receives a callback function and
+ * user data. The callback function may be `NULL` if the source was never
+ * connected to a callback using [method@GLib.Source.set_callback]. The dispatch
+ * function should call the callback function with @user_data and whatever
+ * additional parameters are needed for this type of event source. The
+ * return value of the dispatch function should be [const@GLib.SOURCE_REMOVE]
+ * if the source should be removed or [const@GLib.SOURCE_CONTINUE] to keep it.
+ *
+ * Returns: [const@GLib.SOURCE_REMOVE] if the source should be removed,
+ *   [const@GLib.SOURCE_CONTINUE] otherwise.
+ *
+ * Since: 2.82
+ */
+typedef gboolean (*GSourceFuncsDispatchFunc) (GSource     *source,
+                                              GSourceFunc  callback,
+                                              gpointer     user_data);
+
+/**
+ * GSourceFuncsFinalizeFunc:
+ * @source: The #GSource
+ *
+ * Finalizes the source.
+ *
+ * Called when the source is finalized. At this point, the source
+ * will have been destroyed, had its callback cleared, and have been removed
+ * from its [type@GLib.MainContext], but it will still have its final reference
+ * count, so methods can be called on it from within this function.
+ *
+ * Since: 2.82
+ */
+typedef void (*GSourceFuncsFinalizeFunc) (GSource *source);
+
 struct _GSourceFuncs
 {
-  gboolean (*prepare)  (GSource    *source,
-                        gint       *timeout_);/* Can be NULL */
-  gboolean (*check)    (GSource    *source);/* Can be NULL */
-  gboolean (*dispatch) (GSource    *source,
-                        GSourceFunc callback,
-                        gpointer    user_data);
-  void     (*finalize) (GSource    *source); /* Can be NULL */
+  GSourceFuncsPrepareFunc prepare; /* Can be NULL */
+  GSourceFuncsCheckFunc check;     /* Can be NULL */
+  GSourceFuncsDispatchFunc dispatch;
+  GSourceFuncsFinalizeFunc finalize; /* Can be NULL */
 
   /*< private >*/
   /* For use by g_source_set_closure */
@@ -308,7 +415,7 @@ struct _GSourceFuncs
  *
  * Use this for high priority event sources.
  *
- * It is not used within GLib or GTK+.
+ * It is not used within GLib or GTK.
  */
 #define G_PRIORITY_HIGH            -100
 
@@ -318,7 +425,7 @@ struct _GSourceFuncs
  * Use this for default priority event sources.
  *
  * In GLib this priority is used when adding timeout functions
- * with g_timeout_add(). In GDK this priority is used for events
+ * with [func@GLib.timeout_add]. In GDK this priority is used for events
  * from the X server.
  */
 #define G_PRIORITY_DEFAULT          0
@@ -328,7 +435,7 @@ struct _GSourceFuncs
  *
  * Use this for high priority idle functions.
  *
- * GTK+ uses %G_PRIORITY_HIGH_IDLE + 10 for resizing operations,
+ * GTK uses %G_PRIORITY_HIGH_IDLE + 10 for resizing operations,
  * and %G_PRIORITY_HIGH_IDLE + 20 for redrawing operations. (This is
  * done to ensure that any pending resizes are processed before any
  * pending redraws, so that widgets are not redrawn twice unnecessarily.)
@@ -341,7 +448,7 @@ struct _GSourceFuncs
  * Use this for default priority idle functions.
  *
  * In GLib this priority is used when adding idle functions with
- * g_idle_add().
+ * [func@GLib.idle_add].
  */
 #define G_PRIORITY_DEFAULT_IDLE     200
 
@@ -350,15 +457,15 @@ struct _GSourceFuncs
  *
  * Use this for very low priority background tasks.
  *
- * It is not used within GLib or GTK+.
+ * It is not used within GLib or GTK.
  */
 #define G_PRIORITY_LOW              300
 
 /**
  * G_SOURCE_REMOVE:
  *
- * Use this macro as the return value of a #GSourceFunc to remove
- * the #GSource from the main loop.
+ * Use this macro as the return value of a [callback@GLib.SourceFunc] to remove
+ * the [struct@GLib.Source] from the main loop.
  *
  * Since: 2.32
  */
@@ -367,8 +474,8 @@ struct _GSourceFuncs
 /**
  * G_SOURCE_CONTINUE:
  *
- * Use this macro as the return value of a #GSourceFunc to leave
- * the #GSource in the main loop.
+ * Use this macro as the return value of a [callback@GLib.SourceFunc] to leave
+ * the [struct@GLib.Source] in the main loop.
  *
  * Since: 2.32
  */
@@ -486,13 +593,13 @@ typedef void GMainContextPusher GLIB_AVAILABLE_TYPE_IN_2_64;
  * @main_context: (transfer none): a main context to push
  *
  * Push @main_context as the new thread-default main context for the current
- * thread, using g_main_context_push_thread_default(), and return a new
- * #GMainContextPusher. Pop with g_main_context_pusher_free(). Using
- * g_main_context_pop_thread_default() on @main_context while a
- * #GMainContextPusher exists for it can lead to undefined behaviour.
+ * thread, using [method@GLib.MainContext.push_thread_default], and return a
+ * new [alias@GLib.MainContextPusher]. Pop with g_main_context_pusher_free().
+ * Using [method@GLib.MainContext.pop_thread_default] on @main_context while a
+ * [alias@GLib.MainContextPusher] exists for it can lead to undefined behaviour.
  *
- * Using two #GMainContextPushers in the same scope is not allowed, as it leads
- * to an undefined pop order.
+ * Using two [alias@GLib.MainContextPusher]s in the same scope is not allowed,
+ * as it leads to an undefined pop order.
  *
  * This is intended to be used with g_autoptr().  Note that g_autoptr()
  * is only available when using GCC or clang, so the following example
@@ -543,8 +650,8 @@ G_GNUC_END_IGNORE_DEPRECATIONS
  * Pop @pusher’s main context as the thread default main context.
  * See g_main_context_pusher_new() for details.
  *
- * This will pop the #GMainContext as the current thread-default main context,
- * but will not call g_main_context_unref() on it.
+ * This will pop the [struct@GLib.MainContext] as the current thread-default
+ * main context, but will not call [method@GLib.MainContext.unref] on it.
  *
  * Since: 2.64
  */
@@ -733,10 +840,10 @@ gboolean g_source_remove_by_funcs_user_data  (GSourceFuncs  *funcs,
  * GClearHandleFunc:
  * @handle_id: the handle ID to clear
  *
- * Specifies the type of function passed to g_clear_handle_id().
- * The implementation is expected to free the resource identified
- * by @handle_id; for instance, if @handle_id is a #GSource ID,
- * g_source_remove() can be used.
+ * Specifies the type of function passed to [func@GLib.clear_handle_id] The
+ * implementation is expected to free the resource identified by @handle_id;
+ * for instance, if @handle_id is a [struct@GLib.Source] ID,
+ * [func@GLib.Source.remove] can be used.
  *
  * Since: 2.56
  */
@@ -794,14 +901,25 @@ GLIB_AVAILABLE_IN_ALL
 guint    g_child_watch_add          (GPid            pid,
                                      GChildWatchFunc function,
                                      gpointer        data);
+GLIB_AVAILABLE_IN_2_74
+guint    g_timeout_add_once         (guint           interval,
+                                     GSourceOnceFunc function,
+                                     gpointer        data);
 GLIB_AVAILABLE_IN_ALL
 guint    g_idle_add                 (GSourceFunc     function,
+                                     gpointer        data);
+GLIB_AVAILABLE_IN_2_78
+guint    g_timeout_add_seconds_once (guint           interval,
+                                     GSourceOnceFunc function,
                                      gpointer        data);
 GLIB_AVAILABLE_IN_ALL
 guint    g_idle_add_full            (gint            priority,
                                      GSourceFunc     function,
                                      gpointer        data,
                                      GDestroyNotify  notify);
+GLIB_AVAILABLE_IN_2_74
+guint    g_idle_add_once            (GSourceOnceFunc function,
+                                     gpointer        data);
 GLIB_AVAILABLE_IN_ALL
 gboolean g_idle_remove_by_data      (gpointer        data);
 

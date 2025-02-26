@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2014, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -26,9 +26,6 @@
 package com.sun.glass.ui.monocle;
 
 import com.sun.glass.events.KeyEvent;
-
-import java.security.AccessController;
-import java.security.PrivilegedAction;
 
 /**
  * Processes key input events based on changes to key state. Not
@@ -85,13 +82,9 @@ class KeyInput {
                 } else if (key == KeyEvent.VK_NUM_LOCK) {
                     numLock = !numLock;
                 } else if (key == KeyEvent.VK_C && newState.isControlPressed()) {
-                    @SuppressWarnings("removal")
-                    var dummy = AccessController.doPrivileged((PrivilegedAction<Void>) () -> {
-                        if ("1".equals(System.getenv("JAVAFX_DEBUG"))) {
-                            System.exit(0);
-                        }
-                        return null;
-                    });
+                    if ("1".equals(System.getenv("JAVAFX_DEBUG"))) {
+                        System.exit(0);
+                    }
                 }
                 dispatchKeyEvent(newState, KeyEvent.PRESS, key);
             }
@@ -195,7 +188,7 @@ class KeyInput {
         return c == '\000' ? NO_CHAR : new char[] { c };
     }
 
-    int getKeyCodeForChar(char c) {
+    int getKeyCodeForChar(char c, int hint) {
         c = Character.toUpperCase(c);
         // remove shift modification
         switch (c) {

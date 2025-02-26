@@ -27,39 +27,81 @@
 #include "NativeImage.h"
 #include "GraphicsContext.h"
 
-#include <wtf/NeverDestroyed.h>
-
 namespace WebCore {
 
-RefPtr<NativeImage> NativeImage::create(PlatformImagePtr&& platformImage, RenderingResourceIdentifier renderingResourceIdentifier)
+NativeImageBackend::NativeImageBackend() = default;
+
+NativeImageBackend::~NativeImageBackend() = default;
+
+bool NativeImageBackend::isRemoteNativeImageBackendProxy() const
+{
+    return false;
+}
+
+PlatformImageNativeImageBackend::~PlatformImageNativeImageBackend() = default;
+
+const PlatformImagePtr& PlatformImageNativeImageBackend::platformImage() const
+{
+    return m_platformImage;
+}
+
+PlatformImageNativeImageBackend::PlatformImageNativeImageBackend(PlatformImagePtr platformImage)
+    : m_platformImage(WTFMove(platformImage))
+{
+}
+
+#if !USE(CG)
+RefPtr<NativeImage> NativeImage::create(PlatformImagePtr&& platformImage, RenderingResourceIdentifier identifier)
 {
     if (!platformImage)
         return nullptr;
-    return adoptRef(*new NativeImage(WTFMove(platformImage), renderingResourceIdentifier));
+    UniqueRef<PlatformImageNativeImageBackend> backend { *new PlatformImageNativeImageBackend(WTFMove(platformImage)) };
+    return adoptRef(*new NativeImage(WTFMove(backend), identifier));
 }
 
-NativeImage::NativeImage(PlatformImagePtr&& platformImage, RenderingResourceIdentifier renderingResourceIdentifier)
-    : m_platformImage(WTFMove(platformImage))
-    , m_renderingResourceIdentifier(renderingResourceIdentifier)
+RefPtr<NativeImage> NativeImage::createTransient(PlatformImagePtr&& image, RenderingResourceIdentifier identifier)
 {
-    ASSERT(m_platformImage);
+    return create(WTFMove(image), identifier);
+}
+#endif
+
+NativeImage::NativeImage(UniqueRef<NativeImageBackend> backend, RenderingResourceIdentifier renderingResourceIdentifier)
+    : RenderingResource(renderingResourceIdentifier)
+    , m_backend(WTFMove(backend))
+{
 }
 
-NativeImage::~NativeImage()
+#if PLATFORM(JAVA)
+void NativeImage::draw(GraphicsContext& context, const FloatRect& destRect, const FloatRect& srcRect, ImagePaintingOptions options)
 {
-    for (auto observer : m_observers)
-        observer->releaseNativeImage(m_renderingResourceIdentifier);
+    context.drawNativeImageInternal(*this, destRect, srcRect, options);
+}
+#endif
+NativeImage::~NativeImage() = default;
+
+const PlatformImagePtr& NativeImage::platformImage() const
+{
+    return m_backend->platformImage();
 }
 
-void NativeImage::draw(GraphicsContext& context, const FloatSize& imageSize, const FloatRect& destinationRect, const FloatRect& sourceRect, const ImagePaintingOptions& options)
+IntSize NativeImage::size() const
 {
-    context.drawNativeImageInternal(*this, imageSize, destinationRect, sourceRect, options);
+    return m_backend->size();
 }
 
-void NativeImage::setPlatformImage(PlatformImagePtr&& platformImage)
+bool NativeImage::hasAlpha() const
 {
-    ASSERT(platformImage);
-    m_platformImage = WTFMove(platformImage);
+    return m_backend->hasAlpha();
+}
+
+DestinationColorSpace NativeImage::colorSpace() const
+{
+    return m_backend->colorSpace();
+}
+
+void NativeImage::replaceBackend(UniqueRef<NativeImageBackend> backend)
+{
+    m_backend = WTFMove(backend);
 }
 
 } // namespace WebCore

@@ -1,7 +1,7 @@
 /*
- * Copyright (C) 2008, 2010, 2013, 2014 Apple Inc. All Rights Reserved.
+ * Copyright (C) 2008-2023 Apple Inc. All Rights Reserved.
  * Copyright (C) 2009 Torch Mobile, Inc. http://www.torchmobile.com/
- * Copyright (C) 2010 Google Inc. All Rights Reserved.
+ * Copyright (C) 2010-2020 Google Inc. All Rights Reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -28,7 +28,7 @@
 #include "config.h"
 #include "CSSPreloadScanner.h"
 
-#include "HTMLParserIdioms.h"
+#include "Document.h"
 #include <wtf/SetForScope.h>
 
 namespace WebCore {
@@ -59,6 +59,20 @@ void CSSPreloadScanner::scan(const HTMLToken::DataVector& data, PreloadRequestSt
 
         tokenize(c);
     }
+
+    if (m_state == RuleValue || m_state == AfterRuleValue)
+        emitRule();
+}
+
+bool CSSPreloadScanner::hasFinishedRuleValue() const
+{
+    if (m_ruleValue.size() < 2 || m_ruleValue[m_ruleValue.size() - 2] == '\\')
+        return false;
+    // String
+    if (m_ruleValue[0] == '\'' || m_ruleValue[0] == '"')
+        return m_ruleValue[0] == m_ruleValue[m_ruleValue.size()  - 1];
+    // url()
+    return m_ruleValue[m_ruleValue.size() - 1] == ')';
 }
 
 inline void CSSPreloadScanner::tokenize(UChar c)
@@ -67,7 +81,7 @@ inline void CSSPreloadScanner::tokenize(UChar c)
     // Searching for other types of resources is probably low payoff.
     switch (m_state) {
     case Initial:
-        if (isHTMLSpace(c))
+        if (isASCIIWhitespace(c))
             break;
         if (c == '@')
             m_state = RuleStart;
@@ -105,7 +119,7 @@ inline void CSSPreloadScanner::tokenize(UChar c)
             m_state = Initial;
         break;
     case Rule:
-        if (isHTMLSpace(c))
+        if (isASCIIWhitespace(c))
             m_state = AfterRule;
         else if (c == ';')
             m_state = Initial;
@@ -113,7 +127,7 @@ inline void CSSPreloadScanner::tokenize(UChar c)
             m_rule.append(c);
         break;
     case AfterRule:
-        if (isHTMLSpace(c))
+        if (isASCIIWhitespace(c))
             break;
         if (c == ';')
             m_state = Initial;
@@ -125,15 +139,15 @@ inline void CSSPreloadScanner::tokenize(UChar c)
         }
         break;
     case RuleValue:
-        if (isHTMLSpace(c))
+        if (isASCIIWhitespace(c))
             m_state = AfterRuleValue;
-        else if (c == ';')
-            emitRule();
         else
             m_ruleValue.append(c);
+        if (hasFinishedRuleValue())
+            m_state = AfterRuleValue;
         break;
     case AfterRuleValue:
-        if (isHTMLSpace(c))
+        if (isASCIIWhitespace(c))
             break;
         if (c == ';')
             emitRule();
@@ -158,18 +172,21 @@ inline void CSSPreloadScanner::tokenize(UChar c)
     }
 }
 
-static String parseCSSStringOrURL(const UChar* characters, size_t length)
+static String parseCSSStringOrURL(std::span<const UChar> characters)
 {
     size_t offset = 0;
-    size_t reducedLength = length;
+    size_t reducedLength = characters.size();
 
-    while (reducedLength && isHTMLSpace(characters[offset])) {
+    // Remove whitespace from the rule start
+    while (reducedLength && isASCIIWhitespace(characters[offset])) {
         ++offset;
         --reducedLength;
     }
-    while (reducedLength && isHTMLSpace(characters[offset + reducedLength - 1]))
+    // Remove whitespace from the rule end
+    while (reducedLength && isASCIIWhitespace(characters[offset + reducedLength - 1]))
         --reducedLength;
 
+    // Skip the "url(" prefix and the ")" suffix
     if (reducedLength >= 5
             && (characters[offset] == 'u' || characters[offset] == 'U')
             && (characters[offset + 1] == 'r' || characters[offset + 1] == 'R')
@@ -180,26 +197,23 @@ static String parseCSSStringOrURL(const UChar* characters, size_t length)
         reducedLength -= 5;
     }
 
-    while (reducedLength && isHTMLSpace(characters[offset])) {
+    // Skip whitespace before and after the URL inside the "url()" parenthesis.
+    while (reducedLength && isASCIIWhitespace(characters[offset])) {
         ++offset;
         --reducedLength;
     }
-    while (reducedLength && isHTMLSpace(characters[offset + reducedLength - 1]))
+    while (reducedLength && isASCIIWhitespace(characters[offset + reducedLength - 1]))
         --reducedLength;
 
-    if (reducedLength < 2 || characters[offset] != characters[offset + reducedLength - 1] || !(characters[offset] == '\'' || characters[offset] == '"'))
-        return String();
-    offset++;
-    reducedLength -= 2;
-
-    while (reducedLength && isHTMLSpace(characters[offset])) {
+    // Remove single-quotes or double-quotes from the URL
+    if ((reducedLength >= 2)
+        && (characters[offset] == characters[offset + reducedLength - 1])
+        && (characters[offset] == '\'' || characters[offset] == '"')) {
         ++offset;
-        --reducedLength;
+            reducedLength -= 2;
     }
-    while (reducedLength && isHTMLSpace(characters[offset + reducedLength - 1]))
-        --reducedLength;
 
-    return String(characters + offset, reducedLength);
+    return String(characters.subspan(offset, reducedLength));
 }
 
 static bool hasValidImportConditions(StringView conditions)
@@ -207,7 +221,7 @@ static bool hasValidImportConditions(StringView conditions)
     if (conditions.isEmpty())
         return true;
 
-    conditions = conditions.stripLeadingAndTrailingMatchedCharacters(isHTMLSpace<UChar>);
+    conditions = conditions.trim(isASCIIWhitespace<UChar>);
 
     // FIXME: Support multiple conditions.
     // FIXME: Support media queries.
@@ -222,10 +236,10 @@ static bool hasValidImportConditions(StringView conditions)
 
 void CSSPreloadScanner::emitRule()
 {
-    StringView rule(m_rule.data(), m_rule.size());
+    StringView rule(m_rule.span());
     if (equalLettersIgnoringASCIICase(rule, "import"_s)) {
-        String url = parseCSSStringOrURL(m_ruleValue.data(), m_ruleValue.size());
-        StringView conditions(m_ruleConditions.data(), m_ruleConditions.size());
+        String url = parseCSSStringOrURL(m_ruleValue.span());
+        StringView conditions(m_ruleConditions.span());
         if (!url.isEmpty() && hasValidImportConditions(conditions)) {
             URL baseElementURL; // FIXME: This should be passed in from the HTMLPreloadScanner via scan(): without it we will get relative URLs wrong.
             // FIXME: Should this be including the charset in the preload request?

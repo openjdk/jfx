@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2016 Canon Inc.
- * Copyright (C) 2020 Apple Inc. All rights reserved.
+ * Copyright (C) 2020-2024 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted, provided that the following conditions
@@ -41,13 +41,17 @@
 
 namespace WebCore {
 
+DECLARE_ALLOCATOR_WITH_HEAP_IDENTIFIER(FetchBodyOwner);
+
 class FetchBodyOwner : public RefCounted<FetchBodyOwner>, public ActiveDOMObject, public CanMakeWeakPtr<FetchBodyOwner> {
+    WTF_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(FetchBodyOwner);
 public:
     ~FetchBodyOwner();
 
     bool bodyUsed() const { return isDisturbed(); }
     void arrayBuffer(Ref<DeferredPromise>&&);
     void blob(Ref<DeferredPromise>&&);
+    void bytes(Ref<DeferredPromise>&&);
     void formData(Ref<DeferredPromise>&&);
     void json(Ref<DeferredPromise>&&);
     void text(Ref<DeferredPromise>&&);
@@ -66,12 +70,17 @@ public:
     virtual void consumeBodyAsStream();
     virtual void feedStream() { }
     virtual void cancel() { }
+    virtual void loadBody() { }
 
     bool hasLoadingError() const;
     ResourceError loadingError() const;
     std::optional<Exception> loadingException() const;
 
-    const String& contentType() const { return m_contentType; }
+    String contentType() const { return m_headers->fastGet(HTTPHeaderName::ContentType); }
+
+    // ActiveDOMObject.
+    void ref() const final { RefCounted::ref(); }
+    void deref() const final { RefCounted::deref(); }
 
 protected:
     FetchBodyOwner(ScriptExecutionContext*, std::optional<FetchBody>&&, Ref<FetchHeaders>&&);
@@ -83,13 +92,12 @@ protected:
     void cloneBody(FetchBodyOwner&);
 
     ExceptionOr<void> extractBody(FetchBody::Init&&);
-    void updateContentType();
     void consumeOnceLoadingFinished(FetchBodyConsumer::Type, Ref<DeferredPromise>&&);
 
     void setBody(FetchBody&& body) { m_body = WTFMove(body); }
     ExceptionOr<void> createReadableStream(JSC::JSGlobalObject&);
 
-    // ActiveDOMObject API
+    // ActiveDOMObject.
     void stop() override;
 
     void setDisturbed() { m_isDisturbed = true; }
@@ -117,7 +125,7 @@ private:
         void didReceiveResponse(const ResourceResponse&) final;
         void didReceiveData(const SharedBuffer& buffer) final { owner.blobChunk(buffer); }
         void didFail(const ResourceError&) final;
-        void didSucceed(const NetworkLoadMetrics&) final { owner.blobLoadingSucceeded(); }
+        void didSucceed(const NetworkLoadMetrics&) final;
 
         FetchBodyOwner& owner;
         std::unique_ptr<FetchLoader> loader;
@@ -125,7 +133,6 @@ private:
 
 protected:
     std::optional<FetchBody> m_body;
-    String m_contentType;
     bool m_isDisturbed { false };
     RefPtr<FetchBodySource> m_readableStreamSource;
     Ref<FetchHeaders> m_headers;

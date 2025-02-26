@@ -28,16 +28,16 @@
 #if ENABLE(WEBGL)
 #include "WebGLCompressedTextureS3TCsRGB.h"
 
-#include <wtf/IsoMallocInlines.h>
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
-WTF_MAKE_ISO_ALLOCATED_IMPL(WebGLCompressedTextureS3TCsRGB);
+WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(WebGLCompressedTextureS3TCsRGB);
 
 WebGLCompressedTextureS3TCsRGB::WebGLCompressedTextureS3TCsRGB(WebGLRenderingContextBase& context)
-    : WebGLExtension(context)
+    : WebGLExtension(context, WebGLExtensionName::WebGLCompressedTextureS3TCsRGB)
 {
-    context.graphicsContextGL()->ensureExtensionEnabled("GL_EXT_texture_compression_s3tc_srgb"_s);
+    context.protectedGraphicsContextGL()->ensureExtensionEnabled("GL_EXT_texture_compression_s3tc_srgb"_s);
     context.addCompressedTextureFormat(GraphicsContextGL::COMPRESSED_SRGB_S3TC_DXT1_EXT);
     context.addCompressedTextureFormat(GraphicsContextGL::COMPRESSED_SRGB_ALPHA_S3TC_DXT1_EXT);
     context.addCompressedTextureFormat(GraphicsContextGL::COMPRESSED_SRGB_ALPHA_S3TC_DXT3_EXT);
@@ -45,11 +45,6 @@ WebGLCompressedTextureS3TCsRGB::WebGLCompressedTextureS3TCsRGB(WebGLRenderingCon
 }
 
 WebGLCompressedTextureS3TCsRGB::~WebGLCompressedTextureS3TCsRGB() = default;
-
-WebGLExtension::ExtensionName WebGLCompressedTextureS3TCsRGB::getName() const
-{
-    return WebGLCompressedTextureS3TCsRGBName;
-}
 
 bool WebGLCompressedTextureS3TCsRGB::supported(GraphicsContextGL& context)
 {

@@ -20,6 +20,7 @@
 
 #pragma once
 
+#include "Path.h"
 #include "RenderSVGInline.h"
 
 namespace WebCore {
@@ -28,22 +29,21 @@ class SVGGeometryElement;
 class SVGTextPathElement;
 
 class RenderSVGTextPath final : public RenderSVGInline {
-    WTF_MAKE_ISO_ALLOCATED(RenderSVGTextPath);
+    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(RenderSVGTextPath);
+    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(RenderSVGTextPath);
 public:
     RenderSVGTextPath(SVGTextPathElement&, RenderStyle&&);
+    virtual ~RenderSVGTextPath();
 
     SVGTextPathElement& textPathElement() const;
     SVGGeometryElement* targetElement() const;
 
     Path layoutPath() const;
     const SVGLengthValue& startOffset() const;
-    bool exactAlignment() const;
-    bool stretchMethod() const;
 
 private:
     void graphicsElement() const = delete;
 
-    bool isSVGTextPath() const override { return true; }
     ASCIILiteral renderName() const override { return "RenderSVGTextPath"_s; }
 
     Path m_layoutPath;
@@ -51,4 +51,4 @@ private:
 
 } // namespace WebCore
 
-SPECIALIZE_TYPE_TRAITS_RENDER_OBJECT(RenderSVGTextPath, isSVGTextPath())
+SPECIALIZE_TYPE_TRAITS_RENDER_OBJECT(RenderSVGTextPath, isRenderSVGTextPath())

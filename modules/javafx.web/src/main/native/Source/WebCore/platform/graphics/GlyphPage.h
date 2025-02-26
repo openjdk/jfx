@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2006, 2007, 2008, 2013 Apple Inc. All rights reserved.
+ * Copyright (C) 2006-2023 Apple Inc. All rights reserved.
  * Copyright (C) Research In Motion Limited 2011. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -30,34 +30,38 @@
 #ifndef GlyphPage_h
 #define GlyphPage_h
 
+#include "Font.h"
 #include "Glyph.h"
+#include "TextFlags.h"
 #include <unicode/utypes.h>
+#include <wtf/BitSet.h>
+#include <wtf/CheckedPtr.h>
 #include <wtf/RefCounted.h>
 #include <wtf/Ref.h>
 
 namespace WebCore {
 
-class Font;
-
 // Holds the glyph index and the corresponding Font information for a given
 // character.
 struct GlyphData {
-    GlyphData(Glyph glyph = 0, const Font* font = nullptr)
+    GlyphData(Glyph glyph = 0, const Font* font = nullptr, ColorGlyphType colorGlyphType = ColorGlyphType::Outline)
         : glyph(glyph)
+        , colorGlyphType(colorGlyphType)
         , font(font)
     {
     }
 
-    bool isValid() const { return glyph || font; }
+    bool isValid() const { return !!font; }
 
     Glyph glyph;
-    const Font* font;
+    ColorGlyphType colorGlyphType;
+    SingleThreadWeakPtr<const Font> font;
 };
 
 // A GlyphPage contains a fixed-size set of GlyphData mappings for a contiguous
 // range of characters in the Unicode code space. GlyphPages are indexed
 // starting from 0 and incrementing for each "size" number of glyphs.
-class GlyphPage : public RefCounted<GlyphPage> {
+class GlyphPage final : public RefCounted<GlyphPage> {
 public:
     static Ref<GlyphPage> create(const Font& font)
     {
@@ -71,20 +75,20 @@ public:
 
     static unsigned count() { return s_count; }
 
-    static const unsigned size = 16;
+    static constexpr unsigned size = 16;
 
-    static unsigned sizeForPageNumber(unsigned) { return 16; }
-    static unsigned indexForCodePoint(UChar32 c) { return c % size; }
-    static unsigned pageNumberForCodePoint(UChar32 c) { return c / size; }
-    static UChar32 startingCodePointInPageNumber(unsigned pageNumber) { return pageNumber * size; }
-    static bool pageNumberIsUsedForArabic(unsigned pageNumber) { return startingCodePointInPageNumber(pageNumber) >= 0x600 && startingCodePointInPageNumber(pageNumber) + sizeForPageNumber(pageNumber) < 0x700; }
+    static constexpr unsigned sizeForPageNumber(unsigned) { return size; }
+    static constexpr unsigned indexForCodePoint(char32_t c) { return c % size; }
+    static constexpr unsigned pageNumberForCodePoint(char32_t c) { return c / size; }
+    static constexpr char32_t startingCodePointInPageNumber(unsigned pageNumber) { return pageNumber * size; }
+    static constexpr bool pageNumberIsUsedForArabic(unsigned pageNumber) { return startingCodePointInPageNumber(pageNumber) >= 0x600 && startingCodePointInPageNumber(pageNumber) + sizeForPageNumber(pageNumber) < 0x700; }
 
-    GlyphData glyphDataForCharacter(UChar32 c) const
+    GlyphData glyphDataForCharacter(char32_t c) const
     {
         return glyphDataForIndex(indexForCodePoint(c));
     }
 
-    Glyph glyphForCharacter(UChar32 c) const
+    Glyph glyphForCharacter(char32_t c) const
     {
         return glyphForIndex(indexForCodePoint(c));
     }
@@ -92,29 +96,37 @@ public:
     GlyphData glyphDataForIndex(unsigned index) const
     {
         Glyph glyph = glyphForIndex(index);
-        return GlyphData(glyph, glyph ? &m_font : nullptr);
+        auto colorGlyphType = colorGlyphTypeForIndex(index);
+        return GlyphData(glyph, glyph ? m_font.get() : nullptr, colorGlyphType);
     }
 
     Glyph glyphForIndex(unsigned index) const
     {
-        ASSERT_WITH_SECURITY_IMPLICATION(index < size);
+        RELEASE_ASSERT_WITH_SECURITY_IMPLICATION(index < size);
         return m_glyphs[index];
     }
 
+    ColorGlyphType colorGlyphTypeForIndex(unsigned index) const
+    {
+        RELEASE_ASSERT_WITH_SECURITY_IMPLICATION(index < size);
+        return m_isColor.get(index) ? ColorGlyphType::Color : ColorGlyphType::Outline;
+    }
+
     // FIXME: Pages are immutable after initialization. This should be private.
-    void setGlyphForIndex(unsigned index, Glyph glyph)
+    void setGlyphForIndex(unsigned index, Glyph glyph, ColorGlyphType colorGlyphType)
     {
         ASSERT_WITH_SECURITY_IMPLICATION(index < size);
         m_glyphs[index] = glyph;
+        m_isColor.set(index, colorGlyphType == ColorGlyphType::Color);
     }
 
     const Font& font() const
     {
-        return m_font;
+        return *m_font;
     }
 
     // Implemented by the platform.
-    bool fill(UChar* characterBuffer, unsigned bufferLength);
+    bool fill(std::span<const UChar> characterBuffer);
 
 private:
     explicit GlyphPage(const Font& font)
@@ -123,8 +135,9 @@ private:
         ++s_count;
     }
 
-    const Font& m_font;
+    SingleThreadWeakPtr<const Font> m_font;
     Glyph m_glyphs[size] { };
+    WTF::BitSet<size> m_isColor;
 
     WEBCORE_EXPORT static unsigned s_count;
 };

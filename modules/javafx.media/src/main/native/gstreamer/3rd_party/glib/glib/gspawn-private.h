@@ -4,6 +4,8 @@
  *  g_execvpe implementation based on GNU libc execvp:
  *   Copyright 1991, 92, 95, 96, 97, 98, 99 Free Software Foundation, Inc.
  *
+ * SPDX-License-Identifier: LGPL-2.1-or-later
+ *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
  * License as published by the Free Software Foundation; either
@@ -22,7 +24,40 @@
 
 #include <errno.h>
 
+#include "glibintl.h"
 #include "gspawn.h"
+
+/* Platform-specific implementation functions. */
+gboolean g_spawn_sync_impl (const gchar           *working_directory,
+                            gchar                **argv,
+                            gchar                **envp,
+                            GSpawnFlags            flags,
+                            GSpawnChildSetupFunc   child_setup,
+                            gpointer               user_data,
+                            gchar                **standard_output,
+                            gchar                **standard_error,
+                            gint                  *wait_status,
+                            GError               **error);
+gboolean g_spawn_async_with_pipes_and_fds_impl (const gchar           *working_directory,
+                                                const gchar * const   *argv,
+                                                const gchar * const   *envp,
+                                                GSpawnFlags            flags,
+                                                GSpawnChildSetupFunc   child_setup,
+                                                gpointer               user_data,
+                                                gint                   stdin_fd,
+                                                gint                   stdout_fd,
+                                                gint                   stderr_fd,
+                                                const gint            *source_fds,
+                                                const gint            *target_fds,
+                                                gsize                  n_fds,
+                                                GPid                  *child_pid_out,
+                                                gint                  *stdin_pipe_out,
+                                                gint                  *stdout_pipe_out,
+                                                gint                  *stderr_pipe_out,
+                                                GError               **error);
+gboolean g_spawn_check_wait_status_impl (gint     wait_status,
+                                         GError **error);
+void g_spawn_close_pid_impl (GPid pid);
 
 static inline gint
 _g_spawn_exec_err_to_g_error (gint en)
@@ -112,4 +147,25 @@ _g_spawn_exec_err_to_g_error (gint en)
     default:
       return G_SPAWN_ERROR_FAILED;
     }
+}
+
+static inline gboolean
+_g_spawn_invalid_source_fd (gint         fd,
+                            const gint  *source_fds,
+                            gsize        n_fds,
+                            GError     **error)
+{
+  gsize i;
+
+  for (i = 0; i < n_fds; i++)
+    if (fd == source_fds[i])
+      {
+        g_set_error (error,
+                     G_SPAWN_ERROR,
+                     G_SPAWN_ERROR_INVAL,
+                     _("Invalid source FDs argument"));
+        return TRUE;
+      }
+
+  return FALSE;
 }

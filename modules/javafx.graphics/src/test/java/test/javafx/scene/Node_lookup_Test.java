@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,10 +25,6 @@
 
 package test.javafx.scene;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertSame;
-import static org.junit.Assert.assertTrue;
-
 import java.util.Set;
 
 import javafx.css.PseudoClass;
@@ -36,8 +32,11 @@ import javafx.scene.Group;
 import javafx.scene.Node;
 import javafx.scene.ParentShim;
 
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class Node_lookup_Test {
     //                  Group & #root
@@ -47,7 +46,8 @@ public class Node_lookup_Test {
     //           .d    #e        .d   .g:testPseudo1   .h.g:testPseudo1:testPseudo2
     private Group root, a, bc, d, e, d2, f, g, hg;
 
-    @Before public void setup() {
+    @BeforeEach
+    public void setup() {
         root = new Group();
         root.setId("root");
         a = new Group();
@@ -76,7 +76,8 @@ public class Node_lookup_Test {
         ParentShim.getChildren(f).addAll(g, hg);
     }
 
-    @Test public void test_lookup_on_nodes_without_pseudo_classes() {
+    @Test
+    public void test_lookup_on_nodes_without_pseudo_classes() {
         Node found = root.lookup("Group");
         assertSame(root, found);
 
@@ -99,7 +100,8 @@ public class Node_lookup_Test {
         assertSame(bc, found);
     }
 
-    @Test public void test_lookupAll_on_nodes_without_pseudo_classes() {
+    @Test
+    public void test_lookupAll_on_nodes_without_pseudo_classes() {
         Set<Node> nodes = root.lookupAll("#a");
         assertEquals(1, nodes.size());
         assertTrue(nodes.contains(a));

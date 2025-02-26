@@ -28,6 +28,7 @@
 
 #include "JSCInlines.h"
 #include "ObjectConstructor.h"
+#include "ProfilerDumper.h"
 
 namespace JSC { namespace Profiler {
 
@@ -37,18 +38,13 @@ ProfiledBytecodes::ProfiledBytecodes(Bytecodes* bytecodes, CodeBlock* profiledBl
 {
 }
 
-ProfiledBytecodes::~ProfiledBytecodes()
+ProfiledBytecodes::~ProfiledBytecodes() = default;
+
+Ref<JSON::Value> ProfiledBytecodes::toJSON(Dumper& dumper) const
 {
-}
-
-JSValue ProfiledBytecodes::toJS(JSGlobalObject* globalObject) const
-{
-    VM& vm = globalObject->vm();
-    JSObject* result = constructEmptyObject(globalObject);
-
-    result->putDirect(vm, vm.propertyNames->bytecodesID, jsNumber(m_bytecodes->id()));
-    addSequenceProperties(globalObject, result);
-
+    auto result = JSON::Object::create();
+    result->setDouble(dumper.keys().m_bytecodesID, m_bytecodes->id());
+    addSequenceProperties(dumper, result.get());
     return result;
 }
 

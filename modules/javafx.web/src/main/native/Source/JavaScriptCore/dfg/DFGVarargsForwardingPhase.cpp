@@ -47,7 +47,7 @@ class VarargsForwardingPhase : public Phase {
     static constexpr bool verbose = false;
 public:
     VarargsForwardingPhase(Graph& graph)
-        : Phase(graph, "varargs forwarding")
+        : Phase(graph, "varargs forwarding"_s)
     {
     }
 
@@ -270,6 +270,7 @@ private:
             // what gets read on OSR exit.
             switch (node->op()) {
             case MovHint:
+            case ZombieHint:
             case KillStack:
                 if (argumentsInvolveStackSlot(candidate, node->unlinkedOperand())) {
                     if (verbose)

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,10 +25,24 @@
 
 package test.javafx.scene.control;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
+import static test.com.sun.javafx.scene.control.infrastructure.ControlTestUtils.assertPseudoClassDoesNotExist;
+import static test.com.sun.javafx.scene.control.infrastructure.ControlTestUtils.assertPseudoClassExists;
+import static test.com.sun.javafx.scene.control.infrastructure.ControlTestUtils.assertStyleClassContains;
+import java.util.List;
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.SimpleBooleanProperty;
 import javafx.event.ActionEvent;
 import javafx.scene.Scene;
+import javafx.scene.control.Button;
+import javafx.scene.control.ContextMenu;
+import javafx.scene.control.MenuItem;
+import javafx.scene.control.Skin;
 import javafx.scene.input.KeyCode;
 import javafx.scene.input.MouseButton;
 import javafx.scene.layout.BackgroundFill;
@@ -39,28 +53,14 @@ import javafx.scene.paint.LinearGradient;
 import javafx.scene.paint.Stop;
 import javafx.scene.shape.Rectangle;
 import javafx.stage.Stage;
-import java.util.List;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import com.sun.javafx.tk.Toolkit;
 import test.com.sun.javafx.pgstub.StubToolkit;
 import test.com.sun.javafx.scene.control.infrastructure.ContextMenuEventFirer;
 import test.com.sun.javafx.scene.control.infrastructure.KeyEventFirer;
 import test.com.sun.javafx.scene.control.infrastructure.MouseEventFirer;
-import com.sun.javafx.tk.Toolkit;
-import javafx.scene.control.Button;
-import javafx.scene.control.ContextMenu;
-import javafx.scene.control.MenuItem;
-import javafx.scene.control.Skin;
-import org.junit.Before;
-import org.junit.After;
-import org.junit.Test;
-import static test.com.sun.javafx.scene.control.infrastructure.ControlTestUtils.assertPseudoClassDoesNotExist;
-import static test.com.sun.javafx.scene.control.infrastructure.ControlTestUtils.assertPseudoClassExists;
-import static test.com.sun.javafx.scene.control.infrastructure.ControlTestUtils.assertStyleClassContains;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertSame;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
 
 /**
  * action (which can be bound, and can be null),
@@ -75,7 +75,8 @@ public class ButtonTest {
     private MouseEventFirer mouse; //Note : It is created and used by individual tests that need it
 
 
-    @Before public void setup() {
+    @BeforeEach
+    public void setup() {
         btn = new Button();
         tk = Toolkit.getToolkit();
 
@@ -87,7 +88,8 @@ public class ButtonTest {
         stage.setScene(scene);
     }
 
-    @After public void after() {
+    @AfterEach
+    public void after() {
         stage.hide();
 
         if (mouse != null) {
@@ -264,21 +266,19 @@ public class ButtonTest {
     }
 
     // Test for JDK-8209938
-    @Test public void defaultButtonSceneAccelerators() {
-        assertEquals("Scene.getAccelerators() should contain no accelerators.",
-            0, scene.getAccelerators().size());
+    @Test
+    public void defaultButtonSceneAccelerators() {
+        assertEquals(0, scene.getAccelerators().size(), "Scene.getAccelerators() should contain no accelerators.");
 
         HBox btnParent = new HBox();
         btnParent.getChildren().add(btn);
         root.getChildren().add(btnParent);
         btn.setDefaultButton(true);
         show();
-        assertEquals("Scene.getAccelerators() should contain one accelerator" +
-            " for Default button.", 1, scene.getAccelerators().size());
+        assertEquals(1, scene.getAccelerators().size(), "Scene.getAccelerators() should contain one accelerator for Default button.");
 
         root.getChildren().remove(btnParent);
-        assertEquals("Default button accelerator should be removed from" +
-            " Scene.getAccelerators().", 0, scene.getAccelerators().size());
+        assertEquals(0, scene.getAccelerators().size(), "Default button accelerator should be removed from Scene.getAccelerators().");
 
         tk.firePulse();
     }
@@ -339,21 +339,19 @@ public class ButtonTest {
     }
 
     // Test for JDK-8209938
-    @Test public void cancelButtonSceneAccelerators() {
-        assertEquals("Scene.getAccelerators() should contain no accelerators.",
-            0, scene.getAccelerators().size());
+    @Test
+    public void cancelButtonSceneAccelerators() {
+        assertEquals(0, scene.getAccelerators().size(), "Scene.getAccelerators() should contain no accelerators.");
 
         HBox btnParent = new HBox();
         btnParent.getChildren().add(btn);
         root.getChildren().add(btnParent);
         btn.setCancelButton(true);
         show();
-        assertEquals("Scene.getAccelerators() should contain one accelerator" +
-            " for Cancel button.", 1, scene.getAccelerators().size());
+        assertEquals(1, scene.getAccelerators().size(), "Scene.getAccelerators() should contain one accelerator for Cancel button.");
 
         root.getChildren().remove(btnParent);
-        assertEquals("Cancel button accelerator should be removed from" +
-            " Scene.getAccelerators().", 0, scene.getAccelerators().size());
+        assertEquals(0, scene.getAccelerators().size(), "Cancel button accelerator should be removed from Scene.getAccelerators().");
 
         tk.firePulse();
     }
@@ -400,7 +398,7 @@ public class ButtonTest {
     }
 
 
-    @Test public void conextMenuShouldntShowOnAction() {
+    @Test public void contextMenuShouldntShowOnAction() {
         ContextMenu popupMenu = new ContextMenu();
         MenuItem item1 = new MenuItem("_About");
         popupMenu.getItems().add(item1);
@@ -542,7 +540,7 @@ public class ButtonTest {
         // did green change after green hover=true?
         assertFalse(greenStops0.equals(greenStops2));
         // did green revert to original after green hover=false?
-        // This is the acid test. If this fails, then RT-23207 is present.
+        // This is the acid test. If this fails, then JDK-8126478 is present.
         assertTrue(greenStops0.equals(greenStops3));
 
     }

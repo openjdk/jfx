@@ -122,10 +122,17 @@ enum Opcode : uint8_t {
     SExt8,
     SExt16,
     // Takes Int32 and returns Int64:
+    SExt8To64,
+    SExt16To64,
     SExt32,
     ZExt32,
     // Does a bitwise truncation of Int64->Int32 and Double->Float:
     Trunc,
+    // On JSVALUE32_64 platforms only: gets the high 32-bits of an Int64.
+    TruncHigh,
+    // On JSVALUE32_64 platforms only: puts together an Int32 from two Int32s.
+    // High bits come from the first child.
+    Stitch,
     // Takes ints and returns floating point value. Note that we don't currently provide the opposite operation,
     // because double-to-int conversions have weirdly different semantics on different platforms. Use
     // a patchpoint if you need to do that.
@@ -415,9 +422,17 @@ enum Opcode : uint8_t {
     VectorMulSat,
     VectorSwizzle,
 
+    // Relaxed SIMD
+
+    VectorRelaxedSwizzle,
+    VectorRelaxedTruncSat,
+    VectorRelaxedMAdd,
+    VectorRelaxedNMAdd,
+
     // Currently only some architectures support this.
     // FIXME: Expand this to identical instructions for the other architectures as a macro.
     VectorMulByElement,
+    VectorShiftByVector,
 
     // SSA support, in the style of DFG SSA.
     Upsilon, // This uses the UpsilonValue class.

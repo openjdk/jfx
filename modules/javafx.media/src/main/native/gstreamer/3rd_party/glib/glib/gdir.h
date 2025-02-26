@@ -5,6 +5,8 @@
  *
  * Copyright 2001 Hans Breuer
  *
+ * SPDX-License-Identifier: LGPL-2.1-or-later
+ *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
  * License as published by the Free Software Foundation; either
@@ -46,6 +48,11 @@ GLIB_AVAILABLE_IN_ALL
 void                     g_dir_rewind         (GDir         *dir);
 GLIB_AVAILABLE_IN_ALL
 void                     g_dir_close          (GDir         *dir);
+
+GLIB_AVAILABLE_IN_2_80
+GDir *                   g_dir_ref             (GDir        *dir);
+GLIB_AVAILABLE_IN_2_80
+void                     g_dir_unref           (GDir        *dir);
 
 G_END_DECLS
 

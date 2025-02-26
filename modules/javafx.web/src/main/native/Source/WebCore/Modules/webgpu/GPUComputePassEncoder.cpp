@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2021-2022 Apple Inc. All rights reserved.
+ * Copyright (C) 2021-2023 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -71,12 +71,17 @@ void GPUComputePassEncoder::setBindGroup(GPUIndex32 index, const GPUBindGroup& b
     m_backing->setBindGroup(index, bindGroup.backing(), WTFMove(dynamicOffsets));
 }
 
-void GPUComputePassEncoder::setBindGroup(GPUIndex32 index, const GPUBindGroup& bindGroup,
+ExceptionOr<void> GPUComputePassEncoder::setBindGroup(GPUIndex32 index, const GPUBindGroup& bindGroup,
     const JSC::Uint32Array& dynamicOffsetsData,
     GPUSize64 dynamicOffsetsDataStart,
     GPUSize32 dynamicOffsetsDataLength)
 {
+    auto offset = checkedSum<uint64_t>(dynamicOffsetsDataStart, dynamicOffsetsDataLength);
+    if (offset.hasOverflowed() || offset > dynamicOffsetsData.length())
+        return Exception { ExceptionCode::RangeError, "dynamic offsets overflowed"_s };
+
     m_backing->setBindGroup(index, bindGroup.backing(), dynamicOffsetsData.data(), dynamicOffsetsData.length(), dynamicOffsetsDataStart, dynamicOffsetsDataLength);
+    return { };
 }
 
 void GPUComputePassEncoder::pushDebugGroup(String&& groupLabel)

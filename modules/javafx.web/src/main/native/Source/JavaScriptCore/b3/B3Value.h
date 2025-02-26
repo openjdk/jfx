@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015-2017 Apple Inc. All rights reserved.
+ * Copyright (C) 2015-2023 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -37,9 +37,9 @@
 #include "B3ValueKey.h"
 #include "B3Width.h"
 #include <wtf/CommaPrinter.h>
-#include <wtf/FastMalloc.h>
 #include <wtf/IteratorRange.h>
 #include <wtf/StdLibExtras.h>
+#include <wtf/TZoneMalloc.h>
 #include <wtf/TriState.h>
 
 namespace JSC { namespace B3 {
@@ -52,7 +52,7 @@ class PhiChildren;
 class Procedure;
 
 class JS_EXPORT_PRIVATE Value {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_ALLOCATED(Value);
 public:
     static const char* const dumpPrefix;
 
@@ -367,8 +367,8 @@ protected:
     // The specific value of VarArgs does not matter, but the value of the others is assumed to match their meaning.
     enum NumChildren : uint8_t { Zero = 0, One = 1, Two = 2, Three = 3, VarArgs = 4};
 
-    char* childrenAlloc() { return bitwise_cast<char*>(this) + adjacencyListOffset(); }
-    const char* childrenAlloc() const { return bitwise_cast<const char*>(this) + adjacencyListOffset(); }
+    char* childrenAlloc() { return bitwise_cast<char*>(this) + m_adjacencyListOffset; }
+    const char* childrenAlloc() const { return bitwise_cast<const char*>(this) + m_adjacencyListOffset; }
     Vector<Value*, 3>& childrenVector()
     {
         ASSERT(m_numChildren == VarArgs);
@@ -424,6 +424,9 @@ protected:
         case SExt8:
         case SExt16:
         case Trunc:
+        case TruncHigh:
+        case SExt8To64:
+        case SExt16To64:
         case SExt32:
         case ZExt32:
         case FloatToDouble:
@@ -454,6 +457,7 @@ protected:
         case VectorFloor:
         case VectorTrunc:
         case VectorTruncSat:
+        case VectorRelaxedTruncSat:
         case VectorConvert:
         case VectorConvertLow:
         case VectorNearest:
@@ -537,11 +541,16 @@ protected:
         case VectorMulSat:
         case VectorAvgRound:
         case VectorMulByElement:
+        case VectorShiftByVector:
+        case VectorRelaxedSwizzle:
+        case Stitch:
             return 2 * sizeof(Value*);
         case Select:
         case AtomicWeakCAS:
         case AtomicStrongCAS:
         case VectorBitwiseSelect:
+        case VectorRelaxedMAdd:
+        case VectorRelaxedNMAdd:
             return 3 * sizeof(Value*);
         case CCall:
         case Check:
@@ -593,7 +602,7 @@ protected:
     Value& operator=(const Value&) = delete;
     Value& operator=(Value&&) = delete;
 
-    size_t adjacencyListOffset() const;
+    size_t computeAdjacencyListOffset() const;
 
     friend class Procedure;
     friend class SparseCollection<Value>;
@@ -602,6 +611,10 @@ private:
     template<typename... Arguments>
     void buildAdjacencyList(NumChildren numChildren, Arguments... arguments)
     {
+        size_t offset = computeAdjacencyListOffset();
+        RELEASE_ASSERT(offset == static_cast<uint16_t>(offset));
+        m_adjacencyListOffset = offset;
+
         if (numChildren == VarArgs) {
             new (childrenAlloc()) Vector<Value*, 3> { arguments... };
             return;
@@ -611,6 +624,9 @@ private:
     }
     void buildAdjacencyList(size_t offset, const Value& valueToClone)
     {
+        RELEASE_ASSERT(offset == static_cast<uint16_t>(offset));
+        m_adjacencyListOffset = offset;
+
         switch (valueToClone.m_numChildren) {
         case VarArgs:
             new (bitwise_cast<char*>(this) + offset) Vector<Value*, 3> (valueToClone.childrenVector());
@@ -657,6 +673,9 @@ private:
         case SExt8:
         case SExt16:
         case Trunc:
+        case TruncHigh:
+        case SExt8To64:
+        case SExt16To64:
         case SExt32:
         case ZExt32:
         case FloatToDouble:
@@ -689,6 +708,7 @@ private:
         case VectorAllTrue:
         case VectorExtaddPairwise:
         case VectorDupElement:
+        case VectorRelaxedTruncSat:
             if (UNLIKELY(numArgs != 1))
                 badKind(kind, numArgs);
             return One;
@@ -752,11 +772,16 @@ private:
         case VectorMulSat:
         case VectorAvgRound:
         case VectorMulByElement:
+        case VectorShiftByVector:
+        case VectorRelaxedSwizzle:
+        case Stitch:
             if (UNLIKELY(numArgs != 2))
                 badKind(kind, numArgs);
             return Two;
         case Select:
         case VectorBitwiseSelect:
+        case VectorRelaxedMAdd:
+        case VectorRelaxedNMAdd:
             if (UNLIKELY(numArgs != 3))
                 badKind(kind, numArgs);
             return Three;
@@ -849,6 +874,7 @@ protected:
     unsigned m_index { UINT_MAX };
 private:
     Kind m_kind;
+    uint16_t m_adjacencyListOffset;
     Type m_type;
 protected:
     NumChildren m_numChildren;
@@ -858,8 +884,9 @@ private:
     NO_RETURN_DUE_TO_CRASH static void badKind(Kind, unsigned);
 
 #if ASSERT_ENABLED
-    String m_compilerConstructionSite { generateCompilerConstructionSite() };
+    String m_compilerConstructionSite { emptyString() };
 
+public:
     static String generateCompilerConstructionSite();
 #endif
 

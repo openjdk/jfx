@@ -73,27 +73,37 @@ void NotificationResourcesLoader::start(CompletionHandler<void(RefPtr<Notificati
     if (resourceIsSupportedInPlatform(Resource::Icon)) {
         const URL& iconURL = m_notification.icon();
         if (!iconURL.isEmpty()) {
-            if (!m_resources)
-                m_resources = NotificationResources::create();
-            m_loaders.add(makeUnique<ResourceLoader>(*m_notification.scriptExecutionContext(), iconURL, [this](ResourceLoader* loader, RefPtr<BitmapImage>&& image) {
-                if (!m_resources)
+            auto loader = makeUnique<ResourceLoader>(*m_notification.scriptExecutionContext(), iconURL, [this](ResourceLoader* loader, RefPtr<BitmapImage>&& image) {
+                if (m_stopped)
                     return;
 
-                m_resources->setIcon(WTFMove(image));
+                if (image) {
+                    if (!m_resources)
+                        m_resources = NotificationResources::create();
+                    m_resources->setIcon(WTFMove(image));
+                }
+
                 didFinishLoadingResource(loader);
-            }));
+            });
+
+            if (!loader->finished())
+                m_loaders.add(WTFMove(loader));
         }
     }
 
     // FIXME: Implement other resources.
 
     if (m_loaders.isEmpty())
-        m_completionHandler(nullptr);
+        m_completionHandler(WTFMove(m_resources));
 }
 
 void NotificationResourcesLoader::stop()
 {
-    m_resources = nullptr;
+    if (m_stopped)
+        return;
+
+    m_stopped = true;
+
     auto completionHandler = std::exchange(m_completionHandler, nullptr);
 
     while (!m_loaders.isEmpty()) {
@@ -107,9 +117,11 @@ void NotificationResourcesLoader::stop()
 
 void NotificationResourcesLoader::didFinishLoadingResource(ResourceLoader* loader)
 {
-    m_loaders.remove(loader);
-    if (m_loaders.isEmpty() && m_completionHandler)
-        m_completionHandler(WTFMove(m_resources));
+    if (m_loaders.contains(loader)) {
+        m_loaders.remove(loader);
+        if (m_loaders.isEmpty() && m_completionHandler)
+            m_completionHandler(WTFMove(m_resources));
+    }
 }
 
 NotificationResourcesLoader::ResourceLoader::ResourceLoader(ScriptExecutionContext& context, const URL& url, CompletionHandler<void(ResourceLoader*, RefPtr<BitmapImage>&&)>&& completionHandler)
@@ -136,7 +148,7 @@ void NotificationResourcesLoader::ResourceLoader::cancel()
         completionHandler(this, nullptr);
 }
 
-void NotificationResourcesLoader::ResourceLoader::didReceiveResponse(ResourceLoaderIdentifier, const ResourceResponse& response)
+void NotificationResourcesLoader::ResourceLoader::didReceiveResponse(ScriptExecutionContextIdentifier, ResourceLoaderIdentifier, const ResourceResponse& response)
 {
     // If the response's internal response's type is "default", then attempt to decode the resource as image.
     if (response.type() == ResourceResponse::Type::Default)
@@ -151,8 +163,10 @@ void NotificationResourcesLoader::ResourceLoader::didReceiveData(const SharedBuf
     }
 }
 
-void NotificationResourcesLoader::ResourceLoader::didFinishLoading(ResourceLoaderIdentifier, const NetworkLoadMetrics&)
+void NotificationResourcesLoader::ResourceLoader::didFinishLoading(ScriptExecutionContextIdentifier, ResourceLoaderIdentifier, const NetworkLoadMetrics&)
 {
+    m_finished = true;
+
     if (m_image)
         m_image->setData(m_buffer.take(), true);
 
@@ -160,8 +174,10 @@ void NotificationResourcesLoader::ResourceLoader::didFinishLoading(ResourceLoade
         m_completionHandler(this, WTFMove(m_image));
 }
 
-void NotificationResourcesLoader::ResourceLoader::didFail(const ResourceError&)
+void NotificationResourcesLoader::ResourceLoader::didFail(ScriptExecutionContextIdentifier, const ResourceError&)
 {
+    m_finished = true;
+
     if (m_completionHandler)
         m_completionHandler(this, nullptr);
 }

@@ -26,7 +26,8 @@
 namespace WebCore {
 
 class SVGFEOffsetElement final : public SVGFilterPrimitiveStandardAttributes {
-    WTF_MAKE_ISO_ALLOCATED(SVGFEOffsetElement);
+    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(SVGFEOffsetElement);
+    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(SVGFEOffsetElement);
 public:
     static Ref<SVGFEOffsetElement> create(const QualifiedName&, Document&);
 
@@ -43,7 +44,7 @@ private:
 
     using PropertyRegistry = SVGPropertyOwnerRegistry<SVGFEOffsetElement, SVGFilterPrimitiveStandardAttributes>;
 
-    void parseAttribute(const QualifiedName&, const AtomString&) override;
+    void attributeChanged(const QualifiedName&, const AtomString& oldValue, const AtomString& newValue, AttributeModificationReason) override;
     void svgAttributeChanged(const QualifiedName&) override;
 
     bool setFilterEffectAttribute(FilterEffect&, const QualifiedName&) override;

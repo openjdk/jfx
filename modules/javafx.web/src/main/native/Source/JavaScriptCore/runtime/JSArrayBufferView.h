@@ -188,7 +188,7 @@ public:
     }
 
     static constexpr size_t fastSizeLimit = 1000;
-    using VectorPtr = CagedBarrierPtr<Gigacage::Primitive, void, tagCagedPtr>;
+    using VectorPtr = CagedBarrierPtr<Gigacage::Primitive, void>;
 
     static void* nullVectorPtr()
     {
@@ -234,7 +234,7 @@ protected:
         bool operator!() const { return !m_structure; }
 
         Structure* structure() const { return m_structure; }
-        void* vector() const { return m_vector.getMayBeNull(m_length); }
+        void* vector() const { return m_vector.getMayBeNull(); }
         size_t length() const { return m_length; }
         size_t byteOffset() const { return m_byteOffset; }
         TypedArrayMode mode() const { return m_mode; }
@@ -242,7 +242,7 @@ protected:
 
     private:
         Structure* m_structure;
-        using VectorType = CagedPtr<Gigacage::Primitive, void, tagCagedPtr>;
+        using VectorType = CagedPtr<Gigacage::Primitive, void>;
         VectorType m_vector;
         size_t m_length;
         size_t m_byteOffset;
@@ -259,12 +259,12 @@ public:
     TypedArrayMode mode() const { return m_mode; }
     bool hasArrayBuffer() const { return JSC::hasArrayBuffer(mode()); }
 
-    bool isShared();
+    inline bool isShared();
     JS_EXPORT_PRIVATE ArrayBuffer* unsharedBuffer();
     inline ArrayBuffer* possiblySharedBuffer();
     JSArrayBuffer* unsharedJSBuffer(JSGlobalObject* globalObject);
     JSArrayBuffer* possiblySharedJSBuffer(JSGlobalObject* globalObject);
-    RefPtr<ArrayBufferView> unsharedImpl();
+    inline RefPtr<ArrayBufferView> unsharedImpl();
     JS_EXPORT_PRIVATE RefPtr<ArrayBufferView> possiblySharedImpl();
     bool isDetached() const { return hasArrayBuffer() && !hasVector(); }
     bool isResizableOrGrowableShared() const { return JSC::isResizableOrGrowableShared(m_mode); }
@@ -278,11 +278,11 @@ public:
         return JSC::canUseArrayBufferViewRawFieldsDirectly(m_mode);
     }
 
-    void detach();
-
     bool hasVector() const { return !!m_vector; }
-    void* vector() const { return m_vector.getMayBeNull(m_length); }
+    void* vector() const { return m_vector.getMayBeNull(); }
     void* vectorWithoutPACValidation() const { return m_vector.getUnsafe(); }
+
+    std::span<const uint8_t> span() const { return { static_cast<const uint8_t*>(vector()), byteLength() }; }
 
     size_t byteOffset() const
     {
@@ -343,13 +343,13 @@ public:
 
     DECLARE_EXPORT_INFO;
 
-    static ptrdiff_t offsetOfVector() { return OBJECT_OFFSETOF(JSArrayBufferView, m_vector); }
-    static ptrdiff_t offsetOfLength() { return OBJECT_OFFSETOF(JSArrayBufferView, m_length); }
-    static ptrdiff_t offsetOfByteOffset() { return OBJECT_OFFSETOF(JSArrayBufferView, m_byteOffset); }
-    static ptrdiff_t offsetOfMode() { return OBJECT_OFFSETOF(JSArrayBufferView, m_mode); }
+    static constexpr ptrdiff_t offsetOfVector() { return OBJECT_OFFSETOF(JSArrayBufferView, m_vector); }
+    static constexpr ptrdiff_t offsetOfLength() { return OBJECT_OFFSETOF(JSArrayBufferView, m_length); }
+    static constexpr ptrdiff_t offsetOfByteOffset() { return OBJECT_OFFSETOF(JSArrayBufferView, m_byteOffset); }
+    static constexpr ptrdiff_t offsetOfMode() { return OBJECT_OFFSETOF(JSArrayBufferView, m_mode); }
 
-    static RefPtr<ArrayBufferView> toWrapped(VM&, JSValue);
-    static RefPtr<ArrayBufferView> toWrappedAllowShared(VM&, JSValue);
+    static inline RefPtr<ArrayBufferView> toWrapped(VM&, JSValue);
+    static inline RefPtr<ArrayBufferView> toWrappedAllowShared(VM&, JSValue);
 
     bool isIteratorProtocolFastAndNonObservable();
 
@@ -359,9 +359,12 @@ private:
 
     JS_EXPORT_PRIVATE ArrayBuffer* slowDownAndWasteMemory();
     static void finalize(JSCell*);
+    void detachFromArrayBuffer();
+
 
 protected:
     friend class LLIntOffsetsExtractor;
+    friend class ArrayBuffer;
 
     ArrayBuffer* existingBufferInButterfly();
 
@@ -371,7 +374,7 @@ protected:
     TypedArrayMode m_mode;
 };
 
-JSArrayBufferView* validateTypedArray(JSGlobalObject*, JSValue);
+inline JSArrayBufferView* validateTypedArray(JSGlobalObject*, JSValue);
 
 inline ArrayBuffer* JSArrayBufferView::existingBufferInButterfly()
 {

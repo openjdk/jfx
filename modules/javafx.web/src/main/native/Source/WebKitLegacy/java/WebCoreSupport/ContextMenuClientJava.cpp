@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2019, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -35,27 +35,22 @@ ContextMenuClientJava::ContextMenuClientJava(const JLObject &webPage)
 {
 }
 
-void ContextMenuClientJava::contextMenuDestroyed()
-{
-    delete this;
-}
-
 void ContextMenuClientJava::downloadURL(const URL&)
 {
     notImplemented();
 }
 
-void ContextMenuClientJava::searchWithGoogle(const Frame*)
+void ContextMenuClientJava::searchWithGoogle(const LocalFrame*)
 {
     notImplemented();
 }
 
-void ContextMenuClientJava::lookUpInDictionary(Frame*)
+void ContextMenuClientJava::lookUpInDictionary(LocalFrame*)
 {
     notImplemented();
 }
 
-bool ContextMenuClientJava::isSpeaking()
+bool ContextMenuClientJava::isSpeaking() const
 {
     notImplemented();
     return false;

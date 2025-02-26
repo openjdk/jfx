@@ -43,17 +43,6 @@ float euclidianDistance(const FloatPoint& p1, const FloatPoint& p2)
     return euclidianDistance(p1 - p2);
 }
 
-float findSlope(const FloatPoint& p1, const FloatPoint& p2, float& c)
-{
-    if (p2.x() == p1.x())
-        return std::numeric_limits<float>::infinity();
-
-    // y = mx + c
-    float slope = (p2.y() - p1.y()) / (p2.x() - p1.x());
-    c = p1.y() - slope * p1.x();
-    return slope;
-}
-
 bool findIntersection(const FloatPoint& p1, const FloatPoint& p2, const FloatPoint& d1, const FloatPoint& d2, FloatPoint& intersection)
 {
     float pxLength = p2.x() - p1.x();
@@ -287,6 +276,56 @@ RectEdges<double> distanceOfPointToSidesOfRect(const FloatRect& box, const Float
     double left = std::abs(position.x());
     double right = std::abs(position.x() - box.width());
     return RectEdges<double>(top, right, bottom, left);
+}
+
+float distanceToClosestSide(FloatPoint p, FloatSize size)
+{
+    float widthDelta = std::abs(size.width() - p.x());
+    float heightDelta = std::abs(size.height() - p.y());
+
+    return min4(std::abs(p.x()), widthDelta, std::abs(p.y()), heightDelta);
+}
+
+float distanceToFarthestSide(FloatPoint p, FloatSize size)
+{
+    float widthDelta = std::abs(size.width() - p.x());
+    float heightDelta = std::abs(size.height() - p.y());
+
+    return max4(std::abs(p.x()), widthDelta, std::abs(p.y()), heightDelta);
+}
+
+float distanceToClosestCorner(FloatPoint p, FloatSize size)
+{
+    FloatPoint topLeft;
+    float topLeftDistance = FloatSize(p - topLeft).diagonalLength();
+
+    FloatPoint topRight(size.width(), 0);
+    float topRightDistance = FloatSize(p - topRight).diagonalLength();
+
+    FloatPoint bottomLeft(0, size.height());
+    float bottomLeftDistance = FloatSize(p - bottomLeft).diagonalLength();
+
+    FloatPoint bottomRight(size.width(), size.height());
+    float bottomRightDistance = FloatSize(p - bottomRight).diagonalLength();
+
+    return min4(topLeftDistance, topRightDistance, bottomLeftDistance, bottomRightDistance);
+}
+
+float distanceToFarthestCorner(FloatPoint p, FloatSize size)
+{
+    FloatPoint topLeft;
+    float topLeftDistance = FloatSize(p - topLeft).diagonalLength();
+
+    FloatPoint topRight(size.width(), 0);
+    float topRightDistance = FloatSize(p - topRight).diagonalLength();
+
+    FloatPoint bottomLeft(0, size.height());
+    float bottomLeftDistance = FloatSize(p - bottomLeft).diagonalLength();
+
+    FloatPoint bottomRight(size.width(), size.height());
+    float bottomRightDistance = FloatSize(p - bottomRight).diagonalLength();
+
+    return max4(topLeftDistance, topRightDistance, bottomLeftDistance, bottomRightDistance);
 }
 
 std::array<FloatPoint, 4> verticesForBox(const FloatRect& box, const FloatPoint position)

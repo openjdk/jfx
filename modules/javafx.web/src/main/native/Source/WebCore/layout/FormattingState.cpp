@@ -27,12 +27,13 @@
 #include "FormattingState.h"
 
 #include "LayoutBoxGeometry.h"
-#include <wtf/IsoMallocInlines.h>
+#include "RenderObject.h"
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 namespace Layout {
 
-WTF_MAKE_ISO_ALLOCATED_IMPL(FormattingState);
+WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(FormattingState);
 
 FormattingState::FormattingState(Type type, LayoutState& layoutState)
     : m_layoutState(layoutState)
@@ -46,11 +47,7 @@ FormattingState::~FormattingState()
 
 BoxGeometry& FormattingState::boxGeometry(const Box& layoutBox)
 {
-    // Should never need to mutate a display box outside of the formatting context, unless we are trying
-    // to compute the static position of an out-of-flow box.
-    ASSERT((layoutBox.isOutOfFlowPositioned() && isInlineFormattingState()) || layoutBox.isInlineIntegrationRoot() || &layoutState().formattingStateForFormattingContext(FormattingContext::formattingContextRoot(layoutBox)) == this);
-    // Anonymous text wrappers do not need to compute box geometry. They initiate inline runs.
-    ASSERT(!layoutBox.isInlineTextBox());
+    // FIXME: Remove this when all FormattingStates transtioned to a cache setup.
     return layoutState().ensureGeometryForBox(layoutBox);
 }
 

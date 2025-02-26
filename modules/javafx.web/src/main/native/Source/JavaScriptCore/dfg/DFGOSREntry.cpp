@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2022 Apple Inc. All rights reserved.
+ * Copyright (C) 2011-2023 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -75,15 +75,15 @@ void OSREntryData::dumpInContext(PrintStream& out, DumpContext* context) const
 
     CommaPrinter comma;
     for (size_t argumentIndex = m_expectedValues.numberOfArguments(); argumentIndex--;) {
-        out.print(comma, "arg", argumentIndex, ":");
+        out.print(comma, "arg"_s, argumentIndex, ":"_s);
         printOperand(virtualRegisterForArgumentIncludingThis(argumentIndex));
     }
     for (size_t localIndex = 0; localIndex < m_expectedValues.numberOfLocals(); ++localIndex) {
-        out.print(comma, "loc", localIndex, ":");
+        out.print(comma, "loc"_s, localIndex, ":"_s);
         printOperand(virtualRegisterForLocal(localIndex));
     }
 
-    out.print("], machine stack used = ", m_machineStackUsed);
+    out.print("], machine stack used = "_s, m_machineStackUsed);
 }
 
 void OSREntryData::dump(PrintStream& out) const
@@ -94,7 +94,7 @@ void OSREntryData::dump(PrintStream& out) const
 SUPPRESS_ASAN
 void* prepareOSREntry(VM& vm, CallFrame* callFrame, CodeBlock* codeBlock, BytecodeIndex bytecodeIndex)
 {
-    ASSERT(JITCode::isOptimizingJIT(codeBlock->jitType()));
+    ASSERT(JSC::JITCode::isOptimizingJIT(codeBlock->jitType()));
     ASSERT(codeBlock->alternative());
     ASSERT(codeBlock->alternative()->jitType() == JITType::BaselineJIT);
     ASSERT(codeBlock->jitCode()->dfgCommon()->isStillValid());
@@ -411,6 +411,7 @@ CodePtr<ExceptionHandlerPtrTag> prepareCatchOSREntry(VM& vm, CallFrame* callFram
 
     // The active length of catchOSREntryBuffer will be zeroed by ClearCatchLocals node.
     dfgCommon->catchOSREntryBuffer->setActiveLength(sizeof(JSValue) * index);
+    vm.requestEntryScopeService(VM::EntryScopeService::ClearScratchBuffers);
 
     // At this point, we're committed to triggering an OSR entry immediately after we return. Hence, it is safe to modify stack here.
     callFrame->setCodeBlock(optimizedCodeBlock);

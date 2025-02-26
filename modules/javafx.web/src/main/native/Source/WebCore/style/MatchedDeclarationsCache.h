@@ -28,19 +28,22 @@
 #include "MatchResult.h"
 #include "RenderStyle.h"
 #include "Timer.h"
+#include <wtf/WeakRef.h>
 
 namespace WebCore {
 
 namespace Style {
 
+class Resolver;
+
 class MatchedDeclarationsCache {
     WTF_MAKE_FAST_ALLOCATED;
 public:
-    MatchedDeclarationsCache();
+    explicit MatchedDeclarationsCache(const Resolver&);
     ~MatchedDeclarationsCache();
 
     static bool isCacheable(const Element&, const RenderStyle&, const RenderStyle& parentStyle);
-    static unsigned computeHash(const MatchResult&);
+    static unsigned computeHash(const MatchResult&, const StyleCustomPropertyData& inheritedCustomProperties);
 
     struct Entry {
         MatchResult matchResult;
@@ -51,7 +54,7 @@ public:
         bool isUsableAfterHighPriorityProperties(const RenderStyle&) const;
     };
 
-    const Entry* find(unsigned hash, const MatchResult&);
+    const Entry* find(unsigned hash, const MatchResult&, const StyleCustomPropertyData& inheritedCustomProperties);
     void add(const RenderStyle&, const RenderStyle& parentStyle, const RenderStyle* userAgentAppearanceStyle, unsigned hash, const MatchResult&);
     void remove(unsigned hash);
 
@@ -60,9 +63,13 @@ public:
     void invalidate();
     void clearEntriesAffectedByViewportUnits();
 
+    void ref() const;
+    void deref() const;
+
 private:
     void sweep();
 
+    SingleThreadWeakRef<const Resolver> m_owner;
     HashMap<unsigned, Entry, AlreadyHashed> m_entries;
     Timer m_sweepTimer;
     unsigned m_additionsSinceLastSweep { 0 };

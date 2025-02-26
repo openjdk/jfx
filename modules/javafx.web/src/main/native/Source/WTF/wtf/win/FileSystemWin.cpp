@@ -58,19 +58,6 @@ static bool getFindData(String path, WIN32_FIND_DATAW& findData)
     return true;
 }
 
-static bool getFileSizeFromFindData(const WIN32_FIND_DATAW& findData, long long& size)
-{
-    ULARGE_INTEGER fileSize;
-    fileSize.HighPart = findData.nFileSizeHigh;
-    fileSize.LowPart = findData.nFileSizeLow;
-
-    if (fileSize.QuadPart > static_cast<ULONGLONG>(std::numeric_limits<long long>::max()))
-        return false;
-
-    size = fileSize.QuadPart;
-    return true;
-}
-
 static std::optional<uint64_t> getFileSizeFromByHandleFileInformationStructure(const BY_HANDLE_FILE_INFORMATION& fileInformation)
 {
     ULARGE_INTEGER fileSize;
@@ -94,16 +81,6 @@ static void fileCreationTimeFromFindData(const WIN32_FIND_DATAW& findData, time_
 }
 
 
-static void fileModificationTimeFromFindData(const WIN32_FIND_DATAW& findData, time_t& time)
-{
-    ULARGE_INTEGER fileTime;
-    fileTime.HighPart = findData.ftLastWriteTime.dwHighDateTime;
-    fileTime.LowPart = findData.ftLastWriteTime.dwLowDateTime;
-
-    // Information about converting time_t to FileTime is available at http://msdn.microsoft.com/en-us/library/ms724228%28v=vs.85%29.aspx
-    time = fileTime.QuadPart / 10000000 - kSecondsFromFileTimeToTimet;
-}
-
 std::optional<uint64_t> fileSize(PlatformFileHandle fileHandle)
 {
     BY_HANDLE_FILE_INFORMATION fileInformation;
@@ -113,13 +90,13 @@ std::optional<uint64_t> fileSize(PlatformFileHandle fileHandle)
     return getFileSizeFromByHandleFileInformationStructure(fileInformation);
 }
 
-std::optional<PlatformFileID> fileID(PlatformFileHandle fileHandle)
+std::optional<PlatformFileID> fileID(PlatformFileHandle)
 {
     // FIXME (246118): Implement this function properly.
     return std::nullopt;
 }
 
-bool fileIDsAreEqual(std::optional<PlatformFileID> a, std::optional<PlatformFileID> b)
+bool fileIDsAreEqual(std::optional<PlatformFileID>, std::optional<PlatformFileID>)
 {
     // FIXME (246118): Implement this function properly.
     return true;
@@ -136,41 +113,17 @@ std::optional<WallTime> fileCreationTime(const String& path)
     return WallTime::fromRawSeconds(time);
 }
 
-#if !USE(CF)
-
 CString fileSystemRepresentation(const String& path)
 {
-    auto characters = wcharFrom(StringView(path).upconvertedCharacters());
-    int size = WideCharToMultiByte(CP_ACP, 0, characters, path.length(), 0, 0, 0, 0) - 1;
+    auto characters = StringView(path).upconvertedCharacters();
+    int size = WideCharToMultiByte(CP_ACP, 0, wcharFrom(characters), path.length(), 0, 0, 0, 0);
 
     char* buffer;
     CString string = CString::newUninitialized(size, buffer);
 
-    WideCharToMultiByte(CP_ACP, 0, characters, path.length(), buffer, size, 0, 0);
+    WideCharToMultiByte(CP_ACP, 0, wcharFrom(characters), path.length(), buffer, size, 0, 0);
 
     return string;
-}
-
-#endif // !USE(CF)
-
-static String bundleName()
-{
-    static const NeverDestroyed<String> name = [] {
-        String name { "WebKit"_s };
-
-#if USE(CF)
-        if (CFBundleRef bundle = CFBundleGetMainBundle()) {
-            if (CFTypeRef bundleExecutable = CFBundleGetValueForInfoDictionaryKey(bundle, kCFBundleExecutableKey)) {
-                if (CFGetTypeID(bundleExecutable) == CFStringGetTypeID())
-                    name = reinterpret_cast<CFStringRef>(bundleExecutable);
-            }
-        }
-#endif
-
-        return name;
-    }();
-
-    return name;
 }
 
 static String storageDirectory(DWORD pathIdentifier)
@@ -182,7 +135,7 @@ static String storageDirectory(DWORD pathIdentifier)
     buffer.shrink(wcslen(wcharFrom(buffer.data())));
     String directory = String::adopt(WTFMove(buffer));
 
-    directory = pathByAppendingComponent(directory, makeString("Apple Computer\\", bundleName()));
+    directory = pathByAppendingComponent(directory, "Apple Computer\\WebKit"_s);
     if (!makeAllDirectories(directory))
         return String();
 
@@ -214,7 +167,7 @@ static String generateTemporaryPath(const Function<bool(const String&)>& action)
     do {
         wchar_t tempFile[] = L"XXXXXXXX.tmp"; // Use 8.3 style name (more characters aren't helpful due to 8.3 short file names)
         const int randomPartLength = 8;
-        cryptographicallyRandomValues(tempFile, randomPartLength * sizeof(wchar_t));
+        cryptographicallyRandomValues({ reinterpret_cast<uint8_t*>(tempFile), randomPartLength * sizeof(wchar_t) });
 
         // Limit to valid filesystem characters, also excluding others that could be problematic, like punctuation.
         // don't include both upper and lowercase since Windows file systems are typically not case sensitive.
@@ -232,12 +185,12 @@ static String generateTemporaryPath(const Function<bool(const String&)>& action)
     return proposedPath;
 }
 
-String openTemporaryFile(StringView, PlatformFileHandle& handle, StringView suffix)
+std::pair<String, PlatformFileHandle> openTemporaryFile(StringView, StringView suffix)
 {
     // FIXME: Suffix is not supported, but OK for now since the code using it is macOS-port-only.
     ASSERT_UNUSED(suffix, suffix.isEmpty());
 
-    handle = INVALID_HANDLE_VALUE;
+    PlatformFileHandle handle = INVALID_HANDLE_VALUE;
 
     String proposedPath = generateTemporaryPath([&handle](const String& proposedPath) {
         // use CREATE_NEW to avoid overwriting an existing file with the same name
@@ -247,9 +200,9 @@ String openTemporaryFile(StringView, PlatformFileHandle& handle, StringView suff
     });
 
     if (!isHandleValid(handle))
-        return String();
+        return { String(), handle };
 
-    return proposedPath;
+    return { proposedPath, handle };
 }
 
 PlatformFileHandle openFile(const String& path, FileOpenMode mode, FileAccessPermission, bool failIfFileExists)
@@ -316,36 +269,36 @@ bool truncateFile(PlatformFileHandle handle, long long offset)
     return SetFileInformationByHandle(handle, FileEndOfFileInfo, &eofInfo, sizeof(FILE_END_OF_FILE_INFO));
 }
 
-bool flushFile(PlatformFileHandle handle)
+bool flushFile(PlatformFileHandle)
 {
     // Not implemented.
     return false;
 }
 
-int writeToFile(PlatformFileHandle handle, const void* data, int length)
+int64_t writeToFile(PlatformFileHandle handle, std::span<const uint8_t> data)
 {
     if (!isHandleValid(handle))
         return -1;
 
     DWORD bytesWritten;
-    bool success = WriteFile(handle, data, length, &bytesWritten, nullptr);
+    bool success = WriteFile(handle, data.data(), data.size(), &bytesWritten, nullptr);
 
     if (!success)
         return -1;
-    return static_cast<int>(bytesWritten);
+    return static_cast<int64_t>(bytesWritten);
 }
 
-int readFromFile(PlatformFileHandle handle, void* data, int length)
+int64_t readFromFile(PlatformFileHandle handle, std::span<uint8_t> data)
 {
     if (!isHandleValid(handle))
         return -1;
 
     DWORD bytesRead;
-    bool success = ::ReadFile(handle, data, length, &bytesRead, nullptr);
+    bool success = ::ReadFile(handle, data.data(), data.size(), &bytesRead, nullptr);
 
     if (!success)
         return -1;
-    return static_cast<int>(bytesRead);
+    return static_cast<int64_t>(bytesRead);
 }
 
 String localUserSpecificStorageDirectory()
@@ -395,8 +348,6 @@ MappedFileData::~MappedFileData()
 {
     if (m_fileData)
         UnmapViewOfFile(m_fileData);
-    if (m_fileMapping)
-        CloseHandle(m_fileMapping);
 }
 
 bool MappedFileData::mapFileHandle(PlatformFileHandle handle, FileOpenMode openMode, MappedFileMode)
@@ -430,11 +381,11 @@ bool MappedFileData::mapFileHandle(PlatformFileHandle handle, FileOpenMode openM
         break;
     }
 
-    m_fileMapping = CreateFileMapping(handle, nullptr, pageProtection, 0, 0, nullptr);
+    m_fileMapping = Win32Handle::adopt(CreateFileMapping(handle, nullptr, pageProtection, 0, 0, nullptr));
     if (!m_fileMapping)
         return false;
 
-    m_fileData = MapViewOfFile(m_fileMapping, desiredAccess, 0, 0, *size);
+    m_fileData = MapViewOfFile(m_fileMapping.get(), desiredAccess, 0, 0, *size);
     if (!m_fileData)
         return false;
     m_fileSize = *size;

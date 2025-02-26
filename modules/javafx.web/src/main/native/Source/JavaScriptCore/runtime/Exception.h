@@ -55,7 +55,7 @@ public:
 
     DECLARE_EXPORT_INFO;
 
-    static ptrdiff_t valueOffset()
+    static constexpr ptrdiff_t valueOffset()
     {
         return OBJECT_OFFSETOF(Exception, m_value);
     }
@@ -69,8 +69,8 @@ public:
     ~Exception();
 
 private:
-    Exception(VM&);
-    void finishCreation(VM&, JSValue thrownValue, StackCaptureAction);
+    Exception(VM&, JSValue thrownValue);
+    void finishCreation(VM&, StackCaptureAction);
     static void destroy(JSCell*);
 
     WriteBarrier<Unknown> m_value;

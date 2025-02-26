@@ -31,12 +31,49 @@
 #include "JSDOMConvertInterface.h"
 #include "JSDOMConvertNullable.h"
 #include "JSDOMConvertSequences.h"
+#include "JSDOMConvertUnion.h"
+#include "JSDOMFormData.h"
 #include "JSElement.h"
+#include "JSFile.h"
 #include "WebCoreJSClientData.h"
 #include <JavaScriptCore/ObjectConstructor.h>
 
 namespace WebCore {
 using namespace JSC;
+
+JSValue JSElementInternals::setFormValue(JSGlobalObject& lexicalGlobalObject, CallFrame& callFrame)
+{
+    using JSCustomElementFormValue = IDLUnion<IDLNull, IDLInterface<File>, IDLUSVString, IDLInterface<DOMFormData>>;
+
+    auto& vm = lexicalGlobalObject.vm();
+    auto throwScope = DECLARE_THROW_SCOPE(vm);
+    if (UNLIKELY(callFrame.argumentCount() < 1)) {
+        throwException(&lexicalGlobalObject, throwScope, createNotEnoughArgumentsError(&lexicalGlobalObject));
+        return { };
+    }
+
+    EnsureStillAliveScope argument0 = callFrame.uncheckedArgument(0);
+    auto value = convert<JSCustomElementFormValue>(lexicalGlobalObject, argument0.value());
+    if (UNLIKELY(value.hasException(throwScope)))
+        return { };
+
+    std::optional<CustomElementFormValue> state;
+    if (callFrame.argumentCount() > 1) {
+        EnsureStillAliveScope argument1 = callFrame.argument(1);
+        auto stateConversionResult = convert<JSCustomElementFormValue>(lexicalGlobalObject, argument1.value());
+        if (UNLIKELY(stateConversionResult.hasException(throwScope)))
+            return { };
+        state = stateConversionResult.releaseReturnValue();
+    }
+
+    auto result = wrapped().setFormValue(value.releaseReturnValue(), WTFMove(state));
+    if (UNLIKELY(result.hasException())) {
+        propagateException(lexicalGlobalObject, throwScope, result.releaseException());
+        return { };
+    }
+
+    return jsUndefined();
+}
 
 static JSValue getElementsArrayAttribute(JSGlobalObject& lexicalGlobalObject, const JSElementInternals& thisObject, const QualifiedName& attributeName)
 {
@@ -52,12 +89,12 @@ static JSValue getElementsArrayAttribute(JSGlobalObject& lexicalGlobalObject, co
         const_cast<JSElementInternals&>(thisObject).putDirect(vm, builtinNames(vm).cachedAttrAssociatedElementsPrivateName(), cachedObject);
     }
 
-    std::optional<Vector<RefPtr<Element>>> elements = thisObject.wrapped().getElementsArrayAttribute(attributeName);
+    std::optional<Vector<Ref<Element>>> elements = thisObject.wrapped().getElementsArrayAttribute(attributeName);
     auto propertyName = PropertyName(Identifier::fromString(vm, attributeName.toString()));
     JSValue cachedValue = cachedObject->getDirect(vm, propertyName);
     if (!cachedValue.isEmpty()) {
-        std::optional<Vector<RefPtr<Element>>> cachedElements = convert<IDLNullable<IDLFrozenArray<IDLInterface<Element>>>>(lexicalGlobalObject, cachedValue);
-        if (elements == cachedElements)
+        auto cachedElements = convert<IDLNullable<IDLFrozenArray<IDLInterface<Element>>>>(lexicalGlobalObject, cachedValue);
+        if (!cachedElements.hasException(throwScope) && elements == cachedElements.returnValue())
             return cachedValue;
     }
 

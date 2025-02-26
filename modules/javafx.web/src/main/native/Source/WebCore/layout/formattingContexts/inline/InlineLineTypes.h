@@ -33,24 +33,31 @@ namespace Layout {
 class InlineItem;
 
 enum class LineEndingEllipsisPolicy : uint8_t {
-    No,
+    NoEllipsis,
     WhenContentOverflowsInInlineDirection,
     WhenContentOverflowsInBlockDirection,
     // FIXME: This should be used when we realize the last line of this IFC is where the content is truncated (sibling IFC has more lines).
     Always
 };
 
+struct ExpansionInfo {
+    size_t opportunityCount { 0 };
+    Vector<size_t> opportunityList;
+    Vector<ExpansionBehavior> behaviorList;
+};
+
 struct InlineItemPosition {
     size_t index { 0 };
     size_t offset { 0 }; // Note that this is offset relative to the start position of the InlineItem.
 
-    bool operator==(const InlineItemPosition& other) const { return index == other.index && offset == other.offset; }
+    friend bool operator==(const InlineItemPosition&, const InlineItemPosition&) = default;
     operator bool() const { return index || offset; }
 };
 
 struct InlineItemRange {
     InlineItemRange(InlineItemPosition start, InlineItemPosition end);
     InlineItemRange(size_t startIndex, size_t endIndex);
+    InlineItemRange() = default;
 
     size_t startIndex() const { return start.index; }
     size_t endIndex() const { return end.index; }
@@ -65,8 +72,9 @@ struct PreviousLine {
     // Content width measured during line breaking (avoid double-measuring).
     std::optional<InlineLayoutUnit> trailingOverflowingContentWidth { };
     bool endsWithLineBreak { false };
+    bool hasInlineContent { false };
     TextDirection inlineBaseDirection { TextDirection::LTR };
-    Vector<const InlineItem*> overflowingFloats;
+    Vector<const Box*> suspendedFloats;
 };
 
 inline InlineItemRange::InlineItemRange(InlineItemPosition start, InlineItemPosition end)

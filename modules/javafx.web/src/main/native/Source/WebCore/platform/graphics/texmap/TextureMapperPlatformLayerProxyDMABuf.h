@@ -32,17 +32,21 @@
 
 #include "DMABufFormat.h"
 #include "DMABufObject.h"
-#include "TextureMapperGL.h"
+#include "GLFence.h"
+#include "TextureMapperFlags.h"
 #include "TextureMapperPlatformLayer.h"
 #include <cstdint>
 #include <memory>
+#include <wtf/OptionSet.h>
 
 namespace WebCore {
+
+class TextureMapper;
 
 class TextureMapperPlatformLayerProxyDMABuf final : public TextureMapperPlatformLayerProxy {
     WTF_MAKE_FAST_ALLOCATED;
 public:
-    TextureMapperPlatformLayerProxyDMABuf();
+    explicit TextureMapperPlatformLayerProxyDMABuf(ContentType);
     virtual ~TextureMapperPlatformLayerProxyDMABuf();
 
     bool isDMABufBased() const override { return true; }
@@ -54,10 +58,11 @@ public:
     class DMABufLayer : public ThreadSafeRefCounted<DMABufLayer>, public TextureMapperPlatformLayer {
         WTF_MAKE_FAST_ALLOCATED;
     public:
-        DMABufLayer(DMABufObject&&, TextureMapperGL::Flags = 0);
+        explicit DMABufLayer(DMABufObject&&, OptionSet<TextureMapperFlags> = { });
         virtual ~DMABufLayer();
 
         void paintToTextureMapper(TextureMapper&, const FloatRect&, const TransformationMatrix& modelViewMatrix = { }, float opacity = 1.0) final;
+        void setFence(std::unique_ptr<GLFence>&& fence) { m_fence = WTFMove(fence); }
 
         void release()
         {
@@ -72,14 +77,15 @@ public:
 
         DMABufObject m_object;
         std::unique_ptr<EGLImageData> m_imageData;
-        TextureMapperGL::Flags m_flags;
+        OptionSet<TextureMapperFlags> m_flags;
 
         static constexpr unsigned c_maximumAge { 16 };
         unsigned m_age { 0 };
+        std::unique_ptr<GLFence> m_fence;
     };
 
     template<typename F>
-    void pushDMABuf(DMABufObject&& dmabufObject, const F& constructor, TextureMapperGL::Flags flags = 0)
+    void pushDMABuf(DMABufObject&& dmabufObject, const F& constructor, OptionSet<TextureMapperFlags> flags = { }, std::unique_ptr<GLFence>&& fence = nullptr)
     {
         ASSERT(m_lock.isHeld());
 
@@ -87,6 +93,7 @@ public:
             [&] {
                 return adoptRef(*new DMABufLayer(constructor(WTFMove(dmabufObject)), flags));
             });
+        result.iterator->value->setFence(WTFMove(fence));
         pushDMABuf(result.iterator->value.copyRef());
     }
 

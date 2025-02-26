@@ -72,6 +72,7 @@ private:
 
     struct TextureContent {
         intptr_t surface { 0 };
+        uint32_t surfaceID { 0 };
         uint32_t surfaceSeed { 0 };
         GCGLint level { 0 };
         GCGLenum internalFormat { 0 };
@@ -80,7 +81,7 @@ private:
         FlipY unpackFlipY { FlipY::No };
         ImageOrientation orientation;
 
-        bool operator==(const TextureContent&) const;
+        friend bool operator==(const TextureContent&, const TextureContent&) = default;
     };
     using TextureContentMap = HashMap<GCGLuint, TextureContent, IntHash<GCGLuint>, WTF::UnsignedWithZeroKeyHashTraits<GCGLuint>>;
     TextureContentMap m_knownContent;

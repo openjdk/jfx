@@ -38,17 +38,21 @@ class ScriptExecutionContext;
 
 class URLSearchParams : public RefCounted<URLSearchParams> {
 public:
+    ~URLSearchParams();
+
     static ExceptionOr<Ref<URLSearchParams>> create(std::variant<Vector<Vector<String>>, Vector<KeyValuePair<String, String>>, String>&&);
     static Ref<URLSearchParams> create(const String& string, DOMURL* associatedURL)
     {
         return adoptRef(*new URLSearchParams(string, associatedURL));
     }
 
+    size_t size() const { return m_pairs.size(); }
+
     void append(const String& name, const String& value);
-    void remove(const String& name);
+    void remove(const String& name, const String& value = { });
     String get(const String& name) const;
     Vector<String> getAll(const String& name) const;
-    bool has(const String& name) const;
+    bool has(const String& name, const String& value = { }) const;
     void set(const String& name, const String& value);
     String toString() const;
     void updateFromAssociatedURL();

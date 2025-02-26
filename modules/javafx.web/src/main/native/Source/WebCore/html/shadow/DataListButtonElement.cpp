@@ -32,11 +32,11 @@
 #include "EventNames.h"
 #include "HTMLNames.h"
 #include "MouseEvent.h"
-#include <wtf/IsoMallocInlines.h>
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
-WTF_MAKE_ISO_ALLOCATED_IMPL(DataListButtonElement);
+WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(DataListButtonElement);
 
 using namespace HTMLNames;
 
@@ -51,19 +51,18 @@ DataListButtonElement::DataListButtonElement(Document& document, DataListButtonO
 {
 }
 
-DataListButtonElement::~DataListButtonElement() { }
+DataListButtonElement::~DataListButtonElement() = default;
 
 void DataListButtonElement::defaultEventHandler(Event& event)
 {
-    if (!is<MouseEvent>(event)) {
+    auto* mouseEvent = dynamicDowncast<MouseEvent>(event);
+    if (!mouseEvent) {
         if (!event.defaultHandled())
             HTMLDivElement::defaultEventHandler(event);
         return;
     }
 
-    MouseEvent& mouseEvent = downcast<MouseEvent>(event);
-
-    if (mouseEvent.type() == eventNames().clickEvent) {
+    if (isAnyClick(*mouseEvent)) {
         m_owner.dataListButtonElementWasClicked();
         event.setDefaultHandled();
     }

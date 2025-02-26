@@ -22,18 +22,18 @@
 #include "config.h"
 #include "SVGFEComponentTransferElement.h"
 
-#include "ElementIterator.h"
-#include "ElementName.h"
+#include "ElementChildIteratorInlines.h"
 #include "FEComponentTransfer.h"
+#include "NodeName.h"
 #include "SVGComponentTransferFunctionElement.h"
 #include "SVGComponentTransferFunctionElementInlines.h"
 #include "SVGElementTypeHelpers.h"
 #include "SVGNames.h"
-#include <wtf/IsoMallocInlines.h>
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
-WTF_MAKE_ISO_ALLOCATED_IMPL(SVGFEComponentTransferElement);
+WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(SVGFEComponentTransferElement);
 
 inline SVGFEComponentTransferElement::SVGFEComponentTransferElement(const QualifiedName& tagName, Document& document)
     : SVGFilterPrimitiveStandardAttributes(tagName, document, makeUniqueRef<PropertyRegistry>(*this))
@@ -51,14 +51,12 @@ Ref<SVGFEComponentTransferElement> SVGFEComponentTransferElement::create(const Q
     return adoptRef(*new SVGFEComponentTransferElement(tagName, document));
 }
 
-void SVGFEComponentTransferElement::parseAttribute(const QualifiedName& name, const AtomString& value)
+void SVGFEComponentTransferElement::attributeChanged(const QualifiedName& name, const AtomString& oldValue, const AtomString& newValue, AttributeModificationReason attributeModificationReason)
 {
-    if (name == SVGNames::inAttr) {
-        m_in1->setBaseValInternal(value);
-        return;
-    }
+    if (name == SVGNames::inAttr)
+        Ref { m_in1 }->setBaseValInternal(newValue);
 
-    SVGFilterPrimitiveStandardAttributes::parseAttribute(name, value);
+    SVGFilterPrimitiveStandardAttributes::attributeChanged(name, oldValue, newValue, attributeModificationReason);
 }
 
 void SVGFEComponentTransferElement::svgAttributeChanged(const QualifiedName& attrName)
@@ -96,39 +94,35 @@ static bool isRelevantTransferFunctionElement(const Element& child)
     return true;
 }
 
-bool SVGFEComponentTransferElement::setFilterEffectAttributeFromChild(FilterEffect& effect, const Element& childElement, const QualifiedName& attrName)
+bool SVGFEComponentTransferElement::setFilterEffectAttributeFromChild(FilterEffect& filterEffect, const Element& childElement, const QualifiedName& attrName)
 {
     ASSERT(isRelevantTransferFunctionElement(childElement));
 
-    if (!is<SVGComponentTransferFunctionElement>(childElement)) {
-        ASSERT_NOT_REACHED();
+    RefPtr child = dynamicDowncast<SVGComponentTransferFunctionElement>(childElement);
+    ASSERT(child);
+    if (!child)
         return false;
+
+    auto& effect = downcast<FEComponentTransfer>(filterEffect);
+
+    switch (attrName.nodeName()) {
+    case AttributeNames::typeAttr:
+        return effect.setType(child->channel(), child->type());
+    case AttributeNames::slopeAttr:
+        return effect.setSlope(child->channel(), child->slope());
+    case AttributeNames::interceptAttr:
+        return effect.setIntercept(child->channel(), child->intercept());
+    case AttributeNames::amplitudeAttr:
+        return effect.setAmplitude(child->channel(), child->amplitude());
+    case AttributeNames::exponentAttr:
+        return effect.setExponent(child->channel(), child->exponent());
+    case AttributeNames::offsetAttr:
+        return effect.setOffset(child->channel(), child->offset());
+    case AttributeNames::tableValuesAttr:
+        return effect.setTableValues(child->channel(), child->tableValues());
+    default:
+        break;
     }
-
-    auto& feComponentTransfer = downcast<FEComponentTransfer>(effect);
-    auto& child = downcast<SVGComponentTransferFunctionElement>(childElement);
-
-    if (attrName == SVGNames::typeAttr)
-        return feComponentTransfer.setType(child.channel(), child.type());
-
-    if (attrName == SVGNames::slopeAttr)
-        return feComponentTransfer.setSlope(child.channel(), child.slope());
-
-    if (attrName == SVGNames::interceptAttr)
-        return feComponentTransfer.setIntercept(child.channel(), child.intercept());
-
-    if (attrName == SVGNames::amplitudeAttr)
-        return feComponentTransfer.setAmplitude(child.channel(), child.amplitude());
-
-    if (attrName == SVGNames::exponentAttr)
-        return feComponentTransfer.setExponent(child.channel(), child.exponent());
-
-    if (attrName == SVGNames::offsetAttr)
-        return feComponentTransfer.setOffset(child.channel(), child.offset());
-
-    if (attrName == SVGNames::tableValuesAttr)
-        return feComponentTransfer.setTableValues(child.channel(), child.tableValues());
-
     return false;
 }
 

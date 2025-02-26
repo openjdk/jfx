@@ -32,6 +32,7 @@ import javafx.scene.Node;
 import javafx.scene.Scene;
 import javafx.scene.control.TableColumn;
 import javafx.scene.control.TableView;
+import javafx.scene.control.skin.NestedTableColumnHeader;
 import javafx.scene.control.skin.TableColumnHeader;
 import javafx.scene.control.skin.TableColumnHeaderShim;
 import javafx.scene.control.skin.TableHeaderRow;
@@ -165,6 +166,8 @@ class TableViewSkinTest {
 
     @Test
     void testColumnHeaderReorderCorrectTranslateX() {
+        int dragAmount = 20;
+
         TableView<String> tableView = new TableView<>();
         tableView.setPadding(new Insets(0, 10, 0, 30));
         for (int i = 0; i < 5; i++) {
@@ -183,9 +186,49 @@ class TableViewSkinTest {
 
         TableColumnHeader tableColumnHeader = header.getRootHeader().getColumnHeaders().get(0);
         Bounds bounds = tableColumnHeader.localToScene(tableColumnHeader.getLayoutBounds());
-        TableColumnHeaderShim.columnReordering(tableColumnHeader, bounds.getMinX() + 20, bounds.getMinY());
+        TableColumnHeaderShim.columnReordering(tableColumnHeader, bounds.getMinX() + dragAmount, bounds.getMinY());
 
-        assertEquals(20, columnDragHeader.getTranslateX());
+        assertEquals(dragAmount, columnDragHeader.getTranslateX());
+    }
+
+    @Test
+    void testHeaderReorderWithinNestedColumns() {
+        int width = 100;
+        int dragAmount = 20;
+
+        TableView<String> tableView = new TableView<>();
+        for (int i = 0; i < 2; i++) {
+            TableColumn<String, String> column = new TableColumn<>("Col " + i);
+            column.setMinWidth(width);
+            column.setMaxWidth(width);
+            tableView.getColumns().add(column);
+        }
+
+        TableColumn<String, String> column = new TableColumn<>("Column with nested");
+        for (int i = 0; i < 2; i++) {
+            TableColumn<String, String> nestedCol = new TableColumn<>("NestedCol " + i);
+            nestedCol.setMinWidth(width);
+            nestedCol.setMaxWidth(width);
+            column.getColumns().add(nestedCol);
+        }
+        tableView.getColumns().add(column);
+
+        stageLoader = new StageLoader(tableView);
+
+        TableHeaderRow header = (TableHeaderRow) tableView.lookup("TableHeaderRow");
+        Node columnDragHeader = header.lookup(".column-drag-header");
+
+        assertEquals(0, columnDragHeader.getTranslateX());
+
+        NestedTableColumnHeader nestedTableColumnHeader =
+                (NestedTableColumnHeader) header.getRootHeader().getColumnHeaders().get(2);
+        TableColumnHeader tableColumnHeader = nestedTableColumnHeader.getColumnHeaders().get(0);
+
+        Bounds bounds = tableColumnHeader.localToScene(tableColumnHeader.getLayoutBounds());
+        TableColumnHeaderShim.columnReordering(tableColumnHeader, bounds.getMinX() + dragAmount, bounds.getMinY());
+
+        // 220, since we have 2 columns to the left with a size of 100 and a dragged this column by 20.
+        assertEquals(width * 2 + dragAmount, columnDragHeader.getTranslateX());
     }
 
     private static class CustomTableViewSkin<S> extends TableViewSkin<S> {

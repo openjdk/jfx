@@ -3,6 +3,8 @@
  *  Copyright (C) 1999, 2000 Tom Tromey
  *  Copyright 2000 Red Hat, Inc.
  *
+ * SPDX-License-Identifier: LGPL-2.1-or-later
+ *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
  * License as published by the Free Software Foundation; either
@@ -17,43 +19,6 @@
  * along with this library; if not, see <http://www.gnu.org/licenses/>.
  */
 
-/**
- * SECTION:unicode
- * @Title: Unicode Manipulation
- * @Short_description: functions operating on Unicode characters and
- *     UTF-8 strings
- * @See_also: g_locale_to_utf8(), g_locale_from_utf8()
- *
- * This section describes a number of functions for dealing with
- * Unicode characters and strings. There are analogues of the
- * traditional `ctype.h` character classification and case conversion
- * functions, UTF-8 analogues of some string utility functions,
- * functions to perform normalization, case conversion and collation
- * on UTF-8 strings and finally functions to convert between the UTF-8,
- * UTF-16 and UCS-4 encodings of Unicode.
- *
- * The implementations of the Unicode functions in GLib are based
- * on the Unicode Character Data tables, which are available from
- * [www.unicode.org](http://www.unicode.org/).
- *
- *  * Unicode 4.0 was added in GLib 2.8
- *  * Unicode 4.1 was added in GLib 2.10
- *  * Unicode 5.0 was added in GLib 2.12
- *  * Unicode 5.1 was added in GLib 2.16.3
- *  * Unicode 6.0 was added in GLib 2.30
- *  * Unicode 6.1 was added in GLib 2.32
- *  * Unicode 6.2 was added in GLib 2.36
- *  * Unicode 6.3 was added in GLib 2.40
- *  * Unicode 7.0 was added in GLib 2.42
- *  * Unicode 8.0 was added in GLib 2.48
- *  * Unicode 9.0 was added in GLib 2.50.1
- *  * Unicode 10.0 was added in GLib 2.54
- *  * Unicode 11.10 was added in GLib 2.58
- *  * Unicode 12.0 was added in GLib 2.62
- *  * Unicode 12.1 was added in GLib 2.62
- *  * Unicode 13.0 was added in GLib 2.66
- */
-
 #include "config.h"
 
 #include <stdlib.h>
@@ -61,6 +26,7 @@
 #include "gunicode.h"
 #include "gunidecomp.h"
 #include "gmem.h"
+#include "gtestutils.h"
 #include "gunicomp.h"
 #include "gunicodeprivate.h"
 
@@ -111,7 +77,7 @@ g_unichar_combining_class (gunichar uc)
 
 /**
  * g_unicode_canonical_ordering:
- * @string: a UCS-4 encoded string.
+ * @string: (array length=len) (element-type gunichar): a UCS-4 encoded string.
  * @len: the maximum length of @string to use.
  *
  * Computes the canonical ordering of a string in-place.
@@ -390,9 +356,33 @@ _g_utf8_normalize_wc (const gchar    *str,
   while ((max_len < 0 || p < str + max_len) && *p)
     {
       const gchar *decomp;
-      gunichar wc = g_utf8_get_char (p);
+      const char *next, *between;
+      gunichar wc;
 
-      if (wc >= SBase && wc < SBase + SCount)
+      next = g_utf8_next_char (p);
+      /* Avoid reading truncated multibyte characters
+         which run past the end of the buffer */
+      if (max_len < 0)
+        {
+          /* Does the character contain a NUL terminator? */
+          for (between = &p[1]; between < next; between++)
+            {
+              if (G_UNLIKELY (!*between))
+                return NULL;
+            }
+        }
+      else
+        {
+          if (G_UNLIKELY (next > str + max_len))
+            return NULL;
+        }
+      wc = g_utf8_get_char (p);
+
+      if (G_UNLIKELY (wc == (gunichar) -1))
+        {
+          return NULL;
+        }
+      else if (wc >= SBase && wc < SBase + SCount)
         {
           gsize result_len;
           decompose_hangul (wc, NULL, &result_len);
@@ -408,7 +398,7 @@ _g_utf8_normalize_wc (const gchar    *str,
             n_wc++;
         }
 
-      p = g_utf8_next_char (p);
+      p = next;
     }
 
   wc_buffer = g_new (gunichar, n_wc + 1);
@@ -443,16 +433,16 @@ _g_utf8_normalize_wc (const gchar    *str,
             wc_buffer[n_wc++] = wc;
         }
 
-      if (n_wc > 0)
-  {
-    cc = COMBINING_CLASS (wc_buffer[old_n_wc]);
+      /* Each code path above *must* have appended at least gunichar to wc_buffer. */
+      g_assert (n_wc > old_n_wc);
 
-    if (cc == 0)
-      {
-        g_unicode_canonical_ordering (wc_buffer + last_start, n_wc - last_start);
-        last_start = old_n_wc;
-      }
-  }
+      cc = COMBINING_CLASS (wc_buffer[old_n_wc]);
+
+      if (cc == 0)
+        {
+          g_unicode_canonical_ordering (wc_buffer + last_start, n_wc - last_start);
+          last_start = old_n_wc;
+        }
 
       p = g_utf8_next_char (p);
     }
@@ -550,10 +540,13 @@ g_utf8_normalize (const gchar    *str,
       GNormalizeMode  mode)
 {
   gunichar *result_wc = _g_utf8_normalize_wc (str, len, mode);
-  gchar *result;
+  gchar *result = NULL;
 
-  result = g_ucs4_to_utf8 (result_wc, -1, NULL, NULL, NULL);
-  g_free (result_wc);
+  if (G_LIKELY (result_wc != NULL))
+    {
+      result = g_ucs4_to_utf8 (result_wc, -1, NULL, NULL, NULL);
+      g_free (result_wc);
+    }
 
   return result;
 }

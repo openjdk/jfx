@@ -28,7 +28,8 @@
 #if ENABLE(APPLICATION_MANIFEST)
 
 #include "Color.h"
-#include <wtf/EnumTraits.h>
+#include "ScreenOrientationLockType.h"
+#include <optional>
 #include <wtf/URL.h>
 #include <wtf/Vector.h>
 
@@ -55,15 +56,28 @@ struct ApplicationManifest {
         OptionSet<Purpose> purposes;
     };
 
+    struct Shortcut {
+    String name;
+        URL url;
+        Vector<Icon> icons;
+    };
+
+    String rawJSON;
     String name;
     String shortName;
     String description;
     URL scope;
+    bool isDefaultScope { false };
     Display display;
+    std::optional<ScreenOrientationLockType> orientation;
+    URL manifestURL;
     URL startURL;
     URL id;
+    Color backgroundColor;
     Color themeColor;
+    Vector<String> categories;
     Vector<Icon> icons;
+    Vector<Shortcut> shortcuts;
 };
 
 } // namespace WebCore

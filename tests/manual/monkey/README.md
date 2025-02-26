@@ -24,7 +24,7 @@ ant -Djavafx.home=<JAVAFX>
 
 ## Run
 
-The tool requires JDK 17+ and JavaFX 20+.
+The tool requires JDK 21+ and JavaFX 21+.
 
 To launch, specify the path to the JavaFX SDK lib/ folder on the command line, example:
 

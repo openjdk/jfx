@@ -26,11 +26,17 @@
 #include "config.h"
 #include "ManagedMediaSource.h"
 
-#if ENABLE(MANAGED_MEDIA_SOURCE)
+#if ENABLE(MEDIA_SOURCE)
+
+#include "Event.h"
+#include "EventNames.h"
+#include "MediaSourcePrivate.h"
+#include "SourceBufferList.h"
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
-WTF_MAKE_ISO_ALLOCATED_IMPL(ManagedMediaSource);
+WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(ManagedMediaSource);
 
 Ref<ManagedMediaSource> ManagedMediaSource::create(ScriptExecutionContext& context)
 {
@@ -41,14 +47,13 @@ Ref<ManagedMediaSource> ManagedMediaSource::create(ScriptExecutionContext& conte
 
 ManagedMediaSource::ManagedMediaSource(ScriptExecutionContext& context)
     : MediaSource(context)
+    , m_streamingTimer(*this, &ManagedMediaSource::streamingTimerFired)
 {
 }
 
-ManagedMediaSource::~ManagedMediaSource() = default;
-
-ExceptionOr<ManagedMediaSource::BufferingPolicy> ManagedMediaSource::buffering() const
+ManagedMediaSource::~ManagedMediaSource()
 {
-    return BufferingPolicy::Medium;
+    m_streamingTimer.stop();
 }
 
 ExceptionOr<ManagedMediaSource::PreferredQuality> ManagedMediaSource::quality() const
@@ -61,5 +66,84 @@ bool ManagedMediaSource::isTypeSupported(ScriptExecutionContext& context, const 
     return MediaSource::isTypeSupported(context, type);
 }
 
+void ManagedMediaSource::elementDetached()
+{
+    setStreaming(false);
 }
-#endif
+
+void ManagedMediaSource::setStreaming(bool streaming)
+{
+    if (m_streaming == streaming)
+        return;
+    ALWAYS_LOG(LOGIDENTIFIER, streaming);
+    m_streaming = streaming;
+    if (m_private)
+        m_private->setStreaming(streaming);
+    if (streaming) {
+        scheduleEvent(eventNames().startstreamingEvent);
+        if (m_streamingAllowed) {
+            ensurePrefsRead();
+            Seconds delay { *m_highThreshold };
+            m_streamingTimer.startOneShot(delay);
+        }
+    } else {
+        if (m_streamingTimer.isActive())
+            m_streamingTimer.stop();
+        scheduleEvent(eventNames().endstreamingEvent);
+    }
+    notifyElementUpdateMediaState();
+}
+
+void ManagedMediaSource::ensurePrefsRead()
+{
+    ASSERT(scriptExecutionContext());
+
+    if (m_lowThreshold && m_highThreshold)
+        return;
+    m_lowThreshold = scriptExecutionContext()->settingsValues().managedMediaSourceLowThreshold;
+    m_highThreshold = scriptExecutionContext()->settingsValues().managedMediaSourceHighThreshold;
+}
+
+void ManagedMediaSource::monitorSourceBuffers()
+{
+    MediaSource::monitorSourceBuffers();
+
+    if (!activeSourceBuffers() || !activeSourceBuffers()->length()) {
+        setStreaming(true);
+        return;
+    }
+
+    ensurePrefsRead();
+    auto currentTime = this->currentTime();
+    ASSERT(currentTime.isValid());
+
+    auto limitAhead = [&] (double upper) {
+        MediaTime aheadTime = currentTime + MediaTime::createWithDouble(upper);
+        return isEnded() ? std::min(duration(), aheadTime) : aheadTime;
+    };
+    if (!m_streaming) {
+        PlatformTimeRanges neededBufferedRange { currentTime, std::max(currentTime, limitAhead(*m_lowThreshold)) };
+        if (!isBuffered(neededBufferedRange))
+            setStreaming(true);
+        return;
+    }
+
+    if (auto ahead = limitAhead(*m_highThreshold); currentTime < ahead) {
+        if (isBuffered({ currentTime,  ahead }))
+            setStreaming(false);
+    } else
+        setStreaming(false);
+}
+
+void ManagedMediaSource::streamingTimerFired()
+{
+    ALWAYS_LOG(LOGIDENTIFIER, "Disabling streaming due to policy ", *m_highThreshold);
+    m_streamingAllowed = false;
+    if (m_private)
+        m_private->setStreamingAllowed(false);
+    notifyElementUpdateMediaState();
+}
+
+} // namespace WebCore
+
+#endif // ENABLE(MEDIA_SOURCE)

@@ -26,15 +26,16 @@
 #include "config.h"
 #include "HTMLAllCollection.h"
 
+#include "CachedHTMLCollectionInlines.h"
 #include "Element.h"
-#include "NodeRareData.h"
+#include "NodeRareDataInlines.h"
 #include <JavaScriptCore/Identifier.h>
 #include <variant>
-#include <wtf/IsoMallocInlines.h>
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
-WTF_MAKE_ISO_ALLOCATED_IMPL(HTMLAllNamedSubCollection);
+WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(HTMLAllNamedSubCollection);
 
 Ref<HTMLAllCollection> HTMLAllCollection::create(Document& document, CollectionType type)
 {
@@ -69,6 +70,13 @@ std::optional<std::variant<RefPtr<HTMLCollection>, RefPtr<Element>>> HTMLAllColl
         return std::variant<RefPtr<HTMLCollection>, RefPtr<Element>> { RefPtr<Element> { WTFMove(namedItems[0]) } };
 
     return std::variant<RefPtr<HTMLCollection>, RefPtr<Element>> { RefPtr<HTMLCollection> { downcast<Document>(ownerNode()).allFilteredByName(name) } };
+}
+
+HTMLAllNamedSubCollection::HTMLAllNamedSubCollection(Document& document, CollectionType type, const AtomString& name)
+    : CachedHTMLCollection(document, type)
+    , m_name(name)
+{
+    ASSERT(type == CollectionType::DocumentAllNamedItems);
 }
 
 HTMLAllNamedSubCollection::~HTMLAllNamedSubCollection()

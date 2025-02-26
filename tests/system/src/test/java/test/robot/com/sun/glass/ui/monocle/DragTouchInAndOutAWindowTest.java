@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,44 +25,38 @@
 
 package test.robot.com.sun.glass.ui.monocle;
 
-import com.sun.glass.ui.monocle.TestLogShim;
-import test.robot.com.sun.glass.ui.monocle.TestApplication;
-import test.robot.com.sun.glass.ui.monocle.input.devices.TestTouchDevice;
-import test.robot.com.sun.glass.ui.monocle.input.devices.TestTouchDevices;
+import java.util.Collection;
 import javafx.geometry.Rectangle2D;
 import javafx.stage.Stage;
-import org.junit.Assert;
-import org.junit.Assume;
-import org.junit.Before;
-import org.junit.Test;
-import org.junit.Ignore;
-import org.junit.runners.Parameterized;
-
-import java.util.Collection;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Assumptions;
+import org.junit.jupiter.api.Disabled;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
+import com.sun.glass.ui.monocle.TestLogShim;
 import test.com.sun.glass.ui.monocle.TestRunnable;
+import test.robot.com.sun.glass.ui.monocle.input.devices.TestTouchDevice;
+import test.robot.com.sun.glass.ui.monocle.input.devices.TestTouchDevices;
 
 /**
- * This is a regression test for RT-33771 - Lens:FXML-LoginDemo throws
+ * This is a regression test for JDK-8119854 - Lens:FXML-LoginDemo throws
  * java.lang.RuntimeException: Platform reported wrong touch point ID.
  *
- * and  RT-33687 - Lens:some touch events are been dropped in native
+ * and  JDK-8123356 - Lens:some touch events are been dropped in native
  * causing exceptions to be thrown.
  *
  */
-public class DragTouchInAndOutAWindowTest extends ParameterizedTestBase {
+public final class DragTouchInAndOutAWindowTest extends ParameterizedTestBase {
 
-    public DragTouchInAndOutAWindowTest(TestTouchDevice device) {
-        super(device);
-    }
-
-    @Parameterized.Parameters
-    public static Collection<Object[]> data() {
+    private static Collection<TestTouchDevice> parameters() {
         return TestTouchDevices.getTouchDeviceParameters(1);
     }
 
 
-    @Before
-    public void setUpScreen() throws Exception {
+    // @BeforeEach
+    // junit5 does not support parameterized class-level tests yet
+    private void setUpScreen(TestTouchDevice device) throws Exception {
+        createDevice(device, null);
         TestApplication.showInMiddleOfScreen();
         TestApplication.addTouchListeners();
         int p = device.addPoint(0, 0);
@@ -73,15 +67,17 @@ public class DragTouchInAndOutAWindowTest extends ParameterizedTestBase {
     }
 
     /**
-     * RT-33771 stated that exceptions are been thrown because the state of the
+     * JDK-8119854 stated that exceptions are been thrown because the state of the
      * point, when entering the window, is wrong.
      * Test check that states are ok and no exception is been thrown
      *
-     * Test update for RT-34191 - make sure no touch event received if drag
+     * Test update for JDK-8122329 - make sure no touch event received if drag
      * started outside the window
      */
-    @Test
-    public void singleTouch_dragPointIntoTheWindow() throws Exception {
+    @ParameterizedTest
+    @MethodSource("parameters")
+    public void singleTouch_dragPointIntoTheWindow(TestTouchDevice device) throws Exception {
+        setUpScreen(device);
         Stage stage = TestApplication.getStage();
         int windowRightEnd = (int)(stage.getX() + stage.getWidth());
         int windowMiddleHeight = (int)(stage.getY() + (stage.getHeight() / 2));
@@ -105,20 +101,22 @@ public class DragTouchInAndOutAWindowTest extends ParameterizedTestBase {
         //check that tested window didn't recive any notifications
 
         //wait for results and make sure no event received
-        Assert.assertEquals(0, TestLogShim.countLogContaining("TouchPoint: PRESSED"));
-        Assert.assertEquals(0, TestLogShim.countLogContaining("TouchPoint: MOVED"));
-        Assert.assertEquals(0, TestLogShim.countLogContaining("TouchPoint: RELEASED"));
+        Assertions.assertEquals(0, TestLogShim.countLogContaining("TouchPoint: PRESSED"));
+        Assertions.assertEquals(0, TestLogShim.countLogContaining("TouchPoint: MOVED"));
+        Assertions.assertEquals(0, TestLogShim.countLogContaining("TouchPoint: RELEASED"));
     }
 
-    @Test
     /**
-     * This test is also related to RT-33687 - Lens:some touch events are been
+     * This test is also related to JDK-8123356 - Lens:some touch events are been
      * dropped in native causing exceptions to be thrown.
      * In short there was a problem that when touch point moved outside a window
      * no notifications were sent, especially releases.
      *
      */
-    public void singleTouch_dragPointoutsideAwindow() throws Exception {
+    @ParameterizedTest
+    @MethodSource("parameters")
+    public void singleTouch_dragPointoutsideAwindow(TestTouchDevice device) throws Exception {
+        setUpScreen(device);
         Stage stage = TestApplication.getStage();
         int windowMiddleWidth = (int)(stage.getX() + stage.getWidth() / 2);
         int windowMiddleHeight = (int)(stage.getY() + (stage.getHeight() / 2));
@@ -141,14 +139,16 @@ public class DragTouchInAndOutAWindowTest extends ParameterizedTestBase {
         TestLogShim.waitForLogContaining("TouchPoint: RELEASED", 3000);
     }
 
-     @Test
     /**
      * Combining the two test cases above, start a touch sequence inside a
      * window, drag the 'finger' out and in again and see that we gat the
      * events.
      *
      */
-    public void singleTouch_dragPointInandOutAwindow() throws Exception {
+    @ParameterizedTest
+    @MethodSource("parameters")
+    public void singleTouch_dragPointInandOutAwindow(TestTouchDevice device) throws Exception {
+        setUpScreen(device);
         Stage stage = TestApplication.getStage();
         int windowMiddleWidth = (int)(stage.getX() + stage.getWidth() / 2);
         int windowMiddleHeight = (int)(stage.getY() + (stage.getHeight() / 2));
@@ -180,15 +180,17 @@ public class DragTouchInAndOutAWindowTest extends ParameterizedTestBase {
         TestLogShim.waitForLogContaining("TouchPoint: RELEASED", 3000);
     }
 
-     @Test
     /**
      * Same test as above, but for multi touch.
      * Test should pass in either single touch mode or multi touch mode
      * Main point is to see that no exception is been thrown
      *
      */
-    public void multiTouch_dragPointInandOutAwindow() throws Exception {
-        Assume.assumeTrue(device.getPointCount() >= 2);
+    @ParameterizedTest
+    @MethodSource("parameters")
+    public void multiTouch_dragPointInandOutAwindow(TestTouchDevice device) throws Exception {
+        Assumptions.assumeTrue(device.getPointCount() >= 2);
+        setUpScreen(device);
         Stage stage = TestApplication.getStage();
         int windowMiddleWidth = (int)(stage.getX() + stage.getWidth() / 2);
         int windowMiddleHeight = (int)(stage.getY() + (stage.getHeight() / 2));
@@ -222,19 +224,22 @@ public class DragTouchInAndOutAWindowTest extends ParameterizedTestBase {
         device.sync();
 
         //wait for results and make sure no event received
-        Assert.assertEquals(0, TestLogShim.countLogContaining("TouchPoint: PRESSED"));
-        Assert.assertEquals(0, TestLogShim.countLogContaining("TouchPoint: MOVED"));
-        Assert.assertEquals(0, TestLogShim.countLogContaining("TouchPoint: RELEASED"));
+        Assertions.assertEquals(0, TestLogShim.countLogContaining("TouchPoint: PRESSED"));
+        Assertions.assertEquals(0, TestLogShim.countLogContaining("TouchPoint: MOVED"));
+        Assertions.assertEquals(0, TestLogShim.countLogContaining("TouchPoint: RELEASED"));
     }
-    @Ignore("RT-38482")
-    @Test
+
     /**
      * Drag two touch points simultaneously from outside the window (from the
      * right side) to the window's center.
      * No "move", "press" or "release" events should be sent.
      */
-    public void multiTouch_dragTwoPointsIntoTheWindow() throws Exception {
-        Assume.assumeTrue(device.getPointCount() >= 2);
+    @Disabled("JDK-8087675")
+    @ParameterizedTest
+    @MethodSource("parameters")
+    public void multiTouch_dragTwoPointsIntoTheWindow(TestTouchDevice device) throws Exception {
+        Assumptions.assumeTrue(device.getPointCount() >= 2);
+        setUpScreen(device);
         Stage stage = TestApplication.getStage();
         double[] bounds = {0.0, 0.0, 0.0, 0.0};
         TestRunnable.invokeAndWait(() -> {
@@ -256,7 +261,7 @@ public class DragTouchInAndOutAWindowTest extends ParameterizedTestBase {
         int y1 = windowMiddleY;
         int x2 = windowRightEnd + distance * 2;
         int y2 = y1;
-        Assert.assertTrue(x1 < width && x2 < width);
+        Assertions.assertTrue(x1 < width && x2 < width);
         //press two fingers
         int p1 = device.addPoint(x1, y1);
         int p2 = device.addPoint(x2, y2);
@@ -286,10 +291,10 @@ public class DragTouchInAndOutAWindowTest extends ParameterizedTestBase {
         TestLogShim.waitForLogContaining("TouchPoint: RELEASED %d, %d", x3, y3);
 
         //Verify press/release events were received only once
-        Assert.assertEquals(1, TestLogShim.countLogContaining("TouchPoint: PRESSED"));
-        Assert.assertEquals(1, TestLogShim.countLogContaining("TouchPoint: RELEASED"));
+        Assertions.assertEquals(1, TestLogShim.countLogContaining("TouchPoint: PRESSED"));
+        Assertions.assertEquals(1, TestLogShim.countLogContaining("TouchPoint: RELEASED"));
 
         //make sure no move event was received
-        Assert.assertEquals(0, TestLogShim.countLogContaining("TouchPoint: MOVED"));
+        Assertions.assertEquals(0, TestLogShim.countLogContaining("TouchPoint: MOVED"));
     }
 }

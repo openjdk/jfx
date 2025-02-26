@@ -1,11 +1,8 @@
 list(APPEND WebCore_PRIVATE_INCLUDE_DIRECTORIES
     "${WEBCORE_DIR}/platform/graphics/texmap"
-    "${WEBCORE_DIR}/platform/graphics/nicosia"
 )
 
 list(APPEND WebCore_SOURCES
-    platform/graphics/nicosia/NicosiaAnimation.cpp
-
     platform/graphics/texmap/BitmapTexture.cpp
     platform/graphics/texmap/BitmapTexturePool.cpp
     platform/graphics/texmap/GraphicsContextGLTextureMapperANGLE.cpp
@@ -18,14 +15,14 @@ list(APPEND WebCore_SOURCES
 )
 
 list(APPEND WebCore_PRIVATE_FRAMEWORK_HEADERS
-    platform/graphics/nicosia/NicosiaAnimation.h
-
     platform/graphics/texmap/BitmapTexture.h
+    platform/graphics/texmap/BitmapTexturePool.h
     platform/graphics/texmap/ClipStack.h
     platform/graphics/texmap/GraphicsContextGLTextureMapperANGLE.h
     platform/graphics/texmap/GraphicsLayerTextureMapper.h
     platform/graphics/texmap/TextureMapper.h
     platform/graphics/texmap/TextureMapperBackingStore.h
+    platform/graphics/texmap/TextureMapperFlags.h
     platform/graphics/texmap/TextureMapperContextAttributes.h
     platform/graphics/texmap/TextureMapperFPSCounter.h
     platform/graphics/texmap/TextureMapperGL.h
@@ -62,12 +59,10 @@ endif ()
 
 if (USE_COORDINATED_GRAPHICS)
     list(APPEND WebCore_PRIVATE_INCLUDE_DIRECTORIES
-        "${WEBCORE_DIR}/page/scrolling/nicosia"
         "${WEBCORE_DIR}/platform/graphics/texmap/coordinated"
     )
     list(APPEND WebCore_SOURCES
         platform/graphics/texmap/TextureMapperPlatformLayerBuffer.cpp
-        platform/graphics/texmap/TextureMapperPlatformLayerDmabuf.cpp
         platform/graphics/texmap/TextureMapperPlatformLayerProxy.cpp
         platform/graphics/texmap/TextureMapperPlatformLayerProxyGL.cpp
 
@@ -79,68 +74,90 @@ if (USE_COORDINATED_GRAPHICS)
     list(APPEND WebCore_PRIVATE_FRAMEWORK_HEADERS
         platform/graphics/texmap/coordinated/CoordinatedBackingStore.h
         platform/graphics/texmap/coordinated/CoordinatedGraphicsLayer.h
-        platform/graphics/texmap/coordinated/SurfaceUpdateInfo.h
         platform/graphics/texmap/coordinated/Tile.h
         platform/graphics/texmap/coordinated/TiledBackingStore.h
         platform/graphics/texmap/coordinated/TiledBackingStoreClient.h
     )
 
-    # FIXME: Move this into Nicosia.cmake once the component is set for long-term use.
+    if (USE_CAIRO)
+        list(APPEND WebCore_SOURCES
+            platform/graphics/texmap/coordinated/CoordinatedGraphicsLayerCairo.cpp
+        )
+    elseif (USE_SKIA)
+        list(APPEND WebCore_SOURCES
+            platform/graphics/texmap/coordinated/CoordinatedGraphicsLayerSkia.cpp
+        )
+    endif ()
+else ()
+    list(APPEND WebCore_SOURCES
+        platform/graphics/texmap/GraphicsLayerTextureMapper.cpp
+        platform/graphics/texmap/TextureMapperTiledBackingStore.cpp
+    )
+
+    # FIXME: Share NicosiaAnimation since its used outside of Nicosia
     list(APPEND WebCore_PRIVATE_INCLUDE_DIRECTORIES
-        "${WEBCORE_DIR}/platform/graphics/nicosia/cairo"
-        "${WEBCORE_DIR}/platform/graphics/nicosia/texmap"
+        "${WEBCORE_DIR}/platform/graphics/nicosia"
     )
     list(APPEND WebCore_SOURCES
-        platform/graphics/nicosia/NicosiaBuffer.cpp
-        platform/graphics/nicosia/NicosiaImageBufferPipe.cpp
-        platform/graphics/nicosia/NicosiaPaintingContext.cpp
-        platform/graphics/nicosia/NicosiaPaintingEngine.cpp
-        platform/graphics/nicosia/NicosiaPaintingEngineBasic.cpp
-        platform/graphics/nicosia/NicosiaPaintingEngineThreaded.cpp
-        platform/graphics/nicosia/NicosiaPlatformLayer.cpp
-        platform/graphics/nicosia/NicosiaScene.cpp
-        platform/graphics/nicosia/NicosiaSceneIntegration.cpp
+        platform/graphics/nicosia/NicosiaAnimation.cpp
+    )
+    list(APPEND WebCore_PRIVATE_FRAMEWORK_HEADERS
+        platform/graphics/nicosia/NicosiaAnimation.h
+    )
+endif ()
 
-        platform/graphics/nicosia/cairo/NicosiaCairoOperationRecorder.cpp
-        platform/graphics/nicosia/cairo/NicosiaPaintingContextCairo.cpp
-
-        platform/graphics/nicosia/texmap/NicosiaBackingStoreTextureMapperImpl.cpp
-        platform/graphics/nicosia/texmap/NicosiaCompositionLayerTextureMapperImpl.cpp
-        platform/graphics/nicosia/texmap/NicosiaContentLayerTextureMapperImpl.cpp
-        platform/graphics/nicosia/texmap/NicosiaImageBackingStore.cpp
-        platform/graphics/nicosia/texmap/NicosiaImageBackingTextureMapperImpl.cpp
+if (USE_NICOSIA)
+    list(APPEND WebCore_PRIVATE_INCLUDE_DIRECTORIES
+        "${WEBCORE_DIR}/page/scrolling/nicosia"
+        "${WEBCORE_DIR}/platform/graphics/nicosia"
+        "${WEBCORE_DIR}/platform/graphics/nicosia/texmap"
+    )
+    list(APPEND WebCore_UNIFIED_SOURCE_LIST_FILES
+        "platform/SourcesNicosia.txt"
     )
     list(APPEND WebCore_PRIVATE_FRAMEWORK_HEADERS
         page/scrolling/nicosia/ScrollingTreeFixedNodeNicosia.h
         page/scrolling/nicosia/ScrollingTreeStickyNodeNicosia.h
 
         platform/graphics/nicosia/NicosiaAnimatedBackingStoreClient.h
+        platform/graphics/nicosia/NicosiaAnimation.h
+        platform/graphics/nicosia/NicosiaBackingStore.h
         platform/graphics/nicosia/NicosiaBuffer.h
-        platform/graphics/nicosia/NicosiaPaintingEngine.h
+        platform/graphics/nicosia/NicosiaCompositionLayer.h
+        platform/graphics/nicosia/NicosiaContentLayer.h
+        platform/graphics/nicosia/NicosiaImageBacking.h
+        platform/graphics/nicosia/NicosiaImageBackingStore.h
         platform/graphics/nicosia/NicosiaPlatformLayer.h
         platform/graphics/nicosia/NicosiaScene.h
         platform/graphics/nicosia/NicosiaSceneIntegration.h
+    )
 
-        platform/graphics/nicosia/texmap/NicosiaBackingStoreTextureMapperImpl.h
-        platform/graphics/nicosia/texmap/NicosiaCompositionLayerTextureMapperImpl.h
-        platform/graphics/nicosia/texmap/NicosiaContentLayerTextureMapperImpl.h
-        platform/graphics/nicosia/texmap/NicosiaImageBackingStore.h
-        platform/graphics/nicosia/texmap/NicosiaImageBackingTextureMapperImpl.h
+    if (USE_CAIRO)
+        list(APPEND WebCore_PRIVATE_INCLUDE_DIRECTORIES
+            "${WEBCORE_DIR}/platform/graphics/nicosia/cairo"
     )
-else ()
-    list(APPEND WebCore_SOURCES
-        platform/graphics/texmap/GraphicsLayerTextureMapper.cpp
-        platform/graphics/texmap/TextureMapperTiledBackingStore.cpp
+        list(APPEND WebCore_PRIVATE_FRAMEWORK_HEADERS
+            platform/graphics/nicosia/NicosiaPaintingEngine.h
     )
-endif ()
 
-if (ENABLE_WEBGL)
+        # Currently NicosiaPaintingContext.cpp will cause a compilation error
+        # when building without USE_CAIRO so these are not in unified sources
     list(APPEND WebCore_SOURCES
-        platform/graphics/nicosia/texmap/NicosiaGCGLANGLELayer.cpp
+            platform/graphics/nicosia/NicosiaPaintingContext.cpp
+            platform/graphics/nicosia/NicosiaPaintingEngine.cpp
+            platform/graphics/nicosia/NicosiaPaintingEngineBasic.cpp
+            platform/graphics/nicosia/NicosiaPaintingEngineThreaded.cpp
+
+            platform/graphics/nicosia/cairo/NicosiaCairoOperationRecorder.cpp
+            platform/graphics/nicosia/cairo/NicosiaPaintingContextCairo.cpp
     )
+    endif ()
 endif ()
 
 if (USE_GRAPHICS_LAYER_WC)
+    list(APPEND WebCore_PRIVATE_INCLUDE_DIRECTORIES
+        "${WEBCORE_DIR}/platform/graphics/wc"
+    )
     list(APPEND WebCore_SOURCES
         platform/graphics/texmap/TextureMapperSparseBackingStore.cpp
     )
@@ -158,10 +175,9 @@ if (USE_GBM)
         platform/graphics/gbm/DMABufFormat.h
         platform/graphics/gbm/DMABufObject.h
         platform/graphics/gbm/DMABufReleaseFlag.h
+        platform/graphics/gbm/DRMDeviceManager.h
+        platform/graphics/gbm/DRMDeviceNode.h
         platform/graphics/gbm/GBMBufferSwapchain.h
-        platform/graphics/gbm/GBMDevice.h
-        platform/graphics/gbm/GraphicsContextGLFallback.h
         platform/graphics/gbm/GraphicsContextGLGBM.h
-        platform/graphics/gbm/GraphicsContextGLGBMTextureMapper.h
     )
 endif ()

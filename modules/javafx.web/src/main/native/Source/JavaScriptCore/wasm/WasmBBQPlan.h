@@ -25,13 +25,14 @@
 
 #pragma once
 
-#if ENABLE(WEBASSEMBLY_B3JIT)
+#if ENABLE(WEBASSEMBLY_BBQJIT)
 
 #include "CompilationResult.h"
-#include "WasmB3IRGenerator.h"
+#include "WasmCallee.h"
 #include "WasmEntryPlan.h"
 #include "WasmModuleInformation.h"
 #include "WasmTierUpCount.h"
+#include "tools/FunctionAllowlist.h"
 #include <wtf/Bag.h>
 #include <wtf/Function.h>
 #include <wtf/SharedTask.h>
@@ -72,18 +73,18 @@ public:
 
     bool parseAndValidateModule()
     {
-        return Base::parseAndValidateModule(m_source.data(), m_source.size());
+        return Base::parseAndValidateModule(m_source.span());
     }
 
-    static bool planGeneratesLoopOSREntrypoints(const ModuleInformation&);
+    static FunctionAllowlist& ensureGlobalBBQAllowlist();
 
 private:
     bool prepareImpl() final;
-    void dumpDisassembly(CompilationContext&, LinkBuffer&);
+    bool dumpDisassembly(CompilationContext&, LinkBuffer&, unsigned functionIndex, const TypeDefinition&, unsigned functionIndexSpace);
     void compileFunction(uint32_t functionIndex) final;
     void didCompleteCompilation() WTF_REQUIRES_LOCK(m_lock) final;
 
-    std::unique_ptr<InternalFunction> compileFunction(uint32_t functionIndex, Callee&, CompilationContext&, Vector<UnlinkedWasmToWasmCall>&, TierUpCount*);
+    std::unique_ptr<InternalFunction> compileFunction(uint32_t functionIndex, BBQCallee&, CompilationContext&, Vector<UnlinkedWasmToWasmCall>&, TierUpCount*);
 
     Vector<std::unique_ptr<InternalFunction>> m_wasmInternalFunctions;
     Vector<std::unique_ptr<LinkBuffer>> m_wasmInternalFunctionLinkBuffers;
@@ -101,4 +102,4 @@ private:
 
 } } // namespace JSC::Wasm
 
-#endif // ENABLE(WEBASSEMBLY_B3JIT)
+#endif // ENABLE(WEBASSEMBLY_BBQJIT)

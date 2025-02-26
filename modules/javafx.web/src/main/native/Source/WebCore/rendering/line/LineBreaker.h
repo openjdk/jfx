@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2000 Lars Knoll (knoll@kde.org)
- * Copyright (C) 2003-2017 Apple Inc. All right reserved.
+ * Copyright (C) 2003-2023 Apple Inc. All right reserved.
  * Copyright (C) 2010 Google Inc. All rights reserved.
  * Copyright (C) 2013 ChangSeok Oh <shivamidow@gmail.com>
  * Copyright (C) 2013 Adobe Systems Inc. All right reserved.
@@ -26,7 +26,6 @@
 
 #include "LegacyInlineIterator.h"
 #include "LineInfo.h"
-#include "LineInlineHeaders.h"
 #include <wtf/Vector.h>
 
 namespace WebCore {
@@ -37,7 +36,7 @@ class TextLayout;
 struct RenderTextInfo {
     RenderText* text { nullptr };
     std::unique_ptr<TextLayout, TextLayoutDeleter> layout;
-    LazyLineBreakIterator lineBreakIterator;
+    CachedLineBreakIteratorFactory lineBreakIteratorFactory;
     const FontCascade* font { nullptr };
 };
 
@@ -48,31 +47,15 @@ public:
     explicit LineBreaker(RenderBlockFlow& block)
         : m_block(block)
     {
-        reset();
     }
 
-    LegacyInlineIterator nextLineBreak(InlineBidiResolver&, LineInfo&, RenderTextInfo&, FloatingObject* lastFloatFromPreviousLine, unsigned consecutiveHyphenatedLines, WordMeasurements&);
-
-    bool lineWasHyphenated() { return m_hyphenated; }
-    const Vector<RenderBox*>& positionedObjects() { return m_positionedObjects; }
-    UsedClear usedClear() { return m_clear; }
+    LegacyInlineIterator nextLineBreak(InlineBidiResolver&, LineInfo&, RenderTextInfo&);
 
 private:
-    void reset();
-
     void skipTrailingWhitespace(LegacyInlineIterator&, const LineInfo&);
-    void skipLeadingWhitespace(InlineBidiResolver&, LineInfo&, FloatingObject* lastFloatFromPreviousLine, LineWidth&);
-
-    FloatingObject* insertFloatingObject(RenderBox& floatBox) { return m_block.insertFloatingObject(floatBox); }
-    bool positionNewFloatOnLine(const FloatingObject& newFloat, FloatingObject* lastFloatFromPreviousLine, LineInfo& lineInfo, LineWidth& width)
-    {
-        return m_block.legacyLineLayout()->positionNewFloatOnLine(newFloat, lastFloatFromPreviousLine, lineInfo, width);
-    }
+    void skipLeadingWhitespace(InlineBidiResolver&, LineInfo&);
 
     RenderBlockFlow& m_block;
-    bool m_hyphenated;
-    UsedClear m_clear;
-    Vector<RenderBox*> m_positionedObjects;
 };
 
 } // namespace WebCore

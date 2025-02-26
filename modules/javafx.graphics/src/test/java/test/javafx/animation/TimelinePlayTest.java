@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -36,10 +36,10 @@ import javafx.beans.property.SimpleLongProperty;
 import javafx.collections.ObservableList;
 import javafx.util.Duration;
 import javafx.util.Pair;
-import org.junit.Before;
-import org.junit.Test;
 
-import static org.junit.Assert.*;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 public class TimelinePlayTest {
 
@@ -51,7 +51,7 @@ public class TimelinePlayTest {
     private static final double EPSILON = 1e-12;
 
 
-    @Before
+    @BeforeEach
     public void setUp() {
         amt = new AbstractPrimaryTimerMock();
         timeline = TimelineShim.getTimeline(amt);

@@ -222,7 +222,6 @@ my %idlFileNameHash = map { $_, 1 } @idlFileNames;
 
 # Populate $idlFilePathToInterfaceName and $interfaceNameToIdlFilePath.
 foreach my $idlFileName (sort keys %idlFileNameHash) {
-    $idlFileName =~ s/\s*$//g;
     my $fullPath = Cwd::realpath($idlFileName);
     my $interfaceName = fileparse(basename($idlFileName), ".idl");
     $idlFilePathToInterfaceName{$fullPath} = $interfaceName;
@@ -231,7 +230,6 @@ foreach my $idlFileName (sort keys %idlFileNameHash) {
 
 # Parse all IDL files.
 foreach my $idlFileName (sort keys %idlFileNameHash) {
-    $idlFileName =~ s/\s*$//g;
     my $fullPath = Cwd::realpath($idlFileName);
 
     my $idlFile = processIDL($idlFileName, $fullPath);
@@ -492,7 +490,7 @@ sub GenerateConstructorAttributes
     my $globalContext = shift;
 
     # FIXME: Rather than being ConditionalForWorker=FOO, we need a syntax like ConditionalForContext=(Worker:FOO).
-    if ($extendedAttributes->{"ConditionalForWorker"} && $globalContext eq "Worker") {
+    if ($extendedAttributes->{"ConditionalForWorker"} && ($globalContext eq "Worker" || $globalContext eq "DedicatedWorker" )) {
       my $conditionalForWorker = $extendedAttributes->{"ConditionalForWorker"};
       my $existingConditional = $extendedAttributes->{"Conditional"};
       if ($existingConditional) {

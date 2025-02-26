@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,7 +25,7 @@
 
 package com.sun.javafx.util;
 
-import static com.sun.javafx.FXPermissions.ACCESS_WINDOW_LIST_PERMISSION;
+import javafx.application.Platform;
 import javafx.geometry.BoundingBox;
 import javafx.geometry.Bounds;
 import javafx.geometry.HPos;
@@ -40,10 +40,9 @@ import javafx.scene.paint.Stop;
 import javafx.stage.Screen;
 import javafx.stage.Stage;
 import javafx.stage.Window;
+import java.math.BigDecimal;
 import java.util.List;
 import com.sun.javafx.PlatformUtil;
-import java.security.AccessController;
-import java.security.PrivilegedAction;
 import com.sun.glass.utils.NativeLibLoader;
 import com.sun.prism.impl.PrismSettings;
 
@@ -97,6 +96,16 @@ public class Utils {
     public static long clamp(long min, long value, long max) {
         if (value < min) return min;
         if (value > max) return max;
+        return value;
+    }
+
+    /**
+     * Simple utility function which clamps the given value to be strictly
+     * between the min and max values.
+     */
+    public static BigDecimal clamp(BigDecimal min, BigDecimal value, BigDecimal max) {
+        if (value.compareTo(min) < 0) return min;
+        if (value.compareTo(max) > 0) return max;
         return value;
     }
 
@@ -552,7 +561,7 @@ public class Utils {
         // --- after all the moving around, we do one last check / rearrange.
         // Unlike the check above, this time we are just fully committed to keeping
         // the item on screen at all costs, regardless of whether or not that results
-        /// in overlapping the parent object.
+        // in overlapping the parent object.
         if ((finalScreenX + width) > screenBounds.getMaxX()) {
             finalScreenX -= (finalScreenX + width - screenBounds.getMaxX());
         }
@@ -669,11 +678,7 @@ public class Utils {
     }
 
     public static boolean hasFullScreenStage(final Screen screen) {
-        @SuppressWarnings("removal")
-        final List<Window> allWindows = AccessController.doPrivileged(
-                (PrivilegedAction<List<Window>>) () -> Window.getWindows(),
-                null,
-                ACCESS_WINDOW_LIST_PERMISSION);
+        final List<Window> allWindows = Window.getWindows();
 
         for (final Window window : allWindows) {
             if (window instanceof Stage) {
@@ -982,19 +987,28 @@ public class Utils {
         return new String(dst, 0, dstIndex);
     }
 
-    @SuppressWarnings("removal")
     public static synchronized void loadNativeSwingLibrary() {
-        AccessController.doPrivileged((PrivilegedAction<Void>) () -> {
-            String libName = "prism_common";
+        String libName = "prism_common";
 
-            if (PrismSettings.verbose) {
-                System.out.println("Loading Prism common native library ...");
-            }
-            NativeLibLoader.loadLibrary(libName);
-            if (PrismSettings.verbose) {
-                System.out.println("\tsucceeded.");
-            }
-            return null;
-        });
+        if (PrismSettings.verbose) {
+            System.out.println("Loading Prism common native library ...");
+        }
+        NativeLibLoader.loadLibrary(libName);
+        if (PrismSettings.verbose) {
+            System.out.println("\tsucceeded.");
+        }
+    }
+
+    /**
+     * Ensures that a code segment is run on the FX thread.
+     *
+     * @param runnable a {@code Runnable} encapsulating the code
+     */
+    public static void runOnFxThread(Runnable runnable) {
+        if (Platform.isFxApplicationThread()) {
+            runnable.run();
+        } else {
+            Platform.runLater(runnable);
+        }
     }
 }

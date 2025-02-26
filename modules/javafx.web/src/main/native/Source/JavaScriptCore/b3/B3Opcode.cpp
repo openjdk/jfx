@@ -219,6 +219,12 @@ void printInternal(PrintStream& out, Opcode opcode)
     case SExt16:
         out.print("SExt16");
         return;
+    case SExt8To64:
+        out.print("SExt8To64");
+        return;
+    case SExt16To64:
+        out.print("SExt16To64");
+        return;
     case SExt32:
         out.print("SExt32");
         return;
@@ -227,6 +233,12 @@ void printInternal(PrintStream& out, Opcode opcode)
         return;
     case Trunc:
         out.print("Trunc");
+        return;
+    case TruncHigh:
+        out.print("TruncHigh");
+        return;
+    case Stitch:
+        out.print("Stitch");
         return;
     case IToD:
         out.print("IToD");
@@ -527,6 +539,21 @@ void printInternal(PrintStream& out, Opcode opcode)
         return;
     case VectorMulByElement:
         out.print("VectorMulByElement");
+        return;
+    case VectorShiftByVector:
+        out.print("VectorShiftByVector");
+        return;
+    case VectorRelaxedSwizzle:
+        out.print("VectorRelaxedSwizzle");
+        return;
+    case VectorRelaxedTruncSat:
+        out.print("VectorRelaxedTruncSat");
+        return;
+    case VectorRelaxedMAdd:
+        out.print("VectorRelaxedMAdd");
+        return;
+    case VectorRelaxedNMAdd:
+        out.print("VectorRelaxedNMAdd");
         return;
     case Upsilon:
         out.print("Upsilon");

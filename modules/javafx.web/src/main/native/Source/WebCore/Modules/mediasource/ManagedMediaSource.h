@@ -25,29 +25,43 @@
 
 #pragma once
 
-#if ENABLE(MANAGED_MEDIA_SOURCE)
+#if ENABLE(MEDIA_SOURCE)
 
 #include "MediaSource.h"
+#include "Timer.h"
+#include <optional>
 
 namespace WebCore {
 
 class ManagedMediaSource final : public MediaSource {
-    WTF_MAKE_ISO_ALLOCATED(ManagedMediaSource);
+    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(ManagedMediaSource);
 public:
     static Ref<ManagedMediaSource> create(ScriptExecutionContext&);
     ~ManagedMediaSource();
-
-    enum class BufferingPolicy { Low, Medium, High };
-    ExceptionOr<BufferingPolicy> buffering() const;
 
     enum class PreferredQuality { Low, Medium, High };
     ExceptionOr<PreferredQuality> quality() const;
 
     static bool isTypeSupported(ScriptExecutionContext&, const String& type);
 
+    bool streaming() const override { return m_streaming; }
+    bool streamingAllowed() const { return m_streamingAllowed; }
+
     bool isManaged() const final { return true; }
+
 private:
     explicit ManagedMediaSource(ScriptExecutionContext&);
+    void monitorSourceBuffers() final;
+    void elementDetached() final;
+    void setStreaming(bool);
+    void streamingTimerFired();
+    void ensurePrefsRead();
+
+    bool m_streaming { false };
+    std::optional<double> m_lowThreshold;
+    std::optional<double> m_highThreshold;
+    Timer m_streamingTimer;
+    bool m_streamingAllowed { true };
 };
 
 } // namespace WebCore
@@ -56,4 +70,4 @@ SPECIALIZE_TYPE_TRAITS_BEGIN(WebCore::ManagedMediaSource)
     static bool isType(const WebCore::MediaSource& mediaSource) { return mediaSource.isManaged(); }
 SPECIALIZE_TYPE_TRAITS_END()
 
-#endif
+#endif // ENABLE(MEDIA_SOURCE)

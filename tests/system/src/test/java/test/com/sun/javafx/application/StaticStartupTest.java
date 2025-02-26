@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2019, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,27 +25,26 @@
 
 package test.com.sun.javafx.application;
 
-import javafx.application.Platform;
-import junit.framework.AssertionFailedError;
-import org.junit.AfterClass;
-import org.junit.Test;
-import test.util.Util;
-
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.fail;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
-
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
+import javafx.application.Platform;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 
 public class StaticStartupTest {
 
-    @Test (timeout=15000)
+    @Test
+    @Timeout(value=15000, unit=TimeUnit.MILLISECONDS)
     public void testStartupFromClinit() throws Exception {
         Thread thr = new Thread(() -> {
             try {
                 Thread.sleep(20000);
-            } catch (InterruptedException ex) {}
+            } catch (InterruptedException ex) {
+                // OK to not rethrow; the exit 1 signals an error
+            }
             System.err.println("Test timeout exceeded -- calling System.exit");
             System.exit(1);
         });
@@ -54,7 +53,7 @@ public class StaticStartupTest {
         StaticClass.doSomething();
     }
 
-    @AfterClass
+    @AfterAll
     public static void teardown() {
         Platform.exit();
     }
@@ -76,7 +75,7 @@ class StaticClass {
             try {
                 assertEquals(staticLatch.getCount(), 0);
             } catch (Throwable th) {
-                throw new AssertionFailedError ("Static latch couldn't be read");
+                fail("Static latch couldn't be read");
             }
         });
     }

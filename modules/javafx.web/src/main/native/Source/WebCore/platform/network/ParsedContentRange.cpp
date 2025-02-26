@@ -27,7 +27,7 @@
 #include "ParsedContentRange.h"
 
 #include <wtf/StdLibExtras.h>
-#include <wtf/text/StringConcatenateNumbers.h>
+#include <wtf/text/MakeString.h>
 #include <wtf/text/StringToIntegerConversion.h>
 
 namespace WebCore {
@@ -81,7 +81,7 @@ static bool parseContentRange(StringView headerValue, int64_t& firstBytePosition
         return false;
 
     auto firstByteString = headerValue.substring(prefixLength, byteSeparatorTokenLoc - prefixLength);
-    if (!firstByteString.isAllSpecialCharacters<isASCIIDigit>())
+    if (!firstByteString.containsOnly<isASCIIDigit>())
         return false;
 
     auto optionalFirstBytePosition = parseInteger<int64_t>(firstByteString);
@@ -90,7 +90,7 @@ static bool parseContentRange(StringView headerValue, int64_t& firstBytePosition
     firstBytePosition = *optionalFirstBytePosition;
 
     auto lastByteString = headerValue.substring(byteSeparatorTokenLoc + 1, instanceLengthSeparatorToken - (byteSeparatorTokenLoc + 1));
-    if (!lastByteString.isAllSpecialCharacters<isASCIIDigit>())
+    if (!lastByteString.containsOnly<isASCIIDigit>())
         return false;
 
     auto optionalLastBytePosition = parseInteger<int64_t>(lastByteString);
@@ -102,7 +102,7 @@ static bool parseContentRange(StringView headerValue, int64_t& firstBytePosition
     if (instanceString == "*"_s)
         instanceLength = ParsedContentRange::unknownLength;
     else {
-        if (!instanceString.isAllSpecialCharacters<isASCIIDigit>())
+        if (!instanceString.containsOnly<isASCIIDigit>())
             return false;
 
         auto optionalInstanceLength = parseInteger<int64_t>(instanceString);
@@ -134,8 +134,8 @@ String ParsedContentRange::headerValue() const
     if (!isValid())
         return String();
     if (m_instanceLength == unknownLength)
-        return makeString("bytes ", m_firstBytePosition, '-', m_lastBytePosition, "/*");
-    return makeString("bytes ", m_firstBytePosition, '-', m_lastBytePosition, '/', m_instanceLength);
+        return makeString("bytes "_s, m_firstBytePosition, '-', m_lastBytePosition, "/*"_s);
+    return makeString("bytes "_s, m_firstBytePosition, '-', m_lastBytePosition, '/', m_instanceLength);
 }
 
 }

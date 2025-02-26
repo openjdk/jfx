@@ -37,6 +37,7 @@
 #include "DFGInsertionSet.h"
 #include "DFGPhase.h"
 #include "JSCInlines.h"
+#include "StructureID.h"
 #include <wtf/CommaPrinter.h>
 #include <wtf/HashSet.h>
 
@@ -71,7 +72,7 @@ template<PhaseMode mode>
 class StoreBarrierInsertionPhase : public Phase {
 public:
     StoreBarrierInsertionPhase(Graph& graph)
-        : Phase(graph, mode == PhaseMode::Fast ? "fast store barrier insertion" : "global store barrier insertion")
+        : Phase(graph, mode == PhaseMode::Fast ? "fast store barrier insertion"_s : "global store barrier insertion"_s)
         , m_insertionSet(graph)
     {
     }
@@ -237,6 +238,7 @@ private:
             case PutByValAlias: {
                 switch (m_node->arrayMode().modeForPut().type()) {
                 case Array::Generic:
+                case Array::Float16Array:
                 case Array::BigInt64Array:
                 case Array::BigUint64Array: {
                     Edge child1 = m_graph.varArgChild(m_node, 0);
@@ -298,7 +300,8 @@ private:
             case PutById:
             case PutByIdFlush:
             case PutByIdDirect:
-            case PutStructure: {
+            case PutStructure:
+            case PutByIdMegamorphic: {
                 considerBarrier(m_node->child1());
                 break;
             }
@@ -328,6 +331,13 @@ private:
             case SetRegExpObjectLastIndex:
             case PutInternalField: {
                 considerBarrier(m_node->child1(), m_node->child2());
+                break;
+            }
+
+            case EnumeratorPutByVal:
+            case PutByValMegamorphic: {
+                Edge child1 = m_graph.varArgChild(m_node, 0);
+                considerBarrier(child1);
                 break;
             }
 
@@ -372,24 +382,28 @@ private:
             case NewAsyncGenerator:
             case NewArray:
             case NewArrayWithSize:
+            case NewArrayWithConstantSize:
             case NewArrayBuffer:
             case NewInternalFieldObject:
             case NewTypedArray:
             case NewRegexp:
             case NewStringObject:
+            case NewMap:
+            case NewSet:
             case NewSymbol:
             case MaterializeNewObject:
             case MaterializeCreateActivation:
             case MakeRope:
+            case MakeAtomString:
             case CreateActivation:
             case CreateDirectArguments:
             case CreateScopedArguments:
             case CreateClonedArguments:
-            case CreateArgumentsButterflyExcludingThis:
             case NewFunction:
             case NewGeneratorFunction:
             case NewAsyncGeneratorFunction:
             case NewAsyncFunction:
+            case NewBoundFunction:
             case AllocatePropertyStorage:
             case ReallocatePropertyStorage:
                 // Nodes that allocate get to set their epoch because for those nodes we know

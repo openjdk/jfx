@@ -78,7 +78,7 @@ gst_toc_data_free (gpointer p)
 
   g_mutex_clear (&data->lock);
 
-  g_slice_free (GstTocData, data);
+  g_free (data);
 }
 
 static GstTocData *
@@ -94,7 +94,7 @@ gst_toc_setter_get_data (GstTocSetter * setter)
     g_mutex_lock (&create_mutex);
     data = g_object_get_qdata (G_OBJECT (setter), gst_toc_key);
     if (!data) {
-      data = g_slice_new (GstTocData);
+      data = g_new (GstTocData, 1);
       g_mutex_init (&data->lock);
       data->toc = NULL;
       g_object_set_qdata_full (G_OBJECT (setter), gst_toc_key, data,

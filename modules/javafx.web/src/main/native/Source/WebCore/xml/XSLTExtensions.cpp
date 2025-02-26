@@ -35,22 +35,8 @@
 #include <libxslt/extensions.h>
 #include <libxslt/extra.h>
 
-#if OS(DARWIN) && !PLATFORM(GTK) && !PLATFORM(JAVA)
-#include "SoftLinkLibxslt.h"
 
-static void xsltTransformErrorTrampoline(xsltTransformContextPtr context, xsltStylesheetPtr style, xmlNodePtr node, const char* message)
-{
-    static void (*xsltTransformErrorPointer)(xsltTransformContextPtr, xsltStylesheetPtr, xmlNodePtr, const char*, ...) WTF_ATTRIBUTE_PRINTF(4, 5);
-    static std::once_flag onceFlag;
-    std::call_once(onceFlag, [] {
-        xsltTransformErrorPointer = reinterpret_cast<void (*)(xsltTransformContextPtr, xsltStylesheetPtr, xmlNodePtr, const char*, ...)>(dlsym(WebCore::libxsltLibrary(), "xsltTransformError"));
-    });
-    xsltTransformErrorPointer(context, style, node, "%s", message);
-}
 
-#define xsltTransformError xsltTransformErrorTrampoline
-
-#endif
 
 namespace WebCore {
 

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2021, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2021, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -28,11 +28,23 @@
 
 #include <gst/gst.h>
 
+#include "mfgstbuffer.h"
+
 #include <mfapi.h>
 #include <mferror.h>
 #include <mftransform.h>
 
 G_BEGIN_DECLS
+
+// Media Foundation Color Convert:
+// NV12 -> IYUV
+// P010 -> NV12 -> IYUV
+// Maximum number of color converters
+#define MAX_COLOR_CONVERT 2
+// Index in array for color convert with IYUV output format
+#define COLOR_CONVERT_IYUV 0
+// Index in array for color convert with NV12 output format
+#define COLOR_CONVERT_NV12 1
 
 #define GST_TYPE_MFWRAPPER \
     (gst_mfwrapper_get_type())
@@ -61,6 +73,9 @@ struct _GstMFWrapper
     gboolean is_eos_received;
     gboolean is_eos;
     gboolean is_decoder_initialized;
+    // If set to true do not call decoder it might hang.
+    // This flag should be set if decoder calls failed.
+    gboolean is_decoder_error;
 
     gboolean force_discontinuity;
     gboolean force_output_discontinuity;
@@ -68,12 +83,14 @@ struct _GstMFWrapper
     HRESULT hr_mfstartup;
 
     IMFTransform *pDecoder;
-
     IMFSample *pDecoderOutput;
+    CMFGSTBuffer *pDecoderBuffer;
 
-    IMFTransform *pColorConvert;
+    IMFTransform *pColorConvert[MAX_COLOR_CONVERT];
+    IMFSample *pColorConvertOutput[MAX_COLOR_CONVERT];
+    CMFGSTBuffer *pColorConvertBuffer[MAX_COLOR_CONVERT];
 
-    IMFSample *pColorConvertOutput;
+    GstBufferPool *pool;
 
     BYTE *header;
     gsize header_size;
@@ -82,6 +99,10 @@ struct _GstMFWrapper
     guint height;
     guint framerate_num;
     guint framerate_den;
+
+    guint defaultStride;
+    guint pixel_num;
+    guint pixel_den;
 };
 
 struct _GstMFWrapperClass

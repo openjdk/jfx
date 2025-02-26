@@ -26,6 +26,7 @@
 #pragma once
 
 #include "CachedResource.h"
+#include "ContentSecurityPolicy.h"
 #include "Element.h"
 #include "ResourceLoadPriority.h"
 #include "ResourceLoaderOptions.h"
@@ -64,6 +65,8 @@ public:
     const std::optional<ResourceLoadPriority>& priority() const { return m_priority; }
     void setPriority(std::optional<ResourceLoadPriority>&& priority) { m_priority = WTFMove(priority); }
 
+    RequestPriority fetchPriorityHint() const { return m_options.fetchPriorityHint; }
+
     void setInitiator(Element&);
     void setInitiatorType(const AtomString&);
     const AtomString& initiatorType() const;
@@ -82,7 +85,7 @@ public:
     void updateReferrerPolicy(ReferrerPolicy);
     void updateReferrerAndOriginHeaders(FrameLoader&);
     void updateUserAgentHeader(FrameLoader&);
-    void upgradeInsecureRequestIfNeeded(Document&);
+    void upgradeInsecureRequestIfNeeded(Document&, ContentSecurityPolicy::AlwaysUpgradeRequest = ContentSecurityPolicy::AlwaysUpgradeRequest::No);
     void setAcceptHeaderIfNone(CachedResource::Type);
     void updateAccordingCacheMode();
     void updateAcceptEncodingHeader();
@@ -103,18 +106,18 @@ public:
     RefPtr<SecurityOrigin> releaseOrigin() { return WTFMove(m_origin); }
     const SecurityOrigin* origin() const { return m_origin.get(); }
     SecurityOrigin* origin() { return m_origin.get(); }
+    RefPtr<SecurityOrigin> protectedOrigin() const { return m_origin; }
 
+    bool hasFragmentIdentifier() const { return !m_fragmentIdentifier.isEmpty(); }
     String&& releaseFragmentIdentifier() { return WTFMove(m_fragmentIdentifier); }
     void clearFragmentIdentifier() { m_fragmentIdentifier = { }; }
 
     static String splitFragmentIdentifierFromRequestURL(ResourceRequest&);
     static String acceptHeaderValueFromType(CachedResource::Type);
 
-#if ENABLE(SERVICE_WORKER)
     void setClientIdentifierIfNeeded(ScriptExecutionContextIdentifier);
     void setSelectedServiceWorkerRegistrationIdentifierIfNeeded(ServiceWorkerRegistrationIdentifier);
     void setNavigationServiceWorkerRegistrationData(const std::optional<ServiceWorkerRegistrationData>&);
-#endif
 
 private:
     ResourceRequest m_resourceRequest;
@@ -129,6 +132,6 @@ private:
     bool m_ignoreForRequestCount { false };
 };
 
-void upgradeInsecureResourceRequestIfNeeded(ResourceRequest&, Document&);
+void upgradeInsecureResourceRequestIfNeeded(ResourceRequest&, Document&, ContentSecurityPolicy::AlwaysUpgradeRequest = ContentSecurityPolicy::AlwaysUpgradeRequest::No);
 
 } // namespace WebCore

@@ -22,17 +22,18 @@
 #include "config.h"
 #include "SVGPolyElement.h"
 
-#include "Document.h"
+#include "DocumentInlines.h"
 #include "LegacyRenderSVGPath.h"
+#include "LegacyRenderSVGResource.h"
 #include "RenderSVGPath.h"
-#include "RenderSVGResource.h"
 #include "SVGDocumentExtensions.h"
 #include "SVGParserUtilities.h"
-#include <wtf/IsoMallocInlines.h>
+#include <wtf/TZoneMallocInlines.h>
+#include <wtf/text/MakeString.h>
 
 namespace WebCore {
 
-WTF_MAKE_ISO_ALLOCATED_IMPL(SVGPolyElement);
+WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(SVGPolyElement);
 
 SVGPolyElement::SVGPolyElement(const QualifiedName& tagName, Document& document)
     : SVGGeometryElement(tagName, document, makeUniqueRef<PropertyRegistry>(*this))
@@ -43,15 +44,14 @@ SVGPolyElement::SVGPolyElement(const QualifiedName& tagName, Document& document)
     });
 }
 
-void SVGPolyElement::parseAttribute(const QualifiedName& name, const AtomString& value)
+void SVGPolyElement::attributeChanged(const QualifiedName& name, const AtomString& oldValue, const AtomString& newValue, AttributeModificationReason attributeModificationReason)
 {
     if (name == SVGNames::pointsAttr) {
-        if (!m_points->baseVal()->parse(value))
-            document().accessSVGExtensions().reportError("Problem parsing points=\"" + value + "\"");
-        return;
+        if (!m_points->baseVal()->parse(newValue))
+            protectedDocument()->checkedSVGExtensions()->reportError(makeString("Problem parsing points=\""_s, newValue, "\""_s));
     }
 
-    SVGGeometryElement::parseAttribute(name, value);
+    SVGGeometryElement::attributeChanged(name, oldValue, newValue, attributeModificationReason);
 }
 
 void SVGPolyElement::svgAttributeChanged(const QualifiedName& attrName)
@@ -60,14 +60,14 @@ void SVGPolyElement::svgAttributeChanged(const QualifiedName& attrName)
         ASSERT(attrName == SVGNames::pointsAttr);
         InstanceInvalidationGuard guard(*this);
 
-#if ENABLE(LAYER_BASED_SVG_ENGINE)
-        if (auto* path = dynamicDowncast<RenderSVGPath>(renderer()))
+        if (CheckedPtr path = dynamicDowncast<RenderSVGPath>(renderer()))
             path->setNeedsShapeUpdate();
-#endif
-        if (auto* path = dynamicDowncast<LegacyRenderSVGPath>(renderer()))
+
+        if (CheckedPtr path = dynamicDowncast<LegacyRenderSVGPath>(renderer()))
             path->setNeedsShapeUpdate();
 
         updateSVGRendererForElementChange();
+        invalidateResourceImageBuffersIfNeeded();
         return;
     }
 
@@ -78,12 +78,10 @@ size_t SVGPolyElement::approximateMemoryCost() const
 {
     size_t pointsCost = m_points->baseVal()->items().size() * sizeof(FloatPoint);
 
-#if ENABLE(LAYER_BASED_SVG_ENGINE)
     if (document().settings().layerBasedSVGEngineEnabled()) {
         // We need to account for the memory which is allocated by the RenderSVGPath::m_path.
         return sizeof(*this) + (renderer() ? pointsCost * 2 + sizeof(RenderSVGPath) : pointsCost);
     }
-#endif
 
     // We need to account for the memory which is allocated by the LegacyRenderSVGPath::m_path.
     return sizeof(*this) + (renderer() ? pointsCost * 2 + sizeof(LegacyRenderSVGPath) : pointsCost);

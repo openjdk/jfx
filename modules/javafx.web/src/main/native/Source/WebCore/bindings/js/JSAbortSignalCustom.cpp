@@ -1,5 +1,5 @@
 /*
-* Copyright (C) 2019-2022 Apple Inc. All rights reserved.
+* Copyright (C) 2019-2023 Apple Inc. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without
 * modification, are permitted provided that the following conditions
@@ -26,11 +26,11 @@
 #include "config.h"
 #include "JSAbortSignal.h"
 
-#include "WebCoreOpaqueRoot.h"
+#include "WebCoreOpaqueRootInlines.h"
 
 namespace WebCore {
 
-bool JSAbortSignalOwner::isReachableFromOpaqueRoots(JSC::Handle<JSC::Unknown> handle, void*, JSC::AbstractSlotVisitor& visitor, const char** reason)
+bool JSAbortSignalOwner::isReachableFromOpaqueRoots(JSC::Handle<JSC::Unknown> handle, void*, JSC::AbstractSlotVisitor& visitor, ASCIILiteral* reason)
 {
     auto& abortSignal = JSC::jsCast<JSAbortSignal*>(handle.slot()->asCell())->wrapped();
     if (abortSignal.aborted())
@@ -38,14 +38,27 @@ bool JSAbortSignalOwner::isReachableFromOpaqueRoots(JSC::Handle<JSC::Unknown> ha
 
     if (abortSignal.isFollowingSignal()) {
         if (UNLIKELY(reason))
-            *reason = "Is Following Signal";
+            *reason = "Is Following Signal"_s;
         return true;
     }
 
-    if (abortSignal.hasAbortEventListener() && abortSignal.hasActiveTimeoutTimer()) {
+    if (abortSignal.hasAbortEventListener()) {
+        if (abortSignal.hasActiveTimeoutTimer()) {
         if (UNLIKELY(reason))
-            *reason = "Has Active Abort Listener";
+                *reason = "Has Timeout And Abort Event Listener"_s;
         return true;
+    }
+        if (abortSignal.isDependent()) {
+        if (!abortSignal.sourceSignals().isEmptyIgnoringNullReferences()) {
+            if (UNLIKELY(reason))
+                *reason = "Has Source Signals And Abort Event Listener"_s;
+                return true;
+            }
+        } else {
+            if (UNLIKELY(reason))
+                *reason = "Has Abort Event Listener"_s;
+            return true;
+        }
     }
 
     return containsWebCoreOpaqueRoot(visitor, abortSignal);

@@ -30,7 +30,8 @@
 namespace WebCore {
 
 class HTMLTableColElement final : public HTMLTablePartElement {
-    WTF_MAKE_ISO_ALLOCATED(HTMLTableColElement);
+    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(HTMLTableColElement);
+    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(HTMLTableColElement);
 public:
     static Ref<HTMLTableColElement> create(const QualifiedName& tagName, Document&);
 
@@ -42,7 +43,7 @@ public:
 private:
     HTMLTableColElement(const QualifiedName& tagName, Document&);
 
-    void parseAttribute(const QualifiedName&, const AtomString&) final;
+    void attributeChanged(const QualifiedName&, const AtomString& oldValue, const AtomString& newValue, AttributeModificationReason) final;
     bool hasPresentationalHintsForAttribute(const QualifiedName&) const final;
     void collectPresentationalHintsForAttribute(const QualifiedName&, const AtomString&, MutableStyleProperties&) final;
     const MutableStyleProperties* additionalPresentationalHintStyle() const final;

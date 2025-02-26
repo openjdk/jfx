@@ -112,7 +112,7 @@ static JLObject createEntry(HistoryItem* item, jlong jpage)
     return jEntry;
 }
 
-void notifyHistoryItemChangedImpl(HistoryItem& item) {
+void historyItemChangedImpl(HistoryItem& item) {
     JNIEnv* env = WTF::GetJavaEnv();
     static jmethodID notifyItemChangedMID = initMethod(env, getJEntryClass(), "notifyItemChanged", "()V");
     if (item.hostObject()) {
@@ -182,6 +182,7 @@ JNIEXPORT jstring JNICALL Java_com_sun_webkit_BackForwardList_bflItemGetTitle(JN
     HistoryItem* item = getItem(jitem);
     String title = item->title();
     return title.toJavaString(env).releaseLocal();
+
 }
 
 // entry.getIcon()
@@ -236,7 +237,7 @@ JNIEXPORT void JNICALL Java_com_sun_webkit_BackForwardList_bflClearBackForwardLi
     int capacity = bfl->capacity();
     bfl->setCapacity(0);
     bfl->setCapacity(capacity);
-    bfl->addItem(*current);
+    bfl->addItem({}, *current);
     bfl->goToItem(*current);
 }
 
@@ -244,9 +245,6 @@ JNIEXPORT void JNICALL Java_com_sun_webkit_BackForwardList_bflClearBackForwardLi
 JNIEXPORT jobjectArray JNICALL Java_com_sun_webkit_BackForwardList_bflItemGetChildren(JNIEnv* env, jclass, jlong jitem, jlong jpage)
 {
     HistoryItem* item = getItem(jitem);
-    if (!item->hasChildren()) {
-        return nullptr;
-    }
     jobjectArray children = env->NewObjectArray(item->children().size(), getJEntryClass(), nullptr);
     int i = 0;
     for (const auto& it : item->children()) {
@@ -344,7 +342,7 @@ JNIEXPORT void JNICALL Java_com_sun_webkit_BackForwardList_bflSetHostObject(JNIE
     BackForwardList* bfl = getBfl(jpage);
     bfl->setHostObject(JLObject(host, true));
 
-    notifyHistoryItemChanged = notifyHistoryItemChangedImpl;
+    //notifyHistoryItemChanged = historyItemChangedImpl;//Check 4ef4b65d33f45734ad3c6cbc7f2fe0dda17051bc for more details
 }
 
 }
@@ -362,7 +360,7 @@ BackForwardList::~BackForwardList()
     ASSERT(m_closed);
 }
 
-void BackForwardList::addItem(Ref<HistoryItem>&& newItem)
+void BackForwardList::addItem(WebCore::FrameIdentifier frameIdentifier, Ref<HistoryItem>&& newItem)
 {
     if (!m_capacity || !m_enabled)
         return;

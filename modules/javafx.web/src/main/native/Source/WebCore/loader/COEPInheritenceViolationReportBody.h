@@ -28,11 +28,12 @@
 #include "CrossOriginEmbedderPolicy.h"
 #include "ReportBody.h"
 #include "ViolationReportType.h"
+#include <wtf/ArgumentCoder.h>
 
 namespace WebCore {
 
 class COEPInheritenceViolationReportBody : public ReportBody {
-    WTF_MAKE_ISO_ALLOCATED(COEPInheritenceViolationReportBody);
+    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(COEPInheritenceViolationReportBody);
 public:
     WEBCORE_EXPORT static Ref<COEPInheritenceViolationReportBody> create(COEPDisposition, const URL& blockedURL, const String& type);
 
@@ -40,43 +41,16 @@ public:
     const String& type() const final { return m_type; }
     const String& blockedURL() const { return m_blockedURL.string(); }
 
-    template<typename Encoder> void encode(Encoder&) const;
-    template<typename Decoder> static std::optional<RefPtr<COEPInheritenceViolationReportBody>> decode(Decoder&);
-
 private:
+    friend struct IPC::ArgumentCoder<COEPInheritenceViolationReportBody, void>;
     COEPInheritenceViolationReportBody(COEPDisposition, const URL& blockedURL, const String& type);
+
+    ViolationReportType reportBodyType() const final { return ViolationReportType::COEPInheritenceViolation; }
 
     COEPDisposition m_disposition;
     URL m_blockedURL;
     String m_type;
 };
-
-template<typename Encoder>
-void COEPInheritenceViolationReportBody::encode(Encoder& encoder) const
-{
-    encoder << m_disposition << m_blockedURL << m_type;
-}
-
-template<typename Decoder>
-std::optional<RefPtr<COEPInheritenceViolationReportBody>> COEPInheritenceViolationReportBody::decode(Decoder& decoder)
-{
-    std::optional<COEPDisposition> disposition;
-    decoder >> disposition;
-    if (!disposition)
-        return std::nullopt;
-
-    std::optional<URL> blockedURL;
-    decoder >> blockedURL;
-    if (!blockedURL)
-        return std::nullopt;
-
-    std::optional<String> type;
-    decoder >> type;
-    if (!type)
-        return std::nullopt;
-
-    return COEPInheritenceViolationReportBody::create(*disposition, WTFMove(*blockedURL), WTFMove(*type));
-}
 
 } // namespace WebCore
 

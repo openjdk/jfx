@@ -30,8 +30,8 @@
 #include "TextManipulationControllerExclusionRule.h"
 #include "TextManipulationControllerManipulationFailure.h"
 #include "TextManipulationItem.h"
+#include <wtf/CheckedRef.h>
 #include <wtf/CompletionHandler.h>
-#include <wtf/EnumTraits.h>
 #include <wtf/ObjectIdentifier.h>
 #include <wtf/WeakHashSet.h>
 #include <wtf/WeakPtr.h>
@@ -42,8 +42,9 @@ class Document;
 class Element;
 class VisiblePosition;
 
-class TextManipulationController : public CanMakeWeakPtr<TextManipulationController> {
+class TextManipulationController final : public CanMakeWeakPtr<TextManipulationController>, public CanMakeCheckedPtr<TextManipulationController> {
     WTF_MAKE_FAST_ALLOCATED;
+    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(TextManipulationController);
 public:
     TextManipulationController(Document&);
 
@@ -101,8 +102,6 @@ private:
     std::optional<ManipulationFailure::Type> replace(const ManipulationItemData&, const Vector<TextManipulationToken>&, HashSet<Ref<Node>>& containersWithoutVisualOverflowBeforeReplacement);
 
     WeakPtr<Document, WeakPtrImplWithEventTargetData> m_document;
-    WeakHashSet<Element, WeakPtrImplWithEventTargetData> m_elementsWithNewRenderer;
-    WeakHashSet<Node, WeakPtrImplWithEventTargetData> m_textNodesWithNewRenderer;
     WeakHashSet<Node, WeakPtrImplWithEventTargetData> m_manipulatedNodes;
     WeakHashSet<Node, WeakPtrImplWithEventTargetData> m_manipulatedNodesWithNewContent;
     WeakHashSet<Node, WeakPtrImplWithEventTargetData> m_addedOrNewlyRenderedNodes;

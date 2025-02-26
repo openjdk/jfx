@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2021 Apple Inc. All rights reserved.
+ * Copyright (C) 2021-2023 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -31,9 +31,29 @@
 #include "config.h"
 #include "ScriptBuffer.h"
 
+#include <wtf/StdLibExtras.h>
 #include <wtf/text/StringBuilder.h>
 
 namespace WebCore {
+
+#if ENABLE(SHAREABLE_RESOURCE) && PLATFORM(COCOA)
+static std::optional<ShareableResource::Handle> tryConvertToShareableResourceHandle(const ScriptBuffer& script)
+{
+    if (!script.containsSingleFileMappedSegment())
+        return std::nullopt;
+
+    auto& segment = script.buffer()->begin()->segment;
+    auto sharedMemory = SharedMemory::wrapMap(segment->span(), SharedMemory::Protection::ReadOnly);
+    if (!sharedMemory)
+        return std::nullopt;
+
+    auto shareableResource = ShareableResource::create(sharedMemory.releaseNonNull(), 0, segment->size());
+    if (!shareableResource)
+        return std::nullopt;
+
+    return shareableResource->createHandle();
+}
+#endif
 
 ScriptBuffer::ScriptBuffer(const String& string)
 {
@@ -51,8 +71,8 @@ String ScriptBuffer::toString() const
         return String();
 
     StringBuilder builder;
-    m_buffer.get()->forEachSegment([&](auto& segment) {
-        builder.append(String::fromUTF8(segment.data(), segment.size()));
+    m_buffer.get()->forEachSegment([&](auto segment) {
+        builder.append(byteCast<char8_t>(segment));
     });
     return builder.toString();
 }
@@ -64,8 +84,10 @@ bool ScriptBuffer::containsSingleFileMappedSegment() const
 
 void ScriptBuffer::append(const String& string)
 {
-    auto result = string.tryGetUTF8([&](Span<const char> span) -> bool {
-        m_buffer.append(span.data(), span.size());
+    if (string.isEmpty())
+        return;
+    auto result = string.tryGetUTF8([&](std::span<const char8_t> span) -> bool {
+        m_buffer.append(span);
         return true;
     });
     RELEASE_ASSERT(result);
@@ -76,6 +98,30 @@ void ScriptBuffer::append(const FragmentedSharedBuffer& buffer)
     m_buffer.append(buffer);
 }
 
+std::optional<ScriptBuffer> ScriptBuffer::fromIPCData(IPCData&& ipcData)
+{
+#if ENABLE(SHAREABLE_RESOURCE) && PLATFORM(COCOA)
+    return WTF::switchOn(WTFMove(ipcData), [](ShareableResourceHandle&& handle) -> std::optional<ScriptBuffer> {
+        if (RefPtr buffer = WTFMove(handle).tryWrapInSharedBuffer())
+            return ScriptBuffer { WTFMove(buffer) };
+        return std::nullopt;
+    }, [](RefPtr<FragmentedSharedBuffer>&& buffer) -> std::optional<ScriptBuffer> {
+        return ScriptBuffer { WTFMove(buffer) };
+    });
+#else
+    return ScriptBuffer { WTFMove(ipcData) };
+#endif
+}
+
+auto ScriptBuffer::ipcData() const -> IPCData
+{
+#if ENABLE(SHAREABLE_RESOURCE) && PLATFORM(COCOA)
+    if (auto handle = tryConvertToShareableResourceHandle(*this))
+        return { WTFMove(*handle) };
+#endif
+    return m_buffer.get();
+}
+
 bool operator==(const ScriptBuffer& a, const ScriptBuffer& b)
 {
     if (a.buffer() == b.buffer())
@@ -83,11 +129,6 @@ bool operator==(const ScriptBuffer& a, const ScriptBuffer& b)
     if (!a.buffer() || !b.buffer())
         return false;
     return *a.buffer() == *b.buffer();
-}
-
-bool operator!=(const ScriptBuffer& a, const ScriptBuffer& b)
-{
-    return !(a == b);
 }
 
 } // namespace WebCore

@@ -26,7 +26,7 @@
 
 #pragma once
 
-#if ENABLE(WEBGL) && USE(TEXTURE_MAPPER) && USE(GBM)
+#if USE(ANGLE_GBM)
 
 #include "GraphicsContextGLGBM.h"
 #include <memory>
@@ -53,8 +53,10 @@ private:
 
     std::unique_ptr<Nicosia::GCGLANGLELayer> m_nicosiaLayer;
     RefPtr<GraphicsLayerContentsDisplayDelegate> m_layerContentsDisplayDelegate;
+    void notifyVideoPosition(const FloatRect&, const TransformationMatrix&) override;
+    void paintTransparentRectangle(TextureMapper&, const FloatRect&, const TransformationMatrix&) override;
 };
 
 } // namespace WebCore
 
-#endif // ENABLE(WEBGL) && USE(TEXTURE_MAPPER) && USE(GBM)
+#endif // USE(ANGLE_GBM)

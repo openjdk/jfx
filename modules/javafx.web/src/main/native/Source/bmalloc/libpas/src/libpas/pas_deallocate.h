@@ -72,6 +72,9 @@ PAS_API bool pas_try_deallocate_known_large(void* ptr,
 PAS_API void pas_deallocate_known_large(void* ptr,
                                         const pas_heap_config* config);
 
+PAS_API bool pas_try_deallocate_pgm_large(void* ptr,
+                                        const pas_heap_config* config);
+
 static PAS_ALWAYS_INLINE bool pas_try_deallocate_not_small_exclusive_segregated(
     pas_thread_local_cache* thread_local_cache,
     uintptr_t begin,
@@ -190,6 +193,11 @@ static PAS_ALWAYS_INLINE bool pas_try_deallocate(void* ptr,
     static const bool verbose = false;
 
     pas_thread_local_cache* thread_local_cache;
+    uintptr_t begin;
+
+    begin = (uintptr_t)ptr;
+    PAS_PROFILE(TRY_DEALLOCATE, begin);
+    ptr = (void*)begin;
 
     if (verbose)
         pas_log("try_deallocate for %p\n", ptr);

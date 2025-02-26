@@ -31,10 +31,12 @@
 #include "BasicShapes.h"
 
 #include "AnimationUtilities.h"
-#include "BasicShapeFunctions.h"
+#include "BasicShapeConversion.h"
+#include "BasicShapesShape.h"
 #include "CalculationValue.h"
 #include "FloatRect.h"
 #include "FloatRoundedRect.h"
+#include "GeometryUtilities.h"
 #include "LengthFunctions.h"
 #include "Path.h"
 #include "RenderBox.h"
@@ -63,11 +65,7 @@ void BasicShapeCenterCoordinate::updateComputedLength()
 }
 
 struct SVGPathTransformedByteStream {
-    bool operator==(const SVGPathTransformedByteStream& other) const
-    {
-        return other.offset == offset && other.zoom == zoom && other.rawStream == rawStream;
-    }
-    bool operator!=(const SVGPathTransformedByteStream& other) const { return !(*this == other); }
+    friend bool operator==(const SVGPathTransformedByteStream&, const SVGPathTransformedByteStream&) = default;
     bool isEmpty() const { return rawStream.isEmpty(); }
 
     Path path() const
@@ -91,7 +89,7 @@ public:
     static Path createValueForKey(const FloatRect& rect)
     {
         Path path;
-        path.addEllipse(rect);
+        path.addEllipseInRect(rect);
         return path;
     }
 };
@@ -103,7 +101,7 @@ public:
     static Path createValueForKey(const FloatRoundedRect& rect)
     {
         Path path;
-        path.addRoundedRect(rect);
+        path.addRoundedRect(rect, PathRoundedRect::Strategy::PreferBezier);
         return path;
     }
 };
@@ -112,7 +110,7 @@ struct PolygonPathPolicy : TinyLRUCachePolicy<Vector<FloatPoint>, Path> {
 public:
     static bool isKeyNull(const Vector<FloatPoint>& points) { return !points.size(); }
 
-    static Path createValueForKey(const Vector<FloatPoint>& points) { return Path::polygonPathFromPoints(points); }
+    static Path createValueForKey(const Vector<FloatPoint>& points) { return Path(points); }
 };
 
 struct TransformedByteStreamPathPolicy : TinyLRUCachePolicy<SVGPathTransformedByteStream, Path> {
@@ -145,6 +143,8 @@ static const Path& cachedTransformedByteStreamPath(const SVGPathByteStream& stre
     return cache.get().get(SVGPathTransformedByteStream { stream, zoom, offset });
 }
 
+// MARK: -
+
 Ref<BasicShapeCircle> BasicShapeCircle::create(BasicShapeCenterCoordinate&& centerX, BasicShapeCenterCoordinate&& centerY, BasicShapeRadius&& radius)
 {
     return adoptRef(*new BasicShapeCircle(WTFMove(centerX), WTFMove(centerY), WTFMove(radius)));
@@ -157,41 +157,56 @@ BasicShapeCircle::BasicShapeCircle(BasicShapeCenterCoordinate&& centerX, BasicSh
 {
 }
 
+Ref<BasicShape> BasicShapeCircle::clone() const
+{
+    auto centerX = m_centerX;
+    auto centerY = m_centerY;
+    auto radius = m_radius;
+    return adoptRef(*new BasicShapeCircle(WTFMove(centerX), WTFMove(centerY), WTFMove(radius)));
+}
+
 bool BasicShapeCircle::operator==(const BasicShape& other) const
 {
     if (type() != other.type())
         return false;
 
-    auto& otherCircle = downcast<BasicShapeCircle>(other);
+    auto& otherCircle = uncheckedDowncast<BasicShapeCircle>(other);
     return m_centerX == otherCircle.m_centerX
         && m_centerY == otherCircle.m_centerY
-        && m_radius == otherCircle.m_radius;
+        && m_radius == otherCircle.m_radius
+        && positionWasOmitted() == otherCircle.positionWasOmitted();
 }
 
-float BasicShapeCircle::floatValueForRadiusInBox(float boxWidth, float boxHeight) const
+float BasicShapeCircle::floatValueForRadiusInBox(FloatSize boxSize, FloatPoint center) const
 {
-    if (m_radius.type() == BasicShapeRadius::Type::Value)
-        return floatValueForLength(m_radius.value(), std::hypot(boxWidth, boxHeight) / sqrtOfTwoFloat);
+    switch (m_radius.type()) {
+    case BasicShapeRadius::Type::Value:
+        return floatValueForLength(m_radius.value(), boxSize.diagonalLength() / sqrtOfTwoFloat);
 
-    float centerX = floatValueForCenterCoordinate(m_centerX, boxWidth);
-    float centerY = floatValueForCenterCoordinate(m_centerY, boxHeight);
+    case BasicShapeRadius::Type::ClosestSide:
+        return distanceToClosestSide(center, boxSize);
 
-    float widthDelta = std::abs(boxWidth - centerX);
-    float heightDelta = std::abs(boxHeight - centerY);
-    if (m_radius.type() == BasicShapeRadius::Type::ClosestSide)
-        return std::min(std::min(std::abs(centerX), widthDelta), std::min(std::abs(centerY), heightDelta));
+    case BasicShapeRadius::Type::FarthestSide:
+        return distanceToFarthestSide(center, boxSize);
 
-    // If radius.type() == BasicShapeRadius::Type::FarthestSide.
-    return std::max(std::max(std::abs(centerX), widthDelta), std::max(std::abs(centerY), heightDelta));
+    case BasicShapeRadius::Type::ClosestCorner:
+        return distanceToClosestCorner(center, boxSize);
+
+    case BasicShapeRadius::Type::FarthestCorner:
+        return distanceToFarthestCorner(center, boxSize);
+    }
+    return 0;
 }
 
-const Path& BasicShapeCircle::path(const FloatRect& boundingBox)
+Path BasicShapeCircle::pathForCenterCoordinate(const FloatRect& boundingBox, FloatPoint center) const
 {
-    float centerX = floatValueForCenterCoordinate(m_centerX, boundingBox.width());
-    float centerY = floatValueForCenterCoordinate(m_centerY, boundingBox.height());
-    float radius = floatValueForRadiusInBox(boundingBox.width(), boundingBox.height());
+    float radius = floatValueForRadiusInBox(boundingBox.size(), center);
+    return cachedEllipsePath(FloatRect(center.x() - radius + boundingBox.x(), center.y() - radius + boundingBox.y(), radius * 2, radius * 2));
+}
 
-    return cachedEllipsePath(FloatRect(centerX - radius + boundingBox.x(), centerY - radius + boundingBox.y(), radius * 2, radius * 2));
+Path BasicShapeCircle::path(const FloatRect& boundingBox) const
+{
+    return pathForCenterCoordinate(boundingBox, { floatValueForCenterCoordinate(m_centerX, boundingBox.width()), floatValueForCenterCoordinate(m_centerY, boundingBox.height()) });
 }
 
 bool BasicShapeCircle::canBlend(const BasicShape& other) const
@@ -199,7 +214,7 @@ bool BasicShapeCircle::canBlend(const BasicShape& other) const
     if (type() != other.type())
         return false;
 
-    return radius().canBlend(downcast<BasicShapeCircle>(other).radius());
+    return radius().canBlend(uncheckedDowncast<BasicShapeCircle>(other).radius());
 }
 
 Ref<BasicShape> BasicShapeCircle::blend(const BasicShape& other, const BlendingContext& context) const
@@ -211,6 +226,7 @@ Ref<BasicShape> BasicShapeCircle::blend(const BasicShape& other, const BlendingC
     result->setCenterX(m_centerX.blend(otherCircle.centerX(), context));
     result->setCenterY(m_centerY.blend(otherCircle.centerY(), context));
     result->setRadius(m_radius.blend(otherCircle.radius(), context));
+    result->setPositionWasOmitted(positionWasOmitted() && otherCircle.positionWasOmitted());
     return result;
 }
 
@@ -220,6 +236,8 @@ void BasicShapeCircle::dump(TextStream& ts) const
     ts.dumpProperty("center-y", centerY());
     ts.dumpProperty("radius", radius());
 }
+
+// MARK: -
 
 Ref<BasicShapeEllipse> BasicShapeEllipse::create(BasicShapeCenterCoordinate&& centerX, BasicShapeCenterCoordinate&& centerY, BasicShapeRadius&& radiusX, BasicShapeRadius&& radiusY)
 {
@@ -234,39 +252,62 @@ BasicShapeEllipse::BasicShapeEllipse(BasicShapeCenterCoordinate&& centerX, Basic
 {
 }
 
+Ref<BasicShape> BasicShapeEllipse::clone() const
+{
+    auto centerX = m_centerX;
+    auto centerY = m_centerY;
+    auto radiusX = m_radiusX;
+    auto radiusY = m_radiusY;
+    return adoptRef(*new BasicShapeEllipse(WTFMove(centerX), WTFMove(centerY), WTFMove(radiusX), WTFMove(radiusY)));
+}
+
 bool BasicShapeEllipse::operator==(const BasicShape& other) const
 {
     if (type() != other.type())
         return false;
 
-    auto& otherEllipse = downcast<BasicShapeEllipse>(other);
+    auto& otherEllipse = uncheckedDowncast<BasicShapeEllipse>(other);
     return m_centerX == otherEllipse.m_centerX
         && m_centerY == otherEllipse.m_centerY
         && m_radiusX == otherEllipse.m_radiusX
-        && m_radiusY == otherEllipse.m_radiusY;
+        && m_radiusY == otherEllipse.m_radiusY
+        && positionWasOmitted() == otherEllipse.positionWasOmitted();
 }
 
-float BasicShapeEllipse::floatValueForRadiusInBox(const BasicShapeRadius& radius, float center, float boxWidthOrHeight) const
+FloatSize BasicShapeEllipse::floatSizeForRadiusInBox(FloatSize boxSize, FloatPoint center) const
 {
-    if (radius.type() == BasicShapeRadius::Type::Value)
-        return floatValueForLength(radius.value(), std::abs(boxWidthOrHeight));
+    auto sizeForAxis = [&](const BasicShapeRadius& radius, float centerValue, float dimensionSize) {
+        switch (radius.type()) {
+        case BasicShapeRadius::Type::Value:
+            return floatValueForLength(radius.value(), std::abs(dimensionSize));
 
-    float widthOrHeightDelta = std::abs(boxWidthOrHeight - center);
-    if (radius.type() == BasicShapeRadius::Type::ClosestSide)
-        return std::min(std::abs(center), widthOrHeightDelta);
+        case BasicShapeRadius::Type::ClosestSide:
+            return std::min(std::abs(centerValue), std::abs(dimensionSize - centerValue));
 
-    ASSERT(radius.type() == BasicShapeRadius::Type::FarthestSide);
-    return std::max(std::abs(center), widthOrHeightDelta);
+        case BasicShapeRadius::Type::FarthestSide:
+            return std::max(std::abs(centerValue), std::abs(dimensionSize - centerValue));
+
+        case BasicShapeRadius::Type::ClosestCorner:
+            return distanceToClosestCorner(center, boxSize);
+
+        case BasicShapeRadius::Type::FarthestCorner:
+            return distanceToFarthestCorner(center, boxSize);
+        }
+        return 0.0f;
+    };
+
+    return { sizeForAxis(m_radiusX, center.x(), boxSize.width()), sizeForAxis(m_radiusY, center.y(), boxSize.height()) };
 }
 
-const Path& BasicShapeEllipse::path(const FloatRect& boundingBox)
+Path BasicShapeEllipse::pathForCenterCoordinate(const FloatRect& boundingBox, FloatPoint center) const
 {
-    float centerX = floatValueForCenterCoordinate(m_centerX, boundingBox.width());
-    float centerY = floatValueForCenterCoordinate(m_centerY, boundingBox.height());
-    float radiusX = floatValueForRadiusInBox(m_radiusX, centerX, boundingBox.width());
-    float radiusY = floatValueForRadiusInBox(m_radiusY, centerY, boundingBox.height());
+    auto radius = floatSizeForRadiusInBox(boundingBox.size(), center);
+    return cachedEllipsePath(FloatRect(center.x() - radius.width() + boundingBox.x(), center.y() - radius.height() + boundingBox.y(), radius.width() * 2, radius.height() * 2));
+}
 
-    return cachedEllipsePath(FloatRect(centerX - radiusX + boundingBox.x(), centerY - radiusY + boundingBox.y(), radiusX * 2, radiusY * 2));
+Path BasicShapeEllipse::path(const FloatRect& boundingBox) const
+{
+    return pathForCenterCoordinate(boundingBox, { floatValueForCenterCoordinate(m_centerX, boundingBox.width()), floatValueForCenterCoordinate(m_centerY, boundingBox.height()) });
 }
 
 bool BasicShapeEllipse::canBlend(const BasicShape& other) const
@@ -274,7 +315,7 @@ bool BasicShapeEllipse::canBlend(const BasicShape& other) const
     if (type() != other.type())
         return false;
 
-    auto& otherEllipse = downcast<BasicShapeEllipse>(other);
+    auto& otherEllipse = uncheckedDowncast<BasicShapeEllipse>(other);
     return radiusX().canBlend(otherEllipse.radiusX()) && radiusY().canBlend(otherEllipse.radiusY());
 }
 
@@ -297,6 +338,7 @@ Ref<BasicShape> BasicShapeEllipse::blend(const BasicShape& other, const Blending
     result->setCenterY(m_centerY.blend(otherEllipse.centerY(), context));
     result->setRadiusX(m_radiusX.blend(otherEllipse.radiusX(), context));
     result->setRadiusY(m_radiusY.blend(otherEllipse.radiusY(), context));
+    result->setPositionWasOmitted(positionWasOmitted() && otherEllipse.positionWasOmitted());
     return result;
 }
 
@@ -307,6 +349,224 @@ void BasicShapeEllipse::dump(TextStream& ts) const
     ts.dumpProperty("radius-x", radiusX());
     ts.dumpProperty("radius-y", radiusY());
 }
+
+// MARK: -
+
+Ref<BasicShapeRect> BasicShapeRect::create(Length&& top, Length&& right, Length&& bottom, Length&& left, LengthSize&& topLeftRadius, LengthSize&& topRightRadius, LengthSize&& bottomRightRadius, LengthSize&& bottomLeftRadius)
+{
+    return adoptRef(*new BasicShapeRect(WTFMove(top), WTFMove(right), WTFMove(bottom), WTFMove(left), WTFMove(topLeftRadius), WTFMove(topRightRadius), WTFMove(bottomRightRadius), WTFMove(bottomLeftRadius)));
+}
+
+BasicShapeRect::BasicShapeRect(Length&& top, Length&& right, Length&& bottom, Length&& left, LengthSize&& topLeftRadius, LengthSize&& topRightRadius, LengthSize&& bottomRightRadius, LengthSize&& bottomLeftRadius)
+    : m_edges(RectEdges<Length> { WTFMove(top), WTFMove(right), WTFMove(bottom), WTFMove(left) })
+    , m_topLeftRadius(WTFMove(topLeftRadius))
+    , m_topRightRadius(WTFMove(topRightRadius))
+    , m_bottomRightRadius(WTFMove(bottomRightRadius))
+    , m_bottomLeftRadius(WTFMove(bottomLeftRadius))
+{
+}
+
+BasicShapeRect::BasicShapeRect(RectEdges<Length>&& edges, LengthSize&& topLeftRadius, LengthSize&& topRightRadius, LengthSize&& bottomRightRadius, LengthSize&& bottomLeftRadius)
+    : m_edges(WTFMove(edges))
+    , m_topLeftRadius(WTFMove(topLeftRadius))
+    , m_topRightRadius(WTFMove(topRightRadius))
+    , m_bottomRightRadius(WTFMove(bottomRightRadius))
+    , m_bottomLeftRadius(WTFMove(bottomLeftRadius))
+{
+}
+
+Ref<BasicShape> BasicShapeRect::clone() const
+{
+    auto edges = m_edges;
+
+    auto topLeftRadius = m_topLeftRadius;
+    auto topRightRadius = m_topRightRadius;
+    auto bottomRightRadius = m_bottomRightRadius;
+    auto bottomLeftRadius = m_bottomLeftRadius;
+
+    return adoptRef(*new BasicShapeRect(WTFMove(edges), WTFMove(topLeftRadius), WTFMove(topRightRadius), WTFMove(bottomRightRadius), WTFMove(bottomLeftRadius)));
+}
+
+bool BasicShapeRect::operator==(const BasicShape& other) const
+{
+    if (type() != other.type())
+        return false;
+
+    auto& otherRect = uncheckedDowncast<BasicShapeRect>(other);
+    return m_edges == otherRect.m_edges
+        && m_topLeftRadius == otherRect.m_topLeftRadius
+        && m_topRightRadius == otherRect.m_topRightRadius
+        && m_bottomRightRadius == otherRect.m_bottomRightRadius
+        && m_bottomLeftRadius == otherRect.m_bottomLeftRadius;
+}
+
+Path BasicShapeRect::path(const FloatRect& boundingBox) const
+{
+    auto top = m_edges.top().isAuto() ? 0 : floatValueForLength(m_edges.top(), boundingBox.height());
+    auto right = m_edges.right().isAuto() ? boundingBox.width() : floatValueForLength(m_edges.right(), boundingBox.width());
+    auto bottom = m_edges.bottom().isAuto() ? boundingBox.height() : floatValueForLength(m_edges.bottom(), boundingBox.height());
+    auto left = m_edges.left().isAuto() ? 0 : floatValueForLength(m_edges.left(), boundingBox.width());
+
+    right = std::max(right, left);
+    bottom = std::max(top, bottom);
+
+    auto rect = FloatRect(left + boundingBox.x(), top + boundingBox.y(), right - left, bottom - top);
+    auto radii = FloatRoundedRect::Radii(floatSizeForLengthSize(m_topLeftRadius, boundingBox.size()),
+        floatSizeForLengthSize(m_topRightRadius, boundingBox.size()),
+        floatSizeForLengthSize(m_bottomLeftRadius, boundingBox.size()),
+        floatSizeForLengthSize(m_bottomRightRadius, boundingBox.size()));
+
+    radii.scale(calcBorderRadiiConstraintScaleFor(rect, radii));
+
+    return cachedRoundedRectPath(FloatRoundedRect(rect, radii));
+}
+
+bool BasicShapeRect::canBlend(const BasicShape& other) const
+{
+    // FIXME: Allow interpolation with inset() shape.
+    return type() == other.type();
+}
+
+Ref<BasicShape> BasicShapeRect::blend(const BasicShape& other, const BlendingContext& context) const
+{
+    ASSERT(type() == other.type());
+    auto& otherRect = downcast<BasicShapeRect>(other);
+    auto result = BasicShapeRect::create();
+
+    result->setTop(WebCore::blend(otherRect.top(), top(), context));
+    result->setRight(WebCore::blend(otherRect.right(), right(), context));
+    result->setBottom(WebCore::blend(otherRect.bottom(), bottom(), context));
+    result->setLeft(WebCore::blend(otherRect.left(), left(), context));
+
+    result->setTopLeftRadius(WebCore::blend(otherRect.topLeftRadius(), topLeftRadius(), context, ValueRange::NonNegative));
+    result->setTopRightRadius(WebCore::blend(otherRect.topRightRadius(), topRightRadius(), context, ValueRange::NonNegative));
+    result->setBottomRightRadius(WebCore::blend(otherRect.bottomRightRadius(), bottomRightRadius(), context, ValueRange::NonNegative));
+    result->setBottomLeftRadius(WebCore::blend(otherRect.bottomLeftRadius(), bottomLeftRadius(), context, ValueRange::NonNegative));
+
+    return result;
+}
+
+void BasicShapeRect::dump(TextStream& ts) const
+{
+    ts.dumpProperty("top", top());
+    ts.dumpProperty("right", right());
+    ts.dumpProperty("bottom", bottom());
+    ts.dumpProperty("left", left());
+
+    ts.dumpProperty("top-left-radius", topLeftRadius());
+    ts.dumpProperty("top-right-radius", topRightRadius());
+    ts.dumpProperty("bottom-right-radius", bottomRightRadius());
+    ts.dumpProperty("bottom-left-radius", bottomLeftRadius());
+}
+
+// MARK: -
+
+Ref<BasicShapeXywh> BasicShapeXywh::create(Length&& insetX, Length&& insetY, Length&& width, Length&& height, LengthSize&& topLeftRadius, LengthSize&& topRightRadius, LengthSize&& bottomRightRadius, LengthSize&& bottomLeftRadius)
+{
+    return adoptRef(*new BasicShapeXywh(WTFMove(insetX), WTFMove(insetY), WTFMove(width), WTFMove(height), WTFMove(topLeftRadius), WTFMove(topRightRadius), WTFMove(bottomRightRadius), WTFMove(bottomLeftRadius)));
+}
+
+BasicShapeXywh::BasicShapeXywh(Length&& insetX, Length&& insetY, Length&& width, Length&& height, LengthSize&& topLeftRadius, LengthSize&& topRightRadius, LengthSize&& bottomRightRadius, LengthSize&& bottomLeftRadius)
+    : m_insetX(WTFMove(insetX))
+    , m_insetY(WTFMove(insetY))
+    , m_width(WTFMove(width))
+    , m_height(WTFMove(height))
+    , m_topLeftRadius(WTFMove(topLeftRadius))
+    , m_topRightRadius(WTFMove(topRightRadius))
+    , m_bottomRightRadius(WTFMove(bottomRightRadius))
+    , m_bottomLeftRadius(WTFMove(bottomLeftRadius))
+{
+}
+
+Ref<BasicShape> BasicShapeXywh::clone() const
+{
+    auto insetX = m_insetX;
+    auto insetY = m_insetY;
+    auto width = m_width;
+    auto height = m_height;
+
+    auto topLeftRadius = m_topLeftRadius;
+    auto topRightRadius = m_topRightRadius;
+    auto bottomRightRadius = m_bottomRightRadius;
+    auto bottomLeftRadius = m_bottomLeftRadius;
+
+    return adoptRef(*new BasicShapeXywh(WTFMove(insetX), WTFMove(insetY), WTFMove(width), WTFMove(height), WTFMove(topLeftRadius), WTFMove(topRightRadius), WTFMove(bottomRightRadius), WTFMove(bottomLeftRadius)));
+}
+
+bool BasicShapeXywh::operator==(const BasicShape& other) const
+{
+    if (type() != other.type())
+        return false;
+
+    auto& otherXywh = uncheckedDowncast<BasicShapeXywh>(other);
+    return m_insetX == otherXywh.m_insetX
+        && m_insetY == otherXywh.m_insetY
+        && m_width == otherXywh.m_width
+        && m_height == otherXywh.m_height
+        && m_topLeftRadius == otherXywh.m_topLeftRadius
+        && m_topRightRadius == otherXywh.m_topRightRadius
+        && m_bottomRightRadius == otherXywh.m_bottomRightRadius
+        && m_bottomLeftRadius == otherXywh.m_bottomLeftRadius;
+}
+
+Path BasicShapeXywh::path(const FloatRect& boundingBox) const
+{
+    auto insetX = floatValueForLength(m_insetX, boundingBox.width());
+    auto insetY = floatValueForLength(m_insetY, boundingBox.height());
+    auto width = floatValueForLength(m_width, boundingBox.width());
+    auto height = floatValueForLength(m_height, boundingBox.height());
+
+    auto rect = FloatRect(boundingBox.x() + insetX, boundingBox.y() + insetY, width, height);
+    auto radii = FloatRoundedRect::Radii(floatSizeForLengthSize(m_topLeftRadius, boundingBox.size()),
+        floatSizeForLengthSize(m_topRightRadius, boundingBox.size()),
+        floatSizeForLengthSize(m_bottomLeftRadius, boundingBox.size()),
+        floatSizeForLengthSize(m_bottomRightRadius, boundingBox.size()));
+
+    radii.scale(calcBorderRadiiConstraintScaleFor(rect, radii));
+
+    return cachedRoundedRectPath(FloatRoundedRect(rect, radii));
+}
+
+bool BasicShapeXywh::canBlend(const BasicShape& other) const
+{
+    // FIXME: Allow interpolation with inset() shape.
+    return type() == other.type();
+}
+
+Ref<BasicShape> BasicShapeXywh::blend(const BasicShape& other, const BlendingContext& context) const
+{
+    ASSERT(type() == other.type());
+    auto& otherXywh = downcast<BasicShapeXywh>(other);
+    auto result = BasicShapeXywh::create();
+
+    result->setInsetX(WebCore::blend(otherXywh.insetX(), m_insetX, context));
+    result->setInsetY(WebCore::blend(otherXywh.insetY(), m_insetY, context));
+    result->setWidth(WebCore::blend(otherXywh.width(), m_width, context));
+    result->setHeight(WebCore::blend(otherXywh.height(), m_height, context));
+
+    result->setTopLeftRadius(WebCore::blend(otherXywh.topLeftRadius(), topLeftRadius(), context, ValueRange::NonNegative));
+    result->setTopRightRadius(WebCore::blend(otherXywh.topRightRadius(), topRightRadius(), context, ValueRange::NonNegative));
+    result->setBottomRightRadius(WebCore::blend(otherXywh.bottomRightRadius(), bottomRightRadius(), context, ValueRange::NonNegative));
+    result->setBottomLeftRadius(WebCore::blend(otherXywh.bottomLeftRadius(), bottomLeftRadius(), context, ValueRange::NonNegative));
+
+    return result;
+}
+
+void BasicShapeXywh::dump(TextStream& ts) const
+{
+    ts.dumpProperty("x", insetX());
+    ts.dumpProperty("y", insetY());
+    ts.dumpProperty("width", width());
+    ts.dumpProperty("height", height());
+
+    ts.dumpProperty("top-left-radius", topLeftRadius());
+    ts.dumpProperty("top-right-radius", topRightRadius());
+    ts.dumpProperty("bottom-right-radius", bottomRightRadius());
+    ts.dumpProperty("bottom-left-radius", bottomLeftRadius());
+
+}
+
+// MARK: -
 
 Ref<BasicShapePolygon> BasicShapePolygon::create(WindRule windRule, Vector<Length>&& values)
 {
@@ -319,17 +579,23 @@ BasicShapePolygon::BasicShapePolygon(WindRule windRule, Vector<Length>&& values)
 {
 }
 
+Ref<BasicShape> BasicShapePolygon::clone() const
+{
+    auto values = m_values;
+    return adoptRef(*new BasicShapePolygon(m_windRule, WTFMove(values)));
+}
+
 bool BasicShapePolygon::operator==(const BasicShape& other) const
 {
     if (type() != other.type())
         return false;
 
-    auto& otherPolygon = downcast<BasicShapePolygon>(other);
+    auto& otherPolygon = uncheckedDowncast<BasicShapePolygon>(other);
     return m_windRule == otherPolygon.m_windRule
         && m_values == otherPolygon.m_values;
 }
 
-const Path& BasicShapePolygon::path(const FloatRect& boundingBox)
+Path BasicShapePolygon::path(const FloatRect& boundingBox) const
 {
     ASSERT(!(m_values.size() % 2));
     size_t length = m_values.size();
@@ -348,16 +614,16 @@ bool BasicShapePolygon::canBlend(const BasicShape& other) const
     if (type() != other.type())
         return false;
 
-    auto& otherPolygon = downcast<BasicShapePolygon>(other);
+    auto& otherPolygon = uncheckedDowncast<BasicShapePolygon>(other);
     return values().size() == otherPolygon.values().size() && windRule() == otherPolygon.windRule();
 }
 
-Ref<BasicShape> BasicShapePolygon::blend(const BasicShape& other, const BlendingContext& context) const
+Ref<BasicShape> BasicShapePolygon::blend(const BasicShape& from, const BlendingContext& context) const
 {
-    ASSERT(type() == other.type());
+    ASSERT(type() == from.type());
 
-    auto& otherPolygon = downcast<BasicShapePolygon>(other);
-    ASSERT(m_values.size() == otherPolygon.values().size());
+    auto& fromPolygon = downcast<BasicShapePolygon>(from);
+    ASSERT(m_values.size() == fromPolygon.values().size());
     ASSERT(!(m_values.size() % 2));
 
     size_t length = m_values.size();
@@ -365,12 +631,12 @@ Ref<BasicShape> BasicShapePolygon::blend(const BasicShape& other, const Blending
     if (!length)
         return result;
 
-    result->setWindRule(otherPolygon.windRule());
+    result->setWindRule(windRule());
 
     for (size_t i = 0; i < length; i = i + 2) {
         result->appendPoint(
-            WebCore::blend(otherPolygon.values().at(i), m_values.at(i), context),
-            WebCore::blend(otherPolygon.values().at(i + 1), m_values.at(i + 1), context));
+            WebCore::blend(fromPolygon.values().at(i), m_values.at(i), context),
+            WebCore::blend(fromPolygon.values().at(i + 1), m_values.at(i + 1), context));
     }
 
     return result;
@@ -381,6 +647,8 @@ void BasicShapePolygon::dump(TextStream& ts) const
     ts.dumpProperty("wind-rule", windRule());
     ts.dumpProperty("path", values());
 }
+
+// MARK: -
 
 Ref<BasicShapePath> BasicShapePath::create(std::unique_ptr<SVGPathByteStream>&& byteStream, float zoom, WindRule windRule)
 {
@@ -399,7 +667,17 @@ BasicShapePath::BasicShapePath(std::unique_ptr<SVGPathByteStream>&& byteStream, 
 {
 }
 
-const Path& BasicShapePath::path(const FloatRect& boundingBox)
+BasicShapePath::~BasicShapePath() = default;
+
+Ref<BasicShape> BasicShapePath::clone() const
+{
+    std::unique_ptr<SVGPathByteStream> byteStream;
+    if (m_byteStream)
+        byteStream = m_byteStream->copy();
+    return adoptRef(*new BasicShapePath(WTFMove(byteStream), m_zoom, m_windRule));
+}
+
+Path BasicShapePath::path(const FloatRect& boundingBox) const
 {
     return cachedTransformedByteStreamPath(*m_byteStream, m_zoom, boundingBox.location());
 }
@@ -409,21 +687,27 @@ bool BasicShapePath::operator==(const BasicShape& other) const
     if (type() != other.type())
         return false;
 
-    auto& otherPath = downcast<BasicShapePath>(other);
+    auto& otherPath = uncheckedDowncast<BasicShapePath>(other);
     return m_zoom == otherPath.m_zoom && m_windRule == otherPath.m_windRule && *m_byteStream == *otherPath.m_byteStream;
 }
 
 bool BasicShapePath::canBlend(const BasicShape& other) const
 {
+    if (other.type() == Type::Shape)
+        return other.canBlend(*this);
+
     if (type() != other.type())
         return false;
 
-    auto& otherPath = downcast<BasicShapePath>(other);
+    auto& otherPath = uncheckedDowncast<BasicShapePath>(other);
     return windRule() == otherPath.windRule() && canBlendSVGPathByteStreams(*m_byteStream, *otherPath.pathData());
 }
 
 Ref<BasicShape> BasicShapePath::blend(const BasicShape& from, const BlendingContext& context) const
 {
+    if (from.type() == Type::Shape)
+        return BasicShapeShape::blendWithPath(from, *this, context);
+
     ASSERT(type() == from.type());
 
     auto& fromPath = downcast<BasicShapePath>(from);
@@ -442,6 +726,8 @@ void BasicShapePath::dump(TextStream& ts) const
     // FIXME: print the byte stream?
 }
 
+// MARK: -
+
 Ref<BasicShapeInset> BasicShapeInset::create(Length&& right, Length&& top, Length&& bottom, Length&& left, LengthSize&& topLeftRadius, LengthSize&& topRightRadius, LengthSize&& bottomRightRadius, LengthSize&& bottomLeftRadius)
 {
     return adoptRef(*new BasicShapeInset(WTFMove(right), WTFMove(top), WTFMove(bottom), WTFMove(left), WTFMove(topLeftRadius), WTFMove(topRightRadius), WTFMove(bottomRightRadius), WTFMove(bottomLeftRadius)));
@@ -459,12 +745,25 @@ BasicShapeInset::BasicShapeInset(Length&& right, Length&& top, Length&& bottom, 
 {
 }
 
+Ref<BasicShape> BasicShapeInset::clone() const
+{
+    auto right = m_right;
+    auto top = m_top;
+    auto bottom = m_bottom;
+    auto left = m_left;
+    auto topLeftRadius = m_topLeftRadius;
+    auto topRightRadius = m_topRightRadius;
+    auto bottomRightRadius = m_bottomRightRadius;
+    auto bottomLeftRadius = m_bottomLeftRadius;
+    return adoptRef(*new BasicShapeInset(WTFMove(right), WTFMove(top), WTFMove(bottom), WTFMove(left), WTFMove(topLeftRadius), WTFMove(topRightRadius), WTFMove(bottomRightRadius), WTFMove(bottomLeftRadius)));
+}
+
 bool BasicShapeInset::operator==(const BasicShape& other) const
 {
     if (type() != other.type())
         return false;
 
-    auto& otherInset = downcast<BasicShapeInset>(other);
+    auto& otherInset = uncheckedDowncast<BasicShapeInset>(other);
     return m_right == otherInset.m_right
         && m_top == otherInset.m_top
         && m_bottom == otherInset.m_bottom
@@ -475,7 +774,7 @@ bool BasicShapeInset::operator==(const BasicShape& other) const
         && m_bottomLeftRadius == otherInset.m_bottomLeftRadius;
 }
 
-const Path& BasicShapeInset::path(const FloatRect& boundingBox)
+Path BasicShapeInset::path(const FloatRect& boundingBox) const
 {
     float left = floatValueForLength(m_left, boundingBox.width());
     float top = floatValueForLength(m_top, boundingBox.height());
@@ -534,6 +833,19 @@ static TextStream& operator<<(TextStream& ts, BasicShapeRadius::Type radiusType)
     case BasicShapeRadius::Type::Value: ts << "value"; break;
     case BasicShapeRadius::Type::ClosestSide: ts << "closest-side"; break;
     case BasicShapeRadius::Type::FarthestSide: ts << "farthest-side"; break;
+    case BasicShapeRadius::Type::ClosestCorner: ts << "closest-corner"; break;
+    case BasicShapeRadius::Type::FarthestCorner: ts << "farthest-corner"; break;
+    }
+    return ts;
+}
+
+// MARK: -
+
+TextStream& operator<<(TextStream& ts, CoordinateAffinity affinity)
+{
+    switch (affinity) {
+    case CoordinateAffinity::Relative: ts << "relative"_s; break;
+    case CoordinateAffinity::Absolute: ts << "absolute"_s; break;
     }
     return ts;
 }

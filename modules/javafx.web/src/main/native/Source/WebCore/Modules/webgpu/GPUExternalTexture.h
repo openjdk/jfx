@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2021 Apple Inc. All rights reserved.
+ * Copyright (C) 2021-2023 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -25,16 +25,17 @@
 
 #pragma once
 
-#include <pal/graphics/WebGPU/WebGPUExternalTexture.h>
+#include "WebGPUExternalTexture.h"
 #include <wtf/Ref.h>
 #include <wtf/RefCounted.h>
+#include <wtf/WeakPtr.h>
 #include <wtf/text/WTFString.h>
 
 namespace WebCore {
 
-class GPUExternalTexture : public RefCounted<GPUExternalTexture> {
+class GPUExternalTexture : public RefCounted<GPUExternalTexture>, public CanMakeWeakPtr<GPUExternalTexture> {
 public:
-    static Ref<GPUExternalTexture> create(Ref<PAL::WebGPU::ExternalTexture>&& backing)
+    static Ref<GPUExternalTexture> create(Ref<WebGPU::ExternalTexture>&& backing)
     {
         return adoptRef(*new GPUExternalTexture(WTFMove(backing)));
     }
@@ -42,16 +43,18 @@ public:
     String label() const;
     void setLabel(String&&);
 
-    PAL::WebGPU::ExternalTexture& backing() { return m_backing; }
-    const PAL::WebGPU::ExternalTexture& backing() const { return m_backing; }
+    WebGPU::ExternalTexture& backing() { return m_backing; }
+    const WebGPU::ExternalTexture& backing() const { return m_backing; }
+    void destroy();
+    void undestroy();
 
 private:
-    GPUExternalTexture(Ref<PAL::WebGPU::ExternalTexture>&& backing)
+    GPUExternalTexture(Ref<WebGPU::ExternalTexture>&& backing)
         : m_backing(WTFMove(backing))
     {
     }
 
-    Ref<PAL::WebGPU::ExternalTexture> m_backing;
+    Ref<WebGPU::ExternalTexture> m_backing;
 };
 
 }

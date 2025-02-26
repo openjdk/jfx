@@ -31,7 +31,8 @@ namespace WebCore {
 class CachedSVGDocument;
 
 class SVGUseElement final : public SVGGraphicsElement, public SVGURIReference, private CachedSVGDocumentClient {
-    WTF_MAKE_ISO_ALLOCATED(SVGUseElement);
+    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(SVGUseElement);
+    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(SVGUseElement);
 public:
     static Ref<SVGUseElement> create(const QualifiedName&, Document&);
     virtual ~SVGUseElement();
@@ -39,6 +40,7 @@ public:
     void invalidateShadowTree();
     void updateUserAgentShadowTree() final;
 
+    RefPtr<SVGElement> clipChild() const;
     RenderElement* rendererClipChild() const;
 
     const SVGLengthValue& x() const { return m_x->currentValue(); }
@@ -61,18 +63,18 @@ private:
 
     using PropertyRegistry = SVGPropertyOwnerRegistry<SVGUseElement, SVGGraphicsElement, SVGURIReference>;
 
-    void parseAttribute(const QualifiedName&, const AtomString&) override;
+    void attributeChanged(const QualifiedName&, const AtomString& oldValue, const AtomString& newValue, AttributeModificationReason) override;
     void svgAttributeChanged(const QualifiedName&) override;
 
     RenderPtr<RenderElement> createElementRenderer(RenderStyle&&, const RenderTreePosition&) override;
     Path toClipPath() override;
     bool selfHasRelativeLengths() const override;
-    void notifyFinished(CachedResource&, const NetworkLoadMetrics&) final;
+    void notifyFinished(CachedResource&, const NetworkLoadMetrics&, LoadWillContinueInAnotherProcess) final;
 
     Document* externalDocument() const;
     void updateExternalDocument();
 
-    SVGElement* findTarget(AtomString* targetID = nullptr) const;
+    RefPtr<SVGElement> findTarget(AtomString* targetID = nullptr) const;
 
     void cloneTarget(ContainerNode&, SVGElement& target) const;
     RefPtr<SVGElement> targetClone() const;

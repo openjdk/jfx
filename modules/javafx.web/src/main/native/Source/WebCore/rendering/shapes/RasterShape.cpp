@@ -48,11 +48,11 @@ private:
 };
 
 MarginIntervalGenerator::MarginIntervalGenerator(unsigned radius)
-    : m_y(0)
+    : m_xIntercepts(radius + 1)
+    , m_y(0)
     , m_x1(0)
     , m_x2(0)
 {
-    m_xIntercepts.resize(radius + 1);
     unsigned radiusSquared = radius * radius;
     for (unsigned y = 0; y <= radius; y++)
         m_xIntercepts[y] = sqrt(static_cast<double>(radiusSquared - y * y));
@@ -68,7 +68,7 @@ void MarginIntervalGenerator::set(int y, const IntShapeInterval& interval)
 
 IntShapeInterval MarginIntervalGenerator::intervalAt(int y) const
 {
-    unsigned xInterceptsIndex = abs(y - m_y);
+    unsigned xInterceptsIndex = std::abs(y - m_y);
     int dx = (xInterceptsIndex >= m_xIntercepts.size()) ? 0 : m_xIntercepts[xInterceptsIndex];
     return IntShapeInterval(m_x1 - dx, m_x2 + dx);
 }

@@ -85,6 +85,15 @@ public:
     }
 
 private:
+    template <class Fn>
+    void replaceWithBinaryCall(Fn &&function)
+    {
+        Value* functionAddress = m_insertionSet.insert<ConstPtrValue>(m_index, m_origin, tagCFunction<OperationPtrTag>(function));
+        Value* result = m_insertionSet.insert<CCallValue>(m_index, m_value->type(), m_origin, Effects::none(), functionAddress, m_value->child(0), m_value->child(1));
+        m_value->replaceWithIdentity(result);
+        m_changed = true;
+    }
+
     void processCurrentBlock()
     {
         for (m_index = 0; m_index < m_block->size(); ++m_index) {
@@ -148,6 +157,11 @@ private:
                     Value* result = m_insertionSet.insert<Value>(m_index, DoubleToFloat, m_origin, doubleMod);
                     m_value->replaceWithIdentity(result);
                     m_changed = true;
+                } else if constexpr (isARM_THUMB2()) {
+                    if (m_value->type() == Int64)
+                        replaceWithBinaryCall(Math::i64_rem_s);
+                    else
+                        replaceWithBinaryCall(Math::i32_rem_s);
                 } else if (isARM64()) {
                     Value* divResult = m_insertionSet.insert<Value>(m_index, chill(Div), m_origin, m_value->child(0), m_value->child(1));
                     Value* multipliedBack = m_insertionSet.insert<Value>(m_index, Mul, m_origin, divResult, m_value->child(1));
@@ -159,6 +173,13 @@ private:
             }
 
             case UMod: {
+                if constexpr (isARM_THUMB2()) {
+                    if (m_value->child(0)->type() == Int64)
+                        replaceWithBinaryCall(Math::i64_rem_u);
+                    else
+                        replaceWithBinaryCall(Math::i32_rem_u);
+                    break;
+                }
                 if (isARM64()) {
                     Value* divResult = m_insertionSet.insert<Value>(m_index, UDiv, m_origin, m_value->child(0), m_value->child(1));
                     Value* multipliedBack = m_insertionSet.insert<Value>(m_index, Mul, m_origin, divResult, m_value->child(1));
@@ -169,9 +190,18 @@ private:
                 break;
             }
 
+            case UDiv: {
+                if constexpr (!isARM_THUMB2())
+                    break;
+                if (m_value->type() == Int64)
+                    replaceWithBinaryCall(Math::i64_div_u);
+                else
+                    replaceWithBinaryCall(Math::i32_div_u);
+                break;
+            }
             case FMax:
             case FMin: {
-                if (isX86()) {
+                if (isX86() || isARM_THUMB2()) {
                     bool isMax = m_value->opcode() == FMax;
 
                     Value* a = m_value->child(0);
@@ -237,34 +267,13 @@ private:
             case Div: {
                 if (m_value->isChill())
                     makeDivisionChill(Div);
-                break;
-            }
-
-            case CheckMul: {
-                if (isARM64() && m_value->child(0)->type() == Int32) {
-                    CheckValue* checkMul = m_value->as<CheckValue>();
-
-                    Value* left = m_insertionSet.insert<Value>(m_index, SExt32, m_origin, m_value->child(0));
-                    Value* right = m_insertionSet.insert<Value>(m_index, SExt32, m_origin, m_value->child(1));
-                    Value* mulResult = m_insertionSet.insert<Value>(m_index, Mul, m_origin, left, right);
-                    Value* mulResult32 = m_insertionSet.insert<Value>(m_index, Trunc, m_origin, mulResult);
-                    Value* upperResult = m_insertionSet.insert<Value>(m_index, Trunc, m_origin,
-                        m_insertionSet.insert<Value>(m_index, SShr, m_origin, mulResult, m_insertionSet.insert<Const32Value>(m_index, m_origin, 32)));
-                    Value* signBit = m_insertionSet.insert<Value>(m_index, SShr, m_origin,
-                        mulResult32,
-                        m_insertionSet.insert<Const32Value>(m_index, m_origin, 31));
-                    Value* hasOverflowed = m_insertionSet.insert<Value>(m_index, NotEqual, m_origin, upperResult, signBit);
-
-                    CheckValue* check = m_insertionSet.insert<CheckValue>(m_index, Check, m_origin, hasOverflowed);
-                    check->setGenerator(checkMul->generator());
-                    check->clobberEarly(checkMul->earlyClobbered());
-                    check->clobberLate(checkMul->lateClobbered());
-                    auto children = checkMul->constrainedChildren();
-                    auto it = children.begin();
-                    for (std::advance(it, 2); it != children.end(); ++it)
-                        check->append(*it);
-
-                    m_value->replaceWithIdentity(mulResult32);
+                else if (isARM_THUMB2() && (m_value->type() == Int64 || m_value->type() == Int32)) {
+                    BasicBlock* before = m_blockInsertionSet.splitForward(m_block, m_index);
+                    before->replaceLastWithNew<Value>(m_proc, Nop, m_origin);
+                    Value* result = callDivModHelper(before, Div, m_value->child(0), m_value->child(1));
+                    before->appendNew<Value>(m_proc, Jump, m_origin);
+                    before->setSuccessors(FrequentedBlock(m_block));
+                    m_value->replaceWithIdentity(result);
                     m_changed = true;
                 }
                 break;
@@ -528,6 +537,26 @@ private:
                 if (isX86() && m_value->as<SIMDValue>()->simdLane() == SIMDLane::i64x2)
                     invertedComparisonByXor(VectorGreaterThan, m_value->child(0), m_value->child(1));
                 break;
+            case VectorShr:
+            case VectorShl: {
+                if constexpr (!isARM64())
+                    break;
+                SIMDValue* value = m_value->as<SIMDValue>();
+                SIMDLane lane = value->simdLane();
+
+                int32_t mask = (elementByteSize(lane) * CHAR_BIT) - 1;
+                Value* shiftAmount = m_insertionSet.insert<Value>(m_index, BitAnd, m_origin, value->child(1), m_insertionSet.insertIntConstant(m_index, m_origin, Int32, mask));
+                if (value->opcode() == VectorShr) {
+                    // ARM64 doesn't have a version of this instruction for right shift. Instead, if the input to
+                    // left shift is negative, it's a right shift by the absolute value of that amount.
+                    shiftAmount = m_insertionSet.insert<Value>(m_index, Neg, m_origin, shiftAmount);
+                }
+                Value* shiftVector = m_insertionSet.insert<SIMDValue>(m_index, m_origin, VectorSplat, B3::V128, SIMDLane::i8x16, SIMDSignMode::None, shiftAmount);
+                Value* result = m_insertionSet.insert<SIMDValue>(m_index, m_origin, VectorShiftByVector, B3::V128, value->simdInfo(), value->child(0), shiftVector);
+                m_value->replaceWithIdentity(result);
+                m_changed = true;
+                break;
+            }
             default:
                 break;
             }
@@ -547,6 +576,30 @@ private:
         m_changed = true;
     }
 
+#if USE(JSVALUE32_64)
+    Value* callDivModHelper(BasicBlock* block, Opcode nonChillOpcode, Value* num, Value* den)
+    {
+        Type type = num->type();
+        Value* functionAddress;
+        if (nonChillOpcode == Div) {
+            if (m_value->type() == Int64)
+                functionAddress = block->appendNew<ConstPtrValue>(m_proc, m_origin, tagCFunction<OperationPtrTag>(Math::i64_div_s));
+            else
+                functionAddress = block->appendNew<ConstPtrValue>(m_proc, m_origin, tagCFunction<OperationPtrTag>(Math::i32_div_s));
+        } else {
+            if (m_value->type() == Int64)
+                functionAddress = block->appendNew<ConstPtrValue>(m_proc, m_origin, tagCFunction<OperationPtrTag>(Math::i64_rem_s));
+            else
+                functionAddress = block->appendNew<ConstPtrValue>(m_proc, m_origin, tagCFunction<OperationPtrTag>(Math::i32_rem_s));
+        }
+        return block->appendNew<CCallValue>(m_proc, type, m_origin, Effects::none(), functionAddress, num, den);
+    }
+#else
+    Value* callDivModHelper(BasicBlock*, Opcode, Value*, Value*)
+    {
+        RELEASE_ASSERT_NOT_REACHED();
+    }
+#endif
     void makeDivisionChill(Opcode nonChillOpcode)
     {
         ASSERT(nonChillOpcode == Div || nonChillOpcode == Mod);
@@ -593,9 +646,14 @@ private:
             FrequentedBlock(normalDivCase, FrequencyClass::Normal),
             FrequentedBlock(shadyDenCase, FrequencyClass::Rare));
 
+        Value* innerResult;
+        if (isARM_THUMB2() && (m_value->type() == Int64 || m_value->type() == Int32))
+            innerResult = callDivModHelper(normalDivCase, nonChillOpcode, num, den);
+        else
+            innerResult = normalDivCase->appendNew<Value>(m_proc, nonChillOpcode, m_origin, num, den);
         UpsilonValue* normalResult = normalDivCase->appendNew<UpsilonValue>(
             m_proc, m_origin,
-            normalDivCase->appendNew<Value>(m_proc, nonChillOpcode, m_origin, num, den));
+            innerResult);
         normalDivCase->appendNew<Value>(m_proc, Jump, m_origin);
         normalDivCase->setSuccessors(FrequentedBlock(m_block));
 
@@ -835,7 +893,7 @@ private:
 
 bool lowerMacros(Procedure& proc)
 {
-    PhaseScope phaseScope(proc, "B3::lowerMacros");
+    PhaseScope phaseScope(proc, "B3::lowerMacros"_s);
     LowerMacros lowerMacros(proc);
     return lowerMacros.run();
 }

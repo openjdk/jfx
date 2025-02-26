@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2022 Apple Inc. All rights reserved.
+ * Copyright (C) 2022-2023 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -74,31 +74,41 @@ WTF::TextStream& operator<<(TextStream& ts, Kerning kerning)
     return ts;
 }
 
-WTF::TextStream& operator<<(TextStream& ts, FontVariantAlternates alternates)
+WTF::TextStream& operator<<(TextStream& ts, FontOpticalSizing opticalSizing)
+{
+    switch (opticalSizing) {
+    case FontOpticalSizing::Enabled: ts << "auto"; break;
+    case FontOpticalSizing::Disabled: ts << "none"; break;
+    }
+    return ts;
+}
+
+WTF::TextStream& operator<<(TextStream& ts, const FontVariantAlternates& alternates)
 {
     if (alternates.isNormal())
         ts << "normal";
     else {
         auto values = alternates.values();
         StringBuilder builder;
-        auto append = [&builder] <typename ...Ts> (Ts&& ...args) {
+        auto append = [&builder]<typename ...Ts>(Ts&& ...args) {
             // Separate elements with a space.
-            builder.append(builder.isEmpty() ? "": " ", std::forward<Ts>(args)...);
+            builder.append(builder.isEmpty() ? ""_s: " "_s, std::forward<Ts>(args)...);
         };
+        // FIXME: These strings needs to be escaped.
         if (!values.stylistic.isNull())
-            append("stylistic(", values.stylistic, ")");
+            append("stylistic("_s, values.stylistic, ')');
         if (values.historicalForms)
             append("historical-forms"_s);
         if (!values.styleset.isEmpty())
-            append("styleset(", makeStringByJoining(values.styleset, ", "_s), ")");
+            append("styleset("_s, interleave(values.styleset, ", "_s), ')');
         if (!values.characterVariant.isEmpty())
-            append("character-variant(", makeStringByJoining(values.characterVariant, ", "_s), ")");
+            append("character-variant("_s, interleave(values.characterVariant, ", "_s), ')');
         if (!values.swash.isNull())
-            append("swash(", values.swash, ")");
+            append("swash("_s, values.swash, ')');
         if (!values.ornaments.isNull())
-            append("ornaments(", values.ornaments, ")");
+            append("ornaments("_s, values.ornaments, ')');
         if (!values.annotation.isNull())
-            append("annotation(", values.annotation, ")");
+            append("annotation("_s, values.annotation, ')');
 
         ts << builder.toString();
     }
@@ -112,7 +122,7 @@ void add(Hasher& hasher, const FontVariantAlternatesValues& key)
 
 void add(Hasher& hasher, const FontVariantAlternates& key)
 {
-    add(hasher, key.m_val.index());
+    add(hasher, !!key.m_values);
     if (!key.isNormal())
         add(hasher, key.values());
 }
@@ -280,16 +290,15 @@ FeaturesMap computeFeatureSettingsFromVariants(const FontVariantSettings& varian
             features.set(fontFeatureTag("hist"), 1);
 
         if (fontFeatureValues) {
-            auto lookupTags = [](const std::optional<String>& name, const auto& tags) -> Span<const unsigned> {
-                if (!name)
+            auto lookupTags = [] (const auto& name, const auto& tags) -> std::span<const unsigned> {
+                if (name.isNull())
                     return { };
 
-                auto found = tags.find(*name);
+                auto found = tags.find(name);
                 if (found == tags.end())
                     return { };
 
-                return Span { found->value };
-
+                return found->value.span();
             };
 
             auto addFeatureTagWithValue = [&features, &lookupTags] (const auto& name, const auto& tags, const FontTag& codename) {
@@ -309,7 +318,7 @@ FeaturesMap computeFeatureSettingsFromVariants(const FontVariantSettings& varian
             };
 
             // For styleset and character-variant, the tag name itself is the actual conveyor of information.
-            auto addFeatureTags = [&](const Vector<String>& names, const auto& tags, std::array<char, 2> codename) {
+            auto addFeatureTags = [&](const auto& names, const auto& tags, std::array<char, 2> codename) {
                 for (const auto& name : names) {
                     for (unsigned value : lookupTags(name, tags)) {
                         if (value < 1 || value > 99)

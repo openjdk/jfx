@@ -37,8 +37,8 @@
 #include "SharedBufferChunkReader.h"
 #include <wtf/HashMap.h>
 #include <wtf/text/CString.h>
+#include <wtf/text/MakeString.h>
 #include <wtf/text/StringBuilder.h>
-#include <wtf/text/StringConcatenate.h>
 #include <wtf/text/StringHash.h>
 
 namespace WebCore {
@@ -63,7 +63,7 @@ static KeyValueMap retrieveKeyValuePairs(WebCore::SharedBufferChunkReader& buffe
         if (!key.isEmpty()) {
             if (keyValuePairs.find(key) != keyValuePairs.end())
                 LOG_ERROR("Key duplicate found in MIME header. Key is '%s', previous value replaced.", key.ascii().data());
-            keyValuePairs.add(key, value.toString().stripWhiteSpace());
+            keyValuePairs.add(key, value.toString().trim(deprecatedIsSpaceOrNewline));
             key = String();
             value.clear();
         }
@@ -72,12 +72,12 @@ static KeyValueMap retrieveKeyValuePairs(WebCore::SharedBufferChunkReader& buffe
             // This is not a key value pair, ignore.
             continue;
         }
-        key = StringView(line).left(semicolonIndex).stripWhiteSpace().convertToASCIILowercase();
+        key = StringView(line).left(semicolonIndex).trim(isUnicodeCompatibleASCIIWhitespace<UChar>).convertToASCIILowercase();
         value.append(StringView(line).substring(semicolonIndex + 1));
     }
     // Store the last property if there is one.
     if (!key.isEmpty())
-        keyValuePairs.set(key, value.toString().stripWhiteSpace());
+        keyValuePairs.set(key, value.toString().trim(deprecatedIsSpaceOrNewline));
     return keyValuePairs;
 }
 
@@ -90,7 +90,7 @@ RefPtr<MIMEHeader> MIMEHeader::parseHeader(SharedBufferChunkReader& buffer)
         String contentType, charset, multipartType, endOfPartBoundary;
         if (auto parsedContentType = ParsedContentType::create(mimeParametersIterator->value)) {
             contentType = parsedContentType->mimeType();
-            charset = parsedContentType->charset().stripWhiteSpace();
+            charset = parsedContentType->charset().trim(deprecatedIsSpaceOrNewline);
             multipartType = parsedContentType->parameterValueForName("type"_s);
             endOfPartBoundary = parsedContentType->parameterValueForName("boundary"_s);
         }
@@ -104,8 +104,8 @@ RefPtr<MIMEHeader> MIMEHeader::parseHeader(SharedBufferChunkReader& buffer)
                 LOG_ERROR("No boundary found in multipart MIME header.");
                 return nullptr;
             }
-            mimeHeader->m_endOfPartBoundary = "--" + mimeHeader->m_endOfPartBoundary;
-            mimeHeader->m_endOfDocumentBoundary = mimeHeader->m_endOfPartBoundary + "--";
+            mimeHeader->m_endOfPartBoundary = makeString("--"_s, mimeHeader->m_endOfPartBoundary);
+            mimeHeader->m_endOfDocumentBoundary = makeString(mimeHeader->m_endOfPartBoundary, "--"_s);
         }
     }
 
@@ -122,7 +122,7 @@ RefPtr<MIMEHeader> MIMEHeader::parseHeader(SharedBufferChunkReader& buffer)
 
 MIMEHeader::Encoding MIMEHeader::parseContentTransferEncoding(StringView text)
 {
-    auto encoding = text.stripWhiteSpace();
+    auto encoding = text.trim(isUnicodeCompatibleASCIIWhitespace<UChar>);
     if (equalLettersIgnoringASCIICase(encoding, "base64"_s))
         return Base64;
     if (equalLettersIgnoringASCIICase(encoding, "quoted-printable"_s))

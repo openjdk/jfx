@@ -30,7 +30,8 @@ namespace WebCore {
 class RenderButton;
 
 class HTMLButtonElement final : public HTMLFormControlElement {
-    WTF_MAKE_ISO_ALLOCATED(HTMLButtonElement);
+    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(HTMLButtonElement);
+    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(HTMLButtonElement);
 public:
     static Ref<HTMLButtonElement> create(const QualifiedName&, Document&, HTMLFormElement*);
     static Ref<HTMLButtonElement> create(Document&);
@@ -56,7 +57,7 @@ private:
 
     int defaultTabIndex() const final;
 
-    void parseAttribute(const QualifiedName&, const AtomString&) final;
+    void attributeChanged(const QualifiedName&, const AtomString& oldValue, const AtomString& newValue, AttributeModificationReason) final;
     bool hasPresentationalHintsForAttribute(const QualifiedName&) const final;
     void defaultEventHandler(Event&) final;
 

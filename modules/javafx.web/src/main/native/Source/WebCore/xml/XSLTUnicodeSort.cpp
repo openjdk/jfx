@@ -36,34 +36,6 @@
 #include <wtf/Vector.h>
 #include <wtf/unicode/Collator.h>
 
-#if OS(DARWIN) && !PLATFORM(GTK) && !PLATFORM(JAVA)
-#include "SoftLinkLibxslt.h"
-
-static void xsltTransformErrorTrampoline(xsltTransformContextPtr, xsltStylesheetPtr, xmlNodePtr, const char* message, ...) WTF_ATTRIBUTE_PRINTF(4, 5);
-
-void xsltTransformErrorTrampoline(xsltTransformContextPtr context, xsltStylesheetPtr style, xmlNodePtr node, const char* message, ...)
-{
-    va_list args;
-    va_start(args, message);
-
-    va_list preflightArgs;
-    va_copy(preflightArgs, args);
-    size_t stringLength = vsnprintf(nullptr, 0, message, preflightArgs);
-    va_end(preflightArgs);
-
-    Vector<char, 1024> buffer(stringLength + 1);
-    vsnprintf(buffer.data(), stringLength + 1, message, args);
-    va_end(args);
-
-    static void (*xsltTransformErrorPointer)(xsltTransformContextPtr, xsltStylesheetPtr, xmlNodePtr, const char*, ...) WTF_ATTRIBUTE_PRINTF(4, 5)
-        = reinterpret_cast<void (*)(xsltTransformContextPtr, xsltStylesheetPtr, xmlNodePtr, const char*, ...)>(dlsym(WebCore::libxsltLibrary(), "xsltTransformError"));
-    xsltTransformErrorPointer(context, style, node, "%s", buffer.data());
-}
-
-#define xsltTransformError xsltTransformErrorTrampoline
-
-#endif
-
 namespace WebCore {
 
 // Based on default implementation from libxslt 1.1.22 and xsltICUSort.c example.
@@ -157,7 +129,7 @@ void xsltUnicodeSortFunction(xsltTransformContextPtr ctxt, xmlNodePtr *sorts, in
     // The implementation of Collator should be lenient, and accept both "en-US" and "en_US", for example.
     // This lets an author specify sorting rules, e.g. "de_DE@collation=phonebook", which isn't
     // possible with language alone.
-    Collator collator(comp->has_lang ? reinterpret_cast<const char*>(comp->lang) : "en", comp->lower_first);
+    Collator collator(comp->has_lang ? byteCast<char>(comp->lang) : "en", comp->lower_first);
 
     /* Shell's sort of node-set */
     for (incr = len / 2; incr > 0; incr /= 2) {
@@ -188,7 +160,7 @@ void xsltUnicodeSortFunction(xsltTransformContextPtr ctxt, xmlNodePtr *sorts, in
                             tst = 1;
                         else tst = -1;
                     } else
-                        tst = collator.collateUTF8(reinterpret_cast<const char*>(results[j]->stringval), reinterpret_cast<const char*>(results[j + incr]->stringval));
+                        tst = collator.collate(byteCast<char8_t>(results[j]->stringval), byteCast<char8_t>(results[j + incr]->stringval));
                     if (desc[0])
                         tst = -tst;
                 }
@@ -238,7 +210,7 @@ void xsltUnicodeSortFunction(xsltTransformContextPtr ctxt, xmlNodePtr *sorts, in
                                     tst = 1;
                                 else tst = -1;
                             } else
-                                tst = collator.collateUTF8(reinterpret_cast<const char*>(res[j]->stringval), reinterpret_cast<const char*>(res[j + incr]->stringval));
+                                tst = collator.collate(byteCast<char8_t>(res[j]->stringval), byteCast<char8_t>(res[j + incr]->stringval));
                             if (desc[depth])
                                 tst = -tst;
                         }
@@ -282,7 +254,6 @@ void xsltUnicodeSortFunction(xsltTransformContextPtr ctxt, xmlNodePtr *sorts, in
     }
 
     for (j = 0; j < nbsorts; j++) {
-        comp = static_cast<xsltStylePreComp*>(sorts[j]->psvi);
         if (resultsTab[j] != NULL) {
             for (i = 0;i < len;i++)
                 xmlXPathFreeObject(resultsTab[j][i]);

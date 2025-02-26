@@ -30,7 +30,7 @@
 
 namespace JSC {
 
-ALWAYS_INLINE Heap& MarkedSpace::heap() const
+ALWAYS_INLINE JSC::Heap& MarkedSpace::heap() const
 {
     return *bitwise_cast<Heap*>(bitwise_cast<uintptr_t>(this) - OBJECT_OFFSETOF(Heap, m_objectSpace));
 }
@@ -74,6 +74,73 @@ template<typename Functor> inline void MarkedSpace::forEachDeadCell(HeapIteratio
                 return;
         }
     }
+}
+
+template<typename Visitor>
+inline Ref<SharedTask<void(Visitor&)>> MarkedSpace::forEachWeakInParallel()
+{
+    constexpr unsigned batchSize = 16;
+    class Task final : public SharedTask<void(Visitor&)> {
+    public:
+        Task(MarkedSpace& markedSpace)
+            : m_markedSpace(markedSpace)
+            , m_newActiveCursor(markedSpace.m_newActiveWeakSets.begin())
+            , m_activeCursor(markedSpace.heap().collectionScope() == CollectionScope::Full ? markedSpace.m_activeWeakSets.begin() : markedSpace.m_activeWeakSets.end())
+        {
+        }
+
+        std::span<WeakBlock*> drain(std::array<WeakBlock*, batchSize>& results)
+        {
+            Locker locker { m_lock };
+            size_t resultsSize = 0;
+            while (true) {
+                if (m_current) {
+                    auto* block = m_current;
+                    m_current = m_current->next();
+                    if (block->isEmpty())
+                        continue;
+                    results[resultsSize++] = block;
+                    if (resultsSize == batchSize)
+                        return std::span { results.data(), resultsSize };
+                    continue;
+                }
+
+                if (m_newActiveCursor != m_markedSpace.m_newActiveWeakSets.end()) {
+                    m_current = m_newActiveCursor->head();
+                    ++m_newActiveCursor;
+                    continue;
+                }
+
+                if (m_activeCursor != m_markedSpace.m_activeWeakSets.end()) {
+                    m_current = m_activeCursor->head();
+                    ++m_activeCursor;
+                    continue;
+                }
+                return std::span { results.data(), resultsSize };
+            }
+        }
+
+        void run(Visitor& visitor) final
+        {
+            std::array<WeakBlock*, batchSize> resultsStorage;
+            while (true) {
+                auto results = drain(resultsStorage);
+                if (!results.size())
+                    return;
+                for (auto* result : results)
+                    result->visit(visitor);
+            }
+        }
+
+    private:
+        MarkedSpace& m_markedSpace;
+        WeakBlock* m_current { nullptr };
+        SentinelLinkedList<WeakSet, BasicRawSentinelNode<WeakSet>>::iterator m_newActiveCursor;
+        SentinelLinkedList<WeakSet, BasicRawSentinelNode<WeakSet>>::iterator m_activeCursor;
+        Lock m_lock;
+    };
+
+    return adoptRef(*new Task(*this));
 }
 
 } // namespace JSC

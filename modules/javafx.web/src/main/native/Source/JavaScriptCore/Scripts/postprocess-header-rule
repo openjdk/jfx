@@ -28,11 +28,6 @@ if [[ -z "${SCRIPT_HEADER_VISIBILITY}" ]]; then
     exit 0
 fi
 
-if [[ "${JSC_FRAMEWORK_HEADER_POSTPROCESSING_DISABLED}" == "YES" ]]; then
-    ditto "${SCRIPT_INPUT_FILE}" "${SCRIPT_OUTPUT_FILE_0}"
-    exit 0
-fi
-
 function process_definitions () {
     local DEFINITIONS_FILE=$1
 
@@ -43,40 +38,60 @@ function process_definitions () {
     source "${DEFINITIONS_FILE}"
 }
 
-function rewrite_headers () {
-    local SOURCE_FILE="${1}"
-    local WORK_FILE="${2}.tmp"
-    local DEST_FILE="${2}"
+DEFINITIONS_PATH=usr/local/include/WebKitAdditions/Scripts/postprocess-framework-headers-definitions
 
-    if [[ "${PLATFORM_NAME}" == "macosx" ]]; then
+process_definitions "${BUILT_PRODUCTS_DIR}/${DEFINITIONS_PATH}" || process_definitions "${SDKROOT}/${DEFINITIONS_PATH}"
+
+# WebKitAdditions may set WK_FRAMEWORK_HEADER_POSTPROCESSING_DISABLED=YES when
+# postprocessing should be disabled based on the deployment target version
+# (e.g. for a downlevel build).
+if [ "${WK_FRAMEWORK_HEADER_POSTPROCESSING_DISABLED}" == "YES" ]; then
+    JSC_FRAMEWORK_HEADER_POSTPROCESSING_DISABLED=YES;
+fi
+
+if [[ "${JSC_FRAMEWORK_HEADER_POSTPROCESSING_DISABLED}" != "YES" ]]; then
+    if [[ "${WK_PLATFORM_NAME}" == "macosx" ]]; then
         [[ -n ${OSX_VERSION} ]] || OSX_VERSION=${MACOSX_DEPLOYMENT_TARGET}
         [[ -n ${OSX_VERSION_NUMBER} ]] || OSX_VERSION_NUMBER=${TARGET_MAC_OS_X_VERSION_MAJOR}
-
-        if [[ "${WK_PLATFORM_NAME}" == "maccatalyst" && "${LLVM_TARGET_TRIPLE_OS_VERSION}" == ios* ]]; then
+        [[ -n ${XROS_VERSION} ]] || XROS_VERSION="NA"
+        [[ -n ${XROS_VERSION_NUMBER} ]] || XROS_VERSION_NUMBER="0"
+        [[ -n ${IOS_VERSION} ]] || IOS_VERSION="NA"
+        [[ -n ${IOS_VERSION_NUMBER} ]] || IOS_VERSION_NUMBER="0"
+    elif [[ "${WK_PLATFORM_NAME}" == "maccatalyst" ]]; then
             # On Mac Catalyst `LLVM_TARGET_TRIPLE_OS_VERSION` will be in the format `ios{major}.{minor}`.
             local ALIGNED_IOS_VERSION="${LLVM_TARGET_TRIPLE_OS_VERSION#ios}"
             [[ -n ${IOS_VERSION} ]] || IOS_VERSION=${ALIGNED_IOS_VERSION}
             [[ -n ${IOS_VERSION_NUMBER} ]] || IOS_VERSION_NUMBER=${ALIGNED_IOS_VERSION%%.*}
-        else
-            [[ -n ${IOS_VERSION} ]] || IOS_VERSION="NA"
-        [[ -n ${IOS_VERSION_NUMBER} ]] || IOS_VERSION_NUMBER="0"
-        fi
-    elif [[ "${PLATFORM_NAME}" =~ "iphone" ]]; then
-        [[ -n ${IOS_VERSION} ]] || IOS_VERSION=${IPHONEOS_DEPLOYMENT_TARGET}
         [[ -n ${OSX_VERSION} ]] || OSX_VERSION="NA"
         [[ -n ${OSX_VERSION_NUMBER} ]] || OSX_VERSION_NUMBER="0"
+        [[ -n ${XROS_VERSION} ]] || XROS_VERSION="NA"
+        [[ -n ${XROS_VERSION_NUMBER} ]] || XROS_VERSION_NUMBER="0"
+    elif [[ "${PLATFORM_NAME}" =~ "iphone" ]]; then
+        [[ -n ${IOS_VERSION} ]] || IOS_VERSION=${IPHONEOS_DEPLOYMENT_TARGET}
         [[ -n ${IOS_VERSION_NUMBER} ]] || IOS_VERSION_NUMBER=${SDK_VERSION_MAJOR}
+        [[ -n ${OSX_VERSION} ]] || OSX_VERSION="NA"
+        [[ -n ${OSX_VERSION_NUMBER} ]] || OSX_VERSION_NUMBER="0"
+        [[ -n ${XROS_VERSION} ]] || XROS_VERSION="NA"
+        [[ -n ${XROS_VERSION_NUMBER} ]] || XROS_VERSION_NUMBER="0"
+    elif [[ "${PLATFORM_NAME}" == xr* ]]; then
+        [[ -n ${XROS_VERSION} ]] || XROS_VERSION=${XROS_DEPLOYMENT_TARGET}
+        [[ -n ${XROS_VERSION_NUMBER} ]] || XROS_VERSION_NUMBER=${SDK_VERSION_MAJOR}
+        [[ -n ${IOS_VERSION} ]] || IOS_VERSION="NA"
+        [[ -n ${OSX_VERSION} ]] || OSX_VERSION="NA"
+        [[ -n ${OSX_VERSION_NUMBER} ]] || OSX_VERSION_NUMBER="0"
+        [[ -n ${IOS_VERSION_NUMBER} ]] || IOS_VERSION_NUMBER="0"
     fi
 
-    SED_OPTIONS=(
-    )
+    SED_OPTIONS=()
 
-    if [[ -n "$OSX_VERSION" && -n "$IOS_VERSION" ]]; then
+    if [[ -n "$OSX_VERSION" && -n "$IOS_VERSION" && -n "$XROS_VERSION" ]]; then
         SED_OPTIONS+=(
             -e s/JSC_MAC_TBA/${OSX_VERSION}/g
             -e s/JSC_IOS_TBA/${IOS_VERSION}/g
+            -e s/JSC_XROS_TBA/${XROS_VESRION}/g
             -e s/JSC_MAC_VERSION_TBA/${OSX_VERSION_NUMBER}/g
             -e s/JSC_IOS_VERSION_TBA/${IOS_VERSION_NUMBER}/g
+            -e s/JSC_XROS_VERSION_TBA/${XROS_VERSION_NUMBER}/g
             -e s/JSC_API_AVAILABLE/API_AVAILABLE/
             -e s/JSC_API_DEPRECATED/API_DEPRECATED/
             -e "s/^JSC_CLASS_AVAILABLE/JS_EXPORT API_AVAILABLE/"
@@ -91,14 +106,17 @@ function rewrite_headers () {
     fi
 
     SED_OPTIONS+=(${OTHER_SED_OPTIONS[*]})
+fi
 
-    sed -E "${SED_OPTIONS[@]}" "${SOURCE_FILE}" > "${WORK_FILE}" || exit $?
-    cmp -s "${WORK_FILE}" "${DEST_FILE}" && rm -f "${WORK_FILE}" || mv "${WORK_FILE}" "${DEST_FILE}"
-    [[ "${SOURCE_FILE}" -nt "${DEST_FILE}" ]] && touch "${DEST_FILE}" || true
-}
+UNIFDEF_OPTIONS=(-Bt)
 
-DEFINITIONS_PATH=usr/local/include/WebKitAdditions/Scripts/postprocess-framework-headers-definitions
+if [[ "${JSC_FRAMEWORK_HEADER_POSTPROCESSING_DISABLED}" == "YES" ]]; then
+    UNIFDEF_OPTIONS+=(-UJSC_FRAMEWORK_HEADER_POSTPROCESSING_ENABLED)
+else
+    UNIFDEF_OPTIONS+=(-DJSC_FRAMEWORK_HEADER_POSTPROCESSING_ENABLED)
+fi
 
-process_definitions "${BUILT_PRODUCTS_DIR}/${DEFINITIONS_PATH}" || process_definitions "${SDKROOT}/${DEFINITIONS_PATH}"
-
-rewrite_headers "${SCRIPT_INPUT_FILE}" "${SCRIPT_OUTPUT_FILE_0}"
+sed -E "${SED_OPTIONS[@]}" < "${INPUT_FILE_PATH}" |
+    unifdef ${UNIFDEF_OPTIONS[@]} > "${SCRIPT_OUTPUT_FILE_0}"
+exits=(${PIPESTATUS[@]})
+[ ${exits[0]} -eq 0 -a ${exits[1]} -lt 2 ]

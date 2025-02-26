@@ -26,7 +26,7 @@
 #include "config.h"
 #include "ScrollingThread.h"
 
-#if ENABLE(SCROLLING_THREAD)
+#if ENABLE(SCROLLING_THREAD) || ENABLE(THREADED_ANIMATION_RESOLUTION)
 
 #include <mutex>
 #include <wtf/MainThread.h>
@@ -52,7 +52,7 @@ ScrollingThread::ScrollingThread()
 
 bool ScrollingThread::isCurrentThread()
 {
-    return ScrollingThread::singleton().m_runLoop.ptr() == &RunLoop::current();
+    return ScrollingThread::singleton().m_runLoop->isCurrent();
 }
 
 void ScrollingThread::dispatch(Function<void ()>&& function)
@@ -69,4 +69,4 @@ void ScrollingThread::dispatchBarrier(Function<void ()>&& function)
 
 } // namespace WebCore
 
-#endif // ENABLE(SCROLLING_THREAD)
+#endif // ENABLE(SCROLLING_THREAD) || ENABLE(THREADED_ANIMATION_RESOLUTION)

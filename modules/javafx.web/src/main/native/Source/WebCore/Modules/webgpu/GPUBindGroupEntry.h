@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2021 Apple Inc. All rights reserved.
+ * Copyright (C) 2021-2023 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -30,7 +30,7 @@
 #include "GPUIntegralTypes.h"
 #include "GPUSampler.h"
 #include "GPUTextureView.h"
-#include <pal/graphics/WebGPU/WebGPUBindGroupEntry.h>
+#include "WebGPUBindGroupEntry.h"
 #include <utility>
 #include <variant>
 
@@ -38,29 +38,95 @@ namespace WebCore {
 
 using GPUBindingResource = std::variant<RefPtr<GPUSampler>, RefPtr<GPUTextureView>, GPUBufferBinding, RefPtr<GPUExternalTexture>>;
 
-inline PAL::WebGPU::BindingResource convertToBacking(const GPUBindingResource& bindingResource)
+inline WebGPU::BindingResource convertToBacking(const GPUBindingResource& bindingResource)
 {
-    return WTF::switchOn(bindingResource, [] (const RefPtr<GPUSampler>& sampler) -> PAL::WebGPU::BindingResource {
+    return WTF::switchOn(bindingResource, [](const RefPtr<GPUSampler>& sampler) -> WebGPU::BindingResource {
         ASSERT(sampler);
         return sampler->backing();
-    }, [] (const RefPtr<GPUTextureView>& textureView) -> PAL::WebGPU::BindingResource {
+    }, [](const RefPtr<GPUTextureView>& textureView) -> WebGPU::BindingResource {
         ASSERT(textureView);
         return textureView->backing();
-    }, [] (const GPUBufferBinding& bufferBinding) -> PAL::WebGPU::BindingResource {
+    }, [](const GPUBufferBinding& bufferBinding) -> WebGPU::BindingResource {
         return bufferBinding.convertToBacking();
-    }, [] (const RefPtr<GPUExternalTexture>& externalTexture) -> PAL::WebGPU::BindingResource {
+    }, [](const RefPtr<GPUExternalTexture>& externalTexture) -> WebGPU::BindingResource {
         ASSERT(externalTexture);
         return externalTexture->backing();
     });
 }
 
 struct GPUBindGroupEntry {
-    PAL::WebGPU::BindGroupEntry convertToBacking() const
+    WebGPU::BindGroupEntry convertToBacking() const
     {
         return {
             binding,
             WebCore::convertToBacking(resource),
         };
+    }
+
+    static bool equal(const GPUSampler& entry, const GPUBindingResource& otherEntry)
+    {
+        return WTF::switchOn(otherEntry, [&](const RefPtr<GPUSampler>& sampler) -> bool {
+            return sampler.get() == &entry;
+        }, [&](const RefPtr<GPUTextureView>&) -> bool {
+            return false;
+        }, [&](const GPUBufferBinding&) -> bool {
+            return false;
+        }, [&](const RefPtr<GPUExternalTexture>&) -> bool {
+            return false;
+        });
+    }
+    static bool equal(const GPUTextureView& entry, const GPUBindingResource& otherEntry)
+    {
+        return WTF::switchOn(otherEntry, [&](const RefPtr<GPUSampler>&) -> bool {
+            return false;
+        }, [&](const RefPtr<GPUTextureView>& textureView) -> bool {
+            return textureView.get() == &entry;
+        }, [&](const GPUBufferBinding&) -> bool {
+            return false;
+        }, [&](const RefPtr<GPUExternalTexture>&) -> bool {
+            return false;
+        });
+    }
+    static bool equal(const GPUBufferBinding& entry, const GPUBindingResource& otherEntry)
+    {
+        return WTF::switchOn(otherEntry, [&](const RefPtr<GPUSampler>&) -> bool {
+            return false;
+        }, [&](const RefPtr<GPUTextureView>&) -> bool {
+            return false;
+        }, [&](const GPUBufferBinding& bufferBinding) -> bool {
+            return bufferBinding.buffer.get() == entry.buffer.get();
+        }, [&](const RefPtr<GPUExternalTexture>&) -> bool {
+            return false;
+        });
+    }
+    static bool equal(const GPUExternalTexture& entry, const GPUBindingResource& otherEntry)
+    {
+        return WTF::switchOn(otherEntry, [&](const RefPtr<GPUSampler>&) -> bool {
+            return false;
+        }, [&](const RefPtr<GPUTextureView>&) -> bool {
+            return false;
+        }, [&](const GPUBufferBinding&) -> bool {
+            return false;
+        }, [&](const RefPtr<GPUExternalTexture>& externalTexture) -> bool {
+            return externalTexture.get() == &entry;
+        });
+    }
+    static bool equal(const GPUBindGroupEntry& entry, const GPUBindGroupEntry& otherEntry)
+    {
+        return WTF::switchOn(entry.resource, [&](const RefPtr<GPUSampler>& sampler) -> bool {
+            return sampler.get() && equal(*sampler, otherEntry.resource);
+        }, [&](const RefPtr<GPUTextureView>& textureView) -> bool {
+            return textureView.get() && equal(*textureView, otherEntry.resource);
+        }, [&](const GPUBufferBinding& bufferBinding) -> bool {
+            return equal(bufferBinding, otherEntry.resource);
+        }, [&](const RefPtr<GPUExternalTexture>& externalTexture) -> bool {
+            return externalTexture.get() && equal(*externalTexture, otherEntry.resource);
+        });
+    }
+
+    const RefPtr<GPUExternalTexture>* externalTexture() const
+    {
+        return std::get_if<RefPtr<GPUExternalTexture>>(&resource);
     }
 
     GPUIndex32 binding { 0 };

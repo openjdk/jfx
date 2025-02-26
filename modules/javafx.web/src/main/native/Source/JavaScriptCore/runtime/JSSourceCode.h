@@ -26,7 +26,6 @@
 
 #pragma once
 
-#include "JSGlobalObject.h"
 #include "JSObject.h"
 #include "SourceCode.h"
 
@@ -47,10 +46,7 @@ public:
         return vm.sourceCodeSpace<mode>();
     }
 
-    static Structure* createStructure(VM& vm, JSGlobalObject* globalObject, JSValue prototype)
-    {
-        return Structure::create(vm, globalObject, prototype, TypeInfo(JSSourceCodeType, StructureFlags), info());
-    }
+    inline static Structure* createStructure(VM&, JSGlobalObject*, JSValue);
 
     static JSSourceCode* create(VM& vm, Structure* structure, SourceCode&& sourceCode)
     {

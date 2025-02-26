@@ -33,39 +33,49 @@ namespace JSC {
 const ClassInfo ModuleProgramExecutable::s_info = { "ModuleProgramExecutable"_s, &Base::s_info, nullptr, nullptr, CREATE_METHOD_TABLE(ModuleProgramExecutable) };
 
 ModuleProgramExecutable::ModuleProgramExecutable(JSGlobalObject* globalObject, const SourceCode& source)
-    : Base(globalObject->vm().moduleProgramExecutableStructure.get(), globalObject->vm(), source, false, DerivedContextType::None, false, false, EvalContextType::None, NoIntrinsic)
+    : Base(globalObject->vm().moduleProgramExecutableStructure.get(), globalObject->vm(), source, StrictModeLexicallyScopedFeature, DerivedContextType::None, false, false, EvalContextType::None, NoIntrinsic)
 {
     ASSERT(source.provider()->sourceType() == SourceProviderSourceType::Module);
     VM& vm = globalObject->vm();
     if (vm.typeProfiler() || vm.controlFlowProfiler())
-        vm.functionHasExecutedCache()->insertUnexecutedRange(sourceID(), typeProfilingStartOffset(vm), typeProfilingEndOffset(vm));
+        vm.functionHasExecutedCache()->insertUnexecutedRange(sourceID(), typeProfilingStartOffset(), typeProfilingEndOffset());
+}
+
+
+UnlinkedModuleProgramCodeBlock* ModuleProgramExecutable::getUnlinkedCodeBlock(JSGlobalObject* globalObject)
+{
+    VM& vm = globalObject->vm();
+    auto throwScope = DECLARE_THROW_SCOPE(vm);
+
+    UnlinkedModuleProgramCodeBlock* unlinkedModuleProgramCode = unlinkedCodeBlock();
+    if (unlinkedModuleProgramCode)
+        RELEASE_AND_RETURN(throwScope, unlinkedModuleProgramCode);
+
+    ParserError error;
+    OptionSet<CodeGenerationMode> codeGenerationMode = globalObject->defaultCodeGenerationMode();
+    unlinkedModuleProgramCode = vm.codeCache()->getUnlinkedModuleProgramCodeBlock(vm, this, source(), codeGenerationMode, error);
+
+    if (globalObject->hasDebugger())
+        globalObject->debugger()->sourceParsed(globalObject, source().provider(), error.line(), error.message());
+
+    if (error.isValid()) {
+        throwVMError(globalObject, throwScope, error.toErrorObject(globalObject, source()));
+        return nullptr;
+    }
+
+    m_unlinkedCodeBlock.set(vm, this, unlinkedModuleProgramCode);
+    VirtualRegister symbolTableReg = VirtualRegister(unlinkedModuleProgramCode->moduleEnvironmentSymbolTableConstantRegisterOffset());
+    SymbolTable* symbolTable = jsCast<SymbolTable*>(unlinkedModuleProgramCode->getConstant(symbolTableReg));
+    m_moduleEnvironmentSymbolTable.set(vm, this, symbolTable->cloneScopePart(vm));
+    RELEASE_AND_RETURN(throwScope, unlinkedModuleProgramCode);
 }
 
 ModuleProgramExecutable* ModuleProgramExecutable::create(JSGlobalObject* globalObject, const SourceCode& source)
 {
     VM& vm = globalObject->vm();
-    auto scope = DECLARE_THROW_SCOPE(vm);
-
     ModuleProgramExecutable* executable = new (NotNull, allocateCell<ModuleProgramExecutable>(vm)) ModuleProgramExecutable(globalObject, source);
-    executable->finishCreation(globalObject->vm());
-
-    ParserError error;
-    OptionSet<CodeGenerationMode> codeGenerationMode = globalObject->defaultCodeGenerationMode();
-    UnlinkedModuleProgramCodeBlock* unlinkedModuleProgramCode = vm.codeCache()->getUnlinkedModuleProgramCodeBlock(
-        vm, executable, executable->source(), codeGenerationMode, error);
-
-    if (globalObject->hasDebugger())
-        globalObject->debugger()->sourceParsed(globalObject, executable->source().provider(), error.line(), error.message());
-
-    if (error.isValid()) {
-        throwVMError(globalObject, scope, error.toErrorObject(globalObject, executable->source()));
-        return nullptr;
-    }
-
-    executable->m_unlinkedCodeBlock.set(globalObject->vm(), executable, unlinkedModuleProgramCode);
-
-    executable->m_moduleEnvironmentSymbolTable.set(globalObject->vm(), executable, jsCast<SymbolTable*>(unlinkedModuleProgramCode->constantRegister(VirtualRegister(unlinkedModuleProgramCode->moduleEnvironmentSymbolTableConstantRegisterOffset())).get())->cloneScopePart(globalObject->vm()));
-
+    executable->finishCreation(vm);
+    executable->getUnlinkedCodeBlock(globalObject); // This generates and binds unlinked code block.
     return executable;
 }
 

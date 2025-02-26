@@ -45,7 +45,9 @@ public:
 
     // Visitor
     void visit(ShaderModule&) override;
-    void visit(Directive&) override;
+
+    // Directive
+    void visit(DiagnosticDirective&) override;
 
     // Attribute
     void visit(BindingAttribute&) override;
@@ -59,6 +61,7 @@ public:
     void visit(Function&) override;
     void visit(Structure&) override;
     void visit(Variable&) override;
+    void visit(TypeAlias&) override;
 
     // Expression
     void visit(AbstractFloatLiteral&) override;
@@ -68,6 +71,7 @@ public:
     void visit(CallExpression&) override;
     void visit(FieldAccessExpression&) override;
     void visit(Float32Literal&) override;
+    void visit(Float16Literal&) override;
     void visit(IdentifierExpression&) override;
     void visit(IndexAccessExpression&) override;
     void visit(PointerDereferenceExpression&) override;
@@ -77,16 +81,20 @@ public:
 
     // Statement
     void visit(AssignmentStatement&) override;
+    void visit(CallStatement&) override;
+    void visit(CompoundAssignmentStatement&) override;
     void visit(CompoundStatement&) override;
+    void visit(AST::DecrementIncrementStatement&) override;
+    void visit(IfStatement&) override;
+    void visit(PhonyAssignmentStatement&) override;
     void visit(ReturnStatement&) override;
     void visit(VariableStatement&) override;
+    void visit(ForStatement&) override;
 
     // Types
-    void visit(ArrayTypeName&) override;
-    void visit(NamedTypeName&) override;
-    void visit(ParameterizedTypeName&) override;
-    void visit(StructTypeName&) override;
-    void visit(ReferenceTypeName&) override;
+    void visit(ArrayTypeExpression&) override;
+    void visit(ElaboratedTypeExpression&) override;
+    void visit(ReferenceTypeExpression&) override;
 
     // Values
     void visit(Parameter&) override;

@@ -27,8 +27,14 @@ function initializeReadableStreamDefaultReader(stream)
 {
     "use strict";
 
-    if (!@isReadableStream(stream))
+    if (!@isReadableStream(stream)) {
+        // FIXME: We should pass a single type.
+        let potentialInternalStream = @getInternalReadableStream(stream);
+        if (potentialInternalStream === @undefined)
         @throwTypeError("ReadableStreamDefaultReader needs a ReadableStream");
+        stream = potentialInternalStream;
+    }
+
     if (@isReadableStreamLocked(stream))
         @throwTypeError("ReadableStream is locked");
 
@@ -74,10 +80,7 @@ function releaseLock()
     if (!@getByIdDirectPrivate(this, "ownerReadableStream"))
         return;
 
-    if (@getByIdDirectPrivate(this, "readRequests").length)
-        @throwTypeError("There are still pending read requests, cannot release the lock");
-
-    @readableStreamReaderGenericRelease(this);
+    @readableStreamDefaultReaderRelease(this);
 }
 
 @getter
@@ -88,5 +91,5 @@ function closed()
     if (!@isReadableStreamDefaultReader(this))
         return @Promise.@reject(@makeGetterTypeError("ReadableStreamDefaultReader", "closed"));
 
-    return @getByIdDirectPrivate(this, "closedPromiseCapability").@promise;
+    return @getByIdDirectPrivate(this, "closedPromiseCapability").promise;
 }

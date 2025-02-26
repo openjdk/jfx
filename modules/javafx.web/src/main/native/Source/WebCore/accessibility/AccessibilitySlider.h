@@ -37,24 +37,22 @@ class HTMLInputElement;
 
 class AccessibilitySlider : public AccessibilityRenderObject {
 public:
-    static Ref<AccessibilitySlider> create(RenderObject*);
+    static Ref<AccessibilitySlider> create(RenderObject&);
     virtual ~AccessibilitySlider() = default;
 
-protected:
-    explicit AccessibilitySlider(RenderObject*);
-
 private:
-    HTMLInputElement* inputElement() const;
-    AXCoreObject* elementAccessibilityHitTest(const IntPoint&) const override;
+    explicit AccessibilitySlider(RenderObject&);
 
-    AccessibilityRole roleValue() const override { return AccessibilityRole::Slider; }
-    bool isSlider() const final { return true; }
+    HTMLInputElement* inputElement() const;
+    AccessibilityObject* elementAccessibilityHitTest(const IntPoint&) const final;
+
+    AccessibilityRole determineAccessibilityRole() final { return AccessibilityRole::Slider; }
+
     bool isControl() const override { return true; }
 
     void addChildren() override;
 
     bool canSetValueAttribute() const override { return true; }
-    const AtomString& getAttribute(const QualifiedName&) const override;
 
     bool setValue(const String&) override;
     float valueForRange() const override;
@@ -68,7 +66,7 @@ public:
     static Ref<AccessibilitySliderThumb> create();
     virtual ~AccessibilitySliderThumb() = default;
 
-    AccessibilityRole roleValue() const override { return AccessibilityRole::SliderThumb; }
+    AccessibilityRole determineAccessibilityRole() final { return AccessibilityRole::SliderThumb; }
     LayoutRect elementRect() const override;
 
 private:

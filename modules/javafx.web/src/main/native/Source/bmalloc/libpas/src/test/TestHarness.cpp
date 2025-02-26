@@ -228,14 +228,11 @@ BootJITHeap::BootJITHeap()
         "boot-jit-heap",
         [] () {
 #if PAS_ENABLE_JIT
-            constexpr unsigned numRegions = 10;
+            constexpr unsigned numRegions = 50;
 
             for (unsigned i = numRegions; i--;) {
-                size_t size =
-                    pas_round_up_to_power_of_2(5000000, pas_page_malloc_alignment());
-
+                size_t size = pas_round_up_to_power_of_2(5000000, pas_page_malloc_alignment());
                 void* base = valloc(size);
-
                 jit_heap_add_fresh_memory(
                     pas_range_create(reinterpret_cast<uintptr_t>(base),
                                      reinterpret_cast<uintptr_t>(base) + size));
@@ -356,6 +353,7 @@ void addBitvectorTests();
 void addBmallocTests();
 void addCartesianTreeTests();
 void addCoalignTests();
+void addEnumerationTests();
 void addExpendableMemoryTests();
 void addExtendedGCDTests();
 void addHashtableTests();
@@ -725,6 +723,7 @@ int main(int argc, char** argv)
     ADD_SUITE(Bmalloc);
     ADD_SUITE(CartesianTree);
     ADD_SUITE(Coalign);
+    ADD_SUITE(Enumeration);
     ADD_SUITE(ExpendableMemory);
     ADD_SUITE(ExtendedGCD);
     ADD_SUITE(Hashtable);

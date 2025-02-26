@@ -28,6 +28,7 @@
 
 #include "BuiltinNames.h"
 #include "DeferredWorkTimer.h"
+#include "GlobalObjectMethodTable.h"
 #include "JSCInlines.h"
 #include "JSInternalFieldObjectImplInlines.h"
 #include "JSPromiseConstructor.h"
@@ -124,11 +125,11 @@ JSPromise::DeferredData JSPromise::convertCapabilityToDeferredData(JSGlobalObjec
     VM& vm = globalObject->vm();
     auto scope = DECLARE_THROW_SCOPE(vm);
 
-    result.promise = promiseCapability.getAs<JSPromise*>(globalObject, vm.propertyNames->builtinNames().promisePrivateName());
+    result.promise = promiseCapability.getAs<JSPromise*>(globalObject, vm.propertyNames->builtinNames().promisePublicName());
     RETURN_IF_EXCEPTION(scope, { });
-    result.resolve = promiseCapability.getAs<JSFunction*>(globalObject, vm.propertyNames->builtinNames().resolvePrivateName());
+    result.resolve = promiseCapability.getAs<JSFunction*>(globalObject, vm.propertyNames->builtinNames().resolvePublicName());
     RETURN_IF_EXCEPTION(scope, { });
-    result.reject = promiseCapability.getAs<JSFunction*>(globalObject, vm.propertyNames->builtinNames().rejectPrivateName());
+    result.reject = promiseCapability.getAs<JSFunction*>(globalObject, vm.propertyNames->builtinNames().rejectPublicName());
     RETURN_IF_EXCEPTION(scope, { });
 
     return result;
@@ -218,13 +219,19 @@ void JSPromise::reject(JSGlobalObject* lexicalGlobalObject, JSValue value)
     }
 }
 
-void JSPromise::rejectAsHandled(JSGlobalObject* lexicalGlobalObject, JSValue value)
+// https://webidl.spec.whatwg.org/#mark-a-promise-as-handled
+void JSPromise::markAsHandled(JSGlobalObject* lexicalGlobalObject)
 {
-    // Setting isHandledFlag before calling reject since this removes round-trip between JSC and PromiseRejectionTracker, and it does not show an user-observable behavior.
     VM& vm = lexicalGlobalObject->vm();
     uint32_t flags = this->flags();
     if (!(flags & isFirstResolvingFunctionCalledFlag))
         internalField(Field::Flags).set(vm, this, jsNumber(flags | isHandledFlag));
+}
+
+void JSPromise::rejectAsHandled(JSGlobalObject* lexicalGlobalObject, JSValue value)
+{
+    // Setting isHandledFlag before calling reject since this removes round-trip between JSC and PromiseRejectionTracker, and it does not show an user-observable behavior.
+    markAsHandled(lexicalGlobalObject);
     reject(lexicalGlobalObject, value);
 }
 

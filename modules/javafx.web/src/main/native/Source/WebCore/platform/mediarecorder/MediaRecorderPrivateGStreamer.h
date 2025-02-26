@@ -24,7 +24,6 @@
 #include "GRefPtrGStreamer.h"
 #include "MediaRecorderPrivate.h"
 #include "SharedBuffer.h"
-#include <gst/transcoder/gsttranscoder.h>
 #include <wtf/CompletionHandler.h>
 #include <wtf/Condition.h>
 #include <wtf/Forward.h>
@@ -37,18 +36,74 @@ class ContentType;
 class MediaStreamTrackPrivate;
 struct MediaRecorderPrivateOptions;
 
-class MediaRecorderPrivateGStreamer final : public MediaRecorderPrivate, public CanMakeWeakPtr<MediaRecorderPrivateGStreamer> {
+class MediaRecorderPrivateBackend : public ThreadSafeRefCountedAndCanMakeThreadSafeWeakPtr<MediaRecorderPrivateBackend, WTF::DestructionThread::Main> {
     WTF_MAKE_FAST_ALLOCATED;
+public:
+    using SelectTracksCallback = Function<void(MediaRecorderPrivate::AudioVideoSelectedTracks)>;
+    static RefPtr<MediaRecorderPrivateBackend> create(MediaStreamPrivate& stream, const MediaRecorderPrivateOptions& options)
+    {
+        return adoptRef(*new MediaRecorderPrivateBackend(stream, options));
+    }
 
+    ~MediaRecorderPrivateBackend();
+
+    bool preparePipeline();
+
+    void fetchData(MediaRecorderPrivate::FetchDataCallback&&);
+    void startRecording(MediaRecorderPrivate::StartRecordingCallback&&);
+    void stopRecording(CompletionHandler<void()>&&);
+    void pauseRecording(CompletionHandler<void()>&&);
+    void resumeRecording(CompletionHandler<void()>&&);
+    const String& mimeType() const { return m_mimeType; }
+
+    void setSelectTracksCallback(SelectTracksCallback&& callback) { m_selectTracksCallback = WTFMove(callback); }
+
+private:
+    MediaRecorderPrivateBackend(MediaStreamPrivate&, const MediaRecorderPrivateOptions&);
+
+    void setSource(GstElement*);
+    void setSink(GstElement*);
+    void configureAudioEncoder(GstElement*);
+    void configureVideoEncoder(GstElement*);
+
+    GRefPtr<GstEncodingContainerProfile> containerProfile();
+    MediaStreamPrivate& stream() const { return m_stream; }
+    void processSample(GRefPtr<GstSample>&&);
+    void notifyPosition(GstClockTime);
+    void notifyEOS();
+
+    GRefPtr<GstEncodingProfile> m_audioEncodingProfile;
+    GRefPtr<GstEncodingProfile> m_videoEncodingProfile;
+    String m_videoCodec;
+    GRefPtr<GstTranscoder> m_transcoder;
+    GRefPtr<GstTranscoderSignalAdapter> m_signalAdapter;
+    GRefPtr<GstElement> m_pipeline;
+    GRefPtr<GstElement> m_src;
+    GRefPtr<GstElement> m_sink;
+    Condition m_eosCondition;
+    Lock m_eosLock;
+    bool m_eos WTF_GUARDED_BY_LOCK(m_eosLock);
+
+    Lock m_dataLock;
+    SharedBufferBuilder m_data WTF_GUARDED_BY_LOCK(m_dataLock);
+    MediaTime m_position WTF_GUARDED_BY_LOCK(m_dataLock) { MediaTime::invalidTime() };
+    double m_timeCode WTF_GUARDED_BY_LOCK(m_dataLock) { 0 };
+
+    MediaStreamPrivate& m_stream;
+    const MediaRecorderPrivateOptions& m_options;
+    String m_mimeType;
+    std::optional<SelectTracksCallback> m_selectTracksCallback;
+};
+
+class MediaRecorderPrivateGStreamer final : public MediaRecorderPrivate {
+    WTF_MAKE_FAST_ALLOCATED;
+    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(MediaRecorderPrivateGStreamer);
 public:
     static std::unique_ptr<MediaRecorderPrivateGStreamer> create(MediaStreamPrivate&, const MediaRecorderPrivateOptions&);
-    explicit MediaRecorderPrivateGStreamer(MediaStreamPrivate&, const MediaRecorderPrivateOptions&);
-    ~MediaRecorderPrivateGStreamer();
+    explicit MediaRecorderPrivateGStreamer(Ref<MediaRecorderPrivateBackend>&&);
+    ~MediaRecorderPrivateGStreamer() = default;
 
     static bool isTypeSupported(const ContentType&);
-
-protected:
-    bool preparePipeline();
 
 private:
     void videoFrameAvailable(VideoFrame&, VideoFrameTimeMetadata) final { };
@@ -61,33 +116,7 @@ private:
     void resumeRecording(CompletionHandler<void()>&&) final;
     const String& mimeType() const final;
 
-    void setSource(GstElement*);
-    void setSink(GstElement*);
-    void configureVideoEncoder(GstElement*);
-
-    GRefPtr<GstEncodingContainerProfile> containerProfile();
-    MediaStreamPrivate& stream() const { return m_stream; }
-    void processSample(GRefPtr<GstSample>&&);
-    void notifyPosition(GstClockTime position) { m_position = GST_TIME_AS_SECONDS(position); }
-    void notifyEOS();
-
-    GRefPtr<GstEncodingProfile> m_audioEncodingProfile;
-    GRefPtr<GstEncodingProfile> m_videoEncodingProfile;
-    GRefPtr<GstTranscoder> m_transcoder;
-    GRefPtr<GstTranscoderSignalAdapter> m_signalAdapter;
-    GRefPtr<GstElement> m_pipeline;
-    GRefPtr<GstElement> m_src;
-    GRefPtr<GstElement> m_sink;
-    Condition m_eosCondition;
-    Lock m_eosLock;
-    bool m_eos WTF_GUARDED_BY_LOCK(m_eosLock);
-    double m_position { 0 };
-
-    Lock m_dataLock;
-    SharedBufferBuilder m_data WTF_GUARDED_BY_LOCK(m_dataLock);
-
-    MediaStreamPrivate& m_stream;
-    const MediaRecorderPrivateOptions& m_options;
+    Ref<MediaRecorderPrivateBackend> m_recorder;
 };
 
 } // namespace WebCore

@@ -63,6 +63,7 @@ public:
     void recordEndLayer(CGRenderingStateRef, CGGStateRef);
     void recordDrawGlyphs(CGRenderingStateRef, CGGStateRef, const CGAffineTransform*, const CGGlyph[], const CGPoint positions[], size_t count);
     void recordDrawImage(CGRenderingStateRef, CGGStateRef, CGRect, CGImageRef);
+    void recordDrawPath(CGRenderingStateRef, CGGStateRef, CGPathDrawingMode, CGPathRef);
 #endif
 
 private:
@@ -88,7 +89,7 @@ private:
         Yes,
         No
     };
-    void updateShadow(const DropShadow&, ShadowsIgnoreTransforms);
+    void updateShadow(const std::optional<GraphicsDropShadow>&, ShadowsIgnoreTransforms);
 
 #if USE(CORE_TEXT)
     void updateFillColor(CGColorRef);
@@ -113,7 +114,7 @@ private:
         SourceBrush fillBrush;
         SourceBrush strokeBrush;
         AffineTransform ctm;
-        DropShadow dropShadow;
+        std::optional<GraphicsDropShadow> dropShadow;
         bool ignoreTransforms { false };
     };
     State m_originalState;

@@ -44,18 +44,20 @@ class AudioTrackList;
 class TextTrackList;
 struct MediaSelectionOption;
 
+enum class CaptionUserPreferencesDisplayMode : uint8_t {
+    Automatic,
+    ForcedOnly,
+    AlwaysOn,
+    Manual,
+};
+
 class CaptionUserPreferences : public RefCounted<CaptionUserPreferences>, public CanMakeWeakPtr<CaptionUserPreferences> {
     WTF_MAKE_FAST_ALLOCATED;
 public:
     static Ref<CaptionUserPreferences> create(PageGroup&);
     virtual ~CaptionUserPreferences();
 
-    enum CaptionDisplayMode {
-        Automatic,
-        ForcedOnly,
-        AlwaysOn,
-        Manual,
-    };
+    using CaptionDisplayMode = CaptionUserPreferencesDisplayMode;
     virtual CaptionDisplayMode captionDisplayMode() const;
     virtual void setCaptionDisplayMode(CaptionDisplayMode);
 
@@ -102,9 +104,9 @@ public:
     virtual bool testingMode() const { return m_testingModeCount; }
 
     friend class CaptionUserPreferencesTestingModeToken;
-    UniqueRef<CaptionUserPreferencesTestingModeToken> createTestingModeToken() { return makeUniqueRef<CaptionUserPreferencesTestingModeToken>(*this); }
+    WEBCORE_EXPORT UniqueRef<CaptionUserPreferencesTestingModeToken> createTestingModeToken();
 
-    PageGroup& pageGroup() const { return m_pageGroup; }
+    PageGroup& pageGroup() const;
 
 protected:
     explicit CaptionUserPreferences(PageGroup&);
@@ -126,7 +128,7 @@ private:
     void notify();
     Page* currentPage() const;
 
-    PageGroup& m_pageGroup;
+    WeakRef<PageGroup> m_pageGroup;
     mutable CaptionDisplayMode m_displayMode;
     Timer m_timer;
     String m_userPreferredLanguage;
@@ -160,13 +162,18 @@ private:
 namespace WTF {
 
 template<> struct EnumTraits<WebCore::CaptionUserPreferences::CaptionDisplayMode> {
-    using values = EnumValues<
-        WebCore::CaptionUserPreferences::CaptionDisplayMode,
-        WebCore::CaptionUserPreferences::CaptionDisplayMode::Automatic,
-        WebCore::CaptionUserPreferences::CaptionDisplayMode::ForcedOnly,
-        WebCore::CaptionUserPreferences::CaptionDisplayMode::AlwaysOn,
-        WebCore::CaptionUserPreferences::CaptionDisplayMode::Manual
-    >;
+    static std::optional<WebCore::CaptionUserPreferences::CaptionDisplayMode> fromString(const String& mode)
+    {
+        if (equalLettersIgnoringASCIICase(mode, "forcedonly"_s))
+            return WebCore::CaptionUserPreferences::CaptionDisplayMode::ForcedOnly;
+        if (equalLettersIgnoringASCIICase(mode, "manual"_s))
+            return WebCore::CaptionUserPreferences::CaptionDisplayMode::Manual;
+        if (equalLettersIgnoringASCIICase(mode, "automatic"_s))
+            return WebCore::CaptionUserPreferences::CaptionDisplayMode::Automatic;
+        if (equalLettersIgnoringASCIICase(mode, "alwayson"_s))
+            return WebCore::CaptionUserPreferences::CaptionDisplayMode::AlwaysOn;
+        return std::nullopt;
+    }
 };
 
 } // namespace WTF

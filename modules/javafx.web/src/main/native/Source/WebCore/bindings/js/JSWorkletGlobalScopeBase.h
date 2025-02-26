@@ -29,10 +29,9 @@
 #include "JSDOMGlobalObject.h"
 #include "JSDOMWrapper.h"
 #include "JSEventTarget.h"
+#include "WorkletGlobalScope.h"
 
 namespace WebCore {
-
-class WorkletGlobalScope;
 
 class JSWorkletGlobalScopeBase : public JSDOMGlobalObject {
 public:
@@ -53,8 +52,6 @@ public:
         return JSC::Structure::create(vm, globalObject, prototype, JSC::TypeInfo(JSC::GlobalObjectType, StructureFlags), info());
     }
 
-    static const JSC::GlobalObjectMethodTable s_globalObjectMethodTable;
-
     static bool supportsRichSourceInfo(const JSC::JSGlobalObject*);
     static bool shouldInterruptScript(const JSC::JSGlobalObject*);
     static bool shouldInterruptScriptBeforeTimeout(const JSC::JSGlobalObject*);
@@ -62,14 +59,18 @@ public:
     static JSC::ScriptExecutionStatus scriptExecutionStatus(JSC::JSGlobalObject*, JSC::JSObject*);
     static void queueMicrotaskToEventLoop(JSC::JSGlobalObject&, Ref<JSC::Microtask>&&);
     static void reportViolationForUnsafeEval(JSC::JSGlobalObject*, JSC::JSString*);
+    static String codeForEval(JSC::JSGlobalObject*, JSC::JSValue);
+    static bool canCompileStrings(JSC::JSGlobalObject*, JSC::CompilationType, String, JSC::JSValue);
 
 protected:
     JSWorkletGlobalScopeBase(JSC::VM&, JSC::Structure*, RefPtr<WorkletGlobalScope>&&);
-    void finishCreation(JSC::VM&, JSC::JSProxy*);
+    void finishCreation(JSC::VM&, JSC::JSGlobalProxy*);
 
     DECLARE_VISIT_CHILDREN;
 
 private:
+    static const JSC::GlobalObjectMethodTable* globalObjectMethodTable();
+
     RefPtr<WorkletGlobalScope> m_wrapped;
 };
 

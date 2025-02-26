@@ -29,6 +29,15 @@
 
 namespace JSC {
 
+ALWAYS_INLINE void RegExpCachedResult::record(VM& vm, JSObject* owner, RegExp* regExp, JSString* input, MatchResult result)
+{
+    m_lastRegExp.setWithoutWriteBarrier(regExp);
+    m_lastInput.setWithoutWriteBarrier(input);
+    m_result = result;
+    m_reified = false;
+    vm.writeBarrier(owner);
+}
+
 inline void RegExpGlobalData::setInput(JSGlobalObject* globalObject, JSString* string)
 {
     m_cachedResult.setInput(globalObject, globalObject, string);
@@ -79,6 +88,17 @@ ALWAYS_INLINE void RegExpGlobalData::recordMatch(VM& vm, JSGlobalObject* owner, 
 {
     ASSERT(result);
     m_cachedResult.record(vm, owner, regExp, string, result);
+}
+
+inline MatchResult RegExpGlobalData::matchResult() const
+{
+    return m_cachedResult.result();
+}
+
+inline void RegExpGlobalData::resetResultFromCache(JSGlobalObject* owner, RegExp* regExp, JSString* string, MatchResult matchResult, Vector<int>&& vector)
+{
+    m_ovector = WTFMove(vector);
+    m_cachedResult.record(getVM(owner), owner, regExp, string, matchResult);
 }
 
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2023, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -50,7 +50,7 @@ public:
     // see http://www.whatwg.org/specs/web-apps/current-work/ Section 6.3.5.3
     static String normalizeMIMEType(const String& type)
     {
-        String qType = type.stripWhiteSpace().convertToLowercaseWithoutLocale();
+        String qType = type.convertToLowercaseWithoutLocale();
         // two special cases for IE compatibility
         if (qType == "text"_s || qType.startsWith("text/plain;"_s))
             return mimePlainText();

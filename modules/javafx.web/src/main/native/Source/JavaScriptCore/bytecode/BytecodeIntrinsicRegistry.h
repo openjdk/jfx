@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2015 Yusuke Suzuki <utatane.tea@gmail.com>.
- * Copyright (C) 2016-2017 Apple Inc. All rights reserved.
+ * Copyright (C) 2016-2023 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -29,6 +29,7 @@
 #include "Identifier.h"
 #include <wtf/Noncopyable.h>
 #include <wtf/RobinHoodHashMap.h>
+#include <wtf/TZoneMalloc.h>
 
 namespace JSC {
 
@@ -83,6 +84,8 @@ enum class LinkTimeConstant : int32_t;
     macro(putByIdDirect) \
     macro(putByIdDirectPrivate) \
     macro(putByValDirect) \
+    macro(putByValWithThisSloppy) \
+    macro(putByValWithThisStrict) \
     macro(putPromiseInternalField) \
     macro(putGeneratorInternalField) \
     macro(putAsyncGeneratorInternalField) \
@@ -96,11 +99,13 @@ enum class LinkTimeConstant : int32_t;
     macro(toString) \
     macro(toPropertyKey) \
     macro(toObject) \
+    macro(toThis) \
+    macro(mustValidateResultOfProxyGetAndSetTraps) \
+    macro(mustValidateResultOfProxyTrapsExceptGetAndSet) \
     macro(newArrayWithSize) \
     macro(newArrayWithSpecies) \
     macro(newPromise) \
     macro(createPromise) \
-    macro(createArgumentsButterflyExcludingThis) \
 
 #define JSC_COMMON_BYTECODE_INTRINSIC_CONSTANTS_EACH_NAME(macro) \
     JSC_COMMON_BYTECODE_INTRINSIC_CONSTANTS_SIMPLE_EACH_NAME(macro) \
@@ -146,9 +151,13 @@ enum class LinkTimeConstant : int32_t;
     macro(arrayIteratorFieldIndex) \
     macro(arrayIteratorFieldIteratedObject) \
     macro(arrayIteratorFieldKind) \
-    macro(mapIteratorFieldMapBucket) \
+    macro(mapIteratorFieldEntry) \
+    macro(mapIteratorFieldIteratedObject) \
+    macro(mapIteratorFieldStorage) \
     macro(mapIteratorFieldKind) \
-    macro(setIteratorFieldSetBucket) \
+    macro(setIteratorFieldEntry) \
+    macro(setIteratorFieldIteratedObject) \
+    macro(setIteratorFieldStorage) \
     macro(setIteratorFieldKind) \
     macro(stringIteratorFieldIndex) \
     macro(stringIteratorFieldIteratedString) \
@@ -163,15 +172,14 @@ enum class LinkTimeConstant : int32_t;
     macro(AsyncGeneratorSuspendReasonYield) \
     macro(AsyncGeneratorSuspendReasonAwait) \
     macro(AsyncGeneratorSuspendReasonNone) \
-    macro(abstractModuleRecordFieldState) \
+    macro(abstractModuleRecordFieldState)
 
 #define JSC_COMMON_BYTECODE_INTRINSIC_CONSTANTS_CUSTOM_EACH_NAME(macro) \
-    macro(sentinelMapBucket) \
-    macro(sentinelSetBucket) \
+    macro(orderedHashTableSentinel)
 
 class BytecodeIntrinsicRegistry {
-    WTF_MAKE_FAST_ALLOCATED;
     WTF_MAKE_NONCOPYABLE(BytecodeIntrinsicRegistry);
+    WTF_MAKE_TZONE_ALLOCATED(BytecodeIntrinsicRegistry);
 public:
     explicit BytecodeIntrinsicRegistry(VM&);
 

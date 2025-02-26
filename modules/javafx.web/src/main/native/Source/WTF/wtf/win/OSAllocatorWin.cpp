@@ -28,6 +28,7 @@
 
 #include <windows.h>
 #include <wtf/Assertions.h>
+#include <wtf/DataLog.h>
 #include <wtf/MathExtras.h>
 #include <wtf/PageBlock.h>
 #include <wtf/SoftLinking.h>
@@ -56,7 +57,7 @@ void* OSAllocator::reserveUncommitted(size_t bytes, Usage usage, bool writable, 
     return result;
 }
 
-void* OSAllocator::tryReserveUncommittedAligned(size_t bytes, size_t alignment, Usage usage, bool writable, bool executable, bool, bool)
+void* OSAllocator::tryReserveUncommittedAligned(size_t bytes, size_t alignment, Usage, bool writable, bool executable, bool, bool)
 {
     ASSERT(hasOneBitSet(alignment) && alignment >= pageSize());
 
@@ -133,7 +134,7 @@ void OSAllocator::hintMemoryNotNeededSoon(void*, size_t)
 {
 }
 
-bool OSAllocator::protect(void* address, size_t bytes, bool readable, bool writable)
+bool OSAllocator::tryProtect(void* address, size_t bytes, bool readable, bool writable)
 {
     if (!bytes)
         return true;
@@ -143,10 +144,19 @@ bool OSAllocator::protect(void* address, size_t bytes, bool readable, bool writa
             protection = PAGE_READWRITE;
         else
             protection = PAGE_READONLY;
-        return VirtualAlloc(address, bytes, MEM_COMMIT, protection);
-    }
+    } else {
     ASSERT(!readable && !writable);
-    return VirtualFree(address, bytes, MEM_DECOMMIT);
+        protection = PAGE_NOACCESS;
+    }
+    return VirtualAlloc(address, bytes, MEM_COMMIT, protection);
+}
+
+void OSAllocator::protect(void* address, size_t bytes, bool readable, bool writable)
+{
+    if (bool result = tryProtect(address, bytes, readable, writable); UNLIKELY(!result)) {
+        dataLogLn("mprotect failed: ", static_cast<int>(GetLastError()));
+        RELEASE_ASSERT_NOT_REACHED();
+    }
 }
 
 } // namespace WTF

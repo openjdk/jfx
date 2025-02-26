@@ -2,6 +2,7 @@
  * Copyright (C) 2016 Oleksandr Skachkov <gskachkov@gmail.com>.
  * Copyright (C) 2015 Jordan Harband. All rights reserved.
  * Copyright (C) 2018 Yusuke Suzuki <yusukesuzuki@slowstart.org>.
+ * Copyright (C) 2023 Devin Rousso <webkit@devinrousso.com>.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -40,4 +41,41 @@ function fromEntries(iterable)
     }
 
     return object;
+}
+
+function groupBy(items, callback)
+{
+    "use strict";
+
+    if (@isUndefinedOrNull(items))
+        @throwTypeError("Object.groupBy requires that the first argument not be null or undefined");
+
+    if (!@isCallable(callback))
+        @throwTypeError("Object.groupBy requires that the second argument must be a function");
+
+    var iteratorMethod = items.@@iterator;
+    if (!@isCallable(iteratorMethod))
+        @throwTypeError("Object.groupBy requires that the property of the first argument, items[Symbol.iterator] be a function");
+
+    var groups = @Object.@create(null);
+    var k = 0;
+
+    var iterator = iteratorMethod.@call(items);
+    // Since for-of loop once more looks up the @@iterator property of a given iterable,
+    // it could be observable if the user defines a getter for @@iterator.
+    // To avoid this situation, we define a wrapper object that @@iterator just returns a given iterator.
+    var wrapper = {
+        @@iterator: function () { return iterator; }
+    };
+    for (var item of wrapper) {
+        var key = @toPropertyKey(callback.@call(@undefined, item, k));
+        var group = groups[key];
+        if (!group) {
+            group = [];
+            @putByValDirect(groups, key, group);
+        }
+        @putByValDirect(group, group.length, item);
+        ++k;
+    }
+    return groups;
 }

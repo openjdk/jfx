@@ -36,14 +36,14 @@ namespace WebCore {
 
 using namespace HTMLNames;
 
-AccessibilityLabel::AccessibilityLabel(RenderObject* renderer)
+AccessibilityLabel::AccessibilityLabel(RenderObject& renderer)
     : AccessibilityRenderObject(renderer)
 {
 }
 
 AccessibilityLabel::~AccessibilityLabel() = default;
 
-Ref<AccessibilityLabel> AccessibilityLabel::create(RenderObject* renderer)
+Ref<AccessibilityLabel> AccessibilityLabel::create(RenderObject& renderer)
 {
     return adoptRef(*new AccessibilityLabel(renderer));
 }
@@ -67,7 +67,7 @@ static bool childrenContainOnlyStaticText(const AccessibilityObject::Accessibili
     for (const auto& child : children) {
         if (child->roleValue() == AccessibilityRole::StaticText)
             continue;
-        if (child->roleValue() == AccessibilityRole::Group) {
+        if (child->isGroup()) {
             if (!childrenContainOnlyStaticText(child->children()))
                 return false;
         } else
@@ -81,33 +81,6 @@ bool AccessibilityLabel::containsOnlyStaticText() const
     if (m_containsOnlyStaticTextDirty)
         return childrenContainOnlyStaticText(m_children);
     return m_containsOnlyStaticText;
-}
-
-static bool childrenContainUnrelatedControls(const AccessibilityObject::AccessibilityChildrenVector& children, AccessibilityObject* controlForLabel)
-{
-    if (!children.size())
-        return false;
-
-    for (const auto& child : children) {
-        if (child->isControl()) {
-            if (child == controlForLabel)
-                continue;
-            return true;
-        }
-
-        if (childrenContainUnrelatedControls(child->children(), controlForLabel))
-            return true;
-    }
-
-    return false;
-}
-
-bool AccessibilityLabel::containsUnrelatedControls() const
-{
-    if (containsOnlyStaticText())
-        return false;
-
-    return childrenContainUnrelatedControls(m_children, correspondingControlForLabelElement());
 }
 
 void AccessibilityLabel::updateChildrenIfNecessary()

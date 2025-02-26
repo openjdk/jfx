@@ -33,15 +33,17 @@ class DOMPlugin;
 class Navigator;
 
 class DOMPluginArray final : public ScriptWrappable, public RefCounted<DOMPluginArray> {
-    WTF_MAKE_ISO_ALLOCATED(DOMPluginArray);
+    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(DOMPluginArray);
 public:
     static Ref<DOMPluginArray> create(Navigator&, Vector<Ref<DOMPlugin>>&& = { }, Vector<Ref<DOMPlugin>>&& = { });
     ~DOMPluginArray();
 
     unsigned length() const;
+    bool isSupportedPropertyIndex(unsigned index) const { return index < length(); }
     RefPtr<DOMPlugin> item(unsigned index);
     RefPtr<DOMPlugin> namedItem(const AtomString& propertyName);
     Vector<AtomString> supportedPropertyNames() const;
+    bool isSupportedPropertyName(const AtomString&) const;
 
     void refresh(bool reloadPages);
 

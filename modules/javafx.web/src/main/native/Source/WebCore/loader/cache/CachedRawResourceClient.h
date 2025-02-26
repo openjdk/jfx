@@ -26,6 +26,15 @@
 #include <wtf/CompletionHandler.h>
 
 namespace WebCore {
+class CachedRawResourceClient;
+}
+
+namespace WTF {
+template<typename T> struct IsDeprecatedWeakRefSmartPointerException;
+template<> struct IsDeprecatedWeakRefSmartPointerException<WebCore::CachedRawResourceClient> : std::true_type { };
+}
+
+namespace WebCore {
 
 class CachedResource;
 class ResourceRequest;
@@ -35,7 +44,6 @@ class SharedBuffer;
 
 class CachedRawResourceClient : public CachedResourceClient {
 public:
-    virtual ~CachedRawResourceClient() = default;
     static CachedResourceClientType expectedType() { return RawResourceType; }
     CachedResourceClientType resourceClientType() const override { return expectedType(); }
 

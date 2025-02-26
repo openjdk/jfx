@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2017-2021 Apple Inc. All rights reserved.
+ * Copyright (C) 2017-2023 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -30,6 +30,7 @@
 #include "Allocator.h"
 #include "MarkedBlock.h"
 #include "MarkedSpace.h"
+#include <wtf/TZoneMalloc.h>
 #include <wtf/text/CString.h>
 
 namespace JSC {
@@ -42,7 +43,7 @@ class HeapCellType;
 // class is the baseclass of all subspaces e.g. CompleteSubspace, IsoSubspace.
 class Subspace {
     WTF_MAKE_NONCOPYABLE(Subspace);
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_ALLOCATED(Subspace);
 public:
     JS_EXPORT_PRIVATE virtual ~Subspace();
 
@@ -98,6 +99,7 @@ public:
     virtual void didBeginSweepingToFreeList(MarkedBlock::Handle*);
 
     bool isIsoSubspace() const { return m_isIsoSubspace; }
+    bool isPreciseOnly() const { return m_isPreciseOnly; }
 
 protected:
     Subspace(CString name, Heap&);
@@ -111,10 +113,11 @@ protected:
 
     BlockDirectory* m_firstDirectory { nullptr };
     BlockDirectory* m_directoryForEmptyAllocation { nullptr }; // Uses the MarkedSpace linked list of blocks.
-    SentinelLinkedList<PreciseAllocation, PackedRawSentinelNode<PreciseAllocation>> m_preciseAllocations;
+    SentinelLinkedList<PreciseAllocation, BasicRawSentinelNode<PreciseAllocation>> m_preciseAllocations;
 
     bool m_isIsoSubspace { false };
-    uint8_t m_remainingLowerTierCellCount { 0 };
+    bool m_isPreciseOnly { false };
+    uint8_t m_remainingLowerTierPreciseCount { 0 }; // Lower tier is a precise allocation but we use the term lower to avoid confusion with precise-only.
 
     Subspace* m_nextSubspaceInAlignedMemoryAllocator { nullptr };
 

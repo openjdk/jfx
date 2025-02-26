@@ -1,4 +1,4 @@
-/*
+/**
  * Copyright (C) 2023 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -54,6 +54,12 @@ StyleNonInheritedData::StyleNonInheritedData(const StyleNonInheritedData& other)
     , miscData(other.miscData)
     , rareData(other.rareData)
 {
+    ASSERT(other == *this, "StyleNonInheritedData should be properly copied.");
+}
+
+Ref<StyleNonInheritedData> StyleNonInheritedData::create()
+{
+    return adoptRef(*new StyleNonInheritedData);
 }
 
 Ref<StyleNonInheritedData> StyleNonInheritedData::copy() const

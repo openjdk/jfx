@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2023, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -26,11 +26,6 @@
 package javafx.scene.control.skin;
 
 import java.util.List;
-
-import com.sun.javafx.scene.control.behavior.PasswordFieldBehavior;
-import com.sun.javafx.scene.control.behavior.TextFieldBehavior;
-import com.sun.javafx.scene.control.behavior.TextInputControlBehavior;
-
 import javafx.beans.binding.BooleanBinding;
 import javafx.beans.binding.DoubleBinding;
 import javafx.beans.binding.ObjectBinding;
@@ -42,6 +37,7 @@ import javafx.beans.value.ObservableDoubleValue;
 import javafx.event.EventHandler;
 import javafx.geometry.Bounds;
 import javafx.geometry.HPos;
+import javafx.geometry.NodeOrientation;
 import javafx.geometry.Point2D;
 import javafx.geometry.Rectangle2D;
 import javafx.scene.AccessibleAttribute;
@@ -60,6 +56,10 @@ import javafx.scene.shape.PathElement;
 import javafx.scene.shape.Rectangle;
 import javafx.scene.text.HitInfo;
 import javafx.scene.text.Text;
+import com.sun.javafx.scene.control.behavior.PasswordFieldBehavior;
+import com.sun.javafx.scene.control.behavior.TextFieldBehavior;
+import com.sun.javafx.scene.control.behavior.TextInputControlBehavior;
+import com.sun.javafx.scene.shape.TextHelper;
 
 /**
  * Default skin implementation for the {@link TextField} control.
@@ -160,6 +160,9 @@ public class TextFieldSkin extends TextInputControlSkin<TextField> {
                 }
                 updateCaretOff();
             }
+            // restart caret blinking animation
+            setCaretAnimating(false);
+            setCaretAnimating(true);
         });
 
         forwardBiasProperty().addListener(observable -> {
@@ -234,7 +237,7 @@ public class TextFieldSkin extends TextInputControlSkin<TextField> {
         caretPath.fillProperty().bind(textFillProperty());
         caretPath.strokeProperty().bind(textFillProperty());
 
-        // modifying visibility of the caret forces a layout-pass (RT-32373), so
+        // modifying visibility of the caret forces a layout-pass (JDK-8123291), so
         // instead we modify the opacity.
         caretPath.opacityProperty().bind(new DoubleBinding() {
             { bind(caretVisibleProperty()); }
@@ -245,8 +248,11 @@ public class TextFieldSkin extends TextInputControlSkin<TextField> {
         caretPath.layoutXProperty().bind(textTranslateX);
         textNode.caretShapeProperty().addListener(observable -> {
             caretPath.getElements().setAll(textNode.caretShapeProperty().get());
-            if (caretPath.getElements().size() == 0) {
-                // The caret pos is invalid.
+            if (caretPath.getElements().size() != 4) {
+                /* On replacing same text using keyboard shortcut,
+                 * caret position is not updated.
+                 * The caret pos is invalid in this case,
+                 * hence it should be updated when caret path size is not 4 */
                 updateTextNodeCaretPos(control.getCaretPosition());
             } else if (caretPath.getElements().size() == 4) {
                 // The caret is split. Ignore and keep the previous width value.
@@ -325,7 +331,7 @@ public class TextFieldSkin extends TextInputControlSkin<TextField> {
             caretHandle.setOnMouseDragged(e -> {
                 Point2D p = new Point2D(caretHandle.getLayoutX() + e.getX() + pressX - textNode.getLayoutX(),
                                         caretHandle.getLayoutY() + e.getY() - pressY - 6);
-                HitInfo hit = textNode.hitTest(p);
+                HitInfo hit = hitTest(p);
                 positionCaret(hit, false);
                 e.consume();
             });
@@ -336,7 +342,7 @@ public class TextFieldSkin extends TextInputControlSkin<TextField> {
                     Point2D tp = textNode.localToScene(0, 0);
                     Point2D p = new Point2D(e.getSceneX() - tp.getX() + 10/*??*/ - pressX + selectionHandle1.getWidth() / 2,
                                             e.getSceneY() - tp.getY() - pressY - 6);
-                    HitInfo hit = textNode.hitTest(p);
+                    HitInfo hit = hitTest(p);
                     if (control.getAnchor() < control.getCaretPosition()) {
                         // Swap caret and anchor
                         control.selectRange(control.getCaretPosition(), control.getAnchor());
@@ -358,7 +364,7 @@ public class TextFieldSkin extends TextInputControlSkin<TextField> {
                     Point2D tp = textNode.localToScene(0, 0);
                     Point2D p = new Point2D(e.getSceneX() - tp.getX() + 10/*??*/ - pressX + selectionHandle2.getWidth() / 2,
                                             e.getSceneY() - tp.getY() - pressY - 6);
-                    HitInfo hit = textNode.hitTest(p);
+                    HitInfo hit = hitTest(p);
                     if (control.getAnchor() > control.getCaretPosition()) {
                         // Swap caret and anchor
                         control.selectRange(control.getCaretPosition(), control.getAnchor());
@@ -479,9 +485,8 @@ public class TextFieldSkin extends TextInputControlSkin<TextField> {
     public HitInfo getIndex(double x, double y) {
         // adjust the event to be in the same coordinate space as the
         // text content of the textInputControl
-        Point2D p = new Point2D(x - textTranslateX.get() - snappedLeftInset(),
-                                y - snappedTopInset());
-        return textNode.hitTest(p);
+        Point2D p = new Point2D(x - textTranslateX.get() - snappedLeftInset(), y - snappedTopInset());
+        return hitTest(p);
     }
 
     // Public for behavior
@@ -585,12 +590,12 @@ public class TextFieldSkin extends TextInputControlSkin<TextField> {
             // The caret is split
             // TODO: Find a better way to get the primary caret position
             // instead of depending on the internal implementation.
-            // See RT-25465.
+            // See JDK-8089958.
             caretBounds = new Path(caretPath.getElements().get(0), caretPath.getElements().get(1)).getLayoutBounds();
         }
         double hitX = moveRight ? caretBounds.getMaxX() : caretBounds.getMinX();
         double hitY = (caretBounds.getMinY() + caretBounds.getMaxY()) / 2;
-        HitInfo hit = textNode.hitTest(new Point2D(hitX, hitY));
+        HitInfo hit = hitTest(new Point2D(hitX, hitY));
         boolean leading = hit.isLeading();
         Path charShape = new Path(textNode.rangeShape(hit.getCharIndex(), hit.getCharIndex() + 1));
         if ((moveRight && charShape.getLayoutBounds().getMaxX() > caretBounds.getMaxX()) ||
@@ -933,4 +938,11 @@ public class TextFieldSkin extends TextInputControlSkin<TextField> {
         return textTranslateX.get();
     }
 
+    private final HitInfo hitTest(Point2D p) {
+        if (getSkinnable().getEffectiveNodeOrientation() == NodeOrientation.RIGHT_TO_LEFT) {
+            double x = TextHelper.getVisualWidth(getTextNode()) - p.getX();
+            p = new Point2D(x, p.getY());
+        }
+        return textNode.hitTest(p);
+    }
 }

@@ -32,8 +32,8 @@ namespace WebCore {
 
 class Text;
 
-#define AppleInterchangeNewline   "Apple-interchange-newline"
-#define AppleConvertedSpace       "Apple-converted-space"
+constexpr auto AppleInterchangeNewline = "Apple-interchange-newline"_s;
+constexpr auto AppleConvertedSpace = "Apple-converted-space"_s;
 constexpr auto WebKitMSOListQuirksStyle = "WebKit-mso-list-quirks-style"_s;
 
 constexpr auto ApplePasteAsQuotation = "Apple-paste-as-quotation"_s;
@@ -43,7 +43,7 @@ constexpr auto AppleTabSpanClass = "Apple-tab-span"_s;
 // Controls whether a special BR which is removed upon paste in ReplaceSelectionCommand needs to be inserted
 // and making sequence of spaces not collapsible by inserting non-breaking spaces.
 // See https://trac.webkit.org/r8087 and https://trac.webkit.org/r8096.
-enum class AnnotateForInterchange : uint8_t { No, Yes };
+enum class AnnotateForInterchange : bool { No, Yes };
 
 String convertHTMLTextToInterchangeFormat(const String&, const Text*);
 

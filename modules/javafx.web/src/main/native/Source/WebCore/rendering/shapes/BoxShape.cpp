@@ -30,7 +30,7 @@
 #include "config.h"
 #include "BoxShape.h"
 
-#include "RenderBox.h"
+#include "RenderBoxInlines.h"
 #include <wtf/MathExtras.h>
 
 namespace WebCore {
@@ -80,9 +80,7 @@ RoundedRect computeRoundedRectForBoxShape(CSSBoxType box, const RenderBox& rende
     // fill-box compute to content-box for HTML elements.
     case CSSBoxType::FillBox:
     case CSSBoxType::ContentBox:
-        return style.getRoundedInnerBorderFor(renderer.borderBoxRect(),
-            renderer.paddingTop() + renderer.borderTop(), renderer.paddingBottom() + renderer.borderBottom(),
-            renderer.paddingLeft() + renderer.borderLeft(), renderer.paddingRight() + renderer.borderRight());
+        return renderer.roundedContentBoxRect(renderer.borderBoxRect());
     // stroke-box, view-box compute to border-box for HTML elements.
     case CSSBoxType::BorderBox:
     case CSSBoxType::StrokeBox:
@@ -159,9 +157,9 @@ LineSegment BoxShape::getExcludedInterval(LayoutUnit logicalTop, LayoutUnit logi
 
 void BoxShape::buildDisplayPaths(DisplayPaths& paths) const
 {
-    paths.shape.addRoundedRect(m_bounds, Path::RoundedRectStrategy::PreferBezier);
+    paths.shape.addRoundedRect(m_bounds, PathRoundedRect::Strategy::PreferBezier);
     if (shapeMargin())
-        paths.marginShape.addRoundedRect(shapeMarginBounds(), Path::RoundedRectStrategy::PreferBezier);
+        paths.marginShape.addRoundedRect(shapeMarginBounds(), PathRoundedRect::Strategy::PreferBezier);
 }
 
 } // namespace WebCore

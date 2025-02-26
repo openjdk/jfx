@@ -48,6 +48,7 @@
 namespace WebCore {
 
 class Document;
+class InputDeviceInfo;
 class MediaDeviceInfo;
 class MediaStream;
 class UserGestureToken;
@@ -57,7 +58,7 @@ struct MediaTrackSupportedConstraints;
 template<typename IDLType> class DOMPromiseDeferred;
 
 class MediaDevices final : public RefCounted<MediaDevices>, public ActiveDOMObject, public EventTarget {
-    WTF_MAKE_ISO_ALLOCATED(MediaDevices);
+    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(MediaDevices);
 public:
     static Ref<MediaDevices> create(Document&);
 
@@ -66,7 +67,7 @@ public:
     Document* document() const;
 
     using Promise = DOMPromiseDeferred<IDLInterface<MediaStream>>;
-    using EnumerateDevicesPromise = DOMPromiseDeferred<IDLSequence<IDLInterface<MediaDeviceInfo>>>;
+    using EnumerateDevicesPromise = DOMPromiseDeferred<IDLSequence<IDLUnion<IDLInterface<MediaDeviceInfo>, IDLInterface<InputDeviceInfo>>>>;
 
     enum class DisplayCaptureSurfaceType {
         Monitor,
@@ -91,9 +92,11 @@ public:
     MediaTrackSupportedConstraints getSupportedConstraints();
 
     String deviceIdToPersistentId(const String& deviceId) const { return m_audioOutputDeviceIdToPersistentId.get(deviceId); }
+    String hashedGroupId(const String& groupId);
 
-    using RefCounted<MediaDevices>::ref;
-    using RefCounted<MediaDevices>::deref;
+    // ActiveDOMObject.
+    void ref() const final { RefCounted::ref(); }
+    void deref() const final { RefCounted::deref(); }
 
 private:
     explicit MediaDevices(Document&);
@@ -101,18 +104,17 @@ private:
     void scheduledEventTimerFired();
     bool addEventListener(const AtomString& eventType, Ref<EventListener>&&, const AddEventListenerOptions&) override;
 
-    void exposeDevices(const Vector<CaptureDevice>&, MediaDeviceHashSalts&&, EnumerateDevicesPromise&&);
+    void exposeDevices(Vector<CaptureDeviceWithCapabilities>&&, MediaDeviceHashSalts&&, EnumerateDevicesPromise&&);
     void listenForDeviceChanges();
 
     friend class JSMediaDevicesOwner;
 
     // ActiveDOMObject
-    const char* activeDOMObjectName() const final;
     void stop() final;
     bool virtualHasPendingActivity() const final;
 
     // EventTarget.
-    EventTargetInterface eventTargetInterface() const final { return MediaDevicesEventTargetInterfaceType; }
+    enum EventTargetInterfaceType eventTargetInterface() const final { return EventTargetInterfaceType::MediaDevices; }
     ScriptExecutionContext* scriptExecutionContext() const final { return ActiveDOMObject::scriptExecutionContext(); }
     void refEventTarget() final { ref(); }
     void derefEventTarget() final { deref(); }

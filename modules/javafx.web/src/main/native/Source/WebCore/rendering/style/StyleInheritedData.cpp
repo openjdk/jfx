@@ -22,7 +22,7 @@
 #include "config.h"
 #include "StyleInheritedData.h"
 
-#include "RenderStyle.h"
+#include "RenderStyleInlines.h"
 
 namespace WebCore {
 
@@ -52,6 +52,7 @@ inline StyleInheritedData::StyleInheritedData(const StyleInheritedData& o)
     , color(o.color)
     , visitedLinkColor(o.visitedLinkColor)
 {
+    ASSERT(o == *this, "StyleInheritedData should be properly copied.");
 }
 
 Ref<StyleInheritedData> StyleInheritedData::copy() const

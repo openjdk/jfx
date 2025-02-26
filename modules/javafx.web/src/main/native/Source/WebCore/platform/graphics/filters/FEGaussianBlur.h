@@ -29,7 +29,9 @@ namespace WebCore {
 
 class FEGaussianBlur : public FilterEffect {
 public:
-    WEBCORE_EXPORT static Ref<FEGaussianBlur> create(float x, float y, EdgeModeType);
+    WEBCORE_EXPORT static Ref<FEGaussianBlur> create(float x, float y, EdgeModeType, DestinationColorSpace = DestinationColorSpace::SRGB());
+
+    bool operator==(const FEGaussianBlur&) const;
 
     float stdDeviationX() const { return m_stdX; }
     bool setStdDeviationX(float);
@@ -47,16 +49,19 @@ public:
     static IntOutsets calculateOutsets(const FloatSize& stdDeviation);
 
 private:
-    FEGaussianBlur(float x, float y, EdgeModeType);
+    FEGaussianBlur(float x, float y, EdgeModeType, DestinationColorSpace);
 
-    FloatRect calculateImageRect(const Filter&, Span<const FloatRect> inputImageRects, const FloatRect& primitiveSubregion) const override;
+    bool operator==(const FilterEffect& other) const override { return areEqual<FEGaussianBlur>(*this, other); }
+
+    FloatRect calculateImageRect(const Filter&, std::span<const FloatRect> inputImageRects, const FloatRect& primitiveSubregion) const override;
 
     bool resultIsAlphaImage(const FilterImageVector& inputs) const override;
 
     OptionSet<FilterRenderingMode> supportedFilterRenderingModes() const override;
 
+    std::unique_ptr<FilterEffectApplier> createAcceleratedApplier() const override;
     std::unique_ptr<FilterEffectApplier> createSoftwareApplier() const override;
-    std::optional<GraphicsStyle> createGraphicsStyle(const Filter&) const override;
+    std::optional<GraphicsStyle> createGraphicsStyle(GraphicsContext&, const Filter&) const override;
 
     WTF::TextStream& externalRepresentation(WTF::TextStream&, FilterRepresentation) const override;
 
@@ -67,4 +72,4 @@ private:
 
 } // namespace WebCore
 
-SPECIALIZE_TYPE_TRAITS_FILTER_EFFECT(FEGaussianBlur)
+SPECIALIZE_TYPE_TRAITS_FILTER_FUNCTION(FEGaussianBlur)

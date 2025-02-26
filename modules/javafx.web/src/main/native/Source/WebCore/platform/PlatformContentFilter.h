@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015 Apple Inc. All rights reserved.
+ * Copyright (C) 2015-2024 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -28,7 +28,17 @@
 
 #include "SharedBuffer.h"
 #include <wtf/Ref.h>
+#include <wtf/WeakPtr.h>
 #include <wtf/text/WTFString.h>
+
+namespace WebCore {
+class PlatformContentFilter;
+}
+
+namespace WTF {
+template<typename T> struct IsDeprecatedWeakRefSmartPointerException;
+template<> struct IsDeprecatedWeakRefSmartPointerException<WebCore::PlatformContentFilter> : std::true_type { };
+}
 
 namespace WebCore {
 
@@ -38,7 +48,7 @@ class ResourceRequest;
 class ResourceResponse;
 class SharedBuffer;
 
-class PlatformContentFilter {
+class PlatformContentFilter : public CanMakeWeakPtr<PlatformContentFilter> {
     WTF_MAKE_FAST_ALLOCATED;
     WTF_MAKE_NONCOPYABLE(PlatformContentFilter);
 
@@ -64,8 +74,16 @@ public:
 #endif
     virtual String unblockRequestDeniedScript() const { return emptyString(); }
 
+#if HAVE(AUDIT_TOKEN)
+    const std::optional<audit_token_t> hostProcessAuditToken() const { return m_hostProcessAuditToken; }
+    void setHostProcessAuditToken(const std::optional<audit_token_t>& token) { m_hostProcessAuditToken = token; }
+#endif
+
 protected:
     PlatformContentFilter() = default;
+#if HAVE(AUDIT_TOKEN)
+    std::optional<audit_token_t> m_hostProcessAuditToken;
+#endif
     State m_state { State::Filtering };
 };
 

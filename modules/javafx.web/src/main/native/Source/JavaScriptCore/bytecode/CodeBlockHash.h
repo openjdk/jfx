@@ -54,7 +54,7 @@ public:
 
     CodeBlockHash(const SourceCode&, CodeSpecializationKind);
 
-    explicit CodeBlockHash(const char*);
+    explicit CodeBlockHash(std::span<const char, 6>);
 
     bool isSet() const { return !!m_hash; }
     bool operator!() const { return !isSet(); }
@@ -64,8 +64,7 @@ public:
     void dump(PrintStream&) const;
 
     // Comparison methods useful for bisection.
-    bool operator==(const CodeBlockHash& other) const { return hash() == other.hash(); }
-    bool operator!=(const CodeBlockHash& other) const { return hash() != other.hash(); }
+    friend bool operator==(const CodeBlockHash&, const CodeBlockHash&) = default;
     bool operator<(const CodeBlockHash& other) const { return hash() < other.hash(); }
     bool operator>(const CodeBlockHash& other) const { return hash() > other.hash(); }
     bool operator<=(const CodeBlockHash& other) const { return hash() <= other.hash(); }

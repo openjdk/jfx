@@ -29,7 +29,8 @@
 namespace WebCore {
 
 class HTMLFieldSetElement final : public HTMLFormControlElement {
-    WTF_MAKE_ISO_ALLOCATED(HTMLFieldSetElement);
+    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(HTMLFieldSetElement);
+    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(HTMLFieldSetElement);
 public:
     static Ref<HTMLFieldSetElement> create(const QualifiedName&, Document&, HTMLFormElement*);
 
@@ -44,12 +45,14 @@ private:
     HTMLFieldSetElement(const QualifiedName&, Document&, HTMLFormElement*);
     ~HTMLFieldSetElement();
 
+    bool isDisabledFormControl() const final;
+    bool isActuallyDisabled() const final;
     bool isEnumeratable() const final { return true; }
     bool supportsFocus() const final;
     RenderPtr<RenderElement> createElementRenderer(RenderStyle&&, const RenderTreePosition&) final;
     const AtomString& formControlType() const final;
     bool computeWillValidate() const final { return false; }
-    void parseAttribute(const QualifiedName&, const AtomString&) final;
+    void attributeChanged(const QualifiedName&, const AtomString& oldValue, const AtomString& newValue, AttributeModificationReason) final;
     void disabledStateChanged() final;
     void childrenChanged(const ChildChange&) final;
     void didMoveToNewDocument(Document& oldDocument, Document& newDocument) final;

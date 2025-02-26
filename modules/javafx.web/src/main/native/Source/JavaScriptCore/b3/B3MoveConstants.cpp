@@ -215,6 +215,8 @@ private:
                         if (!addend->hasInt() || !filter(addend))
                             break;
                         int64_t addendConst = addend->asInt();
+                        if (Air::Arg::isValidImmForm(addendConst))
+                            break;
                         Value* bestAddend = findBestConstant(
                             [&] (Value* candidateAddend) -> bool {
                                 if (candidateAddend->type() != addend->type())
@@ -400,7 +402,7 @@ private:
 
 void moveConstants(Procedure& proc)
 {
-    PhaseScope phaseScope(proc, "moveConstants");
+    PhaseScope phaseScope(proc, "moveConstants"_s);
     MoveConstants moveConstants(proc);
     moveConstants.run();
 }

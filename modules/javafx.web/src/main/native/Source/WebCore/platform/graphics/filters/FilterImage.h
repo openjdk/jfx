@@ -26,6 +26,7 @@
 #pragma once
 
 #include "FloatRect.h"
+#include "ImageBuffer.h"
 #include "IntRect.h"
 #include "PixelBuffer.h"
 #include "RenderingMode.h"
@@ -37,11 +38,15 @@
 OBJC_CLASS CIImage;
 #endif
 
+#if USE(SKIA)
+#include <skia/core/SkPicture.h>
+#include <skia/core/SkPictureRecorder.h>
+#endif
+
 namespace WebCore {
 
 class Filter;
 class FloatRect;
-class ImageBuffer;
 class ImageBufferAllocator;
 
 class FilterImage : public RefCounted<FilterImage> {
@@ -63,6 +68,8 @@ public:
     RenderingMode renderingMode() const { return m_renderingMode; }
     const DestinationColorSpace& colorSpace() const { return m_colorSpace; }
 
+    size_t memoryCost() const;
+
     WEBCORE_EXPORT ImageBuffer* imageBuffer();
     PixelBuffer* pixelBuffer(AlphaPremultiplication);
 
@@ -75,6 +82,7 @@ public:
 #if USE(CORE_IMAGE)
     RetainPtr<CIImage> ciImage() const { return m_ciImage; }
     void setCIImage(RetainPtr<CIImage>&&);
+    size_t memoryCostOfCIImage() const;
 #endif
 
 private:

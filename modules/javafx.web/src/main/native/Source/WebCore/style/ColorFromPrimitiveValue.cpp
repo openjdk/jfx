@@ -38,41 +38,44 @@ namespace WebCore {
 
 namespace Style {
 
+StyleColor colorFromValueID(const Document& document, RenderStyle& style, CSSValueID valueID, ForVisitedLink forVisitedLink)
+{
+    switch (valueID) {
+    case CSSValueInternalDocumentTextColor:
+        return { document.textColor() };
+    case CSSValueWebkitLink:
+        return { forVisitedLink == ForVisitedLink::Yes ? document.visitedLinkColor(style) : document.linkColor(style) };
+    case CSSValueWebkitActivelink:
+        return { document.activeLinkColor(style) };
+    case CSSValueWebkitFocusRingColor:
+        return { RenderTheme::singleton().focusRingColor(document.styleColorOptions(&style)) };
+    case CSSValueCurrentcolor:
+        return StyleColor::currentColor();
+    default:
+        return { StyleColor::colorFromKeyword(valueID, document.styleColorOptions(&style)) };
+    }
+}
+
 StyleColor colorFromPrimitiveValue(const Document& document, RenderStyle& style, const CSSPrimitiveValue& value, ForVisitedLink forVisitedLink)
 {
     if (value.isColor())
         return value.color();
     if (value.isUnresolvedColor())
         return value.unresolvedColor().createStyleColor(document, style, forVisitedLink);
-
-    auto identifier = value.valueID();
-    switch (identifier) {
-    case CSSValueInternalDocumentTextColor:
-        return { document.textColor() };
-    case CSSValueWebkitLink:
-        return { forVisitedLink == ForVisitedLink::Yes ? document.visitedLinkColor() : document.linkColor() };
-    case CSSValueWebkitActivelink:
-        return { document.activeLinkColor() };
-    case CSSValueWebkitFocusRingColor:
-        return { RenderTheme::singleton().focusRingColor(document.styleColorOptions(&style)) };
-    case CSSValueCurrentcolor:
-        return StyleColor::currentColor();
-    default:
-        return { StyleColor::colorFromKeyword(identifier, document.styleColorOptions(&style)) };
-    }
+    return colorFromValueID(document, style, value.valueID(), forVisitedLink);
 }
 
 Color colorFromPrimitiveValueWithResolvedCurrentColor(const Document& document, RenderStyle& style, const CSSPrimitiveValue& value)
 {
     // FIXME: 'currentcolor' should be resolved at use time to make it inherit correctly. https://bugs.webkit.org/show_bug.cgi?id=210005
-    if (StyleColor::isCurrentColor(value)) {
+    if (StyleColor::containsCurrentColor(value)) {
         // Color is an inherited property so depending on it effectively makes the property inherited.
         style.setHasExplicitlyInheritedProperties();
         style.setDisallowsFastPathInheritance();
-        return style.color();
     }
 
-    return colorFromPrimitiveValue(document, style, value, ForVisitedLink::No).absoluteColor();
+    auto color = colorFromPrimitiveValue(document, style, value, ForVisitedLink::No);
+    return style.colorResolvingCurrentColor(color);
 }
 
 } // namespace Style

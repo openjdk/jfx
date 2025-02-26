@@ -24,7 +24,7 @@
 
 #include <gst/tag/tag.h>
 
-#include <gst/gst-i18n-plugin.h>
+#include <glib/gi18n-lib.h>
 
 #include "aiffelements.h"
 

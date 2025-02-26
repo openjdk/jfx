@@ -30,7 +30,7 @@
 
 namespace WebCore {
 
-enum FrameIdentifierType { };
-using FrameIdentifier = ProcessQualified<ObjectIdentifier<FrameIdentifierType>>;
+struct FrameIdentifierType;
+using FrameIdentifier = ProcessQualified<LegacyNullableObjectIdentifier<FrameIdentifierType>>;
 
 }

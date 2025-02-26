@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2014, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -275,7 +275,8 @@ JNIEXPORT jlong JNICALL Java_com_sun_prism_es2_X11GLContext_nInitialize
                 dlsym(RTLD_DEFAULT, "glXSwapIntervalSGI");
 
         if (ctxInfo->glXSwapIntervalSGI == NULL) {
-            ctxInfo->glXSwapIntervalSGI = glXGetProcAddress("glXSwapIntervalSGI");
+            ctxInfo->glXSwapIntervalSGI = (PFNGLXSWAPINTERVALSGIPROC)
+                glXGetProcAddress((const GLubyte *)"glXSwapIntervalSGI");
         }
 
     }

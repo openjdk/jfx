@@ -33,18 +33,27 @@
 
 namespace JSC {
 
+class BaselineJITCode;
+
 class BaselineJITPlan final : public JITPlan {
     using Base = JITPlan;
 
 public:
-    BaselineJITPlan(CodeBlock*, BytecodeIndex loopOSREntryBytecodeIndex);
+    BaselineJITPlan(CodeBlock*);
 
     CompilationPath compileInThreadImpl() final;
     size_t codeSize() const final;
     CompilationResult finalize() override;
 
+    CompilationPath compileSync(JITCompilationEffort);
+
+    bool isKnownToBeLiveAfterGC() final;
+    bool isKnownToBeLiveDuringGC(AbstractSlotVisitor&) final;
+
 private:
-    JIT m_jit;
+    CompilationPath compileInThreadImpl(JITCompilationEffort);
+
+    RefPtr<BaselineJITCode> m_jitCode;
 };
 
 } // namespace JSC

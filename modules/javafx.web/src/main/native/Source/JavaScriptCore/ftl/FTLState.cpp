@@ -80,13 +80,12 @@ State::State(Graph& graph)
     proc->setFrontendData(&graph);
 }
 
-void State::dumpDisassembly(PrintStream& out, const ScopedLambda<void(DFG::Node*)>& perDFGNodeCallback)
+void State::dumpDisassembly(PrintStream& out, LinkBuffer& linkBuffer, const ScopedLambda<void(DFG::Node*)>& perDFGNodeCallback)
 {
     B3::Air::Disassembler* disassembler = proc->code().disassembler();
 
     out.print("Generated ", graph.m_plan.mode(), " code for ", CodeBlockWithJITType(graph.m_codeBlock, JITType::FTLJIT), ", instructions size = ", graph.m_codeBlock->instructionsSize(), ":\n");
 
-    LinkBuffer& linkBuffer = *finalizer->b3CodeLinkBuffer;
     B3::Value* currentB3Value = nullptr;
     Node* currentDFGNode = nullptr;
 
@@ -149,17 +148,19 @@ void State::dumpDisassembly(PrintStream& out, const ScopedLambda<void(DFG::Node*
         printedValues.add(value);
     };
 
+    B3::Value* prevOrigin = nullptr;
     auto forEachInst = scopedLambda<void(B3::Air::Inst&)>([&] (B3::Air::Inst& inst) {
+        if (inst.origin != prevOrigin) {
         printB3Value(inst.origin);
+            prevOrigin = inst.origin;
+        }
     });
 
     disassembler->dump(proc->code(), out, linkBuffer, airPrefix, asmPrefix, forEachInst);
     linkBuffer.didAlreadyDisassemble();
 }
 
-State::~State()
-{
-}
+State::~State() = default;
 
 StructureStubInfo* State::addStructureStubInfo()
 {
@@ -171,7 +172,7 @@ StructureStubInfo* State::addStructureStubInfo()
 
 OptimizingCallLinkInfo* State::addCallLinkInfo(CodeOrigin codeOrigin)
 {
-    return jitCode->common.m_callLinkInfos.add(codeOrigin, CallLinkInfo::UseDataIC::No);
+    return jitCode->common.m_callLinkInfos.add(codeOrigin, graph.m_codeBlock);
 }
 
 } } // namespace JSC::FTL

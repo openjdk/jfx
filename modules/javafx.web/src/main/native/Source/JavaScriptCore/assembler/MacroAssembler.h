@@ -59,7 +59,6 @@
 #define TARGET_ASSEMBLER ARMv7Assembler
 #define TARGET_MACROASSEMBLER MacroAssemblerARMv7
 #include "MacroAssemblerARMv7.h"
-namespace JSC { typedef MacroAssemblerARMv7 MacroAssemblerBase; };
 
 #elif CPU(ARM64E)
 #define TARGET_ASSEMBLER ARM64EAssembler
@@ -70,11 +69,6 @@ namespace JSC { typedef MacroAssemblerARMv7 MacroAssemblerBase; };
 #define TARGET_ASSEMBLER ARM64Assembler
 #define TARGET_MACROASSEMBLER MacroAssemblerARM64
 #include "MacroAssemblerARM64.h"
-
-#elif CPU(MIPS)
-#define TARGET_ASSEMBLER MIPSAssembler
-#define TARGET_MACROASSEMBLER MacroAssemblerMIPS
-#include "MacroAssemblerMIPS.h"
 
 #elif CPU(X86_64)
 #define TARGET_ASSEMBLER X86Assembler
@@ -109,7 +103,7 @@ enum class SavedFPWidth {
 };
 
 class Context;
-typedef void (*Function)(Context&);
+typedef void (SYSV_ABI *Function)(Context&);
 
 } // namespace Probe
 
@@ -170,11 +164,14 @@ public:
     using MacroAssemblerBase::and32;
     using MacroAssemblerBase::branchAdd32;
     using MacroAssemblerBase::branchMul32;
-#if CPU(ARM64) || CPU(ARM_THUMB2) || CPU(X86_64) || CPU(MIPS) || CPU(RISCV64)
+#if CPU(ARM64) || CPU(ARM_THUMB2) || CPU(X86_64) || CPU(RISCV64)
     using MacroAssemblerBase::branchPtr;
 #endif
 #if CPU(X86_64)
     using MacroAssemblerBase::branch64;
+#endif
+#if CPU(RISCV64)
+    using MacroAssemblerRISCV64::lshift64;
 #endif
     using MacroAssemblerBase::branchSub32;
     using MacroAssemblerBase::lshift32;
@@ -185,10 +182,17 @@ public:
     using MacroAssemblerBase::urshift32;
     using MacroAssemblerBase::xor32;
 
-#if CPU(ARM64) || CPU(X86_64) || CPU(RISCV64)
-    using MacroAssemblerBase::and64;
+#if CPU(ARM64) || CPU(X86_64) || CPU(RISCV64) || CPU(ARM_THUMB2)
     using MacroAssemblerBase::convertInt32ToDouble;
+#endif
+#if CPU(ARM64) || CPU(X86_64) || CPU(RISCV64)
+    using MacroAssemblerBase::add64;
+    using MacroAssemblerBase::sub64;
+    using MacroAssemblerBase::and64;
+    using MacroAssemblerBase::or64;
+    using MacroAssemblerBase::xor64;
     using MacroAssemblerBase::store64;
+    using MacroAssemblerBase::compare64;
 #endif
 
     static bool isPtrAlignedAddressOffset(ptrdiff_t value)
@@ -498,6 +502,12 @@ public:
         return PatchableJump(branch8(cond, address, imm));
     }
 
+    PatchableJump patchableBranch16(RelationalCondition cond, Address address, TrustedImm32 imm)
+    {
+        padBeforePatch();
+        return PatchableJump(branch16(cond, address, imm));
+    }
+
     PatchableJump patchableBranch32(RelationalCondition cond, Address address, TrustedImm32 imm)
     {
         padBeforePatch();
@@ -548,7 +558,11 @@ public:
     // consumes some register in some way.
     void retVoid() { ret(); }
     void ret32(RegisterID) { ret(); }
+#if CPU(ARM_THUMB2)
+    void ret64(RegisterID, RegisterID) { ret(); }
+#else
     void ret64(RegisterID) { ret(); }
+#endif
     void retFloat(FPRegisterID) { ret(); }
     void retDouble(FPRegisterID) { ret(); }
 
@@ -574,12 +588,6 @@ public:
     {
         loadFloat(src, scratch);
         storeFloat(scratch, dest);
-    }
-
-    // Overload mostly for use in templates.
-    void move(FPRegisterID src, FPRegisterID dest)
-    {
-        moveDouble(src, dest);
     }
 
     void moveDouble(Address src, Address dest, FPRegisterID scratch)
@@ -784,6 +792,11 @@ public:
         loadPair32(src, offset, dest1, dest2);
     }
 
+    void loadPairPtr(Address src, RegisterID dest1, RegisterID dest2)
+    {
+        loadPair32(src, dest1, dest2);
+    }
+
 #if ENABLE(FAST_TLS_JIT)
     void loadFromTLSPtr(uint32_t offset, RegisterID dst)
     {
@@ -856,6 +869,11 @@ public:
         storePair32(src1, src2, dest, offset);
     }
 
+    void storePairPtr(RegisterID src1, RegisterID src2, Address dest)
+    {
+        storePair32(src1, src2, dest);
+    }
+
     Jump branchPtr(RelationalCondition cond, RegisterID left, RegisterID right)
     {
         return branch32(cond, left, right);
@@ -917,6 +935,11 @@ public:
     }
 
     Jump branchTestPtr(ResultCondition cond, BaseIndex address, TrustedImm32 mask = TrustedImm32(-1))
+    {
+        return branchTest32(cond, address, mask);
+    }
+
+    Jump branchTestPtr(ResultCondition cond, AbsoluteAddress address, TrustedImm32 mask = TrustedImm32(-1))
     {
         return branchTest32(cond, address, mask);
     }
@@ -1014,6 +1037,11 @@ public:
         lshift64(imm, srcDest);
     }
 
+    void lshiftPtr(RegisterID src, TrustedImm32 imm, RegisterID dest)
+    {
+        lshift64(src, imm, dest);
+    }
+
     void rshiftPtr(Imm32 imm, RegisterID srcDest)
     {
         rshift64(trustedImm32ForShift(imm), srcDest);
@@ -1024,6 +1052,11 @@ public:
         rshift64(imm, srcDest);
     }
 
+    void rshiftPtr(RegisterID src, TrustedImm32 imm, RegisterID dest)
+    {
+        rshift64(src, imm, dest);
+    }
+
     void urshiftPtr(Imm32 imm, RegisterID srcDest)
     {
         urshift64(trustedImm32ForShift(imm), srcDest);
@@ -1032,6 +1065,11 @@ public:
     void urshiftPtr(RegisterID shiftAmmount, RegisterID srcDest)
     {
         urshift64(shiftAmmount, srcDest);
+    }
+
+    void urshiftPtr(RegisterID src, TrustedImm32 imm, RegisterID dest)
+    {
+        urshift64(src, imm, dest);
     }
 
     void negPtr(RegisterID dest)
@@ -1153,6 +1191,11 @@ public:
         loadPair64(src, offset, dest1, dest2);
     }
 
+    void loadPairPtr(Address src, RegisterID dest1, RegisterID dest2)
+    {
+        loadPair64(src, dest1, dest2);
+    }
+
 #if ENABLE(FAST_TLS_JIT)
     void loadFromTLSPtr(uint32_t offset, RegisterID dst)
     {
@@ -1202,6 +1245,11 @@ public:
     void storePairPtr(RegisterID src1, RegisterID src2, RegisterID dest, TrustedImm32 offset)
     {
         storePair64(src1, src2, dest, offset);
+    }
+
+    void storePairPtr(RegisterID src1, RegisterID src2, Address dest)
+    {
+        storePair64(src1, src2, dest);
     }
 
     void comparePtr(RelationalCondition cond, RegisterID left, TrustedImm32 right, RegisterID dest)
@@ -1424,7 +1472,7 @@ public:
         if (bitwise_cast<uint64_t>(value * 1.0) != bitwise_cast<uint64_t>(value))
             return shouldConsiderBlinding();
 
-        value = fabs(value);
+        value = std::abs(value);
         // Only allow a limited set of fractional components
         double scaledValue = value * 8;
         if (scaledValue / 8 != value)
@@ -1633,6 +1681,141 @@ public:
             and64(imm.asTrustedImm32(), dest);
     }
 
+    void and64(Imm32 imm, RegisterID src, RegisterID dest)
+    {
+        if (shouldBlind(imm)) {
+            move(src, dest);
+            and64(imm, dest);
+        } else
+            and64(imm.asTrustedImm32(), src, dest);
+    }
+
+    void and64(Imm64 imm, RegisterID dest)
+    {
+        if (shouldBlind(imm) && haveScratchRegisterForBlinding()) {
+            RegisterID scratchRegister = scratchRegisterForBlinding();
+            loadRotationBlindedConstant(rotationBlindConstant(imm), scratchRegister);
+            and64(scratchRegister, dest);
+        } else
+            and64(imm.asTrustedImm64(), dest);
+    }
+
+    void and64(Imm64 imm, RegisterID src, RegisterID dest)
+    {
+        if (shouldBlind(imm) && haveScratchRegisterForBlinding()) {
+            RegisterID scratchRegister = scratchRegisterForBlinding();
+            loadRotationBlindedConstant(rotationBlindConstant(imm), scratchRegister);
+            and64(scratchRegister, dest);
+        } else
+            and64(imm.asTrustedImm64(), src, dest);
+    }
+
+    void xor64(Imm64 imm, RegisterID dest)
+    {
+        if (shouldBlind(imm) && haveScratchRegisterForBlinding()) {
+            RegisterID scratchRegister = scratchRegisterForBlinding();
+            loadRotationBlindedConstant(rotationBlindConstant(imm), scratchRegister);
+            xor64(scratchRegister, dest);
+        } else
+            xor64(imm.asTrustedImm64(), dest);
+    }
+
+    void xor64(Imm64 imm, RegisterID src, RegisterID dest)
+    {
+        if (shouldBlind(imm) && haveScratchRegisterForBlinding()) {
+            RegisterID scratchRegister = scratchRegisterForBlinding();
+            loadRotationBlindedConstant(rotationBlindConstant(imm), scratchRegister);
+            xor64(scratchRegister, dest);
+        } else
+            xor64(imm.asTrustedImm64(), src, dest);
+    }
+
+    void or64(Imm64 imm, RegisterID dest)
+    {
+        if (shouldBlind(imm) && haveScratchRegisterForBlinding()) {
+            RegisterID scratchRegister = scratchRegisterForBlinding();
+            loadRotationBlindedConstant(rotationBlindConstant(imm), scratchRegister);
+            or64(scratchRegister, dest);
+        } else
+            or64(imm.asTrustedImm64(), dest);
+    }
+
+    void or64(Imm64 imm, RegisterID src, RegisterID dest)
+    {
+        if (shouldBlind(imm) && haveScratchRegisterForBlinding()) {
+            RegisterID scratchRegister = scratchRegisterForBlinding();
+            loadRotationBlindedConstant(rotationBlindConstant(imm), scratchRegister);
+            or64(scratchRegister, dest);
+        } else
+            or64(imm.asTrustedImm64(), src, dest);
+    }
+
+    void add64(Imm64 imm, RegisterID dest)
+    {
+        if (shouldBlind(imm) && haveScratchRegisterForBlinding()) {
+            RegisterID scratchRegister = scratchRegisterForBlinding();
+            loadRotationBlindedConstant(rotationBlindConstant(imm), scratchRegister);
+            add64(scratchRegister, dest);
+        } else
+            add64(imm.asTrustedImm64(), dest);
+    }
+
+    void add64(Imm64 imm, RegisterID src, RegisterID dest)
+    {
+        if (shouldBlind(imm)) {
+            move(src, dest);
+            add64(imm, dest);
+        } else
+            add64(imm.asTrustedImm64(), src, dest);
+    }
+
+    void sub64(Imm64 imm, RegisterID dest)
+    {
+        if (shouldBlind(imm) && haveScratchRegisterForBlinding()) {
+            RegisterID scratchRegister = scratchRegisterForBlinding();
+            loadRotationBlindedConstant(rotationBlindConstant(imm), scratchRegister);
+            sub64(scratchRegister, dest);
+        } else
+            sub64(imm.asTrustedImm64(), dest);
+    }
+
+    void sub64(RegisterID src, Imm64 imm, RegisterID dest)
+    {
+        if (shouldBlind(imm)) {
+            move(src, dest);
+            sub64(imm, dest);
+        } else
+            sub64(src, imm.asTrustedImm64(), dest);
+    }
+
+    void compare64(RelationalCondition cond, Imm64 left, RegisterID right, RegisterID dest)
+    {
+        compare64(commute(cond), right, left, dest);
+    }
+
+    void compare64(RelationalCondition cond, RegisterID left, Imm64 right, RegisterID dest)
+    {
+        if (shouldBlind(right)) {
+            if (left != dest || haveScratchRegisterForBlinding()) {
+                RegisterID blindedConstantReg = dest;
+                if (left == dest)
+                    blindedConstantReg = scratchRegisterForBlinding();
+                loadRotationBlindedConstant(rotationBlindConstant(right), blindedConstantReg);
+                compare64(cond, left, blindedConstantReg, dest);
+                return;
+            }
+            // If we don't have a scratch register available for use, we'll just
+            // place a random number of nops.
+            uint32_t nopCount = random() & 3;
+            while (nopCount--)
+                nop();
+            compare64(cond, left, right.asTrustedImm64(), dest);
+            return;
+        }
+
+        compare64(cond, left, right.asTrustedImm64(), dest);
+    }
+
 #endif // USE(JSVALUE64)
 
 #if CPU(X86_64) || CPU(RISCV64)
@@ -1663,7 +1846,7 @@ public:
     }
 #endif
 
-#if !CPU(X86) && !CPU(X86_64) && !CPU(ARM64)
+#if !CPU(X86_64) && !CPU(ARM64)
     // We should implement this the right way eventually, but for now, it's fine because it arises so
     // infrequently.
     void compareDouble(DoubleCondition cond, FPRegisterID left, FPRegisterID right, RegisterID dest)
@@ -1672,6 +1855,14 @@ public:
         Jump falseCase = branchDouble(invert(cond), left, right);
         move(TrustedImm32(1), dest);
         falseCase.link(this);
+    }
+
+    void compareDoubleWithZero(DoubleCondition cond, FPRegisterID left, RegisterID dest)
+    {
+        UNUSED_PARAM(cond);
+        UNUSED_PARAM(left);
+        UNUSED_PARAM(dest);
+        UNREACHABLE_FOR_PLATFORM();
     }
 #endif
 
@@ -1685,7 +1876,7 @@ public:
     {
         add64(TrustedImm32(address.offset), address.base, dest);
     }
-#endif // CPU(X86_64) || CPU(ARM64)
+#endif // CPU(X86_64) || CPU(ARM64) || CPU(RISCV64)
 
 #if CPU(X86_64)
     bool shouldBlind(Imm32 imm)
@@ -1943,11 +2134,11 @@ public:
     void store32(Imm32 imm, Address dest)
     {
         if (shouldBlind(imm)) {
-#if CPU(X86) || CPU(X86_64)
+#if CPU(X86_64)
             BlindedImm32 blind = xorBlindConstant(imm);
             store32(blind.value1, dest);
             xor32(blind.value2, dest);
-#else // CPU(X86) || CPU(X86_64)
+#else // CPU(X86_64)
             if (haveScratchRegisterForBlinding()) {
                 loadXorBlindedConstant(xorBlindConstant(imm), scratchRegisterForBlinding());
                 store32(scratchRegisterForBlinding(), dest);
@@ -1959,7 +2150,7 @@ public:
                     nop();
                 store32(imm.asTrustedImm32(), dest);
             }
-#endif // CPU(X86) || CPU(X86_64)
+#endif // CPU(X86_64)
         } else
             store32(imm.asTrustedImm32(), dest);
     }
@@ -2220,13 +2411,32 @@ public:
 
     // This leaks memory. Must not be used for production.
     JS_EXPORT_PRIVATE void probeDebug(Function<void(Probe::Context&)>);
+    JS_EXPORT_PRIVATE void probeDebugSIMD(Function<void(Probe::Context&)>);
 
     // Let's you print from your JIT generated code.
     // See comments in MacroAssemblerPrinter.h for examples of how to use this.
-    template<typename... Arguments>
-    void print(Arguments&&... args);
+    void print(auto&&... args);
+    void println(auto&&... args);
 
     void print(Printer::PrintRecordList*);
+
+    template<PtrTag tag>
+    void nearCallThunk(CodeLocationLabel<tag> label)
+    {
+        nearCall().linkThunk(label, this);
+    }
+
+    template<PtrTag tag>
+    void nearTailCallThunk(CodeLocationLabel<tag> label)
+    {
+        nearTailCall().linkThunk(label, this);
+    }
+
+    template<PtrTag tag>
+    void jumpThunk(CodeLocationLabel<tag> label)
+    {
+        jump().linkThunk(label, this);
+    }
 };
 
 } // namespace JSC

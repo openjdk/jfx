@@ -41,29 +41,10 @@ void RemoteFrameView::setFrameRect(const IntRect& newRect)
     IntRect oldRect = frameRect();
     if (newRect.size() != oldRect.size())
         m_frame->client().sizeDidChange(newRect.size());
-    AbstractFrameView::setFrameRect(newRect);
+    FrameView::setFrameRect(newRect);
 }
 
 // FIXME: Implement all the stubs below.
-
-void RemoteFrameView::invalidateRect(const IntRect&)
-{
-}
-
-bool RemoteFrameView::isActive() const
-{
-    return false;
-}
-
-bool RemoteFrameView::forceUpdateScrollbarsOnMainThreadForPerformanceTesting() const
-{
-    return false;
-}
-
-ScrollableArea* RemoteFrameView::enclosingScrollableArea() const
-{
-    return nullptr;
-}
 
 bool RemoteFrameView::isScrollableOrRubberbandable()
 {
@@ -75,11 +56,6 @@ bool RemoteFrameView::hasScrollableOrRubberbandableAncestor()
     return false;
 }
 
-IntRect RemoteFrameView::scrollableAreaBoundingBox(bool*) const
-{
-    return { };
-}
-
 bool RemoteFrameView::shouldPlaceVerticalScrollbarOnLeft() const
 {
     return false;
@@ -89,17 +65,12 @@ void RemoteFrameView::invalidateScrollbarRect(Scrollbar&, const IntRect&)
 {
 }
 
-HostWindow* RemoteFrameView::hostWindow() const
-{
-    return nullptr;
-}
-
 IntRect RemoteFrameView::windowClipRect() const
 {
     return { };
 }
 
-void RemoteFrameView::paintContents(GraphicsContext&, const IntRect&, SecurityOriginPaintPolicy, EventRegionContext*)
+void RemoteFrameView::paintContents(GraphicsContext&, const IntRect&, SecurityOriginPaintPolicy, RegionContext*)
 {
 }
 
@@ -153,6 +124,12 @@ void RemoteFrameView::updateLayerPositionsAfterScrolling()
 
 void RemoteFrameView::updateCompositingLayersAfterScrolling()
 {
+}
+
+void RemoteFrameView::writeRenderTreeAsText(TextStream& ts, OptionSet<RenderAsTextFlag> behavior)
+{
+    auto& remoteFrame = frame();
+    ts << remoteFrame.renderTreeAsText(ts.indent(), behavior);
 }
 
 } // namespace WebCore

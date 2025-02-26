@@ -30,20 +30,23 @@
 namespace WGSL::AST {
 
 class CompoundStatement final : public Statement {
-    WTF_MAKE_FAST_ALLOCATED;
+    WGSL_AST_BUILDER_NODE(CompoundStatement);
 public:
+    using Ref = std::reference_wrapper<CompoundStatement>;
 
-    using Ref = UniqueRef<CompoundStatement>;
+    NodeKind kind() const override;
+    Attribute::List& attributes() { return m_attributes; }
+    Statement::List& statements() { return m_statements; }
+    const Statement::List& statements() const { return m_statements; }
 
-    CompoundStatement(SourceSpan span, Statement::List&& statements)
+private:
+    CompoundStatement(SourceSpan span, Attribute::List&& attributes, Statement::List&& statements)
         : Statement(span)
+        , m_attributes(WTFMove(attributes))
         , m_statements(WTFMove(statements))
     { }
 
-    NodeKind kind() const override;
-    Statement::List& statements() { return m_statements; }
-
-private:
+    Attribute::List m_attributes;
     Statement::List m_statements;
 };
 

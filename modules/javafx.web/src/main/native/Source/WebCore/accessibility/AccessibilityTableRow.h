@@ -36,14 +36,15 @@ class AccessibilityTable;
 
 class AccessibilityTableRow : public AccessibilityRenderObject {
 public:
-    static Ref<AccessibilityTableRow> create(RenderObject*);
+    static Ref<AccessibilityTableRow> create(RenderObject&);
+    static Ref<AccessibilityTableRow> create(Node&);
     virtual ~AccessibilityTableRow();
 
     // retrieves the "row" header (a th tag in the rightmost column)
-    virtual AXCoreObject* headerObject();
+    AXCoreObject* rowHeader() override;
     virtual AccessibilityTable* parentTable() const;
 
-    void setRowIndex(unsigned rowIndex) { m_rowIndex = rowIndex; }
+    void setRowIndex(unsigned);
     unsigned rowIndex() const override { return m_rowIndex; }
 
     // allows the table to add other children that may not originate
@@ -56,7 +57,8 @@ public:
     int axRowIndex() const override;
 
 protected:
-    explicit AccessibilityTableRow(RenderObject*);
+    explicit AccessibilityTableRow(RenderObject&);
+    explicit AccessibilityTableRow(Node&);
 
     AccessibilityRole determineAccessibilityRole() final;
 

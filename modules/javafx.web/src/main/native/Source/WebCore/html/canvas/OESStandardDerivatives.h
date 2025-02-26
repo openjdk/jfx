@@ -26,16 +26,17 @@
 #pragma once
 
 #include "WebGLExtension.h"
+#include "WebGLRenderingContextBase.h"
+#include <wtf/Noncopyable.h>
+#include <wtf/TZoneMalloc.h>
 
 namespace WebCore {
 
-class OESStandardDerivatives final : public WebGLExtension {
-    WTF_MAKE_ISO_ALLOCATED(OESStandardDerivatives);
+class OESStandardDerivatives final : public WebGLExtension<WebGLRenderingContextBase> {
+    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(OESStandardDerivatives);
 public:
     explicit OESStandardDerivatives(WebGLRenderingContextBase&);
-    virtual ~OESStandardDerivatives();
-
-    ExtensionName getName() const override;
+    ~OESStandardDerivatives();
 
     static bool supported(GraphicsContextGL&);
 };

@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2017 Google Inc. All rights reserved.
- * Copyright (C) 2017 Apple Inc. All rights reserved.
+ * Copyright (C) 2017-2024 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -29,39 +29,43 @@
 #if ENABLE(WEB_AUTHN)
 
 #include "AuthenticatorCoordinator.h"
+#include "DigitalCredential.h"
 #include <wtf/RefCounted.h>
 #include <wtf/WeakPtr.h>
-
-namespace WebAuthn {
-enum class Scope;
-}
 
 namespace WebCore {
 
 class Document;
-
+class WeakPtrImplWithEventTargetData;
 struct CredentialCreationOptions;
 struct CredentialRequestOptions;
-class WeakPtrImplWithEventTargetData;
 
 class CredentialsContainer : public RefCounted<CredentialsContainer> {
 public:
-    static Ref<CredentialsContainer> create(WeakPtr<Document, WeakPtrImplWithEventTargetData>&& document) { return adoptRef(*new CredentialsContainer(WTFMove(document))); }
+    static Ref<CredentialsContainer> create(WeakPtr<Document, WeakPtrImplWithEventTargetData>&& document)
+    {
+        return adoptRef(*new CredentialsContainer(WTFMove(document)));
+    }
 
-    void get(CredentialRequestOptions&&, CredentialPromise&&);
+    virtual void get(CredentialRequestOptions&&, CredentialPromise&&);
 
     void store(const BasicCredential&, CredentialPromise&&);
 
-    void isCreate(CredentialCreationOptions&&, CredentialPromise&&);
+    virtual void isCreate(CredentialCreationOptions&&, CredentialPromise&&);
 
     void preventSilentAccess(DOMPromiseDeferred<void>&&) const;
 
-private:
     CredentialsContainer(WeakPtr<Document, WeakPtrImplWithEventTargetData>&&);
 
-    ScopeAndCrossOriginParent scopeAndCrossOriginParent() const;
+    virtual ~CredentialsContainer() = default;
 
+private:
     WeakPtr<Document, WeakPtrImplWithEventTargetData> m_document;
+
+protected:
+    template<typename Options>
+    bool performCommonChecks(const Options&, CredentialPromise&);
+    const Document* document() const { return m_document.get(); }
 };
 
 } // namespace WebCore

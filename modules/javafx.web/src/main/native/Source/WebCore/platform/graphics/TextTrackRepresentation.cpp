@@ -38,13 +38,14 @@ public:
     void update() final { }
     PlatformLayer* platformLayer() final { return nullptr; }
     void setContentScale(float) final { }
+    void setBounds(const IntRect&) final { }
     IntRect bounds() const final { return IntRect(); }
     void setHidden(bool) const final { }
 };
 
 #if !(PLATFORM(IOS_FAMILY) || (PLATFORM(MAC) && ENABLE(VIDEO_PRESENTATION_MODE)))
 
-std::unique_ptr<TextTrackRepresentation> TextTrackRepresentation::create(TextTrackRepresentationClient&)
+std::unique_ptr<TextTrackRepresentation> TextTrackRepresentation::create(TextTrackRepresentationClient&, HTMLMediaElement&)
 {
     return makeUnique<NullTextTrackRepresentation>();
 }

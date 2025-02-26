@@ -29,6 +29,7 @@
 #include "AnimationFrameRate.h"
 #include "AnimationFrameRatePreset.h"
 #include "CSSNumericValue.h"
+#include "ContextDestructionObserverInlines.h"
 #include "EventTarget.h"
 #include "ExceptionOr.h"
 #include "IDLTypes.h"
@@ -56,7 +57,7 @@ struct ResolutionContext;
 }
 
 class WebAnimation : public RefCounted<WebAnimation>, public EventTarget, public ActiveDOMObject {
-    WTF_MAKE_ISO_ALLOCATED(WebAnimation);
+    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(WebAnimation);
 public:
     static Ref<WebAnimation> create(Document&, AnimationEffect*);
     static Ref<WebAnimation> create(Document&, AnimationEffect*, AnimationTimeline*);
@@ -64,12 +65,14 @@ public:
 
     WEBCORE_EXPORT static HashSet<WebAnimation*>& instances();
 
-    virtual bool isDeclarativeAnimation() const { return false; }
+    virtual bool isStyleOriginatedAnimation() const { return false; }
     virtual bool isCSSAnimation() const { return false; }
     virtual bool isCSSTransition() const { return false; }
 
+    bool isSkippedContentAnimation() const;
+
     const String& id() const { return m_id; }
-    void setId(const String&);
+    void setId(String&&);
 
     AnimationEffect* bindingsEffect() const { return effect(); }
     virtual void setBindingsEffect(RefPtr<AnimationEffect>&&);
@@ -99,7 +102,8 @@ public:
     using FinishedPromise = DOMPromiseProxyWithResolveCallback<IDLInterface<WebAnimation>>;
     FinishedPromise& finished() { return m_finishedPromise.get(); }
 
-    virtual void cancel();
+    enum class Silently : bool { No, Yes };
+    virtual void cancel(Silently = Silently::No);
     ExceptionOr<void> finish();
     ExceptionOr<void> play();
     void updatePlaybackRate(double);
@@ -122,6 +126,7 @@ public:
     virtual FinishedPromise& bindingsFinished() { return finished(); }
     virtual ExceptionOr<void> bindingsPlay() { return play(); }
     virtual ExceptionOr<void> bindingsPause() { return pause(); }
+    std::optional<Seconds> holdTime() const { return m_holdTime; }
 
     virtual std::variant<FramesPerSecond, AnimationFrameRatePreset> bindingsFrameRate() const { return m_bindingsFrameRate; }
     virtual void setBindingsFrameRate(std::variant<FramesPerSecond, AnimationFrameRatePreset>&&);
@@ -130,7 +135,7 @@ public:
     bool needsTick() const;
     virtual void tick();
     WEBCORE_EXPORT Seconds timeToNextTick() const;
-    virtual void resolve(RenderStyle& targetStyle, const Style::ResolutionContext&, std::optional<Seconds> = std::nullopt);
+    virtual OptionSet<AnimationImpact> resolve(RenderStyle& targetStyle, const Style::ResolutionContext&, std::optional<Seconds> = std::nullopt);
     void effectTargetDidChange(const std::optional<const Styleable>& previousTarget, const std::optional<const Styleable>& newTarget);
     void acceleratedStateDidChange();
     void willChangeRenderer();
@@ -140,6 +145,7 @@ public:
     void effectTimingDidChange();
     void suspendEffectInvalidation();
     void unsuspendEffectInvalidation();
+    bool isEffectInvalidationSuspended() const { return m_suspendCount; }
     void setSuspended(bool);
     bool isSuspended() const { return m_isSuspended; }
     bool isReplaceable() const;
@@ -157,22 +163,22 @@ public:
     ScriptExecutionContext* scriptExecutionContext() const final { return ActiveDOMObject::scriptExecutionContext(); }
     void contextDestroyed() final;
 
-    using RefCounted::ref;
-    using RefCounted::deref;
+    // ActiveDOMObject.
+    void ref() const final { RefCounted::ref(); }
+    void deref() const final { RefCounted::deref(); }
 
 protected:
     explicit WebAnimation(Document&);
 
     void initialize();
     void enqueueAnimationEvent(Ref<AnimationEventBase>&&);
-    virtual void animationDidFinish() { };
+    virtual void animationDidFinish();
 
 private:
-    enum class DidSeek : uint8_t { Yes, No };
-    enum class SynchronouslyNotify : uint8_t { Yes, No };
-    enum class Silently : uint8_t { Yes, No };
-    enum class RespectHoldTime : uint8_t { Yes, No };
-    enum class AutoRewind : uint8_t { Yes, No };
+    enum class DidSeek : bool { No, Yes };
+    enum class SynchronouslyNotify : bool { No, Yes };
+    enum class RespectHoldTime : bool { No, Yes };
+    enum class AutoRewind : bool { No, Yes };
     enum class TimeToRunPendingTask : uint8_t { NotScheduled, ASAP, WhenReady };
 
     ExceptionOr<std::optional<Seconds>> validateCSSNumberishValue(const std::optional<CSSNumberish>&) const;
@@ -192,12 +198,22 @@ private:
     void resetPendingTasks();
     void setEffectInternal(RefPtr<AnimationEffect>&&, bool = false);
     void setTimelineInternal(RefPtr<AnimationTimeline>&&);
-    bool isEffectInvalidationSuspended() { return m_suspendCount; }
     bool computeRelevance();
     void invalidateEffect();
     double effectivePlaybackRate() const;
     void applyPendingPlaybackRate();
     void setEffectiveFrameRate(std::optional<FramesPerSecond>);
+
+    // ActiveDOMObject.
+    void suspend(ReasonForSuspension) final;
+    void resume() final;
+    void stop() final;
+    bool virtualHasPendingActivity() const final;
+
+    // EventTarget
+    enum EventTargetInterfaceType eventTargetInterface() const final { return EventTargetInterfaceType::WebAnimation; }
+    void refEventTarget() final { ref(); }
+    void derefEventTarget() final { deref(); }
 
     RefPtr<AnimationEffect> m_effect;
     RefPtr<AnimationTimeline> m_timeline;
@@ -223,18 +239,6 @@ private:
     TimeToRunPendingTask m_timeToRunPendingPauseTask { TimeToRunPendingTask::NotScheduled };
     ReplaceState m_replaceState { ReplaceState::Active };
     uint64_t m_globalPosition { 0 };
-
-    // ActiveDOMObject.
-    const char* activeDOMObjectName() const final;
-    void suspend(ReasonForSuspension) final;
-    void resume() final;
-    void stop() final;
-    bool virtualHasPendingActivity() const final;
-
-    // EventTarget
-    EventTargetInterface eventTargetInterface() const final { return WebAnimationEventTargetInterfaceType; }
-    void refEventTarget() final { ref(); }
-    void derefEventTarget() final { deref(); }
 };
 
 } // namespace WebCore

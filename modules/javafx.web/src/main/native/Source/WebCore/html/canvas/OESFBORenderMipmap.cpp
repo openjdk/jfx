@@ -28,24 +28,19 @@
 #if ENABLE(WEBGL)
 #include "OESFBORenderMipmap.h"
 
-#include <wtf/IsoMallocInlines.h>
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
-WTF_MAKE_ISO_ALLOCATED_IMPL(OESFBORenderMipmap);
+WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(OESFBORenderMipmap);
 
 OESFBORenderMipmap::OESFBORenderMipmap(WebGLRenderingContextBase& context)
-    : WebGLExtension(context)
+    : WebGLExtension(context, WebGLExtensionName::OESFBORenderMipmap)
 {
-    context.graphicsContextGL()->ensureExtensionEnabled("GL_OES_fbo_render_mipmap"_s);
+    context.protectedGraphicsContextGL()->ensureExtensionEnabled("GL_OES_fbo_render_mipmap"_s);
 }
 
 OESFBORenderMipmap::~OESFBORenderMipmap() = default;
-
-WebGLExtension::ExtensionName OESFBORenderMipmap::getName() const
-{
-    return OESFBORenderMipmapName;
-}
 
 bool OESFBORenderMipmap::supported(GraphicsContextGL& context)
 {

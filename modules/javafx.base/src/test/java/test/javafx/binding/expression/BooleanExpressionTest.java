@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,8 +25,9 @@
 
 package test.javafx.binding.expression;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import javafx.beans.binding.BooleanBinding;
 import javafx.beans.binding.BooleanExpression;
 import javafx.beans.binding.ObjectExpression;
@@ -39,15 +40,15 @@ import javafx.beans.value.ObservableValueStub;
 import test.javafx.binding.DependencyUtils;
 import javafx.collections.FXCollections;
 
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 public class BooleanExpressionTest {
 
     private BooleanProperty op1;
     private BooleanProperty op2;
 
-    @Before
+    @BeforeEach
     public void setUp() {
         op1 = new SimpleBooleanProperty(true);
         op2 = new SimpleBooleanProperty(false);
@@ -195,8 +196,10 @@ public class BooleanExpressionTest {
         assertEquals(op1, BooleanExpression.booleanExpression((ObservableValue)op1));
     }
 
-    @Test(expected=NullPointerException.class)
+    @Test
     public void testFactory_Null() {
-        BooleanExpression.booleanExpression(null);
+        assertThrows(NullPointerException.class, () -> {
+            BooleanExpression.booleanExpression(null);
+        });
     }
 }

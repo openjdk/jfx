@@ -52,7 +52,7 @@ G_BEGIN_DECLS \
 static gboolean \
 G_PASTE(_private_type_find_riff_, typefind_name) (GstPlugin * plugin) \
 { \
-  GstTypeFindData *sw_data = g_slice_new (GstTypeFindData);             \
+  GstTypeFindData *sw_data = g_new (GstTypeFindData, 1);             \
   sw_data->data = (gpointer)_data;                                      \
   sw_data->size = 4;                                                    \
   sw_data->probability = GST_TYPE_FIND_MAXIMUM;                         \
@@ -81,3 +81,7 @@ TYPE_FIND_REGISTER_RIFF_DEFINE (wav, "audio/x-wav", GST_RANK_PRIMARY, "wav",
     "WAVE");
 TYPE_FIND_REGISTER_RIFF_DEFINE (webp, "image/webp", GST_RANK_PRIMARY,
     "webp", "WEBP");
+TYPE_FIND_REGISTER_RIFF_DEFINE (fourxm, "video/x-4xm", GST_RANK_PRIMARY,
+    NULL, "4XMV");
+TYPE_FIND_REGISTER_RIFF_DEFINE (xwma, "audio/x-xwma", GST_RANK_PRIMARY,
+    NULL, "XWMA");

@@ -28,7 +28,7 @@
 
 #include "JSDOMExceptionHandling.h"
 #include "JSDOMMicrotask.h"
-#include "WebCoreOpaqueRoot.h"
+#include "WebCoreOpaqueRootInlines.h"
 #include "WorkerGlobalScope.h"
 #include "WorkerLocation.h"
 #include "WorkerNavigator.h"
@@ -67,7 +67,7 @@ JSValue JSWorkerGlobalScope::queueMicrotask(JSGlobalObject& lexicalGlobalObject,
 
     JSValue functionValue = callFrame.uncheckedArgument(0);
     if (UNLIKELY(!functionValue.isCallable()))
-        return JSValue::decode(throwArgumentMustBeFunctionError(lexicalGlobalObject, scope, 0, "callback", "WorkerGlobalScope", "queueMicrotask"));
+        return JSValue::decode(throwArgumentMustBeFunctionError(lexicalGlobalObject, scope, 0, "callback"_s, "WorkerGlobalScope"_s, "queueMicrotask"_s));
 
     scope.release();
     Base::queueMicrotask(createJSDOMMicrotask(vm, asObject(functionValue)));

@@ -27,6 +27,7 @@
 #include "LoadableClassicScript.h"
 
 #include "DefaultResourceLoadPriority.h"
+#include "Element.h"
 #include "FetchIdioms.h"
 #include "LoadableImportMap.h"
 #include "LoadableScriptError.h"
@@ -34,12 +35,13 @@
 #include "ScriptSourceCode.h"
 #include "SubresourceIntegrity.h"
 #include <wtf/NeverDestroyed.h>
+#include <wtf/text/MakeString.h>
 #include <wtf/text/StringImpl.h>
 
 namespace WebCore {
 
-LoadableNonModuleScriptBase::LoadableNonModuleScriptBase(const AtomString& nonce, const AtomString& integrity, ReferrerPolicy policy, const AtomString& crossOriginMode, const String& charset, const AtomString& initiatorType, bool isInUserAgentShadowTree, bool isAsync)
-    : LoadableScript(nonce, policy, crossOriginMode, charset, initiatorType, isInUserAgentShadowTree)
+LoadableNonModuleScriptBase::LoadableNonModuleScriptBase(const AtomString& nonce, const AtomString& integrity, ReferrerPolicy policy, RequestPriority fetchPriorityHint,  const AtomString& crossOriginMode, const String& charset, const AtomString& initiatorType, bool isInUserAgentShadowTree, bool isAsync)
+    : LoadableScript(nonce, policy, fetchPriorityHint, crossOriginMode, charset, initiatorType, isInUserAgentShadowTree)
     , m_integrity(integrity)
     , m_isAsync(isAsync)
 {
@@ -47,8 +49,8 @@ LoadableNonModuleScriptBase::LoadableNonModuleScriptBase(const AtomString& nonce
 
 LoadableNonModuleScriptBase::~LoadableNonModuleScriptBase()
 {
-    if (m_cachedScript)
-        m_cachedScript->removeClient(*this);
+    if (CachedResourceHandle cachedScript = m_cachedScript)
+        cachedScript->removeClient(*this);
 }
 
 bool LoadableNonModuleScriptBase::isLoaded() const
@@ -63,10 +65,7 @@ bool LoadableNonModuleScriptBase::hasError() const
     if (m_error)
         return true;
 
-    if (m_cachedScript->errorOccurred())
-        return true;
-
-    return false;
+    return m_cachedScript->errorOccurred();
 }
 
 std::optional<LoadableScript::Error> LoadableNonModuleScriptBase::takeError()
@@ -87,7 +86,7 @@ bool LoadableNonModuleScriptBase::wasCanceled() const
     return m_cachedScript->wasCanceled();
 }
 
-void LoadableNonModuleScriptBase::notifyFinished(CachedResource& resource, const NetworkLoadMetrics&)
+void LoadableNonModuleScriptBase::notifyFinished(CachedResource& resource, const NetworkLoadMetrics&, LoadWillContinueInAnotherProcess)
 {
     ASSERT(m_cachedScript);
     if (resource.resourceError().isAccessControl()) {
@@ -103,25 +102,26 @@ void LoadableNonModuleScriptBase::notifyFinished(CachedResource& resource, const
         };
     }
 
-    if (!m_error && !isScriptAllowedByNosniff(m_cachedScript->response())) {
+    CachedResourceHandle cachedScript = m_cachedScript;
+    if (!m_error && !isScriptAllowedByNosniff(cachedScript->response())) {
         m_error = Error {
             ErrorType::Nosniff,
             ConsoleMessage {
                 MessageSource::Security,
                 MessageLevel::Error,
-                makeString("Refused to execute ", m_cachedScript->url().stringCenterEllipsizedToLength(), " as script because \"X-Content-Type-Options: nosniff\" was given and its Content-Type is not a script MIME type.")
+                makeString("Refused to execute "_s, cachedScript->url().stringCenterEllipsizedToLength(), " as script because \"X-Content-Type-Options: nosniff\" was given and its Content-Type is not a script MIME type."_s)
             },
             { }
         };
     }
 
-    if (!m_error && shouldBlockResponseDueToMIMEType(m_cachedScript->response(), m_cachedScript->options().destination)) {
+    if (!m_error && shouldBlockResponseDueToMIMEType(cachedScript->response(), cachedScript->options().destination)) {
         m_error = Error {
             ErrorType::MIMEType,
             ConsoleMessage {
                 MessageSource::Security,
                 MessageLevel::Error,
-                makeString("Refused to execute ", m_cachedScript->url().stringCenterEllipsizedToLength(), " as script because ", m_cachedScript->response().mimeType(), " is not a script MIME type.")
+                makeString("Refused to execute "_s, cachedScript->url().stringCenterEllipsizedToLength(), " as script because "_s, cachedScript->response().mimeType(), " is not a script MIME type."_s)
             },
             { }
         };
@@ -130,7 +130,7 @@ void LoadableNonModuleScriptBase::notifyFinished(CachedResource& resource, const
     if (!m_error && !resource.errorOccurred() && !matchIntegrityMetadata(resource, m_integrity)) {
         m_error = Error {
             ErrorType::FailedIntegrityCheck,
-            ConsoleMessage { MessageSource::Security, MessageLevel::Error, makeString("Cannot load script ", integrityMismatchDescription(resource, m_integrity)) },
+            ConsoleMessage { MessageSource::Security, MessageLevel::Error, makeString("Cannot load script "_s, integrityMismatchDescription(resource, m_integrity)) },
             { }
         };
     }
@@ -149,28 +149,29 @@ bool LoadableNonModuleScriptBase::load(Document& document, const URL& sourceURL)
         return { };
     };
 
-    m_weakDocument = &document;
-    m_cachedScript = requestScriptWithCache(document, sourceURL, crossOriginMode(), String { integrity() }, priority());
-    if (!m_cachedScript)
+    m_weakDocument = document;
+    CachedResourceHandle cachedScript = requestScriptWithCache(document, sourceURL, crossOriginMode(), String { integrity() }, priority());
+    m_cachedScript = cachedScript;
+    if (!cachedScript)
         return false;
-    m_cachedScript->addClient(*this);
+    cachedScript->addClient(*this);
     return true;
 }
 
-Ref<LoadableClassicScript> LoadableClassicScript::create(const AtomString& nonce, const AtomString& integrityMetadata, ReferrerPolicy policy, const AtomString& crossOriginMode, const String& charset, const AtomString& initiatorType, bool isInUserAgentShadowTree, bool isAsync)
+Ref<LoadableClassicScript> LoadableClassicScript::create(const AtomString& nonce, const AtomString& integrityMetadata, ReferrerPolicy policy, RequestPriority fetchPriorityHint, const AtomString& crossOriginMode, const String& charset, const AtomString& initiatorType, bool isInUserAgentShadowTree, bool isAsync)
 {
-    return adoptRef(*new LoadableClassicScript(nonce, integrityMetadata, policy, crossOriginMode, charset, initiatorType, isInUserAgentShadowTree, isAsync));
+    return adoptRef(*new LoadableClassicScript(nonce, integrityMetadata, policy, fetchPriorityHint, crossOriginMode, charset, initiatorType, isInUserAgentShadowTree, isAsync));
 }
 
-LoadableClassicScript::LoadableClassicScript(const AtomString& nonce, const AtomString& integrity, ReferrerPolicy policy, const AtomString& crossOriginMode, const String& charset, const AtomString& initiatorType, bool isInUserAgentShadowTree, bool isAsync)
-    : LoadableNonModuleScriptBase(nonce, integrity, policy, crossOriginMode, charset, initiatorType, isInUserAgentShadowTree, isAsync)
+LoadableClassicScript::LoadableClassicScript(const AtomString& nonce, const AtomString& integrity, ReferrerPolicy policy, RequestPriority fetchPriorityHint, const AtomString& crossOriginMode, const String& charset, const AtomString& initiatorType, bool isInUserAgentShadowTree, bool isAsync)
+    : LoadableNonModuleScriptBase(nonce, integrity, policy, fetchPriorityHint, crossOriginMode, charset, initiatorType, isInUserAgentShadowTree, isAsync)
 {
 }
 
 void LoadableClassicScript::execute(ScriptElement& scriptElement)
 {
     ASSERT(!m_error);
-    scriptElement.executeClassicScript(ScriptSourceCode(m_cachedScript.get(), JSC::SourceProviderSourceType::Program, *this));
+    scriptElement.executeClassicScript(ScriptSourceCode(protectedCachedScript().get(), JSC::SourceProviderSourceType::Program, *this));
 }
 
 }

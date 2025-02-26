@@ -264,7 +264,7 @@ gst_atomic_queue_peek (GstAtomicQueue * queue)
  *
  * Get the head element of the queue.
  *
- * Returns: (transfer full): the head element of @queue or %NULL when
+ * Returns: (transfer full) (nullable): the head element of @queue or %NULL when
  * the queue is empty.
  */
 gpointer

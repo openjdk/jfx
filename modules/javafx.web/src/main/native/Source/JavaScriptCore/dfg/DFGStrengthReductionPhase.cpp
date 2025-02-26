@@ -38,11 +38,13 @@
 #include "JSObjectInlines.h"
 #include "JSWebAssemblyInstance.h"
 #include "MathCommon.h"
+#include "NumberPrototype.h"
 #include "RegExpObject.h"
 #include "StringPrototypeInlines.h"
 #include "WasmCallingConvention.h"
 #include "WebAssemblyFunction.h"
 #include <cstdlib>
+#include <wtf/text/MakeString.h>
 #include <wtf/text/StringBuilder.h>
 
 namespace JSC { namespace DFG {
@@ -52,7 +54,7 @@ class StrengthReductionPhase : public Phase {
 
 public:
     StrengthReductionPhase(Graph& graph)
-        : Phase(graph, "strength reduction")
+        : Phase(graph, "strength reduction"_s)
         , m_insertionSet(graph)
     {
     }
@@ -109,6 +111,11 @@ private:
                 && m_node->child1()->child2()->isInt32Constant()
                 && (m_node->child1()->child2()->asInt32() & 0x1f)
                 && m_node->arithMode() != Arith::DoOverflow) {
+                m_node->convertToIdentity();
+                m_changed = true;
+                break;
+            }
+            if (bytecodeCanTruncateInteger(m_node->arithNodeFlags())) {
                 m_node->convertToIdentity();
                 m_changed = true;
                 break;
@@ -393,10 +400,15 @@ private:
         }
 
         case MakeRope:
+        case MakeAtomString:
         case StrCat: {
             String leftString = m_node->child1()->tryGetString(m_graph);
             if (!leftString)
                 break;
+            if (!m_node->child2()) {
+                ASSERT(!m_node->child3());
+                break;
+            }
             String rightString = m_node->child2()->tryGetString(m_graph);
             if (!rightString)
                 break;
@@ -442,6 +454,25 @@ private:
                 }
                 break;
             }
+            case StringOrOtherUse: {
+                if (child1->hasConstant()) {
+                    if (JSValue value = child1->constant()->value()) {
+                        if (value.isUndefinedOrNull()) {
+                            m_graph.convertToConstant(m_node, value.isUndefined() ? vm().smallStrings.undefinedString() : vm().smallStrings.nullString());
+                            m_changed = true;
+                            break;
+                        }
+                        if (value.isString()) {
+                            m_graph.convertToConstant(m_node, value);
+                            m_changed = true;
+                            break;
+                        }
+                    }
+                }
+                break;
+            }
+            case KnownPrimitiveUse:
+                break;
 
             default:
                 break;
@@ -565,6 +596,15 @@ private:
 
             ASSERT(m_node->op() != RegExpMatchFast);
 
+            bool needLastIndexTypeCheck = false;
+            auto insertLastIndexTypeCheckIfNecessary = [&](NodeOrigin origin) {
+                if (needLastIndexTypeCheck) {
+                    ASSERT(m_node->op() != RegExpExecNonGlobalOrSticky);
+                    Node* lastIndex = m_insertionSet.insertNode(m_nodeIndex, SpecNone, GetRegExpObjectLastIndex, origin, Edge(regExpObjectNode, RegExpObjectUse));
+                    m_insertionSet.insertNode(m_nodeIndex, SpecNone, Check, origin, Edge(lastIndex, Int32Use));
+                }
+            };
+
             unsigned lastIndex = UINT_MAX;
             if (m_node->op() != RegExpExecNonGlobalOrSticky) {
                 // This will only work if we can prove what the value of lastIndex is. To do this
@@ -592,11 +632,30 @@ private:
                         break;
                 }
                 if (lastIndex == UINT_MAX) {
-                    if (verbose)
-                        dataLog("Giving up because the last index is not known.\n");
+                    // We cannot statically prove lastIndex. But still there is a chance.
+                    // If RegExp is not global and not sticky, then only thing we care is ToIntegerOrInfinity(regExp.lastIndex).
+                    // Thus, we can emit Int32Use check to protect further when conversion happens.
+                    if (regExp->globalOrSticky()) {
+                        dataLogLnIf(verbose, "Giving up because the last index is not known.");
+                        break;
+                    }
+
+                    if (m_graph.hasExitSite(m_node->origin.semantic, BadType)) {
+                        dataLogLnIf(verbose, "Giving up because the last index type check may fail.");
                     break;
                 }
+
+                    if (RegExpObject* object = regExpObjectNode->dynamicCastConstant<RegExpObject*>()) {
+                        if (!object->getLastIndex().isInt32()) {
+                            dataLogLnIf(verbose, "Giving up because the constant RegExpObject's lastIndex is not Int32 already.");
+                            break;
             }
+                    }
+
+                    needLastIndexTypeCheck = true;
+                }
+            }
+
             if (!regExp->globalOrSticky())
                 lastIndex = 0;
 
@@ -686,8 +745,8 @@ private:
 
                 NodeOrigin origin = m_node->origin;
 
-                m_insertionSet.insertNode(
-                    m_nodeIndex, SpecNone, Check, origin, m_node->children.justChecks());
+                m_insertionSet.insertNode(m_nodeIndex, SpecNone, Check, origin, m_node->children.justChecks());
+                insertLastIndexTypeCheckIfNecessary(origin);
 
                 if (m_node->op() == RegExpExec || m_node->op() == RegExpExecNonGlobalOrSticky) {
                     if (result) {
@@ -833,7 +892,7 @@ private:
                 if (regExp->globalOrSticky())
                     return false;
 
-                if (regExp->unicode())
+                if (regExp->eitherUnicode())
                     return false;
 
                 auto jitCodeBlock = regExp->getRegExpJITCodeBlock();
@@ -850,14 +909,14 @@ private:
                 if (codeSize > Options::maximumRegExpTestInlineCodesize())
                     return false;
 
-                unsigned alignedFrameSize = WTF::roundUpToMultipleOf(stackAlignmentBytes(), inlineCodeStats8Bit.stackSize());
+                unsigned alignedFrameSize = WTF::roundUpToMultipleOf<stackAlignmentBytes()>(inlineCodeStats8Bit.stackSize());
 
                 if (alignedFrameSize)
                     m_graph.m_parameterSlots = std::max(m_graph.m_parameterSlots, argumentCountForStackSize(alignedFrameSize));
 
                 NodeOrigin origin = m_node->origin;
-                m_insertionSet.insertNode(
-                    m_nodeIndex, SpecNone, Check, origin, m_node->children.justChecks());
+                m_insertionSet.insertNode(m_nodeIndex, SpecNone, Check, origin, m_node->children.justChecks());
+                insertLastIndexTypeCheckIfNecessary(origin);
                 m_node->convertToRegExpTestInline(m_graph.freeze(globalObject), m_graph.freeze(regExp));
                 m_changed = true;
                 return true;
@@ -871,9 +930,10 @@ private:
                     return false;
                 if (m_node->child3().useKind() != StringUse)
                     return false;
+
                 NodeOrigin origin = m_node->origin;
-                m_insertionSet.insertNode(
-                    m_nodeIndex, SpecNone, Check, origin, m_node->children.justChecks());
+                m_insertionSet.insertNode(m_nodeIndex, SpecNone, Check, origin, m_node->children.justChecks());
+                insertLastIndexTypeCheckIfNecessary(origin);
                 m_node->convertToRegExpExecNonGlobalOrStickyWithoutChecks(m_graph.freeze(regExp));
                 m_changed = true;
                 return true;
@@ -1109,6 +1169,56 @@ private:
             break;
         }
 
+        case GetByVal:
+        case GetByValMegamorphic: {
+            Edge& baseEdge = m_graph.child(m_node, 0);
+            Edge& keyEdge = m_graph.child(m_node, 1);
+            if (baseEdge.useKind() == ObjectUse && m_node->arrayMode().type() == Array::Generic) {
+                if (keyEdge->op() == MakeRope) {
+                    keyEdge->setOp(MakeAtomString);
+                    m_changed = true;
+                }
+            }
+            break;
+        }
+
+        case PutByVal:
+        case PutByValDirect:
+        case PutByValAlias:
+        case PutByValMegamorphic: {
+            Edge& baseEdge = m_graph.child(m_node, 0);
+            Edge& keyEdge = m_graph.child(m_node, 1);
+            if ((baseEdge.useKind() == CellUse || baseEdge.useKind() == KnownCellUse) && m_node->arrayMode().type() == Array::Generic) {
+                if (keyEdge->op() == MakeRope) {
+                    keyEdge->setOp(MakeAtomString);
+                    m_changed = true;
+                }
+            }
+            break;
+        }
+
+        case InByVal:
+        case InByValMegamorphic: {
+            Edge& baseEdge = m_graph.child(m_node, 0);
+            Edge& keyEdge = m_graph.child(m_node, 1);
+            if (baseEdge.useKind() == CellUse) {
+                if (keyEdge->op() == MakeRope) {
+                    keyEdge->setOp(MakeAtomString);
+                    m_changed = true;
+                }
+            }
+            break;
+        }
+
+        case HasOwnProperty: {
+            Edge& keyEdge = m_graph.child(m_node, 1);
+            if (keyEdge->op() == MakeRope) {
+                keyEdge->setOp(MakeAtomString);
+                m_changed = true;
+            }
+            break;
+        }
+
         case Call:
         case Construct:
         case TailCallInlinedCaller:
@@ -1140,7 +1250,7 @@ private:
             // FIXME: Support wasm IC.
             // DirectCall to wasm function has suboptimal implementation. We avoid using DirectCall if we know that function is a wasm function.
             // https://bugs.webkit.org/show_bug.cgi?id=220339
-            if (executable->intrinsic() == WasmFunctionIntrinsic) {
+            if (executable->intrinsic() == WasmFunctionIntrinsic && !Options::forceICFailure()) {
                 if (m_node->op() != Call) // FIXME: We should support tail-call.
                     break;
                 if (!function)
@@ -1148,10 +1258,9 @@ private:
                 auto* wasmFunction = jsDynamicCast<WebAssemblyFunction*>(function);
                 if (!wasmFunction)
                     break;
-                const auto& typeDefinition = Wasm::TypeInformation::get(wasmFunction->typeIndex()).expand();
-                const auto& signature = *typeDefinition.as<Wasm::FunctionSignature>();
+                const auto& signature = Wasm::TypeInformation::getFunctionSignature(wasmFunction->typeIndex());
                 const Wasm::WasmCallingConvention& wasmCC = Wasm::wasmCallingConvention();
-                Wasm::CallInformation wasmCallInfo = wasmCC.callInformationFor(typeDefinition);
+                Wasm::CallInformation wasmCallInfo = wasmCC.callInformationFor(signature);
                 if (wasmCallInfo.argumentsOrResultsIncludeV128)
                 break;
 
@@ -1320,8 +1429,7 @@ private:
                 JSBoundFunction* boundFunction = jsCast<JSBoundFunction*>(function);
                 if (JSFunction* targetFunction = jsDynamicCast<JSFunction*>(boundFunction->targetFunction())) {
                     auto* targetExecutable = targetFunction->executable();
-                    JSImmutableButterfly* boundArgs = boundFunction->boundArgs();
-                    if (((boundArgs ? boundArgs->length() : 0) + m_node->numChildren()) <= Options::maximumDirectCallStackSize()) {
+                    if ((boundFunction->boundArgsLength() + m_node->numChildren()) <= Options::maximumDirectCallStackSize()) {
                         if (FunctionExecutable* functionExecutable = jsDynamicCast<FunctionExecutable*>(targetExecutable)) {
                             // We need to update m_parameterSlots before we get to the backend, but we don't
                             // want to do too much of this.
@@ -1334,11 +1442,10 @@ private:
                         m_graph.m_varArgChildren.append(m_insertionSet.insertConstant(m_nodeIndex, m_node->origin, targetFunction)); // |callee|.
                         m_graph.m_varArgChildren.append(m_insertionSet.insertConstant(m_nodeIndex, m_node->origin, boundFunction->boundThis())); // |this|
 
-                        JSImmutableButterfly* boundArgs = boundFunction->boundArgs();
-                        if (boundArgs) {
-                            for (unsigned index = 0; index < boundArgs->length(); ++index)
-                                m_graph.m_varArgChildren.append(m_insertionSet.insertConstant(m_nodeIndex, m_node->origin, boundArgs->get(index)));
-                        }
+                        boundFunction->forEachBoundArg([&](JSValue argument) {
+                            m_graph.m_varArgChildren.append(m_insertionSet.insertConstant(m_nodeIndex, m_node->origin, argument));
+                            return IterationStatus::Continue;
+                        });
 
                         // First one is |callee|, second one is |this|.
                         for (unsigned index = 2; index < m_node->numChildren(); ++index)

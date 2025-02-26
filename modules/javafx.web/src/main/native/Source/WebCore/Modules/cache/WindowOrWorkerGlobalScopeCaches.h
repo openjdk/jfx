@@ -27,8 +27,8 @@
 
 namespace WebCore {
 
-class DOMCacheStorage;
 class DOMWindow;
+class DOMCacheStorage;
 class ScriptExecutionContext;
 class WorkerGlobalScope;
 

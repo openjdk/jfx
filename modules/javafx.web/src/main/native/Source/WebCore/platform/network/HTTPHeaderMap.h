@@ -43,7 +43,7 @@ public:
         CommonHeader isolatedCopy() const & { return { key , value.isolatedCopy() }; }
         CommonHeader isolatedCopy() && { return { key , WTFMove(value).isolatedCopy() }; }
 
-        bool operator==(const CommonHeader& other) const { return key == other.key && value == other.value; }
+        friend bool operator==(const CommonHeader&, const CommonHeader&) = default;
     };
 
     struct UncommonHeader {
@@ -53,7 +53,7 @@ public:
         UncommonHeader isolatedCopy() const & { return { key.isolatedCopy() , value.isolatedCopy() }; }
         UncommonHeader isolatedCopy() && { return { WTFMove(key).isolatedCopy() , WTFMove(value).isolatedCopy() }; }
 
-        bool operator==(const UncommonHeader& other) const { return key == other.key && value == other.value; }
+        friend bool operator==(const UncommonHeader&, const UncommonHeader&) = default;
     };
 
     typedef Vector<CommonHeader, 0, CrashOnOverflow, 6> CommonHeadersVector;
@@ -75,6 +75,11 @@ public:
             std::optional<HTTPHeaderName> keyAsHTTPHeaderName;
             String value;
         };
+        using difference_type = ptrdiff_t;
+        using value_type = KeyValue;
+        using pointer = const KeyValue*;
+        using reference = const KeyValue&;
+        using iterator_category = std::forward_iterator_tag;
 
         const KeyValue* get() const
         {
@@ -96,7 +101,6 @@ public:
             return *this;
         }
 
-        bool operator!=(const HTTPHeaderMapConstIterator& other) const { return !(*this == other); }
         bool operator==(const HTTPHeaderMapConstIterator& other) const
         {
             return m_commonHeadersIt == other.m_commonHeadersIt && m_uncommonHeadersIt == other.m_uncommonHeadersIt;
@@ -107,7 +111,7 @@ public:
         {
             if (it == m_table.commonHeaders().end())
                 return false;
-            m_keyValue.key = httpHeaderNameString(it->key).toStringWithoutCopying();
+            m_keyValue.key = httpHeaderNameString(it->key);
             m_keyValue.keyAsHTTPHeaderName = it->key;
             m_keyValue.value = it->value;
             return true;
@@ -201,11 +205,6 @@ public:
                 return false;
         }
         return true;
-    }
-
-    friend bool operator!=(const HTTPHeaderMap& a, const HTTPHeaderMap& b)
-    {
-        return !(a == b);
     }
 
 private:

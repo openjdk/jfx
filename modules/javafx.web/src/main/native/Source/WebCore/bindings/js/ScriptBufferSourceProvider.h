@@ -30,6 +30,15 @@
 #include <wtf/WeakPtr.h>
 
 namespace WebCore {
+class AbstractScriptBufferHolder;
+}
+
+namespace WTF {
+template<typename T> struct IsDeprecatedWeakRefSmartPointerException;
+template<> struct IsDeprecatedWeakRefSmartPointerException<WebCore::AbstractScriptBufferHolder> : std::true_type { };
+}
+
+namespace WebCore {
 
 class AbstractScriptBufferHolder : public CanMakeWeakPtr<AbstractScriptBufferHolder> {
 public:
@@ -62,12 +71,12 @@ public:
         if (!m_contiguousBuffer && (!m_containsOnlyASCII || *m_containsOnlyASCII))
             m_contiguousBuffer = m_scriptBuffer.buffer()->makeContiguous();
         if (!m_containsOnlyASCII) {
-            m_containsOnlyASCII = charactersAreAllASCII(m_contiguousBuffer->data(), m_contiguousBuffer->size());
+            m_containsOnlyASCII = charactersAreAllASCII(m_contiguousBuffer->span());
             if (*m_containsOnlyASCII)
-                m_scriptHash = StringHasher::computeHashAndMaskTop8Bits(m_contiguousBuffer->data(), m_contiguousBuffer->size());
+                m_scriptHash = StringHasher::computeHashAndMaskTop8Bits(m_contiguousBuffer->span());
         }
         if (*m_containsOnlyASCII)
-            return { m_contiguousBuffer->data(), static_cast<unsigned>(m_contiguousBuffer->size()) };
+            return m_contiguousBuffer->span();
 
         if (!m_cachedScriptString) {
             m_cachedScriptString = m_scriptBuffer.toString();
@@ -96,7 +105,7 @@ public:
 
 private:
     ScriptBufferSourceProvider(const ScriptBuffer& scriptBuffer, const JSC::SourceOrigin& sourceOrigin, String&& sourceURL, String&& preRedirectURL, const TextPosition& startPosition, JSC::SourceProviderSourceType sourceType)
-        : JSC::SourceProvider(sourceOrigin, WTFMove(sourceURL), WTFMove(preRedirectURL), startPosition, sourceType)
+        : JSC::SourceProvider(sourceOrigin, WTFMove(sourceURL), WTFMove(preRedirectURL), JSC::SourceTaintedOrigin::Untainted, startPosition, sourceType)
         , m_scriptBuffer(scriptBuffer)
     {
     }

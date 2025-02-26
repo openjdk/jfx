@@ -33,7 +33,7 @@ class RenderMenuList;
 
 class AccessibilityMenuList final : public AccessibilityRenderObject {
 public:
-    static Ref<AccessibilityMenuList> create(RenderMenuList* renderer);
+    static Ref<AccessibilityMenuList> create(RenderMenuList&);
 
     bool isCollapsed() const override;
     bool press() override;
@@ -41,10 +41,11 @@ public:
     void didUpdateActiveOption(int optionIndex);
 
 private:
-    explicit AccessibilityMenuList(RenderMenuList*);
+    explicit AccessibilityMenuList(RenderMenuList&);
 
-    bool isMenuList() const override { return true; }
-    AccessibilityRole roleValue() const override { return AccessibilityRole::PopUpButton; }
+    bool isMenuList() const final { return true; }
+    AccessibilityRole determineAccessibilityRole() final { return AccessibilityRole::PopUpButton; }
+
     bool canSetFocusAttribute() const override;
 
     void addChildren() override;
@@ -52,4 +53,6 @@ private:
 
 } // namespace WebCore
 
-SPECIALIZE_TYPE_TRAITS_ACCESSIBILITY(AccessibilityMenuList, isMenuList())
+SPECIALIZE_TYPE_TRAITS_BEGIN(WebCore::AccessibilityMenuList) \
+    static bool isType(const WebCore::AccessibilityObject& object) { return object.isMenuList(); } \
+SPECIALIZE_TYPE_TRAITS_END()

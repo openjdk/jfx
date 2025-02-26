@@ -26,11 +26,11 @@
 #include "RenderSVGHiddenContainer.h"
 #include "SVGFitToViewBox.h"
 #include "SVGNames.h"
-#include <wtf/IsoMallocInlines.h>
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
-WTF_MAKE_ISO_ALLOCATED_IMPL(SVGSymbolElement);
+WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(SVGSymbolElement);
 
 inline SVGSymbolElement::SVGSymbolElement(const QualifiedName& tagName, Document& document)
     : SVGGraphicsElement(tagName, document, makeUniqueRef<PropertyRegistry>(*this))
@@ -44,10 +44,10 @@ Ref<SVGSymbolElement> SVGSymbolElement::create(const QualifiedName& tagName, Doc
     return adoptRef(*new SVGSymbolElement(tagName, document));
 }
 
-void SVGSymbolElement::parseAttribute(const QualifiedName& name, const AtomString& value)
+void SVGSymbolElement::attributeChanged(const QualifiedName& name, const AtomString& oldValue, const AtomString& newValue, AttributeModificationReason attributeModificationReason)
 {
-    SVGGraphicsElement::parseAttribute(name, value);
-    SVGFitToViewBox::parseAttribute(name, value);
+    SVGFitToViewBox::parseAttribute(name, newValue);
+    SVGGraphicsElement::attributeChanged(name, oldValue, newValue, attributeModificationReason);
 }
 
 bool SVGSymbolElement::selfHasRelativeLengths() const
@@ -57,11 +57,9 @@ bool SVGSymbolElement::selfHasRelativeLengths() const
 
 RenderPtr<RenderElement> SVGSymbolElement::createElementRenderer(RenderStyle&& style, const RenderTreePosition&)
 {
-#if ENABLE(LAYER_BASED_SVG_ENGINE)
     if (document().settings().layerBasedSVGEngineEnabled())
-    return createRenderer<RenderSVGHiddenContainer>(*this, WTFMove(style));
-#endif
-    return createRenderer<LegacyRenderSVGHiddenContainer>(*this, WTFMove(style));
+        return createRenderer<RenderSVGHiddenContainer>(RenderObject::Type::SVGHiddenContainer, *this, WTFMove(style));
+    return createRenderer<LegacyRenderSVGHiddenContainer>(RenderObject::Type::LegacySVGHiddenContainer, *this, WTFMove(style));
 }
 
 }

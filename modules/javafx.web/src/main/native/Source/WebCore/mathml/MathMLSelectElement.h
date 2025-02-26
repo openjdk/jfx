@@ -32,7 +32,8 @@
 namespace WebCore {
 
 class MathMLSelectElement final : public MathMLRowElement {
-    WTF_MAKE_ISO_ALLOCATED(MathMLSelectElement);
+    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(MathMLSelectElement);
+    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(MathMLSelectElement);
 public:
     static Ref<MathMLSelectElement> create(const QualifiedName& tagName, Document&);
     static bool isMathMLEncoding(const AtomString& value);
@@ -47,7 +48,7 @@ private:
 
     void finishParsingChildren() final;
     void childrenChanged(const ChildChange&) final;
-    void attributeChanged(const QualifiedName&, const AtomString& oldValue, const AtomString& newValue, AttributeModificationReason = ModifiedDirectly) final;
+    void attributeChanged(const QualifiedName&, const AtomString& oldValue, const AtomString& newValue, AttributeModificationReason = AttributeModificationReason::Directly) final;
     void defaultEventHandler(Event&) final;
     bool willRespondToMouseClickEventsWithEditability(Editability) const final;
 

@@ -27,18 +27,20 @@
 
 #include "CachedRawResourceClient.h"
 #include "CachedResourceHandle.h"
+#include "LoaderMalloc.h"
 #include <wtf/Forward.h>
 #include <wtf/Noncopyable.h>
 #include <wtf/URL.h>
+#include <wtf/WeakRef.h>
 
 namespace WebCore {
 
 class CachedRawResource;
 class DocumentLoader;
-class Frame;
+class LocalFrame;
 
 class IconLoader final : private CachedRawResourceClient {
-    WTF_MAKE_NONCOPYABLE(IconLoader); WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_NONCOPYABLE(IconLoader); WTF_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(Loader);
 public:
     IconLoader(DocumentLoader&, const URL&);
     virtual ~IconLoader();
@@ -47,9 +49,9 @@ public:
     void stopLoading();
 
 private:
-    void notifyFinished(CachedResource&, const NetworkLoadMetrics&) final;
+    void notifyFinished(CachedResource&, const NetworkLoadMetrics&, LoadWillContinueInAnotherProcess) final;
 
-    DocumentLoader& m_documentLoader;
+    SingleThreadWeakRef<DocumentLoader> m_documentLoader;
     URL m_url;
     CachedResourceHandle<CachedRawResource> m_resource;
 };

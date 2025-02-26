@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008, 2019, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2008, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -35,14 +35,16 @@ import com.sun.scenario.effect.compiler.tree.JSLVisitor;
 import com.sun.scenario.effect.compiler.tree.Stmt;
 import com.sun.scenario.effect.compiler.tree.WhileStmt;
 import org.antlr.v4.runtime.misc.ParseCancellationException;
-import org.junit.Test;
 
-import static org.junit.Assert.*;
+import org.junit.jupiter.api.Test;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class IterationStatementTest extends ParserBase {
 
     @Test
-    public void whileStmt() throws Exception {
+    public void whileStmt() {
         Stmt tree = parseTreeFor("while (i >= 3) j += 4;");
         assertTrue(tree instanceof WhileStmt);
         WhileStmt s = (WhileStmt)tree;
@@ -51,7 +53,7 @@ public class IterationStatementTest extends ParserBase {
     }
 
     @Test
-    public void doWhileStmt() throws Exception {
+    public void doWhileStmt() {
         Stmt tree = parseTreeFor("do j += 4; while (i >= 3);");
         assertTrue(tree instanceof DoWhileStmt);
         DoWhileStmt s = (DoWhileStmt)tree;
@@ -60,7 +62,7 @@ public class IterationStatementTest extends ParserBase {
     }
 
     @Test
-    public void forStmt() throws Exception {
+    public void forStmt() {
         Stmt tree = parseTreeFor("for (i = 0; i < 5; i += 2) j += 4;");
         assertTrue(tree instanceof ForStmt);
         ForStmt s = (ForStmt)tree;
@@ -71,7 +73,7 @@ public class IterationStatementTest extends ParserBase {
     }
 
     @Test
-    public void forStmtNoCondition() throws Exception {
+    public void forStmtNoCondition() {
         Stmt tree = parseTreeFor("for (i = 0; ; i += 2) j += 4;");
         assertTrue(tree instanceof ForStmt);
         ForStmt s = (ForStmt)tree;
@@ -82,7 +84,7 @@ public class IterationStatementTest extends ParserBase {
     }
 
     @Test
-    public void forStmtNoIncrement() throws Exception {
+    public void forStmtNoIncrement() {
         Stmt tree = parseTreeFor("for (i = 0; i < 5; ) j += 4;");
         assertTrue(tree instanceof ForStmt);
         ForStmt s = (ForStmt)tree;
@@ -93,7 +95,7 @@ public class IterationStatementTest extends ParserBase {
     }
 
     @Test
-    public void forStmtNoConditionOrIncrement() throws Exception {
+    public void forStmtNoConditionOrIncrement() {
         Stmt tree = parseTreeFor("for (i = 0; ; ) j += 4;");
         assertTrue(tree instanceof ForStmt);
         ForStmt s = (ForStmt)tree;
@@ -103,12 +105,14 @@ public class IterationStatementTest extends ParserBase {
         assertTrue(s.getStmt() instanceof ExprStmt);
     }
 
-    @Test(expected = ParseCancellationException.class)
-    public void notAnIterationStmt() throws Exception {
-        parseTreeFor("return;");
+    @Test
+    public void notAnIterationStmt() {
+        assertThrows(ParseCancellationException.class, () -> {
+            parseTreeFor("return;");
+        });
     }
 
-    private Stmt parseTreeFor(String text) throws Exception {
+    private Stmt parseTreeFor(String text) {
         JSLParser parser = parserOver(text);
         JSLVisitor visitor = new JSLVisitor();
         visitor.getSymbolTable().declareVariable("i", Type.INT, null);

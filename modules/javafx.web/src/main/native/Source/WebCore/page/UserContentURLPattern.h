@@ -66,6 +66,7 @@ public:
     const String& host() const { return m_host; }
     const String& path() const { return m_path; }
 
+    bool matchAllHosts() const { return m_matchSubdomains && m_host.isEmpty(); }
     bool matchSubdomains() const { return m_matchSubdomains; }
 
     // The host with the '*' wildcard, if matchSubdomains is true, otherwise same as host().
@@ -97,5 +98,7 @@ private:
     Error m_error { Error::Invalid };
     bool m_matchSubdomains { false };
 };
+
+WEBCORE_EXPORT bool matchesWildcardPattern(const String& pattern, const String& testString);
 
 } // namespace WebCore

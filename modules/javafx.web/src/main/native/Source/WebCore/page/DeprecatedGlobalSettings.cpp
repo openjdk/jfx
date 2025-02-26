@@ -29,11 +29,17 @@
 #include "AudioSession.h"
 #include "HTMLMediaElement.h"
 #include "MediaPlayer.h"
+#include "MediaStrategy.h"
 #include "PlatformMediaSessionManager.h"
+#include "PlatformStrategies.h"
 #include <wtf/NeverDestroyed.h>
 
 #if PLATFORM(COCOA)
 #include "MediaSessionManagerCocoa.h"
+#endif
+
+#if USE(APPLE_INTERNAL_SDK) && __has_include(<WebKitAdditions/DeprecatedGlobalSettingsAdditions.cpp>)
+#import <WebKitAdditions/DeprecatedGlobalSettingsAdditions.cpp>
 #endif
 
 namespace WebCore {
@@ -70,13 +76,6 @@ void DeprecatedGlobalSettings::setMediaSourceInlinePaintingEnabled(bool isEnable
 }
 #endif
 
-#if PLATFORM(WIN)
-void DeprecatedGlobalSettings::setShouldUseHighResolutionTimers(bool shouldUseHighResolutionTimers)
-{
-    shared().m_shouldUseHighResolutionTimers = shouldUseHighResolutionTimers;
-}
-#endif
-
 #if USE(AVFOUNDATION)
 void DeprecatedGlobalSettings::setAVFoundationEnabled(bool enabled)
 {
@@ -84,7 +83,7 @@ void DeprecatedGlobalSettings::setAVFoundationEnabled(bool enabled)
         return;
 
     shared().m_AVFoundationEnabled = enabled;
-    HTMLMediaElement::resetMediaEngines();
+    platformStrategies()->mediaStrategy().resetMediaEngines();
 }
 #endif
 
@@ -97,7 +96,7 @@ void DeprecatedGlobalSettings::setGStreamerEnabled(bool enabled)
     shared().m_GStreamerEnabled = enabled;
 
 #if ENABLE(VIDEO)
-    HTMLMediaElement::resetMediaEngines();
+    platformStrategies()->mediaStrategy().resetMediaEngines();
 #endif
 }
 #endif
@@ -166,5 +165,18 @@ bool DeprecatedGlobalSettings::allowsAnySSLCertificate()
 {
     return shared().m_allowsAnySSLCertificate;
 }
+
+#if ENABLE(WEB_PUSH_NOTIFICATIONS)
+
+bool DeprecatedGlobalSettings::builtInNotificationsEnabled()
+{
+#if defined(DEPRECATED_GLOBAL_SETTINGS_BUILT_IN_NOTIFICATIONS_ENABLED_ADDITIONS)
+    DEPRECATED_GLOBAL_SETTINGS_BUILT_IN_NOTIFICATIONS_ENABLED_ADDITIONS;
+#else
+    return shared().m_builtInNotificationsEnabled;
+#endif
+}
+
+#endif
 
 } // namespace WebCore

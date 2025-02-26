@@ -61,7 +61,9 @@ static JSC_DECLARE_HOST_FUNCTION(mathProtoFuncSinh);
 static JSC_DECLARE_HOST_FUNCTION(mathProtoFuncSqrt);
 static JSC_DECLARE_HOST_FUNCTION(mathProtoFuncTan);
 static JSC_DECLARE_HOST_FUNCTION(mathProtoFuncTanh);
+static JSC_DECLARE_HOST_FUNCTION(mathProtoFuncTrunc);
 static JSC_DECLARE_HOST_FUNCTION(mathProtoFuncIMul);
+static JSC_DECLARE_HOST_FUNCTION(mathProtoFuncF16Round);
 
 const ClassInfo MathObject::s_info = { "Math"_s, &Base::s_info, nullptr, nullptr, CREATE_METHOD_TABLE(MathObject) };
 
@@ -120,13 +122,14 @@ void MathObject::finishCreation(VM& vm, JSGlobalObject* globalObject)
     putDirectNativeFunctionWithoutTransition(vm, globalObject, Identifier::fromString(vm, "tanh"_s), 1, mathProtoFuncTanh, ImplementationVisibility::Public, TanhIntrinsic, static_cast<unsigned>(PropertyAttribute::DontEnum));
     putDirectNativeFunctionWithoutTransition(vm, globalObject, Identifier::fromString(vm, "trunc"_s), 1, mathProtoFuncTrunc, ImplementationVisibility::Public, TruncIntrinsic, static_cast<unsigned>(PropertyAttribute::DontEnum));
     putDirectNativeFunctionWithoutTransition(vm, globalObject, Identifier::fromString(vm, "imul"_s), 2, mathProtoFuncIMul, ImplementationVisibility::Public, IMulIntrinsic, static_cast<unsigned>(PropertyAttribute::DontEnum));
+    putDirectNativeFunctionWithoutTransition(vm, globalObject, Identifier::fromString(vm, "f16round"_s), 1, mathProtoFuncF16Round, ImplementationVisibility::Public, F16RoundIntrinsic, static_cast<unsigned>(PropertyAttribute::DontEnum));
 }
 
 // ------------------------------ Functions --------------------------------
 
 JSC_DEFINE_HOST_FUNCTION(mathProtoFuncAbs, (JSGlobalObject* globalObject, CallFrame* callFrame))
 {
-    return JSValue::encode(jsNumber(fabs(callFrame->argument(0).toNumber(globalObject))));
+    return JSValue::encode(jsNumber(std::abs(callFrame->argument(0).toNumber(globalObject))));
 }
 
 JSC_DEFINE_HOST_FUNCTION(mathProtoFuncACos, (JSGlobalObject* globalObject, CallFrame* callFrame))
@@ -190,19 +193,18 @@ JSC_DEFINE_HOST_FUNCTION(mathProtoFuncHypot, (JSGlobalObject* globalObject, Call
     auto scope = DECLARE_THROW_SCOPE(vm);
 
     unsigned argsCount = callFrame->argumentCount();
-    Vector<double, 8> args;
-    args.reserveInitialCapacity(argsCount);
-    for (unsigned i = 0; i < argsCount; ++i) {
+    Vector<double, 8> args(argsCount, [&](size_t i) -> std::optional<double> {
         double argument = callFrame->uncheckedArgument(i).toNumber(globalObject);
+        RETURN_IF_EXCEPTION(scope, std::nullopt);
+        return argument;
+    });
         RETURN_IF_EXCEPTION(scope, { });
-        args.uncheckedAppend(argument);
-    }
 
     double max = 0;
     for (double argument : args) {
         if (std::isinf(argument))
             return JSValue::encode(jsDoubleNumber(+std::numeric_limits<double>::infinity()));
-        max = std::max(fabs(argument), max);
+        max = std::max(std::abs(argument), max);
     }
 
     if (!max)
@@ -231,14 +233,16 @@ JSC_DEFINE_HOST_FUNCTION(mathProtoFuncMax, (JSGlobalObject* globalObject, CallFr
     VM& vm = globalObject->vm();
     auto scope = DECLARE_THROW_SCOPE(vm);
     unsigned argsCount = callFrame->argumentCount();
-    double result = -std::numeric_limits<double>::infinity();
-    for (unsigned k = 0; k < argsCount; ++k) {
-        double val = callFrame->uncheckedArgument(k).toNumber(globalObject);
-        RETURN_IF_EXCEPTION(scope, encodedJSValue());
-        if (std::isnan(val)) {
-            result = PNaN;
-        } else if (val > result || (!val && !result && !std::signbit(val)))
-            result = val;
+    if (UNLIKELY(!argsCount))
+        return JSValue::encode(jsNumber(-std::numeric_limits<double>::infinity()));
+
+    double result = callFrame->uncheckedArgument(0).toNumber(globalObject);
+    RETURN_IF_EXCEPTION(scope, { });
+
+    for (unsigned i = 1; i < argsCount; ++i) {
+        double value = callFrame->uncheckedArgument(i).toNumber(globalObject);
+        RETURN_IF_EXCEPTION(scope, { });
+        result = Math::jsMaxDouble(result, value);
     }
     return JSValue::encode(jsNumber(result));
 }
@@ -248,14 +252,16 @@ JSC_DEFINE_HOST_FUNCTION(mathProtoFuncMin, (JSGlobalObject* globalObject, CallFr
     VM& vm = globalObject->vm();
     auto scope = DECLARE_THROW_SCOPE(vm);
     unsigned argsCount = callFrame->argumentCount();
-    double result = +std::numeric_limits<double>::infinity();
-    for (unsigned k = 0; k < argsCount; ++k) {
-        double val = callFrame->uncheckedArgument(k).toNumber(globalObject);
-        RETURN_IF_EXCEPTION(scope, encodedJSValue());
-        if (std::isnan(val)) {
-            result = PNaN;
-        } else if (val < result || (!val && !result && std::signbit(val)))
-            result = val;
+    if (UNLIKELY(!argsCount))
+        return JSValue::encode(jsNumber(std::numeric_limits<double>::infinity()));
+
+    double result = callFrame->uncheckedArgument(0).toNumber(globalObject);
+    RETURN_IF_EXCEPTION(scope, { });
+
+    for (unsigned i = 1; i < argsCount; ++i) {
+        double value = callFrame->uncheckedArgument(i).toNumber(globalObject);
+        RETURN_IF_EXCEPTION(scope, { });
+        result = Math::jsMinDouble(result, value);
     }
     return JSValue::encode(jsNumber(result));
 }
@@ -384,6 +390,11 @@ JSC_DEFINE_HOST_FUNCTION(mathProtoFuncTanh, (JSGlobalObject* globalObject, CallF
 JSC_DEFINE_HOST_FUNCTION(mathProtoFuncTrunc, (JSGlobalObject* globalObject, CallFrame* callFrame))
 {
     return JSValue::encode(jsNumber(callFrame->argument(0).toIntegerPreserveNaN(globalObject)));
+}
+
+JSC_DEFINE_HOST_FUNCTION(mathProtoFuncF16Round, (JSGlobalObject* globalObject, CallFrame* callFrame))
+{
+    return JSValue::encode(jsDoubleNumber(Float16 { callFrame->argument(0).toNumber(globalObject) }));
 }
 
 } // namespace JSC

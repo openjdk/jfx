@@ -64,14 +64,16 @@ template<typename JSClass> inline JSDOMBuiltinConstructor<JSClass>* JSDOMBuiltin
 
 template<typename JSClass> inline JSC::Structure* JSDOMBuiltinConstructor<JSClass>::createStructure(JSC::VM& vm, JSC::JSGlobalObject& globalObject, JSC::JSValue prototype)
 {
-    return JSC::Structure::create(vm, &globalObject, prototype, JSC::TypeInfo(JSC::InternalFunctionType, StructureFlags), info());
+    auto* structure = JSC::Structure::create(vm, &globalObject, prototype, JSC::TypeInfo(JSC::InternalFunctionType, StructureFlags), info());
+    structure->setMayBePrototype(true);
+    return structure;
 }
 
 template<typename JSClass> inline void JSDOMBuiltinConstructor<JSClass>::finishCreation(JSC::VM& vm, JSDOMGlobalObject& globalObject)
 {
     Base::finishCreation(vm);
     ASSERT(inherits(info()));
-    setInitializeFunction(vm, *JSC::JSFunction::create(vm, initializeExecutable(vm), &globalObject));
+    setInitializeFunction(vm, *JSC::JSFunction::create(vm, &globalObject, initializeExecutable(vm), &globalObject));
     initializeProperties(vm, globalObject);
 }
 

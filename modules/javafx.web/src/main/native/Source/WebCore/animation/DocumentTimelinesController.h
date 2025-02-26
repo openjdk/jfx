@@ -29,6 +29,7 @@
 #include "ReducedResolutionSeconds.h"
 #include "Timer.h"
 #include <wtf/CancellableTask.h>
+#include <wtf/CheckedRef.h>
 #include <wtf/Markable.h>
 #include <wtf/Seconds.h>
 #include <wtf/WeakHashSet.h>
@@ -40,8 +41,10 @@ class Document;
 class DocumentTimeline;
 class WebAnimation;
 
-class DocumentTimelinesController {
-    WTF_MAKE_FAST_ALLOCATED;
+DECLARE_ALLOCATOR_WITH_HEAP_IDENTIFIER(DocumentTimelinesController);
+class DocumentTimelinesController final : public CanMakeCheckedPtr<DocumentTimelinesController> {
+    WTF_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(DocumentTimelinesController);
+    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(DocumentTimelinesController);
 public:
     explicit DocumentTimelinesController(Document&);
     ~DocumentTimelinesController();
@@ -57,14 +60,9 @@ public:
 
     WEBCORE_EXPORT void suspendAnimations();
     WEBCORE_EXPORT void resumeAnimations();
-    WEBCORE_EXPORT bool animationsAreSuspended() const;
+    bool animationsAreSuspended() const { return m_isSuspended; }
 
 private:
-    struct AnimationsToProcess {
-        Vector<RefPtr<WebAnimation>> animationsToRemove;
-        Vector<RefPtr<CSSTransition>> completedTransitions;
-    };
-
     ReducedResolutionSeconds liveCurrentTime() const;
     void cacheCurrentTime(ReducedResolutionSeconds);
     void maybeClearCachedCurrentTime();

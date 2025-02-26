@@ -32,11 +32,11 @@
 #include "ExceptionOr.h"
 #include <wtf/Algorithms.h>
 #include <wtf/FixedVector.h>
-#include <wtf/IsoMallocInlines.h>
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
-WTF_MAKE_ISO_ALLOCATED_IMPL(CSSMathSum);
+WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(CSSMathSum);
 
 ExceptionOr<Ref<CSSMathSum>> CSSMathSum::create(FixedVector<CSSNumberish> numberishes)
 {
@@ -46,11 +46,11 @@ ExceptionOr<Ref<CSSMathSum>> CSSMathSum::create(FixedVector<CSSNumberish> number
 ExceptionOr<Ref<CSSMathSum>> CSSMathSum::create(Vector<Ref<CSSNumericValue>> values)
 {
     if (values.isEmpty())
-        return Exception { SyntaxError };
+        return Exception { ExceptionCode::SyntaxError };
 
     auto type = CSSNumericType::addTypes(values);
     if (!type)
-        return Exception { TypeError };
+        return Exception { ExceptionCode::TypeError };
 
     return adoptRef(*new CSSMathSum(WTFMove(values), WTFMove(*type)));
 }
@@ -65,17 +65,17 @@ void CSSMathSum::serialize(StringBuilder& builder, OptionSet<SerializationArgume
 {
     // https://drafts.css-houdini.org/css-typed-om/#calc-serialization
     if (!arguments.contains(SerializationArguments::WithoutParentheses))
-        builder.append(arguments.contains(SerializationArguments::Nested) ? "(" : "calc(");
+        builder.append(arguments.contains(SerializationArguments::Nested) ? "("_s : "calc("_s);
     m_values->forEach([&](auto& numericValue, bool first) {
         OptionSet<SerializationArguments> operandSerializationArguments { SerializationArguments::Nested };
         operandSerializationArguments.set(SerializationArguments::WithoutParentheses, arguments.contains(SerializationArguments::WithoutParentheses));
         if (!first) {
             if (auto* mathNegate = dynamicDowncast<CSSMathNegate>(numericValue)) {
-                builder.append(" - ");
+                builder.append(" - "_s);
                 mathNegate->value().serialize(builder, operandSerializationArguments);
                 return;
             }
-            builder.append(" + ");
+            builder.append(" + "_s);
         }
         numericValue.serialize(builder, operandSerializationArguments);
     });
@@ -140,7 +140,7 @@ RefPtr<CSSCalcExpressionNode> CSSMathSum::toCalcExpressionNode() const
         auto value = item->toCalcExpressionNode();
         if (!value)
             return nullptr;
-        values.uncheckedAppend(value.releaseNonNull());
+        values.append(value.releaseNonNull());
     }
     return CSSCalcOperationNode::createSum(WTFMove(values));
 }

@@ -44,8 +44,9 @@ class WeakPtrImplWithEventTargetData;
 
 struct FontCustomPlatformData;
 
+DECLARE_ALLOCATOR_WITH_HEAP_IDENTIFIER(CSSFontFaceSource);
 class CSSFontFaceSource final : public FontLoadRequestClient {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(CSSFontFaceSource);
 public:
     CSSFontFaceSource(CSSFontFace& owner, AtomString fontFaceName);
     CSSFontFaceSource(CSSFontFace& owner, AtomString fontFaceName, SVGFontFaceElement&);
@@ -90,10 +91,10 @@ private:
 
     RefPtr<SharedBuffer> m_generatedOTFBuffer;
     RefPtr<JSC::ArrayBufferView> m_immediateSource;
-    std::unique_ptr<FontCustomPlatformData> m_immediateFontCustomPlatformData;
+    RefPtr<FontCustomPlatformData> m_immediateFontCustomPlatformData;
 
     WeakPtr<SVGFontFaceElement, WeakPtrImplWithEventTargetData> m_svgFontFaceElement;
-    std::unique_ptr<FontCustomPlatformData> m_inDocumentCustomPlatformData;
+    RefPtr<FontCustomPlatformData> m_inDocumentCustomPlatformData;
 
     Status m_status { Status::Pending };
     bool m_hasSVGFontFaceElement { false };

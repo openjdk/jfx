@@ -34,8 +34,9 @@ class CSSToLengthConversionData;
 
 enum CSSPropertyID : uint16_t;
 
+DECLARE_ALLOCATOR_WITH_HEAP_IDENTIFIER(CSSCalcPrimitiveValueNode);
 class CSSCalcPrimitiveValueNode final : public CSSCalcExpressionNode {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(CSSCalcPrimitiveValueNode);
 public:
     static Ref<CSSCalcPrimitiveValueNode> create(Ref<CSSPrimitiveValue>&&);
     static RefPtr<CSSCalcPrimitiveValueNode> create(double value, CSSUnitType);
@@ -62,9 +63,12 @@ public:
     void canonicalizeUnit();
 
     const CSSPrimitiveValue& value() const { return m_value.get(); }
-    double doubleValue(CSSUnitType) const final;
+    Ref<CSSPrimitiveValue> protectedValue() const { return m_value; }
+
+    double doubleValue(CSSUnitType, const CSSCalcSymbolTable&) const final;
 
 private:
+    bool isResolvable() const final;
     bool isZero() const final;
     bool equals(const CSSCalcExpressionNode& other) const final;
     Type type() const final { return CssCalcPrimitiveValue; }
@@ -73,7 +77,6 @@ private:
 
     double computeLengthPx(const CSSToLengthConversionData&) const final;
     void collectComputedStyleDependencies(ComputedStyleDependencies&) const final;
-    bool convertingToLengthRequiresNonNullStyle(int lengthConversion) const final;
 
     void dump(TextStream&) const final;
 

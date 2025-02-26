@@ -44,54 +44,10 @@
 
 namespace WebCore {
 
-class DisplayBufferDisplayDelegate final : public GraphicsLayerContentsDisplayDelegate {
-public:
-    static Ref<DisplayBufferDisplayDelegate> create(bool isOpaque = true, float contentsScale = 1)
-    {
-        return adoptRef(*new DisplayBufferDisplayDelegate(isOpaque, contentsScale));
-    }
-    // GraphicsLayerContentsDisplayDelegate overrides.
-    void prepareToDelegateDisplay(PlatformCALayer& layer) final
-    {
-        layer.setOpaque(m_isOpaque);
-        layer.setContentsScale(m_contentsScale);
-    }
-    void display(PlatformCALayer& layer) final
-    {
-        if (m_displayBuffer)
-            layer.setContents(m_displayBuffer);
-        else
-            layer.clearContents();
-    }
-    GraphicsLayer::CompositingCoordinatesOrientation orientation() const final
-    {
-        return GraphicsLayer::CompositingCoordinatesOrientation::TopDown;
-    }
-    void setDisplayBuffer(WTF::MachSendRight& displayBuffer)
-    {
-        if (!displayBuffer) {
-            m_displayBuffer = { };
-            return;
-        }
-
-        if (m_displayBuffer && displayBuffer.sendRight() == m_displayBuffer.sendRight())
-            return;
-
-        m_displayBuffer = displayBuffer.copySendRight();
-    }
-private:
-    DisplayBufferDisplayDelegate(bool isOpaque, float contentsScale)
-        : m_contentsScale(contentsScale)
-        , m_isOpaque(isOpaque)
-    {
-    }
-    WTF::MachSendRight m_displayBuffer;
-    const float m_contentsScale;
-    const bool m_isOpaque;
-};
+class GPUDisplayBufferDisplayDelegate;
 
 class GPUCanvasContextCocoa final : public GPUCanvasContext {
-    WTF_MAKE_ISO_ALLOCATED(GPUCanvasContextCocoa);
+    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(GPUCanvasContextCocoa);
 public:
 #if ENABLE(OFFSCREEN_CANVAS)
     using CanvasType = std::variant<RefPtr<HTMLCanvasElement>, RefPtr<OffscreenCanvas>>;
@@ -106,23 +62,19 @@ public:
     RefPtr<GraphicsLayerContentsDisplayDelegate> layerContentsDisplayDelegate() override;
     bool needsPreparationForDisplay() const override { return true; }
     void prepareForDisplay() override;
-    PixelFormat pixelFormat() const override;
-    void reshape(int width, int height) override;
+    ImageBufferPixelFormat pixelFormat() const override;
+    void reshape() override;
 
-    // FIXME: implement these to allow for painting
-    void prepareForDisplayWithPaint() override { }
-    void paintRenderingResultsToCanvas() override { }
+
+    RefPtr<ImageBuffer> surfaceBufferToImageBuffer(SurfaceBuffer) override;
     // GPUCanvasContext methods:
     CanvasType canvas() override;
-    void configure(GPUCanvasConfiguration&&) override;
+    ExceptionOr<void> configure(GPUCanvasConfiguration&&) override;
     void unconfigure() override;
-    RefPtr<GPUTexture> getCurrentTexture() override;
+    ExceptionOr<RefPtr<GPUTexture>> getCurrentTexture() override;
+    RefPtr<ImageBuffer> transferToImageBuffer() override;
 
     bool isWebGPU() const override { return true; }
-    const char* activeDOMObjectName() const override
-    {
-        return "GPUCanvasElement";
-    }
 
 private:
     explicit GPUCanvasContextCocoa(CanvasBase&, GPU&);
@@ -134,25 +86,29 @@ private:
         return static_cast<bool>(m_configuration);
     }
 
+    CanvasType htmlOrOffscreenCanvas() const;
+    ExceptionOr<void> configure(GPUCanvasConfiguration&&, bool);
+    void present();
+
     struct Configuration {
         Ref<GPUDevice> device;
         GPUTextureFormat format { GPUTextureFormat::R8unorm };
         GPUTextureUsageFlags usage { GPUTextureUsage::RENDER_ATTACHMENT };
         Vector<GPUTextureFormat> viewFormats;
         GPUPredefinedColorSpace colorSpace { GPUPredefinedColorSpace::SRGB };
-        GPUCanvasCompositingAlphaMode compositingAlphaMode { GPUCanvasCompositingAlphaMode::Opaque };
+        GPUCanvasAlphaMode compositingAlphaMode { GPUCanvasAlphaMode::Opaque };
         Vector<MachSendRight> renderBuffers;
         unsigned frameCount { 0 };
     };
     std::optional<Configuration> m_configuration;
 
-    Ref<DisplayBufferDisplayDelegate> m_layerContentsDisplayDelegate;
-    Ref<GPUCompositorIntegration> m_compositorIntegration;
-    Ref<GPUPresentationContext> m_presentationContext;
+    Ref<GPUDisplayBufferDisplayDelegate> m_layerContentsDisplayDelegate;
+    RefPtr<GPUCompositorIntegration> m_compositorIntegration;
+    RefPtr<GPUPresentationContext> m_presentationContext;
     RefPtr<GPUTexture> m_currentTexture;
 
-    int m_width { 0 };
-    int m_height { 0 };
+    GPUIntegerCoordinate m_width { 0 };
+    GPUIntegerCoordinate m_height { 0 };
     bool m_compositingResultsNeedsUpdating { false };
 };
 

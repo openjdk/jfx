@@ -89,7 +89,9 @@ bool ScrollAnimator::singleAxisScroll(ScrollEventAxis axis, float scrollDelta, O
         if (m_scrollController.retargetAnimatedScrollBy(delta))
             return true;
 
-        m_scrollableArea.scrollToPositionWithAnimation(m_currentPosition + delta);
+        auto options = ScrollPositionChangeOptions::createProgrammatic();
+        options.originalScrollDelta = delta;
+        m_scrollableArea.scrollToPositionWithAnimation(m_currentPosition + delta, options);
         return true;
     }
 
@@ -229,6 +231,12 @@ bool ScrollAnimator::handleTouchEvent(const PlatformTouchEvent&)
 }
 #endif
 
+static void notifyScrollAnchoringControllerOfScroll(ScrollableArea& scrollableArea)
+{
+    scrollableArea.invalidateScrollAnchoringElement();
+    scrollableArea.updateScrollAnchoringElement();
+}
+
 void ScrollAnimator::setCurrentPosition(const FloatPoint& position, NotifyScrollableArea notify)
 {
     // FIXME: An early return here if the position is not changing triggers test failures because of adjustForIOSCaretWhenScrolling()
@@ -238,6 +246,8 @@ void ScrollAnimator::setCurrentPosition(const FloatPoint& position, NotifyScroll
 
     if (notify == NotifyScrollableArea::Yes)
         notifyPositionChanged(delta);
+    else
+        notifyScrollAnchoringControllerOfScroll(m_scrollableArea);
 
     updateActiveScrollSnapIndexForOffset();
 }
@@ -376,7 +386,7 @@ void ScrollAnimator::stopAnimationCallback(ScrollingEffectsController&)
     m_scrollAnimationScheduled = false;
 }
 
-void ScrollAnimator::deferWheelEventTestCompletionForReason(WheelEventTestMonitor::ScrollableAreaIdentifier identifier, WheelEventTestMonitor::DeferReason reason) const
+void ScrollAnimator::deferWheelEventTestCompletionForReason(ScrollingNodeID identifier, WheelEventTestMonitor::DeferReason reason) const
 {
     if (!m_wheelEventTestMonitor)
         return;
@@ -384,7 +394,7 @@ void ScrollAnimator::deferWheelEventTestCompletionForReason(WheelEventTestMonito
     m_wheelEventTestMonitor->deferForReason(identifier, reason);
 }
 
-void ScrollAnimator::removeWheelEventTestCompletionDeferralForReason(WheelEventTestMonitor::ScrollableAreaIdentifier identifier, WheelEventTestMonitor::DeferReason reason) const
+void ScrollAnimator::removeWheelEventTestCompletionDeferralForReason(ScrollingNodeID identifier, WheelEventTestMonitor::DeferReason reason) const
 {
     if (!m_wheelEventTestMonitor)
         return;
@@ -445,5 +455,11 @@ ScrollAnimationStatus ScrollAnimator::serviceScrollAnimation(MonotonicTime time)
         m_scrollController.animationCallback(time);
     return m_scrollAnimationScheduled ? ScrollAnimationStatus::Animating : ScrollAnimationStatus::NotAnimating;
 }
+
+ScrollingNodeID ScrollAnimator::scrollingNodeIDForTesting() const
+{
+    return m_scrollableArea.scrollingNodeIDForTesting();
+}
+
 
 } // namespace WebCore

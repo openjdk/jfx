@@ -29,11 +29,11 @@
 
 #include "BiquadFilterNode.h"
 #include <JavaScriptCore/Float32Array.h>
-#include <wtf/IsoMallocInlines.h>
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
-WTF_MAKE_ISO_ALLOCATED_IMPL(BiquadFilterNode);
+WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(BiquadFilterNode);
 
 ExceptionOr<Ref<BiquadFilterNode>> BiquadFilterNode::create(BaseAudioContext& context, const BiquadFilterOptions& options)
 {
@@ -76,7 +76,7 @@ ExceptionOr<void> BiquadFilterNode::getFrequencyResponse(const Ref<Float32Array>
 {
     unsigned length = frequencyHz->length();
     if (magResponse->length() != length || phaseResponse->length() != length)
-        return Exception { InvalidAccessError, "The arrays passed as arguments must have the same length"_s };
+        return Exception { ExceptionCode::InvalidAccessError, "The arrays passed as arguments must have the same length"_s };
 
     if (length)
         biquadProcessor()->getFrequencyResponse(length, frequencyHz->data(), magResponse->data(), phaseResponse->data());

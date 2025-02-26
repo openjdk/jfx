@@ -33,15 +33,20 @@ namespace WebCore {
 
 class FontAccessor;
 
-enum class ExternalResourceDownloadPolicy {
+enum class ExternalResourceDownloadPolicy : bool {
     Forbid,
     Allow
+};
+
+enum class IsGenericFontFamily : bool {
+    No,
+    Yes
 };
 
 class FontRanges {
 public:
     struct Range {
-        Range(UChar32 from, UChar32 to, Ref<FontAccessor>&& fontAccessor)
+        Range(char32_t from, char32_t to, Ref<FontAccessor>&& fontAccessor)
             : m_from(from)
             , m_to(to)
             , m_fontAccessor(WTFMove(fontAccessor))
@@ -59,22 +64,23 @@ public:
         Range& operator=(const Range&) = delete;
         Range& operator=(Range&&) = default;
 
-        UChar32 from() const { return m_from; }
-        UChar32 to() const { return m_to; }
+        char32_t from() const { return m_from; }
+        char32_t to() const { return m_to; }
         WEBCORE_EXPORT const Font* font(ExternalResourceDownloadPolicy) const;
         const FontAccessor& fontAccessor() const { return m_fontAccessor; }
 
     private:
-        UChar32 m_from;
-        UChar32 m_to;
+        char32_t m_from;
+        char32_t m_to;
         Ref<FontAccessor> m_fontAccessor;
     };
 
-    FontRanges();
+    FontRanges() = default;
     explicit FontRanges(RefPtr<Font>&&);
     ~FontRanges();
 
     FontRanges(const FontRanges&) = default;
+    FontRanges(FontRanges&& other, IsGenericFontFamily);
     FontRanges& operator=(FontRanges&&) = default;
 
     bool isNull() const { return m_ranges.isEmpty(); }
@@ -85,13 +91,15 @@ public:
 
     void shrinkToFit() { m_ranges.shrinkToFit(); }
 
-    WEBCORE_EXPORT GlyphData glyphDataForCharacter(UChar32, ExternalResourceDownloadPolicy) const;
-    WEBCORE_EXPORT const Font* fontForCharacter(UChar32) const;
+    WEBCORE_EXPORT GlyphData glyphDataForCharacter(char32_t, ExternalResourceDownloadPolicy) const;
+    WEBCORE_EXPORT const Font* fontForCharacter(char32_t) const;
     WEBCORE_EXPORT const Font& fontForFirstRange() const;
     bool isLoading() const;
+    bool isGenericFontFamily() const { return m_isGenericFontFamily == IsGenericFontFamily::Yes; }
 
 private:
     Vector<Range, 1> m_ranges;
+    IsGenericFontFamily m_isGenericFontFamily { IsGenericFontFamily::No };
 };
 
 }

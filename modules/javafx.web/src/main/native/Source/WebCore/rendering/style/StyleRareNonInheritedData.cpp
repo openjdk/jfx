@@ -16,19 +16,18 @@
  * along with this library; see the file COPYING.LIB.  If not, write to
  * the Free Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
  * Boston, MA 02110-1301, USA.
- *
  */
 
 #include "config.h"
 #include "StyleRareNonInheritedData.h"
 
 #include "RenderCounter.h"
-#include "RenderStyle.h"
+#include "RenderStyleInlines.h"
 #include "ShadowData.h"
-#include "StyleCustomPropertyData.h"
-#include "StyleFilterData.h"
 #include "StyleImage.h"
+#include "StyleReflection.h"
 #include "StyleResolver.h"
+#include "StyleTextEdge.h"
 #include <wtf/PointerComparison.h>
 #include <wtf/RefPtr.h>
 #include <wtf/text/TextStream.h>
@@ -45,9 +44,7 @@ StyleRareNonInheritedData::StyleRareNonInheritedData()
     , lineClamp(RenderStyle::initialLineClamp())
     , initialLetter(RenderStyle::initialInitialLetter())
     , marquee(StyleMarqueeData::create())
-#if ENABLE(FILTERS_LEVEL_2)
     , backdropFilter(StyleFilterData::create())
-#endif
     , grid(StyleGridData::create())
     , gridItem(StyleGridItemData::create())
     // clip
@@ -56,7 +53,7 @@ StyleRareNonInheritedData::StyleRareNonInheritedData()
     // counterDirectives
     , willChange(RenderStyle::initialWillChange())
     // boxReflect
-    , maskBoxImage(NinePieceImage::Type::Mask)
+    , maskBorder(NinePieceImage::Type::Mask)
     // pageSize
     , shapeOutside(RenderStyle::initialShapeOutside())
     , shapeMargin(RenderStyle::initialShapeMargin())
@@ -71,6 +68,8 @@ StyleRareNonInheritedData::StyleRareNonInheritedData()
     , translate(RenderStyle::initialTranslate())
     , offsetPath(RenderStyle::initialOffsetPath())
     // containerNames
+    , viewTransitionClasses(RenderStyle::initialViewTransitionClasses())
+    // viewTransitionName
     , columnGap(RenderStyle::initialColumnGap())
     , rowGap(RenderStyle::initialRowGap())
     , offsetDistance(RenderStyle::initialOffsetDistance())
@@ -84,10 +83,25 @@ StyleRareNonInheritedData::StyleRareNonInheritedData()
     // scrollSnapType
     // scrollSnapAlign
     // scrollSnapStop
+    // scrollTimelines
+    // scrollTimelineAxes
+    // scrollTimelineNames
+    // viewTimelines
+    // viewTimelineAxes
+    // viewTimelineInsets
+    // viewTimelineNames
+    // scrollbarGutter
+    , scrollbarWidth(RenderStyle::initialScrollbarWidth())
     , zoom(RenderStyle::initialZoom())
+    , pseudoElementNameArgument(nullAtom())
+    , anchorNames(RenderStyle::initialAnchorNames())
+    , positionAnchor(RenderStyle::initialPositionAnchor())
+    , textBoxEdge(RenderStyle::initialTextBoxEdge())
+    , blockStepSize(RenderStyle::initialBlockStepSize())
+    , blockStepInsert(static_cast<unsigned>(RenderStyle::initialBlockStepInsert()))
     , overscrollBehaviorX(static_cast<unsigned>(RenderStyle::initialOverscrollBehaviorX()))
     , overscrollBehaviorY(static_cast<unsigned>(RenderStyle::initialOverscrollBehaviorY()))
-    , pageSizeType(PAGE_SIZE_AUTO)
+    , pageSizeType(static_cast<unsigned>(PageSizeType::Auto))
     , transformStyle3D(static_cast<unsigned>(RenderStyle::initialTransformStyle3D()))
     , transformStyleForcedToFlat(false)
     , backfaceVisibility(static_cast<unsigned>(RenderStyle::initialBackfaceVisibility()))
@@ -95,10 +109,8 @@ StyleRareNonInheritedData::StyleRareNonInheritedData()
     , textDecorationStyle(static_cast<unsigned>(RenderStyle::initialTextDecorationStyle()))
     , textGroupAlign(static_cast<unsigned>(RenderStyle::initialTextGroupAlign()))
     , contentVisibility(static_cast<unsigned>(RenderStyle::initialContentVisibility()))
-#if ENABLE(CSS_COMPOSITING)
     , effectiveBlendMode(static_cast<unsigned>(RenderStyle::initialBlendMode()))
     , isolation(static_cast<unsigned>(RenderStyle::initialIsolation()))
-#endif
 #if ENABLE(APPLE_PAY)
     , applePayButtonStyle(static_cast<unsigned>(RenderStyle::initialApplePayButtonStyle()))
     , applePayButtonType(static_cast<unsigned>(RenderStyle::initialApplePayButtonType()))
@@ -110,9 +122,10 @@ StyleRareNonInheritedData::StyleRareNonInheritedData()
     , containIntrinsicWidthType(static_cast<unsigned>(RenderStyle::initialContainIntrinsicWidthType()))
     , containIntrinsicHeightType(static_cast<unsigned>(RenderStyle::initialContainIntrinsicHeightType()))
     , containerType(static_cast<unsigned>(RenderStyle::initialContainerType()))
-    , leadingTrim(static_cast<unsigned>(RenderStyle::initialLeadingTrim()))
+    , textBoxTrim(static_cast<unsigned>(RenderStyle::initialTextBoxTrim()))
     , overflowAnchor(static_cast<unsigned>(RenderStyle::initialOverflowAnchor()))
     , hasClip(false)
+    , fieldSizing(RenderStyle::initialFieldSizing())
 {
 }
 
@@ -125,18 +138,16 @@ inline StyleRareNonInheritedData::StyleRareNonInheritedData(const StyleRareNonIn
     , lineClamp(o.lineClamp)
     , initialLetter(o.initialLetter)
     , marquee(o.marquee)
-#if ENABLE(FILTERS_LEVEL_2)
     , backdropFilter(o.backdropFilter)
-#endif
     , grid(o.grid)
     , gridItem(o.gridItem)
     , clip(o.clip)
     , scrollMargin(o.scrollMargin)
     , scrollPadding(o.scrollPadding)
-    , counterDirectives(o.counterDirectives ? makeUnique<CounterDirectiveMap>(*o.counterDirectives) : nullptr)
+    , counterDirectives(o.counterDirectives)
     , willChange(o.willChange)
     , boxReflect(o.boxReflect)
-    , maskBoxImage(o.maskBoxImage)
+    , maskBorder(o.maskBorder)
     , pageSize(o.pageSize)
     , shapeOutside(o.shapeOutside)
     , shapeMargin(o.shapeMargin)
@@ -151,6 +162,8 @@ inline StyleRareNonInheritedData::StyleRareNonInheritedData(const StyleRareNonIn
     , translate(o.translate)
     , offsetPath(o.offsetPath)
     , containerNames(o.containerNames)
+    , viewTransitionClasses(o.viewTransitionClasses)
+    , viewTransitionName(o.viewTransitionName)
     , columnGap(o.columnGap)
     , rowGap(o.rowGap)
     , offsetDistance(o.offsetDistance)
@@ -164,7 +177,22 @@ inline StyleRareNonInheritedData::StyleRareNonInheritedData(const StyleRareNonIn
     , scrollSnapType(o.scrollSnapType)
     , scrollSnapAlign(o.scrollSnapAlign)
     , scrollSnapStop(o.scrollSnapStop)
+    , scrollTimelines(o.scrollTimelines)
+    , scrollTimelineAxes(o.scrollTimelineAxes)
+    , scrollTimelineNames(o.scrollTimelineNames)
+    , viewTimelines(o.viewTimelines)
+    , viewTimelineAxes(o.viewTimelineAxes)
+    , viewTimelineInsets(o.viewTimelineInsets)
+    , viewTimelineNames(o.viewTimelineNames)
+    , scrollbarGutter(o.scrollbarGutter)
+    , scrollbarWidth(o.scrollbarWidth)
     , zoom(o.zoom)
+    , pseudoElementNameArgument(o.pseudoElementNameArgument)
+    , anchorNames(o.anchorNames)
+    , positionAnchor(o.positionAnchor)
+    , textBoxEdge(o.textBoxEdge)
+    , blockStepSize(o.blockStepSize)
+    , blockStepInsert(o.blockStepInsert)
     , overscrollBehaviorX(o.overscrollBehaviorX)
     , overscrollBehaviorY(o.overscrollBehaviorY)
     , pageSizeType(o.pageSizeType)
@@ -175,10 +203,8 @@ inline StyleRareNonInheritedData::StyleRareNonInheritedData(const StyleRareNonIn
     , textDecorationStyle(o.textDecorationStyle)
     , textGroupAlign(o.textGroupAlign)
     , contentVisibility(o.contentVisibility)
-#if ENABLE(CSS_COMPOSITING)
     , effectiveBlendMode(o.effectiveBlendMode)
     , isolation(o.isolation)
-#endif
 #if ENABLE(APPLE_PAY)
     , applePayButtonStyle(o.applePayButtonStyle)
     , applePayButtonType(o.applePayButtonType)
@@ -190,9 +216,10 @@ inline StyleRareNonInheritedData::StyleRareNonInheritedData(const StyleRareNonIn
     , containIntrinsicWidthType(o.containIntrinsicWidthType)
     , containIntrinsicHeightType(o.containIntrinsicHeightType)
     , containerType(o.containerType)
-    , leadingTrim(o.leadingTrim)
+    , textBoxTrim(o.textBoxTrim)
     , overflowAnchor(o.overflowAnchor)
     , hasClip(o.hasClip)
+    , fieldSizing(o.fieldSizing)
 {
 }
 
@@ -212,18 +239,16 @@ bool StyleRareNonInheritedData::operator==(const StyleRareNonInheritedData& o) c
         && lineClamp == o.lineClamp
         && initialLetter == o.initialLetter
         && marquee == o.marquee
-#if ENABLE(FILTERS_LEVEL_2)
         && backdropFilter == o.backdropFilter
-#endif
         && grid == o.grid
         && gridItem == o.gridItem
         && clip == o.clip
         && scrollMargin == o.scrollMargin
         && scrollPadding == o.scrollPadding
-        && arePointingToEqualData(counterDirectives, o.counterDirectives)
+        && counterDirectives.map == o.counterDirectives.map
         && arePointingToEqualData(willChange, o.willChange)
         && arePointingToEqualData(boxReflect, o.boxReflect)
-        && maskBoxImage == o.maskBoxImage
+        && maskBorder == o.maskBorder
         && pageSize == o.pageSize
         && arePointingToEqualData(shapeOutside, o.shapeOutside)
         && shapeMargin == o.shapeMargin
@@ -251,7 +276,21 @@ bool StyleRareNonInheritedData::operator==(const StyleRareNonInheritedData& o) c
         && scrollSnapType == o.scrollSnapType
         && scrollSnapAlign == o.scrollSnapAlign
         && scrollSnapStop == o.scrollSnapStop
+        && scrollTimelines == o.scrollTimelines
+        && scrollTimelineAxes == o.scrollTimelineAxes
+        && scrollTimelineNames == o.scrollTimelineNames
+        && viewTimelines == o.viewTimelines
+        && viewTimelineAxes == o.viewTimelineAxes
+        && viewTimelineInsets == o.viewTimelineInsets
+        && viewTimelineNames == o.viewTimelineNames
+        && scrollbarGutter == o.scrollbarGutter
+        && scrollbarWidth == o.scrollbarWidth
         && zoom == o.zoom
+        && pseudoElementNameArgument == o.pseudoElementNameArgument
+        && anchorNames == o.anchorNames
+        && positionAnchor == o.positionAnchor
+        && blockStepSize == o.blockStepSize
+        && blockStepInsert == o.blockStepInsert
         && overscrollBehaviorX == o.overscrollBehaviorX
         && overscrollBehaviorY == o.overscrollBehaviorY
         && pageSizeType == o.pageSizeType
@@ -261,10 +300,8 @@ bool StyleRareNonInheritedData::operator==(const StyleRareNonInheritedData& o) c
         && useSmoothScrolling == o.useSmoothScrolling
         && textDecorationStyle == o.textDecorationStyle
         && textGroupAlign == o.textGroupAlign
-#if ENABLE(CSS_COMPOSITING)
         && effectiveBlendMode == o.effectiveBlendMode
         && isolation == o.isolation
-#endif
 #if ENABLE(APPLE_PAY)
         && applePayButtonStyle == o.applePayButtonStyle
         && applePayButtonType == o.applePayButtonType
@@ -277,12 +314,16 @@ bool StyleRareNonInheritedData::operator==(const StyleRareNonInheritedData& o) c
         && containIntrinsicWidthType == o.containIntrinsicWidthType
         && containIntrinsicHeightType == o.containIntrinsicHeightType
         && containerType == o.containerType
-        && leadingTrim == o.leadingTrim
+        && textBoxTrim == o.textBoxTrim
+        && textBoxEdge == o.textBoxEdge
         && overflowAnchor == o.overflowAnchor
-        && hasClip == o.hasClip;
+        && viewTransitionClasses == o.viewTransitionClasses
+        && viewTransitionName == o.viewTransitionName
+        && hasClip == o.hasClip
+        && fieldSizing == o.fieldSizing;
 }
 
-OptionSet<Containment> StyleRareNonInheritedData::effectiveContainment() const
+OptionSet<Containment> StyleRareNonInheritedData::usedContain() const
 {
     auto containment = contain;
 
@@ -300,13 +341,9 @@ OptionSet<Containment> StyleRareNonInheritedData::effectiveContainment() const
     return containment;
 }
 
-#if ENABLE(FILTERS_LEVEL_2)
-
 bool StyleRareNonInheritedData::hasBackdropFilters() const
 {
     return !backdropFilter->operations.isEmpty();
 }
-
-#endif
 
 } // namespace WebCore

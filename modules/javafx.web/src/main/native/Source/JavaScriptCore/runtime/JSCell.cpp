@@ -1,7 +1,7 @@
 /*
  *  Copyright (C) 1999-2001 Harri Porten (porten@kde.org)
  *  Copyright (C) 2001 Peter Kelly (pmk@post.com)
- *  Copyright (C) 2003-2020 Apple Inc. All rights reserved.
+ *  Copyright (C) 2003-2023 Apple Inc. All rights reserved.
  *
  *  This library is free software; you can redistribute it and/or
  *  modify it under the terms of the GNU Library General Public
@@ -29,9 +29,12 @@
 #include "JSCInlines.h"
 #include "MarkedBlockInlines.h"
 #include "SubspaceInlines.h"
+#include "Symbol.h"
 #include <wtf/LockAlgorithmInlines.h>
 
 namespace JSC {
+
+const ASCIILiteral SymbolCoercionError { "Cannot convert a symbol to a string"_s };
 
 static_assert(sizeof(JSCell) == sizeof(uint64_t), "jscell is eight bytes");
 STATIC_ASSERT_IS_TRIVIALLY_DESTRUCTIBLE(JSCell);
@@ -144,36 +147,35 @@ bool JSCell::deletePropertyByIndex(JSCell* cell, JSGlobalObject* globalObject, u
 
 JSValue JSCell::toPrimitive(JSGlobalObject* globalObject, PreferredPrimitiveType preferredType) const
 {
-    if (isString())
-        return static_cast<const JSString*>(this)->toPrimitive(globalObject, preferredType);
-    if (isSymbol())
-        return static_cast<const Symbol*>(this)->toPrimitive(globalObject, preferredType);
-    if (isHeapBigInt())
-        return static_cast<const JSBigInt*>(this)->toPrimitive(globalObject, preferredType);
-    return static_cast<const JSObject*>(this)->toPrimitive(globalObject, preferredType);
+    if (const auto* string = jsDynamicCast<const JSString*>(this))
+        return string->toPrimitive(globalObject, preferredType);
+    if (const auto* symbol = jsDynamicCast<const Symbol*>(this))
+        return symbol->toPrimitive(globalObject, preferredType);
+    if (const auto* bigInt = jsDynamicCast<const JSBigInt*>(this))
+        return bigInt->toPrimitive(globalObject, preferredType);
+    return jsSecureCast<const JSObject*>(this)->toPrimitive(globalObject, preferredType);
 }
 
 double JSCell::toNumber(JSGlobalObject* globalObject) const
 {
-    if (isString())
-        return static_cast<const JSString*>(this)->toNumber(globalObject);
-    if (isSymbol())
-        return static_cast<const Symbol*>(this)->toNumber(globalObject);
-    if (isHeapBigInt())
-        return static_cast<const JSBigInt*>(this)->toNumber(globalObject);
-    return static_cast<const JSObject*>(this)->toNumber(globalObject);
+    if (const auto* string = jsDynamicCast<const JSString*>(this))
+        return string->toNumber(globalObject);
+    if (const auto* symbol = jsDynamicCast<const Symbol*>(this))
+        return symbol->toNumber(globalObject);
+    if (const auto* bigInt = jsDynamicCast<const JSBigInt*>(this))
+        return bigInt->toNumber(globalObject);
+    return jsSecureCast<const JSObject*>(this)->toNumber(globalObject);
 }
 
 JSObject* JSCell::toObjectSlow(JSGlobalObject* globalObject) const
 {
     Integrity::auditStructureID(structureID());
     ASSERT(!isObject());
-    if (isString())
-        return static_cast<const JSString*>(this)->toObject(globalObject);
-    if (isHeapBigInt())
-        return static_cast<const JSBigInt*>(this)->toObject(globalObject);
-    ASSERT(isSymbol());
-    return static_cast<const Symbol*>(this)->toObject(globalObject);
+    if (const auto* string = jsDynamicCast<const JSString*>(this))
+        return string->toObject(globalObject);
+    if (const auto* bigInt = jsDynamicCast<const JSBigInt*>(this))
+        return bigInt->toObject(globalObject);
+    return jsSecureCast<const Symbol*>(this)->toObject(globalObject);
 }
 
 void slowValidateCell(JSCell* cell)
@@ -240,6 +242,26 @@ JSValue JSCell::getPrototype(JSObject*, JSGlobalObject*)
     RELEASE_ASSERT_NOT_REACHED();
 }
 
+JSString* JSCell::toStringSlowCase(JSGlobalObject* globalObject) const
+{
+    VM& vm = globalObject->vm();
+    auto scope = DECLARE_THROW_SCOPE(vm);
+
+    ASSERT(isSymbol() || isHeapBigInt());
+    auto* emptyString = jsEmptyString(vm);
+    if (auto* bigInt = jsDynamicCast<JSBigInt*>(const_cast<JSCell*>(this))) {
+        // FIXME: we should rather have two cases here: one-character string vs jsNonTrivialString for everything else.
+        auto string = bigInt->toString(globalObject, 10);
+        RETURN_IF_EXCEPTION(scope, emptyString);
+        JSString* returnString = JSString::create(vm, string.releaseImpl().releaseNonNull());
+        RETURN_IF_EXCEPTION(scope, emptyString);
+        return returnString;
+    }
+    ASSERT(isSymbol());
+    throwTypeError(globalObject, scope, SymbolCoercionError);
+    return emptyString;
+}
+
 void JSCellLock::lockSlow()
 {
     Atomic<IndexingType>* lock = bitwise_cast<Atomic<IndexingType>*>(&m_indexingTypeAndMisc);
@@ -276,7 +298,7 @@ NEVER_INLINE NO_RETURN_DUE_TO_CRASH NOT_TAIL_CALLED void reportZappedCellAndCras
     MarkedBlock* foundBlock = nullptr;
     if (foundBlockHandle) {
         foundBlock = &foundBlockHandle->block();
-        subspaceHash = StringHasher::computeHash(foundBlockHandle->subspace()->name());
+        subspaceHash = SuperFastHash::computeHash(foundBlockHandle->subspace()->name());
         cellSize = foundBlockHandle->cellSize();
 
         variousState |= static_cast<uint64_t>(foundBlockHandle->isFreeListed()) << 0;
@@ -300,7 +322,7 @@ NEVER_INLINE NO_RETURN_DUE_TO_CRASH NOT_TAIL_CALLED void reportZappedCellAndCras
                 return IterationStatus::Done;
 
             if (subspace.isIsoSubspace()) {
-                static_cast<IsoSubspace&>(subspace).forEachLowerTierFreeListedPreciseAllocation([&](PreciseAllocation* allocation) {
+                static_cast<IsoSubspace&>(subspace).forEachLowerTierPreciseFreeListedPreciseAllocation([&](PreciseAllocation* allocation) {
                     if (allocation->contains(cell)) {
                         foundPreciseAllocation = allocation;
                         isFreeListed = true;
@@ -312,7 +334,7 @@ NEVER_INLINE NO_RETURN_DUE_TO_CRASH NOT_TAIL_CALLED void reportZappedCellAndCras
             return IterationStatus::Continue;
         });
         if (foundPreciseAllocation) {
-            subspaceHash = StringHasher::computeHash(foundPreciseAllocation->subspace()->name());
+            subspaceHash = SuperFastHash::computeHash(foundPreciseAllocation->subspace()->name());
             cellSize = foundPreciseAllocation->cellSize();
 
             variousState |= static_cast<uint64_t>(isFreeListed) << 0;

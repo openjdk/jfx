@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -28,8 +28,6 @@ package test.javafx.scene;
 import test.com.sun.javafx.test.TestHelper;
 import javafx.geometry.BoundingBox;
 import javafx.scene.transform.Rotate;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
 import javafx.geometry.Bounds;
 import javafx.geometry.Point2D;
 import javafx.scene.Group;
@@ -39,7 +37,9 @@ import javafx.scene.shape.Rectangle;
 import javafx.scene.shape.Circle;
 import javafx.scene.transform.Translate;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class Parent_recomputeBounds_Test {
     private static final Rectangle r1 = new Rectangle(100, 100, 100, 100);

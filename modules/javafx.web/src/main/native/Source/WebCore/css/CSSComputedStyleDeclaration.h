@@ -22,10 +22,11 @@
 
 #include "CSSStyleDeclaration.h"
 #include "ComputedStyleExtractor.h"
+#include "PseudoElementIdentifier.h"
 #include "RenderStyleConstants.h"
 #include <wtf/FixedVector.h>
-#include <wtf/IsoMalloc.h>
 #include <wtf/RefPtr.h>
+#include <wtf/TZoneMalloc.h>
 #include <wtf/text/WTFString.h>
 
 namespace WebCore {
@@ -33,19 +34,26 @@ namespace WebCore {
 class Element;
 class MutableStyleProperties;
 
-class CSSComputedStyleDeclaration final : public CSSStyleDeclaration {
-    WTF_MAKE_ISO_ALLOCATED_EXPORT(CSSComputedStyleDeclaration, WEBCORE_EXPORT);
+class CSSComputedStyleDeclaration final : public CSSStyleDeclaration, public RefCounted<CSSComputedStyleDeclaration> {
+    WTF_MAKE_TZONE_OR_ISO_ALLOCATED_EXPORT(CSSComputedStyleDeclaration, WEBCORE_EXPORT);
 public:
-    WEBCORE_EXPORT static Ref<CSSComputedStyleDeclaration> create(Element&, bool allowVisitedStyle = false, StringView pseudoElementName = StringView { });
-    virtual ~CSSComputedStyleDeclaration();
+    enum class AllowVisited : bool { No, Yes };
+    WEBCORE_EXPORT static Ref<CSSComputedStyleDeclaration> create(Element&, AllowVisited);
+    static Ref<CSSComputedStyleDeclaration> create(Element&, const std::optional<Style::PseudoElementIdentifier>&);
+    static Ref<CSSComputedStyleDeclaration> createEmpty(Element&);
 
-    WEBCORE_EXPORT void ref() final;
-    WEBCORE_EXPORT void deref() final;
+    WEBCORE_EXPORT virtual ~CSSComputedStyleDeclaration();
+
+    void ref() final { RefCounted::ref(); }
+    void deref() final { RefCounted::deref(); }
 
     String getPropertyValue(CSSPropertyID) const;
 
 private:
-    CSSComputedStyleDeclaration(Element&, bool allowVisitedStyle, StringView);
+    enum class IsEmpty : bool { No, Yes };
+    CSSComputedStyleDeclaration(Element&, AllowVisited);
+    CSSComputedStyleDeclaration(Element&, IsEmpty);
+    CSSComputedStyleDeclaration(Element&, const std::optional<Style::PseudoElementIdentifier>&);
 
     // CSSOM functions. Don't make these public.
     CSSRule* parentRule() const final;
@@ -62,7 +70,7 @@ private:
     String cssText() const final;
     ExceptionOr<void> setCssText(const String&) final;
     String getPropertyValueInternal(CSSPropertyID) final;
-    ExceptionOr<void> setPropertyInternal(CSSPropertyID, const String& value, bool important) final;
+    ExceptionOr<void> setPropertyInternal(CSSPropertyID, const String& value, IsImportant) final;
     Ref<MutableStyleProperties> copyProperties() const final;
 
     RefPtr<CSSValue> getPropertyCSSValue(CSSPropertyID, ComputedStyleExtractor::UpdateLayout = ComputedStyleExtractor::UpdateLayout::Yes) const;
@@ -71,9 +79,9 @@ private:
     const FixedVector<CSSPropertyID>& exposedComputedCSSPropertyIDs() const;
 
     mutable Ref<Element> m_element;
-    PseudoId m_pseudoElementSpecifier;
-    bool m_allowVisitedStyle;
-    unsigned m_refCount { 1 };
+    std::optional<Style::PseudoElementIdentifier> m_pseudoElementIdentifier { std::nullopt };
+    bool m_isEmpty { false };
+    bool m_allowVisitedStyle { false };
 };
 
 } // namespace WebCore

@@ -30,6 +30,7 @@
 
 namespace WebCore {
 
+class AXRemoteFrame;
 class AccessibilityScrollbar;
 class Scrollbar;
 class ScrollView;
@@ -37,7 +38,7 @@ class ScrollView;
 class AccessibilityScrollView final : public AccessibilityObject {
 public:
     static Ref<AccessibilityScrollView> create(ScrollView*);
-    AccessibilityRole roleValue() const override { return AccessibilityRole::ScrollArea; }
+    AccessibilityRole determineAccessibilityRole() final { return AccessibilityRole::ScrollArea; }
     ScrollView* scrollView() const override { return currentScrollView(); }
 
     virtual ~AccessibilityScrollView();
@@ -54,6 +55,7 @@ private:
     bool computeAccessibilityIsIgnored() const override;
     bool isAccessibilityScrollViewInstance() const override { return true; }
     bool isEnabled() const override { return true; }
+    bool hasRemoteFrameChild() const final { return m_remoteFrame; }
 
     bool isAttachment() const override;
     PlatformWidget platformWidget() const override;
@@ -62,16 +64,17 @@ private:
     AccessibilityObject* scrollBar(AccessibilityOrientation) override;
     void addChildren() override;
     void clearChildren() override;
-    AXCoreObject* accessibilityHitTest(const IntPoint&) const override;
+    AccessibilityObject* accessibilityHitTest(const IntPoint&) const override;
     void updateChildrenIfNecessary() override;
     void setNeedsToUpdateChildren() override { m_childrenDirty = true; }
     void updateScrollbars();
     void setFocused(bool) override;
     bool canSetFocusAttribute() const override;
     bool isFocused() const override;
+    void addRemoteFrameChild();
 
     Document* document() const override;
-    FrameView* documentFrameView() const override;
+    LocalFrameView* documentFrameView() const override;
     LayoutRect elementRect() const override;
     AccessibilityObject* parentObject() const override;
     AccessibilityObject* parentObjectIfExists() const override { return parentObject(); }
@@ -80,11 +83,12 @@ private:
     AccessibilityScrollbar* addChildScrollbar(Scrollbar*);
     void removeChildScrollbar(AccessibilityObject*);
 
-    WeakPtr<ScrollView> m_scrollView;
+    SingleThreadWeakPtr<ScrollView> m_scrollView;
     WeakPtr<HTMLFrameOwnerElement, WeakPtrImplWithEventTargetData> m_frameOwnerElement;
     RefPtr<AccessibilityObject> m_horizontalScrollbar;
     RefPtr<AccessibilityObject> m_verticalScrollbar;
     bool m_childrenDirty;
+    RefPtr<AXRemoteFrame> m_remoteFrame;
 };
 
 } // namespace WebCore

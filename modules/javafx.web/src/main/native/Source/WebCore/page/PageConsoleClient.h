@@ -30,6 +30,7 @@
 
 #include <JavaScriptCore/ConsoleClient.h>
 #include <JavaScriptCore/ScriptCallStack.h>
+#include <wtf/CheckedRef.h>
 #include <wtf/Forward.h>
 
 namespace Inspector {
@@ -47,8 +48,9 @@ namespace WebCore {
 class Document;
 class Page;
 
-class WEBCORE_EXPORT PageConsoleClient final : public JSC::ConsoleClient {
+class WEBCORE_EXPORT PageConsoleClient final : public JSC::ConsoleClient, public CanMakeCheckedPtr<PageConsoleClient> {
     WTF_MAKE_FAST_ALLOCATED;
+    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(PageConsoleClient);
 public:
     explicit PageConsoleClient(Page&);
     virtual ~PageConsoleClient();
@@ -67,6 +69,8 @@ public:
     void addMessage(MessageSource, MessageLevel, const String& message, Ref<Inspector::ScriptCallStack>&&);
     void addMessage(MessageSource, MessageLevel, const String& message, unsigned long requestIdentifier = 0, Document* = nullptr);
 
+    static void logMessageToSystemConsole(const Inspector::ConsoleMessage&);
+
 private:
     void messageWithTypeAndLevel(MessageType, MessageLevel, JSC::JSGlobalObject*, Ref<Inspector::ScriptArguments>&&) override;
     void count(JSC::JSGlobalObject*, const String& label) override;
@@ -82,7 +86,9 @@ private:
     void recordEnd(JSC::JSGlobalObject*, Ref<Inspector::ScriptArguments>&&) override;
     void screenshot(JSC::JSGlobalObject*, Ref<Inspector::ScriptArguments>&&) override;
 
-    Page& m_page;
+    Ref<Page> protectedPage() const;
+
+    WeakRef<Page> m_page;
 };
 
 } // namespace WebCore

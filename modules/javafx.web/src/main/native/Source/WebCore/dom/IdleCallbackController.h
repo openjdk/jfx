@@ -32,11 +32,20 @@
 #include <wtf/WeakPtr.h>
 
 namespace WebCore {
+class IdleCallbackController;
+}
+
+namespace WTF {
+template<typename T> struct IsDeprecatedWeakRefSmartPointerException;
+template<> struct IsDeprecatedWeakRefSmartPointerException<WebCore::IdleCallbackController> : std::true_type { };
+}
+
+namespace WebCore {
 
 class Document;
 class WeakPtrImplWithEventTargetData;
 
-class IdleCallbackController {
+class IdleCallbackController : public CanMakeWeakPtr<IdleCallbackController> {
     WTF_MAKE_FAST_ALLOCATED;
 
 public:
@@ -45,14 +54,16 @@ public:
     int queueIdleCallback(Ref<IdleRequestCallback>&&, Seconds timeout);
     void removeIdleCallback(int);
 
+    void startIdlePeriod();
+    bool isEmpty() const { return m_idleRequestCallbacks.isEmpty() && m_runnableIdleCallbacks.isEmpty(); }
+
 private:
     void queueTaskToStartIdlePeriod();
-    void startIdlePeriod();
-    void queueTaskToInvokeIdleCallbacks(MonotonicTime deadline);
-    void invokeIdleCallbacks(MonotonicTime deadline);
+    void queueTaskToInvokeIdleCallbacks();
+    void invokeIdleCallbacks();
+    void invokeIdleCallbackTimeout(unsigned identifier);
 
     unsigned m_idleCallbackIdentifier { 0 };
-    MonotonicTime m_lastDeadline;
 
     struct IdleRequest {
         unsigned identifier { 0 };

@@ -54,10 +54,15 @@ public:
     AbstractValue& fastForward(AbstractValue& value) { return value; }
 
     AbstractValue& forNode(NodeFlowProjection);
-    AbstractValue& forNode(Edge edge) { return forNode(edge.node()); }
+    AbstractValue& forNode(Edge edge)
+    {
+        ASSERT(!edge.node()->isTuple());
+        return forNode(edge.node());
+    }
 
     ALWAYS_INLINE AbstractValue& forNodeWithoutFastForward(NodeFlowProjection node)
     {
+        ASSERT(!node->isTuple());
         return forNode(node);
     }
 
@@ -73,6 +78,7 @@ public:
 
     ALWAYS_INLINE void clearForNode(NodeFlowProjection node)
     {
+        ASSERT(!node->isTuple());
         forNode(node).clear();
     }
 
@@ -84,6 +90,7 @@ public:
     template<typename... Arguments>
     ALWAYS_INLINE void setForNode(NodeFlowProjection node, Arguments&&... arguments)
     {
+        ASSERT(!node->isTuple());
         forNode(node).set(m_graph, std::forward<Arguments>(arguments)...);
     }
 
@@ -137,6 +144,88 @@ public:
         makeHeapTopForNode(edge.node());
     }
 
+    ALWAYS_INLINE AbstractValue& forTupleNodeWithoutFastForward(NodeFlowProjection node, unsigned index)
+    {
+        return forTupleNode(node, index);
+    }
+
+    ALWAYS_INLINE AbstractValue& forTupleNode(NodeFlowProjection node, unsigned index)
+    {
+        ASSERT(index < node->tupleSize());
+        return m_tupleAbstractValues.at(m_block).at(node->tupleOffset() + index);
+    }
+
+    ALWAYS_INLINE AbstractValue& forTupleNode(Edge edge, unsigned index)
+    {
+        return forTupleNode(edge.node(), index);
+    }
+
+    ALWAYS_INLINE void clearForTupleNode(NodeFlowProjection node, unsigned index)
+    {
+        forTupleNode(node, index).clear();
+    }
+
+    ALWAYS_INLINE void clearForTupleNode(Edge edge, unsigned index)
+    {
+        clearForTupleNode(edge.node(), index);
+    }
+
+    template<typename... Arguments>
+    ALWAYS_INLINE void setForTupleNode(NodeFlowProjection node, unsigned index, Arguments&&... arguments)
+    {
+        forTupleNode(node, index).set(m_graph, std::forward<Arguments>(arguments)...);
+    }
+
+    template<typename... Arguments>
+    ALWAYS_INLINE void setForTupleNode(Edge edge, unsigned index, Arguments&&... arguments)
+    {
+        setForTupleNode(edge.node(), index, std::forward<Arguments>(arguments)...);
+    }
+
+    template<typename... Arguments>
+    ALWAYS_INLINE void setTypeForTupleNode(NodeFlowProjection node, unsigned index, Arguments&&... arguments)
+    {
+        forTupleNode(node, index).setType(m_graph, std::forward<Arguments>(arguments)...);
+    }
+
+    template<typename... Arguments>
+    ALWAYS_INLINE void setTypeForTupleNode(Edge edge, unsigned index, Arguments&&... arguments)
+    {
+        setTypeForTupleNode(edge.node(), index, std::forward<Arguments>(arguments)...);
+    }
+
+    template<typename... Arguments>
+    ALWAYS_INLINE void setNonCellTypeForTupleNode(NodeFlowProjection node, unsigned index, Arguments&&... arguments)
+    {
+        forTupleNode(node, index).setNonCellType(std::forward<Arguments>(arguments)...);
+    }
+
+    template<typename... Arguments>
+    ALWAYS_INLINE void setNonCellTypeForTupleNode(Edge edge, unsigned index, Arguments&&... arguments)
+    {
+        setNonCellTypeForTupleNode(edge.node(), index, std::forward<Arguments>(arguments)...);
+    }
+
+    ALWAYS_INLINE void makeBytecodeTopForTupleNode(NodeFlowProjection node, unsigned index)
+    {
+        forTupleNode(node, index).makeBytecodeTop();
+    }
+
+    ALWAYS_INLINE void makeBytecodeTopForTupleNode(Edge edge, unsigned index)
+    {
+        makeBytecodeTopForTupleNode(edge.node(), index);
+    }
+
+    ALWAYS_INLINE void makeHeapTopForTupleNode(NodeFlowProjection node, unsigned index)
+    {
+        forTupleNode(node, index).makeHeapTop();
+    }
+
+    ALWAYS_INLINE void makeHeapTopForTupleNode(Edge edge, unsigned index)
+    {
+        makeHeapTopForTupleNode(edge.node(), index);
+    }
+
     unsigned size() const { return m_block->valuesAtTail.size(); }
     unsigned numberOfArguments() const { return m_block->valuesAtTail.numberOfArguments(); }
     unsigned numberOfLocals() const { return m_block->valuesAtTail.numberOfLocals(); }
@@ -181,6 +270,7 @@ public:
 private:
     Graph& m_graph;
     BlockMap<HashMap<NodeFlowProjection, AbstractValue>> m_valuesAtTailMap;
+    BlockMap<Vector<AbstractValue>> m_tupleAbstractValues;
     BasicBlock* m_block { nullptr };
     bool m_trustEdgeProofs { false };
 };

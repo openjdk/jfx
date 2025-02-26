@@ -37,18 +37,17 @@ namespace JSC { namespace B3 { namespace Air {
 
 void lowerStackArgs(Code& code)
 {
-    PhaseScope phaseScope(code, "lowerStackArgs");
+    PhaseScope phaseScope(code, "lowerStackArgs"_s);
 
     // Now we need to deduce how much argument area we need.
     for (BasicBlock* block : code) {
         for (Inst& inst : *block) {
             for (Arg& arg : inst.args) {
                 if (arg.isCallArg()) {
-                    // For now, we assume that we use 8 bytes of the call arg. But that's not
-                    // such an awesome assumption.
-                    // FIXME: https://bugs.webkit.org/show_bug.cgi?id=150454
                     ASSERT(arg.offset() >= 0);
-                    code.requestCallArgAreaSizeInBytes(arg.offset() + (code.usesSIMD() ? conservativeRegisterBytes(arg.bank()) : conservativeRegisterBytesWithoutVectors(arg.bank())));
+                    // We always check the conservative register bytes for Bank::FP because
+                    // CallArgs do not store which bank they are.
+                    code.requestCallArgAreaSizeInBytes(arg.offset() + (code.usesSIMD() ? conservativeRegisterBytes(Bank::FP) : conservativeRegisterBytesWithoutVectors(Bank::FP)));
                 }
             }
         }
@@ -154,6 +153,8 @@ void lowerStackArgs(Code& code)
                     switch (arg.kind()) {
                     case Arg::Stack: {
                         StackSlot* slot = arg.stackSlot();
+                        if (inst.kind.opcode == Move && slot->kind() == StackSlotKind::Spill)
+                            inst.kind.spill = true;
                         if (Arg::isZDef(role)
                             && slot->kind() == StackSlotKind::Spill
                             && slot->byteSize() > bytesForWidth(width)) {
@@ -165,7 +166,7 @@ void lowerStackArgs(Code& code)
                             RELEASE_ASSERT(width == Width32);
 
 #if CPU(ARM64) || CPU(RISCV64)
-                            Air::Opcode storeOpcode = Store32;
+                            Air::Opcode storeOpcode = Move32;
                             Air::Arg::Kind operandKind = Arg::ZeroReg;
                             Air::Arg operand = Arg::zeroReg();
 #elif CPU(X86_64) || CPU(ARM)

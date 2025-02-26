@@ -29,9 +29,9 @@
 #include "EventOptions.h"
 #include "ExceptionOr.h"
 #include "ScriptWrappable.h"
-#include <wtf/CheckedPtr.h>
 #include <wtf/MonotonicTime.h>
 #include <wtf/TypeCasts.h>
+#include <wtf/WeakPtr.h>
 #include <wtf/text/AtomString.h>
 
 namespace WTF {
@@ -45,7 +45,7 @@ class EventTarget;
 class ScriptExecutionContext;
 
 class Event : public ScriptWrappable, public RefCounted<Event> {
-    WTF_MAKE_ISO_ALLOCATED(Event);
+    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(Event);
 public:
     using IsTrusted = EventIsTrusted;
     using CanBubble = EventCanBubble;
@@ -72,11 +72,14 @@ public:
     const AtomString& type() const { return m_type; }
     void setType(const AtomString& type) { m_type = type; }
 
+    enum EventInterfaceType interfaceType() const { return static_cast<enum EventInterfaceType>(m_eventInterface); }
+
     EventTarget* target() const { return m_target.get(); }
     void setTarget(RefPtr<EventTarget>&&);
 
     EventTarget* currentTarget() const { return m_currentTarget.get(); }
-    void setCurrentTarget(EventTarget*, std::optional<bool> isInShadowTree = std::nullopt);
+    RefPtr<EventTarget> protectedCurrentTarget() const;
+    void setCurrentTarget(RefPtr<EventTarget>&&, std::optional<bool> isInShadowTree = std::nullopt);
     bool currentTargetIsInShadowTree() const { return m_currentTargetIsInShadowTree; }
 
     unsigned short eventPhase() const { return m_eventPhase; }
@@ -101,11 +104,10 @@ public:
     bool legacyReturnValue() const { return !m_wasCanceled; }
     void setLegacyReturnValue(bool);
 
-    virtual EventInterface eventInterface() const { return EventInterfaceType; }
-
     virtual bool isBeforeTextInsertedEvent() const { return false; }
     virtual bool isBeforeUnloadEvent() const { return false; }
     virtual bool isClipboardEvent() const { return false; }
+    virtual bool isCommandEvent() const { return false; }
     virtual bool isCompositionEvent() const { return false; }
     virtual bool isErrorEvent() const { return false; }
     virtual bool isFocusEvent() const { return false; }
@@ -157,15 +159,17 @@ public:
     virtual String debugDescription() const;
 
 protected:
-    explicit Event(IsTrusted = IsTrusted::No);
-    Event(const AtomString& type, CanBubble, IsCancelable, IsComposed = IsComposed::No);
-    Event(const AtomString& type, CanBubble, IsCancelable, IsComposed, MonotonicTime timestamp, IsTrusted isTrusted = IsTrusted::Yes);
-    Event(const AtomString& type, const EventInit&, IsTrusted);
+    explicit Event(enum EventInterfaceType, IsTrusted = IsTrusted::No);
+    Event(enum EventInterfaceType, const AtomString& type, CanBubble, IsCancelable, IsComposed = IsComposed::No);
+    Event(enum EventInterfaceType, const AtomString& type, CanBubble, IsCancelable, IsComposed, MonotonicTime timestamp, IsTrusted isTrusted = IsTrusted::Yes);
+    Event(enum EventInterfaceType, const AtomString& type, const EventInit&, IsTrusted);
 
     virtual void receivedTarget() { }
 
+    bool isConstructedFromInitializer() const { return m_isConstructedFromInitializer; }
+
 private:
-    explicit Event(MonotonicTime createTime, const AtomString& type, IsTrusted, CanBubble, IsCancelable, IsComposed);
+    explicit Event(MonotonicTime createTime, enum EventInterfaceType, const AtomString& type, IsTrusted, CanBubble, IsCancelable, IsComposed);
 
     void setCanceledFlagIfPossible();
 
@@ -185,10 +189,18 @@ private:
 
     unsigned m_eventPhase : 2;
 
+    // We consult this flag since the EventInit dictionary takes priority in initializing event attribute values.
+    // See step 4 of https://dom.spec.whatwg.org/#inner-event-creation-steps
+    unsigned m_isConstructedFromInitializer : 1 { false };
+
+    unsigned m_eventInterface : 7 { 0 };
+
+    // 10-bits left.
+
     AtomString m_type;
 
     RefPtr<EventTarget> m_currentTarget;
-    CheckedPtr<const EventPath> m_eventPath;
+    SingleThreadWeakPtr<const EventPath> m_eventPath;
     RefPtr<EventTarget> m_target;
     MonotonicTime m_createTime;
 

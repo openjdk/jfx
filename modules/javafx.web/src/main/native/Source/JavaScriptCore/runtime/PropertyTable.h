@@ -119,10 +119,7 @@ public:
 
     DECLARE_EXPORT_INFO;
 
-    static Structure* createStructure(VM& vm, JSGlobalObject* globalObject, JSValue prototype)
-    {
-        return Structure::create(vm, globalObject, prototype, TypeInfo(CellType, StructureFlags), info());
-    }
+    inline static Structure* createStructure(VM&, JSGlobalObject*, JSValue);
 
     using KeyType = UniquedStringImpl*;
     using ValueType = PropertyTableEntry;
@@ -143,6 +140,16 @@ public:
 
     PropertyOffset renumberPropertyOffsets(JSObject*, unsigned inlineCapacity, Vector<JSValue>&);
 
+    struct FindResult {
+        unsigned entryIndex;
+        unsigned index;
+        PropertyOffset offset;
+        unsigned attributes;
+    };
+
+    FindResult find(const KeyType&);
+    std::tuple<PropertyOffset, unsigned, bool> addAfterFind(VM&, const ValueType& entry, FindResult&&);
+
     void seal();
     void freeze();
 
@@ -161,7 +168,7 @@ public:
     // Used to maintain a list of unused entries in the property storage.
     void clearDeletedOffsets();
     bool hasDeletedOffset();
-    PropertyOffset getDeletedOffset();
+    PropertyOffset takeDeletedOffset();
     void addDeletedOffset(PropertyOffset);
 
     PropertyOffset nextOffset(PropertyOffset inlineCapacity);
@@ -227,15 +234,6 @@ private:
     bool canInsert(const ValueType&);
 
     void remove(VM&, KeyType, unsigned entryIndex, unsigned index);
-
-    struct FindResult {
-        unsigned entryIndex;
-        unsigned index;
-        PropertyOffset offset;
-        unsigned attributes;
-    };
-
-    FindResult find(const KeyType&);
 
     template<typename Index, typename Entry>
     ALWAYS_INLINE FindResult findImpl(const Index*, const Entry*, const KeyType&);
@@ -383,7 +381,11 @@ inline std::tuple<PropertyOffset, unsigned, bool> WARN_UNUSED_RETURN PropertyTab
     FindResult result = find(entry.key());
     if (result.offset != invalidOffset)
         return std::tuple { result.offset, result.attributes, false };
+    return addAfterFind(vm, entry, WTFMove(result));
+}
 
+ALWAYS_INLINE std::tuple<PropertyOffset, unsigned, bool> PropertyTable::addAfterFind(VM& vm, const ValueType& entry, FindResult&& result)
+{
 #if DUMP_PROPERTYMAP_STATS
     ++propertyTableStats->numAdds;
 #endif
@@ -481,11 +483,9 @@ inline bool PropertyTable::hasDeletedOffset()
     return m_deletedOffsets && !m_deletedOffsets->isEmpty();
 }
 
-inline PropertyOffset PropertyTable::getDeletedOffset()
+inline PropertyOffset PropertyTable::takeDeletedOffset()
 {
-    PropertyOffset offset = m_deletedOffsets->last();
-    m_deletedOffsets->removeLast();
-    return offset;
+    return m_deletedOffsets->takeLast();
 }
 
 inline void PropertyTable::addDeletedOffset(PropertyOffset offset)
@@ -499,7 +499,7 @@ inline void PropertyTable::addDeletedOffset(PropertyOffset offset)
 inline PropertyOffset PropertyTable::nextOffset(PropertyOffset inlineCapacity)
 {
     if (hasDeletedOffset())
-        return getDeletedOffset();
+        return takeDeletedOffset();
 
     return offsetForPropertyNumber(size(), inlineCapacity);
 }
@@ -598,7 +598,7 @@ inline void PropertyTable::rehash(VM& vm, unsigned newCapacity, bool canStayComp
 
     size_t newDataSize = dataSize(this->isCompact());
     if (oldDataSize < newDataSize)
-        vm.heap.reportExtraMemoryAllocated(newDataSize - oldDataSize);
+        vm.heap.reportExtraMemoryAllocated(this, newDataSize - oldDataSize);
 }
 
 inline unsigned PropertyTable::tableCapacity() const { return m_indexSize >> 1; }

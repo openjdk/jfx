@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008, 2017, Oracle and/or its affiliates.
+ * Copyright (c) 2008, 2024, Oracle and/or its affiliates.
  * All rights reserved. Use is subject to license terms.
  *
  * This file is available and licensed under the following license:
@@ -33,14 +33,11 @@ package modena;
 
 import java.awt.Graphics2D;
 import java.awt.image.BufferedImage;
-import java.io.BufferedReader;
 import java.io.ByteArrayInputStream;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.InputStreamReader;
-import java.net.MalformedURLException;
 import java.net.URL;
 import java.net.URLConnection;
 import java.net.URLStreamHandler;
@@ -49,7 +46,7 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.logging.Level;
 import java.util.logging.Logger;
-
+import javax.imageio.ImageIO;
 import javafx.application.Application;
 import javafx.application.Platform;
 import javafx.embed.swing.SwingFXUtils;
@@ -65,7 +62,6 @@ import javafx.scene.control.Button;
 import javafx.scene.control.ChoiceBox;
 import javafx.scene.control.ColorPicker;
 import javafx.scene.control.ComboBox;
-import javafx.scene.control.Control;
 import javafx.scene.control.Label;
 import javafx.scene.control.Menu;
 import javafx.scene.control.MenuBar;
@@ -77,7 +73,6 @@ import javafx.scene.control.TabPane;
 import javafx.scene.control.ToggleButton;
 import javafx.scene.control.ToggleGroup;
 import javafx.scene.control.ToolBar;
-import javafx.scene.control.Tooltip;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
 import javafx.scene.image.WritableImage;
@@ -88,8 +83,6 @@ import javafx.scene.paint.Color;
 import javafx.scene.transform.Scale;
 import javafx.stage.FileChooser;
 import javafx.stage.Stage;
-
-import javax.imageio.ImageIO;
 
 public class Modena extends Application {
     public static final String TEST = "test";
@@ -181,7 +174,7 @@ public class Modena extends Application {
         // scene.getStylesheets().add(testAppCssUrl);
         stage.setScene(scene);
         stage.setTitle("Modena");
-//        stage.setIconified(test); // TODO: Blocked by http://javafx-jira.kenai.com/browse/JMY-203
+//        stage.setIconified(test);
         stage.show(); // see SamplePage.java:110 comment on how test fails without having stage shown
         instance = this;
     }
@@ -299,7 +292,6 @@ public class Modena extends Application {
             tab5.setContent(new ScrollPane(combinationsTest =
                     (Node)FXMLLoader.load(Modena.class.getResource("CombinationTest.fxml"))));
 
-            // Customer example from bug report http://javafx-jira.kenai.com/browse/DTL-5561
             Tab tab6 = new Tab("Customer Example");
             tab6.setContent(new ScrollPane(customerTest =
                     (Node)FXMLLoader.load(Modena.class.getResource("ScottSelvia.fxml"))));

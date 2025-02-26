@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008, 2020, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2008, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -73,7 +73,7 @@ Java_com_sun_prism_d3d_D3DShader_enable
     pCtx->getStats().numSetPixelShader++;
 #endif
 
-    IDirect3DDevice9 *pd3dDevice = pCtx->Get3DDevice();
+    IDirect3DDevice9Ex *pd3dDevice = pCtx->Get3DDevice();
     RETURN_STATUS_IF_NULL(pd3dDevice, E_FAIL);
 
     IDirect3DPixelShader9 *pShader = pPSResource->GetPixelShader();
@@ -99,7 +99,7 @@ Java_com_sun_prism_d3d_D3DShader_disable
     D3DContext *pCtx = (D3DContext*)jlong_to_ptr(ctx);
     RETURN_STATUS_IF_NULL(pCtx, E_FAIL);
 
-    IDirect3DDevice9 *pd3dDevice = pCtx->Get3DDevice();
+    IDirect3DDevice9Ex *pd3dDevice = pCtx->Get3DDevice();
     RETURN_STATUS_IF_NULL(pd3dDevice, E_FAIL);
 
     HRESULT res = pd3dDevice->SetPixelShader(NULL);
@@ -139,7 +139,7 @@ Java_com_sun_prism_d3d_D3DShader_setConstantsI
 
     buf += off * sizeof(jint);
 
-    IDirect3DDevice9 *pd3dDevice = pCtx->Get3DDevice();
+    IDirect3DDevice9Ex *pd3dDevice = pCtx->Get3DDevice();
     RETURN_STATUS_IF_NULL(pd3dDevice, E_FAIL);
 
     HRESULT res = pd3dDevice->SetPixelShaderConstantI(reg, (const int *)buf, count);
@@ -179,7 +179,7 @@ Java_com_sun_prism_d3d_D3DShader_setConstantsF
 
     TraceLn4(NWT_TRACE_VERBOSE, "  vals: %f %f %f %f", buf[0], buf[1], buf[2], buf[3]);
 
-    IDirect3DDevice9 *pd3dDevice = pCtx->Get3DDevice();
+    IDirect3DDevice9Ex *pd3dDevice = pCtx->Get3DDevice();
     RETURN_STATUS_IF_NULL(pd3dDevice, E_FAIL);
 
     HRESULT res = pd3dDevice->SetPixelShaderConstantF(reg, (const float *)buf, count);

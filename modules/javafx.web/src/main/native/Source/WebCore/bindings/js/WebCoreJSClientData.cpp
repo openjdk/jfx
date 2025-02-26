@@ -39,7 +39,6 @@
 #include "JSIDBSerializationGlobalObject.h"
 #include "JSObservableArray.h"
 #include "JSPaintWorkletGlobalScope.h"
-#include "JSRemoteDOMWindow.h"
 #include "JSServiceWorkerGlobalScope.h"
 #include "JSShadowRealmGlobalScope.h"
 #include "JSSharedWorkerGlobalScope.h"
@@ -62,6 +61,8 @@
 namespace WebCore {
 using namespace JSC;
 
+DEFINE_ALLOCATOR_WITH_HEAP_IDENTIFIER(JSHeapData);
+
 JSHeapData::JSHeapData(Heap& heap)
     : m_runtimeArrayHeapCellType(JSC::IsoHeapCellType::Args<RuntimeArray>())
     , m_observableArrayHeapCellType(JSC::IsoHeapCellType::Args<JSObservableArray>())
@@ -69,17 +70,12 @@ JSHeapData::JSHeapData(Heap& heap)
     , m_windowProxyHeapCellType(JSC::IsoHeapCellType::Args<JSWindowProxy>())
     , m_heapCellTypeForJSDOMWindow(JSC::IsoHeapCellType::Args<JSDOMWindow>())
     , m_heapCellTypeForJSDedicatedWorkerGlobalScope(JSC::IsoHeapCellType::Args<JSDedicatedWorkerGlobalScope>())
-    , m_heapCellTypeForJSRemoteDOMWindow(JSC::IsoHeapCellType::Args<JSRemoteDOMWindow>())
     , m_heapCellTypeForJSWorkerGlobalScope(JSC::IsoHeapCellType::Args<JSWorkerGlobalScope>())
     , m_heapCellTypeForJSSharedWorkerGlobalScope(JSC::IsoHeapCellType::Args<JSSharedWorkerGlobalScope>())
     , m_heapCellTypeForJSShadowRealmGlobalScope(JSC::IsoHeapCellType::Args<JSShadowRealmGlobalScope>())
-#if ENABLE(SERVICE_WORKER)
     , m_heapCellTypeForJSServiceWorkerGlobalScope(JSC::IsoHeapCellType::Args<JSServiceWorkerGlobalScope>())
-#endif
     , m_heapCellTypeForJSWorkletGlobalScope(JSC::IsoHeapCellType::Args<JSWorkletGlobalScope>())
-#if ENABLE(CSS_PAINTING_API)
     , m_heapCellTypeForJSPaintWorkletGlobalScope(JSC::IsoHeapCellType::Args<JSPaintWorkletGlobalScope>())
-#endif
 #if ENABLE(WEB_AUDIO)
     , m_heapCellTypeForJSAudioWorkletGlobalScope(JSC::IsoHeapCellType::Args<JSAudioWorkletGlobalScope>())
 #endif
@@ -112,6 +108,8 @@ JSHeapData* JSHeapData::ensureHeapData(Heap& heap)
 }
 
 #define CLIENT_ISO_SUBSPACE_INIT(subspace) subspace(m_heapData->subspace)
+
+DEFINE_ALLOCATOR_WITH_HEAP_IDENTIFIER(JSVMClientData);
 
 JSVMClientData::JSVMClientData(VM& vm)
     : m_builtinFunctions(vm)
@@ -161,7 +159,7 @@ void JSVMClientData::getAllWorlds(Vector<Ref<DOMWrapperWorld>>& worlds)
 
     // Add main normal world.
     if (m_worldSet.contains(&mainNormalWorld))
-        worlds.uncheckedAppend(mainNormalWorld);
+        worlds.append(mainNormalWorld);
 
     // Add other normal worlds.
     for (auto* world : m_worldSet) {
@@ -169,14 +167,14 @@ void JSVMClientData::getAllWorlds(Vector<Ref<DOMWrapperWorld>>& worlds)
             continue;
         if (world == &mainNormalWorld)
             continue;
-        worlds.uncheckedAppend(*world);
+        worlds.append(*world);
     }
 
     // Add non-normal worlds.
     for (auto* world : m_worldSet) {
         if (world->type() == DOMWrapperWorld::Type::Normal)
             continue;
-        worlds.uncheckedAppend(*world);
+        worlds.append(*world);
     }
 }
 
@@ -203,7 +201,7 @@ String JSVMClientData::overrideSourceURL(const JSC::StackFrame& frame, const Str
     if (!globalObject->inherits<JSDOMWindowBase>())
         return nullString();
 
-    auto* document = jsCast<const JSDOMWindowBase*>(globalObject)->wrapped().document();
+    auto* document = jsCast<const JSDOMWindowBase*>(globalObject)->wrapped().documentIfLocal();
     if (!document)
         return nullString();
 

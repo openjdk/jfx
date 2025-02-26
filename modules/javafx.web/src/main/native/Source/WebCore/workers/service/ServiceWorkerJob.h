@@ -25,10 +25,9 @@
 
 #pragma once
 
-#if ENABLE(SERVICE_WORKER)
-
 #include "ResourceLoaderIdentifier.h"
 #include "ResourceResponse.h"
+#include "ScriptExecutionContextIdentifier.h"
 #include "ServiceWorkerJobClient.h"
 #include "ServiceWorkerJobData.h"
 #include "ServiceWorkerTypes.h"
@@ -76,8 +75,8 @@ public:
 
 private:
     // WorkerScriptLoaderClient
-    void didReceiveResponse(ResourceLoaderIdentifier, const ResourceResponse&) final;
-    void notifyFinished() final;
+    void didReceiveResponse(ScriptExecutionContextIdentifier, ResourceLoaderIdentifier, const ResourceResponse&) final;
+    void notifyFinished(ScriptExecutionContextIdentifier) final;
 
     ServiceWorkerJobClient& m_client;
     ServiceWorkerJobData m_jobData;
@@ -94,6 +93,3 @@ private:
 };
 
 } // namespace WebCore
-
-#endif // ENABLE(SERVICE_WORKER)
-

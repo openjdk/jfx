@@ -30,9 +30,11 @@ namespace WebCore {
 struct FrameEdgeInfo;
 
 class RenderFrame final : public RenderFrameBase {
-    WTF_MAKE_ISO_ALLOCATED(RenderFrame);
+    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(RenderFrame);
+    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(RenderFrame);
 public:
     RenderFrame(HTMLFrameElement&, RenderStyle&&);
+    virtual ~RenderFrame();
 
     HTMLFrameElement& frameElement() const;
     FrameEdgeInfo edgeInfo() const;
@@ -43,7 +45,6 @@ private:
     void frameOwnerElement() const = delete;
 
     ASCIILiteral renderName() const final { return "RenderFrame"_s; }
-    bool isFrame() const final { return true; }
 };
 
 inline RenderFrame* HTMLFrameElement::renderer() const
@@ -53,4 +54,4 @@ inline RenderFrame* HTMLFrameElement::renderer() const
 
 } // namespace WebCore
 
-SPECIALIZE_TYPE_TRAITS_RENDER_OBJECT(RenderFrame, isFrame())
+SPECIALIZE_TYPE_TRAITS_RENDER_OBJECT(RenderFrame, isRenderFrame())

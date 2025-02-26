@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html>
+    <body>
+        <p id="message"> </p>
+        <script>
+            let socket = new WebSocket("wss://echo.websocket.org/");
+            let messageElement = document.getElementById("message");
+
+            socket.onopen = function(e) {
+                messageElement.textContent = "[open] Connection established";
+                socket.send("Test WebSocket");
+                alert("[open] Connection established");
+            };
+
+            socket.onmessage = function(event) {
+                messageElement.textContent = '[message] Data received from server!';
+                alert('[message] Data received from server!');
+            };
+
+            socket.onerror = function(event) {
+                messageElement.textContent = "ERROR!";
+                alert("ERROR!");
+            };
+        </script>
+    </body>
+</html>
+

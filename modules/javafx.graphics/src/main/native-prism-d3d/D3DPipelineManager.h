@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2007, 2014, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2007, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -41,7 +41,6 @@ interface IConfig {
     virtual bool getBool(cstr name)=0;
 };
 
-IDirect3D9 * Direct3DCreate9();
 IDirect3D9Ex * Direct3DCreate9Ex();
 
 template <class T> inline T * addRef(T *t) {
@@ -80,7 +79,7 @@ public:
                                             D3DFORMAT adapterFormat,
                                             D3DFORMAT renderTargetFormat);
 
-    LPDIRECT3D9 GetD3DObject() { return pd3d9; }
+    LPDIRECT3D9EX GetD3DObject() { return pd3d9; }
     D3DDEVTYPE GetDeviceType() { return devType; }
 
     // returns adapterOrdinal given a HMONITOR handle
@@ -135,8 +134,7 @@ private:
     // current adapter count
     UINT adapterCount;
     // Pointer to Direct3D9 Object mainained by the pipeline manager
-    LPDIRECT3D9 pd3d9;
-    IDirect3D9Ex * pd3d9Ex;
+    IDirect3D9Ex * pd3d9;
 
     D3DDEVTYPE devType;
 

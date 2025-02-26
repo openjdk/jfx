@@ -25,6 +25,7 @@
 
 #pragma once
 
+#include "IDBDatabaseConnectionIdentifier.h"
 #include "IDBDatabaseInfo.h"
 #include "IDBError.h"
 #include "IDBGetAllResult.h"
@@ -34,13 +35,12 @@
 #include "IDBTransactionInfo.h"
 #include "ThreadSafeDataBuffer.h"
 #include <wtf/ArgumentCoder.h>
-#include <wtf/EnumTraits.h>
 
 namespace WebCore {
 
 class ThreadSafeDataBuffer;
 
-enum class IDBResultType {
+enum class IDBResultType : uint8_t {
     Error,
     OpenDatabaseSuccess,
     OpenDatabaseUpgradeNeeded,
@@ -99,7 +99,7 @@ public:
     IDBResourceIdentifier requestIdentifier() const { return m_requestIdentifier; }
 
     const IDBError& error() const { return m_error; }
-    uint64_t databaseConnectionIdentifier() const { return m_databaseConnectionIdentifier; }
+    IDBDatabaseConnectionIdentifier databaseConnectionIdentifier() const { return *m_databaseConnectionIdentifier; }
 
     const IDBDatabaseInfo& databaseInfo() const;
     const IDBTransactionInfo& transactionInfo() const;
@@ -125,7 +125,7 @@ private:
     IDBResourceIdentifier m_requestIdentifier;
 
     IDBError m_error;
-    uint64_t m_databaseConnectionIdentifier { 0 };
+    std::optional<IDBDatabaseConnectionIdentifier> m_databaseConnectionIdentifier;
     std::unique_ptr<IDBDatabaseInfo> m_databaseInfo;
     std::unique_ptr<IDBTransactionInfo> m_transactionInfo;
     std::unique_ptr<IDBKeyData> m_resultKey;
@@ -136,30 +136,3 @@ private:
 
 } // namespace WebCore
 
-namespace WTF {
-
-template<> struct EnumTraits<WebCore::IDBResultType> {
-    using values = EnumValues<
-        WebCore::IDBResultType,
-        WebCore::IDBResultType::Error,
-        WebCore::IDBResultType::OpenDatabaseSuccess,
-        WebCore::IDBResultType::OpenDatabaseUpgradeNeeded,
-        WebCore::IDBResultType::DeleteDatabaseSuccess,
-        WebCore::IDBResultType::CreateObjectStoreSuccess,
-        WebCore::IDBResultType::DeleteObjectStoreSuccess,
-        WebCore::IDBResultType::ClearObjectStoreSuccess,
-        WebCore::IDBResultType::PutOrAddSuccess,
-        WebCore::IDBResultType::GetRecordSuccess,
-        WebCore::IDBResultType::GetAllRecordsSuccess,
-        WebCore::IDBResultType::GetCountSuccess,
-        WebCore::IDBResultType::DeleteRecordSuccess,
-        WebCore::IDBResultType::CreateIndexSuccess,
-        WebCore::IDBResultType::DeleteIndexSuccess,
-        WebCore::IDBResultType::OpenCursorSuccess,
-        WebCore::IDBResultType::IterateCursorSuccess,
-        WebCore::IDBResultType::RenameObjectStoreSuccess,
-        WebCore::IDBResultType::RenameIndexSuccess
-    >;
-};
-
-} // namespace WTF

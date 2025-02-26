@@ -45,7 +45,7 @@ class PutStackSinkingPhase : public Phase {
     static constexpr bool verbose = false;
 public:
     PutStackSinkingPhase(Graph& graph)
-        : Phase(graph, "PutStack sinking")
+        : Phase(graph, "PutStack sinking"_s)
     {
     }
 
@@ -504,8 +504,11 @@ public:
                         Node* incoming = mapping.operand(operand);
                         DFG_ASSERT(m_graph, node, incoming);
 
+                        // If we are sinking a PutStack to before an ExitOK, it
+                        // should be ExitInvalid like the other preceding nodes.
+                        auto origin = node->op() == ExitOK ? node->origin.withInvalidExit() : node->origin;
                         insertionSet.insertNode(
-                            nodeIndex, SpecNone, PutStack, node->origin,
+                            nodeIndex, SpecNone, PutStack, origin,
                             OpInfo(m_graph.m_stackAccessData.add(operand, format)),
                             Edge(incoming, uncheckedUseKindFor(format)));
 

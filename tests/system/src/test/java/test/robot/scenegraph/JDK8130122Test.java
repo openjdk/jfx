@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015, 2018, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2015, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,6 +25,7 @@
 
 package test.robot.scenegraph;
 
+import java.util.concurrent.TimeUnit;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.geometry.Orientation;
@@ -37,12 +38,14 @@ import javafx.scene.layout.Priority;
 import javafx.scene.paint.Color;
 import javafx.scene.shape.Rectangle;
 import javafx.stage.Stage;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 import test.robot.testharness.VisualTestBase;
 
 /**
  * Test bounds update of invisible node in the scene graph.
  */
+@Timeout(value=20000, unit=TimeUnit.MILLISECONDS)
 public class JDK8130122Test extends VisualTestBase {
 
     private Stage testStage;
@@ -50,7 +53,7 @@ public class JDK8130122Test extends VisualTestBase {
 
     private static final double TOLERANCE = 0.07;
 
-    @Test(timeout = 15000)
+    @Test
     public void testEmptyShapes() {
         final int WIDTH = 800;
         final int HEIGHT = 400;
@@ -98,9 +101,10 @@ public class JDK8130122Test extends VisualTestBase {
             assertColorEquals(Color.WHITE, color, TOLERANCE);
             horizontalListView.setVisible(true);
         });
-        waitNextFrame();
+        // Give more time after setVisible(true) is called for frame update
+        waitFirstFrame();
         runAndWait(() -> {
-            Color color = getColor(testScene, 200, 250);
+            Color color = getColor(testScene, 200, 200);
             assertColorEquals(Color.GREEN, color, TOLERANCE);
         });
 

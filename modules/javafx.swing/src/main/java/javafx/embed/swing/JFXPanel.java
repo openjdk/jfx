@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2023, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -57,8 +57,6 @@ import java.awt.image.BufferedImage;
 import java.awt.image.DataBufferInt;
 import java.nio.IntBuffer;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.security.AccessController;
-import java.security.PrivilegedAction;
 import javax.swing.JComponent;
 import javax.swing.SwingUtilities;
 
@@ -135,6 +133,11 @@ import com.sun.javafx.embed.swing.newimpl.JFXPanelInteropN;
  *         }
  *     }
  * </pre>
+ * <strong>Warning:</strong>
+ * Serialized objects of this class will not be compatible with
+ * future Swing or JavaFX releases. The current serialization support is
+ * appropriate for short term storage or RMI between applications running
+ * the same version of Swing and the same version of JavaFX.
  *
  * @since JavaFX 2.0
  */
@@ -157,36 +160,49 @@ public class JFXPanel extends JComponent {
     private transient EmbeddedSceneInterface scenePeer;
 
     // The logical size of the FX content
+    @SuppressWarnings("doclint:missing")
     private int pWidth;
+    @SuppressWarnings("doclint:missing")
     private int pHeight;
 
     // The scale factor, used to translate b/w the logical (the FX content dimension)
     // and physical (the back buffer's dimension) coordinate spaces
+    @SuppressWarnings("doclint:missing")
     private double scaleFactorX = 1.0;
+    @SuppressWarnings("doclint:missing")
     private double scaleFactorY = 1.0;
 
     // Preferred size set from FX
+    @SuppressWarnings("doclint:missing")
     private volatile int pPreferredWidth = -1;
+    @SuppressWarnings("doclint:missing")
     private volatile int pPreferredHeight = -1;
 
     // Cached copy of this component's location on screen to avoid
     // calling getLocationOnScreen() under the tree lock on FX thread
+    @SuppressWarnings("doclint:missing")
     private volatile int screenX = 0;
+    @SuppressWarnings("doclint:missing")
     private volatile int screenY = 0;
 
     // Accessed on EDT only
+    @SuppressWarnings("doclint:missing")
     private BufferedImage pixelsIm;
 
+    @SuppressWarnings("doclint:missing")
     private volatile float opacity = 1.0f;
 
     // Indicates how many times setFxEnabled(false) has been called.
     // A value of 0 means the component is enabled.
+    @SuppressWarnings("doclint:missing")
     private AtomicInteger disableCount = new AtomicInteger(0);
 
+    @SuppressWarnings("doclint:missing")
     private boolean isCapturingMouse = false;
 
     private static boolean fxInitialized;
 
+    @SuppressWarnings("doclint:missing")
     private JFXPanelInteropN jfxPanelIOP;
 
     private synchronized void registerFinishListener() {
@@ -219,10 +235,7 @@ public class JFXPanel extends JComponent {
         if (fxInitialized) {
             return;
         }
-        @SuppressWarnings("removal")
-        EventQueue eventQueue = AccessController.doPrivileged(
-                                (PrivilegedAction<EventQueue>) java.awt.Toolkit
-                                .getDefaultToolkit()::getSystemEventQueue);
+        EventQueue eventQueue = java.awt.Toolkit.getDefaultToolkit().getSystemEventQueue();
         if (eventQueue.isDispatchThread()) {
             // We won't block EDT by FX initialization
             SecondaryLoop secondaryLoop = eventQueue.createSecondaryLoop();
@@ -303,10 +316,7 @@ public class JFXPanel extends JComponent {
         if (Toolkit.getToolkit().isFxUserThread()) {
             setSceneImpl(newScene);
         } else {
-            @SuppressWarnings("removal")
-            EventQueue eventQueue = AccessController.doPrivileged(
-                    (PrivilegedAction<EventQueue>) java.awt.Toolkit
-                            .getDefaultToolkit()::getSystemEventQueue);
+            EventQueue eventQueue = java.awt.Toolkit.getDefaultToolkit().getSystemEventQueue();
             SecondaryLoop secondaryLoop = eventQueue.createSecondaryLoop();
             Platform.runLater(() -> {
                 try {
@@ -422,7 +432,7 @@ public class JFXPanel extends JComponent {
         }
 
         int extModifiers = e.getModifiersEx();
-        // Fix for RT-15457: we should report no mouse button upon mouse release, so
+        // Fix for JDK-8114341: we should report no mouse button upon mouse release, so
         // *BtnDown values are calculated based on extMofifiers, not e.getButton()
         boolean primaryBtnDown = (extModifiers & MouseEvent.BUTTON1_DOWN_MASK) != 0;
         boolean middleBtnDown = (extModifiers & MouseEvent.BUTTON2_DOWN_MASK) != 0;
@@ -430,7 +440,7 @@ public class JFXPanel extends JComponent {
         boolean backBtnDown = (extModifiers & MouseEvent.getMaskForButton(4)) != 0;
         boolean forwardBtnDown = (extModifiers & MouseEvent.getMaskForButton(5)) != 0;
 
-        // Fix for RT-16558: if a PRESSED event is consumed, e.g. by a Swing Popup,
+        // Fix for JDK-8128809: if a PRESSED event is consumed, e.g. by a Swing Popup,
         // subsequent DRAGGED and RELEASED events should not be sent to FX as well
         if (e.getID() == MouseEvent.MOUSE_DRAGGED) {
             if (!isCapturingMouse) {
@@ -931,19 +941,15 @@ public class JFXPanel extends JComponent {
      * method is invoked, the chain of parent components is set up with
      * KeyboardAction event listeners.
      */
-    @SuppressWarnings("removal")
     @Override
     public void addNotify() {
         super.addNotify();
 
         registerFinishListener();
 
-        AccessController.doPrivileged((PrivilegedAction<Void>) () -> {
-            JFXPanel.this.getToolkit().addAWTEventListener(ungrabListener,
-                                               jfxPanelIOP.getMask());
-            return null;
-        });
-        updateComponentSize(); // see RT-23603
+        getToolkit().addAWTEventListener(ungrabListener, jfxPanelIOP.getMask());
+
+        updateComponentSize(); // see JDK-8117363
         SwingNodeHelper.runOnFxThread(() -> {
             if ((stage != null) && !stage.isShowing()) {
                 stage.show();
@@ -956,7 +962,7 @@ public class JFXPanel extends JComponent {
     public InputMethodRequests getInputMethodRequests() {
         EmbeddedSceneInterface scene = scenePeer;
         if (scene == null) {
-            return null;
+            return new InputMethodSupport.InputMethodRequestsAdapter(null);
         }
         return new InputMethodSupport.InputMethodRequestsAdapter(scene.getInputMethodRequests());
     }
@@ -966,7 +972,6 @@ public class JFXPanel extends JComponent {
      * When this method is invoked, any KeyboardActions set up in the the
      * chain of parent components are removed.
      */
-    @SuppressWarnings("removal")
     @Override public void removeNotify() {
         SwingNodeHelper.runOnFxThread(() -> {
             if ((stage != null) && stage.isShowing()) {
@@ -980,10 +985,7 @@ public class JFXPanel extends JComponent {
 
         super.removeNotify();
 
-        AccessController.doPrivileged((PrivilegedAction<Void>) () -> {
-            JFXPanel.this.getToolkit().removeAWTEventListener(ungrabListener);
-            return null;
-        });
+        getToolkit().removeAWTEventListener(ungrabListener);
 
         /* see CR 4867453 */
         getInputContext().removeNotify(this);

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2021 Apple Inc. All rights reserved.
+ * Copyright (C) 2021-2023 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -26,23 +26,21 @@
 #include "config.h"
 #include "GPUUncapturedErrorEvent.h"
 
-#include <wtf/IsoMallocInlines.h>
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
-WTF_MAKE_ISO_ALLOCATED_IMPL(GPUUncapturedErrorEvent);
+WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(GPUUncapturedErrorEvent);
+
+GPUUncapturedErrorEvent::GPUUncapturedErrorEvent(const AtomString& type, GPUUncapturedErrorEventInit&& uncapturedErrorEventInit)
+    : Event(EventInterfaceType::GPUUncapturedErrorEvent, type, uncapturedErrorEventInit, IsTrusted::Yes)
+    , m_uncapturedErrorEventInit(WTFMove(uncapturedErrorEventInit))
+{
+}
 
 GPUError GPUUncapturedErrorEvent::error() const
 {
-    if (!m_backing)
         return m_uncapturedErrorEventInit.error;
-
-    return WTF::switchOn(PAL::WebGPU::Error(m_backing->error()), [] (Ref<PAL::WebGPU::OutOfMemoryError>&& outOfMemoryError) -> GPUError {
-        return RefPtr<GPUOutOfMemoryError>(GPUOutOfMemoryError::create(WTFMove(outOfMemoryError)));
-    }, [] (Ref<PAL::WebGPU::ValidationError>&& validationError) -> GPUError {
-        return RefPtr<GPUValidationError>(GPUValidationError::create(WTFMove(validationError)));
-    });
-
 }
 
 }

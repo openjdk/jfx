@@ -35,23 +35,20 @@ public:
     typedef InternalFunction Base;
     static constexpr unsigned StructureFlags = Base::StructureFlags | HasStaticPropertyTable;
 
-    static RegExpConstructor* create(VM& vm, Structure* structure, RegExpPrototype* regExpPrototype, GetterSetter* species)
+    static RegExpConstructor* create(VM& vm, Structure* structure, RegExpPrototype* regExpPrototype)
     {
         RegExpConstructor* constructor = new (NotNull, allocateCell<RegExpConstructor>(vm)) RegExpConstructor(vm, structure);
-        constructor->finishCreation(vm, regExpPrototype, species);
+        constructor->finishCreation(vm, regExpPrototype);
         return constructor;
     }
 
-    static Structure* createStructure(VM& vm, JSGlobalObject* globalObject, JSValue prototype)
-    {
-        return Structure::create(vm, globalObject, prototype, TypeInfo(InternalFunctionType, StructureFlags), info());
-    }
+    inline static Structure* createStructure(VM&, JSGlobalObject*, JSValue);
 
     DECLARE_INFO;
 
 private:
     RegExpConstructor(VM&, Structure*);
-    void finishCreation(VM&, RegExpPrototype*, GetterSetter* species);
+    void finishCreation(VM&, RegExpPrototype*);
 };
 STATIC_ASSERT_ISO_SUBSPACE_SHARABLE(RegExpConstructor, InternalFunction);
 

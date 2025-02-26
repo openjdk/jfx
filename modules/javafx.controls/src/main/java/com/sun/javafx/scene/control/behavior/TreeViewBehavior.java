@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,32 +25,35 @@
 
 package com.sun.javafx.scene.control.behavior;
 
-import com.sun.javafx.scene.control.inputmap.InputMap;
+import static javafx.scene.input.KeyCode.*;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.function.Consumer;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
 import javafx.beans.value.WeakChangeListener;
 import javafx.collections.ListChangeListener;
 import javafx.collections.WeakListChangeListener;
 import javafx.event.EventHandler;
-import javafx.scene.control.*;
-import javafx.scene.input.*;
+import javafx.scene.control.FocusModel;
+import javafx.scene.control.MultipleSelectionModel;
+import javafx.scene.control.SelectionMode;
+import javafx.scene.control.TreeItem;
+import javafx.scene.control.TreeView;
+import javafx.scene.input.KeyEvent;
+import javafx.scene.input.MouseEvent;
 import javafx.util.Callback;
-
-import java.util.ArrayList;
-import java.util.List;
 import com.sun.javafx.PlatformUtil;
+import com.sun.javafx.scene.control.inputmap.InputMap;
+import com.sun.javafx.scene.control.inputmap.InputMap.KeyMapping;
 import com.sun.javafx.scene.control.inputmap.KeyBinding;
 
-import static javafx.scene.input.KeyCode.*;
-import static com.sun.javafx.scene.control.inputmap.InputMap.KeyMapping;
-
 public class TreeViewBehavior<T> extends BehaviorBase<TreeView<T>> {
-
     private final InputMap<TreeView<T>> treeViewInputMap;
 
     private final EventHandler<KeyEvent> keyEventListener = e -> {
         if (!e.isConsumed()) {
-            // RT-12751: we want to keep an eye on the user holding down the shift key,
+            // JDK-8114799: we want to keep an eye on the user holding down the shift key,
             // so that we know when they enter/leave multiple selection mode. This
             // changes what happens when certain key combinations are pressed.
             isShiftDown = e.getEventType() == KeyEvent.KEY_PRESSED && e.isShiftDown();
@@ -65,7 +68,7 @@ public class TreeViewBehavior<T> extends BehaviorBase<TreeView<T>> {
     private boolean isShiftDown = false;
     private boolean isShortcutDown = false;
 
-    // Support for RT-13826:
+    // Support for JDK-8114797:
     // set when focus is moved by keyboard to allow for proper selection positions
 //    private int selectPos = -1;
 
@@ -196,6 +199,11 @@ public class TreeViewBehavior<T> extends BehaviorBase<TreeView<T>> {
             new KeyMapping(RIGHT, e -> rtl(control, this::collapseRow, this::expandRow)),
             new KeyMapping(KP_RIGHT, e -> rtl(control, this::collapseRow, this::expandRow)),
 
+            new KeyMapping(new KeyBinding(RIGHT).shortcut().alt(), e -> horizontalUnitScroll(true)),
+            new KeyMapping(new KeyBinding(LEFT).shortcut().alt(), e -> horizontalUnitScroll(false)),
+            new KeyMapping(new KeyBinding(UP).shortcut().alt(), e -> verticalUnitScroll(false)),
+            new KeyMapping(new KeyBinding(DOWN).shortcut().alt(), e -> verticalUnitScroll(true)),
+
             new KeyMapping(MULTIPLY, e -> expandAll()),
             new KeyMapping(ADD, e -> expandRow()),
             new KeyMapping(SUBTRACT, e -> collapseRow()),
@@ -235,7 +243,7 @@ public class TreeViewBehavior<T> extends BehaviorBase<TreeView<T>> {
         // of the shift key before the event handlers get a shot at the event.
         control.addEventFilter(KeyEvent.ANY, keyEventListener);
 
-        // Fix for RT-16565
+        // Fix for JDK-8128723
         control.selectionModelProperty().addListener(weakSelectionModelListener);
         if (control.getSelectionModel() != null) {
             control.getSelectionModel().getSelectedIndices().addListener(weakSelectedIndicesListener);
@@ -254,6 +262,18 @@ public class TreeViewBehavior<T> extends BehaviorBase<TreeView<T>> {
         }
         getNode().removeEventFilter(KeyEvent.ANY, keyEventListener);
         TreeCellBehavior.removeAnchor(getNode());
+
+        onScrollPageUp = null;
+        onScrollPageDown = null;
+        onSelectPreviousRow = null;
+        onSelectNextRow = null;
+        onMoveToFirstCell = null;
+        onMoveToLastCell = null;
+        onFocusPreviousRow = null;
+        onFocusNextRow = null;
+        onHorizontalUnitScroll = null;
+        onVerticalUnitScroll = null;
+
         super.dispose();
     }
 
@@ -512,7 +532,7 @@ public class TreeViewBehavior<T> extends BehaviorBase<TreeView<T>> {
         sm.clearSelection();
         sm.selectRange(leadIndex, -1);
 
-        // RT-18413: Focus must go to first row
+        // JDK-8115478: Focus must go to first row
         fm.focus(0);
 
         if (isShiftDown) {
@@ -561,7 +581,7 @@ public class TreeViewBehavior<T> extends BehaviorBase<TreeView<T>> {
 
         int leadSelectedIndex = onScrollPageUp.call(false);
 
-        // fix for RT-34407
+        // fix for JDK-8097503
         int adjust = leadIndex < leadSelectedIndex ? 1 : -1;
 
         MultipleSelectionModel<TreeItem<T>> sm = getNode().getSelectionModel();
@@ -589,7 +609,7 @@ public class TreeViewBehavior<T> extends BehaviorBase<TreeView<T>> {
 
         int leadSelectedIndex = onScrollPageDown.call(false);
 
-        // fix for RT-34407
+        // fix for JDK-8097503
         int adjust = leadIndex < leadSelectedIndex ? 1 : -1;
 
         MultipleSelectionModel<TreeItem<T>> sm = getNode().getSelectionModel();
@@ -606,7 +626,7 @@ public class TreeViewBehavior<T> extends BehaviorBase<TreeView<T>> {
     }
 
     private void selectAllToFocus(boolean setAnchorToFocusIndex) {
-        // Fix for RT-31241
+        // Fix for JDK-8123409
         final TreeView<T> treeView = getNode();
         if (treeView.getEditingItem() != null) return;
 
@@ -647,7 +667,7 @@ public class TreeViewBehavior<T> extends BehaviorBase<TreeView<T>> {
         if (treeItem == null || treeItem.isLeaf()) return;
 
         if (treeItem.isExpanded()) {
-            // move selection to the first child (RT-17978)
+            // move selection to the first child (JDK-8117018)
             List<TreeItem<T>> children = treeItem.getChildren();
             if (! children.isEmpty()) {
                 sm.clearAndSelect(getIndex.call(children.get(0)));
@@ -685,7 +705,7 @@ public class TreeViewBehavior<T> extends BehaviorBase<TreeView<T>> {
         if (selectedItem == null) return;
         if (root == null) return;
 
-        // Fix for RT-17233 where we could hide all items in a tree with no visible
+        // Fix for JDK-8118332 where we could hide all items in a tree with no visible
         // root by pressing the left-arrow key too many times.
         // Check for isLeaf() added to resolve JDK-8152106.
         if (!isShowRoot
@@ -694,7 +714,7 @@ public class TreeViewBehavior<T> extends BehaviorBase<TreeView<T>> {
             return;
         }
 
-        // Fix for RT-17833 where the selection highlight could disappear unexpectedly from
+        // Fix for JDK-8128031 where the selection highlight could disappear unexpectedly from
         // the root node in certain circumstances
         if (root.equals(selectedItem) && (! root.isExpanded() || root.getChildren().isEmpty())) {
             return;
@@ -847,5 +867,28 @@ public class TreeViewBehavior<T> extends BehaviorBase<TreeView<T>> {
         sm.selectRange(index, getNode().getExpandedItemCount());
 
         if (onMoveToLastCell != null) onMoveToLastCell.run();
+    }
+
+    private Consumer<Boolean> onHorizontalUnitScroll;
+    private Consumer<Boolean> onVerticalUnitScroll;
+
+    public void setOnHorizontalUnitScroll(Consumer<Boolean> f) {
+        onHorizontalUnitScroll = f;
+    }
+
+    public void setOnVerticalUnitScroll(Consumer<Boolean> f) {
+        onVerticalUnitScroll = f;
+    }
+
+    private void horizontalUnitScroll(boolean right) {
+        if (onHorizontalUnitScroll != null) {
+            onHorizontalUnitScroll.accept(right);
+        }
+    }
+
+    private void verticalUnitScroll(boolean down) {
+        if (onVerticalUnitScroll != null) {
+            onVerticalUnitScroll.accept(down);
+        }
     }
 }

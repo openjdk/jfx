@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2014, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,13 +25,6 @@
 
 package javafx.embed.swing;
 
-import com.sun.javafx.collections.ObservableListWrapper;
-import com.sun.javafx.scene.input.ExtendedInputMethodRequests;
-import javafx.collections.ObservableList;
-import javafx.geometry.Point2D;
-import javafx.scene.input.InputMethodHighlight;
-import javafx.scene.input.InputMethodTextRun;
-
 import java.awt.Rectangle;
 import java.awt.event.InputMethodEvent;
 import java.awt.font.TextHitInfo;
@@ -41,6 +34,15 @@ import java.text.AttributedString;
 import java.text.CharacterIterator;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicReference;
+import javafx.collections.ObservableList;
+import javafx.geometry.Point2D;
+import javafx.scene.input.InputMethodHighlight;
+import javafx.scene.input.InputMethodTextRun;
+import com.sun.javafx.application.PlatformImpl;
+import com.sun.javafx.collections.ObservableListWrapper;
+import com.sun.javafx.scene.input.ExtendedInputMethodRequests;
 
 /**
  * A utility class containing the functions to support Input Methods
@@ -58,40 +60,59 @@ class InputMethodSupport {
 
         @Override
         public Rectangle getTextLocation(TextHitInfo offset) {
-            Point2D result = fxRequests.getTextLocation(offset.getInsertionIndex());
-            return new Rectangle((int)result.getX(), (int)result.getY(), 0, 0);
+            AtomicReference<Point2D> location = new AtomicReference<>(new Point2D(0.0, 0.0));
+            if (fxRequests != null) {
+                PlatformImpl.runAndWait(() -> {
+                    location.set(fxRequests.getTextLocation(offset.getInsertionIndex()));
+                });
+            }
+            return new Rectangle((int)location.get().getX(), (int)location.get().getY(), 0, 0);
         }
 
         @Override
         public TextHitInfo getLocationOffset(int x, int y) {
-            int result = fxRequests.getLocationOffset(x, y);
-            return TextHitInfo.afterOffset(result);
+            AtomicInteger offset = new AtomicInteger(0);
+            if (fxRequests != null) {
+                PlatformImpl.runAndWait(() -> {
+                    offset.set(fxRequests.getLocationOffset(x, y));
+                });
+            }
+            return TextHitInfo.afterOffset(offset.get());
         }
 
         @Override
         public int getInsertPositionOffset() {
+            AtomicInteger offset = new AtomicInteger(0);
             if (fxRequests instanceof ExtendedInputMethodRequests) {
-                return ((ExtendedInputMethodRequests)fxRequests).getInsertPositionOffset();
+                PlatformImpl.runAndWait(() -> {
+                    offset.set(((ExtendedInputMethodRequests)fxRequests).getInsertPositionOffset());
+                });
             }
-            return 0;
+            return offset.get();
         }
 
         @Override
         public AttributedCharacterIterator getCommittedText(int beginIndex, int endIndex, AttributedCharacterIterator.Attribute[] attributes) {
-            String result = null;
+            AtomicReference<String> committed = new AtomicReference<>(null);
             if (fxRequests instanceof ExtendedInputMethodRequests) {
-                result = ((ExtendedInputMethodRequests)fxRequests).getCommittedText(beginIndex, endIndex);
+                PlatformImpl.runAndWait(() -> {
+                    committed.set(((ExtendedInputMethodRequests)fxRequests).getCommittedText(beginIndex, endIndex));
+                });
             }
-            if (result == null) result = "";
-            return new AttributedString(result).getIterator();
+            String text = committed.get();
+            if (text == null) text = "";
+            return new AttributedString(text).getIterator();
         }
 
         @Override
         public int getCommittedTextLength() {
+            AtomicInteger length = new AtomicInteger(0);
             if (fxRequests instanceof ExtendedInputMethodRequests) {
-                return ((ExtendedInputMethodRequests)fxRequests).getCommittedTextLength();
+                PlatformImpl.runAndWait(() -> {
+                    length.set(((ExtendedInputMethodRequests)fxRequests).getCommittedTextLength());
+                });
             }
-            return 0;
+            return length.get();
         }
 
         @Override
@@ -102,7 +123,13 @@ class InputMethodSupport {
 
         @Override
         public AttributedCharacterIterator getSelectedText(AttributedCharacterIterator.Attribute[] attributes) {
-            String text = fxRequests.getSelectedText();
+            AtomicReference<String> selected = new AtomicReference<>(null);
+            if (fxRequests != null) {
+                PlatformImpl.runAndWait(() -> {
+                    selected.set(fxRequests.getSelectedText());
+                });
+            }
+            String text = selected.get();
             if (text == null) text = "";
             return new AttributedString(text).getIterator();
         }

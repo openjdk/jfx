@@ -31,6 +31,6 @@ namespace WebCore {
 
 class ResourceLoader;
 
-using ResourceLoaderIdentifier = ObjectIdentifier<ResourceLoader>;
+using ResourceLoaderIdentifier = LegacyNullableAtomicObjectIdentifier<ResourceLoader>;
 
 } // namespace WebCore

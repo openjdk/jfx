@@ -26,6 +26,7 @@
 #ifndef PAS_DEBUG_HEAP_H
 #define PAS_DEBUG_HEAP_H
 
+#include "pas_allocation_mode.h"
 #include "pas_allocation_result.h"
 #include "pas_heap_config_kind.h"
 #include "pas_log.h"
@@ -38,12 +39,16 @@ PAS_BEGIN_EXTERN_C;
 
 #if PAS_BMALLOC
 
+// FIXME: Find a way to declare bmalloc's symbol visibility without having to
+// import a bmalloc header.
+#include "BExport.h"
+
 /* The implementations are provided by bmalloc. */
-PAS_API extern bool pas_debug_heap_is_enabled(pas_heap_config_kind kind);
-PAS_API extern void* pas_debug_heap_malloc(size_t size);
-PAS_API extern void* pas_debug_heap_memalign(size_t alignment, size_t size);
-PAS_API extern void* pas_debug_heap_realloc(void* ptr, size_t size);
-PAS_API extern void pas_debug_heap_free(void* ptr);
+BEXPORT extern bool pas_debug_heap_is_enabled(pas_heap_config_kind);
+BEXPORT extern void* pas_debug_heap_malloc(size_t);
+BEXPORT extern void* pas_debug_heap_memalign(size_t alignment, size_t);
+BEXPORT extern void* pas_debug_heap_realloc(void* ptr, size_t);
+BEXPORT extern void pas_debug_heap_free(void* ptr);
 
 #else /* PAS_BMALLOC -> so !PAS_BMALLOC */
 
@@ -84,7 +89,7 @@ static inline void pas_debug_heap_free(void* ptr)
 
 #endif /* PAS_BMALLOC -> so end of !PAS_BMALLOC */
 
-static inline pas_allocation_result pas_debug_heap_allocate(size_t size, size_t alignment)
+static inline pas_allocation_result pas_debug_heap_allocate(size_t size, size_t alignment, pas_allocation_mode allocation_mode)
 {
     static const bool verbose = false;
 
@@ -107,6 +112,7 @@ static inline pas_allocation_result pas_debug_heap_allocate(size_t size, size_t 
     result.did_succeed = !!raw_result;
     result.begin = (uintptr_t)raw_result;
     result.zero_mode = pas_zero_mode_may_have_non_zero;
+    PAS_PROFILE(DEBUG_HEAP_ALLOCATION, result.begin, size, allocation_mode);
 
     return result;
 }

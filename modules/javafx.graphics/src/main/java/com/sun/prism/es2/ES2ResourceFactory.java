@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2009, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2009, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -187,7 +187,7 @@ public class ES2ResourceFactory extends BaseShaderFactory {
                 return glFactory.isGL2()
                     // Unfortunately our support for float textures on GLES
                     // seems to be broken so we will defer use of this extension
-                    // until we fix RT-26286.
+                    // until we fix JDK-8092380.
 //                        || glFactory.isGLExtensionSupported("GL_OES_texture_float")
                         ;
             case BYTE_APPLE_422:
@@ -217,7 +217,8 @@ public class ES2ResourceFactory extends BaseShaderFactory {
     }
 
     @Override
-    public Shader createShader(InputStream pixelShaderCode,
+    public Shader createShader(String pixelShaderName,
+            InputStream pixelShaderCode,
             Map<String, Integer> samplers,
             Map<String, Integer> params,
             int maxTexCoordIndex,
@@ -320,8 +321,8 @@ public class ES2ResourceFactory extends BaseShaderFactory {
             }
             Method m =
                     klass.getMethod("loadShader", new Class[]{ShaderFactory.class,
-                        InputStream.class});
-            return (Shader) m.invoke(null, new Object[]{this, stream});
+                        String.class, InputStream.class});
+            return (Shader) m.invoke(null, new Object[]{this, name, stream});
         } catch (Throwable e) {
             e.printStackTrace();
             throw new InternalError("Error loading stock shader " + name);

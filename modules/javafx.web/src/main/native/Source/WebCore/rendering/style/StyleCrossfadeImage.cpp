@@ -58,7 +58,8 @@ StyleCrossfadeImage::~StyleCrossfadeImage()
 
 bool StyleCrossfadeImage::operator==(const StyleImage& other) const
 {
-    return is<StyleCrossfadeImage>(other) && equals(downcast<StyleCrossfadeImage>(other));
+    auto* otherCrossfadeImage = dynamicDowncast<StyleCrossfadeImage>(other);
+    return otherCrossfadeImage && equals(*otherCrossfadeImage);
 }
 
 bool StyleCrossfadeImage::equals(const StyleCrossfadeImage& other) const
@@ -104,12 +105,14 @@ void StyleCrossfadeImage::load(CachedResourceLoader& loader, const ResourceLoade
     auto oldCachedToImage = m_cachedToImage;
 
     if (m_from) {
+        if (m_from->isPending())
         m_from->load(loader, options);
         m_cachedFromImage = m_from->cachedImage();
     } else
         m_cachedFromImage = nullptr;
 
     if (m_to) {
+        if (m_to->isPending())
         m_to->load(loader, options);
         m_cachedToImage = m_to->cachedImage();
     } else
@@ -132,7 +135,7 @@ void StyleCrossfadeImage::load(CachedResourceLoader& loader, const ResourceLoade
     m_inputImagesAreReady = true;
 }
 
-RefPtr<Image> StyleCrossfadeImage::image(const RenderElement* renderer, const FloatSize& size) const
+RefPtr<Image> StyleCrossfadeImage::image(const RenderElement* renderer, const FloatSize& size, bool isForFirstLine) const
 {
     if (!renderer)
         return &Image::nullImage();
@@ -143,8 +146,8 @@ RefPtr<Image> StyleCrossfadeImage::image(const RenderElement* renderer, const Fl
     if (!m_from || !m_to)
         return &Image::nullImage();
 
-    auto fromImage = m_from->image(renderer, size);
-    auto toImage = m_to->image(renderer, size);
+    auto fromImage = m_from->image(renderer, size, isForFirstLine);
+    auto toImage = m_to->image(renderer, size, isForFirstLine);
 
     if (!fromImage || !toImage)
         return &Image::nullImage();
@@ -184,8 +187,10 @@ void StyleCrossfadeImage::imageChanged(CachedImage*, const IntRect*)
 {
     if (!m_inputImagesAreReady)
         return;
-    for (auto& client : clients().values())
-        client->imageChanged(this);
+    for (auto entry : clients()) {
+        auto& client = entry.key;
+        client.imageChanged(static_cast<WrappedImagePtr>(this));
+    }
 }
 
 } // namespace WebCore

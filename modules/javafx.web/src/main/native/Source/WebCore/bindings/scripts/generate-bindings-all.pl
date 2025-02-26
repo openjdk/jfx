@@ -30,7 +30,6 @@ use lib $FindBin::Bin;
 
 use File::Basename;
 use File::Spec;
-use File::Find;
 use Getopt::Long;
 
 my $perl = $^X;
@@ -39,6 +38,7 @@ my @idlDirectories;
 my $outputDirectory;
 my $idlFilesList;
 my $ppIDLFilesList;
+my $idlFileNamesList;
 my $generator;
 my @generatorDependency;
 my $defines;
@@ -49,12 +49,13 @@ my @ppExtraArgs;
 my $numOfJobs = 1;
 my $idlAttributesFile;
 my $showProgress;
-my $includeDirsList;
+my $includeDirlist = '';
 
-GetOptions('includeDirsList=s' => \$includeDirsList,
+GetOptions('include=s@' => \@idlDirectories,
            'outputDir=s' => \$outputDirectory,
            'idlFilesList=s' => \$idlFilesList,
            'ppIDLFilesList=s' => \$ppIDLFilesList,
+           'idlFileNamesList=s' => \$idlFileNamesList,
            'generator=s' => \$generator,
            'generatorDependency=s@' => \@generatorDependency,
            'defines=s' => \$defines,
@@ -64,22 +65,20 @@ GetOptions('includeDirsList=s' => \$includeDirsList,
            'ppExtraArgs=s@' => \@ppExtraArgs,
            'idlAttributesFile=s' => \$idlAttributesFile,
            'numOfJobs=i' => \$numOfJobs,
-           'showProgress' => \$showProgress);
+           'showProgress' => \$showProgress,
+           'includeDirlist=s' => \$includeDirlist);
 
 $| = 1;
 my @idlFiles;
 open(my $fh, '<', $idlFilesList) or die "Cannot open $idlFilesList";
-@idlFiles = map { (my $path = $_) =~ s/\r?\n?$//; CygwinPathIfNeeded($path) } <$fh>;
+@idlFiles = map { CygwinPathIfNeeded(s/\r?\n?$//r) } <$fh>;
 close($fh) or die;
 
 my @ppIDLFiles;
 open($fh, '<', $ppIDLFilesList) or die "Cannot open $ppIDLFilesList";
-@ppIDLFiles = map { (my $path = $_) =~ s/\r?\n?$//; CygwinPathIfNeeded(s/\r?\n?$//r) } <$fh>;
+@ppIDLFiles = map { CygwinPathIfNeeded(s/\r?\n?$//r) } <$fh>;
 close($fh) or die;
 
-open(my $dh, '<', $includeDirsList) or die "Cannot open $includeDirsList";
-@idlDirectories = map { (my $path = $_) =~ s/\r?\n?$//; CygwinPathIfNeeded($path) } <$dh>;
-close($dh) or die;
 
 my %oldSupplements;
 my %newSupplements;
@@ -106,8 +105,17 @@ my @args = (File::Spec->catfile($scriptDir, 'generate-bindings.pl'),
             '--outputDir', $outputDirectory,
             '--preprocessor', $preprocessor,
             '--idlAttributesFile', $idlAttributesFile,
+            '--idlFileNamesList', $idlFileNamesList,
             '--write-dependencies');
-push @args, map { ('--includeDirsList', $_) } $includeDirsList;
+
+# Read --include dir list from file if passed as an argument.
+if ($includeDirlist) {
+    open(my $fh, '<', $includeDirlist) or die "Cannot open $includeDirlist";
+    @idlDirectories = map { CygwinPathIfNeeded(s/\r?\n?$//r) } <$fh>;
+    close($fh) or die;
+}
+
+push @args, map { ('--include', $_) } @idlDirectories;
 push @args, '--supplementalDependencyFile', $supplementalDependencyFile if $supplementalDependencyFile;
 
 my %directoryCache;
@@ -190,11 +198,13 @@ sub spawnGenerateBindingsIfNeeded
 
 sub buildDirectoryCache
 {
-    my $wanted = sub {
-        $directoryCache{$_} = $File::Find::name;
-        $File::Find::prune = 1 unless ~/\./;
-    };
-    find($wanted, @idlDirectories);
+    open my $fh, "<", $idlFileNamesList or die "cannot open $idlFileNamesList for reading";
+    while (<$fh>) {
+        chomp $_;
+        my $name = fileparse($_);
+        $directoryCache{$name} = $_;
+    }
+    close $fh;
 }
 
 sub implicitDependencies
@@ -231,8 +241,7 @@ sub spawnCommand
 sub quoteCommand
 {
     return map {
-        (my $qStr = $_) =~ s/([\\\"])/\\$1/g;
-        '"' . $qStr . '"';
+        '"' . s/([\\\"])/\\$1/gr . '"';
     } @_;
 }
 

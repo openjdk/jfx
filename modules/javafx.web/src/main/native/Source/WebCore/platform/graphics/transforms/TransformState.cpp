@@ -43,7 +43,6 @@ TransformState& TransformState::operator=(const TransformState& other)
         m_lastPlanarSecondaryQuad = other.m_lastPlanarSecondaryQuad;
     }
     m_accumulatingTransform = other.m_accumulatingTransform;
-    m_useCSS3DTransformInterop = other.m_useCSS3DTransformInterop;
     m_direction = other.m_direction;
 
     m_accumulatedTransform = nullptr;
@@ -79,10 +78,14 @@ void TransformState::translateMappedCoordinates(const LayoutSize& offset)
     if (m_tracking != DoNotTrackTransformMatrix) {
         if (!m_trackedTransform)
             m_trackedTransform = makeUnique<TransformationMatrix>();
+        if (shouldFlattenBefore())
+            m_trackedTransform->flatten();
         if (m_direction == ApplyTransformDirection)
             m_trackedTransform->translateRight(offset.width(), offset.height());
         else
             m_trackedTransform->translate(offset.width(), offset.height());
+        if (shouldFlattenAfter())
+            m_trackedTransform->flatten();
     }
 }
 
@@ -123,16 +126,12 @@ void TransformState::applyAccumulatedOffset()
 
 bool TransformState::shouldFlattenBefore(TransformAccumulation accumulate)
 {
-    if (m_useCSS3DTransformInterop)
         return accumulate == FlattenTransform && m_direction != ApplyTransformDirection;
-    return false;
 }
 
 bool TransformState::shouldFlattenAfter(TransformAccumulation accumulate)
 {
-    if (m_useCSS3DTransformInterop)
         return accumulate == FlattenTransform && m_direction == ApplyTransformDirection;
-    return accumulate == FlattenTransform;
 }
 
 // FIXME: We transform AffineTransform to TransformationMatrix. This is rather inefficient.
@@ -275,10 +274,15 @@ void TransformState::flattenWithTransform(const TransformationMatrix& t, bool* w
         }
     }
 
-    if (m_trackedTransform)
+    if (m_trackedTransform) {
+        if (shouldFlattenBefore())
+            m_trackedTransform->flatten();
         *m_trackedTransform = (m_direction == ApplyTransformDirection) ? (t * *m_trackedTransform) : (*m_trackedTransform * t);
-    else if (m_tracking != DoNotTrackTransformMatrix)
+    } else if (m_tracking != DoNotTrackTransformMatrix)
         m_trackedTransform = makeUnique<TransformationMatrix>(t);
+
+    if (m_trackedTransform && shouldFlattenAfter())
+        m_trackedTransform->flatten();
 
     // We could throw away m_accumulatedTransform if we wanted to here, but that
     // would cause thrash when traversing hierarchies with alternating

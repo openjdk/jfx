@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2021 Apple Inc. All rights reserved.
+ * Copyright (C) 2021-2023 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -26,22 +26,24 @@
 #pragma once
 
 #include "GPUPowerPreference.h"
+#include "WebGPURequestAdapterOptions.h"
 #include <optional>
-#include <pal/graphics/WebGPU/WebGPURequestAdapterOptions.h>
 
 namespace WebCore {
 
 struct GPURequestAdapterOptions {
-    PAL::WebGPU::RequestAdapterOptions convertToBacking() const
+    WebGPU::RequestAdapterOptions convertToBacking() const
     {
         return {
-            powerPreference ? std::optional { WebCore::convertToBacking(*powerPreference) } : std::nullopt,
-            forceFallbackAdapter,
+            .powerPreference = powerPreference ? std::optional { WebCore::convertToBacking(*powerPreference) } : std::nullopt,
+            .forceFallbackAdapter = forceFallbackAdapter,
+            .xrCompatible = xrCompatible
         };
     }
 
     std::optional<GPUPowerPreference> powerPreference;
     bool forceFallbackAdapter { false };
+    bool xrCompatible { false };
 };
 
 }

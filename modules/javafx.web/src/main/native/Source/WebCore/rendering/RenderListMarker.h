@@ -30,12 +30,11 @@ class CSSCounterStyle;
 class RenderListItem;
 class StyleRuleCounterStyle;
 
-String listMarkerText(ListStyleType, int value, CSSCounterStyle* = nullptr);
-
 // Used to render the list item's marker.
 // The RenderListMarker always has to be a child of a RenderListItem.
 class RenderListMarker final : public RenderBox {
-    WTF_MAKE_ISO_ALLOCATED(RenderListMarker);
+    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(RenderListMarker);
+    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(RenderListMarker);
 public:
     RenderListMarker(RenderListItem&, RenderStyle&&);
     virtual ~RenderListMarker();
@@ -46,7 +45,6 @@ public:
     bool isInside() const;
 
     void updateMarginsAndContent();
-    void addOverflowFromListMarker();
 
     bool isImage() const final;
 
@@ -57,12 +55,10 @@ private:
     void willBeDestroyed() final;
     ASCIILiteral renderName() const final { return "RenderListMarker"_s; }
     void computePreferredLogicalWidths() final;
-    bool isListMarker() const final { return true; }
     bool canHaveChildren() const final { return false; }
     void paint(PaintInfo&, const LayoutPoint&) final;
     void layout() final;
     void imageChanged(WrappedImagePtr, const IntRect*) final;
-    std::unique_ptr<LegacyInlineElementBox> createInlineBox() final;
     LayoutUnit lineHeight(bool firstLine, LineDirectionMode, LinePositionMode) const final;
     LayoutUnit baselinePosition(FontBaseline, bool firstLine, LineDirectionMode, LinePositionMode) const final;
     LayoutRect selectionRectForRepaint(const RenderLayerModelObject* repaintContainer, bool clipToVisibleContent) final;
@@ -80,17 +76,18 @@ private:
     struct TextRunWithUnderlyingString;
     TextRunWithUnderlyingString textRun() const;
 
-    CSSCounterStyle* counterStyle() const;
+    RefPtr<CSSCounterStyle> counterStyle() const;
+    bool widthUsesMetricsOfPrimaryFont() const;
 
     String m_textWithSuffix;
     uint8_t m_textWithoutSuffixLength { 0 };
     bool m_textIsLeftToRightDirection { true };
     RefPtr<StyleImage> m_image;
-    WeakPtr<RenderListItem> m_listItem;
+    SingleThreadWeakPtr<RenderListItem> m_listItem;
     LayoutUnit m_lineOffsetForListItem;
     LayoutUnit m_lineLogicalOffsetForListItem;
 };
 
 } // namespace WebCore
 
-SPECIALIZE_TYPE_TRAITS_RENDER_OBJECT(RenderListMarker, isListMarker())
+SPECIALIZE_TYPE_TRAITS_RENDER_OBJECT(RenderListMarker, isRenderListMarker())

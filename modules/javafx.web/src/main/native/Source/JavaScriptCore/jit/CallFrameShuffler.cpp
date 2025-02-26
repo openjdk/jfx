@@ -379,7 +379,7 @@ void CallFrameShuffler::prepareForTailCall()
     m_oldFrameBase = MacroAssembler::stackPointerRegister;
     m_oldFrameOffset = numLocals();
     m_newFrameBase = acquireGPR();
-#if CPU(ARM_THUMB2) || CPU(MIPS)
+#if CPU(ARM_THUMB2)
     // We load the frame pointer and link register
     // manually. We could ask the algorithm to load them for us,
     // and it would allow us to use the link register as an extra
@@ -451,9 +451,6 @@ void CallFrameShuffler::prepareForTailCall()
     m_jit.validateUntaggedPtr(MacroAssembler::linkRegister);
 #endif
 
-#elif CPU(MIPS)
-    m_jit.loadPtr(MacroAssembler::Address(MacroAssembler::framePointerRegister, sizeof(void*)),
-        MacroAssembler::returnAddressRegister);
 #endif
 
     // We want the frame pointer to always point to a valid frame, and
@@ -743,6 +740,7 @@ void CallFrameShuffler::prepareAny()
     if (verbose)
         dataLog("   * Storing the argument count into ", VirtualRegister { CallFrameSlot::argumentCountIncludingThis }, "\n");
     RELEASE_ASSERT(m_numPassedArgs != UINT_MAX);
+
 #if USE(JSVALUE64)
     // Initialize CallFrameSlot::argumentCountIncludingThis's TagOffset and PayloadOffset with 0 and m_numPassedArgs.
     m_jit.store64(MacroAssembler::TrustedImm32(m_numPassedArgs), addressForNew(VirtualRegister { CallFrameSlot::argumentCountIncludingThis }));

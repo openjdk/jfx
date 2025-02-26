@@ -30,11 +30,13 @@
 #include "CSSTransition.h"
 #include "KeyframeEffectStack.h"
 #include "RenderStyle.h"
+#include "ScriptExecutionContext.h"
 
 namespace WebCore {
+DEFINE_ALLOCATOR_WITH_HEAP_IDENTIFIER(ElementAnimationRareData);
 
-ElementAnimationRareData::ElementAnimationRareData(PseudoId pseudoId)
-    : m_pseudoId(pseudoId)
+ElementAnimationRareData::ElementAnimationRareData(const std::optional<Style::PseudoElementIdentifier>& pseudoElementIdentifier)
+    : m_pseudoElementIdentifier(pseudoElementIdentifier)
 {
 }
 

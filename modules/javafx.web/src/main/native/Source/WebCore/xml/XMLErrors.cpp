@@ -30,7 +30,6 @@
 #include "XMLErrors.h"
 
 #include "Document.h"
-#include "Frame.h"
 #include "HTMLBodyElement.h"
 #include "HTMLDivElement.h"
 #include "HTMLHeadElement.h"
@@ -39,6 +38,7 @@
 #include "HTMLNames.h"
 #include "HTMLParagraphElement.h"
 #include "HTMLStyleElement.h"
+#include "LocalFrame.h"
 #include "SVGNames.h"
 #include "Text.h"
 
@@ -78,7 +78,7 @@ void XMLErrors::handleError(ErrorType type, const char* message, TextPosition po
 void XMLErrors::appendErrorMessage(ASCIILiteral typeString, TextPosition position, const char* message)
 {
     // <typeString> on line <lineNumber> at column <columnNumber>: <message>
-    m_errorMessages.append(typeString, " on line ", position.m_line.oneBasedInt(), " at column ", position.m_column.oneBasedInt(), ": ", message);
+    m_errorMessages.append(typeString, " on line "_s, position.m_line.oneBasedInt(), " at column "_s, position.m_column.oneBasedInt(), ": "_s, span(message));
 }
 
 static inline Ref<Element> createXHTMLParserErrorHeader(Document& document, String&& errorMessages)
@@ -86,7 +86,7 @@ static inline Ref<Element> createXHTMLParserErrorHeader(Document& document, Stri
     Ref<Element> reportElement = document.createElement(QualifiedName(nullAtom(), "parsererror"_s, xhtmlNamespaceURI), true);
 
     Attribute reportAttribute(styleAttr, "display: block; white-space: pre; border: 2px solid #c77; padding: 0 1em 0 1em; margin: 1em; background-color: #fdd; color: black"_s);
-    reportElement->parserSetAttributes(Span { &reportAttribute, 1 });
+    reportElement->parserSetAttributes(std::span(&reportAttribute, 1));
 
     auto h3 = HTMLHeadingElement::create(h3Tag, document);
     reportElement->parserAppendChild(h3);
@@ -94,7 +94,7 @@ static inline Ref<Element> createXHTMLParserErrorHeader(Document& document, Stri
 
     auto fixed = HTMLDivElement::create(document);
     Attribute fixedAttribute(styleAttr, "font-family:monospace;font-size:12px"_s);
-    fixed->parserSetAttributes(Span { &fixedAttribute, 1 });
+    fixed->parserSetAttributes(std::span(&fixedAttribute, 1));
     reportElement->parserAppendChild(fixed);
 
     fixed->parserAppendChild(Text::create(document, WTFMove(errorMessages)));
@@ -146,7 +146,7 @@ void XMLErrors::insertErrorMessageBlock()
     if (m_document.transformSourceDocument()) {
         Attribute attribute(styleAttr, "white-space: normal"_s);
         auto paragraph = HTMLParagraphElement::create(m_document);
-        paragraph->parserSetAttributes(Span { &attribute, 1 });
+        paragraph->parserSetAttributes(std::span(&attribute, 1));
         paragraph->parserAppendChild(m_document.createTextNode("This document was created as the result of an XSL transformation. The line and column numbers given are from the transformed result."_s));
         reportElement->parserAppendChild(paragraph);
     }

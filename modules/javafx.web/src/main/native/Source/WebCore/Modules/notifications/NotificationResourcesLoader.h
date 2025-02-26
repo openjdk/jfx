@@ -55,19 +55,24 @@ private:
     static bool resourceIsSupportedInPlatform(Resource);
 
     class ResourceLoader final : public ThreadableLoaderClient {
+        WTF_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(Loader);
+        WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(ResourceLoader);
     public:
         ResourceLoader(ScriptExecutionContext&, const URL&, CompletionHandler<void(ResourceLoader*, RefPtr<BitmapImage>&&)>&&);
         ~ResourceLoader();
 
         void cancel();
 
+        bool finished() const { return m_finished; }
+
     private:
         // ThreadableLoaderClient API.
-        void didReceiveResponse(ResourceLoaderIdentifier, const ResourceResponse&) final;
+        void didReceiveResponse(ScriptExecutionContextIdentifier, ResourceLoaderIdentifier, const ResourceResponse&) final;
         void didReceiveData(const SharedBuffer&) final;
-        void didFinishLoading(ResourceLoaderIdentifier, const NetworkLoadMetrics&) final;
-        void didFail(const ResourceError&) final;
+        void didFinishLoading(ScriptExecutionContextIdentifier, ResourceLoaderIdentifier, const NetworkLoadMetrics&) final;
+        void didFail(ScriptExecutionContextIdentifier, const ResourceError&) final;
 
+        bool m_finished { false };
         SharedBufferBuilder m_buffer;
         RefPtr<BitmapImage> m_image;
         RefPtr<ThreadableLoader> m_loader;
@@ -77,6 +82,7 @@ private:
     void didFinishLoadingResource(ResourceLoader*);
 
     Notification& m_notification;
+    bool m_stopped { false };
     CompletionHandler<void(RefPtr<NotificationResources>&&)> m_completionHandler;
     HashSet<std::unique_ptr<ResourceLoader>> m_loaders;
     RefPtr<NotificationResources> m_resources;

@@ -108,11 +108,6 @@ inline bool operator==(const ImageContentData& a, const ImageContentData& b)
     return &a.image() == &b.image();
 }
 
-inline bool operator!=(const ImageContentData& a, const ImageContentData& b)
-{
-    return !(a == b);
-}
-
 class TextContentData final : public ContentData {
 public:
     explicit TextContentData(const String& text)
@@ -134,11 +129,6 @@ private:
 inline bool operator==(const TextContentData& a, const TextContentData& b)
 {
     return a.text() == b.text();
-}
-
-inline bool operator!=(const TextContentData& a, const TextContentData& b)
-{
-    return !(a == b);
 }
 
 class CounterContentData final : public ContentData {
@@ -172,11 +162,6 @@ inline bool operator==(const CounterContentData& a, const CounterContentData& b)
     return a.counter() == b.counter();
 }
 
-inline bool operator!=(const CounterContentData& a, const CounterContentData& b)
-{
-    return !(a == b);
-}
-
 class QuoteContentData final : public ContentData {
 public:
     explicit QuoteContentData(QuoteType quote)
@@ -200,11 +185,6 @@ inline bool operator==(const QuoteContentData& a, const QuoteContentData& b)
     return a.quote() == b.quote();
 }
 
-inline bool operator!=(const QuoteContentData& a, const QuoteContentData& b)
-{
-    return !(a == b);
-}
-
 inline bool operator==(const ContentData& a, const ContentData& b)
 {
     if (a.type() != b.type())
@@ -212,22 +192,17 @@ inline bool operator==(const ContentData& a, const ContentData& b)
 
     switch (a.type()) {
     case ContentData::CounterDataType:
-        return downcast<CounterContentData>(a) == downcast<CounterContentData>(b);
+        return uncheckedDowncast<CounterContentData>(a) == uncheckedDowncast<CounterContentData>(b);
     case ContentData::ImageDataType:
-        return downcast<ImageContentData>(a) == downcast<ImageContentData>(b);
+        return uncheckedDowncast<ImageContentData>(a) == uncheckedDowncast<ImageContentData>(b);
     case ContentData::QuoteDataType:
-        return downcast<QuoteContentData>(a) == downcast<QuoteContentData>(b);
+        return uncheckedDowncast<QuoteContentData>(a) == uncheckedDowncast<QuoteContentData>(b);
     case ContentData::TextDataType:
-        return downcast<TextContentData>(a) == downcast<TextContentData>(b);
+        return uncheckedDowncast<TextContentData>(a) == uncheckedDowncast<TextContentData>(b);
     }
 
     ASSERT_NOT_REACHED();
     return false;
-}
-
-inline bool operator!=(const ContentData& a, const ContentData& b)
-{
-    return !(a == b);
 }
 
 } // namespace WebCore

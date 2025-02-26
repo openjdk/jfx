@@ -28,6 +28,7 @@
 
 #if ENABLE(WEB_CODECS)
 
+#include "ContextDestructionObserverInlines.h"
 #include "DOMException.h"
 #include "Event.h"
 #include "EventNames.h"
@@ -42,11 +43,12 @@
 #include "WebCodecsVideoEncoderEncodeOptions.h"
 #include "WebCodecsVideoFrame.h"
 #include <JavaScriptCore/ArrayBuffer.h>
-#include <wtf/IsoMallocInlines.h>
+#include <wtf/TZoneMallocInlines.h>
+#include <wtf/text/MakeString.h>
 
 namespace WebCore {
 
-WTF_MAKE_ISO_ALLOCATED_IMPL(WebCodecsVideoEncoder);
+WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(WebCodecsVideoEncoder);
 
 Ref<WebCodecsVideoEncoder> WebCodecsVideoEncoder::create(ScriptExecutionContext& context, Init&& init)
 {
@@ -63,14 +65,22 @@ WebCodecsVideoEncoder::WebCodecsVideoEncoder(ScriptExecutionContext& context, In
 {
 }
 
-WebCodecsVideoEncoder::~WebCodecsVideoEncoder()
+WebCodecsVideoEncoder::~WebCodecsVideoEncoder() = default;
+
+static bool isSupportedEncoderCodec(const String& codec, const Settings::Values& settings)
 {
+    return codec.startsWith("vp8"_s) || codec.startsWith("vp09.00"_s) || codec.startsWith("avc1."_s)
+#if ENABLE(WEB_RTC)
+        || (codec.startsWith("vp09.02"_s) && settings.webRTCVP9Profile2CodecEnabled)
+#endif
+        || (codec.startsWith("hev1."_s) && settings.webCodecsHEVCEnabled)
+        || (codec.startsWith("hvc1."_s) && settings.webCodecsHEVCEnabled)
+        || (codec.startsWith("av01.0"_s) && settings.webCodecsAV1Enabled);
 }
 
-static bool isValidEncoderConfig(const WebCodecsVideoEncoderConfig& config, const Settings::Values& settings)
+static bool isValidEncoderConfig(const WebCodecsVideoEncoderConfig& config)
 {
-    // FIXME: Check codec more accurately.
-    if (!config.codec.startsWith("vp8"_s) && !config.codec.startsWith("vp09."_s) && !config.codec.startsWith("avc1."_s) && !config.codec.startsWith("hev1."_s) && (!config.codec.startsWith("av01."_s) || !settings.webCodecsAV1Enabled))
+    if (StringView(config.codec).trim(isASCIIWhitespace<UChar>).isEmpty())
         return false;
 
     if (!config.width || !config.height)
@@ -81,101 +91,154 @@ static bool isValidEncoderConfig(const WebCodecsVideoEncoderConfig& config, cons
     return true;
 }
 
-static VideoEncoder::Config createVideoEncoderConfig(const WebCodecsVideoEncoderConfig& config)
+static ExceptionOr<VideoEncoder::Config> createVideoEncoderConfig(const WebCodecsVideoEncoderConfig& config)
 {
+    if (config.alpha == WebCodecsAlphaOption::Keep)
+        return Exception { ExceptionCode::NotSupportedError, "Alpha keep is not supported"_s };
+
+    VideoEncoder::ScalabilityMode scalabilityMode = VideoEncoder::ScalabilityMode::L1T1;
+    if (!config.scalabilityMode.isNull()) {
+        if (config.scalabilityMode == "L1T3"_s)
+            scalabilityMode = VideoEncoder::ScalabilityMode::L1T3;
+        else if (config.scalabilityMode == "L1T2"_s)
+            scalabilityMode = VideoEncoder::ScalabilityMode::L1T2;
+        else if (config.scalabilityMode != "L1T1"_s)
+            return Exception { ExceptionCode::TypeError, "Scalabilty mode is not supported"_s };
+    }
+
+    if (config.codec.startsWith("avc1."_s) && (!!(config.width % 2) || !!(config.height % 2)))
+        return Exception { ExceptionCode::TypeError, "H264 only supports even sized frames"_s };
+
     bool useAnnexB = config.avc && config.avc->format == AvcBitstreamFormat::Annexb;
-    return { config.width, config.height, useAnnexB, config.bitrate.value_or(0), config.framerate.value_or(0), config.latencyMode == LatencyMode::Realtime };
+    return VideoEncoder::Config { config.width, config.height, useAnnexB, config.bitrate.value_or(0), config.framerate.value_or(0), config.latencyMode == LatencyMode::Realtime, scalabilityMode };
+}
+
+bool WebCodecsVideoEncoder::updateRates(const WebCodecsVideoEncoderConfig& config)
+{
+    auto bitrate = config.bitrate.value_or(0);
+    auto framerate = config.framerate.value_or(0);
+
+    m_isMessageQueueBlocked = true;
+    bool isChangingRatesSupported = m_internalEncoder->setRates(bitrate, framerate, [this, weakThis = WeakPtr { *this }, bitrate, framerate]() mutable {
+        auto protectedThis = weakThis.get();
+        if (!protectedThis)
+            return;
+
+        if (m_state == WebCodecsCodecState::Closed || !scriptExecutionContext())
+            return;
+
+        if (bitrate)
+            m_baseConfiguration.bitrate = bitrate;
+        if (framerate)
+            m_baseConfiguration.framerate = framerate;
+        m_isMessageQueueBlocked = false;
+        processControlMessageQueue();
+    });
+    if (!isChangingRatesSupported)
+        m_isMessageQueueBlocked = false;
+    return isChangingRatesSupported;
 }
 
 ExceptionOr<void> WebCodecsVideoEncoder::configure(ScriptExecutionContext& context, WebCodecsVideoEncoderConfig&& config)
 {
-    if (!isValidEncoderConfig(config, context.settingsValues()))
-        return Exception { TypeError, "Config is invalid"_s };
+    if (!isValidEncoderConfig(config))
+        return Exception { ExceptionCode::TypeError, "Config is invalid"_s };
 
     if (m_state == WebCodecsCodecState::Closed || !scriptExecutionContext())
-        return Exception { InvalidStateError, "VideoEncoder is closed"_s };
+        return Exception { ExceptionCode::InvalidStateError, "VideoEncoder is closed"_s };
 
     m_state = WebCodecsCodecState::Configured;
     m_isKeyChunkRequired = true;
 
     if (m_internalEncoder) {
-        queueControlMessageAndProcess([this, config]() mutable {
-            m_isMessageQueueBlocked = true;
-            m_internalEncoder->flush([this, weakedThis = WeakPtr { *this }, config = WTFMove(config)]() mutable {
-                if (!weakedThis)
-                    return;
-
-                if (m_state == WebCodecsCodecState::Closed || !scriptExecutionContext())
-                    return;
-
-                m_isMessageQueueBlocked = false;
-                processControlMessageQueue();
-            });
-        });
-    }
-
-    queueControlMessageAndProcess([this, config = WTFMove(config), identifier = scriptExecutionContext()->identifier()]() mutable {
-        m_isMessageQueueBlocked = true;
-        m_baseConfiguration = config;
-
-        VideoEncoder::PostTaskCallback postTaskCallback;
-        if (isMainThread()) {
-            postTaskCallback = [](auto&& task) {
-                callOnMainThread(WTFMove(task));
-            };
-        } else {
-            postTaskCallback = [identifier](auto&& task) {
-                ScriptExecutionContext::postTaskTo(identifier, [task = WTFMove(task)](auto&) mutable {
-                    task();
-                });
-            };
-        }
-
-        VideoEncoder::create(config.codec, createVideoEncoderConfig(config), [this, weakThis = WeakPtr { *this }](auto&& result) {
-            if (!weakThis)
+        queueControlMessageAndProcess({ *this, [this, config]() mutable {
+            if (isSameConfigurationExceptBitrateAndFramerate(m_baseConfiguration, config) && updateRates(config))
                 return;
 
+            m_isMessageQueueBlocked = true;
+            m_internalEncoder->flush([weakThis = ThreadSafeWeakPtr { *this }, config = WTFMove(config)]() mutable {
+                RefPtr protectedThis = weakThis.get();
+                if (!protectedThis)
+                    return;
+
+                if (protectedThis->m_state == WebCodecsCodecState::Closed || !protectedThis->scriptExecutionContext())
+                    return;
+
+                protectedThis->m_isMessageQueueBlocked = false;
+                protectedThis->processControlMessageQueue();
+            });
+        } });
+    }
+
+    bool isSupportedCodec = isSupportedEncoderCodec(config.codec, context.settingsValues());
+    queueControlMessageAndProcess({ *this, [this, config = WTFMove(config), isSupportedCodec, identifier = scriptExecutionContext()->identifier()]() mutable {
+        if (isSupportedCodec && isSameConfigurationExceptBitrateAndFramerate(m_baseConfiguration, config) && updateRates(config))
+            return;
+
+        m_isMessageQueueBlocked = true;
+        VideoEncoder::PostTaskCallback postTaskCallback = [weakThis = ThreadSafeWeakPtr { *this }, identifier](auto&& task) {
+            ScriptExecutionContext::postTaskTo(identifier, [weakThis, task = WTFMove(task)](auto&) mutable {
+                RefPtr protectedThis = weakThis.get();
+                if (!protectedThis)
+                    return;
+                protectedThis->queueTaskKeepingObjectAlive(*protectedThis, TaskSource::MediaElement, WTFMove(task));
+                });
+            };
+
+        if (!isSupportedCodec) {
+            postTaskCallback([this] {
+                closeEncoder(Exception { ExceptionCode::NotSupportedError, "Codec is not supported"_s });
+            });
+            return;
+        }
+
+        auto encoderConfig = createVideoEncoderConfig(config);
+        if (encoderConfig.hasException()) {
+            postTaskCallback([this, message = encoderConfig.releaseException().message()]() mutable {
+                closeEncoder(Exception { ExceptionCode::NotSupportedError, WTFMove(message) });
+            });
+            return;
+        }
+
+        m_baseConfiguration = config;
+
+        VideoEncoder::create(config.codec, encoderConfig.releaseReturnValue(), [this](auto&& result) {
             if (!result.has_value()) {
-                closeEncoder(Exception { NotSupportedError, WTFMove(result.error()) });
+                closeEncoder(Exception { ExceptionCode::NotSupportedError, WTFMove(result.error()) });
                 return;
             }
             setInternalEncoder(WTFMove(result.value()));
-            m_isMessageQueueBlocked = false;
             m_hasNewActiveConfiguration = true;
+            m_isMessageQueueBlocked = false;
             processControlMessageQueue();
-        }, [this, weakThis = WeakPtr { *this }](auto&& configuration) {
-            if (!weakThis)
-                return;
-
+        }, [this](VideoEncoder::ActiveConfiguration&& configuration) {
             m_activeConfiguration = WTFMove(configuration);
             m_hasNewActiveConfiguration = true;
-        }, [this, weakThis = WeakPtr { *this }](auto&& result) {
-            if (!weakThis || m_state != WebCodecsCodecState::Configured)
+        }, [this](auto&& result) {
+            if (m_state != WebCodecsCodecState::Configured)
                 return;
 
-            RefPtr<JSC::ArrayBuffer> buffer = JSC::ArrayBuffer::create(result.data.data(), result.data.size());
+            RefPtr<JSC::ArrayBuffer> buffer = JSC::ArrayBuffer::create(result.data);
             auto chunk = WebCodecsEncodedVideoChunk::create(WebCodecsEncodedVideoChunk::Init {
                 result.isKeyFrame ? WebCodecsEncodedVideoChunkType::Key : WebCodecsEncodedVideoChunkType::Delta,
                 result.timestamp,
                 result.duration,
                 BufferSource { WTFMove(buffer) }
             });
-            m_output->handleEvent(WTFMove(chunk), createEncodedChunkMetadata());
+            m_output->handleEvent(WTFMove(chunk), createEncodedChunkMetadata(result.temporalIndex));
         }, WTFMove(postTaskCallback));
-    });
+    } });
     return { };
 }
 
-WebCodecsEncodedVideoChunkMetadata WebCodecsVideoEncoder::createEncodedChunkMetadata()
+WebCodecsEncodedVideoChunkMetadata WebCodecsVideoEncoder::createEncodedChunkMetadata(std::optional<unsigned> temporalIndex)
 {
-    WebCodecsVideoDecoderConfig decoderConfig;
-    if (!m_hasNewActiveConfiguration)
-        return { };
+    WebCodecsEncodedVideoChunkMetadata metadata;
 
+    if (m_hasNewActiveConfiguration) {
     m_hasNewActiveConfiguration = false;
-
     // FIXME: Provide more accurate decoder configuration
-    WebCodecsVideoDecoderConfig config {
+        metadata.decoderConfig = WebCodecsVideoDecoderConfig {
         !m_activeConfiguration.codec.isEmpty() ? WTFMove(m_activeConfiguration.codec) : String { m_baseConfiguration.codec },
         { },
         m_activeConfiguration.visibleWidth ? m_activeConfiguration.visibleWidth : m_baseConfiguration.width,
@@ -187,17 +250,21 @@ WebCodecsEncodedVideoChunkMetadata WebCodecsVideoEncoder::createEncodedChunkMeta
         { }
     };
 
-    RefPtr<ArrayBuffer> arrayBuffer;
     if (m_activeConfiguration.description && m_activeConfiguration.description->size()) {
         auto arrayBuffer = ArrayBuffer::tryCreateUninitialized(m_activeConfiguration.description->size(), 1);
         RELEASE_LOG_ERROR_IF(!!arrayBuffer, Media, "Cannot create array buffer for WebCodecs encoder description");
         if (arrayBuffer) {
             memcpy(static_cast<uint8_t*>(arrayBuffer->data()), m_activeConfiguration.description->data(), m_activeConfiguration.description->size());
-            config.description = WTFMove(arrayBuffer);
+                metadata.decoderConfig->description = WTFMove(arrayBuffer);
+            }
         }
+
     }
 
-    return WebCodecsEncodedVideoChunkMetadata { WTFMove(config) };
+    if (temporalIndex)
+        metadata.svc = WebCodecsSvcOutputMetadata { *temporalIndex };
+
+    return metadata;
 }
 
 ExceptionOr<void> WebCodecsVideoEncoder::encode(Ref<WebCodecsVideoFrame>&& frame, WebCodecsVideoEncoderEncodeOptions&& options)
@@ -205,79 +272,80 @@ ExceptionOr<void> WebCodecsVideoEncoder::encode(Ref<WebCodecsVideoFrame>&& frame
     auto internalFrame = frame->internalFrame();
     if (!internalFrame) {
         ASSERT(frame->isDetached());
-        return Exception { TypeError, "VideoFrame is detached"_s };
+        return Exception { ExceptionCode::TypeError, "VideoFrame is detached"_s };
     }
     ASSERT(!frame->isDetached());
 
     if (m_state != WebCodecsCodecState::Configured)
-        return Exception { InvalidStateError, "VideoEncoder is not configured"_s };
+        return Exception { ExceptionCode::InvalidStateError, "VideoEncoder is not configured"_s };
 
     ++m_encodeQueueSize;
-    queueControlMessageAndProcess([this, internalFrame = internalFrame.releaseNonNull(), timestamp = frame->timestamp(), duration = frame->duration(), options = WTFMove(options)]() mutable {
-        ++m_beingEncodedQueueSize;
+    queueControlMessageAndProcess({ *this, [this, internalFrame = internalFrame.releaseNonNull(), timestamp = frame->timestamp(), duration = frame->duration(), options = WTFMove(options)]() mutable {
         --m_encodeQueueSize;
         scheduleDequeueEvent();
-        m_internalEncoder->encode({ WTFMove(internalFrame), timestamp, duration }, options.keyFrame, [this, weakedThis = WeakPtr { *this }](auto&& result) {
-            if (!weakedThis)
-                return;
-
-            --m_beingEncodedQueueSize;
+        m_internalEncoder->encode({ WTFMove(internalFrame), timestamp, duration }, options.keyFrame, [protectedThis = Ref { *this }, pendingActivity = makePendingActivity(*this)](String&& result) {
             if (!result.isNull()) {
-                if (auto* context = scriptExecutionContext())
-                    context->addConsoleMessage(MessageSource::JS, MessageLevel::Error, makeString("VideoEncoder encode failed: ", result));
-                closeEncoder(Exception { EncodingError, WTFMove(result) });
+                if (RefPtr context = protectedThis->scriptExecutionContext())
+                    context->addConsoleMessage(MessageSource::JS, MessageLevel::Error, makeString("VideoEncoder encode failed: "_s, result));
+                protectedThis->closeEncoder(Exception { ExceptionCode::EncodingError, WTFMove(result) });
                 return;
             }
         });
-    });
+    } });
     return { };
 }
 
 void WebCodecsVideoEncoder::flush(Ref<DeferredPromise>&& promise)
 {
     if (m_state != WebCodecsCodecState::Configured) {
-        promise->reject(Exception { InvalidStateError, "VideoEncoder is not configured"_s });
+        promise->reject(Exception { ExceptionCode::InvalidStateError, "VideoEncoder is not configured"_s });
         return;
     }
 
-    m_pendingFlushPromises.append(promise.copyRef());
-    m_isFlushing = true;
-    queueControlMessageAndProcess([this, clearFlushPromiseCount = m_clearFlushPromiseCount]() mutable {
-        m_internalEncoder->flush([this, weakThis = WeakPtr { *this }, clearFlushPromiseCount] {
-            if (!weakThis || clearFlushPromiseCount != m_clearFlushPromiseCount)
+    m_pendingFlushPromises.append(WTFMove(promise));
+    queueControlMessageAndProcess({ *this, [this, clearFlushPromiseCount = m_clearFlushPromiseCount]() mutable {
+        m_internalEncoder->flush([weakThis = ThreadSafeWeakPtr { *this }, clearFlushPromiseCount, pendingActivity = makePendingActivity(*this)] {
+            RefPtr protectedThis = weakThis.get();
+            if (!protectedThis || clearFlushPromiseCount != protectedThis->m_clearFlushPromiseCount)
                 return;
 
-            m_pendingFlushPromises.takeFirst()->resolve();
-            m_isFlushing = !m_pendingFlushPromises.isEmpty();
-        });
+            protectedThis->m_pendingFlushPromises.takeFirst()->resolve();
     });
+    } });
 }
 
 ExceptionOr<void> WebCodecsVideoEncoder::reset()
 {
-    return resetEncoder(Exception { AbortError, "Reset called"_s });
+    return resetEncoder(Exception { ExceptionCode::AbortError, "Reset called"_s });
 }
 
 ExceptionOr<void> WebCodecsVideoEncoder::close()
 {
-    return closeEncoder(Exception { AbortError, "Close called"_s });
+    return closeEncoder(Exception { ExceptionCode::AbortError, "Close called"_s });
 }
 
 void WebCodecsVideoEncoder::isConfigSupported(ScriptExecutionContext& context, WebCodecsVideoEncoderConfig&& config, Ref<DeferredPromise>&& promise)
 {
-    if (!isValidEncoderConfig(config, context.settingsValues())) {
-        promise->reject(Exception { TypeError, "Config is not valid"_s });
+    if (!isValidEncoderConfig(config)) {
+        promise->reject(Exception { ExceptionCode::TypeError, "Config is not valid"_s });
         return;
     }
-    if (config.alpha == WebCodecsAlphaOption::Keep) {
-        promise->reject(Exception { NotSupportedError, "Alpha keep is not supported"_s });
+
+    if (!isSupportedEncoderCodec(config.codec, context.settingsValues())) {
+        promise->template resolve<IDLDictionary<WebCodecsVideoEncoderSupport>>(WebCodecsVideoEncoderSupport { false, WTFMove(config) });
+        return;
+    }
+
+    auto encoderConfig = createVideoEncoderConfig(config);
+    if (encoderConfig.hasException()) {
+        promise->template resolve<IDLDictionary<WebCodecsVideoEncoderSupport>>(WebCodecsVideoEncoderSupport { false, WTFMove(config) });
         return;
     }
 
     auto* promisePtr = promise.ptr();
     context.addDeferredPromise(WTFMove(promise));
 
-    VideoEncoder::create(config.codec, createVideoEncoderConfig(config), [identifier = context.identifier(), config = config.isolatedCopy(), promisePtr](auto&& result) mutable {
+    VideoEncoder::create(config.codec, encoderConfig.releaseReturnValue(), [identifier = context.identifier(), config = config.isolatedCopy(), promisePtr](auto&& result) mutable {
         ScriptExecutionContext::postTaskTo(identifier, [success = result.has_value(), config = WTFMove(config).isolatedCopy(), promisePtr](auto& context) mutable {
             if (auto promise = context.takeDeferredPromise(promisePtr))
                 promise->template resolve<IDLDictionary<WebCodecsVideoEncoderSupport>>(WebCodecsVideoEncoderSupport { success, WTFMove(config) });
@@ -296,18 +364,16 @@ ExceptionOr<void> WebCodecsVideoEncoder::closeEncoder(Exception&& exception)
         return result;
     m_state = WebCodecsCodecState::Closed;
     m_internalEncoder = nullptr;
-    if (exception.code() != AbortError) {
-        queueTaskKeepingObjectAlive(*this, TaskSource::MediaElement, [this, exception = WTFMove(exception)]() mutable {
+    if (exception.code() != ExceptionCode::AbortError)
             m_error->handleEvent(DOMException::create(WTFMove(exception)));
-        });
-    }
+
     return { };
 }
 
 ExceptionOr<void> WebCodecsVideoEncoder::resetEncoder(const Exception& exception)
 {
     if (m_state == WebCodecsCodecState::Closed)
-        return Exception { InvalidStateError, "VideoEncoder is closed"_s };
+        return Exception { ExceptionCode::InvalidStateError, "VideoEncoder is closed"_s };
 
     m_state = WebCodecsCodecState::Unconfigured;
     if (m_internalEncoder)
@@ -316,9 +382,6 @@ ExceptionOr<void> WebCodecsVideoEncoder::resetEncoder(const Exception& exception
     if (m_encodeQueueSize) {
         m_encodeQueueSize = 0;
         scheduleDequeueEvent();
-        queueTaskKeepingObjectAlive(*this, TaskSource::MediaElement, [this, exception = Exception { exception }]() mutable {
-            m_error->handleEvent(DOMException::create(WTFMove(exception)));
-        });
     }
     ++m_clearFlushPromiseCount;
     while (!m_pendingFlushPromises.isEmpty())
@@ -344,7 +407,7 @@ void WebCodecsVideoEncoder::setInternalEncoder(UniqueRef<VideoEncoder>&& interna
     m_internalEncoder = internalEncoder.moveToUniquePtr();
 }
 
-void WebCodecsVideoEncoder::queueControlMessageAndProcess(Function<void()>&& message)
+void WebCodecsVideoEncoder::queueControlMessageAndProcess(WebCodecsControlMessage<WebCodecsVideoEncoder>&& message)
 {
     if (m_isMessageQueueBlocked) {
         m_controlMessageQueue.append(WTFMove(message));
@@ -375,14 +438,9 @@ void WebCodecsVideoEncoder::stop()
     // FIXME: Implement.
 }
 
-const char* WebCodecsVideoEncoder::activeDOMObjectName() const
-{
-    return "VideoEncoder";
-}
-
 bool WebCodecsVideoEncoder::virtualHasPendingActivity() const
 {
-    return m_state == WebCodecsCodecState::Configured && (m_encodeQueueSize || m_beingEncodedQueueSize || m_isFlushing);
+    return m_state == WebCodecsCodecState::Configured && (m_encodeQueueSize || m_isMessageQueueBlocked);
 }
 
 } // namespace WebCore

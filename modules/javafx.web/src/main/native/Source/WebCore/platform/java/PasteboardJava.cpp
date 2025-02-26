@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2023, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -32,6 +32,7 @@
 #include "Editor.h"
 #include "Frame.h"
 #include "FrameView.h"
+#include "LocalFrame.h"
 #include "markup.h"
 #include "Pasteboard.h"
 #include "RenderImage.h"
@@ -178,9 +179,9 @@ void writeImageToDataObject(RefPtr<DataObjectJava> dataObject, const Element& el
 String imageToMarkup(const String& url, const Element& element)
 {
     StringBuilder markup;
-    markup.append("<img src=\"");
+    markup.append(WTF::String::fromUTF8("<img src=\""));
     markup.append(url);
-    markup.append("\"");
+    markup.append(WTF::String::fromUTF8("\""));
     // Copy over attributes.  If we are dragging an image, we expect things like
     // the id to be copied as well.
     NamedNodeMap* attrs = &element.attributes();
@@ -189,16 +190,16 @@ String imageToMarkup(const String& url, const Element& element)
         RefPtr<Attr> attr(static_cast<Attr*>(attrs->item(i).get()));
         if (attr->name() == "src"_s)
             continue;
-        markup.append(" ");
+        markup.append(WTF::String::fromUTF8(" "));
         markup.append(attr->name());
-        markup.append("=\"");
+        markup.append(WTF::String::fromUTF8("=\""));
         String escapedAttr = attr->value();
         escapedAttr = makeStringByReplacingAll(escapedAttr,"\""_s, "&quot;"_s);
         markup.append(escapedAttr);
-        markup.append("\"");
+        markup.append(WTF::String::fromUTF8("\""));
     }
 
-    markup.append("/>");
+    markup.append(WTF::String::fromUTF8("/>"));
     return markup.toString();
 }
 
@@ -260,7 +261,7 @@ void Pasteboard::setDragImage(DragImage, const IntPoint&)
 void Pasteboard::writeSelection(
     const SimpleRange& selectedRange,
     bool canSmartCopyOrDelete,
-    Frame& frame,
+    LocalFrame& frame,
     ShouldSerializeSelectedTextForDataTransfer shouldSerializeSelectedTextForDataTransfer)
 {
     String markup = serializePreservingVisualAppearance(selectedRange, nullptr, AnnotateForInterchange::Yes, ConvertBlocksToInlines::No, ResolveURLs::YesExcludingURLsForPrivacy);
@@ -330,7 +331,7 @@ void Pasteboard::writeImage(Element& element, const URL& url, const String& titl
 
     AtomString imageURL = element.getAttribute(HTMLNames::srcAttr);
     if (!imageURL.isEmpty()) {
-        String fullURL = element.document().completeURL(stripLeadingAndTrailingHTMLSpaces(imageURL)).string();
+        String fullURL = element.document().completeURL(imageURL).string();  //REVISIT
         if (!fullURL.isEmpty()) {
             m_dataObject->setHTML(
                 imageToMarkup(fullURL, element),
@@ -474,7 +475,7 @@ bool Pasteboard::canSmartReplace()
 }
 
 RefPtr<DocumentFragment> Pasteboard::documentFragment(
-    Frame& frame, const SimpleRange& range, bool allowPlainText, bool &chosePlainText)
+    LocalFrame& frame, const SimpleRange& range, bool allowPlainText, bool &chosePlainText)
 {
     chosePlainText = false;
 

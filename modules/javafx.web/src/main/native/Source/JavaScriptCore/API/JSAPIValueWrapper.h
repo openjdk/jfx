@@ -43,32 +43,26 @@ public:
 
     JSValue value() const { return m_value.get(); }
 
-    static Structure* createStructure(VM& vm, JSGlobalObject* globalObject, JSValue prototype)
-    {
-        return Structure::create(vm, globalObject, prototype, TypeInfo(APIValueWrapperType, StructureFlags), info());
-    }
+    static Structure* createStructure(VM&, JSGlobalObject*, JSValue);
 
     DECLARE_EXPORT_INFO;
 
     static JSAPIValueWrapper* create(VM& vm, JSValue value)
     {
-        JSAPIValueWrapper* wrapper = new (NotNull, allocateCell<JSAPIValueWrapper>(vm)) JSAPIValueWrapper(vm);
-        wrapper->finishCreation(vm, value);
+        JSAPIValueWrapper* wrapper = new (NotNull, allocateCell<JSAPIValueWrapper>(vm)) JSAPIValueWrapper(vm, value);
+        wrapper->finishCreation(vm);
+        ASSERT(!value.isCell());
         return wrapper;
     }
 
 private:
-    void finishCreation(VM& vm, JSValue value)
+    JSAPIValueWrapper(VM& vm, JSValue value)
+        : JSCell(vm, vm.apiWrapperStructure.get())
+        , m_value(value, WriteBarrierEarlyInit)
     {
-        Base::finishCreation(vm);
-        m_value.set(vm, this, value);
-        ASSERT(!value.isCell());
     }
 
-    JSAPIValueWrapper(VM& vm)
-        : JSCell(vm, vm.apiWrapperStructure.get())
-    {
-    }
+    DECLARE_DEFAULT_FINISH_CREATION;
 
     WriteBarrier<Unknown> m_value;
 };

@@ -22,9 +22,10 @@
 
 #if USE(COORDINATED_GRAPHICS)
 
+#include "BitmapTexture.h"
 #include "GraphicsLayer.h"
 #include "TextureMapper.h"
-#include "TextureMapperGL.h"
+#include <wtf/SystemTracing.h>
 
 namespace WebCore {
 
@@ -36,26 +37,59 @@ void CoordinatedBackingStoreTile::addUpdate(Update&& update)
 void CoordinatedBackingStoreTile::swapBuffers(TextureMapper& textureMapper)
 {
     auto updates = WTFMove(m_updates);
-    for (auto& update : updates) {
+    auto updatesCount = updates.size();
+    if (!updatesCount)
+        return;
+    WTFBeginSignpost(this, CoordinatedSwapBuffers, "%lu updates", updatesCount);
+    for (unsigned updateIndex = 0; updateIndex < updates.size(); ++updateIndex) {
+        auto& update = updates[updateIndex];
         if (!update.buffer)
             continue;
 
+        WTFBeginSignpost(this, CoordinatedSwapBuffer, "%u/%lu, rect %ix%i+%i+%i", updateIndex + 1, updatesCount, update.tileRect.x(), update.tileRect.y(), update.tileRect.width(), update.tileRect.height());
         ASSERT(textureMapper.maxTextureSize().width() >= update.tileRect.size().width());
         ASSERT(textureMapper.maxTextureSize().height() >= update.tileRect.size().height());
 
         FloatRect unscaledTileRect(update.tileRect);
         unscaledTileRect.scale(1. / m_scale);
 
+        OptionSet<BitmapTexture::Flags> flags;
+        if (update.buffer->supportsAlpha())
+            flags.add(BitmapTexture::Flags::SupportsAlpha);
+
+        WTFBeginSignpost(this, AcquireTexture);
         if (!m_texture || unscaledTileRect != rect()) {
             setRect(unscaledTileRect);
-            m_texture = textureMapper.acquireTextureFromPool(update.tileRect.size(), update.buffer->supportsAlpha() ? BitmapTexture::SupportsAlpha : BitmapTexture::NoFlag);
+            m_texture = textureMapper.acquireTextureFromPool(update.tileRect.size(), flags);
         } else if (update.buffer->supportsAlpha() == m_texture->isOpaque())
-            m_texture->reset(update.tileRect.size(), update.buffer->supportsAlpha());
+            m_texture->reset(update.tileRect.size(), flags);
+        WTFEndSignpost(this, AcquireTexture);
 
+        WTFBeginSignpost(this, WaitPaintingCompletion);
         update.buffer->waitUntilPaintingComplete();
-        m_texture->updateContents(update.buffer->data(), update.sourceRect, update.bufferOffset, update.buffer->stride());
+        WTFEndSignpost(this, WaitPaintingCompletion);
+
+#if USE(SKIA)
+        if (update.buffer->isBackedByOpenGL()) {
+            WTFBeginSignpost(this, CopyTextureGPUToGPU);
+            auto& buffer = static_cast<Nicosia::AcceleratedBuffer&>(*update.buffer);
+            m_texture->copyFromExternalTexture(buffer.textureID(), update.sourceRect, toIntSize(update.bufferOffset));
+            update.buffer = nullptr;
+            WTFEndSignpost(this, CopyTextureGPUToGPU);
+            WTFEndSignpost(this, CoordinatedSwapBuffer);
+            continue;
+        }
+#endif
+
+        WTFBeginSignpost(this, CopyTextureCPUToGPU);
+        ASSERT(!update.buffer->isBackedByOpenGL());
+        auto& buffer = static_cast<Nicosia::UnacceleratedBuffer&>(*update.buffer);
+        m_texture->updateContents(buffer.data(), update.sourceRect, update.bufferOffset, buffer.stride());
         update.buffer = nullptr;
+        WTFEndSignpost(this, CopyTextureCPUToGPU);
+        WTFEndSignpost(this, CoordinatedSwapBuffer);
     }
+    WTFEndSignpost(this, CoordinatedSwapBuffers);
 }
 
 void CoordinatedBackingStore::createTile(uint32_t id, float scale)
@@ -91,7 +125,7 @@ void CoordinatedBackingStore::setSize(const FloatSize& size)
 void CoordinatedBackingStore::paintTilesToTextureMapper(Vector<TextureMapperTile*>& tiles, TextureMapper& textureMapper, const TransformationMatrix& transform, float opacity, const FloatRect& rect)
 {
     for (auto& tile : tiles)
-        tile->paint(textureMapper, transform, opacity, calculateExposedTileEdges(rect, tile->rect()));
+        tile->paint(textureMapper, transform, opacity, allTileEdgesExposed(rect, tile->rect()));
 }
 
 TransformationMatrix CoordinatedBackingStore::adjustedTransformForRect(const FloatRect& targetRect)

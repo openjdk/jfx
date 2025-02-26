@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2019, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -26,7 +26,7 @@
 package test.robot.javafx.scene.dialog;
 
 import java.util.concurrent.CountDownLatch;
-
+import java.util.concurrent.TimeUnit;
 import javafx.application.Application;
 import javafx.application.Platform;
 import javafx.scene.Scene;
@@ -38,15 +38,15 @@ import javafx.scene.robot.Robot;
 import javafx.stage.Stage;
 import javafx.stage.StageStyle;
 import javafx.stage.WindowEvent;
-
-import org.junit.AfterClass;
-import org.junit.Assert;
-import org.junit.BeforeClass;
-import org.junit.Test;
-
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 import test.util.Util;
 
 //see JDK-8193502
+@Timeout(value=15000, unit=TimeUnit.MILLISECONDS)
 public class DialogWithOwnerSizingTest {
     static Robot robot;
     static Button button;
@@ -58,15 +58,15 @@ public class DialogWithOwnerSizingTest {
     static CountDownLatch dialogShownLatch;
     static CountDownLatch dialogHideLatch;
 
-    @Test(timeout = 15000)
+    @Test
     public void dialogWithOwnerSizingTest() throws Exception {
         Thread.sleep(500);
         clickButton();
         Thread.sleep(500);
 
         try {
-            Assert.assertEquals(dialog2.getDialogPane().getWidth(), dialog.getDialogPane().getWidth(), 2.0);
-            Assert.assertEquals(dialog2.getDialogPane().getHeight(), dialog.getDialogPane().getHeight(), 2.0);
+            Assertions.assertEquals(dialog2.getDialogPane().getWidth(), dialog.getDialogPane().getWidth(), 2.0);
+            Assertions.assertEquals(dialog2.getDialogPane().getHeight(), dialog.getDialogPane().getHeight(), 2.0);
         } finally {
             hide();
         }
@@ -88,14 +88,14 @@ public class DialogWithOwnerSizingTest {
         Util.waitForLatch(dialogHideLatch, 10, "Failed to hide Dialog");
     }
 
-    @BeforeClass
+    @BeforeAll
     public static void initFX() throws Exception {
         Util.launch(startupLatch, SizingTestApp.class);
     }
 
-    @AfterClass
+    @AfterAll
     public static void exit() {
-        Util.shutdown(stage);
+        Util.shutdown();
     }
 
     private void mouseClick(double x, double y) {

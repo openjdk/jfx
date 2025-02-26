@@ -23,27 +23,34 @@
 #include "config.h"
 #include "RenderSVGTransformableContainer.h"
 
-#if ENABLE(LAYER_BASED_SVG_ENGINE)
 #include "RenderSVGModelObjectInlines.h"
 #include "SVGContainerLayout.h"
 #include "SVGElementTypeHelpers.h"
 #include "SVGGElement.h"
 #include "SVGGraphicsElement.h"
 #include "SVGUseElement.h"
-#include <wtf/IsoMallocInlines.h>
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
-WTF_MAKE_ISO_ALLOCATED_IMPL(RenderSVGTransformableContainer);
+WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(RenderSVGTransformableContainer);
 
 RenderSVGTransformableContainer::RenderSVGTransformableContainer(SVGGraphicsElement& element, RenderStyle&& style)
-    : RenderSVGContainer(element, WTFMove(style))
+    : RenderSVGContainer(Type::SVGTransformableContainer, element, WTFMove(style))
 {
+    ASSERT(isRenderSVGTransformableContainer());
 }
+
+RenderSVGTransformableContainer::~RenderSVGTransformableContainer() = default;
 
 SVGGraphicsElement& RenderSVGTransformableContainer::graphicsElement() const
 {
     return downcast<SVGGraphicsElement>(RenderSVGContainer::element());
+}
+
+Ref<SVGGraphicsElement> RenderSVGTransformableContainer::protectedGraphicsElement() const
+{
+    return graphicsElement();
 }
 
 inline SVGUseElement* associatedUseElement(SVGGraphicsElement& element)
@@ -51,13 +58,12 @@ inline SVGUseElement* associatedUseElement(SVGGraphicsElement& element)
     // If we're either the renderer for a <use> element, or for any <g> element inside the shadow
     // tree, that was created during the use/symbol/svg expansion in SVGUseElement. These containers
     // need to respect the translations induced by their corresponding use elements x/y attributes.
-    if (is<SVGUseElement>(element))
-        return &downcast<SVGUseElement>(element);
+    if (auto* useElement = dynamicDowncast<SVGUseElement>(element))
+        return useElement;
 
     if (element.isInShadowTree() && is<SVGGElement>(element)) {
-        SVGElement* correspondingElement = element.correspondingElement();
-        if (is<SVGUseElement>(correspondingElement))
-            return downcast<SVGUseElement>(correspondingElement);
+        if (auto* useElement = dynamicDowncast<SVGUseElement>(element.correspondingElement()))
+            return useElement;
     }
 
     return nullptr;
@@ -65,8 +71,9 @@ inline SVGUseElement* associatedUseElement(SVGGraphicsElement& element)
 
 FloatSize RenderSVGTransformableContainer::additionalContainerTranslation() const
 {
-    if (auto* useElement = associatedUseElement(graphicsElement())) {
-        SVGLengthContext lengthContext(useElement);
+    Ref graphicsElement = this->graphicsElement();
+    if (RefPtr useElement = associatedUseElement(graphicsElement)) {
+        SVGLengthContext lengthContext(graphicsElement.ptr());
         return { useElement->x().value(lengthContext), useElement->y().value(lengthContext) };
     }
 
@@ -75,7 +82,8 @@ FloatSize RenderSVGTransformableContainer::additionalContainerTranslation() cons
 
 bool RenderSVGTransformableContainer::needsHasSVGTransformFlags() const
 {
-    return graphicsElement().hasTransformRelatedAttributes() || associatedUseElement(graphicsElement());
+    Ref graphicsElement = this->graphicsElement();
+    return graphicsElement->hasTransformRelatedAttributes() || associatedUseElement(graphicsElement);
 }
 
 void RenderSVGTransformableContainer::updateLayerTransform()
@@ -90,9 +98,7 @@ void RenderSVGTransformableContainer::updateLayerTransform()
 void RenderSVGTransformableContainer::applyTransform(TransformationMatrix& transform, const RenderStyle& style, const FloatRect& boundingBox, OptionSet<RenderStyle::TransformOperationOption> options) const
 {
     auto postTransform = m_supplementalLayerTransform.isIdentity() ? std::nullopt : std::make_optional(m_supplementalLayerTransform);
-    applySVGTransform(transform, graphicsElement(), style, boundingBox, std::nullopt, postTransform, options);
+    applySVGTransform(transform, protectedGraphicsElement(), style, boundingBox, std::nullopt, postTransform, options);
 }
 
 }
-
-#endif // ENABLE(LAYER_BASED_SVG_ENGINE)

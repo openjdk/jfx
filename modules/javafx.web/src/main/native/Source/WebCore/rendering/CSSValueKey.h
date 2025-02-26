@@ -30,47 +30,14 @@
 namespace WebCore {
 
 struct CSSValueKey {
-
     unsigned hash() const;
 
-    template<class Encoder> void encode(Encoder&) const;
-    template<class Decoder> static std::optional<CSSValueKey> decode(Decoder&);
+    friend bool operator==(const CSSValueKey&, const CSSValueKey&) = default;
 
     unsigned cssValueID;
     bool useDarkAppearance;
     bool useElevatedUserInterfaceLevel;
 };
-
-inline bool operator==(const CSSValueKey& a, const CSSValueKey& b)
-{
-    return a.cssValueID == b.cssValueID && a.useDarkAppearance == b.useDarkAppearance && a.useElevatedUserInterfaceLevel == b.useElevatedUserInterfaceLevel;
-}
-
-template<class Encoder>
-void CSSValueKey::encode(Encoder& encoder) const
-{
-    encoder << cssValueID;
-    encoder << useDarkAppearance;
-    encoder << useElevatedUserInterfaceLevel;
-}
-
-template<class Decoder>
-std::optional<CSSValueKey> CSSValueKey::decode(Decoder& decoder)
-{
-    std::optional<unsigned> cssValueID;
-    decoder >> cssValueID;
-    if (!cssValueID)
-        return std::nullopt;
-    std::optional<bool> useDarkAppearance;
-    decoder >> useDarkAppearance;
-    if (!useDarkAppearance)
-        return std::nullopt;
-    std::optional<bool> useElevatedUserInterfaceLevel;
-    decoder >> useElevatedUserInterfaceLevel;
-    if (!useElevatedUserInterfaceLevel)
-        return std::nullopt;
-    return { { WTFMove(*cssValueID), WTFMove(*useDarkAppearance), WTFMove(*useElevatedUserInterfaceLevel) } };
-}
 
 inline unsigned CSSValueKey::hash() const
 {

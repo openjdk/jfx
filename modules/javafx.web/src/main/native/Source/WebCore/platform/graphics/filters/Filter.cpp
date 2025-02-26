@@ -34,8 +34,13 @@
 
 namespace WebCore {
 
-Filter::Filter(Filter::Type filterType, const FloatSize& filterScale, const FloatRect& filterRegion)
-    : FilterFunction(filterType)
+Filter::Filter(Filter::Type filterType, std::optional<RenderingResourceIdentifier> renderingResourceIdentifier)
+    : FilterFunction(filterType, renderingResourceIdentifier)
+{
+}
+
+Filter::Filter(Filter::Type filterType, const FloatSize& filterScale, const FloatRect& filterRegion, std::optional<RenderingResourceIdentifier> renderingResourceIdentifier)
+    : FilterFunction(filterType, renderingResourceIdentifier)
     , m_filterScale(filterScale)
     , m_filterRegion(filterRegion)
 {
@@ -116,10 +121,10 @@ RefPtr<FilterImage> Filter::apply(ImageBuffer* sourceImage, const FloatRect& sou
     return result;
 }
 
-FilterStyleVector Filter::createFilterStyles(const FloatRect& sourceImageRect) const
+FilterStyleVector Filter::createFilterStyles(GraphicsContext& context, const FloatRect& sourceImageRect) const
 {
     auto input = FilterStyle { std::nullopt, m_filterRegion, sourceImageRect };
-    auto result = createFilterStyles(input);
+    auto result = createFilterStyles(context, input);
     if (result.isEmpty())
         return { };
 

@@ -96,7 +96,7 @@ private:
     String m_settings;
 };
 
-class WebVTTParser final {
+class WEBCORE_EXPORT WebVTTParser final {
     WTF_MAKE_FAST_ALLOCATED;
 public:
     enum ParseState {
@@ -111,6 +111,7 @@ public:
         Finished
     };
 
+    WebVTTParser() = delete;
     WebVTTParser(WebVTTParserClient&, Document&);
 
     static inline bool isRecognizedTag(const AtomString& tagName)
@@ -122,20 +123,6 @@ public:
             || tagName == rtTag;
     }
 
-    static inline bool isASpace(UChar c)
-    {
-        // WebVTT space characters are U+0020 SPACE, U+0009 CHARACTER
-        // TABULATION (tab), U+000A LINE FEED (LF), U+000C FORM FEED (FF), and
-        // U+000D CARRIAGE RETURN (CR).
-        return c == ' ' || c == '\t' || c == '\n' || c == '\f' || c == '\r';
-    }
-
-    static inline bool isValidSettingDelimiter(UChar c)
-    {
-        // ... a WebVTT cue consists of zero or more of the following components, in any order, separated from each other by one or more
-        // U+0020 SPACE characters or U+0009 CHARACTER TABULATION (tab) characters.
-        return c == ' ' || c == '\t';
-    }
     static bool collectTimeStamp(const String&, MediaTime&);
 
     // Useful functions for parsing percentage settings.
@@ -143,7 +130,7 @@ public:
     static bool parseFloatPercentageValuePair(VTTScanner& valueScanner, char, FloatPoint&);
 
     // Input data to the parser to parse.
-    void parseBytes(const uint8_t*, unsigned);
+    void parseBytes(std::span<const uint8_t>);
     void parseFileHeader(String&&);
     void parseCueData(const ISOWebVTTCue&);
     void flush();

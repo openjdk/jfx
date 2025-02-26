@@ -35,6 +35,7 @@
 #include "YarrInterpreter.h"
 #include <wtf/BumpPointerAllocator.h>
 #include <wtf/StdLibExtras.h>
+#include <wtf/text/MakeString.h>
 #include <wtf/text/StringBuilder.h>
 #include <wtf/text/TextPosition.h>
 
@@ -143,7 +144,7 @@ RegularExpression createRegularExpressionForSearchString(const String& searchStr
         pattern = escapeStringForRegularExpressionSource(searchString);
         break;
     }
-    return RegularExpression(pattern, caseSensitive ? TextCaseSensitive : TextCaseInsensitive);
+    return caseSensitive ? RegularExpression(pattern) : RegularExpression(pattern, { Flags::IgnoreCase });
 }
 
 int countRegularExpressionMatches(const RegularExpression& regex, const String& content)

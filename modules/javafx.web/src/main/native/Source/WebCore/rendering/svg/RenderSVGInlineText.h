@@ -31,19 +31,26 @@ namespace WebCore {
 class SVGInlineTextBox;
 
 class RenderSVGInlineText final : public RenderText {
-    WTF_MAKE_ISO_ALLOCATED(RenderSVGInlineText);
+    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(RenderSVGInlineText);
+    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(RenderSVGInlineText);
 public:
     RenderSVGInlineText(Text&, const String&);
+    virtual ~RenderSVGInlineText();
 
     Text& textNode() const { return downcast<Text>(nodeForNonAnonymous()); }
 
     bool characterStartsNewTextChunk(int position) const;
     SVGTextLayoutAttributes* layoutAttributes() { return &m_layoutAttributes; }
 
+    // computeScalingFactor() returns the font-size scaling factor, ignoring the text-rendering mode.
+    // scalingFactor() takes it into account, and thus returns 1 whenever text-rendering is set to 'geometricPrecision'.
+    // Therefore if you need access to the vanilla scaling factor, use this method directly (e.g. for non-scaling-stroke).
+    static float computeScalingFactorForRenderer(const RenderObject&);
+
     float scalingFactor() const { return m_scalingFactor; }
     const FontCascade& scaledFont() const { return m_scaledFont; }
     void updateScaledFont();
-    static void computeNewScaledFontForStyle(const RenderObject&, const RenderStyle&, float& scalingFactor, FontCascade& scaledFont);
+    static bool computeNewScaledFontForStyle(const RenderObject&, const RenderStyle&, float& scalingFactor, FontCascade& scaledFont);
 
     // Preserves floating point precision for the use in DRT. It knows how to round and does a better job than enclosingIntRect.
     FloatRect floatLinesBoundingBox() const;
@@ -59,9 +66,7 @@ private:
 
     FloatRect objectBoundingBox() const override { return floatLinesBoundingBox(); }
 
-    bool isSVGInlineText() const override { return true; }
-
-    VisiblePosition positionForPoint(const LayoutPoint&, const RenderFragmentContainer*) override;
+    VisiblePosition positionForPoint(const LayoutPoint&, HitTestSource, const RenderFragmentContainer*) override;
     IntRect linesBoundingBox() const override;
     std::unique_ptr<LegacyInlineTextBox> createTextBox() override;
 
@@ -72,4 +77,4 @@ private:
 
 } // namespace WebCore
 
-SPECIALIZE_TYPE_TRAITS_RENDER_OBJECT(RenderSVGInlineText, isSVGInlineText())
+SPECIALIZE_TYPE_TRAITS_RENDER_OBJECT(RenderSVGInlineText, isRenderSVGInlineText())

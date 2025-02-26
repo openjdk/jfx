@@ -33,9 +33,9 @@
 namespace WebCore {
 
 class InbandTextTrack : public TextTrack, private InbandTextTrackPrivateClient {
-    WTF_MAKE_ISO_ALLOCATED(InbandTextTrack);
+    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(InbandTextTrack);
 public:
-    static Ref<InbandTextTrack> create(Document&, InbandTextTrackPrivate&);
+    static Ref<InbandTextTrack> create(ScriptExecutionContext&, InbandTextTrackPrivate&);
     virtual ~InbandTextTrack();
 
     bool isClosedCaptions() const override;
@@ -55,21 +55,23 @@ public:
 #endif
 
 protected:
-    InbandTextTrack(Document&, InbandTextTrackPrivate&);
+    InbandTextTrack(ScriptExecutionContext&, InbandTextTrackPrivate&);
 
     void setModeInternal(Mode);
     void updateKindFromPrivate();
 
     Ref<InbandTextTrackPrivate> m_private;
 
+    MediaTime startTimeVariance() const override;
+
 private:
     bool isInband() const final { return true; }
-    void idChanged(const AtomString&) override;
+    void idChanged(TrackID) override;
     void labelChanged(const AtomString&) override;
     void languageChanged(const AtomString&) override;
     void willRemove() override;
 
-    void addDataCue(const MediaTime&, const MediaTime&, const void*, unsigned) override { ASSERT_NOT_REACHED(); }
+    void addDataCue(const MediaTime&, const MediaTime&, std::span<const uint8_t>) override { ASSERT_NOT_REACHED(); }
 
 #if ENABLE(DATACUE_VALUE)
     void addDataCue(const MediaTime&, const MediaTime&, Ref<SerializedPlatformDataCue>&&, const String&) override { ASSERT_NOT_REACHED(); }
@@ -82,10 +84,8 @@ private:
     void removeGenericCue(InbandGenericCue&) override { ASSERT_NOT_REACHED(); }
 
     void parseWebVTTFileHeader(String&&) override { ASSERT_NOT_REACHED(); }
-    void parseWebVTTCueData(const uint8_t*, unsigned) override { ASSERT_NOT_REACHED(); }
+    void parseWebVTTCueData(std::span<const uint8_t>) override { ASSERT_NOT_REACHED(); }
     void parseWebVTTCueData(ISOWebVTTCue&&) override { ASSERT_NOT_REACHED(); }
-
-    MediaTime startTimeVariance() const override;
 };
 
 } // namespace WebCore

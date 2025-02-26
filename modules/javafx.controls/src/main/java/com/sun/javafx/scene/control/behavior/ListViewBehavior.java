@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -24,8 +24,12 @@
  */
 package com.sun.javafx.scene.control.behavior;
 
-import com.sun.javafx.PlatformUtil;
-import com.sun.javafx.scene.control.skin.Utils;
+import static javafx.scene.input.KeyCode.*;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.function.Consumer;
+import java.util.function.Predicate;
+import java.util.function.Supplier;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
 import javafx.beans.value.WeakChangeListener;
@@ -38,26 +42,22 @@ import javafx.scene.control.FocusModel;
 import javafx.scene.control.ListView;
 import javafx.scene.control.MultipleSelectionModel;
 import javafx.scene.control.SelectionMode;
-import com.sun.javafx.scene.control.inputmap.InputMap;
-import com.sun.javafx.scene.control.inputmap.KeyBinding;
 import javafx.scene.input.KeyEvent;
 import javafx.scene.input.MouseEvent;
 import javafx.util.Callback;
-
-import java.util.ArrayList;
-import java.util.List;
-import java.util.function.Predicate;
-import java.util.function.Supplier;
-
-import static com.sun.javafx.scene.control.inputmap.InputMap.*;
-import static javafx.scene.input.KeyCode.*;
+import com.sun.javafx.PlatformUtil;
+import com.sun.javafx.scene.control.inputmap.InputMap;
+import com.sun.javafx.scene.control.inputmap.InputMap.KeyMapping;
+import com.sun.javafx.scene.control.inputmap.InputMap.MouseMapping;
+import com.sun.javafx.scene.control.inputmap.KeyBinding;
+import com.sun.javafx.scene.control.skin.Utils;
 
 public class ListViewBehavior<T> extends BehaviorBase<ListView<T>> {
     private final InputMap<ListView<T>> listViewInputMap;
 
     private final EventHandler<KeyEvent> keyEventListener = e -> {
         if (!e.isConsumed()) {
-            // RT-12751: we want to keep an eye on the user holding down the shift key,
+            // JDK-8114799: we want to keep an eye on the user holding down the shift key,
             // so that we know when they enter/leave multiple selection mode. This
             // changes what happens when certain key combinations are pressed.
             isShiftDown = e.getEventType() == KeyEvent.KEY_PRESSED && e.isShiftDown();
@@ -114,6 +114,11 @@ public class ListViewBehavior<T> extends BehaviorBase<ListView<T>> {
             new KeyMapping(new KeyBinding(PAGE_DOWN).shortcut(), e -> focusPageDown()),
 
             new KeyMapping(new KeyBinding(BACK_SLASH).shortcut(), e -> clearSelection()),
+
+            new KeyMapping(new KeyBinding(RIGHT).shortcut().alt(), e -> horizontalUnitScroll(true)),
+            new KeyMapping(new KeyBinding(LEFT).shortcut().alt(), e -> horizontalUnitScroll(false)),
+            new KeyMapping(new KeyBinding(UP).shortcut().alt(), e -> verticalUnitScroll(false)),
+            new KeyMapping(new KeyBinding(DOWN).shortcut().alt(), e -> verticalUnitScroll(true)),
 
             new MouseMapping(MouseEvent.MOUSE_PRESSED, this::mousePressed)
         );
@@ -193,7 +198,7 @@ public class ListViewBehavior<T> extends BehaviorBase<ListView<T>> {
             control.getItems().addListener(weakItemsListListener);
         }
 
-        // Fix for RT-16565
+        // Fix for JDK-8128723
         control.selectionModelProperty().addListener(weakSelectionModelListener);
         if (control.getSelectionModel() != null) {
             control.getSelectionModel().getSelectedIndices().addListener(weakSelectedIndicesListener);
@@ -231,6 +236,18 @@ public class ListViewBehavior<T> extends BehaviorBase<ListView<T>> {
 
         if (tlFocus != null) tlFocus.dispose();
         control.removeEventFilter(KeyEvent.ANY, keyEventListener);
+
+        onScrollPageUp = null;
+        onScrollPageDown = null;
+        onFocusPreviousRow = null;
+        onFocusNextRow = null;
+        onSelectPreviousRow = null;
+        onSelectNextRow = null;
+        onMoveToFirstCell = null;
+        onMoveToLastCell = null;
+        onHorizontalUnitScroll = null;
+        onVerticalUnitScroll = null;
+
         super.dispose();
     }
 
@@ -641,7 +658,7 @@ public class ListViewBehavior<T> extends BehaviorBase<ListView<T>> {
 
         int leadSelectedIndex = onScrollPageUp.call(false);
 
-        // fix for RT-34407
+        // fix for JDK-8097503
         int adjust = leadIndex < leadSelectedIndex ? 1 : -1;
 
         MultipleSelectionModel<T> sm = getNode().getSelectionModel();
@@ -669,7 +686,7 @@ public class ListViewBehavior<T> extends BehaviorBase<ListView<T>> {
 
         int leadSelectedIndex = onScrollPageDown.call(false);
 
-        // fix for RT-34407
+        // fix for JDK-8097503
         int adjust = leadIndex < leadSelectedIndex ? 1 : -1;
 
         MultipleSelectionModel<T> sm = getNode().getSelectionModel();
@@ -701,7 +718,7 @@ public class ListViewBehavior<T> extends BehaviorBase<ListView<T>> {
         sm.clearSelection();
         sm.selectRange(leadIndex, -1);
 
-        // RT-18413: Focus must go to first row
+        // JDK-8115478: Focus must go to first row
         fm.focus(0);
 
         if (isShiftDown) {
@@ -741,7 +758,7 @@ public class ListViewBehavior<T> extends BehaviorBase<ListView<T>> {
     }
 
     private void selectAllToFocus(boolean setAnchorToFocusIndex) {
-        // Fix for RT-31241
+        // Fix for JDK-8123409
         final ListView<T> listView = getNode();
         if (listView.getEditingIndex() >= 0) return;
 
@@ -911,5 +928,28 @@ public class ListViewBehavior<T> extends BehaviorBase<ListView<T>> {
         sm.selectRange(index, getRowCount());
 
         if (onMoveToLastCell != null) onMoveToLastCell.run();
+    }
+
+    private Consumer<Boolean> onHorizontalUnitScroll;
+    private Consumer<Boolean> onVerticalUnitScroll;
+
+    public void setOnHorizontalUnitScroll(Consumer<Boolean> f) {
+        onHorizontalUnitScroll = f;
+    }
+
+    public void setOnVerticalUnitScroll(Consumer<Boolean> f) {
+        onVerticalUnitScroll = f;
+    }
+
+    private void horizontalUnitScroll(boolean right) {
+        if (onHorizontalUnitScroll != null) {
+            onHorizontalUnitScroll.accept(right);
+        }
+    }
+
+    private void verticalUnitScroll(boolean down) {
+        if (onVerticalUnitScroll != null) {
+            onVerticalUnitScroll.accept(down);
+        }
     }
 }

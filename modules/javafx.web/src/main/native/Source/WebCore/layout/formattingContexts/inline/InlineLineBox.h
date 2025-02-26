@@ -29,7 +29,7 @@
 #include "InlineLine.h"
 #include "InlineRect.h"
 #include "LayoutElementBox.h"
-#include <wtf/IsoMallocInlines.h>
+#include <wtf/TZoneMallocInlines.h>
 #include <wtf/UniqueRef.h>
 
 namespace WebCore {
@@ -39,6 +39,7 @@ class BoxGeometry;
 class InlineFormattingContext;
 class LineBoxBuilder;
 class LineBoxVerticalAligner;
+class RubyFormattingContext;
 
 //   ____________________________________________________________ Line Box
 // |                                    --------------------
@@ -63,13 +64,13 @@ public:
     // Note that the line can have many inline boxes and be "empty" the same time e.g. <div><span></span><span></span></div>
     bool hasContent() const { return m_hasContent; }
     bool hasInlineBox() const { return m_boxTypes.contains(InlineLevelBox::Type::InlineBox); }
-    bool hasNonInlineBox() const { return m_boxTypes.containsAny({ InlineLevelBox::Type::AtomicInlineLevelBox, InlineLevelBox::Type::LineBreakBox, InlineLevelBox::Type::GenericInlineLevelBox }); }
-    bool hasAtomicInlineLevelBox() const { return m_boxTypes.contains(InlineLevelBox::Type::AtomicInlineLevelBox); }
+    bool hasNonInlineBox() const { return m_boxTypes.containsAny({ InlineLevelBox::Type::AtomicInlineBox, InlineLevelBox::Type::LineBreakBox, InlineLevelBox::Type::GenericInlineLevelBox }); }
+    bool hasAtomicInlineBox() const { return m_boxTypes.contains(InlineLevelBox::Type::AtomicInlineBox); }
 
     InlineRect logicalRectForTextRun(const Line::Run&) const;
     InlineRect logicalRectForLineBreakBox(const Box&) const;
     InlineRect logicalRectForRootInlineBox() const { return m_rootInlineBox.logicalRect(); }
-    InlineRect logicalBorderBoxForAtomicInlineLevelBox(const Box&, const BoxGeometry&) const;
+    InlineRect logicalBorderBoxForAtomicInlineBox(const Box&, const BoxGeometry&) const;
     InlineRect logicalBorderBoxForInlineBox(const Box&, const BoxGeometry&) const;
 
     const InlineLevelBox* inlineLevelBoxFor(const Box& layoutBox) const { return const_cast<LineBox&>(*this).inlineLevelBoxFor(layoutBox); }
@@ -80,7 +81,6 @@ public:
     const InlineLevelBoxList& nonRootInlineLevelBoxes() const { return m_nonRootInlineLevelBoxList; }
 
     FontBaseline baselineType() const { return m_baselineType; }
-    bool isHorizontal() const { return m_rootInlineBox.layoutBox().style().isHorizontalWritingMode(); }
 
     const InlineRect& logicalRect() const { return m_logicalRect; }
 
@@ -89,6 +89,7 @@ public:
 private:
     friend class LineBoxBuilder;
     friend class LineBoxVerticalAligner;
+    friend class RubyFormattingContext;
 
     void addInlineLevelBox(InlineLevelBox&&);
     InlineLevelBoxList& nonRootInlineLevelBoxes() { return m_nonRootInlineLevelBoxList; }

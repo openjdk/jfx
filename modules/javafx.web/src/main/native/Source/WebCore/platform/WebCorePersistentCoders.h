@@ -41,6 +41,7 @@ class ResourceRequest;
 struct ClientOrigin;
 struct CrossOriginEmbedderPolicy;
 struct FetchOptions;
+struct ImageResource;
 struct ImportedScriptAttributes;
 struct NavigationPreloadState;
 class SecurityOriginData;
@@ -55,8 +56,8 @@ class Encoder;
 
 #define DECLARE_CODER(class) \
 template<> struct Coder<class> { \
-    WEBCORE_EXPORT static void encode(Encoder&, const class&); \
-    WEBCORE_EXPORT static std::optional<class> decode(Decoder&); \
+    WEBCORE_EXPORT static void encodeForPersistence(Encoder&, const class&); \
+    WEBCORE_EXPORT static std::optional<class> decodeForPersistence(Decoder&); \
 }
 
 #if ENABLE(APP_HIGHLIGHTS)
@@ -68,15 +69,12 @@ DECLARE_CODER(WebCore::ContentSecurityPolicyResponseHeaders);
 DECLARE_CODER(WebCore::CrossOriginEmbedderPolicy);
 DECLARE_CODER(WebCore::FetchOptions);
 DECLARE_CODER(WebCore::HTTPHeaderMap);
-#if ENABLE(SERVICE_WORKER)
 DECLARE_CODER(WebCore::ImportedScriptAttributes);
-#endif
+DECLARE_CODER(WebCore::ImageResource);
 DECLARE_CODER(WebCore::ResourceResponse);
 DECLARE_CODER(WebCore::ResourceRequest);
 DECLARE_CODER(WebCore::SecurityOriginData);
-#if ENABLE(SERVICE_WORKER)
 DECLARE_CODER(WebCore::NavigationPreloadState);
-#endif
 #undef DECLARE_CODER
 
 }

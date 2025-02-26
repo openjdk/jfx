@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2006-2021 Apple Inc. All rights reserved.
+ * Copyright (C) 2006-2024 Apple Inc. All rights reserved.
  * Copyright (C) 2006 Samuel Weinig <sam.weinig@gmail.com>
  *
  * This library is free software; you can redistribute it and/or
@@ -18,6 +18,8 @@
  * Boston, MA 02110-1301, USA.
  */
 
+// https://drafts.csswg.org/cssom/#the-cssstyledeclaration-interface
+
 typedef USVString CSSOMString;
 
 [
@@ -28,16 +30,16 @@ typedef USVString CSSOMString;
     SkipVTableValidation,
     Exposed=Window,
 ] interface CSSStyleDeclaration {
-    [CEReactions] attribute CSSOMString cssText;
+    [CEReactions=Needed] attribute CSSOMString cssText;
     readonly attribute CSSRuleList cssRules;
     readonly attribute unsigned long length;
     getter CSSOMString item(unsigned long index);
     CSSOMString getPropertyValue(CSSOMString property);
     CSSOMString getPropertyPriority(CSSOMString property);
-    [CEReactions] undefined setProperty(CSSOMString property, [LegacyNullToEmptyString] CSSOMString value, optional [LegacyNullToEmptyString] CSSOMString priority = "");
-    [CEReactions] CSSOMString removeProperty(CSSOMString property);
+    [CEReactions=Needed] undefined setProperty(CSSOMString property, [LegacyNullToEmptyString] CSSOMString value, optional [LegacyNullToEmptyString] CSSOMString priority = "");
+    [CEReactions=Needed] CSSOMString removeProperty(CSSOMString property);
     readonly attribute CSSRule? parentRule;
-    [CEReactions] attribute [LegacyNullToEmptyString] CSSOMString cssFloat;
+    [CEReactions=Needed] attribute [LegacyNullToEmptyString] CSSOMString cssFloat;
 
     // Non-standard.
     DeprecatedCSSOMValue? getPropertyCSSValue(DOMString propertyName);

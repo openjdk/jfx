@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2019-2021 Apple Inc. All rights reserved.
+ * Copyright (C) 2019-2023 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -61,12 +61,6 @@ JSWebAssemblyGlobal::JSWebAssemblyGlobal(VM& vm, Structure* structure, Ref<Wasm:
 {
 }
 
-void JSWebAssemblyGlobal::finishCreation(VM& vm)
-{
-    Base::finishCreation(vm);
-    ASSERT(inherits(info()));
-}
-
 void JSWebAssemblyGlobal::destroy(JSCell* cell)
 {
     static_cast<JSWebAssemblyGlobal*>(cell)->JSWebAssemblyGlobal::~JSWebAssemblyGlobal();
@@ -91,32 +85,9 @@ JSObject* JSWebAssemblyGlobal::type(JSGlobalObject* globalObject)
     result->putDirect(vm, Identifier::fromString(vm, "mutable"_s), jsBoolean(m_global->mutability() == Wasm::Mutable));
 
     Wasm::Type valueType = m_global->type();
-    JSString* valueString = nullptr;
-    switch (valueType.kind) {
-    case Wasm::TypeKind::I32:
-        valueString = jsNontrivialString(vm, "i32"_s);
-        break;
-    case Wasm::TypeKind::I64:
-        valueString = jsNontrivialString(vm, "i64"_s);
-        break;
-    case Wasm::TypeKind::F32:
-        valueString = jsNontrivialString(vm, "f32"_s);
-        break;
-    case Wasm::TypeKind::F64:
-        valueString = jsNontrivialString(vm, "f64"_s);
-        break;
-    case Wasm::TypeKind::V128:
-        valueString = jsNontrivialString(vm, "v128"_s);
-        break;
-    default: {
-        if (Wasm::isFuncref(valueType))
-            valueString = jsNontrivialString(vm, "funcref"_s);
-        else if (Wasm::isExternref(valueType))
-            valueString = jsNontrivialString(vm, "externref"_s);
-        else
-            RELEASE_ASSERT_NOT_REACHED();
-    }
-    }
+    JSString* valueString = typeToJSAPIString(vm, valueType);
+    if (!valueString)
+        return nullptr;
     result->putDirect(vm, Identifier::fromString(vm, "value"_s), valueString);
 
     return result;

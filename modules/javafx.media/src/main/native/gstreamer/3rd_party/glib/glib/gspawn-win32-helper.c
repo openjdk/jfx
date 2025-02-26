@@ -3,6 +3,8 @@
  *  Copyright 2000 Red Hat, Inc.
  *  Copyright 2000 Tor Lillqvist
  *
+ * SPDX-License-Identifier: LGPL-2.1-or-later
+ *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
  * License as published by the Free Software Foundation; either
@@ -21,24 +23,11 @@
 
 #include <fcntl.h>
 
-/* For _CrtSetReportMode, we don't want Windows CRT (2005 and later)
- * to terminate the process if a bad file descriptor is passed into
- * _get_osfhandle().  This is necessary because we use _get_osfhandle()
- * to check the validity of the fd before we try to call close() on
- * it as attempting to close an invalid fd will cause the Windows CRT
- * to abort() this program internally.
- *
- * Please see http://msdn.microsoft.com/zh-tw/library/ks2530z6%28v=vs.80%29.aspx
- * for an explanation on this.
- */
-#if (defined (_MSC_VER) && _MSC_VER >= 1400)
-#include <crtdbg.h>
-#endif
-
 #undef G_LOG_DOMAIN
 #include "glib.h"
 #define GSPAWN_HELPER
-#include "gspawn-win32.c"       /* For shared definitions */
+#include "gspawn-win32.c"  /* For shared definitions */
+#include "glib/glib-private.h"
 
 
 static void
@@ -165,29 +154,6 @@ checked_dup2 (int oldfd, int newfd, int report_fd)
   return newfd;
 }
 
-#if (defined (_MSC_VER) && _MSC_VER >= 1400)
-/*
- * This is the (empty) invalid parameter handler
- * that is used for Visual C++ 2005 (and later) builds
- * so that we can use this instead of the system automatically
- * aborting the process.
- *
- * This is necessary as we use _get_oshandle() to check the validity
- * of the file descriptors as we close them, so when an invalid file
- * descriptor is passed into that function as we check on it, we get
- * -1 as the result, instead of the gspawn helper program aborting.
- *
- * Please see http://msdn.microsoft.com/zh-tw/library/ks2530z6%28v=vs.80%29.aspx
- * for an explanation on this.
- */
-extern void
-myInvalidParameterHandler(const wchar_t *expression,
-                          const wchar_t *function,
-                          const wchar_t *file,
-                          unsigned int   line,
-                          uintptr_t      pReserved);
-#endif
-
 #ifndef GSTREAMER_LITE
 #ifndef HELPER_CONSOLE
 int _stdcall
@@ -217,16 +183,7 @@ main (int ignored_argc, char **ignored_argv)
   char **argv;
   wchar_t **wargv;
   char c;
-
-#if (defined (_MSC_VER) && _MSC_VER >= 1400)
-  /* set up our empty invalid parameter handler */
-  _invalid_parameter_handler oldHandler, newHandler;
-  newHandler = myInvalidParameterHandler;
-  oldHandler = _set_invalid_parameter_handler(newHandler);
-
-  /* Disable the message box for assertions. */
-  _CrtSetReportMode(_CRT_ASSERT, 0);
-#endif
+  GWin32InvalidParameterHandler handler;
 
   /* Fetch the wide-char argument vector */
   wargv = CommandLineToArgvW (GetCommandLineW(), &argc);
@@ -272,12 +229,12 @@ main (int ignored_argc, char **ignored_argv)
     {
       fd = open ("NUL:", O_RDONLY);
       checked_dup2 (fd, 0, child_err_report_fd);
-  }
+    }
   else
     {
       fd = atoi (argv[ARG_STDIN]);
       checked_dup2 (fd, 0, child_err_report_fd);
-  }
+    }
 
   if (argv[ARG_STDOUT][0] == '-')
     ; /* Nothing */
@@ -285,16 +242,21 @@ main (int ignored_argc, char **ignored_argv)
     {
       fd = open ("NUL:", O_WRONLY);
       checked_dup2 (fd, 1, child_err_report_fd);
-  }
+    }
   else
     {
       fd = atoi (argv[ARG_STDOUT]);
       checked_dup2 (fd, 1, child_err_report_fd);
-  }
+    }
 
-  saved_stderr_fd = reopen_noninherited (dup (2), _O_WRONLY);
-  if (saved_stderr_fd == -1)
-    write_err_and_exit (child_err_report_fd, CHILD_DUP_FAILED);
+  /* GUI application do not necessarily have a stderr */
+  if (_fileno (stderr) == 2)
+    {
+      saved_stderr_fd = GLIB_PRIVATE_CALL (g_win32_reopen_noninherited) (
+        dup (2), _O_WRONLY, NULL);
+      if (saved_stderr_fd == -1)
+        write_err_and_exit (child_err_report_fd, CHILD_DUP_FAILED);
+    }
 
   maxfd = MAX (saved_stderr_fd, maxfd);
   if (argv[ARG_STDERR][0] == '-')
@@ -354,8 +316,11 @@ main (int ignored_argc, char **ignored_argv)
   child_err_report_fd = checked_dup2 (child_err_report_fd, maxfd, child_err_report_fd);
   maxfd++;
   helper_sync_fd = checked_dup2 (helper_sync_fd, maxfd, child_err_report_fd);
-  maxfd++;
-  saved_stderr_fd = checked_dup2 (saved_stderr_fd, maxfd, child_err_report_fd);
+  if (saved_stderr_fd >= 0)
+    {
+      maxfd++;
+      saved_stderr_fd = checked_dup2 (saved_stderr_fd, maxfd, child_err_report_fd);
+    }
 
   {
     GHashTableIter iter;
@@ -381,22 +346,27 @@ main (int ignored_argc, char **ignored_argv)
 
   g_hash_table_add (fds, GINT_TO_POINTER (child_err_report_fd));
   g_hash_table_add (fds, GINT_TO_POINTER (helper_sync_fd));
-  g_hash_table_add (fds, GINT_TO_POINTER (saved_stderr_fd));
+  if (saved_stderr_fd >= 0)
+    g_hash_table_add (fds, GINT_TO_POINTER (saved_stderr_fd));
 
   /* argv[ARG_CLOSE_DESCRIPTORS] is "y" if file descriptors from 3
    *  upwards should be closed
    */
+  GLIB_PRIVATE_CALL (g_win32_push_empty_invalid_parameter_handler) (&handler);
   if (argv[ARG_CLOSE_DESCRIPTORS][0] == 'y')
     for (i = 3; i < 1000; i++)  /* FIXME real limit? */
       if (!g_hash_table_contains (fds, GINT_TO_POINTER (i)))
         if (_get_osfhandle (i) != -1)
           close (i);
+  GLIB_PRIVATE_CALL (g_win32_pop_invalid_parameter_handler) (&handler);
 
   /* We don't want our child to inherit the error report and
    * helper sync fds.
    */
-  child_err_report_fd = reopen_noninherited (child_err_report_fd, _O_WRONLY);
-  helper_sync_fd = reopen_noninherited (helper_sync_fd, _O_RDONLY);
+  child_err_report_fd = GLIB_PRIVATE_CALL (g_win32_reopen_noninherited) (
+    child_err_report_fd, _O_WRONLY, NULL);
+  helper_sync_fd = GLIB_PRIVATE_CALL (g_win32_reopen_noninherited) (
+    helper_sync_fd, _O_RDONLY, NULL);
   if (helper_sync_fd == -1)
     write_err_and_exit (child_err_report_fd, CHILD_DUP_FAILED);
 
@@ -430,7 +400,9 @@ main (int ignored_argc, char **ignored_argv)
    * Remove redirection so that they would go to original stderr
    * instead of being treated as part of stderr of child process.
    */
-  dup2 (saved_stderr_fd, 2);
+  if (saved_stderr_fd >= 0)
+    dup2 (saved_stderr_fd, 2);
+
   if (handle == -1 && saved_errno != 0)
     {
       int ec = (saved_errno == ENOENT)

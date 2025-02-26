@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -51,7 +51,7 @@ void Image::drawImage(GraphicsContext& gc, const FloatRect &dstRect, const Float
         return;
     }
 
-    auto nativeImage = nativeImageForCurrentFrame();
+    auto nativeImage = currentNativeImage();
     if (!nativeImage) {
         return;
     }
@@ -73,11 +73,14 @@ void Image::drawImage(GraphicsContext& gc, const FloatRect &dstRect, const Float
         imageObserver()->didDraw(*this);
 }
 
-Ref<Image> Image::loadPlatformResource(const char *name)
+Ref<Image> ImageAdapter::loadPlatformResource(const char *name)
 {
     return BitmapImage::createFromName(name);
 }
 
+void ImageAdapter::invalidate()
+{
+}
 #if !USE(IMAGEIO)
 NativeImagePtr ImageFrame::asNewNativeImage() const
 {

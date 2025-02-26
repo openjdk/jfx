@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2008, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -366,14 +366,14 @@ public enum SizeUnits {
     private final boolean absolute;
 
     /**
-     * Gets wehther this {@code SizeUnits} value is absolute.
-     * @return whether value is absoulute
+     * Gets whether this {@code SizeUnits} value is absolute.
+     * @return whether value is absolute
      */
     public boolean isAbsolute() {
         return absolute;
     }
 
-    // RT-14711: The spec says 1px is equal to 0.75pt
+    // JDK-8114453: The spec says 1px is equal to 0.75pt
     //           72 / 0.75 = 96
     static final private double DOTS_PER_INCH = 96.0;
     static final private double POINTS_PER_INCH = 72.0;

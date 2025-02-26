@@ -29,22 +29,19 @@ namespace JSC {
 
 namespace GCClient {
 
-ALWAYS_INLINE void* IsoSubspace::allocate(VM& vm, size_t size, GCDeferralContext* deferralContext, AllocationFailureMode failureMode)
+ALWAYS_INLINE void* IsoSubspace::allocate(VM& vm, size_t cellSize, GCDeferralContext* deferralContext, AllocationFailureMode failureMode)
 {
-    RELEASE_ASSERT(size <= cellSize());
-    Allocator allocator = allocatorFor(size, AllocatorForMode::MustAlreadyHaveAllocator);
-    void* result = allocator.allocate(vm.heap, deferralContext, failureMode);
-    return result;
+    return m_localAllocator.allocate(vm.heap, cellSize, deferralContext, failureMode);
 }
 
 } // namespace GCClient
 
 inline void IsoSubspace::clearIsoCellSetBit(PreciseAllocation* preciseAllocation)
 {
-    unsigned lowerTierIndex = preciseAllocation->lowerTierIndex();
+    unsigned lowerTierPreciseIndex = preciseAllocation->lowerTierPreciseIndex();
     m_cellSets.forEach(
         [&](IsoCellSet* set) {
-            set->clearLowerTierCell(lowerTierIndex);
+            set->clearLowerTierPreciseCell(lowerTierPreciseIndex);
         });
 }
 
@@ -59,9 +56,9 @@ inline void IsoSubspace::sweep()
 }
 
 template<typename Func>
-void IsoSubspace::forEachLowerTierFreeListedPreciseAllocation(const Func& func)
+void IsoSubspace::forEachLowerTierPreciseFreeListedPreciseAllocation(const Func& func)
 {
-    m_lowerTierFreeList.forEach(func);
+    m_lowerTierPreciseFreeList.forEach(func);
 }
 
 } // namespace JSC

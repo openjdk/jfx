@@ -26,6 +26,7 @@
 #pragma once
 
 #include <wtf/Forward.h>
+#include <wtf/HexNumber.h>
 #include <wtf/Markable.h>
 #include <wtf/OptionSet.h>
 #include <wtf/Ref.h>
@@ -74,17 +75,16 @@ public:
     WTF_EXPORT_PRIVATE TextStream& operator<<(const char*);
     WTF_EXPORT_PRIVATE TextStream& operator<<(const void*);
     WTF_EXPORT_PRIVATE TextStream& operator<<(const AtomString&);
+    WTF_EXPORT_PRIVATE TextStream& operator<<(const CString&);
     WTF_EXPORT_PRIVATE TextStream& operator<<(const String&);
     WTF_EXPORT_PRIVATE TextStream& operator<<(ASCIILiteral);
     WTF_EXPORT_PRIVATE TextStream& operator<<(StringView);
+    WTF_EXPORT_PRIVATE TextStream& operator<<(const HexNumberBuffer&);
     // Deprecated. Use the NumberRespectingIntegers FormattingFlag instead.
     WTF_EXPORT_PRIVATE TextStream& operator<<(const FormatNumberRespectingIntegers&);
 
 #if PLATFORM(COCOA)
     WTF_EXPORT_PRIVATE TextStream& operator<<(id);
-#ifdef __OBJC__
-    WTF_EXPORT_PRIVATE TextStream& operator<<(NSArray *);
-#endif
 #endif
 
     OptionSet<Formatting> formattingFlags() const { return m_formattingFlags; }
@@ -107,6 +107,15 @@ public:
         TextStream& ts = *this;
         ts.startGroup();
         ts << name << " " << value;
+        ts.endGroup();
+    }
+
+    template<typename T>
+    void dumpProperty(ASCIILiteral name, const T& value)
+    {
+        TextStream& ts = *this;
+        ts.startGroup();
+        ts << name << " "_s << value;
         ts.endGroup();
     }
 
@@ -232,13 +241,13 @@ TextStream& operator<<(TextStream& ts, const Markable<T, Traits>& item)
     return ts << "unset";
 }
 
-template<typename ItemType, size_t inlineCapacity>
-TextStream& operator<<(TextStream& ts, const Vector<ItemType, inlineCapacity>& vector)
+template<typename SizedContainer>
+TextStream& streamSizedContainer(TextStream& ts, const SizedContainer& sizedContainer)
 {
     ts << "[";
 
     unsigned count = 0;
-    for (const auto& value : vector) {
+    for (const auto& value : sizedContainer) {
         if (count)
             ts << ", ";
         ts << value;
@@ -246,10 +255,34 @@ TextStream& operator<<(TextStream& ts, const Vector<ItemType, inlineCapacity>& v
             break;
     }
 
-    if (count != vector.size())
+    if (count != sizedContainer.size())
         ts << ", ...";
 
     return ts << "]";
+}
+
+template<typename ItemType, size_t inlineCapacity>
+TextStream& operator<<(TextStream& ts, const Vector<ItemType, inlineCapacity>& vector)
+{
+    return streamSizedContainer(ts, vector);
+}
+
+template<typename ItemType>
+TextStream& operator<<(TextStream& ts, const FixedVector<ItemType>& vector)
+{
+    return streamSizedContainer(ts, vector);
+}
+
+template<typename ValueArg, typename HashArg, typename TraitsArg>
+TextStream& operator<<(TextStream& ts, const HashSet<ValueArg, HashArg, TraitsArg>& set)
+{
+    return streamSizedContainer(ts, set);
+}
+
+template<typename T, size_t size>
+TextStream& operator<<(TextStream& ts, const std::array<T, size>& array)
+{
+    return streamSizedContainer(ts, array);
 }
 
 template<typename T, typename Counter>
@@ -296,26 +329,6 @@ TextStream& operator<<(TextStream& ts, const HashMap<KeyArg, MappedArg, HashArg,
     return ts << "}";
 }
 
-template<typename ValueArg, typename HashArg, typename TraitsArg>
-TextStream& operator<<(TextStream& ts, const HashSet<ValueArg, HashArg, TraitsArg>& set)
-{
-    ts << "[";
-
-    unsigned count = 0;
-    for (const auto& item : set) {
-        if (count)
-            ts << ", ";
-        ts << item;
-        if (++count == ts.containerSizeLimit())
-            break;
-    }
-
-    if (count != set.size())
-        ts << ", ...";
-
-    return ts << "]";
-}
-
 template<typename Option>
 TextStream& operator<<(TextStream& ts, const OptionSet<Option>& options)
 {
@@ -330,24 +343,10 @@ TextStream& operator<<(TextStream& ts, const OptionSet<Option>& options)
     return ts << "]";
 }
 
-template<typename T, size_t size>
-TextStream& operator<<(TextStream& ts, const std::array<T, size>& array)
+template<typename T, typename U>
+TextStream& operator<<(TextStream& ts, const std::pair<T, U>& pair)
 {
-    ts << "[";
-
-    unsigned count = 0;
-    for (const auto& value : array) {
-        if (count)
-            ts << ", ";
-        ts << value;
-        if (++count == ts.containerSizeLimit())
-            break;
-    }
-
-    if (count != array.size())
-        ts << ", ...";
-
-    return ts << "]";
+    return ts << "[" << pair.first << ", " << pair.second << "]";
 }
 
 template<typename, typename = void, typename = void, typename = void, typename = void, size_t = 0>
@@ -385,6 +384,9 @@ struct supports_text_stream_insertion<Ref<T>> : supports_text_stream_insertion<T
 
 template<typename T, size_t size>
 struct supports_text_stream_insertion<std::array<T, size>> : supports_text_stream_insertion<T> { };
+
+template<typename T, typename U>
+struct supports_text_stream_insertion<std::pair<T, U>> : std::conjunction<supports_text_stream_insertion<T>, supports_text_stream_insertion<U>> { };
 
 template<typename T>
 struct ValueOrEllipsis {

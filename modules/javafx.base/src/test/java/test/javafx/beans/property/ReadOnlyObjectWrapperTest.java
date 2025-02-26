@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -30,16 +30,17 @@ import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.ReadOnlyObjectProperty;
 import javafx.beans.property.ReadOnlyObjectWrapper;
 import javafx.beans.property.SimpleObjectProperty;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import test.javafx.beans.InvalidationListenerMock;
 import test.javafx.beans.value.ChangeListenerMock;
 import javafx.beans.value.ObservableObjectValueStub;
 
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 public class ReadOnlyObjectWrapperTest {
 
@@ -55,7 +56,7 @@ public class ReadOnlyObjectWrapperTest {
     private ChangeListenerMock<Object> internalChangeListener;
     private ChangeListenerMock<Object> publicChangeListener;
 
-    @Before
+    @BeforeEach
     public void setUp() throws Exception {
         property = new ReadOnlyObjectWrapperMock();
         readOnlyProperty = property.getReadOnlyProperty();
@@ -318,12 +319,15 @@ public class ReadOnlyObjectWrapperTest {
         publicChangeListener.check(readOnlyProperty, VALUE_2, VALUE_1, 2);
     }
 
-    @Test(expected=RuntimeException.class)
+    @Test
     public void testSetBoundValue() {
-        final ObjectProperty<Object> v = new SimpleObjectProperty<>(VALUE_1);
-        property.bind(v);
-        property.set(VALUE_1);
+        assertThrows(RuntimeException.class, () -> {
+            final ObjectProperty<Object> v = new SimpleObjectProperty<>(VALUE_1);
+            property.bind(v);
+            property.set(VALUE_1);
+        });
     }
+
 
     @Test
     public void testLazyBind_primitive() {
@@ -549,10 +553,13 @@ public class ReadOnlyObjectWrapperTest {
         publicChangeListener.check(readOnlyProperty, VALUE_2, VALUE_1, 1);
     }
 
-    @Test(expected=NullPointerException.class)
+    @Test
     public void testBindToNull() {
-        property.bind(null);
+        assertThrows(NullPointerException.class, () -> {
+            property.bind(null);
+        });
     }
+
 
     @Test
     public void testRebind() {

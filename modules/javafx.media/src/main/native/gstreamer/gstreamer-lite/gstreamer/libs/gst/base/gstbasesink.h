@@ -58,6 +58,20 @@ G_BEGIN_DECLS
 #define GST_BASE_SINK_PREROLL_SIGNAL(obj)     g_cond_signal (GST_BASE_SINK_GET_PREROLL_COND (obj));
 #define GST_BASE_SINK_PREROLL_BROADCAST(obj)  g_cond_broadcast (GST_BASE_SINK_GET_PREROLL_COND (obj));
 
+/**
+ * GST_BASE_SINK_FLOW_DROPPED:
+ *
+ * A #GstFlowReturn that can be returned from
+ * #GstBaseSinkClass::render to indicate that the output buffer was not
+ * rendered.
+ *
+ * Note that this is currently not support for #GstBaseSinkClass::render_list
+ * virtual method.
+ *
+ * Since: 1.24
+ */
+#define GST_BASE_SINK_FLOW_DROPPED     GST_FLOW_CUSTOM_SUCCESS
+
 typedef struct _GstBaseSink GstBaseSink;
 typedef struct _GstBaseSinkClass GstBaseSinkClass;
 typedef struct _GstBaseSinkPrivate GstBaseSinkPrivate;
@@ -152,7 +166,7 @@ struct _GstBaseSinkClass {
   GstElementClass parent_class;
 
   /**
-   * GstBaseSink::get_caps:
+   * GstBaseSinkClass::get_caps:
    * @filter: (in) (nullable):
    *
    * Called to get sink pad caps from the subclass.
@@ -167,7 +181,7 @@ struct _GstBaseSinkClass {
   gboolean      (*activate_pull)(GstBaseSink *sink, gboolean active);
 
   /**
-   * GstBaseSink::get_times:
+   * GstBaseSinkClass::get_times:
    * @start: (out): the start #GstClockTime
    * @end: (out): the end #GstClockTime
    *

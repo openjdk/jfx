@@ -23,7 +23,6 @@
 
 #pragma once
 
-#if ENABLE(LAYER_BASED_SVG_ENGINE)
 #include "RenderSVGContainer.h"
 #include "RenderSVGRoot.h"
 
@@ -32,19 +31,21 @@ namespace WebCore {
 class SVGSVGElement;
 
 class RenderSVGViewportContainer final : public RenderSVGContainer {
-    WTF_MAKE_ISO_ALLOCATED(RenderSVGViewportContainer);
+    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(RenderSVGViewportContainer);
+    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(RenderSVGViewportContainer);
 public:
     RenderSVGViewportContainer(RenderSVGRoot&, RenderStyle&&);
     RenderSVGViewportContainer(SVGSVGElement&, RenderStyle&&);
+    virtual ~RenderSVGViewportContainer();
 
     SVGSVGElement& svgSVGElement() const;
+    Ref<SVGSVGElement> protectedSVGSVGElement() const;
     FloatRect viewport() const { return { { }, viewportSize() }; }
     FloatSize viewportSize() const { return m_viewport.size(); }
 
     void updateFromStyle() final;
 
 private:
-    bool isSVGViewportContainer() const final { return true; }
     ASCIILiteral renderName() const final { return "RenderSVGViewportContainer"_s; }
 
     void element() const = delete;
@@ -56,18 +57,17 @@ private:
     FloatPoint computeViewportLocation() const;
     FloatSize computeViewportSize() const;
 
-    void applyTransform(TransformationMatrix&, const RenderStyle&, const FloatRect& boundingBox, OptionSet<RenderStyle::TransformOperationOption> = RenderStyle::allTransformOperations) const final;
+    void applyTransform(TransformationMatrix&, const RenderStyle&, const FloatRect& boundingBox, OptionSet<RenderStyle::TransformOperationOption>) const final;
     LayoutRect overflowClipRect(const LayoutPoint& location, RenderFragmentContainer* = nullptr, OverlayScrollbarSizeRelevancy = IgnoreOverlayScrollbarSize, PaintPhase = PaintPhase::BlockBackground) const final;
     void updateLayerTransform() final;
     bool needsHasSVGTransformFlags() const final;
 
     AffineTransform m_supplementalLayerTransform;
     FloatRect m_viewport;
-    WeakPtr<RenderSVGRoot> m_owningSVGRoot;
+    SingleThreadWeakPtr<RenderSVGRoot> m_owningSVGRoot;
 };
 
 } // namespace WebCore
 
-SPECIALIZE_TYPE_TRAITS_RENDER_OBJECT(RenderSVGViewportContainer, isSVGViewportContainer())
+SPECIALIZE_TYPE_TRAITS_RENDER_OBJECT(RenderSVGViewportContainer, isRenderSVGViewportContainer())
 
-#endif // ENABLE(LAYER_BASED_SVG_ENGINE)

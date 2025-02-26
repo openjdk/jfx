@@ -81,7 +81,7 @@ private:
     void configurationChanged(const PlatformVideoTrackConfiguration&) final;
 
     // TrackPrivateBaseClient
-    void idChanged(const AtomString&) final;
+    void idChanged(TrackID) final;
     void labelChanged(const AtomString&) final;
     void languageChanged(const AtomString&) final;
     void willRemove() final;
@@ -92,7 +92,7 @@ private:
     void updateConfigurationFromPrivate();
 
 #if !RELEASE_LOG_DISABLED
-    const char* logClassName() const final { return "VideoTrack"; }
+    ASCIILiteral logClassName() const final { return "VideoTrack"_s; }
 #endif
 
     WeakPtr<VideoTrackList> m_videoTrackList;

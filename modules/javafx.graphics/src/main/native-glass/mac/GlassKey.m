@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2023, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -32,6 +32,8 @@
 #import "GlassKey.h"
 
 #import <Carbon/Carbon.h>
+
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
 
 //#define VERBOSE
 #ifndef VERBOSE
@@ -600,13 +602,34 @@ NSString* GetStringForJavaKey(jchar jKeyCode) {
 
 }
 
+NSString* GetStringForMacKey(unsigned short keyCode, bool shifted)
+{
+    // Restrict to printable characters. UCKeyTranslate can produce
+    // odd results with keys like Home, Up Arrow, etc.
+    if (!macKeyCodeIsLayoutSensitive(keyCode)) return nil;
+
+    TISInputSourceRef keyboard = TISCopyCurrentKeyboardLayoutInputSource();
+    if (keyboard == NULL) return nil;
+
+    UInt32 modifiers = (shifted ? shiftKey : 0);
+    UniChar unicode[8];
+    UniCharCount length = queryKeyboard(keyboard, keyCode, modifiers, unicode, 8);
+    CFRelease(keyboard);
+
+    if (length == 1) {
+        return [NSString stringWithCharacters: &unicode[0] length: 1];
+    }
+
+    return nil;
+}
+
 /*
  * Class:     com_sun_glass_ui_mac_MacApplication
  * Method:    _getKeyCodeForChar
- * Signature: (C)I
+ * Signature: (CI)I
  */
 JNIEXPORT jint JNICALL Java_com_sun_glass_ui_mac_MacApplication__1getKeyCodeForChar
-(JNIEnv * env, jobject jApplication, jchar c)
+(JNIEnv * env, jobject jApplication, jchar c, jint hint)
 {
     LOG("Java_com_sun_glass_ui_mac_MacApplication__1getKeyCodeForChar");
 

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2016-2018 Apple Inc. All rights reserved.
+ * Copyright (C) 2016-2023 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -26,8 +26,8 @@
 #include "config.h"
 #include "AccessCaseSnippetParams.h"
 
+#include "InlineCacheCompiler.h"
 #include "LinkBuffer.h"
-#include "PolymorphicAccess.h"
 #include "StructureStubInfo.h"
 
 #if ENABLE(JIT)
@@ -47,47 +47,37 @@ public:
     }
 
     template<size_t... ArgumentsIndex>
-    CCallHelpers::JumpList generateImpl(AccessGenerationState& state, const RegisterSetBuilder& usedRegistersBySnippet, CCallHelpers& jit, std::index_sequence<ArgumentsIndex...>)
+    CCallHelpers::JumpList generateImpl(InlineCacheCompiler& compiler, const RegisterSetBuilder& usedRegistersBySnippet, CCallHelpers& jit, std::index_sequence<ArgumentsIndex...>)
     {
         CCallHelpers::JumpList exceptions;
         // We spill (1) the used registers by IC and (2) the used registers by Snippet.
-        AccessGenerationState::SpillState spillState = state.preserveLiveRegistersToStackForCall(usedRegistersBySnippet.buildAndValidate());
-
-        jit.store32(
-            CCallHelpers::TrustedImm32(state.callSiteIndexForExceptionHandlingOrOriginal().bits()),
-            CCallHelpers::tagFor(CallFrameSlot::argumentCountIncludingThis));
+        InlineCacheCompiler::SpillState spillState = compiler.preserveLiveRegistersToStackForCall(usedRegistersBySnippet.buildAndValidate());
 
         jit.makeSpaceOnStackForCCall();
 
         jit.setupArguments<FunctionType>(std::get<ArgumentsIndex>(m_arguments)...);
-        jit.prepareCallOperation(state.m_vm);
-
-        CCallHelpers::Call operationCall = jit.call(OperationPtrTag);
-        auto function = m_function;
-        jit.addLinkTask([=] (LinkBuffer& linkBuffer) {
-            linkBuffer.link<OperationPtrTag>(operationCall, function);
-        });
-
+        jit.prepareCallOperation(compiler.vm());
+        jit.callOperation<OperationPtrTag>(m_function);
         jit.setupResults(m_result);
         jit.reclaimSpaceOnStackForCCall();
 
-        CCallHelpers::Jump noException = jit.emitExceptionCheck(state.m_vm, CCallHelpers::InvertedExceptionCheck);
+        CCallHelpers::Jump noException = jit.emitExceptionCheck(compiler.vm(), CCallHelpers::InvertedExceptionCheck);
 
-        state.restoreLiveRegistersFromStackForCallWithThrownException(spillState);
+        compiler.restoreLiveRegistersFromStackForCallWithThrownException(spillState);
         exceptions.append(jit.jump());
 
         noException.link(&jit);
         RegisterSet dontRestore;
         dontRestore.add(m_result, IgnoreVectors);
-        state.restoreLiveRegistersFromStackForCall(spillState, dontRestore);
+        compiler.restoreLiveRegistersFromStackForCall(spillState, dontRestore);
 
         return exceptions;
     }
 
-    CCallHelpers::JumpList generate(AccessGenerationState& state, const RegisterSetBuilder& usedRegistersBySnippet, CCallHelpers& jit) final
+    CCallHelpers::JumpList generate(InlineCacheCompiler& compiler, const RegisterSetBuilder& usedRegistersBySnippet, CCallHelpers& jit) final
     {
         m_from.link(&jit);
-        CCallHelpers::JumpList exceptions = generateImpl(state, usedRegistersBySnippet, jit, std::make_index_sequence<std::tuple_size<std::tuple<Arguments...>>::value>());
+        CCallHelpers::JumpList exceptions = generateImpl(compiler, usedRegistersBySnippet, jit, std::make_index_sequence<std::tuple_size<std::tuple<Arguments...>>::value>());
         jit.jump().linkTo(m_to, &jit);
         return exceptions;
     }
@@ -110,11 +100,11 @@ private:
 SNIPPET_SLOW_PATH_CALLS(JSC_DEFINE_CALL_OPERATIONS)
 #undef JSC_DEFINE_CALL_OPERATIONS
 
-CCallHelpers::JumpList AccessCaseSnippetParams::emitSlowPathCalls(AccessGenerationState& state, const RegisterSetBuilder& usedRegistersBySnippet, CCallHelpers& jit)
+CCallHelpers::JumpList AccessCaseSnippetParams::emitSlowPathCalls(InlineCacheCompiler& compiler, const RegisterSetBuilder& usedRegistersBySnippet, CCallHelpers& jit)
 {
     CCallHelpers::JumpList exceptions;
     for (auto& generator : m_generators)
-        exceptions.append(generator->generate(state, usedRegistersBySnippet, jit));
+        exceptions.append(generator->generate(compiler, usedRegistersBySnippet, jit));
     return exceptions;
 }
 

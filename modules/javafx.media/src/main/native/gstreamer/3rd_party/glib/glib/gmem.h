@@ -1,6 +1,8 @@
 /* GLIB - Library of useful routines for C programming
  * Copyright (C) 1995-1997  Peter Mattis, Spencer Kimball and Josh MacDonald
  *
+ * SPDX-License-Identifier: LGPL-2.1-or-later
+ *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
  * License as published by the Free Software Foundation; either
@@ -69,7 +71,10 @@ typedef struct _GMemVTable GMemVTable;
  */
 
 GLIB_AVAILABLE_IN_ALL
-void     g_free           (gpointer      mem);
+void     (g_free)         (gpointer       mem);
+GLIB_AVAILABLE_IN_2_76
+void     g_free_sized     (gpointer      mem,
+                           size_t        size);
 
 GLIB_AVAILABLE_IN_2_34
 void     g_clear_pointer  (gpointer      *pp,
@@ -121,6 +126,10 @@ gpointer g_aligned_alloc0 (gsize         n_blocks,
                            gsize         alignment) G_GNUC_WARN_UNUSED_RESULT G_GNUC_ALLOC_SIZE2(1,2);
 GLIB_AVAILABLE_IN_2_72
 void     g_aligned_free   (gpointer      mem);
+GLIB_AVAILABLE_IN_2_76
+void     g_aligned_free_sized (gpointer  mem,
+                               size_t    alignment,
+                               size_t    size);
 
 #if defined(glib_typeof) && GLIB_VERSION_MAX_ALLOWED >= GLIB_VERSION_2_58
 #define g_clear_pointer(pp, destroy)                     \
@@ -155,6 +164,15 @@ void     g_aligned_free   (gpointer      mem);
   } G_STMT_END                                                                 \
   GLIB_AVAILABLE_MACRO_IN_2_34
 #endif /* __GNUC__ */
+
+
+#if G_GNUC_CHECK_VERSION (4, 1) && GLIB_VERSION_MAX_ALLOWED >= GLIB_VERSION_2_78 && defined(G_HAVE_FREE_SIZED)
+
+#define g_free(mem)                                                            \
+  (__builtin_object_size ((mem), 0) != ((size_t) - 1)) ?                       \
+    g_free_sized (mem, __builtin_object_size ((mem), 0)) : (g_free) (mem)
+
+#endif /* G_GNUC_CHECK_VERSION (4, 1) && && GLIB_VERSION_MAX_ALLOWED >= GLIB_VERSION_2_78 && defined(G_HAVE_FREE_SIZED) */
 
 /**
  * g_steal_pointer:

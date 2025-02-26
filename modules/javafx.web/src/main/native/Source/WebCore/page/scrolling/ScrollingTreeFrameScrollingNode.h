@@ -51,13 +51,14 @@ public:
     FloatRect layoutViewportRespectingRubberBanding() const;
 
     float frameScaleFactor() const { return m_frameScaleFactor; }
-
-protected:
-    ScrollingTreeFrameScrollingNode(ScrollingTree&, ScrollingNodeType, ScrollingNodeID);
-
     int headerHeight() const { return m_headerHeight; }
     int footerHeight() const { return m_footerHeight; }
     float topContentInset() const { return m_topContentInset; }
+    virtual void viewWillStartLiveResize() { }
+    virtual void viewWillEndLiveResize() { }
+    virtual void viewSizeDidChange() { }
+protected:
+    ScrollingTreeFrameScrollingNode(ScrollingTree&, ScrollingNodeType, ScrollingNodeID);
 
     FloatPoint minLayoutViewportOrigin() const { return m_minLayoutViewportOrigin; }
     FloatPoint maxLayoutViewportOrigin() const { return m_maxLayoutViewportOrigin; }
@@ -67,7 +68,7 @@ protected:
 private:
     void updateViewportForCurrentScrollPosition(std::optional<FloatRect>) override;
     bool scrollPositionAndLayoutViewportMatch(const FloatPoint& position, std::optional<FloatRect> overrideLayoutViewport) override;
-    FloatRect layoutViewportForScrollPosition(const FloatPoint&, float scale, ScrollBehaviorForFixedElements = StickToDocumentBounds) const;
+    FloatRect layoutViewportForScrollPosition(const FloatPoint&, float scale, ScrollBehaviorForFixedElements = ScrollBehaviorForFixedElements::StickToDocumentBounds) const;
 
     void dumpProperties(WTF::TextStream&, OptionSet<ScrollingStateTreeAsTextBehavior>) const override;
 
@@ -82,7 +83,7 @@ private:
     int m_headerHeight { 0 };
     int m_footerHeight { 0 };
 
-    ScrollBehaviorForFixedElements m_behaviorForFixed { StickToDocumentBounds };
+    ScrollBehaviorForFixedElements m_behaviorForFixed { ScrollBehaviorForFixedElements::StickToDocumentBounds };
 
     bool m_fixedElementsLayoutRelativeToFrame { false };
     bool m_visualViewportIsSmallerThanLayoutViewport { false };

@@ -942,7 +942,15 @@ void testLoadFromFramePointer()
             root->appendNew<Value>(proc, FramePointer, Origin())));
 
     void* fp = compileAndRun<void*>(proc);
+#if OS(WINDOWS)
+    // Windows __builtin_frame_address(0) points at the space after the function's local variables
+    void* myFP = ((uintptr_t*) _AddressOfReturnAddress() - 1);
+    void* frameAddressZero = __builtin_frame_address(0);
+    CHECK(frameAddressZero < myFP);
+#else
     void* myFP = __builtin_frame_address(0);
+#endif
+
     CHECK(fp <= myFP);
     CHECK(fp >= bitwise_cast<char*>(myFP) - 10000);
 }
@@ -967,6 +975,90 @@ void testStoreLoadStackSlot(int value)
         root->appendNew<MemoryValue>(proc, Load, Int32, Origin(), stack));
 
     CHECK(compileAndRun<int>(proc, value) == value);
+}
+
+void testStoreDouble(double input)
+{
+    // Simple store from an address in a register.
+    {
+        Procedure proc;
+        BasicBlock* root = proc.addBlock();
+        Value* argumentAsDouble = root->appendNew<ArgumentRegValue>(proc, Origin(), FPRInfo::argumentFPR0);
+
+        Value* destinationAddress = root->appendNew<ArgumentRegValue>(proc, Origin(), GPRInfo::argumentGPR0);
+        root->appendNew<MemoryValue>(proc, Store, Origin(), argumentAsDouble, destinationAddress);
+
+        root->appendNewControlValue(proc, Return, Origin(), root->appendNew<Const32Value>(proc, Origin(), 0));
+
+        double output = 0.;
+        CHECK(!compileAndRun<int64_t>(proc, input, &output));
+        CHECK(isIdentical(input, output));
+    }
+
+    // Simple indexed store.
+    {
+        Procedure proc;
+        BasicBlock* root = proc.addBlock();
+        Value* argumentAsDouble = root->appendNew<ArgumentRegValue>(proc, Origin(), FPRInfo::argumentFPR0);
+
+        Value* destinationBaseAddress = root->appendNew<ArgumentRegValue>(proc, Origin(), GPRInfo::argumentGPR0);
+        Value* index = root->appendNew<ArgumentRegValue>(proc, Origin(), GPRInfo::argumentGPR1);
+        Value* scaledIndex = root->appendNew<Value>(
+            proc, Shl, Origin(),
+            index,
+            root->appendNew<Const32Value>(proc, Origin(), 3));
+        Value* destinationAddress = root->appendNew<Value>(proc, Add, Origin(), scaledIndex, destinationBaseAddress);
+
+        root->appendNew<MemoryValue>(proc, Store, Origin(), argumentAsDouble, destinationAddress);
+
+        root->appendNewControlValue(proc, Return, Origin(), root->appendNew<Const32Value>(proc, Origin(), 0));
+
+        double output = 0.;
+        CHECK(!compileAndRun<int64_t>(proc, input, &output - 1, 1));
+        CHECK(isIdentical(input, output));
+    }
+}
+
+void testStoreDoubleConstant(double input)
+{
+    // Simple store from an address in a register.
+    {
+        Procedure proc;
+        BasicBlock* root = proc.addBlock();
+        Value* argumentAsDouble = root->appendNew<ConstDoubleValue>(proc, Origin(), input);
+
+        Value* destinationAddress = root->appendNew<ArgumentRegValue>(proc, Origin(), GPRInfo::argumentGPR0);
+        root->appendNew<MemoryValue>(proc, Store, Origin(), argumentAsDouble, destinationAddress);
+
+        root->appendNewControlValue(proc, Return, Origin(), root->appendNew<Const32Value>(proc, Origin(), 0));
+
+        double output = 0.;
+        CHECK(!compileAndRun<int64_t>(proc, &output));
+        CHECK(isIdentical(input, output));
+    }
+
+    // Simple indexed store.
+    {
+        Procedure proc;
+        BasicBlock* root = proc.addBlock();
+        Value* argumentAsDouble = root->appendNew<ConstDoubleValue>(proc, Origin(), input);
+
+        Value* destinationBaseAddress = root->appendNew<ArgumentRegValue>(proc, Origin(), GPRInfo::argumentGPR0);
+        Value* index = root->appendNew<ArgumentRegValue>(proc, Origin(), GPRInfo::argumentGPR1);
+        Value* scaledIndex = root->appendNew<Value>(
+            proc, Shl, Origin(),
+            index,
+            root->appendNew<Const32Value>(proc, Origin(), 3));
+        Value* destinationAddress = root->appendNew<Value>(proc, Add, Origin(), scaledIndex, destinationBaseAddress);
+
+        root->appendNew<MemoryValue>(proc, Store, Origin(), argumentAsDouble, destinationAddress);
+
+        root->appendNewControlValue(proc, Return, Origin(), root->appendNew<Const32Value>(proc, Origin(), 0));
+
+        double output = 0.;
+        CHECK(!compileAndRun<int64_t>(proc, &output - 1, 1));
+        CHECK(isIdentical(input, output));
+    }
 }
 
 void testStoreFloat(double input)
@@ -1009,6 +1101,48 @@ void testStoreFloat(double input)
 
         float output = 0.;
         CHECK(!compileAndRun<int64_t>(proc, input, &output - 1, 1));
+        CHECK(isIdentical(static_cast<float>(input), output));
+    }
+}
+
+void testStoreFloatConstant(double input)
+{
+    // Simple store from an address in a register.
+    {
+        Procedure proc;
+        BasicBlock* root = proc.addBlock();
+        Value* argumentAsFloat = root->appendNew<ConstFloatValue>(proc, Origin(), static_cast<float>(input));
+
+        Value* destinationAddress = root->appendNew<ArgumentRegValue>(proc, Origin(), GPRInfo::argumentGPR0);
+        root->appendNew<MemoryValue>(proc, Store, Origin(), argumentAsFloat, destinationAddress);
+
+        root->appendNewControlValue(proc, Return, Origin(), root->appendNew<Const32Value>(proc, Origin(), 0));
+
+        float output = 0.;
+        CHECK(!compileAndRun<int64_t>(proc, &output));
+        CHECK(isIdentical(static_cast<float>(input), output));
+    }
+
+    // Simple indexed store.
+    {
+        Procedure proc;
+        BasicBlock* root = proc.addBlock();
+        Value* argumentAsFloat = root->appendNew<ConstFloatValue>(proc, Origin(), static_cast<float>(input));
+
+        Value* destinationBaseAddress = root->appendNew<ArgumentRegValue>(proc, Origin(), GPRInfo::argumentGPR0);
+        Value* index = root->appendNew<ArgumentRegValue>(proc, Origin(), GPRInfo::argumentGPR1);
+        Value* scaledIndex = root->appendNew<Value>(
+            proc, Shl, Origin(),
+            index,
+            root->appendNew<Const32Value>(proc, Origin(), 2));
+        Value* destinationAddress = root->appendNew<Value>(proc, Add, Origin(), scaledIndex, destinationBaseAddress);
+
+        root->appendNew<MemoryValue>(proc, Store, Origin(), argumentAsFloat, destinationAddress);
+
+        root->appendNewControlValue(proc, Return, Origin(), root->appendNew<Const32Value>(proc, Origin(), 0));
+
+        float output = 0.;
+        CHECK(!compileAndRun<int64_t>(proc, &output - 1, 1));
         CHECK(isIdentical(static_cast<float>(input), output));
     }
 }
@@ -2915,7 +3049,7 @@ void testPatchpointAnyImm(ValueRep rep)
     CHECK(compileAndRun<int>(proc, 1) == 43);
 }
 
-void addSExtTests(const char* filter, Deque<RefPtr<SharedTask<void()>>>& tasks)
+void addSExtTests(const TestConfig* config, Deque<RefPtr<SharedTask<void()>>>& tasks)
 {
     RUN(testSExt8(0));
     RUN(testSExt8(1));

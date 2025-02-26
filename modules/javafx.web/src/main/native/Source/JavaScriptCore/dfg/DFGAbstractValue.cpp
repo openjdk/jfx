@@ -524,7 +524,9 @@ void AbstractValue::validateReferences(const TrackedReferences& trackedReference
 #if USE(JSVALUE64) && !defined(NDEBUG)
 void AbstractValue::ensureCanInitializeWithZeros()
 {
+    ALLOW_DEPRECATED_DECLARATIONS_BEGIN
     std::aligned_storage<sizeof(AbstractValue), alignof(AbstractValue)>::type zeroFilledStorage;
+    ALLOW_DEPRECATED_DECLARATIONS_END
     memset(static_cast<void*>(&zeroFilledStorage), 0, sizeof(AbstractValue));
     ASSERT(*this == *static_cast<AbstractValue*>(static_cast<void*>(&zeroFilledStorage)));
 }
@@ -542,6 +544,63 @@ void AbstractValue::fastForwardToSlow(AbstractValueClobberEpoch newEpoch)
     m_effectEpoch = newEpoch;
 
     checkConsistency();
+}
+
+bool AbstractValue::validateOSREntryValue(JSValue value, FlushFormat format) const
+{
+    if (isBytecodeTop())
+        return true;
+
+    if (format == FlushedInt52) {
+        if (!isInt52Any())
+            return false;
+
+        if (!validateTypeAcceptingBoxedInt52(value))
+            return false;
+
+        if (!!m_value) {
+            ASSERT(m_value.isAnyInt());
+            ASSERT(value.isAnyInt());
+            if (jsDoubleNumber(m_value.asAnyInt()) != jsDoubleNumber(value.asAnyInt()))
+                return false;
+        }
+    } else {
+        if (!!m_value && m_value != value)
+            return false;
+
+        if (mergeSpeculations(m_type, speculationFromValue(value)) != m_type)
+            return false;
+
+        if (value.isEmpty()) {
+            ASSERT(m_type & SpecEmpty);
+            return true;
+        }
+    }
+
+    if (!!value && value.isCell()) {
+        ASSERT(m_type & SpecCell);
+        Structure* structure = value.asCell()->structure();
+        return m_structure.contains(structure)
+            && (m_arrayModes & arrayModesFromStructure(structure));
+    }
+
+    return true;
+}
+
+bool AbstractValue::validateTypeAcceptingBoxedInt52(JSValue value) const
+{
+    if (isBytecodeTop())
+        return true;
+
+    if (m_type & SpecInt52Any) {
+        if (mergeSpeculations(m_type, int52AwareSpeculationFromValue(value)) == m_type)
+            return true;
+    }
+
+    if (mergeSpeculations(m_type, speculationFromValue(value)) != m_type)
+        return false;
+
+    return true;
 }
 
 } } // namespace JSC::DFG

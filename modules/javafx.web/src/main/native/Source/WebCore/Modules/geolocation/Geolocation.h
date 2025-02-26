@@ -37,26 +37,31 @@
 #include "PositionOptions.h"
 #include "ScriptWrappable.h"
 #include "Timer.h"
+#include <wtf/CheckedRef.h>
 #include <wtf/HashMap.h>
 #include <wtf/HashSet.h>
 
 namespace WebCore {
 
-class Frame;
 class GeoNotifier;
 class GeolocationError;
+class LocalFrame;
 class Navigator;
 class Page;
 class ScriptExecutionContext;
 class SecurityOrigin;
 struct PositionOptions;
 
-class Geolocation final : public ScriptWrappable, public RefCounted<Geolocation>, public ActiveDOMObject {
-    WTF_MAKE_ISO_ALLOCATED_EXPORT(Geolocation, WEBCORE_EXPORT);
+class Geolocation final : public ScriptWrappable, public RefCounted<Geolocation>, public CanMakeWeakPtr<Geolocation>, public ActiveDOMObject {
+    WTF_MAKE_TZONE_OR_ISO_ALLOCATED_EXPORT(Geolocation, WEBCORE_EXPORT);
     friend class GeoNotifier;
 public:
     static Ref<Geolocation> create(Navigator&);
     WEBCORE_EXPORT ~Geolocation();
+
+    // ActiveDOMObject.
+    void ref() const final { RefCounted::ref(); }
+    void deref() const final { RefCounted::deref(); }
 
     WEBCORE_EXPORT void resetAllGeolocationPermission();
     Document* document() const { return downcast<Document>(scriptExecutionContext()); }
@@ -75,23 +80,23 @@ public:
     bool shouldBlockGeolocationRequests();
 
     Navigator* navigator();
-    WEBCORE_EXPORT Frame* frame() const;
+    WEBCORE_EXPORT LocalFrame* frame() const;
 
 private:
     explicit Geolocation(Navigator&);
 
     GeolocationPosition* lastPosition();
 
-    // ActiveDOMObject
+    // ActiveDOMObject.
     void stop() override;
     void suspend(ReasonForSuspension) override;
     void resume() override;
-    const char* activeDOMObjectName() const override;
 
     bool isDenied() const { return m_allowGeolocation == No; }
 
     Page* page() const;
     SecurityOrigin* securityOrigin() const;
+    RefPtr<SecurityOrigin> protectedSecurityOrigin() const;
 
     typedef Vector<RefPtr<GeoNotifier>> GeoNotifierVector;
     typedef HashSet<RefPtr<GeoNotifier>> GeoNotifierSet;

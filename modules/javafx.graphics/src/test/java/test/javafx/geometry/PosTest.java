@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,7 +25,6 @@
 
 package test.javafx.geometry;
 
-import static java.util.Arrays.asList;
 import static javafx.geometry.HPos.LEFT;
 import static javafx.geometry.HPos.RIGHT;
 import static javafx.geometry.Pos.BASELINE_CENTER;
@@ -42,51 +41,40 @@ import static javafx.geometry.Pos.TOP_RIGHT;
 import static javafx.geometry.VPos.BASELINE;
 import static javafx.geometry.VPos.BOTTOM;
 import static javafx.geometry.VPos.TOP;
-import static junit.framework.Assert.assertEquals;
 
-import java.util.Collection;
+import java.util.stream.Stream;
 import javafx.geometry.HPos;
 import javafx.geometry.Pos;
 import javafx.geometry.VPos;
 
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
-import org.junit.runners.Parameterized.Parameters;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 
-@RunWith(Parameterized.class)
 public class PosTest {
 
-    @Parameters
-    public static Collection<Object[]> parameters() {
-        return asList(new Object[][] {
-                {TOP_LEFT, TOP, LEFT},
-                {TOP_CENTER, TOP, HPos.CENTER},
-                {TOP_RIGHT, TOP, RIGHT},
-                {CENTER_LEFT, VPos.CENTER, LEFT},
-                {Pos.CENTER, VPos.CENTER, HPos.CENTER},
-                {CENTER_RIGHT, VPos.CENTER, RIGHT},
-                {BOTTOM_LEFT, BOTTOM, LEFT},
-                {BOTTOM_CENTER, BOTTOM, HPos.CENTER},
-                {BOTTOM_RIGHT, BOTTOM, RIGHT},
-                {BASELINE_LEFT, BASELINE, LEFT},
-                {BASELINE_CENTER, BASELINE, HPos.CENTER},
-                {BASELINE_RIGHT, BASELINE, RIGHT},
-         });
+    public static Stream<Arguments> parameters() {
+        return Stream.of(
+            Arguments.of(TOP_LEFT, TOP, LEFT),
+            Arguments.of(TOP_CENTER, TOP, HPos.CENTER),
+            Arguments.of(TOP_RIGHT, TOP, RIGHT),
+            Arguments.of(CENTER_LEFT, VPos.CENTER, LEFT),
+            Arguments.of(Pos.CENTER, VPos.CENTER, HPos.CENTER),
+            Arguments.of(CENTER_RIGHT, VPos.CENTER, RIGHT),
+            Arguments.of(BOTTOM_LEFT, BOTTOM, LEFT),
+            Arguments.of(BOTTOM_CENTER, BOTTOM, HPos.CENTER),
+            Arguments.of(BOTTOM_RIGHT, BOTTOM, RIGHT),
+            Arguments.of(BASELINE_LEFT, BASELINE, LEFT),
+            Arguments.of(BASELINE_CENTER, BASELINE, HPos.CENTER),
+            Arguments.of(BASELINE_RIGHT, BASELINE, RIGHT)
+         );
     }
 
-    private final Pos pos;
-    private final VPos vpos;
-    private final HPos hpos;
-
-    public PosTest(Pos pos, VPos vpos, HPos hpos) {
-        this.pos = pos;
-        this.vpos = vpos;
-        this.hpos = hpos;
-    }
-
-    @Test public void shouldHaveVPosAndHPos() {
+    @ParameterizedTest
+    @MethodSource("parameters")
+    public void shouldHaveVPosAndHPos(Pos pos, VPos vpos, HPos hpos) {
         assertEquals(pos.getVpos(), vpos);
         assertEquals(pos.getHpos(), hpos);
     }

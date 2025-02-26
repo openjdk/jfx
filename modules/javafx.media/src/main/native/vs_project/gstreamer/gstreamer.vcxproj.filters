@@ -216,9 +216,6 @@
     <ClCompile Include="..\..\gstreamer\gstreamer-lite\gstreamer\gst\gstpluginfeature.c">
       <Filter>gstreamer\gst</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\gstreamer\gstreamer-lite\gstreamer\gst\gstpluginloader.c">
-      <Filter>gstreamer\gst</Filter>
-    </ClCompile>
     <ClCompile Include="..\..\gstreamer\gstreamer-lite\gstreamer\gst\gstpoll.c">
       <Filter>gstreamer\gst</Filter>
     </ClCompile>
@@ -322,6 +319,9 @@
       <Filter>gst-plugins-base\gst-libs\gst\app</Filter>
     </ClCompile>
     <ClCompile Include="..\..\gstreamer\gstreamer-lite\gst-plugins-base\gst-libs\gst\app\gstappsink.c">
+      <Filter>gst-plugins-base\gst-libs\gst\app</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\gstreamer\gstreamer-lite\gst-plugins-base\gst-libs\gst\app\gstapputils.c">
       <Filter>gst-plugins-base\gst-libs\gst\app</Filter>
     </ClCompile>
     <ClCompile Include="..\..\gstreamer\gstreamer-lite\gst-plugins-base\gst-libs\gst\fft\gstfft.c">
@@ -591,12 +591,6 @@
     <ClCompile Include="..\..\gstreamer\gstreamer-lite\gst-plugins-base\gst-libs\gst\video\convertframe.c">
       <Filter>gst-plugins-base\gst-libs\gst\video</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\gstreamer\gstreamer-lite\gst-plugins-base\gst-libs\gst\video\gstvideodecoder.c">
-      <Filter>gst-plugins-base\gst-libs\gst\video</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\gstreamer\gstreamer-lite\gst-plugins-base\gst-libs\gst\video\gstvideoencoder.c">
-      <Filter>gst-plugins-base\gst-libs\gst\video</Filter>
-    </ClCompile>
     <ClCompile Include="..\..\gstreamer\gstreamer-lite\gst-plugins-base\gst-libs\gst\video\gstvideofilter.c">
       <Filter>gst-plugins-base\gst-libs\gst\video</Filter>
     </ClCompile>
@@ -741,12 +735,6 @@
       <Filter>gst-plugins-base\gst-libs\gst\video</Filter>
     </ClInclude>
     <ClInclude Include="..\..\gstreamer\gstreamer-lite\gst-plugins-base\gst-libs\gst\video\colorbalancechannel.h">
-      <Filter>gst-plugins-base\gst-libs\gst\video</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\gstreamer\gstreamer-lite\gst-plugins-base\gst-libs\gst\video\gstvideodecoder.h">
-      <Filter>gst-plugins-base\gst-libs\gst\video</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\gstreamer\gstreamer-lite\gst-plugins-base\gst-libs\gst\video\gstvideoencoder.h">
       <Filter>gst-plugins-base\gst-libs\gst\video</Filter>
     </ClInclude>
     <ClInclude Include="..\..\gstreamer\gstreamer-lite\gst-plugins-base\gst-libs\gst\video\gstvideofilter.h">

@@ -28,20 +28,27 @@ namespace WebCore {
 
 class RenderObject;
 
+enum class RepaintRectCalculation : bool;
+
 class SVGClipPathElement final : public SVGGraphicsElement {
-    WTF_MAKE_ISO_ALLOCATED(SVGClipPathElement);
+    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(SVGClipPathElement);
+    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(SVGClipPathElement);
 public:
     static Ref<SVGClipPathElement> create(const QualifiedName&, Document&);
 
     SVGUnitTypes::SVGUnitType clipPathUnits() const { return m_clipPathUnits->currentValue<SVGUnitTypes::SVGUnitType>(); }
     SVGAnimatedEnumeration& clipPathUnitsAnimated() { return m_clipPathUnits; }
 
+    RefPtr<SVGGraphicsElement> shouldApplyPathClipping() const;
+
+    FloatRect calculateClipContentRepaintRect(RepaintRectCalculation);
+
 private:
     SVGClipPathElement(const QualifiedName&, Document&);
 
     using PropertyRegistry = SVGPropertyOwnerRegistry<SVGClipPathElement, SVGGraphicsElement>;
 
-    void parseAttribute(const QualifiedName&, const AtomString&) final;
+    void attributeChanged(const QualifiedName&, const AtomString& oldValue, const AtomString& newValue, AttributeModificationReason) final;
     void svgAttributeChanged(const QualifiedName&) final;
     void childrenChanged(const ChildChange&) final;
 

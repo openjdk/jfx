@@ -63,8 +63,8 @@ namespace JSC { namespace DFG {
 static constexpr bool dumpOSRAvailabilityData = false;
 
 // Creates an array of stringized names.
-static const char* const dfgOpNames[] = {
-#define STRINGIZE_DFG_OP_ENUM(opcode, flags) #opcode ,
+static constexpr ASCIILiteral dfgOpNames[] = {
+#define STRINGIZE_DFG_OP_ENUM(opcode, flags) #opcode ## _s ,
     FOR_EACH_DFG_OP(STRINGIZE_DFG_OP_ENUM)
 #undef STRINGIZE_DFG_OP_ENUM
 };
@@ -94,11 +94,9 @@ Graph::Graph(VM& vm, Plan& plan)
     this->symbolStructure = registerStructure(vm.symbolStructure.get());
 }
 
-Graph::~Graph()
-{
-}
+Graph::~Graph() = default;
 
-const char *Graph::opName(NodeType op)
+ASCIILiteral Graph::opName(NodeType op)
 {
     return dfgOpNames[op];
 }
@@ -205,8 +203,8 @@ void Graph::dump(PrintStream& out, const char* prefixStr, Node* node, DumpContex
     if (node->hasResult() && node->hasVirtualRegister() && node->virtualRegister().isValid())
         out.print(node->virtualRegister());
     else
-        out.print("-");
-    out.print(">\t", opName(op), "(");
+        out.print("-"_s);
+    out.print(">\t"_s, opName(op), "("_s);
     CommaPrinter comma;
     if (node->flags() & NodeHasVarArgs) {
         for (unsigned childIdx = node->firstChild(); childIdx < node->firstChild() + node->numChildren(); childIdx++) {
@@ -228,15 +226,17 @@ void Graph::dump(PrintStream& out, const char* prefixStr, Node* node, DumpContex
     if (node->prediction())
         out.print(comma, SpeculationDump(node->prediction()));
     if (node->hasNumberOfArgumentsToSkip())
-        out.print(comma, "numberOfArgumentsToSkip = ", node->numberOfArgumentsToSkip());
+        out.print(comma, "numberOfArgumentsToSkip = "_s, node->numberOfArgumentsToSkip());
+    if (node->hasNumberOfBoundArguments())
+        out.print(comma, "numberOfBoundArguments = "_s, node->numberOfBoundArguments());
     if (node->hasArrayMode())
         out.print(comma, node->arrayMode());
     if (node->hasArithUnaryType())
-        out.print(comma, "Type:", node->arithUnaryType());
+        out.print(comma, "Type:"_s, node->arithUnaryType());
     if (node->hasArithMode())
         out.print(comma, node->arithMode());
     if (node->hasArithRoundingMode())
-        out.print(comma, "Rounding:", node->arithRoundingMode());
+        out.print(comma, "Rounding:"_s, node->arithRoundingMode());
     if (node->hasScopeOffset())
         out.print(comma, node->scopeOffset());
     if (node->hasDirectArgumentsOffset())
@@ -244,11 +244,13 @@ void Graph::dump(PrintStream& out, const char* prefixStr, Node* node, DumpContex
     if (node->hasArgumentIndex())
         out.print(comma, node->argumentIndex());
     if (node->hasRegisterPointer())
-        out.print(comma, "global", "(", RawPointer(node->variablePointer()), ")");
+        out.print(comma, "global", "("_s, RawPointer(node->variablePointer()), ")"_s);
     if (node->hasIdentifier() && node->identifierNumber() != UINT32_MAX)
-        out.print(comma, "id", node->identifierNumber(), "{", identifiers()[node->identifierNumber()], "}");
+        out.print(comma, "id"_s, node->identifierNumber(), "{"_s, identifiers()[node->identifierNumber()], "}"_s);
     if (node->hasCacheableIdentifier() && node->cacheableIdentifier())
-        out.print(comma, "cachable-id {", node->cacheableIdentifier(), "}");
+        out.print(comma, "cachable-id {"_s, node->cacheableIdentifier(), "}"_s);
+    if (node->hasCacheType())
+        out.print(comma, node->cacheType());
     if (node->hasPromotedLocationDescriptor())
         out.print(comma, node->promotedLocationDescriptor());
     if (node->hasClassInfo())
@@ -262,35 +264,37 @@ void Graph::dump(PrintStream& out, const char* prefixStr, Node* node, DumpContex
     if (node->hasTransition()) {
         out.print(comma, pointerDumpInContext(node->transition(), context));
 #if USE(JSVALUE64)
-        out.print(", ID:", node->transition()->next->id().bits());
+        out.print(", ID:"_s, node->transition()->next->id().bits());
 #else
-        out.print(", ID:", RawPointer(node->transition()->next.get()));
+        out.print(", ID:"_s, RawPointer(node->transition()->next.get()));
 #endif
     }
     if (node->hasCellOperand()) {
         if (!node->cellOperand()->value() || !node->cellOperand()->value().isCell())
-            out.print(comma, "invalid cell operand: ", node->cellOperand()->value());
+            out.print(comma, "invalid cell operand: "_s, node->cellOperand()->value());
         else {
             out.print(comma, pointerDump(node->cellOperand()->value().asCell()));
             if (node->cellOperand()->value().isCell()) {
                 CallVariant variant(node->cellOperand()->value().asCell());
                 if (ExecutableBase* executable = variant.executable()) {
                     if (executable->isHostFunction())
-                        out.print(comma, "<host function>");
+                        out.print(comma, "<host function>"_s);
                     else if (FunctionExecutable* functionExecutable = jsDynamicCast<FunctionExecutable*>(executable))
                         out.print(comma, FunctionExecutableDump(functionExecutable));
                     else
-                        out.print(comma, "<non-function executable>");
+                        out.print(comma, "<non-function executable>"_s);
                 }
             }
         }
     }
     if (node->hasQueriedType())
         out.print(comma, node->queriedType());
+    if (node->hasStructureFlags())
+        out.print(comma, node->structureFlags());
     if (node->hasStorageAccessData()) {
         StorageAccessData& storageAccessData = node->storageAccessData();
-        out.print(comma, "id", storageAccessData.identifierNumber, "{", identifiers()[storageAccessData.identifierNumber], "}");
-        out.print(", ", static_cast<ptrdiff_t>(storageAccessData.offset));
+        out.print(comma, "id"_s, storageAccessData.identifierNumber, "{"_s, identifiers()[storageAccessData.identifierNumber], "}"_s);
+        out.print(", "_s, static_cast<ptrdiff_t>(storageAccessData.offset));
     }
     if (node->hasMultiGetByOffsetData()) {
         MultiGetByOffsetData& data = node->multiGetByOffsetData();
@@ -300,42 +304,42 @@ void Graph::dump(PrintStream& out, const char* prefixStr, Node* node, DumpContex
     }
     if (node->hasMultiPutByOffsetData()) {
         MultiPutByOffsetData& data = node->multiPutByOffsetData();
-        out.print(comma, "id", data.identifierNumber, "{", identifiers()[data.identifierNumber], "}");
+        out.print(comma, "id"_s, data.identifierNumber, "{"_s, identifiers()[data.identifierNumber], "}"_s);
         for (unsigned i = 0; i < data.variants.size(); ++i)
             out.print(comma, inContext(data.variants[i], context));
     }
     if (node->hasMultiDeleteByOffsetData()) {
         MultiDeleteByOffsetData& data = node->multiDeleteByOffsetData();
-        out.print(comma, "id", data.identifierNumber, "{", identifiers()[data.identifierNumber], "}");
+        out.print(comma, "id"_s, data.identifierNumber, "{"_s, identifiers()[data.identifierNumber], "}"_s);
         for (unsigned i = 0; i < data.variants.size(); ++i)
             out.print(comma, inContext(data.variants[i], context));
     }
     if (node->hasMatchStructureData()) {
         for (MatchStructureVariant& variant : node->matchStructureData().variants)
-            out.print(comma, inContext(*variant.structure.get(), context), "=>", variant.result);
+            out.print(comma, inContext(*variant.structure.get(), context), "=>"_s, variant.result);
     }
     ASSERT(node->hasVariableAccessData(*this) == node->accessesStack(*this));
     if (node->hasVariableAccessData(*this)) {
         VariableAccessData* variableAccessData = node->tryGetVariableAccessData();
         if (variableAccessData) {
             Operand operand = variableAccessData->operand();
-            out.print(comma, variableAccessData->operand(), "(", VariableAccessDataDump(*this, variableAccessData), ")");
+            out.print(comma, variableAccessData->operand(), "("_s, VariableAccessDataDump(*this, variableAccessData), ")"_s);
             operand = variableAccessData->machineLocal();
             if (operand.isValid())
-                out.print(comma, "machine:", operand);
+                out.print(comma, "machine:"_s, operand);
         }
     }
     if (node->hasStackAccessData()) {
         StackAccessData* data = node->stackAccessData();
         out.print(comma, data->operand);
         if (data->machineLocal.isValid())
-            out.print(comma, "machine:", data->machineLocal);
+            out.print(comma, "machine:"_s, data->machineLocal);
         out.print(comma, data->format);
     }
     if (node->hasUnlinkedOperand())
         out.print(comma, node->unlinkedOperand());
     if (node->hasVectorLengthHint())
-        out.print(comma, "vectorLengthHint = ", node->vectorLengthHint());
+        out.print(comma, "vectorLengthHint = "_s, node->vectorLengthHint());
     if (node->hasLazyJSValue())
         out.print(comma, node->lazyJSValue());
     if (node->hasIndexingType())
@@ -343,7 +347,7 @@ void Graph::dump(PrintStream& out, const char* prefixStr, Node* node, DumpContex
     if (node->hasTypedArrayType())
         out.print(comma, node->typedArrayType());
     if (node->hasPhi())
-        out.print(comma, "^", node->phi()->index());
+        out.print(comma, "^"_s, node->phi()->index());
     if (node->hasExecutionCounter())
         out.print(comma, RawPointer(node->executionCounter()));
     if (node->hasWatchpointSet())
@@ -353,30 +357,30 @@ void Graph::dump(PrintStream& out, const char* prefixStr, Node* node, DumpContex
     if (node->hasObjectMaterializationData())
         out.print(comma, node->objectMaterializationData());
     if (node->hasCallVarargsData())
-        out.print(comma, "firstVarArgOffset = ", node->callVarargsData()->firstVarArgOffset);
+        out.print(comma, "firstVarArgOffset = "_s, node->callVarargsData()->firstVarArgOffset);
     if (node->hasLoadVarargsData()) {
         LoadVarargsData* data = node->loadVarargsData();
-        out.print(comma, "start = ", data->start, ", count = ", data->count);
+        out.print(comma, "start = "_s, data->start, ", count = "_s, data->count);
         if (data->machineStart.isValid())
             out.print(", machineStart = ", data->machineStart);
         if (data->machineCount.isValid())
-            out.print(", machineCount = ", data->machineCount);
-        out.print(", offset = ", data->offset, ", mandatoryMinimum = ", data->mandatoryMinimum);
-        out.print(", limit = ", data->limit);
+            out.print(", machineCount = "_s, data->machineCount);
+        out.print(", offset = "_s, data->offset, ", mandatoryMinimum = "_s, data->mandatoryMinimum);
+        out.print(", limit = "_s, data->limit);
     }
     if (node->hasIsInternalPromise())
-        out.print(comma, "isInternalPromise = ", node->isInternalPromise());
+        out.print(comma, "isInternalPromise = "_s, node->isInternalPromise());
     if (node->hasInternalFieldIndex())
-        out.print(comma, "internalFieldIndex = ", node->internalFieldIndex());
+        out.print(comma, "internalFieldIndex = "_s, node->internalFieldIndex());
     if (node->hasCallDOMGetterData()) {
         CallDOMGetterData* data = node->callDOMGetterData();
-        out.print(comma, "id", data->identifierNumber, "{", identifiers()[data->identifierNumber], "}");
-        out.print(", domJIT = ", RawPointer(data->domJIT));
+        out.print(comma, "id"_s, data->identifierNumber, "{"_s, identifiers()[data->identifierNumber], "}"_s);
+        out.print(", domJIT = "_s, RawPointer(data->domJIT));
     }
     if (node->hasIgnoreLastIndexIsWritable())
-        out.print(comma, "ignoreLastIndexIsWritable = ", node->ignoreLastIndexIsWritable());
+        out.print(comma, "ignoreLastIndexIsWritable = "_s, node->ignoreLastIndexIsWritable());
     if (node->hasIntrinsic())
-        out.print(comma, "intrinsic = ", node->intrinsic());
+        out.print(comma, "intrinsic = "_s, node->intrinsic());
     if (node->isConstant())
         out.print(comma, pointerDumpInContext(node->constant(), context));
     if (node->hasCallLinkStatus())
@@ -388,17 +392,19 @@ void Graph::dump(PrintStream& out, const char* prefixStr, Node* node, DumpContex
     if (node->hasPutByStatus())
         out.print(comma, *node->putByStatus());
     if (node->hasEnumeratorMetadata())
-        out.print(comma, "enumeratorModes = ", node->enumeratorMetadata().toRaw());
+        out.print(comma, "enumeratorModes = "_s, node->enumeratorMetadata().toRaw());
+    if (node->hasExtractOffset())
+        out.print(comma, "<<"_s, node->extractOffset());
     if (node->isJump())
-        out.print(comma, "T:", *node->targetBlock());
+        out.print(comma, "T:"_s, *node->targetBlock());
     if (node->isBranch())
-        out.print(comma, "T:", node->branchData()->taken, ", F:", node->branchData()->notTaken);
+        out.print(comma, "T:"_s, node->branchData()->taken, ", F:"_s, node->branchData()->notTaken);
     if (node->isSwitch()) {
         SwitchData* data = node->switchData();
         out.print(comma, data->kind);
         for (unsigned i = 0; i < data->cases.size(); ++i)
-            out.print(comma, inContext(data->cases[i].value, context), ":", data->cases[i].target);
-        out.print(comma, "default:", data->fallThrough);
+            out.print(comma, inContext(data->cases[i].value, context), ":"_s, data->cases[i].target);
+        out.print(comma, "default:"_s, data->fallThrough);
     }
     if (node->isEntrySwitch()) {
         EntrySwitchData* data = node->entrySwitchData();
@@ -409,30 +415,30 @@ void Graph::dump(PrintStream& out, const char* prefixStr, Node* node, DumpContex
     ClobberSet writes;
     addReadsAndWrites(*this, node, reads, writes);
     if (!reads.isEmpty())
-        out.print(comma, "R:", sortedListDump(reads.direct(), ","));
+        out.print(comma, "R:"_s, sortedListDump(reads.direct(), ","_s));
     if (!writes.isEmpty())
-        out.print(comma, "W:", sortedListDump(writes.direct(), ","));
+        out.print(comma, "W:"_s, sortedListDump(writes.direct(), ","_s));
     ExitMode exitMode = mayExit(*this, node);
     if (exitMode != DoesNotExit)
         out.print(comma, exitMode);
     if (clobbersExitState(*this, node))
-        out.print(comma, "ClobbersExit");
+        out.print(comma, "ClobbersExit"_s);
     if (node->origin.isSet()) {
         out.print(comma, node->origin.semantic.bytecodeIndex());
         if (node->origin.semantic != node->origin.forExit && node->origin.forExit.isSet())
-            out.print(comma, "exit: ", node->origin.forExit);
+            out.print(comma, "exit: "_s, node->origin.forExit);
     }
-    out.print(comma, node->origin.exitOK ? "ExitValid" : "ExitInvalid");
+    out.print(comma, node->origin.exitOK ? "ExitValid"_s : "ExitInvalid"_s);
     if (node->origin.wasHoisted)
-        out.print(comma, "WasHoisted");
+        out.print(comma, "WasHoisted"_s);
     out.print(")");
 
     if (node->accessesStack(*this) && node->tryGetVariableAccessData())
-        out.print("  predicting ", SpeculationDump(node->tryGetVariableAccessData()->prediction()));
+        out.print("  predicting "_s, SpeculationDump(node->tryGetVariableAccessData()->prediction()));
     else if (node->hasHeapPrediction())
-        out.print("  predicting ", SpeculationDump(node->getHeapPrediction()));
+        out.print("  predicting "_s, SpeculationDump(node->getHeapPrediction()));
 
-    out.print("\n");
+    out.print("\n"_s);
 }
 
 bool Graph::terminalsAreValid()
@@ -647,9 +653,9 @@ void Graph::dump(PrintStream& out, DumpContext* context)
     prefix.clearBlockIndex();
 
     out.print(prefix, "GC Values:\n");
-    for (FrozenValue* value : m_frozenValues) {
-        if (value->pointsToHeap())
-            out.print(prefix, "    ", inContext(*value, &myContext), "\n");
+    for (FrozenValue& value : m_frozenValues) {
+        if (value.pointsToHeap())
+            out.print(prefix, "    ", inContext(value, &myContext), "\n");
     }
 
     out.print(inContext(watchpoints(), &myContext));
@@ -677,6 +683,11 @@ void Graph::deleteNode(Node* node)
 void Graph::packNodeIndices()
 {
     m_nodes.packIndices();
+}
+
+void Graph::clearAbstractValues()
+{
+    m_abstractValuesCache->clear();
 }
 
 void Graph::dethread()
@@ -763,6 +774,8 @@ public:
             for (unsigned phiIndex = block->phis.size(); phiIndex--;)
                 block->phis[phiIndex]->setRefCount(0);
         }
+        for (auto& tupleData : m_graph.m_tupleData)
+            tupleData.refCount = 0;
 
         // Now find the roots:
         // - Nodes that are must-generate.
@@ -818,8 +831,7 @@ private:
         // will just not have gotten around to it.
         if (edge.isProved() || edge.willNotHaveCheck())
             return;
-        if (!edge->postfixRef())
-            m_worklist.append(edge.node());
+        countNode(edge.node());
     }
 
     void countNode(Node* node)
@@ -829,11 +841,14 @@ private:
         m_worklist.append(node);
     }
 
-    void countEdge(Node*, Edge edge)
+    void countEdge(Node* node, Edge edge)
     {
         // Don't count edges that are already counted for their type checks.
         if (!(edge.isProved() || edge.willNotHaveCheck()))
             return;
+        // Tuples are special and have a reference count for each result.
+        if (node->op() == ExtractFromTuple)
+            m_graph.m_tupleData.at(node->tupleIndex()).refCount++;
         countNode(edge.node());
     }
 
@@ -1326,12 +1341,39 @@ JSValue Graph::tryGetConstantProperty(
     // incompatible with the getDirect we're trying to do. The easiest way to do that is to
     // determine if the structure belongs to the proven set.
 
-    Locker cellLock { object->cellLock() };
-    Structure* structure = object->structure();
-    if (!structureSet.toStructureSet().contains(structure))
+    JSValue result;
+    auto set = structureSet.toStructureSet();
+    {
+        Locker cellLock { object->cellLock() };
+        Structure* structure = object->structure();
+        if (!set.contains(structure))
+            return JSValue();
+        result = object->getDirectConcurrently(cellLock, structure, offset);
+    }
+
+    if (!result)
         return JSValue();
 
-    return object->getDirectConcurrently(cellLock, structure, offset);
+    // If all structures are watched, we don't need to consider whether object transitions and changes the value.
+    // If the object gets transition while compiling, then it invalidates the code.
+    bool allAreWatched = true;
+    for (unsigned i = structureSet.size(); i--;) {
+        RegisteredStructure structure = structureSet[i];
+        if (!structure->dfgShouldWatch()) {
+            allAreWatched = false;
+            break;
+        }
+    }
+    if (allAreWatched)
+        return result;
+
+    // However, if structures transitions are not watched, then object can get to the one of the structures transitively while it is changing the value.
+    // But we can still optimize it if StructureSet is only one: in that case, there is no way to fulfill Structure requirement while changing the property
+    // and avoiding the replacement watchpoint firing.
+    if (structureSet.size() != 1)
+        return JSValue();
+
+    return result;
 }
 
 JSValue Graph::tryGetConstantProperty(JSValue base, Structure* structure, PropertyOffset offset)
@@ -1362,6 +1404,17 @@ AbstractValue Graph::inferredValueForProperty(
     StructureClobberState clobberState)
 {
     if (JSValue value = tryGetConstantProperty(base, offset)) {
+        AbstractValue result;
+        result.set(*this, *freeze(value), clobberState);
+        return result;
+    }
+
+    return AbstractValue::heapTop();
+}
+
+AbstractValue Graph::inferredValueForProperty(const AbstractValue& base, const RegisteredStructureSet& structureSet, PropertyOffset offset, StructureClobberState clobberState)
+{
+    if (JSValue value = tryGetConstantProperty(base.m_value, structureSet, offset)) {
         AbstractValue result;
         result.set(*this, *freeze(value), clobberState);
         return result;
@@ -1468,22 +1521,22 @@ void Graph::registerFrozenValues()
 {
     ConcurrentJSLocker locker(m_codeBlock->m_lock);
     m_codeBlock->constants().shrink(0);
-    for (FrozenValue* value : m_frozenValues) {
-        if (!value->pointsToHeap())
+    for (FrozenValue& value : m_frozenValues) {
+        if (!value.pointsToHeap())
             continue;
 
-        ASSERT(value->structure());
-        ASSERT(m_plan.weakReferences().contains(value->structure()));
+        ASSERT(value.structure());
+        ASSERT(m_plan.weakReferences().contains(value.structure()));
 
-        switch (value->strength()) {
+        switch (value.strength()) {
         case WeakValue: {
-            m_plan.weakReferences().addLazily(value->value().asCell());
+            m_plan.weakReferences().addLazily(value.value().asCell());
             break;
         }
         case StrongValue: {
             unsigned constantIndex = m_codeBlock->addConstantLazily(locker);
             // We already have a barrier on the code block.
-            m_codeBlock->constants()[constantIndex].setWithoutWriteBarrier(value->value());
+            m_codeBlock->constants()[constantIndex].setWithoutWriteBarrier(value.value());
             break;
         } }
     }
@@ -1493,9 +1546,9 @@ void Graph::registerFrozenValues()
 template<typename Visitor>
 ALWAYS_INLINE void Graph::visitChildrenImpl(Visitor& visitor)
 {
-    for (FrozenValue* value : m_frozenValues) {
-        visitor.appendUnbarriered(value->value());
-        visitor.appendUnbarriered(value->structure());
+    for (FrozenValue& value : m_frozenValues) {
+        visitor.appendUnbarriered(value.value());
+        visitor.appendUnbarriered(value.structure());
     }
 }
 
@@ -1504,6 +1557,7 @@ void Graph::visitChildren(SlotVisitor& visitor) { visitChildrenImpl(visitor); }
 
 FrozenValue* Graph::freeze(JSValue value)
 {
+    RELEASE_ASSERT(!m_frozenValuesAreFinalized);
     if (UNLIKELY(!value))
         return FrozenValue::emptySingleton();
 
@@ -1524,7 +1578,7 @@ FrozenValue* Graph::freeze(JSValue value)
     if (Structure* structure = frozenValue.structure())
         registerStructure(structure);
 
-    return result.iterator->value = m_frozenValues.add(frozenValue);
+    return result.iterator->value = &m_frozenValues.alloc(frozenValue);
 }
 
 FrozenValue* Graph::freezeStrong(JSValue value)
@@ -1737,8 +1791,34 @@ MethodOfGettingAValueProfile Graph::methodOfGettingAValueProfileFor(Node* curren
                     return MethodOfGettingAValueProfile::lazyOperandValueProfile(node->origin.semantic, node->operand());
             }
 
-            if (node->hasHeapPrediction())
+            if (node->hasHeapPrediction()) {
+                auto instruction = profiledBlock->instructions().at(node->origin.semantic.bytecodeIndex());
+                OpcodeID opcodeID = instruction->opcodeID();
+                switch (opcodeID) {
+                case op_tail_call:
+                case op_tail_call_varargs:
+                case op_tail_call_forward_arguments: {
+                    InlineCallFrame* inlineCallFrame = node->origin.semantic.inlineCallFrame();
+                    if (!inlineCallFrame)
+                        return { }; // TailCall in the outermost function.
+
+                    CodeOrigin* codeOrigin = inlineCallFrame->getCallerSkippingTailCalls();
+                    if (!codeOrigin)
+                        return { };
+
+                    CodeBlock* callerBlock = baselineCodeBlockFor(*codeOrigin);
+                    auto* valueProfile = callerBlock->tryGetValueProfileForBytecodeIndex(codeOrigin->bytecodeIndex());
+                    if (!valueProfile)
+                        return { };
+
+                    return MethodOfGettingAValueProfile::bytecodeValueProfile(*codeOrigin);
+                }
+                case op_call_ignore_result:
+                    return { };
+                default:
                 return MethodOfGettingAValueProfile::bytecodeValueProfile(node->origin.semantic);
+                }
+            }
 
             if (profiledBlock->hasBaselineJITProfiling()) {
                 if (profiledBlock->binaryArithProfileForBytecodeIndex(node->origin.semantic.bytecodeIndex()))
@@ -1903,6 +1983,24 @@ bool Graph::canDoFastSpread(Node* node, const AbstractValue& value)
     return allGood;
 }
 
+bool Graph::isNeverResizableOrGrowableSharedTypedArrayIncludingDataView(const AbstractValue& value)
+{
+    auto& structureSet = value.m_structure;
+    if (!structureSet.isFinite())
+        return false;
+
+    if (structureSet.isClear())
+        return false;
+
+    bool allAreNonResizable = true;
+    structureSet.forEach(
+        [&](RegisteredStructure structure) {
+            if (isResizableOrGrowableSharedTypedArrayIncludingDataView(structure->classInfoForCells()))
+                allAreNonResizable = false;
+        });
+    return allAreNonResizable;
+}
+
 void Graph::clearCPSCFGData()
 {
     m_cpsNaturalLoops = nullptr;
@@ -1928,6 +2026,18 @@ void Graph::freeDFGIRAfterLowering()
     m_backwardsCFG = nullptr;
     m_backwardsDominators = nullptr;
     m_controlEquivalenceAnalysis = nullptr;
+}
+
+const BoyerMooreHorspoolTable<uint8_t>* Graph::tryAddStringSearchTable8(const String& string)
+{
+    constexpr unsigned minPatternLength = 9;
+    if (string.length() > BoyerMooreHorspoolTable<uint8_t>::maxPatternLength)
+        return nullptr;
+    if (string.length() < minPatternLength)
+        return nullptr;
+    return m_stringSearchTable8.ensure(string, [&]() {
+        return makeUnique<BoyerMooreHorspoolTable<uint8_t>>(string);
+    }).iterator->value.get();
 }
 
 void Prefix::dump(PrintStream& out) const

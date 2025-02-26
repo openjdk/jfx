@@ -62,6 +62,8 @@ namespace IDBClient {
 class IDBConnectionProxy;
 }
 
+enum class AdvancedPrivacyProtections : uint16_t;
+
 struct WorkerThreadStartupData;
 
 struct WorkerParameters {
@@ -82,10 +84,10 @@ public:
     Settings::Values settingsValues;
     WorkerThreadMode workerThreadMode { WorkerThreadMode::CreateNewThread };
     PAL::SessionID sessionID;
-#if ENABLE(SERVICE_WORKER)
     std::optional<ServiceWorkerData> serviceWorkerData;
-#endif
     ScriptExecutionContextIdentifier clientIdentifier;
+    OptionSet<AdvancedPrivacyProtections> advancedPrivacyProtections;
+    std::optional<uint64_t> noiseInjectionHashSalt;
 
     WorkerParameters isolatedCopy() const;
 };
@@ -94,10 +96,11 @@ class WorkerThread : public WorkerOrWorkletThread {
 public:
     virtual ~WorkerThread();
 
-    WorkerBadgeProxy& workerBadgeProxy() const { return m_workerBadgeProxy; }
-    WorkerDebuggerProxy* workerDebuggerProxy() const final { return &m_workerDebuggerProxy; }
-    WorkerLoaderProxy& workerLoaderProxy() final { return m_workerLoaderProxy; }
-    WorkerReportingProxy& workerReportingProxy() const { return m_workerReportingProxy; }
+    WorkerBadgeProxy* workerBadgeProxy() const { return m_workerBadgeProxy; }
+    WorkerDebuggerProxy* workerDebuggerProxy() const final { return m_workerDebuggerProxy; }
+    WorkerLoaderProxy* workerLoaderProxy() final { return m_workerLoaderProxy; }
+    WorkerReportingProxy* workerReportingProxy() const { return m_workerReportingProxy; }
+
 
     // Number of active worker threads.
     WEBCORE_EXPORT static unsigned workerThreadCount();
@@ -110,8 +113,9 @@ public:
     JSC::RuntimeFlags runtimeFlags() const { return m_runtimeFlags; }
     bool isInStaticScriptEvaluation() const { return m_isInStaticScriptEvaluation; }
 
-    void setWorkerClient(std::unique_ptr<WorkerClient>&& client) { m_workerClient = WTFMove(client); }
-    WorkerClient* workerClient() { return m_workerClient.get(); }
+    void clearProxies() override;
+
+    void setWorkerClient(std::unique_ptr<WorkerClient> client) { m_workerClient = WTFMove(client); }
 protected:
     WorkerThread(const WorkerParameters&, const ScriptBuffer& sourceCode, WorkerLoaderProxy&, WorkerDebuggerProxy&, WorkerReportingProxy&, WorkerBadgeProxy&, WorkerThreadStartMode, const SecurityOrigin& topOrigin, IDBClient::IDBConnectionProxy*, SocketProvider*, JSC::RuntimeFlags);
 
@@ -135,10 +139,10 @@ private:
     void evaluateScriptIfNecessary(String& exceptionMessage) final;
     bool shouldWaitForWebInspectorOnStartup() const final;
 
-    WorkerLoaderProxy& m_workerLoaderProxy;
-    WorkerDebuggerProxy& m_workerDebuggerProxy;
-    WorkerReportingProxy& m_workerReportingProxy;
-    WorkerBadgeProxy& m_workerBadgeProxy;
+    WorkerLoaderProxy* m_workerLoaderProxy; // FIXME: Use CheckedPtr.
+    WorkerDebuggerProxy* m_workerDebuggerProxy; // FIXME: Use CheckedPtr.
+    WorkerReportingProxy* m_workerReportingProxy; // FIXME: Use CheckedPtr.
+    WorkerBadgeProxy* m_workerBadgeProxy; // FIXME: Use CheckedPtr.
     JSC::RuntimeFlags m_runtimeFlags;
 
     std::unique_ptr<WorkerThreadStartupData> m_startupData;

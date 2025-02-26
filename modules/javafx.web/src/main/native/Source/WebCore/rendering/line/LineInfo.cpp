@@ -31,19 +31,13 @@
 #include "LineInfo.h"
 
 #include "RenderBlock.h"
+#include "RenderBoxInlines.h"
 
 namespace WebCore {
 
-void LineInfo::setEmpty(bool empty, RenderBlock* block, LineWidth* lineWidth)
+void LineInfo::setEmpty(bool empty)
 {
-    if (m_isEmpty == empty)
-        return;
     m_isEmpty = empty;
-    if (!empty && block && floatPaginationStrut()) {
-        block->setLogicalHeight(block->logicalHeight() + floatPaginationStrut());
-        setFloatPaginationStrut(0);
-        lineWidth->updateAvailableWidth();
-    }
 }
 
 }

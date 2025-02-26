@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2016-2021 Apple Inc. All rights reserved.
+ * Copyright (C) 2016-2023 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -30,6 +30,7 @@
 #include <wtf/HashMap.h>
 #include <wtf/HashSet.h>
 #include <wtf/Lock.h>
+#include <wtf/TZoneMalloc.h>
 #include <wtf/Vector.h>
 
 namespace JSC {
@@ -103,7 +104,7 @@ struct HeapSnapshotEdge {
 };
 
 class JS_EXPORT_PRIVATE HeapSnapshotBuilder final : public HeapAnalyzer {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_ALLOCATED(HeapSnapshotBuilder);
 public:
     enum SnapshotType { InspectorSnapshot, GCDebuggingSnapshot };
 
@@ -124,7 +125,7 @@ public:
     void analyzeVariableNameEdge(JSCell* from, JSCell* to, UniquedStringImpl* variableName) final;
     void analyzeIndexEdge(JSCell* from, JSCell* to, uint32_t index) final;
 
-    void setOpaqueRootReachabilityReasonForCell(JSCell*, const char*) final;
+    void setOpaqueRootReachabilityReasonForCell(JSCell*, ASCIILiteral) final;
     void setWrappedObjectForCell(JSCell*, void*) final;
     void setLabelForCell(JSCell*, const String&) final;
 
@@ -142,7 +143,7 @@ private:
     String descriptionForCell(JSCell*) const;
 
     struct RootData {
-        const char* reachabilityFromOpaqueRootReasons { nullptr };
+        ASCIILiteral reachabilityFromOpaqueRootReasons;
         RootMarkReason markReason { RootMarkReason::None };
     };
 

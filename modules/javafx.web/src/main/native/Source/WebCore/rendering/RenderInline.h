@@ -22,7 +22,6 @@
 
 #pragma once
 
-#include "LegacyInlineFlowBox.h"
 #include "RenderBoxModelObject.h"
 #include "RenderLineBoxList.h"
 
@@ -32,10 +31,12 @@ class Position;
 class RenderFragmentContainer;
 
 class RenderInline : public RenderBoxModelObject {
-    WTF_MAKE_ISO_ALLOCATED(RenderInline);
+    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(RenderInline);
+    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(RenderInline);
 public:
-    RenderInline(Element&, RenderStyle&&);
-    RenderInline(Document&, RenderStyle&&);
+    RenderInline(Type, Element&, RenderStyle&&);
+    RenderInline(Type, Document&, RenderStyle&&);
+    virtual ~RenderInline();
 
     LayoutUnit marginLeft() const final;
     LayoutUnit marginRight() const final;
@@ -46,7 +47,7 @@ public:
     LayoutUnit marginStart(const RenderStyle* otherStyle = 0) const final;
     LayoutUnit marginEnd(const RenderStyle* otherStyle = 0) const final;
 
-    void absoluteRects(Vector<IntRect>&, const LayoutPoint& accumulatedOffset) const final;
+    void boundingRects(Vector<LayoutRect>&, const LayoutPoint& accumulatedOffset) const final;
     void absoluteQuads(Vector<FloatQuad>&, bool* wasFixed) const override;
 
     LayoutSize offsetFromContainer(RenderElement&, const LayoutPoint&, bool* offsetDependsOnPoint = nullptr) const final;
@@ -61,7 +62,6 @@ public:
 
     WEBCORE_EXPORT IntRect linesBoundingBox() const;
     LayoutRect linesVisualOverflowBoundingBox() const;
-    LayoutRect linesVisualOverflowBoundingBoxInFragment(const RenderFragmentContainer*) const;
 
     LegacyInlineFlowBox* createAndAppendInlineFlowBox();
 
@@ -71,8 +71,8 @@ public:
     RenderLineBoxList& lineBoxes() { return m_lineBoxes; }
     const RenderLineBoxList& lineBoxes() const { return m_lineBoxes; }
 
-    LegacyInlineFlowBox* firstLineBox() const { return m_lineBoxes.firstLineBox(); }
-    LegacyInlineFlowBox* lastLineBox() const { return m_lineBoxes.lastLineBox(); }
+    LegacyInlineFlowBox* firstLegacyInlineBox() const { return m_lineBoxes.firstLegacyLineBox(); }
+    LegacyInlineFlowBox* lastLegacyInlineBox() const { return m_lineBoxes.lastLegacyLineBox(); }
 
 #if PLATFORM(IOS_FAMILY)
     void absoluteQuadsForSelection(Vector<FloatQuad>& quads) const override;
@@ -85,7 +85,9 @@ public:
 
     bool mayAffectLayout() const;
 
-    bool requiresLayer() const override { return isInFlowPositioned() || createsGroup() || hasClipPath() || shouldApplyPaintContainment() || willChangeCreatesStackingContext() || hasRunningAcceleratedAnimations(); }
+    bool requiresLayer() const override;
+
+    LayoutPoint firstInlineBoxTopLeft() const;
 
 protected:
     void willBeDestroyed() override;
@@ -115,26 +117,26 @@ private:
     LayoutUnit offsetTop() const final;
     LayoutUnit offsetWidth() const final { return linesBoundingBox().width(); }
     LayoutUnit offsetHeight() const final { return linesBoundingBox().height(); }
-    LayoutPoint firstInlineBoxTopLeft() const;
 
 protected:
     LayoutRect clippedOverflowRect(const RenderLayerModelObject* repaintContainer, VisibleRectContext) const override;
+    RepaintRects rectsForRepaintingAfterLayout(const RenderLayerModelObject* repaintContainer, RepaintOutlineBounds) const override;
     LayoutRect rectWithOutlineForRepaint(const RenderLayerModelObject* repaintContainer, LayoutUnit outlineWidth) const final;
 
-    std::optional<LayoutRect> computeVisibleRectInContainer(const LayoutRect&, const RenderLayerModelObject* container, VisibleRectContext) const final;
-    LayoutRect computeVisibleRectUsingPaintOffset(const LayoutRect&) const;
+    std::optional<RepaintRects> computeVisibleRectsInContainer(const RepaintRects&, const RenderLayerModelObject* container, VisibleRectContext) const final;
+    RepaintRects computeVisibleRectsUsingPaintOffset(const RepaintRects&) const;
 
     void mapLocalToContainer(const RenderLayerModelObject* repaintContainer, TransformState&, OptionSet<MapCoordinatesMode>, bool* wasFixed) const override;
     const RenderObject* pushMappingToContainer(const RenderLayerModelObject* ancestorToStopAt, RenderGeometryMap&) const override;
 
 private:
-    VisiblePosition positionForPoint(const LayoutPoint&, const RenderFragmentContainer*) final;
+    VisiblePosition positionForPoint(const LayoutPoint&, HitTestSource, const RenderFragmentContainer*) final;
 
     LayoutRect frameRectForStickyPositioning() const final { return linesBoundingBox(); }
 
     virtual std::unique_ptr<LegacyInlineFlowBox> createInlineFlowBox(); // Subclassed by RenderSVGInline
 
-    void dirtyLinesFromChangedChild(RenderObject& child) final { m_lineBoxes.dirtyLinesFromChangedChild(*this, child); }
+    void dirtyLineFromChangedChild() final { m_lineBoxes.dirtyLineFromChangedChild(*this); }
 
     LayoutUnit lineHeight(bool firstLine, LineDirectionMode, LinePositionMode = PositionOnContainingLine) const final;
     LayoutUnit baselinePosition(FontBaseline, bool firstLine, LineDirectionMode, LinePositionMode = PositionOnContainingLine) const final;
@@ -143,10 +145,7 @@ private:
 
     void imageChanged(WrappedImagePtr, const IntRect* = 0) final;
 
-    bool willChangeCreatesStackingContext() const
-    {
-        return style().willChange() && style().willChange()->canCreateStackingContext();
-    }
+    inline bool willChangeCreatesStackingContext() const;
 
     RenderLineBoxList m_lineBoxes;   // All of the line boxes created for this inline flow.  For example, <i>Hello<br>world.</i> will have two <i> line boxes.
 };

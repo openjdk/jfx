@@ -28,14 +28,26 @@
 #if ENABLE(GAMEPAD)
 
 #include "Supplementable.h"
+#include <wtf/MonotonicTime.h>
 #include <wtf/Vector.h>
 #include <wtf/WeakPtr.h>
+
+namespace WebCore {
+class NavigatorGamepad;
+}
+
+namespace WTF {
+template<typename T> struct IsDeprecatedWeakRefSmartPointerException;
+template<> struct IsDeprecatedWeakRefSmartPointerException<WebCore::NavigatorGamepad> : std::true_type { };
+}
 
 namespace WebCore {
 
 class Gamepad;
 class Navigator;
+class Page;
 class PlatformGamepad;
+template<typename> class ExceptionOr;
 
 class NavigatorGamepad : public Supplement<Navigator>, public CanMakeWeakPtr<NavigatorGamepad> {
     WTF_MAKE_FAST_ALLOCATED;
@@ -47,17 +59,23 @@ public:
 
     // The array of Gamepads might be sparse.
     // Null checking each entry is necessary.
-    static const Vector<RefPtr<Gamepad>>& getGamepads(Navigator&);
+    static ExceptionOr<const Vector<RefPtr<Gamepad>>&> getGamepads(Navigator&);
 
     void gamepadConnected(PlatformGamepad&);
     void gamepadDisconnected(PlatformGamepad&);
 
     Ref<Gamepad> gamepadFromPlatformGamepad(PlatformGamepad&);
 
+    WEBCORE_EXPORT static void setGamepadsRecentlyAccessedThreshold(Seconds);
+    static Seconds gamepadsRecentlyAccessedThreshold();
+
+    RefPtr<Page> protectedPage() const;
+
 private:
-    static const char* supplementName();
+    static ASCIILiteral supplementName();
 
     void gamepadsBecameVisible();
+    void maybeNotifyRecentAccess();
 
     const Vector<RefPtr<Gamepad>>& gamepads();
 

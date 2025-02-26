@@ -35,6 +35,12 @@
             "description": "Level of logging."
         },
         {
+            "id": "ClearReason",
+            "type": "string",
+            "enum": ["console-api", "frontend", "main-frame-navigation"],
+            "description": "The reason the console is being cleared."
+        },
+        {
             "id": "Channel",
             "description": "Logging channel.",
             "type": "object",
@@ -100,6 +106,13 @@
             "description": "Clears console messages collected in the browser."
         },
         {
+           "name": "setConsoleClearAPIEnabled",
+           "description": "Control whether calling <code>console.clear()</code> has an effect in Web Inspector. Defaults to true.",
+           "parameters": [
+               { "name": "enable", "type": "boolean" }
+           ]
+        },
+        {
             "name": "getLoggingChannels",
             "description": "List of the different message sources that are non-default logging channels.",
             "returns": [
@@ -133,7 +146,10 @@
         },
         {
             "name": "messagesCleared",
-            "description": "Issued when console is cleared. This happens either upon <code>clearMessages</code> command or after page navigation."
+            "description": "Issued when console is cleared. This happens either upon <code>clearMessages</code> command or after page navigation.",
+            "parameters": [
+                { "name": "reason", "$ref": "ClearReason", "description": "The reason the console is being cleared." }
+            ]
         },
         {
             "name": "heapSnapshot",

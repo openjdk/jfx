@@ -32,14 +32,15 @@
 #include "AbstractWorker.h"
 
 #include "ContentSecurityPolicy.h"
+#include "OriginAccessPatterns.h"
 #include "ScriptExecutionContext.h"
 #include "SecurityOrigin.h"
 #include "WorkerOptions.h"
-#include <wtf/IsoMallocInlines.h>
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
-WTF_MAKE_ISO_ALLOCATED_IMPL(AbstractWorker);
+WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(AbstractWorker);
 
 FetchOptions AbstractWorker::workerFetchOptions(const WorkerOptions& options, FetchOptions::Destination destination)
 {
@@ -62,14 +63,14 @@ ExceptionOr<URL> AbstractWorker::resolveURL(const String& url)
     // FIXME: This should use the dynamic global scope (bug #27887).
     URL scriptURL = context.completeURL(url);
     if (!scriptURL.isValid())
-        return Exception { SyntaxError };
+        return Exception { ExceptionCode::SyntaxError };
 
-    if (!context.securityOrigin()->canRequest(scriptURL) && !scriptURL.protocolIsData())
-        return Exception { SecurityError };
+    if (!context.protectedSecurityOrigin()->canRequest(scriptURL, OriginAccessPatternsForWebProcess::singleton()) && !scriptURL.protocolIsData())
+        return Exception { ExceptionCode::SecurityError };
 
     ASSERT(context.contentSecurityPolicy());
-    if (!context.contentSecurityPolicy()->allowWorkerFromSource(scriptURL))
-        return Exception { SecurityError };
+    if (!context.checkedContentSecurityPolicy()->allowWorkerFromSource(scriptURL))
+        return Exception { ExceptionCode::SecurityError };
 
     return scriptURL;
 }

@@ -29,8 +29,8 @@
 
 namespace WebCore {
 
-enum ProcessIdentifierType { };
-using ProcessIdentifier = ObjectIdentifier<ProcessIdentifierType>;
+enum class ProcessIdentifierType { };
+using ProcessIdentifier = LegacyNullableObjectIdentifier<ProcessIdentifierType>;
 
 namespace Process {
 

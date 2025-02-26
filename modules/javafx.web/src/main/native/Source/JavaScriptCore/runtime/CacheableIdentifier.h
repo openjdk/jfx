@@ -26,16 +26,7 @@
 #pragma once
 
 #include "JSCJSValue.h"
-
-namespace WTF {
-
-class PrintStream;
-class UniquedStringImpl;
-
-} // namespace WTF
-
-using WTF::PrintStream;
-using WTF::UniquedStringImpl;
+#include <wtf/text/SymbolImpl.h>
 
 namespace JSC {
 
@@ -53,6 +44,7 @@ public:
     template <typename CodeBlockType>
     static inline CacheableIdentifier createFromIdentifierOwnedByCodeBlock(CodeBlockType*, UniquedStringImpl*);
     static inline CacheableIdentifier createFromImmortalIdentifier(UniquedStringImpl*);
+    static inline CacheableIdentifier createFromSharedStub(UniquedStringImpl*);
     static constexpr CacheableIdentifier createFromRawBits(uintptr_t rawBits) { return CacheableIdentifier(rawBits); }
 
     CacheableIdentifier(const CacheableIdentifier&) = default;
@@ -66,8 +58,10 @@ public:
     bool isCell() const { return !isUid(); }
     inline bool isSymbolCell() const;
     inline bool isStringCell() const;
+    inline void ensureIsCell(VM&);
 
     bool isSymbol() const { return m_bits && uid()->isSymbol(); }
+    bool isPrivateName() const { return isSymbol() && static_cast<SymbolImpl&>(*uid()).isPrivate(); }
 
     inline JSCell* cell() const;
     UniquedStringImpl* uid() const;
@@ -79,9 +73,8 @@ public:
     CacheableIdentifier& operator=(const CacheableIdentifier&) = default;
     CacheableIdentifier& operator=(CacheableIdentifier&&) = default;
 
-    bool operator==(const CacheableIdentifier& other) const;
-    bool operator!=(const CacheableIdentifier& other) const;
-    bool operator==(const Identifier& other) const;
+    bool operator==(const CacheableIdentifier&) const;
+    bool operator==(const Identifier&) const;
 
     static inline bool isCacheableIdentifierCell(JSCell*);
     static inline bool isCacheableIdentifierCell(JSValue);

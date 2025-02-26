@@ -38,6 +38,7 @@ using JSUint8Array = JSGenericTypedArrayView<Uint8Adaptor>;
 using JSUint8ClampedArray = JSGenericTypedArrayView<Uint8ClampedAdaptor>;
 using JSUint16Array = JSGenericTypedArrayView<Uint16Adaptor>;
 using JSUint32Array = JSGenericTypedArrayView<Uint32Adaptor>;
+using JSFloat16Array = JSGenericTypedArrayView<Float16Adaptor>;
 using JSFloat32Array = JSGenericTypedArrayView<Float32Adaptor>;
 using JSFloat64Array = JSGenericTypedArrayView<Float64Adaptor>;
 using JSBigInt64Array = JSGenericTypedArrayView<BigInt64Adaptor>;
@@ -49,6 +50,7 @@ using JSResizableOrGrowableSharedUint8Array = JSGenericResizableOrGrowableShared
 using JSResizableOrGrowableSharedUint8ClampedArray = JSGenericResizableOrGrowableSharedTypedArrayView<Uint8ClampedAdaptor>;
 using JSResizableOrGrowableSharedUint16Array = JSGenericResizableOrGrowableSharedTypedArrayView<Uint16Adaptor>;
 using JSResizableOrGrowableSharedUint32Array = JSGenericResizableOrGrowableSharedTypedArrayView<Uint32Adaptor>;
+using JSResizableOrGrowableSharedFloat16Array = JSGenericResizableOrGrowableSharedTypedArrayView<Float16Adaptor>;
 using JSResizableOrGrowableSharedFloat32Array = JSGenericResizableOrGrowableSharedTypedArrayView<Float32Adaptor>;
 using JSResizableOrGrowableSharedFloat64Array = JSGenericResizableOrGrowableSharedTypedArrayView<Float64Adaptor>;
 using JSResizableOrGrowableSharedBigInt64Array = JSGenericResizableOrGrowableSharedTypedArrayView<BigInt64Adaptor>;
@@ -58,7 +60,5 @@ inline bool isResizableOrGrowableSharedTypedArrayIncludingDataView(const ClassIn
 {
     return classInfo->isResizableOrGrowableSharedTypedArray;
 }
-
-JS_EXPORT_PRIVATE JSUint8Array* createUint8TypedArray(JSGlobalObject*, Structure*, RefPtr<ArrayBuffer>&&, unsigned byteOffset, unsigned length);
 
 } // namespace JSC

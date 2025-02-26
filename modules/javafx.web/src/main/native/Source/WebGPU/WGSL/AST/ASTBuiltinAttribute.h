@@ -26,23 +26,25 @@
 #pragma once
 
 #include "ASTAttribute.h"
+#include "ASTBuilder.h"
 #include "ASTIdentifier.h"
+#include "WGSLEnums.h"
 
 namespace WGSL::AST {
 
 class BuiltinAttribute final : public Attribute {
-    WTF_MAKE_FAST_ALLOCATED;
+    WGSL_AST_BUILDER_NODE(BuiltinAttribute);
 public:
-    BuiltinAttribute(SourceSpan span, Identifier&& name)
-        : Attribute(span)
-        , m_name(WTFMove(name))
-    { }
-
     NodeKind kind() const override;
-    Identifier& name() { return m_name; }
+    Builtin builtin() const { return m_builtin; }
 
 private:
-    Identifier m_name;
+    BuiltinAttribute(SourceSpan span, Builtin builtin)
+        : Attribute(span)
+        , m_builtin(builtin)
+    { }
+
+    Builtin m_builtin;
 };
 
 } // namespace WGSL::AST

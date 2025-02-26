@@ -32,9 +32,11 @@ namespace WebCore {
 class RenderView;
 
 class RenderIFrame final : public RenderFrameBase {
-    WTF_MAKE_ISO_ALLOCATED(RenderIFrame);
+    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(RenderIFrame);
+    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(RenderIFrame);
 public:
     RenderIFrame(HTMLIFrameElement&, RenderStyle&&);
+    virtual ~RenderIFrame();
 
     HTMLIFrameElement& iframeElement() const;
 
@@ -46,13 +48,9 @@ private:
 
     void layout() override;
 
-    bool isRenderIFrame() const override { return true; }
-
     ASCIILiteral renderName() const override { return "RenderIFrame"_s; }
 
     bool requiresLayer() const override;
-
-    RenderView* contentRootRenderer() const;
 
     bool isFullScreenIFrame() const;
 };

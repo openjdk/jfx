@@ -29,7 +29,6 @@
 #if ENABLE(MEDIA_RECORDER)
 
 #include "ContentType.h"
-#include "HTMLParserIdioms.h"
 #include "MediaRecorderPrivate.h"
 
 #if PLATFORM(COCOA) && USE(AVFOUNDATION)
@@ -46,9 +45,11 @@ std::unique_ptr<MediaRecorderPrivate> MediaRecorderProvider::createMediaRecorder
 {
 #if PLATFORM(COCOA) && USE(AVFOUNDATION)
     return MediaRecorderPrivateAVFImpl::create(stream, options);
-#endif
-#if USE(GSTREAMER_TRANSCODER)
+#elif USE(GSTREAMER_TRANSCODER)
     return MediaRecorderPrivateGStreamer::create(stream, options);
+#else
+    UNUSED_PARAM(stream);
+    UNUSED_PARAM(options);
 #endif
     return nullptr;
 }
@@ -65,7 +66,7 @@ bool MediaRecorderProvider::isSupported(const String& value)
         return false;
 
     for (auto& item : mimeType.codecs()) {
-        auto codec = StringView(item).stripLeadingAndTrailingMatchedCharacters(isHTMLSpace<UChar>);
+        auto codec = StringView(item).trim(isASCIIWhitespace<UChar>);
         // FIXME: We should further validate parameters.
         if (!startsWithLettersIgnoringASCIICase(codec, "avc1"_s) && !startsWithLettersIgnoringASCIICase(codec, "mp4a"_s))
             return false;

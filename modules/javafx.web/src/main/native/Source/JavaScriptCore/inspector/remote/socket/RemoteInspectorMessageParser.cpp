@@ -46,25 +46,24 @@ MessageParser::MessageParser(Function<void(Vector<uint8_t>&&)>&& listener)
 {
 }
 
-Vector<uint8_t> MessageParser::createMessage(const uint8_t* data, size_t size)
+Vector<uint8_t> MessageParser::createMessage(std::span<const uint8_t> data)
 {
-    if (!data || !size || size > UINT_MAX)
+    if (data.empty() || data.size() > std::numeric_limits<uint32_t>::max())
         return Vector<uint8_t>();
 
-    auto messageBuffer = Vector<uint8_t>(size + sizeof(uint32_t));
-    uint32_t uintSize = static_cast<uint32_t>(size);
-    uint32_t nboSize = htonl(uintSize);
+    auto messageBuffer = Vector<uint8_t>(data.size() + sizeof(uint32_t));
+    uint32_t nboSize = htonl(static_cast<uint32_t>(data.size()));
     memcpy(&messageBuffer[0], &nboSize, sizeof(uint32_t));
-    memcpy(&messageBuffer[sizeof(uint32_t)], data, uintSize);
+    memcpy(&messageBuffer[sizeof(uint32_t)], data.data(), data.size());
     return messageBuffer;
 }
 
-void MessageParser::pushReceivedData(const uint8_t* data, size_t size)
+void MessageParser::pushReceivedData(std::span<const uint8_t> data)
 {
-    if (!data || !size || !m_listener)
+    if (data.empty() || !m_listener)
         return;
 
-    m_buffer.append(data, size);
+    m_buffer.append(data);
 
     if (!parse())
         clearReceivedData();
@@ -77,13 +76,8 @@ void MessageParser::clearReceivedData()
 
 bool MessageParser::parse()
 {
-    while (!m_buffer.isEmpty()) {
-        if (m_buffer.size() < sizeof(uint32_t)) {
-            // Wait for more data.
-            return true;
-        }
-
-        uint32_t dataSize = 0;
+    while (m_buffer.size() >= sizeof(uint32_t)) {
+        uint32_t dataSize;
         memcpy(&dataSize, &m_buffer[0], sizeof(uint32_t));
         dataSize = ntohl(dataSize);
         if (!dataSize) {

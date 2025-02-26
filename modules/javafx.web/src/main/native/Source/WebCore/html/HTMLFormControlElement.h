@@ -34,7 +34,8 @@
 namespace WebCore {
 
 class HTMLFormControlElement : public HTMLElement, public ValidatedFormListedElement {
-    WTF_MAKE_ISO_ALLOCATED(HTMLFormControlElement);
+    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(HTMLFormControlElement);
+    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(HTMLFormControlElement);
 public:
     virtual ~HTMLFormControlElement();
 
@@ -46,7 +47,7 @@ public:
     bool matchesUserValidPseudoClass() const override { return ValidatedFormListedElement::matchesUserValidPseudoClass(); }
     bool matchesUserInvalidPseudoClass() const override { return ValidatedFormListedElement::matchesUserInvalidPseudoClass(); }
 
-    bool isDisabledFormControl() const final { return isDisabled(); }
+    bool isDisabledFormControl() const override { return isDisabled(); }
     bool supportsFocus() const override { return !isDisabled(); }
 
     WEBCORE_EXPORT String formEnctype() const;
@@ -77,6 +78,7 @@ public:
     virtual bool isSuccessfulSubmitButton() const { return false; }
     virtual bool isActivatedSubmit() const { return false; }
     virtual void setActivatedSubmit(bool) { }
+    void finishParsingChildren() override;
 
 #if ENABLE(AUTOCORRECT)
     WEBCORE_EXPORT bool shouldAutocorrect() const final;
@@ -97,6 +99,14 @@ public:
 
     virtual String resultForDialogSubmit() const;
 
+    RefPtr<HTMLElement> popoverTargetElement() const;
+    const AtomString& popoverTargetAction() const;
+    void setPopoverTargetAction(const AtomString& value);
+
+    RefPtr<Element> commandForElement() const;
+
+    bool isKeyboardFocusable(KeyboardEvent*) const override;
+
     using Node::ref;
     using Node::deref;
 
@@ -108,19 +118,22 @@ protected:
     void didAttachRenderers() override;
     void didMoveToNewDocument(Document& oldDocument, Document& newDocument) override;
     void removedFromAncestor(RemovalType, ContainerNode&) override;
-    void parseAttribute(const QualifiedName&, const AtomString&) override;
-    void finishParsingChildren() override;
+    void attributeChanged(const QualifiedName&, const AtomString& oldValue, const AtomString& newValue, AttributeModificationReason) override;
 
     void disabledStateChanged() override;
     void readOnlyStateChanged() override;
     virtual void requiredStateChanged();
 
-    bool isKeyboardFocusable(KeyboardEvent*) const override;
     bool isMouseFocusable() const override;
 
     void didRecalcStyle(Style::Change) override;
 
     void dispatchBlurEvent(RefPtr<Element>&& newFocusedElement) override;
+
+    void handlePopoverTargetAction() const;
+
+    CommandType commandType() const;
+    void handleCommand();
 
 private:
     void refFormAssociatedElement() const final { ref(); }
@@ -139,8 +152,6 @@ private:
     FormListedElement* asFormListedElement() final { return this; }
     ValidatedFormListedElement* asValidatedFormListedElement() final { return this; }
 
-    bool needsMouseFocusableQuirk() const;
-
     unsigned m_isRequired : 1;
     unsigned m_valueMatchesRenderer : 1;
     unsigned m_wasChangedSinceLastFormControlChangeEvent : 1;
@@ -150,6 +161,10 @@ private:
 
 SPECIALIZE_TYPE_TRAITS_BEGIN(WebCore::HTMLFormControlElement)
     static bool isType(const WebCore::Element& element) { return element.isFormControlElement(); }
-    static bool isType(const WebCore::Node& node) { return is<WebCore::Element>(node) && isType(downcast<WebCore::Element>(node)); }
+    static bool isType(const WebCore::Node& node)
+    {
+        auto* element = dynamicDowncast<WebCore::Element>(node);
+        return element && isType(*element);
+    }
     static bool isType(const WebCore::FormListedElement& element) { return element.isFormControlElement(); }
 SPECIALIZE_TYPE_TRAITS_END()

@@ -23,6 +23,7 @@
 #pragma once
 
 #include "CachedResource.h"
+#include "FrameLoaderTypes.h"
 
 namespace WebCore {
 
@@ -38,7 +39,7 @@ public:
     virtual ~CachedCSSStyleSheet();
 
     enum class MIMETypeCheckHint { Strict, Lax };
-    const String sheetText(MIMETypeCheckHint = MIMETypeCheckHint::Strict, bool* hasValidMIMEType = nullptr) const;
+    const String sheetText(MIMETypeCheckHint = MIMETypeCheckHint::Strict, bool* hasValidMIMEType = nullptr, bool* hasHTTPStatusOK = nullptr) const;
 
     RefPtr<StyleSheetContents> restoreParsedStyleSheet(const CSSParserContext&, CachePolicy, FrameLoader&);
     void saveParsedStyleSheet(Ref<StyleSheetContents>&&);
@@ -47,22 +48,23 @@ public:
 
 private:
     String responseMIMEType() const;
-    bool canUseSheet(MIMETypeCheckHint, bool* hasValidMIMEType) const;
+    bool canUseSheet(MIMETypeCheckHint, bool* hasValidMIMEType, bool* hasHTTPStatusOK) const;
     bool mayTryReplaceEncodedData() const final { return true; }
+    Ref<TextResourceDecoder> protectedDecoder() const;
 
     void didAddClient(CachedResourceClient&) final;
 
     void setEncoding(const String&) final;
     String encoding() const final;
-    const TextResourceDecoder* textResourceDecoder() const final { return m_decoder.get(); }
+    const TextResourceDecoder* textResourceDecoder() const final { return m_decoder.ptr(); }
     void finishLoading(const FragmentedSharedBuffer*, const NetworkLoadMetrics&) final;
     void destroyDecodedData() final;
 
     void setBodyDataFrom(const CachedResource&) final;
 
-    void checkNotify(const NetworkLoadMetrics&) final;
+    void checkNotify(const NetworkLoadMetrics&, LoadWillContinueInAnotherProcess = LoadWillContinueInAnotherProcess::No) final;
 
-    RefPtr<TextResourceDecoder> m_decoder;
+    Ref<TextResourceDecoder> m_decoder;
     String m_decodedSheetText;
 
     RefPtr<StyleSheetContents> m_parsedStyleSheetCache;

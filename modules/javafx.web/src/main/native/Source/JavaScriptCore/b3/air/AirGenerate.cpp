@@ -44,6 +44,7 @@
 #include "AirLowerStackArgs.h"
 #include "AirOpcodeUtils.h"
 #include "AirOptimizeBlockOrder.h"
+#include "AirOptimizePairedLoadStore.h"
 #include "AirReportUsedRegisters.h"
 #include "AirSimplifyCFG.h"
 #include "AirValidate.h"
@@ -58,7 +59,7 @@ namespace JSC { namespace B3 { namespace Air {
 
 void prepareForGeneration(Code& code)
 {
-    CompilerTimingScope timingScope("Total Air", "prepareForGeneration");
+    CompilerTimingScope timingScope("Total Air"_s, "prepareForGeneration"_s);
 
     // If we're doing super verbose dumping, the phase scope of any phase will already do a dump.
     if (shouldDumpIR(code.proc(), AirMode) && !shouldDumpIRAtEachPhase(AirMode)) {
@@ -174,6 +175,14 @@ void prepareForGeneration(Code& code)
     // The control flow graph can be simplified further after we have lowered EntrySwitch.
     simplifyCFG(code);
 
+    // We do this optimization at the very end of Air generation pipeline since it can be beneficial after
+    // spills are lowered to load/store with the frame pointer or the stack pointer. And this is block-local
+    // optimization, so this is more effective after simplifyCFG.
+#if CPU(ARM64)
+    if (Options::useAirOptimizePairedLoadStore())
+        optimizePairedLoadStore(code);
+#endif
+
     // This sorts the basic blocks in Code to achieve an ordering that maximizes the likelihood that a high
     // frequency successor is also the fall-through target.
     optimizeBlockOrder(code);
@@ -191,7 +200,7 @@ void prepareForGeneration(Code& code)
 
 static void generateWithAlreadyAllocatedRegisters(Code& code, CCallHelpers& jit)
 {
-    CompilerTimingScope timingScope("Air", "generateWithAlreadyAllocatedRegisters");
+    CompilerTimingScope timingScope("Air"_s, "generateWithAlreadyAllocatedRegisters"_s);
 
 #if !CPU(ARM)
     DisallowMacroScratchRegisterUsage disallowScratch(jit);

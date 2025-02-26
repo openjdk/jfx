@@ -32,14 +32,14 @@
 #include "PerformanceNavigation.h"
 
 #include "DocumentLoader.h"
-#include "Frame.h"
 #include "FrameLoader.h"
 #include "FrameLoaderTypes.h"
+#include "LocalFrame.h"
 
 namespace WebCore {
 
-PerformanceNavigation::PerformanceNavigation(DOMWindow* window)
-    : DOMWindowProperty(window)
+PerformanceNavigation::PerformanceNavigation(LocalDOMWindow* window)
+    : LocalDOMWindowProperty(window)
 {
 }
 
@@ -66,11 +66,11 @@ unsigned short PerformanceNavigation::type() const
 
 unsigned short PerformanceNavigation::redirectCount() const
 {
-    auto* frame = this->frame();
+    RefPtr frame = this->frame();
     if (!frame)
         return 0;
 
-    DocumentLoader* loader = frame->loader().documentLoader();
+    RefPtr loader = frame->loader().documentLoader();
     if (!loader)
         return 0;
 

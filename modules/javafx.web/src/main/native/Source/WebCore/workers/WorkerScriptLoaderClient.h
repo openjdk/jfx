@@ -27,15 +27,25 @@
 #pragma once
 
 #include "ResourceLoaderIdentifier.h"
+#include "ScriptExecutionContextIdentifier.h"
+
+namespace WebCore {
+class WorkerScriptLoaderClient;
+}
+
+namespace WTF {
+template<typename T> struct IsDeprecatedWeakRefSmartPointerException;
+template<> struct IsDeprecatedWeakRefSmartPointerException<WebCore::WorkerScriptLoaderClient> : std::true_type { };
+}
 
 namespace WebCore {
 
 class ResourceResponse;
 
-class WorkerScriptLoaderClient {
+class WorkerScriptLoaderClient : public CanMakeWeakPtr<WorkerScriptLoaderClient> {
 public:
-    virtual void didReceiveResponse(ResourceLoaderIdentifier, const ResourceResponse&) = 0;
-    virtual void notifyFinished() = 0;
+    virtual void didReceiveResponse(ScriptExecutionContextIdentifier, ResourceLoaderIdentifier, const ResourceResponse&) = 0;
+    virtual void notifyFinished(ScriptExecutionContextIdentifier) = 0;
 
 protected:
     virtual ~WorkerScriptLoaderClient() = default;

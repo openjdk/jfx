@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -61,7 +61,7 @@ extern jmethodID jWindowNotifyDelegatePtr;
 extern jmethodID jViewNotifyEvent;
 extern jmethodID jViewNotifyRepaint;
 extern jmethodID jViewNotifyResize;
-extern jmethodID jViewNotifyKey;
+extern jmethodID jViewNotifyKeyAndReturnConsumed;
 extern jmethodID jViewNotifyMouse;
 extern jmethodID jViewNotifyMenu;
 extern jmethodID jViewNotifyInputMethod;
@@ -85,6 +85,18 @@ extern jmethodID jLongValueMethod;
 extern jmethodID jSizeInit;
 
 extern jmethodID jPixelsAttachData;
+
+extern jclass jObjectClass;
+extern jclass jCollectionsClass;
+extern jclass jColorClass;
+extern jclass jHashMapClass;
+extern jfieldID jBooleanTRUE;
+extern jfieldID jBooleanFALSE;
+extern jmethodID jColorRgbMethod;
+extern jmethodID jHashMapInitMethod;
+extern jmethodID jMapPutMethod;
+extern jmethodID jObjectEqualsMethod;
+extern jmethodID jCollectionsUnmodifiableMapMethod;
 
 typedef struct _tagJavaIDs {
     struct {
@@ -116,6 +128,7 @@ typedef struct _tagJavaIDs {
     } Application;
     struct {
         jmethodID notifyApplicationDidTerminate;
+        jmethodID notifyPreferencesChanged;
     } MacApplication;
     struct {
         jmethodID rotateGesturePerformed;

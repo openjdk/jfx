@@ -25,7 +25,7 @@
 
 [
     Conditional=SPEECH_SYNTHESIS,
-    ImplementedBy=DOMWindowSpeechSynthesis
+    ImplementedBy=LocalDOMWindowSpeechSynthesis
 ] partial interface DOMWindow {
     [SameObject] readonly attribute SpeechSynthesis speechSynthesis;
 };

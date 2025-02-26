@@ -49,7 +49,7 @@ enum AspectRatioFit {
 
 class LayoutSize {
 public:
-    LayoutSize() { }
+    LayoutSize() = default;
     LayoutSize(const IntSize& size) : m_width(size.width()), m_height(size.height()) { }
     template<typename T, typename U> LayoutSize(T width, U height) : m_width(width), m_height(height) { }
 
@@ -144,6 +144,7 @@ public:
         return m_width.mightBeSaturated() || m_height.mightBeSaturated();
     }
 
+    friend bool operator==(const LayoutSize&, const LayoutSize&) = default;
 private:
     LayoutUnit m_width;
     LayoutUnit m_height;
@@ -176,16 +177,6 @@ inline LayoutSize operator-(const LayoutSize& a, const LayoutSize& b)
 inline LayoutSize operator-(const LayoutSize& size)
 {
     return LayoutSize(-size.width(), -size.height());
-}
-
-inline bool operator==(const LayoutSize& a, const LayoutSize& b)
-{
-    return a.width() == b.width() && a.height() == b.height();
-}
-
-inline bool operator!=(const LayoutSize& a, const LayoutSize& b)
-{
-    return a.width() != b.width() || a.height() != b.height();
 }
 
 inline IntSize flooredIntSize(const LayoutSize& s)

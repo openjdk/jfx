@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2017, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -57,7 +57,7 @@ public:
         ASSERT(m_position + sizeof(jint) <= m_capacity);
         RefPtr<RQRef> repeatable_use_holder(ref);
         m_refList.append(repeatable_use_holder);
-        putInt((jint)*repeatable_use_holder);
+        putInt(static_cast<jint>(*repeatable_use_holder));
     }
 
     void putInt(jint i) {

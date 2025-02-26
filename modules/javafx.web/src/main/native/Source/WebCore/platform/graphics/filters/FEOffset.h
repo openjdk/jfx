@@ -28,7 +28,9 @@ namespace WebCore {
 
 class FEOffset : public FilterEffect {
 public:
-    WEBCORE_EXPORT static Ref<FEOffset> create(float dx, float dy);
+    WEBCORE_EXPORT static Ref<FEOffset> create(float dx, float dy, DestinationColorSpace = DestinationColorSpace::SRGB());
+
+    bool operator==(const FEOffset&) const;
 
     float dx() const { return m_dx; }
     bool setDx(float);
@@ -39,9 +41,11 @@ public:
     static IntOutsets calculateOutsets(const FloatSize& offset);
 
 private:
-    FEOffset(float dx, float dy);
+    FEOffset(float dx, float dy, DestinationColorSpace);
 
-    FloatRect calculateImageRect(const Filter&, Span<const FloatRect> inputImageRects, const FloatRect& primitiveSubregion) const override;
+    bool operator==(const FilterEffect& other) const override { return areEqual<FEOffset>(*this, other); }
+
+    FloatRect calculateImageRect(const Filter&, std::span<const FloatRect> inputImageRects, const FloatRect& primitiveSubregion) const override;
 
     bool resultIsAlphaImage(const FilterImageVector& inputs) const override;
 
@@ -55,4 +59,4 @@ private:
 
 } // namespace WebCore
 
-SPECIALIZE_TYPE_TRAITS_FILTER_EFFECT(FEOffset)
+SPECIALIZE_TYPE_TRAITS_FILTER_FUNCTION(FEOffset)

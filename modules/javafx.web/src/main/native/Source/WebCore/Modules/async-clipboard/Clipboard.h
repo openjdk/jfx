@@ -26,7 +26,7 @@
 #pragma once
 
 #include "EventTarget.h"
-#include <wtf/IsoMalloc.h>
+#include <wtf/TZoneMalloc.h>
 #include <wtf/Vector.h>
 #include <wtf/WeakPtr.h>
 
@@ -34,21 +34,21 @@ namespace WebCore {
 
 class ClipboardItem;
 class DeferredPromise;
-class Frame;
+class LocalFrame;
 class Navigator;
 class Pasteboard;
 class PasteboardCustomData;
 
 class Clipboard final : public RefCounted<Clipboard>, public EventTarget {
-    WTF_MAKE_ISO_ALLOCATED(Clipboard);
+    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(Clipboard);
 public:
     static Ref<Clipboard> create(Navigator&);
     ~Clipboard();
 
-    EventTargetInterface eventTargetInterface() const final;
+    enum EventTargetInterfaceType eventTargetInterface() const final;
     ScriptExecutionContext* scriptExecutionContext() const final;
 
-    Frame* frame() const;
+    LocalFrame* frame() const;
     Navigator* navigator();
 
     using RefCounted::ref;
@@ -58,7 +58,7 @@ public:
     void writeText(const String& data, Ref<DeferredPromise>&&);
 
     void read(Ref<DeferredPromise>&&);
-    void write(const Vector<RefPtr<ClipboardItem>>& data, Ref<DeferredPromise>&&);
+    void write(const Vector<Ref<ClipboardItem>>& data, Ref<DeferredPromise>&&);
 
     void getType(ClipboardItem&, const String& type, Ref<DeferredPromise>&&);
 
@@ -76,7 +76,7 @@ private:
 
     Pasteboard& activePasteboard();
 
-    enum class SessionIsValid { No, Yes };
+    enum class SessionIsValid : bool { No, Yes };
     SessionIsValid updateSessionValidity();
 
     class ItemWriter : public RefCounted<ItemWriter> {
@@ -88,7 +88,7 @@ private:
 
         ~ItemWriter();
 
-        void write(const Vector<RefPtr<ClipboardItem>>&);
+        void write(const Vector<Ref<ClipboardItem>>&);
         void invalidate();
 
     private:

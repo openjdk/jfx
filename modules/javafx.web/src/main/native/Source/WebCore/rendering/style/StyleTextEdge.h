@@ -30,15 +30,12 @@
 namespace WebCore {
 
 struct TextEdge {
-    TextEdgeType over { TextEdgeType::Leading };
-    TextEdgeType under { TextEdgeType::Leading };
+    TextEdgeType over { TextEdgeType::Auto };
+    TextEdgeType under { TextEdgeType::Auto };
+
+    friend bool operator==(const TextEdge&, const TextEdge&) = default;
 };
 
-inline bool operator==(const TextEdge& a, const TextEdge& b)
-{
-    return a.over == b.over && a.under == b.under;
-}
-
-inline bool operator!=(const TextEdge& a, const TextEdge& b) { return !(a == b); }
+WTF::TextStream& operator<<(WTF::TextStream&, TextEdge);
 
 } // namespace WebCore

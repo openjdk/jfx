@@ -1,7 +1,7 @@
 /*
  * Copyright (C) 2008 Alp Toker <alp@atoker.com>
  * Copyright (C) 2010 Igalia S.L.
- * Copyright (C) 2022 Apple Inc. All rights reserved.
+ * Copyright (C) 2022-2023 Apple Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Library General Public
@@ -35,7 +35,6 @@
 #include "RefPtrCairo.h"
 #include "RefPtrFontconfig.h"
 #include "StyleFontSizeFunctions.h"
-#include "UTF16UChar32Iterator.h"
 #include <cairo-ft.h>
 #include <cairo.h>
 #include <fontconfig/fcfreetype.h>
@@ -88,12 +87,12 @@ bool FontCache::configurePatternForFontDescription(FcPattern* pattern, const Fon
         return false;
     if (!FcPatternAddInteger(pattern, FC_WEIGHT, fontWeightToFontconfigWeight(fontDescription.weight())))
         return false;
-    if (!FcPatternAddDouble(pattern, FC_PIXEL_SIZE, fontDescription.computedPixelSize()))
+    if (!FcPatternAddDouble(pattern, FC_PIXEL_SIZE, fontDescription.computedSize()))
         return false;
     return true;
 }
 
-static void getFontPropertiesFromPattern(FcPattern* pattern, const FontDescription& fontDescription, bool& fixedWidth, bool& syntheticBold, bool& syntheticOblique)
+static void getFontPropertiesFromPattern(FcPattern* pattern, const FontDescription& fontDescription, OptionSet<FontLookupOptions> options, bool& fixedWidth, bool& syntheticBold, bool& syntheticOblique)
 {
     fixedWidth = false;
     int spacing;
@@ -101,8 +100,9 @@ static void getFontPropertiesFromPattern(FcPattern* pattern, const FontDescripti
         fixedWidth = true;
 
     syntheticBold = false;
-    bool descriptionAllowsSyntheticBold = fontDescription.hasAutoFontSynthesisWeight();
-    if (descriptionAllowsSyntheticBold && isFontWeightBold(fontDescription.weight())) {
+    bool allowSyntheticBold = fontDescription.hasAutoFontSynthesisWeight()
+        && !options.contains(FontLookupOptions::DisallowBoldSynthesis);
+    if (allowSyntheticBold && isFontWeightBold(fontDescription.weight())) {
         // The FC_EMBOLDEN property instructs us to fake the boldness of the font.
         FcBool fontConfigEmbolden = FcFalse;
         if (FcPatternGetBool(pattern, FC_EMBOLDEN, 0, &fontConfigEmbolden) == FcResultMatch)
@@ -117,24 +117,25 @@ static void getFontPropertiesFromPattern(FcPattern* pattern, const FontDescripti
     // We requested an italic font, but Fontconfig gave us one that was neither oblique nor italic.
     syntheticOblique = false;
     int actualFontSlant;
-    bool descriptionAllowsSyntheticOblique = fontDescription.hasAutoFontSynthesisStyle();
-    if (descriptionAllowsSyntheticOblique && fontDescription.italic()
+    bool allowSyntheticOblique = fontDescription.hasAutoFontSynthesisStyle()
+        && !options.contains(FontLookupOptions::DisallowObliqueSynthesis);
+    if (allowSyntheticOblique && fontDescription.italic()
         && FcPatternGetInteger(pattern, FC_SLANT, 0, &actualFontSlant) == FcResultMatch) {
         syntheticOblique = actualFontSlant == FC_SLANT_ROMAN;
     }
 }
 
-RefPtr<Font> FontCache::systemFallbackForCharacters(const FontDescription& description, const Font&, IsForPlatformFont, PreferColoredFont preferColoredFont, const UChar* characters, unsigned length)
+RefPtr<Font> FontCache::systemFallbackForCharacterCluster(const FontDescription& description, const Font&, IsForPlatformFont, PreferColoredFont preferColoredFont, StringView stringView)
 {
-    RefPtr<FcPattern> resultPattern = m_fontSetCache.bestForCharacters(description, preferColoredFont == PreferColoredFont::Yes, characters, length);
+    RefPtr<FcPattern> resultPattern = m_fontSetCache.bestForCharacters(description, preferColoredFont == PreferColoredFont::Yes, stringView);
     if (!resultPattern)
         return nullptr;
 
     bool fixedWidth, syntheticBold, syntheticOblique;
-    getFontPropertiesFromPattern(resultPattern.get(), description, fixedWidth, syntheticBold, syntheticOblique);
+    getFontPropertiesFromPattern(resultPattern.get(), description, { }, fixedWidth, syntheticBold, syntheticOblique);
 
     RefPtr<cairo_font_face_t> fontFace = adoptRef(cairo_ft_font_face_create_for_pattern(resultPattern.get()));
-    FontPlatformData alternateFontData(fontFace.get(), WTFMove(resultPattern), description.computedPixelSize(), fixedWidth, syntheticBold, syntheticOblique, description.orientation());
+    FontPlatformData alternateFontData(fontFace.get(), WTFMove(resultPattern), description.computedSize(), fixedWidth, syntheticBold, syntheticOblique, description.orientation());
     return fontForPlatformData(alternateFontData);
 }
 
@@ -350,8 +351,7 @@ static bool areStronglyAliased(const String& familyA, const String& familyB)
 
 static inline bool isCommonlyUsedGenericFamily(const String& familyNameString)
 {
-    return equalLettersIgnoringASCIICase(familyNameString, "sans"_s)
-        || equalLettersIgnoringASCIICase(familyNameString, "sans-serif"_s)
+    return equalLettersIgnoringASCIICase(familyNameString, "sans-serif"_s)
         || equalLettersIgnoringASCIICase(familyNameString, "serif"_s)
         || equalLettersIgnoringASCIICase(familyNameString, "monospace"_s)
         || equalLettersIgnoringASCIICase(familyNameString, "fantasy"_s)
@@ -362,7 +362,7 @@ static inline bool isCommonlyUsedGenericFamily(const String& familyNameString)
         || equalLettersIgnoringASCIICase(familyNameString, "cursive"_s);
 }
 
-std::unique_ptr<FontPlatformData> FontCache::createFontPlatformData(const FontDescription& fontDescription, const AtomString& family, const FontCreationContext& fontCreationContext)
+std::unique_ptr<FontPlatformData> FontCache::createFontPlatformData(const FontDescription& fontDescription, const AtomString& family, const FontCreationContext& fontCreationContext, OptionSet<FontLookupOptions> options)
 {
     // The CSS font matching algorithm (http://www.w3.org/TR/css3-fonts/#font-matching-algorithm)
     // says that we must find an exact match for font family, slant (italic or oblique can be used)
@@ -435,7 +435,7 @@ std::unique_ptr<FontPlatformData> FontCache::createFontPlatformData(const FontDe
         return nullptr;
 
     bool fixedWidth, syntheticBold, syntheticOblique;
-    getFontPropertiesFromPattern(resultPattern.get(), fontDescription, fixedWidth, syntheticBold, syntheticOblique);
+    getFontPropertiesFromPattern(resultPattern.get(), fontDescription, options, fixedWidth, syntheticBold, syntheticOblique);
 
     if (fontCreationContext.fontFaceFeatures() && !fontCreationContext.fontFaceFeatures()->isEmpty()) {
         for (auto& fontFaceFeature : *fontCreationContext.fontFaceFeatures()) {
@@ -451,10 +451,10 @@ std::unique_ptr<FontPlatformData> FontCache::createFontPlatformData(const FontDe
 #if ENABLE(VARIATION_FONTS)
     // Cairo doesn't have API to get the FT_Face of an unscaled font, so we need to
     // create a temporary scaled font to get the FT_Face.
-    CairoUniquePtr<cairo_font_options_t> options(cairo_font_options_copy(getDefaultCairoFontOptions()));
+    CairoUniquePtr<cairo_font_options_t> fontOptions(cairo_font_options_copy(getDefaultCairoFontOptions()));
     cairo_matrix_t matrix;
     cairo_matrix_init_identity(&matrix);
-    RefPtr<cairo_scaled_font_t> scaledFont = adoptRef(cairo_scaled_font_create(fontFace.get(), &matrix, &matrix, options.get()));
+    RefPtr<cairo_scaled_font_t> scaledFont = adoptRef(cairo_scaled_font_create(fontFace.get(), &matrix, &matrix, fontOptions.get()));
     CairoFtFaceLocker cairoFtFaceLocker(scaledFont.get());
     if (FT_Face freeTypeFace = cairoFtFaceLocker.ftFace()) {
         auto variants = buildVariationSettings(freeTypeFace, fontDescription, fontCreationContext);
@@ -463,10 +463,10 @@ std::unique_ptr<FontPlatformData> FontCache::createFontPlatformData(const FontDe
     }
 #endif
 
-    auto size = fontDescription.computedPixelSize();
+    auto size = fontDescription.adjustedSizeForFontFace(fontCreationContext.sizeAdjust());
     FontPlatformData platformData(fontFace.get(), WTFMove(resultPattern), size, fixedWidth, syntheticBold, syntheticOblique, fontDescription.orientation());
 
-    platformData.updateSizeWithFontSizeAdjust(fontDescription.fontSizeAdjust());
+    platformData.updateSizeWithFontSizeAdjust(fontDescription.fontSizeAdjust(), fontDescription.computedSize());
     auto platformDataUniquePtr = makeUnique<FontPlatformData>(platformData);
 
     // Verify that this font has an encoding compatible with Fontconfig. Fontconfig currently
@@ -494,7 +494,7 @@ static String fontNameMapName(FT_Face face, unsigned id)
         switch (name.platform_id) {
         case TT_PLATFORM_MACINTOSH:
             if (name.encoding_id == TT_MAC_ID_ROMAN)
-                return String(name.string, name.string_len);
+                return String({ name.string, name.string_len });
             // FIXME: implement other macintosh encodings.
             break;
         case TT_PLATFORM_APPLE_UNICODE:

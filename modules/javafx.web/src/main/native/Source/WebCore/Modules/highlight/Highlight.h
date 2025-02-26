@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2019-2020 Apple Inc. All rights reserved.
+ * Copyright (C) 2019-2023 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -27,6 +27,7 @@
 
 #include "ExceptionOr.h"
 #include "Position.h"
+#include "Range.h"
 #include "StaticRange.h"
 #include <wtf/RefCounted.h>
 
@@ -35,38 +36,58 @@ namespace WebCore {
 class CSSStyleDeclaration;
 class DOMSetAdapter;
 class PropertySetCSSStyleDeclaration;
-class StaticRange;
 
+class HighlightRange : public RefCounted<HighlightRange>, public CanMakeWeakPtr<HighlightRange> {
+public:
+    static Ref<HighlightRange> create(Ref<AbstractRange>&& range)
+    {
+        return adoptRef(*new HighlightRange(WTFMove(range)));
+    }
 
-struct HighlightRangeData : RefCounted<HighlightRangeData>, public CanMakeWeakPtr<HighlightRangeData> {
-    HighlightRangeData(Ref<StaticRange>&& range)
-        : range(WTFMove(range))
+    AbstractRange& range() const { return m_range.get(); }
+    const Position& startPosition() const { return m_startPosition; }
+    void setStartPosition(Position&& startPosition) { m_startPosition = WTFMove(startPosition); }
+    const Position& endPosition() const { return m_endPosition; }
+    void setEndPosition(Position&& endPosition) { m_endPosition = WTFMove(endPosition); }
+
+private:
+    explicit HighlightRange(Ref<AbstractRange>&& range)
+        : m_range(WTFMove(range))
     {
+        if (auto liveRange = dynamicDowncast<Range>(m_range))
+            liveRange->didAssociateWithHighlight();
     }
-    static Ref<HighlightRangeData> create(Ref<StaticRange>&& range)
-    {
-        return adoptRef(*new HighlightRangeData(WTFMove(range)));
-    }
-    Ref<StaticRange> range;
-    std::optional<Position> startPosition;
-    std::optional<Position> endPosition;
+
+    Ref<AbstractRange> m_range;
+    Position m_startPosition;
+    Position m_endPosition;
 };
 
 class Highlight : public RefCounted<Highlight> {
 public:
-    WEBCORE_EXPORT static Ref<Highlight> create(StaticRange&);
+    WEBCORE_EXPORT static Ref<Highlight> create(FixedVector<std::reference_wrapper<AbstractRange>>&&);
+    static void repaintRange(const AbstractRange&);
     void clearFromSetLike();
-    bool addToSetLike(StaticRange&);
-    bool removeFromSetLike(const StaticRange&);
+    bool addToSetLike(AbstractRange&);
+    bool removeFromSetLike(const AbstractRange&);
     void initializeSetLike(DOMSetAdapter&);
 
-    void repaint();
-    const Vector<Ref<HighlightRangeData>>& rangesData() const { return m_rangesData; }
+    enum class Type : uint8_t { Highlight, SpellingError, GrammarError };
+    Type type() const { return m_type; }
+    void setType(Type type) { m_type = type; }
 
-    // FIXME: Add WEBCORE_EXPORT CSSStyleDeclaration& style();
+    int priority() const { return m_priority; }
+    void setPriority(int);
+
+    void repaint();
+    const Vector<Ref<HighlightRange>>& highlightRanges() const { return m_highlightRanges; }
+
 private:
-    Vector<Ref<HighlightRangeData>> m_rangesData; // FIXME: use a HashSet instead of a Vector <rdar://problem/57760614>
-    explicit Highlight(Ref<StaticRange>&&);
+    explicit Highlight(FixedVector<std::reference_wrapper<AbstractRange>>&&);
+
+    Vector<Ref<HighlightRange>> m_highlightRanges;
+    Type m_type { Type::Highlight };
+    int m_priority { 0 };
 };
 
-}
+} // namespace WebCore

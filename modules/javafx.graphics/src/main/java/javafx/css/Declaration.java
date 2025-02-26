@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2008, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -157,7 +157,7 @@ final public class Declaration {
     }
 
     //
-    // RT-21964
+    // JDK-8126015
     //
     // We know when the .css file is parsed what the stylesheet URL is,
     // but that might not be the URL of the deployed file. So for URL

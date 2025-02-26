@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -232,7 +232,7 @@ abstract class MultipleSelectionModelBase<T> extends MultipleSelectionModel<T> {
                     .mapToInt(shift -> shift.getValue())
                     .sum();
 
-            // Fix for RT-38787: we used to not enter this block if
+            // Fix for JDK-8096243: we used to not enter this block if
             // selectedIndex + shift resulted in a value less than zero, whereas
             // now we just set the newSelectionLead to zero in that instance.
             // There exists unit tests that cover this.
@@ -240,8 +240,8 @@ abstract class MultipleSelectionModelBase<T> extends MultipleSelectionModel<T> {
 
             setSelectedIndex(newSelectionLead);
 
-            // added the selectedIndices call for RT-30356.
-            // changed to check if hasPermutated, and to call select(..) for RT-40010.
+            // added the selectedIndices call for JDK-8116904.
+            // changed to check if hasPermutated, and to call select(..) for JDK-8095676.
             // This forces the selection event to go through the system and fire
             // the necessary events.
             if (hasSelectionChanged) {
@@ -250,7 +250,7 @@ abstract class MultipleSelectionModelBase<T> extends MultipleSelectionModel<T> {
                 select(newSelectionLead);
             }
 
-            // removed due to RT-27185
+            // removed due to JDK-8125112
 //            focus(newSelectionLead);
         }
 
@@ -275,7 +275,7 @@ abstract class MultipleSelectionModelBase<T> extends MultipleSelectionModel<T> {
         final int position = shiftPair.getKey();
         final int shift = shiftPair.getValue();
 
-        // with no check here, we get RT-15024
+        // with no check here, we get JDK-8114444
         if (position < 0) return;
         if (shift == 0) return;
 
@@ -339,7 +339,7 @@ abstract class MultipleSelectionModelBase<T> extends MultipleSelectionModel<T> {
 
         final boolean wasSelected = isSelected(row);
 
-        // RT-33558 if this method has been called with a given row, and that
+        // JDK-8119637 if this method has been called with a given row, and that
         // row is the only selected row currently, then this method becomes a no-op.
         if (wasSelected && getSelectedIndices().size() == 1) {
             // before we return, we double-check that the selected item
@@ -358,10 +358,10 @@ abstract class MultipleSelectionModelBase<T> extends MultipleSelectionModel<T> {
         // No modifications should be made to 'selectedIndicesCopy' to honour the constructor.
         List<Integer> previousSelectedIndices = new SelectedIndicesList(selectedIndicesCopy);
 
-        // RT-32411 We used to call quietClearSelection() here, but this
+        // JDK-8120351 We used to call quietClearSelection() here, but this
         // resulted in the selectedItems and selectedIndices lists never
         // reporting that they were empty.
-        // makeAtomic toggle added to resolve RT-32618
+        // makeAtomic toggle added to resolve JDK-8117117
         startAtomic();
 
         // then clear the current selection
@@ -372,7 +372,7 @@ abstract class MultipleSelectionModelBase<T> extends MultipleSelectionModel<T> {
         stopAtomic();
 
         // fire off a single add/remove/replace notification (rather than
-        // individual remove and add notifications) - see RT-33324
+        // individual remove and add notifications) - see JDK-8119264
         ListChangeListener.Change<Integer> change;
 
         /*
@@ -584,7 +584,7 @@ abstract class MultipleSelectionModelBase<T> extends MultipleSelectionModel<T> {
         // Note the change in semantics here - we used to check to ensure that
         // the index is less than the item count, but now simply ensure that
         // it is less than the length of the selectedIndices bitset. This helps
-        // to resolve issues such as RT-26721, where isSelected(int) was being
+        // to resolve issues such as JDK-8118464, where isSelected(int) was being
         // called for indices that exceeded the item count, as a TreeItem (e.g.
         // the root) was being collapsed.
 //        if (index >= 0 && index < getItemCount()) {
@@ -642,7 +642,7 @@ abstract class MultipleSelectionModelBase<T> extends MultipleSelectionModel<T> {
         private int lastGetIndex = -1;
         private int lastGetValue = -1;
 
-        // Fix for RT-20945 (and numerous other issues!)
+        // Fix for JDK-8116954 (and numerous other issues!)
         private int atomicityCount = 0;
 
 //        @Override
@@ -687,13 +687,13 @@ abstract class MultipleSelectionModelBase<T> extends MultipleSelectionModel<T> {
                 return lastGetValue;
             } else if (index == (lastGetIndex + 1) && lastGetValue < itemCount) {
                 // we're iterating forward in order, short circuit for
-                // performance reasons (RT-39776)
+                // performance reasons (JDK-8093204)
                 lastGetIndex++;
                 lastGetValue = bitset.nextSetBit(lastGetValue + 1);
                 return lastGetValue;
             } else if (index == (lastGetIndex - 1) && lastGetValue > 0) {
                 // we're iterating backward in order, short circuit for
-                // performance reasons (RT-39776)
+                // performance reasons (JDK-8093204)
                 lastGetIndex--;
                 lastGetValue = bitset.previousSetBit(lastGetValue - 1);
                 return lastGetValue;
@@ -761,15 +761,18 @@ abstract class MultipleSelectionModelBase<T> extends MultipleSelectionModel<T> {
                 // by finding all contiguous indices, of all indices that are
                 // not already selected, and which are in the valid range
                 startAtomic();
-                List<Integer> sortedNewIndices =
-                        IntStream.concat(IntStream.of(index), IntStream.of(indices))
+
+                List<Integer> sortedNewIndices = new ArrayList<>(indices.length + 1);
+                IntStream.concat(IntStream.of(index), IntStream.of(indices))
                         .distinct()
                         .filter(this::isValidIndex)
                         .filter(this::isNotSelected)
                         .sorted()
-                        .boxed()
-                        .peek(this::set) // we also set here, but it's atomic!
-                        .collect(Collectors.toList());
+                        .forEach(i -> {
+                            sortedNewIndices.add(i);
+                            set(i);
+                        });
+
                 stopAtomic();
 
                 final int size = sortedNewIndices.size();

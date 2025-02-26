@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2021-2022 Apple Inc. All rights reserved.
+ * Copyright (c) 2021-2023 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -29,11 +29,17 @@
 #import <wtf/Deque.h>
 #import <wtf/FastMalloc.h>
 #import <wtf/Lock.h>
+#import <wtf/MachSendRight.h>
 #import <wtf/Ref.h>
+#import <wtf/TZoneMalloc.h>
 #import <wtf/ThreadSafeRefCounted.h>
 
 struct WGPUInstanceImpl {
 };
+
+namespace WTF {
+class MachSendRight;
+}
 
 namespace WebGPU {
 
@@ -42,7 +48,7 @@ class PresentationContext;
 
 // https://gpuweb.github.io/gpuweb/#gpu
 class Instance : public WGPUInstanceImpl, public ThreadSafeRefCounted<Instance> {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_ALLOCATED(Instance);
 public:
     static Ref<Instance> create(const WGPUInstanceDescriptor&);
     static Ref<Instance> createInvalid()
@@ -59,18 +65,20 @@ public:
     bool isValid() const { return m_isValid; }
 
     // This can be called on a background thread.
-    using WorkItem = CompletionHandler<void(void)>;
+    using WorkItem = Function<void()>;
     void scheduleWork(WorkItem&&);
+    const std::optional<const MachSendRight>& webProcessID() const;
 
 private:
-    Instance(WGPUScheduleWorkBlock);
-    Instance();
+    Instance(WGPUScheduleWorkBlock, const WTF::MachSendRight* webProcessResourceOwner);
+    explicit Instance();
 
     // This can be called on a background thread.
     void defaultScheduleWork(WGPUWorkItem&&);
 
     // This can be used on a background thread.
     Deque<WGPUWorkItem> m_pendingWork WTF_GUARDED_BY_LOCK(m_lock);
+    const std::optional<const MachSendRight> m_webProcessID;
     const WGPUScheduleWorkBlock m_scheduleWorkBlock;
     Lock m_lock;
     bool m_isValid { true };

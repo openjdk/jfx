@@ -33,13 +33,12 @@
 
 #include "Blob.h"
 #include "Document.h"
-#include "Frame.h"
 #include "FrameDestructionObserverInlines.h"
+#include "LocalFrame.h"
 #include "MixedContentChecker.h"
 #include "ScriptExecutionContext.h"
 #include "SocketProvider.h"
 #include "ThreadableWebSocketChannelClientWrapper.h"
-#include "WebSocketChannel.h"
 #include "WebSocketChannelClient.h"
 #include "WorkerGlobalScope.h"
 #include "WorkerLoaderProxy.h"
@@ -47,6 +46,8 @@
 #include "WorkerThread.h"
 #include <JavaScriptCore/ArrayBuffer.h>
 #include <wtf/MainThread.h>
+#include <wtf/StdLibExtras.h>
+#include <wtf/text/MakeString.h>
 #include <wtf/text/WTFString.h>
 
 namespace WebCore {
@@ -56,7 +57,7 @@ WorkerThreadableWebSocketChannel::WorkerThreadableWebSocketChannel(WorkerGlobalS
     , m_workerClientWrapper(ThreadableWebSocketChannelClientWrapper::create(context, client))
     , m_bridge(Bridge::create(m_workerClientWrapper.copyRef(), m_workerGlobalScope.copyRef(), taskMode, provider))
     , m_socketProvider(provider)
-    , m_progressIdentifier(WebSocketChannelIdentifier::generateThreadSafe())
+    , m_progressIdentifier(WebSocketChannelIdentifier::generate())
 {
     m_bridge->initialize(context);
 }
@@ -347,7 +348,7 @@ void WorkerThreadableWebSocketChannel::Peer::didUpgradeURL()
 WorkerThreadableWebSocketChannel::Bridge::Bridge(Ref<ThreadableWebSocketChannelClientWrapper>&& workerClientWrapper, Ref<WorkerGlobalScope>&& workerGlobalScope, const String& taskMode, Ref<SocketProvider>&& socketProvider)
     : m_workerClientWrapper(WTFMove(workerClientWrapper))
     , m_workerGlobalScope(WTFMove(workerGlobalScope))
-    , m_loaderProxy(m_workerGlobalScope->thread().workerLoaderProxy())
+    , m_loaderProxy(*m_workerGlobalScope->thread().workerLoaderProxy())
     , m_taskMode(taskMode)
     , m_socketProvider(WTFMove(socketProvider))
 {
@@ -375,10 +376,12 @@ void WorkerThreadableWebSocketChannel::Bridge::mainThreadInitialize(ScriptExecut
             ASSERT(context.isWorkerGlobalScope() || context.isWorkletGlobalScope());
             if (clientWrapper->failedWebSocketChannelCreation()) {
                 // If Bridge::initialize() quitted earlier, we need to kick mainThreadDestroy() to delete the peer.
-                downcast<WorkerOrWorkletGlobalScope>(context).workerOrWorkletThread()->workerLoaderProxy().postTaskToLoader([peer = WTFMove(peer)](ScriptExecutionContext& context) {
+                if (auto* workerLoaderProxy = downcast<WorkerOrWorkletGlobalScope>(context).workerOrWorkletThread()->workerLoaderProxy()) {
+                    workerLoaderProxy->postTaskToLoader([peer = WTFMove(peer)](ScriptExecutionContext& context) {
                     ASSERT(isMainThread());
                     ASSERT_UNUSED(context, context.isDocument());
                 });
+                }
             } else
                 clientWrapper->didCreateWebSocketChannel(peer.release());
         }
@@ -409,13 +412,12 @@ void WorkerThreadableWebSocketChannel::Bridge::connect(const URL& url, const Str
 
     m_loaderProxy.postTaskToLoader([peer = m_peer, url = url.isolatedCopy(), protocol = protocol.isolatedCopy()](ScriptExecutionContext& context) {
         ASSERT(isMainThread());
-        ASSERT(context.isDocument());
         ASSERT(peer);
 
         auto& document = downcast<Document>(context);
 
-        if (document.frame() && !MixedContentChecker::frameAndAncestorsCanRunInsecureContent(*document.frame(), document.securityOrigin(), url, MixedContentChecker::ShouldLogWarning::No)) {
-            peer->fail(makeString("The page at ", document.url().stringCenterEllipsizedToLength(), " was blocked from connecting insecurely to ", url.stringCenterEllipsizedToLength(), " either because the protocol is insecure or the page is embedded from an insecure page."));
+        if (RefPtr frame = document.frame(); frame && MixedContentChecker::shouldBlockRequestForRunnableContent(*frame, document.securityOrigin(), url, MixedContentChecker::ShouldLogWarning::No)) {
+            peer->fail(makeString("The page at "_s, document.url().stringCenterEllipsizedToLength(), " was blocked from connecting insecurely to "_s, url.stringCenterEllipsizedToLength(), " either because the protocol is insecure or the page is embedded from an insecure page."_s));
                 return;
             }
 
@@ -451,7 +453,7 @@ ThreadableWebSocketChannel::SendResult WorkerThreadableWebSocketChannel::Bridge:
     // ArrayBuffer isn't thread-safe, hence the content of ArrayBuffer is copied into Vector<uint8_t>.
     Vector<uint8_t> data(byteLength);
     if (binaryData.byteLength())
-        memcpy(data.data(), static_cast<const uint8_t*>(binaryData.data()) + byteOffset, byteLength);
+        memcpySpan(data.mutableSpan(), binaryData.span().subspan(byteOffset, byteLength));
     setMethodNotCompleted();
 
     m_loaderProxy.postTaskToLoader([peer = m_peer, data = WTFMove(data)](ScriptExecutionContext& context) {
@@ -459,7 +461,7 @@ ThreadableWebSocketChannel::SendResult WorkerThreadableWebSocketChannel::Bridge:
         ASSERT_UNUSED(context, context.isDocument());
         ASSERT(peer);
 
-        auto arrayBuffer = ArrayBuffer::create(data.data(), data.size());
+        auto arrayBuffer = ArrayBuffer::create(data.span());
         peer->send(arrayBuffer);
     });
 

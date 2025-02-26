@@ -80,11 +80,15 @@ public:
     // fileName - The file name.
     WEBCORE_EXPORT static bool deleteDatabaseFile(const String& filePath);
 
+#if PLATFORM(COCOA)
+    static void setCanSuspendLockedFileAttribute(const String& filePath);
+#endif
+
     // Moves a database file to a new place.
     WEBCORE_EXPORT static bool moveDatabaseFile(const String& oldFilePath, const String& newFilePath);
     WEBCORE_EXPORT static String computeHashForFileName(StringView filePath);
 
-#if PLATFORM(IOS_FAMILY)
+#if PLATFORM(COCOA)
     // Truncates a database file. Used when MobileSafariSettings deletes a database file,
     // since deleting the file nukes the POSIX file locks which would potentially cause Safari
     // to corrupt the new db if it's running in the background.

@@ -53,11 +53,10 @@ void NetworkSendQueue::enqueue(CString&& utf8)
 void NetworkSendQueue::enqueue(const JSC::ArrayBuffer& binaryData, unsigned byteOffset, unsigned byteLength)
 {
     if (m_queue.isEmpty()) {
-        auto* data = static_cast<const uint8_t*>(binaryData.data());
-        m_writeRawData(Span { data + byteOffset, byteLength });
+        m_writeRawData(binaryData.span().subspan(byteOffset, byteLength));
         return;
     }
-    m_queue.append(SharedBuffer::create(static_cast<const uint8_t*>(binaryData.data()) + byteOffset, byteLength));
+    m_queue.append(SharedBuffer::create(binaryData.span().subspan(byteOffset, byteLength)));
 }
 
 void NetworkSendQueue::enqueue(WebCore::Blob& blob)
@@ -98,13 +97,13 @@ void NetworkSendQueue::processMessages()
             data->forEachSegment(m_writeRawData);
         }, [this, &shouldStopProcessing](UniqueRef<BlobLoader>& loader) {
             auto errorCode = loader->errorCode();
-            if (loader->isLoading() || (errorCode && errorCode.value() == AbortError)) {
+            if (loader->isLoading() || (errorCode && errorCode.value() == ExceptionCode::AbortError)) {
                 shouldStopProcessing = true;
                 return;
             }
 
             if (const auto& result = loader->arrayBufferResult()) {
-                m_writeRawData(Span { static_cast<const uint8_t*>(result->data()), result->byteLength() });
+                m_writeRawData(result->span());
                 return;
             }
             ASSERT(errorCode);

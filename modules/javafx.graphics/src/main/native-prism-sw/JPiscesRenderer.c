@@ -248,13 +248,17 @@ JNIEXPORT void JNICALL Java_com_sun_pisces_PiscesRenderer_setTextureImpl
 {
     Renderer* rdr;
     Transform6 textureTransform;
-    jint *data;
+    jint *data = NULL;
+    jsize dataLength = (*env)->GetArrayLength(env, dataArray);
 
-    transform_get6(&textureTransform, env, jTransform);
+    if (width > 0 && height > 0 && (width < (INT_MAX / height / sizeof(jint)))
+        && stride > 0 && (height - 1) <= (dataLength - width) / stride) {
+        transform_get6(&textureTransform, env, jTransform);
 
-    rdr = (Renderer*)JLongToPointer((*env)->GetLongField(env, this, fieldIds[RENDERER_NATIVE_PTR]));
+        rdr = (Renderer*)JLongToPointer((*env)->GetLongField(env, this, fieldIds[RENDERER_NATIVE_PTR]));
 
-    data = (jint*)(*env)->GetPrimitiveArrayCritical(env, dataArray, NULL);
+        data = (jint*)(*env)->GetPrimitiveArrayCritical(env, dataArray, NULL);
+    }
     if (data != NULL) {
         jint *alloc_data = my_malloc(jint, width * height);
         if (alloc_data != NULL) {

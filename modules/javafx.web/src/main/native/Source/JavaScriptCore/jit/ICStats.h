@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2016-2019 Apple Inc. All rights reserved.
+ * Copyright (C) 2016-2023 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -25,14 +25,15 @@
 
 #pragma once
 
+#include "CacheableIdentifierInlines.h"
 #include "ClassInfo.h"
 #include "Identifier.h"
 #include <wtf/Condition.h>
-#include <wtf/FastMalloc.h>
 #include <wtf/Lock.h>
 #include <wtf/Noncopyable.h>
 #include <wtf/PrintStream.h>
 #include <wtf/Spectrum.h>
+#include <wtf/TZoneMalloc.h>
 
 namespace JSC {
 
@@ -57,15 +58,15 @@ namespace JSC {
     macro(OperationInByIdGeneric) \
     macro(OperationInByIdOptimize) \
     macro(OperationPutByIdStrict) \
-    macro(OperationPutByIdNonStrict) \
+    macro(OperationPutByIdSloppy) \
     macro(OperationPutByIdDirectStrict) \
-    macro(OperationPutByIdDirectNonStrict) \
+    macro(OperationPutByIdDirectSloppy) \
     macro(OperationPutByIdStrictOptimize) \
-    macro(OperationPutByIdNonStrictOptimize) \
+    macro(OperationPutByIdSloppyOptimize) \
     macro(OperationPutByIdDirectStrictOptimize) \
-    macro(OperationPutByIdDirectNonStrictOptimize) \
+    macro(OperationPutByIdDirectSloppyOptimize) \
     macro(OperationPutByIdStrictBuildList) \
-    macro(OperationPutByIdNonStrictBuildList) \
+    macro(OperationPutByIdSloppyBuildList) \
     macro(OperationPutByIdDefinePrivateFieldStrictOptimize) \
     macro(OperationPutByIdPutPrivateFieldStrictOptimize) \
     macro(PutByAddAccessCase) \
@@ -102,18 +103,18 @@ public:
     {
     }
 
-    ICEvent(Kind kind, const ClassInfo* classInfo, const Identifier propertyName)
+    ICEvent(VM& vm, Kind kind, const ClassInfo* classInfo, PropertyName propertyName)
         : m_kind(kind)
         , m_classInfo(classInfo)
-        , m_propertyName(propertyName)
+        , m_propertyName(Identifier::fromUid(vm, propertyName.uid()))
         , m_propertyLocation(Unknown)
     {
     }
 
-    ICEvent(Kind kind, const ClassInfo* classInfo, const Identifier propertyName, bool isBaseProperty)
+    ICEvent(VM& vm, Kind kind, const ClassInfo* classInfo, PropertyName propertyName, bool isBaseProperty)
         : m_kind(kind)
         , m_classInfo(classInfo)
-        , m_propertyName(propertyName)
+        , m_propertyName(Identifier::fromUid(vm, propertyName.uid()))
         , m_propertyLocation(isBaseProperty ? BaseObject : ProtoLookup)
     {
     }
@@ -128,11 +129,6 @@ public:
         return m_kind == other.m_kind
             && m_classInfo == other.m_classInfo
             && m_propertyName == other.m_propertyName;
-    }
-
-    bool operator!=(const ICEvent& other) const
-    {
-        return !(*this == other);
     }
 
     bool operator<(const ICEvent& other) const;
@@ -199,14 +195,14 @@ namespace JSC {
 
 class ICStats {
     WTF_MAKE_NONCOPYABLE(ICStats);
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_ALLOCATED(ICStats);
 public:
     ICStats();
     ~ICStats();
 
     void add(const ICEvent& event);
 
-    static ICStats& instance();
+    static ICStats& singleton();
 
 private:
 

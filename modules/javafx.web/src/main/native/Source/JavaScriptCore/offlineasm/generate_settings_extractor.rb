@@ -1,6 +1,6 @@
 #!/usr/bin/env ruby
 
-# Copyright (C) 2011-2018 Apple Inc. All rights reserved.
+# Copyright (C) 2011-2023 Apple Inc. All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions
@@ -40,9 +40,13 @@ IncludeFile.processIncludeOptions()
 
 inputFlnm = ARGV.shift
 outputFlnm = ARGV.shift
+tempFlnm = File.join(
+    ENV['TARGET_TEMP_DIR'] || File.dirname(outputFlnm),
+    "#{File.basename(outputFlnm)}.part"
+)
 
-validBackends = canonicalizeBackendNames(ARGV.shift.split(/[,\s]+/))
-includeOnlyBackends(validBackends)
+inputBackends = canonicalizeBackendNames(ARGV.shift.split(/[,\s]+/))
+includeOnlyBackends(inputBackends)
 
 $options = {}
 OptionParser.new do |opts|
@@ -55,7 +59,7 @@ OptionParser.new do |opts|
     end
 end.parse!
 
-inputHash = "// SettingsExtractor input hash: #{parseHash(inputFlnm, $options)} #{selfHash}"
+inputHash = "// SettingsExtractor input hash: #{parseHash(inputFlnm, $options)} #{selfHash} #{validBackends.join(' ')}"
 
 if FileTest.exist?(outputFlnm) and (not $options[:depfile] or FileTest.exist?($options[:depfile]))
     File.open(outputFlnm, "r") {
@@ -78,7 +82,7 @@ if $options[:depfile]
     depfile.puts(Shellwords.join(sources.sort))
 end
 
-File.open(outputFlnm, "w") {
+File.open(tempFlnm, "w") {
     | outp |
     $output = outp
     outp.puts inputHash
@@ -96,5 +100,5 @@ File.open(outputFlnm, "w") {
         outp.puts "#{index},"
     }
     outp.puts "};"
-
 }
+File.rename(tempFlnm, outputFlnm)

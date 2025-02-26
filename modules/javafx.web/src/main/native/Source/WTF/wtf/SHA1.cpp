@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2011 Google Inc. All rights reserved.
- * Copyright (C) 2015 Apple Inc. All rights reserved.
+ * Copyright (C) 2015-2023 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -32,8 +32,10 @@
 #include "config.h"
 #include <wtf/SHA1.h>
 
+#include <cstddef>
 #include <wtf/Assertions.h>
 #include <wtf/text/CString.h>
+#include <wtf/text/WTFString.h>
 
 namespace WTF {
 
@@ -41,23 +43,23 @@ namespace WTF {
 
 SHA1::SHA1()
 {
-    ALLOW_DEPRECATED_DECLARATIONS_BEGIN
+ALLOW_DEPRECATED_DECLARATIONS_BEGIN
     CC_SHA1_Init(&m_context);
-    ALLOW_DEPRECATED_DECLARATIONS_END
+ALLOW_DEPRECATED_DECLARATIONS_END
 }
 
-void SHA1::addBytes(Span<const std::byte> input)
+void SHA1::addBytes(std::span<const std::byte> input)
 {
-    ALLOW_DEPRECATED_DECLARATIONS_BEGIN
+ALLOW_DEPRECATED_DECLARATIONS_BEGIN
     CC_SHA1_Update(&m_context, input.data(), input.size());
-    ALLOW_DEPRECATED_DECLARATIONS_END
+ALLOW_DEPRECATED_DECLARATIONS_END
 }
 
 void SHA1::computeHash(Digest& hash)
 {
-    ALLOW_DEPRECATED_DECLARATIONS_BEGIN
+ALLOW_DEPRECATED_DECLARATIONS_BEGIN
     CC_SHA1_Final(hash.data(), &m_context);
-    ALLOW_DEPRECATED_DECLARATIONS_END
+ALLOW_DEPRECATED_DECLARATIONS_END
 }
 
 #else
@@ -101,7 +103,7 @@ SHA1::SHA1()
     reset();
 }
 
-void SHA1::addBytes(Span<const std::byte> input)
+void SHA1::addBytes(std::span<const std::byte> input)
 {
     for (auto byte : input) {
         ASSERT(m_cursor < 64);
@@ -201,6 +203,40 @@ void SHA1::reset()
 }
 
 #endif
+
+void SHA1::addUTF8Bytes(StringView string)
+{
+    if (string.containsOnlyASCII()) {
+        if (string.is8Bit())
+            addBytes(string.span8());
+        else
+            addBytes(String::make8Bit(string.span16()).span8());
+    } else
+        addBytes(string.utf8().span());
+}
+
+#if USE(CF)
+void SHA1::addUTF8Bytes(CFStringRef string)
+{
+    if (auto* characters = CFStringGetCStringPtr(string, kCFStringEncodingASCII)) {
+        addBytes(std::span { byteCast<uint8_t>(characters), static_cast<size_t>(CFStringGetLength(string)) });
+        return;
+    }
+
+    constexpr size_t bufferSize = 1024;
+    if (size_t length = CFStringGetLength(string); length <= bufferSize) {
+        std::array<UInt8, bufferSize> buffer;
+        CFIndex usedBufferLength = 0;
+        CFStringGetBytes(string, CFRangeMake(0, length), kCFStringEncodingASCII, 0, false, buffer.data(), buffer.size(), &usedBufferLength);
+        if (length == static_cast<size_t>(usedBufferLength)) {
+            addBytes(std::span { buffer }.first(length));
+            return;
+        }
+    }
+
+    addUTF8Bytes(String(string));
+}
+#endif // USE(CF)
 
 CString SHA1::hexDigest(const Digest& digest)
 {

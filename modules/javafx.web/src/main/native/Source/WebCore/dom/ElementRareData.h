@@ -23,6 +23,7 @@
 
 #include "CustomElementDefaultARIA.h"
 #include "CustomElementReactionQueue.h"
+#include "CustomStateSet.h"
 #include "DOMTokenList.h"
 #include "DatasetDOMStringMap.h"
 #include "ElementAnimationRareData.h"
@@ -33,15 +34,29 @@
 #include "NodeRareData.h"
 #include "PopoverData.h"
 #include "PseudoElement.h"
+#include "PseudoElementIdentifier.h"
 #include "RenderElement.h"
 #include "ResizeObserver.h"
-#include "ResizeObserverSize.h"
 #include "ShadowRoot.h"
 #include "SpaceSplitString.h"
 #include "StylePropertyMap.h"
 #include "StylePropertyMapReadOnly.h"
+#include "VisibilityAdjustment.h"
+#include <wtf/Markable.h>
 
 namespace WebCore {
+
+struct LayoutUnitMarkableTraits {
+    static bool isEmptyValue(LayoutUnit value)
+    {
+        return value == LayoutUnit(-1);
+    }
+
+    static LayoutUnit emptyValue()
+    {
+        return LayoutUnit(-1);
+    }
+};
 
 class ElementRareData : public NodeRareData {
 public:
@@ -61,7 +76,7 @@ public:
 
     unsigned childIndex() const { return m_childIndex; }
     void setChildIndex(unsigned index) { m_childIndex = index; }
-    static ptrdiff_t childIndexMemoryOffset() { return OBJECT_OFFSETOF(ElementRareData, m_childIndex); }
+    static constexpr ptrdiff_t childIndexMemoryOffset() { return OBJECT_OFFSETOF(ElementRareData, m_childIndex); }
 
     void clearShadowRoot() { m_shadowRoot = nullptr; }
     ShadowRoot* shadowRoot() const { return m_shadowRoot.get(); }
@@ -82,8 +97,8 @@ public:
     RenderStyle* computedStyle() const { return m_computedStyle.get(); }
     void setComputedStyle(std::unique_ptr<RenderStyle>&& computedStyle) { m_computedStyle = WTFMove(computedStyle); }
 
-    RenderStyle* displayContentsStyle() const { return m_displayContentsStyle.get(); }
-    void setDisplayContentsStyle(std::unique_ptr<RenderStyle> style) { m_displayContentsStyle = WTFMove(style); }
+    RenderStyle* displayContentsOrNoneStyle() const { return m_displayContentsOrNoneStyle.get(); }
+    void setDisplayContentsOrNoneStyle(std::unique_ptr<RenderStyle> style) { m_displayContentsOrNoneStyle = WTFMove(style); }
 
     const AtomString& effectiveLang() const { return m_effectiveLang; }
     void setEffectiveLang(const AtomString& lang) { m_effectiveLang = lang; }
@@ -94,11 +109,11 @@ public:
     DatasetDOMStringMap* dataset() const { return m_dataset.get(); }
     void setDataset(std::unique_ptr<DatasetDOMStringMap>&& dataset) { m_dataset = WTFMove(dataset); }
 
-    IntPoint savedLayerScrollPosition() const { return m_savedLayerScrollPosition; }
-    void setSavedLayerScrollPosition(IntPoint position) { m_savedLayerScrollPosition = position; }
+    ScrollPosition savedLayerScrollPosition() const { return m_savedLayerScrollPosition; }
+    void setSavedLayerScrollPosition(ScrollPosition position) { m_savedLayerScrollPosition = position; }
 
-    ElementAnimationRareData* animationRareData(PseudoId) const;
-    ElementAnimationRareData& ensureAnimationRareData(PseudoId);
+    ElementAnimationRareData* animationRareData(const std::optional<Style::PseudoElementIdentifier>&) const;
+    ElementAnimationRareData& ensureAnimationRareData(const std::optional<Style::PseudoElementIdentifier>&);
 
     DOMTokenList* partList() const { return m_partList.get(); }
     void setPartList(std::unique_ptr<DOMTokenList>&& partList) { m_partList = WTFMove(partList); }
@@ -112,9 +127,12 @@ public:
     ResizeObserverData* resizeObserverData() { return m_resizeObserverData.get(); }
     void setResizeObserverData(std::unique_ptr<ResizeObserverData>&& data) { m_resizeObserverData = WTFMove(data); }
 
-    ResizeObserverSize* lastRememberedSize() const { return m_lastRememberedSize.get(); }
-    void setLastRememberedSize(RefPtr<ResizeObserverSize>&& size) { m_lastRememberedSize = WTFMove(size); }
-    void clearLastRememberedSize() { m_lastRememberedSize = nullptr; }
+    std::optional<LayoutUnit> lastRememberedLogicalWidth() const { return m_lastRememberedLogicalWidth; }
+    std::optional<LayoutUnit> lastRememberedLogicalHeight() const { return m_lastRememberedLogicalHeight; }
+    void setLastRememberedLogicalWidth(LayoutUnit width) { m_lastRememberedLogicalWidth = width; }
+    void setLastRememberedLogicalHeight(LayoutUnit height) { m_lastRememberedLogicalHeight = height; }
+    void clearLastRememberedLogicalWidth() { m_lastRememberedLogicalWidth.reset(); }
+    void clearLastRememberedLogicalHeight() { m_lastRememberedLogicalHeight.reset(); }
 
     const AtomString& nonce() const { return m_nonce; }
     void setNonce(const AtomString& value) { m_nonce = value; }
@@ -130,16 +148,27 @@ public:
     PopoverData* popoverData() { return m_popoverData.get(); }
     void setPopoverData(std::unique_ptr<PopoverData>&& popoverData) { m_popoverData = WTFMove(popoverData); }
 
+    const std::optional<OptionSet<ContentRelevancy>>& contentRelevancy() const { return m_contentRelevancy; }
+    void setContentRelevancy(OptionSet<ContentRelevancy>& contentRelevancy) { m_contentRelevancy = contentRelevancy; }
+
+    CustomStateSet* customStateSet() { return m_customStateSet.get(); }
+    void setCustomStateSet(Ref<CustomStateSet>&& customStateSet) { m_customStateSet = WTFMove(customStateSet); }
+
+    OptionSet<VisibilityAdjustment> visibilityAdjustment() const { return m_visibilityAdjustment; }
+    void setVisibilityAdjustment(OptionSet<VisibilityAdjustment> adjustment) { m_visibilityAdjustment = adjustment; }
+
 #if DUMP_NODE_STATISTICS
     OptionSet<UseType> useTypes() const
     {
         auto result = NodeRareData::useTypes();
+        if (m_unusualTabIndex)
+            result.add(UseType::TabIndex);
         if (!m_savedLayerScrollPosition.isZero())
             result.add(UseType::ScrollingPosition);
         if (m_computedStyle)
             result.add(UseType::ComputedStyle);
-        if (m_displayContentsStyle)
-            result.add(UseType::DisplayContentsStyle);
+        if (m_displayContentsOrNoneStyle)
+            result.add(UseType::DisplayContentsOrNoneStyle);
         if (!m_effectiveLang.isEmpty())
             result.add(UseType::EffectiveLang);
         if (m_dataset)
@@ -158,7 +187,7 @@ public:
             result.add(UseType::AttributeMap);
         if (m_intersectionObserverData)
             result.add(UseType::InteractionObserver);
-        if (m_resizeObserverData || m_lastRememberedSize)
+        if (m_resizeObserverData || m_lastRememberedLogicalWidth || m_lastRememberedLogicalHeight)
             result.add(UseType::ResizeObserver);
         if (!m_animationRareData.isEmpty())
             result.add(UseType::Animations);
@@ -178,14 +207,23 @@ public:
             result.add(UseType::ExplicitlySetAttrElementsMap);
         if (m_popoverData)
             result.add(UseType::Popover);
+        if (m_childIndex)
+            result.add(UseType::ChildIndex);
+        if (!m_customStateSet.isEmpty())
+            result.add(UseType::CustomStateSet);
         return result;
     }
 #endif
 
 private:
-    IntPoint m_savedLayerScrollPosition;
+    unsigned short m_childIndex { 0 }; // Keep on top for better bit packing with NodeRareData.
+    int m_unusualTabIndex { 0 }; // Keep on top for better bit packing with NodeRareData.
+
+    std::optional<OptionSet<ContentRelevancy>> m_contentRelevancy;
+    ScrollPosition m_savedLayerScrollPosition;
+
     std::unique_ptr<RenderStyle> m_computedStyle;
-    std::unique_ptr<RenderStyle> m_displayContentsStyle;
+    std::unique_ptr<RenderStyle> m_displayContentsOrNoneStyle;
 
     AtomString m_effectiveLang;
     std::unique_ptr<DatasetDOMStringMap> m_dataset;
@@ -199,7 +237,9 @@ private:
     std::unique_ptr<IntersectionObserverData> m_intersectionObserverData;
 
     std::unique_ptr<ResizeObserverData> m_resizeObserverData;
-    RefPtr<ResizeObserverSize> m_lastRememberedSize;
+
+    Markable<LayoutUnit, LayoutUnitMarkableTraits> m_lastRememberedLogicalWidth;
+    Markable<LayoutUnit, LayoutUnitMarkableTraits> m_lastRememberedLogicalHeight;
 
     Vector<std::unique_ptr<ElementAnimationRareData>> m_animationRareData;
 
@@ -218,7 +258,9 @@ private:
 
     std::unique_ptr<PopoverData> m_popoverData;
 
-    void releasePseudoElement(PseudoElement*);
+    RefPtr<CustomStateSet> m_customStateSet;
+
+    OptionSet<VisibilityAdjustment> m_visibilityAdjustment;
 };
 
 inline ElementRareData::ElementRareData()
@@ -262,21 +304,21 @@ inline void ElementRareData::setUnusualTabIndex(int tabIndex)
     m_unusualTabIndex = tabIndex;
 }
 
-inline ElementAnimationRareData* ElementRareData::animationRareData(PseudoId pseudoId) const
+inline ElementAnimationRareData* ElementRareData::animationRareData(const std::optional<Style::PseudoElementIdentifier>& pseudoElementIdentifier) const
 {
     for (auto& animationRareData : m_animationRareData) {
-        if (animationRareData->pseudoId() == pseudoId)
+        if (animationRareData->pseudoElementIdentifier() == pseudoElementIdentifier)
             return animationRareData.get();
     }
     return nullptr;
 }
 
-inline ElementAnimationRareData& ElementRareData::ensureAnimationRareData(PseudoId pseudoId)
+inline ElementAnimationRareData& ElementRareData::ensureAnimationRareData(const std::optional<Style::PseudoElementIdentifier>& pseudoElementIdentifier)
 {
-    if (auto* animationRareData = this->animationRareData(pseudoId))
+    if (auto* animationRareData = this->animationRareData(pseudoElementIdentifier))
         return *animationRareData;
 
-    m_animationRareData.append(makeUnique<ElementAnimationRareData>(pseudoId));
+    m_animationRareData.append(makeUnique<ElementAnimationRareData>(pseudoElementIdentifier));
     return *m_animationRareData.last().get();
 }
 
@@ -288,14 +330,22 @@ inline ElementRareData* Element::elementRareData() const
 
 inline ShadowRoot* Node::shadowRoot() const
 {
-    if (!is<Element>(*this))
+    if (auto* element = dynamicDowncast<Element>(*this))
+        return element->shadowRoot();
         return nullptr;
-    return downcast<Element>(*this).shadowRoot();
 }
 
 inline ShadowRoot* Element::shadowRoot() const
 {
     return hasRareData() ? elementRareData()->shadowRoot() : nullptr;
+}
+
+inline void Element::removeShadowRoot()
+{
+    RefPtr shadowRoot = this->shadowRoot();
+    if (LIKELY(!shadowRoot))
+        return;
+    removeShadowRootSlow(*shadowRoot);
 }
 
 } // namespace WebCore

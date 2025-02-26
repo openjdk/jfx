@@ -31,6 +31,7 @@
 #include "WindowsKeyboardCodes.h"
 #include <wpe/wpe.h>
 #include <wtf/HexNumber.h>
+#include <wtf/text/MakeString.h>
 #include <wtf/text/StringBuilder.h>
 
 namespace WebCore {
@@ -429,12 +430,9 @@ String PlatformKeyboardEvent::keyValueForWPEKeyCode(unsigned keyCode)
         break;
     }
 
-    UChar32 unicodeCharacter = wpe_key_code_to_unicode(keyCode);
-    if (unicodeCharacter && U_IS_UNICODE_CHAR(unicodeCharacter)) {
-        StringBuilder builder;
-        builder.appendCharacter(unicodeCharacter);
-        return builder.toString();
-    }
+    char32_t unicodeCharacter = wpe_key_code_to_unicode(keyCode);
+    if (unicodeCharacter && U_IS_UNICODE_CHAR(unicodeCharacter))
+        return makeString(unicodeCharacter);
 
     return "Unidentified"_s;
 }
@@ -886,7 +884,7 @@ String PlatformKeyboardEvent::keyIdentifierForWPEKeyCode(unsigned keyCode)
         break;
     }
 
-    return makeString("U+", hex(wpe_key_code_to_unicode(keyCode), 4));
+    return makeString("U+"_s, hex(wpe_key_code_to_unicode(keyCode), 4));
 }
 
 int PlatformKeyboardEvent::windowsKeyCodeForWPEKeyCode(unsigned keycode)
@@ -1320,12 +1318,9 @@ String PlatformKeyboardEvent::singleCharacterString(unsigned val)
         break;
     }
 
-    UChar32 unicodeCharacter = wpe_key_code_to_unicode(val);
-    if (unicodeCharacter && U_IS_UNICODE_CHAR(unicodeCharacter)) {
-        StringBuilder builder;
-        builder.appendCharacter(unicodeCharacter);
-        return builder.toString();
-    }
+    char32_t unicodeCharacter = wpe_key_code_to_unicode(val);
+    if (unicodeCharacter && U_IS_UNICODE_CHAR(unicodeCharacter))
+        return makeString(unicodeCharacter);
 
     return { };
 }
@@ -1348,7 +1343,9 @@ void PlatformKeyboardEvent::disambiguateKeyDownEvent(Type type, bool backwardsCo
 
 OptionSet<PlatformEvent::Modifier> PlatformKeyboardEvent::currentStateOfModifierKeys()
 {
-    return { }; // FIXME: Implement.
+    if (s_currentModifiers)
+        return *s_currentModifiers;
+    return { };
 }
 
 } // namespace WebCore

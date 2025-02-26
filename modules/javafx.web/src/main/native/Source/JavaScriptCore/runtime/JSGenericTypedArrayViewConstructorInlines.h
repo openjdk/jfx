@@ -35,6 +35,7 @@
 #include "JSDataView.h"
 #include "JSGenericTypedArrayViewConstructor.h"
 #include "JSGlobalObject.h"
+#include "JSTypedArrays.h"
 #include "StructureInlines.h"
 
 namespace JSC {
@@ -46,11 +47,18 @@ JSGenericTypedArrayViewConstructor<ViewClass>::JSGenericTypedArrayViewConstructo
 }
 
 template<typename ViewClass>
-void JSGenericTypedArrayViewConstructor<ViewClass>::finishCreation(VM& vm, JSGlobalObject*, JSObject* prototype, const String& name)
+void JSGenericTypedArrayViewConstructor<ViewClass>::finishCreation(VM& vm, JSGlobalObject* globalObject, JSObject* prototype, const String& name)
 {
     Base::finishCreation(vm, ViewClass::TypedArrayStorageType == TypeDataView ? 1 : 3, name, PropertyAdditionMode::WithoutStructureTransition);
     putDirectWithoutTransition(vm, vm.propertyNames->prototype, prototype, PropertyAttribute::DontEnum | PropertyAttribute::DontDelete | PropertyAttribute::ReadOnly);
     putDirectWithoutTransition(vm, vm.propertyNames->BYTES_PER_ELEMENT, jsNumber(ViewClass::elementSize), PropertyAttribute::DontEnum | PropertyAttribute::ReadOnly | PropertyAttribute::DontDelete);
+
+    if constexpr (std::is_same_v<ViewClass, JSUint8Array>) {
+        if (Options::useUint8ArrayBase64Methods()) {
+            JSC_NATIVE_FUNCTION_WITHOUT_TRANSITION("fromBase64"_s, uint8ArrayConstructorFromBase64, static_cast<unsigned>(PropertyAttribute::DontEnum), 1, ImplementationVisibility::Public);
+            JSC_NATIVE_FUNCTION_WITHOUT_TRANSITION("fromHex"_s, uint8ArrayConstructorFromHex, static_cast<unsigned>(PropertyAttribute::DontEnum), 1, ImplementationVisibility::Public);
+        }
+    }
 }
 
 template<typename ViewClass>
@@ -184,6 +192,9 @@ inline JSObject* constructGenericTypedArrayViewWithArguments(JSGlobalObject* glo
 
             // This getPropertySlot operation should not be observed by the Proxy.
             // So we use VMInquiry. And purge the opaque object cases (proxy and namespace object) by isTaintedByOpaqueObject() guard.
+        if (JSArray* array = jsDynamicCast<JSArray*>(object); LIKELY(array && isJSArray(array) && array->isIteratorProtocolFastAndNonObservable()))
+            length = array->length();
+        else {
             PropertySlot lengthSlot(object, PropertySlot::InternalMethodType::VMInquiry, &vm);
             object->getPropertySlot(globalObject, vm.propertyNames->length, lengthSlot);
             RETURN_IF_EXCEPTION(scope, nullptr);
@@ -196,12 +207,14 @@ inline JSObject* constructGenericTypedArrayViewWithArguments(JSGlobalObject* glo
             // 1) The iterator is not a known iterator.
             // 2) The base object does not have a length getter.
             // 3) The base object might have indexed getters.
+            // 4) The iterator protocol is still intact.
             // it should not be observable that we do not use the iterator.
 
             if (!iteratorFunc.isUndefinedOrNull()
                 && (iteratorFunc != object->globalObject()->arrayProtoValuesFunction()
                     || lengthSlot.isAccessor() || lengthSlot.isCustom() || lengthSlot.isTaintedByOpaqueObject()
-                    || hasAnyArrayStorage(object->indexingType()))) {
+                    || hasAnyArrayStorage(object->indexingType())
+                    || !object->globalObject()->arrayIteratorProtocolWatchpointSet().isStillValid())) {
                     RELEASE_AND_RETURN(scope, constructGenericTypedArrayViewFromIterator<ViewClass>(globalObject, structure, object, iteratorFunc));
             }
 
@@ -213,6 +226,7 @@ inline JSObject* constructGenericTypedArrayViewWithArguments(JSGlobalObject* glo
                 length = value.toLength(globalObject);
                 RETURN_IF_EXCEPTION(scope, nullptr);
             }
+        }
 
         ViewClass* result = ViewClass::createUninitialized(globalObject, structure, length);
         EXCEPTION_ASSERT(!!scope.exception() == !result);
@@ -256,6 +270,19 @@ ALWAYS_INLINE EncodedJSValue constructGenericTypedArrayViewImpl(JSGlobalObject* 
     size_t offset = 0;
     std::optional<size_t> length;
     if (auto* arrayBuffer = jsDynamicCast<JSArrayBuffer*>(firstValue)) {
+        if (argCount > 1) {
+            offset = callFrame->uncheckedArgument(1).toTypedArrayIndex(globalObject, "byteOffset"_s);
+            RETURN_IF_EXCEPTION(scope, { });
+
+            if constexpr (ViewClass::TypedArrayStorageType == TypeDataView) {
+                RefPtr<ArrayBuffer> buffer = arrayBuffer->impl();
+                if (UNLIKELY(offset > buffer->byteLength())) {
+                    throwRangeError(globalObject, scope, "byteOffset exceeds source ArrayBuffer byteLength"_s);
+                    RETURN_IF_EXCEPTION(scope, { });
+                }
+            }
+        }
+
         if (arrayBuffer->isResizableOrGrowableShared()) {
             structure = JSC_GET_DERIVED_STRUCTURE(vm, resizableOrGrowableSharedTypedArrayStructureWithTypedArrayType<ViewClass::TypedArrayStorageType>, newTarget, callFrame->jsCallee());
             RETURN_IF_EXCEPTION(scope, { });
@@ -263,10 +290,6 @@ ALWAYS_INLINE EncodedJSValue constructGenericTypedArrayViewImpl(JSGlobalObject* 
             structure = JSC_GET_DERIVED_STRUCTURE(vm, typedArrayStructureWithTypedArrayType<ViewClass::TypedArrayStorageType>, newTarget, callFrame->jsCallee());
             RETURN_IF_EXCEPTION(scope, { });
         }
-
-        if (argCount > 1) {
-            offset = callFrame->uncheckedArgument(1).toTypedArrayIndex(globalObject, "byteOffset"_s);
-        RETURN_IF_EXCEPTION(scope, encodedJSValue());
 
         if (argCount > 2) {
             // If the length value is present but undefined, treat it as missing.
@@ -276,7 +299,6 @@ ALWAYS_INLINE EncodedJSValue constructGenericTypedArrayViewImpl(JSGlobalObject* 
                 RETURN_IF_EXCEPTION(scope, encodedJSValue());
             }
         }
-    }
     } else {
         structure = JSC_GET_DERIVED_STRUCTURE(vm, typedArrayStructureWithTypedArrayType<ViewClass::TypedArrayStorageType>, newTarget, callFrame->jsCallee());
         RETURN_IF_EXCEPTION(scope, { });

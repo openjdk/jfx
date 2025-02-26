@@ -26,7 +26,6 @@
 #include "config.h"
 #include "JSXMLDocument.h"
 
-#include "JSDOMWindow.h"
 #include "JSDocumentCustom.h"
 #include "NodeTraversal.h"
 

@@ -42,12 +42,12 @@
 #include "WebXRView.h"
 #include "WebXRViewport.h"
 #include "XRWebGLLayerInit.h"
-#include <wtf/IsoMallocInlines.h>
 #include <wtf/Scope.h>
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
-WTF_MAKE_ISO_ALLOCATED_IMPL(WebXRWebGLLayer);
+WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(WebXRWebGLLayer);
 
 // Arbitrary value for minimum framebuffer scaling.
 // Below this threshold the resulting framebuffer would be too small to see.
@@ -57,25 +57,24 @@ static ExceptionOr<std::unique_ptr<WebXROpaqueFramebuffer>> createOpaqueFramebuf
 {
     auto device = session.device();
     if (!device)
-        return Exception { OperationError, "Cannot create an XRWebGLLayer with an XRSession that has ended."_s };
+        return Exception { ExceptionCode::OperationError, "Cannot create an XRWebGLLayer with an XRSession that has ended."_s };
 
     // 9.1. Initialize layer’s antialias to layerInit’s antialias value.
     // 9.2. Let framebufferSize be the recommended WebGL framebuffer resolution multiplied by layerInit's framebufferScaleFactor.
 
     float scaleFactor = std::clamp(init.framebufferScaleFactor, MinFramebufferScalingFactor, device->maxFramebufferScalingFactor());
 
-    IntSize recommendedSize = session.recommendedWebGLFramebufferResolution();
-    auto width = static_cast<uint32_t>(std::ceil(recommendedSize.width() * scaleFactor));
-    auto height = static_cast<uint32_t>(std::ceil(recommendedSize.height() * scaleFactor));
+    FloatSize recommendedSize = session.recommendedWebGLFramebufferResolution();
+    IntSize size = expandedIntSize(recommendedSize.scaled(scaleFactor));
 
     // 9.3. Initialize layer’s framebuffer to a new opaque framebuffer with the dimensions framebufferSize
     //      created with context, session initialized to session, and layerInit’s depth, stencil, and alpha values.
     // 9.4. Allocate and initialize resources compatible with session’s XR device, including GPU accessible memory buffers,
     //      as required to support the compositing of layer.
     // 9.5. If layer’s resources were unable to be created for any reason, throw an OperationError and abort these steps.
-    auto layerHandle = device->createLayerProjection(width, height, init.alpha);
+    auto layerHandle = device->createLayerProjection(size.width(), size.height(), init.alpha);
     if (!layerHandle)
-        return Exception { OperationError, "Unable to allocate XRWebGLLayer GPU resources."_s };
+        return Exception { ExceptionCode::OperationError, "Unable to allocate XRWebGLLayer GPU resources."_s };
 
     WebXROpaqueFramebuffer::Attributes attributes {
         .alpha = init.alpha,
@@ -84,9 +83,9 @@ static ExceptionOr<std::unique_ptr<WebXROpaqueFramebuffer>> createOpaqueFramebuf
         .stencil = init.stencil
     };
 
-    auto framebuffer = WebXROpaqueFramebuffer::create(*layerHandle, context, WTFMove(attributes), width, height);
+    auto framebuffer = WebXROpaqueFramebuffer::create(*layerHandle, context, WTFMove(attributes), size);
     if (!framebuffer)
-        return Exception { OperationError, "Unable to create a framebuffer."_s };
+        return Exception { ExceptionCode::OperationError, "Unable to create a framebuffer."_s };
 
     return framebuffer;
 }
@@ -97,7 +96,7 @@ ExceptionOr<Ref<WebXRWebGLLayer>> WebXRWebGLLayer::create(Ref<WebXRSession>&& se
     // 1. Let layer be a new XRWebGLLayer
     // 2. If session’s ended value is true, throw an InvalidStateError and abort these steps.
     if (session->ended())
-        return Exception { InvalidStateError, "Cannot create an XRWebGLLayer with an XRSession that has ended."_s };
+        return Exception { ExceptionCode::InvalidStateError, "Cannot create an XRWebGLLayer with an XRSession that has ended."_s };
 
     // 3. If context is lost, throw an InvalidStateError and abort these steps.
     // 4. If session is an immersive session and context’s XR compatible boolean is false, throw
@@ -106,11 +105,11 @@ ExceptionOr<Ref<WebXRWebGLLayer>> WebXRWebGLLayer::create(Ref<WebXRSession>&& se
         [&](const RefPtr<WebGLRenderingContextBase>& baseContext) -> ExceptionOr<Ref<WebXRWebGLLayer>>
         {
             if (baseContext->isContextLost())
-                return Exception { InvalidStateError, "Cannot create an XRWebGLLayer with a lost WebGL context."_s };
+                return Exception { ExceptionCode::InvalidStateError, "Cannot create an XRWebGLLayer with a lost WebGL context."_s };
 
             auto mode = session->mode();
             if ((mode == XRSessionMode::ImmersiveAr || mode == XRSessionMode::ImmersiveVr) && !baseContext->isXRCompatible())
-                return Exception { InvalidStateError, "Cannot create an XRWebGLLayer with WebGL context not marked as XR compatible."_s };
+                return Exception { ExceptionCode::InvalidStateError, "Cannot create an XRWebGLLayer with WebGL context not marked as XR compatible."_s };
 
 
             // 5. Initialize layer’s context to context. (see constructor)
@@ -147,7 +146,7 @@ ExceptionOr<Ref<WebXRWebGLLayer>> WebXRWebGLLayer::create(Ref<WebXRSession>&& se
         },
         [](std::monostate) {
             ASSERT_NOT_REACHED();
-            return Exception { InvalidStateError };
+            return Exception { ExceptionCode::InvalidStateError };
         }
     );
 }
@@ -171,11 +170,6 @@ WebXRWebGLLayer::~WebXRWebGLLayer()
     auto canvasElement = canvas();
     if (canvasElement)
         canvasElement->removeObserver(*this);
-    if (m_framebuffer) {
-        auto device = m_session->device();
-        if (device)
-            device->deleteLayer(m_framebuffer->handle());
-    }
 }
 
 bool WebXRWebGLLayer::antialias() const
@@ -196,20 +190,22 @@ const WebGLFramebuffer* WebXRWebGLLayer::framebuffer() const
 unsigned WebXRWebGLLayer::framebufferWidth() const
 {
     if (m_framebuffer)
-        return m_framebuffer->width();
+        return std::max<unsigned>(1, m_framebuffer->drawFramebufferSize().width());
+
     return WTF::switchOn(m_context,
         [&](const RefPtr<WebGLRenderingContextBase>& baseContext) {
-            return baseContext->drawingBufferWidth();
+            return std::max<unsigned>(1, baseContext->drawingBufferWidth());
         });
 }
 
 unsigned WebXRWebGLLayer::framebufferHeight() const
 {
     if (m_framebuffer)
-        return m_framebuffer->height();
+        return std::max<unsigned>(1, m_framebuffer->drawFramebufferSize().height());
+
     return WTF::switchOn(m_context,
         [&](const RefPtr<WebGLRenderingContextBase>& baseContext) {
-            return baseContext->drawingBufferHeight();
+            return std::max<unsigned>(1, baseContext->drawingBufferHeight());
         });
 }
 
@@ -219,33 +215,28 @@ ExceptionOr<RefPtr<WebXRViewport>> WebXRWebGLLayer::getViewport(WebXRView& view)
     // 1. Let session be view’s session.
     // 2. Let frame be session’s animation frame.
     // 3. If session is not equal to layer’s session, throw an InvalidStateError and abort these steps.
-    if (&view.frame().session() != m_session.ptr())
-        return Exception { InvalidStateError };
+    if (&view.frame().session() != m_session.get())
+        return Exception { ExceptionCode::InvalidStateError };
 
     // 4. If frame’s active boolean is false, throw an InvalidStateError and abort these steps.
     // 5. If view’s frame is not equal to frame, throw an InvalidStateError and abort these steps.
     if (!view.frame().isActive() || !view.frame().isAnimationFrame())
-        return Exception { InvalidStateError };
+        return Exception { ExceptionCode::InvalidStateError };
 
     auto& viewportData = view.eye() == XREye::Right ? m_rightViewportData : m_leftViewportData;
-
-    // 6. If the viewport modifiable flag is true and view’s requested viewport scale is not equal to current viewport scale:
-    //   6.1 Set current viewport scale to requested viewport scale.
-    //   6.2 Compute the scaled viewport.
-    if (view.isViewportModifiable() && view.requestedViewportScale() != viewportData.currentScale) {
-        viewportData.currentScale = view.requestedViewportScale();
-        m_viewportsDirty = true;
-    }
 
     // 7. Set the view’s viewport modifiable flag to false.
     view.setViewportModifiable(false);
 
-    if (m_viewportsDirty)
         computeViewports();
 
     // 8. Let viewport be the XRViewport from the list of viewport objects associated with view.
     // 9. Return viewport.
-    return RefPtr<WebXRViewport>(viewportData.viewport.copyRef());
+    auto result = RefPtr<WebXRViewport>(viewportData.viewport.copyRef());
+    if (!result->width() || !result->height())
+        result->updateViewport(IntRect(0, 0, 1, 1));
+
+    return result;
 }
 
 double WebXRWebGLLayer::getNativeFramebufferScaleFactor(const WebXRSession& session)
@@ -273,8 +264,23 @@ HTMLCanvasElement* WebXRWebGLLayer::canvas() const
     });
 }
 
+void WebXRWebGLLayer::sessionEnded()
+{
+#if PLATFORM(COCOA)
+    ASSERT(m_session);
 
-void WebXRWebGLLayer::startFrame(const PlatformXR::Device::FrameData& data)
+    if (m_framebuffer) {
+        auto device = m_session->device();
+        if (device)
+            device->deleteLayer(m_framebuffer->handle());
+        m_framebuffer = nullptr;
+    }
+
+    m_session = nullptr;
+#endif
+}
+
+void WebXRWebGLLayer::startFrame(const PlatformXR::FrameData& data)
 {
     ASSERT(m_framebuffer);
 
@@ -303,14 +309,21 @@ PlatformXR::Device::Layer WebXRWebGLLayer::endFrame()
 
 void WebXRWebGLLayer::canvasResized(CanvasBase&)
 {
-    m_viewportsDirty = true;
 }
 
 // https://immersive-web.github.io/webxr/#xrview-obtain-a-scaled-viewport
 void WebXRWebGLLayer::computeViewports()
 {
-    auto roundDown = [](double value) -> int {
+    ASSERT(m_session);
+
+    auto roundDown = [](IntSize size, double scale) -> IntSize {
         // Round down to integer value and ensure that the value is not zero.
+        size.scale(scale);
+        size.clampToMinimumSize({ 1, 1 });
+        return size;
+    };
+
+    auto roundDownShared = [](double value) -> int {
         return std::max(1, static_cast<int>(std::floor(value)));
     };
 
@@ -318,14 +331,27 @@ void WebXRWebGLLayer::computeViewports()
     auto height = framebufferHeight();
 
     if (m_session->mode() == XRSessionMode::ImmersiveVr && m_session->views().size() > 1) {
-        auto leftScale = m_leftViewportData.currentScale;
-        m_leftViewportData.viewport->updateViewport(IntRect(0, 0, roundDown(width * 0.5 * leftScale), roundDown(height * leftScale)));
-        auto rightScale = m_rightViewportData.currentScale;
-        m_rightViewportData.viewport->updateViewport(IntRect(width * 0.5, 0, roundDown(width * 0.5 * rightScale), roundDown(height * rightScale)));
-    } else
-        m_leftViewportData.viewport->updateViewport(IntRect(0, 0, width, height));
+        if (m_framebuffer && m_framebuffer->usesLayeredMode()) {
+            auto scale = m_leftViewportData.currentScale;
+            auto viewport = m_framebuffer->drawViewport(PlatformXR::Eye::Left);
+            viewport.setSize(roundDown(viewport.size(), scale));
+            m_leftViewportData.viewport->updateViewport(viewport);
 
-    m_viewportsDirty = false;
+            scale = m_rightViewportData.currentScale;
+            viewport = m_framebuffer->drawViewport(PlatformXR::Eye::Right);
+            viewport.setSize(roundDown(viewport.size(), scale));
+            m_rightViewportData.viewport->updateViewport(viewport);
+            return;
+        }
+
+        auto leftScale = m_leftViewportData.currentScale;
+        m_leftViewportData.viewport->updateViewport(IntRect(0, 0, roundDownShared(width * 0.5 * leftScale), roundDownShared(height * leftScale)));
+        auto rightScale = m_rightViewportData.currentScale;
+        m_rightViewportData.viewport->updateViewport(IntRect(width * 0.5, 0, roundDownShared(width * 0.5 * rightScale), roundDownShared(height * rightScale)));
+    } else {
+        auto viewport = m_framebuffer ? m_framebuffer->drawViewport(PlatformXR::Eye::None) : IntRect(0, 0, framebufferWidth(), framebufferHeight());
+        m_leftViewportData.viewport->updateViewport(viewport);
+    }
 }
 
 } // namespace WebCore

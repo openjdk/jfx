@@ -31,12 +31,12 @@
 #include "ThreadableBlobRegistry.h"
 #include <wtf/DateMath.h>
 #include <wtf/FileSystem.h>
-#include <wtf/IsoMallocInlines.h>
+#include <wtf/TZoneMallocInlines.h>
 #include <wtf/text/WTFString.h>
 
 namespace WebCore {
 
-WTF_MAKE_ISO_ALLOCATED_IMPL(File);
+WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(File);
 
 Ref<File> File::createWithRelativePath(ScriptExecutionContext* context, const String& path, const String& relativePath)
 {
@@ -53,7 +53,7 @@ Ref<File> File::create(ScriptExecutionContext* context, const String& path, cons
     computeNameAndContentType(effectivePath, nameOverride, name, type);
 
     auto internalURL = BlobURL::createInternalURL();
-    ThreadableBlobRegistry::registerFileBlobURL(internalURL, path, replacementPath, type);
+    ThreadableBlobRegistry::registerInternalFileBlobURL(internalURL, path, replacementPath, type);
 
     auto file = adoptRef(*new File(context, WTFMove(internalURL), WTFMove(type), WTFMove(effectivePath), WTFMove(name), fileID));
     file->suspendIfNeeded();
@@ -135,12 +135,7 @@ void File::computeNameAndContentType(const String& path, const String& nameOverr
     }
 #endif
 
-#if !PLATFORM(JAVA)
     effectiveName = nameOverride.isEmpty() ? FileSystem::pathFileName(path) : nameOverride;
-#else
-    // Use simple path not from std::FileSystem
-    effectiveName = nameOverride.isEmpty() ? path : nameOverride;
-#endif
     size_t index = effectiveName.reverseFind('.');
     if (index != notFound) {
         callOnMainThreadAndWait([&effectiveContentType, &effectiveName, index] {
@@ -163,11 +158,6 @@ bool File::isDirectory() const
     if (!m_isDirectory)
         m_isDirectory = FileSystem::fileTypeFollowingSymlinks(m_path) == FileSystem::FileType::Directory;
     return *m_isDirectory;
-}
-
-const char* File::activeDOMObjectName() const
-{
-    return "File";
 }
 
 } // namespace WebCore

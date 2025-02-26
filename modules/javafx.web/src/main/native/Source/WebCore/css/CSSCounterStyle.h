@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2022 Apple Inc.  All rights reserved.
+ * Copyright (C) 2022-2024 Apple Inc.  All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -26,6 +26,7 @@
 #pragma once
 
 #include "CSSCounterStyleDescriptors.h"
+#include "WritingMode.h"
 #include <wtf/Forward.h>
 #include <wtf/WeakPtr.h>
 #include <wtf/text/AtomString.h>
@@ -37,7 +38,6 @@ class StyleRuleCounterStyle;
 class CSSCounterStyle : public RefCounted<CSSCounterStyle>, public CanMakeWeakPtr<CSSCounterStyle> {
 public:
     static Ref<CSSCounterStyle> create(const CSSCounterStyleDescriptors&, bool isPredefinedCounterStyle);
-    static Ref<CSSCounterStyle> createCounterStyleDecimal();
 
     bool operator==(const CSSCounterStyle& other) const
     {
@@ -45,7 +45,7 @@ public:
             && m_predefinedCounterStyle == other.m_predefinedCounterStyle;
     }
 
-    String text(int);
+    String text(int, TextFlow);
     const CSSCounterStyleDescriptors::Name& name() const { return m_descriptors.m_name; }
     CSSCounterStyleDescriptors::System system() const { return m_descriptors.m_system; }
     const CSSCounterStyleDescriptors::NegativeSymbols& negative() const { return m_descriptors.m_negativeSymbols; }
@@ -71,12 +71,22 @@ public:
     void setSymbols(const Vector<CSSCounterStyleDescriptors::Symbol>& symbols) { m_descriptors.m_symbols = symbols; }
     void setAdditiveSymbols(const CSSCounterStyleDescriptors::AdditiveSymbols& additiveSymbols) { m_descriptors.m_additiveSymbols = additiveSymbols; }
     void setSpeakAs(CSSCounterStyleDescriptors::SpeakAs speakAs) { m_descriptors.m_speakAs = speakAs; }
+    void setFirstSymbolValueForFixedSystem(int firstSymbolValue) { m_descriptors.m_fixedSystemFirstSymbolValue = firstSymbolValue; }
 
     void setFallbackReference(RefPtr<CSSCounterStyle>&&);
     bool isFallbackUnresolved() { return !m_fallbackReference; }
-    bool isExtendsUnresolved() { return m_isExtendedUnresolved; };
+    bool isExtendsUnresolved() { return !m_descriptors.m_isExtendedResolved; };
     bool isExtendsSystem() const { return system() == CSSCounterStyleDescriptors::System::Extends; }
     void extendAndResolve(const CSSCounterStyle&);
+
+    static String counterForSystemSimplifiedChineseInformal(int);
+    static String counterForSystemSimplifiedChineseFormal(int);
+    static String counterForSystemTraditionalChineseInformal(int);
+    static String counterForSystemTraditionalChineseFormal(int);
+    static String counterForSystemEthiopicNumeric(unsigned);
+    static String counterForSystemDisclosureClosed(TextFlow);
+    static String counterForSystemDisclosureOpen(TextFlow);
+
 private:
     CSSCounterStyle(const CSSCounterStyleDescriptors&, bool isPredefinedCounterStyle);
 
@@ -84,21 +94,22 @@ private:
     bool isInRange(int) const;
     // https://www.w3.org/TR/css-counter-styles-3/#counter-style-negative
     bool usesNegativeSign();
-    bool shouldApplyNegativeSymbols(int);
+    bool shouldApplyNegativeSymbols(int) const;
     // https://www.w3.org/TR/css-counter-styles-3/#counter-style-fallback
-    Ref<CSSCounterStyle> fallback();
+    WeakPtr<CSSCounterStyle> fallback() const { return m_fallbackReference; };
+    String fallbackText(int, TextFlow);
     // Generates a CSSCounterStyle object as it was defined by a 'decimal' descriptor. It is used as a last-resource in case we can't resolve fallback references.
-    void applyPadSymbols(String&);
-    void applyNegativeSymbols(String&);
+    void applyPadSymbols(String&, int) const;
+    void applyNegativeSymbols(String&) const;
     // Initial text representation for the counter, before applying pad and/or negative symbols. Suffix and Prefix are also not considered as described by https://www.w3.org/TR/css-counter-styles-3/#counter-styles.
-    String initialRepresentation(int);
+    String initialRepresentation(int, TextFlow) const;
 
-    String counterForSystemCyclic(int);
-    String counterForSystemFixed(int);
-    String counterForSystemSymbolic(int);
-    String counterForSystemAlphabetic(int);
-    String counterForSystemNumeric(int);
-    String counterForSystemAdditive(int);
+    String counterForSystemCyclic(int) const;
+    String counterForSystemFixed(int) const;
+    String counterForSystemSymbolic(unsigned) const;
+    String counterForSystemAlphabetic(unsigned) const;
+    String counterForSystemNumeric(unsigned) const;
+    String counterForSystemAdditive(unsigned) const;
 
     bool isPredefinedCounterStyle() const { return m_predefinedCounterStyle; }
     bool isAutoRange() const { return ranges().isEmpty(); }

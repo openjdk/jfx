@@ -25,19 +25,19 @@
 
 #pragma once
 
-#include "DOMWindowProperty.h"
 #include "EventTarget.h"
+#include "LocalDOMWindowProperty.h"
 #include <wtf/WeakPtr.h>
 
 namespace WebCore {
 
 class ApplicationCacheHost;
-class Frame;
+class LocalFrame;
 
-class DOMApplicationCache final : public RefCounted<DOMApplicationCache>, public EventTarget, public DOMWindowProperty {
-    WTF_MAKE_ISO_ALLOCATED(DOMApplicationCache);
+class DOMApplicationCache final : public RefCounted<DOMApplicationCache>, public EventTarget, public LocalDOMWindowProperty {
+    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(DOMApplicationCache);
 public:
-    static Ref<DOMApplicationCache> create(DOMWindow& window) { return adoptRef(*new DOMApplicationCache(window)); }
+    static Ref<DOMApplicationCache> create(LocalDOMWindow& window) { return adoptRef(*new DOMApplicationCache(window)); }
     virtual ~DOMApplicationCache() { ASSERT(!frame()); }
 
     unsigned short status() const;
@@ -49,12 +49,12 @@ public:
     using RefCounted::deref;
 
 private:
-    explicit DOMApplicationCache(DOMWindow&);
+    explicit DOMApplicationCache(LocalDOMWindow&);
 
     void refEventTarget() final { ref(); }
     void derefEventTarget() final { deref(); }
 
-    EventTargetInterface eventTargetInterface() const final { return DOMApplicationCacheEventTargetInterfaceType; }
+    enum EventTargetInterfaceType eventTargetInterface() const final { return EventTargetInterfaceType::DOMApplicationCache; }
     ScriptExecutionContext* scriptExecutionContext() const final;
 
     ApplicationCacheHost* applicationCacheHost() const;

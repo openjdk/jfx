@@ -41,7 +41,7 @@ class OSRAvailabilityAnalysisPhase : public Phase {
     static constexpr bool verbose = false;
 public:
     OSRAvailabilityAnalysisPhase(Graph& graph, HeadFunctor& availabilityAtHead, TailFunctor& availabilityAtTail)
-        : Phase(graph, "OSR availability analysis")
+        : Phase(graph, "OSR availability analysis"_s)
         , availabilityAtHead(availabilityAtHead)
         , availabilityAtTail(availabilityAtTail)
     {
@@ -224,9 +224,7 @@ LocalOSRAvailabilityCalculator::LocalOSRAvailabilityCalculator(Graph& graph)
 {
 }
 
-LocalOSRAvailabilityCalculator::~LocalOSRAvailabilityCalculator()
-{
-}
+LocalOSRAvailabilityCalculator::~LocalOSRAvailabilityCalculator() = default;
 
 void LocalOSRAvailabilityCalculator::beginBlock(BasicBlock* block)
 {
@@ -270,7 +268,8 @@ void LocalOSRAvailabilityCalculator::executeNode(Node* node)
         break;
     }
 
-    case MovHint: {
+    case MovHint:
+    case ZombieHint: {
         m_availability.m_locals.operand(node->unlinkedOperand()).setNode(node->child1().node());
         break;
     }

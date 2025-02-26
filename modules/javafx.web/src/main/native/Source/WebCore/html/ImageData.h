@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008-2021 Apple Inc. All rights reserved.
+ * Copyright (C) 2008-2023 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -42,7 +42,7 @@ class ImageData : public RefCounted<ImageData> {
 public:
     WEBCORE_EXPORT static Ref<ImageData> create(Ref<ByteArrayPixelBuffer>&&);
     WEBCORE_EXPORT static RefPtr<ImageData> create(RefPtr<ByteArrayPixelBuffer>&&);
-    WEBCORE_EXPORT static RefPtr<ImageData> create(const IntSize&);
+    WEBCORE_EXPORT static RefPtr<ImageData> create(const IntSize&, PredefinedColorSpace);
     WEBCORE_EXPORT static RefPtr<ImageData> create(const IntSize&, Ref<Uint8ClampedArray>&&, PredefinedColorSpace);
     WEBCORE_EXPORT static ExceptionOr<Ref<ImageData>> createUninitialized(unsigned rows, unsigned pixelsPerRow, PredefinedColorSpace defaultColorSpace, std::optional<ImageDataSettings> = std::nullopt);
     WEBCORE_EXPORT static ExceptionOr<Ref<ImageData>> create(unsigned sw, unsigned sh, std::optional<ImageDataSettings>);
@@ -60,6 +60,8 @@ public:
     PredefinedColorSpace colorSpace() const { return m_colorSpace; }
 
     Ref<ByteArrayPixelBuffer> pixelBuffer() const;
+
+    RefPtr<ImageData> clone() const;
 
 private:
     explicit ImageData(const IntSize&, Ref<JSC::Uint8ClampedArray>&&, PredefinedColorSpace);

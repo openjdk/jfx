@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2017-2021 Apple Inc. All rights reserved.
+ * Copyright (C) 2017-2023 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -31,22 +31,14 @@
 
 #include "CPU.h"
 #include "WasmPlan.h"
+#include <wtf/TZoneMallocInlines.h>
 
 namespace JSC { namespace Wasm {
 
+WTF_MAKE_TZONE_ALLOCATED_IMPL(Worklist);
+
 namespace WasmWorklistInternal {
 static constexpr bool verbose = false;
-}
-
-const char* Worklist::priorityString(Priority priority)
-{
-    switch (priority) {
-    case Priority::Preparation: return "Preparation";
-    case Priority::Shutdown: return "Shutdown";
-    case Priority::Compilation: return "Compilation";
-    case Priority::Synchronous: return "Synchronous";
-    }
-    RELEASE_ASSERT_NOT_REACHED();
 }
 
 void Worklist::dump(PrintStream& out) const
@@ -62,6 +54,12 @@ void Worklist::dump(PrintStream& out) const
 class Worklist::Thread final : public AutomaticThread {
 public:
     using Base = AutomaticThread;
+    static Ref<Thread> create(const AbstractLocker& locker, Worklist& work)
+    {
+        return adoptRef(*new Thread(locker, work));
+    }
+
+private:
     Thread(const AbstractLocker& locker, Worklist& work)
         : Base(locker, work.m_lock, work.m_planEnqueued.copyRef())
         , worklist(work)
@@ -69,7 +67,6 @@ public:
 
     }
 
-private:
     PollResult poll(const AbstractLocker&) final
     {
         auto& queue = worklist.m_queue;
@@ -122,9 +119,9 @@ private:
         return complete(Locker { *worklist.m_lock });
     }
 
-    const char* name() const final
+    ASCIILiteral name() const final
     {
-        return "Wasm Worklist Helper Thread";
+        return "Wasm Worklist Helper Thread"_s;
     }
 
 public:
@@ -216,11 +213,11 @@ Worklist::Worklist()
     : m_lock(Box<Lock>::create())
     , m_planEnqueued(AutomaticThreadCondition::create())
 {
-    unsigned numberOfCompilationThreads = Options::useConcurrentJIT() ? kernTCSMAwareNumberOfProcessorCores() : 1;
-    m_threads.reserveInitialCapacity(numberOfCompilationThreads);
+    unsigned numberOfCompilationThreads = Options::useConcurrentJIT() ? Options::numberOfWasmCompilerThreads() : 1;
     Locker locker { *m_lock };
-    for (unsigned i = 0; i < numberOfCompilationThreads; ++i)
-        m_threads.uncheckedAppend(makeUnique<Worklist::Thread>(locker, *this));
+    m_threads = Vector<Ref<Thread>>(numberOfCompilationThreads, [&](size_t) {
+        return Worklist::Thread::create(locker, *this);
+    });
 }
 
 Worklist::~Worklist()

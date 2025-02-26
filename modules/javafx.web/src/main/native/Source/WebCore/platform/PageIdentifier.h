@@ -29,7 +29,7 @@
 
 namespace WebCore {
 
-enum PageIdentifierType { };
-using PageIdentifier = ObjectIdentifier<PageIdentifierType>;
+struct PageIdentifierType;
+using PageIdentifier = LegacyNullableObjectIdentifier<PageIdentifierType>;
 
 }

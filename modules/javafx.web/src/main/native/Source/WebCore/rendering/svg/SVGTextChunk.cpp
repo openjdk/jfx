@@ -23,7 +23,9 @@
 #include "SVGTextChunk.h"
 
 #include "RenderSVGInlineText.h"
+#include "RenderStyleInlines.h"
 #include "SVGInlineTextBoxInlines.h"
+#include "SVGRenderStyle.h"
 #include "SVGTextContentElement.h"
 #include "SVGTextFragment.h"
 
@@ -55,8 +57,8 @@ SVGTextChunk::SVGTextChunk(const Vector<SVGInlineTextBox*>& lineLayoutBoxes, uns
         break;
     }
 
-    if (auto* textContentElement = SVGTextContentElement::elementFromRenderer(box->renderer().parent())) {
-        SVGLengthContext lengthContext(textContentElement);
+    if (RefPtr textContentElement = SVGTextContentElement::elementFromRenderer(box->renderer().parent())) {
+        SVGLengthContext lengthContext(textContentElement.get());
         m_desiredTextLength = textContentElement->specifiedTextLength().value(lengthContext);
 
         switch (textContentElement->lengthAdjust()) {
@@ -71,7 +73,7 @@ SVGTextChunk::SVGTextChunk(const Vector<SVGInlineTextBox*>& lineLayoutBoxes, uns
         }
     }
 
-    m_boxes.append(&lineLayoutBoxes[first], limit - first);
+    m_boxes.append(lineLayoutBoxes.subspan(first, limit - first));
 }
 
 unsigned SVGTextChunk::totalCharacters() const

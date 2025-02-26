@@ -35,8 +35,8 @@
 
 namespace WebCore {
 
-class ClassCollection final : public CachedHTMLCollection<ClassCollection, CollectionTypeTraits<ByClass>::traversalType> {
-    WTF_MAKE_ISO_ALLOCATED(ClassCollection);
+class ClassCollection final : public CachedHTMLCollection<ClassCollection, CollectionTypeTraits<CollectionType::ByClass>::traversalType> {
+    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(ClassCollection);
 public:
     static Ref<ClassCollection> create(ContainerNode&, CollectionType, const AtomString& classNames);
 
@@ -69,4 +69,4 @@ inline bool ClassCollection::elementMatches(Element& element) const
 
 } // namespace WebCore
 
-SPECIALIZE_TYPE_TRAITS_HTMLCOLLECTION(ClassCollection, ByClass)
+SPECIALIZE_TYPE_TRAITS_HTMLCOLLECTION(ClassCollection, CollectionType::ByClass)

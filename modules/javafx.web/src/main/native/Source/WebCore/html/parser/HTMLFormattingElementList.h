@@ -66,9 +66,8 @@ public:
         }
         void replaceElement(HTMLStackItem&& item) { m_item = WTFMove(item); }
 
-        // Needed for use with Vector.  These are super-hot and must be inline.
+        // Needed for use with Vector. This is super-hot and must be inline.
         bool operator==(Element* element) const { return m_item.elementOrNull() == element; }
-        bool operator!=(Element* element) const { return m_item.elementOrNull() != element; }
 
     private:
         HTMLStackItem m_item;
@@ -109,7 +108,7 @@ public:
     void removeUpdatingBookmark(Element&, Bookmark&);
 
     Bookmark bookmarkFor(Element&);
-    void swapTo(Element& oldElement, HTMLStackItem&& newItem, const Bookmark&);
+    void swapTo(Ref<Element> oldElement, HTMLStackItem&& newItem, const Bookmark&);
 
     void appendMarker();
     // clearToLastMarker also clears the marker (per the HTML5 spec).

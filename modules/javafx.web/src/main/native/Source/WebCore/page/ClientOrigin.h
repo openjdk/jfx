@@ -30,14 +30,14 @@
 #include <wtf/HashTraits.h>
 #include <wtf/Hasher.h>
 #include <wtf/URL.h>
+#include <wtf/text/MakeString.h>
 
 namespace WebCore {
 
 struct ClientOrigin {
     static ClientOrigin emptyKey() { return { }; }
 
-    bool operator==(const ClientOrigin&) const;
-    bool operator!=(const ClientOrigin& other) const { return !(*this == other); }
+    friend bool operator==(const ClientOrigin&, const ClientOrigin&) = default;
 
     ClientOrigin isolatedCopy() const & { return { topOrigin.isolatedCopy(), clientOrigin.isolatedCopy() }; }
     ClientOrigin isolatedCopy() && { return { WTFMove(topOrigin).isolatedCopy(), WTFMove(clientOrigin).isolatedCopy() }; }
@@ -48,17 +48,12 @@ struct ClientOrigin {
     SecurityOriginData topOrigin;
     SecurityOriginData clientOrigin;
 
-    String loggingString() const { return makeString(topOrigin.toString(), "-", clientOrigin.toString()); }
+    String loggingString() const { return makeString(topOrigin.toString(), '-', clientOrigin.toString()); }
 };
 
 inline void add(Hasher& hasher, const ClientOrigin& origin)
 {
     add(hasher, origin.topOrigin, origin.clientOrigin);
-}
-
-inline bool ClientOrigin::operator==(const ClientOrigin& other) const
-{
-    return topOrigin == other.topOrigin && clientOrigin == other.clientOrigin;
 }
 
 } // namespace WebCore

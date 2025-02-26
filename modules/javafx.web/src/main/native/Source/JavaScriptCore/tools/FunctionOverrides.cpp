@@ -32,7 +32,9 @@
 #include <wtf/DataLog.h>
 #include <wtf/NeverDestroyed.h>
 #include <wtf/SafeStrerror.h>
+#include <wtf/WTFProcess.h>
 #include <wtf/text/CString.h>
+#include <wtf/text/MakeString.h>
 #include <wtf/text/StringBuilder.h>
 #include <wtf/text/StringHash.h>
 
@@ -139,18 +141,18 @@ static void initializeOverrideInfo(const SourceCode& origCode, const String& new
 
     auto overridden = "<overridden>"_s;
     URL url({ }, overridden);
-    Ref<SourceProvider> newProvider = StringSourceProvider::create(newProviderString, SourceOrigin { url }, overridden);
+    Ref<SourceProvider> newProvider = StringSourceProvider::create(newProviderString, SourceOrigin { url }, overridden, SourceTaintedOrigin::Untainted);
 
     info.firstLine = 1;
     info.lineCount = 1; // Faking it. This doesn't really matter for now.
     info.startColumn = 1;
     info.endColumn = 1; // Faking it. This doesn't really matter for now.
     info.parametersStartOffset = newProviderString.find('(');
-    info.typeProfilingStartOffset = newProviderString.find('{');
-    info.typeProfilingEndOffset = newProviderString.length() - 1;
+    info.functionStart = 0;
+    info.functionEnd = newProviderString.length() - 1;
 
     info.sourceCode =
-        SourceCode(WTFMove(newProvider), info.parametersStartOffset, info.typeProfilingEndOffset + 1, 1, 1);
+        SourceCode(WTFMove(newProvider), info.parametersStartOffset, info.functionEnd + 1, 1, 1);
 }
 
 bool FunctionOverrides::initializeOverrideFor(const SourceCode& origCode, FunctionOverrides::OverrideInfo& result)
@@ -185,7 +187,7 @@ bool FunctionOverrides::initializeOverrideFor(const SourceCode& origCode, Functi
     do { \
         dataLog("functionOverrides ", error, ": "); \
         dataLog errorMessageInBrackets; \
-        exit(EXIT_FAILURE); \
+        exitProcess(EXIT_FAILURE); \
     } while (false)
 
 static bool hasDisallowedCharacters(const char* str, size_t length)
@@ -195,7 +197,7 @@ static bool hasDisallowedCharacters(const char* str, size_t length)
         // '{' is also disallowed, but we don't need to check for it because
         // parseClause() searches for '{' as the end of the start delimiter.
         // As a result, the parsed delimiter string will never include '{'.
-        if (c == '}' || isASCIISpace(c))
+        if (c == '}' || isUnicodeCompatibleASCIIWhitespace(c))
             return true;
     }
     return false;
@@ -213,12 +215,12 @@ static String parseClause(const char* keyword, size_t keywordLength, FILE* file,
         FAIL_WITH_ERROR(SYNTAX_ERROR, ("'", keyword, "' must be followed by a ' ':\n", line, "\n"));
 
     const char* delimiterStart = &line[keywordLength + 1];
-    const char* delimiterEnd = strstr(delimiterStart, "{");
+    const char* delimiterEnd = strchr(delimiterStart, '{');
     if (!delimiterEnd)
         FAIL_WITH_ERROR(SYNTAX_ERROR, ("Missing { after '", keyword, "' clause start delimiter:\n", line, "\n"));
 
     size_t delimiterLength = delimiterEnd - delimiterStart;
-    String delimiter(delimiterStart, delimiterLength);
+    String delimiter({ delimiterStart, delimiterLength });
 
     if (hasDisallowedCharacters(delimiterStart, delimiterLength))
         FAIL_WITH_ERROR(SYNTAX_ERROR, ("Delimiter '", delimiter, "' cannot have '{', '}', or whitespace:\n", line, "\n"));
@@ -234,10 +236,10 @@ static String parseClause(const char* keyword, size_t keywordLength, FILE* file,
             if (p[strlen(terminator)] != '\n')
                 FAIL_WITH_ERROR(SYNTAX_ERROR, ("Unexpected characters after '", keyword, "' clause end delimiter '", delimiter, "':\n", line, "\n"));
 
-            builder.appendCharacters(line, p - line + 1);
+            builder.append(std::span { line, p + 1 });
             return builder.toString();
         }
-        builder.append(line);
+        builder.append(span(line));
 
     } while ((line = fgets(buffer, bufferSize, file)));
 

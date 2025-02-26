@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2018, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,8 +25,13 @@
 
 package test.robot.com.sun.glass.ui.monocle;
 
-import com.sun.glass.ui.monocle.TestLogShim;
-import com.sun.glass.ui.monocle.TouchInputShim;
+import static org.junit.jupiter.api.Assertions.fail;
+import java.util.List;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.Semaphore;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicReference;
+import java.util.function.Consumer;
 import javafx.animation.AnimationTimer;
 import javafx.application.Application;
 import javafx.application.Platform;
@@ -42,14 +47,9 @@ import javafx.scene.shape.Rectangle;
 import javafx.stage.Screen;
 import javafx.stage.Stage;
 import javafx.stage.StageStyle;
-import org.junit.Assert;
-
-import java.util.List;
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.Semaphore;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicReference;
-import java.util.function.Consumer;
+import org.junit.jupiter.api.Assertions;
+import com.sun.glass.ui.monocle.TestLogShim;
+import com.sun.glass.ui.monocle.TouchInputShim;
 import test.com.sun.glass.ui.monocle.TestRunnable;
 
 public class TestApplication extends Application {
@@ -90,6 +90,7 @@ public class TestApplication extends Application {
         return isLens;
     }
 
+    @Override
     public void start(Stage stage) throws Exception {
         TestApplication.stage = stage;
         stage.initStyle(StageStyle.UNDECORATED);
@@ -201,7 +202,7 @@ public class TestApplication extends Application {
         try {
             frameCounter.await();
         } catch (InterruptedException ex) {
-            Assert.fail("Unexpected exception: " + ex);
+            Assertions.fail(ex);
         }
     }
 
@@ -358,15 +359,15 @@ public class TestApplication extends Application {
         ui.processLine("EV_KEY BTN_TOUCH 0");
         ui.processLine("EV_SYN");
         try {
-            Assert.assertTrue(released.tryAcquire(3, TimeUnit.SECONDS));
+            Assertions.assertTrue(released.tryAcquire(3, TimeUnit.SECONDS));
             TestRunnable.invokeAndWait(() -> {
                 Robot robot = new Robot();
                 TestLogShim.log("x = " + robot.getMouseX());
                 TestLogShim.log("y = " + robot.getMouseY());
                 TestLogShim.log("targetX = " + targetX);
                 TestLogShim.log("targetY = " + targetY);
-                Assert.assertEquals(targetX, (int) robot.getMouseX());
-                Assert.assertEquals(targetY, (int) robot.getMouseY());
+                Assertions.assertEquals(targetX, (int) robot.getMouseX());
+                Assertions.assertEquals(targetY, (int) robot.getMouseY());
             });
             frameWait(1);
         } finally {
@@ -404,7 +405,7 @@ public class TestApplication extends Application {
             try {
                 latch.await();
             } catch (InterruptedException e) {
-                e.printStackTrace();
+                fail(e);
             }
         }
     }

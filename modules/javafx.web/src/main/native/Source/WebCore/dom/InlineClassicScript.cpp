@@ -34,17 +34,17 @@ namespace WebCore {
 
 Ref<InlineClassicScript> InlineClassicScript::create(ScriptElement& scriptElement)
 {
-    auto& element = scriptElement.element();
+    Ref element = scriptElement.element();
     return adoptRef(*new InlineClassicScript(
-        element.nonce(),
-        element.attributeWithoutSynchronization(HTMLNames::crossoriginAttr),
+        element->nonce(),
+        element->attributeWithoutSynchronization(HTMLNames::crossoriginAttr),
         scriptElement.scriptCharset(),
-        element.localName(),
-        element.isInUserAgentShadowTree()));
+        element->localName(),
+        element->isInUserAgentShadowTree()));
 }
 
 InlineClassicScript::InlineClassicScript(const AtomString& nonce, const AtomString& crossOriginMode, const String& charset, const AtomString& initiatorType, bool isInUserAgentShadowTree)
-    : ScriptElementCachedScriptFetcher(nonce, ReferrerPolicy::EmptyString, crossOriginMode, charset, initiatorType, isInUserAgentShadowTree)
+    : ScriptElementCachedScriptFetcher(nonce, ReferrerPolicy::EmptyString, RequestPriority::Auto, crossOriginMode, charset, initiatorType, isInUserAgentShadowTree)
 {
 }
 

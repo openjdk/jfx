@@ -27,11 +27,20 @@
 
 #include "ExceptionOr.h"
 #include "ScriptExecutionContextIdentifier.h"
+#include <span>
 #include <wtf/FastMalloc.h>
 #include <wtf/Function.h>
-#include <wtf/Span.h>
 #include <wtf/WeakPtr.h>
 #include <wtf/WorkQueue.h>
+
+namespace WebCore {
+class FormDataConsumer;
+}
+
+namespace WTF {
+template<typename T> struct IsDeprecatedWeakRefSmartPointerException;
+template<> struct IsDeprecatedWeakRefSmartPointerException<WebCore::FormDataConsumer> : std::true_type { };
+}
 
 namespace WebCore {
 
@@ -42,7 +51,7 @@ class ScriptExecutionContext;
 class FormDataConsumer : public CanMakeWeakPtr<FormDataConsumer> {
     WTF_MAKE_FAST_ALLOCATED;
 public:
-    using Callback = Function<void(ExceptionOr<Span<const uint8_t>>)>;
+    using Callback = Function<void(ExceptionOr<std::span<const uint8_t>>)>;
     FormDataConsumer(const FormData&, ScriptExecutionContext&, Callback&&);
     WEBCORE_EXPORT ~FormDataConsumer();
 
@@ -53,9 +62,9 @@ private:
     void consumeFile(const String&);
     void consumeBlob(const URL&);
 
-    void consume(Span<const uint8_t>);
+    void consume(std::span<const uint8_t>);
     void read();
-    template <class A> void didFail(A &&exception);
+    void didFail(Exception&&);
     bool isCancelled() { return !m_context; }
 
     Ref<FormData> m_formData;

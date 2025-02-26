@@ -41,6 +41,8 @@ class FilterEffect : public FilterFunction {
     using FilterFunction::apply;
 
 public:
+    virtual bool operator==(const FilterEffect&) const;
+
     const DestinationColorSpace& operatingColorSpace() const { return m_operatingColorSpace; }
     virtual void setOperatingColorSpace(const DestinationColorSpace& colorSpace) { m_operatingColorSpace = colorSpace; }
 
@@ -48,18 +50,25 @@ public:
     FilterImageVector takeImageInputs(FilterImageVector& stack) const;
 
     RefPtr<FilterImage> apply(const Filter&, const FilterImageVector& inputs, FilterResults&, const std::optional<FilterEffectGeometry>& = std::nullopt);
-    FilterStyle createFilterStyle(const Filter&, const FilterStyle& input, const std::optional<FilterEffectGeometry>& = std::nullopt) const;
+    FilterStyle createFilterStyle(GraphicsContext&, const Filter&, const FilterStyle& input, const std::optional<FilterEffectGeometry>& = std::nullopt) const;
 
     WTF::TextStream& externalRepresentation(WTF::TextStream&, FilterRepresentation) const override;
 
 protected:
-    using FilterFunction::FilterFunction;
+    explicit FilterEffect(Type, DestinationColorSpace = DestinationColorSpace::SRGB(), std::optional<RenderingResourceIdentifier> = std::nullopt);
+
+    template<typename FilterEffectType>
+    static bool areEqual(const FilterEffectType& a, const FilterEffect& b)
+    {
+        auto* bType = dynamicDowncast<FilterEffectType>(b);
+        return bType && a.operator==(*bType);
+    }
 
     virtual unsigned numberOfEffectInputs() const { return 1; }
 
-    FloatRect calculatePrimitiveSubregion(const Filter&, Span<const FloatRect> inputPrimitiveSubregions, const std::optional<FilterEffectGeometry>&) const;
+    FloatRect calculatePrimitiveSubregion(const Filter&, std::span<const FloatRect> inputPrimitiveSubregions, const std::optional<FilterEffectGeometry>&) const;
 
-    virtual FloatRect calculateImageRect(const Filter&, Span<const FloatRect> inputImageRects, const FloatRect& primitiveSubregion) const;
+    virtual FloatRect calculateImageRect(const Filter&, std::span<const FloatRect> inputImageRects, const FloatRect& primitiveSubregion) const;
 
     // Solid black image with different alpha values.
     virtual bool resultIsAlphaImage(const FilterImageVector&) const { return false; }
@@ -76,10 +85,10 @@ protected:
 
     virtual std::unique_ptr<FilterEffectApplier> createAcceleratedApplier() const { return nullptr; }
     virtual std::unique_ptr<FilterEffectApplier> createSoftwareApplier() const = 0;
-    virtual std::optional<GraphicsStyle> createGraphicsStyle(const Filter&) const { return std::nullopt; }
+    virtual std::optional<GraphicsStyle> createGraphicsStyle(GraphicsContext&, const Filter&) const { return std::nullopt; }
 
     RefPtr<FilterImage> apply(const Filter&, FilterImage& input, FilterResults&) override;
-    FilterStyleVector createFilterStyles(const Filter&, const FilterStyle& input) const override;
+    FilterStyleVector createFilterStyles(GraphicsContext&, const Filter&, const FilterStyle& input) const override;
 
     DestinationColorSpace m_operatingColorSpace { DestinationColorSpace::SRGB() };
 };
@@ -90,9 +99,4 @@ WEBCORE_EXPORT WTF::TextStream& operator<<(WTF::TextStream&, const FilterEffect&
 
 SPECIALIZE_TYPE_TRAITS_BEGIN(WebCore::FilterEffect)
     static bool isType(const WebCore::FilterFunction& function) { return function.isFilterEffect(); }
-SPECIALIZE_TYPE_TRAITS_END()
-
-#define SPECIALIZE_TYPE_TRAITS_FILTER_EFFECT(ClassName) \
-SPECIALIZE_TYPE_TRAITS_BEGIN(WebCore::ClassName) \
-    static bool isType(const WebCore::FilterEffect& effect) { return effect.filterType() == WebCore::FilterEffect::Type::ClassName; } \
 SPECIALIZE_TYPE_TRAITS_END()

@@ -37,7 +37,7 @@ namespace WebCore {
 
 class FloatLine {
 public:
-    FloatLine() { }
+    FloatLine() = default;
     FloatLine(const FloatPoint& start, const FloatPoint& end)
         : m_start(start)
         , m_end(end)
@@ -55,34 +55,10 @@ public:
     const FloatLine extendedToBounds(const FloatRect&) const;
     const std::optional<FloatPoint> intersectionWith(const FloatLine&) const;
 
-    template<class Encoder> void encode(Encoder&) const;
-    template<class Decoder> static std::optional<FloatLine> decode(Decoder&);
-
 private:
     FloatPoint m_start { 0, 0 };
     FloatPoint m_end { 0, 0 };
     float m_length { 0 };
 };
-
-template<class Encoder> void FloatLine::encode(Encoder& encoder) const
-{
-    encoder << m_start;
-    encoder << m_end;
-}
-
-template<class Decoder> std::optional<FloatLine> FloatLine::decode(Decoder& decoder)
-{
-    std::optional<FloatPoint> start;
-    decoder >> start;
-    if (!start)
-        return std::nullopt;
-
-    std::optional<FloatPoint> end;
-    decoder >> end;
-    if (!end)
-        return std::nullopt;
-
-    return {{ *start, *end }};
-}
 
 }

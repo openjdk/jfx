@@ -28,8 +28,7 @@
 
 #if USE(COORDINATED_GRAPHICS)
 
-#include "BitmapTextureGL.h"
-#include "TextureMapperGL.h"
+#include "BitmapTexture.h"
 #include "TextureMapperLayer.h"
 #include "TextureMapperPlatformLayerBuffer.h"
 
@@ -43,7 +42,10 @@ static const Seconds releaseUnusedBuffersTimerInterval = { 500_ms };
 
 namespace WebCore {
 
-TextureMapperPlatformLayerProxyGL::TextureMapperPlatformLayerProxyGL() = default;
+TextureMapperPlatformLayerProxyGL::TextureMapperPlatformLayerProxyGL(ContentType contentType)
+    : TextureMapperPlatformLayerProxy(contentType)
+{
+}
 
 TextureMapperPlatformLayerProxyGL::~TextureMapperPlatformLayerProxyGL()
 {
@@ -102,10 +104,12 @@ void TextureMapperPlatformLayerProxyGL::invalidate()
             m_targetLayer = nullptr;
         }
 
+        if (contentType() != ContentType::HolePunch) {
         m_currentBuffer = nullptr;
         m_pendingBuffer = nullptr;
         m_releaseUnusedBuffersTimer = nullptr;
         m_usedBuffers.clear();
+        }
 
         // Clear the timer and dispatch the update function manually now.
         m_compositorThreadUpdateTimer = nullptr;
@@ -129,6 +133,18 @@ void TextureMapperPlatformLayerProxyGL::pushNextBuffer(std::unique_ptr<TextureMa
     m_pendingBuffer = WTFMove(newBuffer);
     m_wasBufferDropped = false;
 
+#if HAVE(DISPLAY_LINK)
+    // WebGL and Canvas changes will cause a composition request during layerFlush. We cannot request
+    // a new compostion here as well or we may trigger two compositions instead of one.
+    switch (contentType()) {
+    case ContentType::WebGL:
+    case ContentType::Canvas:
+        return;
+    default:
+        break;
+    }
+#endif
+
     if (m_compositor)
         m_compositor->onNewBufferAvailable();
 }
@@ -136,7 +152,7 @@ void TextureMapperPlatformLayerProxyGL::pushNextBuffer(std::unique_ptr<TextureMa
 std::unique_ptr<TextureMapperPlatformLayerBuffer> TextureMapperPlatformLayerProxyGL::getAvailableBuffer(const IntSize& size, GLint internalFormat)
 {
     ASSERT(m_lock.isHeld());
-    ASSERT(m_compositorThread == &Thread::current());
+
     std::unique_ptr<TextureMapperPlatformLayerBuffer> availableBuffer;
 
     auto buffers = WTFMove(m_usedBuffers);

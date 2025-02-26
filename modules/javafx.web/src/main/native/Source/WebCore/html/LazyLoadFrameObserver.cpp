@@ -26,9 +26,11 @@
 #include "config.h"
 #include "LazyLoadFrameObserver.h"
 
-#include "Frame.h"
+#include "DocumentInlines.h"
 #include "HTMLIFrameElement.h"
 #include "IntersectionObserverCallback.h"
+#include "IntersectionObserverEntry.h"
+#include "LocalFrame.h"
 #include "RenderStyle.h"
 
 #include <limits>
@@ -52,10 +54,9 @@ private:
         for (auto& entry : entries) {
             if (!entry->isIntersecting())
                 continue;
-            auto* element = entry->target();
-            if (is<HTMLIFrameElement>(element)) {
-                downcast<HTMLIFrameElement>(*element).lazyLoadFrameObserver().unobserve();
-                downcast<HTMLIFrameElement>(*element).loadDeferredFrame();
+            if (RefPtr iframe = dynamicDowncast<HTMLIFrameElement>(entry->target())) {
+                iframe->lazyLoadFrameObserver().unobserve();
+                iframe->loadDeferredFrame();
             }
         }
         return { };
@@ -74,8 +75,8 @@ LazyLoadFrameObserver::LazyLoadFrameObserver(HTMLIFrameElement& element)
 
 void LazyLoadFrameObserver::observe(const AtomString& frameURL, const ReferrerPolicy& referrerPolicy)
 {
-    auto& frameObserver = m_element.lazyLoadFrameObserver();
-    auto* intersectionObserver = frameObserver.intersectionObserver(m_element.document());
+    auto& frameObserver = m_element->lazyLoadFrameObserver();
+    auto* intersectionObserver = frameObserver.intersectionObserver(m_element->protectedDocument());
     if (!intersectionObserver)
         return;
     m_frameURL = frameURL;
@@ -85,7 +86,7 @@ void LazyLoadFrameObserver::observe(const AtomString& frameURL, const ReferrerPo
 
 void LazyLoadFrameObserver::unobserve()
 {
-    auto& frameObserver = m_element.lazyLoadFrameObserver();
+    auto& frameObserver = m_element->lazyLoadFrameObserver();
     ASSERT(frameObserver.isObserved(m_element));
     frameObserver.m_observer->unobserve(m_element);
 }

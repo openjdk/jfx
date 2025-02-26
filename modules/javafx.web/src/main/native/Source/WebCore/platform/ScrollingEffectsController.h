@@ -107,8 +107,8 @@ public:
     virtual void rubberBandingStateChanged(bool) { }
 #endif
 
-    virtual void deferWheelEventTestCompletionForReason(WheelEventTestMonitor::ScrollableAreaIdentifier, WheelEventTestMonitor::DeferReason) const { /* Do nothing */ }
-    virtual void removeWheelEventTestCompletionDeferralForReason(WheelEventTestMonitor::ScrollableAreaIdentifier, WheelEventTestMonitor::DeferReason) const { /* Do nothing */ }
+    virtual void deferWheelEventTestCompletionForReason(ScrollingNodeID, WheelEventTestMonitor::DeferReason) const { /* Do nothing */ }
+    virtual void removeWheelEventTestCompletionDeferralForReason(ScrollingNodeID, WheelEventTestMonitor::DeferReason) const { /* Do nothing */ }
 
     virtual FloatPoint scrollOffset() const = 0;
 
@@ -124,6 +124,7 @@ public:
     virtual float pageScaleFactor() const = 0;
     virtual ScrollExtents scrollExtents() const = 0;
     virtual bool scrollAnimationEnabled() const { return true; }
+    virtual ScrollingNodeID scrollingNodeIDForTesting() const = 0;
 };
 
 class ScrollingEffectsController : public ScrollAnimationClient {
@@ -204,8 +205,8 @@ private:
 
 #if PLATFORM(MAC)
     bool shouldOverrideMomentumScrolling() const;
-    void statelessSnapTransitionTimerFired();
-    void scheduleStatelessScrollSnap();
+    void discreteSnapTransitionTimerFired();
+    void scheduleDiscreteScrollSnap(const FloatSize& delta);
 
     bool modifyScrollDeltaForStretching(const PlatformWheelEvent&, FloatSize&, bool isHorizontallyStretched, bool isVerticallyStretched);
     bool applyScrollDeltaWithStretching(const PlatformWheelEvent&, FloatSize, bool isHorizontallyStretched, bool isVerticallyStretched);
@@ -277,7 +278,8 @@ private:
     bool m_ignoreMomentumScrolls { false };
     bool m_isRubberBanding { false };
 
-    std::unique_ptr<ScrollingEffectsControllerTimer> m_statelessSnapTransitionTimer;
+    Deque<FloatSize> m_recentDiscreteWheelDeltas;
+    std::unique_ptr<ScrollingEffectsControllerTimer> m_discreteSnapTransitionTimer;
 
 #if HAVE(RUBBER_BANDING)
     RectEdges<bool> m_rubberBandingEdges;

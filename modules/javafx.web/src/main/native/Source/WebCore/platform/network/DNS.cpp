@@ -28,10 +28,21 @@
 #include "DNS.h"
 
 #include "DNSResolveQueue.h"
+#include <wtf/CompletionHandler.h>
 #include <wtf/MainThread.h>
+#include <wtf/URL.h>
 
 #if OS(UNIX)
 #include <arpa/inet.h>
+#endif
+
+#if OS(WINDOWS) && PLATFORM(JAVA)
+// Include Windows-specific headers for clang-cl
+#include <winsock2.h>
+#endif
+
+#if OS(QNX)
+#include <sys/socket.h>
 #endif
 
 namespace WebCore {
@@ -49,7 +60,7 @@ void resolveDNS(const String& hostname, uint64_t identifier, DNSCompletionHandle
 {
     ASSERT(isMainThread());
     if (hostname.isEmpty())
-        return;
+        return completionHandler(makeUnexpected(DNSError::CannotResolve));
 
     WebCore::DNSResolveQueue::singleton().resolve(hostname, identifier, WTFMove(completionHandler));
 }
@@ -57,6 +68,44 @@ void resolveDNS(const String& hostname, uint64_t identifier, DNSCompletionHandle
 void stopResolveDNS(uint64_t identifier)
 {
     WebCore::DNSResolveQueue::singleton().stopResolve(identifier);
+}
+
+// FIXME: Temporary fix until we have rdar://63797758
+bool isIPAddressDisallowed(const URL& url)
+{
+    if (auto address = IPAddress::fromString(url.host().toStringWithoutCopying()))
+        return address->containsOnlyZeros();
+    return false;
+}
+
+bool IPAddress::containsOnlyZeros() const
+{
+    return std::visit(WTF::makeVisitor([] (const WTF::HashTableEmptyValueType&) {
+        ASSERT_NOT_REACHED();
+        return false;
+    }, [] (const in_addr& address) {
+        return !address.s_addr;
+    }, [] (const in6_addr& address) {
+        for (uint8_t byte : address.s6_addr) {
+            if (byte)
+                return false;
+        }
+        return true;
+    }), m_address);
+}
+
+bool IPAddress::isLoopback() const
+{
+    return WTF::switchOn(m_address,
+        [] (const struct in_addr& address) {
+        return address.s_addr == htonl(INADDR_LOOPBACK);
+    }, [] (const struct in6_addr& address) {
+        constexpr auto in6addrLoopback = "\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\1";
+        return !memcmp(&address.s6_addr, in6addrLoopback, sizeof(address.s6_addr));
+    }, [] (const WTF::HashTableEmptyValueType&) {
+        ASSERT_NOT_REACHED();
+        return false;
+    });
 }
 
 std::optional<IPAddress> IPAddress::fromString(const String& string)

@@ -99,6 +99,7 @@ struct _GstQueue {
 
   /* position of src/sink */
   GstClockTimeDiff sinktime, srctime;
+  GstClockTimeDiff sink_start_time;
   /* TRUE if either position needs to be recalculated */
   gboolean sink_tainted, src_tainted;
 

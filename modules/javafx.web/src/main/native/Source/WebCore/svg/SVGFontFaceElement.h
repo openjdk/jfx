@@ -29,7 +29,8 @@ class SVGFontElement;
 class StyleRuleFontFace;
 
 class SVGFontFaceElement final : public SVGElement {
-    WTF_MAKE_ISO_ALLOCATED(SVGFontFaceElement);
+    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(SVGFontFaceElement);
+    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(SVGFontFaceElement);
 public:
     static Ref<SVGFontFaceElement> create(const QualifiedName&, Document&);
 
@@ -47,15 +48,17 @@ public:
     String fontFamily() const;
 
     SVGFontElement* associatedFontElement() const;
+    RefPtr<SVGFontElement> protectedFontElement() const;
     void rebuildFontFace();
 
     StyleRuleFontFace& fontFaceRule() { return m_fontFaceRule.get(); }
+    Ref<StyleRuleFontFace> protectedFontFaceRule() const;
 
 private:
     SVGFontFaceElement(const QualifiedName&, Document&);
     ~SVGFontFaceElement();
 
-    void parseAttribute(const QualifiedName&, const AtomString&) final;
+    void attributeChanged(const QualifiedName&, const AtomString& oldValue, const AtomString& newValue, AttributeModificationReason) final;
 
     void childrenChanged(const ChildChange&) final;
     InsertedIntoAncestorResult insertedIntoAncestor(InsertionType, ContainerNode&) final;

@@ -2,7 +2,7 @@
  * jcmaster.c
  *
  * Copyright (C) 1991-1997, Thomas G. Lane.
- * Modified 2003-2019 by Guido Vollbeding.
+ * Modified 2003-2020 by Guido Vollbeding.
  * This file is part of the Independent JPEG Group's software.
  * For conditions of distribution and use, see the accompanying README file.
  *

@@ -1,7 +1,7 @@
 /*
  * Copyright (C) 2004, 2005, 2006, 2007 Nikolas Zimmermann <zimmermann@kde.org>
  * Copyright (C) 2004, 2005, 2006 Rob Buis <buis@kde.org>
- * Copyright (C) 2018-2022 Apple Inc. All rights reserved.
+ * Copyright (C) 2018-2024 Apple Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Library General Public
@@ -22,8 +22,7 @@
 #pragma once
 
 #include "FilterEffectGeometry.h"
-#include "RenderSVGResourceFilter.h"
-#include "RenderSVGResourceFilterPrimitive.h"
+#include "FilterEffectVector.h"
 #include "SVGElement.h"
 #include "SVGNames.h"
 #include <wtf/RefPtr.h>
@@ -35,7 +34,8 @@ class FilterEffect;
 class SVGFilter;
 
 class SVGFilterPrimitiveStandardAttributes : public SVGElement {
-    WTF_MAKE_ISO_ALLOCATED(SVGFilterPrimitiveStandardAttributes);
+    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(SVGFilterPrimitiveStandardAttributes);
+    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(SVGFilterPrimitiveStandardAttributes);
 public:
     using PropertyRegistry = SVGPropertyOwnerRegistry<SVGFilterPrimitiveStandardAttributes, SVGElement>;
 
@@ -59,6 +59,7 @@ public:
     RefPtr<FilterEffect> filterEffect(const FilterEffectVector&, const GraphicsContext& destinationContext);
 
     void primitiveAttributeChanged(const QualifiedName&);
+    void markFilterEffectForRepaint();
     void markFilterEffectForRebuild();
 
     static void invalidateFilterPrimitiveParent(SVGElement*);
@@ -66,7 +67,7 @@ public:
 protected:
     SVGFilterPrimitiveStandardAttributes(const QualifiedName&, Document&, UniqueRef<SVGPropertyRegistry>&&);
 
-    void parseAttribute(const QualifiedName&, const AtomString&) override;
+    void attributeChanged(const QualifiedName&, const AtomString& oldValue, const AtomString& newValue, AttributeModificationReason) override;
     void svgAttributeChanged(const QualifiedName&) override;
     void childrenChanged(const ChildChange&) override;
     void primitiveAttributeOnChildChanged(const Element&, const QualifiedName&);
@@ -97,5 +98,9 @@ private:
 
 SPECIALIZE_TYPE_TRAITS_BEGIN(WebCore::SVGFilterPrimitiveStandardAttributes)
     static bool isType(const WebCore::SVGElement& element) { return element.isFilterEffect(); }
-    static bool isType(const WebCore::Node& node) { return is<WebCore::SVGElement>(node) && isType(downcast<WebCore::SVGElement>(node)); }
+    static bool isType(const WebCore::Node& node)
+    {
+        auto* svgElement = dynamicDowncast<WebCore::SVGElement>(node);
+        return svgElement && isType(*svgElement);
+    }
 SPECIALIZE_TYPE_TRAITS_END()

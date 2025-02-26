@@ -127,7 +127,7 @@
  * ```
  *
  * > *note*: gst_structure_to_string() won't use that syntax for backward
- * > compatibility reason, gst_structure_serialize() has been added for
+ * > compatibility reason, gst_structure_serialize_full() has been added for
  * > that purpose.
  */
 
@@ -579,7 +579,7 @@ gst_clear_structure (GstStructure ** structure_ptr)
  * gst_structure_take:
  * @oldstr_ptr: (inout) (transfer full) (nullable): pointer to a place of
  *     a #GstStructure to take
- * @newstr: (transfer full) (allow-none): a new #GstStructure
+ * @newstr: (transfer full) (nullable): a new #GstStructure
  *
  * Atomically modifies a pointer to point to a new structure.
  * The #GstStructure @oldstr_ptr is pointing to is freed and
@@ -1964,8 +1964,8 @@ gst_structure_get_fraction (const GstStructure * structure,
  * gst_structure_get_flagset:
  * @structure: a #GstStructure
  * @fieldname: the name of a field
- * @value_flags: (out) (allow-none): a pointer to a guint for the flags field
- * @value_mask: (out) (allow-none): a pointer to a guint for the mask field
+ * @value_flags: (out) (optional): a pointer to a guint for the flags field
+ * @value_mask: (out) (optional): a pointer to a guint for the mask field
  *
  * Read the GstFlagSet flags and mask out of the structure into the
  * provided pointers.
@@ -2035,6 +2035,7 @@ priv_gst_structure_append_to_gstring (const GstStructure * structure,
   guint i, len;
   gboolean nested_structs_brackets =
       !(flags & GST_SERIALIZE_FLAG_BACKWARD_COMPAT);
+  gboolean strict = (flags & GST_SERIALIZE_FLAG_STRICT) != 0;
 
   g_return_val_if_fail (s != NULL, FALSE);
 
@@ -2046,9 +2047,11 @@ priv_gst_structure_append_to_gstring (const GstStructure * structure,
     field = GST_STRUCTURE_FIELD (structure, i);
 
     if (G_VALUE_TYPE (&field->value) == GST_TYPE_ARRAY) {
-      t = _priv_gst_value_serialize_any_list (&field->value, "< ", " >", FALSE);
+      t = _priv_gst_value_serialize_any_list (&field->value, "< ", " >", FALSE,
+          flags);
     } else if (G_VALUE_TYPE (&field->value) == GST_TYPE_LIST) {
-      t = _priv_gst_value_serialize_any_list (&field->value, "{ ", " }", FALSE);
+      t = _priv_gst_value_serialize_any_list (&field->value, "{ ", " }", FALSE,
+          flags);
     } else if (!nested_structs_brackets
         || (G_VALUE_TYPE (&field->value) != GST_TYPE_STRUCTURE
             && G_VALUE_TYPE (&field->value) != GST_TYPE_CAPS)) {
@@ -2069,7 +2072,8 @@ priv_gst_structure_append_to_gstring (const GstStructure * structure,
 
       g_string_append_c (s, '[');
       g_string_append (s, g_quark_to_string (substruct->name));
-      priv_gst_structure_append_to_gstring (substruct, s, flags);
+      if (!priv_gst_structure_append_to_gstring (substruct, s, flags))
+        return FALSE;
       g_string_append_c (s, ']');
     } else if (nested_structs_brackets
         && G_VALUE_TYPE (&field->value) == GST_TYPE_CAPS) {
@@ -2081,9 +2085,13 @@ priv_gst_structure_append_to_gstring (const GstStructure * structure,
     } else if (t) {
       g_string_append (s, t);
       g_free (t);
+      if (strict && G_VALUE_HOLDS_OBJECT (&field->value))
+        return FALSE;
     } else if (G_TYPE_CHECK_VALUE_TYPE (&field->value, G_TYPE_POINTER)) {
       gpointer ptr = g_value_get_pointer (&field->value);
 
+      if (strict)
+        return FALSE;
       if (!ptr)
         g_string_append (s, "NULL");
       else
@@ -2093,6 +2101,8 @@ priv_gst_structure_append_to_gstring (const GstStructure * structure,
         GST_WARNING ("No value transform to serialize field '%s' of type '%s'",
             g_quark_to_string (field->name),
             _priv_gst_value_gtype_to_abbr (type));
+      if (strict)
+        return FALSE;
       /* TODO(ensonic): don't print NULL if field->value is not empty */
       g_string_append (s, "NULL");
     }
@@ -2168,7 +2178,10 @@ structure_serialize (const GstStructure * structure, GstSerializeFlags flags)
    * avoid unnecessary reallocs within GString */
   s = g_string_sized_new (STRUCTURE_ESTIMATED_STRING_LEN (structure));
   g_string_append (s, g_quark_to_string (structure->name));
-  priv_gst_structure_append_to_gstring (structure, s, flags);
+  if (!priv_gst_structure_append_to_gstring (structure, s, flags)) {
+    g_string_free (s, TRUE);
+    return NULL;
+  }
   return g_string_free (s, FALSE);
 
 }
@@ -2186,7 +2199,7 @@ structure_serialize (const GstStructure * structure, GstSerializeFlags flags)
  *
  * This function will lead to unexpected results when there are nested #GstCaps
  * / #GstStructure deeper than one level, you should user
- * gst_structure_serialize() instead for those cases.
+ * gst_structure_serialize_full() instead for those cases.
  *
  * Free-function: g_free
  *
@@ -2211,15 +2224,41 @@ gst_structure_to_string (const GstStructure * structure)
  * GStreamer prior to 1.20 unless #GST_SERIALIZE_FLAG_BACKWARD_COMPAT is passed
  * as @flag.
  *
+ * %GST_SERIALIZE_FLAG_STRICT flags is not allowed because it would make this
+ * function nullable which is an API break for bindings.
+ * Use gst_structure_serialize_full() instead.
+ *
  * Free-function: g_free
  *
  * Returns: (transfer full): a pointer to string allocated by g_malloc().
  *     g_free() after usage.
  *
  * Since: 1.20
+ * Deprecated: Use gst_structure_serialize_full() instead.
  */
 gchar *
 gst_structure_serialize (const GstStructure * structure,
+    GstSerializeFlags flags)
+{
+  g_return_val_if_fail ((flags & GST_SERIALIZE_FLAG_STRICT) == 0, NULL);
+  return structure_serialize (structure, flags);
+}
+
+/**
+ * gst_structure_serialize_full:
+ * @structure: a #GstStructure
+ * @flags: The flags to use to serialize structure
+ *
+ * Alias for gst_structure_serialize() but with nullable annotation because it
+ * can return %NULL when %GST_SERIALIZE_FLAG_STRICT flag is set.
+ *
+ * Returns: (transfer full) (nullable): a pointer to string allocated by g_malloc().
+ *     g_free() after usage.
+ *
+ * Since: 1.24
+ */
+gchar *
+gst_structure_serialize_full (const GstStructure * structure,
     GstSerializeFlags flags)
 {
   return structure_serialize (structure, flags);
@@ -2390,7 +2429,7 @@ gst_structure_new_from_string (const gchar * string)
 /**
  * gst_structure_from_string: (constructor):
  * @string: a string representation of a #GstStructure.
- * @end: (out) (allow-none) (transfer none) (skip): pointer to store the end of the string in.
+ * @end: (out) (optional) (transfer none) (skip): pointer to store the end of the string in.
  *
  * Creates a #GstStructure from a string representation.
  * If end is not %NULL, a pointer to the place inside the given string
@@ -3157,7 +3196,7 @@ gst_structure_is_equal (const GstStructure * structure1,
  *
  * Intersects @struct1 and @struct2 and returns the intersection.
  *
- * Returns: (nullable): Intersection of @struct1 and @struct2
+ * Returns: (transfer full) (nullable): Intersection of @struct1 and @struct2
  */
 GstStructure *
 gst_structure_intersect (const GstStructure * struct1,
@@ -3500,4 +3539,44 @@ gst_structure_set_list (GstStructure * structure, const gchar * fieldname,
     const GValueArray * array)
 {
   _gst_structure_set_any_list (structure, GST_TYPE_LIST, fieldname, array);
+}
+
+/**
+ * gst_structure_get_flags:
+ * @structure: a #GstStructure
+ * @fieldname: the name of a field
+ * @flags_type: the flags type of a field
+ * @value: (out): a pointer to an unsigned int to set
+ *
+ * Sets the unsigned int pointed to by @value corresponding to the value of the
+ * given field. Caller is responsible for making sure the field exists,
+ * has the correct type and that the flagstype is correct.
+ *
+ * Returns: %TRUE if the value could be set correctly. If there was no field
+ * with @fieldname or the existing field did not contain flags or
+ * did not contain flags of the given type, this function returns %FALSE.
+ *
+ * Since: 1.22
+ */
+gboolean
+gst_structure_get_flags (const GstStructure * structure,
+    const gchar * fieldname, GType flags_type, guint * value)
+{
+  GstStructureField *field;
+
+  g_return_val_if_fail (structure != NULL, FALSE);
+  g_return_val_if_fail (fieldname != NULL, FALSE);
+  g_return_val_if_fail (flags_type != G_TYPE_INVALID, FALSE);
+  g_return_val_if_fail (value != NULL, FALSE);
+
+  field = gst_structure_get_field (structure, fieldname);
+
+  if (field == NULL)
+    return FALSE;
+  if (!G_TYPE_CHECK_VALUE_TYPE (&field->value, flags_type))
+    return FALSE;
+
+  *value = g_value_get_flags (&field->value);
+
+  return TRUE;
 }

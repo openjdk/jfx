@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2021 Apple Inc. All rights reserved.
+ * Copyright (C) 2021-2023 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -25,16 +25,18 @@
 
 #pragma once
 
-#include <pal/graphics/WebGPU/WebGPUBindGroup.h>
+#include "WebGPUBindGroup.h"
 #include <wtf/Ref.h>
 #include <wtf/RefCounted.h>
 #include <wtf/text/WTFString.h>
 
 namespace WebCore {
 
+class GPUExternalTexture;
+
 class GPUBindGroup : public RefCounted<GPUBindGroup> {
 public:
-    static Ref<GPUBindGroup> create(Ref<PAL::WebGPU::BindGroup>&& backing)
+    static Ref<GPUBindGroup> create(Ref<WebGPU::BindGroup>&& backing)
     {
         return adoptRef(*new GPUBindGroup(WTFMove(backing)));
     }
@@ -42,16 +44,17 @@ public:
     String label() const;
     void setLabel(String&&);
 
-    PAL::WebGPU::BindGroup& backing() { return m_backing; }
-    const PAL::WebGPU::BindGroup& backing() const { return m_backing; }
+    WebGPU::BindGroup& backing() { return m_backing; }
+    const WebGPU::BindGroup& backing() const { return m_backing; }
+    void updateExternalTextures(const GPUExternalTexture&);
 
 private:
-    GPUBindGroup(Ref<PAL::WebGPU::BindGroup>&& backing)
+    GPUBindGroup(Ref<WebGPU::BindGroup>&& backing)
         : m_backing(WTFMove(backing))
     {
     }
 
-    Ref<PAL::WebGPU::BindGroup> m_backing;
+    Ref<WebGPU::BindGroup> m_backing;
 };
 
 }

@@ -27,13 +27,13 @@
 
 #pragma once
 
-#if ENABLE(LAYER_BASED_SVG_ENGINE)
 #include "RenderSVGShape.h"
 
 namespace WebCore {
 
 class RenderSVGEllipse final : public RenderSVGShape {
-    WTF_MAKE_ISO_ALLOCATED(RenderSVGEllipse);
+    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(RenderSVGEllipse);
+    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(RenderSVGEllipse);
 public:
     RenderSVGEllipse(SVGGraphicsElement&, RenderStyle&&);
     virtual ~RenderSVGEllipse();
@@ -42,7 +42,7 @@ private:
     ASCIILiteral renderName() const override { return "RenderSVGEllipse"_s; }
 
     void updateShapeFromElement() override;
-    bool isEmpty() const override { return m_usePathFallback ? RenderSVGShape::isEmpty() : m_fillBoundingBox.isEmpty(); }
+    bool isEmpty() const override { return hasPath() ? RenderSVGShape::isEmpty() : m_fillBoundingBox.isEmpty(); }
     bool isRenderingDisabled() const override;
     void fillShape(GraphicsContext&) const override;
     void strokeShape(GraphicsContext&) const override;
@@ -51,11 +51,10 @@ private:
     void calculateRadiiAndCenter();
 
 private:
+    bool canUseStrokeHitTestFastPath() const;
+
     FloatPoint m_center;
     FloatSize m_radii;
-    bool m_usePathFallback;
 };
 
 } // namespace WebCore
-
-#endif // ENABLE(LAYER_BASED_SVG_ENGINE)

@@ -29,7 +29,8 @@ namespace WebCore {
 class FlexBoxIterator;
 
 class RenderDeprecatedFlexibleBox final : public RenderBlock {
-    WTF_MAKE_ISO_ALLOCATED(RenderDeprecatedFlexibleBox);
+    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(RenderDeprecatedFlexibleBox);
+    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(RenderDeprecatedFlexibleBox);
 public:
     RenderDeprecatedFlexibleBox(Element&, RenderStyle&&);
     virtual ~RenderDeprecatedFlexibleBox();
@@ -52,7 +53,6 @@ public:
     void placeChild(RenderBox* child, const LayoutPoint& location, LayoutSize* childLayoutDelta = nullptr);
 
 private:
-    bool isDeprecatedFlexibleBox() const override { return true; }
     void computeIntrinsicLogicalWidths(LayoutUnit& minLogicalWidth, LayoutUnit& maxLogicalWidth) const override;
     void computePreferredLogicalWidths() override;
 
@@ -62,8 +62,12 @@ private:
     bool isVertical() const { return style().boxOrient() == BoxOrient::Vertical; }
     bool isHorizontal() const { return style().boxOrient() == BoxOrient::Horizontal; }
 
-    void applyLineClamp(FlexBoxIterator&, bool relayoutChildren);
-    bool applyModernLineClamp(FlexBoxIterator&);
+    struct ClampedContent {
+        LayoutUnit contentHeight;
+        SingleThreadWeakPtr<const RenderBlockFlow> renderer;
+    };
+    std::optional<ClampedContent> applyLineClamp(FlexBoxIterator&, bool relayoutChildren);
+    std::optional<ClampedContent> applyModernLineClamp(FlexBoxIterator&);
     void clearLineClamp();
 
     bool m_stretchingChildren;
@@ -71,4 +75,4 @@ private:
 
 } // namespace WebCore
 
-SPECIALIZE_TYPE_TRAITS_RENDER_OBJECT(RenderDeprecatedFlexibleBox, isDeprecatedFlexibleBox())
+SPECIALIZE_TYPE_TRAITS_RENDER_OBJECT(RenderDeprecatedFlexibleBox, isRenderDeprecatedFlexibleBox())

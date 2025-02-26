@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2014, Oracle and/or its affiliates.
+ * Copyright (c) 2010, 2024, Oracle and/or its affiliates.
  * All rights reserved. Use is subject to license terms.
  *
  * This file is available and licensed under the following license:
@@ -79,14 +79,17 @@ public class MArrayImpl extends MDataImpl implements MArray {
             this.length = length;
         }
 
+        @Override
         public void setSize(int size) {
             array.setSize(base + size);
         }
 
+        @Override
         public int getSize() {
             return length;
         }
 
+        @Override
         public void set(int index, MData data) {
             if (index >= length) {
                 throw new ArrayIndexOutOfBoundsException(index);
@@ -94,19 +97,23 @@ public class MArrayImpl extends MDataImpl implements MArray {
             array.set(base + index, data);
         }
 
+        @Override
         public MData getData(int index) {
             return array.getData(base + index);
         }
 
+        @Override
         public MData getData(int start, int end) {
             return new MArraySlice(this, start, end - start);
         }
 
+        @Override
         public List<MData> get() {
             // FIXME
             throw new RuntimeException("Probably shouldn't fetch the data behind a slice");
         }
 
+        @Override
         public void parse(Iterator<String> values) {
             new Parser(this).parse(values);
         }
@@ -120,10 +127,12 @@ public class MArrayImpl extends MDataImpl implements MArray {
         return (MArrayType) getType();
     }
 
+    @Override
     public List<MData> get() {
         return data;
     }
 
+    @Override
     public MData getData(int index) {
         if (index >= data.size()) {  // TODO huge hack, to prevent out of bounds exception
             int oldIndex = index;
@@ -133,14 +142,17 @@ public class MArrayImpl extends MDataImpl implements MArray {
         return data.get(index);
     }
 
+    @Override
     public MData getData(int start, int end) {
         return new MArraySlice(this, start, end - start);
     }
 
+    @Override
     public void set(int index, MData data) {
         this.data.set(index, data);
     }
 
+    @Override
     public void setSize(int size) {
         while (data.size() < size) {
             data.add(getArrayType().getElementType().createData());
@@ -148,14 +160,17 @@ public class MArrayImpl extends MDataImpl implements MArray {
         //        System.out.println("SET SIZE: " + size + " data.size="+data.size());
     }
 
+    @Override
     public int getSize() {
         return data.size();
     }
 
+    @Override
     public void parse(Iterator<String> values) {
         new Parser(this).parse(values);
     }
 
+    @Override
     public String toString() {
         return data.toString();
     }

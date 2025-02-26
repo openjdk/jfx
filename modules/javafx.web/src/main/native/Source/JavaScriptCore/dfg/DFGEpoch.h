@@ -81,15 +81,7 @@ public:
         *this = next();
     }
 
-    bool operator==(const Epoch& other) const
-    {
-        return m_epoch == other.m_epoch;
-    }
-
-    bool operator!=(const Epoch& other) const
-    {
-        return !(*this == other);
-    }
+    friend bool operator==(const Epoch&, const Epoch&) = default;
 
     bool operator<(const Epoch& other) const
     {

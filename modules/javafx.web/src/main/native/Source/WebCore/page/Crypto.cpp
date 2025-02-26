@@ -57,14 +57,14 @@ Crypto::~Crypto() = default;
 ExceptionOr<void> Crypto::getRandomValues(ArrayBufferView& array)
 {
     if (!isInt(array.getType()) && !isBigInt(array.getType()))
-        return Exception { TypeMismatchError };
+        return Exception { ExceptionCode::TypeMismatchError };
     if (array.byteLength() > 65536)
-        return Exception { QuotaExceededError };
-#if OS(DARWIN) && ENABLE(SUBTLE_CRYPTO)
+        return Exception { ExceptionCode::QuotaExceededError };
+#if OS(DARWIN)
     auto rc = CCRandomGenerateBytes(array.baseAddress(), array.byteLength());
     RELEASE_ASSERT(rc == kCCSuccess);
 #else
-    cryptographicallyRandomValues(array.baseAddress(), array.byteLength());
+    cryptographicallyRandomValues(array.mutableSpan());
 #endif
     return { };
 }

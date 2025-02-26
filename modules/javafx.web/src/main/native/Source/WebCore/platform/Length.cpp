@@ -41,37 +41,37 @@
 
 namespace WebCore {
 
-static Length parseLength(const UChar* data, unsigned length)
+static Length parseLength(std::span<const UChar> data)
 {
-    if (length == 0)
+    if (data.empty())
         return Length(1, LengthType::Relative);
 
     unsigned i = 0;
-    while (i < length && isSpaceOrNewline(data[i]))
+    while (i < data.size() && deprecatedIsSpaceOrNewline(data[i]))
         ++i;
-    if (i < length && (data[i] == '+' || data[i] == '-'))
+    if (i < data.size() && (data[i] == '+' || data[i] == '-'))
         ++i;
-    while (i < length && isASCIIDigit(data[i]))
+    while (i < data.size() && isASCIIDigit(data[i]))
         ++i;
     unsigned intLength = i;
-    while (i < length && (isASCIIDigit(data[i]) || data[i] == '.'))
+    while (i < data.size() && (isASCIIDigit(data[i]) || data[i] == '.'))
         ++i;
     unsigned doubleLength = i;
 
     // IE quirk: Skip whitespace between the number and the % character (20 % => 20%).
-    while (i < length && isSpaceOrNewline(data[i]))
+    while (i < data.size() && deprecatedIsSpaceOrNewline(data[i]))
         ++i;
 
     bool ok;
-    UChar next = (i < length) ? data[i] : ' ';
+    UChar next = (i < data.size()) ? data[i] : ' ';
     if (next == '%') {
         // IE quirk: accept decimal fractions for percentages.
-        double r = charactersToDouble(data, doubleLength, &ok);
+        double r = charactersToDouble(data.first(doubleLength), &ok);
         if (ok)
             return Length(r, LengthType::Percent);
         return Length(1, LengthType::Relative);
     }
-    auto r = parseInteger<int>({ data, intLength });
+    auto r = parseInteger<int>(data.first(intLength));
     if (next == '*')
         return Length(r.value_or(1), LengthType::Relative);
     if (r)
@@ -88,41 +88,9 @@ static unsigned countCharacter(StringImpl& string, UChar character)
     return count;
 }
 
-UniqueArray<Length> newCoordsArray(const String& string, int& len)
-{
-    unsigned length = string.length();
-    LChar* spacifiedCharacters;
-    auto str = StringImpl::createUninitialized(length, spacifiedCharacters);
-    for (unsigned i = 0; i < length; i++) {
-        UChar cc = string[i];
-        if (cc > '9' || (cc < '0' && cc != '-' && cc != '*' && cc != '.'))
-            spacifiedCharacters[i] = ' ';
-        else
-            spacifiedCharacters[i] = cc;
-    }
-    str = str->simplifyWhiteSpace();
-
-    len = countCharacter(str, ' ') + 1;
-    auto r = makeUniqueArray<Length>(len);
-
-    int i = 0;
-    unsigned pos = 0;
-    size_t pos2;
-
-    while ((pos2 = str->find(' ', pos)) != notFound) {
-        r[i++] = parseLength(str->characters16() + pos, pos2 - pos);
-        pos = pos2+1;
-    }
-    r[i] = parseLength(str->characters16() + pos, str->length() - pos);
-
-    ASSERT(i == len - 1);
-
-    return r;
-}
-
 UniqueArray<Length> newLengthArray(const String& string, int& len)
 {
-    RefPtr<StringImpl> str = string.impl()->simplifyWhiteSpace();
+    RefPtr<StringImpl> str = string.impl()->simplifyWhiteSpace(deprecatedIsSpaceOrNewline);
     if (!str->length()) {
         len = 1;
         return nullptr;
@@ -137,15 +105,15 @@ UniqueArray<Length> newLengthArray(const String& string, int& len)
 
     auto upconvertedCharacters = StringView(str.get()).upconvertedCharacters();
     while ((pos2 = str->find(',', pos)) != notFound) {
-        r[i++] = parseLength(upconvertedCharacters + pos, pos2 - pos);
+        r[i++] = parseLength(upconvertedCharacters.span().subspan(pos, pos2 - pos));
         pos = pos2+1;
     }
 
     ASSERT(i == len - 1);
 
     // IE Quirk: If the last comma is the last char skip it and reduce len by one.
-    if (str->length()-pos > 0)
-        r[i] = parseLength(upconvertedCharacters + pos, str->length() - pos);
+    if (str->length() - pos > 0)
+        r[i] = parseLength(upconvertedCharacters.span().subspan(pos));
     else
         len--;
 
@@ -164,25 +132,18 @@ public:
 
 private:
     struct Entry {
-        uint64_t referenceCountMinusOne;
-        CalculationValue* value;
-        Entry();
-        Entry(CalculationValue&);
+        uint64_t referenceCountMinusOne { 0 };
+        RefPtr<CalculationValue> value;
+        Entry() = default;
+        Entry(Ref<CalculationValue>&&);
     };
 
     unsigned m_nextAvailableHandle;
     HashMap<unsigned, Entry> m_map;
 };
 
-inline CalculationValueMap::Entry::Entry()
-    : referenceCountMinusOne(0)
-    , value(nullptr)
-{
-}
-
-inline CalculationValueMap::Entry::Entry(CalculationValue& value)
-    : referenceCountMinusOne(0)
-    , value(&value)
+inline CalculationValueMap::Entry::Entry(Ref<CalculationValue>&& value)
+    : value(WTFMove(value))
 {
 }
 
@@ -195,12 +156,11 @@ inline unsigned CalculationValueMap::insert(Ref<CalculationValue>&& value)
 {
     ASSERT(m_nextAvailableHandle);
 
-    // The leakRef below is balanced by the adoptRef in the deref member function.
-    Entry leakedValue = value.leakRef();
+    Entry entry(WTFMove(value));
 
     // FIXME: This monotonically increasing handle generation scheme is potentially wasteful
     // of the handle space. Consider reusing empty handles. https://bugs.webkit.org/show_bug.cgi?id=80489
-    while (!m_map.isValidKey(m_nextAvailableHandle) || !m_map.add(m_nextAvailableHandle, leakedValue).isNewEntry)
+    while (!m_map.isValidKey(m_nextAvailableHandle) || !m_map.add(m_nextAvailableHandle, entry).isNewEntry)
         ++m_nextAvailableHandle;
 
     return m_nextAvailableHandle++;
@@ -230,9 +190,6 @@ inline void CalculationValueMap::deref(unsigned handle)
         return;
     }
 
-    // The adoptRef here is balanced by the leakRef in the insert member function.
-    Ref<CalculationValue> value { adoptRef(*it->value.value) };
-
     m_map.remove(it);
 }
 
@@ -254,6 +211,11 @@ CalculationValue& Length::calculationValue() const
     return calculationValues().get(m_calculationValueHandle);
 }
 
+Ref<CalculationValue> Length::protectedCalculationValue() const
+{
+    return calculationValue();
+}
+
 void Length::ref() const
 {
     ASSERT(isCalculated());
@@ -266,10 +228,109 @@ void Length::deref() const
     calculationValues().deref(m_calculationValueHandle);
 }
 
+LengthType Length::typeFromIndex(const IPCData& data)
+{
+    static_assert(std::variant_size_v<IPCData> == 13);
+    switch (data.index()) {
+    case WTF::alternativeIndexV<AutoData, IPCData>:
+        return LengthType::Auto;
+    case WTF::alternativeIndexV<NormalData, IPCData>:
+        return LengthType::Normal;
+    case WTF::alternativeIndexV<RelativeData, IPCData>:
+        return LengthType::Relative;
+    case WTF::alternativeIndexV<PercentData, IPCData>:
+        return LengthType::Percent;
+    case WTF::alternativeIndexV<FixedData, IPCData>:
+        return LengthType::Fixed;
+    case WTF::alternativeIndexV<IntrinsicData, IPCData>:
+        return LengthType::Intrinsic;
+    case WTF::alternativeIndexV<MinIntrinsicData, IPCData>:
+        return LengthType::MinIntrinsic;
+    case WTF::alternativeIndexV<MinContentData, IPCData>:
+        return LengthType::MinContent;
+    case WTF::alternativeIndexV<MaxContentData, IPCData>:
+        return LengthType::MaxContent;
+    case WTF::alternativeIndexV<FillAvailableData, IPCData>:
+        return LengthType::FillAvailable;
+    case WTF::alternativeIndexV<FitContentData, IPCData>:
+        return LengthType::FitContent;
+    case WTF::alternativeIndexV<ContentData, IPCData>:
+        return LengthType::Content;
+    case WTF::alternativeIndexV<UndefinedData, IPCData>:
+        return LengthType::Undefined;
+    }
+    RELEASE_ASSERT_NOT_REACHED();
+}
+
+Length::Length(IPCData&& data)
+    : m_type(typeFromIndex(data))
+{
+    WTF::switchOn(data,
+        [&] (auto data) {
+            WTF::switchOn(data.value,
+                [&] (float value) {
+            m_isFloat = true;
+            m_floatValue = value;
+                },
+                [&] (int value) {
+            m_isFloat = false;
+            m_intValue = value;
+                }
+            );
+        m_hasQuirk = data.hasQuirk;
+        },
+        []<typename EmptyData> (EmptyData) requires std::is_empty_v<EmptyData> { }
+    );
+}
+
+auto Length::ipcData() const -> IPCData
+{
+    switch (m_type) {
+    case LengthType::Auto:
+        return AutoData { };
+    case LengthType::Normal:
+        return NormalData { };
+    case LengthType::Relative:
+        return RelativeData { floatOrInt(), m_hasQuirk };
+    case LengthType::Percent:
+        return PercentData { floatOrInt(), m_hasQuirk };
+    case LengthType::Fixed:
+        return FixedData { floatOrInt(), m_hasQuirk };
+    case LengthType::Intrinsic:
+        return IntrinsicData { floatOrInt(), m_hasQuirk };
+    case LengthType::MinIntrinsic:
+        return MinIntrinsicData { floatOrInt(), m_hasQuirk };
+    case LengthType::MinContent:
+        return MinContentData { floatOrInt(), m_hasQuirk };
+    case LengthType::MaxContent:
+        return MaxContentData { floatOrInt(), m_hasQuirk };
+    case LengthType::FillAvailable:
+        return FillAvailableData { floatOrInt(), m_hasQuirk };
+    case LengthType::FitContent:
+        return FitContentData { floatOrInt(), m_hasQuirk };
+    case LengthType::Content:
+        return ContentData { };
+    case LengthType::Undefined:
+        return UndefinedData { };
+    case LengthType::Calculated:
+        ASSERT_NOT_REACHED();
+        return { };
+    }
+    RELEASE_ASSERT_NOT_REACHED();
+}
+
+auto Length::floatOrInt() const -> FloatOrInt
+{
+    ASSERT(!isCalculated());
+    if (m_isFloat)
+        return m_floatValue;
+    return m_intValue;
+}
+
 float Length::nonNanCalculatedValue(float maxValue) const
 {
     ASSERT(isCalculated());
-    float result = calculationValue().evaluate(maxValue);
+    float result = protectedCalculationValue()->evaluate(maxValue);
     if (std::isnan(result))
         return 0;
     return result;
@@ -296,10 +357,39 @@ Length convertTo100PercentMinusLength(const Length& length)
     return makeCalculated(CalcOperator::Subtract, Length(100, LengthType::Percent), length);
 }
 
+Length convertTo100PercentMinusLengthSum(const Length& a, const Length& b)
+{
+    // FIXME: The main simplification code does not deal with substract expressions so this does some basic steps.
+    // A seperate calc node type for pixel-and-percent values would make simplifications easier.
+
+    if (a.isPercent() && b.isPercent())
+        return Length(100 - a.value() - b.value(), LengthType::Percent);
+
+    if (a.isPercent()) {
+        auto percent = Length(100 - a.value(), LengthType::Percent);
+        return makeCalculated(CalcOperator::Subtract, percent, b);
+    }
+    if (b.isPercent()) {
+        auto percent = Length(100 - b.value(), LengthType::Percent);
+        return makeCalculated(CalcOperator::Subtract, percent, a);
+    }
+    auto sum = makeCalculated(CalcOperator::Add, a, b);
+    return convertTo100PercentMinusLength(sum);
+}
+
 static Length blendMixedTypes(const Length& from, const Length& to, const BlendingContext& context)
 {
     if (context.compositeOperation != CompositeOperation::Replace)
         return makeCalculated(CalcOperator::Add, from, to);
+
+    if (from.isIntrinsicOrAuto() || to.isIntrinsicOrAuto()) {
+        ASSERT(context.isDiscrete);
+        ASSERT(!context.progress || context.progress == 1);
+        return context.progress ? to : from;
+    }
+
+    if (from.isRelative() || to.isRelative())
+        return { 0, LengthType::Fixed };
 
     if (!to.isCalculated() && !from.isPercent() && (context.progress == 1 || from.isZero()))
         return blend(Length(0, to.type()), to, context);
@@ -307,16 +397,13 @@ static Length blendMixedTypes(const Length& from, const Length& to, const Blendi
     if (!from.isCalculated() && !to.isPercent() && (!context.progress || to.isZero()))
         return blend(from, Length(0, from.type()), context);
 
-    if (from.isIntrinsicOrAuto() || to.isIntrinsicOrAuto() || from.isRelative() || to.isRelative())
-        return { 0, LengthType::Fixed };
-
     auto blend = makeUnique<CalcExpressionBlendLength>(from, to, context.progress);
     return Length(CalculationValue::create(WTFMove(blend), ValueRange::All));
 }
 
 Length blend(const Length& from, const Length& to, const BlendingContext& context)
 {
-    if ((from.isAuto() || to.isAuto()) || (from.isUndefined() || to.isUndefined()))
+    if (from.isAuto() || to.isAuto() || from.isUndefined() || to.isUndefined() || from.isNormal() || to.isNormal())
         return context.progress < 0.5 ? from : to;
 
     if (from.isCalculated() || to.isCalculated() || (from.type() != to.type()))
@@ -365,17 +452,18 @@ static TextStream& operator<<(TextStream& ts, LengthType type)
 {
     switch (type) {
     case LengthType::Auto: ts << "auto"; break;
-    case LengthType::Relative: ts << "relative"; break;
-    case LengthType::Percent: ts << "percent"; break;
+    case LengthType::Calculated: ts << "calc"; break;
+    case LengthType::Content: ts << "content"; break;
+    case LengthType::FillAvailable: ts << "fill-available"; break;
+    case LengthType::FitContent: ts << "fit-content"; break;
     case LengthType::Fixed: ts << "fixed"; break;
     case LengthType::Intrinsic: ts << "intrinsic"; break;
     case LengthType::MinIntrinsic: ts << "min-intrinsic"; break;
     case LengthType::MinContent: ts << "min-content"; break;
     case LengthType::MaxContent: ts << "max-content"; break;
-    case LengthType::FillAvailable: ts << "fill-available"; break;
-    case LengthType::FitContent: ts << "fit-content"; break;
-    case LengthType::Calculated: ts << "calc"; break;
-    case LengthType::Content: ts << "content"; break;
+    case LengthType::Normal: ts << "normal"; break;
+    case LengthType::Percent: ts << "percent"; break;
+    case LengthType::Relative: ts << "relative"; break;
     case LengthType::Undefined: ts << "undefined"; break;
     }
     return ts;
@@ -386,6 +474,7 @@ TextStream& operator<<(TextStream& ts, Length length)
     switch (length.type()) {
     case LengthType::Auto:
     case LengthType::Content:
+    case LengthType::Normal:
     case LengthType::Undefined:
         ts << length.type();
         break;
@@ -405,7 +494,7 @@ TextStream& operator<<(TextStream& ts, Length length)
         ts << TextStream::FormatNumberRespectingIntegers(length.percent()) << "%";
         break;
     case LengthType::Calculated:
-        ts << length.calculationValue();
+        ts << length.protectedCalculationValue();
         break;
     }
 

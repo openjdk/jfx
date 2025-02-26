@@ -38,6 +38,7 @@
 #include "B3StackmapGenerationParams.h"
 #include "B3UpsilonValue.h"
 #include "B3ValueInlines.h"
+#include "ProbeContext.h"
 #include "SuperSampler.h"
 
 namespace JSC { namespace FTL {
@@ -49,9 +50,7 @@ Output::Output(State& state)
 {
 }
 
-Output::~Output()
-{
-}
+Output::~Output() = default;
 
 void Output::initialize(AbstractHeapRepository& heaps)
 {
@@ -84,6 +83,20 @@ LBasicBlock Output::appendTo(LBasicBlock block, LBasicBlock nextBlock)
 void Output::appendTo(LBasicBlock block)
 {
     m_block = block;
+}
+
+void Output::probeDebugPrint(const String& str, LValue value)
+{
+    PatchpointValue* result = patchpoint(Void);
+    result->append(value, ValueRep::SomeRegister);
+    result->setGenerator(
+        [=] (CCallHelpers& jit, const StackmapGenerationParams& params) {
+            auto reg = params.at(0).gpr();
+            jit.probeDebug([=](Probe::Context& ctx) {
+                dataLogLn(str, " value: ", ctx.gpr<uint64_t>(reg));
+            });
+        });
+    result->effects = Effects::forCall();
 }
 
 LValue Output::framePointer()
@@ -126,6 +139,11 @@ LValue Output::phi(LType type)
 LValue Output::opaque(LValue value)
 {
     return m_block->appendNew<Value>(m_proc, Opaque, origin(), value);
+}
+
+LValue Output::extract(LValue value, unsigned index)
+{
+    return m_block->appendNew<ExtractValue>(m_proc, origin(), m_proc.typeAtOffset(value->type(), index), value, index);
 }
 
 LValue Output::add(LValue left, LValue right)
@@ -314,6 +332,16 @@ LValue Output::doubleSqrt(LValue value)
     return m_block->appendNew<B3::Value>(m_proc, B3::Sqrt, origin(), value);
 }
 
+LValue Output::doubleMax(LValue lhs, LValue rhs)
+{
+    return m_block->appendNew<B3::Value>(m_proc, B3::FMax, origin(), lhs, rhs);
+}
+
+LValue Output::doubleMin(LValue lhs, LValue rhs)
+{
+    return m_block->appendNew<B3::Value>(m_proc, B3::FMin, origin(), lhs, rhs);
+}
+
 LValue Output::doubleToInt(LValue value)
 {
     PatchpointValue* result = patchpoint(Int32);
@@ -460,6 +488,25 @@ LValue Output::store32As16(LValue value, TypedPointer pointer)
     LValue store = m_block->appendNew<MemoryValue>(m_proc, Store16, origin(), value, pointer.value());
     m_heaps->decorateMemory(pointer.heap(), store);
     return store;
+}
+
+LValue Output::storeDoubleAsFloat16(LValue value, TypedPointer pointer)
+{
+    PatchpointValue* result = patchpoint(Void);
+    result->append(value, ValueRep::SomeRegister);
+    result->append(pointer.value(), ValueRep::SomeRegister);
+    result->numFPScratchRegisters = 1;
+    result->setGenerator(
+        [](CCallHelpers& jit, const StackmapGenerationParams& params) {
+            FPRReg scratchFPR = params.fpScratch(0);
+            jit.convertDoubleToFloat16(params[0].fpr(), scratchFPR);
+            jit.storeFloat16(scratchFPR, CCallHelpers::Address(params[1].gpr()));
+        });
+    auto effects = Effects::none();
+    effects.writes = HeapRange::top();
+    effects.controlDependent = true;
+    result->effects = effects;
+    return result;
 }
 
 LValue Output::baseIndex(LValue base, LValue index, Scale scale, ptrdiff_t offset)
@@ -760,6 +807,14 @@ void Output::ret(LValue value)
     m_block->appendNewControlValue(m_proc, B3::Return, origin(), value);
 }
 
+void Output::verify(LValue value)
+{
+    CheckValue* check = speculate(logicalNot(value));
+    check->setGenerator([] (CCallHelpers& jit, const B3::StackmapGenerationParams&) {
+        jit.breakpoint();
+    });
+}
+
 void Output::unreachable()
 {
     m_block->appendNewControlValue(m_proc, B3::Oops, origin());
@@ -817,6 +872,18 @@ LValue Output::fround(LValue doubleValue)
     return floatToDouble(doubleToFloat(doubleValue));
 }
 
+LValue Output::f16round(LValue doubleValue)
+{
+    PatchpointValue* result = patchpoint(Double);
+    result->append(doubleValue, ValueRep::SomeRegister);
+    result->setGenerator(
+        [](CCallHelpers& jit, const StackmapGenerationParams& params) {
+            jit.convertDoubleToFloat16(params[1].fpr(), params[0].fpr());
+            jit.convertFloat16ToDouble(params[0].fpr(), params[0].fpr());
+        });
+    return result;
+}
+
 LValue Output::load(TypedPointer pointer, LoadType type)
 {
     switch (type) {
@@ -841,6 +908,22 @@ LValue Output::load(TypedPointer pointer, LoadType type)
     }
     RELEASE_ASSERT_NOT_REACHED();
     return nullptr;
+}
+
+LValue Output::loadFloat16AsDouble(TypedPointer pointer)
+{
+    PatchpointValue* result = patchpoint(Double);
+    result->append(pointer.value(), ValueRep::SomeRegister);
+    result->setGenerator(
+        [](CCallHelpers& jit, const StackmapGenerationParams& params) {
+            jit.loadFloat16(CCallHelpers::Address(params[1].gpr()), params[0].fpr());
+            jit.convertFloat16ToDouble(params[0].fpr(), params[0].fpr());
+        });
+    auto effects = Effects::none();
+    effects.reads = HeapRange::top();
+    effects.controlDependent = true;
+    result->effects = effects;
+    return result;
 }
 
 LValue Output::store(LValue value, TypedPointer pointer, StoreType type)

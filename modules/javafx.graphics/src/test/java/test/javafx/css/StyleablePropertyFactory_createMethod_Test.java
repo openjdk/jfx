@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2014, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -36,14 +36,9 @@ import javafx.scene.paint.Color;
 import javafx.scene.paint.Paint;
 import javafx.scene.text.Font;
 import javafx.util.Duration;
-import org.junit.Before;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
 
 import java.lang.reflect.Method;
-import java.util.Arrays;
-import java.util.Collection;
+import java.util.stream.Stream;
 import java.util.List;
 import java.util.function.Function;
 import javafx.css.CssMetaData;
@@ -54,17 +49,20 @@ import javafx.css.StyleableProperty;
 import javafx.css.StyleablePropertyFactory;
 import javafx.css.StyleablePropertyFactoryShim;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNotSame;
-import static org.junit.Assert.assertSame;
-import static org.junit.Assert.fail;
-import static org.junit.runners.Parameterized.Parameters;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNotSame;
+import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.fail;
 
-@RunWith(Parameterized.class)
 public class StyleablePropertyFactory_createMethod_Test {
 
-    @Before public void setup() {
+    @BeforeEach
+    public void setup() {
         StyleablePropertyFactoryShim.clearDataForTesting(MyStyleable.styleablePropertyFactory);
         StyleablePropertyFactoryShim.clearDataForTesting(MyStyleable1.styleablePropertyFactory);
         StyleablePropertyFactoryShim.clearDataForTesting(MyStyleable2.styleablePropertyFactory);
@@ -83,28 +81,21 @@ public class StyleablePropertyFactory_createMethod_Test {
         }
     }
 
-    private final Data data;
-    public StyleablePropertyFactory_createMethod_Test(Data data) {
-        this.data = data;
-    }
+    public static Stream<Arguments> data() {
 
-    @Parameters
-    public static Collection<Data[]> data() {
-
-        return Arrays.asList(new Data[][] {
-                { new Data("createStyleableBooleanProperty", StyleConverter.getBooleanConverter(), Boolean.TRUE) },
-                { new Data("createStyleableColorProperty",   StyleConverter.getColorConverter(), Color.YELLOW)   },
-                { new Data("createStyleableDurationProperty",   StyleConverter.getDurationConverter(), Duration.millis(30))   },
-                { new Data("createStyleableEffectProperty",  StyleConverter.getEffectConverter(), new InnerShadow(10d, Color.RED)) },
-                { new Data("createStyleableEnumProperty", StyleConverter.getEnumConverter(Pos.class), Pos.CENTER) },
-                { new Data("createStyleableFontProperty", StyleConverter.getFontConverter(), Font.font(18)) },
-                { new Data("createStyleableInsetsProperty", StyleConverter.getInsetsConverter(), new Insets(1,1,1,1)) },
-                { new Data("createStyleableNumberProperty", StyleConverter.getSizeConverter(), Double.valueOf(42d)) },
-                { new Data("createStyleablePaintProperty", StyleConverter.getPaintConverter(), Color.BLUE) },
-                { new Data("createStyleableStringProperty", StyleConverter.getStringConverter(), "ABC") },
-                { new Data("createStyleableUrlProperty", StyleConverter.getUrlConverter(), "http://oracle.com") }
-        });
-
+        return Stream.of(
+            Arguments.of( new Data("createStyleableBooleanProperty", StyleConverter.getBooleanConverter(), Boolean.TRUE) ),
+            Arguments.of( new Data("createStyleableColorProperty",   StyleConverter.getColorConverter(), Color.YELLOW)   ),
+            Arguments.of( new Data("createStyleableDurationProperty",   StyleConverter.getDurationConverter(), Duration.millis(30))   ),
+            Arguments.of( new Data("createStyleableEffectProperty",  StyleConverter.getEffectConverter(), new InnerShadow(10d, Color.RED)) ),
+            Arguments.of( new Data("createStyleableEnumProperty", StyleConverter.getEnumConverter(Pos.class), Pos.CENTER) ),
+            Arguments.of( new Data("createStyleableFontProperty", StyleConverter.getFontConverter(), Font.font(18)) ),
+            Arguments.of( new Data("createStyleableInsetsProperty", StyleConverter.getInsetsConverter(), new Insets(1,1,1,1)) ),
+            Arguments.of( new Data("createStyleableNumberProperty", StyleConverter.getSizeConverter(), Double.valueOf(42d)) ),
+            Arguments.of( new Data("createStyleablePaintProperty", StyleConverter.getPaintConverter(), Color.BLUE) ),
+            Arguments.of( new Data("createStyleableStringProperty", StyleConverter.getStringConverter(), "ABC") ),
+            Arguments.of( new Data("createStyleableUrlProperty", StyleConverter.getUrlConverter(), "http://oracle.com") )
+        );
     }
 
     void check(MyStyleable<?>  styleable, StyleConverter<?,?> converter, boolean inherits) {
@@ -122,7 +113,7 @@ public class StyleablePropertyFactory_createMethod_Test {
         }
 
         assertEquals(styleable.getProp().getCssMetaData().getInitialValue(null), styleable.getProp().getValue());
-        assertEquals(styleable.getProp().getCssMetaData().toString(), Boolean.valueOf(inherits), styleable.getProp().getCssMetaData().isInherits());
+        assertEquals(Boolean.valueOf(inherits), styleable.getProp().getCssMetaData().isInherits(), styleable.getProp().getCssMetaData().toString());
 
         List<CssMetaData<? extends Styleable,?>> list = styleable.getCssMetaData();
         assert list != null;
@@ -146,18 +137,19 @@ public class StyleablePropertyFactory_createMethod_Test {
         assertSame(styleable1.getProp().getCssMetaData(), styleable2.getProp().getCssMetaData());
     }
 
-    @Test
-    public void theTest() {
+    @ParameterizedTest
+    @MethodSource("data")
+    public void theTest(Data data) {
 
         if ("createStyleableEnumProperty".equals(data.createMethodName)) {
-            testEnum();
+            testEnum(data);
         } else {
-            testOther();
+            testOther(data);
         }
 
     }
 
-    void testEnum() {
+    void testEnum(Data data) {
         final Class c = data.initialValue.getClass();
         // zero
         final MyStyleable<?> styleable = new MyStyleableEnum();
@@ -192,7 +184,7 @@ public class StyleablePropertyFactory_createMethod_Test {
 //        assertNotSame(styleable1.getProp().getCssMetaData(), styleable2.getProp().getCssMetaData());
     }
 
-    void testOther() {
+    void testOther(Data data) {
          // zero
         final MyStyleable<?> styleable = new MyStyleable();
         styleable.setProp(data.createMethodName);

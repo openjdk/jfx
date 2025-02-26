@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2019 Apple Inc. All rights reserved.
+ * Copyright (C) 2011-2023 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -36,6 +36,7 @@
 #include "DFGDominators.h"
 #include "DFGGraph.h"
 #include "DFGPhase.h"
+#include <wtf/TZoneMallocInlines.h>
 
 namespace JSC { namespace DFG {
 
@@ -52,7 +53,7 @@ static constexpr bool verbose = false;
 
 class ImpureDataSlot {
     WTF_MAKE_NONCOPYABLE(ImpureDataSlot);
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_ALLOCATED(ImpureDataSlot);
 public:
     ImpureDataSlot(HeapLocation key, LazyNode value, unsigned hash)
         : key(key), value(value), hash(hash)
@@ -62,6 +63,8 @@ public:
     LazyNode value;
     unsigned hash;
 };
+
+WTF_MAKE_TZONE_ALLOCATED_IMPL(ImpureDataSlot);
 
 struct ImpureDataSlotHash : public DefaultHash<std::unique_ptr<ImpureDataSlot>> {
     static unsigned hash(const std::unique_ptr<ImpureDataSlot>& key)
@@ -100,7 +103,7 @@ struct ImpureDataTranslator {
 };
 
 class ImpureMap {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_ALLOCATED(ImpureMap);
     WTF_MAKE_NONCOPYABLE(ImpureMap);
 public:
     ImpureMap() = default;
@@ -309,7 +312,7 @@ private:
 class LocalCSEPhase : public Phase {
 public:
     LocalCSEPhase(Graph& graph)
-        : Phase(graph, "local common subexpression elimination")
+        : Phase(graph, "local common subexpression elimination"_s)
         , m_smallBlock(graph)
         , m_largeBlock(graph)
         , m_hugeBlock(graph)
@@ -521,6 +524,7 @@ private:
 
         bool run(BasicBlock* block)
         {
+            dataLogLnIf(DFGCSEPhaseInternal::verbose, "Starting block: ", block->index);
             m_maps.clear();
             m_changed = false;
             m_block = block;
@@ -574,6 +578,7 @@ private:
                         case Array::Uint8ClampedArray:
                         case Array::Uint16Array:
                         case Array::Uint32Array:
+                        case Array::Float16Array:
                         case Array::Float32Array:
                         case Array::Float64Array:
                             if (!mode.isInBounds())
@@ -603,11 +608,13 @@ private:
 
         void write(AbstractHeap heap)
         {
+            dataLogLnIf(DFGCSEPhaseInternal::verbose, "\tWrite to heap ", heap);
             m_maps.write(heap);
         }
 
         void def(PureValue value)
         {
+            dataLogLnIf(DFGCSEPhaseInternal::verbose, "\tDef of value ", value, " at node ", m_node->index());
             Node* match = m_maps.addPure(value, m_node);
             if (!match)
                 return;
@@ -618,6 +625,7 @@ private:
 
         void def(const HeapLocation& location, const LazyNode& value)
         {
+            dataLogLnIf(DFGCSEPhaseInternal::verbose, "\tDef to ", location, " of value ", value, " at node ", m_node->index());
             LazyNode match = m_maps.addImpure(location, value);
             if (!match)
                 return;
@@ -669,7 +677,7 @@ private:
 class GlobalCSEPhase : public Phase {
 public:
     GlobalCSEPhase(Graph& graph)
-        : Phase(graph, "global common subexpression elimination")
+        : Phase(graph, "global common subexpression elimination"_s)
         , m_impureDataMap(graph)
         , m_insertionSet(graph)
     {
@@ -677,6 +685,12 @@ public:
 
     bool run()
     {
+
+        if (DFGCSEPhaseInternal::verbose) {
+            dataLog("Graph before Global CSE:\n");
+            m_graph.dump();
+        }
+
         ASSERT(m_graph.m_fixpointState == FixpointNotConverged);
         ASSERT(m_graph.m_form == SSA);
 

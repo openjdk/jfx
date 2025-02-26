@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2022 Apple Inc. All rights reserved.
+ * Copyright (C) 2022-2023 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -30,6 +30,7 @@
 #include <wtf/HashMap.h>
 #include <wtf/Lock.h>
 #include <wtf/SentinelLinkedList.h>
+#include <wtf/TZoneMalloc.h>
 
 namespace JSC {
 
@@ -37,21 +38,11 @@ enum class AtomicsWaitType : uint8_t { Sync, Async };
 enum class AtomicsWaitValidation : uint8_t { Pass, Fail };
 
 class Waiter final : public WTF::BasicRawSentinelNode<Waiter>, public ThreadSafeRefCounted<Waiter> {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_ALLOCATED(Waiter);
 
 public:
-    Waiter(VM* vm)
-        : m_vm(vm)
-        , m_isAsync(false)
-    {
-    }
-
-    Waiter(JSPromise* promise)
-        : m_vm(&promise->vm())
-        , m_ticket(m_vm->deferredWorkTimer->addPendingWork(*m_vm, promise, { }))
-        , m_isAsync(true)
-    {
-    }
+    Waiter(VM*);
+    Waiter(JSPromise*);
 
     bool isAsync() const
     {
@@ -79,16 +70,16 @@ public:
         return m_condition;
     }
 
-    DeferredWorkTimer::Ticket ticket(const AbstractLocker&) const
+    RefPtr<DeferredWorkTimer::TicketData> ticket(const AbstractLocker&) const
     {
         ASSERT(m_isAsync);
-        return m_ticket;
+        return m_ticket.get();
     }
 
-    DeferredWorkTimer::Ticket takeTicket(const AbstractLocker&)
+    void clearTicket(const AbstractLocker&)
     {
         ASSERT(m_isAsync);
-        return std::exchange(m_ticket, nullptr);
+        m_ticket = nullptr;
     }
 
     void setTimer(const AbstractLocker&, Ref<RunLoop::DispatchTimer>&& timer)
@@ -102,26 +93,32 @@ public:
         return !!m_timer;
     }
 
-    void cancelTimer(const AbstractLocker&)
+    void clearTimer(const AbstractLocker&)
     {
         ASSERT(m_isAsync);
         // If the timeout for AsyncWaiter is infinity, we won't dispatch any timer.
         if (!m_timer)
             return;
         m_timer->stop();
+        // The AsyncWaiter's timer holds the waiter's reference. This
+        // releases the strong reference to the Waiter in the timer.
         m_timer = nullptr;
     }
 
+    void scheduleWorkAndClear(const AbstractLocker&, DeferredWorkTimer::Task&&);
+    void cancelAndClear(const AbstractLocker&);
+    void dump(PrintStream&) const;
+
 private:
     VM* m_vm { nullptr };
-    DeferredWorkTimer::Ticket m_ticket { nullptr };
+    ThreadSafeWeakPtr<DeferredWorkTimer::TicketData> m_ticket { nullptr };
     RefPtr<RunLoop::DispatchTimer> m_timer { nullptr };
     Condition m_condition;
     bool m_isAsync { false };
 };
 
 class WaiterList : public ThreadSafeRefCounted<WaiterList> {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_ALLOCATED(WaiterList);
 
 public:
     ~WaiterList()
@@ -203,7 +200,7 @@ private:
 };
 
 class WaiterListManager {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_ALLOCATED(WaiterListManager);
 public:
     static WaiterListManager& singleton();
 
@@ -223,9 +220,11 @@ public:
 
     size_t waiterListSize(void* ptr);
 
-    void unregisterVM(VM*);
+    size_t totalWaiterCount();
 
-    void unregisterSharedArrayBuffer(uint8_t* arrayPtr, size_t);
+    void unregister(VM*);
+    void unregister(JSGlobalObject*);
+    void unregister(uint8_t* arrayPtr, size_t);
 
 private:
     template <typename ValueType>

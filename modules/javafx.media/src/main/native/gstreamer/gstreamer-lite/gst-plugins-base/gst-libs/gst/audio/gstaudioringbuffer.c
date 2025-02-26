@@ -40,6 +40,9 @@
 #include <string.h>
 
 #include <gst/audio/audio.h>
+#ifndef GSTREAMER_LITE
+#include <gst/audio/gstdsd.h>
+#endif // GSTREAMER_LITE
 #include "gstaudioringbuffer.h"
 
 GST_DEBUG_CATEGORY_STATIC (gst_audio_ring_buffer_debug);
@@ -81,7 +84,7 @@ gst_audio_ring_buffer_init (GstAudioRingBuffer * ringbuffer)
 {
   ringbuffer->open = FALSE;
   ringbuffer->acquired = FALSE;
-  ringbuffer->state = GST_AUDIO_RING_BUFFER_STATE_STOPPED;
+  g_atomic_int_set (&ringbuffer->state, GST_AUDIO_RING_BUFFER_STATE_STOPPED);
   g_cond_init (&ringbuffer->cond);
   ringbuffer->waiting = 0;
   ringbuffer->empty_seg = NULL;
@@ -313,6 +316,62 @@ gst_audio_ring_buffer_parse_caps (GstAudioRingBufferSpec * spec, GstCaps * caps)
     gst_structure_get_int (structure, "channels", &info.channels);
     spec->type = GST_AUDIO_RING_BUFFER_FORMAT_TYPE_FLAC;
     info.bpf = 1;
+#ifndef GSTREAMER_LITE
+  } else if (g_str_equal (mimetype, GST_DSD_MEDIA_TYPE)) {
+
+    /* Notes about what the "rate" means in DSD:
+     *
+     * In DSD, "sample formats" don't actually exist. There is only the DSD bit;
+     * this is what could be considered the closest equivalent to a "sample format".
+     * But since it is impractical to deal with individual bits in software, the
+     * bits are typically grouped into words (8/16/32 bit words). These are the
+     * DSDU8, DSDU16LE etc. "grouping formats".
+     *
+     * The "rate" in DSD information refers to the number of DSD _bytes_ per second
+     * (not bits per second, because, as said, per-bit handling in software does
+     * not usually make sense). The way the GstAudioRingBuffer works however requires
+     * the rate to be interpreted as the number of DSD _words_ per minute. This is
+     * in part because that's how ALSA uses the rate.
+     *
+     * If the word format is DSDU8, then there's no difference to just using the
+     * original byte rate. But if for example it is DSDU16LE, then the ringbuffer's
+     * rate needs to be half of the rate from GstDsdInfo. For this reason, it is
+     * essential to divide the rate from the DSD info by the word length (in bytes).
+     *
+     * Furthermore, the BPF is set to the stride (= format width * num channels).
+     * The GstAudioRingBuffer can only handle interleaved DSD. This means that
+     * there is a "stride", that is, the DSD word of channel #1 is stored first,
+     * followed by the DSD word of channel #2 etc. and then again we get a DSD
+     * word from channel #1, and so forth. This is similar to how interleaved
+     * PCM works. The stride is then the size (in bytes) of the DSD words for
+     * each channel that are played at the same time. Using this as the BPF is
+     * very important. Otherweise, timestamp and duration figures can be off,
+     * the segment sizes may not be an integer multiple of the DSD stride, etc.
+     */
+
+    GstDsdInfo dsd_info;
+    guint format_width;
+
+    if (!gst_dsd_info_from_caps (&dsd_info, caps))
+      goto parse_error;
+
+    format_width = gst_dsd_format_get_width (dsd_info.format);
+
+    info.rate = dsd_info.rate / format_width;
+    info.channels = dsd_info.channels;
+    info.bpf = format_width * dsd_info.channels;
+
+    GST_INFO ("using DSD word rate %d instead of DSD byte rate %d "
+        "for ringbuffer", info.rate, dsd_info.rate);
+
+    memcpy (info.position, dsd_info.positions,
+        sizeof (GstAudioChannelPosition) * dsd_info.channels);
+
+    GST_AUDIO_RING_BUFFER_SPEC_DSD_FORMAT (spec) =
+        GST_DSD_INFO_FORMAT (&dsd_info);
+
+    spec->type = GST_AUDIO_RING_BUFFER_FORMAT_TYPE_DSD;
+#endif // GSTREAMER_LITE
   } else {
     goto parse_error;
   }
@@ -633,7 +692,7 @@ gst_audio_ring_buffer_acquire (GstAudioRingBuffer * buf,
 
   GST_INFO_OBJECT (buf, "Allocating an array for %d timestamps",
       spec->segtotal);
-  buf->timestamps = g_slice_alloc0 (sizeof (GstClockTime) * spec->segtotal);
+  buf->timestamps = g_new0 (GstClockTime, spec->segtotal);
   /* initialize array with invalid timestamps */
   for (i = 0; i < spec->segtotal; i++) {
     buf->timestamps[i] = GST_CLOCK_TIME_NONE;
@@ -655,13 +714,21 @@ gst_audio_ring_buffer_acquire (GstAudioRingBuffer * buf,
   g_free (buf->empty_seg);
   buf->empty_seg = g_malloc (segsize);
 
-  if (buf->spec.type == GST_AUDIO_RING_BUFFER_FORMAT_TYPE_RAW) {
-    gst_audio_format_info_fill_silence (buf->spec.info.finfo, buf->empty_seg,
-        segsize);
-  } else {
-    /* FIXME, non-raw formats get 0 as the empty sample */
-    memset (buf->empty_seg, 0, segsize);
+  switch (buf->spec.type) {
+    case GST_AUDIO_RING_BUFFER_FORMAT_TYPE_RAW:
+      gst_audio_format_info_fill_silence (buf->spec.info.finfo, buf->empty_seg,
+          segsize);
+      break;
+#ifndef GSTREAMER_LITE
+    case GST_AUDIO_RING_BUFFER_FORMAT_TYPE_DSD:
+      memset (buf->empty_seg, GST_DSD_SILENCE_PATTERN_BYTE, segsize);
+      break;
+#endif // GSTREAMER_LITE
+    default:
+      /* FIXME, non-raw formats get 0 as the empty sample */
+      memset (buf->empty_seg, 0, segsize);
   }
+
   GST_DEBUG_OBJECT (buf, "acquired device");
 
 done:
@@ -727,7 +794,7 @@ gst_audio_ring_buffer_release (GstAudioRingBuffer * buf)
   if (G_LIKELY (buf->timestamps)) {
     GST_INFO_OBJECT (buf, "Freeing timestamp buffer, %d entries",
         buf->spec.segtotal);
-    g_slice_free1 (sizeof (GstClockTime) * buf->spec.segtotal, buf->timestamps);
+    g_free (buf->timestamps);
     buf->timestamps = NULL;
   }
 
@@ -1005,7 +1072,7 @@ gst_audio_ring_buffer_start (GstAudioRingBuffer * buf)
   }
 
   if (G_UNLIKELY (!res)) {
-    buf->state = GST_AUDIO_RING_BUFFER_STATE_PAUSED;
+    g_atomic_int_set (&buf->state, GST_AUDIO_RING_BUFFER_STATE_PAUSED);
     GST_DEBUG_OBJECT (buf, "failed to start");
   } else {
     GST_DEBUG_OBJECT (buf, "started");
@@ -1036,6 +1103,38 @@ may_not_start:
   }
 }
 
+/**
+ * gst_audio_ring_buffer_set_errored:
+ * @buf: the #GstAudioRingBuffer that has encountered an error
+ *
+ * Mark the ringbuffer as errored after it has started.
+ *
+ * MT safe.
+
+ * Since: 1.24
+ */
+void
+gst_audio_ring_buffer_set_errored (GstAudioRingBuffer * buf)
+{
+  gboolean res;
+
+  /* If started set to errored */
+  res = g_atomic_int_compare_and_exchange (&buf->state,
+      GST_AUDIO_RING_BUFFER_STATE_STARTED, GST_AUDIO_RING_BUFFER_STATE_ERROR);
+  if (!res) {
+    GST_DEBUG_OBJECT (buf, "ringbuffer was not started, checking paused");
+    res = g_atomic_int_compare_and_exchange (&buf->state,
+        GST_AUDIO_RING_BUFFER_STATE_PAUSED, GST_AUDIO_RING_BUFFER_STATE_ERROR);
+  }
+  if (res) {
+    GST_DEBUG_OBJECT (buf, "ringbuffer is errored");
+  } else {
+    GST_DEBUG_OBJECT (buf,
+        "Could not mark ringbuffer as errored. It must have been stopped or already errored (was state %d)",
+        g_atomic_int_get (&buf->state));
+  }
+}
+
 static gboolean
 gst_audio_ring_buffer_pause_unlocked (GstAudioRingBuffer * buf)
 {
@@ -1060,7 +1159,8 @@ gst_audio_ring_buffer_pause_unlocked (GstAudioRingBuffer * buf)
     res = rclass->pause (buf);
 
   if (G_UNLIKELY (!res)) {
-    buf->state = GST_AUDIO_RING_BUFFER_STATE_STARTED;
+    /* Restore started state */
+    g_atomic_int_set (&buf->state, GST_AUDIO_RING_BUFFER_STATE_STARTED);
     GST_DEBUG_OBJECT (buf, "failed to pause");
   } else {
     GST_DEBUG_OBJECT (buf, "paused");
@@ -1071,7 +1171,7 @@ gst_audio_ring_buffer_pause_unlocked (GstAudioRingBuffer * buf)
 not_started:
   {
     /* was not started */
-    GST_DEBUG_OBJECT (buf, "was not started");
+    GST_DEBUG_OBJECT (buf, "was not started (state %d)", buf->state);
     return TRUE;
   }
 }
@@ -1153,9 +1253,16 @@ gst_audio_ring_buffer_stop (GstAudioRingBuffer * buf)
         GST_AUDIO_RING_BUFFER_STATE_PAUSED,
         GST_AUDIO_RING_BUFFER_STATE_STOPPED);
     if (!res) {
-      /* was not paused either, must have been stopped then */
+      GST_DEBUG_OBJECT (buf, "was not paused, try errored");
+      res = g_atomic_int_compare_and_exchange (&buf->state,
+          GST_AUDIO_RING_BUFFER_STATE_ERROR,
+          GST_AUDIO_RING_BUFFER_STATE_STOPPED);
+    }
+    if (!res) {
+      /* was not paused or stopped either, must have been stopped then */
       res = TRUE;
-      GST_DEBUG_OBJECT (buf, "was not paused, must have been stopped");
+      GST_DEBUG_OBJECT (buf,
+          "was not paused or errored, must have been stopped");
       goto done;
     }
   }
@@ -1169,7 +1276,7 @@ gst_audio_ring_buffer_stop (GstAudioRingBuffer * buf)
     res = rclass->stop (buf);
 
   if (G_UNLIKELY (!res)) {
-    buf->state = GST_AUDIO_RING_BUFFER_STATE_STARTED;
+    g_atomic_int_set (&buf->state, GST_AUDIO_RING_BUFFER_STATE_STARTED);
     GST_DEBUG_OBJECT (buf, "failed to stop");
   } else {
     GST_DEBUG_OBJECT (buf, "stopped");
@@ -1675,7 +1782,7 @@ not_started:
 /**
  * gst_audio_ring_buffer_commit:
  * @buf: the #GstAudioRingBuffer to commit
- * @sample: the sample position of the data
+ * @sample: (inout): the sample position of the data
  * @data: (array length=in_samples): the data to commit
  * @in_samples: the number of samples in the data to commit
  * @out_samples: the number of samples to write to the ringbuffer
@@ -2044,6 +2151,11 @@ gst_audio_ring_buffer_set_channel_positions (GstAudioRingBuffer * buf,
   if (memcmp (position, to, channels * sizeof (to[0])) == 0)
     return;
 
+  if (channels == 1) {
+    GST_LOG_OBJECT (buf, "single channel, no need to reorder");
+    return;
+  }
+
   if (position_less_channels (position, channels)) {
     GST_LOG_OBJECT (buf, "position-less channels, no need to reorder");
     return;
@@ -2080,7 +2192,13 @@ gst_audio_ring_buffer_set_channel_positions (GstAudioRingBuffer * buf,
  * @readseg: the current data segment
  * @timestamp: The new timestamp of the buffer.
  *
- * Set a new timestamp on the buffer.
+ * Set a new timestamp on the buffer representing the time of the first sample
+ * in the ringbuffer segment. The timestamp is used by the #GstAudioSrc base
+ * class to set the timestamps on output buffers. Timestamps are
+ * expected to be taken directly from the pipeline clock and are
+ * actual clock timestamps. #GstAudioSrc will convert to running time
+ * by subtracting the base time, but otherwise does not adjust the
+ * outgoing timestamps if provided.
  *
  * MT safe.
  */

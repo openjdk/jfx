@@ -25,8 +25,6 @@
 
 #pragma once
 
-#include <wtf/EnumTraits.h>
-
 namespace WebCore {
 
 enum class PermissionName : uint8_t {
@@ -42,32 +40,9 @@ enum class PermissionName : uint8_t {
     Midi,
     Nfc,
     Notifications,
+    Push,
     ScreenWakeLock,
     SpeakerSelection
 };
 
 } // namespace WebCore
-
-namespace WTF {
-
-template<> struct EnumTraits<WebCore::PermissionName> {
-    using values = EnumValues<
-        WebCore::PermissionName,
-        WebCore::PermissionName::Accelerometer,
-        WebCore::PermissionName::BackgroundFetch,
-        WebCore::PermissionName::Bluetooth,
-        WebCore::PermissionName::Camera,
-        WebCore::PermissionName::DisplayCapture,
-        WebCore::PermissionName::Geolocation,
-        WebCore::PermissionName::Gyroscope,
-        WebCore::PermissionName::Magnetometer,
-        WebCore::PermissionName::Microphone,
-        WebCore::PermissionName::Midi,
-        WebCore::PermissionName::Nfc,
-        WebCore::PermissionName::Notifications,
-        WebCore::PermissionName::ScreenWakeLock,
-        WebCore::PermissionName::SpeakerSelection
-    >;
-};
-
-} // namespace WTF

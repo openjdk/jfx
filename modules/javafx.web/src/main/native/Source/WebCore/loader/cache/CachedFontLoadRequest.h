@@ -31,26 +31,30 @@
 #include "CachedResourceHandle.h"
 #include "FontLoadRequest.h"
 #include "FontSelectionAlgorithm.h"
+#include "ScriptExecutionContext.h"
+#include <wtf/text/MakeString.h>
 
 namespace WebCore {
 
 class FontCreationContext;
 
 class CachedFontLoadRequest final : public FontLoadRequest, public CachedFontClient {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(Loader);
 public:
-    CachedFontLoadRequest(CachedFont& font)
+    CachedFontLoadRequest(CachedFont& font, ScriptExecutionContext& context)
         : m_font(&font)
+        , m_context(context)
     {
     }
 
     ~CachedFontLoadRequest()
     {
         if (m_fontLoadRequestClient)
-            m_font->removeClient(*this);
+            protectedCachedFont()->removeClient(*this);
     }
 
     CachedFont& cachedFont() const { return *m_font; }
+    CachedResourceHandle<CachedFont> protectedCachedFont() const { return m_font; }
 
 private:
     const URL& url() const final { return m_font->url(); }
@@ -58,21 +62,32 @@ private:
     bool isLoading() const final { return m_font->isLoading(); }
     bool errorOccurred() const final { return m_font->errorOccurred(); }
 
-    bool ensureCustomFontData() final { return m_font->ensureCustomFontData(); }
+    bool ensureCustomFontData() final
+    {
+        bool result = m_font->ensureCustomFontData();
+        if (!result && m_font->didRefuseToParseCustomFontWithSafeFontParser()) {
+            if (RefPtr context = m_context.get()) {
+                auto message = makeString("[Lockdown Mode] This font wasn't parsed: "_s, m_font->url().string());
+                context->addConsoleMessage(MessageSource::Security, MessageLevel::Info, message);
+            }
+        }
+        return result;
+    }
+
     RefPtr<Font> createFont(const FontDescription& description, bool syntheticBold, bool syntheticItalic, const FontCreationContext& fontCreationContext) final
     {
-        return m_font->createFont(description, syntheticBold, syntheticItalic, fontCreationContext);
+        return protectedCachedFont()->createFont(description, syntheticBold, syntheticItalic, fontCreationContext);
     }
 
     void setClient(FontLoadRequestClient* client) final
     {
-        auto* oldClient = m_fontLoadRequestClient;
+        WeakPtr oldClient = m_fontLoadRequestClient;
         m_fontLoadRequestClient = client;
 
         if (!client && oldClient)
-            m_font->removeClient(*this);
+            protectedCachedFont()->removeClient(*this);
         else if (client && !oldClient)
-            m_font->addClient(*this);
+            protectedCachedFont()->addClient(*this);
     }
 
     bool isCachedFontLoadRequest() const final { return true; }
@@ -81,11 +96,12 @@ private:
     {
         ASSERT_UNUSED(font, &font == m_font.get());
         if (m_fontLoadRequestClient)
-            m_fontLoadRequestClient->fontLoaded(*this);
+            m_fontLoadRequestClient->fontLoaded(*this); // fontLoaded() might destroy this object. Don't deref its members after it.
     }
 
     CachedResourceHandle<CachedFont> m_font;
-    FontLoadRequestClient* m_fontLoadRequestClient { nullptr };
+    WeakPtr<FontLoadRequestClient> m_fontLoadRequestClient;
+    WeakPtr<ScriptExecutionContext> m_context;
 };
 
 } // namespace WebCore

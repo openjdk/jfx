@@ -1,6 +1,8 @@
 /*
  * Copyright (C) 2011 Canonical Limited
  *
+ * SPDX-License-Identifier: LGPL-2.1-or-later
+ *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
  * License as published by the Free Software Foundation; either
@@ -19,6 +21,7 @@
 
 #include "config.h"
 
+#include <stdint.h>
 
 /* gwakeup.c is special -- GIO and some test cases include it.  As such,
  * it cannot include other glib headers without triggering the single
@@ -35,11 +38,9 @@
 #include "gwakeup.h"
 
 /*< private >
- * SECTION:gwakeup
- * @title: GWakeup
- * @short_description: portable cross-thread event signal mechanism
+ * GWakeup:
  *
- * #GWakeup is a simple and portable way of signaling events between
+ * `GWakeup` is a simple and portable way of signaling events between
  * different threads in a way that integrates nicely with g_poll().
  * GLib uses it internally for cross-thread signalling in the
  * implementation of #GMainContext and #GCancellable.
@@ -56,7 +57,7 @@
  * is implemented with a pair of pipes.
  *
  * Since: 2.30
- **/
+ */
 #ifdef _WIN32
 
 #include <windows.h>
@@ -121,7 +122,7 @@ struct _GWakeup
   gint fds[2];
 };
 
-/**
+/*< private >
  * g_wakeup_new:
  *
  * Creates a new #GWakeup.
@@ -157,7 +158,7 @@ g_wakeup_new (void)
   /* for any failure, try a pipe instead */
 #endif
 
-  if (!g_unix_open_pipe (wakeup->fds, FD_CLOEXEC, &error))
+  if (!g_unix_open_pipe (wakeup->fds, O_CLOEXEC | O_NONBLOCK, &error))
     g_error ("Creating pipes for GWakeup: %s", error->message);
 
   if (!g_unix_set_fd_nonblocking (wakeup->fds[0], TRUE, &error) ||
@@ -167,7 +168,7 @@ g_wakeup_new (void)
   return wakeup;
 }
 
-/**
+/*< private >
  * g_wakeup_get_pollfd:
  * @wakeup: a #GWakeup
  * @poll_fd: a #GPollFD
@@ -187,7 +188,7 @@ g_wakeup_get_pollfd (GWakeup *wakeup,
   poll_fd->events = G_IO_IN;
 }
 
-/**
+/*< private >
  * g_wakeup_acknowledge:
  * @wakeup: a #GWakeup
  *
@@ -204,13 +205,29 @@ g_wakeup_get_pollfd (GWakeup *wakeup,
 void
 g_wakeup_acknowledge (GWakeup *wakeup)
 {
-  char buffer[16];
+  int res;
 
-  /* read until it is empty */
-  while (read (wakeup->fds[0], buffer, sizeof buffer) == sizeof buffer);
+  if (wakeup->fds[1] == -1)
+    {
+      uint64_t value;
+
+      /* eventfd() read resets counter */
+      do
+        res = read (wakeup->fds[0], &value, sizeof (value));
+      while (G_UNLIKELY (res == -1 && errno == EINTR));
+    }
+  else
+    {
+      uint8_t value;
+
+      /* read until it is empty */
+      do
+        res = read (wakeup->fds[0], &value, sizeof (value));
+      while (res == sizeof (value) || G_UNLIKELY (res == -1 && errno == EINTR));
+    }
 }
 
-/**
+/*< private >
  * g_wakeup_signal:
  * @wakeup: a #GWakeup
  *
@@ -231,7 +248,7 @@ g_wakeup_signal (GWakeup *wakeup)
 
   if (wakeup->fds[1] == -1)
     {
-      guint64 one = 1;
+      uint64_t one = 1;
 
       /* eventfd() case. It requires a 64-bit counter increment value to be
        * written. */
@@ -241,7 +258,7 @@ g_wakeup_signal (GWakeup *wakeup)
     }
   else
     {
-      guint8 one = 1;
+      uint8_t one = 1;
 
       /* Non-eventfd() case. Only a single byte needs to be written, and it can
        * have an arbitrary value. */
@@ -251,7 +268,7 @@ g_wakeup_signal (GWakeup *wakeup)
     }
 }
 
-/**
+/*< private >
  * g_wakeup_free:
  * @wakeup: a #GWakeup
  *

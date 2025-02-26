@@ -27,12 +27,15 @@
 #include "CompilationMessage.h"
 
 #include <wtf/PrintStream.h>
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WGSL {
 
+WTF_MAKE_TZONE_ALLOCATED_IMPL(CompilationMessage);
+
 void CompilationMessage::dump(PrintStream& out) const
 {
-    out.print(m_span.m_line, ":", m_span.m_lineOffset, ": ", m_message);
+    out.print(m_span.line, ":", m_span.lineOffset, ": ", m_message);
 }
 
 } // namespace WGSL

@@ -34,20 +34,19 @@ namespace WebCore {
 
 // A "generic" cue is a non-WebVTT cue, so it is not positioned/sized with the WebVTT logic.
 class TextTrackCueGeneric final : public VTTCue {
-    WTF_MAKE_ISO_ALLOCATED_EXPORT(TextTrackCueGeneric, WEBCORE_EXPORT);
+    WTF_MAKE_TZONE_OR_ISO_ALLOCATED_EXPORT(TextTrackCueGeneric, WEBCORE_EXPORT);
 public:
     WEBCORE_EXPORT static Ref<TextTrackCueGeneric> create(ScriptExecutionContext&, const MediaTime& start, const MediaTime& end, const String& content);
 
-    ExceptionOr<void> setLine(const LineAndPositionSetting&) final;
     ExceptionOr<void> setPosition(const LineAndPositionSetting&) final;
 
     bool useDefaultPosition() const { return m_useDefaultPosition; }
 
     double baseFontSizeRelativeToVideoHeight() const { return m_baseFontSizeRelativeToVideoHeight; }
-    void setBaseFontSizeRelativeToVideoHeight(double size) { m_baseFontSizeRelativeToVideoHeight = size; }
+    void setBaseFontSizeRelativeToVideoHeight(double);
 
     double fontSizeMultiplier() const { return m_fontSizeMultiplier; }
-    void setFontSizeMultiplier(double size) { m_fontSizeMultiplier = size; }
+    void setFontSizeMultiplier(double);
 
     const String& fontName() const { return m_fontName; }
     void setFontName(const String& name) { m_fontName = name; }
@@ -60,8 +59,6 @@ public:
 
     const Color& highlightColor() const { return m_highlightColor; }
     void setHighlightColor(const Color& color) { m_highlightColor = color; }
-
-    void setFontSize(int, const IntSize&, bool important) final;
 
 private:
     TextTrackCueGeneric(Document&, const MediaTime& start, const MediaTime& end, const String&);

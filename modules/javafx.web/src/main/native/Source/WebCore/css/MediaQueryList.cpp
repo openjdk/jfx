@@ -21,17 +21,20 @@
 #include "MediaQueryList.h"
 
 #include "AddEventListenerOptions.h"
+#include "Document.h"
+#include "DocumentInlines.h"
 #include "EventNames.h"
 #include "HTMLFrameOwnerElement.h"
 #include "MediaQueryEvaluator.h"
 #include "MediaQueryListEvent.h"
 #include "MediaQueryParser.h"
-#include <wtf/IsoMallocInlines.h>
+#include "Quirks.h"
+#include <wtf/TZoneMallocInlines.h>
 #include <wtf/text/StringBuilder.h>
 
 namespace WebCore {
 
-WTF_MAKE_ISO_ALLOCATED_IMPL(MediaQueryList);
+WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(MediaQueryList);
 
 MediaQueryList::MediaQueryList(Document& document, MediaQueryMatcher& matcher, MQ::MediaQueryList&& mediaQueries, bool matches)
     : ActiveDOMObject(&document)
@@ -140,11 +143,6 @@ bool MediaQueryList::matches()
 void MediaQueryList::eventListenersDidChange()
 {
     m_hasChangeEventListener = hasEventListeners(eventNames().changeEvent);
-}
-
-const char* MediaQueryList::activeDOMObjectName() const
-{
-    return "MediaQueryList";
 }
 
 bool MediaQueryList::virtualHasPendingActivity() const

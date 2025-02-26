@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2023, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -272,8 +272,8 @@ public interface ObservableValue<T> extends Observable {
      * <p>
      * For example:
      * <pre>{@code
-     * ObservableValue<Boolean> condition = new SimpleBooleanProperty(true);
-     * ObservableValue<String> longLivedProperty = new SimpleStringProperty("A");
+     * Property<Boolean> condition = new SimpleBooleanProperty(true);
+     * Property<String> longLivedProperty = new SimpleStringProperty("A");
      * ObservableValue<String> whenProperty = longLivedProperty.when(condition);
      *
      * // observe whenProperty, which will in turn observe longLivedProperty

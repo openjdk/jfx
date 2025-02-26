@@ -30,7 +30,6 @@
 #if USE(COORDINATED_GRAPHICS) && USE(TEXTURE_MAPPER_DMABUF)
 
 #include "PlatformDisplay.h"
-#include "TextureMapperGL.h"
 #include "TextureMapperGLHeaders.h"
 #include "TextureMapperLayer.h"
 #include <fcntl.h>
@@ -38,7 +37,7 @@
 #include <unistd.h>
 
 #if USE(LIBEPOXY)
-#include "EpoxyEGL.h"
+#include <epoxy/egl.h>
 #else
 #include <EGL/egl.h>
 #include <EGL/eglext.h>
@@ -49,39 +48,18 @@
 
 namespace WebCore {
 
-static PFNEGLCREATEIMAGEKHRPROC createImageKHR()
-{
-    static PFNEGLCREATEIMAGEKHRPROC s_createImageKHR;
-    static std::once_flag s_flag;
-    std::call_once(s_flag,
-        [&] {
-            s_createImageKHR = reinterpret_cast<PFNEGLCREATEIMAGEKHRPROC>(eglGetProcAddress("eglCreateImageKHR"));
-        });
-    return s_createImageKHR;
-}
-
-static PFNEGLDESTROYIMAGEKHRPROC destroyImageKHR()
-{
-    static PFNEGLDESTROYIMAGEKHRPROC s_destroyImageKHR;
-    static std::once_flag s_flag;
-    std::call_once(s_flag,
-        [&] {
-            s_destroyImageKHR = reinterpret_cast<PFNEGLDESTROYIMAGEKHRPROC>(eglGetProcAddress("eglDestroyImageKHR"));
-        });
-    return s_destroyImageKHR;
-}
-
 struct TextureMapperPlatformLayerProxyDMABuf::DMABufLayer::EGLImageData {
     WTF_MAKE_STRUCT_FAST_ALLOCATED;
 
     ~EGLImageData()
     {
         if (numImages) {
+            auto& platformDisplay = PlatformDisplay::sharedDisplay();
             glDeleteTextures(numImages, texture.data());
 
             for (unsigned i = 0; i < numImages; ++i) {
                 if (image[i] != EGL_NO_IMAGE_KHR)
-                    destroyImageKHR()(PlatformDisplay::sharedDisplayForCompositing().eglDisplay(), image[i]);
+                    platformDisplay.destroyEGLImage(image[i]);
             }
         }
     }
@@ -93,7 +71,11 @@ struct TextureMapperPlatformLayerProxyDMABuf::DMABufLayer::EGLImageData {
     std::array<EGLImageKHR, DMABufFormat::c_maxPlanes> image { EGL_NO_IMAGE_KHR, EGL_NO_IMAGE_KHR, EGL_NO_IMAGE_KHR, EGL_NO_IMAGE_KHR };
 };
 
-TextureMapperPlatformLayerProxyDMABuf::TextureMapperPlatformLayerProxyDMABuf() = default;
+TextureMapperPlatformLayerProxyDMABuf::TextureMapperPlatformLayerProxyDMABuf(ContentType contentType)
+    : TextureMapperPlatformLayerProxy(contentType)
+{
+}
+
 TextureMapperPlatformLayerProxyDMABuf::~TextureMapperPlatformLayerProxyDMABuf() = default;
 
 void TextureMapperPlatformLayerProxyDMABuf::activateOnCompositingThread(Compositor* compositor, TextureMapperLayer* targetLayer)
@@ -109,6 +91,8 @@ void TextureMapperPlatformLayerProxyDMABuf::activateOnCompositingThread(Composit
     {
         Locker locker { m_lock };
         m_compositor = compositor;
+        if (m_targetLayer)
+            m_targetLayer->setContentsLayer(nullptr);
         m_targetLayer = targetLayer;
     }
 }
@@ -127,6 +111,8 @@ void TextureMapperPlatformLayerProxyDMABuf::invalidate()
     m_layers = { };
 
     m_compositor = nullptr;
+    if (m_targetLayer)
+        m_targetLayer->setContentsLayer(nullptr);
     m_targetLayer = nullptr;
 }
 
@@ -179,14 +165,23 @@ void TextureMapperPlatformLayerProxyDMABuf::pushDMABuf(Ref<DMABufLayer>&& dmabuf
         m_pendingLayer->release();
 
     m_pendingLayer = WTFMove(dmabufLayer);
+
+#if HAVE(DISPLAY_LINK)
+    // WebGL changes will cause a composition request during layerFlush. We cannot request
+    // a new compostion here as well or we may trigger two compositions instead of one.
+    if (contentType() == ContentType::WebGL)
+        return;
+#endif
+
     if (m_compositor)
         m_compositor->onNewBufferAvailable();
 }
 
-TextureMapperPlatformLayerProxyDMABuf::DMABufLayer::DMABufLayer(DMABufObject&& object, TextureMapperGL::Flags flags)
+TextureMapperPlatformLayerProxyDMABuf::DMABufLayer::DMABufLayer(DMABufObject&& object, OptionSet<TextureMapperFlags> flags)
     : m_object(WTFMove(object))
     , m_flags(flags)
-{ }
+{
+}
 
 TextureMapperPlatformLayerProxyDMABuf::DMABufLayer::~DMABufLayer() = default;
 
@@ -194,6 +189,11 @@ void TextureMapperPlatformLayerProxyDMABuf::DMABufLayer::paintToTextureMapper(Te
 {
     if (!m_imageData)
         return;
+
+    if (m_fence) {
+        m_fence->serverWait();
+        m_fence = nullptr;
+    }
 
     static constexpr std::array<GLfloat, 16> s_bt601ConversionMatrix {
         1.164383561643836,  0.0,                1.596026785714286, -0.874202217873451,
@@ -245,7 +245,6 @@ void TextureMapperPlatformLayerProxyDMABuf::DMABufLayer::paintToTextureMapper(Te
             return s_bt601ConversionMatrix;
         }();
 
-    TextureMapperGL& texmapGL = static_cast<TextureMapperGL&>(textureMapper);
     auto& data = *m_imageData;
 
     switch (m_object.format.fourcc) {
@@ -255,28 +254,28 @@ void TextureMapperPlatformLayerProxyDMABuf::DMABufLayer::paintToTextureMapper(Te
     case DMABufFormat::FourCC::ABGR8888:
         // Either no colorspace or the SRGB colorspace was defined for this object. Other options are not meaningful.
         ASSERT(m_object.colorSpace == DMABufColorSpace::Invalid || m_object.colorSpace == DMABufColorSpace::SRGB);
-        texmapGL.drawTexture(data.texture[0], m_flags, IntSize(data.width, data.height), targetRect, modelViewMatrix, opacity);
+        textureMapper.drawTexture(data.texture[0], m_flags, targetRect, modelViewMatrix, opacity);
         break;
     case DMABufFormat::FourCC::I420:
     case DMABufFormat::FourCC::Y444:
     case DMABufFormat::FourCC::Y41B:
     case DMABufFormat::FourCC::Y42B:
-        texmapGL.drawTexturePlanarYUV(std::array<GLuint, 3> { data.texture[0], data.texture[1], data.texture[2] },
-            yuvToRGB, m_flags, IntSize(data.width, data.height), targetRect, modelViewMatrix, opacity, std::nullopt);
+        textureMapper.drawTexturePlanarYUV(std::array<GLuint, 3> { data.texture[0], data.texture[1], data.texture[2] },
+            yuvToRGB, m_flags, targetRect, modelViewMatrix, opacity, std::nullopt);
         break;
     case DMABufFormat::FourCC::YV12:
-        texmapGL.drawTexturePlanarYUV(std::array<GLuint, 3> { data.texture[0], data.texture[2], data.texture[1] },
-            yuvToRGB, m_flags, IntSize(data.width, data.height), targetRect, modelViewMatrix, opacity, std::nullopt);
+        textureMapper.drawTexturePlanarYUV(std::array<GLuint, 3> { data.texture[0], data.texture[2], data.texture[1] },
+            yuvToRGB, m_flags, targetRect, modelViewMatrix, opacity, std::nullopt);
         break;
     case DMABufFormat::FourCC::A420:
-        texmapGL.drawTexturePlanarYUV(std::array<GLuint, 3> { data.texture[0], data.texture[1], data.texture[2] },
-            yuvToRGB, m_flags, IntSize(data.width, data.height), targetRect, modelViewMatrix, opacity, data.texture[3]);
+        textureMapper.drawTexturePlanarYUV(std::array<GLuint, 3> { data.texture[0], data.texture[1], data.texture[2] },
+            yuvToRGB, m_flags, targetRect, modelViewMatrix, opacity, data.texture[3]);
         break;
     case DMABufFormat::FourCC::NV12:
     case DMABufFormat::FourCC::NV21:
-        texmapGL.drawTextureSemiPlanarYUV(std::array<GLuint, 2> { data.texture[0], data.texture[1] },
+        textureMapper.drawTextureSemiPlanarYUV(std::array<GLuint, 2> { data.texture[0], data.texture[1] },
             (m_object.format.fourcc == DMABufFormat::FourCC::NV21),
-            yuvToRGB, m_flags, IntSize(data.width, data.height), targetRect, modelViewMatrix, opacity);
+            yuvToRGB, m_flags, targetRect, modelViewMatrix, opacity);
         break;
     case DMABufFormat::FourCC::YUY2:
     case DMABufFormat::FourCC::YVYU:
@@ -284,8 +283,16 @@ void TextureMapperPlatformLayerProxyDMABuf::DMABufLayer::paintToTextureMapper(Te
     case DMABufFormat::FourCC::VYUY:
     case DMABufFormat::FourCC::VUYA:
     case DMABufFormat::FourCC::AYUV:
-        texmapGL.drawTexturePackedYUV(data.texture[0],
-            yuvToRGB, m_flags, IntSize(data.width, data.height), targetRect, modelViewMatrix, opacity);
+        textureMapper.drawTexturePackedYUV(data.texture[0],
+            yuvToRGB, m_flags, targetRect, modelViewMatrix, opacity);
+        break;
+    case DMABufFormat::FourCC::P010:
+    case DMABufFormat::FourCC::P016:
+        // These HDR formats have 10 bits color depth, but since we support only 8 bits color depth, we
+        // threat it as a regular semi-planar YUV format, thus ignoring the two least significant
+        // bits when rendering.
+        textureMapper.drawTextureSemiPlanarYUV(std::array<GLuint, 2> { data.texture[0], data.texture[1] },
+            false, yuvToRGB, m_flags, targetRect, modelViewMatrix, opacity);
         break;
     default:
         break;
@@ -296,14 +303,13 @@ std::unique_ptr<TextureMapperPlatformLayerProxyDMABuf::DMABufLayer::EGLImageData
 {
     using EGLImageData = TextureMapperPlatformLayerProxyDMABuf::DMABufLayer::EGLImageData;
 
-    auto& platformDisplay = PlatformDisplay::sharedDisplayForCompositing();
-    EGLDisplay eglDisplay = platformDisplay.eglDisplay();
+    auto& platformDisplay = PlatformDisplay::sharedDisplay();
 
     EGLImageKHR image[DMABufFormat::c_maxPlanes];
     for (unsigned i = 0; i < object.format.numPlanes; ++i) {
         auto attributes = DMABufEGLUtilities::constructEGLCreateImageAttributes(object, i,
             DMABufEGLUtilities::PlaneModifiersUsage { platformDisplay.eglExtensions().EXT_image_dma_buf_import_modifiers });
-        image[i] = createImageKHR()(eglDisplay, EGL_NO_CONTEXT, EGL_LINUX_DMA_BUF_EXT, nullptr, attributes.data());
+        image[i] = platformDisplay.createEGLImage(EGL_NO_CONTEXT, EGL_LINUX_DMA_BUF_EXT, nullptr, attributes);
     }
 
     auto imageData = makeUnique<EGLImageData>();

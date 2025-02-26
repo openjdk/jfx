@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2017-2020 Apple Inc. All rights reserved.
+ * Copyright (C) 2017-2024 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -25,22 +25,26 @@
 
 #pragma once
 
-#if OS(UNIX)
-
-#include <signal.h>
-#include <tuple>
+#include <wtf/CodePtr.h>
 #include <wtf/Function.h>
 #include <wtf/Lock.h>
 #include <wtf/PlatformRegisters.h>
 
+#if OS(UNIX)
+
+#include <signal.h>
+#include <tuple>
+
 #if HAVE(MACH_EXCEPTIONS)
 #include <mach/exception_types.h>
 #endif
+#endif // OS(UNIX)
 
 namespace WTF {
 
 // Note that SIGUSR1 is used in Pthread-based ports except for Darwin to suspend and resume threads.
 enum class Signal {
+#if OS(UNIX)
     // Usr will always chain to any non-default handler install before us. Since there is no way to know
     // if a signal was intended exclusively for us.
     Usr,
@@ -56,39 +60,14 @@ enum class Signal {
     AccessFault, // For posix this is both SIGSEGV and SIGBUS
     NumberOfSignals = AccessFault + 2, // AccessFault is really two signals.
     Unknown = NumberOfSignals
+#else // not OS(UNIX)
+    FloatingPoint,
+    IllegalInstruction,
+    AccessFault,
+    NumberOfSignals = AccessFault + 1,
+    Unknown = NumberOfSignals
+#endif
 };
-
-inline std::tuple<int, std::optional<int>> toSystemSignal(Signal signal)
-{
-    switch (signal) {
-    case Signal::AccessFault: return std::make_tuple(SIGSEGV, SIGBUS);
-    case Signal::IllegalInstruction: return std::make_tuple(SIGILL, std::nullopt);
-    case Signal::Usr: return std::make_tuple(SIGUSR2, std::nullopt);
-    case Signal::FloatingPoint: return std::make_tuple(SIGFPE, std::nullopt);
-    case Signal::Breakpoint: return std::make_tuple(SIGTRAP, std::nullopt);
-#if !OS(DARWIN)
-    case Signal::Abort: return std::make_tuple(SIGABRT, std::nullopt);
-#endif
-    default: break;
-    }
-    RELEASE_ASSERT_NOT_REACHED();
-}
-
-inline Signal fromSystemSignal(int signal)
-{
-    switch (signal) {
-    case SIGSEGV: return Signal::AccessFault;
-    case SIGBUS: return Signal::AccessFault;
-    case SIGFPE: return Signal::FloatingPoint;
-    case SIGTRAP: return Signal::Breakpoint;
-    case SIGILL: return Signal::IllegalInstruction;
-    case SIGUSR2: return Signal::Usr;
-#if !OS(DARWIN)
-    case SIGABRT: return Signal::Abort;
-#endif
-    default: return Signal::Unknown;
-    }
-}
 
 enum class SignalAction {
     Handled,
@@ -101,14 +80,23 @@ struct SigInfo {
 };
 
 using SignalHandler = Function<SignalAction(Signal, SigInfo&, PlatformRegisters&)>;
+ALLOW_DEPRECATED_DECLARATIONS_BEGIN
 using SignalHandlerMemory = std::aligned_storage<sizeof(SignalHandler), std::alignment_of<SignalHandler>::value>::type;
+ALLOW_DEPRECATED_DECLARATIONS_END
 
 struct SignalHandlers {
     static void initialize();
+    static void finalize();
 
     void add(Signal, SignalHandler&&);
     template<typename Func>
     void forEachHandler(Signal, const Func&) const;
+
+    // We intentionally disallow presigning the return PC on platforms that can't authenticate it so
+    // we don't accidentally leave an unfrozen pointer in the heap somewhere.
+#if CPU(ARM64E) && HAVE(HARDENED_MACH_EXCEPTIONS)
+    void* presignReturnPCForHandler(CodePtr<NoPtrTag>);
+#endif
 
     static constexpr size_t numberOfSignals = static_cast<size_t>(Signal::NumberOfSignals);
     static constexpr size_t maxNumberOfHandlers = 4;
@@ -119,12 +107,26 @@ struct SignalHandlers {
     mach_port_t exceptionPort;
     exception_mask_t addedExceptions;
     bool useMach;
+    // FIXME: It seems like this should be able to be just `HAVE(HARDENED_MACH_EXCEPTIONS)` but X86 had weird issues.
+#if CPU(ARM64) && HAVE(HARDENED_MACH_EXCEPTIONS)
+    bool useHardenedHandler;
+#endif
 #else
     static constexpr bool useMach = false;
 #endif
+    enum class InitState : uint8_t {
+        Uninitialized = 0,
+        Initializing,
+        Finalized,
+    };
+    InitState initState;
+
     uint8_t numberOfHandlers[numberOfSignals];
     SignalHandlerMemory handlers[numberOfSignals][maxNumberOfHandlers];
+
+#if OS(UNIX)
     struct sigaction oldActions[numberOfSignals];
+#endif
 };
 
 // Call this method whenever you want to add a signal handler. This function needs to be called
@@ -135,15 +137,16 @@ struct SignalHandlers {
 // These functions are a one way street i.e. once installed, a signal handler cannot be uninstalled
 // and once commited they can't be turned off.
 WTF_EXPORT_PRIVATE void addSignalHandler(Signal, SignalHandler&&);
+// Note: This function doesn't necessarily activate the signal right away. Signals are
+// activated when SignalHandlers::finalize() runs and that signal has been turned on.
+// This also only currently does something if using Mach exceptions rather than posix/windows signals.
 WTF_EXPORT_PRIVATE void activateSignalHandlersFor(Signal);
 
-
 #if HAVE(MACH_EXCEPTIONS)
+void handleSignalsWithMach();
+
 class Thread;
 void registerThreadForMachExceptionHandling(Thread&);
-void startMachExceptionHandlerThread();
-
-void handleSignalsWithMach();
 #endif // HAVE(MACH_EXCEPTIONS)
 
 } // namespace WTF
@@ -155,11 +158,7 @@ using WTF::handleSignalsWithMach;
 
 using WTF::Signal;
 using WTF::SigInfo;
-using WTF::toSystemSignal;
-using WTF::fromSystemSignal;
 using WTF::SignalAction;
 using WTF::SignalHandler;
 using WTF::addSignalHandler;
 using WTF::activateSignalHandlersFor;
-
-#endif // OS(UNIX)

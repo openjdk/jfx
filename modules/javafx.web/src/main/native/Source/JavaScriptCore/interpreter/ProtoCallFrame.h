@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2013-2023 Apple Inc. All Rights Reserved.
+ * Copyright (C) 2013-2024 Apple Inc. All Rights Reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -30,6 +30,10 @@
 #include "StackAlignment.h"
 #include <wtf/ForbidHeapAllocation.h>
 
+#if ENABLE(WEBASSEMBLY)
+#include "JSWebAssemblyInstance.h"
+#endif
+
 namespace JSC {
 
 struct JS_EXPORT_PRIVATE ProtoCallFrame {
@@ -43,10 +47,10 @@ public:
     Register argCountAndCodeOriginValue;
     Register thisArg;
     uint32_t paddedArgCount;
-    JSValue *args;
+    EncodedJSValue* args;
     JSGlobalObject* globalObject;
 
-    inline void init(CodeBlock*, JSGlobalObject*, JSObject*, JSValue, int, JSValue* otherArgs = nullptr);
+    inline void init(CodeBlock*, JSGlobalObject*, JSObject*, JSValue, int, EncodedJSValue* otherArgs = nullptr);
 
     inline CodeBlock* codeBlock() const;
     inline void setCodeBlock(CodeBlock*);
@@ -69,21 +73,21 @@ public:
     void setThisValue(JSValue value) { thisArg = value; }
 
 #if ENABLE(WEBASSEMBLY)
-    void setWasmInstance(Wasm::Instance* instance)
+    void setWasmInstance(JSWebAssemblyInstance* instance)
     {
-        codeBlockValue = bitwise_cast<CallFrame*>(instance);
+        codeBlockValue = instance;
     }
 #endif
 
     JSValue argument(size_t argumentIndex)
     {
         ASSERT(static_cast<int>(argumentIndex) < argumentCount());
-        return args[argumentIndex];
+        return JSValue::decode(args[argumentIndex]);
     }
     void setArgument(size_t argumentIndex, JSValue value)
     {
         ASSERT(static_cast<int>(argumentIndex) < argumentCount());
-        args[argumentIndex] = value;
+        args[argumentIndex] = JSValue::encode(value);
     }
 };
 

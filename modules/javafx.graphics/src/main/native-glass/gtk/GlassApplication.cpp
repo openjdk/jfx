@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2023, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -42,11 +42,13 @@
 #include "glass_dnd.h"
 #include "glass_window.h"
 #include "glass_screen.h"
+#include "PlatformSupport.h"
 
 GdkEventFunc process_events_prev;
 static void process_events(GdkEvent*, gpointer);
 
 JNIEnv* mainEnv; // Use only with main loop thread!!!
+PlatformSupport* platformSupport = NULL;
 
 extern gboolean disableGrab;
 
@@ -186,6 +188,11 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_gtk_GtkApplication__1init
 
     GdkWindow *root = gdk_screen_get_root_window(default_gdk_screen);
     gdk_window_set_events(root, static_cast<GdkEventMask>(gdk_window_get_events(root) | GDK_PROPERTY_CHANGE_MASK));
+
+    platformSupport = new PlatformSupport(env, obj);
+
+    // Set ibus to sync mode
+    setenv("IBUS_ENABLE_SYNC_MODE", "1", 1);
 }
 
 /*
@@ -224,7 +231,7 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_gtk_GtkApplication__1runLoop
     // event loop and should be restored when the event loop exits. Unfortunately,
     // this is too early. The fix is to never restore X errors.
     //
-    // See RT-21408 & RT-20756
+    // See JDK-8126059 & JDK-8118745
 
     // Restore X error handling
     // #ifndef VERBOSE
@@ -249,6 +256,11 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_gtk_GtkApplication__1terminateLoop
     (void)obj;
 
     gtk_main_quit();
+
+    if (platformSupport) {
+        delete platformSupport;
+        platformSupport = NULL;
+    }
 }
 
 /*
@@ -406,6 +418,17 @@ JNIEXPORT jboolean JNICALL Java_com_sun_glass_ui_gtk_GtkApplication__1supportsTr
             && gdk_screen_is_composited(gdk_screen_get_default());
 }
 
+/*
+ * Class:     com_sun_glass_ui_gtk_GtkApplication
+ * Method:    getPlatformPreferences
+ * Signature: ()Ljava/util/Map;
+ */
+JNIEXPORT jobject JNICALL Java_com_sun_glass_ui_gtk_GtkApplication_getPlatformPreferences
+  (JNIEnv *env, jobject self)
+{
+    return platformSupport ? platformSupport->collectPreferences() : NULL;
+}
+
 } // extern "C"
 
 bool is_window_enabled_for_event(GdkWindow * window, WindowContext *ctx, gint event_type) {
@@ -447,14 +470,15 @@ static void process_events(GdkEvent* event, gpointer data)
         return;
     }
 
-    if (ctx != NULL && ctx->hasIME() && ctx->filterIME(event)) {
+    EventsCounterHelper helper(ctx);
+
+    if ((event->type == GDK_KEY_PRESS || event->type == GDK_KEY_RELEASE) && ctx != NULL && ctx->filterIME(event)) {
         return;
     }
 
     glass_evloop_call_hooks(event);
 
     if (ctx != NULL) {
-        EventsCounterHelper helper(ctx);
         try {
             switch (event->type) {
                 case GDK_PROPERTY_NOTIFY:

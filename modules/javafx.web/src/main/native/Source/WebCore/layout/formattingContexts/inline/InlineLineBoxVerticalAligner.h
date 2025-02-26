@@ -26,7 +26,7 @@
 #pragma once
 
 #include "InlineFormattingContext.h"
-#include "InlineFormattingGeometry.h"
+#include "InlineFormattingUtils.h"
 
 namespace WebCore {
 namespace Layout {
@@ -40,25 +40,30 @@ private:
     InlineLayoutUnit simplifiedVerticalAlignment(LineBox&) const;
 
     struct LineBoxAlignmentContent {
-        InlineLayoutUnit height() const { return std::max(nonBottomAlignedBoxesMaximumHeight, bottomAlignedBoxesMaximumHeight.value_or(0.f)); }
+        InlineLayoutUnit height() const { return std::max(nonLineBoxRelativeAlignedMaximumHeight, std::max(topAndBottomAlignedMaximumHeight.top.value_or(0.f), topAndBottomAlignedMaximumHeight.bottom.value_or(0.f))); }
 
-        InlineLayoutUnit nonBottomAlignedBoxesMaximumHeight { 0 };
-        std::optional<InlineLayoutUnit> bottomAlignedBoxesMaximumHeight { };
-        bool hasAnnotation { false };
+        InlineLayoutUnit nonLineBoxRelativeAlignedMaximumHeight { 0 };
+        struct TopAndBottomAlignedMaximumHeight {
+            std::optional<InlineLayoutUnit> top { };
+            std::optional<InlineLayoutUnit> bottom { };
+        };
+        TopAndBottomAlignedMaximumHeight topAndBottomAlignedMaximumHeight { };
+        bool hasTextEmphasis { false };
     };
     LineBoxAlignmentContent computeLineBoxLogicalHeight(LineBox&) const;
     void computeRootInlineBoxVerticalPosition(LineBox&, const LineBoxAlignmentContent&) const;
     void alignInlineLevelBoxes(LineBox&, InlineLayoutUnit lineBoxLogicalHeight) const;
     InlineLayoutUnit adjustForAnnotationIfNeeded(LineBox&, InlineLayoutUnit lineBoxHeight) const;
-    InlineLevelBox::LayoutBounds layoutBoundsForInlineBoxSubtree(const LineBox::InlineLevelBoxList& nonRootInlineLevelBoxes, size_t inlineBoxIndex) const;
+    InlineLevelBox::AscentAndDescent layoutBoundsForInlineBoxSubtree(const LineBox::InlineLevelBoxList& nonRootInlineLevelBoxes, size_t inlineBoxIndex) const;
 
-    const InlineFormattingGeometry& formattingGeometry() const { return m_inlineFormattingGeometry; }
+    const InlineFormattingUtils& formattingUtils() const { return m_inlineFormattingUtils; }
     const InlineFormattingContext& formattingContext() const { return m_inlineFormattingContext; }
-    const LayoutState& layoutState() const { return formattingContext().layoutState(); }
+    const ElementBox& rootBox() const { return formattingContext().root(); }
+    const InlineLayoutState& layoutState() const { return formattingContext().layoutState(); }
 
 private:
     const InlineFormattingContext& m_inlineFormattingContext;
-    const InlineFormattingGeometry m_inlineFormattingGeometry;
+    const InlineFormattingUtils m_inlineFormattingUtils;
 };
 
 }

@@ -38,7 +38,7 @@ class TextStream;
 
 namespace WebCore {
 
-// This class wraps the lenght of a gap used by properties column-gap and row-gap.
+// This class wraps the length of a gap used by properties column-gap and row-gap.
 // The valid values are "normal" or a non-negative <length-percentage>.
 class GapLength {
 public:
@@ -56,15 +56,7 @@ public:
     bool isNormal() const { return m_isNormal; }
     const Length& length() const { ASSERT(!m_isNormal); return m_length; }
 
-    bool operator==(const GapLength& other) const
-    {
-        return m_isNormal == other.m_isNormal && m_length == other.m_length;
-    }
-
-    bool operator!=(const GapLength& other) const
-    {
-        return !(*this == other);
-    }
+    friend bool operator==(const GapLength&, const GapLength&) = default;
 
 private:
     bool m_isNormal;

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2018, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -269,7 +269,7 @@ class SWTEvents {
         {0x7B /*KeyEvent.VK_F12*/,   SWT.F12},
     };
 
-    // RT-27940: map these to Fx keys
+    // JDK-8090271: map these to Fx keys
 //    /* Numeric Keypad Keys */
 //    {KeyEvent.VK_MULTIPLY,    SWT.KEYPAD_MULTIPLY},
 //    {KeyEvent.VK_ADD,         SWT.KEYPAD_ADD},
@@ -277,7 +277,7 @@ class SWTEvents {
 //    {KeyEvent.VK_SUBTRACT,    SWT.KEYPAD_SUBTRACT},
 //    {KeyEvent.VK_DECIMAL,     SWT.KEYPAD_DECIMAL},
 //    {KeyEvent.VK_DIVIDE,      SWT.KEYPAD_DIVIDE},
-////  {KeyEvent.VK_????,        SWT.KEYPAD_EQUAL},
+//--  {KeyEvent.VK_????,        SWT.KEYPAD_EQUAL},
 
     static int keyCodeToEmbedKeyCode(int keyCode) {
         for (int i=0; i<KeyTable.length; i++) {

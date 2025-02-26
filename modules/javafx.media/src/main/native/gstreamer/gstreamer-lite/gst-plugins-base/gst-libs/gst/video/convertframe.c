@@ -24,6 +24,31 @@
 
 #include <string.h>
 #include "video.h"
+#ifdef HAVE_GL
+#include <gst/gl/gstglmemory.h>
+#endif
+
+#ifndef GST_DISABLE_GST_DEBUG
+#define GST_CAT_DEFAULT ensure_debug_category()
+static GstDebugCategory *
+ensure_debug_category (void)
+{
+  static gsize cat_gonce = 0;
+
+  if (g_once_init_enter (&cat_gonce)) {
+    gsize cat_done;
+
+    cat_done = (gsize) _gst_debug_category_new ("video-frame-converter", 0,
+        "video-frame-converter object");
+
+    g_once_init_leave (&cat_gonce, cat_done);
+  }
+
+  return (GstDebugCategory *) cat_gonce;
+}
+#else
+#define ensure_debug_category() /* NOOP */
+#endif /* GST_DISABLE_GST_DEBUG */
 
 static gboolean
 caps_are_raw (const GstCaps * caps)
@@ -111,14 +136,104 @@ fail:
 }
 
 static GstElement *
+build_convert_frame_pipeline_d3d11 (GstElement ** src_element,
+    GstElement ** sink_element, GstCaps * from_caps, GstCaps * to_caps,
+    GError ** err)
+{
+  GstElement *pipeline = NULL;
+  GstElement *appsrc = NULL;
+  GstElement *d3d11_convert = NULL;
+  GstElement *d3d11_download = NULL;
+  GstElement *convert = NULL;
+  GstElement *enc = NULL;
+  GstElement *appsink = NULL;
+  GError *error = NULL;
+
+  if (!create_element ("appsrc", &appsrc, &error) ||
+      !create_element ("d3d11convert", &d3d11_convert, &error) ||
+      !create_element ("d3d11download", &d3d11_download, &error) ||
+      !create_element ("videoconvert", &convert, &error) ||
+      !create_element ("appsink", &appsink, &error)) {
+    GST_ERROR ("Could not create element");
+    goto failed;
+  }
+
+  if (caps_are_raw (to_caps)) {
+    if (!create_element ("identity", &enc, &error)) {
+      GST_ERROR ("Could not create identity element");
+      goto failed;
+    }
+  } else {
+    enc = get_encoder (to_caps, &error);
+    if (!enc) {
+      GST_ERROR ("Could not create encoder");
+      goto failed;
+    }
+  }
+
+  g_object_set (appsrc, "caps", from_caps, "emit-signals", TRUE,
+      "format", GST_FORMAT_TIME, NULL);
+  g_object_set (appsink, "caps", to_caps, "emit-signals", TRUE, NULL);
+
+  pipeline = gst_pipeline_new ("d3d11-convert-frame-pipeline");
+  gst_bin_add_many (GST_BIN (pipeline), appsrc, d3d11_convert, d3d11_download,
+      convert, enc, appsink, NULL);
+
+  if (!gst_element_link_many (appsrc,
+          d3d11_convert, d3d11_download, convert, enc, appsink, NULL)) {
+    /* Now pipeline takes ownership of all elements, so only top-level
+     * pipeline should be cleared */
+    appsrc = d3d11_convert = convert = enc = appsink = NULL;
+
+    error = g_error_new (GST_CORE_ERROR, GST_CORE_ERROR_NEGOTIATION,
+        "Could not configure pipeline for conversion");
+  }
+
+  *src_element = appsrc;
+  *sink_element = appsink;
+
+  return pipeline;
+
+failed:
+  if (err)
+    *err = error;
+  else
+    g_clear_error (&error);
+
+  gst_clear_object (&pipeline);
+  gst_clear_object (&appsrc);
+  gst_clear_object (&d3d11_convert);
+  gst_clear_object (&d3d11_download);
+  gst_clear_object (&convert);
+  gst_clear_object (&enc);
+  gst_clear_object (&appsink);
+
+  return NULL;
+}
+
+static GstElement *
 build_convert_frame_pipeline (GstElement ** src_element,
-    GstElement ** sink_element, const GstCaps * from_caps,
-    GstVideoCropMeta * cmeta, const GstCaps * to_caps, GError ** err)
+    GstElement ** sink_element, GstCaps * from_caps,
+    GstVideoCropMeta * cmeta, GstCaps * to_caps, GError ** err)
 {
   GstElement *vcrop = NULL, *csp = NULL, *csp2 = NULL, *vscale = NULL;
   GstElement *src = NULL, *sink = NULL, *encoder = NULL, *pipeline;
+  GstElement *dl = NULL;
   GstVideoInfo info;
   GError *error = NULL;
+  GstCapsFeatures *features;
+
+  features = gst_caps_get_features (from_caps, 0);
+  if (features && gst_caps_features_contains (features, "memory:D3D11Memory")) {
+    return build_convert_frame_pipeline_d3d11 (src_element, sink_element,
+        from_caps, to_caps, err);
+  }
+#ifdef HAVE_GL
+  if (features &&
+      gst_caps_features_contains (features, GST_CAPS_FEATURE_MEMORY_GL_MEMORY))
+    if (!create_element ("gldownload", &dl, &error))
+      goto no_elements;
+#endif
 
   if (cmeta) {
     if (!create_element ("videocrop", &vcrop, &error)) {
@@ -150,9 +265,14 @@ build_convert_frame_pipeline (GstElement ** src_element,
   gst_bin_add_many (GST_BIN (pipeline), src, csp, vscale, sink, NULL);
   if (vcrop)
     gst_bin_add_many (GST_BIN (pipeline), vcrop, csp2, NULL);
+  if (dl)
+    gst_bin_add (GST_BIN (pipeline), dl);
 
-  /* set caps */
-  g_object_set (src, "caps", from_caps, NULL);
+  /* set input and output caps */
+  g_object_set (src, "caps", from_caps, "emit-signals", TRUE,
+      "format", GST_FORMAT_TIME, NULL);
+  g_object_set (sink, "caps", to_caps, "emit-signals", TRUE, NULL);
+
   if (vcrop) {
     gst_video_info_from_caps (&info, from_caps);
     g_object_set (vcrop, "left", cmeta->x, NULL);
@@ -164,13 +284,22 @@ build_convert_frame_pipeline (GstElement ** src_element,
     GST_DEBUG ("crop meta [x,y,width,height]: %d %d %d %d", cmeta->x, cmeta->y,
         cmeta->width, cmeta->height);
   }
-  g_object_set (sink, "caps", to_caps, NULL);
 
   /* FIXME: linking is still way too expensive, profile this properly */
   if (vcrop) {
-    GST_DEBUG ("linking src->csp2");
-    if (!gst_element_link_pads (src, "src", csp2, "sink"))
-      goto link_failed;
+    if (!dl) {
+      GST_DEBUG ("linking src->csp2");
+      if (!gst_element_link_pads (src, "src", csp2, "sink"))
+        goto link_failed;
+    } else {
+      GST_DEBUG ("linking src->dl");
+      if (!gst_element_link_pads (src, "src", dl, "sink"))
+        goto link_failed;
+
+      GST_DEBUG ("linking dl->csp2");
+      if (!gst_element_link_pads (dl, "src", csp2, "sink"))
+        goto link_failed;
+    }
 
     GST_DEBUG ("linking csp2->vcrop");
     if (!gst_element_link_pads (csp2, "src", vcrop, "sink"))
@@ -181,8 +310,18 @@ build_convert_frame_pipeline (GstElement ** src_element,
       goto link_failed;
   } else {
     GST_DEBUG ("linking src->csp");
-    if (!gst_element_link_pads (src, "src", csp, "sink"))
-      goto link_failed;
+    if (!dl) {
+      if (!gst_element_link_pads (src, "src", csp, "sink"))
+        goto link_failed;
+    } else {
+      GST_DEBUG ("linking src->dl");
+      if (!gst_element_link_pads (src, "src", dl, "sink"))
+        goto link_failed;
+
+      GST_DEBUG ("linking dl->csp");
+      if (!gst_element_link_pads (dl, "src", csp, "sink"))
+        goto link_failed;
+    }
   }
 
   GST_DEBUG ("linking csp->vscale");
@@ -210,9 +349,6 @@ build_convert_frame_pipeline (GstElement ** src_element,
     if (!gst_element_link_pads (encoder, "src", sink, "sink"))
       goto link_failed;
   }
-
-  g_object_set (src, "emit-signals", TRUE, NULL);
-  g_object_set (sink, "emit-signals", TRUE, NULL);
 
   *src_element = src;
   *sink_element = sink;
@@ -294,7 +430,7 @@ link_failed:
  *
  * The width, height and pixel-aspect-ratio can also be specified in the output caps.
  *
- * Returns: The converted #GstSample, or %NULL if an error happened (in which case @err
+ * Returns: (nullable) (transfer full): The converted #GstSample, or %NULL if an error happened (in which case @err
  * will point to the #GError).
  */
 GstSample *
@@ -464,7 +600,7 @@ gst_video_convert_frame_context_unref (GstVideoConvertSampleContext * ctx)
    * must not end up here without finish() being called */
   g_warn_if_fail (ctx->pipeline == NULL);
 
-  g_slice_free (GstVideoConvertSampleContext, ctx);
+  g_free (ctx);
 }
 
 static gboolean
@@ -723,7 +859,7 @@ gst_video_convert_sample_async (GstSample * sample,
   /* There's a reference cycle between the context and the pipeline, which is
    * broken up once the finish() is called on the context. At latest when the
    * timeout triggers the context will be freed */
-  ctx = g_slice_new0 (GstVideoConvertSampleContext);
+  ctx = g_new0 (GstVideoConvertSampleContext, 1);
   ctx->ref_count = 1;
   g_mutex_init (&ctx->mutex);
   ctx->sample = gst_sample_ref (sample);

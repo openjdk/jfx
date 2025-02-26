@@ -41,7 +41,6 @@ namespace WebCore {
 
 class IPAddress {
 public:
-    static std::optional<IPAddress> fromSockAddrIn6(const struct sockaddr_in6&);
     explicit IPAddress(const struct in_addr& address)
         : m_address(address)
     {
@@ -63,6 +62,8 @@ public:
 
     bool isIPv4() const { return std::holds_alternative<struct in_addr>(m_address); }
     bool isIPv6() const { return std::holds_alternative<struct in6_addr>(m_address); }
+    bool containsOnlyZeros() const;
+    WEBCORE_EXPORT bool isLoopback() const;
 
     const struct in_addr& ipv4Address() const { return std::get<struct in_addr>(m_address); }
     const struct in6_addr& ipv6Address() const { return std::get<struct in6_addr>(m_address); }
@@ -96,7 +97,6 @@ public:
     bool operator<(const IPAddress& other) const { return compare(other) == ComparisonResult::Less; }
     bool operator>(const IPAddress& other) const { return compare(other) == ComparisonResult::Greater; }
     bool operator==(const IPAddress& other) const { return compare(other) == ComparisonResult::Equal; }
-    bool operator!=(const IPAddress& other) const { return !(*this == other); }
 
 private:
     std::variant<WTF::HashTableEmptyValueType, struct in_addr, struct in6_addr> m_address;
@@ -110,15 +110,7 @@ using DNSCompletionHandler = CompletionHandler<void(DNSAddressesOrError&&)>;
 WEBCORE_EXPORT void prefetchDNS(const String& hostname);
 WEBCORE_EXPORT void resolveDNS(const String& hostname, uint64_t identifier, DNSCompletionHandler&&);
 WEBCORE_EXPORT void stopResolveDNS(uint64_t identifier);
-
-inline std::optional<IPAddress> IPAddress::fromSockAddrIn6(const struct sockaddr_in6& address)
-{
-    if (address.sin6_family == AF_INET6)
-        return IPAddress { address.sin6_addr };
-    if (address.sin6_family == AF_INET)
-        return IPAddress { reinterpret_cast<const struct sockaddr_in&>(address).sin_addr };
-    return { };
-}
+WEBCORE_EXPORT bool isIPAddressDisallowed(const URL&);
 
 } // namespace WebCore
 

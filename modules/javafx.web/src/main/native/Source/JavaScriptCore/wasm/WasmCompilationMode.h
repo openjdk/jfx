@@ -25,29 +25,34 @@
 
 #pragma once
 
+#include <wtf/Forward.h>
+
 namespace JSC { namespace Wasm {
 
 enum class CompilationMode : uint8_t {
     LLIntMode,
+    IPIntMode,
     BBQMode,
     BBQForOSREntryMode,
     OMGMode,
     OMGForOSREntryMode,
-    JSEntrypointMode,
+    JSEntrypointJITMode,
+    JITLessJSEntrypointMode,
     JSToWasmICMode,
     WasmToJSMode,
 };
-static constexpr unsigned numberOfRepatchableMode = 5;
 
-const char* makeString(CompilationMode);
+ASCIILiteral makeString(CompilationMode);
 
 constexpr inline bool isOSREntry(CompilationMode compilationMode)
 {
     switch (compilationMode) {
     case CompilationMode::LLIntMode:
+    case CompilationMode::IPIntMode:
     case CompilationMode::BBQMode:
     case CompilationMode::OMGMode:
-    case CompilationMode::JSEntrypointMode:
+    case CompilationMode::JSEntrypointJITMode:
+    case CompilationMode::JITLessJSEntrypointMode:
     case CompilationMode::JSToWasmICMode:
     case CompilationMode::WasmToJSMode:
         return false;
@@ -66,8 +71,10 @@ constexpr inline bool isAnyBBQ(CompilationMode compilationMode)
         return true;
     case CompilationMode::OMGForOSREntryMode:
     case CompilationMode::LLIntMode:
+    case CompilationMode::IPIntMode:
     case CompilationMode::OMGMode:
-    case CompilationMode::JSEntrypointMode:
+    case CompilationMode::JSEntrypointJITMode:
+    case CompilationMode::JITLessJSEntrypointMode:
     case CompilationMode::JSToWasmICMode:
     case CompilationMode::WasmToJSMode:
         return false;
@@ -84,7 +91,9 @@ constexpr inline bool isAnyOMG(CompilationMode compilationMode)
     case CompilationMode::BBQMode:
     case CompilationMode::BBQForOSREntryMode:
     case CompilationMode::LLIntMode:
-    case CompilationMode::JSEntrypointMode:
+    case CompilationMode::IPIntMode:
+    case CompilationMode::JSEntrypointJITMode:
+    case CompilationMode::JITLessJSEntrypointMode:
     case CompilationMode::JSToWasmICMode:
     case CompilationMode::WasmToJSMode:
         return false;

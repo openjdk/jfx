@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,8 +25,12 @@
 
 package test.com.sun.javafx.application;
 
-import com.sun.javafx.application.PlatformImpl;
-import com.sun.javafx.application.PlatformImplShim;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
+import static test.util.Util.TIMEOUT;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -35,11 +39,9 @@ import javafx.scene.Group;
 import javafx.scene.Scene;
 import javafx.scene.paint.Color;
 import javafx.stage.Stage;
-import junit.framework.AssertionFailedError;
+import com.sun.javafx.application.PlatformImpl;
+import com.sun.javafx.application.PlatformImplShim;
 import test.util.Util;
-
-import static org.junit.Assert.*;
-import static test.util.Util.TIMEOUT;
 
 /**
  * Test program for Platform finishListener
@@ -84,12 +86,10 @@ public class ListenerTestCommon {
 
         try {
             if (!launchLatch.await(TIMEOUT, TimeUnit.MILLISECONDS)) {
-                throw new AssertionFailedError("Timeout waiting for Platform to start");
+                fail("Timeout waiting for Platform to start");
             }
         } catch (InterruptedException ex) {
-            AssertionFailedError err = new AssertionFailedError("Unexpected exception");
-            err.initCause(ex);
-            throw err;
+            fail(ex);
         }
         exitLatch = PlatformImplShim.test_getPlatformExitLatch();
         assertEquals(1, exitLatch.getCount());
@@ -98,10 +98,12 @@ public class ListenerTestCommon {
         assertNull(listener);
 
         listener = new PlatformImpl.FinishListener() {
+            @Override
             public void idle(boolean flag) {
                 implicitExit.set(flag);
                 idleNotification.countDown();
             }
+            @Override
             public void exitCalled() {
                 exitNotification.countDown();
             }
@@ -141,12 +143,10 @@ public class ListenerTestCommon {
         Platform.exit();
         try {
             if (!exitNotification.await(TIMEOUT, TimeUnit.MILLISECONDS)) {
-                throw new AssertionFailedError("Timeout waiting for exit notification");
+                fail("Timeout waiting for exit notification");
             }
         } catch (InterruptedException ex) {
-            AssertionFailedError err = new AssertionFailedError("Unexpected exception");
-            err.initCause(ex);
-            throw err;
+            fail(ex);
         }
         assertEquals(0, exitNotification.getCount());
 
@@ -201,11 +201,11 @@ public class ListenerTestCommon {
 
         try {
             if (!rDone.await(TIMEOUT, TimeUnit.MILLISECONDS)) {
-                throw new AssertionFailedError("Timeout waiting for runLater, throwableType = "
+                fail("Timeout waiting for runLater, throwableType = "
                         + throwableType);
             }
         } catch (InterruptedException ex) {
-            throw new AssertionFailedError("Unexpected exception waiting for runLater, throwableType = "
+            fail("Unexpected exception waiting for runLater, throwableType = "
                         + throwableType);
         }
 
@@ -213,12 +213,10 @@ public class ListenerTestCommon {
 
         try {
             if (!idleNotification.await(TIMEOUT, TimeUnit.MILLISECONDS)) {
-                throw new AssertionFailedError("Timeout waiting for exit notification");
+                fail("Timeout waiting for exit notification");
             }
         } catch (InterruptedException ex) {
-            AssertionFailedError err = new AssertionFailedError("Unexpected exception");
-            err.initCause(ex);
-            throw err;
+            fail(ex);
         }
         assertEquals(0, idleNotification.getCount());
         assertEquals(implicit, implicitExit.get());
@@ -230,5 +228,4 @@ public class ListenerTestCommon {
         PlatformImpl.removeListener(listener);
         listener = null;
     }
-
 }

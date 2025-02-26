@@ -22,6 +22,7 @@
 #pragma once
 
 #include "RenderFlexibleBox.h"
+#include "RenderTextFragment.h"
 #include <memory>
 
 namespace WebCore {
@@ -33,7 +34,8 @@ class RenderTextFragment;
 // For inputs, they will also generate an anonymous RenderText and keep its style and content up
 // to date as the button changes.
 class RenderButton final : public RenderFlexibleBox {
-    WTF_MAKE_ISO_ALLOCATED(RenderButton);
+    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(RenderButton);
+    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(RenderButton);
 public:
     RenderButton(HTMLFormControlElement&, RenderStyle&&);
     virtual ~RenderButton();
@@ -59,6 +61,8 @@ public:
     void layout() override;
 #endif
 
+    RenderTextFragment* textRenderer() const { return m_buttonText.get(); }
+
     RenderBlock* innerRenderer() const { return m_inner.get(); }
     void setInnerRenderer(RenderBlock&);
 
@@ -68,14 +72,13 @@ private:
     void element() const = delete;
 
     ASCIILiteral renderName() const override { return "RenderButton"_s; }
-    bool isRenderButton() const override { return true; }
 
     bool hasLineIfEmpty() const override;
 
     bool isFlexibleBoxImpl() const override { return true; }
 
-    WeakPtr<RenderTextFragment> m_buttonText;
-    WeakPtr<RenderBlock> m_inner;
+    SingleThreadWeakPtr<RenderTextFragment> m_buttonText;
+    SingleThreadWeakPtr<RenderBlock> m_inner;
 };
 
 } // namespace WebCore

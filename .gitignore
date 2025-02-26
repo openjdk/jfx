@@ -11,6 +11,7 @@ testbin/
 **/Ensemble8/lib/
 **/Ensemble8/src/generated/resources/ensemble/search/index/write.lock
 **/nbproject/private/
+hs_err_pid*
 
 # Ignore webrevs
 /webrev/

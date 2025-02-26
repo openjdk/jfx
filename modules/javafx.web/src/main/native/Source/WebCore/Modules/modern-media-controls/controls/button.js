@@ -135,6 +135,17 @@ class Button extends LayoutItem
         return {};
     }
 
+    get circular()
+    {
+        return this.element.classList.contains("circular");
+    }
+
+    set circular(circular)
+    {
+        this.element.classList.toggle("circular", circular);
+        this._updateImageMetrics();
+    }
+
     // Protected
 
     handleEvent(event)
@@ -202,12 +213,20 @@ class Button extends LayoutItem
 
     _updateImageMetrics()
     {
+        if (!this._imageSource)
+            return;
+
         let width = this._imageSource.width * this._scaleFactor;
         let height = this._imageSource.height * this._scaleFactor;
 
         if (this._iconName.type === "png" || this._iconName.type === "pdf") {
             width /= window.devicePixelRatio;
             height /= window.devicePixelRatio;
+        }
+
+        if (this.circular) {
+            width = Math.max(width, height);
+            height = width;
         }
 
         if (this.image.width === width && this.image.height === height)

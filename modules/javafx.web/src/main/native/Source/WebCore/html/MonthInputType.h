@@ -37,14 +37,18 @@
 namespace WebCore {
 
 class MonthInputType final : public BaseDateAndTimeInputType {
-    template<typename DowncastedType> friend bool isInvalidInputType(const InputType&, const String&);
 public:
+    static Ref<MonthInputType> create(HTMLInputElement& element)
+    {
+        return adoptRef(*new MonthInputType(element));
+    }
+
+private:
     explicit MonthInputType(HTMLInputElement& element)
         : BaseDateAndTimeInputType(Type::Month, element)
     {
     }
 
-private:
     const AtomString& formControlType() const final;
     DateComponentsType dateType() const final;
     WallTime valueAsDate() const final;
@@ -55,6 +59,7 @@ private:
     std::optional<DateComponents> parseToDateComponents(StringView) const final;
     std::optional<DateComponents> setMillisecondToDateComponents(double) const final;
     void handleDOMActivateEvent(Event&) final;
+    void showPicker() final;
 
     bool isValidFormat(OptionSet<DateTimeFormatValidationResults>) const final;
     String formatDateTimeFieldsState(const DateTimeFieldsState&) const final;

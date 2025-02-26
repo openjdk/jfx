@@ -26,13 +26,11 @@
 #include "config.h"
 #include "PushSubscriptionOptions.h"
 
-#if ENABLE(SERVICE_WORKER)
-
-#include <wtf/IsoMallocInlines.h>
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
-WTF_MAKE_ISO_ALLOCATED_IMPL(PushSubscriptionOptions);
+WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(PushSubscriptionOptions);
 
 PushSubscriptionOptions::PushSubscriptionOptions(Vector<uint8_t>&& serverVAPIDPublicKey)
     : m_serverVAPIDPublicKey(WTFMove(serverVAPIDPublicKey))
@@ -54,14 +52,12 @@ const Vector<uint8_t>& PushSubscriptionOptions::serverVAPIDPublicKey() const
 ExceptionOr<RefPtr<JSC::ArrayBuffer>> PushSubscriptionOptions::applicationServerKey() const
 {
     if (!m_applicationServerKey) {
-        m_applicationServerKey = ArrayBuffer::tryCreate(m_serverVAPIDPublicKey.data(), m_serverVAPIDPublicKey.size());
+        m_applicationServerKey = ArrayBuffer::tryCreate(m_serverVAPIDPublicKey);
         if (!m_applicationServerKey)
-            return Exception { OutOfMemoryError };
+            return Exception { ExceptionCode::OutOfMemoryError };
     }
 
     return m_applicationServerKey.copyRef();
 }
 
 } // namespace WebCore
-
-#endif // ENABLE(SERVICE_WORKER)

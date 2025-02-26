@@ -24,18 +24,21 @@
 #include "CSSPropertyNames.h"
 #include "CSSValue.h"
 #include "WritingMode.h"
+#include <wtf/BitSet.h>
 #include <wtf/RefPtr.h>
 
 namespace WebCore {
 
 class CSSValueList;
 
+enum class IsImportant : bool { No, Yes };
+
 struct StylePropertyMetadata {
-    StylePropertyMetadata(CSSPropertyID propertyID, bool isSetFromShorthand, int indexInShorthandsVector, bool important, bool implicit, bool inherited)
+    StylePropertyMetadata(CSSPropertyID propertyID, bool isSetFromShorthand, int indexInShorthandsVector, IsImportant important, bool implicit, bool inherited)
         : m_propertyID(propertyID)
         , m_isSetFromShorthand(isSetFromShorthand)
         , m_indexInShorthandsVector(indexInShorthandsVector)
-        , m_important(important)
+        , m_important(important == IsImportant::Yes)
         , m_implicit(implicit)
         , m_inherited(inherited)
     {
@@ -45,27 +48,19 @@ struct StylePropertyMetadata {
 
     CSSPropertyID shorthandID() const;
 
-    bool operator==(const StylePropertyMetadata& other) const
-    {
-        return m_propertyID == other.m_propertyID
-            && m_isSetFromShorthand == other.m_isSetFromShorthand
-            && m_indexInShorthandsVector == other.m_indexInShorthandsVector
-            && m_important == other.m_important
-            && m_implicit == other.m_implicit
-            && m_inherited == other.m_inherited;
-    }
+    friend bool operator==(const StylePropertyMetadata&, const StylePropertyMetadata&) = default;
 
-    uint16_t m_propertyID : 10;
-    uint16_t m_isSetFromShorthand : 1;
-    uint16_t m_indexInShorthandsVector : 2; // If this property was set as part of an ambiguous shorthand, gives the index in the shorthands vector.
-    uint16_t m_important : 1;
-    uint16_t m_implicit : 1; // Whether or not the property was set implicitly as the result of a shorthand.
-    uint16_t m_inherited : 1;
+    unsigned m_propertyID : 10;
+    unsigned m_isSetFromShorthand : 1;
+    unsigned m_indexInShorthandsVector : 2; // If this property was set as part of an ambiguous shorthand, gives the index in the shorthands vector.
+    unsigned m_important : 1;
+    unsigned m_implicit : 1; // Whether or not the property was set implicitly as the result of a shorthand.
+    unsigned m_inherited : 1;
 };
 
 class CSSProperty {
 public:
-    CSSProperty(CSSPropertyID propertyID, RefPtr<CSSValue>&& value, bool important = false, bool isSetFromShorthand = false, int indexInShorthandsVector = 0, bool implicit = false)
+    CSSProperty(CSSPropertyID propertyID, RefPtr<CSSValue>&& value, IsImportant important = IsImportant::No, bool isSetFromShorthand = false, int indexInShorthandsVector = 0, bool implicit = false)
         : m_metadata(propertyID, isSetFromShorthand, indexInShorthandsVector, important, implicit, isInheritedProperty(propertyID))
         , m_value(WTFMove(value))
     {
@@ -77,8 +72,7 @@ public:
     bool isImportant() const { return m_metadata.m_important; }
 
     CSSValue* value() const { return m_value.get(); }
-
-    void wrapValueInCommaSeparatedList();
+    RefPtr<CSSValue> protectedValue() const { return m_value; }
 
     static CSSPropertyID resolveDirectionAwareProperty(CSSPropertyID, TextDirection, WritingMode);
     static CSSPropertyID unresolvePhysicalProperty(CSSPropertyID, TextDirection, WritingMode);
@@ -88,13 +82,18 @@ public:
     static bool isInLogicalPropertyGroup(CSSPropertyID);
     static bool areInSameLogicalPropertyGroupWithDifferentMappingLogic(CSSPropertyID, CSSPropertyID);
     static bool isDescriptorOnly(CSSPropertyID);
-    static bool isColorProperty(CSSPropertyID);
     static UChar listValuedPropertySeparator(CSSPropertyID);
     static bool isListValuedProperty(CSSPropertyID propertyID) { return !!listValuedPropertySeparator(propertyID); }
-    static Ref<CSSValueList> createListForProperty(CSSPropertyID);
     static bool allowsNumberOrIntegerInput(CSSPropertyID);
 
     const StylePropertyMetadata& metadata() const { return m_metadata; }
+    static bool isColorProperty(CSSPropertyID propertyId)
+    {
+        return colorProperties.get(propertyId);
+    }
+
+    static const WEBCORE_EXPORT WTF::BitSet<numCSSProperties> colorProperties;
+    static const WEBCORE_EXPORT WTF::BitSet<numCSSProperties> physicalProperties;
 
     bool operator==(const CSSProperty& other) const
     {

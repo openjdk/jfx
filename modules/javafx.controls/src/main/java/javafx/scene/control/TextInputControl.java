@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2023, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -249,7 +249,7 @@ public abstract class TextInputControl extends Control {
                 public void applyStyle(StyleOrigin newOrigin, Font value) {
 
                     //
-                    // RT-20727 - if CSS is setting the font, then make sure invalidate doesn't call NodeHelper.reapplyCSS
+                    // JDK-8127428 - if CSS is setting the font, then make sure invalidate doesn't call NodeHelper.reapplyCSS
                     //
                     try {
                         // super.applyStyle calls set which might throw if value is bound.
@@ -276,7 +276,7 @@ public abstract class TextInputControl extends Control {
 
                 @Override
                 protected void invalidated() {
-                    // RT-20727 - if font is changed by calling setFont, then
+                    // JDK-8127428 - if font is changed by calling setFont, then
                     // css might need to be reapplied since font size affects
                     // calculated values for styles with relative values
                     if(fontSetByCss == false) {
@@ -320,6 +320,9 @@ public abstract class TextInputControl extends Control {
             String txt = get();
             if (txt != null && txt.contains("\n")) {
                 txt = txt.replace("\n", "");
+                if (isBound()) {
+                    unbind();
+                }
                 set(txt);
             }
         }
@@ -810,8 +813,7 @@ public abstract class TextInputControl extends Control {
         int pos = wordIterator.preceding(Utils.clamp(0, getCaretPosition(), textLength));
 
         // Skip the non-word region, then move/select to the beginning of the word.
-        while (pos != BreakIterator.DONE &&
-               !Character.isLetterOrDigit(text.charAt(Utils.clamp(0, pos, textLength-1)))) {
+        while (pos != BreakIterator.DONE && !isLetterOrDigit(text, pos)) {
             pos = wordIterator.preceding(Utils.clamp(0, pos, textLength));
         }
 
@@ -1287,7 +1289,7 @@ public abstract class TextInputControl extends Control {
      *         new lines by the TextField)
      */
     private int replaceText(int start, int end, String value, int anchor, int caretPosition) {
-        // RT-16566: Need to take into account stripping of chars into the
+        // JDK-8120290: Need to take into account stripping of chars into the
         // final anchor & caret position
         blockSelectedTextUpdate = true;
         try {
@@ -1332,7 +1334,7 @@ public abstract class TextInputControl extends Control {
     }
 
     /**
-     * If the field is currently being edited, this call will set text to the last commited value.
+     * If the field is currently being edited, this call will set text to the last committed value.
      * @since JavaFX 8u40
      */
     public final void cancelEdit() {
@@ -1743,4 +1745,15 @@ public abstract class TextInputControl extends Control {
         }
     }
 
+    private static boolean isLetterOrDigit(String text, int ix) {
+        if (ix < 0) {
+            // should not happen
+            return false;
+        } else if (ix >= text.length()) {
+            return false;
+        }
+        // ignore the case when 'c' is a high surrogate without the low surrogate
+        int c = Character.codePointAt(text, ix);
+        return Character.isLetterOrDigit(c);
+    }
 }

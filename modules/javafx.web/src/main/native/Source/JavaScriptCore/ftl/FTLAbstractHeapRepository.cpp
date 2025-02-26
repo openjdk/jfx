@@ -33,12 +33,14 @@
 #include "B3MemoryValue.h"
 #include "B3PatchpointValue.h"
 #include "B3ValueInlines.h"
+#include "ClonedArguments.h"
 #include "DateInstance.h"
 #include "DirectArguments.h"
 #include "FTLState.h"
 #include "GetterSetter.h"
 #include "JSPropertyNameEnumerator.h"
 #include "JSWebAssemblyInstance.h"
+#include "JSWrapperObject.h"
 #include "RegExpObject.h"
 #include "ScopedArguments.h"
 #include "ShadowChicken.h"
@@ -97,9 +99,7 @@ AbstractHeapRepository::AbstractHeapRepository()
     RELEASE_ASSERT(!JSCell_freeListNext.offset());
 }
 
-AbstractHeapRepository::~AbstractHeapRepository()
-{
-}
+AbstractHeapRepository::~AbstractHeapRepository() = default;
 
 void AbstractHeapRepository::decorateMemory(const AbstractHeap* heap, B3::Value* value)
 {

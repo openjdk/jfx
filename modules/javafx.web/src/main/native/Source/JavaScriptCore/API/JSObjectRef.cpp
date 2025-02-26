@@ -142,6 +142,7 @@ JSObjectRef JSObjectMakeFunction(JSContextRef ctx, JSStringRef name, unsigned pa
     Identifier nameID = name ? name->identifier(&vm) : Identifier::fromString(vm, "anonymous"_s);
 
     MarkedArgumentBuffer args;
+    args.ensureCapacity(parameterCount + 1);
     for (unsigned i = 0; i < parameterCount; i++)
         args.append(jsString(vm, parameterNames[i]->string()));
     args.append(jsString(vm, body->string()));
@@ -153,7 +154,7 @@ JSObjectRef JSObjectMakeFunction(JSContextRef ctx, JSStringRef name, unsigned pa
     }
 
     auto sourceURL = sourceURLString ? URL({ }, sourceURLString->string()) : URL();
-    JSObject* result = constructFunction(globalObject, args, nameID, SourceOrigin { sourceURL }, sourceURL.string(), TextPosition(OrdinalNumber::fromOneBasedInt(startingLineNumber), OrdinalNumber()));
+    JSObject* result = constructFunction(globalObject, args, nameID, SourceOrigin { sourceURL }, sourceURL.string(), SourceTaintedOrigin::Untainted, TextPosition(OrdinalNumber::fromOneBasedInt(startingLineNumber), OrdinalNumber()));
     if (handleExceptionIfNeeded(scope, ctx, exception) == ExceptionStatus::DidThrow)
         result = nullptr;
     return toRef(result);
@@ -173,6 +174,7 @@ JSObjectRef JSObjectMakeArray(JSContextRef ctx, size_t argumentCount, const JSVa
     JSObject* result;
     if (argumentCount) {
         MarkedArgumentBuffer argList;
+        argList.ensureCapacity(argumentCount);
         for (size_t i = 0; i < argumentCount; ++i)
             argList.append(toJS(globalObject, arguments[i]));
         if (UNLIKELY(argList.hasOverflowed())) {
@@ -204,6 +206,7 @@ JSObjectRef JSObjectMakeDate(JSContextRef ctx, size_t argumentCount, const JSVal
     auto scope = DECLARE_CATCH_SCOPE(vm);
 
     MarkedArgumentBuffer argList;
+    argList.ensureCapacity(argumentCount);
     for (size_t i = 0; i < argumentCount; ++i)
         argList.append(toJS(globalObject, arguments[i]));
     if (UNLIKELY(argList.hasOverflowed())) {
@@ -254,6 +257,7 @@ JSObjectRef JSObjectMakeRegExp(JSContextRef ctx, size_t argumentCount, const JSV
     auto scope = DECLARE_CATCH_SCOPE(vm);
 
     MarkedArgumentBuffer argList;
+    argList.ensureCapacity(argumentCount);
     for (size_t i = 0; i < argumentCount; ++i)
         argList.append(toJS(globalObject, arguments[i]));
     if (UNLIKELY(argList.hasOverflowed())) {
@@ -558,8 +562,8 @@ void* JSObjectGetPrivate(JSObjectRef object)
     const ClassInfo* classInfo = classInfoPrivate(jsObject);
 
     // Get wrapped object if proxied
-    if (classInfo->isSubClassOf(JSProxy::info())) {
-        jsObject = static_cast<JSProxy*>(jsObject)->target();
+    if (classInfo->isSubClassOf(JSGlobalProxy::info())) {
+        jsObject = static_cast<JSGlobalProxy*>(jsObject)->target();
         classInfo = jsObject->classInfo();
     }
 
@@ -582,8 +586,8 @@ bool JSObjectSetPrivate(JSObjectRef object, void* data)
     const ClassInfo* classInfo = classInfoPrivate(jsObject);
 
     // Get wrapped object if proxied
-    if (classInfo->isSubClassOf(JSProxy::info())) {
-        jsObject = static_cast<JSProxy*>(jsObject)->target();
+    if (classInfo->isSubClassOf(JSGlobalProxy::info())) {
+        jsObject = static_cast<JSGlobalProxy*>(jsObject)->target();
         classInfo = jsObject->classInfo();
     }
 
@@ -616,8 +620,8 @@ JSValueRef JSObjectGetPrivateProperty(JSContextRef ctx, JSObjectRef object, JSSt
 
 
     // Get wrapped object if proxied
-    if (jsObject->inherits<JSProxy>())
-        jsObject = jsCast<JSProxy*>(jsObject)->target();
+    if (jsObject->inherits<JSGlobalProxy>())
+        jsObject = jsCast<JSGlobalProxy*>(jsObject)->target();
 
     if (jsObject->inherits<JSCallbackObject<JSGlobalObject>>())
         result = jsCast<JSCallbackObject<JSGlobalObject>*>(jsObject)->getPrivateProperty(name);
@@ -640,8 +644,8 @@ bool JSObjectSetPrivateProperty(JSContextRef ctx, JSObjectRef object, JSStringRe
     Identifier name(propertyName->identifier(&vm));
 
     // Get wrapped object if proxied
-    if (jsObject->inherits<JSProxy>())
-        jsObject = jsCast<JSProxy*>(jsObject)->target();
+    if (jsObject->inherits<JSGlobalProxy>())
+        jsObject = jsCast<JSGlobalProxy*>(jsObject)->target();
 
     if (jsObject->inherits<JSCallbackObject<JSGlobalObject>>()) {
         jsCast<JSCallbackObject<JSGlobalObject>*>(jsObject)->setPrivateProperty(vm, name, jsValue);
@@ -669,8 +673,8 @@ bool JSObjectDeletePrivateProperty(JSContextRef ctx, JSObjectRef object, JSStrin
     Identifier name(propertyName->identifier(&vm));
 
     // Get wrapped object if proxied
-    if (jsObject->inherits<JSProxy>())
-        jsObject = jsCast<JSProxy*>(jsObject)->target();
+    if (jsObject->inherits<JSGlobalProxy>())
+        jsObject = jsCast<JSGlobalProxy*>(jsObject)->target();
 
     if (jsObject->inherits<JSCallbackObject<JSGlobalObject>>()) {
         jsCast<JSCallbackObject<JSGlobalObject>*>(jsObject)->deletePrivateProperty(name);
@@ -717,6 +721,7 @@ JSValueRef JSObjectCallAsFunction(JSContextRef ctx, JSObjectRef object, JSObject
         jsThisObject = globalObject->globalThis();
 
     MarkedArgumentBuffer argList;
+    argList.ensureCapacity(argumentCount);
     for (size_t i = 0; i < argumentCount; i++)
         argList.append(toJS(globalObject, arguments[i]));
     if (UNLIKELY(argList.hasOverflowed())) {
@@ -763,6 +768,7 @@ JSObjectRef JSObjectCallAsConstructor(JSContextRef ctx, JSObjectRef object, size
         return nullptr;
 
     MarkedArgumentBuffer argList;
+    argList.ensureCapacity(argumentCount);
     for (size_t i = 0; i < argumentCount; i++)
         argList.append(toJS(globalObject, arguments[i]));
     if (UNLIKELY(argList.hasOverflowed())) {
@@ -809,10 +815,9 @@ JSPropertyNameArrayRef JSObjectCopyPropertyNames(JSContextRef ctx, JSObjectRef o
     PropertyNameArray array(vm, PropertyNameMode::Strings, PrivateSymbolMode::Exclude);
     jsObject->getPropertyNames(globalObject, array, DontEnumPropertiesMode::Exclude);
 
-    size_t size = array.size();
-    propertyNames->array.reserveInitialCapacity(size);
-    for (size_t i = 0; i < size; ++i)
-        propertyNames->array.uncheckedAppend(OpaqueJSString::tryCreate(array[i].string()).releaseNonNull());
+    propertyNames->array = WTF::map(array, [](auto& item) {
+        return OpaqueJSString::tryCreate(item.string()).releaseNonNull();
+    });
 
     return JSPropertyNameArrayRetain(propertyNames);
 }
@@ -857,7 +862,7 @@ JSObjectRef JSObjectGetProxyTarget(JSObjectRef objectRef)
     VM& vm = object->vm();
     JSLockHolder locker(vm);
     JSObject* result = nullptr;
-    if (JSProxy* proxy = jsDynamicCast<JSProxy*>(object))
+    if (JSGlobalProxy* proxy = jsDynamicCast<JSGlobalProxy*>(object))
         result = proxy->target();
     else if (ProxyObject* proxy = jsDynamicCast<ProxyObject*>(object))
         result = proxy->target();

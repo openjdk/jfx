@@ -25,22 +25,51 @@
 
 #pragma once
 
-#include "ReducedResolutionSeconds.h"
+#include "Document.h"
+#include "LayoutRect.h"
+#include "RenderTheme.h"
 #include "Timer.h"
 
 namespace WebCore {
 
 class CaretAnimator;
+class Color;
 class Document;
+class FloatRect;
+class GraphicsContext;
+class Node;
 class Page;
+class VisibleSelection;
+
+enum class CaretAnimatorType : uint8_t {
+    Default,
+    Dictation
+};
+
+enum class CaretAnimatorStopReason : uint8_t {
+    Default,
+    CaretRectChanged,
+};
+
+#if HAVE(REDESIGNED_TEXT_CURSOR)
+
+struct KeyFrame {
+    Seconds time;
+    float value;
+};
+
+#endif
 
 class CaretAnimationClient {
 public:
     virtual ~CaretAnimationClient() = default;
 
     virtual void caretAnimationDidUpdate(CaretAnimator&) { }
+    virtual LayoutRect localCaretRect() const = 0;
 
     virtual Document* document() = 0;
+
+    virtual Node* caretNode() = 0;
 };
 
 class CaretAnimator {
@@ -57,37 +86,44 @@ public:
 
     virtual ~CaretAnimator() = default;
 
-    virtual void start(ReducedResolutionSeconds currentTime) = 0;
+    virtual void start() = 0;
 
-    void stop()
-    {
-        if (!m_isActive)
-            return;
-        didEnd();
-    }
+    virtual void stop(CaretAnimatorStopReason = CaretAnimatorStopReason::Default);
 
     bool isActive() const { return m_isActive; }
 
-    void serviceCaretAnimation(ReducedResolutionSeconds);
+    void serviceCaretAnimation();
 
     virtual String debugDescription() const = 0;
 
     virtual void setBlinkingSuspended(bool suspended) { m_isBlinkingSuspended = suspended; }
-    bool isBlinkingSuspended() const { return m_isBlinkingSuspended; }
+    bool isBlinkingSuspended() const;
+
+#if ENABLE(ACCESSIBILITY_NON_BLINKING_CURSOR)
+    void setPrefersNonBlinkingCursor(bool enabled) { m_prefersNonBlinkingCursor = enabled; }
+    bool prefersNonBlinkingCursor() const { return m_prefersNonBlinkingCursor; }
+#endif
 
     virtual void setVisible(bool) = 0;
 
     PresentationProperties presentationProperties() const { return m_presentationProperties; }
 
+    virtual void paint(GraphicsContext&, const FloatRect&, const Color&, const LayoutPoint&) const;
+    virtual LayoutRect caretRepaintRectForLocalRect(LayoutRect) const;
+
 protected:
     explicit CaretAnimator(CaretAnimationClient& client)
         : m_client(client)
         , m_blinkTimer(*this, &CaretAnimator::scheduleAnimation)
-    { }
+    {
+#if ENABLE(ACCESSIBILITY_NON_BLINKING_CURSOR)
+        m_prefersNonBlinkingCursor = page() && page()->prefersNonBlinkingCursor();
+#endif
+    }
 
-    virtual void updateAnimationProperties(ReducedResolutionSeconds) = 0;
+    virtual void updateAnimationProperties() = 0;
 
-    void didStart(ReducedResolutionSeconds currentTime, std::optional<Seconds> interval)
+    void didStart(MonotonicTime currentTime, std::optional<Seconds> interval)
     {
         m_startTime = currentTime;
         m_isActive = true;
@@ -105,7 +141,7 @@ protected:
     Page* page() const;
 
     CaretAnimationClient& m_client;
-    ReducedResolutionSeconds m_startTime;
+    MonotonicTime m_startTime;
     Timer m_blinkTimer;
     PresentationProperties m_presentationProperties { };
 
@@ -114,6 +150,9 @@ private:
 
     bool m_isActive { false };
     bool m_isBlinkingSuspended { false };
+#if ENABLE(ACCESSIBILITY_NON_BLINKING_CURSOR)
+    bool m_prefersNonBlinkingCursor { false };
+#endif
 };
 
 static inline CaretAnimator::PresentationProperties::BlinkState operator!(CaretAnimator::PresentationProperties::BlinkState blinkState)

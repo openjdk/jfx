@@ -26,13 +26,14 @@
 #include "config.h"
 #include "LayoutElementBox.h"
 
-#include "RenderStyle.h"
-#include <wtf/IsoMallocInlines.h>
+#include "RenderElement.h"
+#include "RenderStyleInlines.h"
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 namespace Layout {
 
-WTF_MAKE_ISO_ALLOCATED_IMPL(ElementBox);
+WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(ElementBox);
 
 ElementBox::ElementBox(ElementAttributes&& attributes, RenderStyle&& style, std::unique_ptr<RenderStyle>&& firstLineStyle, OptionSet<BaseTypeFlag> baseTypeFlags)
     : Box(WTFMove(attributes), WTFMove(style), WTFMove(firstLineStyle), baseTypeFlags | ElementBoxFlag)
@@ -101,7 +102,21 @@ const Box* ElementBox::lastInFlowOrFloatingChild() const
     return nullptr;
 }
 
+bool ElementBox::hasOutOfFlowChild() const
+{
+    for (auto* child = this->firstChild(); child; child = child->nextSibling()) {
+        if (child->isOutOfFlowPositioned())
+            return true;
+    }
+    return false;
+}
+
 void ElementBox::appendChild(UniqueRef<Box> childRef)
+{
+    insertChild(WTFMove(childRef), m_lastChild.get());
+}
+
+void ElementBox::insertChild(UniqueRef<Box> childRef, Box* beforeChild)
 {
     auto childBox = childRef.moveToUniquePtr();
     ASSERT(!childBox->m_parent);
@@ -109,13 +124,34 @@ void ElementBox::appendChild(UniqueRef<Box> childRef)
     ASSERT(!childBox->m_nextSibling);
 
     childBox->m_parent = this;
-    childBox->m_previousSibling = m_lastChild;
 
+    if (!m_firstChild || (beforeChild && !beforeChild->m_nextSibling)) {
+        // Append as first and/or last.
+        childBox->m_previousSibling = m_lastChild;
     auto& nextOrFirst = m_lastChild ? m_lastChild->m_nextSibling : m_firstChild;
     ASSERT(!nextOrFirst);
 
     m_lastChild = childBox.get();
     nextOrFirst = WTFMove(childBox);
+        return;
+    }
+
+    if (!beforeChild) {
+        // Insert as first.
+        ASSERT(m_firstChild && m_lastChild);
+        m_firstChild->m_previousSibling = childBox.get();
+        childBox->m_nextSibling = WTFMove(m_firstChild);
+        m_firstChild = WTFMove(childBox);
+        return;
+    }
+
+    ASSERT(&beforeChild->parent() == this);
+    auto* nextSibling = beforeChild->m_nextSibling.get();
+    ASSERT(nextSibling);
+    childBox->m_previousSibling = beforeChild;
+    childBox->m_nextSibling = WTFMove(beforeChild->m_nextSibling);
+    nextSibling->m_previousSibling = childBox.get();
+    beforeChild->m_nextSibling = WTFMove(childBox);
 }
 
 void ElementBox::destroyChildren()
@@ -180,6 +216,11 @@ LayoutUnit ElementBox::intrinsicRatio() const
 bool ElementBox::hasAspectRatio() const
 {
     return isImage();
+}
+
+RenderElement* ElementBox::rendererForIntegration() const
+{
+    return downcast<RenderElement>(Box::rendererForIntegration());
 }
 
 }

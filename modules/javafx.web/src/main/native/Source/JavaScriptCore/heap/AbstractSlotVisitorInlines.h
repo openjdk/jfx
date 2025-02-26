@@ -98,14 +98,14 @@ inline AbstractSlotVisitor::ReferrerContext::~ReferrerContext()
     m_visitor.m_context = m_previous;
 }
 
-inline AbstractSlotVisitor::AbstractSlotVisitor(Heap& heap, CString codeName, ConcurrentPtrHashSet& opaqueRoots)
+inline AbstractSlotVisitor::AbstractSlotVisitor(JSC::Heap& heap, CString codeName, ConcurrentPtrHashSet& opaqueRoots)
     : m_heap(heap)
     , m_codeName(codeName)
     , m_opaqueRoots(opaqueRoots)
 {
 }
 
-inline Heap* AbstractSlotVisitor::heap() const
+inline JSC::Heap* AbstractSlotVisitor::heap() const
 {
     return &m_heap;
 }
@@ -183,6 +183,12 @@ ALWAYS_INLINE void AbstractSlotVisitor::append(Iterator begin, Iterator end)
 {
     for (auto it = begin; it != end; ++it)
         append(*it);
+}
+
+ALWAYS_INLINE void AbstractSlotVisitor::appendValues(std::span<const WriteBarrier<Unknown, RawValueTraits<Unknown>>> barriers)
+{
+    for (auto& barrier : barriers)
+        append(barrier);
 }
 
 ALWAYS_INLINE void AbstractSlotVisitor::appendValues(const WriteBarrierBase<Unknown>* barriers, size_t count)

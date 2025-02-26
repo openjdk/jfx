@@ -31,16 +31,8 @@ struct ScreenDataOverrides {
     double width { 0 };
     double height { 0 };
     double scale { 1 };
+
+    friend bool operator==(const ScreenDataOverrides&, const ScreenDataOverrides&) = default;
 };
-
-inline bool operator==(const ScreenDataOverrides& a, const ScreenDataOverrides& b)
-{
-    return a.width == b.width && a.height == b.height && a.scale == b.scale;
-}
-
-inline bool operator!=(const ScreenDataOverrides& a, const ScreenDataOverrides& b)
-{
-    return !(a == b);
-}
 
 }

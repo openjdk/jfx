@@ -348,7 +348,7 @@ gst_value_array_init (GValue * value, guint prealloc)
  */
 gchar *
 _priv_gst_value_serialize_any_list (const GValue * value, const gchar * begin,
-    const gchar * end, gboolean print_type)
+    const gchar * end, gboolean print_type, GstSerializeFlags flags)
 {
   guint i;
   GstValueList *vlist = value->data[0].v_pointer;
@@ -361,21 +361,37 @@ _priv_gst_value_serialize_any_list (const GValue * value, const gchar * begin,
   s = g_string_sized_new (2 + (6 * alen) + 2);
   g_string_append (s, begin);
   for (i = 0; i < alen; i++) {
+    gboolean nested_structs_brackets;
     v = &vlist->fields[i];
-    s_val = gst_value_serialize (v);
+    nested_structs_brackets = !(flags & GST_SERIALIZE_FLAG_BACKWARD_COMPAT)
+        && (GST_VALUE_HOLDS_STRUCTURE (v) || GST_VALUE_HOLDS_CAPS (v));
+    if (!nested_structs_brackets) {
+      s_val = gst_value_serialize (v);
+    } else {
+      if (GST_VALUE_HOLDS_STRUCTURE (v))
+        s_val =
+            gst_structure_serialize_full (gst_value_get_structure (v), flags);
+      else if (GST_VALUE_HOLDS_CAPS (v))
+        s_val = gst_caps_serialize (gst_value_get_caps (v), flags);
+    }
     if (s_val != NULL) {
       if (print_type) {
         g_string_append_c (s, '(');
         g_string_append (s, _priv_gst_value_gtype_to_abbr (G_VALUE_TYPE (v)));
         g_string_append_c (s, ')');
       }
+
+      if (nested_structs_brackets)
+        g_string_append_c (s, '[');
       g_string_append (s, s_val);
+      if (nested_structs_brackets)
+        g_string_append_c (s, ']');
       g_free (s_val);
       if (i < alen - 1) {
         g_string_append_len (s, ", ", 2);
       }
     } else {
-      GST_WARNING ("Could not serialize list/array value of type '%s'",
+      g_critical ("Could not serialize list/array value of type '%s'",
           G_VALUE_TYPE_NAME (v));
     }
   }
@@ -442,7 +458,7 @@ _gst_value_serialize_g_value_array (const GValue * value, const gchar * begin,
         g_string_append_len (s, ", ", 2);
       }
     } else {
-      GST_WARNING ("Could not serialize list/array value of type '%s'",
+      g_critical ("Could not serialize list/array value of type '%s'",
           G_VALUE_TYPE_NAME (v));
     }
   }
@@ -1242,7 +1258,8 @@ gst_value_compare_g_value_array (const GValue * value1, const GValue * value2)
 static gchar *
 gst_value_serialize_value_list (const GValue * value)
 {
-  return _priv_gst_value_serialize_any_list (value, "{ ", " }", TRUE);
+  return _priv_gst_value_serialize_any_list (value, "{ ", " }", TRUE,
+      GST_SERIALIZE_FLAG_BACKWARD_COMPAT);
 }
 
 static gboolean
@@ -1256,7 +1273,8 @@ gst_value_deserialize_value_list (GValue * dest, const gchar * s,
 static gchar *
 gst_value_serialize_value_array (const GValue * value)
 {
-  return _priv_gst_value_serialize_any_list (value, "< ", " >", TRUE);
+  return _priv_gst_value_serialize_any_list (value, "< ", " >", TRUE,
+      GST_SERIALIZE_FLAG_BACKWARD_COMPAT);
 }
 
 static gboolean
@@ -1512,7 +1530,7 @@ gst_value_deserialize_int_range (GValue * dest, const gchar * s)
 static void
 gst_value_init_int64_range (GValue * value)
 {
-  gint64 *vals = g_slice_alloc0 (3 * sizeof (gint64));
+  gint64 *vals = g_malloc0 (3 * sizeof (gint64));
   value->data[0].v_pointer = vals;
   INT64_RANGE_MIN (value) = 0;
   INT64_RANGE_MAX (value) = 0;
@@ -1523,7 +1541,7 @@ static void
 gst_value_free_int64_range (GValue * value)
 {
   g_return_if_fail (GST_VALUE_HOLDS_INT64_RANGE (value));
-  g_slice_free1 (3 * sizeof (gint64), value->data[0].v_pointer);
+  g_free (value->data[0].v_pointer);
   value->data[0].v_pointer = NULL;
 }
 
@@ -1898,7 +1916,7 @@ gst_value_init_fraction_range (GValue * value)
 
   ftype = GST_TYPE_FRACTION;
 
-  value->data[0].v_pointer = vals = g_slice_alloc0 (2 * sizeof (GValue));
+  value->data[0].v_pointer = vals = g_malloc0 (2 * sizeof (GValue));
   g_value_init (&vals[0], ftype);
   g_value_init (&vals[1], ftype);
 }
@@ -1912,7 +1930,7 @@ gst_value_free_fraction_range (GValue * value)
     /* we know the two values contain fractions without internal allocs */
     /* g_value_unset (&vals[0]); */
     /* g_value_unset (&vals[1]); */
-    g_slice_free1 (2 * sizeof (GValue), vals);
+    g_free (vals);
     value->data[0].v_pointer = NULL;
   }
 }
@@ -2316,6 +2334,8 @@ _priv_gst_value_get_abbrs (gint * n_abbrs)
       {"date", G_TYPE_DATE}
       ,
       {"datetime", GST_TYPE_DATE_TIME}
+      ,
+      {"gdatetime", G_TYPE_DATE_TIME}
       ,
       {"bitmask", GST_TYPE_BITMASK}
       ,
@@ -4180,15 +4200,23 @@ gst_value_serialize_gflags (const GValue * value)
   result = g_strdup ("");
   while (flags) {
     fl = g_flags_get_first_value (klass, flags);
-    if (fl != NULL) {
-      tmp = g_strconcat (result, (first ? "" : "+"), fl->value_name, NULL);
-      g_free (result);
-      result = tmp;
-      first = FALSE;
-
-      /* clear flag */
-      flags &= ~fl->value;
+    if (fl == NULL) {
+      if (flags) {
+        g_critical ("Could not serialize invalid flags 0x%x of type %s",
+            flags, G_VALUE_TYPE_NAME (value));
+        g_free (result);
+        result = g_strdup ("0");
+      }
+      break;
     }
+
+    tmp = g_strconcat (result, (first ? "" : "+"), fl->value_name, NULL);
+    g_free (result);
+    result = tmp;
+    first = FALSE;
+
+    /* clear flag */
+    flags &= ~fl->value;
   }
   g_type_class_unref (klass);
 
@@ -4781,6 +4809,104 @@ gst_value_union_structure_structure (GValue * dest, const GValue * src1,
 out:
   gst_structure_free (result);
   return ret;
+}
+
+static gboolean
+gst_value_union_fraction_fraction_range (GValue * dest, const GValue * src1,
+    const GValue * src2)
+{
+  GValue *vals;
+  int f_n, f_d, fr_start_n, fr_start_d, fr_end_n, fr_end_d;
+
+  g_return_val_if_fail (GST_VALUE_HOLDS_FRACTION (src1), FALSE);
+  g_return_val_if_fail (GST_VALUE_HOLDS_FRACTION_RANGE (src2), FALSE);
+
+  /* Fraction */
+  f_n = src1->data[0].v_int;
+  f_d = src1->data[1].v_int;
+
+  vals = src2->data[0].v_pointer;
+  /* Fraction range start */
+  fr_start_n = vals[0].data[0].v_int;
+  fr_start_d = vals[0].data[1].v_int;
+  /* Fraction range end */
+  fr_end_n = vals[1].data[0].v_int;
+  fr_end_d = vals[1].data[1].v_int;
+
+  /* Check if it's already in the range. This is the only case in which we can
+   * successfully perform a union. */
+  if (gst_util_fraction_compare (f_n, f_d, fr_start_n, fr_start_d) >= 0 &&
+      gst_util_fraction_compare (f_n, f_d, fr_end_n, fr_end_d) <= 0) {
+    if (dest)
+      gst_value_init_and_copy (dest, src2);
+    return TRUE;
+  }
+
+  return FALSE;
+}
+
+static gboolean
+gst_value_union_fraction_range_fraction_range (GValue * dest,
+    const GValue * src1, const GValue * src2)
+{
+  GValue *vals1, *vals2;
+  int fr1_start_n, fr1_start_d, fr1_end_n, fr1_end_d;
+  int fr2_start_n, fr2_start_d, fr2_end_n, fr2_end_d;
+  int fr_start_n, fr_start_d, fr_end_n, fr_end_d;
+
+  g_return_val_if_fail (GST_VALUE_HOLDS_FRACTION_RANGE (src1), FALSE);
+  g_return_val_if_fail (GST_VALUE_HOLDS_FRACTION_RANGE (src2), FALSE);
+
+  vals1 = src1->data[0].v_pointer;
+  g_return_val_if_fail (vals1 != NULL, FALSE);
+
+  fr1_start_n = vals1[0].data[0].v_int;
+  fr1_start_d = vals1[0].data[1].v_int;
+  fr1_end_n = vals1[1].data[0].v_int;
+  fr1_end_d = vals1[1].data[1].v_int;
+
+  vals2 = src2->data[0].v_pointer;
+  g_return_val_if_fail (vals2 != NULL, FALSE);
+
+  fr2_start_n = vals2[0].data[0].v_int;
+  fr2_start_d = vals2[0].data[1].v_int;
+  fr2_end_n = vals2[1].data[0].v_int;
+  fr2_end_d = vals2[1].data[1].v_int;
+
+  /* Ranges are completely disjoint: end of one range is less than the start of
+   * other range */
+  if (gst_util_fraction_compare (fr2_end_n, fr2_end_d, fr1_start_n,
+          fr1_start_d) < 0
+      || gst_util_fraction_compare (fr1_end_n, fr1_end_d, fr2_start_n,
+          fr2_start_d) < 0)
+    return FALSE;
+
+  /* Ranges overlap, union is trivial */
+  if (!dest)
+    return TRUE;
+
+  if (gst_util_fraction_compare (fr1_start_n, fr1_start_d, fr2_start_n,
+          fr2_start_d) < 0) {
+    fr_start_n = fr1_start_n;
+    fr_start_d = fr1_start_d;
+  } else {
+    fr_start_n = fr2_start_n;
+    fr_start_d = fr2_start_d;
+  }
+
+  if (gst_util_fraction_compare (fr1_end_n, fr1_end_d, fr2_end_n,
+          fr2_end_d) > 0) {
+    fr_end_n = fr1_end_n;
+    fr_end_d = fr1_end_d;
+  } else {
+    fr_end_n = fr2_end_n;
+    fr_end_d = fr2_end_d;
+  }
+
+  g_value_init (dest, GST_TYPE_FRACTION_RANGE);
+  gst_value_set_fraction_range_full (dest, fr_start_n, fr_start_d, fr_end_n,
+      fr_end_d);
+  return TRUE;
 }
 
 /****************
@@ -7268,9 +7394,9 @@ gst_value_deserialize_date (GValue * dest, const gchar * s)
   return TRUE;
 }
 
-/*************
+/***************
  * GstDateTime *
- *************/
+ ***************/
 
 static gint
 gst_value_compare_date_time (const GValue * value1, const GValue * value2)
@@ -7331,6 +7457,111 @@ static void
 gst_value_transform_string_date (const GValue * src_value, GValue * dest_value)
 {
   gst_value_deserialize_date (dest_value, src_value->data[0].v_pointer);
+}
+
+/*************
+ * GDateTime *
+ *************/
+
+static gint
+gst_value_compare_g_date_time (const GValue * value1, const GValue * value2)
+{
+  const GDateTime *date1 = (const GDateTime *) g_value_get_boxed (value1);
+  const GDateTime *date2 = (const GDateTime *) g_value_get_boxed (value2);
+
+  if (date1 == date2)
+    return GST_VALUE_EQUAL;
+
+  if ((date1 == NULL) && (date2 != NULL)) {
+    return GST_VALUE_LESS_THAN;
+  }
+  if ((date2 == NULL) && (date1 != NULL)) {
+    return GST_VALUE_LESS_THAN;
+  }
+
+  return g_date_time_compare (date1, date2);
+}
+
+#ifndef GSTREAMER_LITE
+static gchar *
+gst_value_serialize_g_date_time (const GValue * val)
+{
+  GDateTime *date = (GDateTime *) g_value_get_boxed (val);
+
+  if (date == NULL)
+    return g_strdup ("null");
+
+  return g_date_time_format_iso8601 (date);
+}
+
+static gboolean
+gst_value_deserialize_g_date_time (GValue * dest, const gchar * s)
+{
+  GDateTime *datetime;
+
+  if (!s || strcmp (s, "null") == 0) {
+    return FALSE;
+  }
+
+  /* The Gstreamer iso8601 parser is a bit more forgiving */
+  datetime =
+      gst_date_time_to_g_date_time (gst_date_time_new_from_iso8601_string (s));
+  if (datetime != NULL) {
+    g_value_take_boxed (dest, datetime);
+    return TRUE;
+  }
+  GST_WARNING ("Failed to deserialize date time string '%s' to GLibDateTime",
+      s);
+  return FALSE;
+}
+#endif // GSTREAMER_LITE
+
+/*********
+ * bytes *
+ *********/
+
+static gint
+gst_value_compare_bytes (const GValue * value1, const GValue * value2)
+{
+  GBytes *bytes1 = (GBytes *) g_value_get_boxed (value1);
+  GBytes *bytes2 = (GBytes *) g_value_get_boxed (value2);
+
+  if (G_UNLIKELY (!bytes1 || !bytes2)) {
+    if (bytes1 == bytes2)
+      return GST_VALUE_EQUAL;
+    else
+      return GST_VALUE_UNORDERED;
+  }
+
+  return g_bytes_compare (bytes1, bytes2);
+}
+
+static gchar *
+gst_value_serialize_bytes (const GValue * value)
+{
+  GBytes *bytes = (GBytes *) g_value_get_boxed (value);
+  gsize len = 0;
+  const guint8 *data;
+
+  data = bytes ? g_bytes_get_data (bytes, &len) : NULL;
+
+  return g_base64_encode (data, len);
+}
+
+static gboolean
+gst_value_deserialize_bytes (GValue * dest, const gchar * s)
+{
+  gsize len;
+  guint8 *data;
+
+  if (!s) {
+    g_value_set_boxed (dest, g_bytes_new (NULL, 0));
+    return TRUE;
+  }
+
+  data = g_base64_decode (s, &len);
+  g_value_set_boxed (dest, g_bytes_new_take (data, len));
+  return TRUE;
 }
 
 
@@ -7683,6 +7914,16 @@ gst_value_deserialize_flagset (GValue * dest, const gchar * s)
   if (G_UNLIKELY ((mask == 0 && errno == EINVAL) || cur == next))
     goto try_as_flags_string;
 
+  if (g_str_has_prefix (cur, "0x") || g_str_has_prefix (cur, "0X"))
+    cur += 2;
+
+  /* Flagsets are 32 bits hex numbers, so do not accept any number that has more
+   * then 8 characters. strtoul() accepts unlimited number of leading zeros and
+   * 64bit numbers on 64bit platforms.
+   */
+  if ((next - cur) > 8)
+    return FALSE;
+
   /* Next char should be NULL terminator, or a ':'. If ':', we need the flag string after */
   if (G_UNLIKELY (next[0] == 0)) {
     res = TRUE;
@@ -7729,12 +7970,12 @@ try_as_flags_string:
     if (end != NULL) {
       gchar *class_name = g_strndup (set_class, end - set_class);
       GType flags_type = g_type_from_name (class_name);
-      if (flags_type == 0) {
+      if (flags_type == G_TYPE_INVALID) {
         GST_TRACE ("Looking for dynamic type %s", class_name);
         gst_dynamic_type_factory_load (class_name);
       }
 
-      if (flags_type != 0) {
+      if (flags_type != G_TYPE_INVALID) {
         flags_klass = g_type_class_ref (flags_type);
         GST_TRACE ("Going to parse %s as %s", s, class_name);
       }
@@ -8078,7 +8319,11 @@ _priv_gst_value_initialize (void)
   REGISTER_SERIALIZATION (gst_caps_get_type (), caps);
   REGISTER_SERIALIZATION (gst_tag_list_get_type (), tag_list);
   REGISTER_SERIALIZATION (G_TYPE_DATE, date);
+  REGISTER_SERIALIZATION (G_TYPE_BYTES, bytes);
   REGISTER_SERIALIZATION (gst_date_time_get_type (), date_time);
+  #ifndef GSTREAMER_LITE
+  REGISTER_SERIALIZATION (G_TYPE_DATE_TIME, g_date_time);
+  #endif // GSTREAMER_LITE
   REGISTER_SERIALIZATION (gst_bitmask_get_type (), bitmask);
   REGISTER_SERIALIZATION (gst_structure_get_type (), structure);
 #ifndef GSTREAMER_LITE
@@ -8226,6 +8471,10 @@ _priv_gst_value_initialize (void)
       gst_value_union_flagset_flagset);
   gst_value_register_union_func (GST_TYPE_STRUCTURE, GST_TYPE_STRUCTURE,
       gst_value_union_structure_structure);
+  gst_value_register_union_func (GST_TYPE_FRACTION, GST_TYPE_FRACTION_RANGE,
+      gst_value_union_fraction_fraction_range);
+  gst_value_register_union_func (GST_TYPE_FRACTION_RANGE,
+      GST_TYPE_FRACTION_RANGE, gst_value_union_fraction_range_fraction_range);
 
 #if GST_VERSION_NANO == 1
   /* If building from git master, check starting array sizes matched actual size
@@ -8250,14 +8499,6 @@ _priv_gst_value_initialize (void)
         "Please set GST_VALUE_SUBTRACT_TABLE_DEFAULT_SIZE to %u in gstvalue.c",
         gst_value_subtract_funcs->len);
   }
-#endif
-
-#if 0
-  /* Implement these if needed */
-  gst_value_register_union_func (GST_TYPE_FRACTION, GST_TYPE_FRACTION_RANGE,
-      gst_value_union_fraction_fraction_range);
-  gst_value_register_union_func (GST_TYPE_FRACTION_RANGE,
-      GST_TYPE_FRACTION_RANGE, gst_value_union_fraction_range_fraction_range);
 #endif
 }
 

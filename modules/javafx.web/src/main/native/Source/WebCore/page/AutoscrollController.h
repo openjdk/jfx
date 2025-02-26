@@ -32,22 +32,25 @@
 namespace WebCore {
 
 class EventHandler;
-class Frame;
-class FrameView;
+class LocalFrame;
+class LocalFrameView;
 class Node;
 class PlatformMouseEvent;
 class RenderBox;
 class RenderObject;
 
-enum AutoscrollType {
-    NoAutoscroll,
-    AutoscrollForDragAndDrop,
-    AutoscrollForSelection,
+enum class AutoscrollType : uint8_t {
+    None,
+    DragAndDrop,
+    Selection,
 #if ENABLE(PAN_SCROLLING)
-    AutoscrollForPanCanStop,
-    AutoscrollForPan,
+    PanCanStop,
+    Pan,
 #endif
 };
+
+// When the autoscroll or the panScroll is triggered when do the scroll every 50ms to make it smooth.
+constexpr Seconds autoscrollInterval { 50_ms };
 
 // AutscrollController handles autoscroll and pan scroll for EventHandler.
 class AutoscrollController {
@@ -73,12 +76,12 @@ private:
     void autoscrollTimerFired();
     void startAutoscrollTimer();
 #if ENABLE(PAN_SCROLLING)
-    void updatePanScrollState(FrameView*, const IntPoint&);
+    void updatePanScrollState(LocalFrameView*, const IntPoint&);
 #endif
 
     Timer m_autoscrollTimer;
-    WeakPtr<RenderBox> m_autoscrollRenderer;
-    AutoscrollType m_autoscrollType { NoAutoscroll };
+    SingleThreadWeakPtr<RenderBox> m_autoscrollRenderer;
+    AutoscrollType m_autoscrollType { AutoscrollType::None };
     IntPoint m_dragAndDropAutoscrollReferencePosition;
     WallTime m_dragAndDropAutoscrollStartTime;
 #if ENABLE(PAN_SCROLLING)

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -27,23 +27,28 @@ package test.javafx.geometry;
 
 import javafx.geometry.Point2D;
 import javafx.geometry.Rectangle2D;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class Rectangle2DTest {
 
-    @Test(expected=IllegalArgumentException.class)
+    @Test
     public void testConstruction1() {
-        new Rectangle2D(0, 0, -1, 0);
+        assertThrows(IllegalArgumentException.class, () -> {
+            new Rectangle2D(0, 0, -1, 0);
+        });
     }
 
-    @Test(expected=IllegalArgumentException.class)
+    @Test
     public void testConstruction2() {
-        new Rectangle2D(0, 0, 0, -1);
+        assertThrows(IllegalArgumentException.class, () -> {
+            new Rectangle2D(0, 0, 0, -1);
+        });
     }
 
     @Test

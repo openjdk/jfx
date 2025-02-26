@@ -40,7 +40,11 @@ struct InlineCallFrame;
 class CallFrame;
 class JSFunction;
 
+DECLARE_COMPACT_ALLOCATOR_WITH_HEAP_IDENTIFIER(InlineCallFrame);
+
 struct InlineCallFrame {
+    WTF_MAKE_STRUCT_FAST_COMPACT_ALLOCATED_WITH_HEAP_IDENTIFIER(InlineCallFrame);
+
     enum Kind {
         Call,
         Construct,
@@ -54,7 +58,10 @@ struct InlineCallFrame {
         GetterCall,
         SetterCall,
         ProxyObjectLoadCall,
+        ProxyObjectStoreCall,
+        ProxyObjectInCall,
         BoundFunctionCall,
+        BoundFunctionTailCall,
     };
     static constexpr unsigned bitWidthOfKind = 4;
 
@@ -66,10 +73,13 @@ struct InlineCallFrame {
         case GetterCall:
         case SetterCall:
         case ProxyObjectLoadCall:
+        case ProxyObjectStoreCall:
+        case ProxyObjectInCall:
         case BoundFunctionCall:
             return CallMode::Regular;
         case TailCall:
         case TailCallVarargs:
+        case BoundFunctionTailCall:
             return CallMode::Tail;
         case Construct:
         case ConstructVarargs:
@@ -114,7 +124,10 @@ struct InlineCallFrame {
         case GetterCall:
         case SetterCall:
         case ProxyObjectLoadCall:
+        case ProxyObjectStoreCall:
+        case ProxyObjectInCall:
         case BoundFunctionCall:
+        case BoundFunctionTailCall:
             return CodeForCall;
         case Construct:
         case ConstructVarargs:
@@ -140,6 +153,7 @@ struct InlineCallFrame {
         switch (kind) {
         case TailCall:
         case TailCallVarargs:
+        case BoundFunctionTailCall:
             return true;
         default:
             return false;

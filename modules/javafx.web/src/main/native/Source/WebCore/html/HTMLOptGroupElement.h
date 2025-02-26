@@ -30,7 +30,8 @@ namespace WebCore {
 class HTMLSelectElement;
 
 class HTMLOptGroupElement final : public HTMLElement {
-    WTF_MAKE_ISO_ALLOCATED(HTMLOptGroupElement);
+    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(HTMLOptGroupElement);
+    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(HTMLOptGroupElement);
 public:
     static Ref<HTMLOptGroupElement> create(const QualifiedName&, Document&);
 
@@ -44,7 +45,7 @@ private:
 
     const AtomString& formControlType() const;
     bool isFocusable() const final;
-    void parseAttribute(const QualifiedName&, const AtomString&) final;
+    void attributeChanged(const QualifiedName&, const AtomString& oldValue, const AtomString& newValue, AttributeModificationReason) final;
     bool rendererIsNeeded(const RenderStyle&) final { return false; }
 
     void childrenChanged(const ChildChange&) final;

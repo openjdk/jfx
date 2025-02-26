@@ -446,18 +446,6 @@ static const GLfloat* YCbCrToRGBMatrixForRangeAndTransferFunction(PixelRange ran
     return iterator->second;
 }
 
-inline bool GraphicsContextGLCVCocoa::TextureContent::operator==(const TextureContent& other) const
-{
-    return surface == other.surface
-        && surfaceSeed == other.surfaceSeed
-        && level == other.level
-        && internalFormat == other.internalFormat
-        && format == other.format
-        && type == other.type
-        && unpackFlipY == other.unpackFlipY
-        && orientation == other.orientation;
-}
-
 std::unique_ptr<GraphicsContextGLCVCocoa> GraphicsContextGLCVCocoa::create(GraphicsContextGLCocoa& context)
 {
     std::unique_ptr<GraphicsContextGLCVCocoa> cv { new GraphicsContextGLCVCocoa(context) };
@@ -505,7 +493,7 @@ GraphicsContextGLCVCocoa::GraphicsContextGLCVCocoa(GraphicsContextGLCocoa& owner
 
     const bool useTexture2D = m_owner.drawingBufferTextureTarget() == GL_TEXTURE_2D;
 
-#if PLATFORM(MAC) || PLATFORM(MACCATALYST)
+#if PLATFORM(MAC)
     if (!useTexture2D) {
         GL_RequestExtensionANGLE("GL_ANGLE_texture_rectangle");
         GL_RequestExtensionANGLE("GL_EXT_texture_format_BGRA8888");
@@ -614,7 +602,7 @@ bool GraphicsContextGLCVCocoa::copyVideoSampleToTexture(const VideoFrameCV& vide
         return false;
 
     auto orientation = videoFrame.orientation();
-    TextureContent content { reinterpret_cast<intptr_t>(surface), IOSurfaceGetSeed(surface), level, internalFormat, format, type, unpackFlipY, orientation };
+    TextureContent content { reinterpret_cast<intptr_t>(surface), IOSurfaceGetID(surface), IOSurfaceGetSeed(surface), level, internalFormat, format, type, unpackFlipY, orientation };
     auto it = m_knownContent.find(outputTexture);
     if (it != m_knownContent.end() && it->value == content) {
         // If the texture hasn't been modified since the last time we copied to it, and the
@@ -623,7 +611,6 @@ bool GraphicsContextGLCVCocoa::copyVideoSampleToTexture(const VideoFrameCV& vide
     }
     if (!m_context || !GraphicsContextGLCocoa::makeCurrent(m_display, m_context))
         return false;
-
     // Compute transform that undoes the `orientation`, e.g. moves the origin to top left.
     // Even number of operations (flipX, flipY, swapXY) means a rotation.
     // Odd number of operations means a rotation and a flip.

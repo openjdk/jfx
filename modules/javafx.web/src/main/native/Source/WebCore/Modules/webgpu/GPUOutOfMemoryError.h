@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2021 Apple Inc. All rights reserved.
+ * Copyright (C) 2021-2023 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -25,38 +25,43 @@
 
 #pragma once
 
-#include <pal/graphics/WebGPU/WebGPUOutOfMemoryError.h>
+#include "WebGPUOutOfMemoryError.h"
 #include <wtf/RefCounted.h>
 #include <wtf/RefPtr.h>
+#include <wtf/text/WTFString.h>
 
 namespace WebCore {
 
 class GPUOutOfMemoryError : public RefCounted<GPUOutOfMemoryError> {
 public:
-    static Ref<GPUOutOfMemoryError> create()
+    static Ref<GPUOutOfMemoryError> create(String&& message)
     {
-        return adoptRef(*new GPUOutOfMemoryError());
+        return adoptRef(*new GPUOutOfMemoryError(WTFMove(message)));
     }
 
-    static Ref<GPUOutOfMemoryError> create(Ref<PAL::WebGPU::OutOfMemoryError>&& backing)
+    static Ref<GPUOutOfMemoryError> create(Ref<WebGPU::OutOfMemoryError>&& backing)
     {
         return adoptRef(*new GPUOutOfMemoryError(WTFMove(backing)));
     }
 
-    PAL::WebGPU::OutOfMemoryError* backing() { return m_backing.get(); }
-    const PAL::WebGPU::OutOfMemoryError* backing() const { return m_backing.get(); }
+    const String& message() const { return m_message; }
+
+    WebGPU::OutOfMemoryError* backing() { return m_backing.get(); }
+    const WebGPU::OutOfMemoryError* backing() const { return m_backing.get(); }
 
 private:
-    GPUOutOfMemoryError()
+    GPUOutOfMemoryError(String&& message)
+        : m_message(WTFMove(message))
     {
     }
 
-    GPUOutOfMemoryError(Ref<PAL::WebGPU::OutOfMemoryError>&& backing)
+    GPUOutOfMemoryError(Ref<WebGPU::OutOfMemoryError>&& backing)
         : m_backing(WTFMove(backing))
     {
     }
 
-    RefPtr<PAL::WebGPU::OutOfMemoryError> m_backing;
+    String m_message;
+    RefPtr<WebGPU::OutOfMemoryError> m_backing;
 };
 
 }

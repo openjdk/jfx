@@ -21,11 +21,11 @@
 #include "config.h"
 #include "UIEventWithKeyState.h"
 
-#include <wtf/IsoMallocInlines.h>
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
-WTF_MAKE_ISO_ALLOCATED_IMPL(UIEventWithKeyState);
+WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(UIEventWithKeyState);
 
 auto UIEventWithKeyState::modifiersFromInitializer(const EventModifierInit& initializer) -> OptionSet<Modifier>
 {
@@ -55,15 +55,13 @@ bool UIEventWithKeyState::getModifierState(const String& keyIdentifier) const
         return altKey();
     if (keyIdentifier == "Meta"_s)
         return metaKey();
-    if (keyIdentifier == "AltGraph"_s)
-        return altGraphKey();
     if (keyIdentifier == "CapsLock"_s)
         return capsLockKey();
     // FIXME: The specification also has Fn, FnLock, Hyper, NumLock, Super, ScrollLock, Symbol, SymbolLock.
     return false;
 }
 
-void UIEventWithKeyState::setModifierKeys(bool ctrlKey, bool altKey, bool shiftKey, bool metaKey, bool altGraphKey)
+void UIEventWithKeyState::setModifierKeys(bool ctrlKey, bool altKey, bool shiftKey, bool metaKey)
 {
     OptionSet<Modifier> result;
     if (ctrlKey)
@@ -74,8 +72,6 @@ void UIEventWithKeyState::setModifierKeys(bool ctrlKey, bool altKey, bool shiftK
         result.add(Modifier::ShiftKey);
     if (metaKey)
         result.add(Modifier::MetaKey);
-    if (altGraphKey)
-        result.add(Modifier::AltGraphKey);
     m_modifiers = result;
 }
 

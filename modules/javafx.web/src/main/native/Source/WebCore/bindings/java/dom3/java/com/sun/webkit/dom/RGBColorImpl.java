@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2017, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -36,6 +36,8 @@ public class RGBColorImpl implements RGBColor {
         SelfDisposer(final long peer) {
             this.peer = peer;
         }
+
+        @Override
         public void dispose() {
             RGBColorImpl.dispose(peer);
         }
@@ -78,16 +80,19 @@ public class RGBColorImpl implements RGBColor {
 
 
 // Attributes
+    @Override
     public CSSPrimitiveValue getRed() {
         return CSSPrimitiveValueImpl.getImpl(getRedImpl(getPeer()));
     }
     native static long getRedImpl(long peer);
 
+    @Override
     public CSSPrimitiveValue getGreen() {
         return CSSPrimitiveValueImpl.getImpl(getGreenImpl(getPeer()));
     }
     native static long getGreenImpl(long peer);
 
+    @Override
     public CSSPrimitiveValue getBlue() {
         return CSSPrimitiveValueImpl.getImpl(getBlueImpl(getPeer()));
     }

@@ -271,6 +271,12 @@
 #else
 #error "Unsupported pointer width"
 #endif
+#elif BCOMPILER(MSVC)
+#if defined(_WIN64)
+#define BCPU_ADDRESS64 1
+#else
+#define BCPU_ADDRESS32 1
+#endif
 #else
 #error "Unsupported compiler for bmalloc"
 #endif
@@ -285,12 +291,14 @@
 #else
 #error "Unknown endian"
 #endif
+#elif BCOMPILER(MSVC)
+#define BCPU_LITTLE_ENDIAN 1
 #else
 #error "Unsupported compiler for bmalloc"
 #endif
 
 #if BCPU(ADDRESS64)
-#if BOS(DARWIN)
+#if BOS(DARWIN) && !BPLATFORM(IOS_FAMILY_SIMULATOR)
 #define BOS_EFFECTIVE_ADDRESS_WIDTH (bmalloc::getMSBSetConstexpr(MACH_VM_MAX_ADDRESS) + 1)
 #else
 /* We strongly assume that effective address width is <= 48 in 64bit architectures (e.g. NaN boxing). */
@@ -300,7 +308,11 @@
 #define BOS_EFFECTIVE_ADDRESS_WIDTH 32
 #endif
 
+#if BCOMPILER(GCC_COMPATIBLE)
 #define BATTRIBUTE_PRINTF(formatStringArgument, extraArguments) __attribute__((__format__(printf, formatStringArgument, extraArguments)))
+#else
+#define BATTRIBUTE_PRINTF(formatStringArgument, extraArguments)
+#endif
 
 /* Export macro support. Detects the attributes available for shared library symbol export
    decorations. */
@@ -354,24 +366,6 @@
 #define BUSE_PRECOMPUTED_CONSTANTS_VMPAGE16K 1
 #endif
 
-/* The unified Config record feature is not available for Windows because the
-   Windows port puts WTF in a separate DLL, and the offlineasm code accessing
-   the config record expects the config record to be directly accessible like
-   a global variable (and not have to go thru DLL shenanigans). C++ code would
-   resolve these DLL bindings automatically, but offlineasm does not.
-
-   The permanently freezing feature also currently relies on the Config records
-   being unified, and the Windows port also does not currently have an
-   implementation for the freezing mechanism anyway. For simplicity, we just
-   disable both the use of unified Config record and config freezing for the
-   Windows port.
-*/
-#if BOS(WINDOWS)
-#define BENABLE_UNIFIED_AND_FREEZABLE_CONFIG_RECORD 0
-#else
-#define BENABLE_UNIFIED_AND_FREEZABLE_CONFIG_RECORD 1
-#endif
-
 /* We only export the mallocSize and mallocGoodSize APIs if they're supported by the DebugHeap allocator (currently only Darwin) and the current bmalloc allocator (currently only libpas). */
 #if BUSE(LIBPAS) && BOS(DARWIN)
 #define BENABLE_MALLOC_SIZE 1
@@ -379,4 +373,12 @@
 #else
 #define BENABLE_MALLOC_SIZE 0
 #define BENABLE_MALLOC_GOOD_SIZE 0
+#endif
+/*disbale BUSE_TZONE for ARM64 too*/
+#if !defined(BUSE_TZONE)
+#if BUSE(LIBPAS) && BOS(DARWIN) && BCPU(ARM64)
+#define BUSE_TZONE 0
+#else
+#define BUSE_TZONE 0
+#endif
 #endif

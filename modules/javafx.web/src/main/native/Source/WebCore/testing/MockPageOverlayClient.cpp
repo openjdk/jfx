@@ -27,13 +27,14 @@
 #include "MockPageOverlayClient.h"
 
 #include "Document.h"
-#include "Frame.h"
 #include "GraphicsContext.h"
 #include "GraphicsLayer.h"
+#include "LocalFrame.h"
 #include "Page.h"
 #include "PageOverlayController.h"
 #include "PlatformMouseEvent.h"
 #include <wtf/NeverDestroyed.h>
+#include <wtf/text/MakeString.h>
 #include <wtf/text/StringBuilder.h>
 
 namespace WebCore {
@@ -72,8 +73,8 @@ String MockPageOverlayClient::layerTreeAsText(Page& page, OptionSet<LayerTreeAsT
     GraphicsLayer* viewOverlayRoot = page.pageOverlayController().viewOverlayRootLayer();
     GraphicsLayer* documentOverlayRoot = page.pageOverlayController().documentOverlayRootLayer();
 
-    return "View-relative:\n" + (viewOverlayRoot ? viewOverlayRoot->layerTreeAsText(options | LayerTreeAsTextOptions::IncludePageOverlayLayers) : "(no view-relative overlay root)"_s)
-        + "\n\nDocument-relative:\n" + (documentOverlayRoot ? documentOverlayRoot->layerTreeAsText(options | LayerTreeAsTextOptions::IncludePageOverlayLayers) : "(no document-relative overlay root)"_s);
+    return makeString("View-relative:\n"_s, (viewOverlayRoot ? viewOverlayRoot->layerTreeAsText(options | LayerTreeAsTextOptions::IncludePageOverlayLayers) : "(no view-relative overlay root)"_s)
+        , "\n\nDocument-relative:\n"_s, (documentOverlayRoot ? documentOverlayRoot->layerTreeAsText(options | LayerTreeAsTextOptions::IncludePageOverlayLayers) : "(no document-relative overlay root)"_s));
 }
 
 void MockPageOverlayClient::willMoveToPage(PageOverlay&, Page*)
@@ -105,12 +106,14 @@ void MockPageOverlayClient::drawRect(PageOverlay& overlay, GraphicsContext& cont
 
 bool MockPageOverlayClient::mouseEvent(PageOverlay& overlay, const PlatformMouseEvent& event)
 {
-    overlay.page()->mainFrame().document()->addConsoleMessage(MessageSource::Other, MessageLevel::Debug,
-        makeString("MockPageOverlayClient::mouseEvent location (", event.position().x(), ", ", event.position().y(), ')'));
+    if (auto* localMainFrame = dynamicDowncast<LocalFrame>(overlay.page()->mainFrame())) {
+        localMainFrame->document()->addConsoleMessage(MessageSource::Other, MessageLevel::Debug,
+            makeString("MockPageOverlayClient::mouseEvent location ("_s, event.position().x(), ", "_s, event.position().y(), ')'));
+    }
     return false;
 }
 
-void MockPageOverlayClient::didScrollFrame(PageOverlay&, Frame&)
+void MockPageOverlayClient::didScrollFrame(PageOverlay&, LocalFrame&)
 {
 }
 

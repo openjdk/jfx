@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2022 Apple Inc. All rights reserved.
+ * Copyright (C) 2022-2023 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -27,6 +27,7 @@
 
 #if USE(SYSTEM_PREVIEW)
 
+#include "Image.h"
 #include "NativeImage.h"
 #include "SystemImage.h"
 #include <optional>
@@ -40,6 +41,7 @@ OBJC_CLASS CIContext;
 namespace WebCore {
 
 class WEBCORE_EXPORT ARKitBadgeSystemImage final : public SystemImage {
+    WTF_MAKE_FAST_ALLOCATED;
 public:
     static Ref<ARKitBadgeSystemImage> create(Image& image)
     {

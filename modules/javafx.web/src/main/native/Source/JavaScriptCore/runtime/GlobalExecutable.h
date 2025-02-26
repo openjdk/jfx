@@ -39,9 +39,9 @@ public:
     unsigned lastLine() const { return m_lastLine; }
     unsigned endColumn() const { return m_endColumn; }
 
-    void recordParse(CodeFeatures features, LexicalScopeFeatures lexicalScopeFeatures, bool hasCapturedVariables, int lastLine, unsigned endColumn)
+    void recordParse(CodeFeatures features, LexicallyScopedFeatures lexicallyScopedFeatures, bool hasCapturedVariables, int lastLine, unsigned endColumn)
     {
-        Base::recordParse(features, lexicalScopeFeatures, hasCapturedVariables);
+        Base::recordParse(features, lexicallyScopedFeatures, hasCapturedVariables);
         m_lastLine = lastLine;
         m_endColumn = endColumn;
         ASSERT(endColumn != UINT_MAX);
@@ -50,12 +50,12 @@ public:
     DECLARE_VISIT_CHILDREN;
     DECLARE_VISIT_OUTPUT_CONSTRAINTS;
 
-    void finalizeUnconditionally(VM&);
+    void finalizeUnconditionally(VM&, CollectionScope);
 
 protected:
     friend class ScriptExecutable;
-    GlobalExecutable(Structure* structure, VM& vm, const SourceCode& sourceCode, bool isInStrictContext, DerivedContextType derivedContextType, bool isInArrowFunctionContext, bool isInsideOrdinaryFunction, EvalContextType evalContextType, Intrinsic intrinsic)
-        : Base(structure, vm, sourceCode, isInStrictContext ? StrictModeLexicalFeature : NoLexicalFeatures, derivedContextType, isInArrowFunctionContext, isInsideOrdinaryFunction, evalContextType, intrinsic)
+    GlobalExecutable(Structure* structure, VM& vm, const SourceCode& sourceCode, LexicallyScopedFeatures lexicallyScopedFeatures, DerivedContextType derivedContextType, bool isInArrowFunctionContext, bool isInsideOrdinaryFunction, EvalContextType evalContextType, Intrinsic intrinsic)
+        : Base(structure, vm, sourceCode, lexicallyScopedFeatures, derivedContextType, isInArrowFunctionContext, isInsideOrdinaryFunction, evalContextType, intrinsic)
     {
     }
 

@@ -20,6 +20,7 @@
  */
 
 #include "gst_private.h"
+#include "glib-compat-private.h"
 
 #include <math.h>
 
@@ -103,7 +104,7 @@ gst_segment_copy (const GstSegment * segment)
   GstSegment *result = NULL;
 
   if (segment) {
-    result = (GstSegment *) g_slice_copy (sizeof (GstSegment), segment);
+    result = (GstSegment *) g_memdup2 (segment, sizeof (GstSegment));
   }
   return result;
 }
@@ -139,7 +140,7 @@ gst_segment_new (void)
 {
   GstSegment *result;
 
-  result = g_slice_new0 (GstSegment);
+  result = g_new0 (GstSegment, 1);
   gst_segment_init (result, GST_FORMAT_UNDEFINED);
 
   return result;
@@ -154,7 +155,7 @@ gst_segment_new (void)
 void
 gst_segment_free (GstSegment * segment)
 {
-  g_slice_free (GstSegment, segment);
+  g_free (segment);
 }
 
 /**
@@ -774,8 +775,8 @@ gst_segment_to_running_time_full (const GstSegment * segment, GstFormat format,
       stop = segment->start + segment->duration;
 
     /* cannot continue if no stop position set or invalid offset */
-    g_return_val_if_fail (stop != -1, 0);
-    g_return_val_if_fail (stop >= offset, 0);
+    if (stop == -1 || stop < offset)
+      return 0;
 
     stop -= offset;
 

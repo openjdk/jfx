@@ -46,12 +46,13 @@ class TextTrack;
 class TextTrackCue;
 
 class TextTrackCueBox : public HTMLElement {
-    WTF_MAKE_ISO_ALLOCATED(TextTrackCueBox);
+    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(TextTrackCueBox);
+    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(TextTrackCueBox);
 public:
     static Ref<TextTrackCueBox> create(Document&, TextTrackCue&);
 
     TextTrackCue* getCue() const;
-    virtual void applyCSSProperties(const IntSize&) { }
+    virtual void applyCSSProperties() { }
 
 protected:
     void initialize();
@@ -65,11 +66,14 @@ private:
 };
 
 class TextTrackCue : public RefCounted<TextTrackCue>, public EventTarget, public ActiveDOMObject {
-    WTF_MAKE_ISO_ALLOCATED(TextTrackCue);
+    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(TextTrackCue);
 public:
     static ExceptionOr<Ref<TextTrackCue>> create(Document&, double start, double end, DocumentFragment&);
 
+    void didMoveToNewDocument(Document&);
+
     TextTrack* track() const;
+    RefPtr<TextTrack> protectedTrack() const;
     void setTrack(TextTrack*);
 
     const AtomString& id() const { return m_id; }
@@ -106,9 +110,9 @@ public:
     bool isEqual(const TextTrackCue&, CueMatchRules) const;
 
     void willChange();
-    virtual void didChange();
+    virtual void didChange(bool = false);
 
-    virtual RefPtr<TextTrackCueBox> getDisplayTree(const IntSize& videoSize, int fontSize);
+    virtual RefPtr<TextTrackCueBox> getDisplayTree();
     virtual void removeDisplayTree();
 
     virtual RefPtr<DocumentFragment> getCueAsHTML();
@@ -116,11 +120,12 @@ public:
 
     String toJSONString() const;
 
-    using RefCounted::ref;
-    using RefCounted::deref;
+    // ActiveDOMObject.
+    void ref() const final { RefCounted::ref(); }
+    void deref() const final { RefCounted::deref(); }
 
     virtual void recalculateStyles() { m_displayTreeNeedsUpdate = true; }
-    virtual void setFontSize(int fontSize, const IntSize& videoSize, bool important);
+    virtual void setFontSize(int fontSize, bool important);
     virtual void updateDisplayTree(const MediaTime&) { }
 
     unsigned cueIndex() const;
@@ -131,12 +136,13 @@ public:
     virtual void pauseSpeaking() { }
     virtual void cancelSpeaking() { }
 
+    virtual bool cueContentsMatch(const TextTrackCue&) const;
+
 protected:
     TextTrackCue(Document&, const MediaTime& start, const MediaTime& end);
 
     Document* document() const;
 
-    virtual bool cueContentsMatch(const TextTrackCue&) const;
     virtual void toJSON(JSON::Object&) const;
 
 private:
@@ -147,11 +153,8 @@ private:
     void derefEventTarget() final { deref(); }
     using EventTarget::dispatchEvent;
     void dispatchEvent(Event&) final;
-    EventTargetInterface eventTargetInterface() const final { return TextTrackCueEventTargetInterfaceType; }
+    enum EventTargetInterfaceType eventTargetInterface() const final { return EventTargetInterfaceType::TextTrackCue; }
     ScriptExecutionContext* scriptExecutionContext() const final;
-
-    // ActiveDOMObject
-    const char* activeDOMObjectName() const final;
 
     void rebuildDisplayTree();
 
@@ -160,7 +163,7 @@ private:
     MediaTime m_endTime;
     int m_processingCueChanges { 0 };
 
-    TextTrack* m_track { nullptr };
+    WeakPtr<TextTrack, WeakPtrImplWithEventTargetData> m_track;
 
     RefPtr<DocumentFragment> m_cueNode;
     RefPtr<TextTrackCueBox> m_displayTree;

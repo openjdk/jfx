@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2013 Apple Inc.  All rights reserved.
+ * Copyright (C) 2013-2023 Apple Inc.  All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -30,14 +30,13 @@
 
 #include "ElementInlines.h"
 #include "HTMLSpanElement.h"
-#include "RubyElement.h"
-#include "RubyTextElement.h"
+#include "RenderTreePosition.h"
 #include "TextTrack.h"
-#include <wtf/IsoMallocInlines.h>
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
-WTF_MAKE_ISO_ALLOCATED_IMPL(WebVTTElement);
+WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(WebVTTElement);
 
 static const QualifiedName& nodeTypeToTagName(WebVTTNodeType nodeType)
 {
@@ -73,23 +72,21 @@ static const QualifiedName& nodeTypeToTagName(WebVTTNodeType nodeType)
     }
 }
 
-WebVTTElement::WebVTTElement(WebVTTNodeType nodeType, Document& document)
-    : Element(nodeTypeToTagName(nodeType), document, CreateElement)
-    , m_isPastNode(0)
+WebVTTElement::WebVTTElement(WebVTTNodeType nodeType, AtomString language, Document& document)
+    : Element(nodeTypeToTagName(nodeType), document, { })
     , m_webVTTNodeType(nodeType)
+    , m_language(language)
 {
 }
 
-Ref<WebVTTElement> WebVTTElement::create(WebVTTNodeType nodeType, Document& document)
+Ref<Element> WebVTTElement::create(WebVTTNodeType nodeType, AtomString language, Document& document)
 {
-    return adoptRef(*new WebVTTElement(nodeType, document));
+        return adoptRef(*new WebVTTElement(nodeType, language, document));
 }
 
 Ref<Element> WebVTTElement::cloneElementWithoutAttributesAndChildren(Document& targetDocument)
 {
-    Ref<WebVTTElement> clone = create(static_cast<WebVTTNodeType>(m_webVTTNodeType), targetDocument);
-    clone->setLanguage(m_language);
-    return clone;
+    return create(m_webVTTNodeType, m_language, targetDocument);
 }
 
 Ref<HTMLElement> WebVTTElement::createEquivalentHTMLElement(Document& document)
@@ -114,10 +111,13 @@ Ref<HTMLElement> WebVTTElement::createEquivalentHTMLElement(Document& document)
         htmlElement = HTMLElement::create(HTMLNames::uTag, document);
         break;
     case WebVTTNodeTypeRuby:
-        htmlElement = RubyElement::create(document);
+        htmlElement = HTMLElement::create(HTMLNames::rubyTag, document);
         break;
     case WebVTTNodeTypeRubyText:
-        htmlElement = RubyTextElement::create(document);
+        htmlElement = HTMLElement::create(HTMLNames::rtTag, document);
+        break;
+    case WebVTTNodeTypeNone:
+        ASSERT_NOT_REACHED();
         break;
     }
 

@@ -31,25 +31,29 @@
 #include "HitTestResult.h"
 #include "HTMLNames.h"
 #include "PaintInfo.h"
+#include "RenderBoxInlines.h"
+#include "RenderBoxModelObjectInlines.h"
 #include "RenderChildIterator.h"
 #include "RenderLayoutState.h"
-#include "RenderTableCell.h"
+#include "RenderObjectInlines.h"
+#include "RenderTableCellInlines.h"
 #include "RenderTableCol.h"
 #include "RenderTableRow.h"
+#include "RenderTableSectionInlines.h"
 #include "RenderTextControl.h"
 #include "RenderTreeBuilder.h"
 #include "RenderView.h"
 #include "StyleInheritedData.h"
 #include <limits>
-#include <wtf/IsoMallocInlines.h>
 #include <wtf/HashSet.h>
 #include <wtf/StackStats.h>
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
 using namespace HTMLNames;
 
-WTF_MAKE_ISO_ALLOCATED_IMPL(RenderTableSection);
+WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(RenderTableSection);
 
 // Those 2 variables are used to balance the memory consumption vs the repaint time on big tables.
 static const unsigned gMinTableSizeToUseFastPaintPathWithOverflowingCell = 75 * 75;
@@ -87,15 +91,17 @@ static inline void updateLogicalHeightForCell(RenderTableSection::RowStruct& row
 }
 
 RenderTableSection::RenderTableSection(Element& element, RenderStyle&& style)
-    : RenderBox(element, WTFMove(style), 0)
+    : RenderBox(Type::TableSection, element, WTFMove(style))
 {
     setInline(false);
+    ASSERT(isRenderTableSection());
 }
 
 RenderTableSection::RenderTableSection(Document& document, RenderStyle&& style)
-    : RenderBox(document, WTFMove(style), 0)
+    : RenderBox(Type::TableSection, document, WTFMove(style))
 {
     setInline(false);
+    ASSERT(isRenderTableSection());
 }
 
 RenderTableSection::~RenderTableSection() = default;
@@ -103,17 +109,17 @@ RenderTableSection::~RenderTableSection() = default;
 void RenderTableSection::styleDidChange(StyleDifference diff, const RenderStyle* oldStyle)
 {
     RenderBox::styleDidChange(diff, oldStyle);
-    propagateStyleToAnonymousChildren(PropagateToAllChildren);
+    propagateStyleToAnonymousChildren(StylePropagationType::AllChildren);
 
     // If border was changed, notify table.
     RenderTable* table = this->table();
-    if (table && oldStyle && oldStyle->border() != style().border())
+    if (table && oldStyle && !oldStyle->borderIsEquivalentForPainting(style()))
         table->invalidateCollapsedBorders();
 }
 
-void RenderTableSection::willBeRemovedFromTree(IsInternalMove isInternalMove)
+void RenderTableSection::willBeRemovedFromTree()
 {
-    RenderBox::willBeRemovedFromTree(isInternalMove);
+    RenderBox::willBeRemovedFromTree();
 
     // Preventively invalidate our cells as we may be re-inserted into
     // a new table which would require us to rebuild our structure.
@@ -287,7 +293,7 @@ LayoutUnit RenderTableSection::calcRowLogicalHeight()
                 // For row spanning cells, |r| is the last row in the span.
                 unsigned cellStartRow = cell->rowIndex();
 
-                if (cell->hasOverridingLogicalHeight()) {
+                if (cell->overridingLogicalHeight()) {
                     cell->clearIntrinsicPadding();
                     cell->clearOverridingContentSize();
                     cell->setChildNeedsLayout(MarkOnlyThis);
@@ -500,18 +506,19 @@ void RenderTableSection::relayoutCellIfFlexed(RenderTableCell& cell, int rowInde
     bool flexAllChildren = cell.style().logicalHeight().isFixed() || (!table()->style().logicalHeight().isAuto() && rowHeight != cell.logicalHeight());
 
     for (auto& renderer : childrenOfType<RenderBox>(cell)) {
-        if (renderer.style().logicalHeight().isPercentOrCalculated()
-            && (flexAllChildren || shouldFlexCellChild(cell, renderer))
-            && (!is<RenderTable>(renderer) || downcast<RenderTable>(renderer).hasSections())) {
+        if (renderer.style().logicalHeight().isPercentOrCalculated() && (flexAllChildren || shouldFlexCellChild(cell, renderer))) {
+            auto* renderTable = dynamicDowncast<RenderTable>(renderer);
+            if (!renderTable || renderTable->hasSections()) {
             cellChildrenFlex = true;
             break;
         }
     }
+    }
 
     if (!cellChildrenFlex) {
         if (TrackedRendererListHashSet* percentHeightDescendants = cell.percentHeightDescendants()) {
-            for (auto* descendant : *percentHeightDescendants) {
-                if (flexAllChildren || shouldFlexCellChild(cell, *descendant)) {
+            for (auto& descendant : *percentHeightDescendants) {
+                if (flexAllChildren || shouldFlexCellChild(cell, descendant)) {
                     cellChildrenFlex = true;
                     break;
                 }
@@ -662,13 +669,13 @@ void RenderTableSection::computeOverflowFromCells(unsigned totalRows, unsigned n
                 continue;
             if (r < totalRows - 1 && cell == primaryCellAt(r + 1, c))
                 continue;
-            addOverflowFromChild(cell);
+            addOverflowFromChild(*cell);
 #if ASSERT_ENABLED
             hasOverflowingCell |= cell->hasVisualOverflow();
 #endif
             if (cell->hasVisualOverflow() && !m_forceSlowPaintPathWithOverflowingCell) {
-                m_overflowingCells.add(cell);
-                if (m_overflowingCells.size() > maxAllowedOverflowingCellsCount) {
+                m_overflowingCells.add(*cell);
+                if (m_overflowingCells.computeSize() > maxAllowedOverflowingCellsCount) {
                     // We need to set m_forcesSlowPaintPath only if there is a least one overflowing cells as the hit testing code rely on this information.
                     m_forceSlowPaintPathWithOverflowingCell = true;
                     // The slow path does not make any use of the overflowing cells info, don't hold on to the memory.
@@ -936,18 +943,18 @@ void RenderTableSection::paint(PaintInfo& paintInfo, const LayoutPoint& paintOff
     if (pushedClip)
         popContentsClip(paintInfo, phase, adjustedPaintOffset);
 
-    if ((phase == PaintPhase::Outline || phase == PaintPhase::SelfOutline) && style().visibility() == Visibility::Visible)
+    if ((phase == PaintPhase::Outline || phase == PaintPhase::SelfOutline) && style().usedVisibility() == Visibility::Visible)
         paintOutline(paintInfo, LayoutRect(adjustedPaintOffset, size()));
 }
 
-static inline bool compareCellPositions(RenderTableCell* elem1, RenderTableCell* elem2)
+static inline bool compareCellPositions(const SingleThreadWeakPtr<RenderTableCell>& elem1, const SingleThreadWeakPtr<RenderTableCell>& elem2)
 {
     return elem1->rowIndex() < elem2->rowIndex();
 }
 
 // This comparison is used only when we have overflowing cells as we have an unsorted array to sort. We thus need
 // to sort both on rows and columns to properly repaint.
-static inline bool compareCellPositionsWithOverflowingCells(RenderTableCell* elem1, RenderTableCell* elem2)
+static inline bool compareCellPositionsWithOverflowingCells(const SingleThreadWeakPtr<RenderTableCell>& elem1, const SingleThreadWeakPtr<RenderTableCell>& elem2)
 {
     if (elem1->rowIndex() != elem2->rowIndex())
         return elem1->rowIndex() < elem2->rowIndex();
@@ -964,24 +971,25 @@ void RenderTableSection::paintCell(RenderTableCell* cell, PaintInfo& paintInfo, 
     if (paintPhase == PaintPhase::BlockBackground || paintPhase == PaintPhase::ChildBlockBackground) {
         // We need to handle painting a stack of backgrounds.  This stack (from bottom to top) consists of
         // the column group, column, row group, row, and then the cell.
-        RenderTableCol* column = table()->colElement(cell->col());
-        RenderTableCol* columnGroup = column ? column->enclosingColumnGroup() : nullptr;
 
         // Column groups and columns first.
         // FIXME: Columns and column groups do not currently support opacity, and they are being painted "too late" in
         // the stack, since we have already opened a transparency layer (potentially) for the table row group.
         // Note that we deliberately ignore whether or not the cell has a layer, since these backgrounds paint "behind" the
         // cell.
-        cell->paintBackgroundsBehindCell(paintInfo, cellPoint, columnGroup);
-        cell->paintBackgroundsBehindCell(paintInfo, cellPoint, column);
+        if (RenderTableCol* column = table()->colElement(cell->col())) {
+            if (RenderTableCol* columnGroup = column->enclosingColumnGroup())
+                cell->paintBackgroundsBehindCell(paintInfo, cellPoint, columnGroup, cellPoint);
+            cell->paintBackgroundsBehindCell(paintInfo, cellPoint, column, cellPoint);
+        }
 
         // Paint the row group next.
-        cell->paintBackgroundsBehindCell(paintInfo, cellPoint, this);
+        cell->paintBackgroundsBehindCell(paintInfo, cellPoint, this, paintOffset);
 
         // Paint the row next, but only if it doesn't have a layer.  If a row has a layer, it will be responsible for
         // painting the row background for the cell.
         if (!row.hasSelfPaintingLayer())
-            cell->paintBackgroundsBehindCell(paintInfo, cellPoint, &row);
+            cell->paintBackgroundsBehindCell(paintInfo, cellPoint, &row, cellPoint);
     }
     if ((!cell->hasSelfPaintingLayer() && !row.hasSelfPaintingLayer()))
         cell->paint(paintInfo, cellPoint);
@@ -1219,7 +1227,7 @@ void RenderTableSection::paintObject(PaintInfo& paintInfo, const LayoutPoint& pa
     CellSpan dirtiedColumns = this->dirtiedColumns(tableAlignedRect);
 
     if (dirtiedColumns.start < dirtiedColumns.end) {
-        if (!m_hasMultipleCellLevels && !m_overflowingCells.size()) {
+        if (!m_hasMultipleCellLevels && m_overflowingCells.isEmptyIgnoringNullReferences()) {
             if (paintInfo.phase == PaintPhase::CollapsedTableBorders) {
                 // Collapsed borders are painted from the bottom right to the top left so that precedence
                 // due to cell position is respected. We need to paint one row beyond the topmost dirtied
@@ -1277,13 +1285,13 @@ void RenderTableSection::paintObject(PaintInfo& paintInfo, const LayoutPoint& pa
 #if ASSERT_ENABLED
             unsigned totalRows = m_grid.size();
             unsigned totalCols = table()->columns().size();
-            ASSERT(m_overflowingCells.size() < totalRows * totalCols * gMaxAllowedOverflowingCellRatioForFastPaintPath);
+            ASSERT(m_overflowingCells.computeSize() < totalRows * totalCols * gMaxAllowedOverflowingCellRatioForFastPaintPath);
 #endif
 
             // To make sure we properly repaint the section, we repaint all the overflowing cells that we collected.
             auto cells = copyToVector(m_overflowingCells);
 
-            HashSet<RenderTableCell*> spanningCells;
+            HashSet<CheckedPtr<RenderTableCell>> spanningCells;
 
             for (unsigned r = dirtiedRows.start; r < dirtiedRows.end; r++) {
                 RenderTableRow* row = m_grid[r].rowRenderer;
@@ -1294,7 +1302,7 @@ void RenderTableSection::paintObject(PaintInfo& paintInfo, const LayoutPoint& pa
                     if (!current.hasCells())
                         continue;
                     for (unsigned i = 0; i < current.cells.size(); ++i) {
-                        if (m_overflowingCells.contains(current.cells[i]))
+                        if (m_overflowingCells.contains(*current.cells[i]))
                             continue;
 
                         if (current.cells[i]->rowSpan() > 1 || current.cells[i]->colSpan() > 1) {
@@ -1308,7 +1316,7 @@ void RenderTableSection::paintObject(PaintInfo& paintInfo, const LayoutPoint& pa
             }
 
             // Sort the dirty cells by paint order.
-            if (!m_overflowingCells.size())
+            if (m_overflowingCells.isEmptyIgnoringNullReferences())
                 std::stable_sort(cells.begin(), cells.end(), compareCellPositions);
             else
                 std::sort(cells.begin(), cells.end(), compareCellPositionsWithOverflowingCells);
@@ -1320,7 +1328,7 @@ void RenderTableSection::paintObject(PaintInfo& paintInfo, const LayoutPoint& pa
                 }
             } else {
                 for (unsigned i = 0; i < cells.size(); ++i)
-                    paintCell(cells[i], paintInfo, paintOffset);
+                    paintCell(cells[i].get(), paintInfo, paintOffset);
             }
         }
     }
@@ -1329,6 +1337,8 @@ void RenderTableSection::paintObject(PaintInfo& paintInfo, const LayoutPoint& pa
 void RenderTableSection::imageChanged(WrappedImagePtr, const IntRect*)
 {
     // FIXME: Examine cells and repaint only the rect the image paints in.
+    if (!parent())
+        return;
     repaint();
 }
 
@@ -1368,7 +1378,7 @@ void RenderTableSection::removeRedundantColumns()
     for (auto& rowItem : m_grid) {
         if (rowItem.row.size() <= maximumNumberOfColumns)
             continue;
-        rowItem.row.resize(maximumNumberOfColumns);
+        rowItem.row.shrink(maximumNumberOfColumns);
     }
 }
 
@@ -1489,13 +1499,10 @@ bool RenderTableSection::nodeAtPoint(const HitTestRequest& request, HitTestResul
             // table-specific hit-test method (which we should do for performance reasons anyway),
             // then we can remove this check.
             if (!row->hasSelfPaintingLayer()) {
-                LayoutPoint childPoint = flipForWritingModeForChild(*row, adjustedLocation);
-                if (row->nodeAtPoint(request, result, locationInContainer, childPoint, action)) {
-                    updateHitTestResult(result, toLayoutPoint(locationInContainer.point() - childPoint));
+                if (row->nodeAtPoint(request, result, locationInContainer, adjustedLocation, action))
                     return true;
                 }
             }
-        }
         return false;
     }
 

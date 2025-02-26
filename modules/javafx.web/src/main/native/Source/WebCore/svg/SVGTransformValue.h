@@ -1,7 +1,8 @@
 /*
  * Copyright (C) 2004, 2005, 2008 Nikolas Zimmermann <zimmermann@kde.org>
  * Copyright (C) 2004, 2005 Rob Buis <buis@kde.org>
- * Copyright (C) 2019 Apple Inc. All rights reserved.
+ * Copyright (C) 2019-2024 Apple Inc. All rights reserved.
+ * Copyright (C) 2014 Google Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Library General Public
@@ -75,7 +76,7 @@ public:
 
     SVGTransformValue(const SVGTransformValue& other)
         : m_type(other.m_type)
-        , m_matrix(SVGMatrix::create(other.matrix()->value()))
+        , m_matrix(SVGMatrix::create(other.matrix().value()))
         , m_angle(other.m_angle)
         , m_rotationCenter(other.m_rotationCenter)
     {
@@ -107,7 +108,8 @@ public:
     }
 
     SVGTransformType type() const { return m_type; }
-    const Ref<SVGMatrix>& matrix() const { return m_matrix; }
+    SVGMatrix& matrix() const { return m_matrix; }
+    Ref<SVGMatrix> protectedMatrix() const { return m_matrix; }
     float angle() const { return m_angle; }
     FloatPoint rotationCenter() const { return m_rotationCenter; }
 
@@ -118,7 +120,7 @@ public:
         m_type = SVG_TRANSFORM_MATRIX;
         m_angle = 0;
         m_rotationCenter = { };
-        m_matrix->setValue(matrix);
+        protectedMatrix()->setValue(matrix);
     }
 
     void matrixDidChange()
@@ -188,7 +190,7 @@ public:
     String valueAsString() const
     {
         StringBuilder builder;
-        builder.append(prefixForTransfromType(m_type));
+        builder.append(prefixForTransformType(m_type));
         switch (m_type) {
         case SVG_TRANSFORM_UNKNOWN:
             break;
@@ -214,26 +216,26 @@ public:
         return builder.toString();
     }
 
-    static const char* prefixForTransfromType(SVGTransformType type)
+    static ASCIILiteral prefixForTransformType(SVGTransformType type)
     {
         switch (type) {
         case SVG_TRANSFORM_UNKNOWN:
-            return "";
+            return ""_s;
         case SVG_TRANSFORM_MATRIX:
-            return "matrix(";
+            return "matrix("_s;
         case SVG_TRANSFORM_TRANSLATE:
-            return "translate(";
+            return "translate("_s;
         case SVG_TRANSFORM_SCALE:
-            return "scale(";
+            return "scale("_s;
         case SVG_TRANSFORM_ROTATE:
-            return "rotate(";
+            return "rotate("_s;
         case SVG_TRANSFORM_SKEWX:
-            return "skewX(";
+            return "skewX("_s;
         case SVG_TRANSFORM_SKEWY:
-            return "skewY(";
+            return "skewY("_s;
         }
         ASSERT_NOT_REACHED();
-        return "";
+        return ""_s;
     }
 
 private:
@@ -264,7 +266,7 @@ private:
 
     void appendScale(StringBuilder& builder) const
     {
-        appendFixedPrecisionNumbers(builder, m_matrix->value().xScale(), m_matrix->value().yScale());
+        appendFixedPrecisionNumbers(builder, m_matrix->a(), m_matrix->d());
     }
 
     void appendRotate(StringBuilder& builder) const

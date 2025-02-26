@@ -48,7 +48,7 @@ void DeviceOrientationController::didChangeDeviceOrientation(DeviceOrientationDa
 
 DeviceOrientationClient& DeviceOrientationController::deviceOrientationClient()
 {
-    return static_cast<DeviceOrientationClient&>(m_client);
+    return static_cast<DeviceOrientationClient&>(m_client.get());
 }
 
 #if PLATFORM(IOS_FAMILY)
@@ -58,13 +58,13 @@ DeviceOrientationClient& DeviceOrientationController::deviceOrientationClient()
 
 void DeviceOrientationController::suspendUpdates()
 {
-    m_client.stopUpdating();
+    m_client->stopUpdating();
 }
 
 void DeviceOrientationController::resumeUpdates()
 {
     if (!m_listeners.isEmpty())
-        m_client.startUpdating();
+        m_client->startUpdating();
 }
 
 #else
@@ -76,14 +76,15 @@ bool DeviceOrientationController::hasLastData()
 
 RefPtr<Event> DeviceOrientationController::getLastEvent()
 {
-    return DeviceOrientationEvent::create(eventNames().deviceorientationEvent, deviceOrientationClient().lastOrientation());
+    RefPtr orientation = deviceOrientationClient().lastOrientation();
+    return DeviceOrientationEvent::create(eventNames().deviceorientationEvent, orientation.get());
 }
 
 #endif // PLATFORM(IOS_FAMILY)
 
-const char* DeviceOrientationController::supplementName()
+ASCIILiteral DeviceOrientationController::supplementName()
 {
-    return "DeviceOrientationController";
+    return "DeviceOrientationController"_s;
 }
 
 DeviceOrientationController* DeviceOrientationController::from(Page* page)
@@ -96,11 +97,6 @@ bool DeviceOrientationController::isActiveAt(Page* page)
     if (DeviceOrientationController* self = DeviceOrientationController::from(page))
         return self->isActive();
     return false;
-}
-
-void provideDeviceOrientationTo(Page& page, DeviceOrientationClient& client)
-{
-    DeviceOrientationController::provideTo(&page, DeviceOrientationController::supplementName(), makeUnique<DeviceOrientationController>(client));
 }
 
 } // namespace WebCore

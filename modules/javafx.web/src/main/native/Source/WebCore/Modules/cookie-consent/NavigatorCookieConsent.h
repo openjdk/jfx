@@ -27,8 +27,8 @@
 
 #include "Supplementable.h"
 #include <wtf/Forward.h>
-#include <wtf/IsoMalloc.h>
 #include <wtf/RefCounted.h>
+#include <wtf/TZoneMalloc.h>
 
 namespace WebCore {
 
@@ -49,7 +49,7 @@ public:
 
 private:
     static NavigatorCookieConsent& from(Navigator&);
-    static const char* supplementName() { return "NavigatorCookieConsent"; }
+    static ASCIILiteral supplementName() { return "NavigatorCookieConsent"_s; }
 
     void requestCookieConsent(RequestCookieConsentOptions&&, Ref<DeferredPromise>&&);
 

@@ -269,6 +269,38 @@ gst_video_colorimetry_is_equal (const GstVideoColorimetry * cinfo,
   return CI_IS_EQUAL (cinfo, other);
 }
 
+/**
+ * gst_video_colorimetry_is_equivalent:
+ * @cinfo: a #GstVideoColorimetry
+ * @bitdepth: bitdepth of a format associated with @cinfo
+ * @other: another #GstVideoColorimetry
+ * @other_bitdepth: bitdepth of a format associated with @other
+ *
+ * Compare the 2 colorimetry sets for functionally equality
+ *
+ * Returns: %TRUE if @cinfo and @other are equivalent.
+ *
+ * Since: 1.22
+ */
+gboolean
+gst_video_colorimetry_is_equivalent (const GstVideoColorimetry * cinfo,
+    guint bitdepth, const GstVideoColorimetry * other, guint other_bitdepth)
+{
+  g_return_val_if_fail (cinfo != NULL, FALSE);
+  g_return_val_if_fail (other != NULL, FALSE);
+
+  if (cinfo->range != other->range || cinfo->matrix != other->matrix)
+    return FALSE;
+
+  if (!gst_video_color_primaries_is_equivalent (cinfo->primaries,
+          other->primaries)) {
+    return FALSE;
+  }
+
+  return gst_video_transfer_function_is_equivalent (cinfo->transfer, bitdepth,
+      other->transfer, other_bitdepth);
+}
+
 #define WP_C    0.31006, 0.31616
 #define WP_D65  0.31271, 0.32902
 #define WP_CENTRE (1/3), (1/3)
@@ -317,6 +349,35 @@ gst_video_color_primaries_get_info (GstVideoColorPrimaries primaries)
       G_N_ELEMENTS (color_primaries), NULL);
 
   return &color_primaries[primaries];
+}
+
+/**
+ * gst_video_color_primaries_is_equivalent:
+ * @primaries: a #GstVideoColorPrimaries
+ * @other: another #GstVideoColorPrimaries
+ *
+ * Checks whether @primaries and @other are functionally equivalent
+ *
+ * Returns: TRUE if @primaries and @other can be considered equivalent.
+ *
+ * Since: 1.22
+ */
+gboolean
+gst_video_color_primaries_is_equivalent (GstVideoColorPrimaries primaries,
+    GstVideoColorPrimaries other)
+{
+  if (primaries == other)
+    return TRUE;
+
+  /* smpte-170m and 240m use the same reference RGB primaries and white point */
+  if ((primaries == GST_VIDEO_COLOR_PRIMARIES_SMPTE170M ||
+          primaries == GST_VIDEO_COLOR_PRIMARIES_SMPTE240M) &&
+      (other == GST_VIDEO_COLOR_PRIMARIES_SMPTE170M ||
+          other == GST_VIDEO_COLOR_PRIMARIES_SMPTE240M)) {
+    return TRUE;
+  }
+
+  return FALSE;
 }
 
 /**

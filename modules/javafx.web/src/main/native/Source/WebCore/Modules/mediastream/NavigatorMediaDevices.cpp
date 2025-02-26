@@ -34,14 +34,14 @@
 #if ENABLE(MEDIA_STREAM)
 
 #include "Document.h"
-#include "Frame.h"
+#include "LocalFrame.h"
 #include "MediaDevices.h"
 #include "Navigator.h"
 
 namespace WebCore {
 
-NavigatorMediaDevices::NavigatorMediaDevices(DOMWindow* window)
-    : DOMWindowProperty(window)
+NavigatorMediaDevices::NavigatorMediaDevices(LocalDOMWindow* window)
+    : LocalDOMWindowProperty(window)
 {
 }
 
@@ -70,9 +70,9 @@ MediaDevices* NavigatorMediaDevices::mediaDevices() const
     return m_mediaDevices.get();
 }
 
-const char* NavigatorMediaDevices::supplementName()
+ASCIILiteral NavigatorMediaDevices::supplementName()
 {
-    return "NavigatorMediaDevices";
+    return "NavigatorMediaDevices"_s;
 }
 
 } // namespace WebCore

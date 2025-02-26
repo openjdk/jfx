@@ -27,7 +27,17 @@
 #pragma once
 
 #include "FontTaggedSettings.h"
+#include <wtf/WeakPtr.h>
 #include <wtf/text/AtomString.h>
+
+namespace WebCore {
+class FontLoadRequestClient;
+}
+
+namespace WTF {
+template<typename T> struct IsDeprecatedWeakRefSmartPointerException;
+template<> struct IsDeprecatedWeakRefSmartPointerException<WebCore::FontLoadRequestClient> : std::true_type { };
+}
 
 namespace WebCore {
 
@@ -37,7 +47,7 @@ class FontDescription;
 class FontLoadRequest;
 struct FontSelectionSpecifiedCapabilities;
 
-class FontLoadRequestClient {
+class FontLoadRequestClient : public CanMakeWeakPtr<FontLoadRequestClient> {
 public:
     virtual ~FontLoadRequestClient() = default;
     virtual void fontLoaded(FontLoadRequest&) { }

@@ -1,5 +1,6 @@
 /*
  * Copyright (C) Research In Motion Limited 2009-2010. All rights reserved.
+ * Copyright (C) 2021, 2022, 2023 Igalia S.L.
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Library General Public
@@ -19,7 +20,6 @@
 
 #pragma once
 
-#include "ImageBuffer.h"
 #include "RenderSVGResourceContainer.h"
 #include "SVGUnitTypes.h"
 
@@ -30,41 +30,40 @@ namespace WebCore {
 class GraphicsContext;
 class SVGMaskElement;
 
-struct MaskerData {
-    WTF_MAKE_STRUCT_FAST_ALLOCATED;
-    RefPtr<ImageBuffer> maskImage;
-};
-
 class RenderSVGResourceMasker final : public RenderSVGResourceContainer {
-    WTF_MAKE_ISO_ALLOCATED(RenderSVGResourceMasker);
+    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(RenderSVGResourceMasker);
+    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(RenderSVGResourceMasker);
 public:
     RenderSVGResourceMasker(SVGMaskElement&, RenderStyle&&);
     virtual ~RenderSVGResourceMasker();
 
     inline SVGMaskElement& maskElement() const;
+    inline Ref<SVGMaskElement> protectedMaskElement() const;
 
-    void removeAllClientsFromCache(bool markForInvalidation = true) override;
-    void removeClientFromCache(RenderElement&, bool markForInvalidation = true) override;
-    bool applyResource(RenderElement&, const RenderStyle&, GraphicsContext*&, OptionSet<RenderSVGResourceMode>) override;
-    FloatRect resourceBoundingBox(const RenderObject&) override;
+    void applyMask(PaintInfo&, const RenderLayerModelObject& targetRenderer, const LayoutPoint& adjustedPaintOffset);
+
+    FloatRect resourceBoundingBox(const RenderObject&, RepaintRectCalculation);
 
     inline SVGUnitTypes::SVGUnitType maskUnits() const;
     inline SVGUnitTypes::SVGUnitType maskContentUnits() const;
 
-    RenderSVGResourceType resourceType() const override { return MaskerResourceType; }
+    void invalidateMask()
+    {
+        m_masker.clear();
+    }
+
+    void removeReferencingCSSClient(const RenderElement&) final;
+
+    bool drawContentIntoContext(GraphicsContext&, const FloatRect& objectBoundingBox);
+    bool drawContentIntoContext(GraphicsContext&, const FloatRect& destinationRect, const FloatRect& sourceRect, ImagePaintingOptions);
 
 private:
     void element() const = delete;
 
-    ASCIILiteral renderName() const override { return "RenderSVGResourceMasker"_s; }
-
-    bool drawContentIntoMaskImage(MaskerData*, const DestinationColorSpace&, RenderObject*);
-    void calculateMaskContentRepaintRect();
-
-    FloatRect m_maskContentBoundaries;
-    HashMap<RenderObject*, std::unique_ptr<MaskerData>> m_masker;
+    ASCIILiteral renderName() const final { return "RenderSVGResourceMasker"_s; }
+    HashMap<SingleThreadWeakRef<const RenderLayerModelObject>, RefPtr<ImageBuffer>> m_masker;
 };
 
 }
 
-SPECIALIZE_TYPE_TRAITS_RENDER_SVG_RESOURCE(RenderSVGResourceMasker, MaskerResourceType)
+SPECIALIZE_TYPE_TRAITS_RENDER_OBJECT(RenderSVGResourceMasker, isRenderSVGResourceMasker())

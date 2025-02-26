@@ -28,7 +28,7 @@
 #include "ReportBody.h"
 #include "SecurityPolicyViolationEvent.h"
 #include "ViolationReportType.h"
-#include <wtf/IsoMalloc.h>
+#include <wtf/TZoneMalloc.h>
 
 namespace WebCore {
 
@@ -38,7 +38,7 @@ struct CSPInfo;
 struct SecurityPolicyViolationEventInit;
 
 class CSPViolationReportBody final : public ReportBody {
-    WTF_MAKE_ISO_ALLOCATED(CSPViolationReportBody);
+    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(CSPViolationReportBody);
 public:
     using Init = SecurityPolicyViolationEventInit;
 
@@ -63,6 +63,8 @@ public:
 private:
     CSPViolationReportBody(Init&&);
     CSPViolationReportBody(String&& documentURL, String&& referrer, String&& blockedURL, String&& effectiveDirective, String&& originalPolicy, String&& sourceFile, String&& sample, SecurityPolicyViolationEventDisposition, unsigned short statusCode, unsigned long lineNumber, unsigned long columnNumber);
+
+    ViolationReportType reportBodyType() const final { return ViolationReportType::ContentSecurityPolicy; }
 
     const String m_documentURL;
     const String m_referrer;

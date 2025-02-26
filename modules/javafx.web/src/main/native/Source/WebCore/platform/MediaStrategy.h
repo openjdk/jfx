@@ -33,7 +33,6 @@ namespace WebCore {
 class AudioDestination;
 class AudioIOCallback;
 class CDMFactory;
-struct NowPlayingInfo;
 class NowPlayingManager;
 
 class WEBCORE_EXPORT MediaStrategy {
@@ -43,10 +42,17 @@ public:
         AudioIOCallback&, const String& inputDeviceId, unsigned numberOfInputChannels, unsigned numberOfOutputChannels, float sampleRate) = 0;
 #endif
     virtual std::unique_ptr<NowPlayingManager> createNowPlayingManager() const;
-
+    void resetMediaEngines();
+    virtual bool hasThreadSafeMediaSourceSupport() const;
+#if ENABLE(MEDIA_SOURCE)
+    virtual void enableMockMediaSource();
+    bool mockMediaSourceEnabled() const;
+    static void addMockMediaSourceEngine();
+#endif
 protected:
     MediaStrategy();
     virtual ~MediaStrategy();
+    bool m_mockMediaSourceEnabled { false };
 };
 
 } // namespace WebCore

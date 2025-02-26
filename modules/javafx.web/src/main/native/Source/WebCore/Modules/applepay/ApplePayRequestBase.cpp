@@ -29,7 +29,7 @@
 #if ENABLE(APPLE_PAY)
 
 #include "PaymentCoordinator.h"
-#include <wtf/text/StringConcatenateNumbers.h>
+#include <wtf/text/MakeString.h>
 
 namespace WebCore {
 
@@ -51,17 +51,17 @@ static ExceptionOr<Vector<String>> convertAndValidate(Document& document, unsign
     for (auto& supportedNetwork : supportedNetworks) {
         auto validatedNetwork = paymentCoordinator.validatedPaymentNetwork(document, version, supportedNetwork);
         if (!validatedNetwork)
-            return Exception { TypeError, makeString("\"", supportedNetwork, "\" is not a valid payment network.") };
-        result.uncheckedAppend(*validatedNetwork);
+            return Exception { ExceptionCode::TypeError, makeString("\""_s, supportedNetwork, "\" is not a valid payment network."_s) };
+        result.append(*validatedNetwork);
     }
 
     return WTFMove(result);
 }
 
-ExceptionOr<ApplePaySessionPaymentRequest> convertAndValidate(Document& document, unsigned version, ApplePayRequestBase& request, const PaymentCoordinator& paymentCoordinator)
+ExceptionOr<ApplePaySessionPaymentRequest> convertAndValidate(Document& document, unsigned version, const ApplePayRequestBase& request, const PaymentCoordinator& paymentCoordinator)
 {
     if (!version || !paymentCoordinator.supportsVersion(document, version))
-        return Exception { InvalidAccessError, makeString('"', version, "\" is not a supported version.") };
+        return Exception { ExceptionCode::InvalidAccessError, makeString('"', version, "\" is not a supported version."_s) };
 
     ApplePaySessionPaymentRequest result;
     result.setVersion(version);
@@ -73,7 +73,7 @@ ExceptionOr<ApplePaySessionPaymentRequest> convertAndValidate(Document& document
     result.setMerchantCapabilities(merchantCapabilities.releaseReturnValue());
 
     if (requiresSupportedNetworks(version, request) && request.supportedNetworks.isEmpty())
-        return Exception { TypeError, "At least one supported network must be provided."_s };
+        return Exception { ExceptionCode::TypeError, "At least one supported network must be provided."_s };
 
     auto supportedNetworks = convertAndValidate(document, version, request.supportedNetworks, paymentCoordinator);
     if (supportedNetworks.hasException())
@@ -103,7 +103,7 @@ ExceptionOr<ApplePaySessionPaymentRequest> convertAndValidate(Document& document
     result.setApplicationData(request.applicationData);
 
     if (version >= 3)
-        result.setSupportedCountries(WTFMove(request.supportedCountries));
+        result.setSupportedCountries(Vector { request.supportedCountries });
 
 #if ENABLE(APPLE_PAY_INSTALLMENTS)
     if (request.installmentConfiguration) {
@@ -121,6 +121,14 @@ ExceptionOr<ApplePaySessionPaymentRequest> convertAndValidate(Document& document
 
 #if ENABLE(APPLE_PAY_SHIPPING_CONTACT_EDITING_MODE)
     result.setShippingContactEditingMode(request.shippingContactEditingMode);
+#endif
+
+#if ENABLE(APPLE_PAY_LATER_AVAILABILITY)
+    result.setApplePayLaterAvailability(request.applePayLaterAvailability);
+#endif
+
+#if ENABLE(APPLE_PAY_MERCHANT_CATEGORY_CODE)
+    result.setMerchantCategoryCode(request.merchantCategoryCode);
 #endif
 
     return WTFMove(result);

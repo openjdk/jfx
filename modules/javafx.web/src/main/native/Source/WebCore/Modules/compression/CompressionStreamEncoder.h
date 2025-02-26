@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2022 Apple Inc. All rights reserved.
+ * Copyright (C) 2022-2024 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -32,7 +32,7 @@
 #include <wtf/RefPtr.h>
 #include <wtf/Vector.h>
 #if !PLATFORM(JAVA)
-    #include <zlib.h>
+#include <zlib.h>
 #endif
 
 namespace WebCore {
@@ -44,7 +44,7 @@ public:
         return adoptRef(*new CompressionStreamEncoder(format));
     }
 
-    ExceptionOr<RefPtr<Uint8Array>> encode(const BufferSource&& input);
+    ExceptionOr<RefPtr<Uint8Array>> encode(const BufferSource&&);
     ExceptionOr<RefPtr<Uint8Array>> flush();
 
     ~CompressionStreamEncoder()
@@ -57,23 +57,9 @@ public:
     }
 
 private:
-#if !PLATFORM(JAVA)
-    // If the user provides too small of an input size we will automatically allocate a page worth of memory instead.
-    // Very small input sizes can result in a larger output than their input. This would require an additional
-    // encode call then, which is not desired.
-    const size_t startingAllocationSize = 16384; // 16KB
-    const size_t maxAllocationSize = 1073741824; // 1GB
+    bool didDeflateFinish(int) const;
 
-    Formats::CompressionFormat m_format;
-
-    bool m_initialized { false };
-
-
-    z_stream m_zstream;
-#endif
-     bool m_finish { false };
-
-    ExceptionOr<RefPtr<JSC::ArrayBuffer>> compress(const uint8_t* input, const size_t inputLength);
+    ExceptionOr<Ref<JSC::ArrayBuffer>> compress(std::span<const uint8_t>);
     ExceptionOr<bool> initialize();
 
     explicit CompressionStreamEncoder(unsigned char format)
@@ -81,10 +67,22 @@ private:
         : m_format(static_cast<Formats::CompressionFormat>(format))
 #endif
     {
-         UNUSED_PARAM(format);
 #if !PLATFORM(JAVA)
         std::memset(&m_zstream, 0, sizeof(m_zstream));
 #endif
     }
+
+    // If the user provides too small of an input size we will automatically allocate a page worth of memory instead.
+    // Very small input sizes can result in a larger output than their input. This would require an additional
+    // encode call then, which is not desired.
+    const size_t startingAllocationSize = 16384; // 16KB
+    const size_t maxAllocationSize = 1073741824; // 1GB
+
+    bool m_initialized { false };
+    bool m_didFinish { false };
+#if !PLATFORM(JAVA)
+    z_stream m_zstream;
+#endif
+    Formats::CompressionFormat m_format;
 };
 } // namespace WebCore

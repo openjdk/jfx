@@ -32,13 +32,16 @@
 #include "LayoutInitialContainingBlock.h"
 #include "LayoutPhase.h"
 #include "LayoutState.h"
-#include "RenderStyle.h"
-#include <wtf/IsoMallocInlines.h>
+#include "RenderObject.h"
+#include "RenderStyleInlines.h"
+#include "Shape.h"
+#include <wtf/NeverDestroyed.h>
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 namespace Layout {
 
-WTF_MAKE_ISO_ALLOCATED_IMPL(Box);
+WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(Box);
 
 Box::Box(ElementAttributes&& elementAttributes, RenderStyle&& style, std::unique_ptr<RenderStyle>&& firstLineStyle, OptionSet<BaseTypeFlag> baseTypeFlags)
     : m_nodeType(elementAttributes.nodeType)
@@ -54,6 +57,8 @@ Box::~Box()
 {
     if (UNLIKELY(m_hasRareData))
         removeRareData();
+    if (m_renderer)
+        m_renderer->clearLayoutBox();
 }
 
 UniqueRef<Box> Box::removeFromParent()
@@ -87,6 +92,7 @@ bool Box::establishesFormattingContext() const
         || establishesBlockFormattingContext()
         || establishesTableFormattingContext()
         || establishesFlexFormattingContext()
+        || establishesGridFormattingContext()
         || establishesIndependentFormattingContext();
 }
 
@@ -113,7 +119,7 @@ bool Box::establishesBlockFormattingContext() const
     if (isFloatingPositioned()) {
         // Not all floating or out-of-positioned block level boxes establish BFC.
         // See [9.7 Relationships between 'display', 'position', and 'float'] for details.
-        return style().display() == DisplayType::Block;
+        return isBlockContainer();
     }
 
     if (isBlockContainer() && !isBlockBox())
@@ -135,15 +141,16 @@ bool Box::establishesInlineFormattingContext() const
     if (!isBlockContainer())
         return false;
 
-    if (!isElementBox())
+    auto* elementBox = dynamicDowncast<ElementBox>(*this);
+    if (!elementBox)
         return false;
 
     // FIXME ???
-    if (!downcast<ElementBox>(*this).firstInFlowChild())
+    if (!elementBox->firstInFlowChild())
         return false;
 
     // It's enough to check the first in-flow child since we can't have both block and inline level sibling boxes.
-    return downcast<ElementBox>(*this).firstInFlowChild()->isInlineLevelBox();
+    return elementBox->firstInFlowChild()->isInlineLevelBox();
 }
 
 bool Box::establishesTableFormattingContext() const
@@ -154,6 +161,11 @@ bool Box::establishesTableFormattingContext() const
 bool Box::establishesFlexFormattingContext() const
 {
     return isFlexBox();
+}
+
+bool Box::establishesGridFormattingContext() const
+{
+    return isGridBox();
 }
 
 bool Box::establishesIndependentFormattingContext() const
@@ -238,6 +250,9 @@ bool Box::isInlineLevelBox() const
         || display == DisplayType::InlineBox
         || display == DisplayType::InlineFlex
         || display == DisplayType::InlineGrid
+        || display == DisplayType::Ruby
+        || display == DisplayType::RubyBase
+        || display == DisplayType::RubyAnnotation
         || isInlineBlockBox()
         || isInlineTableBox();
 }
@@ -246,10 +261,11 @@ bool Box::isInlineBox() const
 {
     // An inline box is one that is both inline-level and whose contents participate in its containing inline formatting context.
     // A non-replaced element with a 'display' value of 'inline' generates an inline box.
-    return m_style.display() == DisplayType::Inline && !isReplacedBox();
+    auto display = m_style.display();
+    return (display == DisplayType::Inline || display == DisplayType::Ruby || display == DisplayType::RubyBase) && !isReplacedBox();
 }
 
-bool Box::isAtomicInlineLevelBox() const
+bool Box::isAtomicInlineBox() const
 {
     // Inline-level boxes that are not inline boxes (such as replaced inline-level elements, inline-block elements, and inline-table elements)
     // are called atomic inline-level boxes because they participate in their inline formatting context as a single opaque box.
@@ -268,6 +284,7 @@ bool Box::isBlockContainer() const
     return display == DisplayType::Block
         || display == DisplayType::FlowRoot
         || display == DisplayType::ListItem
+        || display == DisplayType::RubyBlock
         || isInlineBlockBox()
         || isTableCell()
         || isTableCaption(); // TODO && !replaced element
@@ -284,10 +301,25 @@ bool Box::isLayoutContainmentBox() const
         if (isInternalRubyBox())
             return false;
         if (isInlineLevelBox())
-            return isAtomicInlineLevelBox();
+            return isAtomicInlineBox();
         return true;
     };
-    return m_style.effectiveContainment().contains(Containment::Layout) && supportsLayoutContainment();
+    return m_style.usedContain().contains(Containment::Layout) && supportsLayoutContainment();
+}
+
+bool Box::isRubyAnnotationBox() const
+{
+    return m_style.display() == DisplayType::RubyAnnotation;
+}
+
+bool Box::isInterlinearRubyAnnotationBox() const
+{
+    return isRubyAnnotationBox() && m_style.rubyPosition() != RubyPosition::InterCharacter;
+}
+
+bool Box::isInternalRubyBox() const
+{
+    return m_style.display() == DisplayType::RubyBase || m_style.display() == DisplayType::RubyAnnotation;
 }
 
 bool Box::isSizeContainmentBox() const
@@ -301,10 +333,10 @@ bool Box::isSizeContainmentBox() const
         if (isInternalRubyBox())
             return false;
         if (isInlineLevelBox())
-            return isAtomicInlineLevelBox();
+            return isAtomicInlineBox();
         return true;
     };
-    return m_style.effectiveContainment().contains(Containment::Size) && supportsSizeContainment();
+    return m_style.usedContain().contains(Containment::Size) && supportsSizeContainment();
 }
 
 bool Box::isInternalTableBox() const
@@ -375,9 +407,12 @@ bool Box::isOverflowVisible() const
     }
     if (is<InitialContainingBlock>(*this)) {
         auto* documentBox = downcast<ElementBox>(*this).firstChild();
-        if (!documentBox || !documentBox->isDocumentBox() || !is<ElementBox>(documentBox))
+        if (!documentBox || !documentBox->isDocumentBox())
             return isOverflowVisible;
-        auto* bodyBox = downcast<ElementBox>(documentBox)->firstChild();
+        auto* elementBox = dynamicDowncast<ElementBox>(*documentBox);
+        if (!elementBox)
+            return isOverflowVisible;
+        auto* bodyBox = elementBox->firstChild();
         if (!bodyBox || !bodyBox->isBodyBox())
             return isOverflowVisible;
         auto& bodyBoxStyle = bodyBox->style();
@@ -442,11 +477,28 @@ std::optional<LayoutUnit> Box::columnWidth() const
     return rareData().columnWidth;
 }
 
-void Box::setCachedGeometryForLayoutState(LayoutState& layoutState, std::unique_ptr<BoxGeometry> geometry) const
+const Shape* Box::shape() const
 {
-    ASSERT(!m_cachedLayoutState);
-    m_cachedLayoutState = layoutState;
-    m_cachedGeometryForLayoutState = WTFMove(geometry);
+    if (!hasRareData())
+        return nullptr;
+    return rareData().shape.get();
+}
+
+void Box::setShape(RefPtr<const Shape> shape)
+{
+    ensureRareData().shape = WTFMove(shape);
+}
+
+const ElementBox* Box::associatedRubyAnnotationBox() const
+{
+    if (style().display() != DisplayType::RubyBase)
+        return nullptr;
+
+    auto* next = nextSibling();
+    if (!next || next->style().display() != DisplayType::RubyAnnotation)
+        return nullptr;
+
+    return dynamicDowncast<ElementBox>(next);
 }
 
 Box::RareDataMap& Box::rareDataMap()

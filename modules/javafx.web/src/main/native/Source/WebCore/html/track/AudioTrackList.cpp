@@ -24,12 +24,12 @@
  */
 
 #include "config.h"
+#include "AudioTrackList.h"
 
 #if ENABLE(VIDEO)
 
-#include "AudioTrackList.h"
-
 #include "AudioTrack.h"
+#include "ContextDestructionObserverInlines.h"
 
 namespace WebCore {
 
@@ -74,6 +74,15 @@ AudioTrack* AudioTrackList::item(unsigned index) const
     return nullptr;
 }
 
+AudioTrack* AudioTrackList::firstEnabled() const
+{
+    for (auto& item : m_inbandTracks) {
+        if (item && item->enabled())
+            return downcast<AudioTrack>(item.get());
+    }
+    return nullptr;
+}
+
 AudioTrack* AudioTrackList::getTrackById(const AtomString& id) const
 {
     for (auto& inbandTrack : m_inbandTracks) {
@@ -84,14 +93,19 @@ AudioTrack* AudioTrackList::getTrackById(const AtomString& id) const
     return nullptr;
 }
 
-EventTargetInterface AudioTrackList::eventTargetInterface() const
+AudioTrack* AudioTrackList::getTrackById(TrackID id) const
 {
-    return AudioTrackListEventTargetInterfaceType;
+    for (auto& inbandTrack : m_inbandTracks) {
+        auto& track = downcast<AudioTrack>(*inbandTrack);
+        if (track.trackId() == id)
+            return &track;
+    }
+    return nullptr;
 }
 
-const char* AudioTrackList::activeDOMObjectName() const
+enum EventTargetInterfaceType AudioTrackList::eventTargetInterface() const
 {
-    return "AudioTrackList";
+    return EventTargetInterfaceType::AudioTrackList;
 }
 
 } // namespace WebCore

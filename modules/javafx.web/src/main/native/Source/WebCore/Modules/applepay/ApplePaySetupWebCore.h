@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2018-2020 Apple Inc. All rights reserved.
+ * Copyright (C) 2018-2023 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -28,6 +28,7 @@
 #if ENABLE(APPLE_PAY)
 
 #include "ApplePaySetupConfiguration.h"
+#include "JSDOMPromiseDeferred.h"
 #include <WebCore/ActiveDOMObject.h>
 #include <WebCore/JSDOMPromiseDeferredForward.h>
 #include <wtf/Forward.h>
@@ -48,13 +49,16 @@ public:
     void getSetupFeatures(Document&, SetupFeaturesPromise&&);
 
     using BeginPromise = DOMPromiseDeferred<IDLBoolean>;
-    void begin(Document&, Vector<RefPtr<ApplePaySetupFeature>>&&, BeginPromise&&);
+    void begin(Document&, Vector<Ref<ApplePaySetupFeature>>&&, BeginPromise&&);
+
+    // ActiveDOMObject.
+    void ref() const final { RefCounted::ref(); }
+    void deref() const final { RefCounted::deref(); }
 
 private:
     ApplePaySetup(ScriptExecutionContext&, ApplePaySetupConfiguration&&);
 
     // ActiveDOMObject
-    const char* activeDOMObjectName() const final { return "ApplePaySetup"; }
     void stop() final;
     void suspend(ReasonForSuspension) final;
 

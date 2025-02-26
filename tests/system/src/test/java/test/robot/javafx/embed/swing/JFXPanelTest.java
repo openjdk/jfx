@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017, 2023, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2017, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -24,33 +24,32 @@
  */
 package test.robot.javafx.embed.swing;
 
-import com.sun.javafx.PlatformUtil;
-import org.junit.Assume;
-import org.junit.Assert;
-import org.junit.BeforeClass;
-import org.junit.AfterClass;
-import org.junit.Test;
-
-import javafx.embed.swing.JFXPanel;
-
-import javax.swing.JFrame;
-import javax.swing.JMenuBar;
-import javax.swing.JMenu;
-import javax.swing.JMenuItem;
-import javax.swing.SwingUtilities;
+import static org.junit.jupiter.api.Assertions.fail;
 import java.awt.Robot;
 import java.awt.event.InputEvent;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
+import javax.swing.JFrame;
+import javax.swing.JMenu;
+import javax.swing.JMenuBar;
+import javax.swing.JMenuItem;
+import javax.swing.SwingUtilities;
+import javafx.embed.swing.JFXPanel;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Assumptions;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
+import com.sun.javafx.PlatformUtil;
 
 public class JFXPanelTest {
     private static Robot robot;
     private static JFrame frame;
     private static volatile boolean stop;
 
-    @BeforeClass
+    @BeforeAll
     public static void init() throws Exception {
-        Assume.assumeTrue(PlatformUtil.isMac());
+        Assumptions.assumeTrue(PlatformUtil.isMac());
         System.setProperty("apple.laf.useScreenMenuBar", "true");
         robot = new Robot();
         robot.waitForIdle();
@@ -75,7 +74,7 @@ public class JFXPanelTest {
             try {
                 beginLatch.await();
             } catch (Exception e) {
-                e.printStackTrace();
+                fail(e);
             }
             while (!stop) {
                 robot.mouseMove(300, 10);
@@ -91,10 +90,10 @@ public class JFXPanelTest {
             endLatch.countDown();
         });
         endLatch.await(5, TimeUnit.SECONDS);
-        Assert.assertTrue("It seems FX initialization is deadlocked", stop);
+        Assertions.assertTrue(stop, "It seems FX initialization is deadlocked");
     }
 
-    @AfterClass
+    @AfterAll
     public static void teardown() throws Exception {
         stop = true;
         if (frame != null) {

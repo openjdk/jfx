@@ -31,9 +31,24 @@
 #include <wtf/WeakPtr.h>
 
 namespace WebCore {
+class NowPlayingManagerClient;
+}
+
+namespace WTF {
+template<typename T> struct IsDeprecatedWeakRefSmartPointerException;
+template<> struct IsDeprecatedWeakRefSmartPointerException<WebCore::NowPlayingManagerClient> : std::true_type { };
+}
+
+namespace WebCore {
 
 class Image;
 struct NowPlayingInfo;
+
+class NowPlayingManagerClient : public CanMakeWeakPtr<NowPlayingManagerClient> {
+public:
+    virtual ~NowPlayingManagerClient() = default;
+    virtual void didReceiveRemoteControlCommand(PlatformMediaSession::RemoteControlCommandType, const PlatformMediaSession::RemoteCommandArgument&) = 0;
+};
 
 class WEBCORE_EXPORT NowPlayingManager : public RemoteCommandListenerClient {
     WTF_MAKE_FAST_ALLOCATED;
@@ -43,18 +58,12 @@ public:
 
     void didReceiveRemoteControlCommand(PlatformMediaSession::RemoteControlCommandType, const PlatformMediaSession::RemoteCommandArgument&) final;
 
-    class Client : public CanMakeWeakPtr<Client> {
-    public:
-        virtual ~Client() = default;
-        virtual void didReceiveRemoteControlCommand(PlatformMediaSession::RemoteControlCommandType, const PlatformMediaSession::RemoteCommandArgument&) = 0;
-    };
-
     void addSupportedCommand(PlatformMediaSession::RemoteControlCommandType);
     void removeSupportedCommand(PlatformMediaSession::RemoteControlCommandType);
     RemoteCommandListener::RemoteCommandsSet supportedCommands() const;
 
-    void addClient(Client&);
-    void removeClient(Client&);
+    void addClient(NowPlayingManagerClient&);
+    void removeClient(NowPlayingManagerClient&);
 
     void clearNowPlayingInfo();
     bool setNowPlayingInfo(const NowPlayingInfo&);
@@ -66,8 +75,8 @@ private:
     virtual void clearNowPlayingInfoPrivate();
     virtual void setNowPlayingInfoPrivate(const NowPlayingInfo&);
     void ensureRemoteCommandListenerCreated();
-    std::unique_ptr<RemoteCommandListener> m_remoteCommandListener;
-    WeakPtr<Client> m_client;
+    RefPtr<RemoteCommandListener> m_remoteCommandListener;
+    WeakPtr<NowPlayingManagerClient> m_client;
     std::optional<NowPlayingInfo> m_nowPlayingInfo;
     struct ArtworkCache {
         String src;

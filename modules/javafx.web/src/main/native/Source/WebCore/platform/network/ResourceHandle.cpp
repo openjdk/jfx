@@ -27,6 +27,7 @@
 #include "ResourceHandle.h"
 #include "ResourceHandleInternal.h"
 
+#include "DNS.h"
 #include "Logging.h"
 #include "NetworkingContext.h"
 #include "NotImplemented.h"
@@ -40,6 +41,7 @@
 #include <wtf/NeverDestroyed.h>
 #include <wtf/text/AtomStringHash.h>
 #include <wtf/text/CString.h>
+#include <wtf/text/MakeString.h>
 
 namespace WebCore {
 
@@ -85,7 +87,7 @@ ResourceHandle::ResourceHandle(NetworkingContext* context, const ResourceRequest
         return;
     }
 
-    if (!portAllowed(request.url())) {
+    if (!portAllowed(request.url()) || isIPAddressDisallowed(request.url())) {
         scheduleFailure(BlockedFailure);
         return;
     }
@@ -166,7 +168,7 @@ void ResourceHandle::didReceiveResponse(ResourceResponse&& response, CompletionH
         std::optional<uint16_t> port = url.port();
         if (port && !WTF::isDefaultPortForProtocol(port.value(), url.protocol())) {
             cancel();
-            String message = "Cancelled load from '" + url.stringCenterEllipsizedToLength() + "' because it is using HTTP/0.9.";
+            auto message = makeString("Cancelled load from '"_s, url.stringCenterEllipsizedToLength(), "' because it is using HTTP/0.9."_s);
             d->m_client->didFail(this, { String(), 0, url, message });
             completionHandler();
             return;
@@ -174,13 +176,6 @@ void ResourceHandle::didReceiveResponse(ResourceResponse&& response, CompletionH
     }
     client()->didReceiveResponseAsync(this, WTFMove(response), WTFMove(completionHandler));
 }
-
-#if !USE(SOUP) && !USE(CURL)
-void ResourceHandle::platformContinueSynchronousDidReceiveResponse()
-{
-    // Do nothing.
-}
-#endif
 
 ResourceRequest& ResourceHandle::firstRequest()
 {
@@ -282,7 +277,7 @@ bool ResourceHandle::shouldContentSniffURL(const URL& url)
         return true;
 #endif
     // We shouldn't content sniff file URLs as their MIME type should be established via their extension.
-    return !url.protocolIs("file"_s);
+    return !url.protocolIsFile();
 }
 
 void ResourceHandle::forceContentSniffing()
@@ -308,5 +303,71 @@ void ResourceHandle::setDefersLoading(bool defers)
 
     platformSetDefersLoading(defers);
 }
+
+#if USE(SOUP) || USE(CURL)
+ResourceHandleInternal::~ResourceHandleInternal() = default;
+
+ResourceHandle::~ResourceHandle()
+{
+    ASSERT_NOT_REACHED();
+}
+
+bool ResourceHandle::start()
+{
+    ASSERT_NOT_REACHED();
+    return false;
+}
+
+void ResourceHandle::cancel()
+{
+    ASSERT_NOT_REACHED();
+}
+
+void ResourceHandle::platformSetDefersLoading(bool)
+{
+    ASSERT_NOT_REACHED();
+}
+
+void ResourceHandle::platformLoadResourceSynchronously(NetworkingContext*, const ResourceRequest&, StoredCredentialsPolicy, SecurityOrigin*, ResourceError&, ResourceResponse&, Vector<uint8_t>&)
+{
+    ASSERT_NOT_REACHED();
+}
+
+bool ResourceHandle::shouldUseCredentialStorage()
+{
+    ASSERT_NOT_REACHED();
+    return false;
+}
+
+void ResourceHandle::didReceiveAuthenticationChallenge(const AuthenticationChallenge&)
+{
+    ASSERT_NOT_REACHED();
+}
+
+void ResourceHandle::receivedCredential(const AuthenticationChallenge&, const Credential&)
+{
+    ASSERT_NOT_REACHED();
+}
+
+void ResourceHandle::receivedRequestToContinueWithoutCredential(const AuthenticationChallenge&)
+{
+    ASSERT_NOT_REACHED();
+}
+
+void ResourceHandle::receivedCancellation(const AuthenticationChallenge&)
+{
+    ASSERT_NOT_REACHED();
+}
+
+void ResourceHandle::receivedRequestToPerformDefaultHandling(const AuthenticationChallenge&)
+{
+    ASSERT_NOT_REACHED();
+}
+
+void ResourceHandle::receivedChallengeRejection(const AuthenticationChallenge&)
+{
+    ASSERT_NOT_REACHED();
+}
+#endif
 
 } // namespace WebCore

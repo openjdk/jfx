@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,7 +25,11 @@
 
 package test.javafx.scene.chart;
 
-import javafx.css.CssMetaData;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.DoubleProperty;
 import javafx.beans.property.ReadOnlyDoubleProperty;
@@ -33,28 +37,26 @@ import javafx.beans.property.SimpleBooleanProperty;
 import javafx.beans.property.SimpleDoubleProperty;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
+import javafx.css.CssMetaData;
 import javafx.css.StyleableProperty;
-import static org.junit.Assert.*;
-
-
-import org.junit.Before;
-import org.junit.Test;
-
 import javafx.scene.chart.CategoryAxis;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 /**
  * All public members of CatgoryAxis are tested here .
  * @author srikalyc
  */
 public class CategoryAxisTest {
-    private CategoryAxis axis;//Empty string
+    private CategoryAxis axis;
     private AxisHelper helper;
 
     public CategoryAxisTest() {
         helper = new AxisHelper();
     }
 
-    @Before public void setup() {
+    @BeforeEach
+    public void setup() {
         if (axis == null) {
             axis = new CategoryAxis();
         }
@@ -95,28 +97,26 @@ public class CategoryAxisTest {
     @Test public void checkStartMarginPropertyBind() {
         DoubleProperty objPr = new SimpleDoubleProperty(56.0);
         axis.startMarginProperty().bind(objPr);
-        assertEquals("startMarginProperty cannot be bound", axis.startMarginProperty().getValue(),56.0,0.0);
+        assertEquals(axis.startMarginProperty().getValue(),56.0,0.0, "startMarginProperty cannot be bound");
         objPr.setValue(23.0);
-        assertEquals("startMarginProperty cannot be bound", axis.startMarginProperty().getValue(),23.0,0.0);
+        assertEquals(axis.startMarginProperty().getValue(),23.0,0.0, "startMarginProperty cannot be bound");
     }
 
     @Test public void checkEndMarginPropertyBind() {
         DoubleProperty objPr = new SimpleDoubleProperty(56.0);
         axis.endMarginProperty().bind(objPr);
-        assertEquals("endMarginProperty cannot be bound", axis.endMarginProperty().getValue(),56.0,0.0);
+        assertEquals(axis.endMarginProperty().getValue(),56.0,0.0, "endMarginProperty cannot be bound");
         objPr.setValue(23.0);
-        assertEquals("endMarginProperty cannot be bound", axis.endMarginProperty().getValue(),23.0,0.0);
+        assertEquals(axis.endMarginProperty().getValue(),23.0,0.0, "endMarginProperty cannot be bound");
     }
-
 
     @Test public void checkGapStartAndEndPropertyBind() {
         BooleanProperty objPr = new SimpleBooleanProperty(true);
         axis.gapStartAndEndProperty().bind(objPr);
-        assertTrue("gapStartAndEndProperty cannot be bound", axis.gapStartAndEndProperty().getValue());
+        assertTrue(axis.gapStartAndEndProperty().getValue(), "gapStartAndEndProperty cannot be bound");
         objPr.setValue(false);
-        assertFalse("gapStartAndEndProperty cannot be bound", axis.gapStartAndEndProperty().getValue());
+        assertFalse(axis.gapStartAndEndProperty().getValue(), "gapStartAndEndProperty cannot be bound");
     }
-
 
     @SuppressWarnings("cast")
     @Test public void checkCategorySpacingReadOnlyCannotBind() {
@@ -268,5 +268,4 @@ public class CategoryAxisTest {
         axis.setCategories(FXCollections.observableArrayList("A", "B", "C", "D"));
         assertTrue(Double.isNaN(axis.getDisplayPosition("E")));
     }
-
 }

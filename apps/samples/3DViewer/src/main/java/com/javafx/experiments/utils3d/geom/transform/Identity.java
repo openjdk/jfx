@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2009, 2015, Oracle and/or its affiliates.
+ * Copyright (c) 2009, 2024, Oracle and/or its affiliates.
  * All rights reserved. Use is subject to license terms.
  *
  * This file is available and licensed under the following license:
@@ -110,6 +110,7 @@ public final class Identity extends BaseTransform {
         return dst;
     }
 
+    @Override
     public void transform(float[] srcPts, int srcOff,
                           float[] dstPts, int dstOff,
                           int numPts) {
@@ -118,6 +119,7 @@ public final class Identity extends BaseTransform {
         }
     }
 
+    @Override
     public void transform(double[] srcPts, int srcOff,
                           double[] dstPts, int dstOff,
                           int numPts) {
@@ -126,6 +128,7 @@ public final class Identity extends BaseTransform {
         }
     }
 
+    @Override
     public void transform(float[] srcPts, int srcOff,
                           double[] dstPts, int dstOff,
                           int numPts) {
@@ -135,6 +138,7 @@ public final class Identity extends BaseTransform {
         }
     }
 
+    @Override
     public void transform(double[] srcPts, int srcOff,
                           float[] dstPts, int dstOff,
                           int numPts) {
@@ -162,6 +166,7 @@ public final class Identity extends BaseTransform {
         }
     }
 
+    @Override
     public void inverseTransform(float[] srcPts, int srcOff,
                                  float[] dstPts, int dstOff,
                                  int numPts) {
@@ -170,6 +175,7 @@ public final class Identity extends BaseTransform {
         }
     }
 
+    @Override
     public void inverseDeltaTransform(float[] srcPts, int srcOff,
                                       float[] dstPts, int dstOff,
                                       int numPts) {
@@ -178,6 +184,7 @@ public final class Identity extends BaseTransform {
         }
     }
 
+    @Override
     public void inverseTransform(double[] srcPts, int srcOff,
                                  double[] dstPts, int dstOff,
                                  int numPts) {

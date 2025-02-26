@@ -23,7 +23,9 @@
 #include "SVGTests.h"
 
 #include "DOMImplementation.h"
+#include "EventTarget.h"
 #include "HTMLNames.h"
+#include "NodeName.h"
 #include "SVGElement.h"
 #include "SVGNames.h"
 #include "SVGStringList.h"
@@ -139,14 +141,36 @@ bool SVGTests::isValid() const
     return true;
 }
 
+Ref<SVGStringList> SVGTests::protectedRequiredFeatures()
+{
+    return requiredFeatures();
+}
+
+Ref<SVGStringList> SVGTests::protectedRequiredExtensions()
+{
+    return requiredExtensions();
+}
+
+Ref<SVGStringList> SVGTests::protectedSystemLanguage()
+{
+    return systemLanguage();
+}
+
 void SVGTests::parseAttribute(const QualifiedName& attributeName, const AtomString& value)
 {
-    if (attributeName == SVGNames::requiredFeaturesAttr)
-        requiredFeatures().reset(value);
-    if (attributeName == SVGNames::requiredExtensionsAttr)
-        requiredExtensions().reset(value);
-    if (attributeName == SVGNames::systemLanguageAttr)
-        systemLanguage().reset(value);
+    switch (attributeName.nodeName()) {
+    case AttributeNames::requiredFeaturesAttr:
+        protectedRequiredFeatures()->reset(value);
+        break;
+    case AttributeNames::requiredExtensionsAttr:
+        protectedRequiredExtensions()->reset(value);
+        break;
+    case AttributeNames::systemLanguageAttr:
+        protectedSystemLanguage()->reset(value);
+        break;
+    default:
+        break;
+    }
 }
 
 void SVGTests::svgAttributeChanged(const QualifiedName& attrName)
@@ -154,9 +178,10 @@ void SVGTests::svgAttributeChanged(const QualifiedName& attrName)
     if (!PropertyRegistry::isKnownAttribute(attrName))
         return;
 
-    if (!m_contextElement.isConnected())
+    Ref contextElement = m_contextElement.get();
+    if (!contextElement->isConnected())
         return;
-    m_contextElement.invalidateStyleAndRenderersForSubtree();
+    contextElement->invalidateStyleAndRenderersForSubtree();
 }
 
 void SVGTests::addSupportedAttributes(MemoryCompactLookupOnlyRobinHoodHashSet<QualifiedName>& supportedAttributes)
@@ -187,14 +212,20 @@ bool SVGTests::hasFeatureForLegacyBindings(const String& feature, const String& 
     return false;
 }
 
+Ref<SVGElement> SVGTests::protectedContextElement() const
+{
+    return m_contextElement.get();
+}
+
 SVGConditionalProcessingAttributes& SVGTests::conditionalProcessingAttributes()
 {
-    return m_contextElement.conditionalProcessingAttributes();
+    RefAllowingPartiallyDestroyed<SVGElement> contextElement = m_contextElement.get();
+    return contextElement->conditionalProcessingAttributes();
 }
 
 SVGConditionalProcessingAttributes* SVGTests::conditionalProcessingAttributesIfExists() const
 {
-    return m_contextElement.conditionalProcessingAttributesIfExists();
+    return protectedContextElement()->conditionalProcessingAttributesIfExists();
 }
 
-}
+} // namespace WebCore

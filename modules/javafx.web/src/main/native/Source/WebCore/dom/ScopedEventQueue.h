@@ -45,20 +45,20 @@ class ScopedEventQueue {
     WTF_MAKE_NONCOPYABLE(ScopedEventQueue); WTF_MAKE_FAST_ALLOCATED;
 public:
     static ScopedEventQueue& singleton();
-    void enqueueEvent(Ref<Event>&&);
-
-private:
-    ScopedEventQueue() = default;
-    ~ScopedEventQueue() = delete;
 
     struct ScopedEvent {
         Ref<Event> event;
         GCReachableRef<Node> target;
     };
+    void enqueueEvent(ScopedEvent&&);
+
+private:
+    ScopedEventQueue() = default;
+    ~ScopedEventQueue() = delete;
 
     void dispatchEvent(const ScopedEvent&) const;
     void dispatchAllEvents();
-    void incrementScopingLevel();
+    void incrementScopingLevel() { ++m_scopingLevel; }
     void decrementScopingLevel();
 
     Vector<ScopedEvent> m_queuedEvents;

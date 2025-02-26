@@ -31,8 +31,10 @@
 #include "ContentSecurityPolicy.h"
 #include "Document.h"
 #include "KeepaliveRequestTracker.h"
+#include "MixedContentChecker.h"
 #include "ResourceTimingInformation.h"
 #include "Timer.h"
+#include <wtf/CheckedPtr.h>
 #include <wtf/Expected.h>
 #include <wtf/HashMap.h>
 #include <wtf/RobinHoodHashSet.h>
@@ -54,8 +56,8 @@ class CachedTextTrack;
 class CachedXSLStyleSheet;
 class Document;
 class DocumentLoader;
-class Frame;
 class ImageLoader;
+class LocalFrame;
 class Page;
 class SVGImage;
 class Settings;
@@ -67,6 +69,8 @@ enum class CachePolicy : uint8_t;
 enum class ImageLoading : uint8_t { Immediate, DeferredUntilVisible };
 enum class FetchMetadataSite : uint8_t { None, SameOrigin, SameSite, CrossSite };
 
+const String& convertEnumerationToString(FetchMetadataSite);
+
 // The CachedResourceLoader provides a per-context interface to the MemoryCache
 // and enforces a bunch of security checks and rules for resource revalidation.
 // Its lifetime is roughly per-DocumentLoader, in that it is generally created
@@ -76,7 +80,7 @@ enum class FetchMetadataSite : uint8_t { None, SameOrigin, SameSite, CrossSite }
 // are initialized without a Frame), so a Document can keep a CachedResourceLoader
 // alive past detach if scripts still reference the Document.
 class CachedResourceLoader : public RefCounted<CachedResourceLoader>, public CanMakeWeakPtr<CachedResourceLoader> {
-    WTF_MAKE_NONCOPYABLE(CachedResourceLoader); WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_NONCOPYABLE(CachedResourceLoader); WTF_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(Loader);
 friend class ImageLoader;
 friend class ResourceCacheValidationSuppressor;
 
@@ -136,11 +140,12 @@ public:
 
     CachePolicy cachePolicy(CachedResource::Type, const URL&) const;
 
-    Frame* frame() const; // Can be null
+    LocalFrame* frame() const; // Can be null
+    RefPtr<LocalFrame> protectedFrame() const;
     Document* document() const { return m_document.get(); } // Can be null
+    RefPtr<Document> protectedDocument() const { return document(); }
     void setDocument(Document* document) { m_document = document; }
-    void clearDocumentLoader() { m_documentLoader = nullptr; }
-
+    void clearDocumentLoader();
     void loadDone(LoadCompletionType, bool shouldPerformPostLoadActions = true);
 
     WEBCORE_EXPORT void garbageCollectDocumentResources();
@@ -168,23 +173,26 @@ public:
 
     KeepaliveRequestTracker& keepaliveRequestTracker() { return m_keepaliveRequestTracker; }
 
-    Vector<CachedResource*> visibleResourcesToPrioritize();
+    Vector<CachedResourceHandle<CachedResource>> visibleResourcesToPrioritize();
 
-    static FetchMetadataSite computeFetchMetadataSite(const ResourceRequest&, CachedResource::Type, FetchOptions::Mode, const SecurityOrigin& originalOrigin, FetchMetadataSite originalSite = FetchMetadataSite::SameOrigin);
+    static FetchMetadataSite computeFetchMetadataSite(const ResourceRequest&, CachedResource::Type, FetchOptions::Mode, const LocalFrame&, bool isDirectlyUserInitiatedRequest);
+    static FetchMetadataSite computeFetchMetadataSiteAfterRedirection(const ResourceRequest&, CachedResource::Type, FetchOptions::Mode, const SecurityOrigin& originalOrigin, FetchMetadataSite originalSite, bool isDirectlyUserInitiatedRequest);
 
 private:
     explicit CachedResourceLoader(DocumentLoader*);
 
-    enum class ForPreload { Yes, No };
+    enum class ForPreload : bool { No, Yes };
 
     ResourceErrorOr<CachedResourceHandle<CachedResource>> requestResource(CachedResource::Type, CachedResourceRequest&&, ForPreload = ForPreload::No, ImageLoading = ImageLoading::Immediate);
     CachedResourceHandle<CachedResource> revalidateResource(CachedResourceRequest&&, CachedResource&);
-    CachedResourceHandle<CachedResource> loadResource(CachedResource::Type, PAL::SessionID, CachedResourceRequest&&, const CookieJar&, const Settings&);
+
+    enum class MayAddToMemoryCache : bool { No, Yes };
+    CachedResourceHandle<CachedResource> loadResource(CachedResource::Type, PAL::SessionID, CachedResourceRequest&&, const CookieJar&, const Settings&, MayAddToMemoryCache);
 
     void prepareFetch(CachedResource::Type, CachedResourceRequest&);
     void updateHTTPRequestHeaders(FrameLoader&, CachedResource::Type, CachedResourceRequest&);
 
-    bool canRequest(CachedResource::Type, const URL&, const ResourceLoaderOptions&, ForPreload);
+    bool canRequest(CachedResource::Type, const URL&, const ResourceLoaderOptions&, ForPreload, MixedContentChecker::IsUpgradable);
 
     enum RevalidationPolicy { Use, Revalidate, Reload, Load };
     RevalidationPolicy determineRevalidationPolicy(CachedResource::Type, CachedResourceRequest&, CachedResource* existingResource, ForPreload, ImageLoading) const;
@@ -193,7 +201,7 @@ private:
     CachedResourceHandle<CachedResource> updateCachedResourceWithCurrentRequest(const CachedResource&, CachedResourceRequest&&, PAL::SessionID, const CookieJar&, const Settings&);
 
     bool shouldContinueAfterNotifyingLoadedFromMemoryCache(const CachedResourceRequest&, CachedResource&, ResourceError&);
-    bool checkInsecureContent(CachedResource::Type, const URL&) const;
+    bool checkInsecureContent(CachedResource::Type, const URL&, MixedContentChecker::IsUpgradable) const;
 
     void performPostLoadActions();
 
@@ -203,11 +211,13 @@ private:
     bool canRequestAfterRedirection(CachedResource::Type, const URL&, const ResourceLoaderOptions&, const URL& preRedirectURL) const;
     bool canRequestInContentDispositionAttachmentSandbox(CachedResource::Type, const URL&) const;
 
+    RefPtr<DocumentLoader> protectedDocumentLoader() const;
+
     MemoryCompactRobinHoodHashSet<URL> m_validatedURLs;
     MemoryCompactRobinHoodHashSet<URL> m_cachedSVGImagesURLs;
     mutable DocumentResourceMap m_documentResources;
     WeakPtr<Document, WeakPtrImplWithEventTargetData> m_document;
-    DocumentLoader* m_documentLoader;
+    SingleThreadWeakPtr<DocumentLoader> m_documentLoader;
 
     int m_requestCount { 0 };
 
@@ -226,20 +236,20 @@ private:
 
 class ResourceCacheValidationSuppressor {
     WTF_MAKE_NONCOPYABLE(ResourceCacheValidationSuppressor);
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(Loader);
 public:
     ResourceCacheValidationSuppressor(CachedResourceLoader& loader)
         : m_loader(loader)
-        , m_previousState(m_loader.m_allowStaleResources)
+        , m_previousState(loader.m_allowStaleResources)
     {
-        m_loader.m_allowStaleResources = true;
+        m_loader->m_allowStaleResources = true;
     }
     ~ResourceCacheValidationSuppressor()
     {
-        m_loader.m_allowStaleResources = m_previousState;
+        m_loader->m_allowStaleResources = m_previousState;
     }
 private:
-    CachedResourceLoader& m_loader;
+    WeakRef<CachedResourceLoader> m_loader;
     bool m_previousState;
 };
 

@@ -40,6 +40,8 @@ G_BEGIN_DECLS
  * @GST_PBUTILS_CAPS_DESCRIPTION_FLAG_TAG: Container format is a tags container.
  * @GST_PBUTILS_CAPS_DESCRIPTION_FLAG_GENERIC: Container format can store any kind of
  *     stream type.
+ * @GST_PBUTILS_CAPS_DESCRIPTION_FLAG_METADATA: Caps describe a metadata
+ *     format, or a container format that can store metadata.
  *
  * Flags that are returned by gst_pb_utils_get_caps_description_flags() and
  * describe the format of the caps.
@@ -54,6 +56,17 @@ typedef enum {
   GST_PBUTILS_CAPS_DESCRIPTION_FLAG_SUBTITLE  = 1 << 4,
   GST_PBUTILS_CAPS_DESCRIPTION_FLAG_TAG       = 1 << 5,
   GST_PBUTILS_CAPS_DESCRIPTION_FLAG_GENERIC   = 1 << 6,
+
+  /**
+   * GST_PBUTILS_CAPS_DESCRIPTION_FLAG_METADATA:
+   *
+   * Caps describe a metadata format, or a container format that can store
+   * metadata.
+   *
+   * Since: 1.22
+   */
+
+  GST_PBUTILS_CAPS_DESCRIPTION_FLAG_METADATA  = 1 << 7,
 } GstPbUtilsCapsDescriptionFlags;
 
 /*

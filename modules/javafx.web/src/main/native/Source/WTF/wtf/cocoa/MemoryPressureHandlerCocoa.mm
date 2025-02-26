@@ -61,7 +61,10 @@ static OSObjectPtr<dispatch_source_t>& timerEventSource()
     return source.get();
 }
 
-static int notifyTokens[3];
+// One token for each of the memory pressure/memory warning notifications we listen for.
+// notifyutil -p org.WebKit.lowMemory[.begin/.end]
+// notifyutil -p org.WebKit.memoryWarning[.begin/.end]
+static int notifyTokens[6];
 
 // Disable memory event reception for a minimum of s_minimumHoldOffTime
 // seconds after receiving an event. Don't let events fire any sooner than
@@ -88,34 +91,58 @@ void MemoryPressureHandler::install()
             switch (status) {
             // VM pressure events.
             case DISPATCH_MEMORYPRESSURE_NORMAL:
-                setMemoryPressureStatus(MemoryPressureStatus::Normal);
+                setMemoryPressureStatus(SystemMemoryPressureStatus::Normal);
                 break;
             case DISPATCH_MEMORYPRESSURE_WARN:
-                setMemoryPressureStatus(MemoryPressureStatus::SystemWarning);
+                setMemoryPressureStatus(SystemMemoryPressureStatus::Warning);
                 respondToMemoryPressure(Critical::No);
                 break;
             case DISPATCH_MEMORYPRESSURE_CRITICAL:
-                setMemoryPressureStatus(MemoryPressureStatus::SystemCritical);
+                setMemoryPressureStatus(SystemMemoryPressureStatus::Critical);
                 respondToMemoryPressure(Critical::Yes);
                 break;
             // Process memory limit events.
             case DISPATCH_MEMORYPRESSURE_PROC_LIMIT_WARN:
-                setMemoryPressureStatus(MemoryPressureStatus::ProcessLimitWarning);
+                didExceedProcessMemoryLimit(ProcessMemoryLimit::Warning);
                 respondToMemoryPressure(Critical::No);
                 break;
             case DISPATCH_MEMORYPRESSURE_PROC_LIMIT_CRITICAL:
-                setMemoryPressureStatus(MemoryPressureStatus::ProcessLimitCritical);
+                didExceedProcessMemoryLimit(ProcessMemoryLimit::Critical);
                 respondToMemoryPressure(Critical::Yes);
                 break;
             }
             if (m_shouldLogMemoryMemoryPressureEvents)
-                RELEASE_LOG(MemoryPressure, "Received memory pressure event %lu vm pressure %d", status, isUnderMemoryPressure());
+                RELEASE_LOG(MemoryPressure, "Received memory pressure event: %lu, system vm pressure critical: %d", status, isUnderMemoryPressure());
         });
         dispatch_resume(memoryPressureEventSource().get());
     });
 
+    // Allow simulation of memory warning (80% of high watermark) with "notifyutil -p org.WebKit.memoryWarning
+    notify_register_dispatch("org.WebKit.memoryWarning", &notifyTokens[0], m_dispatchQueue.get(), ^(int) {
+#if ENABLE(FMW_FOOTPRINT_COMPARISON)
+        auto footprintBefore = pagesPerVMTag();
+#endif
+        beginSimulatedMemoryWarning();
+
+#if ENABLE(FMW_FOOTPRINT_COMPARISON)
+        auto footprintAfter = pagesPerVMTag();
+        logFootprintComparison(footprintBefore, footprintAfter);
+#endif
+
+        dispatch_after(dispatch_time(DISPATCH_TIME_NOW, 2 * NSEC_PER_SEC), m_dispatchQueue.get(), ^{
+            endSimulatedMemoryWarning();
+        });
+    });
+
+    notify_register_dispatch("org.WebKit.memoryWarning.begin", &notifyTokens[1], m_dispatchQueue.get(), ^(int) {
+        beginSimulatedMemoryWarning();
+    });
+    notify_register_dispatch("org.WebKit.memoryWarning.end", &notifyTokens[2], m_dispatchQueue.get(), ^(int) {
+        endSimulatedMemoryWarning();
+    });
+
     // Allow simulation of memory pressure with "notifyutil -p org.WebKit.lowMemory"
-    notify_register_dispatch("org.WebKit.lowMemory", &notifyTokens[0], m_dispatchQueue.get(), ^(int) {
+    notify_register_dispatch("org.WebKit.lowMemory", &notifyTokens[3], m_dispatchQueue.get(), ^(int) {
 #if ENABLE(FMW_FOOTPRINT_COMPARISON)
         auto footprintBefore = pagesPerVMTag();
 #endif
@@ -134,10 +161,10 @@ void MemoryPressureHandler::install()
         });
     });
 
-    notify_register_dispatch("org.WebKit.lowMemory.begin", &notifyTokens[1], m_dispatchQueue.get(), ^(int) {
+    notify_register_dispatch("org.WebKit.lowMemory.begin", &notifyTokens[4], m_dispatchQueue.get(), ^(int) {
         beginSimulatedMemoryPressure();
     });
-    notify_register_dispatch("org.WebKit.lowMemory.end", &notifyTokens[2], m_dispatchQueue.get(), ^(int) {
+    notify_register_dispatch("org.WebKit.lowMemory.end", &notifyTokens[5], m_dispatchQueue.get(), ^(int) {
         endSimulatedMemoryPressure();
     });
 

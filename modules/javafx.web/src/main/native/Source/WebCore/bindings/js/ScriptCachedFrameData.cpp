@@ -34,8 +34,9 @@
 
 #include "CommonVM.h"
 #include "Document.h"
-#include "Frame.h"
 #include "GCController.h"
+#include "JSDOMWindow.h"
+#include "LocalFrame.h"
 #include "Page.h"
 #include "PageConsoleClient.h"
 #include "PageGroup.h"
@@ -47,7 +48,7 @@
 namespace WebCore {
 using namespace JSC;
 
-ScriptCachedFrameData::ScriptCachedFrameData(Frame& frame)
+ScriptCachedFrameData::ScriptCachedFrameData(LocalFrame& frame)
 {
     JSLockHolder lock(commonVM());
 
@@ -65,7 +66,7 @@ ScriptCachedFrameData::~ScriptCachedFrameData()
     clear();
 }
 
-void ScriptCachedFrameData::restore(Frame& frame)
+void ScriptCachedFrameData::restore(LocalFrame& frame)
 {
     JSLockHolder lock(commonVM());
 

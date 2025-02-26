@@ -24,7 +24,6 @@
 
 #pragma once
 
-#if ENABLE(LAYER_BASED_SVG_ENGINE)
 #include "RenderImageResource.h"
 #include "RenderSVGModelObject.h"
 #include "SVGBoundingBoxComputation.h"
@@ -34,15 +33,18 @@ namespace WebCore {
 class SVGImageElement;
 
 class RenderSVGImage final : public RenderSVGModelObject {
-    WTF_MAKE_ISO_ALLOCATED(RenderSVGImage);
+    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(RenderSVGImage);
+    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(RenderSVGImage);
 public:
     RenderSVGImage(SVGImageElement&, RenderStyle&&);
     virtual ~RenderSVGImage();
 
     SVGImageElement& imageElement() const;
+    Ref<SVGImageElement> protectedImageElement() const;
 
     RenderImageResource& imageResource() { return *m_imageResource; }
     const RenderImageResource& imageResource() const { return *m_imageResource; }
+    CheckedRef<RenderImageResource> checkedImageResource() const;
 
     bool updateImageViewport();
 
@@ -52,13 +54,12 @@ private:
     void element() const = delete;
 
     ASCIILiteral renderName() const final { return "RenderSVGImage"_s; }
-    bool isSVGImage() const final { return true; }
     bool canHaveChildren() const final { return false; }
 
     FloatRect calculateObjectBoundingBox() const;
     FloatRect objectBoundingBox() const final { return m_objectBoundingBox; }
     FloatRect strokeBoundingBox() const final { return m_objectBoundingBox; }
-    FloatRect repaintRectInLocalCoordinates() const final { return SVGBoundingBoxComputation::computeRepaintBoundingBox(*this); }
+    FloatRect repaintRectInLocalCoordinates(RepaintRectCalculation = RepaintRectCalculation::Fast) const final { return SVGBoundingBoxComputation::computeRepaintBoundingBox(*this); }
 
     void imageChanged(WrappedImagePtr, const IntRect* = nullptr) final;
 
@@ -71,12 +72,12 @@ private:
     bool nodeAtPoint(const HitTestRequest&, HitTestResult&, const HitTestLocation& locationInContainer, const LayoutPoint& accumulatedOffset, HitTestAction) final;
 
     void repaintOrMarkForLayout(const IntRect* = nullptr);
-    void notifyFinished(CachedResource&, const NetworkLoadMetrics&) final;
+    void notifyFinished(CachedResource&, const NetworkLoadMetrics&, LoadWillContinueInAnotherProcess) final;
     bool bufferForeground(PaintInfo&, const LayoutPoint&);
 
     bool needsHasSVGTransformFlags() const final;
 
-    void applyTransform(TransformationMatrix&, const RenderStyle&, const FloatRect& boundingBox, OptionSet<RenderStyle::TransformOperationOption> = RenderStyle::allTransformOperations) const final;
+    void applyTransform(TransformationMatrix&, const RenderStyle&, const FloatRect& boundingBox, OptionSet<RenderStyle::TransformOperationOption>) const final;
 
     CachedImage* cachedImage() const { return imageResource().cachedImage(); }
 
@@ -87,6 +88,4 @@ private:
 
 } // namespace WebCore
 
-SPECIALIZE_TYPE_TRAITS_RENDER_OBJECT(RenderSVGImage, isSVGImage())
-
-#endif // ENABLE(LAYER_BASED_SVG_ENGINE)
+SPECIALIZE_TYPE_TRAITS_RENDER_OBJECT(RenderSVGImage, isRenderSVGImage())

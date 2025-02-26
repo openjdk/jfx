@@ -39,6 +39,7 @@ class JSModuleEnvironment;
 // ECMA 262-3 8.6.1
 // Property attributes
 enum class PropertyAttribute : unsigned {
+    // This must be 7 bits. Keep in sync with Structure's definition.
     None              = 0,
     ReadOnly          = 1 << 1,  // property can be only read, not written
     DontEnum          = 1 << 2,  // property doesn't appear in (for .. in ..)
@@ -209,7 +210,7 @@ public:
 
     void setValue(JSObject* slotBase, unsigned attributes, JSValue value)
     {
-        ASSERT(attributes == attributesForStructure(attributes));
+        ASSERT(attributes == attributesForStructure(attributes) && !(attributes & PropertyAttribute::Accessor));
 
         m_data.value = JSValue::encode(value);
         m_attributes = attributes;
@@ -223,7 +224,7 @@ public:
 
     void setValue(JSObject* slotBase, unsigned attributes, JSValue value, PropertyOffset offset)
     {
-        ASSERT(attributes == attributesForStructure(attributes));
+        ASSERT(attributes == attributesForStructure(attributes) && !(attributes & PropertyAttribute::Accessor));
 
         ASSERT(value);
         m_data.value = JSValue::encode(value);
@@ -239,7 +240,7 @@ public:
 
     void setValue(JSString*, unsigned attributes, JSValue value)
     {
-        ASSERT(attributes == attributesForStructure(attributes));
+        ASSERT(attributes == attributesForStructure(attributes) && !(attributes & PropertyAttribute::Accessor));
 
         ASSERT(value);
         m_data.value = JSValue::encode(value);

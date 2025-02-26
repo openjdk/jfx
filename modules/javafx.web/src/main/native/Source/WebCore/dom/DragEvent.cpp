@@ -27,11 +27,12 @@
 #include "DragEvent.h"
 
 #include "DataTransfer.h"
-#include <wtf/IsoMallocInlines.h>
+#include "Node.h"
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
-WTF_MAKE_ISO_ALLOCATED_IMPL(DragEvent);
+WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(DragEvent);
 
 Ref<DragEvent> DragEvent::create(const AtomString& eventType, DragEventInit&& init)
 {
@@ -44,33 +45,33 @@ Ref<DragEvent> DragEvent::createForBindings()
 }
 
 Ref<DragEvent> DragEvent::create(const AtomString& type, CanBubble canBubble, IsCancelable isCancelable, IsComposed isComposed, MonotonicTime timestamp, RefPtr<WindowProxy>&& view, int detail,
-    const IntPoint& screenLocation, const IntPoint& windowLocation, double movementX, double movementY, OptionSet<Modifier> modifiers, short button, unsigned short buttons,
-    EventTarget* relatedTarget, double force, unsigned short syntheticClickType, DataTransfer* dataTransfer, IsSimulated isSimulated, IsTrusted isTrusted)
+    const IntPoint& screenLocation, const IntPoint& windowLocation, double movementX, double movementY, OptionSet<Modifier> modifiers, MouseButton button, unsigned short buttons,
+    EventTarget* relatedTarget, double force, SyntheticClickType syntheticClickType, DataTransfer* dataTransfer, IsSimulated isSimulated, IsTrusted isTrusted)
 {
     return adoptRef(*new DragEvent(type, canBubble, isCancelable, isComposed, timestamp, WTFMove(view), detail,
         screenLocation, windowLocation, movementX, movementY, modifiers, button, buttons, relatedTarget, force, syntheticClickType, dataTransfer, isSimulated, isTrusted));
 }
 
 DragEvent::DragEvent(const AtomString& eventType, DragEventInit&& init)
-    : MouseEvent(eventType, init)
+    : MouseEvent(EventInterfaceType::DragEvent, eventType, init, IsTrusted::No)
     , m_dataTransfer(WTFMove(init.dataTransfer))
 {
 }
 
 DragEvent::DragEvent(const AtomString& eventType, CanBubble canBubble, IsCancelable isCancelable, IsComposed isComposed,
     MonotonicTime timestamp, RefPtr<WindowProxy>&& view, int detail,
-    const IntPoint& screenLocation, const IntPoint& windowLocation, double movementX, double movementY, OptionSet<Modifier> modifiers, short button, unsigned short buttons,
-    EventTarget* relatedTarget, double force, unsigned short syntheticClickType, DataTransfer* dataTransfer, IsSimulated isSimulated, IsTrusted isTrusted)
-    : MouseEvent(eventType, canBubble, isCancelable, isComposed, timestamp, WTFMove(view), detail, screenLocation, windowLocation, movementX, movementY, modifiers, button, buttons, relatedTarget, force, syntheticClickType, isSimulated, isTrusted)
+    const IntPoint& screenLocation, const IntPoint& windowLocation, double movementX, double movementY, OptionSet<Modifier> modifiers, MouseButton button, unsigned short buttons,
+    EventTarget* relatedTarget, double force, SyntheticClickType syntheticClickType, DataTransfer* dataTransfer, IsSimulated isSimulated, IsTrusted isTrusted)
+    : MouseEvent(EventInterfaceType::DragEvent, eventType, canBubble, isCancelable, isComposed, timestamp, WTFMove(view), detail, screenLocation, windowLocation, movementX, movementY, modifiers, button, buttons, relatedTarget, force, syntheticClickType, { }, { }, isSimulated, isTrusted)
     , m_dataTransfer(dataTransfer)
 {
 }
 
-DragEvent::DragEvent() = default;
-
-EventInterface DragEvent::eventInterface() const
+DragEvent::DragEvent()
+    : MouseEvent(EventInterfaceType::DragEvent)
 {
-    return DragEventInterfaceType;
 }
+
+DragEvent::~DragEvent() = default;
 
 } // namespace WebCore

@@ -27,8 +27,6 @@
 
 #if ENABLE(WEB_AUTHN)
 
-#include <wtf/Forward.h>
-
 namespace WebCore {
 
 enum class AuthenticatorTransport : uint8_t {

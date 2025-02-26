@@ -31,7 +31,12 @@
 
 namespace JSC {
 
-inline IndexingType JSArray::mergeIndexingTypeForCopying(IndexingType other)
+inline Structure* JSArray::createStructure(VM& vm, JSGlobalObject* globalObject, JSValue prototype, IndexingType indexingType)
+{
+    return Structure::create(vm, globalObject, prototype, TypeInfo(ArrayType, StructureFlags), info(), indexingType);
+}
+
+inline IndexingType JSArray::mergeIndexingTypeForCopying(IndexingType other, bool allowPromotion)
 {
     IndexingType type = indexingType();
     if (!(type & IsArray && other & IsArray))
@@ -53,6 +58,14 @@ inline IndexingType JSArray::mergeIndexingTypeForCopying(IndexingType other)
         if (other == ArrayWithContiguous)
             return other;
         return type;
+    }
+
+    if (allowPromotion) {
+        if ((type == ArrayWithInt32 || type == ArrayWithDouble) && (other == ArrayWithInt32 || other == ArrayWithDouble)) {
+            if (type == other)
+                return type;
+            return ArrayWithDouble;
+        }
     }
 
     if (type != other)
@@ -109,6 +122,30 @@ inline bool JSArray::canDoFastIndexedAccess() const
 
     return true;
 }
+
+ALWAYS_INLINE bool JSArray::definitelyNegativeOneMiss() const
+{
+    JSGlobalObject* globalObject = this->globalObject();
+    if (!globalObject->arrayPrototypeChainIsSane())
+        return false;
+
+    if (!globalObject->arrayNegativeOneWatchpointSet().isStillValid())
+        return false;
+
+    Structure* structure = this->structure();
+    // This is the fast case. Many arrays will be an original array.
+    if (globalObject->isOriginalArrayStructure(structure))
+        return true;
+
+    if (getPrototypeDirect() != globalObject->arrayPrototype())
+        return false;
+
+    if (structure->seenProperties().bits())
+        return false;
+
+    return true;
+}
+
 
 ALWAYS_INLINE uint64_t toLength(JSGlobalObject* globalObject, JSObject* object)
 {

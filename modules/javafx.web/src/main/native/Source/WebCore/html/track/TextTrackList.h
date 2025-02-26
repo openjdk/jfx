@@ -35,7 +35,7 @@ namespace WebCore {
 class TextTrack;
 
 class TextTrackList final : public TrackListBase {
-    WTF_MAKE_ISO_ALLOCATED(TextTrackList);
+    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(TextTrackList);
 public:
     static Ref<TextTrackList> create(ScriptExecutionContext* context)
     {
@@ -45,13 +45,15 @@ public:
     }
     virtual ~TextTrackList();
 
+    bool isSupportedPropertyIndex(unsigned index) const { return index < length(); }
     unsigned length() const override;
     int getTrackIndex(TextTrack&);
     int getTrackIndexRelativeToRenderedTracks(TextTrack&);
     bool contains(TrackBase&) const override;
 
     TextTrack* item(unsigned index) const;
-    TextTrack* getTrackById(const AtomString&);
+    TextTrack* getTrackById(const AtomString&) const;
+    TextTrack* getTrackById(TrackID) const;
     TextTrack* lastItem() const { return item(length() - 1); }
 
     void append(Ref<TextTrack>&&);
@@ -61,11 +63,10 @@ public:
     const MediaTime& duration() const { return m_duration; }
 
     // EventTarget
-    EventTargetInterface eventTargetInterface() const override;
+    enum EventTargetInterfaceType eventTargetInterface() const override;
 
 private:
     TextTrackList(ScriptExecutionContext*);
-    const char* activeDOMObjectName() const final;
 
     void invalidateTrackIndexesAfterTrack(TextTrack&);
 

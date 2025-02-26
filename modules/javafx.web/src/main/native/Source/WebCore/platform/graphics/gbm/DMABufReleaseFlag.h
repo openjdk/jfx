@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2022 Metrological Group B.V.
- * Copyright (C) 2022 Igalia S.L.
+ * Copyright (C) 2022-2024 Igalia S.L.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -32,6 +32,10 @@
 #include <wtf/text/CString.h>
 #include <wtf/unix/UnixFileDescriptor.h>
 
+namespace IPC {
+template<typename T, typename U> struct ArgumentCoder;
+}
+
 namespace WebCore {
 
 struct DMABufReleaseFlag {
@@ -41,9 +45,8 @@ struct DMABufReleaseFlag {
 
     enum InitializeTag { Initialize };
     DMABufReleaseFlag(InitializeTag)
-    {
-        fd = { eventfd(0, EFD_CLOEXEC | EFD_NONBLOCK), UnixFileDescriptor::Adopt };
-    }
+        : fd { eventfd(0, EFD_CLOEXEC | EFD_NONBLOCK), UnixFileDescriptor::Adopt }
+    { }
 
     ~DMABufReleaseFlag() = default;
 
@@ -74,11 +77,18 @@ struct DMABufReleaseFlag {
             return;
 
         uint64_t value { 1 };
-        if (write(fd.value(), &value, sizeof(value)) != sizeof(value))
+        if (::write(fd.value(), &value, sizeof(value)) != sizeof(value))
             WTFLogAlways("Error writing to the eventfd at DMABufReleaseFlag: %s", safeStrerror(errno).data());
     }
 
     UnixFileDescriptor fd;
+
+private:
+    DMABufReleaseFlag(UnixFileDescriptor&& fd)
+        : fd(WTFMove(fd))
+    { }
+
+    friend struct IPC::ArgumentCoder<DMABufReleaseFlag, void>;
 };
 
 } // namespace WebCore

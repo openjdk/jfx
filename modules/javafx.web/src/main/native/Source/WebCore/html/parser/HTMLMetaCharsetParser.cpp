@@ -28,7 +28,6 @@
 #include "HTMLMetaCharsetParser.h"
 
 #include "HTMLNames.h"
-#include "HTMLParserIdioms.h"
 #include <pal/text/TextCodec.h>
 #include <pal/text/TextEncodingRegistry.h>
 
@@ -86,13 +85,13 @@ static StringView extractCharset(StringView value)
 bool HTMLMetaCharsetParser::processMeta(HTMLToken& token)
 {
     auto attributes = token.attributes().map([](auto& attribute) {
-        return std::pair { StringView { attribute.name.data(), static_cast<unsigned>(attribute.name.size()) }, StringView { attribute.value.data(), static_cast<unsigned>(attribute.value.size()) } };
+        return std::pair { StringView { attribute.name.span() }, StringView { attribute.value.span() } };
     });
     m_encoding = encodingFromMetaAttributes(attributes);
     return m_encoding.isValid();
 }
 
-PAL::TextEncoding HTMLMetaCharsetParser::encodingFromMetaAttributes(Span<const std::pair<StringView, StringView>> attributes)
+PAL::TextEncoding HTMLMetaCharsetParser::encodingFromMetaAttributes(std::span<const std::pair<StringView, StringView>> attributes)
 {
     bool gotPragma = false;
     enum { None, Charset, Pragma } mode = None;
@@ -118,12 +117,12 @@ PAL::TextEncoding HTMLMetaCharsetParser::encodingFromMetaAttributes(Span<const s
     }
 
     if (mode == Charset || (mode == Pragma && gotPragma))
-        return charset.stripLeadingAndTrailingMatchedCharacters(isHTMLSpace<UChar>);
+        return charset.trim(isASCIIWhitespace<UChar>);
 
     return PAL::TextEncoding();
 }
 
-bool HTMLMetaCharsetParser::checkForMetaCharset(const char* data, size_t length)
+bool HTMLMetaCharsetParser::checkForMetaCharset(std::span<const uint8_t> data)
 {
     if (m_doneChecking)
         return true;
@@ -151,12 +150,12 @@ bool HTMLMetaCharsetParser::checkForMetaCharset(const char* data, size_t length)
     constexpr int bytesToCheckUnconditionally = 1024;
 
     bool ignoredSawErrorFlag;
-    m_input.append(m_codec->decode(data, length, false, false, ignoredSawErrorFlag));
+    m_input.append(m_codec->decode(data, false, false, ignoredSawErrorFlag));
 
     while (auto token = m_tokenizer.nextToken(m_input)) {
         bool isEnd = token->type() == HTMLToken::Type::EndTag;
         if (isEnd || token->type() == HTMLToken::Type::StartTag) {
-            auto knownTagName = AtomString::lookUp(token->name().data(), token->name().size());
+            auto knownTagName = AtomString::lookUp(token->name().span());
             if (!isEnd) {
                 m_tokenizer.updateStateFor(knownTagName);
                 if (knownTagName == metaTag && processMeta(*token)) {

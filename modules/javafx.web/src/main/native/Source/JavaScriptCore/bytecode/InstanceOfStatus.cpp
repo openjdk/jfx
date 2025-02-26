@@ -27,9 +27,9 @@
 #include "InstanceOfStatus.h"
 
 #include "ICStatusUtils.h"
+#include "InlineCacheCompiler.h"
 #include "InstanceOfAccessCase.h"
 #include "JSCellInlines.h"
-#include "PolymorphicAccess.h"
 #include "StructureStubInfo.h"
 
 namespace JSC {
@@ -88,8 +88,8 @@ InstanceOfStatus InstanceOfStatus::computeForStubInfo(const ConcurrentJSLocker&,
     for (unsigned listIndex = 0; listIndex < list->size(); ++listIndex) {
         const AccessCase& access = list->at(listIndex);
 
-        if (access.type() == AccessCase::InstanceOfGeneric)
-            return TakesSlowPath;
+        if (access.type() == AccessCase::InstanceOfMegamorphic)
+            return Megamorphic;
 
         if (!access.conditionSet().structuresEnsureValidity())
             return TakesSlowPath;

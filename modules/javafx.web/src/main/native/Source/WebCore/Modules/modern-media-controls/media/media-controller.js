@@ -23,13 +23,14 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+const maxNonLiveDuration = 604800; // 604800 seconds == 1 week
+
 class MediaController
 {
-
     constructor(shadowRoot, media, host)
     {
-        this.shadowRoot = shadowRoot;
-        this.media = media;
+        this.shadowRootWeakRef = new WeakRef(shadowRoot);
+        this.mediaWeakRef = new WeakRef(media);
         this.host = host;
 
         this.fullscreenChangeEventType = media.webkitSupportsPresentationMode ? "webkitpresentationmodechanged" : "webkitfullscreenchange";
@@ -58,6 +59,8 @@ class MediaController
 
         media.addEventListener("play", this);
         media.addEventListener(this.fullscreenChangeEventType, this);
+        media.addEventListener("keydown", this);
+        media.addEventListener("keyup", this);
 
         window.addEventListener("keydown", this);
 
@@ -65,6 +68,16 @@ class MediaController
     }
 
     // Public
+    get media()
+    {
+        return this.mediaWeakRef ? this.mediaWeakRef.deref() : null;
+    }
+
+    get shadowRoot()
+    {
+
+        return this.shadowRootWeakRef ? this.shadowRootWeakRef.deref() : null;
+    }
 
     get isAudio()
     {
@@ -91,7 +104,10 @@ class MediaController
 
     get isFullscreen()
     {
-        return this.media.webkitSupportsPresentationMode ? this.media.webkitPresentationMode === "fullscreen" : this.media.webkitDisplayingFullscreen;
+        if (!this.media)
+            return false;
+
+        return this.media.webkitSupportsPresentationMode ? this.media.webkitPresentationMode === "fullscreen" || (this.host && this.host.inWindowFullscreen) : this.media.webkitDisplayingFullscreen;
     }
 
     get layoutTraits()
@@ -170,7 +186,7 @@ class MediaController
     macOSControlsBackgroundWasClicked()
     {
         // Toggle playback when clicking on the video but not on any controls on macOS.
-        if (this.media.controls)
+        if (this.media.controls || (this.host && this.host.shouldForceControlsDisplay))
             this.togglePlayback();
     }
 
@@ -194,14 +210,23 @@ class MediaController
             this._updateControlsIfNeeded();
             // We must immediately perform layouts so that we don't lag behind the media layout size.
             scheduler.flushScheduledLayoutCallbacks();
-        } else if (event.currentTarget === this.media) {
+        } else if (event.type === "keydown" && this.isFullscreen && event.key === " ") {
+            this.togglePlayback();
+            event.preventDefault();
+            event.stopPropagation();
+        } else if (event.type === "keyup" && this.isFullscreen && event.key === " ") {
+            event.preventDefault();
+            event.stopPropagation();
+        } else if (event.type === "dragstart" && this.isFullscreen)
+            event.preventDefault();
+        else if (event.type === this.fullscreenChangeEventType)
+            this.host?.presentationModeChanged?.();
+
+        if (event.currentTarget === this.media) {
             if (event.type === "play")
                 this.hasPlayed = true;
             this._updateControlsIfNeeded();
             this._updateControlsAvailability();
-        } else if (event.type === "keydown" && this.isFullscreen && event.key === " ") {
-            this.togglePlayback();
-            event.preventDefault();
         }
     }
 
@@ -235,6 +260,7 @@ class MediaController
             let valueElement = rowElement.appendChild(document.createElement("td"));
             return valueElement;
         }
+        let sourceValueElement = createRow(UIString("Source"));
         let viewportValueElement = createRow(UIString("Viewport"));
         let framesValueElement = createRow(UIString("Frames"));
         let resolutionValueElement = createRow(UIString("Resolution"));
@@ -250,9 +276,10 @@ class MediaController
             let videoTrackConfiguration = videoTrack.configuration;
             let videoColorSpace = videoTrackConfiguration?.colorSpace;
 
+            sourceValueElement.textContent = UIString(this.host.sourceType ?? "none");
             viewportValueElement.textContent = UIString("%s\u00d7%s", this.controls.width, this.controls.height) + (window.devicePixelRatio !== 1 ? " " + UIString("(%s)", UIString("%s\u00d7", window.devicePixelRatio)) : "");
             framesValueElement.textContent = UIString("%s dropped of %s", quality.droppedVideoFrames, quality.totalVideoFrames);
-            resolutionValueElement.textContent = UIString("%s\u00d7%s", videoTrackConfiguration?.width, videoTrackConfiguration?.height) + " " + UIString("(%s)", UIString("%sfps", videoTrackConfiguration?.framerate));
+            resolutionValueElement.textContent = UIString("%s\u00d7%s", videoTrackConfiguration?.width, videoTrackConfiguration?.height) + " " + UIString("(%s)", UIString("%sfps", Math.round(videoTrackConfiguration?.framerate * 1000) / 1000));
             codecsValueElement.textContent = videoTrackConfiguration?.codec;
             colorValueElement.textContent = UIString("%s / %s / %s", videoColorSpace?.primaries, videoColorSpace?.transfer, videoColorSpace?.matrix);
 
@@ -263,16 +290,23 @@ class MediaController
         return true;
     }
 
-    // Private
-
-    _supportingObjectClasses()
+    deinitialize()
     {
-        let overridenSupportingObjectClasses = this.layoutTraits.overridenSupportingObjectClasses();
-        if (overridenSupportingObjectClasses)
-            return overridenSupportingObjectClasses;
-
-        return [AirplaySupport, AudioSupport, CloseSupport, ControlsVisibilitySupport, FullscreenSupport, MuteSupport, OverflowSupport, PiPSupport, PlacardSupport, PlaybackSupport, ScrubbingSupport, SeekBackwardSupport, SeekForwardSupport, SkipBackSupport, SkipForwardSupport, StartSupport, StatusSupport, TimeControlSupport, TracksSupport, VolumeSupport];
+        this.shadowRoot.removeChild(this.container);
+        return true;
     }
+
+    reinitialize(shadowRoot, media, host)
+    {
+        iconService.shadowRoot = shadowRoot;
+        this.shadowRootWeakRef = new WeakRef(shadowRoot);
+        this.mediaWeakRef = new WeakRef(media);
+        this.host = host;
+        shadowRoot.appendChild(this.container);
+        return true;
+    }
+
+    // Private
 
     _updateControlsIfNeeded()
     {
@@ -292,6 +326,9 @@ class MediaController
                 supportingObject.disable();
         }
 
+        if (previousControls)
+            previousControls.disable();
+
         this.controls = new ControlsClass;
         this.controls.delegate = this;
 
@@ -308,11 +345,35 @@ class MediaController
         this._updateTextTracksClassList();
         this._updateControlsSize();
 
-        this._supportingObjects = this._supportingObjectClasses().map(SupportClass => new SupportClass(this), this);
+        this._supportingObjects = layoutTraits.supportingObjectClasses().map(SupportClass => new SupportClass(this), this);
 
         this.controls.shouldUseSingleBarLayout = this.controls instanceof InlineMediaControls && this.isYouTubeEmbedWithTitle;
 
+        if (this.controls instanceof MacOSFullscreenMediaControls)
+            window.addEventListener("dragstart", this, true);
+        else
+            window.removeEventListener("dragstart", this, true);
+
+        if (this.host && this.host.inWindowFullscreen) {
+            this._stopPropagationOnClickEvents();
+            if (!this.host.supportsSeeking)
+                this.controls.timeControl.scrubber.disabled = true;
+
+            if (!this.host.supportsRewind)
+                this.controls.rewindButton.dropped = true;
+        }
+
         this._updateControlsAvailability();
+    }
+
+    _stopPropagationOnClickEvents()
+    {
+        let clickEvents = ["click", "mousedown", "mouseup", "pointerdown", "pointerup"];
+        for (let clickEvent of clickEvents) {
+            this.controls.element.addEventListener(clickEvent, (event) => {
+                event.stopPropagation();
+            });
+        }
     }
 
     _updateControlsSize()
@@ -383,9 +444,6 @@ class MediaController
 
     _shouldControlsBeAvailable()
     {
-        if (this.layoutTraits.controlsAlwaysAvailable())
-            return true;
-
         if (this.layoutTraits.controlsNeverAvailable())
             return false;
 

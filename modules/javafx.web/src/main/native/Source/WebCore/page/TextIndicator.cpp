@@ -26,20 +26,21 @@
 #include "config.h"
 #include "TextIndicator.h"
 
+#include "BitmapImage.h"
 #include "ColorBlending.h"
 #include "ColorHash.h"
 #include "Document.h"
 #include "Editor.h"
 #include "Element.h"
-#include "ElementAncestorIterator.h"
-#include "Frame.h"
+#include "ElementAncestorIteratorInlines.h"
 #include "FrameSelection.h"
 #include "FrameSnapshotting.h"
-#include "FrameView.h"
 #include "GeometryUtilities.h"
 #include "GraphicsContext.h"
 #include "ImageBuffer.h"
 #include "IntRect.h"
+#include "LocalFrame.h"
+#include "LocalFrameView.h"
 #include "NodeTraversal.h"
 #include "Range.h"
 #include "RenderElement.h"
@@ -54,7 +55,7 @@
 
 namespace WebCore {
 
-static bool initializeIndicator(TextIndicatorData&, Frame&, const SimpleRange&, FloatSize margin, bool indicatesCurrentSelection);
+static bool initializeIndicator(TextIndicatorData&, LocalFrame&, const SimpleRange&, FloatSize margin, bool indicatesCurrentSelection);
 
 TextIndicator::TextIndicator(const TextIndicatorData& data)
     : m_data(data)
@@ -76,7 +77,7 @@ RefPtr<TextIndicator> TextIndicator::createWithRange(const SimpleRange& range, O
             Ref indicatorNode = *commonAncestor;
 
             for (auto& ancestorElement : ancestorsOfType<Element>(*commonAncestor)) {
-                if (auto* renderer = ancestorElement.renderer(); renderer && renderer->style().effectiveUserSelect() == UserSelect::All)
+                if (auto* renderer = ancestorElement.renderer(); renderer && renderer->style().usedUserSelect() == UserSelect::All)
                     indicatorNode = ancestorElement;
             }
 
@@ -113,7 +114,7 @@ RefPtr<TextIndicator> TextIndicator::createWithRange(const SimpleRange& range, O
     return TextIndicator::create(data);
 }
 
-RefPtr<TextIndicator> TextIndicator::createWithSelectionInFrame(Frame& frame, OptionSet<TextIndicatorOption> options, TextIndicatorPresentationTransition presentationTransition, FloatSize margin)
+RefPtr<TextIndicator> TextIndicator::createWithSelectionInFrame(LocalFrame& frame, OptionSet<TextIndicatorOption> options, TextIndicatorPresentationTransition presentationTransition, FloatSize margin)
 {
     auto range = frame.selection().selection().toNormalizedRange();
     if (!range)
@@ -142,7 +143,7 @@ static bool hasNonInlineOrReplacedElements(const SimpleRange& range)
 
 static SnapshotOptions snapshotOptionsForTextIndicatorOptions(OptionSet<TextIndicatorOption> options)
 {
-    SnapshotOptions snapshotOptions { { SnapshotFlags::PaintWithIntegralScaleFactor }, PixelFormat::BGRA8, DestinationColorSpace::SRGB() };
+    SnapshotOptions snapshotOptions { { SnapshotFlags::PaintWithIntegralScaleFactor }, ImageBufferPixelFormat::BGRA8, DestinationColorSpace::SRGB() };
 
     if (!options.contains(TextIndicatorOption::PaintAllContent)) {
         if (options.contains(TextIndicatorOption::PaintBackgrounds))
@@ -153,22 +154,24 @@ static SnapshotOptions snapshotOptionsForTextIndicatorOptions(OptionSet<TextIndi
             if (!options.contains(TextIndicatorOption::RespectTextColor))
                 snapshotOptions.flags.add(SnapshotFlags::ForceBlackText);
         }
+        if (options.contains(TextIndicatorOption::SkipReplacedContent))
+            snapshotOptions.flags.add(SnapshotFlags::ExcludeReplacedContent);
     } else
         snapshotOptions.flags.add(SnapshotFlags::ExcludeSelectionHighlighting);
 
     return snapshotOptions;
 }
 
-static RefPtr<Image> takeSnapshot(Frame& frame, IntRect rect, SnapshotOptions&& options, float& scaleFactor, const Vector<FloatRect>& clipRectsInDocumentCoordinates)
+static RefPtr<Image> takeSnapshot(LocalFrame& frame, IntRect rect, SnapshotOptions&& options, float& scaleFactor, const Vector<FloatRect>& clipRectsInDocumentCoordinates)
 {
     auto buffer = snapshotFrameRectWithClip(frame, rect, clipRectsInDocumentCoordinates, WTFMove(options));
     if (!buffer)
         return nullptr;
     scaleFactor = buffer->resolutionScale();
-    return ImageBuffer::sinkIntoImage(WTFMove(buffer), PreserveResolution::Yes);
+    return BitmapImage::create(ImageBuffer::sinkIntoNativeImage(WTFMove(buffer)));
 }
 
-static bool takeSnapshots(TextIndicatorData& data, Frame& frame, IntRect snapshotRect, const Vector<FloatRect>& clipRectsInDocumentCoordinates)
+static bool takeSnapshots(TextIndicatorData& data, LocalFrame& frame, IntRect snapshotRect, const Vector<FloatRect>& clipRectsInDocumentCoordinates)
 {
     data.contentImage = takeSnapshot(frame, snapshotRect, snapshotOptionsForTextIndicatorOptions(data.options), data.contentImageScaleFactor, clipRectsInDocumentCoordinates);
     if (!data.contentImage)
@@ -176,14 +179,14 @@ static bool takeSnapshots(TextIndicatorData& data, Frame& frame, IntRect snapsho
 
     if (data.options.contains(TextIndicatorOption::IncludeSnapshotWithSelectionHighlight)) {
         float snapshotScaleFactor;
-        data.contentImageWithHighlight = takeSnapshot(frame, snapshotRect, { { }, PixelFormat::BGRA8, DestinationColorSpace::SRGB() }, snapshotScaleFactor, clipRectsInDocumentCoordinates);
+        data.contentImageWithHighlight = takeSnapshot(frame, snapshotRect, { { }, ImageBufferPixelFormat::BGRA8, DestinationColorSpace::SRGB() }, snapshotScaleFactor, clipRectsInDocumentCoordinates);
         ASSERT(!data.contentImageWithHighlight || data.contentImageScaleFactor >= snapshotScaleFactor);
     }
 
     if (data.options.contains(TextIndicatorOption::IncludeSnapshotOfAllVisibleContentWithoutSelection)) {
         float snapshotScaleFactor;
         auto snapshotRect = frame.view()->visibleContentRect();
-        data.contentImageWithoutSelection = takeSnapshot(frame, snapshotRect, { { SnapshotFlags::PaintEverythingExcludingSelection }, PixelFormat::BGRA8, DestinationColorSpace::SRGB() }, snapshotScaleFactor, { });
+        data.contentImageWithoutSelection = takeSnapshot(frame, snapshotRect, { { SnapshotFlags::PaintEverythingExcludingSelection }, ImageBufferPixelFormat::BGRA8, DestinationColorSpace::SRGB() }, snapshotScaleFactor, { });
         data.contentImageWithoutSelectionRectInRootViewCoordinates = frame.view()->contentsToRootView(snapshotRect);
     }
 
@@ -243,12 +246,12 @@ static bool containsOnlyWhiteSpaceText(const SimpleRange& range)
         if (!is<RenderText>(node.renderer()))
             return false;
     }
-    return plainTextReplacingNoBreakSpace(range).find(isNotSpaceOrNewline) == notFound;
+    return plainTextReplacingNoBreakSpace(range).find(deprecatedIsNotSpaceOrNewline) == notFound;
 }
 
-static bool initializeIndicator(TextIndicatorData& data, Frame& frame, const SimpleRange& range, FloatSize margin, bool indicatesCurrentSelection)
+static bool initializeIndicator(TextIndicatorData& data, LocalFrame& frame, const SimpleRange& range, FloatSize margin, bool indicatesCurrentSelection)
 {
-    if (auto* document = frame.document())
+    if (RefPtr document = frame.document())
         document->updateLayoutIgnorePendingStylesheets();
 
     bool treatRangeAsComplexDueToIllegibleTextColors = false;

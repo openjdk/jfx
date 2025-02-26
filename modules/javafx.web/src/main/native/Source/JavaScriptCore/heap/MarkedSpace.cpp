@@ -177,7 +177,7 @@ void MarkedSpace::initializeSizeClassForStepSize()
         });
 }
 
-MarkedSpace::MarkedSpace(Heap* heap)
+MarkedSpace::MarkedSpace(JSC::Heap* heap)
 {
     ASSERT_UNUSED(heap, heap == &this->heap());
     initializeSizeClassForStepSize();
@@ -198,7 +198,7 @@ void MarkedSpace::freeMemory()
         allocation->destroy();
     forEachSubspace([&](Subspace& subspace) {
         if (subspace.isIsoSubspace())
-            static_cast<IsoSubspace&>(subspace).destroyLowerTierFreeList();
+            static_cast<IsoSubspace&>(subspace).destroyLowerTierPreciseFreeList();
         return IterationStatus::Continue;
     });
 }
@@ -236,8 +236,8 @@ void MarkedSpace::sweepPreciseAllocations()
         if (allocation->isEmpty()) {
             if (auto* set = preciseAllocationSet())
                 set->remove(allocation->cell());
-            if (allocation->isLowerTier())
-                static_cast<IsoSubspace*>(allocation->subspace())->sweepLowerTierCell(allocation);
+            if (allocation->isLowerTierPrecise())
+                static_cast<IsoSubspace*>(allocation->subspace())->sweepLowerTierPreciseCell(allocation);
             else {
                 m_capacity -= allocation->cellSize();
                 allocation->destroy();
@@ -272,22 +272,6 @@ void MarkedSpace::enablePreciseAllocationTracking()
     for (auto* allocation : m_preciseAllocations)
         m_preciseAllocationSet->add(allocation->cell());
 }
-
-template<typename Visitor>
-void MarkedSpace::visitWeakSets(Visitor& visitor)
-{
-    auto visit = [&] (WeakSet* weakSet) {
-        weakSet->visit(visitor);
-    };
-
-    m_newActiveWeakSets.forEach(visit);
-
-    if (heap().collectionScope() == CollectionScope::Full)
-        m_activeWeakSets.forEach(visit);
-}
-
-template void MarkedSpace::visitWeakSets(AbstractSlotVisitor&);
-template void MarkedSpace::visitWeakSets(SlotVisitor&);
 
 void MarkedSpace::reapWeakSets()
 {
@@ -402,7 +386,12 @@ void MarkedSpace::shrink()
 
 void MarkedSpace::beginMarking()
 {
-    if (heap().collectionScope() == CollectionScope::Full) {
+    switch (heap().collectionScope().value()) {
+    case CollectionScope::Eden: {
+        m_edenVersion = nextVersion(m_edenVersion);
+        break;
+    }
+    case CollectionScope::Full: {
         forEachDirectory(
             [&] (BlockDirectory& directory) -> IterationStatus {
                 directory.beginMarkingForFullCollection();
@@ -420,6 +409,9 @@ void MarkedSpace::beginMarking()
 
         for (PreciseAllocation* allocation : m_preciseAllocations)
             allocation->flip();
+
+        break;
+    }
     }
 
     if (ASSERT_ENABLED) {
@@ -567,6 +559,7 @@ void MarkedSpace::dumpBits(PrintStream& out)
 {
     forEachDirectory(
         [&] (BlockDirectory& directory) -> IterationStatus {
+            directory.assertIsMutatorOrMutatorIsStopped();
             out.print("Bits for ", directory, ":\n");
             directory.dumpBits(out);
             return IterationStatus::Continue;

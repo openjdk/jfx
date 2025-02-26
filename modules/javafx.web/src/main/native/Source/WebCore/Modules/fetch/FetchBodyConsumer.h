@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2016 Apple Inc.
+ * Copyright (C) 2016-2024 Apple Inc.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted, provided that the following conditions
@@ -40,13 +40,14 @@ namespace WebCore {
 
 class Blob;
 class DOMFormData;
+class FetchBodyOwner;
 class FetchBodySource;
 class FormData;
 class ReadableStream;
 
 class FetchBodyConsumer {
 public:
-    enum class Type { None, ArrayBuffer, Blob, JSON, Text, FormData };
+    enum class Type { None, ArrayBuffer, Blob, Bytes, JSON, Text, FormData };
 
     explicit FetchBodyConsumer(Type);
     FetchBodyConsumer(FetchBodyConsumer&&);
@@ -65,14 +66,13 @@ public:
     RefPtr<JSC::ArrayBuffer> takeAsArrayBuffer();
     String takeAsText();
 
-    void setContentType(const String& contentType) { m_contentType = contentType; }
     void setType(Type type) { m_type = type; }
 
     void clean();
 
     void extract(ReadableStream&, ReadableStreamToSharedBufferSink::Callback&&);
-    void resolve(Ref<DeferredPromise>&&, const String& contentType, ReadableStream*);
-    void resolveWithData(Ref<DeferredPromise>&&, const String& contentType, const unsigned char*, unsigned);
+    void resolve(Ref<DeferredPromise>&&, const String& contentType, FetchBodyOwner*, ReadableStream*);
+    void resolveWithData(Ref<DeferredPromise>&&, const String& contentType, std::span<const uint8_t>);
     void resolveWithFormData(Ref<DeferredPromise>&&, const String& contentType, const FormData&, ScriptExecutionContext*);
     void consumeFormDataAsStream(const FormData&, FetchBodySource&, ScriptExecutionContext*);
 
@@ -84,14 +84,13 @@ public:
 
     void setAsLoading() { m_isLoading = true; }
 
-    static RefPtr<DOMFormData> packageFormData(ScriptExecutionContext*, const String& contentType, const uint8_t* data, size_t length);
+    static RefPtr<DOMFormData> packageFormData(ScriptExecutionContext*, const String& contentType, std::span<const uint8_t> data);
 
 private:
-    Ref<Blob> takeAsBlob(ScriptExecutionContext*);
+    Ref<Blob> takeAsBlob(ScriptExecutionContext*, const String& contentType);
     void resetConsumePromise();
 
     Type m_type;
-    String m_contentType;
     SharedBufferBuilder m_buffer;
     RefPtr<DeferredPromise> m_consumePromise;
     RefPtr<ReadableStreamToSharedBufferSink> m_sink;

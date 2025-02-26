@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2006-2023 Apple Inc. All rights reserved.
- * Copyright (C) 2013 Google Inc. All rights reserved.
+ * Copyright (C) 2013-2016 Google Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Library General Public
@@ -21,7 +21,7 @@
 
 #pragma once
 
-#include "AbstractFrame.h"
+#include "Frame.h"
 #include "HTMLElement.h"
 #include "ReferrerPolicy.h"
 #include "SecurityContext.h"
@@ -33,15 +33,18 @@ namespace WebCore {
 class RenderWidget;
 
 class HTMLFrameOwnerElement : public HTMLElement {
-    WTF_MAKE_ISO_ALLOCATED(HTMLFrameOwnerElement);
+    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(HTMLFrameOwnerElement);
+    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(HTMLFrameOwnerElement);
 public:
     virtual ~HTMLFrameOwnerElement();
 
-    AbstractFrame* contentFrame() const { return m_contentFrame.get(); }
+    Frame* contentFrame() const { return m_contentFrame.get(); }
+    RefPtr<Frame> protectedContentFrame() const;
     WEBCORE_EXPORT WindowProxy* contentWindow() const;
     WEBCORE_EXPORT Document* contentDocument() const;
+    RefPtr<Document> protectedContentDocument() const { return contentDocument(); }
 
-    WEBCORE_EXPORT void setContentFrame(AbstractFrame&);
+    WEBCORE_EXPORT void setContentFrame(Frame&);
     void clearContentFrame();
 
     void disconnectContentFrame();
@@ -67,15 +70,15 @@ public:
     virtual bool isLazyLoadObserverActive() const { return false; }
 
 protected:
-    HTMLFrameOwnerElement(const QualifiedName& tagName, Document&);
+    HTMLFrameOwnerElement(const QualifiedName& tagName, Document&, OptionSet<TypeFlag> = { });
     void setSandboxFlags(SandboxFlags);
     bool isProhibitedSelfReference(const URL&) const;
+    bool isKeyboardFocusable(KeyboardEvent*) const override;
 
 private:
-    bool isKeyboardFocusable(KeyboardEvent*) const override;
-    bool isFrameOwnerElement() const final { return true; }
+    bool isHTMLFrameOwnerElement() const final { return true; }
 
-    WeakPtr<AbstractFrame> m_contentFrame;
+    WeakPtr<Frame> m_contentFrame;
     SandboxFlags m_sandboxFlags { SandboxNone };
 };
 
@@ -85,13 +88,13 @@ public:
         : m_root(root)
     {
         if (m_root)
-            disabledSubtreeRoots().add(m_root);
+            disabledSubtreeRoots().add(m_root.get());
     }
 
     ~SubframeLoadingDisabler()
     {
         if (m_root)
-            disabledSubtreeRoots().remove(m_root);
+            disabledSubtreeRoots().remove(m_root.get());
     }
 
     static bool canLoadFrame(HTMLFrameOwnerElement&);
@@ -103,11 +106,21 @@ private:
         return nodes;
     }
 
-    ContainerNode* m_root;
+    WeakPtr<ContainerNode, WeakPtrImplWithEventTargetData> m_root;
 };
+
+inline HTMLFrameOwnerElement* Frame::ownerElement() const
+{
+    return m_ownerElement.get();
+}
+
+inline RefPtr<HTMLFrameOwnerElement> Frame::protectedOwnerElement() const
+{
+    return m_ownerElement.get();
+}
 
 } // namespace WebCore
 
 SPECIALIZE_TYPE_TRAITS_BEGIN(WebCore::HTMLFrameOwnerElement)
-    static bool isType(const WebCore::Node& node) { return node.isFrameOwnerElement(); }
+    static bool isType(const WebCore::Node& node) { return node.isHTMLFrameOwnerElement(); }
 SPECIALIZE_TYPE_TRAITS_END()

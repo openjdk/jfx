@@ -22,15 +22,16 @@
 #include "config.h"
 #include "SVGLineElement.h"
 
+#include "LegacyRenderSVGResource.h"
 #include "LegacyRenderSVGShape.h"
-#include "RenderSVGResource.h"
+#include "NodeName.h"
 #include "RenderSVGShape.h"
 #include "SVGLengthValue.h"
-#include <wtf/IsoMallocInlines.h>
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
-WTF_MAKE_ISO_ALLOCATED_IMPL(SVGLineElement);
+WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(SVGLineElement);
 
 inline SVGLineElement::SVGLineElement(const QualifiedName& tagName, Document& document)
     : SVGGeometryElement(tagName, document, makeUniqueRef<PropertyRegistry>(*this))
@@ -51,22 +52,29 @@ Ref<SVGLineElement> SVGLineElement::create(const QualifiedName& tagName, Documen
     return adoptRef(*new SVGLineElement(tagName, document));
 }
 
-void SVGLineElement::parseAttribute(const QualifiedName& name, const AtomString& value)
+void SVGLineElement::attributeChanged(const QualifiedName& name, const AtomString& oldValue, const AtomString& newValue, AttributeModificationReason attributeModificationReason)
 {
     SVGParsingError parseError = NoError;
 
-    if (name == SVGNames::x1Attr)
-        m_x1->setBaseValInternal(SVGLengthValue::construct(SVGLengthMode::Width, value, parseError));
-    else if (name == SVGNames::y1Attr)
-        m_y1->setBaseValInternal(SVGLengthValue::construct(SVGLengthMode::Height, value, parseError));
-    else if (name == SVGNames::x2Attr)
-        m_x2->setBaseValInternal(SVGLengthValue::construct(SVGLengthMode::Width, value, parseError));
-    else if (name == SVGNames::y2Attr)
-        m_y2->setBaseValInternal(SVGLengthValue::construct(SVGLengthMode::Height, value, parseError));
+    switch (name.nodeName()) {
+    case AttributeNames::x1Attr:
+        Ref { m_x1 }->setBaseValInternal(SVGLengthValue::construct(SVGLengthMode::Width, newValue, parseError));
+        break;
+    case AttributeNames::y1Attr:
+        Ref { m_y1 }->setBaseValInternal(SVGLengthValue::construct(SVGLengthMode::Height, newValue, parseError));
+        break;
+    case AttributeNames::x2Attr:
+        Ref { m_x2 }->setBaseValInternal(SVGLengthValue::construct(SVGLengthMode::Width, newValue, parseError));
+        break;
+    case AttributeNames::y2Attr:
+        Ref { m_y2 }->setBaseValInternal(SVGLengthValue::construct(SVGLengthMode::Height, newValue, parseError));
+        break;
+    default:
+        break;
+    }
+    reportAttributeParsingError(parseError, name, newValue);
 
-    reportAttributeParsingError(parseError, name, value);
-
-    SVGGeometryElement::parseAttribute(name, value);
+    SVGGeometryElement::attributeChanged(name, oldValue, newValue, attributeModificationReason);
 }
 
 void SVGLineElement::svgAttributeChanged(const QualifiedName& attrName)
@@ -75,14 +83,14 @@ void SVGLineElement::svgAttributeChanged(const QualifiedName& attrName)
         InstanceInvalidationGuard guard(*this);
         updateRelativeLengthsInformation();
 
-#if ENABLE(LAYER_BASED_SVG_ENGINE)
-        if (auto* shape = dynamicDowncast<RenderSVGShape>(renderer()))
+        if (CheckedPtr shape = dynamicDowncast<RenderSVGShape>(renderer()))
             shape->setNeedsShapeUpdate();
-#endif
-        if (auto* shape = dynamicDowncast<LegacyRenderSVGShape>(renderer()))
+
+        if (CheckedPtr shape = dynamicDowncast<LegacyRenderSVGShape>(renderer()))
             shape->setNeedsShapeUpdate();
 
         updateSVGRendererForElementChange();
+        invalidateResourceImageBuffersIfNeeded();
         return;
     }
 

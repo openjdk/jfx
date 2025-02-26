@@ -38,23 +38,19 @@ namespace WebCore {
 AnimationTimeline::AnimationTimeline() = default;
 AnimationTimeline::~AnimationTimeline() = default;
 
-void AnimationTimeline::forgetAnimation(WebAnimation* animation)
-{
-    m_allAnimations.removeFirst(animation);
-}
-
 void AnimationTimeline::animationTimingDidChange(WebAnimation& animation)
 {
     updateGlobalPosition(animation);
 
     if (m_animations.add(animation)) {
-        m_allAnimations.append(animation);
         auto* timeline = animation.timeline();
         if (timeline && timeline != this)
             timeline->removeAnimation(animation);
-        else if (timeline == this && is<KeyframeEffect>(animation.effect())) {
-            if (auto styleable = downcast<KeyframeEffect>(animation.effect())->targetStyleable())
+        else if (timeline == this) {
+            if (auto* keyframeEffect = dynamicDowncast<KeyframeEffect>(animation.effect())) {
+                if (auto styleable = keyframeEffect->targetStyleable())
                 styleable->animationWasAdded(animation);
+            }
         }
     }
 }

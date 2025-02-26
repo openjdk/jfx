@@ -25,6 +25,7 @@
 
 #pragma once
 
+#include <wtf/CommaPrinter.h>
 #include <wtf/FastMalloc.h>
 #include <wtf/GraphNodeWorklist.h>
 #include <wtf/Noncopyable.h>
@@ -38,7 +39,7 @@ class SingleRootGraphNode {
     WTF_MAKE_FAST_ALLOCATED;
 public:
     // We use "#root" to refer to the synthetic root we have created.
-    static const char* rootName() { return "#root"; };
+    static ASCIILiteral rootName() { return "#root"_s; };
 
     SingleRootGraphNode(typename Graph::Node node = typename Graph::Node())
         : m_node(node)
@@ -53,16 +54,7 @@ public:
         return result;
     }
 
-    bool operator==(const SingleRootGraphNode& other) const
-    {
-        return m_node == other.m_node
-            && m_isRoot == other.m_isRoot;
-    }
-
-    bool operator!=(const SingleRootGraphNode& other) const
-    {
-        return !(*this == other);
-    }
+    friend bool operator==(const SingleRootGraphNode&, const SingleRootGraphNode&) = default;
 
     explicit operator bool() const { return *this != SingleRootGraphNode(); }
 
@@ -113,7 +105,7 @@ public:
     void dump(PrintStream& out) const
     {
         if (m_hasRoot)
-            out.print(Node::rootName(), " ");
+            out.print(Node::rootName(), " "_s);
         out.print(m_set);
     }
 
@@ -269,17 +261,17 @@ public:
             Node node = this->node(i);
             if (!node)
                 continue;
-            out.print(dump(node), ":\n");
-            out.print("    Preds: ");
+            out.print(dump(node), ":\n"_s);
+            out.print("    Preds: "_s);
             CommaPrinter comma;
             for (Node predecessor : predecessors(node))
                 out.print(comma, dump(predecessor));
-            out.print("\n");
-            out.print("    Succs: ");
+            out.print("\n"_s);
+            out.print("    Succs: "_s);
             comma = CommaPrinter();
             for (Node successor : successors(node))
                 out.print(comma, dump(successor));
-            out.print("\n");
+            out.print("\n"_s);
         }
     }
 

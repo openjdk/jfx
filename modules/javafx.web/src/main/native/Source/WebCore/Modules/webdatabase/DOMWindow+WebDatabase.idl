@@ -25,9 +25,7 @@
  */
 
 [
-    ImplementedBy=DOMWindowWebDatabase
+    ImplementedBy=LocalDOMWindowWebDatabase
 ] partial interface DOMWindow {
-#if 0  // FIXME-java: Currently WebSQL feature is not implemented completely in JavaFX port.
     [Custom, NotEnumerable] attribute any openDatabase;
-#endif
 };

@@ -21,14 +21,14 @@
 #include "DOMPluginArray.h"
 
 #include "DOMPlugin.h"
-#include "Frame.h"
+#include "LocalFrame.h"
 #include "Page.h"
-#include <wtf/IsoMallocInlines.h>
+#include <wtf/TZoneMallocInlines.h>
 #include <wtf/text/AtomString.h>
 
 namespace WebCore {
 
-WTF_MAKE_ISO_ALLOCATED_IMPL(DOMPluginArray);
+WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(DOMPluginArray);
 
 Ref<DOMPluginArray> DOMPluginArray::create(Navigator& navigator, Vector<Ref<DOMPlugin>>&& publiclyVisiblePlugins, Vector<Ref<DOMPlugin>>&& additionalWebVisibilePlugins)
 {
@@ -69,6 +69,12 @@ RefPtr<DOMPlugin> DOMPluginArray::namedItem(const AtomString& propertyName)
     }
 
     return nullptr;
+}
+
+bool DOMPluginArray::isSupportedPropertyName(const AtomString& propertyName) const
+{
+    return m_publiclyVisiblePlugins.containsIf([&](auto& plugin) { return plugin->name() == propertyName; })
+        || m_additionalWebVisibilePlugins.containsIf([&](auto& plugin) { return plugin->name() == propertyName; });
 }
 
 Vector<AtomString> DOMPluginArray::supportedPropertyNames() const

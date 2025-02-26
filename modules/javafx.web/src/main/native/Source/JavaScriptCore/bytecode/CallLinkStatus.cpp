@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012-2019 Apple Inc. All rights reserved.
+ * Copyright (C) 2012-2023 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -32,6 +32,7 @@
 #include "JSCInlines.h"
 #include <wtf/CommaPrinter.h>
 #include <wtf/ListDump.h>
+#include <wtf/TZoneMallocInlines.h>
 
 namespace JSC {
 
@@ -40,6 +41,8 @@ namespace CallLinkStatusInternal {
 static constexpr bool verbose = false;
 }
 #endif
+
+WTF_MAKE_TZONE_ALLOCATED_IMPL(CallLinkStatus);
 
 CallLinkStatus::CallLinkStatus(JSValue value)
     : m_couldTakeSlowPath(false)
@@ -67,8 +70,8 @@ CallLinkStatus CallLinkStatus::computeFor(
     CallLinkInfo* callLinkInfo = map.get(CodeOrigin(bytecodeIndex)).callLinkInfo;
     if (!callLinkInfo)
         return CallLinkStatus();
-    // doneLocation is nullptr when it is tied to LLInt (not Baseline).
-    if (!callLinkInfo->doneLocation()) {
+    // m_jitData is nullptr when it is tied to LLInt (not Baseline).
+    if (callLinkInfo->type() == CallLinkInfo::Type::DataOnly && !profiledBlock->m_jitData) {
         if (exitSiteData.takesSlowPath)
             return takesSlowPath();
 #if ENABLE(DFG_JIT)
@@ -137,16 +140,12 @@ CallLinkStatus CallLinkStatus::computeFor(
 CallLinkStatus CallLinkStatus::computeFromCallLinkInfo(
     const ConcurrentJSLocker&, CallLinkInfo& callLinkInfo)
 {
-    // We cannot tell you anything about direct calls.
-    if (callLinkInfo.isDirect())
-        return CallLinkStatus();
-
     if (callLinkInfo.clearedByGC() || callLinkInfo.clearedByVirtual())
         return takesSlowPath();
 
     // Note that despite requiring that the locker is held, this code is racy with respect
     // to the CallLinkInfo: it may get cleared while this code runs! This is because
-    // CallLinkInfo::unlink() may be called from a different CodeBlock than the one that owns
+    // CallLinkInfoBase::unlinkOrUpgrade() may be called from a different CodeBlock than the one that owns
     // the CallLinkInfo and currently we save space by not having CallLinkInfos know who owns
     // them. So, there is no way for either the caller of CallLinkInfo::unlock() or unlock()
     // itself to figure out which lock to lock.
@@ -428,26 +427,26 @@ void CallLinkStatus::filter(JSValue value)
 void CallLinkStatus::dump(PrintStream& out) const
 {
     if (!isSet()) {
-        out.print("Not Set");
+        out.print("Not Set"_s);
         return;
     }
 
     CommaPrinter comma;
 
     if (m_isProved)
-        out.print(comma, "Statically Proved");
+        out.print(comma, "Statically Proved"_s);
 
     if (m_couldTakeSlowPath)
-        out.print(comma, "Could Take Slow Path");
+        out.print(comma, "Could Take Slow Path"_s);
 
     if (m_isBasedOnStub)
-        out.print(comma, "Based On Stub");
+        out.print(comma, "Based On Stub"_s);
 
     if (!m_variants.isEmpty())
         out.print(comma, listDump(m_variants));
 
     if (m_maxArgumentCountIncludingThisForVarargs)
-        out.print(comma, "maxArgumentCountIncludingThisForVarargs = ", m_maxArgumentCountIncludingThisForVarargs);
+        out.print(comma, "maxArgumentCountIncludingThisForVarargs = "_s, m_maxArgumentCountIncludingThisForVarargs);
 }
 
 } // namespace JSC

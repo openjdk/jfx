@@ -1,6 +1,8 @@
 /* GLIB - Library of useful routines for C programming
  * Copyright (C) 1995-1997  Peter Mattis, Spencer Kimball and Josh MacDonald
  *
+ * SPDX-License-Identifier: LGPL-2.1-or-later
+ *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
  * License as published by the Free Software Foundation; either
@@ -55,21 +57,14 @@
 #include "gmain.h"
 
 /**
- * SECTION:timers
- * @title: Timers
- * @short_description: keep track of elapsed time
- *
- * #GTimer records a start time, and counts microseconds elapsed since
- * that time. This is done somewhat differently on different platforms,
- * and can be tricky to get exactly right, so #GTimer provides a
- * portable/convenient interface.
- **/
-
-/**
  * GTimer:
  *
- * Opaque datatype that records a start time.
- **/
+ * `GTimer` records a start time, and counts microseconds elapsed since
+ * that time.
+ *
+ * This is done somewhat differently on different platforms, and can be
+ * tricky to get exactly right, so `GTimer` provides a portable/convenient interface.
+ */
 struct _GTimer
 {
   guint64 start;
@@ -79,12 +74,12 @@ struct _GTimer
 };
 
 /**
- * g_timer_new:
+ * g_timer_new: (constructor)
  *
  * Creates a new timer, and starts timing (i.e. g_timer_start() is
  * implicitly called for you).
  *
- * Returns: a new #GTimer.
+ * Returns: (transfer full): a new #GTimer.
  **/
 GTimer*
 g_timer_new (void)
@@ -267,6 +262,9 @@ g_timer_is_active (GTimer *timer)
 void
 g_usleep (gulong microseconds)
 {
+  if G_UNLIKELY (microseconds == 0)
+    return;
+
 #ifdef G_OS_WIN32
   /* Round up to the next millisecond */
   Sleep (microseconds ? (1 + (microseconds - 1) / 1000) : 0);

@@ -30,20 +30,20 @@
 
 #include "EventNames.h"
 #include "PaymentRequest.h"
-#include <wtf/IsoMallocInlines.h>
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
-WTF_MAKE_ISO_ALLOCATED_IMPL(PaymentRequestUpdateEvent);
+WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(PaymentRequestUpdateEvent);
 
-PaymentRequestUpdateEvent::PaymentRequestUpdateEvent(const AtomString& type, const PaymentRequestUpdateEventInit& eventInit)
-    : Event { type, eventInit, IsTrusted::No }
+PaymentRequestUpdateEvent::PaymentRequestUpdateEvent(enum EventInterfaceType eventInterface, const AtomString& type, const PaymentRequestUpdateEventInit& eventInit)
+    : Event { eventInterface, type, eventInit, IsTrusted::No }
 {
     ASSERT(!isTrusted());
 }
 
-PaymentRequestUpdateEvent::PaymentRequestUpdateEvent(const AtomString& type)
-    : Event { type, CanBubble::No, IsCancelable::No }
+PaymentRequestUpdateEvent::PaymentRequestUpdateEvent(enum EventInterfaceType eventInterface, const AtomString& type)
+    : Event { eventInterface, type, CanBubble::No, IsCancelable::No }
 {
     ASSERT(isTrusted());
 }
@@ -53,10 +53,10 @@ PaymentRequestUpdateEvent::~PaymentRequestUpdateEvent() = default;
 ExceptionOr<void> PaymentRequestUpdateEvent::updateWith(Ref<DOMPromise>&& detailsPromise)
 {
     if (!isTrusted())
-        return Exception { InvalidStateError };
+        return Exception { ExceptionCode::InvalidStateError };
 
     if (m_waitForUpdate)
-        return Exception { InvalidStateError };
+        return Exception { ExceptionCode::InvalidStateError };
 
     stopPropagation();
     stopImmediatePropagation();
@@ -70,7 +70,7 @@ ExceptionOr<void> PaymentRequestUpdateEvent::updateWith(Ref<DOMPromise>&& detail
         reason = PaymentRequest::UpdateReason::PaymentMethodChanged;
     else {
         ASSERT_NOT_REACHED();
-        return Exception { TypeError };
+        return Exception { ExceptionCode::TypeError };
     }
 
     auto exception = downcast<PaymentRequest>(target())->updateWith(reason, WTFMove(detailsPromise));
@@ -79,11 +79,6 @@ ExceptionOr<void> PaymentRequestUpdateEvent::updateWith(Ref<DOMPromise>&& detail
 
     m_waitForUpdate = true;
     return { };
-}
-
-EventInterface PaymentRequestUpdateEvent::eventInterface() const
-{
-    return PaymentRequestUpdateEventInterfaceType;
 }
 
 } // namespace WebCore

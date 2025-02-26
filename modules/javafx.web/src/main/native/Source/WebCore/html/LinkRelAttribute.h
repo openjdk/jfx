@@ -45,37 +45,21 @@ struct LinkRelAttribute {
     bool isStyleSheet : 1 { false };
     bool isAlternate : 1 { false };
     bool isDNSPrefetch : 1 { false };
+    bool isLinkModulePreload : 1 { false };
     bool isLinkPreload : 1 { false };
     bool isLinkPreconnect : 1 { false };
     bool isLinkPrefetch : 1 { false };
 #if ENABLE(APPLICATION_MANIFEST)
     bool isApplicationManifest : 1 { false };
 #endif
+    bool isInternalResourceLink : 1 { false };
 
     LinkRelAttribute() = default;
     LinkRelAttribute(Document&, StringView);
 
+    friend bool operator==(const LinkRelAttribute&, const LinkRelAttribute&) = default;
+
     static bool isSupported(Document&, StringView);
 };
-
-inline bool operator==(const LinkRelAttribute& left, const LinkRelAttribute& right)
-{
-    return left.iconType == right.iconType
-        && left.isStyleSheet == right.isStyleSheet
-        && left.isAlternate == right.isAlternate
-        && left.isDNSPrefetch == right.isDNSPrefetch
-        && left.isLinkPreload == right.isLinkPreload
-        && left.isLinkPreconnect == right.isLinkPreconnect
-        && left.isLinkPrefetch == right.isLinkPrefetch
-#if ENABLE(APPLICATION_MANIFEST)
-        && left.isApplicationManifest == right.isApplicationManifest
-#endif
-        ;
-}
-
-inline bool operator!=(const LinkRelAttribute& left, const LinkRelAttribute& right)
-{
-    return !(left == right);
-}
 
 }

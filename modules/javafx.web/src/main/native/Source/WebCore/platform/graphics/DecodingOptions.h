@@ -32,7 +32,6 @@ namespace WebCore {
 
 enum class DecodingMode : uint8_t {
     Auto,
-    SynchronousThumbnail,
     Synchronous,
     Asynchronous
 };
@@ -45,11 +44,11 @@ public:
     {
     }
 
-    bool operator==(const DecodingOptions&) const = default;
+    friend bool operator==(const DecodingOptions&, const DecodingOptions&) = default;
 
     DecodingMode decodingMode() const { return m_decodingMode; }
     bool isAuto() const { return m_decodingMode == DecodingMode::Auto; }
-    bool isSynchronous() const { return m_decodingMode == DecodingMode::Synchronous || m_decodingMode == DecodingMode::SynchronousThumbnail; }
+    bool isSynchronous() const { return m_decodingMode == DecodingMode::Synchronous; }
     bool isAsynchronous() const { return m_decodingMode == DecodingMode::Asynchronous; }
 
     std::optional<IntSize> sizeForDrawing() const { return m_sizeForDrawing; }
@@ -74,5 +73,7 @@ private:
     DecodingMode m_decodingMode;
     std::optional<IntSize> m_sizeForDrawing;
 };
+
+TextStream& operator<<(TextStream&, DecodingMode);
 
 } // namespace WebCore

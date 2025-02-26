@@ -18,7 +18,7 @@ DIRLIST = gstreamer/gst \
           gst-plugins-base/gst-libs/gst/tag \
           gst-plugins-base/gst-libs/gst/riff \
           gst-plugins-base/gst-libs/gst/app \
-	  projects/plugins \
+          projects/plugins \
           gstreamer/plugins/elements \
           gst-plugins-base/gst-libs/gst/fft \
           gst-plugins-base/gst-libs/gst/pbutils \
@@ -64,7 +64,7 @@ else
 endif
 
 INCLUDES = -I$(BASE_DIR)/plugins                          \
-	   -I$(SRCBASE_DIR)/projects/build/linux/common   \
+           -I$(SRCBASE_DIR)/projects/build/linux/common   \
            -I$(SRCBASE_DIR)/gstreamer                     \
            -I$(SRCBASE_DIR)/gstreamer/libs                \
            -I$(SRCBASE_DIR)/gstreamer/gst/parse           \
@@ -127,7 +127,6 @@ SOURCES = gstreamer/gst/gst.c \
           gstreamer/gst/gstpipeline.c \
           gstreamer/gst/gstplugin.c \
           gstreamer/gst/gstpluginfeature.c \
-          gstreamer/gst/gstpluginloader.c \
           gstreamer/gst/gstpoll.c \
           gstreamer/gst/gstprotection.c \
           gstreamer/gst/gstquark.c \
@@ -172,6 +171,7 @@ SOURCES = gstreamer/gst/gst.c \
           gstreamer/libs/gst/base/gsttypefindhelper.c \
           gst-plugins-base/gst-libs/gst/app/gstapp-marshal.c \
           gst-plugins-base/gst-libs/gst/app/gstappsink.c \
+          gst-plugins-base/gst-libs/gst/app/gstapputils.c \
           gst-plugins-base/gst-libs/gst/audio/audio.c \
           gst-plugins-base/gst-libs/gst/audio/audio-channels.c \
           gst-plugins-base/gst-libs/gst/audio/audio-channel-mixer.c \
@@ -202,8 +202,6 @@ SOURCES = gstreamer/gst/gst.c \
           gst-plugins-base/gst-libs/gst/fft/kiss_fftr_f32.c \
           gst-plugins-base/gst-libs/gst/pbutils/codec-utils.c \
           gst-plugins-base/gst-libs/gst/pbutils/descriptions.c \
-          gst-plugins-base/gst-libs/gst/pbutils/gstdiscoverer.c \
-          gst-plugins-base/gst-libs/gst/pbutils/gstdiscoverer-types.c \
           gst-plugins-base/gst-libs/gst/pbutils/gstpluginsbaseversion.c \
           gst-plugins-base/gst-libs/gst/pbutils/missing-plugins.c \
           gst-plugins-base/gst-libs/gst/pbutils/pbutils.c \

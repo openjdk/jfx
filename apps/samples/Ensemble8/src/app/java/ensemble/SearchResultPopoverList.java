@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008, 2014, Oracle and/or its affiliates.
+ * Copyright (c) 2008, 2024, Oracle and/or its affiliates.
  * All rights reserved. Use is subject to license terms.
  *
  * This file is available and licensed under the following license:
@@ -31,13 +31,8 @@
  */
 package ensemble;
 
-import ensemble.control.Popover;
-import ensemble.control.PopoverTreeList;
-import ensemble.search.DocumentType;
-import ensemble.search.SearchResult;
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.Comparator;
 import java.util.List;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
@@ -57,6 +52,10 @@ import javafx.scene.layout.Pane;
 import javafx.scene.layout.Region;
 import javafx.scene.paint.Color;
 import javafx.scene.shape.Rectangle;
+import ensemble.control.Popover;
+import ensemble.control.PopoverTreeList;
+import ensemble.search.DocumentType;
+import ensemble.search.SearchResult;
 
 /**
  * Popover page that displays a list of search results.

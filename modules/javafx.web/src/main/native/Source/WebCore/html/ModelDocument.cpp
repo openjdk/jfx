@@ -32,7 +32,6 @@
 #include "DocumentLoader.h"
 #include "EventNames.h"
 #include "FrameLoader.h"
-#include "FrameLoaderClient.h"
 #include "HTMLBodyElement.h"
 #include "HTMLHeadElement.h"
 #include "HTMLHtmlElement.h"
@@ -41,13 +40,15 @@
 #include "HTMLNames.h"
 #include "HTMLSourceElement.h"
 #include "HTMLStyleElement.h"
+#include "LocalFrame.h"
+#include "LocalFrameLoaderClient.h"
 #include "RawDataDocumentParser.h"
-#include <wtf/IsoMallocInlines.h>
+#include <wtf/TZoneMallocInlines.h>
 #include <wtf/text/StringBuilder.h>
 
 namespace WebCore {
 
-WTF_MAKE_ISO_ALLOCATED_IMPL(ModelDocument);
+WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(ModelDocument);
 
 using namespace HTMLNames;
 
@@ -67,7 +68,7 @@ private:
 
     void createDocumentStructure();
 
-    void appendBytes(DocumentWriter&, const uint8_t*, size_t) final;
+    void appendBytes(DocumentWriter&, std::span<const uint8_t>) final;
     void finish() final;
 
     WeakPtr<HTMLModelElement, WeakPtrImplWithEventTargetData> m_modelElement;
@@ -81,7 +82,6 @@ void ModelDocumentParser::createDocumentStructure()
     auto rootElement = HTMLHtmlElement::create(document);
     document.appendChild(rootElement);
     document.setCSSTarget(rootElement.ptr());
-    rootElement->insertedByParser();
 
     if (document.frame())
         document.frame()->injectUserScripts(UserScriptInjectionTime::DocumentStart);
@@ -126,7 +126,7 @@ void ModelDocumentParser::createDocumentStructure()
     frame->loader().setOutgoingReferrer(document.completeURL(m_outgoingReferrer));
 }
 
-void ModelDocumentParser::appendBytes(DocumentWriter&, const uint8_t*, size_t)
+void ModelDocumentParser::appendBytes(DocumentWriter&, std::span<const uint8_t>)
 {
     if (!m_modelElement)
         createDocumentStructure();
@@ -137,7 +137,7 @@ void ModelDocumentParser::finish()
     document()->finishedParsing();
 }
 
-ModelDocument::ModelDocument(Frame* frame, const Settings& settings, const URL& url)
+ModelDocument::ModelDocument(LocalFrame* frame, const Settings& settings, const URL& url)
     : HTMLDocument(frame, settings, url, { }, { DocumentClass::Model })
 {
     if (frame)

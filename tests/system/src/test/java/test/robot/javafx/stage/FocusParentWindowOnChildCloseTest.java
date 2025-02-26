@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2019, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -26,7 +26,7 @@
 package test.robot.javafx.stage;
 
 import java.util.concurrent.CountDownLatch;
-
+import java.util.concurrent.TimeUnit;
 import javafx.application.Application;
 import javafx.application.Platform;
 import javafx.scene.Scene;
@@ -38,15 +38,15 @@ import javafx.scene.layout.StackPane;
 import javafx.scene.robot.Robot;
 import javafx.stage.Stage;
 import javafx.stage.WindowEvent;
-
-import org.junit.AfterClass;
-import org.junit.Assert;
-import org.junit.BeforeClass;
-import org.junit.Test;
-
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 import test.util.Util;
 
 // See JDK-8210973
+@Timeout(value=15000, unit=TimeUnit.MILLISECONDS)
 public class FocusParentWindowOnChildCloseTest {
     static Robot robot;
     static Button button;
@@ -58,12 +58,12 @@ public class FocusParentWindowOnChildCloseTest {
     static CountDownLatch alertShownLatch;
     static CountDownLatch alertCloseLatch;
 
-    @Test(timeout = 15000)
+    @Test
     public void focusRightParentOnChildWindowClose() throws Exception {
         Thread.sleep(400);
         clickButton();
         fireOkInAlert();
-        Assert.assertTrue("Stage 1 should be focused", stage.isFocused());
+        Assertions.assertTrue(stage.isFocused(), "Stage 1 should be focused");
     }
 
     private void clickButton() throws Exception {
@@ -74,14 +74,14 @@ public class FocusParentWindowOnChildCloseTest {
         Util.waitForLatch(alertShownLatch, 10, "Failed to show Alert");
     }
 
-    @BeforeClass
+    @BeforeAll
     public static void initFX() throws Exception {
         Util.launch(startupLatch, TestApp.class);
     }
 
-    @AfterClass
+    @AfterAll
     public static void exit() {
-        Util.shutdown(stage, stage2);
+        Util.shutdown();
     }
 
     private void mouseClick(double x, double y) {

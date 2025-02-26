@@ -36,7 +36,7 @@ WeakSet::~WeakSet()
     if (isOnList())
         remove();
 
-    Heap& heap = *this->heap();
+    JSC::Heap& heap = *this->heap();
     WeakBlock* next = nullptr;
     for (WeakBlock* block = m_blocks.head(); block; block = next) {
         next = block->next();
@@ -122,8 +122,5 @@ void WeakSet::removeAllocator(WeakBlock* block)
     m_blocks.remove(block);
     WeakBlock::destroy(*heap(), block);
 }
-
-template void WeakSet::visit(AbstractSlotVisitor&);
-template void WeakSet::visit(SlotVisitor&);
 
 } // namespace JSC

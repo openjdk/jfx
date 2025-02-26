@@ -26,36 +26,36 @@
 #include "config.h"
 #include "VisualViewport.h"
 
+#include "Chrome.h"
+#include "ChromeClient.h"
 #include "ContextDestructionObserver.h"
-#include "DOMWindow.h"
 #include "Document.h"
 #include "Event.h"
 #include "EventNames.h"
-#include "Frame.h"
-#include "FrameView.h"
+#include "LocalDOMWindow.h"
+#include "LocalFrame.h"
+#include "LocalFrameView.h"
 #include "Page.h"
-#include <wtf/IsoMallocInlines.h>
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
-WTF_MAKE_ISO_ALLOCATED_IMPL(VisualViewport);
+WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(VisualViewport);
 
-VisualViewport::VisualViewport(DOMWindow& window)
-    : DOMWindowProperty(&window)
+VisualViewport::VisualViewport(LocalDOMWindow& window)
+    : LocalDOMWindowProperty(&window)
 {
 }
 
-EventTargetInterface VisualViewport::eventTargetInterface() const
+enum EventTargetInterfaceType VisualViewport::eventTargetInterface() const
 {
-    return VisualViewportEventTargetInterfaceType;
+    return EventTargetInterfaceType::VisualViewport;
 }
 
 ScriptExecutionContext* VisualViewport::scriptExecutionContext() const
 {
-    auto window = this->window();
-    if (!window)
-        return nullptr;
-    return static_cast<ContextDestructionObserver*>(window)->scriptExecutionContext();
+    RefPtr window = this->window();
+    return window ? window->document() : nullptr;
 }
 
 bool VisualViewport::addEventListener(const AtomString& eventType, Ref<EventListener>&& listener, const AddEventListenerOptions& options)
@@ -71,7 +71,7 @@ bool VisualViewport::addEventListener(const AtomString& eventType, Ref<EventList
 void VisualViewport::updateFrameLayout() const
 {
     ASSERT(frame());
-    frame()->document()->updateLayoutIgnorePendingStylesheets(Document::RunPostLayoutTasks::Synchronously);
+    frame()->document()->updateLayout({ LayoutOptions::IgnorePendingStylesheets, LayoutOptions::RunPostLayoutTasksSynchronously });
 }
 
 double VisualViewport::offsetLeft() const
@@ -163,8 +163,8 @@ void VisualViewport::update()
             width = visualViewportRect.width() / pageZoomFactor;
             height = visualViewportRect.height() / pageZoomFactor;
         }
-        if (auto* page = frame->page())
-            scale = page->pageScaleFactor();
+        if (RefPtr page = frame->page())
+            scale = page->pageScaleFactor() / page->chrome().client().baseViewportLayoutSizeScaleFactor();
     }
 
     RefPtr<Document> document = frame ? frame->document() : nullptr;

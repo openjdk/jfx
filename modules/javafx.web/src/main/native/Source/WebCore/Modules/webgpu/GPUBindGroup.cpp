@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2021 Apple Inc. All rights reserved.
+ * Copyright (C) 2021-2023 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -26,6 +26,8 @@
 #include "config.h"
 #include "GPUBindGroup.h"
 
+#include "GPUExternalTexture.h"
+
 namespace WebCore {
 
 String GPUBindGroup::label() const
@@ -36,6 +38,11 @@ String GPUBindGroup::label() const
 void GPUBindGroup::setLabel(String&& label)
 {
     m_backing->setLabel(WTFMove(label));
+}
+
+void GPUBindGroup::updateExternalTextures(const GPUExternalTexture& externalTexture)
+{
+    m_backing->updateExternalTextures(externalTexture.backing());
 }
 
 }

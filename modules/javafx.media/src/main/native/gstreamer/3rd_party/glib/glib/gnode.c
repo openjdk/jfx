@@ -4,6 +4,8 @@
  * GNode: N-way tree implementation.
  * Copyright (C) 1998 Tim Janik
  *
+ * SPDX-License-Identifier: LGPL-2.1-or-later
+ *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
  * License as published by the Free Software Foundation; either
@@ -36,43 +38,6 @@
 #include "gslice.h"
 
 #include "gtestutils.h"
-
-/**
- * SECTION:trees-nary
- * @title: N-ary Trees
- * @short_description: trees of data with any number of branches
- *
- * The #GNode struct and its associated functions provide a N-ary tree
- * data structure, where nodes in the tree can contain arbitrary data.
- *
- * To create a new tree use g_node_new().
- *
- * To insert a node into a tree use g_node_insert(),
- * g_node_insert_before(), g_node_append() and g_node_prepend().
- *
- * To create a new node and insert it into a tree use
- * g_node_insert_data(), g_node_insert_data_after(),
- * g_node_insert_data_before(), g_node_append_data()
- * and g_node_prepend_data().
- *
- * To reverse the children of a node use g_node_reverse_children().
- *
- * To find a node use g_node_get_root(), g_node_find(),
- * g_node_find_child(), g_node_child_index(), g_node_child_position(),
- * g_node_first_child(), g_node_last_child(), g_node_nth_child(),
- * g_node_first_sibling(), g_node_prev_sibling(), g_node_next_sibling()
- * or g_node_last_sibling().
- *
- * To get information about a node or tree use G_NODE_IS_LEAF(),
- * G_NODE_IS_ROOT(), g_node_depth(), g_node_n_nodes(),
- * g_node_n_children(), g_node_is_ancestor() or g_node_max_height().
- *
- * To traverse a tree, calling a function for each node visited in the
- * traversal, use g_node_traverse() or g_node_children_foreach().
- *
- * To remove a node or subtree from a tree use g_node_unlink() or
- * g_node_destroy().
- **/
 
 /**
  * GNode:
@@ -168,8 +133,8 @@ g_node_unlink (GNode *node)
 /**
  * g_node_copy_deep:
  * @node: a #GNode
- * @copy_func: the function which is called to copy the data inside each node,
- *   or %NULL to use the original data.
+ * @copy_func: (scope call): the function which is called to copy the data
+ *   inside each node, or %NULL to use the original data.
  * @data: data to pass to @copy_func
  *
  * Recursively copies a #GNode and its data.
@@ -810,7 +775,7 @@ g_node_depth_traverse_level (GNode             *node,
  *     depth will not be visited. If max_depth is -1 all nodes in
  *     the tree are visited. If depth is 1, only the root is visited.
  *     If depth is 2, the root and its children are visited. And so on.
- * @func: the function to call for each visited #GNode
+ * @func: (scope call): the function to call for each visited #GNode
  * @data: user data to pass to the function
  *
  * Traverses a tree starting at the given root #GNode.
@@ -835,16 +800,38 @@ g_node_depth_traverse_level (GNode             *node,
  *              efficient than the other orders.
  *
  * Specifies the type of traversal performed by g_tree_traverse(),
- * g_node_traverse() and g_node_find(). The different orders are
- * illustrated here:
+ * g_node_traverse() and g_node_find().
+ *
+ * The different orders are illustrated here:
+ *
  * - In order: A, B, C, D, E, F, G, H, I
- *   ![](Sorted_binary_tree_inorder.svg)
+ *   <picture>
+ *     <source srcset="Sorted_binary_tree_inorder-dark.svg"
+ *      media="(prefers-color-scheme: dark)">
+ *     <img src="Sorted_binary_tree_inorder.svg"
+ *      alt="Sorted binary tree, in-order traversal">
+ *   </picture>
  * - Pre order: F, B, A, D, C, E, G, I, H
- *   ![](Sorted_binary_tree_preorder.svg)
+ *   <picture>
+ *     <source srcset="Sorted_binary_tree_preorder-dark.svg"
+ *      media="(prefers-color-scheme: dark)">
+ *     <img src="Sorted_binary_tree_preorder.svg"
+ *      alt="Sorted binary tree, pre-order traversal">
+ *   </picture>
  * - Post order: A, C, E, D, B, H, I, G, F
- *   ![](Sorted_binary_tree_postorder.svg)
+ *   <picture>
+ *     <source srcset="Sorted_binary_tree_postorder-dark.svg"
+ *      media="(prefers-color-scheme: dark)">
+ *     <img src="Sorted_binary_tree_postorder.svg"
+ *      alt="Sorted binary tree, post-order traversal">
+ *   </picture>
  * - Level order: F, B, G, A, D, I, C, E, H
- *   ![](Sorted_binary_tree_breadth-first_traversal.svg)
+ *   <picture>
+ *     <source srcset="Sorted_binary_tree_breadth-first_traversal-dark.svg"
+ *      media="(prefers-color-scheme: dark)">
+ *     <img src="Sorted_binary_tree_breadth-first_traversal.svg"
+ *      alt="Sorted binary tree, breadth-first level order traversal">
+ *   </picture>
  */
 
 /**
@@ -1233,7 +1220,7 @@ g_node_last_sibling (GNode *node)
  * @node: a #GNode
  * @flags: which types of children are to be visited, one of
  *     %G_TRAVERSE_ALL, %G_TRAVERSE_LEAVES and %G_TRAVERSE_NON_LEAVES
- * @func: the function to call for each visited node
+ * @func: (scope call): the function to call for each visited node
  * @data: user data to pass to the function
  *
  * Calls a function for each of the children of a #GNode. Note that it

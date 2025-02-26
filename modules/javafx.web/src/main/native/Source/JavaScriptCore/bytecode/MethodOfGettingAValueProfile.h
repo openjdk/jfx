@@ -48,8 +48,7 @@ struct ValueProfile;
 class MethodOfGettingAValueProfile {
 public:
     MethodOfGettingAValueProfile()
-        : m_rawOperand(0)
-        , m_kind(Kind::None)
+        : m_kind(Kind::None)
     {
     }
 
@@ -113,7 +112,7 @@ private:
     static_assert(static_cast<unsigned>(Kind::LazyOperandValueProfile) <= ((1U << bitsOfKind) - 1));
 
     CodeOrigin m_codeOrigin;
-    uint64_t m_rawOperand : Operand::maxBits;
+    uint64_t m_rawOperand : Operand::maxBits { 0 };
     Kind m_kind : bitsOfKind;
 };
 

@@ -41,7 +41,7 @@ public:
     SourceCodeFlags() = default;
 
     SourceCodeFlags(
-        SourceCodeType codeType, JSParserStrictMode strictMode, JSParserScriptMode scriptMode,
+        SourceCodeType codeType, LexicallyScopedFeatures lexicallyScopedFeatures, JSParserScriptMode scriptMode,
         DerivedContextType derivedContextType, EvalContextType evalContextType, bool isArrowFunctionContext,
         OptionSet<CodeGenerationMode> codeGenerationMode)
         : m_flags(
@@ -51,15 +51,12 @@ public:
             (static_cast<unsigned>(evalContextType) << 3) |
             (static_cast<unsigned>(derivedContextType) << 2) |
             (static_cast<unsigned>(codeType) << 1) |
-            (static_cast<unsigned>(strictMode))
+            (static_cast<unsigned>(lexicallyScopedFeatures & StrictModeLexicallyScopedFeature))
         )
     {
     }
 
-    inline bool operator==(const SourceCodeFlags& rhs) const
-    {
-        return m_flags == rhs.m_flags;
-    }
+    friend bool operator==(const SourceCodeFlags&, const SourceCodeFlags&) = default;
 
     unsigned bits() { return m_flags; }
 
@@ -76,12 +73,12 @@ public:
     }
 
     SourceCodeKey(
-        const UnlinkedSourceCode& sourceCode, const String& name, SourceCodeType codeType, JSParserStrictMode strictMode,
+        const UnlinkedSourceCode& sourceCode, const String& name, SourceCodeType codeType, LexicallyScopedFeatures lexicallyScopedFeatures,
         JSParserScriptMode scriptMode, DerivedContextType derivedContextType, EvalContextType evalContextType, bool isArrowFunctionContext,
         OptionSet<CodeGenerationMode> codeGenerationMode, std::optional<int> functionConstructorParametersEndPosition)
             : m_sourceCode(sourceCode)
             , m_name(name)
-            , m_flags(codeType, strictMode, scriptMode, derivedContextType, evalContextType, isArrowFunctionContext, codeGenerationMode)
+            , m_flags(codeType, lexicallyScopedFeatures, scriptMode, derivedContextType, evalContextType, isArrowFunctionContext, codeGenerationMode)
             , m_functionConstructorParametersEndPosition(functionConstructorParametersEndPosition.value_or(-1))
             , m_hash(sourceCode.hash() ^ m_flags.bits())
     {

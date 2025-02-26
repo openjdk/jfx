@@ -27,10 +27,17 @@
 #include "CSSFunctionValue.h"
 
 #include "CSSValueKeywords.h"
+#include <wtf/Hasher.h>
 #include <wtf/text/StringBuilder.h>
 #include <wtf/text/WTFString.h>
 
 namespace WebCore {
+
+CSSFunctionValue::CSSFunctionValue(CSSValueID name, CSSValueListBuilder arguments)
+    : CSSValueContainingVector(FunctionClass, CommaSeparator, WTFMove(arguments))
+    , m_name(name)
+{
+}
 
 CSSFunctionValue::CSSFunctionValue(CSSValueID name)
     : CSSValueContainingVector(FunctionClass, CommaSeparator)
@@ -38,9 +45,58 @@ CSSFunctionValue::CSSFunctionValue(CSSValueID name)
 {
 }
 
+CSSFunctionValue::CSSFunctionValue(CSSValueID name, Ref<CSSValue> argument)
+    : CSSValueContainingVector(FunctionClass, CommaSeparator, WTFMove(argument))
+    , m_name(name)
+{
+}
+
+CSSFunctionValue::CSSFunctionValue(CSSValueID name, Ref<CSSValue> argument1, Ref<CSSValue> argument2)
+    : CSSValueContainingVector(FunctionClass, CommaSeparator, WTFMove(argument1), WTFMove(argument2))
+    , m_name(name)
+{
+}
+
+CSSFunctionValue::CSSFunctionValue(CSSValueID name, Ref<CSSValue> argument1, Ref<CSSValue> argument2, Ref<CSSValue> argument3)
+    : CSSValueContainingVector(FunctionClass, CommaSeparator, WTFMove(argument1), WTFMove(argument2), WTFMove(argument3))
+    , m_name(name)
+{
+}
+
+CSSFunctionValue::CSSFunctionValue(CSSValueID name, Ref<CSSValue> argument1, Ref<CSSValue> argument2, Ref<CSSValue> argument3, Ref<CSSValue> argument4)
+    : CSSValueContainingVector(FunctionClass, CommaSeparator, WTFMove(argument1), WTFMove(argument2), WTFMove(argument3), WTFMove(argument4))
+    , m_name(name)
+{
+}
+
+Ref<CSSFunctionValue> CSSFunctionValue::create(CSSValueID name, CSSValueListBuilder arguments)
+{
+    return adoptRef(*new CSSFunctionValue(name, WTFMove(arguments)));
+}
+
 Ref<CSSFunctionValue> CSSFunctionValue::create(CSSValueID name)
 {
     return adoptRef(*new CSSFunctionValue(name));
+}
+
+Ref<CSSFunctionValue> CSSFunctionValue::create(CSSValueID name, Ref<CSSValue> argument)
+{
+    return adoptRef(*new CSSFunctionValue(name, WTFMove(argument)));
+}
+
+Ref<CSSFunctionValue> CSSFunctionValue::create(CSSValueID name, Ref<CSSValue> argument1, Ref<CSSValue> argument2)
+{
+    return adoptRef(*new CSSFunctionValue(name, WTFMove(argument1), WTFMove(argument2)));
+}
+
+Ref<CSSFunctionValue> CSSFunctionValue::create(CSSValueID name, Ref<CSSValue> argument1, Ref<CSSValue> argument2, Ref<CSSValue> argument3)
+{
+    return adoptRef(*new CSSFunctionValue(name, WTFMove(argument1), WTFMove(argument2), WTFMove(argument3)));
+}
+
+Ref<CSSFunctionValue> CSSFunctionValue::create(CSSValueID name, Ref<CSSValue> argument1, Ref<CSSValue> argument2, Ref<CSSValue> argument3, Ref<CSSValue> argument4)
+{
+    return adoptRef(*new CSSFunctionValue(name, WTFMove(argument1), WTFMove(argument2), WTFMove(argument3), WTFMove(argument4)));
 }
 
 String CSSFunctionValue::customCSSText() const
@@ -50,6 +106,12 @@ String CSSFunctionValue::customCSSText() const
     serializeItems(result);
     result.append(')');
     return result.toString();
+}
+
+bool CSSFunctionValue::addDerivedHash(Hasher& hasher) const
+{
+    add(hasher, m_name);
+    return CSSValueContainingVector::addDerivedHash(hasher);
 }
 
 }

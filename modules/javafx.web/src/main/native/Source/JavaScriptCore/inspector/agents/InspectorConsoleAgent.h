@@ -1,5 +1,5 @@
 /*
-* Copyright (C) 2014, 2015 Apple Inc. All rights reserved.
+* Copyright (C) 2014-2023 Apple Inc. All rights reserved.
 * Copyright (C) 2011 Google Inc. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without
@@ -32,6 +32,7 @@
 #include <wtf/HashMap.h>
 #include <wtf/MonotonicTime.h>
 #include <wtf/Noncopyable.h>
+#include <wtf/TZoneMalloc.h>
 #include <wtf/Vector.h>
 #include <wtf/text/StringHash.h>
 
@@ -49,7 +50,7 @@ class ScriptCallStack;
 
 class JS_EXPORT_PRIVATE InspectorConsoleAgent : public InspectorAgentBase, public ConsoleBackendDispatcherHandler {
     WTF_MAKE_NONCOPYABLE(InspectorConsoleAgent);
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_ALLOCATED(InspectorConsoleAgent);
 public:
     InspectorConsoleAgent(AgentContext&);
     ~InspectorConsoleAgent() override;
@@ -63,6 +64,7 @@ public:
     Protocol::ErrorStringOr<void> enable() final;
     Protocol::ErrorStringOr<void> disable() final;
     Protocol::ErrorStringOr<void> clearMessages() override;
+    Protocol::ErrorStringOr<void> setConsoleClearAPIEnabled(bool) override;
     Protocol::ErrorStringOr<Ref<JSON::ArrayOf<Protocol::Console::Channel>>> getLoggingChannels() override;
     Protocol::ErrorStringOr<void> setLoggingChannelLevel(Protocol::Console::ChannelSource, Protocol::Console::ChannelLevel) override;
 
@@ -70,7 +72,9 @@ public:
 
     bool enabled() const { return m_enabled; }
     bool developerExtrasEnabled() const;
-    void reset();
+
+    // InspectorInstrumentation
+    void mainFrameNavigated();
 
     void addMessageToConsole(std::unique_ptr<ConsoleMessage>);
 
@@ -83,6 +87,7 @@ public:
 
 protected:
     void addConsoleMessage(std::unique_ptr<ConsoleMessage>);
+    void clearMessages(Protocol::Console::ClearReason);
 
     InjectedScriptManager& m_injectedScriptManager;
     std::unique_ptr<ConsoleFrontendDispatcher> m_frontendDispatcher;
@@ -95,6 +100,7 @@ protected:
     HashMap<String, MonotonicTime> m_times;
     bool m_enabled { false };
     bool m_isAddingMessageToFrontend { false };
+    bool m_consoleClearAPIEnabled { true };
 };
 
 } // namespace Inspector

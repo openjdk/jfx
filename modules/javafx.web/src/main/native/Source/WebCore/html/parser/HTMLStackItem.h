@@ -29,8 +29,8 @@
 #include "AtomHTMLToken.h"
 #include "DocumentFragment.h"
 #include "Element.h"
-#include "ElementName.h"
 #include "Namespace.h"
+#include "NodeName.h"
 #include "TagName.h"
 
 namespace WebCore {
@@ -53,6 +53,7 @@ public:
 
     ContainerNode& node() const { return *m_node; }
     Element& element() const { return downcast<Element>(node()); }
+    Ref<Element> protectedElement() const { return element(); }
     Element* elementOrNull() const { return downcast<Element>(m_node.get()); }
 
     const AtomString& localName() const { return isElement() ? element().localName() : nullAtom(); }
@@ -67,9 +68,9 @@ public:
     bool matchesHTMLTag(const AtomString&) const;
 
 private:
-    RefPtr<ContainerNode> m_node;
     ElementName m_elementName = ElementName::Unknown;
     Namespace m_namespace = Namespace::Unknown;
+    RefPtr<ContainerNode> m_node;
     Vector<Attribute> m_attributes;
 };
 
@@ -78,25 +79,25 @@ bool isNumberedHeaderElement(const HTMLStackItem&);
 bool isSpecialNode(const HTMLStackItem&);
 
 inline HTMLStackItem::HTMLStackItem(Ref<Element>&& element, AtomHTMLToken&& token)
-    : m_node(WTFMove(element))
-    , m_elementName(downcast<Element>(*m_node).elementName())
-    , m_namespace(downcast<Element>(*m_node).nodeNamespace())
+    : m_elementName(element->elementName())
+    , m_namespace(element->nodeNamespace())
+    , m_node(WTFMove(element))
     , m_attributes(WTFMove(token.attributes()))
 {
 }
 
 inline HTMLStackItem::HTMLStackItem(Ref<Element>&& element, Vector<Attribute>&& attributes)
-    : m_node(WTFMove(element))
-    , m_elementName(downcast<Element>(*m_node).elementName())
-    , m_namespace(downcast<Element>(*m_node).nodeNamespace())
+    : m_elementName(element->elementName())
+    , m_namespace(element->nodeNamespace())
+    , m_node(WTFMove(element))
     , m_attributes(WTFMove(attributes))
 {
 }
 
 inline HTMLStackItem::HTMLStackItem(Element& element)
-    : m_node(&element)
-    , m_elementName(element.elementName())
+    : m_elementName(element.elementName())
     , m_namespace(element.nodeNamespace())
+    , m_node(&element)
 {
 }
 
@@ -146,7 +147,7 @@ inline bool isNumberedHeaderElement(const HTMLStackItem& item)
     }
 }
 
-// http://www.whatwg.org/specs/web-apps/current-work/multipage/parsing.html#special
+// https://html.spec.whatwg.org/multipage/parsing.html#special
 inline bool isSpecialNode(const HTMLStackItem& item)
 {
     using namespace ElementNames;
@@ -171,7 +172,6 @@ inline bool isSpecialNode(const HTMLStackItem& item)
     case HTML::center:
     case HTML::col:
     case HTML::colgroup:
-    case HTML::command:
     case HTML::dd:
     case HTML::details:
     case HTML::dir:

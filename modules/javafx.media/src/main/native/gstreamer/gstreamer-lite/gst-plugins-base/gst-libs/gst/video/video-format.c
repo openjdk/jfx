@@ -3256,6 +3256,110 @@ pack_GBR_12BE (const GstVideoFormatInfo * info, GstVideoPackFlags flags,
   }
 }
 
+#define PACK_GBR_16LE GST_VIDEO_FORMAT_ARGB64, unpack_GBR_16LE, 1, pack_GBR_16LE
+static void
+unpack_GBR_16LE (const GstVideoFormatInfo * info, GstVideoPackFlags flags,
+    gpointer dest, const gpointer data[GST_VIDEO_MAX_PLANES],
+    const gint stride[GST_VIDEO_MAX_PLANES], gint x, gint y, gint width)
+{
+  int i;
+  const guint16 *sg = GET_G_LINE (y);
+  const guint16 *sb = GET_B_LINE (y);
+  const guint16 *sr = GET_R_LINE (y);
+  guint16 *d = dest, G, B, R;
+
+  sg += x;
+  sb += x;
+  sr += x;
+
+  for (i = 0; i < width; i++) {
+    G = GST_READ_UINT16_LE (sg + i);
+    B = GST_READ_UINT16_LE (sb + i);
+    R = GST_READ_UINT16_LE (sr + i);
+
+    d[i * 4 + 0] = 0xffff;
+    d[i * 4 + 1] = R;
+    d[i * 4 + 2] = G;
+    d[i * 4 + 3] = B;
+  }
+}
+
+static void
+pack_GBR_16LE (const GstVideoFormatInfo * info, GstVideoPackFlags flags,
+    const gpointer src, gint sstride, gpointer data[GST_VIDEO_MAX_PLANES],
+    const gint stride[GST_VIDEO_MAX_PLANES], GstVideoChromaSite chroma_site,
+    gint y, gint width)
+{
+  int i;
+  guint16 *restrict dg = GET_G_LINE (y);
+  guint16 *restrict db = GET_B_LINE (y);
+  guint16 *restrict dr = GET_R_LINE (y);
+  guint16 G, B, R;
+  const guint16 *restrict s = src;
+
+  for (i = 0; i < width; i++) {
+    G = (s[i * 4 + 2]);
+    B = (s[i * 4 + 3]);
+    R = (s[i * 4 + 1]);
+
+    GST_WRITE_UINT16_LE (dg + i, G);
+    GST_WRITE_UINT16_LE (db + i, B);
+    GST_WRITE_UINT16_LE (dr + i, R);
+  }
+}
+
+#define PACK_GBR_16BE GST_VIDEO_FORMAT_ARGB64, unpack_GBR_16BE, 1, pack_GBR_16BE
+static void
+unpack_GBR_16BE (const GstVideoFormatInfo * info, GstVideoPackFlags flags,
+    gpointer dest, const gpointer data[GST_VIDEO_MAX_PLANES],
+    const gint stride[GST_VIDEO_MAX_PLANES], gint x, gint y, gint width)
+{
+  int i;
+  const guint16 *restrict sg = GET_G_LINE (y);
+  const guint16 *restrict sb = GET_B_LINE (y);
+  const guint16 *restrict sr = GET_R_LINE (y);
+  guint16 *restrict d = dest, G, B, R;
+
+  sg += x;
+  sb += x;
+  sr += x;
+
+  for (i = 0; i < width; i++) {
+    G = GST_READ_UINT16_BE (sg + i);
+    B = GST_READ_UINT16_BE (sb + i);
+    R = GST_READ_UINT16_BE (sr + i);
+
+    d[i * 4 + 0] = 0xffff;
+    d[i * 4 + 1] = R;
+    d[i * 4 + 2] = G;
+    d[i * 4 + 3] = B;
+  }
+}
+
+static void
+pack_GBR_16BE (const GstVideoFormatInfo * info, GstVideoPackFlags flags,
+    const gpointer src, gint sstride, gpointer data[GST_VIDEO_MAX_PLANES],
+    const gint stride[GST_VIDEO_MAX_PLANES], GstVideoChromaSite chroma_site,
+    gint y, gint width)
+{
+  int i;
+  guint16 *restrict dg = GET_G_LINE (y);
+  guint16 *restrict db = GET_B_LINE (y);
+  guint16 *restrict dr = GET_R_LINE (y);
+  guint16 G, B, R;
+  const guint16 *restrict s = src;
+
+  for (i = 0; i < width; i++) {
+    G = s[i * 4 + 2];
+    B = s[i * 4 + 3];
+    R = s[i * 4 + 1];
+
+    GST_WRITE_UINT16_BE (dg + i, G);
+    GST_WRITE_UINT16_BE (db + i, B);
+    GST_WRITE_UINT16_BE (dr + i, R);
+  }
+}
+
 #define PACK_GBRA_12LE GST_VIDEO_FORMAT_ARGB64, unpack_GBRA_12LE, 1, pack_GBRA_12LE
 static void
 unpack_GBRA_12LE (const GstVideoFormatInfo * info, GstVideoPackFlags flags,
@@ -4254,9 +4358,66 @@ pack_I422_12BE (const GstVideoFormatInfo * info, GstVideoPackFlags flags,
   }
 }
 
-#define PACK_A444_10LE GST_VIDEO_FORMAT_AYUV64, unpack_A444_10LE, 1, pack_A444_10LE
+#define PACK_A444 GST_VIDEO_FORMAT_AYUV, unpack_A444, 1, pack_A444
 static void
-unpack_A444_10LE (const GstVideoFormatInfo * info, GstVideoPackFlags flags,
+unpack_A444 (const GstVideoFormatInfo * info, GstVideoPackFlags flags,
+    gpointer dest, const gpointer data[GST_VIDEO_MAX_PLANES],
+    const gint stride[GST_VIDEO_MAX_PLANES], gint x, gint y, gint width)
+{
+  int i;
+  guint8 *restrict sa = GET_A_LINE (y);
+  guint8 *restrict sy = GET_Y_LINE (y);
+  guint8 *restrict su = GET_U_LINE (y);
+  guint8 *restrict sv = GET_V_LINE (y);
+  guint8 *restrict d = dest, A, Y, U, V;
+
+  sa += x;
+  sy += x;
+  su += x;
+  sv += x;
+
+  for (i = 0; i < width; i++) {
+    A = sa[i];
+    Y = sy[i];
+    U = su[i];
+    V = sv[i];
+
+    d[i * 4 + 0] = A;
+    d[i * 4 + 1] = Y;
+    d[i * 4 + 2] = U;
+    d[i * 4 + 3] = V;
+  }
+}
+
+static void
+pack_A444 (const GstVideoFormatInfo * info, GstVideoPackFlags flags,
+    const gpointer src, gint sstride, gpointer data[GST_VIDEO_MAX_PLANES],
+    const gint stride[GST_VIDEO_MAX_PLANES], GstVideoChromaSite chroma_site,
+    gint y, gint width)
+{
+  int i;
+  guint8 *restrict da = GET_A_LINE (y);
+  guint8 *restrict dy = GET_Y_LINE (y);
+  guint8 *restrict du = GET_U_LINE (y);
+  guint8 *restrict dv = GET_V_LINE (y);
+  guint8 A, Y, U, V;
+  const guint8 *restrict s = src;
+
+  for (i = 0; i < width; i++) {
+    A = (s[i * 4 + 0]);
+    Y = (s[i * 4 + 1]);
+    U = (s[i * 4 + 2]);
+    V = (s[i * 4 + 3]);
+
+    da[i] = A;
+    dy[i] = Y;
+    du[i] = U;
+    dv[i] = V;
+  }
+}
+
+static void
+unpack_A444_16 (const GstVideoFormatInfo * info, GstVideoPackFlags flags,
     gpointer dest, const gpointer data[GST_VIDEO_MAX_PLANES],
     const gint stride[GST_VIDEO_MAX_PLANES], gint x, gint y, gint width)
 {
@@ -4273,16 +4434,23 @@ unpack_A444_10LE (const GstVideoFormatInfo * info, GstVideoPackFlags flags,
   sv += x;
 
   for (i = 0; i < width; i++) {
-    A = GST_READ_UINT16_LE (sa + i) << 6;
-    Y = GST_READ_UINT16_LE (sy + i) << 6;
-    U = GST_READ_UINT16_LE (su + i) << 6;
-    V = GST_READ_UINT16_LE (sv + i) << 6;
+    if (info->flags & GST_VIDEO_FORMAT_FLAG_LE) {
+      A = GST_READ_UINT16_LE (sa + i) << (16 - info->bits);
+      Y = GST_READ_UINT16_LE (sy + i) << (16 - info->bits);
+      U = GST_READ_UINT16_LE (su + i) << (16 - info->bits);
+      V = GST_READ_UINT16_LE (sv + i) << (16 - info->bits);
+    } else {
+      A = GST_READ_UINT16_BE (sa + i) << (16 - info->bits);
+      Y = GST_READ_UINT16_BE (sy + i) << (16 - info->bits);
+      U = GST_READ_UINT16_BE (su + i) << (16 - info->bits);
+      V = GST_READ_UINT16_BE (sv + i) << (16 - info->bits);
+    }
 
     if (!(flags & GST_VIDEO_PACK_FLAG_TRUNCATE_RANGE)) {
-      A |= (A >> 10);
-      Y |= (Y >> 10);
-      U |= (U >> 10);
-      V |= (V >> 10);
+      A |= (A >> info->bits);
+      Y |= (Y >> info->bits);
+      U |= (U >> info->bits);
+      V |= (V >> info->bits);
     }
 
     d[i * 4 + 0] = A;
@@ -4293,7 +4461,7 @@ unpack_A444_10LE (const GstVideoFormatInfo * info, GstVideoPackFlags flags,
 }
 
 static void
-pack_A444_10LE (const GstVideoFormatInfo * info, GstVideoPackFlags flags,
+pack_A444_16 (const GstVideoFormatInfo * info, GstVideoPackFlags flags,
     const gpointer src, gint sstride, gpointer data[GST_VIDEO_MAX_PLANES],
     const gint stride[GST_VIDEO_MAX_PLANES], GstVideoChromaSite chroma_site,
     gint y, gint width)
@@ -4307,21 +4475,241 @@ pack_A444_10LE (const GstVideoFormatInfo * info, GstVideoPackFlags flags,
   const guint16 *restrict s = src;
 
   for (i = 0; i < width; i++) {
-    A = (s[i * 4 + 0]) >> 6;
-    Y = (s[i * 4 + 1]) >> 6;
-    U = (s[i * 4 + 2]) >> 6;
-    V = (s[i * 4 + 3]) >> 6;
+    A = (s[i * 4 + 0]) >> (16 - info->bits);
+    Y = (s[i * 4 + 1]) >> (16 - info->bits);
+    U = (s[i * 4 + 2]) >> (16 - info->bits);
+    V = (s[i * 4 + 3]) >> (16 - info->bits);
 
-    GST_WRITE_UINT16_LE (da + i, A);
-    GST_WRITE_UINT16_LE (dy + i, Y);
-    GST_WRITE_UINT16_LE (du + i, U);
-    GST_WRITE_UINT16_LE (dv + i, V);
+    if (info->flags & GST_VIDEO_FORMAT_FLAG_LE) {
+      GST_WRITE_UINT16_LE (da + i, A);
+      GST_WRITE_UINT16_LE (dy + i, Y);
+      GST_WRITE_UINT16_LE (du + i, U);
+      GST_WRITE_UINT16_LE (dv + i, V);
+    } else {
+      GST_WRITE_UINT16_BE (da + i, A);
+      GST_WRITE_UINT16_BE (dy + i, Y);
+      GST_WRITE_UINT16_BE (du + i, U);
+      GST_WRITE_UINT16_BE (dv + i, V);
+    }
   }
 }
 
-#define PACK_A444_10BE GST_VIDEO_FORMAT_AYUV64, unpack_A444_10BE, 1, pack_A444_10BE
+#define PACK_A444_10BE GST_VIDEO_FORMAT_AYUV64, unpack_A444_16, 1, pack_A444_16
+#define PACK_A444_10LE GST_VIDEO_FORMAT_AYUV64, unpack_A444_16, 1, pack_A444_16
+#define PACK_A444_12BE GST_VIDEO_FORMAT_AYUV64, unpack_A444_16, 1, pack_A444_16
+#define PACK_A444_12LE GST_VIDEO_FORMAT_AYUV64, unpack_A444_16, 1, pack_A444_16
+#define PACK_A444_16BE GST_VIDEO_FORMAT_AYUV64, unpack_A444_16, 1, pack_A444_16
+#define PACK_A444_16LE GST_VIDEO_FORMAT_AYUV64, unpack_A444_16, 1, pack_A444_16
+
 static void
-unpack_A444_10BE (const GstVideoFormatInfo * info, GstVideoPackFlags flags,
+unpack_A420_16 (const GstVideoFormatInfo * info, GstVideoPackFlags flags,
+    gpointer dest, const gpointer data[GST_VIDEO_MAX_PLANES],
+    const gint stride[GST_VIDEO_MAX_PLANES], gint x, gint y, gint width)
+{
+  int i;
+  gint uv = GET_UV_420 (y, flags);
+  const guint16 *restrict sa = GET_A_LINE (y);
+  const guint16 *restrict sy = GET_Y_LINE (y);
+  const guint16 *restrict su = GET_U_LINE (uv);
+  const guint16 *restrict sv = GET_V_LINE (uv);
+  guint16 *restrict d = dest, A, Y, U, V;
+
+  sa += x;
+  sy += x;
+  su += x >> 1;
+  sv += x >> 1;
+
+  for (i = 0; i < width; i++) {
+    if (info->flags & GST_VIDEO_FORMAT_FLAG_LE) {
+      A = GST_READ_UINT16_LE (sa + i) << (16 - info->bits);
+      Y = GST_READ_UINT16_LE (sy + i) << (16 - info->bits);
+      U = GST_READ_UINT16_LE (su + (i >> 1)) << (16 - info->bits);
+      V = GST_READ_UINT16_LE (sv + (i >> 1)) << (16 - info->bits);
+    } else {
+      A = GST_READ_UINT16_BE (sa + i) << (16 - info->bits);
+      Y = GST_READ_UINT16_BE (sy + i) << (16 - info->bits);
+      U = GST_READ_UINT16_BE (su + (i >> 1)) << (16 - info->bits);
+      V = GST_READ_UINT16_BE (sv + (i >> 1)) << (16 - info->bits);
+    }
+    if (!(flags & GST_VIDEO_PACK_FLAG_TRUNCATE_RANGE)) {
+      A |= (A >> info->bits);
+      Y |= (Y >> info->bits);
+      U |= (U >> info->bits);
+      V |= (V >> info->bits);
+    }
+
+    d[i * 4 + 0] = A;
+    d[i * 4 + 1] = Y;
+    d[i * 4 + 2] = U;
+    d[i * 4 + 3] = V;
+    if (x & 1) {
+      x = 0;
+      su++;
+      sv++;
+    }
+  }
+}
+
+static void
+pack_A420_16 (const GstVideoFormatInfo * info, GstVideoPackFlags flags,
+    const gpointer src, gint sstride, gpointer data[GST_VIDEO_MAX_PLANES],
+    const gint stride[GST_VIDEO_MAX_PLANES], GstVideoChromaSite chroma_site,
+    gint y, gint width)
+{
+  int i;
+  gint uv = GET_UV_420 (y, flags);
+  guint16 *restrict da = GET_A_LINE (y);
+  guint16 *restrict dy = GET_Y_LINE (y);
+  guint16 *restrict du = GET_U_LINE (uv);
+  guint16 *restrict dv = GET_V_LINE (uv);
+  guint16 A0, Y0, A1, Y1, U, V;
+  const guint16 *restrict s = src;
+
+  if (IS_CHROMA_LINE_420 (y, flags)) {
+    for (i = 0; i < width - 1; i += 2) {
+      A0 = s[i * 4 + 0] >> (16 - info->bits);
+      Y0 = s[i * 4 + 1] >> (16 - info->bits);
+      A1 = s[i * 4 + 4] >> (16 - info->bits);
+      Y1 = s[i * 4 + 5] >> (16 - info->bits);
+      U = s[i * 4 + 2] >> (16 - info->bits);
+      V = s[i * 4 + 3] >> (16 - info->bits);
+
+      if (info->flags & GST_VIDEO_FORMAT_FLAG_LE) {
+        GST_WRITE_UINT16_LE (da + i + 0, A0);
+        GST_WRITE_UINT16_LE (dy + i + 0, Y0);
+        GST_WRITE_UINT16_LE (da + i + 1, A1);
+        GST_WRITE_UINT16_LE (dy + i + 1, Y1);
+        GST_WRITE_UINT16_LE (du + (i >> 1), U);
+        GST_WRITE_UINT16_LE (dv + (i >> 1), V);
+      } else {
+        GST_WRITE_UINT16_BE (da + i + 0, A0);
+        GST_WRITE_UINT16_BE (dy + i + 0, Y0);
+        GST_WRITE_UINT16_BE (da + i + 1, A1);
+        GST_WRITE_UINT16_BE (dy + i + 1, Y1);
+        GST_WRITE_UINT16_BE (du + (i >> 1), U);
+        GST_WRITE_UINT16_BE (dv + (i >> 1), V);
+      }
+    }
+    if (i == width - 1) {
+      A0 = s[i * 4 + 0] >> (16 - info->bits);
+      Y0 = s[i * 4 + 1] >> (16 - info->bits);
+      U = s[i * 4 + 2] >> (16 - info->bits);
+      V = s[i * 4 + 3] >> (16 - info->bits);
+      if (info->flags & GST_VIDEO_FORMAT_FLAG_LE) {
+        GST_WRITE_UINT16_LE (da + i, A0);
+        GST_WRITE_UINT16_LE (dy + i, Y0);
+        GST_WRITE_UINT16_LE (du + (i >> 1), U);
+        GST_WRITE_UINT16_LE (dv + (i >> 1), V);
+      } else {
+        GST_WRITE_UINT16_BE (da + i, A0);
+        GST_WRITE_UINT16_BE (dy + i, Y0);
+        GST_WRITE_UINT16_BE (du + (i >> 1), U);
+        GST_WRITE_UINT16_BE (dv + (i >> 1), V);
+      }
+    }
+  } else {
+    for (i = 0; i < width; i++) {
+      A0 = s[i * 4 + 0] >> (16 - info->bits);
+      Y0 = s[i * 4 + 1] >> (16 - info->bits);
+      if (info->flags & GST_VIDEO_FORMAT_FLAG_LE) {
+        GST_WRITE_UINT16_LE (da + i, A0);
+        GST_WRITE_UINT16_LE (dy + i, Y0);
+      } else {
+        GST_WRITE_UINT16_BE (da + i, A0);
+        GST_WRITE_UINT16_BE (dy + i, Y0);
+      }
+    }
+  }
+}
+
+#define PACK_A420_10LE GST_VIDEO_FORMAT_AYUV64, unpack_A420_16, 1, pack_A420_16
+#define PACK_A420_10BE GST_VIDEO_FORMAT_AYUV64, unpack_A420_16, 1, pack_A420_16
+#define PACK_A420_12LE GST_VIDEO_FORMAT_AYUV64, unpack_A420_16, 1, pack_A420_16
+#define PACK_A420_12BE GST_VIDEO_FORMAT_AYUV64, unpack_A420_16, 1, pack_A420_16
+#define PACK_A420_16LE GST_VIDEO_FORMAT_AYUV64, unpack_A420_16, 1, pack_A420_16
+#define PACK_A420_16BE GST_VIDEO_FORMAT_AYUV64, unpack_A420_16, 1, pack_A420_16
+
+#define PACK_A422 GST_VIDEO_FORMAT_AYUV, unpack_A422, 1, pack_A422
+static void
+unpack_A422 (const GstVideoFormatInfo * info, GstVideoPackFlags flags,
+    gpointer dest, const gpointer data[GST_VIDEO_MAX_PLANES],
+    const gint stride[GST_VIDEO_MAX_PLANES], gint x, gint y, gint width)
+{
+  int i;
+  const guint8 *restrict sa = GET_A_LINE (y);
+  const guint8 *restrict sy = GET_Y_LINE (y);
+  const guint8 *restrict su = GET_U_LINE (y);
+  const guint8 *restrict sv = GET_V_LINE (y);
+  guint8 *restrict d = dest, A, Y, U, V;
+
+  sa += x;
+  sy += x;
+  su += x >> 1;
+  sv += x >> 1;
+
+  for (i = 0; i < width; i++) {
+    A = sa[i];
+    Y = sy[i];
+    U = su[(i >> 1)];
+    V = sv[(i >> 1)];
+
+    d[i * 4 + 0] = A;
+    d[i * 4 + 1] = Y;
+    d[i * 4 + 2] = U;
+    d[i * 4 + 3] = V;
+
+    if (x & 1) {
+      x = 0;
+      su++;
+      sv++;
+    }
+  }
+}
+
+static void
+pack_A422 (const GstVideoFormatInfo * info, GstVideoPackFlags flags,
+    const gpointer src, gint sstride, gpointer data[GST_VIDEO_MAX_PLANES],
+    const gint stride[GST_VIDEO_MAX_PLANES], GstVideoChromaSite chroma_site,
+    gint y, gint width)
+{
+  int i;
+  guint8 *restrict da = GET_A_LINE (y);
+  guint8 *restrict dy = GET_Y_LINE (y);
+  guint8 *restrict du = GET_U_LINE (y);
+  guint8 *restrict dv = GET_V_LINE (y);
+  guint8 A0, Y0, A1, Y1, U, V;
+  const guint8 *restrict s = src;
+
+  for (i = 0; i < width - 1; i += 2) {
+    A0 = s[i * 4 + 0];
+    Y0 = s[i * 4 + 1];
+    A1 = s[i * 4 + 4];
+    Y1 = s[i * 4 + 5];
+    U = s[i * 4 + 2];
+    V = s[i * 4 + 3];
+
+    da[i + 0] = A0;
+    dy[i + 0] = Y0;
+    da[i + 1] = A1;
+    dy[i + 1] = Y1;
+    du[i >> 1] = U;
+    dv[i >> 1] = V;
+  }
+  if (i == width - 1) {
+    A0 = s[i * 4 + 0];
+    Y0 = s[i * 4 + 1];
+    U = s[i * 4 + 2];
+    V = s[i * 4 + 3];
+
+    da[i + 0] = A0;
+    dy[i + 0] = Y0;
+    du[i >> 1] = U;
+    dv[i >> 1] = V;
+  }
+}
+
+static void
+unpack_A422_16 (const GstVideoFormatInfo * info, GstVideoPackFlags flags,
     gpointer dest, const gpointer data[GST_VIDEO_MAX_PLANES],
     const gint stride[GST_VIDEO_MAX_PLANES], gint x, gint y, gint width)
 {
@@ -4334,31 +4722,44 @@ unpack_A444_10BE (const GstVideoFormatInfo * info, GstVideoPackFlags flags,
 
   sa += x;
   sy += x;
-  su += x;
-  sv += x;
+  su += x >> 1;
+  sv += x >> 1;
 
   for (i = 0; i < width; i++) {
-    A = GST_READ_UINT16_BE (sa + i) << 6;
-    Y = GST_READ_UINT16_BE (sy + i) << 6;
-    U = GST_READ_UINT16_BE (su + i) << 6;
-    V = GST_READ_UINT16_BE (sv + i) << 6;
+    if (info->flags & GST_VIDEO_FORMAT_FLAG_LE) {
+      A = GST_READ_UINT16_LE (sa + i) << (16 - info->bits);
+      Y = GST_READ_UINT16_LE (sy + i) << (16 - info->bits);
+      U = GST_READ_UINT16_LE (su + (i >> 1)) << (16 - info->bits);
+      V = GST_READ_UINT16_LE (sv + (i >> 1)) << (16 - info->bits);
+    } else {
+      A = GST_READ_UINT16_BE (sa + i) << (16 - info->bits);
+      Y = GST_READ_UINT16_BE (sy + i) << (16 - info->bits);
+      U = GST_READ_UINT16_BE (su + (i >> 1)) << (16 - info->bits);
+      V = GST_READ_UINT16_BE (sv + (i >> 1)) << (16 - info->bits);
+    }
 
     if (!(flags & GST_VIDEO_PACK_FLAG_TRUNCATE_RANGE)) {
-      A |= (A >> 10);
-      Y |= (Y >> 10);
-      U |= (U >> 10);
-      V |= (V >> 10);
+      A |= (A >> info->bits);
+      Y |= (Y >> info->bits);
+      U |= (U >> info->bits);
+      V |= (V >> info->bits);
     }
 
     d[i * 4 + 0] = A;
     d[i * 4 + 1] = Y;
     d[i * 4 + 2] = U;
     d[i * 4 + 3] = V;
+
+    if (x & 1) {
+      x = 0;
+      su++;
+      sv++;
+    }
   }
 }
 
 static void
-pack_A444_10BE (const GstVideoFormatInfo * info, GstVideoPackFlags flags,
+pack_A422_16 (const GstVideoFormatInfo * info, GstVideoPackFlags flags,
     const gpointer src, gint sstride, gpointer data[GST_VIDEO_MAX_PLANES],
     const gint stride[GST_VIDEO_MAX_PLANES], GstVideoChromaSite chroma_site,
     gint y, gint width)
@@ -4368,188 +4769,25 @@ pack_A444_10BE (const GstVideoFormatInfo * info, GstVideoPackFlags flags,
   guint16 *restrict dy = GET_Y_LINE (y);
   guint16 *restrict du = GET_U_LINE (y);
   guint16 *restrict dv = GET_V_LINE (y);
-  guint16 A, Y, U, V;
-  const guint16 *restrict s = src;
-
-  for (i = 0; i < width; i++) {
-    A = s[i * 4 + 0] >> 6;
-    Y = s[i * 4 + 1] >> 6;
-    U = s[i * 4 + 2] >> 6;
-    V = s[i * 4 + 3] >> 6;
-
-    GST_WRITE_UINT16_BE (da + i, A);
-    GST_WRITE_UINT16_BE (dy + i, Y);
-    GST_WRITE_UINT16_BE (du + i, U);
-    GST_WRITE_UINT16_BE (dv + i, V);
-  }
-}
-
-#define PACK_A420_10LE GST_VIDEO_FORMAT_AYUV64, unpack_A420_10LE, 1, pack_A420_10LE
-static void
-unpack_A420_10LE (const GstVideoFormatInfo * info, GstVideoPackFlags flags,
-    gpointer dest, const gpointer data[GST_VIDEO_MAX_PLANES],
-    const gint stride[GST_VIDEO_MAX_PLANES], gint x, gint y, gint width)
-{
-  int i;
-  gint uv = GET_UV_420 (y, flags);
-  const guint16 *restrict sa = GET_A_LINE (y);
-  const guint16 *restrict sy = GET_Y_LINE (y);
-  const guint16 *restrict su = GET_U_LINE (uv);
-  const guint16 *restrict sv = GET_V_LINE (uv);
-  guint16 *restrict d = dest, A, Y, U, V;
-
-  sa += x;
-  sy += x;
-  su += x >> 1;
-  sv += x >> 1;
-
-  for (i = 0; i < width; i++) {
-    A = GST_READ_UINT16_LE (sa + i) << 6;
-    Y = GST_READ_UINT16_LE (sy + i) << 6;
-    U = GST_READ_UINT16_LE (su + (i >> 1)) << 6;
-    V = GST_READ_UINT16_LE (sv + (i >> 1)) << 6;
-
-    if (!(flags & GST_VIDEO_PACK_FLAG_TRUNCATE_RANGE)) {
-      A |= (A >> 10);
-      Y |= (Y >> 10);
-      U |= (U >> 10);
-      V |= (V >> 10);
-    }
-
-    d[i * 4 + 0] = A;
-    d[i * 4 + 1] = Y;
-    d[i * 4 + 2] = U;
-    d[i * 4 + 3] = V;
-
-    if (x & 1) {
-      x = 0;
-      su++;
-      sv++;
-    }
-  }
-}
-
-static void
-pack_A420_10LE (const GstVideoFormatInfo * info, GstVideoPackFlags flags,
-    const gpointer src, gint sstride, gpointer data[GST_VIDEO_MAX_PLANES],
-    const gint stride[GST_VIDEO_MAX_PLANES], GstVideoChromaSite chroma_site,
-    gint y, gint width)
-{
-  int i;
-  gint uv = GET_UV_420 (y, flags);
-  guint16 *restrict da = GET_A_LINE (y);
-  guint16 *restrict dy = GET_Y_LINE (y);
-  guint16 *restrict du = GET_U_LINE (uv);
-  guint16 *restrict dv = GET_V_LINE (uv);
   guint16 A0, Y0, A1, Y1, U, V;
   const guint16 *restrict s = src;
 
-  if (IS_CHROMA_LINE_420 (y, flags)) {
-    for (i = 0; i < width - 1; i += 2) {
-      A0 = s[i * 4 + 0] >> 6;
-      Y0 = s[i * 4 + 1] >> 6;
-      A1 = s[i * 4 + 4] >> 6;
-      Y1 = s[i * 4 + 5] >> 6;
-      U = s[i * 4 + 2] >> 6;
-      V = s[i * 4 + 3] >> 6;
+  for (i = 0; i < width - 1; i += 2) {
+    A0 = s[i * 4 + 0] >> (16 - info->bits);
+    Y0 = s[i * 4 + 1] >> (16 - info->bits);
+    A1 = s[i * 4 + 4] >> (16 - info->bits);
+    Y1 = s[i * 4 + 5] >> (16 - info->bits);
+    U = s[i * 4 + 2] >> (16 - info->bits);
+    V = s[i * 4 + 3] >> (16 - info->bits);
 
+    if (info->flags & GST_VIDEO_FORMAT_FLAG_LE) {
       GST_WRITE_UINT16_LE (da + i + 0, A0);
       GST_WRITE_UINT16_LE (dy + i + 0, Y0);
       GST_WRITE_UINT16_LE (da + i + 1, A1);
       GST_WRITE_UINT16_LE (dy + i + 1, Y1);
       GST_WRITE_UINT16_LE (du + (i >> 1), U);
       GST_WRITE_UINT16_LE (dv + (i >> 1), V);
-    }
-    if (i == width - 1) {
-      A0 = s[i * 4 + 0] >> 6;
-      Y0 = s[i * 4 + 1] >> 6;
-      U = s[i * 4 + 2] >> 6;
-      V = s[i * 4 + 3] >> 6;
-
-      GST_WRITE_UINT16_LE (da + i, A0);
-      GST_WRITE_UINT16_LE (dy + i, Y0);
-      GST_WRITE_UINT16_LE (du + (i >> 1), U);
-      GST_WRITE_UINT16_LE (dv + (i >> 1), V);
-    }
-  } else {
-    for (i = 0; i < width; i++) {
-      A0 = s[i * 4 + 0] >> 6;
-      Y0 = s[i * 4 + 1] >> 6;
-      GST_WRITE_UINT16_LE (da + i, A0);
-      GST_WRITE_UINT16_LE (dy + i, Y0);
-    }
-  }
-}
-
-#define PACK_A420_10BE GST_VIDEO_FORMAT_AYUV64, unpack_A420_10BE, 1, pack_A420_10BE
-static void
-unpack_A420_10BE (const GstVideoFormatInfo * info, GstVideoPackFlags flags,
-    gpointer dest, const gpointer data[GST_VIDEO_MAX_PLANES],
-    const gint stride[GST_VIDEO_MAX_PLANES], gint x, gint y, gint width)
-{
-  int i;
-  gint uv = GET_UV_420 (y, flags);
-  const guint16 *restrict sa = GET_A_LINE (y);
-  const guint16 *restrict sy = GET_Y_LINE (y);
-  const guint16 *restrict su = GET_U_LINE (uv);
-  const guint16 *restrict sv = GET_V_LINE (uv);
-  guint16 *restrict d = dest, A, Y, U, V;
-
-  sa += x;
-  sy += x;
-  su += x >> 1;
-  sv += x >> 1;
-
-  for (i = 0; i < width; i++) {
-    A = GST_READ_UINT16_BE (sa + i) << 6;
-    Y = GST_READ_UINT16_BE (sy + i) << 6;
-    U = GST_READ_UINT16_BE (su + (i >> 1)) << 6;
-    V = GST_READ_UINT16_BE (sv + (i >> 1)) << 6;
-
-    if (!(flags & GST_VIDEO_PACK_FLAG_TRUNCATE_RANGE)) {
-      A |= (A >> 10);
-      Y |= (Y >> 10);
-      U |= (U >> 10);
-      V |= (V >> 10);
-    }
-
-    d[i * 4 + 0] = A;
-    d[i * 4 + 1] = Y;
-    d[i * 4 + 2] = U;
-    d[i * 4 + 3] = V;
-
-    if (x & 1) {
-      x = 0;
-      su++;
-      sv++;
-    }
-  }
-}
-
-static void
-pack_A420_10BE (const GstVideoFormatInfo * info, GstVideoPackFlags flags,
-    const gpointer src, gint sstride, gpointer data[GST_VIDEO_MAX_PLANES],
-    const gint stride[GST_VIDEO_MAX_PLANES], GstVideoChromaSite chroma_site,
-    gint y, gint width)
-{
-  int i;
-  gint uv = GET_UV_420 (y, flags);
-  guint16 *restrict da = GET_A_LINE (y);
-  guint16 *restrict dy = GET_Y_LINE (y);
-  guint16 *restrict du = GET_U_LINE (uv);
-  guint16 *restrict dv = GET_V_LINE (uv);
-  guint16 A0, Y0, A1, Y1, U, V;
-  const guint16 *restrict s = src;
-
-  if (IS_CHROMA_LINE_420 (y, flags)) {
-    for (i = 0; i < width - 1; i += 2) {
-      A0 = s[i * 4 + 0] >> 6;
-      Y0 = s[i * 4 + 1] >> 6;
-      A1 = s[i * 4 + 4] >> 6;
-      Y1 = s[i * 4 + 5] >> 6;
-      U = s[i * 4 + 2] >> 6;
-      V = s[i * 4 + 3] >> 6;
-
+    } else {
       GST_WRITE_UINT16_BE (da + i + 0, A0);
       GST_WRITE_UINT16_BE (dy + i + 0, Y0);
       GST_WRITE_UINT16_BE (da + i + 1, A1);
@@ -4557,226 +4795,166 @@ pack_A420_10BE (const GstVideoFormatInfo * info, GstVideoPackFlags flags,
       GST_WRITE_UINT16_BE (du + (i >> 1), U);
       GST_WRITE_UINT16_BE (dv + (i >> 1), V);
     }
-    if (i == width - 1) {
-      A0 = s[i * 4 + 0] >> 6;
-      Y0 = s[i * 4 + 1] >> 6;
-      U = s[i * 4 + 2] >> 6;
-      V = s[i * 4 + 3] >> 6;
+  }
 
+  if (i == width - 1) {
+    A0 = s[i * 4 + 0] >> (16 - info->bits);
+    Y0 = s[i * 4 + 1] >> (16 - info->bits);
+    U = s[i * 4 + 2] >> (16 - info->bits);
+    V = s[i * 4 + 3] >> (16 - info->bits);
+
+    if (info->flags & GST_VIDEO_FORMAT_FLAG_LE) {
+      GST_WRITE_UINT16_LE (da + i, A0);
+      GST_WRITE_UINT16_LE (dy + i, Y0);
+      GST_WRITE_UINT16_LE (du + (i >> 1), U);
+      GST_WRITE_UINT16_LE (dv + (i >> 1), V);
+    } else {
       GST_WRITE_UINT16_BE (da + i, A0);
       GST_WRITE_UINT16_BE (dy + i, Y0);
       GST_WRITE_UINT16_BE (du + (i >> 1), U);
       GST_WRITE_UINT16_BE (dv + (i >> 1), V);
     }
-  } else {
-    for (i = 0; i < width; i++) {
-      A0 = s[i * 4 + 0] >> 6;
-      Y0 = s[i * 4 + 1] >> 6;
-      GST_WRITE_UINT16_BE (da + i, A0);
-      GST_WRITE_UINT16_BE (dy + i, Y0);
-    }
   }
 }
 
-#define PACK_A422_10LE GST_VIDEO_FORMAT_AYUV64, unpack_A422_10LE, 1, pack_A422_10LE
+#define PACK_A422_10LE GST_VIDEO_FORMAT_AYUV64, unpack_A422_16, 1, pack_A422_16
+#define PACK_A422_10BE GST_VIDEO_FORMAT_AYUV64, unpack_A422_16, 1, pack_A422_16
+#define PACK_A422_12LE GST_VIDEO_FORMAT_AYUV64, unpack_A422_16, 1, pack_A422_16
+#define PACK_A422_12BE GST_VIDEO_FORMAT_AYUV64, unpack_A422_16, 1, pack_A422_16
+#define PACK_A422_16LE GST_VIDEO_FORMAT_AYUV64, unpack_A422_16, 1, pack_A422_16
+#define PACK_A422_16BE GST_VIDEO_FORMAT_AYUV64, unpack_A422_16, 1, pack_A422_16
+
+/* Helpers for the most common tile format */
 static void
-unpack_A422_10LE (const GstVideoFormatInfo * info, GstVideoPackFlags flags,
-    gpointer dest, const gpointer data[GST_VIDEO_MAX_PLANES],
-    const gint stride[GST_VIDEO_MAX_PLANES], gint x, gint y, gint width)
-{
-  int i;
-  const guint16 *restrict sa = GET_A_LINE (y);
-  const guint16 *restrict sy = GET_Y_LINE (y);
-  const guint16 *restrict su = GET_U_LINE (y);
-  const guint16 *restrict sv = GET_V_LINE (y);
-  guint16 *restrict d = dest, A, Y, U, V;
-
-  sa += x;
-  sy += x;
-  su += x >> 1;
-  sv += x >> 1;
-
-  for (i = 0; i < width; i++) {
-    A = GST_READ_UINT16_LE (sa + i) << 6;
-    Y = GST_READ_UINT16_LE (sy + i) << 6;
-    U = GST_READ_UINT16_LE (su + (i >> 1)) << 6;
-    V = GST_READ_UINT16_LE (sv + (i >> 1)) << 6;
-
-    if (!(flags & GST_VIDEO_PACK_FLAG_TRUNCATE_RANGE)) {
-      A |= (A >> 10);
-      Y |= (Y >> 10);
-      U |= (U >> 10);
-      V |= (V >> 10);
-    }
-
-    d[i * 4 + 0] = A;
-    d[i * 4 + 1] = Y;
-    d[i * 4 + 2] = U;
-    d[i * 4 + 3] = V;
-
-    if (x & 1) {
-      x = 0;
-      su++;
-      sv++;
-    }
-  }
-}
-
-static void
-pack_A422_10LE (const GstVideoFormatInfo * info, GstVideoPackFlags flags,
-    const gpointer src, gint sstride, gpointer data[GST_VIDEO_MAX_PLANES],
-    const gint stride[GST_VIDEO_MAX_PLANES], GstVideoChromaSite chroma_site,
-    gint y, gint width)
-{
-  int i;
-  guint16 *restrict da = GET_A_LINE (y);
-  guint16 *restrict dy = GET_Y_LINE (y);
-  guint16 *restrict du = GET_U_LINE (y);
-  guint16 *restrict dv = GET_V_LINE (y);
-  guint16 A0, Y0, A1, Y1, U, V;
-  const guint16 *restrict s = src;
-
-  for (i = 0; i < width - 1; i += 2) {
-    A0 = s[i * 4 + 0] >> 6;
-    Y0 = s[i * 4 + 1] >> 6;
-    A1 = s[i * 4 + 4] >> 6;
-    Y1 = s[i * 4 + 5] >> 6;
-    U = s[i * 4 + 2] >> 6;
-    V = s[i * 4 + 3] >> 6;
-
-    GST_WRITE_UINT16_LE (da + i + 0, A0);
-    GST_WRITE_UINT16_LE (dy + i + 0, Y0);
-    GST_WRITE_UINT16_LE (da + i + 1, A1);
-    GST_WRITE_UINT16_LE (dy + i + 1, Y1);
-    GST_WRITE_UINT16_LE (du + (i >> 1), U);
-    GST_WRITE_UINT16_LE (dv + (i >> 1), V);
-  }
-  if (i == width - 1) {
-    A0 = s[i * 4 + 0] >> 6;
-    Y0 = s[i * 4 + 1] >> 6;
-    U = s[i * 4 + 2] >> 6;
-    V = s[i * 4 + 3] >> 6;
-
-    GST_WRITE_UINT16_LE (da + i, A0);
-    GST_WRITE_UINT16_LE (dy + i, Y0);
-    GST_WRITE_UINT16_LE (du + (i >> 1), U);
-    GST_WRITE_UINT16_LE (dv + (i >> 1), V);
-  }
-}
-
-#define PACK_A422_10BE GST_VIDEO_FORMAT_AYUV64, unpack_A422_10BE, 1, pack_A422_10BE
-static void
-unpack_A422_10BE (const GstVideoFormatInfo * info, GstVideoPackFlags flags,
-    gpointer dest, const gpointer data[GST_VIDEO_MAX_PLANES],
-    const gint stride[GST_VIDEO_MAX_PLANES], gint x, gint y, gint width)
-{
-  int i;
-  const guint16 *restrict sa = GET_A_LINE (y);
-  const guint16 *restrict sy = GET_Y_LINE (y);
-  const guint16 *restrict su = GET_U_LINE (y);
-  const guint16 *restrict sv = GET_V_LINE (y);
-  guint16 *restrict d = dest, A, Y, U, V;
-
-  sa += x;
-  sy += x;
-  su += x >> 1;
-  sv += x >> 1;
-
-  for (i = 0; i < width; i++) {
-    A = GST_READ_UINT16_BE (sa + i) << 6;
-    Y = GST_READ_UINT16_BE (sy + i) << 6;
-    U = GST_READ_UINT16_BE (su + (i >> 1)) << 6;
-    V = GST_READ_UINT16_BE (sv + (i >> 1)) << 6;
-
-    if (!(flags & GST_VIDEO_PACK_FLAG_TRUNCATE_RANGE)) {
-      A |= (A >> 10);
-      Y |= (Y >> 10);
-      U |= (U >> 10);
-      V |= (V >> 10);
-    }
-
-    d[i * 4 + 0] = A;
-    d[i * 4 + 1] = Y;
-    d[i * 4 + 2] = U;
-    d[i * 4 + 3] = V;
-
-    if (x & 1) {
-      x = 0;
-      su++;
-      sv++;
-    }
-  }
-}
-
-static void
-pack_A422_10BE (const GstVideoFormatInfo * info, GstVideoPackFlags flags,
-    const gpointer src, gint sstride, gpointer data[GST_VIDEO_MAX_PLANES],
-    const gint stride[GST_VIDEO_MAX_PLANES], GstVideoChromaSite chroma_site,
-    gint y, gint width)
-{
-  int i;
-  guint16 *restrict da = GET_A_LINE (y);
-  guint16 *restrict dy = GET_Y_LINE (y);
-  guint16 *restrict du = GET_U_LINE (y);
-  guint16 *restrict dv = GET_V_LINE (y);
-  guint16 A0, Y0, A1, Y1, U, V;
-  const guint16 *restrict s = src;
-
-  for (i = 0; i < width - 1; i += 2) {
-    A0 = s[i * 4 + 0] >> 6;
-    Y0 = s[i * 4 + 1] >> 6;
-    A1 = s[i * 4 + 4] >> 6;
-    Y1 = s[i * 4 + 5] >> 6;
-    U = s[i * 4 + 2] >> 6;
-    V = s[i * 4 + 3] >> 6;
-
-    GST_WRITE_UINT16_BE (da + i + 0, A0);
-    GST_WRITE_UINT16_BE (dy + i + 0, Y0);
-    GST_WRITE_UINT16_BE (da + i + 1, A1);
-    GST_WRITE_UINT16_BE (dy + i + 1, Y1);
-    GST_WRITE_UINT16_BE (du + (i >> 1), U);
-    GST_WRITE_UINT16_BE (dv + (i >> 1), V);
-  }
-  if (i == width - 1) {
-    A0 = s[i * 4 + 0] >> 6;
-    Y0 = s[i * 4 + 1] >> 6;
-    U = s[i * 4 + 2] >> 6;
-    V = s[i * 4 + 3] >> 6;
-
-    GST_WRITE_UINT16_BE (da + i, A0);
-    GST_WRITE_UINT16_BE (dy + i, Y0);
-    GST_WRITE_UINT16_BE (du + (i >> 1), U);
-    GST_WRITE_UINT16_BE (dv + (i >> 1), V);
-  }
-}
-
-static void
-get_tile_NV12 (gint tile_width, gint ts, gint tx, gint ty,
-    GstVideoTileMode mode,
+get_tile_NV12 (const GstVideoFormatInfo * info, gint tx, gint ty,
     const gpointer data[GST_VIDEO_MAX_PLANES],
     const gint stride[GST_VIDEO_MAX_PLANES],
     gpointer tile_data[GST_VIDEO_MAX_PLANES],
     gint tile_stride[GST_VIDEO_MAX_PLANES])
 {
-  gsize offset;
+  GstVideoTileMode mode = GST_VIDEO_FORMAT_INFO_TILE_MODE (info);
+  gsize index, offset;
 
   /* index of Y tile */
-  offset = gst_video_tile_get_index (mode,
-      tx, ty, GST_VIDEO_TILE_X_TILES (stride[0]),
-      GST_VIDEO_TILE_Y_TILES (stride[0]));
-  offset <<= ts;
+  index = gst_video_tile_get_index (mode, tx, ty,
+      GST_VIDEO_TILE_X_TILES (stride[0]), GST_VIDEO_TILE_Y_TILES (stride[0]));
+  offset = index * GST_VIDEO_FORMAT_INFO_TILE_SIZE (info, 0);
   tile_data[0] = ((guint8 *) data[0]) + offset;
 
-  /* index of UV tile */
-  offset = gst_video_tile_get_index (mode,
-      tx, ty >> 1, GST_VIDEO_TILE_X_TILES (stride[1]),
-      GST_VIDEO_TILE_Y_TILES (stride[1]));
-  offset <<= ts;
-  /* On odd rows we return the second part of the UV tile */
-  offset |= (ty & 1) << (ts - 1);
+  index = gst_video_tile_get_index (mode, tx,
+      GST_VIDEO_FORMAT_INFO_HAS_SUBTILES (info) ? ty : ty / 2,
+      GST_VIDEO_TILE_X_TILES (stride[1]), GST_VIDEO_TILE_Y_TILES (stride[1]));
+  offset = index * GST_VIDEO_FORMAT_INFO_TILE_SIZE (info, 1);
+
+  if (!GST_VIDEO_FORMAT_INFO_HAS_SUBTILES (info) && (ty & 1))
+    offset += GST_VIDEO_FORMAT_INFO_TILE_SIZE (info, 1) / 2;
+
   tile_data[1] = ((guint8 *) data[1]) + offset;
 
-  tile_stride[0] = tile_stride[1] = tile_width;
+  tile_stride[0] = GST_VIDEO_FORMAT_INFO_TILE_STRIDE (info, 0);
+  tile_stride[1] = GST_VIDEO_FORMAT_INFO_TILE_STRIDE (info, 1);
+}
+
+static inline void
+unpack_TILED (GstVideoFormat inner_format,
+    const GstVideoFormatInfo * info, GstVideoPackFlags flags,
+    gpointer dest, const gpointer data[GST_VIDEO_MAX_PLANES],
+    const gint stride[GST_VIDEO_MAX_PLANES], gint x, gint y, gint width)
+{
+  const GstVideoFormatInfo *unpack_info, *tile_finfo;
+  guint8 *line = dest;
+  gint tile_width, tile_height;
+  gint ntx, tx, ty;
+  gint unpack_pstride;
+
+  tile_width = GST_VIDEO_FORMAT_INFO_TILE_WIDTH (info, 0);
+  tile_height = GST_VIDEO_FORMAT_INFO_TILE_HEIGHT (info, 0);
+
+  /* we reuse these unpack functions */
+  tile_finfo = gst_video_format_get_info (inner_format);
+
+  /* get pstride of unpacked format */
+  unpack_info = gst_video_format_get_info (info->unpack_format);
+  unpack_pstride = GST_VIDEO_FORMAT_INFO_PSTRIDE (unpack_info, 0);
+
+  /* first x tile to convert */
+  tx = x / tile_width;
+  /* Last tile to convert */
+  ntx = ((x + width - 1) / tile_width) + 1;
+  /* The row we are going to convert */
+  ty = y / tile_height;
+
+  /* y position in a tile */
+  y = y % tile_height;
+  /* x position in a tile */
+  x = x % tile_width;
+
+  for (; tx < ntx; tx++) {
+    gpointer tdata[GST_VIDEO_MAX_PLANES];
+    gint tstride[GST_VIDEO_MAX_PLANES];
+    gint unpack_width;
+
+    get_tile_NV12 (info, tx, ty, data, stride, tdata, tstride);
+
+    /* the number of pixels left to unpack */
+    unpack_width = MIN (width - x, tile_width - x);
+
+    tile_finfo->unpack_func (tile_finfo, flags, line, tdata, tstride, x, y,
+        unpack_width);
+
+    x = 0;
+    width -= unpack_width;
+    line += unpack_width * unpack_pstride;
+  }
+}
+
+static inline void
+pack_TILED (GstVideoFormat inner_format,
+    const GstVideoFormatInfo * info, GstVideoPackFlags flags,
+    const gpointer src, gint sstride, gpointer data[GST_VIDEO_MAX_PLANES],
+    const gint stride[GST_VIDEO_MAX_PLANES], GstVideoChromaSite chroma_site,
+    gint y, gint width)
+{
+  const GstVideoFormatInfo *pack_info, *tile_finfo;
+  guint8 *line = src;
+  gint tile_width, tile_height;
+  gint ntx, tx, ty;
+  gint pack_pstride;
+
+  tile_width = GST_VIDEO_FORMAT_INFO_TILE_WIDTH (info, 0);
+  tile_height = GST_VIDEO_FORMAT_INFO_TILE_HEIGHT (info, 0);
+
+  /* we reuse these pack functions */
+  tile_finfo = gst_video_format_get_info (inner_format);
+
+  /* get pstride of packed format */
+  pack_info = gst_video_format_get_info (info->unpack_format);
+  pack_pstride = GST_VIDEO_FORMAT_INFO_PSTRIDE (pack_info, 0);
+
+  /* Last tile to convert */
+  ntx = ((width - 1) / tile_width) + 1;
+  /* The row we are going to convert */
+  ty = y / tile_height;
+
+  /* y position in a tile */
+  y = y % tile_height;
+
+  for (tx = 0; tx < ntx; tx++) {
+    gpointer tdata[GST_VIDEO_MAX_PLANES];
+    gint tstride[GST_VIDEO_MAX_PLANES];
+    gint pack_width;
+
+    get_tile_NV12 (info, tx, ty, data, stride, tdata, tstride);
+
+    /* the number of pixels left to pack */
+    pack_width = MIN (width, tile_width);
+
+    tile_finfo->pack_func (tile_finfo, flags, line, sstride, tdata, tstride,
+        chroma_site, y, pack_width);
+
+    width -= pack_width;
+    line += pack_width * pack_pstride;
+  }
 }
 
 #define PACK_NV12_TILED GST_VIDEO_FORMAT_AYUV, unpack_NV12_TILED, 1, pack_NV12_TILED
@@ -4785,54 +4963,8 @@ unpack_NV12_TILED (const GstVideoFormatInfo * info, GstVideoPackFlags flags,
     gpointer dest, const gpointer data[GST_VIDEO_MAX_PLANES],
     const gint stride[GST_VIDEO_MAX_PLANES], gint x, gint y, gint width)
 {
-  const GstVideoFormatInfo *unpack_info, *finfo;
-  guint8 *line = dest;
-  gint ws, hs, ts, tile_width;
-  gint ntx, tx, ty;
-  gint unpack_pstride;
-
-  ws = GST_VIDEO_FORMAT_INFO_TILE_WS (info);
-  hs = GST_VIDEO_FORMAT_INFO_TILE_HS (info);
-  ts = ws + hs;
-
-  tile_width = 1 << ws;
-
-  /* we reuse these unpack functions */
-  finfo = gst_video_format_get_info (GST_VIDEO_FORMAT_NV12);
-
-  /* get pstride of unpacked format */
-  unpack_info = gst_video_format_get_info (info->unpack_format);
-  unpack_pstride = GST_VIDEO_FORMAT_INFO_PSTRIDE (unpack_info, 0);
-
-  /* first x tile to convert */
-  tx = x >> ws;
-  /* Last tile to convert */
-  ntx = ((x + width - 1) >> ws) + 1;
-  /* The row we are going to convert */
-  ty = y >> hs;
-
-  /* y position in a tile */
-  y = y & ((1 << hs) - 1);
-  /* x position in a tile */
-  x = x & (tile_width - 1);
-
-  for (; tx < ntx; tx++) {
-    gpointer tdata[GST_VIDEO_MAX_PLANES];
-    gint tstride[GST_VIDEO_MAX_PLANES];
-    gint unpack_width;
-
-    get_tile_NV12 (tile_width, ts, tx, ty, info->tile_mode,
-        data, stride, tdata, tstride);
-
-    /* the number of bytes left to unpack */
-    unpack_width = MIN (width - x, tile_width - x);
-
-    finfo->unpack_func (finfo, flags, line, tdata, tstride, x, y, unpack_width);
-
-    x = 0;
-    width -= unpack_width;
-    line += unpack_width * unpack_pstride;
-  }
+  unpack_TILED (GST_VIDEO_FORMAT_NV12, info, flags, dest, data, stride,
+      x, y, width);
 }
 
 static void
@@ -4841,51 +4973,10 @@ pack_NV12_TILED (const GstVideoFormatInfo * info, GstVideoPackFlags flags,
     const gint stride[GST_VIDEO_MAX_PLANES], GstVideoChromaSite chroma_site,
     gint y, gint width)
 {
-  const GstVideoFormatInfo *pack_info, *finfo;
-  guint8 *line = src;
-  gint ws, hs, ts, tile_width;
-  gint ntx, tx, ty;
-  gint pack_pstride;
-
-  ws = GST_VIDEO_FORMAT_INFO_TILE_WS (info);
-  hs = GST_VIDEO_FORMAT_INFO_TILE_HS (info);
-  ts = ws + hs;
-
-  tile_width = 1 << ws;
-
-  /* we reuse these pack functions */
-  finfo = gst_video_format_get_info (GST_VIDEO_FORMAT_NV12);
-
-  /* get pstride of packed format */
-  pack_info = gst_video_format_get_info (info->unpack_format);
-  pack_pstride = GST_VIDEO_FORMAT_INFO_PSTRIDE (pack_info, 0);
-
-  /* Last tile to convert */
-  ntx = ((width - 1) >> ws) + 1;
-  /* The row we are going to convert */
-  ty = y >> hs;
-
-  /* y position in a tile */
-  y = y & ((1 << hs) - 1);
-
-  for (tx = 0; tx < ntx; tx++) {
-    gpointer tdata[GST_VIDEO_MAX_PLANES];
-    gint tstride[GST_VIDEO_MAX_PLANES];
-    gint pack_width;
-
-    get_tile_NV12 (tile_width, ts, tx, ty, info->tile_mode,
-        data, stride, tdata, tstride);
-
-    /* the number of bytes left to pack */
-    pack_width = MIN (width, tile_width);
-
-    finfo->pack_func (finfo, flags, line, sstride, tdata, tstride,
-        chroma_site, y, pack_width);
-
-    width -= pack_width;
-    line += pack_width * pack_pstride;
-  }
+  pack_TILED (GST_VIDEO_FORMAT_NV12, info, flags, src, sstride, data, stride,
+      chroma_site, y, width);
 }
+
 
 #define PACK_P010_10BE GST_VIDEO_FORMAT_AYUV64, unpack_P010_10BE, 1, pack_P010_10BE
 static void
@@ -6757,6 +6848,497 @@ pack_BGRP (const GstVideoFormatInfo * info, GstVideoPackFlags flags,
   video_orc_pack_Y444 (dr, dg, db, src, width);
 }
 
+#define PACK_NV12_10BE_8L128  GST_VIDEO_FORMAT_AYUV64, unpack_NV12_10BE_8L128, 1, pack_NV12_10BE_8L128
+#define GST_SET_U8_BITS(__pdata, __val, __mask, __shift)  \
+  *(guint8 *)(__pdata) = (guint8)(((*(guint8 *)(__pdata)) & (~((__mask) << (__shift)))) | (((__val) & (__mask)) << (__shift)))
+#define GST_GET_U8_BITS(__pdata, __mask, __shift)   (((*(guint8 *)(__pdata)) >> (__shift)) & (__mask))
+
+static void
+get_tile_NV12_10BE (const gint bit_depth,
+    gint ts, gint ws, gint hs, gint ty, gint y, gint x,
+    const gpointer data, const gint stride,
+    void *restrict pdata[2], gint bits[2], guint16 mask[2])
+{
+  gint bit_index = bit_depth * x;
+  gint line_size = GST_VIDEO_TILE_X_TILES (stride) << ts;
+  gint tile_size = 1 << ts;
+  gint tile_width = 1 << ws;
+  gint pos[2];
+  gsize offset;
+  gint i;
+
+  pos[0] = bit_index / 8;
+  bits[0] = 8 - (bit_index % 8);
+  if (bits[0] > bit_depth)
+    bits[0] = bit_depth;
+  bits[1] = bit_depth > bits[0] ? (bit_depth - bits[0]) : 0;
+  pos[1] = bits[1] ? (pos[0] + 1) : 0;
+  mask[0] = (1 << bits[0]) - 1;
+  mask[1] = (1 << bits[1]) - 1;
+
+  for (i = 0; i < 2; i++) {
+    offset =
+        line_size * ty + tile_size * (pos[i] >> ws) + tile_width * y +
+        (pos[i] % tile_width);
+    pdata[i] = ((guint8 *) data) + offset;
+  }
+}
+
+static void
+unpack_NV12_10BE_8L128 (const GstVideoFormatInfo * info,
+    GstVideoPackFlags flags, gpointer dest,
+    const gpointer data[GST_VIDEO_MAX_PLANES],
+    const gint stride[GST_VIDEO_MAX_PLANES], gint x, gint y, gint width)
+{
+  const gint bit_depth = 10;
+  guint16 *restrict d = dest;
+  gint ws, hs, ts;
+  gint ty, uv_ty, uv_y;
+  guint16 Y = 0, U = 0, V = 0;
+  void *restrict pdata[2];
+  gint bits[2];
+  guint16 mask[2];
+  int i;
+  int j;
+
+  ws = 3;
+  hs = 7;
+  ts = ws + hs;
+  ty = y >> hs;
+  y = y & ((1 << hs) - 1);
+  uv_ty = ty >> 1;
+  uv_y = (((ty % 2) << hs) + y) / 2;
+
+  for (i = 0; i < width; i++) {
+    j = x + i;
+
+    get_tile_NV12_10BE (bit_depth, ts, ws, hs, ty, y, j,
+        data[0], stride[0], pdata, bits, mask);
+    Y = (GST_GET_U8_BITS (pdata[0], mask[0], 0) << bits[1]) |
+        GST_GET_U8_BITS (pdata[1], mask[1], 8 - bits[1]);
+
+    if ((i == 0) && (j % 2))
+      j--;
+    if (j % 2 == 0) {
+      get_tile_NV12_10BE (bit_depth, ts, ws, hs, uv_ty, uv_y, j,
+          data[1], stride[1], pdata, bits, mask);
+      U = (GST_GET_U8_BITS (pdata[0], mask[0], 0) << bits[1]) |
+          GST_GET_U8_BITS (pdata[1], mask[1], 8 - bits[1]);
+
+      get_tile_NV12_10BE (bit_depth, ts, ws, hs, uv_ty, uv_y, j + 1,
+          data[1], stride[1], pdata, bits, mask);
+      V = (GST_GET_U8_BITS (pdata[0], mask[0], 0) << bits[1]) |
+          GST_GET_U8_BITS (pdata[1], mask[1], 8 - bits[1]);
+    }
+
+    d[0] = 0xffff;
+    d[1] = Y << 6;
+    d[2] = U << 6;
+    d[3] = V << 6;
+    d += 4;
+  }
+}
+
+static void
+pack_NV12_10BE_8L128 (const GstVideoFormatInfo * info, GstVideoPackFlags flags,
+    const gpointer src, gint sstride, gpointer data[GST_VIDEO_MAX_PLANES],
+    const gint stride[GST_VIDEO_MAX_PLANES], GstVideoChromaSite chroma_site,
+    gint y, gint width)
+{
+  const guint16 *restrict s = src;
+  const gint bit_depth = 10;
+  gint ws, hs, ts;
+  gint ty, uv_ty, uv_y;
+  guint16 Y, U, V;
+  void *restrict pdata[2];
+  gint bits[2];
+  guint16 mask[2];
+  int i;
+
+  ws = 3;
+  hs = 7;
+  ts = ws + hs;
+  ty = y >> hs;
+  y = y & ((1 << hs) - 1);
+  uv_ty = ty >> 1;
+  uv_y = (((ty % 2) << hs) + y) / 2;
+
+  for (i = 0; i < width; i++) {
+    Y = s[i * 4 + 1] >> 6;
+    U = s[i * 4 + 2] >> 6;
+    V = s[i * 4 + 3] >> 6;
+
+    get_tile_NV12_10BE (bit_depth, ts, ws, hs, ty, y, i,
+        data[0], stride[0], pdata, bits, mask);
+    GST_SET_U8_BITS (pdata[0], Y >> bits[1], mask[0], 0);
+    GST_SET_U8_BITS (pdata[1], Y & mask[1], mask[1], 8 - bits[1]);
+
+    if ((y % 2 == 0) && (i % 2 == 0)) {
+      get_tile_NV12_10BE (bit_depth, ts, ws, hs, uv_ty, uv_y, i,
+          data[1], stride[1], pdata, bits, mask);
+      GST_SET_U8_BITS (pdata[0], U >> bits[1], mask[0], 0);
+      GST_SET_U8_BITS (pdata[1], U & mask[1], mask[1], 8 - bits[1]);
+
+      get_tile_NV12_10BE (bit_depth, ts, ws, hs, uv_ty, uv_y, i + 1,
+          data[1], stride[1], pdata, bits, mask);
+      GST_SET_U8_BITS (pdata[0], V >> bits[1], mask[0], 0);
+      GST_SET_U8_BITS (pdata[1], V & mask[1], mask[1], 8 - bits[1]);
+    }
+  }
+}
+
+#define PACK_NV12_10LE40_TILED  GST_VIDEO_FORMAT_AYUV64, unpack_NV12_10LE40_TILED, 1, pack_NV12_10LE40_TILED
+static void
+unpack_NV12_10LE40_TILED (const GstVideoFormatInfo * info,
+    GstVideoPackFlags flags, gpointer dest,
+    const gpointer data[GST_VIDEO_MAX_PLANES],
+    const gint stride[GST_VIDEO_MAX_PLANES], gint x, gint y, gint width)
+{
+  unpack_TILED (GST_VIDEO_FORMAT_NV12_10LE40, info, flags, dest, data, stride,
+      x, y, width);
+}
+
+static void
+pack_NV12_10LE40_TILED (const GstVideoFormatInfo * info,
+    GstVideoPackFlags flags, const gpointer src, gint sstride,
+    gpointer data[GST_VIDEO_MAX_PLANES],
+    const gint stride[GST_VIDEO_MAX_PLANES], GstVideoChromaSite chroma_site,
+    gint y, gint width)
+{
+  pack_TILED (GST_VIDEO_FORMAT_NV12_10LE40, info, flags, src, sstride, data,
+      stride, chroma_site, y, width);
+}
+
+#define PACK_MT2110T_TILED  GST_VIDEO_FORMAT_AYUV64, unpack_MT2110T, 1, pack_MT2110T
+
+static void
+unpack_MT2110T (const GstVideoFormatInfo * info,
+    GstVideoPackFlags flags, gpointer dest,
+    const gpointer data[GST_VIDEO_MAX_PLANES],
+    const gint stride[GST_VIDEO_MAX_PLANES], gint x, gint y, gint width)
+{
+  const gsize TILE_SIZE = 640;
+  guint16 *restrict d = dest;
+
+  /* TODO not supported yet */
+  g_assert (x == 0);
+
+  /* Position in the partition grid */
+  guint ty = y / 32;
+  guint tx;
+
+  /* Vertical position within the tile */
+  gint tile_y = y % 32;
+
+  /* Tiles are split into partitions of 16 bytes of lower 2bit and 64 bytes
+   * of higher 8 bits. It contains 64 pixels, so 4 lines per parititons. The
+   * chroma tiles have half the number of parititons. */
+  gint partition_luma = tile_y / 4;
+  gint partition_chroma = partition_luma / 2;
+  gint partition_line_luma = tile_y % 4;
+  gint partition_line_chroma = (tile_y / 2) % 4;
+  gint partition_skip_luma = partition_luma * 80;
+  gint partition_skip_chroma = partition_chroma * 80;
+
+  for (tx = 0; tx < (width / 16); tx++) {
+    const guint8 *y_tile = data[0];
+    const guint8 *uv_tile = data[1];
+    gsize offset;
+    gint tile_x;
+    gint num_pixels = MIN (16, width - (tx * 16));
+
+    offset = gst_video_tile_get_index (info->tile_mode, tx, ty,
+        GST_VIDEO_TILE_X_TILES (stride[0]),
+        GST_VIDEO_TILE_Y_TILES (stride[0])) * TILE_SIZE;
+    y_tile = y_tile + offset + partition_skip_luma;
+
+    offset = gst_video_tile_get_index (info->tile_mode, tx, ty,
+        GST_VIDEO_TILE_X_TILES (stride[1]),
+        GST_VIDEO_TILE_Y_TILES (stride[1])) * (TILE_SIZE / 2);
+    uv_tile = uv_tile + offset + partition_skip_chroma;
+
+    for (tile_x = 0; tile_x < num_pixels; tile_x++) {
+      guint high_i = partition_line_luma * 16 + tile_x;
+      guint low_i = tile_x;
+      guint low_shift = partition_line_luma * 2;
+      guint low_mask = 0x03 << low_shift;
+      guint low_y = (y_tile[low_i] & low_mask) >> low_shift;
+      guint16 Y = (y_tile[16 + high_i] << 2) | low_y;
+
+      high_i = partition_line_chroma * 16 + GST_ROUND_DOWN_2 (tile_x);
+      low_i = GST_ROUND_DOWN_2 (tile_x);
+      low_shift = partition_line_chroma * 2;
+      low_mask = 0x03 << low_shift;
+      guint low_u = (uv_tile[low_i] & low_mask) >> low_shift;
+      guint low_v = (uv_tile[low_i + 1] & low_mask) >> low_shift;
+      guint16 U = (uv_tile[16 + high_i] << 2) | low_u;
+      guint16 V = (uv_tile[16 + high_i + 1] << 2) | low_v;
+
+      d[0] = 0xffff;
+      d[1] = Y << 6;
+      d[2] = U << 6;
+      d[3] = V << 6;
+      d += 4;
+    }
+  }
+}
+
+static void
+pack_MT2110T (const GstVideoFormatInfo * info,
+    GstVideoPackFlags flags, const gpointer src, gint sstride,
+    gpointer data[GST_VIDEO_MAX_PLANES],
+    const gint stride[GST_VIDEO_MAX_PLANES], GstVideoChromaSite chroma_site,
+    gint y, gint width)
+{
+  const gsize TILE_SIZE = 640;
+  const guint16 *restrict s = src;
+
+  /* Position in the partition grid */
+  guint ty = y / 32;
+  guint tx;
+
+  /* Vertical position within the tile */
+  gint tile_y = y % 32;
+
+  /* Tiles are split into paritions of 16 bytes of lower 2bit and 64 bytes
+   * of higher 8 bits. It contains 64 pixels, so 4 lines per parititons. The
+   * chroma tiles have half the number of parititons. */
+  gint partition_luma = tile_y / 4;
+  gint partition_chroma = partition_luma / 2;
+  gint partition_line_luma = tile_y % 4;
+  gint partition_line_chroma = (tile_y / 2) % 4;
+  gint partition_skip_luma = partition_luma * 80;
+  gint partition_skip_chroma = partition_chroma * 80;
+
+  for (tx = 0; tx < (width / 16); tx++) {
+    guint8 *y_tile = data[0];
+    guint8 *uv_tile = data[1];
+    gsize offset;
+    gint tile_x;
+    gint num_pixels = MIN (16, width - (tx * 16));
+
+    offset = gst_video_tile_get_index (info->tile_mode, tx, ty,
+        GST_VIDEO_TILE_X_TILES (stride[0]),
+        GST_VIDEO_TILE_Y_TILES (stride[0])) * TILE_SIZE;
+    y_tile = y_tile + offset + partition_skip_luma;
+
+    offset = gst_video_tile_get_index (info->tile_mode, tx, ty,
+        GST_VIDEO_TILE_X_TILES (stride[1]),
+        GST_VIDEO_TILE_Y_TILES (stride[1])) * (TILE_SIZE / 2);
+    uv_tile = uv_tile + offset + partition_skip_chroma;
+
+    for (tile_x = 0; tile_x < num_pixels; tile_x++) {
+      const guint16 Y = s[1] >> 6;
+      const guint16 U = s[2] >> 6;
+      const guint16 V = s[3] >> 6;
+
+      guint high_i = partition_line_luma * 16 + tile_x;
+      guint low_i = tile_x;
+      guint low_shift = partition_line_luma * 2;
+      guint low_mask = 0x03 << low_shift;
+
+      y_tile[low_i] = (y_tile[low_i] & ~low_mask) | ((Y & 0x03) << low_shift);
+      y_tile[16 + high_i] = Y >> 2;
+
+      if (IS_CHROMA_LINE_420 (y, flags) && (tile_x & 1) == 0) {
+        high_i = partition_line_chroma * 16 + GST_ROUND_DOWN_2 (tile_x);
+        low_i = GST_ROUND_DOWN_2 (tile_x);
+        low_shift = partition_line_chroma * 2;
+        low_mask = 0x03 << low_shift;
+
+        uv_tile[low_i] =
+            (uv_tile[low_i] & ~low_mask) | ((U & 0x03) << low_shift);
+        uv_tile[low_i + 1] =
+            (uv_tile[low_i + 1] & ~low_mask) | ((V & 0x03) << low_shift);
+        uv_tile[16 + high_i] = U >> 2;
+        uv_tile[16 + high_i + 1] = V >> 2;
+      }
+
+      s += 4;
+    }
+  }
+}
+
+#define PACK_MT2110R_TILED  GST_VIDEO_FORMAT_AYUV64, unpack_MT2110R, 1, pack_MT2110R
+
+static void
+unpack_MT2110R (const GstVideoFormatInfo * info,
+    GstVideoPackFlags flags, gpointer dest,
+    const gpointer data[GST_VIDEO_MAX_PLANES],
+    const gint stride[GST_VIDEO_MAX_PLANES], gint x, gint y, gint width)
+{
+  const gsize TILE_SIZE = 640;
+  guint16 *restrict d = dest;
+
+  /* TODO not supported yet */
+  g_assert (x == 0);
+
+  /* Position in the partition grid */
+  guint ty = y / 32;
+  guint tx;
+
+  /* Vertical position within the tile */
+  gint tile_y = y % 32;
+
+  /* Tiles are split into partitions of 16 bytes of lower 2bit and 64 bytes
+   * of higher 8 bits. It contains 64 pixels, so 4 lines per parititons. The
+   * chroma tiles have half the number of parititons. */
+  gint partition_luma = tile_y / 4;
+  gint partition_chroma = partition_luma / 2;
+  gint partition_line_luma = tile_y % 4;
+  gint partition_line_chroma = (tile_y / 2) % 4;
+  gint partition_skip_luma = partition_luma * 80;
+  gint partition_skip_chroma = partition_chroma * 80;
+
+  for (tx = 0; tx < (width / 16); tx++) {
+    const guint8 *y_tile = data[0];
+    const guint8 *uv_tile = data[1];
+    gsize offset;
+    gint tile_x;
+    gint num_pixels = MIN (16, width - (tx * 16));
+
+    offset = gst_video_tile_get_index (info->tile_mode, tx, ty,
+        GST_VIDEO_TILE_X_TILES (stride[0]),
+        GST_VIDEO_TILE_Y_TILES (stride[0])) * TILE_SIZE;
+    y_tile = y_tile + offset + partition_skip_luma;
+
+    offset = gst_video_tile_get_index (info->tile_mode, tx, ty,
+        GST_VIDEO_TILE_X_TILES (stride[1]),
+        GST_VIDEO_TILE_Y_TILES (stride[1])) * (TILE_SIZE / 2);
+    uv_tile = uv_tile + offset + partition_skip_chroma;
+
+    for (tile_x = 0; tile_x < num_pixels; tile_x++) {
+      guint high_i = partition_line_luma * 16 + tile_x;
+      guint low_i = partition_line_luma * 4 + tile_x / 4;
+      guint low_shift = tile_x % 4 * 2;
+      guint low_mask = 0x03 << low_shift;
+      guint low_y = (y_tile[low_i] & low_mask) >> low_shift;
+      guint16 Y = (y_tile[16 + high_i] << 2) | low_y;
+
+      high_i = partition_line_chroma * 16 + GST_ROUND_DOWN_2 (tile_x);
+      low_i = partition_line_chroma * 4 + tile_x / 4;
+      low_shift = GST_ROUND_DOWN_2 (tile_x % 4) * 2;
+      low_mask = 0x03 << low_shift;
+      guint low_u = (uv_tile[low_i] & low_mask) >> low_shift;
+      guint low_v = (uv_tile[low_i] & (low_mask << 2)) >> (low_shift + 2);
+      guint16 U = (uv_tile[16 + high_i] << 2) | low_u;
+      guint16 V = (uv_tile[16 + high_i + 1] << 2) | low_v;
+
+      d[0] = 0xffff;
+      d[1] = Y << 6;
+      d[2] = U << 6;
+      d[3] = V << 6;
+      d += 4;
+    }
+  }
+}
+
+static void
+pack_MT2110R (const GstVideoFormatInfo * info,
+    GstVideoPackFlags flags, const gpointer src, gint sstride,
+    gpointer data[GST_VIDEO_MAX_PLANES],
+    const gint stride[GST_VIDEO_MAX_PLANES], GstVideoChromaSite chroma_site,
+    gint y, gint width)
+{
+  const gsize TILE_SIZE = 640;
+  const guint16 *restrict s = src;
+
+  /* Position in the partition grid */
+  guint ty = y / 32;
+  guint tx;
+
+  /* Vertical position within the tile */
+  gint tile_y = y % 32;
+
+  /* Tiles are split into paritions of 16 bytes of lower 2bit and 64 bytes
+   * of higher 8 bits. It contains 64 pixels, so 4 lines per parititons. The
+   * chroma tiles have half the number of parititons. */
+  gint partition_luma = tile_y / 4;
+  gint partition_chroma = partition_luma / 2;
+  gint partition_line_luma = tile_y % 4;
+  gint partition_line_chroma = (tile_y / 2) % 4;
+  gint partition_skip_luma = partition_luma * 80;
+  gint partition_skip_chroma = partition_chroma * 80;
+
+  for (tx = 0; tx < (width / 16); tx++) {
+    guint8 *y_tile = data[0];
+    guint8 *uv_tile = data[1];
+    gsize offset;
+    gint tile_x;
+    gint num_pixels = MIN (16, width - (tx * 16));
+
+    offset = gst_video_tile_get_index (info->tile_mode, tx, ty,
+        GST_VIDEO_TILE_X_TILES (stride[0]),
+        GST_VIDEO_TILE_Y_TILES (stride[0])) * TILE_SIZE;
+    y_tile = y_tile + offset + partition_skip_luma;
+
+    offset = gst_video_tile_get_index (info->tile_mode, tx, ty,
+        GST_VIDEO_TILE_X_TILES (stride[1]),
+        GST_VIDEO_TILE_Y_TILES (stride[1])) * (TILE_SIZE / 2);
+    uv_tile = uv_tile + offset + partition_skip_chroma;
+
+    for (tile_x = 0; tile_x < num_pixels; tile_x++) {
+      const guint16 Y = s[1] >> 6;
+      const guint16 U = s[2] >> 6;
+      const guint16 V = s[3] >> 6;
+
+      guint high_i = partition_line_luma * 16 + tile_x;
+      guint low_i = partition_line_luma * 4 + tile_x / 4;
+      guint low_shift = tile_x % 4 * 2;
+      guint low_mask = 0x03 << low_shift;
+
+      y_tile[low_i] = (y_tile[low_i] & ~low_mask) | ((Y & 0x03) << low_shift);
+      y_tile[16 + high_i] = Y >> 2;
+
+      if (IS_CHROMA_LINE_420 (y, flags) && (tile_x & 1) == 0) {
+        high_i = partition_line_chroma * 16 + GST_ROUND_DOWN_2 (tile_x);
+        low_i = partition_line_chroma * 4 + tile_x / 4;
+        low_shift = GST_ROUND_DOWN_2 (tile_x % 4) * 2;
+        low_mask = 0x0f << low_shift;
+
+        uv_tile[low_i] = (uv_tile[low_i] & ~(low_mask)) |
+            ((U & 0x03) << low_shift) | ((V & 0x03) << (low_shift + 2));
+        uv_tile[16 + high_i] = U >> 2;
+        uv_tile[16 + high_i + 1] = V >> 2;
+      }
+
+      s += 4;
+    }
+  }
+}
+
+#define PACK_RBGA GST_VIDEO_FORMAT_ARGB, unpack_RBGA, 1, pack_RBGA
+static void
+unpack_RBGA (const GstVideoFormatInfo * info, GstVideoPackFlags flags,
+    gpointer dest, const gpointer data[GST_VIDEO_MAX_PLANES],
+    const gint stride[GST_VIDEO_MAX_PLANES], gint x, gint y, gint width)
+{
+  const guint8 *restrict s = GET_LINE (y);
+
+  s += x * 4;
+
+#if G_BYTE_ORDER == G_LITTLE_ENDIAN
+  video_orc_unpack_RBGA_le (dest, s, width);
+#else
+  video_orc_unpack_RBGA_be (dest, s, width);
+#endif
+}
+
+static void
+pack_RBGA (const GstVideoFormatInfo * info, GstVideoPackFlags flags,
+    const gpointer src, gint sstride, gpointer data[GST_VIDEO_MAX_PLANES],
+    const gint stride[GST_VIDEO_MAX_PLANES], GstVideoChromaSite chroma_site,
+    gint y, gint width)
+{
+  guint8 *restrict d = GET_LINE (y);
+
+#if G_BYTE_ORDER == G_LITTLE_ENDIAN
+  video_orc_pack_RBGA_le (d, src, width);
+#else
+  video_orc_pack_RBGA_be (d, src, width);
+#endif
+}
+
 typedef struct
 {
   guint32 fourcc;
@@ -6826,6 +7408,7 @@ typedef struct
 #define OFFS123           { 1, 2, 3, 0 }
 #define OFFS321           { 3, 2, 1, 0 }
 #define OFFS0123          { 0, 1, 2, 3 }
+#define OFFS0213          { 0, 2, 1, 3 }
 #define OFFS2103          { 2, 1, 0, 3 }
 #define OFFS3210          { 3, 2, 1, 0 }
 #define OFFS031           { 0, 3, 1, 0 }
@@ -6850,10 +7433,15 @@ typedef struct
 #define SUB4204           { 0, 1, 1, 0 }, { 0, 1, 1, 0 }
 #define SUB4224           { 0, 1, 1, 0 }, { 0, 0, 0, 0 }
 
-/* tile_mode, tile_ws (width shift), tile_hs (height shift) */
-#define TILE_4x4(mode) GST_VIDEO_TILE_MODE_ ##mode, 2, 2
-#define TILE_32x32(mode) GST_VIDEO_TILE_MODE_ ##mode, 5, 5
-#define TILE_64x32(mode) GST_VIDEO_TILE_MODE_ ##mode, 6, 5
+/* tile_mode, tile_ws (width shift), tile_hs (height shift), tile_info[] */
+#define TILE_4x4(mode) GST_VIDEO_TILE_MODE_ ##mode, 2, 2, { {4, 4, 4, 16}, {2, 4, 4, 16}, }
+#define TILE_16x32s(mode) GST_VIDEO_TILE_MODE_ ##mode, 4, 5, { {16, 32, 16, 512}, {8, 16, 16, 256}, }
+#define TILE_32x32(mode) GST_VIDEO_TILE_MODE_ ##mode, 5, 5, { {32, 32, 32, 1024}, {16, 32, 32, 1024}, }
+#define TILE_64x32(mode) GST_VIDEO_TILE_MODE_ ##mode, 6, 5, { {64, 32, 64, 2048}, {32, 32, 64, 2048}, }
+#define TILE_8x128(mode) GST_VIDEO_TILE_MODE_ ##mode, 3, 7, { {8, 128, 8, 1024}, {4, 128, 8, 1024}, }
+#define TILE_10bit_16x32s(mode) GST_VIDEO_TILE_MODE_ ##mode, 4, 5, { {16, 32, 20, 640}, {8, 16, 20, 320}, }
+#define TILE_10bit_8x128(mode) GST_VIDEO_TILE_MODE_ ##mode, 3, 7, { {0, 128, 8, 1024}, {0, 128, 8, 1024}, }
+#define TILE_10bit_4x4(mode) GST_VIDEO_TILE_MODE_ ##mode, 2, 2, { {4, 4, 5, 20}, {2, 4, 5, 20}, }
 
 #define MAKE_YUV_FORMAT(name, desc, fourcc, depth, pstride, plane, offs, sub, pack ) \
  { fourcc, {GST_VIDEO_FORMAT_ ##name, G_STRINGIFY(name), desc, GST_VIDEO_FORMAT_FLAG_YUV, depth, pstride, plane, offs, sub, pack } }
@@ -6873,6 +7461,8 @@ typedef struct
  { fourcc, {GST_VIDEO_FORMAT_ ##name, G_STRINGIFY(name), desc, GST_VIDEO_FORMAT_FLAG_YUV | GST_VIDEO_FORMAT_FLAG_COMPLEX | GST_VIDEO_FORMAT_FLAG_LE, depth, pstride, plane, offs, sub, pack } }
 #define MAKE_YUV_T_FORMAT(name, desc, fourcc, depth, pstride, plane, offs, sub, pack, tile) \
  { fourcc, {GST_VIDEO_FORMAT_ ##name, G_STRINGIFY(name), desc, GST_VIDEO_FORMAT_FLAG_YUV | GST_VIDEO_FORMAT_FLAG_COMPLEX | GST_VIDEO_FORMAT_FLAG_TILED, depth, pstride, plane, offs, sub, pack, tile } }
+#define MAKE_YUV_ST_FORMAT(name, desc, fourcc, depth, pstride, plane, offs, sub, pack, tile) \
+ { fourcc, {GST_VIDEO_FORMAT_ ##name, G_STRINGIFY(name), desc, GST_VIDEO_FORMAT_FLAG_YUV | GST_VIDEO_FORMAT_FLAG_COMPLEX | GST_VIDEO_FORMAT_FLAG_TILED | GST_VIDEO_FORMAT_FLAG_SUBTILES, depth, pstride, plane, offs, sub, pack, tile } }
 
 #define MAKE_RGB_FORMAT(name, desc, depth, pstride, plane, offs, sub, pack) \
  { 0x00000000, {GST_VIDEO_FORMAT_ ##name, G_STRINGIFY(name), desc, GST_VIDEO_FORMAT_FLAG_RGB, depth, pstride, plane, offs, sub, pack } }
@@ -6896,6 +7486,7 @@ typedef struct
 #define MAKE_GRAY_C_LE_FORMAT(name, desc, depth, pstride, plane, offs, sub, pack) \
  { 0x00000000, {GST_VIDEO_FORMAT_ ##name, G_STRINGIFY(name), desc, GST_VIDEO_FORMAT_FLAG_GRAY | GST_VIDEO_FORMAT_FLAG_COMPLEX | GST_VIDEO_FORMAT_FLAG_LE, depth, pstride, plane, offs, sub, pack } }
 
+G_GNUC_BEGIN_IGNORE_DEPRECATIONS;
 static const VideoFormat formats[] = {
   {0x00000000, {GST_VIDEO_FORMAT_UNKNOWN, "UNKNOWN", "unknown video", 0, DPTH0,
           PSTR0, PLANE_NA, OFFS0}},
@@ -7149,7 +7740,63 @@ static const VideoFormat formats[] = {
       PLANE0, OFFS6420, SUB444, PACK_ABGR64_LE),
   MAKE_RGBA_FORMAT (ABGR64_BE, "raw video", DPTH16_16_16_16, PSTR8888, PLANE0,
       OFFS6420, SUB4444, PACK_ABGR64_BE),
+  MAKE_YUV_ST_FORMAT (NV12_16L32S, "raw video",
+      GST_MAKE_FOURCC ('M', 'M', '2', '1'), DPTH888, PSTR122, PLANE011,
+      OFFS001, SUB420, PACK_NV12_TILED, TILE_16x32s (LINEAR)),
+  MAKE_YUV_T_FORMAT (NV12_8L128, "raw video",
+      GST_MAKE_FOURCC ('N', 'A', '1', '2'), DPTH888, PSTR122, PLANE011,
+      OFFS001, SUB420, PACK_NV12_TILED, TILE_8x128 (LINEAR)),
+  MAKE_YUV_T_FORMAT (NV12_10BE_8L128, "raw video",
+      GST_MAKE_FOURCC ('N', 'T', '1', '2'), DPTH10_10_10, PSTR0, PLANE011,
+      OFFS001, SUB420, PACK_NV12_10BE_8L128, TILE_10bit_8x128 (LINEAR)),
+  MAKE_YUV_T_FORMAT (NV12_10LE40_4L4, "raw video",
+      GST_MAKE_FOURCC ('M', 'H', '2', '1'), DPTH10_10_10, PSTR0, PLANE011,
+      OFFS001, SUB420, PACK_NV12_10LE40_TILED, TILE_10bit_4x4 (LINEAR)),
+  {0x00000000, {GST_VIDEO_FORMAT_DMA_DRM, "DMA_DRM", "DMA DRM video",
+          GST_VIDEO_FORMAT_FLAG_COMPLEX, DPTH0, PSTR0, PLANE_NA, OFFS0}},
+  MAKE_YUV_ST_FORMAT (MT2110T, "raw video",
+      GST_MAKE_FOURCC ('M', 'T', '2', 'T'), DPTH10_10_10, PSTR0, PLANE011,
+      OFFS001, SUB420, PACK_MT2110T_TILED, TILE_10bit_16x32s (LINEAR)),
+  MAKE_YUV_ST_FORMAT (MT2110R, "raw video",
+      GST_MAKE_FOURCC ('M', 'T', '2', 'R'), DPTH10_10_10, PSTR0, PLANE011,
+      OFFS001, SUB420, PACK_MT2110R_TILED, TILE_10bit_16x32s (LINEAR)),
+  MAKE_YUVA_FORMAT (A422, "raw video", GST_MAKE_FOURCC ('A', '4', '2', '2'),
+      DPTH8888, PSTR1111, PLANE0123, OFFS0, SUB4224, PACK_A422),
+  MAKE_YUVA_FORMAT (A444, "raw video", GST_MAKE_FOURCC ('A', '4', '4', '4'),
+      DPTH8888, PSTR1111, PLANE0123, OFFS0, SUB4444, PACK_A444),
+  MAKE_YUVA_LE_FORMAT (A444_12LE, "raw video", 0x00000000, DPTH12_12_12_12,
+      PSTR2222, PLANE0123, OFFS0, SUB4444, PACK_A444_12LE),
+  MAKE_YUVA_FORMAT (A444_12BE, "raw video", 0x00000000, DPTH12_12_12_12,
+      PSTR2222, PLANE0123, OFFS0, SUB4444, PACK_A444_12BE),
+  MAKE_YUVA_LE_FORMAT (A422_12LE, "raw video", 0x00000000, DPTH12_12_12_12,
+      PSTR2222, PLANE0123, OFFS0, SUB4224, PACK_A422_12LE),
+  MAKE_YUVA_FORMAT (A422_12BE, "raw video", 0x00000000, DPTH12_12_12_12,
+      PSTR2222, PLANE0123, OFFS0, SUB4224, PACK_A422_12BE),
+  MAKE_YUVA_LE_FORMAT (A420_12LE, "raw video", 0x00000000, DPTH12_12_12_12,
+      PSTR2222, PLANE0123, OFFS0, SUB4204, PACK_A420_12LE),
+  MAKE_YUVA_FORMAT (A420_12BE, "raw video", 0x00000000, DPTH12_12_12_12,
+      PSTR2222, PLANE0123, OFFS0, SUB4204, PACK_A420_12BE),
+  MAKE_YUVA_LE_FORMAT (A444_16LE, "raw video", 0x00000000, DPTH16_16_16_16,
+      PSTR2222, PLANE0123, OFFS0, SUB4444, PACK_A444_16LE),
+  MAKE_YUVA_FORMAT (A444_16BE, "raw video", 0x00000000, DPTH16_16_16_16,
+      PSTR2222, PLANE0123, OFFS0, SUB4444, PACK_A444_16BE),
+  MAKE_YUVA_LE_FORMAT (A422_16LE, "raw video", 0x00000000, DPTH16_16_16_16,
+      PSTR2222, PLANE0123, OFFS0, SUB4224, PACK_A422_16LE),
+  MAKE_YUVA_FORMAT (A422_16BE, "raw video", 0x00000000, DPTH16_16_16_16,
+      PSTR2222, PLANE0123, OFFS0, SUB4224, PACK_A422_16BE),
+  MAKE_YUVA_LE_FORMAT (A420_16LE, "raw video", 0x00000000, DPTH16_16_16_16,
+      PSTR2222, PLANE0123, OFFS0, SUB4204, PACK_A420_16LE),
+  MAKE_YUVA_FORMAT (A420_16BE, "raw video", 0x00000000, DPTH16_16_16_16,
+      PSTR2222, PLANE0123, OFFS0, SUB4204, PACK_A420_16BE),
+  MAKE_RGB_LE_FORMAT (GBR_16LE, "raw video", DPTH16_16_16, PSTR222, PLANE201,
+      OFFS0, SUB444, PACK_GBR_16LE),
+  MAKE_RGB_FORMAT (GBR_16BE, "raw video", DPTH16_16_16, PSTR222, PLANE201,
+      OFFS0, SUB444, PACK_GBR_16BE),
+  MAKE_RGBA_FORMAT (RBGA, "raw video", DPTH8888, PSTR4444, PLANE0, OFFS0213,
+      SUB4444, PACK_RBGA),
 };
+
+G_GNUC_END_IGNORE_DEPRECATIONS;
 
 static GstVideoFormat
 gst_video_format_from_rgb32_masks (int red_mask, int green_mask, int blue_mask)
@@ -7292,6 +7939,9 @@ gst_video_format_from_masks (gint depth, gint bpp, gint endianness,
   } else if (depth == 24 && bpp == 32) {
     format = gst_video_format_from_rgb32_masks (red_mask, green_mask,
         blue_mask);
+  } else if (depth == 32 && bpp == 32 && !alpha_mask) {
+    format = gst_video_format_from_rgb32_masks (red_mask, green_mask,
+        blue_mask);
   } else if (depth == 32 && bpp == 32 && alpha_mask) {
     format = gst_video_format_from_rgba32_masks (red_mask, green_mask,
         blue_mask, alpha_mask);
@@ -7430,6 +8080,7 @@ gst_video_format_from_string (const gchar * format)
     if (strcmp (GST_VIDEO_FORMAT_INFO_NAME (&formats[i].info), format) == 0)
       return GST_VIDEO_FORMAT_INFO_FORMAT (&formats[i].info);
   }
+
   return GST_VIDEO_FORMAT_UNKNOWN;
 }
 
@@ -7499,7 +8150,7 @@ gst_video_format_get_info (GstVideoFormat format)
  * Get the default palette of @format. This the palette used in the pack
  * function for paletted formats.
  *
- * Returns: (transfer none): the default palette of @format or %NULL when
+ * Returns: (transfer none) (nullable): the default palette of @format or %NULL when
  * @format does not have a palette.
  *
  * Since: 1.2
@@ -7549,14 +8200,52 @@ gst_video_format_info_component (const GstVideoFormatInfo * info, guint plane,
     components[c] = -1;
 }
 
+/**
+ * gst_video_format_info_extrapolate_stride:
+ * @finfo: #GstVideoFormatInfo
+ * @plane: a plane number
+ * @stride: The fist plane stride
+ *
+ * Extrapolate @plane stride from the first stride of an image. This helper is
+ * useful to support legacy API were only one stride is supported.
+ *
+ * Returns: The extrapolated stride for @plane
+ *
+ * Since: 1.22
+ */
+gint
+gst_video_format_info_extrapolate_stride (const GstVideoFormatInfo * finfo,
+    gint plane, gint stride)
+{
+  gint estride;
+  gint comp[GST_VIDEO_MAX_COMPONENTS];
+  gint i;
+
+  /* there is nothing to extrapolate on first plane */
+  if (plane == 0)
+    return stride;
+
+  gst_video_format_info_component (finfo, plane, comp);
+
+  /* For now, all planar formats have a single component on first plane, but
+   * if there was a planar format with more, we'd have to make a ratio of the
+   * number of component on the first plane against the number of component on
+   * the current plane. */
+  estride = 0;
+  for (i = 0; i < GST_VIDEO_MAX_COMPONENTS && comp[i] >= 0; i++)
+    estride += GST_VIDEO_FORMAT_INFO_SCALE_WIDTH (finfo, comp[i], stride);
+
+  return estride;
+}
+
 struct RawVideoFormats
 {
   GstVideoFormat *formats;
   guint n;
 };
 
-static gpointer
-generate_raw_video_formats (gpointer data)
+static struct RawVideoFormats *
+generate_video_formats (const gchar * formats)
 {
   GValue list = G_VALUE_INIT;
   struct RawVideoFormats *all = g_new (struct RawVideoFormats, 1);
@@ -7568,7 +8257,7 @@ generate_raw_video_formats (gpointer data)
   /* Workaround a bug in our parser that would lead to segfaults
    * when deserializing container types using static strings,
    * see https://gitlab.freedesktop.org/gstreamer/gstreamer/-/issues/446 */
-  tmp = g_strdup (GST_VIDEO_FORMATS_ALL);
+  tmp = g_strdup (formats);
   res = gst_value_deserialize (&list, tmp);
   g_assert (res);
   g_free (tmp);
@@ -7587,6 +8276,18 @@ generate_raw_video_formats (gpointer data)
   g_value_unset (&list);
 
   return all;
+}
+
+static gpointer
+generate_raw_video_formats (gpointer data)
+{
+  return generate_video_formats (GST_VIDEO_FORMATS_ALL);
+}
+
+static gpointer
+generate_any_video_formats (gpointer data)
+{
+  return generate_video_formats (GST_VIDEO_FORMATS_ANY);
 }
 
 /**
@@ -7609,6 +8310,33 @@ gst_video_formats_raw (guint * len)
   g_once (&raw_video_formats_once, generate_raw_video_formats, NULL);
 
   all = raw_video_formats_once.retval;
+  *len = all->n;
+  return all->formats;
+}
+
+/**
+ * gst_video_formats_any:
+ * @len: (out): the number of elements in the returned array
+ *
+ * Return all the raw video formats supported by GStreamer including
+ * special opaque formats such as %GST_VIDEO_FORMAT_DMA_DRM for which
+ * no software conversion exists. This should be use for passthrough
+ * template cpas.
+ *
+ * Returns: (transfer none) (array length=len): an array of #GstVideoFormat
+ * Since: 1.24
+ */
+const GstVideoFormat *
+gst_video_formats_any (guint * len)
+{
+  static GOnce any_video_formats_once = G_ONCE_INIT;
+  struct RawVideoFormats *all;
+
+  g_return_val_if_fail (len, NULL);
+
+  g_once (&any_video_formats_once, generate_any_video_formats, NULL);
+
+  all = any_video_formats_once.retval;
   *len = all->n;
   return all->formats;
 }

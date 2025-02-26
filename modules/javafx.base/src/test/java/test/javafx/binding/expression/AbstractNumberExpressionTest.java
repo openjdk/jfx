@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,8 +25,8 @@
 
 package test.javafx.binding.expression;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.Locale;
 
@@ -52,9 +52,10 @@ import javafx.beans.value.ObservableNumberValue;
 import test.javafx.binding.DependencyUtils;
 import javafx.collections.FXCollections;
 
-import org.junit.Before;
-import org.junit.Ignore;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Disabled;
+import org.junit.jupiter.api.Test;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 public class AbstractNumberExpressionTest {
 
@@ -71,7 +72,7 @@ public class AbstractNumberExpressionTest {
     private short short1;
     private byte byte1;
 
-    @Before
+    @BeforeEach
     public void setUp() {
         data1 = 90224.8923;
         data2 = -13;
@@ -417,23 +418,27 @@ public class AbstractNumberExpressionTest {
         assertEquals(0, exp.intValue());
     }
 
-    @Test(expected=NullPointerException.class)
+    @Test
     public void testFactory_Null() {
-        NumberExpressionBase.numberExpression(null);
+        assertThrows(NullPointerException.class, () -> {
+            NumberExpressionBase.numberExpression(null);
+        });
     }
 
-    @Test(expected=IllegalArgumentException.class)
+    @Test
     public void testFactory_UnknownClass() {
-        NumberExpressionBase.numberExpression(new ObservableNumberValue() {
-            @Override public void addListener(InvalidationListener observer) {}
-            @Override public void addListener(ChangeListener observer) {}
-            @Override public void removeListener(InvalidationListener observer) {}
-            @Override public void removeListener(ChangeListener observer) {}
-            @Override public Number getValue() {return null;}
-            @Override public int intValue() {return 0;}
-            @Override public long longValue() {return 0L;}
-            @Override public float floatValue() {return 0.0f;}
-            @Override public double doubleValue() {return 0.0;}
+        assertThrows(IllegalArgumentException.class, () -> {
+            NumberExpressionBase.numberExpression(new ObservableNumberValue() {
+                @Override public void addListener(InvalidationListener observer) {}
+                @Override public void addListener(ChangeListener observer) {}
+                @Override public void removeListener(InvalidationListener observer) {}
+                @Override public void removeListener(ChangeListener observer) {}
+                @Override public Number getValue() {return null;}
+                @Override public int intValue() {return 0;}
+                @Override public long longValue() {return 0L;}
+                @Override public float floatValue() {return 0.0f;}
+                @Override public double doubleValue() {return 0.0;}
+            });
         });
     }
 
@@ -447,7 +452,7 @@ public class AbstractNumberExpressionTest {
         assertEquals("42", s.get());
     }
 
-    @Ignore("RT-33413")
+    @Disabled("JDK-8089771")
     @Test
     public void testAsString_Format() {
         final Locale defaultLocale = Locale.getDefault();
@@ -472,7 +477,7 @@ public class AbstractNumberExpressionTest {
         }
     }
 
-    @Ignore("RT-33413")
+    @Disabled("JDK-8089771")
     @Test
     public void testAsString_LocaleFormat() {
         // checking German default

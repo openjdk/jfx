@@ -36,9 +36,9 @@
 #include "FetchIdentifier.h"
 #include "FetchOptions.h"
 #include "HTTPHeaderNames.h"
+#include "RequestPriority.h"
 #include "ServiceWorkerTypes.h"
 #include "StoredCredentialsPolicy.h"
-#include <wtf/EnumTraits.h>
 #include <wtf/HashSet.h>
 #include <wtf/Vector.h>
 #include <wtf/text/WTFString.h>
@@ -151,17 +151,17 @@ enum class PreflightPolicy : uint8_t {
 };
 static constexpr unsigned bitWidthOfPreflightPolicy = 2;
 
-enum class LoadedFromOpaqueSource : uint8_t {
-    Yes,
-    No
-};
+enum class ShouldEnableContentExtensionsCheck : bool { No, Yes };
+static constexpr unsigned bitWidthOfShouldEnableContentExtensionsCheck = 1;
+
+enum class LoadedFromOpaqueSource : bool { No, Yes };
 static constexpr unsigned bitWidthOfLoadedFromOpaqueSource = 1;
 
-enum class LoadedFromPluginElement : bool {
-    No,
-    Yes
-};
+enum class LoadedFromPluginElement : bool { No, Yes };
 static constexpr unsigned bitWidthOfLoadedFromPluginElement = 1;
+
+enum class LoadedFromFetch : bool { No, Yes };
+static constexpr unsigned bitWidthOfLoadedFromFetch = 1;
 
 struct ResourceLoaderOptions : public FetchOptions {
     ResourceLoaderOptions()
@@ -190,6 +190,9 @@ struct ResourceLoaderOptions : public FetchOptions {
         , preflightPolicy(PreflightPolicy::Consider)
         , loadedFromOpaqueSource(LoadedFromOpaqueSource::No)
         , loadedFromPluginElement(LoadedFromPluginElement::No)
+        , loadedFromFetch(LoadedFromFetch::No)
+        , fetchPriorityHint(RequestPriority::Auto)
+        , shouldEnableContentExtensionsCheck(ShouldEnableContentExtensionsCheck::Yes)
     { }
 
     ResourceLoaderOptions(SendCallbackPolicy sendLoadCallbacks, ContentSniffingPolicy sniffContent, DataBufferingPolicy dataBufferingPolicy, StoredCredentialsPolicy storedCredentialsPolicy, ClientCredentialPolicy credentialPolicy, FetchOptions::Credentials credentials, SecurityCheckPolicy securityCheck, FetchOptions::Mode mode, CertificateInfoPolicy certificateInfoPolicy, ContentSecurityPolicyImposition contentSecurityPolicyImposition, DefersLoadingPolicy defersLoadingPolicy, CachingPolicy cachingPolicy)
@@ -212,15 +215,15 @@ struct ResourceLoaderOptions : public FetchOptions {
         , preflightPolicy(PreflightPolicy::Consider)
         , loadedFromOpaqueSource(LoadedFromOpaqueSource::No)
         , loadedFromPluginElement(LoadedFromPluginElement::No)
-
+        , loadedFromFetch(LoadedFromFetch::No)
+        , fetchPriorityHint(RequestPriority::Auto)
+        , shouldEnableContentExtensionsCheck(ShouldEnableContentExtensionsCheck::Yes)
     {
         this->credentials = credentials;
         this->mode = mode;
     }
 
-#if ENABLE(SERVICE_WORKER)
     Markable<ServiceWorkerRegistrationIdentifier, ServiceWorkerRegistrationIdentifier::MarkableTraits> serviceWorkerRegistrationIdentifier;
-#endif
     Markable<ContentSecurityPolicyResponseHeaders, ContentSecurityPolicyResponseHeaders::MarkableTraits> cspResponseHeaders;
     std::optional<CrossOriginEmbedderPolicy> crossOriginEmbedderPolicy;
 
@@ -246,31 +249,12 @@ struct ResourceLoaderOptions : public FetchOptions {
     PreflightPolicy preflightPolicy : bitWidthOfPreflightPolicy;
     LoadedFromOpaqueSource loadedFromOpaqueSource : bitWidthOfLoadedFromOpaqueSource;
     LoadedFromPluginElement loadedFromPluginElement : bitWidthOfLoadedFromPluginElement;
+    LoadedFromFetch loadedFromFetch : bitWidthOfLoadedFromFetch;
+    RequestPriority fetchPriorityHint : bitWidthOfFetchPriorityHint;
+    ShouldEnableContentExtensionsCheck shouldEnableContentExtensionsCheck : bitWidthOfShouldEnableContentExtensionsCheck;
 
     FetchIdentifier navigationPreloadIdentifier;
     String nonce;
 };
 
 } // namespace WebCore
-
-namespace WTF {
-
-template<> struct EnumTraits<WebCore::PreflightPolicy> {
-    using values = EnumValues<
-        WebCore::PreflightPolicy,
-        WebCore::PreflightPolicy::Consider,
-        WebCore::PreflightPolicy::Force,
-        WebCore::PreflightPolicy::Prevent
-    >;
-};
-
-template<> struct EnumTraits<WebCore::ServiceWorkersMode> {
-    using values = EnumValues<
-        WebCore::ServiceWorkersMode,
-        WebCore::ServiceWorkersMode::All,
-        WebCore::ServiceWorkersMode::None,
-        WebCore::ServiceWorkersMode::Only
-    >;
-};
-
-} // namespace WTF

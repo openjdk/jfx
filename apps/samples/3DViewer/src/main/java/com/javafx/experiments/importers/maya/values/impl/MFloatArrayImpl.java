@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2014, Oracle and/or its affiliates.
+ * Copyright (c) 2010, 2024, Oracle and/or its affiliates.
  * All rights reserved. Use is subject to license terms.
  *
  * This file is available and licensed under the following license:
@@ -78,14 +78,17 @@ public class MFloatArrayImpl extends MDataImpl implements MFloatArray {
             this.length = length;
         }
 
+        @Override
         public void setSize(int size) {
             array.setSize(base + size);
         }
 
+        @Override
         public int getSize() {
             return length;
         }
 
+        @Override
         public void set(int index, float x) {
             if (index >= length) {
                 throw new ArrayIndexOutOfBoundsException(index);
@@ -93,15 +96,18 @@ public class MFloatArrayImpl extends MDataImpl implements MFloatArray {
             array.set(base + index, x);
         }
 
+        @Override
         public float[] get() {
             // FIXME
             throw new RuntimeException("Probably shouldn't fetch the data behind a slice");
         }
 
+        @Override
         public float get(int index) {
             return array.get(base + index);
         }
 
+        @Override
         public void parse(Iterator<String> elements) {
             new Parser(this).parse(elements);
         }
@@ -111,6 +117,7 @@ public class MFloatArrayImpl extends MDataImpl implements MFloatArray {
         super(type);
     }
 
+    @Override
     public void setSize(int size) {
         if (data == null || size > data.length) {
             float[] newdata = new float[size];
@@ -121,36 +128,44 @@ public class MFloatArrayImpl extends MDataImpl implements MFloatArray {
         }
     }
 
+    @Override
     public int getSize() {
         return data == null ? 0 : data.length;
     }
 
 
+    @Override
     public void set(int index, float x) {
         setSize(index + 1);
         data[index] = x;
     }
 
+    @Override
     public float[] get() {
         return data;
     }
 
+    @Override
     public float get(int index) {
         return data[index];
     }
 
+    @Override
     public MData getData(int index) {
         return getData(index, index + 1);
     }
 
+    @Override
     public MData getData(int start, int end) {
         return new MFloatArraySlice(this, start, end - start + 1);
     }
 
+    @Override
     public void parse(Iterator<String> elements) {
         new Parser(this).parse(elements);
     }
 
+    @Override
     public String toString() {
         String result = getType().getName();
         String sep = " ";

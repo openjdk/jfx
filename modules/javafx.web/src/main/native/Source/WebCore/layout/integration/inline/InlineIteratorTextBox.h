@@ -43,16 +43,11 @@ public:
     unsigned end() const;
     unsigned length() const;
 
-    unsigned offsetForPosition(float x, bool includePartialGlyphs = true) const;
-    float positionForOffset(unsigned) const;
-
     TextBoxSelectableRange selectableRange() const;
-    LayoutRect selectionRect(unsigned start, unsigned end) const;
 
-    bool isCombinedText() const;
     const FontCascade& fontCascade() const;
 
-    TextRun textRun(TextRunMode = TextRunMode::Painting) const;
+    inline TextRun textRun(TextRunMode = TextRunMode::Painting) const;
 
     const RenderText& renderer() const { return downcast<RenderText>(Box::renderer()); }
 
@@ -65,7 +60,7 @@ public:
 
 class TextBoxIterator : public LeafBoxIterator {
 public:
-    TextBoxIterator() { }
+    TextBoxIterator() = default;
     TextBoxIterator(Box::PathVariant&&);
     TextBoxIterator(const Box&);
 
@@ -150,13 +145,6 @@ inline TextBoxSelectableRange TextBox::selectableRange() const
 {
     return WTF::switchOn(m_pathVariant, [&](auto& path) {
         return path.selectableRange();
-    });
-}
-
-inline TextRun TextBox::textRun(TextRunMode mode) const
-{
-    return WTF::switchOn(m_pathVariant, [&](auto& path) {
-        return path.textRun(mode);
     });
 }
 

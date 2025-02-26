@@ -30,6 +30,7 @@
 
 #include "CDMFactory.h"
 #include "CDMPrivate.h"
+#include "ContextDestructionObserverInlines.h"
 #include "Document.h"
 #include "InitDataRegistry.h"
 #include "MediaKeysRequirement.h"
@@ -161,19 +162,8 @@ std::optional<String> CDM::sanitizeSessionId(const String& sessionId)
 
 String CDM::storageDirectory() const
 {
-    auto* document = downcast<Document>(scriptExecutionContext());
-    if (!document)
-        return emptyString();
-
-    auto* page = document->page();
-    if (!page || page->usesEphemeralSession())
-        return emptyString();
-
-    auto storageDirectory = document->settings().mediaKeysStorageDirectory();
-    if (storageDirectory.isEmpty())
-        return emptyString();
-
-    return FileSystem::pathByAppendingComponent(storageDirectory, document->securityOrigin().data().databaseIdentifier());
+    RefPtr document = downcast<Document>(scriptExecutionContext());
+    return document ? document->mediaKeysStorageDirectory() : emptyString();
 }
 
 }

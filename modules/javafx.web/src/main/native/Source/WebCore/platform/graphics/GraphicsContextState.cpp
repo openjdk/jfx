@@ -41,22 +41,47 @@ GraphicsContextState::GraphicsContextState(const ChangeFlags& changeFlags, Inter
 {
 }
 
-GraphicsContextState GraphicsContextState::cloneForRecording() const
+void GraphicsContextState::repurpose(Purpose purpose)
+{
+    if (purpose == Purpose::Initial)
+        m_changeFlags = { };
+
+#if USE(CG)
+    // CGContextBeginTransparencyLayer() sets the CG global alpha to 1. Keep the clone's alpha in sync.
+    if (purpose == Purpose::TransparencyLayer)
+        m_alpha = 1;
+#endif
+
+    m_purpose = purpose;
+}
+
+GraphicsContextState GraphicsContextState::clone(Purpose purpose) const
 {
     auto clone = *this;
-    clone.m_changeFlags = { };
+    clone.repurpose(purpose);
     return clone;
 }
 
 bool GraphicsContextState::containsOnlyInlineChanges() const
 {
-    if (m_changeFlags != (m_changeFlags & basicChangeFlags))
+    if (m_changeFlags.isEmpty() || m_changeFlags != (m_changeFlags & basicChangeFlags))
         return false;
 
     if (m_changeFlags.contains(Change::StrokeBrush) && !m_strokeBrush.isInlineColor())
         return false;
 
     if (m_changeFlags.contains(Change::FillBrush) && !m_fillBrush.isInlineColor())
+        return false;
+
+    return true;
+}
+
+bool GraphicsContextState::containsOnlyInlineStrokeChanges() const
+{
+    if (m_changeFlags.isEmpty() || m_changeFlags != (m_changeFlags & strokeChangeFlags))
+        return false;
+
+    if (m_changeFlags.contains(Change::StrokeBrush) && !m_strokeBrush.isInlineColor())
         return false;
 
     return true;
@@ -159,6 +184,7 @@ void GraphicsContextState::mergeAllChanges(const GraphicsContextState& state)
 
     mergeChange(Change::CompositeMode,               &GraphicsContextState::m_compositeMode);
     mergeChange(Change::DropShadow,                  &GraphicsContextState::m_dropShadow);
+    mergeChange(Change::Style,                       &GraphicsContextState::m_style);
 
     mergeChange(Change::Alpha,                       &GraphicsContextState::m_alpha);
     mergeChange(Change::ImageInterpolationQuality,   &GraphicsContextState::m_textDrawingMode);
@@ -174,68 +200,60 @@ void GraphicsContextState::mergeAllChanges(const GraphicsContextState& state)
 #endif
 }
 
-void GraphicsContextState::didBeginTransparencyLayer()
-{
-#if USE(CG)
-    // CGContextBeginTransparencyLayer() sets the CG global alpha to 1. Keep our alpha in sync.
-    m_alpha = 1;
-#endif
-}
-
-static const char* stateChangeName(GraphicsContextState::Change change)
+static ASCIILiteral stateChangeName(GraphicsContextState::Change change)
 {
     switch (change) {
     case GraphicsContextState::Change::FillBrush:
-        return "fill-brush";
+        return "fill-brush"_s;
 
     case GraphicsContextState::Change::FillRule:
-        return "fill-rule";
+        return "fill-rule"_s;
 
     case GraphicsContextState::Change::StrokeBrush:
-        return "stroke-brush";
+        return "stroke-brush"_s;
 
     case GraphicsContextState::Change::StrokeThickness:
-        return "stroke-thickness";
+        return "stroke-thickness"_s;
 
     case GraphicsContextState::Change::StrokeStyle:
-        return "stroke-style";
+        return "stroke-style"_s;
 
     case GraphicsContextState::Change::CompositeMode:
-        return "composite-mode";
+        return "composite-mode"_s;
 
     case GraphicsContextState::Change::DropShadow:
-        return "drop-shadow";
+        return "drop-shadow"_s;
 
     case GraphicsContextState::Change::Style:
-        return "style";
+        return "style"_s;
 
     case GraphicsContextState::Change::Alpha:
-        return "alpha";
+        return "alpha"_s;
 
     case GraphicsContextState::Change::ImageInterpolationQuality:
-        return "image-interpolation-quality";
+        return "image-interpolation-quality"_s;
 
     case GraphicsContextState::Change::TextDrawingMode:
-        return "text-drawing-mode";
+        return "text-drawing-mode"_s;
 
     case GraphicsContextState::Change::ShouldAntialias:
-        return "should-antialias";
+        return "should-antialias"_s;
 
     case GraphicsContextState::Change::ShouldSmoothFonts:
-        return "should-smooth-fonts";
+        return "should-smooth-fonts"_s;
 
     case GraphicsContextState::Change::ShouldSubpixelQuantizeFonts:
-        return "should-subpixel-quantize-fonts";
+        return "should-subpixel-quantize-fonts"_s;
 
     case GraphicsContextState::Change::ShadowsIgnoreTransforms:
-        return "shadows-ignore-transforms";
+        return "shadows-ignore-transforms"_s;
 
     case GraphicsContextState::Change::DrawLuminanceMask:
-        return "draw-luminance-mask";
+        return "draw-luminance-mask"_s;
 
 #if HAVE(OS_DARK_MODE_SUPPORT)
     case GraphicsContextState::Change::UseDarkAppearance:
-        return "use-dark-appearance";
+        return "use-dark-appearance"_s;
 #endif
     }
 

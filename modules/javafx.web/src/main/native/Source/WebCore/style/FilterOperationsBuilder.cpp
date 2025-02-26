@@ -74,50 +74,49 @@ static FilterOperation::Type filterOperationForType(CSSValueID type)
 
 std::optional<FilterOperations> createFilterOperations(const Document& document, RenderStyle& style, const CSSToLengthConversionData& cssToLengthConversionData, const CSSValue& inValue)
 {
-    FilterOperations operations;
-
-    if (is<CSSPrimitiveValue>(inValue)) {
-        auto& primitiveValue = downcast<CSSPrimitiveValue>(inValue);
-        if (primitiveValue.valueID() == CSSValueNone)
-            return operations;
+    if (auto* primitiveValue = dynamicDowncast<CSSPrimitiveValue>(inValue)) {
+        if (primitiveValue->valueID() == CSSValueNone)
+            return FilterOperations { };
     }
 
-    if (!is<CSSValueList>(inValue))
+    auto* list = dynamicDowncast<CSSValueList>(inValue);
+    if (!list)
         return std::nullopt;
 
-    for (auto& currentValue : downcast<CSSValueList>(inValue)) {
-        if (is<CSSPrimitiveValue>(currentValue)) {
-            auto& primitiveValue = downcast<CSSPrimitiveValue>(currentValue.get());
-            if (!primitiveValue.isURI())
+    Vector<Ref<FilterOperation>> operations;
+
+    for (auto& currentValue : *list) {
+        if (auto* primitiveValue = dynamicDowncast<CSSPrimitiveValue>(currentValue)) {
+            if (!primitiveValue->isURI())
                 continue;
 
-            auto filterURL = primitiveValue.stringValue();
+            auto filterURL = primitiveValue->stringValue();
             auto fragment = document.completeURL(filterURL).fragmentIdentifier().toAtomString();
-            operations.operations().append(ReferenceFilterOperation::create(filterURL, WTFMove(fragment)));
+            operations.append(ReferenceFilterOperation::create(filterURL, WTFMove(fragment)));
             continue;
         }
 
-        if (!is<CSSFunctionValue>(currentValue))
+        auto* filterValue = dynamicDowncast<CSSFunctionValue>(currentValue);
+        if (!filterValue)
             continue;
 
-        auto& filterValue = downcast<CSSFunctionValue>(currentValue.get());
-        auto operationType = filterOperationForType(filterValue.name());
+        auto operationType = filterOperationForType(filterValue->name());
 
         // Check that all parameters are primitive values, with the
         // exception of drop shadow which has a CSSShadowValue parameter.
         const CSSPrimitiveValue* firstValue = nullptr;
         if (operationType != FilterOperation::Type::DropShadow) {
             bool haveNonPrimitiveValue = false;
-            for (unsigned j = 0; j < filterValue.length(); ++j) {
-                if (!is<CSSPrimitiveValue>(*filterValue.itemWithoutBoundsCheck(j))) {
+            for (unsigned j = 0; j < filterValue->length(); ++j) {
+                if (!is<CSSPrimitiveValue>(*filterValue->itemWithoutBoundsCheck(j))) {
                     haveNonPrimitiveValue = true;
                     break;
                 }
             }
             if (haveNonPrimitiveValue)
                 continue;
-            if (filterValue.length())
-                firstValue = downcast<CSSPrimitiveValue>(filterValue.itemWithoutBoundsCheck(0));
+            if (filterValue->length())
+                firstValue = downcast<CSSPrimitiveValue>(filterValue->itemWithoutBoundsCheck(0));
         }
 
         switch (operationType) {
@@ -125,21 +124,21 @@ std::optional<FilterOperations> createFilterOperations(const Document& document,
         case FilterOperation::Type::Sepia:
         case FilterOperation::Type::Saturate: {
             double amount = 1;
-            if (filterValue.length() == 1) {
+            if (filterValue->length() == 1) {
                 amount = firstValue->doubleValue();
                 if (firstValue->isPercentage())
                     amount /= 100;
             }
 
-            operations.operations().append(BasicColorMatrixFilterOperation::create(amount, operationType));
+            operations.append(BasicColorMatrixFilterOperation::create(amount, operationType));
             break;
         }
         case FilterOperation::Type::HueRotate: {
             double angle = 0;
-            if (filterValue.length() == 1)
+            if (filterValue->length() == 1)
                 angle = firstValue->computeDegrees();
 
-            operations.operations().append(BasicColorMatrixFilterOperation::create(angle, operationType));
+            operations.append(BasicColorMatrixFilterOperation::create(angle, operationType));
             break;
         }
         case FilterOperation::Type::Invert:
@@ -147,45 +146,44 @@ std::optional<FilterOperations> createFilterOperations(const Document& document,
         case FilterOperation::Type::Contrast:
         case FilterOperation::Type::Opacity: {
             double amount = 1;
-            if (filterValue.length() == 1) {
+            if (filterValue->length() == 1) {
                 amount = firstValue->doubleValue();
                 if (firstValue->isPercentage())
                     amount /= 100;
             }
 
-            operations.operations().append(BasicComponentTransferFilterOperation::create(amount, operationType));
+            operations.append(BasicComponentTransferFilterOperation::create(amount, operationType));
             break;
         }
         case FilterOperation::Type::AppleInvertLightness: {
-            operations.operations().append(InvertLightnessFilterOperation::create());
+            operations.append(InvertLightnessFilterOperation::create());
             break;
         }
         case FilterOperation::Type::Blur: {
             Length stdDeviation = Length(0, LengthType::Fixed);
-            if (filterValue.length() >= 1)
+            if (filterValue->length() >= 1)
                 stdDeviation = convertToFloatLength(firstValue, cssToLengthConversionData);
             if (stdDeviation.isUndefined())
                 return std::nullopt;
 
-            operations.operations().append(BlurFilterOperation::create(stdDeviation));
+            operations.append(BlurFilterOperation::create(stdDeviation));
             break;
         }
         case FilterOperation::Type::DropShadow: {
-            if (filterValue.length() != 1)
+            if (filterValue->length() != 1)
                 return std::nullopt;
 
-            const auto* cssValue = filterValue.itemWithoutBoundsCheck(0);
-            if (!is<CSSShadowValue>(cssValue))
+            const auto* item = dynamicDowncast<CSSShadowValue>(filterValue->itemWithoutBoundsCheck(0));
+            if (!item)
                 continue;
 
-            const auto& item = downcast<CSSShadowValue>(*cssValue);
-            int x = item.x->computeLength<int>(cssToLengthConversionData);
-            int y = item.y->computeLength<int>(cssToLengthConversionData);
+            int x = item->x->computeLength<int>(cssToLengthConversionData);
+            int y = item->y->computeLength<int>(cssToLengthConversionData);
             IntPoint location(x, y);
-            int blur = item.blur ? item.blur->computeLength<int>(cssToLengthConversionData) : 0;
-            auto color = item.color ? colorFromPrimitiveValueWithResolvedCurrentColor(document, style, *item.color) : style.color();
+            int blur = item->blur ? item->blur->computeLength<int>(cssToLengthConversionData) : 0;
+            auto color = item->color ? colorFromPrimitiveValueWithResolvedCurrentColor(document, style, *item->color) : style.color();
 
-            operations.operations().append(DropShadowFilterOperation::create(location, blur, color.isValid() ? color : Color::transparentBlack));
+            operations.append(DropShadowFilterOperation::create(location, blur, color.isValid() ? color : Color::transparentBlack));
             break;
         }
         default:
@@ -194,7 +192,9 @@ std::optional<FilterOperations> createFilterOperations(const Document& document,
         }
     }
 
-    return operations;
+    operations.shrinkToFit();
+
+    return FilterOperations { WTFMove(operations) };
 }
 
 } // namespace Style

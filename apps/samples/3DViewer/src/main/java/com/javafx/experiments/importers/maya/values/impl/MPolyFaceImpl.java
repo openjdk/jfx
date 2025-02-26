@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2014, Oracle and/or its affiliates.
+ * Copyright (c) 2010, 2024, Oracle and/or its affiliates.
  * All rights reserved. Use is subject to license terms.
  *
  * This file is available and licensed under the following license:
@@ -48,6 +48,7 @@ public class MPolyFaceImpl extends MDataImpl implements MPolyFace {
         super(type);
     }
 
+    @Override
     public void addFace(FaceData face) {
         if (faces == null) {
             faces = new ArrayList<FaceData>();
@@ -60,10 +61,12 @@ public class MPolyFaceImpl extends MDataImpl implements MPolyFace {
         return this; // hack?
     }
 
+    @Override
     public List<FaceData> getFaces() {
         return faces;
     }
 
+    @Override
     public void parse(Iterator<String> values) {
         // System.out.println("parsing poly faces: " + values);
         new Parser(values).parse();
@@ -122,6 +125,7 @@ public class MPolyFaceImpl extends MDataImpl implements MPolyFace {
         }
     }
 
+    @Override
     public String toString() {
         StringBuffer result = new StringBuffer();
         result.append(getType().getName());

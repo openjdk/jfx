@@ -30,7 +30,6 @@
 #include <wtf/RefPtr.h>
 
 #if OS(DARWIN)
-#include <mach/vm_types.h>
 #include <mach/vm_param.h>
 #include <mach/vm_types.h>
 #endif

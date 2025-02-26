@@ -34,6 +34,7 @@
 #import "ComputePassEncoder.h"
 #import "ComputePipeline.h"
 #import "Device.h"
+#import "ExternalTexture.h"
 #import "Instance.h"
 #import "PipelineLayout.h"
 #import "PresentationContext.h"
@@ -47,6 +48,10 @@
 #import "ShaderModule.h"
 #import "Texture.h"
 #import "TextureView.h"
+#import "XRBinding.h"
+#import "XRProjectionLayer.h"
+#import "XRSubImage.h"
+#import "XRView.h"
 #import <wtf/BlockPtr.h>
 #import <wtf/text/WTFString.h>
 
@@ -97,6 +102,11 @@ inline ComputePipeline& fromAPI(WGPUComputePipeline computePipeline)
 inline Device& fromAPI(WGPUDevice device)
 {
     return static_cast<Device&>(*device);
+}
+
+inline ExternalTexture& fromAPI(WGPUExternalTexture texture)
+{
+    return static_cast<ExternalTexture&>(*texture);
 }
 
 inline Instance& fromAPI(WGPUInstance instance)
@@ -167,6 +177,26 @@ inline Texture& fromAPI(WGPUTexture texture)
 inline TextureView& fromAPI(WGPUTextureView textureView)
 {
     return static_cast<TextureView&>(*textureView);
+}
+
+inline XRBinding& fromAPI(WGPUXRBinding binding)
+{
+    return static_cast<XRBinding&>(*binding);
+}
+
+inline XRSubImage& fromAPI(WGPUXRSubImage subImage)
+{
+    return static_cast<XRSubImage&>(*subImage);
+}
+
+inline XRProjectionLayer& fromAPI(WGPUXRProjectionLayer layer)
+{
+    return static_cast<XRProjectionLayer&>(*layer);
+}
+
+inline XRView& fromAPI(WGPUXRView view)
+{
+    return static_cast<XRView&>(*view);
 }
 
 inline String fromAPI(const char* string)

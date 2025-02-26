@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015-2018 Apple Inc. All rights reserved.
+ * Copyright (C) 2015-2023 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -25,7 +25,7 @@
 
 #pragma once
 
-#if ENABLE(B3_JIT)
+#if ENABLE(B3_JIT) || ENABLE(WEBASSEMBLY_BBQJIT)
 
 #include "FPRInfo.h"
 #include "GPRInfo.h"
@@ -34,6 +34,7 @@
 #include "RegisterSet.h"
 #include "ValueRecovery.h"
 #include <wtf/PrintStream.h>
+#include <wtf/TZoneMalloc.h>
 #if ENABLE(WEBASSEMBLY)
 #include "WasmValueLocation.h"
 #endif
@@ -50,7 +51,7 @@ namespace B3 {
 // output.
 
 class ValueRep {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_ALLOCATED(ValueRep);
 public:
     enum Kind : uint8_t {
         // As an input representation, this means that B3 can pick any representation. As an output
@@ -102,7 +103,16 @@ public:
         StackArgument,
 
         // As an output representation, this tells us that B3 constant-folded the value.
-        Constant
+        Constant,
+#if USE(JSVALUE32_64)
+        SomeRegisterPair,
+        SomeRegisterPairWithClobber,
+        SomeEarlyRegisterPair,
+        SomeLateRegisterPair,
+        RegisterPair,
+        LateRegisterPair
+#endif
+
     };
 
     ValueRep()
@@ -119,7 +129,22 @@ public:
     ValueRep(Kind kind)
         : m_kind(kind)
     {
-        ASSERT(kind == WarmAny || kind == ColdAny || kind == LateColdAny || kind == SomeRegister || kind == SomeRegisterWithClobber || kind == SomeEarlyRegister || kind == SomeLateRegister);
+        ASSERT(kind == WarmAny
+            || kind == ColdAny
+            || kind == LateColdAny
+            || kind == SomeRegister
+            || kind == SomeRegisterWithClobber
+            || kind == SomeEarlyRegister
+            || kind == SomeLateRegister
+#if USE(JSVALUE32_64)
+            || kind == SomeRegisterPair
+            || kind == SomeRegisterPairWithClobber
+            || kind == SomeEarlyRegisterPair
+            || kind == SomeLateRegisterPair
+            || kind == RegisterPair
+            || kind == LateRegisterPair
+#endif
+        );
     }
 
 #if ENABLE(WEBASSEMBLY)
@@ -127,9 +152,16 @@ public:
     {
         switch (location.kind()) {
         case Wasm::ValueLocation::Kind::GPRRegister:
+#if USE(JSVALUE32_64)
+            m_kind = RegisterPair;
+            u.registerPair.regHi = location.jsr().tagGPR();
+            u.registerPair.regLo = location.jsr().payloadGPR();
+            break;
+#else
             m_kind = Register;
             u.reg = location.jsr().payloadGPR();
             break;
+#endif
         case Wasm::ValueLocation::Kind::FPRRegister:
             m_kind = Register;
             u.reg = location.fpr();
@@ -215,12 +247,39 @@ public:
         }
     }
 
-    bool operator!=(const ValueRep& other) const
+    explicit operator bool() const { return kind() != WarmAny; }
+
+#if USE(JSVALUE32_64)
+    explicit ValueRep(Reg regHi, Reg regLo)
+        : m_kind(RegisterPair)
     {
-        return !(*this == other);
+        u.registerPair.regHi = regHi;
+        u.registerPair.regLo = regLo;
     }
 
-    explicit operator bool() const { return kind() != WarmAny; }
+    static ValueRep regPair(Reg regHi, Reg regLo)
+    {
+        return ValueRep(regHi, regLo);
+    }
+
+    bool isRegPair() const { return kind() == RegisterPair || kind() == LateRegisterPair || kind() == SomeLateRegisterPair; }
+    Reg regLo() const
+    {
+        return u.registerPair.regLo;
+    }
+    Reg regHi() const
+    {
+        return u.registerPair.regHi;
+    }
+    bool isGPRPair() const
+    {
+        if (!isRegPair())
+            return false;
+        ASSERT(regHi().isGPR());
+        ASSERT(regLo().isGPR());
+        return true;
+    }
+#endif
 
     bool isAny() const { return kind() == WarmAny || kind() == ColdAny || kind() == LateColdAny; }
 
@@ -313,6 +372,12 @@ public:
 private:
     union U {
         Reg reg;
+#if USE(JSVALUE32_64)
+        struct {
+            Reg regLo;
+            Reg regHi;
+        } registerPair;
+#endif
         intptr_t offsetFromFP;
         intptr_t offsetFromSP;
         int64_t value;

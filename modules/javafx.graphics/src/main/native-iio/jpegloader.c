@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2009, 2023, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2009, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -49,7 +49,7 @@
 
 #include <TargetConditionals.h>
 
-/* RT-37125: use setjmp/longjmp versions that do not save/restore the signal mask */
+/* JDK-8097189: use setjmp/longjmp versions that do not save/restore the signal mask */
 #define longjmp _longjmp
 #define setjmp _setjmp
 
@@ -657,8 +657,6 @@ static void imageio_set_stream(JNIEnv *env,
 static void imageio_dispose(j_common_ptr info) {
 
     if (info != NULL) {
-        free(info->err);
-        info->err = NULL;
         if (info->is_decompressor) {
             j_decompress_ptr dinfo = (j_decompress_ptr) info;
             free(dinfo->src);
@@ -669,6 +667,8 @@ static void imageio_dispose(j_common_ptr info) {
             cinfo->dest = NULL;
         }
         jpeg_destroy(info);
+        free(info->err);
+        info->err = NULL;
         free(info);
     }
 }

@@ -29,9 +29,9 @@
 #include "CachedScript.h"
 #include "CachedScriptFetcher.h"
 #include "DOMWrapperWorld.h"
-#include "Frame.h"
 #include "JSDOMBinding.h"
 #include "JSDOMPromiseDeferred.h"
+#include "LocalFrame.h"
 #include "ModuleFetchParameters.h"
 #include "ResourceLoaderOptions.h"
 #include "ScriptController.h"
@@ -73,7 +73,7 @@ bool CachedModuleScriptLoader::load(Document& document, URL&& sourceURL)
     return true;
 }
 
-void CachedModuleScriptLoader::notifyFinished(CachedResource& resource, const NetworkLoadMetrics&)
+void CachedModuleScriptLoader::notifyFinished(CachedResource& resource, const NetworkLoadMetrics&, LoadWillContinueInAnotherProcess)
 {
     ASSERT_UNUSED(resource, &resource == m_cachedScript);
     ASSERT(m_cachedScript);

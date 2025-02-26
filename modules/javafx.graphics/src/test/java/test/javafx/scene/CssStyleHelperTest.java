@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020, 2023, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2020, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -24,26 +24,34 @@
  */
 package test.javafx.scene;
 
+import java.io.IOException;
+import java.nio.charset.StandardCharsets;
+import java.util.Base64;
 import com.sun.javafx.css.StyleManager;
 import javafx.stage.Stage;
 import com.sun.javafx.tk.Toolkit;
-import java.io.IOException;
 import javafx.css.CssParser;
+import javafx.css.CssParser.ParseError;
+import javafx.css.CssParser.ParseError.PropertySetError;
 import javafx.css.PseudoClass;
 import javafx.css.Stylesheet;
 import javafx.geometry.Insets;
 import javafx.scene.Scene;
+import javafx.scene.layout.Background;
 import javafx.scene.layout.Pane;
 import javafx.scene.layout.StackPane;
 import javafx.scene.paint.Color;
+import javafx.scene.paint.Paint;
 import javafx.scene.text.Text;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
-import org.junit.AfterClass;
-import org.junit.Before;
-import org.junit.Test;
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.EnumSource;
 
 public class CssStyleHelperTest {
 
@@ -60,16 +68,19 @@ public class CssStyleHelperTest {
         sm.hasDefaultUserAgentStylesheet = false;
     }
 
-    @Before
+    @BeforeEach
     public void setup() {
         root = new StackPane();
         scene = new Scene(root);
         stage = new Stage();
         stage.setScene(scene);
         resetStyleManager();
+
+        // Apparently, need to access this property first, or nothing will be appended at all.
+        CssParser.errorsProperty().clear();
     }
 
-    @AfterClass
+    @AfterAll
     public static void cleanupOnce() {
         resetStyleManager();
     }
@@ -107,13 +118,13 @@ public class CssStyleHelperTest {
         Toolkit.getToolkit().firePulse();
         assertEquals("Italic", C.getFont().getStyle());
         assertEquals("Italic", D.getFont().getStyle());
-        assertNull(E.getFont().getStyle());
+        assertEquals("Regular", E.getFont().getStyle());
 
         B.getChildren().add(D); //move D
         Toolkit.getToolkit().firePulse();
         assertEquals("Italic", C.getFont().getStyle());
-        assertNull(D.getFont().getStyle());
-        assertNull(E.getFont().getStyle());
+        assertEquals("Regular", D.getFont().getStyle());
+        assertEquals("Regular", E.getFont().getStyle());
     }
 
     @Test
@@ -194,7 +205,7 @@ public class CssStyleHelperTest {
         Toolkit.getToolkit().firePulse();
         assertEquals("Italic", C.getFont().getStyle());
         assertEquals("Italic", D.getFont().getStyle());
-        assertNull(E.getFont().getStyle());
+        assertEquals("Regular", E.getFont().getStyle());
 
         A.getChildren().remove(D); //move D
         Toolkit.getToolkit().firePulse();
@@ -202,8 +213,8 @@ public class CssStyleHelperTest {
         Toolkit.getToolkit().firePulse();
 
         assertEquals("Italic", C.getFont().getStyle());
-        assertNull(D.getFont().getStyle());
-        assertNull(E.getFont().getStyle());
+        assertEquals("Regular", D.getFont().getStyle());
+        assertEquals("Regular", E.getFont().getStyle());
     }
 
     @Test
@@ -482,7 +493,7 @@ public class CssStyleHelperTest {
         A.getChildren().add(C);
         Toolkit.getToolkit().firePulse();
 
-        assertNull(C.getFont().getStyle());
+        assertEquals("Regular", C.getFont().getStyle());
     }
 
     @Test
@@ -518,7 +529,7 @@ public class CssStyleHelperTest {
         A.getChildren().add(C);
         Toolkit.getToolkit().firePulse();
 
-        assertNull(C.getFont().getStyle());
+        assertEquals("Regular", C.getFont().getStyle());
     }
 
     @Test
@@ -553,7 +564,7 @@ public class CssStyleHelperTest {
         A.getChildren().add(C);
         Toolkit.getToolkit().firePulse();
 
-        assertNull(C.getFont().getStyle());
+        assertEquals("Regular", C.getFont().getStyle());
     }
 
     @Test
@@ -657,5 +668,251 @@ public class CssStyleHelperTest {
 
         assertEquals(new Insets(10), a.getPadding());
         assertEquals(new Insets(4), b.getPadding());
+    }
+
+    @Test
+    public void shouldDetectSimpleInfiniteLoop() throws IOException {
+        Stylesheet stylesheet = new CssParser().parse(
+            "userAgentStyleSheet",
+            """
+                .root {
+                    -fx-base-fill: -fx-base;
+                    -fx-base: -fx-base-color;
+                    -fx-base-color: -fx-base-fill;
+                }
+
+                .pane {
+                    -fx-background-color: -fx-base;
+                }
+            """
+        );
+
+        StyleManager.getInstance().setDefaultUserAgentStylesheet(stylesheet);
+        Pane a = new Pane();
+
+        a.getStyleClass().add("pane");
+
+        root.getChildren().addAll(a);
+
+        assertDoesNotThrow(() -> stage.show());  // This should not result in a StackOverflowError
+        assertEquals(1, CssParser.errorsProperty().size());
+
+        ParseError error = CssParser.errorsProperty().getFirst();
+
+        assertEquals(PropertySetError.class, error.getClass());
+
+        // Note: on Windows, the message is using inconsistent line endings (sometimes Windows, sometimes Linux)
+        // so I've stripped it.
+        assertEquals(
+            """
+            Caught java.lang.IllegalArgumentException: Loop detected in *.root{
+            \t-fx-base-fill: <Value lookup="true">
+              <value>-fx-base</value>
+              <converter>null</converter>
+            </Value>
+            \t-fx-base: <Value lookup="true">
+              <value>-fx-base-color</value>
+              <converter>null</converter>
+            </Value>
+            \t-fx-base-color: <Value lookup="true">
+              <value>-fx-base-fill</value>
+              <converter>null</converter>
+            </Value>
+            } while resolving '-fx-base'' while calculating value for '-fx-background-color' from rule '*.pane' in stylesheet userAgentStyleSheet\
+            """,
+            error.getMessage().replace("\r", "")
+        );
+    }
+
+    @Test
+    public void shouldDetectNestedInfiniteLoop() throws IOException {
+        Stylesheet stylesheet = new CssParser().parse(
+            "userAgentStyleSheet",
+            """
+                .root {
+                    -fx-base-fill: ladder(-fx-base, white 49%, black 50%);
+                    -fx-base: ladder(-fx-base-fill, white 49%, black 50%);
+                }
+
+                .pane {
+                    -fx-background-color: -fx-base;
+                }
+            """
+        );
+
+        StyleManager.getInstance().setDefaultUserAgentStylesheet(stylesheet);
+        Pane a = new Pane();
+
+        a.getStyleClass().add("pane");
+
+        root.getChildren().addAll(a);
+
+        assertDoesNotThrow(() -> stage.show());  // This should not result in a StackOverflowError
+        assertEquals(1, CssParser.errorsProperty().size());
+
+        ParseError error = CssParser.errorsProperty().getFirst();
+
+        assertEquals(PropertySetError.class, error.getClass());
+
+        // Note: on Windows, the message is using inconsistent line endings (sometimes Windows, sometimes Linux)
+        // so I've stripped it.
+        assertEquals(
+            """
+            Caught java.lang.IllegalArgumentException: Loop detected in *.root{
+            \t-fx-base-fill: <Value>
+              <value values="3">
+                <Value lookup="true">
+                  <value>-fx-base</value>
+                  <converter>null</converter>
+                </Value>    <Value>
+                  <value values="2">
+                    <Value>
+                      <value>49.0%</value>
+                      <converter>null</converter>
+                    </Value>        <Value>
+                      <value>0xffffffff</value>
+                      <converter>null</converter>
+                    </Value>      </value>
+                  <converter>StopConverter</converter>
+                </Value>    <Value>
+                  <value values="2">
+                    <Value>
+                      <value>50.0%</value>
+                      <converter>null</converter>
+                    </Value>        <Value>
+                      <value>0x000000ff</value>
+                      <converter>null</converter>
+                    </Value>      </value>
+                  <converter>StopConverter</converter>
+                </Value>  </value>
+              <converter>LadderConverter</converter>
+            </Value>
+            \t-fx-base: <Value>
+              <value values="3">
+                <Value lookup="true">
+                  <value>-fx-base-fill</value>
+                  <converter>null</converter>
+                </Value>    <Value>
+                  <value values="2">
+                    <Value>
+                      <value>49.0%</value>
+                      <converter>null</converter>
+                    </Value>        <Value>
+                      <value>0xffffffff</value>
+                      <converter>null</converter>
+                    </Value>      </value>
+                  <converter>StopConverter</converter>
+                </Value>    <Value>
+                  <value values="2">
+                    <Value>
+                      <value>50.0%</value>
+                      <converter>null</converter>
+                    </Value>        <Value>
+                      <value>0x000000ff</value>
+                      <converter>null</converter>
+                    </Value>      </value>
+                  <converter>StopConverter</converter>
+                </Value>  </value>
+              <converter>LadderConverter</converter>
+            </Value>
+            } while resolving '-fx-base'' while calculating value for '-fx-background-color' from rule '*.pane' in stylesheet userAgentStyleSheet\
+            """,
+            error.getMessage().replace("\r", "")
+        );
+    }
+
+    private static final String GRAY_STYLESHEET = ".my-pane {-fx-background-color: #808080}";
+    private static final String GRAY_INDIRECT_STYLESHEET = ".root {-fx-base: #808080} .my-pane {-fx-background-color: -fx-base}";
+    private static final String RED_STYLESHEET = ".my-pane {-fx-background-color: red}";
+    private static final String RED_INDIRECT_STYLESHEET = ".root {-fx-base: red} .my-pane {-fx-background-color: -fx-base}";
+    private static final String FX_BASE_GREEN_STYLESHEET = ".root {-fx-base: green}";
+    private static final String FX_BASE_GRAY_STYLESHEET = ".root {-fx-base: #808080}";
+
+    /**
+     * All cases will lead to a neutral gray color #808080.
+     *
+     * UA = USER_AGENT
+     */
+    enum OverrideCases {
+        // User agent styles win when not overridden directly or indirectly:
+        UA(GRAY_STYLESHEET, null, null, null),
+        INDIRECT_UA(GRAY_INDIRECT_STYLESHEET, null, null, null),
+
+        // Property wins when not directly overridden by author or inline style:
+        PROPERTY(null, Color.web("#808080"), null, null),
+        PROPERTY_OVERRIDES_UA(RED_STYLESHEET, Color.web("#808080"), null, null),
+        PROPERTY_OVERRIDES_INDIRECT_UA(RED_INDIRECT_STYLESHEET, Color.web("#808080"), null, null),
+
+        // Property wins even if indirectly overridden by author or inline style (resolving of a lookup does not change priority of the user agent style):
+        PROPERTY_OVERRIDES_UA_VARIABLE_SET_IN_AUTHOR(RED_INDIRECT_STYLESHEET, Color.web("#808080"), FX_BASE_GREEN_STYLESHEET, null),
+        PROPERTY_OVERRIDES_UA_VARIABLE_SET_INLINE(RED_INDIRECT_STYLESHEET, Color.web("#808080"), null, "-fx-base: yellow"),
+
+        // Author style wins when not directly overridden by inline style:
+        AUTHOR_OVERRIDES_UA(RED_STYLESHEET, null, GRAY_STYLESHEET, null),
+        AUTHOR_OVERRIDES_INDIRECT_UA(RED_INDIRECT_STYLESHEET, null, GRAY_STYLESHEET, null),
+        AUTHOR_OVERRIDES_PROPERTY(null, Color.BLUE, GRAY_STYLESHEET, null),
+
+        // Author style wins even if indirectly overridden by inline style (resolving of a lookup does not change priority of the user agent style):
+        AUTHOR_OVERRIDES_UA_VARIABLE_SET_INLINE(RED_INDIRECT_STYLESHEET, null, GRAY_STYLESHEET, "-fx-base: yellow"),
+
+        // Indirect author styles win when property is not set directly, and there is no direct or indirect override in an inline style:
+        AUTHOR_VARIABLE_OVERRIDES_UA_VARIABLE(RED_INDIRECT_STYLESHEET, null, FX_BASE_GRAY_STYLESHEET, null),
+
+        // Direct inline styles always win over anything:
+        INLINE_OVERRIDES_UA(RED_STYLESHEET, null, null, "-fx-background-color: #808080"),
+        INLINE_OVERRIDES_PROPERTY(null, Color.BLUE, null, "-fx-background-color: #808080"),
+        INLINE_OVERRIDES_AUTHOR(null, null, RED_STYLESHEET, "-fx-background-color: #808080"),
+        INLINE_OVERRIDES_ALL(RED_STYLESHEET, Color.BLUE, RED_STYLESHEET, "-fx-background-color: #808080"),
+
+        // Indirect inline styles win when not directly overridden by author stylesheet or property:
+        INLINE_VARIABLE_OVERRIDES_UA_VARIABLE(RED_INDIRECT_STYLESHEET, null, null, "-fx-base: #808080"),
+        INLINE_VARIABLE_OVERRIDES_AUTHOR_VARIABLE(null, null, RED_INDIRECT_STYLESHEET, "-fx-base: #808080"),
+        INLINE_VARIABLE_OVERRIDES_ALL(RED_INDIRECT_STYLESHEET, null, FX_BASE_GREEN_STYLESHEET, "-fx-base: #808080");
+
+        private final String userAgentStylesheet;
+        private final Color property;
+        private final String authorStylesheet;
+        private final String inlineStyles;
+
+        OverrideCases(String userAgentStylesheet, Color property, String authorStylesheet, String inlineStyles) {
+            this.userAgentStylesheet = userAgentStylesheet;
+            this.property = property;
+            this.authorStylesheet = authorStylesheet;
+            this.inlineStyles = inlineStyles;
+        }
+    }
+
+    /*
+     * Tests various override cases, with direct or indirect (via lookup) overrides. All cases should lead
+     * to a neutral gray color.
+     */
+    @ParameterizedTest
+    @EnumSource(OverrideCases.class)
+    public void whenAllStylesAndOverridesAreAppliedShouldBeNeutralGray(OverrideCases c) throws IOException {
+        StyleManager.getInstance().setDefaultUserAgentStylesheet(new CssParser().parse("userAgentStylSheet", c.userAgentStylesheet));
+        Pane pane = new Pane();
+
+        pane.getStyleClass().addAll("root", "my-pane");
+
+        if (c.property != null) {
+            pane.setBackground(Background.fill(c.property));
+        }
+        if (c.authorStylesheet != null) {
+            pane.getStylesheets().add(toDataURL(c.authorStylesheet));
+        }
+        if (c.inlineStyles != null) {
+            pane.setStyle(c.inlineStyles);
+        }
+
+        root.getChildren().add(pane);
+
+        stage.show();
+        Toolkit.getToolkit().firePulse();
+
+        assertEquals(Paint.valueOf("#808080"), pane.getBackground().getFills().get(0).getFill());
+    }
+
+    private static String toDataURL(String stylesheet) {
+        return "data:text/plain;base64," + Base64.getEncoder().encodeToString(stylesheet.getBytes(StandardCharsets.UTF_8));
     }
 }

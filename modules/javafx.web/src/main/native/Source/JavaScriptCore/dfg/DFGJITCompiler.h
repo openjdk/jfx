@@ -38,9 +38,11 @@
 #include "HandlerInfo.h"
 #include "JITCode.h"
 #include "JITInlineCacheGenerator.h"
+#include "JITThunks.h"
 #include "LinkBuffer.h"
 #include "MacroAssembler.h"
 #include "PCToCodeOriginMap.h"
+#include <wtf/TZoneMalloc.h>
 
 namespace JSC {
 
@@ -85,6 +87,7 @@ struct CallLinkRecord {
 // compilation, and also records information used in linking (e.g. a list of all
 // call to be linked).
 class JITCompiler : public CCallHelpers {
+    WTF_MAKE_TZONE_ALLOCATED(JITCompiler);
 public:
     friend class SpeculativeJIT;
 
@@ -138,10 +141,17 @@ public:
     }
 
     // Add a call out from JIT code, without an exception check.
-    Call appendCall(const CodePtr<CFunctionPtrTag> function)
+    template<PtrTag tag>
+    requires (tag != NoPtrTag)
+    Call appendCall(const CodePtr<tag> function)
     {
         Call functionCall = call(OperationPtrTag);
-        m_calls.append(CallLinkRecord(functionCall, function.retagged<OperationPtrTag>()));
+        // FIXME: If we had CustomGetters in JITOperationList we could just call retagged on all
+        // code paths but since we don't register them retagging triggers an ASSERT.
+        if constexpr (tag == OperationPtrTag)
+            m_calls.append(CallLinkRecord(functionCall, function));
+        else
+            m_calls.append(CallLinkRecord(functionCall, function.template retagged<OperationPtrTag>()));
         return functionCall;
     }
 
@@ -157,12 +167,7 @@ public:
         call(address, OperationPtrTag);
     }
 
-    void exceptionCheck();
-
-    void exceptionJumpWithCallFrameRollback()
-    {
-        m_exceptionChecksWithCallFrameRollback.append(jump());
-    }
+    void exceptionJumpWithCallFrameRollback();
 
     OSRExitCompilationInfo& appendExitInfo(MacroAssembler::JumpList jumpsToFail = MacroAssembler::JumpList())
     {
@@ -236,12 +241,7 @@ public:
         m_privateBrandAccesses.append(InlineCacheWrapper<JITPrivateBrandAccessGenerator>(gen, slowPath));
     }
 
-    void addJSCall(Label slowPathStart, Label doneLocation, CompileTimeCallLinkInfo info)
-    {
-        m_jsCalls.append(JSCallRecord(slowPathStart, doneLocation, info));
-    }
-
-    void addJSDirectCall(Label slowPath, OptimizingCallLinkInfo* info)
+    void addJSDirectCall(Label slowPath, DirectCallLinkInfo* info)
     {
         m_jsDirectCalls.append(JSDirectCallRecord(slowPath, info));
     }
@@ -287,7 +287,7 @@ public:
         return result;
     }
 
-    RefPtr<JITCode> jitCode() { return m_jitCode; }
+    RefPtr<DFG::JITCode> jitCode() { return m_jitCode; }
 
     Vector<Label>& blockHeads() { return m_blockHeads; }
 
@@ -344,7 +344,7 @@ public:
         Address unlinkedAddress()
         {
             ASSERT(isUnlinked());
-            return Address(GPRInfo::constantsRegister, JITData::offsetOfData() + sizeof(void*) * m_index);
+            return Address(GPRInfo::jitDataRegister, JITData::offsetOfTrailingData() + sizeof(void*) * m_index);
         }
 #endif
 
@@ -357,6 +357,7 @@ public:
     };
 
     void loadConstant(LinkerIR::Constant, GPRReg);
+    void loadStructureStubInfo(StructureStubInfoIndex, GPRReg);
     void loadLinkableConstant(LinkableConstant, GPRReg);
     void storeLinkableConstant(LinkableConstant, Address);
 
@@ -378,7 +379,7 @@ public:
         return CCallHelpers::branchPtr(cond, left, CCallHelpers::TrustedImmPtr(constant.pointer()));
     }
 
-    std::tuple<CompileTimeStructureStubInfo, LinkableConstant> addStructureStubInfo();
+    std::tuple<CompileTimeStructureStubInfo, StructureStubInfoIndex> addStructureStubInfo();
     std::tuple<CompileTimeCallLinkInfo, LinkableConstant> addCallLinkInfo(CodeOrigin);
     LinkerIR::Constant addToConstantPool(LinkerIR::Type, void*);
 
@@ -404,39 +405,24 @@ protected:
 
     std::unique_ptr<Disassembler> m_disassembler;
 
-    RefPtr<JITCode> m_jitCode;
+    RefPtr<DFG::JITCode> m_jitCode;
 
     // Vector of calls out from JIT code, including exception handler information.
     // Count of the number of CallRecords with exception handlers.
     Vector<CallLinkRecord> m_calls;
-    JumpList m_exceptionChecks;
-    JumpList m_exceptionChecksWithCallFrameRollback;
 
     Vector<Label> m_blockHeads;
 
 
-    struct JSCallRecord {
-        JSCallRecord(Label slowPathStart, Label doneLocation, CompileTimeCallLinkInfo info)
-            : slowPathStart(slowPathStart)
-            , doneLocation(doneLocation)
-            , info(info)
-        {
-        }
-
-        Label slowPathStart;
-        Label doneLocation;
-        CompileTimeCallLinkInfo info;
-    };
-
     struct JSDirectCallRecord {
-        JSDirectCallRecord(Label slowPath, OptimizingCallLinkInfo* info)
+        JSDirectCallRecord(Label slowPath, DirectCallLinkInfo* info)
             : slowPath(slowPath)
             , info(info)
         {
         }
 
         Label slowPath;
-        OptimizingCallLinkInfo* info;
+        DirectCallLinkInfo* info;
     };
 
     Vector<InlineCacheWrapper<JITGetByIdGenerator>, 4> m_getByIds;
@@ -451,7 +437,6 @@ protected:
     Vector<InlineCacheWrapper<JITInByValGenerator>, 4> m_inByVals;
     Vector<InlineCacheWrapper<JITInstanceOfGenerator>, 4> m_instanceOfs;
     Vector<InlineCacheWrapper<JITPrivateBrandAccessGenerator>, 4> m_privateBrandAccesses;
-    Vector<JSCallRecord, 4> m_jsCalls;
     Vector<JSDirectCallRecord, 4> m_jsDirectCalls;
     SegmentedVector<OSRExitCompilationInfo, 4> m_exitCompilationInfo;
     Vector<Vector<Label>> m_exitSiteLabels;

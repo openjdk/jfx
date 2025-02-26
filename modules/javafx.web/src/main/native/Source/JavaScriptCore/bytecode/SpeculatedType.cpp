@@ -39,15 +39,20 @@
 #include "JSCellInlines.h"
 #include "JSDataView.h"
 #include "JSFunction.h"
-#include "JSGenericTypedArrayView.h"
+#include "JSGenericTypedArrayViewInlines.h"
+#include "JSGlobalProxy.h"
 #include "JSMap.h"
+#include "JSMapIterator.h"
+#include "JSPromise.h"
 #include "JSSet.h"
+#include "JSSetIterator.h"
 #include "JSWeakMap.h"
 #include "JSWeakSet.h"
 #include "ProxyObject.h"
 #include "RegExpObject.h"
 #include "ScopedArguments.h"
 #include "StringObject.h"
+#include "TypedArrayInlines.h"
 #include <wtf/CommaPrinter.h>
 #include <wtf/StringPrintStream.h>
 
@@ -56,7 +61,7 @@ namespace JSC {
 struct PrettyPrinter {
     PrettyPrinter(PrintStream& out)
         : out(out)
-        , separator("|")
+        , separator("|"_s)
     { }
 
     template<typename T>
@@ -143,6 +148,11 @@ void dumpSpeculation(PrintStream& outStream, SpeculatedType value)
             else
                 isTop = false;
 
+            if (value & SpecFloat16Array)
+                strOut.print("Float16array");
+            else
+                isTop = false;
+
             if (value & SpecFloat32Array)
                 strOut.print("Float32array");
             else
@@ -220,6 +230,11 @@ void dumpSpeculation(PrintStream& outStream, SpeculatedType value)
 
             if (value & SpecProxyObject)
                 strOut.print("ProxyObject");
+            else
+                isTop = false;
+
+            if (value & SpecGlobalProxy)
+                strOut.print("GlobalProxy");
             else
                 isTop = false;
 
@@ -365,6 +380,8 @@ static const char* speculationToAbbreviatedString(SpeculatedType prediction)
         return "<Uint16array>";
     if (isUint32ArraySpeculation(prediction))
         return "<Uint32array>";
+    if (isFloat16ArraySpeculation(prediction))
+        return "<Float16array>";
     if (isFloat32ArraySpeculation(prediction))
         return "<Float32array>";
     if (isFloat64ArraySpeculation(prediction))
@@ -434,6 +451,8 @@ SpeculatedType speculationFromTypedArrayType(TypedArrayType type)
         return SpecUint16Array;
     case TypeUint32:
         return SpecUint32Array;
+    case TypeFloat16:
+        return SpecFloat16Array;
     case TypeFloat32:
         return SpecFloat32Array;
     case TypeFloat64:
@@ -488,9 +507,17 @@ SpeculatedType speculationFromClassInfoInheritance(const ClassInfo* classInfo)
     if (classInfo == JSMap::info())
         return SpecMapObject;
 
+    static_assert(std::is_final_v<JSMapIterator>);
+    if (classInfo == JSMapIterator::info())
+        return SpecObjectOther;
+
     static_assert(std::is_final_v<JSSet>);
     if (classInfo == JSSet::info())
         return SpecSetObject;
+
+    static_assert(std::is_final_v<JSSetIterator>);
+    if (classInfo == JSSetIterator::info())
+        return SpecObjectOther;
 
     static_assert(std::is_final_v<JSWeakMap>);
     if (classInfo == JSWeakMap::info())
@@ -504,6 +531,9 @@ SpeculatedType speculationFromClassInfoInheritance(const ClassInfo* classInfo)
     if (classInfo == ProxyObject::info())
         return SpecProxyObject;
 
+    if (classInfo->isSubClassOf(JSGlobalProxy::info()))
+        return SpecGlobalProxy;
+
     if (classInfo->isSubClassOf(JSDataView::info()))
         return SpecDataViewObject;
 
@@ -513,12 +543,8 @@ SpeculatedType speculationFromClassInfoInheritance(const ClassInfo* classInfo)
     if (classInfo->isSubClassOf(JSArray::info()))
         return SpecArray | SpecDerivedArray;
 
-    static_assert(std::is_final_v<JSBoundFunction>);
-        if (classInfo == JSBoundFunction::info())
-            return SpecFunctionWithNonDefaultHasInstance;
-
     if (classInfo->isSubClassOf(JSFunction::info()))
-        return SpecFunctionWithDefaultHasInstance;
+        return SpecFunction;
 
     if (classInfo->isSubClassOf(JSPromise::info()))
         return SpecPromiseObject;
@@ -536,92 +562,22 @@ SpeculatedType speculationFromClassInfoInheritance(const ClassInfo* classInfo)
     return SpecCellOther;
 }
 
+static constexpr unsigned SpeculationMappingSize { static_cast<unsigned>(UINT8_MAX) + 1 };
+using SpeculationMapping = std::array<SpeculatedType, SpeculationMappingSize>;
+static constexpr SpeculationMapping speculatedTypeMapping = ([]() -> SpeculationMapping {
+    SpeculationMapping result { };
+    for (unsigned i = 0; i < SpeculationMappingSize; ++i)
+        result[i] = SpecObjectOther;
+#define JSC_DEFINE_JS_TYPE(type, speculatedType) result[type] = speculatedType;
+    FOR_EACH_JS_TYPE(JSC_DEFINE_JS_TYPE)
+#undef JSC_DEFINE_JS_TYPE
+    return result;
+})();
+
 SpeculatedType speculationFromStructure(Structure* structure)
 {
-    SpeculatedType filteredResult = SpecNone;
     JSType type = structure->typeInfo().type();
-    switch (type) {
-    case StringType:
-        filteredResult = SpecString;
-        break;
-    case SymbolType:
-        filteredResult = SpecSymbol;
-        break;
-    case HeapBigIntType:
-        filteredResult = SpecHeapBigInt;
-        break;
-    case FinalObjectType:
-        filteredResult = SpecFinalObject;
-        break;
-    case DirectArgumentsType:
-        filteredResult = SpecDirectArguments;
-        break;
-    case ScopedArgumentsType:
-        filteredResult = SpecScopedArguments;
-        break;
-    case RegExpObjectType:
-        filteredResult = SpecRegExpObject;
-        break;
-    case JSDateType:
-        filteredResult = SpecDateObject;
-        break;
-    case JSMapType:
-        filteredResult = SpecMapObject;
-        break;
-    case JSSetType:
-        filteredResult = SpecSetObject;
-        break;
-    case JSWeakMapType:
-        filteredResult = SpecWeakMapObject;
-        break;
-    case JSWeakSetType:
-        filteredResult = SpecWeakSetObject;
-        break;
-    case ProxyObjectType:
-        filteredResult = SpecProxyObject;
-        break;
-    case DataViewType:
-        filteredResult = SpecDataViewObject;
-        break;
-    case DerivedArrayType:
-        filteredResult = SpecDerivedArray;
-        break;
-    case ArrayType:
-        filteredResult = SpecArray;
-        break;
-    case StringObjectType:
-        filteredResult = SpecStringObject;
-        break;
-    // We do not want to accept String.prototype in StringObjectUse, so that we do not include it as SpecStringObject.
-    case DerivedStringObjectType:
-        filteredResult = SpecObjectOther;
-        break;
-    case JSPromiseType:
-        filteredResult = SpecPromiseObject;
-        break;
-    case JSFunctionType:
-        static_assert(std::is_final_v<JSBoundFunction>);
-        if (structure->classInfoForCells() == JSBoundFunction::info())
-            filteredResult = SpecFunctionWithNonDefaultHasInstance;
-        else
-            filteredResult = SpecFunctionWithDefaultHasInstance;
-        break;
-
-#define JSC_TYPED_ARRAY_CHECK(type) \
-    case type##ArrayType: \
-        filteredResult = Spec ## type ## Array; \
-        break;
-    FOR_EACH_TYPED_ARRAY_TYPE_EXCLUDING_DATA_VIEW(JSC_TYPED_ARRAY_CHECK)
-#undef JSC_TYPED_ARRAY_CHECK
-
-    default:
-        if (!isObjectType(type))
-            return SpecCellOther;
-        return speculationFromClassInfoInheritance(structure->classInfoForCells());
-    }
-    ASSERT(filteredResult);
-    ASSERT(isSubtypeSpeculation(filteredResult, speculationFromClassInfoInheritance(structure->classInfoForCells())));
-    return filteredResult;
+    return speculatedTypeMapping[type];
 }
 
 SpeculatedType speculationFromCell(JSCell* cell)
@@ -631,6 +587,7 @@ SpeculatedType speculationFromCell(JSCell* cell)
         ASSERT_NOT_REACHED();
         return SpecNone;
     }
+
     if (cell->isString()) {
         JSString* string = jsCast<JSString*>(cell);
         if (const StringImpl* impl = string->tryGetValueImpl()) {
@@ -643,13 +600,9 @@ SpeculatedType speculationFromCell(JSCell* cell)
         }
         return SpecString;
     }
-    // FIXME: rdar://69036888: undo this when no longer needed.
-    auto* structure = cell->structureID().tryDecode();
-    if (UNLIKELY(!Integrity::isSanePointer(structure))) {
-        ASSERT_NOT_REACHED();
-        return SpecNone;
-    }
-    return speculationFromStructure(structure);
+
+    JSType type = cell->type();
+    return speculatedTypeMapping[type];
 }
 
 SpeculatedType speculationFromValue(JSValue value)
@@ -714,6 +667,9 @@ TypedArrayType typedArrayTypeFromSpeculation(SpeculatedType type)
     if (isUint32ArraySpeculation(type))
         return TypeUint32;
 
+    if (isFloat16ArraySpeculation(type))
+        return TypeFloat16;
+
     if (isFloat32ArraySpeculation(type))
         return TypeFloat32;
 
@@ -748,6 +704,8 @@ std::optional<SpeculatedType> speculationFromJSType(JSType type)
         return SpecDateObject;
     case ProxyObjectType:
         return SpecProxyObject;
+    case GlobalProxyType:
+        return SpecGlobalProxy;
     case JSPromiseType:
         return SpecPromiseObject;
     case JSMapType:
@@ -760,6 +718,9 @@ std::optional<SpeculatedType> speculationFromJSType(JSType type)
         return SpecWeakSetObject;
     case DataViewType:
         return SpecDataViewObject;
+    case JSMapIteratorType:
+    case JSSetIteratorType:
+        return SpecObjectOther;
     default:
         return std::nullopt;
     }
@@ -967,6 +928,8 @@ SpeculatedType speculationFromString(const char* speculation)
         return SpecUint16Array;
     if (!strncmp(speculation, "SpecUint32Array", strlen("SpecUint32Array")))
         return SpecUint32Array;
+    if (!strncmp(speculation, "SpecFloat16Array", strlen("SpecFloat16Array")))
+        return SpecFloat16Array;
     if (!strncmp(speculation, "SpecFloat32Array", strlen("SpecFloat32Array")))
         return SpecFloat32Array;
     if (!strncmp(speculation, "SpecFloat64Array", strlen("SpecFloat64Array")))
@@ -999,6 +962,8 @@ SpeculatedType speculationFromString(const char* speculation)
         return SpecWeakSetObject;
     if (!strncmp(speculation, "SpecProxyObject", strlen("SpecProxyObject")))
         return SpecProxyObject;
+    if (!strncmp(speculation, "SpecGlobalProxy", strlen("SpecGlobalProxy")))
+        return SpecGlobalProxy;
     if (!strncmp(speculation, "SpecDerivedArray", strlen("SpecDerivedArray")))
         return SpecDerivedArray;
     if (!strncmp(speculation, "SpecDataViewObject", strlen("SpecDataViewObject")))

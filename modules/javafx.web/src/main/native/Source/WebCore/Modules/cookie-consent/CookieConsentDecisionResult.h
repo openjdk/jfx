@@ -25,8 +25,6 @@
 
 #pragma once
 
-#include <wtf/EnumTraits.h>
-
 namespace WebCore {
 
 enum class CookieConsentDecisionResult : uint8_t {
@@ -37,15 +35,3 @@ enum class CookieConsentDecisionResult : uint8_t {
 
 } // namespace WebCore
 
-namespace WTF {
-
-template<> struct EnumTraits<WebCore::CookieConsentDecisionResult> {
-    using values = EnumValues<
-    WebCore::CookieConsentDecisionResult,
-    WebCore::CookieConsentDecisionResult::NotSupported,
-    WebCore::CookieConsentDecisionResult::Consent,
-    WebCore::CookieConsentDecisionResult::Dissent
-    >;
-};
-
-} // namespace WTF

@@ -29,10 +29,13 @@
 #if ENABLE(MEDIA_SOURCE)
 
 #include "MediaPlayer.h"
+#include "MediaSourcePrivate.h"
 #include "MediaSourcePrivateClient.h"
 #include "MockMediaSourcePrivate.h"
 #include <wtf/MainThread.h>
+#include <wtf/NativePromise.h>
 #include <wtf/NeverDestroyed.h>
+#include <wtf/RunLoop.h>
 #include <wtf/text/WTFString.h>
 
 namespace WebCore {
@@ -41,9 +44,9 @@ class MediaPlayerFactoryMediaSourceMock final : public MediaPlayerFactory {
 private:
     MediaPlayerEnums::MediaEngineIdentifier identifier() const final { return MediaPlayerEnums::MediaEngineIdentifier::MockMSE; };
 
-    std::unique_ptr<MediaPlayerPrivateInterface> createMediaEnginePlayer(MediaPlayer* player) const final { return makeUnique<MockMediaPlayerMediaSource>(player); }
+    Ref<MediaPlayerPrivateInterface> createMediaEnginePlayer(MediaPlayer* player) const final { return adoptRef(*new MockMediaPlayerMediaSource(player)); }
 
-    void getSupportedTypes(HashSet<String, ASCIICaseInsensitiveHash>& types) const final
+    void getSupportedTypes(HashSet<String>& types) const final
     {
         return MockMediaPlayerMediaSource::getSupportedTypes(types);
     }
@@ -61,16 +64,16 @@ void MockMediaPlayerMediaSource::registerMediaEngine(MediaEngineRegistrar regist
 }
 
 // FIXME: What does the word "cache" mean here?
-static const HashSet<String, ASCIICaseInsensitiveHash>& mimeTypeCache()
+static const HashSet<String>& mimeTypeCache()
 {
-    static NeverDestroyed cache = HashSet<String, ASCIICaseInsensitiveHash> {
+    static NeverDestroyed cache = HashSet<String> {
         "video/mock"_s,
         "audio/mock"_s,
     };
     return cache;
 }
 
-void MockMediaPlayerMediaSource::getSupportedTypes(HashSet<String, ASCIICaseInsensitiveHash>& supportedTypes)
+void MockMediaPlayerMediaSource::getSupportedTypes(HashSet<String>& supportedTypes)
 {
     supportedTypes = mimeTypeCache();
 }
@@ -80,7 +83,7 @@ MediaPlayer::SupportsType MockMediaPlayerMediaSource::supportsType(const MediaEn
     if (!parameters.isMediaSource)
         return MediaPlayer::SupportsType::IsNotSupported;
 
-    auto containerType = parameters.type.containerType();
+    auto containerType = parameters.type.containerType().convertToASCIILowercase();
     if (containerType.isEmpty() || !mimeTypeCache().contains(containerType))
         return MediaPlayer::SupportsType::IsNotSupported;
 
@@ -96,11 +99,6 @@ MediaPlayer::SupportsType MockMediaPlayerMediaSource::supportsType(const MediaEn
 
 MockMediaPlayerMediaSource::MockMediaPlayerMediaSource(MediaPlayer* player)
     : m_player(player)
-    , m_currentTime(MediaTime::zeroTime())
-    , m_readyState(MediaPlayer::ReadyState::HaveNothing)
-    , m_networkState(MediaPlayer::NetworkState::Empty)
-    , m_playing(false)
-    , m_seekCompleted(true)
 {
 }
 
@@ -123,10 +121,8 @@ void MockMediaPlayerMediaSource::cancelLoad()
 void MockMediaPlayerMediaSource::play()
 {
     m_playing = 1;
-    callOnMainThread([this, weakThis = WeakPtr { *this }] {
-        if (!weakThis)
-            return;
-        advanceCurrentTime();
+    callOnMainThread([protectedThis = Ref { *this }] {
+        protectedThis->advanceCurrentTime();
     });
 }
 
@@ -156,7 +152,7 @@ void MockMediaPlayerMediaSource::setPageIsVisible(bool)
 
 bool MockMediaPlayerMediaSource::seeking() const
 {
-    return !m_seekCompleted;
+    return !!m_lastSeekTarget;
 }
 
 bool MockMediaPlayerMediaSource::paused() const
@@ -174,17 +170,15 @@ MediaPlayer::ReadyState MockMediaPlayerMediaSource::readyState() const
     return m_readyState;
 }
 
-MediaTime MockMediaPlayerMediaSource::maxMediaTimeSeekable() const
+MediaTime MockMediaPlayerMediaSource::maxTimeSeekable() const
 {
     return m_duration;
 }
 
-std::unique_ptr<PlatformTimeRanges> MockMediaPlayerMediaSource::buffered() const
+const PlatformTimeRanges& MockMediaPlayerMediaSource::buffered() const
 {
-    if (m_mediaSourcePrivate)
-        return m_mediaSourcePrivate->buffered();
-
-    return makeUnique<PlatformTimeRanges>();
+    ASSERT_NOT_REACHED();
+    return PlatformTimeRanges::emptyRanges();
 }
 
 bool MockMediaPlayerMediaSource::didLoadingProgress() const
@@ -200,34 +194,53 @@ void MockMediaPlayerMediaSource::paint(GraphicsContext&, const FloatRect&)
 {
 }
 
-MediaTime MockMediaPlayerMediaSource::currentMediaTime() const
+MediaTime MockMediaPlayerMediaSource::currentTime() const
 {
-    return m_currentTime;
+    return m_lastSeekTarget ? m_lastSeekTarget->time : m_currentTime;
 }
 
-MediaTime MockMediaPlayerMediaSource::durationMediaTime() const
+bool MockMediaPlayerMediaSource::timeIsProgressing() const
+{
+    return m_playing && m_mediaSourcePrivate && m_mediaSourcePrivate->hasFutureTime(currentTime());
+}
+
+void MockMediaPlayerMediaSource::notifyActiveSourceBuffersChanged()
+{
+    if (auto player = m_player.get())
+        player->activeSourceBuffersChanged();
+}
+
+MediaTime MockMediaPlayerMediaSource::duration() const
 {
     return m_mediaSourcePrivate ? m_mediaSourcePrivate->duration() : MediaTime::zeroTime();
 }
 
-void MockMediaPlayerMediaSource::seekWithTolerance(const MediaTime& time, const MediaTime& negativeTolerance, const MediaTime& positiveTolerance)
+void MockMediaPlayerMediaSource::seekToTarget(const SeekTarget& target)
 {
-    if (!negativeTolerance && !positiveTolerance) {
-        m_currentTime = time;
-        m_mediaSourcePrivate->seekToTime(time);
-    } else
-        m_currentTime = m_mediaSourcePrivate->seekToTime(time, negativeTolerance, positiveTolerance);
+    m_lastSeekTarget = target;
+    m_mediaSourcePrivate->waitForTarget(target)->whenSettled(RunLoop::current(), [this, weakThis = WeakPtr { this }](auto&& result) {
+        if (!weakThis || !result)
+            return;
 
-    if (m_seekCompleted) {
-        m_player->timeChanged();
+        m_mediaSourcePrivate->seekToTime(*result)->whenSettled(RunLoop::current(), [this, weakThis, seekTime = *result] {
+            RefPtr protectedThis = weakThis.get();
+            if (!protectedThis)
+                return;
+            m_lastSeekTarget.reset();
+            m_currentTime = seekTime;
 
-        if (m_playing)
-            callOnMainThread([this, weakThis = WeakPtr { *this }] {
-                if (!weakThis)
-                    return;
+            if (auto player = m_player.get()) {
+                player->seeked(seekTime);
+            player->timeChanged();
+            }
+
+            if (m_playing) {
+                callOnMainThread([this, protectedThis = WTFMove(protectedThis)] {
                 advanceCurrentTime();
             });
     }
+        });
+    });
 }
 
 void MockMediaPlayerMediaSource::advanceCurrentTime()
@@ -236,13 +249,14 @@ void MockMediaPlayerMediaSource::advanceCurrentTime()
         return;
 
     auto buffered = m_mediaSourcePrivate->buffered();
-    size_t pos = buffered->find(m_currentTime);
+    size_t pos = buffered.find(m_currentTime);
     if (pos == notFound)
         return;
 
     bool ignoreError;
-    m_currentTime = std::min(m_duration, buffered->end(pos, ignoreError));
-    m_player->timeChanged();
+    m_currentTime = std::min(m_duration, buffered.end(pos, ignoreError));
+    if (auto player = m_player.get())
+        player->timeChanged();
 }
 
 void MockMediaPlayerMediaSource::updateDuration(const MediaTime& duration)
@@ -251,7 +265,8 @@ void MockMediaPlayerMediaSource::updateDuration(const MediaTime& duration)
         return;
 
     m_duration = duration;
-    m_player->durationChanged();
+    if (auto player = m_player.get())
+        player->durationChanged();
 }
 
 void MockMediaPlayerMediaSource::setReadyState(MediaPlayer::ReadyState readyState)
@@ -260,7 +275,8 @@ void MockMediaPlayerMediaSource::setReadyState(MediaPlayer::ReadyState readyStat
         return;
 
     m_readyState = readyState;
-    m_player->readyStateChanged();
+    if (auto player = m_player.get())
+        player->readyStateChanged();
 }
 
 void MockMediaPlayerMediaSource::setNetworkState(MediaPlayer::NetworkState networkState)
@@ -269,28 +285,8 @@ void MockMediaPlayerMediaSource::setNetworkState(MediaPlayer::NetworkState netwo
         return;
 
     m_networkState = networkState;
-    m_player->networkStateChanged();
-}
-
-void MockMediaPlayerMediaSource::waitForSeekCompleted()
-{
-    m_seekCompleted = false;
-}
-
-void MockMediaPlayerMediaSource::seekCompleted()
-{
-    if (m_seekCompleted)
-        return;
-    m_seekCompleted = true;
-
-    m_player->timeChanged();
-
-    if (m_playing)
-        callOnMainThread([this, weakThis = WeakPtr { *this }] {
-            if (!weakThis)
-                return;
-            advanceCurrentTime();
-        });
+    if (auto player = m_player.get())
+        player->networkStateChanged();
 }
 
 std::optional<VideoPlaybackQualityMetrics> MockMediaPlayerMediaSource::videoPlaybackQualityMetrics()

@@ -27,7 +27,7 @@
 #include "AffineTransform.h"
 #include "FloatRect.h"
 #include "SVGParserUtilities.h"
-#include <wtf/text/StringConcatenateNumbers.h>
+#include <wtf/text/MakeString.h>
 #include <wtf/text/StringParsingBuffer.h>
 #include <wtf/text/StringView.h>
 
@@ -47,7 +47,7 @@ SVGPreserveAspectRatioValue::SVGPreserveAspectRatioValue(SVGPreserveAspectRatioT
 ExceptionOr<void> SVGPreserveAspectRatioValue::setAlign(unsigned short align)
 {
     if (align == SVG_PRESERVEASPECTRATIO_UNKNOWN || align > SVG_PRESERVEASPECTRATIO_XMAXYMAX)
-        return Exception { NotSupportedError };
+        return Exception { ExceptionCode::NotSupportedError };
 
     m_align = static_cast<SVGPreserveAspectRatioType>(align);
     return { };
@@ -56,7 +56,7 @@ ExceptionOr<void> SVGPreserveAspectRatioValue::setAlign(unsigned short align)
 ExceptionOr<void> SVGPreserveAspectRatioValue::setMeetOrSlice(unsigned short meetOrSlice)
 {
     if (meetOrSlice == SVG_MEETORSLICE_UNKNOWN || meetOrSlice > SVG_MEETORSLICE_SLICE)
-        return Exception { NotSupportedError };
+        return Exception { ExceptionCode::NotSupportedError };
 
     m_meetOrSlice = static_cast<SVGMeetOrSliceType>(meetOrSlice);
     return { };
@@ -361,9 +361,9 @@ String SVGPreserveAspectRatioValue::valueAsString() const
     case SVG_MEETORSLICE_UNKNOWN:
         return alignType();
     case SVG_MEETORSLICE_MEET:
-        return makeString(alignType(), " meet");
+        return makeString(alignType(), " meet"_s);
     case SVG_MEETORSLICE_SLICE:
-        return makeString(alignType(), " slice");
+        return makeString(alignType(), " slice"_s);
     }
 }
 

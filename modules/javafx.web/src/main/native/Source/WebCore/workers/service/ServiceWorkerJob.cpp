@@ -26,8 +26,6 @@
 #include "config.h"
 #include "ServiceWorkerJob.h"
 
-#if ENABLE(SERVICE_WORKER)
-
 #include "HTTPHeaderNames.h"
 #include "JSDOMPromiseDeferred.h"
 #include "MIMETypeRegistry.h"
@@ -39,6 +37,7 @@
 #include "ServiceWorkerRegistration.h"
 #include "WorkerFetchResult.h"
 #include "WorkerRunLoop.h"
+#include <wtf/text/MakeString.h>
 
 namespace WebCore {
 
@@ -152,7 +151,7 @@ ResourceError ServiceWorkerJob::validateServiceWorkerResponse(const ServiceWorke
     return { };
 }
 
-void ServiceWorkerJob::didReceiveResponse(ResourceLoaderIdentifier, const ResourceResponse& response)
+void ServiceWorkerJob::didReceiveResponse(ScriptExecutionContextIdentifier, ResourceLoaderIdentifier, const ResourceResponse& response)
 {
     ASSERT(m_creationThread.ptr() == &Thread::current());
     ASSERT(!m_completed);
@@ -165,16 +164,16 @@ void ServiceWorkerJob::didReceiveResponse(ResourceLoaderIdentifier, const Resour
     m_scriptLoader->cancel();
     m_scriptLoader = nullptr;
 
-    Exception exception { SecurityError, error.localizedDescription() };
+    Exception exception { ExceptionCode::SecurityError, error.localizedDescription() };
     m_client.jobFailedLoadingScript(*this, WTFMove(error), WTFMove(exception));
 }
 
-void ServiceWorkerJob::notifyFinished()
+void ServiceWorkerJob::notifyFinished(ScriptExecutionContextIdentifier)
 {
     ASSERT(m_creationThread.ptr() == &Thread::current());
     ASSERT(m_scriptLoader);
 
-    auto scriptLoader = WTFMove(m_scriptLoader);
+    auto scriptLoader = std::exchange(m_scriptLoader, { });
 
     if (!scriptLoader->failed()) {
         m_client.jobFinishedLoadingScript(*this, scriptLoader->fetchResult());
@@ -184,18 +183,16 @@ void ServiceWorkerJob::notifyFinished()
     auto& error = scriptLoader->error();
     ASSERT(!error.isNull());
 
-    m_client.jobFailedLoadingScript(*this, error, Exception { error.isAccessControl() ? SecurityError : TypeError, makeString("Script ", scriptLoader->url().string(), " load failed") });
+    m_client.jobFailedLoadingScript(*this, error, Exception { error.isAccessControl() ? ExceptionCode::SecurityError : ExceptionCode::TypeError, makeString("Script "_s, scriptLoader->url().string(), " load failed"_s) });
 }
 
 bool ServiceWorkerJob::cancelPendingLoad()
 {
-    if (auto loader = WTFMove(m_scriptLoader)) {
-        m_scriptLoader->cancel();
+    if (auto loader = std::exchange(m_scriptLoader, { })) {
+        loader->cancel();
         return true;
     }
     return false;
 }
 
 } // namespace WebCore
-
-#endif // ENABLE(SERVICE_WORKER)

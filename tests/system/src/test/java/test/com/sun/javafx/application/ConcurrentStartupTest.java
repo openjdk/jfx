@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2019, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,24 +25,22 @@
 
 package test.com.sun.javafx.application;
 
-import javafx.application.Platform;
-import org.junit.AfterClass;
-import org.junit.Test;
-import test.util.Util;
-
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
-
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
+import javafx.application.Platform;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 
 public class ConcurrentStartupTest {
     CountDownLatch startupLatch;
     CountDownLatch mainLatch;
     volatile Throwable error = null;
 
-    @Test (timeout=15000)
+    @Test
+    @Timeout(value=15000, unit=TimeUnit.MILLISECONDS)
     public void testStartupReturnBeforeRunnableComplete() throws Exception {
         startupLatch = new CountDownLatch(2);
         mainLatch = new CountDownLatch(1);
@@ -52,7 +50,7 @@ public class ConcurrentStartupTest {
                     error = new AssertionError("Timeout waiting for main latch");
                 }
                 try {
-                    assertEquals("Runnable executed out of order", 2, startupLatch.getCount());
+                    assertEquals(2, startupLatch.getCount(), "Runnable executed out of order");
                 } catch (Throwable err) {
                     error = err;
                 }
@@ -63,7 +61,7 @@ public class ConcurrentStartupTest {
         });
         Platform.runLater(() -> {
             try {
-                assertEquals("Runnable executed out of order", 1, startupLatch.getCount());
+                assertEquals(1, startupLatch.getCount(), "Runnable executed out of order");
             } catch (Throwable err) {
                 error = err;
             }
@@ -80,7 +78,7 @@ public class ConcurrentStartupTest {
         }
     }
 
-    @AfterClass
+    @AfterAll
     public static void teardown() {
         Platform.exit();
     }

@@ -2,7 +2,7 @@
  * jctrans.c
  *
  * Copyright (C) 1995-1998, Thomas G. Lane.
- * Modified 2000-2017 by Guido Vollbeding.
+ * Modified 2000-2020 by Guido Vollbeding.
  * This file is part of the Independent JPEG Group's software.
  * For conditions of distribution and use, see the accompanying README file.
  *
@@ -393,6 +393,6 @@ transencode_coef_controller (j_compress_ptr cinfo,
   /* Save pointer to virtual arrays */
   coef->whole_image = coef_arrays;
 
-  /* Allocate and pre-zero space for dummy DCT blocks. */
+  /* Pre-zero space for dummy DCT blocks */
   MEMZERO(coef->dummy_buffer, SIZEOF(coef->dummy_buffer));
 }

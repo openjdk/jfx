@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2023, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -273,7 +273,7 @@ int readFromFile(PlatformFileHandle handle, void* data, int length)
     return result;
 }
 
-String pathGetFileName(const String& path)
+String pathFileName(const String& path)
 {
     JNIEnv* env = WTF::GetJavaEnv();
 
@@ -441,13 +441,6 @@ bool isHiddenFile(const String& path)
     return false;
 }
 
-String pathFileName(const String& path)
-{
-    UNUSED_PARAM(path);
-   // return path.substring(path.reverseFind('/') + 1);
-   return nullString();
-}
-
 bool hardLinkOrCopyFile(const String& targetPath, const String& linkPath)
 {
     fprintf(stderr, "hardLinkOrCopyFile(const String& targetPath, const String& linkPath) NOT IMPLEMENTED\n");
@@ -516,7 +509,6 @@ std::optional<uint64_t> fileSize(PlatformFileHandle handle)
 
 std::optional<PlatformFileID> fileID(PlatformFileHandle fileHandle)
 {
-    fprintf(stderr, "fileID(PlatformFileHandle) NOT IMPLEMENTED\n");
     UNUSED_PARAM(fileHandle);
     return std::nullopt;
 }
@@ -527,6 +519,30 @@ bool fileIDsAreEqual(std::optional<PlatformFileID> a, std::optional<PlatformFile
     UNUSED_PARAM(a);
     UNUSED_PARAM(b);
     return true;
+}
+
+int overwriteEntireFile(const String& path, std::span<const uint8_t>)
+{
+    fprintf(stderr, "overwriteEntireFile(const String& path, std::span<const uint8_t>) NOT IMPLEMENTED\n");
+    return 0;
+}
+
+int64_t writeToFile(PlatformFileHandle, std::span<const uint8_t> data)
+{
+     fprintf(stderr, "writeToFile(PlatformFileHandle, std::span<const uint8_t> data) NOT IMPLEMENTED\n");
+     return 0;
+}
+
+int64_t readFromFile(PlatformFileHandle, std::span<uint8_t> data)
+{
+      fprintf(stderr, "readFromFile(PlatformFileHandle, std::span<uint8_t> data) NOT IMPLEMENTED\n");
+      return 0;
+}
+
+std::pair<String, PlatformFileHandle> openTemporaryFile(StringView prefix, StringView suffix)
+{
+     fprintf(stderr, "openTemporaryFile(StringView prefix, StringView suffix) return { String(), nullptr}\n");
+     return { String(), nullptr};
 }
 
 } // namespace FileSystemImpl

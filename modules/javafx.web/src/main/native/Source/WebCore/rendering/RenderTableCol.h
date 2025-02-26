@@ -33,10 +33,12 @@ class RenderTable;
 class RenderTableCell;
 
 class RenderTableCol final : public RenderBox {
-    WTF_MAKE_ISO_ALLOCATED(RenderTableCol);
+    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(RenderTableCol);
+    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(RenderTableCol);
 public:
     RenderTableCol(Element&, RenderStyle&&);
     RenderTableCol(Document&, RenderStyle&&);
+    virtual ~RenderTableCol();
 
     void clearPreferredLogicalWidthsDirtyBits();
 
@@ -67,17 +69,18 @@ public:
 
 private:
     ASCIILiteral renderName() const override { return "RenderTableCol"_s; }
-    bool isRenderTableCol() const override { return true; }
     void computePreferredLogicalWidths() override { ASSERT_NOT_REACHED(); }
 
-    void insertedIntoTree(IsInternalMove) override;
-    void willBeRemovedFromTree(IsInternalMove) override;
+    void insertedIntoTree() override;
+    void willBeRemovedFromTree() override;
 
     bool isChildAllowed(const RenderObject&, const RenderStyle&) const override;
     bool canHaveChildren() const override;
     bool requiresLayer() const override { return false; }
 
     LayoutRect clippedOverflowRect(const RenderLayerModelObject* repaintContainer, VisibleRectContext) const override;
+    RepaintRects rectsForRepaintingAfterLayout(const RenderLayerModelObject* repaintContainer, RepaintOutlineBounds) const override;
+
     void imageChanged(WrappedImagePtr, const IntRect* = 0) override;
 
     void styleDidChange(StyleDifference, const RenderStyle* oldStyle) override;

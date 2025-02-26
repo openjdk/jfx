@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2023, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -53,25 +53,13 @@ JNIEXPORT jlong JNICALL Java_com_sun_webkit_dom_HTMLDocumentImpl_getEmbedsImpl(J
 JNIEXPORT jlong JNICALL Java_com_sun_webkit_dom_HTMLDocumentImpl_getPluginsImpl(JNIEnv* env, jclass, jlong peer)
 {
     WebCore::JSMainThreadNullState state;
-    return JavaReturn<HTMLCollection>(env, WTF::getPtr(IMPL->plugins()));
+    return JavaReturn<HTMLCollection>(env, WTF::getPtr(IMPL->embeds()));
 }
 
 JNIEXPORT jlong JNICALL Java_com_sun_webkit_dom_HTMLDocumentImpl_getScriptsImpl(JNIEnv* env, jclass, jlong peer)
 {
     WebCore::JSMainThreadNullState state;
     return JavaReturn<HTMLCollection>(env, WTF::getPtr(IMPL->scripts()));
-}
-
-JNIEXPORT jint JNICALL Java_com_sun_webkit_dom_HTMLDocumentImpl_getWidthImpl(JNIEnv*, jclass, jlong peer)
-{
-    WebCore::JSMainThreadNullState state;
-    return IMPL->width();
-}
-
-JNIEXPORT jint JNICALL Java_com_sun_webkit_dom_HTMLDocumentImpl_getHeightImpl(JNIEnv*, jclass, jlong peer)
-{
-    WebCore::JSMainThreadNullState state;
-    return IMPL->height();
 }
 
 JNIEXPORT jstring JNICALL Java_com_sun_webkit_dom_HTMLDocumentImpl_getDirImpl(JNIEnv* env, jclass, jlong peer)
@@ -184,7 +172,8 @@ JNIEXPORT void JNICALL Java_com_sun_webkit_dom_HTMLDocumentImpl_writeImpl(JNIEnv
     , jstring text)
 {
     WebCore::JSMainThreadNullState state;
-    IMPL->write(nullptr, { String(env, text) });
+    WTF::FixedVector<String> textVector { String(env, text) };
+    IMPL->write(nullptr, WTFMove(textVector));
 }
 
 
@@ -192,7 +181,8 @@ JNIEXPORT void JNICALL Java_com_sun_webkit_dom_HTMLDocumentImpl_writelnImpl(JNIE
     , jstring text)
 {
     WebCore::JSMainThreadNullState state;
-    IMPL->writeln(nullptr, { String(env, text) });
+    WTF::FixedVector<String> textVector { String(env, text) };
+    IMPL->writeln(nullptr, WTFMove(textVector));
 }
 
 

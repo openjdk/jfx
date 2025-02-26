@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2014, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -160,6 +160,7 @@ public class HelloTabPane extends Application {
                 final ToggleButton button = new ToggleButton(policy.name());
                 button.setToggleGroup(closingPolicy);
                 button.selectedProperty().addListener(new InvalidationListener() {
+                    @Override
                     public void invalidated(Observable ov) {
                         tabPane.setTabClosingPolicy(TabPane.TabClosingPolicy.valueOf(button.getText()));
                     }
@@ -169,6 +170,7 @@ public class HelloTabPane extends Application {
 
             final ToggleButton rotateGraphics = new ToggleButton("Rotate Graphics");
             rotateGraphics.selectedProperty().addListener(new InvalidationListener() {
+                @Override
                     public void invalidated(Observable ov) {
                     tabPane.setRotateGraphic(rotateGraphics.isSelected());
                 }
@@ -188,6 +190,7 @@ public class HelloTabPane extends Application {
                 final ToggleButton tb = new ToggleButton("Show Labels");
                 tb.setSelected(true);
                 tb.selectedProperty().addListener(new InvalidationListener() {
+                    @Override
                     public void invalidated(Observable ov) {
                         if (tb.isSelected()) {
                             tab1.setText("Tab 1");

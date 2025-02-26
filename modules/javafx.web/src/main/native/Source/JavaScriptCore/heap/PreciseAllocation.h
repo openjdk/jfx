@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2016-2021 Apple Inc. All rights reserved.
+ * Copyright (C) 2016-2023 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -27,6 +27,7 @@
 
 #include "MarkedBlock.h"
 #include "WeakSet.h"
+#include <wtf/StdLibExtras.h>
 
 namespace JSC {
 
@@ -38,15 +39,15 @@ class SlotVisitor;
 // objects directly using malloc, and put the PreciseAllocation header just before them. We can detect
 // when a HeapCell* is a PreciseAllocation because it will have the MarkedBlock::atomSize / 2 bit set.
 
-class PreciseAllocation : public PackedRawSentinelNode<PreciseAllocation> {
+class PreciseAllocation : public BasicRawSentinelNode<PreciseAllocation> {
 public:
     friend class LLIntOffsetsExtractor;
     friend class IsoSubspace;
 
     static PreciseAllocation* tryCreate(Heap&, size_t, Subspace*, unsigned indexInSpace);
+    static PreciseAllocation* tryCreateForLowerTierPrecise(Heap&, size_t, Subspace*, uint8_t lowerTierPreciseIndex);
 
-    static PreciseAllocation* tryCreateForLowerTier(Heap&, size_t, Subspace*, uint8_t lowerTierIndex);
-    PreciseAllocation* reuseForLowerTier();
+    PreciseAllocation* reuseForLowerTierPrecise();
 
     PreciseAllocation* tryReallocate(size_t, Subspace*);
 
@@ -71,11 +72,11 @@ public:
 
     void lastChanceToFinalize();
 
-    Heap* heap() const { return m_weakSet.heap(); }
+    JSC::Heap* heap() const { return m_weakSet.heap(); }
     VM& vm() const { return m_weakSet.vm(); }
     WeakSet& weakSet() { return m_weakSet; }
 
-    static ptrdiff_t offsetOfWeakSet() { return OBJECT_OFFSETOF(PreciseAllocation, m_weakSet); }
+    static constexpr ptrdiff_t offsetOfWeakSet() { return OBJECT_OFFSETOF(PreciseAllocation, m_weakSet); }
 
     unsigned indexInSpace() { return m_indexInSpace; }
     void setIndexInSpace(unsigned indexInSpace) { m_indexInSpace = indexInSpace; }
@@ -95,8 +96,6 @@ public:
     bool isEmpty();
 
     size_t cellSize() const { return m_cellSize; }
-
-    uint8_t lowerTierIndex() const { return m_lowerTierIndex; }
 
     bool aboveLowerBound(const void* rawPtr)
     {
@@ -151,14 +150,20 @@ public:
 
     void dump(PrintStream&) const;
 
-    bool isLowerTier() const { return m_lowerTierIndex != UINT8_MAX; }
+    bool isLowerTierPrecise() const { return m_lowerTierPreciseIndex != UINT8_MAX; }
+    uint8_t lowerTierPreciseIndex() const { return m_lowerTierPreciseIndex; }
 
     static constexpr unsigned alignment = MarkedBlock::atomSize;
     static constexpr unsigned halfAlignment = alignment / 2;
-    static constexpr unsigned headerSize() { return ((sizeof(PreciseAllocation) + halfAlignment - 1) & ~(halfAlignment - 1)) | halfAlignment; }
+    static constexpr unsigned cacheLineAdjustment = 2 * halfAlignment;
+
+    // The header size must be packed to full alignment size. Because the cell start address
+    // always begins immediately after the header, this allows isAlignedForPreciseAllocation()
+    // to trivially infer the alignment of the cell from the alignment of the header.
+    static constexpr unsigned headerSize() { return roundUpToMultipleOf<alignment>(sizeof(PreciseAllocation)); }
 
 private:
-    PreciseAllocation(Heap&, size_t, Subspace*, unsigned indexInSpace, bool adjustedAlignment);
+    PreciseAllocation(Heap&, size_t, Subspace*, unsigned indexInSpace, unsigned adjustment);
 
     void* basePointer() const;
 
@@ -166,20 +171,20 @@ private:
     size_t m_cellSize;
     bool m_isNewlyAllocated : 1;
     bool m_hasValidCell : 1;
-    bool m_adjustedAlignment : 1;
+    // Worst case adjustment needed would be halfAlignment + portionOfObjectThatMustFitInCacheLine
+    // which is 8 + 16 -> 24 bytes i.e. will fit in 5 bits. If we need more bits in the future, we
+    // can also encode this number of uintptr_t words to save 3 bits.
+    unsigned m_adjustment : 5;
     Atomic<bool> m_isMarked;
     CellAttributes m_attributes;
-    uint8_t m_lowerTierIndex { UINT8_MAX };
+    uint8_t m_lowerTierPreciseIndex { UINT8_MAX };
     Subspace* m_subspace;
     WeakSet m_weakSet;
 };
 
 inline void* PreciseAllocation::basePointer() const
 {
-    if (m_adjustedAlignment)
-        return bitwise_cast<char*>(this) - halfAlignment;
-    return bitwise_cast<void*>(this);
+    return bitwise_cast<char*>(this) - m_adjustment;
 }
 
 } // namespace JSC
-

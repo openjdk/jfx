@@ -46,12 +46,6 @@
 
 namespace WebCore {
 
-FetchLoader::~FetchLoader()
-{
-    if (!m_urlForReading.isEmpty())
-        ThreadableBlobRegistry::unregisterBlobURL(m_urlForReading);
-}
-
 void FetchLoader::start(ScriptExecutionContext& context, const Blob& blob)
 {
     return startLoadingBlobURL(context, blob.url());
@@ -59,7 +53,8 @@ void FetchLoader::start(ScriptExecutionContext& context, const Blob& blob)
 
 void FetchLoader::startLoadingBlobURL(ScriptExecutionContext& context, const URL& blobURL)
 {
-    m_urlForReading = BlobURL::createPublicURL(context.securityOrigin());
+    m_urlForReading = { BlobURL::createPublicURL(context.securityOrigin()), context.topOrigin().data() };
+
     if (m_urlForReading.isEmpty()) {
         m_client.didFail({ errorDomainWebKitInternal, 0, URL(), "Could not create URL for Blob"_s });
         return;
@@ -96,17 +91,23 @@ void FetchLoader::start(ScriptExecutionContext& context, const FetchRequest& req
     options.sameOriginDataURLFlag = SameOriginDataURLFlag::Set;
     options.navigationPreloadIdentifier = request.navigationPreloadIdentifier();
     options.contentEncodingSniffingPolicy = ContentEncodingSniffingPolicy::Disable;
+    if (context.settingsValues().fetchPriorityEnabled)
+        options.fetchPriorityHint = request.fetchPriorityHint();
+
+    options.shouldEnableContentExtensionsCheck = request.shouldEnableContentExtensionsCheck() ? ShouldEnableContentExtensionsCheck::Yes : ShouldEnableContentExtensionsCheck::No;
 
     ResourceRequest fetchRequest = request.resourceRequest();
 
     ASSERT(context.contentSecurityPolicy());
-    auto& contentSecurityPolicy = *context.contentSecurityPolicy();
+    {
+        CheckedRef contentSecurityPolicy = *context.contentSecurityPolicy();
 
-    contentSecurityPolicy.upgradeInsecureRequestIfNeeded(fetchRequest, ContentSecurityPolicy::InsecureRequestType::Load);
+        contentSecurityPolicy->upgradeInsecureRequestIfNeeded(fetchRequest, ContentSecurityPolicy::InsecureRequestType::Load);
 
-    if (!context.shouldBypassMainWorldContentSecurityPolicy() && !contentSecurityPolicy.allowConnectToSource(fetchRequest.url())) {
+        if (!context.shouldBypassMainWorldContentSecurityPolicy() && !contentSecurityPolicy->allowConnectToSource(fetchRequest.url())) {
         m_client.didFail({ errorDomainWebKitInternal, 0, fetchRequest.url(), "Not allowed by ContentSecurityPolicy"_s, ResourceError::Type::AccessControl });
         return;
+        }
     }
 
     String referrer = request.internalRequestReferrer();
@@ -114,7 +115,7 @@ void FetchLoader::start(ScriptExecutionContext& context, const FetchRequest& req
         options.referrerPolicy = ReferrerPolicy::NoReferrer;
         referrer = String();
     } else
-        referrer = (referrer == "client"_s) ? context.url().strippedForUseAsReferrer() : URL(context.url(), referrer).strippedForUseAsReferrer();
+        referrer = (referrer == "client"_s) ? context.url().strippedForUseAsReferrer().string : URL(context.url(), referrer).strippedForUseAsReferrer().string;
     if (options.referrerPolicy == ReferrerPolicy::EmptyString)
         options.referrerPolicy = context.referrerPolicy();
 
@@ -144,7 +145,7 @@ RefPtr<FragmentedSharedBuffer> FetchLoader::startStreaming()
     return firstChunk;
 }
 
-void FetchLoader::didReceiveResponse(ResourceLoaderIdentifier, const ResourceResponse& response)
+void FetchLoader::didReceiveResponse(ScriptExecutionContextIdentifier, ResourceLoaderIdentifier, const ResourceResponse& response)
 {
     m_client.didReceiveResponse(response);
 }
@@ -158,12 +159,12 @@ void FetchLoader::didReceiveData(const SharedBuffer& buffer)
     m_consumer->append(buffer);
 }
 
-void FetchLoader::didFinishLoading(ResourceLoaderIdentifier, const NetworkLoadMetrics& metrics)
+void FetchLoader::didFinishLoading(ScriptExecutionContextIdentifier, ResourceLoaderIdentifier, const NetworkLoadMetrics& metrics)
 {
     m_client.didSucceed(metrics);
 }
 
-void FetchLoader::didFail(const ResourceError& error)
+void FetchLoader::didFail(ScriptExecutionContextIdentifier, const ResourceError& error)
 {
     m_client.didFail(error);
 }

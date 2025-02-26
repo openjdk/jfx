@@ -35,8 +35,8 @@ namespace WebCore {
 
 class HTMLTableRowElement;
 
-class HTMLTableRowsCollection final : public CachedHTMLCollection<HTMLTableRowsCollection, CollectionTypeTraits<TableRows>::traversalType> {
-    WTF_MAKE_ISO_ALLOCATED(HTMLTableRowsCollection);
+class HTMLTableRowsCollection final : public CachedHTMLCollection<HTMLTableRowsCollection, CollectionTypeTraits<CollectionType::TableRows>::traversalType> {
+    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(HTMLTableRowsCollection);
 public:
     static Ref<HTMLTableRowsCollection> create(HTMLTableElement&, CollectionType);
 
@@ -55,4 +55,4 @@ private:
 
 } // namespace WebCore
 
-SPECIALIZE_TYPE_TRAITS_HTMLCOLLECTION(HTMLTableRowsCollection, TableRows)
+SPECIALIZE_TYPE_TRAITS_HTMLCOLLECTION(HTMLTableRowsCollection, CollectionType::TableRows)

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2003, 2006, 2017, 2022 Apple Inc.  All rights reserved.
+ * Copyright (C) 2003-2023 Apple Inc.  All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -30,6 +30,7 @@
 #include <variant>
 #include <vector>
 #include <wtf/Hasher.h>
+#include <wtf/Markable.h>
 
 namespace WTF {
 class TextStream;
@@ -55,12 +56,12 @@ enum class FontSmoothingMode : uint8_t {
 
 WEBCORE_EXPORT WTF::TextStream& operator<<(WTF::TextStream&, FontSmoothingMode);
 
-enum class FontOrientation : uint8_t {
+enum class FontOrientation : bool {
     Horizontal,
     Vertical
 };
 
-enum class NonCJKGlyphOrientation : uint8_t {
+enum class NonCJKGlyphOrientation : bool {
     Mixed,
     Upright
 };
@@ -85,10 +86,7 @@ struct ExpansionBehavior {
     {
     }
 
-    bool operator==(const ExpansionBehavior& other) const
-    {
-        return left == other.left && right == other.right;
-    }
+    friend bool operator==(const ExpansionBehavior&, const ExpansionBehavior&) = default;
 
     static ExpansionBehavior defaultBehavior()
     {
@@ -166,33 +164,8 @@ enum class FontVariantNumericFraction : uint8_t {
 enum class FontVariantNumericOrdinal : bool { Normal, Yes };
 enum class FontVariantNumericSlashedZero : bool { Normal, Yes };
 
-struct FontVariantAlternatesNormal {
-    bool operator==(const FontVariantAlternatesNormal&) const
-    {
-        return true;
-    }
-    bool operator!=(const FontVariantAlternatesNormal& other) const
-    {
-        return !(*this == other);
-    }
-};
-
 struct FontVariantAlternatesValues {
-    bool operator==(const FontVariantAlternatesValues& other) const
-    {
-        return stylistic == other.stylistic
-            && styleset == other.styleset
-            && characterVariant == other.characterVariant
-            && swash == other.swash
-            && ornaments == other.ornaments
-            && annotation == other.annotation
-            && historicalForms == other.historicalForms;
-    }
-
-    bool operator!=(const FontVariantAlternatesValues& other) const
-    {
-        return !(*this == other);
-    }
+    friend bool operator==(const FontVariantAlternatesValues&, const FontVariantAlternatesValues&) = default;
 
     String stylistic;
     Vector<String> styleset;
@@ -203,26 +176,41 @@ struct FontVariantAlternatesValues {
     bool historicalForms = false;
 
     friend void add(Hasher&, const FontVariantAlternatesValues&);
+
+    struct MarkableTraits {
+        static bool isEmptyValue(const FontVariantAlternatesValues& value)
+        {
+            return value.m_isEmpty;
+        }
+
+        static FontVariantAlternatesValues emptyValue()
+        {
+            FontVariantAlternatesValues emptyValue;
+            emptyValue.m_isEmpty = true;
+            return emptyValue;
+        }
+    };
+
+private:
+    friend MarkableTraits;
+    bool m_isEmpty { false };
 };
 
 class FontVariantAlternates {
     using Values = FontVariantAlternatesValues;
 
 public:
-    bool operator==(const FontVariantAlternates& other) const
-    {
-        return m_val == other.m_val;
-    }
+    friend bool operator==(const FontVariantAlternates&, const FontVariantAlternates&) = default;
 
     bool isNormal() const
     {
-        return std::holds_alternative<FontVariantAlternatesNormal>(m_val);
+        return !m_values;
     }
 
-    Values values() const
+    const Values& values() const
     {
         ASSERT(!isNormal());
-        return *std::get_if<Values>(&m_val);
+        return *m_values;
     }
 
     Values& valuesRef()
@@ -230,29 +218,27 @@ public:
         if (isNormal())
             setValues();
 
-        return *std::get_if<Values>(&m_val);
+        return *m_values;
     }
 
     void setValues()
     {
-        m_val = Values { };
+        m_values = Values { };
     }
 
     static FontVariantAlternates Normal()
     {
-        FontVariantAlternates result;
-        result.m_val = FontVariantAlternatesNormal { };
-        return result;
+        return { };
     }
 
     friend void add(Hasher&, const FontVariantAlternates&);
 
 private:
-    std::variant<FontVariantAlternatesNormal, Values> m_val;
+    Markable<Values> m_values;
     FontVariantAlternates() = default;
 };
 
-WTF::TextStream& operator<<(WTF::TextStream&, FontVariantAlternates);
+WTF::TextStream& operator<<(WTF::TextStream&, const FontVariantAlternates&);
 
 enum class FontVariantEastAsianVariant : uint8_t {
     Normal,
@@ -275,6 +261,13 @@ enum class FontVariantEastAsianRuby : uint8_t {
     Yes
 };
 
+enum class FontVariantEmoji : uint8_t {
+    Normal,
+    Text,
+    Emoji,
+    Unicode,
+};
+
 struct FontVariantSettings {
     FontVariantSettings()
         : commonLigatures(FontVariantLigatures::Normal)
@@ -292,6 +285,7 @@ struct FontVariantSettings {
         , eastAsianVariant(FontVariantEastAsianVariant::Normal)
         , eastAsianWidth(FontVariantEastAsianWidth::Normal)
         , eastAsianRuby(FontVariantEastAsianRuby::Normal)
+        , emoji(FontVariantEmoji::Normal)
     {
     }
 
@@ -310,7 +304,8 @@ struct FontVariantSettings {
         FontVariantAlternates alternates,
         FontVariantEastAsianVariant eastAsianVariant,
         FontVariantEastAsianWidth eastAsianWidth,
-        FontVariantEastAsianRuby eastAsianRuby)
+        FontVariantEastAsianRuby eastAsianRuby,
+        FontVariantEmoji emoji)
             : commonLigatures(commonLigatures)
             , discretionaryLigatures(discretionaryLigatures)
             , historicalLigatures(historicalLigatures)
@@ -326,6 +321,7 @@ struct FontVariantSettings {
             , eastAsianVariant(eastAsianVariant)
             , eastAsianWidth(eastAsianWidth)
             , eastAsianRuby(eastAsianRuby)
+            , emoji(emoji)
     {
     }
 
@@ -345,29 +341,11 @@ struct FontVariantSettings {
             && alternates.isNormal()
             && eastAsianVariant == FontVariantEastAsianVariant::Normal
             && eastAsianWidth == FontVariantEastAsianWidth::Normal
-            && eastAsianRuby == FontVariantEastAsianRuby::Normal;
+            && eastAsianRuby == FontVariantEastAsianRuby::Normal
+            && emoji == FontVariantEmoji::Normal;
     }
 
-    bool operator==(const FontVariantSettings& other) const
-    {
-        return commonLigatures == other.commonLigatures
-            && discretionaryLigatures == other.discretionaryLigatures
-            && historicalLigatures == other.historicalLigatures
-            && contextualAlternates == other.contextualAlternates
-            && position == other.position
-            && caps == other.caps
-            && numericFigure == other.numericFigure
-            && numericSpacing == other.numericSpacing
-            && numericFraction == other.numericFraction
-            && numericOrdinal == other.numericOrdinal
-            && numericSlashedZero == other.numericSlashedZero
-            && alternates == other.alternates
-            && eastAsianVariant == other.eastAsianVariant
-            && eastAsianWidth == other.eastAsianWidth
-            && eastAsianRuby == other.eastAsianRuby;
-    }
-
-    bool operator!=(const FontVariantSettings& other) const { return !(*this == other); }
+    friend bool operator==(const FontVariantSettings&, const FontVariantSettings&) = default;
 
     FontVariantLigatures commonLigatures;
     FontVariantLigatures discretionaryLigatures;
@@ -384,6 +362,7 @@ struct FontVariantSettings {
     FontVariantEastAsianVariant eastAsianVariant;
     FontVariantEastAsianWidth eastAsianWidth;
     FontVariantEastAsianRuby eastAsianRuby;
+    FontVariantEmoji emoji;
 };
 
 struct FontVariantLigaturesValues {
@@ -469,10 +448,12 @@ enum class Kerning : uint8_t {
 
 WTF::TextStream& operator<<(WTF::TextStream&, Kerning);
 
-enum class FontOpticalSizing : uint8_t {
+enum class FontOpticalSizing : bool {
     Enabled,
     Disabled
 };
+
+WTF::TextStream& operator<<(WTF::TextStream&, FontOpticalSizing);
 
 // https://www.microsoft.com/typography/otspec/fvar.htm#VAT
 enum class FontStyleAxis : uint8_t {
@@ -480,12 +461,20 @@ enum class FontStyleAxis : uint8_t {
     ital
 };
 
-enum class AllowUserInstalledFonts : uint8_t {
-    No,
-    Yes
-};
+enum class AllowUserInstalledFonts : bool { No, Yes };
 
 using FeaturesMap = HashMap<FontTag, int, FourCharacterTagHash, FourCharacterTagHashTraits>;
 FeaturesMap computeFeatureSettingsFromVariants(const FontVariantSettings&, RefPtr<FontFeatureValues>);
 
-}
+enum class ResolvedEmojiPolicy : uint8_t {
+    NoPreference,
+    RequireText,
+    RequireEmoji,
+};
+
+enum class ColorGlyphType : uint8_t {
+    Outline,
+    Color,
+};
+
+} // namespace WebCore

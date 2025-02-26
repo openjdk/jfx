@@ -29,15 +29,20 @@
 
 namespace WebCore {
 
-Ref<FEMerge> FEMerge::create(unsigned numberOfEffectInputs)
+Ref<FEMerge> FEMerge::create(unsigned numberOfEffectInputs, DestinationColorSpace colorSpace)
 {
-    return adoptRef(*new FEMerge(numberOfEffectInputs));
+    return adoptRef(*new FEMerge(numberOfEffectInputs, colorSpace));
 }
 
-FEMerge::FEMerge(unsigned numberOfEffectInputs)
-    : FilterEffect(FilterEffect::Type::FEMerge)
+FEMerge::FEMerge(unsigned numberOfEffectInputs, DestinationColorSpace colorSpace)
+    : FilterEffect(FilterEffect::Type::FEMerge, colorSpace)
     , m_numberOfEffectInputs(numberOfEffectInputs)
 {
+}
+
+bool FEMerge::operator==(const FEMerge& other) const
+{
+    return FilterEffect::operator==(other) && m_numberOfEffectInputs == other.m_numberOfEffectInputs;
 }
 
 std::unique_ptr<FilterEffectApplier> FEMerge::createSoftwareApplier() const

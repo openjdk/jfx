@@ -28,7 +28,8 @@
 namespace WebCore {
 
 class SVGImageElement final : public SVGGraphicsElement, public SVGURIReference {
-    WTF_MAKE_ISO_ALLOCATED(SVGImageElement);
+    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(SVGImageElement);
+    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(SVGImageElement);
 public:
     static Ref<SVGImageElement> create(const QualifiedName&, Document&);
 
@@ -42,6 +43,9 @@ public:
     const SVGLengthValue& height() const { return m_height->currentValue(); }
     const SVGPreserveAspectRatioValue& preserveAspectRatio() const { return m_preserveAspectRatio->currentValue(); }
 
+    void setCrossOrigin(const AtomString&);
+    String crossOrigin() const;
+
     SVGAnimatedLength& xAnimated() { return m_x; }
     SVGAnimatedLength& yAnimated() { return m_y; }
     SVGAnimatedLength& widthAnimated() { return m_width; }
@@ -53,7 +57,7 @@ private:
 
     using PropertyRegistry = SVGPropertyOwnerRegistry<SVGImageElement, SVGGraphicsElement, SVGURIReference>;
 
-    void parseAttribute(const QualifiedName&, const AtomString&) final;
+    void attributeChanged(const QualifiedName&, const AtomString& oldValue, const AtomString& newValue, AttributeModificationReason) final;
     void svgAttributeChanged(const QualifiedName&) final;
 
     void didAttachRenderers() final;

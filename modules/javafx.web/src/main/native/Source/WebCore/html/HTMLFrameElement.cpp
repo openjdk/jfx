@@ -25,16 +25,16 @@
 #include "HTMLFrameElement.h"
 
 #include "ElementInlines.h"
-#include "Frame.h"
 #include "HTMLFrameSetElement.h"
 #include "HTMLNames.h"
 #include "HTMLParserIdioms.h"
+#include "LocalFrame.h"
 #include "RenderFrame.h"
-#include <wtf/IsoMallocInlines.h>
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
-WTF_MAKE_ISO_ALLOCATED_IMPL(HTMLFrameElement);
+WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(HTMLFrameElement);
 
 using namespace HTMLNames;
 
@@ -42,7 +42,6 @@ inline HTMLFrameElement::HTMLFrameElement(const QualifiedName& tagName, Document
     : HTMLFrameElementBase(tagName, document)
 {
     ASSERT(hasTagName(frameTag));
-    setHasCustomStyleResolveCallbacks();
 }
 
 Ref<HTMLFrameElement> HTMLFrameElement::create(const QualifiedName& tagName, Document& document)
@@ -50,10 +49,9 @@ Ref<HTMLFrameElement> HTMLFrameElement::create(const QualifiedName& tagName, Doc
     return adoptRef(*new HTMLFrameElement(tagName, document));
 }
 
-bool HTMLFrameElement::rendererIsNeeded(const RenderStyle&)
+bool HTMLFrameElement::rendererIsNeeded(const RenderStyle& style)
 {
-    // For compatibility, frames render even when display: none is set.
-    return canLoad();
+    return HTMLFrameElementBase::rendererIsNeeded(style) && canLoad();
 }
 
 RenderPtr<RenderElement> HTMLFrameElement::createElementRenderer(RenderStyle&& style, const RenderTreePosition&)
@@ -81,17 +79,17 @@ int HTMLFrameElement::defaultTabIndex() const
     return 0;
 }
 
-void HTMLFrameElement::parseAttribute(const QualifiedName& name, const AtomString& value)
+void HTMLFrameElement::attributeChanged(const QualifiedName& name, const AtomString& oldValue, const AtomString& newValue, AttributeModificationReason attributeModificationReason)
 {
     if (name == frameborderAttr) {
-        m_frameBorder = parseHTMLInteger(value).value_or(0);
-        m_frameBorderSet = !value.isNull();
+        m_frameBorder = parseHTMLInteger(newValue).value_or(0);
+        m_frameBorderSet = !newValue.isNull();
         // FIXME: If we are already attached, this has no effect.
     } else if (name == noresizeAttr) {
         if (auto* renderer = this->renderer())
             renderer->updateFromElement();
     } else
-        HTMLFrameElementBase::parseAttribute(name, value);
+        HTMLFrameElementBase::attributeChanged(name, oldValue, newValue, attributeModificationReason);
 }
 
 } // namespace WebCore

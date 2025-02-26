@@ -26,28 +26,24 @@
 #pragma once
 
 #include "ASTAttribute.h"
+#include "ASTBuilder.h"
+#include "WGSLEnums.h"
 
 namespace WGSL::AST {
 
 class StageAttribute final : public Attribute {
-    WTF_MAKE_FAST_ALLOCATED;
+    WGSL_AST_BUILDER_NODE(StageAttribute);
 public:
-    enum class Stage : uint8_t {
-        Compute,
-        Vertex,
-        Fragment
-    };
+    NodeKind kind() const override;
+    ShaderStage stage() const { return m_stage; }
 
-    StageAttribute(SourceSpan span, Stage stage)
+private:
+    StageAttribute(SourceSpan span, ShaderStage stage)
         : Attribute(span)
         , m_stage(stage)
     { }
 
-    NodeKind kind() const override;
-    Stage stage() const { return m_stage; }
-
-private:
-    Stage m_stage;
+    ShaderStage m_stage;
 };
 
 } // namespace WGSL::AST

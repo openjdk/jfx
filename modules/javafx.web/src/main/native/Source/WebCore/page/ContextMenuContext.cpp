@@ -38,13 +38,11 @@ ContextMenuContext::~ContextMenuContext() = default;
 
 ContextMenuContext& ContextMenuContext::operator=(const ContextMenuContext&) = default;
 
-ContextMenuContext::ContextMenuContext(Type type, const HitTestResult& hitTestResult, Event* event)
+ContextMenuContext::ContextMenuContext(Type type, const HitTestResult& hitTestResult, RefPtr<Event>&& event)
     : m_type(type)
     , m_hitTestResult(hitTestResult)
-    , m_event(event)
-#if ENABLE(SERVICE_CONTROLS)
-    , m_controlledImage(nullptr)
-#endif
+    , m_event(WTFMove(event))
+    , m_hasEntireImage(hitTestResult.hasEntireImage())
 {
 }
 

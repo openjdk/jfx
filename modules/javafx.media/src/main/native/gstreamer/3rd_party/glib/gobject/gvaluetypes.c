@@ -2,6 +2,8 @@
  * Copyright (C) 1997-1999, 2000-2001 Tim Janik and Red Hat, Inc.
  * Copyright (C) 2010 Christian Persch
  *
+ * SPDX-License-Identifier: LGPL-2.1-or-later
+ *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
  * License as published by the Free Software Foundation; either
@@ -386,12 +388,8 @@ value_collect_variant (GValue     *value,
 {
   if (!collect_values[0].v_pointer)
     value->data[0].v_pointer = NULL;
-  else if (collect_flags & G_VALUE_NOCOPY_CONTENTS)
-    {
-      value->data[0].v_pointer = collect_values[0].v_pointer;
-      value->data[1].v_uint = G_VALUE_NOCOPY_CONTENTS;
-    }
   else
+    /* never honour G_VALUE_NOCOPY_CONTENTS for ref-counted types */
     value->data[0].v_pointer = g_variant_ref_sink (collect_values[0].v_pointer);
 
   return NULL;
@@ -1110,7 +1108,7 @@ g_value_set_string_take_ownership (GValue *value,
 /**
  * g_value_take_string:
  * @value: a valid #GValue of type %G_TYPE_STRING
- * @v_string: (nullable): string to take ownership of
+ * @v_string: (nullable) (transfer full): string to take ownership of
  *
  * Sets the contents of a %G_TYPE_STRING #GValue to @v_string.
  *
@@ -1135,7 +1133,7 @@ g_value_take_string (GValue *value,
  *
  * Get the contents of a %G_TYPE_STRING #GValue.
  *
- * Returns: string content of @value
+ * Returns: (nullable) (transfer none): string content of @value
  */
 const gchar*
 g_value_get_string (const GValue *value)
@@ -1151,7 +1149,7 @@ g_value_get_string (const GValue *value)
  *
  * Get a copy the contents of a %G_TYPE_STRING #GValue.
  *
- * Returns: a newly allocated copy of the string content of @value
+ * Returns: (nullable) (transfer full): a newly allocated copy of the string content of @value
  */
 gchar*
 g_value_dup_string (const GValue *value)
@@ -1159,6 +1157,41 @@ g_value_dup_string (const GValue *value)
   g_return_val_if_fail (G_VALUE_HOLDS_STRING (value), NULL);
 
   return g_strdup (value->data[0].v_pointer);
+}
+
+/**
+ * g_value_steal_string:
+ * @value: a valid #GValue of type %G_TYPE_STRING
+ *
+ * Steal ownership on contents of a %G_TYPE_STRING #GValue.
+ * As a result of this operation the value's contents will be reset to %NULL.
+ *
+ * The purpose of this call is to provide a way to avoid an extra copy
+ * when some object have been serialized into string through #GValue API.
+ *
+ * NOTE: for safety and compatibility purposes, if #GValue contains
+ * static string, or an interned one, this function will return a copy
+ * of the string. Otherwise the transfer notation would be ambiguous.
+ *
+ * Returns: (nullable) (transfer full): string content of @value;
+ *  Should be freed with g_free() when no longer needed.
+ *
+ * Since: 2.80
+ */
+gchar*
+g_value_steal_string (GValue *value)
+{
+  gchar *ret;
+
+  g_return_val_if_fail (G_VALUE_HOLDS_STRING (value), NULL);
+
+  ret = value->data[0].v_pointer;
+  value->data[0].v_pointer = NULL;
+
+  if (value->data[1].v_uint & G_VALUE_NOCOPY_CONTENTS)
+    return g_strdup (ret);
+
+  return ret;
 }
 
 /**
@@ -1210,7 +1243,7 @@ g_value_set_gtype (GValue *value,
 {
   g_return_if_fail (G_VALUE_HOLDS_GTYPE (value));
 
-  value->data[0].v_pointer = GSIZE_TO_POINTER (v_gtype);
+  value->data[0].v_pointer = GTYPE_TO_POINTER (v_gtype);
 
 }
 
@@ -1229,7 +1262,7 @@ g_value_get_gtype (const GValue *value)
 {
   g_return_val_if_fail (G_VALUE_HOLDS_GTYPE (value), 0);
 
-  return GPOINTER_TO_SIZE (value->data[0].v_pointer);
+  return GPOINTER_TO_TYPE (value->data[0].v_pointer);
 }
 
 /**

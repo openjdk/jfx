@@ -25,11 +25,10 @@
 
 #pragma once
 
-#if ENABLE(SERVICE_WORKER)
-
 #include "FetchIdentifier.h"
 #include "ResourceResponse.h"
 #include "ScriptExecutionContextIdentifier.h"
+#include "ServiceWorkerTypes.h"
 #include <wtf/Ref.h>
 #include <wtf/ThreadSafeRefCounted.h>
 
@@ -57,19 +56,26 @@ public:
     virtual void didFail(const ResourceError&) = 0;
     virtual void didFinish(const NetworkLoadMetrics&) = 0;
     virtual void didNotHandle() = 0;
-    virtual void cancel() = 0;
     virtual void setCancelledCallback(Function<void()>&&) = 0;
-    virtual void continueDidReceiveResponse() = 0;
-    virtual void convertFetchToDownload() = 0;
-    virtual void setFetchEvent(Ref<FetchEvent>&&) = 0;
-    virtual void navigationPreloadIsReady(ResourceResponse::CrossThreadData&&) = 0;
-    virtual void navigationPreloadFailed(ResourceError&&) = 0;
     virtual void usePreload() = 0;
+    virtual void contextIsStopping() = 0;
+
+    void cancel();
+    bool isCancelled() const { return m_isCancelled; }
+
+private:
+    virtual void doCancel() = 0;
+    bool m_isCancelled { false };
 };
 
-void dispatchFetchEvent(Ref<Client>&&, ServiceWorkerGlobalScope&, ResourceRequest&&, String&& referrer, FetchOptions&&, FetchIdentifier, bool isServiceWorkerNavigationPreloadEnabled, String&& clientIdentifier, String&& resultingClientIdentifier);
+inline void Client::cancel()
+{
+    ASSERT(!m_isCancelled);
+    m_isCancelled = true;
+    doCancel();
+}
+
+void dispatchFetchEvent(Ref<Client>&&, ServiceWorkerGlobalScope&, ResourceRequest&&, String&& referrer, FetchOptions&&, SWServerConnectionIdentifier, FetchIdentifier, bool isServiceWorkerNavigationPreloadEnabled, String&& clientIdentifier, String&& resultingClientIdentifier);
 };
 
 } // namespace WebCore
-
-#endif // ENABLE(SERVICE_WORKER)

@@ -70,6 +70,8 @@ public:
     // We need to declare this in this non-template base. Otherwise, every use of
     // AlreadyTaggedValueTag will require a specialized template qualification.
     enum AlreadyTaggedValueTag { AlreadyTaggedValue };
+
+    friend bool operator==(FunctionPtrBase, FunctionPtrBase) = default;
 };
 
 template<PtrTag tag, typename Out, typename... In, FunctionAttributes attr>
@@ -83,6 +85,12 @@ public:
     constexpr FunctionPtr(Out(*ptr)(In...))
         : m_ptr(encode(ptr))
     { }
+
+#if OS(WINDOWS) && (!PLATFORM(JAVA) || !CPU(X86))
+    constexpr FunctionPtr(Out(SYSV_ABI *ptr)(In...))
+        : m_ptr(encode(ptr))
+    { }
+#endif
 
 // MSVC doesn't seem to treat functions with different calling conventions as
 // different types; these methods already defined for fastcall, below.
@@ -127,8 +135,7 @@ public:
     explicit operator bool() const { return !!m_ptr; }
     bool operator!() const { return !m_ptr; }
 
-    bool operator==(const FunctionPtr& other) const { return m_ptr == other.m_ptr; }
-    bool operator!=(const FunctionPtr& other) const { return m_ptr != other.m_ptr; }
+    friend bool operator==(FunctionPtr, FunctionPtr) = default;
 
     FunctionPtr& operator=(Ptr ptr)
     {

@@ -96,12 +96,37 @@ JS_EXPORT void JSContextGroupClearExecutionTimeLimit(JSContextGroupRef group) JS
 
 /*!
 @function
+@abstract Enables sampling profiler.
+@param group The JavaScript context group to start sampling.
+@result The value of the enablement, true if the sampling profiler gets enabled, otherwise false.
+@discussion Remote inspection is true by default.
+*/
+JS_EXPORT bool JSContextGroupEnableSamplingProfiler(JSContextGroupRef group) JSC_API_AVAILABLE(macos(14.2), ios(17.2));
+
+/*!
+@function
+@abstract Disables sampling profiler.
+@param group The JavaScript context group to stop sampling.
+*/
+JS_EXPORT void JSContextGroupDisableSamplingProfiler(JSContextGroupRef group) JSC_API_AVAILABLE(macos(14.2), ios(17.2));
+
+/*!
+@function
+@abstract Gets sampling profiler output in JSON form and clears the sampling profiler records.
+@param group The JavaScript context group whose sampling profile output is taken.
+@result The sampling profiler output in JSON form. NULL if sampling profiler is not enabled ever before.
+@discussion Calling this function clears the sampling data accumulated so far.
+*/
+JS_EXPORT JSStringRef JSContextGroupTakeSamplesFromSamplingProfiler(JSContextGroupRef group) JSC_API_AVAILABLE(macos(14.2), ios(17.2));
+
+/*!
+@function
 @abstract Gets a whether or not remote inspection is enabled on the context.
 @param ctx The JSGlobalContext whose setting you want to get.
 @result The value of the setting, true if remote inspection is enabled, otherwise false.
 @discussion Remote inspection is true by default.
 */
-JS_EXPORT bool JSGlobalContextGetRemoteInspectionEnabled(JSGlobalContextRef ctx) JSC_API_DEPRECATED_WITH_REPLACEMENT("JSGlobalContextIsInspectable", macos(10.10, JSC_MAC_TBA), ios(8.0, JSC_IOS_TBA));
+JS_EXPORT bool JSGlobalContextGetRemoteInspectionEnabled(JSGlobalContextRef ctx) JSC_API_DEPRECATED_WITH_REPLACEMENT("JSGlobalContextIsInspectable", macos(10.10, 13.3), ios(8.0, 16.4));
 
 /*!
 @function
@@ -109,7 +134,7 @@ JS_EXPORT bool JSGlobalContextGetRemoteInspectionEnabled(JSGlobalContextRef ctx)
 @param ctx The JSGlobalContext that you want to change.
 @param enabled The new remote inspection enabled setting for the context.
 */
-JS_EXPORT void JSGlobalContextSetRemoteInspectionEnabled(JSGlobalContextRef ctx, bool enabled) JSC_API_DEPRECATED_WITH_REPLACEMENT("JSGlobalContextSetInspectable", macos(10.10, JSC_MAC_TBA), ios(8.0, JSC_IOS_TBA));
+JS_EXPORT void JSGlobalContextSetRemoteInspectionEnabled(JSGlobalContextRef ctx, bool enabled) JSC_API_DEPRECATED_WITH_REPLACEMENT("JSGlobalContextSetInspectable", macos(10.10, 13.3), ios(8.0, 16.4));
 
 /*!
 @function
@@ -145,7 +170,7 @@ JS_EXPORT void JSGlobalContextSetUnhandledRejectionCallback(JSGlobalContextRef c
 @param enabled The new eval enabled setting for the context.
 @param message The error message to display when user attempts to call eval (or the Function constructor). Pass NULL when setting enabled to true.
 */
-JS_EXPORT void JSGlobalContextSetEvalEnabled(JSGlobalContextRef ctx, bool enabled, JSStringRef message) JSC_API_AVAILABLE(macos(JSC_MAC_TBA), ios(JSC_IOS_TBA));
+JS_EXPORT void JSGlobalContextSetEvalEnabled(JSGlobalContextRef ctx, bool enabled, JSStringRef message) JSC_API_AVAILABLE(macos(12.3), ios(15.4));
 
 #ifdef __cplusplus
 }

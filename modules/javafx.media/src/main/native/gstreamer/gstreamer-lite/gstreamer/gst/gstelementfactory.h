@@ -169,6 +169,14 @@ typedef guint64 GstElementFactoryListType;
 #define  GST_ELEMENT_FACTORY_TYPE_DECRYPTOR      ((GstElementFactoryListType)(G_GUINT64_CONSTANT (1) << 10))
 #define  GST_ELEMENT_FACTORY_TYPE_ENCRYPTOR      ((GstElementFactoryListType)(G_GUINT64_CONSTANT (1) << 11))
 #define  GST_ELEMENT_FACTORY_TYPE_HARDWARE      ((GstElementFactoryListType)(G_GUINT64_CONSTANT (1) << 12))
+/**
+ * GST_ELEMENT_FACTORY_TYPE_TIMESTAMPER:
+ *
+ * Timestamp correcting elements
+ *
+ * Since: 1.24
+ */
+#define  GST_ELEMENT_FACTORY_TYPE_TIMESTAMPER    ((GstElementFactoryListType)(G_GUINT64_CONSTANT (1) << 13))
 
 #define  GST_ELEMENT_FACTORY_TYPE_MAX_ELEMENTS   ((GstElementFactoryListType)(G_GUINT64_CONSTANT (1) << 48))
 

@@ -1,6 +1,6 @@
 #!/usr/bin/env ruby
 
-# Copyright (C) 2011-2018 Apple Inc. All rights reserved.
+# Copyright (C) 2011-2023 Apple Inc. All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions
@@ -41,9 +41,13 @@ IncludeFile.processIncludeOptions()
 inputFlnm = ARGV.shift
 settingsFlnm = ARGV.shift
 outputFlnm = ARGV.shift
+tempFlnm = File.join(
+    ENV['TARGET_TEMP_DIR'] || File.dirname(outputFlnm),
+    "#{File.basename(outputFlnm)}.part"
+)
 
-validBackends = canonicalizeBackendNames(ARGV.shift.split(/[,\s]+/))
-includeOnlyBackends(validBackends)
+inputBackends = canonicalizeBackendNames(ARGV.shift.split(/[,\s]+/))
+includeOnlyBackends(inputBackends)
 
 variants = ARGV.shift.split(/[,\s]+/)
 
@@ -73,7 +77,7 @@ def emitMagicNumber
 end
 
 configurationHash = Digest::SHA1.hexdigest(configurationList.join(' '))
-inputHash = "// OffsetExtractor input hash: #{parseHash(inputFlnm, $options)} #{configurationHash} #{selfHash}"
+inputHash = "// OffsetExtractor input hash: #{parseHash(inputFlnm, $options)} #{configurationHash} #{selfHash} #{validBackends.join(' ')}"
 
 if FileTest.exist?(outputFlnm) and (not $options[:depfile] or FileTest.exist?($options[:depfile]))
     File.open(outputFlnm, "r") {
@@ -96,7 +100,7 @@ if $options[:depfile]
     depfile.puts(Shellwords.join(sources.sort))
 end
 
-File.open(outputFlnm, "w") {
+File.open(tempFlnm, "w") {
     | outp |
     $output = outp
     outp.puts inputHash
@@ -112,11 +116,7 @@ File.open(outputFlnm, "w") {
             constsList = constsList(lowLevelAST)
 
             emitCodeInConfiguration(concreteSettings, lowLevelAST, backend) {
-
                 # Windows complains about signed integers being cast to unsigned but we just want the bits.
-                outp.puts "\#if COMPILER(MSVC)"
-                outp.puts "\#pragma warning(disable:4308)"
-                outp.puts "\#endif"
                 constsList.each_with_index {
                     | const, index |
                     outp.puts "constexpr int64_t constValue#{index} = static_cast<int64_t>(#{const.value});"
@@ -150,5 +150,5 @@ File.open(outputFlnm, "w") {
     }
 
     outp.puts "static const int64_t offsetExtractorTable[] = { };" if not configurationList.size
-
 }
+File.rename(tempFlnm, outputFlnm)

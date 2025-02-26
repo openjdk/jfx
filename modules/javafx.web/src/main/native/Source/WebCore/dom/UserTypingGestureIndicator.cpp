@@ -27,7 +27,7 @@
 #include "UserTypingGestureIndicator.h"
 
 #include "Element.h"
-#include "Frame.h"
+#include "LocalFrame.h"
 #include <wtf/NeverDestroyed.h>
 
 namespace WebCore {
@@ -49,12 +49,13 @@ Node* UserTypingGestureIndicator::focusedElementAtGestureStart()
     return focusedNode().get();
 }
 
-UserTypingGestureIndicator::UserTypingGestureIndicator(Frame& frame)
+UserTypingGestureIndicator::UserTypingGestureIndicator(LocalFrame& frame)
     : m_previousProcessingUserTypingGesture(s_processingUserTypingGesture)
     , m_previousFocusedNode(focusedNode())
 {
     s_processingUserTypingGesture = true;
-    focusedNode() = frame.document() ? frame.document()->focusedElement() : nullptr;
+    RefPtr document = frame.document();
+    focusedNode() = document ? document->focusedElement() : nullptr;
 }
 
 UserTypingGestureIndicator::~UserTypingGestureIndicator()

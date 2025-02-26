@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2021 Apple Inc. All rights reserved.
+ * Copyright (C) 2021-2023 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -25,9 +25,21 @@
 
 #pragma once
 
-#include "GraphicsLayer.h"
+#include "LayerHostingContextIdentifier.h"
+#include "PlatformLayerIdentifier.h"
+#include "TransformationMatrix.h"
 #include <wtf/Forward.h>
 #include <wtf/WeakPtr.h>
+
+namespace WebCore {
+class FloatPoint3D;
+class ModelPlayerClient;
+}
+
+namespace WTF {
+template<typename T> struct IsDeprecatedWeakRefSmartPointerException;
+template<> struct IsDeprecatedWeakRefSmartPointerException<WebCore::ModelPlayerClient> : std::true_type { };
+}
 
 namespace WebCore {
 
@@ -38,9 +50,14 @@ class WEBCORE_EXPORT ModelPlayerClient : public CanMakeWeakPtr<ModelPlayerClient
 public:
     virtual ~ModelPlayerClient();
 
+    virtual void didUpdateLayerHostingContextIdentifier(ModelPlayer&, LayerHostingContextIdentifier) = 0;
     virtual void didFinishLoading(ModelPlayer&) = 0;
     virtual void didFailLoading(ModelPlayer&, const ResourceError&) = 0;
-    virtual GraphicsLayer::PlatformLayerID platformLayerID() = 0;
+#if ENABLE(MODEL_PROCESS)
+    virtual void didUpdateEntityTransform(ModelPlayer&, const TransformationMatrix&) = 0;
+    virtual void didUpdateBoundingBox(ModelPlayer&, const FloatPoint3D&, const FloatPoint3D&) = 0;
+#endif
+    virtual PlatformLayerIdentifier platformLayerID() = 0;
 };
 
 }

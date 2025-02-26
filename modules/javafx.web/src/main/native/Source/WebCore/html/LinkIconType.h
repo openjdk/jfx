@@ -25,8 +25,6 @@
 
 #pragma once
 
-#include <wtf/EnumTraits.h>
-
 namespace WebCore {
 
 // These values are arranged so that they can be used with OptionSet.
@@ -40,16 +38,3 @@ enum class LinkIconType : uint8_t {
 };
 
 } // namespace WebCore
-
-namespace WTF {
-
-template<> struct EnumTraits<WebCore::LinkIconType> {
-    using values = EnumValues<
-        WebCore::LinkIconType,
-        WebCore::LinkIconType::Favicon,
-        WebCore::LinkIconType::TouchIcon,
-        WebCore::LinkIconType::TouchPrecomposedIcon
-    >;
-};
-
-} // namespace WTF

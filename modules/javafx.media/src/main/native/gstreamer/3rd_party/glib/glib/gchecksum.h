@@ -2,6 +2,8 @@
  *
  * Copyright (C) 2007  Emmanuele Bassi  <ebassi@gnome.org>
  *
+ * SPDX-License-Identifier: LGPL-2.1-or-later
+ *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
  * License as published by the Free Software Foundation; either
@@ -52,16 +54,6 @@ typedef enum {
   G_CHECKSUM_SHA384
 } GChecksumType;
 
-/**
- * GChecksum:
- *
- * An opaque structure representing a checksumming operation.
- *
- * To create a new GChecksum, use g_checksum_new(). To free
- * a GChecksum, use g_checksum_free().
- *
- * Since: 2.16
- */
 typedef struct _GChecksum       GChecksum;
 
 GLIB_AVAILABLE_IN_ALL

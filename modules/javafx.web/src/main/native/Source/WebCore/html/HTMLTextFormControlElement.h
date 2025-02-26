@@ -37,12 +37,14 @@ class VisiblePosition;
 struct SimpleRange;
 
 enum class AutoFillButtonType : uint8_t { None, Credentials, Contacts, StrongPassword, CreditCard, Loading };
+enum class ForBindings : bool { No, Yes };
 enum TextFieldSelectionDirection { SelectionHasNoDirection, SelectionHasForwardDirection, SelectionHasBackwardDirection };
 enum TextFieldEventBehavior { DispatchNoEvent, DispatchChangeEvent, DispatchInputAndChangeEvent };
 enum TextControlSetValueSelection { SetSelectionToEnd, Clamp, DoNotSet };
 
 class HTMLTextFormControlElement : public HTMLFormControlElement {
-    WTF_MAKE_ISO_ALLOCATED(HTMLTextFormControlElement);
+    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(HTMLTextFormControlElement);
+    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(HTMLTextFormControlElement);
 public:
     // Common flag for HTMLInputElement::tooLong() / tooShort() and HTMLTextAreaElement::tooLong() / tooShort().
     enum NeedsToCheckDirtyFlag {CheckDirtyFlag, IgnoreDirtyFlag};
@@ -79,8 +81,10 @@ public:
     WEBCORE_EXPORT void select(SelectionRevealMode = SelectionRevealMode::DoNotReveal, const AXTextStateChangeIntent& = AXTextStateChangeIntent());
     WEBCORE_EXPORT ExceptionOr<void> setRangeText(StringView replacement);
     WEBCORE_EXPORT virtual ExceptionOr<void> setRangeText(StringView replacement, unsigned start, unsigned end, const String& selectionMode);
-    void setSelectionRange(unsigned start, unsigned end, const String& direction, const AXTextStateChangeIntent& = AXTextStateChangeIntent());
-    WEBCORE_EXPORT bool setSelectionRange(unsigned start, unsigned end, TextFieldSelectionDirection = SelectionHasNoDirection, SelectionRevealMode = SelectionRevealMode::DoNotReveal, const AXTextStateChangeIntent& = AXTextStateChangeIntent());
+    void setSelectionRange(unsigned start, unsigned end, const String& direction, const AXTextStateChangeIntent& = AXTextStateChangeIntent(), ForBindings = ForBindings::No);
+    WEBCORE_EXPORT bool setSelectionRange(unsigned start, unsigned end, TextFieldSelectionDirection = SelectionHasNoDirection, SelectionRevealMode = SelectionRevealMode::DoNotReveal, const AXTextStateChangeIntent& = AXTextStateChangeIntent(), ForBindings = ForBindings::No);
+
+    void scheduleSelectionChangeEvent();
 
     TextFieldSelectionDirection computeSelectionDirection() const;
 
@@ -97,7 +101,9 @@ public:
     virtual RefPtr<TextControlInnerTextElement> innerTextElementCreatingShadowSubtreeIfNeeded() = 0;
     virtual RenderStyle createInnerTextStyle(const RenderStyle&) = 0;
 
-    void selectionChanged(bool shouldFireSelectEvent);
+    virtual bool dirAutoUsesValue() const = 0;
+
+    bool selectionChanged(bool shouldFireSelectEvent);
     WEBCORE_EXPORT bool lastChangeWasUserEdit() const;
     void setInnerTextValue(String&&);
     String innerTextValue() const;
@@ -115,7 +121,7 @@ protected:
     bool isPlaceholderEmpty() const;
     virtual void updatePlaceholderText() = 0;
 
-    void parseAttribute(const QualifiedName&, const AtomString&) override;
+    void attributeChanged(const QualifiedName&, const AtomString& oldValue, const AtomString& newValue, AttributeModificationReason) override;
 
     void disabledStateChanged() override;
     void readOnlyStateChanged() override;
@@ -153,6 +159,8 @@ private:
 
     void setHovered(bool, Style::InvalidationScope, HitTestRequest) final;
 
+    void effectiveSpellcheckAttributeChanged(bool) final;
+
     unsigned indexForPosition(const Position&) const;
 
     // Returns true if user-editable value is empty. Used to check placeholder visibility.
@@ -165,21 +173,22 @@ private:
     bool placeholderShouldBeVisible() const;
 
     unsigned m_cachedSelectionDirection : 2;
-    unsigned m_lastChangeWasUserEdit : 1;
-    unsigned m_isPlaceholderVisible : 1;
-    unsigned m_canShowPlaceholder : 1;
-
-    String m_pointerType { mousePointerEventType() };
-
-    String m_textAsOfLastFormControlChangeEvent;
-
-    unsigned m_cachedSelectionStart;
-    unsigned m_cachedSelectionEnd;
+    unsigned m_lastChangeWasUserEdit : 1 { false };
+    unsigned m_isPlaceholderVisible : 1 { false };
+    unsigned m_canShowPlaceholder : 1 { true };
 
     int m_maxLength { -1 };
     int m_minLength { -1 };
 
+    unsigned m_cachedSelectionStart { 0 };
+    unsigned m_cachedSelectionEnd { 0 };
+
     bool m_hasCachedSelection { false };
+    bool m_hasScheduledSelectionChangeEvent { false };
+
+    String m_pointerType { mousePointerEventType() };
+
+    String m_textAsOfLastFormControlChangeEvent;
 };
 
 WEBCORE_EXPORT HTMLTextFormControlElement* enclosingTextFormControl(const Position&);
@@ -188,6 +197,14 @@ WEBCORE_EXPORT HTMLTextFormControlElement* enclosingTextFormControl(const Positi
 
 SPECIALIZE_TYPE_TRAITS_BEGIN(WebCore::HTMLTextFormControlElement)
     static bool isType(const WebCore::Element& element) { return element.isTextFormControlElement(); }
-    static bool isType(const WebCore::Node& node) { return is<WebCore::Element>(node) && isType(downcast<WebCore::Element>(node)); }
-    static bool isType(const WebCore::EventTarget& target) { return is<WebCore::Node>(target) && isType(downcast<WebCore::Node>(target)); }
+    static bool isType(const WebCore::Node& node)
+    {
+        auto* element = dynamicDowncast<WebCore::Element>(node);
+        return element && isType(*element);
+    }
+    static bool isType(const WebCore::EventTarget& target)
+    {
+        auto* node = dynamicDowncast<WebCore::Node>(target);
+        return node && isType(*node);
+    }
 SPECIALIZE_TYPE_TRAITS_END()

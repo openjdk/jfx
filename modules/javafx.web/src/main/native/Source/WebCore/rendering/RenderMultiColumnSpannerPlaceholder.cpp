@@ -30,12 +30,14 @@
 #include "config.h"
 #include "RenderMultiColumnSpannerPlaceholder.h"
 
+#include "RenderBoxInlines.h"
+#include "RenderBoxModelObjectInlines.h"
 #include "RenderMultiColumnFlow.h"
-#include <wtf/IsoMallocInlines.h>
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
-WTF_MAKE_ISO_ALLOCATED_IMPL(RenderMultiColumnSpannerPlaceholder);
+WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(RenderMultiColumnSpannerPlaceholder);
 
 RenderPtr<RenderMultiColumnSpannerPlaceholder> RenderMultiColumnSpannerPlaceholder::createAnonymous(RenderMultiColumnFlow& fragmentedFlow, RenderBox& spanner, const RenderStyle& parentStyle)
 {
@@ -47,11 +49,14 @@ RenderPtr<RenderMultiColumnSpannerPlaceholder> RenderMultiColumnSpannerPlacehold
 }
 
 RenderMultiColumnSpannerPlaceholder::RenderMultiColumnSpannerPlaceholder(RenderMultiColumnFlow& fragmentedFlow, RenderBox& spanner, RenderStyle&& style)
-    : RenderBox(fragmentedFlow.document(), WTFMove(style), RenderBoxModelObjectFlag)
+    : RenderBox(Type::MultiColumnSpannerPlaceholder, fragmentedFlow.document(), WTFMove(style), TypeFlag::IsBoxModelObject)
     , m_spanner(spanner)
     , m_fragmentedFlow(fragmentedFlow)
 {
+    ASSERT(isRenderMultiColumnSpannerPlaceholder());
 }
+
+RenderMultiColumnSpannerPlaceholder::~RenderMultiColumnSpannerPlaceholder() = default;
 
 ASCIILiteral RenderMultiColumnSpannerPlaceholder::renderName() const
 {

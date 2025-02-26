@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -60,6 +60,11 @@ import javafx.css.StyleableProperty;
 /**
  * A chart that plots bars indicating data values for a category. The bars can be vertical or horizontal depending on
  * which axis is a category axis.
+ * <p>
+ * Adding data with multiple occurences of a category to a series shows the last occurence.
+ *
+ * @param <X> the category axis value type
+ * @param <Y> the data value type
  * @since JavaFX 2.0
  */
 public class BarChart<X,Y> extends XYChart<X,Y> {
@@ -206,10 +211,39 @@ public class BarChart<X,Y> extends XYChart<X,Y> {
         }
         // check if category is already present
         if (!categoryAxis.getCategories().contains(category)) {
+            int seriesCount = getDataSize();
+            int categoryCount = categoryAxis.getCategories().size();
+
+            int categoryIndex;
+            if (seriesCount == 1 && itemIndex == categoryCount) {
+                // shortcut if there is only one series and data contains no duplicates
+                categoryIndex = categoryCount;
+            } else {
+                // There may be data items with duplicate categories. Find category insertion index on the axis
+                // by looking at the concatenation of the data of all series, skipping duplicate categories.
+                // The category insertion index is found when the new data's index is reached within its series.
+                categoryIndex = 0;
+                var uniqueCategories = new HashSet<String>();
+                for (var entry : seriesCategoryMap.entrySet()) {
+                    Series s = entry.getKey();
+                    Map<String, Data<X,Y>> catMap = entry.getValue();
+                    int i = 0;
+                    for (String cat : catMap.keySet()) {
+                        if (s == series && i >= itemIndex) {
+                            break;
+                        }
+                        if (uniqueCategories.add(cat)) {
+                            categoryIndex++;
+                        }
+                        i++;
+                    }
+                }
+            }
+
             // note: cat axis categories can be updated only when autoranging is true.
-            categoryAxis.getCategories().add(itemIndex, category);
+            categoryAxis.getCategories().add(categoryIndex, category);
         } else if (categoryMap.containsKey(category)){
-            // RT-21162 : replacing the previous data, first remove the node from scenegraph.
+            // JDK-8115821 : replacing the previous data, first remove the node from scenegraph.
             Data<X,Y> data = categoryMap.get(category);
             getPlotChildren().remove(data.getNode());
             removeDataItemFromDisplay(series, data);
@@ -262,7 +296,7 @@ public class BarChart<X,Y> extends XYChart<X,Y> {
             item.getNode().getStyleClass().add(NEGATIVE_STYLE);
         } else if (currentVal < 0 && barVal > 0) { // going from negative to positive
             // remove style class negative
-            // RT-21164 upside down bars: was adding NEGATIVE_STYLE styleclass
+            // JDK-8115074 upside down bars: was adding NEGATIVE_STYLE styleclass
             // instead of removing it; when going from negative to positive
             item.getNode().getStyleClass().remove(NEGATIVE_STYLE);
         }
@@ -277,37 +311,17 @@ public class BarChart<X,Y> extends XYChart<X,Y> {
                 Data<X,Y> item = series.getData().get(j);
                 Node bar = item.getNode();
                 bar.getStyleClass().setAll("chart-bar", "series" + i, "data" + j, series.defaultColorStyleClass);
+                applyNegativeStyleClass(item);
             }
         }
     }
 
     @Override protected void seriesAdded(Series<X,Y> series, int seriesIndex) {
         // handle any data already in series
-        // create entry in the map
-        Map<String, Data<X,Y>> categoryMap = new HashMap<>();
         for (int j=0; j<series.getData().size(); j++) {
             Data<X,Y> item = series.getData().get(j);
-            Node bar = createBar(series, seriesIndex, item, j);
-            String category;
-            if (orientation == Orientation.VERTICAL) {
-                category = (String)item.getXValue();
-            } else {
-                category = (String)item.getYValue();
-            }
-            categoryMap.put(category, item);
-            if (shouldAnimate()) {
-                animateDataAdd(item, bar);
-            } else {
-                // RT-21164 check if bar value is negative to add NEGATIVE_STYLE style class
-                double barVal = (orientation == Orientation.VERTICAL) ? ((Number)item.getYValue()).doubleValue() :
-                        ((Number)item.getXValue()).doubleValue();
-                if (barVal < 0) {
-                    bar.getStyleClass().add(NEGATIVE_STYLE);
-                }
-                getPlotChildren().add(bar);
-            }
+            dataItemAdded(series, j, item);
         }
-        if (categoryMap.size() > 0) seriesCategoryMap.put(series, categoryMap);
     }
 
     @Override protected void seriesRemoved(final Series<X,Y> series) {
@@ -350,12 +364,12 @@ public class BarChart<X,Y> extends XYChart<X,Y> {
     @Override protected void layoutPlotChildren() {
         double catSpace = categoryAxis.getCategorySpacing();
         // calculate bar spacing
-        final double availableBarSpace = catSpace - (getCategoryGap() + getBarGap());
+        final double availableBarSpace = catSpace - getCategoryGap() + getBarGap();
         double barWidth = (availableBarSpace / getSeriesSize()) - getBarGap();
         final double barOffset = -((catSpace - getCategoryGap()) / 2);
         final double zeroPos = (valueAxis.getLowerBound() > 0) ?
                 valueAxis.getDisplayPosition(valueAxis.getLowerBound()) : valueAxis.getZeroPosition();
-        // RT-24813 : if the data in a series gets too large, barWidth can get negative.
+        // JDK-8125812 : if the data in a series gets too large, barWidth can get negative.
         if (barWidth <= 0) barWidth = 1;
         // update bar positions and sizes
         int catIndex = 0;
@@ -389,9 +403,9 @@ public class BarChart<X,Y> extends XYChart<X,Y> {
                         bar.resizeRelocate( bottom, categoryPos + barOffset + (barWidth + getBarGap()) * index,
                                             top-bottom, barWidth);
                     }
-
-                    index++;
                 }
+
+                index++;
             }
             catIndex++;
         }
@@ -428,9 +442,6 @@ public class BarChart<X,Y> extends XYChart<X,Y> {
         double barVal;
         if (orientation == Orientation.VERTICAL) {
             barVal = ((Number)item.getYValue()).doubleValue();
-            if (barVal < 0) {
-                bar.getStyleClass().add(NEGATIVE_STYLE);
-            }
             item.setCurrentY(getYAxis().toRealValue((barVal < 0) ? -bottomPos : bottomPos));
             getPlotChildren().add(bar);
             item.setYValue(getYAxis().toRealValue(barVal));
@@ -444,9 +455,6 @@ public class BarChart<X,Y> extends XYChart<X,Y> {
             );
         } else {
             barVal = ((Number)item.getXValue()).doubleValue();
-            if (barVal < 0) {
-                bar.getStyleClass().add(NEGATIVE_STYLE);
-            }
             item.setCurrentX(getXAxis().toRealValue((barVal < 0) ? -bottomPos : bottomPos));
             getPlotChildren().add(bar);
             item.setXValue(getXAxis().toRealValue(barVal));
@@ -555,7 +563,17 @@ public class BarChart<X,Y> extends XYChart<X,Y> {
             item.setNode(bar);
         }
         bar.getStyleClass().setAll("chart-bar", "series" + seriesIndex, "data" + itemIndex, series.defaultColorStyleClass);
+        applyNegativeStyleClass(item);
         return bar;
+    }
+
+    private void applyNegativeStyleClass(Data<X,Y> item) {
+        double barVal = (orientation == Orientation.VERTICAL) ? ((Number)item.getYValue()).doubleValue() :
+            ((Number)item.getXValue()).doubleValue();
+        if (barVal < 0) {
+            var bar = item.getNode();
+            bar.getStyleClass().add(NEGATIVE_STYLE);
+        }
     }
 
     private Data<X,Y> getDataItem(Series<X,Y> series, int seriesIndex, int itemIndex, String category) {

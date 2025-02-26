@@ -61,6 +61,7 @@ public:
     AbstractColoringAllocator(Code& code, const Vector<Reg>& regsInPriorityOrder, IndexType lastPrecoloredRegisterIndex, unsigned tmpArraySize, const BitVector& unspillableTmps, const UseCounts& useCounts)
         : m_regsInPriorityOrder(regsInPriorityOrder)
         , m_lastPrecoloredRegisterIndex(lastPrecoloredRegisterIndex)
+        , m_coalescedTmps(tmpArraySize, 0)
         , m_unspillableTmps(unspillableTmps)
         , m_useCounts(useCounts)
         , m_code(code)
@@ -74,9 +75,8 @@ public:
             dataLogLn("]");
         }
 
-        m_adjacencyList.resize(tmpArraySize);
-        m_moveList.resize(tmpArraySize);
-        m_coalescedTmps.fill(0, tmpArraySize);
+        m_adjacencyList.grow(tmpArraySize);
+        m_moveList.grow(tmpArraySize);
         m_isOnSelectStack.ensureSize(tmpArraySize);
         m_spillWorklist.ensureSize(tmpArraySize);
     }
@@ -209,10 +209,15 @@ protected:
         ASSERT(!isPrecolored(u));
         ASSERT(!isPrecolored(v));
 
+        if (m_unspillableTmps.get(u) != m_unspillableTmps.get(v))
+            return false;
+
         const auto& adjacentsOfU = m_adjacencyList[u];
         const auto& adjacentsOfV = m_adjacencyList[v];
 
-        Vector<IndexType, MacroAssembler::numGPRs + MacroAssembler::numFPRs> highOrderAdjacents;
+        std::array<IndexType, MacroAssembler::numGPRs + MacroAssembler::numFPRs> highOrderAdjacents;
+        size_t highOrderAdjacentsSize = 0;
+
         RELEASE_ASSERT(registerCount() <= MacroAssembler::numGPRs + MacroAssembler::numFPRs);
         unsigned numCandidates = adjacentsOfU.size() + adjacentsOfV.size();
         if (numCandidates < registerCount()) {
@@ -225,16 +230,16 @@ protected:
             ASSERT(adjacentTmpIndex != u);
             numCandidates--;
             if (!hasBeenSimplified(adjacentTmpIndex) && m_degrees[adjacentTmpIndex] >= registerCount()) {
-                ASSERT(std::find(highOrderAdjacents.begin(), highOrderAdjacents.end(), adjacentTmpIndex) == highOrderAdjacents.end());
-                highOrderAdjacents.uncheckedAppend(adjacentTmpIndex);
-                if (highOrderAdjacents.size() >= registerCount())
+                ASSERT(std::find(highOrderAdjacents.begin(), highOrderAdjacents.begin() + highOrderAdjacentsSize, adjacentTmpIndex) == highOrderAdjacents.begin() + highOrderAdjacentsSize);
+                highOrderAdjacents[highOrderAdjacentsSize++] = adjacentTmpIndex;
+                if (highOrderAdjacentsSize >= registerCount())
                     return false;
-            } else if (highOrderAdjacents.size() + numCandidates < registerCount())
+            } else if (highOrderAdjacentsSize + numCandidates < registerCount())
                 return true;
         }
         ASSERT(numCandidates == adjacentsOfV.size());
 
-        auto iteratorEndHighOrderAdjacentsOfU = highOrderAdjacents.end();
+        auto iteratorEndHighOrderAdjacentsOfU = highOrderAdjacents.begin() + highOrderAdjacentsSize;
         for (IndexType adjacentTmpIndex : adjacentsOfV) {
             ASSERT(adjacentTmpIndex != u);
             ASSERT(adjacentTmpIndex != v);
@@ -242,16 +247,16 @@ protected:
             if (!hasBeenSimplified(adjacentTmpIndex)
                 && m_degrees[adjacentTmpIndex] >= registerCount()
                 && std::find(highOrderAdjacents.begin(), iteratorEndHighOrderAdjacentsOfU, adjacentTmpIndex) == iteratorEndHighOrderAdjacentsOfU) {
-                ASSERT(std::find(iteratorEndHighOrderAdjacentsOfU, highOrderAdjacents.end(), adjacentTmpIndex) == highOrderAdjacents.end());
-                highOrderAdjacents.uncheckedAppend(adjacentTmpIndex);
-                if (highOrderAdjacents.size() >= registerCount())
+                ASSERT(std::find(iteratorEndHighOrderAdjacentsOfU, highOrderAdjacents.begin() + highOrderAdjacentsSize, adjacentTmpIndex) == highOrderAdjacents.begin() + highOrderAdjacentsSize);
+                highOrderAdjacents[highOrderAdjacentsSize++] = adjacentTmpIndex;
+                if (highOrderAdjacentsSize >= registerCount())
                     return false;
-            } else if (highOrderAdjacents.size() + numCandidates < registerCount())
+            } else if (highOrderAdjacentsSize + numCandidates < registerCount())
                 return true;
         }
 
         ASSERT(!numCandidates);
-        ASSERT(highOrderAdjacents.size() < registerCount());
+        ASSERT(highOrderAdjacentsSize < registerCount());
         return true;
     }
 
@@ -1441,15 +1446,7 @@ public:
         Tmp operator*() const { return TmpMapper::tmpFromAbsoluteIndex(*m_indexIterator); }
         IndexToTmpIteratorAdaptor& operator++() { ++m_indexIterator; return *this; }
 
-        bool operator==(const IndexToTmpIteratorAdaptor& other) const
-        {
-            return m_indexIterator == other.m_indexIterator;
-        }
-
-        bool operator!=(const IndexToTmpIteratorAdaptor& other) const
-        {
-            return !(*this == other);
-        }
+        friend bool operator==(const IndexToTmpIteratorAdaptor&, const IndexToTmpIteratorAdaptor&) = default;
 
     private:
         IndexIterator m_indexIterator;
@@ -1896,8 +1893,7 @@ private:
         unsigned numTmps = m_code.numTmps(bank);
         unsigned arraySize = AbsoluteTmpMapper<bank>::absoluteIndex(numTmps);
 
-        Vector<Range, 0, UnsafeVectorOverflow> ranges;
-        ranges.fill(Range(), arraySize);
+        Vector<Range, 0, UnsafeVectorOverflow> ranges(arraySize, Range());
 
         unsigned globalIndex = 0;
         for (BasicBlock* block : m_code) {
@@ -1971,15 +1967,23 @@ private:
                 // complete register allocation. So, we record this before starting.
                 bool mayBeCoalescable = allocator.mayBeCoalescable(inst);
 
-                // Move32 is cheaper if we know that it's equivalent to a Move. It's
+                if constexpr (isX86_64()) {
+                // Move32 is cheaper if we know that it's equivalent to a Move in x86_64. It's
                 // equivalent if the destination's high bits are not observable or if the source's high
-                // bits are all zero. Note that we don't have the opposite optimization for other
-                // architectures, which may prefer Move over Move32, because Move is canonical already.
-                if (bank == GP && inst.kind.opcode == Move
-                    && inst.args[0].isTmp() && inst.args[1].isTmp()) {
-                    if (m_tmpWidth.useWidth(inst.args[1].tmp()) <= Width32
-                        || m_tmpWidth.defWidth(inst.args[0].tmp()) <= Width32)
+                    // bits are all zero.
+                    if (bank == GP && inst.kind.opcode == Move && inst.args[0].isTmp() && inst.args[1].isTmp()) {
+                        if (m_tmpWidth.useWidth(inst.args[1].tmp()) <= Width32 || m_tmpWidth.defWidth(inst.args[0].tmp()) <= Width32)
                         inst.kind.opcode = Move32;
+                }
+                }
+                if constexpr (isARM64()) {
+                    // On the other hand, on ARM64, Move is cheaper than Move32. We would like to use Move instead of Move32.
+                    // Move32 on ARM64 is explicitly selected in B3LowerToAir for ZExt32 for example. But using ZDef information
+                    // here can optimize it from Move32 to Move.
+                    if (bank == GP && inst.kind.opcode == Move32 && inst.args[0].isTmp() && inst.args[1].isTmp()) {
+                        if (m_tmpWidth.defWidth(inst.args[0].tmp()) <= Width32)
+                            inst.kind.opcode = Move;
+                    }
                 }
 
                 inst.forEachTmpFast([&] (Tmp& tmp) {
@@ -2204,6 +2208,7 @@ private:
                         break;
                     }
 
+                    auto oldTmp = tmp;
                     auto newTmp = m_code.newTmp(bank);
                     dataLogLnIf(traceDebug, "Add unspillable tmp since we introduce it during spill (2): ", tmp, " -> ", newTmp);
                     tmp = newTmp;
@@ -2213,10 +2218,33 @@ private:
                         return;
 
                     Arg arg = Arg::stack(stackSlotEntry->value);
-                    if (Arg::isAnyUse(role))
+                    if (Arg::isAnyUse(role)) {
+                        auto tryRematerialize = [&]() {
+                            if constexpr (bank == GP) {
+                                auto oldIndex = AbsoluteTmpMapper<bank>::absoluteIndex(oldTmp);
+                                if (m_useCounts.isConstDef<bank>(oldIndex)) {
+                                    int64_t value = m_useCounts.constant<bank>(oldIndex);
+                                    if (Arg::isValidImmForm(value) && isValidForm(Move, Arg::Imm, Arg::Tmp)) {
+                                        insertionSet.insert(instIndex, Move, inst.origin, Arg::imm(value), tmp);
+                                        return true;
+                                    }
+                                    if (isValidForm(Move, Arg::BigImm, Arg::Tmp)) {
+                                        insertionSet.insert(instIndex, Move, inst.origin, Arg::bigImm(value), tmp);
+                                        return true;
+                                    }
+                                }
+                            }
+                            return false;
+                        };
+
+                        if (!tryRematerialize())
                         insertionSet.insert(instIndex, move, inst.origin, arg, tmp);
-                    if (Arg::isAnyDef(role))
+                    }
+
+                    if (Arg::isAnyDef(role)) {
+                        // FIXME: When nobody is using admitsStack's spill result, we can also skip def.
                         insertionSet.insert(instIndex + 1, move, inst.origin, tmp, arg);
+                    }
                 });
             }
             insertionSet.execute(block);
@@ -2238,7 +2266,7 @@ private:
 
 void allocateRegistersByGraphColoring(Code& code)
 {
-    PhaseScope phaseScope(code, "allocateRegistersByGraphColoring");
+    PhaseScope phaseScope(code, "allocateRegistersByGraphColoring"_s);
 
     if (traceDebug)
         dataLog("Code before graph coloring:\n", code);

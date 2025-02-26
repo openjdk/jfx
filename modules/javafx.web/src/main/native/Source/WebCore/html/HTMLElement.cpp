@@ -1,7 +1,8 @@
 /*
  * Copyright (C) 1999 Lars Knoll (knoll@kde.org)
  *           (C) 1999 Antti Koivisto (koivisto@kde.org)
- * Copyright (C) 2004-2021 Apple Inc. All rights reserved.
+ * Copyright (C) 2004-2023 Apple Inc. All rights reserved.
+ * Copyright (C) 2021 Google Inc. All rights reserved.
  * Copyright (C) 2009 Torch Mobile Inc. All rights reserved. (http://www.torchmobile.com/)
  * Copyright (C) 2011 Motorola Mobility. All rights reserved.
  *
@@ -26,6 +27,7 @@
 #include "HTMLElement.h"
 
 #include "CSSMarkup.h"
+#include "CSSParser.h"
 #include "CSSPropertyNames.h"
 #include "CSSValueKeywords.h"
 #include "CSSValueList.h"
@@ -35,9 +37,12 @@
 #include "CommonAtomStrings.h"
 #include "CustomElementReactionQueue.h"
 #include "DOMTokenList.h"
+#include "Document.h"
 #include "DocumentFragment.h"
-#include "ElementAncestorIterator.h"
-#include "ElementChildIterator.h"
+#include "DocumentInlines.h"
+#include "Editor.h"
+#include "ElementAncestorIteratorInlines.h"
+#include "ElementChildIteratorInlines.h"
 #include "ElementInternals.h"
 #include "ElementRareData.h"
 #include "EnterKeyHint.h"
@@ -46,10 +51,7 @@
 #include "EventListener.h"
 #include "EventLoop.h"
 #include "EventNames.h"
-#include "Frame.h"
 #include "FrameLoader.h"
-#include "FrameView.h"
-#include "HTMLBDIElement.h"
 #include "HTMLBRElement.h"
 #include "HTMLButtonElement.h"
 #include "HTMLDialogElement.h"
@@ -70,11 +72,15 @@
 #include "ImageOverlay.h"
 #include "JSHTMLElement.h"
 #include "LabelsNodeList.h"
+#include "LocalFrame.h"
+#include "LocalFrameView.h"
 #include "MediaControlsHost.h"
 #include "MutableStyleProperties.h"
+#include "NodeName.h"
 #include "NodeTraversal.h"
 #include "PopoverData.h"
 #include "PseudoClassChangeInvalidation.h"
+#include "Quirks.h"
 #include "RenderElement.h"
 #include "ScriptController.h"
 #include "ScriptDisallowedScope.h"
@@ -83,14 +89,14 @@
 #include "StyleProperties.h"
 #include "Text.h"
 #include "ToggleEvent.h"
-#include "TypedElementDescendantIterator.h"
+#include "TypedElementDescendantIteratorInlines.h"
 #include "UserAgentStyleSheets.h"
 #include "XMLNames.h"
 #include "markup.h"
-#include <wtf/IsoMallocInlines.h>
 #include <wtf/NeverDestroyed.h>
 #include <wtf/Range.h>
 #include <wtf/StdLibExtras.h>
+#include <wtf/TZoneMallocInlines.h>
 #include <wtf/text/CString.h>
 #include <wtf/text/StringBuilder.h>
 
@@ -100,7 +106,7 @@
 
 namespace WebCore {
 
-WTF_MAKE_ISO_ALLOCATED_IMPL(HTMLElement);
+WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(HTMLElement);
 
 using namespace HTMLNames;
 
@@ -115,7 +121,7 @@ String HTMLElement::nodeName() const
     // ASCII characters that does not have to copy the string on a hit in the hash.
     if (document().isHTMLDocument()) {
         if (LIKELY(!tagQName().hasPrefix()))
-            return tagQName().localNameUpper();
+            return tagQName().localNameUppercase();
         return Element::nodeName().convertToASCIIUppercase();
     }
     return Element::nodeName();
@@ -157,8 +163,18 @@ void HTMLElement::mapLanguageAttributeToLocale(const AtomString& value, MutableS
 
 bool HTMLElement::hasPresentationalHintsForAttribute(const QualifiedName& name) const
 {
-    if (name == alignAttr || name == contenteditableAttr || name == hiddenAttr || name == langAttr || name.matches(XMLNames::langAttr) || name == draggableAttr || name == dirAttr)
+    switch (name.nodeName()) {
+    case AttributeNames::alignAttr:
+    case AttributeNames::contenteditableAttr:
+    case AttributeNames::hiddenAttr:
+    case AttributeNames::langAttr:
+    case AttributeNames::XML::langAttr:
+    case AttributeNames::draggableAttr:
+    case AttributeNames::dirAttr:
         return true;
+    default:
+        break;
+    }
     return StyledElement::hasPresentationalHintsForAttribute(name);
 }
 
@@ -188,47 +204,16 @@ static ContentEditableType contentEditableType(const HTMLElement& element)
     return contentEditableType(element.attributeWithoutSynchronization(contenteditableAttr));
 }
 
-enum class TextDirectionDirective {
-    Invalid,
-    LTR,
-    RTL,
-    Auto,
-};
-
-static inline TextDirectionDirective parseTextDirection(const AtomString& value)
-{
-    if (equalLettersIgnoringASCIICase(value, "ltr"_s))
-        return TextDirectionDirective::LTR;
-    if (equalLettersIgnoringASCIICase(value, "rtl"_s))
-        return TextDirectionDirective::RTL;
-    if (equalLettersIgnoringASCIICase(value, "auto"_s))
-        return TextDirectionDirective::Auto;
-    return TextDirectionDirective::Invalid;
-}
-
-static bool isValidDirValue(const AtomString& value)
-{
-    return parseTextDirection(value) != TextDirectionDirective::Invalid;
-}
-
-static bool elementAffectsDirectionality(const HTMLElement& element)
-{
-    return is<HTMLBDIElement>(element) || isValidDirValue(element.attributeWithoutSynchronization(dirAttr));
-}
-
-static bool elementAffectsDirectionality(const Node& node)
-{
-    return is<HTMLElement>(node) && elementAffectsDirectionality(downcast<HTMLElement>(node));
-}
-
 void HTMLElement::collectPresentationalHintsForAttribute(const QualifiedName& name, const AtomString& value, MutableStyleProperties& style)
 {
-    if (name == alignAttr) {
+    switch (name.nodeName()) {
+    case AttributeNames::alignAttr:
         if (equalLettersIgnoringASCIICase(value, "middle"_s))
             addPropertyToPresentationalHintStyle(style, CSSPropertyTextAlign, CSSValueCenter);
         else
             addPropertyToPresentationalHintStyle(style, CSSPropertyTextAlign, value);
-    } else if (name == contenteditableAttr) {
+        break;
+    case AttributeNames::contenteditableAttr: {
         CSSValueID userModifyValue = CSSValueReadWrite;
         switch (contentEditableType(value)) {
         case ContentEditableType::Inherit:
@@ -249,16 +234,18 @@ void HTMLElement::collectPresentationalHintsForAttribute(const QualifiedName& na
             break;
         }
         addPropertyToPresentationalHintStyle(style, CSSPropertyWebkitUserModify, userModifyValue);
-    } else if (name == hiddenAttr) {
+        break;
+    }
+    case AttributeNames::hiddenAttr:
         addPropertyToPresentationalHintStyle(style, CSSPropertyDisplay, CSSValueNone);
-    } else if (name == draggableAttr) {
-        if (equalLettersIgnoringASCIICase(value, "true"_s)) {
+        break;
+    case AttributeNames::draggableAttr:
+        if (equalLettersIgnoringASCIICase(value, "true"_s))
             addPropertyToPresentationalHintStyle(style, CSSPropertyWebkitUserDrag, CSSValueElement);
-            if (!isDraggableIgnoringAttributes())
-                addPropertyToPresentationalHintStyle(style, CSSPropertyWebkitUserSelect, CSSValueNone);
-        } else if (equalLettersIgnoringASCIICase(value, "false"_s))
+        else if (equalLettersIgnoringASCIICase(value, "false"_s))
             addPropertyToPresentationalHintStyle(style, CSSPropertyWebkitUserDrag, CSSValueNone);
-    } else if (name == dirAttr) {
+        break;
+    case AttributeNames::dirAttr:
         if (equalLettersIgnoringASCIICase(value, "auto"_s))
             addPropertyToPresentationalHintStyle(style, CSSPropertyUnicodeBidi, unicodeBidiAttributeForDirAuto(*this));
         else if (equalLettersIgnoringASCIICase(value, "rtl"_s) || equalLettersIgnoringASCIICase(value, "ltr"_s)) {
@@ -266,14 +253,19 @@ void HTMLElement::collectPresentationalHintsForAttribute(const QualifiedName& na
             if (!hasTagName(bdiTag) && !hasTagName(bdoTag) && !hasTagName(outputTag))
                 addPropertyToPresentationalHintStyle(style, CSSPropertyUnicodeBidi, CSSValueIsolate);
         }
-    } else if (name.matches(XMLNames::langAttr))
+        break;
+    case AttributeNames::XML::langAttr:
         mapLanguageAttributeToLocale(value, style);
-    else if (name == langAttr) {
+        break;
+    case AttributeNames::langAttr:
         // xml:lang has a higher priority than lang.
         if (!hasAttributeWithoutSynchronization(XMLNames::langAttr))
             mapLanguageAttributeToLocale(value, style);
-    } else
+        break;
+    default:
         StyledElement::collectPresentationalHintsForAttribute(name, value, style);
+        break;
+    }
 }
 
 const AtomString& HTMLElement::eventNameForEventHandlerAttribute(const QualifiedName& attributeName, const EventHandlerNameMap& map)
@@ -301,7 +293,7 @@ const AtomString& HTMLElement::eventNameForEventHandlerAttribute(const Qualified
             // FIXME: Remove this special case. This has an [EventHandler] line in the IDL but was not historically in this map.
             if (attributeName == oncuechangeAttr.get().localName())
                 return;
-            map.add(attributeName.impl(), eventName);
+            map.add(attributeName, eventName);
         });
         // FIXME: Remove these special cases. These are not in IDL with [EventHandler] but were historically in this map.
         static constexpr std::array table {
@@ -326,8 +318,8 @@ const AtomString& HTMLElement::eventNameForEventHandlerAttribute(const Qualified
             &onwebkitpresentationmodechangedAttr,
         };
         for (auto& entry : table) {
-            auto* name = entry->get().localName().impl();
-            map.add(name, AtomString { name, 2, String::MaxLength });
+            auto& name = entry->get().localName();
+            map.add(name, AtomString { name.impl(), 2, String::MaxLength });
         }
         return map;
     }();
@@ -339,7 +331,10 @@ Node::Editability HTMLElement::editabilityFromContentEditableAttr(const Node& no
     if (pageIsEditable == PageIsEditable::Yes)
         return Editability::CanEditRichly;
 
-    if (auto* startElement = is<Element>(node) ? &downcast<Element>(node) : node.parentElement()) {
+    auto* startElement = dynamicDowncast<Element>(node);
+    if (!startElement)
+        startElement = node.parentElement();
+    if (startElement) {
         for (auto& element : lineageOfType<HTMLElement>(*startElement)) {
             switch (contentEditableType(element)) {
             case ContentEditableType::True:
@@ -358,7 +353,7 @@ Node::Editability HTMLElement::editabilityFromContentEditableAttr(const Node& no
     if (containingShadowRoot && containingShadowRoot->mode() == ShadowRootMode::UserAgent)
         return Editability::ReadOnly;
 
-    if (node.document().inDesignMode() && &node.rootNode() == &node.document())
+    if (node.document().inDesignMode() && node.isInDocumentTree())
         return Editability::CanEditRichly;
 
     return Editability::ReadOnly;
@@ -369,68 +364,70 @@ bool HTMLElement::matchesReadWritePseudoClass() const
     return editabilityFromContentEditableAttr(*this, PageIsEditable::No) != Editability::ReadOnly;
 }
 
-void HTMLElement::parseAttribute(const QualifiedName& name, const AtomString& value)
+void HTMLElement::attributeChanged(const QualifiedName& name, const AtomString& oldValue, const AtomString& newValue, AttributeModificationReason attributeModificationReason)
 {
-    if (name == dirAttr) {
-        dirAttributeChanged(value);
-        return;
-    }
+    StyledElement::attributeChanged(name, oldValue, newValue, attributeModificationReason);
 
-    if (name == tabindexAttr) {
-        if (auto optionalTabIndex = parseHTMLInteger(value))
+    switch (name.nodeName()) {
+    case AttributeNames::tabindexAttr:
+        if (auto optionalTabIndex = parseHTMLInteger(newValue))
             setTabIndexExplicitly(optionalTabIndex.value());
         else
             setTabIndexExplicitly(std::nullopt);
         return;
-    }
-
-    if (document().settings().inertAttributeEnabled() && name == inertAttr)
+    case AttributeNames::inertAttr:
         invalidateStyleInternal();
-
-    if (name == inputmodeAttr) {
-        auto& document = this->document();
-        if (this == document.focusedElement()) {
-            if (auto* page = document.page())
+        return;
+    case AttributeNames::inputmodeAttr:
+        if (Ref document = this->document(); this == document->focusedElement()) {
+            if (RefPtr page = document->page())
                 page->chrome().client().focusedElementDidChangeInputMode(*this, canonicalInputMode());
         }
-    }
+        return;
+    case AttributeNames::popoverAttr:
+        if (document().settings().popoverAttributeEnabled())
+            popoverAttributeChanged(newValue);
+        return;
+    case AttributeNames::spellcheckAttr: {
+        if (!document().hasEverHadSelectionInsideTextFormControl())
+            return;
 
-    if (document().settings().popoverAttributeEnabled() && name == popoverAttr)
-        popoverAttributeChanged(value);
+        bool oldEffectiveAttributeValue = !equalLettersIgnoringASCIICase(oldValue, "false"_s);
+        bool newEffectiveAttributeValue = !equalLettersIgnoringASCIICase(newValue, "false"_s);
+
+        if (oldEffectiveAttributeValue == newEffectiveAttributeValue)
+            return;
+
+        effectiveSpellcheckAttributeChanged(newEffectiveAttributeValue);
+        return;
+    }
+    default:
+        break;
+    }
 
     auto& eventName = eventNameForEventHandlerAttribute(name);
     if (!eventName.isNull())
-        setAttributeEventListener(eventName, name, value);
+        setAttributeEventListener(eventName, name, newValue);
 }
 
 Node::InsertedIntoAncestorResult HTMLElement::insertedIntoAncestor(InsertionType insertionType, ContainerNode& parentOfInsertedTree)
 {
     auto result = StyledElement::insertedIntoAncestor(insertionType, parentOfInsertedTree);
     hideNonce();
-
-    if (RefPtr parent = parentOrShadowHostElement(); parent && parent != document().documentElement() && UNLIKELY(parent->usesEffectiveTextDirection())) {
-        if (!elementAffectsDirectionality(*this) && !(is<HTMLInputElement>(*this) && downcast<HTMLInputElement>(*this).isTelephoneField())) {
-            setUsesEffectiveTextDirection(true);
-            setEffectiveTextDirection(parent->effectiveTextDirection());
-        }
-    }
-
     return result;
 }
 
 void HTMLElement::removedFromAncestor(RemovalType removalType, ContainerNode& oldParentOfRemovedTree)
 {
-    StyledElement::removedFromAncestor(removalType, oldParentOfRemovedTree);
+    if (popoverData())
+        hidePopoverInternal(FocusPreviousElement::No, FireEvents::No);
 
-    if (UNLIKELY(usesEffectiveTextDirection()) && !isValidDirValue(attributeWithoutSynchronization(dirAttr))) {
-        if (auto* parent = parentOrShadowHostElement(); !(parent && parent->usesEffectiveTextDirection()))
-            setUsesEffectiveTextDirection(false);
-    }
+    StyledElement::removedFromAncestor(removalType, oldParentOfRemovedTree);
 }
 
 static Ref<DocumentFragment> textToFragment(Document& document, const String& text)
 {
-    auto fragment = DocumentFragment::create(document);
+    Ref fragment = DocumentFragment::create(document);
 
     // It's safe to dispatch events on the new fragment since author scripts have no access to it yet.
     ScriptDisallowedScope::EventAllowedScope allowedScope(fragment);
@@ -511,7 +508,7 @@ ExceptionOr<void> HTMLElement::setInnerText(String&& text)
 
     // FIXME: This should use replaceAll(), after we fix that to work properly for DocumentFragment.
     // Add text nodes and <br> elements.
-    auto fragment = textToFragment(document(), WTFMove(text));
+    Ref fragment = textToFragment(document(), WTFMove(text));
     // It's safe to dispatch events on the new fragment since author scripts have no access to it yet.
     ScriptDisallowedScope::EventAllowedScope allowedScope(fragment.get());
     return replaceChildrenWithFragment(*this, WTFMove(fragment));
@@ -519,12 +516,12 @@ ExceptionOr<void> HTMLElement::setInnerText(String&& text)
 
 ExceptionOr<void> HTMLElement::setOuterText(String&& text)
 {
-    RefPtr<ContainerNode> parent = parentNode();
+    RefPtr parent = parentNode();
     if (!parent)
-        return Exception { NoModificationAllowedError };
+        return Exception { ExceptionCode::NoModificationAllowedError };
 
-    RefPtr<Node> prev = previousSibling();
-    RefPtr<Node> next = nextSibling();
+    RefPtr prev = previousSibling();
+    RefPtr next = nextSibling();
     RefPtr<Node> newChild;
 
     // Convert text to fragment with <br> tags instead of linebreaks if needed.
@@ -534,20 +531,19 @@ ExceptionOr<void> HTMLElement::setOuterText(String&& text)
         newChild = Text::create(document(), WTFMove(text));
 
     if (!parentNode())
-        return Exception { HierarchyRequestError };
+        return Exception { ExceptionCode::HierarchyRequestError };
 
     auto replaceResult = parent->replaceChild(*newChild, *this);
     if (replaceResult.hasException())
         return replaceResult.releaseException();
 
-    RefPtr<Node> node = next ? next->previousSibling() : nullptr;
-    if (is<Text>(node)) {
-        auto result = mergeWithNextTextNode(downcast<Text>(*node));
+    if (RefPtr node = dynamicDowncast<Text>(next ? next->previousSibling() : nullptr)) {
+        auto result = mergeWithNextTextNode(*node);
         if (result.hasException())
             return result.releaseException();
     }
-    if (is<Text>(prev)) {
-        auto result = mergeWithNextTextNode(downcast<Text>(*prev));
+    if (RefPtr previousText = dynamicDowncast<Text>(WTFMove(prev))) {
+        auto result = mergeWithNextTextNode(*previousText);
         if (result.hasException())
             return result.releaseException();
     }
@@ -556,9 +552,6 @@ ExceptionOr<void> HTMLElement::setOuterText(String&& text)
 
 void HTMLElement::applyAspectRatioFromWidthAndHeightAttributesToStyle(StringView widthAttribute, StringView heightAttribute, MutableStyleProperties& style)
 {
-    if (!document().settings().aspectRatioOfImgFromWidthAndHeightEnabled())
-        return;
-
     auto dimensionWidth = parseHTMLDimension(widthAttribute);
     if (!dimensionWidth || dimensionWidth->type != HTMLDimension::Type::Pixel)
         return;
@@ -571,9 +564,6 @@ void HTMLElement::applyAspectRatioFromWidthAndHeightAttributesToStyle(StringView
 
 void HTMLElement::applyAspectRatioWithoutDimensionalRulesFromWidthAndHeightAttributesToStyle(StringView widthAttribute, StringView heightAttribute, MutableStyleProperties& style)
 {
-    if (!document().settings().aspectRatioOfImgFromWidthAndHeightEnabled())
-        return;
-
     auto dimensionWidth = parseHTMLNonNegativeInteger(widthAttribute);
     if (!dimensionWidth)
         return;
@@ -586,13 +576,8 @@ void HTMLElement::applyAspectRatioWithoutDimensionalRulesFromWidthAndHeightAttri
 
 void HTMLElement::addParsedWidthAndHeightToAspectRatioList(double width, double height, MutableStyleProperties& style)
 {
-    auto ratioList = CSSValueList::createSlashSeparated();
-    ratioList->append(CSSPrimitiveValue::create(width));
-    ratioList->append(CSSPrimitiveValue::create(height));
-    auto list = CSSValueList::createSpaceSeparated();
-    list->append(CSSPrimitiveValue::create(CSSValueAuto));
-    list->append(ratioList);
-    style.setProperty(CSSPropertyAspectRatio, WTFMove(list));
+    style.setProperty(CSSPropertyAspectRatio, CSSValueList::createSpaceSeparated(CSSPrimitiveValue::create(CSSValueAuto),
+        CSSValueList::createSlashSeparated(CSSPrimitiveValue::create(width), CSSPrimitiveValue::create(height))));
 }
 
 void HTMLElement::applyAlignmentAttributeToStyle(const AtomString& alignment, MutableStyleProperties& style)
@@ -602,7 +587,7 @@ void HTMLElement::applyAlignmentAttributeToStyle(const AtomString& alignment, Mu
     CSSValueID floatValue = CSSValueInvalid;
     CSSValueID verticalAlignValue = CSSValueInvalid;
 
-    if (equalLettersIgnoringASCIICase(alignment, "absmiddle"_s))
+    if (equalLettersIgnoringASCIICase(alignment, "absmiddle"_s) || equalLettersIgnoringASCIICase(alignment, "abscenter"_s))
         verticalAlignValue = CSSValueMiddle;
     else if (equalLettersIgnoringASCIICase(alignment, "absbottom"_s))
         verticalAlignValue = CSSValueBottom;
@@ -666,7 +651,7 @@ ExceptionOr<void> HTMLElement::setContentEditable(const String& enabled)
     else if (equalLettersIgnoringASCIICase(enabled, "inherit"_s))
         removeAttribute(contenteditableAttr);
     else
-        return Exception { SyntaxError };
+        return Exception { ExceptionCode::SyntaxError };
     return { };
 }
 
@@ -692,6 +677,37 @@ bool HTMLElement::spellcheck() const
 void HTMLElement::setSpellcheck(bool enable)
 {
     setAttributeWithoutSynchronization(spellcheckAttr, enable ? trueAtom() : falseAtom());
+}
+
+bool HTMLElement::writingsuggestions() const
+{
+    return isWritingSuggestionsEnabled();
+}
+
+void HTMLElement::setWritingsuggestions(bool enable)
+{
+    setAttributeWithoutSynchronization(writingsuggestionsAttr, enable ? trueAtom() : falseAtom());
+}
+
+void HTMLElement::effectiveSpellcheckAttributeChanged(bool newValue)
+{
+    for (auto it = descendantsOfType<HTMLElement>(*this).begin(); it;) {
+        Ref element = *it;
+
+        auto& value = element->attributeWithoutSynchronization(HTMLNames::spellcheckAttr);
+        if (!value.isNull()) {
+            it.traverseNextSkippingChildren();
+            continue;
+        }
+
+        if (element->isTextFormControlElement()) {
+            element->effectiveSpellcheckAttributeChanged(newValue);
+            it.traverseNextSkippingChildren();
+            continue;
+        }
+
+        it.traverseNext();
+    }
 }
 
 void HTMLElement::click()
@@ -723,7 +739,7 @@ String HTMLElement::accessKeyLabel() const
 #else
     // Currently accessKeyModifier in non-cocoa platforms is hardcoded to Alt, so no reason to do extra work here.
     // If this ever becomes configurable, make this code use EventHandler::accessKeyModifiers().
-    result.append("Alt+");
+    result.append("Alt+"_s);
 #endif
 
     result.append(accessKey);
@@ -753,217 +769,9 @@ void HTMLElement::setTranslate(bool enable)
     setAttributeWithoutSynchronization(translateAttr, enable ? "yes"_s : "no"_s);
 }
 
-bool HTMLElement::rendererIsEverNeeded()
-{
-    if (hasTagName(noscriptTag)) {
-        RefPtr<Frame> frame = document().frame();
-        if (frame && frame->script().canExecuteScripts(NotAboutToExecuteScript))
-            return false;
-    } else if (hasTagName(noembedTag)) {
-        RefPtr<Frame> frame = document().frame();
-        if (frame && frame->arePluginsEnabled())
-            return false;
-    }
-    return StyledElement::rendererIsEverNeeded();
-}
-
 FormAssociatedElement* HTMLElement::asFormAssociatedElement()
 {
     return nullptr;
-}
-
-static void setHasDirAutoFlagRecursively(Node* firstNode, bool flag, Node* lastNode = nullptr)
-{
-    firstNode->setSelfOrPrecedingNodesAffectDirAuto(flag);
-
-    RefPtr<Node> node = firstNode->firstChild();
-
-    while (node) {
-        if (elementAffectsDirectionality(*node)) {
-            if (node == lastNode)
-                return;
-            node = NodeTraversal::nextSkippingChildren(*node, firstNode);
-            continue;
-        }
-        node->setSelfOrPrecedingNodesAffectDirAuto(flag);
-        if (node == lastNode)
-            return;
-        node = NodeTraversal::next(*node, firstNode);
-    }
-}
-
-void HTMLElement::childrenChanged(const ChildChange& change)
-{
-    StyledElement::childrenChanged(change);
-    if (UNLIKELY(document().isDirAttributeDirty()))
-    adjustDirectionalityIfNeededAfterChildrenChanged(change.previousSiblingElement, change.type);
-}
-
-bool HTMLElement::hasDirectionAuto() const
-{
-    const AtomString& direction = attributeWithoutSynchronization(dirAttr);
-    return (hasTagName(bdiTag) && !isValidDirValue(direction)) || equalLettersIgnoringASCIICase(direction, "auto"_s);
-}
-
-std::optional<TextDirection> HTMLElement::directionalityIfDirIsAuto() const
-{
-    if (!(selfOrPrecedingNodesAffectDirAuto() && hasDirectionAuto()))
-        return std::nullopt;
-    return computeDirectionalityFromText().direction;
-}
-
-auto HTMLElement::computeDirectionalityFromText() const -> TextDirectionWithStrongDirectionalityNode
-{
-    if (auto* textControl = dynamicDowncast<HTMLTextFormControlElement>(const_cast<HTMLElement*>(this))) {
-        auto* inputElement = dynamicDowncast<HTMLInputElement>(textControl);
-        if (!inputElement || (inputElement->isTextType() && !inputElement->isPasswordField())) {
-            auto direction = textControl->value().defaultWritingDirection();
-            if (!direction)
-                return { TextDirection::LTR, nullptr };
-            return { *direction == U_LEFT_TO_RIGHT ? TextDirection::LTR : TextDirection::RTL, textControl };
-        }
-    }
-
-    RefPtr<Node> node = firstChild();
-    while (node) {
-        // Skip bdi, script, style and text form controls.
-        if (node->hasTagName(bdiTag) || node->hasTagName(scriptTag) || node->hasTagName(styleTag)
-            || (is<Element>(*node) && downcast<Element>(*node).isTextField())) {
-            node = NodeTraversal::nextSkippingChildren(*node, this);
-            continue;
-        }
-
-        // Skip elements with valid dir attribute
-        if (is<Element>(*node)) {
-            if (isValidDirValue(downcast<Element>(*node).attributeWithoutSynchronization(dirAttr))) {
-                node = NodeTraversal::nextSkippingChildren(*node, this);
-                continue;
-            }
-        }
-
-        if (node->isTextNode()) {
-            if (auto direction = node->textContent(true).defaultWritingDirection())
-                return { *direction == U_LEFT_TO_RIGHT ? TextDirection::LTR : TextDirection::RTL, node };
-        }
-        node = NodeTraversal::next(*node, this);
-    }
-    return { TextDirection::LTR, nullptr };
-}
-
-void HTMLElement::dirAttributeChanged(const AtomString& value)
-{
-    RefPtr<Element> parent = parentOrShadowHostElement();
-    bool isValid = true;
-
-    document().setIsDirAttributeDirty();
-
-    auto direction = parseTextDirection(value);
-    switch (direction) {
-    case TextDirectionDirective::Invalid:
-        isValid = false;
-        if (selfOrPrecedingNodesAffectDirAuto() && (!parent || !parent->selfOrPrecedingNodesAffectDirAuto()) && !is<HTMLBDIElement>(*this))
-            setHasDirAutoFlagRecursively(this, false);
-        if (parent && parent->usesEffectiveTextDirection() && !(is<HTMLInputElement>(*this) && downcast<HTMLInputElement>(*this).isTelephoneField())) {
-            setUsesEffectiveTextDirection(true);
-            updateEffectiveDirectionality(parent->effectiveTextDirection());
-        } else
-            setUsesEffectiveTextDirection(false);
-        break;
-    case TextDirectionDirective::LTR:
-        if (selfOrPrecedingNodesAffectDirAuto())
-            setHasDirAutoFlagRecursively(this, false);
-        setUsesEffectiveTextDirection(true);
-        updateEffectiveDirectionality(TextDirection::LTR);
-        break;
-    case TextDirectionDirective::RTL:
-        if (selfOrPrecedingNodesAffectDirAuto())
-            setHasDirAutoFlagRecursively(this, false);
-        setUsesEffectiveTextDirection(true);
-        updateEffectiveDirectionality(TextDirection::RTL);
-        break;
-    case TextDirectionDirective::Auto:
-        setUsesEffectiveTextDirection(true);
-        updateEffectiveDirectionalityOfDirAuto();
-        break;
-    }
-
-    if (is<HTMLElement>(parent) && parent->selfOrPrecedingNodesAffectDirAuto()) {
-        if (isValid && direction != TextDirectionDirective::Auto)
-            setHasDirAutoFlagRecursively(this, false);
-        downcast<HTMLElement>(*parent).adjustDirectionalityIfNeededAfterChildAttributeChanged(this);
-    }
-}
-
-void HTMLElement::updateEffectiveDirectionality(TextDirection direction)
-{
-    Style::PseudoClassChangeInvalidation styleInvalidation(*this, CSSSelector::PseudoClassDir, Style::PseudoClassChangeInvalidation::AnyValue);
-    setUsesEffectiveTextDirection(true);
-    setEffectiveTextDirection(direction);
-    auto updateEffectiveTextDirectionOfShadowRoot = [&](HTMLElement& element) {
-        if (RefPtr shadowRootOfElement = element.shadowRoot()) {
-            for (auto& element : childrenOfType<HTMLElement>(*shadowRootOfElement))
-                element.updateEffectiveDirectionality(direction);
-        }
-    };
-    updateEffectiveTextDirectionOfShadowRoot(*this);
-    for (auto it = descendantsOfType<HTMLElement>(*this).begin(); it;) {
-        auto& element = *it;
-        if (isValidDirValue(element.attributeWithoutSynchronization(dirAttr))) {
-            it.traverseNextSkippingChildren();
-            continue;
-        }
-        updateEffectiveTextDirectionOfShadowRoot(element);
-        Style::PseudoClassChangeInvalidation styleInvalidation(element, CSSSelector::PseudoClassDir, Style::PseudoClassChangeInvalidation::AnyValue);
-        element.setUsesEffectiveTextDirection(true);
-        element.setEffectiveTextDirection(direction);
-        it.traverseNext();
-    }
-}
-
-void HTMLElement::adjustDirectionalityIfNeededAfterChildAttributeChanged(Element*)
-{
-    ASSERT(selfOrPrecedingNodesAffectDirAuto());
-    for (auto& element : lineageOfType<HTMLElement>(*this)) {
-        if (elementAffectsDirectionality(element)) {
-            ASSERT(element.hasDirectionAuto());
-            element.updateEffectiveDirectionalityOfDirAuto();
-            break;
-        }
-    }
-}
-
-void HTMLElement::updateEffectiveDirectionalityOfDirAuto()
-{
-    auto result = computeDirectionalityFromText();
-    setHasDirAutoFlagRecursively(this, true, result.strongDirectionalityNode.get());
-    updateEffectiveDirectionality(result.direction);
-    if (renderer() && renderer()->style().direction() != result.direction)
-        invalidateStyleForSubtree();
-}
-
-void HTMLElement::adjustDirectionalityIfNeededAfterChildrenChanged(Element* beforeChange, ChildChange::Type changeType)
-{
-    // FIXME: This function looks suspicious.
-
-    if (!selfOrPrecedingNodesAffectDirAuto())
-        return;
-
-    RefPtr<Node> oldMarkedNode;
-    if (beforeChange)
-        oldMarkedNode = changeType == ChildChange::Type::ElementInserted ? ElementTraversal::nextSibling(*beforeChange) : beforeChange->nextSibling();
-
-    while (oldMarkedNode && elementAffectsDirectionality(*oldMarkedNode))
-        oldMarkedNode = oldMarkedNode->nextSibling();
-    if (oldMarkedNode)
-        setHasDirAutoFlagRecursively(oldMarkedNode.get(), false);
-
-    for (auto& elementToAdjust : lineageOfType<HTMLElement>(*this)) {
-        if (elementAffectsDirectionality(elementToAdjust)) {
-            ASSERT(elementToAdjust.hasDirectionAuto());
-            elementToAdjust.updateEffectiveDirectionalityOfDirAuto();
-            return;
-        }
-    }
 }
 
 void HTMLElement::addHTMLLengthToStyle(MutableStyleProperties& style, CSSPropertyID propertyID, StringView value, AllowPercentage allowPercentage, UseCSSPXAsUnitType useCSSPX, IsMultiLength isMultiLength, AllowZeroValue allowZeroValue)
@@ -1014,7 +822,7 @@ std::optional<SRGBA<uint8_t>> HTMLElement::parseLegacyColorValue(StringView stri
     if (string.isEmpty())
         return std::nullopt;
 
-    string = string.stripLeadingAndTrailingMatchedCharacters(isHTMLSpace<UChar>);
+    string = string.trim(isASCIIWhitespace<UChar>);
     if (string.isEmpty())
         return Color::black;
 
@@ -1099,14 +907,16 @@ bool HTMLElement::willRespondToMouseClickEventsWithEditability(Editability edita
 
 bool HTMLElement::canBeActuallyDisabled() const
 {
-    return is<HTMLButtonElement>(*this)
+    if (is<HTMLButtonElement>(*this)
         || is<HTMLInputElement>(*this)
         || is<HTMLSelectElement>(*this)
         || is<HTMLTextAreaElement>(*this)
         || is<HTMLOptGroupElement>(*this)
         || is<HTMLOptionElement>(*this)
-        || is<HTMLFieldSetElement>(*this)
-        || (is<HTMLMaybeFormAssociatedCustomElement>(*this) && downcast<HTMLMaybeFormAssociatedCustomElement>(*this).isFormAssociatedCustomElement());
+        || is<HTMLFieldSetElement>(*this))
+        return true;
+    auto* customElement = dynamicDowncast<HTMLMaybeFormAssociatedCustomElement>(*this);
+    return customElement && customElement->isFormAssociatedCustomElement();
 }
 
 bool HTMLElement::isActuallyDisabled() const
@@ -1159,12 +969,7 @@ void HTMLElement::setAutocorrect(bool autocorrect)
 
 InputMode HTMLElement::canonicalInputMode() const
 {
-    auto mode = inputModeForAttributeValue(attributeWithoutSynchronization(inputmodeAttr));
-    if (mode == InputMode::Unspecified) {
-        if (document().quirks().needsInputModeNoneImplicitly(*this))
-            return InputMode::None;
-    }
-    return mode;
+    return inputModeForAttributeValue(attributeWithoutSynchronization(inputmodeAttr));
 }
 
 const AtomString& HTMLElement::inputMode() const
@@ -1202,119 +1007,221 @@ bool HTMLElement::shouldExtendSelectionToTargetNode(const Node& targetNode, cons
 
 ExceptionOr<Ref<ElementInternals>> HTMLElement::attachInternals()
 {
-    auto* queue = reactionQueue();
+    CheckedPtr queue = reactionQueue();
     if (!queue)
-        return Exception { NotSupportedError, "attachInternals is only supported on a custom element instance"_s };
+        return Exception { ExceptionCode::NotSupportedError, "attachInternals is only supported on a custom element instance"_s };
 
     if (queue->isElementInternalsDisabled())
-        return Exception { NotSupportedError, "attachInternals is disabled"_s };
+        return Exception { ExceptionCode::NotSupportedError, "attachInternals is disabled"_s };
 
     if (queue->isElementInternalsAttached())
-        return Exception { NotSupportedError, "There is already an existing ElementInternals"_s };
+        return Exception { ExceptionCode::NotSupportedError, "There is already an existing ElementInternals"_s };
 
     if (!isPrecustomizedOrDefinedCustomElement())
-        return Exception { NotSupportedError, "Custom element is in an invalid state"_s };
+        return Exception { ExceptionCode::NotSupportedError, "Custom element is in an invalid state"_s };
 
     queue->setElementInternalsAttached();
     return ElementInternals::create(*this);
 }
 
-static ExceptionOr<void> checkPopoverValidity(Element& element, PopoverVisibilityState expectedState)
+static ExceptionOr<bool> checkPopoverValidity(HTMLElement& element, PopoverVisibilityState expectedState, Document* expectedDocument = nullptr)
 {
-    if (!element.hasAttributeWithoutSynchronization(HTMLNames::popoverAttr))
-        return Exception { InvalidStateError, "Element does not have the popover attribute"_s };
-
-    if (!element.isConnected())
-        return Exception { InvalidStateError, "Element is not connected"_s };
+    if (element.popoverState() == PopoverState::None)
+        return Exception { ExceptionCode::NotSupportedError, "Element does not have the popover attribute"_s };
 
     if (element.popoverData()->visibilityState() != expectedState)
-        return Exception { InvalidStateError, "Element has unexpected visibility state"_s };
+        return false;
 
-    if (is<HTMLDialogElement>(element) && element.hasAttributeWithoutSynchronization(HTMLNames::openAttr))
-        return Exception { InvalidStateError, "Element is an open <dialog> element"_s };
+    if (!element.isConnected())
+        return Exception { ExceptionCode::InvalidStateError, "Element is not connected"_s };
+
+    if (expectedDocument && &element.document() != expectedDocument)
+        return Exception { ExceptionCode::InvalidStateError, "Invalid when the document changes while showing or hiding a popover element"_s };
+
+    if (auto* dialog = dynamicDowncast<HTMLDialogElement>(element); dialog && dialog->isModal())
+        return Exception { ExceptionCode::InvalidStateError, "Element is a modal <dialog> element"_s };
 
 #if ENABLE(FULLSCREEN_API)
     if (element.hasFullscreenFlag())
-        return Exception { InvalidStateError, "Element is fullscreen"_s };
+        return Exception { ExceptionCode::InvalidStateError, "Element is fullscreen"_s };
 #endif
 
-    return { };
+    return true;
 }
 
-ExceptionOr<void> HTMLElement::showPopover()
+// https://html.spec.whatwg.org/#popover-focusing-steps
+static void runPopoverFocusingSteps(HTMLElement& popover)
 {
-    if (auto check = checkPopoverValidity(*this, PopoverVisibilityState::Hidden); check.hasException())
+    if (RefPtr dialog = dynamicDowncast<HTMLDialogElement>(popover)) {
+        dialog->runFocusingSteps();
+        return;
+    }
+
+    RefPtr control = popover.hasAttribute(autofocusAttr) ? &popover : popover.findAutofocusDelegate();
+
+    if (!control)
+        return;
+
+    control->runFocusingStepsForAutofocus();
+
+    if (!control->document().isSameOriginAsTopDocument())
+        return;
+
+    Ref topDocument = control->document().topDocument();
+    topDocument->clearAutofocusCandidates();
+    topDocument->setAutofocusProcessed();
+}
+
+void HTMLElement::queuePopoverToggleEventTask(PopoverVisibilityState oldState, PopoverVisibilityState newState)
+{
+    if (auto queuedEventData = popoverData()->queuedToggleEventData())
+        oldState = queuedEventData->oldState;
+    popoverData()->setQueuedToggleEventData({ oldState, newState });
+    queueTaskKeepingThisNodeAlive(TaskSource::DOMManipulation, [this, newState] {
+        if (!popoverData())
+            return;
+        auto queuedEventData = popoverData()->queuedToggleEventData();
+        if (!queuedEventData || queuedEventData->newState != newState)
+            return;
+        popoverData()->clearQueuedToggleEventData();
+        auto stringForState = [](PopoverVisibilityState state) {
+            return state == PopoverVisibilityState::Hidden ? "closed"_s : "open"_s;
+        };
+        dispatchEvent(ToggleEvent::create(eventNames().toggleEvent, { EventInit { }, stringForState(queuedEventData->oldState), stringForState(queuedEventData->newState) }, Event::IsCancelable::No));
+    });
+}
+
+ExceptionOr<void> HTMLElement::showPopover(const HTMLFormControlElement* invoker)
+{
+    auto check = checkPopoverValidity(*this, PopoverVisibilityState::Hidden);
+    if (check.hasException())
         return check.releaseException();
+    if (!check.returnValue())
+        return { };
+
+    if (popoverData())
+        popoverData()->setInvoker(invoker);
 
     ASSERT(!isInTopLayer());
 
-    auto event = ToggleEvent::create(eventNames().beforetoggleEvent, { EventInit { }, "closed"_s, "open"_s }, Event::IsCancelable::Yes);
+    PopoverData::ScopedStartShowingOrHiding showOrHidingPopoverScope(*this);
+    auto fireEvents = showOrHidingPopoverScope.wasShowingOrHiding() ? FireEvents::No : FireEvents::Yes;
+
+    Ref document = this->document();
+    Ref event = ToggleEvent::create(eventNames().beforetoggleEvent, { EventInit { }, "closed"_s, "open"_s }, Event::IsCancelable::Yes);
     dispatchEvent(event);
-    if (event->defaultPrevented())
+    if (event->defaultPrevented() || event->defaultHandled())
         return { };
 
-    if (auto check = checkPopoverValidity(*this, PopoverVisibilityState::Hidden); check.hasException())
+    check = checkPopoverValidity(*this, PopoverVisibilityState::Hidden, document.ptr());
+    if (check.hasException())
         return check.releaseException();
+    if (!check.returnValue())
+        return { };
 
     ASSERT(popoverData());
 
-    // FIXME: Run auto popover steps.
+    bool shouldRestoreFocus = false;
 
-    if (popoverState() == PopoverState::Auto)
-        popoverData()->setPreviouslyFocusedElement(document().focusedElement());
+    if (popoverState() == PopoverState::Auto) {
+        auto originalState = popoverState();
+        auto hideUntil = topmostPopoverAncestor(TopLayerElementType::Popover);
+        document->hideAllPopoversUntil(hideUntil, FocusPreviousElement::No, fireEvents);
+
+        if (popoverState() != originalState)
+            return Exception { ExceptionCode::InvalidStateError, "The value of the popover attribute was changed while hiding the popover."_s };
+
+        check = checkPopoverValidity(*this, PopoverVisibilityState::Hidden, document.ptr());
+        if (check.hasException())
+            return check.releaseException();
+        if (!check.returnValue())
+            return { };
+
+        shouldRestoreFocus = !document->topmostAutoPopover();
+    }
+
+    RefPtr previouslyFocusedElement = document->focusedElement();
 
     addToTopLayer();
 
-    Style::PseudoClassChangeInvalidation styleInvalidation(*this, {
-        { CSSSelector::PseudoClassOpen, true },
-        { CSSSelector::PseudoClassClosed, false }
-    });
+    popoverData()->setPreviouslyFocusedElement(nullptr);
+
+    Style::PseudoClassChangeInvalidation styleInvalidation(*this, CSSSelector::PseudoClass::PopoverOpen, true);
     popoverData()->setVisibilityState(PopoverVisibilityState::Showing);
 
-    // FIXME: Queue popover toggle event task.
+    runPopoverFocusingSteps(*this);
+
+    if (shouldRestoreFocus) {
+        ASSERT(popoverState() == PopoverState::Auto);
+        popoverData()->setPreviouslyFocusedElement(previouslyFocusedElement.get());
+    }
+
+    queuePopoverToggleEventTask(PopoverVisibilityState::Hidden, PopoverVisibilityState::Showing);
+
+    if (CheckedPtr cache = document->existingAXObjectCache())
+        cache->onPopoverToggle(*this);
 
     return { };
 }
 
 ExceptionOr<void> HTMLElement::hidePopoverInternal(FocusPreviousElement focusPreviousElement, FireEvents fireEvents)
 {
-    if (auto check = checkPopoverValidity(*this, PopoverVisibilityState::Showing); check.hasException())
+    auto check = checkPopoverValidity(*this, PopoverVisibilityState::Showing);
+    if (check.hasException())
         return check.releaseException();
+    if (!check.returnValue())
+        return { };
 
     ASSERT(popoverData());
 
-    // FIXME: Run auto popover steps.
+    PopoverData::ScopedStartShowingOrHiding showOrHidingPopoverScope(*this);
+    if (showOrHidingPopoverScope.wasShowingOrHiding())
+        fireEvents = FireEvents::No;
 
-    if (fireEvents == FireEvents::Yes) {
-        auto event = ToggleEvent::create(eventNames().beforetoggleEvent, { EventInit { }, "open"_s, "closed"_s }, Event::IsCancelable::No);
-        dispatchEvent(event);
-        if (event->defaultPrevented())
+    if (popoverState() == PopoverState::Auto) {
+        RefAllowingPartiallyDestroyed<Document> { document() }->hideAllPopoversUntil(this, focusPreviousElement, fireEvents);
+
+        check = checkPopoverValidity(*this, PopoverVisibilityState::Showing);
+        if (check.hasException())
+            return check.releaseException();
+        if (!check.returnValue())
             return { };
     }
 
-    if (auto check = checkPopoverValidity(*this, PopoverVisibilityState::Showing); check.hasException())
+    popoverData()->setInvoker(nullptr);
+
+    if (fireEvents == FireEvents::Yes)
+        dispatchEvent(ToggleEvent::create(eventNames().beforetoggleEvent, { EventInit { }, "open"_s, "closed"_s }, Event::IsCancelable::No));
+
+    check = checkPopoverValidity(*this, PopoverVisibilityState::Showing);
+    if (check.hasException())
         return check.releaseException();
+    if (!check.returnValue())
+        return { };
 
     ASSERT(popoverData());
 
     removeFromTopLayer();
 
-    Style::PseudoClassChangeInvalidation styleInvalidation(*this, {
-        { CSSSelector::PseudoClassClosed, true },
-        { CSSSelector::PseudoClassOpen, false }
-    });
+    std::optional<Style::PseudoClassChangeInvalidation> styleInvalidation;
+    if (isConnected())
+        styleInvalidation.emplace(*this, CSSSelector::PseudoClass::PopoverOpen, false, Style::InvalidationScope::Descendants);
     popoverData()->setVisibilityState(PopoverVisibilityState::Hidden);
 
-    // FIXME: Queue popover toggle event task.
+    if (fireEvents == FireEvents::Yes)
+        queuePopoverToggleEventTask(PopoverVisibilityState::Showing, PopoverVisibilityState::Hidden);
 
     if (RefPtr element = popoverData()->previouslyFocusedElement()) {
-        if (focusPreviousElement == FocusPreviousElement::Yes) {
+        if (focusPreviousElement == FocusPreviousElement::Yes && containsIncludingShadowDOM(document().focusedElement())) {
             FocusOptions options;
             options.preventScroll = true;
             element->focus(options);
         }
         popoverData()->setPreviouslyFocusedElement(nullptr);
     }
+
+    if (CheckedPtr cache = document().existingAXObjectCache())
+        cache->onPopoverToggle(*this);
 
     return { };
 }
@@ -1324,17 +1231,27 @@ ExceptionOr<void> HTMLElement::hidePopover()
     return hidePopoverInternal(FocusPreviousElement::Yes, FireEvents::Yes);
 }
 
-ExceptionOr<void> HTMLElement::togglePopover(std::optional<bool> force)
+ExceptionOr<bool> HTMLElement::togglePopover(std::optional<bool> force)
 {
-    if (popoverData() && popoverData()->visibilityState() == PopoverVisibilityState::Showing && !force.value_or(false))
-        return hidePopover();
-
-    return showPopover();
+    if (isPopoverShowing() && !force.value_or(false)) {
+        auto returnValue = hidePopover();
+        if (returnValue.hasException())
+            return returnValue.releaseException();
+    } else if (!isPopoverShowing() && force.value_or(true)) {
+        auto returnValue = showPopover();
+        if (returnValue.hasException())
+            return returnValue.releaseException();
+    } else {
+        auto check = checkPopoverValidity(*this, popoverData() ? popoverData()->visibilityState() : PopoverVisibilityState::Showing);
+        if (check.hasException())
+            return check.releaseException();
+    }
+    return isPopoverShowing();
 }
 
 void HTMLElement::popoverAttributeChanged(const AtomString& value)
 {
-    auto newPopoverState = [](const AtomString& value) -> PopoverState {
+    auto computePopoverState = [](const AtomString& value) -> PopoverState {
         if (!value || value.isNull())
             return PopoverState::None;
 
@@ -1342,24 +1259,52 @@ void HTMLElement::popoverAttributeChanged(const AtomString& value)
             return PopoverState::Auto;
 
         return PopoverState::Manual;
-    }(value);
+    };
+
+    auto newPopoverState = computePopoverState(value);
 
     auto oldPopoverState = popoverState();
     if (newPopoverState == oldPopoverState)
         return;
 
-    Style::PseudoClassChangeInvalidation styleInvalidation(*this, {
-        { CSSSelector::PseudoClassOpen, false },
-        { CSSSelector::PseudoClassClosed, newPopoverState != PopoverState::None }
-    });
+    Style::PseudoClassChangeInvalidation styleInvalidation(*this, CSSSelector::PseudoClass::PopoverOpen, false);
 
-    if (oldPopoverState != PopoverState::None)
-        hidePopoverInternal(FocusPreviousElement::Yes, FireEvents::No);
+    if (isPopoverShowing()) {
+        hidePopoverInternal(FocusPreviousElement::Yes, FireEvents::Yes);
+        newPopoverState = computePopoverState(attributeWithoutSynchronization(popoverAttr));
+    }
 
     if (newPopoverState == PopoverState::None)
         clearPopoverData();
     else
         ensurePopoverData().setPopoverState(newPopoverState);
+}
+
+bool HTMLElement::isValidCommandType(const CommandType command)
+{
+    return Element::isValidCommandType(command) || command == CommandType::TogglePopover || command == CommandType::ShowPopover || command == CommandType::HidePopover;
+}
+
+bool HTMLElement::handleCommandInternal(const HTMLFormControlElement& invoker, const CommandType& command)
+{
+    if (popoverState() == PopoverState::None)
+        return false;
+
+    if (isPopoverShowing()) {
+        bool shouldHide = command == CommandType::TogglePopover || command == CommandType::HidePopover;
+        if (shouldHide) {
+            hidePopover();
+            return true;
+        }
+    } else {
+        bool shouldShow = command == CommandType::TogglePopover || command == CommandType::ShowPopover;
+        if (shouldShow) {
+            showPopover(&invoker);
+            return true;
+        }
+    }
+
+    return false;
 }
 
 const AtomString& HTMLElement::popover() const

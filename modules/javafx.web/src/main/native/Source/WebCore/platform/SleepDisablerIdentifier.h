@@ -29,7 +29,7 @@
 
 namespace WebCore {
 
-enum SleepDisablerIdentifierType { };
-using SleepDisablerIdentifier = ObjectIdentifier<SleepDisablerIdentifierType>;
+struct SleepDisablerIdentifierType { };
+using SleepDisablerIdentifier = LegacyNullableObjectIdentifier<SleepDisablerIdentifierType>;
 
 } // namespace WebCore

@@ -26,7 +26,6 @@
 
 #pragma once
 
-#include "JSGlobalObject.h"
 #include "JSObject.h"
 #include "ScriptFetchParameters.h"
 #include <wtf/Ref.h>
@@ -48,10 +47,7 @@ public:
         return vm.scriptFetchParametersSpace<mode>();
     }
 
-    static Structure* createStructure(VM& vm, JSGlobalObject* globalObject, JSValue prototype)
-    {
-        return Structure::create(vm, globalObject, prototype, TypeInfo(JSScriptFetchParametersType, StructureFlags), info());
-    }
+    inline static Structure* createStructure(VM&, JSGlobalObject*, JSValue);
 
     static JSScriptFetchParameters* create(VM& vm, Structure* structure, Ref<ScriptFetchParameters>&& parameters)
     {

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2005-2021 Apple Inc. All rights reserved.
+ * Copyright (C) 2005-2023 Apple Inc. All rights reserved.
  * Copyright (C) 2006 Alexey Proskuryakov
  *
  * Redistribution and use in source and binary forms, with or without
@@ -29,6 +29,7 @@
 
 #pragma once
 
+#include "TextFlags.h"
 #include <wtf/HashMap.h>
 #include <wtf/HashTraits.h>
 #include <wtf/Hasher.h>
@@ -42,24 +43,22 @@ enum class IsForPlatformFont : bool;
 
 struct CharacterFallbackMapKey {
     AtomString locale;
-    UChar32 character { 0 };
+    String string;
     bool isForPlatformFont { false };
+    ResolvedEmojiPolicy resolvedEmojiPolicy { ResolvedEmojiPolicy::NoPreference };
 
-    bool operator==(const CharacterFallbackMapKey& other) const
-    {
-        return locale == other.locale && character == other.character && isForPlatformFont == other.isForPlatformFont;
-    }
+    bool operator==(const CharacterFallbackMapKey& other) const = default;
 };
 
 inline void add(Hasher& hasher, const CharacterFallbackMapKey& key)
 {
-    add(hasher, key.locale, key.character, key.isForPlatformFont);
+    add(hasher, key.locale, key.string, key.isForPlatformFont, key.resolvedEmojiPolicy);
 }
 
 struct CharacterFallbackMapKeyHash {
     static unsigned hash(const CharacterFallbackMapKey& key) { return computeHash(key); }
     static bool equal(const CharacterFallbackMapKey& a, const CharacterFallbackMapKey& b) { return a == b; }
-    static const bool safeToCompareToEmptyOrDeleted = true;
+    static const bool safeToCompareToEmptyOrDeleted = false;
 };
 
 class SystemFallbackFontCache {
@@ -70,13 +69,13 @@ public:
 
     SystemFallbackFontCache() = default;
 
-    RefPtr<Font> systemFallbackFontForCharacter(const Font*, UChar32 character, const FontDescription&, IsForPlatformFont);
+    RefPtr<Font> systemFallbackFontForCharacterCluster(const Font*, StringView, const FontDescription&, ResolvedEmojiPolicy, IsForPlatformFont);
     void remove(Font*);
 
 private:
     struct CharacterFallbackMapKeyHashTraits : SimpleClassHashTraits<CharacterFallbackMapKey> {
-        static void constructDeletedValue(CharacterFallbackMapKey& slot) { new (NotNull, &slot) CharacterFallbackMapKey { { }, U_SENTINEL, { } }; }
-        static bool isDeletedValue(const CharacterFallbackMapKey& key) { return key.character == U_SENTINEL; }
+        static void constructDeletedValue(CharacterFallbackMapKey& slot) { new (NotNull, &slot) CharacterFallbackMapKey { { }, WTF::HashTableDeletedValue, { } }; }
+        static bool isDeletedValue(const CharacterFallbackMapKey& key) { return key.string.isHashTableDeletedValue(); }
     };
 
     // Fonts are not ref'd to avoid cycles.

@@ -36,10 +36,12 @@ namespace WebCore {
 class MathMLTokenElement;
 
 class RenderMathMLToken : public RenderMathMLBlock {
-    WTF_MAKE_ISO_ALLOCATED(RenderMathMLToken);
+    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(RenderMathMLToken);
+    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(RenderMathMLToken);
 public:
-    RenderMathMLToken(MathMLTokenElement&, RenderStyle&&);
-    RenderMathMLToken(Document&, RenderStyle&&);
+    RenderMathMLToken(Type, MathMLTokenElement&, RenderStyle&&);
+    RenderMathMLToken(Type, Document&, RenderStyle&&);
+    virtual ~RenderMathMLToken();
 
     MathMLTokenElement& element();
 
@@ -64,7 +66,7 @@ private:
         m_mathVariantGlyphDirty = true;
         setNeedsLayoutAndPrefWidthsRecalc();
     }
-    std::optional<UChar32> m_mathVariantCodePoint { std::nullopt };
+    std::optional<char32_t> m_mathVariantCodePoint { std::nullopt };
     bool m_mathVariantIsMirrored { false };
     bool m_mathVariantGlyphDirty { false };
 };

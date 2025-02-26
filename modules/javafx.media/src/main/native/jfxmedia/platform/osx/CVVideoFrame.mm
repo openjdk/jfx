@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2023, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -39,32 +39,43 @@ bool CVVideoFrame::IsFormatSupported(OSType format) {
     return false;
 }
 
-CVVideoFrame::CVVideoFrame(CVPixelBufferRef buf, double frameTime, uint64_t frameHostTime)
+CVVideoFrame::CVVideoFrame(CVPixelBufferRef pixelBuffer, double frameTime, uint64_t frameHostTime)
 :
-  pixelBuffer(buf),
-  frameHostTime(frameHostTime)
+  m_bDisposePixelBuffer(false),
+  m_pixelBuffer(pixelBuffer)
 {
     // We can assume that buf is retained at least for the duration of this ctor
     // So postpone retaining it until we're absolutely sure we'll use it
 
     // fail fast
-    OSType type = CVPixelBufferGetPixelFormatType(buf);
+    OSType type = CVPixelBufferGetPixelFormatType(pixelBuffer);
     if (!IsFormatSupported(type)) {
         throw "CVVideoFrame: Invalid PixelFormat";
     }
 
     m_dTime = frameTime;
-    m_iWidth = (int)CVPixelBufferGetWidth(pixelBuffer);
-    m_iHeight = (int)CVPixelBufferGetHeight(pixelBuffer);
+    m_frameHostTime = frameHostTime;
+    m_uiWidth = (unsigned int)CVPixelBufferGetWidth(pixelBuffer);
+    m_uiHeight = (unsigned int)CVPixelBufferGetHeight(pixelBuffer);
 
     size_t extLeft, extRight, extTop, extBottom;
     CVPixelBufferGetExtendedPixels(pixelBuffer, &extLeft, &extRight, &extTop, &extBottom);
-    m_iEncodedWidth = m_iWidth + (int)extLeft + (int)extRight;
-    m_iEncodedHeight = m_iHeight + (int)extBottom; // ignore top, since 0,0 is where base addr starts
 
-    m_pvPlaneData[0] = m_pvPlaneData[1] = m_pvPlaneData[2] = m_pvPlaneData[3] = NULL;
-    m_piPlaneStrides[0] = m_piPlaneStrides[1] = m_piPlaneStrides[2] = m_piPlaneStrides[3] = 0;
-    m_pulPlaneSize[0] = m_pulPlaneSize[1] = m_pulPlaneSize[2] = m_pulPlaneSize[3] = 0;
+    if (m_uiWidth <= (UINT_MAX - (unsigned int)extLeft) &&
+          (m_uiWidth + (unsigned int)extLeft) <= (UINT_MAX - (unsigned int)extRight)) {
+        m_uiEncodedWidth = m_uiWidth + (unsigned int)extLeft + (unsigned int)extRight;
+    } else {
+        throw "CVVideoFrame: Invalid frame size";
+    }
+
+    if (m_uiHeight <= (UINT_MAX - (unsigned int)extBottom)) {
+        // ignore top, since 0,0 is where base addr starts
+        m_uiEncodedHeight = m_uiHeight + (unsigned int)extBottom;
+    } else {
+        throw "CVVideoFrame: Invalid frame size";
+    }
+
+    Reset();
     m_FrameDirty = false;
 
     if (type != gLastFormat) {
@@ -95,7 +106,8 @@ CVVideoFrame::CVVideoFrame(CVPixelBufferRef buf, double frameTime, uint64_t fram
     }
 
     // Now retain the pixelBuffer so it doesn't go away
-    CVPixelBufferRetain(pixelBuffer);
+    m_bDisposePixelBuffer = true;
+    CVPixelBufferRetain(m_pixelBuffer);
 }
 
 CVVideoFrame::~CVVideoFrame()
@@ -105,39 +117,49 @@ CVVideoFrame::~CVVideoFrame()
 
 void CVVideoFrame::PrepareChunky()
 {
-    m_iPlaneCount = 1;
-    m_iWidth = (int)CVPixelBufferGetWidth(pixelBuffer);
-    m_iHeight = (int)CVPixelBufferGetHeight(pixelBuffer);
+    SetPlaneCount(1);
+    m_uiWidth = (unsigned int)CVPixelBufferGetWidth(m_pixelBuffer);
+    m_uiHeight = (unsigned int)CVPixelBufferGetHeight(m_pixelBuffer);
     m_bHasAlpha = (m_typeFrame == BGRA_PRE);
 
     // We MUST lock the base address during the lifetime of this object
     // or else we could cause a crash
-    CVReturn cr = CVPixelBufferLockBaseAddress(pixelBuffer, kCVPixelBufferLock_ReadOnly);
+    CVReturn cr = CVPixelBufferLockBaseAddress(m_pixelBuffer, kCVPixelBufferLock_ReadOnly);
     if (kCVReturnSuccess != cr) {
         throw "CVVideoFrame: Unable to lock PixelBuffer base address";
     }
 
-    m_pvPlaneData[0] = CVPixelBufferGetBaseAddress(pixelBuffer);
-    m_piPlaneStrides[0] = (int)CVPixelBufferGetBytesPerRow(pixelBuffer);
-    m_pulPlaneSize[0] = m_piPlaneStrides[0] * m_iEncodedHeight;
+    m_pvPlaneData[0] = CVPixelBufferGetBaseAddress(m_pixelBuffer);
+    m_puiPlaneStrides[0] = (int)CVPixelBufferGetBytesPerRow(m_pixelBuffer);
+
+    bool bValid = true; // CalcSize() requires bValid to be true when called
+    m_pulPlaneSize[0] = CalcSize(m_puiPlaneStrides[0], m_uiEncodedHeight, &bValid);
+    if (!bValid) {
+        throw "CVVideoFrame: Invalid frame size";
+    }
 }
 
 void CVVideoFrame::PreparePlanar()
 {
-    m_iPlaneCount = (int)CVPixelBufferGetPlaneCount(pixelBuffer);
+    SetPlaneCount((unsigned int)CVPixelBufferGetPlaneCount(m_pixelBuffer));
     m_bHasAlpha = false;
 
     // We MUST lock the base address during the lifetime of this object
     // or else we could cause a crash
-    CVReturn cr = CVPixelBufferLockBaseAddress(pixelBuffer, kCVPixelBufferLock_ReadOnly);
+    CVReturn cr = CVPixelBufferLockBaseAddress(m_pixelBuffer, kCVPixelBufferLock_ReadOnly);
     if (kCVReturnSuccess != cr) {
         throw "CVVideoFrame: Unable to lock PixelBuffer base address";
     }
 
-    for (int index = 0; index < m_iPlaneCount; index++) {
-        m_piPlaneStrides[index] = (int)CVPixelBufferGetBytesPerRowOfPlane(pixelBuffer, index);
-        m_pulPlaneSize[index] = CVPixelBufferGetHeightOfPlane(pixelBuffer, index) * m_piPlaneStrides[index];
-        m_pvPlaneData[index] = CVPixelBufferGetBaseAddressOfPlane(pixelBuffer, index);
+    bool bValid = true; // CalcSize() requires bValid to be true when called
+    for (int index = 0; index < GetPlaneCount(); index++) {
+        m_puiPlaneStrides[index] = (unsigned int)CVPixelBufferGetBytesPerRowOfPlane(m_pixelBuffer, index);
+        unsigned long ulHeightOfPlane = (unsigned long)CVPixelBufferGetHeightOfPlane(m_pixelBuffer, index);
+        m_pulPlaneSize[index] = CalcSize(ulHeightOfPlane, m_puiPlaneStrides[index], &bValid);
+        if (!bValid) {
+            throw "CVVideoFrame: Invalid frame size";
+        }
+        m_pvPlaneData[index] = CVPixelBufferGetBaseAddressOfPlane(m_pixelBuffer, index);
     }
 
     if (m_typeFrame == YCbCr_420p) {
@@ -148,34 +170,35 @@ void CVVideoFrame::PreparePlanar()
 
 void CVVideoFrame::Dispose()
 {
-    if (pixelBuffer) {
-        CVPixelBufferUnlockBaseAddress(pixelBuffer, kCVPixelBufferLock_ReadOnly);
-        CVPixelBufferRelease(pixelBuffer);
-        pixelBuffer = 0;
+    if (m_bDisposePixelBuffer) {
+        CVPixelBufferUnlockBaseAddress(m_pixelBuffer, kCVPixelBufferLock_ReadOnly);
+        CVPixelBufferRelease(m_pixelBuffer);
+        m_pixelBuffer = NULL;
+        m_bDisposePixelBuffer = false;
     }
 }
 
 CVideoFrame *CVVideoFrame::ConvertToFormat(FrameType type)
 {
-    if(YCbCr_422 == m_typeFrame && BGRA_PRE == type) {
+    if (YCbCr_422 == m_typeFrame && BGRA_PRE == type) {
         CVPixelBufferRef destPixelBuffer = NULL;
-        if(kCVReturnSuccess == CVPixelBufferCreate(NULL, m_iEncodedWidth, m_iEncodedHeight,
+        if (kCVReturnSuccess == CVPixelBufferCreate(NULL, m_uiEncodedWidth, m_uiEncodedHeight,
                                                    k32BGRAPixelFormat, NULL, &destPixelBuffer)) {
-            if(kCVReturnSuccess == CVPixelBufferLockBaseAddress(destPixelBuffer, 0)) {
+            if (kCVReturnSuccess == CVPixelBufferLockBaseAddress(destPixelBuffer, 0)) {
                 uint8_t* bgra = (uint8_t*)CVPixelBufferGetBaseAddress(destPixelBuffer);
                 int32_t bgraStride = (int32_t)CVPixelBufferGetBytesPerRow(destPixelBuffer);
                 uint8_t* srcData = (uint8_t*)m_pvPlaneData[0];
 
-                if(0 == ColorConvert_YCbCr422p_to_BGRA32_no_alpha(bgra,
+                if (0 == ColorConvert_YCbCr422p_to_BGRA32_no_alpha(bgra,
                                                                   bgraStride,
-                                                                  m_iEncodedWidth,
-                                                                  m_iEncodedHeight,
+                                                                  m_uiEncodedWidth,
+                                                                  m_uiEncodedHeight,
                                                                   srcData + 1,
                                                                   srcData + 2,
                                                                   srcData,
-                                                                  m_piPlaneStrides[0],
-                                                                  m_piPlaneStrides[0])) {
-                    return new CVVideoFrame(destPixelBuffer, m_dTime, frameHostTime);
+                                                                  m_puiPlaneStrides[0],
+                                                                  m_puiPlaneStrides[0])) {
+                    return new CVVideoFrame(destPixelBuffer, m_dTime, m_frameHostTime);
                 }
             }
         }

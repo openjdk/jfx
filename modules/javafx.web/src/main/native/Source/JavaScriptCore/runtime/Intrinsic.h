@@ -55,10 +55,12 @@ namespace JSC {
     macro(ArrayPushIntrinsic) \
     macro(ArrayPopIntrinsic) \
     macro(ArraySliceIntrinsic) \
+    macro(ArraySpliceIntrinsic) \
     macro(ArrayIndexOfIntrinsic) \
     macro(ArrayValuesIntrinsic) \
     macro(ArrayKeysIntrinsic) \
     macro(ArrayEntriesIntrinsic) \
+    macro(BooleanConstructorIntrinsic) \
     macro(CharCodeAtIntrinsic) \
     macro(CharAtIntrinsic) \
     macro(DatePrototypeGetTimeIntrinsic) \
@@ -80,7 +82,9 @@ namespace JSC {
     macro(DatePrototypeGetUTCMillisecondsIntrinsic) \
     macro(DatePrototypeGetTimezoneOffsetIntrinsic) \
     macro(DatePrototypeGetYearIntrinsic) \
+    macro(DatePrototypeSetTimeIntrinsic) \
     macro(FromCharCodeIntrinsic) \
+    macro(GlobalIsNaNIntrinsic) \
     macro(PowIntrinsic) \
     macro(FloorIntrinsic) \
     macro(CeilIntrinsic) \
@@ -98,13 +102,16 @@ namespace JSC {
     macro(ObjectAssignIntrinsic) \
     macro(ObjectCreateIntrinsic) \
     macro(ObjectGetOwnPropertyNamesIntrinsic) \
+    macro(ObjectGetOwnPropertySymbolsIntrinsic) \
     macro(ObjectGetPrototypeOfIntrinsic) \
     macro(ObjectIsIntrinsic) \
     macro(ObjectKeysIntrinsic) \
     macro(ObjectToStringIntrinsic) \
     macro(ReflectGetPrototypeOfIntrinsic) \
+    macro(ReflectOwnKeysIntrinsic) \
     macro(StringConstructorIntrinsic) \
     macro(StringPrototypeCodePointAtIntrinsic) \
+    macro(StringPrototypeIndexOfIntrinsic) \
     macro(StringPrototypeLocaleCompareIntrinsic) \
     macro(StringPrototypeValueOfIntrinsic) \
     macro(StringPrototypeReplaceIntrinsic) \
@@ -114,11 +121,15 @@ namespace JSC {
     macro(StringPrototypeSubstringIntrinsic) \
     macro(StringPrototypeToLowerCaseIntrinsic) \
     macro(NumberPrototypeToStringIntrinsic) \
+    macro(NumberIsNaNIntrinsic) \
     macro(NumberIsIntegerIntrinsic) \
     macro(NumberConstructorIntrinsic) \
     macro(IMulIntrinsic) \
     macro(RandomIntrinsic) \
     macro(FRoundIntrinsic) \
+    macro(F16RoundIntrinsic) \
+    macro(ToIntegerOrInfinityIntrinsic) \
+    macro(ToLengthIntrinsic) \
     macro(TruncIntrinsic) \
     macro(TypedArrayValuesIntrinsic) \
     macro(TypedArrayKeysIntrinsic) \
@@ -133,18 +144,25 @@ namespace JSC {
     macro(JSMapValuesIntrinsic) \
     macro(JSMapKeysIntrinsic) \
     macro(JSMapEntriesIntrinsic) \
-    macro(JSMapBucketHeadIntrinsic) \
-    macro(JSMapBucketNextIntrinsic) \
-    macro(JSMapBucketKeyIntrinsic) \
-    macro(JSMapBucketValueIntrinsic) \
+    macro(JSMapStorageIntrinsic) \
+    macro(JSMapIterationNextIntrinsic) \
+    macro(JSMapIterationEntryIntrinsic) \
+    macro(JSMapIterationEntryKeyIntrinsic) \
+    macro(JSMapIterationEntryValueIntrinsic) \
+    macro(JSSetStorageIntrinsic) \
+    macro(JSSetIterationNextIntrinsic) \
+    macro(JSSetIterationEntryIntrinsic) \
+    macro(JSSetIterationEntryKeyIntrinsic) \
+    macro(JSMapIteratorNextIntrinsic) \
+    macro(JSMapIteratorKeyIntrinsic) \
+    macro(JSMapIteratorValueIntrinsic) \
+    macro(JSSetIteratorNextIntrinsic) \
+    macro(JSSetIteratorKeyIntrinsic) \
     macro(JSSetHasIntrinsic) \
     macro(JSSetAddIntrinsic) \
     macro(JSSetDeleteIntrinsic) \
     macro(JSSetValuesIntrinsic) \
     macro(JSSetEntriesIntrinsic) \
-    macro(JSSetBucketHeadIntrinsic) \
-    macro(JSSetBucketNextIntrinsic) \
-    macro(JSSetBucketKeyIntrinsic) \
     macro(JSWeakMapGetIntrinsic) \
     macro(JSWeakMapHasIntrinsic) \
     macro(JSWeakMapSetIntrinsic) \
@@ -166,12 +184,14 @@ namespace JSC {
     macro(AtomicsXorIntrinsic) \
     macro(ParseIntIntrinsic) \
     macro(FunctionToStringIntrinsic) \
+    macro(FunctionBindIntrinsic) \
     \
     /* Getter intrinsics. */ \
     macro(TypedArrayLengthIntrinsic) \
     macro(TypedArrayByteLengthIntrinsic) \
     macro(TypedArrayByteOffsetIntrinsic) \
     macro(UnderscoreProtoIntrinsic) \
+    macro(SpeciesGetterIntrinsic) \
     macro(WebAssemblyInstanceExportsIntrinsic) \
     \
     /* Debugging intrinsics. These are meant to be used as testing hacks within jsc.cpp and should never be exposed to users.*/ \
@@ -195,6 +215,7 @@ namespace JSC {
     macro(DataViewGetUint16) \
     macro(DataViewGetInt32) \
     macro(DataViewGetUint32) \
+    macro(DataViewGetFloat16) \
     macro(DataViewGetFloat32) \
     macro(DataViewGetFloat64) \
     macro(DataViewSetInt8) \
@@ -203,6 +224,7 @@ namespace JSC {
     macro(DataViewSetUint16) \
     macro(DataViewSetInt32) \
     macro(DataViewSetUint32) \
+    macro(DataViewSetFloat16) \
     macro(DataViewSetFloat32) \
     macro(DataViewSetFloat64) \
     \

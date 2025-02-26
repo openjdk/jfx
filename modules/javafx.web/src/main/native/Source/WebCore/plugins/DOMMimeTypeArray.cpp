@@ -22,12 +22,12 @@
 
 #include "DOMMimeType.h"
 #include "Navigator.h"
-#include <wtf/IsoMallocInlines.h>
+#include <wtf/TZoneMallocInlines.h>
 #include <wtf/text/AtomString.h>
 
 namespace WebCore {
 
-WTF_MAKE_ISO_ALLOCATED_IMPL(DOMMimeTypeArray);
+WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(DOMMimeTypeArray);
 
 Ref<DOMMimeTypeArray> DOMMimeTypeArray::create(Navigator& navigator, Vector<Ref<DOMMimeType>>&& types)
 {
@@ -61,6 +61,11 @@ RefPtr<DOMMimeType> DOMMimeTypeArray::namedItem(const AtomString& propertyName)
             return type.ptr();
     }
     return nullptr;
+}
+
+bool DOMMimeTypeArray::isSupportedPropertyName(const AtomString& propertyName) const
+{
+    return m_types.containsIf([&](auto& type) { return type->type() == propertyName; });
 }
 
 Vector<AtomString> DOMMimeTypeArray::supportedPropertyNames() const

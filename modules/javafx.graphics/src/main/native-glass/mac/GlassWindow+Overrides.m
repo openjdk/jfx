@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2023, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -62,11 +62,6 @@
 
 - (void)windowDidBecomeKey:(NSNotification *)notification
 {
-    if (self->fullscreenWindow)
-    {
-        return;
-    }
-
     GET_MAIN_JENV;
     if (!self->isEnabled)
     {
@@ -86,15 +81,12 @@
 
 - (void)windowDidResignKey:(NSNotification *)notification
 {
-    if (self->fullscreenWindow)
-    {
-        return;
-    }
-
     [self _ungrabFocus];
 
-    GET_MAIN_JENV;
-    (*env)->CallVoidMethod(env, self->jWindow, jWindowNotifyFocus, com_sun_glass_events_WindowEvent_FOCUS_LOST);
+    GET_MAIN_JENV_NOWARN;
+    if (env != NULL) {
+        (*env)->CallVoidMethod(env, self->jWindow, jWindowNotifyFocus, com_sun_glass_events_WindowEvent_FOCUS_LOST);
+    }
 }
 
 - (void)windowWillClose:(NSNotification *)notification
@@ -231,8 +223,10 @@
 {
     if (self->isEnabled)
     {
-        GET_MAIN_JENV;
-        (*env)->CallVoidMethod(env, jWindow, jWindowNotifyClose);
+        GET_MAIN_JENV_NOWARN;
+        if (env != NULL) {
+            (*env)->CallVoidMethod(env, jWindow, jWindowNotifyClose);
+        }
     }
 
     // it's up to app to decide if the window should be closed

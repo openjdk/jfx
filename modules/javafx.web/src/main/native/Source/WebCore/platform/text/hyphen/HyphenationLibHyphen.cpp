@@ -34,6 +34,7 @@
 #include <stdlib.h>
 #include <wtf/FileSystem.h>
 #include <wtf/HashMap.h>
+#include <wtf/Language.h>
 #include <wtf/NeverDestroyed.h>
 #include <wtf/TinyLRUCache.h>
 #include <wtf/text/AtomStringHash.h>
@@ -171,11 +172,8 @@ static HashMap<AtomString, Vector<String>>& availableLocales()
 
 bool canHyphenate(const AtomString& localeIdentifier)
 {
-    if (localeIdentifier.isNull())
-        return false;
-    if (availableLocales().contains(localeIdentifier))
-        return true;
-    return availableLocales().contains(localeIdentifier.convertToASCIILowercase());
+    AtomString lowercaseLocaleIdentifier = localeIdentifier.isNull() ? AtomString(defaultLanguage()).convertToASCIILowercase() : localeIdentifier.convertToASCIILowercase();
+    return availableLocales().contains(lowercaseLocaleIdentifier);
 }
 
 class HyphenationDictionary : public RefCounted<HyphenationDictionary> {
@@ -256,12 +254,11 @@ static void countLeadingSpaces(const CString& utf8String, int32_t& pointerOffset
     pointerOffset = 0;
     characterOffset = 0;
     const char* stringData = utf8String.data();
-    UChar32 character = 0;
+    char32_t character = 0;
     while (static_cast<unsigned>(pointerOffset) < utf8String.length()) {
         int32_t nextPointerOffset = pointerOffset;
         U8_NEXT(stringData, nextPointerOffset, static_cast<int32_t>(utf8String.length()), character);
-
-        if (character < 0 || !u_isUWhiteSpace(character))
+        if (character == static_cast<char32_t>(U_SENTINEL) || !u_isUWhiteSpace(character))
             return;
 
         pointerOffset = nextPointerOffset;
@@ -289,7 +286,7 @@ size_t lastHyphenLocation(StringView string, size_t beforeIndex, const AtomStrin
     Vector<char> hyphenArray(utf8StringCopy.length() - leadingSpaceBytes + 5);
     char* hyphenArrayData = hyphenArray.data();
 
-    AtomString lowercaseLocaleIdentifier = localeIdentifier.convertToASCIILowercase();
+    AtomString lowercaseLocaleIdentifier = localeIdentifier.isNull() ? AtomString(defaultLanguage()).convertToASCIILowercase() : localeIdentifier.convertToASCIILowercase();
 
     // Web content may specify strings for locales which do not exist or that we do not have.
     if (!availableLocales().contains(lowercaseLocaleIdentifier))

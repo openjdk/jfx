@@ -33,16 +33,17 @@
 #include "RenderMathMLFenced.h"
 #include "RenderMathMLMenclose.h"
 #include "RenderMathMLRow.h"
-#include <wtf/IsoMallocInlines.h>
+#include "RenderStyleInlines.h"
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
-WTF_MAKE_ISO_ALLOCATED_IMPL(MathMLRowElement);
+WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(MathMLRowElement);
 
 using namespace MathMLNames;
 
-MathMLRowElement::MathMLRowElement(const QualifiedName& tagName, Document& document)
-    : MathMLPresentationElement(tagName, document)
+MathMLRowElement::MathMLRowElement(const QualifiedName& tagName, Document& document, OptionSet<TypeFlag> constructionType)
+    : MathMLPresentationElement(tagName, document, constructionType)
 {
 }
 
@@ -53,9 +54,11 @@ Ref<MathMLRowElement> MathMLRowElement::create(const QualifiedName& tagName, Doc
 
 void MathMLRowElement::childrenChanged(const ChildChange& change)
 {
-    for (auto child = firstChild(); child; child = child->nextSibling()) {
+    // FIXME: Avoid this invalidation for valid MathMLFractionElement/MathMLScriptsElement.
+    // See https://bugs.webkit.org/show_bug.cgi?id=276828.
+    for (RefPtr child = firstChild(); child; child = child->nextSibling()) {
         if (child->hasTagName(moTag))
-            static_cast<MathMLOperatorElement*>(child)->setOperatorFormDirty();
+            static_cast<MathMLOperatorElement*>(child.get())->setOperatorFormDirty();
     }
 
     MathMLPresentationElement::childrenChanged(change);
@@ -67,7 +70,7 @@ RenderPtr<RenderElement> MathMLRowElement::createElementRenderer(RenderStyle&& s
         return createRenderer<RenderMathMLFenced>(*this, WTFMove(style));
 
     ASSERT(hasTagName(merrorTag) || hasTagName(mphantomTag) || hasTagName(mrowTag) || hasTagName(mstyleTag));
-    return createRenderer<RenderMathMLRow>(*this, WTFMove(style));
+    return createRenderer<RenderMathMLRow>(RenderObject::Type::MathMLRow, *this, WTFMove(style));
 }
 
 bool MathMLRowElement::acceptsMathVariantAttribute()

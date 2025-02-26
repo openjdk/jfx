@@ -28,11 +28,11 @@
 #include "SVGInlineTextBox.h"
 #include "SVGRenderingContext.h"
 #include "SVGTextFragment.h"
-#include <wtf/IsoMallocInlines.h>
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
-WTF_MAKE_ISO_ALLOCATED_IMPL(SVGInlineFlowBox);
+WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(SVGInlineFlowBox);
 
 void SVGInlineFlowBox::paintSelectionBackground(PaintInfo& paintInfo)
 {
@@ -41,10 +41,10 @@ void SVGInlineFlowBox::paintSelectionBackground(PaintInfo& paintInfo)
 
     PaintInfo childPaintInfo(paintInfo);
     for (auto* child = firstChild(); child; child = child->nextOnLine()) {
-        if (is<SVGInlineTextBox>(*child))
-            downcast<SVGInlineTextBox>(*child).paintSelectionBackground(childPaintInfo);
-        else if (is<SVGInlineFlowBox>(*child))
-            downcast<SVGInlineFlowBox>(*child).paintSelectionBackground(childPaintInfo);
+        if (auto* textBox = dynamicDowncast<SVGInlineTextBox>(*child))
+            textBox->paintSelectionBackground(childPaintInfo);
+        else if (auto* flowBox = dynamicDowncast<SVGInlineFlowBox>(*child))
+            flowBox->paintSelectionBackground(childPaintInfo);
     }
 }
 
@@ -64,12 +64,12 @@ FloatRect SVGInlineFlowBox::calculateBoundaries() const
 {
     FloatRect childRect;
     for (auto* child = firstChild(); child; child = child->nextOnLine()) {
-        if (is<SVGInlineTextBox>(child)) {
-            childRect.unite(downcast<SVGInlineTextBox>(*child).calculateBoundaries());
+        if (auto* textBox = dynamicDowncast<SVGInlineTextBox>(child)) {
+            childRect.unite(textBox->calculateBoundaries());
             continue;
         }
-        if (is<SVGInlineFlowBox>(child)) {
-            childRect.unite(downcast<SVGInlineFlowBox>(*child).calculateBoundaries());
+        if (auto* flowBox = dynamicDowncast<SVGInlineFlowBox>(child)) {
+            childRect.unite(flowBox->calculateBoundaries());
             continue;
         }
     }

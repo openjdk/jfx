@@ -20,26 +20,26 @@ extern "C" {
  *
  * the version string like "1.2.3"
  */
-#define LIBXSLT_DOTTED_VERSION "1.1.35"
+#define LIBXSLT_DOTTED_VERSION "1.1.42"
 
 /**
  * LIBXSLT_VERSION:
  *
  * the version number: 1.2.3 value is 10203
  */
-#define LIBXSLT_VERSION 10135
+#define LIBXSLT_VERSION 10142
 
 /**
  * LIBXSLT_VERSION_STRING:
  *
  * the version number string, 1.2.3 value is "10203"
  */
-#define LIBXSLT_VERSION_STRING "10135"
+#define LIBXSLT_VERSION_STRING "10142"
 
 /**
  * LIBXSLT_VERSION_EXTRA:
  *
- * extra version information, used to show a CVS compilation
+ * extra version information, used to show a Git commit description
  */
 #define LIBXSLT_VERSION_EXTRA ""
 
@@ -54,26 +54,6 @@ extern "C" {
 #define WITH_XSLT_DEBUG
 #endif
 
-#if 0
-/**
- * DEBUG_MEMORY:
- *
- * should be activated only when debugging libxslt. It replaces the
- * allocator with a collect and debug shell to the libc allocator.
- * Use configure --with-mem-debug to activate it on both library
- */
-#define DEBUG_MEMORY
-
-/**
- * DEBUG_MEMORY_LOCATION:
- *
- * should be activated only when debugging libxslt.
- * DEBUG_MEMORY_LOCATION should be activated only when libxml has
- * been configured with --with-debug-mem too
- */
-#define DEBUG_MEMORY_LOCATION
-#endif
-
 /**
  * XSLT_NEED_TRIO:
  *
@@ -86,7 +66,6 @@ extern "C" {
 #define XSLT_NEED_TRIO
 #endif
 #ifdef __VMS
-#define HAVE_MATH_H 1
 #define HAVE_SYS_STAT_H 1
 #ifndef XSLT_NEED_TRIO
 #define XSLT_NEED_TRIO
@@ -133,20 +112,7 @@ extern "C" {
 #ifndef WITH_MODULES
 #define WITH_MODULES
 #endif
-#define LIBXSLT_DEFAULT_PLUGINS_PATH() "/usr/local/lib/libxslt-plugins"
-#endif
-
-/**
- * ATTRIBUTE_UNUSED:
- *
- * This macro is used to flag unused function parameters to GCC
- */
-#ifdef __GNUC__
-#ifndef ATTRIBUTE_UNUSED
-#define ATTRIBUTE_UNUSED __attribute__((unused))
-#endif
-#else
-#define ATTRIBUTE_UNUSED
+#define LIBXSLT_DEFAULT_PLUGINS_PATH() "NULL"
 #endif
 
 /**

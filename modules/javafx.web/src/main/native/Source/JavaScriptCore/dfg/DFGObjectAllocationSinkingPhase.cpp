@@ -268,19 +268,7 @@ public:
         return m_kind == Kind::RegExpObject;
     }
 
-    bool operator==(const Allocation& other) const
-    {
-        return m_identifier == other.m_identifier
-            && m_kind == other.m_kind
-            && m_fields == other.m_fields
-            && m_structures == other.m_structures
-            && m_structuresForMaterialization == other.m_structuresForMaterialization;
-    }
-
-    bool operator!=(const Allocation& other) const
-    {
-        return !(*this == other);
-    }
+    friend bool operator==(const Allocation&, const Allocation&) = default;
 
     void dump(PrintStream& out) const
     {
@@ -291,50 +279,50 @@ public:
     {
         switch (m_kind) {
         case Kind::Escaped:
-            out.print("Escaped");
+            out.print("Escaped"_s);
             break;
 
         case Kind::Object:
-            out.print("Object");
+            out.print("Object"_s);
             break;
 
         case Kind::Function:
-            out.print("Function");
+            out.print("Function"_s);
             break;
 
         case Kind::GeneratorFunction:
-            out.print("GeneratorFunction");
+            out.print("GeneratorFunction"_s);
             break;
 
         case Kind::AsyncFunction:
-            out.print("AsyncFunction");
+            out.print("AsyncFunction"_s);
             break;
 
         case Kind::InternalFieldObject:
-            out.print("InternalFieldObject");
+            out.print("InternalFieldObject"_s);
             break;
 
         case Kind::AsyncGeneratorFunction:
-            out.print("AsyncGeneratorFunction");
+            out.print("AsyncGeneratorFunction"_s);
             break;
 
         case Kind::Activation:
-            out.print("Activation");
+            out.print("Activation"_s);
             break;
 
         case Kind::RegExpObject:
-            out.print("RegExpObject");
+            out.print("RegExpObject"_s);
             break;
         }
-        out.print("Allocation(");
+        out.print("Allocation("_s);
         if (!m_structuresForMaterialization.isEmpty())
             out.print(inContext(m_structuresForMaterialization.toStructureSet(), context));
         if (!m_fields.isEmpty()) {
             if (!m_structuresForMaterialization.isEmpty())
                 out.print(", ");
-            out.print(mapDump(m_fields, " => #", ", "));
+            out.print(mapDump(m_fields, " => #"_s, ", "_s));
         }
-        out.print(")");
+        out.print(")"_s);
     }
 
 private:
@@ -643,11 +631,6 @@ public:
             && m_pointers == other.m_pointers;
     }
 
-    bool operator!=(const LocalHeap& other) const
-    {
-        return !(*this == other);
-    }
-
     const HashMap<Node*, Allocation>& allocations() const
     {
         return m_allocations;
@@ -798,7 +781,7 @@ private:
 class ObjectAllocationSinkingPhase : public Phase {
 public:
     ObjectAllocationSinkingPhase(Graph& graph)
-        : Phase(graph, "object allocation elimination")
+        : Phase(graph, "object allocation elimination"_s)
         , m_pointerSSA(graph)
         , m_allocationSSA(graph)
         , m_insertionSet(graph)
@@ -827,7 +810,7 @@ private:
         m_graph.computeRefCounts();
         m_graph.initializeNodeOwners();
         m_graph.ensureSSADominators();
-        performLivenessAnalysis(m_graph);
+        performGraphPackingAndLivenessAnalysis(m_graph);
         performOSRAvailabilityAnalysis(m_graph);
         m_combinedLiveness = CombinedLiveness(m_graph);
 
@@ -1579,8 +1562,7 @@ private:
         // Nodes without remaining unmaterialized fields will be
         // materialized first - amongst the remaining unmaterialized
         // nodes
-        Vector<Allocation> toMaterialize;
-        toMaterialize.resize(escapees.size());
+        Vector<Allocation> toMaterialize(escapees.size());
         size_t firstIndex = 0;
         size_t lastIndex = toMaterialize.size();
         auto materializeFirst = [&] (Allocation&& allocation) {
@@ -2554,13 +2536,15 @@ private:
                         // nodes. Those nodes were guarded by the appropriate type checks. This means that
                         // at this point, we can simply trust that the incoming value has the right type
                         // for whatever structure we are using.
-                        data->variants.append(PutByVariant::replace(nullptr, currentSet, currentOffset));
+                        // Now, this data is used directly for the base, so viaGlobalProxy or not does not matter.
+                        data->variants.append(PutByVariant::replace(nullptr, currentSet, currentOffset, /* viaGlobalProxy */ false));
                         currentOffset = offset;
                         currentSet.clear();
                     }
                     currentSet.add(structure.get());
                 }
-                data->variants.append(PutByVariant::replace(nullptr, currentSet, currentOffset));
+                // Now, this data is used directly for the base, so viaGlobalProxy or not does not matter.
+                data->variants.append(PutByVariant::replace(nullptr, currentSet, currentOffset, /* viaGlobalProxy */ false));
             }
 
             return m_graph.addNode(

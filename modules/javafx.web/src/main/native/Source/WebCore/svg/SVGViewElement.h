@@ -30,7 +30,8 @@
 namespace WebCore {
 
 class SVGViewElement final : public SVGElement, public SVGFitToViewBox, public SVGZoomAndPan {
-    WTF_MAKE_ISO_ALLOCATED(SVGViewElement);
+    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(SVGViewElement);
+    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(SVGViewElement);
 public:
     static Ref<SVGViewElement> create(const QualifiedName&, Document&);
 
@@ -46,7 +47,7 @@ private:
 
     using PropertyRegistry = SVGPropertyOwnerRegistry<SVGViewElement, SVGElement, SVGFitToViewBox>;
 
-    void parseAttribute(const QualifiedName&, const AtomString&) final;
+    void attributeChanged(const QualifiedName&, const AtomString& oldValue, const AtomString& newValue, AttributeModificationReason) final;
     void svgAttributeChanged(const QualifiedName&) override;
 
     bool rendererIsNeeded(const RenderStyle&) final { return false; }

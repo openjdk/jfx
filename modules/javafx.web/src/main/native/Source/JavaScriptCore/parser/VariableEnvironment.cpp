@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015 Apple Inc. All Rights Reserved.
+ * Copyright (C) 2015-2023 Apple Inc. All Rights Reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -27,9 +27,13 @@
 #include "VariableEnvironment.h"
 #include <wtf/CommaPrinter.h>
 #include <wtf/HexNumber.h>
+#include <wtf/TZoneMallocInlines.h>
 #include <wtf/text/UniquedStringImpl.h>
 
 namespace JSC {
+
+WTF_MAKE_TZONE_ALLOCATED_IMPL(CompactTDZEnvironment);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(VariableEnvironment);
 
 void VariableEnvironmentEntry::dump(PrintStream& out) const
 {
@@ -204,9 +208,9 @@ bool VariableEnvironment::declarePrivateMethod(const RefPtr<UniquedStringImpl>& 
 
 void VariableEnvironment::dump(PrintStream& out) const
 {
-    CommaPrinter comma(", ");
+    CommaPrinter comma(", "_s);
     for (auto& pair : m_map)
-        out.print(comma, pair.key, " => ", pair.value);
+        out.print(comma, pair.key, " => "_s, pair.value);
 }
 
 void CompactTDZEnvironment::sortCompact(Compact& compact)

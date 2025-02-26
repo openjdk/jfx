@@ -69,7 +69,7 @@ static void textUTF16ContextAwareMoveInPrimaryContext(UText* text, int64_t nativ
 {
     ASSERT(text->chunkContents == text->p);
     ASSERT_UNUSED(forward, forward ? nativeIndex >= text->b : nativeIndex > text->b);
-    ASSERT_UNUSED(forward, forward ? nativeIndex < nativeLength : nativeIndex <= nativeLength);
+    ASSERT(nativeIndex <= nativeLength);
     text->chunkNativeStart = text->b;
     text->chunkNativeLimit = nativeLength;
     int64_t length = text->chunkNativeLimit - text->chunkNativeStart;
@@ -93,9 +93,8 @@ static void textUTF16ContextAwareSwitchToPrimaryContext(UText* text, int64_t nat
 static void textUTF16ContextAwareMoveInPriorContext(UText* text, int64_t nativeIndex, int64_t nativeLength, UBool forward)
 {
     ASSERT(text->chunkContents == text->q);
-    ASSERT(forward ? nativeIndex < text->b : nativeIndex <= text->b);
-    ASSERT_UNUSED(nativeLength, forward ? nativeIndex < nativeLength : nativeIndex <= nativeLength);
-    ASSERT_UNUSED(forward, forward ? nativeIndex < nativeLength : nativeIndex <= nativeLength);
+    ASSERT_UNUSED(forward, forward ? nativeIndex < text->b : nativeIndex <= text->b);
+    ASSERT_UNUSED(nativeLength, nativeIndex <= nativeLength);
     text->chunkNativeStart = 0;
     text->chunkNativeLimit = text->b;
     text->chunkLength = text->b;
@@ -163,11 +162,11 @@ static void uTextUTF16ContextAwareClose(UText* text)
     text->context = nullptr;
 }
 
-UText* openUTF16ContextAwareUTextProvider(UText* text, const UChar* string, unsigned length, const UChar* priorContext, int priorContextLength, UErrorCode* status)
+UText* openUTF16ContextAwareUTextProvider(UText* text, std::span<const UChar> string, std::span<const UChar> priorContext, UErrorCode* status)
 {
     if (U_FAILURE(*status))
         return nullptr;
-    if (!string || length > static_cast<unsigned>(std::numeric_limits<int32_t>::max())) {
+    if (!string.data() || string.size() > static_cast<unsigned>(std::numeric_limits<int32_t>::max())) {
         *status = U_ILLEGAL_ARGUMENT_ERROR;
         return nullptr;
     }
@@ -177,7 +176,7 @@ UText* openUTF16ContextAwareUTextProvider(UText* text, const UChar* string, unsi
         return nullptr;
     }
 
-    initializeContextAwareUTextProvider(text, &textUTF16ContextAwareFuncs, string, length, priorContext, priorContextLength);
+    initializeContextAwareUTextProvider(text, &textUTF16ContextAwareFuncs, string, priorContext);
     return text;
 }
 

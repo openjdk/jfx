@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2022 Metrological Group B.V.
- * Copyright (C) 2022 Igalia S.L.
+ * Copyright (C) 2022-2024 Igalia S.L.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -30,6 +30,10 @@
 #include <cstddef>
 #include <cstdint>
 
+namespace IPC {
+template<typename T, typename U> struct ArgumentCoder;
+}
+
 namespace WebCore {
 
 namespace DMABufFormatImpl {
@@ -47,6 +51,8 @@ struct DMABufFormat {
 
         R8 = DMABufFormatImpl::createFourCC('R', '8', ' ', ' '),
         GR88 = DMABufFormatImpl::createFourCC('G', 'R', '8', '8'),
+        R16 = DMABufFormatImpl::createFourCC('R', '1', '6', ' '),
+        GR32 = DMABufFormatImpl::createFourCC('G', 'R', '3', '2'),
 
         XRGB8888 = DMABufFormatImpl::createFourCC('X', 'R', '2', '4'),
         XBGR8888 = DMABufFormatImpl::createFourCC('X', 'B', '2', '4'),
@@ -75,6 +81,13 @@ struct DMABufFormat {
         Y444 = DMABufFormatImpl::createFourCC('Y', '4', '4', '4'),
         Y41B = DMABufFormatImpl::createFourCC('Y', '4', '1', 'B'),
         Y42B = DMABufFormatImpl::createFourCC('Y', '4', '2', 'B'),
+
+        P010 = DMABufFormatImpl::createFourCC('P', '0', '1', '0'),
+        P016 = DMABufFormatImpl::createFourCC('P', '0', '1', '6'),
+    };
+
+    enum class Modifier : uint64_t {
+        Invalid = ((1ULL << 56) - 1),
     };
 
     static constexpr unsigned c_maxPlanes = 4;
@@ -110,16 +123,25 @@ struct DMABufFormat {
     struct Plane {
         Plane() = default;
 
-        template<typename PlaneDefitionType>
-        Plane(const PlaneDefitionType&)
-            : fourcc(PlaneDefitionType::fourcc)
-            , horizontalSubsampling(PlaneDefitionType::horizontalSubsampling)
-            , verticalSubsampling(PlaneDefitionType::verticalSubsampling)
+        template<typename PlaneDefinitionType>
+        Plane(const PlaneDefinitionType&)
+            : fourcc(PlaneDefinitionType::fourcc)
+            , horizontalSubsampling(PlaneDefinitionType::horizontalSubsampling)
+            , verticalSubsampling(PlaneDefinitionType::verticalSubsampling)
         { }
 
         FourCC fourcc { FourCC::Invalid };
         unsigned horizontalSubsampling { 0 };
         unsigned verticalSubsampling { 0 };
+
+    private:
+        Plane(const FourCC& fourcc, const unsigned& hsValue, const unsigned& vsValue)
+            : fourcc(fourcc)
+            , horizontalSubsampling(hsValue)
+            , verticalSubsampling(vsValue)
+        { }
+
+        friend struct IPC::ArgumentCoder<Plane, void>;
     };
     std::array<Plane, c_maxPlanes> planes;
 };
@@ -316,6 +338,22 @@ inline DMABufFormat DMABufFormat::create<DMABufFormat::FourCC::Y42B>()
         PlaneDefinition<FourCC::R8, 1, 0>>();
 }
 
+template<>
+inline DMABufFormat DMABufFormat::create<DMABufFormat::FourCC::P010>()
+{
+    return DMABufFormat::instantiate<FourCC::P010,
+        PlaneDefinition<FourCC::R16, 0, 0>,
+        PlaneDefinition<FourCC::GR32, 1, 1>>();
+}
+
+template<>
+inline DMABufFormat DMABufFormat::create<DMABufFormat::FourCC::P016>()
+{
+    return DMABufFormat::instantiate<FourCC::P010,
+        PlaneDefinition<FourCC::R16, 0, 0>,
+        PlaneDefinition<FourCC::GR32, 1, 1>>();
+}
+
 inline DMABufFormat DMABufFormat::create(uint32_t fourccValue)
 {
 #define CREATE_FORMAT_FOR_FOURCC(FourCCValue) \
@@ -345,6 +383,8 @@ inline DMABufFormat DMABufFormat::create(uint32_t fourccValue)
     CREATE_FORMAT_FOR_FOURCC(Y444);
     CREATE_FORMAT_FOR_FOURCC(Y41B);
     CREATE_FORMAT_FOR_FOURCC(Y42B);
+    CREATE_FORMAT_FOR_FOURCC(P010);
+    CREATE_FORMAT_FOR_FOURCC(P016);
     default:
         break;
     }

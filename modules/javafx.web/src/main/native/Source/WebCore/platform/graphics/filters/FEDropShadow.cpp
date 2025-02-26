@@ -25,17 +25,22 @@
 #include "FEDropShadowSoftwareApplier.h"
 #include "FEGaussianBlur.h"
 #include "Filter.h"
+#include "GraphicsContext.h"
 #include <wtf/text/TextStream.h>
+
+#if USE(SKIA)
+#include "FEDropShadowSkiaApplier.h"
+#endif
 
 namespace WebCore {
 
-Ref<FEDropShadow> FEDropShadow::create(float stdX, float stdY, float dx, float dy, const Color& shadowColor, float shadowOpacity)
+Ref<FEDropShadow> FEDropShadow::create(float stdX, float stdY, float dx, float dy, const Color& shadowColor, float shadowOpacity, DestinationColorSpace colorSpace)
 {
-    return adoptRef(*new FEDropShadow(stdX, stdY, dx, dy, shadowColor, shadowOpacity));
+    return adoptRef(*new FEDropShadow(stdX, stdY, dx, dy, shadowColor, shadowOpacity, colorSpace));
 }
 
-FEDropShadow::FEDropShadow(float stdX, float stdY, float dx, float dy, const Color& shadowColor, float shadowOpacity)
-    : FilterEffect(FilterEffect::Type::FEDropShadow)
+FEDropShadow::FEDropShadow(float stdX, float stdY, float dx, float dy, const Color& shadowColor, float shadowOpacity, DestinationColorSpace colorSpace)
+    : FilterEffect(FilterEffect::Type::FEDropShadow, colorSpace)
     , m_stdX(stdX)
     , m_stdY(stdY)
     , m_dx(dx)
@@ -43,6 +48,17 @@ FEDropShadow::FEDropShadow(float stdX, float stdY, float dx, float dy, const Col
     , m_shadowColor(shadowColor)
     , m_shadowOpacity(shadowOpacity)
 {
+}
+
+bool FEDropShadow::operator==(const FEDropShadow& other) const
+{
+    return FilterEffect::operator==(other)
+        && m_stdX == other.m_stdX
+        && m_stdY == other.m_stdY
+        && m_dx == other.m_dx
+        && m_dy == other.m_dy
+        && m_shadowColor == other.m_shadowColor
+        && m_shadowOpacity == other.m_shadowOpacity;
 }
 
 bool FEDropShadow::setStdDeviationX(float stdX)
@@ -93,7 +109,7 @@ bool FEDropShadow::setShadowOpacity(float shadowOpacity)
     return true;
 }
 
-FloatRect FEDropShadow::calculateImageRect(const Filter& filter, Span<const FloatRect> inputImageRects, const FloatRect& primitiveSubregion) const
+FloatRect FEDropShadow::calculateImageRect(const Filter& filter, std::span<const FloatRect> inputImageRects, const FloatRect& primitiveSubregion) const
 {
     auto imageRect = inputImageRects[0];
     auto imageRectWithOffset(imageRect);
@@ -124,6 +140,9 @@ IntOutsets FEDropShadow::calculateOutsets(const FloatSize& offset, const FloatSi
 OptionSet<FilterRenderingMode> FEDropShadow::supportedFilterRenderingModes() const
 {
     OptionSet<FilterRenderingMode> modes = FilterRenderingMode::Software;
+#if USE(SKIA)
+    modes.add(FilterRenderingMode::Accelerated);
+#endif
 #if HAVE(CGSTYLE_CREATE_SHADOW2)
     if (m_stdX == m_stdY)
         modes.add(FilterRenderingMode::GraphicsContext);
@@ -131,18 +150,32 @@ OptionSet<FilterRenderingMode> FEDropShadow::supportedFilterRenderingModes() con
     return modes;
 }
 
-std::optional<GraphicsStyle> FEDropShadow::createGraphicsStyle(const Filter& filter) const
+std::optional<GraphicsStyle> FEDropShadow::createGraphicsStyle(GraphicsContext& context, const Filter& filter) const
 {
-    auto offset = filter.resolvedSize({ m_dx, m_dy });
-    auto radius = FEGaussianBlur::calculateUnscaledKernelSize(filter.resolvedSize({ m_stdX, m_stdY }));
-    auto color = m_shadowColor.colorWithAlpha(m_shadowOpacity);
+    ASSERT(m_stdX == m_stdY);
 
-    return GraphicsDropShadow { offset, radius, color };
+    auto offset = filter.resolvedSize(context.platformShadowOffset({ m_dx, m_dy }));
+    auto radius = FEGaussianBlur::calculateUnscaledKernelSize(filter.resolvedSize({ m_stdX, m_stdY }));
+
+    return GraphicsDropShadow { offset, static_cast<float>(radius.width()), m_shadowColor, ShadowRadiusMode::Default, m_shadowOpacity };
+}
+
+std::unique_ptr<FilterEffectApplier> FEDropShadow::createAcceleratedApplier() const
+{
+#if USE(SKIA)
+    return FilterEffectApplier::create<FEDropShadowSkiaApplier>(*this);
+#else
+    return nullptr;
+#endif
 }
 
 std::unique_ptr<FilterEffectApplier> FEDropShadow::createSoftwareApplier() const
 {
+#if USE(SKIA)
+    return FilterEffectApplier::create<FEDropShadowSkiaApplier>(*this);
+#else
     return FilterEffectApplier::create<FEDropShadowSoftwareApplier>(*this);
+#endif
 }
 
 TextStream& FEDropShadow::externalRepresentation(TextStream& ts, FilterRepresentation representation) const

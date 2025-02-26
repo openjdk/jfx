@@ -46,17 +46,19 @@ public:
     RenderTreeUpdater(Document&, Style::PostResolutionCallbackDisabler&);
     ~RenderTreeUpdater();
 
-    void commit(std::unique_ptr<const Style::Update>);
+    void commit(std::unique_ptr<Style::Update>);
 
     static void tearDownRenderers(Element&);
+    static void tearDownRenderersForShadowRootInsertion(Element&);
     static void tearDownRenderersAfterSlotChange(Element& host);
     static void tearDownRenderer(Text&);
 
 private:
     class GeneratedContent;
+    class ViewTransition;
 
     void updateRenderTree(ContainerNode& root);
-    void updateTextRenderer(Text&, const Style::TextUpdate*);
+    void updateTextRenderer(Text&, const Style::TextUpdate*, const ContainerNode* root = nullptr);
     void createTextRenderer(Text&, const Style::TextUpdate*);
     void updateElementRenderer(Element&, const Style::ElementUpdate&);
     void updateSVGRenderer(Element&);
@@ -75,6 +77,7 @@ private:
 
         bool didCreateOrDestroyChildRenderer { false };
         RenderObject* previousChildRenderer { nullptr };
+        bool hasPrecedingInFlowChild { false };
 
         Parent(ContainerNode& root);
         Parent(Element&, const Style::ElementUpdate*);
@@ -84,26 +87,32 @@ private:
     RenderTreePosition& renderTreePosition();
 
     GeneratedContent& generatedContent() { return *m_generatedContent; }
+    ViewTransition& viewTransition() { return *m_viewTransition; }
 
     void pushParent(Element&, const Style::ElementUpdate*);
     void popParent();
     void popParentsToDepth(unsigned depth);
 
     // FIXME: Use OptionSet.
-    enum class TeardownType { Full, FullAfterSlotChange, RendererUpdate, RendererUpdateCancelingAnimations };
+    enum class TeardownType { Full, FullAfterSlotOrShadowRootChange, RendererUpdate, RendererUpdateCancelingAnimations };
+    static void tearDownRenderers(Element&, TeardownType);
     static void tearDownRenderers(Element&, TeardownType, RenderTreeBuilder&);
-    static void tearDownTextRenderer(Text&, RenderTreeBuilder&);
+    enum class NeedsRepaintAndLayout : bool { No, Yes };
+    static void tearDownTextRenderer(Text&, const ContainerNode* root, RenderTreeBuilder&, NeedsRepaintAndLayout = NeedsRepaintAndLayout::Yes);
     static void tearDownLeftoverChildrenOfComposedTree(Element&, RenderTreeBuilder&);
     static void tearDownLeftoverPaginationRenderersIfNeeded(Element&, RenderTreeBuilder&);
 
+    void updateRebuildRoots();
+
     RenderView& renderView();
 
-    Document& m_document;
-    std::unique_ptr<const Style::Update> m_styleUpdate;
+    Ref<Document> m_document;
+    std::unique_ptr<Style::Update> m_styleUpdate;
 
     Vector<Parent> m_parentStack;
 
     std::unique_ptr<GeneratedContent> m_generatedContent;
+    std::unique_ptr<ViewTransition> m_viewTransition;
 
     RenderTreeBuilder m_builder;
 };

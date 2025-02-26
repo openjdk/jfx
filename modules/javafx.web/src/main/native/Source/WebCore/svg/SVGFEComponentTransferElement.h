@@ -29,7 +29,8 @@ namespace WebCore {
 class SVGComponentTransferFunctionElement;
 
 class SVGFEComponentTransferElement final : public SVGFilterPrimitiveStandardAttributes {
-    WTF_MAKE_ISO_ALLOCATED(SVGFEComponentTransferElement);
+    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(SVGFEComponentTransferElement);
+    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(SVGFEComponentTransferElement);
 public:
     static Ref<SVGFEComponentTransferElement> create(const QualifiedName&, Document&);
 
@@ -46,7 +47,7 @@ private:
 
     using PropertyRegistry = SVGPropertyOwnerRegistry<SVGFEComponentTransferElement, SVGFilterPrimitiveStandardAttributes>;
 
-    void parseAttribute(const QualifiedName&, const AtomString&) override;
+    void attributeChanged(const QualifiedName&, const AtomString& oldValue, const AtomString& newValue, AttributeModificationReason) override;
     void svgAttributeChanged(const QualifiedName&) override;
 
     Vector<AtomString> filterEffectInputsNames() const override { return { AtomString { in1() } }; }

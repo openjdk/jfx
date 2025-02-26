@@ -26,11 +26,18 @@
 #include "config.h"
 #include "XMLDocument.h"
 
-#include <wtf/IsoMallocInlines.h>
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
-WTF_MAKE_ISO_ALLOCATED_IMPL(XMLDocument);
+WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(XMLDocument);
+
+Ref<XMLDocument> XMLDocument::createXHTML(LocalFrame* frame, const Settings& settings, const URL& url)
+{
+    auto document = adoptRef(*new XMLDocument(frame, settings, url, { DocumentClass::XML, DocumentClass::XHTML }));
+    document->addToContextsMap();
+    return document;
+}
 
 } // namespace WebCore
 

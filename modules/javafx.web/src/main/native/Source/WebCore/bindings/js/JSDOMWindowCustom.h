@@ -22,22 +22,22 @@
 
 namespace WebCore {
 
-class AbstractDOMWindow;
-class AbstractFrame;
+class DOMWindow;
+class Frame;
 
 JSDOMWindow* asJSDOMWindow(JSC::JSGlobalObject*);
 const JSDOMWindow* asJSDOMWindow(const JSC::JSGlobalObject*);
 
 enum class DOMWindowType : bool { Local, Remote };
-template<DOMWindowType> bool jsDOMWindowGetOwnPropertySlotRestrictedAccess(JSDOMGlobalObject*, AbstractDOMWindow&, JSC::JSGlobalObject&, JSC::PropertyName, JSC::PropertySlot&, const String&);
+bool jsDOMWindowGetOwnPropertySlotRestrictedAccess(JSDOMGlobalObject*, DOMWindow&, JSC::JSGlobalObject&, JSC::PropertyName, JSC::PropertySlot&, const String&);
 
 enum class CrossOriginObject : bool { Window, Location };
 template<CrossOriginObject> void addCrossOriginOwnPropertyNames(JSC::JSGlobalObject&, JSC::PropertyNameArray&);
 
 bool handleCommonCrossOriginProperties(JSC::JSObject* thisObject, JSC::VM&, JSC::PropertyName, JSC::PropertySlot&);
 
-JSDOMWindow& mainWorldGlobalObject(Frame&);
-JSDOMWindow* mainWorldGlobalObject(Frame*);
+JSDOMWindow& mainWorldGlobalObject(LocalFrame&);
+JSDOMWindow* mainWorldGlobalObject(LocalFrame*);
 
 inline JSDOMWindow* asJSDOMWindow(JSC::JSGlobalObject* globalObject)
 {
@@ -49,7 +49,7 @@ inline const JSDOMWindow* asJSDOMWindow(const JSC::JSGlobalObject* globalObject)
     return static_cast<const JSDOMWindow*>(globalObject);
 }
 
-inline JSDOMWindow* mainWorldGlobalObject(Frame* frame)
+inline JSDOMWindow* mainWorldGlobalObject(LocalFrame* frame)
 {
     return frame ? &mainWorldGlobalObject(*frame) : nullptr;
 }

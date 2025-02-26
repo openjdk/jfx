@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,35 +25,35 @@
 
 package javafx.scene.control.skin;
 
-import com.sun.javafx.PlatformUtil;
-import com.sun.javafx.scene.control.skin.Utils;
 import javafx.animation.Animation.Status;
 import javafx.animation.Interpolator;
 import javafx.animation.KeyFrame;
 import javafx.animation.KeyValue;
 import javafx.animation.Timeline;
+import javafx.application.Platform;
+import javafx.beans.binding.DoubleBinding;
 import javafx.beans.property.DoubleProperty;
 import javafx.beans.property.SimpleDoubleProperty;
 import javafx.geometry.HPos;
+import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.geometry.VPos;
 import javafx.scene.Cursor;
 import javafx.scene.Node;
+import javafx.scene.control.Accordion;
 import javafx.scene.control.ContentDisplay;
+import javafx.scene.control.ContextMenu;
 import javafx.scene.control.Control;
+import javafx.scene.control.Labeled;
 import javafx.scene.control.TitledPane;
+import javafx.scene.input.MouseButton;
 import javafx.scene.layout.StackPane;
 import javafx.scene.shape.Rectangle;
-import javafx.util.Duration;
-
-import com.sun.javafx.scene.control.behavior.TitledPaneBehavior;
-import javafx.beans.binding.DoubleBinding;
-import javafx.geometry.Insets;
-import javafx.scene.control.Accordion;
-import javafx.scene.control.Labeled;
-import javafx.scene.control.ContextMenu;
-import javafx.scene.input.MouseButton;
 import javafx.scene.text.Font;
+import javafx.util.Duration;
+import com.sun.javafx.PlatformUtil;
+import com.sun.javafx.scene.control.behavior.TitledPaneBehavior;
+import com.sun.javafx.scene.control.skin.Utils;
 
 /**
  * Default skin implementation for the {@link TitledPane} control.
@@ -306,7 +306,7 @@ public class TitledPaneSkin extends LabeledSkinBase<TitledPane>  {
         }
 
         // we need to perform the transition between expanded / hidden
-        if (getSkinnable().isAnimated()) {
+        if (Platform.isFxApplicationThread() && getSkinnable().isAnimated()) {
             transitionStartValue = getTransition();
             doAnimationTransition();
         } else {
@@ -426,7 +426,7 @@ public class TitledPaneSkin extends LabeledSkinBase<TitledPane>  {
             arrow.getStyleClass().setAll("arrow");
             arrowRegion.getChildren().setAll(arrow);
 
-            // RT-13294: TitledPane : add animation to the title arrow
+            // JDK-8101303: TitledPane : add animation to the title arrow
             arrow.rotateProperty().bind(new DoubleBinding() {
                 { bind(transitionProperty()); }
 

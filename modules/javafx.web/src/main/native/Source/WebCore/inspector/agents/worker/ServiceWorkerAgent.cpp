@@ -26,8 +26,6 @@
 #include "config.h"
 #include "ServiceWorkerAgent.h"
 
-#if ENABLE(SERVICE_WORKER)
-
 #include "SecurityOrigin.h"
 #include "ServiceWorkerGlobalScope.h"
 #include "ServiceWorkerThread.h"
@@ -54,9 +52,9 @@ void ServiceWorkerAgent::willDestroyFrontendAndBackend(Inspector::DisconnectReas
 {
 }
 
-Protocol::ErrorStringOr<Ref<Protocol::ServiceWorker::Configuration>> ServiceWorkerAgent::getInitializationInfo()
+Inspector::Protocol::ErrorStringOr<Ref<Inspector::Protocol::ServiceWorker::Configuration>> ServiceWorkerAgent::getInitializationInfo()
 {
-    return Protocol::ServiceWorker::Configuration::create()
+    return Inspector::Protocol::ServiceWorker::Configuration::create()
         .setTargetId(m_serviceWorkerGlobalScope.inspectorIdentifier())
         .setSecurityOrigin(m_serviceWorkerGlobalScope.securityOrigin()->toRawString())
         .setUrl(m_serviceWorkerGlobalScope.contextData().scriptURL.string())
@@ -65,5 +63,3 @@ Protocol::ErrorStringOr<Ref<Protocol::ServiceWorker::Configuration>> ServiceWork
 }
 
 } // namespace WebCore
-
-#endif // ENABLE(SERVICE_WORKER)

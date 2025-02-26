@@ -27,10 +27,10 @@
 #include "SubresourceIntegrity.h"
 
 #include "CachedResource.h"
-#include "HTMLParserIdioms.h"
 #include "ParsingUtilities.h"
 #include "ResourceCryptographicDigest.h"
 #include "SharedBuffer.h"
+#include <wtf/text/MakeString.h>
 #include <wtf/text/StringParsingBuffer.h>
 
 namespace WebCore {
@@ -71,7 +71,7 @@ public:
 
         // After the base64 value and options, the current character pointed to by position
         // should either be the end or a space.
-        if (!buffer.atEnd() && !isHTMLSpace(*buffer))
+        if (!buffer.atEnd() && !isASCIIWhitespace(*buffer))
             return false;
 
         m_digests->append(WTFMove(*digest));
@@ -87,12 +87,12 @@ private:
 template <typename CharacterType, typename Functor>
 static inline void splitOnSpaces(StringParsingBuffer<CharacterType> buffer, Functor&& functor)
 {
-    skipWhile<isHTMLSpace>(buffer);
+    skipWhile<isASCIIWhitespace>(buffer);
 
     while (buffer.hasCharactersRemaining()) {
         if (!functor(buffer))
-            skipWhile<isNotHTMLSpace>(buffer);
-        skipWhile<isHTMLSpace>(buffer);
+            skipWhile<isNotASCIIWhitespace>(buffer);
+        skipWhile<isASCIIWhitespace>(buffer);
     }
 }
 
@@ -103,8 +103,7 @@ std::optional<Vector<EncodedResourceCryptographicDigest>> parseIntegrityMetadata
 
     std::optional<Vector<EncodedResourceCryptographicDigest>> result;
 
-    readCharactersForParsing(integrityMetadata, [&result] (auto buffer) {
-        using CharacterType = typename decltype(buffer)::CharacterType;
+    readCharactersForParsing(integrityMetadata, [&result]<typename CharacterType> (StringParsingBuffer<CharacterType> buffer) {
         splitOnSpaces(buffer, IntegrityMetadataParser<CharacterType> { result });
     });
 
@@ -162,10 +161,8 @@ static Vector<EncodedResourceCryptographicDigest> strongestMetadataFromSet(Vecto
     return result;
 }
 
-bool matchIntegrityMetadata(const CachedResource& resource, const String& integrityMetadataList)
+bool matchIntegrityMetadataSlow(const CachedResource& resource, const String& integrityMetadataList)
 {
-    // FIXME: Consider caching digests on the CachedResource rather than always recomputing it.
-
     // 1. Let parsedMetadata be the result of parsing metadataList.
     auto parsedMetadata = parseIntegrityMetadata(integrityMetadataList);
 
@@ -184,8 +181,6 @@ bool matchIntegrityMetadata(const CachedResource& resource, const String& integr
     // 5. Let metadata be the result of getting the strongest metadata from parsedMetadata.
     auto metadata = strongestMetadataFromSet(WTFMove(*parsedMetadata));
 
-    const auto* sharedBuffer = resource.resourceBuffer();
-
     // 6. For each item in metadata:
     for (auto& item : metadata) {
         // 1. Let algorithm be the alg component of item.
@@ -195,7 +190,7 @@ bool matchIntegrityMetadata(const CachedResource& resource, const String& integr
         auto expectedValue = decodeEncodedResourceCryptographicDigest(item);
 
         // 3. Let actualValue be the result of applying algorithm to response.
-        auto actualValue = cryptographicDigestForSharedBuffer(algorithm, sharedBuffer);
+        auto actualValue = resource.cryptographicDigest(algorithm);
 
         // 4. If actualValue is a case-sensitive match for expectedValue, return true.
         if (expectedValue && actualValue.value == expectedValue->value)
@@ -208,12 +203,12 @@ bool matchIntegrityMetadata(const CachedResource& resource, const String& integr
 String integrityMismatchDescription(const CachedResource& resource, const String& integrityMetadata)
 {
     auto resourceURL = resource.url().stringCenterEllipsizedToLength();
-    if (auto resourceBuffer = resource.resourceBuffer()) {
-        return makeString(resourceURL, ". Failed integrity metadata check. Content length: ", resourceBuffer->size(), ", Expected content length: ",
-            resource.response().expectedContentLength(), ", Expected metadata: ", integrityMetadata);
+    if (RefPtr resourceBuffer = resource.resourceBuffer()) {
+        return makeString(resourceURL, ". Failed integrity metadata check. Content length: "_s, resourceBuffer->size(), ", Expected content length: "_s,
+            resource.response().expectedContentLength(), ", Expected metadata: "_s, integrityMetadata);
     }
-    return makeString(resourceURL, ". Failed integrity metadata check. Content length: (no content), Expected content length: ",
-        resource.response().expectedContentLength(), ", Expected metadata: ", integrityMetadata);
+    return makeString(resourceURL, ". Failed integrity metadata check. Content length: (no content), Expected content length: "_s,
+        resource.response().expectedContentLength(), ", Expected metadata: "_s, integrityMetadata);
 }
 
 }

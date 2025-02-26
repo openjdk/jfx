@@ -30,6 +30,7 @@
 
 #include <wtf/FastMalloc.h>
 #include <wtf/JSONValues.h>
+#include <wtf/Seconds.h>
 #include <wtf/text/WTFString.h>
 
 #include <cmath>
@@ -55,17 +56,19 @@ public:
 
     constexpr MediaTime();
     constexpr MediaTime(int64_t value, uint32_t scale, uint8_t flags = Valid);
-    MediaTime(const MediaTime& rhs);
+    MediaTime(const MediaTime&) = default;
 
     static MediaTime createWithFloat(float floatTime);
     static MediaTime createWithFloat(float floatTime, uint32_t timeScale);
     static MediaTime createWithDouble(double doubleTime);
     static MediaTime createWithDouble(double doubleTime, uint32_t timeScale);
+    static MediaTime createWithSeconds(Seconds seconds) { return createWithDouble(seconds.value()); }
 
     float toFloat() const;
     double toDouble() const;
+    int64_t toMicroseconds() const;
 
-    MediaTime& operator=(const MediaTime& rhs);
+    MediaTime& operator=(const MediaTime&) = default;
     MediaTime& operator+=(const MediaTime& rhs) { return *this = *this + rhs; }
     MediaTime& operator-=(const MediaTime& rhs) { return *this = *this - rhs; }
     MediaTime operator+(const MediaTime& rhs) const;
@@ -74,7 +77,6 @@ public:
     MediaTime operator*(int32_t) const;
     bool operator<(const MediaTime& rhs) const { return compare(rhs) == LessThan; }
     bool operator>(const MediaTime& rhs) const { return compare(rhs) == GreaterThan; }
-    bool operator!=(const MediaTime& rhs) const { return compare(rhs) != EqualTo; }
     bool operator==(const MediaTime& rhs) const { return compare(rhs) == EqualTo; }
     bool operator>=(const MediaTime& rhs) const { return compare(rhs) >= EqualTo; }
     bool operator<=(const MediaTime& rhs) const { return compare(rhs) <= EqualTo; }

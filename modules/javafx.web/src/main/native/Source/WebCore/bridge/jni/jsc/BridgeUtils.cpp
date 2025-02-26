@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2020, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -160,7 +160,7 @@ JSValueRef Java_Object_to_JSValue(
             {
                 JSDOMGlobalObject* globalObject = toJSDOMGlobalObject(
                     ((peer_type == com_sun_webkit_dom_JSObject_JS_DOM_WINDOW_OBJECT)
-                        ? *static_cast<DOMWindow*>(jlong_to_ptr(peer))->document()
+                        ? *static_cast<LocalDOMWindow*>(jlong_to_ptr(peer))->document()
                         : static_cast<Node*>(jlong_to_ptr(peer))->document()),
                     normalWorld(lexicalGlobalObject->vm()));
                 return toRef(lexicalGlobalObject,
@@ -290,15 +290,17 @@ RefPtr<JSC::Bindings::RootObject> checkJSPeer(
     case com_sun_webkit_dom_JSObject_JS_DOM_WINDOW_OBJECT:
         {
             WebCore::Frame* frame = (peer_type == com_sun_webkit_dom_JSObject_JS_DOM_WINDOW_OBJECT)
-                ? static_cast<WebCore::DOMWindow*>(jlong_to_ptr(peer))->document()->frame()
+                ? static_cast<WebCore::LocalDOMWindow*>(jlong_to_ptr(peer))->document()->frame()
                 : static_cast<WebCore::Node*>(jlong_to_ptr(peer))->document().frame();
 
             if (!frame) {
                 return rootObject;
             }
-            rootObject = &(frame->script().createRootObject(frame).leakRef());
+
+            auto* localFrame = dynamicDowncast<LocalFrame>(frame);
+            rootObject = &(localFrame->script().createRootObject(frame).leakRef());
             if (rootObject) {
-                context = WebCore::getGlobalContext(&frame->script());
+                context = WebCore::getGlobalContext(&localFrame->script());
                 JSC::JSGlobalObject* JSGlobalObject = toJS(context);
                 JSC::JSLockHolder lock(JSGlobalObject);
 
@@ -444,7 +446,7 @@ JNIEXPORT jstring JNICALL Java_com_sun_webkit_dom_JSObject_toStringImpl
     JSC::JSLockHolder lock(JSGlobalObject);
 
     return toJS(object)->toString(JSGlobalObject)->value(JSGlobalObject)
-        .toJavaString(env).releaseLocal();
+        ->toJavaString(env).releaseLocal();
 }
 
 JNIEXPORT jobject JNICALL Java_com_sun_webkit_dom_JSObject_callImpl

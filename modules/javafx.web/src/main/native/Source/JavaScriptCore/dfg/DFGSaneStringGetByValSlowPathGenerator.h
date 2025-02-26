@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2013-2017 Apple Inc. All rights reserved.
+ * Copyright (C) 2013-2023 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -30,11 +30,13 @@
 #include "DFGOperations.h"
 #include "DFGSlowPathGenerator.h"
 #include "DFGSpeculativeJIT.h"
+#include <wtf/TZoneMallocInlines.h>
 #include <wtf/Vector.h>
 
 namespace JSC { namespace DFG {
 
 class SaneStringGetByValSlowPathGenerator final : public JumpingSlowPathGenerator<MacroAssembler::Jump> {
+    WTF_MAKE_TZONE_ALLOCATED_INLINE(SaneStringGetByValSlowPathGenerator);
 public:
     SaneStringGetByValSlowPathGenerator(
         const MacroAssembler::Jump& from, SpeculativeJIT* jit, JSValueRegs resultRegs, JITCompiler::LinkableConstant globalObject, GPRReg baseReg, GPRReg propertyReg)
@@ -68,12 +70,7 @@ private:
 
         isNeg.link(jit);
 
-        for (unsigned i = 0; i < m_plans.size(); ++i)
-            jit->silentSpill(m_plans[i]);
-        jit->callOperation(operationGetByValStringInt, extractResult(m_resultRegs), m_globalObject, m_baseReg, m_propertyReg);
-        for (unsigned i = m_plans.size(); i--;)
-            jit->silentFill(m_plans[i]);
-        jit->exceptionCheck();
+        jit->callOperationWithSilentSpill(m_plans, operationGetByValStringInt, extractResult(m_resultRegs), m_globalObject, m_baseReg, m_propertyReg);
 
         jumpTo(jit);
     }

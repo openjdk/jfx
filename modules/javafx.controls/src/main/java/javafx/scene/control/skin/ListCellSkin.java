@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -37,6 +37,7 @@ import javafx.scene.layout.Region;
 /**
  * Default skin implementation for the {@link ListCell} control.
  *
+ * @param <T> the type of the item contained within the ListCell
  * @see ListCell
  * @since 9
  */
@@ -102,7 +103,7 @@ public class ListCellSkin<T> extends CellSkinBase<ListCell<T>> {
         }
 
         // Added the comparison between the default cell size and the requested
-        // cell size to prevent the issue identified in RT-19873.
+        // cell size to prevent the issue identified in JDK-8116512.
         final double cellSize = getCellSize();
         final double prefHeight = cellSize == DEFAULT_CELL_SIZE ? super.computePrefHeight(width, topInset, rightInset, bottomInset, leftInset) : cellSize;
         return prefHeight;

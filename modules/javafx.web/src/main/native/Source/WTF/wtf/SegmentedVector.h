@@ -67,11 +67,6 @@ namespace WTF {
             return m_index == other.m_index && &m_vector == &other.m_vector;
         }
 
-        bool operator!=(const Iterator& other) const
-        {
-            return m_index != other.m_index || &m_vector != &other.m_vector;
-        }
-
         SegmentedVectorIterator& operator=(const SegmentedVectorIterator<T, SegmentSize>& other)
         {
             m_vector = other.m_vector;
@@ -223,14 +218,7 @@ namespace WTF {
 
     private:
         struct Segment {
-#if COMPILER(MSVC)
-#pragma warning(push)
-#pragma warning(disable: 4200)
-#endif
             T entries[0];
-#if COMPILER(MSVC)
-#pragma warning(pop)
-#endif
         };
 
         void deleteAllSegments()

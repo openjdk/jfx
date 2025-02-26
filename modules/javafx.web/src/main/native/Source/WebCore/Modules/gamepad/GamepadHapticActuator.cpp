@@ -83,7 +83,7 @@ bool GamepadHapticActuator::canPlayEffectType(EffectType effectType) const
 void GamepadHapticActuator::playEffect(EffectType effectType, GamepadEffectParameters&& effectParameters, Ref<DeferredPromise>&& promise)
 {
     if (!areEffectParametersValid(effectType, effectParameters)) {
-        promise->reject(Exception { TypeError, "Invalid effect parameter"_s });
+        promise->reject(Exception { ExceptionCode::TypeError, "Invalid effect parameter"_s });
         return;
     }
 
@@ -99,7 +99,7 @@ void GamepadHapticActuator::playEffect(EffectType effectType, GamepadEffectParam
         });
     }
     if (!canPlayEffectType(effectType)) {
-        promise->reject(Exception { NotSupportedError, "This gamepad doesn't support playing such effect"_s });
+        promise->reject(Exception { ExceptionCode::NotSupportedError, "This gamepad doesn't support playing such effect"_s });
         return;
     }
 
@@ -156,11 +156,6 @@ const Document* GamepadHapticActuator::document() const
     return downcast<Document>(scriptExecutionContext());
 }
 
-const char* GamepadHapticActuator::activeDOMObjectName() const
-{
-    return "GamepadHapticActuator";
-}
-
 void GamepadHapticActuator::suspend(ReasonForSuspension)
 {
     stopEffects([] { });
@@ -173,7 +168,7 @@ void GamepadHapticActuator::stop()
 
 void GamepadHapticActuator::visibilityStateChanged()
 {
-    auto* document = this->document();
+    RefPtr document = this->document();
     if (!document || !document->hidden())
         return;
     stopEffects([] { });

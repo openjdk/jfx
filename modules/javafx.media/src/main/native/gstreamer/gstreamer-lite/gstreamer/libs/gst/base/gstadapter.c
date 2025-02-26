@@ -581,7 +581,7 @@ gst_adapter_unmap (GstAdapter * adapter)
  * @dest: (out caller-allocates) (array length=size) (element-type guint8):
  *     the memory to copy into
  * @offset: the bytes offset in the adapter to start from
- * @size: the number of bytes to copy
+ * @size: (in): the number of bytes to copy
  *
  * Copies @size bytes of data starting at @offset out of the buffers
  * contained in #GstAdapter into an array @dest provided by the caller.
@@ -919,7 +919,8 @@ foreach_metadata (GstBuffer * inbuf, GstMeta ** meta, gpointer user_data)
   const GstMetaInfo *info = (*meta)->info;
   gboolean do_copy = FALSE;
 
-  if (gst_meta_api_type_has_tag (info->api, _gst_meta_tag_memory)) {
+  if (gst_meta_api_type_has_tag (info->api, _gst_meta_tag_memory)
+      || gst_meta_api_type_has_tag (info->api, _gst_meta_tag_memory_reference)) {
     /* never call the transform_meta with memory specific metadata */
     GST_DEBUG ("not copying memory specific metadata %s",
         g_type_name (info->api));

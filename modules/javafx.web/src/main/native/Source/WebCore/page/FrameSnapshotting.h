@@ -31,7 +31,7 @@
 
 #include "Color.h"
 #include "DestinationColorSpace.h"
-#include "PixelFormat.h"
+#include "ImageBufferPixelFormat.h"
 #include "SimpleRange.h"
 #include <memory>
 #include <wtf/OptionSet.h>
@@ -39,12 +39,12 @@
 namespace WebCore {
 
 class FloatRect;
-class Frame;
 class IntRect;
 class ImageBuffer;
+class LocalFrame;
 class Node;
 
-enum class SnapshotFlags : uint8_t {
+enum class SnapshotFlags : uint16_t {
     ExcludeSelectionHighlighting = 1 << 0,
     PaintSelectionOnly = 1 << 1,
     InViewCoordinates = 1 << 2,
@@ -53,19 +53,21 @@ enum class SnapshotFlags : uint8_t {
     PaintEverythingExcludingSelection = 1 << 5,
     PaintWithIntegralScaleFactor = 1 << 6,
     Shareable = 1 << 7,
+    Accelerated = 1 << 8,
+    ExcludeReplacedContent = 1 << 9,
 };
 
 struct SnapshotOptions {
     OptionSet<SnapshotFlags> flags;
-    PixelFormat pixelFormat;
+    ImageBufferPixelFormat pixelFormat;
     DestinationColorSpace colorSpace;
 };
 
-WEBCORE_EXPORT RefPtr<ImageBuffer> snapshotFrameRect(Frame&, const IntRect&, SnapshotOptions&&);
-RefPtr<ImageBuffer> snapshotFrameRectWithClip(Frame&, const IntRect&, const Vector<FloatRect>& clipRects, SnapshotOptions&&);
-RefPtr<ImageBuffer> snapshotNode(Frame&, Node&, SnapshotOptions&&);
-WEBCORE_EXPORT RefPtr<ImageBuffer> snapshotSelection(Frame&, SnapshotOptions&&);
+WEBCORE_EXPORT RefPtr<ImageBuffer> snapshotFrameRect(LocalFrame&, const IntRect&, SnapshotOptions&&);
+RefPtr<ImageBuffer> snapshotFrameRectWithClip(LocalFrame&, const IntRect&, const Vector<FloatRect>& clipRects, SnapshotOptions&&);
+RefPtr<ImageBuffer> snapshotNode(LocalFrame&, Node&, SnapshotOptions&&);
+WEBCORE_EXPORT RefPtr<ImageBuffer> snapshotSelection(LocalFrame&, SnapshotOptions&&);
 
-Color estimatedBackgroundColorForRange(const SimpleRange&, const Frame&);
+Color estimatedBackgroundColorForRange(const SimpleRange&, const LocalFrame&);
 
 } // namespace WebCore

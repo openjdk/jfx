@@ -36,7 +36,8 @@
 namespace WebCore {
 
 class MathMLElement : public StyledElement {
-    WTF_MAKE_ISO_ALLOCATED(MathMLElement);
+    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(MathMLElement);
+    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(MathMLElement);
 public:
     static Ref<MathMLElement> create(const QualifiedName& tagName, Document&);
 
@@ -90,9 +91,9 @@ public:
     virtual void updateSelectedChild() { }
 
 protected:
-    MathMLElement(const QualifiedName& tagName, Document&, ConstructionType = CreateMathMLElement);
+    MathMLElement(const QualifiedName& tagName, Document&, OptionSet<TypeFlag> = { });
 
-    void parseAttribute(const QualifiedName&, const AtomString&) override;
+    void attributeChanged(const QualifiedName&, const AtomString& oldValue, const AtomString& newValue, AttributeModificationReason) override;
     bool childShouldCreateRenderer(const Node&) const override;
 
     bool hasPresentationalHintsForAttribute(const QualifiedName&) const override;

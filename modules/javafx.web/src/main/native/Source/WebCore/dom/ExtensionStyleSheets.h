@@ -29,10 +29,12 @@
 
 #include "UserStyleSheet.h"
 #include <memory>
+#include <wtf/CheckedRef.h>
 #include <wtf/FastMalloc.h>
 #include <wtf/RefPtr.h>
 #include <wtf/RobinHoodHashMap.h>
 #include <wtf/Vector.h>
+#include <wtf/WeakRef.h>
 #include <wtf/text/WTFString.h>
 
 #if ENABLE(CONTENT_EXTENSIONS)
@@ -47,11 +49,14 @@ class Node;
 class StyleSheet;
 class StyleSheetContents;
 class StyleSheetList;
+class WeakPtrImplWithEventTargetData;
 
-class ExtensionStyleSheets {
+class ExtensionStyleSheets final : public CanMakeCheckedPtr<ExtensionStyleSheets> {
     WTF_MAKE_FAST_ALLOCATED;
+    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(ExtensionStyleSheets);
 public:
     explicit ExtensionStyleSheets(Document&);
+    ~ExtensionStyleSheets();
 
     CSSStyleSheet* pageUserSheet();
     const Vector<RefPtr<CSSStyleSheet>>& documentUserStyleSheets() const { return m_userStyleSheets; }
@@ -81,7 +86,9 @@ public:
     void detachFromDocument();
 
 private:
-    Document& m_document;
+    Ref<Document> protectedDocument() const;
+
+    WeakRef<Document, WeakPtrImplWithEventTargetData> m_document;
 
     RefPtr<CSSStyleSheet> m_pageUserSheet;
 

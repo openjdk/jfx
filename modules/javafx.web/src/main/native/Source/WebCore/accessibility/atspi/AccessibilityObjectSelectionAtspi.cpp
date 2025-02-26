@@ -82,9 +82,20 @@ unsigned AccessibilityObjectAtspi::selectionCount() const
     if (!m_coreObject)
         return 0;
 
-    AccessibilityObject::AccessibilityChildrenVector selectedItems;
-    m_coreObject->selectedChildren(selectedItems);
-    return selectedItems.size();
+    auto selectedChildren = m_coreObject->selectedChildren();
+    return selectedChildren ? selectedChildren->size() : 0;
+}
+
+Vector<RefPtr<AccessibilityObjectAtspi>> AccessibilityObjectAtspi::selectedChildren() const
+{
+    if (!m_coreObject)
+        return { };
+
+    auto selectedChildren = m_coreObject->selectedChildren();
+    if (!selectedChildren)
+        return { };
+
+    return wrapperVector(*selectedChildren);
 }
 
 AccessibilityObjectAtspi* AccessibilityObjectAtspi::selectedChild(unsigned index) const
@@ -92,12 +103,10 @@ AccessibilityObjectAtspi* AccessibilityObjectAtspi::selectedChild(unsigned index
     if (!m_coreObject)
         return nullptr;
 
-    AccessibilityObject::AccessibilityChildrenVector selectedItems;
-    m_coreObject->selectedChildren(selectedItems);
-    if (index >= selectedItems.size())
+    auto selectedItems = m_coreObject->selectedChildren();
+    if (!selectedItems || index >= selectedItems->size())
         return nullptr;
-
-    return selectedItems[index]->wrapper();
+    return (*selectedItems)[index]->wrapper();
 }
 
 bool AccessibilityObjectAtspi::setChildSelected(unsigned index, bool selected) const
@@ -121,16 +130,15 @@ bool AccessibilityObjectAtspi::deselectSelectedChild(unsigned index) const
     if (!m_coreObject)
         return false;
 
-    AccessibilityObject::AccessibilityChildrenVector selectedItems;
-    m_coreObject->selectedChildren(selectedItems);
-    if (index >= selectedItems.size())
+    auto selectedItems = m_coreObject->selectedChildren();
+    if (!selectedItems || index >= selectedItems->size())
         return false;
 
-    if (!selectedItems[index]->canSetSelectedAttribute())
+    if (!(*selectedItems)[index]->canSetSelectedAttribute())
         return false;
 
-    selectedItems[index]->setSelected(false);
-    return !selectedItems[index]->isSelected();
+    (*selectedItems)[index]->setSelected(false);
+    return !(*selectedItems)[index]->isSelected();
 }
 
 bool AccessibilityObjectAtspi::isChildSelected(unsigned index) const
@@ -164,9 +172,8 @@ bool AccessibilityObjectAtspi::selectAll() const
         return false;
 
     m_coreObject->setSelectedChildren(children);
-    AccessibilityObject::AccessibilityChildrenVector selectedItems;
-    m_coreObject->selectedChildren(selectedItems);
-    return selectableChildCount == selectedItems.size();
+    auto selectedChildren = m_coreObject->selectedChildren();
+    return selectedChildren && selectableChildCount == selectedChildren->size();
 }
 
 bool AccessibilityObjectAtspi::clearSelection() const
@@ -178,9 +185,8 @@ bool AccessibilityObjectAtspi::clearSelection() const
         return false;
 
     m_coreObject->setSelectedChildren({ });
-    AccessibilityObject::AccessibilityChildrenVector selectedItems;
-    m_coreObject->selectedChildren(selectedItems);
-    return selectedItems.isEmpty();
+    auto selectedChildren = m_coreObject->selectedChildren();
+    return !selectedChildren || selectedChildren->isEmpty();
 }
 
 void AccessibilityObjectAtspi::selectionChanged()

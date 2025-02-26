@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2008, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -45,11 +45,13 @@ import com.sun.prism.ps.Shader;
 
 class D3DContext extends BaseShaderContext {
 
-    public static final int D3DERR_DEVICEREMOVED    = 0x88760870;
-    public static final int D3DERR_DEVICENOTRESET   = 0x88760869;
     public static final int D3DERR_DEVICELOST       = 0x88760868;
-    public static final int E_FAIL                  = 0x80004005;
+    public static final int D3DERR_DEVICENOTRESET   = 0x88760869;
+    public static final int D3DERR_DEVICEREMOVED    = 0x88760870;
+    public static final int D3DERR_DEVICEHUNG       = 0X88760874;
     public static final int D3DERR_OUTOFVIDEOMEMORY = 0x8876017c;
+
+    public static final int E_FAIL                  = 0x80004005;
     public static final int D3D_OK                  = 0x0;
 
     public static final int D3DCOMPMODE_CLEAR           = 0;
@@ -170,6 +172,9 @@ class D3DContext extends BaseShaderContext {
                 case D3DERR_DEVICENOTRESET:
                     System.err.println("D3DERR_DEVICENOTRESET");
                     break;
+                case D3DERR_DEVICEHUNG:
+                    System.err.println("D3DERR_DEVICEHUNG");
+                    break;
                 case E_FAIL:
                     System.err.println("E_FAIL");
                     break;
@@ -199,7 +204,7 @@ class D3DContext extends BaseShaderContext {
             }
         }
 
-        if (hr == D3DERR_DEVICEREMOVED) {
+        if (hr == D3DERR_DEVICEREMOVED || hr == D3DERR_DEVICEHUNG) {
             setLost();
 
             // Reinitialize the D3DPipeline. This will dispose and recreate
@@ -234,7 +239,7 @@ class D3DContext extends BaseShaderContext {
 
     /**
      * OpenGL projection transform use z-range of [-1, 1] while D3D expects it
-     * to be [0, 1], so we need to adjust the matrix, see RT-32880.
+     * to be [0, 1], so we need to adjust the matrix, see JDK-8123305.
      */
     private GeneralTransform3D adjustClipSpace(GeneralTransform3D projViewTx) {
         double[] m = projViewTx.get(tempAdjustClipSpaceMat);
@@ -493,24 +498,18 @@ class D3DContext extends BaseShaderContext {
     private static native boolean nGetFrameStats(long pContext,
             D3DFrameStats returnValue, boolean bReset);
 
-    private static native boolean nIsRTTVolatile(long contextHandle);
-
-    public boolean isRTTVolatile() {
-        if (checkDisposed()) return false;
-
-        return nIsRTTVolatile(pContext);
-    }
-
     public static String hResultToString(long hResult) {
         switch ((int)hResult) {
-            case D3DERR_DEVICENOTRESET:
-                return "D3DERR_DEVICENOTRESET";
             case D3DERR_DEVICELOST:
                 return "D3DERR_DEVICELOST";
-            case D3DERR_OUTOFVIDEOMEMORY:
-                return "D3DERR_OUTOFVIDEOMEMORY";
+            case D3DERR_DEVICENOTRESET:
+                return "D3DERR_DEVICENOTRESET";
             case D3DERR_DEVICEREMOVED:
                 return "D3DERR_DEVICEREMOVED";
+            case D3DERR_DEVICEHUNG:
+                return "D3DERR_DEVICEHUNG";
+            case D3DERR_OUTOFVIDEOMEMORY:
+                return "D3DERR_OUTOFVIDEOMEMORY";
             case D3D_OK:
                 return "D3D_OK";
             default:

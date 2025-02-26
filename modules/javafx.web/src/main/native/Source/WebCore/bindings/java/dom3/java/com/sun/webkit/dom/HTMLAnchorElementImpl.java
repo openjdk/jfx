@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2017, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -39,41 +39,49 @@ public class HTMLAnchorElementImpl extends HTMLElementImpl implements HTMLAnchor
 
 
 // Attributes
+    @Override
     public String getCharset() {
         return getCharsetImpl(getPeer());
     }
     native static String getCharsetImpl(long peer);
 
+    @Override
     public void setCharset(String value) {
         setCharsetImpl(getPeer(), value);
     }
     native static void setCharsetImpl(long peer, String value);
 
+    @Override
     public String getCoords() {
         return getCoordsImpl(getPeer());
     }
     native static String getCoordsImpl(long peer);
 
+    @Override
     public void setCoords(String value) {
         setCoordsImpl(getPeer(), value);
     }
     native static void setCoordsImpl(long peer, String value);
 
+    @Override
     public String getHreflang() {
         return getHreflangImpl(getPeer());
     }
     native static String getHreflangImpl(long peer);
 
+    @Override
     public void setHreflang(String value) {
         setHreflangImpl(getPeer(), value);
     }
     native static void setHreflangImpl(long peer, String value);
 
+    @Override
     public String getName() {
         return getNameImpl(getPeer());
     }
     native static String getNameImpl(long peer);
 
+    @Override
     public void setName(String value) {
         setNameImpl(getPeer(), value);
     }
@@ -89,51 +97,61 @@ public class HTMLAnchorElementImpl extends HTMLElementImpl implements HTMLAnchor
     }
     native static void setPingImpl(long peer, String value);
 
+    @Override
     public String getRel() {
         return getRelImpl(getPeer());
     }
     native static String getRelImpl(long peer);
 
+    @Override
     public void setRel(String value) {
         setRelImpl(getPeer(), value);
     }
     native static void setRelImpl(long peer, String value);
 
+    @Override
     public String getRev() {
         return getRevImpl(getPeer());
     }
     native static String getRevImpl(long peer);
 
+    @Override
     public void setRev(String value) {
         setRevImpl(getPeer(), value);
     }
     native static void setRevImpl(long peer, String value);
 
+    @Override
     public String getShape() {
         return getShapeImpl(getPeer());
     }
     native static String getShapeImpl(long peer);
 
+    @Override
     public void setShape(String value) {
         setShapeImpl(getPeer(), value);
     }
     native static void setShapeImpl(long peer, String value);
 
+    @Override
     public String getTarget() {
         return getTargetImpl(getPeer());
     }
     native static String getTargetImpl(long peer);
 
+    @Override
     public void setTarget(String value) {
         setTargetImpl(getPeer(), value);
     }
     native static void setTargetImpl(long peer, String value);
 
+    @Override
     public String getType() {
         return getTypeImpl(getPeer());
     }
     native static String getTypeImpl(long peer);
 
+    @Override
     public void setType(String value) {
         setTypeImpl(getPeer(), value);
     }
@@ -149,11 +167,13 @@ public class HTMLAnchorElementImpl extends HTMLElementImpl implements HTMLAnchor
     }
     native static void setTextImpl(long peer, String value);
 
+    @Override
     public String getHref() {
         return getHrefImpl(getPeer());
     }
     native static String getHrefImpl(long peer);
 
+    @Override
     public void setHref(String value) {
         setHrefImpl(getPeer(), value);
     }

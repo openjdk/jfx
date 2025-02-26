@@ -3,6 +3,8 @@
  *  Copyright (C) 2006 Alexander Larsson <alexl@redhat.com>
  *  Copyright (C) 2000-2003 Ximian Inc.
  *
+ * SPDX-License-Identifier: LGPL-2.1-or-later
+ *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
  * License as published by the Free Software Foundation; either
@@ -28,30 +30,6 @@
 #include "gbase64.h"
 #include "gtestutils.h"
 #include "glibintl.h"
-
-
-/**
- * SECTION:base64
- * @title: Base64 Encoding
- * @short_description: encodes and decodes data in Base64 format
- *
- * Base64 is an encoding that allows a sequence of arbitrary bytes to be
- * encoded as a sequence of printable ASCII characters. For the definition
- * of Base64, see
- * [RFC 1421](http://www.ietf.org/rfc/rfc1421.txt)
- * or
- * [RFC 2045](http://www.ietf.org/rfc/rfc2045.txt).
- * Base64 is most commonly used as a MIME transfer encoding
- * for email.
- *
- * GLib supports incremental encoding using g_base64_encode_step() and
- * g_base64_encode_close(). Incremental decoding can be done with
- * g_base64_decode_step(). To encode or decode data in one go, use
- * g_base64_encode() or g_base64_decode(). To avoid memory allocation when
- * decoding, you can use g_base64_decode_inplace().
- *
- * Support for Base64 encoding has been added in GLib 2.12.
- */
 
 static const char base64_alphabet[] =
         "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
@@ -458,7 +436,8 @@ guchar *
 g_base64_decode_inplace (gchar *text,
                          gsize *out_len)
 {
-  gint input_length, state = 0;
+  gint state = 0;
+  size_t input_length;
   guint save = 0;
 
   g_return_val_if_fail (text != NULL, NULL);

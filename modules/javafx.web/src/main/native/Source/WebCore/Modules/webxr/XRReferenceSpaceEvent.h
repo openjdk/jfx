@@ -28,7 +28,6 @@
 #if ENABLE(WEBXR)
 
 #include "Event.h"
-#include <wtf/IsoMalloc.h>
 #include <wtf/Ref.h>
 #include <wtf/RefPtr.h>
 
@@ -38,7 +37,7 @@ class WebXRReferenceSpace;
 class WebXRRigidTransform;
 
 class XRReferenceSpaceEvent : public Event {
-    WTF_MAKE_ISO_ALLOCATED(XRReferenceSpaceEvent);
+    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(XRReferenceSpaceEvent);
 public:
     struct Init : EventInit {
         RefPtr<WebXRReferenceSpace> referenceSpace;

@@ -310,8 +310,13 @@ gst_plugin_feature_list_debug (GList * list)
  * @min_minor: minimum required minor version
  * @min_micro: minimum required micro version
  *
- * Checks whether the given plugin feature is at least
- *  the required version
+ * Checks whether the given plugin feature is at least the required version.
+ *
+ * Note: Since version 1.24 this function no longer returns %TRUE if the
+ * version is a git development version (e.g. 1.23.0.1) and the check is
+ * for the "next" micro version, that is it will no longer return %TRUE for
+ * e.g. 1.23.0.1 if the check is for 1.23.1. It is still possible to parse
+ * the nano version from the string and do this check that way if needed.
  *
  * Returns: %TRUE if the plugin feature has at least
  *  the required version, otherwise %FALSE.
@@ -354,10 +359,6 @@ gst_plugin_feature_check_version (GstPluginFeature * feature,
       else if (minor < min_minor)
         ret = FALSE;
       else if (micro > min_micro)
-        ret = TRUE;
-      /* micro is 1 smaller but we have a nano version, this is the upcoming
-       * release of the requested version and we're ok then */
-      else if (nscan == 4 && nano > 0 && (micro + 1 == min_micro))
         ret = TRUE;
       else
         ret = (micro == min_micro);

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2021 Apple Inc. All rights reserved.
+ * Copyright (C) 2021-2023 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -25,9 +25,10 @@
 
 #pragma once
 
+#include "SVGNames.h"
 #include <wtf/FastMalloc.h>
-#include <wtf/IsoMalloc.h>
 #include <wtf/RobinHoodHashMap.h>
+#include <wtf/TZoneMalloc.h>
 #include <wtf/text/AtomString.h>
 #include <wtf/text/AtomStringHash.h>
 
@@ -35,34 +36,53 @@ namespace WebCore {
 
 class CSSSVGResourceElementClient;
 class Document;
-class ReferencePathOperation;
+class LegacyRenderSVGResourceClipper;
+class LegacyRenderSVGResourceContainer;
+class QualifiedName;
 class ReferenceFilterOperation;
+class ReferencePathOperation;
 class RenderElement;
-class RenderSVGResourceClipper;
 class RenderSVGResourceFilter;
 class RenderStyle;
-class QualifiedName;
+class SVGClipPathElement;
 class SVGElement;
 class SVGFilterElement;
+class SVGMarkerElement;
+class SVGMaskElement;
+class StyleImage;
+class TreeScope;
 
 class ReferencedSVGResources {
-    WTF_MAKE_ISO_ALLOCATED(ReferencedSVGResources);
+    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(ReferencedSVGResources);
 public:
     ReferencedSVGResources(RenderElement&);
     ~ReferencedSVGResources();
 
-    static Vector<std::pair<AtomString, QualifiedName>> referencedSVGResourceIDs(const RenderStyle&);
-    void updateReferencedResources(Document&, const Vector<std::pair<AtomString, QualifiedName>>&);
+    using SVGQualifiedNames = Vector<SVGQualifiedName>;
+    using SVGElementIdentifierAndTagPairs = Vector<std::pair<AtomString, SVGQualifiedNames>>;
 
-    // Clipping needs a renderer, filters use an element.
-    RenderSVGResourceClipper* referencedClipperRenderer(Document&, const ReferencePathOperation&);
-    SVGFilterElement* referencedFilterElement(Document&, const ReferenceFilterOperation&);
+    static SVGElementIdentifierAndTagPairs referencedSVGResourceIDs(const RenderStyle&, const Document&);
+    void updateReferencedResources(TreeScope&, const SVGElementIdentifierAndTagPairs&);
+
+    // Legacy: Clipping needs a renderer, filters use an element.
+    static LegacyRenderSVGResourceClipper* referencedClipperRenderer(TreeScope&, const ReferencePathOperation&);
+    static RefPtr<SVGFilterElement> referencedFilterElement(TreeScope&, const ReferenceFilterOperation&);
+
+    static LegacyRenderSVGResourceContainer* referencedRenderResource(TreeScope&, const AtomString& fragment);
+
+    // LBSE: All element based.
+    static RefPtr<SVGClipPathElement> referencedClipPathElement(TreeScope&, const ReferencePathOperation&);
+    static RefPtr<SVGMarkerElement> referencedMarkerElement(TreeScope&, const String&);
+    static RefPtr<SVGMaskElement> referencedMaskElement(TreeScope&, const StyleImage&);
+    static RefPtr<SVGMaskElement> referencedMaskElement(TreeScope&, const AtomString&);
+    static RefPtr<SVGElement> referencedPaintServerElement(TreeScope&, const String&);
 
 private:
-    static SVGElement* elementForResourceID(Document&, const AtomString& resourceID, const QualifiedName& tagName);
+    static RefPtr<SVGElement> elementForResourceID(TreeScope&, const AtomString& resourceID, const SVGQualifiedName& tagName);
+    static RefPtr<SVGElement> elementForResourceIDs(TreeScope&, const AtomString& resourceID, const SVGQualifiedNames& tagNames);
 
     void addClientForTarget(SVGElement& targetElement, const AtomString&);
-    void removeClientForTarget(Document&, const AtomString&);
+    void removeClientForTarget(TreeScope&, const AtomString&);
 
     RenderElement& m_renderer;
     MemoryCompactRobinHoodHashMap<AtomString, std::unique_ptr<CSSSVGResourceElementClient>> m_elementClients;

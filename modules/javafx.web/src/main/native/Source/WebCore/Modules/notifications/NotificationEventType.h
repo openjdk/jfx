@@ -25,8 +25,6 @@
 
 #pragma once
 
-#include <wtf/EnumTraits.h>
-
 namespace WebCore {
 
 enum class NotificationEventType : bool {
@@ -35,15 +33,3 @@ enum class NotificationEventType : bool {
 };
 
 } // namespace WebCore
-
-namespace WTF {
-
-template<> struct EnumTraits<WebCore::NotificationEventType> {
-    using values = EnumValues<
-        WebCore::NotificationEventType,
-        WebCore::NotificationEventType::Click,
-        WebCore::NotificationEventType::Close
-    >;
-};
-
-}

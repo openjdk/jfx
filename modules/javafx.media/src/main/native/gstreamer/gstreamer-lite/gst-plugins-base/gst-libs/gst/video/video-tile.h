@@ -105,6 +105,8 @@ typedef enum
  */
 #define GST_VIDEO_TILE_Y_TILES(stride) ((stride) >> GST_VIDEO_TILE_Y_TILES_SHIFT)
 
+typedef struct _GstVideoTileInfo GstVideoTileInfo;
+
 /**
  * GstVideoTileMode:
  * @GST_VIDEO_TILE_MODE_UNKNOWN: Unknown or unset tile mode
@@ -113,6 +115,8 @@ typedef enum
  *    in memory in Z or flipped Z order. In case of odd rows, the last row
  *    of blocks is arranged in linear order.
  * @GST_VIDEO_TILE_MODE_LINEAR: Tiles are in row order. (Since: 1.18)
+ * @GST_VIDEO_TILE_MODE_LINEAR_SUBSAMPLED: Tiles are in row order, with
+ *   variable tile size according to subsampling. (Since: 1.20)
  *
  * Enum value describing the available tiling modes.
  */
@@ -129,6 +133,63 @@ typedef enum
    */
   GST_VIDEO_TILE_MODE_LINEAR = GST_VIDEO_TILE_MAKE_MODE (2, INDEXED),
 } GstVideoTileMode;
+
+
+/**
+ * GstVideoTileInfo:
+ *
+ * Description of a tile. This structure allow to describe arbitrary tile
+ * dimensions and sizes.
+ *
+ * Since: 1.22
+ */
+struct _GstVideoTileInfo
+{
+  /**
+   * GstVideoTileInfo.width:
+   *
+   * The width in pixels of a tile. This value can be zero if the number of
+   * pixels per line is not an integer value.
+   *
+   * Since: 1.22
+   */
+  guint width;
+
+  /**
+   * GstVideoTileInfo::height:
+   *
+   * The width in pixels of a tile. This value can be zero if the number of
+   * pixels per line is not an integer value.
+   *
+   * Since: 1.22
+   */
+  guint height;
+
+  /**
+   * GstVideoTileInfo.stride:
+   *
+   * The stride (in bytes) of a tile line. Regardless if the tile have sub-tiles
+   * this stride multiplied by the height should be equal to
+   * #GstVideoTileInfo.size. This value is used to translate into linear stride
+   * when older APIs are being used to expose this format.
+   *
+   * Since: 1.22
+   */
+  guint stride;
+
+  /**
+   * GstVideoTileInfo.size:
+   *
+   * The size in bytes of a tile. This value must be divisible by
+   * #GstVideoTileInfo.stride.
+   *
+   * Since: 1.22
+   */
+  guint size;
+
+  /* <private> */
+  guint32 padding[GST_PADDING];
+};
 
 GST_VIDEO_API
 guint           gst_video_tile_get_index                (GstVideoTileMode mode, gint x, gint y,

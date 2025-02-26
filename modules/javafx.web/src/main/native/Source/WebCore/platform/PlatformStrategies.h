@@ -25,12 +25,17 @@
 
 #pragma once
 
+#include <mutex>
+
 namespace WebCore {
 
 class BlobRegistry;
 class LoaderStrategy;
 class MediaStrategy;
 class PasteboardStrategy;
+#if ENABLE(DECLARATIVE_WEB_PUSH)
+class PushStrategy;
+#endif
 
 class PlatformStrategies {
 public:
@@ -50,8 +55,9 @@ public:
 
     MediaStrategy& mediaStrategy()
     {
-        if (!m_mediaStrategy)
+        std::call_once(m_onceKeyForMediaStrategies, [&] {
             m_mediaStrategy = createMediaStrategy();
+        });
         return *m_mediaStrategy;
     }
 
@@ -61,6 +67,15 @@ public:
             m_blobRegistry = createBlobRegistry();
         return m_blobRegistry;
     }
+
+#if ENABLE(DECLARATIVE_WEB_PUSH)
+    PushStrategy* pushStrategy()
+    {
+        if (!m_pushStrategy)
+            m_pushStrategy = createPushStrategy();
+        return m_pushStrategy;
+    }
+#endif
 
 protected:
     PlatformStrategies() = default;
@@ -77,8 +92,14 @@ private:
 
     LoaderStrategy* m_loaderStrategy { };
     PasteboardStrategy* m_pasteboardStrategy { };
+    std::once_flag m_onceKeyForMediaStrategies;
     MediaStrategy* m_mediaStrategy { };
     BlobRegistry* m_blobRegistry { };
+
+#if ENABLE(DECLARATIVE_WEB_PUSH)
+    virtual PushStrategy* createPushStrategy() = 0;
+    PushStrategy* m_pushStrategy { };
+#endif
 };
 
 bool hasPlatformStrategies();

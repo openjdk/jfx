@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2003-2020 Apple Inc. All rights reserved.
+ * Copyright (C) 2003-2023 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -31,7 +31,7 @@
 #include <wtf/CheckedArithmetic.h>
 #include <wtf/NeverDestroyed.h>
 #include <wtf/text/StringCommon.h>
-#include <wtf/text/StringHasher.h>
+#include <wtf/text/SuperFastHash.h>
 
 namespace WTF {
 
@@ -45,31 +45,31 @@ Ref<CStringBuffer> CStringBuffer::createUninitialized(size_t length)
     return adoptRef(*new (NotNull, stringBuffer) CStringBuffer(length));
 }
 
-CString::CString(const char* str)
+CString::CString(const char* string)
 {
-    if (!str)
+    if (!string)
         return;
 
-    init(str, strlen(str));
+    init(WTF::span(string));
 }
 
-CString::CString(const char* str, size_t length)
+CString::CString(std::span<const char> string)
 {
-    if (!str) {
-        ASSERT(!length);
+    if (!string.data()) {
+        ASSERT(string.empty());
         return;
     }
 
-    init(str, length);
+    init(string);
 }
 
-void CString::init(const char* str, size_t length)
+void CString::init(std::span<const char> string)
 {
-    ASSERT(str);
+    ASSERT(string.data());
 
-    m_buffer = CStringBuffer::createUninitialized(length);
-    memcpy(m_buffer->mutableData(), str, length);
-    m_buffer->mutableData()[length] = '\0';
+    m_buffer = CStringBuffer::createUninitialized(string.size());
+    memcpy(m_buffer->mutableData(), string.data(), string.size());
+    m_buffer->mutableData()[string.size()] = '\0';
 }
 
 char* CString::mutableData()
@@ -121,7 +121,7 @@ bool operator==(const CString& a, const CString& b)
         return false;
     if (a.length() != b.length())
         return false;
-    return equal(reinterpret_cast<const LChar*>(a.data()), reinterpret_cast<const LChar*>(b.data()), a.length());
+    return equal(a.span().data(), b.span());
 }
 
 bool operator==(const CString& a, const char* b)
@@ -137,7 +137,7 @@ unsigned CString::hash() const
 {
     if (isNull())
         return 0;
-    StringHasher hasher;
+    SuperFastHash hasher;
     for (const char* ptr = data(); *ptr; ++ptr)
         hasher.addCharacter(*ptr);
     return hasher.hash();

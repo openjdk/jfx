@@ -52,7 +52,10 @@
 #include "gstalsasink.h"
 
 #include <gst/audio/gstaudioiec61937.h>
-#include <gst/gst-i18n-plugin.h>
+#ifndef GSTREAMER_LITE
+#include <gst/audio/gstdsd.h>
+#endif // GSTREAMER_LITE
+#include <glib/gi18n-lib.h>
 
 #ifndef ESTRPIPE
 #define ESTRPIPE EPIPE
@@ -114,6 +117,13 @@ static GstStaticPadTemplate alsasink_sink_factory =
         "format = (string) " GST_AUDIO_FORMATS_ALL ", "
         "layout = (string) interleaved, "
         "rate = (int) [ 1, MAX ], " "channels = (int) [ 1, MAX ]; "
+#ifndef GSTREAMER_LITE
+        GST_DSD_MEDIA_TYPE ", "
+        "format = (string) " GST_DSD_FORMATS_ALL ", "
+        "layout = (string) interleaved, "
+        "reversed-bytes = (gboolean) false, "
+        "rate = (int) [ 1, MAX ], " "channels = (int) [ 1, MAX ]; "
+#endif // GSTREAMER_LITE
         PASSTHROUGH_CAPS)
     );
 
@@ -572,7 +582,14 @@ success:
       alsa->period_size);
 
   /* Check if hardware supports pause */
+#ifdef GSTREAMER_LITE
+  // See JDK-8308955. For some reason after stop we will skip ~500 ms of
+  // audio if we use hardware pause. So, for workaround we will never use
+  // hardware pause even if supported.
+  alsa->hw_support_pause = FALSE;
+#else // GSTREAMER_LITE
   alsa->hw_support_pause = snd_pcm_hw_params_can_pause (params);
+#endif // GSTREAMER_LITE
   GST_DEBUG_OBJECT (alsa, "Hw support pause: %s",
       alsa->hw_support_pause ? "yes" : "no");
 
@@ -825,6 +842,29 @@ alsasink_parse_spec (GstAlsaSink * alsa, GstAudioRingBufferSpec * spec)
           goto error;
       }
       break;
+#ifndef GSTREAMER_LITE
+    case GST_AUDIO_RING_BUFFER_FORMAT_TYPE_DSD:
+      switch (GST_AUDIO_RING_BUFFER_SPEC_DSD_FORMAT (spec)) {
+        case GST_DSD_FORMAT_U8:
+          alsa->format = SND_PCM_FORMAT_DSD_U8;
+          break;
+        case GST_DSD_FORMAT_U16LE:
+          alsa->format = SND_PCM_FORMAT_DSD_U16_LE;
+          break;
+        case GST_DSD_FORMAT_U16BE:
+          alsa->format = SND_PCM_FORMAT_DSD_U16_BE;
+          break;
+        case GST_DSD_FORMAT_U32LE:
+          alsa->format = SND_PCM_FORMAT_DSD_U32_LE;
+          break;
+        case GST_DSD_FORMAT_U32BE:
+          alsa->format = SND_PCM_FORMAT_DSD_U32_BE;
+          break;
+        default:
+          goto error;
+      }
+      break;
+#endif // GSTREAMER_LITE
     case GST_AUDIO_RING_BUFFER_FORMAT_TYPE_A_LAW:
       alsa->format = SND_PCM_FORMAT_A_LAW;
       break;
@@ -848,7 +888,13 @@ alsasink_parse_spec (GstAlsaSink * alsa, GstAudioRingBufferSpec * spec)
   alsa->period_time = spec->latency_time;
   alsa->access = SND_PCM_ACCESS_RW_INTERLEAVED;
 
+#ifndef GSTREAMER_LITE
+  if ((spec->type == GST_AUDIO_RING_BUFFER_FORMAT_TYPE_RAW ||
+          spec->type == GST_AUDIO_RING_BUFFER_FORMAT_TYPE_DSD) &&
+      alsa->channels < 9)
+#else // GSTREAMER_LITE
   if (spec->type == GST_AUDIO_RING_BUFFER_FORMAT_TYPE_RAW && alsa->channels < 9)
+#endif // GSTREAMER_LITE
     gst_audio_ring_buffer_set_channel_positions (GST_AUDIO_BASE_SINK
         (alsa)->ringbuffer, alsa_position[alsa->channels - 1]);
 
@@ -1181,6 +1227,7 @@ pause_error:
     GST_ERROR_OBJECT (alsa, "alsa-pause: pcm pause error: %s",
         snd_strerror (err));
     GST_ALSA_SINK_UNLOCK (asink);
+    gst_alsasink_stop (asink);
     return;
   }
 }

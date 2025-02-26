@@ -42,7 +42,7 @@
 #include <wtf/Scope.h>
 #include <wtf/Threading.h>
 #include <wtf/text/CString.h>
-#include <wtf/text/StringConcatenateNumbers.h>
+#include <wtf/text/MakeString.h>
 
 #if !USE(SYSTEM_MALLOC)
 #include <bmalloc/BPlatform.h>
@@ -51,12 +51,12 @@
 
 namespace WebCore {
 
-static const char notOpenErrorMessage[] = "database is not open";
+static constexpr auto notOpenErrorMessage = "database is not open"_s;
 
 static void unauthorizedSQLFunction(sqlite3_context *context, int, sqlite3_value **)
 {
-    const char* functionName = (const char*)sqlite3_user_data(context);
-    sqlite3_result_error(context, makeString("Function ", functionName, " is unauthorized").utf8().data(), -1);
+    auto* functionName = static_cast<const char*>(sqlite3_user_data(context));
+    sqlite3_result_error(context, makeString("Function "_s, span(functionName), " is unauthorized"_s).utf8().data(), -1);
 }
 
 static void initializeSQLiteIfNecessary()
@@ -117,7 +117,7 @@ SQLiteDatabase::~SQLiteDatabase()
     close();
 }
 
-bool SQLiteDatabase::open(const String& filename, OpenMode openMode)
+bool SQLiteDatabase::open(const String& filename, OpenMode openMode, OptionSet<OpenOptions> options)
 {
     initializeSQLiteIfNecessary();
     close();
@@ -156,6 +156,12 @@ bool SQLiteDatabase::open(const String& filename, OpenMode openMode)
         {
             SQLiteTransactionInProgressAutoCounter transactionCounter;
             result = sqlite3_open_v2(FileSystem::fileSystemRepresentation(filename).data(), &m_db, flags, nullptr);
+#if PLATFORM(COCOA)
+            if (result == SQLITE_OK && options.contains(OpenOptions::CanSuspendWhileLocked))
+                SQLiteFileSystem::setCanSuspendLockedFileAttribute(filename);
+#else
+            UNUSED_PARAM(options);
+#endif
         }
 
         if (result != SQLITE_OK) {
@@ -310,18 +316,18 @@ void SQLiteDatabase::close()
 
 void SQLiteDatabase::overrideUnauthorizedFunctions()
 {
-    static const std::pair<const char*, int> functionParameters[] = {
-        { "rtreenode", 2 },
-        { "rtreedepth", 1 },
-        { "eval", 1 },
-        { "eval", 2 },
-        { "printf", -1 },
-        { "fts3_tokenizer", 1 },
-        { "fts3_tokenizer", 2 },
+    static const std::pair<ASCIILiteral, int> functionParameters[] = {
+        { "rtreenode"_s, 2 },
+        { "rtreedepth"_s, 1 },
+        { "eval"_s, 1 },
+        { "eval"_s, 2 },
+        { "printf"_s, -1 },
+        { "fts3_tokenizer"_s, 1 },
+        { "fts3_tokenizer"_s, 2 },
     };
 
     for (auto& functionParameter : functionParameters)
-        sqlite3_create_function(m_db, functionParameter.first, functionParameter.second, SQLITE_UTF8, const_cast<char*>(functionParameter.first), unauthorizedSQLFunction, 0, 0);
+        sqlite3_create_function(m_db, functionParameter.first, functionParameter.second, SQLITE_UTF8, const_cast<char*>(functionParameter.first.characters()), unauthorizedSQLFunction, 0, 0);
 }
 
 void SQLiteDatabase::setFullsync(bool fsync)
@@ -360,7 +366,7 @@ void SQLiteDatabase::setMaximumSize(int64_t size)
     Locker locker { m_authorizerLock };
     enableAuthorizer(false);
 
-    auto statement = prepareStatementSlow(makeString("PRAGMA max_page_count = ", newMaxPageCount));
+    auto statement = prepareStatementSlow(makeString("PRAGMA max_page_count = "_s, newMaxPageCount));
     if (!statement || statement->step() != SQLITE_ROW)
         LOG_ERROR("Failed to set maximum size of database to %lli bytes", static_cast<long long>(size));
 
@@ -418,7 +424,7 @@ int64_t SQLiteDatabase::totalSize()
 
 void SQLiteDatabase::setSynchronous(SynchronousPragma sync)
 {
-    executeCommandSlow(makeString("PRAGMA synchronous = ", static_cast<unsigned>(sync)));
+    executeCommandSlow(makeString("PRAGMA synchronous = "_s, static_cast<unsigned>(sync)));
 }
 
 void SQLiteDatabase::setBusyTimeout(int ms)
@@ -437,16 +443,32 @@ void SQLiteDatabase::setBusyHandler(int(*handler)(void*, int))
         LOG(SQLDatabase, "Busy handler set on non-open database");
 }
 
-bool SQLiteDatabase::executeCommandSlow(StringView query)
+int SQLiteDatabase::executeSlow(StringView query)
 {
     auto statement = prepareStatementSlow(query);
-    return statement && statement->executeCommand();
+    if (!statement)
+        return statement.error();
+
+    return statement->step();
+}
+
+int SQLiteDatabase::execute(ASCIILiteral query)
+{
+    auto statement = prepareStatement(query);
+    if (!statement)
+        return statement.error();
+
+    return statement->step();
+}
+
+bool SQLiteDatabase::executeCommandSlow(StringView query)
+{
+    return executeSlow(query) == SQLITE_DONE;
 }
 
 bool SQLiteDatabase::executeCommand(ASCIILiteral query)
 {
-    auto statement = prepareStatement(query);
-    return statement && statement->executeCommand();
+    return execute(query) == SQLITE_DONE;
 }
 
 bool SQLiteDatabase::tableExists(StringView tableName)
@@ -489,7 +511,7 @@ void SQLiteDatabase::clearAllTables()
     while (statement->step() == SQLITE_ROW)
         tables.append(statement->columnText(0));
     for (auto& table : tables) {
-        if (!executeCommandSlow(makeString("DROP TABLE ", table)))
+        if (!executeCommandSlow(makeString("DROP TABLE "_s, table)))
             LOG(SQLDatabase, "Unable to drop table %s", table.ascii().data());
     }
 }
@@ -667,7 +689,6 @@ bool SQLiteDatabase::turnOnIncrementalAutoVacuum()
     if (!statement)
         return false;
         autoVacuumMode = statement->columnInt(0);
-    }
 
     // Check if we got an error while trying to get the value of the auto_vacuum flag.
     // If we got a SQLITE_BUSY error, then there's probably another transaction in
@@ -675,8 +696,14 @@ bool SQLiteDatabase::turnOnIncrementalAutoVacuum()
     // auto_vacuum flag and try to set it to INCREMENTAL the next time we open this
     // database. If the error is not SQLITE_BUSY, then we probably ran into a more
     // serious problem and should return false (to log an error message).
+        //
+        // The call to lastError() here MUST be made immediately after the call to columnInt
+        // and before the destructor of the PRAGMA auto_vacuum statement. This is because we
+        // want to get the return value of the sqlite3_step issued by columnInt, not the
+        // return value of the sqlite3_finalize issued by the statement destructor.
     if (lastError() != SQLITE_ROW)
         return false;
+    }
 
     switch (autoVacuumMode) {
     case AutoVacuumIncremental:
@@ -718,20 +745,19 @@ void SQLiteDatabase::releaseMemory()
     sqlite3_db_release_memory(m_db);
 }
 
-static Expected<sqlite3_stmt*, int> constructAndPrepareStatement(SQLiteDatabase& database, const char* query, size_t queryLength)
+static Expected<sqlite3_stmt*, int> constructAndPrepareStatement(SQLiteDatabase& database, std::span<const char> queryIncludingNullTerminator)
 {
     Locker databaseLock { database.databaseMutex() };
-    LOG(SQLDatabase, "SQL - prepare - %s", query);
+    LOG(SQLDatabase, "SQL - prepare - %s", queryIncludingNullTerminator.data());
+
+    sqlite3_stmt* statement = nullptr;
+    const char* tail = nullptr;
 
     // Pass the length of the string including the null character to sqlite3_prepare_v2;
     // this lets SQLite avoid an extra string copy.
-    size_t lengthIncludingNullCharacter = queryLength + 1;
-
-    sqlite3_stmt* statement { nullptr };
-    const char* tail = nullptr;
-    int error = sqlite3_prepare_v2(database.sqlite3Handle(), query, lengthIncludingNullCharacter, &statement, &tail);
+    int error = sqlite3_prepare_v2(database.sqlite3Handle(), queryIncludingNullTerminator.data(), queryIncludingNullTerminator.size(), &statement, &tail);
     if (error != SQLITE_OK)
-        LOG(SQLDatabase, "sqlite3_prepare16 failed (%i)\n%s\n%s", error, query, sqlite3_errmsg(database.sqlite3Handle()));
+        LOG(SQLDatabase, "sqlite3_prepare16 failed (%i)\n%s\n%s", error, queryIncludingNullTerminator.data(), sqlite3_errmsg(database.sqlite3Handle()));
 
     if (tail && *tail)
         error = SQLITE_ERROR;
@@ -750,8 +776,8 @@ static Expected<sqlite3_stmt*, int> constructAndPrepareStatement(SQLiteDatabase&
 
 Expected<SQLiteStatement, int> SQLiteDatabase::prepareStatementSlow(StringView queryString)
 {
-    CString query = queryString.stripWhiteSpace().utf8();
-    auto sqlStatement = constructAndPrepareStatement(*this, query.data(), query.length());
+    auto query = queryString.trim(isUnicodeCompatibleASCIIWhitespace<UChar>).utf8();
+    auto sqlStatement = constructAndPrepareStatement(*this, query.spanIncludingNullTerminator());
     if (!sqlStatement) {
         RELEASE_LOG_ERROR(SQLDatabase, "SQLiteDatabase::prepareStatement: Failed to prepare statement %" PUBLIC_LOG_STRING, query.data());
         return makeUnexpected(sqlStatement.error());
@@ -761,7 +787,7 @@ Expected<SQLiteStatement, int> SQLiteDatabase::prepareStatementSlow(StringView q
 
 Expected<SQLiteStatement, int> SQLiteDatabase::prepareStatement(ASCIILiteral query)
 {
-    auto sqlStatement = constructAndPrepareStatement(*this, query.characters(), query.length());
+    auto sqlStatement = constructAndPrepareStatement(*this, query.spanIncludingNullTerminator());
     if (!sqlStatement) {
         RELEASE_LOG_ERROR(SQLDatabase, "SQLiteDatabase::prepareStatement: Failed to prepare statement %" PUBLIC_LOG_STRING, query.characters());
         return makeUnexpected(sqlStatement.error());
@@ -771,8 +797,8 @@ Expected<SQLiteStatement, int> SQLiteDatabase::prepareStatement(ASCIILiteral que
 
 Expected<UniqueRef<SQLiteStatement>, int> SQLiteDatabase::prepareHeapStatementSlow(StringView queryString)
 {
-    CString query = queryString.stripWhiteSpace().utf8();
-    auto sqlStatement = constructAndPrepareStatement(*this, query.data(), query.length());
+    auto query = queryString.trim(isUnicodeCompatibleASCIIWhitespace<UChar>).utf8();
+    auto sqlStatement = constructAndPrepareStatement(*this, query.spanIncludingNullTerminator());
     if (!sqlStatement) {
         RELEASE_LOG_ERROR(SQLDatabase, "SQLiteDatabase::prepareHeapStatement: Failed to prepare statement %" PUBLIC_LOG_STRING, query.data());
         return makeUnexpected(sqlStatement.error());
@@ -782,7 +808,7 @@ Expected<UniqueRef<SQLiteStatement>, int> SQLiteDatabase::prepareHeapStatementSl
 
 Expected<UniqueRef<SQLiteStatement>, int> SQLiteDatabase::prepareHeapStatement(ASCIILiteral query)
 {
-    auto sqlStatement = constructAndPrepareStatement(*this, query.characters(), query.length());
+    auto sqlStatement = constructAndPrepareStatement(*this, query.spanIncludingNullTerminator());
     if (!sqlStatement) {
         RELEASE_LOG_ERROR(SQLDatabase, "SQLiteDatabase::prepareHeapStatement: Failed to prepare statement %" PUBLIC_LOG_STRING, query.characters());
         return makeUnexpected(sqlStatement.error());

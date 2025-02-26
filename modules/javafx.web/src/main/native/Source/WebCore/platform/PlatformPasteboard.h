@@ -38,6 +38,7 @@ OBJC_CLASS NSPasteboardItem;
 
 #if PLATFORM(IOS_FAMILY)
 OBJC_CLASS UIPasteboard;
+OBJC_PROTOCOL(AbstractPasteboard);
 #endif
 
 #if USE(LIBWPE)
@@ -50,6 +51,7 @@ class Color;
 class SharedBuffer;
 class PasteboardCustomData;
 class SelectionData;
+struct PasteboardBuffer;
 struct PasteboardImage;
 struct PasteboardItemInfo;
 struct PasteboardURL;
@@ -72,7 +74,7 @@ public:
     static String platformPasteboardTypeForSafeTypeForDOMToReadAndWrite(const String& domType, IncludeImageTypes = IncludeImageTypes::No);
 
     WEBCORE_EXPORT void getTypes(Vector<String>& types) const;
-    WEBCORE_EXPORT RefPtr<SharedBuffer> bufferForType(const String& pasteboardType) const;
+    WEBCORE_EXPORT PasteboardBuffer bufferForType(const String& pasteboardType) const;
     WEBCORE_EXPORT void getPathnamesForType(Vector<String>& pathnames, const String& pasteboardType) const;
     WEBCORE_EXPORT String stringForType(const String& pasteboardType) const;
     WEBCORE_EXPORT Vector<String> allStringsForType(const String& pasteboardType) const;
@@ -122,7 +124,7 @@ private:
     RetainPtr<NSPasteboard> m_pasteboard;
 #endif
 #if PLATFORM(IOS_FAMILY)
-    RetainPtr<id> m_pasteboard;
+    RetainPtr<AbstractPasteboard> m_pasteboard;
 #endif
 #if USE(LIBWPE)
     struct wpe_pasteboard* m_pasteboard;

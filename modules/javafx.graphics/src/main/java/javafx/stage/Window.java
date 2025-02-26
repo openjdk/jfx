@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2023, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,8 +25,6 @@
 
 package javafx.stage;
 
-import java.security.AccessControlContext;
-import java.security.AccessController;
 import java.util.HashMap;
 
 import javafx.application.Platform;
@@ -67,7 +65,6 @@ import com.sun.javafx.tk.Toolkit;
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.SimpleBooleanProperty;
 
-import static com.sun.javafx.FXPermissions.ACCESS_WINDOW_LIST_PERMISSION;
 import com.sun.javafx.scene.NodeHelper;
 import com.sun.javafx.scene.SceneHelper;
 
@@ -208,12 +205,6 @@ public class Window implements EventTarget {
                     public ReadOnlyObjectProperty<Screen> screenProperty(Window window) {
                         return window.screenProperty();
                     }
-
-                    @SuppressWarnings("removal")
-                    @Override
-                    public AccessControlContext getAccessControlContext(Window window) {
-                        return window.acc;
-                    }
                 });
     }
 
@@ -225,17 +216,8 @@ public class Window implements EventTarget {
      * @since 9
      */
     public static ObservableList<Window> getWindows() {
-        @SuppressWarnings("removal")
-        final SecurityManager securityManager = System.getSecurityManager();
-        if (securityManager != null) {
-            securityManager.checkPermission(ACCESS_WINDOW_LIST_PERMISSION);
-        }
-
         return unmodifiableWindows;
     }
-
-    @SuppressWarnings("removal")
-    final AccessControlContext acc = AccessController.getContext();
 
     /**
      * Constructor for subclasses to call.
@@ -292,15 +274,27 @@ public class Window implements EventTarget {
     /**
      * Set the width and height of this Window to match the size of the content
      * of this Window's Scene.
+     * <p>This request might be ignored if the Window is not allowed to do so, for example a {@link Stage}
+     * may be {@code maximized} or in {@code fullScreen} and therefore does not allow this request.
+     * If that is the case, this request is remembered and reapplied later when allowed.</p>
      */
     public void sizeToScene() {
-        if (getScene() != null && peer != null) {
+        if (isSizeToSceneAllowed() && getScene() != null && peer != null) {
             SceneHelper.preferredSize(getScene());
             adjustSize(false);
         } else {
             // Remember the request to reapply it later if needed
             sizeToScene = true;
         }
+    }
+
+    /**
+     * Determines whether the {@link #sizeToScene()} request is allowed or not.
+     *
+     * @return true if allowed, false otherwise
+     */
+    boolean isSizeToSceneAllowed() {
+        return true;
     }
 
     private void adjustSize(boolean selfSizePriority) {
@@ -339,7 +333,7 @@ public class Window implements EventTarget {
 
     /**
      * Sets x and y properties on this Window so that it is centered on the
-     * curent screen.
+     * current screen.
      * The current screen is determined from the intersection of current window bounds and
      * visual bounds of all screens.
      */
@@ -859,7 +853,7 @@ public class Window implements EventTarget {
                 // Set scene impl on stage impl
                 updatePeerScene(SceneHelper.getPeer(newScene));
 
-                // Fix for RT-15432: we should update new Scene's stylesheets, if the
+                // Fix for JDK-8113774: we should update new Scene's stylesheets, if the
                 // window is already showing. For not yet shown windows, the update is
                 // performed in doVisibleChanging()
                 if (isShowing()) {

@@ -25,11 +25,22 @@
 
 #pragma once
 
+#include <wtf/WeakPtr.h>
+
+namespace WebCore {
+class LoadableScriptClient;
+}
+
+namespace WTF {
+template<typename T> struct IsDeprecatedWeakRefSmartPointerException;
+template<> struct IsDeprecatedWeakRefSmartPointerException<WebCore::LoadableScriptClient> : std::true_type { };
+}
+
 namespace WebCore {
 
 class LoadableScript;
 
-class LoadableScriptClient {
+class LoadableScriptClient : public CanMakeWeakPtr<LoadableScriptClient> {
 public:
     virtual ~LoadableScriptClient() = default;
 

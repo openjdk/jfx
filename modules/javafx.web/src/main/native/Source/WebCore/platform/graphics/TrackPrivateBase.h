@@ -29,16 +29,21 @@
 
 #if ENABLE(VIDEO)
 
+#include "ScriptExecutionContextIdentifier.h"
 #include "TrackPrivateBaseClient.h"
+#include <wtf/Lock.h>
 #include <wtf/LoggerHelper.h>
 #include <wtf/MediaTime.h>
 #include <wtf/ThreadSafeRefCounted.h>
+#include <wtf/Vector.h>
 #include <wtf/text/AtomString.h>
 
 namespace WebCore {
 
+using TrackID = uint64_t;
+
 class WEBCORE_EXPORT TrackPrivateBase
-    : public ThreadSafeRefCounted<TrackPrivateBase, WTF::DestructionThread::Main>
+    : public ThreadSafeRefCounted<TrackPrivateBase>
 #if !RELEASE_LOG_DISABLED
     , public LoggerHelper
 #endif
@@ -48,25 +53,30 @@ class WEBCORE_EXPORT TrackPrivateBase
 public:
     virtual ~TrackPrivateBase() = default;
 
-    virtual TrackPrivateBaseClient* client() const = 0;
+    size_t addClient(TrackPrivateBaseClient::Dispatcher&&, TrackPrivateBaseClient&);
+    void removeClient(uint32_t); // Can be called multiple times with the same id.
 
-    virtual AtomString id() const { return emptyAtom(); }
+    virtual TrackID id() const { return 0; }
     virtual AtomString label() const { return emptyAtom(); }
     virtual AtomString language() const { return emptyAtom(); }
 
     virtual int trackIndex() const { return 0; }
-    virtual std::optional<uint64_t> trackUID() const;
+    virtual std::optional<AtomString> trackUID() const;
     virtual std::optional<bool> defaultEnabled() const;
 
     virtual MediaTime startTimeVariance() const { return MediaTime::zeroTime(); }
 
     void willBeRemoved()
     {
-        if (auto* client = this->client())
-            client->willRemove();
+        notifyClients([](auto& client) {
+            client.willRemove();
+        });
     }
 
     bool operator==(const TrackPrivateBase&) const;
+
+    enum class Type { Video, Audio, Text };
+    virtual Type type() const = 0;
 
 #if !RELEASE_LOG_DISABLED
     virtual void setLogger(const Logger&, const void*);
@@ -75,8 +85,33 @@ public:
     WTFLogChannel& logChannel() const final;
 #endif
 
+    using Task = Function<void(TrackPrivateBaseClient&)>;
+    void notifyClients(Task&&);
+    void notifyMainThreadClient(Task&&);
+
 protected:
     TrackPrivateBase() = default;
+
+    template <typename T>
+    class Shared final : public ThreadSafeRefCounted<Shared<T>> {
+    public:
+        static Ref<Shared> create(T&& obj) { return adoptRef(*new Shared(WTFMove(obj))); }
+
+        T& get() { return m_obj; };
+    private:
+        Shared(T&& obj)
+            : m_obj(WTFMove(obj))
+        {
+        }
+        T m_obj;
+    };
+    using SharedDispatcher = Shared<TrackPrivateBaseClient::Dispatcher>;
+
+    bool hasClients() const;
+    bool hasOneClient() const;
+    mutable Lock m_lock;
+    using ClientRecord = std::tuple<RefPtr<SharedDispatcher>, WeakPtr<TrackPrivateBaseClient>, bool>;
+    Vector<ClientRecord> m_clients WTF_GUARDED_BY_LOCK(m_lock);
 
 #if !RELEASE_LOG_DISABLED
     RefPtr<const Logger> m_logger;

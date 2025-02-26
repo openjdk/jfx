@@ -27,15 +27,15 @@
 #include "TestReportBody.h"
 
 #include "FormData.h"
-#include <wtf/IsoMallocInlines.h>
+#include <wtf/NeverDestroyed.h>
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
-WTF_MAKE_ISO_ALLOCATED_IMPL(TestReportBody);
+WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(TestReportBody);
 
 TestReportBody::TestReportBody(String&& message)
-    : ReportBody(ViolationReportType::Test)
-    , m_bodyMessage(WTFMove(message))
+    : m_bodyMessage(WTFMove(message))
 {
 }
 

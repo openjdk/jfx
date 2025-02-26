@@ -55,8 +55,9 @@ enum LocationKind {
     IndexedPropertyInt32Loc,
     IndexedPropertyInt32OutOfBoundsSaneChainLoc,
     IndexedPropertyInt52Loc,
-    IndexedPropertyJSOutOfBoundsSaneChainLoc,
+    IndexedPropertyInt52OutOfBoundsSaneChainLoc,
     IndexedPropertyJSLoc,
+    IndexedPropertyJSOutOfBoundsSaneChainLoc,
     IndexedPropertyStorageLoc,
     InvalidationPointLoc,
     IsCallableLoc,
@@ -73,12 +74,24 @@ enum LocationKind {
     PrototypeLoc,
     StackLoc,
     StackPayloadLoc,
+    GlobalProxyTargetLoc,
     DateFieldLoc,
     MapBucketLoc,
     MapBucketHeadLoc,
     MapBucketValueLoc,
     MapBucketKeyLoc,
     MapBucketNextLoc,
+    MapIteratorNextLoc,
+    MapIteratorKeyLoc,
+    MapIteratorValueLoc,
+    MapStorageLoc,
+    MapIterationNextLoc,
+    MapIterationEntryLoc,
+    MapIterationEntryKeyLoc,
+    MapIterationEntryValueLoc,
+    MapEntryKeyLoc,
+    MapEntryValueLoc,
+    LoadMapValueLoc,
     WeakMapGetLoc,
     InternalFieldObjectLoc,
     DOMStateLoc,
@@ -89,16 +102,20 @@ public:
     HeapLocation(
         LocationKind kind = InvalidLocationKind,
         AbstractHeap heap = AbstractHeap(),
-        Node* base = nullptr, LazyNode index = LazyNode(), Node* descriptor = nullptr)
+        Node* base = nullptr,
+        LazyNode index = LazyNode(),
+        Node* descriptor = nullptr,
+        void* extraState = nullptr)
         : m_kind(kind)
         , m_heap(heap)
         , m_base(base)
         , m_index(index)
         , m_descriptor(descriptor)
+        , m_extraState(extraState)
     {
         ASSERT((kind == InvalidLocationKind) == !heap);
         ASSERT(!!m_heap || !m_base);
-        ASSERT(m_base || (!m_index && !m_descriptor));
+        ASSERT(m_base || (!m_index && !m_descriptor && !m_extraState));
     }
 
     HeapLocation(LocationKind kind, AbstractHeap heap, Node* base, Node* index, Node* descriptor = nullptr)
@@ -108,6 +125,11 @@ public:
 
     HeapLocation(LocationKind kind, AbstractHeap heap, Edge base, Edge index = Edge(), Edge descriptor = Edge())
         : HeapLocation(kind, heap, base.node(), index.node(), descriptor.node())
+    {
+    }
+
+    HeapLocation(LocationKind kind, AbstractHeap heap, Edge base, void* extraState)
+        : HeapLocation(kind, heap, base.node(), nullptr, nullptr, extraState)
     {
     }
 
@@ -126,20 +148,19 @@ public:
     AbstractHeap heap() const { return m_heap; }
     Node* base() const { return m_base; }
     LazyNode index() const { return m_index; }
+    void* extraState() const { return m_extraState; }
 
     unsigned hash() const
     {
-        return m_kind + m_heap.hash() + m_index.hash() + static_cast<unsigned>(bitwise_cast<uintptr_t>(m_base)) + static_cast<unsigned>(bitwise_cast<uintptr_t>(m_descriptor));
+        return m_kind
+            + m_heap.hash()
+            + m_index.hash()
+            + static_cast<unsigned>(bitwise_cast<uintptr_t>(m_base))
+            + static_cast<unsigned>(bitwise_cast<uintptr_t>(m_descriptor))
+            + static_cast<unsigned>(bitwise_cast<uintptr_t>(m_extraState));
     }
 
-    bool operator==(const HeapLocation& other) const
-    {
-        return m_kind == other.m_kind
-            && m_heap == other.m_heap
-            && m_base == other.m_base
-            && m_index == other.m_index
-            && m_descriptor == other.m_descriptor;
-    }
+    friend bool operator==(const HeapLocation&, const HeapLocation&) = default;
 
     bool isHashTableDeletedValue() const
     {
@@ -154,6 +175,7 @@ private:
     Node* m_base;
     LazyNode m_index;
     Node* m_descriptor;
+    void* m_extraState { nullptr };
 };
 
 struct HeapLocationHash {
@@ -162,7 +184,6 @@ struct HeapLocationHash {
     static constexpr bool safeToCompareToEmptyOrDeleted = true;
 };
 
-LocationKind indexedPropertyLocForResultType(NodeFlags);
 
 inline LocationKind indexedPropertyLocForResultType(NodeFlags canonicalResultRepresentation)
 {
@@ -187,11 +208,25 @@ inline LocationKind indexedPropertyLocForResultType(NodeFlags canonicalResultRep
     RELEASE_ASSERT_NOT_REACHED();
 }
 
+inline LocationKind indexedPropertyLocToOutOfBoundsSaneChain(LocationKind location)
+{
+    switch (location) {
+    case IndexedPropertyInt32Loc:
+        return IndexedPropertyInt32OutOfBoundsSaneChainLoc;
+    case IndexedPropertyInt52Loc:
+        return IndexedPropertyInt52OutOfBoundsSaneChainLoc;
+    case IndexedPropertyDoubleLoc:
+        return IndexedPropertyDoubleOutOfBoundsSaneChainLoc;
+    case IndexedPropertyJSLoc:
+        return IndexedPropertyJSOutOfBoundsSaneChainLoc;
+    default:
+        RELEASE_ASSERT_NOT_REACHED();
+    }
+}
 } } // namespace JSC::DFG
 
 namespace WTF {
 
-void printInternal(PrintStream&, JSC::DFG::LocationKind);
 
 template<typename T> struct DefaultHash;
 template<> struct DefaultHash<JSC::DFG::HeapLocation> : JSC::DFG::HeapLocationHash { };

@@ -26,9 +26,10 @@
 #include "config.h"
 #include "InspectorFrontendAPIDispatcher.h"
 
-#include "Frame.h"
+#include "DOMWrapperWorld.h"
 #include "InspectorController.h"
 #include "JSDOMPromise.h"
+#include "LocalFrame.h"
 #include "Page.h"
 #include "ScriptController.h"
 #include "ScriptDisallowedScope.h"
@@ -36,6 +37,7 @@
 #include <JavaScriptCore/FrameTracers.h>
 #include <JavaScriptCore/JSPromise.h>
 #include <wtf/RunLoop.h>
+#include <wtf/text/MakeString.h>
 
 namespace WebCore {
 
@@ -107,18 +109,22 @@ JSDOMGlobalObject* InspectorFrontendAPIDispatcher::frontendGlobalObject()
     if (!m_frontendPage)
         return nullptr;
 
-    return m_frontendPage->mainFrame().script().globalObject(mainThreadNormalWorld());
+    auto* localMainFrame = dynamicDowncast<LocalFrame>(m_frontendPage->mainFrame());
+    if (!localMainFrame)
+        return nullptr;
+
+    return localMainFrame->script().globalObject(mainThreadNormalWorld());
 }
 
 static String expressionForEvaluatingCommand(const String& command, Vector<Ref<JSON::Value>>&& arguments)
 {
     StringBuilder expression;
-    expression.append("InspectorFrontendAPI.dispatch([\"", command, '"');
+    expression.append("InspectorFrontendAPI.dispatch([\""_s, command, '"');
     for (auto& argument : arguments) {
-        expression.append(", ");
+        expression.append(", "_s);
         argument->writeJSON(expression);
     }
-    expression.append("])");
+    expression.append("])"_s);
     return expression.toString();
 }
 
@@ -137,7 +143,7 @@ void InspectorFrontendAPIDispatcher::dispatchCommandWithResultAsync(const String
 
 void InspectorFrontendAPIDispatcher::dispatchMessageAsync(const String& message)
 {
-    evaluateOrQueueExpression(makeString("InspectorFrontendAPI.dispatchMessageAsync(", message, ")"));
+    evaluateOrQueueExpression(makeString("InspectorFrontendAPI.dispatchMessageAsync("_s, message, ')'));
 }
 
 void InspectorFrontendAPIDispatcher::evaluateOrQueueExpression(const String& expression, EvaluationResultHandler&& optionalResultHandler)
@@ -195,14 +201,14 @@ void InspectorFrontendAPIDispatcher::evaluateOrQueueExpression(const String& exp
         if (!weakThis)
             return;
 
-        Ref strongThis = { *weakThis };
-        if (!strongThis->m_pendingResponses.size())
+        Ref protectedThis = { *weakThis };
+        if (!protectedThis->m_pendingResponses.size())
             return;
 
-        EvaluationResultHandler resultHandler = strongThis->m_pendingResponses.take(promise);
+        EvaluationResultHandler resultHandler = protectedThis->m_pendingResponses.take(promise);
         ASSERT(resultHandler);
 
-        JSDOMGlobalObject* globalObject = strongThis->frontendGlobalObject();
+        JSDOMGlobalObject* globalObject = protectedThis->frontendGlobalObject();
         if (!globalObject) {
             resultHandler(makeUnexpected(EvaluationError::ContextDestroyed));
             return;
@@ -259,7 +265,9 @@ ValueOrException InspectorFrontendAPIDispatcher::evaluateExpression(const String
     ASSERT(m_queuedEvaluations.isEmpty());
 
     JSC::SuspendExceptionScope scope(m_frontendPage->inspectorController().vm());
-    return m_frontendPage->mainFrame().script().evaluateInWorld(ScriptSourceCode(expression), mainThreadNormalWorld());
+
+    auto* localMainFrame = dynamicDowncast<LocalFrame>(m_frontendPage->mainFrame());
+    return localMainFrame->script().evaluateInWorld(ScriptSourceCode(expression, JSC::SourceTaintedOrigin::Untainted), mainThreadNormalWorld());
 }
 
 void InspectorFrontendAPIDispatcher::evaluateExpressionForTesting(const String& expression)

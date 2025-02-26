@@ -1,6 +1,8 @@
 /* GLIB - Library of useful routines for C programming
  * Copyright (C) 2021  Iain Lane, Xavier Claessens
  *
+ * SPDX-License-Identifier: LGPL-2.1-or-later
+ *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
  * License as published by the Free Software Foundation; either
@@ -32,9 +34,11 @@
  * This symbol is private.
  */
 #undef glib_typeof
-#if !defined(__cplusplus) && (G_GNUC_CHECK_VERSION(4, 8) || defined(__clang__))
+#if !G_CXX_STD_CHECK_VERSION (11) && \
+    (G_GNUC_CHECK_VERSION(4, 8) || defined(__clang__))
 #define glib_typeof(t) __typeof__ (t)
-#elif defined(__cplusplus) && __cplusplus >= 201103L && GLIB_VERSION_MIN_REQUIRED >= GLIB_VERSION_2_68
+#elif G_CXX_STD_CHECK_VERSION (11) && \
+      GLIB_VERSION_MIN_REQUIRED >= GLIB_VERSION_2_68
 /* C++11 decltype() is close enough for our usage */
 #include <type_traits>
 #define glib_typeof(t) typename std::remove_reference<decltype (t)>::type

@@ -38,6 +38,15 @@
 #include <wtf/text/WTFString.h>
 
 namespace WebCore {
+class ValidationMessage;
+}
+
+namespace WTF {
+template<typename T> struct IsDeprecatedWeakRefSmartPointerException;
+template<> struct IsDeprecatedWeakRefSmartPointerException<WebCore::ValidationMessage> : std::true_type { };
+}
+
+namespace WebCore {
 
 class WeakPtrImplWithEventTargetData;
 class HTMLElement;
@@ -56,12 +65,12 @@ public:
     void requestToHideMessage();
     bool isVisible() const;
     bool shadowTreeContains(const Node&) const;
+    void adjustBubblePosition();
 
 private:
     ValidationMessageClient* validationMessageClient() const;
     void setMessage(const String&);
     void setMessageDOMAndStartTimer();
-    void adjustBubblePosition();
     void buildBubbleTree();
     void deleteBubbleTree();
 

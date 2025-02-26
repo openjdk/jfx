@@ -36,31 +36,38 @@ class JSGlobalObject;
     JSC_FOREACH_BUILTIN_LINK_TIME_CONSTANT(v) \
     v(throwTypeErrorFunction, nullptr) \
     v(importModule, nullptr) \
-    v(mapBucketHead, nullptr) \
-    v(mapBucketNext, nullptr) \
-    v(mapBucketKey, nullptr) \
-    v(mapBucketValue, nullptr) \
-    v(setBucketHead, nullptr) \
-    v(setBucketNext, nullptr) \
-    v(setBucketKey, nullptr) \
+    v(mapStorage, nullptr) \
+    v(mapIterationNext, nullptr) \
+    v(mapIterationEntry, nullptr) \
+    v(mapIterationEntryKey, nullptr) \
+    v(mapIterationEntryValue, nullptr) \
+    v(mapIteratorNext, nullptr) \
+    v(mapIteratorKey, nullptr) \
+    v(mapIteratorValue, nullptr) \
+    v(setStorage, nullptr) \
+    v(setIterationNext, nullptr) \
+    v(setIterationEntry, nullptr) \
+    v(setIterationEntryKey, nullptr) \
+    v(setIteratorNext, nullptr) \
+    v(setIteratorKey, nullptr) \
     v(setClone, nullptr) \
     v(setPrototypeDirect, nullptr) \
     v(setPrototypeDirectOrThrow, nullptr) \
     v(copyDataProperties, nullptr) \
+    v(cloneObject, nullptr) \
     v(enqueueJob, nullptr) \
     v(makeTypeError, nullptr) \
     v(AggregateError, nullptr) \
     v(typedArrayLength, nullptr) \
-    v(typedArrayClone, nullptr) \
     v(typedArrayContentType, nullptr) \
     v(typedArrayGetOriginalConstructor, nullptr) \
-    v(typedArraySort, nullptr) \
+    v(toIntegerOrInfinity, nullptr) \
+    v(toLength, nullptr) \
     v(isTypedArrayView, nullptr) \
     v(isSharedTypedArrayView, nullptr) \
     v(isResizableOrGrowableSharedTypedArrayView, nullptr) \
     v(typedArrayFromFast, nullptr) \
     v(isDetached, nullptr) \
-    v(typedArrayDefaultComparator, nullptr) \
     v(isBoundFunction, nullptr) \
     v(hasInstanceBoundFunction, nullptr) \
     v(instanceOf, nullptr) \
@@ -68,7 +75,6 @@ class JSGlobalObject;
     v(BuiltinDescribe, nullptr) \
     v(RegExp, nullptr) \
     v(min, nullptr) \
-    v(trunc, nullptr) \
     v(Promise, nullptr) \
     v(InternalPromise, nullptr) \
     v(defaultPromiseThen, nullptr) \
@@ -80,20 +86,23 @@ class JSGlobalObject;
     v(hostPromiseRejectionTracker, nullptr) \
     v(Set, nullptr) \
     v(Map, nullptr) \
-    v(thisTimeValue, nullptr) \
     v(importMapStatus, nullptr) \
     v(importInRealm, nullptr) \
+    v(evalFunction, nullptr) \
     v(evalInRealm, nullptr) \
     v(moveFunctionToRealm, nullptr) \
     v(isConstructor, nullptr) \
     v(sameValue, nullptr) \
     v(regExpProtoFlagsGetter, nullptr) \
     v(regExpProtoGlobalGetter, nullptr) \
+    v(regExpProtoHasIndicesGetter, nullptr) \
     v(regExpProtoIgnoreCaseGetter, nullptr) \
     v(regExpProtoMultilineGetter, nullptr) \
     v(regExpProtoSourceGetter, nullptr) \
     v(regExpProtoStickyGetter, nullptr) \
+    v(regExpProtoDotAllGetter, nullptr) \
     v(regExpProtoUnicodeGetter, nullptr) \
+    v(regExpProtoUnicodeSetsGetter, nullptr) \
     v(regExpBuiltinExec, nullptr) \
     v(regExpCreate, nullptr) \
     v(isRegExp, nullptr) \
@@ -107,10 +116,9 @@ class JSGlobalObject;
     v(stringIndexOfInternal, nullptr) \
     v(stringSplitFast, nullptr) \
     v(stringSubstring, nullptr) \
-    v(makeBoundFunction, nullptr) \
-    v(hasOwnLengthProperty, nullptr) \
+    v(handleNegativeProxyHasTrapResult, nullptr) \
+    v(handlePositiveProxySetTrapResult, nullptr) \
     v(handleProxyGetTrapResult, nullptr) \
-    v(dateTimeFormat, nullptr) \
     v(webAssemblyCompileStreamingInternal, nullptr) \
     v(webAssemblyInstantiateStreamingInternal, nullptr) \
     v(Object, nullptr) \
@@ -123,6 +131,7 @@ class JSGlobalObject;
     v(sentinelString, nullptr) \
     v(createRemoteFunction, nullptr) \
     v(isRemoteFunction, nullptr) \
+    v(arrayFromFast, nullptr) \
     v(arraySort, nullptr) \
     v(jsonParse, nullptr) \
     v(jsonStringify, nullptr) \
@@ -134,6 +143,7 @@ class JSGlobalObject;
     v(Uint16Array, nullptr) \
     v(Int32Array, nullptr) \
     v(Uint32Array, nullptr) \
+    v(Float16Array, nullptr) \
     v(Float32Array, nullptr) \
     v(Float64Array, nullptr) \
     v(BigInt64Array, nullptr) \

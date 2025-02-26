@@ -62,6 +62,7 @@ private:
     void postMessageToWorkerObject(MessageWithMessagePorts&&) final;
     void postTaskToWorkerObject(Function<void(Worker&)>&&) final;
     void postExceptionToWorkerObject(const String& errorMessage, int lineNumber, int columnNumber, const String& sourceURL) final;
+    void reportErrorToWorkerObject(const String&) final;
     void workerGlobalScopeClosed() final;
     void workerGlobalScopeDestroyed() final;
 
@@ -77,7 +78,6 @@ private:
     void postTaskToLoader(ScriptExecutionContext::Task&&) final;
     ScriptExecutionContextIdentifier loaderContextIdentifier() const final;
     RefPtr<CacheStorageConnection> createCacheStorageConnection() final;
-    StorageConnection* storageConnection() final;
     RefPtr<RTCDataChannelRemoteHandlerConnection> createRTCDataChannelRemoteHandlerConnection() final;
 
     void workerThreadCreated(DedicatedWorkerThread&);

@@ -34,15 +34,17 @@
 namespace WebCore {
 
 class RenderMathMLFencedOperator final : public RenderMathMLOperator {
-    WTF_MAKE_ISO_ALLOCATED(RenderMathMLFencedOperator);
+    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(RenderMathMLFencedOperator);
+    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(RenderMathMLFencedOperator);
 public:
     RenderMathMLFencedOperator(Document&, RenderStyle&&, const String& operatorString, MathMLOperatorDictionary::Form, unsigned short flags = 0);
+    virtual ~RenderMathMLFencedOperator();
+
     void updateOperatorContent(const String&);
 
 private:
-    bool isRenderMathMLFencedOperator() const final { return true; }
     bool isVertical() const final { return m_operatorChar.isVertical; }
-    UChar32 textContent() const final { return m_operatorChar.character; }
+    char32_t textContent() const final { return m_operatorChar.character; }
     LayoutUnit leadingSpace() const final;
     LayoutUnit trailingSpace() const final;
 

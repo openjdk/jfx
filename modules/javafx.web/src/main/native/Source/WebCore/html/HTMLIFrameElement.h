@@ -23,19 +23,22 @@
 
 #pragma once
 
-#include "FeaturePolicy.h"
 #include "HTMLFrameElementBase.h"
+#include "PermissionsPolicy.h"
 
 namespace WebCore {
 
 class DOMTokenList;
 class LazyLoadFrameObserver;
 class RenderIFrame;
+class TrustedHTML;
 
 class HTMLIFrameElement final : public HTMLFrameElementBase {
-    WTF_MAKE_ISO_ALLOCATED(HTMLIFrameElement);
+    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(HTMLIFrameElement);
+    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(HTMLIFrameElement);
 public:
     static Ref<HTMLIFrameElement> create(const QualifiedName&, Document&);
+    ~HTMLIFrameElement();
 
     DOMTokenList& sandbox();
 
@@ -43,20 +46,26 @@ public:
     String referrerPolicyForBindings() const;
     ReferrerPolicy referrerPolicy() const final;
 
-    const FeaturePolicy& featurePolicy() const;
-
     const AtomString& loadingForBindings() const;
     void setLoadingForBindings(const AtomString&);
+
+    String srcdoc() const;
+    ExceptionOr<void> setSrcdoc(std::variant<RefPtr<TrustedHTML>, String>&&);
 
     LazyLoadFrameObserver& lazyLoadFrameObserver();
 
     void loadDeferredFrame();
 
+#if ENABLE(FULLSCREEN_API)
+    bool hasIFrameFullscreenFlag() const { return m_IFrameFullscreenFlag; }
+    void setIFrameFullscreenFlag(bool value) { m_IFrameFullscreenFlag = value; }
+#endif
+
 private:
     HTMLIFrameElement(const QualifiedName&, Document&);
 
     int defaultTabIndex() const final;
-    void parseAttribute(const QualifiedName&, const AtomString&) final;
+    void attributeChanged(const QualifiedName&, const AtomString& oldValue, const AtomString& newValue, AttributeModificationReason) final;
     bool hasPresentationalHintsForAttribute(const QualifiedName&) const final;
     void collectPresentationalHintsForAttribute(const QualifiedName&, const AtomString&, MutableStyleProperties&) final;
 
@@ -69,7 +78,9 @@ private:
     bool isLazyLoadObserverActive() const final;
 
     std::unique_ptr<DOMTokenList> m_sandbox;
-    mutable std::optional<FeaturePolicy> m_featurePolicy;
+#if ENABLE(FULLSCREEN_API)
+    bool m_IFrameFullscreenFlag { false };
+#endif
     std::unique_ptr<LazyLoadFrameObserver> m_lazyLoadFrameObserver;
 };
 

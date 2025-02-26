@@ -41,10 +41,11 @@ public:
         HardLineBreak,
         SoftLineBreak,
         WordBreakOpportunity,
-        Box,
+        AtomicInlineBox,
         InlineBoxStart,
         InlineBoxEnd,
-        Float
+        Float,
+        Opaque
     };
     InlineItem(const Box& layoutBox, Type, UBiDiLevel = UBIDI_DEFAULT_LTR);
 
@@ -56,7 +57,7 @@ public:
     const RenderStyle& firstLineStyle() const { return layoutBox().firstLineStyle(); }
 
     bool isText() const { return type() == Type::Text; }
-    bool isBox() const { return type() == Type::Box; }
+    bool isAtomicInlineBox() const { return type() == Type::AtomicInlineBox; }
     bool isFloat() const { return type() == Type::Float; }
     bool isLineBreak() const { return isSoftLineBreak() || isHardLineBreak(); }
     bool isWordBreakOpportunity() const { return type() == Type::WordBreakOpportunity; }
@@ -64,6 +65,7 @@ public:
     bool isHardLineBreak() const { return type() == Type::HardLineBreak; }
     bool isInlineBoxStart() const { return type() == Type::InlineBoxStart; }
     bool isInlineBoxEnd() const { return type() == Type::InlineBoxEnd; }
+    bool isOpaque() const { return type() == Type::Opaque; }
 
 private:
     friend class InlineItemsBuilder;
@@ -82,7 +84,7 @@ protected:
 private:
     UBiDiLevel m_bidiLevel { UBIDI_DEFAULT_LTR };
 
-    Type m_type : 3 { };
+    Type m_type : 4 { };
 
 protected:
     // For InlineTextItem
@@ -107,10 +109,22 @@ inline void InlineItem::setWidth(InlineLayoutUnit width)
     m_hasWidth = true;
 }
 
+using InlineItemList = Vector<InlineItem>;
+
 #define SPECIALIZE_TYPE_TRAITS_INLINE_ITEM(ToValueTypeName, predicate) \
 SPECIALIZE_TYPE_TRAITS_BEGIN(WebCore::Layout::ToValueTypeName) \
     static bool isType(const WebCore::Layout::InlineItem& inlineItem) { return inlineItem.predicate; } \
 SPECIALIZE_TYPE_TRAITS_END()
 
 }
+}
+
+namespace WTF {
+
+template<>
+struct VectorTraits<WebCore::Layout::InlineItem> : public VectorTraitsBase<false, void> {
+    static constexpr bool canCopyWithMemcpy = true;
+    static constexpr bool canMoveWithMemcpy = true;
+};
+
 }

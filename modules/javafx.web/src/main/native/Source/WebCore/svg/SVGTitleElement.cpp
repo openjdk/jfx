@@ -23,12 +23,13 @@
 #include "SVGTitleElement.h"
 
 #include "Document.h"
-#include "SVGNames.h"
-#include <wtf/IsoMallocInlines.h>
+#include "SVGElementTypeHelpers.h"
+#include "SVGSVGElement.h"
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
-WTF_MAKE_ISO_ALLOCATED_IMPL(SVGTitleElement);
+WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(SVGTitleElement);
 
 inline SVGTitleElement::SVGTitleElement(const QualifiedName& tagName, Document& document)
     : SVGElement(tagName, document, makeUniqueRef<PropertyRegistry>(*this))
@@ -43,21 +44,35 @@ Ref<SVGTitleElement> SVGTitleElement::create(const QualifiedName& tagName, Docum
 
 Node::InsertedIntoAncestorResult SVGTitleElement::insertedIntoAncestor(InsertionType insertionType, ContainerNode& parentOfInsertedTree)
 {
-    SVGElement::insertedIntoAncestor(insertionType, parentOfInsertedTree);
-    document().titleElementAdded(*this);
-    return InsertedIntoAncestorResult::Done;
+    auto result = SVGElement::insertedIntoAncestor(insertionType, parentOfInsertedTree);
+    if (insertionType.connectedToDocument && parentNode() == document().documentElement())
+        protectedDocument()->titleElementAdded(*this);
+    return result;
+}
+
+static bool isTitleElementRemovedFromSVGSVGElement(SVGTitleElement& title, ContainerNode& oldParentOfRemovedTree)
+{
+    if (!title.parentNode() && is<SVGSVGElement>(oldParentOfRemovedTree) && title.document().documentElement() == &oldParentOfRemovedTree)
+        return true;
+    if (title.parentNode() && is<SVGSVGElement>(*title.parentNode()) && !title.parentNode()->parentNode() && is<Document>(oldParentOfRemovedTree))
+        return true;
+    return false;
 }
 
 void SVGTitleElement::removedFromAncestor(RemovalType removalType, ContainerNode& oldParentOfRemovedTree)
 {
     SVGElement::removedFromAncestor(removalType, oldParentOfRemovedTree);
-    document().titleElementRemoved(*this);
+    if (removalType.disconnectedFromDocument && isTitleElementRemovedFromSVGSVGElement(*this, oldParentOfRemovedTree)) {
+        RefAllowingPartiallyDestroyed<Document> document = this->document();
+        document->titleElementRemoved(*this);
+    }
 }
 
 void SVGTitleElement::childrenChanged(const ChildChange& change)
 {
     SVGElement::childrenChanged(change);
-    document().titleElementTextChanged(*this);
+    if (isConnected() && parentNode() == document().documentElement())
+        protectedDocument()->titleElementTextChanged(*this);
 }
 
-}
+} // namespace WebCore

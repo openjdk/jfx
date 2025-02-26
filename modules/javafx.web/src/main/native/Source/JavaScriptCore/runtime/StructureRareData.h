@@ -42,10 +42,12 @@ class CachedSpecialPropertyAdaptiveStructureWatchpoint;
 class CachedSpecialPropertyAdaptiveInferredPropertyValueWatchpoint;
 struct SpecialPropertyCache;
 enum class CachedPropertyNamesKind : uint8_t {
-    Keys = 0,
-    GetOwnPropertyNames,
+    EnumerableStrings = 0,
+    Strings,
+    Symbols,
+    StringsAndSymbols,
 };
-static constexpr unsigned numberOfCachedPropertyNames = 2;
+static constexpr unsigned numberOfCachedPropertyNames = 4;
 
 enum class CachedSpecialPropertyKey : uint8_t {
     ToStringTag = 0,
@@ -106,27 +108,42 @@ public:
 
     static JSImmutableButterfly* cachedPropertyNamesSentinel() { return bitwise_cast<JSImmutableButterfly*>(static_cast<uintptr_t>(1)); }
 
-    static ptrdiff_t offsetOfCachedPropertyNames(CachedPropertyNamesKind kind)
+    static constexpr ptrdiff_t offsetOfCachedPropertyNames(CachedPropertyNamesKind kind)
     {
         return OBJECT_OFFSETOF(StructureRareData, m_cachedPropertyNames) + sizeof(WriteBarrier<JSImmutableButterfly>) * static_cast<unsigned>(kind);
     }
 
-    static ptrdiff_t offsetOfCachedPropertyNameEnumeratorAndFlag()
+    static constexpr ptrdiff_t offsetOfCachedPropertyNameEnumeratorAndFlag()
     {
         return OBJECT_OFFSETOF(StructureRareData, m_cachedPropertyNameEnumeratorAndFlag);
     }
 
-    static ptrdiff_t offsetOfSpecialPropertyCache()
+    static constexpr ptrdiff_t offsetOfSpecialPropertyCache()
     {
         return OBJECT_OFFSETOF(StructureRareData, m_specialPropertyCache);
     }
 
+    static constexpr ptrdiff_t offsetOfPrevious()
+    {
+        return OBJECT_OFFSETOF(StructureRareData, m_previous);
+    }
+
     DECLARE_EXPORT_INFO;
 
-    void finalizeUnconditionally(VM&);
+    void finalizeUnconditionally(VM&, CollectionScope);
 
     static constexpr uintptr_t cachedPropertyNameEnumeratorIsValidatedViaTraversingFlag = 1;
     static constexpr uintptr_t cachedPropertyNameEnumeratorMask = ~static_cast<uintptr_t>(1);
+
+    unsigned incrementActiveReplacementWatchpointSet()
+    {
+        return ++m_activeReplacementWatchpointSet;
+    }
+
+    unsigned decrementActiveReplacementWatchpointSet()
+    {
+        return --m_activeReplacementWatchpointSet;
+    }
 
 private:
     friend class LLIntOffsetsExtractor;
@@ -164,6 +181,7 @@ private:
     WriteBarrierStructureID m_previous;
     PropertyOffset m_maxOffset;
     PropertyOffset m_transitionOffset;
+    unsigned m_activeReplacementWatchpointSet { 0 };
 };
 
 } // namespace JSC

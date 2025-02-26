@@ -273,6 +273,12 @@ gst_video_sink_get_times (GstBaseSink * bsink, GstBuffer * buffer,
       *end = timestamp +
           gst_util_uint64_scale_int (GST_SECOND, vsink->priv->info.fps_d,
           vsink->priv->info.fps_n);
+    } else if (bsink->segment.rate < 0) {
+      /* The end time will be used for clock waiting time position
+       * in case of revese playback, and unknown end time will result in
+       * never waiting for clock (as if sync=false).
+       * Returning timestamp here would be the best effort we can do */
+      *end = timestamp;
     }
   }
 }

@@ -26,11 +26,12 @@
 #include "config.h"
 #include "SpeechRecognitionErrorEvent.h"
 
-#include <wtf/IsoMallocInlines.h>
+#include "ScriptExecutionContext.h"
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
-WTF_MAKE_ISO_ALLOCATED_IMPL(SpeechRecognitionErrorEvent);
+WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(SpeechRecognitionErrorEvent);
 
 Ref<SpeechRecognitionErrorEvent> SpeechRecognitionErrorEvent::create(const AtomString& type, Init&& init, IsTrusted isTrusted)
 {
@@ -43,22 +44,17 @@ Ref<SpeechRecognitionErrorEvent> SpeechRecognitionErrorEvent::create(const AtomS
 }
 
 SpeechRecognitionErrorEvent::SpeechRecognitionErrorEvent(const AtomString& type, Init&& init, IsTrusted isTrusted)
-    : Event(type, init, isTrusted)
+    : Event(EventInterfaceType::SpeechRecognitionErrorEvent, type, init, isTrusted)
     , m_error(init.error)
     , m_message(WTFMove(init.message))
 {
 }
 
 SpeechRecognitionErrorEvent::SpeechRecognitionErrorEvent(const AtomString& type, SpeechRecognitionErrorCode error, const String& message)
-    : Event(type, Event::CanBubble::No, Event::IsCancelable::No)
+    : Event(EventInterfaceType::SpeechRecognitionErrorEvent, type, Event::CanBubble::No, Event::IsCancelable::No)
     , m_error(error)
     , m_message(message)
 {
-}
-
-EventInterface SpeechRecognitionErrorEvent::eventInterface() const
-{
-    return SpeechRecognitionErrorEventInterfaceType;
 }
 
 }; // namespace WebCore

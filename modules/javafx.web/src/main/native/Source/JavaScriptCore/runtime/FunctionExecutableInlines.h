@@ -31,9 +31,14 @@
 
 namespace JSC {
 
-inline void FunctionExecutable::finalizeUnconditionally(VM& vm)
+inline Structure* FunctionExecutable::createStructure(VM& vm, JSGlobalObject* globalObject, JSValue proto)
 {
-    m_singleton.finalizeUnconditionally(vm);
+    return Structure::create(vm, globalObject, proto, TypeInfo(FunctionExecutableType, StructureFlags), info());
+}
+
+inline void FunctionExecutable::finalizeUnconditionally(VM& vm, CollectionScope collectionScope)
+{
+    m_singleton.finalizeUnconditionally(vm, collectionScope);
     finalizeCodeBlockEdge(vm, m_codeBlockForCall);
     finalizeCodeBlockEdge(vm, m_codeBlockForConstruct);
     vm.heap.functionExecutableSpaceAndSet.outputConstraintsSet.remove(this);

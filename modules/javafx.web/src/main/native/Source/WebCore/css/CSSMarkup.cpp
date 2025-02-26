@@ -35,22 +35,20 @@
 namespace WebCore {
 
 template <typename CharacterType>
-static inline bool isCSSTokenizerIdentifier(const CharacterType* characters, unsigned length)
+static inline bool isCSSTokenizerIdentifier(std::span<const CharacterType> characters)
 {
-    const CharacterType* end = characters + length;
-
     // -?
-    if (characters != end && characters[0] == '-')
-        ++characters;
+    while (!characters.empty() && characters.front() == '-')
+        characters = characters.subspan(1);
 
     // {nmstart}
-    if (characters == end || !isNameStartCodePoint(characters[0]))
+    if (characters.empty() || !isNameStartCodePoint(characters.front()))
         return false;
-    ++characters;
+    characters = characters.subspan(1);
 
     // {nmchar}*
-    for (; characters != end; ++characters) {
-        if (!isNameCodePoint(characters[0]))
+    for (; !characters.empty(); characters = characters.subspan(1)) {
+        if (!isNameCodePoint(characters.front()))
             return false;
     }
 
@@ -60,23 +58,20 @@ static inline bool isCSSTokenizerIdentifier(const CharacterType* characters, uns
 // "ident" from the CSS tokenizer, minus backslash-escape sequences
 static bool isCSSTokenizerIdentifier(const String& string)
 {
-    unsigned length = string.length();
-
-    if (!length)
+    if (string.isEmpty())
         return false;
 
     if (string.is8Bit())
-        return isCSSTokenizerIdentifier(string.characters8(), length);
-    return isCSSTokenizerIdentifier(string.characters16(), length);
+        return isCSSTokenizerIdentifier(string.span8());
+    return isCSSTokenizerIdentifier(string.span16());
 }
 
-static void serializeCharacter(UChar32 c, StringBuilder& appendTo)
+static void serializeCharacter(char32_t c, StringBuilder& appendTo)
 {
-    appendTo.append('\\');
-    appendTo.appendCharacter(c);
+    appendTo.append('\\', c);
 }
 
-static void serializeCharacterAsCodePoint(UChar32 c, StringBuilder& appendTo)
+static void serializeCharacterAsCodePoint(char32_t c, StringBuilder& appendTo)
 {
     appendTo.append('\\', hex(c, Lowercase), ' ');
 }
@@ -88,7 +83,7 @@ void serializeIdentifier(const String& identifier, StringBuilder& appendTo, bool
     bool isFirstCharHyphen = false;
     unsigned index = 0;
     while (index < identifier.length()) {
-        UChar32 c = identifier.characterStartingAt(index);
+        char32_t c = identifier.characterStartingAt(index);
         if (!c) {
             // Check for lone surrogate which characterStartingAt does not return.
             c = identifier[index];
@@ -103,7 +98,7 @@ void serializeIdentifier(const String& identifier, StringBuilder& appendTo, bool
         else if (c == hyphenMinus && isFirst && index == identifier.length())
             serializeCharacter(c, appendTo);
         else if (0x80 <= c || c == hyphenMinus || c == lowLine || (0x30 <= c && c <= 0x39) || (0x41 <= c && c <= 0x5a) || (0x61 <= c && c <= 0x7a))
-            appendTo.appendCharacter(c);
+            appendTo.append(c);
         else
             serializeCharacter(c, appendTo);
 
@@ -122,7 +117,7 @@ void serializeString(const String& string, StringBuilder& appendTo)
 
     unsigned index = 0;
     while (index < string.length()) {
-        UChar32 c = string.characterStartingAt(index);
+        char32_t c = string.characterStartingAt(index);
         index += U16_LENGTH(c);
 
         if (c <= 0x1f || c == deleteCharacter)
@@ -130,7 +125,7 @@ void serializeString(const String& string, StringBuilder& appendTo)
         else if (c == quotationMark || c == reverseSolidus)
             serializeCharacter(c, appendTo);
         else
-            appendTo.appendCharacter(c);
+            appendTo.append(c);
     }
 
     appendTo.append('"');
@@ -146,7 +141,7 @@ String serializeString(const String& string)
 String serializeURL(const String& string)
 {
     StringBuilder builder;
-    builder.append("url(");
+    builder.append("url("_s);
     serializeString(string, builder);
     builder.append(')');
     return builder.toString();

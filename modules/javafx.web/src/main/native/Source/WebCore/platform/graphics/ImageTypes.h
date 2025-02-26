@@ -68,7 +68,7 @@ enum class GammaAndColorProfileOption {
     Ignored
 };
 
-enum class ImageAnimatingState { Yes, No };
+enum class ImageAnimatingState : bool { No, Yes };
 
 enum class EncodedDataStatus {
     Error,
@@ -91,5 +91,22 @@ enum class ImageDrawResult {
     DidRecord,
     DidDraw
 };
+
+enum class ShowDebugBackground : bool {
+    No,
+    Yes
+};
+
+enum class AllowImageSubsampling : bool {
+    No,
+    Yes
+};
+
+#if USE(SKIA)
+enum class StrictImageClamping : bool {
+    No,
+    Yes
+};
+#endif
 
 }

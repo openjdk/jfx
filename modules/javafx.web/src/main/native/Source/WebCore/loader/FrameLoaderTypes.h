@@ -31,7 +31,6 @@
 #include "ElementContext.h"
 #include "IntRect.h"
 #include "ProcessIdentifier.h"
-#include <wtf/EnumTraits.h>
 
 namespace WebCore {
 
@@ -47,7 +46,7 @@ enum class PolicyAction : uint8_t {
     Use,
     Download,
     Ignore,
-    StopAllLoads
+    LoadWillContinueInAnotherProcess
 };
 
 enum class ReloadOption : uint8_t {
@@ -73,14 +72,7 @@ enum class IsMetaRefresh : bool { No, Yes };
 enum class WillContinueLoading : bool { No, Yes };
 enum class WillInternallyHandleFailure : bool { No, Yes };
 
-enum LocalPolicyCheckIdentifierType { };
-using LocalPolicyCheckIdentifier = ObjectIdentifier<LocalPolicyCheckIdentifierType>;
-using PolicyCheckIdentifier = ProcessQualified<LocalPolicyCheckIdentifier>;
-
-enum class ShouldContinuePolicyCheck : bool {
-    Yes,
-    No
-};
+enum class ShouldContinuePolicyCheck : bool { No, Yes };
 
 enum class NewFrameOpenerPolicy : uint8_t {
     Suppress,
@@ -96,6 +88,13 @@ enum class NavigationType : uint8_t {
     Other
 };
 
+enum class NavigationHistoryBehavior : uint8_t {
+    Auto,
+    Push,
+    Replace,
+    Reload // Internal, not part of the specification
+};
+
 enum class ShouldOpenExternalURLsPolicy : uint8_t {
     ShouldNotAllow,
     ShouldAllowExternalSchemesButNotAppLinks,
@@ -107,10 +106,7 @@ enum class InitiatedByMainFrame : uint8_t {
     Unknown,
 };
 
-enum class ClearProvisionalItem : bool {
-    Yes,
-    No
-};
+enum class ClearProvisionalItem : bool { No, Yes };
 
 enum class StopLoadingPolicy {
     PreventDuringUnloadEvents,
@@ -149,7 +145,9 @@ enum class LockHistory : bool { No, Yes };
 enum class LockBackForwardList : bool { No, Yes };
 enum class AllowNavigationToInvalidURL : bool { No, Yes };
 enum class HasInsecureContent : bool { No, Yes };
+enum class LoadWillContinueInAnotherProcess : bool { No, Yes };
 
+// FIXME: This should move to somewhere else. It no longer is related to frame loading.
 struct SystemPreviewInfo {
     ElementContext element;
 
@@ -167,73 +165,10 @@ enum class AllowsContentJavaScript : bool {
     Yes,
 };
 
+enum class WindowProxyProperty : uint8_t {
+    Other = 1 << 0,
+    Closed = 1 << 1,
+    PostMessage = 1 << 2,
+};
+
 } // namespace WebCore
-
-namespace WTF {
-
-template<> struct EnumTraits<WebCore::FrameLoadType> {
-    using values = EnumValues<
-        WebCore::FrameLoadType,
-        WebCore::FrameLoadType::Standard,
-        WebCore::FrameLoadType::Back,
-        WebCore::FrameLoadType::Forward,
-        WebCore::FrameLoadType::IndexedBackForward,
-        WebCore::FrameLoadType::Reload,
-        WebCore::FrameLoadType::Same,
-        WebCore::FrameLoadType::RedirectWithLockedBackForwardList,
-        WebCore::FrameLoadType::Replace,
-        WebCore::FrameLoadType::ReloadFromOrigin,
-        WebCore::FrameLoadType::ReloadExpiredOnly
-    >;
-};
-
-template<> struct EnumTraits<WebCore::NavigationType> {
-    using values = EnumValues<
-        WebCore::NavigationType,
-        WebCore::NavigationType::LinkClicked,
-        WebCore::NavigationType::FormSubmitted,
-        WebCore::NavigationType::BackForward,
-        WebCore::NavigationType::Reload,
-        WebCore::NavigationType::FormResubmitted,
-        WebCore::NavigationType::Other
-    >;
-};
-
-template<> struct EnumTraits<WebCore::PolicyAction> {
-    using values = EnumValues<
-        WebCore::PolicyAction,
-        WebCore::PolicyAction::Use,
-        WebCore::PolicyAction::Download,
-        WebCore::PolicyAction::Ignore,
-        WebCore::PolicyAction::StopAllLoads
-    >;
-};
-
-template<> struct EnumTraits<WebCore::ReloadOption> {
-    using values = EnumValues<
-        WebCore::ReloadOption,
-        WebCore::ReloadOption::ExpiredOnly,
-        WebCore::ReloadOption::FromOrigin,
-        WebCore::ReloadOption::DisableContentBlockers
-    >;
-};
-
-template<> struct EnumTraits<WebCore::BrowsingContextGroupSwitchDecision> {
-    using values = EnumValues<
-        WebCore::BrowsingContextGroupSwitchDecision,
-        WebCore::BrowsingContextGroupSwitchDecision::StayInGroup,
-        WebCore::BrowsingContextGroupSwitchDecision::NewSharedGroup,
-        WebCore::BrowsingContextGroupSwitchDecision::NewIsolatedGroup
-    >;
-};
-
-template<> struct EnumTraits<WebCore::ShouldOpenExternalURLsPolicy> {
-    using values = EnumValues<
-        WebCore::ShouldOpenExternalURLsPolicy,
-        WebCore::ShouldOpenExternalURLsPolicy::ShouldNotAllow,
-        WebCore::ShouldOpenExternalURLsPolicy::ShouldAllowExternalSchemesButNotAppLinks,
-        WebCore::ShouldOpenExternalURLsPolicy::ShouldAllow
-    >;
-};
-
-} // namespace WTF

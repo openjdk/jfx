@@ -290,7 +290,6 @@ template <typename LHS, typename RHS, typename ResultType> struct ArithmeticOper
 
     static inline bool add(LHS lhs, RHS rhs, ResultType& result) WARN_UNUSED_RETURN
     {
-#if COMPILER(GCC_COMPATIBLE)
 #if !HAVE(INT128_T)
         if constexpr (sizeof(LHS) <= sizeof(uint64_t) || sizeof(RHS) <= sizeof(uint64_t)) {
 #endif
@@ -301,7 +300,6 @@ template <typename LHS, typename RHS, typename ResultType> struct ArithmeticOper
             return true;
 #if !HAVE(INT128_T)
         }
-#endif
 #endif
         if (signsMatch(lhs, rhs)) {
             if (lhs >= 0) {
@@ -319,7 +317,6 @@ template <typename LHS, typename RHS, typename ResultType> struct ArithmeticOper
 
     static inline bool sub(LHS lhs, RHS rhs, ResultType& result) WARN_UNUSED_RETURN
     {
-#if COMPILER(GCC_COMPATIBLE)
 #if !HAVE(INT128_T)
         if constexpr (sizeof(LHS) <= sizeof(uint64_t) || sizeof(RHS) <= sizeof(uint64_t)) {
 #endif
@@ -330,7 +327,6 @@ template <typename LHS, typename RHS, typename ResultType> struct ArithmeticOper
             return true;
 #if !HAVE(INT128_T)
         }
-#endif
 #endif
         if (!signsMatch(lhs, rhs)) {
             if (lhs >= 0) {
@@ -404,7 +400,6 @@ template <typename LHS, typename RHS, typename ResultType> struct ArithmeticOper
     static inline bool add(LHS lhs, RHS rhs, ResultType& result) WARN_UNUSED_RETURN
     {
         ResultType temp;
-#if COMPILER(GCC_COMPATIBLE)
 #if !HAVE(INT128_T)
         if constexpr (sizeof(LHS) <= sizeof(uint64_t) || sizeof(RHS) <= sizeof(uint64_t)) {
 #endif
@@ -414,7 +409,6 @@ template <typename LHS, typename RHS, typename ResultType> struct ArithmeticOper
             return true;
 #if !HAVE(INT128_T)
         }
-#endif
 #endif
         temp = lhs + rhs;
         if (temp < lhs)
@@ -426,7 +420,6 @@ template <typename LHS, typename RHS, typename ResultType> struct ArithmeticOper
     static inline bool sub(LHS lhs, RHS rhs, ResultType& result) WARN_UNUSED_RETURN
     {
         ResultType temp;
-#if COMPILER(GCC_COMPATIBLE)
 #if !HAVE(INT128_T)
         if constexpr (sizeof(LHS) <= sizeof(uint64_t) || sizeof(RHS) <= sizeof(uint64_t)) {
 #endif
@@ -436,7 +429,6 @@ template <typename LHS, typename RHS, typename ResultType> struct ArithmeticOper
             return true;
 #if !HAVE(INT128_T)
         }
-#endif
 #endif
         temp = lhs - rhs;
         if (temp > lhs)
@@ -489,40 +481,20 @@ template <typename LHS, typename RHS, typename ResultType> struct ArithmeticOper
 template <typename ResultType> struct ArithmeticOperations<int, unsigned, ResultType, true, false> {
     static inline bool add(int64_t lhs, int64_t rhs, ResultType& result)
     {
-#if COMPILER(GCC_COMPATIBLE)
         ResultType temp;
         if (__builtin_add_overflow(lhs, rhs, &temp))
             return false;
         result = temp;
         return true;
-#else
-        int64_t temp = lhs + rhs;
-        if (temp < std::numeric_limits<ResultType>::min())
-            return false;
-        if (temp > std::numeric_limits<ResultType>::max())
-            return false;
-        result = static_cast<ResultType>(temp);
-        return true;
-#endif
     }
 
     static inline bool sub(int64_t lhs, int64_t rhs, ResultType& result)
     {
-#if COMPILER(GCC_COMPATIBLE)
         ResultType temp;
         if (__builtin_sub_overflow(lhs, rhs, &temp))
             return false;
         result = temp;
         return true;
-#else
-        int64_t temp = lhs - rhs;
-        if (temp < std::numeric_limits<ResultType>::min())
-            return false;
-        if (temp > std::numeric_limits<ResultType>::max())
-            return false;
-        result = static_cast<ResultType>(temp);
-        return true;
-#endif
     }
 
     static inline bool multiply(int64_t lhs, int64_t rhs, ResultType& result)
@@ -596,7 +568,6 @@ inline constexpr bool observesOverflow<AssertNoOverflow>() { return ASSERT_ENABL
 template <typename U, typename V, typename R> static inline bool safeAdd(U lhs, V rhs, R& result)
 {
     return ArithmeticOperations<U, V, R>::add(lhs, rhs, result);
-    return true;
 }
 
 template <class OverflowHandler, typename U, typename V, typename R, typename = std::enable_if_t<!std::is_scalar<OverflowHandler>::value>>
@@ -859,11 +830,6 @@ public:
         return value() == Checked(rhs.value());
     }
 
-    template <typename U> bool operator!=(U rhs)
-    {
-        return !(*this == rhs);
-    }
-
     // Other comparisons
     template <typename V> bool operator<(Checked<T, V> rhs) const
     {
@@ -1017,6 +983,12 @@ template<typename T, typename... Args> bool sumOverflows(Args... args)
 template<typename T, typename U> bool differenceOverflows(U left, U right)
 {
     return checkedDifference<T>(left, right).hasOverflowed();
+}
+
+template<typename T> T sumIfNoOverflowOrFirstValue(T firstValue, T secondValue)
+{
+    auto result = Checked<T, RecordOverflow>(firstValue) + Checked<T, RecordOverflow>(secondValue);
+    return result.hasOverflowed() ? firstValue : result.value();
 }
 
 template<typename T, typename U>

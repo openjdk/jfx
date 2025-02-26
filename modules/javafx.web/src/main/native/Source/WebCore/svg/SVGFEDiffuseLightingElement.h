@@ -31,7 +31,8 @@ class FEDiffuseLighting;
 class SVGColor;
 
 class SVGFEDiffuseLightingElement final : public SVGFilterPrimitiveStandardAttributes {
-    WTF_MAKE_ISO_ALLOCATED(SVGFEDiffuseLightingElement);
+    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(SVGFEDiffuseLightingElement);
+    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(SVGFEDiffuseLightingElement);
 public:
     static Ref<SVGFEDiffuseLightingElement> create(const QualifiedName&, Document&);
     void lightElementAttributeChanged(const SVGFELightElement*, const QualifiedName&);
@@ -53,7 +54,7 @@ private:
 
     using PropertyRegistry = SVGPropertyOwnerRegistry<SVGFEDiffuseLightingElement, SVGFilterPrimitiveStandardAttributes>;
 
-    void parseAttribute(const QualifiedName&, const AtomString&) override;
+    void attributeChanged(const QualifiedName&, const AtomString& oldValue, const AtomString& newValue, AttributeModificationReason) override;
     void svgAttributeChanged(const QualifiedName&) override;
 
     bool setFilterEffectAttribute(FilterEffect&, const QualifiedName&) override;

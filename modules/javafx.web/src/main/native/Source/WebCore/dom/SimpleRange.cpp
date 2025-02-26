@@ -27,8 +27,8 @@
 #include "SimpleRange.h"
 
 #include "CharacterData.h"
-#include "Frame.h"
 #include "HTMLFrameOwnerElement.h"
+#include "LocalFrame.h"
 #include "NodeTraversal.h"
 #include "ShadowRoot.h"
 
@@ -46,14 +46,19 @@ SimpleRange::SimpleRange(BoundaryPoint&& start, BoundaryPoint&& end)
 {
 }
 
-bool operator==(const SimpleRange& a, const SimpleRange& b)
+WeakSimpleRange::WeakSimpleRange(const WeakBoundaryPoint& start, const WeakBoundaryPoint& end)
+    : start(start)
+    , end(end)
 {
-    return a.start == b.start && a.end == b.end;
 }
-
+WeakSimpleRange::WeakSimpleRange(WeakBoundaryPoint&& start, WeakBoundaryPoint&& end)
+    : start(WTFMove(start))
+    , end(WTFMove(end))
+{
+}
 std::optional<SimpleRange> makeRangeSelectingNode(Node& node)
 {
-    auto parent = node.parentNode();
+    RefPtr parent = node.parentNode();
     if (!parent)
         return std::nullopt;
     unsigned offset = node.computeNodeIndex();
@@ -123,8 +128,9 @@ void IntersectingNodeIterator::advance()
 
 void IntersectingNodeIterator::advanceSkippingChildren()
 {
-    ASSERT(m_node);
-    m_node = m_node->contains(m_pastLastNode.get()) ? nullptr : NodeTraversal::nextSkippingChildren(*m_node);
+    auto node = protectedNode();
+    ASSERT(node);
+    m_node = node->contains(m_pastLastNode.get()) ? nullptr : NodeTraversal::nextSkippingChildren(*node);
     enforceEndInvariant();
 }
 
@@ -160,7 +166,7 @@ template<> bool contains<ComposedTree>(const SimpleRange& range, const std::opti
     return point && contains<ComposedTree>(range, *point);
 }
 
-bool containsForTesting(TreeType type, const SimpleRange& range, const BoundaryPoint& point)
+bool contains(TreeType type, const SimpleRange& range, const BoundaryPoint& point)
 {
     switch (type) {
     case Tree:
@@ -174,26 +180,26 @@ bool containsForTesting(TreeType type, const SimpleRange& range, const BoundaryP
     return false;
 }
 
-template<TreeType treeType> PartialOrdering treeOrder(const SimpleRange& range, const BoundaryPoint& point)
+template<TreeType treeType> std::partial_ordering treeOrder(const SimpleRange& range, const BoundaryPoint& point)
 {
     if (auto order = treeOrder<treeType>(range.start, point); !is_lt(order))
         return order;
     if (auto order = treeOrder<treeType>(range.end, point); !is_gt(order))
         return order;
-    return PartialOrdering::equivalent;
+    return std::partial_ordering::equivalent;
 }
 
-template<TreeType treeType> PartialOrdering treeOrder(const BoundaryPoint& point, const SimpleRange& range)
+template<TreeType treeType> std::partial_ordering treeOrder(const BoundaryPoint& point, const SimpleRange& range)
 {
     if (auto order = treeOrder<treeType>(point, range.start); !is_gt(order))
         return order;
     if (auto order = treeOrder<treeType>(point, range.end); !is_lt(order))
         return order;
-    return PartialOrdering::equivalent;
+    return std::strong_ordering::equivalent;
 }
 
-template PartialOrdering treeOrder<Tree>(const SimpleRange&, const BoundaryPoint&);
-template PartialOrdering treeOrder<Tree>(const BoundaryPoint&, const SimpleRange&);
+template std::partial_ordering treeOrder<Tree>(const SimpleRange&, const BoundaryPoint&);
+template std::partial_ordering treeOrder<Tree>(const BoundaryPoint&, const SimpleRange&);
 
 template<TreeType treeType> bool contains(const SimpleRange& outerRange, const SimpleRange& innerRange)
 {
@@ -203,7 +209,7 @@ template<TreeType treeType> bool contains(const SimpleRange& outerRange, const S
 template bool contains<Tree>(const SimpleRange&, const SimpleRange&);
 template bool contains<ComposedTree>(const SimpleRange&, const SimpleRange&);
 
-bool containsForTesting(TreeType type, const SimpleRange& outerRange, const SimpleRange& innerRange)
+bool contains(TreeType type, const SimpleRange& outerRange, const SimpleRange& innerRange)
 {
     switch (type) {
     case Tree:
@@ -268,7 +274,7 @@ template<TreeType treeType> bool contains(const SimpleRange& range, const Node& 
 template bool contains<Tree>(const SimpleRange&, const Node&);
 template bool contains<ComposedTree>(const SimpleRange&, const Node&);
 
-bool containsForTesting(TreeType type, const SimpleRange& range, const Node& node)
+bool contains(TreeType type, const SimpleRange& range, const Node& node)
 {
     switch (type) {
     case Tree:

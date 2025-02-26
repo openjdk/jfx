@@ -33,11 +33,11 @@
 #include "AudioNodeInput.h"
 #include "AudioNodeOutput.h"
 #include "AudioUtilities.h"
-#include <wtf/IsoMallocInlines.h>
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
-WTF_MAKE_ISO_ALLOCATED_IMPL(StereoPannerNode);
+WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(StereoPannerNode);
 
 ExceptionOr<Ref<StereoPannerNode>> StereoPannerNode::create(BaseAudioContext& context, const StereoPannerOptions& options)
 {
@@ -106,7 +106,7 @@ void StereoPannerNode::processOnlyAudioParams(size_t framesToProcess)
 ExceptionOr<void> StereoPannerNode::setChannelCount(unsigned channelCount)
 {
     if (channelCount > 2)
-        return Exception { NotSupportedError, "StereoPannerNode's channelCount cannot be greater than 2."_s };
+        return Exception { ExceptionCode::NotSupportedError, "StereoPannerNode's channelCount cannot be greater than 2."_s };
 
     return AudioNode::setChannelCount(channelCount);
 }
@@ -114,7 +114,7 @@ ExceptionOr<void> StereoPannerNode::setChannelCount(unsigned channelCount)
 ExceptionOr<void> StereoPannerNode::setChannelCountMode(ChannelCountMode mode)
 {
     if (mode == ChannelCountMode::Max)
-        return Exception { NotSupportedError, "StereoPannerNode's channelCountMode cannot be max."_s };
+        return Exception { ExceptionCode::NotSupportedError, "StereoPannerNode's channelCountMode cannot be max."_s };
 
     return AudioNode::setChannelCountMode(mode);
 }

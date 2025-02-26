@@ -44,10 +44,12 @@
 #include "CSSShadowValue.h"
 #include "ColorFromPrimitiveValue.h"
 #include "Document.h"
+#include "DocumentInlines.h"
 #include "ElementInlines.h"
 #include "FilterOperationsBuilder.h"
 #include "FontCache.h"
 #include "HTMLElement.h"
+#include "RenderStyleSetters.h"
 #include "RenderTheme.h"
 #include "SVGElementTypeHelpers.h"
 #include "SVGSVGElement.h"
@@ -98,38 +100,36 @@ bool BuilderState::useSVGZoomRulesForLength() const
 
 RefPtr<StyleImage> BuilderState::createStyleImage(const CSSValue& value)
 {
-    if (is<CSSImageValue>(value))
-        return downcast<CSSImageValue>(value).createStyleImage(*this);
-    if (is<CSSImageSetValue>(value))
-        return downcast<CSSImageSetValue>(value).createStyleImage(*this);
-    if (is<CSSCursorImageValue>(value))
-        return downcast<CSSCursorImageValue>(value).createStyleImage(*this);
-    if (is<CSSNamedImageValue>(value))
-        return downcast<CSSNamedImageValue>(value).createStyleImage(*this);
-    if (is<CSSCanvasValue>(value))
-        return downcast<CSSCanvasValue>(value).createStyleImage(*this);
-    if (is<CSSCrossfadeValue>(value))
-        return downcast<CSSCrossfadeValue>(value).createStyleImage(*this);
-    if (is<CSSFilterImageValue>(value))
-        return downcast<CSSFilterImageValue>(value).createStyleImage(*this);
-    if (is<CSSLinearGradientValue>(value))
-        return downcast<CSSLinearGradientValue>(value).createStyleImage(*this);
-    if (is<CSSPrefixedLinearGradientValue>(value))
-        return downcast<CSSPrefixedLinearGradientValue>(value).createStyleImage(*this);
-    if (is<CSSDeprecatedLinearGradientValue>(value))
-        return downcast<CSSDeprecatedLinearGradientValue>(value).createStyleImage(*this);
-    if (is<CSSRadialGradientValue>(value))
-        return downcast<CSSRadialGradientValue>(value).createStyleImage(*this);
-    if (is<CSSPrefixedRadialGradientValue>(value))
-        return downcast<CSSPrefixedRadialGradientValue>(value).createStyleImage(*this);
-    if (is<CSSDeprecatedRadialGradientValue>(value))
-        return downcast<CSSDeprecatedRadialGradientValue>(value).createStyleImage(*this);
-    if (is<CSSConicGradientValue>(value))
-        return downcast<CSSConicGradientValue>(value).createStyleImage(*this);
-#if ENABLE(CSS_PAINTING_API)
-    if (is<CSSPaintImageValue>(value))
-        return downcast<CSSPaintImageValue>(value).createStyleImage(*this);
-#endif
+    if (auto* imageValue = dynamicDowncast<CSSImageValue>(value))
+        return imageValue->createStyleImage(*this);
+    if (auto* imageSetValue = dynamicDowncast<CSSImageSetValue>(value))
+        return imageSetValue->createStyleImage(*this);
+    if (auto* imageValue = dynamicDowncast<CSSCursorImageValue>(value))
+        return imageValue->createStyleImage(*this);
+    if (auto* imageValue = dynamicDowncast<CSSNamedImageValue>(value))
+        return imageValue->createStyleImage(*this);
+    if (auto* cssCanvasValue = dynamicDowncast<CSSCanvasValue>(value))
+        return cssCanvasValue->createStyleImage(*this);
+    if (auto* crossfadeValue = dynamicDowncast<CSSCrossfadeValue>(value))
+        return crossfadeValue->createStyleImage(*this);
+    if (auto* filterImageValue = dynamicDowncast<CSSFilterImageValue>(value))
+        return filterImageValue->createStyleImage(*this);
+    if (auto* linearGradientValue = dynamicDowncast<CSSLinearGradientValue>(value))
+        return linearGradientValue->createStyleImage(*this);
+    if (auto* linearGradientValue = dynamicDowncast<CSSPrefixedLinearGradientValue>(value))
+        return linearGradientValue->createStyleImage(*this);
+    if (auto* linearGradientValue = dynamicDowncast<CSSDeprecatedLinearGradientValue>(value))
+        return linearGradientValue->createStyleImage(*this);
+    if (auto* radialGradientvalue = dynamicDowncast<CSSRadialGradientValue>(value))
+        return radialGradientvalue->createStyleImage(*this);
+    if (auto* radialGradientvalue = dynamicDowncast<CSSPrefixedRadialGradientValue>(value))
+        return radialGradientvalue->createStyleImage(*this);
+    if (auto* radialGradientvalue = dynamicDowncast<CSSDeprecatedRadialGradientValue>(value))
+        return radialGradientvalue->createStyleImage(*this);
+    if (auto conicGradientValue = dynamicDowncast<CSSConicGradientValue>(value))
+        return conicGradientValue->createStyleImage(*this);
+    if (auto* paintImageValue = dynamicDowncast<CSSPaintImageValue>(value))
+        return paintImageValue->createStyleImage(*this);
     return nullptr;
 }
 
@@ -140,15 +140,7 @@ std::optional<FilterOperations> BuilderState::createFilterOperations(const CSSVa
 
 bool BuilderState::isColorFromPrimitiveValueDerivedFromElement(const CSSPrimitiveValue& value)
 {
-    switch (value.valueID()) {
-    case CSSValueInternalDocumentTextColor:
-    case CSSValueWebkitLink:
-    case CSSValueWebkitActivelink:
-    case CSSValueCurrentcolor:
-        return true;
-    default:
-        return false;
-    }
+    return StyleColor::containsCurrentColor(value) || StyleColor::containsColorSchemeDependentColor(value);
 }
 
 StyleColor BuilderState::colorFromPrimitiveValue(const CSSPrimitiveValue& value, ForVisitedLink forVisitedLink) const
@@ -158,14 +150,9 @@ StyleColor BuilderState::colorFromPrimitiveValue(const CSSPrimitiveValue& value,
     return { WebCore::Style::colorFromPrimitiveValue(document(), m_style, value, forVisitedLink) };
 }
 
-Color BuilderState::colorFromPrimitiveValueWithResolvedCurrentColor(const CSSPrimitiveValue& value) const
-{
-    return WebCore::Style::colorFromPrimitiveValueWithResolvedCurrentColor(document(), m_style, value);
-}
-
 void BuilderState::registerContentAttribute(const AtomString& attributeLocalName)
 {
-    if (style().styleType() == PseudoId::Before || style().styleType() == PseudoId::After)
+    if (style().pseudoElementType() == PseudoId::Before || style().pseudoElementType() == PseudoId::After)
         m_registeredContentAttributes.append(attributeLocalName);
 }
 
@@ -176,7 +163,7 @@ void BuilderState::adjustStyleForInterCharacterRuby()
 
     m_style.setTextAlign(TextAlignMode::Center);
     if (m_style.isHorizontalWritingMode())
-        m_style.setWritingMode(WritingMode::LeftToRight);
+        m_style.setWritingMode(WritingMode::VerticalLr);
 }
 
 void BuilderState::updateFont()
@@ -229,7 +216,7 @@ void BuilderState::updateFontForTextSizeAdjust()
 
 void BuilderState::updateFontForZoomChange()
 {
-    if (m_style.effectiveZoom() == parentStyle().effectiveZoom() && m_style.textZoom() == parentStyle().textZoom())
+    if (m_style.usedZoom() == parentStyle().usedZoom() && m_style.textZoom() == parentStyle().textZoom())
         return;
 
     const auto& childFont = m_style.fontDescription();
@@ -287,6 +274,12 @@ void BuilderState::setFontSize(FontCascadeDescription& fontDescription, float si
 {
     fontDescription.setSpecifiedSize(size);
     fontDescription.setComputedSize(Style::computedFontSizeFromSpecifiedSize(size, fontDescription.isAbsoluteSize(), useSVGZoomRules(), &style(), document()));
+}
+
+CSSPropertyID BuilderState::cssPropertyID() const
+{
+    ASSERT(m_currentProperty);
+    return m_currentProperty->id;
 }
 
 }

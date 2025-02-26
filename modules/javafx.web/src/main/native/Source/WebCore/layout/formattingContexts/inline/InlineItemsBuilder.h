@@ -25,10 +25,14 @@
 
 #pragma once
 
-#include "InlineFormattingState.h"
+#include "InlineContentCache.h"
+#include "InlineItem.h"
 #include "InlineLineTypes.h"
 #include "LayoutElementBox.h"
+#include "SecurityOrigin.h"
+#include <wtf/HashMap.h>
 #include <wtf/text/StringBuilder.h>
+#include <wtf/text/WTFString.h>
 
 namespace WebCore {
 namespace Layout {
@@ -36,27 +40,38 @@ class InlineTextBox;
 
 class InlineItemsBuilder {
 public:
-    InlineItemsBuilder(const ElementBox& formattingContextRoot, InlineFormattingState&);
+    InlineItemsBuilder(InlineContentCache&, const ElementBox& root, const SecurityOrigin&);
     void build(InlineItemPosition startPosition);
 
-private:
-    void collectInlineItems(InlineItems&, InlineItemPosition startPosition);
-    void breakAndComputeBidiLevels(InlineItems&);
-    void computeInlineTextItemWidths(InlineItems&);
+    static void populateBreakingPositionCache(const InlineItemList&, const Document&);
 
-    void handleTextContent(const InlineTextBox&, InlineItems&);
-    void handleInlineBoxStart(const Box&, InlineItems&);
-    void handleInlineBoxEnd(const Box&, InlineItems&);
-    void handleInlineLevelBox(const Box&, InlineItems&);
+private:
+    void collectInlineItems(InlineItemList&, InlineItemPosition startPosition);
+    using LayoutQueue = Vector<CheckedRef<const Box>, 8>;
+    LayoutQueue initializeLayoutQueue(InlineItemPosition startPosition);
+    LayoutQueue traverseUntilDamaged(const Box& firstDamagedLayoutBox);
+    void breakAndComputeBidiLevels(InlineItemList&);
+    void computeInlineTextItemWidths(InlineItemList&);
+
+    void handleTextContent(const InlineTextBox&, InlineItemList&, std::optional<size_t> partialContentOffset);
+    bool buildInlineItemListForTextFromBreakingPositionsCache(const InlineTextBox&, InlineItemList&);
+    void handleInlineBoxStart(const Box&, InlineItemList&);
+    void handleInlineBoxEnd(const Box&, InlineItemList&);
+    void handleInlineLevelBox(const Box&, InlineItemList&);
 
     bool contentRequiresVisualReordering() const { return m_contentRequiresVisualReordering; }
 
     const ElementBox& root() const { return m_root; }
+    InlineContentCache& inlineContentCache() { return m_inlineContentCache; }
 
+private:
+    InlineContentCache& m_inlineContentCache;
     const ElementBox& m_root;
-    // FIXME: We should not need this here. This is only required by the out of flow boxes.
-    InlineFormattingState& m_formattingState;
+    const SecurityOrigin& m_securityOrigin;
+
     bool m_contentRequiresVisualReordering { false };
+    bool m_isTextAndForcedLineBreakOnlyContent { true };
+    size_t m_inlineBoxCount { 0 };
 };
 
 }

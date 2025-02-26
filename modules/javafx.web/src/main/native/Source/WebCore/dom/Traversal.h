@@ -25,26 +25,40 @@
 #pragma once
 
 #include "ExceptionOr.h"
+#include "Node.h"
+#include "NodeFilter.h"
 #include <wtf/RefPtr.h>
 
 namespace WebCore {
-
-class Node;
-class NodeFilter;
 
 class NodeIteratorBase {
 public:
     Node& root() { return m_root.get(); }
     const Node& root() const { return m_root.get(); }
+    Ref<Node> protectedRoot() const { return m_root; }
 
     unsigned whatToShow() const { return m_whatToShow; }
     NodeFilter* filter() const { return m_filter.get(); }
 
 protected:
     NodeIteratorBase(Node&, unsigned whatToShow, RefPtr<NodeFilter>&&);
-    ExceptionOr<unsigned short> acceptNode(Node&);
+    ExceptionOr<unsigned short> acceptNode(Node& node)
+    {
+        // https://dom.spec.whatwg.org/#concept-node-filter
+        if (!m_filter)
+            return matchesWhatToShow(node) ? NodeFilter::FILTER_ACCEPT : NodeFilter::FILTER_SKIP;
+        return acceptNodeSlowCase(node);
+    }
+
+    bool matchesWhatToShow(const Node& node) const
+    {
+        unsigned nodeMask = 1 << (node.nodeType() - 1);
+        return nodeMask & m_whatToShow;
+    }
 
 private:
+    ExceptionOr<unsigned short> acceptNodeSlowCase(Node&);
+
     Ref<Node> m_root;
     RefPtr<NodeFilter> m_filter;
     unsigned m_whatToShow;

@@ -29,6 +29,7 @@
 
 #include "JSRemoteInspector.h"
 #include "RemoteControllableTarget.h"
+#include <wtf/ProcessID.h>
 #include <wtf/RetainPtr.h>
 #include <wtf/TypeCasts.h>
 #include <wtf/text/WTFString.h>
@@ -51,6 +52,7 @@ public:
 
     virtual String name() const { return String(); } // ITML JavaScript Page ServiceWorker WebPage
     virtual String url() const { return String(); } // Page ServiceWorker WebPage
+    virtual const String& nameOverride() const { return nullString(); }
     virtual bool hasLocalDebugger() const = 0;
 
     virtual void setIndicating(bool) { } // Default is to do nothing.
@@ -61,6 +63,9 @@ public:
 
     // RemoteControllableTarget overrides.
     bool remoteControlAllowed() const final;
+
+    std::optional<ProcessID> presentingApplicationPID() const { return m_presentingApplicationPID; }
+    void setPresentingApplicationPID(std::optional<ProcessID>&&);
 
 private:
     enum class Inspectable : uint8_t {
@@ -76,6 +81,8 @@ private:
 #if USE(CF)
     RetainPtr<CFRunLoopRef> m_runLoop;
 #endif
+
+    std::optional<ProcessID> m_presentingApplicationPID;
 };
 
 } // namespace Inspector

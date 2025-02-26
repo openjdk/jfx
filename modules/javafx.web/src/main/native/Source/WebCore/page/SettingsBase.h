@@ -26,17 +26,14 @@
 
 #pragma once
 
-#include "AllowedFonts.h"
 #include "ClipboardAccessPolicy.h"
 #include "ContentType.h"
 #include "EditableLinkBehavior.h"
 #include "EditingBehaviorType.h"
 #include "FontGenericFamilies.h"
 #include "FontLoadTimingOverride.h"
-#include "FontRenderingMode.h"
 #include "ForcedAccessibilityValue.h"
 #include "FourCC.h"
-#include "FrameFlattening.h"
 #include "HTMLParserScriptingFlagPolicy.h"
 #include "MediaPlayerEnums.h"
 #include "StorageBlockingPolicy.h"
@@ -44,6 +41,7 @@
 #include "TextDirection.h"
 #include "TextDirectionSubmenuInclusionBehavior.h"
 #include "Timer.h"
+#include "TrustedFonts.h"
 #include "UserInterfaceDirectionPolicy.h"
 #include <JavaScriptCore/RuntimeFlags.h>
 #include <unicode/uscript.h>
@@ -63,10 +61,10 @@ class Page;
 class SettingsBase {
     WTF_MAKE_NONCOPYABLE(SettingsBase); WTF_MAKE_FAST_ALLOCATED;
 public:
-    void pageDestroyed() { m_page = nullptr; }
 
 #if ENABLE(MEDIA_SOURCE)
     WEBCORE_EXPORT static bool platformDefaultMediaSourceEnabled();
+    WEBCORE_EXPORT static uint64_t defaultMaximumSourceBufferSize();
 #endif
 
     static const unsigned defaultMaximumHTMLParserDOMTreeDepth = 512;
@@ -144,7 +142,6 @@ protected:
     void setNeedsRelayoutAllFrames();
     void mediaTypeOverrideChanged();
     void imagesEnabledChanged();
-    void pluginsEnabledChanged();
     void userStyleSheetLocationChanged();
     void usesBackForwardCacheChanged();
     void dnsPrefetchingEnabledChanged();
@@ -162,14 +159,12 @@ protected:
 #if ENABLE(MEDIA_STREAM)
     void mockCaptureDevicesEnabledChanged();
 #endif
-#if ENABLE(LAYER_BASED_SVG_ENGINE)
     void layerBasedSVGEngineEnabledChanged();
-#endif
 #if HAVE(AVCONTENTKEYSPECIFIER)
     void sampleBufferContentKeySessionSupportEnabledChanged();
 #endif
 
-    Page* m_page;
+    WeakPtr<Page> m_page;
 
     Seconds m_minimumDOMTimerInterval;
 

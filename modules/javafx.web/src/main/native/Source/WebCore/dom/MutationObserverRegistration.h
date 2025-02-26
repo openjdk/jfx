@@ -32,10 +32,20 @@
 
 #include "GCReachableRef.h"
 #include "MutationObserver.h"
+#include <wtf/CheckedRef.h>
 #include <wtf/RobinHoodHashSet.h>
 #include <wtf/WeakPtr.h>
 #include <wtf/text/AtomString.h>
 #include <wtf/text/AtomStringHash.h>
+
+namespace WebCore {
+class MutationObserverRegistration;
+}
+
+namespace WTF {
+template<typename T> struct IsDeprecatedWeakRefSmartPointerException;
+template<> struct IsDeprecatedWeakRefSmartPointerException<WebCore::MutationObserverRegistration> : std::true_type { };
+}
 
 namespace JSC {
 class AbstractSlotVisitor;
@@ -60,6 +70,7 @@ public:
     bool isSubtree() const { return m_options.contains(MutationObserverOptionType::Subtree); }
 
     MutationObserver& observer() { return m_observer.get(); }
+    Ref<MutationObserver> protectedObserver() { return m_observer; }
     Node& node() { return m_node; }
     MutationRecordDeliveryOptions deliveryOptions() const { return m_options & MutationObserver::AllDeliveryFlags; }
     MutationObserverOptions mutationTypes() const { return m_options & MutationObserver::AllMutationTypes; }
@@ -68,7 +79,7 @@ public:
 
 private:
     Ref<MutationObserver> m_observer;
-    Node& m_node;
+    WeakRef<Node, WeakPtrImplWithEventTargetData> m_node;
     RefPtr<Node> m_nodeKeptAlive;
     HashSet<GCReachableRef<Node>> m_transientRegistrationNodes;
     MutationObserverOptions m_options;

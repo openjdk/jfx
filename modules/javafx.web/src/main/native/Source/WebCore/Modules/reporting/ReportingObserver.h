@@ -25,9 +25,9 @@
 
 #pragma once
 
-#include "ContextDestructionObserver.h"
-#include <wtf/IsoMalloc.h>
+#include "ActiveDOMObject.h"
 #include <wtf/RefCounted.h>
+#include <wtf/TZoneMalloc.h>
 #include <wtf/WeakPtr.h>
 
 namespace WebCore {
@@ -37,8 +37,8 @@ class ReportingObserverCallback;
 class ReportingScope;
 class ScriptExecutionContext;
 
-class ReportingObserver final : public RefCounted<ReportingObserver>, public ContextDestructionObserver  {
-    WTF_MAKE_ISO_ALLOCATED(ReportingObserver);
+class ReportingObserver final : public RefCounted<ReportingObserver>, public ActiveDOMObject  {
+    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(ReportingObserver);
 public:
     struct Options {
         std::optional<Vector<AtomString>> types;
@@ -54,6 +54,13 @@ public:
     Vector<Ref<Report>> takeRecords();
 
     void appendQueuedReportIfCorrectType(const Ref<Report>&);
+
+    ReportingObserverCallback& callbackConcurrently();
+
+    // ActiveDOMObject
+    void ref() const final { RefCounted::ref(); }
+    void deref() const final { RefCounted::deref(); }
+    bool virtualHasPendingActivity() const final;
 
 private:
     explicit ReportingObserver(ScriptExecutionContext&, Ref<ReportingObserverCallback>&&, ReportingObserver::Options&&);

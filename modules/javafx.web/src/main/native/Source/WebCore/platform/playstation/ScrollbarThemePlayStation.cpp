@@ -39,8 +39,10 @@ ScrollbarTheme& ScrollbarTheme::nativeTheme()
     return theme;
 }
 
-int ScrollbarThemePlayStation::scrollbarThickness(ScrollbarControlSize, ScrollbarExpansionState)
+int ScrollbarThemePlayStation::scrollbarThickness(ScrollbarWidth scrollbarWidth, ScrollbarExpansionState)
 {
+    if (scrollbarWidth == ScrollbarWidth::None)
+        return 0;
     return 7;
 }
 
@@ -75,7 +77,7 @@ IntRect ScrollbarThemePlayStation::trackRect(Scrollbar& scrollbar, bool)
 
 void ScrollbarThemePlayStation::paintTrackBackground(GraphicsContext& context, Scrollbar& scrollbar, const IntRect& trackRect)
 {
-    context.fillRect(trackRect, scrollbar.enabled() ? Color::lightGray : Color(0xFFE0E0E0));
+    context.fillRect(trackRect, scrollbar.enabled() ? Color::lightGray : SRGBA<uint8_t> { 224, 224, 224 });
 }
 
 void ScrollbarThemePlayStation::paintThumb(GraphicsContext& context, Scrollbar& scrollbar, const IntRect& thumbRect)

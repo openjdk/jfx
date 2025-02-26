@@ -172,7 +172,9 @@ gst_riff_create_video_caps (guint32 codec_fcc,
     case GST_RIFF_dmb1:
     case GST_MAKE_FOURCC ('A', 'C', 'D', 'V'):
     case GST_MAKE_FOURCC ('Q', 'I', 'V', 'G'):
-      caps = gst_caps_new_empty_simple ("image/jpeg");
+      caps =
+          gst_caps_new_simple ("image/jpeg", "parsed", G_TYPE_BOOLEAN, TRUE,
+          NULL);
       if (codec_name)
         *codec_name = g_strdup ("Motion JPEG");
       break;
@@ -180,7 +182,9 @@ gst_riff_create_video_caps (guint32 codec_fcc,
     case GST_RIFF_JPEG:        /* generic (mostly RGB) MJPEG */
     case GST_RIFF_jpeg:
     case GST_MAKE_FOURCC ('j', 'p', 'e', 'g'): /* generic (mostly RGB) MJPEG */
-      caps = gst_caps_new_empty_simple ("image/jpeg");
+      caps =
+          gst_caps_new_simple ("image/jpeg", "parsed", G_TYPE_BOOLEAN, TRUE,
+          NULL);
       if (codec_name)
         *codec_name = g_strdup ("JPEG Still Image");
       break;
@@ -188,25 +192,33 @@ gst_riff_create_video_caps (guint32 codec_fcc,
     case GST_MAKE_FOURCC ('P', 'I', 'X', 'L'): /* Miro/Pinnacle fourccs */
     case GST_RIFF_VIXL:        /* Miro/Pinnacle fourccs */
     case GST_RIFF_vixl:
-      caps = gst_caps_new_empty_simple ("image/jpeg");
+      caps =
+          gst_caps_new_simple ("image/jpeg", "parsed", G_TYPE_BOOLEAN, TRUE,
+          NULL);
       if (codec_name)
         *codec_name = g_strdup ("Miro/Pinnacle Motion JPEG");
       break;
 
     case GST_MAKE_FOURCC ('C', 'J', 'P', 'G'):
-      caps = gst_caps_new_empty_simple ("image/jpeg");
+      caps =
+          gst_caps_new_simple ("image/jpeg", "parsed", G_TYPE_BOOLEAN, TRUE,
+          NULL);
       if (codec_name)
         *codec_name = g_strdup ("Creative Webcam JPEG");
       break;
 
     case GST_MAKE_FOURCC ('S', 'L', 'M', 'J'):
-      caps = gst_caps_new_empty_simple ("image/jpeg");
+      caps =
+          gst_caps_new_simple ("image/jpeg", "parsed", G_TYPE_BOOLEAN, TRUE,
+          NULL);
       if (codec_name)
         *codec_name = g_strdup ("SL Motion JPEG");
       break;
 
     case GST_MAKE_FOURCC ('J', 'P', 'G', 'L'):
-      caps = gst_caps_new_empty_simple ("image/jpeg");
+      caps =
+          gst_caps_new_simple ("image/jpeg", "parsed", G_TYPE_BOOLEAN, TRUE,
+          NULL);
       if (codec_name)
         *codec_name = g_strdup ("Pegasus Lossless JPEG");
       break;
@@ -242,6 +254,16 @@ gst_riff_create_video_caps (guint32 codec_fcc,
       }
       if (codec_name)
         *codec_name = g_strdup ("Huffman Lossless Codec");
+      break;
+
+    case GST_MAKE_FOURCC ('F', 'F', 'V', 'H'):
+      caps = gst_caps_new_empty_simple ("video/x-ffvhuff");
+      if (strf) {
+        gst_caps_set_simple (caps, "bpp",
+            G_TYPE_INT, (int) strf->bit_cnt, NULL);
+      }
+      if (codec_name)
+        *codec_name = g_strdup ("FFmpeg Huffman YUV variant");
       break;
 
     case GST_MAKE_FOURCC ('M', 'P', 'E', 'G'):
@@ -359,6 +381,10 @@ gst_riff_create_video_caps (guint32 codec_fcc,
     case GST_MAKE_FOURCC ('h', '2', '6', '5'):
     case GST_MAKE_FOURCC ('h', 'v', 'c', '1'):
     case GST_MAKE_FOURCC ('H', 'V', 'C', '1'):
+    case GST_MAKE_FOURCC ('h', 'e', 'v', 'c'):
+    case GST_MAKE_FOURCC ('H', 'E', 'V', 'C'):
+    case GST_MAKE_FOURCC ('h', 'e', 'v', '1'):
+    case GST_MAKE_FOURCC ('H', 'E', 'V', '1'):
       caps = gst_caps_new_empty_simple ("video/x-h265");
       if (codec_name)
         *codec_name = g_strdup ("H.265");
@@ -1026,24 +1052,24 @@ static const struct
   const GstAudioChannelPosition gst_pos;
 } layout_mapping[] = {
   {
-  0x00001, GST_AUDIO_CHANNEL_POSITION_FRONT_LEFT}, {
-  0x00002, GST_AUDIO_CHANNEL_POSITION_FRONT_RIGHT}, {
-  0x00004, GST_AUDIO_CHANNEL_POSITION_FRONT_CENTER}, {
-  0x00008, GST_AUDIO_CHANNEL_POSITION_LFE1}, {
-  0x00010, GST_AUDIO_CHANNEL_POSITION_REAR_LEFT}, {
-  0x00020, GST_AUDIO_CHANNEL_POSITION_REAR_RIGHT}, {
-  0x00040, GST_AUDIO_CHANNEL_POSITION_FRONT_LEFT_OF_CENTER}, {
-  0x00080, GST_AUDIO_CHANNEL_POSITION_FRONT_RIGHT_OF_CENTER}, {
-  0x00100, GST_AUDIO_CHANNEL_POSITION_REAR_CENTER}, {
-  0x00200, GST_AUDIO_CHANNEL_POSITION_SIDE_LEFT}, {
-  0x00400, GST_AUDIO_CHANNEL_POSITION_SIDE_RIGHT}, {
-  0x00800, GST_AUDIO_CHANNEL_POSITION_TOP_CENTER}, {
-  0x01000, GST_AUDIO_CHANNEL_POSITION_TOP_FRONT_LEFT}, {
-  0x02000, GST_AUDIO_CHANNEL_POSITION_TOP_FRONT_CENTER}, {
-  0x04000, GST_AUDIO_CHANNEL_POSITION_TOP_FRONT_RIGHT}, {
-  0x08000, GST_AUDIO_CHANNEL_POSITION_TOP_REAR_LEFT}, {
-  0x10000, GST_AUDIO_CHANNEL_POSITION_TOP_REAR_CENTER}, {
-  0x20000, GST_AUDIO_CHANNEL_POSITION_TOP_REAR_RIGHT}
+      0x00001, GST_AUDIO_CHANNEL_POSITION_FRONT_LEFT}, {
+      0x00002, GST_AUDIO_CHANNEL_POSITION_FRONT_RIGHT}, {
+      0x00004, GST_AUDIO_CHANNEL_POSITION_FRONT_CENTER}, {
+      0x00008, GST_AUDIO_CHANNEL_POSITION_LFE1}, {
+      0x00010, GST_AUDIO_CHANNEL_POSITION_REAR_LEFT}, {
+      0x00020, GST_AUDIO_CHANNEL_POSITION_REAR_RIGHT}, {
+      0x00040, GST_AUDIO_CHANNEL_POSITION_FRONT_LEFT_OF_CENTER}, {
+      0x00080, GST_AUDIO_CHANNEL_POSITION_FRONT_RIGHT_OF_CENTER}, {
+      0x00100, GST_AUDIO_CHANNEL_POSITION_REAR_CENTER}, {
+      0x00200, GST_AUDIO_CHANNEL_POSITION_SIDE_LEFT}, {
+      0x00400, GST_AUDIO_CHANNEL_POSITION_SIDE_RIGHT}, {
+      0x00800, GST_AUDIO_CHANNEL_POSITION_TOP_CENTER}, {
+      0x01000, GST_AUDIO_CHANNEL_POSITION_TOP_FRONT_LEFT}, {
+      0x02000, GST_AUDIO_CHANNEL_POSITION_TOP_FRONT_CENTER}, {
+      0x04000, GST_AUDIO_CHANNEL_POSITION_TOP_FRONT_RIGHT}, {
+      0x08000, GST_AUDIO_CHANNEL_POSITION_TOP_REAR_LEFT}, {
+      0x10000, GST_AUDIO_CHANNEL_POSITION_TOP_REAR_CENTER}, {
+      0x20000, GST_AUDIO_CHANNEL_POSITION_TOP_REAR_RIGHT}
 };
 
 #define MAX_CHANNEL_POSITIONS G_N_ELEMENTS (layout_mapping)
@@ -1755,8 +1781,10 @@ gst_riff_create_audio_caps (guint16 codec_id,
             GST_DEBUG ("WAVE_FORMAT_EXTENSIBLE audio");
           if (caps) {
             if (codec_name) {
+              gchar *tmp = *codec_name;
               GST_DEBUG ("WAVE_FORMAT_EXTENSIBLE %s", *codec_name);
-              *codec_name = g_strjoin ("wavext ", *codec_name, NULL);
+              *codec_name = g_strjoin ("wavext ", tmp, NULL);
+              g_free (tmp);
             }
             return caps;
           }

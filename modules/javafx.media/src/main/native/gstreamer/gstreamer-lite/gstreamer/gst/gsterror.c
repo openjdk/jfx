@@ -117,7 +117,7 @@
 
 #include "gst_private.h"
 #include <gst/gst.h>
-#include "gst-i18n-lib.h"
+#include <glib/gi18n-lib.h>
 
 #define QUARK_FUNC(string)                                              \
 GQuark gst_ ## string ## _error_quark (void) {                          \

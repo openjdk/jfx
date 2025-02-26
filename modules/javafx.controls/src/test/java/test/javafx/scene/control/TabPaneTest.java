@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,20 +25,22 @@
 
 package test.javafx.scene.control;
 
-import com.sun.javafx.scene.SceneHelper;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 import static test.com.sun.javafx.scene.control.infrastructure.ControlTestUtils.assertPseudoClassDoesNotExist;
 import static test.com.sun.javafx.scene.control.infrastructure.ControlTestUtils.assertPseudoClassExists;
 import static test.com.sun.javafx.scene.control.infrastructure.ControlTestUtils.assertStyleClassContains;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertSame;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
-
-import javafx.scene.control.SelectionModel;
-import test.com.sun.javafx.scene.control.infrastructure.StageLoader;
+import java.lang.ref.WeakReference;
+import java.util.Arrays;
+import java.util.HashMap;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.Map;
 import javafx.application.Platform;
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.DoubleProperty;
@@ -54,42 +56,36 @@ import javafx.geometry.Bounds;
 import javafx.geometry.Side;
 import javafx.scene.Group;
 import javafx.scene.Scene;
-import javafx.scene.input.KeyEvent;
-import javafx.scene.input.MouseEvent;
-import javafx.scene.layout.StackPane;
-import javafx.scene.layout.VBox;
-import javafx.stage.Stage;
-
-import org.junit.Before;
-import org.junit.Test;
-
-import test.com.sun.javafx.pgstub.StubToolkit;
-import test.com.sun.javafx.scene.control.infrastructure.KeyEventFirer;
-import test.com.sun.javafx.scene.control.infrastructure.MouseEventGenerator;
-import com.sun.javafx.scene.input.KeyCodeMap;
-import com.sun.javafx.tk.Toolkit;
-
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.Map;
 import javafx.scene.control.Button;
 import javafx.scene.control.ContextMenu;
 import javafx.scene.control.ScrollPane;
+import javafx.scene.control.SelectionModel;
 import javafx.scene.control.SingleSelectionModel;
 import javafx.scene.control.SingleSelectionModelShim;
-import javafx.scene.control.skin.TabPaneSkin;
-import javafx.scene.control.skin.TabPaneSkinShim;
 import javafx.scene.control.SplitPane;
 import javafx.scene.control.Tab;
 import javafx.scene.control.TabPane;
 import javafx.scene.control.TabPaneShim;
-
-import java.lang.ref.WeakReference;
+import javafx.scene.control.skin.TabPaneSkin;
+import javafx.scene.control.skin.TabPaneSkinShim;
+import javafx.scene.input.KeyEvent;
+import javafx.scene.input.MouseEvent;
+import javafx.scene.input.ScrollEvent;
+import javafx.scene.layout.StackPane;
+import javafx.scene.layout.VBox;
+import javafx.stage.Stage;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import com.sun.javafx.scene.SceneHelper;
+import com.sun.javafx.scene.input.KeyCodeMap;
+import com.sun.javafx.tk.Toolkit;
+import test.com.sun.javafx.pgstub.StubToolkit;
+import test.com.sun.javafx.scene.control.infrastructure.KeyEventFirer;
+import test.com.sun.javafx.scene.control.infrastructure.MouseEventGenerator;
+import test.com.sun.javafx.scene.control.infrastructure.StageLoader;
 
 public class TabPaneTest {
-    private TabPane tabPane;//Empty string
+    private TabPane tabPane;
     private Toolkit tk;
     private SingleSelectionModel<Tab> sm;
     private Tab tab1;
@@ -99,7 +95,8 @@ public class TabPaneTest {
     private Stage stage;
     private StackPane root;
 
-    @Before public void setup() {
+    @BeforeEach
+    public void setup() {
         tk = Toolkit.getToolkit();
 
         assertTrue(tk instanceof StubToolkit);  // Ensure it's StubToolkit
@@ -190,66 +187,66 @@ public class TabPaneTest {
     @Test public void checkSelectionModelPropertyBind() {
         ObjectProperty objPr = new SimpleObjectProperty<SingleSelectionModel<Tab>>(null);
         tabPane.selectionModelProperty().bind(objPr);
-        assertNull("selectionModel cannot be bound", tabPane.selectionModelProperty().getValue());
+        assertNull(tabPane.selectionModelProperty().getValue(), "selectionModel cannot be bound");
         objPr.setValue(sm);
-        assertSame("selectionModel cannot be bound", tabPane.selectionModelProperty().getValue(), sm);
+        assertSame(tabPane.selectionModelProperty().getValue(), sm, "selectionModel cannot be bound");
     }
 
     @Test public void checkSidePropertyBind() {
         ObjectProperty objPr = new SimpleObjectProperty<>(Side.BOTTOM);
         tabPane.sideProperty().bind(objPr);
-        assertSame("side cannot be bound", tabPane.sideProperty().getValue(), Side.BOTTOM);
+        assertSame(tabPane.sideProperty().getValue(), Side.BOTTOM, "side cannot be bound");
         objPr.setValue(Side.RIGHT);
-        assertSame("side cannot be bound", tabPane.sideProperty().getValue(), Side.RIGHT);
+        assertSame(tabPane.sideProperty().getValue(), Side.RIGHT, "side cannot be bound");
     }
 
     @Test public void checkTabClosingPropertyBind() {
         ObjectProperty objPr = new SimpleObjectProperty<>(TabPane.TabClosingPolicy.UNAVAILABLE);
         tabPane.tabClosingPolicyProperty().bind(objPr);
-        assertSame("side cannot be bound", tabPane.tabClosingPolicyProperty().getValue(), TabPane.TabClosingPolicy.UNAVAILABLE);
+        assertSame(tabPane.tabClosingPolicyProperty().getValue(), TabPane.TabClosingPolicy.UNAVAILABLE, "side cannot be bound");
         objPr.setValue(TabPane.TabClosingPolicy.ALL_TABS);
-        assertSame("side cannot be bound", tabPane.tabClosingPolicyProperty().getValue(), TabPane.TabClosingPolicy.ALL_TABS);
+        assertSame(tabPane.tabClosingPolicyProperty().getValue(), TabPane.TabClosingPolicy.ALL_TABS, "side cannot be bound");
     }
 
     @Test public void checkRotateGraphicsPropertyBind() {
         BooleanProperty objPr = new SimpleBooleanProperty(false);
         tabPane.rotateGraphicProperty().bind(objPr);
-        assertFalse("rotateGraphic cannot be bound", tabPane.rotateGraphicProperty().getValue());
+        assertFalse(tabPane.rotateGraphicProperty().getValue(), "rotateGraphic cannot be bound");
         objPr.setValue(true);
-        assertTrue("rotateGraphic cannot be bound", tabPane.rotateGraphicProperty().getValue());
+        assertTrue(tabPane.rotateGraphicProperty().getValue(), "rotateGraphic cannot be bound");
     }
 
     @Test public void checkTabMinWidthPropertyBind() {
         DoubleProperty objPr = new SimpleDoubleProperty(2.0);
         tabPane.tabMinWidthProperty().bind(objPr);
-        assertEquals("tabMinWidthProperty cannot be bound", tabPane.tabMinWidthProperty().getValue(), 2.0, 0.0);
+        assertEquals(tabPane.tabMinWidthProperty().getValue(), 2.0, 0.0, "tabMinWidthProperty cannot be bound");
         objPr.setValue(5.0);
-        assertEquals("tabMinWidthProperty cannot be bound", tabPane.tabMinWidthProperty().getValue(), 5.0, 0.0);
+        assertEquals(tabPane.tabMinWidthProperty().getValue(), 5.0, 0.0, "tabMinWidthProperty cannot be bound");
     }
 
     @Test public void checkTabMaxWidthPropertyBind() {
         DoubleProperty objPr = new SimpleDoubleProperty(2.0);
         tabPane.tabMaxWidthProperty().bind(objPr);
-        assertEquals("tabMaxWidthProperty cannot be bound", tabPane.tabMaxWidthProperty().getValue(), 2.0, 0.0);
+        assertEquals(tabPane.tabMaxWidthProperty().getValue(), 2.0, 0.0, "tabMaxWidthProperty cannot be bound");
         objPr.setValue(5.0);
-        assertEquals("tabMaxWidthProperty cannot be bound", tabPane.tabMaxWidthProperty().getValue(), 5.0, 0.0);
+        assertEquals(tabPane.tabMaxWidthProperty().getValue(), 5.0, 0.0, "tabMaxWidthProperty cannot be bound");
     }
 
 
     @Test public void checkTabMinHeightPropertyBind() {
         DoubleProperty objPr = new SimpleDoubleProperty(2.0);
         tabPane.tabMinHeightProperty().bind(objPr);
-        assertEquals("tabMinHeightProperty cannot be bound", tabPane.tabMinHeightProperty().getValue(), 2.0, 0.0);
+        assertEquals(tabPane.tabMinHeightProperty().getValue(), 2.0, 0.0, "tabMinHeightProperty cannot be bound");
         objPr.setValue(5.0);
-        assertEquals("tabMinHeightProperty cannot be bound", tabPane.tabMinHeightProperty().getValue(), 5.0, 0.0);
+        assertEquals(tabPane.tabMinHeightProperty().getValue(), 5.0, 0.0, "tabMinHeightProperty cannot be bound");
     }
 
     @Test public void checkTabMaxHeightPropertyBind() {
         DoubleProperty objPr = new SimpleDoubleProperty(2.0);
         tabPane.tabMaxHeightProperty().bind(objPr);
-        assertEquals("tabMaxHeightProperty cannot be bound", tabPane.tabMaxHeightProperty().getValue(), 2.0, 0.0);
+        assertEquals(tabPane.tabMaxHeightProperty().getValue(), 2.0, 0.0, "tabMaxHeightProperty cannot be bound");
         objPr.setValue(5.0);
-        assertEquals("tabMaxHeightProperty cannot be bound", tabPane.tabMaxHeightProperty().getValue(), 5.0, 0.0);
+        assertEquals(tabPane.tabMaxHeightProperty().getValue(), 5.0, 0.0, "tabMaxHeightProperty cannot be bound");
     }
 
     @Test public void selectionModelPropertyHasBeanReference() {
@@ -999,7 +996,7 @@ public class TabPaneTest {
 
         // selection should move to the next non-disabled tab - in this case tab2
         selectedTab = tabPane.getSelectionModel().getSelectedItem();
-        assertEquals(tab2.getText() + " != " +  tab2.getText(), tab2, selectedTab);
+        assertEquals(tab2, selectedTab, tab2.getText() + " != " +  tab2.getText());
 
         sl.dispose();
     }
@@ -1151,8 +1148,8 @@ public class TabPaneTest {
             MouseEventGenerator.generateMouseEvent(MouseEvent.MOUSE_PRESSED, xval + 19, yval + 17));
         tk.firePulse();
 
-        assertEquals("Tabpane should have 3 tabs.", 3, tabPane.getTabs().size());
-        assertEquals("tab2 should be at index 0.", tab2, tabPane.getSelectionModel().getSelectedItem());
+        assertEquals(3, tabPane.getTabs().size(), "Tabpane should have 3 tabs.");
+        assertEquals(tab2, tabPane.getSelectionModel().getSelectedItem(), "tab2 should be at index 0.");
     }
 
     // Test for JDK-8154039
@@ -1196,11 +1193,11 @@ public class TabPaneTest {
         assertNotNull(tbSkin);
         ContextMenu tabsMenu = TabPaneSkinShim.getTabsMenu(tbSkin);
         assertNotNull(tabsMenu);
-        assertEquals("ContextMenu should contain 3 items.", 3, tabsMenu.getItems().size());
+        assertEquals(3, tabsMenu.getItems().size(), "ContextMenu should contain 3 items.");
 
         tabPane.getTabs().sort((o1, o2) -> sortCompare(o1, o2));
         tk.firePulse();
-        assertEquals("ContextMenu should contain 3 items.", 3, tabsMenu.getItems().size());
+        assertEquals(3, tabsMenu.getItems().size(), "ContextMenu should contain 3 items.");
     }
 
     private int sortCompare(Tab t1, Tab t2) {
@@ -1240,5 +1237,105 @@ public class TabPaneTest {
         tk.firePulse();
         attemptGC(10, weakSMRef);
         assertNull(weakSMRef.get());
+    }
+
+    @Test
+    public void testVerticalScrollTopSide() {
+        scrollTabPane(Side.TOP, 0, -100);
+    }
+
+    @Test
+    public void testVerticalScrollRightSide() {
+        scrollTabPane(Side.RIGHT, 0, 100);
+    }
+
+    @Test
+    public void testVerticalScrollBottomSide() {
+        scrollTabPane(Side.BOTTOM, 0, -100);
+    }
+
+    @Test
+    public void testVerticalScrollLeftSide() {
+        scrollTabPane(Side.LEFT, 0, 100);
+    }
+
+    @Test
+    public void testHorizontalScrollTopSide() {
+        scrollTabPane(Side.TOP, -100, 0);
+    }
+
+    @Test
+    public void testHorizontalScrollRightSide() {
+        scrollTabPane(Side.RIGHT, 100, 0);
+    }
+
+    @Test
+    public void testHorizontalScrollBottomSide() {
+        scrollTabPane(Side.BOTTOM, -100, 0);
+    }
+
+    @Test
+    public void testHorizontalScrollLeftSide() {
+        scrollTabPane(Side.LEFT, 100, 0);
+    }
+
+    private void scrollTabPane(Side side, double deltaX, double deltaY) {
+        tabPane.setMaxSize(400, 100);
+        tabPane.setSide(side);
+        for (int i = 0; i < 40; i++) {
+            Tab tab = new Tab("Tab " + (1000 + i));
+            tabPane.getTabs().add(tab);
+        }
+        root.getChildren().add(tabPane);
+        stage.show();
+
+        Bounds firstTabBounds = tabPane.lookupAll(".tab-label")
+                .stream()
+                .findFirst()
+                .map(n -> n.localToScene(n.getLayoutBounds()))
+                .orElse(null);
+        assertNotNull(firstTabBounds);
+
+        Bounds layoutBounds = tabPane.getLayoutBounds();
+        double minX = tabPane.localToScene(layoutBounds).getMinX();
+        double minY = tabPane.localToScene(layoutBounds).getMinY();
+        double minScrX = tabPane.localToScreen(layoutBounds).getMinX();
+        double minScrY = tabPane.localToScreen(layoutBounds).getMinY();
+        double x = 50;
+        double y = 10;
+
+        SceneHelper.processMouseEvent(scene,
+                MouseEventGenerator.generateMouseEvent(MouseEvent.MOUSE_MOVED, minX + x, minY + y));
+        tk.firePulse();
+
+        StackPane tabHeaderArea = (StackPane) tabPane.lookup(".tab-header-area");
+        assertNotNull(tabHeaderArea);
+
+        Event.fireEvent(tabHeaderArea, new ScrollEvent(
+                ScrollEvent.SCROLL,
+                minX + x, minY + y,
+                minScrX + x, minScrY + y,
+                false, false, false, false, true, false,
+                deltaX, deltaY, deltaX, deltaY,
+                ScrollEvent.HorizontalTextScrollUnits.NONE, 0.0,
+                ScrollEvent.VerticalTextScrollUnits.NONE, 0.0,
+                0, null));
+        tk.firePulse();
+
+        Bounds newFirstTabBounds = tabPane.lookupAll(".tab-label")
+                .stream()
+                .findFirst()
+                .map(n -> n.localToScene(n.getLayoutBounds()))
+                .orElse(null);
+        assertNotNull(newFirstTabBounds);
+
+        if (side.equals(Side.TOP) || side.equals(Side.BOTTOM)) {
+            double delta = Math.abs(deltaY) > Math.abs(deltaX) ? deltaY : deltaX;
+            assertEquals(firstTabBounds.getMinX() + delta, newFirstTabBounds.getMinX(), 0);
+            assertEquals(firstTabBounds.getMinY(), newFirstTabBounds.getMinY(), 0);
+        } else {
+            assertEquals(firstTabBounds.getMinX(), newFirstTabBounds.getMinX(), 0);
+            assertEquals(firstTabBounds.getMinY() - deltaY, newFirstTabBounds.getMinY(), 0);
+        }
     }
 }

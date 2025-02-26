@@ -351,7 +351,7 @@ void pas_segregated_size_directory_enable_exclusive_views(
 
     alloc_bits_bytes = pas_segregated_page_config_num_alloc_bytes(page_config);
     full_alloc_bits = pas_immortal_heap_allocate_with_manual_alignment(
-        alloc_bits_bytes, sizeof(unsigned),
+        alloc_bits_bytes, PAS_MAX(PAS_INTERNAL_MIN_ALIGN, sizeof(unsigned)),
         "pas_segregated_size_directory_data/full_alloc_bits",
         pas_object_allocation);
     pas_compact_tagged_unsigned_ptr_store(&data->full_alloc_bits, full_alloc_bits);
@@ -392,7 +392,7 @@ void pas_segregated_size_directory_enable_exclusive_views(
 
         full_use_counts = pas_immortal_heap_allocate_with_manual_alignment(
             num_granules * sizeof(pas_page_granule_use_count),
-            sizeof(pas_page_granule_use_count),
+            PAS_MAX(PAS_INTERNAL_MIN_ALIGN, sizeof(pas_page_granule_use_count)),
             "pas_extended_segregated_size_directory_data/full_use_counts",
             pas_object_allocation);
 
@@ -728,7 +728,8 @@ take_last_empty_consider_view(pas_segregated_directory_iterate_config* config)
     PAS_ASSERT(!PAS_SEGREGATED_DIRECTORY_GET_BIT(directory, index, eligible));
 
     /* It's totally possible that the empty bit got set again. We should clear it for sure now. */
-    PAS_SEGREGATED_DIRECTORY_SET_BIT(directory, index, empty, false);
+    bool result = PAS_SEGREGATED_DIRECTORY_SET_BIT(directory, index, empty, false);
+    PAS_UNUSED_PARAM(result);
 
     PAS_TESTING_ASSERT(pas_segregated_page_qualifies_for_decommit(page, my_page_config));
 

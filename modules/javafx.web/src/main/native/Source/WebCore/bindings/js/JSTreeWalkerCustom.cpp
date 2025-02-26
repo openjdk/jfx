@@ -21,7 +21,7 @@
 #include "JSTreeWalker.h"
 
 #include "Node.h"
-#include "WebCoreOpaqueRoot.h"
+#include "WebCoreOpaqueRootInlines.h"
 #include <JavaScriptCore/SlotVisitorInlines.h>
 
 namespace WebCore {
@@ -29,7 +29,7 @@ namespace WebCore {
 template<typename Visitor>
 void JSTreeWalker::visitAdditionalChildren(Visitor& visitor)
 {
-    if (auto* filter = wrapped().filter())
+    if (auto filter = wrapped().filter())
         addWebCoreOpaqueRoot(visitor, *filter);
 }
 

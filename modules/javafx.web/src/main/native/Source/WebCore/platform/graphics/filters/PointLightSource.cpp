@@ -44,9 +44,14 @@ Ref<PointLightSource> PointLightSource::create(const FloatPoint3D& position)
 }
 
 PointLightSource::PointLightSource(const FloatPoint3D& position)
-    : LightSource(LS_POINT)
+    : LightSource(LightType::LS_POINT)
     , m_position(position)
 {
+}
+
+bool PointLightSource::operator==(const PointLightSource& other) const
+{
+    return LightSource::operator==(other) && m_position == other.m_position;
 }
 
 void PointLightSource::initPaintingData(const Filter& filter, const FilterImage& result, PaintingData&) const

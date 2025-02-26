@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2021 Sony Interactive Entertainment Inc.
- * Copyright (C) 2021 Apple Inc. All rights reserved.
+ * Copyright (C) 2021-2023 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -30,8 +30,8 @@
 #include "IntlObjectInlines.h"
 #include "JSCInlines.h"
 #include "TemporalObject.h"
+#include <wtf/text/MakeString.h>
 #include <wtf/text/StringBuilder.h>
-#include <wtf/text/StringConcatenate.h>
 
 namespace JSC {
 
@@ -55,12 +55,6 @@ TemporalDuration::TemporalDuration(VM& vm, Structure* structure, ISO8601::Durati
     : Base(vm, structure)
     , m_duration(WTFMove(duration))
 {
-}
-
-void TemporalDuration::finishCreation(VM& vm)
-{
-    Base::finishCreation(vm);
-    ASSERT(inherits(info()));
 }
 
 // CreateTemporalDuration ( years, months, weeks, days, hours, minutes, seconds, milliseconds, microseconds, nanoseconds [ , newTarget ] )
@@ -98,7 +92,7 @@ ISO8601::Duration TemporalDuration::fromDurationLike(JSGlobalObject* globalObjec
             continue;
 
         hasRelevantProperty = true;
-        result[unit] = value.toIntegerWithoutRounding(globalObject);
+        result[unit] = value.toNumber(globalObject) + 0.0;
         RETURN_IF_EXCEPTION(scope, { });
 
         if (!isInteger(result[unit])) {
@@ -127,6 +121,11 @@ ISO8601::Duration TemporalDuration::toISO8601Duration(JSGlobalObject* globalObje
         duration = fromDurationLike(globalObject, asObject(itemValue));
         RETURN_IF_EXCEPTION(scope, { });
     } else {
+        if (!itemValue.isString()) {
+            throwTypeError(globalObject, scope, "can only convert to Duration from object or string values"_s);
+            return { };
+        }
+
         String string = itemValue.toWTFString(globalObject);
         RETURN_IF_EXCEPTION(scope, { });
 

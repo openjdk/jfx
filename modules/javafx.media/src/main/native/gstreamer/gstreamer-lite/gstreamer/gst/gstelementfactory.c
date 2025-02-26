@@ -163,7 +163,7 @@ gst_element_factory_cleanup (GstElementFactory * factory)
     GstStaticPadTemplate *templ = item->data;
 
     gst_static_caps_cleanup (&templ->static_caps);
-    g_slice_free (GstStaticPadTemplate, templ);
+    g_free (templ);
   }
   g_list_free (factory->staticpadtemplates);
   factory->staticpadtemplates = NULL;
@@ -257,7 +257,7 @@ gst_element_register (GstPlugin * plugin, const gchar * name, guint rank,
     GstStaticPadTemplate *newt;
     gchar *caps_string = gst_caps_to_string (templ->caps);
 
-    newt = g_slice_new (GstStaticPadTemplate);
+    newt = g_new (GstStaticPadTemplate, 1);
     newt->name_template = g_intern_string (templ->name_template);
     newt->direction = templ->direction;
     newt->presence = templ->presence;
@@ -489,14 +489,15 @@ gst_element_factory_create_with_properties (GstElementFactory * factory,
 
   GST_INFO ("creating element \"%s\"", GST_OBJECT_NAME (factory));
 
-  if (factory->type == 0)
+  if (factory->type == G_TYPE_INVALID)
     goto no_type;
 
   element = (GstElement *) g_object_new_with_properties (factory->type, n,
       names, values);
-
-  if (G_UNLIKELY (element == NULL))
-    goto no_element;
+  if (G_UNLIKELY (!element)) {
+    gst_object_unref (factory);
+    g_return_val_if_fail (element != NULL, NULL);
+  }
 
   /* fill in the pointer to the factory in the element class. The
    * class will not be unreffed currently.
@@ -536,12 +537,6 @@ no_type:
     gst_object_unref (factory);
     return NULL;
   }
-no_element:
-  {
-    GST_WARNING_OBJECT (factory, "could not create element");
-    gst_object_unref (factory);
-    return NULL;
-  }
 }
 
 /**
@@ -574,10 +569,13 @@ gst_element_factory_create_valist (GstElementFactory * factory,
       GST_ELEMENT_FACTORY (gst_plugin_feature_load (GST_PLUGIN_FEATURE
           (factory)));
 
-  g_return_val_if_fail (newfactory != NULL, NULL);
-  g_return_val_if_fail (newfactory->type != 0, NULL);
+  if (newfactory == NULL)
+    goto load_failed;
 
   factory = newfactory;
+
+  if (factory->type == G_TYPE_INVALID)
+    goto no_type;
 
   if (!first) {
     element =
@@ -603,6 +601,19 @@ gst_element_factory_create_valist (GstElementFactory * factory,
 out:
   gst_object_unref (factory);
   return element;
+
+  /* ERRORS */
+load_failed:
+  {
+    GST_WARNING_OBJECT (factory, "loading plugin returned NULL!");
+    return NULL;
+  }
+no_type:
+  {
+    GST_WARNING_OBJECT (factory, "factory has no type");
+    gst_object_unref (factory);
+    return NULL;
+  }
 }
 
 /**
@@ -1206,6 +1217,10 @@ gst_element_factory_list_is_type (GstElementFactory * factory,
   /* FIXME : We're actually parsing two Classes here... */
   if (!res && (type & GST_ELEMENT_FACTORY_TYPE_PARSER))
     res = ((strstr (klass, "Parser") != NULL)
+        && (strstr (klass, "Codec") != NULL));
+
+  if (!res && (type & GST_ELEMENT_FACTORY_TYPE_TIMESTAMPER))
+    res = ((strstr (klass, "Timestamper") != NULL)
         && (strstr (klass, "Codec") != NULL));
 
   if (!res && (type & GST_ELEMENT_FACTORY_TYPE_DEPAYLOADER))

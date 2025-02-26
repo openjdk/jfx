@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2023, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -30,7 +30,10 @@ import com.sun.javafx.tk.Toolkit;
 import java.util.Optional;
 import javafx.beans.property.ReadOnlyBooleanProperty;
 import javafx.beans.property.ReadOnlyBooleanWrapper;
+import javafx.beans.property.ReadOnlyObjectProperty;
+import javafx.collections.ObservableMap;
 import javafx.scene.input.KeyCode;
+import javafx.scene.paint.Color;
 
 /**
  * Application platform support class.
@@ -431,5 +434,333 @@ public final class Platform {
             accessibilityActiveProperty.bind(PlatformImpl.accessibilityActiveProperty());
         }
         return accessibilityActiveProperty.getReadOnlyProperty();
+    }
+
+    /**
+     * Gets the preferences of the current platform.
+     * <p>
+     * The map returned from this method is unmodifiable, which means that keys and values cannot
+     * be added, removed, or updated. Calling any mutator method on the map will always cause
+     * {@code UnsupportedOperationException} to be thrown. However, the mappings will be updated
+     * by JavaFX when the operating system reports that a platform preference has changed.
+     *
+     * @return the {@code Preferences} instance
+     * @see <a href="Platform.Preferences.html#preferences-table-windows">Windows preferences</a>
+     * @see <a href="Platform.Preferences.html#preferences-table-macos">macOS preferences</a>
+     * @see <a href="Platform.Preferences.html#preferences-table-linux">Linux preferences</a>
+     * @since 22
+     */
+    public static Preferences getPreferences() {
+        PlatformImpl.checkPreferencesSupport();
+        return PlatformImpl.getPlatformPreferences();
+    }
+
+    /**
+     * Contains preferences of the current platform.
+     * <p>
+     * {@code Preferences} extends {@link ObservableMap} to expose platform preferences as key-value pairs.
+     * The map is unmodifiable, which means that keys and values cannot be added, removed, or updated.
+     * Calling any mutator method on the map will always cause {@code UnsupportedOperationException} to be thrown.
+     * However, the mappings will be updated by JavaFX when the operating system reports that a platform
+     * preference has changed.
+     * <p>
+     * For convenience, {@link #getInteger}, {@link #getDouble}, {@link #getBoolean}, {@link #getString},
+     * {@link #getColor}, and {@link #getValue} are provided as typed alternatives to the untyped
+     * {@link #get} method.
+     * <p>
+     * The preferences that are reported by the platform may be dependent on the operating system version
+     * and its current configuration, so applications should not assume that a particular preference is
+     * always available.
+     * <p>
+     * The following preferences are potentially available on the specified platforms:
+     * <table id="preferences-table-windows" class="striped">
+     *     <caption>Windows</caption>
+     *     <tbody>
+     *         <tr><td>{@code Windows.SPI.HighContrast}</td><td>{@link Boolean}</td></tr>
+     *         <tr><td>{@code Windows.SPI.HighContrastColorScheme}</td><td>{@link String}</td></tr>
+     *         <tr><td>{@code Windows.SPI.ClientAreaAnimation}</td><td>{@link Boolean}</td></tr>
+     *         <tr><td>{@code Windows.SysColor.COLOR_3DFACE}</td><td>{@link Color}</td></tr>
+     *         <tr><td>{@code Windows.SysColor.COLOR_BTNTEXT}</td><td>{@link Color}</td></tr>
+     *         <tr><td>{@code Windows.SysColor.COLOR_GRAYTEXT}</td><td>{@link Color}</td></tr>
+     *         <tr><td>{@code Windows.SysColor.COLOR_HIGHLIGHT}</td><td>{@link Color}</td></tr>
+     *         <tr><td>{@code Windows.SysColor.COLOR_HIGHLIGHTTEXT}</td><td>{@link Color}</td></tr>
+     *         <tr><td>{@code Windows.SysColor.COLOR_HOTLIGHT}</td><td>{@link Color}</td></tr>
+     *         <tr><td>{@code Windows.SysColor.COLOR_WINDOW}</td><td>{@link Color}</td></tr>
+     *         <tr><td>{@code Windows.SysColor.COLOR_WINDOWTEXT}</td><td>{@link Color}</td></tr>
+     *         <tr><td>{@code Windows.UIColor.Background}</td><td>{@link Color}</td></tr>
+     *         <tr><td>{@code Windows.UIColor.Foreground}</td><td>{@link Color}</td></tr>
+     *         <tr><td>{@code Windows.UIColor.AccentDark3}</td><td>{@link Color}</td></tr>
+     *         <tr><td>{@code Windows.UIColor.AccentDark2}</td><td>{@link Color}</td></tr>
+     *         <tr><td>{@code Windows.UIColor.AccentDark1}</td><td>{@link Color}</td></tr>
+     *         <tr><td>{@code Windows.UIColor.Accent}</td><td>{@link Color}</td></tr>
+     *         <tr><td>{@code Windows.UIColor.AccentLight1}</td><td>{@link Color}</td></tr>
+     *         <tr><td>{@code Windows.UIColor.AccentLight2}</td><td>{@link Color}</td></tr>
+     *         <tr><td>{@code Windows.UIColor.AccentLight3}</td><td>{@link Color}</td></tr>
+     *         <tr><td>{@code Windows.UISettings.AdvancedEffectsEnabled}</td><td>{@link Boolean}</td></tr>
+     *         <tr><td>{@code Windows.UISettings.AutoHideScrollBars}</td><td>{@link Boolean}</td></tr>
+     *         <tr><td>{@code Windows.NetworkInformation.InternetCostType}</td><td>{@link String}</td></tr>
+     *         <tr></tr>
+     *     </tbody>
+     * </table>
+     * <table id="preferences-table-macos" class="striped">
+     *     <caption>macOS</caption>
+     *     <tbody>
+     *         <tr><td>{@code macOS.NSColor.labelColor}</td><td>{@link Color}</td></tr>
+     *         <tr><td>{@code macOS.NSColor.secondaryLabelColor}</td><td>{@link Color}</td></tr>
+     *         <tr><td>{@code macOS.NSColor.tertiaryLabelColor}</td><td>{@link Color}</td></tr>
+     *         <tr><td>{@code macOS.NSColor.quaternaryLabelColor}</td><td>{@link Color}</td></tr>
+     *         <tr><td>{@code macOS.NSColor.textColor}</td><td>{@link Color}</td></tr>
+     *         <tr><td>{@code macOS.NSColor.placeholderTextColor}</td><td>{@link Color}</td></tr>
+     *         <tr><td>{@code macOS.NSColor.selectedTextColor}</td><td>{@link Color}</td></tr>
+     *         <tr><td>{@code macOS.NSColor.textBackgroundColor}</td><td>{@link Color}</td></tr>
+     *         <tr><td>{@code macOS.NSColor.selectedTextBackgroundColor}</td><td>{@link Color}</td></tr>
+     *         <tr><td>{@code macOS.NSColor.keyboardFocusIndicatorColor}</td><td>{@link Color}</td></tr>
+     *         <tr><td>{@code macOS.NSColor.unemphasizedSelectedTextColor}</td><td>{@link Color}</td></tr>
+     *         <tr><td>{@code macOS.NSColor.unemphasizedSelectedTextBackgroundColor}</td><td>{@link Color}</td></tr>
+     *         <tr><td>{@code macOS.NSColor.linkColor}</td><td>{@link Color}</td></tr>
+     *         <tr><td>{@code macOS.NSColor.separatorColor}</td><td>{@link Color}</td></tr>
+     *         <tr><td>{@code macOS.NSColor.selectedContentBackgroundColor}</td><td>{@link Color}</td></tr>
+     *         <tr><td>{@code macOS.NSColor.unemphasizedSelectedContentBackgroundColor}</td><td>{@link Color}</td></tr>
+     *         <tr><td>{@code macOS.NSColor.selectedMenuItemTextColor}</td><td>{@link Color}</td></tr>
+     *         <tr><td>{@code macOS.NSColor.gridColor}</td><td>{@link Color}</td></tr>
+     *         <tr><td>{@code macOS.NSColor.headerTextColor}</td><td>{@link Color}</td></tr>
+     *         <tr><td>{@code macOS.NSColor.alternatingContentBackgroundColors}</td><td>{@link Color}{@code []}</td></tr>
+     *         <tr><td>{@code macOS.NSColor.controlAccentColor}</td><td>{@link Color}</td></tr>
+     *         <tr><td>{@code macOS.NSColor.controlColor}</td><td>{@link Color}</td></tr>
+     *         <tr><td>{@code macOS.NSColor.controlBackgroundColor}</td><td>{@link Color}</td></tr>
+     *         <tr><td>{@code macOS.NSColor.controlTextColor}</td><td>{@link Color}</td></tr>
+     *         <tr><td>{@code macOS.NSColor.disabledControlTextColor}</td><td>{@link Color}</td></tr>
+     *         <tr><td>{@code macOS.NSColor.selectedControlColor}</td><td>{@link Color}</td></tr>
+     *         <tr><td>{@code macOS.NSColor.selectedControlTextColor}</td><td>{@link Color}</td></tr>
+     *         <tr><td>{@code macOS.NSColor.alternateSelectedControlTextColor}</td><td>{@link Color}</td></tr>
+     *         <tr><td>{@code macOS.NSColor.currentControlTint}</td><td>{@link String}</td></tr>
+     *         <tr><td>{@code macOS.NSColor.windowBackgroundColor}</td><td>{@link Color}</td></tr>
+     *         <tr><td>{@code macOS.NSColor.windowFrameTextColor}</td><td>{@link Color}</td></tr>
+     *         <tr><td>{@code macOS.NSColor.underPageBackgroundColor}</td><td>{@link Color}</td></tr>
+     *         <tr><td>{@code macOS.NSColor.findHighlightColor}</td><td>{@link Color}</td></tr>
+     *         <tr><td>{@code macOS.NSColor.highlightColor}</td><td>{@link Color}</td></tr>
+     *         <tr><td>{@code macOS.NSColor.shadowColor}</td><td>{@link Color}</td></tr>
+     *         <tr><td>{@code macOS.NSColor.systemBlueColor}</td><td>{@link Color}</td></tr>
+     *         <tr><td>{@code macOS.NSColor.systemBrownColor}</td><td>{@link Color}</td></tr>
+     *         <tr><td>{@code macOS.NSColor.systemGrayColor}</td><td>{@link Color}</td></tr>
+     *         <tr><td>{@code macOS.NSColor.systemGreenColor}</td><td>{@link Color}</td></tr>
+     *         <tr><td>{@code macOS.NSColor.systemIndigoColor}</td><td>{@link Color}</td></tr>
+     *         <tr><td>{@code macOS.NSColor.systemOrangeColor}</td><td>{@link Color}</td></tr>
+     *         <tr><td>{@code macOS.NSColor.systemPinkColor}</td><td>{@link Color}</td></tr>
+     *         <tr><td>{@code macOS.NSColor.systemPurpleColor}</td><td>{@link Color}</td></tr>
+     *         <tr><td>{@code macOS.NSColor.systemRedColor}</td><td>{@link Color}</td></tr>
+     *         <tr><td>{@code macOS.NSColor.systemTealColor}</td><td>{@link Color}</td></tr>
+     *         <tr><td>{@code macOS.NSColor.systemYellowColor}</td><td>{@link Color}</td></tr>
+     *         <tr><td>{@code macOS.NSWorkspace.accessibilityDisplayShouldReduceMotion}</td><td>{@link Boolean}</td></tr>
+     *         <tr><td>{@code macOS.NSWorkspace.accessibilityDisplayShouldReduceTransparency}</td><td>{@link Boolean}</td></tr>
+     *         <tr><td>{@code macOS.NSScroller.preferredScrollerStyle}</td><td>{@link String}</td></tr>
+     *         <tr><td>{@code macOS.NWPathMonitor.currentPathConstrained}</td><td>{@link Boolean}</td></tr>
+     *         <tr><td>{@code macOS.NWPathMonitor.currentPathExpensive}</td><td>{@link Boolean}</td></tr>
+     *         <tr></tr>
+     *     </tbody>
+     * </table>
+     * <table id="preferences-table-linux" class="striped">
+     *     <caption>Linux</caption>
+     *     <tbody>
+     *         <tr><td>{@code GTK.theme_name}</td><td>{@link String}</td></tr>
+     *         <tr><td>{@code GTK.theme_fg_color}</td><td>{@link Color}</td></tr>
+     *         <tr><td>{@code GTK.theme_bg_color}</td><td>{@link Color}</td></tr>
+     *         <tr><td>{@code GTK.theme_base_color}</td><td>{@link Color}</td></tr>
+     *         <tr><td>{@code GTK.theme_selected_bg_color}</td><td>{@link Color}</td></tr>
+     *         <tr><td>{@code GTK.theme_selected_fg_color}</td><td>{@link Color}</td></tr>
+     *         <tr><td>{@code GTK.theme_unfocused_fg_color}</td><td>{@link Color}</td></tr>
+     *         <tr><td>{@code GTK.theme_unfocused_bg_color}</td><td>{@link Color}</td></tr>
+     *         <tr><td>{@code GTK.theme_unfocused_base_color}</td><td>{@link Color}</td></tr>
+     *         <tr><td>{@code GTK.theme_unfocused_selected_bg_color}</td><td>{@link Color}</td></tr>
+     *         <tr><td>{@code GTK.theme_unfocused_selected_fg_color}</td><td>{@link Color}</td></tr>
+     *         <tr><td>{@code GTK.insensitive_bg_color}</td><td>{@link Color}</td></tr>
+     *         <tr><td>{@code GTK.insensitive_fg_color}</td><td>{@link Color}</td></tr>
+     *         <tr><td>{@code GTK.insensitive_base_color}</td><td>{@link Color}</td></tr>
+     *         <tr><td>{@code GTK.borders}</td><td>{@link Color}</td></tr>
+     *         <tr><td>{@code GTK.unfocused_borders}</td><td>{@link Color}</td></tr>
+     *         <tr><td>{@code GTK.warning_color}</td><td>{@link Color}</td></tr>
+     *         <tr><td>{@code GTK.error_color}</td><td>{@link Color}</td></tr>
+     *         <tr><td>{@code GTK.success_color}</td><td>{@link Color}</td></tr>
+     *         <tr><td>{@code GTK.enable_animations}</td><td>{@link Boolean}</td></tr>
+     *         <tr><td>{@code GTK.overlay_scrolling}</td><td>{@link Boolean}</td></tr>
+     *         <tr><td>{@code GTK.network_metered}</td><td>{@link Boolean}</td></tr>
+     *         <tr></tr>
+     *     </tbody>
+     * </table>
+     *
+     * @since 22
+     */
+    public sealed interface Preferences extends ObservableMap<String, Object>
+            permits com.sun.javafx.application.preferences.PlatformPreferences {
+
+        /**
+         * Specifies whether applications should always show scroll bars. If not set, an application may
+         * choose to hide scroll bars that are not actively used, or make them smaller or less noticeable.
+         * <p>
+         * If the platform does not report this preference, this property defaults to {@code false}.
+         *
+         * @return the {@code persistentScrollBars} property
+         * @defaultValue {@code false}
+         * @since 24
+         */
+        ReadOnlyBooleanProperty persistentScrollBarsProperty();
+
+        boolean isPersistentScrollBars();
+
+        /**
+         * Specifies whether applications should minimize the amount of non-essential animations,
+         * reducing discomfort for users who experience motion sickness or vertigo.
+         * <p>
+         * If the platform does not report this preference, this property defaults to {@code false}.
+         *
+         * @return the {@code reducedMotion} property
+         * @defaultValue {@code false}
+         * @since 24
+         */
+        ReadOnlyBooleanProperty reducedMotionProperty();
+
+        boolean isReducedMotion();
+
+        /**
+         * Specifies whether applications should minimize the amount of transparent or translucent
+         * layer effects, which can help to increase contrast and readability for some users.
+         * <p>
+         * If the platform does not report this preference, this property defaults to {@code false}.
+         *
+         * @return the {@code reducedTransparency} property
+         * @defaultValue {@code false}
+         * @since 24
+         */
+        ReadOnlyBooleanProperty reducedTransparencyProperty();
+
+        boolean isReducedTransparency();
+
+        /**
+         * Specifies whether applications should minimize the amount of internet traffic, which users
+         * might request because they are on a metered network or a limited data plan.
+         * <p>
+         * If the platform does not report this preference, this property defaults to {@code false}.
+         *
+         * @return the {@code reducedData} property
+         * @defaultValue {@code false}
+         * @since 24
+         */
+        ReadOnlyBooleanProperty reducedDataProperty();
+
+        boolean isReducedData();
+
+        /**
+         * The platform color scheme, which specifies whether applications should prefer light text on
+         * dark backgrounds, or dark text on light backgrounds.
+         * <p>
+         * If the platform does not report color preferences, this property defaults to {@code LIGHT}.
+         *
+         * @return the {@code colorScheme} property
+         * @defaultValue {@link ColorScheme#LIGHT}
+         */
+        ReadOnlyObjectProperty<ColorScheme> colorSchemeProperty();
+
+        ColorScheme getColorScheme();
+
+        /**
+         * The color used for background regions.
+         * <p>
+         * If the platform does not report a background color, this property defaults to {@code WHITE}.
+         *
+         * @return the {@code backgroundColor} property
+         * @defaultValue {@link Color#WHITE}
+         */
+        ReadOnlyObjectProperty<Color> backgroundColorProperty();
+
+        Color getBackgroundColor();
+
+        /**
+         * The color used for foreground elements like text.
+         * <p>
+         * If the platform does not report a foreground color, this property defaults to {@code BLACK}.
+         *
+         * @return the {@code foregroundColor} property
+         * @defaultValue {@link Color#BLACK}
+         */
+        ReadOnlyObjectProperty<Color> foregroundColorProperty();
+
+        Color getForegroundColor();
+
+        /**
+         * The accent color, which can be used to highlight the active or important part of a
+         * control and make it stand out from the rest of the user interface. It is usually a
+         * vivid color that contrasts with the foreground and background colors.
+         * <p>
+         * If the platform does not report an accent color, this property defaults to vivid blue
+         * (corresponding to the hex color value {@code #157EFB}).
+         *
+         * @return the {@code accentColor} property
+         * @defaultValue {@code #157EFB}
+         */
+        ReadOnlyObjectProperty<Color> accentColorProperty();
+
+        Color getAccentColor();
+
+        /**
+         * Returns an optional {@code Integer} to which the specified key is mapped.
+         *
+         * @param key the key
+         * @throws NullPointerException if {@code key} is null
+         * @throws IllegalArgumentException if the key is not mappable to an {@code Integer}
+         * @return the optional {@code Integer} to which the key is mapped
+         */
+        Optional<Integer> getInteger(String key);
+
+        /**
+         * Returns an optional {@code Double} to which the specified key is mapped.
+         *
+         * @param key the key
+         * @throws NullPointerException if {@code key} is null
+         * @throws IllegalArgumentException if the key is not mappable to a {@code Double}
+         * @return the optional {@code Double} to which the key is mapped
+         */
+        Optional<Double> getDouble(String key);
+
+        /**
+         * Returns an optional {@code Boolean} to which the specified key is mapped.
+         *
+         * @param key the key
+         * @throws NullPointerException if {@code key} is null
+         * @throws IllegalArgumentException if the key is not mappable to a {@code Boolean}
+         * @return the optional {@code Boolean} to which the key is mapped
+         */
+        Optional<Boolean> getBoolean(String key);
+
+        /**
+         * Returns an optional {@code String} to which the specified key is mapped.
+         *
+         * @param key the key
+         * @throws NullPointerException if {@code key} is null
+         * @throws IllegalArgumentException if the key is not mappable to a {@code String}
+         * @return the optional {@code String} to which the key is mapped
+         */
+        Optional<String> getString(String key);
+
+        /**
+         * Returns an optional {@code Color} to which the specified key is mapped.
+         *
+         * @param key the key
+         * @throws NullPointerException if {@code key} is null
+         * @throws IllegalArgumentException if the key is not mappable to a {@code Color}
+         * @return the optional {@code Color} instance to which the key is mapped
+         */
+        Optional<Color> getColor(String key);
+
+        /**
+         * Returns an optional value to which the specified key is mapped.
+         *
+         * @param <T> the type of the value
+         * @param key the key
+         * @param type the type of the value
+         * @throws NullPointerException if {@code key} or {@code type} is null
+         * @throws IllegalArgumentException if the key is not mappable to a value of type {@code T}
+         * @return the optional value to which the key is mapped
+         */
+        <T> Optional<T> getValue(String key, Class<T> type);
     }
 }

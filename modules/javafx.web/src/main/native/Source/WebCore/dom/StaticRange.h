@@ -39,7 +39,7 @@ namespace WebCore {
 template<typename> class ExceptionOr;
 
 class StaticRange final : public AbstractRange, public SimpleRange {
-    WTF_MAKE_ISO_ALLOCATED(StaticRange);
+    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(StaticRange);
 public:
     struct Init {
         RefPtr<Node> startContainer;
@@ -57,6 +57,9 @@ public:
     Node& endContainer() const final { return SimpleRange::endContainer(); }
     unsigned endOffset() const final { return SimpleRange::endOffset(); }
     bool collapsed() const final { return SimpleRange::collapsed(); }
+
+    // https://dom.spec.whatwg.org/#staticrange-valid
+    bool computeValidity() const;
 
     void visitNodesConcurrently(JSC::AbstractSlotVisitor&) const;
 
