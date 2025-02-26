@@ -218,6 +218,9 @@ bool DocumentWriter::begin(const URL& urlReference, bool dispatch, Document* own
         // https://html.spec.whatwg.org/multipage/origin.html#determining-navigation-params-policy-container
         RefPtr currentHistoryItem = frame->history().currentItem();
 
+        auto isLoadingBrowserControlledHTML = [document] {
+            return document->loader() && document->loader()->substituteData().isValid();
+        };
         if (currentHistoryItem && currentHistoryItem->policyContainer()) {
             const auto& policyContainerFromHistory = currentHistoryItem->policyContainer();
             ASSERT(policyContainerFromHistory);
@@ -228,7 +231,7 @@ bool DocumentWriter::begin(const URL& urlReference, bool dispatch, Document* own
                 document->inheritPolicyContainerFrom(parentFrame->document()->policyContainer());
                 document->checkedContentSecurityPolicy()->updateSourceSelf(parentFrame->document()->securityOrigin());
             }
-        } else if (triggeringAction && triggeringAction->requester()) {
+        } else if (triggeringAction && triggeringAction->requester() && !isLoadingBrowserControlledHTML()) {
             document->inheritPolicyContainerFrom(triggeringAction->requester()->policyContainer);
             document->checkedContentSecurityPolicy()->updateSourceSelf(triggeringAction->requester()->securityOrigin);
         }

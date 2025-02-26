@@ -25,11 +25,13 @@
 
 #include "config.h"
 #include "CSSQuadValue.h"
+#include "CSSValue.h"
 
 namespace WebCore {
 
 CSSQuadValue::CSSQuadValue(Quad quad)
     : CSSValue(QuadClass)
+    , m_coalesceIdenticalValues(true)
     , m_quad(WTFMove(quad))
 {
 }
@@ -49,4 +51,12 @@ bool CSSQuadValue::equals(const CSSQuadValue& other) const
     return m_quad.equals(other.m_quad);
 }
 
+bool CSSQuadValue::canBeCoalesced() const
+{
+    Ref top = m_quad.top();
+    Ref right = m_quad.right();
+    Ref left = m_quad.left();
+    Ref bottom = m_quad.bottom();
+    return m_coalesceIdenticalValues && top->equals(right) && top->equals(left) && top->equals(bottom);
+}
 } // namespace WebCore
