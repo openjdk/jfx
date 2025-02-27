@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -378,6 +378,9 @@ public abstract class TextInputControl extends Control {
             String txt = get();
             if (txt != null && txt.contains("\n")) {
                 txt = txt.replace("\n", "");
+                if (isBound()) {
+                    unbind();
+                }
                 set(txt);
             }
         }
@@ -1389,7 +1392,7 @@ public abstract class TextInputControl extends Control {
     }
 
     /**
-     * If the field is currently being edited, this call will set text to the last commited value.
+     * If the field is currently being edited, this call will set text to the last committed value.
      * @since JavaFX 8u40
      */
     public final void cancelEdit() {

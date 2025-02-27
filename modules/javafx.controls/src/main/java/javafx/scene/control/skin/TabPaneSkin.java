@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -34,6 +34,7 @@ import javafx.animation.KeyFrame;
 import javafx.animation.KeyValue;
 import javafx.animation.Timeline;
 import javafx.animation.Transition;
+import javafx.application.Platform;
 import javafx.beans.InvalidationListener;
 import javafx.beans.Observable;
 import javafx.beans.WeakInvalidationListener;
@@ -516,7 +517,7 @@ public class TabPaneSkin extends SkinBase<TabPane> {
                     }
                 };
 
-                if (closeTabAnimation.get() == TabAnimation.GROW) {
+                if (Platform.isFxApplicationThread() && (closeTabAnimation.get() == TabAnimation.GROW)) {
                     tabRegion.animationState = TabAnimationState.HIDING;
                     Timeline closedTabTimeline = tabRegion.currentAnimation =
                             createTimeline(tabRegion, Duration.millis(ANIMATION_SPEED), 0.0F, cleanup);
@@ -565,7 +566,7 @@ public class TabPaneSkin extends SkinBase<TabPane> {
             addTabContent(tab);
             final TabHeaderSkin tabRegion = tabHeaderArea.getTabHeaderSkin(tab);
             if (tabRegion != null) {
-                if (openTabAnimation.get() == TabAnimation.GROW) {
+                if (Platform.isFxApplicationThread() && (openTabAnimation.get() == TabAnimation.GROW)) {
                     tabRegion.animationState = TabAnimationState.SHOWING;
                     tabRegion.animationTransition.setValue(0.0);
                     tabRegion.setVisible(true);

@@ -100,7 +100,7 @@ void ContentSecurityPolicyTrustedTypesDirective::parse(const String& value)
             auto beginPolicy = buffer.position();
             skipWhile<isTrustedTypeCharacter>(buffer);
 
-            auto policyBuffer = StringParsingBuffer { beginPolicy, buffer.position() };
+            StringParsingBuffer policyBuffer(std::span(beginPolicy, buffer.position()));
 
             if (skipExactlyIgnoringASCIICase(policyBuffer, "'allow-duplicates'"_s)) {
                 m_allowDuplicates = true;
@@ -118,11 +118,12 @@ void ContentSecurityPolicyTrustedTypesDirective::parse(const String& value)
             }
 
             if (skipExactly<isPolicyNameCharacter>(policyBuffer)) {
-                auto policy = String(beginPolicy, buffer.position() - beginPolicy);
+                auto policy = String({ beginPolicy, buffer.position() });
                 m_list.add(policy);
             } else {
-                auto policy = String(beginPolicy, buffer.position() - beginPolicy);
+                auto policy = String({ beginPolicy, buffer.position() });
                 directiveList().policy().reportInvalidTrustedTypesPolicy(policy);
+                return;
             }
 
             ASSERT(buffer.atEnd() || isASCIIWhitespace(*buffer));

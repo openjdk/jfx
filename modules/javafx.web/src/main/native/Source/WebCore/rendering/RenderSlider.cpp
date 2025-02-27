@@ -40,13 +40,13 @@
 #include "SliderThumbElement.h"
 #include "StepRange.h"
 #include "StyleResolver.h"
-#include <wtf/IsoMallocInlines.h>
 #include <wtf/MathExtras.h>
 #include <wtf/StackStats.h>
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
-WTF_MAKE_ISO_ALLOCATED_IMPL(RenderSlider);
+WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(RenderSlider);
 
 const int RenderSlider::defaultTrackLength = 129;
 
@@ -80,8 +80,11 @@ void RenderSlider::computeIntrinsicLogicalWidths(LayoutUnit& minLogicalWidth, La
         }
         return;
     }
-    maxLogicalWidth = defaultTrackLength * style().effectiveZoom();
-    if (!style().width().isPercentOrCalculated())
+    maxLogicalWidth = defaultTrackLength * style().usedZoom();
+    auto& logicalWidth = style().logicalWidth();
+    if (logicalWidth.isCalculated())
+        minLogicalWidth = std::max(0_lu, valueForLength(logicalWidth, 0_lu));
+    else if (!logicalWidth.isPercent())
         minLogicalWidth = maxLogicalWidth;
 }
 

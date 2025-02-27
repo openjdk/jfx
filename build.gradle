@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -2840,6 +2840,121 @@ project(":controls") {
 //}
 // END: incubator placeholder
 
+project(":incubator.input") {
+    project.ext.buildModule = true
+    project.ext.includeSources = true
+    project.ext.moduleRuntime = true
+    project.ext.moduleName = "jfx.incubator.input"
+    project.ext.incubating = true
+
+    sourceSets {
+        main
+        shims {
+            java {
+                compileClasspath += sourceSets.main.output
+                runtimeClasspath += sourceSets.main.output
+            }
+        }
+        test {
+            java {
+                compileClasspath += sourceSets.shims.output
+                runtimeClasspath += sourceSets.shims.output
+            }
+        }
+    }
+
+    project.ext.moduleSourcePath = defaultModuleSourcePath
+    project.ext.moduleSourcePathShim = defaultModuleSourcePathShim
+
+    commonModuleSetup(project, [
+        'base',
+        'graphics',
+        'controls',
+        'incubator.input'
+    ])
+
+    dependencies {
+        testImplementation project(":base").sourceSets.test.output
+        testImplementation project(":graphics").sourceSets.test.output
+        testImplementation project(":controls").sourceSets.test.output
+        implementation project(':base')
+        implementation project(':graphics')
+        implementation project(':controls')
+    }
+
+    test {
+        jvmArgs "-Djavafx.toolkit=test.com.sun.javafx.pgstub.StubToolkit"
+    }
+
+    def modulePath = "${project.sourceSets.main.java.getDestinationDirectory().get().getAsFile()}"
+    modulePath += File.pathSeparator + "${rootProject.projectDir}/modules/javafx.controls/build/classes/java/main"
+    modulePath += File.pathSeparator + "${rootProject.projectDir}/modules/javafx.graphics/build/classes/java/main"
+    modulePath += File.pathSeparator + "${rootProject.projectDir}/modules/javafx.base/build/classes/java/main"
+
+    addMavenPublication(project, [ 'graphics' , 'controls'])
+
+    addValidateSourceSets(project, sourceSets)
+}
+
+project(":incubator.richtext") {
+    project.ext.buildModule = true
+    project.ext.includeSources = true
+    project.ext.moduleRuntime = true
+    project.ext.moduleName = "jfx.incubator.richtext"
+    project.ext.incubating = true
+
+    sourceSets {
+        main
+        shims {
+            java {
+                compileClasspath += sourceSets.main.output
+                runtimeClasspath += sourceSets.main.output
+            }
+        }
+        test {
+            java {
+                compileClasspath += sourceSets.shims.output
+                runtimeClasspath += sourceSets.shims.output
+            }
+        }
+    }
+
+    project.ext.moduleSourcePath = defaultModuleSourcePath
+    project.ext.moduleSourcePathShim = defaultModuleSourcePathShim
+
+    commonModuleSetup(project, [
+        'base',
+        'graphics',
+        'controls',
+        'incubator.input',
+        'incubator.richtext'
+    ])
+
+    dependencies {
+        testImplementation project(":base").sourceSets.test.output
+        testImplementation project(":graphics").sourceSets.test.output
+        testImplementation project(":controls").sourceSets.test.output
+        testImplementation project(":incubator.input").sourceSets.test.output
+        implementation project(':base')
+        implementation project(':graphics')
+        implementation project(':controls')
+        implementation project(':incubator.input')
+    }
+
+    test {
+        jvmArgs "-Djavafx.toolkit=test.com.sun.javafx.pgstub.StubToolkit"
+    }
+
+    def modulePath = "${project.sourceSets.main.java.getDestinationDirectory().get().getAsFile()}"
+    modulePath += File.pathSeparator + "${rootProject.projectDir}/modules/javafx.controls/build/classes/java/main"
+    modulePath += File.pathSeparator + "${rootProject.projectDir}/modules/javafx.graphics/build/classes/java/main"
+    modulePath += File.pathSeparator + "${rootProject.projectDir}/modules/javafx.base/build/classes/java/main"
+
+    addMavenPublication(project, [ 'graphics' , 'controls'])
+
+    addValidateSourceSets(project, sourceSets)
+}
+
 project(":swing") {
 
     // We need to skip setting compiler.options.release for this module,
@@ -3819,11 +3934,27 @@ project(":web") {
                     if (t.name == "win") {
                         // To enable ninja build on Windows
                         environment(WINDOWS_NATIVE_COMPILE_ENVIRONMENT)
-                        // Adds compiler and linker flags if present
-                        def cFlags = webkitProperties.ccFlags?.join(' ') ?: ''
-                        def lFlags = webkitProperties.linkFlags?.join(' ') ?: ''
+                        // Ensure the Clang environment is set up properly
+                        // Set the Clang compiler and linker as webkit has dropped MSVC compiler support
+                        def clangCompiler = "clang-cl.exe"  // Set to the path of clang-cl
+                        def msvcLinker = "link.exe"  // Set to the path of clang-cl
+                        // Define the flags for Clang compilation and MSVC linking
+                        def cFlags = "-shared"
+                        def lFlags = "-shared"
+                        if (!IS_64) {
+                            cFlags += " /clang:-m32"
+                            lFlags += " /machine:x86"
+                        }
+                        // Pass Clang-specific flags
                         cmakeArgs = "$cmakeArgs -DCMAKE_C_FLAGS='${cFlags}' -DCMAKE_CXX_FLAGS='${cFlags}'"
                         cmakeArgs = "$cmakeArgs -DCMAKE_SHARED_LINKER_FLAGS='${lFlags}'"
+
+                        // Specify Clang-CL as the compiler for C and C++
+                        cmakeArgs = "$cmakeArgs -DCMAKE_C_COMPILER=${clangCompiler} -DCMAKE_CXX_COMPILER=${clangCompiler}"
+                        // pass the MSVC bin dir for icu Third party lib
+                        cmakeArgs = "$cmakeArgs -DCMAKE_LINKER=${msvcLinker} -DMSVC_BIN_DIR='${WIN.MSVC_BIN_DIR}'"
+
+
                     } else if (t.name == "mac") {
                         cmakeArgs = " $cmakeArgs -DCMAKE_OSX_DEPLOYMENT_TARGET=$MACOSX_MIN_VERSION -DCMAKE_OSX_SYSROOT=$MACOSX_SDK_PATH"
                     } else if (t.name == "linux") {
@@ -4023,6 +4154,8 @@ project(":systemTests") {
         // BEGIN: incubator placeholder
         //'incubator.mymod',
         // END: incubator placeholder
+        'incubator.input',
+        'incubator.richtext',
         'media',
         'jsobject',
         'web',
@@ -4155,6 +4288,8 @@ project(":systemTests") {
 
         // enable native access for all modules with native code
         jvmArgs enableNativeAll
+
+        maxHeapSize = "1000m"
 
         // FIXME: Remove this when JDK-8334137 is fixed
         if (jdk24OrLater) {
@@ -4483,6 +4618,8 @@ task javadoc(type: Javadoc, dependsOn: createMSPfile) {
         // BEGIN: incubator placeholder
         //project(":incubator.mymod"),
         // END: incubator placeholder
+        project(":incubator.input"),
+        project(":incubator.richtext"),
         project(":media"),
         project(":swing"),
         /*project(":swt"),*/

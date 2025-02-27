@@ -45,7 +45,7 @@ import javafx.scene.shape.Shape3D;
  *
  * @since JavaFX 8.0
  */
-public abstract class Material {
+public abstract sealed class Material permits PhongMaterial {
 
     static {
         // This is used by classes in different packages to get access to

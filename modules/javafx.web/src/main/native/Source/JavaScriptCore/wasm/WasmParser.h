@@ -42,6 +42,7 @@
 #include <wtf/LEBDecoder.h>
 #include <wtf/StdLibExtras.h>
 #include <wtf/StringPrintStream.h>
+#include <wtf/text/MakeString.h>
 #include <wtf/text/WTFString.h>
 #include <wtf/unicode/UTF8Conversion.h>
 
@@ -53,16 +54,13 @@ template<typename T>
 inline String makeString(const T& failure) { return WTF::toString(failure); }
 }
 
-template<typename SuccessType>
-class Parser {
+class ParserBase {
 public:
     typedef String ErrorType;
     typedef Unexpected<ErrorType> UnexpectedResult;
     typedef Expected<void, ErrorType> PartialResult;
-    typedef Expected<SuccessType, ErrorType> Result;
 
-    const uint8_t* source() const { return m_source; }
-    size_t length() const { return m_sourceLength; }
+    std::span<const uint8_t> source() const { return m_source; }
     size_t offset() const { return m_offset; }
 
 protected:
@@ -72,7 +70,7 @@ protected:
         uint32_t end;
     };
 
-    Parser(const uint8_t*, size_t);
+    explicit ParserBase(std::span<const uint8_t>);
 
     bool WARN_UNUSED_RETURN consumeCharacter(char);
     bool WARN_UNUSED_RETURN consumeString(const char*);
@@ -106,7 +104,7 @@ protected:
     NEVER_INLINE UnexpectedResult WARN_UNUSED_RETURN fail(Args... args) const
     {
         using namespace FailureHelper; // See ADL comment in namespace above.
-        return UnexpectedResult(makeString("WebAssembly.Module doesn't parse at byte "_s, String::number(m_offset), ": "_s, makeString(args)...));
+        return UnexpectedResult(makeString("WebAssembly.Module doesn't parse at byte "_s, m_offset, ": "_s, makeString(args)...));
     }
 #define WASM_PARSER_FAIL_IF(condition, ...) do { \
     if (UNLIKELY(condition))                     \
@@ -120,8 +118,7 @@ protected:
     } while (0)
 
 private:
-    const uint8_t* m_source;
-    size_t m_sourceLength;
+    std::span<const uint8_t> m_source;
 
 protected:
     // We keep a local reference to the global table so we don't have to fetch it to find thunk types.
@@ -130,32 +127,37 @@ protected:
     RecursionGroupInformation m_recursionGroupInformation;
 };
 
-template<typename SuccessType>
-ALWAYS_INLINE Parser<SuccessType>::Parser(const uint8_t* sourceBuffer, size_t sourceLength)
-    : m_source(sourceBuffer)
-    , m_sourceLength(sourceLength)
+template<typename SuccessType> class Parser : public ParserBase {
+public:
+    using Result = Expected<SuccessType, ErrorType>;
+
+    explicit Parser(std::span<const uint8_t> span)
+        : ParserBase { span }
+    { }
+};
+
+ALWAYS_INLINE ParserBase::ParserBase(std::span<const uint8_t> source)
+    : m_source(source)
     , m_typeInformation(TypeInformation::singleton())
     , m_recursionGroupInformation({ })
 {
 }
 
-template<typename SuccessType>
-ALWAYS_INLINE bool Parser<SuccessType>::consumeCharacter(char c)
+ALWAYS_INLINE bool ParserBase::consumeCharacter(char c)
 {
-    if (m_offset >= length())
+    if (m_offset >= m_source.size())
         return false;
-    if (c == source()[m_offset]) {
+    if (c == m_source[m_offset]) {
         m_offset++;
         return true;
     }
     return false;
 }
 
-template<typename SuccessType>
-ALWAYS_INLINE bool Parser<SuccessType>::consumeString(const char* str)
+ALWAYS_INLINE bool ParserBase::consumeString(const char* str)
 {
     unsigned start = m_offset;
-    if (m_offset >= length())
+    if (m_offset >= m_source.size())
         return false;
     for (size_t i = 0; str[i]; i++) {
         if (!consumeCharacter(str[i])) {
@@ -166,138 +168,117 @@ ALWAYS_INLINE bool Parser<SuccessType>::consumeString(const char* str)
     return true;
 }
 
-template<typename SuccessType>
-ALWAYS_INLINE bool Parser<SuccessType>::consumeUTF8String(Name& result, size_t stringLength)
+ALWAYS_INLINE bool ParserBase::consumeUTF8String(Name& result, size_t stringLength)
 {
-    if (length() < stringLength || m_offset > length() - stringLength)
+    if (!stringLength)
+        return true;
+    if (m_source.size() < stringLength || m_offset > m_source.size() - stringLength)
         return false;
     if (stringLength > maxStringSize)
         return false;
     if (!result.tryReserveCapacity(stringLength))
         return false;
 
-    const uint8_t* stringStart = source() + m_offset;
-
-    // We don't cache the UTF-16 characters since it seems likely the string is ASCII.
-    if (UNLIKELY(!charactersAreAllASCII(stringStart, stringLength))) {
-        Vector<UChar, 1024> buffer(stringLength);
-        UChar* bufferStart = buffer.data();
-
-        UChar* bufferCurrent = bufferStart;
-        const char* stringCurrent = reinterpret_cast<const char*>(stringStart);
-        if (!WTF::Unicode::convertUTF8ToUTF16(stringCurrent, reinterpret_cast<const char *>(stringStart + stringLength), &bufferCurrent, bufferCurrent + buffer.size()))
+    auto string = spanReinterpretCast<const char8_t>(m_source.subspan(m_offset, stringLength));
+    if (auto checkResult = WTF::Unicode::checkUTF8(string); checkResult.characters.size() != string.size())
             return false;
-    }
 
     result.grow(stringLength);
-    memcpy(result.data(), stringStart, stringLength);
+    memcpy(result.data(), string.data(), stringLength);
     m_offset += stringLength;
     return true;
 }
 
-template<typename SuccessType>
-ALWAYS_INLINE bool Parser<SuccessType>::parseVarUInt32(uint32_t& result)
+ALWAYS_INLINE bool ParserBase::parseVarUInt32(uint32_t& result)
 {
-    return WTF::LEBDecoder::decodeUInt32(m_source, m_sourceLength, m_offset, result);
+    return WTF::LEBDecoder::decodeUInt32(m_source, m_offset, result);
 }
 
-template<typename SuccessType>
-ALWAYS_INLINE bool Parser<SuccessType>::parseVarUInt64(uint64_t& result)
+ALWAYS_INLINE bool ParserBase::parseVarUInt64(uint64_t& result)
 {
-    return WTF::LEBDecoder::decodeUInt64(m_source, m_sourceLength, m_offset, result);
+    return WTF::LEBDecoder::decodeUInt64(m_source, m_offset, result);
 }
 
-template<typename SuccessType>
-ALWAYS_INLINE bool Parser<SuccessType>::parseVarInt32(int32_t& result)
+ALWAYS_INLINE bool ParserBase::parseVarInt32(int32_t& result)
 {
-    return WTF::LEBDecoder::decodeInt32(m_source, m_sourceLength, m_offset, result);
+    return WTF::LEBDecoder::decodeInt32(m_source, m_offset, result);
 }
 
-template<typename SuccessType>
-ALWAYS_INLINE bool Parser<SuccessType>::parseVarInt64(int64_t& result)
+ALWAYS_INLINE bool ParserBase::parseVarInt64(int64_t& result)
 {
-    return WTF::LEBDecoder::decodeInt64(m_source, m_sourceLength, m_offset, result);
+    return WTF::LEBDecoder::decodeInt64(m_source, m_offset, result);
 }
 
-template<typename SuccessType>
-ALWAYS_INLINE bool Parser<SuccessType>::parseUInt32(uint32_t& result)
+ALWAYS_INLINE bool ParserBase::parseUInt32(uint32_t& result)
 {
-    if (length() < 4 || m_offset > length() - 4)
+    if (m_source.size() < m_offset + 4)
         return false;
-    memcpy(&result, source() + m_offset, sizeof(uint32_t)); // src can be unaligned
+    memcpy(&result, m_source.data() + m_offset, sizeof(uint32_t)); // src can be unaligned
     m_offset += 4;
     return true;
 }
 
-template<typename SuccessType>
-ALWAYS_INLINE bool Parser<SuccessType>::parseUInt64(uint64_t& result)
+ALWAYS_INLINE bool ParserBase::parseUInt64(uint64_t& result)
 {
-    if (length() < 8 || m_offset > length() - 8)
+    if (m_source.size() < m_offset + 8)
         return false;
-    memcpy(&result, source() + m_offset, sizeof(uint64_t)); // src can be unaligned
+    memcpy(&result, m_source.data() + m_offset, sizeof(uint64_t)); // src can be unaligned
     m_offset += 8;
     return true;
 }
 
-template<typename SuccessType>
-ALWAYS_INLINE bool Parser<SuccessType>::parseImmByteArray16(v128_t& result)
+ALWAYS_INLINE bool ParserBase::parseImmByteArray16(v128_t& result)
 {
-    if (length() < 16 || m_offset > length() - 16)
+    if (m_source.size() < m_offset + 16)
         return false;
-    std::copy_n(source() + m_offset, 16, result.u8x16);
+    std::copy_n(m_source.begin() + m_offset, 16, result.u8x16);
     m_offset += 16;
     return true;
 }
 
-template<typename SuccessType>
-ALWAYS_INLINE typename Parser<SuccessType>::PartialResult Parser<SuccessType>::parseImmLaneIdx(uint8_t laneCount, uint8_t& result)
+ALWAYS_INLINE typename ParserBase::PartialResult ParserBase::parseImmLaneIdx(uint8_t laneCount, uint8_t& result)
 {
     RELEASE_ASSERT(laneCount == 2 || laneCount == 4 || laneCount == 8 || laneCount == 16 || laneCount == 32);
-    WASM_PARSER_FAIL_IF(!parseUInt8(result), "Could not parse the lane index immediate byte.");
-    WASM_PARSER_FAIL_IF(result >= laneCount, "Lane index immediate is too large, saw ", laneCount, ", expected an ImmLaneIdx", laneCount);
+    WASM_PARSER_FAIL_IF(!parseUInt8(result), "Could not parse the lane index immediate byte."_s);
+    WASM_PARSER_FAIL_IF(result >= laneCount, "Lane index immediate is too large, saw "_s, laneCount, ", expected an ImmLaneIdx"_s, laneCount);
     return { };
 }
 
-template<typename SuccessType>
-ALWAYS_INLINE bool Parser<SuccessType>::parseUInt8(uint8_t& result)
+ALWAYS_INLINE bool ParserBase::parseUInt8(uint8_t& result)
 {
-    if (m_offset >= length())
+    if (m_offset >= m_source.size())
         return false;
-    result = source()[m_offset++];
+    result = m_source[m_offset++];
     return true;
 }
 
-template<typename SuccessType>
-ALWAYS_INLINE bool Parser<SuccessType>::parseInt7(int8_t& result)
+ALWAYS_INLINE bool ParserBase::parseInt7(int8_t& result)
 {
-    if (m_offset >= length())
+    if (m_offset >= m_source.size())
         return false;
-    uint8_t v = source()[m_offset++];
+    uint8_t v = m_source[m_offset++];
     result = (v & 0x40) ? WTF::bitwise_cast<int8_t>(uint8_t(v | 0x80)) : v;
-    return (v & 0x80) == 0;
+    return !(v & 0x80);
 }
 
-template<typename SuccessType>
-ALWAYS_INLINE bool Parser<SuccessType>::peekInt7(int8_t& result)
+ALWAYS_INLINE bool ParserBase::peekInt7(int8_t& result)
 {
-    if (m_offset >= length())
+    if (m_offset >= m_source.size())
         return false;
-    uint8_t v = source()[m_offset];
+    uint8_t v = m_source[m_offset];
     result = (v & 0x40) ? WTF::bitwise_cast<int8_t>(uint8_t(v | 0x80)) : v;
-    return (v & 0x80) == 0;
+    return !(v & 0x80);
 }
 
-template<typename SuccessType>
-ALWAYS_INLINE bool Parser<SuccessType>::parseUInt7(uint8_t& result)
+ALWAYS_INLINE bool ParserBase::parseUInt7(uint8_t& result)
 {
-    if (m_offset >= length())
+    if (m_offset >= m_source.size())
         return false;
-    result = source()[m_offset++];
+    result = m_source[m_offset++];
     return result < 0x80;
 }
 
-template<typename SuccessType>
-ALWAYS_INLINE bool Parser<SuccessType>::parseVarUInt1(uint8_t& result)
+ALWAYS_INLINE bool ParserBase::parseVarUInt1(uint8_t& result)
 {
     uint32_t temp;
     if (!parseVarUInt32(temp))
@@ -308,42 +289,38 @@ ALWAYS_INLINE bool Parser<SuccessType>::parseVarUInt1(uint8_t& result)
     return true;
 }
 
-template<typename SuccessType>
-ALWAYS_INLINE typename Parser<SuccessType>::PartialResult Parser<SuccessType>::parseBlockSignature(const ModuleInformation& info, BlockSignature& result)
+ALWAYS_INLINE typename ParserBase::PartialResult ParserBase::parseBlockSignature(const ModuleInformation& info, BlockSignature& result)
 {
     int8_t kindByte;
     if (peekInt7(kindByte) && isValidTypeKind(kindByte)) {
         TypeKind typeKind = static_cast<TypeKind>(kindByte);
 
-        if (UNLIKELY(Options::useWebAssemblyTypedFunctionReferences())) {
-            if ((isValidHeapTypeKind(typeKind) || typeKind == TypeKind::Ref || typeKind == TypeKind::RefNull))
+        if ((isValidHeapTypeKind(kindByte) || typeKind == TypeKind::Ref || typeKind == TypeKind::RefNull))
                 return parseReftypeSignature(info, result);
-        }
 
         Type type = { typeKind, TypeDefinition::invalidIndex };
-        WASM_PARSER_FAIL_IF(!(isValueType(type) || type.isVoid()), "result type of block: ", makeString(type.kind), " is not a value type or Void");
+        WASM_PARSER_FAIL_IF(!(isValueType(type) || type.isVoid()), "result type of block: "_s, makeString(type.kind), " is not a value type or Void"_s);
         result = m_typeInformation.thunkFor(type);
         m_offset++;
         return { };
     }
 
     int64_t index;
-    WASM_PARSER_FAIL_IF(!parseVarInt64(index), "Block-like instruction doesn't return value type but can't decode type section index");
-    WASM_PARSER_FAIL_IF(index < 0, "Block-like instruction signature index is negative");
-    WASM_PARSER_FAIL_IF(static_cast<size_t>(index) >= info.typeCount(), "Block-like instruction signature index is out of bounds. Index: ", index, " type index space: ", info.typeCount());
+    WASM_PARSER_FAIL_IF(!parseVarInt64(index), "Block-like instruction doesn't return value type but can't decode type section index"_s);
+    WASM_PARSER_FAIL_IF(index < 0, "Block-like instruction signature index is negative"_s);
+    WASM_PARSER_FAIL_IF(static_cast<size_t>(index) >= info.typeCount(), "Block-like instruction signature index is out of bounds. Index: "_s, index, " type index space: "_s, info.typeCount());
 
     const auto& signature = info.typeSignatures[index].get().expand();
-    WASM_PARSER_FAIL_IF(!signature.is<FunctionSignature>(), "Block-like instruction signature index does not refer to a function type definition");
+    WASM_PARSER_FAIL_IF(!signature.is<FunctionSignature>(), "Block-like instruction signature index does not refer to a function type definition"_s);
 
     result = signature.as<FunctionSignature>();
     return { };
 }
 
-template<typename SuccessType>
-typename Parser<SuccessType>::PartialResult Parser<SuccessType>::parseReftypeSignature(const ModuleInformation& info, BlockSignature& result)
+inline typename ParserBase::PartialResult ParserBase::parseReftypeSignature(const ModuleInformation& info, BlockSignature& result)
 {
     Type resultType;
-    WASM_PARSER_FAIL_IF(!parseValueType(info, resultType), "result type of block is not a valid ref type");
+    WASM_PARSER_FAIL_IF(!parseValueType(info, resultType), "result type of block is not a valid ref type"_s);
     Vector<Type, 16> returnTypes { resultType };
     const auto& typeDefinition = TypeInformation::typeDefinitionForFunction(returnTypes, { }).get();
     result = &TypeInformation::getFunctionSignature(typeDefinition->index());
@@ -351,18 +328,14 @@ typename Parser<SuccessType>::PartialResult Parser<SuccessType>::parseReftypeSig
     return { };
 }
 
-template<typename SuccessType>
-ALWAYS_INLINE bool Parser<SuccessType>::parseHeapType(const ModuleInformation& info, int32_t& result)
+ALWAYS_INLINE bool ParserBase::parseHeapType(const ModuleInformation& info, int32_t& result)
 {
-    if (!Options::useWebAssemblyTypedFunctionReferences())
-        return false;
-
     int32_t heapType;
     if (!parseVarInt32(heapType))
         return false;
 
     if (heapType < 0) {
-        if (isValidHeapTypeKind(static_cast<TypeKind>(heapType))) {
+        if (isValidHeapTypeKind(heapType)) {
             result = heapType;
             return true;
         }
@@ -376,8 +349,7 @@ ALWAYS_INLINE bool Parser<SuccessType>::parseHeapType(const ModuleInformation& i
     return true;
 }
 
-template<typename SuccessType>
-ALWAYS_INLINE bool Parser<SuccessType>::parseValueType(const ModuleInformation& info, Type& result)
+ALWAYS_INLINE bool ParserBase::parseValueType(const ModuleInformation& info, Type& result)
 {
     int8_t kind;
     if (!parseInt7(kind))
@@ -387,7 +359,7 @@ ALWAYS_INLINE bool Parser<SuccessType>::parseValueType(const ModuleInformation& 
 
     TypeKind typeKind = static_cast<TypeKind>(kind);
     TypeIndex typeIndex = 0;
-    if (Options::useWebAssemblyTypedFunctionReferences() && isValidHeapTypeKind(typeKind)) {
+    if (isValidHeapTypeKind(kind)) {
         typeIndex = static_cast<TypeIndex>(typeKind);
         typeKind = TypeKind::RefNull;
     } else if (typeKind == TypeKind::Ref || typeKind == TypeKind::RefNull) {
@@ -419,15 +391,13 @@ ALWAYS_INLINE bool Parser<SuccessType>::parseValueType(const ModuleInformation& 
     return true;
 }
 
-template<typename SuccessType>
-ALWAYS_INLINE bool Parser<SuccessType>::parseRefType(const ModuleInformation& info, Type& result)
+ALWAYS_INLINE bool ParserBase::parseRefType(const ModuleInformation& info, Type& result)
 {
     const bool parsed = parseValueType(info, result);
     return parsed && isRefType(result);
 }
 
-template<typename SuccessType>
-ALWAYS_INLINE bool Parser<SuccessType>::parseExternalKind(ExternalKind& result)
+ALWAYS_INLINE bool ParserBase::parseExternalKind(ExternalKind& result)
 {
     uint8_t value;
     if (!parseUInt7(value))

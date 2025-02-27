@@ -32,6 +32,7 @@
 
 #include "LoaderMalloc.h"
 #include "ResourceLoaderIdentifier.h"
+#include "ScriptExecutionContextIdentifier.h"
 #include <wtf/CheckedRef.h>
 #include <wtf/WeakPtr.h>
 
@@ -43,15 +44,17 @@ class ResourceResponse;
 class ResourceTiming;
 class SharedBuffer;
 
-class ThreadableLoaderClient : public CanMakeWeakPtr<ThreadableLoaderClient>, public CanMakeThreadSafeCheckedPtr {
-    WTF_MAKE_NONCOPYABLE(ThreadableLoaderClient); WTF_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(Loader);
+class ThreadableLoaderClient : public CanMakeWeakPtr<ThreadableLoaderClient>, public CanMakeThreadSafeCheckedPtr<ThreadableLoaderClient> {
+    WTF_MAKE_NONCOPYABLE(ThreadableLoaderClient);
+    WTF_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(Loader);
+    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(ThreadableLoaderClient);
 public:
     virtual void didSendData(unsigned long long /*bytesSent*/, unsigned long long /*totalBytesToBeSent*/) { }
 
-    virtual void didReceiveResponse(ResourceLoaderIdentifier, const ResourceResponse&) { }
+    virtual void didReceiveResponse(ScriptExecutionContextIdentifier, ResourceLoaderIdentifier, const ResourceResponse&) { }
     virtual void didReceiveData(const SharedBuffer&) { }
-    virtual void didFinishLoading(ResourceLoaderIdentifier, const NetworkLoadMetrics&) { }
-    virtual void didFail(const ResourceError&) { }
+    virtual void didFinishLoading(ScriptExecutionContextIdentifier, ResourceLoaderIdentifier, const NetworkLoadMetrics&) { }
+    virtual void didFail(ScriptExecutionContextIdentifier, const ResourceError&) { }
     virtual void didFinishTiming(const ResourceTiming&) { }
     virtual void notifyIsDone(bool) { ASSERT_NOT_REACHED(); }
 

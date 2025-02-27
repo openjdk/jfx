@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2008, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -123,7 +123,7 @@ public abstract sealed class Selector permits SimpleSelector, CompoundSelector {
      * {@code PseudoClass} state that it finds along the way.
      * @param styleable the {@code Styleable} to match
      * @param triggerStates a set of {@code PseudoClass} states
-     * @param depth depth of the {@code Node} heirarchy to look for
+     * @param depth depth of the {@code Node} hierarchy to look for
      * @return {@code true} if this {@code Selector} and a set of {@code PseudoClass}
      * applies to the given {@code Styleable}
      */

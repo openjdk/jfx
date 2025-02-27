@@ -26,10 +26,38 @@
 #include "config.h"
 #include "NavigationTransition.h"
 
-#include <wtf/IsoMallocInlines.h>
+#include "JSDOMPromiseDeferred.h"
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
-WTF_MAKE_ISO_ALLOCATED_IMPL(NavigationTransition);
+WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(NavigationTransition);
+
+NavigationTransition::NavigationTransition(NavigationNavigationType type, Ref<NavigationHistoryEntry>&& fromEntry, Ref<DeferredPromise>&& finished)
+    : m_navigationType(type)
+    , m_from(WTFMove(fromEntry))
+    , m_finished(WTFMove(finished))
+{
+}
+
+void NavigationTransition::resolvePromise()
+{
+    m_finished->resolve();
+}
+
+void NavigationTransition::rejectPromise(Exception& exception)
+{
+    m_finished->reject(exception, RejectAsHandled::Yes);
+}
+
+DOMPromise* NavigationTransition::finished()
+{
+    if (!m_finishedDOMPromise) {
+        auto& promise = *jsCast<JSC::JSPromise*>(m_finished->promise());
+        m_finishedDOMPromise = DOMPromise::create(*m_finished->globalObject(), promise);
+    }
+
+    return m_finishedDOMPromise.get();
+}
 
 } // namespace WebCore

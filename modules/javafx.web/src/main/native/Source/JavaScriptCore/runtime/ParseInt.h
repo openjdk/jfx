@@ -49,12 +49,12 @@ ALWAYS_INLINE static int parseDigit(unsigned short c, int radix)
     return digit;
 }
 
-static double parseIntOverflow(const LChar* s, unsigned length, int radix)
+static double parseIntOverflow(std::span<const LChar> s, int radix)
 {
     double number = 0.0;
     double radixMultiplier = 1.0;
 
-    for (const LChar* p = s + length - 1; p >= s; p--) {
+    for (const LChar* p = s.data() + s.size() - 1; p >= s.data(); p--) {
         if (radixMultiplier == std::numeric_limits<double>::infinity()) {
             if (*p != '0') {
                 number = std::numeric_limits<double>::infinity();
@@ -71,12 +71,12 @@ static double parseIntOverflow(const LChar* s, unsigned length, int radix)
     return number;
 }
 
-static double parseIntOverflow(const UChar* s, unsigned length, int radix)
+static double parseIntOverflow(std::span<const UChar> s, int radix)
 {
     double number = 0.0;
     double radixMultiplier = 1.0;
 
-    for (const UChar* p = s + length - 1; p >= s; p--) {
+    for (const UChar* p = s.data() + s.size() - 1; p >= s.data(); p--) {
         if (radixMultiplier == std::numeric_limits<double>::infinity()) {
             if (*p != '0') {
                 number = std::numeric_limits<double>::infinity();
@@ -91,13 +91,6 @@ static double parseIntOverflow(const UChar* s, unsigned length, int radix)
     }
 
     return number;
-}
-
-static double parseIntOverflow(StringView string, int radix)
-{
-    if (string.is8Bit())
-        return parseIntOverflow(string.characters8(), string.length(), radix);
-    return parseIntOverflow(string.characters16(), string.length(), radix);
 }
 
 ALWAYS_INLINE static bool isStrWhiteSpace(UChar c)
@@ -132,14 +125,14 @@ inline static std::optional<double> parseIntDouble(double n)
 // ES5.1 15.1.2.2
 template <typename CharType>
 ALWAYS_INLINE
-static double parseInt(StringView s, const CharType* data, int radix)
+static double parseInt(std::span<const CharType> data, int radix)
 {
     // 1. Let inputString be ToString(string).
     // 2. Let S be a newly created substring of inputString consisting of the first character that is not a
     //    StrWhiteSpaceChar and all characters following that character. (In other words, remove leading white
     //    space.) If inputString does not contain any such characters, let S be the empty string.
-    int length = s.length();
-    int p = 0;
+    size_t length = data.size();
+    size_t p = 0;
     while (p < length && isStrWhiteSpace(data[p]))
         ++p;
 
@@ -204,9 +197,9 @@ static double parseInt(StringView s, const CharType* data, int radix)
     if (number >= mantissaOverflowLowerBound) {
         if (radix == 10) {
             size_t parsedLength;
-            number = parseDouble(s.substring(firstDigitPosition, p - firstDigitPosition), parsedLength);
+            number = parseDouble(data.subspan(firstDigitPosition, p - firstDigitPosition), parsedLength);
         } else if (radix == 2 || radix == 4 || radix == 8 || radix == 16 || radix == 32)
-            number = parseIntOverflow(s.substring(firstDigitPosition, p - firstDigitPosition), radix);
+            number = parseIntOverflow(data.subspan(firstDigitPosition, p - firstDigitPosition), radix);
     }
 
     // 15. Return sign x number.
@@ -216,8 +209,8 @@ static double parseInt(StringView s, const CharType* data, int radix)
 ALWAYS_INLINE static double parseInt(StringView s, int radix)
 {
     if (s.is8Bit())
-        return parseInt(s, s.characters8(), radix);
-    return parseInt(s, s.characters16(), radix);
+        return parseInt(s.span8(), radix);
+    return parseInt(s.span16(), radix);
 }
 
 template<typename CallbackWhenNoException>
@@ -229,9 +222,9 @@ static ALWAYS_INLINE typename std::invoke_result<CallbackWhenNoException, String
     EXCEPTION_ASSERT(!!scope.exception() == !string);
     if (UNLIKELY(!string))
         return { };
-    auto viewWithString = string->viewWithUnderlyingString(globalObject);
+    auto view = string->view(globalObject);
     RETURN_IF_EXCEPTION(scope, { });
-    RELEASE_AND_RETURN(scope, callback(viewWithString.view));
+    RELEASE_AND_RETURN(scope, callback(view));
 }
 
 // Mapping from integers 0..35 to digit identifying this value, for radix 2..36.

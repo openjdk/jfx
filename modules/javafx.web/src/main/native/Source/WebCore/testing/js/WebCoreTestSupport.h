@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2011, 2015 Google Inc. All rights reserved.
- * Copyright (C) 2016-2023 Apple Inc. All rights reserved.
+ * Copyright (C) 2016-2024 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -96,7 +96,7 @@ bool testDocumentFragmentParseXML(const String&, OptionSet<WebCore::ParserConten
 #endif
 
 #if ENABLE(WEB_AUDIO)
-void testSincResamplerProcessBuffer(std::span<const float> source, std::span<float> destination, double scaleFactor) TEST_SUPPORT_EXPORT;
+TEST_SUPPORT_EXPORT void testSincResamplerProcessBuffer(std::span<const float> source, std::span<float> destination, double scaleFactor);
 #endif
 
 } // namespace WebCoreTestSupport

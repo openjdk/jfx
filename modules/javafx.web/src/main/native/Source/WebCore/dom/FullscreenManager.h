@@ -42,8 +42,9 @@ namespace WebCore {
 class DeferredPromise;
 class RenderStyle;
 
-class FullscreenManager final : public CanMakeWeakPtr<FullscreenManager>, public CanMakeCheckedPtr {
+class FullscreenManager final : public CanMakeWeakPtr<FullscreenManager>, public CanMakeCheckedPtr<FullscreenManager> {
     WTF_MAKE_FAST_ALLOCATED;
+    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(FullscreenManager);
 public:
     FullscreenManager(Document&);
     ~FullscreenManager();
@@ -75,7 +76,7 @@ public:
         EnforceIFrameAllowFullscreenRequirement,
         ExemptIFrameAllowFullscreenRequirement,
     };
-    WEBCORE_EXPORT void requestFullscreenForElement(Ref<Element>&&, RefPtr<DeferredPromise>&&, FullscreenCheckType, HTMLMediaElementEnums::VideoFullscreenMode = HTMLMediaElementEnums::VideoFullscreenModeStandard);
+    WEBCORE_EXPORT void requestFullscreenForElement(Ref<Element>&&, RefPtr<DeferredPromise>&&, FullscreenCheckType, CompletionHandler<void(bool)>&& = [](bool) { }, HTMLMediaElementEnums::VideoFullscreenMode = HTMLMediaElementEnums::VideoFullscreenModeStandard);
     WEBCORE_EXPORT bool willEnterFullscreen(Element&, HTMLMediaElementEnums::VideoFullscreenMode = HTMLMediaElementEnums::VideoFullscreenModeStandard);
     WEBCORE_EXPORT bool didEnterFullscreen();
     WEBCORE_EXPORT bool willExitFullscreen();
@@ -117,7 +118,7 @@ private:
 #if !RELEASE_LOG_DISABLED
     const Logger& logger() const { return document().logger(); }
     const void* logIdentifier() const { return m_logIdentifier; }
-    const char* logClassName() const { return "FullscreenManager"; }
+    ASCIILiteral logClassName() const { return "FullscreenManager"_s; }
     WTFLogChannel& logChannel() const;
 #endif
 

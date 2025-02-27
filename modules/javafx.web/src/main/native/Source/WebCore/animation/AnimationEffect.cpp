@@ -33,19 +33,15 @@
 #include "ScriptExecutionContext.h"
 #include "WebAnimation.h"
 #include "WebAnimationUtilities.h"
-#include <wtf/IsoMallocInlines.h>
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
-WTF_MAKE_ISO_ALLOCATED_IMPL(AnimationEffect);
+WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(AnimationEffect);
 
-AnimationEffect::AnimationEffect()
-{
-}
+AnimationEffect::AnimationEffect() = default;
 
-AnimationEffect::~AnimationEffect()
-{
-}
+AnimationEffect::~AnimationEffect() = default;
 
 void AnimationEffect::setAnimation(WebAnimation* animation)
 {

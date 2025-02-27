@@ -1,7 +1,7 @@
 /*
  * Copyright (C) 2004, 2005, 2006, 2007 Nikolas Zimmermann <zimmermann@kde.org>
  * Copyright (C) 2004, 2005, 2006 Rob Buis <buis@kde.org>
- * Copyright (C) 2018-2022 Apple Inc. All rights reserved.
+ * Copyright (C) 2018-2024 Apple Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Library General Public
@@ -22,8 +22,7 @@
 #pragma once
 
 #include "FilterEffectGeometry.h"
-#include "LegacyRenderSVGResourceFilter.h"
-#include "LegacyRenderSVGResourceFilterPrimitive.h"
+#include "FilterEffectVector.h"
 #include "SVGElement.h"
 #include "SVGNames.h"
 #include <wtf/RefPtr.h>
@@ -35,7 +34,8 @@ class FilterEffect;
 class SVGFilter;
 
 class SVGFilterPrimitiveStandardAttributes : public SVGElement {
-    WTF_MAKE_ISO_ALLOCATED(SVGFilterPrimitiveStandardAttributes);
+    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(SVGFilterPrimitiveStandardAttributes);
+    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(SVGFilterPrimitiveStandardAttributes);
 public:
     using PropertyRegistry = SVGPropertyOwnerRegistry<SVGFilterPrimitiveStandardAttributes, SVGElement>;
 
@@ -59,6 +59,7 @@ public:
     RefPtr<FilterEffect> filterEffect(const FilterEffectVector&, const GraphicsContext& destinationContext);
 
     void primitiveAttributeChanged(const QualifiedName&);
+    void markFilterEffectForRepaint();
     void markFilterEffectForRebuild();
 
     static void invalidateFilterPrimitiveParent(SVGElement*);

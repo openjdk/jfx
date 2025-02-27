@@ -45,6 +45,15 @@
 #include <wtf/WeakPtr.h>
 
 namespace WebCore {
+class PeerConnectionBackend;
+}
+
+namespace WTF {
+template<typename T> struct IsDeprecatedWeakRefSmartPointerException;
+template<> struct IsDeprecatedWeakRefSmartPointerException<WebCore::PeerConnectionBackend> : std::true_type { };
+}
+
+namespace WebCore {
 
 class DeferredPromise;
 class Document;
@@ -84,6 +93,9 @@ class PeerConnectionBackend
     : public CanMakeWeakPtr<PeerConnectionBackend>
 #if !RELEASE_LOG_DISABLED
     , private LoggerHelper
+#if PLATFORM(WPE) || PLATFORM(GTK)
+    , public Logger::MessageHandlerObserver
+#endif
 #endif
 {
 public:
@@ -119,7 +131,8 @@ public:
     virtual ExceptionOr<Ref<RTCRtpSender>> addTrack(MediaStreamTrack&, FixedVector<String>&&);
     virtual void removeTrack(RTCRtpSender&) { }
 
-    virtual ExceptionOr<Ref<RTCRtpTransceiver>> addTransceiver(const String&, const RTCRtpTransceiverInit&);
+    enum class IgnoreNegotiationNeededFlag : bool { No, Yes };
+    virtual ExceptionOr<Ref<RTCRtpTransceiver>> addTransceiver(const String&, const RTCRtpTransceiverInit&, IgnoreNegotiationNeededFlag);
     virtual ExceptionOr<Ref<RTCRtpTransceiver>> addTransceiver(Ref<MediaStreamTrack>&&, const RTCRtpTransceiverInit&);
 
     void markAsNeedingNegotiation(uint32_t);
@@ -142,7 +155,7 @@ public:
     };
     struct TransceiverState {
         String mid;
-        Vector<RefPtr<MediaStream>> receiverStreams;
+        Vector<Ref<MediaStream>> receiverStreams;
         std::optional<RTCRtpTransceiverDirection> firedDirection;
     };
     using TransceiverStates = Vector<TransceiverState>;
@@ -160,8 +173,11 @@ public:
 #if !RELEASE_LOG_DISABLED
     const Logger& logger() const final { return m_logger.get(); }
     const void* logIdentifier() const final { return m_logIdentifier; }
-    const char* logClassName() const override { return "PeerConnectionBackend"; }
+    ASCIILiteral logClassName() const override { return "PeerConnectionBackend"_s; }
     WTFLogChannel& logChannel() const final;
+#if PLATFORM(WPE) || PLATFORM(GTK)
+    void handleLogMessage(const WTFLogChannel&, WTFLogLevel, Vector<JSONLogValue>&&) final;
+#endif
 #endif
 
     virtual bool isLocalDescriptionSet() const = 0;
@@ -211,6 +227,9 @@ public:
 
     void iceGatheringStateChanged(RTCIceGatheringState);
 
+    virtual void startGatheringStatLogs(Function<void(String&&)>&&) { }
+    virtual void stopGatheringStatLogs() { }
+
 protected:
     void doneGatheringCandidates();
 
@@ -228,16 +247,17 @@ protected:
 
     void validateSDP(const String&) const;
 
-    struct PendingTrackEvent {
-        Ref<RTCRtpReceiver> receiver;
-        Ref<MediaStreamTrack> track;
-        Vector<RefPtr<MediaStream>> streams;
-        RefPtr<RTCRtpTransceiver> transceiver;
+#if PLATFORM(WPE) || PLATFORM(GTK)
+    bool isJSONLogStreamingEnabled() const { return !m_jsonFilePath.isEmpty(); }
+#endif
+    struct MessageLogEvent {
+        String message;
+        std::optional<std::span<const uint8_t>> payload;
     };
-    void addPendingTrackEvent(PendingTrackEvent&&);
-
-    void dispatchTrackEvent(PendingTrackEvent&);
-
+    using StatsLogEvent = String;
+    using LogEvent = std::variant<MessageLogEvent, StatsLogEvent>;
+    String generateJSONLogEvent(LogEvent&&, bool isForGatherLogs);
+    void emitJSONLogEvent(String&&);
 private:
     virtual void doCreateOffer(RTCOfferOptions&&) = 0;
     virtual void doCreateAnswer(RTCAnswerOptions&&) = 0;
@@ -255,14 +275,16 @@ private:
 
     bool m_shouldFilterICECandidates { true };
 
-    Vector<PendingTrackEvent> m_pendingTrackEvents;
-
 #if !RELEASE_LOG_DISABLED
     Ref<const Logger> m_logger;
     const void* m_logIdentifier;
 #endif
+    String m_logIdentifierString;
     bool m_finishedGatheringCandidates { false };
     bool m_isProcessingLocalDescriptionAnswer { false };
+#if PLATFORM(WPE) || PLATFORM(GTK)
+    String m_jsonFilePath;
+#endif
 };
 
 inline PeerConnectionBackend::DescriptionStates PeerConnectionBackend::DescriptionStates::isolatedCopy() &&

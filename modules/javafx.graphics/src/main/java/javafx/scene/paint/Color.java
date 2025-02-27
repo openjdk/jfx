@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -64,7 +64,7 @@ import javafx.beans.NamedArg;
  * Color c = Color.rgb(0,0,255); //use 0->255 integers, implicit alpha of 1.0
  * Color c = Color.rgb(0,0,255,1.0); //use 0->255 integers, explicit alpha of 1.0
  *
- * Color c = Color.hsb(270,1.0,1.0); //hue = 270, saturation & value = 1.0. inplicit alpha of 1.0
+ * Color c = Color.hsb(270,1.0,1.0); //hue = 270, saturation & value = 1.0. implicit alpha of 1.0
  * Color c = Color.hsb(270,1.0,1.0,1.0); //hue = 270, saturation & value = 1.0, explicit alpha of 1.0
  *
  * Color c = Color.web("0x0000FF",1.0);// blue as a hex web value, explicit alpha

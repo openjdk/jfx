@@ -54,7 +54,7 @@ WTF_MAKE_TZONE_ALLOCATED_IMPL(BufferMemoryManager);
 
 size_t BufferMemoryHandle::fastMappedRedzoneBytes()
 {
-    return static_cast<size_t>(PageCount::pageSize) * Options::webAssemblyFastMemoryRedzonePages();
+    return static_cast<size_t>(PageCount::pageSize) * Options::wasmFastMemoryRedzonePages();
 }
 
 size_t BufferMemoryHandle::fastMappedBytes()
@@ -65,23 +65,9 @@ size_t BufferMemoryHandle::fastMappedBytes()
     return MAX_ARRAY_BUFFER_SIZE + fastMappedRedzoneBytes();
 }
 
-ASCIILiteral BufferMemoryResult::toString(Kind kind)
-{
-    switch (kind) {
-    case Success:
-        return "Success"_s;
-    case SuccessAndNotifyMemoryPressure:
-        return "SuccessAndNotifyMemoryPressure"_s;
-    case SyncTryToReclaimMemory:
-        return "SyncTryToReclaimMemory"_s;
-    }
-    RELEASE_ASSERT_NOT_REACHED();
-    return { };
-}
-
 void BufferMemoryResult::dump(PrintStream& out) const
 {
-    out.print("{basePtr = ", RawPointer(basePtr), ", kind = ", toString(kind), "}");
+    out.print("{basePtr = ", RawPointer(basePtr), ", kind = ", kind, "}");
 }
 
 BufferMemoryResult BufferMemoryManager::tryAllocateFastMemory()
@@ -102,7 +88,7 @@ BufferMemoryResult BufferMemoryManager::tryAllocateFastMemory()
             m_fastMemories.size() >= m_maxFastMemoryCount / 2 ? BufferMemoryResult::SuccessAndNotifyMemoryPressure : BufferMemoryResult::Success);
     }();
 
-    dataLogLnIf(Options::logWebAssemblyMemory(), "Allocated virtual: ", result, "; state: ", *this);
+    dataLogLnIf(Options::logWasmMemory(), "Allocated virtual: ", result, "; state: ", *this);
 
     return result;
 }
@@ -115,7 +101,7 @@ void BufferMemoryManager::freeFastMemory(void* basePtr)
         m_fastMemories.removeFirst(basePtr);
     }
 
-    dataLogLnIf(Options::logWebAssemblyMemory(), "Freed virtual; state: ", *this);
+    dataLogLnIf(Options::logWasmMemory(), "Freed virtual; state: ", *this);
 }
 
 BufferMemoryResult BufferMemoryManager::tryAllocateGrowableBoundsCheckingMemory(size_t mappedCapacity)
@@ -131,7 +117,7 @@ BufferMemoryResult BufferMemoryManager::tryAllocateGrowableBoundsCheckingMemory(
         return BufferMemoryResult(result, BufferMemoryResult::Success);
     }();
 
-    dataLogLnIf(Options::logWebAssemblyMemory(), "Allocated virtual: ", result, "; state: ", *this);
+    dataLogLnIf(Options::logWasmMemory(), "Allocated virtual: ", result, "; state: ", *this);
 
     return result;
 }
@@ -144,7 +130,7 @@ void BufferMemoryManager::freeGrowableBoundsCheckingMemory(void* basePtr, size_t
         m_growableBoundsCheckingMemories.erase(std::make_pair(bitwise_cast<uintptr_t>(basePtr), mappedCapacity));
     }
 
-    dataLogLnIf(Options::logWebAssemblyMemory(), "Freed virtual; state: ", *this);
+    dataLogLnIf(Options::logWasmMemory(), "Freed virtual; state: ", *this);
 }
 
 bool BufferMemoryManager::isInGrowableOrFastMemory(void* address)
@@ -186,7 +172,7 @@ BufferMemoryResult::Kind BufferMemoryManager::tryAllocatePhysicalBytes(size_t by
         return BufferMemoryResult::Success;
     }();
 
-    dataLogLnIf(Options::logWebAssemblyMemory(), "Allocated physical: ", bytes, ", ", BufferMemoryResult::toString(result), "; state: ", *this);
+    dataLogLnIf(Options::logWasmMemory(), "Allocated physical: ", bytes, ", ", result, "; state: ", *this);
 
     return result;
 }
@@ -198,7 +184,7 @@ void BufferMemoryManager::freePhysicalBytes(size_t bytes)
         m_physicalBytes -= bytes;
     }
 
-    dataLogLnIf(Options::logWebAssemblyMemory(), "Freed physical: ", bytes, "; state: ", *this);
+    dataLogLnIf(Options::logWasmMemory(), "Freed physical: ", bytes, "; state: ", *this);
 }
 
 void BufferMemoryManager::dump(PrintStream& out) const
@@ -261,14 +247,7 @@ BufferMemoryHandle::~BufferMemoryHandle()
             // nullBasePointer's zero-sized memory is not used for MemoryMode::Signaling.
             constexpr bool readable = true;
             constexpr bool writable = true;
-            if (!OSAllocator::protect(memory, BufferMemoryHandle::fastMappedBytes(), readable, writable)) {
-#if OS(WINDOWS)
-                dataLogLn("mprotect failed: ", static_cast<int>(GetLastError()));
-#else
-                dataLogLn("mprotect failed: ", safeStrerror(errno).data());
-#endif
-                RELEASE_ASSERT_NOT_REACHED();
-            }
+            OSAllocator::protect(memory, BufferMemoryHandle::fastMappedBytes(), readable, writable);
             BufferMemoryManager::singleton().freeFastMemory(memory);
             break;
         }
@@ -287,14 +266,7 @@ BufferMemoryHandle::~BufferMemoryHandle()
                 }
                 constexpr bool readable = true;
                 constexpr bool writable = true;
-                if (!OSAllocator::protect(memory, m_mappedCapacity, readable, writable)) {
-#if OS(WINDOWS)
-                    dataLogLn("mprotect failed: ", static_cast<int>(GetLastError()));
-#else
-                    dataLogLn("mprotect failed: ", safeStrerror(errno).data());
-#endif
-                    RELEASE_ASSERT_NOT_REACHED();
-                }
+                OSAllocator::protect(memory, m_mappedCapacity, readable, writable);
                 BufferMemoryManager::singleton().freeGrowableBoundsCheckingMemory(memory, m_mappedCapacity);
                 break;
             }

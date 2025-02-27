@@ -800,16 +800,38 @@ g_node_depth_traverse_level (GNode             *node,
  *              efficient than the other orders.
  *
  * Specifies the type of traversal performed by g_tree_traverse(),
- * g_node_traverse() and g_node_find(). The different orders are
- * illustrated here:
+ * g_node_traverse() and g_node_find().
+ *
+ * The different orders are illustrated here:
+ *
  * - In order: A, B, C, D, E, F, G, H, I
- *   ![](Sorted_binary_tree_inorder.svg)
+ *   <picture>
+ *     <source srcset="Sorted_binary_tree_inorder-dark.svg"
+ *      media="(prefers-color-scheme: dark)">
+ *     <img src="Sorted_binary_tree_inorder.svg"
+ *      alt="Sorted binary tree, in-order traversal">
+ *   </picture>
  * - Pre order: F, B, A, D, C, E, G, I, H
- *   ![](Sorted_binary_tree_preorder.svg)
+ *   <picture>
+ *     <source srcset="Sorted_binary_tree_preorder-dark.svg"
+ *      media="(prefers-color-scheme: dark)">
+ *     <img src="Sorted_binary_tree_preorder.svg"
+ *      alt="Sorted binary tree, pre-order traversal">
+ *   </picture>
  * - Post order: A, C, E, D, B, H, I, G, F
- *   ![](Sorted_binary_tree_postorder.svg)
+ *   <picture>
+ *     <source srcset="Sorted_binary_tree_postorder-dark.svg"
+ *      media="(prefers-color-scheme: dark)">
+ *     <img src="Sorted_binary_tree_postorder.svg"
+ *      alt="Sorted binary tree, post-order traversal">
+ *   </picture>
  * - Level order: F, B, G, A, D, I, C, E, H
- *   ![](Sorted_binary_tree_breadth-first_traversal.svg)
+ *   <picture>
+ *     <source srcset="Sorted_binary_tree_breadth-first_traversal-dark.svg"
+ *      media="(prefers-color-scheme: dark)">
+ *     <img src="Sorted_binary_tree_breadth-first_traversal.svg"
+ *      alt="Sorted binary tree, breadth-first level order traversal">
+ *   </picture>
  */
 
 /**

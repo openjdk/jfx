@@ -47,7 +47,7 @@ static Size64 getMappedSize(WGPUBuffer buffer, std::optional<Size64> size, Size6
     if (size.has_value())
         return size.value();
 
-    auto bufferSize = wgpuBufferGetSize(buffer);
+    auto bufferSize = wgpuBufferGetInitialSize(buffer);
     return bufferSize > offset ? (bufferSize - offset) : 0;
 }
 
@@ -65,22 +65,37 @@ void BufferImpl::mapAsync(MapModeFlags mapModeFlags, Size64 offset, std::optiona
 
     // FIXME: Check the casts.
     auto blockPtr = makeBlockPtr([callback = WTFMove(callback)](WGPUBufferMapAsyncStatus status) mutable {
-        callback(status == WGPUBufferMapAsyncStatus_Success ? true : false);
+        callback(status == WGPUBufferMapAsyncStatus_Success);
     });
     wgpuBufferMapAsync(m_backing.get(), backingMapModeFlags, static_cast<size_t>(offset), static_cast<size_t>(usedSize), &mapAsyncCallback, Block_copy(blockPtr.get())); // Block_copy is matched with Block_release above in mapAsyncCallback().
 }
 
-auto BufferImpl::getMappedRange(Size64 offset, std::optional<Size64> size) -> MappedRange
+void BufferImpl::getMappedRange(Size64 offset, std::optional<Size64> size, Function<void(std::span<uint8_t>)>&& callback)
 {
     auto usedSize = getMappedSize(m_backing.get(), size, offset);
 
     // FIXME: Check the casts.
     auto* pointer = wgpuBufferGetMappedRange(m_backing.get(), static_cast<size_t>(offset), static_cast<size_t>(usedSize));
     // FIXME: Check the type narrowing.
-    auto bufferSize = wgpuBufferGetSize(m_backing.get());
+    auto bufferSize = wgpuBufferGetInitialSize(m_backing.get());
     size_t actualSize = pointer ? static_cast<size_t>(bufferSize) : 0;
     size_t actualOffset = pointer ? static_cast<size_t>(offset) : 0;
-    return { static_cast<uint8_t*>(pointer) - actualOffset, actualSize };
+    callback({ static_cast<uint8_t*>(pointer) - actualOffset, actualSize });
+}
+
+std::span<uint8_t> BufferImpl::getBufferContents()
+{
+    if (!m_backing.get())
+        return { };
+
+    auto* pointer = wgpuBufferGetBufferContents(m_backing.get());
+    auto bufferSize = wgpuBufferGetCurrentSize(m_backing.get());
+    return { static_cast<uint8_t*>(pointer), static_cast<size_t>(bufferSize) };
+}
+
+void BufferImpl::copy(std::span<const uint8_t>, size_t)
+{
+    RELEASE_ASSERT_NOT_REACHED();
 }
 
 void BufferImpl::unmap()

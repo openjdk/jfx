@@ -32,10 +32,18 @@
 #include <memory>
 
 namespace WebCore {
+struct RenderBlockFlowRareData;
+}
+
+namespace WTF {
+template<typename T> struct IsDeprecatedWeakRefSmartPointerException;
+template<> struct IsDeprecatedWeakRefSmartPointerException<WebCore::RenderBlockFlowRareData> : std::true_type { };
+}
+
+namespace WebCore {
 
 class LineBreaker;
 class RenderMultiColumnFlow;
-class RenderRubyRun;
 
 namespace LayoutIntegration {
 class LineLayout;
@@ -51,8 +59,69 @@ enum LineCount {
 };
 #endif
 
+class MarginValues {
+public:
+        MarginValues(LayoutUnit beforePos, LayoutUnit beforeNeg, LayoutUnit afterPos, LayoutUnit afterNeg)
+            : m_positiveMarginBefore(beforePos)
+            , m_negativeMarginBefore(beforeNeg)
+            , m_positiveMarginAfter(afterPos)
+            , m_negativeMarginAfter(afterNeg)
+        {
+        }
+
+        LayoutUnit positiveMarginBefore() const { return m_positiveMarginBefore; }
+        LayoutUnit negativeMarginBefore() const { return m_negativeMarginBefore; }
+        LayoutUnit positiveMarginAfter() const { return m_positiveMarginAfter; }
+        LayoutUnit negativeMarginAfter() const { return m_negativeMarginAfter; }
+
+        void setPositiveMarginBefore(LayoutUnit pos) { m_positiveMarginBefore = pos; }
+        void setNegativeMarginBefore(LayoutUnit neg) { m_negativeMarginBefore = neg; }
+        void setPositiveMarginAfter(LayoutUnit pos) { m_positiveMarginAfter = pos; }
+        void setNegativeMarginAfter(LayoutUnit neg) { m_negativeMarginAfter = neg; }
+
+private:
+        LayoutUnit m_positiveMarginBefore;
+        LayoutUnit m_negativeMarginBefore;
+        LayoutUnit m_positiveMarginAfter;
+        LayoutUnit m_negativeMarginAfter;
+};
+
+// Allocated only when some of these fields have non-default values
+struct RenderBlockFlowRareData {
+        WTF_MAKE_NONCOPYABLE(RenderBlockFlowRareData); WTF_MAKE_FAST_ALLOCATED;
+public:
+    RenderBlockFlowRareData(const RenderBlockFlow&);
+    ~RenderBlockFlowRareData();
+
+        static LayoutUnit positiveMarginBeforeDefault(const RenderBlock& block)
+        {
+            return std::max<LayoutUnit>(block.marginBefore(), 0);
+        }
+        static LayoutUnit negativeMarginBeforeDefault(const RenderBlock& block)
+        {
+            return std::max<LayoutUnit>(-block.marginBefore(), 0);
+        }
+        static LayoutUnit positiveMarginAfterDefault(const RenderBlock& block)
+        {
+            return std::max<LayoutUnit>(block.marginAfter(), 0);
+        }
+        static LayoutUnit negativeMarginAfterDefault(const RenderBlock& block)
+        {
+            return std::max<LayoutUnit>(-block.marginAfter(), 0);
+        }
+
+        MarginValues m_margins;
+        int m_lineBreakToAvoidWidow;
+        LayoutUnit m_alignContentShift; // Caches negative shifts for overflow calculation.
+
+        SingleThreadWeakPtr<RenderMultiColumnFlow> m_multiColumnFlow;
+
+        bool m_didBreakAtLineToAvoidWidow : 1;
+};
+
 class RenderBlockFlow : public RenderBlock {
-    WTF_MAKE_ISO_ALLOCATED(RenderBlockFlow);
+    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(RenderBlockFlow);
+    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(RenderBlockFlow);
 public:
     RenderBlockFlow(Type, Element&, RenderStyle&&, OptionSet<BlockFlowFlag> = { });
     RenderBlockFlow(Type, Document&, RenderStyle&&, OptionSet<BlockFlowFlag> = { });
@@ -82,79 +151,16 @@ protected:
     LayoutUnit collapsedMarginBefore() const final { return maxPositiveMarginBefore() - maxNegativeMarginBefore(); }
     LayoutUnit collapsedMarginAfter() const final { return maxPositiveMarginAfter() - maxNegativeMarginAfter(); }
 
-    void dirtyLinesFromChangedChild(RenderObject& child) final
+    void dirtyLineFromChangedChild() final
     {
         if (legacyLineLayout())
-            legacyLineLayout()->lineBoxes().dirtyLinesFromChangedChild(*this, child);
+            legacyLineLayout()->lineBoxes().dirtyLineFromChangedChild(*this);
     }
 
     void paintColumnRules(PaintInfo&, const LayoutPoint&) override;
 
 public:
-    class MarginValues {
-    public:
-        MarginValues(LayoutUnit beforePos, LayoutUnit beforeNeg, LayoutUnit afterPos, LayoutUnit afterNeg)
-            : m_positiveMarginBefore(beforePos)
-            , m_negativeMarginBefore(beforeNeg)
-            , m_positiveMarginAfter(afterPos)
-            , m_negativeMarginAfter(afterNeg)
-        {
-        }
-
-        LayoutUnit positiveMarginBefore() const { return m_positiveMarginBefore; }
-        LayoutUnit negativeMarginBefore() const { return m_negativeMarginBefore; }
-        LayoutUnit positiveMarginAfter() const { return m_positiveMarginAfter; }
-        LayoutUnit negativeMarginAfter() const { return m_negativeMarginAfter; }
-
-        void setPositiveMarginBefore(LayoutUnit pos) { m_positiveMarginBefore = pos; }
-        void setNegativeMarginBefore(LayoutUnit neg) { m_negativeMarginBefore = neg; }
-        void setPositiveMarginAfter(LayoutUnit pos) { m_positiveMarginAfter = pos; }
-        void setNegativeMarginAfter(LayoutUnit neg) { m_negativeMarginAfter = neg; }
-
-    private:
-        LayoutUnit m_positiveMarginBefore;
-        LayoutUnit m_negativeMarginBefore;
-        LayoutUnit m_positiveMarginAfter;
-        LayoutUnit m_negativeMarginAfter;
-    };
     MarginValues marginValuesForChild(RenderBox& child) const;
-
-    // Allocated only when some of these fields have non-default values
-    struct RenderBlockFlowRareData {
-        WTF_MAKE_NONCOPYABLE(RenderBlockFlowRareData); WTF_MAKE_FAST_ALLOCATED;
-    public:
-        RenderBlockFlowRareData(const RenderBlockFlow& block)
-            : m_margins(positiveMarginBeforeDefault(block), negativeMarginBeforeDefault(block), positiveMarginAfterDefault(block), negativeMarginAfterDefault(block))
-            , m_lineBreakToAvoidWidow(-1)
-            , m_didBreakAtLineToAvoidWidow(false)
-        {
-        }
-
-        static LayoutUnit positiveMarginBeforeDefault(const RenderBlock& block)
-        {
-            return std::max<LayoutUnit>(block.marginBefore(), 0);
-        }
-        static LayoutUnit negativeMarginBeforeDefault(const RenderBlock& block)
-        {
-            return std::max<LayoutUnit>(-block.marginBefore(), 0);
-        }
-        static LayoutUnit positiveMarginAfterDefault(const RenderBlock& block)
-        {
-            return std::max<LayoutUnit>(block.marginAfter(), 0);
-        }
-        static LayoutUnit negativeMarginAfterDefault(const RenderBlock& block)
-        {
-            return std::max<LayoutUnit>(-block.marginAfter(), 0);
-        }
-
-        MarginValues m_margins;
-        int m_lineBreakToAvoidWidow;
-        LayoutUnit m_alignContentShift; // Caches negative shifts for overflow calculation.
-
-        SingleThreadWeakPtr<RenderMultiColumnFlow> m_multiColumnFlow;
-
-        bool m_didBreakAtLineToAvoidWidow : 1;
-    };
 
     class MarginInfo {
         // Collapsing flags for whether we can collapse our margins with our children's margins.
@@ -238,9 +244,9 @@ public:
     void trimBlockEndChildrenMargins();
 
     void setStaticInlinePositionForChild(RenderBox& child, LayoutUnit blockOffset, LayoutUnit inlinePosition);
-    void updateStaticInlinePositionForChild(RenderBox& child, LayoutUnit logicalTop, IndentTextOrNot shouldIndentText);
+    void updateStaticInlinePositionForChild(RenderBox& child, LayoutUnit logicalTop);
 
-    LayoutUnit startAlignedOffsetForLine(LayoutUnit position, IndentTextOrNot);
+    LayoutUnit staticInlinePositionForOriginalDisplayInline(LayoutUnit logicalTop);
 
     LayoutUnit collapseMargins(RenderBox& child, MarginInfo&);
     LayoutUnit collapseMarginsWithChildInfo(RenderBox* child, RenderObject* prevSibling, MarginInfo&);
@@ -275,8 +281,8 @@ public:
 
     void deleteLines() override;
     void computeOverflow(LayoutUnit oldClientAfterEdge, bool recomputeFloats = false) override;
-    Position positionForPoint(const LayoutPoint&) override;
-    VisiblePosition positionForPoint(const LayoutPoint&, const RenderFragmentContainer*) override;
+    Position positionForPoint(const LayoutPoint&, HitTestSource) override;
+    VisiblePosition positionForPoint(const LayoutPoint&, HitTestSource, const RenderFragmentContainer*) override;
 
     LayoutUnit lowestFloatLogicalBottom(FloatingObject::Type = FloatingObject::FloatLeftRight) const;
 
@@ -333,23 +339,25 @@ public:
 
     LayoutPoint flipFloatForWritingModeForChild(const FloatingObject&, const LayoutPoint&) const;
 
-    LegacyRootInlineBox* firstRootBox() const { return legacyLineLayout() ? legacyLineLayout()->firstRootBox() : nullptr; }
-    LegacyRootInlineBox* lastRootBox() const { return legacyLineLayout() ? legacyLineLayout()->lastRootBox() : nullptr; }
+    LegacyRootInlineBox* legacyRootBox() const { return legacyLineLayout() ? legacyLineLayout()->legacyRootBox() : nullptr; }
 
     void setChildrenInline(bool) final;
 
     bool hasLines() const;
-    void invalidateLineLayoutPath() final;
+
+    enum InvalidationReason : uint8_t {
+        StyleChange,
+        InsertionOrRemoval, // renderer gets constructed/goes away
+        ContentChange       // existing renderer gets changed (text content only atm)
+    };
+    void invalidateLineLayoutPath(InvalidationReason);
     void computeAndSetLineLayoutPath();
 
-    enum LineLayoutPath { UndeterminedPath = 0, ModernPath, LegacyPath, ForcedLegacyPath };
+    enum LineLayoutPath { UndeterminedPath = 0, ModernPath, LegacyPath };
     LineLayoutPath lineLayoutPath() const { return static_cast<LineLayoutPath>(renderBlockFlowLineLayoutPath()); }
     void setLineLayoutPath(LineLayoutPath path) { setRenderBlockFlowLineLayoutPath(path); }
 
     int lineCount() const;
-
-    void setHasMarkupTruncation(bool b) { setRenderBlockFlowHasMarkupTruncation(b); }
-    bool hasMarkupTruncation() const { return renderBlockFlowHasMarkupTruncation(); }
 
     bool containsNonZeroBidiLevel() const;
 
@@ -485,8 +493,8 @@ private:
     LayoutUnit logicalRightFloatOffsetForLine(LayoutUnit logicalTop, LayoutUnit fixedOffset, LayoutUnit logicalHeight) const override;
     LayoutUnit logicalLeftFloatOffsetForLine(LayoutUnit logicalTop, LayoutUnit fixedOffset, LayoutUnit logicalHeight) const override;
 
-    LayoutUnit logicalRightOffsetForPositioningFloat(LayoutUnit logicalTop, LayoutUnit fixedOffset, bool applyTextIndent, LayoutUnit* heightRemaining) const;
-    LayoutUnit logicalLeftOffsetForPositioningFloat(LayoutUnit logicalTop, LayoutUnit fixedOffset, bool applyTextIndent, LayoutUnit* heightRemaining) const;
+    LayoutUnit logicalRightOffsetForPositioningFloat(LayoutUnit logicalTop, LayoutUnit fixedOffset, LayoutUnit* heightRemaining) const;
+    LayoutUnit logicalLeftOffsetForPositioningFloat(LayoutUnit logicalTop, LayoutUnit fixedOffset, LayoutUnit* heightRemaining) const;
 
     LayoutUnit nextFloatLogicalBottomBelow(LayoutUnit) const;
     LayoutUnit nextFloatLogicalBottomBelowForBlock(LayoutUnit) const;
@@ -504,17 +512,11 @@ private:
 
     void addOverflowFromInlineChildren() override;
 
-    void markLinesDirtyInBlockRange(LayoutUnit logicalTop, LayoutUnit logicalBottom, LegacyRootInlineBox* highest = 0);
-
     GapRects inlineSelectionGaps(RenderBlock& rootBlock, const LayoutPoint& rootBlockPhysicalPosition, const LayoutSize& offsetFromRootBlock,
         LayoutUnit& lastLogicalTop, LayoutUnit& lastLogicalLeft, LayoutUnit& lastLogicalRight, const LogicalSelectionOffsetCaches&, const PaintInfo*) override;
 
-    VisiblePosition positionForPointWithInlineChildren(const LayoutPoint& pointInLogicalContents, const RenderFragmentContainer*) override;
+    VisiblePosition positionForPointWithInlineChildren(const LayoutPoint& pointInLogicalContents, HitTestSource, const RenderFragmentContainer*) override;
     void addFocusRingRectsForInlineChildren(Vector<LayoutRect>& rects, const LayoutPoint& additionalOffset, const RenderLayerModelObject*) const override;
-
-public:
-    virtual std::optional<TextAlignMode> overrideTextAlignmentForLine(bool /* endsWithSoftBreak */) const { return { }; }
-    virtual void adjustInlineDirectionLineBounds(int /* expansionOpportunityCount */, float& /* logicalLeft */, float& /* logicalWidth */) const { }
 
 private:
     bool hasLineLayout() const;
@@ -542,9 +544,6 @@ private:
     std::optional<LayoutUnit> selfCollapsingMarginBeforeWithClear(RenderObject* candidate);
 
 public:
-    // Computes a deltaOffset value that put a line at the top of the next page if it doesn't fit on the current page.
-    void adjustLinePositionForPagination(LegacyRootInlineBox*, LayoutUnit& deltaOffset);
-
     struct LinePaginationAdjustment {
         LayoutUnit strut { 0_lu };
         bool isFirstAfterPageBreak { false };

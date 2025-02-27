@@ -29,19 +29,21 @@
 #include "PaintInfo.h"
 #include "RenderBoxInlines.h"
 #include "RenderBoxModelObjectInlines.h"
-#include <wtf/IsoMallocInlines.h>
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
 using namespace HTMLNames;
 
-WTF_MAKE_ISO_ALLOCATED_IMPL(RenderDetailsMarker);
+WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(RenderDetailsMarker);
 
 RenderDetailsMarker::RenderDetailsMarker(DetailsMarkerControl& element, RenderStyle&& style)
     : RenderBlockFlow(Type::DetailsMarker, element, WTFMove(style))
 {
     ASSERT(isRenderDetailsMarker());
 }
+
+RenderDetailsMarker::~RenderDetailsMarker() = default;
 
 static Path createPath(const FloatPoint* path)
 {
@@ -121,7 +123,7 @@ Path RenderDetailsMarker::getPath(const LayoutPoint& origin) const
 
 void RenderDetailsMarker::paint(PaintInfo& paintInfo, const LayoutPoint& paintOffset)
 {
-    if (paintInfo.phase != PaintPhase::Foreground || style().visibility() != Visibility::Visible) {
+    if (paintInfo.phase != PaintPhase::Foreground || style().usedVisibility() != Visibility::Visible) {
         RenderBlockFlow::paint(paintInfo, paintOffset);
         return;
     }
@@ -134,9 +136,6 @@ void RenderDetailsMarker::paint(PaintInfo& paintInfo, const LayoutPoint& paintOf
         return;
 
     const Color color(style().visitedDependentColorWithColorFilter(CSSPropertyColor));
-    paintInfo.context().setStrokeColor(color);
-    paintInfo.context().setStrokeStyle(StrokeStyle::SolidStroke);
-    paintInfo.context().setStrokeThickness(1.0f);
     paintInfo.context().setFillColor(color);
 
     boxOrigin.move(borderLeft() + paddingLeft(), borderTop() + paddingTop());

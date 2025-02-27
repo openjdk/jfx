@@ -27,32 +27,26 @@
 #include "MapConstructor.h"
 
 #include "BuiltinNames.h"
+#include "GetterSetter.h"
 #include "IteratorOperations.h"
 #include "JSCInlines.h"
 #include "JSMapInlines.h"
 #include "MapPrototype.h"
 #include "VMInlines.h"
 
-#include "MapConstructor.lut.h"
-
 namespace JSC {
 
-const ClassInfo MapConstructor::s_info = { "Function"_s, &Base::s_info, &mapConstructorTable, nullptr, CREATE_METHOD_TABLE(MapConstructor) };
+const ClassInfo MapConstructor::s_info = { "Function"_s, &Base::s_info, nullptr, nullptr, CREATE_METHOD_TABLE(MapConstructor) };
 
-/* Source for MapConstructor.lut.h
-@begin mapConstructorTable
-@end
-*/
-
-void MapConstructor::finishCreation(VM& vm, MapPrototype* mapPrototype, GetterSetter* speciesSymbol)
+void MapConstructor::finishCreation(VM& vm, MapPrototype* mapPrototype)
 {
     Base::finishCreation(vm, 0, "Map"_s, PropertyAdditionMode::WithoutStructureTransition);
     putDirectWithoutTransition(vm, vm.propertyNames->prototype, mapPrototype, PropertyAttribute::DontEnum | PropertyAttribute::DontDelete | PropertyAttribute::ReadOnly);
-    putDirectNonIndexAccessorWithoutTransition(vm, vm.propertyNames->speciesSymbol, speciesSymbol, PropertyAttribute::Accessor | PropertyAttribute::ReadOnly | PropertyAttribute::DontEnum);
 
     JSGlobalObject* globalObject = mapPrototype->globalObject();
 
-    if (Options::useArrayGroupMethod())
+    GetterSetter* speciesGetterSetter = GetterSetter::create(vm, globalObject, JSFunction::create(vm, globalObject, 0, "get [Symbol.species]"_s, globalFuncSpeciesGetter, ImplementationVisibility::Public, SpeciesGetterIntrinsic), nullptr);
+    putDirectNonIndexAccessorWithoutTransition(vm, vm.propertyNames->speciesSymbol, speciesGetterSetter, PropertyAttribute::Accessor | PropertyAttribute::ReadOnly | PropertyAttribute::DontEnum);
         JSC_BUILTIN_FUNCTION_WITHOUT_TRANSITION(vm.propertyNames->builtinNames().groupByPublicName(), mapConstructorGroupByCodeGenerator, static_cast<unsigned>(PropertyAttribute::DontEnum));
 }
 
@@ -68,7 +62,7 @@ JSC_DEFINE_HOST_FUNCTION(callMap, (JSGlobalObject* globalObject, CallFrame*))
 {
     VM& vm = globalObject->vm();
     auto scope = DECLARE_THROW_SCOPE(vm);
-    return JSValue::encode(throwConstructorCannotBeCalledAsFunctionTypeError(globalObject, scope, "Map"));
+    return JSValue::encode(throwConstructorCannotBeCalledAsFunctionTypeError(globalObject, scope, "Map"_s));
 }
 
 JSC_DEFINE_HOST_FUNCTION(constructMap, (JSGlobalObject* globalObject, CallFrame* callFrame))
@@ -135,43 +129,61 @@ JSC_DEFINE_HOST_FUNCTION(constructMap, (JSGlobalObject* globalObject, CallFrame*
     return JSValue::encode(map);
 }
 
-JSC_DEFINE_HOST_FUNCTION(mapPrivateFuncMapBucketHead, (JSGlobalObject*, CallFrame* callFrame))
+JSC_DEFINE_HOST_FUNCTION(mapPrivateFuncMapIterationNext, (JSGlobalObject* globalObject, CallFrame* callFrame))
+{
+    ASSERT(callFrame->argument(0).isCell() && (callFrame->argument(1).isInt32()));
+
+    VM& vm = globalObject->vm();
+    JSCell* cell = callFrame->uncheckedArgument(0).asCell();
+    if (cell == vm.orderedHashTableSentinel())
+        return JSValue::encode(vm.orderedHashTableSentinel());
+
+    JSMap::Storage& storage = *jsCast<JSMap::Storage*>(cell);
+    JSMap::Helper::Entry entry = JSMap::Helper::toNumber(callFrame->uncheckedArgument(1));
+    return JSValue::encode(JSMap::Helper::nextAndUpdateIterationEntry(vm, storage, entry));
+}
+
+JSC_DEFINE_HOST_FUNCTION(mapPrivateFuncMapIterationEntry, (JSGlobalObject* globalObject, CallFrame* callFrame))
+{
+    ASSERT(callFrame->argument(0).isCell());
+
+    VM& vm = globalObject->vm();
+    JSCell* cell = callFrame->uncheckedArgument(0).asCell();
+    ASSERT_UNUSED(vm, cell != vm.orderedHashTableSentinel());
+
+    JSMap::Storage& storage = *jsCast<JSMap::Storage*>(cell);
+    return JSValue::encode(JSMap::Helper::getIterationEntry(storage));
+}
+
+JSC_DEFINE_HOST_FUNCTION(mapPrivateFuncMapIterationEntryKey, (JSGlobalObject* globalObject, CallFrame* callFrame))
+{
+    ASSERT(callFrame->argument(0).isCell());
+
+    VM& vm = globalObject->vm();
+    JSCell* cell = callFrame->uncheckedArgument(0).asCell();
+    ASSERT_UNUSED(vm, cell != vm.orderedHashTableSentinel());
+
+    JSMap::Storage& storage = *jsCast<JSMap::Storage*>(cell);
+    return JSValue::encode(JSMap::Helper::getIterationEntryKey(storage));
+}
+
+JSC_DEFINE_HOST_FUNCTION(mapPrivateFuncMapIterationEntryValue, (JSGlobalObject* globalObject, CallFrame* callFrame))
+{
+    ASSERT(callFrame->argument(0).isCell());
+
+    VM& vm = globalObject->vm();
+    JSCell* cell = callFrame->uncheckedArgument(0).asCell();
+    ASSERT_UNUSED(vm, cell != vm.orderedHashTableSentinel());
+
+    JSMap::Storage& storage = *jsCast<JSMap::Storage*>(cell);
+    return JSValue::encode(JSMap::Helper::getIterationEntryValue(storage));
+}
+
+JSC_DEFINE_HOST_FUNCTION(mapPrivateFuncMapStorage, (JSGlobalObject* globalObject, CallFrame* callFrame))
 {
     ASSERT(jsDynamicCast<JSMap*>(callFrame->argument(0)));
     JSMap* map = jsCast<JSMap*>(callFrame->uncheckedArgument(0));
-    auto* head = map->head();
-    ASSERT(head);
-    return JSValue::encode(head);
-}
-
-JSC_DEFINE_HOST_FUNCTION(mapPrivateFuncMapBucketNext, (JSGlobalObject* globalObject, CallFrame* callFrame))
-{
-    ASSERT(jsDynamicCast<JSMap::BucketType*>(callFrame->argument(0)));
-    auto* bucket = jsCast<JSMap::BucketType*>(callFrame->uncheckedArgument(0));
-    ASSERT(bucket);
-    bucket = bucket->next();
-    while (bucket) {
-        if (!bucket->deleted())
-            return JSValue::encode(bucket);
-        bucket = bucket->next();
-    }
-    return JSValue::encode(globalObject->vm().sentinelMapBucket());
-}
-
-JSC_DEFINE_HOST_FUNCTION(mapPrivateFuncMapBucketKey, (JSGlobalObject*, CallFrame* callFrame))
-{
-    ASSERT(jsDynamicCast<JSMap::BucketType*>(callFrame->argument(0)));
-    auto* bucket = jsCast<JSMap::BucketType*>(callFrame->uncheckedArgument(0));
-    ASSERT(bucket);
-    return JSValue::encode(bucket->key());
-}
-
-JSC_DEFINE_HOST_FUNCTION(mapPrivateFuncMapBucketValue, (JSGlobalObject*, CallFrame* callFrame))
-{
-    ASSERT(jsDynamicCast<JSMap::BucketType*>(callFrame->argument(0)));
-    auto* bucket = jsCast<JSMap::BucketType*>(callFrame->uncheckedArgument(0));
-    ASSERT(bucket);
-    return JSValue::encode(bucket->value());
+    return JSValue::encode(map->storageOrSentinel(getVM(globalObject)));
 }
 
 }

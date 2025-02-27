@@ -56,20 +56,12 @@ struct AsyncFileStream::Internals {
 
     FileStream stream;
     FileStreamClient& client;
-#if !COMPILER(MSVC)
     std::atomic_bool destroyed { false };
-#else
-    std::atomic_bool destroyed;
-#endif
 };
 
 inline AsyncFileStream::Internals::Internals(FileStreamClient& client)
     : client(client)
 {
-#if COMPILER(MSVC)
-    // Work around a bug that prevents the default value above from compiling.
-    atomic_init(&destroyed, false);
-#endif
 }
 
 static void callOnFileThread(Function<void ()>&& function)
@@ -81,7 +73,7 @@ static void callOnFileThread(Function<void ()>&& function)
 
     static std::once_flag createFileThreadOnce;
     std::call_once(createFileThreadOnce, [] {
-        Thread::create("WebCore: AsyncFileStream", [] {
+        Thread::create("WebCore: AsyncFileStream"_s, [] {
             for (;;) {
                 AutodrainedPool pool;
 

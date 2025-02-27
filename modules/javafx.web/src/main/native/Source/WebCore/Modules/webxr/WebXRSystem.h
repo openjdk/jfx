@@ -38,8 +38,8 @@
 #include "XRReferenceSpaceType.h"
 #include "XRSessionMode.h"
 #include <wtf/HashSet.h>
-#include <wtf/IsoMalloc.h>
 #include <wtf/RefCounted.h>
+#include <wtf/TZoneMalloc.h>
 #include <wtf/ThreadSafeWeakHashSet.h>
 #include <wtf/ThreadSafeWeakPtr.h>
 
@@ -57,7 +57,7 @@ class SecurityOriginData;
 struct XRSessionInit;
 
 class WebXRSystem final : public RefCounted<WebXRSystem>, public EventTarget, public ActiveDOMObject {
-    WTF_MAKE_ISO_ALLOCATED(WebXRSystem);
+    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(WebXRSystem);
 public:
     using IsSessionSupportedPromise = DOMPromiseDeferred<IDLBoolean>;
     using RequestSessionPromise = DOMPromiseDeferred<IDLInterface<WebXRSession>>;
@@ -65,16 +65,18 @@ public:
     static Ref<WebXRSystem> create(Navigator&);
     ~WebXRSystem();
 
-    using RefCounted<WebXRSystem>::ref;
-    using RefCounted<WebXRSystem>::deref;
+    // ActiveDOMObject.
+    void ref() const final { RefCounted::ref(); }
+    void deref() const final { RefCounted::deref(); }
 
     void isSessionSupported(XRSessionMode, IsSessionSupportedPromise&&);
     void requestSession(Document&, XRSessionMode, const XRSessionInit&, RequestSessionPromise&&);
 
     // This is also needed by WebGLRenderingContextBase::makeXRCompatible() and HTMLCanvasElement::createContextWebGL().
     void ensureImmersiveXRDeviceIsSelected(CompletionHandler<void()>&&);
-    bool hasActiveImmersiveXRDevice() { return !!m_activeImmersiveDevice.get(); }
+    bool hasActiveImmersiveXRDevice() const { return !!m_activeImmersiveDevice.get(); }
 
+    RefPtr<WebXRSession> activeImmersiveSession() const;
     void sessionEnded(WebXRSession&);
 
     // For testing purpouses only.
@@ -85,13 +87,12 @@ public:
 
 protected:
     // EventTarget
-    EventTargetInterface eventTargetInterface() const override { return WebXRSystemEventTargetInterfaceType; }
+    enum EventTargetInterfaceType eventTargetInterface() const override { return EventTargetInterfaceType::WebXRSystem; }
     ScriptExecutionContext* scriptExecutionContext() const override { return ActiveDOMObject::scriptExecutionContext(); }
     void refEventTarget() override { ref(); }
     void derefEventTarget() override { deref(); }
 
     // ActiveDOMObject
-    const char* activeDOMObjectName() const override;
     void stop() override;
 
 private:
@@ -104,6 +105,7 @@ private:
     bool immersiveSessionRequestIsAllowedForGlobalObject(LocalDOMWindow&, Document&) const;
     bool inlineSessionRequestIsAllowedForGlobalObject(LocalDOMWindow&, Document&, const XRSessionInit&) const;
 
+    bool isFeaturePermitted(PlatformXR::SessionFeature) const;
     bool isFeatureSupported(PlatformXR::SessionFeature, XRSessionMode, const PlatformXR::Device&) const;
     struct ResolvedRequestedFeatures;
     std::optional<ResolvedRequestedFeatures> resolveRequestedFeatures(XRSessionMode, const XRSessionInit&, RefPtr<PlatformXR::Device>, JSC::JSGlobalObject&) const;

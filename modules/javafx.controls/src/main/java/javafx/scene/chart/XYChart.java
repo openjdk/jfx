@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -976,7 +976,7 @@ public abstract class XYChart<X,Y> extends Chart {
 
     /**
      * XYChart maintains a list of all series currently displayed this includes all current series + any series that
-     * have recently been deleted that are in the process of being faded(animated) out. This creates and returns a
+     * have recently been deleted that are in the process of being faded (animated) out. This creates and returns a
      * iterator over that list. This is what implementations of XYChart should use when plotting data.
      *
      * @return iterator over currently displayed series

@@ -201,8 +201,8 @@ void SWServerWorker::scriptContextStarted(const std::optional<ServiceWorkerJobDa
 void SWServerWorker::didFinishInstall(const std::optional<ServiceWorkerJobDataIdentifier>& jobDataIdentifier, bool wasSuccessful)
 {
     ASSERT(m_server && this->state() == ServiceWorkerState::Installing);
-    if (m_server)
-        m_server->didFinishInstall(jobDataIdentifier, *this, wasSuccessful);
+    if (RefPtr server = m_server.get())
+        server->didFinishInstall(jobDataIdentifier, *this, wasSuccessful);
 }
 
 void SWServerWorker::didFinishActivation()

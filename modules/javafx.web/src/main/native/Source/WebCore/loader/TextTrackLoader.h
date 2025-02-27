@@ -36,6 +36,15 @@
 #include <wtf/WeakPtr.h>
 
 namespace WebCore {
+class TextTrackLoaderClient;
+}
+
+namespace WTF {
+template<typename T> struct IsDeprecatedWeakRefSmartPointerException;
+template<> struct IsDeprecatedWeakRefSmartPointerException<WebCore::TextTrackLoaderClient> : std::true_type { };
+}
+
+namespace WebCore {
 
 class CachedTextTrack;
 class Document;
@@ -69,7 +78,7 @@ public:
 
 private:
     // CachedResourceClient
-    void notifyFinished(CachedResource&, const NetworkLoadMetrics&) final;
+    void notifyFinished(CachedResource&, const NetworkLoadMetrics&, LoadWillContinueInAnotherProcess) final;
     void deprecatedDidReceiveCachedResource(CachedResource&) final;
 
     // WebVTTParserClient

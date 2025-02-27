@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -57,7 +57,7 @@ public abstract class ResizeFeaturesBase<S> {
   /**
    * Returns the width of the area available for columns.
    *
-   * @return the width availabe for columns
+   * @return the width available for columns
    *
    * @since 20
    */

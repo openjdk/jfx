@@ -48,27 +48,18 @@
 
 #include <mutex>
 
-#if ENABLE(UNIFIED_AND_FREEZABLE_CONFIG_RECORD)
-
 namespace WebConfig {
 
 alignas(WTF::ConfigAlignment) Slot g_config[WTF::ConfigSizeToProtect / sizeof(Slot)];
 
 } // namespace WebConfig
 
-#else // not ENABLE(UNIFIED_AND_FREEZABLE_CONFIG_RECORD)
+#if !USE(SYSTEM_MALLOC)
+static_assert(Gigacage::startSlotOfGigacageConfig == WebConfig::reservedSlotsForExecutableAllocator + WebConfig::additionalReservedSlots);
+#endif
 
 namespace WTF {
 
-Config g_wtfConfig;
-
-} // namespace WTF
-
-#endif // ENABLE(UNIFIED_AND_FREEZABLE_CONFIG_RECORD)
-
-namespace WTF {
-
-#if ENABLE(UNIFIED_AND_FREEZABLE_CONFIG_RECORD)
 void setPermissionsOfConfigPage()
 {
 #if PLATFORM(COCOA)
@@ -92,10 +83,10 @@ void setPermissionsOfConfigPage()
     });
 #endif // PLATFORM(COCOA)
 }
-#endif // ENABLE(UNIFIED_AND_FREEZABLE_CONFIG_RECORD)
 
 void Config::initialize()
 {
+    // FIXME: We should do a placement new for Config so we can use default initializers.
     []() -> void {
         uintptr_t onePage = pageSize(); // At least, first one page must be unmapped.
 #if OS(DARWIN)
@@ -120,14 +111,23 @@ void Config::initialize()
         g_wtfConfig.lowestAccessibleAddress = onePage;
     }();
     g_wtfConfig.highestAccessibleAddress = static_cast<uintptr_t>((1ULL << OS_CONSTANT(EFFECTIVE_ADDRESS_WIDTH)) - 1);
+    SignalHandlers::initialize();
+}
+
+void Config::finalize()
+{
+    static std::once_flag once;
+    std::call_once(once, [] {
+        SignalHandlers::finalize();
+        if (!g_wtfConfig.disabledFreezingForTesting)
+            Config::permanentlyFreeze();
+    });
 }
 
 void Config::permanentlyFreeze()
 {
-    static Lock configLock;
-    Locker locker { configLock };
-
     RELEASE_ASSERT(roundUpToMultipleOf(pageSize(), ConfigSizeToProtect) == ConfigSizeToProtect);
+    ASSERT(!g_wtfConfig.disabledFreezingForTesting);
 
     if (!g_wtfConfig.isPermanentlyFrozen) {
         g_wtfConfig.isPermanentlyFrozen = true;
@@ -138,7 +138,6 @@ void Config::permanentlyFreeze()
 
     int result = 0;
 
-#if ENABLE(UNIFIED_AND_FREEZABLE_CONFIG_RECORD)
 #if PLATFORM(COCOA)
     enum {
         DontUpdateMaximumPermission = false,
@@ -150,17 +149,18 @@ void Config::permanentlyFreeze()
 #elif OS(LINUX)
     result = mprotect(&WebConfig::g_config, ConfigSizeToProtect, PROT_READ);
 #elif OS(WINDOWS)
-    // FIXME: Implement equivalent, maybe with VirtualProtect.
+    // FIXME: Implement equivalent for Windows, maybe with VirtualProtect.
     // Also need to fix WebKitTestRunner.
-
-    // Note: the Windows port also currently does not support a unified Config
-    // record, which is needed for the current form of the freezing feature to
-    // work. See comments in PlatformEnable.h for UNIFIED_AND_FREEZABLE_CONFIG_RECORD.
 #endif
-#endif // ENABLE(UNIFIED_AND_FREEZABLE_CONFIG_RECORD)
 
     RELEASE_ASSERT(!result);
     RELEASE_ASSERT(g_wtfConfig.isPermanentlyFrozen);
+}
+
+void Config::disableFreezingForTesting()
+{
+    RELEASE_ASSERT(!g_wtfConfig.isPermanentlyFrozen);
+    g_wtfConfig.disabledFreezingForTesting = true;
 }
 
 } // namespace WTF

@@ -38,11 +38,11 @@
 #include "EventNames.h"
 #include "SourceBuffer.h"
 #include "WebCoreOpaqueRoot.h"
-#include <wtf/IsoMallocInlines.h>
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
-WTF_MAKE_ISO_ALLOCATED_IMPL(SourceBufferList);
+WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(SourceBufferList);
 
 Ref<SourceBufferList> SourceBufferList::create(ScriptExecutionContext* context)
 {
@@ -103,11 +103,6 @@ void SourceBufferList::swap(Vector<RefPtr<SourceBuffer>>& other)
 void SourceBufferList::scheduleEvent(const AtomString& eventName)
 {
     queueTaskToDispatchEvent(*this, TaskSource::MediaElement, Event::create(eventName, Event::CanBubble::No, Event::IsCancelable::No));
-}
-
-const char* SourceBufferList::activeDOMObjectName() const
-{
-    return "SourceBufferList";
 }
 
 WebCoreOpaqueRoot root(SourceBufferList* list)

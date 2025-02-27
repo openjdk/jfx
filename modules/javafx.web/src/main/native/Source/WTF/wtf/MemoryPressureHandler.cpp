@@ -26,7 +26,9 @@
 #include "config.h"
 #include <wtf/MemoryPressureHandler.h>
 
+#include <algorithm>
 #include <atomic>
+#include <functional>
 #include <wtf/Logging.h>
 #include <wtf/MemoryFootprint.h>
 #include <wtf/NeverDestroyed.h>
@@ -76,6 +78,11 @@ MemoryPressureHandler::MemoryPressureHandler()
 #endif
 }
 
+void MemoryPressureHandler::setMemoryFootprintPollIntervalForTesting(Seconds pollInterval)
+{
+    m_configuration.pollInterval = pollInterval;
+}
+
 void MemoryPressureHandler::setShouldUsePeriodicMemoryMonitor(bool use)
 {
     if (!isFastMallocEnabled()) {
@@ -92,15 +99,15 @@ void MemoryPressureHandler::setShouldUsePeriodicMemoryMonitor(bool use)
 }
 
 #if !RELEASE_LOG_DISABLED
-static const char* toString(MemoryUsagePolicy policy)
+static ASCIILiteral toString(MemoryUsagePolicy policy)
 {
     switch (policy) {
-    case MemoryUsagePolicy::Unrestricted: return "Unrestricted";
-    case MemoryUsagePolicy::Conservative: return "Conservative";
-    case MemoryUsagePolicy::Strict: return "Strict";
+    case MemoryUsagePolicy::Unrestricted: return "Unrestricted"_s;
+    case MemoryUsagePolicy::Conservative: return "Conservative"_s;
+    case MemoryUsagePolicy::Strict: return "Strict"_s;
     }
     ASSERT_NOT_REACHED();
-    return "";
+    return ""_s;
 }
 #endif
 
@@ -204,10 +211,21 @@ void MemoryPressureHandler::setMemoryUsagePolicyBasedOnFootprint(size_t footprin
     if (newPolicy == m_memoryUsagePolicy)
         return;
 
-    RELEASE_LOG(MemoryPressure, "Memory usage policy changed: %s -> %s", toString(m_memoryUsagePolicy), toString(newPolicy));
+    RELEASE_LOG(MemoryPressure, "Memory usage policy changed: %s -> %s", toString(m_memoryUsagePolicy).characters(), toString(newPolicy).characters());
     m_memoryUsagePolicy = newPolicy;
     memoryPressureStatusChanged();
 }
+
+void MemoryPressureHandler::setMemoryFootprintNotificationThresholds(Vector<size_t>&& thresholds, WTF::Function<void(size_t)>&& handler)
+{
+    if (thresholds.isEmpty() || !handler)
+        return;
+
+    std::sort(thresholds.begin(), thresholds.end(), std::greater<>());
+    m_memoryFootprintNotificationThresholds = WTFMove(thresholds);
+    m_memoryFootprintNotificationHandler = WTFMove(handler);
+}
+
 
 void MemoryPressureHandler::measurementTimerFired()
 {
@@ -215,6 +233,12 @@ void MemoryPressureHandler::measurementTimerFired()
 #if PLATFORM(COCOA)
     RELEASE_LOG(MemoryPressure, "Current memory footprint: %zu MB", footprint / MB);
 #endif
+
+    while (m_memoryFootprintNotificationThresholds.size() && footprint > m_memoryFootprintNotificationThresholds.last()) {
+        auto notificationThreshold = m_memoryFootprintNotificationThresholds.takeLast();
+        m_memoryFootprintNotificationHandler(notificationThreshold);
+    }
+
     auto killThreshold = thresholdForMemoryKill();
     if (killThreshold && footprint >= *killThreshold) {
         shrinkOrDie(*killThreshold);

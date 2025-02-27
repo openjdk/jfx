@@ -24,4 +24,5 @@
 
 [
     Conditional=GEOLOCATION,
+    GenerateIsReachable=ImplScriptExecutionContext
 ] callback PositionErrorCallback = undefined (GeolocationPositionError error);

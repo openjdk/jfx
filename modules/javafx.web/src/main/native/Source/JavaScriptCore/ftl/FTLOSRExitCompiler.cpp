@@ -152,6 +152,7 @@ static void compileStub(VM& vm, unsigned exitID, JITCode* jitCode, OSRExit& exit
         SpeculationFailureDebugInfo* debugInfo = new SpeculationFailureDebugInfo;
         debugInfo->codeBlock = jit.codeBlock();
         debugInfo->kind = exit.m_kind;
+        debugInfo->exitIndex = exitID;
         debugInfo->bytecodeIndex = exit.m_codeOrigin.bytecodeIndex();
         jit.probe(tagCFunction<JITProbePtrTag>(operationDebugPrintSpeculationFailure), debugInfo, SavedFPWidth::DontSaveVectors);
     }
@@ -262,13 +263,6 @@ static void compileStub(VM& vm, unsigned exitID, JITCode* jitCode, OSRExit& exit
             CodeOrigin codeOrigin = exit.m_codeOriginForExitProfile;
             CodeBlock* codeBlock = jit.baselineCodeBlockFor(codeOrigin);
             if (ArrayProfile* arrayProfile = codeBlock->getArrayProfile(ConcurrentJSLocker(codeBlock->m_lock), codeOrigin.bytecodeIndex())) {
-                const auto* instruction = codeBlock->instructions().at(codeOrigin.bytecodeIndex()).ptr();
-                CCallHelpers::Jump skipProfile;
-                if (instruction->is<OpGetById>()) {
-                    auto& metadata = instruction->as<OpGetById>().metadata(codeBlock);
-                    skipProfile = jit.branch8(CCallHelpers::NotEqual, CCallHelpers::AbsoluteAddress(&metadata.m_modeMetadata.mode), CCallHelpers::TrustedImm32(static_cast<uint8_t>(GetByIdMode::ArrayLength)));
-                }
-
                 jit.load32(MacroAssembler::Address(GPRInfo::regT0, JSCell::structureIDOffset()), GPRInfo::regT1);
                 jit.store32(GPRInfo::regT1, arrayProfile->addressOfLastSeenStructureID());
 
@@ -286,9 +280,6 @@ static void compileStub(VM& vm, unsigned exitID, JITCode* jitCode, OSRExit& exit
                 jit.lshift32(GPRInfo::regT1, GPRInfo::regT2);
                 storeArrayModes.link(&jit);
                 jit.or32(GPRInfo::regT2, MacroAssembler::AbsoluteAddress(arrayProfile->addressOfArrayModes()));
-
-                if (skipProfile.isSet())
-                    skipProfile.link(&jit);
             }
         }
 
@@ -630,15 +621,15 @@ static void compileStub(VM& vm, unsigned exitID, JITCode* jitCode, OSRExit& exit
     LinkBuffer patchBuffer(jit, codeBlock, LinkBuffer::Profile::FTLOSRExit);
     exit.m_code = FINALIZE_CODE_IF(
         shouldDumpDisassembly() || Options::verboseOSR() || Options::verboseFTLOSRExit(),
-        patchBuffer, OSRExitPtrTag,
+        patchBuffer, OSRExitPtrTag, nullptr,
         "FTL OSR exit #%u (D@%u, %s, %s) from %s, with operands = %s",
             exitID, exit.m_dfgNodeIndex, toCString(exit.m_codeOrigin).data(),
-            exitKindToString(exit.m_kind), toCString(*codeBlock).data(),
+            toCString(exit.m_kind).data(), toCString(*codeBlock).data(),
             toCString(ignoringContext<DumpContext>(exit.m_descriptor->m_values)).data()
         );
 }
 
-JSC_DEFINE_JIT_OPERATION(operationCompileFTLOSRExit, void*, (CallFrame* callFrame, unsigned exitID))
+JSC_DEFINE_NOEXCEPT_JIT_OPERATION(operationCompileFTLOSRExit, void*, (CallFrame* callFrame, unsigned exitID))
 {
     if (shouldDumpDisassembly() || Options::verboseOSR() || Options::verboseFTLOSRExit())
         dataLog("Compiling OSR exit with exitID = ", exitID, "\n");

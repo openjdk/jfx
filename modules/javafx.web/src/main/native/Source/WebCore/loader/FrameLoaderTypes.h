@@ -31,7 +31,6 @@
 #include "ElementContext.h"
 #include "IntRect.h"
 #include "ProcessIdentifier.h"
-#include <wtf/EnumTraits.h>
 
 namespace WebCore {
 
@@ -87,6 +86,13 @@ enum class NavigationType : uint8_t {
     Reload,
     FormResubmitted,
     Other
+};
+
+enum class NavigationHistoryBehavior : uint8_t {
+    Auto,
+    Push,
+    Replace,
+    Reload // Internal, not part of the specification
 };
 
 enum class ShouldOpenExternalURLsPolicy : uint8_t {

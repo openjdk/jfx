@@ -31,6 +31,7 @@
 #include "ExecutableAllocationFuzz.h"
 #include "JITOperationValidation.h"
 #include "LinkBuffer.h"
+#include <wtf/ByteOrder.h>
 #include <wtf/CryptographicallyRandomNumber.h>
 #include <wtf/FastBitVector.h>
 #include <wtf/FileSystem.h>
@@ -42,6 +43,7 @@
 #include <wtf/Scope.h>
 #include <wtf/SystemTracing.h>
 #include <wtf/TZoneMallocInlines.h>
+#include <wtf/UUID.h>
 #include <wtf/WorkQueue.h>
 
 #if ENABLE(LIBPAS_JIT_HEAP)
@@ -153,6 +155,11 @@ static constexpr double executablePoolReservationFraction = 0.25;
 static constexpr size_t minimumExecutablePoolReservationSize = 256 * KB;
 static_assert(fixedExecutableMemoryPoolSize * executablePoolReservationFraction >= minimumExecutablePoolReservationSize);
 static_assert(fixedExecutableMemoryPoolSize < 4 * GB, "ExecutableMemoryHandle assumes it is less than 4GB");
+#endif
+
+#if HAVE(KDEBUG_H)
+// 325696c8-e7cc-11ee-9f4e-325096b39f47
+static constexpr WTF::UUID jscJITNamespace { static_cast<UInt128>(0x325696c8e7cc11eeULL) << 64 | (0x9f4e325096b39f47ULL) };
 #endif
 
 static bool isJITEnabled()
@@ -284,7 +291,7 @@ static ALWAYS_INLINE MacroAssemblerCodeRef<JITThunkPtrTag> jitWriteThunkGenerato
     // to appear in the console or anywhere in memory, via the PrintStream buffer.
     // The second is we can't guarantee that the code is readable when using the
     // asyncDisassembly option as our caller will set our pages execute only.
-    return linkBuffer.finalizeCodeWithoutDisassembly<JITThunkPtrTag>();
+    return linkBuffer.finalizeCodeWithoutDisassembly<JITThunkPtrTag>(nullptr);
 }
 #else // not USE(EXECUTE_ONLY_JIT_WRITE_FUNCTION)
 static void genericWriteToJITRegion(off_t offset, const void* data, size_t dataSize)
@@ -416,10 +423,10 @@ static ALWAYS_INLINE JITReservation initializeJITPageReservation()
     if (reservation.pageReservation) {
         ASSERT(reservation.pageReservation.size() == reservation.size);
         reservation.base = reservation.pageReservation.base();
-        g_jscConfig.useFastJITPermissions = threadSelfRestrictSupported();
+        g_jscConfig.useFastJITPermissions = threadSelfRestrictSupported<MemoryRestriction::kRwxToRw>();
 
         if (g_jscConfig.useFastJITPermissions)
-            threadSelfRestrictRWXToRX();
+            threadSelfRestrict<MemoryRestriction::kRwxToRx>();
 
 #if ENABLE(SEPARATED_WX_HEAP)
         if (!g_jscConfig.useFastJITPermissions) {
@@ -435,9 +442,18 @@ static ALWAYS_INLINE JITReservation initializeJITPageReservation()
         g_jscConfig.startExecutableMemory = reservation.base;
         g_jscConfig.endExecutableMemory = reservationEnd;
 
-#if !USE(SYSTEM_MALLOC) && ENABLE(UNIFIED_AND_FREEZABLE_CONFIG_RECORD)
+#if !USE(SYSTEM_MALLOC)
+        static_assert(WebConfig::reservedSlotsForExecutableAllocator >= 2);
         WebConfig::g_config[0] = bitwise_cast<uintptr_t>(reservation.base);
         WebConfig::g_config[1] = bitwise_cast<uintptr_t>(reservationEnd);
+#endif
+
+#if HAVE(KDEBUG_H)
+        {
+            uint64_t pid = getCurrentProcessID();
+            auto uuid = WTF::UUID::createVersion5(jscJITNamespace, std::span { bitwise_cast<const uint8_t*>(&pid), sizeof(pid) });
+            kdebug_trace(KDBG_CODE(DBG_DYLD, DBG_DYLD_UUID, DBG_DYLD_UUID_MAP_A), WTF::byteSwap64(uuid.high()), WTF::byteSwap64(uuid.low()), bitwise_cast<uintptr_t>(reservation.base), 0);
+        }
 #endif
     }
 
@@ -515,6 +531,11 @@ public:
 #else
             m_allocator.addFreshFreeSpace(reservation.base, reservation.size);
             m_bytesReserved += reservation.size;
+#endif
+
+#if ENABLE(MPROTECT_RX_TO_RWX)
+            ptrdiff_t pagesInReservation = (bitwise_cast<uint8_t*>(g_jscConfig.endExecutableMemory) - bitwise_cast<uint8_t*>(g_jscConfig.startExecutableMemory)) / executablePageSize();
+            m_pageWriterCounts = bitwise_cast<uint8_t*>(WTF::fastZeroedMalloc(pagesInReservation));
 #endif
         }
     }
@@ -656,6 +677,61 @@ public:
     }
 #endif
 
+#if ENABLE(MPROTECT_RX_TO_RWX)
+    static std::pair<size_t, size_t> pageRangeForWrittenRegion(const void* start, size_t sizeInBytes, size_t pageSize)
+    {
+        size_t startPage = bitwise_cast<uintptr_t>(bitwise_cast<uint8_t*>(start) - bitwise_cast<uint8_t*>(g_jscConfig.startExecutableMemory)) / pageSize;
+        size_t endPage = WTF::roundUpToMultipleOf(pageSize, bitwise_cast<uintptr_t>(start) - bitwise_cast<uintptr_t>(g_jscConfig.startExecutableMemory) + sizeInBytes) / pageSize;
+        return { startPage, endPage };
+    }
+
+    void startWriting(const void* start, size_t sizeInBytes)
+    {
+        size_t pageSize = executablePageSize();
+        auto [startPage, endPage] = pageRangeForWrittenRegion(start, sizeInBytes, pageSize);
+        uint8_t* startAddress = bitwise_cast<uint8_t*>(g_jscConfig.startExecutableMemory);
+
+        {
+            Locker locker(m_pageLock);
+            ssize_t firstFirstWriterPage = -1; // We use this to track runs of pages for which we are the first writer, since this means their mprotect() calls can be batched.
+            for (size_t i = startPage; i < endPage; i ++) {
+                if (!(m_pageWriterCounts[i]++)) {
+                    if (firstFirstWriterPage == -1)
+                        firstFirstWriterPage = i;
+                } else if (firstFirstWriterPage != -1) {
+                    mprotect(startAddress + pageSize * firstFirstWriterPage, (i - firstFirstWriterPage) * pageSize, PROT_READ | PROT_WRITE | PROT_EXEC);
+                    firstFirstWriterPage = -1;
+                }
+            }
+            if (firstFirstWriterPage != -1)
+                mprotect(startAddress + pageSize * firstFirstWriterPage, (endPage - firstFirstWriterPage) * pageSize, PROT_READ | PROT_WRITE | PROT_EXEC);
+        }
+    }
+
+    void finishWriting(const void* start, size_t sizeInBytes)
+    {
+        size_t pageSize = executablePageSize();
+        auto [startPage, endPage] = pageRangeForWrittenRegion(start, sizeInBytes, pageSize);
+        uint8_t* startAddress = bitwise_cast<uint8_t*>(g_jscConfig.startExecutableMemory);
+
+        {
+            Locker locker(m_pageLock);
+            ssize_t firstLastWriterPage = -1; // We use this to track runs of pages for which we are the last writer, since this means their mprotect() calls can be batched.
+            for (size_t i = startPage; i < endPage; i ++) {
+                if (!--m_pageWriterCounts[i]) {
+                    if (firstLastWriterPage == -1)
+                        firstLastWriterPage = i;
+                } else if (firstLastWriterPage != -1) {
+                    mprotect(startAddress + pageSize * firstLastWriterPage, (i - firstLastWriterPage) * pageSize, PROT_READ | PROT_EXEC);
+                    firstLastWriterPage = -1;
+                }
+            }
+            if (firstLastWriterPage != -1)
+                mprotect(startAddress + pageSize * firstLastWriterPage, (endPage - firstLastWriterPage) * pageSize, PROT_READ | PROT_EXEC);
+        }
+    }
+#endif
+
 #if !ENABLE(LIBPAS_JIT_HEAP)
     MetaAllocator::Statistics currentStatistics()
     {
@@ -688,7 +764,7 @@ public:
 #endif // ENABLE(LIBPAS_JIT_HEAP)
 
 #if ENABLE(JUMP_ISLANDS)
-    void handleWillBeReleased(const LockHolder& locker, ExecutableMemoryHandle& handle)
+    void handleWillBeReleased(const Locker<Lock>& locker, ExecutableMemoryHandle& handle)
     {
         if (m_islandsForJumpSourceLocation.isEmpty())
             return;
@@ -740,7 +816,7 @@ private:
         return result;
     }
 
-    void freeJumpIslands(const LockHolder&, Islands* islands)
+    void freeJumpIslands(const Locker<Lock>&, Islands* islands)
     {
         for (CodeLocationLabel<ExecutableMemoryPtrTag> jumpIsland : islands->jumpIslands) {
             uintptr_t untaggedJumpIsland = bitwise_cast<uintptr_t>(jumpIsland.dataLocation());
@@ -751,14 +827,14 @@ private:
         islands->jumpIslands.clear();
     }
 
-    void freeIslands(const LockHolder& locker, Islands* islands)
+    void freeIslands(const Locker<Lock>& locker, Islands* islands)
     {
         freeJumpIslands(locker, islands);
         m_islandsForJumpSourceLocation.remove(islands);
         delete islands;
     }
 
-    void* islandForJumpLocation(const LockHolder& locker, uintptr_t jumpLocation, uintptr_t target, bool concurrently, bool useMemcpy)
+    void* islandForJumpLocation(const Locker<Lock>& locker, uintptr_t jumpLocation, uintptr_t target, bool concurrently, bool useMemcpy)
     {
         Islands* islands = m_islandsForJumpSourceLocation.findExact(bitwise_cast<void*>(jumpLocation));
         if (islands) {
@@ -920,7 +996,7 @@ private:
         }
 
 #if !ENABLE(LIBPAS_JIT_HEAP)
-        void release(const LockHolder& locker, MetaAllocatorHandle& handle) final
+        void release(const Locker<Lock>& locker, MetaAllocatorHandle& handle) final
         {
             AssemblyCommentRegistry::singleton().unregisterCodeRange(handle.start().untaggedPtr(), handle.end().untaggedPtr());
             m_fixedAllocator.handleWillBeReleased(locker, handle);
@@ -1043,6 +1119,12 @@ private:
 #else
     Allocator m_allocator;
 #endif // ENABLE(JUMP_ISLANDS)
+
+#if ENABLE(MPROTECT_RX_TO_RWX)
+    Lock m_pageLock;
+    uint8_t* m_pageWriterCounts;
+#endif
+
     size_t m_bytesReserved { 0 };
 #if ENABLE(LIBPAS_JIT_HEAP)
     std::atomic<size_t> m_bytesAllocated { 0 };
@@ -1289,7 +1371,7 @@ void dumpJITMemory(const void* dst, const void* src, size_t size)
     static std::once_flag once;
     std::call_once(once, [] {
         buffer = bitwise_cast<uint8_t*>(malloc(bufferSize));
-        flushQueue.construct(WorkQueue::create("jsc.dumpJITMemory.queue", WorkQueue::QOS::Background));
+        flushQueue.construct(WorkQueue::create("jsc.dumpJITMemory.queue"_s, WorkQueue::QOS::Background));
         std::atexit([] {
             Locker locker { dumpJITMemoryLock };
             DumpJIT::flush();
@@ -1314,6 +1396,19 @@ void dumpJITMemory(const void* dst, const void* src, size_t size)
     RELEASE_ASSERT_NOT_REACHED();
 #endif
 }
+
+#if ENABLE(MPROTECT_RX_TO_RWX)
+void ExecutableAllocator::startWriting(const void* start, size_t sizeInBytes) { g_jscConfig.fixedVMPoolExecutableAllocator->startWriting(start, sizeInBytes); }
+void ExecutableAllocator::finishWriting(const void* start, size_t sizeInBytes) { g_jscConfig.fixedVMPoolExecutableAllocator->finishWriting(start, sizeInBytes); }
+
+void* performJITMemcpyWithMProtect(void *dst, const void *src, size_t n)
+{
+    g_jscConfig.fixedVMPoolExecutableAllocator->startWriting(dst, n);
+    memcpy(dst, src, n);
+    g_jscConfig.fixedVMPoolExecutableAllocator->finishWriting(dst, n);
+    return dst;
+}
+#endif
 
 #if ENABLE(LIBPAS_JIT_HEAP) && ENABLE(JIT)
 RefPtr<ExecutableMemoryHandle> ExecutableMemoryHandle::createImpl(size_t sizeInBytes)

@@ -45,7 +45,7 @@ WTF_MAKE_TZONE_ALLOCATED_IMPL(VMInspector);
 
 VM* VMInspector::m_recentVM { nullptr };
 
-VMInspector& VMInspector::instance()
+VMInspector& VMInspector::singleton()
 {
     static VMInspector* manager;
     static std::once_flag once;
@@ -109,7 +109,7 @@ void VMInspector::dumpVMs()
 
 void VMInspector::forEachVM(Function<IterationStatus(VM&)>&& func)
 {
-    VMInspector& inspector = instance();
+    VMInspector& inspector = singleton();
     Locker lock { inspector.getLock() };
     inspector.iterate(func);
 }
@@ -117,7 +117,7 @@ void VMInspector::forEachVM(Function<IterationStatus(VM&)>&& func)
 // Returns null if the callFrame doesn't actually correspond to any active VM.
 VM* VMInspector::vmForCallFrame(CallFrame* callFrame)
 {
-    VMInspector& inspector = instance();
+    VMInspector& inspector = singleton();
     Locker lock { inspector.getLock() };
 
     auto isOnVMStack = [] (VM& vm, CallFrame* callFrame) -> bool {
@@ -506,8 +506,8 @@ SUPPRESS_ASAN void VMInspector::dumpRegisters(CallFrame* callFrame)
     dataLogF("% 4d  CodeBlock        : %10p  0x%llx ", registerNumber++, it++, (long long)codeBlock);
     dataLogLn(codeBlock);
     long long calleeBits = (long long)callFrame->callee().rawPtr();
-    auto calleeString = valueAsString(it->jsValue()).data();
-    dataLogF("% 4d  Callee           : %10p  0x%llx %s\n", registerNumber++, it++, calleeBits, calleeString);
+    auto calleeString = valueAsString(it->jsValue());
+    dataLogF("% 4d  Callee           : %10p  0x%llx %s\n", registerNumber++, it++, calleeBits, calleeString.data());
 
     StackVisitor::visit(callFrame, vm, [&] (StackVisitor& visitor) {
         if (visitor->callFrame() == callFrame) {

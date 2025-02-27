@@ -42,12 +42,20 @@ class TextureMapperPlatformLayerBuffer;
 class TextureMapperPlatformLayerProxy : public ThreadSafeRefCounted<TextureMapperPlatformLayerProxy> {
     WTF_MAKE_FAST_ALLOCATED();
 public:
+    enum class ContentType : uint8_t {
+        WebGL,
+        Video,
+        OffscreenCanvas,
+        HolePunch,
+        Canvas
+    };
+
     class Compositor {
     public:
         virtual void onNewBufferAvailable() = 0;
     };
 
-    TextureMapperPlatformLayerProxy();
+    explicit TextureMapperPlatformLayerProxy(ContentType);
     virtual ~TextureMapperPlatformLayerProxy();
 
     virtual bool isGLBased() const { return false; }
@@ -55,6 +63,8 @@ public:
 
     Lock& lock() WTF_RETURNS_LOCK(m_lock) { return m_lock; }
     bool isActive();
+
+    ContentType contentType() const { return m_contentType; }
 
     virtual void activateOnCompositingThread(Compositor*, TextureMapperLayer*) = 0;
     virtual void invalidate() = 0;
@@ -64,6 +74,7 @@ protected:
     Lock m_lock;
     Compositor* m_compositor { nullptr };
     TextureMapperLayer* m_targetLayer { nullptr };
+    ContentType m_contentType;
 };
 
 } // namespace WebCore

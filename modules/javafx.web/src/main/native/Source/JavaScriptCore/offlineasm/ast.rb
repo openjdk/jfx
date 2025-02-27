@@ -213,6 +213,10 @@ class Immediate < NoChildren
         "#{value}"
     end
     
+    def name
+        "0x%x" % value
+    end
+
     def ==(other)
         other.is_a? Immediate and other.value == @value
     end
@@ -1089,6 +1093,8 @@ class Label < NoChildren
         @extern = true
         @global = false
         @aligned = true
+        @alignTo = false
+        @export = false
     end
     
     def self.forName(codeOrigin, name, definedInFile = false)
@@ -1115,6 +1121,18 @@ class Label < NoChildren
         end
     end
 
+    def self.setAsGlobalExport(codeOrigin, name)
+        if $labelMapping[name]
+            label = $labelMapping[name]
+            raise "Label: #{name} declared global multiple times" unless not label.global?
+            label.setGlobalExport()
+        else
+            newLabel = Label.new(codeOrigin, name)
+            newLabel.setGlobalExport()
+            $labelMapping[name] = newLabel
+        end
+    end
+
     def self.setAsUnalignedGlobal(codeOrigin, name)
         if $labelMapping[name]
             label = $labelMapping[name]
@@ -1123,6 +1141,30 @@ class Label < NoChildren
         else
             newLabel = Label.new(codeOrigin, name)
             newLabel.setUnalignedGlobal()
+            $labelMapping[name] = newLabel
+        end
+    end
+
+    def self.setAsAligned(codeOrigin, name, alignTo)
+        if $labelMapping[name]
+            label = $labelMapping[name]
+            raise "Label: #{name} declared aligned multiple times" unless not label.aligned?
+            label.setAligned(alignTo)
+        else
+            newLabel = Label.new(codeOrigin, name)
+            newLabel.setAligned(alignTo)
+            $labelMapping[name] = newLabel
+        end
+    end
+
+    def self.setAsUnalignedGlobalExport(codeOrigin, name)
+        if $labelMapping[name]
+            label = $labelMapping[name]
+            raise "Label: #{name} declared global multiple times" unless not label.global?
+            label.setUnalignedGlobalExport()
+        else
+            newLabel = Label.new(codeOrigin, name)
+            newLabel.setUnalignedGlobalExport()
             $labelMapping[name] = newLabel
         end
     end
@@ -1150,13 +1192,35 @@ class Label < NoChildren
         @global = true
     end
 
+    def setGlobalExport
+        @global = true
+        @export = true
+    end
+
     def setUnalignedGlobal
         @global = true
         @aligned = false
     end
 
+    def setAligned(alignTo)
+        @aligned = true
+        @alignTo = alignTo
+        # You must use this from cpp for the alignment to work on all linkers
+        @global = true
+    end
+
+    def setUnalignedGlobalExport
+        @global = true
+        @aligned = false
+        @export = true
+    end
+
     def global?
         @global
+    end
+
+    def export?
+        @export
     end
 
     def aligned?
@@ -1193,9 +1257,6 @@ class LocalLabel < NoChildren
     
     def self.unique(comment)
         newName = "_#{comment}"
-        if $emitWinAsm and newName.length > 90
-            newName = newName[0...45] + "___" + newName[-45..-1]
-        end
         if $labelMapping[newName]
             while $labelMapping[newName = "_#{@@uniqueNameCounter}_#{comment}"]
                 @@uniqueNameCounter += 1
