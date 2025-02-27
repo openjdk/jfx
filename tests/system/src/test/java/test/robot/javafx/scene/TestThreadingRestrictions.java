@@ -25,7 +25,6 @@
 package test.robot.javafx.scene;
 
 import static org.junit.jupiter.api.Assertions.assertThrows;
-import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
@@ -45,10 +44,7 @@ import javafx.scene.control.skin.DatePickerSkin;
 import javafx.stage.PopupWindow;
 import javafx.stage.Stage;
 import javafx.stage.Window;
-import org.junit.jupiter.api.MethodOrderer;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.TestMethodOrder;
-import org.junit.jupiter.api.Timeout;
 import test.robot.testharness.RobotTestBase;
 import test.util.Util;
 
@@ -60,7 +56,6 @@ import test.util.Util;
  *
  * This test ensures that the threading restrictions are in place where required.
  */
-@TestMethodOrder(MethodOrderer.MethodName.class)
 public class TestThreadingRestrictions extends RobotTestBase {
     @Test
     public void choiceBox() {
@@ -234,6 +229,7 @@ public class TestThreadingRestrictions extends RobotTestBase {
         class TPopupWindow extends PopupWindow {
         }
 
+        test(TPopupWindow::new, (p) -> p.hide());
         test(TPopupWindow::new, (p) -> p.show(stage));
         test(TPopupWindow::new, (p) -> p.show(stage, 0, 0));
         test(TPopupWindow::new, (p) -> p.show(contentPane, 0, 0));
@@ -259,13 +255,12 @@ public class TestThreadingRestrictions extends RobotTestBase {
             Util.runAndWait(() -> {
                 p.show();
             });
-            p.hide(); // do we need to fail early here, or only when showing?
+            p.hide();
         });
         test(inFxThread(Stage::new), Stage::showAndWait);
     }
 
     @Test
-    @Timeout(value = 1, unit = TimeUnit.DAYS)
     public void window() {
         class TWindow extends Window {
             public TWindow() {

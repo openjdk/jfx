@@ -428,6 +428,8 @@ public class Dialog<R> implements EventTarget {
 
     /**
      * Hides this {@code Dialog}.
+     * @throws IllegalStateException if this method is called on a thread
+     * other than the JavaFX Application Thread.
      */
     public final void hide() {
         close();

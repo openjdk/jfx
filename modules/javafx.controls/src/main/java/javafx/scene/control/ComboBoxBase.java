@@ -394,7 +394,7 @@ public abstract class ComboBoxBase<T> extends Control {
      **************************************************************************/
 
     /**
-     * Requests that the ComboBox display the popup aspect of the user interface.
+     * Requests that the ComboBox display the popup associated with this control.
      * As mentioned in the {@link ComboBoxBase} class javadoc, what is actually
      * shown when this method is called is undefined, but commonly it is some
      * form of popup or dialog window.
