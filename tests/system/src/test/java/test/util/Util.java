@@ -337,9 +337,8 @@ public class Util {
     /**
      * Makes double click of the mouse left button.
      */
-    public static void doubleClick(Robot robot, int x, int y) {
+    public static void doubleClick(Robot robot) {
         runAndWait(() -> {
-            robot.mouseMove(x, y);
             robot.mouseClick(MouseButton.PRIMARY);
         });
         sleep(50);

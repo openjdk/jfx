@@ -99,7 +99,8 @@ public class TextSelectionTest {
         Util.parkCursor(robot);
         Util.runAndWait(() -> colorBefore = robot.getPixelColor(x, y));
 
-        Util.doubleClick(robot, x, y);
+        Util.runAndWait(() -> robot.mouseMove(x, y));
+        Util.doubleClick(robot);
         Util.sleep(500); // Wait for the selection highlight to be drawn
 
         Util.parkCursor(robot);
