@@ -102,8 +102,10 @@ public abstract class AbstractPrimaryTimer {
     static {
         Settings.addPropertyChangeListener(pcl);
         int pulse = Settings.getInt(PULSE_PROP, -1);
-        if (pulse != -1) {
-            System.err.println("Setting PULSE_DURATION to " + pulse + " hz");
+
+        boolean verbose = Boolean.getBoolean("javafx.verbose");
+        if (verbose && pulse != -1) {
+            System.out.println("Setting PULSE_DURATION to " + pulse + " hz");
         }
     }
 
