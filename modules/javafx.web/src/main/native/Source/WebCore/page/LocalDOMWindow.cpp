@@ -2635,8 +2635,11 @@ ExceptionOr<RefPtr<Frame>> LocalDOMWindow::createWindow(const String& urlString,
     RefPtr newFrame = WebCore::createWindow(*activeFrame, openerFrame, WTFMove(frameLoadRequest), windowFeatures, created);
     if (!newFrame)
         return RefPtr<Frame> { nullptr };
-
+#if !PLATFORM(JAVA)
+    bool noopener = windowFeatures.wantsNoOpener();
+#else
     bool noopener = windowFeatures.noreferrer;
+#endif
     if (!noopener)
         newFrame->setOpener(&openerFrame);
 

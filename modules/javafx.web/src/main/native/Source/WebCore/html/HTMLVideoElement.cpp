@@ -681,7 +681,7 @@ void HTMLVideoElement::cancelVideoFrameCallback(unsigned identifier)
     // Search first the requests currently being serviced, and mark them as cancelled if found.
     auto index = m_servicedVideoFrameRequests.findIf([identifier](auto& request) { return request->identifier == identifier; });
     if (index != notFound) {
-        m_servicedVideoFrameRequests[index]->cancelled = true;
+        m_servicedVideoFrameRequests[index]->callback = nullptr;
         return;
     }
 
@@ -699,7 +699,8 @@ void HTMLVideoElement::cancelVideoFrameCallback(unsigned identifier)
 void HTMLVideoElement::stop()
 {
     m_videoFrameRequests.clear();
-    m_servicedVideoFrameRequests.clear();
+    for (auto& request : m_servicedVideoFrameRequests)
+        request->callback = nullptr;
     HTMLMediaElement::stop();
 }
 
@@ -734,10 +735,8 @@ void HTMLVideoElement::serviceRequestVideoFrameCallbacks(ReducedResolutionSecond
 
     m_videoFrameRequests.swap(m_servicedVideoFrameRequests);
     for (auto& request : m_servicedVideoFrameRequests) {
-        if (!request->cancelled) {
-            Ref { request->callback }->handleEvent(std::round(now.milliseconds()), *videoFrameMetadata);
-            request->cancelled = true;
-        }
+        if (RefPtr callback = std::exchange(request->callback, { }))
+            callback->handleEvent(std::round(now.milliseconds()), *videoFrameMetadata);
     }
     m_servicedVideoFrameRequests.clear();
 
