@@ -54,9 +54,10 @@ public class RegionShim extends Region {
     }
 
     public static double computeChildMinAreaHeight(Region r,
-        Node child, Insets margin) {
-    return r.computeChildMinAreaHeight(child, margin);
-}
+            Node child, Insets margin) {
+        return r.computeChildMinAreaHeight(child, margin);
+    }
+
     public static double computeChildMinAreaHeight(Region r,
             Node child, double minBaselineComplement,
             Insets margin, double width, boolean fillWidth) {
@@ -172,12 +173,12 @@ public class RegionShim extends Region {
 
     //----------------------------------------------------------
 
-        @Override public void addImageListener(Image image) {
-            super.addImageListener(image);
-        }
+    @Override public void addImageListener(Image image) {
+        super.addImageListener(image);
+    }
 
-        @Override public void removeImageListener(Image image) {
-            super.removeImageListener(image);
-        }
+    @Override public void removeImageListener(Image image) {
+        super.removeImageListener(image);
+    }
 
 }
