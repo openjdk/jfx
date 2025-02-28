@@ -75,7 +75,7 @@ See [JDK-8306707](https://bugs.openjdk.org/browse/JDK-8306707) for more informat
 
 `ScrollPane` now only responds to key events when it is the active focus owner. This ensures that custom controls and other UI elements work correctly inside a `ScrollPane`, providing a more consistent and intuitive navigation experience.
 
-Applications that prefer the previous behavior, where `ScrollPane` always reacts to arrow keys and other navigational inputs, can manually restore it by adding an event handler. See [this note](notes/24/JDK-8340852-info.md) for an example of how to do this.
+Applications that prefer the previous behavior, where `ScrollPane` always reacts to arrow keys and other navigational inputs, can manually restore it by adding an event handler. See [this note](notes/24/JDK-8340852-ScrollPane.md) for an example of how to do this.
 
 See [JDK-8340852](https://bugs.openjdk.org/browse/JDK-8340852) for more information.
 
