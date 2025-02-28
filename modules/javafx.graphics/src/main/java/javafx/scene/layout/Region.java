@@ -2041,12 +2041,14 @@ public class Region extends Parent {
      *
      * # content width/heights:
      *
-     * The space allocated to a child, minus its margins. These are never -1.
+     * The space allocated to a child, minus its margins. A content size is
+     * always a real value (not NaN) and never negative.
      *
      * # bounded width/heights:
      *
      * The space allocated to a child, minus its margins, adjusted according to
-     * its constraints (min <= X <= max). These are never -1.
+     * its constraints (min <= X <= max). A bounded size is always a real value
+     * (not NaN) and never negative.
      */
 
     /*
