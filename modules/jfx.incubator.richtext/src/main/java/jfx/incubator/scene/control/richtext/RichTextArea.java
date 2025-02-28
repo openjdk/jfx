@@ -54,17 +54,16 @@ import javafx.scene.AccessibleAction;
 import javafx.scene.AccessibleAttribute;
 import javafx.scene.AccessibleRole;
 import javafx.scene.control.Control;
+import javafx.scene.control.input.FunctionTag;
+import javafx.scene.control.input.InputMap;
 import javafx.scene.input.DataFormat;
 import javafx.util.Duration;
-import com.sun.jfx.incubator.scene.control.input.InputMapHelper;
 import com.sun.jfx.incubator.scene.control.richtext.CssStyles;
 import com.sun.jfx.incubator.scene.control.richtext.Params;
 import com.sun.jfx.incubator.scene.control.richtext.RTAccessibilityHelper;
 import com.sun.jfx.incubator.scene.control.richtext.RichTextAreaSkinHelper;
 import com.sun.jfx.incubator.scene.control.richtext.VFlow;
 import com.sun.jfx.incubator.scene.control.richtext.util.RichUtils;
-import jfx.incubator.scene.control.input.FunctionTag;
-import jfx.incubator.scene.control.input.InputMap;
 import jfx.incubator.scene.control.richtext.model.RichTextModel;
 import jfx.incubator.scene.control.richtext.model.StyleAttributeMap;
 import jfx.incubator.scene.control.richtext.model.StyledInput;
@@ -306,8 +305,6 @@ public class RichTextArea extends Control {
     private StyleableBooleanProperty useContentWidth;
     private StyleableBooleanProperty wrapText;
     private RTAccessibilityHelper accessibilityHelper;
-    // will be moved to Control JDK-8314968
-    private final InputMap inputMap = new InputMap(this);
 
     /** The style handler registry instance, made available for use by subclasses to add support for new style attributes. */
     protected static final StyleHandlerRegistry styleHandlerRegistry = initStyleHandlerRegistry();
@@ -1294,28 +1291,6 @@ public class RichTextArea extends Control {
     }
 
     /**
-     * Executes a function mapped to the specified function tag.
-     * This method does nothing if no function is mapped to the tag, or the function has been unbound.
-     *
-     * @param tag the function tag
-     */
-    // TODO to be moved to Control JDK-8314968
-    public final void execute(FunctionTag tag) {
-        InputMapHelper.execute(this, getInputMap(), tag);
-    }
-
-    /**
-     * Executes the default function mapped to the specified tag.
-     * This method does nothing if no default mapping exists.
-     *
-     * @param tag the function tag
-     */
-    // TODO to be moved to Control JDK-8314968
-    public final void executeDefault(FunctionTag tag) {
-        InputMapHelper.executeDefault(this, getInputMap(), tag);
-    }
-
-    /**
      * Extends selection to the specified position.  Internally, this method will normalized the position
      * to be within the document boundaries.
      * Calling this method produces the same result as {@code select(pos, pos)} if no prior selection exists.
@@ -1356,15 +1331,6 @@ public class RichTextArea extends Control {
     public final TextPos getDocumentEnd() {
         StyledTextModel m = getModel();
         return (m == null) ? TextPos.ZERO : m.getDocumentEnd();
-    }
-
-    /**
-     * Returns the input map instance.
-     * @return the input map instance
-     */
-    // to be moved to Control JDK-8314968
-    public final InputMap getInputMap() {
-        return inputMap;
     }
 
     /**

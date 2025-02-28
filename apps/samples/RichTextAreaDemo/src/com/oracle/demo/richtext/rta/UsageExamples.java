@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023, 2024, Oracle and/or its affiliates.
+ * Copyright (c) 2023, 2025, Oracle and/or its affiliates.
  * All rights reserved. Use is subject to license terms.
  *
  * This file is available and licensed under the following license:
@@ -34,10 +34,10 @@ package com.oracle.demo.richtext.rta;
 
 import javafx.application.Application;
 import javafx.scene.Scene;
+import javafx.scene.control.input.FunctionTag;
+import javafx.scene.control.input.KeyBinding;
 import javafx.scene.input.KeyCode;
 import javafx.stage.Stage;
-import jfx.incubator.scene.control.input.FunctionTag;
-import jfx.incubator.scene.control.input.KeyBinding;
 import jfx.incubator.scene.control.richtext.CodeArea;
 import jfx.incubator.scene.control.richtext.LineNumberDecorator;
 import jfx.incubator.scene.control.richtext.RichTextArea;

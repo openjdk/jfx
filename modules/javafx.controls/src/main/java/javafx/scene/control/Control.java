@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -484,7 +484,7 @@ public abstract class Control extends Region implements Skinnable {
      * @since 999 TODO
      * @param tag the function tag
      */
-    protected final void execute(FunctionTag tag) {
+    public final void execute(FunctionTag tag) {
         InputMapHelper.execute(this, getInputMap(), tag);
     }
 
