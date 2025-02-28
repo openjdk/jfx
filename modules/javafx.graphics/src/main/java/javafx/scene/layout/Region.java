@@ -1950,7 +1950,7 @@ public class Region extends Parent {
         double bottom = margin != null? snapSpaceY(margin.getBottom(), snap) : 0;
 
         double alt = -1;
-        if (availableWidth != -1 & child.isResizable() && child.getContentBias() == Orientation.HORIZONTAL) { // height depends on width
+        if (availableWidth != -1 && child.isResizable() && child.getContentBias() == Orientation.HORIZONTAL) { // height depends on width
             double contentWidth = computeContentWidth(margin, availableWidth);
 
             alt = computeBoundedWidth(child, fillWidth, contentWidth);
