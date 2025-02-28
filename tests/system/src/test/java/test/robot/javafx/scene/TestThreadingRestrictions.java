@@ -29,12 +29,14 @@ import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
 import javafx.geometry.Side;
+import javafx.scene.Scene;
 import javafx.scene.control.ChoiceBox;
 import javafx.scene.control.ColorPicker;
 import javafx.scene.control.ComboBox;
 import javafx.scene.control.ContextMenu;
 import javafx.scene.control.DatePicker;
 import javafx.scene.control.Dialog;
+import javafx.scene.control.Label;
 import javafx.scene.control.Menu;
 import javafx.scene.control.MenuButton;
 import javafx.scene.control.MenuItem;
@@ -107,6 +109,14 @@ public class TestThreadingRestrictions extends RobotTestBase {
             });
             p.hide();
         });
+    }
+
+    @Test
+    public void comboBoxSkinListeners() {
+        ComboBox<Object> c = new ComboBox<>();
+        c.setSkin(new ComboBoxListViewSkin(c));
+        Scene s = new Scene(c);
+        c.getScene().setRoot(new Label());
     }
 
     @Test
