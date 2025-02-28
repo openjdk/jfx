@@ -51,7 +51,7 @@ NOTE: The above will fail if you run your application with JDK 23 or earlier. JD
 
 #### Applications using `jlink` to create a custom Java runtime image:
 
-When creating your custom Java runtime image, put the JavaFX jmods on the module path ahead of the JDK jmoods. For example:
+When creating your custom Java runtime image, put the JavaFX jmods on the module path ahead of the JDK jmods. For example:
 
 ```
 jlink --output jdk-with-javafx \
