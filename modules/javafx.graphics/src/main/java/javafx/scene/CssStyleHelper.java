@@ -832,8 +832,8 @@ final class CssStyleHelper {
         // transition to that value.
         transitionStateInProgress = true;
 
-        // The StyleCacheEntry (cache), when filled, holds previously calculated values 
-        // for each property. Missing values in this cache indicate no style affected 
+        // The StyleCacheEntry (cache), when filled, holds previously calculated values
+        // for each property. Missing values in this cache indicate no style affected
         // the value and should lead to a reset of the property to its previous value.
         //
         // If there was no cache present, then a new cache is created which will have
