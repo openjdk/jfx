@@ -87,6 +87,8 @@ import javafx.scene.control.DialogPane;
 import javafx.scene.control.Hyperlink;
 import javafx.scene.control.Label;
 import javafx.scene.control.ListView;
+import javafx.scene.control.Menu;
+import javafx.scene.control.MenuBar;
 import javafx.scene.control.MenuButton;
 import javafx.scene.control.MenuItem;
 import javafx.scene.control.Pagination;
@@ -124,6 +126,7 @@ import javafx.scene.control.skin.DatePickerSkin;
 import javafx.scene.control.skin.HyperlinkSkin;
 import javafx.scene.control.skin.LabelSkin;
 import javafx.scene.control.skin.ListViewSkin;
+import javafx.scene.control.skin.MenuBarSkin;
 import javafx.scene.control.skin.MenuButtonSkin;
 import javafx.scene.control.skin.PaginationSkin;
 import javafx.scene.control.skin.ProgressIndicatorSkin;
@@ -222,7 +225,7 @@ import test.robot.testharness.RobotTestBase;
  */
 public class NodeInitializationStressTest extends RobotTestBase {
     /* debugging aid: set this flag to true and comment out assumeFalse(SKIP_TEST) to run specific test(s). */
-    private static final boolean SKIP_TEST = false;
+    private static final boolean SKIP_TEST = !false;
     /** Determines the amount of time background threads are active during each test. */
     private static final int DURATION = 5000;
     private static final AtomicLong seq = new AtomicLong();
@@ -737,6 +740,22 @@ public class NodeInitializationStressTest extends RobotTestBase {
             c.setViewport(new Rectangle2D(nextDouble(100), nextDouble(100), nextDouble(100), nextDouble(100)));
             c.setX(nextDouble(100));
             c.setY(nextDouble(100));
+        });
+    }
+
+    @Test
+    public void menuBar() {
+        //assumeFalse(SKIP_TEST);
+        test(() -> {
+            MenuBar c = new MenuBar();
+            c.setSkin(new MenuBarSkin(c));
+            return c;
+        }, (c) -> {
+            c.getMenus().setAll(new Menu("MenuBar"));
+            accessControl(c);
+            if (Platform.isFxApplicationThread()) {
+                c.setUseSystemMenuBar(nextBoolean());
+            }
         });
     }
 

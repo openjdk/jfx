@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -35,7 +35,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.WeakHashMap;
 import java.util.stream.Collectors;
-
+import javafx.application.Platform;
 import javafx.beans.InvalidationListener;
 import javafx.beans.property.DoubleProperty;
 import javafx.beans.property.ObjectProperty;
@@ -77,7 +77,7 @@ import javafx.scene.layout.HBox;
 import javafx.stage.Stage;
 import javafx.stage.Window;
 import javafx.util.Pair;
-
+import javafx.util.Subscription;
 import com.sun.javafx.menu.MenuBase;
 import com.sun.javafx.scene.ParentHelper;
 import com.sun.javafx.scene.SceneHelper;
@@ -816,7 +816,35 @@ public class MenuBarSkin extends SkinBase<MenuBar> {
         container.getChildren().clear();
     }
 
+    // FIX
+    private volatile Subscription windowSubscription;
+
     private void rebuildUI() {
+        if (Platform.isFxApplicationThread()) {
+            // FIX this code is not thread safe
+            if (windowSubscription != null) {
+                windowSubscription.unsubscribe();
+                windowSubscription = null;
+            }
+            rebuildUILocal();
+        } else {
+            if (windowSubscription == null) {
+                // FIX this code is not thread safe
+                windowSubscription = getSkinnable()
+                    .sceneProperty()
+                    .flatMap(Scene::windowProperty)
+                    .subscribe(v -> {
+                        // FIX this code is not thread safe
+                        if (windowSubscription != null) {
+                            windowSubscription.unsubscribe();
+                            windowSubscription = null;
+                        }
+                    });
+            }
+        }
+    }
+
+    private void rebuildUILocal() {
         cleanUpListeners();
 
         if (Toolkit.getToolkit().getSystemMenu().isSupported()) {
