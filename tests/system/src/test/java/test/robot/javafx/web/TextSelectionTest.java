@@ -71,7 +71,7 @@ public class TextSelectionTest extends RobotTestBase{
     // ========================== TEST CASE ==========================
     @Test
     @Timeout(value=20)
-    public void testTextSelection() throws Exception {
+    public void testTextSelection() {
 
         int x = (int)(scene.getWindow().getX() + scene.getX() + 22);
         int y = (int)(scene.getWindow().getY() + scene.getY() + 15);
