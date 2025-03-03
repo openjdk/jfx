@@ -540,8 +540,7 @@ public abstract class Chart extends Region {
             if (accessibilityActive instanceof SimpleBooleanProperty p) {
                 return p.get();
             } else {
-                boolean aa = Platform.accessibilityActiveProperty().get();
-                SimpleBooleanProperty active = new SimpleBooleanProperty(aa);
+                SimpleBooleanProperty active = new SimpleBooleanProperty();
                 accessibilityActive = active;
                 active.bind(Platform.accessibilityActiveProperty());
                 active.addListener((src, prev, on) -> {
