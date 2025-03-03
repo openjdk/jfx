@@ -213,7 +213,6 @@ import test.robot.testharness.RobotTestBase;
  *
  * Notable exceptions to this rule:
  * - HTMLEditor
- * - MenuBar
  * - WebView
  *
  * The test creates a visible node on the JavaFX application thread, and at the same time,
@@ -225,7 +224,7 @@ import test.robot.testharness.RobotTestBase;
  */
 public class NodeInitializationStressTest extends RobotTestBase {
     /* debugging aid: set this flag to true and comment out assumeFalse(SKIP_TEST) to run specific test(s). */
-    private static final boolean SKIP_TEST = !false;
+    private static final boolean SKIP_TEST = false;
     /** Determines the amount of time background threads are active during each test. */
     private static final int DURATION = 5000;
     private static final AtomicLong seq = new AtomicLong();
@@ -745,7 +744,7 @@ public class NodeInitializationStressTest extends RobotTestBase {
 
     @Test
     public void menuBar() {
-        //assumeFalse(SKIP_TEST);
+        assumeFalse(SKIP_TEST);
         test(() -> {
             MenuBar c = new MenuBar();
             // exercise skin installation and displosal code paths
