@@ -44,10 +44,13 @@ import test.util.Util;
 
 public class TextSelectionTest {
 
-    private static final String html = "<html>" +
-        "<head></head> " +
-        "<body>&nbsp&nbsp&nbsp&nbsp some text</body>" +
-        "</html>";
+    private static final String html =
+    """
+    <html>
+    <head></head>
+    <body>&nbsp&nbsp&nbsp&nbsp some text</body>
+    </html>
+    """;
 
     private static CountDownLatch startupLatch = new CountDownLatch(1);
     private static CountDownLatch webviewLoadLatch = new CountDownLatch(1);
