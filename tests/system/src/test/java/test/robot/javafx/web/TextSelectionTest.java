@@ -27,22 +27,19 @@ package test.robot.javafx.web;
 
 import java.util.concurrent.CountDownLatch;
 
-import javafx.application.Application;
 import javafx.concurrent.Worker;
 import javafx.scene.paint.Color;
-import javafx.scene.robot.Robot;
-import javafx.scene.Scene;
 import javafx.scene.web.WebView;
-import javafx.stage.Stage;
 
 import org.junit.jupiter.api.Assertions;
-import org.junit.jupiter.api.AfterAll;
-import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
+
+import test.robot.testharness.RobotTestBase;
 import test.util.Util;
 
-public class TextSelectionTest {
+public class TextSelectionTest extends RobotTestBase{
 
     private static final String html =
     """
@@ -52,43 +49,23 @@ public class TextSelectionTest {
     </html>
     """;
 
-    private static CountDownLatch startupLatch = new CountDownLatch(1);
     private static CountDownLatch webviewLoadLatch = new CountDownLatch(1);
-    private static Scene scene;
-    private static Robot robot;
     private Color colorBefore;
     private Color colorAfter;
 
-    public static class TestApp extends Application {
-        @Override
-        public void start(Stage primaryStage) {
-
-            robot = new Robot();
+    @BeforeEach
+    public void beforeEach() {
+        Util.runAndWait(() -> {
             WebView webview = new WebView();
-            scene = new Scene(webview, 400, 300);
-            primaryStage.setScene(scene);
-            primaryStage.setAlwaysOnTop(true);
-
             webview.getEngine().getLoadWorker().stateProperty().addListener((ov, o, n) -> {
                 if (n == Worker.State.SUCCEEDED) {
                     webviewLoadLatch.countDown();
                 }
             });
             webview.getEngine().loadContent(html);
-            primaryStage.setOnShown(e -> startupLatch.countDown());
-            primaryStage.show();
-        }
-    }
-
-    @BeforeAll
-    public static void initFX() {
-        Util.launch(startupLatch, TestApp.class);
+            contentPane.setCenter(webview);
+        });
         Util.waitForLatch(webviewLoadLatch, 10, "Timeout waiting for web content to load");
-    }
-
-    @AfterAll
-    public static void teardown() {
-        Util.shutdown();
     }
 
     // ========================== TEST CASE ==========================
