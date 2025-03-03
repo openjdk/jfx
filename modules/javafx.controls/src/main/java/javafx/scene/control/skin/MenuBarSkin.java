@@ -130,7 +130,7 @@ public class MenuBarSkin extends SkinBase<MenuBar> {
     private WeakChangeListener<Boolean> weakMenuVisibilityChangeListener;
     private ListenerHelper sceneListenerHelper;
     private IDisconnectable windowFocusHelper;
-
+    private volatile Subscription windowSubscription;
     private boolean pendingDismiss = false;
     private boolean altKeyPressed = false;
 
@@ -227,6 +227,18 @@ public class MenuBarSkin extends SkinBase<MenuBar> {
         };
         weakMenuVisibilityChangeListener = new WeakChangeListener<>(menuVisibilityChangeListener);
 
+        if (!Platform.isFxApplicationThread()) {
+            // delay rebuildUI() until after MenuBar becomes a part of the scene graph
+            windowSubscription = getSkinnable()
+                .sceneProperty()
+                .flatMap(Scene::windowProperty)
+                .subscribe(w -> {
+                    if (w != null) {
+                        rebuildUI();
+                    }
+                });
+        }
+
         ListenerHelper lh = ListenerHelper.get(this);
 
         rebuildUI();
@@ -234,11 +246,11 @@ public class MenuBarSkin extends SkinBase<MenuBar> {
             rebuildUI();
         });
 
-        if (Toolkit.getToolkit().getSystemMenu().isSupported()) {
-            lh.addInvalidationListener(control.useSystemMenuBarProperty(), (v) -> {
+        lh.addInvalidationListener(control.useSystemMenuBarProperty(), (v) -> {
+            if (Toolkit.getToolkit().getSystemMenu().isSupported()) {
                 rebuildUI();
-            });
-        }
+            }
+        });
 
         // When the mouse leaves the menu, the last hovered item should lose
         // it's focus so that it is no longer selected. This code returns focus
@@ -783,6 +795,12 @@ public class MenuBarSkin extends SkinBase<MenuBar> {
     }
 
     private void cleanUpListeners() {
+        Subscription sub = windowSubscription;
+        if (sub != null) {
+            sub.unsubscribe();
+            windowSubscription = null;
+        }
+
         getSkinnable().focusedProperty().removeListener(weakMenuBarFocusedPropertyListener);
 
         for (Menu m : getSkinnable().getMenus()) {
@@ -816,35 +834,10 @@ public class MenuBarSkin extends SkinBase<MenuBar> {
         container.getChildren().clear();
     }
 
-    // FIX
-    private volatile Subscription windowSubscription;
-
     private void rebuildUI() {
-        if (Platform.isFxApplicationThread()) {
-            // FIX this code is not thread safe
-            if (windowSubscription != null) {
-                windowSubscription.unsubscribe();
-                windowSubscription = null;
-            }
-            rebuildUILocal();
-        } else {
-            if (windowSubscription == null) {
-                // FIX this code is not thread safe
-                windowSubscription = getSkinnable()
-                    .sceneProperty()
-                    .flatMap(Scene::windowProperty)
-                    .subscribe(v -> {
-                        // FIX this code is not thread safe
-                        if (windowSubscription != null) {
-                            windowSubscription.unsubscribe();
-                            windowSubscription = null;
-                        }
-                    });
-            }
+        if (!Platform.isFxApplicationThread()) {
+            return;
         }
-    }
-
-    private void rebuildUILocal() {
         cleanUpListeners();
 
         if (Toolkit.getToolkit().getSystemMenu().isSupported()) {
