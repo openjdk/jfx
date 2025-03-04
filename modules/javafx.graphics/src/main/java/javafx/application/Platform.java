@@ -422,7 +422,7 @@ public final class Platform {
      * assistive technology, such as a screen reader, requests
      * information about any JavaFX window or its children.
      * <p>
-     * This property can be accessed only from the FX application thread.
+     * This property can be accessed only from the JavaFX Application Thread.
      *
      * @return the read-only boolean property indicating if accessibility is active
      *
