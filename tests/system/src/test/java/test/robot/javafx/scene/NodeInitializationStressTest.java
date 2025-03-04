@@ -750,6 +750,7 @@ public class NodeInitializationStressTest extends RobotTestBase {
             // exercise skin installation and displosal code paths
             c.setSkin(new MenuBarSkin(c));
             c.setSkin(new MenuBarSkin(c));
+            c.setUseSystemMenuBar(nextBoolean());
             return c;
         }, (c) -> {
             c.getMenus().setAll(new Menu("MenuBar"));

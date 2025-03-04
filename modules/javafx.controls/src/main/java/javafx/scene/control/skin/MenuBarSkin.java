@@ -227,29 +227,36 @@ public class MenuBarSkin extends SkinBase<MenuBar> {
         };
         weakMenuVisibilityChangeListener = new WeakChangeListener<>(menuVisibilityChangeListener);
 
-        if (!Platform.isFxApplicationThread()) {
+        ListenerHelper lh = ListenerHelper.get(this);
+
+        if (Platform.isFxApplicationThread()) {
+            if (Toolkit.getToolkit().getSystemMenu().isSupported()) {
+                lh.addInvalidationListener(control.useSystemMenuBarProperty(), (v) -> {
+                    rebuildUI();
+                });
+            }
+        } else {
             // delay rebuildUI() until after MenuBar becomes a part of the scene graph
+            // this subscription will be removed by cleanUpListeners()
             windowSubscription = getSkinnable()
                 .sceneProperty()
                 .flatMap(Scene::windowProperty)
                 .subscribe(w -> {
                     if (w != null) {
+                        if (Toolkit.getToolkit().getSystemMenu().isSupported()) {
+                            lh.addInvalidationListener(control.useSystemMenuBarProperty(), (v) -> {
+                                rebuildUI();
+                            });
+                        }
+                        // this method will unsubscribe on first run
                         rebuildUI();
                     }
                 });
         }
 
-        ListenerHelper lh = ListenerHelper.get(this);
-
         rebuildUI();
         lh.addListChangeListener(control.getMenus(), (v) -> {
             rebuildUI();
-        });
-
-        lh.addInvalidationListener(control.useSystemMenuBarProperty(), (v) -> {
-            if (Toolkit.getToolkit().getSystemMenu().isSupported()) {
-                rebuildUI();
-            }
         });
 
         // When the mouse leaves the menu, the last hovered item should lose
