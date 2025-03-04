@@ -560,7 +560,7 @@ public abstract class Chart extends Region {
                     .flatMap(Scene::windowProperty)
                     .subscribe((w) -> {
                         if (w != null) {
-                            // also unsubscribes when appears in a window
+                            // will unsubscribe when appears in a window, in the fx app thread
                             if (isAccessibilityActive()) {
                                 handleAccessibilityActive(true);
                             }
