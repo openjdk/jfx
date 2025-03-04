@@ -41,6 +41,7 @@ import java.util.concurrent.TimeUnit;
 import javafx.application.Application;
 import javafx.application.Platform;
 import javafx.geometry.Rectangle2D;
+import javafx.scene.input.MouseButton;
 import javafx.scene.Node;
 import javafx.scene.Scene;
 import javafx.scene.layout.Region;
@@ -331,6 +332,19 @@ public class Util {
         } catch (InterruptedException e) {
             fail(e);
         }
+    }
+
+    /**
+     * Makes double click of the mouse left button.
+     */
+    public static void doubleClick(Robot robot) {
+        runAndWait(() -> {
+            robot.mouseClick(MouseButton.PRIMARY);
+        });
+        sleep(50);
+        runAndWait(() -> {
+            robot.mouseClick(MouseButton.PRIMARY);
+        });
     }
 
     /**
