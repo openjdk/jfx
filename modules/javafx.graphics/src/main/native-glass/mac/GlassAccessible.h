@@ -44,6 +44,7 @@ jMapper jVariantToID;
 
 id variantToID(JNIEnv *env, jobject variant);
 NSString* jStringToNSString(JNIEnv *env, jstring string);
+jstring NSStringToJavaString(JNIEnv *env, NSString* string);
 NSArray* jArrayToNSArray(JNIEnv *env, jarray srcArray, jMapper);
 
 /* Accessible class IDs for classes, methods, and fields (this could be in GlassStatics.h) */
