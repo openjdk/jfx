@@ -458,16 +458,16 @@ public class NodeInitializationStressTest extends RobotTestBase {
             c.setValue(Color.GREEN);
             return c;
         }, (c) -> {
+            accessControl(c);
             c.setValue(Color.RED);
             c.prefHeight(-1);
             c.setValue(Color.BLACK);
             c.prefWidth(-1);
-            accessControl(c);
             if (Platform.isFxApplicationThread()) {
-                if (nextBoolean()) {
-                    c.show();
-                } else {
+                if (c.isShowing()) {
                     c.hide();
+                } else {
+                    c.show();
                 }
             }
         });
@@ -482,15 +482,15 @@ public class NodeInitializationStressTest extends RobotTestBase {
             c.getItems().setAll("ComboBox", "1", "2");
             return c;
         }, (c) -> {
+            accessControl(c);
             c.setEditable(true);
             c.getItems().setAll("ComboBox", nextString(), "2");
             c.getSelectionModel().select(0);
-            accessControl(c);
             if (Platform.isFxApplicationThread()) {
-                if (nextBoolean()) {
-                    c.show();
-                } else {
+                if (c.isShowing()) {
                     c.hide();
+                } else {
+                    c.show();
                 }
             }
         });
@@ -534,16 +534,16 @@ public class NodeInitializationStressTest extends RobotTestBase {
             c.setSkin(new DatePickerSkin(c));
             return c;
         }, (c) -> {
+            accessControl(c);
             c.setValue(LocalDate.now());
             c.prefHeight(-1);
             c.setValue(LocalDate.EPOCH);
             c.prefWidth(-1);
-            accessControl(c);
             if (Platform.isFxApplicationThread()) {
-                if (nextBoolean()) {
-                    c.show();
-                } else {
+                if (c.isShowing()) {
                     c.hide();
+                } else {
+                    c.show();
                 }
             }
         });
@@ -748,14 +748,14 @@ public class NodeInitializationStressTest extends RobotTestBase {
             c.setSkin(new MenuButtonSkin(c));
             return c;
         }, (c) -> {
+            accessControl(c);
             c.getItems().setAll(new MenuItem("MenuButton"));
             c.setPopupSide(nextEnum(Side.class));
-            accessControl(c);
             if (Platform.isFxApplicationThread()) {
-                if (nextBoolean()) {
-                    c.show();
-                } else {
+                if (c.isShowing()) {
                     c.hide();
+                } else {
+                    c.show();
                 }
             }
         });
@@ -1057,10 +1057,10 @@ public class NodeInitializationStressTest extends RobotTestBase {
             c.setPopupSide(nextEnum(Side.class));
             accessControl(c);
             if (Platform.isFxApplicationThread()) {
-                if (nextBoolean()) {
-                    c.show();
-                } else {
+                if (c.isShowing()) {
                     c.hide();
+                } else {
+                    c.show();
                 }
             }
         });
