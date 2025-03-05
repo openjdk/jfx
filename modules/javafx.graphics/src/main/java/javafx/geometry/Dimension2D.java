@@ -27,13 +27,13 @@ package javafx.geometry;
 
 import javafx.beans.NamedArg;
 
-
 /**
  * A 2D dimension object that contains a width and a height.
  *
  * @since JavaFX 2.0
  */
 public class Dimension2D {
+
     /**
      * Constructs a <code>Dimension2D</code> with the specified width and
      * height.
@@ -51,7 +51,7 @@ public class Dimension2D {
      *
      * @defaultValue 0.0
      */
-    private double width;
+    private final double width;
 
     /**
      * The width of the dimension.
@@ -66,7 +66,7 @@ public class Dimension2D {
      *
      * @defaultValue 0.0
      */
-    private double height;
+    private final double height;
 
     /**
      * The height of the dimension.
