@@ -39,19 +39,17 @@ import org.junit.jupiter.api.Timeout;
 import test.robot.testharness.RobotTestBase;
 import test.util.Util;
 
-public class TextSelectionTest extends RobotTestBase{
+public class TextSelectionTest extends RobotTestBase {
 
-    private static final String html =
-    """
-    <html>
-    <head></head>
-    <body>&nbsp&nbsp&nbsp&nbsp some text</body>
-    </html>
-    """;
+    private static final String html = """
+        <html>
+        <body><font size="2">&nbsp&nbsp&nbsp&nbsp some text</font></body>
+        </html>
+        """;
 
     private static CountDownLatch webviewLoadLatch = new CountDownLatch(1);
-    private Color colorBefore;
-    private Color colorAfter;
+    private volatile Color colorBefore;
+    private volatile Color colorAfter;
 
     @BeforeEach
     public void beforeEach() {
