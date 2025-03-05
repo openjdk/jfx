@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -30,7 +30,8 @@ import javafx.beans.Observable;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
 
-import com.sun.javafx.binding.ExpressionHelper;
+import com.sun.javafx.binding.OldValueCachingListenerManager;
+
 import java.lang.ref.WeakReference;
 import javafx.beans.WeakListener;
 
@@ -51,11 +52,23 @@ import javafx.beans.WeakListener;
  */
 public abstract class ObjectPropertyBase<T> extends ObjectProperty<T> {
 
+    private static final OldValueCachingListenerManager<Object, ObjectPropertyBase<?>> LISTENER_MANAGER = new OldValueCachingListenerManager<>() {
+        @Override
+        protected Object getData(ObjectPropertyBase<?> instance) {
+            return instance.listenerData;
+        }
+
+        @Override
+        protected void setData(ObjectPropertyBase<?> instance, Object data) {
+            instance.listenerData = data;
+        }
+    };
+
     private T value;
     private ObservableValue<? extends T> observable = null;
     private InvalidationListener listener = null;
     private boolean valid = true;
-    private ExpressionHelper<T> helper = null;
+    private Object listenerData;
 
     /**
      * The constructor of the {@code ObjectPropertyBase}.
@@ -75,22 +88,22 @@ public abstract class ObjectPropertyBase<T> extends ObjectProperty<T> {
 
     @Override
     public void addListener(InvalidationListener listener) {
-        helper = ExpressionHelper.addListener(helper, this, listener);
+        LISTENER_MANAGER.addListener(this, listener);
     }
 
     @Override
     public void removeListener(InvalidationListener listener) {
-        helper = ExpressionHelper.removeListener(helper, listener);
+        LISTENER_MANAGER.removeListener(this, listener);
     }
 
     @Override
     public void addListener(ChangeListener<? super T> listener) {
-        helper = ExpressionHelper.addListener(helper, this, listener);
+        LISTENER_MANAGER.addListener(this, (ChangeListener<Object>) listener);
     }
 
     @Override
     public void removeListener(ChangeListener<? super T> listener) {
-        helper = ExpressionHelper.removeListener(helper, listener);
+        LISTENER_MANAGER.removeListener(this, listener);
     }
 
     /**
@@ -103,7 +116,7 @@ public abstract class ObjectPropertyBase<T> extends ObjectProperty<T> {
      * binding becomes invalid.
      */
     protected void fireValueChangedEvent() {
-        ExpressionHelper.fireValueChangedEvent(helper);
+        LISTENER_MANAGER.fireValueChanged(this, listenerData);
     }
 
     private void markInvalid() {
