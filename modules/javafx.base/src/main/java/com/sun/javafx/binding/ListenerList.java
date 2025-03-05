@@ -66,7 +66,7 @@ public class ListenerList<T> extends ListenerListBase {
      * nesting levels it contains the number of listeners that have
      * been notified in higher level loops, while deeper nesting levels
      * communicate to higher level loops whether a nested notification
-     * actually occurred if if it completed normally or was aborted early.<p>
+     * actually occurred if it completed normally or was aborted early.<p>
      *
      * When its value is zero or positive, it indicates the number of
      * listeners notified in a higher level loop (minus one), while the constants
