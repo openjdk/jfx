@@ -1183,6 +1183,8 @@ public class Stage extends Window {
     /**
      * Closes this {@code Stage}.
      * This call is equivalent to {@code hide()}.
+     * @throws IllegalStateException if this method is called on a thread
+     * other than the JavaFX Application Thread.
      */
     public void close() {
         hide();
