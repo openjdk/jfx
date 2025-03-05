@@ -32,6 +32,10 @@
 #include "Filter.h"
 #include <wtf/text/TextStream.h>
 
+#if USE(SKIA)
+#include "FEGaussianBlurSkiaApplier.h"
+#endif
+
 namespace WebCore {
 
 Ref<FEGaussianBlur> FEGaussianBlur::create(float x, float y, EdgeModeType edgeMode, DestinationColorSpace colorSpace)
@@ -153,6 +157,10 @@ bool FEGaussianBlur::resultIsAlphaImage(const FilterImageVector& inputs) const
 OptionSet<FilterRenderingMode> FEGaussianBlur::supportedFilterRenderingModes() const
 {
     OptionSet<FilterRenderingMode> modes = FilterRenderingMode::Software;
+#if USE(SKIA)
+    if (m_edgeMode == EdgeModeType::None)
+        modes.add(FilterRenderingMode::Accelerated);
+#endif
     // FIXME: Ensure the correctness of the CG GaussianBlur filter (http://webkit.org/b/243816).
 #if 0 && HAVE(CGSTYLE_COLORMATRIX_BLUR)
     if (m_stdX == m_stdY)
@@ -161,12 +169,25 @@ OptionSet<FilterRenderingMode> FEGaussianBlur::supportedFilterRenderingModes() c
     return modes;
 }
 
+std::unique_ptr<FilterEffectApplier> FEGaussianBlur::createAcceleratedApplier() const
+{
+#if USE(SKIA)
+    return FilterEffectApplier::create<FEGaussianBlurSkiaApplier>(*this);
+#else
+    return nullptr;
+#endif
+}
+
 std::unique_ptr<FilterEffectApplier> FEGaussianBlur::createSoftwareApplier() const
 {
+#if USE(SKIA)
+    if (m_edgeMode == EdgeModeType::None)
+        return FilterEffectApplier::create<FEGaussianBlurSkiaApplier>(*this);
+#endif
     return FilterEffectApplier::create<FEGaussianBlurSoftwareApplier>(*this);
 }
 
-std::optional<GraphicsStyle> FEGaussianBlur::createGraphicsStyle(const Filter& filter) const
+std::optional<GraphicsStyle> FEGaussianBlur::createGraphicsStyle(GraphicsContext&, const Filter& filter) const
 {
     auto radius = calculateUnscaledKernelSize(filter.resolvedSize({ m_stdX, m_stdY }));
     return GraphicsGaussianBlur { radius };

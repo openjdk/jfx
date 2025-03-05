@@ -43,14 +43,14 @@ namespace WTF {
 
 // Declarations of string operations
 
-WTF_EXPORT_PRIVATE double charactersToDouble(const LChar*, size_t, bool* ok = nullptr);
-WTF_EXPORT_PRIVATE double charactersToDouble(const UChar*, size_t, bool* ok = nullptr);
-WTF_EXPORT_PRIVATE float charactersToFloat(const LChar*, size_t, bool* ok = nullptr);
-WTF_EXPORT_PRIVATE float charactersToFloat(const UChar*, size_t, bool* ok = nullptr);
-WTF_EXPORT_PRIVATE float charactersToFloat(const LChar*, size_t, size_t& parsedLength);
-WTF_EXPORT_PRIVATE float charactersToFloat(const UChar*, size_t, size_t& parsedLength);
+WTF_EXPORT_PRIVATE double charactersToDouble(std::span<const LChar>, bool* ok = nullptr);
+WTF_EXPORT_PRIVATE double charactersToDouble(std::span<const UChar>, bool* ok = nullptr);
+WTF_EXPORT_PRIVATE float charactersToFloat(std::span<const LChar>, bool* ok = nullptr);
+WTF_EXPORT_PRIVATE float charactersToFloat(std::span<const UChar>, bool* ok = nullptr);
+WTF_EXPORT_PRIVATE float charactersToFloat(std::span<const LChar>, size_t& parsedLength);
+WTF_EXPORT_PRIVATE float charactersToFloat(std::span<const UChar>, size_t& parsedLength);
 
-template<bool isSpecialCharacter(UChar), typename CharacterType> bool containsOnly(const CharacterType*, size_t);
+template<bool isSpecialCharacter(UChar), typename CharacterType, std::size_t Extent> bool containsOnly(std::span<const CharacterType, Extent>);
 
 enum class TrailingZerosPolicy : bool { Keep, Truncate };
 
@@ -61,13 +61,11 @@ public:
     String() = default;
 
     // Construct a string with UTF-16 data.
-    WTF_EXPORT_PRIVATE String(const UChar* characters, unsigned length);
-    ALWAYS_INLINE String(std::span<const UChar> characters) : String(characters.data(), characters.size()) { }
+    WTF_EXPORT_PRIVATE String(std::span<const UChar> characters);
 
     // Construct a string with Latin-1 data.
-    WTF_EXPORT_PRIVATE String(const LChar* characters, unsigned length);
-    WTF_EXPORT_PRIVATE String(const char* characters, unsigned length);
-    ALWAYS_INLINE String(std::span<const LChar> characters) : String(characters.data(), characters.size()) { }
+    WTF_EXPORT_PRIVATE String(std::span<const LChar> characters);
+    WTF_EXPORT_PRIVATE String(std::span<const char> characters);
     ALWAYS_INLINE static String fromLatin1(const char* characters) { return String { characters }; }
 
     // Construct a string referencing an existing StringImpl.
@@ -106,13 +104,11 @@ public:
     RefPtr<StringImpl> releaseImpl() { return WTFMove(m_impl); }
 
     unsigned length() const { return m_impl ? m_impl->length() : 0; }
-    const LChar* characters8() const { return m_impl ? m_impl->characters8() : nullptr; }
-    const UChar* characters16() const { return m_impl ? m_impl->characters16() : nullptr; }
-    std::span<const LChar> span8() const { return { characters8(), length() }; }
-    std::span<const UChar> span16() const { return { characters16(), length() }; }
+    std::span<const LChar> span8() const { return m_impl ? m_impl->span8() : std::span<const LChar>(); }
+    std::span<const UChar> span16() const { return m_impl ? m_impl->span16() : std::span<const UChar>(); }
 
-    // Return characters8() or characters16() depending on CharacterType.
-    template<typename CharacterType> const CharacterType* characters() const;
+    // Return span8() or span16() depending on CharacterType.
+    template<typename CharacterType> std::span<const CharacterType> span() const;
 
     bool is8Bit() const { return !m_impl || m_impl->is8Bit(); }
 
@@ -124,7 +120,7 @@ public:
     WTF_EXPORT_PRIVATE CString utf8(ConversionMode = LenientConversion) const;
 
     template<typename Func>
-    Expected<std::invoke_result_t<Func, std::span<const char>>, UTF8ConversionError> tryGetUTF8(const Func&, ConversionMode = LenientConversion) const;
+    Expected<std::invoke_result_t<Func, std::span<const char8_t>>, UTF8ConversionError> tryGetUTF8(const Func&, ConversionMode = LenientConversion) const;
     WTF_EXPORT_PRIVATE Expected<CString, UTF8ConversionError> tryGetUTF8(ConversionMode) const;
     WTF_EXPORT_PRIVATE Expected<CString, UTF8ConversionError> tryGetUTF8() const;
 
@@ -264,29 +260,29 @@ public:
 
 #if OS(WINDOWS)
     String(const wchar_t* characters, unsigned length)
-        : String(ucharFrom(characters), length) { }
+        : String({ ucharFrom(characters), length }) { }
 
     String(const wchar_t* characters)
-        : String(characters, characters ? wcslen(characters) : 0) { }
+        : String({ ucharFrom(characters), static_cast<size_t>(characters ? wcslen(characters) : 0) }) { }
 
     WTF_EXPORT_PRIVATE Vector<wchar_t> wideCharacters() const;
 #endif
 
-    WTF_EXPORT_PRIVATE static String make8Bit(const UChar*, unsigned);
+    WTF_EXPORT_PRIVATE static String make8Bit(std::span<const UChar>);
     WTF_EXPORT_PRIVATE void convertTo16Bit();
 
     // String::fromUTF8 will return a null string if the input data contains invalid UTF-8 sequences.
-    WTF_EXPORT_PRIVATE static String fromUTF8(const LChar*, size_t);
-    WTF_EXPORT_PRIVATE static String fromUTF8(const LChar*);
-    static String fromUTF8(const char* characters, size_t length) { return fromUTF8(reinterpret_cast<const LChar*>(characters), length); }
-    static String fromUTF8(const char* string) { return fromUTF8(reinterpret_cast<const LChar*>(string)); }
-    WTF_EXPORT_PRIVATE static String fromUTF8(const CString&);
-    static String fromUTF8(const Vector<LChar>& characters);
-    static String fromUTF8ReplacingInvalidSequences(const LChar*, size_t);
+    WTF_EXPORT_PRIVATE static String fromUTF8(std::span<const char8_t>);
+    static String fromUTF8(std::span<const LChar> characters) { return fromUTF8(byteCast<char8_t>(characters)); }
+    static String fromUTF8(std::span<const char> characters) { return fromUTF8(byteCast<char8_t>(characters)); }
+    static String fromUTF8(const char* string) { return fromUTF8(WTF::span8(string)); }
+    static String fromUTF8ReplacingInvalidSequences(std::span<const char8_t>);
+    static String fromUTF8ReplacingInvalidSequences(std::span<const LChar> characters) { return fromUTF8ReplacingInvalidSequences(byteCast<char8_t>(characters)); }
 
     // Tries to convert the passed in string to UTF-8, but will fall back to Latin-1 if the string is not valid UTF-8.
-    WTF_EXPORT_PRIVATE static String fromUTF8WithLatin1Fallback(const LChar*, size_t);
-    static String fromUTF8WithLatin1Fallback(const char* characters, size_t length) { return fromUTF8WithLatin1Fallback(reinterpret_cast<const LChar*>(characters), length); }
+    WTF_EXPORT_PRIVATE static String fromUTF8WithLatin1Fallback(std::span<const char8_t>);
+    static String fromUTF8WithLatin1Fallback(std::span<const LChar> characters) { return fromUTF8WithLatin1Fallback(byteCast<char8_t>(characters)); }
+    static String fromUTF8WithLatin1Fallback(std::span<const char> characters) { return fromUTF8WithLatin1Fallback(byteCast<char8_t>(characters)); }
 
     WTF_EXPORT_PRIVATE static String fromCodePoint(char32_t codePoint);
 
@@ -351,6 +347,9 @@ inline void swap(String& a, String& b) { a.swap(b); }
 // Used in a small number of places where the long standing behavior has been "nil if empty".
 NSString * nsStringNilIfEmpty(const String&);
 
+// Used in a small number of places where null strings should be converted to nil but empty strings should be maintained.
+NSString * nsStringNilIfNull(const String&);
+
 #endif
 
 WTF_EXPORT_PRIVATE int codePointCompare(const String&, const String&);
@@ -382,7 +381,7 @@ template<> struct VectorTraits<String> : VectorTraitsBase<false, void> {
 template<> struct IntegerToStringConversionTrait<String> {
     using ReturnType = String;
     using AdditionalArgumentType = void;
-    static String flush(LChar* characters, unsigned length, void*) { return { characters, length }; }
+    static String flush(std::span<const LChar> characters, void*) { return characters; }
 };
 
 #ifdef __OBJC__
@@ -442,21 +441,21 @@ inline String::String(ASCIILiteral characters)
 {
 }
 
-template<> inline const LChar* String::characters<LChar>() const
+template<> inline std::span<const LChar> String::span<LChar>() const
 {
-    return characters8();
+    return span8();
 }
 
-template<> inline const UChar* String::characters<UChar>() const
+template<> inline std::span<const UChar> String::span<UChar>() const
 {
-    return characters16();
+    return span16();
 }
 
 inline UChar String::characterAt(unsigned index) const
 {
     if (!m_impl || index >= m_impl->length())
         return 0;
-    return m_impl->is8Bit() ? m_impl->characters8()[index] : m_impl->characters16()[index];
+    return m_impl->at(index);
 }
 
 inline String WARN_UNUSED_RETURN makeStringByReplacingAll(const String& string, UChar target, UChar replacement)
@@ -469,7 +468,7 @@ inline String WARN_UNUSED_RETURN makeStringByReplacingAll(const String& string, 
 ALWAYS_INLINE String WARN_UNUSED_RETURN makeStringByReplacingAll(const String& string, UChar target, ASCIILiteral literal)
 {
     if (auto impl = string.impl())
-        return String { impl->replace(target, literal.characters(), literal.length()) };
+        return String { impl->replace(target, literal.span8()) };
     return string;
 }
 
@@ -502,12 +501,10 @@ inline String String::substring(unsigned position, unsigned length) const
 }
 
 template<typename Func>
-inline Expected<std::invoke_result_t<Func, std::span<const char>>, UTF8ConversionError> String::tryGetUTF8(const Func& function, ConversionMode mode) const
+inline Expected<std::invoke_result_t<Func, std::span<const char8_t>>, UTF8ConversionError> String::tryGetUTF8(const Func& function, ConversionMode mode) const
 {
-    if (!m_impl) {
-        constexpr const char* emptyString = "";
-        return function(std::span(emptyString, emptyString));
-    }
+    if (!m_impl)
+        return function(nonNullEmptyUTF8Span());
     return m_impl->tryGetUTF8(function, mode);
 }
 
@@ -527,18 +524,18 @@ inline NSString * nsStringNilIfEmpty(const String& string)
     return *string.impl();
 }
 
+inline NSString * nsStringNilIfNull(const String& string)
+{
+    if (string.isNull())
+        return nil;
+    return *string.impl();
+}
+
 #endif
 
 inline bool codePointCompareLessThan(const String& a, const String& b)
 {
     return codePointCompare(a.impl(), b.impl()) < 0;
-}
-
-inline String String::fromUTF8(const Vector<LChar>& characters)
-{
-    if (characters.isEmpty())
-        return emptyString();
-    return fromUTF8(characters.data(), characters.size());
 }
 
 template<typename Predicate>
@@ -576,7 +573,7 @@ inline String operator"" _str(const char* characters, size_t)
 
 inline String operator"" _str(const UChar* characters, size_t length)
 {
-    return String(characters, length);
+    return String({ characters, length });
 }
 
 } // inline StringLiterals
@@ -596,5 +593,6 @@ using WTF::equal;
 using WTF::find;
 using WTF::containsOnly;
 using WTF::reverseFind;
+using WTF::codePointCompareLessThan;
 
 #include <wtf/text/AtomString.h>

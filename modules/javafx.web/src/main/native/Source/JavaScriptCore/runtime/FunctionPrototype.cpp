@@ -71,7 +71,7 @@ void FunctionPrototype::addFunctionProperties(VM& vm, JSGlobalObject* globalObje
     putDirectCustomGetterSetterWithoutTransition(vm, vm.propertyNames->arguments, CustomGetterSetter::create(vm, argumentsGetter, callerAndArgumentsSetter), PropertyAttribute::DontEnum | PropertyAttribute::CustomAccessor);
     putDirectCustomGetterSetterWithoutTransition(vm, vm.propertyNames->caller, CustomGetterSetter::create(vm, callerGetter, callerAndArgumentsSetter), PropertyAttribute::DontEnum | PropertyAttribute::CustomAccessor);
 
-    *hasInstanceSymbolFunction = JSFunction::create(vm, functionPrototypeSymbolHasInstanceCodeGenerator(vm), globalObject);
+    *hasInstanceSymbolFunction = JSFunction::create(vm, globalObject, functionPrototypeSymbolHasInstanceCodeGenerator(vm), globalObject);
     putDirectWithoutTransition(vm, vm.propertyNames->hasInstanceSymbol, *hasInstanceSymbolFunction, PropertyAttribute::DontDelete | PropertyAttribute::ReadOnly | PropertyAttribute::DontEnum);
 }
 
@@ -90,14 +90,14 @@ JSC_DEFINE_HOST_FUNCTION(functionProtoFuncToString, (JSGlobalObject* globalObjec
     if (thisValue.inherits<InternalFunction>()) {
         InternalFunction* function = jsCast<InternalFunction*>(thisValue);
         Integrity::auditStructureID(function->structureID());
-        RELEASE_AND_RETURN(scope, JSValue::encode(jsMakeNontrivialString(globalObject, "function ", function->name(), "() {\n    [native code]\n}")));
+        RELEASE_AND_RETURN(scope, JSValue::encode(jsMakeNontrivialString(globalObject, "function "_s, function->name(), "() {\n    [native code]\n}"_s)));
     }
 
     if (thisValue.isObject()) {
         JSObject* object = asObject(thisValue);
         Integrity::auditStructureID(object->structureID());
         if (object->isCallable())
-            RELEASE_AND_RETURN(scope, JSValue::encode(jsMakeNontrivialString(globalObject, "function ", object->classInfo()->className, "() {\n    [native code]\n}")));
+            RELEASE_AND_RETURN(scope, JSValue::encode(jsMakeNontrivialString(globalObject, "function "_s, object->classInfo()->className, "() {\n    [native code]\n}"_s)));
     }
 
     return throwVMTypeError(globalObject, scope);

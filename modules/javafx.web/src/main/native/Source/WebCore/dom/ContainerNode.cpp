@@ -65,11 +65,11 @@
 #include "TemplateContentDocumentFragment.h"
 #include <algorithm>
 #include <variant>
-#include <wtf/IsoMallocInlines.h>
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
-WTF_MAKE_ISO_ALLOCATED_IMPL(ContainerNode);
+WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(ContainerNode);
 
 struct SameSizeAsContainerNode : public Node {
     void* firstChild;
@@ -95,7 +95,7 @@ ALWAYS_INLINE auto ContainerNode::removeAllChildrenWithScriptAssertion(ChildChan
         ScriptDisallowedScope::InMainThread scriptDisallowedScope;
         RELEASE_ASSERT(!connectedSubframeCount() && !hasRareData() && !wrapper());
         bool hadElementChild = false;
-        while (RefPtr child = m_firstChild) {
+        while (RefPtr child = m_firstChild.get()) {
             hadElementChild |= is<Element>(*child);
             removeBetween(nullptr, child->protectedNextSibling().get(), *child);
         }
@@ -103,6 +103,7 @@ ALWAYS_INLINE auto ContainerNode::removeAllChildrenWithScriptAssertion(ChildChan
         return hadElementChild ? DidRemoveElements::Yes : DidRemoveElements::No;
     }
 
+    ASSERT_WITH_SECURITY_IMPLICATION(ScriptDisallowedScope::InMainThread::isEventDispatchAllowedInSubtree(*this));
     if (source == ChildChange::Source::API) {
         ChildListMutationScope mutation(*this);
         for (auto& child : children) {
@@ -136,7 +137,7 @@ ALWAYS_INLINE auto ContainerNode::removeAllChildrenWithScriptAssertion(ChildChan
 
         RefAllowingPartiallyDestroyed<Document> { document() }->nodeChildrenWillBeRemoved(*this);
 
-        while (RefPtr child = m_firstChild) {
+        while (RefPtr child = m_firstChild.get()) {
             if (is<Element>(*child))
                 hadElementChild = true;
 
@@ -152,7 +153,7 @@ ALWAYS_INLINE auto ContainerNode::removeAllChildrenWithScriptAssertion(ChildChan
     ASSERT_WITH_SECURITY_IMPLICATION(!document().selection().selection().isOrphan());
 
     if (deferChildrenChanged == DeferChildrenChanged::No) {
-#if ASSERT_ENABLED
+#if ASSERT_ENABLED || ENABLE(SECURITY_ASSERTIONS)
         auto treeVersion = document().domTreeVersion();
 #endif
         childrenChanged(childChange);
@@ -191,12 +192,10 @@ ALWAYS_INLINE bool ContainerNode::removeNodeWithScriptAssertion(Node& childToRem
         ChildListMutationScope(*this).willRemoveChild(childToRemove);
     }
 
+    ASSERT_WITH_SECURITY_IMPLICATION(ScriptDisallowedScope::InMainThread::isEventDispatchAllowedInSubtree(childToRemove));
     if (source == ChildChange::Source::API) {
         childToRemove.notifyMutationObserversNodeWillDetach();
-        if (!document().shouldNotFireMutationEvents()) {
-            RELEASE_ASSERT_WITH_SECURITY_IMPLICATION(ScriptDisallowedScope::InMainThread::isEventDispatchAllowedInSubtree(childToRemove));
         dispatchChildRemovalEvents(protectedChildToRemove);
-        }
         if (childToRemove.parentNode() != this)
             return false;
     }
@@ -578,7 +577,7 @@ void ContainerNode::insertBeforeCommon(Node& nextChild, Node& newChild)
     ASSERT(!newChild.isShadowRoot());
 
     RefPtr previousSibling = nextChild.previousSibling();
-    ASSERT(m_lastChild != previousSibling);
+    ASSERT(m_lastChild != previousSibling.get());
     nextChild.setPreviousSibling(&newChild);
     if (previousSibling) {
         ASSERT(m_firstChild != &nextChild);
@@ -728,14 +727,6 @@ ExceptionOr<void> ContainerNode::removeChild(Node& oldChild)
     rebuildSVGExtensionsElementsIfNecessary();
     dispatchSubtreeModifiedEvent();
 
-    auto* element = dynamicDowncast<Element>(oldChild);
-    if (element && (element->lastRememberedLogicalWidth() || element->lastRememberedLogicalHeight())) {
-        // The disconnected element could be unobserved because of other properties, here we need to make sure it is observed,
-        // so that deliver could be triggered and it would clear lastRememberedSize.
-        document().observeForContainIntrinsicSize(*element);
-        document().resetObservationSizeForContainIntrinsicSize(*element);
-    }
-
     return { };
 }
 
@@ -823,8 +814,8 @@ void ContainerNode::stringReplaceAll(String&& string)
 inline void ContainerNode::rebuildSVGExtensionsElementsIfNecessary()
 {
     RefAllowingPartiallyDestroyed<Document> document = this->document();
-    if (document->svgExtensions() && !is<SVGUseElement>(shadowHost()))
-        document->accessSVGExtensions().rebuildElements();
+    if (document->svgExtensionsIfExists() && !is<SVGUseElement>(shadowHost()))
+        document->checkedSVGExtensions()->rebuildElements();
 }
 
 // this differs from other remove functions because it forcibly removes all the children,
@@ -1085,7 +1076,7 @@ static void dispatchChildRemovalEvents(Ref<Node>& child)
     RefAllowingPartiallyDestroyed<Document> document = child->document();
     InspectorInstrumentation::willRemoveDOMNode(document, child.get());
 
-    if (child->isInShadowTree())
+    if (child->isInShadowTree() || document->shouldNotFireMutationEvents())
         return;
 
     // dispatch pre-removal mutation events
@@ -1244,6 +1235,11 @@ ExceptionOr<void> ContainerNode::replaceChildren(FixedVector<NodeOrString>&& vec
 HTMLCollection* ContainerNode::cachedHTMLCollection(CollectionType type)
 {
     return hasRareData() && rareData()->nodeLists() ? rareData()->nodeLists()->cachedCollection<HTMLCollection>(type) : nullptr;
+}
+
+ContainerNode& ContainerNode::traverseToRootNode() const
+{
+    return traverseToRootNodeInternal(*this);
 }
 
 } // namespace WebCore

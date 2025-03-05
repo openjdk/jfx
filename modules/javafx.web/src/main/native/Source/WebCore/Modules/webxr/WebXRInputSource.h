@@ -33,10 +33,10 @@
 #include "WebXRInputSpace.h"
 #include "XRHandedness.h"
 #include "XRTargetRayMode.h"
-#include <wtf/IsoMalloc.h>
 #include <wtf/Ref.h>
 #include <wtf/RefCounted.h>
 #include <wtf/RefPtr.h>
+#include <wtf/TZoneMalloc.h>
 #include <wtf/Vector.h>
 #include <wtf/text/WTFString.h>
 
@@ -54,7 +54,7 @@ class WebXRHand;
 class WebXRInputSpace;
 
 class WebXRInputSource : public RefCounted<WebXRInputSource>, public CanMakeWeakPtr<WebXRInputSource> {
-    WTF_MAKE_ISO_ALLOCATED(WebXRInputSource);
+    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(WebXRInputSource);
 public:
     using InputSource = PlatformXR::FrameData::InputSource;
     using InputSourceButton = PlatformXR::FrameData::InputSourceButton;
@@ -70,11 +70,11 @@ public:
     const Vector<String>& profiles() const { return m_source.profiles; };
     double connectTime() const { return m_connectTime; }
 #if ENABLE(GAMEPAD)
-    const Gamepad* gamepad() const { return m_gamepad.ptr(); }
+    Gamepad* gamepad() const { return m_gamepad.ptr(); }
 #endif
 
 #if ENABLE(WEBXR_HANDS)
-    const WebXRHand* hand() const { return m_hand.get(); }
+    WebXRHand* hand() const { return m_hand.get(); }
 #endif
 
     void update(double timestamp, const InputSource&);

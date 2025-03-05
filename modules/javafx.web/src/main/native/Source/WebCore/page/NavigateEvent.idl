@@ -1,4 +1,5 @@
 [
+  JSCustomMarkFunction,
   EnabledBySetting=NavigationAPIEnabled,
   Exposed=Window
 ] interface NavigateEvent : Event {
@@ -13,10 +14,10 @@
   readonly attribute DOMFormData? formData;
   readonly attribute DOMString? downloadRequest;
   readonly attribute any info;
-  readonly attribute boolean hasUAVisualTransition;
+  [EnabledBySetting=UAVisualTransitionDetectionEnabled] readonly attribute boolean hasUAVisualTransition;
 
-  undefined intercept(optional NavigationInterceptOptions options = {});
-  undefined scroll();
+  [CallWith=RelevantDocument] undefined intercept(optional NavigationInterceptOptions options = {});
+  [CallWith=RelevantDocument] undefined scroll();
 };
 
 dictionary NavigateEventInit : EventInit {
@@ -29,7 +30,7 @@ dictionary NavigateEventInit : EventInit {
   DOMFormData? formData = null;
   DOMString? downloadRequest = null;
   any info;
-  boolean hasUAVisualTransition = false;
+  [EnabledBySetting=UAVisualTransitionDetectionEnabled] boolean hasUAVisualTransition = false;
 };
 
 dictionary NavigationInterceptOptions {

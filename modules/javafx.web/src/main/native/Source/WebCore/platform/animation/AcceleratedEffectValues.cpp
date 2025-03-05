@@ -30,47 +30,23 @@
 
 #include "IntSize.h"
 #include "LengthFunctions.h"
+#include "MotionPath.h"
 #include "Path.h"
+#include "RenderElementInlines.h"
+#include "RenderLayerModelObject.h"
 #include "RenderStyleInlines.h"
 #include "TransformOperationData.h"
 
 namespace WebCore {
 
-AcceleratedEffectValues::AcceleratedEffectValues(const AcceleratedEffectValues& src)
-{
-    opacity = src.opacity;
-
-    auto& transformOperations = transform.operations();
-    auto& srcTransformOperations = src.transform.operations();
-    transformOperations.appendVector(srcTransformOperations);
-
-    translate = src.translate.copyRef();
-    scale = src.scale.copyRef();
-    rotate = src.rotate.copyRef();
-    transformOrigin = src.transformOrigin;
-
-    offsetPath = src.offsetPath.copyRef();
-    offsetDistance = src.offsetDistance;
-    offsetPosition = src.offsetPosition;
-    offsetAnchor = src.offsetAnchor;
-    offsetRotate = src.offsetRotate;
-
-    filter.setOperations(src.filter.operations().map([](const auto& operation) {
-        return operation.copyRef();
-    }));
-
-    backdropFilter.setOperations(src.backdropFilter.operations().map([](const auto& operation) {
-        return operation.copyRef();
-    }));
-}
-
 AcceleratedEffectValues AcceleratedEffectValues::clone() const
 {
-    auto clonedTransformOrigin = transformOrigin;
+    std::optional<TransformOperationData> clonedTransformOperationData;
+    if (transformOperationData)
+        clonedTransformOperationData = transformOperationData;
 
-    TransformOperations clonedTransform { transform.operations().map([](const auto& operation) {
-        return RefPtr { operation->clone() };
-    }) };
+    auto clonedTransformOrigin = transformOrigin;
+    auto clonedTransform = transform.clone();
 
     RefPtr<TransformOperation> clonedTranslate;
     if (auto* srcTranslate = translate.get())
@@ -93,17 +69,14 @@ AcceleratedEffectValues AcceleratedEffectValues::clone() const
     auto clonedOffsetAnchor = offsetAnchor;
     auto clonedOffsetRotate = offsetRotate;
 
-    FilterOperations clonedFilter { filter.operations().map([](const auto& operation) {
-        return RefPtr { operation->clone() };
-    }) };
-
-    FilterOperations clonedBackdropFilter { backdropFilter.operations().map([](const auto& operation) {
-        return RefPtr { operation->clone() };
-    }) };
+    auto clonedFilter = filter.clone();
+    auto clonedBackdropFilter = backdropFilter.clone();
 
     return {
         opacity,
+        WTFMove(clonedTransformOperationData),
         WTFMove(clonedTransformOrigin),
+        transformBox,
         WTFMove(clonedTransform),
         WTFMove(clonedTranslate),
         WTFMove(clonedScale),
@@ -128,17 +101,17 @@ static LengthPoint nonCalculatedLengthPoint(LengthPoint lengthPoint, const IntSi
     };
 }
 
-AcceleratedEffectValues::AcceleratedEffectValues(const RenderStyle& style, const IntRect& borderBoxRect)
+AcceleratedEffectValues::AcceleratedEffectValues(const RenderStyle& style, const IntRect& borderBoxRect, const RenderLayerModelObject* renderer)
 {
     opacity = style.opacity();
 
     auto borderBoxSize = borderBoxRect.size();
 
-    auto& transformOperations = transform.operations();
-    auto& srcTransformOperations = style.transform().operations();
-    transformOperations.appendContainerWithMapping(srcTransformOperations, [&](auto& srcTransformOperation) {
-        return srcTransformOperation->selfOrCopyWithResolvedCalculatedValues(borderBoxSize);
-    });
+    if (renderer)
+        transformOperationData = TransformOperationData(renderer->transformReferenceBoxRect(style), renderer);
+
+    transformBox = style.transformBox();
+    transform = style.transform().selfOrCopyWithResolvedCalculatedValues(borderBoxSize);
 
     if (auto* srcTranslate = style.translate())
         translate = srcTranslate->selfOrCopyWithResolvedCalculatedValues(borderBoxSize);
@@ -162,13 +135,45 @@ AcceleratedEffectValues::AcceleratedEffectValues(const RenderStyle& style, const
         offsetDistance = { path ? path->length() : 0.0f, LengthType:: Fixed };
     }
 
-    filter.setOperations(style.filter().operations().map([](const auto& operation) {
-        return operation.copyRef();
-    }));
+    filter = style.filter();
+    backdropFilter = style.backdropFilter();
+}
 
-    backdropFilter.setOperations(style.backdropFilter().operations().map([](const auto& operation) {
-        return operation.copyRef();
-    }));
+TransformationMatrix AcceleratedEffectValues::computedTransformationMatrix(const FloatRect& boundingBox) const
+{
+    // https://www.w3.org/TR/css-transforms-2/#ctm
+    // The transformation matrix is computed from the transform, transform-origin, translate, rotate, scale, and offset properties as follows:
+    // 1. Start with the identity matrix.
+    TransformationMatrix matrix;
+
+    // 2. Translate by the computed X, Y, and Z values of transform-origin.
+    // (not needed, the GraphicsLayer handles that)
+
+    // 3. Translate by the computed X, Y, and Z values of translate.
+    if (translate)
+        translate->apply(matrix, boundingBox.size());
+
+    // 4. Rotate by the computed <angle> about the specified axis of rotate.
+    if (rotate)
+        rotate->apply(matrix, boundingBox.size());
+
+    // 5. Scale by the computed X, Y, and Z values of scale.
+    if (scale)
+        scale->apply(matrix, boundingBox.size());
+
+    // 6. Translate and rotate by the transform specified by offset.
+    if (transformOperationData && offsetPath) {
+        auto computedTransformOrigin = boundingBox.location() + floatPointForLengthPoint(transformOrigin, boundingBox.size());
+        MotionPath::applyMotionPathTransform(matrix, *transformOperationData, computedTransformOrigin, *offsetPath, offsetAnchor, offsetDistance, offsetRotate, transformBox);
+    }
+
+    // 7. Multiply by each of the transform functions in transform from left to right.
+    transform.apply(matrix, boundingBox.size());
+
+    // 8. Translate by the negated computed X, Y and Z values of transform-origin.
+    // (not needed, the GraphicsLayer handles that)
+
+    return matrix;
 }
 
 } // namespace WebCore

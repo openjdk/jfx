@@ -23,15 +23,17 @@
  * THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "config.h"
-#include "ImageRotationSessionVT.h"
+#import "config.h"
+#import "ImageRotationSessionVT.h"
 
-#include "AffineTransform.h"
+#import "AffineTransform.h"
+#import "CVUtilities.h"
+#import "Logging.h"
+#import "VideoFrame.h"
 
-#include "CoreVideoSoftLink.h"
-#include "VideoToolboxSoftLink.h"
-
-#if USE(VIDEOTOOLBOX)
+#import "CoreVideoSoftLink.h"
+#import "VideoToolboxSoftLink.h"
+#import <pal/cf/CoreMediaSoftLink.h>
 
 namespace WebCore {
 
@@ -58,54 +60,87 @@ static ImageRotationSessionVT::RotationProperties transformToRotationProperties(
     return rotation;
 }
 
-ImageRotationSessionVT::ImageRotationSessionVT(AffineTransform&& transform, FloatSize size, OSType pixelFormat, IsCGImageCompatible cvImageCompatibility)
-    : ImageRotationSessionVT(transformToRotationProperties(transform), size, pixelFormat, cvImageCompatibility)
+ImageRotationSessionVT::ImageRotationSessionVT(AffineTransform&& transform, FloatSize size, IsCGImageCompatible isCGImageCompatible, ShouldUseIOSurface shouldUseIOSurface)
+    : ImageRotationSessionVT(transformToRotationProperties(transform), size, isCGImageCompatible, shouldUseIOSurface)
 {
     m_transform = WTFMove(transform);
 }
 
-
-ImageRotationSessionVT::ImageRotationSessionVT(RotationProperties&& rotation, FloatSize size, OSType pixelFormat, IsCGImageCompatible cvImageCompatibility)
-    : m_rotationProperties(WTFMove(rotation))
-    , m_size(size)
+ImageRotationSessionVT::ImageRotationSessionVT(const RotationProperties& rotation, FloatSize size, IsCGImageCompatible isCGImageCompatible, ShouldUseIOSurface shouldUseIOSurface)
+    : m_shouldUseIOSurface(shouldUseIOSurface == ShouldUseIOSurface::Yes)
 {
+    initialize(rotation, size, isCGImageCompatible);
+}
+
+void ImageRotationSessionVT::initialize(const RotationProperties& rotation, FloatSize size, IsCGImageCompatible isCGImageCompatible)
+{
+    m_rotationProperties = rotation;
+    m_size = size;
+    m_isCGImageCompatible = isCGImageCompatible;
+
     if (m_rotationProperties.angle == 90 || m_rotationProperties.angle == 270)
         size = size.transposedSize();
 
     m_rotatedSize = expandedIntSize(size);
+    m_rotationPool = nullptr;
 
     VTImageRotationSessionRef rawRotationSession = nullptr;
     VTImageRotationSessionCreate(kCFAllocatorDefault, m_rotationProperties.angle, &rawRotationSession);
-    m_rotationSession = rawRotationSession;
+    m_rotationSession = adoptCF(rawRotationSession);
     VTImageRotationSessionSetProperty(m_rotationSession.get(), kVTImageRotationPropertyKey_EnableHighSpeedTransfer, kCFBooleanTrue);
 
     if (m_rotationProperties.flipY)
         VTImageRotationSessionSetProperty(m_rotationSession.get(), kVTImageRotationPropertyKey_FlipVerticalOrientation, kCFBooleanTrue);
     if (m_rotationProperties.flipX)
         VTImageRotationSessionSetProperty(m_rotationSession.get(), kVTImageRotationPropertyKey_FlipHorizontalOrientation, kCFBooleanTrue);
-
-    auto pixelAttributes = @{
-        (__bridge NSString *)kCVPixelBufferWidthKey: @(m_rotatedSize.width()),
-        (__bridge NSString *)kCVPixelBufferHeightKey: @(m_rotatedSize.height()),
-        (__bridge NSString *)kCVPixelBufferPixelFormatTypeKey: @(pixelFormat),
-        (__bridge NSString *)kCVPixelBufferCGImageCompatibilityKey: (cvImageCompatibility == IsCGImageCompatible::Yes ? @YES : @NO),
-    };
-    CVPixelBufferPoolRef rawPool = nullptr;
-    if (auto err = CVPixelBufferPoolCreate(kCFAllocatorDefault, nullptr, (__bridge CFDictionaryRef)pixelAttributes, &rawPool); err != noErr)
-        LOG_ERROR("CVPixelBufferPool create returned error code %d", err);
-    m_rotationPool = adoptCF(rawPool);
 }
 
 RetainPtr<CVPixelBufferRef> ImageRotationSessionVT::rotate(CVPixelBufferRef pixelBuffer)
 {
+    auto pixelFormat = CVPixelBufferGetPixelFormatType(pixelBuffer);
+    if (pixelFormat != m_pixelFormat || !m_rotationPool) {
+        m_pixelFormat = pixelFormat;
+        auto bufferPool = createCVPixelBufferPool(m_rotatedSize.width(), m_rotatedSize.height(), m_pixelFormat, 0u, m_isCGImageCompatible == IsCGImageCompatible::Yes, m_shouldUseIOSurface);
+
+        if (!bufferPool) {
+            RELEASE_LOG_ERROR(WebRTC, "ImageRotationSessionVT failed creating buffer pool with error %d", (int)bufferPool.error());
+            return nullptr;
+        }
+
+        m_rotationPool = WTFMove(*bufferPool);
+    }
+
+    RetainPtr<CVPixelBufferRef> result;
     CVPixelBufferRef rawRotatedBuffer = nullptr;
-    CVPixelBufferPoolCreatePixelBuffer(kCFAllocatorDefault, m_rotationPool.get(), &rawRotatedBuffer);
-    auto status = VTImageRotationSessionTransferImage(m_rotationSession.get(), pixelBuffer, rawRotatedBuffer);
-    if (status == noErr)
-        return adoptCF(rawRotatedBuffer);
-    return nullptr;
+    auto status = CVPixelBufferPoolCreatePixelBuffer(kCFAllocatorDefault, m_rotationPool.get(), &rawRotatedBuffer);
+    if (status != kCVReturnSuccess || !rawRotatedBuffer) {
+        RELEASE_LOG_ERROR(WebRTC, "ImageRotationSessionVT failed creating buffer from pool with error %d", status);
+        return nullptr;
+    }
+    result = adoptCF(rawRotatedBuffer);
+
+    status = VTImageRotationSessionTransferImage(m_rotationSession.get(), pixelBuffer, rawRotatedBuffer);
+    if (status != noErr) {
+        RELEASE_LOG_ERROR(WebRTC, "ImageRotationSessionVT failed rotating buffer with error %d", status);
+        return nullptr;
+    }
+
+    return result;
+}
+
+RetainPtr<CVPixelBufferRef> ImageRotationSessionVT::rotate(VideoFrame& videoFrame, const RotationProperties& rotation, IsCGImageCompatible cgImageCompatible)
+{
+    auto pixelBuffer = videoFrame.pixelBuffer();
+    ASSERT(pixelBuffer);
+    if (!pixelBuffer)
+        return nullptr;
+
+    m_pixelFormat = CVPixelBufferGetPixelFormatType(pixelBuffer);
+    IntSize size { (int)CVPixelBufferGetWidth(pixelBuffer), (int)CVPixelBufferGetHeight(pixelBuffer) };
+    if (rotation != m_rotationProperties || m_size != size)
+        initialize(rotation, size, cgImageCompatible);
+
+    return rotate(pixelBuffer);
 }
 
 }
-
-#endif

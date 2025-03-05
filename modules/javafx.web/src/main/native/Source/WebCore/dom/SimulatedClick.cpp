@@ -33,13 +33,13 @@
 #include "EventNames.h"
 #include "MouseEvent.h"
 #include "PlatformMouseEvent.h"
-#include <wtf/IsoMallocInlines.h>
 #include <wtf/NeverDestroyed.h>
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
 class SimulatedMouseEvent final : public MouseEvent {
-    WTF_MAKE_ISO_ALLOCATED_INLINE(SimulatedMouseEvent);
+    WTF_MAKE_TZONE_OR_ISO_ALLOCATED_INLINE(SimulatedMouseEvent);
 public:
     static Ref<SimulatedMouseEvent> create(const AtomString& eventType, RefPtr<WindowProxy>&& view, RefPtr<Event>&& underlyingEvent, Element& target, SimulatedClickSource source)
     {
@@ -48,9 +48,9 @@ public:
 
 private:
     SimulatedMouseEvent(const AtomString& eventType, RefPtr<WindowProxy>&& view, RefPtr<Event>&& underlyingEvent, Element& target, SimulatedClickSource source)
-        : MouseEvent(eventType, CanBubble::Yes, IsCancelable::Yes, IsComposed::Yes,
+        : MouseEvent(EventInterfaceType::MouseEvent, eventType, CanBubble::Yes, IsCancelable::Yes, IsComposed::Yes,
             underlyingEvent ? underlyingEvent->timeStamp() : MonotonicTime::now(), WTFMove(view), /* detail */ 0,
-            { }, { }, 0, 0, modifiersFromUnderlyingEvent(underlyingEvent), MouseButton::Left, 0, nullptr, 0, SyntheticClickType::NoTap, IsSimulated::Yes,
+            { }, { }, 0, 0, modifiersFromUnderlyingEvent(underlyingEvent), MouseButton::Left, 0, nullptr, 0, SyntheticClickType::NoTap, { }, { }, IsSimulated::Yes,
             source == SimulatedClickSource::UserAgent ? IsTrusted::Yes : IsTrusted::No)
     {
         setUnderlyingEvent(underlyingEvent.get());

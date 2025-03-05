@@ -45,6 +45,7 @@
 #include "HTMLAnchorElement.h"
 #include "HTMLNames.h"
 #include "HTMLParserIdioms.h"
+#include "IdTargetObserver.h"
 #include "JSRequestPriority.h"
 #include "LocalFrame.h"
 #include "LocalFrameLoaderClient.h"
@@ -66,15 +67,17 @@
 #include "StyleScope.h"
 #include "StyleSheetContents.h"
 #include "SubresourceIntegrity.h"
-#include <wtf/IsoMallocInlines.h>
+#include "TreeScopeInlines.h"
 #include <wtf/Ref.h>
 #include <wtf/Scope.h>
 #include <wtf/StdLibExtras.h>
+#include <wtf/TZoneMallocInlines.h>
+#include <wtf/text/MakeString.h>
 #include <wtf/text/TextStream.h>
 
 namespace WebCore {
 
-WTF_MAKE_ISO_ALLOCATED_IMPL(HTMLLinkElement);
+WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(HTMLLinkElement);
 
 using namespace HTMLNames;
 
@@ -82,6 +85,30 @@ static LinkEventSender& linkLoadEventSender()
 {
     static NeverDestroyed<LinkEventSender> sharedLoadEventSender;
     return sharedLoadEventSender;
+}
+
+class ExpectIdTargetObserver final : public IdTargetObserver {
+    WTF_MAKE_FAST_ALLOCATED;
+    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(ExpectIdTargetObserver);
+public:
+    ExpectIdTargetObserver(const AtomString& id, HTMLLinkElement&);
+
+    void idTargetChanged() override;
+
+private:
+    WeakPtr<HTMLLinkElement, WeakPtrImplWithEventTargetData> m_element;
+};
+
+ExpectIdTargetObserver::ExpectIdTargetObserver(const AtomString& id, HTMLLinkElement& element)
+    : IdTargetObserver(element.treeScope().idTargetObserverRegistry(), id)
+    , m_element(element)
+{
+}
+
+void ExpectIdTargetObserver::idTargetChanged()
+{
+    if (m_element)
+        m_element->processInternalResourceLink();
 }
 
 inline HTMLLinkElement::HTMLLinkElement(const QualifiedName& tagName, Document& document, bool createdByParser)
@@ -170,7 +197,7 @@ void HTMLLinkElement::attributeChanged(const QualifiedName& name, const AtomStri
         auto didMutateRel = parsedRel != m_relAttribute;
         m_relAttribute = WTFMove(parsedRel);
         if (m_relList)
-            m_relList->associatedAttributeValueChanged(newValue);
+            m_relList->associatedAttributeValueChanged();
         if (didMutateRel)
             process();
         break;
@@ -191,7 +218,12 @@ void HTMLLinkElement::attributeChanged(const QualifiedName& name, const AtomStri
         break;
     case AttributeNames::sizesAttr:
         if (m_sizes)
-            m_sizes->associatedAttributeValueChanged(newValue);
+            m_sizes->associatedAttributeValueChanged();
+        process();
+        break;
+    case AttributeNames::blockingAttr:
+        if (m_blockingList)
+            m_blockingList->associatedAttributeValueChanged();
         process();
         break;
     case AttributeNames::mediaAttr: {
@@ -260,6 +292,10 @@ void HTMLLinkElement::process()
 
     // Prevent recursive loading of link.
     if (m_isHandlingBeforeLoad)
+        return;
+
+    processInternalResourceLink();
+    if (m_relAttribute.isInternalResourceLink)
         return;
 
     Ref document = this->document();
@@ -376,6 +412,51 @@ void HTMLLinkElement::clearSheet()
     m_sheet = nullptr;
 }
 
+// https://html.spec.whatwg.org/multipage/links.html#process-internal-resource-link
+void HTMLLinkElement::processInternalResourceLink(HTMLAnchorElement* anchor)
+{
+    if (document().wasRemovedLastRefCalled())
+        return;
+
+    if (!m_relAttribute.isInternalResourceLink) {
+        unblockRendering();
+        return;
+    }
+
+    if (!equalIgnoringFragmentIdentifier(m_url, document().url())) {
+        unblockRendering();
+        return;
+    }
+
+    RefPtr<Element> indicatedElement;
+    // If the change originated from an anchor, then we can just check if that's
+    // the right one instead doing a tree search using the name
+    if (anchor) {
+        if (anchor->name() == m_url.fragmentIdentifier())
+            indicatedElement = anchor;
+    } else
+        indicatedElement = document().findAnchor(m_url.fragmentIdentifier());
+
+    // FIXME: "is on a stack of open elements of an HTML parser whose associated Document is doc"
+    if (document().readyState() == Document::ReadyState::Loading && isConnected() && mediaAttributeMatches() && blocking().contains("render"_s) && !indicatedElement) {
+        if (!m_isRenderBlocking) {
+            document().blockRenderingOn(*this);
+            m_isRenderBlocking = true;
+        }
+        if (!m_expectIdTargetObserver)
+            m_expectIdTargetObserver = makeUnique<ExpectIdTargetObserver>(makeAtomString(m_url.fragmentIdentifier()), *this);
+    } else
+        unblockRendering();
+}
+
+void HTMLLinkElement::unblockRendering()
+{
+    if (m_isRenderBlocking) {
+        document().unblockRenderingOn(*this);
+        m_isRenderBlocking = false;
+    }
+}
+
 Node::InsertedIntoAncestorResult HTMLLinkElement::insertedIntoAncestor(InsertionType insertionType, ContainerNode& parentOfInsertedTree)
 {
     HTMLElement::insertedIntoAncestor(insertionType, parentOfInsertedTree);
@@ -414,6 +495,8 @@ void HTMLLinkElement::removedFromAncestor(RemovalType removalType, ContainerNode
         m_styleScope->removeStyleSheetCandidateNode(*this);
         m_styleScope = nullptr;
     }
+
+    processInternalResourceLink();
 }
 
 void HTMLLinkElement::finishParsingChildren()
@@ -457,7 +540,7 @@ void HTMLLinkElement::setCSSStyleSheet(const String& href, const URL& baseURL, c
     Ref<HTMLLinkElement> protectedThis(*this);
 
     if (!cachedStyleSheet->errorOccurred() && !matchIntegrityMetadata(*cachedStyleSheet, m_integrityMetadataForPendingSheetRequest)) {
-        document().addConsoleMessage(MessageSource::Security, MessageLevel::Error, makeString("Cannot load stylesheet ", integrityMismatchDescription(*cachedStyleSheet, m_integrityMetadataForPendingSheetRequest)));
+        document().addConsoleMessage(MessageSource::Security, MessageLevel::Error, makeString("Cannot load stylesheet "_s, integrityMismatchDescription(*cachedStyleSheet, m_integrityMetadataForPendingSheetRequest)));
 
         m_loading = false;
         sheetLoaded();
@@ -570,6 +653,19 @@ DOMTokenList& HTMLLinkElement::relList()
             return LinkRelAttribute::isSupported(document, token);
         });
     return *m_relList;
+}
+
+// https://html.spec.whatwg.org/multipage/semantics.html#dom-link-blocking
+DOMTokenList& HTMLLinkElement::blocking()
+{
+    if (!m_blockingList) {
+        m_blockingList = makeUniqueWithoutRefCountedCheck<DOMTokenList>(*this, HTMLNames::blockingAttr, [](Document&, StringView token) {
+            if (equalLettersIgnoringASCIICase(token, "render"_s))
+                return true;
+            return false;
+        });
+    }
+    return *m_blockingList;
 }
 
 void HTMLLinkElement::notifyLoadedSheetAndAllCriticalSubresources(bool errorOccurred)

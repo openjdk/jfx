@@ -237,7 +237,7 @@ JNIEXPORT void JNICALL Java_com_sun_webkit_BackForwardList_bflClearBackForwardLi
     int capacity = bfl->capacity();
     bfl->setCapacity(0);
     bfl->setCapacity(capacity);
-    bfl->addItem(*current);
+    bfl->addItem({}, *current);
     bfl->goToItem(*current);
 }
 
@@ -245,9 +245,6 @@ JNIEXPORT void JNICALL Java_com_sun_webkit_BackForwardList_bflClearBackForwardLi
 JNIEXPORT jobjectArray JNICALL Java_com_sun_webkit_BackForwardList_bflItemGetChildren(JNIEnv* env, jclass, jlong jitem, jlong jpage)
 {
     HistoryItem* item = getItem(jitem);
-    if (!item->hasChildren()) {
-        return nullptr;
-    }
     jobjectArray children = env->NewObjectArray(item->children().size(), getJEntryClass(), nullptr);
     int i = 0;
     for (const auto& it : item->children()) {
@@ -363,7 +360,7 @@ BackForwardList::~BackForwardList()
     ASSERT(m_closed);
 }
 
-void BackForwardList::addItem(Ref<HistoryItem>&& newItem)
+void BackForwardList::addItem(WebCore::FrameIdentifier frameIdentifier, Ref<HistoryItem>&& newItem)
 {
     if (!m_capacity || !m_enabled)
         return;

@@ -31,7 +31,7 @@
 namespace WebCore {
 
 class XMLHttpRequestProgressEvent final : public ProgressEvent {
-    WTF_MAKE_ISO_ALLOCATED(XMLHttpRequestProgressEvent);
+    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(XMLHttpRequestProgressEvent);
 public:
     static Ref<XMLHttpRequestProgressEvent> create(const AtomString& type, bool lengthComputable = false, unsigned long long loaded = 0, unsigned long long total = 0)
     {
@@ -41,11 +41,9 @@ public:
     unsigned long long position() const { return loaded(); }
     unsigned long long totalSize() const { return total(); }
 
-    EventInterface eventInterface() const override { return XMLHttpRequestProgressEventInterfaceType; }
-
 private:
     XMLHttpRequestProgressEvent(const AtomString& type, bool lengthComputable, unsigned long long loaded, unsigned long long total)
-        : ProgressEvent(type, lengthComputable, loaded, total)
+        : ProgressEvent(EventInterfaceType::XMLHttpRequestProgressEvent, type, lengthComputable, loaded, total)
     {
     }
 };

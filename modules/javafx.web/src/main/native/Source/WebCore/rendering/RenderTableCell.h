@@ -37,10 +37,12 @@ static const unsigned maxColumnIndex = 0x1FFFFFE; // 33554430
 enum IncludeBorderColorOrNot { DoNotIncludeBorderColor, IncludeBorderColor };
 
 class RenderTableCell final : public RenderBlockFlow {
-    WTF_MAKE_ISO_ALLOCATED(RenderTableCell);
+    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(RenderTableCell);
+    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(RenderTableCell);
 public:
     RenderTableCell(Element&, RenderStyle&&);
     RenderTableCell(Document&, RenderStyle&&);
+    virtual ~RenderTableCell();
 
     unsigned colSpan() const;
     unsigned rowSpan() const;
@@ -63,6 +65,7 @@ public:
 
     void setCellLogicalWidth(LayoutUnit constrainedLogicalWidth);
 
+    RectEdges<LayoutUnit> borderWidths() const override;
     LayoutUnit borderLeft() const override;
     LayoutUnit borderRight() const override;
     LayoutUnit borderTop() const override;
@@ -80,7 +83,7 @@ public:
     void paint(PaintInfo&, const LayoutPoint&) override;
 
     void paintCollapsedBorders(PaintInfo&, const LayoutPoint&);
-    void paintBackgroundsBehindCell(PaintInfo&, const LayoutPoint&, RenderElement* backgroundObject);
+    void paintBackgroundsBehindCell(PaintInfo&, LayoutPoint paintOffset, RenderBox* backgroundObject, LayoutPoint backgroundPaintOffset);
 
     LayoutUnit cellBaselinePosition() const;
     bool isBaselineAligned() const;
@@ -91,6 +94,7 @@ public:
     LayoutUnit intrinsicPaddingBefore() const { return m_intrinsicPaddingBefore; }
     LayoutUnit intrinsicPaddingAfter() const { return m_intrinsicPaddingAfter; }
 
+    RectEdges<LayoutUnit> padding() const override;
     LayoutUnit paddingTop() const override;
     LayoutUnit paddingBottom() const override;
     LayoutUnit paddingLeft() const override;
@@ -144,7 +148,7 @@ private:
 
     ASCIILiteral renderName() const override { return (isAnonymous() || isPseudoElement()) ? "RenderTableCell (anonymous)"_s : "RenderTableCell"_s; }
 
-    void willBeRemovedFromTree(IsInternalMove) override;
+    void willBeRemovedFromTree() override;
 
     void updateLogicalWidth() override;
 

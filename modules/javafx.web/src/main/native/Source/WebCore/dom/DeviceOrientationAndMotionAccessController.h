@@ -28,11 +28,21 @@
 #if ENABLE(DEVICE_ORIENTATION)
 
 #include "DeviceOrientationOrMotionPermissionState.h"
+#include "EventTarget.h"
 #include "ExceptionOr.h"
 #include "SecurityOriginData.h"
 #include <wtf/Function.h>
 #include <wtf/Vector.h>
 #include <wtf/WeakPtr.h>
+
+namespace WebCore {
+class DeviceOrientationAndMotionAccessController;
+}
+
+namespace WTF {
+template<typename T> struct IsDeprecatedWeakRefSmartPointerException;
+template<> struct IsDeprecatedWeakRefSmartPointerException<WebCore::DeviceOrientationAndMotionAccessController> : std::true_type { };
+}
 
 namespace WebCore {
 

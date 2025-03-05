@@ -27,6 +27,7 @@
 #include "config.h"
 #include "HTMLTreeBuilder.h"
 
+#include "CSSTokenizerInputStream.h"
 #include "CommonAtomStrings.h"
 #include "DocumentFragment.h"
 #include "HTMLDocument.h"
@@ -51,6 +52,7 @@
 #include "XMLNames.h"
 #include <wtf/NeverDestroyed.h>
 #include <wtf/RobinHoodHashMap.h>
+#include <wtf/text/MakeString.h>
 #include <wtf/unicode/CharacterNames.h>
 
 #if ENABLE(TELEPHONE_NUMBER_DETECTION) && PLATFORM(IOS_FAMILY)
@@ -233,7 +235,7 @@ private:
     {
         if (stringView.is8Bit() || !isAll8BitData())
             return stringView.toString();
-        return String::make8Bit(stringView.characters16(), stringView.length());
+        return String::make8Bit(stringView.span16());
     }
 
     StringView m_text;
@@ -970,12 +972,8 @@ bool HTMLTreeBuilder::processTemplateEndTag(AtomHTMLToken&& token)
     if (m_tree.currentStackItem().elementName() != HTML::template_)
         parseError(token);
     m_tree.openElements().popUntil(HTML::template_);
-    Ref templateElement = checkedDowncast<HTMLTemplateElement>(m_tree.openElements().top());
+    Ref templateElement = downcast<HTMLTemplateElement>(m_tree.openElements().top());
     m_tree.openElements().pop();
-
-    auto& item = adjustedCurrentStackItem();
-    RELEASE_ASSERT(item.isElement());
-    Ref shadowHost = item.element();
 
     m_tree.activeFormattingElements().clearToLastMarker();
     m_templateInsertionModes.removeLast();
@@ -2455,35 +2453,35 @@ void HTMLTreeBuilder::linkifyPhoneNumbers(const String& string)
 
     // relativeStartPosition and relativeEndPosition are the endpoints of the phone number range,
     // relative to the scannerPosition
-    unsigned length = string.length();
-    unsigned scannerPosition = 0;
     int relativeStartPosition = 0;
     int relativeEndPosition = 0;
 
     auto characters = StringView(string).upconvertedCharacters();
+    auto span = characters.span();
 
     // While there's a phone number in the rest of the string...
-    while (scannerPosition < length && TelephoneNumberDetector::find(&characters[scannerPosition], length - scannerPosition, &relativeStartPosition, &relativeEndPosition)) {
+    while (!span.empty() && TelephoneNumberDetector::find(span, &relativeStartPosition, &relativeEndPosition)) {
+        auto scannerPosition = span.data() - characters.span().data();
+
         // The convention in the Data Detectors framework is that the end position is the first character NOT in the phone number
         // (that is, the length of the range is relativeEndPosition - relativeStartPosition). So substract 1 to get the same
         // convention as the old WebCore phone number parser (so that the rest of the code is still valid if we want to go back
         // to the old parser).
         --relativeEndPosition;
 
-        ASSERT(scannerPosition + relativeEndPosition < length);
+        ASSERT(static_cast<unsigned>(scannerPosition + relativeEndPosition) < string.length());
 
         m_tree.insertTextNode(string.substring(scannerPosition, relativeStartPosition));
         insertPhoneNumberLink(string.substring(scannerPosition + relativeStartPosition, relativeEndPosition - relativeStartPosition + 1));
 
-        scannerPosition += relativeEndPosition + 1;
+        span = span.subspan(relativeEndPosition + 1);
     }
 
     // Append the rest as a text node.
+    size_t scannerPosition = span.data() - characters.span().data();
     if (scannerPosition > 0) {
-        if (scannerPosition < length) {
-            String after = string.substring(scannerPosition, length - scannerPosition);
-            m_tree.insertTextNode(after);
-        }
+        if (scannerPosition < string.length())
+            m_tree.insertTextNode(string.substring(scannerPosition));
     } else
         m_tree.insertTextNode(string);
 }

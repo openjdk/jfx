@@ -25,11 +25,11 @@
 #include "FEColorMatrix.h"
 #include "NodeName.h"
 #include "SVGNames.h"
-#include <wtf/IsoMallocInlines.h>
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
-WTF_MAKE_ISO_ALLOCATED_IMPL(SVGFEColorMatrixElement);
+WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(SVGFEColorMatrixElement);
 
 inline SVGFEColorMatrixElement::SVGFEColorMatrixElement(const QualifiedName& tagName, Document& document)
     : SVGFilterPrimitiveStandardAttributes(tagName, document, makeUniqueRef<PropertyRegistry>(*this))
@@ -65,14 +65,14 @@ void SVGFEColorMatrixElement::attributeChanged(const QualifiedName& name, const 
     case AttributeNames::typeAttr: {
         auto propertyValue = SVGPropertyTraits<ColorMatrixType>::fromString(newValue);
         if (enumToUnderlyingType(propertyValue))
-            m_type->setBaseValInternal<ColorMatrixType>(propertyValue);
+            Ref { m_type }->setBaseValInternal<ColorMatrixType>(propertyValue);
         break;
     }
     case AttributeNames::inAttr:
-        m_in1->setBaseValInternal(newValue);
+        Ref { m_in1 }->setBaseValInternal(newValue);
         break;
     case AttributeNames::valuesAttr:
-        m_values->baseVal()->parse(newValue);
+        Ref { m_values }->baseVal()->parse(newValue);
         break;
     default:
         break;

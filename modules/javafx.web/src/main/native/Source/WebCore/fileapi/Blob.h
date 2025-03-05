@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2010 Google Inc. All rights reserved.
- * Copyright (C) 2012-2019 Apple Inc. All rights reserved.
+ * Copyright (C) 2012-2024 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -40,7 +40,7 @@
 #include "URLKeepingBlobAlive.h"
 #include "URLRegistry.h"
 #include <variant>
-#include <wtf/IsoMalloc.h>
+#include <wtf/TZoneMalloc.h>
 #include <wtf/URL.h>
 
 namespace JSC {
@@ -58,12 +58,15 @@ class ScriptExecutionContext;
 class FragmentedSharedBuffer;
 class WebCoreOpaqueRoot;
 
+struct IDLArrayBuffer;
+
+template<typename> class DOMPromiseDeferred;
 template<typename> class ExceptionOr;
 
 using BlobPartVariant = std::variant<RefPtr<JSC::ArrayBufferView>, RefPtr<JSC::ArrayBuffer>, RefPtr<Blob>, String>;
 
 class Blob : public ScriptWrappable, public URLRegistrable, public RefCounted<Blob>, public ActiveDOMObject {
-    WTF_MAKE_ISO_ALLOCATED_EXPORT(Blob, WEBCORE_EXPORT);
+    WTF_MAKE_TZONE_OR_ISO_ALLOCATED_EXPORT(Blob, WEBCORE_EXPORT);
 public:
     static Ref<Blob> create(ScriptExecutionContext* context)
     {
@@ -111,13 +114,18 @@ public:
     static bool isNormalizedContentType(const CString&);
 #endif
 
+    // ActiveDOMObject.
+    void ref() const final { RefCounted::ref(); }
+    void deref() const final { RefCounted::deref(); }
+
     // URLRegistrable
     URLRegistry& registry() const override;
 
     Ref<Blob> slice(long long start, long long end, const String& contentType) const;
 
     void text(Ref<DeferredPromise>&&);
-    void arrayBuffer(Ref<DeferredPromise>&&);
+    void arrayBuffer(DOMPromiseDeferred<IDLArrayBuffer>&&);
+    void bytes(Ref<DeferredPromise>&&);
     ExceptionOr<Ref<ReadableStream>> stream();
 
     size_t memoryCost() const { return m_memoryCost; }
@@ -144,9 +152,6 @@ protected:
 
 private:
     void loadBlob(FileReaderLoader::ReadType, CompletionHandler<void(BlobLoader&)>&&);
-
-    // ActiveDOMObject.
-    const char* activeDOMObjectName() const override;
 
     String m_type;
     mutable std::optional<unsigned long long> m_size;

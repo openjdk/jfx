@@ -86,8 +86,9 @@ enum class AllowTrustedTypePolicy : uint8_t {
     DisallowedDuplicateName,
 };
 
-class ContentSecurityPolicy : public CanMakeThreadSafeCheckedPtr {
+class ContentSecurityPolicy final : public CanMakeThreadSafeCheckedPtr<ContentSecurityPolicy> {
     WTF_MAKE_FAST_ALLOCATED;
+    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(ContentSecurityPolicy);
 public:
     explicit ContentSecurityPolicy(URL&&, ScriptExecutionContext&);
     WEBCORE_EXPORT explicit ContentSecurityPolicy(URL&&, ContentSecurityPolicyClient*, ReportingClient*);
@@ -128,7 +129,7 @@ public:
     bool allowPluginType(const String& type, const String& typeAttribute, const URL&, bool overrideContentSecurityPolicy = false) const;
 
     bool allowFrameAncestors(const LocalFrame&, const URL&, bool overrideContentSecurityPolicy = false) const;
-    WEBCORE_EXPORT bool allowFrameAncestors(const Vector<RefPtr<SecurityOrigin>>& ancestorOrigins, const URL&, bool overrideContentSecurityPolicy = false) const;
+    WEBCORE_EXPORT bool allowFrameAncestors(const Vector<Ref<SecurityOrigin>>& ancestorOrigins, const URL&, bool overrideContentSecurityPolicy = false) const;
     WEBCORE_EXPORT bool overridesXFrameOptions() const;
 
     enum class RedirectResponseReceived : bool { No, Yes };
@@ -151,6 +152,8 @@ public:
     bool allowBaseURI(const URL&, bool overrideContentSecurityPolicy = false) const;
 
     AllowTrustedTypePolicy allowTrustedTypesPolicy(const String&, bool isDuplicate) const;
+    bool requireTrustedTypesForSinkGroup(const String& sinkGroup) const;
+    bool allowMissingTrustedTypesForSinkGroup(const String& stringContext, const String& sink, const String& sinkGroup, StringView source) const;
 
     void setOverrideAllowInlineStyle(bool);
 
@@ -205,8 +208,9 @@ public:
     void setUpgradeInsecureRequests(bool);
     bool upgradeInsecureRequests() const { return m_upgradeInsecureRequests; }
     enum class InsecureRequestType { Load, FormSubmission, Navigation };
-    WEBCORE_EXPORT void upgradeInsecureRequestIfNeeded(ResourceRequest&, InsecureRequestType) const;
-    WEBCORE_EXPORT void upgradeInsecureRequestIfNeeded(URL&, InsecureRequestType) const;
+    enum class AlwaysUpgradeRequest : bool { No, Yes };
+    WEBCORE_EXPORT void upgradeInsecureRequestIfNeeded(ResourceRequest&, InsecureRequestType, AlwaysUpgradeRequest = AlwaysUpgradeRequest::No) const;
+    WEBCORE_EXPORT void upgradeInsecureRequestIfNeeded(URL&, InsecureRequestType, AlwaysUpgradeRequest = AlwaysUpgradeRequest::No) const;
 
     HashSet<SecurityOriginData> takeNavigationRequestsToUpgrade();
     void inheritInsecureNavigationRequestsToUpgradeFromOpener(const ContentSecurityPolicy&);
@@ -256,8 +260,8 @@ private:
 
     void reportViolation(const ContentSecurityPolicyDirective& violatedDirective, const String& blockedURL, const String& consoleMessage, JSC::JSGlobalObject*, StringView sourceContent) const;
     void reportViolation(const String& effectiveViolatedDirective, const ContentSecurityPolicyDirectiveList&, const String& blockedURL, const String& consoleMessage, JSC::JSGlobalObject* = nullptr) const;
-    void reportViolation(const ContentSecurityPolicyDirective& violatedDirective, const String& blockedURL, const String& consoleMessage, const String& sourceURL, const StringView& sourceContent, const TextPosition& sourcePosition, const URL& preRedirectURL = URL(), JSC::JSGlobalObject* = nullptr, Element* = nullptr) const;
-    void reportViolation(const String& violatedDirective, const ContentSecurityPolicyDirectiveList& violatedDirectiveList, const String& blockedURL, const String& consoleMessage, const String& sourceURL, const StringView& sourceContent, const TextPosition& sourcePosition, JSC::JSGlobalObject*, const URL& preRedirectURL = URL(), Element* = nullptr) const;
+    void reportViolation(const ContentSecurityPolicyDirective& violatedDirective, const String& blockedURL, const String& consoleMessage, const String& sourceURL, StringView sourceContent, const TextPosition& sourcePosition, const URL& preRedirectURL = URL(), JSC::JSGlobalObject* = nullptr, Element* = nullptr) const;
+    void reportViolation(const String& violatedDirective, const ContentSecurityPolicyDirectiveList& violatedDirectiveList, const String& blockedURL, const String& consoleMessage, const String& sourceURL, StringView sourceContent, const TextPosition& sourcePosition, JSC::JSGlobalObject*, const URL& preRedirectURL = URL(), Element* = nullptr) const;
     void reportBlockedScriptExecutionToInspector(const String& directiveText) const;
 
     // We can never have both a script execution context and a ContentSecurityPolicyClient.

@@ -29,6 +29,7 @@
 #include "DragActions.h"
 #include "FocusDirection.h"
 #include "HitTestRequest.h"
+#include "ImmediateActionStage.h"
 #include "LayoutPoint.h"
 #include "PlatformMouseEvent.h"
 #include "RenderObject.h"
@@ -124,17 +125,9 @@ extern const unsigned InvalidTouchIdentifier;
 enum AppendTrailingWhitespace { ShouldAppendTrailingWhitespace, DontAppendTrailingWhitespace };
 enum CheckDragHysteresis { ShouldCheckDragHysteresis, DontCheckDragHysteresis };
 
-enum class ImmediateActionStage : uint8_t {
-    None,
-    PerformedHitTest,
-    ActionUpdated,
-    ActionCancelledWithoutUpdate,
-    ActionCancelledAfterUpdate,
-    ActionCompleted
-};
-
-class EventHandler : public CanMakeCheckedPtr {
+class EventHandler final : public CanMakeCheckedPtr<EventHandler> {
     WTF_MAKE_FAST_ALLOCATED;
+    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(EventHandler);
 public:
     explicit EventHandler(LocalFrame&);
     ~EventHandler();
@@ -181,7 +174,8 @@ public:
     void cancelDragAndDrop(const PlatformMouseEvent&, std::unique_ptr<Pasteboard>&&, OptionSet<DragOperation>, bool draggingFiles);
     bool performDragAndDrop(const PlatformMouseEvent&, std::unique_ptr<Pasteboard>&&, OptionSet<DragOperation>, bool draggingFiles);
     void updateDragStateAfterEditDragIfNeeded(Element& rootEditableElement);
-    RefPtr<Element> draggedElement() const;
+    static Element* draggedElement();
+    static RefPtr<Element> protectedDraggedElement();
 #endif
 
     void scheduleHoverStateUpdate();
@@ -225,7 +219,9 @@ public:
     void defaultWheelEventHandler(Node*, WheelEvent&);
     void wheelEventWasProcessedByMainThread(const PlatformWheelEvent&, OptionSet<EventHandling>);
 
-    bool handlePasteGlobalSelection(const PlatformMouseEvent&);
+    WEBCORE_EXPORT void setLastKnownMousePosition(IntPoint position, IntPoint globalPosition);
+
+    bool handlePasteGlobalSelection();
 
 #if ENABLE(IOS_TOUCH_EVENTS) || ENABLE(IOS_GESTURE_EVENTS)
     using TouchArray = Vector<RefPtr<Touch>>;
@@ -250,7 +246,7 @@ public:
     bool dispatchGestureEvent(const PlatformTouchEvent&, const AtomString&, const EventTargetSet&, float, float);
 #elif ENABLE(MAC_GESTURE_EVENTS)
     bool dispatchGestureEvent(const PlatformGestureEvent&, const AtomString&, const EventTargetSet&, float, float);
-    WEBCORE_EXPORT bool handleGestureEvent(const PlatformGestureEvent&);
+    WEBCORE_EXPORT HandleUserInputEventResult handleGestureEvent(const PlatformGestureEvent&);
     WEBCORE_EXPORT void didEndMagnificationGesture();
 #endif
 
@@ -387,6 +383,8 @@ private:
 #if ENABLE(DRAG_SUPPORT)
     static DragState& dragState();
     static const Seconds TextDragDelay;
+    SimpleRange createSimpleRangeFromDragStartSelection() const;
+    std::optional<WeakSimpleRange> getWeakSimpleRangeFromSelection(const VisibleSelection&) const;
 #endif
 
     bool eventActivatedView(const PlatformMouseEvent&) const;
@@ -455,8 +453,10 @@ private:
 
     MouseEventWithHitTestResults prepareMouseEvent(const HitTestRequest&, const PlatformMouseEvent&);
 
-    enum class Cancelable : bool { No, Yes };
     bool dispatchMouseEvent(const AtomString& eventType, Node* target, int clickCount, const PlatformMouseEvent&, FireMouseOverOut);
+
+    enum class IgnoreAncestorNodesForClickEvent : bool { No, Yes };
+    bool swallowAnyClickEvent(const PlatformMouseEvent&, const MouseEventWithHitTestResults&, IgnoreAncestorNodesForClickEvent);
 
 #if ENABLE(DRAG_SUPPORT)
     bool dispatchDragEvent(const AtomString& eventType, Element& target, const PlatformMouseEvent&, DataTransfer&);
@@ -586,8 +586,6 @@ private:
     bool isKeyEventAllowedInFullScreen(const PlatformKeyboardEvent&) const;
 #endif
 
-    void setLastKnownMousePosition(const PlatformMouseEvent&);
-
 #if ENABLE(CURSOR_VISIBILITY)
     void startAutoHideCursorTimer();
     void cancelAutoHideCursorTimer();
@@ -675,7 +673,7 @@ private:
 
 #if ENABLE(DRAG_SUPPORT)
     LayoutPoint m_dragStartPosition;
-    std::optional<SimpleRange> m_dragStartSelection;
+    std::optional<WeakSimpleRange> m_dragStartSelection;
     RefPtr<Element> m_dragTarget;
     bool m_mouseDownMayStartDrag { false };
     bool m_dragMayStartSelectionInstead { false };

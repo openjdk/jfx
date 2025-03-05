@@ -81,6 +81,7 @@
 #include <wtf/NeverDestroyed.h>
 #include <wtf/Scope.h>
 #include <wtf/StdLibExtras.h>
+#include <wtf/text/MakeString.h>
 #include <wtf/text/StringBuilder.h>
 
 #if ENABLE(WEBASSEMBLY)
@@ -91,7 +92,7 @@
 
 namespace JSC {
 
-JSValue eval(CallFrame* callFrame, JSValue thisValue, JSScope* callerScopeChain, ECMAMode ecmaMode)
+JSValue eval(CallFrame* callFrame, JSValue thisValue, JSScope* callerScopeChain, LexicallyScopedFeatures lexicallyScopedFeatures)
 {
     CallFrame* callerFrame = callFrame->callerFrame();
     CallSiteIndex callerCallSiteIndex = callerFrame->callSiteIndex();
@@ -122,10 +123,25 @@ JSValue eval(CallFrame* callFrame, JSValue thisValue, JSScope* callerScopeChain,
         return jsUndefined();
 
     JSValue program = callFrame->argument(0);
-    if (!program.isString())
+    JSString* programString = nullptr;
+    if (LIKELY(program.isString()))
+        programString = asString(program);
+    else if (Options::useTrustedTypes()) {
+        auto code = globalObject->globalObjectMethodTable()->codeForEval(globalObject, program);
+        if (!code.isNull())
+            programString = jsString(vm, code);
+    }
+
+    if (!programString)
         return program;
 
-    auto* programString = asString(program);
+    auto programSource = programString->value(globalObject);
+    RETURN_IF_EXCEPTION(scope, JSValue());
+
+    if (Options::useTrustedTypes() && globalObject->requiresTrustedTypes() && !globalObject->globalObjectMethodTable()->canCompileStrings(globalObject, CompilationType::DirectEval, programSource, program)) {
+        throwException(globalObject, scope, createEvalError(globalObject, "Refused to evaluate a string as JavaScript because this document requires a 'Trusted Type' assignment."_s));
+        return { };
+    }
 
     TopCallFrameSetter topCallFrame(vm, callFrame);
     if (!globalObject->evalEnabled()) {
@@ -133,9 +149,6 @@ JSValue eval(CallFrame* callFrame, JSValue thisValue, JSScope* callerScopeChain,
         throwException(globalObject, scope, createEvalError(globalObject, globalObject->evalDisabledErrorMessage()));
         return { };
     }
-    String programSource = programString->value(globalObject);
-    RETURN_IF_EXCEPTION(scope, JSValue());
-
 
     bool isArrowFunctionContext = callerUnlinkedCodeBlock->isArrowFunction() || callerUnlinkedCodeBlock->isArrowFunctionContext();
 
@@ -158,14 +171,14 @@ JSValue eval(CallFrame* callFrame, JSValue thisValue, JSScope* callerScopeChain,
 
     DirectEvalExecutable* eval = callerBaselineCodeBlock->directEvalCodeCache().tryGet(programSource, bytecodeIndex);
     if (!eval) {
-        if (!ecmaMode.isStrict()) {
-            if (programSource.is8Bit()) {
-                LiteralParser<LChar> preparser(globalObject, programSource.characters8(), programSource.length(), SloppyJSON, callerBaselineCodeBlock);
+        if (!(lexicallyScopedFeatures & StrictModeLexicallyScopedFeature)) {
+            if (programSource->is8Bit()) {
+                LiteralParser preparser(globalObject, programSource->span8(), SloppyJSON, callerBaselineCodeBlock);
                 if (JSValue parsedObject = preparser.tryLiteralParse())
                     RELEASE_AND_RETURN(scope, parsedObject);
 
             } else {
-                LiteralParser<UChar> preparser(globalObject, programSource.characters16(), programSource.length(), SloppyJSON, callerBaselineCodeBlock);
+                LiteralParser preparser(globalObject, programSource->span16(), SloppyJSON, callerBaselineCodeBlock);
                 if (JSValue parsedObject = preparser.tryLiteralParse())
                     RELEASE_AND_RETURN(scope, parsedObject);
 
@@ -177,7 +190,7 @@ JSValue eval(CallFrame* callFrame, JSValue thisValue, JSScope* callerScopeChain,
         PrivateNameEnvironment privateNameEnvironment;
         JSScope::collectClosureVariablesUnderTDZ(callerScopeChain, variablesUnderTDZ, privateNameEnvironment);
         SourceTaintedOrigin sourceTaintedOrigin = computeNewSourceTaintedOriginFromStack(vm, callFrame);
-        eval = DirectEvalExecutable::create(globalObject, makeSource(programSource, callerBaselineCodeBlock->source().provider()->sourceOrigin(), sourceTaintedOrigin), derivedContextType, callerUnlinkedCodeBlock->needsClassFieldInitializer(), callerUnlinkedCodeBlock->privateBrandRequirement(), isArrowFunctionContext, callerBaselineCodeBlock->ownerExecutable()->isInsideOrdinaryFunction(), evalContextType, &variablesUnderTDZ, &privateNameEnvironment, ecmaMode);
+        eval = DirectEvalExecutable::create(globalObject, makeSource(programSource, callerBaselineCodeBlock->source().provider()->sourceOrigin(), sourceTaintedOrigin), lexicallyScopedFeatures, derivedContextType, callerUnlinkedCodeBlock->needsClassFieldInitializer(), callerUnlinkedCodeBlock->privateBrandRequirement(), isArrowFunctionContext, callerBaselineCodeBlock->ownerExecutable()->isInsideOrdinaryFunction(), evalContextType, &variablesUnderTDZ, &privateNameEnvironment);
         EXCEPTION_ASSERT(!!scope.exception() == !eval);
         if (!eval)
             return { };
@@ -367,9 +380,7 @@ Interpreter::Interpreter()
 #endif // ASSERT_ENABLED
 }
 
-Interpreter::~Interpreter()
-{
-}
+Interpreter::~Interpreter() = default;
 
 #if ENABLE(COMPUTED_GOTO_OPCODES)
 #if !ENABLE(LLINT_EMBEDDED_OPCODE_ID) || ASSERT_ENABLED
@@ -693,7 +704,7 @@ public:
                 if (m_catchableFromWasm) {
                     auto* wasmCallee = static_cast<Wasm::Callee*>(nativeCallee);
             if (wasmCallee->hasExceptionHandlers()) {
-                Wasm::Instance* instance = m_callFrame->wasmInstance();
+                        JSWebAssemblyInstance* instance = m_callFrame->wasmInstance();
                 unsigned exceptionHandlerIndex = m_callFrame->callSiteIndex().bits();
                 m_handler = { wasmCallee->handlerForIndex(*instance, exceptionHandlerIndex, m_wasmTag), wasmCallee };
                 if (m_handler.m_valid)
@@ -938,6 +949,9 @@ JSValue Interpreter::executeProgram(const SourceCode& source, JSGlobalObject*, J
     EXCEPTION_ASSERT(throwScope.exception() || program);
     RETURN_IF_EXCEPTION(throwScope, { });
 
+    if (globalObject->globalScopeExtension())
+        program->setTaintedByWithScope();
+
     ASSERT(!vm.isCollectorBusyOnCurrentThread());
     RELEASE_ASSERT(vm.currentThreadIsHoldingAPILock());
 
@@ -962,10 +976,10 @@ JSValue Interpreter::executeProgram(const SourceCode& source, JSGlobalObject*, J
     if (programSource.isNull())
         return jsUndefined();
     if (programSource.is8Bit()) {
-        LiteralParser<LChar> literalParser(globalObject, programSource.characters8(), programSource.length(), JSONP);
+        LiteralParser literalParser(globalObject, programSource.span8(), JSONP);
         parseResult = literalParser.tryJSONPParse(JSONPData, globalObject->globalObjectMethodTable()->supportsRichSourceInfo(globalObject));
     } else {
-        LiteralParser<UChar> literalParser(globalObject, programSource.characters16(), programSource.length(), JSONP);
+        LiteralParser literalParser(globalObject, programSource.span16(), JSONP);
         parseResult = literalParser.tryJSONPParse(JSONPData, globalObject->globalObjectMethodTable()->supportsRichSourceInfo(globalObject));
     }
 

@@ -30,7 +30,7 @@
 #include <mach/mach_init.h>
 #include <utility>
 #include <wtf/spi/cocoa/MachVMSPI.h>
-#include <wtf/text/StringConcatenateNumbers.h>
+#include <wtf/text/MakeString.h>
 
 namespace WTF {
 
@@ -58,7 +58,7 @@ void logFootprintComparison(const std::array<TagInfo, 256>& before, const std::a
             continue;
         String tagName = displayNameForVMTag(i);
         if (!tagName)
-            tagName = makeString("Tag ", i);
+            tagName = makeString("Tag "_s, i);
         WTFLogAlways("  %02X %16s %10ld %10ld %10ld",
             i,
             tagName.ascii().data(),

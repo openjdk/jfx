@@ -23,22 +23,35 @@
 
 #pragma once
 
+#include "DOMTokenList.h"
 #include "HTMLElement.h"
 #include "ScriptElement.h"
 
 namespace WebCore {
 
+class TrustedScript;
+class TrustedScriptURL;
+
 enum class RequestPriority : uint8_t;
 
 class HTMLScriptElement final : public HTMLElement, public ScriptElement {
-    WTF_MAKE_ISO_ALLOCATED(HTMLScriptElement);
+    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(HTMLScriptElement);
+    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(HTMLScriptElement);
 public:
     static Ref<HTMLScriptElement> create(const QualifiedName&, Document&, bool wasInsertedByParser, bool alreadyStarted = false);
 
     String text() const { return scriptContent(); }
     WEBCORE_EXPORT void setText(String&&);
+    ExceptionOr<void> setText(std::variant<RefPtr<TrustedScript>, String>&&);
 
-    URL src() const;
+    using Node::setTextContent;
+    ExceptionOr<void> setTextContent(std::optional<std::variant<RefPtr<TrustedScript>, String>>&&);
+
+    using HTMLElement::setInnerText;
+    ExceptionOr<void> setInnerText(std::variant<RefPtr<TrustedScript>, String>&&);
+
+    String src() const;
+    ExceptionOr<void> setSrc(std::variant<RefPtr<TrustedScriptURL>, String>&&);
 
     WEBCORE_EXPORT void setAsync(bool);
     WEBCORE_EXPORT bool async() const;
@@ -59,6 +72,8 @@ public:
     String fetchPriorityForBindings() const;
     RequestPriority fetchPriorityHint() const override;
 
+    WEBCORE_EXPORT DOMTokenList& blocking();
+
 private:
     HTMLScriptElement(const QualifiedName&, Document&, bool wasInsertedByParser, bool alreadyStarted);
 
@@ -66,6 +81,14 @@ private:
     InsertedIntoAncestorResult insertedIntoAncestor(InsertionType, ContainerNode&) final;
     void didFinishInsertingNode() final;
     void childrenChanged(const ChildChange&) final;
+    void finishParsingChildren() final;
+    void removedFromAncestor(RemovalType, ContainerNode&) final;
+
+    void potentiallyBlockRendering() final;
+    void unblockRendering() final;
+    bool isImplicitlyPotentiallyRenderBlocking() const;
+
+    ExceptionOr<void> setTextContent(ExceptionOr<String>);
 
     bool isURLAttribute(const Attribute&) const final;
 
@@ -85,6 +108,9 @@ private:
     bool isScriptPreventedByAttributes() const final;
 
     Ref<Element> cloneElementWithoutAttributesAndChildren(Document&) final;
+
+    std::unique_ptr<DOMTokenList> m_blockingList;
+    bool m_isRenderBlocking { false };
 };
 
 } //namespace

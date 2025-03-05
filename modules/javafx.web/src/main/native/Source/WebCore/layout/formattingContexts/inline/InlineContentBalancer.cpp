@@ -41,18 +41,6 @@ namespace Layout {
 // used decreases. So, we ignore this ideal number of lines requirement beyond this threshold.
 static const size_t maximumLinesToBalanceWithLineRequirement { 12 };
 
-static Vector<size_t> computeBreakOpportunities(const InlineItemList& inlineItemList, InlineItemRange range)
-{
-    Vector<size_t> breakOpportunities;
-    size_t currentIndex = range.startIndex();
-    while (currentIndex < range.endIndex()) {
-        currentIndex = InlineFormattingUtils::nextWrapOpportunity(currentIndex, range, inlineItemList);
-        breakOpportunities.append(currentIndex);
-    }
-    return breakOpportunities;
-}
-
-
 static float computeCost(InlineLayoutUnit candidateLineWidth, InlineLayoutUnit idealLineWidth)
 {
     auto difference = idealLineWidth - candidateLineWidth;
@@ -63,23 +51,24 @@ static bool containsTrailingSoftHyphen(const InlineItem& inlineItem)
 {
     if (inlineItem.style().hyphens() == Hyphens::None)
         return false;
-    if (!inlineItem.isText())
+    auto* textItem = dynamicDowncast<InlineTextItem>(inlineItem);
+    if (!textItem)
         return false;
-    return downcast<InlineTextItem>(inlineItem).hasTrailingSoftHyphen();
+    return textItem->hasTrailingSoftHyphen();
 }
 
 static bool containsPreservedTab(const InlineItem& inlineItem)
 {
-    if (!inlineItem.isText())
+    auto* textItem = dynamicDowncast<InlineTextItem>(inlineItem);
+    if (!textItem)
         return false;
-    const auto& textItem = downcast<InlineTextItem>(inlineItem);
-    if (!textItem.isWhitespace())
+    if (!textItem->isWhitespace())
         return false;
-    const auto& textBox = textItem.inlineTextBox();
+    const auto& textBox = textItem->inlineTextBox();
     if (!TextUtil::shouldPreserveSpacesAndTabs(textBox))
         return false;
-    auto start = textItem.start();
-    auto length = textItem.length();
+    auto start = textItem->start();
+    auto length = textItem->length();
     const auto& textContent = textBox.content();
     for (size_t index = start; index < start + length; index++) {
         if (textContent[index] == tabCharacter)
@@ -167,7 +156,7 @@ void InlineContentBalancer::initialize()
         if (numberOfVisibleLinesAllowed && (lineIndex + 1 >= numberOfVisibleLinesAllowed))
             break;
 
-        layoutRange.start = InlineFormattingUtils::leadingInlineItemPositionForNextLine(lineLayoutResult.inlineItemRange.end, previousLineEnd, !lineLayoutResult.floatContent.hasIntrusiveFloat.isEmpty(), layoutRange.end);
+        layoutRange.start = InlineFormattingUtils::leadingInlineItemPositionForNextLine(lineLayoutResult.inlineItemRange.end, previousLineEnd, !lineLayoutResult.floatContent.hasIntrusiveFloat.isEmpty() || !lineLayoutResult.floatContent.placedFloats.isEmpty(), layoutRange.end);
         previousLineEnd = layoutRange.start;
         previousLine = PreviousLine { lineIndex, lineLayoutResult.contentGeometry.trailingOverflowingContentWidth, !lineLayoutResult.inlineContent.isEmpty() && lineLayoutResult.inlineContent.last().isLineBreak(), !lineLayoutResult.inlineContent.isEmpty(), lineLayoutResult.directionality.inlineBaseDirection, WTFMove(lineLayoutResult.floatContent.suspendedFloats) };
         lineIndex++;
@@ -234,7 +223,7 @@ std::optional<Vector<LayoutUnit>> InlineContentBalancer::balanceRangeWithLineReq
     ASSERT(range.startIndex() < range.endIndex());
 
     // breakOpportunities holds the indices i such that a line break can occur before m_inlineItemList[i].
-    auto breakOpportunities = computeBreakOpportunities(m_inlineItemList, range);
+    auto breakOpportunities = computeBreakOpportunities(range);
 
     // We need a dummy break opportunity at the beginning for algorithmic base case purposes
     breakOpportunities.insert(0, range.startIndex());
@@ -337,7 +326,7 @@ std::optional<Vector<LayoutUnit>> InlineContentBalancer::balanceRangeWithNoLineR
     ASSERT(range.startIndex() < range.endIndex());
 
     // breakOpportunities holds the indices i such that a line break can occur before m_inlineItemList[i].
-    auto breakOpportunities = computeBreakOpportunities(m_inlineItemList, range);
+    auto breakOpportunities = computeBreakOpportunities(range);
 
     // We need a dummy break opportunity at the beginning for algorithmic base case purposes
     breakOpportunities.insert(0, range.startIndex());
@@ -446,9 +435,8 @@ bool InlineContentBalancer::shouldTrimLeading(size_t inlineItemIndex, bool useFi
     if (inlineItem.isLineBreak())
         return true;
 
-    if (inlineItem.isText()) {
-        auto& textItem = downcast<InlineTextItem>(inlineItem);
-        if (textItem.isWhitespace()) {
+    if (auto* textItem = dynamicDowncast<InlineTextItem>(inlineItem)) {
+        if (textItem->isWhitespace()) {
             bool isFirstLineLeadingPreservedWhiteSpace = style.whiteSpaceCollapse() == WhiteSpaceCollapse::Preserve && isFirstLineInChunk;
             return !isFirstLineLeadingPreservedWhiteSpace && style.whiteSpaceCollapse() != WhiteSpaceCollapse::BreakSpaces;
         }
@@ -470,9 +458,8 @@ bool InlineContentBalancer::shouldTrimTrailing(size_t inlineItemIndex, bool useF
     if (inlineItem.isLineBreak())
         return true;
 
-    if (inlineItem.isText()) {
-        auto& textItem = downcast<InlineTextItem>(inlineItem);
-        if (textItem.isWhitespace())
+    if (auto* textItem = dynamicDowncast<InlineTextItem>(inlineItem)) {
+        if (textItem->isWhitespace())
             return style.whiteSpaceCollapse() != WhiteSpaceCollapse::BreakSpaces;
         return false;
     }
@@ -569,6 +556,17 @@ void InlineContentBalancer::SlidingWidth::advanceEndTo(size_t newEnd)
     ASSERT(m_end <= newEnd);
     while (m_end < newEnd)
         advanceEnd();
+}
+
+Vector<size_t> InlineContentBalancer::computeBreakOpportunities(InlineItemRange range) const
+{
+    Vector<size_t> breakOpportunities;
+    size_t currentIndex = range.startIndex();
+    while (currentIndex < range.endIndex()) {
+        currentIndex = m_inlineFormattingContext.formattingUtils().nextWrapOpportunity(currentIndex, range, m_inlineItemList.span());
+        breakOpportunities.append(currentIndex);
+    }
+    return breakOpportunities;
 }
 
 }

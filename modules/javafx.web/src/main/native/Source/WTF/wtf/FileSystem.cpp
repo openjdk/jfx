@@ -31,6 +31,7 @@
 #include <wtf/HexNumber.h>
 #include <wtf/Logging.h>
 #include <wtf/Scope.h>
+#include <wtf/StdLibExtras.h>
 #include <wtf/text/CString.h>
 #include <wtf/text/StringBuilder.h>
 
@@ -51,18 +52,22 @@ namespace WTF::FileSystemImpl {
 
 static std::filesystem::path toStdFileSystemPath(StringView path)
 {
-#if HAVE(MISSING_STD_FILESYSTEM_PATH_CONSTRUCTOR)
+#if HAVE(MISSING_U8STRING)
 ALLOW_DEPRECATED_DECLARATIONS_BEGIN
     return std::filesystem::u8path(path.utf8().data());
 ALLOW_DEPRECATED_DECLARATIONS_END
 #else
-    return { std::u8string(reinterpret_cast<const char8_t*>(path.utf8().data())) };
+    return { std::u8string(byteCast<char8_t>(path.utf8().data())) };
 #endif
 }
 
 static String fromStdFileSystemPath(const std::filesystem::path& path)
 {
-    return String::fromUTF8(reinterpret_cast<const LChar*>(path.u8string().c_str()));
+#if HAVE(MISSING_U8STRING)
+    return String::fromUTF8(span8(path.u8string().c_str()));
+#else
+    return String::fromUTF8(span(path.u8string()));
+#endif
 }
 
 #endif // HAVE(STD_FILESYSTEM) || HAVE(STD_EXPERIMENTAL_FILESYSTEM)
@@ -164,7 +169,7 @@ String encodeForFileName(const String& inputString)
             if (character <= 0xFF)
                 result.append('%', hex(character, 2));
             else
-                result.append("%+", hex(static_cast<uint8_t>(character >> 8), 2), hex(static_cast<uint8_t>(character), 2));
+                result.append("%+"_s, hex(static_cast<uint8_t>(character >> 8), 2), hex(static_cast<uint8_t>(character), 2));
         } else
             result.append(character);
         previousCharacter = character;
@@ -262,12 +267,12 @@ bool appendFileContentsToFileHandle(const String& path, PlatformFileHandle& targ
     });
 
     do {
-        int readBytes = readFromFile(source, buffer.data(), bufferSize);
+        int readBytes = readFromFile(source, buffer.mutableSpan());
 
         if (readBytes < 0)
             return false;
 
-        if (writeToFile(target, buffer.data(), readBytes) != readBytes)
+        if (writeToFile(target, buffer.span().first(readBytes)) != readBytes)
             return false;
 
         if (readBytes < bufferSize)
@@ -459,7 +464,7 @@ MappedFileData createMappedFileData(const String& path, size_t bytesSize, Platfo
 
 void finalizeMappedFileData(MappedFileData& mappedFileData, size_t bytesSize)
 {
-    void* map = const_cast<void*>(mappedFileData.data());
+    auto* map = mappedFileData.mutableSpan().data();
 #if OS(WINDOWS)
     DWORD oldProtection;
     VirtualProtect(map, bytesSize, FILE_MAP_READ, &oldProtection);
@@ -479,12 +484,11 @@ MappedFileData mapToFile(const String& path, size_t bytesSize, Function<void(con
     if (!mappedFile)
         return { };
 
-    void* map = const_cast<void*>(mappedFile.data());
-    uint8_t* mapData = static_cast<uint8_t*>(map);
+    auto mapData = mappedFile.mutableSpan();
 
     apply([&mapData](std::span<const uint8_t> chunk) {
-        memcpy(mapData, chunk.data(), chunk.size());
-        mapData += chunk.size();
+        memcpySpan(mapData, chunk);
+        mapData = mapData.subspan(chunk.size());
         return true;
     });
 
@@ -496,7 +500,7 @@ MappedFileData mapToFile(const String& path, size_t bytesSize, Function<void(con
 static Salt makeSalt()
 {
     Salt salt;
-    cryptographicallyRandomValues(&salt, sizeof(Salt));
+    cryptographicallyRandomValues(salt);
     return salt;
 }
 
@@ -505,7 +509,7 @@ std::optional<Salt> readOrMakeSalt(const String& path)
     if (FileSystem::fileExists(path)) {
         auto file = FileSystem::openFile(path, FileSystem::FileOpenMode::Read);
         Salt salt;
-        auto bytesRead = static_cast<std::size_t>(FileSystem::readFromFile(file, salt.data(), salt.size()));
+        auto bytesRead = static_cast<std::size_t>(FileSystem::readFromFile(file, salt));
         FileSystem::closeFile(file);
         if (bytesRead == salt.size())
             return salt;
@@ -519,7 +523,7 @@ std::optional<Salt> readOrMakeSalt(const String& path)
     if (!FileSystem::isHandleValid(file))
         return { };
 
-    bool success = static_cast<std::size_t>(FileSystem::writeToFile(file, salt.data(), salt.size())) == salt.size();
+    bool success = static_cast<std::size_t>(FileSystem::writeToFile(file, salt)) == salt.size();
     FileSystem::closeFile(file);
     if (!success)
         return { };
@@ -527,8 +531,7 @@ std::optional<Salt> readOrMakeSalt(const String& path)
     return salt;
 }
 
-#if HAVE(STD_FILESYSTEM) || HAVE(STD_EXPERIMENTAL_FILESYSTEM)
-
+#if !PLATFORM(JAVA)
 std::optional<Vector<uint8_t>> readEntireFile(PlatformFileHandle handle)
 {
     if (!FileSystem::isHandleValid(handle))
@@ -546,7 +549,7 @@ std::optional<Vector<uint8_t>> readEntireFile(PlatformFileHandle handle)
     size_t totalBytesRead = 0;
     int bytesRead;
 
-    while ((bytesRead = FileSystem::readFromFile(handle, buffer.data() + totalBytesRead, bytesToRead - totalBytesRead)) > 0)
+    while ((bytesRead = FileSystem::readFromFile(handle, buffer.mutableSpan().subspan(totalBytesRead))) > 0)
         totalBytesRead += bytesRead;
 
     if (totalBytesRead != bytesToRead)
@@ -564,7 +567,7 @@ std::optional<Vector<uint8_t>> readEntireFile(const String& path)
     return contents;
 }
 
-int overwriteEntireFile(const String& path, std::span<uint8_t> span)
+int overwriteEntireFile(const String& path, std::span<const uint8_t> span)
 {
     auto fileHandle = FileSystem::openFile(path, FileSystem::FileOpenMode::Truncate);
     auto closeFile = makeScopeExit([&] {
@@ -574,7 +577,7 @@ int overwriteEntireFile(const String& path, std::span<uint8_t> span)
     if (!FileSystem::isHandleValid(fileHandle))
         return -1;
 
-    return FileSystem::writeToFile(fileHandle, span.data(), span.size());
+    return FileSystem::writeToFile(fileHandle, span);
 }
 
 void deleteAllFilesModifiedSince(const String& directory, WallTime time)
@@ -609,7 +612,8 @@ void deleteAllFilesModifiedSince(const String& directory, WallTime time)
 
     FileSystem::deleteEmptyDirectory(directory);
 }
-
+#endif
+#if HAVE(STD_FILESYSTEM) || HAVE(STD_EXPERIMENTAL_FILESYSTEM)
 
 bool deleteEmptyDirectory(const String& path)
 {
@@ -649,6 +653,8 @@ bool moveFile(const String& oldPath, const String& newPath)
     std::filesystem::rename(fsOldPath, fsNewPath, ec);
     if (!ec)
         return true;
+    if (isAncestor(oldPath, newPath))
+        return false;
 
     // Fall back to copying and then deleting source as rename() does not work across volumes.
     ec = { };
@@ -824,6 +830,28 @@ String parentPath(const String& path)
     return fromStdFileSystemPath(toStdFileSystemPath(path).parent_path());
 }
 
+String lexicallyNormal(const String& path)
+{
+    return fromStdFileSystemPath(toStdFileSystemPath(path).lexically_normal());
+}
+
+bool isAncestor(const String& possibleAncestor, const String& possibleChild)
+{
+    auto possibleChildLexicallyNormal = lexicallyNormal(possibleChild);
+    auto possibleAncestorLexicallyNormal = lexicallyNormal(possibleAncestor);
+    if (possibleChildLexicallyNormal.endsWith(std::filesystem::path::preferred_separator))
+        possibleChildLexicallyNormal = possibleChildLexicallyNormal.left(possibleChildLexicallyNormal.length() - 1);
+    if (possibleAncestorLexicallyNormal.endsWith(std::filesystem::path::preferred_separator))
+        possibleAncestorLexicallyNormal = possibleAncestorLexicallyNormal.left(possibleAncestorLexicallyNormal.length() - 1);
+    return possibleChildLexicallyNormal.startsWith(possibleAncestorLexicallyNormal) && possibleChildLexicallyNormal.length() != possibleAncestorLexicallyNormal.length();
+}
+String createTemporaryFile(StringView prefix, StringView suffix)
+{
+    auto [path, handle] = openTemporaryFile(prefix, suffix);
+    closeFile(handle);
+    return path;
+}
+
 #if !PLATFORM(PLAYSTATION)
 String realPath(const String& path)
 {
@@ -903,7 +931,7 @@ String createTemporaryDirectory()
 
     std::string newTempDirTemplate = tempDir + "XXXXXXXX";
 
-    Vector<char> newTempDir(newTempDirTemplate.c_str(), newTempDirTemplate.size());
+    Vector<char> newTempDir(std::span<const char> { newTempDirTemplate });
     if (!mkdtemp(newTempDir.data()))
         return String();
 

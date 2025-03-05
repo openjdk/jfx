@@ -39,7 +39,8 @@ class GraphicsContextStateSaver;
 class SVGGraphicsElement;
 
 class LegacyRenderSVGShape : public LegacyRenderSVGModelObject {
-    WTF_MAKE_ISO_ALLOCATED(LegacyRenderSVGShape);
+    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(LegacyRenderSVGShape);
+    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(LegacyRenderSVGShape);
 public:
     friend FloatRect SVGRenderSupport::calculateApproximateStrokeBoundingBox(const RenderElement&);
 
@@ -61,10 +62,10 @@ public:
     virtual ~LegacyRenderSVGShape();
 
     inline SVGGraphicsElement& graphicsElement() const;
+    inline Ref<SVGGraphicsElement> protectedGraphicsElement() const;
 
     void setNeedsShapeUpdate() { m_needsShapeUpdate = true; }
     void setNeedsBoundariesUpdate() final { m_needsBoundariesUpdate = true; }
-    bool needsBoundariesUpdate() final { return m_needsBoundariesUpdate; }
     void setNeedsTransformUpdate() final { m_needsTransformUpdate = true; }
     virtual void fillShape(GraphicsContext&) const;
     virtual void strokeShape(GraphicsContext&) const;
@@ -105,6 +106,8 @@ protected:
 
     FloatRect strokeBoundingBox() const final;
     FloatRect approximateStrokeBoundingBox() const;
+
+    bool fillRequiresClip() const { return m_fillRequiresClip; }
 
 private:
     // Hit-detection separated for the fill and the stroke
@@ -151,6 +154,7 @@ private:
     bool m_needsBoundariesUpdate : 1;
     bool m_needsShapeUpdate : 1;
     bool m_needsTransformUpdate : 1;
+    bool m_fillRequiresClip : 1 { true };
 protected:
     ShapeType m_shapeType : 3 { ShapeType::Empty };
 private:

@@ -29,8 +29,11 @@
 #include <errno.h>
 #include <sys/mman.h>
 #include <wtf/Assertions.h>
+#include <wtf/DataLog.h>
 #include <wtf/MathExtras.h>
 #include <wtf/PageBlock.h>
+#include <wtf/SafeStrerror.h>
+#include <wtf/text/CString.h>
 
 #if ENABLE(JIT_CAGE)
 #include <WebKitAdditions/JITCageAdditions.h>
@@ -107,8 +110,17 @@ void* OSAllocator::tryReserveAndCommit(size_t bytes, Usage usage, bool writable,
         // mprotect results in multiple references to the code region. This
         // breaks the madvise based mechanism we use to return physical memory
         // to the OS.
-        mmap(result, pageSize(), PROT_NONE, MAP_FIXED | MAP_PRIVATE | MAP_ANON, fd, 0);
-        mmap(static_cast<char*>(result) + bytes - pageSize(), pageSize(), PROT_NONE, MAP_FIXED | MAP_PRIVATE | MAP_ANON, fd, 0);
+        const auto guardPageSize = pageSize();
+        auto foreGuardResult = mmap(result, guardPageSize, PROT_NONE, MAP_FIXED | MAP_PRIVATE | MAP_ANON, fd, 0);
+        if (UNLIKELY(foreGuardResult == MAP_FAILED)) {
+            munmap(result, bytes);
+            return nullptr;
+        }
+        auto aftGuardResult = mmap(static_cast<char*>(result) + bytes - guardPageSize, guardPageSize, PROT_NONE, MAP_FIXED | MAP_PRIVATE | MAP_ANON, fd, 0);
+        if (UNLIKELY(aftGuardResult == MAP_FAILED)) {
+            munmap(result, bytes);
+            return nullptr;
+        }
     }
     return result;
 }
@@ -284,7 +296,7 @@ void OSAllocator::releaseDecommitted(void* address, size_t bytes)
         CRASH();
 }
 
-bool OSAllocator::protect(void* address, size_t bytes, bool readable, bool writable)
+bool OSAllocator::tryProtect(void* address, size_t bytes, bool readable, bool writable)
 {
     int protection = 0;
     if (readable) {
@@ -297,6 +309,14 @@ bool OSAllocator::protect(void* address, size_t bytes, bool readable, bool writa
         protection = PROT_NONE;
     }
     return !mprotect(address, bytes, protection);
+}
+
+void OSAllocator::protect(void* address, size_t bytes, bool readable, bool writable)
+{
+    if (bool result = tryProtect(address, bytes, readable, writable); UNLIKELY(!result)) {
+        dataLogLn("mprotect failed: ", safeStrerror(errno).data());
+        RELEASE_ASSERT_NOT_REACHED();
+    }
 }
 
 } // namespace WTF

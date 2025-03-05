@@ -54,7 +54,7 @@ public:
     void initializeB3Code(CodeRef<JSEntryPtrTag>);
     void initializeB3Byproducts(std::unique_ptr<OpaqueByproducts>);
     void initializeAddressForCall(CodePtr<JSEntryPtrTag>);
-    void initializeArityCheckEntrypoint(CodeRef<JSEntryPtrTag>);
+    void initializeAddressForArityCheck(CodePtr<JSEntryPtrTag>);
 
     void validateReferences(const TrackedReferences&) override;
 
@@ -67,8 +67,8 @@ public:
     JITCode* ftl() override;
     DFG::CommonData* dfgCommon() override;
     const DFG::CommonData* dfgCommon() const override;
-    static ptrdiff_t commonDataOffset() { return OBJECT_OFFSETOF(JITCode, common); }
-    void shrinkToFit(const ConcurrentJSLocker&) override;
+    static constexpr ptrdiff_t commonDataOffset() { return OBJECT_OFFSETOF(JITCode, common); }
+    void shrinkToFit() override;
 
     bool isUnlinked() const { return common.isUnlinked(); }
 
@@ -85,7 +85,7 @@ public:
 private:
     CodeRef<JSEntryPtrTag> m_b3Code;
     std::unique_ptr<OpaqueByproducts> m_b3Byproducts;
-    CodeRef<JSEntryPtrTag> m_arityCheckEntrypoint;
+    CodePtr<JSEntryPtrTag> m_addressForArityCheck;
 };
 
 } } // namespace JSC::FTL

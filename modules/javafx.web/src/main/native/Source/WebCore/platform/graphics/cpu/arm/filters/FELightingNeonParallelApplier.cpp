@@ -520,8 +520,9 @@ void FELightingNeonParallelApplier::applyPlatformWorker(ApplyParameters* paramet
 void FELightingNeonParallelApplier::applyPlatformParallel(const LightingData& data, const LightSource::PaintingData& paintingData) const
 {
     alignas(16) FloatArguments floatArguments;
+    auto bytes = data.pixels->bytes();
     ApplyParameters neonData = {
-        data.pixels->bytes(),
+        bytes.data(),
         1,
         data.width - 2,
         data.height - 2,
@@ -542,19 +543,17 @@ void FELightingNeonParallelApplier::applyPlatformParallel(const LightingData& da
     floatArguments.colorBlue = color.blue;
     floatArguments.padding4 = 0;
 
-    if (data.lightSource->type() == LightType::LS_POINT) {
+    if (auto* pointLightSource = dynamicDowncast<PointLightSource>(*data.lightSource)) {
         neonData.flags |= FLAG_POINT_LIGHT;
-        auto& pointLightSource = downcast<PointLightSource>(*data.lightSource);
-        floatArguments.lightX = pointLightSource.position().x();
-        floatArguments.lightY = pointLightSource.position().y();
-        floatArguments.lightZ = pointLightSource.position().z();
+        floatArguments.lightX = pointLightSource->position().x();
+        floatArguments.lightY = pointLightSource->position().y();
+        floatArguments.lightZ = pointLightSource->position().z();
         floatArguments.padding2 = 0;
-    } else if (data.lightSource->type() == LightType::LS_SPOT) {
+    } else if (auto* spotLightSource = dynamicDowncast<SpotLightSource>(*data.lightSource)) {
         neonData.flags |= FLAG_SPOT_LIGHT;
-        auto& spotLightSource = downcast<SpotLightSource>(*data.lightSource);
-        floatArguments.lightX = spotLightSource.position().x();
-        floatArguments.lightY = spotLightSource.position().y();
-        floatArguments.lightZ = spotLightSource.position().z();
+        floatArguments.lightX = spotLightSource->position().x();
+        floatArguments.lightY = spotLightSource->position().y();
+        floatArguments.lightZ = spotLightSource->position().z();
         floatArguments.padding2 = 0;
 
         floatArguments.directionX = paintingData.directionVector.x();
@@ -565,8 +564,8 @@ void FELightingNeonParallelApplier::applyPlatformParallel(const LightingData& da
         floatArguments.coneCutOffLimit = paintingData.coneCutOffLimit;
         floatArguments.coneFullLight = paintingData.coneFullLight;
         floatArguments.coneCutOffRange = paintingData.coneCutOffLimit - paintingData.coneFullLight;
-        neonData.coneExponent = getPowerCoefficients(spotLightSource.specularExponent());
-        if (spotLightSource.specularExponent() == 1)
+        neonData.coneExponent = getPowerCoefficients(spotLightSource->specularExponent());
+        if (spotLightSource->specularExponent() == 1)
             neonData.flags |= FLAG_CONE_EXPONENT_IS_1;
     } else {
         ASSERT(data.lightSource->type() == LS_DISTANT);

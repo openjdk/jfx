@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -421,7 +421,7 @@ public class GridPane extends Pane {
      * If set, will override the gridpane's default horizontal alignment.
      * Setting the value to null will remove the constraint.
      * @param child the child node of a gridpane
-     * @param value the hozizontal alignment for the child
+     * @param value the horizontal alignment for the child
      */
     public static void setHalignment(Node child, HPos value) {
         setConstraint(child, HALIGNMENT_CONSTRAINT, value);
@@ -547,7 +547,7 @@ public class GridPane extends Pane {
     }
 
     /**
-     * Sets the column,row indeces for the child when contained in a gridpane.
+     * Sets the column,row indices for the child when contained in a gridpane.
      * @param child the child node of a gridpane
      * @param columnIndex the column index position for the child
      * @param rowIndex the row index position for the child

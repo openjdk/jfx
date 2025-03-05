@@ -30,12 +30,12 @@
 #include "SVGElementTypeHelpers.h"
 #include "SVGNames.h"
 #include "SVGPathElement.h"
-#include <wtf/IsoMallocInlines.h>
 #include <wtf/NeverDestroyed.h>
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
-WTF_MAKE_ISO_ALLOCATED_IMPL(SVGTextPathElement);
+WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(SVGTextPathElement);
 
 inline SVGTextPathElement::SVGTextPathElement(const QualifiedName& tagName, Document& document)
     : SVGTextContentElement(tagName, document, makeUniqueRef<PropertyRegistry>(*this))
@@ -72,18 +72,18 @@ void SVGTextPathElement::attributeChanged(const QualifiedName& name, const AtomS
 
     switch (name.nodeName()) {
     case AttributeNames::startOffsetAttr:
-        m_startOffset->setBaseValInternal(SVGLengthValue::construct(SVGLengthMode::Other, newValue, parseError));
+        Ref { m_startOffset }->setBaseValInternal(SVGLengthValue::construct(SVGLengthMode::Other, newValue, parseError));
         break;
     case AttributeNames::methodAttr: {
         SVGTextPathMethodType propertyValue = SVGPropertyTraits<SVGTextPathMethodType>::fromString(newValue);
         if (propertyValue > 0)
-            m_method->setBaseValInternal<SVGTextPathMethodType>(propertyValue);
+            Ref { m_method }->setBaseValInternal<SVGTextPathMethodType>(propertyValue);
         break;
     }
     case AttributeNames::spacingAttr: {
         SVGTextPathSpacingType propertyValue = SVGPropertyTraits<SVGTextPathSpacingType>::fromString(newValue);
         if (propertyValue > 0)
-            m_spacing->setBaseValInternal<SVGTextPathSpacingType>(propertyValue);
+            Ref { m_spacing }->setBaseValInternal<SVGTextPathSpacingType>(propertyValue);
         break;
     }
     default:
@@ -151,12 +151,12 @@ void SVGTextPathElement::buildPendingResource()
     auto target = SVGURIReference::targetElementFromIRIString(href(), treeScopeForSVGReferences());
     if (!target.element) {
         // Do not register as pending if we are already pending this resource.
-        auto& treeScope = treeScopeForSVGReferences();
-        if (treeScope.isPendingSVGResource(*this, target.identifier))
+        Ref treeScope = treeScopeForSVGReferences();
+        if (treeScope->isPendingSVGResource(*this, target.identifier))
             return;
 
         if (!target.identifier.isEmpty()) {
-            treeScope.addPendingSVGResource(target.identifier, *this);
+            treeScope->addPendingSVGResource(target.identifier, *this);
             ASSERT(hasPendingResources());
         }
     } else if (RefPtr pathElement = dynamicDowncast<SVGPathElement>(*target.element))

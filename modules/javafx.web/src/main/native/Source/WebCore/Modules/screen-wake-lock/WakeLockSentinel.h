@@ -36,7 +36,7 @@ class DeferredPromise;
 class WakeLockManager;
 
 class WakeLockSentinel final : public RefCounted<WakeLockSentinel>, public ActiveDOMObject, public EventTarget {
-    WTF_MAKE_ISO_ALLOCATED(WakeLockSentinel);
+    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(WakeLockSentinel);
 public:
     static Ref<WakeLockSentinel> create(Document& document, WakeLockType type)
     {
@@ -45,8 +45,9 @@ public:
         return sentinel;
     }
 
-    using RefCounted::ref;
-    using RefCounted::deref;
+    // ActiveDOMObject.
+    void ref() const final { RefCounted::ref(); }
+    void deref() const final { RefCounted::deref(); }
 
     bool released() const { return m_wasReleased; }
     WakeLockType type() const { return m_type; }
@@ -56,12 +57,11 @@ public:
 private:
     WakeLockSentinel(Document&, WakeLockType);
 
-    // ActiveDOMObject
-    const char* activeDOMObjectName() const final;
+    // ActiveDOMObject.
     bool virtualHasPendingActivity() const final;
 
-    // EventTarget
-    EventTargetInterface eventTargetInterface() const final { return WakeLockSentinelEventTargetInterfaceType; }
+    // EventTarget.
+    enum EventTargetInterfaceType eventTargetInterface() const final { return EventTargetInterfaceType::WakeLockSentinel; }
     ScriptExecutionContext* scriptExecutionContext() const final { return ActiveDOMObject::scriptExecutionContext(); }
     void refEventTarget() final { RefCounted::ref(); }
     void derefEventTarget() final { RefCounted::deref(); }

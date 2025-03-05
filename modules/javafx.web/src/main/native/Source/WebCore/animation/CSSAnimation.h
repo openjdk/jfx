@@ -36,7 +36,7 @@ class Animation;
 class RenderStyle;
 
 class CSSAnimation final : public StyleOriginatedAnimation {
-    WTF_MAKE_ISO_ALLOCATED(CSSAnimation);
+    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(CSSAnimation);
 public:
     static Ref<CSSAnimation> create(const Styleable&, const Animation&, const RenderStyle* oldStyle, const RenderStyle& newStyle, const Style::ResolutionContext&);
     ~CSSAnimation() = default;
@@ -54,7 +54,7 @@ private:
     CSSAnimation(const Styleable&, const Animation&);
 
     void syncPropertiesWithBackingAnimation() final;
-    Ref<StyleOriginatedAnimationEvent> createEvent(const AtomString& eventType, std::optional<Seconds> scheduledTime, double elapsedTime, PseudoId) final;
+    Ref<StyleOriginatedAnimationEvent> createEvent(const AtomString& eventType, std::optional<Seconds> scheduledTime, double elapsedTime, const std::optional<Style::PseudoElementIdentifier>&) final;
 
     ExceptionOr<void> bindingsPlay() final;
     ExceptionOr<void> bindingsPause() final;

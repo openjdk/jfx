@@ -29,7 +29,7 @@
 #include "config.h"
 #include "NavigationAction.h"
 
-#include "Document.h"
+#include "DocumentInlines.h"
 #include "FrameLoader.h"
 #include "HistoryItem.h"
 #include "LocalFrame.h"
@@ -68,7 +68,7 @@ NavigationAction& NavigationAction::operator=(NavigationAction&&) = default;
 
 static bool shouldTreatAsSameOriginNavigation(const Document& document, const URL& url)
 {
-    return url.protocolIsAbout() || url.protocolIsData() || (url.protocolIsBlob() && document.securityOrigin().canRequest(url, OriginAccessPatternsForWebProcess::singleton()));
+    return url.protocolIsAbout() || url.protocolIsData() || (url.protocolIsBlob() && document.protectedSecurityOrigin()->canRequest(url, OriginAccessPatternsForWebProcess::singleton()));
 }
 
 static std::optional<NavigationAction::UIEventWithKeyStateData> keyStateDataForFirstEventWithKeyState(Event* event)
@@ -80,11 +80,11 @@ static std::optional<NavigationAction::UIEventWithKeyStateData> keyStateDataForF
 
 static std::optional<NavigationAction::MouseEventData> mouseEventDataForFirstMouseEvent(Event* event)
 {
-    for (Event* e = event; e; e = e->underlyingEvent()) {
-        if (e->isMouseEvent())
-            return NavigationAction::MouseEventData { static_cast<const MouseEvent&>(*e) };
+    for (auto* e = event; e; e = e->underlyingEvent()) {
+        if (auto* mouseEvent = dynamicDowncast<MouseEvent>(e))
+            return NavigationAction::MouseEventData { *mouseEvent };
     }
-    return std::nullopt;
+    return { };
 }
 
 static NavigationType navigationType(FrameLoadType frameLoadType, bool isFormSubmission, bool haveEvent)

@@ -28,6 +28,8 @@
 
 #if ENABLE(MEDIA_SESSION)
 
+#include "DocumentInlines.h"
+#include "DocumentLoader.h"
 #include "EventNames.h"
 #include "HTMLMediaElement.h"
 #include "JSDOMPromiseDeferred.h"
@@ -39,6 +41,7 @@
 #include "MediaMetadata.h"
 #include "MediaSessionCoordinator.h"
 #include "Navigator.h"
+#include "NowPlayingInfo.h"
 #include "Page.h"
 #include "PlatformMediaSessionManager.h"
 #include <wtf/CryptographicallyRandomNumber.h>
@@ -59,9 +62,9 @@ static WTFLogChannel& logChannel()
     return LogMedia;
 }
 
-static const char* logClassName()
+static ASCIILiteral logClassName()
 {
-    return "MediaSession";
+    return "MediaSession"_s;
 }
 #endif
 
@@ -122,6 +125,10 @@ static std::optional<std::pair<PlatformMediaSession::RemoteControlCommandType, P
     case MediaSessionAction::Settrack:
         // Not supported at present.
         break;
+    case MediaSessionAction::Togglecamera:
+    case MediaSessionAction::Togglemicrophone:
+    case MediaSessionAction::Togglescreenshare:
+        break;
     }
     if (command == PlatformMediaSession::RemoteControlCommandType::NoCommand)
         return { };
@@ -157,7 +164,13 @@ MediaSession::MediaSession(Navigator& navigator)
     ALWAYS_LOG(LOGIDENTIFIER);
 }
 
-MediaSession::~MediaSession() = default;
+MediaSession::~MediaSession()
+{
+    if (m_metadata)
+        m_metadata->resetMediaSession();
+    if (m_defaultMetadata)
+        m_defaultMetadata->resetMediaSession();
+}
 
 void MediaSession::suspend(ReasonForSuspension reason)
 {
@@ -189,7 +202,7 @@ void MediaSession::setMetadata(RefPtr<MediaMetadata>&& metadata)
     m_metadata = WTFMove(metadata);
     if (m_metadata)
         m_metadata->setMediaSession(*this);
-    notifyMetadataObservers();
+    notifyMetadataObservers(m_metadata);
 }
 
 #if ENABLE(MEDIA_SESSION_COORDINATOR)
@@ -206,7 +219,7 @@ void MediaSession::setReadyState(MediaSessionReadyState state)
 #endif
 
 #if ENABLE(MEDIA_SESSION_PLAYLIST)
-ExceptionOr<void> MediaSession::setPlaylist(ScriptExecutionContext& context, Vector<RefPtr<MediaMetadata>>&& playlist)
+ExceptionOr<void> MediaSession::setPlaylist(ScriptExecutionContext& context, Vector<Ref<MediaMetadata>>&& playlist)
 {
     ALWAYS_LOG(LOGIDENTIFIER);
 
@@ -240,8 +253,14 @@ void MediaSession::setPlaybackState(MediaSessionPlaybackState state)
     notifyPlaybackStateObservers();
 }
 
-void MediaSession::setActionHandler(MediaSessionAction action, RefPtr<MediaSessionActionHandler>&& handler)
+ExceptionOr<void> MediaSession::setActionHandler(MediaSessionAction action, RefPtr<MediaSessionActionHandler>&& handler)
 {
+#if ENABLE(MEDIA_STREAM)
+    RefPtr document = this->document();
+    if (document && !document->settings().mediaSessionCaptureToggleAPIEnabled() && (action == MediaSessionAction::Togglecamera || action == MediaSessionAction::Togglemicrophone || action == MediaSessionAction::Togglescreenshare))
+        return Exception { ExceptionCode::TypeError, makeString("Argument 1 ('action') to MediaSession.setActionHandler must be a value other than '"_s, convertEnumerationToString(action), "'"_s) };
+#endif
+
     if (handler) {
         ALWAYS_LOG(LOGIDENTIFIER, "adding ", action);
         {
@@ -264,6 +283,7 @@ void MediaSession::setActionHandler(MediaSessionAction action, RefPtr<MediaSessi
     }
 
     notifyActionHandlerObservers();
+    return { };
 }
 
 void MediaSession::callActionHandler(const MediaSessionActionDetails& actionDetails, DOMPromiseDeferred<void>&& promise)
@@ -285,6 +305,7 @@ bool MediaSession::callActionHandler(const MediaSessionActionDetails& actionDeta
         Locker lock { m_actionHandlersLock };
         handler = m_actionHandlers.get(actionDetails.action);
     }
+
     if (handler) {
         std::optional<UserGestureIndicator> maybeGestureIndicator;
         if (triggerGestureIndicator == TriggerGestureIndicator::Yes)
@@ -350,34 +371,40 @@ Document* MediaSession::document() const
     return m_navigator->window()->document();
 }
 
-void MediaSession::metadataUpdated()
+void MediaSession::metadataUpdated(const MediaMetadata& metadata)
 {
-    notifyMetadataObservers();
+    notifyMetadataObservers(const_cast<MediaMetadata*>(&metadata));
 }
 
-void MediaSession::addObserver(Observer& observer)
+bool MediaSession::hasObserver(MediaSessionObserver& observer) const
+{
+    ASSERT(isMainThread());
+    return m_observers.contains(observer);
+}
+
+void MediaSession::addObserver(MediaSessionObserver& observer)
 {
     ASSERT(isMainThread());
     m_observers.add(observer);
 }
 
-void MediaSession::removeObserver(Observer& observer)
+void MediaSession::removeObserver(MediaSessionObserver& observer)
 {
     ASSERT(isMainThread());
     m_observers.remove(observer);
 }
 
-void MediaSession::forEachObserver(const Function<void(Observer&)>& apply)
+void MediaSession::forEachObserver(const Function<void(MediaSessionObserver&)>& apply)
 {
     ASSERT(isMainThread());
     Ref protectedThis { *this };
     m_observers.forEach(apply);
 }
 
-void MediaSession::notifyMetadataObservers()
+void MediaSession::notifyMetadataObservers(const RefPtr<MediaMetadata>& metadata)
 {
-    forEachObserver([this](auto& observer) {
-        observer.metadataChanged(m_metadata);
+    forEachObserver([&](auto& observer) {
+        observer.metadataChanged(metadata);
     });
 }
 
@@ -432,6 +459,51 @@ void MediaSession::willPausePlayback()
     updateReportedPosition();
     m_playbackState = MediaSessionPlaybackState::Paused;
     notifyPositionStateObservers();
+}
+
+static Vector<URL> fallbackArtwork(DocumentLoader* loader)
+{
+    if (!loader)
+        return { };
+    size_t size = 0;
+    for (const auto& icon : loader->linkIcons()) {
+        if (icon.url.protocolIsInHTTPFamily())
+            size++;
+    }
+    if (!size)
+        return { };
+    Vector<URL> images;
+    images.reserveInitialCapacity(size);
+    for (const auto& icon : loader->linkIcons()) {
+        if (icon.url.protocolIsInHTTPFamily())
+            images.append(icon.url);
+    };
+    return images;
+}
+void MediaSession::updateNowPlayingInfo(NowPlayingInfo& info)
+{
+    if (auto positionState = this->positionState()) {
+        info.duration = positionState->duration;
+        info.rate = positionState->playbackRate;
+    }
+    if (auto currentPosition = this->currentPosition())
+        info.currentTime = *currentPosition;
+
+    if (!m_defaultArtworkAttempted && (!m_metadata || m_metadata->artwork().isEmpty())) {
+        m_defaultArtworkAttempted = true;
+        if (auto images = fallbackArtwork(document() ? document()->loader() : nullptr); images.size())
+            m_defaultMetadata = MediaMetadata::create(*this, WTFMove(images));
+    }
+
+    if (RefPtr metadataWithImage = m_metadata && m_metadata->artworkImage() ? m_metadata : (m_defaultMetadata && m_defaultMetadata->artworkImage() ? m_defaultMetadata : nullptr)) {
+        ASSERT(metadataWithImage->artworkImage()->data(), "An image must always have associated data");
+        info.metadata.artwork = { { metadataWithImage->artworkSrc(), metadataWithImage->artworkImage()->mimeType(), metadataWithImage->artworkImage() } };
+    }
+    if (m_metadata) {
+        info.metadata.title = m_metadata->title();
+        info.metadata.artist = m_metadata->artist();
+        info.metadata.album = m_metadata->album();
+    }
 }
 
 #if ENABLE(MEDIA_SESSION_COORDINATOR)

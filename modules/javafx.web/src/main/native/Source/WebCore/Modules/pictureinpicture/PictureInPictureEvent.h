@@ -35,7 +35,7 @@ namespace WebCore {
 class PictureInPictureWindow;
 
 class PictureInPictureEvent final : public Event {
-    WTF_MAKE_ISO_ALLOCATED(PictureInPictureEvent);
+    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(PictureInPictureEvent);
 public:
     struct Init : EventInit {
         RefPtr<PictureInPictureWindow> pictureInPictureWindow;
@@ -44,8 +44,6 @@ public:
     static Ref<PictureInPictureEvent> create(const AtomString&, Init&&, IsTrusted = IsTrusted::No);
 
     PictureInPictureWindow& pictureInPictureWindow() const { return m_pictureInPictureWindow.get(); }
-
-    EventInterface eventInterface() const final { return PictureInPictureEventInterfaceType; }
 
 private:
     PictureInPictureEvent(const AtomString&, Init&&, IsTrusted = IsTrusted::No);

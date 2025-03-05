@@ -34,13 +34,13 @@
 #include "HTMLFormElement.h"
 #include "HTMLMaybeFormAssociatedCustomElement.h"
 #include "ShadowRoot.h"
-#include <wtf/IsoMallocInlines.h>
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
 using namespace HTMLNames;
 
-WTF_MAKE_ISO_ALLOCATED_IMPL(ElementInternals);
+WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(ElementInternals);
 
 RefPtr<ShadowRoot> ElementInternals::shadowRoot() const
 {
@@ -144,7 +144,7 @@ void ElementInternals::setAttributeWithoutSynchronization(const QualifiedName& n
     element->checkedCustomElementDefaultARIA()->setValueForAttribute(name, value);
 
     if (CheckedPtr cache = element->document().existingAXObjectCache())
-        cache->deferAttributeChangeIfNeeded(element.get(), name, oldValue, computeValueForAttribute(*element, name));
+        cache->deferAttributeChangeIfNeeded(*element, name, oldValue, computeValueForAttribute(*element, name));
 }
 
 const AtomString& ElementInternals::attributeWithoutSynchronization(const QualifiedName& name) const
@@ -169,10 +169,10 @@ void ElementInternals::setElementAttribute(const QualifiedName& name, Element* v
     element->checkedCustomElementDefaultARIA()->setElementForAttribute(name, value);
 
     if (CheckedPtr cache = element->document().existingAXObjectCache())
-        cache->deferAttributeChangeIfNeeded(element.get(), name, oldValue, computeValueForAttribute(*element, name));
+        cache->deferAttributeChangeIfNeeded(*element, name, oldValue, computeValueForAttribute(*element, name));
 }
 
-std::optional<Vector<RefPtr<Element>>> ElementInternals::getElementsArrayAttribute(const QualifiedName& name) const
+std::optional<Vector<Ref<Element>>> ElementInternals::getElementsArrayAttribute(const QualifiedName& name) const
 {
     RefPtr element = m_element.get();
     CheckedPtr defaultARIA = m_element->customElementDefaultARIAIfExists();
@@ -181,7 +181,7 @@ std::optional<Vector<RefPtr<Element>>> ElementInternals::getElementsArrayAttribu
     return defaultARIA->elementsForAttribute(*element, name);
 }
 
-void ElementInternals::setElementsArrayAttribute(const QualifiedName& name, std::optional<Vector<RefPtr<Element>>>&& value)
+void ElementInternals::setElementsArrayAttribute(const QualifiedName& name, std::optional<Vector<Ref<Element>>>&& value)
 {
     RefPtr element = m_element.get();
     auto oldValue = computeValueForAttribute(*element, name);
@@ -189,7 +189,7 @@ void ElementInternals::setElementsArrayAttribute(const QualifiedName& name, std:
     element->checkedCustomElementDefaultARIA()->setElementsForAttribute(name, WTFMove(value));
 
     if (CheckedPtr cache = element->document().existingAXObjectCache())
-        cache->deferAttributeChangeIfNeeded(element.get(), name, oldValue, computeValueForAttribute(*element, name));
+        cache->deferAttributeChangeIfNeeded(*element, name, oldValue, computeValueForAttribute(*element, name));
 }
 
 CustomStateSet& ElementInternals::states()

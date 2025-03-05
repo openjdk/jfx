@@ -167,11 +167,8 @@ void StringPrototype::finishCreation(VM& vm, JSGlobalObject* globalObject)
 
     JSC_NATIVE_FUNCTION_WITHOUT_TRANSITION(vm.propertyNames->builtinNames().substrPrivateName(), stringProtoFuncSubstr, static_cast<unsigned>(PropertyAttribute::DontEnum), 2, ImplementationVisibility::Public);
     JSC_NATIVE_FUNCTION_WITHOUT_TRANSITION(vm.propertyNames->builtinNames().endsWithPrivateName(), stringProtoFuncEndsWith, static_cast<unsigned>(PropertyAttribute::DontEnum), 2, ImplementationVisibility::Public);
-
-    if (Options::useStringWellFormed()) {
         JSC_NATIVE_FUNCTION_WITHOUT_TRANSITION(vm.propertyNames->isWellFormed, stringProtoFuncIsWellFormed, static_cast<unsigned>(PropertyAttribute::DontEnum), 0, ImplementationVisibility::Public);
         JSC_NATIVE_FUNCTION_WITHOUT_TRANSITION(vm.propertyNames->toWellFormed, stringProtoFuncToWellFormed, static_cast<unsigned>(PropertyAttribute::DontEnum), 0, ImplementationVisibility::Public);
-    }
 
     // The constructor will be added later, after StringConstructor has been built
 }
@@ -282,15 +279,15 @@ void substituteBackreferences(StringBuilder& result, const String& replacement, 
     substituteBackreferencesInline(result, replacement, source, ovector, reg);
 }
 
-static ALWAYS_INLINE JSString* jsSpliceSubstrings(JSGlobalObject* globalObject, JSString* sourceVal, const String& source, const Range<int32_t>* substringRanges, int rangeCount)
+static ALWAYS_INLINE JSString* jsSpliceSubstrings(JSGlobalObject* globalObject, JSString* sourceVal, const String& source, std::span<const Range<int32_t>> substringRanges)
 {
     VM& vm = globalObject->vm();
     auto scope = DECLARE_THROW_SCOPE(vm);
 
-    if (rangeCount == 1) {
+    if (substringRanges.size() == 1) {
         int sourceSize = source.length();
-        int position = substringRanges[0].begin();
-        int length = substringRanges[0].distance();
+        int position = substringRanges.front().begin();
+        int length = substringRanges.front().distance();
         if (position <= 0 && length >= sourceSize)
             return sourceVal;
         // We could call String::substringSharingImpl(), but this would result in redundant checks.
@@ -302,8 +299,8 @@ static ALWAYS_INLINE JSString* jsSpliceSubstrings(JSGlobalObject* globalObject, 
     // in removeUsingRegExpSearch(). Hence, totalLength cannot exceed
     // String::MaxLength, and therefore, cannot overflow.
     Checked<int, AssertNoOverflow> totalLength = 0;
-    for (int i = 0; i < rangeCount; i++)
-        totalLength += substringRanges[i].distance();
+    for (auto& range : substringRanges)
+        totalLength += range.distance();
     ASSERT(totalLength <= static_cast<int>(String::MaxLength));
 
     if (!totalLength)
@@ -311,17 +308,17 @@ static ALWAYS_INLINE JSString* jsSpliceSubstrings(JSGlobalObject* globalObject, 
 
     if (source.is8Bit()) {
         LChar* buffer;
-        const LChar* sourceData = source.characters8();
+        auto sourceData = source.span8();
         auto impl = StringImpl::tryCreateUninitialized(totalLength, buffer);
         if (!impl) {
             throwOutOfMemoryError(globalObject, scope);
             return nullptr;
         }
 
-        Checked<int, AssertNoOverflow> bufferPos = 0;
-        for (int i = 0; i < rangeCount; i++) {
-            int srcLen = substringRanges[i].distance();
-            StringImpl::copyCharacters(buffer + bufferPos.value(), sourceData + substringRanges[i].begin(), srcLen);
+        Checked<size_t, AssertNoOverflow> bufferPos = 0;
+        for (auto range : substringRanges) {
+            size_t srcLen = range.distance();
+            StringImpl::copyCharacters(buffer + bufferPos.value(), sourceData.subspan(range.begin(), srcLen));
                 bufferPos += srcLen;
             }
 
@@ -329,7 +326,7 @@ static ALWAYS_INLINE JSString* jsSpliceSubstrings(JSGlobalObject* globalObject, 
     }
 
     UChar* buffer;
-    const UChar* sourceData = source.characters16();
+    auto sourceData = source.span16();
 
     auto impl = StringImpl::tryCreateUninitialized(totalLength, buffer);
     if (!impl) {
@@ -337,10 +334,10 @@ static ALWAYS_INLINE JSString* jsSpliceSubstrings(JSGlobalObject* globalObject, 
         return nullptr;
     }
 
-    Checked<int, AssertNoOverflow> bufferPos = 0;
-    for (int i = 0; i < rangeCount; i++) {
-        int srcLen = substringRanges[i].distance();
-        StringImpl::copyCharacters(buffer + bufferPos.value(), sourceData + substringRanges[i].begin(), srcLen);
+    Checked<size_t, AssertNoOverflow> bufferPos = 0;
+    for (auto& range : substringRanges) {
+        size_t srcLen = range.distance();
+        StringImpl::copyCharacters(buffer + bufferPos.value(), sourceData.subspan(range.begin(), srcLen));
                 bufferPos += srcLen;
             }
 
@@ -392,7 +389,7 @@ static ALWAYS_INLINE JSString* removeUsingRegExpSearch(VM& vm, JSGlobalObject* g
         if (UNLIKELY(!sourceRanges.tryConstructAndAppend(lastIndex, sourceLen)))
             OUT_OF_MEMORY(globalObject, scope);
     }
-    RELEASE_AND_RETURN(scope, jsSpliceSubstrings(globalObject, string, source, sourceRanges.data(), sourceRanges.size()));
+    RELEASE_AND_RETURN(scope, jsSpliceSubstrings(globalObject, string, source, sourceRanges.span()));
 }
 
 static ALWAYS_INLINE JSString* replaceUsingRegExpSearchWithCache(VM& vm, JSGlobalObject* globalObject, JSString* string, const String& source, RegExp* regExp, JSFunction* replaceFunction)
@@ -530,14 +527,14 @@ static ALWAYS_INLINE JSString* replaceUsingRegExpSearchWithCache(VM& vm, JSGloba
 
 static ALWAYS_INLINE JSString* replaceUsingRegExpSearch(
     VM& vm, JSGlobalObject* globalObject, JSString* string, JSValue searchValue, const CallData& callData,
-    String& replacementString, JSValue replaceValue)
+    const String& replacementString, JSValue replaceValue)
 {
     auto scope = DECLARE_THROW_SCOPE(vm);
 
-    String source = string->value(globalObject);
+    auto source = string->value(globalObject);
     RETURN_IF_EXCEPTION(scope, nullptr);
 
-    unsigned sourceLen = source.length();
+    unsigned sourceLen = source->length();
     RegExpObject* regExpObject = jsCast<RegExpObject*>(searchValue);
     RegExp* regExp = regExpObject->regExp();
     bool global = regExp->global();
@@ -779,15 +776,15 @@ JSC_DEFINE_JIT_OPERATION(operationStringProtoFuncReplaceRegExpEmptyStr, JSCell*,
     if (regExp->global()) {
         // ES5.1 15.5.4.10 step 8.a.
         searchValue->setLastIndex(globalObject, 0);
-        RETURN_IF_EXCEPTION(scope, nullptr);
-        String source = thisValue->value(globalObject);
-        RETURN_IF_EXCEPTION(scope, nullptr);
-        RELEASE_AND_RETURN(scope, removeUsingRegExpSearch(vm, globalObject, thisValue, WTFMove(source), regExp));
+        OPERATION_RETURN_IF_EXCEPTION(scope, nullptr);
+        auto source = thisValue->value(globalObject);
+        OPERATION_RETURN_IF_EXCEPTION(scope, nullptr);
+        OPERATION_RETURN(scope, removeUsingRegExpSearch(vm, globalObject, thisValue, source, regExp));
     }
 
     CallData callData;
     String replacementString = emptyString();
-    RELEASE_AND_RETURN(scope, replaceUsingRegExpSearch(
+    OPERATION_RETURN(scope, replaceUsingRegExpSearch(
         vm, globalObject, thisValue, searchValue, callData, replacementString, JSValue()));
 }
 
@@ -799,9 +796,9 @@ JSC_DEFINE_JIT_OPERATION(operationStringProtoFuncReplaceRegExpString, JSCell*, (
     auto scope = DECLARE_THROW_SCOPE(vm);
 
     CallData callData;
-    String replacementString = replaceString->value(globalObject);
-    RETURN_IF_EXCEPTION(scope, nullptr);
-    RELEASE_AND_RETURN(scope, replaceUsingRegExpSearch(
+    auto replacementString = replaceString->value(globalObject);
+    OPERATION_RETURN_IF_EXCEPTION(scope, nullptr);
+    OPERATION_RETURN(scope, replaceUsingRegExpSearch(
         vm, globalObject, thisValue, searchValue, callData, replacementString, replaceString));
 }
 
@@ -857,9 +854,8 @@ JSC_DEFINE_HOST_FUNCTION(stringProtoFuncRepeatCharacter, (JSGlobalObject* global
     ASSERT(repeatCount >= 0);
     ASSERT(!repeatCountValue.isDouble() || repeatCountValue.asDouble() == repeatCount);
 
-    auto viewWithString = string->viewWithUnderlyingString(globalObject);
-    StringView view = viewWithString.view;
-    ASSERT(view.length() == 1);
+    auto view = string->view(globalObject);
+    ASSERT(view->length() == 1);
     scope.assertNoException();
     UChar character = view[0];
     scope.release();
@@ -882,13 +878,22 @@ ALWAYS_INLINE JSString* replace(VM& vm, JSGlobalObject* globalObject, JSValue th
     if (searchValue.inherits<RegExpObject>())
         RELEASE_AND_RETURN(scope, replaceUsingRegExpSearch(vm, globalObject, string, searchValue, replaceValue));
 
-    String thisString = string->value(globalObject);
+    auto thisString = string->value(globalObject);
     RETURN_IF_EXCEPTION(scope, nullptr);
+
+    // This path avoids an extra ref count churn for the most likely case that the search value is a string.
+    JSString* searchJSString = jsDynamicCast<JSString*>(searchValue);
+    if (LIKELY(searchJSString)) {
+        auto searchString = searchJSString->value(globalObject);
+        RETURN_IF_EXCEPTION(scope, nullptr);
+
+        RELEASE_AND_RETURN(scope, replaceUsingStringSearch(vm, globalObject, string, thisString, WTFMove(searchString), replaceValue, StringReplaceMode::Single));
+    }
 
     String searchString = searchValue.toWTFString(globalObject);
     RETURN_IF_EXCEPTION(scope, nullptr);
 
-    RELEASE_AND_RETURN(scope, replaceUsingStringSearch(vm, globalObject, string, WTFMove(thisString), WTFMove(searchString), replaceValue, StringReplaceMode::Single));
+    RELEASE_AND_RETURN(scope, replaceUsingStringSearch(vm, globalObject, string, thisString, WTFMove(searchString), replaceValue, StringReplaceMode::Single));
 }
 
 JSC_DEFINE_HOST_FUNCTION(stringProtoFuncReplaceUsingRegExp, (JSGlobalObject* globalObject, CallFrame* callFrame))
@@ -913,13 +918,13 @@ JSC_DEFINE_HOST_FUNCTION(stringProtoFuncReplaceUsingStringSearch, (JSGlobalObjec
 
     JSString* string = asString(callFrame->thisValue());
 
-    String thisString = string->value(globalObject);
+    auto thisString = string->value(globalObject);
     RETURN_IF_EXCEPTION(scope, { });
 
-    String searchString = asString(callFrame->uncheckedArgument(0))->value(globalObject);
+    auto searchString = asString(callFrame->uncheckedArgument(0))->value(globalObject);
     RETURN_IF_EXCEPTION(scope, { });
 
-    RELEASE_AND_RETURN(scope, JSValue::encode(replaceUsingStringSearch(vm, globalObject, string, WTFMove(thisString), WTFMove(searchString), callFrame->uncheckedArgument(1), StringReplaceMode::Single)));
+    RELEASE_AND_RETURN(scope, JSValue::encode(replaceUsingStringSearch(vm, globalObject, string, thisString, searchString, callFrame->uncheckedArgument(1), StringReplaceMode::Single)));
 }
 
 JSC_DEFINE_HOST_FUNCTION(stringProtoFuncReplaceAllUsingStringSearch, (JSGlobalObject* globalObject, CallFrame* callFrame))
@@ -929,13 +934,13 @@ JSC_DEFINE_HOST_FUNCTION(stringProtoFuncReplaceAllUsingStringSearch, (JSGlobalOb
 
     JSString* string = asString(callFrame->thisValue());
 
-    String thisString = string->value(globalObject);
+    auto thisString = string->value(globalObject);
     RETURN_IF_EXCEPTION(scope, { });
 
-    String searchString = asString(callFrame->uncheckedArgument(0))->value(globalObject);
+    auto searchString = asString(callFrame->uncheckedArgument(0))->value(globalObject);
     RETURN_IF_EXCEPTION(scope, { });
 
-    RELEASE_AND_RETURN(scope, JSValue::encode(replaceUsingStringSearch(vm, globalObject, string, WTFMove(thisString), WTFMove(searchString), callFrame->uncheckedArgument(1), StringReplaceMode::Global)));
+    RELEASE_AND_RETURN(scope, JSValue::encode(replaceUsingStringSearch(vm, globalObject, string, thisString, searchString, callFrame->uncheckedArgument(1), StringReplaceMode::Global)));
 }
 
 JSC_DEFINE_JIT_OPERATION(operationStringProtoFuncReplaceGeneric, JSCell*, (JSGlobalObject* globalObject, EncodedJSValue thisValue, EncodedJSValue searchValue, EncodedJSValue replaceValue))
@@ -943,8 +948,9 @@ JSC_DEFINE_JIT_OPERATION(operationStringProtoFuncReplaceGeneric, JSCell*, (JSGlo
     VM& vm = globalObject->vm();
     CallFrame* callFrame = DECLARE_CALL_FRAME(vm);
     JITOperationPrologueCallFrameTracer tracer(vm, callFrame);
+    auto scope = DECLARE_THROW_SCOPE(vm);
 
-    return replace(vm, globalObject, JSValue::decode(thisValue), JSValue::decode(searchValue), JSValue::decode(replaceValue));
+    OPERATION_RETURN(scope, replace(vm, globalObject, JSValue::decode(thisValue), JSValue::decode(searchValue), JSValue::decode(replaceValue)));
 }
 
 IGNORE_WARNINGS_END
@@ -980,19 +986,18 @@ JSC_DEFINE_HOST_FUNCTION(stringProtoFuncCharAt, (JSGlobalObject* globalObject, C
         return throwVMTypeError(globalObject, scope);
     auto* thisString = thisValue.toString(globalObject);
     RETURN_IF_EXCEPTION(scope, { });
-    auto viewWithString = thisString->viewWithUnderlyingString(globalObject);
+    auto view = thisString->view(globalObject);
     RETURN_IF_EXCEPTION(scope, { });
-    StringView view = viewWithString.view;
     JSValue a0 = callFrame->argument(0);
     if (a0.isUInt32()) {
         uint32_t i = a0.asUInt32();
-        if (i < view.length())
+        if (i < view->length())
             return JSValue::encode(jsSingleCharacterString(vm, view[i]));
         return JSValue::encode(jsEmptyString(vm));
     }
     double dpos = a0.toIntegerOrInfinity(globalObject);
     RETURN_IF_EXCEPTION(scope, { });
-    if (dpos >= 0 && dpos < view.length())
+    if (dpos >= 0 && dpos < view->length())
         return JSValue::encode(jsSingleCharacterString(vm, view[static_cast<unsigned>(dpos)]));
     return JSValue::encode(jsEmptyString(vm));
 }
@@ -1007,19 +1012,18 @@ JSC_DEFINE_HOST_FUNCTION(stringProtoFuncCharCodeAt, (JSGlobalObject* globalObjec
         return throwVMTypeError(globalObject, scope);
     auto* thisString = thisValue.toString(globalObject);
     RETURN_IF_EXCEPTION(scope, { });
-    auto viewWithString = thisString->viewWithUnderlyingString(globalObject);
+    auto view = thisString->view(globalObject);
     RETURN_IF_EXCEPTION(scope, { });
-    StringView view = viewWithString.view;
     JSValue a0 = callFrame->argument(0);
     if (a0.isUInt32()) {
         uint32_t i = a0.asUInt32();
-        if (i < view.length())
+        if (i < view->length())
             return JSValue::encode(jsNumber(view[i]));
         return JSValue::encode(jsNaN());
     }
     double dpos = a0.toIntegerOrInfinity(globalObject);
     RETURN_IF_EXCEPTION(scope, { });
-    if (dpos >= 0 && dpos < view.length())
+    if (dpos >= 0 && dpos < view->length())
         return JSValue::encode(jsNumber(view[static_cast<int>(dpos)]));
     return JSValue::encode(jsNaN());
 }
@@ -1028,9 +1032,10 @@ static inline char32_t codePointAt(const String& string, unsigned position, unsi
 {
     RELEASE_ASSERT(position < length);
     if (string.is8Bit())
-        return string.characters8()[position];
+        return string.span8()[position];
     char32_t character;
-    U16_NEXT(string.characters16(), position, length, character);
+    auto characters = string.span16();
+    U16_NEXT(characters, position, length, character);
     return character;
 }
 
@@ -1101,11 +1106,11 @@ static EncodedJSValue stringIndexOfImpl(JSGlobalObject* globalObject, CallFrame*
     if (thisJSString->length() < otherJSString->length() + pos)
         return JSValue::encode(jsNumber(-1));
 
-    auto thisViewWithString = thisJSString->viewWithUnderlyingString(globalObject);
+    auto thisView = thisJSString->view(globalObject);
     RETURN_IF_EXCEPTION(scope, encodedJSValue());
-    auto otherViewWithString = otherJSString->viewWithUnderlyingString(globalObject);
+    auto otherView = otherJSString->view(globalObject);
     RETURN_IF_EXCEPTION(scope, encodedJSValue());
-    size_t result = thisViewWithString.view.find(vm.adaptiveStringSearcherTables(), otherViewWithString.view, pos);
+    size_t result = thisView->find(vm.adaptiveStringSearcherTables(), otherView, pos);
     if (result == notFound)
         return JSValue::encode(jsNumber(-1));
     return JSValue::encode(jsNumber(result));
@@ -1155,15 +1160,15 @@ JSC_DEFINE_HOST_FUNCTION(stringProtoFuncLastIndexOf, (JSGlobalObject* globalObje
     if (len < otherJSString->length())
         return JSValue::encode(jsNumber(-1));
 
-    String thisString = thisJSString->value(globalObject);
+    auto thisString = thisJSString->value(globalObject);
     RETURN_IF_EXCEPTION(scope, encodedJSValue());
-    String otherString = otherJSString->value(globalObject);
+    auto otherString = otherJSString->value(globalObject);
     RETURN_IF_EXCEPTION(scope, encodedJSValue());
     size_t result;
     if (!startPosition)
-        result = thisString.startsWith(otherString) ? 0 : notFound;
+        result = thisString->startsWith(otherString) ? 0 : notFound;
     else
-        result = thisString.reverseFind(otherString, startPosition);
+        result = thisString->reverseFind(otherString, startPosition);
     if (result == notFound)
         return JSValue::encode(jsNumber(-1));
     return JSValue::encode(jsNumber(result));
@@ -1201,13 +1206,11 @@ static ALWAYS_INLINE bool splitStringByOneCharacterImpl(Indice& result, StringIm
     // 12. Let q = p.
     size_t matchPosition;
     size_t position = 0;
-    unsigned stringLength = string->length();
-    const CharacterType* characters = string->characters<CharacterType>();
     // 13. Repeat, while q != s
     //   a. Call SplitMatch(S, q, R) and let z be its MatchResult result.
     //   b. If z is failure, then let q = q+1.
     //   c. Else, z is not failure
-    while ((matchPosition = WTF::find(characters, stringLength, separatorCharacter, position)) != notFound) {
+    while ((matchPosition = WTF::find(string->span<CharacterType>(), separatorCharacter, position)) != notFound) {
         // 1. Let T be a String value equal to the substring of S consisting of the characters at positions p (inclusive)
         //    through q (exclusive).
         // 2. Call the [[DefineOwnProperty]] internal method of A with arguments ToString(lengthA),
@@ -1237,9 +1240,9 @@ JSC_DEFINE_HOST_FUNCTION(stringProtoFuncSplitFast, (JSGlobalObject* globalObject
     // 7. Let s be the number of characters in S.
     JSString* thisString = thisValue.toString(globalObject);
     RETURN_IF_EXCEPTION(scope, { });
-    String input = thisString->value(globalObject);
+    auto input = thisString->value(globalObject);
     RETURN_IF_EXCEPTION(scope, { });
-    ASSERT(!input.isNull());
+    ASSERT(!input->isNull());
 
     // 6. If limit is undefined, let lim = 2^32-1; else let lim = ToUint32(limit).
     JSValue limitValue = callFrame->uncheckedArgument(1);
@@ -1314,20 +1317,20 @@ JSC_DEFINE_HOST_FUNCTION(stringProtoFuncSplitFast, (JSGlobalObject* globalObject
     };
 
     // 12. If s == 0, then
-    if (input.isEmpty()) {
+    if (input->isEmpty()) {
         // a. Let z be SplitMatch(S, 0, R) where S is input, R is separator.
         // b. If z is not false, return A.
         // c. Call CreateDataProperty(A, "0", S).
         // d. Return A.
             scope.release();
         if (!separator.isEmpty())
-            result.append(input.length());
+            result.append(input->length());
         return JSValue::encode(cacheAndCreateArray());
     }
 
     // Optimized case for splitting on the empty string.
     if (!separatorLength) {
-        unsigned resultSize = std::min(limit, input.length());
+        unsigned resultSize = std::min(limit, input->length());
         // Zero limt/input length handled in steps 9/11 respectively, above.
         ASSERT(resultSize);
 
@@ -1353,16 +1356,11 @@ JSC_DEFINE_HOST_FUNCTION(stringProtoFuncSplitFast, (JSGlobalObject* globalObject
     // -separator length == 1, 8 bits
     // -separator length == 1, 16 bits
     // -separator length > 1
-    StringImpl* stringImpl = input.impl();
+    StringImpl* stringImpl = input->impl();
     StringImpl* separatorImpl = separator.impl();
 
     if (separatorLength == 1) {
-        UChar separatorCharacter;
-        if (separatorImpl->is8Bit())
-            separatorCharacter = separatorImpl->characters8()[0];
-        else
-            separatorCharacter = separatorImpl->characters16()[0];
-
+        UChar separatorCharacter = separatorImpl->at(0);
         if (stringImpl->is8Bit()) {
             if (splitStringByOneCharacterImpl<LChar>(result, stringImpl, separatorCharacter, limit))
                 RELEASE_AND_RETURN(scope, JSValue::encode(cacheAndCreateArray()));
@@ -1397,7 +1395,7 @@ JSC_DEFINE_HOST_FUNCTION(stringProtoFuncSplitFast, (JSGlobalObject* globalObject
     // 15. Let T be a String value equal to the substring of S consisting of the characters at positions p (inclusive)
     //     through s (exclusive).
     // 16. Call CreateDataProperty(A, ToString(lengthA), T).
-    result.append(input.length());
+    result.append(input->length());
     RELEASE_AND_RETURN(scope, JSValue::encode(cacheAndCreateArray()));
 }
 
@@ -1503,10 +1501,10 @@ JSC_DEFINE_HOST_FUNCTION(stringProtoFuncToLowerCase, (JSGlobalObject* globalObje
         return throwVMTypeError(globalObject, scope);
     JSString* sVal = thisValue.toString(globalObject);
     RETURN_IF_EXCEPTION(scope, encodedJSValue());
-    String s = sVal->value(globalObject);
+    auto s = sVal->value(globalObject);
     RETURN_IF_EXCEPTION(scope, encodedJSValue());
-    String lowercasedString = s.convertToLowercaseWithoutLocale();
-    if (lowercasedString.impl() == s.impl())
+    String lowercasedString = s->convertToLowercaseWithoutLocale();
+    if (lowercasedString.impl() == s->impl())
         return JSValue::encode(sVal);
     RELEASE_AND_RETURN(scope, JSValue::encode(jsString(vm, WTFMove(lowercasedString))));
 }
@@ -1521,10 +1519,10 @@ JSC_DEFINE_HOST_FUNCTION(stringProtoFuncToUpperCase, (JSGlobalObject* globalObje
         return throwVMTypeError(globalObject, scope);
     JSString* sVal = thisValue.toString(globalObject);
     RETURN_IF_EXCEPTION(scope, encodedJSValue());
-    String s = sVal->value(globalObject);
+    auto s = sVal->value(globalObject);
     RETURN_IF_EXCEPTION(scope, encodedJSValue());
-    String uppercasedString = s.convertToUppercaseWithoutLocale();
-    if (uppercasedString.impl() == s.impl())
+    String uppercasedString = s->convertToUppercaseWithoutLocale();
+    if (uppercasedString.impl() == s->impl())
         return JSValue::encode(sVal);
     RELEASE_AND_RETURN(scope, JSValue::encode(jsString(vm, WTFMove(uppercasedString))));
 }
@@ -1584,7 +1582,7 @@ static EncodedJSValue toLocaleCase(JSGlobalObject* globalObject, CallFrame* call
     // 2. Let S be ToString(O).
     JSString* sVal = thisValue.toString(globalObject);
     RETURN_IF_EXCEPTION(scope, encodedJSValue());
-    String s = sVal->value(globalObject);
+    auto s = sVal->value(globalObject);
 
     // 3. ReturnIfAbrupt(S).
     RETURN_IF_EXCEPTION(scope, encodedJSValue());
@@ -1592,7 +1590,7 @@ static EncodedJSValue toLocaleCase(JSGlobalObject* globalObject, CallFrame* call
     JSValue localeValue = callFrame->argument(0);
 
     // Optimization for empty strings.
-    if (s.isEmpty() && localeValue.isUndefined())
+    if (s->isEmpty() && localeValue.isUndefined())
         return JSValue::encode(sVal);
 
     // 4. Let requestedLocales be CanonicalizeLocaleList(locales).
@@ -1643,9 +1641,9 @@ static EncodedJSValue toLocaleCase(JSGlobalObject* globalObject, CallFrame* call
 
     // Most strings lower/upper case will be the same size as original, so try that first.
     Vector<UChar> buffer;
-    buffer.reserveInitialCapacity(s.length());
+    buffer.reserveInitialCapacity(s->length());
     auto convertCase = mode == CaseConversionMode::Lower ? u_strToLower : u_strToUpper;
-    auto status = callBufferProducingFunction(convertCase, buffer, StringView { s }.upconvertedCharacters().get(), s.length(), locale.utf8().data());
+    auto status = callBufferProducingFunction(convertCase, buffer, StringView { s }.upconvertedCharacters().get(), s->length(), locale.utf8().data());
     if (U_FAILURE(status))
         return throwVMTypeError(globalObject, scope, String::fromLatin1(u_errorName(status)));
 
@@ -1902,29 +1900,28 @@ static JSValue normalize(JSGlobalObject* globalObject, JSString* string, Normali
     VM& vm = globalObject->vm();
     auto scope = DECLARE_THROW_SCOPE(vm);
 
-    auto viewWithString = string->viewWithUnderlyingString(globalObject);
+    auto view = string->view(globalObject);
     RETURN_IF_EXCEPTION(scope, { });
 
-    StringView view = viewWithString.view;
     // Latin-1 characters (U+0000..U+00FF) are left unaffected by NFC.
     // ASCII characters (U+0000..U+007F) are left unaffected by all of the Normalization Forms
     // https://unicode.org/reports/tr15/#Description_Norm
-    if (view.is8Bit() && (form == NormalizationForm::NFC || charactersAreAllASCII(view.characters8(), view.length())))
+    if (view->is8Bit() && (form == NormalizationForm::NFC || view->containsOnlyASCII()))
         RELEASE_AND_RETURN(scope, string);
 
     const UNormalizer2* normalizer = JSC::normalizer(form);
 
     // Since ICU does not offer functions that can perform normalization or check for
     // normalization with input that is Latin-1, we need to upconvert to UTF-16 at this point.
-    auto characters = view.upconvertedCharacters();
+    auto characters = view->upconvertedCharacters();
 
     UErrorCode status = U_ZERO_ERROR;
-    UBool isNormalized = unorm2_isNormalized(normalizer, characters, view.length(), &status);
+    UBool isNormalized = unorm2_isNormalized(normalizer, characters, view->length(), &status);
     ASSERT(U_SUCCESS(status));
     if (isNormalized)
         RELEASE_AND_RETURN(scope, string);
 
-    int32_t normalizedStringLength = unorm2_normalize(normalizer, characters, view.length(), nullptr, 0, &status);
+    int32_t normalizedStringLength = unorm2_normalize(normalizer, characters, view->length(), nullptr, 0, &status);
     ASSERT(needsToGrowToProduceBuffer(status));
 
     UChar* buffer;
@@ -1933,7 +1930,7 @@ static JSValue normalize(JSGlobalObject* globalObject, JSString* string, Normali
         return throwOutOfMemoryError(globalObject, scope);
 
     status = U_ZERO_ERROR;
-    unorm2_normalize(normalizer, characters, view.length(), buffer, normalizedStringLength, &status);
+    unorm2_normalize(normalizer, characters, view->length(), buffer, normalizedStringLength, &status);
     ASSERT(U_SUCCESS(status));
 
     RELEASE_AND_RETURN(scope, jsString(vm, result.releaseNonNull()));
@@ -1971,9 +1968,9 @@ JSC_DEFINE_HOST_FUNCTION(stringProtoFuncNormalize, (JSGlobalObject* globalObject
     RELEASE_AND_RETURN(scope, JSValue::encode(normalize(globalObject, string, form)));
 }
 
-static inline std::optional<unsigned> illFormedIndex(const UChar* characters, unsigned length)
+static inline std::optional<unsigned> illFormedIndex(std::span<const UChar> characters)
 {
-    for (unsigned index = 0; index < length; ++index) {
+    for (unsigned index = 0; index < characters.size(); ++index) {
         UChar character = characters[index];
         if (!U16_IS_SURROGATE(character))
             continue;
@@ -1982,7 +1979,7 @@ static inline std::optional<unsigned> illFormedIndex(const UChar* characters, un
             return index;
 
         ASSERT(U16_IS_SURROGATE_LEAD(character));
-        if ((index + 1) == length)
+        if ((index + 1) == characters.size())
             return index;
         UChar nextCharacter = characters[index + 1];
 
@@ -2015,7 +2012,7 @@ JSC_DEFINE_HOST_FUNCTION(stringProtoFuncIsWellFormed, (JSGlobalObject* globalObj
 
     if (string.is8Bit())
         return JSValue::encode(jsBoolean(true));
-    return JSValue::encode(jsBoolean(!illFormedIndex(string.characters16(), string.length())));
+    return JSValue::encode(jsBoolean(!illFormedIndex(string.span16())));
 }
 
 JSC_DEFINE_HOST_FUNCTION(stringProtoFuncToWellFormed, (JSGlobalObject* globalObject, CallFrame* callFrame))
@@ -2037,22 +2034,21 @@ JSC_DEFINE_HOST_FUNCTION(stringProtoFuncToWellFormed, (JSGlobalObject* globalObj
     if (stringValue->is8Bit())
         return JSValue::encode(stringValue);
 
-    String string = stringValue->value(globalObject);
+    auto string = stringValue->value(globalObject);
     RETURN_IF_EXCEPTION(scope, { });
 
-    if (string.is8Bit())
+    if (string->is8Bit())
         return JSValue::encode(stringValue);
 
-    const UChar* characters = string.characters16();
-    unsigned length = string.length();
-    auto firstIllFormedIndex = illFormedIndex(characters, length);
+    auto characters = string->span16();
+    auto firstIllFormedIndex = illFormedIndex(characters);
     if (!firstIllFormedIndex)
         return JSValue::encode(stringValue);
 
     Vector<UChar> buffer;
-    buffer.reserveInitialCapacity(length);
-    buffer.append(characters, firstIllFormedIndex.value());
-    for (unsigned index = firstIllFormedIndex.value(); index < length; ++index) {
+    buffer.reserveInitialCapacity(characters.size());
+    buffer.append(characters.first(*firstIllFormedIndex));
+    for (unsigned index = firstIllFormedIndex.value(); index < characters.size(); ++index) {
         UChar character = characters[index];
 
         if (!U16_IS_SURROGATE(character)) {
@@ -2066,7 +2062,7 @@ JSC_DEFINE_HOST_FUNCTION(stringProtoFuncToWellFormed, (JSGlobalObject* globalObj
         }
 
         ASSERT(U16_IS_SURROGATE_LEAD(character));
-        if ((index + 1) == length) {
+        if ((index + 1) == characters.size()) {
             buffer.append(replacementCharacter);
             continue;
         }

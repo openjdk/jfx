@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -659,7 +659,7 @@ public abstract class TextInputControlSkin<T extends TextInputControl> extends S
      *
      * @param unit the unit of text to move by.
      * @param dir the direction of movement.
-     * @param select whether to extends the selection to the new posititon.
+     * @param select whether to extends the selection to the new position.
      */
     public abstract void moveCaret(TextUnit unit, Direction dir, boolean select);
 

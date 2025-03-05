@@ -46,6 +46,7 @@
 #include "WorkerGlobalScope.h"
 #include "WorkerSWClientConnection.h"
 #include <wtf/CrossThreadCopier.h>
+#include <wtf/text/MakeString.h>
 
 namespace WebCore {
 
@@ -62,8 +63,8 @@ static bool dispatchToContextThreadIfNecessary(const ServiceWorkerOrClientIdenti
 
 Ref<SWClientConnection> SWClientConnection::fromScriptExecutionContext(ScriptExecutionContext& context)
 {
-    if (is<WorkerGlobalScope>(context))
-        return static_cast<SWClientConnection&>(downcast<WorkerGlobalScope>(context).swClientConnection());
+    if (auto* worker = dynamicDowncast<WorkerGlobalScope>(context))
+        return static_cast<SWClientConnection&>(worker->swClientConnection());
 
     return ServiceWorkerProvider::singleton().serviceWorkerConnection();
 }
@@ -124,7 +125,7 @@ void SWClientConnection::startScriptFetchForServer(ServiceWorkerJobIdentifier jo
         job.startScriptFetch(cachePolicy);
     });
     if (!isPosted)
-        finishFetchingScriptInServer({ serverConnectionIdentifier(), jobIdentifier }, WTFMove(registrationKey), workerFetchError(ResourceError { errorDomainWebKitInternal, 0, { }, makeString("Failed to fetch script for service worker with scope ", registrationKey.scope().string()) }));
+        finishFetchingScriptInServer({ serverConnectionIdentifier(), jobIdentifier }, WTFMove(registrationKey), workerFetchError(ResourceError { errorDomainWebKitInternal, 0, { }, makeString("Failed to fetch script for service worker with scope "_s, registrationKey.scope().string()) }));
 }
 
 static void postMessageToContainer(ScriptExecutionContext& context, MessageWithMessagePorts&& message, ServiceWorkerData&& sourceData, String&& sourceOrigin)

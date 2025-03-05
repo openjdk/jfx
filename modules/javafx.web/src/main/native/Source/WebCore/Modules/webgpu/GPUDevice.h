@@ -27,6 +27,7 @@
 
 #include "ActiveDOMObject.h"
 #include "EventTarget.h"
+#include "GPUBindGroupEntry.h"
 #include "GPUComputePipeline.h"
 #include "GPUDeviceLostInfo.h"
 #include "GPUError.h"
@@ -38,9 +39,10 @@
 #include "ScriptExecutionContext.h"
 #include "WebGPUDevice.h"
 #include <optional>
-#include <wtf/IsoMalloc.h>
 #include <wtf/Ref.h>
+#include <wtf/TZoneMalloc.h>
 #include <wtf/WeakHashMap.h>
+#include <wtf/WeakHashSet.h>
 #include <wtf/WeakPtr.h>
 #include <wtf/text/WTFString.h>
 
@@ -77,16 +79,26 @@ class GPUSupportedFeatures;
 class GPUSupportedLimits;
 class GPUTexture;
 struct GPUTextureDescriptor;
+class WebXRSession;
+class XRGPUBinding;
+
+namespace WebGPU {
+class XRBinding;
+}
 
 class GPUDevice : public RefCounted<GPUDevice>, public ActiveDOMObject, public EventTarget {
-    WTF_MAKE_ISO_ALLOCATED(GPUDevice);
+    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(GPUDevice);
 public:
-    static Ref<GPUDevice> create(ScriptExecutionContext* scriptExecutionContext, Ref<WebGPU::Device>&& backing)
+    static Ref<GPUDevice> create(ScriptExecutionContext* scriptExecutionContext, Ref<WebGPU::Device>&& backing, String&& queueLabel)
     {
-        return adoptRef(*new GPUDevice(scriptExecutionContext, WTFMove(backing)));
+        return adoptRef(*new GPUDevice(scriptExecutionContext, WTFMove(backing), WTFMove(queueLabel)));
     }
 
     virtual ~GPUDevice();
+
+    // ActiveDOMObject.
+    void ref() const final { RefCounted::ref(); }
+    void deref() const final { RefCounted::deref(); }
 
     String label() const;
     void setLabel(String&&);
@@ -98,25 +110,26 @@ public:
 
     void destroy(ScriptExecutionContext&);
 
+    RefPtr<WebGPU::XRBinding> createXRBinding(const WebXRSession&);
     ExceptionOr<Ref<GPUBuffer>> createBuffer(const GPUBufferDescriptor&);
     ExceptionOr<Ref<GPUTexture>> createTexture(const GPUTextureDescriptor&);
     bool isSupportedFormat(GPUTextureFormat) const;
-    Ref<GPUSampler> createSampler(const std::optional<GPUSamplerDescriptor>&);
-    Ref<GPUExternalTexture> importExternalTexture(const GPUExternalTextureDescriptor&);
+    ExceptionOr<Ref<GPUSampler>> createSampler(const std::optional<GPUSamplerDescriptor>&);
+    ExceptionOr<Ref<GPUExternalTexture>> importExternalTexture(const GPUExternalTextureDescriptor&);
 
     ExceptionOr<Ref<GPUBindGroupLayout>> createBindGroupLayout(const GPUBindGroupLayoutDescriptor&);
-    Ref<GPUPipelineLayout> createPipelineLayout(const GPUPipelineLayoutDescriptor&);
-    Ref<GPUBindGroup> createBindGroup(const GPUBindGroupDescriptor&);
+    ExceptionOr<Ref<GPUPipelineLayout>> createPipelineLayout(const GPUPipelineLayoutDescriptor&);
+    ExceptionOr<Ref<GPUBindGroup>> createBindGroup(const GPUBindGroupDescriptor&);
 
-    Ref<GPUShaderModule> createShaderModule(const GPUShaderModuleDescriptor&);
-    Ref<GPUComputePipeline> createComputePipeline(const GPUComputePipelineDescriptor&);
+    ExceptionOr<Ref<GPUShaderModule>> createShaderModule(const GPUShaderModuleDescriptor&);
+    ExceptionOr<Ref<GPUComputePipeline>> createComputePipeline(const GPUComputePipelineDescriptor&);
     ExceptionOr<Ref<GPURenderPipeline>> createRenderPipeline(const GPURenderPipelineDescriptor&);
     using CreateComputePipelineAsyncPromise = DOMPromiseDeferred<IDLInterface<GPUComputePipeline>>;
     void createComputePipelineAsync(const GPUComputePipelineDescriptor&, CreateComputePipelineAsyncPromise&&);
     using CreateRenderPipelineAsyncPromise = DOMPromiseDeferred<IDLInterface<GPURenderPipeline>>;
     ExceptionOr<void> createRenderPipelineAsync(const GPURenderPipelineDescriptor&, CreateRenderPipelineAsyncPromise&&);
 
-    Ref<GPUCommandEncoder> createCommandEncoder(const std::optional<GPUCommandEncoderDescriptor>&);
+    ExceptionOr<Ref<GPUCommandEncoder>> createCommandEncoder(const std::optional<GPUCommandEncoderDescriptor>&);
     ExceptionOr<Ref<GPURenderBundleEncoder>> createRenderBundleEncoder(const GPURenderBundleEncoderDescriptor&);
 
     ExceptionOr<Ref<GPUQuerySet>> createQuerySet(const GPUQuerySetDescriptor&);
@@ -135,19 +148,18 @@ public:
     void removeBufferToUnmap(GPUBuffer&);
     void addBufferToUnmap(GPUBuffer&);
 
-    using RefCounted::ref;
-    using RefCounted::deref;
+#if ENABLE(VIDEO)
+    WeakPtr<GPUExternalTexture> takeExternalTextureForVideoElement(const HTMLVideoElement&);
+#endif
 
 private:
-    GPUDevice(ScriptExecutionContext*, Ref<WebGPU::Device>&&);
+    GPUDevice(ScriptExecutionContext*, Ref<WebGPU::Device>&&, String&& queueLabel);
 
-    // ActiveDOMObject.
     // FIXME: We probably need to override more methods to make this work properly.
-    const char* activeDOMObjectName() const final { return "GPUDevice"; }
-    Ref<GPUPipelineLayout> createAutoPipelineLayout();
+    RefPtr<GPUPipelineLayout> createAutoPipelineLayout();
 
     // EventTarget.
-    EventTargetInterface eventTargetInterface() const final { return GPUDeviceEventTargetInterfaceType; }
+    enum EventTargetInterfaceType eventTargetInterface() const final { return EventTargetInterfaceType::GPUDevice; }
     ScriptExecutionContext* scriptExecutionContext() const final { return ActiveDOMObject::scriptExecutionContext(); }
     void refEventTarget() final { ref(); }
     void derefEventTarget() final { deref(); }
@@ -155,14 +167,16 @@ private:
     UniqueRef<LostPromise> m_lostPromise;
     Ref<WebGPU::Device> m_backing;
     Ref<GPUQueue> m_queue;
-    Ref<GPUPipelineLayout> m_autoPipelineLayout;
-    HashSet<GPUBuffer*> m_buffersToUnmap;
+    RefPtr<GPUPipelineLayout> m_autoPipelineLayout;
+    WeakHashSet<GPUBuffer> m_buffersToUnmap;
 
 #if ENABLE(VIDEO)
     GPUExternalTexture* externalTextureForDescriptor(const GPUExternalTextureDescriptor&);
-#endif
 
-    WeakHashMap<HTMLVideoElement, WeakPtr<GPUExternalTexture>, WeakPtrImplWithEventTargetData> m_videoElementToExternalTextureMap;
+    WeakHashMap<HTMLVideoElement, WeakPtr<GPUExternalTexture>> m_videoElementToExternalTextureMap;
+    std::pair<RefPtr<HTMLVideoElement>, RefPtr<GPUExternalTexture>> m_previouslyImportedExternalTexture;
+    std::pair<Vector<GPUBindGroupEntry>, RefPtr<GPUBindGroup>> m_lastCreatedExternalTextureBindGroup;
+#endif
     bool m_waitingForDeviceLostPromise { false };
 };
 

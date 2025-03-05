@@ -26,7 +26,6 @@
 #include "EllipsisBoxPainter.h"
 
 #include "InlineIteratorTextBox.h"
-#include "LegacyEllipsisBox.h"
 #include "LineSelection.h"
 #include "PaintInfo.h"
 #include "RenderView.h"
@@ -49,6 +48,9 @@ void EllipsisBoxPainter::paint()
     auto& style = m_lineBox.style();
     auto textColor = style.visitedDependentColorWithColorFilter(CSSPropertyWebkitTextFillColor);
 
+    if (m_paintInfo.forceTextColor())
+        textColor = m_paintInfo.forcedTextColor();
+
     if (m_lineBox.ellipsisSelectionState() != RenderObject::HighlightState::None) {
         paintSelection();
 
@@ -70,7 +72,7 @@ void EllipsisBoxPainter::paint()
 
     auto visualRect = m_lineBox.ellipsisVisualRect();
     auto textOrigin = visualRect.location();
-    textOrigin.move(m_paintOffset.x(), m_paintOffset.y() + style.metricsOfPrimaryFont().ascent());
+    textOrigin.move(m_paintOffset.x(), m_paintOffset.y() + style.metricsOfPrimaryFont().intAscent());
     context.drawBidiText(style.fontCascade(), m_lineBox.ellipsisText(), textOrigin);
 
     if (textColor != context.fillColor())
@@ -100,7 +102,8 @@ void EllipsisBoxPainter::paintSelection()
     visualRect.move(m_paintOffset.x(), m_paintOffset.y());
 
     auto ellipsisText = m_lineBox.ellipsisText();
-    style.fontCascade().adjustSelectionRectForText(ellipsisText, visualRect);
+    constexpr bool canUseSimplifiedTextMeasuring = false;
+    style.fontCascade().adjustSelectionRectForText(canUseSimplifiedTextMeasuring, ellipsisText, visualRect);
     context.fillRect(snapRectToDevicePixelsWithWritingDirection(visualRect, m_lineBox.formattingContextRoot().document().deviceScaleFactor(), ellipsisText.ltr()), backgroundColor);
 }
 

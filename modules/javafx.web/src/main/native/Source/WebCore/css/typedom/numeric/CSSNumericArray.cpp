@@ -28,13 +28,13 @@
 
 #include "ExceptionOr.h"
 #include <wtf/FixedVector.h>
-#include <wtf/IsoMallocInlines.h>
+#include <wtf/TZoneMallocInlines.h>
 #include <wtf/text/StringBuilder.h>
 #include <wtf/text/WTFString.h>
 
 namespace WebCore {
 
-WTF_MAKE_ISO_ALLOCATED_IMPL(CSSNumericArray);
+WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(CSSNumericArray);
 
 Ref<CSSNumericArray> CSSNumericArray::create(FixedVector<CSSNumberish>&& numberishes)
 {
@@ -47,11 +47,6 @@ Ref<CSSNumericArray> CSSNumericArray::create(Vector<Ref<CSSNumericValue>>&& valu
 }
 
 CSSNumericArray::CSSNumericArray(Vector<Ref<CSSNumericValue>>&& values)
-    : m_array(WTFMove(values))
-{
-}
-
-CSSNumericArray::CSSNumericArray(FixedVector<Ref<CSSNumericValue>>&& values)
     : m_array(WTFMove(values))
 {
 }

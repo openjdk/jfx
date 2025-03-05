@@ -161,29 +161,29 @@ JSImmutableButterfly* JSImmutableButterfly::createFromString(JSGlobalObject* glo
     VM& vm = globalObject->vm();
     auto scope = DECLARE_THROW_SCOPE(vm);
 
-    auto holder = string->viewWithUnderlyingString(globalObject);
+    auto holder = string->view(globalObject);
     RETURN_IF_EXCEPTION(scope, { });
 
-    unsigned length = holder.view.length();
-    if (holder.view.is8Bit()) {
+    unsigned length = holder->length();
+    if (holder->is8Bit()) {
         JSImmutableButterfly* result = JSImmutableButterfly::tryCreate(vm, vm.immutableButterflyStructures[arrayIndexFromIndexingType(CopyOnWriteArrayWithContiguous) - NumberOfIndexingShapes].get(), length);
         if (UNLIKELY(!result)) {
             throwOutOfMemoryError(globalObject, scope);
             return nullptr;
         }
 
-        const auto* characters = holder.view.characters8();
-        for (unsigned i = 0; i < length; ++i) {
+        auto characters = holder->span8();
+        for (size_t i = 0; i < length; ++i) {
             auto* value = jsSingleCharacterString(vm, characters[i]);
             result->setIndex(vm, i, value);
         }
         return result;
     }
 
-    auto forEachCodePointViaStringIteratorProtocol = [](const UChar* characters, unsigned length, auto func) {
-        for (unsigned i = 0; i < length; ++i) {
+    auto forEachCodePointViaStringIteratorProtocol = [](std::span<const UChar> characters, auto func) {
+        for (size_t i = 0; i < characters.size(); ++i) {
             UChar character = characters[i];
-            if (!U16_IS_LEAD(character) || (i + 1) == length) {
+            if (!U16_IS_LEAD(character) || (i + 1) == characters.size()) {
                 if (func(i, 1) == IterationStatus::Done)
                     return;
                 continue;
@@ -202,9 +202,9 @@ JSImmutableButterfly* JSImmutableButterfly::createFromString(JSGlobalObject* glo
         }
     };
 
-    const auto* characters = holder.view.characters16();
+    auto characters = holder->span16();
     unsigned codePointLength = 0;
-    forEachCodePointViaStringIteratorProtocol(characters, length, [&](unsigned, unsigned) {
+    forEachCodePointViaStringIteratorProtocol(characters, [&](size_t, size_t) {
         codePointLength += 1;
         return IterationStatus::Continue;
     });
@@ -215,18 +215,18 @@ JSImmutableButterfly* JSImmutableButterfly::createFromString(JSGlobalObject* glo
         return nullptr;
     }
 
-    unsigned resultIndex = 0;
-    forEachCodePointViaStringIteratorProtocol(characters, length, [&](unsigned index, unsigned size) {
+    size_t resultIndex = 0;
+    forEachCodePointViaStringIteratorProtocol(characters, [&](size_t index, size_t size) {
         JSString* value = nullptr;
         if (size == 1)
             value = jsSingleCharacterString(vm, characters[index]);
         else {
             ASSERT(size == 2);
-            UChar string[2] = {
+            const UChar string[2] = {
                 characters[index],
                 characters[index + 1],
             };
-            value = jsNontrivialString(vm, String(string, 2));
+            value = jsNontrivialString(vm, String(string));
         }
 
         result->setIndex(vm, resultIndex++, value);

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -2112,7 +2112,7 @@ public class FXMLLoader {
     public static final String JAVAFX_VERSION = System.getProperty("javafx.version");
 
     /**
-     * Contains the current fx namepsace version.
+     * Contains the current fx namespace version.
      * @since JavaFX 8.0
      */
     public static final String FX_NAMESPACE_VERSION = "1";

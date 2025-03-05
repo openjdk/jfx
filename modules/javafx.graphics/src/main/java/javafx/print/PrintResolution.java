@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -31,7 +31,7 @@ package javafx.print;
  * When printing in a portrait orientation
  * cross feed direction is usually x/horizontal resolution, and
  * feed direction is usually y/horizontal resolution.
- * On most printers these are the same value, but it is possuble
+ * On most printers these are the same value, but it is possible
  * for them to be different.
  * @since JavaFX 8.0
  */
