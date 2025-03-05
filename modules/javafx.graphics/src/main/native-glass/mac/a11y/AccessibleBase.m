@@ -131,12 +131,9 @@ static NSMutableDictionary * rolesMap;
 
 - (NSString *)accessibilityLabel
 {
-    jobject jresult = NULL;
-    GET_MAIN_JENV;
-    if (env == NULL) return NULL;
-    jresult = (jobject)(*env)->CallLongMethod(env, self->jAccessible, jAccessibilityAttributeValue, (jlong)@"AXTitle");
-    GLASS_CHECK_EXCEPTION(env);
-    return variantToID(env, jresult);
+    // Use the same value that is set for accessibilityTitle - some component
+    // do not have titles and request it as a label
+    return [self accessibilityTitle];
 }
 
 - (id)accessibilityParent
