@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -188,7 +188,7 @@ public class LineChartTest extends XYChartTestBase {
         lineChart.getData().addAll(series1);
         pulse();
 
-        assertArrayEquals(convertSeriesDataToPoint2D(series1).toArray(), findDataPointsFromPathLine(lineChart).toArray());
+        eq(series1, lineChart);
     }
 
     @Test
@@ -210,7 +210,7 @@ public class LineChartTest extends XYChartTestBase {
                 new XYChart.Data<>(100d, 20d)
         );
 
-        assertArrayEquals(convertSeriesDataToPoint2D(expectedSeries).toArray(), findDataPointsFromPathLine(lineChart).toArray());
+        eq(expectedSeries, lineChart);
     }
 
     @Test
@@ -232,7 +232,7 @@ public class LineChartTest extends XYChartTestBase {
                 new XYChart.Data<>(100d, 20d)
         );
 
-        assertArrayEquals(convertSeriesDataToPoint2D(expectedSeries).toArray(), findDataPointsFromPathLine(lineChart).toArray());
+        eq(expectedSeries, lineChart);
     }
 
     @Test
@@ -255,7 +255,7 @@ public class LineChartTest extends XYChartTestBase {
                 new XYChart.Data<>(90d, 32d)
         );
 
-        assertArrayEquals(convertSeriesDataToPoint2D(expectedSeries).toArray(), findDataPointsFromPathLine(lineChart).toArray());
+        eq(expectedSeries, lineChart);
     }
 
     @Test
@@ -278,7 +278,7 @@ public class LineChartTest extends XYChartTestBase {
                 new XYChart.Data<>(90d, 40d)
         );
 
-        assertArrayEquals(convertSeriesDataToPoint2D(expectedSeries).toArray(), findDataPointsFromPathLine(lineChart).toArray());
+        eq(expectedSeries, lineChart);
     }
 
     @Test
@@ -300,7 +300,7 @@ public class LineChartTest extends XYChartTestBase {
                 new XYChart.Data<>(95d, 35d)
         );
 
-        assertArrayEquals(convertSeriesDataToPoint2D(expectedSeries).toArray(), findDataPointsFromPathLine(lineChart).toArray());
+        eq(expectedSeries, lineChart);
     }
 
     @Test
@@ -322,7 +322,7 @@ public class LineChartTest extends XYChartTestBase {
                 new XYChart.Data<>(95d, 40d)
         );
 
-        assertArrayEquals(convertSeriesDataToPoint2D(expectedSeries).toArray(), findDataPointsFromPathLine(lineChart).toArray());
+        eq(expectedSeries, lineChart);
     }
 
     @Test
@@ -344,7 +344,7 @@ public class LineChartTest extends XYChartTestBase {
                 new XYChart.Data<>(95d, 32d)
         );
 
-        assertArrayEquals(convertSeriesDataToPoint2D(expectedSeries).toArray(), findDataPointsFromPathLine(lineChart).toArray());
+        eq(expectedSeries, lineChart);
     }
 
     @Test
@@ -366,7 +366,7 @@ public class LineChartTest extends XYChartTestBase {
                 new XYChart.Data<>(95d, 40d)
         );
 
-        assertArrayEquals(convertSeriesDataToPoint2D(expectedSeries).toArray(), findDataPointsFromPathLine(lineChart).toArray());
+        eq(expectedSeries, lineChart);
     }
 
     @Test
@@ -390,7 +390,7 @@ public class LineChartTest extends XYChartTestBase {
                 new XYChart.Data<>(80d, 10d)
         );
 
-        assertArrayEquals(convertSeriesDataToPoint2D(expectedSeries).toArray(), findDataPointsFromPathLine(lineChart).toArray());
+        eq(expectedSeries, lineChart);
     }
 
     @Test
@@ -414,7 +414,7 @@ public class LineChartTest extends XYChartTestBase {
                 new XYChart.Data<>(80d, 10d)
         );
 
-        assertArrayEquals(convertSeriesDataToPoint2D(expectedSeries).toArray(), findDataPointsFromPathLine(lineChart).toArray());
+        eq(expectedSeries, lineChart);
     }
 
     @Test
@@ -438,7 +438,7 @@ public class LineChartTest extends XYChartTestBase {
                 new XYChart.Data<>(80d, 10d)
         );
 
-        assertArrayEquals(convertSeriesDataToPoint2D(expectedSeries).toArray(), findDataPointsFromPathLine(lineChart).toArray());
+        eq(expectedSeries, lineChart);
     }
 
     @Test
@@ -462,7 +462,7 @@ public class LineChartTest extends XYChartTestBase {
                 new XYChart.Data<>(80d, 10d)
         );
 
-        assertArrayEquals(convertSeriesDataToPoint2D(expectedSeries).toArray(), findDataPointsFromPathLine(lineChart).toArray());
+        eq(expectedSeries, lineChart);
     }
 
     @Test
@@ -485,7 +485,7 @@ public class LineChartTest extends XYChartTestBase {
                 new XYChart.Data<>(80d, -10d)
         );
 
-        assertArrayEquals(convertSeriesDataToPoint2D(expectedSeries).toArray(), findDataPointsFromPathLine(lineChart).toArray());
+        eq(expectedSeries, lineChart);
     }
 
     @Test
@@ -508,7 +508,7 @@ public class LineChartTest extends XYChartTestBase {
                 new XYChart.Data<>(80d, 10d)
         );
 
-        assertArrayEquals(convertSeriesDataToPoint2D(expectedSeries).toArray(), findDataPointsFromPathLine(lineChart).toArray());
+        eq(expectedSeries, lineChart);
     }
 
     @Test
@@ -530,7 +530,7 @@ public class LineChartTest extends XYChartTestBase {
                 new XYChart.Data<>(80d, 10d),
                 new XYChart.Data<>(80d, -10d)
         );
-        assertArrayEquals(convertSeriesDataToPoint2D(expectedSeries).toArray(), findDataPointsFromPathLine(lineChart).toArray());
+        eq(expectedSeries, lineChart);
     }
 
     @Test
@@ -553,7 +553,7 @@ public class LineChartTest extends XYChartTestBase {
                 new XYChart.Data<>(80d, 10d)
         );
 
-        assertArrayEquals(convertSeriesDataToPoint2D(expectedSeries).toArray(), findDataPointsFromPathLine(lineChart).toArray());
+        eq(expectedSeries, lineChart);
     }
 
     @Test
@@ -577,7 +577,7 @@ public class LineChartTest extends XYChartTestBase {
                 new XYChart.Data<>(95d, -10d)*/
         );
 
-        assertArrayEquals(convertSeriesDataToPoint2D(expectedSeries).toArray(), findDataPointsFromPathLine(lineChart).toArray());
+        eq(expectedSeries, lineChart);
     }
 
     @Test
@@ -600,7 +600,7 @@ public class LineChartTest extends XYChartTestBase {
                 new XYChart.Data<>(80d, 10d)
         );
 
-        assertArrayEquals(convertSeriesDataToPoint2D(expectedSeries).toArray(), findDataPointsFromPathLine(lineChart).toArray());
+        eq(expectedSeries, lineChart);
     }
 
     @Test
@@ -623,7 +623,7 @@ public class LineChartTest extends XYChartTestBase {
                 new XYChart.Data<>(-10d, -10d)
         );
 
-        assertArrayEquals(convertSeriesDataToPoint2D(expectedSeries).toArray(), findDataPointsFromPathLine(lineChart).toArray());
+        eq(expectedSeries, lineChart);
     }
 
     @Test
@@ -646,7 +646,7 @@ public class LineChartTest extends XYChartTestBase {
                 new XYChart.Data<>(80d, 10d)
         );
 
-        assertArrayEquals(convertSeriesDataToPoint2D(expectedSeries).toArray(), findDataPointsFromPathLine(lineChart).toArray());
+        eq(expectedSeries, lineChart);
     }
 
     @Test
@@ -669,7 +669,7 @@ public class LineChartTest extends XYChartTestBase {
                 new XYChart.Data<>(-15d, -10d)
         );
 
-        assertArrayEquals(convertSeriesDataToPoint2D(expectedSeries).toArray(), findDataPointsFromPathLine(lineChart).toArray());
+        eq(expectedSeries, lineChart);
     }
 
     @Test
@@ -692,7 +692,7 @@ public class LineChartTest extends XYChartTestBase {
                 new XYChart.Data<>(80d, 10d)
         );
 
-        assertArrayEquals(convertSeriesDataToPoint2D(expectedSeries).toArray(), findDataPointsFromPathLine(lineChart).toArray());
+        eq(expectedSeries, lineChart);
     }
 
     @Test
@@ -715,7 +715,7 @@ public class LineChartTest extends XYChartTestBase {
                 new XYChart.Data<>(-10d, -10d)
         );
 
-        assertArrayEquals(convertSeriesDataToPoint2D(expectedSeries).toArray(), findDataPointsFromPathLine(lineChart).toArray());
+        eq(expectedSeries, lineChart);
     }
 
     @Test
@@ -738,7 +738,7 @@ public class LineChartTest extends XYChartTestBase {
                 new XYChart.Data<>(80d, 10d)
         );
 
-        assertArrayEquals(convertSeriesDataToPoint2D(expectedSeries).toArray(), findDataPointsFromPathLine(lineChart).toArray());
+        eq(expectedSeries, lineChart);
     }
 
     //JDK-8283675
@@ -776,5 +776,18 @@ public class LineChartTest extends XYChartTestBase {
                 )
                 .collect(Collectors.toList());
         return data.subList(0, data.size());
+    }
+
+    private void eq(XYChart.Series<Number, Number> expected, LineChart<Number, Number> ch) {
+        List<Point2D> exp = convertSeriesDataToPoint2D(expected);
+        List<Point2D> res = findDataPointsFromPathLine(lineChart);
+
+        assertEquals(exp.size(), res.size());
+        for (int i = 0; i < exp.size(); i++) {
+            Point2D pe = exp.get(i);
+            Point2D pr = res.get(i);
+            assertEquals(pe.getX(), pr.getX(), 1e-9, "at index " + i + " expected=" + pe + " actual=" + pr);
+            assertEquals(pe.getY(), pr.getY(), 1e-9, "at index " + i + " expected=" + pe + " actual=" + pr);
+        }
     }
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -26,7 +26,6 @@
 package com.sun.javafx.font.directwrite;
 
 import java.util.Arrays;
-
 import com.sun.javafx.font.CompositeFontResource;
 import com.sun.javafx.font.FontResource;
 import com.sun.javafx.font.FontStrike;
@@ -34,6 +33,7 @@ import com.sun.javafx.font.PGFont;
 import com.sun.javafx.font.PrismFontFactory;
 import com.sun.javafx.scene.text.TextSpan;
 import com.sun.javafx.text.GlyphLayout;
+import com.sun.javafx.text.GlyphLayoutManager;
 import com.sun.javafx.text.PrismTextLayout;
 import com.sun.javafx.text.TextRun;
 
@@ -406,5 +406,10 @@ public class DWGlyphLayout extends GlyphLayout {
             layout.Release();
         }
         format.Release();
+    }
+
+    @Override
+    public void dispose() {
+        GlyphLayoutManager.dispose(this);
     }
 }

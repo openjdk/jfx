@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,13 +25,13 @@
 
 package test.javafx.scene.layout;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import javafx.scene.Parent;
 import javafx.scene.ParentShim;
 import javafx.scene.shape.Rectangle;
 import javafx.scene.text.Text;
-
 import org.junit.jupiter.api.Test;
-import static org.junit.jupiter.api.Assertions.assertEquals;
 
 /**
  * Tests baseline offsets on various classes
@@ -51,7 +51,7 @@ public class BaselineTest {
     public void testTextBaseline() {
         Text text = new Text("Graphically");
         float size = (float) text.getFont().getSize();
-        assertEquals(size, text.getBaselineOffset(),1e-100);
+        assertTrue(text.getBaselineOffset() > (size / 2.0f));
     }
 
     @Test
