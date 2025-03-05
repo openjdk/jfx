@@ -39,10 +39,10 @@ import javafx.beans.NamedArg;
  * The location of a symbol or punctuation mark can vary from one keyboard
  * layout to another. For example, on an English QWERTY layout the '+' symbol
  * is the shifted character on {@link KeyCode#EQUALS} but on a German layout
- * it is the unmodified character on {@link KeyCode#PLUS}. On most layouts
- * the '+' symbol also appears on {@link KeyCode#ADD} on the numeric keypad.
- * A key character combination dynamically queries the OS to determine which
- * keys the character appears on when matching against a key event.
+ * it is the unmodified character on {@link KeyCode#PLUS}. The '+' symbol
+ * also appears on {@link KeyCode#ADD} on the numeric keypad. When matching
+ * against a key event a key character combination queries the OS to
+ * determine which keys the character appears on in the current layout.
  *
  * @since JavaFX 2.0
  */

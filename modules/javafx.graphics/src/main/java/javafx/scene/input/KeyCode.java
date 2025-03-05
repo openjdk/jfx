@@ -33,19 +33,18 @@ import java.util.Map;
  *
  * <p>
  *
- * For a given keyboard layout each key is assigned a key code which remains
- * the same regardless of the modifier keys in effect when the key is
- * pressed. For keys that generate printable characters the code will
- * generally be based on the character produced with no modifiers. The
- * exception is {@link KeyCode#A} through {@link KeyCode#Z} which are
- * assigned to keys even on layouts which don't generate those letters
- * (such as Greek) to ensure that common letter-based shortcuts are always
- * accessible.
+ * For a given keyboard layout each key is assigned a code which does not
+ * vary (the modifiers do not change a key's code). For keys that generate
+ * printable characters the code will usually be based on the unmodified
+ * character. The exceptions are {@link KeyCode#A} through {@link KeyCode#Z}
+ * which are assigned to keys even on layouts which don't generate those
+ * letters (such as Greek). This ensures that common letter-based shortcuts
+ * are always available.
  *
  * <p>
  *
  * Keys that generate characters with accents or other diacritic marks are
- * typically assigned a code of {@link KeyCode#UNDEFINED}.
+ * usually assigned a code of {@link KeyCode#UNDEFINED}.
  * @since JavaFX 2.0
  */
 public enum KeyCode {
