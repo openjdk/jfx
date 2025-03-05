@@ -275,6 +275,22 @@ NSString* jStringToNSString(JNIEnv *env, jstring string) {
     return result;
 }
 
+jstring NSStringToJavaString(JNIEnv *env, NSString* string) {
+    if (string == NULL) {
+       return NULL;
+    }
+    jsize len = [string length];
+    unichar *buffer = (unichar*)calloc(len, sizeof(unichar));
+    if (buffer == NULL) {
+       return NULL;
+    }
+    NSRange crange = NSMakeRange(0, len);
+    [string getCharacters:buffer range:crange];
+    jstring jStr = (*env)->NewString(env, buffer, len);
+    free(buffer);
+    return jStr;
+}
+
 id variantToID(JNIEnv *env, jobject variant) {
     if (variant == NULL) return NULL;
     jint type = (*env)->GetIntField(env, variant, jVariantType);
