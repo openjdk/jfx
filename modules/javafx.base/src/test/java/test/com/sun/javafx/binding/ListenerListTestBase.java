@@ -276,8 +276,10 @@ public abstract class ListenerListTestBase<L extends ListenerListBase> {
 
                 records.add("CL1: changed from " + o + " to " + n);
 
-                property.set(2);
-                notifyListeners(list, property, v);
+                if (v != 2) {  // This check is normally done by the property
+                    property.set(2);
+                    notifyListeners(list, property, v);
+                }
             });
 
             list.add((ChangeListener<Number>) (obs, o, n) -> {
@@ -285,8 +287,10 @@ public abstract class ListenerListTestBase<L extends ListenerListBase> {
 
                 records.add("CL2: changed from " + o + " to " + n);
 
-                property.set(3);
-                notifyListeners(list, property, v);
+                if (v != 3) {  // This check is normally done by the property
+                    property.set(3);
+                    notifyListeners(list, property, v);
+                }
             });
 
             list.add((ChangeListener<Number>) (obs, o, n) -> {
@@ -295,7 +299,7 @@ public abstract class ListenerListTestBase<L extends ListenerListBase> {
 
             StackOverflowError e = assertThrows(StackOverflowError.class, () -> notifyListeners(list, property, 0));
 
-            assertEquals("non-converging value detected in value modifying listeners on LongProperty [value: 2]; value was reset twice to: 0", e.getMessage());
+            assertEquals("non-converging value detected in value modifying listeners on LongProperty [value: 2]; changed back from [3] to [2]", e.getMessage());
         }
 
         /**
@@ -343,7 +347,7 @@ public abstract class ListenerListTestBase<L extends ListenerListBase> {
 
             StackOverflowError e = assertThrows(StackOverflowError.class, () -> notifyListeners(list, property, 0));
 
-            assertEquals("non-converging value detected in value modifying listeners on LongProperty [value: 30]; value was reset twice to: 0", e.getMessage());
+            assertEquals("non-converging value detected in value modifying listeners on LongProperty [value: 30]; changed back from [20] to [30]", e.getMessage());
         }
 
         /**
@@ -395,7 +399,7 @@ public abstract class ListenerListTestBase<L extends ListenerListBase> {
 
             StackOverflowError e = assertThrows(StackOverflowError.class, () -> notifyListeners(list, property, 0));
 
-            assertEquals("non-converging value detected in value modifying listeners on LongProperty [value: 30]; value was reset twice to: 0", e.getMessage());
+            assertEquals("non-converging value detected in value modifying listeners on LongProperty [value: 30]; changed back from [20] to [30]", e.getMessage());
         }
 
         /**
