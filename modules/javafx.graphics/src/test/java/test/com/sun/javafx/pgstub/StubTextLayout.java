@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,13 +25,15 @@
 
 package test.com.sun.javafx.pgstub;
 
+import javafx.scene.text.Font;
 import com.sun.javafx.geom.BaseBounds;
 import com.sun.javafx.geom.Path2D;
 import com.sun.javafx.geom.RectBounds;
 import com.sun.javafx.geom.Shape;
-import com.sun.javafx.scene.text.*;
-import javafx.scene.shape.PathElement;
-import javafx.scene.text.Font;
+import com.sun.javafx.scene.text.GlyphList;
+import com.sun.javafx.scene.text.TextLayout;
+import com.sun.javafx.scene.text.TextLine;
+import com.sun.javafx.scene.text.TextSpan;
 
 /**
  * Stub implementation of the {@link TextLayout} for testing purposes.
@@ -77,7 +79,6 @@ public class StubTextLayout implements TextLayout {
     @Override
     public boolean setLineSpacing(float spacing) {
         this.spacing = spacing;
-
         return true;
     }
 
@@ -204,14 +205,14 @@ public class StubTextLayout implements TextLayout {
     }
 
     @Override
-    public PathElement[] getCaretShape(int offset, boolean isLeading, float x,
-            float y) {
-        return new PathElement[0];
+    public float[] getCaretGeometry(int offset, boolean isLeading) {
+        // FIX this can be implemented if needed, following the logic used in getBounds() and getHitInfo()
+        return null;
     }
 
     @Override
-    public PathElement[] getRange(int start, int end, int type, float x, float y) {
-        return new PathElement[0];
+    public void getRange(int start, int end, int type, GeometryCallback client) {
+        // FIX this can be implemented if needed, following the logic used in getBounds() and getHitInfo()
     }
 
     @Override
