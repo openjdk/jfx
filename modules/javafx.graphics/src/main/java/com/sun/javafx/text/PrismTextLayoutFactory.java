@@ -31,10 +31,10 @@ import com.sun.javafx.scene.text.TextLayout;
 import com.sun.javafx.scene.text.TextLayoutFactory;
 
 public class PrismTextLayoutFactory implements TextLayoutFactory {
-    private static final PrismTextLayoutFactory factory = new PrismTextLayoutFactory();
+    private static final PrismTextLayoutFactory FACTORY = new PrismTextLayoutFactory();
     /* Same strategy as GlyphLayout */
-    private static final TextLayout reusableTL = factory.createLayout();
-    private static final AtomicBoolean guard = new AtomicBoolean(false);
+    private static final TextLayout REUSABLE_INSTANCE = FACTORY.createLayout();
+    private static final AtomicBoolean GUARD = new AtomicBoolean(false);
 
     private PrismTextLayoutFactory() {
     }
@@ -51,12 +51,12 @@ public class PrismTextLayoutFactory implements TextLayoutFactory {
 
     @Override
     public TextLayout getLayout() {
-        if (guard.compareAndSet(false, true)) {
-            reusableTL.setAlignment(0);
-            reusableTL.setWrapWidth(0);
-            reusableTL.setDirection(0);
-            reusableTL.setContent(null);
-            return reusableTL;
+        if (GUARD.compareAndSet(false, true)) {
+            REUSABLE_INSTANCE.setAlignment(0);
+            REUSABLE_INSTANCE.setWrapWidth(0);
+            REUSABLE_INSTANCE.setDirection(0);
+            REUSABLE_INSTANCE.setContent(null);
+            return REUSABLE_INSTANCE;
         } else {
             return createLayout();
         }
@@ -64,12 +64,12 @@ public class PrismTextLayoutFactory implements TextLayoutFactory {
 
     @Override
     public void disposeLayout(TextLayout layout) {
-        if (layout == reusableTL) {
-            guard.set(false);
+        if (layout == REUSABLE_INSTANCE) {
+            GUARD.set(false);
         }
     }
 
     public static PrismTextLayoutFactory getFactory() {
-        return factory;
+        return FACTORY;
     }
 }
