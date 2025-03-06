@@ -40,14 +40,14 @@ import javafx.beans.value.ObservableValue;
 public class ListenerList<T> extends ListenerListBase {
 
     /**
-     * Indicates a nested notification was aborted early, meaning that not
+     * Indicates a nested notification was aborted early because the new value
+     * was modified during the loop to equal the old value. This means that not
      * all intended listeners (up to the maximum set by the higher level loop)
-     * were called.
+     * were called and so there may be confusion as to the current value is now
+     * for some listeners.
      *
-     * This happens when a listener changes the current value to the same
-     * value as the old value at the current notification level. An abort
-     * may indicate a problem with multiple listeners changing values that
-     * are not converging to a mutually agreed value.
+     * An abort may indicate a problem with multiple listeners changing values
+     * that are not converging to a mutually agreed value.
      */
     private static final int NESTED_NOTIFICATION_ABORTED = -2;
 
@@ -139,29 +139,22 @@ public class ListenerList<T> extends ListenerListBase {
 
             // only get the latest value if this is the first loop or a nested notification occurred
             if (progress < 0) {
+                if (!wasLocked && progress == NESTED_NOTIFICATION_ABORTED) {
+
+                    /*
+                     * Non-convergence detected at the top-level loop. Exit early here as further
+                     * notifications will otherwise overwrite the progress value making this problem
+                     * go undetected.
+                     */
+
+                    break;
+                }
+
                 newValue = observableValue.getValue();
 
                 valueObtained(newValue);
 
                 if (Objects.equals(newValue, oldValue)) {
-
-                    if (progress == NESTED_NOTIFICATION_ABORTED) {
-
-                        /*
-                         * A nested notification occurred, which did not complete normally
-                         * AND the value was reset to the previous value. This means that
-                         * at least one listener is now unaware of the correct latest value.
-                         * Previous implementations would notify such listeners with an
-                         * incorrect old value and the same new value again, and if this
-                         * triggered further modifications would cause a stack overflow.
-                         *
-                         * As we don't want to notify listeners with bad values to trigger
-                         * the unavoidable stack overflow, we instead throw an exception here.
-                         */
-
-                        throw new StackOverflowError("non-converging value detected in value modifying listeners on " + observableValue + "; value was reset twice to: " + oldValue);
-                    }
-
                     progress = NESTED_NOTIFICATION_ABORTED;  // Indicate an early exit before notifying all listeners intended at this level
 
                     return wasLocked ? false : unlock();
@@ -181,11 +174,26 @@ public class ListenerList<T> extends ListenerListBase {
             }
 
             /*
-             * This is a top level notification (as when it started the notification, it wasn't
-             * locked). If a nested notification was aborted for any reason, it means that the
-             * value was being modified by multiple listeners that could not reach consensus.
-             * A StackOverflowError is thrown to indicate a serious issue (and to mimic similar
-             * cases that do result in a real StackOverflowError).
+             * The is the top level notification call, which has been notifying listeners
+             * of value X. A nested loop occurred that was notifying listeners of a different
+             * value Y was aborted. This means:
+             *
+             * - The top level loop notified its listeners up to index i with value X
+             * - At least one listener was not notified in the nested loop with value Y
+             *   while it was already notified in this loop with value X (in other
+             *   words, it did not notify all listeners up to index i)
+             *
+             * This is a conflict, as at least one listener received X but did not
+             * receive Y, and this call (the top level one) will not rectify this as
+             * it already completed notifications. For example, a listener with
+             * index 2 triggered a nested notification (i == 2), but this notification
+             * was aborted at index 1, then the listener at index 2 received X (from
+             * the top level loop) but never received Y from the nested loop.
+             *
+             * If it was not a top level notification, there is a chance that the
+             * listeners involved may still converge as the notification process is
+             * still ongoing, which is why this is only an error when there is no
+             * further chance that the values may converge:
              */
 
             throw new StackOverflowError("non-converging value detected in value modifying listeners on " + observableValue + "; value was reset twice to: " + oldValue);

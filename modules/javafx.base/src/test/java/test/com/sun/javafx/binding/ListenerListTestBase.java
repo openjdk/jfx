@@ -289,15 +289,18 @@ public abstract class ListenerListTestBase<L extends ListenerListBase> {
                 notifyListeners(list, property, v);
             });
 
+            list.add((ChangeListener<Number>) (obs, o, n) -> {
+                records.add("CL3: changed from " + o + " to " + n);
+            });
+
             StackOverflowError e = assertThrows(StackOverflowError.class, () -> notifyListeners(list, property, 0));
 
-            assertEquals("non-converging value detected in value modifying listeners on LongProperty [value: 2]; value was reset twice to: 2", e.getMessage());
+            assertEquals("non-converging value detected in value modifying listeners on LongProperty [value: 2]; value was reset twice to: 0", e.getMessage());
         }
 
         /**
          * A variant of the non-convergence test with three listeners
-         * that will never agree. This variant results in an actual
-         * StackOverflowError, which for now is just fine.
+         * that will never agree.
          */
         @Test
         void shouldDetectNonConvergence_2() {
@@ -344,11 +347,63 @@ public abstract class ListenerListTestBase<L extends ListenerListBase> {
         }
 
         /**
+         * A variant of the non-convergence test with three listeners
+         * that will never agree and an additional observing listener.
+         */
+        @Test
+        void shouldDetectNonConvergence_3() {
+            LongProperty property = new SimpleLongProperty(1);
+
+            L list = create(il1, il2);
+
+            list.add((ChangeListener<Number>) (obs, o, n) -> {
+                long v = n.longValue();
+
+                records.add("CL1: changed from " + o + " to " + n);
+
+                if (v < 20) {
+                    property.set(20);
+                    notifyListeners(list, property, v);
+                }
+            });
+
+            list.add((ChangeListener<Number>) (obs, o, n) -> {
+                long v = n.longValue();
+
+                records.add("CL2: changed from " + o + " to " + n);
+
+                if (v < 30) {
+                    property.set(30);
+                    notifyListeners(list, property, v);
+                }
+            });
+
+            list.add((ChangeListener<Number>) (obs, o, n) -> {
+                long v = n.longValue();
+
+                records.add("CL3: changed from " + o + " to " + n);
+
+                if (v > 10) {
+                    property.set(10);
+                    notifyListeners(list, property, v);
+                }
+            });
+
+            list.add((ChangeListener<Number>) (obs, o, n) -> {
+                records.add("CL4: changed from " + o + " to " + n);
+            });
+
+            StackOverflowError e = assertThrows(StackOverflowError.class, () -> notifyListeners(list, property, 0));
+
+            assertEquals("non-converging value detected in value modifying listeners on LongProperty [value: 30]; value was reset twice to: 0", e.getMessage());
+        }
+
+        /**
          * A single listener that keeps changing values. This variant results in an actual
          * StackOverflowError.
          */
         @Test
-        void shouldDetectNonConvergence_3() {
+        void shouldDetectNonConvergence_4() {
             LongProperty property = new SimpleLongProperty(1);
 
             L list = create(il1, il2);
