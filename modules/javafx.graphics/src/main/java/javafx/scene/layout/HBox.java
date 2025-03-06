@@ -417,7 +417,7 @@ public class HBox extends Pane {
         if (width != -1 && getContentBias() != null) {
             double prefWidths[][] = getAreaWidths(managed, -1, false);
             adjustAreaWidths(managed, prefWidths, width, -1);
-            contentHeight = computeMaxMinAreaHeight(managed, marginAccessor, prefWidths[0], getAlignmentInternal().getVpos());
+            contentHeight = computeMaxMinAreaHeight(managed, marginAccessor, prefWidths[0], false, getAlignmentInternal().getVpos());
         } else {
             contentHeight = computeMaxMinAreaHeight(managed, marginAccessor, getAlignmentInternal().getVpos());
         }
@@ -440,7 +440,7 @@ public class HBox extends Pane {
         if (width != -1 && getContentBias() != null) {
             double prefWidths[][] = getAreaWidths(managed, -1, false);
             adjustAreaWidths(managed, prefWidths, width, -1);
-            contentHeight = computeMaxPrefAreaHeight(managed, marginAccessor, prefWidths[0], getAlignmentInternal().getVpos());
+            contentHeight = computeMaxPrefAreaHeight(managed, marginAccessor, prefWidths[0], false, getAlignmentInternal().getVpos());
         } else {
             contentHeight = computeMaxPrefAreaHeight(managed, marginAccessor, getAlignmentInternal().getVpos());
         }
