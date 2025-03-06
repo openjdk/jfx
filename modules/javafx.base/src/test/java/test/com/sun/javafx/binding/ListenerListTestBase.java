@@ -25,10 +25,8 @@
 
 package test.com.sun.javafx.binding;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNotEquals;
-import static org.junit.jupiter.api.Assertions.assertNull;
-import static org.junit.jupiter.api.Assertions.assertThrows;
+import com.sun.javafx.binding.ListenerList;
+import com.sun.javafx.binding.ListenerListBase;
 
 import java.lang.Thread.UncaughtExceptionHandler;
 import java.util.ArrayList;
@@ -41,20 +39,23 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import org.junit.jupiter.api.Nested;
-import org.junit.jupiter.api.Test;
-
-
-import com.sun.javafx.binding.ListenerList;
-import com.sun.javafx.binding.ListenerListBase;
-
 import javafx.beans.InvalidationListener;
+import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.LongProperty;
+import javafx.beans.property.SimpleBooleanProperty;
 import javafx.beans.property.SimpleLongProperty;
 import javafx.beans.property.SimpleStringProperty;
 import javafx.beans.property.StringProperty;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
+
+import org.junit.jupiter.api.Nested;
+import org.junit.jupiter.api.Test;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 /**
  * Base test class suitable for testing {@link ListenerList} and {@link com.sun.javafx.binding.OldValueCachingListenerList}.
@@ -254,6 +255,70 @@ public abstract class ListenerListTestBase<L extends ListenerListBase> {
     @Nested
     class WhenANestedChangeOccurs {
 
+        @Test
+        void shouldAllowSimpleVetoingOfValue() {
+            BooleanProperty property = new SimpleBooleanProperty(true);
+
+            L list = create(il1, il2);
+
+            list.add((ChangeListener<Boolean>) (obs, o, n) -> {
+                records.add("CL1: changed from " + o + " to " + n);
+            });
+
+            list.add((ChangeListener<Boolean>) (obs, o, n) -> {
+                records.add("CL2: changed from " + o + " to " + n);
+
+                if (n) {  // This check is normally done by the property
+                    property.set(false);
+                    notifyListeners(list, property, n);
+                }
+            });
+
+            list.add((ChangeListener<Boolean>) (obs, o, n) -> {
+                records.add("CL3: changed from " + o + " to " + n);
+            });
+
+            list.remove(il1);
+            list.remove(il2);
+
+            notifyListeners(list, property, false);  // triggers change from false to true
+
+            //assertConsistentChangeSequence(false);
+            assertEquals(4, records.size());  // 2 at top level, 2 nested, third listener not notified (unchanged)
+        }
+
+        @Test
+        void shouldAllowSimpleVetoingOfValue_2() {
+            StringProperty property = new SimpleStringProperty("B");
+
+            L list = create(il1, il2);
+
+            list.add((ChangeListener<String>) (obs, o, n) -> {
+                records.add("CL1: changed from " + o + " to " + n);
+            });
+
+            list.add((ChangeListener<String>) (obs, o, n) -> {
+                records.add("CL2: changed from " + o + " to " + n);
+
+                if (!n.equals("A")) {  // This check is normally done by the property
+                    property.set("A");
+                    notifyListeners(list, property, n);
+                }
+            });
+
+            list.add((ChangeListener<String>) (obs, o, n) -> {
+                records.add("CL3: changed from " + o + " to " + n);
+            });
+
+            list.remove(il1);
+            list.remove(il2);
+
+            notifyListeners(list, property, "A");  // triggers change from A to B
+
+            assertConsistentChangeSequence("A");
+            assertEquals(4, records.size());  // 2 at top level, 2 nested, third listener not notified (unchanged)
+        }
+
         /**
          * This tests add two change listeners that will never agree
          * on the final value (one sets the value to 2, the other to 3).
@@ -299,7 +364,7 @@ public abstract class ListenerListTestBase<L extends ListenerListBase> {
 
             StackOverflowError e = assertThrows(StackOverflowError.class, () -> notifyListeners(list, property, 0));
 
-            assertEquals("non-converging value detected in value modifying listeners on LongProperty [value: 2]; changed back from [3] to [2]", e.getMessage());
+            assertEquals("non-converging value detected in value modifying listeners on LongProperty [value: 2]; original value was: 0", e.getMessage());
         }
 
         /**
@@ -347,7 +412,7 @@ public abstract class ListenerListTestBase<L extends ListenerListBase> {
 
             StackOverflowError e = assertThrows(StackOverflowError.class, () -> notifyListeners(list, property, 0));
 
-            assertEquals("non-converging value detected in value modifying listeners on LongProperty [value: 30]; changed back from [20] to [30]", e.getMessage());
+            assertEquals("non-converging value detected in value modifying listeners on LongProperty [value: 30]; original value was: 0", e.getMessage());
         }
 
         /**
@@ -399,7 +464,7 @@ public abstract class ListenerListTestBase<L extends ListenerListBase> {
 
             StackOverflowError e = assertThrows(StackOverflowError.class, () -> notifyListeners(list, property, 0));
 
-            assertEquals("non-converging value detected in value modifying listeners on LongProperty [value: 30]; changed back from [20] to [30]", e.getMessage());
+            assertEquals("non-converging value detected in value modifying listeners on LongProperty [value: 30]; original value was: 0", e.getMessage());
         }
 
         /**
