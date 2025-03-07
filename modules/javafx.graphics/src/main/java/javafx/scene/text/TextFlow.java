@@ -401,7 +401,6 @@ public class TextFlow extends Pane {
         if (layout == null) {
             TextLayoutFactory factory = Toolkit.getToolkit().getTextLayoutFactory();
             layout = factory.createLayout();
-            layout.setTabAdvancePolicy(getTabSize(), null);
             needsContent = true;
         }
         if (needsContent) {
@@ -425,6 +424,7 @@ public class TextFlow extends Pane {
                 }
             }
             layout.setContent(spans);
+            layout.setTabAdvancePolicy(getTabSize(), null);
             needsContent = false;
         }
         return layout;
