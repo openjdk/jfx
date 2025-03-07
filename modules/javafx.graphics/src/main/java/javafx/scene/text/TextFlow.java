@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -53,10 +53,12 @@ import com.sun.javafx.geom.BaseBounds;
 import com.sun.javafx.geom.Point2D;
 import com.sun.javafx.geom.RectBounds;
 import com.sun.javafx.scene.text.GlyphList;
+import com.sun.javafx.scene.text.TabAdvancePolicy;
 import com.sun.javafx.scene.text.TextFlowHelper;
 import com.sun.javafx.scene.text.TextLayout;
 import com.sun.javafx.scene.text.TextLayoutFactory;
 import com.sun.javafx.scene.text.TextSpan;
+import com.sun.javafx.text.FixedTabAdvancePolicy;
 import com.sun.javafx.tk.Toolkit;
 
 /**
@@ -399,7 +401,7 @@ public class TextFlow extends Pane {
         if (layout == null) {
             TextLayoutFactory factory = Toolkit.getToolkit().getTextLayoutFactory();
             layout = factory.createLayout();
-            layout.setTabSize(getTabSize());
+            layout.setTabAdvancePolicy(getTabSize(), null);
             needsContent = true;
         }
         if (needsContent) {
@@ -522,7 +524,7 @@ public class TextFlow extends Pane {
                 }
                 @Override protected void invalidated() {
                     TextLayout layout = getTextLayout();
-                    if (layout.setTabSize(get())) {
+                    if (layout.setTabAdvancePolicy(getTabSize(), null)) {
                         requestLayout();
                     }
                 }

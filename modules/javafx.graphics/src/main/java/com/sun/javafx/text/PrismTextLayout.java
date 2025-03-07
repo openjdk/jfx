@@ -48,6 +48,7 @@ import com.sun.javafx.geom.Shape;
 import com.sun.javafx.geom.transform.BaseTransform;
 import com.sun.javafx.geom.transform.Translate2D;
 import com.sun.javafx.scene.text.GlyphList;
+import com.sun.javafx.scene.text.TabAdvancePolicy;
 import com.sun.javafx.scene.text.TextLayout;
 import com.sun.javafx.scene.text.TextSpan;
 
@@ -82,7 +83,7 @@ public abstract class PrismTextLayout implements TextLayout {
     private LayoutCache layoutCache;
     private Shape shape;
     private int flags;
-    private int tabSize = DEFAULT_TAB_SIZE;
+    private TabAdvancePolicy tabAdvancePolicy;
 
     public PrismTextLayout(int maxCacheSize) {
         this.maxCacheSize = maxCacheSize;
@@ -687,12 +688,13 @@ public abstract class PrismTextLayout implements TextLayout {
     }
 
     @Override
-    public boolean setTabSize(int spaces) {
-        if (spaces < 1) {
-            spaces = 1;
+    public boolean setTabAdvancePolicy(int tabSize, TabAdvancePolicy policy) {
+        if (policy == null) {
+            float spaceAdvance = getSpaceAdvance();
+            policy = new FixedTabAdvancePolicy(tabSize, spaceAdvance);
         }
-        if (tabSize != spaces) {
-            tabSize = spaces;
+        if (tabAdvancePolicy == null || (!tabAdvancePolicy.equals(policy))) {
+            tabAdvancePolicy = policy;
             relayout();
             return true;
         }
@@ -1081,23 +1083,21 @@ public abstract class PrismTextLayout implements TextLayout {
         }
     }
 
-    private float getTabAdvance() {
-        float spaceAdvance = 0;
+    private float getSpaceAdvance() {
         if (spans != null) {
-            /* Rich text case - use the first font (for now) */
+            // TextFlow case - use the first font
             for (int i = 0; i < spans.length; i++) {
                 TextSpan span = spans[i];
                 PGFont font = (PGFont)span.getFont();
                 if (font != null) {
                     FontStrike strike = font.getStrike(IDENTITY);
-                    spaceAdvance = strike.getCharAdvance(' ');
-                    break;
+                    return strike.getCharAdvance(' ');
                 }
             }
+            return 0.0f;
         } else {
-            spaceAdvance = strike.getCharAdvance(' ');
+            return strike.getCharAdvance(' ');
         }
-        return tabSize * spaceAdvance;
     }
 
     /*
@@ -1208,9 +1208,10 @@ public abstract class PrismTextLayout implements TextLayout {
             layout = glyphLayout();
         }
 
-        float tabAdvance = 0;
         if ((flags & FLAGS_HAS_TABS) != 0) {
-            tabAdvance = getTabAdvance();
+            if (tabAdvancePolicy == null) {
+                setTabAdvancePolicy(TextLayout.DEFAULT_TAB_SIZE, null);
+            }
         }
 
         BreakIterator boundary = null;
@@ -1244,8 +1245,9 @@ public abstract class PrismTextLayout implements TextLayout {
         for (int i = 0; i < runCount; i++) {
             TextRun run = runs[i];
             shape(run, chars, layout);
+
             if (run.isTab()) {
-                float tabStop = ((int)(lineWidth / tabAdvance) +1) * tabAdvance;
+                float tabStop = tabAdvancePolicy.nextTabStop(lineWidth);
                 run.setWidth(tabStop - lineWidth);
             }
 

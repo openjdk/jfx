@@ -215,13 +215,14 @@ public interface TextLayout {
     public Shape getShape(int type, TextSpan filter);
 
     /**
-     * Sets the tab size for the TextLayout.
+     * Sets the tab size and the tab advance policy for the TextLayout.
+     * A non-{@code null} policy will override the fixed tab size.
      *
-     * @param spaces the number of spaces represented by a tab. Default is 8.
-     * Minimum is 1, lower values will be clamped to 1.
-     * @return returns true if the call modifies the layout internal state.
+     * @param tabSize the tab size
+     * @param policy the tab advance policy, cannot be null
+     * @return returns true if the call modifies the layout internal state
      */
-    public boolean setTabSize(int spaces);
+    public boolean setTabAdvancePolicy(int tabSize, TabAdvancePolicy policy);
 
     /**
      * Calculates character index and insertion index for the given coordinates

@@ -25,45 +25,13 @@
 
 package javafx.scene.text;
 
-import javafx.css.converter.BooleanConverter;
-import javafx.css.converter.EnumConverter;
-import javafx.css.converter.SizeConverter;
-import com.sun.javafx.geom.BaseBounds;
-import com.sun.javafx.geom.Path2D;
-import com.sun.javafx.geom.RectBounds;
-import com.sun.javafx.geom.TransformedShape;
-import com.sun.javafx.geom.transform.BaseTransform;
-import com.sun.javafx.scene.DirtyBits;
-import com.sun.javafx.scene.NodeHelper;
-import com.sun.javafx.scene.shape.ShapeHelper;
-import com.sun.javafx.scene.shape.TextHelper;
-import com.sun.javafx.scene.text.GlyphList;
-import com.sun.javafx.scene.text.TextLayout;
-import com.sun.javafx.scene.text.TextLayoutFactory;
-import com.sun.javafx.scene.text.TextLine;
-import com.sun.javafx.scene.text.TextSpan;
-import com.sun.javafx.sg.prism.NGNode;
-import com.sun.javafx.sg.prism.NGShape;
-import com.sun.javafx.sg.prism.NGText;
-import com.sun.javafx.scene.text.FontHelper;
-import com.sun.javafx.text.TextRun;
-import com.sun.javafx.tk.Toolkit;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
 import javafx.beans.DefaultProperty;
 import javafx.beans.InvalidationListener;
 import javafx.beans.binding.DoubleBinding;
 import javafx.beans.binding.ObjectBinding;
-import javafx.scene.AccessibleAttribute;
-import javafx.scene.AccessibleRole;
-import javafx.scene.paint.Color;
-import javafx.scene.paint.Paint;
-import javafx.scene.shape.LineTo;
-import javafx.scene.shape.MoveTo;
-import javafx.scene.shape.PathElement;
-import javafx.scene.shape.Shape;
-import javafx.scene.shape.StrokeType;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.DoubleProperty;
 import javafx.beans.property.DoublePropertyBase;
@@ -86,12 +54,45 @@ import javafx.css.StyleableDoubleProperty;
 import javafx.css.StyleableIntegerProperty;
 import javafx.css.StyleableObjectProperty;
 import javafx.css.StyleableProperty;
+import javafx.css.converter.BooleanConverter;
+import javafx.css.converter.EnumConverter;
+import javafx.css.converter.SizeConverter;
 import javafx.geometry.BoundingBox;
 import javafx.geometry.Bounds;
 import javafx.geometry.NodeOrientation;
 import javafx.geometry.Point2D;
 import javafx.geometry.VPos;
+import javafx.scene.AccessibleAttribute;
+import javafx.scene.AccessibleRole;
 import javafx.scene.Node;
+import javafx.scene.paint.Color;
+import javafx.scene.paint.Paint;
+import javafx.scene.shape.LineTo;
+import javafx.scene.shape.MoveTo;
+import javafx.scene.shape.PathElement;
+import javafx.scene.shape.Shape;
+import javafx.scene.shape.StrokeType;
+import com.sun.javafx.geom.BaseBounds;
+import com.sun.javafx.geom.Path2D;
+import com.sun.javafx.geom.RectBounds;
+import com.sun.javafx.geom.TransformedShape;
+import com.sun.javafx.geom.transform.BaseTransform;
+import com.sun.javafx.scene.DirtyBits;
+import com.sun.javafx.scene.NodeHelper;
+import com.sun.javafx.scene.shape.ShapeHelper;
+import com.sun.javafx.scene.shape.TextHelper;
+import com.sun.javafx.scene.text.FontHelper;
+import com.sun.javafx.scene.text.GlyphList;
+import com.sun.javafx.scene.text.TabAdvancePolicy;
+import com.sun.javafx.scene.text.TextLayout;
+import com.sun.javafx.scene.text.TextLayoutFactory;
+import com.sun.javafx.scene.text.TextLine;
+import com.sun.javafx.scene.text.TextSpan;
+import com.sun.javafx.sg.prism.NGNode;
+import com.sun.javafx.sg.prism.NGShape;
+import com.sun.javafx.sg.prism.NGText;
+import com.sun.javafx.text.FixedTabAdvancePolicy;
+import com.sun.javafx.tk.Toolkit;
 
 /**
  * The {@code Text} class defines a node that displays a text.
@@ -314,7 +315,7 @@ public non-sealed class Text extends Shape {
             } else {
                 layout.setDirection(TextLayout.DIRECTION_LTR);
             }
-            layout.setTabSize(getTabSize());
+            layout.setTabAdvancePolicy(getTabSize(), null);
         }
         return layout;
     }
@@ -1911,7 +1912,7 @@ public non-sealed class Text extends Shape {
                     @Override protected void invalidated() {
                         if (!isSpan()) {
                             TextLayout layout = getTextLayout();
-                            if (layout.setTabSize(get())) {
+                            if (layout.setTabAdvancePolicy(getTabSize(), null)) {
                                 needsTextLayout();
                             }
                             NodeHelper.markDirty(Text.this, DirtyBits.TEXT_ATTRS);
