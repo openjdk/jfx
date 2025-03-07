@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,11 +25,13 @@
 
 package javafx.scene.control;
 
-import javafx.css.PseudoClass;
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.ObjectPropertyBase;
+import javafx.beans.property.ReadOnlyBooleanProperty;
+import javafx.beans.property.ReadOnlyBooleanWrapper;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
+import javafx.css.PseudoClass;
 import javafx.event.ActionEvent;
 import javafx.event.Event;
 import javafx.event.EventHandler;
@@ -39,8 +41,7 @@ import javafx.scene.AccessibleAction;
 import javafx.scene.AccessibleRole;
 import javafx.scene.Node;
 import javafx.scene.control.skin.MenuButtonSkin;
-import javafx.beans.property.ReadOnlyBooleanProperty;
-import javafx.beans.property.ReadOnlyBooleanWrapper;
+import com.sun.javafx.tk.Toolkit;
 
 /**
  * MenuButton is a button which, when clicked or pressed, will show a
@@ -368,10 +369,13 @@ public class MenuButton extends ButtonBase {
     /**
      * Shows the {@link ContextMenu}, assuming this MenuButton is not disabled.
      *
+     * @throws IllegalStateException if this method is called on a thread
+     *     other than the JavaFX Application Thread.
      * @see #isDisabled()
      * @see #isShowing()
      */
     public void show() {
+        Toolkit.getToolkit().checkFxUserThread();
         // TODO: isBound check is probably unnecessary here
         if (!isDisabled() && !showing.isBound()) {
             setShowing(true);
@@ -381,9 +385,12 @@ public class MenuButton extends ButtonBase {
     /**
      * Hides the {@link ContextMenu}.
      *
+     * @throws IllegalStateException if this method is called on a thread
+     *     other than the JavaFX Application Thread.
      * @see #isShowing()
      */
     public void hide() {
+        Toolkit.getToolkit().checkFxUserThread();
         // TODO: isBound check is probably unnecessary here
         if (!showing.isBound()) {
             setShowing(false);

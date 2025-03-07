@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,10 +25,6 @@
 
 package javafx.scene.control;
 
-import com.sun.javafx.beans.IDProperty;
-import com.sun.javafx.collections.TrackableObservableList;
-import com.sun.javafx.util.Utils;
-
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.ObjectPropertyBase;
 import javafx.collections.ListChangeListener.Change;
@@ -44,6 +40,10 @@ import javafx.scene.Node;
 import javafx.scene.Scene;
 import javafx.scene.control.skin.ContextMenuSkin;
 import javafx.stage.Window;
+import com.sun.javafx.beans.IDProperty;
+import com.sun.javafx.collections.TrackableObservableList;
+import com.sun.javafx.tk.Toolkit;
+import com.sun.javafx.util.Utils;
 
 /**
  * <p>
@@ -236,12 +236,16 @@ public class ContextMenu extends PopupControl {
      * <p>
      * This function is useful for finely tuning the position of a menu,
      * relative to the parent node to ensure close alignment.
+     *
      * @param anchor the anchor node
      * @param side the side
      * @param dx the dx value for the x-axis
      * @param dy the dy value for the y-axis
+     * @throws IllegalStateException if this method is called on a thread
+     *     other than the JavaFX Application Thread.
      */
-     public void show(Node anchor, Side side, double dx, double dy) {
+    public void show(Node anchor, Side side, double dx, double dy) {
+        Toolkit.getToolkit().checkFxUserThread();
         if (anchor == null) return;
         if (getItems().size() == 0) return;
 
@@ -266,12 +270,16 @@ public class ContextMenu extends PopupControl {
      * given its size requirements, the necessary adjustments are made to bring
      * the {@code ContextMenu} back on screen. This also means that the
      * {@code ContextMenu} will not span multiple monitors.
+     *
      * @param anchor the anchor node
      * @param screenX the x position of the anchor in screen coordinates
      * @param screenY the y position of the anchor in screen coordinates
+     * @throws IllegalStateException if this method is called on a thread
+     *     other than the JavaFX Application Thread.
      */
     @Override
     public void show(Node anchor, double screenX, double screenY) {
+        Toolkit.getToolkit().checkFxUserThread();
         if (anchor == null) return;
         if (getItems().size() == 0) return;
         getScene().setNodeOrientation(anchor.getEffectiveNodeOrientation());
@@ -283,8 +291,13 @@ public class ContextMenu extends PopupControl {
      * is called that the {@code ContextMenu} was showing.
      * <p>
      * If this {@code ContextMenu} is not showing, then nothing happens.
+     *
+     * @throws IllegalStateException if this method is called on a thread
+     *     other than the JavaFX Application Thread.
      */
-    @Override public void hide() {
+    @Override
+    public void hide() {
+        Toolkit.getToolkit().checkFxUserThread();
         if (!isShowing()) return;
         Event.fireEvent(this, new Event(Menu.ON_HIDING));
         super.hide();

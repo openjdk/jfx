@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,15 +25,24 @@
 
 package javafx.scene.control;
 
+import javafx.beans.property.BooleanProperty;
+import javafx.beans.property.ObjectProperty;
+import javafx.beans.property.ObjectPropertyBase;
+import javafx.beans.property.ReadOnlyBooleanProperty;
+import javafx.beans.property.ReadOnlyBooleanWrapper;
+import javafx.beans.property.SimpleBooleanProperty;
+import javafx.beans.property.SimpleObjectProperty;
+import javafx.beans.property.SimpleStringProperty;
+import javafx.beans.property.StringProperty;
 import javafx.collections.MapChangeListener;
 import javafx.css.PseudoClass;
-import javafx.beans.property.*;
 import javafx.event.ActionEvent;
 import javafx.event.Event;
 import javafx.event.EventHandler;
 import javafx.event.EventType;
 import javafx.scene.AccessibleAction;
 import javafx.scene.AccessibleAttribute;
+import com.sun.javafx.tk.Toolkit;
 
 /**
  * Abstract base class for ComboBox-like controls. A ComboBox typically has
@@ -385,12 +394,16 @@ public abstract class ComboBoxBase<T> extends Control {
      **************************************************************************/
 
     /**
-     * Requests that the ComboBox display the popup aspect of the user interface.
+     * Requests that the ComboBox display the popup associated with this control.
      * As mentioned in the {@link ComboBoxBase} class javadoc, what is actually
      * shown when this method is called is undefined, but commonly it is some
      * form of popup or dialog window.
+     *
+     * @throws IllegalStateException if this method is called on a thread
+     *     other than the JavaFX Application Thread.
      */
     public void show() {
+        Toolkit.getToolkit().checkFxUserThread();
         if (!isDisabled()) {
             setShowing(true);
         }
@@ -398,8 +411,12 @@ public abstract class ComboBoxBase<T> extends Control {
 
     /**
      * Closes the popup / dialog that was shown when {@link #show()} was called.
+     *
+     * @throws IllegalStateException if this method is called on a thread
+     *     other than the JavaFX Application Thread.
      */
     public void hide() {
+        Toolkit.getToolkit().checkFxUserThread();
         if (isShowing()) {
             setShowing(false);
         }
