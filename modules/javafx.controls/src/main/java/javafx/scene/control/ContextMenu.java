@@ -293,7 +293,7 @@ public class ContextMenu extends PopupControl {
      * If this {@code ContextMenu} is not showing, then nothing happens.
      *
      * @throws IllegalStateException if this method is called on a thread
-     * other than the JavaFX Application Thread.
+     *     other than the JavaFX Application Thread.
      */
     @Override
     public void hide() {

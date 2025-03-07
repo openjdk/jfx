@@ -494,7 +494,7 @@ public class ChoiceBox<T> extends Control {
      * Closes the list of choices.
      *
      * @throws IllegalStateException if this method is called on a thread
-     * other than the JavaFX Application Thread.
+     *     other than the JavaFX Application Thread.
      */
     public void hide() {
         Toolkit.getToolkit().checkFxUserThread();
