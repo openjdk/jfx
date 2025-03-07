@@ -242,7 +242,7 @@ public class ContextMenu extends PopupControl {
      * @param dx the dx value for the x-axis
      * @param dy the dy value for the y-axis
      * @throws IllegalStateException if this method is called on a thread
-     * other than the JavaFX Application Thread.
+     *     other than the JavaFX Application Thread.
      */
     public void show(Node anchor, Side side, double dx, double dy) {
         Toolkit.getToolkit().checkFxUserThread();
@@ -275,7 +275,7 @@ public class ContextMenu extends PopupControl {
      * @param screenX the x position of the anchor in screen coordinates
      * @param screenY the y position of the anchor in screen coordinates
      * @throws IllegalStateException if this method is called on a thread
-     * other than the JavaFX Application Thread.
+     *     other than the JavaFX Application Thread.
      */
     @Override
     public void show(Node anchor, double screenX, double screenY) {

@@ -512,7 +512,7 @@ public abstract class PopupWindow extends Window {
      * Hide this Popup and all its children
      *
      * @throws IllegalStateException if this method is called on a thread
-     * other than the JavaFX Application Thread.
+     *     other than the JavaFX Application Thread.
      */
     @Override
     public void hide() {

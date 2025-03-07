@@ -370,7 +370,7 @@ public class MenuButton extends ButtonBase {
      * Shows the {@link ContextMenu}, assuming this MenuButton is not disabled.
      *
      * @throws IllegalStateException if this method is called on a thread
-     * other than the JavaFX Application Thread.
+     *     other than the JavaFX Application Thread.
      * @see #isDisabled()
      * @see #isShowing()
      */
@@ -386,7 +386,7 @@ public class MenuButton extends ButtonBase {
      * Hides the {@link ContextMenu}.
      *
      * @throws IllegalStateException if this method is called on a thread
-     * other than the JavaFX Application Thread.
+     *     other than the JavaFX Application Thread.
      * @see #isShowing()
      */
     public void hide() {

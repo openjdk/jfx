@@ -408,7 +408,7 @@ public class Menu extends MenuItem {
      * then this will cause the {@link ContextMenu} to be shown.
      *
      * @throws IllegalStateException if this method is called on a thread
-     * other than the JavaFX Application Thread.
+     *     other than the JavaFX Application Thread.
      */
     public void show() {
         Toolkit.getToolkit().checkFxUserThread();
@@ -422,7 +422,7 @@ public class Menu extends MenuItem {
      * has no effect.
      *
      * @throws IllegalStateException if this method is called on a thread
-     * other than the JavaFX Application Thread.
+     *     other than the JavaFX Application Thread.
      */
     public void hide() {
         Toolkit.getToolkit().checkFxUserThread();

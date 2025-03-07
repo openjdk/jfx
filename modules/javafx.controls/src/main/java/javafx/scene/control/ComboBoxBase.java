@@ -400,7 +400,7 @@ public abstract class ComboBoxBase<T> extends Control {
      * form of popup or dialog window.
      *
      * @throws IllegalStateException if this method is called on a thread
-     * other than the JavaFX Application Thread.
+     *     other than the JavaFX Application Thread.
      */
     public void show() {
         Toolkit.getToolkit().checkFxUserThread();
@@ -413,7 +413,7 @@ public abstract class ComboBoxBase<T> extends Control {
      * Closes the popup / dialog that was shown when {@link #show()} was called.
      *
      * @throws IllegalStateException if this method is called on a thread
-     * other than the JavaFX Application Thread.
+     *     other than the JavaFX Application Thread.
      */
     public void hide() {
         Toolkit.getToolkit().checkFxUserThread();
