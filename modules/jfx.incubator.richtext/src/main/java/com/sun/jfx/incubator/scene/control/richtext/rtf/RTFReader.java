@@ -784,9 +784,9 @@ public class RTFReader extends RTFParser {
                 Style defined = style.realize();
                 Object stype = defined.getAttribute(STYLE_TYPE);
                 Map<Integer, Style> toMap;
-                if (STYLE_SECTION.equals(stype)) {
+                if (stype == STYLE_SECTION) {
                     toMap = secStyles;
-                } else if (STYLE_CHARACTER.equals(stype)) {
+                } else if (stype == STYLE_CHARACTER) {
                     toMap = chrStyles;
                 } else {
                     toMap = pgfStyles;
