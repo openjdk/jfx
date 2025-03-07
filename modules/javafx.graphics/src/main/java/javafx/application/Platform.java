@@ -413,6 +413,7 @@ public final class Platform {
     private static ReadOnlyBooleanWrapper accessibilityActiveProperty;
 
     public static boolean isAccessibilityActive() {
+        Toolkit.getToolkit().checkFxUserThread();
         return accessibilityActiveProperty == null ? false : accessibilityActiveProperty.get();
     }
 
@@ -426,9 +427,12 @@ public final class Platform {
      *
      * @return the read-only boolean property indicating if accessibility is active
      *
+     * @throws IllegalStateException if this method is called on a thread
+     *     other than the JavaFX Application Thread.
      * @since JavaFX 8u40
      */
     public static ReadOnlyBooleanProperty accessibilityActiveProperty() {
+        Toolkit.getToolkit().checkFxUserThread();
         if (accessibilityActiveProperty == null) {
             accessibilityActiveProperty = new ReadOnlyBooleanWrapper(Platform.class, "accessibilityActive");
             accessibilityActiveProperty.bind(PlatformImpl.accessibilityActiveProperty());
