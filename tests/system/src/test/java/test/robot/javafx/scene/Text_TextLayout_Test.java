@@ -27,6 +27,7 @@ package test.robot.javafx.scene;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import java.util.List;
 import java.util.concurrent.CountDownLatch;
@@ -297,6 +298,20 @@ public class Text_TextLayout_Test {
         assertTrue(s0.getHeight() > 0);
         assertEquals(s0.getHeight(), s1.getHeight(), EPS);
         assertEquals(s1.getHeight(), s2.getHeight(), EPS);
+    }
+
+    // testing IOOBE exceptions
+    @Test
+    public void testIOOBExceptions() {
+        setText("__\n____\n______");
+        waitForIdle();
+        LayoutInfo la = text.getLayoutInfo();
+        assertThrows(IndexOutOfBoundsException.class, () -> la.getTextLine(-1, true));
+        assertThrows(IndexOutOfBoundsException.class, () -> la.getTextLine(la.getTextLineCount(), true));
+
+        CaretInfo ci = la.caretInfo(0, true);
+        assertThrows(IndexOutOfBoundsException.class, () -> ci.getSegmentAt(-1));
+        assertThrows(IndexOutOfBoundsException.class, () -> ci.getSegmentAt(ci.getSegmentCount()));
     }
 
     private void setText(String s) {
