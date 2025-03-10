@@ -53,7 +53,7 @@ public abstract class ListenerManager<T, I extends ObservableValue<? extends T>>
      *
      * @param instance the instance to which the listeners belong, cannot be {@code null}
      * @param listener a listener to add, cannot be {@code null}
-     * @throws NullPointerException when listener is {@code null}
+     * @throws NullPointerException when any argument is {@code null}
      */
     public void addListener(I instance, InvalidationListener listener) {
         Objects.requireNonNull(listener);
@@ -78,7 +78,7 @@ public abstract class ListenerManager<T, I extends ObservableValue<? extends T>>
      *
      * @param instance the instance to which the listeners belong, cannot be {@code null}
      * @param listener a listener to add, cannot be {@code null}
-     * @throws NullPointerException when listener is {@code null}
+     * @throws NullPointerException when any argument is {@code null}
      */
     public void addListener(I instance, ChangeListener<? super T> listener) {
         Objects.requireNonNull(listener);
@@ -104,7 +104,7 @@ public abstract class ListenerManager<T, I extends ObservableValue<? extends T>>
      * @param instance the instance to which the listeners belong, cannot be {@code null}
      * @param listener a listener to remove, cannot be {@code null}
      * @return {@code true} if there are no more listeners registered after this call completes, otherwise {@code false}
-     * @throws NullPointerException when listener is {@code null}
+     * @throws NullPointerException when any argument is {@code null}
      */
     public boolean removeListener(I instance, Object listener) {
         Objects.requireNonNull(listener);
@@ -139,6 +139,7 @@ public abstract class ListenerManager<T, I extends ObservableValue<? extends T>>
      * @param oldValue the previous value before this change occurred, can be {@code null}
      * @param listenerData the listener data associated with the instance,
      *   can be {@code null} which means there are no listeners to notify
+     * @throws NullPointerException when {@code instance} is {@code null}
      */
     public void fireValueChanged(I instance, T oldValue, Object listenerData) {
         if (listenerData instanceof ListenerList) {

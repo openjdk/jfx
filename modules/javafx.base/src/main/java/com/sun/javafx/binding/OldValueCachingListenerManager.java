@@ -61,7 +61,7 @@ public abstract class OldValueCachingListenerManager<T, I extends ObservableValu
      *
      * @param instance the instance to which the listeners belong, cannot be {@code null}
      * @param listener a listener to add, cannot be {@code null}
-     * @throws NullPointerException when listener is {@code null}
+     * @throws NullPointerException when any argument is {@code null}
      */
     public void addListener(I instance, InvalidationListener listener) {
         Objects.requireNonNull(listener);
@@ -95,7 +95,7 @@ public abstract class OldValueCachingListenerManager<T, I extends ObservableValu
      *
      * @param instance the instance to which the listeners belong, cannot be {@code null}
      * @param listener a listener to add, cannot be {@code null}
-     * @throws NullPointerException when listener is {@code null}
+     * @throws NullPointerException when any argument is {@code null}
      */
     public void addListener(I instance, ChangeListener<? super T> listener) {
         Objects.requireNonNull(listener);
@@ -138,7 +138,7 @@ public abstract class OldValueCachingListenerManager<T, I extends ObservableValu
      *
      * @param instance the instance to which the listeners belong, cannot be {@code null}
      * @param listener a listener to remove, cannot be {@code null}
-     * @throws NullPointerException when listener is {@code null}
+     * @throws NullPointerException when any argument is {@code null}
      */
     public void removeListener(I instance, Object listener) {
         Objects.requireNonNull(listener);
@@ -164,6 +164,7 @@ public abstract class OldValueCachingListenerManager<T, I extends ObservableValu
      * @param instance the instance to which the listeners belong, cannot be {@code null}
      * @param listenerData the listener data associated with the instance,
      *   can be {@code null} which means there are no listeners to notify
+     * @throws NullPointerException when {@code instance} is {@code null}
      */
     public void fireValueChanged(I instance, Object listenerData) {
         if (listenerData instanceof OldValueCachingListenerList) {

@@ -43,16 +43,18 @@ public abstract class ListenerManagerBase<T, I extends ObservableValue<? extends
     /**
      * Gets the listener data under management.
      *
-     * @param instance the instance it is located in, never {@code null}
+     * @param instance the instance it is located in, cannot be {@code null}
      * @return the listener data, can be {@code null}
+     * @throws NullPointerException when {@code instance} is {@code null}
      */
     protected abstract Object getData(I instance);
 
     /**
      * Sets the listener data under management.
      *
-     * @param instance the instance it is located in, never {@code null}
+     * @param instance the instance it is located in, cannot be {@code null}
      * @param data the data to set, can be {@code null}
+     * @throws NullPointerException when {@code instance} is {@code null}
      */
     protected abstract void setData(I instance, Object data);
 
