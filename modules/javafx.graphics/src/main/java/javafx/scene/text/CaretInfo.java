@@ -56,6 +56,8 @@ public sealed abstract class CaretInfo permits PrismCaretInfo {
      *
      * @param index the line index
      * @return the bounds of the caret segment
+     * @throws IndexOutOfBoundsException if the index is outside of the range if the index is out of range
+     *     {@code (index < 0 || index > getSegmentCount())}
      */
     public abstract Rectangle2D getSegmentAt(int index);
 }

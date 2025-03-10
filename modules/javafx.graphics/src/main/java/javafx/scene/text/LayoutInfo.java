@@ -76,6 +76,8 @@ public abstract class LayoutInfo {
      * @param index the line index
      * @param includeLineSpacing determines whether the result includes the line spacing
      * @return the {@code TextLineInfo} object
+     * @throws IndexOutOfBoundsException if the index is outside of the range if the index is out of range
+     *     {@code (index < 0 || index > getTextLineCount())}
      */
     public abstract TextLineInfo getTextLine(int index, boolean includeLineSpacing);
 

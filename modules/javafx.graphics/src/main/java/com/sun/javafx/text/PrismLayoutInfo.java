@@ -27,6 +27,7 @@ package com.sun.javafx.text;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Objects;
 import javafx.geometry.Insets;
 import javafx.geometry.Rectangle2D;
 import javafx.scene.text.CaretInfo;
@@ -84,11 +85,13 @@ public abstract class PrismLayoutInfo extends LayoutInfo {
 
     @Override
     public TextLineInfo getTextLine(int index, boolean includeLineSpacing) {
+        TextLine[] lines = layout.getLines();
+        Objects.checkIndex(index, lines.length);
         Insets m = insets();
         double dx = m.getLeft(); // TODO rtl?
         double dy = m.getTop();
         double sp = includeLineSpacing ? lineSpacing() : 0.0;
-        return TextUtils.toLineInfo(layout.getLines()[index], dx, dy, sp);
+        return TextUtils.toLineInfo(lines[index], dx, dy, sp);
     }
 
     @Override
