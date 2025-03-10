@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2023, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,8 +25,11 @@
 
 package javafx.scene.control;
 
+import javafx.beans.DefaultProperty;
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.ObjectPropertyBase;
+import javafx.beans.property.ReadOnlyBooleanProperty;
+import javafx.beans.property.ReadOnlyBooleanWrapper;
 import javafx.collections.ListChangeListener.Change;
 import javafx.collections.ObservableList;
 import javafx.event.Event;
@@ -34,12 +37,9 @@ import javafx.event.EventDispatchChain;
 import javafx.event.EventHandler;
 import javafx.event.EventType;
 import javafx.scene.Node;
-
 import com.sun.javafx.collections.TrackableObservableList;
 import com.sun.javafx.scene.control.Logging;
-import javafx.beans.DefaultProperty;
-import javafx.beans.property.ReadOnlyBooleanProperty;
-import javafx.beans.property.ReadOnlyBooleanWrapper;
+import com.sun.javafx.tk.Toolkit;
 
 /**
  * <p>
@@ -406,8 +406,12 @@ public class Menu extends MenuItem {
     /**
      * If the Menu is not disabled and the {@link ContextMenu} is not already showing,
      * then this will cause the {@link ContextMenu} to be shown.
+     *
+     * @throws IllegalStateException if this method is called on a thread
+     *     other than the JavaFX Application Thread.
      */
     public void show() {
+        Toolkit.getToolkit().checkFxUserThread();
         if (isDisable()) return;
         setShowing(true);
     }
@@ -416,8 +420,12 @@ public class Menu extends MenuItem {
      * Hides the {@link ContextMenu} if it was previously showing, and any showing
      * submenus. If this menu is not showing, then invoking this function
      * has no effect.
+     *
+     * @throws IllegalStateException if this method is called on a thread
+     *     other than the JavaFX Application Thread.
      */
     public void hide() {
+        Toolkit.getToolkit().checkFxUserThread();
         if (!isShowing()) return;
         // hide all sub menus
         for (MenuItem i : getItems()) {
