@@ -127,7 +127,8 @@ public class PlatformTest {
 
     @Test
     public void accessibilityActiveNotOnFxThread() {
-        assertThrows(IllegalStateException.class, Platform::isAccessibilityActive);
         assertThrows(IllegalStateException.class, Platform::accessibilityActiveProperty);
+        assertThrows(IllegalStateException.class, Platform::getPreferences);
+        assertThrows(IllegalStateException.class, Platform::isAccessibilityActive);
     }
 }

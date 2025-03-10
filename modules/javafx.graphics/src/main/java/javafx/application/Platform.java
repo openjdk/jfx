@@ -449,12 +449,15 @@ public final class Platform {
      * by JavaFX when the operating system reports that a platform preference has changed.
      *
      * @return the {@code Preferences} instance
+     * @throws IllegalStateException if this method is called on a thread
+     *     other than the JavaFX Application Thread.
      * @see <a href="Platform.Preferences.html#preferences-table-windows">Windows preferences</a>
      * @see <a href="Platform.Preferences.html#preferences-table-macos">macOS preferences</a>
      * @see <a href="Platform.Preferences.html#preferences-table-linux">Linux preferences</a>
      * @since 22
      */
     public static Preferences getPreferences() {
+        Toolkit.getToolkit().checkFxUserThread();
         PlatformImpl.checkPreferencesSupport();
         return PlatformImpl.getPlatformPreferences();
     }
