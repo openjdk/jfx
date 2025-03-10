@@ -131,9 +131,9 @@ public final class EventType<T extends Event> implements Serializable{
     }
 
     /**
-     * Internal constructor that skips various checks
+     * Internal constructor for the ROOT instance that skips various checks
      */
-    private EventType(String name, boolean marker) {
+    private EventType(String name, boolean ignored) {
         this.superType = null;
         this.name = name;
     }
