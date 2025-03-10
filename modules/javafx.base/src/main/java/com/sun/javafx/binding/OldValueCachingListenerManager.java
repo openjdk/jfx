@@ -68,25 +68,16 @@ public abstract class OldValueCachingListenerManager<T, I extends ObservableValu
 
         instance.getValue();  // always trigger validation when adding an invalidation listener (required by tests)
 
-        Object data = getData(instance);
+        switch (getData(instance)) {
+            case null -> setData(instance, listener);
+            case OldValueCachingListenerList<?> list -> list.add(listener);
+            case ChangeListenerWrapper<?> wrapper -> {
+                OldValueCachingListenerList<Object> list = new OldValueCachingListenerList<>(wrapper.listener, listener);
 
-        if (data == null) {
-            setData(instance, listener);
-        }
-        else if (data instanceof OldValueCachingListenerList<?> list) {
-            list.add(listener);
-        }
-        else if (data instanceof ChangeListenerWrapper) {
-            @SuppressWarnings("unchecked")
-            ChangeListenerWrapper<T> wrapper = (ChangeListenerWrapper<T>) data;
-            OldValueCachingListenerList<T> list = new OldValueCachingListenerList<>(wrapper.listener, listener);
-
-            list.putLatestValue(wrapper.latestValue);
-
-            setData(instance, list);
-        }
-        else {
-            setData(instance, new OldValueCachingListenerList<>(data, listener));
+                list.putLatestValue(wrapper.latestValue);
+                setData(instance, list);
+            }
+            case Object data -> setData(instance, new OldValueCachingListenerList<>(data, listener));
         }
     }
 
@@ -100,36 +91,32 @@ public abstract class OldValueCachingListenerManager<T, I extends ObservableValu
     public void addListener(I instance, ChangeListener<? super T> listener) {
         Objects.requireNonNull(listener);
 
-        Object data = getData(instance);
+        switch (getData(instance)) {
+            case null -> setData(instance, new ChangeListenerWrapper<>(listener, instance.getValue()));
+            case OldValueCachingListenerList<?> genericList -> {
+                @SuppressWarnings("unchecked")
+                OldValueCachingListenerList<T> list = (OldValueCachingListenerList<T>) genericList;
 
-        if (data == null) {
-            setData(instance, new ChangeListenerWrapper<>(listener, instance.getValue()));
-        }
-        else if (data instanceof OldValueCachingListenerList) {
-            @SuppressWarnings("unchecked")
-            OldValueCachingListenerList<T> list = (OldValueCachingListenerList<T>) data;
+                if (!list.hasChangeListeners()) {
+                    list.putLatestValue(instance.getValue());
+                }
 
-            if (!list.hasChangeListeners()) {
-                list.putLatestValue(instance.getValue());
+                list.add(listener);
             }
+            case ChangeListenerWrapper<?> wrapper -> {
+                OldValueCachingListenerList<Object> list = new OldValueCachingListenerList<>(wrapper.listener, listener);
 
-            list.add(listener);
-        }
-        else if (data instanceof ChangeListenerWrapper) {
-            @SuppressWarnings("unchecked")
-            ChangeListenerWrapper<T> wrapper = (ChangeListenerWrapper<T>) data;
-            OldValueCachingListenerList<T> list = new OldValueCachingListenerList<>(wrapper.listener, listener);
+                list.putLatestValue(wrapper.latestValue);
 
-            list.putLatestValue(wrapper.latestValue);
+                setData(instance, list);
+            }
+            case Object data -> {
+                OldValueCachingListenerList<T> list = new OldValueCachingListenerList<>(data, listener);
 
-            setData(instance, list);
-        }
-        else {
-            OldValueCachingListenerList<T> list = new OldValueCachingListenerList<>(data, listener);
+                list.putLatestValue(instance.getValue());
 
-            list.putLatestValue(instance.getValue());
-
-            setData(instance, list);
+                setData(instance, list);
+            }
         }
     }
 

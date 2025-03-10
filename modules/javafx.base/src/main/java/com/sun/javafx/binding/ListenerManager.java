@@ -60,16 +60,10 @@ public abstract class ListenerManager<T, I extends ObservableValue<? extends T>>
 
         instance.getValue();  // always trigger validation when adding an invalidation listener (required by tests)
 
-        Object data = getData(instance);
-
-        if (data == null) {
-            setData(instance, listener);
-        }
-        else if (data instanceof ListenerList<?> list) {
-            list.add(listener);
-        }
-        else {
-            setData(instance, new ListenerList<>(data, listener));
+        switch (getData(instance)) {
+            case null -> setData(instance, listener);
+            case ListenerList<?> list -> list.add(listener);
+            case Object data -> setData(instance, new ListenerList<>(data, listener));
         }
     }
 
@@ -85,16 +79,10 @@ public abstract class ListenerManager<T, I extends ObservableValue<? extends T>>
 
         instance.getValue();  // always trigger validation when adding a change listener (required by tests)
 
-        Object data = getData(instance);
-
-        if (data == null) {
-            setData(instance, listener);
-        }
-        else if (data instanceof ListenerList<?> list) {
-            list.add(listener);
-        }
-        else {
-            setData(instance, new ListenerList<>(data, listener));
+        switch (getData(instance)) {
+            case null -> setData(instance, listener);
+            case ListenerList<?> list -> list.add(listener);
+            case Object data -> setData(instance, new ListenerList<>(data, listener));
         }
     }
 
