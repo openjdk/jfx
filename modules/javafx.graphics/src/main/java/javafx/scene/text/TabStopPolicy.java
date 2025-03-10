@@ -23,17 +23,17 @@
  * questions.
  */
 
-package com.sun.javafx.scene.text;
+package javafx.scene.text;
 
 /**
- * TabAdvancePolicy provides the next tab advance for any given position within the TextLayout.
+ * TabStopPolicy determines the tab stop positions within the {@code TextFlow} text layout.
  */
-public interface TabAdvancePolicy {
+public interface TabStopPolicy {
     /**
      * Provides next tab stop for the given position.
      *
      * @param position the current position
      * @return the next tab stop, always greater than the supplied position
      */
-    public float nextTabStop(float position);
+    public double nextTabStop(double position);
 }

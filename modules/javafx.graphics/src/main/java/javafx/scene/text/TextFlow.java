@@ -31,6 +31,7 @@ import java.util.List;
 import javafx.beans.property.DoubleProperty;
 import javafx.beans.property.IntegerProperty;
 import javafx.beans.property.ObjectProperty;
+import javafx.beans.property.SimpleObjectProperty;
 import javafx.css.CssMetaData;
 import javafx.css.Styleable;
 import javafx.css.StyleableDoubleProperty;
@@ -424,7 +425,7 @@ public class TextFlow extends Pane {
                 }
             }
             layout.setContent(spans);
-            layout.setTabAdvancePolicy(getTabSize(), null);
+            layout.setTabAdvancePolicy(getTabSize(), getTabAdvancePolicy());
             needsContent = false;
         }
         return layout;
@@ -507,6 +508,10 @@ public class TextFlow extends Pane {
      * The size of a tab stop in spaces.
      * Values less than 1 are treated as 1. This value overrides the
      * {@code tabSize} of contained {@link Text} nodes.
+     * <p>
+     * Note that this method should not be used to control the tab placement when multiple {@code Text} nodes
+     * with different fonts are contained within this {@code TextFlow}.
+     * Instead, {@link #setTabAdvancePolicy(TabAdvancePolicy)} should be used.
      *
      * @defaultValue 8
      *
@@ -524,7 +529,7 @@ public class TextFlow extends Pane {
                 }
                 @Override protected void invalidated() {
                     TextLayout layout = getTextLayout();
-                    if (layout.setTabAdvancePolicy(getTabSize(), null)) {
+                    if (layout.setTabAdvancePolicy(getTabSize(), getTabAdvancePolicy())) {
                         requestLayout();
                     }
                 }
@@ -539,6 +544,68 @@ public class TextFlow extends Pane {
 
     public final void setTabSize(int spaces) {
         tabSizeProperty().set(spaces);
+    }
+
+    /**
+     * {@code TabAdvancePolicy} determines the tab stop positions within this {@code TextFlow}.
+     * <p>
+     * A non-null {@code TabAdvancePolicy} overrides values set by {@link #setTabSize(int)},
+     * as well as any values set by {@link Text#setTabSize(int)} in individual {@code Text} instances within
+     * this {@code TextFlow}.
+     *
+     * @defaultValue null
+     *
+     * @since 25
+     */
+    private SimpleObjectProperty<TabStopPolicy> tabStopPolicy;
+
+    public final ObjectProperty<TabStopPolicy> tabStopPolicyProperty() {
+        if (tabStopPolicy == null) {
+            tabStopPolicy = new SimpleObjectProperty() {
+                @Override
+                public Object getBean() {
+                    return TextFlow.this;
+                }
+
+                @Override
+                public String getName() {
+                    return "tabAdvancePolicy";
+                }
+
+                @Override
+                protected void invalidated() {
+                    TextLayout layout = getTextLayout();
+                    if (layout.setTabAdvancePolicy(getTabSize(), getTabAdvancePolicy())) {
+                        requestLayout();
+                    }
+                }
+            };
+        }
+        return tabStopPolicy;
+    }
+
+    public final TabStopPolicy getTabStopPolicy() {
+        return tabStopPolicy == null ? null : tabStopPolicy.get();
+    }
+
+    public final void setTabStopPolicy(TabStopPolicy policy) {
+        tabStopPolicyProperty().set(policy);
+    }
+
+    private TabAdvancePolicy getTabAdvancePolicy() {
+        // isolate the public tab stop policy from the internal tab advance policy
+        TabStopPolicy p = getTabStopPolicy();
+        if (p != null) {
+            return new TabAdvancePolicy() {
+                // TODO rtl
+                // TODO borders impact the text layout positions, see JDK-8341438
+                @Override
+                public float nextTabStop(float position) {
+                    return (float)p.nextTabStop(position);
+                }
+            };
+        }
+        return null;
     }
 
     @Override public final double getBaselineOffset() {
