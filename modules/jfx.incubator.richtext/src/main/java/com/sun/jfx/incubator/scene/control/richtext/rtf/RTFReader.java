@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 1997, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 1997, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -782,11 +782,11 @@ public class RTFReader extends RTFParser {
             HashMap<Integer, Style> secStyles = new HashMap<>();
             for (StyleDefiningDestination style : definedStyles.values()) {
                 Style defined = style.realize();
-                String stype = (String)defined.getAttribute(STYLE_TYPE);
+                Object stype = defined.getAttribute(STYLE_TYPE);
                 Map<Integer, Style> toMap;
-                if (stype.equals(STYLE_SECTION)) {
+                if (stype == STYLE_SECTION) {
                     toMap = secStyles;
-                } else if (stype.equals(STYLE_CHARACTER)) {
+                } else if (stype == STYLE_CHARACTER) {
                     toMap = chrStyles;
                 } else {
                     toMap = pgfStyles;
