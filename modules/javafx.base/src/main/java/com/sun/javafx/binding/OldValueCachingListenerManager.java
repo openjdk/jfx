@@ -40,7 +40,7 @@ import javafx.beans.value.ObservableValue;
  * When there are no listeners, the field will be {@code null}. When there is
  * only a single invalidation listener, the field will contain only that
  * listener (change listeners are wrapped to track old value). When there is more
- * than one listener, the field will hold a {@link OldValueCachingListenerList}. It
+ * than one listener, the field will hold an {@link OldValueCachingListenerList}. It
  * is recommended to never inspect this field directly but always use this manager to
  * interact with it.<p>
  *
@@ -191,7 +191,8 @@ public abstract class OldValueCachingListenerManager<T, I extends ObservableValu
         }
     }
 
-    static class ChangeListenerWrapper<T> implements ChangeListener<T> {
+    private static class ChangeListenerWrapper<T> implements ChangeListener<T> {
+
         private final ChangeListener<T> listener;
 
         private T latestValue;

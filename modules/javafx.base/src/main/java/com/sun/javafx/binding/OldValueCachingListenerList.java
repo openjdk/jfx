@@ -38,6 +38,7 @@ import javafx.beans.value.ObservableValue;
  * @param <T> the type of the values the observable provides
  */
 public class OldValueCachingListenerList<T> extends ListenerList<T> {
+
     private T latestValue;
 
     /**
