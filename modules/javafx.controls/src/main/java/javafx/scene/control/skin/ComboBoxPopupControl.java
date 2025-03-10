@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -57,6 +57,7 @@ import com.sun.javafx.scene.traversal.Algorithm;
 import com.sun.javafx.scene.traversal.Direction;
 import com.sun.javafx.scene.traversal.ParentTraversalEngine;
 import com.sun.javafx.scene.traversal.TraversalContext;
+import com.sun.javafx.tk.Toolkit;
 
 /**
  * An abstract class that extends the functionality of {@link ComboBoxBaseSkin}
@@ -258,7 +259,9 @@ public abstract class ComboBoxPopupControl<T> extends ComboBoxBaseSkin<T> {
     protected abstract StringConverter<T> getConverter();
 
     /** {@inheritDoc} */
-    @Override public void show() {
+    @Override
+    public void show() {
+        Toolkit.getToolkit().checkFxUserThread();
         if (getSkinnable() == null) {
             throw new IllegalStateException("ComboBox is null");
         }
@@ -274,7 +277,9 @@ public abstract class ComboBoxPopupControl<T> extends ComboBoxBaseSkin<T> {
     }
 
     /** {@inheritDoc} */
-    @Override public void hide() {
+    @Override
+    public void hide() {
+        Toolkit.getToolkit().checkFxUserThread();
         if (popup != null && popup.isShowing()) {
             popup.hide();
         }
