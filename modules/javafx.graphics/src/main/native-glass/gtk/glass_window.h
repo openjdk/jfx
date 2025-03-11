@@ -70,7 +70,7 @@ enum BoundsType {
 
 struct WindowGeometry {
     WindowGeometry(): final_width(), final_height(),
-    size_assigned(false), x(), y(), gravity_x(), gravity_y(), extents() {}
+    size_assigned(false), x(), y(), view_x(), view_y(), gravity_x(), gravity_y(), extents() {}
     // estimate of the final width the window will get after all pending
     // configure requests are processed by the window manager
     struct {
@@ -87,6 +87,9 @@ struct WindowGeometry {
 
     int x;
     int y;
+    int view_x;
+    int view_y;
+
     float gravity_x;
     float gravity_y;
 
@@ -107,7 +110,7 @@ public:
     virtual void commitIME(gchar *) = 0;
 
     virtual void paint(void* data, jint width, jint height) = 0;
-    virtual WindowFrameExtents get_frame_extents() = 0;
+    virtual WindowGeometry get_geometry() = 0;
 
     virtual void show_system_menu(int x, int y) = 0;
     virtual void enter_fullscreen() = 0;
@@ -306,7 +309,7 @@ public:
     void process_mouse_button(GdkEventButton*, bool synthesized = false);
     void work_around_compiz_state();
 
-    WindowFrameExtents get_frame_extents();
+    WindowGeometry get_geometry();
 
     void set_minimized(bool);
     void set_maximized(bool);
