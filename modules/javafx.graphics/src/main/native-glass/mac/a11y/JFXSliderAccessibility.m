@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2023, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -23,24 +23,51 @@
  * questions.
  */
 
-#import <Cocoa/Cocoa.h>
-#import <jni.h>
+#import "JFXSliderAccessibility.h"
 
-#define INCREMENT @"AXIncrement"
-#define DECREMENT @"AXDecrement"
+/*
+ * Implementation of the accessibility peer for the slider role
+ */
 
-@interface AccessibleBase : NSAccessibilityElement {
-@private
-jobject jAccessible;
-id parent;
+@implementation JFXSliderAccessibility
+- (NSAccessibilityRole)accessibilityRole
+{
+    return NSAccessibilitySliderRole;
 }
-- (id)initWithEnv:(JNIEnv*)env accessible:(jobject)jAccessible;
-- (jobject)getJAccessible;
-- (NSRect)accessibilityFrame;
-- (id)accessibilityParent;
-- (BOOL)isAccessibilityElement;
-- (BOOL)performAccessibleAction:(NSString*)actionId;
-+ (void) initializeRolesMap;
-@end
 
-jmethodID jAccessibilityAttributeNames;
+- (NSString *)accessibilityLabel
+{
+    return [super accessibilityLabel];
+}
+
+- (id)accessibilityValue
+{
+    return [super accessibilityValue];
+}
+
+- (id)accessibilityTitle
+{
+    return [super accessibilityTitle];
+}
+
+- (BOOL)accessibilityPerformIncrement
+{
+    return [self performAccessibleAction:INCREMENT];
+}
+
+- (BOOL)accessibilityPerformDecrement
+{
+    return [self performAccessibleAction:DECREMENT];
+}
+
+- (NSRect)accessibilityFrame
+{
+    return [super accessibilityFrame];
+}
+
+- (id)accessibilityParent
+{
+    return [super accessibilityParent];
+}
+
+@end
