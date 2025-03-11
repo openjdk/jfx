@@ -511,7 +511,7 @@ public class TextFlow extends Pane {
      * <p>
      * Note that this method should not be used to control the tab placement when multiple {@code Text} nodes
      * with different fonts are contained within this {@code TextFlow}.
-     * Instead, {@link #setTabAdvancePolicy(TabAdvancePolicy)} should be used.
+     * Instead, {@link #setTabStopPolicy(TabStopPolicy)} should be used.
      *
      * @defaultValue 8
      *
