@@ -25,8 +25,9 @@
 
 package com.sun.glass.ui.gtk.screencast;
 
-import com.sun.javafx.geom.Dimension;
-import com.sun.javafx.geom.Rectangle;
+import static com.sun.glass.ui.gtk.screencast.ScreencastHelper.SCREENCAST_DEBUG;
+import static java.nio.file.StandardWatchEventKinds.*;
+
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
 import java.io.IOException;
@@ -45,11 +46,8 @@ import java.util.Objects;
 import java.util.Properties;
 import java.util.Set;
 
-import static java.nio.file.StandardWatchEventKinds.ENTRY_CREATE;
-import static java.nio.file.StandardWatchEventKinds.ENTRY_DELETE;
-import static java.nio.file.StandardWatchEventKinds.ENTRY_MODIFY;
-import static java.nio.file.StandardWatchEventKinds.OVERFLOW;
-import static com.sun.glass.ui.gtk.screencast.ScreencastHelper.SCREENCAST_DEBUG;
+import com.sun.javafx.geom.Rectangle;
+import com.sun.javafx.geom.Rectangle.Dimension2Di;
 
 /**
  * Helper class for persistent storage of ScreenCast restore tokens
@@ -365,13 +363,10 @@ final class TokenStorage {
 
         // 2. Try screens of the same size but in different locations,
         // screens may have been moved while the token is still valid
-        List<Dimension> dimensions =
+        List<Dimension2Di> dimensions =
                 affectedScreenBounds
                 .stream()
-                .map(rectangle -> new Dimension(
-                        rectangle.width,
-                        rectangle.height
-                ))
+                .map(Dimension2Di::new)
                 .toList();
 
         for (TokenItem tokenItem : allTokenItems) {
