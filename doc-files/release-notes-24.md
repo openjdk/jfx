@@ -63,15 +63,15 @@ NOTE: The above will fail if you create a custom image using JDK 23 or earlier. 
 
 See [JDK-8337280](https://bugs.openjdk.org/browse/JDK-8337280) for more information.
 
-### Pluggable Image Loading via javax.imageio
+### Pluggable Image Loading via `javax.imageio`
 
 JavaFX 24 supports the Java Image I/O API, allowing applications to use third-party image loaders in addition to the built-in image loaders. This includes the ability to use variable-density image loaders for formats like SVG. When an image is loaded using a variable-density image loader, JavaFX rasterizes the image with the screen's DPI scaling.
 
-Applications that want to use this feature can use existing open-source Image I/O extension libraries, or register a custom Image I/O service provider instance with the IIORegistry class. Refer to the Java Image I/O documentation for more information.
+Applications that want to use this feature can use existing open-source Image I/O extension libraries, or register a custom Image I/O service provider instance with the `IIORegistry` class. Refer to the Java [Image I/O documentation](https://docs.oracle.com/en/java/javase/23/docs/api/java.desktop/javax/imageio/package-summary.html) for more information.
 
 See [JDK-8306707](https://bugs.openjdk.org/browse/JDK-8306707) for more information.
 
-### ScrollPane Consumes Navigation Keys Only When It Has Direct Focus
+### `ScrollPane` Consumes Navigation Keys Only When It Has Direct Focus
 
 `ScrollPane` now only responds to key events when it is the active focus owner. This ensures that custom controls and other UI elements work correctly inside a `ScrollPane`, providing a more consistent and intuitive navigation experience.
 
@@ -87,7 +87,7 @@ The Java Security Manager has been permanently disabled in JDK 24 via [JEP 486](
 
 Likewise, as of JavaFX 24, it is no longer possible to run JavaFX applications with a security manager enabled. This is true even if you run your application on an older JDK that still supports the security manager.
 
-The following exception will be thrown when the JavaFX runtime is initialized if the Security Manager is enabled:
+The following exception will be thrown when the JavaFX runtime is initialized with the Security Manager enabled:
 
 ```
 UnsupportedOperationException: JavaFX does not support running with the Security Manager
@@ -97,7 +97,7 @@ See [JDK-8341090](https://bugs.openjdk.org/browse/JDK-8341090) for more informat
 
 ## Known Issues
 
-### JavaFX Warning Printed for Use of Terminally Deprecated Methods in sun.misc.Unsafe
+### JavaFX Warning Printed for Use of Terminally Deprecated Methods in `sun.misc.Unsafe`
 
 Running a JavaFX application on JDK 24 will produce a warning the first time any UI Control or complex shape is rendered:
 
@@ -150,6 +150,8 @@ Issue Key | Summary | Subcomponent
 [JDK-8337280](https://bugs.openjdk.org/browse/JDK-8337280) | Include jdk.jsobject module with JavaFX | other
 [JDK-8341090](https://bugs.openjdk.org/browse/JDK-8341090) | Remove support for security manager from JavaFX | other
 [JDK-8305418](https://bugs.openjdk.org/browse/JDK-8305418) | [Linux] Replace obsolete XIM as Input Method Editor | window-toolkit
+
+See the API docs for a list of [new APIs](https://openjfx.io/javadoc/23/new-list.html) and [deprecated APIs](https://openjfx.io/javadoc/23/deprecated-list.html) in each release.
 
 ## List of Fixed Bugs
 

@@ -4,7 +4,7 @@
 
 The fix for [JDK-8340852](https://bugs.openjdk.org/browse/JDK-8340852) changed the behavior of `ScrollPane`. With the latest update, `ScrollPane` only responds to keyboard navigation when it is the focused node. If you prefer the previous behavior, where `ScrollPane` always reacts to arrow keys and other navigational inputs, you can manually restore it by adding an event handler:
 
-```
+```java
 scrollPane.addEventHandler(KeyEvent.KEY_PRESSED, e -> {
     double x = 0;
     double y = 0;
@@ -28,7 +28,7 @@ scrollPane.addEventHandler(KeyEvent.KEY_PRESSED, e -> {
 });
 ```
 Using this helper method to convert scroll fractions to values for the scrollbars, and set them:
-```
+```java
 static void scrollByFraction(ScrollPane scrollPane, double x, double y) {
     Node content = scrollPane.getContent();
     if (content == null) return;
@@ -51,4 +51,4 @@ static void scrollByFraction(ScrollPane scrollPane, double x, double y) {
     }
 }
 ```
-Adding this event handler will make ScrollPane react to navigation keys as it did before the update.
+Adding this event handler will make `ScrollPane` react to navigation keys as it did before the update.
