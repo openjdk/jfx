@@ -105,7 +105,9 @@ public class ListenerList<T> extends ListenerListBase {
 
         int initialProgress = progress;  // save as it will be modified soon
         int invalidationListenersSize = invalidationListenersSize();
-        int maxInvalidations = wasLocked ? Math.min(initialProgress + 1, invalidationListenersSize) : invalidationListenersSize;
+        int maxInvalidations = wasLocked
+            ? Math.min(initialProgress + 1, invalidationListenersSize)
+            : invalidationListenersSize;
 
         for (int i = 0; i < maxInvalidations; i++) {
             InvalidationListener listener = getInvalidationListener(i);
@@ -123,7 +125,9 @@ public class ListenerList<T> extends ListenerListBase {
         }
 
         int changeListenersSize = changeListenersSize();
-        int maxChanges = wasLocked ? Math.min(initialProgress + 1 - invalidationListenersSize, changeListenersSize) : changeListenersSize;
+        int maxChanges = wasLocked
+            ? Math.min(initialProgress + 1 - invalidationListenersSize, changeListenersSize)
+            : changeListenersSize;
 
         T newValue = null;
 
