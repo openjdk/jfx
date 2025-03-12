@@ -31,7 +31,6 @@ import com.sun.glass.ui.Pixels;
 import com.sun.glass.ui.Screen;
 import com.sun.glass.ui.View;
 import com.sun.glass.ui.Window;
-import com.sun.javafx.binding.StringConstant;
 
 /**
  * MS Windows platform implementation class for Window.
@@ -42,8 +41,6 @@ class WinWindow extends Window {
     public static final int RESIZE_TO_FX_ORIGIN = 2;
 
     public static final long ANCHOR_NO_CAPTURE = (1L << 63);
-
-    private static final String HEADER_BUTTONS_STYLESHEET = "WindowDecoration.css";
 
     private float fxReqWidth;
     private float fxReqHeight;
@@ -383,13 +380,7 @@ class WinWindow extends Window {
      * Creates a new {@code HeaderButtonOverlay} instance.
      */
     private HeaderButtonOverlay createHeaderButtonOverlay() {
-        var url = getClass().getResource(HEADER_BUTTONS_STYLESHEET);
-        if (url == null) {
-            throw new RuntimeException("Resource not found: " + HEADER_BUTTONS_STYLESHEET);
-        }
-
-        var overlay = new HeaderButtonOverlay(
-            StringConstant.valueOf(url.toExternalForm()),
+        var overlay = new WinHeaderButtonOverlay(
             isUtilityWindow(),
             (getStyleMask() & RIGHT_TO_LEFT) != 0);
 

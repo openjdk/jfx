@@ -139,7 +139,7 @@ import java.util.stream.Stream;
  *     </tbody>
  * </table>
  */
-public final class HeaderButtonOverlay extends Region {
+public class HeaderButtonOverlay extends Region {
 
     private static final CssMetaData<HeaderButtonOverlay, Number> BUTTON_DEFAULT_HEIGHT_METADATA =
         new CssMetaData<>("-fx-button-default-height", StyleConverter.getSizeConverter()) {
@@ -323,6 +323,14 @@ public final class HeaderButtonOverlay extends Region {
 
     public DoubleProperty prefButtonHeightProperty() {
         return prefButtonHeight;
+    }
+
+    protected Region getButtonGlyph(HeaderButtonType buttonType) {
+         return (Region)(switch (buttonType) {
+            case ICONIFY -> iconifyButton;
+            case MAXIMIZE -> maximizeButton;
+            case CLOSE -> closeButton;
+        }).getChildrenUnmodifiable().getFirst();
     }
 
     /**
