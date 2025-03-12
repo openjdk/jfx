@@ -106,7 +106,11 @@ public abstract class ObjectBinding<T> extends ObjectExpression<T> implements
     @Override
     public void addListener(ChangeListener<? super T> listener) {
         observed = observed || listener != null;
-        LISTENER_MANAGER.addListener(this, (ChangeListener<Object>) listener);
+
+        @SuppressWarnings("unchecked")
+        ChangeListener<Object> castListener = (ChangeListener<Object>) listener;
+
+        LISTENER_MANAGER.addListener(this, castListener);
     }
 
     @Override

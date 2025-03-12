@@ -73,7 +73,10 @@ public abstract class ReadOnlyObjectPropertyBase<T> extends ReadOnlyObjectProper
 
     @Override
     public void addListener(ChangeListener<? super T> listener) {
-        LISTENER_MANAGER.addListener(this, (ChangeListener<Object>) listener);
+        @SuppressWarnings("unchecked")
+        ChangeListener<Object> castListener = (ChangeListener<Object>) listener;
+
+        LISTENER_MANAGER.addListener(this, castListener);
     }
 
     @Override
