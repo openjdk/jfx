@@ -45,7 +45,7 @@ public abstract class ArrayManager<I, E> {
 
     /**
      * The minimum array size. (3 is a good number considering it would use exactly 24 bytes
-     * with compressed oops with wasted space due to alignment issues).
+     * with compressed oops without wasted space due to alignment issues).
      */
     private static final int MINIMUM_SIZE = 3;
 
@@ -98,7 +98,7 @@ public abstract class ArrayManager<I, E> {
     protected abstract void setOccupiedSlots(I instance, int occupiedSlots);
 
     /**
-     * Adds an element at the end of the array, growing the arrow if necessary.
+     * Adds an element at the end of the array, growing the array if necessary.
      * If the array needs to be grown, this function will call {@link #compact(Object, Object[])}
      * first to reclaim any space before deciding to grow the array.
      *
@@ -262,7 +262,7 @@ public abstract class ArrayManager<I, E> {
      * @param instance a reference to the instance where the array is stored, cannot be {@code null}
      * @param filter a predicate which returns {@code true} for elements to be removed
      * @return {@code true} if any elements were removed
-     * @throws NullPointerException if the specified filter is null
+     * @throws NullPointerException when any argument is {@code null}
      */
     public boolean removeIf(I instance, Predicate<E> filter) {
         Objects.requireNonNull(filter);
@@ -308,7 +308,7 @@ public abstract class ArrayManager<I, E> {
     /**
      * Called when all slots in the array are occupied and the
      * array would need to be grown. If compaction was possible,
-     * return the amount of slots reclaimed. The freed up slots
+     * returns the amount of slots reclaimed. The freed up slots
      * must be the last slots in the array after this call
      * completes.<p>
      *

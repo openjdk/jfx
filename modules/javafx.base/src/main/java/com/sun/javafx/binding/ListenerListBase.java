@@ -253,6 +253,7 @@ public abstract class ListenerListBase {
      * Note: the behavior when calling this method with an index outside the valid range is
      * <b>undefined</b>!
      *
+     * @param <T> the change listener type
      * @param index an index, cannot be negative and must be less than {@link #changeListenersSize()}
      * @return the listener at the given index, or {@code null}
      */
@@ -270,6 +271,7 @@ public abstract class ListenerListBase {
      * up until unlocked, nor will the lists size change.
      *
      * @param listener a listener, cannot be {@code null}
+     * @throws NullPointerException when any argument is {@code null}
      */
     public final void add(Object listener) {
         Objects.requireNonNull(listener);
@@ -288,6 +290,7 @@ public abstract class ListenerListBase {
      * skipped.
      *
      * @param listener a listener to remove, cannot be {@code null}
+     * @throws NullPointerException when any argument is {@code null}
      */
     public final void remove(Object listener) {
         Objects.requireNonNull(listener);
