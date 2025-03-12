@@ -27,6 +27,9 @@ package test.com.sun.javafx.binding;
 
 import com.sun.javafx.binding.ListenerList;
 import com.sun.javafx.binding.ListenerListBase;
+import com.sun.javafx.binding.Logging;
+import com.sun.javafx.binding.Logging.ErrorLogger.ErrorLogRecord;
+import com.sun.javafx.logging.PlatformLogger.Level;
 
 import java.lang.Thread.UncaughtExceptionHandler;
 import java.util.ArrayList;
@@ -49,13 +52,17 @@ import javafx.beans.property.StringProperty;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
 
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * Base test class suitable for testing {@link ListenerList} and {@link com.sun.javafx.binding.OldValueCachingListenerList}.
@@ -82,6 +89,17 @@ public abstract class ListenerListTestBase<L extends ListenerListBase> {
 
     protected abstract L create(Object listener1, Object listener2);
     protected abstract <T> void notifyListeners(L list, ObservableValue<? extends T> property, T oldValue);
+
+    @BeforeEach
+    void beforeEach() {
+        Logging.setKeepLastLogRecord(true);
+        Logging.getLogger().setErrorLogRecord(null);
+    }
+
+    @AfterEach
+    void afterEach() {
+        assertNull(Logging.getLogger().getErrorLogRecord());  // expect no unasserted warnings logged
+    }
 
     @Test
     void shouldNotifyAllListeners() {
@@ -362,9 +380,18 @@ public abstract class ListenerListTestBase<L extends ListenerListBase> {
                 records.add("CL3: changed from " + o + " to " + n);
             });
 
-            StackOverflowError e = assertThrows(StackOverflowError.class, () -> notifyListeners(list, property, 0));
+            notifyListeners(list, property, 0);
 
-            assertEquals("non-converging value detected in value modifying listeners on LongProperty [value: 2]; original value was: 0", e.getMessage());
+            ErrorLogRecord logRecord = Logging.getLogger().getErrorLogRecord();
+
+            assertNotNull(logRecord);
+            assertEquals(Level.WARNING, logRecord.level());
+            assertTrue(logRecord.message().startsWith("LongProperty [value: 2] was modified during the invocation of multiple listeners"));
+
+            assertConsistentChangeSequence("2");
+            assertEquals(14, records.size());  // some back and forth happening until problem detected
+
+            Logging.getLogger().setErrorLogRecord(null);
         }
 
         /**
@@ -410,9 +437,18 @@ public abstract class ListenerListTestBase<L extends ListenerListBase> {
                 }
             });
 
-            StackOverflowError e = assertThrows(StackOverflowError.class, () -> notifyListeners(list, property, 0));
+            notifyListeners(list, property, 0);
 
-            assertEquals("non-converging value detected in value modifying listeners on LongProperty [value: 30]; original value was: 0", e.getMessage());
+            ErrorLogRecord logRecord = Logging.getLogger().getErrorLogRecord();
+
+            assertNotNull(logRecord);
+            assertEquals(Level.WARNING, logRecord.level());
+            assertTrue(logRecord.message().startsWith("LongProperty [value: 30] was modified during the invocation of multiple listeners"));
+
+            assertConsistentChangeSequence("30");
+            assertEquals(23, records.size());  // some back and forth happening until problem detected
+
+            Logging.getLogger().setErrorLogRecord(null);
         }
 
         /**
@@ -462,9 +498,18 @@ public abstract class ListenerListTestBase<L extends ListenerListBase> {
                 records.add("CL4: changed from " + o + " to " + n);
             });
 
-            StackOverflowError e = assertThrows(StackOverflowError.class, () -> notifyListeners(list, property, 0));
+            notifyListeners(list, property, 0);
 
-            assertEquals("non-converging value detected in value modifying listeners on LongProperty [value: 30]; original value was: 0", e.getMessage());
+            ErrorLogRecord logRecord = Logging.getLogger().getErrorLogRecord();
+
+            assertNotNull(logRecord);
+            assertEquals(Level.WARNING, logRecord.level());
+            assertTrue(logRecord.message().startsWith("LongProperty [value: 30] was modified during the invocation of multiple listeners"));
+
+            assertConsistentChangeSequence("30");
+            assertEquals(24, records.size());  // same back and forth happening until problem detected
+
+            Logging.getLogger().setErrorLogRecord(null);
         }
 
         /**
@@ -641,26 +686,26 @@ public abstract class ListenerListTestBase<L extends ListenerListBase> {
     private void assertConsistentChangeSequence(String expectedFinalValue) {
         Map<String, String> oldValues = new HashMap<>();
 
-        for (String record : records) {
-            Matcher matcher = PATTERN.matcher(record);
+        for (String r : records) {
+            Matcher matcher = PATTERN.matcher(r);
 
             if (matcher.matches()) {
                 String name = matcher.group("listener");
                 String o = matcher.group("old");
                 String n = matcher.group("new");
 
-                assertNotEquals(o, n, "Listener " + name + " received a change that wasn't a change: " + record);
+                assertNotEquals(o, n, "Listener " + name + " received a change that wasn't a change: " + r);
 
                 if (oldValues.containsKey(name)) {
-                    assertEquals(o, oldValues.get(name), "Listener " + name + " received an incorrect old value; expected " + oldValues.get(name) + " but was: " + record);
+                    assertEquals(o, oldValues.get(name), "Listener " + name + " received an incorrect old value; expected " + oldValues.get(name) + " but was: " + r);
                 }
 
                 oldValues.put(name, n);
             }
         }
 
-        for (String record : records) {
-            Matcher matcher = INVALIDATION_PATTERN.matcher(record);
+        for (String r : records) {
+            Matcher matcher = INVALIDATION_PATTERN.matcher(r);
 
             if (matcher.matches()) {
                 String name = matcher.group("listener");

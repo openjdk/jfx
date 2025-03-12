@@ -90,6 +90,11 @@ public class Logging {
             }
         }
 
+        @Override
+        public void warning(String msg) {
+            warning(msg, (Throwable)null);
+        }
+
 /*        @Override
         public void info(String msg, Throwable t) {
             super.info(msg, t);

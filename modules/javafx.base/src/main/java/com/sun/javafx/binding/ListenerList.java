@@ -175,7 +175,13 @@ public class ListenerList<T> extends ListenerListBase {
                  * This conflicting listener behavior will be reported to the user:
                  */
 
-                throw new StackOverflowError("non-converging value detected in value modifying listeners on " + observableValue + "; original value was: " + oldValue);
+                Logging.getLogger().warning(
+                    """
+                    %s was modified during the invocation of multiple listeners, and the values set do not seem to be converging; \
+                    the listener %s was notified of change %s -> %s, then modified the value, and was then reset by another listener; \
+                    to avoid this warning ensure listeners are not making conflicting updates, or avoid changing the value in listeners
+                    """.formatted(observableValue, listener, oldValue, newValue)
+                );
             }
         }
 
