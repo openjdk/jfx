@@ -56,15 +56,7 @@ public abstract class ListenerManager<T, I extends ObservableValue<? extends T>>
      * @throws NullPointerException when any argument is {@code null}
      */
     public void addListener(I instance, InvalidationListener listener) {
-        Objects.requireNonNull(listener);
-
-        instance.getValue();  // always trigger validation when adding an invalidation listener (required by tests)
-
-        switch (getData(instance)) {
-            case null -> setData(instance, listener);
-            case ListenerList<?> list -> list.add(listener);
-            case Object data -> setData(instance, new ListenerList<>(data, listener));
-        }
+        addListenerInternal(instance, listener);
     }
 
     /**
@@ -75,9 +67,13 @@ public abstract class ListenerManager<T, I extends ObservableValue<? extends T>>
      * @throws NullPointerException when any argument is {@code null}
      */
     public void addListener(I instance, ChangeListener<? super T> listener) {
+        addListenerInternal(instance, listener);
+    }
+
+    private void addListenerInternal(I instance, Object listener) {
         Objects.requireNonNull(listener);
 
-        instance.getValue();  // always trigger validation when adding a change listener (required by tests)
+        instance.getValue();  // always trigger validation when adding a listener (required by tests for all types of listeners)
 
         switch (getData(instance)) {
             case null -> setData(instance, listener);
