@@ -106,7 +106,7 @@ public abstract class ArrayManager<I, E> {
      * @param element an element to add, can be {@code null}
      * @throws NullPointerException when the given instance was {@code null}
      */
-    public void add(I instance, E element) {
+    public final void add(I instance, E element) {
         E[] array = getArray(instance);
         int occupiedSlots = getOccupiedSlots(instance);
 
@@ -149,7 +149,7 @@ public abstract class ArrayManager<I, E> {
      * @return the index of the first occurrence of the given element, or -1 if no such element was present
      * @throws NullPointerException when the given instance was {@code null}
      */
-    public int indexOf(I instance, E element) {
+    public final int indexOf(I instance, E element) {
         E[] array = getArray(instance);
         int occupiedSlots = getOccupiedSlots(instance);
 
@@ -171,7 +171,7 @@ public abstract class ArrayManager<I, E> {
      * @throws NullPointerException when the given instance was {@code null}
      * @throws IndexOutOfBoundsException when the given index was out of range
      */
-    public E remove(I instance, int index) {
+    public final E remove(I instance, int index) {
         E[] array = getArray(instance);
         int occupiedSlots = getOccupiedSlots(instance);
 
@@ -220,7 +220,7 @@ public abstract class ArrayManager<I, E> {
      * @throws NullPointerException when the given instance was {@code null}
      * @throws IndexOutOfBoundsException when the given index was out of range
      */
-    public E get(I instance, int index) {
+    public final E get(I instance, int index) {
         E[] array = getArray(instance);
         int occupiedSlots = getOccupiedSlots(instance);
 
@@ -241,7 +241,7 @@ public abstract class ArrayManager<I, E> {
      * @throws NullPointerException when the given instance was {@code null}
      * @throws IndexOutOfBoundsException when the given index was out of range
      */
-    public E set(I instance, int index, E element) {
+    public final E set(I instance, int index, E element) {
         E[] array = getArray(instance);
         int occupiedSlots = getOccupiedSlots(instance);
 
@@ -264,7 +264,7 @@ public abstract class ArrayManager<I, E> {
      * @return {@code true} if any elements were removed
      * @throws NullPointerException when any argument is {@code null}
      */
-    public boolean removeIf(I instance, Predicate<E> filter) {
+    public final boolean removeIf(I instance, Predicate<E> filter) {
         Objects.requireNonNull(filter);
         E[] array = getArray(instance);
 
