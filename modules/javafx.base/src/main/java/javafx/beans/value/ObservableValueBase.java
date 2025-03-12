@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,7 +25,8 @@
 
 package javafx.beans.value;
 
-import com.sun.javafx.binding.ExpressionHelper;
+import com.sun.javafx.binding.OldValueCachingListenerManager;
+
 import javafx.beans.InvalidationListener;
 
 /**
@@ -41,7 +42,19 @@ import javafx.beans.InvalidationListener;
  */
 public abstract class ObservableValueBase<T> implements ObservableValue<T> {
 
-    private ExpressionHelper<T> helper;
+    private static final OldValueCachingListenerManager<Object, ObservableValueBase<?>> LISTENER_MANAGER = new OldValueCachingListenerManager<>() {
+        @Override
+        protected Object getData(ObservableValueBase<?> instance) {
+            return instance.listenerData;
+        }
+
+        @Override
+        protected void setData(ObservableValueBase<?> instance, Object data) {
+            instance.listenerData = data;
+        }
+    };
+
+    private Object listenerData;
 
     /**
      * Creates a default {@code ObservableValueBase}.
@@ -54,7 +67,7 @@ public abstract class ObservableValueBase<T> implements ObservableValue<T> {
      */
     @Override
     public void addListener(InvalidationListener listener) {
-        helper = ExpressionHelper.addListener(helper, this, listener);
+        LISTENER_MANAGER.addListener(this, listener);
     }
 
     /**
@@ -62,7 +75,10 @@ public abstract class ObservableValueBase<T> implements ObservableValue<T> {
      */
     @Override
     public void addListener(ChangeListener<? super T> listener) {
-        helper = ExpressionHelper.addListener(helper, this, listener);
+        @SuppressWarnings("unchecked")
+        ChangeListener<Object> castListener = (ChangeListener<Object>) listener;
+
+        LISTENER_MANAGER.addListener(this, castListener);
     }
 
     /**
@@ -70,7 +86,7 @@ public abstract class ObservableValueBase<T> implements ObservableValue<T> {
      */
     @Override
     public void removeListener(InvalidationListener listener) {
-        helper = ExpressionHelper.removeListener(helper, listener);
+        LISTENER_MANAGER.removeListener(this, listener);
     }
 
     /**
@@ -78,7 +94,7 @@ public abstract class ObservableValueBase<T> implements ObservableValue<T> {
      */
     @Override
     public void removeListener(ChangeListener<? super T> listener) {
-        helper = ExpressionHelper.removeListener(helper, listener);
+        LISTENER_MANAGER.removeListener(this, listener);
     }
 
     /**
@@ -89,6 +105,6 @@ public abstract class ObservableValueBase<T> implements ObservableValue<T> {
      * the following call to fireValueChangedEvent.
      */
     protected void fireValueChangedEvent() {
-        ExpressionHelper.fireValueChangedEvent(helper);
+        LISTENER_MANAGER.fireValueChanged(this, listenerData);
     }
 }
