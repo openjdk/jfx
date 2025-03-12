@@ -93,6 +93,7 @@ public abstract class ListenerListBase {
     }
 
     private static final ArrayManager<ListenerListBase, InvalidationListener> INVALIDATION_LISTENERS = new CompactingArrayManager<>(InvalidationListener.class) {
+
         @Override
         protected InvalidationListener[] getArray(ListenerListBase instance) {
             return instance.invalidationListeners;
@@ -115,6 +116,7 @@ public abstract class ListenerListBase {
     };
 
     private static final ArrayManager<ListenerListBase, Object> CHANGE_LISTENERS = new CompactingArrayManager<>(Object.class) {
+
         @Override
         protected Object[] getArray(ListenerListBase instance) {
             return instance.changeListeners;
