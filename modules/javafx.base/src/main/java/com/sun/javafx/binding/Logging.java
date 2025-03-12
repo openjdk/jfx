@@ -29,22 +29,20 @@ import com.sun.javafx.logging.PlatformLogger;
 
 public class Logging {
 
-    private static boolean keepException = false;
+    private static boolean keepLastLogRecord;
 
-    /**
+    /*
      * This is only used for testing purposes.
-     * @param keepException
      */
-    public static void setKeepException(boolean keepException) {
-        Logging.keepException = keepException;
+    public static void setKeepLastLogRecord(boolean keepLastLogRecord) {
+        Logging.keepLastLogRecord = keepLastLogRecord;
     }
 
-    /**
+    /*
      * This is only used for testing purposes.
-     * @return
      */
-    public static boolean getKeepException() {
-        return keepException;
+    public static boolean getKeepLastLogRecord() {
+        return keepLastLogRecord;
     }
 
     public static ErrorLogger getLogger() {
@@ -62,27 +60,7 @@ public class Logging {
 
         private static final ErrorLogger INSTANCE = new ErrorLogger();
 
-        public static class ErrorLogRecord {
-            private final Level level;
-            private final Throwable thrown;
-
-            public ErrorLogRecord(Level level, Throwable thrown) {
-                this.level = level;
-                if (Logging.keepException) {
-                    this.thrown = thrown;
-                } else {
-                    this.thrown = null;
-                }
-            }
-
-            public Throwable getThrown() {
-                return thrown;
-            }
-
-            public Level getLevel() {
-                return level;
-            }
-        }
+        public record ErrorLogRecord(Level level, String message, Throwable throwable) {}
 
         private ErrorLogRecord errorLogRecord;
 
@@ -106,7 +84,10 @@ public class Logging {
         @Override
         public void warning(String msg, Throwable t) {
             super.warning(msg, t);
-            errorLogRecord = new ErrorLogRecord(Level.WARNING, t);
+
+            if (keepLastLogRecord) {
+                errorLogRecord = new ErrorLogRecord(Level.WARNING, msg, t);
+            }
         }
 
 /*        @Override
@@ -118,7 +99,10 @@ public class Logging {
         @Override
         public void fine(String msg, Throwable t) {
             super.fine(msg, t);
-            errorLogRecord = new ErrorLogRecord(Level.FINE, t);
+
+            if (keepLastLogRecord) {
+                errorLogRecord = new ErrorLogRecord(Level.FINE, msg, t);
+            }
         }
 
 /*        @Override
