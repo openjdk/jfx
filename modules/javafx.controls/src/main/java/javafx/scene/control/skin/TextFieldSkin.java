@@ -26,10 +26,7 @@
 package javafx.scene.control.skin;
 
 import java.util.List;
-import javafx.beans.binding.BooleanBinding;
-import javafx.beans.binding.DoubleBinding;
-import javafx.beans.binding.ObjectBinding;
-import javafx.beans.binding.StringBinding;
+import javafx.beans.binding.*;
 import javafx.beans.property.DoubleProperty;
 import javafx.beans.property.SimpleDoubleProperty;
 import javafx.beans.value.ObservableBooleanValue;
@@ -144,7 +141,6 @@ public class TextFieldSkin extends TextInputControlSkin<TextField> {
      */
     public TextFieldSkin(final TextField control) {
         super(control);
-
         // install default input map for the text field control
         this.behavior = (control instanceof PasswordField)
                 ? new PasswordFieldBehavior((PasswordField)control)
@@ -734,6 +730,13 @@ public class TextFieldSkin extends TextInputControlSkin<TextField> {
         promptNode.fontProperty().bind(getSkinnable().fontProperty());
 
         promptNode.textProperty().bind(getSkinnable().promptTextProperty());
+        promptNode.textProperty().bind(Bindings.createStringBinding(() -> {
+            String s = getSkinnable().getPromptText();
+            if (s == null)
+                s = "";
+            s = s.replace("\n", "");
+            return s;
+        }, getSkinnable().promptTextProperty()));
         promptNode.fillProperty().bind(promptTextFillProperty());
         updateSelection();
     }

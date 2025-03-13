@@ -314,23 +314,15 @@ public abstract class TextInputControl extends Control {
      * @defaultValue An empty String
      * @since JavaFX 2.2
      */
-    private StringProperty promptText = new SimpleStringProperty(this, "promptText", "") {
-        @Override protected void invalidated() {
-            String txt = get();
-            if (txt != null && txt.contains("\n")) {
-                if (isBound()) {
-                    unbind();
-                }
-                if (!(TextInputControl.this instanceof TextArea)) {
-                    txt = txt.replace("\n", "");
-                }
-                set(txt);
-            }
+    private StringProperty promptText;
+    public final StringProperty promptTextProperty() {
+        if (promptText == null) {
+            promptText = new SimpleStringProperty(this, "promptText", "");
         }
-    };
-    public final StringProperty promptTextProperty() { return promptText; }
-    public final String getPromptText() { return promptText.get(); }
-    public final void setPromptText(String value) { promptText.set(value); }
+        return promptText;
+    }
+    public final String getPromptText() { return promptText == null ? "" : promptText.get();  }
+    public final void setPromptText(String value) { promptTextProperty().set(value); }
 
 
     /**

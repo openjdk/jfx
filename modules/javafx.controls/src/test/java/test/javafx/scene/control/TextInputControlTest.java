@@ -109,41 +109,6 @@ public class TextInputControlTest {
 
     @ParameterizedTest
     @MethodSource("parameters")
-    public void bindPromptTextWithoutLineBreaks(Class<?> type) {
-        setup(type);
-        String promptWithoutLinebreaks = "Prompt without\tlinebreaks";
-        StringProperty promptProperty = new SimpleStringProperty(promptWithoutLinebreaks);
-        textInput.promptTextProperty().bind(promptProperty);
-        assertEquals(promptWithoutLinebreaks, textInput.getPromptText());
-        textInput.promptTextProperty().unbind();
-    }
-
-    @ParameterizedTest
-    @MethodSource("parameters")
-    public void bindPromptTextWithLineBreaks(Class<?> type) {
-        setup(type);
-        String promptWithLinebreaks = "Prompt\nwith\nLineBreaks\nand\nmixed\tcharacters \uD83C\uDF0D";
-        StringProperty promptProperty = new SimpleStringProperty(promptWithLinebreaks);
-        textInput.promptTextProperty().bind(promptProperty);
-        String expectedPrompt = TextArea.class.isAssignableFrom(type)
-                ? promptWithLinebreaks
-                : promptWithLinebreaks.replace("\n", "");
-        assertEquals(expectedPrompt, textInput.getPromptText());
-        textInput.promptTextProperty().unbind();
-    }
-
-    @ParameterizedTest
-    @MethodSource("parameters")
-    public void bindPromptTextWithNull(Class<?> type) {
-        setup(type);
-        StringProperty promptPropertyNull = new SimpleStringProperty(null);
-        textInput.promptTextProperty().bind(promptPropertyNull);
-        assertNull(textInput.getPromptText());
-        textInput.promptTextProperty().unbind();
-    }
-
-    @ParameterizedTest
-    @MethodSource("parameters")
     public void editableDefaultsToTrue(Class<?> type) {
         setup(type);
         assertTrue(textInput.isEditable());
