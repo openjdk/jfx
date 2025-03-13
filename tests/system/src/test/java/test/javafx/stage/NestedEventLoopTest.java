@@ -341,7 +341,6 @@ public class NestedEventLoopTest {
             if (previousLoop != null) {
                 Platform.exitNestedEventLoop(previousLoop, null);
             }
-            assertFalse(Platform.isNestedLoopRunning());
         }
     }
 
@@ -351,9 +350,11 @@ public class NestedEventLoopTest {
             // correctly.
             AtomicBoolean expectedException = new AtomicBoolean(false);
             createManyNestedLoops(260, null, expectedException);
+            assertFalse(Platform.isNestedLoopRunning());
 
             AtomicBoolean noExceptionExpected = new AtomicBoolean(false);
             createManyNestedLoops(240, null, noExceptionExpected);
+            assertFalse(Platform.isNestedLoopRunning());
 
             assertEquals(expectedException.get(), PlatformUtil.isMac());
             assertFalse(noExceptionExpected.get());
