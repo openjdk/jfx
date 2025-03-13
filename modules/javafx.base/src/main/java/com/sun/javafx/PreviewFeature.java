@@ -49,13 +49,17 @@ public enum PreviewFeature {
     private final String featureName;
 
     private static final String ENABLE_PREVIEW_PROPERTY = "javafx.enablePreview";
+    private static final String SUPPRESS_WARNING_PROPERTY = "javafx.suppressPreviewBanner";
 
     private static final boolean enabled = Boolean.getBoolean(ENABLE_PREVIEW_PROPERTY);
+    private static final boolean suppressWarning = Boolean.getBoolean(SUPPRESS_WARNING_PROPERTY);
     private static final Set<PreviewFeature> enabledFeatures = new HashSet<>();
 
     /**
      * Verifies that preview features are enabled, and throws an exception otherwise.
-     * This method prints a one-time warning to the error output stream for every feature for which it is called.
+     * <p>
+     * Unless suppressed with the {@code javafx.suppressPreviewBanner=true} system property, this method
+     * prints a one-time warning to the error output stream for every feature for which it is called.
      *
      * @throws RuntimeException if preview features are not enabled
      */
@@ -66,11 +70,12 @@ public enum PreviewFeature {
                 Preview features may be removed in a future release, or upgraded to permanent features of JavaFX.
                 Programs can only use preview features when the following system property is set: -D%s=true
                 """.formatted(featureName, VersionInfo.getVersion(), ENABLE_PREVIEW_PROPERTY));
-        } else if (enabledFeatures.add(this)) {
+        } else if (!suppressWarning && enabledFeatures.add(this)) {
             System.err.printf("""
                 Note: This program uses the following preview feature of JavaFX %s: %s
                       Preview features may be removed in a future release, or upgraded to permanent features of JavaFX.
-                """, VersionInfo.getVersion(), featureName);
+                      This warning can be disabled with the following system property: -D%s=true
+                """, VersionInfo.getVersion(), featureName, SUPPRESS_WARNING_PROPERTY);
         }
     }
 }
