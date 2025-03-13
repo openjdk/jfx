@@ -62,6 +62,16 @@ class GlassWindowEventHandler extends Window.EventHandler implements Supplier<Vo
             case WindowEvent.RESTORE:
                 stage.stageListener.changedIconified(false);
                 stage.stageListener.changedMaximized(false);
+
+                // Force a redraw as the scene may have changed while minimized (and its size won't have)
+                QuantumToolkit.runWithRenderLock(() -> {
+                    GlassScene scene = stage.getScene();
+                    if (scene != null) {
+                        scene.updateSceneState();
+                    }
+                    return null;
+                });
+
                 break;
             case WindowEvent.MOVE: {
                 float wx = window.getX();
