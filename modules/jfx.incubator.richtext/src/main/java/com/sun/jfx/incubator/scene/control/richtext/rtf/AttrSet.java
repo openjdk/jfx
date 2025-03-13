@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2023, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -87,6 +87,7 @@ public class AttrSet {
         return StyleAttributeMap.builder().
             setBold(getBoolean(StyleAttributeMap.BOLD)).
             setFontFamily(getString(StyleAttributeMap.FONT_FAMILY)).
+            setFontSize(getDouble(StyleAttributeMap.FONT_SIZE)).
             setItalic(getBoolean(StyleAttributeMap.ITALIC)).
             setTextColor(getColor(StyleAttributeMap.TEXT_COLOR)).
             setUnderline(getBoolean(StyleAttributeMap.UNDERLINE)).
@@ -109,6 +110,14 @@ public class AttrSet {
         Object v = attrs.get(attr);
         if (v instanceof Color c) {
             return c;
+        }
+        return null;
+    }
+
+    private Double getDouble(Object attr) {
+        Object v = attrs.get(attr);
+        if (v instanceof Number n) {
+            return n.doubleValue();
         }
         return null;
     }

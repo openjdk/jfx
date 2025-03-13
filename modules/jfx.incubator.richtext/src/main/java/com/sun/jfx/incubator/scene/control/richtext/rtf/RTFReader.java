@@ -1252,7 +1252,7 @@ public class RTFReader extends RTFParser {
 
             switch (keyword) {
             case "fs":
-                characterAttributes.addAttribute(StyleAttributeMap.FONT_SIZE, (parameter / 2));
+                characterAttributes.addAttribute(StyleAttributeMap.FONT_SIZE, (parameter / 2.0));
                 return true;
             }
 

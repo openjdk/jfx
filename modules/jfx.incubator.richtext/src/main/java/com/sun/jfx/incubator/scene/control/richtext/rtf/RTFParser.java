@@ -66,10 +66,9 @@ abstract class RTFParser extends AbstractFilter {
 
     // For fcharset control word
     protected CharsetDecoder decoder;
-    private final byte[] ba = new byte[2];
-    protected final ByteBuffer decoderBB = ByteBuffer.wrap(ba);
-    private final char[] ca = new char[1];
-    private final CharBuffer decoderCB = CharBuffer.wrap(ca);
+    protected final ByteBuffer decoderBB = ByteBuffer.wrap(new byte[2]);
+    private final char[] decoderCA = new char[1];
+    private final CharBuffer decoderCB = CharBuffer.wrap(decoderCA);
 
     /** Implemented by subclasses to interpret a parameter-less RTF keyword.
      *  The keyword is passed without the leading '/' or any delimiting
@@ -377,7 +376,7 @@ abstract class RTFParser extends AbstractFilter {
                 decoder.reset();
                 decoderBB.clear();
                 decoderBB.limit(1);
-                return ca[0];
+                return decoderCA[0];
             } else {
                 // Detected lead byte
                 decoder.reset();
