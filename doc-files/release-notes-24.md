@@ -186,8 +186,6 @@ Issue Key | Summary | Subcomponent
 [JDK-8183521](https://bugs.openjdk.org/browse/JDK-8183521) | Unable to type characters with tilde with swiss german keyboard layout | localization
 [JDK-8336277](https://bugs.openjdk.org/browse/JDK-8336277) | Colors are incorrect when playing H.265/HEVC on Windows 11 | media
 [JDK-8336938](https://bugs.openjdk.org/browse/JDK-8336938) | Update libFFI to 3.4.6 | media
-[JDK-8336939](https://bugs.openjdk.org/browse/JDK-8336939) | Update Glib to 2.80.4 | media
-[JDK-8336940](https://bugs.openjdk.org/browse/JDK-8336940) | Update GStreamer to 1.24.6 | media
 [JDK-8338701](https://bugs.openjdk.org/browse/JDK-8338701) | Provide media support for libavcodec version 61 | media
 [JDK-8346228](https://bugs.openjdk.org/browse/JDK-8346228) | Update GStreamer to 1.24.10 | media
 [JDK-8346229](https://bugs.openjdk.org/browse/JDK-8346229) | Update Glib to 2.82.4 | media
