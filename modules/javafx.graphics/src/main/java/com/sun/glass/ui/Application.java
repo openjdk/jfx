@@ -334,6 +334,11 @@ public abstract class Application {
         // To override in subclasses
     }
 
+    public void removeDefaultMenus(MenuBar menubar) {
+        checkEventThread();
+        // To override in subclasses
+    }
+
     public EventHandler getEventHandler() {
         //checkEventThread(); // Glass (Mac)
         // When an app is closing, Mac calls notify- Will/DidHide, Will/DidResignActive

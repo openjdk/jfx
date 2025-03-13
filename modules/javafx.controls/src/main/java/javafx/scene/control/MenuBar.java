@@ -179,6 +179,48 @@ public class MenuBar extends Control {
         return useSystemMenuBar == null ? false : useSystemMenuBar.getValue();
     }
 
+    /**
+     * When the system menu bar is used remove the default menus.
+     *
+     * @return the use system menu bar property
+     * @since JavaFX 24
+     */
+    public final BooleanProperty useDefaultMenusProperty() {
+        if (useDefaultMenus == null) {
+            useDefaultMenus = new StyleableBooleanProperty(true) {
+
+                @Override
+                public CssMetaData<MenuBar,Boolean> getCssMetaData() {
+                    return StyleableProperties.USE_DEFAULT_MENUS;
+                }
+
+                @Override
+                public Object getBean() {
+                    return MenuBar.this;
+                }
+
+                @Override
+                public String getName() {
+                    return "useDefaultMenus";
+                }
+
+                @Override
+                public void bind(final ObservableValue<? extends Boolean> rawObservable) {
+                    throw new RuntimeException(BIND_MSG);
+                }
+
+            };
+        }
+        return useDefaultMenus;
+    }
+
+    private BooleanProperty useDefaultMenus;
+    public final void setUseDefaultMenus(boolean value) {
+        useDefaultMenusProperty().setValue(value);
+    }
+    public final boolean isUseDefaultMenus() {
+        return useDefaultMenus == null ? true : useDefaultMenus.getValue();
+    }
 
     /* *************************************************************************
      *                                                                         *
@@ -220,6 +262,19 @@ public class MenuBar extends Control {
 
             @Override public StyleableProperty<Boolean> getStyleableProperty(MenuBar n) {
                 return (StyleableProperty<Boolean>)n.useSystemMenuBarProperty();
+            }
+        };
+
+        private static final CssMetaData<MenuBar, Boolean> USE_DEFAULT_MENUS =
+                new CssMetaData<>("-fx-use-default-menus",
+                                                        BooleanConverter.getInstance(),
+                                                        true) {
+            @Override public boolean isSettable(MenuBar n) {
+                return n.useDefaultMenus == null || !n.useDefaultMenus.isBound();
+            }
+
+            @Override public StyleableProperty<Boolean> getStyleableProperty(MenuBar n) {
+                return (StyleableProperty<Boolean>)n.useDefaultMenusProperty();
             }
         };
 

@@ -43,6 +43,7 @@ public interface TKSystemMenu {
      */
     public boolean isSupported();
 
+    public void setUseDefaultMenus(boolean use);
     public void setMenus(List<MenuBase> menus);
 
 }
