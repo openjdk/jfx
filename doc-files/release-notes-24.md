@@ -151,7 +151,7 @@ Issue Key | Summary | Subcomponent
 [JDK-8341090](https://bugs.openjdk.org/browse/JDK-8341090) | Remove support for security manager from JavaFX | other
 [JDK-8305418](https://bugs.openjdk.org/browse/JDK-8305418) | [Linux] Replace obsolete XIM as Input Method Editor | window-toolkit
 
-See the API docs for a list of [new APIs](https://openjfx.io/javadoc/23/new-list.html) and [deprecated APIs](https://openjfx.io/javadoc/23/deprecated-list.html) in each release.
+See the API docs for a list of [new APIs](https://openjfx.io/javadoc/24/new-list.html) and [deprecated APIs](https://openjfx.io/javadoc/24/deprecated-list.html) in each release.
 
 ## List of Fixed Bugs
 
