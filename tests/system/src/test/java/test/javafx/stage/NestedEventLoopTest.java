@@ -41,6 +41,7 @@ import javafx.stage.Stage;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
+import com.sun.javafx.PlatformUtil;
 import test.util.Util;
 
 /**
@@ -309,6 +310,53 @@ public class NestedEventLoopTest {
             assertFalse(loopTwoRunning.get());
             assertFalse(loopThreeRunning.get());
             assertEquals(result1, returnedValue1.get());
+        });
+    }
+
+    // On some platforms there is a limit on the number of nested event loops.
+    // An exception is thrown if we exceed this limit.
+    private void createManyNestedLoops(int n, Object previousLoop, AtomicBoolean exceptionThrown) {
+        if (exceptionThrown.get()) {
+            // Previous run loop was not created.
+            return;
+        }
+
+        if (n <= 0) {
+            // We created all the nested loops successfully. Unwind them.
+            if (previousLoop != null) {
+                Platform.exitNestedEventLoop(previousLoop, null);
+            }
+        } else {
+            final Integer thisLoop = n;
+            Platform.runLater(() -> {
+                createManyNestedLoops(n - 1, thisLoop, exceptionThrown);
+            });
+
+            try {
+                Platform.enterNestedEventLoop(thisLoop);
+            } catch (RuntimeException ex) {
+                exceptionThrown.set(true);
+            }
+
+            if (previousLoop != null) {
+                Platform.exitNestedEventLoop(previousLoop, null);
+            }
+            assertFalse(Platform.isNestedLoopRunning());
+        }
+    }
+
+    @Test public void maxNestedLoops() {
+        Util.runAndWait(() -> {
+            // Test the exception case first to ensure the system recovers
+            // correctly.
+            AtomicBoolean expectedException = new AtomicBoolean(false);
+            createManyNestedLoops(260, null, expectedException);
+
+            AtomicBoolean noExceptionExpected = new AtomicBoolean(false);
+            createManyNestedLoops(240, null, noExceptionExpected);
+
+            assertEquals(expectedException.get(), PlatformUtil.isMac());
+            assertFalse(noExceptionExpected.get());
         });
     }
 }

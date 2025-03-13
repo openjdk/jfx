@@ -53,6 +53,7 @@
 //#define VERBOSE_LOAD
 
 static BOOL shouldKeepRunningNestedLoop = YES;
+static NSInteger nestedRunLoopRunCount = 0;
 static jobject nestedLoopReturnValue = NULL;
 static BOOL isFullScreenExitingLoop = NO;
 static NSMutableDictionary * keyCodeForCharMap = nil;
@@ -753,6 +754,11 @@ jint JNICALL JNI_OnLoad(JavaVM *vm, void *reserved)
     return platformSupport != nil ? [platformSupport collectPreferences] : nil;
 }
 
++ (BOOL)canStartNestedEventLoop
+{
+    return nestedRunLoopRunCount <= 250;
+}
+
 + (jobject)enterNestedEventLoopWithEnv:(JNIEnv*)env
 {
     jobject ret = NULL;
@@ -762,13 +768,22 @@ jint JNICALL JNI_OnLoad(JavaVM *vm, void *reserved)
     shouldKeepRunningNestedLoop = YES;
     // Cannot use [NSDate distantFuture] because the period is big the app could hang in a runloop
     // if the event came before entering the RL
-    while (shouldKeepRunningNestedLoop && [theRL runMode:NSDefaultRunLoopMode
-                                              beforeDate:[NSDate dateWithTimeIntervalSinceNow:0.010]])
-    {
-        NSEvent * event = [app nextEventMatchingMask: 0xFFFFFFFF untilDate:nil inMode:NSDefaultRunLoopMode dequeue:YES];
+    while (shouldKeepRunningNestedLoop) {
+        // The app will crash if we exceed an undocumented limit on the number of nested
+        // CFRunLoopRun calls.
+        nestedRunLoopRunCount += 1;
+        BOOL ran = [theRL runMode:NSDefaultRunLoopMode
+                       beforeDate:[NSDate dateWithTimeIntervalSinceNow:0.010]];
+        nestedRunLoopRunCount -= 1;
+        if (ran) {
+            NSEvent * event = [app nextEventMatchingMask: 0xFFFFFFFF untilDate:nil inMode:NSDefaultRunLoopMode dequeue:YES];
 
-        if (event != nil) {
-            [app sendEvent: event];
+            if (event != nil) {
+                [app sendEvent: event];
+            }
+        }
+        else {
+            break;
         }
     }
 
@@ -1097,6 +1112,20 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_mac_MacApplication__1leaveNestedEve
     }
     [glasspool drain]; glasspool=nil;
     GLASS_CHECK_EXCEPTION(env);
+}
+
+/*
+ * Class:     com_sun_glass_ui_mac_MacApplication
+ * Method:    _canStartNestedEventLoop
+ * Signature: ()Z
+ */
+JNIEXPORT jboolean JNICALL Java_com_sun_glass_ui_mac_MacApplication__1canStartNestedEventLoop
+(JNIEnv *env, jobject japplication)
+{
+    LOG("Java_com_sun_glass_ui_mac_MacApplication__1canStartNestedEventLoop");
+
+    GLASS_ASSERT_MAIN_JAVA_THREAD(env);
+    return (jboolean) [GlassApplication canStartNestedEventLoop];
 }
 
 /*

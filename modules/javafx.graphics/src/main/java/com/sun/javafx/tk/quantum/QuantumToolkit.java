@@ -622,7 +622,7 @@ public final class QuantumToolkit extends Toolkit {
     @Override public boolean canStartNestedEventLoop() {
         checkFxUserThread();
 
-        return inPulse == 0;
+        return inPulse == 0 && Application.GetApplication().canStartNestedEventLoop();
     }
 
     @Override public Object enterNestedEventLoop(Object key) {
@@ -633,7 +633,11 @@ public final class QuantumToolkit extends Toolkit {
         }
 
         if (!canStartNestedEventLoop()) {
-            throw new IllegalStateException("Cannot enter nested loop during animation or layout processing");
+            if (!Application.GetApplication().canStartNestedEventLoop()) {
+                throw new RuntimeException("Exceeded limit on nested event loops");
+            } else {
+                throw new IllegalStateException("Cannot enter nested loop during animation or layout processing");
+            }
         }
 
         if (eventLoopMap == null) {

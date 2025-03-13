@@ -215,6 +215,11 @@ final class MacApplication extends Application implements InvokeLaterDispatcher.
         _leaveNestedEventLoopImpl(retValue);
     }
 
+    native private boolean _canStartNestedEventLoop();
+    @Override public boolean canStartNestedEventLoop() {
+        return _canStartNestedEventLoop();
+    }
+
     native private void _hide();
     native private void _hideOtherApplications();
     native private void _unhideAllApplications();
