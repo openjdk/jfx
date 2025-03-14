@@ -35,6 +35,10 @@ import com.sun.javafx.application.PlatformImpl;
  */
 public final class ApplicationServices {
 
+    // To prevent instantiation
+    private ApplicationServices() {
+    }
+
     /**
      * Hide the application.
      */
