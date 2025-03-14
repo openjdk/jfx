@@ -90,6 +90,7 @@ public class AttrSet {
             setBold(getBoolean(StyleAttributeMap.BOLD)).
             setFontFamily(getString(StyleAttributeMap.FONT_FAMILY)).
             setItalic(getBoolean(StyleAttributeMap.ITALIC)).
+            setStrikeThrough(getBoolean(StyleAttributeMap.STRIKE_THROUGH)).
             setTextColor(getColor(StyleAttributeMap.TEXT_COLOR)).
             setUnderline(getBoolean(StyleAttributeMap.UNDERLINE));
         Double d = getDouble(StyleAttributeMap.FONT_SIZE);
