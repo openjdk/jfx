@@ -41,6 +41,7 @@ public class AttrSet {
     private AttrSet parent;
 
     public AttrSet(AttrSet a) {
+        addAttributes(a);
     }
 
     public AttrSet() {
@@ -84,14 +85,18 @@ public class AttrSet {
     }
 
     public StyleAttributeMap getStyleAttributeMap() {
-        return StyleAttributeMap.builder().
+        StyleAttributeMap.Builder b = StyleAttributeMap.builder();
+        b.
             setBold(getBoolean(StyleAttributeMap.BOLD)).
             setFontFamily(getString(StyleAttributeMap.FONT_FAMILY)).
-            setFontSize(getDouble(StyleAttributeMap.FONT_SIZE)).
             setItalic(getBoolean(StyleAttributeMap.ITALIC)).
             setTextColor(getColor(StyleAttributeMap.TEXT_COLOR)).
-            setUnderline(getBoolean(StyleAttributeMap.UNDERLINE)).
-            build();
+            setUnderline(getBoolean(StyleAttributeMap.UNDERLINE));
+        Double d = getDouble(StyleAttributeMap.FONT_SIZE);
+        if (d != null) {
+            b.setFontSize(d);
+        }
+        return b.build();
     }
 
     private boolean getBoolean(Object attr) {
