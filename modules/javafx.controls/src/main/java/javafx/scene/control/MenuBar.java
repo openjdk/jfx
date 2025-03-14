@@ -180,9 +180,10 @@ public class MenuBar extends Control {
     }
 
     /**
-     * When the system menu bar is used remove the default menus.
+     * Remove any default menus that are normally added to the system
+     * menu bar. Only effective when the system menu bar is in use.
      *
-     * @return the use system menu bar property
+     * @return the use default menus property
      * @since JavaFX 24
      */
     public final BooleanProperty useDefaultMenusProperty() {

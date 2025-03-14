@@ -219,6 +219,18 @@ final class MacApplication extends Application implements InvokeLaterDispatcher.
     native private void _hideOtherApplications();
     native private void _unhideAllApplications();
 
+    @Override public void hideApplication() {
+        _hide();
+    }
+
+    @Override public void hideOtherApplications() {
+        _hideOtherApplications();
+    }
+
+    @Override public void showAllApplications() {
+        _unhideAllApplications();
+    }
+
     public void installAppleMenu(MenuBar menubar) {
         this.appleMenu = createMenu("Apple");
 

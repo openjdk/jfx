@@ -977,4 +977,24 @@ public class PlatformImpl {
         }
     }
 
+    public static void hideApplication() {
+        var application = com.sun.glass.ui.Application.GetApplication();
+        if (application != null) {
+            application.hideApplication();
+        }
+    }
+
+    public static void hideOtherApplications() {
+        var application = com.sun.glass.ui.Application.GetApplication();
+        if (application != null) {
+            application.hideOtherApplications();
+        }
+    }
+
+    public static void showAllApplications() {
+        var application = com.sun.glass.ui.Application.GetApplication();
+        if (application != null) {
+            application.showAllApplications();
+        }
+    }
 }
