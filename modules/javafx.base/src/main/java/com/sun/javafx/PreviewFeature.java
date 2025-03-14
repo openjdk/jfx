@@ -49,7 +49,7 @@ public enum PreviewFeature {
     private final String featureName;
 
     private static final String ENABLE_PREVIEW_PROPERTY = "javafx.enablePreview";
-    private static final String SUPPRESS_WARNING_PROPERTY = "javafx.suppressPreviewBanner";
+    private static final String SUPPRESS_WARNING_PROPERTY = "javafx.suppressPreviewWarning";
 
     private static final boolean enabled = Boolean.getBoolean(ENABLE_PREVIEW_PROPERTY);
     private static final boolean suppressWarning = Boolean.getBoolean(SUPPRESS_WARNING_PROPERTY);
