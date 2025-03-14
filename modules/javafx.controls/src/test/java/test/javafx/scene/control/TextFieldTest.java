@@ -247,6 +247,7 @@ public class TextFieldTest {
         txtField.onActionProperty().bind(op);
         assertEquals(ev, op.getValue());
     }
+
     @Test
     public void testPromptTextWithBindingWithLineBreaks() {
         initStage();
@@ -256,9 +257,10 @@ public class TextFieldTest {
         txtField.promptTextProperty().bind(promptProperty);
         root.getChildren().add(txtField);
         Text promptNode = TextInputSkinShim.getPromptNode(txtField);
-        assertEquals("PromptwithLineBreaks", promptNode.getText());
+        assertEquals(promptWithLineBreaks.replace("\n",""), promptNode.getText());
         txtField.promptTextProperty().unbind();
     }
+
     @Test
     public void testPromptTextWithBindingWithoutLineBreaks() {
         initStage();
@@ -268,9 +270,10 @@ public class TextFieldTest {
         txtField.promptTextProperty().bind(promptProperty);
         root.getChildren().add(txtField);
         Text promptNode = TextInputSkinShim.getPromptNode(txtField);
-        assertEquals("Prompt without LineBreaks", promptNode.getText());
+        assertEquals(promptWithoutLineBreaks, promptNode.getText());
         txtField.promptTextProperty().unbind();
     }
+
     @Test
     public void testPromptTextWhenSettingValueWithLineBreaks() {
         initStage();
@@ -280,11 +283,11 @@ public class TextFieldTest {
         txtField.setPromptText(promptWithoutLineBreaks);
         root.getChildren().add(txtField);
         Text promptNode = TextInputSkinShim.getPromptNode(txtField);
-        assertEquals("Prompt without LineBreaks", promptNode.getText());
+        assertEquals(promptWithoutLineBreaks, promptNode.getText());
         txtField.setPromptText(promptWithLineBreaks);
-        assertEquals("PromptwithLineBreaks", promptNode.getText());
-
+        assertEquals(promptWithLineBreaks.replace("\n",""), promptNode.getText());
     }
+
     @Test
     public void testPromptTextWithNullValue() {
         initStage();
@@ -294,9 +297,9 @@ public class TextFieldTest {
         txtField.promptTextProperty().bind(promptPropertyNull);
         root.getChildren().add(txtField);
         Text promptNode = TextInputSkinShim.getPromptNode(txtField);
-        System.out.println(promptNode);
         assertNull(promptNode);
     }
+
     /*********************************************************************
      * Miscellaneous Tests                                               *
      ********************************************************************/

@@ -68,6 +68,9 @@ public class TextAreaTest {
 
     @AfterEach
     public void cleanup() {
+        if (stage != null) {
+            stage.hide();
+        }
         removeUncaughtExceptionHandler();
     }
 
@@ -270,9 +273,10 @@ public class TextAreaTest {
         txtArea.promptTextProperty().bind(promptProperty);
         root.getChildren().add(txtArea);
         Text promptNode = TextInputSkinShim.getPromptNode(txtArea);
-        assertEquals("Prompt\nwith\nLineBreaks", promptNode.getText());
+        assertEquals(promptWithLineBreaks, promptNode.getText());
         txtArea.promptTextProperty().unbind();
     }
+
     @Test
     public void testPromptTextInTextArea() {
         initStage();
@@ -281,9 +285,9 @@ public class TextAreaTest {
         txtArea.setPromptText(promptWithLineBreaks);
         root.getChildren().add(txtArea);
         Text promptNode = TextInputSkinShim.getPromptNode(txtArea);
-        System.out.println(promptNode.getText());
-        assertEquals("Prompt\nwith\nLineBreaks", promptNode.getText());
+        assertEquals(promptWithLineBreaks, promptNode.getText());
     }
+
     @Test
     public void testPromptTextWithNullValue() {
         initStage();
@@ -293,9 +297,9 @@ public class TextAreaTest {
         txtArea.promptTextProperty().bind(promptPropertyNull);
         root.getChildren().add(txtArea);
         Text promptNode = TextInputSkinShim.getPromptNode(txtArea);
-        System.out.println(promptNode);
         assertNull(promptNode);
     }
+
     /*********************************************************************
      * Miscellaneous Tests                                               *
      ********************************************************************/
