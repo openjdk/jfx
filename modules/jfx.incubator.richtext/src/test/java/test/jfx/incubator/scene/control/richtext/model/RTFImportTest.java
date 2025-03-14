@@ -60,15 +60,15 @@ public class RTFImportTest {
             /margl1440/margr1440/vieww11520/viewh9000/viewkind0
             /deftab720
             /pard/pardeftab720/partightenfactor0
-            
+
             /f0/b/fs24 /cf2 /expnd0/expndtw0/kerning0
             bold
             /f1/b0 /
-            
+
             /f2/fs36 font
             /f1/fs24 /
             /pard/pardeftab720/partightenfactor0
-            
+
             /f3/i /cf2 italic
             /f1/i0 /
             /pard/pardeftab720/partightenfactor0
