@@ -525,6 +525,9 @@ public class MenuBarSkin extends SkinBase<MenuBar> {
         stages.addListener((ListChangeListener<Window>) c -> {
             while (c.next()) {
                 for (Window stage : c.getRemoved()) {
+                    if (stage == currentMenuBarStage) {
+                        setSystemMenu(null);
+                    }
                     stage.focusedProperty().removeListener(focusedStageListener);
                 }
                 for (Window stage : c.getAddedSubList()) {
