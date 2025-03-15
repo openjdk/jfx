@@ -56,7 +56,7 @@ public enum PreviewFeature {
     /**
      * Verifies that preview features are enabled, and throws an exception otherwise.
      * <p>
-     * Unless suppressed with the {@code javafx.suppressPreviewBanner=true} system property, this method
+     * Unless suppressed with the {@code javafx.suppressPreviewWarning=true} system property, this method
      * prints a one-time warning to the error output stream for every feature for which it is called.
      *
      * @throws RuntimeException if preview features are not enabled
