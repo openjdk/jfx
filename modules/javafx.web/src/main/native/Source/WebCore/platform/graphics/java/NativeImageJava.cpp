@@ -47,14 +47,17 @@ IntSize PlatformImageNativeImageBackend::size() const
     }
 
     JNIEnv* env = WTF::GetJavaEnv();
-    static jmethodID midGetSize = env->GetMethodID(
-        PG_GetImageFrameClass(env),
+    jclass wcImageFrameClz = PG_GetImageFrameClass(env);
+    static jmethodID midGetSize = env->GetStaticMethodID(
+        wcImageFrameClz,
         "getSize",
-        "()[I");
+        "(Ljava/lang/Object;)[I");
     ASSERT(midGetSize);
-    JLocalRef<jintArray> jsize((jintArray)env->CallObjectMethod(
-                        jobject(*m_platformImage->getImage().get()),
-                        midGetSize));
+    JLocalRef<jintArray> jsize((jintArray)env->CallStaticObjectMethod(
+                        wcImageFrameClz,
+                        midGetSize,
+                        jobject(*m_platformImage->getImage().get())
+                        ));
     if (!jsize) {
         return {};
     }

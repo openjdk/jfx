@@ -35,6 +35,15 @@ public abstract class WCImageFrame extends Ref {
      */
     public abstract int[] getSize();
 
+    public static int[] getSize(Object image) {
+        // JDK-8347937 workaround
+        if (image instanceof WCImageFrame) {
+            return ((WCImageFrame)image).getSize();
+        }
+
+        return null;
+    }
+
     protected void destroyDecodedData() {
     }
 }
