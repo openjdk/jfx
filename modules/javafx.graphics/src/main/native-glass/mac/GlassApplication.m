@@ -405,6 +405,22 @@ jint JNICALL JNI_OnLoad(JavaVM *vm, void *reserved)
     GLASS_CHECK_EXCEPTION(env);
 }
 
+- (void)application:(NSApplication *)application openURLs:(NSArray<NSURL *> *)urls
+{
+    LOG("GlassApplication:application:openURLs");
+
+    GET_MAIN_JENV;
+    jclass appEventHandlerClass = [GlassHelper ClassForName:"com.apple.eawt._AppEventHandler" withEnv:env];
+    jmethodID handleOpenURIMethod = (*env)->GetStaticMethodID(env, appEventHandlerClass, "handleOpenURI", "(Ljava/lang/String;)V");
+
+    for (NSURL *url in urls) {
+        jstring jURL = NSStringToJavaString(jEnv, url.absoluteString);
+
+        (*env)->CallStaticVoidMethod(env, appEventHandlerClass, handleOpenURIMethod, jURL);
+        (*env)->DeleteLocalRef(env, jURL);
+    }
+}
+
 - (void)application:(NSApplication *)theApplication openFiles:(NSArray *)filenames
 {
     LOG("GlassApplication:application:openFiles");
