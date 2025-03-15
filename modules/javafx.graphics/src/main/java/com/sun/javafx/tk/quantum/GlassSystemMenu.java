@@ -61,6 +61,7 @@ class GlassSystemMenu implements TKSystemMenu {
 
     private List<MenuBase>      systemMenus = null;
     private MenuBar             glassSystemMenuBar = null;
+    private boolean             useDefaultMenus = true;
     private final Map<Menu, ListChangeListener<MenuItemBase>> menuListeners = new HashMap<>();
     private final Map<ListChangeListener<MenuItemBase>, ObservableList<MenuItemBase>> listenerItems = new HashMap<>();
     private BooleanProperty active;
@@ -75,8 +76,9 @@ class GlassSystemMenu implements TKSystemMenu {
         if (glassSystemMenuBar == null) {
             Application app = Application.GetApplication();
             glassSystemMenuBar = app.createMenuBar();
-            app.installDefaultMenus(glassSystemMenuBar);
-
+            if (useDefaultMenus) {
+                app.installDefaultMenus(glassSystemMenuBar);
+            }
             if (systemMenus != null) {
                 setMenus(systemMenus);
             }
@@ -91,6 +93,19 @@ class GlassSystemMenu implements TKSystemMenu {
         return Application.GetApplication().supportsSystemMenu();
     }
 
+    @Override public void setUseDefaultMenus(boolean use) {
+        if (use != useDefaultMenus) {
+            if (glassSystemMenuBar != null) {
+                if (useDefaultMenus) {
+                    Application.GetApplication().removeDefaultMenus(glassSystemMenuBar);
+                } else {
+                    Application.GetApplication().installDefaultMenus(glassSystemMenuBar);
+                }
+            }
+            useDefaultMenus = use;
+        }
+    }
+
     @Override public void setMenus(List<MenuBase> menus) {
         if (active != null) {
             active.set(false);
@@ -100,15 +115,24 @@ class GlassSystemMenu implements TKSystemMenu {
         if (glassSystemMenuBar != null) {
 
             /*
+             * If we added default menus to ensure the menu bar did
+             * not become empty remove them now.
+             */
+            if (!useDefaultMenus) {
+                Application.GetApplication().removeDefaultMenus(glassSystemMenuBar);
+            }
+
+            /*
              * Remove existing menus
              */
             List<Menu> existingMenus = glassSystemMenuBar.getMenus();
             int existingSize = existingMenus.size();
 
             /*
-             * Leave the Apple menu in place
+             * Leave the Apple menu in place, if using
              */
-            for (int index = existingSize - 1; index >= 1; index--) {
+            int limit = (useDefaultMenus ? 1 : 0);
+            for (int index = existingSize - 1; index >= limit; index--) {
                 Menu menu = existingMenus.get(index);
                 clearMenu(menu);
                 glassSystemMenuBar.remove(index);
@@ -116,6 +140,13 @@ class GlassSystemMenu implements TKSystemMenu {
 
             for (MenuBase menu : menus) {
                 addMenu(null, menu);
+            }
+
+            /*
+             * Do not let the menu bar become empty.
+             */
+            if (existingMenus.size() == 0) {
+                Application.GetApplication().installDefaultMenus(glassSystemMenuBar);
             }
         }
     }
