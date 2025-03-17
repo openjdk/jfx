@@ -34,8 +34,10 @@ import javafx.stage.Stage;
  * will summon snap layouts.
  *
  * @since 25
+ * @deprecated This is a preview feature which may be changed or removed in a future release.
  * @see HeaderBar#setButtonType(Node, HeaderButtonType)
  */
+@Deprecated(since = "25")
 public enum HeaderButtonType {
 
     /**

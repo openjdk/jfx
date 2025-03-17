@@ -158,7 +158,9 @@ public enum ConditionalFeature {
      * This feature is currently supported on Windows, Linux, and macOS.
      *
      * @since 25
+     * @deprecated This is a preview feature which may be changed or removed in a future release.
      */
+    @Deprecated(since = "25")
     EXTENDED_WINDOW,
 
     /**

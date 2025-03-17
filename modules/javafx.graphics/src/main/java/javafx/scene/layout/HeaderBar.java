@@ -26,6 +26,7 @@
 package javafx.scene.layout;
 
 import com.sun.glass.ui.HeaderButtonMetrics;
+import com.sun.javafx.PreviewFeature;
 import com.sun.javafx.geom.Vec2d;
 import com.sun.javafx.scene.layout.HeaderButtonBehavior;
 import com.sun.javafx.stage.StageHelper;
@@ -158,7 +159,9 @@ import javafx.util.Subscription;
  * }</pre>
  *
  * @since 25
+ * @deprecated This is a preview feature which may be changed or removed in a future release.
  */
+@Deprecated(since = "25")
 public class HeaderBar extends Region {
 
     private static final Dimension2D EMPTY = new Dimension2D(0, 0);
@@ -316,6 +319,8 @@ public class HeaderBar extends Region {
      * Creates a new {@code HeaderBar}.
      */
     public HeaderBar() {
+        PreviewFeature.HEADER_BAR.checkEnabled();
+
         // Inflate the minHeight property. This is important so that we can track whether a stylesheet or
         // user code changes the property value before we set it to the height of the native title bar.
         minHeightProperty();
