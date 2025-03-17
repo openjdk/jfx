@@ -42,6 +42,7 @@ import javafx.scene.input.KeyCombination;
 import javafx.scene.layout.HeaderBar;
 
 import com.sun.glass.ui.HeaderButtonMetrics;
+import com.sun.javafx.PreviewFeature;
 import com.sun.javafx.collections.VetoableListDecorator;
 import com.sun.javafx.collections.TrackableObservableList;
 import com.sun.javafx.scene.SceneHelper;
@@ -454,9 +455,7 @@ public class Stage extends Window {
     private StageStyle style; // default is set in constructor
 
     /**
-     * Specifies the style for this stage. This must be done prior to making
-     * the stage visible. The style is one of: StageStyle.DECORATED,
-     * StageStyle.UNDECORATED, StageStyle.TRANSPARENT, or StageStyle.UTILITY.
+     * Specifies the style for this stage. This must be done prior to making the stage visible.
      *
      * @param style the style for this stage.
      *
@@ -465,7 +464,12 @@ public class Stage extends Window {
      *
      * @defaultValue StageStyle.DECORATED
      */
+    @SuppressWarnings("deprecation")
     public final void initStyle(StageStyle style) {
+        switch (style) {
+            case StageStyle.EXTENDED -> PreviewFeature.STAGE_STYLE_EXTENDED.checkEnabled();
+            case StageStyle.EXTENDED_UTILITY -> PreviewFeature.STAGE_STYLE_EXTENDED_UTILITY.checkEnabled();
+        }
         if (hasBeenVisible) {
             throw new IllegalStateException("Cannot set style once stage has been set visible");
         }

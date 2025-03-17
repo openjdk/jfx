@@ -125,7 +125,9 @@ public enum StageStyle {
      * in the title of miniaturized preview windows.
      *
      * @since 25
+     * @deprecated This is a preview feature which may be changed or removed in a future release.
      */
+    @Deprecated(since = "25")
     EXTENDED,
 
     /**
@@ -135,6 +137,8 @@ public enum StageStyle {
      * If the feature is not supported by the platform, this style downgrades to {@link StageStyle#UTILITY}.
      *
      * @since 25
+     * @deprecated This is a preview feature which may be changed or removed in a future release.
      */
+    @Deprecated(since = "25")
     EXTENDED_UTILITY
 }
