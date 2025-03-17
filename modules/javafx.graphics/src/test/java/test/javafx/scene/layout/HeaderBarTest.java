@@ -25,6 +25,7 @@
 
 package test.javafx.scene.layout;
 
+import com.sun.javafx.PreviewFeature;
 import javafx.beans.property.DoubleProperty;
 import javafx.beans.property.ObjectProperty;
 import javafx.geometry.Dimension2D;
@@ -42,12 +43,14 @@ import test.util.ReflectionUtils;
 
 import static org.junit.jupiter.api.Assertions.*;
 
+@SuppressWarnings("deprecation")
 public class HeaderBarTest {
 
     HeaderBar headerBar;
 
     @BeforeEach
     void setup() {
+        PreviewFeature.enableForTesting();
         headerBar = new HeaderBar();
     }
 

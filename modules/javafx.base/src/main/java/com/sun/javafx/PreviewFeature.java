@@ -54,6 +54,16 @@ public enum PreviewFeature {
     private static final boolean enabled = Boolean.getBoolean(ENABLE_PREVIEW_PROPERTY);
     private static final boolean suppressWarning = Boolean.getBoolean(SUPPRESS_WARNING_PROPERTY);
     private static final Set<PreviewFeature> enabledFeatures = new HashSet<>();
+    private static boolean enabledForTesting;
+
+    /**
+     * Enables preview features and suppresses the warning.
+     * <p>
+     * This method is only used for testing purposes.
+     */
+    public static void enableForTesting() {
+        enabledForTesting = true;
+    }
 
     /**
      * Verifies that preview features are enabled, and throws an exception otherwise.
@@ -64,7 +74,9 @@ public enum PreviewFeature {
      * @throws RuntimeException if preview features are not enabled
      */
     public void checkEnabled() {
-        if (!enabled) {
+        if (enabledForTesting) {
+            // do nothing
+        } else if (!enabled) {
             throw new RuntimeException("""
                 %s is a preview feature of JavaFX %s.
                 Preview features may be removed in a future release, or upgraded to permanent features of JavaFX.
