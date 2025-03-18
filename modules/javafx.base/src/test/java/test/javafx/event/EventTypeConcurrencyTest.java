@@ -44,7 +44,7 @@ public class EventTypeConcurrencyTest {
         try (var executor = Executors.newCachedThreadPool()) {
             try {
                 ArrayList<Callable<Object>> runs = new ArrayList<>(N);
-                for(int i=0; i<N; i++) {
+                for (int i = 0; i < N; i++) {
                     String name = "TEST" + i;
                     runs.add(() -> {
                         return new EventType<>(Event.ANY, name);
