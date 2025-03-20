@@ -930,6 +930,10 @@ public class StubToolkit extends Toolkit {
         }
 
         @Override
+        public void setUseDefaultMenus(boolean use) {
+        }
+
+        @Override
         public void setMenus(List<MenuBase> menus) {
             this.menus = menus;
         }
