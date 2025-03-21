@@ -1732,4 +1732,15 @@ public abstract class XYChart<X,Y> extends Chart {
         }
     }
 
+    @Override
+    void updateSymbolFocusable(boolean on) {
+        for (Series<X, Y> s : getData()) {
+            for (Data<X, Y> d : s.getData()) {
+                Node n = d.getNode();
+                if (n != null) {
+                    n.setFocusTraversable(on);
+                }
+            }
+        }
+    }
 }

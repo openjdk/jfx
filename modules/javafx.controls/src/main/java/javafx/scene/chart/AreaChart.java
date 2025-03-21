@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,14 +25,17 @@
 
 package javafx.scene.chart;
 
-import java.util.*;
-
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
 import javafx.animation.FadeTransition;
 import javafx.animation.Interpolator;
 import javafx.animation.KeyFrame;
 import javafx.animation.KeyValue;
 import javafx.animation.Timeline;
-import javafx.application.Platform;
 import javafx.beans.NamedArg;
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.DoubleProperty;
@@ -40,9 +43,15 @@ import javafx.beans.property.SimpleDoubleProperty;
 import javafx.collections.FXCollections;
 import javafx.collections.ListChangeListener;
 import javafx.collections.ObservableList;
+import javafx.css.CssMetaData;
+import javafx.css.Styleable;
+import javafx.css.StyleableBooleanProperty;
+import javafx.css.StyleableProperty;
+import javafx.css.converter.BooleanConverter;
 import javafx.scene.AccessibleRole;
 import javafx.scene.Group;
 import javafx.scene.Node;
+import javafx.scene.chart.LineChart.SortingPolicy;
 import javafx.scene.layout.StackPane;
 import javafx.scene.shape.ClosePath;
 import javafx.scene.shape.LineTo;
@@ -51,14 +60,7 @@ import javafx.scene.shape.Path;
 import javafx.scene.shape.PathElement;
 import javafx.scene.shape.StrokeLineJoin;
 import javafx.util.Duration;
-
 import com.sun.javafx.charts.Legend.LegendItem;
-import javafx.css.converter.BooleanConverter;
-import javafx.css.CssMetaData;
-import javafx.css.Styleable;
-import javafx.css.StyleableBooleanProperty;
-import javafx.css.StyleableProperty;
-import javafx.scene.chart.LineChart.SortingPolicy;
 
 /**
  * AreaChart - Plots the area between the line that connects the data points and
@@ -541,7 +543,7 @@ public class AreaChart<X,Y> extends XYChart<X,Y> {
             symbol = new StackPane();
             symbol.setAccessibleRole(AccessibleRole.TEXT);
             symbol.setAccessibleRoleDescription("Point");
-            symbol.focusTraversableProperty().bind(Platform.accessibilityActiveProperty());
+            symbol.setFocusTraversable(isAccessibilityActive());
             item.setNode(symbol);
         }
         // set symbol styles

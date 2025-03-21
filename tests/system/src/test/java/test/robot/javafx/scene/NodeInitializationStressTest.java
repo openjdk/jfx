@@ -199,7 +199,6 @@ import javafx.util.Duration;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import test.robot.testharness.RobotTestBase;
 
@@ -217,6 +216,9 @@ import test.robot.testharness.RobotTestBase;
  * starts a number of background threads which also create nodes of the same type.
  * Each such thread makes repeated accesses of its own node for the duration
  * of test.
+ *
+ * Some tests employ repeated actions, such as setting the chart data, in order to exercise both addition
+ * and removal code paths.
  *
  * Also, the visible node gets accessed periodically in the FX application thread just to shake things up.
  */
@@ -286,7 +288,6 @@ public class NodeInitializationStressTest extends RobotTestBase {
         });
     }
 
-    @Disabled("JDK-8349091") // FIX
     @Test
     public void areaChart() {
         assumeFalse(SKIP_TEST);
@@ -295,22 +296,25 @@ public class NodeInitializationStressTest extends RobotTestBase {
             c.getData().setAll(createNumberSeries());
             return c;
         }, (c) -> {
-            c.getData().setAll(createNumberSeries());
             accessChart(c);
+            c.getData().setAll(createNumberSeries());
+            c.getData().setAll(createNumberSeries());
         });
     }
 
-    @Disabled("JDK-8349091") // FIX
     @Test
     public void barChart() {
         assumeFalse(SKIP_TEST);
         test(() -> {
             BarChart c = new BarChart(createCategoryAxis("x"), createNumberAxis("y"));
-            c.getData().setAll(createCategorySeries());
+            if (nextBoolean()) {
+                c.getData().setAll(createCategorySeries());
+            }
             return c;
         }, (c) -> {
-            c.getData().setAll(createCategorySeries());
             accessChart(c);
+            c.getData().setAll(createCategorySeries());
+            c.getData().setAll(createCategorySeries());
         });
     }
 
@@ -340,7 +344,6 @@ public class NodeInitializationStressTest extends RobotTestBase {
         });
     }
 
-    @Disabled("JDK-8349091") // FIX
     @Test
     public void bubbleChart() {
         assumeFalse(SKIP_TEST);
@@ -349,8 +352,9 @@ public class NodeInitializationStressTest extends RobotTestBase {
             c.getData().setAll(createNumberSeries());
             return c;
         }, (c) -> {
-            c.getData().setAll(createNumberSeries());
             accessChart(c);
+            c.getData().setAll(createNumberSeries());
+            c.getData().setAll(createNumberSeries());
         });
     }
 
@@ -458,16 +462,16 @@ public class NodeInitializationStressTest extends RobotTestBase {
             c.setValue(Color.GREEN);
             return c;
         }, (c) -> {
+            accessControl(c);
             c.setValue(Color.RED);
             c.prefHeight(-1);
             c.setValue(Color.BLACK);
             c.prefWidth(-1);
-            accessControl(c);
             if (Platform.isFxApplicationThread()) {
-                if (nextBoolean()) {
-                    c.show();
-                } else {
+                if (c.isShowing()) {
                     c.hide();
+                } else {
+                    c.show();
                 }
             }
         });
@@ -482,15 +486,15 @@ public class NodeInitializationStressTest extends RobotTestBase {
             c.getItems().setAll("ComboBox", "1", "2");
             return c;
         }, (c) -> {
+            accessControl(c);
             c.setEditable(true);
             c.getItems().setAll("ComboBox", nextString(), "2");
             c.getSelectionModel().select(0);
-            accessControl(c);
             if (Platform.isFxApplicationThread()) {
-                if (nextBoolean()) {
-                    c.show();
-                } else {
+                if (c.isShowing()) {
                     c.hide();
+                } else {
+                    c.show();
                 }
             }
         });
@@ -534,16 +538,16 @@ public class NodeInitializationStressTest extends RobotTestBase {
             c.setSkin(new DatePickerSkin(c));
             return c;
         }, (c) -> {
+            accessControl(c);
             c.setValue(LocalDate.now());
             c.prefHeight(-1);
             c.setValue(LocalDate.EPOCH);
             c.prefWidth(-1);
-            accessControl(c);
             if (Platform.isFxApplicationThread()) {
-                if (nextBoolean()) {
-                    c.show();
-                } else {
+                if (c.isShowing()) {
                     c.hide();
+                } else {
+                    c.show();
                 }
             }
         });
@@ -695,7 +699,6 @@ public class NodeInitializationStressTest extends RobotTestBase {
         });
     }
 
-    @Disabled("JDK-8349091") // FIX
     @Test
     public void lineChart() {
         assumeFalse(SKIP_TEST);
@@ -704,8 +707,9 @@ public class NodeInitializationStressTest extends RobotTestBase {
             c.getData().setAll(createNumberSeries());
             return c;
         }, (c) -> {
-            c.getData().setAll(createNumberSeries());
             accessChart(c);
+            c.getData().setAll(createNumberSeries());
+            c.getData().setAll(createNumberSeries());
         });
     }
 
@@ -748,14 +752,14 @@ public class NodeInitializationStressTest extends RobotTestBase {
             c.setSkin(new MenuButtonSkin(c));
             return c;
         }, (c) -> {
+            accessControl(c);
             c.getItems().setAll(new MenuItem("MenuButton"));
             c.setPopupSide(nextEnum(Side.class));
-            accessControl(c);
             if (Platform.isFxApplicationThread()) {
-                if (nextBoolean()) {
-                    c.show();
-                } else {
+                if (c.isShowing()) {
                     c.hide();
+                } else {
+                    c.show();
                 }
             }
         });
@@ -856,7 +860,6 @@ public class NodeInitializationStressTest extends RobotTestBase {
         });
     }
 
-    @Disabled("JDK-8349090") // FIX
     @Test
     public void pieChart() {
         assumeFalse(SKIP_TEST);
@@ -978,7 +981,6 @@ public class NodeInitializationStressTest extends RobotTestBase {
         });
     }
 
-    @Disabled("JDK-8349091") // FIX
     @Test
     public void scatterChart() {
         assumeFalse(SKIP_TEST);
@@ -987,8 +989,9 @@ public class NodeInitializationStressTest extends RobotTestBase {
             c.getData().setAll(createNumberSeries());
             return c;
         }, (c) -> {
-            c.getData().setAll(createNumberSeries());
             accessChart(c);
+            c.getData().setAll(createNumberSeries());
+            c.getData().setAll(createNumberSeries());
         });
     }
 
@@ -1057,16 +1060,15 @@ public class NodeInitializationStressTest extends RobotTestBase {
             c.setPopupSide(nextEnum(Side.class));
             accessControl(c);
             if (Platform.isFxApplicationThread()) {
-                if (nextBoolean()) {
-                    c.show();
-                } else {
+                if (c.isShowing()) {
                     c.hide();
+                } else {
+                    c.show();
                 }
             }
         });
     }
 
-    @Disabled("JDK-8349091") // FIX
     @Test
     public void stackedAreaChart() {
         assumeFalse(SKIP_TEST);
@@ -1075,12 +1077,12 @@ public class NodeInitializationStressTest extends RobotTestBase {
             c.getData().setAll(createNumberSeries());
             return c;
         }, (c) -> {
-            c.getData().setAll(createNumberSeries());
             accessChart(c);
+            c.getData().setAll(createNumberSeries());
+            c.getData().setAll(createNumberSeries());
         });
     }
 
-    @Disabled("JDK-8349091") // FIX
     @Test
     public void stackedBarChart() {
         assumeFalse(SKIP_TEST);
@@ -1089,6 +1091,7 @@ public class NodeInitializationStressTest extends RobotTestBase {
             c.getData().setAll(createCategorySeries());
             return c;
         }, (c) -> {
+            c.getData().setAll(createCategorySeries());
             c.getData().setAll(createCategorySeries());
             accessChart(c);
         });
@@ -1366,7 +1369,7 @@ public class NodeInitializationStressTest extends RobotTestBase {
     private static void accessChart(Chart c) {
         String title = c.getClass().getSimpleName();
         c.setTitle(title);
-        c.setAnimated(true);
+        c.setAnimated(nextBoolean());
         accessRegion(c);
     }
 
