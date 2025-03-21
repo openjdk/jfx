@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,12 +25,13 @@
 
 package com.sun.javafx.sg.prism;
 
-import javafx.geometry.VPos;
-import javafx.scene.text.Font;
 import java.nio.IntBuffer;
+import java.util.LinkedList;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.FutureTask;
-import java.util.LinkedList;
+import javafx.geometry.VPos;
+import javafx.scene.text.Font;
+import javafx.scene.text.FontSmoothingType;
 import com.sun.javafx.font.PGFont;
 import com.sun.javafx.geom.Arc2D;
 import com.sun.javafx.geom.BaseBounds;
@@ -46,7 +47,9 @@ import com.sun.javafx.geom.transform.Affine2D;
 import com.sun.javafx.geom.transform.BaseTransform;
 import com.sun.javafx.geom.transform.NoninvertibleTransformException;
 import com.sun.javafx.scene.text.FontHelper;
+import com.sun.javafx.scene.text.TextLayout;
 import com.sun.javafx.text.PrismTextLayout;
+import com.sun.javafx.text.PrismTextLayoutFactory;
 import com.sun.javafx.tk.RenderJob;
 import com.sun.javafx.tk.ScreenConfigurationAccessor;
 import com.sun.javafx.tk.Toolkit;
@@ -72,7 +75,6 @@ import com.sun.scenario.effect.ImageData;
 import com.sun.scenario.effect.impl.prism.PrDrawable;
 import com.sun.scenario.effect.impl.prism.PrFilterContext;
 import com.sun.scenario.effect.impl.prism.PrTexture;
-import javafx.scene.text.FontSmoothingType;
 
 /**
  */
@@ -332,7 +334,7 @@ public class NGCanvas extends NGNode {
     private BasicStroke stroke;
     private Path2D path;
     private NGText ngtext;
-    private PrismTextLayout textLayout;
+    private TextLayout textLayout;
     private PGFont pgfont;
     private int smoothing;
     private boolean imageSmoothing;
@@ -368,7 +370,7 @@ public class NGCanvas extends NGNode {
 
         path = new Path2D();
         ngtext = new NGText();
-        textLayout = new PrismTextLayout();
+        textLayout = PrismTextLayoutFactory.getFactory().createLayout();
         transform = new Affine2D();
         clipStack = new LinkedList<>();
         initAttributes();

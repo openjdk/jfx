@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -384,52 +384,7 @@ public abstract class GlyphLayout {
         return 0;
     }
 
-    /* This scheme creates a singleton GlyphLayout which is checked out
-     * for use. Callers who find its checked out create one that after use
-     * is discarded. This means that in a MT-rendering environment,
-     * there's no need to synchronise except for that one instance.
-     * Fewer threads will then need to synchronise, perhaps helping
-     * throughput on a MP system. If for some reason the reusable
-     * GlyphLayout is checked out for a long time (or never returned?) then
-     * we would end up always creating new ones. That situation should not
-     * occur and if if did, it would just lead to some extra garbage being
-     * created.
-     */
-    private static GlyphLayout reusableGL = newInstance();
-    private static boolean inUse;
-
-    private static GlyphLayout newInstance() {
-        PrismFontFactory factory = PrismFontFactory.getFontFactory();
-        return factory.createGlyphLayout();
-    }
-
-    public static GlyphLayout getInstance() {
-        /* The following heuristic is that if the reusable instance is
-         * in use, it probably still will be in a micro-second, so avoid
-         * synchronising on the class and just allocate a new instance.
-         * The cost is one extra boolean test for the normal case, and some
-         * small number of cases where we allocate an extra object when
-         * in fact the reusable one would be freed very soon.
-         */
-        if (inUse) {
-            return newInstance();
-        } else {
-            synchronized(GlyphLayout.class) {
-                if (inUse) {
-                    return newInstance();
-                } else {
-                    inUse = true;
-                    return reusableGL;
-                }
-            }
-        }
-    }
-
-    public void dispose() {
-        if (this == reusableGL) {
-            inUse = false;
-        }
-    }
+    public abstract void dispose();
 
     private static boolean isIdeographic(int codePoint) {
         if (isIdeographicMethod != null) {
@@ -441,5 +396,4 @@ public abstract class GlyphLayout {
         }
         return false;
     }
-
 }
