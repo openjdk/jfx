@@ -42,8 +42,8 @@ public class RegionShim extends Region {
     }
 
     public static double computeChildMaxAreaHeight(Region r,
-            Node child, double maxBaselineComplement, Insets margin, double width) {
-        return r.computeChildMaxAreaHeight(child, maxBaselineComplement, margin, width);
+            Node child, double maxBaselineComplement, Insets margin, double width, boolean fillWidth) {
+        return r.computeChildMaxAreaHeight(child, maxBaselineComplement, margin, width, fillWidth);
     }
 
     public static double computeChildMaxAreaWidth(Region r,
@@ -54,11 +54,16 @@ public class RegionShim extends Region {
     }
 
     public static double computeChildMinAreaHeight(Region r,
+            Node child, Insets margin) {
+        return r.computeChildMinAreaHeight(child, margin);
+    }
+
+    public static double computeChildMinAreaHeight(Region r,
             Node child, double minBaselineComplement,
-            Insets margin, double width) {
+            Insets margin, double width, boolean fillWidth) {
         return r.computeChildMinAreaHeight(child,
                 minBaselineComplement,
-                margin, width );
+                margin, width, fillWidth);
     }
 
     public static double computeChildMinAreaWidth(Region r,
@@ -81,9 +86,9 @@ public class RegionShim extends Region {
 
     public static double computeChildPrefAreaHeight(Region r,
             Node child, double prefBaselineComplement,
-            Insets margin, double width) {
+            Insets margin, double width, boolean fillWidth) {
         return r.computeChildPrefAreaHeight(child,
-                prefBaselineComplement, margin, width);
+                prefBaselineComplement, margin, width, fillWidth);
     }
 
     public static double computeChildPrefAreaWidth(Region r,
@@ -168,12 +173,12 @@ public class RegionShim extends Region {
 
     //----------------------------------------------------------
 
-        @Override public void addImageListener(Image image) {
-            super.addImageListener(image);
-        }
+    @Override public void addImageListener(Image image) {
+        super.addImageListener(image);
+    }
 
-        @Override public void removeImageListener(Image image) {
-            super.removeImageListener(image);
-        }
+    @Override public void removeImageListener(Image image) {
+        super.removeImageListener(image);
+    }
 
 }
