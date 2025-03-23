@@ -47,7 +47,7 @@ public class WinHeaderButtonOverlay extends HeaderButtonOverlay {
      * to an additional scaling factor of 1.
      */
     private static final double[][] SCALE_FACTORS = new double[][] {
-        { 1.0, 1.0 },
+        { 1.0, 1.15 },
         { 1.25, 1.1 },
         { 1.5, 1.15 },
         { 1.75, 1.0 },
