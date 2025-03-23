@@ -26,6 +26,8 @@
 package com.sun.glass.ui;
 
 import com.sun.glass.events.MouseEvent;
+import com.sun.glass.ui.gtk.GtkWindow;
+import com.sun.glass.ui.win.WinWindow;
 import com.sun.javafx.binding.ObjectConstant;
 import com.sun.javafx.util.Utils;
 import javafx.beans.property.DoubleProperty;
@@ -138,6 +140,10 @@ import java.util.stream.Stream;
  *         </tr>
  *     </tbody>
  * </table>
+ *
+ * @implNote This control is used by the {@link WinWindow#createHeaderButtonOverlay()} and
+ *           {@link GtkWindow#createHeaderButtonOverlay()} implementations for {@link StageStyle#EXTENDED}
+ *           windows. It is not used by the macOS implementation.
  */
 public class HeaderButtonOverlay extends Region {
 
