@@ -734,13 +734,7 @@ public class TextFieldSkin extends TextInputControlSkin<TextField> {
         promptNode.fontProperty().bind(getSkinnable().fontProperty());
 
         promptNode.textProperty().bind(getSkinnable().promptTextProperty());
-        promptNode.textProperty().bind(Bindings.createStringBinding(() -> {
-            String s = getSkinnable().getPromptText();
-            if (s == null) {
-                return "";
-            }
-            return s.replace("\n", "");
-        }, getSkinnable().promptTextProperty()));
+        promptNode.textProperty().bind(getSkinnable().promptTextProperty().map(s -> s.replace("\n", "")));
         promptNode.fillProperty().bind(promptTextFillProperty());
         updateSelection();
     }
