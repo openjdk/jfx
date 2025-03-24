@@ -761,7 +761,7 @@ jint JNICALL JNI_OnLoad(JavaVM *vm, void *reserved)
     // log that contains the phrase "Too many nested CFRunLoopRuns". We use a
     // lower value here to account for calls in the Java runtime and testing
     // environment.
-    return nestedRunLoopRunCount <= 250;
+    return nestedRunLoopRunCount <= 244;
 }
 
 + (jobject)enterNestedEventLoopWithEnv:(JNIEnv*)env
