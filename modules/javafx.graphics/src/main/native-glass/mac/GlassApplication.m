@@ -756,6 +756,11 @@ jint JNICALL JNI_OnLoad(JavaVM *vm, void *reserved)
 
 + (BOOL)canStartNestedEventLoop
 {
+    // Starting with macOS 15 there is an undocumented limit of 255 nested
+    // calls to CFRunLoopRun. Exceeding that limit will crash the app with a
+    // log that contains the phrase "Too many nested CFRunLoopRuns". We use a
+    // lower value here to account for calls in the Java runtime and testing
+    // environment.
     return nestedRunLoopRunCount <= 250;
 }
 
@@ -769,8 +774,7 @@ jint JNICALL JNI_OnLoad(JavaVM *vm, void *reserved)
     // Cannot use [NSDate distantFuture] because the period is big the app could hang in a runloop
     // if the event came before entering the RL
     while (shouldKeepRunningNestedLoop) {
-        // The app will crash if we exceed an undocumented limit on the number of nested
-        // CFRunLoopRun calls.
+        // Platform.runLater runnables are executed from the runMode:beforeDate: call.
         nestedRunLoopRunCount += 1;
         BOOL ran = [theRL runMode:NSDefaultRunLoopMode
                        beforeDate:[NSDate dateWithTimeIntervalSinceNow:0.010]];
