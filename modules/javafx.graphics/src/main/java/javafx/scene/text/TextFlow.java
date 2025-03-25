@@ -594,13 +594,13 @@ public class TextFlow extends Pane {
                 protected void invalidated() {
                     if (old != null) {
                         old.tabStops().removeListener(monitor);
-                        old.defaultStops().removeListener(monitor);
+                        old.defaultStopsProperty().removeListener(monitor);
                     }
 
                     TabStopPolicy p = get();
                     if (p != null) {
                         p.tabStops().addListener(monitor);
-                        p.defaultStops().addListener(monitor);
+                        p.defaultStopsProperty().addListener(monitor);
                     }
                     old = p;
                     updateTabAdvancePolicy();

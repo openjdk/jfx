@@ -99,14 +99,14 @@ public class TabStopPolicy {
     /**
      * Provides default tab stops (beyond the last tab stop specified by {@code #tabStops()}, as a distance
      * in points from the last tab stop position.
-     *
+     * <p>
      * TODO
      * It is unclear how to specify NONE value (negative perhaps?).  MS Word does not allow for NONE, but allows 0.
      *
      * @return the default tab stops property, in pixels.
      * @defaultValue TODO
      */
-    public final DoubleProperty defaultStops() {
+    public final DoubleProperty defaultStopsProperty() {
         return defaultStops;
     }
 
