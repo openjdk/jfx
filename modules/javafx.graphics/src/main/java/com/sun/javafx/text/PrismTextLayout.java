@@ -54,7 +54,7 @@ import com.sun.javafx.scene.text.TextSpan;
 /**
  * Prism TextLayout
  */
-public abstract class PrismTextLayout implements TextLayout {
+public class PrismTextLayout implements TextLayout {
     private static final BaseTransform IDENTITY = BaseTransform.IDENTITY_TRANSFORM;
     private static final int X_MIN_INDEX = 0;
     private static final int Y_MIN_INDEX = 1;
@@ -831,7 +831,9 @@ public abstract class PrismTextLayout implements TextLayout {
         }
     }
 
-    protected abstract GlyphLayout glyphLayout();
+    protected GlyphLayout glyphLayout() {
+        return GlyphLayoutManager.getInstance();
+    }
 
     private void shape(TextRun run, char[] chars, GlyphLayout layout) {
         FontStrike strike;
