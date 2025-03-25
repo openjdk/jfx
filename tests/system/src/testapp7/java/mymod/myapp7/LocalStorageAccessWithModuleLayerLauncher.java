@@ -73,18 +73,12 @@ public class LocalStorageAccessWithModuleLayerLauncher {
         Configuration cf = parent.configuration().resolve(finder, ModuleFinder.of(), Set.of("mymod"));
         ClassLoader scl = ClassLoader.getSystemClassLoader();
         ModuleLayer.Controller controller = ModuleLayer.defineModulesWithOneLoader(cf, List.of(parent), scl);
-        // Remove reflection once JDK 22 is minimum. See JDK-8340004.
-        Method enableNativeAccessMethod = ModuleLayer.Controller.class.getMethod("enableNativeAccess", Module.class);
         ModuleLayer layer = controller.layer();
         ClassLoader moduleClassLoader = layer.findLoader("mymod");
         Class webClass = moduleClassLoader.loadClass("javafx.scene.web.WebView");
-        // Remove reflection once JDK 22 is minimum. See JDK-8340004.
-        //controller.enableNativeAccess(webClass.getModule());
-        enableNativeAccessMethod.invoke(controller, new Object[]{webClass.getModule()});
+        controller.enableNativeAccess(webClass.getModule());
         Class appClass = moduleClassLoader.loadClass("javafx.application.Application");
-        // Remove reflection once JDK 22 is minimum. See JDK-8340004.
-        //controller.enableNativeAccess(appClass.getModule());
-        enableNativeAccessMethod.invoke(controller, new Object[]{appClass.getModule()});
+        controller.enableNativeAccess(appClass.getModule());
         Class testClass = moduleClassLoader.loadClass("myapp7.LocalStorageAccessWithModuleLayer");
         Method launchMethod = appClass.getMethod("launch", Class.class, String[].class);
         launchMethod.invoke(null, new Object[]{testClass, args});
