@@ -272,6 +272,13 @@ public final class Platform {
     }
 
     /**
+     * The maximum number of nested event loops.
+     *
+     * @since 25
+     */
+    public static final int MAX_NESTED_EVENT_LOOPS = 240;
+
+    /**
      * Enter a nested event loop and block until the corresponding
      * exitNestedEventLoop call is made.
      * The key passed into this method is used to
@@ -301,6 +308,9 @@ public final class Platform {
      *
      * @throws IllegalStateException if this method is called on a thread
      * other than the JavaFX Application Thread.
+     *
+     * @throws RuntimeException if this call would exceed the maximum
+     * number of nested event loops.
      *
      * @return the value passed into the corresponding call to exitEventLoop
      *

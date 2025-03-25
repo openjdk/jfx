@@ -26,6 +26,7 @@
 package com.sun.javafx.tk.quantum;
 
 import javafx.application.ConditionalFeature;
+import javafx.application.Platform;
 import javafx.geometry.Dimension2D;
 import javafx.scene.image.Image;
 import javafx.scene.image.PixelBuffer;
@@ -619,10 +620,17 @@ public final class QuantumToolkit extends Toolkit {
         return stage;
     }
 
+    private boolean maxNestedEventLoopsHit() {
+        if (eventLoopMap == null) {
+            return false;
+        }
+        return eventLoopMap.size() >= Platform.MAX_NESTED_EVENT_LOOPS;
+    }
+
     @Override public boolean canStartNestedEventLoop() {
         checkFxUserThread();
 
-        return inPulse == 0 && Application.GetApplication().canStartNestedEventLoop();
+        return inPulse == 0 && !maxNestedEventLoopsHit();
     }
 
     @Override public Object enterNestedEventLoop(Object key) {
@@ -633,8 +641,9 @@ public final class QuantumToolkit extends Toolkit {
         }
 
         if (!canStartNestedEventLoop()) {
-            if (!Application.GetApplication().canStartNestedEventLoop()) {
-                throw new RuntimeException("Exceeded limit on nested event loops");
+            if (maxNestedEventLoopsHit()) {
+                throw new RuntimeException("Exceeded limit on number of nested event loops (" +
+                    Platform.MAX_NESTED_EVENT_LOOPS + ")");
             } else {
                 throw new IllegalStateException("Cannot enter nested loop during animation or layout processing");
             }

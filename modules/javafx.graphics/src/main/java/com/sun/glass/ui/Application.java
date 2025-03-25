@@ -655,10 +655,6 @@ public abstract class Application {
     protected abstract int staticTimer_getMinPeriod();
     protected abstract int staticTimer_getMaxPeriod();
 
-    public boolean canStartNestedEventLoop() {
-        return true;
-    }
-
     public final EventLoop createEventLoop() {
         return new EventLoop();
     }
