@@ -32,6 +32,9 @@ import javafx.beans.property.DoubleProperty;
 import javafx.beans.property.IntegerProperty;
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.SimpleObjectProperty;
+import javafx.beans.value.ChangeListener;
+import javafx.beans.value.ObservableValue;
+import javafx.collections.ListChangeListener;
 import javafx.css.CssMetaData;
 import javafx.css.Styleable;
 import javafx.css.StyleableDoubleProperty;
@@ -54,12 +57,12 @@ import com.sun.javafx.geom.BaseBounds;
 import com.sun.javafx.geom.Point2D;
 import com.sun.javafx.geom.RectBounds;
 import com.sun.javafx.scene.text.GlyphList;
+import com.sun.javafx.scene.text.SimpleTabAdvancePolicy;
 import com.sun.javafx.scene.text.TabAdvancePolicy;
 import com.sun.javafx.scene.text.TextFlowHelper;
 import com.sun.javafx.scene.text.TextLayout;
 import com.sun.javafx.scene.text.TextLayoutFactory;
 import com.sun.javafx.scene.text.TextSpan;
-import com.sun.javafx.text.FixedTabAdvancePolicy;
 import com.sun.javafx.tk.Toolkit;
 
 /**
@@ -561,7 +564,22 @@ public class TextFlow extends Pane {
 
     public final ObjectProperty<TabStopPolicy> tabStopPolicyProperty() {
         if (tabStopPolicy == null) {
-            tabStopPolicy = new SimpleObjectProperty() {
+            tabStopPolicy = new SimpleObjectProperty<>() {
+                class Monitor implements ListChangeListener<TabStop>, ChangeListener<Number> {
+                    @Override
+                    public void changed(ObservableValue<? extends Number> src, Number prev, Number v) {
+                        updateTabAdvancePolicy();
+                    }
+
+                    @Override
+                    public void onChanged(Change<? extends TabStop> ch) {
+                        updateTabAdvancePolicy();
+                    }
+                };
+
+                private Monitor monitor = new Monitor();
+                private TabStopPolicy old;
+
                 @Override
                 public Object getBean() {
                     return TextFlow.this;
@@ -574,6 +592,21 @@ public class TextFlow extends Pane {
 
                 @Override
                 protected void invalidated() {
+                    if (old != null) {
+                        old.tabStops().removeListener(monitor);
+                        old.defaultStops().removeListener(monitor);
+                    }
+
+                    TabStopPolicy p = get();
+                    if (p != null) {
+                        p.tabStops().addListener(monitor);
+                        p.defaultStops().addListener(monitor);
+                    }
+                    old = p;
+                    updateTabAdvancePolicy();
+                }
+
+                private void updateTabAdvancePolicy() {
                     TextLayout layout = getTextLayout();
                     if (layout.setTabAdvancePolicy(getTabSize(), getTabAdvancePolicy())) {
                         requestLayout();
@@ -595,17 +628,7 @@ public class TextFlow extends Pane {
     private TabAdvancePolicy getTabAdvancePolicy() {
         // isolate the public tab stop policy from the internal tab advance policy
         TabStopPolicy p = getTabStopPolicy();
-        if (p != null) {
-            return new TabAdvancePolicy() {
-                // TODO rtl
-                // TODO borders impact the text layout positions, see JDK-8341438
-                @Override
-                public float nextTabStop(float position) {
-                    return (float)p.nextTabStop(position);
-                }
-            };
-        }
-        return null;
+        return p == null ? null : SimpleTabAdvancePolicy.of(p);
     }
 
     @Override public final double getBaselineOffset() {
