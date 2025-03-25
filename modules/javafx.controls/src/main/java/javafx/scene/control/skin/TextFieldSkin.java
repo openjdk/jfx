@@ -30,7 +30,6 @@ import javafx.beans.binding.BooleanBinding;
 import javafx.beans.binding.DoubleBinding;
 import javafx.beans.binding.ObjectBinding;
 import javafx.beans.binding.StringBinding;
-import javafx.beans.binding.Bindings;
 import javafx.beans.property.DoubleProperty;
 import javafx.beans.property.SimpleDoubleProperty;
 import javafx.beans.value.ObservableBooleanValue;
@@ -733,7 +732,6 @@ public class TextFieldSkin extends TextInputControlSkin<TextField> {
         promptNode.visibleProperty().bind(usePromptText);
         promptNode.fontProperty().bind(getSkinnable().fontProperty());
 
-        promptNode.textProperty().bind(getSkinnable().promptTextProperty());
         promptNode.textProperty().bind(getSkinnable().promptTextProperty().map(s -> s.replace("\n", "")));
         promptNode.fillProperty().bind(promptTextFillProperty());
         updateSelection();
