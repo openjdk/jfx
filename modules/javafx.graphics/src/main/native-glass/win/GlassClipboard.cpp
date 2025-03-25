@@ -204,11 +204,8 @@ _bstr_t getMime(CLIPFORMAT cf)
 int create_mime_stuff()
 {
     addPair(GLASS_TEXT_PLAIN, CF_UNICODETEXT);
-    addPair(GLASS_TEXT_PLAIN_LOCALE, CF_TEXT);
     addPair(GLASS_IMAGE, CF_JAVA_BITMAP);
     addPair(GLASS_FILE_LIST, CF_HDROP);
-    addPair(MS_LOCALE, CF_LOCALE);
-    addPair(MS_OEMTEXT, CF_OEMTEXT);
     Mime2oscfstrPair *p = pairs;
     for (int i = 0; i < sizeof(pairs)/sizeof(*pairs); ++i, ++p) {
         addPair(p->mime, ::RegisterClipboardFormat(p->osString));
@@ -403,7 +400,7 @@ HRESULT PopMemory(
                 //as well as corrupted format
                 cdata = 0;
             }
-        } else if (CF_TEXT == cf || CF_UNICODETEXT == cf){
+        } else if (CF_UNICODETEXT == cf){
             for (int i = 0; i < cdata - 1; i += 2){
                 jbyte *pos = me.getMem() + i;
                 if (*(pos) == 0 && *(pos + 1) == 0){
