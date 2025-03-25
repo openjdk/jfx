@@ -331,7 +331,7 @@ public class AnchorPane extends Pane {
                 childWidth = computeChildWidth(child, getSnappedLeftAnchor(child), getSnappedRightAnchor(child), contentWidth, -1);
             }
             max = Math.max(max, top + (minimum && topAnchor != null && bottomAnchor != null?
-                    child.minHeight(childWidth) : computeChildPrefAreaHeight(child, -1, null, childWidth)) + bottom);
+                    child.minHeight(childWidth) : computeChildPrefAreaHeight(child, -1, null, childWidth, true)) + bottom);
         }
 
         return snappedTopInset() + max + snappedBottomInset();
@@ -348,7 +348,7 @@ public class AnchorPane extends Pane {
         if (topAnchor != null && bottomAnchor != null && child.isResizable()) {
             return areaHeight - snappedTopInset() - snappedBottomInset() - topAnchor - bottomAnchor;
         }
-        return computeChildPrefAreaHeight(child, -1, Insets.EMPTY, width);
+        return computeChildPrefAreaHeight(child, -1, Insets.EMPTY, width, true);
     }
 
     @Override protected void layoutChildren() {
