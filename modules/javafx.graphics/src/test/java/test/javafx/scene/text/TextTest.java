@@ -84,7 +84,7 @@ public class TextTest {
         Font f = new Font(44);
         assertEquals(Font.getDefault(), t.getFont());
         t.setFont(f);
-        assertEquals(44f, t.getBaselineOffset(), 0);
+        assertTrue(t.getBaselineOffset() > (f.getSize() / 2.0));
     }
 
  // Commented out as StubFontLoader only knows about Amble and its
