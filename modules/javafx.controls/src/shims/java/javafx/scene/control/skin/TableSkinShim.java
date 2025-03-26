@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2021, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -117,13 +117,11 @@ public class TableSkinShim {
 //----------------- Tree/TableRowSkin state
 
     public static <T> boolean isFixedCellSizeEnabled(TableRow<T> tableRow) {
-        TableRowSkin<T> skin = (TableRowSkin<T>) tableRow.getSkin();
-        return skin.fixedCellSizeEnabled;
+        return tableRow.getTableView().getFixedCellSize() > 0;
     }
 
     public static <T> boolean isFixedCellSizeEnabled(TreeTableRow<T> tableRow) {
-        TreeTableRowSkin<T> skin = (TreeTableRowSkin<T>) tableRow.getSkin();
-        return skin.fixedCellSizeEnabled;
+        return tableRow.getTreeTableView().getFixedCellSize() > 0;
     }
 
     public static <T> boolean isDirty(TableRow<T> tableRow) {
