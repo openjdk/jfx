@@ -96,7 +96,7 @@ public class StubFontResource implements FontResource {
     public boolean isBold() {
         if (bold == null) {
             String name = font.getStyle();
-            bold = name.toLowerCase(Locale.US).contains("bold");
+            bold = name.toLowerCase(Locale.ROOT).contains("bold");
         }
         return bold.booleanValue();
     }

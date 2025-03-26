@@ -34,24 +34,19 @@ public class PrismTextLayoutFactory implements TextLayoutFactory {
     private static final PrismTextLayoutFactory FACTORY = new PrismTextLayoutFactory();
     /* Same strategy as GlyphLayout */
     private static final TextLayout REUSABLE_INSTANCE = FACTORY.createLayout();
-    private static final AtomicBoolean GUARD = new AtomicBoolean(false);
+    private static final AtomicBoolean IN_USE = new AtomicBoolean(false);
 
     private PrismTextLayoutFactory() {
     }
 
     @Override
     public TextLayout createLayout() {
-        return new PrismTextLayout(PrismFontFactory.cacheLayoutSize) {
-            @Override
-            protected GlyphLayout glyphLayout() {
-                return GlyphLayoutManager.getInstance();
-            }
-        };
+        return new PrismTextLayout(PrismFontFactory.cacheLayoutSize);
     }
 
     @Override
     public TextLayout getLayout() {
-        if (GUARD.compareAndSet(false, true)) {
+        if (IN_USE.compareAndSet(false, true)) {
             REUSABLE_INSTANCE.setAlignment(0);
             REUSABLE_INSTANCE.setWrapWidth(0);
             REUSABLE_INSTANCE.setDirection(0);
@@ -65,7 +60,7 @@ public class PrismTextLayoutFactory implements TextLayoutFactory {
     @Override
     public void disposeLayout(TextLayout layout) {
         if (layout == REUSABLE_INSTANCE) {
-            GUARD.set(false);
+            IN_USE.set(false);
         }
     }
 

@@ -39,8 +39,8 @@ import com.sun.javafx.font.PrismFontFactory;
  * created.
  */
 public class GlyphLayoutManager {
-    private static GlyphLayout REUSABLE_INSTANCE = newInstance();
-    private static final AtomicBoolean GUARD = new AtomicBoolean(false);
+    private static final GlyphLayout REUSABLE_INSTANCE = newInstance();
+    private static final AtomicBoolean IN_USE = new AtomicBoolean(false);
 
     private static GlyphLayout newInstance() {
         PrismFontFactory factory = PrismFontFactory.getFontFactory();
@@ -48,7 +48,7 @@ public class GlyphLayoutManager {
     }
 
     public static GlyphLayout getInstance() {
-        if (GUARD.compareAndSet(false, true)) {
+        if (IN_USE.compareAndSet(false, true)) {
             return REUSABLE_INSTANCE;
         } else {
             return newInstance();
@@ -57,7 +57,7 @@ public class GlyphLayoutManager {
 
     public static void dispose(GlyphLayout la) {
         if (la == REUSABLE_INSTANCE) {
-            GUARD.set(false);
+            IN_USE.set(false);
         }
     }
 }
