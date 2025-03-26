@@ -22,7 +22,7 @@
  * or visit www.oracle.com if you need additional information or have any
  * questions.
  */
-package jfx.incubator.scene.control.input;
+package javafx.scene.control.input;
 
 import java.util.HashMap;
 import java.util.HashSet;
@@ -36,12 +36,10 @@ import javafx.event.EventHandler;
 import javafx.event.EventType;
 import javafx.scene.control.Control;
 import javafx.scene.input.KeyEvent;
-import com.sun.javafx.ModuleUtil;
-import com.sun.jfx.incubator.scene.control.input.EventHandlerPriority;
-import com.sun.jfx.incubator.scene.control.input.InputMapHelper;
-import com.sun.jfx.incubator.scene.control.input.KeyEventMapper;
-import com.sun.jfx.incubator.scene.control.input.PHList;
-import com.sun.jfx.incubator.scene.control.input.SkinInputMap;
+import com.sun.javafx.scene.control.input.EventHandlerPriority;
+import com.sun.javafx.scene.control.input.InputMapHelper;
+import com.sun.javafx.scene.control.input.KeyEventMapper;
+import com.sun.javafx.scene.control.input.PHList;
 
 /**
  * InputMap is a property of the {@link Control} class which enables customization
@@ -74,7 +72,7 @@ import com.sun.jfx.incubator.scene.control.input.SkinInputMap;
  * <p>
  * This mechanism allows for customizing the key mappings and the underlying functions independently and separately.
  *
- * @since 24
+ * @since 999 TODO
  */
 public final class InputMap {
     private static final Object NULL = new Object();
@@ -90,7 +88,6 @@ public final class InputMap {
     private final EventHandler<Event> eventHandler = this::handleEvent;
 
     static {
-        ModuleUtil.incubatorWarning();
         initAccessor();
     }
 
@@ -392,9 +389,7 @@ public final class InputMap {
      * This method removes all the mappings from the previous skin input map, if any.
      * @param m the skin input map
      */
-    // TODO change to public once SkinInputMap is public
-    // or add getSkinInputMap() to Skin.
-    private void setSkinInputMap(SkinInputMap m) {
+    public void setSkinInputMap(SkinInputMap m) {
         if (skinInputMap != null) {
             // uninstall all handlers with SKIN_* priority
             Iterator<Map.Entry<Object, Object>> it = map.entrySet().iterator();
@@ -443,12 +438,6 @@ public final class InputMap {
             @Override
             public void execute(Object source, InputMap inputMap, FunctionTag tag) {
                 inputMap.execute(source, tag);
-            }
-
-            // TODO will be unnecessary once SkinInputMap is public
-            @Override
-            public void setSkinInputMap(InputMap inputMap, SkinInputMap sm) {
-                inputMap.setSkinInputMap(sm);
             }
         });
     }
