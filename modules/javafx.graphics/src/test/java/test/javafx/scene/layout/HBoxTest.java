@@ -834,7 +834,6 @@ public class HBoxTest {
     @Test
     public void testHBoxWithHorizontalBiasedChild() {
         HBox hbox = new HBox();
-        System.out.println("************************************");
 
         MockBiased biased = new MockBiased(Orientation.HORIZONTAL, 100,100);
         biased.setId("test");
@@ -847,9 +846,8 @@ public class HBoxTest {
         assertEquals(300, hbox.prefWidth(-1), 1e-100);
         assertEquals(200, hbox.prefHeight(-1), 1e-100);
         assertEquals(20, hbox.minWidth(-1), 1e-100); //MockBias minWidth == 10
-        assertEquals(1, hbox.minHeight(-1), 1e-100); // If both have max width, min height can be indeed 1
+        assertEquals(200, hbox.minHeight(-1), 1e-100); // minimum height of biased2 (when queried correctly)
         assertEquals(Math.ceil(Math.max(100 * 100 / 50.0, 200 * 200 / 150.0)), hbox.minHeight(200), 1e-100);
-        System.out.println("************************************");
 
         hbox.autosize();
         hbox.layout();

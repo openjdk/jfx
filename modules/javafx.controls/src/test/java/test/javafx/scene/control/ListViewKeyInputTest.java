@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -1817,9 +1817,9 @@ public class ListViewKeyInputTest {
         keyboard.doKeyPress(KeyCode.PAGE_DOWN, KeyModifier.SHIFT);
         final int leadSelectedIndex = sm.getSelectedIndex();
         final int selectedIndicesCount = sm.getSelectedIndices().size();
-        assertEquals(6, leadSelectedIndex);
-        assertEquals(6, fm.getFocusedIndex());
-        assertEquals(7, selectedIndicesCount);
+        assertEquals(4, leadSelectedIndex);
+        assertEquals(4, fm.getFocusedIndex());
+        assertEquals(5, selectedIndicesCount);
 
         keyboard.doKeyPress(KeyCode.PAGE_DOWN, KeyModifier.SHIFT);
         assertEquals(leadSelectedIndex * 2, sm.getSelectedIndex());

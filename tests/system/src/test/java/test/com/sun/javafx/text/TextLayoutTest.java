@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -42,9 +42,10 @@ import com.sun.javafx.geom.Point2D;
 import com.sun.javafx.geom.RectBounds;
 import com.sun.javafx.scene.text.FontHelper;
 import com.sun.javafx.scene.text.GlyphList;
+import com.sun.javafx.scene.text.TextLayout;
 import com.sun.javafx.scene.text.TextLine;
 import com.sun.javafx.scene.text.TextSpan;
-import com.sun.javafx.text.PrismTextLayout;
+import com.sun.javafx.text.PrismTextLayoutFactory;
 import com.sun.javafx.text.TextRun;
 
 public class TextLayoutTest {
@@ -52,7 +53,7 @@ public class TextLayoutTest {
     private static final String D = "\u0907";  // Devanagari complex
     private static final String T = "\u0E34";  // Thai complex
 
-    private final PrismTextLayout layout = new PrismTextLayout();
+    private final TextLayout layout = PrismTextLayoutFactory.getFactory().createLayout();
     private final PGFont arialFont = (PGFont) FontHelper.getNativeFont(Font.font("Arial", 12));
     private final PGFont tahomaFont = (PGFont) FontHelper.getNativeFont(Font.font("Tahoma", 12));
 
@@ -73,7 +74,7 @@ public class TextLayoutTest {
         }
     }
 
-    private void setContent(PrismTextLayout layout, Object... content) {
+    private void setContent(TextLayout layout, Object... content) {
         int count = content.length / 2;
         TextSpan[] spans = new TextSpan[count];
         int i = 0;

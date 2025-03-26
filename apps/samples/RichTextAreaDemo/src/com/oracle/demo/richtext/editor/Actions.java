@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023, 2024, Oracle and/or its affiliates.
+ * Copyright (c) 2023, 2025, Oracle and/or its affiliates.
  * All rights reserved. Use is subject to license terms.
  *
  * This file is available and licensed under the following license:
@@ -273,13 +273,12 @@ public class Actions {
         FileChooser ch = new FileChooser();
         ch.setTitle("Open File");
         ch.getExtensionFilters().addAll(
-            filterAll(),
             filterRich(),
-            filterRtf()
+            filterRtf(),
+            filterAll()
         );
 
-        Window w = FX.getParentWindow(control);
-        File f = ch.showOpenDialog(w);
+        File f = ch.showOpenDialog(parentWindow());
         if (f != null) {
             try {
                 DataFormat fmt = guessFormat(f);
@@ -294,11 +293,12 @@ public class Actions {
         File f = getFile();
         if (f == null) {
             f = chooseFileForSave();
-            if (f != null) {
+            if (f == null) {
                 return;
             }
         }
 
+        file.set(f);
         try {
             writeFile(f);
         } catch (Exception e) {
@@ -309,7 +309,6 @@ public class Actions {
     boolean saveAs() {
         File f = chooseFileForSave();
         if (f != null) {
-            // TODO ask to overwrite if file exists
             file.set(f);
             try {
                 writeFile(f);
@@ -333,10 +332,9 @@ public class Actions {
             filterRich(),
             filterRtf(),
             filterTxt()
-            //filterAll()
         );
-        Window w = FX.getParentWindow(control);
-        return ch.showSaveDialog(w);
+
+        return ch.showSaveDialog(parentWindow());
     }
 
     private void readFile(File f, DataFormat fmt) throws Exception {
@@ -500,7 +498,7 @@ public class Actions {
 
     private UserChoiceToSave askSaveChanges() {
         Dialog<UserChoiceToSave> d = new Dialog<>();
-        d.initOwner(FX.getParentWindow(control));
+        d.initOwner(parentWindow());
         d.setTitle("Save Changes?");
         d.setContentText("Do you want to save changes?");
 
@@ -539,5 +537,9 @@ public class Actions {
             }
         }
         return false;
+    }
+
+    private Window parentWindow() {
+        return FX.getParentWindow(control);
     }
 }
