@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,6 +25,7 @@
 
 package com.sun.javafx.scene.text;
 
+import java.util.concurrent.atomic.AtomicBoolean;
 import com.sun.javafx.geom.Point2D;
 import com.sun.javafx.geom.RectBounds;
 
@@ -93,5 +94,25 @@ public interface GlyphList {
      * can be null (for non-rich text) but never null for rich text.
      */
     public TextSpan getTextSpan();
+
+    /**
+     * Returns true if this GlyphList is a line break.
+     * @return whether this GlyphList is a line break
+     */
+    public boolean isLinebreak();
+
+    /**
+     * Returns the start offset.
+     * @return the start offset
+     */
+    public int getStart();
+
+    /**
+     * Gets the glyph offset at the specified x coordinate.
+     * @param x the x coordinate
+     * @param trailing the reference to hold the trailing flag
+     * @return the glyph offset
+     */
+    public int getOffsetAtX(float x, AtomicBoolean trailing);
 }
 

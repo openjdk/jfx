@@ -147,7 +147,10 @@ static String acceptHeaderValueForImageResource()
 {
     static MainThreadNeverDestroyed<String> staticPrefix = [] {
         StringBuilder builder;
+// Java platform failing to decode webp image data already disabled in 619.1
+#if (HAVE(WEBP) || USE(WEBP)) && !PLATFORM(JAVA)
         builder.append("image/webp,"_s);
+#endif
 #if HAVE(AVIF) || USE(AVIF)
         builder.append("image/avif,"_s);
 #endif

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -413,6 +413,7 @@ public final class Platform {
     private static ReadOnlyBooleanWrapper accessibilityActiveProperty;
 
     public static boolean isAccessibilityActive() {
+        Toolkit.getToolkit().checkFxUserThread();
         return accessibilityActiveProperty == null ? false : accessibilityActiveProperty.get();
     }
 
@@ -421,14 +422,17 @@ public final class Platform {
      * This property is typically set to true the first time an
      * assistive technology, such as a screen reader, requests
      * information about any JavaFX window or its children.
-     *
-     * <p>This method may be called from any thread.</p>
+     * <p>
+     * This property can be accessed only from the JavaFX Application Thread.
      *
      * @return the read-only boolean property indicating if accessibility is active
      *
+     * @throws IllegalStateException if this method is called on a thread
+     *     other than the JavaFX Application Thread.
      * @since JavaFX 8u40
      */
     public static ReadOnlyBooleanProperty accessibilityActiveProperty() {
+        Toolkit.getToolkit().checkFxUserThread();
         if (accessibilityActiveProperty == null) {
             accessibilityActiveProperty = new ReadOnlyBooleanWrapper(Platform.class, "accessibilityActive");
             accessibilityActiveProperty.bind(PlatformImpl.accessibilityActiveProperty());
@@ -445,12 +449,15 @@ public final class Platform {
      * by JavaFX when the operating system reports that a platform preference has changed.
      *
      * @return the {@code Preferences} instance
+     * @throws IllegalStateException if this method is called on a thread
+     *     other than the JavaFX Application Thread.
      * @see <a href="Platform.Preferences.html#preferences-table-windows">Windows preferences</a>
      * @see <a href="Platform.Preferences.html#preferences-table-macos">macOS preferences</a>
      * @see <a href="Platform.Preferences.html#preferences-table-linux">Linux preferences</a>
      * @since 22
      */
     public static Preferences getPreferences() {
+        Toolkit.getToolkit().checkFxUserThread();
         PlatformImpl.checkPreferencesSupport();
         return PlatformImpl.getPlatformPreferences();
     }
