@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -185,7 +185,7 @@ public class AccordionTest {
                                          0;
 
         assertEquals(expectedPrefWidth, accordion.prefWidth(-1), 1e-100);
-        assertEquals(60, accordion.prefHeight(-1), 1e-100);
+        assertEquals(78, accordion.prefHeight(-1), 1e-100);
 
         accordion.setExpandedPane(b);
         root.applyCss();
@@ -195,7 +195,7 @@ public class AccordionTest {
         assertEquals(expectedPrefWidth, accordion.prefWidth(-1), 1e-100);
 
         final double expectedPrefHeight = PlatformImpl.isCaspian() ? 170 :
-                                          PlatformImpl.isModena()  ? 161 :
+                                          PlatformImpl.isModena()  ? 179 :
                                           0;
         assertEquals(expectedPrefHeight, accordion.prefHeight(-1), 1e-100);
     }
