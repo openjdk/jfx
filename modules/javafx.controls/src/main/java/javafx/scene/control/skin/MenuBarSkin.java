@@ -238,6 +238,9 @@ public class MenuBarSkin extends SkinBase<MenuBar> {
             lh.addInvalidationListener(control.useSystemMenuBarProperty(), (v) -> {
                 rebuildUI();
             });
+            lh.addInvalidationListener(control.useDefaultMenusProperty(), (v) -> {
+                rebuildUI();
+            });
         }
 
         // When the mouse leaves the menu, the last hovered item should lose
@@ -522,6 +525,9 @@ public class MenuBarSkin extends SkinBase<MenuBar> {
         stages.addListener((ListChangeListener<Window>) c -> {
             while (c.next()) {
                 for (Window stage : c.getRemoved()) {
+                    if (stage == currentMenuBarStage) {
+                        setSystemMenu(null);
+                    }
                     stage.focusedProperty().removeListener(focusedStageListener);
                 }
                 for (Window stage : c.getAddedSubList()) {
@@ -820,6 +826,9 @@ public class MenuBarSkin extends SkinBase<MenuBar> {
         cleanUpListeners();
 
         if (Toolkit.getToolkit().getSystemMenu().isSupported()) {
+            boolean useDefaultMenus = !getSkinnable().isUseSystemMenuBar() || getSkinnable().isUseDefaultMenus();
+            Toolkit.getToolkit().getSystemMenu().setUseDefaultMenus(useDefaultMenus);
+
             final Scene scene = getSkinnable().getScene();
             if (scene != null) {
                 // JDK-8094110 - make sure system menu is updated when this MenuBar's scene changes.
