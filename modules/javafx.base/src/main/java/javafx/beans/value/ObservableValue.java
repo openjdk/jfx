@@ -368,8 +368,17 @@ public interface ObservableValue<T> extends Observable {
         Objects.requireNonNull(valueSubscriber, "valueSubscriber cannot be null");
         ChangeListener<T> listener = (obs, old, current) -> valueSubscriber.accept(current);
 
-        valueSubscriber.accept(getValue());  // eagerly send current value
         addListener(listener);
+
+        /*
+         * Below we eagerly send the current value. This is done after the listener
+         * was added so that observables that may only cache values when observed
+         * can first become observed (allowing caching) and are then queried (likely
+         * getting the value from the cache). Doing this the other way around would
+         * result in the value (or chain of values) being computed twice.
+         */
+
+        valueSubscriber.accept(getValue());
 
         return () -> removeListener(listener);
     }
