@@ -276,7 +276,7 @@ public final class Platform {
      *
      * @since 25
      */
-    public static final int MAX_NESTED_EVENT_LOOPS = 240;
+    public static final int MAX_NESTED_EVENT_LOOPS = 200;
 
     /**
      * Enter a nested event loop and block until the corresponding
