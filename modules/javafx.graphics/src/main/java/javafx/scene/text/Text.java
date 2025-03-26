@@ -1051,7 +1051,7 @@ public non-sealed class Text extends Shape {
     private int findFirstRunStart() {
         int start = Integer.MAX_VALUE;
         for (GlyphList r: getRuns()) {
-            int runStart = ((TextRun) r).getStart();
+            int runStart = r.getStart();
             if (runStart < start) {
                 start = runStart;
             }
