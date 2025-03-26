@@ -29,7 +29,7 @@ package javafx.scene.text;
  * <p>
  * A tab stop is at a specified distance from the
  * left margin, aligns text in a specified way, and has a specified leader.
- * 
+ *
  * @since 999 TODO
  */
 public final class TabStop {
