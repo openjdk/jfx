@@ -26,7 +26,6 @@
 package com.sun.javafx.tk.quantum;
 
 import javafx.application.ConditionalFeature;
-import javafx.application.Platform;
 import javafx.geometry.Dimension2D;
 import javafx.scene.image.Image;
 import javafx.scene.image.PixelBuffer;
