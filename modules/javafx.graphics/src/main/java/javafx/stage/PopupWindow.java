@@ -371,8 +371,11 @@ public abstract class PopupWindow extends Window {
      * @throws NullPointerException if owner is null
      * @throws IllegalArgumentException if the specified owner window would
      *      create cycle in the window hierarchy
+     * @throws IllegalStateException if this method is called on a thread
+     *      other than the JavaFX Application Thread.
      */
     public void show(Window owner) {
+        Toolkit.getToolkit().checkFxUserThread();
         validateOwnerWindow(owner);
         showImpl(owner);
     }
@@ -400,8 +403,11 @@ public abstract class PopupWindow extends Window {
      * @throws IllegalArgumentException if the specified owner node is not
      *      associated with a Window or when the window would create cycle
      *      in the window hierarchy
+     * @throws IllegalStateException if this method is called on a thread
+     *      other than the JavaFX Application Thread.
      */
     public void show(Node ownerNode, double anchorX, double anchorY) {
+        Toolkit.getToolkit().checkFxUserThread();
         if (ownerNode == null) {
             throw new NullPointerException("The owner node must not be null");
         }
@@ -440,8 +446,11 @@ public abstract class PopupWindow extends Window {
      * @throws NullPointerException if ownerWindow is null
      * @throws IllegalArgumentException if the specified owner window would
      *      create cycle in the window hierarchy
+     * @throws IllegalStateException if this method is called on a thread
+     *      other than the JavaFX Application Thread.
      */
     public void show(Window ownerWindow, double anchorX, double anchorY) {
+        Toolkit.getToolkit().checkFxUserThread();
         validateOwnerWindow(ownerWindow);
 
         updateWindow(anchorX, anchorY);
@@ -501,8 +510,13 @@ public abstract class PopupWindow extends Window {
 
     /**
      * Hide this Popup and all its children
+     *
+     * @throws IllegalStateException if this method is called on a thread
+     *     other than the JavaFX Application Thread.
      */
-    @Override public void hide() {
+    @Override
+    public void hide() {
+        Toolkit.getToolkit().checkFxUserThread();
         for (PopupWindow c : children) {
             if (c.isShowing()) {
                 c.hide();

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022, 2023, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2023, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -23,15 +23,15 @@
  * questions.
  */
 
-/**
- * Provides manual test applications.
- */
-module test.manual {
-    exports com.oracle.javafx.tester;
+#import "AccessibleBase.h"
+#import <AppKit/AppKit.h>
 
-    requires javafx.base;
-    requires javafx.controls;
-    requires javafx.graphics;
-    requires java.desktop;
-    requires javafx.swing;
-}
+@interface JFXStepperAccessibility : AccessibleBase <NSAccessibilityStepper> {
+
+};
+- (NSAccessibilityRole)accessibilityRole;
+- (NSString *)accessibilityLabel;
+- (id)accessibilityValue;
+- (BOOL)accessibilityPerformDecrement;
+- (BOOL)accessibilityPerformIncrement;
+@end
