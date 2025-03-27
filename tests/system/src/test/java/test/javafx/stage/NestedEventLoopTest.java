@@ -41,6 +41,7 @@ import javafx.stage.Stage;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
+import com.sun.javafx.application.PlatformImpl;
 import test.util.Util;
 
 /**
@@ -348,11 +349,11 @@ public class NestedEventLoopTest {
             // Test the exception case first to ensure the system recovers
             // correctly.
             AtomicBoolean expectedException = new AtomicBoolean(false);
-            createManyNestedLoops(Platform.MAX_NESTED_EVENT_LOOPS + 1, null, expectedException);
+            createManyNestedLoops(PlatformImpl.MAX_NESTED_EVENT_LOOPS + 1, null, expectedException);
             assertFalse(Platform.isNestedLoopRunning());
 
             AtomicBoolean noExceptionExpected = new AtomicBoolean(false);
-            createManyNestedLoops(Platform.MAX_NESTED_EVENT_LOOPS, null, noExceptionExpected);
+            createManyNestedLoops(PlatformImpl.MAX_NESTED_EVENT_LOOPS, null, noExceptionExpected);
             assertFalse(Platform.isNestedLoopRunning());
 
             assertTrue(expectedException.get());

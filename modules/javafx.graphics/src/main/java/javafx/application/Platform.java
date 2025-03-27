@@ -272,13 +272,6 @@ public final class Platform {
     }
 
     /**
-     * The maximum number of nested event loops.
-     *
-     * @since 25
-     */
-    public static final int MAX_NESTED_EVENT_LOOPS = 200;
-
-    /**
      * Enter a nested event loop and block until the corresponding
      * exitNestedEventLoop call is made.
      * The key passed into this method is used to

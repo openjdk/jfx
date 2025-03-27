@@ -624,7 +624,7 @@ public final class QuantumToolkit extends Toolkit {
         if (eventLoopMap == null) {
             return false;
         }
-        return eventLoopMap.size() >= Platform.MAX_NESTED_EVENT_LOOPS;
+        return eventLoopMap.size() >= PlatformImpl.MAX_NESTED_EVENT_LOOPS;
     }
 
     @Override public boolean canStartNestedEventLoop() {
@@ -643,7 +643,7 @@ public final class QuantumToolkit extends Toolkit {
         if (!canStartNestedEventLoop()) {
             if (maxNestedEventLoopsHit()) {
                 throw new RuntimeException("Exceeded limit on number of nested event loops (" +
-                    Platform.MAX_NESTED_EVENT_LOOPS + ")");
+                    PlatformImpl.MAX_NESTED_EVENT_LOOPS + ")");
             } else {
                 throw new IllegalStateException("Cannot enter nested loop during animation or layout processing");
             }
