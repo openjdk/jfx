@@ -641,7 +641,7 @@ public final class QuantumToolkit extends Toolkit {
 
         if (!canStartNestedEventLoop()) {
             if (maxNestedEventLoopsHit()) {
-                throw new RuntimeException("Exceeded limit on number of nested event loops (" +
+                throw new IllegalStateException("Exceeded limit on number of nested event loops (" +
                     PlatformImpl.MAX_NESTED_EVENT_LOOPS + ")");
             } else {
                 throw new IllegalStateException("Cannot enter nested loop during animation or layout processing");

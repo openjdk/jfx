@@ -334,7 +334,7 @@ public class NestedEventLoopTest {
 
             try {
                 Platform.enterNestedEventLoop(thisLoop);
-            } catch (RuntimeException ex) {
+            } catch (IllegalStateException ex) {
                 exceptionThrown.set(true);
             }
 
