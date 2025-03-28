@@ -27,7 +27,29 @@ package test.javafx.scene.control;
 
 import javafx.css.CssMetaData;
 import static test.com.sun.javafx.scene.control.infrastructure.ControlTestUtils.*;
-
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Disabled;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
+import org.junit.jupiter.params.provider.Arguments;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertNotSame;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
+import static org.junit.jupiter.api.Assertions.assertTimeout;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import org.junit.jupiter.api.Assumptions;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.params.provider.Arguments;
 import javafx.scene.AccessibleAttribute;
 import javafx.scene.layout.Region;
 import javafx.scene.layout.StackPane;
@@ -49,11 +71,6 @@ import javafx.scene.input.KeyCode;
 import javafx.scene.layout.Pane;
 import javafx.scene.shape.Rectangle;
 import javafx.stage.Stage;
-import static org.junit.Assert.*;
-
-
-import org.junit.Before;
-import org.junit.Test;
 
 /**
  *
@@ -73,7 +90,8 @@ public class ToolbarTest {
     private static final double EXPANDED_CHILDREN_SIZE = 250.0;
     private static final double ORIGINAL_CHILDREN_SIZE = 100.0;
 
-    @Before public void setup() {
+    @BeforeEach
+    public void setup() {
         tk = Toolkit.getToolkit();
 
         assertTrue(tk instanceof StubToolkit);  // Ensure it's StubToolkit
@@ -302,17 +320,21 @@ public class ToolbarTest {
 
         Pane overflowButton = getOverflowButton();
         if (overflowButton.getScene() != null && overflowButton.isVisible()) {
-            assertTrue("'" + node.getId() + "' is overlapping the overflowButton." +
-                            " The node " + "<" + nodeX + ".." + (nodeX + nodeWidth) + ">."
-                            + " The overflow button " + "<" + overflowButton.getLayoutX() + ".." + (overflowButton.getLayoutX() + overflowButton.getWidth()) + ">",
-                    nodeX + nodeWidth < overflowButton.getLayoutX());
+            assertTrue(
+                nodeX + nodeWidth < overflowButton.getLayoutX(),
+                "'" + node.getId() + "' is overlapping the overflowButton." +
+                " The node " + "<" + nodeX + ".." + (nodeX + nodeWidth) + ">."
+                + " The overflow button " + "<" + overflowButton.getLayoutX() + ".."
+                + (overflowButton.getLayoutX() + overflowButton.getWidth()) + ">"
+            );
         }
 
-        assertTrue("'" + node.getId() + "' bounds are outside the toolbar." +
-                        " The node " + "<" + nodeX + ".." + (nodeX + nodeWidth) + ">."
-                        + " The toolbar width " + toolBar.getWidth(),
-                nodeX + nodeWidth < toolBar.getWidth());
-
+        assertTrue(
+            nodeX + nodeWidth < toolBar.getWidth(),
+            "'" + node.getId() + "' bounds are outside the toolbar." +
+            " The node " + "<" + nodeX + ".." + (nodeX + nodeWidth) + ">."
+            + " The toolbar width " + toolBar.getWidth()
+        );
     }
 
     private void initializeToolBar() {

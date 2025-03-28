@@ -26,16 +26,18 @@
 #pragma once
 
 #include "WebGLExtension.h"
+#include "WebGLRenderingContextBase.h"
+#include <wtf/Noncopyable.h>
+#include <wtf/TZoneMalloc.h>
 
 namespace WebCore {
 
-class EXTDepthClamp final : public WebGLExtension {
-    WTF_MAKE_ISO_ALLOCATED(EXTDepthClamp);
+class EXTDepthClamp final : public WebGLExtension<WebGLRenderingContextBase> {
+    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(EXTDepthClamp);
+    WTF_MAKE_NONCOPYABLE(EXTDepthClamp);
 public:
     explicit EXTDepthClamp(WebGLRenderingContextBase&);
-    virtual ~EXTDepthClamp();
-
-    ExtensionName getName() const override;
+    ~EXTDepthClamp();
 
     static bool supported(GraphicsContextGL&);
 };

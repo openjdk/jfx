@@ -28,6 +28,7 @@
 
 #pragma once
 
+#include "BasicShapes.h"
 #include "Length.h"
 #include "SVGLengthValue.h"
 #include "ShadowData.h"
@@ -96,7 +97,6 @@ enum class GlyphOrientation : uint8_t {
 };
 
 enum class AlignmentBaseline : uint8_t {
-    Auto,
     Baseline,
     BeforeEdge,
     TextBeforeEdge,
@@ -299,6 +299,7 @@ public:
     Length ry;
     Length x;
     Length y;
+    RefPtr<BasicShapePath> d;
 
 private:
     StyleLayoutData();

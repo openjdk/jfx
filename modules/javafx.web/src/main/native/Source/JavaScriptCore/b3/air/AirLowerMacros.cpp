@@ -41,7 +41,7 @@ namespace JSC { namespace B3 { namespace Air {
 
 void lowerMacros(Code& code)
 {
-    PhaseScope phaseScope(code, "Air::lowerMacros");
+    PhaseScope phaseScope(code, "Air::lowerMacros"_s);
 
     InsertionSet insertionSet(code);
     for (BasicBlock* block : code) {
@@ -299,9 +299,10 @@ void lowerMacros(Code& code)
                 auto* origin = inst.origin;
 
                 Tmp tmp = code.newTmp(GP);
+                Tmp vtmp = code.newTmp(FP);
 
-                insertionSet.insert(instIndex, VectorUnsignedMax, origin, Arg::simdInfo({ SIMDLane::i32x4, SIMDSignMode::None }), vec, vec);
-                insertionSet.insert(instIndex, MoveFloatTo32, origin, vec, tmp);
+                insertionSet.insert(instIndex, VectorUnsignedMax, origin, Arg::simdInfo({ SIMDLane::i32x4, SIMDSignMode::None }), vec, vtmp);
+                insertionSet.insert(instIndex, MoveFloatTo32, origin, vtmp, tmp);
                 insertionSet.insert(instIndex, Compare32, origin, Arg::relCond(MacroAssembler::NotEqual), tmp, Arg::imm(0), dst);
 
                 inst = Inst();

@@ -33,14 +33,14 @@
 #include "HTMLMediaElement.h"
 #include "TimeRanges.h"
 #include <pal/system/Clock.h>
-#include <wtf/IsoMallocInlines.h>
 #include <wtf/NeverDestroyed.h>
 #include <wtf/StdLibExtras.h>
+#include <wtf/TZoneMallocInlines.h>
 #include <wtf/text/AtomString.h>
 
 namespace WebCore {
 
-WTF_MAKE_ISO_ALLOCATED_IMPL(MediaController);
+WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(MediaController);
 
 Ref<MediaController> MediaController::create(ScriptExecutionContext& context)
 {
@@ -78,11 +78,6 @@ void MediaController::removeMediaElement(HTMLMediaElement& element)
 {
     ASSERT(m_mediaElements.contains(&element));
     m_mediaElements.remove(m_mediaElements.find(&element));
-}
-
-bool MediaController::containsMediaElement(HTMLMediaElement& element) const
-{
-    return m_mediaElements.contains(&element);
 }
 
 Ref<TimeRanges> MediaController::buffered() const
@@ -258,7 +253,7 @@ ExceptionOr<void> MediaController::setVolume(double level)
     // If the new value is outside the range 0.0 to 1.0 inclusive, then, on setting, an
     // IndexSizeError exception must be raised instead.
     if (!(level >= 0 && level <= 1))
-        return Exception { IndexSizeError };
+        return Exception { ExceptionCode::IndexSizeError };
 
     // The volume attribute, on setting, if the new value is in the range 0.0 to 1.0 inclusive,
     // must set the MediaController's media controller volume multiplier to the new value

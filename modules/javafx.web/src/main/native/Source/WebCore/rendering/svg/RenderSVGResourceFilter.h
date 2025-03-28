@@ -1,98 +1,56 @@
 /*
- * Copyright (C) 2004, 2005, 2006, 2007 Nikolas Zimmermann <zimmermann@kde.org>
- * Copyright (C) 2004, 2005 Rob Buis <buis@kde.org>
- * Copyright (C) 2005 Eric Seidel <eric@webkit.org>
- * Copyright (C) 2009 Dirk Schulze <krit@webkit.org>
- * Copyright (C) Research In Motion Limited 2010. All rights reserved.
+ * Copyright (C) 2024 Apple Inc.  All rights reserved.
  *
- * This library is free software; you can redistribute it and/or
- * modify it under the terms of the GNU Library General Public
- * License as published by the Free Software Foundation; either
- * version 2 of the License, or (at your option) any later version.
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions
+ * are met:
+ * 1. Redistributions of source code must retain the above copyright
+ *    notice, this list of conditions and the following disclaimer.
+ * 2. Redistributions in binary form must reproduce the above copyright
+ *    notice, this list of conditions and the following disclaimer in the
+ *    documentation and/or other materials provided with the distribution.
  *
- * This library is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
- * Library General Public License for more details.
- *
- * You should have received a copy of the GNU Library General Public License
- * along with this library; see the file COPYING.LIB.  If not, write to
- * the Free Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
- * Boston, MA 02110-1301, USA.
+ * THIS SOFTWARE IS PROVIDED BY APPLE INC. ``AS IS'' AND ANY
+ * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+ * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
+ * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE INC. OR
+ * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
+ * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
+ * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
+ * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
+ * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+ * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #pragma once
 
-#include "FilterResults.h"
-#include "FilterTargetSwitcher.h"
-#include "RenderSVGResourceContainer.h"
-#include "SVGFilter.h"
+#include "RenderSVGResourcePaintServer.h"
 #include "SVGUnitTypes.h"
-#include <wtf/IsoMalloc.h>
-#include <wtf/RefPtr.h>
+#include <wtf/TZoneMalloc.h>
 
 namespace WebCore {
 
-class GraphicsContext;
 class SVGFilterElement;
 
-struct FilterData {
-    WTF_MAKE_ISO_ALLOCATED(FilterData);
-    WTF_MAKE_NONCOPYABLE(FilterData);
+class RenderSVGResourceFilter final : public RenderSVGResourcePaintServer {
+    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(RenderSVGResourceFilter);
+
 public:
-    enum FilterDataState { PaintingSource, Applying, Built, CycleDetected, MarkedForRemoval };
-
-    FilterData() = default;
-
-    RefPtr<SVGFilter> filter;
-
-    std::unique_ptr<FilterTargetSwitcher> targetSwitcher;
-    FloatRect sourceImageRect;
-
-    GraphicsContext* savedContext { nullptr };
-    FilterDataState state { PaintingSource };
-};
-
-class RenderSVGResourceFilter final : public RenderSVGResourceContainer {
-    WTF_MAKE_ISO_ALLOCATED(RenderSVGResourceFilter);
-public:
-    RenderSVGResourceFilter(SVGFilterElement&, RenderStyle&&);
+    RenderSVGResourceFilter(SVGElement&, RenderStyle&&);
     virtual ~RenderSVGResourceFilter();
 
     inline SVGFilterElement& filterElement() const;
-    bool isIdentity() const;
-
-    void removeAllClientsFromCacheIfNeeded(bool markForInvalidation, WeakHashSet<RenderObject>* visitedRenderers) override;
-    void removeClientFromCache(RenderElement&, bool markForInvalidation = true) override;
-
-    bool applyResource(RenderElement&, const RenderStyle&, GraphicsContext*&, OptionSet<RenderSVGResourceMode>) override;
-    void postApplyResource(RenderElement&, GraphicsContext*&, OptionSet<RenderSVGResourceMode>, const Path*, const RenderElement*) override;
-
-    FloatRect resourceBoundingBox(const RenderObject&) override;
+    inline Ref<SVGFilterElement> protectedFilterElement() const;
 
     inline SVGUnitTypes::SVGUnitType filterUnits() const;
     inline SVGUnitTypes::SVGUnitType primitiveUnits() const;
 
-    void markFilterForRepaint(FilterEffect&);
-    void markFilterForRebuild();
+    FloatRect resourceBoundingBox(const RenderObject&, RepaintRectCalculation);
 
-    RenderSVGResourceType resourceType() const override { return FilterResourceType; }
-
-    FloatRect drawingRegion(RenderObject*) const;
-private:
-    void element() const = delete;
-
-    ASCIILiteral renderName() const override { return "RenderSVGResourceFilter"_s; }
-    bool isSVGResourceFilter() const override { return true; }
-
-    HashMap<RenderObject*, std::unique_ptr<FilterData>> m_rendererFilterDataMap;
+    void invalidateFilter();
 };
-
-WTF::TextStream& operator<<(WTF::TextStream&, FilterData::FilterDataState);
 
 } // namespace WebCore
 
-SPECIALIZE_TYPE_TRAITS_BEGIN(WebCore::RenderSVGResourceFilter)
-    static bool isType(const WebCore::RenderObject& renderer) { return renderer.isSVGResourceFilter(); }
-    static bool isType(const WebCore::RenderSVGResource& resource) { return resource.resourceType() == WebCore::FilterResourceType; }
-SPECIALIZE_TYPE_TRAITS_END()
+SPECIALIZE_TYPE_TRAITS_RENDER_OBJECT(RenderSVGResourceFilter, isRenderSVGResourceFilter())

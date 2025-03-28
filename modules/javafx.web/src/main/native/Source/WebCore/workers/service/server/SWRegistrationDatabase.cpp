@@ -26,8 +26,6 @@
 #include "config.h"
 #include "SWRegistrationDatabase.h"
 
-#if ENABLE(SERVICE_WORKER)
-
 #include "ContentSecurityPolicyResponseHeaders.h"
 #include "CrossOriginEmbedderPolicy.h"
 #include "Logging.h"
@@ -44,6 +42,7 @@
 #include "WorkerType.h"
 #include <wtf/persistence/PersistentCoders.h>
 #include <wtf/persistence/PersistentDecoder.h>
+#include <wtf/text/MakeString.h>
 
 namespace WebCore {
 
@@ -71,7 +70,7 @@ static String databaseFilePath(const String& directory)
     if (directory.isEmpty())
         return emptyString();
 
-    return FileSystem::pathByAppendingComponent(directory, makeString("ServiceWorkerRegistrations-", SWRegistrationDatabase::schemaVersion, ".sqlite3"));
+    return FileSystem::pathByAppendingComponent(directory, makeString("ServiceWorkerRegistrations-"_s, SWRegistrationDatabase::schemaVersion, ".sqlite3"_s));
 }
 
 static String scriptDirectoryPath(const String& directory)
@@ -193,7 +192,7 @@ SQLiteStatementAutoResetScope SWRegistrationDatabase::cachedStatement(StatementT
     ASSERT(m_database);
     ASSERT(type < StatementType::Invalid);
 
-    auto index = static_cast<uint8_t>(type);
+    auto index = enumToUnderlyingType(type);
     if (!m_cachedStatements[index]) {
         if (auto result = m_database->prepareHeapStatement(statementString(type)))
             m_cachedStatements[index] = result.value().moveToUniquePtr();
@@ -248,7 +247,11 @@ bool SWRegistrationDatabase::prepareDatabase(ShouldCreateIfNotExists shouldCreat
 
     m_database = makeUnique<SQLiteDatabase>();
     FileSystem::makeAllDirectories(m_directory);
+#if PLATFORM(MAC)
+    auto openResult  = m_database->open(databasePath, SQLiteDatabase::OpenMode::ReadWriteCreate, SQLiteDatabase::OpenOptions::CanSuspendWhileLocked);
+#else
     auto openResult  = m_database->open(databasePath);
+#endif
     if (!openResult) {
         auto lastError = m_database->lastError();
         if (lastError == SQLITE_CORRUPT && lastError == SQLITE_NOTADB) {
@@ -433,7 +436,7 @@ std::optional<Vector<ServiceWorkerScripts>> SWRegistrationDatabase::updateRegist
 
     for (auto& registration : registrationsToDelete) {
         auto statement = cachedStatement(StatementType::DeleteRecord);
-        if (!statement || !statement->bindText(1, registration.toDatabaseKey()) || statement->step() != SQLITE_DONE) {
+        if (!statement || statement->bindText(1, registration.toDatabaseKey()) != SQLITE_OK || statement->step() != SQLITE_DONE) {
             RELEASE_LOG_ERROR(Storage, "SWRegistrationDatabase::updateRegistrations failed to delete record (%d) - %s", m_database->lastError(), m_database->lastErrorMsg());
             return std::nullopt;
         }
@@ -513,5 +516,3 @@ void SWRegistrationDatabase::clearAllRegistrations()
 }
 
 } // namespace WebCore
-
-#endif

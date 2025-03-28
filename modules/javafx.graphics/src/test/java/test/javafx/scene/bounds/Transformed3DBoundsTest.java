@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -27,12 +27,12 @@ package test.javafx.scene.bounds;
 
 import static test.com.sun.javafx.test.TestHelper.assertSimilar;
 import static test.com.sun.javafx.test.TestHelper.box;
-import static org.junit.Assert.assertEquals;
 import javafx.geometry.BoundingBox;
 import javafx.scene.shape.Rectangle;
 import javafx.scene.transform.Rotate;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 public class Transformed3DBoundsTest {
 
@@ -42,8 +42,8 @@ public class Transformed3DBoundsTest {
      * getBoundsInLocal() values * for these nodes are correct. * * /
      **************************************************************************/
 
-    public @Test
-    void test3DBoundsForTranslatedRectangle() {
+    @Test
+    public void test3DBoundsForTranslatedRectangle() {
         Rectangle rect = new Rectangle(100, 100);
         rect.setTranslateX(10);
         rect.setTranslateY(10);
@@ -68,8 +68,8 @@ public class Transformed3DBoundsTest {
 
     // this test specifically checks to make sure the minX,, width, height
     // invariants are correct in this case
-    public @Test
-    void test3DBoundsForNegativeScaledRectangle() {
+    @Test
+    public void test3DBoundsForNegativeScaledRectangle() {
         Rectangle rect = new Rectangle(100, 100);
         rect.setScaleX(2);
         rect.setScaleY(2);
@@ -90,8 +90,8 @@ public class Transformed3DBoundsTest {
                               rect.localToScene(rect.getBoundsInLocal())));
     }
 
-    public @Test
-    void testBoundsForXRotatedRectangle() {
+    @Test
+    public void testBoundsForXRotatedRectangle() {
         Rectangle rect = new Rectangle(100, 100);
         rect.setRotate(90);
         rect.setRotationAxis(Rotate.X_AXIS);
@@ -111,8 +111,8 @@ public class Transformed3DBoundsTest {
                               rect.localToScene(rect.getBoundsInLocal())));
     }
 
-    public @Test
-    void testBoundsForYRotatedRectangle() {
+    @Test
+    public void testBoundsForYRotatedRectangle() {
         Rectangle rect = new Rectangle(100, 100);
         rect.setRotate(90);
         rect.setRotationAxis(Rotate.Y_AXIS);
@@ -132,8 +132,8 @@ public class Transformed3DBoundsTest {
                               rect.localToScene(rect.getBoundsInLocal())));
     }
 
-    public @Test
-    void testBoundsForZRotatedRectangle() {
+    @Test
+    public void testBoundsForZRotatedRectangle() {
         Rectangle rect = new Rectangle(100, 100);
         rect.setRotate(90);
         rect.setRotationAxis(Rotate.Z_AXIS);

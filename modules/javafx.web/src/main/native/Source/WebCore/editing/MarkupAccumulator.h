@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2004-2023 Apple Inc. All rights reserved.
+ * Copyright (C) 2004-2024 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -25,6 +25,7 @@
 
 #pragma once
 
+#include "CSSStyleSheet.h"
 #include "Element.h"
 #include "markup.h"
 #include <wtf/HashMap.h>
@@ -35,8 +36,10 @@ namespace WebCore {
 class Attribute;
 class DocumentType;
 class Element;
+class LocalFrame;
 class Node;
 class Range;
+class ShadowRoot;
 
 typedef HashMap<AtomString, AtomStringImpl*> Namespaces;
 
@@ -64,12 +67,13 @@ constexpr auto EntityMaskInHTMLAttributeValue = { EntityMask::Amp, EntityMask::Q
 class MarkupAccumulator {
     WTF_MAKE_NONCOPYABLE(MarkupAccumulator);
 public:
-    MarkupAccumulator(Vector<Node*>*, ResolveURLs, SerializationSyntax);
+    MarkupAccumulator(Vector<Ref<Node>>*, ResolveURLs, SerializationSyntax, SerializeShadowRoots = SerializeShadowRoots::Explicit, Vector<Ref<ShadowRoot>>&& explicitShadowRoots = { }, const Vector<MarkupExclusionRule>& exclusionRules = { });
     virtual ~MarkupAccumulator();
 
-    String serializeNodes(Node& targetNode, SerializedNodes, Vector<QualifiedName>* tagNamesToSkip = nullptr);
+    String serializeNodes(Node& targetNode, SerializedNodes);
 
     static void appendCharactersReplacingEntities(StringBuilder&, const String&, unsigned, unsigned, OptionSet<EntityMask>);
+    void enableURLReplacement(HashMap<String, String>&& replacementURLStrings, HashMap<RefPtr<CSSStyleSheet>, String>&& replacementURLStringsForCSSStyleSheet);
 
 protected:
     unsigned length() const { return m_markup.length(); }
@@ -86,6 +90,7 @@ protected:
     virtual void appendEndTag(StringBuilder&, const Element&);
     virtual void appendCustomAttributes(StringBuilder&, const Element&, Namespaces*);
     virtual void appendText(StringBuilder&, const Text&);
+    virtual bool appendContentsForNode(StringBuilder& result, const Node&);
 
     void appendOpenTag(StringBuilder&, const Element&, Namespaces*);
     void appendCloseTag(StringBuilder&, const Element&);
@@ -93,30 +98,51 @@ protected:
     void appendNonElementNode(StringBuilder&, const Node&, Namespaces*);
 
     static void appendAttributeValue(StringBuilder&, const String&, bool isSerializingHTML);
-    void appendAttribute(StringBuilder&, const Element&, const Attribute&, Namespaces*);
+    bool appendAttribute(StringBuilder&, const Element&, const Attribute&, Namespaces*);
 
     OptionSet<EntityMask> entityMaskForText(const Text&) const;
 
-    Vector<Node*>* const m_nodes;
+    Vector<Ref<Node>>* const m_nodes;
 
 private:
     void appendNamespace(StringBuilder&, const AtomString& prefix, const AtomString& namespaceURI, Namespaces&, bool allowEmptyDefaultNS = false);
-    String resolveURLIfNeeded(const Element&, const String&) const;
-    void serializeNodesWithNamespaces(Node& targetNode, SerializedNodes, const Namespaces*, Vector<QualifiedName>* tagNamesToSkip);
+    enum class IsCreatedByURLReplacement : bool { No, Yes };
+    std::pair<String, IsCreatedByURLReplacement> resolveURLIfNeeded(const Element&, const String&) const;
+    bool shouldIncludeShadowRoots() const;
+    bool includeShadowRoot(const ShadowRoot&) const;
+    void serializeNodesWithNamespaces(Node& targetNode, SerializedNodes, const Namespaces*);
     bool inXMLFragmentSerialization() const { return m_serializationSyntax == SerializationSyntax::XML; }
     void generateUniquePrefix(QualifiedName&, const Namespaces&);
     QualifiedName xmlAttributeSerialization(const Attribute&, Namespaces*);
+    LocalFrame* frameForAttributeReplacement(const Element&) const;
+    Attribute replaceAttributeIfNecessary(const Element&, const Attribute&);
+    bool appendURLAttributeForReplacementIfNecessary(StringBuilder&, const Element&, Namespaces*);
+    const ShadowRoot* suitableShadowRoot(const Node&);
+    bool shouldExcludeElement(const Element&);
+    void appendStartTagWithURLReplacement(StringBuilder&, const Element&, Namespaces*);
 
     StringBuilder m_markup;
     const ResolveURLs m_resolveURLs;
     const SerializationSyntax m_serializationSyntax;
     unsigned m_prefixLevel { 0 };
+    HashMap<String, String> m_replacementURLStrings;
+    HashMap<RefPtr<CSSStyleSheet>, String> m_replacementURLStringsForCSSStyleSheet;
+    SerializeShadowRoots m_serializeShadowRoots;
+    Vector<Ref<ShadowRoot>> m_explicitShadowRoots;
+    Vector<MarkupExclusionRule> m_exclusionRules;
+    struct URLReplacementData {
+        HashMap<String, String> replacementURLStrings;
+        HashMap<RefPtr<CSSStyleSheet>, String> replacementURLStringsForCSSStyleSheet;
+    };
+    std::optional<URLReplacementData> m_urlReplacementData;
 };
 
 inline void MarkupAccumulator::endAppendingNode(const Node& node)
 {
-    if (is<Element>(node))
-        appendEndTag(m_markup, downcast<Element>(node));
+    if (RefPtr element = dynamicDowncast<Element>(node))
+        appendEndTag(m_markup, *element);
+    else if (suitableShadowRoot(node))
+        m_markup.append("</template>"_s);
 }
 
 } // namespace WebCore

@@ -55,7 +55,7 @@ public:
     String label() const;
     void setLabel(String&&);
 
-    void submit(Vector<RefPtr<GPUCommandBuffer>>&&);
+    void submit(Vector<Ref<GPUCommandBuffer>>&&);
 
     using OnSubmittedWorkDonePromise = DOMPromiseDeferred<IDLNull>;
     void onSubmittedWorkDone(OnSubmittedWorkDonePromise&&);
@@ -73,7 +73,8 @@ public:
         const GPUImageDataLayout&,
         const GPUExtent3D& size);
 
-    void copyExternalImageToTexture(
+    ExceptionOr<void> copyExternalImageToTexture(
+        ScriptExecutionContext&,
         const GPUImageCopyExternalImage& source,
         const GPUImageCopyTextureTagged& destination,
         const GPUExtent3D& copySize);

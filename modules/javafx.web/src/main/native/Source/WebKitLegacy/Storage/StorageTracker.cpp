@@ -36,11 +36,12 @@
 #include <wtf/FileSystem.h>
 #include <wtf/MainThread.h>
 #include <wtf/StdLibExtras.h>
+#include <wtf/TZoneMallocInlines.h>
 #include <wtf/Vector.h>
 #include <wtf/text/CString.h>
 
-#if PLATFORM(IOS_FAMILY)
-#include <pal/spi/ios/SQLite3SPI.h>
+#if PLATFORM(COCOA)
+#include <pal/spi/cocoa/SQLite3SPI.h>
 #endif
 
 using namespace WebCore;
@@ -52,6 +53,8 @@ static StorageTracker* storageTracker = nullptr;
 // If there is no document referencing a storage database, close the underlying database
 // after it has been idle for m_StorageDatabaseIdleInterval seconds.
 static const Seconds defaultStorageDatabaseIdleInterval { 300_s };
+
+WTF_MAKE_TZONE_ALLOCATED_IMPL(StorageTracker);
 
 void StorageTracker::initializeTracker(const String& storagePath, StorageTrackerClient* client)
 {
@@ -358,7 +361,7 @@ Vector<SecurityOriginData> StorageTracker::origins()
             ASSERT_NOT_REACHED();
             continue;
         }
-        result.uncheckedAppend(origin.value());
+        result.append(origin.value());
     }
     return result;
 }

@@ -27,9 +27,11 @@
 namespace WebCore {
 
 class RenderCombineText final : public RenderText {
-    WTF_MAKE_ISO_ALLOCATED(RenderCombineText);
+    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(RenderCombineText);
+    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(RenderCombineText);
 public:
     RenderCombineText(Text&, const String&);
+    virtual ~RenderCombineText();
 
     Text& textNode() const { return downcast<Text>(nodeForNonAnonymous()); }
 
@@ -44,7 +46,6 @@ public:
 private:
     void node() const = delete;
 
-    bool isCombineText() const override { return true; }
     ASCIILiteral renderName() const override { return "RenderCombineText"_s; }
     void styleDidChange(StyleDifference, const RenderStyle* oldStyle) override;
     void setRenderedText(const String&) override;
@@ -59,4 +60,4 @@ private:
 
 } // namespace WebCore
 
-SPECIALIZE_TYPE_TRAITS_RENDER_OBJECT(RenderCombineText, isCombineText())
+SPECIALIZE_TYPE_TRAITS_RENDER_OBJECT(RenderCombineText, isRenderCombineText())

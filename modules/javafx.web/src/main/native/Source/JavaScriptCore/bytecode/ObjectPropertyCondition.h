@@ -204,11 +204,7 @@ public:
         return WTF::PtrHash<JSObject*>::hash(m_object) ^ m_condition.hash();
     }
 
-    bool operator==(const ObjectPropertyCondition& other) const
-    {
-        return m_object == other.m_object
-            && m_condition == other.m_condition;
-    }
+    friend bool operator==(const ObjectPropertyCondition&, const ObjectPropertyCondition&) = default;
 
     bool isHashTableDeletedValue() const
     {
@@ -261,19 +257,16 @@ public:
 
     // This means that it's still valid and we could enforce validity by setting a transition
     // watchpoint on the structure and possibly an impure property watchpoint.
-    bool isWatchableAssumingImpurePropertyWatchpoint(
-        Structure*,
-        PropertyCondition::WatchabilityEffort) const;
-    bool isWatchableAssumingImpurePropertyWatchpoint(
-        PropertyCondition::WatchabilityEffort) const;
+    bool isWatchableAssumingImpurePropertyWatchpoint(Structure*, PropertyCondition::WatchabilityEffort, Concurrency) const;
+    bool isWatchableAssumingImpurePropertyWatchpoint(PropertyCondition::WatchabilityEffort, Concurrency) const;
+    bool isWatchableAssumingImpurePropertyWatchpoint(Structure*, PropertyCondition::WatchabilityEffort) const;
+    bool isWatchableAssumingImpurePropertyWatchpoint(PropertyCondition::WatchabilityEffort) const;
 
     // This means that it's still valid and we could enforce validity by setting a transition
     // watchpoint on the structure, and a value change watchpoint if we're Equivalence.
-    bool isWatchable(
-        Structure*,
-        PropertyCondition::WatchabilityEffort) const;
-    bool isWatchable(
-        PropertyCondition::WatchabilityEffort) const;
+    bool isWatchable(Structure*, PropertyCondition::WatchabilityEffort) const;
+    bool isWatchable(PropertyCondition::WatchabilityEffort) const;
+    bool isWatchable(PropertyCondition::WatchabilityEffort, Concurrency) const;
 
     bool watchingRequiresStructureTransitionWatchpoint() const
     {

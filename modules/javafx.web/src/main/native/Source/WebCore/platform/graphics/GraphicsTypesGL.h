@@ -26,7 +26,6 @@
 #pragma once
 
 #include <cstdint>
-#include <wtf/EnumTraits.h>
 #include <wtf/OptionSet.h>
 
 // GCGL types match the corresponding GL types as defined in OpenGL ES 2.0
@@ -66,12 +65,17 @@ typedef GCGLuint PlatformGLObject;
 using GCGLDisplay = void*;
 using GCGLConfig = void*;
 using GCGLContext = void*;
-using GCEGLImage = void*;
-using GCEGLSuface = void*;
-using GCEGLSync = void*;
+using GCEGLSurface = void*;
+using GCGLExternalImage = unsigned;
+using GCGLExternalSync = unsigned;
 
 #if !PLATFORM(COCOA)
 typedef unsigned GLuint;
+#endif
+
+#if ENABLE(WEBXR)
+// GL_ANGLE_variable_rasterization_rate_metal
+using GCGLMTLRasterizationRateMapANGLE = void*;
 #endif
 
 // Order in inverse of in GL specification, so that iteration is in GL specification order.
@@ -84,19 +88,3 @@ enum class GCGLErrorCode : uint8_t {
     InvalidEnum = 1 << 6
 };
 using GCGLErrorCodeSet = OptionSet<GCGLErrorCode>;
-
-namespace WTF {
-
-template <> struct EnumTraits<GCGLErrorCode> {
-    using values = EnumValues <
-    GCGLErrorCode,
-    GCGLErrorCode::ContextLost,
-    GCGLErrorCode::InvalidFramebufferOperation,
-    GCGLErrorCode::OutOfMemory,
-    GCGLErrorCode::InvalidOperation,
-    GCGLErrorCode::InvalidValue,
-    GCGLErrorCode::InvalidEnum
-    >;
-};
-
-}

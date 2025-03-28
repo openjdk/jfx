@@ -33,29 +33,22 @@
 #include "FTLState.h"
 #include "ProfilerDatabase.h"
 #include "ThunkGenerators.h"
+#include <wtf/TZoneMallocInlines.h>
 
 namespace JSC { namespace FTL {
+
+WTF_MAKE_TZONE_ALLOCATED_IMPL(JITFinalizer);
 
 JITFinalizer::JITFinalizer(DFG::Plan& plan)
     : Finalizer(plan)
 {
 }
 
-JITFinalizer::~JITFinalizer()
-{
-}
+JITFinalizer::~JITFinalizer() = default;
 
 size_t JITFinalizer::codeSize()
 {
-    size_t result = 0;
-
-    if (b3CodeLinkBuffer)
-        result += b3CodeLinkBuffer->size();
-
-    if (entrypointLinkBuffer)
-        result += entrypointLinkBuffer->size();
-
-    return result;
+    return m_codeSize;
 }
 
 bool JITFinalizer::finalize()
@@ -63,11 +56,11 @@ bool JITFinalizer::finalize()
     VM& vm = *m_plan.vm();
     WTF::crossModifyingCodeFence();
 
-    b3CodeLinkBuffer->runMainThreadFinalizationTasks();
+    m_plan.runMainThreadFinalizationTasks();
 
     CodeBlock* codeBlock = m_plan.codeBlock();
 
-    codeBlock->setJITCode(*jitCode);
+    codeBlock->setJITCode(*m_jitCode);
 
     if (UNLIKELY(m_plan.compilation()))
         vm.m_perBytecodeProfiler->addCompilation(codeBlock, *m_plan.compilation());

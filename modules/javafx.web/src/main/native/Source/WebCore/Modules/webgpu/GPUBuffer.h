@@ -35,17 +35,23 @@
 #include <JavaScriptCore/ArrayBuffer.h>
 #include <cstdint>
 #include <optional>
+#include <wtf/HashSet.h>
+#include <wtf/Range.h>
+#include <wtf/RangeSet.h>
 #include <wtf/Ref.h>
 #include <wtf/RefCounted.h>
+#include <wtf/WeakPtr.h>
 #include <wtf/text/WTFString.h>
 
 namespace WebCore {
 
-class GPUBuffer : public RefCounted<GPUBuffer> {
+class GPUDevice;
+
+class GPUBuffer : public RefCounted<GPUBuffer>, public CanMakeWeakPtr<GPUBuffer> {
 public:
-    static Ref<GPUBuffer> create(Ref<WebGPU::Buffer>&& backing, size_t bufferSize, GPUBufferUsageFlags usage, bool mappedAtCreation)
+    static Ref<GPUBuffer> create(Ref<WebGPU::Buffer>&& backing, size_t bufferSize, GPUBufferUsageFlags usage, bool mappedAtCreation, GPUDevice& device)
     {
-        return adoptRef(*new GPUBuffer(WTFMove(backing), bufferSize, usage, mappedAtCreation));
+        return adoptRef(*new GPUBuffer(WTFMove(backing), bufferSize, usage, mappedAtCreation, device));
     }
 
     String label() const;
@@ -54,9 +60,9 @@ public:
     using MapAsyncPromise = DOMPromiseDeferred<IDLNull>;
     void mapAsync(GPUMapModeFlags, std::optional<GPUSize64> offset, std::optional<GPUSize64> sizeForMap, MapAsyncPromise&&);
     ExceptionOr<Ref<JSC::ArrayBuffer>> getMappedRange(std::optional<GPUSize64> offset, std::optional<GPUSize64> rangeSize);
-    void unmap();
+    void unmap(ScriptExecutionContext&);
 
-    void destroy();
+    void destroy(ScriptExecutionContext&);
 
     WebGPU::Buffer& backing() { return m_backing; }
     const WebGPU::Buffer& backing() const { return m_backing; }
@@ -68,15 +74,27 @@ public:
 
     ~GPUBuffer();
 private:
-    GPUBuffer(Ref<WebGPU::Buffer>&&, size_t, GPUBufferUsageFlags, bool);
+    GPUBuffer(Ref<WebGPU::Buffer>&&, size_t, GPUBufferUsageFlags, bool, GPUDevice&);
+    void internalUnmap(ScriptExecutionContext&);
 
     Ref<WebGPU::Buffer> m_backing;
-    WebGPU::Buffer::MappedRange m_mappedRange;
-    JSC::ArrayBuffer* m_arrayBuffer { nullptr };
+    struct ArrayBufferWithOffset {
+        RefPtr<JSC::ArrayBuffer> buffer;
+        size_t offset { 0 };
+    };
+    Vector<ArrayBufferWithOffset> m_arrayBuffers;
     size_t m_bufferSize { 0 };
+    size_t m_mappedRangeOffset { 0 };
+    size_t m_mappedRangeSize { 0 };
     const GPUBufferUsageFlags m_usage { 0 };
     GPUBufferMapState m_mapState { GPUBufferMapState::Unmapped };
     std::optional<MapAsyncPromise> m_pendingMapPromise;
+    WeakPtr<GPUDevice, WeakPtrImplWithEventTargetData> m_device;
+    using MappedRanges = WTF::RangeSet<WTF::Range<size_t>>;
+    MappedRanges m_mappedRanges;
+    HashSet<size_t, DefaultHash<size_t>, WTF::UnsignedWithZeroKeyHashTraits<size_t>> m_mappedPoints;
+    bool m_destroyed { false };
+    bool m_mappedAtCreation { false };
 };
 
 }

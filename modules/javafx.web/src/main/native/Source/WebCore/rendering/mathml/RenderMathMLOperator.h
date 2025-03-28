@@ -36,10 +36,13 @@ namespace WebCore {
 class MathMLOperatorElement;
 
 class RenderMathMLOperator : public RenderMathMLToken {
-    WTF_MAKE_ISO_ALLOCATED(RenderMathMLOperator);
+    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(RenderMathMLOperator);
+    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(RenderMathMLOperator);
 public:
-    RenderMathMLOperator(MathMLOperatorElement&, RenderStyle&&);
-    RenderMathMLOperator(Document&, RenderStyle&&);
+    RenderMathMLOperator(Type, MathMLOperatorElement&, RenderStyle&&);
+    RenderMathMLOperator(Type, Document&, RenderStyle&&);
+    virtual ~RenderMathMLOperator();
+
     MathMLOperatorElement& element() const;
 
     void stretchTo(LayoutUnit heightAboveBaseline, LayoutUnit depthBelowBaseline);
@@ -57,7 +60,7 @@ public:
 
     void updateTokenContent() final;
     void updateFromElement() final;
-    virtual UChar32 textContent() const;
+    virtual char32_t textContent() const;
     bool isStretchy() const { return textContent() && hasOperatorFlag(MathMLOperatorDictionary::Stretchy); }
 
 protected:

@@ -33,23 +33,13 @@
 #include "HTMLTableElement.h"
 #include "NodeName.h"
 #include "RenderTableCell.h"
-#include <wtf/IsoMallocInlines.h>
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
-WTF_MAKE_ISO_ALLOCATED_IMPL(HTMLTableCellElement);
+WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(HTMLTableCellElement);
 
 using namespace HTMLNames;
-
-// These limits are defined in the HTML specification:
-// - https://html.spec.whatwg.org/#dom-tdth-colspan
-// - https://html.spec.whatwg.org/#dom-tdth-rowspan
-static const unsigned minColspan = 1;
-static const unsigned maxColspan = 1000;
-static const unsigned defaultColspan = 1;
-static const unsigned minRowspan = 0;
-static const unsigned maxRowspan = 65534;
-static const unsigned defaultRowspan = 1;
 
 Ref<HTMLTableCellElement> HTMLTableCellElement::create(const QualifiedName& tagName, Document& document)
 {
@@ -110,7 +100,7 @@ void HTMLTableCellElement::collectPresentationalHintsForAttribute(const Qualifie
     switch (name.nodeName()) {
     case AttributeNames::nowrapAttr:
         addPropertyToPresentationalHintStyle(style, CSSPropertyWhiteSpaceCollapse, CSSValueCollapse);
-        addPropertyToPresentationalHintStyle(style, CSSPropertyTextWrap, CSSValueNowrap);
+        addPropertyToPresentationalHintStyle(style, CSSPropertyTextWrapMode, CSSValueNowrap);
         break;
     case AttributeNames::widthAttr:
         // width="0" is not allowed for compatibility with WinIE.
@@ -131,8 +121,8 @@ void HTMLTableCellElement::attributeChanged(const QualifiedName& name, const Ato
     HTMLTablePartElement::attributeChanged(name, oldValue, newValue, attributeModificationReason);
 
     if (name == rowspanAttr || name == colspanAttr) {
-        if (is<RenderTableCell>(renderer()))
-            downcast<RenderTableCell>(*renderer()).colSpanOrRowSpanChanged();
+        if (CheckedPtr tableCell = dynamicDowncast<RenderTableCell>(renderer()))
+            tableCell->colSpanOrRowSpanChanged();
     }
 }
 
@@ -208,12 +198,11 @@ void HTMLTableCellElement::addSubresourceAttributeURLs(ListHashSet<URL>& urls) c
 
 HTMLTableCellElement* HTMLTableCellElement::cellAbove() const
 {
-    auto* cellRenderer = renderer();
-    if (!is<RenderTableCell>(cellRenderer))
+    auto* tableCellRenderer = dynamicDowncast<RenderTableCell>(renderer());
+    if (!tableCellRenderer)
         return nullptr;
 
-    auto& tableCellRenderer = downcast<RenderTableCell>(*cellRenderer);
-    auto* cellAboveRenderer = tableCellRenderer.table()->cellAbove(&tableCellRenderer);
+    auto* cellAboveRenderer = tableCellRenderer->table()->cellAbove(tableCellRenderer);
     if (!cellAboveRenderer)
         return nullptr;
 

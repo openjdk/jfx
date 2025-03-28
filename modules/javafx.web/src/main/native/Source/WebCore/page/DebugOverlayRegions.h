@@ -25,8 +25,6 @@
 
 #pragma once
 
-#include <wtf/EnumTraits.h>
-
 namespace WebCore {
 
 enum class DebugOverlayRegions : uint8_t {
@@ -35,21 +33,7 @@ enum class DebugOverlayRegions : uint8_t {
     TouchActionRegion = 1 << 2,
     EditableElementRegion = 1 << 3,
     InteractionRegion = 1 << 4,
+    SiteIsolationRegion = 1 << 5,
 };
 
 }
-
-namespace WTF {
-
-template<> struct EnumTraits<WebCore::DebugOverlayRegions> {
-    using values = EnumValues<
-        WebCore::DebugOverlayRegions,
-        WebCore::DebugOverlayRegions::NonFastScrollableRegion,
-        WebCore::DebugOverlayRegions::WheelEventHandlerRegion,
-        WebCore::DebugOverlayRegions::TouchActionRegion,
-        WebCore::DebugOverlayRegions::EditableElementRegion,
-        WebCore::DebugOverlayRegions::InteractionRegion
-    >;
-};
-
-} // namespace WTF

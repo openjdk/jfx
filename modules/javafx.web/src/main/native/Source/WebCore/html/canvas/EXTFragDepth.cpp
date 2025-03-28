@@ -28,24 +28,19 @@
 #if ENABLE(WEBGL)
 #include "EXTFragDepth.h"
 
-#include <wtf/IsoMallocInlines.h>
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
-WTF_MAKE_ISO_ALLOCATED_IMPL(EXTFragDepth);
+WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(EXTFragDepth);
 
 EXTFragDepth::EXTFragDepth(WebGLRenderingContextBase& context)
-    : WebGLExtension(context)
+    : WebGLExtension(context, WebGLExtensionName::EXTFragDepth)
 {
-    context.graphicsContextGL()->ensureExtensionEnabled("GL_EXT_frag_depth"_s);
+    context.protectedGraphicsContextGL()->ensureExtensionEnabled("GL_EXT_frag_depth"_s);
 }
 
 EXTFragDepth::~EXTFragDepth() = default;
-
-WebGLExtension::ExtensionName EXTFragDepth::getName() const
-{
-    return EXTFragDepthName;
-}
 
 bool EXTFragDepth::supported(GraphicsContextGL& context)
 {

@@ -31,12 +31,12 @@
 #include "AudioSession.h"
 #include "Document.h"
 #include "EventNames.h"
-#include "FeaturePolicy.h"
+#include "PermissionsPolicy.h"
 #include "PlatformMediaSessionManager.h"
 
 namespace WebCore {
 
-WTF_MAKE_ISO_ALLOCATED_IMPL(DOMAudioSession);
+WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(DOMAudioSession);
 
 static inline AudioSessionCategory fromDOMAudioSessionType(DOMAudioSession::Type type)
 {
@@ -80,11 +80,11 @@ DOMAudioSession::~DOMAudioSession()
 
 ExceptionOr<void> DOMAudioSession::setType(Type type)
 {
-    auto* document = downcast<Document>(scriptExecutionContext());
+    RefPtr document = downcast<Document>(scriptExecutionContext());
     if (!document)
-        return Exception { InvalidStateError };
+        return Exception { ExceptionCode::InvalidStateError };
 
-    if (!isFeaturePolicyAllowedByDocumentAndAllOwners(FeaturePolicy::Type::Microphone, *document, LogFeaturePolicyFailure::No))
+    if (!PermissionsPolicy::isFeatureEnabled(PermissionsPolicy::Feature::Microphone, *document, PermissionsPolicy::ShouldReportViolation::No))
         return { };
 
     document->topDocument().setAudioSessionType(type);
@@ -100,8 +100,8 @@ ExceptionOr<void> DOMAudioSession::setType(Type type)
 
 DOMAudioSession::Type DOMAudioSession::type() const
 {
-    auto* document = downcast<Document>(scriptExecutionContext());
-    if (document && !isFeaturePolicyAllowedByDocumentAndAllOwners(FeaturePolicy::Type::Microphone, *document, LogFeaturePolicyFailure::No))
+    RefPtr document = downcast<Document>(scriptExecutionContext());
+    if (document && !PermissionsPolicy::isFeatureEnabled(PermissionsPolicy::Feature::Microphone, *document, PermissionsPolicy::ShouldReportViolation::No))
         return DOMAudioSession::Type::Auto;
 
     return document ? document->topDocument().audioSessionType() : DOMAudioSession::Type::Auto;
@@ -120,8 +120,8 @@ static DOMAudioSession::State computeAudioSessionState()
 
 DOMAudioSession::State DOMAudioSession::state() const
 {
-    auto* document = downcast<Document>(scriptExecutionContext());
-    if (!document || !isFeaturePolicyAllowedByDocumentAndAllOwners(FeaturePolicy::Type::Microphone, *document, LogFeaturePolicyFailure::No))
+    RefPtr document = downcast<Document>(scriptExecutionContext());
+    if (!document || !PermissionsPolicy::isFeatureEnabled(PermissionsPolicy::Feature::Microphone, *document, PermissionsPolicy::ShouldReportViolation::No))
         return DOMAudioSession::State::Inactive;
 
     if (!m_state)
@@ -131,11 +131,6 @@ DOMAudioSession::State DOMAudioSession::state() const
 
 void DOMAudioSession::stop()
 {
-}
-
-const char* DOMAudioSession::activeDOMObjectName() const
-{
-    return "AudioSession";
 }
 
 bool DOMAudioSession::virtualHasPendingActivity() const
@@ -160,8 +155,8 @@ void DOMAudioSession::audioSessionActiveStateChanged()
 
 void DOMAudioSession::scheduleStateChangeEvent()
 {
-    auto* document = downcast<Document>(scriptExecutionContext());
-    if (document && !isFeaturePolicyAllowedByDocumentAndAllOwners(FeaturePolicy::Type::Microphone, *document, LogFeaturePolicyFailure::No))
+    RefPtr document = downcast<Document>(scriptExecutionContext());
+    if (document && !PermissionsPolicy::isFeatureEnabled(PermissionsPolicy::Feature::Microphone, *document, PermissionsPolicy::ShouldReportViolation::No))
         return;
 
     if (m_hasScheduleStateChangeEvent)

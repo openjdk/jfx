@@ -175,11 +175,7 @@ protected:
 private:
     template<typename> friend class ThreadSafeWeakPtr;
     template<typename> friend class ThreadSafeWeakHashSet;
-#if COMPILER(MSVC)
-    ThreadSafeWeakPtrControlBlock& m_controlBlock { *new ThreadSafeWeakPtrControlBlock((T*)this) };
-#else
     ThreadSafeWeakPtrControlBlock& m_controlBlock { *new ThreadSafeWeakPtrControlBlock(static_cast<T*>(this)) };
-#endif
 };
 
 template<typename T>
@@ -216,6 +212,10 @@ public:
     ThreadSafeWeakPtr(ThreadSafeWeakPtr&& other)
         : m_controlBlock(std::exchange(other.m_controlBlock, nullptr))
         , m_objectOfCorrectType(std::exchange(other.m_objectOfCorrectType, nullptr)) { }
+
+    ThreadSafeWeakPtr(ThreadSafeWeakPtrControlBlock& controlBlock, const T& objectOfCorrectType)
+        : m_controlBlock(&controlBlock)
+        , m_objectOfCorrectType(&objectOfCorrectType) { }
 
     ThreadSafeWeakPtr& operator=(ThreadSafeWeakPtr&& other)
     {

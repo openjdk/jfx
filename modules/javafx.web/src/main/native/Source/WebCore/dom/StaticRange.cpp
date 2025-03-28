@@ -30,11 +30,11 @@
 #include "JSNode.h"
 #include "Text.h"
 #include "WebCoreOpaqueRootInlines.h"
-#include <wtf/IsoMallocInlines.h>
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
-WTF_MAKE_ISO_ALLOCATED_IMPL(StaticRange);
+WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(StaticRange);
 
 StaticRange::StaticRange(SimpleRange&& range)
     : SimpleRange(WTFMove(range))
@@ -48,8 +48,7 @@ Ref<StaticRange> StaticRange::create(SimpleRange&& range)
 
 Ref<StaticRange> StaticRange::create(const SimpleRange& range)
 {
-    auto copiedRange = range;
-    return create(WTFMove(copiedRange));
+    return create(SimpleRange { range });
 }
 
 static bool isDocumentTypeOrAttr(Node& node)
@@ -73,7 +72,7 @@ ExceptionOr<Ref<StaticRange>> StaticRange::create(Init&& init)
     ASSERT(init.startContainer);
     ASSERT(init.endContainer);
     if (isDocumentTypeOrAttr(*init.startContainer) || isDocumentTypeOrAttr(*init.endContainer))
-        return Exception { InvalidNodeTypeError };
+        return Exception { ExceptionCode::InvalidNodeTypeError };
     return create({ { init.startContainer.releaseNonNull(), init.startOffset }, { init.endContainer.releaseNonNull(), init.endOffset } });
 }
 

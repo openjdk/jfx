@@ -66,6 +66,8 @@ gchar*       g_string_free_and_steal    (GString         *string) G_GNUC_WARN_UN
 
 #if G_GNUC_CHECK_VERSION (2, 0) && (GLIB_VERSION_MIN_REQUIRED >= GLIB_VERSION_2_76)
 
+#if !defined(__cplusplus) || !G_GNUC_CHECK_VERSION (6, 1) || G_GNUC_CHECK_VERSION (7, 3)
+
 #define g_string_free(str, free_segment)        \
   (__builtin_constant_p (free_segment) ?        \
     ((free_segment) ?                           \
@@ -73,6 +75,8 @@ gchar*       g_string_free_and_steal    (GString         *string) G_GNUC_WARN_UN
       g_string_free_and_steal (str))            \
     :                                           \
     (g_string_free) ((str), (free_segment)))
+
+#endif /* !defined(__cplusplus) || !G_GNUC_CHECK_VERSION (6, 1) || G_GNUC_CHECK_VERSION (7, 3) */
 
 #endif /* G_GNUC_CHECK_VERSION (2, 0) && (GLIB_VERSION_MIN_REQUIRED >= GLIB_VERSION_2_76) */
 

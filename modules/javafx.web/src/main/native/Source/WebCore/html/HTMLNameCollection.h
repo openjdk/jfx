@@ -24,7 +24,7 @@
 
 #include "CachedHTMLCollection.h"
 #include "NodeRareData.h"
-#include <wtf/IsoMalloc.h>
+#include <wtf/TZoneMalloc.h>
 #include <wtf/text/AtomString.h>
 
 namespace WebCore {
@@ -33,7 +33,7 @@ class Document;
 
 template <typename HTMLCollectionClass, CollectionTraversalType traversalType>
 class HTMLNameCollection : public CachedHTMLCollection<HTMLCollectionClass, traversalType> {
-    WTF_MAKE_ISO_NONALLOCATABLE(HTMLNameCollection);
+    WTF_MAKE_TZONE_OR_ISO_NONALLOCATABLE(HTMLNameCollection);
 public:
     virtual ~HTMLNameCollection();
 
@@ -53,7 +53,7 @@ HTMLNameCollection<HTMLCollectionClass, traversalType>::HTMLNameCollection(Docum
 }
 
 class WindowNameCollection final : public HTMLNameCollection<WindowNameCollection, CollectionTraversalType::Descendants> {
-    WTF_MAKE_ISO_ALLOCATED(WindowNameCollection);
+    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(WindowNameCollection);
 public:
     static Ref<WindowNameCollection> create(Document& document, CollectionType type, const AtomString& name)
     {
@@ -65,7 +65,7 @@ public:
 
     static bool elementMatchesIfIdAttributeMatch(const Element&) { return true; }
     static bool elementMatchesIfNameAttributeMatch(const Element&);
-    static bool elementMatches(const Element&, const AtomStringImpl*);
+    static bool elementMatches(const Element&, const AtomString&);
 
 private:
     WindowNameCollection(Document& document, CollectionType type, const AtomString& name)
@@ -76,7 +76,7 @@ private:
 };
 
 class DocumentNameCollection final : public HTMLNameCollection<DocumentNameCollection, CollectionTraversalType::Descendants> {
-    WTF_MAKE_ISO_ALLOCATED(DocumentNameCollection);
+    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(DocumentNameCollection);
 public:
     static Ref<DocumentNameCollection> create(Document& document, CollectionType type, const AtomString& name)
     {
@@ -89,7 +89,7 @@ public:
     // For CachedHTMLCollection.
     bool elementMatches(const Element& element) const { return elementMatches(element, m_name.impl()); }
 
-    static bool elementMatches(const Element&, const AtomStringImpl*);
+    static bool elementMatches(const Element&, const AtomString&);
 
 private:
     DocumentNameCollection(Document& document, CollectionType type, const AtomString& name)

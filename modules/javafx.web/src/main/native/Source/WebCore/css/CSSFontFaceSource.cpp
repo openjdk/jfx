@@ -31,6 +31,7 @@
 #include "CachedFontLoadRequest.h"
 #include "CachedSVGFont.h"
 #include "Document.h"
+#include "DocumentInlines.h"
 #include "Font.h"
 #include "FontCache.h"
 #include "FontCascadeDescription.h"
@@ -46,6 +47,7 @@
 #include "SharedBuffer.h"
 
 namespace WebCore {
+DEFINE_ALLOCATOR_WITH_HEAP_IDENTIFIER(CSSFontFaceSource);
 
 inline void CSSFontFaceSource::setStatus(Status newStatus)
 {
@@ -160,20 +162,21 @@ void CSSFontFaceSource::load(Document* document)
     } else {
         bool success = false;
         if (m_hasSVGFontFaceElement) {
-            if (m_svgFontFaceElement && is<SVGFontElement>(m_svgFontFaceElement->parentNode())) {
+            if (m_svgFontFaceElement) {
+                if (auto* fontElement = dynamicDowncast<SVGFontElement>(m_svgFontFaceElement->parentNode())) {
                 ASSERT(!m_inDocumentCustomPlatformData);
-                SVGFontElement& fontElement = downcast<SVGFontElement>(*m_svgFontFaceElement->parentNode());
-                if (auto otfFont = convertSVGToOTFFont(fontElement))
+                    if (auto otfFont = convertSVGToOTFFont(*fontElement))
                     m_generatedOTFBuffer = SharedBuffer::create(WTFMove(otfFont.value()));
                 if (m_generatedOTFBuffer) {
-                    m_inDocumentCustomPlatformData = createFontCustomPlatformData(*m_generatedOTFBuffer, String());
+                        m_inDocumentCustomPlatformData = FontCustomPlatformData::create(*m_generatedOTFBuffer, String());
                     success = static_cast<bool>(m_inDocumentCustomPlatformData);
                 }
+            }
             }
         } else if (m_immediateSource) {
             ASSERT(!m_immediateFontCustomPlatformData);
             bool wrapping;
-            auto buffer = SharedBuffer::create(static_cast<const char*>(m_immediateSource->baseAddress()), m_immediateSource->byteLength());
+            auto buffer = SharedBuffer::create(m_immediateSource->span());
             m_immediateFontCustomPlatformData = CachedFont::createCustomFontData(buffer.get(), String(), wrapping);
             success = static_cast<bool>(m_immediateFontCustomPlatformData);
         } else {
@@ -184,7 +187,7 @@ void CSSFontFaceSource::load(Document* document)
             fontDescription.setOneFamily(m_fontFaceName);
             fontDescription.setComputedSize(1);
             fontDescription.setShouldAllowUserInstalledFonts(m_face.allowUserInstalledFonts());
-            success = FontCache::forCurrentThread().fontForFamily(fontDescription, m_fontFaceName, { }, true);
+            success = FontCache::forCurrentThread().fontForFamily(fontDescription, m_fontFaceName, { }, FontLookupOptions::ExactFamilyNameMatch);
             if (document && document->settings().webAPIStatisticsEnabled())
                 ResourceLoadObserver::shared().logFontLoad(*document, m_fontFaceName.string(), success);
         }
@@ -206,8 +209,13 @@ RefPtr<Font> CSSFontFaceSource::font(const FontDescription& fontDescription, boo
         }
 
         // We're local. Just return a Font from the normal cache.
-        // We don't want to check alternate font family names here, so pass true as the checkingAlternateName parameter.
-        return FontCache::forCurrentThread().fontForFamily(fontDescription, m_fontFaceName, fontCreationContext, true);
+        // We don't want to check alternate font family names here, so pass true as the exactFamilyNameMatch parameter.
+        OptionSet<FontLookupOptions> options(FontLookupOptions::ExactFamilyNameMatch);
+        if (!syntheticBold)
+            options.add(FontLookupOptions::DisallowBoldSynthesis);
+        if (!syntheticItalic)
+            options.add(FontLookupOptions::DisallowObliqueSynthesis);
+        return FontCache::forCurrentThread().fontForFamily(fontDescription, m_fontFaceName, fontCreationContext, options);
     }
 
     if (m_fontRequest) {
@@ -232,7 +240,10 @@ RefPtr<Font> CSSFontFaceSource::font(const FontDescription& fontDescription, boo
 
 bool CSSFontFaceSource::isSVGFontFaceSource() const
 {
-    return m_hasSVGFontFaceElement || (is<CachedFontLoadRequest>(m_fontRequest) && is<CachedSVGFont>(downcast<CachedFontLoadRequest>(m_fontRequest.get())->cachedFont()));
+    if (m_hasSVGFontFaceElement)
+        return true;
+    auto* fontRequest = dynamicDowncast<CachedFontLoadRequest>(m_fontRequest.get());
+    return fontRequest && is<CachedSVGFont>(fontRequest->cachedFont());
 }
 
 }

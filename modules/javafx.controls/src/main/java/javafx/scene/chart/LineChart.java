@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -26,17 +26,16 @@
 package javafx.scene.chart;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-
+import javafx.animation.Animation;
 import javafx.animation.FadeTransition;
 import javafx.animation.Interpolator;
 import javafx.animation.KeyFrame;
 import javafx.animation.KeyValue;
 import javafx.animation.Timeline;
-import javafx.animation.Animation;
-import javafx.application.Platform;
 import javafx.beans.NamedArg;
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.DoubleProperty;
@@ -46,6 +45,11 @@ import javafx.beans.property.SimpleDoubleProperty;
 import javafx.collections.FXCollections;
 import javafx.collections.ListChangeListener;
 import javafx.collections.ObservableList;
+import javafx.css.CssMetaData;
+import javafx.css.Styleable;
+import javafx.css.StyleableBooleanProperty;
+import javafx.css.StyleableProperty;
+import javafx.css.converter.BooleanConverter;
 import javafx.scene.AccessibleRole;
 import javafx.scene.Node;
 import javafx.scene.layout.StackPane;
@@ -53,18 +57,7 @@ import javafx.scene.shape.LineTo;
 import javafx.scene.shape.Path;
 import javafx.scene.shape.StrokeLineJoin;
 import javafx.util.Duration;
-
 import com.sun.javafx.charts.Legend.LegendItem;
-
-import javafx.css.StyleableBooleanProperty;
-import javafx.css.CssMetaData;
-
-import javafx.css.converter.BooleanConverter;
-
-import java.util.*;
-
-import javafx.css.Styleable;
-import javafx.css.StyleableProperty;
 
 /**
  * Line Chart plots a line connecting the data points in a series. The data points
@@ -206,7 +199,7 @@ public class LineChart<X,Y> extends XYChart<X,Y> {
                     if(yData != null) yData.add(data.getYValue());
                 }
             }
-            // RT-32838 No need to invalidate range if there is one data item - whose value is zero.
+            // JDK-8118969 No need to invalidate range if there is one data item - whose value is zero.
             if(xData != null && !(xData.size() == 1 && getXAxis().toNumericValue(xData.get(0)) == 0)) {
                 xa.invalidateRange(xData);
             }
@@ -530,7 +523,7 @@ public class LineChart<X,Y> extends XYChart<X,Y> {
             symbol = new StackPane();
             symbol.setAccessibleRole(AccessibleRole.TEXT);
             symbol.setAccessibleRoleDescription("Point");
-            symbol.focusTraversableProperty().bind(Platform.accessibilityActiveProperty());
+            symbol.setFocusTraversable(isAccessibilityActive());
             item.setNode(symbol);
         }
         // set symbol styles

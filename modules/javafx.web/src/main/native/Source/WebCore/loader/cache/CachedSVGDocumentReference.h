@@ -36,7 +36,7 @@ class CachedResourceLoader;
 struct ResourceLoaderOptions;
 
 class CachedSVGDocumentReference final : public CachedSVGDocumentClient {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(Loader);
 public:
     CachedSVGDocumentReference(const String&);
 
@@ -50,7 +50,7 @@ public:
 private:
     String m_url;
     CachedResourceHandle<CachedSVGDocument> m_document;
-    bool m_loadRequested;
+    bool m_loadRequested { false };
 };
 
 } // namespace WebCore

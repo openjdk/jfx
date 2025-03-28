@@ -53,6 +53,11 @@ inline CacheableIdentifier CacheableIdentifier::createFromImmortalIdentifier(Uni
     return CacheableIdentifier(uid);
 }
 
+inline CacheableIdentifier CacheableIdentifier::createFromSharedStub(UniquedStringImpl* uid)
+{
+    return CacheableIdentifier(uid);
+}
+
 inline CacheableIdentifier CacheableIdentifier::createFromCell(JSCell* i)
 {
     return CacheableIdentifier(i);
@@ -145,7 +150,6 @@ inline void CacheableIdentifier::visitAggregate(Visitor& visitor) const
     if (m_bits && isCell())
         visitor.appendUnbarriered(cell());
 }
-
 
 inline bool CacheableIdentifier::operator==(const CacheableIdentifier& other) const
 {

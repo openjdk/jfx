@@ -26,25 +26,24 @@
 #include "config.h"
 #include "PushSubscription.h"
 
-#if ENABLE(SERVICE_WORKER)
-
 #include "EventLoop.h"
 #include "Exception.h"
 #include "JSDOMPromiseDeferred.h"
 #include "PushSubscriptionOptions.h"
+#include "PushSubscriptionOwner.h"
 #include "ScriptExecutionContext.h"
 #include "ServiceWorkerContainer.h"
 #include <JavaScriptCore/ArrayBuffer.h>
-#include <wtf/IsoMallocInlines.h>
+#include <wtf/TZoneMallocInlines.h>
 #include <wtf/text/Base64.h>
 
 namespace WebCore {
 
-WTF_MAKE_ISO_ALLOCATED_IMPL(PushSubscription);
+WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(PushSubscription);
 
-PushSubscription::PushSubscription(PushSubscriptionData&& data, RefPtr<ServiceWorkerRegistration>&& registration)
+PushSubscription::PushSubscription(PushSubscriptionData&& data, RefPtr<PushSubscriptionOwner>&& owner)
     : m_data(WTFMove(data))
-    , m_serviceWorkerRegistration(WTFMove(registration))
+    , m_pushSubscriptionOwner(WTFMove(owner))
 {
 }
 
@@ -87,34 +86,30 @@ const Vector<uint8_t>& PushSubscription::sharedAuthenticationSecret() const
 
 ExceptionOr<RefPtr<JSC::ArrayBuffer>> PushSubscription::getKey(PushEncryptionKeyName name) const
 {
-    const Vector<uint8_t>* source = nullptr;
-
+    auto& source = [&]() -> const Vector<uint8_t>& {
     switch (name) {
     case PushEncryptionKeyName::P256dh:
-        source = &clientECDHPublicKey();
-        break;
+            return clientECDHPublicKey();
     case PushEncryptionKeyName::Auth:
-        source = &sharedAuthenticationSecret();
-        break;
-    default:
-        return nullptr;
+            return sharedAuthenticationSecret();
     }
+    }();
 
-    auto buffer = ArrayBuffer::tryCreate(source->data(), source->size());
+    auto buffer = ArrayBuffer::tryCreate(source);
     if (!buffer)
-        return Exception { OutOfMemoryError };
+        return Exception { ExceptionCode::OutOfMemoryError };
     return buffer;
 }
 
 void PushSubscription::unsubscribe(ScriptExecutionContext& scriptExecutionContext, DOMPromiseDeferred<IDLBoolean>&& promise)
 {
     scriptExecutionContext.eventLoop().queueTask(TaskSource::Networking, [this, protectedThis = Ref { *this }, pushSubscriptionIdentifier = m_data.identifier, promise = WTFMove(promise)]() mutable {
-        if (!m_serviceWorkerRegistration) {
+        if (!m_pushSubscriptionOwner) {
             promise.resolve(false);
             return;
         }
 
-        m_serviceWorkerRegistration->unsubscribeFromPushService(pushSubscriptionIdentifier, WTFMove(promise));
+        m_pushSubscriptionOwner->unsubscribeFromPushService(pushSubscriptionIdentifier, WTFMove(promise));
     });
 }
 
@@ -131,5 +126,3 @@ PushSubscriptionJSON PushSubscription::toJSON() const
 }
 
 } // namespace WebCore
-
-#endif // ENABLE(SERVICE_WORKER)

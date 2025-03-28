@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2023, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -31,6 +31,7 @@ import com.sun.javafx.font.FontStrike;
 import com.sun.javafx.font.PGFont;
 import com.sun.javafx.font.PrismFontFactory;
 import com.sun.javafx.text.GlyphLayout;
+import com.sun.javafx.text.GlyphLayoutManager;
 import com.sun.javafx.text.TextRun;
 
 class CTGlyphLayout extends GlyphLayout {
@@ -158,5 +159,10 @@ class CTGlyphLayout extends GlyphLayout {
             run.shape(glyphCount, glyphs, positions, indices);
         }
         OS.CFRelease(lineRef);
+    }
+
+    @Override
+    public void dispose() {
+        GlyphLayoutManager.dispose(this);
     }
 }

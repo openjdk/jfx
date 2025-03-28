@@ -39,6 +39,7 @@
 #include "AudioTrackList.h"
 #include "AudioTrackPrivate.h"
 #include "CommonAtomStrings.h"
+#include "ScriptExecutionContext.h"
 #include <wtf/NeverDestroyed.h>
 
 namespace WebCore {
@@ -62,19 +63,20 @@ const AtomString& AudioTrack::translationKeyword()
 }
 
 AudioTrack::AudioTrack(ScriptExecutionContext* context, AudioTrackPrivate& trackPrivate)
-    : MediaTrackBase(context, MediaTrackBase::AudioTrack, trackPrivate.id(), trackPrivate.label(), trackPrivate.language())
+    : MediaTrackBase(context, MediaTrackBase::AudioTrack, trackPrivate.trackUID(), trackPrivate.id(), trackPrivate.label(), trackPrivate.language())
     , m_private(trackPrivate)
     , m_enabled(trackPrivate.enabled())
     , m_configuration(AudioTrackConfiguration::create())
 {
-    m_private->setClient(*this);
+    addClientToTrackPrivateBase(*this, trackPrivate);
+
     updateKindFromPrivate();
     updateConfigurationFromPrivate();
 }
 
 AudioTrack::~AudioTrack()
 {
-    m_private->clearClient();
+    removeClientFromTrackPrivateBase(Ref { m_private });
 }
 
 void AudioTrack::setPrivate(AudioTrackPrivate& trackPrivate)
@@ -82,10 +84,11 @@ void AudioTrack::setPrivate(AudioTrackPrivate& trackPrivate)
     if (m_private.ptr() == &trackPrivate)
         return;
 
-    m_private->clearClient();
+    removeClientFromTrackPrivateBase(Ref { m_private });
     m_private = trackPrivate;
     m_private->setEnabled(m_enabled);
-    m_private->setClient(*this);
+    addClientToTrackPrivateBase(*this, trackPrivate);
+
 #if !RELEASE_LOG_DISABLED
     m_private->setLogger(logger(), logIdentifier());
 #endif
@@ -106,12 +109,12 @@ void AudioTrack::setLanguage(const AtomString& language)
 
 bool AudioTrack::isValidKind(const AtomString& value) const
 {
-    return value == alternativeAtom()
-        || value == commentaryAtom()
-        || value == descriptionKeyword()
-        || value == mainAtom()
-        || value == mainDescKeyword()
-        || value == translationKeyword();
+    return value == "alternative"_s
+        || value == "commentary"_s
+        || value == "description"_s
+        || value == "main"_s
+        || value == "main-desc"_s
+        || value == "translation"_s;
 }
 
 void AudioTrack::setEnabled(bool enabled)
@@ -159,7 +162,7 @@ void AudioTrack::configurationChanged(const PlatformAudioTrackConfiguration& con
     m_configuration->setState(configuration);
 }
 
-void AudioTrack::idChanged(const AtomString& id)
+void AudioTrack::idChanged(TrackID id)
 {
     setId(id);
     m_clients.forEach([this] (auto& client) {
@@ -190,25 +193,25 @@ void AudioTrack::willRemove()
 void AudioTrack::updateKindFromPrivate()
 {
     switch (m_private->kind()) {
-    case AudioTrackPrivate::Alternative:
-        setKind(alternativeAtom());
+    case AudioTrackPrivate::Kind::Alternative:
+        setKind("alternative"_s);
         break;
-    case AudioTrackPrivate::Description:
-        setKind(AudioTrack::descriptionKeyword());
+    case AudioTrackPrivate::Kind::Description:
+        setKind("description"_s);
         break;
-    case AudioTrackPrivate::Main:
-        setKind(mainAtom());
+    case AudioTrackPrivate::Kind::Main:
+        setKind("main"_s);
         break;
-    case AudioTrackPrivate::MainDesc:
-        setKind(AudioTrack::mainDescKeyword());
+    case AudioTrackPrivate::Kind::MainDesc:
+        setKind("main-desc"_s);
         break;
-    case AudioTrackPrivate::Translation:
-        setKind(AudioTrack::translationKeyword());
+    case AudioTrackPrivate::Kind::Translation:
+        setKind("translation"_s);
         break;
-    case AudioTrackPrivate::Commentary:
-        setKind(commentaryAtom());
+    case AudioTrackPrivate::Kind::Commentary:
+        setKind("commentary"_s);
         break;
-    case AudioTrackPrivate::None:
+    case AudioTrackPrivate::Kind::None:
         setKind(emptyAtom());
         break;
     default:

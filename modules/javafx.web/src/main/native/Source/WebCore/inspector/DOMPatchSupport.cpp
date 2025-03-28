@@ -88,7 +88,7 @@ void DOMPatchSupport::patchDocument(const String& markup)
     if (newDocument->isHTMLDocument())
         parser = HTMLDocumentParser::create(static_cast<HTMLDocument&>(*newDocument));
     else
-        parser = XMLDocumentParser::create(*newDocument, nullptr);
+        parser = XMLDocumentParser::create(*newDocument, XMLDocumentParser::IsInFrameView::No);
     parser->insert(markup); // Use insert() so that the parser will not yield.
     parser->finish();
     parser->detach();
@@ -398,8 +398,7 @@ ExceptionOr<void> DOMPatchSupport::innerPatchChildren(ContainerNode& parentNode,
 
 static void addStringToSHA1(SHA1& sha1, const String& string)
 {
-    CString cString = string.utf8();
-    sha1.addBytes(cString.dataAsUInt8Ptr(), cString.length());
+    sha1.addUTF8Bytes(string);
 }
 
 std::unique_ptr<DOMPatchSupport::Digest> DOMPatchSupport::createDigest(Node& node, UnusedNodesMap* unusedNodesMap)
@@ -409,7 +408,7 @@ std::unique_ptr<DOMPatchSupport::Digest> DOMPatchSupport::createDigest(Node& nod
     SHA1 sha1;
 
     auto nodeType = node.nodeType();
-    sha1.addBytes(reinterpret_cast<const uint8_t*>(&nodeType), sizeof(nodeType));
+    sha1.addBytes(std::span { reinterpret_cast<const uint8_t*>(&nodeType), sizeof(nodeType) });
     addStringToSHA1(sha1, node.nodeName());
     addStringToSHA1(sha1, node.nodeValue());
 
@@ -431,14 +430,14 @@ std::unique_ptr<DOMPatchSupport::Digest> DOMPatchSupport::createDigest(Node& nod
             }
             SHA1::Digest attrsHash;
             attrsSHA1.computeHash(attrsHash);
-            digest->attrsSHA1 = base64EncodeToString(attrsHash.data(), 10);
+            digest->attrsSHA1 = base64EncodeToString(std::span { attrsHash }.first(10));
             addStringToSHA1(sha1, digest->attrsSHA1);
         }
     }
 
     SHA1::Digest hash;
     sha1.computeHash(hash);
-    digest->sha1 = base64EncodeToString(hash.data(), 10);
+    digest->sha1 = base64EncodeToString(std::span { hash }.first(10));
     if (unusedNodesMap)
         unusedNodesMap->add(digest->sha1, digest.get());
 

@@ -36,6 +36,7 @@
 #include "ScrollAlignment.h"
 #include "ScrollBehavior.h"
 #include "VisibleSelection.h"
+#include <wtf/CheckedRef.h>
 #include <wtf/Noncopyable.h>
 
 namespace WebCore {
@@ -111,9 +112,10 @@ private:
     VisiblePosition m_position;
 };
 
-class FrameSelection final : private CaretBase, public CaretAnimationClient {
+class FrameSelection final : private CaretBase, public CaretAnimationClient, public CanMakeCheckedPtr<FrameSelection> {
     WTF_MAKE_NONCOPYABLE(FrameSelection);
     WTF_MAKE_FAST_ALLOCATED;
+    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(FrameSelection);
 public:
     enum class Alteration : bool { Move, Extend };
     enum class CursorAlignOnScroll : bool { IfNeeded, Always };
@@ -131,6 +133,8 @@ public:
         DelegateMainFrameScroll = 1 << 10,
         RevealSelectionBounds = 1 << 11,
         ForceCenterScroll = 1 << 12,
+        ForBindings = 1 << 13,
+        DoNotNotifyEditorClients = 1 << 14,
     };
     static constexpr OptionSet<SetSelectionOption> defaultSetSelectionOptions(UserTriggered = UserTriggered::No);
 
@@ -144,7 +148,7 @@ public:
     WEBCORE_EXPORT void moveTo(const VisiblePosition&, const VisiblePosition&, UserTriggered = UserTriggered::No);
     void moveTo(const Position&, Affinity, UserTriggered = UserTriggered::No);
     void moveTo(const Position&, const Position&, Affinity, UserTriggered = UserTriggered::No);
-    void moveWithoutValidationTo(const Position&, const Position&, bool selectionHasDirection, bool shouldSetFocus, SelectionRevealMode, const AXTextStateChangeIntent& = AXTextStateChangeIntent());
+    void moveWithoutValidationTo(const Position&, const Position&, bool selectionHasDirection, OptionSet<SetSelectionOption> = defaultSetSelectionOptions(), const AXTextStateChangeIntent& = AXTextStateChangeIntent());
 
     const VisibleSelection& selection() const { return m_selection; }
     WEBCORE_EXPORT void setSelection(const VisibleSelection&, OptionSet<SetSelectionOption> = defaultSetSelectionOptions(), AXTextStateChangeIntent = AXTextStateChangeIntent(), CursorAlignOnScroll = CursorAlignOnScroll::IfNeeded, TextGranularity = TextGranularity::CharacterGranularity);
@@ -202,6 +206,10 @@ public:
     WEBCORE_EXPORT void setCaretBlinkingSuspended(bool);
     WEBCORE_EXPORT bool isCaretBlinkingSuspended() const;
 
+#if ENABLE(ACCESSIBILITY_NON_BLINKING_CURSOR)
+    WEBCORE_EXPORT void setPrefersNonBlinkingCursor(bool);
+#endif
+
     WEBCORE_EXPORT void setFocused(bool);
     bool isFocused() const { return m_focused; }
     WEBCORE_EXPORT bool isFocusedAndActive() const;
@@ -213,6 +221,8 @@ public:
     String debugDescription() const;
     void showTreeForThis() const;
 #endif
+
+    WEBCORE_EXPORT std::optional<SimpleRange> rangeByExtendingCurrentSelection(TextGranularity) const;
 
 #if PLATFORM(IOS_FAMILY)
     WEBCORE_EXPORT void expandSelectionToElementContainingCaretSelection();
@@ -251,7 +261,7 @@ public:
     enum class TextRectangleHeight : bool { TextHeight, SelectionHeight };
     WEBCORE_EXPORT void getClippedVisibleTextRectangles(Vector<FloatRect>&, TextRectangleHeight = TextRectangleHeight::SelectionHeight) const;
 
-    WEBCORE_EXPORT HTMLFormElement* currentForm() const;
+    WEBCORE_EXPORT RefPtr<HTMLFormElement> currentForm() const;
 
     WEBCORE_EXPORT void revealSelection(SelectionRevealMode = SelectionRevealMode::Reveal, const ScrollAlignment& = ScrollAlignment::alignCenterIfNeeded, RevealExtentOption = RevealExtentOption::DoNotRevealExtent, ScrollBehavior = ScrollBehavior::Instant);
     WEBCORE_EXPORT void setSelectionFromNone();
@@ -279,6 +289,7 @@ private:
     void updateDataDetectorsForSelection();
 
     bool setSelectionWithoutUpdatingAppearance(const VisibleSelection&, OptionSet<SetSelectionOption>, CursorAlignOnScroll, TextGranularity);
+    void setNodeFlags(VisibleSelection&, bool value);
 
     void respondToNodeModification(Node&, bool anchorRemoved, bool focusRemoved, bool baseRemoved, bool extentRemoved, bool startRemoved, bool endRemoved);
     TextDirection directionOfEnclosingBlock();
@@ -308,7 +319,7 @@ private:
 
     void selectFrameElementInParentIfFullySelected();
 
-    void setFocusedElementIfNeeded();
+    void setFocusedElementIfNeeded(OptionSet<SetSelectionOption>);
     void focusedOrActiveStateChanged();
 
     enum class ShouldUpdateAppearance : bool { No, Yes };
@@ -320,6 +331,7 @@ private:
     void caretAnimationDidUpdate(CaretAnimator&) final;
 
     Document* document() final;
+    RefPtr<Document> protectedDocument() const { return m_document.get(); }
 
     Node* caretNode() final;
 
@@ -357,6 +369,7 @@ private:
     bool m_shouldShowBlockCursor : 1;
     bool m_pendingSelectionUpdate : 1;
     bool m_alwaysAlignCursorOnScrollWhenRevealingSelection : 1;
+    bool m_hasScheduledSelectionChangeEventOnDocument : 1 { false };
 
 #if PLATFORM(IOS_FAMILY)
     bool m_updateAppearanceEnabled : 1;
@@ -383,7 +396,7 @@ inline void FrameSelection::clearTypingStyle()
     m_typingStyle = nullptr;
 }
 
-#if !(ENABLE(ACCESSIBILITY) && (PLATFORM(COCOA) || USE(ATSPI)))
+#if !(PLATFORM(COCOA) || USE(ATSPI))
 
 inline void FrameSelection::notifyAccessibilityForSelectionChange(const AXTextStateChangeIntent&)
 {

@@ -79,7 +79,7 @@ private:
     void configurationChanged(const PlatformAudioTrackConfiguration&) final;
 
     // TrackPrivateBaseClient
-    void idChanged(const AtomString&) final;
+    void idChanged(TrackID) final;
     void labelChanged(const AtomString&) final;
     void languageChanged(const AtomString&) final;
     void willRemove() final;
@@ -88,7 +88,7 @@ private:
     void updateConfigurationFromPrivate();
 
 #if !RELEASE_LOG_DISABLED
-    const char* logClassName() const final { return "AudioTrack"; }
+    ASCIILiteral logClassName() const final { return "AudioTrack"_s; }
 #endif
 
     WeakPtr<AudioTrackList> m_audioTrackList;

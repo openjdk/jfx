@@ -25,27 +25,27 @@
 
 #include "config.h"
 
-#if ENABLE(MANAGED_MEDIA_SOURCE)
+#if ENABLE(MEDIA_SOURCE)
 #include "BufferedChangeEvent.h"
 
 #include "Event.h"
 #include "EventNames.h"
 #include "TimeRanges.h"
-#include <wtf/IsoMallocInlines.h>
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
-WTF_MAKE_ISO_ALLOCATED_IMPL(BufferedChangeEvent);
+WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(BufferedChangeEvent);
 
 BufferedChangeEvent::BufferedChangeEvent(RefPtr<TimeRanges>&& added, RefPtr<TimeRanges>&& removed)
-    : Event(eventNames().bufferedchangeEvent, CanBubble::No, IsCancelable::No)
+    : Event(EventInterfaceType::BufferedChangeEvent, eventNames().bufferedchangeEvent, CanBubble::No, IsCancelable::No)
     , m_added(WTFMove(added))
     , m_removed(WTFMove(removed))
 {
 }
 
 BufferedChangeEvent::BufferedChangeEvent(const AtomString& type, Init&& init)
-    : Event(type, init, IsTrusted::No)
+    : Event(EventInterfaceType::BufferedChangeEvent, type, init, IsTrusted::No)
     , m_added(WTFMove(init.addedRanges))
     , m_removed(WTFMove(init.removedRanges))
 {
@@ -63,11 +63,6 @@ RefPtr<TimeRanges> BufferedChangeEvent::removedRanges() const
     return m_removed;
 }
 
-EventInterface BufferedChangeEvent::eventInterface() const
-{
-    return BufferedChangeEventInterfaceType;
-}
-
 } // namespace WebCore
 
-#endif
+#endif // ENABLE(MEDIA_SOURCE)

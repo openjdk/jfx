@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -29,9 +29,10 @@ import com.sun.webkit.WebPage;
 import com.sun.webkit.WebPageShim;
 import javafx.scene.web.WebEngineShim;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNull;
-import org.junit.Test;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import org.junit.jupiter.api.Test;
 
 public class WebPageTest extends TestBase {
 
@@ -45,17 +46,17 @@ public class WebPageTest extends TestBase {
         WebPage page = WebEngineShim.getPage(getEngine());
 
         loadContent(HTML);
-        assertEquals("HTML document", HTML, getHtml(page));
+        assertEquals(HTML, getHtml(page), "HTML document");
 
         // With XML document, getHtml() should return null
         loadContent(XML, "application/xml");
-        assertNull("XML document", getHtml(page));
+        assertNull(getHtml(page), "XML document");
 
         loadContent("");
-        assertEquals("Empty document", PLAIN, getHtml(page));
+        assertEquals(PLAIN, getHtml(page), "Empty document");
 
         loadContent("", "text/plain");
-        assertEquals("Empty text/plain document", PLAIN, getHtml(page));
+        assertEquals(PLAIN, getHtml(page), "Empty text/plain document");
     }
 
     private String getHtml(final WebPage page) throws Exception {
@@ -73,13 +74,13 @@ public class WebPageTest extends TestBase {
         // load content with single iframe, which leads to two frame
         loadContent(PTAG + IFRAME);
         submit(() -> {
-            assertEquals("Expected two frames : ", 2, WebPageShim.getFramesCount(page));
+            assertEquals(2, WebPageShim.getFramesCount(page), "Expected two frames : ");
         });
 
         // load content with only one element which leads to single frame
         loadContent(PTAG);
         submit(() -> {
-            assertEquals("Expected single frame : ", 1, WebPageShim.getFramesCount(page));
+            assertEquals(1, WebPageShim.getFramesCount(page), "Expected single frame : ");
         });
     }
 
@@ -89,15 +90,19 @@ public class WebPageTest extends TestBase {
                 "test/html/icutagparse.html").toExternalForm());
     }
 
-    @Test(expected = IllegalStateException.class)
+    @Test
     public void testGetClientTextLocationFromNonEventThread() {
-        WebPage page = WebEngineShim.getPage(getEngine());
-        page.getClientTextLocation(0);
+        assertThrows(IllegalStateException.class, () -> {
+            WebPage page = WebEngineShim.getPage(getEngine());
+            page.getClientTextLocation(0);
+        });
     }
 
-    @Test(expected = IllegalStateException.class)
+    @Test
     public void testGetClientLocationOffsetFromNonEventThread() {
-        WebPage page = WebEngineShim.getPage(getEngine());
-        page.getClientLocationOffset(0, 0);
+        assertThrows(IllegalStateException.class, () -> {
+            WebPage page = WebEngineShim.getPage(getEngine());
+            page.getClientLocationOffset(0, 0);
+        });
     }
 }

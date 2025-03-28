@@ -25,8 +25,6 @@
 
 #pragma once
 
-#if ENABLE(CSS_PAINTING_API)
-
 #include "AffineTransform.h"
 #include "CanvasBase.h"
 #include "ContextDestructionObserver.h"
@@ -34,6 +32,7 @@
 #include "ExceptionOr.h"
 #include "ImageBuffer.h"
 #include "IntSize.h"
+#include "PaintRenderingContext2D.h"
 #include "ScriptWrappable.h"
 #include <wtf/Forward.h>
 #include <wtf/RefCounted.h>
@@ -41,9 +40,11 @@
 
 namespace WebCore {
 
-class CanvasRenderingContext;
 class ImageBitmap;
-class PaintRenderingContext2D;
+
+namespace DisplayList {
+class DrawingContext;
+}
 
 class CustomPaintCanvas final : public RefCounted<CustomPaintCanvas>, public CanvasBase, private ContextDestructionObserver {
     WTF_MAKE_FAST_ALLOCATED;
@@ -56,19 +57,18 @@ public:
     RefPtr<PaintRenderingContext2D> getContext();
 
     CanvasRenderingContext* renderingContext() const final { return m_context.get(); }
-    GraphicsContext* drawingContext() const final;
-    GraphicsContext* existingDrawingContext() const final;
 
     void didDraw(const std::optional<FloatRect>&, ShouldApplyPostProcessingToDirtyRect) final { }
 
-    AffineTransform baseTransform() const final { ASSERT(m_destinationGraphicsContext && m_copiedBuffer); return m_copiedBuffer->baseTransform(); }
     Image* copiedImage() const final;
     void clearCopiedImage() const final;
 
-    void replayDisplayList(GraphicsContext*) const;
+    void replayDisplayList(GraphicsContext&);
 
     void queueTaskKeepingObjectAlive(TaskSource, Function<void()>&&) final { };
     void dispatchEvent(Event&) final { }
+
+    const CSSParserContext& cssParserContext() const final;
 
     using RefCounted::ref;
     using RefCounted::deref;
@@ -76,16 +76,14 @@ public:
 private:
     CustomPaintCanvas(ScriptExecutionContext&, unsigned width, unsigned height);
 
-    void refCanvasBase() final { ref(); }
-    void derefCanvasBase() final { deref(); }
+    void refCanvasBase() const final { ref(); }
+    void derefCanvasBase() const final { deref(); }
     ScriptExecutionContext* canvasBaseScriptExecutionContext() const final { return ContextDestructionObserver::scriptExecutionContext(); }
 
-    std::unique_ptr<CanvasRenderingContext> m_context;
-    mutable GraphicsContext* m_destinationGraphicsContext = nullptr;
-    mutable RefPtr<ImageBuffer> m_copiedBuffer;
+    std::unique_ptr<PaintRenderingContext2D> m_context;
     mutable RefPtr<Image> m_copiedImage;
+    mutable std::unique_ptr<CSSParserContext> m_cssParserContext;
 };
 
 }
 SPECIALIZE_TYPE_TRAITS_CANVAS(WebCore::CustomPaintCanvas, isCustomPaintCanvas())
-#endif

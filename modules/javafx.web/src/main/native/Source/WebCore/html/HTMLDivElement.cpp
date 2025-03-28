@@ -26,16 +26,16 @@
 #include "CSSPropertyNames.h"
 #include "CSSValueKeywords.h"
 #include "HTMLNames.h"
-#include <wtf/IsoMallocInlines.h>
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
-WTF_MAKE_ISO_ALLOCATED_IMPL(HTMLDivElement);
+WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(HTMLDivElement);
 
 using namespace HTMLNames;
 
-HTMLDivElement::HTMLDivElement(const QualifiedName& tagName, Document& document, ConstructionType constructionType)
-    : HTMLElement(tagName, document, constructionType)
+HTMLDivElement::HTMLDivElement(const QualifiedName& tagName, Document& document, OptionSet<TypeFlag> typeFlags)
+    : HTMLElement(tagName, document, typeFlags)
 {
     ASSERT(hasTagName(divTag));
 }

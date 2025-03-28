@@ -174,8 +174,10 @@ public class LogicalFont implements CompositeFontResource {
         if (PrismFontFactory.isLinux) {
             FontConfigManager.FcCompFont fcCompFont =
                 FontConfigManager.getFontConfigFont(family, bold, italic);
-            physicalFullName = fcCompFont.firstFont.fullName;
-            physicalFileName = fcCompFont.firstFont.fontFile;
+            if (fcCompFont != null) {
+                physicalFullName = fcCompFont.firstFont.fullName;
+                physicalFileName = fcCompFont.firstFont.fontFile;
+            }
         } else {
             physicalFamily = PrismFontFactory.getSystemFont(familyName);
         }

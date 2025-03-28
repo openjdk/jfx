@@ -47,7 +47,7 @@ public:
     //We work in window rather than view coordinates here
     OptionSet<DragSourceAction> dragSourceActionMaskForPoint(const IntPoint& windowPoint) override;
 
-    void startDrag(DragItem, DataTransfer&, LocalFrame&) override;
+    void startDrag(DragItem, DataTransfer&, Frame&) override;
 private:
     JGObject m_webPage;
 };

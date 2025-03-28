@@ -55,13 +55,13 @@ using namespace HTMLNames;
 
 static JSValue createNewElementWrapper(JSDOMGlobalObject* globalObject, Ref<Element>&& element)
 {
-    if (is<HTMLElement>(element))
-        return createJSHTMLWrapper(globalObject, static_reference_cast<HTMLElement>(WTFMove(element)));
-    if (is<SVGElement>(element))
-        return createJSSVGWrapper(globalObject, static_reference_cast<SVGElement>(WTFMove(element)));
+    if (auto* htmlElement = dynamicDowncast<HTMLElement>(element.get()))
+        return createJSHTMLWrapper(globalObject, *htmlElement);
+    if (auto* svgElement = dynamicDowncast<SVGElement>(element.get()))
+        return createJSSVGWrapper(globalObject, *svgElement);
 #if ENABLE(MATHML)
-    if (is<MathMLElement>(element))
-        return createJSMathMLWrapper(globalObject, static_reference_cast<MathMLElement>(WTFMove(element)));
+    if (auto* mathmlElement = dynamicDowncast<MathMLElement>(element.get()))
+        return createJSMathMLWrapper(globalObject, *mathmlElement);
 #endif
     return createWrapper<Element>(globalObject, WTFMove(element));
 }
@@ -99,12 +99,12 @@ static JSValue getElementsArrayAttribute(JSGlobalObject& lexicalGlobalObject, co
         const_cast<JSElement&>(thisObject).putDirect(vm, builtinNames(vm).cachedAttrAssociatedElementsPrivateName(), cachedObject);
     }
 
-    std::optional<Vector<RefPtr<Element>>> elements = thisObject.wrapped().getElementsArrayAttribute(attributeName);
+    std::optional<Vector<Ref<Element>>> elements = thisObject.wrapped().getElementsArrayAttribute(attributeName);
     auto propertyName = PropertyName(Identifier::fromString(vm, attributeName.toString()));
     JSValue cachedValue = cachedObject->getDirect(vm, propertyName);
     if (!cachedValue.isEmpty()) {
-        std::optional<Vector<RefPtr<Element>>> cachedElements = convert<IDLNullable<IDLFrozenArray<IDLInterface<Element>>>>(lexicalGlobalObject, cachedValue);
-        if (elements == cachedElements)
+        auto cachedElements = convert<IDLNullable<IDLFrozenArray<IDLInterface<Element>>>>(lexicalGlobalObject, cachedValue);
+        if (!cachedElements.hasException(throwScope) && elements == cachedElements.returnValue())
             return cachedValue;
     }
 

@@ -52,10 +52,7 @@ public:
     String displayName(VM&);
     String calculatedDisplayName(VM&);
 
-    static Structure* createStructure(VM& vm, JSGlobalObject* globalObject, JSValue proto)
-    {
-        return Structure::create(vm, globalObject, proto, TypeInfo(InternalFunctionType, StructureFlags), info());
-    }
+    inline static Structure* createStructure(VM&, JSGlobalObject*, JSValue);
 
     JS_EXPORT_PRIVATE static Structure* createSubclassStructure(JSGlobalObject*, JSObject* newTarget, Structure*);
     JS_EXPORT_PRIVATE static InternalFunction* createFunctionThatMasqueradesAsUndefined(VM&, JSGlobalObject*, unsigned length, const String& name, NativeFunction);
@@ -68,7 +65,7 @@ public:
         return m_functionForConstruct;
     }
 
-    static ptrdiff_t offsetOfNativeFunctionFor(CodeSpecializationKind kind)
+    static constexpr ptrdiff_t offsetOfNativeFunctionFor(CodeSpecializationKind kind)
     {
         if (kind == CodeForCall)
             return OBJECT_OFFSETOF(InternalFunction, m_functionForCall);
@@ -76,7 +73,7 @@ public:
         return OBJECT_OFFSETOF(InternalFunction, m_functionForConstruct);
     }
 
-    static ptrdiff_t offsetOfGlobalObject()
+    static constexpr ptrdiff_t offsetOfGlobalObject()
     {
         return OBJECT_OFFSETOF(InternalFunction, m_globalObject);
     }

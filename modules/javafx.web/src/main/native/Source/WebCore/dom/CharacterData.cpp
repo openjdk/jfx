@@ -27,6 +27,7 @@
 #include "ElementTraversal.h"
 #include "EventNames.h"
 #include "FrameSelection.h"
+#include "HTMLStyleElement.h"
 #include "InspectorInstrumentation.h"
 #include "MutationEvent.h"
 #include "MutationObserverInterestGroup.h"
@@ -34,23 +35,24 @@
 #include "ProcessingInstruction.h"
 #include "RenderText.h"
 #include "StyleInheritedData.h"
-#include <wtf/IsoMallocInlines.h>
 #include <wtf/Ref.h>
+#include <wtf/TZoneMallocInlines.h>
+#include <wtf/text/MakeString.h>
 
 namespace WebCore {
 
-WTF_MAKE_ISO_ALLOCATED_IMPL(CharacterData);
+WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(CharacterData);
 
 CharacterData::~CharacterData()
 {
-    willBeDeletedFrom(document());
+    willBeDeletedFrom(RefAllowingPartiallyDestroyed<Document> { document() });
 }
 
 static bool canUseSetDataOptimization(const CharacterData& node)
 {
-    auto& document = node.document();
-    return !document.hasListenerType(Document::ListenerType::DOMCharacterDataModified) && !document.hasMutationObserversOfType(MutationObserverOptionType::CharacterData)
-        && !document.hasListenerType(Document::ListenerType::DOMSubtreeModified);
+    Ref document = node.document();
+    return !document->hasListenerType(Document::ListenerType::DOMCharacterDataModified) && !document->hasMutationObserversOfType(MutationObserverOptionType::CharacterData)
+        && !document->hasListenerType(Document::ListenerType::DOMSubtreeModified) && !is<HTMLStyleElement>(node.parentNode());
 }
 
 void CharacterData::setData(const String& data)
@@ -59,8 +61,9 @@ void CharacterData::setData(const String& data)
     unsigned oldLength = length();
 
     if (m_data == nonNullData && canUseSetDataOptimization(*this)) {
-        document().textRemoved(*this, 0, oldLength);
-        if (auto* frame = document().frame())
+        Ref document = this->document();
+        document->textRemoved(*this, 0, oldLength);
+        if (RefPtr frame = document->frame())
             frame->selection().textWasReplaced(*this, 0, oldLength, oldLength);
         return;
     }
@@ -69,10 +72,10 @@ void CharacterData::setData(const String& data)
     setDataAndUpdate(nonNullData, 0, oldLength, nonNullData.length());
 }
 
-ExceptionOr<String> CharacterData::substringData(unsigned offset, unsigned count)
+ExceptionOr<String> CharacterData::substringData(unsigned offset, unsigned count) const
 {
     if (offset > length())
-        return Exception { IndexSizeError };
+        return Exception { ExceptionCode::IndexSizeError };
 
     return m_data.substring(offset, count);
 }
@@ -82,8 +85,8 @@ static ContainerNode::ChildChange makeChildChange(CharacterData& characterData, 
     return {
         ContainerNode::ChildChange::Type::TextChanged,
         nullptr,
-        ElementTraversal::previousSibling(characterData),
-        ElementTraversal::nextSibling(characterData),
+        RefPtr { ElementTraversal::previousSibling(characterData) }.get(),
+        RefPtr { ElementTraversal::nextSibling(characterData) }.get(),
         source,
         ContainerNode::ChildChange::AffectsElements::No
     };
@@ -93,11 +96,13 @@ void CharacterData::parserAppendData(StringView string)
 {
     auto childChange = makeChildChange(*this, ContainerNode::ChildChange::Source::Parser);
     std::optional<Style::ChildChangeInvalidation> styleInvalidation;
-    if (auto* parent = parentNode())
+    if (RefPtr parent = parentNode())
         styleInvalidation.emplace(*parent, childChange);
 
     String oldData = m_data;
     m_data = makeString(m_data, string);
+
+    clearStateFlag(StateFlag::ContainsOnlyASCIIWhitespaceIsValid);
 
     ASSERT(!renderer() || is<Text>(*this));
     if (auto text = dynamicDowncast<Text>(*this))
@@ -112,13 +117,13 @@ void CharacterData::parserAppendData(StringView string)
 
 void CharacterData::appendData(const String& data)
 {
-    setDataAndUpdate(m_data + data, m_data.length(), 0, data.length(), UpdateLiveRanges::No);
+    setDataAndUpdate(makeString(m_data, data), m_data.length(), 0, data.length(), UpdateLiveRanges::No);
 }
 
 ExceptionOr<void> CharacterData::insertData(unsigned offset, const String& data)
 {
     if (offset > length())
-        return Exception { IndexSizeError };
+        return Exception { ExceptionCode::IndexSizeError };
 
     auto newData = makeStringByInserting(m_data, data, offset);
     setDataAndUpdate(WTFMove(newData), offset, 0, data.length());
@@ -129,7 +134,7 @@ ExceptionOr<void> CharacterData::insertData(unsigned offset, const String& data)
 ExceptionOr<void> CharacterData::deleteData(unsigned offset, unsigned count)
 {
     if (offset > length())
-        return Exception { IndexSizeError };
+        return Exception { ExceptionCode::IndexSizeError };
 
     count = std::min(count, length() - offset);
 
@@ -142,7 +147,7 @@ ExceptionOr<void> CharacterData::deleteData(unsigned offset, unsigned count)
 ExceptionOr<void> CharacterData::replaceData(unsigned offset, unsigned count, const String& data)
 {
     if (offset > length())
-        return Exception { IndexSizeError };
+        return Exception { ExceptionCode::IndexSizeError };
 
     count = std::min(count, length() - offset);
 
@@ -158,9 +163,17 @@ String CharacterData::nodeValue() const
     return m_data;
 }
 
-void CharacterData::setNodeValue(const String& nodeValue)
+ExceptionOr<void> CharacterData::setNodeValue(const String& nodeValue)
 {
     setData(nodeValue);
+    return { };
+}
+
+void CharacterData::setDataWithoutUpdate(const String& data)
+{
+    ASSERT(!data.isNull());
+    m_data = data;
+    clearStateFlag(StateFlag::ContainsOnlyASCIIWhitespaceIsValid);
 }
 
 void CharacterData::setDataAndUpdate(const String& newData, unsigned offsetOfReplacedData, unsigned oldLength, unsigned newLength, UpdateLiveRanges shouldUpdateLiveRanges)
@@ -170,16 +183,19 @@ void CharacterData::setDataAndUpdate(const String& newData, unsigned offsetOfRep
     String oldData = WTFMove(m_data);
     {
         std::optional<Style::ChildChangeInvalidation> styleInvalidation;
-        if (auto* parent = parentNode())
+        if (RefPtr parent = parentNode())
             styleInvalidation.emplace(*parent, childChange);
 
         m_data = newData;
     }
 
+    clearStateFlag(StateFlag::ContainsOnlyASCIIWhitespaceIsValid);
+
+    Ref document = this->document();
     if (oldLength && shouldUpdateLiveRanges != UpdateLiveRanges::No)
-        document().textRemoved(*this, offsetOfReplacedData, oldLength);
+        document->textRemoved(*this, offsetOfReplacedData, oldLength);
     if (newLength && shouldUpdateLiveRanges != UpdateLiveRanges::No)
-        document().textInserted(*this, offsetOfReplacedData, newLength);
+        document->textInserted(*this, offsetOfReplacedData, newLength);
 
     ASSERT(!renderer() || is<Text>(*this));
     if (auto text = dynamicDowncast<Text>(*this))
@@ -187,7 +203,7 @@ void CharacterData::setDataAndUpdate(const String& newData, unsigned offsetOfRep
     else if (auto processingIntruction = dynamicDowncast<ProcessingInstruction>(*this))
         processingIntruction->checkStyleSheet();
 
-    if (auto* frame = document().frame())
+    if (RefPtr frame = document->frame())
         frame->selection().textWasReplaced(*this, offsetOfReplacedData, oldLength, newLength);
 
     notifyParentAfterChange(childChange);
@@ -199,10 +215,11 @@ void CharacterData::notifyParentAfterChange(const ContainerNode::ChildChange& ch
 {
     document().incDOMTreeVersion();
 
-    if (!parentNode())
+    RefPtr parentNode = this->parentNode();
+    if (!parentNode)
         return;
 
-    parentNode()->childrenChanged(childChange);
+    parentNode->childrenChanged(childChange);
 }
 
 void CharacterData::dispatchModifiedEvent(const String& oldData)
@@ -216,7 +233,18 @@ void CharacterData::dispatchModifiedEvent(const String& oldData)
         dispatchSubtreeModifiedEvent();
     }
 
-    InspectorInstrumentation::characterDataModified(document(), *this);
+    InspectorInstrumentation::characterDataModified(protectedDocument(), *this);
+}
+
+bool CharacterData::containsOnlyASCIIWhitespace() const
+{
+    if (hasStateFlag(StateFlag::ContainsOnlyASCIIWhitespaceIsValid))
+        return hasStateFlag(StateFlag::ContainsOnlyASCIIWhitespace);
+
+    bool hasOnlyWhitespace = m_data.containsOnly<isASCIIWhitespace>();
+    const_cast<CharacterData*>(this)->setStateFlag(StateFlag::ContainsOnlyASCIIWhitespace, hasOnlyWhitespace);
+    const_cast<CharacterData*>(this)->setStateFlag(StateFlag::ContainsOnlyASCIIWhitespaceIsValid);
+    return hasOnlyWhitespace;
 }
 
 } // namespace WebCore

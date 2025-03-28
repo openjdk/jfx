@@ -51,11 +51,18 @@ namespace WebCore {
 
 class RenderMarquee;
 
-class RenderLayerScrollableArea final : public ScrollableArea {
+class RenderLayerScrollableArea final : public ScrollableArea, public CanMakeCheckedPtr<RenderLayerScrollableArea> {
     WTF_MAKE_FAST_ALLOCATED;
+    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(RenderLayerScrollableArea);
 public:
     explicit RenderLayerScrollableArea(RenderLayer&);
     virtual ~RenderLayerScrollableArea();
+
+    // CheckedPtr interface
+    uint32_t ptrCount() const final { return CanMakeCheckedPtr::ptrCount(); }
+    uint32_t ptrCountWithoutThreadCheck() const final { return CanMakeCheckedPtr::ptrCountWithoutThreadCheck(); }
+    void incrementPtrCount() const final { CanMakeCheckedPtr::incrementPtrCount(); }
+    void decrementPtrCount() const final { CanMakeCheckedPtr::decrementPtrCount(); }
 
     RenderLayer& layer() { return m_layer; }
 
@@ -109,6 +116,8 @@ public:
     OverscrollBehavior horizontalOverscrollBehavior() const final;
     OverscrollBehavior verticalOverscrollBehavior() const final;
 
+    Color scrollbarThumbColorStyle() const final;
+    Color scrollbarTrackColorStyle() const final;
     ScrollbarGutter scrollbarGutterStyle() const final;
     ScrollbarWidth scrollbarWidthStyle() const final;
 
@@ -251,6 +260,16 @@ public:
     void animatedScrollDidEnd() final;
     LayoutRect scrollRectToVisible(const LayoutRect& absoluteRect, const ScrollRectToVisibleOptions&);
     std::optional<LayoutRect> updateScrollPositionForScrollIntoView(const ScrollPositionChangeOptions&, const LayoutRect& revealRect, const LayoutRect& localExposeRect);
+    void updateScrollAnchoringElement() final;
+    void updateScrollPositionForScrollAnchoringController() final;
+    void invalidateScrollAnchoringElement() final;
+    ScrollAnchoringController* scrollAnchoringController() { return m_scrollAnchoringController.get(); }
+
+    void createScrollbarsController() final;
+
+    FrameIdentifier rootFrameID() const final;
+
+    void scrollbarWidthChanged(ScrollbarWidth) override;
 
 private:
     bool hasHorizontalOverflow() const;
@@ -280,8 +299,6 @@ private:
     void registerScrollableAreaForAnimatedScroll();
 
     float deviceScaleFactor() const final;
-
-    void createScrollbarsController() final;
 
 private:
     bool m_scrollDimensionsDirty { true };
@@ -317,6 +334,12 @@ private:
     RenderPtr<RenderScrollbarPart> m_resizer;
 
     std::unique_ptr<RenderMarquee> m_marquee; // Used for <marquee>.
+
+    std::unique_ptr<ScrollAnchoringController> m_scrollAnchoringController;
 };
 
 } // namespace WebCore
+
+SPECIALIZE_TYPE_TRAITS_BEGIN(WebCore::RenderLayerScrollableArea)
+static bool isType(const WebCore::ScrollableArea& area) { return area.isRenderLayer(); }
+SPECIALIZE_TYPE_TRAITS_END()

@@ -51,6 +51,48 @@ inline static float endPaddingQuirkValue(const RenderBlockFlow& flow)
     return endPadding;
 }
 
+static std::tuple<float, float> glyphOverflowInInlineDirection(size_t firstTextBoxIndex, size_t lastTextBoxIndex, const InlineDisplay::Boxes& boxes, const FloatRect& inkOverflowRect, bool isLeftToRightDirection)
+{
+    // FIXME: This should be on the text box level and taking all characters into account (maybe consider utilizing the measuring pass if turns out to be a perf hit)
+    if (firstTextBoxIndex >= boxes.size() || lastTextBoxIndex >= boxes.size()) {
+        ASSERT_NOT_REACHED();
+        return { };
+    }
+
+    auto bounds = [&](auto& textBox, bool isLeading) {
+        auto textContent = textBox.text().renderedContent();
+        if (!textContent.length()) {
+            ASSERT_NOT_REACHED();
+            return FloatRect { };
+        }
+        auto character = isLeading ? textContent[0] : textContent[textContent.length() - 1];
+        auto& fontCascade = textBox.style().fontCascade();
+        auto glyphData = fontCascade.glyphDataForCharacter(character, !isLeftToRightDirection);
+        return (glyphData.font ? *glyphData.font : fontCascade.primaryFont()).boundsForGlyph(glyphData.glyph);
+    };
+
+    auto leadingOverflow = [&] {
+        auto& firstTextBox = boxes[firstTextBoxIndex];
+        ASSERT(firstTextBox.isText());
+        if (downcast<Layout::InlineTextBox>(firstTextBox.layoutBox()).canUseSimpleFontCodePath())
+            return 0.f;
+        if (auto boundsX = bounds(firstTextBox, true).x(); boundsX < 0)
+            return std::max(0.f, inkOverflowRect.x() - (firstTextBox.left() + boundsX));
+        return 0.f;
+    };
+
+    auto trailingOverflow = [&] {
+        auto& lastTextBox = boxes[lastTextBoxIndex];
+        ASSERT(lastTextBox.isText());
+        if (downcast<Layout::InlineTextBox>(lastTextBox.layoutBox()).canUseSimpleFontCodePath())
+            return 0.f;
+        if (auto boundsMaxX = bounds(lastTextBox, false).maxX(); boundsMaxX > lastTextBox.width())
+            return std::max(0.f, (lastTextBox.left() + boundsMaxX) - inkOverflowRect.maxX());
+        return 0.f;
+    };
+    return { leadingOverflow(), trailingOverflow() };
+}
+
 InlineContentBuilder::InlineContentBuilder(const RenderBlockFlow& blockFlow, BoxTree& boxTree)
     : m_blockFlow(blockFlow)
     , m_boxTree(boxTree)
@@ -59,11 +101,30 @@ InlineContentBuilder::InlineContentBuilder(const RenderBlockFlow& blockFlow, Box
 
 FloatRect InlineContentBuilder::build(Layout::InlineLayoutResult&& layoutResult, InlineContent& inlineContent, const Layout::InlineDamage* lineDamage) const
 {
+    inlineContent.releaseCaches();
+    computeIsFirstIsLastBoxAndBidiReorderingForInlineContent(layoutResult.displayContent.boxes);
+
+    if (layoutResult.range == Layout::InlineLayoutResult::Range::Full) {
+        auto damagedRect = FloatRect { };
+
+        for (auto& line : inlineContent.displayContent().lines)
+            damagedRect.unite(line.inkOverflow());
+
+        inlineContent.displayContent().set(WTFMove(layoutResult.displayContent));
+        adjustDisplayLines(inlineContent, 0);
+
+        for (auto& line : inlineContent.displayContent().lines)
+            damagedRect.unite(line.inkOverflow());
+        return damagedRect;
+    }
+
+    auto handlePartialDisplayContentUpdate = [&]() -> FloatRect {
+
     auto firstDamagedLineIndex = [&]() -> std::optional<size_t> {
         auto& displayContentFromPreviousLayout = inlineContent.displayContent();
-        if (!lineDamage || !lineDamage->start() || !displayContentFromPreviousLayout.lines.size())
+            if (!lineDamage || !lineDamage->layoutStartPosition() || !displayContentFromPreviousLayout.lines.size())
             return { };
-        auto canidateLineIndex = lineDamage->start()->lineIndex;
+            auto canidateLineIndex = lineDamage->layoutStartPosition()->lineIndex;
         if (canidateLineIndex >= displayContentFromPreviousLayout.lines.size()) {
             ASSERT_NOT_REACHED();
             return { };
@@ -108,40 +169,31 @@ FloatRect InlineContentBuilder::build(Layout::InlineLayoutResult&& layoutResult,
         ASSERT(boxCount);
         return { boxCount };
     }();
+
+        if (!firstDamagedLineIndex || !numberOfDamagedLines || !firstDamagedBoxIndex || !numberOfDamagedBoxes) {
+            ASSERT_NOT_REACHED();
+            return { };
+        }
+
     auto numberOfNewLines = layoutResult.displayContent.lines.size();
     auto numberOfNewBoxes = layoutResult.displayContent.boxes.size();
 
     auto damagedRect = FloatRect { };
-    auto adjustDamagedRectWithLineRange = [&](size_t firstLineIndex, size_t lineCount, auto& lines) {
+        auto adjustDamagedRectWithLineRange = [&](size_t firstLineIndex, size_t lineCount) {
+            auto& lines = inlineContent.displayContent().lines;
         ASSERT(firstLineIndex + lineCount <= lines.size());
         for (size_t i = 0; i < lineCount; ++i)
             damagedRect.unite(lines[firstLineIndex + i].inkOverflow());
     };
 
     // Repaint the damaged content boundary.
-    adjustDamagedRectWithLineRange(firstDamagedLineIndex.value_or(0), numberOfDamagedLines.value_or(inlineContent.displayContent().lines.size()), inlineContent.displayContent().lines);
+        adjustDamagedRectWithLineRange(*firstDamagedLineIndex, *numberOfDamagedLines);
 
-    inlineContent.releaseCaches();
-
-    switch (layoutResult.range) {
-    case Layout::InlineLayoutResult::Range::Full:
-        inlineContent.displayContent().set(WTFMove(layoutResult.displayContent));
-        break;
-    case Layout::InlineLayoutResult::Range::FullFromDamage: {
-        if (!firstDamagedLineIndex || !numberOfDamagedLines || !firstDamagedBoxIndex || !numberOfDamagedBoxes) {
-            // FIXME: Not sure if inlineContent::set or silent failing is what we should do here.
-            break;
-        }
+        if (layoutResult.range == Layout::InlineLayoutResult::Range::FullFromDamage) {
         auto& displayContent = inlineContent.displayContent();
         displayContent.remove(*firstDamagedLineIndex, *numberOfDamagedLines, *firstDamagedBoxIndex, *numberOfDamagedBoxes);
         displayContent.append(WTFMove(layoutResult.displayContent));
-        break;
-    }
-    case Layout::InlineLayoutResult::Range::PartialFromDamage: {
-        if (!firstDamagedLineIndex || !numberOfDamagedLines || !firstDamagedBoxIndex || !numberOfDamagedBoxes) {
-            // FIXME: Not sure if inlineContent::set or silent failing is what we should do here.
-            break;
-        }
+        } else if (layoutResult.range == Layout::InlineLayoutResult::Range::PartialFromDamage) {
         auto& displayContent = inlineContent.displayContent();
         displayContent.remove(*firstDamagedLineIndex, *numberOfDamagedLines, *firstDamagedBoxIndex, *numberOfDamagedBoxes);
         displayContent.insert(WTFMove(layoutResult.displayContent), *firstDamagedLineIndex, *firstDamagedBoxIndex);
@@ -159,48 +211,34 @@ FloatRect InlineContentBuilder::build(Layout::InlineLayoutResult&& layoutResult,
             }
         };
         adjustCachedBoxIndexesIfNeeded();
-        break;
-    }
-    default:
+        } else
         ASSERT_NOT_REACHED();
-        break;
-    }
 
-    auto updateIfTextRenderersNeedVisualReordering = [&] {
-        // FIXME: We may want to have a global, "is this a bidi paragraph" flag to avoid this loop for non-rtl, non-bidi content.
-        for (auto& displayBox : inlineContent.displayContent().boxes) {
-            auto& layoutBox = displayBox.layoutBox();
-            if (!is<Layout::InlineTextBox>(layoutBox))
-                continue;
-            if (displayBox.bidiLevel() != UBIDI_DEFAULT_LTR)
-                downcast<RenderText>(m_boxTree.rendererForLayoutBox(layoutBox)).setNeedsVisualReordering();
-        }
-    };
-    updateIfTextRenderersNeedVisualReordering();
-    adjustDisplayLines(inlineContent);
+        adjustDisplayLines(inlineContent, *firstDamagedLineIndex);
     // Repaint the new content boundary.
-    adjustDamagedRectWithLineRange(firstDamagedLineIndex.value_or(0), numberOfNewLines, inlineContent.displayContent().lines);
-    computeIsFirstIsLastBoxForInlineContent(inlineContent);
+        adjustDamagedRectWithLineRange(*firstDamagedLineIndex, numberOfNewLines);
 
     return damagedRect;
+    };
+    return handlePartialDisplayContentUpdate();
 }
 
 void InlineContentBuilder::updateLineOverflow(InlineContent& inlineContent) const
 {
-    adjustDisplayLines(inlineContent);
+    adjustDisplayLines(inlineContent, 0);
 }
 
-void InlineContentBuilder::adjustDisplayLines(InlineContent& inlineContent) const
+void InlineContentBuilder::adjustDisplayLines(InlineContent& inlineContent, size_t startIndex) const
 {
     auto& lines = inlineContent.displayContent().lines;
     auto& boxes = inlineContent.displayContent().boxes;
 
-    size_t boxIndex = 0;
+    size_t boxIndex = !startIndex ? 0 : lines[startIndex - 1].lastBoxIndex() + 1;
     auto& rootBoxStyle = m_blockFlow.style();
     auto isLeftToRightInlineDirection = rootBoxStyle.isLeftToRightDirection();
     auto isHorizontalWritingMode = rootBoxStyle.isHorizontalWritingMode();
 
-    for (size_t lineIndex = 0; lineIndex < lines.size(); ++lineIndex) {
+    for (size_t lineIndex = startIndex; lineIndex < lines.size(); ++lineIndex) {
         auto& line = lines[lineIndex];
         auto scrollableOverflowRect = line.contentOverflow();
         auto adjustOverflowLogicalWidthWithBlockFlowQuirk = [&] {
@@ -229,6 +267,8 @@ void InlineContentBuilder::adjustDisplayLines(InlineContent& inlineContent) cons
         // Visual overflow propagation is slightly different from ink overflow when it comes to renderers with self painting layers.
         // -and for now we consult atomic renderers for such visual overflow which is not how we are supposed to do in LFC.
         // (visual overflow is computed during their ::layout() call which we issue right before running inline layout in RenderBlockFlow::layoutModernLines)
+        auto firstTextBoxIndex = std::optional<size_t> { };
+        auto lastTextBoxIndex = std::optional<size_t> { };
         for (; boxIndex < boxes.size() && boxes[boxIndex].lineIndex() == lineIndex; ++boxIndex) {
             auto& box = boxes[boxIndex];
             if (box.isRootInlineBox() || box.isEllipsis() || box.isLineBreak())
@@ -236,11 +276,15 @@ void InlineContentBuilder::adjustDisplayLines(InlineContent& inlineContent) cons
 
             if (box.isText()) {
                 inkOverflowRect.unite(box.inkOverflow());
+                if (box.isVisible() && box.text().renderedContent().length()) {
+                    firstTextBoxIndex = firstTextBoxIndex.value_or(boxIndex);
+                    lastTextBoxIndex = boxIndex;
+                }
                 continue;
             }
 
-            if (box.isAtomicInlineLevelBox()) {
-                auto& renderer = downcast<RenderBox>(m_boxTree.rendererForLayoutBox(box.layoutBox()));
+            if (box.isAtomicInlineBox()) {
+                auto& renderer = downcast<RenderBox>(*box.layoutBox().rendererForIntegration());
                 if (!renderer.hasSelfPaintingLayer()) {
                     auto childInkOverflow = renderer.logicalVisualOverflowRectForPropagation(&renderer.parent()->style());
                     childInkOverflow.move(box.left(), box.top());
@@ -253,9 +297,14 @@ void InlineContentBuilder::adjustDisplayLines(InlineContent& inlineContent) cons
             }
 
             if (box.isInlineBox()) {
-                if (!downcast<RenderElement>(m_boxTree.rendererForLayoutBox(box.layoutBox())).hasSelfPaintingLayer())
+                if (!downcast<RenderElement>(*box.layoutBox().rendererForIntegration()).hasSelfPaintingLayer())
                     inkOverflowRect.unite(box.inkOverflow());
             }
+        }
+
+        if (firstTextBoxIndex && lastTextBoxIndex) {
+            auto [leadingOverflow, trailingOverflow] = glyphOverflowInInlineDirection(*firstTextBoxIndex, *lastTextBoxIndex, boxes, inkOverflowRect, line.isLeftToRightInlineDirection());
+            inkOverflowRect.inflate(leadingOverflow, { }, trailingOverflow, { });
         }
 
         line.setScrollableOverflow(scrollableOverflowRect);
@@ -273,9 +322,8 @@ void InlineContentBuilder::adjustDisplayLines(InlineContent& inlineContent) cons
     }
 }
 
-void InlineContentBuilder::computeIsFirstIsLastBoxForInlineContent(InlineContent& inlineContent) const
+void InlineContentBuilder::computeIsFirstIsLastBoxAndBidiReorderingForInlineContent(InlineDisplay::Boxes& boxes) const
 {
-    auto& boxes = inlineContent.displayContent().boxes;
     if (boxes.isEmpty()) {
         // Line clamp may produce a completely empty IFC.
         return;
@@ -295,6 +343,9 @@ void InlineContentBuilder::computeIsFirstIsLastBoxForInlineContent(InlineContent
             continue;
         }
         auto& layoutBox = displayBox.layoutBox();
+        if (is<Layout::InlineTextBox>(layoutBox) && displayBox.bidiLevel() != UBIDI_DEFAULT_LTR)
+            downcast<RenderText>(*layoutBox.rendererForIntegration()).setNeedsVisualReordering();
+
         if (lastDisplayBoxForLayoutBoxIndexes.set(&layoutBox, index).isNewEntry)
             displayBox.setIsFirstForLayoutBox(true);
     }

@@ -58,7 +58,7 @@ public:
 
 private:
     OpaqueJSScript(VM& vm, const SourceOrigin& sourceOrigin, String&& filename, int startingLineNumber, const String& source)
-        : SourceProvider(sourceOrigin, WTFMove(filename), String(), TextPosition(OrdinalNumber::fromOneBasedInt(startingLineNumber), OrdinalNumber()), SourceProviderSourceType::Program)
+        : SourceProvider(sourceOrigin, WTFMove(filename), String(), SourceTaintedOrigin::Untainted, TextPosition(OrdinalNumber::fromOneBasedInt(startingLineNumber), OrdinalNumber()), SourceProviderSourceType::Program)
         , m_vm(vm)
         , m_source(source.isNull() ? *StringImpl::empty() : *source.impl())
     {
@@ -72,10 +72,9 @@ private:
 
 static bool parseScript(VM& vm, const SourceCode& source, ParserError& error)
 {
-    return !!JSC::parse<JSC::ProgramNode>(
-        vm, source, Identifier(), ImplementationVisibility::Public, JSParserBuiltinMode::NotBuiltin,
-        JSParserStrictMode::NotStrict, JSParserScriptMode::Classic, SourceParseMode::ProgramMode, SuperBinding::NotNeeded,
-        error);
+    return !!parseRootNode<ProgramNode>(
+        vm, source, ImplementationVisibility::Public, JSParserBuiltinMode::NotBuiltin,
+        NoLexicallyScopedFeatures, JSParserScriptMode::Classic, SourceParseMode::ProgramMode, error);
 }
 
 extern "C" {
@@ -92,7 +91,7 @@ JSScriptRef JSScriptCreateReferencingImmortalASCIIText(JSContextGroupRef context
     startingLineNumber = std::max(1, startingLineNumber);
 
     auto sourceURL = urlString ? URL({ }, urlString->string()) : URL();
-    auto result = OpaqueJSScript::create(vm, SourceOrigin { sourceURL }, sourceURL.string(), startingLineNumber, String(StringImpl::createWithoutCopying(source, length)));
+    auto result = OpaqueJSScript::create(vm, SourceOrigin { sourceURL }, sourceURL.string(), startingLineNumber, String(StringImpl::createWithoutCopying({ source, length })));
 
     ParserError error;
     if (!parseScript(vm, SourceCode(result.copyRef()), error)) {

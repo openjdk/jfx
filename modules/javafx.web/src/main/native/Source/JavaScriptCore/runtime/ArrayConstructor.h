@@ -30,28 +30,27 @@ class ArrayPrototype;
 class JSArray;
 class GetterSetter;
 
+extern const ASCIILiteral ArrayInvalidLengthError;
+
 class ArrayConstructor final : public InternalFunction {
 public:
     typedef InternalFunction Base;
     static constexpr unsigned StructureFlags = Base::StructureFlags | HasStaticPropertyTable;
 
-    static ArrayConstructor* create(VM& vm, JSGlobalObject* globalObject, Structure* structure, ArrayPrototype* arrayPrototype, GetterSetter* speciesSymbol)
+    static ArrayConstructor* create(VM& vm, JSGlobalObject* globalObject, Structure* structure, ArrayPrototype* arrayPrototype)
     {
         ArrayConstructor* constructor = new (NotNull, allocateCell<ArrayConstructor>(vm)) ArrayConstructor(vm, structure);
-        constructor->finishCreation(vm, globalObject, arrayPrototype, speciesSymbol);
+        constructor->finishCreation(vm, globalObject, arrayPrototype);
         return constructor;
     }
 
     DECLARE_INFO;
 
-    static Structure* createStructure(VM& vm, JSGlobalObject* globalObject, JSValue prototype)
-    {
-        return Structure::create(vm, globalObject, prototype, TypeInfo(InternalFunctionType, StructureFlags), info());
-    }
+    inline static Structure* createStructure(VM&, JSGlobalObject*, JSValue);
 
 private:
     ArrayConstructor(VM&, Structure*);
-    void finishCreation(VM&, JSGlobalObject*, ArrayPrototype*, GetterSetter* speciesSymbol);
+    void finishCreation(VM&, JSGlobalObject*, ArrayPrototype*);
 };
 STATIC_ASSERT_ISO_SUBSPACE_SHARABLE(ArrayConstructor, InternalFunction);
 

@@ -79,6 +79,11 @@ LibWebRTCPeerConnectionBackend::LibWebRTCPeerConnectionBackend(RTCPeerConnection
 
 LibWebRTCPeerConnectionBackend::~LibWebRTCPeerConnectionBackend() = default;
 
+bool LibWebRTCPeerConnectionBackend::shouldEnableWebRTCL4S() const
+{
+    RefPtr document = m_peerConnection.document();
+    return document && document->settings().webRTCL4SEnabled();
+}
 void LibWebRTCPeerConnectionBackend::suspend()
 {
     m_endpoint->suspend();
@@ -159,7 +164,6 @@ static webrtc::PeerConnectionInterface::RTCConfiguration configurationFromMediaE
         rtcConfiguration.servers.push_back(WTFMove(iceServer));
     }
 
-    rtcConfiguration.set_cpu_adaptation(false);
     // FIXME: Activate ice candidate pool size once it no longer bothers test bots.
     // rtcConfiguration.ice_candidate_pool_size = configuration.iceCandidatePoolSize;
 
@@ -246,7 +250,7 @@ void LibWebRTCPeerConnectionBackend::doCreateOffer(RTCOfferOptions&& options)
 void LibWebRTCPeerConnectionBackend::doCreateAnswer(RTCAnswerOptions&&)
 {
     if (!m_isRemoteDescriptionSet) {
-        createAnswerFailed(Exception { InvalidStateError, "No remote description set"_s });
+        createAnswerFailed(Exception { ExceptionCode::InvalidStateError, "No remote description set"_s });
         return;
     }
     m_endpoint->doCreateAnswer();
@@ -270,7 +274,7 @@ void LibWebRTCPeerConnectionBackend::doAddIceCandidate(RTCIceCandidate& candidat
     std::unique_ptr<webrtc::IceCandidateInterface> rtcCandidate(webrtc::CreateIceCandidate(candidate.sdpMid().utf8().data(), sdpMLineIndex, candidate.candidate().utf8().data(), &error));
 
     if (!rtcCandidate) {
-        callback(Exception { OperationError, String::fromUTF8(error.description.data(), error.description.length()) });
+        callback(Exception { ExceptionCode::OperationError, String::fromUTF8(error.description) });
         return;
     }
 
@@ -312,7 +316,7 @@ ExceptionOr<Ref<RTCRtpSender>> LibWebRTCPeerConnectionBackend::addTrack(MediaStr
 {
     auto senderBackend = makeUnique<LibWebRTCRtpSenderBackend>(*this, nullptr);
     if (!m_endpoint->addTrack(*senderBackend, track, mediaStreamIds))
-        return Exception { TypeError, "Unable to add track"_s };
+        return Exception { ExceptionCode::TypeError, "Unable to add track"_s };
 
     if (auto sender = findExistingSender(m_peerConnection.currentTransceivers(), *senderBackend)) {
         backendFromRTPSender(*sender).takeSource(*senderBackend);
@@ -332,23 +336,23 @@ ExceptionOr<Ref<RTCRtpSender>> LibWebRTCPeerConnectionBackend::addTrack(MediaStr
 }
 
 template<typename T>
-ExceptionOr<Ref<RTCRtpTransceiver>> LibWebRTCPeerConnectionBackend::addTransceiverFromTrackOrKind(T&& trackOrKind, const RTCRtpTransceiverInit& init)
+ExceptionOr<Ref<RTCRtpTransceiver>> LibWebRTCPeerConnectionBackend::addTransceiverFromTrackOrKind(T&& trackOrKind, const RTCRtpTransceiverInit& init, IgnoreNegotiationNeededFlag ignoreNegotiationNeededFlag)
 {
-    auto result = m_endpoint->addTransceiver(trackOrKind, init);
+    auto result = m_endpoint->addTransceiver(trackOrKind, init, ignoreNegotiationNeededFlag);
     if (result.hasException())
         return result.releaseException();
 
     auto backends = result.releaseReturnValue();
-    auto sender = RTCRtpSender::create(m_peerConnection, WTFMove(trackOrKind), WTFMove(backends.senderBackend));
+    auto sender = RTCRtpSender::create(m_peerConnection, std::forward<T>(trackOrKind), WTFMove(backends.senderBackend));
     auto receiver = createReceiver(WTFMove(backends.receiverBackend));
     auto transceiver = RTCRtpTransceiver::create(WTFMove(sender), WTFMove(receiver), WTFMove(backends.transceiverBackend));
     m_peerConnection.addInternalTransceiver(transceiver.copyRef());
     return transceiver;
 }
 
-ExceptionOr<Ref<RTCRtpTransceiver>> LibWebRTCPeerConnectionBackend::addTransceiver(const String& trackKind, const RTCRtpTransceiverInit& init)
+ExceptionOr<Ref<RTCRtpTransceiver>> LibWebRTCPeerConnectionBackend::addTransceiver(const String& trackKind, const RTCRtpTransceiverInit& init, IgnoreNegotiationNeededFlag ignoreNegotiationNeededFlag)
 {
-    return addTransceiverFromTrackOrKind(String { trackKind }, init);
+    return addTransceiverFromTrackOrKind(String { trackKind }, init, ignoreNegotiationNeededFlag);
 }
 
 ExceptionOr<Ref<RTCRtpTransceiver>> LibWebRTCPeerConnectionBackend::addTransceiver(Ref<MediaStreamTrack>&& track, const RTCRtpTransceiverInit& init)
@@ -407,6 +411,27 @@ void LibWebRTCPeerConnectionBackend::applyRotationForOutgoingVideoSources()
 std::optional<bool> LibWebRTCPeerConnectionBackend::canTrickleIceCandidates() const
 {
     return m_endpoint->canTrickleIceCandidates();
+}
+
+void LibWebRTCPeerConnectionBackend::startGatheringStatLogs(Function<void(String&&)>&& callback)
+{
+    if (!m_rtcStatsLogCallback)
+        m_endpoint->startRTCLogs();
+    m_rtcStatsLogCallback = WTFMove(callback);
+}
+
+void LibWebRTCPeerConnectionBackend::stopGatheringStatLogs()
+{
+    if (m_rtcStatsLogCallback) {
+        m_endpoint->stopRTCLogs();
+        m_rtcStatsLogCallback = { };
+    }
+}
+
+void LibWebRTCPeerConnectionBackend::provideStatLogs(String&& stats)
+{
+    if (m_rtcStatsLogCallback)
+        m_rtcStatsLogCallback(WTFMove(stats));
 }
 
 } // namespace WebCore

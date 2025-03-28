@@ -50,7 +50,7 @@ public:
     ~WeakSet();
     void lastChanceToFinalize();
 
-    Heap* heap() const;
+    JSC::Heap* heap() const;
     VM& vm() const;
 
     bool isEmpty() const;
@@ -61,7 +61,7 @@ public:
     void shrink();
     void resetAllocator();
 
-    static ptrdiff_t offsetOfVM() { return OBJECT_OFFSETOF(WeakSet, m_vm); }
+    static constexpr ptrdiff_t offsetOfVM() { return OBJECT_OFFSETOF(WeakSet, m_vm); }
 
     WeakBlock* head() { return m_blocks.head(); }
 

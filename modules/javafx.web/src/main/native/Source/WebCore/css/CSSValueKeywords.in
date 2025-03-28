@@ -135,6 +135,13 @@ full-width
 proportional-width
 ruby
 
+// font-variant-emoji
+//
+// normal
+// text
+emoji
+unicode
+
 //
 // CSS_PROP_FONT_WEIGHT:
 //
@@ -526,7 +533,11 @@ flow-root
 flow
 -webkit-inline-flex
 -webkit-flex
-//none
+// ruby
+block-ruby
+ruby-base
+ruby-text
+// none
 //
 // CSS_PROP_CURSOR:
 // The order here must match the order of the CursorType enum in RenderStyleConstants.h.
@@ -595,18 +606,27 @@ full-size-kana
 visible
 //hidden
 collapse
-//
-// Unordered rest
-//
+
+// @page size
 a3
 a4
 a5
+b4
+b5
+jis-b4
+jis-b5
+landscape
+ledger
+legal
+letter
+
+//
+// Unordered rest
+//
 above
 absolute
 always
 avoid
-b4
-b5
 below
 bidi-override
 blink
@@ -626,10 +646,6 @@ plaintext
 -webkit-isolate
 -webkit-isolate-override
 -webkit-plaintext
-landscape
-ledger
-legal
-letter
 level
 line-through
 local
@@ -666,8 +682,8 @@ end
 //baseline
 
 // CSS_PROP_BOX_DECORATION_BREAK
-clone enable-if=ENABLE_CSS_BOX_DECORATION_BREAK
-slice enable-if=ENABLE_CSS_BOX_DECORATION_BREAK
+clone
+slice
 
 // CSS_PROP_BOX_DIRECTION
 // normal
@@ -689,7 +705,7 @@ block-axis
 single
 multiple
 
-// align-content / align-tracks
+// align-content
 flex-start
 flex-end
 // center
@@ -707,7 +723,7 @@ first-baseline
 last-baseline
 // stretch
 
-// justify-content / justify-tracks
+// justify-content
 // start
 // end
 // flex-start
@@ -844,6 +860,7 @@ skip-white-space
 //
 // CSS_PROP_WORD_BREAK
 //
+auto-phrase
 break-all
 keep-all
 
@@ -925,6 +942,7 @@ round
 // border-box/content-box/padding-box should be used instead.
 //
 border
+border-area
 border-box
 content
 content-box
@@ -954,7 +972,6 @@ exclude
 // Variables Implementation
 //
 var
--internal-variable-value
 
 //
 // Environment Variables
@@ -1048,6 +1065,17 @@ accumulate
 replace
 
 //
+// animation-timeline
+//
+// auto
+// none
+// scroll
+nearest
+root
+self
+view
+
+//
 // CSS_PROP_ZOOM
 //
 document
@@ -1114,7 +1142,7 @@ manual
 // auto
 touch enable-if=ENABLE_OVERFLOW_SCROLLING_TOUCH
 
-// -webkit-writing-mode
+// writing-mode
 // SVG compatibility
 lr
 rl
@@ -1124,8 +1152,11 @@ rl-tb
 tb-rl
 // Standard values from CSS3
 horizontal-tb
-vertical-rl
 vertical-lr
+vertical-rl
+sideways-lr
+sideways-rl
+// Non-standard
 horizontal-bt
 
 // -webkit-ruby-position
@@ -1299,7 +1330,7 @@ repeating-conic-gradient
 -webkit-named-image
 filter
 -webkit-filter
-paint enable-if=ENABLE_CSS_PAINTING_API
+paint
 
 // image-set's MIME type
 type
@@ -1320,6 +1351,24 @@ rect
 
 // shapes
 polygon
+shape
+
+// shape function
+line
+// move
+hline
+vline
+curve
+// smooth
+arc
+cw
+ccw
+// large
+// small
+by
+close
+using
+of
 
 // @font-face src
 format
@@ -1424,6 +1473,7 @@ fill-box
 
 // motion path
 path
+xywh
 
 calc
 -webkit-calc
@@ -1448,7 +1498,7 @@ sign
 mod
 rem
 to-zero
-nearest
+// nearest
 infinity
 -infinity id=NegativeInfinity
 NaN
@@ -1563,8 +1613,14 @@ AA-large
 AAA
 AAA-large
 
+// color-layers()
+color-layers
+
 // color-mix()
 color-mix
+
+// light-dark()
+light-dark
 
 // color-space-interpolation
 in
@@ -1596,6 +1652,7 @@ no-preference
 // prefers-contrast
 more
 less
+custom
 // no-preference
 
 // prefers-color-scheme, font-palette
@@ -1639,6 +1696,8 @@ numeric
 symbolic
 additive
 // fixed
+-internal-disclosure-closed
+-internal-disclosure-open
 -internal-simplified-chinese-informal
 -internal-simplified-chinese-formal
 -internal-traditional-chinese-informal
@@ -1682,7 +1741,6 @@ z
 // content
 size
 layout
-paint enable-if=!ENABLE_CSS_PAINTING_API
 
 // container-type
 // normal
@@ -1716,9 +1774,28 @@ false
 // text-spacing-trim
 space-all
 // text-autospace
+// normal
 no-autospace
+ideograph-alpha
+ideograph-numeric
 
 // scrollbar-gutter
 // auto
 // stable
 both-edges
+
+// transition-behavior
+// normal
+allow-discrete
+
+// resize
+// none
+// both
+// horizontal
+// vertical
+// block
+// inline
+-internal-textarea-auto
+
+// anchor()
+anchor

@@ -25,7 +25,6 @@
 
 #pragma once
 
-#include "FlexFormattingState.h"
 #include "LayoutIntegrationBoxTree.h"
 #include "LayoutState.h"
 #include "RenderObjectEnums.h"
@@ -43,10 +42,12 @@ struct PaintInfo;
 
 namespace LayoutIntegration {
 
-class FlexLayout : public CanMakeCheckedPtr {
+class FlexLayout final : public CanMakeCheckedPtr<FlexLayout> {
     WTF_MAKE_FAST_ALLOCATED;
+    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(FlexLayout);
 public:
     FlexLayout(RenderFlexibleBox&);
+    ~FlexLayout();
 
     void updateFormattingRootGeometryAndInvalidate();
     void updateFlexItemDimensions(const RenderBlock& flexItem, LayoutUnit minimumContentSize, LayoutUnit maximumContentSize);
@@ -62,7 +63,7 @@ public:
     LayoutUnit contentLogicalHeight() const;
 
 private:
-    void updateRenderers() const;
+    void updateRenderers();
 
     const Layout::ElementBox& flexBox() const { return m_boxTree.rootLayoutBox(); }
     Layout::ElementBox& flexBox() { return m_boxTree.rootLayoutBox(); }
@@ -71,10 +72,10 @@ private:
     RenderFlexibleBox& flexBoxRenderer() { return downcast<RenderFlexibleBox>(m_boxTree.rootRenderer()); }
 
     Layout::LayoutState& layoutState() { return *m_layoutState; }
+    const Layout::LayoutState& layoutState() const { return *m_layoutState; }
 
     BoxTree m_boxTree;
     WeakPtr<Layout::LayoutState> m_layoutState;
-    Layout::FlexFormattingState& m_flexFormattingState;
 };
 
 }

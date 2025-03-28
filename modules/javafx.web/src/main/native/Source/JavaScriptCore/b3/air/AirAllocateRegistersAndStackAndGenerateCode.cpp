@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2019-2022 Apple Inc. All rights reserved.
+ * Copyright (C) 2019-2023 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -39,12 +39,15 @@
 #include "DisallowMacroScratchRegisterUsage.h"
 #include "Reg.h"
 #include <wtf/ListDump.h>
+#include <wtf/TZoneMallocInlines.h>
 
 namespace JSC { namespace B3 { namespace Air {
 
 namespace GenerateAndAllocateRegistersInternal {
 static bool verbose = false;
 }
+
+WTF_MAKE_TZONE_ALLOCATED_IMPL(GenerateAndAllocateRegisters);
 
 GenerateAndAllocateRegisters::GenerateAndAllocateRegisters(Code& code)
     : m_code(code)
@@ -529,7 +532,7 @@ void GenerateAndAllocateRegisters::generate(CCallHelpers& jit)
 {
     m_jit = &jit;
 
-    CompilerTimingScope timingScope("Air", "GenerateAndAllocateRegisters::generate");
+    CompilerTimingScope timingScope("Air"_s, "GenerateAndAllocateRegisters::generate"_s);
 
     DisallowMacroScratchRegisterUsage disallowScratch(*m_jit);
 
@@ -738,7 +741,7 @@ void GenerateAndAllocateRegisters::generate(CCallHelpers& jit)
             checkConsistency();
 
             inst.forEachTmp([&] (const Tmp& tmp, Arg::Role role, Bank, Width width) {
-                ASSERT(width <= Width64 || Options::useWebAssemblySIMD());
+                ASSERT(width <= Width64 || Options::useWasmSIMD());
                 if (tmp.isReg() && isDisallowedRegister(tmp.reg()))
                     return;
 
@@ -751,7 +754,7 @@ void GenerateAndAllocateRegisters::generate(CCallHelpers& jit)
             });
 
             inst.forEachArg([&] (Arg& arg, Arg::Role role, Bank, Width width) {
-                ASSERT_UNUSED(width, width <= Width64 || Options::useWebAssemblySIMD());
+                ASSERT_UNUSED(width, width <= Width64 || Options::useWasmSIMD());
                 if (!arg.isTmp())
                     return;
 

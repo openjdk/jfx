@@ -47,6 +47,7 @@
 #include <wtf/DateMath.h>
 #include <wtf/GregorianDateTime.h>
 #include <wtf/SaturatedArithmetic.h>
+#include <wtf/TZoneMalloc.h>
 
 namespace JSC {
 
@@ -78,7 +79,7 @@ struct LocalTimeOffsetCache {
 };
 
 class DateCache {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_ALLOCATED(DateCache);
     WTF_MAKE_NONCOPYABLE(DateCache);
 public:
     DateCache();
@@ -199,7 +200,7 @@ private:
 
 ALWAYS_INLINE bool isUTCEquivalent(StringView timeZone)
 {
-    return timeZone == "Etc/UTC"_s || timeZone == "Etc/GMT"_s;
+    return timeZone == "Etc/UTC"_s || timeZone == "Etc/GMT"_s || timeZone == "GMT"_s;
 }
 
 } // namespace JSC

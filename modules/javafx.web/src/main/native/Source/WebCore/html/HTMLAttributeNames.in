@@ -83,6 +83,7 @@ axis
 background
 behavior
 bgcolor
+blocking
 border
 bordercolor
 capture
@@ -104,6 +105,8 @@ codetype
 color
 cols
 colspan
+command
+commandfor
 compact
 composite
 content
@@ -111,6 +114,8 @@ contenteditable
 controls
 coords
 crossorigin
+cue
+cuebackground
 data
 datetime
 declare
@@ -178,7 +183,6 @@ loopend
 loopstart
 low
 lowsrc
-manifest
 marginheight
 marginwidth
 max
@@ -208,6 +212,7 @@ onanimationiteration
 onanimationstart
 onautocomplete
 onautocompleteerror
+onauxclick
 onbeforecopy
 onbeforecut
 onbeforeinput
@@ -223,6 +228,7 @@ oncanplaythrough
 onchange
 onclick
 onclose
+oncontentvisibilityautostatechange
 oncontextmenu
 oncopy
 oncuechange
@@ -278,7 +284,9 @@ onoffline
 ononline
 onorientationchange
 onpagehide
+onpagereveal
 onpageshow
+onpageswap
 onpaste
 onpause
 onplay
@@ -294,6 +302,7 @@ onpointerup
 onpopstate
 onprogress
 onratechange
+onredraw
 onrejectionhandled
 onreset
 onresize
@@ -321,6 +330,7 @@ ontransitioncancel
 ontransitionend
 ontransitionrun
 ontransitionstart
+onuncapturederror
 onunhandledrejection
 onunload
 onvolumechange
@@ -359,7 +369,6 @@ popovertargetaction
 poster
 preload
 progress
-pseudo
 readonly
 referrerpolicy
 rel
@@ -380,8 +389,10 @@ scrolldelay
 scrolling
 select
 selected
-shadowrootmode
+shadowrootclonable
 shadowrootdelegatesfocus
+shadowrootmode
+shadowrootserializable
 shape
 size
 sizes
@@ -398,6 +409,7 @@ step
 style
 subtitle
 summary
+switch
 tabindex
 target
 text
@@ -408,6 +420,7 @@ truespeed
 type
 uiactions
 usemap
+useragentpart
 valign
 value
 valuetype
@@ -423,6 +436,7 @@ webkitdirectory
 webkitdropzone
 width
 wrap
+writingsuggestions
 x-apple-data-detectors
 x-apple-data-detectors-result
 x-apple-data-detectors-type

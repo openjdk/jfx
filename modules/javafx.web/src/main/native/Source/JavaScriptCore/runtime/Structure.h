@@ -74,6 +74,32 @@ namespace Integrity {
 class Analyzer;
 }
 
+class DeferredStructureTransitionWatchpointFire final : public DeferredWatchpointFire {
+    WTF_MAKE_NONCOPYABLE(DeferredStructureTransitionWatchpointFire);
+public:
+    DeferredStructureTransitionWatchpointFire(VM& vm, Structure* structure)
+        : DeferredWatchpointFire()
+        , m_vm(vm)
+        , m_structure(structure)
+    {
+    }
+
+    ~DeferredStructureTransitionWatchpointFire()
+    {
+        if (watchpointsToFire().state() == IsWatched)
+            fireAllSlow();
+    }
+
+    const Structure* structure() const { return m_structure; }
+
+
+private:
+    JS_EXPORT_PRIVATE void fireAllSlow();
+
+    VM& m_vm;
+    const Structure* m_structure;
+};
+
 // The out-of-line property storage capacity to use when first allocating out-of-line
 // storage. Note that all objects start out without having any out-of-line storage;
 // this comes into play only on the first property store that exhausts inline storage.
@@ -178,7 +204,7 @@ public:
 
     typedef JSCell Base;
     static constexpr unsigned StructureFlags = Base::StructureFlags | StructureIsImmortal;
-    static constexpr uint8_t numberOfLowerTierCells = 0;
+    static constexpr uint8_t numberOfLowerTierPreciseCells = 0;
 
 #if ENABLE(STRUCTURE_ID_WITH_SHIFT)
     static constexpr size_t atomSize = 32;
@@ -188,8 +214,10 @@ public:
     static constexpr int s_maxTransitionLength = 64;
     static constexpr int s_maxTransitionLengthForNonEvalPutById = 512;
 
+    using SeenProperties = TinyBloomFilter<CompactPtr<UniquedStringImpl>::StorageType>;
+
     enum PolyProtoTag { PolyProto };
-    static Structure* create(VM&, JSGlobalObject*, JSValue prototype, const TypeInfo&, const ClassInfo*, IndexingType = NonArray, unsigned inlineCapacity = 0);
+    inline static Structure* create(VM&, JSGlobalObject*, JSValue prototype, const TypeInfo&, const ClassInfo*, IndexingType = NonArray, unsigned inlineCapacity = 0);
     static Structure* create(PolyProtoTag, VM&, JSGlobalObject*, JSObject* prototype, const TypeInfo&, const ClassInfo*, IndexingType = NonArray, unsigned inlineCapacity = 0);
 
     ~Structure();
@@ -265,7 +293,9 @@ public:
     static Structure* removePropertyTransitionFromExistingStructure(Structure*, PropertyName, PropertyOffset&);
     static Structure* removePropertyTransitionFromExistingStructureConcurrently(Structure*, PropertyName, PropertyOffset&);
     static Structure* changePrototypeTransition(VM&, Structure*, JSValue prototype, DeferredStructureTransitionWatchpointFire&);
+    static Structure* changeGlobalProxyTargetTransition(VM&, Structure*, JSGlobalObject*, DeferredStructureTransitionWatchpointFire&);
     JS_EXPORT_PRIVATE static Structure* attributeChangeTransition(VM&, Structure*, PropertyName, unsigned attributes, DeferredStructureTransitionWatchpointFire* = nullptr);
+    static Structure* attributeChangeTransitionToExistingStructureConcurrently(Structure*, PropertyName, unsigned attributes, PropertyOffset&);
     JS_EXPORT_PRIVATE static Structure* attributeChangeTransitionToExistingStructure(Structure*, PropertyName, unsigned attributes, PropertyOffset&);
     JS_EXPORT_PRIVATE static Structure* toCacheableDictionaryTransition(VM&, Structure*, DeferredStructureTransitionWatchpointFire* = nullptr);
     static Structure* toUncacheableDictionaryTransition(VM&, Structure*, DeferredStructureTransitionWatchpointFire* = nullptr);
@@ -598,6 +628,7 @@ public:
     PropertyOffset get(VM&, PropertyName);
     PropertyOffset get(VM&, PropertyName, unsigned& attributes);
 
+    bool canPerformFastPropertyEnumerationCommon() const;
     bool canPerformFastPropertyEnumeration() const;
 
     // This is a somewhat internalish method. It will call your functor while possibly holding the
@@ -671,54 +702,59 @@ public:
     }
     void cacheSpecialProperty(JSGlobalObject*, VM&, JSValue, CachedSpecialPropertyKey, const PropertySlot&);
 
-    static ptrdiff_t prototypeOffset()
+    static constexpr ptrdiff_t prototypeOffset()
     {
         return OBJECT_OFFSETOF(Structure, m_prototype);
     }
 
-    static ptrdiff_t globalObjectOffset()
+    static constexpr ptrdiff_t globalObjectOffset()
     {
         return OBJECT_OFFSETOF(Structure, m_globalObject);
     }
 
-    static ptrdiff_t classInfoOffset()
+    static constexpr ptrdiff_t classInfoOffset()
     {
         return OBJECT_OFFSETOF(Structure, m_classInfo);
     }
 
-    static ptrdiff_t outOfLineTypeFlagsOffset()
+    static constexpr ptrdiff_t outOfLineTypeFlagsOffset()
     {
         return OBJECT_OFFSETOF(Structure, m_outOfLineTypeFlags);
     }
 
-    static ptrdiff_t indexingModeIncludingHistoryOffset()
+    static constexpr ptrdiff_t indexingModeIncludingHistoryOffset()
     {
         return OBJECT_OFFSETOF(Structure, m_blob) + TypeInfoBlob::indexingModeIncludingHistoryOffset();
     }
 
-    static ptrdiff_t propertyTableUnsafeOffset()
+    static constexpr ptrdiff_t propertyTableUnsafeOffset()
     {
         return OBJECT_OFFSETOF(Structure, m_propertyTableUnsafe);
     }
 
-    static ptrdiff_t inlineCapacityOffset()
+    static constexpr ptrdiff_t inlineCapacityOffset()
     {
         return OBJECT_OFFSETOF(Structure, m_inlineCapacity);
     }
 
-    static ptrdiff_t previousOrRareDataOffset()
+    static constexpr ptrdiff_t previousOrRareDataOffset()
     {
         return OBJECT_OFFSETOF(Structure, m_previousOrRareData);
     }
 
-    static ptrdiff_t bitFieldOffset()
+    static constexpr ptrdiff_t bitFieldOffset()
     {
         return OBJECT_OFFSETOF(Structure, m_bitField);
     }
 
-    static ptrdiff_t propertyHashOffset()
+    static constexpr ptrdiff_t propertyHashOffset()
     {
         return OBJECT_OFFSETOF(Structure, m_propertyHash);
+    }
+
+    static constexpr ptrdiff_t seenPropertiesOffset()
+    {
+        return OBJECT_OFFSETOF(Structure, m_seenProperties) + SeenProperties::offsetOfBits();
     }
 
     static Structure* createStructure(VM&);
@@ -808,6 +844,7 @@ public:
     ConcurrentJSLock& lock() { return m_lock; }
 
     unsigned propertyHash() const { return m_propertyHash; }
+    SeenProperties seenProperties() const { return m_seenProperties; }
 
     static bool shouldConvertToPolyProto(const Structure* a, const Structure* b);
 
@@ -848,7 +885,7 @@ public:
     DEFINE_BITFIELD(bool, hasAnyKindOfGetterSetterProperties, HasAnyKindOfGetterSetterProperties, 1, 3);
     DEFINE_BITFIELD(bool, hasReadOnlyOrGetterSetterPropertiesExcludingProto, HasReadOnlyOrGetterSetterPropertiesExcludingProto, 1, 4);
     DEFINE_BITFIELD(bool, isQuickPropertyAccessAllowedForEnumeration, IsQuickPropertyAccessAllowedForEnumeration, 1, 5);
-    DEFINE_BITFIELD(TransitionPropertyAttributes, transitionPropertyAttributes, TransitionPropertyAttributes, 7, 6);
+    DEFINE_BITFIELD(bool, hasNonEnumerableProperties, HasNonEnumerableProperties, 1, 6);
     DEFINE_BITFIELD(TransitionKind, transitionKind, TransitionKind, 5, 13);
     DEFINE_BITFIELD(bool, isWatchingReplacement, IsWatchingReplacement, 1, 18); // This flag can be fliped on the main thread at any timing.
     DEFINE_BITFIELD(bool, mayBePrototype, MayBePrototype, 1, 19);
@@ -865,7 +902,6 @@ public:
     DEFINE_BITFIELD(bool, hasNonConfigurableProperties, HasNonConfigurableProperties, 1, 30);
     DEFINE_BITFIELD(bool, hasNonConfigurableReadOnlyOrGetterSetterProperties, HasNonConfigurableReadOnlyOrGetterSetterProperties, 1, 31);
 
-    static_assert(s_bitWidthOfTransitionPropertyAttributes <= sizeof(TransitionPropertyAttributes) * 8);
     static_assert(s_bitWidthOfTransitionKind <= sizeof(TransitionKind) * 8);
 
     static bool bitFieldFlagsCantBeChangedWithoutTransition(unsigned flags)
@@ -873,6 +909,7 @@ public:
         return flags == (flags & (
             s_didPreventExtensionsBits
             | s_isQuickPropertyAccessAllowedForEnumerationBits
+            | s_hasNonEnumerablePropertiesBits
             | s_hasAnyKindOfGetterSetterPropertiesBits
             | s_hasReadOnlyOrGetterSetterPropertiesExcludingProtoBits
             | s_hasUnderscoreProtoPropertyExcludingOriginalProtoBits
@@ -880,6 +917,9 @@ public:
             | s_hasNonConfigurableReadOnlyOrGetterSetterPropertiesBits
         ));
     }
+
+    TransitionPropertyAttributes transitionPropertyAttributes() const { return m_transitionPropertyAttributes; }
+    void setTransitionPropertyAttributes(TransitionPropertyAttributes transitionPropertyAttributes) { m_transitionPropertyAttributes = transitionPropertyAttributes; }
 
     int transitionCountEstimate() const
     {
@@ -902,6 +942,7 @@ private:
     static Structure* create(VM&, Structure*, DeferredStructureTransitionWatchpointFire*);
 
     static Structure* addPropertyTransitionToExistingStructureImpl(Structure*, UniquedStringImpl* uid, unsigned attributes, PropertyOffset&);
+    ALWAYS_INLINE static Structure* attributeChangeTransitionToExistingStructureImpl(Structure*, PropertyName, unsigned attributes, PropertyOffset&);
     static Structure* removePropertyTransitionFromExistingStructureImpl(Structure*, PropertyName, unsigned attributes, PropertyOffset&);
     static Structure* setBrandTransitionFromExistingStructureImpl(Structure*, UniquedStringImpl*);
 
@@ -1021,12 +1062,13 @@ private:
     ConcurrentJSLock m_lock;
 
     uint32_t m_bitField;
+    TransitionPropertyAttributes m_transitionPropertyAttributes { 0 };
 
     uint16_t m_transitionOffset;
     uint16_t m_maxOffset;
 
     uint32_t m_propertyHash;
-    TinyBloomFilter<CompactPtr<UniquedStringImpl>::StorageType> m_seenProperties;
+    SeenProperties m_seenProperties;
 
 
     WriteBarrier<JSGlobalObject> m_globalObject;
@@ -1053,5 +1095,8 @@ private:
     friend class JSDollarVMHelper;
     friend class Integrity::Analyzer;
 };
+
+void dumpTransitionKind(PrintStream&, TransitionKind);
+MAKE_PRINT_ADAPTOR(TransitionKindDump, TransitionKind, dumpTransitionKind);
 
 } // namespace JSC

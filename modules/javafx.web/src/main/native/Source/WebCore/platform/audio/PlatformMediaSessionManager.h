@@ -26,10 +26,12 @@
 #pragma once
 
 #include "MediaUniqueIdentifier.h"
+#include "NowPlayingMetadataObserver.h"
 #include "PlatformMediaSession.h"
 #include "RemoteCommandListener.h"
 #include "Timer.h"
 #include <wtf/AggregateLogger.h>
+#include <wtf/CancellableTask.h>
 #include <wtf/Vector.h>
 #include <wtf/WeakHashSet.h>
 #include <wtf/WeakPtr.h>
@@ -37,6 +39,9 @@
 namespace WebCore {
 
 class PlatformMediaSession;
+struct MediaConfiguration;
+struct NowPlayingInfo;
+struct NowPlayingMetadata;
 
 class PlatformMediaSessionManager
 #if !RELEASE_LOG_DISABLED
@@ -70,19 +75,26 @@ public:
     WEBCORE_EXPORT static bool shouldEnableVP9Decoder();
     WEBCORE_EXPORT static void setShouldEnableVP8Decoder(bool);
     WEBCORE_EXPORT static bool shouldEnableVP8Decoder();
-    WEBCORE_EXPORT static void setShouldEnableVP9SWDecoder(bool);
-    WEBCORE_EXPORT static bool shouldEnableVP9SWDecoder();
+    WEBCORE_EXPORT static void setSWVPDecodersAlwaysEnabled(bool);
+    WEBCORE_EXPORT static bool swVPDecodersAlwaysEnabled();
 #endif
 
-    virtual ~PlatformMediaSessionManager() = default;
+#if ENABLE(EXTENSION_CAPABILITIES)
+    WEBCORE_EXPORT static bool mediaCapabilityGrantsEnabled();
+    WEBCORE_EXPORT static void setMediaCapabilityGrantsEnabled(bool);
+#endif
+
+    virtual ~PlatformMediaSessionManager();
 
     virtual void scheduleSessionStatusUpdate() { }
 
     bool has(PlatformMediaSession::MediaType) const;
     int count(PlatformMediaSession::MediaType) const;
     bool activeAudioSessionRequired() const;
+    bool hasActiveAudioSession() const;
     bool canProduceAudio() const;
 
+    virtual std::optional<NowPlayingInfo> nowPlayingInfo() const;
     virtual bool hasActiveNowPlayingSession() const { return false; }
     virtual String lastUpdatedNowPlayingTitle() const { return emptyString(); }
     virtual double lastUpdatedNowPlayingDuration() const { return NAN; }
@@ -152,13 +164,16 @@ public:
     WEBCORE_EXPORT void setIsPlayingToAutomotiveHeadUnit(bool);
     bool isPlayingToAutomotiveHeadUnit() const { return m_isPlayingToAutomotiveHeadUnit; }
 
+    WEBCORE_EXPORT void setSupportsSpatialAudioPlayback(bool);
+    virtual std::optional<bool> supportsSpatialAudioPlaybackForConfiguration(const MediaConfiguration&);
+
     void forEachMatchingSession(const Function<bool(const PlatformMediaSession&)>& predicate, const Function<void(PlatformMediaSession&)>& matchingCallback);
 
     bool processIsSuspended() const { return m_processIsSuspended; }
 
-    WEBCORE_EXPORT void addAudioCaptureSource(PlatformMediaSession::AudioCaptureSource&);
-    WEBCORE_EXPORT void removeAudioCaptureSource(PlatformMediaSession::AudioCaptureSource&);
-    bool hasAudioCaptureSource(PlatformMediaSession::AudioCaptureSource& source) const { return m_audioCaptureSources.contains(source); }
+    WEBCORE_EXPORT void addAudioCaptureSource(AudioCaptureSource&);
+    WEBCORE_EXPORT void removeAudioCaptureSource(AudioCaptureSource&);
+    bool hasAudioCaptureSource(AudioCaptureSource& source) const { return m_audioCaptureSources.contains(source); }
 
     WEBCORE_EXPORT void processDidReceiveRemoteControlCommand(PlatformMediaSession::RemoteControlCommandType, const PlatformMediaSession::RemoteCommandArgument&);
 
@@ -176,6 +191,13 @@ public:
     virtual void resetSessionState() { };
 
     bool isApplicationInBackground() const { return m_isApplicationInBackground; }
+
+    WeakPtr<PlatformMediaSession> bestEligibleSessionForRemoteControls(const Function<bool(const PlatformMediaSession&)>&, PlatformMediaSession::PlaybackControlsPurpose);
+
+    WEBCORE_EXPORT void addNowPlayingMetadataObserver(const NowPlayingMetadataObserver&);
+    WEBCORE_EXPORT void removeNowPlayingMetadataObserver(const NowPlayingMetadataObserver&);
+
+    bool hasActiveNowPlayingSessionInGroup(MediaSessionGroupIdentifier);
 
 protected:
     friend class PlatformMediaSession;
@@ -195,13 +217,18 @@ protected:
 #if !RELEASE_LOG_DISABLED
     const Logger& logger() const final { return m_logger; }
     const void* logIdentifier() const final { return nullptr; }
-    const char* logClassName() const override { return "PlatformMediaSessionManager"; }
+    ASCIILiteral logClassName() const override { return "PlatformMediaSessionManager"_s; }
     WTFLogChannel& logChannel() const final;
 #endif
 
     int countActiveAudioCaptureSources();
 
     bool computeSupportsSeeking() const;
+
+    std::optional<bool> supportsSpatialAudioPlayback() { return m_supportsSpatialAudioPlayback; }
+
+    void nowPlayingMetadataChanged(const NowPlayingMetadata&);
+    void enqueueTaskOnMainThread(Function<void()>&&);
 
 private:
     friend class Internals;
@@ -211,6 +238,11 @@ private:
 
     Vector<WeakPtr<PlatformMediaSession>> sessionsMatching(const Function<bool(const PlatformMediaSession&)>&) const;
 
+#if !RELEASE_LOG_DISABLED
+    void scheduleStateLog();
+    void dumpSessionStates();
+#endif
+
     SessionRestrictions m_restrictions[static_cast<unsigned>(PlatformMediaSession::MediaType::WebAudio) + 1];
     mutable Vector<WeakPtr<PlatformMediaSession>> m_sessions;
 
@@ -219,14 +251,18 @@ private:
     bool m_willIgnoreSystemInterruptions { false };
     bool m_processIsSuspended { false };
     bool m_isPlayingToAutomotiveHeadUnit { false };
+    std::optional<bool> m_supportsSpatialAudioPlayback;
 
     bool m_alreadyScheduledSessionStatedUpdate { false };
 #if USE(AUDIO_SESSION)
     bool m_becameActive { false };
 #endif
 
-    WeakHashSet<PlatformMediaSession::AudioCaptureSource> m_audioCaptureSources;
+    WeakHashSet<AudioCaptureSource> m_audioCaptureSources;
     bool m_hasScheduledSessionStateUpdate { false };
+
+    WeakHashSet<NowPlayingMetadataObserver> m_nowPlayingMetadataObservers;
+    TaskCancellationGroup m_taskGroup;
 
 #if ENABLE(WEBM_FORMAT_READER)
     static bool m_webMFormatReaderEnabled;
@@ -247,10 +283,15 @@ private:
 #if ENABLE(VP9)
     static bool m_vp9DecoderEnabled;
     static bool m_vp8DecoderEnabled;
-    static bool m_vp9SWDecoderEnabled;
+    static bool m_swVPDecodersAlwaysEnabled;
+#endif
+
+#if ENABLE(EXTENSION_CAPABILITIES)
+    static bool s_mediaCapabilityGrantsEnabled;
 #endif
 
 #if !RELEASE_LOG_DISABLED
+    UniqueRef<Timer> m_stateLogTimer;
     Ref<AggregateLogger> m_logger;
 #endif
 };

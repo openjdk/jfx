@@ -33,35 +33,6 @@
 #include "gvaluearray.h"
 #include "gvaluecollector.h"
 
-
-/**
- * SECTION:gboxed
- * @short_description: A mechanism to wrap opaque C structures registered
- *     by the type system
- * @see_also: #GParamSpecBoxed, g_param_spec_boxed()
- * @title: Boxed Types
- *
- * #GBoxed is a generic wrapper mechanism for arbitrary C structures.
- *
- * The only thing the type system needs to know about the structures is how to
- * copy them (a #GBoxedCopyFunc) and how to free them (a #GBoxedFreeFunc);
- * beyond that, they are treated as opaque chunks of memory.
- *
- * Boxed types are useful for simple value-holder structures like rectangles or
- * points. They can also be used for wrapping structures defined in non-#GObject
- * based libraries. They allow arbitrary structures to be handled in a uniform
- * way, allowing uniform copying (or referencing) and freeing (or unreferencing)
- * of them, and uniform representation of the type of the contained structure.
- * In turn, this allows any type which can be boxed to be set as the data in a
- * #GValue, which allows for polymorphic handling of a much wider range of data
- * types, and hence usage of such types as #GObject property values.
- *
- * #GBoxed is designed so that reference counted types can be boxed. Use the
- * type's 'ref' function as the #GBoxedCopyFunc, and its 'unref' function as the
- * #GBoxedFreeFunc. For example, for #GBytes, the #GBoxedCopyFunc is
- * g_bytes_ref(), and the #GBoxedFreeFunc is g_bytes_unref().
- */
-
 static inline void              /* keep this function in sync with gvalue.c */
 value_meminit (GValue *value,
          GType   value_type)
@@ -170,6 +141,9 @@ G_DEFINE_BOXED_TYPE (GKeyFile, g_key_file, g_key_file_ref, g_key_file_unref)
 G_DEFINE_BOXED_TYPE (GMappedFile, g_mapped_file, g_mapped_file_ref, g_mapped_file_unref)
 #ifndef GSTREAMER_LITE
 G_DEFINE_BOXED_TYPE (GBookmarkFile, g_bookmark_file, g_bookmark_file_copy, g_bookmark_file_free)
+G_DEFINE_BOXED_TYPE (GHmac, g_hmac, g_hmac_ref, g_hmac_unref)
+G_DEFINE_BOXED_TYPE (GDir, g_dir, g_dir_ref, g_dir_unref)
+G_DEFINE_BOXED_TYPE (GRand, g_rand, g_rand_copy, g_rand_free)
 #endif // GSTREAMER_LITE
 
 G_DEFINE_BOXED_TYPE (GMainLoop, g_main_loop, g_main_loop_ref, g_main_loop_unref)
@@ -185,20 +159,24 @@ G_DEFINE_BOXED_TYPE (GUri, g_uri, g_uri_ref, g_uri_unref)
 G_DEFINE_BOXED_TYPE (GOptionGroup, g_option_group, g_option_group_ref, g_option_group_unref)
 G_DEFINE_BOXED_TYPE (GPatternSpec, g_pattern_spec, g_pattern_spec_copy, g_pattern_spec_free);
 
+#ifndef GSTREAMER_LITE
+G_DEFINE_BOXED_TYPE (GStrvBuilder, g_strv_builder, g_strv_builder_ref, g_strv_builder_unref);
+#endif // GSTREAMER_LITE
+
 /* This one can't use G_DEFINE_BOXED_TYPE (GStrv, g_strv, g_strdupv, g_strfreev) */
 GType
 g_strv_get_type (void)
 {
-  static gsize static_g_define_type_id = 0;
+  static GType static_g_define_type_id = 0;
 
-  if (g_once_init_enter (&static_g_define_type_id))
+  if (g_once_init_enter_pointer (&static_g_define_type_id))
     {
       GType g_define_type_id =
         g_boxed_type_register_static (g_intern_static_string ("GStrv"),
                                       (GBoxedCopyFunc) g_strdupv,
                                       (GBoxedFreeFunc) g_strfreev);
 
-      g_once_init_leave (&static_g_define_type_id, g_define_type_id);
+      g_once_init_leave_pointer (&static_g_define_type_id, g_define_type_id);
     }
 
   return static_g_define_type_id;
@@ -284,8 +262,8 @@ boxed_proxy_lcopy_value (const GValue *value,
 /**
  * g_boxed_type_register_static:
  * @name: Name of the new boxed type.
- * @boxed_copy: Boxed structure copy function.
- * @boxed_free: Boxed structure free function.
+ * @boxed_copy: (scope forever): Boxed structure copy function.
+ * @boxed_free: (scope forever): Boxed structure free function.
  *
  * This function creates a new %G_TYPE_BOXED derived type id for a new
  * boxed type with name @name.

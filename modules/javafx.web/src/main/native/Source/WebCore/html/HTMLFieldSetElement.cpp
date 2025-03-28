@@ -36,12 +36,12 @@
 #include "RenderElement.h"
 #include "ScriptDisallowedScope.h"
 #include "TypedElementDescendantIteratorInlines.h"
-#include <wtf/IsoMallocInlines.h>
 #include <wtf/StdLibExtras.h>
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
-WTF_MAKE_ISO_ALLOCATED_IMPL(HTMLFieldSetElement);
+WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(HTMLFieldSetElement);
 
 using namespace HTMLNames;
 
@@ -206,7 +206,7 @@ void HTMLFieldSetElement::addInvalidDescendant(const HTMLElement& invalidFormCon
 
     std::optional<Style::PseudoClassChangeInvalidation> styleInvalidation;
     if (m_invalidDescendants.isEmptyIgnoringNullReferences())
-        emplace(styleInvalidation, *this, { { CSSSelector::PseudoClassType::Valid, false }, { CSSSelector::PseudoClassType::Invalid, true } });
+        emplace(styleInvalidation, *this, { { CSSSelector::PseudoClass::Valid, false }, { CSSSelector::PseudoClass::Invalid, true } });
 
     m_invalidDescendants.add(invalidFormControlElement);
 }
@@ -218,7 +218,7 @@ void HTMLFieldSetElement::removeInvalidDescendant(const HTMLElement& formControl
 
     std::optional<Style::PseudoClassChangeInvalidation> styleInvalidation;
     if (m_invalidDescendants.computeSize() == 1)
-        emplace(styleInvalidation, *this, { { CSSSelector::PseudoClassType::Valid, true }, { CSSSelector::PseudoClassType::Invalid, false } });
+        emplace(styleInvalidation, *this, { { CSSSelector::PseudoClass::Valid, true }, { CSSSelector::PseudoClass::Invalid, false } });
 
     m_invalidDescendants.remove(formControlElement);
 }

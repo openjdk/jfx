@@ -32,7 +32,8 @@ class TextRun;
 // Renderer for embeds and objects, often, but not always, rendered via plug-ins.
 // For example, <embed src="foo.html"> does not invoke a plug-in.
 class RenderEmbeddedObject final : public RenderWidget {
-    WTF_MAKE_ISO_ALLOCATED(RenderEmbeddedObject);
+    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(RenderEmbeddedObject);
+    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(RenderEmbeddedObject);
 public:
     RenderEmbeddedObject(HTMLFrameOwnerElement&, RenderStyle&&);
     virtual ~RenderEmbeddedObject();
@@ -55,11 +56,17 @@ public:
 
     void handleUnavailablePluginIndicatorEvent(Event*);
 
-    bool allowsAcceleratedCompositing() const;
+    bool requiresAcceleratedCompositing() const override;
 
     LayoutRect unavailablePluginIndicatorBounds(const LayoutPoint& accumulatedOffset) const;
 
     const String& pluginReplacementTextIfUnavailable() const { return m_unavailablePluginReplacementText; }
+
+    ScrollableArea* scrollableArea() const;
+    bool usesAsyncScrolling() const;
+    ScrollingNodeID scrollingNodeID() const;
+    void willAttachScrollingNode();
+    void didAttachScrollingNode();
 
 private:
     void paintReplaced(PaintInfo&, const LayoutPoint&) final;
@@ -71,11 +78,8 @@ private:
     void willBeDestroyed() final;
 
     ASCIILiteral renderName() const final { return "RenderEmbeddedObject"_s; }
-    bool isEmbeddedObject() const final { return true; }
 
     bool showsUnavailablePluginIndicator() const { return isPluginUnavailable() && m_isUnavailablePluginIndicatorState != UnavailablePluginIndicatorState::Hidden; }
-
-    bool requiresLayer() const final;
 
     bool nodeAtPoint(const HitTestRequest&, HitTestResult&, const HitTestLocation& locationInContainer, const LayoutPoint& accumulatedOffset, HitTestAction) final;
 
@@ -100,4 +104,4 @@ private:
 
 } // namespace WebCore
 
-SPECIALIZE_TYPE_TRAITS_RENDER_OBJECT(RenderEmbeddedObject, isEmbeddedObject())
+SPECIALIZE_TYPE_TRAITS_RENDER_OBJECT(RenderEmbeddedObject, isRenderEmbeddedObject())

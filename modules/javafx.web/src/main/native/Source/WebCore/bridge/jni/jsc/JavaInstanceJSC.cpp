@@ -128,7 +128,8 @@ JSValue JavaInstance::stringValue(JSGlobalObject* globalObject) const
     jstring stringValue = (jstring) result.l;
     JNIEnv* env = getJNIEnv();
     const jchar* c = getUCharactersFromJStringInEnv(env, stringValue);
-    String u((const UChar*)c, (int)env->GetStringLength(stringValue));
+    std::span<const UChar> createSpan(reinterpret_cast<const UChar*>(c), (int)env->GetStringLength(stringValue));
+    String u(createSpan);
     releaseUCharactersForJStringInEnv(env, stringValue, c);
     return jsString(vm, u);
 }
@@ -176,7 +177,7 @@ JSValue JavaInstance::numberValue(JSGlobalObject*) const
         return numberValueForCharacter(obj);
     if (aClass->isBooleanClass())
         return jsNumber((int)
-                        // Replaced the following line to work around possible GCC bug, see RT-22725
+                        // Replaced the following line to work around possible GCC bug, see JDK-8126601
                     // callJNIMethod<jboolean>(obj, "booleanValue", "()Z"));
                         callJNIMethod(obj, JavaTypeBoolean, "booleanValue", "()Z", 0).z);
     return numberValueForNumber(obj);
@@ -192,7 +193,7 @@ JSValue JavaInstance::booleanValue() const
         return jsUndefined();
     }
 
-    // Changed the call to work around possible GCC bug, see RT-22725
+    // Changed the call to work around possible GCC bug, see JDK-8126601
     jboolean booleanValue = callJNIMethod(m_instance->instance(), JavaTypeBoolean, "booleanValue", "()Z", 0).z;
     return jsBoolean(booleanValue);
 }

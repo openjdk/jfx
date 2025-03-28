@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,8 +25,11 @@
 
 package javafx.scene.control;
 
+import javafx.beans.DefaultProperty;
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.ObjectPropertyBase;
+import javafx.beans.property.ReadOnlyBooleanProperty;
+import javafx.beans.property.ReadOnlyBooleanWrapper;
 import javafx.beans.property.SimpleObjectProperty;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.WeakChangeListener;
@@ -34,8 +37,7 @@ import javafx.collections.FXCollections;
 import javafx.collections.ListChangeListener;
 import javafx.collections.ObservableList;
 import javafx.collections.WeakListChangeListener;
-import javafx.beans.property.ReadOnlyBooleanProperty;
-import javafx.beans.property.ReadOnlyBooleanWrapper;
+import javafx.css.PseudoClass;
 import javafx.event.ActionEvent;
 import javafx.event.Event;
 import javafx.event.EventHandler;
@@ -43,12 +45,9 @@ import javafx.event.EventType;
 import javafx.scene.AccessibleAction;
 import javafx.scene.AccessibleAttribute;
 import javafx.scene.AccessibleRole;
-import javafx.util.StringConverter;
-import javafx.css.PseudoClass;
-
 import javafx.scene.control.skin.ChoiceBoxSkin;
-
-import javafx.beans.DefaultProperty;
+import javafx.util.StringConverter;
+import com.sun.javafx.tk.Toolkit;
 
 /**
  * The ChoiceBox is used for presenting the user with a relatively small set of
@@ -253,7 +252,7 @@ public class ChoiceBox<T> extends Control {
                 final SingleSelectionModel<T> sm = getSelectionModel();
                 if (sm != null) {
                     if (newItems != null && newItems.isEmpty()) {
-                        // RT-29433 - clear selection.
+                        // JDK-8124891 - clear selection.
                         sm.clearSelection();
                     } else if (sm.getSelectedIndex() == -1 && sm.getSelectedItem() != null) {
                         int newIndex = getItems().indexOf(sm.getSelectedItem());
@@ -480,15 +479,25 @@ public class ChoiceBox<T> extends Control {
 
     /**
      * Opens the list of choices.
+     *
+     * @throws IllegalStateException if this method is called on a thread
+     *     other than the JavaFX Application Thread.
      */
     public void show() {
-        if (!isDisabled()) setShowing(true);
+        Toolkit.getToolkit().checkFxUserThread();
+        if (!isDisabled()) {
+            setShowing(true);
+        }
     }
 
     /**
      * Closes the list of choices.
+     *
+     * @throws IllegalStateException if this method is called on a thread
+     *     other than the JavaFX Application Thread.
      */
     public void hide() {
+        Toolkit.getToolkit().checkFxUserThread();
         setShowing(false);
     }
 

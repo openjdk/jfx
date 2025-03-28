@@ -72,12 +72,12 @@ protected:
     CachedResource* ownedResource() { return m_resource.get(); }
 
 private:
-    WeakPtr<LinkLoader> m_loader;
+    SingleThreadWeakPtr<LinkLoader> m_loader;
     CachedResourceHandle<CachedResource> m_resource;
 };
 
 class LinkPreloadDefaultResourceClient : public LinkPreloadResourceClient, CachedResourceClient {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(Loader);
 public:
     LinkPreloadDefaultResourceClient(LinkLoader& loader, CachedResource& resource)
         : LinkPreloadResourceClient(loader, resource)
@@ -86,13 +86,13 @@ public:
     }
 
 private:
-    void notifyFinished(CachedResource& resource, const NetworkLoadMetrics&) final { triggerEvents(resource); }
+    void notifyFinished(CachedResource& resource, const NetworkLoadMetrics&, LoadWillContinueInAnotherProcess) final { triggerEvents(resource); }
     void clear() final { clearResource(*this); }
     bool shouldMarkAsReferenced() const final { return false; }
 };
 
 class LinkPreloadStyleResourceClient : public LinkPreloadResourceClient, public CachedStyleSheetClient {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(Loader);
 public:
     LinkPreloadStyleResourceClient(LinkLoader& loader, CachedCSSStyleSheet& resource)
         : LinkPreloadResourceClient(loader, resource)
@@ -113,7 +113,7 @@ private:
 };
 
 class LinkPreloadImageResourceClient : public LinkPreloadResourceClient, public CachedImageClient {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(Loader);
 public:
     LinkPreloadImageResourceClient(LinkLoader& loader, CachedImage& resource)
         : LinkPreloadResourceClient(loader, resource)
@@ -122,13 +122,13 @@ public:
     }
 
 private:
-    void notifyFinished(CachedResource& resource, const NetworkLoadMetrics&) final { triggerEvents(resource); }
+    void notifyFinished(CachedResource& resource, const NetworkLoadMetrics&, LoadWillContinueInAnotherProcess) final { triggerEvents(resource); }
     void clear() final { clearResource(*this); }
     bool shouldMarkAsReferenced() const final { return false; }
 };
 
 class LinkPreloadFontResourceClient : public LinkPreloadResourceClient, public CachedFontClient {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(Loader);
 public:
     LinkPreloadFontResourceClient(LinkLoader& loader, CachedFont& resource)
         : LinkPreloadResourceClient(loader, resource)
@@ -148,7 +148,7 @@ private:
 };
 
 class LinkPreloadRawResourceClient : public LinkPreloadResourceClient, public CachedRawResourceClient {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(Loader);
 public:
     LinkPreloadRawResourceClient(LinkLoader& loader, CachedRawResource& resource)
         : LinkPreloadResourceClient(loader, resource)
@@ -157,7 +157,7 @@ public:
     }
 
 private:
-    void notifyFinished(CachedResource& resource, const NetworkLoadMetrics&) final { triggerEvents(resource); }
+    void notifyFinished(CachedResource& resource, const NetworkLoadMetrics&, LoadWillContinueInAnotherProcess) final { triggerEvents(resource); }
     void clear() final { clearResource(*this); }
     bool shouldMarkAsReferenced() const final { return false; }
 };

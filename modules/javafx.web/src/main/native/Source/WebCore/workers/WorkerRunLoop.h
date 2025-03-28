@@ -36,6 +36,15 @@
 #include <wtf/MessageQueue.h>
 
 namespace WebCore {
+class WorkerMainRunLoop;
+}
+
+namespace WTF {
+template<typename T> struct IsDeprecatedWeakRefSmartPointerException;
+template<> struct IsDeprecatedWeakRefSmartPointerException<WebCore::WorkerMainRunLoop> : std::true_type { };
+}
+
+namespace WebCore {
 
 class WeakPtrImplWithEventTargetData;
 class ModePredicate;
@@ -117,7 +126,7 @@ private:
     int m_debugCount { 0 };
 };
 
-class WorkerMainRunLoop final : public WorkerRunLoop, public CanMakeWeakPtr<WorkerMainRunLoop> {
+class WorkerMainRunLoop final : public WorkerRunLoop, public CanMakeWeakPtr<WorkerMainRunLoop, WeakPtrFactoryInitialization::Eager> {
 public:
     WorkerMainRunLoop();
 

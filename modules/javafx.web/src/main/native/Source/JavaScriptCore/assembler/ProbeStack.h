@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2017-2021 Apple Inc. All rights reserved.
+ * Copyright (C) 2017-2023 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -28,6 +28,7 @@
 #include "CPU.h"
 #include <wtf/HashMap.h>
 #include <wtf/StdLibExtras.h>
+#include <wtf/TZoneMalloc.h>
 #include <wtf/Threading.h>
 
 #if ENABLE(ASSEMBLER)
@@ -37,7 +38,7 @@ namespace JSC {
 namespace Probe {
 
 class Page {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_ALLOCATED(Page);
 public:
     Page(void* baseAddress);
 
@@ -138,12 +139,14 @@ private:
     static_assert(s_pageSize > s_chunkSize, "bad pageSize or chunkSize");
     static_assert(s_chunkSize == (1 << s_chunkSizeShift), "bad chunkSizeShift");
 
+    ALLOW_DEPRECATED_DECLARATIONS_BEGIN
     typedef typename std::aligned_storage<s_pageSize, std::alignment_of<uintptr_t>::value>::type Buffer;
+    ALLOW_DEPRECATED_DECLARATIONS_END
     Buffer m_buffer;
 };
 
 class Stack {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_ALLOCATED(Stack);
 public:
     Stack()
         : m_stackBounds(Thread::current().stack())

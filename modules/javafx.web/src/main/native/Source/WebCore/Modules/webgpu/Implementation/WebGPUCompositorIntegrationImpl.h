@@ -30,6 +30,7 @@
 #include "WebGPUCompositorIntegration.h"
 
 #include "WebGPUPresentationContextImpl.h"
+#include <WebCore/IOSurface.h>
 #include <WebGPU/WebGPU.h>
 #include <wtf/CompletionHandler.h>
 #include <wtf/Function.h>
@@ -40,6 +41,11 @@
 #include <wtf/RetainPtr.h>
 #include <wtf/spi/cocoa/IOSurfaceSPI.h>
 #endif
+
+namespace WebCore {
+class Device;
+class NativeImage;
+}
 
 namespace WebCore::WebGPU {
 
@@ -69,6 +75,9 @@ public:
         m_onSubmittedWorkScheduledCallback = WTFMove(onSubmittedWorkScheduledCallback);
     }
 
+    void withDisplayBufferAsNativeImage(uint32_t bufferIndex, Function<void(WebCore::NativeImage*)>) final;
+    void paintCompositedResultsToCanvas(WebCore::ImageBuffer&, uint32_t) final;
+
 private:
     friend class DowncastConvertToBackingContext;
 
@@ -82,9 +91,9 @@ private:
     void prepareForDisplay(CompletionHandler<void()>&&) override;
 
 #if PLATFORM(COCOA)
-    Vector<MachSendRight> recreateRenderBuffers(int width, int height) override;
+    Vector<MachSendRight> recreateRenderBuffers(int width, int height, WebCore::DestinationColorSpace&&, WebCore::AlphaPremultiplication, WebCore::WebGPU::TextureFormat, Device&) override;
 
-    Vector<RetainPtr<IOSurfaceRef>> m_renderBuffers;
+    Vector<UniqueRef<WebCore::IOSurface>> m_renderBuffers;
     WTF::Function<void(CFArrayRef)> m_renderBuffersWereRecreatedCallback;
 #endif
 
@@ -92,6 +101,7 @@ private:
 
     RefPtr<PresentationContextImpl> m_presentationContext;
     Ref<ConvertToBackingContext> m_convertToBackingContext;
+    WeakPtr<Device> m_device;
 };
 
 } // namespace WebCore::WebGPU

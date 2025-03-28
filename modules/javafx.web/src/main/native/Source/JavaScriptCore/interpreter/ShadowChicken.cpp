@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2016-2022 Apple Inc. All rights reserved.
+ * Copyright (C) 2016-2023 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -30,12 +30,15 @@
 #include "ShadowChickenInlines.h"
 #include "VMTrapsInlines.h"
 #include <wtf/ListDump.h>
+#include <wtf/TZoneMallocInlines.h>
 
 namespace JSC {
 
 namespace ShadowChickenInternal {
 static constexpr bool verbose = false;
 }
+
+WTF_MAKE_TZONE_ALLOCATED_IMPL(ShadowChicken);
 
 void ShadowChicken::Packet::dump(PrintStream& out) const
 {
@@ -176,7 +179,7 @@ void ShadowChicken::update(VM& vm, CallFrame* callFrame)
             callFrame, vm, [&] (StackVisitor& visitor) -> IterationStatus {
                 if (visitor->isInlinedDFGFrame())
                     return IterationStatus::Continue;
-                if (visitor->isWasmFrame()) {
+                if (visitor->isNativeCalleeFrame()) {
                     // FIXME: Make shadow chicken work with Wasm.
                     // https://bugs.webkit.org/show_bug.cgi?id=165441
                     return IterationStatus::Continue;
@@ -213,7 +216,7 @@ void ShadowChicken::update(VM& vm, CallFrame* callFrame)
             }
             break;
         }
-        m_stack.resize(shadowIndex);
+        m_stack.shrink(shadowIndex);
 
         if (ShadowChickenInternal::verbose)
             dataLog("    Revised stack: ", listDump(m_stack), "\n");
@@ -301,7 +304,7 @@ void ShadowChicken::update(VM& vm, CallFrame* callFrame)
                 return IterationStatus::Continue;
             }
 
-            if (visitor->isWasmFrame()) {
+            if (visitor->isNativeCalleeFrame()) {
                 // FIXME: Make shadow chicken work with Wasm.
                 return IterationStatus::Continue;
             }
@@ -328,7 +331,7 @@ void ShadowChicken::update(VM& vm, CallFrame* callFrame)
             bool foundFrame = advanceIndexInLogTo(callFrame, callFrame->jsCallee(), callFrame->callerFrame());
             bool isTailDeleted = false;
             JSScope* scope = nullptr;
-            CodeBlock* codeBlock = callFrame->isWasmFrame() ? nullptr : callFrame->codeBlock();
+            CodeBlock* codeBlock = callFrame->isNativeCalleeFrame() ? nullptr : callFrame->codeBlock();
             JSValue scopeValue = callFrame->bytecodeIndex() && codeBlock && codeBlock->scopeRegister().isValid()
                 ? callFrame->registers()[codeBlock->scopeRegister().offset()].jsValue()
                 : jsUndefined();
@@ -476,14 +479,14 @@ void ShadowChicken::reset()
 
 void ShadowChicken::dump(PrintStream& out) const
 {
-    out.print("{stack = [", listDump(m_stack), "], log = [");
+    out.print("{stack = ["_s, listDump(m_stack), "], log = ["_s);
 
     CommaPrinter comma;
     unsigned limit = static_cast<unsigned>(m_logCursor - m_log);
-    out.print("\n");
+    out.print("\n"_s);
     for (unsigned i = 0; i < limit; ++i)
-        out.print("\t", comma, "[", i, "] ", m_log[i], "\n");
-    out.print("]}");
+        out.print("\t"_s, comma, "["_s, i, "] "_s, m_log[i], "\n"_s);
+    out.print("]}"_s);
 }
 
 JSArray* ShadowChicken::functionsOnStack(JSGlobalObject* globalObject, CallFrame* callFrame)

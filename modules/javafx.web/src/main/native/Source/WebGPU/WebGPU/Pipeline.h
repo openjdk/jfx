@@ -23,19 +23,27 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+#import "ConstantValue.h"
 #import "ShaderModule.h"
 
 namespace WebGPU {
 
+class BindGroup;
+class ShaderModule;
+
+using BufferBindingSizesForBindGroup = HashMap<uint32_t, uint64_t, DefaultHash<uint32_t>, WTF::UnsignedWithZeroKeyHashTraits<uint32_t>>;
+using BufferBindingSizesForPipeline = HashMap<uint32_t, BufferBindingSizesForBindGroup, DefaultHash<uint32_t>, WTF::UnsignedWithZeroKeyHashTraits<uint32_t>>;
+
 struct LibraryCreationResult {
     id<MTLLibrary> library;
     WGSL::Reflection::EntryPointInformation entryPointInformation; // FIXME(PERFORMANCE): This is big. Don't copy this around.
+    HashMap<String, WGSL::ConstantValue> wgslConstantValues;
 };
 
-std::optional<LibraryCreationResult> createLibrary(id<MTLDevice>, const ShaderModule&, const PipelineLayout*, const String& entryPointName, NSString *label);
+std::optional<LibraryCreationResult> createLibrary(id<MTLDevice>, const ShaderModule&, PipelineLayout*, const String& entryPointName, NSString *label, uint32_t constantCount, const WGPUConstantEntry* constants, BufferBindingSizesForPipeline&, NSError **);
 
-MTLFunctionConstantValues *createConstantValues(uint32_t constantCount, const WGPUConstantEntry* constants, const WGSL::Reflection::EntryPointInformation&);
+id<MTLFunction> createFunction(id<MTLLibrary>, const WGSL::Reflection::EntryPointInformation&, NSString *label);
 
-id<MTLFunction> createFunction(id<MTLLibrary>, const WGSL::Reflection::EntryPointInformation&, unsigned constantCount, const WGPUConstantEntry*, NSString *label);
+NSString* errorValidatingBindGroup(const BindGroup&, const BufferBindingSizesForBindGroup*, const Vector<uint32_t>*);
 
 } // namespace WebGPU

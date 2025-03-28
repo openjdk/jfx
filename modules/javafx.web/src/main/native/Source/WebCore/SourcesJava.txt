@@ -57,6 +57,7 @@ platform/java/PluginInfoStoreJava.cpp
 platform/java/PluginViewJava.cpp
 platform/java/PluginWidgetJava.cpp
 platform/java/RenderThemeJava.cpp
+platform/java/ThemeJava.cpp
 platform/java/ModernMediaControlResource.cpp
 platform/java/ScrollbarThemeJava.cpp
 platform/java/SharedBufferJava.cpp

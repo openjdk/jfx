@@ -185,10 +185,7 @@ public:
         return !!*this;
     }
 
-    bool operator==(const Tmp& other) const
-    {
-        return m_value == other.m_value;
-    }
+    friend bool operator==(const Tmp&, const Tmp&) = default;
 
     void dump(PrintStream& out) const;
 

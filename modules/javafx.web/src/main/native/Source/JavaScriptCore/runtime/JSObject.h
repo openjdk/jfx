@@ -1,7 +1,7 @@
 /*
  *  Copyright (C) 1999-2001 Harri Porten (porten@kde.org)
  *  Copyright (C) 2001 Peter Kelly (pmk@post.com)
- *  Copyright (C) 2003-2023 Apple Inc. All rights reserved.
+ *  Copyright (C) 2003-2024 Apple Inc. All rights reserved.
  *
  *  This library is free software; you can redistribute it and/or
  *  modify it under the terms of the GNU Library General Public
@@ -103,6 +103,7 @@ class JSObject : public JSCell {
     enum PutMode : uint8_t {
         PutModePut,
         PutModeDefineOwnProperty,
+        PutModeDefineOwnPropertyForJSONSlow,
     };
 
 public:
@@ -166,6 +167,10 @@ public:
     template<typename PropertyNameType> JSValue getIfPropertyExists(JSGlobalObject*, const PropertyNameType&);
     bool noSideEffectMayHaveNonIndexProperty(VM&, PropertyName);
 
+    enum class SortMode { Default, Ascending };
+    template<SortMode mode = SortMode::Default, typename Functor>
+    void forEachOwnIndexedProperty(JSGlobalObject*, const Functor&);
+
 private:
     static bool getOwnPropertySlotImpl(JSObject*, JSGlobalObject*, PropertyName, PropertySlot&);
 public:
@@ -200,6 +205,59 @@ public:
         if (!hasIndexedProperties(indexingType()))
             return 0;
         return m_butterfly->vectorLength();
+    }
+
+    bool canHaveExistingOwnIndexedGetterSetterProperties()
+    {
+        if (!hasIndexedProperties(indexingType()))
+            return false;
+
+        switch (indexingType()) {
+        case ALL_BLANK_INDEXING_TYPES:
+        case ALL_UNDECIDED_INDEXING_TYPES:
+        case ALL_INT32_INDEXING_TYPES:
+        case ALL_CONTIGUOUS_INDEXING_TYPES:
+        case ALL_DOUBLE_INDEXING_TYPES:
+            return false;
+        case ALL_ARRAY_STORAGE_INDEXING_TYPES: {
+            SparseArrayValueMap* map = m_butterfly->arrayStorage()->m_sparseMap.get();
+            if (!map)
+                return false;
+            return map->hasAnyKindOfGetterSetterProperties();
+        }
+        default:
+            RELEASE_ASSERT_NOT_REACHED();
+        }
+    }
+
+    // This is only valid after using canPerformFastPropertyEnumerationCommon().
+    // This code is not checking getOwnPropertySlot override etc.
+    unsigned canHaveExistingOwnIndexedProperties() const
+    {
+        if (!hasIndexedProperties(indexingType()))
+            return false;
+
+        switch (indexingType()) {
+        case ALL_BLANK_INDEXING_TYPES:
+        case ALL_UNDECIDED_INDEXING_TYPES:
+            return false;
+        case ALL_INT32_INDEXING_TYPES:
+        case ALL_CONTIGUOUS_INDEXING_TYPES:
+        case ALL_DOUBLE_INDEXING_TYPES:
+            return m_butterfly->publicLength();
+        case ALL_ARRAY_STORAGE_INDEXING_TYPES: {
+            ArrayStorage* storage = m_butterfly->arrayStorage();
+            unsigned usedVectorLength = std::min(storage->length(), storage->vectorLength());
+            if (usedVectorLength)
+                return true;
+            SparseArrayValueMap* map = storage->m_sparseMap.get();
+            if (!map)
+                return false;
+            return map->size();
+        }
+        default:
+            RELEASE_ASSERT_NOT_REACHED();
+        }
     }
 
     static bool putInlineForJSObject(JSCell*, JSGlobalObject*, PropertyName, JSValue, PutPropertySlot&);
@@ -678,6 +736,7 @@ public:
     bool putDirect(VM&, PropertyName, JSValue, unsigned attributes = 0);
     bool putDirect(VM&, PropertyName, JSValue, unsigned attributes, PutPropertySlot&);
     bool putDirect(VM&, PropertyName, JSValue, PutPropertySlot&);
+    void putDirectForJSONSlow(VM&, PropertyName, JSValue);
     void putDirectWithoutTransition(VM&, PropertyName, JSValue, unsigned attributes = 0);
     bool putDirectNonIndexAccessor(VM&, PropertyName, GetterSetter*, unsigned attributes);
     void putDirectNonIndexAccessorWithoutTransition(VM&, PropertyName, GetterSetter*, unsigned attributes);
@@ -972,9 +1031,12 @@ public:
             convertFromCopyOnWrite(vm);
     }
 
-    static size_t offsetOfInlineStorage();
+    static constexpr size_t offsetOfInlineStorage()
+    {
+        return sizeof(JSObject);
+    }
 
-    static ptrdiff_t butterflyOffset()
+    static constexpr ptrdiff_t butterflyOffset()
     {
         return OBJECT_OFFSETOF(JSObject, m_butterfly);
     }
@@ -995,9 +1057,6 @@ public:
 
     DECLARE_EXPORT_INFO;
 
-    template<typename Functor>
-    bool fastForEachPropertyWithSideEffectFreeFunctor(VM&, const Functor&);
-
     bool getOwnNonIndexPropertySlot(VM&, Structure*, PropertyName, PropertySlot&);
     bool getNonIndexPropertySlot(JSGlobalObject*, PropertyName, PropertySlot&);
 
@@ -1017,10 +1076,7 @@ protected:
     }
 #endif
 
-    static Structure* createStructure(VM& vm, JSGlobalObject* globalObject, JSValue prototype)
-    {
-        return Structure::create(vm, globalObject, prototype, TypeInfo(ObjectType, StructureFlags), info());
-    }
+    inline static Structure* createStructure(VM&, JSGlobalObject*, JSValue);
 
     // To instantiate objects you likely want JSFinalObject, below.
     // To create derived types you likely want JSNonFinalObject, below.
@@ -1075,6 +1131,8 @@ protected:
     void convertFromCopyOnWrite(VM&);
 
     static Butterfly* createArrayStorageButterfly(VM&, JSObject* intendedOwner, Structure*, unsigned length, unsigned vectorLength, Butterfly* oldButterfly = nullptr);
+    static Butterfly* tryCreateArrayStorageButterfly(VM&, JSObject* intendedOwner, Structure*, unsigned length, unsigned vectorLength, Butterfly* oldButterfly = nullptr);
+
     ArrayStorage* createArrayStorage(VM&, unsigned length, unsigned vectorLength);
     ArrayStorage* createInitialArrayStorage(VM&);
 
@@ -1203,10 +1261,7 @@ class JSNonFinalObject : public JSObject {
 public:
     typedef JSObject Base;
 
-    static Structure* createStructure(VM& vm, JSGlobalObject* globalObject, JSValue prototype)
-    {
-        return Structure::create(vm, globalObject, prototype, TypeInfo(ObjectType, StructureFlags), info());
-    }
+    inline static Structure* createStructure(VM&, JSGlobalObject*, JSValue);
 
 protected:
     explicit JSNonFinalObject(VM& vm, Structure* structure, Butterfly* butterfly = nullptr)
@@ -1257,10 +1312,7 @@ public:
 
     static JSFinalObject* create(VM&, Structure*);
     static JSFinalObject* createWithButterfly(VM&, Structure*, Butterfly*);
-    static Structure* createStructure(VM& vm, JSGlobalObject* globalObject, JSValue prototype, unsigned inlineCapacity)
-    {
-        return Structure::create(vm, globalObject, prototype, typeInfo(), info(), defaultIndexingType, inlineCapacity);
-    }
+    inline static Structure* createStructure(VM&, JSGlobalObject*, JSValue, unsigned);
 
     static JSFinalObject* createDefaultEmptyObject(JSGlobalObject*);
 
@@ -1311,11 +1363,6 @@ inline JSFinalObject* JSFinalObject::createWithButterfly(VM& vm, Structure* stru
 inline JSFinalObject* JSFinalObject::create(VM& vm, Structure* structure)
 {
     return createWithButterfly(vm, structure, nullptr);
-}
-
-inline size_t JSObject::offsetOfInlineStorage()
-{
-    return sizeof(JSObject);
 }
 
 inline bool JSObject::isGlobalObject() const
@@ -1467,9 +1514,11 @@ ALWAYS_INLINE bool JSObject::getOwnNonIndexPropertySlot(VM& vm, Structure* struc
         JSType type = cell->type();
         switch (type) {
         case GetterSetterType:
+            ASSERT(attributes & PropertyAttribute::Accessor);
             fillGetterPropertySlot(vm, slot, cell, attributes, offset);
             return true;
         case CustomGetterSetterType:
+            ASSERT(attributes & PropertyAttribute::CustomAccessorOrValue);
             fillCustomGetterPropertySlot(slot, jsCast<CustomGetterSetter*>(cell), attributes, structure);
             return true;
         default:
@@ -1661,7 +1710,7 @@ inline int indexRelativeToBase(PropertyOffset offset)
 {
     if (isOutOfLineOffset(offset))
         return offsetInOutOfLineStorage(offset) + Butterfly::indexOfPropertyStorage();
-    ASSERT(!(JSObject::offsetOfInlineStorage() % sizeof(EncodedJSValue)));
+    static_assert(!(JSObject::offsetOfInlineStorage() % sizeof(EncodedJSValue)));
     return JSObject::offsetOfInlineStorage() / sizeof(EncodedJSValue) + offsetInInlineStorage(offset);
 }
 

@@ -25,8 +25,6 @@
 
 #pragma once
 
-#if ENABLE(SERVICE_WORKER)
-
 #include "BackgroundFetchInformation.h"
 #include "ExceptionOr.h"
 #include "PageIdentifier.h"
@@ -44,6 +42,8 @@ namespace WebCore {
 
 class SerializedScriptValue;
 class ServiceWorkerGlobalScope;
+
+struct NotificationPayload;
 
 class SWContextManager {
 public:
@@ -90,6 +90,8 @@ public:
 
         bool isClosed() const { return m_isClosed; }
 
+        virtual void removeNavigationFetch(SWServerConnectionIdentifier, FetchIdentifier) = 0;
+
     protected:
         void setAsClosed() { m_isClosed = true; }
 
@@ -105,7 +107,7 @@ public:
     WEBCORE_EXPORT RefPtr<ServiceWorkerThreadProxy> serviceWorkerThreadProxyFromBackgroundThread(ServiceWorkerIdentifier) const;
     WEBCORE_EXPORT void fireInstallEvent(ServiceWorkerIdentifier);
     WEBCORE_EXPORT void fireActivateEvent(ServiceWorkerIdentifier);
-    WEBCORE_EXPORT void firePushEvent(ServiceWorkerIdentifier, std::optional<Vector<uint8_t>>&&, CompletionHandler<void(bool)>&&);
+    WEBCORE_EXPORT void firePushEvent(ServiceWorkerIdentifier, std::optional<Vector<uint8_t>>&&, std::optional<NotificationPayload>&&, CompletionHandler<void(bool, std::optional<NotificationPayload>&&)>&&);
     WEBCORE_EXPORT void firePushSubscriptionChangeEvent(ServiceWorkerIdentifier, std::optional<PushSubscriptionData>&& newSubscriptionData, std::optional<PushSubscriptionData>&& oldSubscriptionData);
     WEBCORE_EXPORT void fireNotificationEvent(ServiceWorkerIdentifier, NotificationData&&, NotificationEventType, CompletionHandler<void(bool)>&&);
     WEBCORE_EXPORT void fireBackgroundFetchEvent(ServiceWorkerIdentifier, BackgroundFetchInformation&&, CompletionHandler<void(bool)>&&);
@@ -126,6 +128,14 @@ public:
     static constexpr Seconds syncWorkerTerminationTimeout { 100_ms }; // Only used by layout tests.
 
     WEBCORE_EXPORT void setAsInspected(ServiceWorkerIdentifier, bool);
+    WEBCORE_EXPORT void setInspectable(bool);
+
+    WEBCORE_EXPORT void updateRegistrationState(ServiceWorkerRegistrationIdentifier, ServiceWorkerRegistrationState, const std::optional<ServiceWorkerData>&);
+    WEBCORE_EXPORT void updateWorkerState(ServiceWorkerIdentifier, ServiceWorkerState);
+    WEBCORE_EXPORT void fireUpdateFoundEvent(ServiceWorkerRegistrationIdentifier);
+    WEBCORE_EXPORT void setRegistrationLastUpdateTime(ServiceWorkerRegistrationIdentifier, WallTime);
+    WEBCORE_EXPORT void setRegistrationUpdateViaCache(ServiceWorkerRegistrationIdentifier, ServiceWorkerUpdateViaCache);
+    WEBCORE_EXPORT void removeFetch(ServiceWorkerIdentifier, SWServerConnectionIdentifier, FetchIdentifier, bool isNavigationFetch);
 
 private:
     SWContextManager() = default;
@@ -152,5 +162,3 @@ private:
 };
 
 } // namespace WebCore
-
-#endif // ENABLE(SERVICE_WORKER)

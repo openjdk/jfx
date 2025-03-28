@@ -38,13 +38,14 @@
 #include "LoadableTextTrack.h"
 #include "Logging.h"
 #include "NodeName.h"
-#include <wtf/IsoMallocInlines.h>
 #include <wtf/SetForScope.h>
+#include <wtf/TZoneMallocInlines.h>
 #include <wtf/text/CString.h>
+#include <wtf/text/MakeString.h>
 
 namespace WebCore {
 
-WTF_MAKE_ISO_ALLOCATED_IMPL(HTMLTrackElement);
+WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(HTMLTrackElement);
 
 using namespace HTMLNames;
 
@@ -56,13 +57,13 @@ static String urlForLoggingTrack(const URL& url)
 
     if (url.string().length() < maximumURLLengthForLogging)
         return url.string();
-    return makeString(StringView(url.string()).left(maximumURLLengthForLogging), "...");
+    return makeString(StringView(url.string()).left(maximumURLLengthForLogging), "..."_s);
 }
 
 #endif
 
 inline HTMLTrackElement::HTMLTrackElement(const QualifiedName& tagName, Document& document)
-    : HTMLElement(tagName, document)
+    : HTMLElement(tagName, document, TypeFlag::HasDidMoveToNewDocument)
     , ActiveDOMObject(document)
     , m_track(LoadableTextTrack::create(*this, attributeWithoutSynchronization(kindAttr).convertToASCIILowercase(), label(), srclang()))
 {
@@ -73,7 +74,6 @@ inline HTMLTrackElement::HTMLTrackElement(const QualifiedName& tagName, Document
 
 HTMLTrackElement::~HTMLTrackElement()
 {
-    m_track->clearElement();
     m_track->clearClient(*this);
 }
 
@@ -88,9 +88,11 @@ Node::InsertedIntoAncestorResult HTMLTrackElement::insertedIntoAncestor(Insertio
 {
     HTMLElement::insertedIntoAncestor(insertionType, parentOfInsertedTree);
 
-    if (parentNode() == &parentOfInsertedTree && is<HTMLMediaElement>(parentOfInsertedTree)) {
-        downcast<HTMLMediaElement>(parentOfInsertedTree).didAddTextTrack(*this);
+    if (parentNode() == &parentOfInsertedTree) {
+        if (auto* mediaElement = dynamicDowncast<HTMLMediaElement>(parentOfInsertedTree)) {
+            mediaElement->didAddTextTrack(*this);
         scheduleLoad();
+    }
     }
 
     return InsertedIntoAncestorResult::Done;
@@ -100,8 +102,16 @@ void HTMLTrackElement::removedFromAncestor(RemovalType removalType, ContainerNod
 {
     HTMLElement::removedFromAncestor(removalType, oldParentOfRemovedTree);
 
-    if (!parentNode() && is<HTMLMediaElement>(oldParentOfRemovedTree))
-        downcast<HTMLMediaElement>(oldParentOfRemovedTree).didRemoveTextTrack(*this);
+    if (!parentNode()) {
+        if (auto* mediaElement = dynamicDowncast<HTMLMediaElement>(oldParentOfRemovedTree))
+            mediaElement->didRemoveTextTrack(*this);
+    }
+}
+
+void HTMLTrackElement::didMoveToNewDocument(Document& oldDocument, Document& newDocument)
+{
+    HTMLElement::didMoveToNewDocument(oldDocument, newDocument);
+    ActiveDOMObject::didMoveToNewDocument(newDocument);
 }
 
 void HTMLTrackElement::attributeChanged(const QualifiedName& name, const AtomString& oldValue, const AtomString& newValue, AttributeModificationReason attributeModificationReason)
@@ -155,7 +165,7 @@ bool HTMLTrackElement::isDefault() const
 
 TextTrack& HTMLTrackElement::track()
 {
-    return m_track;
+    return m_track.get();
 }
 
 bool HTMLTrackElement::isURLAttribute(const Attribute& attribute) const
@@ -230,9 +240,10 @@ bool HTMLTrackElement::canLoadURL(const URL& url)
     if (url.isEmpty())
         return false;
 
-    ASSERT(document().contentSecurityPolicy());
+    Ref document = this->document();
+    ASSERT(document->contentSecurityPolicy());
     // Elements in user agent show tree should load whatever the embedding document policy is.
-    if (!isInUserAgentShadowTree() && !document().contentSecurityPolicy()->allowMediaFromSource(url)) {
+    if (!isInUserAgentShadowTree() && !document->checkedContentSecurityPolicy()->allowMediaFromSource(url)) {
         LOG(Media, "HTMLTrackElement::canLoadURL(%s) -> rejected by Content Security Policy", urlForLoggingTrack(url).utf8().data());
         return false;
     }
@@ -306,15 +317,7 @@ void HTMLTrackElement::textTrackModeChanged(TextTrack&)
 
 RefPtr<HTMLMediaElement> HTMLTrackElement::mediaElement() const
 {
-    RefPtr parent = parentElement();
-    if (!is<HTMLMediaElement>(parent))
-        return nullptr;
-    return downcast<HTMLMediaElement>(parent.get());
-}
-
-const char* HTMLTrackElement::activeDOMObjectName() const
-{
-    return "HTMLTrackElement";
+    return dynamicDowncast<HTMLMediaElement>(parentElement());
 }
 
 void HTMLTrackElement::eventListenersDidChange()

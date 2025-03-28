@@ -56,6 +56,7 @@
 #include "CSSPropertyNames.h"
 #include "CommonVM.h"
 #include "CookieJar.h"
+#include "DocumentInlines.h"
 #include "DocumentLoader.h"
 #include "DocumentType.h"
 #include "ElementChildIteratorInlines.h"
@@ -77,13 +78,13 @@
 #include "Quirks.h"
 #include "ScriptController.h"
 #include "StyleResolver.h"
-#include <wtf/IsoMallocInlines.h>
 #include <wtf/RobinHoodHashSet.h>
+#include <wtf/TZoneMallocInlines.h>
 #include <wtf/text/CString.h>
 
 namespace WebCore {
 
-WTF_MAKE_ISO_ALLOCATED_IMPL(HTMLDocument);
+WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(HTMLDocument);
 
 using namespace HTMLNames;
 
@@ -102,20 +103,6 @@ HTMLDocument::HTMLDocument(LocalFrame* frame, const Settings& settings, const UR
 
 HTMLDocument::~HTMLDocument() = default;
 
-int HTMLDocument::width()
-{
-    updateLayoutIgnorePendingStylesheets();
-    RefPtr frameView = view();
-    return frameView ? frameView->contentsWidth() : 0;
-}
-
-int HTMLDocument::height()
-{
-    updateLayoutIgnorePendingStylesheets();
-    RefPtr frameView = view();
-    return frameView ? frameView->contentsHeight() : 0;
-}
-
 Ref<DocumentParser> HTMLDocument::createParser()
 {
     return HTMLDocumentParser::create(*this, parserContentPolicy());
@@ -124,27 +111,27 @@ Ref<DocumentParser> HTMLDocument::createParser()
 // https://html.spec.whatwg.org/multipage/dom.html#dom-document-nameditem
 std::optional<std::variant<RefPtr<WindowProxy>, RefPtr<Element>, RefPtr<HTMLCollection>>> HTMLDocument::namedItem(const AtomString& name)
 {
-    if (name.isNull() || !hasDocumentNamedItem(*name.impl()))
+    if (name.isNull() || !hasDocumentNamedItem(name))
         return std::nullopt;
 
-    if (UNLIKELY(documentNamedItemContainsMultipleElements(*name.impl()))) {
+    if (UNLIKELY(documentNamedItemContainsMultipleElements(name))) {
         auto collection = documentNamedItems(name);
         ASSERT(collection->length() > 1);
         return std::variant<RefPtr<WindowProxy>, RefPtr<Element>, RefPtr<HTMLCollection>> { RefPtr<HTMLCollection> { WTFMove(collection) } };
     }
 
-    auto& element = *documentNamedItem(*name.impl());
-    if (UNLIKELY(is<HTMLIFrameElement>(element))) {
-        if (RefPtr domWindow = downcast<HTMLIFrameElement>(element).contentWindow())
+    Ref element = *documentNamedItem(name);
+    if (auto* iframe = dynamicDowncast<HTMLIFrameElement>(element.get()); UNLIKELY(iframe)) {
+        if (RefPtr domWindow = iframe->contentWindow())
             return std::variant<RefPtr<WindowProxy>, RefPtr<Element>, RefPtr<HTMLCollection>> { WTFMove(domWindow) };
     }
 
-    return std::variant<RefPtr<WindowProxy>, RefPtr<Element>, RefPtr<HTMLCollection>> { RefPtr<Element> { &element } };
+    return std::variant<RefPtr<WindowProxy>, RefPtr<Element>, RefPtr<HTMLCollection>> { RefPtr<Element> { WTFMove(element) } };
 }
 
 bool HTMLDocument::isSupportedPropertyName(const AtomString& name) const
 {
-    return !name.isNull() && hasDocumentNamedItem(*name.impl());
+    return !name.isNull() && hasDocumentNamedItem(name);
 }
 
 Vector<AtomString> HTMLDocument::supportedPropertyNames() const
@@ -160,23 +147,23 @@ Vector<AtomString> HTMLDocument::supportedPropertyNames() const
     return properties;
 }
 
-void HTMLDocument::addDocumentNamedItem(const AtomStringImpl& name, Element& item)
+void HTMLDocument::addDocumentNamedItem(const AtomString& name, Element& item)
 {
     m_documentNamedItem.add(name, item, *this);
-    addImpureProperty(AtomString(const_cast<AtomStringImpl*>(&name)));
+    addImpureProperty(name);
 }
 
-void HTMLDocument::removeDocumentNamedItem(const AtomStringImpl& name, Element& item)
+void HTMLDocument::removeDocumentNamedItem(const AtomString& name, Element& item)
 {
     m_documentNamedItem.remove(name, item);
 }
 
-void HTMLDocument::addWindowNamedItem(const AtomStringImpl& name, Element& item)
+void HTMLDocument::addWindowNamedItem(const AtomString& name, Element& item)
 {
     m_windowNamedItem.add(name, item, *this);
 }
 
-void HTMLDocument::removeWindowNamedItem(const AtomStringImpl& name, Element& item)
+void HTMLDocument::removeWindowNamedItem(const AtomString& name, Element& item)
 {
     m_windowNamedItem.remove(name, item);
 }
@@ -184,8 +171,7 @@ void HTMLDocument::removeWindowNamedItem(const AtomStringImpl& name, Element& it
 bool HTMLDocument::isCaseSensitiveAttribute(const QualifiedName& attributeName)
 {
     static NeverDestroyed set = [] {
-        // This is the list of attributes in HTML 4.01 with values marked as "[CI]" or case-insensitive
-        // Mozilla treats all other values as case-sensitive, thus so do we.
+        // https://html.spec.whatwg.org/multipage/semantics-other.html#case-sensitivity-of-selectors
         static constexpr std::array names {
             &accept_charsetAttr,
             &acceptAttr,
@@ -202,6 +188,7 @@ bool HTMLDocument::isCaseSensitiveAttribute(const QualifiedName& attributeName)
             &declareAttr,
             &deferAttr,
             &dirAttr,
+            &directionAttr,
             &disabledAttr,
             &enctypeAttr,
             &faceAttr,
@@ -239,7 +226,7 @@ bool HTMLDocument::isCaseSensitiveAttribute(const QualifiedName& attributeName)
             set.add(name->get().localName());
         return set;
     }();
-    bool isPossibleHTMLAttr = !attributeName.hasPrefix() && attributeName.namespaceURI().isNull();
+    auto isPossibleHTMLAttr = !attributeName.hasPrefix() && attributeName.namespaceURI().isNull();
     return !isPossibleHTMLAttr || !set.get().contains(attributeName.localName());
 }
 

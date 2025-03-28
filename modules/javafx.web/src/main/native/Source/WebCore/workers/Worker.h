@@ -50,6 +50,7 @@ namespace WebCore {
 class RTCRtpScriptTransform;
 class RTCRtpScriptTransformer;
 class ScriptExecutionContext;
+class TrustedScriptURL;
 class WorkerGlobalScopeProxy;
 class WorkerScriptLoader;
 
@@ -57,10 +58,18 @@ struct StructuredSerializeOptions;
 struct WorkerOptions;
 
 class Worker final : public AbstractWorker, public ActiveDOMObject, private WorkerScriptLoaderClient {
-    WTF_MAKE_ISO_ALLOCATED(Worker);
+    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(Worker);
 public:
-    static ExceptionOr<Ref<Worker>> create(ScriptExecutionContext&, JSC::RuntimeFlags, const String& url, WorkerOptions&&);
+    using AbstractWorker::weakPtrFactory;
+    using AbstractWorker::WeakValueType;
+    using AbstractWorker::WeakPtrImplType;
+
+    static ExceptionOr<Ref<Worker>> create(ScriptExecutionContext&, JSC::RuntimeFlags, std::variant<RefPtr<TrustedScriptURL>, String>&&, WorkerOptions&&);
     virtual ~Worker();
+
+    // ActiveDOMObject.
+    void ref() const final { RefCounted::ref(); }
+    void deref() const final { RefCounted::deref(); }
 
     ExceptionOr<void> postMessage(JSC::JSGlobalObject&, JSC::JSValue message, StructuredSerializeOptions&&);
 
@@ -73,6 +82,7 @@ public:
     ScriptExecutionContext* scriptExecutionContext() const final { return ActiveDOMObject::scriptExecutionContext(); }
 
     void dispatchEvent(Event&) final;
+    void reportError(const String&);
 
 #if ENABLE(WEB_RTC)
     void createRTCRtpScriptTransformer(RTCRtpScriptTransform&, MessageWithMessagePorts&&);
@@ -87,16 +97,15 @@ public:
 private:
     Worker(ScriptExecutionContext&, JSC::RuntimeFlags, WorkerOptions&&);
 
-    EventTargetInterface eventTargetInterface() const final { return WorkerEventTargetInterfaceType; }
+    enum EventTargetInterfaceType eventTargetInterface() const final { return EventTargetInterfaceType::Worker; }
 
-    void didReceiveResponse(ResourceLoaderIdentifier, const ResourceResponse&) final;
-    void notifyFinished() final;
+    void didReceiveResponse(ScriptExecutionContextIdentifier, ResourceLoaderIdentifier, const ResourceResponse&) final;
+    void notifyFinished(ScriptExecutionContextIdentifier) final;
 
     // ActiveDOMObject.
     void stop() final;
     void suspend(ReasonForSuspension) final;
     void resume() final;
-    const char* activeDOMObjectName() const final;
     bool virtualHasPendingActivity() const final;
 
     static void networkStateChanged(bool isOnLine);

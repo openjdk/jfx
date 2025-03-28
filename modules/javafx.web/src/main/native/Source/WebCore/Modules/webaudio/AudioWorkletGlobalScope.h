@@ -49,7 +49,7 @@ class JSAudioWorkletProcessorConstructor;
 struct WorkletParameters;
 
 class AudioWorkletGlobalScope final : public WorkletGlobalScope {
-    WTF_MAKE_ISO_ALLOCATED(AudioWorkletGlobalScope);
+    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(AudioWorkletGlobalScope);
 public:
     static RefPtr<AudioWorkletGlobalScope> tryCreate(AudioWorkletThread&, const WorkletParameters&);
     ~AudioWorkletGlobalScope();
@@ -91,7 +91,11 @@ private:
 } // namespace WebCore
 
 SPECIALIZE_TYPE_TRAITS_BEGIN(WebCore::AudioWorkletGlobalScope)
-static bool isType(const WebCore::ScriptExecutionContext& context) { return is<WebCore::WorkletGlobalScope>(context) && downcast<WebCore::WorkletGlobalScope>(context).isAudioWorkletGlobalScope(); }
+static bool isType(const WebCore::ScriptExecutionContext& context)
+{
+    auto* workletGlobalScope = dynamicDowncast<WebCore::WorkletGlobalScope>(context);
+    return workletGlobalScope && workletGlobalScope->isAudioWorkletGlobalScope();
+}
 static bool isType(const WebCore::WorkletGlobalScope& context) { return context.isAudioWorkletGlobalScope(); }
 SPECIALIZE_TYPE_TRAITS_END()
 

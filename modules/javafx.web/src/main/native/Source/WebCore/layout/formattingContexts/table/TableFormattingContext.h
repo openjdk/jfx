@@ -30,7 +30,7 @@
 #include "TableFormattingQuirks.h"
 #include "TableFormattingState.h"
 #include "TableGrid.h"
-#include <wtf/IsoMalloc.h>
+#include <wtf/TZoneMalloc.h>
 #include <wtf/UniqueRef.h>
 
 namespace WebCore {
@@ -39,15 +39,15 @@ namespace Layout {
 // This class implements the layout logic for table formatting contexts.
 // https://www.w3.org/TR/CSS22/tables.html
 class TableFormattingContext final : public FormattingContext {
-    WTF_MAKE_ISO_ALLOCATED(TableFormattingContext);
+    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(TableFormattingContext);
 public:
     TableFormattingContext(const ElementBox& formattingContextRoot, TableFormattingState&);
     void layoutInFlowContent(const ConstraintsForInFlowContent&) override;
     LayoutUnit usedContentHeight() const override;
 
-    const TableFormattingGeometry& formattingGeometry() const final { return m_tableFormattingGeometry; }
-    const TableFormattingQuirks& formattingQuirks() const final { return m_tableFormattingQuirks; }
-    const TableFormattingState& formattingState() const { return downcast<TableFormattingState>(FormattingContext::formattingState()); }
+    const TableFormattingGeometry& formattingGeometry() const { return m_tableFormattingGeometry; }
+    const TableFormattingQuirks& formattingQuirks() const { return m_tableFormattingQuirks; }
+    const TableFormattingState& formattingState() const { return m_tableFormattingState; }
 
 private:
     class TableLayout {
@@ -75,8 +75,9 @@ private:
     IntrinsicWidthConstraints computedPreferredWidthForColumns();
     void computeAndDistributeExtraSpace(LayoutUnit availableHorizontalSpace, std::optional<LayoutUnit> availableVerticalSpace);
 
-    TableFormattingState& formattingState() { return downcast<TableFormattingState>(FormattingContext::formattingState()); }
+    TableFormattingState& formattingState() { return m_tableFormattingState; }
 
+    TableFormattingState& m_tableFormattingState;
     const TableFormattingGeometry m_tableFormattingGeometry;
     const TableFormattingQuirks m_tableFormattingQuirks;
 };

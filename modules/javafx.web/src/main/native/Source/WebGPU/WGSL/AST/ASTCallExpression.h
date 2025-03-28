@@ -26,9 +26,14 @@
 #pragma once
 
 #include "ASTExpression.h"
-#include "ASTTypeName.h"
+#include <wtf/OptionSet.h>
 
-namespace WGSL::AST {
+namespace WGSL {
+class BoundsCheckVisitor;
+class RewriteGlobalVariables;
+class TypeChecker;
+
+namespace AST {
 
 // A CallExpression expresses a "function" call, which consists of a target to be called,
 // and a list of arguments. The target does not necesserily have to be a function identifier,
@@ -36,13 +41,24 @@ namespace WGSL::AST {
 // kind of expression can only be resolved during semantic analysis.
 class CallExpression final : public Expression {
     WGSL_AST_BUILDER_NODE(CallExpression);
+
+    friend BoundsCheckVisitor;
+    friend RewriteGlobalVariables;
+    friend TypeChecker;
+
 public:
+    using Ref = std::reference_wrapper<CallExpression>;
+
     NodeKind kind() const override;
-    TypeName& target() { return m_target.get(); }
+    Expression& target() { return m_target.get(); }
     Expression::List& arguments() { return m_arguments; }
 
+    bool isConstructor() const { return m_isConstructor; }
+
+    const OptionSet<ShaderStage>& visibility() const { return m_visibility; }
+
 private:
-    CallExpression(SourceSpan span, TypeName::Ref&& target, Expression::List&& arguments)
+    CallExpression(SourceSpan span, Expression::Ref&& target, Expression::List&& arguments)
         : Expression(span)
         , m_target(WTFMove(target))
         , m_arguments(WTFMove(arguments))
@@ -52,10 +68,14 @@ private:
     //   * Type that does not accept parameters (bool, i32, u32, ...)
     //   * Identifier that refers to a type alias.
     //   * Identifier that refers to a function.
-    TypeName::Ref m_target;
+    Expression::Ref m_target;
     Expression::List m_arguments;
+
+    bool m_isConstructor { false };
+    OptionSet<ShaderStage> m_visibility { ShaderStage::Compute, ShaderStage::Vertex, ShaderStage::Fragment };
 };
 
-} // namespace WGSL::AST
+} // namespace AST
+} // namespace WGSL
 
 SPECIALIZE_TYPE_TRAITS_WGSL_AST(CallExpression)

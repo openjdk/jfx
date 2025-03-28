@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2016, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,12 +25,10 @@
 
 package test.javafx.stage;
 
-import static org.junit.Assume.assumeTrue;
-
+import static org.junit.jupiter.api.Assumptions.assumeTrue;
 import java.util.Timer;
 import java.util.TimerTask;
 import java.util.concurrent.CountDownLatch;
-
 import javafx.application.Application;
 import javafx.application.Platform;
 import javafx.beans.value.ChangeListener;
@@ -41,12 +39,10 @@ import javafx.scene.control.Label;
 import javafx.stage.Screen;
 import javafx.stage.Stage;
 import javafx.stage.Window;
-
-import org.junit.AfterClass;
-import org.junit.Assert;
-import org.junit.BeforeClass;
-import org.junit.Test;
-
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
 import test.util.Util;
 
 public class ChildStageLocationTest {
@@ -63,12 +59,12 @@ public class ChildStageLocationTest {
         teardown();
     }
 
-    @BeforeClass
+    @BeforeAll
     public static void initFX() throws Exception {
         Util.launch(startupLatch, TestApp.class);
     }
 
-    @AfterClass
+    @AfterAll
     public static void teardown() {
         Util.shutdown();
     }
@@ -81,15 +77,15 @@ public class ChildStageLocationTest {
         double minX = bounds.getMinX() + (bounds.getWidth() - window.getWidth())/2 - 50;
         double minY = bounds.getMinY() + (bounds.getHeight() - window.getHeight())/3 - 100;
         System.out.println("Primary stage location: " + stage.getX() + " " + stage.getY());
-        Assert.assertTrue("Primary stage X location should be >" + minX, stage.getX() > minX);
-        Assert.assertTrue("Primary stage Y location should be >" + minY, stage.getY() > minY);
+        Assertions.assertTrue(stage.getX() > minX, "Primary stage X location should be >" + minX);
+        Assertions.assertTrue(stage.getY() > minY, "Primary stage Y location should be >" + minY);
 
         window = childStage.getScene().getWindow();
         minX = bounds.getMinX() + (bounds.getWidth() - window.getWidth())/2 - 50;
         minY = bounds.getMinY() + (bounds.getHeight() - window.getHeight())/3 - 100;
         System.out.println("Child stage location: " + childStage.getX() + " " + childStage.getY());
-        Assert.assertTrue("Child stage X location should be >" + minX, childStage.getX() > minX);
-        Assert.assertTrue("Child stage Y location should be >" + minY, childStage.getY() > minY);
+        Assertions.assertTrue(childStage.getX() > minX, "Child stage X location should be >" + minX);
+        Assertions.assertTrue(childStage.getY() > minY, "Child stage Y location should be >" + minY);
     }
 
     public static class TestApp extends Application implements ChangeListener {

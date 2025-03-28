@@ -27,6 +27,7 @@
 #include "MainThreadStylePropertyMapReadOnly.h"
 
 #include "CSSPendingSubstitutionValue.h"
+#include "CSSProperty.h"
 #include "CSSPropertyNames.h"
 #include "CSSPropertyParser.h"
 #include "CSSStyleValue.h"
@@ -37,6 +38,7 @@
 #include "Document.h"
 #include "PaintWorkletGlobalScope.h"
 #include "StylePropertyShorthand.h"
+#include <wtf/text/MakeString.h>
 
 namespace WebCore {
 
@@ -45,10 +47,9 @@ MainThreadStylePropertyMapReadOnly::MainThreadStylePropertyMapReadOnly() = defau
 Document* MainThreadStylePropertyMapReadOnly::documentFromContext(ScriptExecutionContext& context)
 {
     ASSERT(isMainThread());
-#if ENABLE(CSS_PAINTING_API)
+
     if (auto* paintWorklet = dynamicDowncast<PaintWorkletGlobalScope>(context))
         return paintWorklet->responsibleDocument();
-#endif
     return &downcast<Document>(context);
 }
 
@@ -64,7 +65,7 @@ ExceptionOr<RefPtr<CSSStyleValue>> MainThreadStylePropertyMapReadOnly::get(Scrip
 
     auto propertyID = cssPropertyID(property);
     if (!isExposed(propertyID, &document->settings()))
-        return Exception { TypeError, makeString("Invalid property ", property) };
+        return Exception { ExceptionCode::TypeError, makeString("Invalid property "_s, property) };
 
     if (isShorthand(propertyID))
         return CSSStyleValueFactory::constructStyleValueForShorthandSerialization(shorthandPropertySerialization(propertyID), { *document });
@@ -84,7 +85,7 @@ ExceptionOr<Vector<RefPtr<CSSStyleValue>>> MainThreadStylePropertyMapReadOnly::g
 
     auto propertyID = cssPropertyID(property);
     if (!isExposed(propertyID, &document->settings()))
-        return Exception { TypeError, makeString("Invalid property ", property) };
+        return Exception { ExceptionCode::TypeError, makeString("Invalid property "_s, property) };
 
     if (isShorthand(propertyID)) {
         if (RefPtr value = CSSStyleValueFactory::constructStyleValueForShorthandSerialization(shorthandPropertySerialization(propertyID), { *document }))

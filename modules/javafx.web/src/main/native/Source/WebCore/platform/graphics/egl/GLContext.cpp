@@ -19,45 +19,22 @@
 #include "config.h"
 #include "GLContext.h"
 
-#if USE(EGL)
 #include "GraphicsContextGL.h"
 #include "Logging.h"
-#include <wtf/ThreadSpecific.h>
 #include <wtf/Vector.h>
 #include <wtf/text/StringToIntegerConversion.h>
 
 #if USE(LIBEPOXY)
-#include "EpoxyEGL.h"
+#include <epoxy/egl.h>
+#include <epoxy/gl.h>
 #else
 #include <EGL/egl.h>
 #include <EGL/eglext.h>
-#endif
-
-#if USE(LIBEPOXY)
-#include <epoxy/gl.h>
-#else
 #include <GLES2/gl2.h>
 #include <GLES2/gl2ext.h>
 #endif
 
-#if PLATFORM(X11)
-#include "PlatformDisplayX11.h"
-#include "XUniquePtr.h"
-#include <X11/Xlib.h>
-#include <X11/Xutil.h>
-#endif
-
 namespace WebCore {
-
-static ThreadSpecific<GLContext*>& currentContext()
-{
-    static ThreadSpecific<GLContext*>* context;
-    static std::once_flag flag;
-    std::call_once(flag, [] {
-        context = new ThreadSpecific<GLContext*>();
-    });
-    return *context;
-}
 
 const char* GLContext::errorString(int statusCode)
 {
@@ -90,11 +67,8 @@ const char* GLContext::lastErrorString()
     return errorString(eglGetError());
 }
 
-bool GLContext::getEGLConfig(PlatformDisplay& platformDisplay, EGLConfig* config, EGLSurfaceType surfaceType, Function<bool(int)>&& checkCompatibleVisuals)
+bool GLContext::getEGLConfig(PlatformDisplay& platformDisplay, EGLConfig* config, EGLSurfaceType surfaceType)
 {
-#if !PLATFORM(X11)
-    UNUSED_PARAM(checkCompatibleVisuals);
-#endif
     std::array<EGLint, 4> rgbaSize = { 8, 8, 8, 8 };
     if (const char* environmentVariable = getenv("WEBKIT_EGL_PIXEL_LAYOUT")) {
         if (!strcmp(environmentVariable, "RGB565"))
@@ -153,16 +127,6 @@ bool GLContext::getEGLConfig(PlatformDisplay& platformDisplay, EGLConfig* config
         eglGetConfigAttrib(display, value, EGL_GREEN_SIZE, &greenSize);
         eglGetConfigAttrib(display, value, EGL_BLUE_SIZE, &blueSize);
         eglGetConfigAttrib(display, value, EGL_ALPHA_SIZE, &alphaSize);
-#if PLATFORM(X11)
-        if (checkCompatibleVisuals) {
-            EGLint visualid;
-            if (!eglGetConfigAttrib(display, value, EGL_NATIVE_VISUAL_ID, &visualid))
-                return false;
-
-            if (!checkCompatibleVisuals(visualid))
-                return false;
-        }
-#endif
         return redSize == rgbaSize[0] && greenSize == rgbaSize[1]
             && blueSize == rgbaSize[2] && alphaSize == rgbaSize[3];
     });
@@ -178,41 +142,8 @@ bool GLContext::getEGLConfig(PlatformDisplay& platformDisplay, EGLConfig* config
 
 std::unique_ptr<GLContext> GLContext::createWindowContext(GLNativeWindowType window, PlatformDisplay& platformDisplay, EGLContext sharingContext)
 {
-    Function<bool(int)> checkCompatibleVisuals = nullptr;
-#if PLATFORM(X11)
-    if (platformDisplay.type() == PlatformDisplay::Type::X11) {
-        Display* x11Display = downcast<PlatformDisplayX11>(platformDisplay).native();
-        XWindowAttributes attributes;
-        if (!XGetWindowAttributes(x11Display, static_cast<Window>(window), &attributes))
-            return nullptr;
-
-        auto visualInfoForID = [x11Display](VisualID visualID) -> XUniquePtr<XVisualInfo> {
-            XVisualInfo templateVisualInfo;
-            templateVisualInfo.visualid = visualID;
-            int visualInfoCount;
-            return XUniquePtr<XVisualInfo>(XGetVisualInfo(x11Display, VisualIDMask, &templateVisualInfo, &visualInfoCount));
-        };
-
-        XUniquePtr<XVisualInfo> visualInfo(visualInfoForID(XVisualIDFromVisual(attributes.visual)));
-        if (!visualInfo)
-            return nullptr;
-
-        checkCompatibleVisuals = [visualInfo = WTFMove(visualInfo), visualInfoForID = WTFMove(visualInfoForID)](unsigned long configVisualID) {
-            auto configVisualInfo = visualInfoForID(configVisualID);
-            return configVisualInfo
-                && visualInfo->c_class == configVisualInfo->c_class
-                && visualInfo->depth >= configVisualInfo->depth
-                && visualInfo->red_mask == configVisualInfo->red_mask
-                && visualInfo->green_mask == configVisualInfo->green_mask
-                && visualInfo->blue_mask == configVisualInfo->blue_mask
-                && visualInfo->colormap_size == configVisualInfo->colormap_size
-                && visualInfo->bits_per_rgb == configVisualInfo->bits_per_rgb;
-        };
-    }
-#endif
-
     EGLConfig config;
-    if (!getEGLConfig(platformDisplay, &config, WindowSurface, WTFMove(checkCompatibleVisuals))) {
+    if (!getEGLConfig(platformDisplay, &config, WindowSurface)) {
         RELEASE_LOG_INFO(Compositing, "Cannot obtain EGL window context configuration: %s\n", lastErrorString());
         return nullptr;
     }
@@ -226,21 +157,16 @@ std::unique_ptr<GLContext> GLContext::createWindowContext(GLNativeWindowType win
     EGLDisplay display = platformDisplay.eglDisplay();
     EGLSurface surface = EGL_NO_SURFACE;
     switch (platformDisplay.type()) {
-#if PLATFORM(X11)
-    case PlatformDisplay::Type::X11:
-        surface = createWindowSurfaceX11(display, config, window);
-        break;
-#endif
 #if USE(WPE_RENDERER)
     case PlatformDisplay::Type::WPE:
         surface = createWindowSurfaceWPE(display, config, window);
         break;
 #endif // USE(WPE_RENDERER)
-#if PLATFORM(WAYLAND)
-    case PlatformDisplay::Type::Wayland:
-#endif
 #if USE(GBM)
     case PlatformDisplay::Type::GBM:
+#endif
+#if PLATFORM(GTK)
+    case PlatformDisplay::Type::Default:
 #endif
     case PlatformDisplay::Type::Surfaceless:
         RELEASE_ASSERT_NOT_REACHED();
@@ -359,18 +285,10 @@ std::unique_ptr<GLContext> GLContext::createOffscreen(PlatformDisplay& platformD
     auto context = createSurfacelessContext(platformDisplay, eglSharingContext);
     if (!context) {
         switch (platformDisplay.type()) {
-#if PLATFORM(X11)
-        case PlatformDisplay::Type::X11:
-            context = createPixmapContext(platformDisplay, eglSharingContext);
-            break;
-#endif
 #if USE(WPE_RENDERER)
         case PlatformDisplay::Type::WPE:
             context = createWPEContext(platformDisplay, eglSharingContext);
             break;
-#endif
-#if PLATFORM(WAYLAND)
-        case PlatformDisplay::Type::Wayland:
 #endif
 #if USE(GBM)
         case PlatformDisplay::Type::GBM:
@@ -408,18 +326,10 @@ std::unique_ptr<GLContext> GLContext::createSharing(PlatformDisplay& platformDis
     auto context = createSurfacelessContext(platformDisplay);
     if (!context) {
         switch (platformDisplay.type()) {
-#if PLATFORM(X11)
-        case PlatformDisplay::Type::X11:
-            context = createPixmapContext(platformDisplay);
-            break;
-#endif
 #if USE(WPE_RENDERER)
         case PlatformDisplay::Type::WPE:
             context = createWPEContext(platformDisplay);
             break;
-#endif
-#if PLATFORM(WAYLAND)
-        case PlatformDisplay::Type::Wayland:
 #endif
 #if USE(GBM)
         case PlatformDisplay::Type::GBM:
@@ -472,9 +382,6 @@ GLContext::~GLContext()
 #if USE(WPE_RENDERER)
     destroyWPETarget();
 #endif
-
-    if (this == *currentContext())
-        *currentContext() = nullptr;
 }
 
 EGLContext GLContext::createContextForEGLVersion(PlatformDisplay& platformDisplay, EGLConfig config, EGLContext sharingContext)
@@ -493,31 +400,62 @@ EGLContext GLContext::createContextForEGLVersion(PlatformDisplay& platformDispla
     return eglCreateContext(platformDisplay.eglDisplay(), config, sharingContext, contextAttributes);
 }
 
-bool GLContext::makeContextCurrent()
+bool GLContext::makeCurrentImpl()
 {
     ASSERT(m_context);
+    return eglMakeCurrent(m_display.eglDisplay(), m_surface, m_surface, m_context);
+}
 
-    *currentContext() = this;
-    if (eglGetCurrentContext() == m_context)
+bool GLContext::unmakeCurrentImpl()
+{
+    return eglMakeCurrent(m_display.eglDisplay(), EGL_NO_SURFACE, EGL_NO_SURFACE, EGL_NO_CONTEXT);
+}
+
+bool GLContext::makeContextCurrent()
+{
+    if (isCurrent())
         return true;
 
-    return eglMakeCurrent(m_display.eglDisplay(), m_surface, m_surface, m_context);
+    // ANGLE doesn't know anything about non-ANGLE contexts, and does
+    // nothing in MakeCurrent if what it thinks is current hasn't changed.
+    // So, when making a native context current we need to unmark any previous
+    // ANGLE context to ensure the next MakeCurrent does the right thing.
+    auto* context = currentContext();
+    bool isSwitchingFromANGLE = context && context->type() == GLContextWrapper::Type::Angle;
+    if (isSwitchingFromANGLE)
+        context->unmakeCurrentImpl();
+
+    if (eglMakeCurrent(m_display.eglDisplay(), m_surface, m_surface, m_context)) {
+        didMakeContextCurrent();
+        return true;
+    }
+
+    // If we failed to make the native context current, restore the previous ANGLE one.
+    if (isSwitchingFromANGLE)
+        context->makeCurrentImpl();
+
+    return false;
 }
 
 bool GLContext::unmakeContextCurrent()
 {
-    if (this != *currentContext())
-        return false;
+    if (!isCurrent())
+        return true;
 
-    eglMakeCurrent(m_display.eglDisplay(), EGL_NO_SURFACE, EGL_NO_SURFACE, EGL_NO_CONTEXT);
-    *currentContext() = nullptr;
-
+    if (eglMakeCurrent(m_display.eglDisplay(), EGL_NO_SURFACE, EGL_NO_SURFACE, EGL_NO_CONTEXT)) {
+        didUnmakeContextCurrent();
     return true;
+    }
+
+    return false;
 }
 
 GLContext* GLContext::current()
 {
-    return *currentContext();
+    auto* context = currentContext();
+    if (context && context->type() == GLContextWrapper::Type::Native)
+        return static_cast<GLContext*>(context);
+    return nullptr;
 }
 
 void GLContext::swapBuffers()
@@ -550,12 +488,9 @@ bool GLContext::isExtensionSupported(const char* extensionList, const char* exte
     return false;
 }
 
-unsigned GLContext::version()
+unsigned GLContext::versionFromString(const char* versionStringAsChar)
 {
-    if (!m_version) {
-        // Version string can start with the version number (all versions except GLES 1 and 2) or with
-        // "OpenGL". Different fields inside the version string are separated by spaces.
-        auto versionString = String::fromLatin1(reinterpret_cast<const char*>(::glGetString(GL_VERSION)));
+    auto versionString = String::fromLatin1(versionStringAsChar);
         Vector<String> versionStringComponents = versionString.split(' ');
 
         Vector<String> versionDigits;
@@ -570,20 +505,44 @@ unsigned GLContext::version()
             versionDigits = versionStringComponents[0].split('.');
         }
 
-        m_version = parseIntegerAllowingTrailingJunk<unsigned>(versionDigits[0]).value_or(0) * 100
-            + parseIntegerAllowingTrailingJunk<unsigned>(versionDigits[1]).value_or(0) * 10;
+    return parseIntegerAllowingTrailingJunk<unsigned>(versionDigits[0]).value_or(0) * 100 + parseIntegerAllowingTrailingJunk<unsigned>(versionDigits[1]).value_or(0) * 10;
+}
+
+unsigned GLContext::version()
+{
+    if (!m_version) {
+        auto* versionString = reinterpret_cast<const char*>(::glGetString(GL_VERSION));
+        m_version = versionFromString(versionString);
     }
+
     return m_version;
+}
+
+const GLContext::GLExtensions& GLContext::glExtensions() const
+{
+    static std::once_flag flag;
+    std::call_once(flag, [this] {
+        const char* extensionsString = reinterpret_cast<const char*>(glGetString(GL_EXTENSIONS));
+        m_glExtensions.OES_texture_npot = isExtensionSupported(extensionsString, "GL_OES_texture_npot");
+        m_glExtensions.EXT_unpack_subimage = isExtensionSupported(extensionsString, "GL_EXT_unpack_subimage");
+        m_glExtensions.APPLE_sync = isExtensionSupported(extensionsString, "GL_APPLE_sync");
+        m_glExtensions.OES_packed_depth_stencil = isExtensionSupported(extensionsString, "GL_OES_packed_depth_stencil");
+    });
+    return m_glExtensions;
 }
 
 GLContext::ScopedGLContext::ScopedGLContext(std::unique_ptr<GLContext>&& context)
     : m_context(WTFMove(context))
 {
-    m_previous.context = eglGetCurrentContext();
-    if (m_previous.context) {
+    auto eglContext = eglGetCurrentContext();
+    m_previous.glContext = GLContext::current();
+    if (!m_previous.glContext || m_previous.glContext->platformContext() != eglContext) {
+        m_previous.context = eglContext;
+        if (m_previous.context != EGL_NO_CONTEXT) {
         m_previous.display = eglGetCurrentDisplay();
         m_previous.readSurface = eglGetCurrentSurface(EGL_READ);
         m_previous.drawSurface = eglGetCurrentSurface(EGL_DRAW);
+    }
     }
     m_context->makeContextCurrent();
 }
@@ -591,20 +550,25 @@ GLContext::ScopedGLContext::ScopedGLContext(std::unique_ptr<GLContext>&& context
 GLContext::ScopedGLContext::~ScopedGLContext()
 {
     m_context = nullptr;
-    if (m_previous.context)
+
+    if (m_previous.context != EGL_NO_CONTEXT)
         eglMakeCurrent(m_previous.display, m_previous.drawSurface, m_previous.readSurface, m_previous.context);
+    else if (m_previous.glContext)
+        m_previous.glContext->makeContextCurrent();
 }
 
 GLContext::ScopedGLContextCurrent::ScopedGLContextCurrent(GLContext& context)
     : m_context(context)
 {
     auto eglContext = eglGetCurrentContext();
-    m_previous.glContext = *currentContext();
+    m_previous.glContext = GLContext::current();
     if (!m_previous.glContext || m_previous.glContext->platformContext() != eglContext) {
         m_previous.context = eglContext;
+        if (m_previous.context != EGL_NO_CONTEXT) {
         m_previous.display = eglGetCurrentDisplay();
         m_previous.readSurface = eglGetCurrentSurface(EGL_READ);
         m_previous.drawSurface = eglGetCurrentSurface(EGL_DRAW);
+    }
     }
     m_context.makeContextCurrent();
 }
@@ -616,14 +580,10 @@ GLContext::ScopedGLContextCurrent::~ScopedGLContextCurrent()
         return;
     }
 
-    if (m_previous.context)
-        eglMakeCurrent(m_previous.display, m_previous.drawSurface, m_previous.readSurface, m_previous.context);
-    else
         m_context.unmakeContextCurrent();
 
-    *currentContext() = m_previous.glContext;
+    if (m_previous.context)
+        eglMakeCurrent(m_previous.display, m_previous.drawSurface, m_previous.readSurface, m_previous.context);
 }
 
 } // namespace WebCore
-
-#endif // USE(EGL)

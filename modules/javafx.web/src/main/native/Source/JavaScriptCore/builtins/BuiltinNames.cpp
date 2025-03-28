@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2017 Yusuke Suzuki <utatane.tea@gmail.com>.
- * Copyright (C) 2019 Apple Inc. All rights reserved.
+ * Copyright (C) 2019-2023 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -28,11 +28,7 @@
 #include "BuiltinNames.h"
 
 #include "IdentifierInlines.h"
-
-#if COMPILER(MSVC)
-#pragma warning(push)
-#pragma warning(disable:4307)
-#endif
+#include <wtf/TZoneMallocInlines.h>
 
 namespace JSC {
 namespace Symbols {
@@ -71,6 +67,8 @@ SymbolImpl::StaticSymbolImpl polyProtoPrivateName { "PolyProto", SymbolImpl::s_f
         m_wellKnownSymbolsMap.add(m_##name##SymbolPrivateIdentifier.impl(), symbol); \
     } while (0);
 
+WTF_MAKE_TZONE_ALLOCATED_IMPL(BuiltinNames);
+
 // We treat the dollarVM name as a special case below for $vm (because CommonIdentifiers does not
 // yet support the $ character).
 BuiltinNames::BuiltinNames(VM& vm, CommonIdentifiers* commonIdentifiers)
@@ -108,7 +106,7 @@ struct CharBufferSeacher {
 
     static bool equal(const String& str, const Buffer& buf)
     {
-        return WTF::equal(str.impl(), buf.characters, buf.length);
+        return WTF::equal(str.impl(), buf.characters);
     }
 };
 
@@ -134,52 +132,48 @@ static SymbolImpl* lookUpWellKnownSymbolImpl(const BuiltinNames::WellKnownSymbol
     return iterator->value;
 }
 
-PrivateSymbolImpl* BuiltinNames::lookUpPrivateName(const LChar* characters, unsigned length) const
+PrivateSymbolImpl* BuiltinNames::lookUpPrivateName(std::span<const LChar> characters) const
 {
-    LCharBuffer buffer { characters, length };
+    LCharBuffer buffer { characters };
     return lookUpPrivateNameImpl(m_privateNameSet, buffer);
 }
 
-PrivateSymbolImpl* BuiltinNames::lookUpPrivateName(const UChar* characters, unsigned length) const
+PrivateSymbolImpl* BuiltinNames::lookUpPrivateName(std::span<const UChar> characters) const
 {
-    UCharBuffer buffer { characters, length };
+    UCharBuffer buffer { characters };
     return lookUpPrivateNameImpl(m_privateNameSet, buffer);
 }
 
 PrivateSymbolImpl* BuiltinNames::lookUpPrivateName(const String& string) const
 {
     if (string.is8Bit()) {
-        LCharBuffer buffer { string.characters8(), string.length(), string.hash() };
+        LCharBuffer buffer { string.span8(), string.hash() };
         return lookUpPrivateNameImpl(m_privateNameSet, buffer);
     }
-    UCharBuffer buffer { string.characters16(), string.length(), string.hash() };
+    UCharBuffer buffer { string.span16(), string.hash() };
     return lookUpPrivateNameImpl(m_privateNameSet, buffer);
 }
 
-SymbolImpl* BuiltinNames::lookUpWellKnownSymbol(const LChar* characters, unsigned length) const
+SymbolImpl* BuiltinNames::lookUpWellKnownSymbol(std::span<const LChar> characters) const
 {
-    LCharBuffer buffer { characters, length };
+    LCharBuffer buffer { characters };
     return lookUpWellKnownSymbolImpl(m_wellKnownSymbolsMap, buffer);
 }
 
-SymbolImpl* BuiltinNames::lookUpWellKnownSymbol(const UChar* characters, unsigned length) const
+SymbolImpl* BuiltinNames::lookUpWellKnownSymbol(std::span<const UChar> characters) const
 {
-    UCharBuffer buffer { characters, length };
+    UCharBuffer buffer { characters };
     return lookUpWellKnownSymbolImpl(m_wellKnownSymbolsMap, buffer);
 }
 
 SymbolImpl* BuiltinNames::lookUpWellKnownSymbol(const String& string) const
 {
     if (string.is8Bit()) {
-        LCharBuffer buffer { string.characters8(), string.length(), string.hash() };
+        LCharBuffer buffer { string.span8(), string.hash() };
         return lookUpWellKnownSymbolImpl(m_wellKnownSymbolsMap, buffer);
     }
-    UCharBuffer buffer { string.characters16(), string.length(), string.hash() };
+    UCharBuffer buffer { string.span16(), string.hash() };
     return lookUpWellKnownSymbolImpl(m_wellKnownSymbolsMap, buffer);
 }
 
 } // namespace JSC
-
-#if COMPILER(MSVC)
-#pragma warning(pop)
-#endif

@@ -27,7 +27,7 @@ namespace WebCore {
 
 class FEDropShadow : public FilterEffect {
 public:
-    WEBCORE_EXPORT static Ref<FEDropShadow> create(float stdX, float stdY, float dx, float dy, const Color& shadowColor, float shadowOpacity);
+    WEBCORE_EXPORT static Ref<FEDropShadow> create(float stdX, float stdY, float dx, float dy, const Color& shadowColor, float shadowOpacity, DestinationColorSpace = DestinationColorSpace::SRGB());
 
     bool operator==(const FEDropShadow&) const;
 
@@ -51,8 +51,12 @@ public:
 
     static IntOutsets calculateOutsets(const FloatSize& offset, const FloatSize& stdDeviation);
 
+#if USE(CAIRO)
+    void setOperatingColorSpace(const DestinationColorSpace&) override { }
+#endif
+
 private:
-    FEDropShadow(float stdX, float stdY, float dx, float dy, const Color& shadowColor, float shadowOpacity);
+    FEDropShadow(float stdX, float stdY, float dx, float dy, const Color& shadowColor, float shadowOpacity, DestinationColorSpace);
 
     bool operator==(const FilterEffect& other) const override { return areEqual<FEDropShadow>(*this, other); }
 
@@ -60,8 +64,9 @@ private:
 
     OptionSet<FilterRenderingMode> supportedFilterRenderingModes() const override;
 
+    std::unique_ptr<FilterEffectApplier> createAcceleratedApplier() const override;
     std::unique_ptr<FilterEffectApplier> createSoftwareApplier() const override;
-    std::optional<GraphicsStyle> createGraphicsStyle(const Filter&) const override;
+    std::optional<GraphicsStyle> createGraphicsStyle(GraphicsContext&, const Filter&) const override;
 
     WTF::TextStream& externalRepresentation(WTF::TextStream&, FilterRepresentation) const override;
 
@@ -75,4 +80,4 @@ private:
 
 } // namespace WebCore
 
-SPECIALIZE_TYPE_TRAITS_FILTER_EFFECT(FEDropShadow)
+SPECIALIZE_TYPE_TRAITS_FILTER_FUNCTION(FEDropShadow)

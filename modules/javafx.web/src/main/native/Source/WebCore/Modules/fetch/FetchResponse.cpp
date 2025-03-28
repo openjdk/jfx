@@ -40,7 +40,7 @@
 #include "ResourceError.h"
 #include "ScriptExecutionContext.h"
 #include <JavaScriptCore/JSONObject.h>
-#include <wtf/text/StringConcatenateNumbers.h>
+#include <wtf/text/MakeString.h>
 
 namespace WebCore {
 
@@ -49,6 +49,8 @@ static inline bool isNullBodyStatus(int status)
 {
     return status == 101 || status == 204 || status == 205 || status == 304;
 }
+
+FetchResponse::~FetchResponse() = default;
 
 Ref<FetchResponse> FetchResponse::create(ScriptExecutionContext* context, std::optional<FetchBody>&& body, FetchHeaders::Guard guard, ResourceResponse&& response)
 {
@@ -70,11 +72,11 @@ ExceptionOr<Ref<FetchResponse>> FetchResponse::create(ScriptExecutionContext& co
     // https://fetch.spec.whatwg.org/#initialize-a-response
     // 1. If init["status"] is not in the range 200 to 599, inclusive, then throw a RangeError.
     if (init.status < 200  || init.status > 599)
-        return Exception { RangeError, "Status must be between 200 and 599"_s };
+        return Exception { ExceptionCode::RangeError, "Status must be between 200 and 599"_s };
 
     // 2. If init["statusText"] does not match the reason-phrase token production, then throw a TypeError.
     if (!isValidReasonPhrase(init.statusText))
-        return Exception { TypeError, "Status text must be a valid reason-phrase."_s };
+        return Exception { ExceptionCode::TypeError, "Status text must be a valid reason-phrase."_s };
 
     // Both uses of "initialize a response" (the Response constructor and Response.json) create the
     // Response object with the "response" header guard.
@@ -94,7 +96,7 @@ ExceptionOr<Ref<FetchResponse>> FetchResponse::create(ScriptExecutionContext& co
         // 6.1 If response’s status is a null body status, then throw a TypeError.
         //     (NOTE: 101 and 103 are included in null body status due to their use elsewhere. It does not affect this step.)
         if (isNullBodyStatus(init.status))
-            return Exception { TypeError, "Response cannot have a body with the given status."_s };
+            return Exception { ExceptionCode::TypeError, "Response cannot have a body with the given status."_s };
 
         // 6.2 Set response’s body to body’s body.
         body = WTFMove(bodyWithType->body);
@@ -110,14 +112,17 @@ ExceptionOr<Ref<FetchResponse>> FetchResponse::create(ScriptExecutionContext& co
     auto r = adoptRef(*new FetchResponse(&context, WTFMove(body), WTFMove(headers), { }));
     r->suspendIfNeeded();
 
-    AtomString mimeType { extractMIMETypeFromMediaType(contentType) };
-    r->m_internalResponse.setMimeType(mimeType.isEmpty() ? AtomString { defaultMIMEType() } : mimeType);
-    r->m_internalResponse.setTextEncodingName(extractCharsetFromMediaType(contentType).toAtomString());
+    auto mimeType = extractMIMETypeFromMediaType(contentType);
+    r->m_internalResponse.setMimeType(mimeType.isEmpty() ? String { defaultMIMEType() } : WTFMove(mimeType));
+    r->m_internalResponse.setTextEncodingName(extractCharsetFromMediaType(contentType).toString());
+
+    if (auto expectedContentLength = parseContentLength(r->m_headers->fastGet(HTTPHeaderName::ContentLength)))
+        r->m_internalResponse.setExpectedContentLength(*expectedContentLength);
 
     // 3. Set response’s response’s status to init["status"].
     r->m_internalResponse.setHTTPStatusCode(init.status);
     // 4. Set response’s response’s status message to init["statusText"].
-    r->m_internalResponse.setHTTPStatusText(init.statusText);
+    r->m_internalResponse.setHTTPStatusText(init.statusText.releaseString());
 
     return r;
 }
@@ -146,14 +151,13 @@ Ref<FetchResponse> FetchResponse::error(ScriptExecutionContext& context)
 
 ExceptionOr<Ref<FetchResponse>> FetchResponse::redirect(ScriptExecutionContext& context, const String& url, int status)
 {
-    // FIXME: Tighten the URL parsing algorithm according https://url.spec.whatwg.org/#concept-url-parser.
-    URL requestURL = context.completeURL(url);
+    URL requestURL = context.completeURL(url, ScriptExecutionContext::ForceUTF8::Yes);
     if (!requestURL.isValid())
-        return Exception { TypeError, makeString("Redirection URL '", requestURL.string(), "' is invalid") };
+        return Exception { ExceptionCode::TypeError, makeString("Redirection URL '"_s, requestURL.string(), "' is invalid"_s) };
     if (requestURL.hasCredentials())
-        return Exception { TypeError, "Redirection URL contains credentials"_s };
+        return Exception { ExceptionCode::TypeError, "Redirection URL contains credentials"_s };
     if (!ResourceResponse::isRedirectionStatusCode(status))
-        return Exception { RangeError, makeString("Status code ", status, "is not a redirection status code") };
+        return Exception { ExceptionCode::RangeError, makeString("Status code "_s, status, "is not a redirection status code"_s) };
     auto redirectResponse = adoptRef(*new FetchResponse(&context, { }, FetchHeaders::create(FetchHeaders::Guard::Immutable), { }));
     redirectResponse->suspendIfNeeded();
     redirectResponse->m_internalResponse.setHTTPStatusCode(status);
@@ -166,11 +170,11 @@ ExceptionOr<Ref<FetchResponse>> FetchResponse::jsonForBindings(ScriptExecutionCo
 {
     auto* globalObject = context.globalObject();
     if (!globalObject)
-        return Exception { InvalidStateError, "Context is stopped"_s };
+        return Exception { ExceptionCode::InvalidStateError, "Context is stopped"_s };
 
     String jsonString = JSC::JSONStringify(globalObject, data, 0);
     if (jsonString.isNull())
-        return Exception { TypeError, "Value doesn't have a JSON representation"_s };
+        return Exception { ExceptionCode::TypeError, "Value doesn't have a JSON representation"_s };
 
     FetchBodyWithType body { FetchBody(WTFMove(jsonString)), "application/json"_s };
     return FetchResponse::create(context, WTFMove(body), WTFMove(init));
@@ -185,15 +189,15 @@ FetchResponse::FetchResponse(ScriptExecutionContext* context, std::optional<Fetc
 ExceptionOr<Ref<FetchResponse>> FetchResponse::clone()
 {
     if (isDisturbedOrLocked())
-        return Exception { TypeError, "Body is disturbed or locked"_s };
+        return Exception { ExceptionCode::TypeError, "Body is disturbed or locked"_s };
 
     // If loading, let's create a stream so that data is teed on both clones.
     if (isLoading() && !m_readableStreamSource) {
-        auto* context = scriptExecutionContext();
+        RefPtr context = scriptExecutionContext();
 
         auto* globalObject = context ? context->globalObject() : nullptr;
         if (!globalObject)
-            return Exception { InvalidStateError, "Context is stopped"_s };
+            return Exception { ExceptionCode::InvalidStateError, "Context is stopped"_s };
 
         auto voidOrException = createReadableStream(*globalObject);
         if (UNLIKELY(voidOrException.hasException()))
@@ -223,14 +227,14 @@ void FetchResponse::addAbortSteps(Ref<AbortSignal>&& signal)
 
         m_abortSignal = nullptr;
 
-        setLoadingError(Exception { AbortError, "Fetch is aborted"_s });
+        setLoadingError(Exception { ExceptionCode::AbortError, "Fetch is aborted"_s });
 
         if (m_loader) {
             if (auto callback = m_loader->takeNotificationCallback())
-                callback(Exception { AbortError, "Fetch is aborted"_s });
+                callback(Exception { ExceptionCode::AbortError, "Fetch is aborted"_s });
 
             if (auto callback = m_loader->takeConsumeDataCallback())
-                callback(Exception { AbortError, "Fetch is aborted"_s });
+                callback(Exception { ExceptionCode::AbortError, "Fetch is aborted"_s });
         }
 
         if (m_readableStreamSource) {
@@ -264,7 +268,7 @@ Ref<FetchResponse> FetchResponse::createFetchResponse(ScriptExecutionContext& co
 void FetchResponse::fetch(ScriptExecutionContext& context, FetchRequest& request, NotificationCallback&& responseCallback, const String& initiator)
 {
     if (request.isReadableStreamBody()) {
-        responseCallback(Exception { NotSupportedError, "ReadableStream uploading is not supported"_s });
+        responseCallback(Exception { ExceptionCode::NotSupportedError, "ReadableStream uploading is not supported"_s });
         return;
     }
 
@@ -349,9 +353,7 @@ FetchResponse::Loader::Loader(FetchResponse& response, NotificationCallback&& re
 {
 }
 
-FetchResponse::Loader::~Loader()
-{
-}
+FetchResponse::Loader::~Loader() = default;
 
 void FetchResponse::Loader::didReceiveResponse(const ResourceResponse& resourceResponse)
 {
@@ -366,7 +368,7 @@ void FetchResponse::Loader::didReceiveData(const SharedBuffer& buffer)
     ASSERT(m_response.m_readableStreamSource || m_consumeDataCallback);
 
     if (m_consumeDataCallback) {
-        auto chunk = buffer.dataAsSpanForContiguousData();
+        auto chunk = buffer.span();
         m_consumeDataCallback(&chunk);
         return;
     }
@@ -422,7 +424,7 @@ void FetchResponse::Loader::consumeDataByChunk(ConsumeDataByChunkCallback&& cons
         return;
 
     auto contiguousBuffer = data->makeContiguous();
-    auto chunk = contiguousBuffer->dataAsSpanForContiguousData();
+    auto chunk = contiguousBuffer->span();
     m_consumeDataCallback(&chunk);
 }
 
@@ -482,7 +484,7 @@ void FetchResponse::setBodyData(ResponseData&& data, uint64_t bodySizeWithPaddin
 
 void FetchResponse::consumeChunk(Ref<JSC::Uint8Array>&& chunk)
 {
-    body().consumer().append(SharedBuffer::create(chunk->data(), chunk->byteLength()));
+    body().consumer().append(SharedBuffer::create(chunk->span()));
 }
 
 void FetchResponse::consumeBodyAsStream()
@@ -515,7 +517,7 @@ void FetchResponse::closeStream()
 void FetchResponse::cancelStream()
 {
     if (isAllowedToRunScript() && hasReadableStreamBody()) {
-        body().readableStream()->cancel(Exception { AbortError, "load is cancelled"_s });
+        body().readableStream()->cancel(Exception { ExceptionCode::AbortError, "load is cancelled"_s });
         return;
     }
     cancel();
@@ -565,11 +567,6 @@ void FetchResponse::stop()
         loader->stop();
     if (auto bodyLoader = WTFMove(m_bodyLoader))
         bodyLoader->stop();
-}
-
-const char* FetchResponse::activeDOMObjectName() const
-{
-    return "Response";
 }
 
 void FetchResponse::loadBody()

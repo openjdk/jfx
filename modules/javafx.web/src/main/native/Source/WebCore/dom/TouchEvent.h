@@ -36,7 +36,7 @@
 namespace WebCore {
 
 class TouchEvent final : public MouseRelatedEvent {
-    WTF_MAKE_ISO_ALLOCATED(TouchEvent);
+    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(TouchEvent);
 public:
     virtual ~TouchEvent();
 
@@ -61,9 +61,6 @@ public:
         return adoptRef(*new TouchEvent(type, initializer, isTrusted));
     }
 
-    void initTouchEvent(TouchList* touches, TouchList* targetTouches, TouchList* changedTouches, const AtomString& type,
-        RefPtr<WindowProxy>&&, int screenX, int screenY, int clientX, int clientY, bool ctrlKey, bool altKey, bool shiftKey, bool metaKey);
-
     TouchList* touches() const { return m_touches.get(); }
     TouchList* targetTouches() const { return m_targetTouches.get(); }
     TouchList* changedTouches() const { return m_changedTouches.get(); }
@@ -73,8 +70,6 @@ public:
     void setChangedTouches(RefPtr<TouchList>&& changedTouches) { m_changedTouches = changedTouches; }
 
     bool isTouchEvent() const override;
-
-    EventInterface eventInterface() const override;
 
 private:
     TouchEvent();

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012-2021 Apple Inc. All rights reserved.
+ * Copyright (C) 2012-2023 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -25,25 +25,9 @@
 
 #pragma once
 
+#include "OSCheck.h"
+
 namespace JSC {
-
-ALWAYS_INLINE constexpr bool isDarwin()
-{
-#if OS(DARWIN)
-    return true;
-#else
-    return false;
-#endif
-}
-
-ALWAYS_INLINE constexpr bool isIOS()
-{
-#if PLATFORM(IOS_FAMILY)
-    return true;
-#else
-    return false;
-#endif
-}
 
 template<size_t bits, typename Type>
 ALWAYS_INLINE constexpr bool isInt(Type t)
@@ -327,6 +311,35 @@ ALWAYS_INLINE bool isValidARMThumb2Immediate(int64_t value)
         return true;
     // FIXME: there are a few more valid forms, see section 4.2 in the Thumb-2 Supplement
     return false;
+}
+
+enum class MachineCodeCopyMode : uint8_t {
+    Memcpy,
+    JITMemcpy,
+};
+
+static void* performJITMemcpy(void *dst, const void *src, size_t n);
+
+template<MachineCodeCopyMode copy>
+ALWAYS_INLINE void* machineCodeCopy(void *dst, const void *src, size_t n)
+{
+#if CPU(ARM_THUMB2)
+    // For thumb instructions, we want to avoid the case where we have
+    // to repatch a 32-bit instruction that crosses 2 words.
+    bool isAligned = (dst == WTF::roundUpToMultipleOf<4>(dst));
+    if (n == 2 * sizeof(int16_t) && isAligned) {
+        *static_cast<uint32_t*>(dst) = *static_cast<const uint32_t*>(src);
+        return dst;
+    }
+    if (n == 1 * sizeof(int16_t)) {
+        *static_cast<uint16_t*>(dst) = *static_cast<const uint16_t*>(src);
+        return dst;
+    }
+#endif
+    if constexpr (copy == MachineCodeCopyMode::Memcpy)
+        return memcpy(dst, src, n);
+    else
+        return performJITMemcpy(dst, src, n);
 }
 
 } // namespace JSC.

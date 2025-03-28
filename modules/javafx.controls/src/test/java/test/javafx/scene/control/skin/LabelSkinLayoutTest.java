@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,12 +25,10 @@
 
 package test.javafx.scene.control.skin;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNull;
-
-import java.util.Arrays;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import java.util.Collection;
-
+import java.util.List;
 import javafx.geometry.BoundingBox;
 import javafx.geometry.Bounds;
 import javafx.scene.Node;
@@ -42,28 +40,24 @@ import javafx.scene.control.skin.LabeledSkinBaseShim;
 import javafx.scene.shape.Rectangle;
 import javafx.scene.text.Font;
 import javafx.scene.text.Text;
-
-import org.junit.Before;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
-import org.junit.runners.Parameterized.Parameters;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
 
 /**
  */
-@RunWith(Parameterized.class)
 public class LabelSkinLayoutTest {
     private static final double GRAPHIC_WIDTH = 23;
     private static final double GRAPHIC_HEIGHT = 32;
     private static final double LABEL_WIDTH = 300;
     private static final double LABEL_HEIGHT = 300;
 
-    @SuppressWarnings("rawtypes")
-    @Parameters public static Collection implementations() {
-        return Arrays.asList(new Object[][] {
-                {-10},
-                {0},
-                {10}
+    private static Collection<Integer> parameters() {
+        return List.of(
+            -10,
+            0,
+            10
+        );
+    }
 //            { HPos.CENTER, VPos.BOTTOM, -10 },
 //            { HPos.CENTER, VPos.BOTTOM, 0 },
 //            { HPos.CENTER, VPos.BOTTOM, 10 },
@@ -91,27 +85,19 @@ public class LabelSkinLayoutTest {
 //            { HPos.RIGHT, VPos.TOP, -10 },
 //            { HPos.RIGHT, VPos.TOP, 0 },
 //            { HPos.RIGHT, VPos.TOP, 10 },
-        });
-    }
 
-    private int graphicTextGap = 0;
 //    private VPos vpos;
 //    private HPos hpos;
     private Label label;
     private LabelSkin skin;
     private Text text;
 
-    public LabelSkinLayoutTest(int graphicTextGap) {
-//    public LabelSkinLayoutTest(HPos hpos, VPos vpos, int graphicTextGap) {
-        this.graphicTextGap = graphicTextGap;
-//        this.hpos = hpos;
-//        this.vpos = vpos;
-    }
-
     // We will parameterize the hpos and vpos to use, but all of the other tests
     // are all done manually.
 
-    @Before public void setup() {
+    // @BeforeEach
+    // junit5 does not support parameterized class-level tests yet
+    public void setup(int graphicTextGap) {
         label = new Label();
         label.resize(LABEL_WIDTH, LABEL_HEIGHT);
         label.setGraphicTextGap(graphicTextGap);
@@ -183,7 +169,10 @@ public class LabelSkinLayoutTest {
 //        }
     }
 
-    @Test public void graphic_nullText_TOP() {
+    @ParameterizedTest
+    @MethodSource("parameters")
+    public void graphic_nullText_TOP(int graphicTextGap) {
+        setup(graphicTextGap);
         Rectangle graphic = new Rectangle(GRAPHIC_WIDTH, GRAPHIC_HEIGHT);
         label.setGraphic(graphic);
         label.setText(null);
@@ -199,7 +188,10 @@ public class LabelSkinLayoutTest {
         assertEquals(contentBounds.getHeight(), graphicBounds.getHeight(), 0);
     }
 
-    @Test public void graphic_emptyText_TOP() {
+    @ParameterizedTest
+    @MethodSource("parameters")
+    public void graphic_emptyText_TOP(int graphicTextGap) {
+        setup(graphicTextGap);
         Rectangle graphic = new Rectangle(GRAPHIC_WIDTH, GRAPHIC_HEIGHT);
         label.setGraphic(graphic);
         label.setText("");
@@ -215,7 +207,10 @@ public class LabelSkinLayoutTest {
         assertEquals(contentBounds.getHeight(), graphicBounds.getHeight(), 0);
     }
 
-    @Test public void graphic_Text_TOP() {
+    @ParameterizedTest
+    @MethodSource("parameters")
+    public void graphic_Text_TOP(int graphicTextGap) {
+        setup(graphicTextGap);
         Rectangle graphic = new Rectangle(GRAPHIC_WIDTH, GRAPHIC_HEIGHT);
         label.setGraphic(graphic);
         label.setText("Falcon");
@@ -237,7 +232,10 @@ public class LabelSkinLayoutTest {
         assertCenteredHorizontally(contentBounds, textBounds);
     }
 
-    @Test public void unmanagedGraphic_nullText_TOP() {
+    @ParameterizedTest
+    @MethodSource("parameters")
+    public void unmanagedGraphic_nullText_TOP(int graphicTextGap) {
+        setup(graphicTextGap);
         Rectangle graphic = new Rectangle(GRAPHIC_WIDTH, GRAPHIC_HEIGHT);
         graphic.setManaged(false);
         label.setGraphic(graphic);
@@ -248,7 +246,10 @@ public class LabelSkinLayoutTest {
         assertNull(getContentBounds());
     }
 
-    @Test public void unmanagedGraphic_emptyText_TOP() {
+    @ParameterizedTest
+    @MethodSource("parameters")
+    public void unmanagedGraphic_emptyText_TOP(int graphicTextGap) {
+        setup(graphicTextGap);
         Rectangle graphic = new Rectangle(GRAPHIC_WIDTH, GRAPHIC_HEIGHT);
         graphic.setManaged(false);
         label.setGraphic(graphic);
@@ -259,7 +260,10 @@ public class LabelSkinLayoutTest {
         assertNull(getContentBounds());
     }
 
-    @Test public void unmanagedGraphic_Text_TOP() {
+    @ParameterizedTest
+    @MethodSource("parameters")
+    public void unmanagedGraphic_Text_TOP(int graphicTextGap) {
+        setup(graphicTextGap);
         Rectangle graphic = new Rectangle(GRAPHIC_WIDTH, GRAPHIC_HEIGHT);
         graphic.setManaged(false);
         label.setGraphic(graphic);
@@ -276,7 +280,10 @@ public class LabelSkinLayoutTest {
         assertEquals(contentBounds.getHeight(), textBounds.getHeight(), 0);
     }
 
-    @Test public void noGraphic_nullText_TOP() {
+    @ParameterizedTest
+    @MethodSource("parameters")
+    public void noGraphic_nullText_TOP(int graphicTextGap) {
+        setup(graphicTextGap);
         label.setText(null);
         label.setContentDisplay(ContentDisplay.TOP);
         label.layout();
@@ -284,7 +291,10 @@ public class LabelSkinLayoutTest {
         assertNull(getContentBounds());
     }
 
-    @Test public void noGraphic_emptyText_TOP() {
+    @ParameterizedTest
+    @MethodSource("parameters")
+    public void noGraphic_emptyText_TOP(int graphicTextGap) {
+        setup(graphicTextGap);
         label.setText("");
         label.setContentDisplay(ContentDisplay.TOP);
         label.layout();
@@ -292,7 +302,10 @@ public class LabelSkinLayoutTest {
         assertNull(getContentBounds());
     }
 
-    @Test public void noGraphic_Text_TOP() {
+    @ParameterizedTest
+    @MethodSource("parameters")
+    public void noGraphic_Text_TOP(int graphicTextGap) {
+        setup(graphicTextGap);
         label.setText("Falcon");
         label.setContentDisplay(ContentDisplay.TOP);
         label.layout();
@@ -307,7 +320,10 @@ public class LabelSkinLayoutTest {
     }
 
     /** */
-    @Test public void graphic_nullText_RIGHT() {
+    @ParameterizedTest
+    @MethodSource("parameters")
+    public void graphic_nullText_RIGHT(int graphicTextGap) {
+        setup(graphicTextGap);
         Rectangle graphic = new Rectangle(GRAPHIC_WIDTH, GRAPHIC_HEIGHT);
         label.setGraphic(graphic);
         label.setText(null);
@@ -323,7 +339,10 @@ public class LabelSkinLayoutTest {
         assertEquals(contentBounds.getHeight(), graphicBounds.getHeight(), 0);
     }
 
-    @Test public void graphic_emptyText_RIGHT() {
+    @ParameterizedTest
+    @MethodSource("parameters")
+    public void graphic_emptyText_RIGHT(int graphicTextGap) {
+        setup(graphicTextGap);
         Rectangle graphic = new Rectangle(GRAPHIC_WIDTH, GRAPHIC_HEIGHT);
         label.setGraphic(graphic);
         label.setText("");
@@ -339,7 +358,10 @@ public class LabelSkinLayoutTest {
         assertEquals(contentBounds.getHeight(), graphicBounds.getHeight(), 0);
     }
 
-    @Test public void graphic_Text_RIGHT() {
+    @ParameterizedTest
+    @MethodSource("parameters")
+    public void graphic_Text_RIGHT(int graphicTextGap) {
+        setup(graphicTextGap);
         Rectangle graphic = new Rectangle(GRAPHIC_WIDTH, GRAPHIC_HEIGHT);
         label.setGraphic(graphic);
         label.setText("Falcon");
@@ -360,7 +382,10 @@ public class LabelSkinLayoutTest {
         assertCenteredVertically(contentBounds, textBounds);
     }
 
-    @Test public void unmanagedGraphic_nullText_RIGHT() {
+    @ParameterizedTest
+    @MethodSource("parameters")
+    public void unmanagedGraphic_nullText_RIGHT(int graphicTextGap) {
+        setup(graphicTextGap);
         Rectangle graphic = new Rectangle(GRAPHIC_WIDTH, GRAPHIC_HEIGHT);
         graphic.setManaged(false);
         label.setGraphic(graphic);
@@ -371,7 +396,10 @@ public class LabelSkinLayoutTest {
         assertNull(getContentBounds());
     }
 
-    @Test public void unmanagedGraphic_emptyText_RIGHT() {
+    @ParameterizedTest
+    @MethodSource("parameters")
+    public void unmanagedGraphic_emptyText_RIGHT(int graphicTextGap) {
+        setup(graphicTextGap);
         Rectangle graphic = new Rectangle(GRAPHIC_WIDTH, GRAPHIC_HEIGHT);
         graphic.setManaged(false);
         label.setGraphic(graphic);
@@ -382,7 +410,10 @@ public class LabelSkinLayoutTest {
         assertNull(getContentBounds());
     }
 
-    @Test public void unmanagedGraphic_Text_RIGHT() {
+    @ParameterizedTest
+    @MethodSource("parameters")
+    public void unmanagedGraphic_Text_RIGHT(int graphicTextGap) {
+        setup(graphicTextGap);
         Rectangle graphic = new Rectangle(GRAPHIC_WIDTH, GRAPHIC_HEIGHT);
         graphic.setManaged(false);
         label.setGraphic(graphic);
@@ -399,7 +430,10 @@ public class LabelSkinLayoutTest {
         assertEquals(contentBounds.getHeight(), textBounds.getHeight(), 0);
     }
 
-    @Test public void noGraphic_nullText_RIGHT() {
+    @ParameterizedTest
+    @MethodSource("parameters")
+    public void noGraphic_nullText_RIGHT(int graphicTextGap) {
+        setup(graphicTextGap);
         label.setText(null);
         label.setContentDisplay(ContentDisplay.RIGHT);
         label.layout();
@@ -407,7 +441,10 @@ public class LabelSkinLayoutTest {
         assertNull(getContentBounds());
     }
 
-    @Test public void noGraphic_emptyText_RIGHT() {
+    @ParameterizedTest
+    @MethodSource("parameters")
+    public void noGraphic_emptyText_RIGHT(int graphicTextGap) {
+        setup(graphicTextGap);
         label.setText("");
         label.setContentDisplay(ContentDisplay.RIGHT);
         label.layout();
@@ -415,7 +452,10 @@ public class LabelSkinLayoutTest {
         assertNull(getContentBounds());
     }
 
-    @Test public void noGraphic_Text_RIGHT() {
+    @ParameterizedTest
+    @MethodSource("parameters")
+    public void noGraphic_Text_RIGHT(int graphicTextGap) {
+        setup(graphicTextGap);
         label.setText("Falcon");
         label.setContentDisplay(ContentDisplay.RIGHT);
         label.layout();
@@ -430,7 +470,10 @@ public class LabelSkinLayoutTest {
     }
 
     /** */
-    @Test public void graphic_nullText_BOTTOM() {
+    @ParameterizedTest
+    @MethodSource("parameters")
+    public void graphic_nullText_BOTTOM(int graphicTextGap) {
+        setup(graphicTextGap);
         Rectangle graphic = new Rectangle(GRAPHIC_WIDTH, GRAPHIC_HEIGHT);
         label.setGraphic(graphic);
         label.setText(null);
@@ -446,7 +489,10 @@ public class LabelSkinLayoutTest {
         assertEquals(contentBounds.getHeight(), graphicBounds.getHeight(), 0);
     }
 
-    @Test public void graphic_emptyText_BOTTOM() {
+    @ParameterizedTest
+    @MethodSource("parameters")
+    public void graphic_emptyText_BOTTOM(int graphicTextGap) {
+        setup(graphicTextGap);
         Rectangle graphic = new Rectangle(GRAPHIC_WIDTH, GRAPHIC_HEIGHT);
         label.setGraphic(graphic);
         label.setText("");
@@ -462,7 +508,10 @@ public class LabelSkinLayoutTest {
         assertEquals(contentBounds.getHeight(), graphicBounds.getHeight(), 0);
     }
 
-    @Test public void graphic_Text_BOTTOM() {
+    @ParameterizedTest
+    @MethodSource("parameters")
+    public void graphic_Text_BOTTOM(int graphicTextGap) {
+        setup(graphicTextGap);
         Rectangle graphic = new Rectangle(GRAPHIC_WIDTH, GRAPHIC_HEIGHT);
         label.setGraphic(graphic);
         label.setText("Falcon");
@@ -484,7 +533,10 @@ public class LabelSkinLayoutTest {
         assertCenteredHorizontally(contentBounds, textBounds);
     }
 
-    @Test public void unmanagedGraphic_nullText_BOTTOM() {
+    @ParameterizedTest
+    @MethodSource("parameters")
+    public void unmanagedGraphic_nullText_BOTTOM(int graphicTextGap) {
+        setup(graphicTextGap);
         Rectangle graphic = new Rectangle(GRAPHIC_WIDTH, GRAPHIC_HEIGHT);
         graphic.setManaged(false);
         label.setGraphic(graphic);
@@ -495,7 +547,10 @@ public class LabelSkinLayoutTest {
         assertNull(getContentBounds());
     }
 
-    @Test public void unmanagedGraphic_emptyText_BOTTOM() {
+    @ParameterizedTest
+    @MethodSource("parameters")
+    public void unmanagedGraphic_emptyText_BOTTOM(int graphicTextGap) {
+        setup(graphicTextGap);
         Rectangle graphic = new Rectangle(GRAPHIC_WIDTH, GRAPHIC_HEIGHT);
         graphic.setManaged(false);
         label.setGraphic(graphic);
@@ -506,7 +561,10 @@ public class LabelSkinLayoutTest {
         assertNull(getContentBounds());
     }
 
-    @Test public void unmanagedGraphic_Text_BOTTOM() {
+    @ParameterizedTest
+    @MethodSource("parameters")
+    public void unmanagedGraphic_Text_BOTTOM(int graphicTextGap) {
+        setup(graphicTextGap);
         Rectangle graphic = new Rectangle(GRAPHIC_WIDTH, GRAPHIC_HEIGHT);
         graphic.setManaged(false);
         label.setGraphic(graphic);
@@ -523,7 +581,10 @@ public class LabelSkinLayoutTest {
         assertEquals(contentBounds.getHeight(), textBounds.getHeight(), 0);
     }
 
-    @Test public void noGraphic_nullText_BOTTOM() {
+    @ParameterizedTest
+    @MethodSource("parameters")
+    public void noGraphic_nullText_BOTTOM(int graphicTextGap) {
+        setup(graphicTextGap);
         label.setText(null);
         label.setContentDisplay(ContentDisplay.BOTTOM);
         label.layout();
@@ -531,7 +592,10 @@ public class LabelSkinLayoutTest {
         assertNull(getContentBounds());
     }
 
-    @Test public void noGraphic_emptyText_BOTTOM() {
+    @ParameterizedTest
+    @MethodSource("parameters")
+    public void noGraphic_emptyText_BOTTOM(int graphicTextGap) {
+        setup(graphicTextGap);
         label.setText("");
         label.setContentDisplay(ContentDisplay.BOTTOM);
         label.layout();
@@ -539,7 +603,10 @@ public class LabelSkinLayoutTest {
         assertNull(getContentBounds());
     }
 
-    @Test public void noGraphic_Text_BOTTOM() {
+    @ParameterizedTest
+    @MethodSource("parameters")
+    public void noGraphic_Text_BOTTOM(int graphicTextGap) {
+        setup(graphicTextGap);
         label.setText("Falcon");
         label.setContentDisplay(ContentDisplay.BOTTOM);
         label.layout();
@@ -554,7 +621,10 @@ public class LabelSkinLayoutTest {
     }
 
     /** */
-    @Test public void graphic_nullText_LEFT() {
+    @ParameterizedTest
+    @MethodSource("parameters")
+    public void graphic_nullText_LEFT(int graphicTextGap) {
+        setup(graphicTextGap);
         Rectangle graphic = new Rectangle(GRAPHIC_WIDTH, GRAPHIC_HEIGHT);
         label.setGraphic(graphic);
         label.setText(null);
@@ -570,7 +640,10 @@ public class LabelSkinLayoutTest {
         assertEquals(contentBounds.getHeight(), graphicBounds.getHeight(), 0);
     }
 
-    @Test public void graphic_emptyText_LEFT() {
+    @ParameterizedTest
+    @MethodSource("parameters")
+    public void graphic_emptyText_LEFT(int graphicTextGap) {
+        setup(graphicTextGap);
         Rectangle graphic = new Rectangle(GRAPHIC_WIDTH, GRAPHIC_HEIGHT);
         label.setGraphic(graphic);
         label.setText("");
@@ -586,7 +659,10 @@ public class LabelSkinLayoutTest {
         assertEquals(contentBounds.getHeight(), graphicBounds.getHeight(), 0);
     }
 
-    @Test public void graphic_Text_LEFT() {
+    @ParameterizedTest
+    @MethodSource("parameters")
+    public void graphic_Text_LEFT(int graphicTextGap) {
+        setup(graphicTextGap);
         Rectangle graphic = new Rectangle(GRAPHIC_WIDTH, GRAPHIC_HEIGHT);
         label.setGraphic(graphic);
         label.setText("Falcon");
@@ -607,7 +683,10 @@ public class LabelSkinLayoutTest {
         assertCenteredVertically(contentBounds, textBounds);
     }
 
-    @Test public void unmanagedGraphic_nullText_LEFT() {
+    @ParameterizedTest
+    @MethodSource("parameters")
+    public void unmanagedGraphic_nullText_LEFT(int graphicTextGap) {
+        setup(graphicTextGap);
         Rectangle graphic = new Rectangle(GRAPHIC_WIDTH, GRAPHIC_HEIGHT);
         graphic.setManaged(false);
         label.setGraphic(graphic);
@@ -618,7 +697,10 @@ public class LabelSkinLayoutTest {
         assertNull(getContentBounds());
     }
 
-    @Test public void unmanagedGraphic_emptyText_LEFT() {
+    @ParameterizedTest
+    @MethodSource("parameters")
+    public void unmanagedGraphic_emptyText_LEFT(int graphicTextGap) {
+        setup(graphicTextGap);
         Rectangle graphic = new Rectangle(GRAPHIC_WIDTH, GRAPHIC_HEIGHT);
         graphic.setManaged(false);
         label.setGraphic(graphic);
@@ -629,7 +711,10 @@ public class LabelSkinLayoutTest {
         assertNull(getContentBounds());
     }
 
-    @Test public void unmanagedGraphic_Text_LEFT() {
+    @ParameterizedTest
+    @MethodSource("parameters")
+    public void unmanagedGraphic_Text_LEFT(int graphicTextGap) {
+        setup(graphicTextGap);
         Rectangle graphic = new Rectangle(GRAPHIC_WIDTH, GRAPHIC_HEIGHT);
         graphic.setManaged(false);
         label.setGraphic(graphic);
@@ -646,7 +731,10 @@ public class LabelSkinLayoutTest {
         assertEquals(contentBounds.getHeight(), textBounds.getHeight(), 0);
     }
 
-    @Test public void noGraphic_nullText_LEFT() {
+    @ParameterizedTest
+    @MethodSource("parameters")
+    public void noGraphic_nullText_LEFT(int graphicTextGap) {
+        setup(graphicTextGap);
         label.setText(null);
         label.setContentDisplay(ContentDisplay.LEFT);
         label.layout();
@@ -654,7 +742,10 @@ public class LabelSkinLayoutTest {
         assertNull(getContentBounds());
     }
 
-    @Test public void noGraphic_emptyText_LEFT() {
+    @ParameterizedTest
+    @MethodSource("parameters")
+    public void noGraphic_emptyText_LEFT(int graphicTextGap) {
+        setup(graphicTextGap);
         label.setText("");
         label.setContentDisplay(ContentDisplay.LEFT);
         label.layout();
@@ -662,7 +753,10 @@ public class LabelSkinLayoutTest {
         assertNull(getContentBounds());
     }
 
-    @Test public void noGraphic_Text_LEFT() {
+    @ParameterizedTest
+    @MethodSource("parameters")
+    public void noGraphic_Text_LEFT(int graphicTextGap) {
+        setup(graphicTextGap);
         label.setText("Falcon");
         label.setContentDisplay(ContentDisplay.LEFT);
         label.layout();
@@ -677,7 +771,10 @@ public class LabelSkinLayoutTest {
     }
 
     /** */
-    @Test public void graphic_nullText_CENTER() {
+    @ParameterizedTest
+    @MethodSource("parameters")
+    public void graphic_nullText_CENTER(int graphicTextGap) {
+        setup(graphicTextGap);
         Rectangle graphic = new Rectangle(GRAPHIC_WIDTH, GRAPHIC_HEIGHT);
         label.setGraphic(graphic);
         label.setText(null);
@@ -693,7 +790,10 @@ public class LabelSkinLayoutTest {
         assertEquals(contentBounds.getHeight(), graphicBounds.getHeight(), 0);
     }
 
-    @Test public void graphic_emptyText_CENTER() {
+    @ParameterizedTest
+    @MethodSource("parameters")
+    public void graphic_emptyText_CENTER(int graphicTextGap) {
+        setup(graphicTextGap);
         Rectangle graphic = new Rectangle(GRAPHIC_WIDTH, GRAPHIC_HEIGHT);
         label.setGraphic(graphic);
         label.setText("");
@@ -709,7 +809,10 @@ public class LabelSkinLayoutTest {
         assertEquals(contentBounds.getHeight(), graphicBounds.getHeight(), 0);
     }
 
-    @Test public void graphic_Text_CENTER() {
+    @ParameterizedTest
+    @MethodSource("parameters")
+    public void graphic_Text_CENTER(int graphicTextGap) {
+        setup(graphicTextGap);
         Rectangle graphic = new Rectangle(GRAPHIC_WIDTH, GRAPHIC_HEIGHT);
         label.setGraphic(graphic);
         label.setText("Falcon");
@@ -731,7 +834,10 @@ public class LabelSkinLayoutTest {
         assertCenteredHorizontally(contentBounds, textBounds);
     }
 
-    @Test public void unmanagedGraphic_nullText_CENTER() {
+    @ParameterizedTest
+    @MethodSource("parameters")
+    public void unmanagedGraphic_nullText_CENTER(int graphicTextGap) {
+        setup(graphicTextGap);
         Rectangle graphic = new Rectangle(GRAPHIC_WIDTH, GRAPHIC_HEIGHT);
         graphic.setManaged(false);
         label.setGraphic(graphic);
@@ -742,7 +848,10 @@ public class LabelSkinLayoutTest {
         assertNull(getContentBounds());
     }
 
-    @Test public void unmanagedGraphic_emptyText_CENTER() {
+    @ParameterizedTest
+    @MethodSource("parameters")
+    public void unmanagedGraphic_emptyText_CENTER(int graphicTextGap) {
+        setup(graphicTextGap);
         Rectangle graphic = new Rectangle(GRAPHIC_WIDTH, GRAPHIC_HEIGHT);
         graphic.setManaged(false);
         label.setGraphic(graphic);
@@ -753,7 +862,10 @@ public class LabelSkinLayoutTest {
         assertNull(getContentBounds());
     }
 
-    @Test public void unmanagedGraphic_Text_CENTER() {
+    @ParameterizedTest
+    @MethodSource("parameters")
+    public void unmanagedGraphic_Text_CENTER(int graphicTextGap) {
+        setup(graphicTextGap);
         Rectangle graphic = new Rectangle(GRAPHIC_WIDTH, GRAPHIC_HEIGHT);
         graphic.setManaged(false);
         label.setGraphic(graphic);
@@ -770,7 +882,10 @@ public class LabelSkinLayoutTest {
         assertEquals(contentBounds.getHeight(), textBounds.getHeight(), 0);
     }
 
-    @Test public void noGraphic_nullText_CENTER() {
+    @ParameterizedTest
+    @MethodSource("parameters")
+    public void noGraphic_nullText_CENTER(int graphicTextGap) {
+        setup(graphicTextGap);
         label.setText(null);
         label.setContentDisplay(ContentDisplay.CENTER);
         label.layout();
@@ -778,7 +893,10 @@ public class LabelSkinLayoutTest {
         assertNull(getContentBounds());
     }
 
-    @Test public void noGraphic_emptyText_CENTER() {
+    @ParameterizedTest
+    @MethodSource("parameters")
+    public void noGraphic_emptyText_CENTER(int graphicTextGap) {
+        setup(graphicTextGap);
         label.setText("");
         label.setContentDisplay(ContentDisplay.CENTER);
         label.layout();
@@ -786,7 +904,10 @@ public class LabelSkinLayoutTest {
         assertNull(getContentBounds());
     }
 
-    @Test public void noGraphic_Text_CENTER() {
+    @ParameterizedTest
+    @MethodSource("parameters")
+    public void noGraphic_Text_CENTER(int graphicTextGap) {
+        setup(graphicTextGap);
         label.setText("Falcon");
         label.setContentDisplay(ContentDisplay.CENTER);
         label.layout();
@@ -801,7 +922,10 @@ public class LabelSkinLayoutTest {
     }
 
     /** */
-    @Test public void graphic_nullText_GRAPHIC_ONLY() {
+    @ParameterizedTest
+    @MethodSource("parameters")
+    public void graphic_nullText_GRAPHIC_ONLY(int graphicTextGap) {
+        setup(graphicTextGap);
         Rectangle graphic = new Rectangle(GRAPHIC_WIDTH, GRAPHIC_HEIGHT);
         label.setGraphic(graphic);
         label.setText(null);
@@ -817,7 +941,10 @@ public class LabelSkinLayoutTest {
         assertEquals(contentBounds.getHeight(), graphicBounds.getHeight(), 0);
     }
 
-    @Test public void graphic_emptyText_GRAPHIC_ONLY() {
+    @ParameterizedTest
+    @MethodSource("parameters")
+    public void graphic_emptyText_GRAPHIC_ONLY(int graphicTextGap) {
+        setup(graphicTextGap);
         Rectangle graphic = new Rectangle(GRAPHIC_WIDTH, GRAPHIC_HEIGHT);
         label.setGraphic(graphic);
         label.setText("");
@@ -833,7 +960,10 @@ public class LabelSkinLayoutTest {
         assertEquals(contentBounds.getHeight(), graphicBounds.getHeight(), 0);
     }
 
-    @Test public void graphic_Text_GRAPHIC_ONLY() {
+    @ParameterizedTest
+    @MethodSource("parameters")
+    public void graphic_Text_GRAPHIC_ONLY(int graphicTextGap) {
+        setup(graphicTextGap);
         Rectangle graphic = new Rectangle(GRAPHIC_WIDTH, GRAPHIC_HEIGHT);
         label.setGraphic(graphic);
         label.setText("Falcon");
@@ -849,7 +979,10 @@ public class LabelSkinLayoutTest {
         assertEquals(contentBounds.getHeight(), graphicBounds.getHeight(), 0);
     }
 
-    @Test public void unmanagedGraphic_nullText_GRAPHIC_ONLY() {
+    @ParameterizedTest
+    @MethodSource("parameters")
+    public void unmanagedGraphic_nullText_GRAPHIC_ONLY(int graphicTextGap) {
+        setup(graphicTextGap);
         Rectangle graphic = new Rectangle(GRAPHIC_WIDTH, GRAPHIC_HEIGHT);
         graphic.setManaged(false);
         label.setGraphic(graphic);
@@ -860,7 +993,10 @@ public class LabelSkinLayoutTest {
         assertNull(getContentBounds());
     }
 
-    @Test public void unmanagedGraphic_emptyText_GRAPHIC_ONLY() {
+    @ParameterizedTest
+    @MethodSource("parameters")
+    public void unmanagedGraphic_emptyText_GRAPHIC_ONLY(int graphicTextGap) {
+        setup(graphicTextGap);
         Rectangle graphic = new Rectangle(GRAPHIC_WIDTH, GRAPHIC_HEIGHT);
         graphic.setManaged(false);
         label.setGraphic(graphic);
@@ -871,7 +1007,10 @@ public class LabelSkinLayoutTest {
         assertNull(getContentBounds());
     }
 
-    @Test public void unmanagedGraphic_Text_GRAPHIC_ONLY() {
+    @ParameterizedTest
+    @MethodSource("parameters")
+    public void unmanagedGraphic_Text_GRAPHIC_ONLY(int graphicTextGap) {
+        setup(graphicTextGap);
         Rectangle graphic = new Rectangle(GRAPHIC_WIDTH, GRAPHIC_HEIGHT);
         graphic.setManaged(false);
         label.setGraphic(graphic);
@@ -882,7 +1021,10 @@ public class LabelSkinLayoutTest {
         assertNull(getContentBounds());
     }
 
-    @Test public void noGraphic_nullText_GRAPHIC_ONLY() {
+    @ParameterizedTest
+    @MethodSource("parameters")
+    public void noGraphic_nullText_GRAPHIC_ONLY(int graphicTextGap) {
+        setup(graphicTextGap);
         label.setText(null);
         label.setContentDisplay(ContentDisplay.GRAPHIC_ONLY);
         label.layout();
@@ -890,7 +1032,10 @@ public class LabelSkinLayoutTest {
         assertNull(getContentBounds());
     }
 
-    @Test public void noGraphic_emptyText_GRAPHIC_ONLY() {
+    @ParameterizedTest
+    @MethodSource("parameters")
+    public void noGraphic_emptyText_GRAPHIC_ONLY(int graphicTextGap) {
+        setup(graphicTextGap);
         label.setText("");
         label.setContentDisplay(ContentDisplay.GRAPHIC_ONLY);
         label.layout();
@@ -898,7 +1043,10 @@ public class LabelSkinLayoutTest {
         assertNull(getContentBounds());
     }
 
-    @Test public void noGraphic_Text_GRAPHIC_ONLY() {
+    @ParameterizedTest
+    @MethodSource("parameters")
+    public void noGraphic_Text_GRAPHIC_ONLY(int graphicTextGap) {
+        setup(graphicTextGap);
         label.setText("Falcon");
         label.setContentDisplay(ContentDisplay.GRAPHIC_ONLY);
         label.layout();
@@ -907,7 +1055,10 @@ public class LabelSkinLayoutTest {
     }
 
     /** */
-    @Test public void graphic_nullText_TEXT_ONLY() {
+    @ParameterizedTest
+    @MethodSource("parameters")
+    public void graphic_nullText_TEXT_ONLY(int graphicTextGap) {
+        setup(graphicTextGap);
         Rectangle graphic = new Rectangle(GRAPHIC_WIDTH, GRAPHIC_HEIGHT);
         label.setGraphic(graphic);
         label.setText(null);
@@ -917,7 +1068,10 @@ public class LabelSkinLayoutTest {
         assertNull(getContentBounds());
     }
 
-    @Test public void graphic_emptyText_TEXT_ONLY() {
+    @ParameterizedTest
+    @MethodSource("parameters")
+    public void graphic_emptyText_TEXT_ONLY(int graphicTextGap) {
+        setup(graphicTextGap);
         Rectangle graphic = new Rectangle(GRAPHIC_WIDTH, GRAPHIC_HEIGHT);
         label.setGraphic(graphic);
         label.setText("");
@@ -927,7 +1081,10 @@ public class LabelSkinLayoutTest {
         assertNull(getContentBounds());
     }
 
-    @Test public void graphic_Text_TEXT_ONLY() {
+    @ParameterizedTest
+    @MethodSource("parameters")
+    public void graphic_Text_TEXT_ONLY(int graphicTextGap) {
+        setup(graphicTextGap);
         Rectangle graphic = new Rectangle(GRAPHIC_WIDTH, GRAPHIC_HEIGHT);
         label.setGraphic(graphic);
         label.setText("Falcon");
@@ -943,7 +1100,10 @@ public class LabelSkinLayoutTest {
         assertEquals(contentBounds.getHeight(), textBounds.getHeight(), 0);
     }
 
-    @Test public void unmanagedGraphic_nullText_TEXT_ONLY() {
+    @ParameterizedTest
+    @MethodSource("parameters")
+    public void unmanagedGraphic_nullText_TEXT_ONLY(int graphicTextGap) {
+        setup(graphicTextGap);
         Rectangle graphic = new Rectangle(GRAPHIC_WIDTH, GRAPHIC_HEIGHT);
         graphic.setManaged(false);
         label.setGraphic(graphic);
@@ -954,7 +1114,10 @@ public class LabelSkinLayoutTest {
         assertNull(getContentBounds());
     }
 
-    @Test public void unmanagedGraphic_emptyText_TEXT_ONLY() {
+    @ParameterizedTest
+    @MethodSource("parameters")
+    public void unmanagedGraphic_emptyText_TEXT_ONLY(int graphicTextGap) {
+        setup(graphicTextGap);
         Rectangle graphic = new Rectangle(GRAPHIC_WIDTH, GRAPHIC_HEIGHT);
         graphic.setManaged(false);
         label.setGraphic(graphic);
@@ -965,7 +1128,10 @@ public class LabelSkinLayoutTest {
         assertNull(getContentBounds());
     }
 
-    @Test public void unmanagedGraphic_Text_TEXT_ONLY() {
+    @ParameterizedTest
+    @MethodSource("parameters")
+    public void unmanagedGraphic_Text_TEXT_ONLY(int graphicTextGap) {
+        setup(graphicTextGap);
         Rectangle graphic = new Rectangle(GRAPHIC_WIDTH, GRAPHIC_HEIGHT);
         graphic.setManaged(false);
         label.setGraphic(graphic);
@@ -982,7 +1148,10 @@ public class LabelSkinLayoutTest {
         assertEquals(contentBounds.getHeight(), textBounds.getHeight(), 0);
     }
 
-    @Test public void noGraphic_nullText_TEXT_ONLY() {
+    @ParameterizedTest
+    @MethodSource("parameters")
+    public void noGraphic_nullText_TEXT_ONLY(int graphicTextGap) {
+        setup(graphicTextGap);
         label.setText(null);
         label.setContentDisplay(ContentDisplay.TEXT_ONLY);
         label.layout();
@@ -990,7 +1159,10 @@ public class LabelSkinLayoutTest {
         assertNull(getContentBounds());
     }
 
-    @Test public void noGraphic_emptyText_TEXT_ONLY() {
+    @ParameterizedTest
+    @MethodSource("parameters")
+    public void noGraphic_emptyText_TEXT_ONLY(int graphicTextGap) {
+        setup(graphicTextGap);
         label.setText("");
         label.setContentDisplay(ContentDisplay.TEXT_ONLY);
         label.layout();
@@ -998,7 +1170,10 @@ public class LabelSkinLayoutTest {
         assertNull(getContentBounds());
     }
 
-    @Test public void noGraphic_Text_TEXT_ONLY() {
+    @ParameterizedTest
+    @MethodSource("parameters")
+    public void noGraphic_Text_TEXT_ONLY(int graphicTextGap) {
+        setup(graphicTextGap);
         label.setText("Falcon");
         label.setContentDisplay(ContentDisplay.TEXT_ONLY);
         label.layout();

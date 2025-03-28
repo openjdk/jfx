@@ -30,7 +30,8 @@ namespace WebCore {
 class NamedNodeMap;
 
 class DocumentType final : public Node {
-    WTF_MAKE_ISO_ALLOCATED(DocumentType);
+    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(DocumentType);
+    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(DocumentType);
 public:
     static Ref<DocumentType> create(Document& document, const String& name, const String& publicId, const String& systemId)
     {
@@ -45,7 +46,6 @@ private:
     DocumentType(Document&, const String& name, const String& publicId, const String& systemId);
 
     String nodeName() const override;
-    NodeType nodeType() const override;
     Ref<Node> cloneNodeInternal(Document&, CloningOperation) override;
 
     void parentOrShadowHostNode() const = delete; // Call parentNode() instead.

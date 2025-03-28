@@ -28,13 +28,14 @@
 typedef double DOMHighResTimeStamp;
 
 [
-  JSGenerateToJSObject
+    JSGenerateToJSObject,
+    JSGenerateToNativeObject
 ] dictionary CookieListItem {
     USVString name;
     USVString value;
     [EnabledBySetting=CookieStoreAPIExtendedAttributesEnabled] USVString? domain;
     [EnabledBySetting=CookieStoreAPIExtendedAttributesEnabled] USVString path;
     [EnabledBySetting=CookieStoreAPIExtendedAttributesEnabled] DOMHighResTimeStamp? expires;
-    [EnabledBySetting=CookieStoreAPIExtendedAttributesEnabled] boolean secure;
-    [EnabledBySetting=CookieStoreAPIExtendedAttributesEnabled] CookieSameSite sameSite;
+    [EnabledBySetting=CookieStoreAPIExtendedAttributesEnabled] boolean secure = false;
+    [EnabledBySetting=CookieStoreAPIExtendedAttributesEnabled] CookieSameSite sameSite = "strict";
 };

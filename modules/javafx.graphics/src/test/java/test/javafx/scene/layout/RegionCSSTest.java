@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2019, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -33,9 +33,6 @@ import javafx.geometry.Insets;
 import javafx.geometry.Side;
 import javafx.scene.Scene;
 import javafx.scene.paint.Color;
-import org.junit.Before;
-import org.junit.Ignore;
-import org.junit.Test;
 
 import java.net.MalformedURLException;
 import java.net.URI;
@@ -55,7 +52,12 @@ import javafx.scene.layout.CornerRadii;
 import javafx.scene.layout.Region;
 
 import static javafx.scene.layout.BackgroundSize.*;
-import static org.junit.Assert.*;
+
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Disabled;
+import org.junit.jupiter.api.Test;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
 
 /**
  * All of these tests are based on information contained in the CSS 3 borders
@@ -128,7 +130,8 @@ public class RegionCSSTest {
 
     }
 
-    @Before public void setUp() {
+    @BeforeEach
+    public void setUp() {
         region = new Region();
         scene = new Scene(region);
 
@@ -144,7 +147,8 @@ public class RegionCSSTest {
      *                                                                        *
      *************************************************************************/
 
-    @Test public void nothingSpecified() {
+    @Test
+    public void nothingSpecified() {
         region.setStyle("-fx-padding: 1;");
         processCSS();
 
@@ -162,7 +166,8 @@ public class RegionCSSTest {
      *                                                                        *
      *************************************************************************/
 
-    @Test public void fillIsNull() {
+    @Test
+    public void fillIsNull() {
         region.setStyle("-fx-background-color: null;");
         processCSS();
 
@@ -171,7 +176,8 @@ public class RegionCSSTest {
         assertNull(region.getBorder());
     }
 
-    @Test public void fillIsTransparent() {
+    @Test
+    public void fillIsTransparent() {
         region.setStyle("-fx-background-color: transparent;");
         processCSS();
 
@@ -183,7 +189,8 @@ public class RegionCSSTest {
         assertEquals(expected, fill);
     }
 
-    @Test public void fillIsSpecifiedOnly() {
+    @Test
+    public void fillIsSpecifiedOnly() {
         region.setStyle("-fx-background-color: purple;");
         processCSS();
 
@@ -195,7 +202,8 @@ public class RegionCSSTest {
         assertEquals(expected, fill);
     }
 
-    @Test public void insetsIsSpecifiedOnly() {
+    @Test
+    public void insetsIsSpecifiedOnly() {
         region.setStyle("-fx-background-insets: 1;");
         processCSS();
 
@@ -203,7 +211,8 @@ public class RegionCSSTest {
         assertNull(region.getBorder());
     }
 
-    @Test public void radiusIsSpecifiedOnly() {
+    @Test
+    public void radiusIsSpecifiedOnly() {
         region.setStyle("-fx-background-radius: 1;");
         processCSS();
 
@@ -211,7 +220,8 @@ public class RegionCSSTest {
         assertNull(region.getBorder());
     }
 
-    @Test public void testWithExcessInsets() {
+    @Test
+    public void testWithExcessInsets() {
         region.setStyle(
                 "-fx-background-color: red;" +
                 "-fx-background-insets: 0 0 -1 0, 0, 1, 2;");
@@ -226,7 +236,8 @@ public class RegionCSSTest {
         assertEquals(expected, fill);
     }
 
-    @Test public void testWithExcessRadius() {
+    @Test
+    public void testWithExcessRadius() {
         region.setStyle(
                 "-fx-background-color: red;" +
                 "-fx-background-radius: 0 0 0 0, 0, 1, 2;");
@@ -241,7 +252,8 @@ public class RegionCSSTest {
         assertEquals(expected, fill);
     }
 
-    @Test public void backgroundScenario1() {
+    @Test
+    public void backgroundScenario1() {
         region.setStyle(
                 "-fx-background-color: red;" +
                 "-fx-background-insets: 0 0 -1 0, 0, 1, 2;" +
@@ -259,7 +271,8 @@ public class RegionCSSTest {
         assertEquals(expected, fill);
     }
 
-    @Test public void backgroundScenario2() {
+    @Test
+    public void backgroundScenario2() {
         region.setStyle(
                 "-fx-background-color: red, green, blue, yellow;" +
                 "-fx-background-insets: 0 0 -1 0, 1;" +
@@ -289,7 +302,8 @@ public class RegionCSSTest {
         assertEquals(expected, fill);
     }
 
-    @Test public void backgroundScenario3() {
+    @Test
+    public void backgroundScenario3() {
         region.setStyle(
                 "-fx-background-color: red, green, blue, yellow;" +
                 "-fx-background-insets: 0 0 -1 0, 0, 1, 2;" +
@@ -321,7 +335,8 @@ public class RegionCSSTest {
      * From the specification: http://www.w3.org/TR/css3-background/
      * This is "Example 1", except modified for multiple background fills
      */
-    @Test public void specExample1_ModifiedForBackgroundFill() {
+    @Test
+    public void specExample1_ModifiedForBackgroundFill() {
         region.setStyle(
                 "-fx-background-color: red, green, blue;" +
                 "-fx-background-insets: 1, 2, 3, 4;" + // An extra value here, which should be ignored
@@ -344,7 +359,8 @@ public class RegionCSSTest {
     }
 
     // See example 23 in http://www.w3.org/TR/css3-background/#the-border-radius
-    @Test public void testBackgroundRadiusWithHorizontalAndVerticalRadii() {
+    @Test
+    public void testBackgroundRadiusWithHorizontalAndVerticalRadii() {
 
         region.setStyle("-fx-background-color: black; -fx-background-radius: 2px 1px 4px / 0.5px 3px;");
         processCSS();
@@ -382,7 +398,8 @@ public class RegionCSSTest {
      * in this file are checking one specific aspect of the functionality tested
      * herein.
      */
-    @Test public void specExample1() {
+    @Test
+    public void specExample1() {
         region.setStyle(
                 "-fx-background-image: url(test/javafx/scene/layout/red.png), url(test/javafx/scene/layout/green.png), url(test/javafx/scene/layout/blue.png);" +
                 "-fx-background-position: center center, 20% 80%, top left, bottom right;" +
@@ -417,7 +434,8 @@ public class RegionCSSTest {
         assertEquals(expected, image);
     }
 
-    @Test public void backgroundImageRepeat_repeatX() {
+    @Test
+    public void backgroundImageRepeat_repeatX() {
         region.setStyle(
                 "-fx-background-image: url('test/javafx/scene/layout/red.png');" +
                 "-fx-background-repeat: repeat-x;");
@@ -435,7 +453,8 @@ public class RegionCSSTest {
         assertEquals(expected, image);
     }
 
-    @Test public void backgroundImageRepeat_repeatY() {
+    @Test
+    public void backgroundImageRepeat_repeatY() {
         region.setStyle(
                 "-fx-background-image: url('test/javafx/scene/layout/red.png');" +
                 "-fx-background-repeat: repeat-y;");
@@ -453,7 +472,8 @@ public class RegionCSSTest {
         assertEquals(expected, image);
     }
 
-    @Test public void backgroundImageRepeat_repeat() {
+    @Test
+    public void backgroundImageRepeat_repeat() {
         region.setStyle(
                 "-fx-background-image: url('test/javafx/scene/layout/red.png');" +
                 "-fx-background-repeat: repeat;");
@@ -471,7 +491,8 @@ public class RegionCSSTest {
         assertEquals(expected, image);
     }
 
-    @Test public void backgroundImageRepeat_space() {
+    @Test
+    public void backgroundImageRepeat_space() {
         region.setStyle(
                 "-fx-background-image: url('test/javafx/scene/layout/red.png');" +
                 "-fx-background-repeat: space;");
@@ -489,7 +510,8 @@ public class RegionCSSTest {
         assertEquals(expected, image);
     }
 
-    @Test public void backgroundImageRepeat_round() {
+    @Test
+    public void backgroundImageRepeat_round() {
         region.setStyle(
                 "-fx-background-image: url('test/javafx/scene/layout/red.png');" +
                 "-fx-background-repeat: round;");
@@ -507,7 +529,8 @@ public class RegionCSSTest {
         assertEquals(expected, image);
     }
 
-    @Test public void backgroundImageRepeat_noRepeat() {
+    @Test
+    public void backgroundImageRepeat_noRepeat() {
         region.setStyle(
                 "-fx-background-image: url('test/javafx/scene/layout/red.png');" +
                 "-fx-background-repeat: no-repeat;");
@@ -525,7 +548,8 @@ public class RegionCSSTest {
         assertEquals(expected, image);
     }
 
-    @Test public void backgroundImageRepeat_repeat_space() {
+    @Test
+    public void backgroundImageRepeat_repeat_space() {
         region.setStyle(
                 "-fx-background-image: url('test/javafx/scene/layout/red.png');" +
                 "-fx-background-repeat: repeat space;");
@@ -543,7 +567,8 @@ public class RegionCSSTest {
         assertEquals(expected, image);
     }
 
-    @Test public void backgroundImageRepeat_round_noRepeat() {
+    @Test
+    public void backgroundImageRepeat_round_noRepeat() {
         region.setStyle(
                 "-fx-background-image: url('test/javafx/scene/layout/red.png');" +
                 "-fx-background-repeat: round no-repeat;");
@@ -565,7 +590,8 @@ public class RegionCSSTest {
     // try "50% left" -- shouldn't work
     // try 3 values... remaining one should be 0
     // If only one value is specified, the second value is assumed to be ???center??? -- whatever this means...
-    @Test public void backgroundImagePosition_right_bottom() {
+    @Test
+    public void backgroundImagePosition_right_bottom() {
         region.setStyle(
                 "-fx-background-image: url('test/javafx/scene/layout/red.png');" +
                 "-fx-background-position: right 20px bottom 10px;");
@@ -618,7 +644,8 @@ public class RegionCSSTest {
         return b.toString();
     }
 
-    @Test public void backgroundImagePosition_bottom_right() {
+    @Test
+    public void backgroundImagePosition_bottom_right() {
         region.setStyle(
                 "-fx-background-image: url('test/javafx/scene/layout/red.png');" +
                 "-fx-background-position: bottom 10px right 20px;");
@@ -636,7 +663,8 @@ public class RegionCSSTest {
         assertEquals(expected, image);
     }
 
-    @Test public void backgroundImagePosition_top() {
+    @Test
+    public void backgroundImagePosition_top() {
         region.setStyle(
                 "-fx-background-image: url('test/javafx/scene/layout/red.png');" +
                 "-fx-background-position: top;");
@@ -654,7 +682,8 @@ public class RegionCSSTest {
         assertEquals(expected, image);
     }
 
-    @Test  public void backgroundImagePosition_left() {
+    @Test
+    public void backgroundImagePosition_left() {
         region.setStyle(
                 "-fx-background-image: url('test/javafx/scene/layout/red.png');" +
                 "-fx-background-position: left;");
@@ -672,7 +701,8 @@ public class RegionCSSTest {
         assertEquals(expected, image);
     }
 
-    @Test public void backgroundImagePosition_center() {
+    @Test
+    public void backgroundImagePosition_center() {
         region.setStyle(
                 "-fx-background-image: url('test/javafx/scene/layout/red.png');" +
                 "-fx-background-position: center;");
@@ -690,7 +720,8 @@ public class RegionCSSTest {
         assertEquals(expected, image);
     }
 
-    @Test public void backgroundImagePosition_right() {
+    @Test
+    public void backgroundImagePosition_right() {
         region.setStyle(
                 "-fx-background-image: url('test/javafx/scene/layout/red.png');" +
                 "-fx-background-position: right;");
@@ -708,7 +739,8 @@ public class RegionCSSTest {
         assertEquals(expected, image);
     }
 
-    @Test public void backgroundImagePosition_bottom() {
+    @Test
+    public void backgroundImagePosition_bottom() {
         region.setStyle(
                 "-fx-background-image: url('test/javafx/scene/layout/red.png');" +
                 "-fx-background-position: bottom;");
@@ -726,7 +758,8 @@ public class RegionCSSTest {
         assertEquals(expected, image);
     }
 
-    @Test public void backgroundImagePosition_center_top() {
+    @Test
+    public void backgroundImagePosition_center_top() {
         region.setStyle(
                 "-fx-background-image: url('test/javafx/scene/layout/red.png');" +
                 "-fx-background-position: center top;");
@@ -744,7 +777,8 @@ public class RegionCSSTest {
         assertEquals(expected, image);
     }
 
-    @Test public void backgroundImagePosition_Example8_1() {
+    @Test
+    public void backgroundImagePosition_Example8_1() {
         region.setStyle(
                 "-fx-background-image: url('test/javafx/scene/layout/red.png');" +
                 "-fx-background-position: left 10px top 15px;");
@@ -762,7 +796,8 @@ public class RegionCSSTest {
         assertEquals(expected, image);
     }
 
-    @Test public void backgroundImagePosition_Example8_2() {
+    @Test
+    public void backgroundImagePosition_Example8_2() {
         region.setStyle(
                 "-fx-background-image: url('test/javafx/scene/layout/red.png');" +
                 "-fx-background-position: left top;");
@@ -780,7 +815,8 @@ public class RegionCSSTest {
         assertEquals(expected, image);
     }
 
-    @Test public void backgroundImagePosition_Example8_3() {
+    @Test
+    public void backgroundImagePosition_Example8_3() {
         region.setStyle(
                 "-fx-background-image: url('test/javafx/scene/layout/red.png');" +
                 "-fx-background-position: 10px 15px;");
@@ -798,7 +834,8 @@ public class RegionCSSTest {
         assertEquals(expected, image);
     }
 
-    @Test public void backgroundImagePosition_Example8_4() {
+    @Test
+    public void backgroundImagePosition_Example8_4() {
         region.setStyle(
                 "-fx-background-image: url('test/javafx/scene/layout/red.png');" +
                 "-fx-background-position: left 15px;");
@@ -816,7 +853,8 @@ public class RegionCSSTest {
         assertEquals(expected, image);
     }
 
-    @Test public void backgroundImagePosition_Example8_5() {
+    @Test
+    public void backgroundImagePosition_Example8_5() {
         region.setStyle(
                 "-fx-background-image: url('test/javafx/scene/layout/red.png');" +
                 "-fx-background-position: 10px top;");
@@ -834,7 +872,8 @@ public class RegionCSSTest {
         assertEquals(expected, image);
     }
 
-    @Test public void backgroundImagePosition_Example8_6() {
+    @Test
+    public void backgroundImagePosition_Example8_6() {
         region.setStyle(
                 "-fx-background-image: url('test/javafx/scene/layout/red.png');" +
                 "-fx-background-position: left top 15px;");
@@ -852,7 +891,8 @@ public class RegionCSSTest {
         assertEquals(expected, image);
     }
 
-    @Test public void backgroundImagePosition_Example8_7() {
+    @Test
+    public void backgroundImagePosition_Example8_7() {
         region.setStyle(
                 "-fx-background-image: url('test/javafx/scene/layout/red.png');" +
                 "-fx-background-position: left 10px top;");
@@ -870,7 +910,8 @@ public class RegionCSSTest {
         assertEquals(expected, image);
     }
 
-    @Test public void backgroundImagePosition_Example10_1() {
+    @Test
+    public void backgroundImagePosition_Example10_1() {
         region.setStyle(
                 "-fx-background-image: url('test/javafx/scene/layout/red.png');" +
                 "-fx-background-position: right top;");
@@ -888,7 +929,8 @@ public class RegionCSSTest {
         assertEquals(expected, image);
     }
 
-    @Test public void backgroundImagePosition_Example10_2() {
+    @Test
+    public void backgroundImagePosition_Example10_2() {
         region.setStyle(
                 "-fx-background-image: url('test/javafx/scene/layout/red.png');" +
                 "-fx-background-position: top center;");
@@ -906,7 +948,8 @@ public class RegionCSSTest {
         assertEquals(expected, image);
     }
 
-    @Test public void backgroundImagePosition_Example11() {
+    @Test
+    public void backgroundImagePosition_Example11() {
         region.setStyle(
                 "-fx-background-image: url('test/javafx/scene/layout/red.png');" +
                 "-fx-background-position: 100% 100%;");
@@ -924,7 +967,8 @@ public class RegionCSSTest {
         assertEquals(expected, image);
     }
 
-    @Test public void backgroundImagePosition_75Percent() {
+    @Test
+    public void backgroundImagePosition_75Percent() {
         region.setStyle(
                 "-fx-background-image: url('test/javafx/scene/layout/red.png');" +
                 "-fx-background-position: 75% 75%;");
@@ -942,7 +986,8 @@ public class RegionCSSTest {
         assertEquals(expected, image);
     }
 
-    @Test public void backgroundImagePosition_Example12() {
+    @Test
+    public void backgroundImagePosition_Example12() {
         region.setStyle(
                 "-fx-background-image: url('test/javafx/scene/layout/red.png');" +
                 "-fx-background-position: right 10% bottom 10%;");
@@ -960,8 +1005,9 @@ public class RegionCSSTest {
         assertEquals(expected, image);
     }
 
-    @Ignore("JDK-8091576") // -fx-background-clip is not implemented.
-    @Test public void backgroundClip_defaultValue() {
+    @Disabled("JDK-8091576") // -fx-background-clip is not implemented.
+    @Test
+    public void backgroundClip_defaultValue() {
         region.setStyle(
                 "-fx-background-image: url('test/javafx/scene/layout/red.png');");
         processCSS();
@@ -981,8 +1027,9 @@ public class RegionCSSTest {
 //        assertEquals(expected, image);
     }
 
-    @Ignore("JDK-8091576") // -fx-background-clip is not implemented.
-    @Test public void backgroundClip_BorderBox() {
+    @Disabled("JDK-8091576") // -fx-background-clip is not implemented.
+    @Test
+    public void backgroundClip_BorderBox() {
         region.setStyle(
                 "-fx-background-image: url('test/javafx/scene/layout/red.png');" +
                 "-fx-background-clip: border-box");
@@ -1002,8 +1049,9 @@ public class RegionCSSTest {
 //        assertEquals(expected, image);
     }
 
-    @Ignore("JDK-8091576") // -fx-background-clip is not implemented.
-    @Test public void backgroundClip_PaddingBox() {
+    @Disabled("JDK-8091576") // -fx-background-clip is not implemented.
+    @Test
+    public void backgroundClip_PaddingBox() {
         region.setStyle(
                 "-fx-background-image: url('test/javafx/scene/layout/red.png');" +
                 "-fx-background-clip: padding-box");
@@ -1023,8 +1071,9 @@ public class RegionCSSTest {
 //        assertEquals(expected, image);
     }
 
-    @Ignore("JDK-8091576") // -fx-background-clip is not implemented.
-    @Test public void backgroundClip_ContentBox() {
+    @Disabled("JDK-8091576") // -fx-background-clip is not implemented.
+    @Test
+    public void backgroundClip_ContentBox() {
         region.setStyle(
                 "-fx-background-image: url('test/javafx/scene/layout/red.png');" +
                 "-fx-background-clip: content-box");
@@ -1044,8 +1093,9 @@ public class RegionCSSTest {
 //        assertEquals(expected, image);
     }
 
-    @Ignore("JDK-8091576") // -fx-background-origin is not implemented.
-    @Test public void backgroundOrigin_defaultValue() {
+    @Disabled("JDK-8091576") // -fx-background-origin is not implemented.
+    @Test
+    public void backgroundOrigin_defaultValue() {
         region.setStyle(
                 "-fx-background-image: url('test/javafx/scene/layout/red.png');");
         processCSS();
@@ -1065,8 +1115,9 @@ public class RegionCSSTest {
 //        assertEquals(expected, image);
     }
 
-    @Ignore("JDK-8091576") // -fx-background-origin is not implemented.
-    @Test public void backgroundOrigin_BorderBox() {
+    @Disabled("JDK-8091576") // -fx-background-origin is not implemented.
+    @Test
+    public void backgroundOrigin_BorderBox() {
         region.setStyle(
                 "-fx-background-image: url('test/javafx/scene/layout/red.png');" +
                 "-fx-background-origin: border-box");
@@ -1087,8 +1138,9 @@ public class RegionCSSTest {
 //        assertEquals(expected, image);
     }
 
-    @Ignore("JDK-8091576") // -fx-background-origin is not implemented.
-    @Test public void backgroundOrigin_PaddingBox() {
+    @Disabled("JDK-8091576") // -fx-background-origin is not implemented.
+    @Test
+    public void backgroundOrigin_PaddingBox() {
         region.setStyle(
                 "-fx-background-image: url('test/javafx/scene/layout/red.png');" +
                 "-fx-background-origin: padding-box");
@@ -1108,8 +1160,9 @@ public class RegionCSSTest {
 //        assertEquals(expected, image);
     }
 
-    @Ignore("JDK-8091576") // -fx-background-origin is not implemented.
-    @Test public void backgroundOrigin_ContentBox() {
+    @Disabled("JDK-8091576") // -fx-background-origin is not implemented.
+    @Test
+    public void backgroundOrigin_ContentBox() {
         region.setStyle(
                 "-fx-background-image: url('test/javafx/scene/layout/red.png');" +
                 "-fx-background-origin: content-box");
@@ -1129,7 +1182,8 @@ public class RegionCSSTest {
 //        assertEquals(expected, image);
     }
 
-    @Test public void backgroundSize_defaultValue() {
+    @Test
+    public void backgroundSize_defaultValue() {
         region.setStyle("-fx-background-image: url('test/javafx/scene/layout/red.png');");
         processCSS();
 
@@ -1145,7 +1199,8 @@ public class RegionCSSTest {
         assertEquals(expected, image);
     }
 
-    @Test public void backgroundSize_cover() {
+    @Test
+    public void backgroundSize_cover() {
         region.setStyle(
                 "-fx-background-image: url('test/javafx/scene/layout/red.png');" +
                 "-fx-background-size: cover;");
@@ -1163,7 +1218,8 @@ public class RegionCSSTest {
         assertEquals(expected, image);
     }
 
-    @Test public void backgroundSize_contain() {
+    @Test
+    public void backgroundSize_contain() {
         region.setStyle(
                 "-fx-background-image: url('test/javafx/scene/layout/red.png');" +
                 "-fx-background-size: contain;");
@@ -1181,7 +1237,8 @@ public class RegionCSSTest {
         assertEquals(expected, image);
     }
 
-    @Test public void backgroundSize_length() {
+    @Test
+    public void backgroundSize_length() {
         region.setStyle(
                 "-fx-background-image: url('test/javafx/scene/layout/red.png');" +
                 "-fx-background-size: 170px;");
@@ -1199,7 +1256,8 @@ public class RegionCSSTest {
         assertEquals(expected, image);
     }
 
-    @Test public void backgroundSize_percent() {
+    @Test
+    public void backgroundSize_percent() {
         region.setStyle(
                 "-fx-background-image: url('test/javafx/scene/layout/red.png');" +
                 "-fx-background-size: 65%;");
@@ -1217,7 +1275,8 @@ public class RegionCSSTest {
         assertEquals(expected, image);
     }
 
-    @Test public void backgroundSize_auto() {
+    @Test
+    public void backgroundSize_auto() {
         region.setStyle(
                 "-fx-background-image: url('test/javafx/scene/layout/red.png');" +
                 "-fx-background-size: auto;");
@@ -1235,7 +1294,8 @@ public class RegionCSSTest {
         assertEquals(expected, image);
     }
 
-    @Test public void backgroundSize_length_length() {
+    @Test
+    public void backgroundSize_length_length() {
         region.setStyle(
                 "-fx-background-image: url('test/javafx/scene/layout/red.png');" +
                 "-fx-background-size: 10px 20px;");
@@ -1253,7 +1313,8 @@ public class RegionCSSTest {
         assertEquals(expected, image);
     }
 
-    @Test public void backgroundSize_length_percent() {
+    @Test
+    public void backgroundSize_length_percent() {
         region.setStyle(
                 "-fx-background-image: url('test/javafx/scene/layout/red.png');" +
                 "-fx-background-size: 50px 25%;");
@@ -1271,7 +1332,8 @@ public class RegionCSSTest {
         assertEquals(expected, image);
     }
 
-    @Test public void backgroundSize_length_auto() {
+    @Test
+    public void backgroundSize_length_auto() {
         region.setStyle(
                 "-fx-background-image: url('test/javafx/scene/layout/red.png');" +
                 "-fx-background-size: 40px auto;");
@@ -1289,7 +1351,8 @@ public class RegionCSSTest {
         assertEquals(expected, image);
     }
 
-    @Test public void backgroundSize_percent_length() {
+    @Test
+    public void backgroundSize_percent_length() {
         region.setStyle(
                 "-fx-background-image: url('test/javafx/scene/layout/red.png');" +
                 "-fx-background-size: 25% 30px;");
@@ -1307,7 +1370,8 @@ public class RegionCSSTest {
         assertEquals(expected, image);
     }
 
-    @Test public void backgroundSize_percent_percent() {
+    @Test
+    public void backgroundSize_percent_percent() {
         region.setStyle(
                 "-fx-background-image: url('test/javafx/scene/layout/red.png');" +
                 "-fx-background-size: 25% 75%;");
@@ -1325,7 +1389,8 @@ public class RegionCSSTest {
         assertEquals(expected, image);
     }
 
-    @Test public void backgroundSize_percent_auto() {
+    @Test
+    public void backgroundSize_percent_auto() {
         region.setStyle(
                 "-fx-background-image: url('test/javafx/scene/layout/red.png');" +
                 "-fx-background-size: 25% auto;");
@@ -1343,7 +1408,8 @@ public class RegionCSSTest {
         assertEquals(expected, image);
     }
 
-    @Test public void backgroundSize_auto_length() {
+    @Test
+    public void backgroundSize_auto_length() {
         region.setStyle(
                 "-fx-background-image: url('test/javafx/scene/layout/red.png');" +
                 "-fx-background-size: auto 25px;");
@@ -1361,7 +1427,8 @@ public class RegionCSSTest {
         assertEquals(expected, image);
     }
 
-    @Test public void backgroundSize_auto_percent() {
+    @Test
+    public void backgroundSize_auto_percent() {
         region.setStyle(
                 "-fx-background-image: url('test/javafx/scene/layout/red.png');" +
                 "-fx-background-size: auto 50%;");
@@ -1379,7 +1446,8 @@ public class RegionCSSTest {
         assertEquals(expected, image);
     }
 
-    @Test public void backgroundSize_auto_auto() {
+    @Test
+    public void backgroundSize_auto_auto() {
         region.setStyle(
                 "-fx-background-image: url('test/javafx/scene/layout/red.png');" +
                 "-fx-background-size: auto auto;");
@@ -1407,7 +1475,8 @@ public class RegionCSSTest {
      *                                                                        *
      *************************************************************************/
 
-    @Test public void borderStrokeStyleIsNull() {
+    @Test
+    public void borderStrokeStyleIsNull() {
         region.setStyle("-fx-border-style: null;");
         processCSS();
 
@@ -1416,8 +1485,9 @@ public class RegionCSSTest {
         assertNull(region.getBorder());
     }
 
-    @Ignore("JDK-8091576") // -fx-border-style-top is not implemented.
-    @Test public void borderStyle_top() {
+    @Disabled("JDK-8091576") // -fx-border-style-top is not implemented.
+    @Test
+    public void borderStyle_top() {
         region.setStyle("-fx-border-style-top: solid;");
         processCSS();
 
@@ -1434,8 +1504,9 @@ public class RegionCSSTest {
         assertEquals(expected, stroke);
     }
 
-    @Ignore("JDK-8091576") // -fx-border-style-right is not implemented.
-    @Test public void borderStyle_right() {
+    @Disabled("JDK-8091576") // -fx-border-style-right is not implemented.
+    @Test
+    public void borderStyle_right() {
         region.setStyle("-fx-border-style-right: solid;");
         processCSS();
 
@@ -1452,8 +1523,9 @@ public class RegionCSSTest {
         assertEquals(expected, stroke);
     }
 
-    @Ignore("JDK-8091576") // -fx-border-style-bottom is not implemented.
-    @Test public void borderStyle_bottom() {
+    @Disabled("JDK-8091576") // -fx-border-style-bottom is not implemented.
+    @Test
+    public void borderStyle_bottom() {
         region.setStyle("-fx-border-style-bottom: solid;");
         processCSS();
 
@@ -1470,8 +1542,9 @@ public class RegionCSSTest {
         assertEquals(expected, stroke);
     }
 
-    @Ignore("JDK-8091576") // -fx-border-style-left is not implemented.
-    @Test public void borderStyle_left() {
+    @Disabled("JDK-8091576") // -fx-border-style-left is not implemented.
+    @Test
+    public void borderStyle_left() {
         region.setStyle("-fx-border-style-left: solid;");
         processCSS();
 
@@ -1488,8 +1561,9 @@ public class RegionCSSTest {
         assertEquals(expected, stroke);
     }
 
-    @Ignore("JDK-8091576")
-    @Test public void borderStyle_top_right() {
+    @Disabled("JDK-8091576")
+    @Test
+    public void borderStyle_top_right() {
         region.setStyle(
                 "-fx-border-style-top: solid;" +
                 "-fx-border-style-right: dashed;");
@@ -1508,8 +1582,9 @@ public class RegionCSSTest {
         assertEquals(expected, stroke);
     }
 
-    @Ignore("JDK-8091576")
-    @Test public void borderStyle_bottom_top() {
+    @Disabled("JDK-8091576")
+    @Test
+    public void borderStyle_bottom_top() {
         region.setStyle(
                 "-fx-border-style-top: solid;" +
                 "-fx-border-style-bottom: dashed;");
@@ -1528,8 +1603,9 @@ public class RegionCSSTest {
         assertEquals(expected, stroke);
     }
 
-    @Ignore("JDK-8091576")
-    @Test public void borderStyle_left_bottom() {
+    @Disabled("JDK-8091576")
+    @Test
+    public void borderStyle_left_bottom() {
         region.setStyle(
                 "-fx-border-style-bottom: solid;" +
                 "-fx-border-style-left: dashed;");
@@ -1548,7 +1624,8 @@ public class RegionCSSTest {
         assertEquals(expected, stroke);
     }
 
-    @Test public void borderStyle_none() {
+    @Test
+    public void borderStyle_none() {
         region.setStyle("-fx-border-style: none;");
         processCSS();
 
@@ -1557,7 +1634,8 @@ public class RegionCSSTest {
         assertNull(region.getBorder());
     }
 
-    @Test public void borderStyle_hidden() {
+    @Test
+    public void borderStyle_hidden() {
         region.setStyle("-fx-border-style: hidden;");
         processCSS();
 
@@ -1566,7 +1644,8 @@ public class RegionCSSTest {
         assertNull(region.getBorder());
     }
 
-    @Test public void borderStyle_dotted() {
+    @Test
+    public void borderStyle_dotted() {
         region.setStyle("-fx-border-color: black; -fx-border-style: dotted;");
         processCSS();
 
@@ -1582,7 +1661,8 @@ public class RegionCSSTest {
     }
 
     // border-style: dashed
-    @Test public void borderStyle_dashed() {
+    @Test
+    public void borderStyle_dashed() {
         region.setStyle("-fx-border-color: black; -fx-border-style: dashed;");
         processCSS();
 
@@ -1597,7 +1677,8 @@ public class RegionCSSTest {
         assertEquals(expected, stroke);
     }
 
-    @Test public void borderStyle_solid() {
+    @Test
+    public void borderStyle_solid() {
         region.setStyle("-fx-border-color: black; -fx-border-style: solid;");
         processCSS();
 
@@ -1612,8 +1693,9 @@ public class RegionCSSTest {
         assertEquals(expected, stroke);
     }
 
-    @Ignore("JDK-8091576") // double value not implemented.
-    @Test public void borderStyle_double() {
+    @Disabled("JDK-8091576") // double value not implemented.
+    @Test
+    public void borderStyle_double() {
         region.setStyle("-fx-border-color: black; -fx-border-style: double;");
         processCSS();
 
@@ -1629,8 +1711,9 @@ public class RegionCSSTest {
 //        assertEquals(expected, stroke);
     }
 
-    @Ignore("JDK-8091576") // groove value not implemented.
-    @Test public void borderStyle_groove() {
+    @Disabled("JDK-8091576") // groove value not implemented.
+    @Test
+    public void borderStyle_groove() {
         region.setStyle("-fx-border-color: black; -fx-border-style: groove;");
         processCSS();
 
@@ -1646,8 +1729,9 @@ public class RegionCSSTest {
 //        assertEquals(expected, stroke);
     }
 
-    @Ignore("JDK-8091576") // ridge value not implemented.
-    @Test public void borderStyle_ridge() {
+    @Disabled("JDK-8091576") // ridge value not implemented.
+    @Test
+    public void borderStyle_ridge() {
         region.setStyle("-fx-border-color: black; -fx-border-style: ridge;");
         processCSS();
 
@@ -1663,8 +1747,9 @@ public class RegionCSSTest {
 //        assertEquals(expected, stroke);
     }
 
-    @Ignore("JDK-8091576") // inset value not implemented.
-    @Test public void borderStyle_inset() {
+    @Disabled("JDK-8091576") // inset value not implemented.
+    @Test
+    public void borderStyle_inset() {
         region.setStyle("-fx-border-color: black; -fx-border-style: inset;");
         processCSS();
 
@@ -1680,8 +1765,9 @@ public class RegionCSSTest {
 //        assertEquals(expected, stroke);
     }
 
-    @Ignore("JDK-8091576") // outset value not implemented.
-    @Test public void borderStyle_outset() {
+    @Disabled("JDK-8091576") // outset value not implemented.
+    @Test
+    public void borderStyle_outset() {
         region.setStyle("-fx-border-color: black; -fx-border-style: outset;");
         processCSS();
 
@@ -1697,7 +1783,8 @@ public class RegionCSSTest {
 //        assertEquals(expected, stroke);
     }
 
-    @Test public void borderStyle_solid_dotted() {
+    @Test
+    public void borderStyle_solid_dotted() {
         region.setStyle("-fx-border-color: black; -fx-border-style: solid dotted;");
         processCSS();
 
@@ -1713,7 +1800,8 @@ public class RegionCSSTest {
         assertEquals(expected, stroke);
     }
 
-    @Test public void borderStyle_solid_dotted_dashed() {
+    @Test
+    public void borderStyle_solid_dotted_dashed() {
         region.setStyle("-fx-border-color: black; -fx-border-style: solid dotted dashed;");
         processCSS();
 
@@ -1729,8 +1817,9 @@ public class RegionCSSTest {
         assertEquals(expected, stroke);
     }
 
-    @Ignore("JDK-8091576") // ridge value not implemented.
-    @Test public void borderStyle_solid_dotted_dashed_ridge() {
+    @Disabled("JDK-8091576") // ridge value not implemented.
+    @Test
+    public void borderStyle_solid_dotted_dashed_ridge() {
         region.setStyle("-fx-border-color: black; -fx-border-style: solid dotted dashed ridge;");
         processCSS();
 
@@ -1747,8 +1836,9 @@ public class RegionCSSTest {
 //        assertEquals(expected, stroke);
     }
 
-    @Ignore("JDK-8091576") // -fx-border-width-top is not implemented.
-    @Test public void borderStrokeWidth_top() {
+    @Disabled("JDK-8091576") // -fx-border-width-top is not implemented.
+    @Test
+    public void borderStrokeWidth_top() {
         region.setStyle(
                 "-fx-border-color: black;" +
                 "-fx-border-width-top: 10px;");
@@ -1764,8 +1854,9 @@ public class RegionCSSTest {
         assertEquals(expected, stroke);
     }
 
-    @Ignore("JDK-8091576") // -fx-border-width-right is not implemented.
-    @Test public void borderStrokeWidth_right() {
+    @Disabled("JDK-8091576") // -fx-border-width-right is not implemented.
+    @Test
+    public void borderStrokeWidth_right() {
         region.setStyle(
                 "-fx-border-color: black;" +
                 "-fx-border-width-right: 10px;");
@@ -1781,8 +1872,9 @@ public class RegionCSSTest {
         assertEquals(expected, stroke);
     }
 
-    @Ignore("JDK-8091576") // -fx-border-width-bottom is not implemented.
-    @Test public void borderStrokeWidth_bottom() {
+    @Disabled("JDK-8091576") // -fx-border-width-bottom is not implemented.
+    @Test
+    public void borderStrokeWidth_bottom() {
         region.setStyle(
                 "-fx-border-color: black;" +
                 "-fx-border-width-bottom: 10px;");
@@ -1798,8 +1890,9 @@ public class RegionCSSTest {
         assertEquals(expected, stroke);
     }
 
-    @Ignore("JDK-8091576") // -fx-border-width-left is not implemented.
-    @Test public void borderStrokeWidth_left() {
+    @Disabled("JDK-8091576") // -fx-border-width-left is not implemented.
+    @Test
+    public void borderStrokeWidth_left() {
         region.setStyle(
                 "-fx-border-color: black;" +
                 "-fx-border-width-left: 10px;");
@@ -1815,8 +1908,9 @@ public class RegionCSSTest {
         assertEquals(expected, stroke);
     }
 
-    @Ignore("JDK-8091576")
-    @Test public void borderStrokeWidth_top_right() {
+    @Disabled("JDK-8091576")
+    @Test
+    public void borderStrokeWidth_top_right() {
         region.setStyle(
                 "-fx-border-color: black;" +
                 "-fx-border-width-top: 10px;" +
@@ -1833,8 +1927,9 @@ public class RegionCSSTest {
         assertEquals(expected, stroke);
     }
 
-    @Ignore("JDK-8091576")
-    @Test public void borderStrokeWidth_top_bottom() {
+    @Disabled("JDK-8091576")
+    @Test
+    public void borderStrokeWidth_top_bottom() {
         region.setStyle(
                 "-fx-border-color: black;" +
                 "-fx-border-width-top: 10px;" +
@@ -1851,8 +1946,9 @@ public class RegionCSSTest {
         assertEquals(expected, stroke);
     }
 
-    @Ignore("JDK-8091576")
-    @Test public void borderStrokeWidth_left_bottom() {
+    @Disabled("JDK-8091576")
+    @Test
+    public void borderStrokeWidth_left_bottom() {
         region.setStyle(
                 "-fx-border-color: black;" +
                 "-fx-border-width-left: 10px;" +
@@ -1869,7 +1965,8 @@ public class RegionCSSTest {
         assertEquals(expected, stroke);
     }
 
-    @Test public void borderStrokeWidth2() {
+    @Test
+    public void borderStrokeWidth2() {
         region.setStyle(
                 "-fx-border-color: black;" +
                 "-fx-border-width: 1px 2px;");
@@ -1884,7 +1981,8 @@ public class RegionCSSTest {
         assertEquals(expected, stroke);
     }
 
-    @Test public void borderStrokeWidth3() {
+    @Test
+    public void borderStrokeWidth3() {
         region.setStyle(
                 "-fx-border-color: black;" +
                 "-fx-border-width: 1px 2px 3px;");
@@ -1899,7 +1997,8 @@ public class RegionCSSTest {
         assertEquals(expected, stroke);
     }
 
-    @Test public void borderStrokeWidth4() {
+    @Test
+    public void borderStrokeWidth4() {
         region.setStyle(
                 "-fx-border-color: black;" +
                 "-fx-border-width: 1px 2px 3px 4px;");
@@ -1914,8 +2013,9 @@ public class RegionCSSTest {
         assertEquals(expected, stroke);
     }
 
-    @Ignore("JDK-8091576") // thin value is not implemented.
-    @Test public void borderStrokeWidth_thin() {
+    @Disabled("JDK-8091576") // thin value is not implemented.
+    @Test
+    public void borderStrokeWidth_thin() {
         region.setStyle(
                 "-fx-border-color: black;" +
                 "-fx-border-width: thin;");
@@ -1931,8 +2031,9 @@ public class RegionCSSTest {
         assertEquals(expected, stroke);
     }
 
-    @Ignore("JDK-8091576") // thick value is not implemented.
-    @Test public void borderStrokeWidth_thick() {
+    @Disabled("JDK-8091576") // thick value is not implemented.
+    @Test
+    public void borderStrokeWidth_thick() {
         region.setStyle(
                 "-fx-border-color: black;" +
                 "-fx-border-width: thick;");
@@ -1948,8 +2049,9 @@ public class RegionCSSTest {
         assertEquals(expected, stroke);
     }
 
-    @Ignore("JDK-8091576") // medium value is not implemented.
-    @Test public void borderStrokeWidth_medium() {
+    @Disabled("JDK-8091576") // medium value is not implemented.
+    @Test
+    public void borderStrokeWidth_medium() {
         region.setStyle(
                 "-fx-border-color: black;" +
                 "-fx-border-width: medium;");
@@ -1965,8 +2067,9 @@ public class RegionCSSTest {
         assertEquals(expected, stroke);
     }
 
-    @Ignore("JDK-8091576")
-    @Test public void borderStrokeWidth_thin_medium_thick() {
+    @Disabled("JDK-8091576")
+    @Test
+    public void borderStrokeWidth_thin_medium_thick() {
         region.setStyle(
                 "-fx-border-color: black;" +
                 "-fx-border-width: thin medium thick;");
@@ -1987,8 +2090,9 @@ public class RegionCSSTest {
 
     // TODO!! The initial width of a border is MEDIUM, NOT 0!
 
-    @Ignore("JDK-8091576") // -fx-border-top-left-radius not implemented.
-    @Test public void borderStrokeRadius_topLeft1() {
+    @Disabled("JDK-8091576") // -fx-border-top-left-radius not implemented.
+    @Test
+    public void borderStrokeRadius_topLeft1() {
         region.setStyle(
                 "-fx-border-color: black;" +
                 "-fx-border-top-left-radius: 5px;");
@@ -2005,8 +2109,9 @@ public class RegionCSSTest {
         assertEquals(expected, stroke);
     }
 
-    @Ignore("JDK-8091576") // -fx-border-top-left-radius not implemented.
-    @Test public void borderStrokeRadius_topLeft2() {
+    @Disabled("JDK-8091576") // -fx-border-top-left-radius not implemented.
+    @Test
+    public void borderStrokeRadius_topLeft2() {
         region.setStyle(
                 "-fx-border-color: black;" +
                 "-fx-border-top-left-radius: 5px, 10px;");
@@ -2032,8 +2137,9 @@ public class RegionCSSTest {
         assertEquals(expected, stroke);
     }
 
-    @Ignore("JDK-8091576") // -fx-border-top-left-radius not implemented.
-    @Test public void borderStrokeRadius_topLeft3() {
+    @Disabled("JDK-8091576") // -fx-border-top-left-radius not implemented.
+    @Test
+    public void borderStrokeRadius_topLeft3() {
         region.setStyle(
                 "-fx-border-color: black;" +
                 "-fx-border-top-left-radius: 5%;");
@@ -2059,8 +2165,9 @@ public class RegionCSSTest {
         assertEquals(expected, stroke);
     }
 
-    @Ignore("JDK-8091576") // -fx-border-top-left-radius not implemented.
-    @Test public void borderStrokeRadius_topLeft4() {
+    @Disabled("JDK-8091576") // -fx-border-top-left-radius not implemented.
+    @Test
+    public void borderStrokeRadius_topLeft4() {
         region.setStyle(
                 "-fx-border-color: black;" +
                 "-fx-border-top-left-radius: 5%, 10%;");
@@ -2086,8 +2193,9 @@ public class RegionCSSTest {
         assertEquals(expected, stroke);
     }
 
-    @Ignore("JDK-8091576") // -fx-border-top-left-radius not implemented.
-    @Test public void borderStrokeRadius_topLeft5() {
+    @Disabled("JDK-8091576") // -fx-border-top-left-radius not implemented.
+    @Test
+    public void borderStrokeRadius_topLeft5() {
         region.setStyle(
                 "-fx-border-color: black;" +
                 "-fx-border-top-left-radius: 5% 10px;");
@@ -2113,8 +2221,9 @@ public class RegionCSSTest {
         assertEquals(expected, stroke);
     }
 
-    @Ignore("JDK-8091576") // -fx-border-top-left-radius not implemented.
-    @Test public void borderStrokeRadius_topLeft6() {
+    @Disabled("JDK-8091576") // -fx-border-top-left-radius not implemented.
+    @Test
+    public void borderStrokeRadius_topLeft6() {
         region.setStyle(
                 "-fx-border-color: black;" +
                 "-fx-border-top-left-radius: 5px, 10%;");
@@ -2140,8 +2249,9 @@ public class RegionCSSTest {
         assertEquals(expected, stroke);
     }
 
-    @Ignore("JDK-8091576") // -fx-border-top-right-radius not implemented.
-    @Test public void borderStrokeRadius_topRight1() {
+    @Disabled("JDK-8091576") // -fx-border-top-right-radius not implemented.
+    @Test
+    public void borderStrokeRadius_topRight1() {
         region.setStyle(
                 "-fx-border-color: black;" +
                 "-fx-border-top-right-radius: 5px;");
@@ -2158,8 +2268,9 @@ public class RegionCSSTest {
         assertEquals(expected, stroke);
     }
 
-    @Ignore("JDK-8091576") // -fx-border-top-right-radius not implemented.
-    @Test public void borderStrokeRadius_topRight2() {
+    @Disabled("JDK-8091576") // -fx-border-top-right-radius not implemented.
+    @Test
+    public void borderStrokeRadius_topRight2() {
         region.setStyle(
                 "-fx-border-color: black;" +
                 "-fx-border-top-right-radius: 5px, 10px;");
@@ -2185,8 +2296,9 @@ public class RegionCSSTest {
         assertEquals(expected, stroke);
     }
 
-    @Ignore("JDK-8091576") // -fx-border-top-right-radius not implemented.
-    @Test public void borderStrokeRadius_topRight3() {
+    @Disabled("JDK-8091576") // -fx-border-top-right-radius not implemented.
+    @Test
+    public void borderStrokeRadius_topRight3() {
         region.setStyle(
                 "-fx-border-color: black;" +
                 "-fx-border-top-right-radius: 5%;");
@@ -2212,8 +2324,9 @@ public class RegionCSSTest {
         assertEquals(expected, stroke);
     }
 
-    @Ignore("JDK-8091576") // -fx-border-top-right-radius not implemented.
-    @Test public void borderStrokeRadius_topRight4() {
+    @Disabled("JDK-8091576") // -fx-border-top-right-radius not implemented.
+    @Test
+    public void borderStrokeRadius_topRight4() {
         region.setStyle(
                 "-fx-border-color: black;" +
                 "-fx-border-top-right-radius: 5%, 10%;");
@@ -2239,8 +2352,9 @@ public class RegionCSSTest {
         assertEquals(expected, stroke);
     }
 
-    @Ignore("JDK-8091576") // -fx-border-top-right-radius not implemented.
-    @Test public void borderStrokeRadius_topRight5() {
+    @Disabled("JDK-8091576") // -fx-border-top-right-radius not implemented.
+    @Test
+    public void borderStrokeRadius_topRight5() {
         region.setStyle(
                 "-fx-border-color: black;" +
                 "-fx-border-top-right-radius: 5% 10px;");
@@ -2266,8 +2380,9 @@ public class RegionCSSTest {
         assertEquals(expected, stroke);
     }
 
-    @Ignore("JDK-8091576") // -fx-border-top-right-radius not implemented.
-    @Test public void borderStrokeRadius_topRight6() {
+    @Disabled("JDK-8091576") // -fx-border-top-right-radius not implemented.
+    @Test
+    public void borderStrokeRadius_topRight6() {
         region.setStyle(
                 "-fx-border-color: black;" +
                 "-fx-border-top-right-radius: 5px, 10%;");
@@ -2293,8 +2408,9 @@ public class RegionCSSTest {
         assertEquals(expected, stroke);
     }
 
-    @Ignore("JDK-8091576") // -fx-border-bottom-right-radius not implemented.
-    @Test public void borderStrokeRadius_bottomRight1() {
+    @Disabled("JDK-8091576") // -fx-border-bottom-right-radius not implemented.
+    @Test
+    public void borderStrokeRadius_bottomRight1() {
         region.setStyle(
                 "-fx-border-color: black;" +
                 "-fx-border-bottom-right-radius: 5px;");
@@ -2311,8 +2427,9 @@ public class RegionCSSTest {
         assertEquals(expected, stroke);
     }
 
-    @Ignore("JDK-8091576") // -fx-border-bottom-right-radius not implemented.
-    @Test public void borderStrokeRadius_bottomRight2() {
+    @Disabled("JDK-8091576") // -fx-border-bottom-right-radius not implemented.
+    @Test
+    public void borderStrokeRadius_bottomRight2() {
         region.setStyle(
                 "-fx-border-color: black;" +
                 "-fx-border-bottom-right-radius: 5px, 10px;");
@@ -2338,8 +2455,9 @@ public class RegionCSSTest {
         assertEquals(expected, stroke);
     }
 
-    @Ignore("JDK-8091576") // -fx-border-bottom-right-radius not implemented.
-    @Test public void borderStrokeRadius_bottomRight3() {
+    @Disabled("JDK-8091576") // -fx-border-bottom-right-radius not implemented.
+    @Test
+    public void borderStrokeRadius_bottomRight3() {
         region.setStyle(
                 "-fx-border-color: black;" +
                 "-fx-border-bottom-right-radius: 5%;");
@@ -2365,8 +2483,9 @@ public class RegionCSSTest {
         assertEquals(expected, stroke);
     }
 
-    @Ignore("JDK-8091576") // -fx-border-bottom-right-radius not implemented.
-    @Test public void borderStrokeRadius_bottomRight4() {
+    @Disabled("JDK-8091576") // -fx-border-bottom-right-radius not implemented.
+    @Test
+    public void borderStrokeRadius_bottomRight4() {
         region.setStyle(
                 "-fx-border-color: black;" +
                 "-fx-border-bottom-right-radius: 5%, 10%;");
@@ -2392,8 +2511,9 @@ public class RegionCSSTest {
         assertEquals(expected, stroke);
     }
 
-    @Ignore("JDK-8091576") // -fx-border-bottom-right-radius not implemented.
-    @Test public void borderStrokeRadius_bottomRight5() {
+    @Disabled("JDK-8091576") // -fx-border-bottom-right-radius not implemented.
+    @Test
+    public void borderStrokeRadius_bottomRight5() {
         region.setStyle(
                 "-fx-border-color: black;" +
                 "-fx-border-bottom-right-radius: 5% 10px;");
@@ -2419,8 +2539,9 @@ public class RegionCSSTest {
         assertEquals(expected, stroke);
     }
 
-    @Ignore("JDK-8091576") // -fx-border-bottom-right-radius not implemented.
-    @Test public void borderStrokeRadius_bottomRight6() {
+    @Disabled("JDK-8091576") // -fx-border-bottom-right-radius not implemented.
+    @Test
+    public void borderStrokeRadius_bottomRight6() {
         region.setStyle(
                 "-fx-border-color: black;" +
                 "-fx-border-bottom-right-radius: 5px, 10%;");
@@ -2446,8 +2567,9 @@ public class RegionCSSTest {
         assertEquals(expected, stroke);
     }
 
-    @Ignore("JDK-8091576") // -fx-border-bottom-left-radius not implemented.
-    @Test public void borderStrokeRadius_bottomLeft1() {
+    @Disabled("JDK-8091576") // -fx-border-bottom-left-radius not implemented.
+    @Test
+    public void borderStrokeRadius_bottomLeft1() {
         region.setStyle(
                 "-fx-border-color: black;" +
                 "-fx-border-bottom-left-radius: 5px;");
@@ -2464,8 +2586,9 @@ public class RegionCSSTest {
         assertEquals(expected, stroke);
     }
 
-    @Ignore("JDK-8091576") // -fx-border-bottom-left-radius not implemented.
-    @Test public void borderStrokeRadius_bottomLeft2() {
+    @Disabled("JDK-8091576") // -fx-border-bottom-left-radius not implemented.
+    @Test
+    public void borderStrokeRadius_bottomLeft2() {
         region.setStyle(
                 "-fx-border-color: black;" +
                 "-fx-border-bottom-left-radius: 5px, 10px;");
@@ -2491,8 +2614,9 @@ public class RegionCSSTest {
         assertEquals(expected, stroke);
     }
 
-    @Ignore("JDK-8091576") // -fx-border-bottom-left-radius not implemented.
-    @Test public void borderStrokeRadius_bottomLeft3() {
+    @Disabled("JDK-8091576") // -fx-border-bottom-left-radius not implemented.
+    @Test
+    public void borderStrokeRadius_bottomLeft3() {
         region.setStyle(
                 "-fx-border-color: black;" +
                 "-fx-border-bottom-left-radius: 5%;");
@@ -2518,8 +2642,9 @@ public class RegionCSSTest {
         assertEquals(expected, stroke);
     }
 
-    @Ignore("JDK-8091576") // -fx-border-bottom-left-radius not implemented.
-    @Test public void borderStrokeRadius_bottomLeft4() {
+    @Disabled("JDK-8091576") // -fx-border-bottom-left-radius not implemented.
+    @Test
+    public void borderStrokeRadius_bottomLeft4() {
         region.setStyle(
                 "-fx-border-color: black;" +
                 "-fx-border-bottom-left-radius: 5%, 10%;");
@@ -2545,8 +2670,9 @@ public class RegionCSSTest {
         assertEquals(expected, stroke);
     }
 
-    @Ignore("JDK-8091576") // -fx-border-bottom-left-radius not implemented.
-    @Test public void borderStrokeRadius_bottomLeft5() {
+    @Disabled("JDK-8091576") // -fx-border-bottom-left-radius not implemented.
+    @Test
+    public void borderStrokeRadius_bottomLeft5() {
         region.setStyle(
                 "-fx-border-color: black;" +
                 "-fx-border-bottom-left-radius: 5% 10px;");
@@ -2572,8 +2698,9 @@ public class RegionCSSTest {
         assertEquals(expected, stroke);
     }
 
-    @Ignore("JDK-8091576") // -fx-border-bottom-left-radius not implemented.
-    @Test public void borderStrokeRadius_bottomLeft6() {
+    @Disabled("JDK-8091576") // -fx-border-bottom-left-radius not implemented.
+    @Test
+    public void borderStrokeRadius_bottomLeft6() {
         region.setStyle(
                 "-fx-border-color: black;" +
                 "-fx-border-bottom-left-radius: 5px, 10%;");
@@ -2599,8 +2726,9 @@ public class RegionCSSTest {
         assertEquals(expected, stroke);
     }
 
-    @Ignore("JDK-8091576")
-    @Test public void borderStrokeRadius_topLeft_topRight() {
+    @Disabled("JDK-8091576")
+    @Test
+    public void borderStrokeRadius_topLeft_topRight() {
         region.setStyle(
                 "-fx-border-color: black;" +
                 "-fx-border-top-left-radius: 5px 10%;" +
@@ -2627,7 +2755,8 @@ public class RegionCSSTest {
         assertEquals(expected, stroke);
     }
 
-    @Test public void borderStrokeRadius1() {
+    @Test
+    public void borderStrokeRadius1() {
         region.setStyle(
                 "-fx-border-color: black;" +
                 "-fx-border-radius: 5px;");
@@ -2644,7 +2773,8 @@ public class RegionCSSTest {
         assertEquals(expected, stroke);
     }
 
-    @Test public void borderStrokeRadius1_Percent() {
+    @Test
+    public void borderStrokeRadius1_Percent() {
         region.setStyle(
                 "-fx-border-color: black;" +
                 "-fx-border-radius: 5%;");
@@ -2661,7 +2791,8 @@ public class RegionCSSTest {
         assertEquals(expected, stroke);
     }
 
-    @Test public void borderStrokeRadius2() {
+    @Test
+    public void borderStrokeRadius2() {
         region.setStyle(
                 "-fx-border-color: black;" +
                 "-fx-border-radius: 5px 10px;");
@@ -2678,7 +2809,8 @@ public class RegionCSSTest {
         assertEquals(expected, stroke);
     }
 
-    @Test public void borderStrokeRadius2_Percent() {
+    @Test
+    public void borderStrokeRadius2_Percent() {
         region.setStyle(
                 "-fx-border-color: black;" +
                 "-fx-border-radius: 5% 10%;");
@@ -2695,7 +2827,8 @@ public class RegionCSSTest {
         assertEquals(expected, stroke);
     }
 
-    @Test public void borderStrokeRadius3() {
+    @Test
+    public void borderStrokeRadius3() {
         region.setStyle(
                 "-fx-border-color: black;" +
                 "-fx-border-radius: 5px 10px 15px;");
@@ -2712,7 +2845,8 @@ public class RegionCSSTest {
         assertEquals(expected, stroke);
     }
 
-    @Test public void borderStrokeRadius3_Percent() {
+    @Test
+    public void borderStrokeRadius3_Percent() {
         region.setStyle(
                 "-fx-border-color: black;" +
                 "-fx-border-radius: 5% 10% 15%;");
@@ -2729,7 +2863,8 @@ public class RegionCSSTest {
         assertEquals(expected, stroke);
     }
 
-    @Test public void borderStrokeRadius4() {
+    @Test
+    public void borderStrokeRadius4() {
         region.setStyle(
                 "-fx-border-color: black;" +
                 "-fx-border-radius: 5px 10px 15px 20px;");
@@ -2746,7 +2881,8 @@ public class RegionCSSTest {
         assertEquals(expected, stroke);
     }
 
-    @Test public void borderStrokeRadius4_Percent() {
+    @Test
+    public void borderStrokeRadius4_Percent() {
         region.setStyle(
                 "-fx-border-color: black;" +
                 "-fx-border-radius: 5% 10% 15% 20%;");
@@ -2767,7 +2903,8 @@ public class RegionCSSTest {
 
     // http://www.w3.org/TR/css3-background/#the-border-radius
     // Example 23 (except using px here instead of em)
-    @Test public void testBorderRadiusWithHorizontalAndVerticalRadii() {
+    @Test
+    public void testBorderRadiusWithHorizontalAndVerticalRadii() {
 
         region.setStyle("-fx-border-color: black; -fx-border-radius: 2px 1px 4px / 0.5px 3px;");
         processCSS();
@@ -2787,7 +2924,8 @@ public class RegionCSSTest {
 
 
 
-    @Test public void borderStrokeIsTransparent() {
+    @Test
+    public void borderStrokeIsTransparent() {
         region.setStyle(
                 "-fx-border-style: solid;" +
                 "-fx-border-color: transparent;");
@@ -2802,7 +2940,8 @@ public class RegionCSSTest {
         assertEquals(expected, stroke);
     }
 
-    @Test public void borderStrokeIsSpecifiedOnly() {
+    @Test
+    public void borderStrokeIsSpecifiedOnly() {
         region.setStyle(
                 "-fx-border-style: solid;" +
                 "-fx-border-color: red;");
@@ -2817,7 +2956,8 @@ public class RegionCSSTest {
         assertEquals(expected, stroke);
     }
 
-    @Test public void borderStroke2IsSpecifiedOnly() {
+    @Test
+    public void borderStroke2IsSpecifiedOnly() {
         region.setStyle(
                 "-fx-border-style: solid;" +
                 "-fx-border-color: red green;");
@@ -2835,7 +2975,8 @@ public class RegionCSSTest {
         assertEquals(expected, stroke);
     }
 
-    @Test public void borderStroke3IsSpecifiedOnly() {
+    @Test
+    public void borderStroke3IsSpecifiedOnly() {
         region.setStyle(
                 "-fx-border-style: solid;" +
                 "-fx-border-color: red green blue;");
@@ -2853,7 +2994,8 @@ public class RegionCSSTest {
         assertEquals(expected, stroke);
     }
 
-    @Test public void borderStroke4IsSpecifiedOnly() {
+    @Test
+    public void borderStroke4IsSpecifiedOnly() {
         region.setStyle(
                 "-fx-border-style: solid;" +
                 "-fx-border-color: red green blue yellow;");
@@ -2871,8 +3013,9 @@ public class RegionCSSTest {
         assertEquals(expected, stroke);
     }
 
-    @Ignore("JDK-8091576")
-    @Test public void borderStroke_top_IsSpecifiedOnly() {
+    @Disabled("JDK-8091576")
+    @Test
+    public void borderStroke_top_IsSpecifiedOnly() {
         region.setStyle(
                 "-fx-border-style: solid;" +
                 "-fx-border-top-color: purple;");
@@ -2891,8 +3034,9 @@ public class RegionCSSTest {
         assertEquals(expected, stroke);
     }
 
-    @Ignore("JDK-8091576")
-    @Test public void borderStroke_right_IsSpecifiedOnly() {
+    @Disabled("JDK-8091576")
+    @Test
+    public void borderStroke_right_IsSpecifiedOnly() {
         region.setStyle(
                 "-fx-border-style: solid;" +
                 "-fx-border-right-color: purple;");
@@ -2911,8 +3055,9 @@ public class RegionCSSTest {
         assertEquals(expected, stroke);
     }
 
-    @Ignore("JDK-8091576") // -fx-border-bottom-color is not implemented.
-    @Test public void borderStroke_bottom_IsSpecifiedOnly() {
+    @Disabled("JDK-8091576") // -fx-border-bottom-color is not implemented.
+    @Test
+    public void borderStroke_bottom_IsSpecifiedOnly() {
         region.setStyle(
                 "-fx-border-style: solid;" +
                 "-fx-border-bottom-color: purple;");
@@ -2931,8 +3076,9 @@ public class RegionCSSTest {
         assertEquals(expected, stroke);
     }
 
-    @Ignore("JDK-8091576") // -fx-border-left-color is not implemented.
-    @Test public void borderStroke_left_IsSpecifiedOnly() {
+    @Disabled("JDK-8091576") // -fx-border-left-color is not implemented.
+    @Test
+    public void borderStroke_left_IsSpecifiedOnly() {
         region.setStyle(
                 "-fx-border-style: solid;" +
                 "-fx-border-left-color: purple;");
@@ -2951,8 +3097,9 @@ public class RegionCSSTest {
         assertEquals(expected, stroke);
     }
 
-    @Ignore("JDK-8091576")
-    @Test public void borderStroke_top_right_IsSpecifiedOnly() {
+    @Disabled("JDK-8091576")
+    @Test
+    public void borderStroke_top_right_IsSpecifiedOnly() {
         region.setStyle(
                 "-fx-border-style: solid;" +
                 "-fx-border-top-color: red;" +
@@ -2972,8 +3119,9 @@ public class RegionCSSTest {
         assertEquals(expected, stroke);
     }
 
-    @Ignore("JDK-8091576")
-    @Test public void borderStroke_right_left_IsSpecifiedOnly() {
+    @Disabled("JDK-8091576")
+    @Test
+    public void borderStroke_right_left_IsSpecifiedOnly() {
         region.setStyle(
                 "-fx-border-style: solid;" +
                 "-fx-border-right-color: red;" +
@@ -2993,8 +3141,9 @@ public class RegionCSSTest {
         assertEquals(expected, stroke);
     }
 
-    @Ignore("JDK-8091576")
-    @Test public void borderStroke_bottom_top_IsSpecifiedOnly() {
+    @Disabled("JDK-8091576")
+    @Test
+    public void borderStroke_bottom_top_IsSpecifiedOnly() {
         region.setStyle(
                 "-fx-border-style: solid;" +
                 "-fx-border-bottom-color: red;" +
@@ -3014,7 +3163,8 @@ public class RegionCSSTest {
         assertEquals(expected, stroke);
     }
 
-    @Test public void borderRadiusIsSpecifiedOnly() {
+    @Test
+    public void borderRadiusIsSpecifiedOnly() {
         region.setStyle("-fx-border-radius: 1px;");
         processCSS();
 
@@ -3022,7 +3172,8 @@ public class RegionCSSTest {
         assertNull(region.getBorder());
     }
 
-    @Test public void borderWidthIsSpecifiedOnly() {
+    @Test
+    public void borderWidthIsSpecifiedOnly() {
         region.setStyle("-fx-border-width: 1;");
         processCSS();
 
@@ -3030,7 +3181,8 @@ public class RegionCSSTest {
         assertNull(region.getBorder());
     }
 
-    @Test public void testWithExcessBorderWidths() {
+    @Test
+    public void testWithExcessBorderWidths() {
         region.setStyle(
                 "-fx-border-style: solid;" +
                 "-fx-border-color: red;" +
@@ -3049,7 +3201,8 @@ public class RegionCSSTest {
         assertEquals(expected, stroke);
     }
 
-    @Test public void testWithExcessBorderRadii() {
+    @Test
+    public void testWithExcessBorderRadii() {
         region.setStyle(
                 "-fx-border-style: solid;" +
                 "-fx-border-color: red;" +
@@ -3074,7 +3227,8 @@ public class RegionCSSTest {
     // the stroke borders (or at least, they can depend on them). As such I might not be
     // able to short-circuit the creation of stroke borders, even if they have no style.
 
-    @Test public void borderImageSourceIsNull() {
+    @Test
+    public void borderImageSourceIsNull() {
         region.setStyle("-fx-border-image-source: null;");
         processCSS();
 
@@ -3083,7 +3237,8 @@ public class RegionCSSTest {
         assertNull(region.getBorder());
     }
 
-    @Test public void borderImageSource() {
+    @Test
+    public void borderImageSource() {
         region.setStyle("-fx-border-image-source: url('test/javafx/scene/layout/center-btn.png')");
         processCSS();
 
@@ -3092,7 +3247,8 @@ public class RegionCSSTest {
         assertEquals(1, region.getBorder().getImages().size(), 0);
     }
 
-    @Test public void defaultBorderImageValues() {
+    @Test
+    public void defaultBorderImageValues() {
         region.setStyle("-fx-border-image-source: url('test/javafx/scene/layout/center-btn.png')");
         processCSS();
 
@@ -3109,7 +3265,8 @@ public class RegionCSSTest {
         assertEquals(expected, image);
     }
 
-    @Test public void borderImageSlice_1() {
+    @Test
+    public void borderImageSlice_1() {
         region.setStyle(
                 "-fx-border-image-source: url('test/javafx/scene/layout/center-btn.png');" +
                 "-fx-border-image-slice: 1;");
@@ -3128,7 +3285,8 @@ public class RegionCSSTest {
         assertEquals(expected, image);
     }
 
-    @Test public void borderImageSlice_1_2() {
+    @Test
+    public void borderImageSlice_1_2() {
         region.setStyle(
                 "-fx-border-image-source: url('test/javafx/scene/layout/center-btn.png');" +
                 "-fx-border-image-slice: 1 2;");
@@ -3147,7 +3305,8 @@ public class RegionCSSTest {
         assertEquals(expected, image);
     }
 
-    @Test public void borderImageSlice_1_2_3() {
+    @Test
+    public void borderImageSlice_1_2_3() {
         region.setStyle(
                 "-fx-border-image-source: url('test/javafx/scene/layout/center-btn.png');" +
                 "-fx-border-image-slice: 1 2 3;");
@@ -3166,7 +3325,8 @@ public class RegionCSSTest {
         assertEquals(expected, image);
     }
 
-    @Test public void borderImageSlice_1_2_3_4() {
+    @Test
+    public void borderImageSlice_1_2_3_4() {
         region.setStyle(
                 "-fx-border-image-source: url('test/javafx/scene/layout/center-btn.png');" +
                 "-fx-border-image-slice: 1 2 3 4;");
@@ -3185,7 +3345,8 @@ public class RegionCSSTest {
         assertEquals(expected, image);
     }
 
-    @Test public void borderImageSlice_1_fill() {
+    @Test
+    public void borderImageSlice_1_fill() {
         region.setStyle(
                 "-fx-border-image-source: url('test/javafx/scene/layout/center-btn.png');" +
                 "-fx-border-image-slice: 1 fill;");
@@ -3204,7 +3365,8 @@ public class RegionCSSTest {
         assertEquals(expected, image);
     }
 
-    @Test public void borderImageSlice_1_2_fill() {
+    @Test
+    public void borderImageSlice_1_2_fill() {
         region.setStyle(
                 "-fx-border-image-source: url('test/javafx/scene/layout/center-btn.png');" +
                 "-fx-border-image-slice: 1 2 fill;");
@@ -3223,7 +3385,8 @@ public class RegionCSSTest {
         assertEquals(expected, image);
     }
 
-    @Test public void borderImageSlice_1_2_3_fill() {
+    @Test
+    public void borderImageSlice_1_2_3_fill() {
         region.setStyle(
                 "-fx-border-image-source: url('test/javafx/scene/layout/center-btn.png');" +
                 "-fx-border-image-slice: 1 2 3 fill;");
@@ -3242,7 +3405,8 @@ public class RegionCSSTest {
         assertEquals(expected, image);
     }
 
-    @Test public void borderImageSlice_1_2_3_4_fill() {
+    @Test
+    public void borderImageSlice_1_2_3_4_fill() {
         region.setStyle(
                 "-fx-border-image-source: url('test/javafx/scene/layout/center-btn.png');" +
                 "-fx-border-image-slice: 1 2 3 4 fill;");
@@ -3261,7 +3425,8 @@ public class RegionCSSTest {
         assertEquals(expected, image);
     }
 
-    @Test public void borderImageWidth_1() {
+    @Test
+    public void borderImageWidth_1() {
         region.setStyle(
                 "-fx-border-image-source: url('test/javafx/scene/layout/center-btn.png');" +
                 "-fx-border-image-width: 1;");
@@ -3280,7 +3445,8 @@ public class RegionCSSTest {
         assertEquals(expected, image);
     }
 
-    @Test public void borderImageWidth_1_2() {
+    @Test
+    public void borderImageWidth_1_2() {
         region.setStyle(
                 "-fx-border-image-source: url('test/javafx/scene/layout/center-btn.png');" +
                 "-fx-border-image-width: 1 2;");
@@ -3299,7 +3465,8 @@ public class RegionCSSTest {
         assertEquals(expected, image);
     }
 
-    @Test public void borderImageWidth_1_2_3() {
+    @Test
+    public void borderImageWidth_1_2_3() {
         region.setStyle(
                 "-fx-border-image-source: url('test/javafx/scene/layout/center-btn.png');" +
                 "-fx-border-image-width: 1 2 3;");
@@ -3318,7 +3485,8 @@ public class RegionCSSTest {
         assertEquals(expected, image);
     }
 
-    @Test public void borderImageWidth_1_2_3_4() {
+    @Test
+    public void borderImageWidth_1_2_3_4() {
         region.setStyle(
                 "-fx-border-image-source: url('test/javafx/scene/layout/center-btn.png');" +
                 "-fx-border-image-width: 1 2 3 4;");
@@ -3337,7 +3505,8 @@ public class RegionCSSTest {
         assertEquals(expected, image);
     }
 
-    @Test public void borderImageWidth_1_2Percent() {
+    @Test
+    public void borderImageWidth_1_2Percent() {
         region.setStyle(
                 "-fx-border-image-source: url('test/javafx/scene/layout/center-btn.png');" +
                 "-fx-border-image-width: 1 2%;");
@@ -3356,7 +3525,8 @@ public class RegionCSSTest {
         assertEquals(expected, image);
     }
 
-    @Test public void borderImageWidth_1Percent_2Percent_3Percent_4Percent() {
+    @Test
+    public void borderImageWidth_1Percent_2Percent_3Percent_4Percent() {
         region.setStyle(
                 "-fx-border-image-source: url('test/javafx/scene/layout/center-btn.png');" +
                 "-fx-border-image-width: 1% 2% 3% 4%;");
@@ -3375,7 +3545,8 @@ public class RegionCSSTest {
         assertEquals(expected, image);
     }
 
-    @Test public void borderImageWidth_auto() {
+    @Test
+    public void borderImageWidth_auto() {
         region.setStyle(
                 "-fx-border-image-source: url('test/javafx/scene/layout/center-btn.png');" +
                 "-fx-border-image-width: auto;");
@@ -3396,7 +3567,8 @@ public class RegionCSSTest {
         assertEquals(expected, image);
     }
 
-    @Test public void borderImageWidth_1_auto() {
+    @Test
+    public void borderImageWidth_1_auto() {
         region.setStyle(
                 "-fx-border-image-source: url('test/javafx/scene/layout/center-btn.png');" +
                 "-fx-border-image-width: 1 auto;");
@@ -3416,7 +3588,8 @@ public class RegionCSSTest {
         assertEquals(expected, image);
     }
 
-    @Test public void borderImageWidth_1_2Percent_auto() {
+    @Test
+    public void borderImageWidth_1_2Percent_auto() {
         region.setStyle(
                 "-fx-border-image-source: url('test/javafx/scene/layout/center-btn.png');" +
                 "-fx-border-image-width: 1 2% auto;");
@@ -3436,7 +3609,8 @@ public class RegionCSSTest {
         assertEquals(expected, image);
     }
 
-    @Test public void borderImageOutset_1() {
+    @Test
+    public void borderImageOutset_1() {
         region.setStyle(
                 "-fx-border-image-source: url('test/javafx/scene/layout/center-btn.png');" +
                 "-fx-border-image-insets: 1;");
@@ -3455,7 +3629,8 @@ public class RegionCSSTest {
         assertEquals(expected, image);
     }
 
-    @Test public void borderImageOutset_1_2() {
+    @Test
+    public void borderImageOutset_1_2() {
         region.setStyle(
                 "-fx-border-image-source: url('test/javafx/scene/layout/center-btn.png');" +
                 "-fx-border-image-insets: 1 2;");
@@ -3474,7 +3649,8 @@ public class RegionCSSTest {
         assertEquals(expected, image);
     }
 
-    @Test public void borderImageOutset_1_2_3() {
+    @Test
+    public void borderImageOutset_1_2_3() {
         region.setStyle(
                 "-fx-border-image-source: url('test/javafx/scene/layout/center-btn.png');" +
                 "-fx-border-image-insets: 1 2 3;");
@@ -3493,7 +3669,8 @@ public class RegionCSSTest {
         assertEquals(expected, image);
     }
 
-    @Test public void borderImageOutset_1_2_3_4() {
+    @Test
+    public void borderImageOutset_1_2_3_4() {
         region.setStyle(
                 "-fx-border-image-source: url('test/javafx/scene/layout/center-btn.png');" +
                 "-fx-border-image-insets: 1 2 3 4;");
@@ -3512,7 +3689,8 @@ public class RegionCSSTest {
         assertEquals(expected, image);
     }
 
-    @Test public void borderImageRepeat_stretch() {
+    @Test
+    public void borderImageRepeat_stretch() {
         region.setStyle(
                 "-fx-border-image-source: url('test/javafx/scene/layout/center-btn.png');" +
                 "-fx-border-image-repeat: stretch;");
@@ -3531,7 +3709,8 @@ public class RegionCSSTest {
         assertEquals(expected, image);
     }
 
-    @Test public void borderImageRepeat_repeat() {
+    @Test
+    public void borderImageRepeat_repeat() {
         region.setStyle(
                 "-fx-border-image-source: url('test/javafx/scene/layout/center-btn.png');" +
                 "-fx-border-image-repeat: repeat;");
@@ -3550,7 +3729,8 @@ public class RegionCSSTest {
         assertEquals(expected, image);
     }
 
-    @Test public void borderImageRepeat_round() {
+    @Test
+    public void borderImageRepeat_round() {
         region.setStyle(
                 "-fx-border-image-source: url('test/javafx/scene/layout/center-btn.png');" +
                 "-fx-border-image-repeat: round;");
@@ -3569,7 +3749,8 @@ public class RegionCSSTest {
         assertEquals(expected, image);
     }
 
-    @Test public void borderImageRepeat_space() {
+    @Test
+    public void borderImageRepeat_space() {
         region.setStyle(
                 "-fx-border-image-source: url('test/javafx/scene/layout/center-btn.png');" +
                 "-fx-border-image-repeat: space;");
@@ -3588,7 +3769,8 @@ public class RegionCSSTest {
         assertEquals(expected, image);
     }
 
-    @Test public void borderImageRepeat_round_stretch() {
+    @Test
+    public void borderImageRepeat_round_stretch() {
         region.setStyle(
                 "-fx-border-image-source: url('test/javafx/scene/layout/center-btn.png');" +
                 "-fx-border-image-repeat: round stretch;");
@@ -3607,7 +3789,8 @@ public class RegionCSSTest {
         assertEquals(expected, image);
     }
 
-    @Test public void borderImageRepeat_round_repeat() {
+    @Test
+    public void borderImageRepeat_round_repeat() {
         region.setStyle(
                 "-fx-border-image-source: url('test/javafx/scene/layout/center-btn.png');" +
                 "-fx-border-image-repeat: round repeat;");

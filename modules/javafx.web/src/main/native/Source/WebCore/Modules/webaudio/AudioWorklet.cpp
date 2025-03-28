@@ -37,11 +37,11 @@
 #include "AudioWorkletProcessor.h"
 #include "BaseAudioContext.h"
 #include "WorkerRunLoop.h"
-#include <wtf/IsoMallocInlines.h>
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
-WTF_MAKE_ISO_ALLOCATED_IMPL(AudioWorklet);
+WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(AudioWorklet);
 
 Ref<AudioWorklet> AudioWorklet::create(BaseAudioContext& audioContext)
 {
@@ -77,7 +77,7 @@ BaseAudioContext* AudioWorklet::audioContext() const
 
 void AudioWorklet::createProcessor(const String& name, TransferredMessagePort port, Ref<SerializedScriptValue>&& options, AudioWorkletNode& node)
 {
-    auto* proxy = this->proxy();
+    RefPtr proxy = this->proxy();
     ASSERT(proxy);
     if (!proxy)
         return;

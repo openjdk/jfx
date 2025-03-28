@@ -27,6 +27,7 @@
 
 #include "DOMImplementation.h"
 #include "CachedResourceLoader.h"
+#include "CommonAtomStrings.h"
 #include "ContentSecurityPolicy.h"
 #include "DocumentFragment.h"
 #include "FrameLoader.h"
@@ -39,6 +40,7 @@
 #include "XMLDocument.h"
 #include "markup.h"
 #include <wtf/Assertions.h>
+#include <wtf/text/MakeString.h>
 
 namespace WebCore {
 
@@ -47,14 +49,14 @@ static inline void transformTextStringToXHTMLDocumentString(String& text)
     // Modify the output so that it is a well-formed XHTML document with a <pre> tag enclosing the text.
     text = makeStringByReplacingAll(text, '&', "&amp;"_s);
     text = makeStringByReplacingAll(text, '<', "&lt;"_s);
-    text = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n"
+    text = makeString("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n"
         "<!DOCTYPE html PUBLIC \"-//W3C//DTD XHTML 1.0 Strict//EN\" \"http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd\">\n"
         "<html xmlns=\"http://www.w3.org/1999/xhtml\">\n"
         "<head><title/></head>\n"
         "<body>\n"
-        "<pre>" + text + "</pre>\n"
+        "<pre>"_s, text, "</pre>\n"
         "</body>\n"
-        "</html>\n";
+        "</html>\n"_s);
 }
 
 XSLTProcessor::~XSLTProcessor()
@@ -71,7 +73,7 @@ Ref<Document> XSLTProcessor::createDocumentFromSource(const String& sourceString
     String documentSource = sourceString;
 
     RefPtr<Document> result;
-    if (sourceMIMEType == "text/plain"_s) {
+    if (sourceMIMEType == textPlainContentTypeAtom()) {
         result = XMLDocument::createXHTML(frame, ownerDocument->settings(), sourceIsDocument ? ownerDocument->url() : URL());
         transformTextStringToXHTMLDocumentString(documentSource);
     } else
@@ -91,8 +93,10 @@ Ref<Document> XSLTProcessor::createDocumentFromSource(const String& sourceString
             result->setFirstPartyForCookies(oldDocument->firstPartyForCookies());
             result->setSiteForCookies(oldDocument->siteForCookies());
             result->setStrictMixedContentMode(oldDocument->isStrictMixedContentMode());
-            result->contentSecurityPolicy()->copyStateFrom(oldDocument->contentSecurityPolicy());
-            result->contentSecurityPolicy()->copyUpgradeInsecureRequestStateFrom(*oldDocument->contentSecurityPolicy());
+            CheckedRef resultCSP = *result->contentSecurityPolicy();
+            CheckedRef oldDocumentCSP = *oldDocument->contentSecurityPolicy();
+            resultCSP->copyStateFrom(oldDocumentCSP.ptr());
+            resultCSP->copyUpgradeInsecureRequestStateFrom(oldDocumentCSP);
         }
 
         frame->setDocument(result.copyRef());
@@ -102,7 +106,7 @@ Ref<Document> XSLTProcessor::createDocumentFromSource(const String& sourceString
     decoder->setEncoding(sourceEncoding.isEmpty() ? PAL::UTF8Encoding() : PAL::TextEncoding(sourceEncoding), TextResourceDecoder::EncodingFromXMLHeader);
     result->setDecoder(WTFMove(decoder));
 
-    result->setContent(documentSource);
+    result->setMarkupUnsafe(documentSource, { ParserContentPolicy::AllowDeclarativeShadowRoots });
 
     return result.releaseNonNull();
 }
@@ -125,7 +129,7 @@ RefPtr<DocumentFragment> XSLTProcessor::transformToFragment(Node& sourceNode, Do
 
     // If the output document is HTML, default to HTML method.
     if (outputDocument.isHTMLDocument())
-        resultMIMEType = "text/html"_s;
+        resultMIMEType = textHTMLContentTypeAtom();
 
     if (!transformToString(sourceNode, resultMIMEType, resultString, resultEncoding))
         return nullptr;

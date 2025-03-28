@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2019-2021 Apple Inc. All rights reserved.
+ * Copyright (C) 2019-2023 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -26,8 +26,11 @@
 #include "config.h"
 #include "PredictionFileCreatingFuzzerAgent.h"
 #include <wtf/DataLog.h>
+#include <wtf/TZoneMallocInlines.h>
 
 namespace JSC {
+
+WTF_MAKE_TZONE_ALLOCATED_IMPL(PredictionFileCreatingFuzzerAgent);
 
 PredictionFileCreatingFuzzerAgent::PredictionFileCreatingFuzzerAgent(VM& vm)
     : FileBasedFuzzerAgentBase(vm)
@@ -43,6 +46,7 @@ SpeculatedType PredictionFileCreatingFuzzerAgent::getPredictionInternal(CodeBloc
     case op_get_from_arguments:
     case op_get_from_scope:
     case op_get_by_id:
+    case op_get_length:
     case op_get_by_id_with_this:
     case op_get_by_val_with_this:
     case op_enumerator_get_by_val:
@@ -58,7 +62,7 @@ SpeculatedType PredictionFileCreatingFuzzerAgent::getPredictionInternal(CodeBloc
         break;
 
     default:
-        RELEASE_ASSERT_WITH_MESSAGE(false, "unhandled opcode: %s", opcodeNames[predictionTarget.opcodeId]);
+        RELEASE_ASSERT_WITH_MESSAGE(false, "unhandled opcode: %s", opcodeNames[predictionTarget.opcodeId].characters());
     }
     return original;
 }

@@ -25,8 +25,6 @@
 
 #pragma once
 
-#if ENABLE(SERVICE_WORKER)
-
 #include "ProcessIdentifier.h"
 #include "ProcessQualified.h"
 #include "ScriptBuffer.h"
@@ -64,19 +62,20 @@ enum class ServiceWorkerClientFrameType : uint8_t {
     None
 };
 
+enum class ServiceWorkerIsInspectable : bool { No, Yes };
 enum class ShouldNotifyWhenResolved : bool { No, Yes };
 
-enum ServiceWorkerRegistrationIdentifierType { };
-using ServiceWorkerRegistrationIdentifier = AtomicObjectIdentifier<ServiceWorkerRegistrationIdentifierType>;
+enum class ServiceWorkerRegistrationIdentifierType { };
+using ServiceWorkerRegistrationIdentifier = LegacyNullableAtomicObjectIdentifier<ServiceWorkerRegistrationIdentifierType>;
 
-enum ServiceWorkerJobIdentifierType { };
-using ServiceWorkerJobIdentifier = AtomicObjectIdentifier<ServiceWorkerJobIdentifierType>;
+enum class ServiceWorkerJobIdentifierType { };
+using ServiceWorkerJobIdentifier = LegacyNullableAtomicObjectIdentifier<ServiceWorkerJobIdentifierType>;
 
-enum SWServerToContextConnectionIdentifierType { };
-using SWServerToContextConnectionIdentifier = ObjectIdentifier<SWServerToContextConnectionIdentifierType>;
+enum class SWServerToContextConnectionIdentifierType { };
+using SWServerToContextConnectionIdentifier = LegacyNullableObjectIdentifier<SWServerToContextConnectionIdentifierType>;
 
 using SWServerConnectionIdentifierType = ProcessIdentifierType;
-using SWServerConnectionIdentifier = ObjectIdentifier<SWServerConnectionIdentifierType>;
+using SWServerConnectionIdentifier = LegacyNullableObjectIdentifier<SWServerConnectionIdentifierType>;
 
 using ServiceWorkerOrClientData = std::variant<ServiceWorkerData, ServiceWorkerClientData>;
 
@@ -98,5 +97,3 @@ struct ServiceWorkerScripts {
 };
 
 } // namespace WebCore
-
-#endif // ENABLE(SERVICE_WORKER)

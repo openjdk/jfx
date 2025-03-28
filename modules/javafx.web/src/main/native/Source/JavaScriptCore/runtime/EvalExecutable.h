@@ -48,15 +48,12 @@ public:
         return bitwise_cast<UnlinkedEvalCodeBlock*>(Base::unlinkedCodeBlock());
     }
 
-    Ref<JITCode> generatedJITCode()
+    Ref<JSC::JITCode> generatedJITCode()
     {
         return generatedJITCodeForCall();
     }
 
-    static Structure* createStructure(VM& vm, JSGlobalObject* globalObject, JSValue proto)
-    {
-        return Structure::create(vm, globalObject, proto, TypeInfo(EvalExecutableType, StructureFlags), info());
-    }
+    inline static Structure* createStructure(VM&, JSGlobalObject*, JSValue);
 
     template<typename CellType, SubspaceAccess mode>
     static GCClient::IsoSubspace* subspaceFor(VM& vm)
@@ -79,7 +76,7 @@ protected:
     friend class ScriptExecutable;
 
     using Base::finishCreation;
-    EvalExecutable(JSGlobalObject*, const SourceCode&, bool inStrictContext, DerivedContextType, bool isArrowFunctionContext, bool isInsideOrdinaryFunction, EvalContextType, NeedsClassFieldInitializer, PrivateBrandRequirement);
+    EvalExecutable(JSGlobalObject*, const SourceCode&, LexicallyScopedFeatures, DerivedContextType, bool isArrowFunctionContext, bool isInsideOrdinaryFunction, EvalContextType, NeedsClassFieldInitializer, PrivateBrandRequirement);
 
     DECLARE_VISIT_CHILDREN;
 

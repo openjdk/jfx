@@ -23,6 +23,7 @@
 
 #include "CustomElementDefaultARIA.h"
 #include "CustomElementReactionQueue.h"
+#include "CustomStateSet.h"
 #include "DOMTokenList.h"
 #include "DatasetDOMStringMap.h"
 #include "ElementAnimationRareData.h"
@@ -33,12 +34,14 @@
 #include "NodeRareData.h"
 #include "PopoverData.h"
 #include "PseudoElement.h"
+#include "PseudoElementIdentifier.h"
 #include "RenderElement.h"
 #include "ResizeObserver.h"
 #include "ShadowRoot.h"
 #include "SpaceSplitString.h"
 #include "StylePropertyMap.h"
 #include "StylePropertyMapReadOnly.h"
+#include "VisibilityAdjustment.h"
 #include <wtf/Markable.h>
 
 namespace WebCore {
@@ -73,7 +76,7 @@ public:
 
     unsigned childIndex() const { return m_childIndex; }
     void setChildIndex(unsigned index) { m_childIndex = index; }
-    static ptrdiff_t childIndexMemoryOffset() { return OBJECT_OFFSETOF(ElementRareData, m_childIndex); }
+    static constexpr ptrdiff_t childIndexMemoryOffset() { return OBJECT_OFFSETOF(ElementRareData, m_childIndex); }
 
     void clearShadowRoot() { m_shadowRoot = nullptr; }
     ShadowRoot* shadowRoot() const { return m_shadowRoot.get(); }
@@ -94,8 +97,8 @@ public:
     RenderStyle* computedStyle() const { return m_computedStyle.get(); }
     void setComputedStyle(std::unique_ptr<RenderStyle>&& computedStyle) { m_computedStyle = WTFMove(computedStyle); }
 
-    RenderStyle* displayContentsStyle() const { return m_displayContentsStyle.get(); }
-    void setDisplayContentsStyle(std::unique_ptr<RenderStyle> style) { m_displayContentsStyle = WTFMove(style); }
+    RenderStyle* displayContentsOrNoneStyle() const { return m_displayContentsOrNoneStyle.get(); }
+    void setDisplayContentsOrNoneStyle(std::unique_ptr<RenderStyle> style) { m_displayContentsOrNoneStyle = WTFMove(style); }
 
     const AtomString& effectiveLang() const { return m_effectiveLang; }
     void setEffectiveLang(const AtomString& lang) { m_effectiveLang = lang; }
@@ -106,11 +109,11 @@ public:
     DatasetDOMStringMap* dataset() const { return m_dataset.get(); }
     void setDataset(std::unique_ptr<DatasetDOMStringMap>&& dataset) { m_dataset = WTFMove(dataset); }
 
-    IntPoint savedLayerScrollPosition() const { return m_savedLayerScrollPosition; }
-    void setSavedLayerScrollPosition(IntPoint position) { m_savedLayerScrollPosition = position; }
+    ScrollPosition savedLayerScrollPosition() const { return m_savedLayerScrollPosition; }
+    void setSavedLayerScrollPosition(ScrollPosition position) { m_savedLayerScrollPosition = position; }
 
-    ElementAnimationRareData* animationRareData(PseudoId) const;
-    ElementAnimationRareData& ensureAnimationRareData(PseudoId);
+    ElementAnimationRareData* animationRareData(const std::optional<Style::PseudoElementIdentifier>&) const;
+    ElementAnimationRareData& ensureAnimationRareData(const std::optional<Style::PseudoElementIdentifier>&);
 
     DOMTokenList* partList() const { return m_partList.get(); }
     void setPartList(std::unique_ptr<DOMTokenList>&& partList) { m_partList = WTFMove(partList); }
@@ -145,19 +148,27 @@ public:
     PopoverData* popoverData() { return m_popoverData.get(); }
     void setPopoverData(std::unique_ptr<PopoverData>&& popoverData) { m_popoverData = WTFMove(popoverData); }
 
-    const OptionSet<ContentRelevancyStatus>& contentRelevancyStatus() const { return m_contentRelevancyStatus; }
-    void setContentRelevancyStatus(OptionSet<ContentRelevancyStatus>& contentRelevancyStatus) { m_contentRelevancyStatus = contentRelevancyStatus; }
+    const std::optional<OptionSet<ContentRelevancy>>& contentRelevancy() const { return m_contentRelevancy; }
+    void setContentRelevancy(OptionSet<ContentRelevancy>& contentRelevancy) { m_contentRelevancy = contentRelevancy; }
+
+    CustomStateSet* customStateSet() { return m_customStateSet.get(); }
+    void setCustomStateSet(Ref<CustomStateSet>&& customStateSet) { m_customStateSet = WTFMove(customStateSet); }
+
+    OptionSet<VisibilityAdjustment> visibilityAdjustment() const { return m_visibilityAdjustment; }
+    void setVisibilityAdjustment(OptionSet<VisibilityAdjustment> adjustment) { m_visibilityAdjustment = adjustment; }
 
 #if DUMP_NODE_STATISTICS
     OptionSet<UseType> useTypes() const
     {
         auto result = NodeRareData::useTypes();
+        if (m_unusualTabIndex)
+            result.add(UseType::TabIndex);
         if (!m_savedLayerScrollPosition.isZero())
             result.add(UseType::ScrollingPosition);
         if (m_computedStyle)
             result.add(UseType::ComputedStyle);
-        if (m_displayContentsStyle)
-            result.add(UseType::DisplayContentsStyle);
+        if (m_displayContentsOrNoneStyle)
+            result.add(UseType::DisplayContentsOrNoneStyle);
         if (!m_effectiveLang.isEmpty())
             result.add(UseType::EffectiveLang);
         if (m_dataset)
@@ -198,6 +209,8 @@ public:
             result.add(UseType::Popover);
         if (m_childIndex)
             result.add(UseType::ChildIndex);
+        if (!m_customStateSet.isEmpty())
+            result.add(UseType::CustomStateSet);
         return result;
     }
 #endif
@@ -206,11 +219,11 @@ private:
     unsigned short m_childIndex { 0 }; // Keep on top for better bit packing with NodeRareData.
     int m_unusualTabIndex { 0 }; // Keep on top for better bit packing with NodeRareData.
 
-    OptionSet<ContentRelevancyStatus> m_contentRelevancyStatus;
+    std::optional<OptionSet<ContentRelevancy>> m_contentRelevancy;
+    ScrollPosition m_savedLayerScrollPosition;
 
-    IntPoint m_savedLayerScrollPosition;
     std::unique_ptr<RenderStyle> m_computedStyle;
-    std::unique_ptr<RenderStyle> m_displayContentsStyle;
+    std::unique_ptr<RenderStyle> m_displayContentsOrNoneStyle;
 
     AtomString m_effectiveLang;
     std::unique_ptr<DatasetDOMStringMap> m_dataset;
@@ -244,6 +257,10 @@ private:
     ExplicitlySetAttrElementsMap m_explicitlySetAttrElementsMap;
 
     std::unique_ptr<PopoverData> m_popoverData;
+
+    RefPtr<CustomStateSet> m_customStateSet;
+
+    OptionSet<VisibilityAdjustment> m_visibilityAdjustment;
 };
 
 inline ElementRareData::ElementRareData()
@@ -287,21 +304,21 @@ inline void ElementRareData::setUnusualTabIndex(int tabIndex)
     m_unusualTabIndex = tabIndex;
 }
 
-inline ElementAnimationRareData* ElementRareData::animationRareData(PseudoId pseudoId) const
+inline ElementAnimationRareData* ElementRareData::animationRareData(const std::optional<Style::PseudoElementIdentifier>& pseudoElementIdentifier) const
 {
     for (auto& animationRareData : m_animationRareData) {
-        if (animationRareData->pseudoId() == pseudoId)
+        if (animationRareData->pseudoElementIdentifier() == pseudoElementIdentifier)
             return animationRareData.get();
     }
     return nullptr;
 }
 
-inline ElementAnimationRareData& ElementRareData::ensureAnimationRareData(PseudoId pseudoId)
+inline ElementAnimationRareData& ElementRareData::ensureAnimationRareData(const std::optional<Style::PseudoElementIdentifier>& pseudoElementIdentifier)
 {
-    if (auto* animationRareData = this->animationRareData(pseudoId))
+    if (auto* animationRareData = this->animationRareData(pseudoElementIdentifier))
         return *animationRareData;
 
-    m_animationRareData.append(makeUnique<ElementAnimationRareData>(pseudoId));
+    m_animationRareData.append(makeUnique<ElementAnimationRareData>(pseudoElementIdentifier));
     return *m_animationRareData.last().get();
 }
 
@@ -313,9 +330,9 @@ inline ElementRareData* Element::elementRareData() const
 
 inline ShadowRoot* Node::shadowRoot() const
 {
-    if (!is<Element>(*this))
+    if (auto* element = dynamicDowncast<Element>(*this))
+        return element->shadowRoot();
         return nullptr;
-    return downcast<Element>(*this).shadowRoot();
 }
 
 inline ShadowRoot* Element::shadowRoot() const

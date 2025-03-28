@@ -31,18 +31,25 @@
 #include "ExecutableAllocator.h"
 #include "LLIntData.h"
 #include "MachineContext.h"
+#include "NativeCalleeRegistry.h"
 #include "WasmCallee.h"
-#include "WasmCalleeRegistry.h"
 #include "WasmCapabilities.h"
 #include "WasmContext.h"
 #include "WasmExceptionType.h"
 #include "WasmMemory.h"
 #include "WasmThunks.h"
+#include <wtf/CodePtr.h>
 #include <wtf/HashSet.h>
 #include <wtf/Lock.h>
 #include <wtf/threads/Signals.h>
 
 namespace JSC { namespace Wasm {
+
+using WTF::CodePtr;
+
+#if CPU(ARM64E) && HAVE(HARDENED_MACH_EXCEPTIONS)
+void* presignedTrampoline { nullptr };
+#endif
 
 namespace {
 namespace WasmFaultSignalHandlerInternal {
@@ -60,7 +67,9 @@ static SignalAction trapHandler(Signal signal, SigInfo& sigInfo, PlatformRegiste
     void* faultingInstruction = instructionPointer->untaggedPtr();
     dataLogLnIf(WasmFaultSignalHandlerInternal::verbose, "starting handler for fault at: ", RawPointer(faultingInstruction));
 
+#if ENABLE(JIT)
     dataLogLnIf(WasmFaultSignalHandlerInternal::verbose, "JIT memory start: ", RawPointer(startOfFixedExecutableMemoryPool()), " end: ", RawPointer(endOfFixedExecutableMemoryPool()));
+#endif
     dataLogLnIf(WasmFaultSignalHandlerInternal::verbose, "WasmLLInt memory start: ", RawPointer(untagCodePtr<void*, CFunctionPtrTag>(LLInt::wasmLLIntPCRangeStart)), " end: ", RawPointer(untagCodePtr<void*, CFunctionPtrTag>(LLInt::wasmLLIntPCRangeEnd)));
     // First we need to make sure we are in JIT code or Wasm LLInt code before we can aquire any locks. Otherwise,
     // we might have crashed in code that is already holding one of the locks we want to aquire.
@@ -78,10 +87,12 @@ static SignalAction trapHandler(Signal signal, SigInfo& sigInfo, PlatformRegiste
             auto didFaultInWasm = [](void* faultingInstruction) {
                 if (LLInt::isWasmLLIntPC(faultingInstruction))
                     return true;
-                auto& calleeRegistry = CalleeRegistry::singleton();
+                auto& calleeRegistry = NativeCalleeRegistry::singleton();
                 Locker locker { calleeRegistry.getLock() };
                 for (auto* callee : calleeRegistry.allCallees()) {
-                    auto [start, end] = callee->range();
+                    if (callee->category() != NativeCallee::Category::Wasm)
+                        continue;
+                    auto [start, end] = static_cast<Wasm::Callee*>(callee)->range();
                     dataLogLnIf(WasmFaultSignalHandlerInternal::verbose, "function start: ", RawPointer(start), " end: ", RawPointer(end));
                     if (start <= faultingInstruction && faultingInstruction < end) {
                         dataLogLnIf(WasmFaultSignalHandlerInternal::verbose, "found match");
@@ -92,6 +103,12 @@ static SignalAction trapHandler(Signal signal, SigInfo& sigInfo, PlatformRegiste
             };
 
             if (didFaultInWasm(faultingInstruction)) {
+#if CPU(ARM64E) && HAVE(HARDENED_MACH_EXCEPTIONS)
+                if (g_wtfConfig.signalHandlers.useHardenedHandler) {
+                    MachineContext::setInstructionPointer(context, presignedTrampoline);
+                    return SignalAction::Handled;
+                }
+#endif
                 MachineContext::setInstructionPointer(context, LLInt::getCodePtr<CFunctionPtrTag>(wasm_throw_from_fault_handler_trampoline_reg_instance));
                 return SignalAction::Handled;
             }
@@ -124,6 +141,9 @@ void prepareSignalingMemory()
         if (!Options::useWasmFaultSignalHandler())
             return;
 
+#if CPU(ARM64E) && HAVE(HARDENED_MACH_EXCEPTIONS)
+        presignedTrampoline = g_wtfConfig.signalHandlers.presignReturnPCForHandler(LLInt::getCodePtr<NoPtrTag>(wasm_throw_from_fault_handler_trampoline_reg_instance));
+#endif
         addSignalHandler(Signal::AccessFault, [] (Signal signal, SigInfo& sigInfo, PlatformRegisters& ucontext) {
             return trapHandler(signal, sigInfo, ucontext);
         });

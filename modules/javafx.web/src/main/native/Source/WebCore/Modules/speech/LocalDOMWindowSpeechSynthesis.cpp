@@ -38,32 +38,35 @@
 
 namespace WebCore {
 
-LocalDOMWindowSpeechSynthesis::LocalDOMWindowSpeechSynthesis(LocalDOMWindow* window)
-    : LocalDOMWindowProperty(window)
+LocalDOMWindowSpeechSynthesis::LocalDOMWindowSpeechSynthesis(DOMWindow* window)
+    : LocalDOMWindowProperty(dynamicDowncast<LocalDOMWindow>(window))
 {
 }
 
 LocalDOMWindowSpeechSynthesis::~LocalDOMWindowSpeechSynthesis() = default;
 
-const char* LocalDOMWindowSpeechSynthesis::supplementName()
+ASCIILiteral LocalDOMWindowSpeechSynthesis::supplementName()
 {
-    return "LocalDOMWindowSpeechSynthesis";
+    return "LocalDOMWindowSpeechSynthesis"_s;
 }
 
 // static
-LocalDOMWindowSpeechSynthesis* LocalDOMWindowSpeechSynthesis::from(LocalDOMWindow* window)
+LocalDOMWindowSpeechSynthesis* LocalDOMWindowSpeechSynthesis::from(DOMWindow* window)
 {
-    auto* supplement = static_cast<LocalDOMWindowSpeechSynthesis*>(Supplement<LocalDOMWindow>::from(window, supplementName()));
+    RefPtr localWindow = dynamicDowncast<LocalDOMWindow>(window);
+    if (!localWindow)
+        return nullptr;
+    auto* supplement = static_cast<LocalDOMWindowSpeechSynthesis*>(Supplement<LocalDOMWindow>::from(localWindow.get(), supplementName()));
     if (!supplement) {
         auto newSupplement = makeUnique<LocalDOMWindowSpeechSynthesis>(window);
         supplement = newSupplement.get();
-        provideTo(window, supplementName(), WTFMove(newSupplement));
+        provideTo(dynamicDowncast<LocalDOMWindow>(window), supplementName(), WTFMove(newSupplement));
     }
     return supplement;
 }
 
 // static
-SpeechSynthesis* LocalDOMWindowSpeechSynthesis::speechSynthesis(LocalDOMWindow& window)
+SpeechSynthesis* LocalDOMWindowSpeechSynthesis::speechSynthesis(DOMWindow& window)
 {
     return LocalDOMWindowSpeechSynthesis::from(&window)->speechSynthesis();
 }

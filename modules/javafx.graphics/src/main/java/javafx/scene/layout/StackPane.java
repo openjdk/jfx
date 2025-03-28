@@ -292,7 +292,7 @@ public class StackPane extends Pane {
     @Override protected double computeMinHeight(double width) {
         List<Node>managed = getManagedChildren();
         return getInsets().getTop() +
-               computeMaxMinAreaHeight(managed, marginAccessor, getAlignmentInternal().getVpos(), width) +
+               computeMaxMinAreaHeight(managed, marginAccessor, width, true, getAlignmentInternal().getVpos()) +
                getInsets().getBottom();
     }
 
@@ -310,7 +310,7 @@ public class StackPane extends Pane {
         Insets padding = getInsets();
         return padding.getTop() +
                computeMaxPrefAreaHeight(managed, marginAccessor,
-                                        (width == -1) ? -1 : (width - padding.getLeft() - padding.getRight()),
+                                        (width == -1) ? -1 : (width - padding.getLeft() - padding.getRight()), true,
                                         getAlignmentInternal().getVpos()) +
                padding.getBottom();
     }

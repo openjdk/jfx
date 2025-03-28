@@ -70,7 +70,8 @@ struct SVGPropertyTraits<SVGSpreadMethodType> {
 };
 
 class SVGGradientElement : public SVGElement, public SVGURIReference {
-    WTF_MAKE_ISO_ALLOCATED(SVGGradientElement);
+    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(SVGGradientElement);
+    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(SVGGradientElement);
 public:
     enum {
         SVG_SPREADMETHOD_UNKNOWN = SVGSpreadMethodUnknown,
@@ -97,6 +98,8 @@ protected:
     void attributeChanged(const QualifiedName&, const AtomString& oldValue, const AtomString& newValue, AttributeModificationReason) override;
     void svgAttributeChanged(const QualifiedName&) override;
 
+    void invalidateGradientResource();
+
 private:
     bool needsPendingResourceHandling() const override { return false; }
     void childrenChanged(const ChildChange&) override;
@@ -115,6 +118,7 @@ static bool isType(const WebCore::SVGElement& element)
 }
 static bool isType(const WebCore::Node& node)
 {
-    return is<WebCore::SVGElement>(node) && isType(downcast<WebCore::SVGElement>(node));
+    auto* svgElement = dynamicDowncast<WebCore::SVGElement>(node);
+    return svgElement && isType(*svgElement);
 }
 SPECIALIZE_TYPE_TRAITS_END()

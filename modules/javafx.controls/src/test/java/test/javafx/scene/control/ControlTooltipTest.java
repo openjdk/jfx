@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -26,28 +26,42 @@
 package test.javafx.scene.control;
 
 import javafx.scene.control.Tooltip;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertSame;
-
-import org.junit.Before;
-import org.junit.Ignore;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Disabled;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
+import org.junit.jupiter.params.provider.Arguments;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertNotSame;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
+import static org.junit.jupiter.api.Assertions.assertTimeout;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import org.junit.jupiter.api.Assumptions;
 
 /**
  *
  */
-@Ignore
+@Disabled
 public class ControlTooltipTest {
     private ControlStub c;
     private SkinStub<ControlStub> s;
     private Tooltip t;
 
-    @Before public void setUp() {
+    @BeforeEach
+    public void setUp() {
         c = new ControlStub();
         s = new SkinStub<>(c);
         c.setSkin(s);
         t = new Tooltip();
-//        t.setSkin(new SkinStub<Tooltip>(t));
     }
 
     @Test public void controlsWithNoTooltipHaveNoTooltipAsAChild() {

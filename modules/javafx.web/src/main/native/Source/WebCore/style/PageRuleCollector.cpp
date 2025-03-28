@@ -85,9 +85,9 @@ void PageRuleCollector::matchPageRules(RuleSet* rules, bool isLeftPage, bool isF
 
     std::stable_sort(matchedPageRules.begin(), matchedPageRules.end(), comparePageRules);
 
-    m_result.authorDeclarations.reserveCapacity(m_result.authorDeclarations.size() + matchedPageRules.size());
-    for (auto* pageRule : matchedPageRules)
-        m_result.authorDeclarations.uncheckedAppend({ pageRule->properties() });
+    m_result.authorDeclarations.appendContainerWithMapping(matchedPageRules, [](auto& pageRule) {
+        return MatchedProperties { pageRule->properties() };
+    });
 }
 
 static bool checkPageSelectorComponents(const CSSSelector* selector, bool isLeftPage, bool isFirstPage, const String& pageName)
@@ -98,10 +98,10 @@ static bool checkPageSelectorComponents(const CSSSelector* selector, bool isLeft
             if (localName != starAtom() && localName != pageName)
                 return false;
         } else if (component->match() == CSSSelector::Match::PagePseudoClass) {
-            CSSSelector::PagePseudoClassType pseudoType = component->pagePseudoClassType();
-            if ((pseudoType == CSSSelector::PagePseudoClassLeft && !isLeftPage)
-                || (pseudoType == CSSSelector::PagePseudoClassRight && isLeftPage)
-                || (pseudoType == CSSSelector::PagePseudoClassFirst && !isFirstPage))
+            auto pseudoType = component->pagePseudoClass();
+            if ((pseudoType == CSSSelector::PagePseudoClass::Left && !isLeftPage)
+                || (pseudoType == CSSSelector::PagePseudoClass::Right && isLeftPage)
+                || (pseudoType == CSSSelector::PagePseudoClass::First && !isFirstPage))
             {
                 return false;
             }

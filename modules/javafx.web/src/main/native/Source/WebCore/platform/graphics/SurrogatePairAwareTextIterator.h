@@ -29,37 +29,53 @@ class SurrogatePairAwareTextIterator {
 public:
     // The passed in UChar pointer starts at 'currentIndex'. The iterator operates on the range [currentIndex, lastIndex].
     // 'endIndex' denotes the maximum length of the UChar array, which might exceed 'lastIndex'.
-    SurrogatePairAwareTextIterator(const UChar* characters, unsigned currentIndex, unsigned lastIndex, unsigned endIndex)
-        : m_characters(characters)
+    SurrogatePairAwareTextIterator(std::span<const UChar> characters, unsigned currentIndex, unsigned lastIndex)
+        : m_characters(characters.data())
         , m_currentIndex(currentIndex)
+        , m_originalIndex(currentIndex)
         , m_lastIndex(lastIndex)
-        , m_endIndex(endIndex)
+        , m_endIndex(characters.size() + currentIndex)
     {
     }
 
-    bool consume(UChar32& character, unsigned& clusterLength)
+    bool consume(char32_t& character, unsigned& clusterLength)
     {
         if (m_currentIndex >= m_lastIndex)
             return false;
 
+        auto relativeIndex = m_currentIndex - m_originalIndex;
         clusterLength = 0;
-        U16_NEXT(m_characters, clusterLength, m_endIndex - m_currentIndex, character);
+        U16_NEXT(&m_characters[relativeIndex], clusterLength, m_endIndex - m_currentIndex, character);
         return true;
     }
 
     void advance(unsigned advanceLength)
     {
-        m_characters += advanceLength;
         m_currentIndex += advanceLength;
     }
 
+    void reset(unsigned index)
+    {
+        if (index >= m_lastIndex)
+            return;
+        m_currentIndex = index;
+    }
+
+    const UChar* remainingCharacters() const
+    {
+        auto relativeIndex = m_currentIndex - m_originalIndex;
+        return m_characters + relativeIndex;
+    }
+
     unsigned currentIndex() const { return m_currentIndex; }
+    const UChar* characters() const { return m_characters; }
 
 private:
-    const UChar* m_characters { nullptr };
+    const UChar* const m_characters { nullptr };
     unsigned m_currentIndex { 0 };
-    unsigned m_lastIndex { 0 };
-    unsigned m_endIndex { 0 };
+    const unsigned m_originalIndex { 0 };
+    const unsigned m_lastIndex { 0 };
+    const unsigned m_endIndex { 0 };
 };
 
-}
+} // namespace WebCore

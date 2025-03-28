@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,12 +25,56 @@
 
 package test.javafx.scene.layout;
 
-import org.junit.Test;
+import javafx.geometry.Insets;
+import javafx.scene.layout.BorderStroke;
+import javafx.scene.layout.BorderWidths;
+import javafx.scene.layout.CornerRadii;
+import org.junit.jupiter.api.Nested;
+import org.junit.jupiter.api.Test;
+
+import static javafx.scene.layout.BorderStrokeStyle.*;
+import static javafx.scene.paint.Color.*;
+import static org.junit.jupiter.api.Assertions.*;
 
 /**
  * Tests for BorderStroke.
  */
 public class BorderStrokeTest {
     // be sure to test the innerEdge and outerEdge, I had bugs there!
-    @Test public void dummy() { }
+    @Test
+    public void dummy() { }
+
+    @Nested
+    class InterpolationTests {
+        @Test
+        public void interpolateBetweenDifferentValuesReturnsNewInstance() {
+            var startValue = new BorderStroke(RED, SOLID, new CornerRadii(10), new BorderWidths(5), new Insets(2));
+            var endValue = new BorderStroke(GREEN, DOTTED, new CornerRadii(20), new BorderWidths(15), new Insets(6));
+            var expect = new BorderStroke(RED.interpolate(GREEN, 0.5), DOTTED, new CornerRadii(15), new BorderWidths(10), new Insets(4));
+            assertEquals(expect, startValue.interpolate(endValue, 0.5));
+        }
+
+        @Test
+        public void interpolateBetweenEqualValuesReturnsStartInstance() {
+            var startValue = new BorderStroke(RED, SOLID, new CornerRadii(10), new BorderWidths(5), new Insets(2));
+            var endValue = new BorderStroke(RED, SOLID, new CornerRadii(10), new BorderWidths(5), new Insets(2));
+            assertSame(startValue, startValue.interpolate(endValue, 0.5));
+        }
+
+        @Test
+        public void interpolationFactorSmallerThanOrEqualToZeroReturnsStartInstance() {
+            var startValue = new BorderStroke(RED, SOLID, new CornerRadii(10), new BorderWidths(5), new Insets(2));
+            var endValue = new BorderStroke(GREEN, SOLID, new CornerRadii(20), new BorderWidths(15), new Insets(6));
+            assertSame(startValue, startValue.interpolate(endValue, 0));
+            assertSame(startValue, startValue.interpolate(endValue, -0.5));
+        }
+
+        @Test
+        public void interpolationFactorGreaterThanOrEqualToOneReturnsEndInstance() {
+            var startValue = new BorderStroke(RED, SOLID, new CornerRadii(10), new BorderWidths(5), new Insets(2));
+            var endValue = new BorderStroke(GREEN, SOLID, new CornerRadii(20), new BorderWidths(15), new Insets(6));
+            assertSame(endValue, startValue.interpolate(endValue, 1));
+            assertSame(endValue, startValue.interpolate(endValue, 1.5));
+        }
+    }
 }

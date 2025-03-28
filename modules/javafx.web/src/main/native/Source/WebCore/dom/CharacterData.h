@@ -27,37 +27,38 @@
 namespace WebCore {
 
 class CharacterData : public Node {
-    WTF_MAKE_ISO_ALLOCATED(CharacterData);
+    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(CharacterData);
+    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(CharacterData);
 public:
     const String& data() const { return m_data; }
-    static ptrdiff_t dataMemoryOffset() { return OBJECT_OFFSETOF(CharacterData, m_data); }
+    static constexpr ptrdiff_t dataMemoryOffset() { return OBJECT_OFFSETOF(CharacterData, m_data); }
 
     WEBCORE_EXPORT void setData(const String&);
     unsigned length() const { return m_data.length(); }
-    WEBCORE_EXPORT ExceptionOr<String> substringData(unsigned offset, unsigned count);
+    WEBCORE_EXPORT ExceptionOr<String> substringData(unsigned offset, unsigned count) const;
     WEBCORE_EXPORT void appendData(const String&);
     WEBCORE_EXPORT ExceptionOr<void> insertData(unsigned offset, const String&);
     WEBCORE_EXPORT ExceptionOr<void> deleteData(unsigned offset, unsigned count);
     WEBCORE_EXPORT ExceptionOr<void> replaceData(unsigned offset, unsigned count, const String&);
 
+    bool containsOnlyASCIIWhitespace() const;
+
     // Like appendData, but optimized for the parser (e.g., no mutation events).
     void parserAppendData(StringView);
 
 protected:
-    CharacterData(Document& document, String&& text, ConstructionType type = CreateCharacterData)
-        : Node(document, type)
+    CharacterData(Document& document, String&& text, NodeType type, OptionSet<TypeFlag> typeFlags = { })
+        : Node(document, type, typeFlags | TypeFlag::IsCharacterData)
         , m_data(!text.isNull() ? WTFMove(text) : emptyString())
     {
-        ASSERT(type == CreateCharacterData || type == CreateText || type == CreateEditingText);
+        ASSERT(isCharacterDataNode());
+        ASSERT(!isContainerNode());
     }
 
     ~CharacterData();
 
-    void setDataWithoutUpdate(const String& data)
-    {
-        ASSERT(!data.isNull());
-        m_data = data;
-    }
+    void setDataWithoutUpdate(const String&);
+
     void dispatchModifiedEvent(const String& oldValue);
 
     enum class UpdateLiveRanges : bool { No, Yes };
@@ -65,7 +66,7 @@ protected:
 
 private:
     String nodeValue() const final;
-    void setNodeValue(const String&) final;
+    ExceptionOr<void> setNodeValue(const String&) final;
     void notifyParentAfterChange(const ContainerNode::ChildChange&);
 
     void parentOrShadowHostNode() const = delete; // Call parentNode() instead.

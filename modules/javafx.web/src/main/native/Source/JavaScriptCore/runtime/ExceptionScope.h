@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2016-2022 Apple Inc. All rights reserved.
+ * Copyright (C) 2016-2023 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -40,7 +40,7 @@ class Exception;
 
 #if ENABLE(C_LOOP)
 #define EXCEPTION_SCOPE_POSITION_FOR_ASAN(vm__) (vm__).currentCLoopStackPointer()
-#elif ASAN_ENABLED && COMPILER(GCC_COMPATIBLE)
+#elif ASAN_ENABLED
 #define EXCEPTION_SCOPE_POSITION_FOR_ASAN(vm__) currentStackPointer()
 #else
 #define EXCEPTION_SCOPE_POSITION_FOR_ASAN(vm__) nullptr
@@ -50,7 +50,7 @@ class ExceptionScope {
 public:
     VM& vm() const { return m_vm; }
     unsigned recursionDepth() const { return m_recursionDepth; }
-    Exception* exception() const { return m_vm.exception(); }
+    ALWAYS_INLINE Exception* exception() const { return m_vm.exception(); }
 
     ALWAYS_INLINE void assertNoException() { RELEASE_ASSERT_WITH_MESSAGE(!exception(), "%s", unexpectedExceptionMessage().data()); }
     ALWAYS_INLINE void releaseAssertNoException() { RELEASE_ASSERT_WITH_MESSAGE(!exception(), "%s", unexpectedExceptionMessage().data()); }
@@ -108,8 +108,8 @@ protected:
 #endif // ENABLE(EXCEPTION_SCOPE_VERIFICATION)
 
 #define RETURN_IF_EXCEPTION(scope__, value__) do { \
-        JSC::VM& vm = (scope__).vm(); \
-        ASSERT(!!(scope__).exception() == vm.traps().needHandling(JSC::VMTraps::NeedExceptionHandling)); \
+        SUPPRESS_UNCOUNTED_LOCAL JSC::VM& vm = (scope__).vm(); \
+        EXCEPTION_ASSERT(!!(scope__).exception() == vm.traps().needHandling(JSC::VMTraps::NeedExceptionHandling)); \
         if (UNLIKELY(vm.traps().maybeNeedHandling())) { \
             if (vm.hasExceptionsAfterHandlingTraps()) \
                 return value__; \

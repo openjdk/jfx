@@ -118,6 +118,7 @@ public:
     static bool supportsFloatingPointSqrt() { return true; }
     static bool supportsFloatingPointAbs() { return true; }
     static bool supportsFloatingPointRounding() { return true; }
+    static bool supportsFloat16() { return false; }
 
     enum RelationalCondition {
         Equal = Assembler::ConditionEQ,
@@ -138,6 +139,7 @@ public:
     }
 
     enum ResultCondition {
+        Carry, // <- not implemented
         Overflow,
         Signed,
         PositiveOrZero,
@@ -677,6 +679,8 @@ public:
 
     void lshift64(RegisterID src, TrustedImm32 imm, RegisterID dest)
     {
+        if (UNLIKELY(!imm.m_value))
+            return move(src, dest);
         m_assembler.slliInsn(dest, src, uint32_t(imm.m_value & ((1 << 6) - 1)));
     }
 
@@ -726,6 +730,8 @@ public:
 
     void rshift64(RegisterID src, TrustedImm32 imm, RegisterID dest)
     {
+        if (UNLIKELY(!imm.m_value))
+            return move(src, dest);
         m_assembler.sraiInsn(dest, src, uint32_t(imm.m_value & ((1 << 6) - 1)));
     }
 
@@ -751,6 +757,13 @@ public:
         m_assembler.maskRegister<32>(dest);
     }
 
+    void addUnsignedRightShift32(RegisterID src1, RegisterID src2, TrustedImm32 amount, RegisterID dest)
+    {
+        // dest = src1 + (src2 >> amount)
+        urshift32(src2, amount, dataTempRegister);
+        add32(src1, dataTempRegister, dest);
+    }
+
     void urshift64(RegisterID shiftAmount, RegisterID dest)
     {
         urshift64(dest, shiftAmount, dest);
@@ -768,6 +781,8 @@ public:
 
     void urshift64(RegisterID src, TrustedImm32 imm, RegisterID dest)
     {
+        if (UNLIKELY(!imm.m_value))
+            return move(src, dest);
         m_assembler.srliInsn(dest, src, uint32_t(imm.m_value & ((1 << 6) - 1)));
     }
 
@@ -935,6 +950,11 @@ public:
         }
     }
 
+    void loadPair32(Address src, RegisterID dest1, RegisterID dest2)
+    {
+        loadPair32(src.base, TrustedImm32(src.offset), dest1, dest2);
+    }
+
     void loadPair64(RegisterID src, RegisterID dest1, RegisterID dest2)
     {
         loadPair64(src, TrustedImm32(0), dest1, dest2);
@@ -950,6 +970,11 @@ public:
             load64(Address(src, offset.m_value), dest1);
             load64(Address(src, offset.m_value + 8), dest2);
         }
+    }
+
+    void loadPair64(Address src, RegisterID dest1, RegisterID dest2)
+    {
+        loadPair64(src.base, TrustedImm32(src.offset), dest1, dest2);
     }
 
     void store8(RegisterID src, Address address)
@@ -1213,14 +1238,84 @@ public:
         m_assembler.sdInsn(temp.memory(), immRegister, Imm::S<0>());
     }
 
+    void transfer32(Address src, Address dest)
+    {
+        if (src == dest)
+            return;
+        auto temp = temps<Data>();
+        load32(src, temp.data());
+        store32(temp.data(), dest);
+    }
+
     void transfer64(Address src, Address dest)
     {
+        if (src == dest)
+            return;
         auto temp = temps<Data>();
         load64(src, temp.data());
         store64(temp.data(), dest);
     }
 
+    void transferFloat(Address src, Address dest)
+    {
+        transfer32(src, dest);
+    }
+
+    void transferDouble(Address src, Address dest)
+    {
+        transfer64(src, dest);
+    }
+
+    void transferVector(Address src, Address dest)
+    {
+        if (src == dest)
+            return;
+        loadVector(src, fpTempRegister);
+        storeVector(fpTempRegister, dest);
+    }
+
     void transferPtr(Address src, Address dest)
+    {
+        transfer64(src, dest);
+    }
+
+    void transfer32(BaseIndex src, BaseIndex dest)
+    {
+        if (src == dest)
+            return;
+        auto temp = temps<Data>();
+        load32(src, temp.data());
+        store32(temp.data(), dest);
+    }
+
+    void transfer64(BaseIndex src, BaseIndex dest)
+    {
+        if (src == dest)
+            return;
+        auto temp = temps<Data>();
+        load64(src, temp.data());
+        store64(temp.data(), dest);
+    }
+
+    void transferFloat(BaseIndex src, BaseIndex dest)
+    {
+        transfer32(src, dest);
+    }
+
+    void transferDouble(BaseIndex src, BaseIndex dest)
+    {
+        transfer64(src, dest);
+    }
+
+    void transferVector(BaseIndex src, BaseIndex dest)
+    {
+        if (src == dest)
+            return;
+        loadVector(src, fpTempRegister);
+        storeVector(fpTempRegister, dest);
+    }
+
+    void transferPtr(BaseIndex src, BaseIndex dest)
     {
         transfer64(src, dest);
     }
@@ -1236,6 +1331,11 @@ public:
         store32(src2, Address(dest, offset.m_value + 4));
     }
 
+    void storePair32(RegisterID src1, RegisterID src2, Address dest)
+    {
+        storePair32(src1, src2, dest.base, TrustedImm32(dest.offset));
+    }
+
     void storePair64(RegisterID src1, RegisterID src2, RegisterID dest)
     {
         storePair64(src1, src2, dest, TrustedImm32(0));
@@ -1245,6 +1345,11 @@ public:
     {
         store64(src1, Address(dest, offset.m_value));
         store64(src2, Address(dest, offset.m_value + 8));
+    }
+
+    void storePair64(RegisterID src1, RegisterID src2, Address dest)
+    {
+        storePair64(src1, src2, dest.base, TrustedImm32(dest.offset));
     }
 
     void zeroExtend8To32(RegisterID src, RegisterID dest)
@@ -1896,6 +2001,12 @@ public:
         Assembler::replaceWithJump(instructionStart.dataLocation(), destination.dataLocation());
     }
 
+    template<PtrTag startTag>
+    static void replaceWithNops(CodeLocationLabel<startTag> instructionStart, size_t memoryToFillWithNopsInBytes)
+    {
+        Assembler::replaceWithNops(instructionStart.dataLocation(), memoryToFillWithNopsInBytes);
+    }
+
     static ptrdiff_t maxJumpReplacementSize()
     {
         return Assembler::maxJumpReplacementSize();
@@ -2100,6 +2211,13 @@ public:
         compareFinalize(cond, lhs, temp.data(), dest);
     }
 
+    void compare64(RelationalCondition cond, RegisterID lhs, TrustedImm64 imm, RegisterID dest)
+    {
+        auto temp = temps<Data>();
+        loadImmediate(imm, temp.data());
+        compareFinalize(cond, lhs, temp.data(), dest);
+    }
+
     void test8(ResultCondition cond, Address address, TrustedImm32 imm, RegisterID dest)
     {
         auto temp = temps<Data, Memory>();
@@ -2176,6 +2294,24 @@ public:
         auto temp = temps<Data, Memory>();
         loadImmediate(TrustedImmPtr(address.m_ptr), temp.memory());
         m_assembler.lbInsn(temp.memory(), temp.memory(), Imm::I<0>());
+        loadImmediate(imm, temp.data());
+        return makeBranch(cond, temp.memory(), temp.data());
+    }
+
+    Jump branch16(RelationalCondition cond, Address address, TrustedImm32 imm)
+    {
+        auto temp = temps<Data, Memory>();
+        auto resolution = resolveAddress(address, temp.memory());
+        m_assembler.lhInsn(temp.memory(), resolution.base, Imm::I(resolution.offset));
+        loadImmediate(imm, temp.data());
+        return makeBranch(cond, temp.memory(), temp.data());
+    }
+
+    Jump branch16(RelationalCondition cond, AbsoluteAddress address, TrustedImm32 imm)
+    {
+        auto temp = temps<Data, Memory>();
+        loadImmediate(TrustedImmPtr(address.m_ptr), temp.memory());
+        m_assembler.lhInsn(temp.memory(), temp.memory(), Imm::I<0>());
         loadImmediate(imm, temp.data());
         return makeBranch(cond, temp.memory(), temp.data());
     }
@@ -2354,6 +2490,15 @@ public:
     Jump branch32WithUnalignedHalfWords(RelationalCondition cond, BaseIndex address, TrustedImm32 imm)
     {
         return branch32(cond, address, imm);
+    }
+
+    Jump branch32WithMemory16(RelationalCondition cond, Address left, RegisterID right)
+    {
+        auto temp = temps<Data, Memory>();
+        MacroAssemblerHelpers::load16OnCondition(*this, cond, left, temp.data());
+        m_assembler.signExtend<32>(temp.data(), temp.data());
+        m_assembler.signExtend<32>(temp.memory(), right);
+        return makeBranch(cond, temp.data(), temp.memory());
     }
 
     Jump branchAdd32(ResultCondition cond, RegisterID src, RegisterID dest)
@@ -3015,7 +3160,8 @@ public:
     Call call(RegisterID target, RegisterID callTag) { UNUSED_PARAM(callTag); return call(target, NoPtrTag); }
     Call call(Address address, RegisterID callTag) { UNUSED_PARAM(callTag); return call(address, NoPtrTag); }
 
-    void callOperation(const CodePtr<OperationPtrTag> operation)
+    template<PtrTag tag>
+    void callOperation(const CodePtr<tag> operation)
     {
         auto temp = temps<Data>();
         loadImmediate(TrustedImmPtr(operation.taggedPtr()), temp.data());
@@ -3471,7 +3617,7 @@ public:
         m_assembler.ebreakInsn();
     }
 
-    void breakpoint(uint16_t = 0xc471)
+    void breakpoint(uint16_t = 0)
     {
         m_assembler.ebreakInsn();
     }
@@ -4000,6 +4146,71 @@ public:
         m_assembler.fsgnjInsn<64>(dest, falseSrc, falseSrc);
     }
 
+    void loadFloat16(Address address, FPRegisterID dest)
+    {
+        UNUSED_PARAM(address);
+        UNUSED_PARAM(dest);
+        UNREACHABLE_FOR_PLATFORM();
+    }
+    void loadFloat16(BaseIndex address, FPRegisterID dest)
+    {
+        UNUSED_PARAM(address);
+        UNUSED_PARAM(dest);
+        UNREACHABLE_FOR_PLATFORM();
+    }
+    void loadFloat16(TrustedImmPtr address, FPRegisterID dest)
+    {
+        UNUSED_PARAM(address);
+        UNUSED_PARAM(dest);
+        UNREACHABLE_FOR_PLATFORM();
+    }
+    void storeFloat16(FPRegisterID src, Address address)
+    {
+        UNUSED_PARAM(src);
+        UNUSED_PARAM(address);
+        UNREACHABLE_FOR_PLATFORM();
+    }
+    void storeFloat16(FPRegisterID src, BaseIndex address)
+    {
+        UNUSED_PARAM(src);
+        UNUSED_PARAM(address);
+        UNREACHABLE_FOR_PLATFORM();
+    }
+    void convertFloat16ToDouble(FPRegisterID src, FPRegisterID dest)
+    {
+        UNUSED_PARAM(src);
+        UNUSED_PARAM(dest);
+        UNREACHABLE_FOR_PLATFORM();
+    }
+    void convertDoubleToFloat16(FPRegisterID src, FPRegisterID dest)
+    {
+        UNUSED_PARAM(src);
+        UNUSED_PARAM(dest);
+        UNREACHABLE_FOR_PLATFORM();
+    }
+    void moveZeroToFloat16(FPRegisterID reg)
+    {
+        UNUSED_PARAM(reg);
+        UNREACHABLE_FOR_PLATFORM();
+    }
+    void move16ToFloat16(RegisterID src, FPRegisterID dest)
+    {
+        UNUSED_PARAM(src);
+        UNUSED_PARAM(dest);
+        UNREACHABLE_FOR_PLATFORM();
+    }
+    void move16ToFloat16(TrustedImm32 imm, FPRegisterID dest)
+    {
+        UNUSED_PARAM(imm);
+        UNUSED_PARAM(dest);
+        UNREACHABLE_FOR_PLATFORM();
+    }
+    void moveFloat16To16(FPRegisterID src, RegisterID dest)
+    {
+        UNUSED_PARAM(src);
+        UNUSED_PARAM(dest);
+        UNREACHABLE_FOR_PLATFORM();
+    }
 private:
     enum class ArithmeticOperation {
         Addition,
@@ -4171,6 +4382,7 @@ private:
     Jump branchTestFinalize(ResultCondition cond, RegisterID src)
     {
         switch (cond) {
+        case Carry:
         case Overflow:
             break;
         case Signed:
@@ -4572,6 +4784,17 @@ private:
 
         end.link(this);
     }
+
+
+
+
+
+
+
+
+
+
+
 };
 
 } // namespace JSC

@@ -43,6 +43,7 @@
 #include "JSArrayIterator.h"
 #include "JSBoundFunction.h"
 #include "JSCInlines.h"
+#include "JSFinalizationRegistry.h"
 #include "JSInjectedScriptHostPrototype.h"
 #include "JSMap.h"
 #include "JSMapIterator.h"
@@ -69,7 +70,8 @@
 #include <wtf/HashSet.h>
 #include <wtf/Lock.h>
 #include <wtf/PrintStream.h>
-#include <wtf/text/StringConcatenate.h>
+#include <wtf/TZoneMallocInlines.h>
+#include <wtf/text/MakeString.h>
 
 namespace Inspector {
 
@@ -116,12 +118,12 @@ JSValue JSInjectedScriptHost::evaluateWithScopeExtension(JSGlobalObject* globalO
     if (!scriptValue.isString())
         return throwTypeError(globalObject, scope, "InjectedScriptHost.evaluateWithScopeExtension first argument must be a string."_s);
 
-    String program = asString(scriptValue)->value(globalObject);
+    auto program = asString(scriptValue)->value(globalObject);
     RETURN_IF_EXCEPTION(scope, JSValue());
 
     NakedPtr<Exception> exception;
     JSObject* scopeExtension = callFrame->argument(1).getObject();
-    JSValue result = JSC::evaluateWithScopeExtension(globalObject, makeSource(program, callFrame->callerSourceOrigin(vm)), scopeExtension, exception);
+    JSValue result = JSC::evaluateWithScopeExtension(globalObject, makeSource(program, callFrame->callerSourceOrigin(vm), SourceTaintedOrigin::Untainted), scopeExtension, exception);
     if (exception)
         throwException(globalObject, scope, exception);
 
@@ -226,6 +228,7 @@ JSValue JSInjectedScriptHost::subtype(JSGlobalObject* globalObject, CallFrame* c
             || object->inherits<JSUint8ClampedArray>()
             || object->inherits<JSUint16Array>()
             || object->inherits<JSUint32Array>()
+            || object->inherits<JSFloat16Array>()
             || object->inherits<JSFloat32Array>()
             || object->inherits<JSFloat64Array>()
             || object->inherits<JSBigInt64Array>()
@@ -292,7 +295,7 @@ static JSObject* constructInternalProperty(JSGlobalObject* globalObject, const S
     return result;
 }
 
-JSValue JSInjectedScriptHost::getOwnPrivatePropertyDescriptors(JSGlobalObject* globalObject, CallFrame* callFrame)
+JSValue JSInjectedScriptHost::getOwnPrivatePropertySymbols(JSGlobalObject* globalObject, CallFrame* callFrame)
 {
     if (callFrame->argumentCount() < 1)
         return jsUndefined();
@@ -301,13 +304,14 @@ JSValue JSInjectedScriptHost::getOwnPrivatePropertyDescriptors(JSGlobalObject* g
     auto scope = DECLARE_THROW_SCOPE(vm);
     JSValue value = callFrame->uncheckedArgument(0);
 
-    JSObject* result = constructEmptyObject(globalObject);
+    JSArray* result = constructEmptyArray(globalObject, nullptr);
     RETURN_IF_EXCEPTION(scope, JSValue());
 
     JSObject* object = jsDynamicCast<JSObject*>(value);
     if (!object)
         return result;
 
+    unsigned index = 0;
     PropertyNameArray propertyNames(vm, PropertyNameMode::StringsAndSymbols, PrivateSymbolMode::Include);
     JSObject::getOwnPropertyNames(object, globalObject, propertyNames, DontEnumPropertiesMode::Include);
     for (const auto& propertyName : propertyNames) {
@@ -318,7 +322,7 @@ JSValue JSInjectedScriptHost::getOwnPrivatePropertyDescriptors(JSGlobalObject* g
         if (!propertyName.string().startsWith('#'))
             continue;
 
-        result->putDirect(vm, Identifier::fromString(vm, String(propertyName.impl()->isolatedCopy())), objectConstructorGetOwnPropertyDescriptor(globalObject, object, propertyName));
+        result->putDirectIndex(globalObject, index++, Symbol::create(vm, *static_cast<SymbolImpl*>(propertyName.impl())));
     }
 
     return result;
@@ -406,6 +410,59 @@ JSValue JSInjectedScriptHost::getInternalProperties(JSGlobalObject* globalObject
         auto* target = weakRef->deref(vm);
         array->putDirectIndex(globalObject, index++, constructInternalProperty(globalObject, "target"_s, target ? target : jsUndefined()));
         RETURN_IF_EXCEPTION(scope, JSValue());
+        return array;
+    }
+
+    if (JSFinalizationRegistry* finalizationRegistry = jsDynamicCast<JSFinalizationRegistry*>(value)) {
+        unsigned index = 0;
+        JSArray* array = constructEmptyArray(globalObject, nullptr, 2);
+        RETURN_IF_EXCEPTION(scope, JSValue());
+
+        array->putDirectIndex(globalObject, index++, constructInternalProperty(globalObject, "cleanupCallback"_s, finalizationRegistry->callback()));
+        RETURN_IF_EXCEPTION(scope, JSValue());
+
+        Vector<JSFinalizationRegistry::LiveRegistration> liveRegistrations;
+        Vector<JSFinalizationRegistry::DeadRegistration> deadRegistrations;
+        {
+            Locker locker { finalizationRegistry->cellLock() };
+
+            liveRegistrations = finalizationRegistry->liveRegistrations(locker);
+            deadRegistrations = finalizationRegistry->deadRegistrations(locker);
+        }
+
+        unsigned liveIndex = 0;
+        JSArray* liveArray = constructEmptyArray(globalObject, nullptr, liveRegistrations.size());
+        RETURN_IF_EXCEPTION(scope, JSValue());
+
+        for (auto&& liveRegistration : WTFMove(liveRegistrations)) {
+            JSObject* registrationObject = constructEmptyObject(globalObject);
+            registrationObject->putDirect(vm, Identifier::fromString(vm, "target"_s), liveRegistration.target);
+            registrationObject->putDirect(vm, Identifier::fromString(vm, "heldValue"_s), liveRegistration.heldValue);
+            if (liveRegistration.unregisterToken)
+                registrationObject->putDirect(vm, Identifier::fromString(vm, "unregisterToken"_s), liveRegistration.unregisterToken);
+            liveArray->putDirectIndex(globalObject, liveIndex++, registrationObject);
+            RETURN_IF_EXCEPTION(scope, JSValue());
+        }
+
+        array->putDirectIndex(globalObject, index++, constructInternalProperty(globalObject, "live"_s, liveArray));
+        RETURN_IF_EXCEPTION(scope, JSValue());
+
+        unsigned deadIndex = 0;
+        JSArray* deadArray = constructEmptyArray(globalObject, nullptr, deadRegistrations.size());
+        RETURN_IF_EXCEPTION(scope, JSValue());
+
+        for (auto&& deadRegistration : WTFMove(deadRegistrations)) {
+            JSObject* registrationObject = constructEmptyObject(globalObject);
+            registrationObject->putDirect(vm, Identifier::fromString(vm, "heldValue"_s), deadRegistration.heldValue);
+            if (deadRegistration.unregisterToken)
+                registrationObject->putDirect(vm, Identifier::fromString(vm, "unregisterToken"_s), deadRegistration.unregisterToken);
+            deadArray->putDirectIndex(globalObject, deadIndex++, registrationObject);
+            RETURN_IF_EXCEPTION(scope, JSValue());
+        }
+
+        array->putDirectIndex(globalObject, index++, constructInternalProperty(globalObject, "dead"_s, deadArray));
+        RETURN_IF_EXCEPTION(scope, JSValue());
+
         return array;
     }
 
@@ -605,15 +662,23 @@ static JSObject* cloneArrayIteratorObject(JSGlobalObject* globalObject, VM& vm, 
 
 static JSObject* cloneMapIteratorObject(JSGlobalObject* globalObject, VM& vm, JSMapIterator* iteratorObject)
 {
-    JSMapIterator* clone = JSMapIterator::create(vm, globalObject->mapIteratorStructure(), jsCast<JSMap*>(iteratorObject->iteratedObject()), iteratorObject->kind());
-    clone->internalField(JSMapIterator::Field::MapBucket).set(vm, clone, iteratorObject->internalField(JSMapIterator::Field::MapBucket).get());
+    auto scope = DECLARE_THROW_SCOPE(vm);
+
+    JSMapIterator* clone = JSMapIterator::create(globalObject, globalObject->mapIteratorStructure(), jsCast<JSMap*>(iteratorObject->iteratedObject()), iteratorObject->kind());
+    RETURN_IF_EXCEPTION(scope, nullptr);
+
+    clone->internalField(JSMapIterator::Field::Entry).set(vm, clone, iteratorObject->internalField(JSMapIterator::Field::Entry).get());
     return clone;
 }
 
 static JSObject* cloneSetIteratorObject(JSGlobalObject* globalObject, VM& vm, JSSetIterator* iteratorObject)
 {
-    JSSetIterator* clone = JSSetIterator::create(vm, globalObject->setIteratorStructure(), jsCast<JSSet*>(iteratorObject->iteratedObject()), iteratorObject->kind());
-    clone->internalField(JSSetIterator::Field::SetBucket).set(vm, clone, iteratorObject->internalField(JSSetIterator::Field::SetBucket).get());
+    auto scope = DECLARE_THROW_SCOPE(vm);
+
+    JSSetIterator* clone = JSSetIterator::create(globalObject, globalObject->setIteratorStructure(), jsCast<JSSet*>(iteratorObject->iteratedObject()), iteratorObject->kind());
+    RETURN_IF_EXCEPTION(scope, nullptr);
+
+    clone->internalField(JSSetIterator::Field::Entry).set(vm, clone, iteratorObject->internalField(JSSetIterator::Field::Entry).get());
     return clone;
 }
 
@@ -642,11 +707,15 @@ JSValue JSInjectedScriptHost::iteratorEntries(JSGlobalObject* globalObject, Call
                     iterator = cloneArrayIteratorObject(globalObject, vm, arrayIterator);
             }
         } else if (auto* mapIterator = jsDynamicCast<JSMapIterator*>(iteratorObject)) {
-            if (jsCast<JSMap*>(mapIterator->iteratedObject())->isIteratorProtocolFastAndNonObservable())
+            if (jsCast<JSMap*>(mapIterator->iteratedObject())->isIteratorProtocolFastAndNonObservable()) {
                 iterator = cloneMapIteratorObject(globalObject, vm, mapIterator);
+                RETURN_IF_EXCEPTION(scope, { });
+            }
         } else if (auto* setIterator = jsDynamicCast<JSSetIterator*>(iteratorObject)) {
-            if (jsCast<JSSet*>(setIterator->iteratedObject())->isIteratorProtocolFastAndNonObservable())
+            if (jsCast<JSSet*>(setIterator->iteratedObject())->isIteratorProtocolFastAndNonObservable()) {
                 iterator = cloneSetIteratorObject(globalObject, vm, setIterator);
+                RETURN_IF_EXCEPTION(scope, { });
+            }
         }
     }
     RETURN_IF_EXCEPTION(scope, { });
@@ -770,7 +839,7 @@ JSValue JSInjectedScriptHost::queryInstances(JSGlobalObject* globalObject, CallF
 }
 
 class HeapHolderFinder final : public HeapAnalyzer {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_ALLOCATED(HeapHolderFinder);
 public:
     HeapHolderFinder(HeapProfiler& profiler, JSCell* target)
         : HeapAnalyzer()
@@ -848,7 +917,7 @@ public:
     void analyzeIndexEdge(JSCell* from, JSCell* to, uint32_t) final { analyzeEdge(from, to, RootMarkReason::None); }
 
     void analyzeNode(JSCell*) final { }
-    void setOpaqueRootReachabilityReasonForCell(JSCell*, const char*) final { }
+    void setOpaqueRootReachabilityReasonForCell(JSCell*, ASCIILiteral) final { }
     void setWrappedObjectForCell(JSCell*, void*) final { }
     void setLabelForCell(JSCell*, const String&) final { }
 
@@ -902,6 +971,8 @@ private:
     HashSet<JSCell*> m_holders;
     const JSCell* m_target;
 };
+
+WTF_MAKE_TZONE_ALLOCATED_IMPL(HeapHolderFinder);
 
 JSValue JSInjectedScriptHost::queryHolders(JSGlobalObject* globalObject, CallFrame* callFrame)
 {

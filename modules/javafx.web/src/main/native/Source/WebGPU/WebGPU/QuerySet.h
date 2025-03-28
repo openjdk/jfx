@@ -29,7 +29,10 @@
 #import <wtf/FastMalloc.h>
 #import <wtf/Ref.h>
 #import <wtf/RefCounted.h>
+#import <wtf/TZoneMalloc.h>
 #import <wtf/Vector.h>
+#import <wtf/WeakHashSet.h>
+#import <wtf/WeakPtr.h>
 
 struct WGPUQuerySetImpl {
 };
@@ -37,11 +40,12 @@ struct WGPUQuerySetImpl {
 namespace WebGPU {
 
 class Buffer;
+class CommandEncoder;
 class Device;
 
 // https://gpuweb.github.io/gpuweb/#gpuqueryset
 class QuerySet : public WGPUQuerySetImpl, public RefCounted<QuerySet> {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_ALLOCATED(QuerySet);
 public:
     static Ref<QuerySet> create(id<MTLBuffer> visibilityBuffer, uint32_t count, WGPUQueryType type, Device& device)
     {
@@ -61,17 +65,17 @@ public:
     void destroy();
     void setLabel(String&&);
 
-    bool isValid() const { return static_cast<bool>(m_visibilityBuffer) || static_cast<bool>(m_visibilityBuffer); }
+    bool isValid() const;
 
-    void setOverrideLocation(uint32_t myIndex, QuerySet& otherQuerySet, uint32_t otherIndex);
-    void encodeResolveCommands(id<MTLBlitCommandEncoder>, uint32_t firstQuery, uint32_t queryCount, const Buffer& destination, uint64_t destinationOffset) const;
+    void setOverrideLocation(QuerySet& otherQuerySet, uint32_t beginningOfPassIndex, uint32_t endOfPassIndex);
 
     Device& device() const { return m_device; }
     uint32_t count() const { return m_count; }
     WGPUQueryType type() const { return m_type; }
     id<MTLBuffer> visibilityBuffer() const { return m_visibilityBuffer; }
     id<MTLCounterSampleBuffer> counterSampleBuffer() const { return m_timestampBuffer; }
-
+    void setCommandEncoder(CommandEncoder&) const;
+    bool isDestroyed() const;
 private:
     QuerySet(id<MTLBuffer>, uint32_t, WGPUQueryType, Device&);
     QuerySet(id<MTLCounterSampleBuffer>, uint32_t, WGPUQueryType, Device&);
@@ -82,7 +86,7 @@ private:
     id<MTLBuffer> m_visibilityBuffer { nil };
     id<MTLCounterSampleBuffer> m_timestampBuffer { nil };
     uint32_t m_count { 0 };
-    WGPUQueryType m_type { WGPUQueryType_Occlusion };
+    const WGPUQueryType m_type { WGPUQueryType_Force32 };
 
     // rdar://91371495 is about how we can't just naively transform PassDescriptor.timestampWrites into MTLComputePassDescriptor.sampleBufferAttachments.
     // Instead, we can resolve all the information to a dummy counter sample buffer, and then internally remember that the data
@@ -94,7 +98,8 @@ private:
         Ref<QuerySet> other;
         uint32_t otherIndex;
     };
-    Vector<std::optional<OverrideLocation>> m_overrideLocations;
+    mutable WeakHashSet<CommandEncoder> m_commandEncoders;
+    bool m_destroyed { false };
 };
 
 } // namespace WebGPU

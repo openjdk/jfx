@@ -28,6 +28,26 @@
 
 #if ENABLE(WEBGL)
 
+#include "ANGLEInstancedArrays.h"
+#include "EXTBlendMinMax.h"
+#include "EXTClipControl.h"
+#include "EXTColorBufferFloat.h"
+#include "EXTColorBufferHalfFloat.h"
+#include "EXTConservativeDepth.h"
+#include "EXTDepthClamp.h"
+#include "EXTDisjointTimerQuery.h"
+#include "EXTDisjointTimerQueryWebGL2.h"
+#include "EXTFloatBlend.h"
+#include "EXTFragDepth.h"
+#include "EXTPolygonOffsetClamp.h"
+#include "EXTRenderSnorm.h"
+#include "EXTShaderTextureLOD.h"
+#include "EXTTextureCompressionBPTC.h"
+#include "EXTTextureCompressionRGTC.h"
+#include "EXTTextureFilterAnisotropic.h"
+#include "EXTTextureMirrorClampToEdge.h"
+#include "EXTTextureNorm16.h"
+#include "EXTsRGB.h"
 #include "JSANGLEInstancedArrays.h"
 #include "JSDOMConvertBufferSource.h"
 #include "JSEXTBlendMinMax.h"
@@ -62,6 +82,7 @@
 #include "JSOESTextureHalfFloat.h"
 #include "JSOESTextureHalfFloatLinear.h"
 #include "JSOESVertexArrayObject.h"
+#include "JSWebGLBlendFuncExtended.h"
 #include "JSWebGLBuffer.h"
 #include "JSWebGLClipCullDistance.h"
 #include "JSWebGLColorBufferFloat.h"
@@ -93,6 +114,40 @@
 #include "JSWebGLTransformFeedback.h"
 #include "JSWebGLVertexArrayObject.h"
 #include "JSWebGLVertexArrayObjectOES.h"
+#include "KHRParallelShaderCompile.h"
+#include "NVShaderNoperspectiveInterpolation.h"
+#include "OESDrawBuffersIndexed.h"
+#include "OESElementIndexUint.h"
+#include "OESFBORenderMipmap.h"
+#include "OESSampleVariables.h"
+#include "OESShaderMultisampleInterpolation.h"
+#include "OESStandardDerivatives.h"
+#include "OESTextureFloat.h"
+#include "OESTextureFloatLinear.h"
+#include "OESTextureHalfFloat.h"
+#include "OESTextureHalfFloatLinear.h"
+#include "OESVertexArrayObject.h"
+#include "WebGLBlendFuncExtended.h"
+#include "WebGLClipCullDistance.h"
+#include "WebGLColorBufferFloat.h"
+#include "WebGLCompressedTextureASTC.h"
+#include "WebGLCompressedTextureETC.h"
+#include "WebGLCompressedTextureETC1.h"
+#include "WebGLCompressedTexturePVRTC.h"
+#include "WebGLCompressedTextureS3TC.h"
+#include "WebGLCompressedTextureS3TCsRGB.h"
+#include "WebGLDebugRendererInfo.h"
+#include "WebGLDebugShaders.h"
+#include "WebGLDepthTexture.h"
+#include "WebGLDrawBuffers.h"
+#include "WebGLDrawInstancedBaseVertexBaseInstance.h"
+#include "WebGLLoseContext.h"
+#include "WebGLMultiDraw.h"
+#include "WebGLMultiDrawInstancedBaseVertexBaseInstance.h"
+#include "WebGLPolygonMode.h"
+#include "WebGLProvokingVertex.h"
+#include "WebGLRenderSharedExponent.h"
+#include "WebGLStencilTexturing.h"
 #include <JavaScriptCore/JSCInlines.h>
 
 namespace WebCore {
@@ -120,18 +175,21 @@ JSValue convertToJSValue(JSGlobalObject& lexicalGlobalObject, JSDOMGlobalObject&
             return jsStringWithCache(lexicalGlobalObject.vm(), value);
         }, [&] (const Vector<bool>& values) -> JSValue {
             MarkedArgumentBuffer list;
+            list.ensureCapacity(values.size());
             for (auto& value : values)
                 list.append(jsBoolean(value));
             RELEASE_ASSERT(!list.hasOverflowed());
             return constructArray(&globalObject, static_cast<JSC::ArrayAllocationProfile*>(nullptr), list);
         }, [&] (const Vector<int>& values) -> JSValue {
             MarkedArgumentBuffer list;
+            list.ensureCapacity(values.size());
             for (auto& value : values)
                 list.append(jsNumber(value));
             RELEASE_ASSERT(!list.hasOverflowed());
             return constructArray(&globalObject, static_cast<JSC::ArrayAllocationProfile*>(nullptr), list);
         }, [&] (const Vector<unsigned>& values) -> JSValue {
             MarkedArgumentBuffer list;
+            list.ensureCapacity(values.size());
             for (auto& value : values)
                 list.append(jsNumber(value));
             RELEASE_ASSERT(!list.hasOverflowed());
@@ -184,66 +242,66 @@ JSValue convertToJSValue(JSGlobalObject& lexicalGlobalObject, JSDOMGlobalObject&
     );
 }
 
-JSValue convertToJSValue(JSGlobalObject& lexicalGlobalObject, JSDOMGlobalObject& globalObject, WebGLExtension& extension)
+JSValue convertToJSValue(JSGlobalObject& lexicalGlobalObject, JSDOMGlobalObject& globalObject, WebGLExtensionAny extensionAny)
 {
 #define TO_JS(EXT) \
-    case WebGLExtension::EXT ## Name: \
-        return toJS(&lexicalGlobalObject, &globalObject, static_cast<EXT&>(extension));
-
-    switch (extension.getName()) {
-        TO_JS(ANGLEInstancedArrays)
-        TO_JS(EXTBlendMinMax)
-        TO_JS(EXTClipControl)
-        TO_JS(EXTColorBufferFloat)
-        TO_JS(EXTColorBufferHalfFloat)
-        TO_JS(EXTConservativeDepth)
-        TO_JS(EXTDepthClamp)
-        TO_JS(EXTDisjointTimerQuery)
-        TO_JS(EXTDisjointTimerQueryWebGL2)
-        TO_JS(EXTFloatBlend)
-        TO_JS(EXTFragDepth)
-        TO_JS(EXTPolygonOffsetClamp)
-        TO_JS(EXTRenderSnorm)
-        TO_JS(EXTShaderTextureLOD)
-        TO_JS(EXTTextureCompressionBPTC)
-        TO_JS(EXTTextureCompressionRGTC)
-        TO_JS(EXTTextureFilterAnisotropic)
-        TO_JS(EXTTextureMirrorClampToEdge)
-        TO_JS(EXTTextureNorm16)
-        TO_JS(EXTsRGB)
-        TO_JS(KHRParallelShaderCompile)
-        TO_JS(NVShaderNoperspectiveInterpolation)
-        TO_JS(OESDrawBuffersIndexed)
-        TO_JS(OESElementIndexUint)
-        TO_JS(OESFBORenderMipmap)
-        TO_JS(OESSampleVariables)
-        TO_JS(OESShaderMultisampleInterpolation)
-        TO_JS(OESStandardDerivatives)
-        TO_JS(OESTextureFloat)
-        TO_JS(OESTextureFloatLinear)
-        TO_JS(OESTextureHalfFloat)
-        TO_JS(OESTextureHalfFloatLinear)
-        TO_JS(OESVertexArrayObject)
-        TO_JS(WebGLClipCullDistance)
-        TO_JS(WebGLColorBufferFloat)
-        TO_JS(WebGLCompressedTextureASTC)
-        TO_JS(WebGLCompressedTextureETC)
-        TO_JS(WebGLCompressedTextureETC1)
-        TO_JS(WebGLCompressedTexturePVRTC)
-        TO_JS(WebGLCompressedTextureS3TC)
-        TO_JS(WebGLCompressedTextureS3TCsRGB)
-        TO_JS(WebGLDebugRendererInfo)
-        TO_JS(WebGLDebugShaders)
-        TO_JS(WebGLDepthTexture)
-        TO_JS(WebGLDrawBuffers)
-        TO_JS(WebGLDrawInstancedBaseVertexBaseInstance)
-        TO_JS(WebGLLoseContext)
-        TO_JS(WebGLMultiDraw)
-        TO_JS(WebGLMultiDrawInstancedBaseVertexBaseInstance)
-        TO_JS(WebGLPolygonMode)
-        TO_JS(WebGLProvokingVertex)
-        TO_JS(WebGLRenderSharedExponent)
-        TO_JS(WebGLStencilTexturing)
+    case WebGLExtensionName::EXT: \
+        return toJS(&lexicalGlobalObject, &globalObject, static_cast<EXT&>(extensionAny.get()));
+    switch (extensionAny->name()) {
+        TO_JS(ANGLEInstancedArrays);
+        TO_JS(EXTBlendMinMax);
+        TO_JS(EXTClipControl);
+        TO_JS(EXTColorBufferFloat);
+        TO_JS(EXTColorBufferHalfFloat);
+        TO_JS(EXTConservativeDepth);
+        TO_JS(EXTDepthClamp);
+        TO_JS(EXTDisjointTimerQuery);
+        TO_JS(EXTDisjointTimerQueryWebGL2);
+        TO_JS(EXTFloatBlend);
+        TO_JS(EXTFragDepth);
+        TO_JS(EXTPolygonOffsetClamp);
+        TO_JS(EXTRenderSnorm);
+        TO_JS(EXTShaderTextureLOD);
+        TO_JS(EXTTextureCompressionBPTC);
+        TO_JS(EXTTextureCompressionRGTC);
+        TO_JS(EXTTextureFilterAnisotropic);
+        TO_JS(EXTTextureMirrorClampToEdge);
+        TO_JS(EXTTextureNorm16);
+        TO_JS(EXTsRGB);
+        TO_JS(KHRParallelShaderCompile);
+        TO_JS(NVShaderNoperspectiveInterpolation);
+        TO_JS(OESDrawBuffersIndexed);
+        TO_JS(OESElementIndexUint);
+        TO_JS(OESFBORenderMipmap);
+        TO_JS(OESSampleVariables);
+        TO_JS(OESShaderMultisampleInterpolation);
+        TO_JS(OESStandardDerivatives);
+        TO_JS(OESTextureFloat);
+        TO_JS(OESTextureFloatLinear);
+        TO_JS(OESTextureHalfFloat);
+        TO_JS(OESTextureHalfFloatLinear);
+        TO_JS(OESVertexArrayObject);
+        TO_JS(WebGLBlendFuncExtended);
+        TO_JS(WebGLClipCullDistance);
+        TO_JS(WebGLColorBufferFloat);
+        TO_JS(WebGLCompressedTextureASTC);
+        TO_JS(WebGLCompressedTextureETC);
+        TO_JS(WebGLCompressedTextureETC1);
+        TO_JS(WebGLCompressedTexturePVRTC);
+        TO_JS(WebGLCompressedTextureS3TC);
+        TO_JS(WebGLCompressedTextureS3TCsRGB);
+        TO_JS(WebGLDebugRendererInfo);
+        TO_JS(WebGLDebugShaders);
+        TO_JS(WebGLDepthTexture);
+        TO_JS(WebGLDrawBuffers);
+        TO_JS(WebGLDrawInstancedBaseVertexBaseInstance);
+        TO_JS(WebGLLoseContext);
+        TO_JS(WebGLMultiDraw);
+        TO_JS(WebGLMultiDrawInstancedBaseVertexBaseInstance);
+        TO_JS(WebGLPolygonMode);
+        TO_JS(WebGLProvokingVertex);
+        TO_JS(WebGLRenderSharedExponent);
+        TO_JS(WebGLStencilTexturing);
     }
     ASSERT_NOT_REACHED();
     return jsNull();

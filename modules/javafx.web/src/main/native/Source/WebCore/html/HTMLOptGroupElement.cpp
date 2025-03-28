@@ -36,12 +36,12 @@
 #include "NodeRenderStyle.h"
 #include "StyleResolver.h"
 #include "TypedElementDescendantIteratorInlines.h"
-#include <wtf/IsoMallocInlines.h>
 #include <wtf/StdLibExtras.h>
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
-WTF_MAKE_ISO_ALLOCATED_IMPL(HTMLOptGroupElement);
+WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(HTMLOptGroupElement);
 
 using namespace HTMLNames;
 
@@ -98,11 +98,11 @@ void HTMLOptGroupElement::attributeChanged(const QualifiedName& name, const Atom
     if (name == disabledAttr) {
         bool newDisabled = !newValue.isNull();
         if (m_isDisabled != newDisabled) {
-            Style::PseudoClassChangeInvalidation disabledInvalidation(*this, { { CSSSelector::PseudoClassType::Disabled, newDisabled }, { CSSSelector::PseudoClassType::Enabled, !newDisabled } });
+            Style::PseudoClassChangeInvalidation disabledInvalidation(*this, { { CSSSelector::PseudoClass::Disabled, newDisabled }, { CSSSelector::PseudoClass::Enabled, !newDisabled } });
 
             Vector<Style::PseudoClassChangeInvalidation> optionInvalidation;
             for (auto& descendant : descendantsOfType<HTMLOptionElement>(*this))
-                optionInvalidation.append({ descendant, { { CSSSelector::PseudoClassType::Disabled, newDisabled }, { CSSSelector::PseudoClassType::Enabled, !newDisabled } } });
+                optionInvalidation.append({ descendant, { { CSSSelector::PseudoClass::Disabled, newDisabled }, { CSSSelector::PseudoClass::Enabled, !newDisabled } } });
 
             m_isDisabled = newDisabled;
         }

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2023, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -72,13 +72,6 @@ static gboolean call_runnable (gpointer data)
     }
 
     return FALSE;
-}
-
-static void call_update_preferences()
-{
-    if (platformSupport) {
-        platformSupport->updatePreferences();
-    }
 }
 
 extern "C" {
@@ -198,11 +191,8 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_gtk_GtkApplication__1init
 
     platformSupport = new PlatformSupport(env, obj);
 
-    GtkSettings* settings = gtk_settings_get_default();
-    if (settings != NULL) {
-        g_signal_connect(G_OBJECT(settings), "notify::gtk-theme-name",
-                         G_CALLBACK(call_update_preferences), NULL);
-    }
+    // Set ibus to sync mode
+    setenv("IBUS_ENABLE_SYNC_MODE", "1", 1);
 }
 
 /*
@@ -241,7 +231,7 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_gtk_GtkApplication__1runLoop
     // event loop and should be restored when the event loop exits. Unfortunately,
     // this is too early. The fix is to never restore X errors.
     //
-    // See RT-21408 & RT-20756
+    // See JDK-8126059 & JDK-8118745
 
     // Restore X error handling
     // #ifndef VERBOSE
@@ -482,7 +472,7 @@ static void process_events(GdkEvent* event, gpointer data)
 
     EventsCounterHelper helper(ctx);
 
-    if (ctx != NULL && ctx->hasIME() && ctx->filterIME(event)) {
+    if ((event->type == GDK_KEY_PRESS || event->type == GDK_KEY_RELEASE) && ctx != NULL && ctx->filterIME(event)) {
         return;
     }
 

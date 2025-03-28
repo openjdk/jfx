@@ -45,8 +45,8 @@ class ReadableStream;
 class SimpleReadableStreamSource;
 class WritableStream;
 
-class RTCRtpSFrameTransform : public RefCounted<RTCRtpSFrameTransform>, public ActiveDOMObject, public EventTarget {
-    WTF_MAKE_ISO_ALLOCATED(RTCRtpSFrameTransform);
+class RTCRtpSFrameTransform : public ThreadSafeRefCountedAndCanMakeThreadSafeWeakPtr<RTCRtpSFrameTransform>, public ActiveDOMObject, public EventTarget {
+    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(RTCRtpSFrameTransform);
 public:
     enum class Role { Encrypt, Decrypt };
     using CompatibilityMode = RTCRtpSFrameTransformer::CompatibilityMode;
@@ -75,18 +75,18 @@ public:
 
     bool hasKey(uint64_t) const;
 
-    using RefCounted<RTCRtpSFrameTransform>::ref;
-    using RefCounted<RTCRtpSFrameTransform>::deref;
+    // ActiveDOMObject.
+    void ref() const final { ThreadSafeRefCountedAndCanMakeThreadSafeWeakPtr::ref(); }
+    void deref() const final { ThreadSafeRefCountedAndCanMakeThreadSafeWeakPtr::deref(); }
 
 private:
     RTCRtpSFrameTransform(ScriptExecutionContext&, Options);
 
     // ActiveDOMObject
-    const char* activeDOMObjectName() const final { return "RTCRtpSFrameTransform"; }
     bool virtualHasPendingActivity() const final;
 
     // EventTarget
-    EventTargetInterface eventTargetInterface() const final { return RTCRtpSFrameTransformEventTargetInterfaceType; }
+    enum EventTargetInterfaceType eventTargetInterface() const final { return EventTargetInterfaceType::RTCRtpSFrameTransform; }
     ScriptExecutionContext* scriptExecutionContext() const final { return ContextDestructionObserver::scriptExecutionContext(); }
     void refEventTarget() final { ref(); }
     void derefEventTarget() final { deref(); }

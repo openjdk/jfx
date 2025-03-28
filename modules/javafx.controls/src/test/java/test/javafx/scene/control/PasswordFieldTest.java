@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,23 +25,24 @@
 
 package test.javafx.scene.control;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static test.com.sun.javafx.scene.control.infrastructure.ControlTestUtils.assertStyleClassContains;
 import javafx.scene.control.PasswordField;
 import javafx.scene.control.TextInputControlShim;
-import static test.com.sun.javafx.scene.control.infrastructure.ControlTestUtils.*;
-import static org.junit.Assert.*;
-
-
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 /**
  *
  * @author srikalyc
  */
 public class PasswordFieldTest {
-    private PasswordField pwdField;//Empty string
+    private PasswordField pwdField;
 
-    @Before public void setup() {
+    @BeforeEach
+    public void setup() {
         pwdField = new PasswordField();
     }
 

@@ -70,35 +70,32 @@ class VideoFrame;
 
 class GraphicsContextGL;
 
-struct GCGLOwned {
-    GCGLOwned() = default;
-    GCGLOwned(const GCGLOwned&) = delete;
-    GCGLOwned(GCGLOwned&&) = delete;
-    ~GCGLOwned();
+#if PLATFORM(COCOA)
+struct GraphicsContextGLExternalImageSourceIOSurfaceHandle {
+    MachSendRight handle;
+};
+struct GraphicsContextGLExternalImageSourceMTLSharedTextureHandle {
+    MachSendRight handle;
+};
+using GraphicsContextGLExternalImageSource = std::variant<
+    GraphicsContextGLExternalImageSourceIOSurfaceHandle,
+    GraphicsContextGLExternalImageSourceMTLSharedTextureHandle
+    >;
+using GraphicsContextGLExternalSyncSource = std::tuple<MachSendRight, uint64_t>;
 
-    GCGLOwned& operator=(const GCGLOwned&) const = delete;
-    GCGLOwned& operator=(GCGLOwned&&) = delete;
+#else
 
-    operator PlatformGLObject() const { return m_object; }
+using GraphicsContextGLExternalImageSource = int;
+using GraphicsContextGLExternalSyncSource = int;
 
-    PlatformGLObject leakObject() { return std::exchange(m_object, 0); }
+#endif
 
-protected:
-    PlatformGLObject m_object = 0;
+enum class GraphicsContextGLSurfaceBuffer : bool {
+    DrawingBuffer,
+    DisplayBuffer
 };
 
-#define DECLARE_GCGL_OWNED(ClassName) \
-struct GCGLOwned##ClassName : public GCGLOwned { \
-    void adopt(GraphicsContextGL& gl, PlatformGLObject object); \
-    void ensure(GraphicsContextGL& gl); \
-    void release(GraphicsContextGL& gl); \
-}
-
-DECLARE_GCGL_OWNED(Framebuffer);
-DECLARE_GCGL_OWNED(Renderbuffer);
-DECLARE_GCGL_OWNED(Texture);
-
-#undef DECLARE_GCGL_OWNED
+enum class GraphicsContextGLFlipY : bool { No, Yes };
 
 // Base class for graphics context for implementing WebGL rendering model.
 class GraphicsContextGL : public RefCounted<GraphicsContextGL> {
@@ -882,6 +879,13 @@ public:
     static constexpr GCGLenum MAX_FRAGMENT_INTERPOLATION_OFFSET_OES = 0x8E5C;
     static constexpr GCGLenum FRAGMENT_INTERPOLATION_OFFSET_BITS_OES = 0x8E5D;
 
+    // GL_EXT_blend_func_extended
+    static constexpr GCGLenum SRC1_COLOR_EXT = 0x88F9;
+    static constexpr GCGLenum SRC1_ALPHA_EXT = 0x8589;
+    static constexpr GCGLenum ONE_MINUS_SRC1_COLOR_EXT = 0x88FA;
+    static constexpr GCGLenum ONE_MINUS_SRC1_ALPHA_EXT = 0x88FB;
+    static constexpr GCGLenum MAX_DUAL_SOURCE_DRAW_BUFFERS_EXT = 0x88FC;
+
     // GL_ARB_draw_buffers / GL_EXT_draw_buffers
     static constexpr GCGLenum MAX_DRAW_BUFFERS_EXT = 0x8824;
     static constexpr GCGLenum DRAW_BUFFER0_EXT = 0x8825;
@@ -941,6 +945,26 @@ public:
 
     // GL_ANGLE_rgbx_internal_format
     static constexpr GCGLenum RGBX8_ANGLE = 0x96BA;
+
+    // GL_ANGLE_variable_rasterization_rate_metal
+    static constexpr GCGLenum VARIABLE_RASTERIZATION_RATE_ANGLE = 0x96BC;
+    static constexpr GCGLenum METAL_RASTERIZATION_RATE_MAP_BINDING_ANGLE = 0x96BD;
+
+    // GL_KHR_debug
+    static constexpr GCGLenum DEBUG_OUTPUT = 0x92E0;
+    static constexpr GCGLenum DEBUG_OUTPUT_SYNCHRONOUS = 0x8242;
+    static constexpr GCGLenum DEBUG_TYPE_ERROR = 0x824C;
+    static constexpr GCGLenum DEBUG_TYPE_DEPRECATED_BEHAVIOR = 0x824D;
+    static constexpr GCGLenum DEBUG_TYPE_UNDEFINED_BEHAVIOR = 0x824E;
+    static constexpr GCGLenum DEBUG_TYPE_PORTABILITY = 0x824F;
+    static constexpr GCGLenum DEBUG_TYPE_PERFORMANCE = 0x8250;
+    static constexpr GCGLenum DEBUG_TYPE_OTHER = 0x8251;
+    static constexpr GCGLenum DEBUG_TYPE_MARKER = 0x8268;
+    static constexpr GCGLenum DEBUG_SEVERITY_HIGH = 0x9146;
+    static constexpr GCGLenum DEBUG_SEVERITY_MEDIUM = 0x9147;
+    static constexpr GCGLenum DEBUG_SEVERITY_LOW = 0x9148;
+    static constexpr GCGLenum DEBUG_SEVERITY_NOTIFICATION = 0x826B;
+    static constexpr GCGLenum DEBUG_SOURCE_API = 0x8246;
 
     // Attempt to enumerate all possible native image formats to
     // reduce the amount of temporary allocations during texture
@@ -1049,7 +1073,7 @@ public:
         DOMSourceNone,
     };
 
-    enum class FlipY : bool { No, Yes };
+    using FlipY = GraphicsContextGLFlipY;
 
     virtual RefPtr<GraphicsLayerContentsDisplayDelegate> layerContentsDisplayDelegate() = 0;
 
@@ -1185,7 +1209,7 @@ public:
         WEBCORE_EXPORT Client();
         WEBCORE_EXPORT virtual ~Client();
         virtual void forceContextLost() = 0;
-        virtual void dispatchContextChangedNotification() = 0;
+        virtual void addDebugMessage(GCGLenum, GCGLenum, GCGLenum, const String&) = 0;
     };
 
     WEBCORE_EXPORT GraphicsContextGL(GraphicsContextGLAttributes);
@@ -1371,7 +1395,7 @@ public:
     virtual void bufferData(GCGLenum target, std::span<const uint8_t> data, GCGLenum usage) = 0;
     virtual void bufferSubData(GCGLenum target, GCGLintptr offset, std::span<const uint8_t> data) = 0;
 
-    virtual void readPixels(IntRect, GCGLenum format, GCGLenum type, std::span<uint8_t> data, GCGLint alignment, GCGLint rowLength) = 0;
+    virtual void readPixels(IntRect, GCGLenum format, GCGLenum type, std::span<uint8_t> data, GCGLint packAlignment, GCGLint packRowLength, GCGLboolean packReverseRowOrder) = 0;
     virtual void readPixelsBufferObject(IntRect, GCGLenum format, GCGLenum type, GCGLintptr offset, GCGLint alignment, GCGLint rowLength) = 0;
 
     virtual void texImage2D(GCGLenum target, GCGLint level, GCGLenum internalformat, GCGLsizei width, GCGLsizei height, GCGLint border, GCGLenum format, GCGLenum type,  std::span<const uint8_t> pixels) = 0;
@@ -1500,36 +1524,32 @@ public:
     virtual String getActiveUniformBlockName(PlatformGLObject program, GCGLuint uniformBlockIndex) = 0;
     virtual void uniformBlockBinding(PlatformGLObject program, GCGLuint uniformBlockIndex, GCGLuint uniformBlockBinding) = 0;
 
-    virtual void getActiveUniformBlockiv(GCGLuint program, GCGLuint uniformBlockIndex, GCGLenum pname, std::span<GCGLint> params) = 0;
+    virtual void getActiveUniformBlockiv(PlatformGLObject program, GCGLuint uniformBlockIndex, GCGLenum pname, std::span<GCGLint> params) = 0;
 
     // ========== EGL related entry points.
 
 #if PLATFORM(COCOA)
-    struct EGLImageSourceIOSurfaceHandle {
-        MachSendRight handle;
-    };
-    struct EGLImageSourceMTLSharedTextureHandle {
-        MachSendRight handle;
-    };
-    using EGLImageSource = std::variant<
-        EGLImageSourceIOSurfaceHandle,
-        EGLImageSourceMTLSharedTextureHandle
-        >;
-#else
-    using EGLImageSource = int;
+    using EGLImageSourceIOSurfaceHandle = GraphicsContextGLExternalImageSourceIOSurfaceHandle;
+    using EGLImageSourceMTLSharedTextureHandle = GraphicsContextGLExternalImageSourceMTLSharedTextureHandle;
 #endif
-    using EGLImageAttachResult = std::tuple<GCEGLImage, IntSize>;
-    virtual std::optional<EGLImageAttachResult> createAndBindEGLImage(GCGLenum, EGLImageSource) = 0;
-    virtual void destroyEGLImage(GCEGLImage) = 0;
+#if ENABLE(WEBXR)
+    virtual bool addFoveation(IntSize, IntSize, IntSize, std::span<const GCGLfloat>, std::span<const GCGLfloat>, std::span<const GCGLfloat>) = 0;
+    virtual void enableFoveation(GCGLuint) = 0;
+    virtual void disableFoveation() = 0;
+#endif
 
-#if PLATFORM(COCOA)
-    using ExternalEGLSyncEvent = std::tuple<MachSendRight, uint64_t>;
-#else
-    using ExternalEGLSyncEvent = int;
+    using ExternalImageSource = GraphicsContextGLExternalImageSource;
+#if ENABLE(WEBXR)
+    virtual GCGLExternalImage createExternalImage(ExternalImageSource&&, GCGLenum internalFormat, GCGLint layer) = 0;
+    virtual void deleteExternalImage(GCGLExternalImage) = 0;
+    virtual void bindExternalImage(GCGLenum target, GCGLExternalImage) = 0;
 #endif
-    virtual GCEGLSync createEGLSync(ExternalEGLSyncEvent) = 0;
-    virtual bool destroyEGLSync(GCEGLSync) = 0;
-    virtual void clientWaitEGLSyncWithFlush(GCEGLSync, uint64_t) = 0;
+
+    using ExternalSyncSource = GraphicsContextGLExternalSyncSource;
+#if ENABLE(WEBXR)
+    virtual GCGLExternalSync createExternalSync(ExternalSyncSource&&) = 0;
+#endif
+    virtual void deleteExternalSync(GCGLExternalSync) = 0;
 
     // ========== Extension related entry points.
 
@@ -1549,7 +1569,9 @@ public:
     // Has no other side-effects.
     virtual bool isExtensionEnabled(const String&) = 0;
 
-    virtual bool enableRequiredWebXRExtensions() { return true; }
+#if ENABLE(WEBXR)
+    virtual bool enableRequiredWebXRExtensions() { return false; }
+#endif
 
     // GL_ANGLE_translated_shader_source
     virtual String getTranslatedShaderSourceANGLE(PlatformGLObject) = 0;
@@ -1596,17 +1618,21 @@ public:
     // GL_EXT_polygon_offset_clamp
     virtual void polygonOffsetClampEXT(GCGLfloat factor, GCGLfloat units, GCGLfloat clamp) = 0;
 
+    // GL_EXT_discard_framebuffer
+    WEBCORE_EXPORT virtual void framebufferDiscard(GCGLenum, std::span<const GCGLenum>);
+
     // ========== Internal use for WebXR on WebGL1 contexts.
     virtual void renderbufferStorageMultisampleANGLE(GCGLenum target, GCGLsizei samples, GCGLenum internalformat, GCGLsizei width, GCGLsizei height) = 0;
-    virtual void blitFramebufferANGLE(GCGLint srcX0, GCGLint srcY0, GCGLint srcX1, GCGLint srcY1, GCGLint dstX0, GCGLint dstY0, GCGLint dstX1, GCGLint dstY1, GCGLbitfield mask, GCGLenum filter) = 0;
-
+#if ENABLE(WEBXR)
+    WEBCORE_EXPORT virtual void framebufferResolveRenderbuffer(GCGLenum target, GCGLenum attachment, GCGLenum renderbuffertarget, PlatformGLObject);
+#endif
 
     // ========== Other functions.
     GCGLfloat getFloat(GCGLenum pname);
     GCGLboolean getBoolean(GCGLenum pname);
     GCGLint getInteger(GCGLenum pname);
     GCGLint getIntegeri(GCGLenum pname, GCGLuint index);
-    GCGLint getActiveUniformBlocki(GCGLuint program, GCGLuint uniformBlockIndex, GCGLenum pname);
+    GCGLint getActiveUniformBlocki(PlatformGLObject program, GCGLuint uniformBlockIndex, GCGLenum pname);
     GCGLint getInternalformati(GCGLenum target, GCGLenum internalformat, GCGLenum pname);
 
     GraphicsContextGLAttributes contextAttributes() const { return m_attrs; }
@@ -1616,36 +1642,18 @@ public:
 
     virtual void reshape(int width, int height) = 0;
 
-    virtual void setContextVisibility(bool) = 0;
-
     WEBCORE_EXPORT virtual void setDrawingBufferColorSpace(const DestinationColorSpace&);
 
     virtual void prepareForDisplay() = 0;
 
-    // FIXME: should be removed, caller should keep track of changed state.
-    WEBCORE_EXPORT virtual void markContextChanged();
-
-    // FIXME: these should be removed, caller is interested in buffer clear status and
-    // should track that in a variable that the caller holds. Caller should receive
-    // the value from reshape().
-    bool layerComposited() const;
-    void setBuffersToAutoClear(GCGLbitfield);
-    GCGLbitfield getBuffersToAutoClear() const;
-
     // FIXME: these should be removed, they're part of drawing buffer and
     // display buffer abstractions that the caller should hold separate to
     // the context.
-    virtual void paintRenderingResultsToCanvas(ImageBuffer&) = 0;
-    virtual RefPtr<PixelBuffer> paintRenderingResultsToPixelBuffer(FlipY) = 0;
-    virtual void paintCompositedResultsToCanvas(ImageBuffer&) = 0;
+    using SurfaceBuffer = GraphicsContextGLSurfaceBuffer;
+    virtual void drawSurfaceBufferToImageBuffer(SurfaceBuffer, ImageBuffer&) = 0;
 #if ENABLE(MEDIA_STREAM) || ENABLE(WEB_CODECS)
-    virtual RefPtr<VideoFrame> paintCompositedResultsToVideoFrame() = 0;
+    virtual RefPtr<VideoFrame> surfaceBufferToVideoFrame(SurfaceBuffer) = 0;
 #endif
-
-    // FIXME: this should be removed. The layer should be marked composited by
-    // preparing for display, so that canvas image buffer and the layer agree
-    // on the content.
-    WEBCORE_EXPORT void markLayerComposited();
 
     using SimulatedEventForTesting = GraphicsContextGLSimulatedEventForTesting;
     virtual void simulateEventForTesting(SimulatedEventForTesting) = 0;
@@ -1708,53 +1716,60 @@ public:
     WEBCORE_EXPORT static void paintToCanvas(NativeImage&, const IntSize& canvasSize, GraphicsContext&);
     WEBCORE_EXPORT static void paintToCanvas(const GraphicsContextGLAttributes&, Ref<PixelBuffer>&&, const IntSize& canvasSize, GraphicsContext&);
 
+    bool isContextLost() const { return m_contextLost; }
 protected:
     WEBCORE_EXPORT virtual void forceContextLost();
-    WEBCORE_EXPORT void dispatchContextChangedNotification();
 
     int m_currentWidth { 0 };
     int m_currentHeight { 0 };
     Client* m_client { nullptr };
-    // A bitmask of GL buffer bits (GL_COLOR_BUFFER_BIT,
-    // GL_DEPTH_BUFFER_BIT, GL_STENCIL_BUFFER_BIT) which need to be
-    // auto-cleared.
-    GCGLbitfield m_buffersToAutoClear { 0 };
-    bool m_layerComposited { false };
+    bool m_contextLost { false };
 
 private:
     GraphicsContextGLAttributes m_attrs;
 };
 
-WEBCORE_EXPORT RefPtr<GraphicsContextGL> createWebProcessGraphicsContextGL(const GraphicsContextGLAttributes&, SerialFunctionDispatcher* = nullptr);
+WEBCORE_EXPORT RefPtr<GraphicsContextGL> createWebProcessGraphicsContextGL(const GraphicsContextGLAttributes&);
 
-inline GCGLOwned::~GCGLOwned()
-{
-    ASSERT(!m_object, "Have you explicitly deleted this object? If so, call release().");
-}
+template<typename Object, void(GraphicsContextGL::*destroyFunc)(Object)>
+class GCGLOwned {
+    WTF_MAKE_NONCOPYABLE(GCGLOwned);
 
-#define IMPLEMENT_GCGL_OWNED(ClassName) \
-inline void GCGLOwned##ClassName::adopt(GraphicsContextGL& gl, PlatformGLObject object) \
-{ \
-    if (m_object) \
-        gl.delete##ClassName(m_object); \
-    m_object = object; \
-} \
-inline void GCGLOwned##ClassName::ensure(GraphicsContextGL& gl) \
-{ \
-    if (!m_object) \
-        m_object = gl.create##ClassName(); \
-} \
-\
-inline void GCGLOwned##ClassName::release(GraphicsContextGL& gl) \
-{ \
-    adopt(gl, 0); \
-}
+public:
+    GCGLOwned() = default;
 
-IMPLEMENT_GCGL_OWNED(Framebuffer)
-IMPLEMENT_GCGL_OWNED(Renderbuffer)
-IMPLEMENT_GCGL_OWNED(Texture)
+    GCGLOwned(GCGLOwned&& other)
+        : m_object(other.leakObject())
+    {
+    }
 
-#undef IMPLEMENT_GCGL_OWNED
+    ~GCGLOwned()
+    {
+        ASSERT(!m_object); // Clients should call release() explicitly.
+    }
+
+    operator Object() const { return m_object; }
+
+    Object leakObject() { return std::exchange(m_object, { }); }
+
+    void adopt(GraphicsContextGL& gl, Object object)
+    {
+        if (m_object)
+            (gl.*destroyFunc)(m_object);
+        m_object = object;
+    }
+
+    void release(GraphicsContextGL& gl) { adopt(gl, { }); }
+private:
+    Object m_object { };
+};
+
+using GCGLOwnedFramebuffer = GCGLOwned<PlatformGLObject, &GraphicsContextGL::deleteFramebuffer>;
+using GCGLOwnedRenderbuffer = GCGLOwned<PlatformGLObject, &GraphicsContextGL::deleteRenderbuffer>;
+using GCGLOwnedTexture = GCGLOwned<PlatformGLObject, &GraphicsContextGL::deleteTexture>;
+#if ENABLE(WEBXR)
+using GCGLOwnedExternalImage = GCGLOwned<GCGLExternalImage, &GraphicsContextGL::deleteExternalImage>;
+#endif
 
 } // namespace WebCore
 

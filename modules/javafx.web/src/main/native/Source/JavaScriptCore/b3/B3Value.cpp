@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015-2020 Apple Inc. All rights reserved.
+ * Copyright (C) 2015-2023 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -45,15 +45,18 @@
 #include <wtf/ListDump.h>
 #include <wtf/StackTrace.h>
 #include <wtf/StringPrintStream.h>
+#include <wtf/TZoneMallocInlines.h>
 #include <wtf/Vector.h>
 
 namespace JSC { namespace B3 {
 
+WTF_MAKE_TZONE_ALLOCATED_IMPL(Value);
+
+#if ASSERT_ENABLED
 namespace B3ValueInternal {
 constexpr bool alwaysDumpConstructionSite = false;
 }
 
-#if ASSERT_ENABLED
 String Value::generateCompilerConstructionSite()
 {
     StringPrintStream s;
@@ -73,23 +76,23 @@ String Value::generateCompilerConstructionSite()
         if (printed > 10)
             return;
         auto name = String::fromUTF8(cName);
-        if (name.contains("JSC::Wasm::B3IRGenerator::emit"_s)
-            || name.contains("JSC::Wasm::B3IRGenerator::add"_s)
-            || name.contains("JSC::Wasm::B3IRGenerator::create"_s)
-            || name.contains("JSC::Wasm::B3IRGenerator::end"_s)
-            || name.contains("JSC::Wasm::B3IRGenerator::set"_s)
-            || name.contains("JSC::Wasm::B3IRGenerator::get"_s)
-            || name.contains("JSC::Wasm::B3IRGenerator::insert"_s)
-            || name.contains("JSC::Wasm::B3IRGenerator::constant("_s)
-            || name.contains("JSC::Wasm::B3IRGenerator::fixup"_s)
-            || name.contains("JSC::Wasm::B3IRGenerator::load"_s)
-            || name.contains("JSC::Wasm::B3IRGenerator::store"_s)
-            || name.contains("JSC::Wasm::B3IRGenerator::atomic"_s)
-            || name.contains("JSC::Wasm::B3IRGenerator::trunc"_s)
-            || name.contains("JSC::Wasm::B3IRGenerator::sanitize"_s)
-            || name.contains("JSC::Wasm::B3IRGenerator::restore"_s)
-            || name.contains("JSC::Wasm::B3IRGenerator::connect"_s)
-            || name.contains("JSC::Wasm::B3IRGenerator::prepare"_s)) {
+        if (name.contains("JSC::Wasm::OMGIRGenerator::emit"_s)
+            || name.contains("JSC::Wasm::OMGIRGenerator::add"_s)
+            || name.contains("JSC::Wasm::OMGIRGenerator::create"_s)
+            || name.contains("JSC::Wasm::OMGIRGenerator::end"_s)
+            || name.contains("JSC::Wasm::OMGIRGenerator::set"_s)
+            || name.contains("JSC::Wasm::OMGIRGenerator::get"_s)
+            || name.contains("JSC::Wasm::OMGIRGenerator::insert"_s)
+            || name.contains("JSC::Wasm::OMGIRGenerator::constant("_s)
+            || name.contains("JSC::Wasm::OMGIRGenerator::fixup"_s)
+            || name.contains("JSC::Wasm::OMGIRGenerator::load"_s)
+            || name.contains("JSC::Wasm::OMGIRGenerator::store"_s)
+            || name.contains("JSC::Wasm::OMGIRGenerator::atomic"_s)
+            || name.contains("JSC::Wasm::OMGIRGenerator::trunc"_s)
+            || name.contains("JSC::Wasm::OMGIRGenerator::sanitize"_s)
+            || name.contains("JSC::Wasm::OMGIRGenerator::restore"_s)
+            || name.contains("JSC::Wasm::OMGIRGenerator::connect"_s)
+            || name.contains("JSC::Wasm::OMGIRGenerator::prepare"_s)) {
             if (name.contains(">::add"_s)
                 || name.contains(">::translate"_s)
                 || name.contains(">::inlineEnsure"_s)
@@ -255,9 +258,9 @@ void Value::dumpChildren(CommaPrinter& comma, PrintStream& out) const
 
 void Value::deepDump(const Procedure* proc, PrintStream& out) const
 {
-    out.print(m_type, " ", dumpPrefix, m_index, " = ", m_kind);
+    out.print(m_type, " "_s, dumpPrefix, m_index, " = "_s, m_kind);
 
-    out.print("(");
+    out.print("("_s);
     CommaPrinter comma;
     dumpChildren(comma, out);
 
@@ -279,7 +282,7 @@ void Value::deepDump(const Procedure* proc, PrintStream& out) const
     }
 #endif
 
-    out.print(")");
+    out.print(")"_s);
 }
 
 void Value::dumpSuccessors(const BasicBlock* block, PrintStream& out) const
@@ -658,6 +661,8 @@ Effects Value::effects() const
     case SExt32:
     case ZExt32:
     case Trunc:
+    case TruncHigh:
+    case Stitch:
     case IToD:
     case IToF:
     case FloatToDouble:
@@ -839,7 +844,9 @@ Effects Value::effects() const
         result.terminal = true;
         break;
     }
-    if (traps()) {
+    // We check hasTraps() first because most Kinds don't trap and we just switched on the
+    // Kind above. So in most cases the compiler won't bother loading the traps() bit.
+    if (kind().hasTraps() && traps()) {
         result.exitsSideways = true;
         result.reads = HeapRange::top();
     }
@@ -867,6 +874,7 @@ ValueKey Value::key() const
     case ZExt32:
     case Clz:
     case Trunc:
+    case TruncHigh:
     case IToD:
     case IToF:
     case FloatToDouble:
@@ -905,6 +913,7 @@ ValueKey Value::key() const
     case CheckAdd:
     case CheckSub:
     case CheckMul:
+    case Stitch:
         return ValueKey(kind(), type(), child(0), child(1));
     case Select:
         return ValueKey(kind(), type(), child(0), child(1), child(2));
@@ -1096,6 +1105,7 @@ Type Value::typeFor(Kind kind, Value* firstChild, Value* secondChild)
     case AboveEqual:
     case BelowEqual:
     case EqualOrUnordered:
+    case TruncHigh:
         return Int32;
     case Trunc:
         return firstChild->type() == Int64 ? Int32 : Float;
@@ -1103,6 +1113,7 @@ Type Value::typeFor(Kind kind, Value* firstChild, Value* secondChild)
     case SExt16To64:
     case SExt32:
     case ZExt32:
+    case Stitch:
         return Int64;
     case FloatToDouble:
     case IToD:

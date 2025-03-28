@@ -28,10 +28,15 @@
 
 #include <optional>
 #include <span>
+#include <wtf/Forward.h>
 #include <wtf/SystemFree.h>
 
 #if HAVE(BACKTRACE_SYMBOLS) || HAVE(BACKTRACE)
 #include <execinfo.h>
+#endif
+
+#if USE(LIBBACKTRACE)
+#include <backtrace.h>
 #endif
 
 #if HAVE(DLADDR)
@@ -48,6 +53,10 @@ namespace WTF {
 
 class PrintStream;
 
+#if USE(LIBBACKTRACE)
+WTF_EXPORT_PRIVATE char** symbolize(void* const*, int);
+#endif
+
 class StackTrace {
     WTF_MAKE_FAST_ALLOCATED;
 public:
@@ -59,8 +68,11 @@ public:
     }
 
     void dump(PrintStream&) const;
-private:
+    template<typename Functor> // void Functor(int frameNumber, void* stackFrame, const char* name)
+    void forEachFrame(Functor) const;
+    WTF_EXPORT_PRIVATE String toString() const;
 
+private:
     StackTrace(size_t size, size_t initialFrame)
         : m_size(size)
         , m_initialFrame(initialFrame)
@@ -105,7 +117,11 @@ public:
     template<typename Functor>
     void forEach(Functor functor) const
     {
-#if HAVE(BACKTRACE_SYMBOLS)
+#if USE(LIBBACKTRACE)
+        char** symbols = symbolize(m_stack.data(), m_stack.size());
+        if (!symbols)
+            return;
+#elif HAVE(BACKTRACE_SYMBOLS)
         char** symbols = backtrace_symbols(m_stack.data(), m_stack.size());
         if (!symbols)
             return;
@@ -132,7 +148,11 @@ public:
             functor(i + 1, m_stack[i], name);
         }
 
-#if HAVE(BACKTRACE_SYMBOLS)
+#if USE(LIBBACKTRACE)
+        for (size_t i = 0; i < m_stack.size(); ++i)
+            free(symbols[i]);
+        free(symbols);
+#elif HAVE(BACKTRACE_SYMBOLS)
         free(symbols);
 #endif
     }
@@ -164,6 +184,12 @@ private:
 inline void StackTrace::dump(PrintStream& out) const
 {
     StackTracePrinter { *this }.dump(out);
+}
+
+template<typename Functor>
+void StackTrace::forEachFrame(Functor functor) const
+{
+    StackTraceSymbolResolver { *this }.forEach(functor);
 }
 
 } // namespace WTF

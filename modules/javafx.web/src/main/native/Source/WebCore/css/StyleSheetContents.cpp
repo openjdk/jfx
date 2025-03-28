@@ -44,6 +44,7 @@
 #include <wtf/Deque.h>
 #include <wtf/NeverDestroyed.h>
 #include <wtf/Ref.h>
+#include <wtf/text/MakeString.h>
 
 #if ENABLE(CONTENT_EXTENSIONS)
 #include "ContentRuleListResults.h"
@@ -80,8 +81,7 @@ StyleSheetContents::StyleSheetContents(StyleRuleImport* ownerRule, const String&
 }
 
 StyleSheetContents::StyleSheetContents(const StyleSheetContents& o)
-    : RefCounted<StyleSheetContents>()
-    , m_ownerRule(nullptr)
+    : CanMakeWeakPtr<StyleSheetContents>()
     , m_originalURL(o.m_originalURL)
     , m_encodingFromCharsetRule(o.m_encodingFromCharsetRule)
     , m_layerRulesBeforeImportRules(o.m_layerRulesBeforeImportRules.size())
@@ -94,12 +94,16 @@ StyleSheetContents::StyleSheetContents(const StyleSheetContents& o)
     , m_loadCompleted(true)
     , m_hasSyntacticallyValidCSSHeader(o.m_hasSyntacticallyValidCSSHeader)
     , m_usesStyleBasedEditability(o.m_usesStyleBasedEditability)
+    , m_hasNestingRulesCache(o.m_hasNestingRulesCache)
     , m_parserContext(o.m_parserContext)
 {
     ASSERT(o.isCacheable());
 
     // FIXME: Copy import rules.
     ASSERT(o.m_importRules.isEmpty());
+
+    // FIXME: Copy namespace rules.
+    ASSERT(o.m_namespaceRules.isEmpty());
 
     for (size_t i = 0; i < m_layerRulesBeforeImportRules.size(); ++i)
         m_layerRulesBeforeImportRules[i] = o.m_layerRulesBeforeImportRules[i]->copy();
@@ -118,6 +122,9 @@ bool StyleSheetContents::isCacheable() const
     // FIXME: Support copying import rules.
     if (!m_importRules.isEmpty())
         return false;
+    // FIXME: Support copying namespace rules.
+    if (!m_namespaceRules.isEmpty())
+        return false;
     // FIXME: Support cached stylesheets in import rules.
     if (m_ownerRule)
         return false;
@@ -133,7 +140,16 @@ bool StyleSheetContents::isCacheable() const
     // FIXME: Valid mime type avoids the check too.
     if (!m_hasSyntacticallyValidCSSHeader)
         return false;
-    if (m_hasNestingRules)
+    if (hasNestingRules())
+        return false;
+    return true;
+}
+
+bool StyleSheetContents::isCacheableWithNoBaseURLDependency() const
+{
+    if (!isCacheable())
+        return false;
+    if (mayDependOnBaseURL())
         return false;
     return true;
 }
@@ -142,46 +158,44 @@ void StyleSheetContents::parserAppendRule(Ref<StyleRuleBase>&& rule)
 {
     ASSERT(!rule->isCharsetRule());
 
-    if (is<StyleRuleLayer>(rule) && m_importRules.isEmpty() && m_childRules.isEmpty() && m_namespaceRules.isEmpty()) {
-        auto& layerRule = downcast<StyleRuleLayer>(rule.get());
-        if (layerRule.isStatement()) {
-            m_layerRulesBeforeImportRules.append(layerRule);
+    if (auto* layerRule = dynamicDowncast<StyleRuleLayer>(rule.get()); layerRule && m_importRules.isEmpty() && m_childRules.isEmpty() && m_namespaceRules.isEmpty()) {
+        if (layerRule->isStatement()) {
+            m_layerRulesBeforeImportRules.append(*layerRule);
             return;
         }
     }
 
-    if (is<StyleRuleImport>(rule)) {
+    if (auto* importRule = dynamicDowncast<StyleRuleImport>(rule.get())) {
         // Parser enforces that @import rules come before anything else except @charset.
         ASSERT(m_childRules.isEmpty());
-        m_importRules.append(downcast<StyleRuleImport>(rule));
+        m_importRules.append(*importRule);
         m_importRules.last()->setParentStyleSheet(this);
         m_importRules.last()->requestStyleSheet();
         return;
     }
 
-    if (is<StyleRuleNamespace>(rule)) {
+    if (auto* namespaceRule = dynamicDowncast<StyleRuleNamespace>(rule.get())) {
         // Parser enforces that @namespace rules come before all rules other than
         // import/charset rules
         ASSERT(m_childRules.isEmpty());
-        auto& namespaceRule = downcast<StyleRuleNamespace>(rule.get());
-        parserAddNamespace(namespaceRule.prefix(), namespaceRule.uri());
-        m_namespaceRules.append(namespaceRule);
+        parserAddNamespace(namespaceRule->prefix(), namespaceRule->uri());
+        m_namespaceRules.append(*namespaceRule);
         return;
     }
 
     // NOTE: The selector list has to fit into RuleData. <http://webkit.org/b/118369>
-    auto ruleHasTooManySelectors = [&] {
-        return downcast<StyleRule>(rule.get()).selectorList().componentCount() > Style::RuleData::maximumSelectorComponentCount;
+    auto ruleHasTooManySelectors = [](StyleRule& rule) {
+        return rule.selectorList().componentCount() > Style::RuleData::maximumSelectorComponentCount;
     };
 
-    if (is<StyleRuleWithNesting>(rule) && ruleHasTooManySelectors()) {
+    if (auto* styleRule = dynamicDowncast<StyleRuleWithNesting>(rule.get()); styleRule && ruleHasTooManySelectors(*styleRule)) {
         // We don't support nested rules with too many selectors
         return;
     }
 
-    if (is<StyleRule>(rule) && ruleHasTooManySelectors()) {
+    if (auto* styleRule = dynamicDowncast<StyleRule>(rule.get()); styleRule && ruleHasTooManySelectors(*styleRule)) {
     // If we're adding a rule with a huge number of selectors, split it up into multiple rules
-        m_childRules.appendVector(downcast<StyleRule>(rule.get()).splitIntoMultipleRulesWithMaximumSelectorComponentCount(Style::RuleData::maximumSelectorComponentCount));
+        m_childRules.appendVector(styleRule->splitIntoMultipleRulesWithMaximumSelectorComponentCount(Style::RuleData::maximumSelectorComponentCount));
         return;
     }
 
@@ -259,7 +273,8 @@ bool StyleSheetContents::wrapperInsertRule(Ref<StyleRuleBase>&& rule, unsigned i
             return false;
         if (!m_importRules.isEmpty() || !m_namespaceRules.isEmpty())
             return false;
-        bool isLayerStatement = is<StyleRuleLayer>(rule) && downcast<StyleRuleLayer>(rule.get()).isStatement();
+        auto* layerRule = dynamicDowncast<StyleRuleLayer>(rule.get());
+        bool isLayerStatement = layerRule && layerRule->isStatement();
         return !rule->isImportRule() && !rule->isNamespaceRule() && !isLayerStatement;
     };
 
@@ -268,11 +283,11 @@ bool StyleSheetContents::wrapperInsertRule(Ref<StyleRuleBase>&& rule, unsigned i
 
     unsigned childVectorIndex = index;
     if (childVectorIndex < m_layerRulesBeforeImportRules.size() || (childVectorIndex == m_layerRulesBeforeImportRules.size() && is<StyleRuleLayer>(rule))) {
-        if (!is<StyleRuleLayer>(rule))
+        auto* layerRule = dynamicDowncast<StyleRuleLayer>(rule.get());
+        if (!layerRule)
             return false;
-        auto& layerRule = downcast<StyleRuleLayer>(rule.get());
-        if (layerRule.isStatement()) {
-            m_layerRulesBeforeImportRules.insert(childVectorIndex, layerRule);
+        if (layerRule->isStatement()) {
+            m_layerRulesBeforeImportRules.insert(childVectorIndex, *layerRule);
             return true;
         }
         if (childVectorIndex < m_layerRulesBeforeImportRules.size())
@@ -282,9 +297,10 @@ bool StyleSheetContents::wrapperInsertRule(Ref<StyleRuleBase>&& rule, unsigned i
 
     if (childVectorIndex < m_importRules.size() || (childVectorIndex == m_importRules.size() && rule->isImportRule())) {
         // Inserting non-import rule before @import is not allowed.
-        if (!is<StyleRuleImport>(rule))
+        auto* importRule = dynamicDowncast<StyleRuleImport>(rule.get());
+        if (!importRule)
             return false;
-        m_importRules.insert(childVectorIndex, downcast<StyleRuleImport>(rule));
+        m_importRules.insert(childVectorIndex, *importRule);
         m_importRules[childVectorIndex]->setParentStyleSheet(this);
         m_importRules[childVectorIndex]->requestStyleSheet();
         // FIXME: Stylesheet doesn't actually change meaningfully before the imported sheets are loaded.
@@ -298,21 +314,21 @@ bool StyleSheetContents::wrapperInsertRule(Ref<StyleRuleBase>&& rule, unsigned i
     if (childVectorIndex < m_namespaceRules.size() || (childVectorIndex == m_namespaceRules.size() && rule->isNamespaceRule())) {
         // Inserting non-namespace rules other than import and layer statement rules before @namespace is
         // not allowed.
-        if (!is<StyleRuleNamespace>(rule))
+        auto* namespaceRule = dynamicDowncast<StyleRuleNamespace>(rule.get());
+        if (!namespaceRule)
             return false;
         // Inserting @namespace rule when rules other than import/namespace/charset
         // are present is not allowed.
         if (!m_childRules.isEmpty() || !m_layerRulesBeforeImportRules.isEmpty())
             return false;
 
-        StyleRuleNamespace& namespaceRule = downcast<StyleRuleNamespace>(rule.get());
-        m_namespaceRules.insert(index, downcast<StyleRuleNamespace>(rule));
+        m_namespaceRules.insert(index, *namespaceRule);
 
         // For now to be compatible with IE and Firefox if a namespace rule with the same
         // prefix is added, it overwrites previous ones.
         // FIXME: The eventual correct behavior would be to ensure that the last value in
         // the list wins.
-        parserAddNamespace(namespaceRule.prefix(), namespaceRule.uri());
+        parserAddNamespace(namespaceRule->prefix(), namespaceRule->uri());
         return true;
     }
     if (is<StyleRuleNamespace>(rule))
@@ -320,7 +336,8 @@ bool StyleSheetContents::wrapperInsertRule(Ref<StyleRuleBase>&& rule, unsigned i
     childVectorIndex -= m_namespaceRules.size();
 
     // If the number of selectors would overflow RuleData, we drop the operation.
-    if (is<StyleRule>(rule) && downcast<StyleRule>(rule.get()).selectorList().componentCount() > Style::RuleData::maximumSelectorComponentCount)
+    auto* styleRule = dynamicDowncast<StyleRule>(rule.get());
+    if (styleRule && styleRule->selectorList().componentCount() > Style::RuleData::maximumSelectorComponentCount)
         return false;
 
     m_childRules.insert(childVectorIndex, WTFMove(rule));
@@ -386,18 +403,23 @@ bool StyleSheetContents::parseAuthorStyleSheet(const CachedCSSStyleSheet* cached
     bool isSameOriginRequest = securityOrigin && securityOrigin->canRequest(baseURL(), OriginAccessPatternsForWebProcess::singleton());
     CachedCSSStyleSheet::MIMETypeCheckHint mimeTypeCheckHint = isStrictParserMode(m_parserContext.mode) || !isSameOriginRequest ? CachedCSSStyleSheet::MIMETypeCheckHint::Strict : CachedCSSStyleSheet::MIMETypeCheckHint::Lax;
     bool hasValidMIMEType = true;
-    String sheetText = cachedStyleSheet->sheetText(mimeTypeCheckHint, &hasValidMIMEType);
+    bool hasHTTPStatusOK = true;
+    String sheetText = cachedStyleSheet->sheetText(mimeTypeCheckHint, &hasValidMIMEType, &hasHTTPStatusOK);
 
+    if (!hasHTTPStatusOK) {
+        ASSERT(sheetText.isNull());
+        return false;
+    }
     if (!hasValidMIMEType) {
         ASSERT(sheetText.isNull());
         if (auto* document = singleOwnerDocument()) {
             if (auto* page = document->page()) {
                 if (isStrictParserMode(m_parserContext.mode))
-                    page->console().addMessage(MessageSource::Security, MessageLevel::Error, makeString("Did not parse stylesheet at '", cachedStyleSheet->url().stringCenterEllipsizedToLength(), "' because non CSS MIME types are not allowed in strict mode."));
+                    page->console().addMessage(MessageSource::Security, MessageLevel::Error, makeString("Did not parse stylesheet at '"_s, cachedStyleSheet->url().stringCenterEllipsizedToLength(), "' because non CSS MIME types are not allowed in strict mode."_s));
                 else if (!cachedStyleSheet->mimeTypeAllowedByNosniff())
-                    page->console().addMessage(MessageSource::Security, MessageLevel::Error, makeString("Did not parse stylesheet at '", cachedStyleSheet->url().stringCenterEllipsizedToLength(), "' because non CSS MIME types are not allowed when 'X-Content-Type-Options: nosniff' is given."));
+                    page->console().addMessage(MessageSource::Security, MessageLevel::Error, makeString("Did not parse stylesheet at '"_s, cachedStyleSheet->url().stringCenterEllipsizedToLength(), "' because non CSS MIME types are not allowed when 'X-Content-Type-Options: nosniff' is given."_s));
                 else
-                    page->console().addMessage(MessageSource::Security, MessageLevel::Error, makeString("Did not parse stylesheet at '", cachedStyleSheet->url().stringCenterEllipsizedToLength(), "' because non CSS MIME types are not allowed for cross-origin stylesheets."));
+                    page->console().addMessage(MessageSource::Security, MessageLevel::Error, makeString("Did not parse stylesheet at '"_s, cachedStyleSheet->url().stringCenterEllipsizedToLength(), "' because non CSS MIME types are not allowed for cross-origin stylesheets."_s));
             }
         }
         return false;
@@ -490,9 +512,10 @@ static bool traverseRulesInVector(const Vector<Ref<StyleRuleBase>>& rules, const
             if (traverseRulesInVector(styleRuleWithNesting->nestedRules(), handler))
                 return true;
         }
-        if (!rule->isGroupRule())
+        auto* groupRule = dynamicDowncast<StyleRuleGroup>(rule.get());
+        if (!groupRule)
             continue;
-        if (traverseRulesInVector(downcast<StyleRuleGroup>(rule).childRules(), handler))
+        if (traverseRulesInVector(groupRule->childRules(), handler))
             return true;
     }
     return false;
@@ -510,18 +533,32 @@ bool StyleSheetContents::traverseRules(const Function<bool(const StyleRuleBase&)
     return traverseRulesInVector(m_childRules, handler);
 }
 
+bool StyleSheetContents::hasNestingRules() const
+{
+    if (m_hasNestingRulesCache)
+        return *m_hasNestingRulesCache;
+
+    m_hasNestingRulesCache = traverseRulesInVector(m_childRules, [&] (auto& rule) {
+        if (rule.isStyleRuleWithNesting())
+            return true;
+        return false;
+    });
+
+    return *m_hasNestingRulesCache;
+}
+
 bool StyleSheetContents::traverseSubresources(const Function<bool(const CachedResource&)>& handler) const
 {
     return traverseRules([&] (const StyleRuleBase& rule) {
         switch (rule.type()) {
         case StyleRuleType::Style:
-            return downcast<StyleRule>(rule).properties().traverseSubresources(handler);
+            return uncheckedDowncast<StyleRule>(rule).properties().traverseSubresources(handler);
         case StyleRuleType::StyleWithNesting:
-            return downcast<StyleRuleWithNesting>(rule).properties().traverseSubresources(handler);
+            return uncheckedDowncast<StyleRuleWithNesting>(rule).properties().traverseSubresources(handler);
         case StyleRuleType::FontFace:
-            return downcast<StyleRuleFontFace>(rule).properties().traverseSubresources(handler);
+            return uncheckedDowncast<StyleRuleFontFace>(rule).properties().traverseSubresources(handler);
         case StyleRuleType::Import:
-            if (auto* cachedResource = downcast<StyleRuleImport>(rule).cachedCSSStyleSheet())
+            if (auto* cachedResource = uncheckedDowncast<StyleRuleImport>(rule).cachedCSSStyleSheet())
                 return handler(*cachedResource);
             return false;
         case StyleRuleType::CounterStyle:
@@ -542,6 +579,9 @@ bool StyleSheetContents::traverseSubresources(const Function<bool(const CachedRe
         case StyleRuleType::FontPaletteValues:
         case StyleRuleType::Margin:
         case StyleRuleType::Property:
+        case StyleRuleType::Scope:
+        case StyleRuleType::StartingStyle:
+        case StyleRuleType::ViewTransition:
             return false;
         };
         ASSERT_NOT_REACHED();
@@ -564,7 +604,7 @@ bool StyleSheetContents::subresourcesAllowReuse(CachePolicy cachePolicy, FrameLo
         auto* documentLoader = loader.documentLoader();
         if (page && documentLoader) {
             const auto& request = resource.resourceRequest();
-            auto results = page->userContentProvider().processContentRuleListsForLoad(*page, request.url(), ContentExtensions::toResourceType(resource.type(), resource.resourceRequest().requester()), *documentLoader);
+            auto results = page->protectedUserContentProvider()->processContentRuleListsForLoad(*page, request.url(), ContentExtensions::toResourceType(resource.type(), resource.resourceRequest().requester()), *documentLoader);
             if (results.summary.blockedLoad || results.summary.madeHTTPS)
                 return true;
         }
@@ -581,6 +621,44 @@ bool StyleSheetContents::isLoadingSubresources() const
 {
     return traverseSubresources([](const CachedResource& resource) {
         return resource.isLoading();
+    });
+}
+
+bool StyleSheetContents::mayDependOnBaseURL() const
+{
+    return traverseRules([&](const StyleRuleBase& rule) -> bool {
+        switch (rule.type()) {
+        case StyleRuleType::Style:
+            return uncheckedDowncast<StyleRule>(rule).properties().mayDependOnBaseURL();
+        case StyleRuleType::StyleWithNesting:
+            return uncheckedDowncast<StyleRuleWithNesting>(rule).properties().mayDependOnBaseURL();
+        case StyleRuleType::FontFace:
+            return uncheckedDowncast<StyleRuleFontFace>(rule).properties().mayDependOnBaseURL();
+        case StyleRuleType::Import:
+        case StyleRuleType::CounterStyle:
+        case StyleRuleType::Media:
+        case StyleRuleType::Page:
+        case StyleRuleType::Keyframes:
+        case StyleRuleType::Namespace:
+        case StyleRuleType::Unknown:
+        case StyleRuleType::Charset:
+        case StyleRuleType::Keyframe:
+        case StyleRuleType::Supports:
+        case StyleRuleType::LayerBlock:
+        case StyleRuleType::LayerStatement:
+        case StyleRuleType::Container:
+        case StyleRuleType::FontFeatureValues:
+        case StyleRuleType::FontFeatureValuesBlock:
+        case StyleRuleType::FontPaletteValues:
+        case StyleRuleType::Margin:
+        case StyleRuleType::Property:
+        case StyleRuleType::Scope:
+        case StyleRuleType::StartingStyle:
+        case StyleRuleType::ViewTransition:
+            return false;
+        };
+        ASSERT_NOT_REACHED();
+        return false;
     });
 }
 

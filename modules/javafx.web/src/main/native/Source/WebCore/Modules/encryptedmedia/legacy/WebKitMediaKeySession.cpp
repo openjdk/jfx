@@ -40,12 +40,12 @@
 #include "WebKitMediaKeys.h"
 #include <JavaScriptCore/Uint8Array.h>
 #include <wtf/FileSystem.h>
-#include <wtf/IsoMallocInlines.h>
 #include <wtf/LoggerHelper.h>
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
-WTF_MAKE_ISO_ALLOCATED_IMPL(WebKitMediaKeySession);
+WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(WebKitMediaKeySession);
 
 Ref<WebKitMediaKeySession> WebKitMediaKeySession::create(Document& document, WebKitMediaKeys& keys, const String& keySystem)
 {
@@ -147,7 +147,7 @@ ExceptionOr<void> WebKitMediaKeySession::update(Ref<Uint8Array>&& key)
     // NOTE: the reference to a "second argument" is a spec bug.
     if (!key->length()) {
         ERROR_LOG(LOGIDENTIFIER, "error: empty key");
-        return Exception { InvalidAccessError };
+        return Exception { ExceptionCode::InvalidAccessError };
     }
 
     ALWAYS_LOG(LOGIDENTIFIER);
@@ -232,19 +232,8 @@ void WebKitMediaKeySession::sendError(MediaKeyErrorCode errorCode, uint32_t syst
 
 String WebKitMediaKeySession::mediaKeysStorageDirectory() const
 {
-    auto* document = downcast<Document>(scriptExecutionContext());
-    if (!document)
-        return emptyString();
-
-    auto* page = document->page();
-    if (!page || page->usesEphemeralSession())
-        return emptyString();
-
-    auto storageDirectory = document->settings().mediaKeysStorageDirectory();
-    if (storageDirectory.isEmpty())
-        return emptyString();
-
-    return FileSystem::pathByAppendingComponent(storageDirectory, document->securityOrigin().data().databaseIdentifier());
+    RefPtr document = downcast<Document>(scriptExecutionContext());
+    return document ? document->mediaKeysStorageDirectory() : emptyString();
 }
 
 bool WebKitMediaKeySession::virtualHasPendingActivity() const
@@ -255,11 +244,6 @@ bool WebKitMediaKeySession::virtualHasPendingActivity() const
 void WebKitMediaKeySession::stop()
 {
     close();
-}
-
-const char* WebKitMediaKeySession::activeDOMObjectName() const
-{
-    return "WebKitMediaKeySession";
 }
 
 #if !RELEASE_LOG_DISABLED

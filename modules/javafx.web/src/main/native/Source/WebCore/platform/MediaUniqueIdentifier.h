@@ -29,7 +29,7 @@
 
 namespace WebCore {
 
-enum MediaUniqueIdentifierType { };
-using MediaUniqueIdentifier = ObjectIdentifier<MediaUniqueIdentifierType>;
+enum class MediaUniqueIdentifierType { };
+using MediaUniqueIdentifier = LegacyNullableObjectIdentifier<MediaUniqueIdentifierType>;
 
 }

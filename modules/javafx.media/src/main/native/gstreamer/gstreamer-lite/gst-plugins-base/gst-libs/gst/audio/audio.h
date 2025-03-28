@@ -36,6 +36,7 @@
 #ifndef GSTREAMER_LITE
 #include <gst/audio/gstaudiostreamalign.h>
 #include <gst/audio/gstaudioaggregator.h>
+#include <gst/audio/gstdsd.h>
 #endif // GSTREAMER_LITE
 
 G_BEGIN_DECLS

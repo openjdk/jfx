@@ -38,11 +38,11 @@
 #include "JSDOMConvertNullable.h"
 #include "JSDOMConvertStrings.h"
 #include "JSDOMFormData.h"
+#include "JSDOMWindow.h"
 #include "JSElement.h"
 #include "JSExecState.h"
 #include "JSExecStateInstrumentation.h"
 #include "JSHTMLElement.h"
-#include "JSLocalDOMWindow.h"
 #include "ScriptExecutionContext.h"
 #include <JavaScriptCore/JSLock.h>
 #include <JavaScriptCore/WeakInlines.h>
@@ -213,7 +213,7 @@ void JSCustomElementInterface::upgradeElement(Element& element)
     auto* context = scriptExecutionContext();
     if (!context)
         return;
-    auto* globalObject = toJSLocalDOMWindow(downcast<Document>(*context).frame(), m_isolatedWorld);
+    auto* globalObject = toJSDOMWindow(downcast<Document>(*context).frame(), m_isolatedWorld);
     if (!globalObject)
         return;
     JSGlobalObject* lexicalGlobalObject = globalObject;
@@ -234,14 +234,12 @@ void JSCustomElementInterface::upgradeElement(Element& element)
 
     if (m_isShadowDisabled && element.shadowRoot()) {
         element.clearReactionQueueFromFailedCustomElement();
-        reportException(lexicalGlobalObject, createDOMException(lexicalGlobalObject, NotSupportedError, "Failed to upgrade an element with shadow root: the custom element definition disallows shadow roots."_s));
+        reportException(lexicalGlobalObject, createDOMException(lexicalGlobalObject, ExceptionCode::NotSupportedError, "Failed to upgrade an element with shadow root: the custom element definition disallows shadow roots."_s));
         return;
     }
 
-    if (m_isFormAssociated) {
-        ASSERT(is<HTMLMaybeFormAssociatedCustomElement>(element));
+    if (m_isFormAssociated)
         downcast<HTMLMaybeFormAssociatedCustomElement>(element).willUpgradeFormAssociated();
-    }
 
     MarkedArgumentBuffer args;
     ASSERT(!args.hasOverflowed());
@@ -260,7 +258,7 @@ void JSCustomElementInterface::upgradeElement(Element& element)
     Element* wrappedElement = JSElement::toWrapped(vm, returnedElement);
     if (!wrappedElement || wrappedElement != &element) {
         element.clearReactionQueueFromFailedCustomElement();
-        reportException(lexicalGlobalObject, createDOMException(lexicalGlobalObject, TypeError, "Custom element constructor returned a wrong element"_s));
+        reportException(lexicalGlobalObject, createDOMException(lexicalGlobalObject, ExceptionCode::TypeError, "Custom element constructor returned a wrong element"_s));
         return;
     }
 
@@ -272,7 +270,7 @@ void JSCustomElementInterface::upgradeElement(Element& element)
     }
 }
 
-void JSCustomElementInterface::invokeCallback(Element& element, JSObject* callback, const Function<void(JSGlobalObject*, JSDOMGlobalObject*, MarkedArgumentBuffer&)>& addArguments)
+void JSCustomElementInterface::invokeCallback(Element& element, JSObject* callback, const auto& addArguments)
 {
     if (!canInvokeCallback())
         return;
@@ -285,7 +283,7 @@ void JSCustomElementInterface::invokeCallback(Element& element, JSObject* callba
     VM& vm = m_isolatedWorld->vm();
     JSLockHolder lock(vm);
 
-    auto* globalObject = toJSLocalDOMWindow(downcast<Document>(*context).frame(), m_isolatedWorld);
+    auto* globalObject = toJSDOMWindow(downcast<Document>(*context).frame(), m_isolatedWorld);
     if (!globalObject)
         return;
     JSGlobalObject* lexicalGlobalObject = globalObject;
@@ -317,7 +315,7 @@ void JSCustomElementInterface::setConnectedCallback(JSC::JSObject* callback)
 
 void JSCustomElementInterface::invokeConnectedCallback(Element& element)
 {
-    invokeCallback(element, m_connectedCallback.get());
+    invokeCallback(element, m_connectedCallback.get(), [](JSC::JSGlobalObject*, JSDOMGlobalObject*, JSC::MarkedArgumentBuffer&) { });
 }
 
 void JSCustomElementInterface::setDisconnectedCallback(JSC::JSObject* callback)
@@ -327,7 +325,7 @@ void JSCustomElementInterface::setDisconnectedCallback(JSC::JSObject* callback)
 
 void JSCustomElementInterface::invokeDisconnectedCallback(Element& element)
 {
-    invokeCallback(element, m_disconnectedCallback.get());
+    invokeCallback(element, m_disconnectedCallback.get(), [](JSC::JSGlobalObject*, JSDOMGlobalObject*, JSC::MarkedArgumentBuffer&) { });
 }
 
 void JSCustomElementInterface::setAdoptedCallback(JSC::JSObject* callback)
@@ -370,7 +368,7 @@ void JSCustomElementInterface::invokeFormAssociatedCallback(Element& element, HT
 
 void JSCustomElementInterface::invokeFormResetCallback(Element& element)
 {
-    invokeCallback(element, m_formResetCallback.get());
+    invokeCallback(element, m_formResetCallback.get(), [](JSC::JSGlobalObject*, JSDOMGlobalObject*, JSC::MarkedArgumentBuffer&) { });
 }
 
 void JSCustomElementInterface::invokeFormDisabledCallback(Element& element, bool isDisabled)

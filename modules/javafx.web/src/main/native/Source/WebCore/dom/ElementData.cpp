@@ -42,10 +42,10 @@ DEFINE_ALLOCATOR_WITH_HEAP_IDENTIFIER(ShareableElementData);
 
 void ElementData::destroy()
 {
-    if (is<UniqueElementData>(*this))
-        delete downcast<UniqueElementData>(this);
+    if (auto* uniqueData = dynamicDowncast<UniqueElementData>(*this))
+        delete uniqueData;
     else
-        delete downcast<ShareableElementData>(this);
+        delete uncheckedDowncast<ShareableElementData>(this);
 }
 
 ElementData::ElementData()
@@ -144,7 +144,7 @@ UniqueElementData::UniqueElementData(const UniqueElementData& other)
 
 UniqueElementData::UniqueElementData(const ShareableElementData& other)
     : ElementData(other, true)
-    , m_attributeVector(other.m_attributeArray, other.length())
+    , m_attributeVector(std::span { other.m_attributeArray, other.length() })
 {
     // An ShareableElementData should never have a mutable inline StyleProperties attached.
     ASSERT(!other.m_inlineStyle || !other.m_inlineStyle->isMutable());

@@ -26,6 +26,7 @@
 #include <wtf/HashFunctions.h>
 #include <wtf/KeyValuePair.h>
 #include <wtf/StdLibExtras.h>
+#include <wtf/text/ASCIILiteral.h>
 
 #ifdef __OBJC__
 #include <CoreFoundation/CoreFoundation.h>
@@ -89,6 +90,13 @@ template<typename T> struct HashTraits : GenericHashTraits<T> { };
 
 template<typename T> struct FloatHashTraits : GenericHashTraits<T> {
     static T emptyValue() { return std::numeric_limits<T>::infinity(); }
+    static void constructDeletedValue(T& slot) { slot = -std::numeric_limits<T>::infinity(); }
+    static bool isDeletedValue(T value) { return value == -std::numeric_limits<T>::infinity(); }
+};
+
+template<typename T> struct FloatWithZeroEmptyKeyHashTraits : GenericHashTraits<T> {
+    static constexpr bool emptyValueIsZero = true;
+    static T emptyValue() { return static_cast<T>(0); }
     static void constructDeletedValue(T& slot) { slot = -std::numeric_limits<T>::infinity(); }
     static bool isDeletedValue(T value) { return value == -std::numeric_limits<T>::infinity(); }
 };
@@ -199,6 +207,13 @@ template<typename T> struct HashTraits<UniqueRef<T>> : SimpleClassHashTraits<Uni
     using TakeType = std::unique_ptr<T>;
     static TakeType take(UniqueRef<T>&& value) { return value.moveToUniquePtr(); }
     static TakeType take(std::nullptr_t) { return nullptr; }
+};
+
+template<> struct HashTraits<ASCIILiteral> : SimpleClassHashTraits<ASCIILiteral> {
+    static ASCIILiteral emptyValue() { return { }; }
+
+    static void constructDeletedValue(ASCIILiteral& slot) { slot = ASCIILiteral::deletedValue(); }
+    static bool isDeletedValue(const ASCIILiteral& value) { return value.isDeletedValue(); }
 };
 
 template<typename P, typename Q, typename R> struct HashTraits<RefPtr<P, Q, R>> : SimpleClassHashTraits<RefPtr<P, Q, R>> {
@@ -343,13 +358,7 @@ struct TupleHashTraits : GenericHashTraits<std::tuple<typename FirstTrait::Trait
     typedef std::tuple<typename FirstTrait::TraitType, typename Traits::TraitType...> TraitType;
     typedef std::tuple<typename FirstTrait::EmptyValueType, typename Traits::EmptyValueType...> EmptyValueType;
 
-    // We should use emptyValueIsZero = Traits::emptyValueIsZero &&... whenever we switch to C++17. We can't do anything
-    // better here right now because GCC can't do C++.
-    template<typename BoolType>
-    static constexpr bool allTrue(BoolType value) { return value; }
-    template<typename BoolType, typename... BoolTypes>
-    static constexpr bool allTrue(BoolType value, BoolTypes... values) { return value && allTrue(values...); }
-    static constexpr bool emptyValueIsZero = allTrue(FirstTrait::emptyValueIsZero, Traits::emptyValueIsZero...);
+    static constexpr bool emptyValueIsZero = FirstTrait::emptyValueIsZero && (Traits::emptyValueIsZero && ...);
     static EmptyValueType emptyValue() { return std::make_tuple(FirstTrait::emptyValue(), Traits::emptyValue()...); }
 
     static constexpr unsigned minimumTableSize = FirstTrait::minimumTableSize;

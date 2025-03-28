@@ -49,10 +49,7 @@ public:
 
     DECLARE_EXPORT_INFO;
 
-    static Structure* createStructure(VM& vm, JSGlobalObject* globalObject, JSValue prototype)
-    {
-        return Structure::create(vm, globalObject, prototype, TypeInfo(ErrorInstanceType, StructureFlags), info());
-    }
+    static Structure* createStructure(VM&, JSGlobalObject*, JSValue);
 
     static JSWebAssemblyException* create(VM& vm, Structure* structure, const Wasm::Tag& tag, FixedVector<uint64_t>&& payload)
     {
@@ -67,7 +64,7 @@ public:
     const FixedVector<uint64_t>& payload() const { return m_payload; }
     JSValue getArg(JSGlobalObject*, unsigned) const;
 
-    static ptrdiff_t offsetOfPayload() { return OBJECT_OFFSETOF(JSWebAssemblyException, m_payload); }
+    static constexpr ptrdiff_t offsetOfPayload() { return OBJECT_OFFSETOF(JSWebAssemblyException, m_payload); }
 
 protected:
     JSWebAssemblyException(VM&, Structure*, const Wasm::Tag&, FixedVector<uint64_t>&&);

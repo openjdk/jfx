@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -108,7 +108,8 @@ class DummyResourceFactory extends BaseShaderFactory {
     }
 
     @Override
-    public Shader createShader(InputStream pixelShaderCode,
+    public Shader createShader(String pixelShaderName,
+                               InputStream pixelShaderCode,
                                Map<String, Integer> samplers,
                                Map<String, Integer> params,
                                int maxTexCoordIndex,

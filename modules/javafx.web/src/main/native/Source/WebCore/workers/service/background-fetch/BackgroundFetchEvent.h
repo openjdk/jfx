@@ -25,32 +25,26 @@
 
 #pragma once
 
-#if ENABLE(SERVICE_WORKER)
-
 #include "BackgroundFetchEventInit.h"
 #include "ExtendableEvent.h"
 
 namespace WebCore {
 
 class BackgroundFetchEvent : public ExtendableEvent {
-    WTF_MAKE_ISO_ALLOCATED(BackgroundFetchEvent);
+    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(BackgroundFetchEvent);
 public:
     ~BackgroundFetchEvent();
 
     using Init = BackgroundFetchEventInit;
     static Ref<BackgroundFetchEvent> create(const AtomString&, Init&&, IsTrusted = IsTrusted::No);
 
-    EventInterface eventInterface() const override { return BackgroundFetchEventInterfaceType; }
-
     RefPtr<BackgroundFetchRegistration> registration() const;
 
 protected:
-    BackgroundFetchEvent(const AtomString&, ExtendableEventInit&&, RefPtr<BackgroundFetchRegistration>&&, IsTrusted);
+    BackgroundFetchEvent(enum EventInterfaceType, const AtomString&, ExtendableEventInit&&, RefPtr<BackgroundFetchRegistration>&&, IsTrusted);
 
 private:
     RefPtr<BackgroundFetchRegistration> m_registration;
 };
 
 } // namespace WebCore
-
-#endif // ENABLE(SERVICE_WORKER)

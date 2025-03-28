@@ -64,9 +64,11 @@ public:
     bool isPositionedNodeNicosia() const { return isPositionedNode(); }
     bool isOverflowScrollProxyNodeNicosia() const { return isOverflowScrollProxyNode(); }
 #endif
-    bool isScrollingNode() const { return isFrameScrollingNode() || isOverflowScrollingNode(); }
+    bool isScrollingNode() const { return isFrameScrollingNode() || isOverflowScrollingNode() || isPluginScrollingNode(); }
     bool isFrameScrollingNode() const { return nodeType() == ScrollingNodeType::MainFrame || nodeType() == ScrollingNodeType::Subframe; }
     bool isFrameHostingNode() const { return nodeType() == ScrollingNodeType::FrameHosting; }
+    bool isPluginScrollingNode() const { return nodeType() == ScrollingNodeType::PluginScrolling; }
+    bool isPluginHostingNode() const { return nodeType() == ScrollingNodeType::PluginHosting; }
     bool isOverflowScrollingNode() const { return nodeType() == ScrollingNodeType::Overflow; }
     bool isOverflowScrollProxyNode() const { return nodeType() == ScrollingNodeType::OverflowProxy; }
 
@@ -87,10 +89,15 @@ public:
     void removeChild(ScrollingTreeNode&);
     void removeAllChildren();
 
+    virtual bool isRootOfHostedSubtree() const { return false; }
+
     WEBCORE_EXPORT RefPtr<ScrollingTreeFrameScrollingNode> enclosingFrameNodeIncludingSelf();
     WEBCORE_EXPORT RefPtr<ScrollingTreeScrollingNode> enclosingScrollingNodeIncludingSelf();
 
     WEBCORE_EXPORT void dump(WTF::TextStream&, OptionSet<ScrollingStateTreeAsTextBehavior>) const;
+
+    FrameIdentifier frameIdentifier() const { return m_parentFrameIdentifier; }
+    void setFrameIdentifier(FrameIdentifier frameID) { m_parentFrameIdentifier = frameID; }
 
 protected:
     ScrollingTreeNode(ScrollingTree&, ScrollingNodeType, ScrollingNodeID);
@@ -107,6 +114,7 @@ private:
 
     const ScrollingNodeType m_nodeType;
     const ScrollingNodeID m_nodeID;
+    FrameIdentifier m_parentFrameIdentifier;
 
     ThreadSafeWeakPtr<ScrollingTreeNode> m_parent;
 };

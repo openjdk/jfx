@@ -26,17 +26,19 @@
 #include "ElementInlines.h"
 #include "LiveNodeListInlines.h"
 #include "NodeRareData.h"
-#include <wtf/IsoMallocInlines.h>
+#include "Quirks.h"
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
 using namespace HTMLNames;
 
-WTF_MAKE_ISO_ALLOCATED_IMPL(NameNodeList);
+WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(NameNodeList);
 
 NameNodeList::NameNodeList(ContainerNode& rootNode, const AtomString& name)
     : CachedLiveNodeList(rootNode, NodeListInvalidationType::InvalidateOnNameAttrChange)
     , m_name(name)
+    , m_needsGetElementsByNameQuirk(rootNode.document().quirks().needsGetElementsByNameQuirk())
 {
 }
 
@@ -47,12 +49,12 @@ Ref<NameNodeList> NameNodeList::create(ContainerNode& rootNode, const AtomString
 
 NameNodeList::~NameNodeList()
 {
-    ownerNode().nodeLists()->removeCacheWithAtomName(*this, m_name);
+    protectedOwnerNode()->nodeLists()->removeCacheWithAtomName(*this, m_name);
 }
 
 bool NameNodeList::elementMatches(Element& element) const
 {
-    return element.getNameAttribute() == m_name;
+    return (is<HTMLElement>(element) || m_needsGetElementsByNameQuirk) && element.getNameAttribute() == m_name;
 }
 
 } // namespace WebCore

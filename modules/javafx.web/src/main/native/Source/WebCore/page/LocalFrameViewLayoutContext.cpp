@@ -32,6 +32,7 @@
 #include "LayoutDisallowedScope.h"
 #include "LocalFrameView.h"
 #include "Logging.h"
+#include "Quirks.h"
 #include "RenderElement.h"
 #include "RenderLayoutState.h"
 #include "RenderStyleInlines.h"
@@ -54,38 +55,6 @@ namespace WebCore {
 
 UpdateScrollInfoAfterLayoutTransaction::UpdateScrollInfoAfterLayoutTransaction() = default;
 UpdateScrollInfoAfterLayoutTransaction::~UpdateScrollInfoAfterLayoutTransaction() = default;
-
-void LocalFrameViewLayoutContext::layoutUsingFormattingContext()
-{
-    if (!frame().settings().layoutFormattingContextEnabled())
-        return;
-    // LocalFrameView::setContentsSize temporary disables layout.
-    if (m_disableSetNeedsLayoutCount)
-        return;
-
-    m_layoutState = nullptr;
-    m_layoutTree = nullptr;
-
-    auto& renderView = *this->renderView();
-    m_layoutTree = Layout::TreeBuilder::buildLayoutTree(renderView);
-    m_layoutState = makeUnique<Layout::LayoutState>(*document(), m_layoutTree->root());
-    auto layoutContext = Layout::LayoutContext { *m_layoutState };
-    layoutContext.layout(view().layoutSize());
-
-    // Clean up the render tree state when we don't run RenderView::layout.
-    if (renderView.needsLayout()) {
-        auto contentSize = Layout::BoxGeometry::marginBoxRect(m_layoutState->geometryForBox(*m_layoutState->root().firstChild())).size();
-        renderView.setSize(contentSize);
-        renderView.repaintViewRectangle({ 0, 0, contentSize.width(), contentSize.height() });
-
-        for (auto& descendant : descendantsOfType<RenderObject>(renderView))
-            descendant.clearNeedsLayout();
-        renderView.clearNeedsLayout();
-    }
-#if ASSERT_ENABLED
-    Layout::LayoutContext::verifyAndOutputMismatchingLayoutTree(*m_layoutState, renderView);
-#endif
-}
 
 static bool isObjectAncestorContainerOf(RenderElement& ancestor, RenderElement& descendant)
 {
@@ -110,8 +79,8 @@ public :
             auto needsLayout = [&] {
                 if (renderer.needsLayout())
                     return true;
-                if (is<RenderBlockFlow>(renderer) && downcast<RenderBlockFlow>(renderer).modernLineLayout())
-                    return downcast<RenderBlockFlow>(renderer).modernLineLayout()->hasDetachedContent();
+                if (auto* renderBlockFlow = dynamicDowncast<RenderBlockFlow>(renderer); renderBlockFlow && renderBlockFlow->modernLineLayout())
+                    return renderBlockFlow->modernLineLayout()->hasDetachedContent();
                 return false;
             };
 
@@ -163,9 +132,7 @@ LocalFrameViewLayoutContext::LocalFrameViewLayoutContext(LocalFrameView& frameVi
 {
 }
 
-LocalFrameViewLayoutContext::~LocalFrameViewLayoutContext()
-{
-}
+LocalFrameViewLayoutContext::~LocalFrameViewLayoutContext() = default;
 
 UpdateScrollInfoAfterLayoutTransaction& LocalFrameViewLayoutContext::updateScrollInfoAfterLayoutTransaction()
 {
@@ -178,7 +145,7 @@ void LocalFrameViewLayoutContext::layout()
 {
     LOG_WITH_STREAM(Layout, stream << "LocalFrameView " << &view() << " LocalFrameViewLayoutContext::layout() with size " << view().layoutSize());
 
-    Ref<LocalFrameView> protectView(view());
+    Ref protectedView(view());
 
     performLayout();
 
@@ -201,13 +168,14 @@ void LocalFrameViewLayoutContext::layout()
 
 void LocalFrameViewLayoutContext::performLayout()
 {
-    RELEASE_ASSERT_WITH_SECURITY_IMPLICATION(!frame().document()->inRenderTreeUpdate());
+    Ref frame = this->frame();
+    RELEASE_ASSERT_WITH_SECURITY_IMPLICATION(!document()->inRenderTreeUpdate());
     ASSERT(LayoutDisallowedScope::isLayoutAllowed());
     ASSERT(!view().isPainting());
-    ASSERT(frame().view() == &view());
-    ASSERT(frame().document());
-    ASSERT(frame().document()->backForwardCacheState() == Document::NotInBackForwardCache
-        || frame().document()->backForwardCacheState() == Document::AboutToEnterBackForwardCache);
+    ASSERT(frame->view() == &view());
+    ASSERT(document());
+    ASSERT(document()->backForwardCacheState() == Document::NotInBackForwardCache
+        || document()->backForwardCacheState() == Document::AboutToEnterBackForwardCache);
     if (!canPerformLayout()) {
         LOG(Layout, "  is not allowed, bailing");
         return;
@@ -216,25 +184,25 @@ void LocalFrameViewLayoutContext::performLayout()
     LayoutScope layoutScope(*this);
     TraceScope tracingScope(PerformLayoutStart, PerformLayoutEnd);
     ScriptDisallowedScope::InMainThread scriptDisallowedScope;
-    InspectorInstrumentation::willLayout(downcast<LocalFrame>(view().frame()));
-    WeakPtr<RenderElement> layoutRoot;
+    InspectorInstrumentation::willLayout(frame);
+    SingleThreadWeakPtr<RenderElement> layoutRoot;
 
     m_layoutTimer.stop();
     m_setNeedsLayoutWasDeferred = false;
 
 #if !LOG_DISABLED
-    if (m_firstLayout && !frame().ownerElement())
+    if (m_firstLayout && !frame->ownerElement())
         LOG_WITH_STREAM(Layout, stream << "LocalFrameView " << &view() << " elapsed time before first layout: " << document()->timeSinceDocumentCreation());
 #endif
 #if PLATFORM(IOS_FAMILY)
-    if (view().updateFixedPositionLayoutRect() && subtreeLayoutRoot())
+    if (protectedView()->updateFixedPositionLayoutRect() && subtreeLayoutRoot())
         convertSubtreeLayoutToFullLayout();
 #endif
 
     {
         SetForScope layoutPhase(m_layoutPhase, LayoutPhase::InPreLayout);
 
-        if (!frame().document()->isResolvingContainerQueriesForSelfOrAncestor()) {
+        if (!document()->isInStyleInterleavedLayoutForSelfOrAncestor()) {
             // If this is a new top-level layout and there are any remaining tasks from the previous layout, finish them now.
             if (!isLayoutNested() && m_postLayoutTaskTimer.isActive())
                 runPostLayoutTasks();
@@ -245,7 +213,7 @@ void LocalFrameViewLayoutContext::performLayout()
         if (view().hasOneRef())
             return;
 
-        view().autoSizeIfEnabled();
+        protectedView()->autoSizeIfEnabled();
         if (!renderView())
             return;
 
@@ -254,9 +222,11 @@ void LocalFrameViewLayoutContext::performLayout()
 
         LOG_WITH_STREAM(Layout, stream << "LocalFrameView " << &view() << " layout " << m_layoutCount << " - subtree root " << subtreeLayoutRoot() << ", needsFullRepaint " << m_needsFullRepaint);
 
-        view().willDoLayout(layoutRoot);
+        protectedView()->willDoLayout(layoutRoot);
         m_firstLayout = false;
     }
+
+    auto isSimplifiedLayout = layoutRoot->needsSimplifiedNormalFlowLayoutOnly();
     {
         TraceScope tracingScope(RenderTreeLayoutStart, RenderTreeLayoutEnd);
         SetForScope layoutPhase(m_layoutPhase, LayoutPhase::InRenderTreeLayout);
@@ -266,15 +236,15 @@ void LocalFrameViewLayoutContext::performLayout()
 #ifndef NDEBUG
         RenderTreeNeedsLayoutChecker checker(*renderView());
 #endif
+        ++m_layoutIdentifier;
         layoutRoot->layout();
-        layoutUsingFormattingContext();
         ++m_layoutCount;
 #if ENABLE(TEXT_AUTOSIZING)
         applyTextSizingIfNeeded(*layoutRoot.get());
 #endif
         clearSubtreeLayoutRoot();
 
-#if !LOG_DISABLED
+#if !LOG_DISABLED && ENABLE(TREE_DEBUGGING)
         auto layoutLogEnabled = [] {
             return LogLayout.state == WTFLogChannelState::On;
         };
@@ -288,7 +258,7 @@ void LocalFrameViewLayoutContext::performLayout()
         if (is<RenderView>(layoutRoot) && !renderView()->printing()) {
             // This is to protect m_needsFullRepaint's value when layout() is getting re-entered through adjustViewSize().
             SetForScope needsFullRepaint(m_needsFullRepaint);
-            view().adjustViewSize();
+            protectedView()->adjustViewSize();
             // FIXME: Firing media query callbacks synchronously on nested frames could produced a detached FrameView here by
             // navigating away from the current document (see webkit.org/b/173329).
             if (view().hasOneRef())
@@ -300,11 +270,11 @@ void LocalFrameViewLayoutContext::performLayout()
         if (m_needsFullRepaint)
             renderView()->repaintRootContents();
         ASSERT(!layoutRoot->needsLayout());
-        view().didLayout(layoutRoot);
+        protectedView()->didLayout(layoutRoot, isSimplifiedLayout);
         runOrScheduleAsynchronousTasks();
     }
-    InspectorInstrumentation::didLayout(downcast<LocalFrame>(view().frame()), *layoutRoot);
-    DebugPageOverlays::didLayout(downcast<LocalFrame>(view().frame()));
+    InspectorInstrumentation::didLayout(frame, *layoutRoot);
+    DebugPageOverlays::didLayout(frame);
 }
 
 void LocalFrameViewLayoutContext::runOrScheduleAsynchronousTasks()
@@ -312,8 +282,8 @@ void LocalFrameViewLayoutContext::runOrScheduleAsynchronousTasks()
     if (m_postLayoutTaskTimer.isActive())
         return;
 
-    if (frame().document()->isResolvingContainerQueries()) {
-        // We are doing layout from style resolution to resolve container queries.
+    if (document()->isInStyleInterleavedLayout()) {
+        // We are doing layout from style resolution to resolve container queries and/or anchor-positioned elements.
         m_postLayoutTaskTimer.startOneShot(0_s);
         return;
     }
@@ -339,7 +309,7 @@ void LocalFrameViewLayoutContext::runPostLayoutTasks()
     if (m_inAsynchronousTasks)
         return;
     SetForScope inAsynchronousTasks(m_inAsynchronousTasks, true);
-    view().performPostLayoutTasks();
+    protectedView()->performPostLayoutTasks();
 }
 
 void LocalFrameViewLayoutContext::flushPostLayoutTasks()
@@ -381,7 +351,7 @@ void LocalFrameViewLayoutContext::setNeedsLayoutAfterViewConfigurationChange()
     }
 
     if (auto* renderView = this->renderView()) {
-        ASSERT(!frame().document()->inHitTesting());
+        ASSERT(!document()->inHitTesting());
         renderView->setNeedsLayout();
         scheduleLayout();
     }
@@ -404,25 +374,26 @@ void LocalFrameViewLayoutContext::scheduleLayout()
     // FIXME: We should assert the page is not in the back/forward cache, but that is causing
     // too many false assertions. See <rdar://problem/7218118>.
     ASSERT(frame().view() == &view());
+    if (!document())
+        return;
 
     if (subtreeLayoutRoot())
         convertSubtreeLayoutToFullLayout();
-    if (!isLayoutSchedulingEnabled())
+
+    if (isLayoutPending())
+        return;
+
+    if (!isLayoutSchedulingEnabled() || !document()->shouldScheduleLayout())
         return;
     if (!needsLayout())
         return;
-    if (!frame().document()->shouldScheduleLayout())
-        return;
-
-    InspectorInstrumentation::didInvalidateLayout(frame());
-    if (m_layoutTimer.isActive())
-        return;
 
 #if !LOG_DISABLED
-    if (!frame().document()->ownerElement())
-        LOG(Layout, "LocalFrameView %p layout timer scheduled at %.3fs", this, frame().document()->timeSinceDocumentCreation().value());
+    if (!document()->ownerElement())
+        LOG(Layout, "LocalFrameView %p layout timer scheduled at %.3fs", this, document()->timeSinceDocumentCreation().value());
 #endif
 
+    InspectorInstrumentation::didInvalidateLayout(protectedFrame());
     m_layoutTimer.startOneShot(0_s);
 }
 
@@ -435,8 +406,8 @@ void LocalFrameViewLayoutContext::unscheduleLayout()
         return;
 
 #if !LOG_DISABLED
-    if (!frame().document()->ownerElement())
-        LOG_WITH_STREAM(Layout, stream << "LocalFrameViewLayoutContext for LocalFrameView " << frame().view() << " layout timer unscheduled at " << frame().document()->timeSinceDocumentCreation().value());
+    if (!document()->ownerElement())
+        LOG_WITH_STREAM(Layout, stream << "LocalFrameViewLayoutContext for LocalFrameView " << frame().view() << " layout timer unscheduled at " << document()->timeSinceDocumentCreation().value());
 #endif
 
     m_layoutTimer.stop();
@@ -452,14 +423,14 @@ void LocalFrameViewLayoutContext::scheduleSubtreeLayout(RenderElement& layoutRoo
     ASSERT(frame().view() == &view());
 
     if (renderView.needsLayout() && !subtreeLayoutRoot()) {
-        layoutRoot.markContainingBlocksForLayout(ScheduleRelayout::No);
+        layoutRoot.markContainingBlocksForLayout(&renderView);
         return;
     }
 
     if (!isLayoutPending() && isLayoutSchedulingEnabled()) {
         ASSERT(!layoutRoot.container() || is<RenderView>(layoutRoot.container()) || !layoutRoot.container()->needsLayout());
         setSubtreeLayoutRoot(layoutRoot);
-        InspectorInstrumentation::didInvalidateLayout(frame());
+        InspectorInstrumentation::didInvalidateLayout(protectedFrame());
         m_layoutTimer.startOneShot(0_s);
         return;
     }
@@ -470,37 +441,37 @@ void LocalFrameViewLayoutContext::scheduleSubtreeLayout(RenderElement& layoutRoo
 
     if (!subtreeLayoutRoot) {
         // We already have a pending (full) layout. Just mark the subtree for layout.
-        layoutRoot.markContainingBlocksForLayout(ScheduleRelayout::No);
-        InspectorInstrumentation::didInvalidateLayout(frame());
+        layoutRoot.markContainingBlocksForLayout(&renderView);
+        InspectorInstrumentation::didInvalidateLayout(protectedFrame());
         return;
     }
 
     if (isObjectAncestorContainerOf(*subtreeLayoutRoot, layoutRoot)) {
         // Keep the current root.
-        layoutRoot.markContainingBlocksForLayout(ScheduleRelayout::No, subtreeLayoutRoot);
+        layoutRoot.markContainingBlocksForLayout(subtreeLayoutRoot);
         ASSERT(!subtreeLayoutRoot->container() || is<RenderView>(subtreeLayoutRoot->container()) || !subtreeLayoutRoot->container()->needsLayout());
         return;
     }
 
     if (isObjectAncestorContainerOf(layoutRoot, *subtreeLayoutRoot)) {
         // Re-root at newRelayoutRoot.
-        subtreeLayoutRoot->markContainingBlocksForLayout(ScheduleRelayout::No, &layoutRoot);
+        subtreeLayoutRoot->markContainingBlocksForLayout(&layoutRoot);
         setSubtreeLayoutRoot(layoutRoot);
         ASSERT(!layoutRoot.container() || is<RenderView>(layoutRoot.container()) || !layoutRoot.container()->needsLayout());
-        InspectorInstrumentation::didInvalidateLayout(frame());
+        InspectorInstrumentation::didInvalidateLayout(protectedFrame());
         return;
     }
     // Two disjoint subtrees need layout. Mark both of them and issue a full layout instead.
     convertSubtreeLayoutToFullLayout();
-    layoutRoot.markContainingBlocksForLayout(ScheduleRelayout::No);
-    InspectorInstrumentation::didInvalidateLayout(frame());
+    layoutRoot.markContainingBlocksForLayout(&renderView);
+    InspectorInstrumentation::didInvalidateLayout(protectedFrame());
 }
 
 void LocalFrameViewLayoutContext::layoutTimerFired()
 {
 #if !LOG_DISABLED
-    if (!frame().document()->ownerElement())
-        LOG_WITH_STREAM(Layout, stream << "LocalFrameViewLayoutContext for LocalFrameView " << frame().view() << " layout timer fired at " << frame().document()->timeSinceDocumentCreation().value());
+    if (!document()->ownerElement())
+        LOG_WITH_STREAM(Layout, stream << "LocalFrameViewLayoutContext for LocalFrameView " << frame().view() << " layout timer fired at " << document()->timeSinceDocumentCreation().value());
 #endif
     layout();
 }
@@ -513,7 +484,7 @@ RenderElement* LocalFrameViewLayoutContext::subtreeLayoutRoot() const
 void LocalFrameViewLayoutContext::convertSubtreeLayoutToFullLayout()
 {
     ASSERT(subtreeLayoutRoot());
-    subtreeLayoutRoot()->markContainingBlocksForLayout(ScheduleRelayout::No);
+    subtreeLayoutRoot()->markContainingBlocksForLayout(renderView());
     clearSubtreeLayoutRoot();
 }
 
@@ -530,7 +501,7 @@ bool LocalFrameViewLayoutContext::canPerformLayout() const
     if (view().isPainting())
         return false;
 
-    if (!subtreeLayoutRoot() && !frame().document()->renderView())
+    if (!subtreeLayoutRoot() && !document()->renderView())
         return false;
 
     return true;
@@ -539,6 +510,9 @@ bool LocalFrameViewLayoutContext::canPerformLayout() const
 #if ENABLE(TEXT_AUTOSIZING)
 void LocalFrameViewLayoutContext::applyTextSizingIfNeeded(RenderElement& layoutRoot)
 {
+    ASSERT(document());
+    if (document()->quirks().shouldIgnoreTextAutoSizing())
+        return;
     auto& settings = layoutRoot.settings();
     bool idempotentMode = settings.textAutosizingUsesIdempotentMode();
     if (!settings.textAutosizingEnabled() || idempotentMode || renderView()->printing())
@@ -562,22 +536,22 @@ void LocalFrameViewLayoutContext::applyTextSizingIfNeeded(RenderElement& layoutR
 void LocalFrameViewLayoutContext::updateStyleForLayout()
 {
     ScriptDisallowedScope::InMainThread scriptDisallowedScope;
-    Document& document = *frame().document();
+    Ref document = *this->document();
 
     // FIXME: This shouldn't be necessary, but see rdar://problem/36670246.
-    if (!document.styleScope().resolverIfExists())
-        document.styleScope().didChangeStyleSheetEnvironment();
+    if (!document->styleScope().resolverIfExists())
+        document->styleScope().didChangeStyleSheetEnvironment();
 
     // Viewport-dependent media queries may cause us to need completely different style information.
-    document.styleScope().evaluateMediaQueriesForViewportChange();
+    document->styleScope().evaluateMediaQueriesForViewportChange();
 
-    document.updateElementsAffectedByMediaQueries();
+    document->updateElementsAffectedByMediaQueries();
     // If there is any pagination to apply, it will affect the RenderView's style, so we should
     // take care of that now.
-    view().applyPaginationToViewport();
+    protectedView()->applyPaginationToViewport();
     // Always ensure our style info is up-to-date. This can happen in situations where
     // the layout beats any sort of style recalc update that needs to occur.
-    document.updateStyleIfNeeded();
+    document->updateStyleIfNeeded();
 }
 
 LayoutSize LocalFrameViewLayoutContext::layoutDelta() const
@@ -617,14 +591,6 @@ void LocalFrameViewLayoutContext::pushLayoutState(RenderElement& root)
     m_layoutStateStack.append(makeUnique<RenderLayoutState>(root));
 }
 
-bool LocalFrameViewLayoutContext::pushLayoutStateForPaginationIfNeeded(RenderBlockFlow& layoutRoot)
-{
-    if (layoutState())
-        return false;
-    m_layoutStateStack.append(makeUnique<RenderLayoutState>(layoutRoot, RenderLayoutState::IsPaginated::Yes));
-    return true;
-}
-
 bool LocalFrameViewLayoutContext::pushLayoutState(RenderBox& renderer, const LayoutSize& offset, LayoutUnit pageHeight, bool pageHeightChanged)
 {
     // We push LayoutState even if layoutState is disabled because it stores layoutDelta too.
@@ -661,6 +627,17 @@ void LocalFrameViewLayoutContext::popLayoutState()
     }
 }
 
+void LocalFrameViewLayoutContext::setBoxNeedsTransformUpdateAfterContainerLayout(RenderBox& box, RenderBlock& container)
+{
+    auto it = m_containersWithDescendantsNeedingTransformUpdate.ensure(container, [] { return Vector<SingleThreadWeakPtr<RenderBox>>({ }); });
+    it.iterator->value.append(WeakPtr { box });
+}
+
+Vector<SingleThreadWeakPtr<RenderBox>> LocalFrameViewLayoutContext::takeBoxesNeedingTransformUpdateAfterContainerLayout(RenderBlock& container)
+{
+    return m_containersWithDescendantsNeedingTransformUpdate.take(container);
+}
+
 #ifndef NDEBUG
 void LocalFrameViewLayoutContext::checkLayoutState()
 {
@@ -671,12 +648,22 @@ void LocalFrameViewLayoutContext::checkLayoutState()
 
 LocalFrame& LocalFrameViewLayoutContext::frame() const
 {
-    return downcast<LocalFrame>(view().frame());
+    return view().frame();
+}
+
+Ref<LocalFrame> LocalFrameViewLayoutContext::protectedFrame()
+{
+    return frame();
 }
 
 LocalFrameView& LocalFrameViewLayoutContext::view() const
 {
-    return m_frameView;
+    return m_frameView.get();
+}
+
+Ref<LocalFrameView> LocalFrameViewLayoutContext::protectedView() const
+{
+    return m_frameView.get();
 }
 
 RenderView* LocalFrameViewLayoutContext::renderView() const

@@ -50,10 +50,10 @@ struct LogArgument<Vector<T>> {
     static String toString(const Vector<T>& value)
     {
         StringBuilder builder;
-        builder.append("[");
+        builder.append('[');
         for (auto item : value)
             builder.append(LogArgument<T>::toString(item));
-        builder.append("]");
+        builder.append(']');
         return builder.toString();
     }
 };
@@ -89,7 +89,7 @@ void NavigatorEME::requestMediaKeySystemAccess(Navigator& navigator, Document& d
 {
     // https://w3c.github.io/encrypted-media/#dom-navigator-requestmediakeysystemaccess
     // W3C Editor's Draft 09 November 2016
-    auto identifier = Logger::LogSiteIdentifier("NavigatorEME", __func__, &navigator);
+    auto identifier = Logger::LogSiteIdentifier("NavigatorEME"_s, __func__, &navigator);
     Ref<Logger> logger = document.logger();
 
     infoLog(logger, identifier, "keySystem(", keySystem, "), supportedConfigurations(", supportedConfigurations, ")");
@@ -99,7 +99,7 @@ void NavigatorEME::requestMediaKeySystemAccess(Navigator& navigator, Document& d
     // 2. If supportedConfigurations is empty, return a promise rejected with a newly created TypeError.
     if (keySystem.isEmpty() || supportedConfigurations.isEmpty()) {
         infoLog(logger, identifier, "Rejected: empty keySystem(", keySystem.isEmpty(), ") or empty supportedConfigurations(", supportedConfigurations.isEmpty(), ")");
-        promise->reject(TypeError);
+        promise->reject(ExceptionCode::TypeError);
         return;
     }
 
@@ -120,7 +120,7 @@ void NavigatorEME::requestMediaKeySystemAccess(Navigator& navigator, Document& d
             //      String comparison is case-sensitive.
             if (!CDM::supportsKeySystem(keySystem)) {
                 infoLog(logger, identifier, "Rejected: keySystem(", keySystem, ") not supported");
-                promise->reject(NotSupportedError);
+                promise->reject(ExceptionCode::NotSupportedError);
                 return;
             }
 
@@ -169,7 +169,7 @@ static void tryNextSupportedConfiguration(Document& document, RefPtr<CDM>&& impl
 
     // 6.4. Reject promise with a NotSupportedError.
     infoLog(logger, identifier, "Rejected: empty supportedConfigurations");
-    promise->reject(NotSupportedError);
+    promise->reject(ExceptionCode::NotSupportedError);
 }
 
 } // namespace WebCore

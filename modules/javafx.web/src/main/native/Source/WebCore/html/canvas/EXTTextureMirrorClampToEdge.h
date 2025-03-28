@@ -26,16 +26,18 @@
 #pragma once
 
 #include "WebGLExtension.h"
+#include "WebGLRenderingContextBase.h"
+#include <wtf/Noncopyable.h>
+#include <wtf/TZoneMalloc.h>
 
 namespace WebCore {
 
-class EXTTextureMirrorClampToEdge final : public WebGLExtension {
-    WTF_MAKE_ISO_ALLOCATED(EXTTextureMirrorClampToEdge);
+class EXTTextureMirrorClampToEdge final : public WebGLExtension<WebGLRenderingContextBase> {
+    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(EXTTextureMirrorClampToEdge);
+    WTF_MAKE_NONCOPYABLE(EXTTextureMirrorClampToEdge);
 public:
     explicit EXTTextureMirrorClampToEdge(WebGLRenderingContextBase&);
-    virtual ~EXTTextureMirrorClampToEdge();
-
-    ExtensionName getName() const override;
+    ~EXTTextureMirrorClampToEdge();
 
     static bool supported(GraphicsContextGL&);
 };

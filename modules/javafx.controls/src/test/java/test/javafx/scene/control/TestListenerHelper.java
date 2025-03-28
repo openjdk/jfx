@@ -24,7 +24,7 @@
  */
 package test.javafx.scene.control;
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import java.lang.ref.WeakReference;
 import java.util.concurrent.atomic.AtomicInteger;
 import javafx.beans.property.SimpleStringProperty;
@@ -46,7 +46,7 @@ import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.Region;
 import javafx.scene.transform.Scale;
 import javafx.stage.Stage;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 import com.sun.javafx.event.EventUtil;
 import com.sun.javafx.scene.control.ListenerHelper;
 import test.com.sun.javafx.scene.control.infrastructure.MouseEventGenerator;

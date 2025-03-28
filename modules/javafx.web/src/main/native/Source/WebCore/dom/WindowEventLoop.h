@@ -29,6 +29,7 @@
 #include "GCReachableRef.h"
 #include "Timer.h"
 #include <wtf/HashSet.h>
+#include <wtf/WeakHashMap.h>
 #include <wtf/text/WTFString.h>
 
 namespace WebCore {
@@ -37,6 +38,7 @@ class CustomElementQueue;
 class Document;
 class HTMLSlotElement;
 class MutationObserver;
+class Page;
 class SecurityOrigin;
 
 // https://html.spec.whatwg.org/multipage/webappapis.html#window-event-loop
@@ -53,10 +55,12 @@ public:
 
     CustomElementQueue& backupElementQueue();
 
-    void didScheduleRenderingUpdate() { m_hasARenderingOpportunity = true; }
-    void didFinishRenderingUpdate() { m_hasARenderingOpportunity = false; }
+    void scheduleIdlePeriod(Page&);
+    void didScheduleRenderingUpdate(Page&, MonotonicTime);
+    void didStartRenderingUpdate(Page&);
     void opportunisticallyRunIdleCallbacks();
-    bool shouldEndIdlePeriod();
+    bool shouldEndIdlePeriod(MonotonicTime);
+    MonotonicTime computeIdleDeadline();
 
     WEBCORE_EXPORT static void breakToAllowRenderingUpdate();
 
@@ -68,7 +72,10 @@ private:
     bool isContextThread() const final;
     MicrotaskQueue& microtaskQueue() final;
 
+    std::optional<MonotonicTime> nextRenderingTime() const;
     void didReachTimeToRun();
+
+    void decayIdleCallbackDuration() { m_expectedIdleCallbackDuration /= 2; }
 
     String m_agentClusterKey;
     Timer m_timer;
@@ -85,10 +92,13 @@ private:
     HashSet<RefPtr<MutationObserver>> m_activeObservers;
     HashSet<RefPtr<MutationObserver>> m_suspendedObservers;
 
+    WeakHashMap<Page, MonotonicTime> m_pagesWithRenderingOpportunity;
+
     std::unique_ptr<CustomElementQueue> m_customElementQueue;
     bool m_processingBackupElementQueue { false };
 
-    bool m_hasARenderingOpportunity { false };
+    MonotonicTime m_lastIdlePeriodStartTime;
+    Seconds m_expectedIdleCallbackDuration { 4_ms };
 };
 
 } // namespace WebCore

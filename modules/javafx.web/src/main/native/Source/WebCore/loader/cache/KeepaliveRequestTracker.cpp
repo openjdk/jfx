@@ -55,7 +55,7 @@ bool KeepaliveRequestTracker::tryRegisterRequest(CachedResource& resource)
 void KeepaliveRequestTracker::registerRequest(CachedResource& resource)
 {
     ASSERT(resource.options().keepAlive);
-    auto body = resource.resourceRequest().httpBody();
+    RefPtr body = resource.resourceRequest().httpBody();
     if (!body)
         return;
     ASSERT(!m_inflightKeepaliveRequests.contains(&resource));
@@ -66,17 +66,7 @@ void KeepaliveRequestTracker::registerRequest(CachedResource& resource)
     resource.addClient(*this);
 }
 
-void KeepaliveRequestTracker::responseReceived(CachedResource& resource, const ResourceResponse&, CompletionHandler<void()>&& completionHandler)
-{
-    // Per Fetch specification, allocated quota should be returned before the promise is resolved,
-    // which is when the response is received.
-    unregisterRequest(resource);
-
-    if (completionHandler)
-        completionHandler();
-}
-
-void KeepaliveRequestTracker::notifyFinished(CachedResource& resource, const NetworkLoadMetrics&)
+void KeepaliveRequestTracker::notifyFinished(CachedResource& resource, const NetworkLoadMetrics&, LoadWillContinueInAnotherProcess)
 {
     unregisterRequest(resource);
 }

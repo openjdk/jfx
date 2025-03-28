@@ -29,15 +29,41 @@
 
 namespace WGSL::AST {
 
+struct SwitchClause {
+    AST::Expression::List selectors;
+    AST::CompoundStatement::Ref body;
+};
+
 class SwitchStatement final : public Statement {
     WGSL_AST_BUILDER_NODE(SwitchStatement);
 public:
     NodeKind kind() const final;
+    Expression& value() { return m_value.get(); }
+    Attribute::List& valueAttributes() { return m_valueAttributes; }
+    Vector<SwitchClause>& clauses() { return m_clauses; }
+    SwitchClause& defaultClause() { return m_defaultClause; }
+
+    bool isInsideLoop() const { return m_isInsideLoop; }
+    void setIsInsideLoop() { m_isInsideLoop = true;; }
+
+    bool isNestedInsideLoop() const { return m_isNestedInsideLoop; }
+    void setIsNestedInsideLoop() { m_isNestedInsideLoop = true; }
 
 private:
-    SwitchStatement(SourceSpan span)
+    SwitchStatement(SourceSpan span, AST::Expression::Ref&& value, AST::Attribute::List&& valueAttributes, Vector<SwitchClause>&& clauses, SwitchClause&& defaultClause)
         : Statement(span)
+        , m_value(WTFMove(value))
+        , m_valueAttributes(WTFMove(valueAttributes))
+        , m_clauses(WTFMove(clauses))
+        , m_defaultClause(WTFMove(defaultClause))
     { }
+
+    bool m_isInsideLoop { false };
+    bool m_isNestedInsideLoop { false };
+    Expression::Ref m_value;
+    Attribute::List m_valueAttributes;
+    Vector<SwitchClause> m_clauses;
+    SwitchClause m_defaultClause;
 };
 
 } // namespace WGSL::AST

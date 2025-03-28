@@ -19,7 +19,6 @@
 #pragma once
 
 #include "ExceptionOr.h"
-#include "ParseFromStringOptions.h"
 #include <wtf/WeakPtr.h>
 
 namespace WebCore {
@@ -27,13 +26,14 @@ namespace WebCore {
 class Document;
 class WeakPtrImplWithEventTargetData;
 class Settings;
+class TrustedHTML;
 
 class DOMParser : public RefCounted<DOMParser> {
 public:
     static Ref<DOMParser> create(Document& contextDocument);
     ~DOMParser();
 
-    ExceptionOr<Ref<Document>> parseFromString(const String&, const String& contentType, ParseFromStringOptions);
+    ExceptionOr<Ref<Document>> parseFromString(std::variant<RefPtr<TrustedHTML>, String>&&, const AtomString& contentType);
 
 private:
     explicit DOMParser(Document& contextDocument);

@@ -38,11 +38,14 @@ class Hasher;
 class Lock;
 class Logger;
 class MachSendRight;
+class MainThreadDispatcher;
 class MonotonicTime;
 class OrdinalNumber;
 class PrintStream;
 class SHA1;
 class Seconds;
+class SerialFunctionDispatcher;
+class RefCountedSerialFunctionDispatcher;
 class String;
 class StringBuilder;
 class StringImpl;
@@ -58,8 +61,14 @@ class WallTime;
 struct AnyThreadsAccessTraits;
 struct FastMalloc;
 struct MainThreadAccessTraits;
-struct ObjectIdentifierMainThreadAccessTraits;
-struct ObjectIdentifierThreadSafeAccessTraits;
+template<typename> struct ObjectIdentifierMainThreadAccessTraits;
+template<typename> struct ObjectIdentifierThreadSafeAccessTraits;
+
+namespace JSONImpl {
+class Array;
+class Object;
+template<typename> class ArrayOf;
+}
 
 #if ENABLE(MALLOC_HEAP_BREAKDOWN)
 struct VectorBufferMalloc;
@@ -78,16 +87,21 @@ template<typename> class Function;
 template<typename, typename = AnyThreadsAccessTraits> class LazyNeverDestroyed;
 template<typename T, typename Traits = typename T::MarkableTraits> class Markable;
 template<typename, typename = AnyThreadsAccessTraits> class NeverDestroyed;
-template<typename, typename> class ObjectIdentifierGeneric;
-template<typename T> using ObjectIdentifier = ObjectIdentifierGeneric<T, ObjectIdentifierMainThreadAccessTraits>;
-template<typename T> using AtomicObjectIdentifier = ObjectIdentifierGeneric<T, ObjectIdentifierThreadSafeAccessTraits>;
+template<typename> class OSObjectPtr;
+enum class SupportsObjectIdentifierNullState : bool { No, Yes };
+template<typename, typename, typename, SupportsObjectIdentifierNullState> class ObjectIdentifierGeneric;
+template<typename T, typename RawValue = uint64_t> using ObjectIdentifier = ObjectIdentifierGeneric<T, ObjectIdentifierMainThreadAccessTraits<RawValue>, RawValue, SupportsObjectIdentifierNullState::No>;
+template<typename T, typename RawValue = uint64_t> using AtomicObjectIdentifier = ObjectIdentifierGeneric<T, ObjectIdentifierThreadSafeAccessTraits<RawValue>, RawValue, SupportsObjectIdentifierNullState::No>;
+template<typename T, typename RawValue = uint64_t> using LegacyNullableObjectIdentifier = ObjectIdentifierGeneric<T, ObjectIdentifierMainThreadAccessTraits<RawValue>, RawValue, SupportsObjectIdentifierNullState::Yes>;
+template<typename T, typename RawValue = uint64_t> using LegacyNullableAtomicObjectIdentifier = ObjectIdentifierGeneric<T, ObjectIdentifierThreadSafeAccessTraits<RawValue>, RawValue, SupportsObjectIdentifierNullState::Yes>;
+template<typename> class Observer;
 template<typename> class OptionSet;
 template<typename> class Packed;
 template<typename T, size_t = alignof(T)> class PackedAlignedPtr;
 template<typename> struct RawPtrTraits;
 template<typename T, typename = RawPtrTraits<T>> class CheckedRef;
 template<typename T, typename = RawPtrTraits<T>> class CheckedPtr;
-template<typename T, typename = RawPtrTraits<T>> class Ref;
+template<typename T, typename = RawPtrTraits<T>, typename = DefaultRefDerefTraits<T>> class Ref;
 template<typename T, typename = RawPtrTraits<T>, typename = DefaultRefDerefTraits<T>> class RefPtr;
 template<typename> class RetainPtr;
 template<typename> class ScopedLambda;
@@ -97,7 +111,8 @@ template<typename, typename = void> class StringTypeAdapter;
 template<typename> class UniqueRef;
 template<typename T, class... Args> UniqueRef<T> makeUniqueRef(Args&&...);
 template<typename, size_t = 0, typename = CrashOnOverflow, size_t = 16, typename = VectorBufferMalloc> class Vector;
-template<typename, typename = DefaultWeakPtrImpl> class WeakPtr;
+template<typename, typename WeakPtrImpl = DefaultWeakPtrImpl, typename = RawPtrTraits<WeakPtrImpl>> class WeakPtr;
+template<typename, typename = DefaultWeakPtrImpl> class WeakRef;
 
 template<typename> struct DefaultHash;
 template<> struct DefaultHash<AtomString>;
@@ -122,7 +137,14 @@ template<typename Key, typename Value, typename Extractor, typename HashFunction
 template<typename Value, typename = DefaultHash<Value>, typename = HashTraits<Value>> class HashCountedSet;
 template<typename KeyArg, typename MappedArg, typename = DefaultHash<KeyArg>, typename = HashTraits<KeyArg>, typename = HashTraits<MappedArg>, typename = HashTableTraits> class HashMap;
 template<typename ValueArg, typename = DefaultHash<ValueArg>, typename = HashTraits<ValueArg>, typename = HashTableTraits> class HashSet;
+template<typename ResolveValueT, typename RejectValueT, unsigned options = 0> class NativePromise;
+using GenericPromise = NativePromise<void, void>;
+using GenericNonExclusivePromise = NativePromise<void, void, 1>;
+class NativePromiseRequest;
+}
 
+namespace JSON {
+using namespace WTF::JSONImpl;
 }
 
 namespace std {
@@ -145,35 +167,46 @@ using WTF::EnumeratedArray;
 using WTF::FixedVector;
 using WTF::Function;
 using WTF::FunctionDispatcher;
+using WTF::GenericPromise;
 using WTF::HashCountedSet;
 using WTF::HashMap;
 using WTF::HashSet;
 using WTF::Hasher;
 using WTF::LazyNeverDestroyed;
+using WTF::LegacyNullableAtomicObjectIdentifier;
+using WTF::LegacyNullableObjectIdentifier;
 using WTF::Lock;
 using WTF::Logger;
 using WTF::MachSendRight;
+using WTF::MainThreadDispatcher;
 using WTF::makeUniqueRef;
 using WTF::MonotonicTime;
+using WTF::NativePromise;
+using WTF::NativePromiseRequest;
 using WTF::NeverDestroyed;
+using WTF::OSObjectPtr;
 using WTF::ObjectIdentifier;
 using WTF::ObjectIdentifierGeneric;
+using WTF::Observer;
 using WTF::OptionSet;
 using WTF::OrdinalNumber;
 using WTF::PrintStream;
 using WTF::RawPtrTraits;
 using WTF::RawValueTraits;
 using WTF::Ref;
+using WTF::RefCountedSerialFunctionDispatcher;
 using WTF::RefPtr;
 using WTF::RetainPtr;
 using WTF::SHA1;
 using WTF::ScopedLambda;
+using WTF::SerialFunctionDispatcher;
 using WTF::String;
 using WTF::StringBuffer;
 using WTF::StringBuilder;
 using WTF::StringImpl;
 using WTF::StringParsingBuffer;
 using WTF::StringView;
+using WTF::SupportsObjectIdentifierNullState;
 using WTF::SuspendableWorkQueue;
 using WTF::TextPosition;
 using WTF::TextStream;
@@ -181,6 +214,7 @@ using WTF::URL;
 using WTF::UniqueRef;
 using WTF::Vector;
 using WTF::WeakPtr;
+using WTF::WeakRef;
 
 template<class T, class E> using Expected = std::experimental::expected<T, E>;
 template<class E> using Unexpected = std::experimental::unexpected<E>;

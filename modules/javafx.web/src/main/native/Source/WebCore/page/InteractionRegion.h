@@ -26,7 +26,8 @@
 #pragma once
 
 #include "ElementIdentifier.h"
-#include "IntRect.h"
+#include "FloatRect.h"
+#include "Path.h"
 #include "Region.h"
 
 namespace IPC {
@@ -52,12 +53,18 @@ struct InteractionRegion {
         MinXMaxYCorner = 1 << 2,
         MaxXMaxYCorner = 1 << 3
     };
+    enum class ContentHint : bool { Default, Photo };
 
     Type type;
     ElementIdentifier elementIdentifier;
-    IntRect rectInLayerCoordinates;
-    float borderRadius { 0 };
+    FloatRect rectInLayerCoordinates;
+    float cornerRadius { 0 };
     OptionSet<CornerMask> maskedCorners { };
+    ContentHint contentHint { ContentHint::Default };
+    std::optional<Path> clipPath { std::nullopt };
+#if ENABLE(INTERACTION_REGION_TEXT_CONTENT)
+    String text { };
+#endif
 
     WEBCORE_EXPORT ~InteractionRegion();
 };
@@ -66,13 +73,18 @@ inline bool operator==(const InteractionRegion& a, const InteractionRegion& b)
 {
     return a.type == b.type
         && a.elementIdentifier == b.elementIdentifier
+        && a.contentHint == b.contentHint
         && a.rectInLayerCoordinates == b.rectInLayerCoordinates
-        && a.borderRadius == b.borderRadius
-        && a.maskedCorners == b.maskedCorners;
+        && a.cornerRadius == b.cornerRadius
+        && a.maskedCorners == b.maskedCorners
+        && a.clipPath.has_value() == b.clipPath.has_value()
+#if ENABLE(INTERACTION_REGION_TEXT_CONTENT)
+        && a.text == b.text
+#endif
+        && (!a.clipPath || &a.clipPath.value() == &b.clipPath.value());
 }
 
-WEBCORE_EXPORT std::optional<InteractionRegion> interactionRegionForRenderedRegion(RenderObject&, const Region&);
-WEBCORE_EXPORT bool elementMatchesHoverRules(Element&);
+WEBCORE_EXPORT std::optional<InteractionRegion> interactionRegionForRenderedRegion(RenderObject&, const FloatRect&, const FloatSize&, const std::optional<AffineTransform>&);
 
 WTF::TextStream& operator<<(WTF::TextStream&, const InteractionRegion&);
 
@@ -80,4 +92,5 @@ WTF::TextStream& operator<<(WTF::TextStream&, const InteractionRegion&);
 namespace WTF {
 template<typename T> struct DefaultHash;
 template<> struct DefaultHash<WebCore::InteractionRegion::Type> : IntHash<WebCore::InteractionRegion::Type> { };
+template<> struct DefaultHash<WebCore::InteractionRegion::ContentHint> : IntHash<WebCore::InteractionRegion::ContentHint> { };
 }

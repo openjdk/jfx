@@ -273,7 +273,7 @@ static void showGlyphsWithAdvances(const FloatPoint& point, const Font& font, CG
         Vector<CGSize, 256> translations(count);
         CTFontGetVerticalTranslationsForGlyphs(platformData.ctFont(), glyphs, translations.data(), count);
 
-        auto ascentDelta = font.fontMetrics().floatAscent(IdeographicBaseline) - font.fontMetrics().floatAscent();
+        auto ascentDelta = font.fontMetrics().ascent(IdeographicBaseline) - font.fontMetrics().ascent();
         fillVectorWithVerticalGlyphPositions(positions, translations.data(), advances, count, point, ascentDelta, CGContextGetTextMatrix(context));
         CTFontDrawGlyphs(platformData.ctFont(), glyphs, positions.data(), count, context);
     } else {
@@ -364,16 +364,16 @@ void FontCascade::drawGlyphs(GraphicsContext& context, const Font& font, const G
     bool hasSimpleShadow = context.textDrawingMode() == TextDrawingMode::Fill && shadow && shadow->color.isValid() && !shadow->radius && !platformData.isColorBitmapFont() && (!context.shadowsIgnoreTransforms() || contextCTM.isIdentityOrTranslationOrFlipped()) && !context.isInTransparencyLayer();
     if (hasSimpleShadow) {
         // Paint simple shadows ourselves instead of relying on CG shadows, to avoid losing subpixel antialiasing.
-        context.clearShadow();
+        context.clearDropShadow();
         Color fillColor = context.fillColor();
         Color shadowFillColor = shadow->color.colorWithAlphaMultipliedBy(fillColor.alphaAsFloat());
         context.setFillColor(shadowFillColor);
-        float shadowTextX = point.x() + shadow->offset.width();
-        // If shadows are ignoring transforms, then we haven't applied the Y coordinate flip yet, so down is negative.
-        float shadowTextY = point.y() + shadow->offset.height() * (context.shadowsIgnoreTransforms() ? -1 : 1);
-        showGlyphsWithAdvances(FloatPoint(shadowTextX, shadowTextY), font, cgContext, glyphs, advances, numGlyphs, textMatrix);
-        if (syntheticBoldOffset)
-            showGlyphsWithAdvances(FloatPoint(shadowTextX + syntheticBoldOffset, shadowTextY), font, cgContext, glyphs, advances, numGlyphs, textMatrix);
+        auto shadowTextOffset = point + context.platformShadowOffset(shadow->offset);
+        showGlyphsWithAdvances(shadowTextOffset, font, cgContext, glyphs, advances, numGlyphs, textMatrix);
+        if (syntheticBoldOffset) {
+            shadowTextOffset.move(syntheticBoldOffset, 0);
+            showGlyphsWithAdvances(shadowTextOffset, font, cgContext, glyphs, advances, numGlyphs, textMatrix);
+        }
         context.setFillColor(fillColor);
     }
 
@@ -397,29 +397,32 @@ void FontCascade::drawGlyphs(GraphicsContext& context, const Font& font, const G
 bool FontCascade::primaryFontIsSystemFont() const
 {
     const auto& fontData = primaryFont();
-    return isSystemFont(fontData.platformData().ctFont());
+    return isSystemFont(fontData.getCTFont());
 }
 
-// FIXME: Use this on all ports.
-const Font* FontCascade::fontForCombiningCharacterSequence(const UChar* characters, size_t length) const
+const Font* FontCascade::fontForCombiningCharacterSequence(StringView stringView) const
 {
-    UChar32 baseCharacter;
-    size_t baseCharacterLength = 0;
-    U16_NEXT(characters, baseCharacterLength, length, baseCharacter);
+    auto codePoints = stringView.codePoints();
+    auto codePointsIterator = codePoints.begin();
+
+    ASSERT(!stringView.isEmpty());
+    char32_t baseCharacter = *codePointsIterator;
+    ++codePointsIterator;
+    bool isOnlySingleCodePoint = codePointsIterator == codePoints.end();
 
     GlyphData baseCharacterGlyphData = glyphDataForCharacter(baseCharacter, false, NormalVariant);
 
     if (!baseCharacterGlyphData.glyph)
         return nullptr;
 
-    if (length == baseCharacterLength)
-        return baseCharacterGlyphData.font;
+    if (isOnlySingleCodePoint)
+        return baseCharacterGlyphData.font.get();
 
     bool triedBaseCharacterFont = false;
 
     for (unsigned i = 0; !fallbackRangesAt(i).isNull(); ++i) {
         auto& fontRanges = fallbackRangesAt(i);
-        if (fontRanges.isGeneric() && isPrivateUseAreaCharacter(baseCharacter))
+        if (fontRanges.isGenericFontFamily() && isPrivateUseAreaCharacter(baseCharacter))
             continue;
         const Font* font = fontRanges.fontForCharacter(baseCharacter);
         if (!font)
@@ -448,17 +451,17 @@ const Font* FontCascade::fontForCombiningCharacterSequence(const UChar* characte
         if (font == baseCharacterGlyphData.font)
             triedBaseCharacterFont = true;
 
-        if (font->canRenderCombiningCharacterSequence(characters, length))
+        if (font->canRenderCombiningCharacterSequence(stringView))
             return font;
     }
 
-    if (!triedBaseCharacterFont && baseCharacterGlyphData.font && baseCharacterGlyphData.font->canRenderCombiningCharacterSequence(characters, length))
-        return baseCharacterGlyphData.font;
+    if (!triedBaseCharacterFont && baseCharacterGlyphData.font && baseCharacterGlyphData.font->canRenderCombiningCharacterSequence(stringView))
+        return baseCharacterGlyphData.font.get();
 
     return Font::systemFallback();
 }
 
-ResolvedEmojiPolicy FontCascade::resolveEmojiPolicy(FontVariantEmoji fontVariantEmoji, UChar32 character)
+ResolvedEmojiPolicy FontCascade::resolveEmojiPolicy(FontVariantEmoji fontVariantEmoji, char32_t character)
 {
     // You may think that this function should be different between macOS and iOS. And you may even be right!
     //
@@ -501,7 +504,7 @@ ResolvedEmojiPolicy FontCascade::resolveEmojiPolicy(FontVariantEmoji fontVariant
         // The first category are characters with Emoji=Yes and Emoji_Presentation=Yes.
         // The second category are characters with Emoji=Yes and Emoji_Presentation=No.
         // The third category are characters with Emoji=No.
-        if (u_hasBinaryProperty(character, UCHAR_EMOJI_PRESENTATION))
+        if (isEmojiWithPresentationByDefault(character))
             return ResolvedEmojiPolicy::RequireEmoji;
         return ResolvedEmojiPolicy::NoPreference;
     case FontVariantEmoji::Text:

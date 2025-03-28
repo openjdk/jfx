@@ -1,7 +1,8 @@
 // Copyright 2015 The Chromium Authors. All rights reserved.
-// Copyright (C) 2016-2023 Apple Inc. All rights reserved.
+// Copyright (C) 2016-2024 Apple Inc. All rights reserved.
 // Copyright (C) 2021 Metrological Group B.V.
 // Copyright (C) 2021 Igalia S.L.
+// Copyright (C) 2024 Samuel Weinig <sam@webkit.org>
 //
 // Redistribution and use in source and binary forms, with or without
 // modification, are permitted provided that the following conditions are
@@ -40,10 +41,19 @@
 #include "CSSParserImpl.h"
 #include "CSSParserTokenRange.h"
 #include "CSSPropertyParser.h"
+#include "CSSPropertyParserConsumer+Angle.h"
+#include "CSSPropertyParserConsumer+Ident.h"
+#include "CSSPropertyParserConsumer+Integer.h"
+#include "CSSPropertyParserConsumer+List.h"
+#include "CSSPropertyParserConsumer+Number.h"
+#include "CSSPropertyParserConsumer+Percent.h"
+#include "CSSPropertyParserConsumer+URL.h"
 #include "CSSPropertyParserHelpers.h"
+#include "CSSToLengthConversionData.h"
 #include "CSSTokenizer.h"
 #include "CSSUnicodeRangeValue.h"
 #include "Document.h"
+#include "FilterOperationsBuilder.h"
 #include "FontCustomPlatformData.h"
 #include "ParsingUtilities.h"
 #include "ScriptExecutionContext.h"
@@ -72,21 +82,25 @@ std::optional<CSSPropertyParserHelpers::FontRaw> CSSPropertyParserWorkerSafe::pa
     return CSSPropertyParserHelpers::consumeFontRaw(range, mode);
 }
 
-Color CSSPropertyParserWorkerSafe::parseColor(const String& string)
+std::optional<FilterOperations> CSSPropertyParserWorkerSafe::parseFilterString(const Document& document, RenderStyle& style, const String& string, CSSParserMode mode)
 {
-    if (auto color = CSSParserFastPaths::parseSimpleColor(string))
-        return *color;
-
     CSSTokenizer tokenizer(string);
     CSSParserTokenRange range(tokenizer.tokenRange());
     range.consumeWhitespace();
 
-    return CSSPropertyParserHelpers::consumeColorWorkerSafe(range, CSSParserContext(HTMLStandardMode));
+    auto parsedValue = CSSPropertyParserHelpers::consumeFilter(range, CSSParserContext(mode), CSSPropertyParserHelpers::AllowedFilterFunctions::PixelFilters);
+    if (!parsedValue)
+        return std::nullopt;
+
+    CSSToLengthConversionData conversionData { style, nullptr, nullptr, nullptr };
+
+    return Style::createFilterOperations(document, style, conversionData, *parsedValue);
 }
 
 static CSSParserMode parserMode(ScriptExecutionContext& context)
 {
-    return (is<Document>(context) && downcast<Document>(context).inQuirksMode()) ? HTMLQuirksMode : HTMLStandardMode;
+    auto* document = dynamicDowncast<Document>(context);
+    return (document && document->inQuirksMode()) ? HTMLQuirksMode : HTMLStandardMode;
 }
 
 RefPtr<CSSValueList> CSSPropertyParserWorkerSafe::parseFontFaceSrc(const String& string, const CSSParserContext& context)
@@ -96,7 +110,7 @@ RefPtr<CSSValueList> CSSPropertyParserWorkerSafe::parseFontFaceSrc(const String&
     range.consumeWhitespace();
     if (range.atEnd())
         return nullptr;
-    auto parsedValue = CSSPropertyParserHelpersWorkerSafe::consumeFontFaceSrc(range, parser.context());
+    RefPtr parsedValue = CSSPropertyParserHelpersWorkerSafe::consumeFontFaceSrc(range, parser.context());
     if (!parsedValue || !range.atEnd())
         return nullptr;
 
@@ -111,7 +125,7 @@ RefPtr<CSSValue> CSSPropertyParserWorkerSafe::parseFontFaceStyle(const String& s
     range.consumeWhitespace();
     if (range.atEnd())
         return nullptr;
-    auto parsedValue =
+    RefPtr parsedValue =
 #if ENABLE(VARIATION_FONTS)
         CSSPropertyParserHelpersWorkerSafe::consumeFontStyleRange(range, parserContext.mode);
 #else
@@ -131,7 +145,7 @@ RefPtr<CSSValue> CSSPropertyParserWorkerSafe::parseFontFaceWeight(const String& 
     range.consumeWhitespace();
     if (range.atEnd())
         return nullptr;
-    auto parsedValue =
+    RefPtr parsedValue =
 #if ENABLE(VARIATION_FONTS)
         CSSPropertyParserHelpersWorkerSafe::consumeFontWeightAbsoluteRange(range);
 #else
@@ -151,7 +165,7 @@ RefPtr<CSSValue> CSSPropertyParserWorkerSafe::parseFontFaceStretch(const String&
     range.consumeWhitespace();
     if (range.atEnd())
         return nullptr;
-    auto parsedValue =
+    RefPtr parsedValue =
 #if ENABLE(VARIATION_FONTS)
         CSSPropertyParserHelpersWorkerSafe::consumeFontStretchRange(range);
 #else
@@ -171,7 +185,7 @@ RefPtr<CSSValueList> CSSPropertyParserWorkerSafe::parseFontFaceUnicodeRange(cons
     range.consumeWhitespace();
     if (range.atEnd())
         return nullptr;
-    auto parsedValue = CSSPropertyParserHelpersWorkerSafe::consumeFontFaceUnicodeRange(range);
+    RefPtr parsedValue = CSSPropertyParserHelpersWorkerSafe::consumeFontFaceUnicodeRange(range);
     if (!parsedValue || !range.atEnd())
         return nullptr;
 
@@ -186,7 +200,7 @@ RefPtr<CSSValue> CSSPropertyParserWorkerSafe::parseFontFaceFeatureSettings(const
     range.consumeWhitespace();
     if (range.atEnd())
         return nullptr;
-    auto parsedValue = CSSPropertyParserHelpersWorkerSafe::consumeFontFeatureSettings(range);
+    RefPtr parsedValue = CSSPropertyParserHelpersWorkerSafe::consumeFontFeatureSettings(range);
     if (!parsedValue || !range.atEnd())
         return nullptr;
 
@@ -201,7 +215,7 @@ RefPtr<CSSPrimitiveValue> CSSPropertyParserWorkerSafe::parseFontFaceDisplay(cons
     range.consumeWhitespace();
     if (range.atEnd())
         return nullptr;
-    auto parsedValue = CSSPropertyParserHelpersWorkerSafe::consumeFontFaceFontDisplay(range);
+    RefPtr parsedValue = CSSPropertyParserHelpersWorkerSafe::consumeFontFaceFontDisplay(range);
     if (!parsedValue || !range.atEnd())
         return nullptr;
 
@@ -216,7 +230,7 @@ RefPtr<CSSValue> CSSPropertyParserWorkerSafe::parseFontFaceSizeAdjust(const Stri
     range.consumeWhitespace();
     if (range.atEnd())
         return nullptr;
-    auto parsedValue = CSSPropertyParserHelpers::consumePercent(range, ValueRange::NonNegative);
+    RefPtr parsedValue = CSSPropertyParserHelpers::consumePercent(range, ValueRange::NonNegative);
     if (!parsedValue || !range.atEnd())
         return nullptr;
 
@@ -228,7 +242,7 @@ namespace CSSPropertyParserHelpersWorkerSafe {
 static RefPtr<CSSFontFaceSrcResourceValue> consumeFontFaceSrcURI(CSSParserTokenRange& range, const CSSParserContext& context)
 {
     StringView parsedURL = CSSPropertyParserHelpers::consumeURLRaw(range);
-    String urlString = !parsedURL.is8Bit() && parsedURL.containsOnlyASCII() ? String::make8Bit(parsedURL.characters16(), parsedURL.length()) : parsedURL.toString();
+    String urlString = !parsedURL.is8Bit() && parsedURL.containsOnlyASCII() ? String::make8Bit(parsedURL.span16()) : parsedURL.toString();
     auto location = context.completeURL(urlString);
     if (location.resolvedURL.isNull())
         return nullptr;
@@ -285,7 +299,7 @@ RefPtr<CSSValueList> consumeFontFaceSrc(CSSParserTokenRange& range, const CSSPar
         while (!range.atEnd() && range.peek().type() != CSSParserTokenType::CommaToken)
             range.consumeComponentValue();
         auto subrange = range.makeSubRange(begin, &range.peek());
-        if (auto parsedValue = consumeSrcListComponent(subrange))
+        if (RefPtr parsedValue = consumeSrcListComponent(subrange))
             values.append(parsedValue.releaseNonNull());
         if (!range.atEnd())
             range.consumeIncludingWhitespace();
@@ -300,7 +314,7 @@ RefPtr<CSSValueList> consumeFontFaceSrc(CSSParserTokenRange& range, const CSSPar
 static RefPtr<CSSPrimitiveValue> consumeFontStyleAngle(CSSParserTokenRange& range, CSSParserMode mode)
 {
     auto rangeAfterAngle = range;
-    auto angle = CSSPropertyParserHelpers::consumeAngle(rangeAfterAngle, mode);
+    RefPtr angle = CSSPropertyParserHelpers::consumeAngle(rangeAfterAngle, mode);
     if (!angle)
         return nullptr;
     if (!angle->isCalculated() && !CSSPropertyParserHelpers::isFontStyleAngleInRange(angle->doubleValue(CSSUnitType::CSS_DEG)))
@@ -311,7 +325,7 @@ static RefPtr<CSSPrimitiveValue> consumeFontStyleAngle(CSSParserTokenRange& rang
 
 RefPtr<CSSValue> consumeFontStyleRange(CSSParserTokenRange& range, CSSParserMode mode)
 {
-    auto keyword = CSSPropertyParserHelpers::consumeIdent<CSSValueNormal, CSSValueItalic, CSSValueOblique>(range);
+    RefPtr keyword = CSSPropertyParserHelpers::consumeIdent<CSSValueNormal, CSSValueItalic, CSSValueOblique>(range);
     if (!keyword)
         return nullptr;
 
@@ -327,7 +341,7 @@ RefPtr<CSSValue> consumeFontStyleRange(CSSParserTokenRange& range, CSSParserMode
     if (rangeAfterAngles.atEnd())
         angleList = CSSValueList::createSpaceSeparated(firstAngle.releaseNonNull());
     else {
-        auto secondAngle = consumeFontStyleAngle(rangeAfterAngles, mode);
+        RefPtr secondAngle = consumeFontStyleAngle(rangeAfterAngles, mode);
         if (!secondAngle)
             return nullptr;
         angleList = CSSValueList::createSpaceSeparated(firstAngle.releaseNonNull(), secondAngle.releaseNonNull());
@@ -341,7 +355,7 @@ RefPtr<CSSValue> consumeFontStyleRange(CSSParserTokenRange& range, CSSParserMode
 
 RefPtr<CSSValue> consumeFontStyle(CSSParserTokenRange& range, CSSParserMode mode)
 {
-    auto keyword = CSSPropertyParserHelpers::consumeIdent<CSSValueNormal, CSSValueItalic, CSSValueOblique>(range);
+    RefPtr keyword = CSSPropertyParserHelpers::consumeIdent<CSSValueNormal, CSSValueItalic, CSSValueOblique>(range);
     if (!keyword)
         return nullptr;
 
@@ -366,14 +380,14 @@ static RefPtr<CSSPrimitiveValue> consumeFontWeightAbsoluteKeywordValue(CSSParser
 
 RefPtr<CSSValue> consumeFontWeightAbsoluteRange(CSSParserTokenRange& range)
 {
-    if (auto result = consumeFontWeightAbsoluteKeywordValue(range))
+    if (RefPtr result = consumeFontWeightAbsoluteKeywordValue(range))
         return result;
-    auto firstNumber = CSSPropertyParserHelpers::consumeFontWeightNumber(range);
+    RefPtr firstNumber = CSSPropertyParserHelpers::consumeFontWeightNumber(range);
     if (!firstNumber)
         return nullptr;
     if (range.atEnd())
         return firstNumber;
-    auto secondNumber = CSSPropertyParserHelpers::consumeFontWeightNumber(range);
+    RefPtr secondNumber = CSSPropertyParserHelpers::consumeFontWeightNumber(range);
     if (!secondNumber)
         return nullptr;
     return CSSValueList::createSpaceSeparated(firstNumber.releaseNonNull(), secondNumber.releaseNonNull());
@@ -383,7 +397,7 @@ RefPtr<CSSValue> consumeFontWeightAbsoluteRange(CSSParserTokenRange& range)
 
 RefPtr<CSSPrimitiveValue> consumeFontWeightAbsolute(CSSParserTokenRange& range)
 {
-    if (auto result = consumeFontWeightAbsoluteKeywordValue(range))
+    if (RefPtr result = consumeFontWeightAbsoluteKeywordValue(range))
         return result;
     return CSSPropertyParserHelpers::consumeFontWeightNumber(range);
 }
@@ -399,10 +413,10 @@ RefPtr<CSSPrimitiveValue> consumeFontStretchKeywordValue(CSSParserTokenRange& ra
 
 RefPtr<CSSPrimitiveValue> consumeFontStretch(CSSParserTokenRange& range)
 {
-    if (auto result = consumeFontStretchKeywordValue(range))
+    if (RefPtr result = consumeFontStretchKeywordValue(range))
         return result;
 #if ENABLE(VARIATION_FONTS)
-    if (auto percent = CSSPropertyParserHelpers::consumePercent(range, ValueRange::NonNegative))
+    if (RefPtr percent = CSSPropertyParserHelpers::consumePercent(range, ValueRange::NonNegative))
         return percent;
 #endif
     return nullptr;
@@ -412,14 +426,14 @@ RefPtr<CSSPrimitiveValue> consumeFontStretch(CSSParserTokenRange& range)
 
 RefPtr<CSSValue> consumeFontStretchRange(CSSParserTokenRange& range)
 {
-    if (auto result = consumeFontStretchKeywordValue(range))
+    if (RefPtr result = consumeFontStretchKeywordValue(range))
         return result;
-    auto firstPercent = CSSPropertyParserHelpers::consumePercent(range, ValueRange::NonNegative);
+    RefPtr firstPercent = CSSPropertyParserHelpers::consumePercent(range, ValueRange::NonNegative);
     if (!firstPercent)
         return nullptr;
     if (range.atEnd())
         return firstPercent;
-    auto secondPercent = CSSPropertyParserHelpers::consumePercent(range, ValueRange::NonNegative);
+    RefPtr secondPercent = CSSPropertyParserHelpers::consumePercent(range, ValueRange::NonNegative);
     if (!secondPercent)
         return nullptr;
     return CSSValueList::createSpaceSeparated(firstPercent.releaseNonNull(), secondPercent.releaseNonNull());
@@ -489,8 +503,8 @@ static String consumeUnicodeRangeString(CSSParserTokenRange& range)
 }
 
 struct UnicodeRange {
-    UChar32 start;
-    UChar32 end;
+    char32_t start;
+    char32_t end;
 };
 
 static std::optional<UnicodeRange> consumeUnicodeRange(CSSParserTokenRange& range)
@@ -498,7 +512,7 @@ static std::optional<UnicodeRange> consumeUnicodeRange(CSSParserTokenRange& rang
     return readCharactersForParsing(consumeUnicodeRangeString(range), [&](auto buffer) -> std::optional<UnicodeRange> {
         if (!skipExactly(buffer, '+'))
             return std::nullopt;
-        UChar32 start = 0;
+        char32_t start = 0;
         unsigned hexDigitCount = 0;
         while (buffer.hasCharactersRemaining() && isASCIIHexDigit(*buffer)) {
             if (++hexDigitCount > 6)

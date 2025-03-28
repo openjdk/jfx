@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2013-2019 Apple Inc. All rights reserved.
+ * Copyright (C) 2013-2023 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -38,22 +38,9 @@
 
 namespace WebCore {
 
-String RealtimeMediaSourceSettings::facingMode(VideoFacingMode mode)
+RealtimeMediaSourceSettings RealtimeMediaSourceSettings::isolatedCopy() const
 {
-    static const NeverDestroyed<String> values[] = {
-        MAKE_STATIC_STRING_IMPL("unknown"),
-        MAKE_STATIC_STRING_IMPL("user"),
-        MAKE_STATIC_STRING_IMPL("environment"),
-        MAKE_STATIC_STRING_IMPL("left"),
-        MAKE_STATIC_STRING_IMPL("right"),
-    };
-    static_assert(static_cast<size_t>(VideoFacingMode::Unknown) == 0, "VideoFacingMode::Unknown is not 0 as expected");
-    static_assert(static_cast<size_t>(VideoFacingMode::User) == 1, "VideoFacingMode::User is not 1 as expected");
-    static_assert(static_cast<size_t>(VideoFacingMode::Environment) == 2, "VideoFacingMode::Environment is not 2 as expected");
-    static_assert(static_cast<size_t>(VideoFacingMode::Left) == 3, "VideoFacingMode::Left is not 3 as expected");
-    static_assert(static_cast<size_t>(VideoFacingMode::Right) == 4, "VideoFacingMode::Right is not 4 as expected");
-    ASSERT(static_cast<size_t>(mode) < std::size(values));
-    return values[static_cast<size_t>(mode)];
+    return { m_width, m_height , m_frameRate, m_facingMode, m_volume , m_sampleRate, m_sampleSize, m_echoCancellation, m_deviceId.isolatedCopy(), m_groupId.isolatedCopy(), m_label.isolatedCopy(), m_displaySurface, m_logicalSurface, m_whiteBalanceMode, m_zoom, m_torch, m_backgroundBlur, m_powerEfficient, RealtimeMediaSourceSupportedConstraints { m_supportedConstraints } };
 }
 
 VideoFacingMode RealtimeMediaSourceSettings::videoFacingModeEnum(const String& mode)
@@ -74,57 +61,69 @@ String RealtimeMediaSourceSettings::convertFlagsToString(const OptionSet<Realtim
 {
     StringBuilder builder;
 
-    builder.append("[ ");
+    builder.append("[ "_s);
     for (auto flag : flags) {
         if (!builder.isEmpty())
-            builder.append(", ");
+            builder.append(", "_s);
 
         switch (flag) {
         case RealtimeMediaSourceSettings::Width:
-            builder.append("Width");
+            builder.append("Width"_s);
             break;
         case RealtimeMediaSourceSettings::Height:
-            builder.append("Height");
+            builder.append("Height"_s);
             break;
         case RealtimeMediaSourceSettings::FrameRate:
-            builder.append("FrameRate");
+            builder.append("FrameRate"_s);
             break;
         case RealtimeMediaSourceSettings::FacingMode:
-            builder.append("FacingMode");
+            builder.append("FacingMode"_s);
             break;
         case RealtimeMediaSourceSettings::Volume:
-            builder.append("Volume");
+            builder.append("Volume"_s);
             break;
         case RealtimeMediaSourceSettings::SampleRate:
-            builder.append("SampleRate");
+            builder.append("SampleRate"_s);
             break;
         case RealtimeMediaSourceSettings::SampleSize:
-            builder.append("SampleSize");
+            builder.append("SampleSize"_s);
             break;
         case RealtimeMediaSourceSettings::EchoCancellation:
-            builder.append("EchoCancellation");
+            builder.append("EchoCancellation"_s);
             break;
         case RealtimeMediaSourceSettings::DeviceId:
-            builder.append("DeviceId");
+            builder.append("DeviceId"_s);
             break;
         case RealtimeMediaSourceSettings::GroupId:
-            builder.append("GroupId");
+            builder.append("GroupId"_s);
             break;
         case RealtimeMediaSourceSettings::Label:
-            builder.append("Label");
+            builder.append("Label"_s);
             break;
         case RealtimeMediaSourceSettings::DisplaySurface:
-            builder.append("DisplaySurface");
+            builder.append("DisplaySurface"_s);
             break;
         case RealtimeMediaSourceSettings::LogicalSurface:
-            builder.append("LogicalSurface");
+            builder.append("LogicalSurface"_s);
+            break;
+        case RealtimeMediaSourceSettings::WhiteBalanceMode:
+            builder.append("WhiteBalanceMode"_s);
             break;
         case RealtimeMediaSourceSettings::Zoom:
-            builder.append("Zoom");
+            builder.append("Zoom"_s);
+            break;
+        case RealtimeMediaSourceSettings::Torch:
+            builder.append("Torch"_s);
+            break;
+        case RealtimeMediaSourceSettings::BackgroundBlur:
+            builder.append("BackgroundBlur"_s);
+            break;
+        case RealtimeMediaSourceSettings::PowerEfficient:
+            builder.append("PowerEfficient"_s);
             break;
         }
     }
-    builder.append(" ]");
+    builder.append(" ]"_s);
 
     return builder.toString();
 }
@@ -159,8 +158,16 @@ OptionSet<RealtimeMediaSourceSettings::Flag> RealtimeMediaSourceSettings::differ
         difference.add(RealtimeMediaSourceSettings::DisplaySurface);
     if (logicalSurface() != that.logicalSurface())
         difference.add(RealtimeMediaSourceSettings::LogicalSurface);
+    if (whiteBalanceMode() != that.whiteBalanceMode())
+        difference.add(RealtimeMediaSourceSettings::WhiteBalanceMode);
     if (zoom() != that.zoom())
         difference.add(RealtimeMediaSourceSettings::Zoom);
+    if (torch() != that.torch())
+        difference.add(RealtimeMediaSourceSettings::Torch);
+    if (backgroundBlur() != that.backgroundBlur())
+        difference.add(RealtimeMediaSourceSettings::BackgroundBlur);
+    if (powerEfficient() != that.powerEfficient())
+        difference.add(RealtimeMediaSourceSettings::PowerEfficient);
 
     return difference;
 }
@@ -168,11 +175,11 @@ OptionSet<RealtimeMediaSourceSettings::Flag> RealtimeMediaSourceSettings::differ
 String convertEnumerationToString(VideoFacingMode enumerationValue)
 {
     static const NeverDestroyed<String> values[] = {
-        MAKE_STATIC_STRING_IMPL("Unknown"),
-        MAKE_STATIC_STRING_IMPL("User"),
-        MAKE_STATIC_STRING_IMPL("Environment"),
-        MAKE_STATIC_STRING_IMPL("Left"),
-        MAKE_STATIC_STRING_IMPL("Right"),
+        MAKE_STATIC_STRING_IMPL("unknown"),
+        MAKE_STATIC_STRING_IMPL("user"),
+        MAKE_STATIC_STRING_IMPL("environment"),
+        MAKE_STATIC_STRING_IMPL("left"),
+        MAKE_STATIC_STRING_IMPL("right"),
     };
     static_assert(static_cast<size_t>(VideoFacingMode::Unknown) == 0, "VideoFacingMode::Unknown is not 0 as expected");
     static_assert(static_cast<size_t>(VideoFacingMode::User) == 1, "VideoFacingMode::User is not 1 as expected");

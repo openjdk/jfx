@@ -99,10 +99,14 @@ bool PaymentCoordinator::beginPaymentSession(Document& document, PaymentSession&
 {
     ASSERT(!m_activeSession);
 
+    RefPtr page = document.page();
+    if (!page)
+        return false;
+
     auto linkIconURLs = LinkIconCollector { document }.iconsOfTypes({ LinkIconType::TouchIcon, LinkIconType::TouchPrecomposedIcon }).map([](auto& icon) {
         return icon.url;
     });
-    auto showPaymentUI = m_client->showPaymentUI(document.url(), WTFMove(linkIconURLs), paymentRequest);
+    auto showPaymentUI = m_client->showPaymentUI(page->mainFrameURL(), WTFMove(linkIconURLs), paymentRequest);
     PAYMENT_COORDINATOR_RELEASE_LOG("beginPaymentSession() -> %d", showPaymentUI);
     if (!showPaymentUI)
         return false;
@@ -288,7 +292,7 @@ void PaymentCoordinator::getSetupFeatures(const ApplePaySetupConfiguration& conf
     });
 }
 
-void PaymentCoordinator::beginApplePaySetup(const ApplePaySetupConfiguration& configuration, const URL& url, Vector<RefPtr<ApplePaySetupFeature>>&& features, CompletionHandler<void(bool)>&& completionHandler)
+void PaymentCoordinator::beginApplePaySetup(const ApplePaySetupConfiguration& configuration, const URL& url, Vector<Ref<ApplePaySetupFeature>>&& features, CompletionHandler<void(bool)>&& completionHandler)
 {
     PAYMENT_COORDINATOR_RELEASE_LOG("beginApplePaySetup()");
     m_client->beginApplePaySetup(configuration, url, WTFMove(features), [this, weakThis = WeakPtr { *this }, completionHandler = WTFMove(completionHandler)](bool success) mutable {

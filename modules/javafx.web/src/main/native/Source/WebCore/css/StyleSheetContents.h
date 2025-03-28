@@ -21,6 +21,8 @@
 #pragma once
 
 #include "CSSParserContext.h"
+#include <optional>
+#include <wtf/CheckedRef.h>
 #include <wtf/Function.h>
 #include <wtf/HashMap.h>
 #include <wtf/RefCounted.h>
@@ -71,6 +73,7 @@ public:
     WEBCORE_EXPORT bool parseString(const String&);
 
     bool isCacheable() const;
+    bool isCacheableWithNoBaseURLDependency() const;
 
     bool isLoading() const;
     bool subresourcesAllowReuse(CachePolicy, FrameLoader&) const;
@@ -86,6 +89,8 @@ public:
     const String& charset() const { return m_parserContext.charset; }
 
     bool loadCompleted() const { return m_loadCompleted; }
+
+    bool mayDependOnBaseURL() const;
 
     bool traverseRules(const Function<bool(const StyleRuleBase&)>& handler) const;
     bool traverseSubresources(const Function<bool(const CachedResource&)>& handler) const;
@@ -120,6 +125,7 @@ public:
     String originalURL() const { return m_originalURL; }
     const URL& baseURL() const { return m_parserContext.baseURL; }
 
+    bool isEmpty() const { return !ruleCount(); }
     unsigned ruleCount() const;
     StyleRuleBase* ruleAt(unsigned index) const;
 
@@ -135,12 +141,13 @@ public:
     void registerClient(CSSStyleSheet*);
     void unregisterClient(CSSStyleSheet*);
     bool hasOneClient() { return m_clients.size() == 1; }
+    Vector<CSSStyleSheet*> clients() const { return m_clients; }
 
     bool isMutable() const { return m_isMutable; }
     void setMutable() { m_isMutable = true; }
 
-    bool hasNestingRules() const { return m_hasNestingRules; }
-    void setHasNestingRules() { m_hasNestingRules = true; }
+    bool hasNestingRules() const;
+    void clearHasNestingRulesCache() { m_hasNestingRulesCache = { }; }
 
     bool isInMemoryCache() const { return m_inMemoryCacheCount; }
     void addedToMemoryCache();
@@ -161,7 +168,7 @@ private:
 
     void clearCharsetRule();
 
-    StyleRuleImport* m_ownerRule;
+    StyleRuleImport* m_ownerRule { nullptr };
 
     String m_originalURL;
 
@@ -180,7 +187,7 @@ private:
     bool m_didLoadErrorOccur { false };
     bool m_usesStyleBasedEditability { false };
     bool m_isMutable { false };
-    bool m_hasNestingRules { false };
+    mutable std::optional<bool> m_hasNestingRulesCache;
     unsigned m_inMemoryCacheCount { 0 };
 
     CSSParserContext m_parserContext;

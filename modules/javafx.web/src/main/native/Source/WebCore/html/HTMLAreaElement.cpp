@@ -33,21 +33,21 @@
 #include "Path.h"
 #include "RenderImage.h"
 #include "RenderView.h"
-#include <wtf/IsoMallocInlines.h>
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
-WTF_MAKE_ISO_ALLOCATED_IMPL(HTMLAreaElement);
+WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(HTMLAreaElement);
 
 using namespace HTMLNames;
 
 inline HTMLAreaElement::HTMLAreaElement(const QualifiedName& tagName, Document& document)
     : HTMLAnchorElement(tagName, document)
-    , m_lastSize(-1, -1)
-    , m_shape(Unknown)
 {
     ASSERT(hasTagName(areaTag));
 }
+
+HTMLAreaElement::~HTMLAreaElement() = default;
 
 Ref<HTMLAreaElement> HTMLAreaElement::create(const QualifiedName& tagName, Document& document)
 {
@@ -59,14 +59,13 @@ void HTMLAreaElement::attributeChanged(const QualifiedName& name, const AtomStri
     switch (name.nodeName()) {
     case AttributeNames::shapeAttr:
         if (equalLettersIgnoringASCIICase(newValue, "default"_s))
-            m_shape = Default;
+            m_shape = Shape::Default;
         else if (equalLettersIgnoringASCIICase(newValue, "circle"_s) || equalLettersIgnoringASCIICase(newValue, "circ"_s))
-            m_shape = Circle;
+            m_shape = Shape::Circle;
         else if (equalLettersIgnoringASCIICase(newValue, "poly"_s) || equalLettersIgnoringASCIICase(newValue, "polygon"_s))
-            m_shape = Poly;
+            m_shape = Shape::Poly;
         else {
-            // The missing value default is the rectangle state.
-            m_shape = Rect;
+            m_shape = Shape::Rect;
         }
         invalidateCachedRegion();
         break;
@@ -95,7 +94,7 @@ bool HTMLAreaElement::mapMouseEvent(LayoutPoint location, const LayoutSize& size
         m_lastSize = size;
     }
 
-    if (!m_region->contains(location))
+    if (!m_region->contains(location, WindRule::EvenOdd))
         return false;
 
     result.setInnerNode(this);
@@ -114,11 +113,11 @@ Path HTMLAreaElement::computePath(RenderObject* obj) const
 
     // Default should default to the size of the containing object.
     LayoutSize size = m_lastSize;
-    if (m_shape == Default)
+    if (isDefault())
         size = obj->absoluteOutlineBounds().size();
 
     Path p = getRegion(size);
-    float zoomFactor = obj->style().effectiveZoom();
+    float zoomFactor = obj->style().usedZoom();
     if (zoomFactor != 1.0f) {
         AffineTransform zoomTransform;
         zoomTransform.scale(zoomFactor);
@@ -131,7 +130,7 @@ Path HTMLAreaElement::computePath(RenderObject* obj) const
 
 Path HTMLAreaElement::computePathForFocusRing(const LayoutSize& elementSize) const
 {
-    return getRegion(m_shape == Default ? elementSize : m_lastSize);
+    return getRegion(isDefault() ? elementSize : m_lastSize);
 }
 
 // FIXME: Use RenderElement* instead of RenderObject* once we upstream iOS's DOMUIKitExtensions.{h, mm}.
@@ -142,26 +141,12 @@ LayoutRect HTMLAreaElement::computeRect(RenderObject* obj) const
 
 Path HTMLAreaElement::getRegion(const LayoutSize& size) const
 {
-    if (m_coords.isEmpty() && m_shape != Default)
+    if (m_coords.isEmpty() && !isDefault())
         return Path();
 
-    LayoutUnit width = size.width();
-    LayoutUnit height = size.height();
-
-    // If element omits the shape attribute, select shape based on number of coordinates.
-    Shape shape = m_shape;
-    if (shape == Unknown) {
-        if (m_coords.size() == 3)
-            shape = Circle;
-        else if (m_coords.size() == 4)
-            shape = Rect;
-        else if (m_coords.size() >= 6)
-            shape = Poly;
-    }
-
     Path path;
-    switch (shape) {
-        case Poly:
+    switch (m_shape) {
+    case Shape::Poly:
             if (m_coords.size() >= 6) {
                 int numPoints = m_coords.size() / 2;
                 path.moveTo(FloatPoint(m_coords[0], m_coords[1]));
@@ -170,39 +155,34 @@ Path HTMLAreaElement::getRegion(const LayoutSize& size) const
                 path.closeSubpath();
             }
             break;
-        case Circle:
+    case Shape::Circle:
             if (m_coords.size() >= 3) {
-                double radius = m_coords[2];
+            auto radius = m_coords[2];
                 if (radius > 0)
                     path.addEllipseInRect(FloatRect(m_coords[0] - radius, m_coords[1] - radius, 2 * radius, 2 * radius));
             }
             break;
-        case Rect:
+    case Shape::Rect:
             if (m_coords.size() >= 4) {
-                double x0 = m_coords[0];
-                double y0 = m_coords[1];
-                double x1 = m_coords[2];
-                double y1 = m_coords[3];
+            auto x0 = m_coords[0];
+            auto y0 = m_coords[1];
+            auto x1 = m_coords[2];
+            auto y1 = m_coords[3];
                 path.addRect(FloatRect(x0, y0, x1 - x0, y1 - y0));
             }
             break;
-        case Default:
-            path.addRect(FloatRect(0, 0, width, height));
-            break;
-        case Unknown:
+    case Shape::Default:
+        path.addRect({ { 0, 0 }, size });
             break;
     }
-
     return path;
 }
 
-HTMLImageElement* HTMLAreaElement::imageElement() const
+RefPtr<HTMLImageElement> HTMLAreaElement::imageElement() const
 {
-    RefPtr<Node> mapElement = parentNode();
-    if (!is<HTMLMapElement>(mapElement))
+    if (RefPtr mapElement = dynamicDowncast<HTMLMapElement>(parentNode()))
+        return mapElement->imageElement();
         return nullptr;
-
-    return downcast<HTMLMapElement>(*mapElement).imageElement();
 }
 
 bool HTMLAreaElement::isKeyboardFocusable(KeyboardEvent*) const
@@ -217,7 +197,7 @@ bool HTMLAreaElement::isMouseFocusable() const
 
 bool HTMLAreaElement::isFocusable() const
 {
-    RefPtr<HTMLImageElement> image = imageElement();
+    RefPtr image = imageElement();
     if (!image || !image->hasFocusableStyle())
         return false;
 
@@ -231,15 +211,12 @@ void HTMLAreaElement::setFocus(bool shouldBeFocused, FocusVisibility visibility)
 
     HTMLAnchorElement::setFocus(shouldBeFocused, visibility);
 
-    RefPtr<HTMLImageElement> imageElement = this->imageElement();
+    RefPtr imageElement = this->imageElement();
     if (!imageElement)
         return;
 
-    auto* renderer = imageElement->renderer();
-    if (!is<RenderImage>(renderer))
-        return;
-
-    downcast<RenderImage>(*renderer).areaElementFocusChanged(this);
+    if (CheckedPtr renderer = dynamicDowncast<RenderImage>(imageElement->renderer()))
+        renderer->areaElementFocusChanged(this);
 }
 
 RefPtr<Element> HTMLAreaElement::focusAppearanceUpdateTarget()

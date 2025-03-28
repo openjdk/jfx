@@ -27,6 +27,7 @@
 #include "config.h"
 #include "TextCodec.h"
 #include <unicode/uchar.h>
+#include <wtf/text/WTFString.h>
 #include <wtf/unicode/CharacterNames.h>
 
 #include <array>
@@ -34,7 +35,7 @@
 
 namespace PAL {
 
-int TextCodec::getUnencodableReplacement(UChar32 codePoint, UnencodableHandling handling, UnencodableReplacementArray& replacement)
+int TextCodec::getUnencodableReplacement(char32_t codePoint, UnencodableHandling handling, UnencodableReplacementArray& replacement)
 {
     ASSERT(!(codePoint > UCHAR_MAX_VALUE));
 
@@ -46,9 +47,9 @@ int TextCodec::getUnencodableReplacement(UChar32 codePoint, UnencodableHandling 
 
     switch (handling) {
     case UnencodableHandling::Entities:
-        return snprintf(replacement.data(), sizeof(UnencodableReplacementArray), "&#%u;", codePoint);
+        return snprintf(replacement.data(), sizeof(UnencodableReplacementArray), "&#%u;", static_cast<unsigned>(codePoint));
     case UnencodableHandling::URLEncodedEntities:
-        return snprintf(replacement.data(), sizeof(UnencodableReplacementArray), "%%26%%23%u%%3B", codePoint);
+        return snprintf(replacement.data(), sizeof(UnencodableReplacementArray), "%%26%%23%u%%3B", static_cast<unsigned>(codePoint));
     }
     ASSERT_NOT_REACHED();
     replacement.data()[0] = 0;

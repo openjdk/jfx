@@ -42,7 +42,7 @@ public:
 
     void initializeMasonry(unsigned gridAxisTracks, GridTrackSizingDirection masonryAxisDirection);
     void performMasonryPlacement(unsigned gridAxisTracks, GridTrackSizingDirection masonryAxisDirection);
-    LayoutUnit offsetForChild(const RenderBox&) const;
+    LayoutUnit offsetForGridItem(const RenderBox&) const;
     LayoutUnit gridContentSize() const { return m_gridContentSize; };
     LayoutUnit gridGap() const { return m_masonryAxisGridGap; };
 
@@ -53,7 +53,6 @@ private:
     GridArea gridAreaForDefiniteGridAxisItem(const RenderBox&) const;
 
     void collectMasonryItems();
-    void addItemsToFirstTrack();
     void placeItemsUsingOrderModifiedDocumentOrder();
     void placeItemsWithDefiniteGridAxisPosition();
     void placeItemsWithIndefiniteGridAxisPosition();
@@ -62,28 +61,23 @@ private:
 
     void resizeAndResetRunningPositions();
     void allocateCapacityForMasonryVectors();
-    LayoutUnit masonryAxisMarginBoxForItem(const RenderBox& child);
-    void updateRunningPositions(const RenderBox& child, const GridArea&);
-    void updateItemOffset(const RenderBox& child, LayoutUnit offset);
+    LayoutUnit masonryAxisMarginBoxForItem(const RenderBox& gridItem);
+    void updateRunningPositions(const RenderBox& gridItem, const GridArea&);
+    void updateItemOffset(const RenderBox& gridItem, LayoutUnit offset);
     inline GridTrackSizingDirection gridAxisDirection() const;
 
-    bool hasDefiniteGridAxisPosition(const RenderBox& child, GridTrackSizingDirection masonryDirection) const;
-    static bool itemGridAreaStartsAtFirstLine(const GridArea& area, GridTrackSizingDirection masonryDirection)
-    {
-        return !(masonryDirection == ForRows ? area.rows.startLine() : area.columns.startLine());
-    }
+    bool hasDefiniteGridAxisPosition(const RenderBox& gridItem, GridTrackSizingDirection masonryDirection) const;
     GridArea masonryGridAreaFromGridAxisSpan(const GridSpan&) const;
     GridSpan gridAxisSpanFromArea(const GridArea&) const;
     bool hasEnoughSpaceAtPosition(unsigned startingPosition, unsigned spanLength) const;
 
     unsigned m_gridAxisTracksCount;
 
-    HashMap<RenderBox*, GridArea> m_firstTrackItems;
     Vector<RenderBox*> m_itemsWithDefiniteGridAxisPosition;
     Vector<RenderBox*> m_itemsWithIndefiniteGridAxisPosition;
 
     Vector<LayoutUnit> m_runningPositions;
-    HashMap<const RenderBox*, LayoutUnit> m_itemOffsets;
+    HashMap<SingleThreadWeakRef<const RenderBox>, LayoutUnit> m_itemOffsets;
     RenderGrid& m_renderGrid;
     LayoutUnit m_masonryAxisGridGap;
     LayoutUnit m_gridContentSize;

@@ -41,18 +41,31 @@
 #include "Logging.h"
 #include "PlatformWheelEvent.h"
 #include "ScrollAnimator.h"
+#include "ScrollbarColor.h"
 #include "ScrollbarGutter.h"
 #include "ScrollbarTheme.h"
 #include "ScrollbarsControllerMock.h"
 #include <wtf/text/TextStream.h>
 
 namespace WebCore {
+struct SameSizeAsScrollableArea;
+}
 
-struct SameSizeAsScrollableArea : public CanMakeWeakPtr<SameSizeAsScrollableArea>, public CanMakeCheckedPtr {
+namespace WTF {
+template<typename T> struct IsDeprecatedWeakRefSmartPointerException;
+template<> struct IsDeprecatedWeakRefSmartPointerException<WebCore::SameSizeAsScrollableArea> : std::true_type { };
+}
+
+namespace WebCore {
+
+struct SameSizeAsScrollableArea final : public CanMakeWeakPtr<SameSizeAsScrollableArea> {
+    WTF_MAKE_STRUCT_FAST_ALLOCATED;
+
     ~SameSizeAsScrollableArea() { }
     SameSizeAsScrollableArea() { }
     void* pointer[3];
     IntPoint origin;
+    Markable<ScrollingNodeID> testID;
     bool bytes[9];
 };
 
@@ -75,7 +88,7 @@ ScrollbarsController& ScrollableArea::scrollbarsController() const
 {
     if (!m_scrollbarsController)
         const_cast<ScrollableArea&>(*this).internalCreateScrollbarsController();
-
+    RELEASE_ASSERT(m_scrollbarsController);
     return *m_scrollbarsController.get();
 }
 
@@ -143,7 +156,7 @@ bool ScrollableArea::scroll(ScrollDirection direction, ScrollGranularity granula
 
     auto scrollDelta = step * stepCount;
 
-    if (direction == ScrollUp || direction == ScrollLeft)
+    if (direction == ScrollDirection::ScrollUp || direction == ScrollDirection::ScrollLeft)
         scrollDelta = -scrollDelta;
 
     return scrollAnimator().singleAxisScroll(axis, scrollDelta, ScrollAnimator::ScrollBehavior::RespectScrollSnap);
@@ -204,11 +217,11 @@ void ScrollableArea::scrollToOffsetWithoutAnimation(const FloatPoint& offset, Sc
 
 void ScrollableArea::scrollToOffsetWithoutAnimation(ScrollbarOrientation orientation, float offset)
 {
-    auto currentPosition = scrollAnimator().currentPosition();
+    auto currentOffset = scrollOffsetFromPosition(scrollAnimator().currentPosition(), toFloatSize(scrollOrigin()));
     if (orientation == ScrollbarOrientation::Horizontal)
-        scrollAnimator().scrollToPositionWithoutAnimation(FloatPoint(offset, currentPosition.y()));
+        scrollToOffsetWithoutAnimation(FloatPoint(offset, currentOffset.y()));
     else
-        scrollAnimator().scrollToPositionWithoutAnimation(FloatPoint(currentPosition.x(), offset));
+        scrollToOffsetWithoutAnimation(FloatPoint(currentOffset.x(), offset));
 }
 
 void ScrollableArea::notifyScrollPositionChanged(const ScrollPosition& position)
@@ -246,8 +259,11 @@ void ScrollableArea::scrollPositionChanged(const ScrollPosition& position)
             verticalScrollbar->invalidate();
     }
 
-    if (scrollPosition() != oldPosition)
+    if (scrollPosition() != oldPosition) {
         scrollbarsController().notifyContentAreaScrolled(scrollPosition() - oldPosition);
+        invalidateScrollAnchoringElement();
+        updateScrollAnchoringElement();
+    }
 }
 
 bool ScrollableArea::handleWheelEventForScrolling(const PlatformWheelEvent& wheelEvent, std::optional<WheelScrollGestureState>)
@@ -522,6 +538,16 @@ String ScrollableArea::verticalScrollbarStateForTesting() const
     return scrollbarsController().verticalScrollbarStateForTesting();
 }
 
+Color ScrollableArea::scrollbarThumbColorStyle() const
+{
+    return { };
+}
+
+Color ScrollableArea::scrollbarTrackColorStyle() const
+{
+    return { };
+}
+
 ScrollbarGutter ScrollableArea::scrollbarGutterStyle() const
 {
     return { };
@@ -761,12 +787,12 @@ IntSize ScrollableArea::totalContentsSize() const
 
 IntRect ScrollableArea::visibleContentRect(VisibleContentRectBehavior visibleContentRectBehavior) const
 {
-    return visibleContentRectInternal(ExcludeScrollbars, visibleContentRectBehavior);
+    return visibleContentRectInternal(VisibleContentRectIncludesScrollbars::No, visibleContentRectBehavior);
 }
 
 IntRect ScrollableArea::visibleContentRectIncludingScrollbars(VisibleContentRectBehavior visibleContentRectBehavior) const
 {
-    return visibleContentRectInternal(IncludeScrollbars, visibleContentRectBehavior);
+    return visibleContentRectInternal(VisibleContentRectIncludesScrollbars::Yes, visibleContentRectBehavior);
 }
 
 IntRect ScrollableArea::visibleContentRectInternal(VisibleContentRectIncludesScrollbars scrollbarInclusion, VisibleContentRectBehavior) const
@@ -774,7 +800,7 @@ IntRect ScrollableArea::visibleContentRectInternal(VisibleContentRectIncludesScr
     int verticalScrollbarWidth = 0;
     int horizontalScrollbarHeight = 0;
 
-    if (scrollbarInclusion == IncludeScrollbars) {
+    if (scrollbarInclusion == VisibleContentRectIncludesScrollbars::Yes) {
         if (Scrollbar* verticalBar = verticalScrollbar())
             verticalScrollbarWidth = verticalBar->occupiedWidth();
         if (Scrollbar* horizontalBar = horizontalScrollbar())
@@ -950,9 +976,10 @@ LayoutRect ScrollableArea::getRectToExposeForScrollIntoView(const LayoutRect& vi
         y = visibleBounds.y();
     else if (scrollY == ScrollAlignment::Behavior::AlignBottom)
         y = exposeRect.maxY() - visibleBounds.height();
-    else if (scrollY == ScrollAlignment::Behavior::AlignCenter)
-        y = exposeRect.y() + (exposeRect.height() - visibleBounds.height()) / 2;
-    else
+    else if (scrollY == ScrollAlignment::Behavior::AlignCenter) {
+        auto halfHeight = (exposeRect.height() - visibleBounds.height()) / 2;
+        y = exposeRect.y() + halfHeight.ceil();
+    } else
         y = exposeRect.y();
 
     return LayoutRect(LayoutPoint(x, y), visibleBounds.size());
@@ -980,6 +1007,16 @@ bool ScrollableArea::shouldBlockScrollPropagation(const FloatSize& biasedDelta) 
         && ((horizontalOverscrollBehaviorPreventsPropagation() && verticalOverscrollBehaviorPreventsPropagation())
         || (horizontalOverscrollBehaviorPreventsPropagation() && !biasedDelta.height()) || (verticalOverscrollBehaviorPreventsPropagation()
         && !biasedDelta.width())));
+}
+
+ScrollingNodeID ScrollableArea::scrollingNodeIDForTesting()
+{
+    if (m_scrollingNodeIDForTesting)
+        return *m_scrollingNodeIDForTesting;
+    auto testingNodeID = scrollingNodeID();
+    if (!testingNodeID)
+        m_scrollingNodeIDForTesting = testingNodeID = ScrollingNodeID::generate();
+    return testingNodeID;
 }
 
 } // namespace WebCore

@@ -36,6 +36,8 @@ public:
     {
     }
     unsigned long countOfUpdatesWithLayerChanges() const override;
+    bool keyboardIsAutomaticallyShifted() const override;
+    void setSpellCheckerResults(JSValueRef) override;
 };
 
 }

@@ -35,17 +35,25 @@ typedef struct objc_object* id;
 namespace WebCore {
 
 class Element;
+class GraphicsLayer;
+class ScrollableArea;
 class Scrollbar;
+class VoidCallback;
+
+enum class PluginLayerHostingStrategy : uint8_t {
+    None,
+    PlatformLayer,
+    GraphicsLayer
+};
 
 // FIXME: Move these virtual functions all into the Widget class and get rid of this class.
 class PluginViewBase : public Widget {
 public:
-    virtual PlatformLayer* platformLayer() const { return 0; }
-#if PLATFORM(IOS_FAMILY)
-    virtual bool willProvidePluginLayer() const { return false; }
-    virtual void attachPluginLayer() { }
-    virtual void detachPluginLayer() { }
-#endif
+    virtual PluginLayerHostingStrategy layerHostingStrategy() const { return PluginLayerHostingStrategy::None; }
+    virtual PlatformLayer* platformLayer() const { return nullptr; }
+    virtual GraphicsLayer* graphicsLayer() const { return nullptr; }
+
+    virtual void layerHostingStrategyDidChange() { }
 
     virtual bool scroll(ScrollDirection, ScrollGranularity) { return false; }
     virtual ScrollPosition scrollPositionForTesting() const { return { }; }
@@ -57,15 +65,29 @@ public:
     virtual bool shouldAllowNavigationFromDrags() const { return false; }
     virtual void willDetachRenderer() { }
 
+    virtual ScrollableArea* scrollableArea() const { return nullptr; }
+    virtual bool usesAsyncScrolling() const { return false; }
+    virtual ScrollingNodeID scrollingNodeID() const { return { }; }
+    virtual void willAttachScrollingNode() { }
+    virtual void didAttachScrollingNode() { }
+
 #if PLATFORM(COCOA)
     virtual id accessibilityAssociatedPluginParentForElement(Element*) const { return nullptr; }
 #endif
+    virtual void setPDFDisplayModeForTesting(const String&) { };
+    virtual bool sendEditingCommandToPDFForTesting(const String&, const String&) { return false; }
+    virtual Vector<FloatRect> pdfAnnotationRectsForTesting() const { return { }; }
+
+    virtual void releaseMemory() { }
 
 protected:
     explicit PluginViewBase(PlatformWidget widget = 0) : Widget(widget) { }
 
 private:
     bool isPluginViewBase() const final { return true; }
+
+    friend class Internals;
+    virtual void registerPDFTestCallback(RefPtr<VoidCallback>&&) { };
 };
 
 } // namespace WebCore

@@ -32,13 +32,13 @@
 #include "WebXRFrame.h"
 #include "WebXRRigidTransform.h"
 #include "WebXRSession.h"
-#include <wtf/IsoMallocInlines.h>
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
 static constexpr double DefaultUserHeightInMeters = 1.65;
 
-WTF_MAKE_ISO_ALLOCATED_IMPL(WebXRReferenceSpace);
+WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(WebXRReferenceSpace);
 
 Ref<WebXRReferenceSpace> WebXRReferenceSpace::create(Document& document, WebXRSession& session, XRReferenceSpaceType type)
 {
@@ -100,11 +100,11 @@ std::optional<TransformationMatrix> WebXRReferenceSpace::nativeOrigin() const
 ExceptionOr<Ref<WebXRReferenceSpace>> WebXRReferenceSpace::getOffsetReferenceSpace(const WebXRRigidTransform& offsetTransform)
 {
     if (!m_session)
-        return Exception { InvalidStateError };
+        return Exception { ExceptionCode::InvalidStateError };
 
-    auto* document = downcast<Document>(scriptExecutionContext());
+    RefPtr document = downcast<Document>(scriptExecutionContext());
     if (!document)
-        return Exception { InvalidStateError };
+        return Exception { ExceptionCode::InvalidStateError };
 
     // https://immersive-web.github.io/webxr/#dom-xrreferencespace-getoffsetreferencespace
     // Set offsetSpace’s origin offset to the result of multiplying base’s origin offset by originOffset in the relevant realm of base.

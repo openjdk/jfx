@@ -28,7 +28,6 @@
 
 #pragma once
 
-#if ENABLE(LAYER_BASED_SVG_ENGINE)
 #include "RenderSVGShape.h"
 
 namespace WebCore {
@@ -36,7 +35,8 @@ namespace WebCore {
 class SVGRectElement;
 
 class RenderSVGRect final : public RenderSVGShape {
-    WTF_MAKE_ISO_ALLOCATED(RenderSVGRect);
+    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(RenderSVGRect);
+    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(RenderSVGRect);
 public:
     RenderSVGRect(SVGRectElement&, RenderStyle&&);
     virtual ~RenderSVGRect();
@@ -57,10 +57,8 @@ private:
     bool shapeDependentFillContains(const FloatPoint&, const WindRule) const override;
 
 private:
-    FloatRect m_innerStrokeRect;
-    FloatRect m_outerStrokeRect;
+    bool definitelyHasSimpleStroke() const;
+    bool canUseStrokeHitTestFastPath() const;
 };
 
 } // namespace WebCore
-
-#endif // ENABLE(LAYER_BASED_SVG_ENGINE)

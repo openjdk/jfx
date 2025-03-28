@@ -26,8 +26,10 @@
 #include "ContainerQueryFeatures.h"
 
 #include "ContainerQueryEvaluator.h"
+#include "CustomPropertyRegistry.h"
 #include "RenderBoxInlines.h"
 #include "RenderElementInlines.h"
+#include "StyleBuilder.h"
 #include <wtf/NeverDestroyed.h>
 
 namespace WebCore::CQ::Features {
@@ -45,29 +47,14 @@ struct SizeFeatureSchema : public FeatureSchema {
         // or the query container does not support container size queries on the relevant axes, then the result of
         // evaluating the size feature is unknown."
         // https://drafts.csswg.org/css-contain-3/#size-container
-        if (!is<RenderBox>(context.renderer))
+        CheckedPtr renderer = dynamicDowncast<RenderBox>(context.renderer.get());
+        if (!renderer)
             return MQ::EvaluationResult::Unknown;
 
-        auto& renderer = downcast<RenderBox>(*context.renderer);
-
-        auto hasEligibleContainment = [&] {
-            if (!renderer.shouldApplyLayoutContainment())
-                return false;
-            switch (renderer.style().containerType()) {
-            case ContainerType::InlineSize:
-                return renderer.shouldApplyInlineSizeContainment();
-            case ContainerType::Size:
-                return renderer.shouldApplySizeContainment();
-            case ContainerType::Normal:
-                return true;
-            }
-            RELEASE_ASSERT_NOT_REACHED();
-        };
-
-        if (!hasEligibleContainment())
+        if (!renderer->hasEligibleContainmentForSizeQuery())
             return MQ::EvaluationResult::Unknown;
 
-        return evaluate(feature, renderer, context.conversionData);
+        return evaluate(feature, *renderer, context.conversionData);
     }
 
     virtual EvaluationResult evaluate(const MQ::Feature&, const RenderBox&, const CSSToLengthConversionData&) const = 0;
@@ -173,6 +160,58 @@ const FeatureSchema& orientation()
     };
 
     static MainThreadNeverDestroyed<Schema> schema;
+    return schema;
+}
+
+struct StyleFeatureSchema : public FeatureSchema {
+    StyleFeatureSchema()
+        : FeatureSchema("style"_s, FeatureSchema::Type::Discrete, FeatureSchema::ValueType::CustomProperty)
+    { }
+
+    EvaluationResult evaluate(const MQ::Feature& feature, const FeatureEvaluationContext& context) const override
+    {
+        if (!context.conversionData.style() || !context.conversionData.parentStyle())
+            return EvaluationResult::False;
+
+        auto& style = *context.conversionData.style();
+
+        auto* customPropertyValue = style.customPropertyValue(feature.name);
+        if (!feature.rightComparison)
+            return toEvaluationResult(customPropertyValue && !customPropertyValue->isInvalid());
+
+        auto resolvedFeatureValue = [&]() -> RefPtr<const CSSCustomPropertyValue> {
+            auto featureValue = dynamicDowncast<CSSCustomPropertyValue>(feature.rightComparison->value);
+            ASSERT(featureValue);
+
+            // Resolve the queried custom property value for var() references, css-wide keywords and registered properties.
+            auto builderContext = Style::BuilderContext {
+                context.document.get(),
+                *context.conversionData.parentStyle(),
+                context.conversionData.rootStyle(),
+                context.conversionData.elementForContainerUnitResolution()
+            };
+
+            auto dummyStyle = RenderStyle::clone(style);
+
+            auto styleBuilder = Style::Builder { dummyStyle, WTFMove(builderContext), { }, { } };
+            return styleBuilder.resolveCustomPropertyForContainerQueries(*featureValue);
+        }();
+
+        if (!resolvedFeatureValue)
+            return EvaluationResult::False;
+
+        // Guaranteed-invalid values match guaranteed-invalid values.
+        if (resolvedFeatureValue->isInvalid())
+            return toEvaluationResult(!customPropertyValue || customPropertyValue->isInvalid());
+
+        ASSERT(feature.rightComparison->op == ComparisonOperator::Equal);
+        return toEvaluationResult(customPropertyValue && *customPropertyValue == *resolvedFeatureValue);
+    }
+};
+
+const FeatureSchema& style()
+{
+    static MainThreadNeverDestroyed<StyleFeatureSchema> schema;
     return schema;
 }
 

@@ -32,6 +32,7 @@
 
 #include "NetworkLoadMetrics.h"
 #include "ResourceLoaderIdentifier.h"
+#include "ScriptExecutionContextIdentifier.h"
 #include "ThreadableLoader.h"
 #include "ThreadableLoaderClient.h"
 #include "ThreadableLoaderClientWrapper.h"
@@ -48,7 +49,7 @@ class WorkerOrWorkletGlobalScope;
 class WorkerLoaderProxy;
 
 class WorkerThreadableLoader : public RefCounted<WorkerThreadableLoader>, public ThreadableLoader {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(Loader);
 public:
     static void loadResourceSynchronously(WorkerOrWorkletGlobalScope&, ResourceRequest&&, ThreadableLoaderClient&, const ThreadableLoaderOptions&);
     static Ref<WorkerThreadableLoader> create(WorkerOrWorkletGlobalScope& WorkerOrWorkletGlobalScope, ThreadableLoaderClient& client, const String& taskMode, ResourceRequest&& request, const ThreadableLoaderOptions& options, const String& referrer)
@@ -90,10 +91,14 @@ private:
     //    go through it. All tasks posted from the worker object's thread to the worker context's
     //    thread contain the RefPtr<ThreadableLoaderClientWrapper> object, so the
     //    ThreadableLoaderClientWrapper instance is there until all tasks are executed.
-    class MainThreadBridge : public ThreadableLoaderClient {
+    class MainThreadBridge final : public ThreadableLoaderClient {
+        WTF_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(Loader);
+        WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(MainThreadBridge);
     public:
         // All executed on the worker context's thread.
         MainThreadBridge(ThreadableLoaderClientWrapper&, WorkerLoaderProxy*, ScriptExecutionContextIdentifier, const String& taskMode, ResourceRequest&&, const ThreadableLoaderOptions&, const String& outgoingReferrer, WorkerOrWorkletGlobalScope&);
+        virtual ~MainThreadBridge();
+
         void cancel();
         void destroy();
         void computeIsDone();
@@ -101,13 +106,14 @@ private:
     private:
         // Executed on the worker context's thread.
         void clearClientWrapper();
+        RefPtr<ThreadableLoaderClientWrapper> protectedWorkerClientWrapper() const;
 
         // All executed on the main thread.
         void didSendData(unsigned long long bytesSent, unsigned long long totalBytesToBeSent) override;
-        void didReceiveResponse(ResourceLoaderIdentifier, const ResourceResponse&) override;
+        void didReceiveResponse(ScriptExecutionContextIdentifier, ResourceLoaderIdentifier, const ResourceResponse&) override;
         void didReceiveData(const SharedBuffer&) override;
-        void didFinishLoading(ResourceLoaderIdentifier, const NetworkLoadMetrics&) override;
-        void didFail(const ResourceError&) override;
+        void didFinishLoading(ScriptExecutionContextIdentifier, ResourceLoaderIdentifier, const NetworkLoadMetrics&) override;
+        void didFail(ScriptExecutionContextIdentifier, const ResourceError&) override;
         void didFinishTiming(const ResourceTiming&) override;
         void notifyIsDone(bool isDone) final;
 
@@ -120,7 +126,7 @@ private:
         RefPtr<ThreadableLoaderClientWrapper> m_workerClientWrapper;
 
         // May be used on either thread.
-        WorkerLoaderProxy* m_loaderProxy;
+        WorkerLoaderProxy* m_loaderProxy; // FIXME: Use a smart pointer.
 
         // For use on the main thread.
         String m_taskMode;
@@ -134,7 +140,7 @@ private:
     void computeIsDone() final;
 
     Ref<ThreadableLoaderClientWrapper> m_workerClientWrapper;
-    MainThreadBridge& m_bridge;
+    MainThreadBridge& m_bridge; // FIXME: Use a smart pointer.
 };
 
 } // namespace WebCore

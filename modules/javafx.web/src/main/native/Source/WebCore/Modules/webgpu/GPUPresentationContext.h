@@ -26,6 +26,7 @@
 #pragma once
 
 #include "GPUTexture.h"
+#include "GPUTextureDescriptor.h"
 #include "WebGPUPresentationContext.h"
 #include <wtf/CompletionHandler.h>
 #include <wtf/Ref.h>
@@ -38,6 +39,7 @@
 namespace WebCore {
 
 struct GPUCanvasConfiguration;
+class GPUDevice;
 class GPUTexture;
 
 class GPUPresentationContext : public RefCounted<GPUPresentationContext> {
@@ -47,11 +49,11 @@ public:
         return adoptRef(*new GPUPresentationContext(WTFMove(backing)));
     }
 
-    void configure(const GPUCanvasConfiguration&);
+    WARN_UNUSED_RETURN bool configure(const GPUCanvasConfiguration&, GPUIntegerCoordinate, GPUIntegerCoordinate, bool);
     void unconfigure();
 
     RefPtr<GPUTexture> getCurrentTexture();
-    void present();
+    void present(bool presentBacking = false);
 
     WebGPU::PresentationContext& backing() { return m_backing; }
     const WebGPU::PresentationContext& backing() const { return m_backing; }
@@ -64,6 +66,8 @@ private:
 
     Ref<WebGPU::PresentationContext> m_backing;
     RefPtr<GPUTexture> m_currentTexture;
+    RefPtr<const GPUDevice> m_device;
+    GPUTextureDescriptor m_textureDescriptor;
 };
 
 }

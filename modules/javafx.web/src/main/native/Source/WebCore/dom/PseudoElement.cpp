@@ -36,11 +36,11 @@
 #include "RenderQuote.h"
 #include "RenderStyleInlines.h"
 #include "StyleResolver.h"
-#include <wtf/IsoMallocInlines.h>
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
-WTF_MAKE_ISO_ALLOCATED_IMPL(PseudoElement);
+WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(PseudoElement);
 
 const QualifiedName& pseudoElementTagName()
 {
@@ -49,10 +49,11 @@ const QualifiedName& pseudoElementTagName()
 }
 
 PseudoElement::PseudoElement(Element& host, PseudoId pseudoId)
-    : Element(pseudoElementTagName(), host.document(), CreatePseudoElement)
+    : Element(pseudoElementTagName(), host.document(), TypeFlag::HasCustomStyleResolveCallbacks)
     , m_hostElement(host)
     , m_pseudoId(pseudoId)
 {
+    setEventTargetFlag(EventTargetFlag::IsConnected);
     ASSERT(pseudoId == PseudoId::Before || pseudoId == PseudoId::After);
 }
 
@@ -63,16 +64,16 @@ PseudoElement::~PseudoElement()
 
 Ref<PseudoElement> PseudoElement::create(Element& host, PseudoId pseudoId)
 {
-    auto pseudoElement = adoptRef(*new PseudoElement(host, pseudoId));
+    Ref pseudoElement = adoptRef(*new PseudoElement(host, pseudoId));
 
-    InspectorInstrumentation::pseudoElementCreated(host.document().page(), pseudoElement.get());
+    InspectorInstrumentation::pseudoElementCreated(host.document().protectedPage().get(), pseudoElement.get());
 
     return pseudoElement;
 }
 
 void PseudoElement::clearHostElement()
 {
-    InspectorInstrumentation::pseudoElementDestroyed(document().page(), *this);
+    InspectorInstrumentation::pseudoElementDestroyed(document().protectedPage().get(), *this);
 
     Styleable::fromElement(*this).elementWasRemoved();
 
@@ -85,7 +86,7 @@ bool PseudoElement::rendererIsNeeded(const RenderStyle& style)
         return true;
 
     if (RefPtr element = m_hostElement.get()) {
-        if (auto* stack = element->keyframeEffectStack(pseudoId()))
+        if (auto* stack = element->keyframeEffectStack(Style::PseudoElementIdentifier { pseudoId() }))
             return stack->requiresPseudoElement();
     }
     return false;

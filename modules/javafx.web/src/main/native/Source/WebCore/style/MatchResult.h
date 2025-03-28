@@ -34,6 +34,7 @@
 namespace WebCore::Style {
 
 enum class FromStyleAttribute : bool { No, Yes };
+enum class IsCacheable : uint8_t { No, Partially, Yes };
 
 struct MatchedProperties {
     Ref<const StyleProperties> properties;
@@ -42,26 +43,29 @@ struct MatchedProperties {
     ScopeOrdinal styleScopeOrdinal { ScopeOrdinal::Element };
     FromStyleAttribute fromStyleAttribute { FromStyleAttribute::No };
     CascadeLayerPriority cascadeLayerPriority { RuleSet::cascadeLayerPriorityForUnlayered };
+    IsStartingStyle isStartingStyle { IsStartingStyle::No };
+    IsCacheable isCacheable { IsCacheable::Yes };
 };
 
 struct MatchResult {
     WTF_MAKE_STRUCT_FAST_ALLOCATED;
+    MatchResult(bool isForLink = false)
+        : isForLink(isForLink)
+    { }
 
-    bool isCacheable { true };
+    bool isForLink { false };
+    bool isCompletelyNonCacheable { false };
+    bool hasStartingStyle { false };
     Vector<MatchedProperties> userAgentDeclarations;
     Vector<MatchedProperties> userDeclarations;
     Vector<MatchedProperties> authorDeclarations;
+    Vector<CSSPropertyID, 4> nonCacheablePropertyIds;
 
     bool isEmpty() const { return userAgentDeclarations.isEmpty() && userDeclarations.isEmpty() && authorDeclarations.isEmpty(); }
-};
 
-inline bool operator==(const MatchResult& a, const MatchResult& b)
-{
-    return a.isCacheable == b.isCacheable
-        && a.userAgentDeclarations == b.userAgentDeclarations
-        && a.userDeclarations == b.userDeclarations
-        && a.authorDeclarations == b.authorDeclarations;
-}
+    friend bool operator==(const MatchResult&, const MatchResult&) = default;
+    bool cacheablePropertiesEqual(const MatchResult&) const;
+};
 
 inline bool operator==(const MatchedProperties& a, const MatchedProperties& b)
 {
@@ -70,24 +74,63 @@ inline bool operator==(const MatchedProperties& a, const MatchedProperties& b)
         && a.allowlistType == b.allowlistType
         && a.styleScopeOrdinal == b.styleScopeOrdinal
         && a.fromStyleAttribute == b.fromStyleAttribute
-        && a.cascadeLayerPriority == b.cascadeLayerPriority;
+        && a.cascadeLayerPriority == b.cascadeLayerPriority
+        && a.isStartingStyle == b.isStartingStyle
+        && a.isCacheable == b.isCacheable;
+}
+
+inline bool MatchResult::cacheablePropertiesEqual(const MatchResult& other) const
+{
+    if (isForLink != other.isForLink || hasStartingStyle != other.hasStartingStyle)
+        return false;
+
+    // Only author style can be non-cacheable.
+    if (userAgentDeclarations != other.userAgentDeclarations)
+        return false;
+    if (userDeclarations != other.userDeclarations)
+        return false;
+
+    // Currently the cached style contains also the non-cacheable property values from when the entry was made
+    // so we can only allow styles that override the same exact properties. Content usually animates or varies the same
+    // small set of properties so this doesn't make a significant difference.
+    auto nonCacheableEqual = std::ranges::equal(nonCacheablePropertyIds, other.nonCacheablePropertyIds, [](auto& idA, auto& idB) {
+        // This would need to check the custom property names for equality.
+        if (idA == CSSPropertyCustom || idB == CSSPropertyCustom)
+            return false;
+        return idA == idB;
+    });
+    if (!nonCacheableEqual)
+        return false;
+
+    return std::ranges::equal(authorDeclarations, other.authorDeclarations, [](auto& propertiesA, auto& propertiesB) {
+        if (propertiesA.isCacheable == IsCacheable::Partially && propertiesB.isCacheable == IsCacheable::Partially)
+            return true;
+        return propertiesA == propertiesB;
+    });
 }
 
 inline void add(Hasher& hasher, const MatchedProperties& matchedProperties)
 {
+    // Ignore non-cacheable properties when computing hash.
+    if (matchedProperties.isCacheable == IsCacheable::Partially)
+        return;
+    ASSERT(matchedProperties.isCacheable == IsCacheable::Yes);
+
     add(hasher,
         matchedProperties.properties.ptr(),
         matchedProperties.linkMatchType,
         matchedProperties.allowlistType,
         matchedProperties.styleScopeOrdinal,
         matchedProperties.fromStyleAttribute,
-        matchedProperties.cascadeLayerPriority
+        matchedProperties.cascadeLayerPriority,
+        matchedProperties.isStartingStyle
     );
 }
 
 inline void add(Hasher& hasher, const MatchResult& matchResult)
 {
-    add(hasher, matchResult.userAgentDeclarations, matchResult.userDeclarations, matchResult.authorDeclarations);
+    ASSERT(!matchResult.isCompletelyNonCacheable);
+    add(hasher, matchResult.isForLink, matchResult.nonCacheablePropertyIds, matchResult.userAgentDeclarations, matchResult.userDeclarations, matchResult.authorDeclarations);
 }
 
 }

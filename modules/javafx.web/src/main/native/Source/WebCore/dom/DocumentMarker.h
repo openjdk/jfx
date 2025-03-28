@@ -25,6 +25,9 @@
 #include <variant>
 #include <wtf/Forward.h>
 #include <wtf/OptionSet.h>
+#include <wtf/UUID.h>
+#include <wtf/WeakPtr.h>
+#include <wtf/text/MakeString.h>
 #include <wtf/text/WTFString.h>
 
 #if PLATFORM(IOS_FAMILY)
@@ -32,12 +35,27 @@
 #endif
 
 namespace WebCore {
+class DocumentMarker;
+
+namespace WritingTools {
+using TextSuggestionID = WTF::UUID;
+using SessionID = WTF::UUID;
+}
+
+} // namespace WebCore
+
+namespace WTF {
+template<typename T> struct IsDeprecatedWeakRefSmartPointerException;
+template<> struct IsDeprecatedWeakRefSmartPointerException<WebCore::DocumentMarker> : std::true_type { };
+}
+
+namespace WebCore {
 
 // A range of a node within a document that is "marked", such as the range of a misspelled word.
 // It optionally includes a description that could be displayed in the user interface.
-class DocumentMarker {
+class DocumentMarker : public CanMakeWeakPtr<DocumentMarker> {
 public:
-    enum MarkerType {
+    enum class Type : uint32_t {
         Spelling = 1 << 0,
         Grammar = 1 << 1,
         TextMatch = 1 << 2,
@@ -81,9 +99,13 @@ public:
         // This marker maintains state for the platform text checker.
         PlatformTextChecking = 1 << 15,
 #endif
+#if ENABLE(WRITING_TOOLS)
+        WritingToolsTextSuggestion = 1 << 16,
+#endif
+        TransparentContent = 1 << 17,
     };
 
-    static constexpr OptionSet<MarkerType> allMarkers();
+    static constexpr OptionSet<Type> allMarkers();
 
     struct DictationData {
         DictationContext context;
@@ -96,6 +118,24 @@ public:
     };
 #endif
 
+#if ENABLE(WRITING_TOOLS)
+    struct WritingToolsTextSuggestionData {
+        enum class State: uint8_t {
+            Accepted,
+            Rejected
+        };
+
+        String originalText;
+        WritingTools::TextSuggestionID suggestionID;
+        State state { State::Accepted };
+    };
+#endif
+
+    struct TransparentContentData {
+        RefPtr<Node> node;
+        WTF::UUID uuid;
+    };
+
     using Data = std::variant<
         String
         , DictationData // DictationAlternatives
@@ -107,15 +147,19 @@ public:
 #if ENABLE(PLATFORM_DRIVEN_TEXT_CHECKING)
         , PlatformTextCheckingData // PlatformTextChecking
 #endif
+#if ENABLE(WRITING_TOOLS)
+        , WritingToolsTextSuggestionData // WritingToolsTextSuggestion
+#endif
+        , TransparentContentData // TransparentContent
     >;
 
-    DocumentMarker(MarkerType, OffsetRange, Data&& = { });
+    DocumentMarker(Type, OffsetRange, Data&& = { });
 
-    MarkerType type() const { return m_type; }
+    Type type() const { return m_type; }
     unsigned startOffset() const { return m_range.start; }
     unsigned endOffset() const { return m_range.end; }
 
-    const String& description() const;
+    String description() const;
 
     const Data& data() const { return m_data; }
     void clearData() { m_data = String { }; }
@@ -127,40 +171,44 @@ public:
     void shiftOffsets(int delta);
 
 private:
-    MarkerType m_type;
+    Type m_type;
     OffsetRange m_range;
     Data m_data;
 };
 
-constexpr auto DocumentMarker::allMarkers() -> OptionSet<MarkerType>
+constexpr auto DocumentMarker::allMarkers() -> OptionSet<Type>
 {
     return {
-        AcceptedCandidate,
-        Autocorrected,
-        CorrectionIndicator,
-        DeletedAutocorrection,
-        DictationAlternatives,
-        DraggedContent,
-        Grammar,
-        RejectedCorrection,
-        Replacement,
-        SpellCheckingExemption,
-        Spelling,
-        TextMatch,
+        Type::AcceptedCandidate,
+        Type::Autocorrected,
+        Type::CorrectionIndicator,
+        Type::DeletedAutocorrection,
+        Type::DictationAlternatives,
+        Type::DraggedContent,
+        Type::Grammar,
+        Type::RejectedCorrection,
+        Type::Replacement,
+        Type::SpellCheckingExemption,
+        Type::Spelling,
+        Type::TextMatch,
 #if ENABLE(TELEPHONE_NUMBER_DETECTION)
-        TelephoneNumber,
+        Type::TelephoneNumber,
 #endif
 #if PLATFORM(IOS_FAMILY)
-        DictationPhraseWithAlternatives,
-        DictationResult,
+        Type::DictationPhraseWithAlternatives,
+        Type::DictationResult,
 #endif
 #if ENABLE(PLATFORM_DRIVEN_TEXT_CHECKING)
-        PlatformTextChecking
+        Type::PlatformTextChecking,
 #endif
+#if ENABLE(WRITING_TOOLS)
+        Type::WritingToolsTextSuggestion,
+#endif
+        Type::TransparentContent,
     };
 }
 
-inline DocumentMarker::DocumentMarker(MarkerType type, OffsetRange range, Data&& data)
+inline DocumentMarker::DocumentMarker(Type type, OffsetRange range, Data&& data)
     : m_type(type)
     , m_range(range)
     , m_data(WTFMove(data))
@@ -173,9 +221,17 @@ inline void DocumentMarker::shiftOffsets(int delta)
     m_range.end += delta;
 }
 
-inline const String& DocumentMarker::description() const
+inline String DocumentMarker::description() const
 {
-    return std::holds_alternative<String>(m_data) ? std::get<String>(m_data) : emptyString();
+    if (auto* description = std::get_if<String>(&m_data))
+        return *description;
+
+#if ENABLE(WRITING_TOOLS)
+    if (auto* data = std::get_if<DocumentMarker::WritingToolsTextSuggestionData>(&m_data))
+        return makeString("('"_s, data->originalText, "', state: "_s, enumToUnderlyingType(data->state), ')');
+#endif
+
+    return emptyString();
 }
 
 } // namespace WebCore

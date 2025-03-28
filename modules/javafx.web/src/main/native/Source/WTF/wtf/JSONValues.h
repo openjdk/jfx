@@ -170,7 +170,7 @@ private:
     } m_value;
 };
 
-class ObjectBase : public Value {
+class SUPPRESS_REFCOUNTED_WITHOUT_VIRTUAL_DESTRUCTOR ObjectBase : public Value {
 private:
     friend class Value;
     using DataStorage = HashMap<String, Ref<Value>>;
@@ -261,7 +261,7 @@ public:
 };
 
 
-class WTF_EXPORT_PRIVATE ArrayBase : public Value {
+class SUPPRESS_REFCOUNTED_WITHOUT_VIRTUAL_DESTRUCTOR WTF_EXPORT_PRIVATE ArrayBase : public Value {
 private:
     friend class Value;
     using DataStorage = Vector<Ref<Value>>;
@@ -528,6 +528,8 @@ inline RefPtr<Array> Value::asArray()
 }
 
 } // namespace JSONImpl
+
+inline size_t containerSize(const JSONImpl::Array& array) { return array.length(); }
 
 } // namespace WTF
 

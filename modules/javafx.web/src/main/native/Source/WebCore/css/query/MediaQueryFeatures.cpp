@@ -26,6 +26,8 @@
 #include "MediaQueryFeatures.h"
 
 #include "Chrome.h"
+#include "Document.h"
+#include "DocumentInlines.h"
 #include "DocumentLoader.h"
 #include "LocalFrame.h"
 #include "LocalFrameView.h"
@@ -172,7 +174,7 @@ private:
 
 static float deviceScaleFactor(const FeatureEvaluationContext& context)
 {
-    auto& frame = *context.document.frame();
+    auto& frame = *context.document->frame();
     auto mediaType = frame.view()->mediaType();
 
     if (mediaType == screenAtom())
@@ -202,7 +204,7 @@ const FeatureSchema& anyHover()
         "any-hover"_s,
         FixedVector { CSSValueNone, CSSValueHover },
         [](auto& context) {
-            auto* page = context.document.frame()->page();
+            RefPtr page = context.document->frame()->page();
             bool isSupported = page && page->chrome().client().hoverSupportedByAnyAvailablePointingDevice();
             return MatchingIdentifiers { isSupported ? CSSValueHover : CSSValueNone };
         }
@@ -216,7 +218,7 @@ const FeatureSchema& anyPointer()
         "any-pointer"_s,
         FixedVector { CSSValueNone, CSSValueFine, CSSValueCoarse },
         [](auto& context) {
-            auto* page = context.document.frame()->page();
+            RefPtr page = context.document->frame()->page();
             auto pointerCharacteristics = page ? page->chrome().client().pointerCharacteristicsOfAllAvailablePointingDevices() : OptionSet<PointerCharacteristics>();
 
             MatchingIdentifiers identifiers;
@@ -238,7 +240,7 @@ const FeatureSchema& aspectRatio()
     static MainThreadNeverDestroyed<RatioSchema> schema {
         "aspect-ratio"_s,
         [](auto& context) {
-            auto& view = *context.document.view();
+            auto& view = *context.document->view();
             return FloatSize(view.layoutWidth(), view.layoutHeight());
         }
     };
@@ -250,9 +252,7 @@ const FeatureSchema& color()
     static MainThreadNeverDestroyed<IntegerSchema> schema {
         "color"_s,
         [](auto& context) {
-            if (auto* localFrame = dynamicDowncast<LocalFrame>(context.document.frame()->mainFrame()))
-                return screenDepthPerComponent(localFrame->view());
-            return 8;
+            return screenDepthPerComponent(context.document->frame()->mainFrame().protectedVirtualView().get());
         }
     };
     return schema;
@@ -264,14 +264,10 @@ const FeatureSchema& colorGamut()
         "color-gamut"_s,
         FixedVector { CSSValueSRGB, CSSValueP3, CSSValueRec2020 },
         [](auto& context) {
-            auto& frame = *context.document.frame();
-
             // FIXME: At some point we should start detecting displays that support more colors.
             MatchingIdentifiers identifiers { CSSValueSRGB };
-            if (auto* localFrame = dynamicDowncast<LocalFrame>(frame.mainFrame())) {
-                if (screenSupportsExtendedColor(localFrame->view()))
+            if (screenSupportsExtendedColor(context.document->protectedFrame()->mainFrame().protectedVirtualView().get()))
                     identifiers.append(CSSValueP3);
-            }
             return identifiers;
         }
     };
@@ -292,7 +288,7 @@ const FeatureSchema& deviceAspectRatio()
     static MainThreadNeverDestroyed<RatioSchema> schema {
         "device-aspect-ratio"_s,
         [](auto& context) {
-            if (auto* localFrame = dynamicDowncast<LocalFrame>(context.document.frame()->mainFrame())) {
+            if (RefPtr localFrame = dynamicDowncast<LocalFrame>(context.document->frame()->mainFrame())) {
                 auto screenSize = localFrame->screenSize();
                 return FloatSize { screenSize.width(), screenSize.height() };
             }
@@ -307,7 +303,7 @@ const FeatureSchema& deviceHeight()
     static MainThreadNeverDestroyed<LengthSchema> schema {
         "device-height"_s,
         [](auto& context) {
-            if (auto* localFrame = dynamicDowncast<LocalFrame>(context.document.frame()->mainFrame()))
+            if (RefPtr localFrame = dynamicDowncast<LocalFrame>(context.document->frame()->mainFrame()))
                 return LayoutUnit { localFrame->screenSize().height() };
             return LayoutUnit { 0.0f };
         }
@@ -331,7 +327,7 @@ const FeatureSchema& deviceWidth()
     static MainThreadNeverDestroyed<LengthSchema> schema {
         "device-width"_s,
         [](auto& context) {
-            if (auto* localFrame = dynamicDowncast<LocalFrame>(context.document.frame()->mainFrame()))
+            if (RefPtr localFrame = dynamicDowncast<LocalFrame>(context.document->frame()->mainFrame()))
                 return LayoutUnit { localFrame->screenSize().width() };
             return LayoutUnit { 0.0f };
         }
@@ -346,14 +342,12 @@ const FeatureSchema& dynamicRange()
         FixedVector { CSSValueStandard, CSSValueHigh },
         [](auto& context) {
             bool supportsHighDynamicRange = [&] {
-                auto& frame = *context.document.frame();
-                if (frame.settings().forcedSupportsHighDynamicRangeValue() == ForcedAccessibilityValue::On)
+                Ref frame = *context.document->frame();
+                if (frame->settings().forcedSupportsHighDynamicRangeValue() == ForcedAccessibilityValue::On)
                     return true;
-                if (frame.settings().forcedSupportsHighDynamicRangeValue() == ForcedAccessibilityValue::Off)
+                if (frame->settings().forcedSupportsHighDynamicRangeValue() == ForcedAccessibilityValue::Off)
                     return false;
-                if (auto* localFrame = dynamicDowncast<LocalFrame>(frame.mainFrame()))
-                    return screenSupportsHighDynamicRange(localFrame->view());
-                return false;
+                return screenSupportsHighDynamicRange(frame->mainFrame().protectedVirtualView().get());
             }();
 
             MatchingIdentifiers identifiers { CSSValueStandard };
@@ -391,8 +385,8 @@ const FeatureSchema& height()
     static MainThreadNeverDestroyed<LengthSchema> schema {
         "height"_s,
         [](auto& context) {
-            auto height = context.document.view()->layoutHeight();
-            if (auto* renderView = context.document.renderView())
+            auto height = context.document->protectedView()->layoutHeight();
+            if (CheckedPtr renderView = context.document->renderView())
                 height = adjustForAbsoluteZoom(height, *renderView);
             return height;
         }
@@ -406,7 +400,7 @@ const FeatureSchema& hover()
         "hover"_s,
         FixedVector { CSSValueNone, CSSValueHover },
         [](auto& context) {
-            auto* page = context.document.frame()->page();
+            RefPtr page = context.document->frame()->page();
             bool isSupported =  page && page->chrome().client().hoverSupportedByPrimaryPointingDevice();
             return MatchingIdentifiers { isSupported ? CSSValueHover : CSSValueNone };
         }
@@ -421,10 +415,10 @@ const FeatureSchema& invertedColors()
         FixedVector { CSSValueNone, CSSValueInverted },
         [](auto& context) {
             bool isInverted = [&] {
-                auto& frame = *context.document.frame();
-                if (frame.settings().forcedColorsAreInvertedAccessibilityValue() == ForcedAccessibilityValue::On)
+                Ref frame = *context.document->frame();
+                if (frame->settings().forcedColorsAreInvertedAccessibilityValue() == ForcedAccessibilityValue::On)
                     return true;
-                if (frame.settings().forcedColorsAreInvertedAccessibilityValue() == ForcedAccessibilityValue::Off)
+                if (frame->settings().forcedColorsAreInvertedAccessibilityValue() == ForcedAccessibilityValue::Off)
                     return false;
                 return screenHasInvertedColors();
             }();
@@ -440,19 +434,19 @@ const FeatureSchema& monochrome()
     static MainThreadNeverDestroyed<IntegerSchema> schema {
         "monochrome"_s,
         [](auto& context) {
-            auto& frame = *context.document.frame();
-            auto* localFrame = dynamicDowncast<LocalFrame>(frame.mainFrame());
+            Ref frame = *context.document->frame();
+            RefPtr localFrame = dynamicDowncast<LocalFrame>(frame->mainFrame());
             bool isMonochrome = [&] {
-                if (frame.settings().forcedDisplayIsMonochromeAccessibilityValue() == ForcedAccessibilityValue::On)
+                if (frame->settings().forcedDisplayIsMonochromeAccessibilityValue() == ForcedAccessibilityValue::On)
                     return true;
-                if (frame.settings().forcedDisplayIsMonochromeAccessibilityValue() == ForcedAccessibilityValue::Off)
+                if (frame->settings().forcedDisplayIsMonochromeAccessibilityValue() == ForcedAccessibilityValue::Off)
                     return false;
                 if (localFrame)
-                    return screenIsMonochrome(localFrame->view());
+                    return screenIsMonochrome(localFrame->protectedView().get());
                 return false;
             }();
 
-            return isMonochrome && localFrame ? screenDepthPerComponent(localFrame->view()) : 0;
+            return isMonochrome && localFrame ? screenDepthPerComponent(localFrame->protectedView().get()) : 0;
         }
     };
     return schema;
@@ -464,9 +458,12 @@ const FeatureSchema& orientation()
         "orientation"_s,
         FixedVector { CSSValueLandscape, CSSValuePortrait },
         [](auto& context) {
-            auto& view = *context.document.view();
+            if (context.document->quirks().shouldPreventOrientationMediaQueryFromEvaluatingToLandscape())
+                return MatchingIdentifiers { CSSValuePortrait };
+
+            Ref view = *context.document->view();
             // Square viewport is portrait.
-            bool isPortrait = view.layoutHeight() >= view.layoutWidth();
+            bool isPortrait = view->layoutHeight() >= view->layoutWidth();
             return MatchingIdentifiers { isPortrait ? CSSValuePortrait : CSSValueLandscape };
         }
     };
@@ -479,11 +476,11 @@ const FeatureSchema& pointer()
         "pointer"_s,
         FixedVector { CSSValueNone, CSSValueFine, CSSValueCoarse },
         [](auto& context) {
-            auto* page = context.document.frame()->page();
+            RefPtr page = context.document->frame()->page();
             auto pointerCharacteristics = page ? page->chrome().client().pointerCharacteristicsOfPrimaryPointingDevice() : OptionSet<PointerCharacteristics>();
 #if ENABLE(TOUCH_EVENTS)
             if (pointerCharacteristics.contains(PointerCharacteristics::Coarse)) {
-                if (context.document.quirks().shouldPreventPointerMediaQueryFromEvaluatingToCoarse())
+                if (context.document->quirks().shouldPreventPointerMediaQueryFromEvaluatingToCoarse())
                     pointerCharacteristics = PointerCharacteristics::Fine;
             }
 #endif
@@ -505,21 +502,17 @@ const FeatureSchema& prefersContrast()
 {
     static MainThreadNeverDestroyed<IdentifierSchema> schema {
         "prefers-contrast"_s,
-        FixedVector { CSSValueNoPreference, CSSValueMore, CSSValueLess },
+        FixedVector { CSSValueNoPreference, CSSValueMore, CSSValueLess, CSSValueCustom },
         [](auto& context) {
             bool userPrefersContrast = [&] {
-                auto& frame = *context.document.frame();
-                switch (frame.settings().forcedPrefersContrastAccessibilityValue()) {
+                Ref frame = *context.document->frame();
+                switch (frame->settings().forcedPrefersContrastAccessibilityValue()) {
                 case ForcedAccessibilityValue::On:
                     return true;
                 case ForcedAccessibilityValue::Off:
                     return false;
                 case ForcedAccessibilityValue::System:
-#if PLATFORM(MAC) || PLATFORM(IOS_FAMILY) || PLATFORM(GTK)
                     return Theme::singleton().userPrefersContrast();
-#else
-                    return false;
-#endif
                 }
                 return false;
             }();
@@ -536,8 +529,8 @@ const FeatureSchema& prefersDarkInterface()
         "prefers-dark-interface"_s,
         FixedVector { CSSValueNoPreference, CSSValuePrefers },
         [](auto& context) {
-            auto& frame = *context.document.frame();
-            bool prefersDarkInterface = frame.page()->useSystemAppearance() && frame.page()->useDarkAppearance();
+            Ref page = *context.document->frame()->page();
+            bool prefersDarkInterface = page->useSystemAppearance() && page->useDarkAppearance();
 
             return MatchingIdentifiers { prefersDarkInterface ? CSSValuePrefers : CSSValueNoPreference };
         }
@@ -552,18 +545,14 @@ const FeatureSchema& prefersReducedMotion()
         FixedVector { CSSValueNoPreference, CSSValueReduce },
         [](auto& context) {
             bool userPrefersReducedMotion = [&] {
-                auto& frame = *context.document.frame();
-                switch (frame.settings().forcedPrefersReducedMotionAccessibilityValue()) {
+                Ref frame = *context.document->frame();
+                switch (frame->settings().forcedPrefersReducedMotionAccessibilityValue()) {
                 case ForcedAccessibilityValue::On:
                     return true;
                 case ForcedAccessibilityValue::Off:
                     return false;
                 case ForcedAccessibilityValue::System:
-#if USE(NEW_THEME) || PLATFORM(IOS_FAMILY)
                     return Theme::singleton().userPrefersReducedMotion();
-#else
-                    return false;
-#endif
                 }
                 return false;
             }();
@@ -603,15 +592,9 @@ const FeatureSchema& scripting()
         "scripting"_s,
         FixedVector { CSSValueNone, CSSValueInitialOnly, CSSValueEnabled },
         [](auto& context) {
-            auto& frame = *context.document.frame();
-
-            if (!frame.script().canExecuteScripts(ReasonForCallingCanExecuteScripts::NotAboutToExecuteScript))
+            Ref frame = *context.document->frame();
+            if (!frame->checkedScript()->canExecuteScripts(ReasonForCallingCanExecuteScripts::NotAboutToExecuteScript))
                 return MatchingIdentifiers { CSSValueNone };
-
-            auto* frameView = frame.view();
-            if (frameView && frameView->mediaType() == printAtom())
-                return MatchingIdentifiers { CSSValueInitialOnly };
-
             return MatchingIdentifiers { CSSValueEnabled };
         }
     };
@@ -632,13 +615,8 @@ const FeatureSchema& transform3d()
     static MainThreadNeverDestroyed<BooleanSchema> schema {
         "-webkit-transform-3d"_s,
         [](auto& context) {
-#if ENABLE(3D_TRANSFORMS)
-            auto* view = context.document.renderView();
+            CheckedPtr view = context.document->renderView();
             return view && view->compositor().canRender3DTransforms();
-#else
-            UNUSED_PARAM(context);
-            return false;
-#endif
         }
     };
     return schema;
@@ -659,9 +637,7 @@ const FeatureSchema& update()
         "update"_s,
         FixedVector { CSSValueNone, CSSValueSlow, CSSValueFast },
         [](auto& context) {
-            auto& frame = *context.document.frame();
-            auto* frameView = frame.view();
-
+            RefPtr frameView = context.document->frame()->view();
             if (frameView && frameView->mediaType() == printAtom())
                 return MatchingIdentifiers { CSSValueNone };
 
@@ -677,7 +653,7 @@ const FeatureSchema& videoPlayableInline()
     static MainThreadNeverDestroyed<BooleanSchema> schema {
         "-webkit-video-playable-inline"_s,
         [](auto& context) {
-            return context.document.frame()->settings().allowsInlineMediaPlayback();
+            return context.document->frame()->settings().allowsInlineMediaPlayback();
         }
     };
     return schema;
@@ -688,8 +664,8 @@ const FeatureSchema& width()
     static MainThreadNeverDestroyed<LengthSchema> schema {
         "width"_s,
         [](auto& context) {
-            auto width = context.document.view()->layoutWidth();
-            if (auto* renderView = context.document.renderView())
+            auto width = context.document->protectedView()->layoutWidth();
+            if (CheckedPtr renderView = context.document->renderView())
                 width = adjustForAbsoluteZoom(width, *renderView);
             return width;
         }
@@ -705,8 +681,8 @@ const FeatureSchema& displayMode()
         FixedVector { CSSValueFullscreen, CSSValueStandalone, CSSValueMinimalUi, CSSValueBrowser },
         [](auto& context) {
             auto identifier = [&] {
-                auto& frame = *context.document.frame();
-                auto manifest = frame.page() ? frame.page()->applicationManifest() : std::nullopt;
+                Ref frame = *context.document->frame();
+                auto manifest = frame->page() ? frame->page()->applicationManifest() : std::nullopt;
                 if (!manifest)
                     return CSSValueBrowser;
 
@@ -739,8 +715,7 @@ const FeatureSchema& overflowBlock()
         [](auto& context) {
             // FIXME: Match none when scrollEnabled is set to false by UIKit.
             bool matchesPaged = [&] {
-                auto& frame = *context.document.frame();
-                auto* frameView = frame.view();
+                RefPtr frameView = context.document->frame()->view();
                 if (!frameView)
                     return false;
                 return frameView->mediaType() == printAtom() || frameView->pagination().mode != PaginationMode::Unpaginated;
@@ -771,8 +746,8 @@ const FeatureSchema& prefersColorScheme()
         "prefers-color-scheme"_s,
         FixedVector { CSSValueLight, CSSValueDark },
         [](auto& context) {
-                auto& frame = *context.document.frame();
-            bool useDarkAppearance = frame.page()->useDarkAppearance();
+            Ref page = *context.document->frame()->page();
+            bool useDarkAppearance = page->useDarkAppearance();
 
             return MatchingIdentifiers { useDarkAppearance ? CSSValueDark : CSSValueLight };
         }

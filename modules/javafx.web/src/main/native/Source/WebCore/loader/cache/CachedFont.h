@@ -28,7 +28,9 @@
 #include "CachedResource.h"
 #include "CachedResourceClient.h"
 #include "Font.h"
+#include "FrameLoaderTypes.h"
 #include "TextFlags.h"
+#include "TrustedFonts.h"
 #include <pal/SessionID.h>
 
 namespace WebCore {
@@ -55,9 +57,12 @@ public:
 
     virtual bool ensureCustomFontData();
     static RefPtr<FontCustomPlatformData> createCustomFontData(SharedBuffer&, const String& itemInCollection, bool& wrapping);
+    static RefPtr<FontCustomPlatformData> createCustomFontDataExperimentalParser(SharedBuffer&, const String& itemInCollection, bool& wrapping);
     static FontPlatformData platformDataFromCustomData(FontCustomPlatformData&, const FontDescription&, bool bold, bool italic, const FontCreationContext&);
 
     virtual RefPtr<Font> createFont(const FontDescription&, bool syntheticBold, bool syntheticItalic, const FontCreationContext&);
+
+    bool didRefuseToParseCustomFontWithSafeFontParser() const { return m_didRefuseToParseCustomFont; }
 
 protected:
     FontPlatformData platformDataFromCustomData(const FontDescription&, bool bold, bool italic, const FontCreationContext&);
@@ -67,7 +72,7 @@ protected:
 private:
     String calculateItemInCollection() const;
 
-    void checkNotify(const NetworkLoadMetrics&) override;
+    void checkNotify(const NetworkLoadMetrics&, LoadWillContinueInAnotherProcess = LoadWillContinueInAnotherProcess::No) override;
     bool mayTryReplaceEncodedData() const override;
 
     void load(CachedResourceLoader&) override;
@@ -78,11 +83,14 @@ private:
 
     void allClientsRemoved() override;
 
-    bool shouldAllowCustomFont(const Ref<SharedBuffer>& data);
+    FontParsingPolicy policyForCustomFont(const Ref<SharedBuffer>& data);
     void setErrorAndDeleteData();
 
     bool m_loadInitiated;
     bool m_hasCreatedFontDataWrappingResource;
+
+    FontParsingPolicy m_fontParsingPolicy { FontParsingPolicy::Deny };
+    bool m_didRefuseToParseCustomFont { false };
 
     RefPtr<FontCustomPlatformData> m_fontCustomPlatformData;
 

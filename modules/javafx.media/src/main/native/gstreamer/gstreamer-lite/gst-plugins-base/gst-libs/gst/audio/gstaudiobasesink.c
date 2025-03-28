@@ -1733,6 +1733,7 @@ flushing:
   }
 }
 
+#define ABSDIFF(a, b) ((a) > (b) ? (a) - (b) : (b) - (a))
 static gint64
 gst_audio_base_sink_get_alignment (GstAudioBaseSink * sink,
     GstClockTime sample_offset)
@@ -1769,10 +1770,16 @@ gst_audio_base_sink_get_alignment (GstAudioBaseSink * sink,
     if (sink->priv->discont_wait > 0) {
       GstClockTime time = gst_util_uint64_scale_int (sample_offset,
           GST_SECOND, rate);
+      GstClockTime expected_time = gst_util_uint64_scale_int (sink->next_sample,
+          GST_SECOND, rate);
+
       if (sink->priv->discont_time == -1) {
-        /* discont candidate */
-        sink->priv->discont_time = time;
-      } else if (time - sink->priv->discont_time >= sink->priv->discont_wait) {
+        if (ABSDIFF (expected_time, time) >= sink->priv->discont_wait)
+          discont = TRUE;
+        else
+          sink->priv->discont_time = expected_time;
+      } else if (ABSDIFF (time,
+              sink->priv->discont_time) >= sink->priv->discont_wait) {
         /* discont_wait expired, discontinuity detected */
         discont = TRUE;
         sink->priv->discont_time = -1;
@@ -1809,6 +1816,8 @@ gst_audio_base_sink_get_alignment (GstAudioBaseSink * sink,
 
   return align;
 }
+
+#undef ABSDIFF
 
 static GstFlowReturn
 gst_audio_base_sink_render (GstBaseSink * bsink, GstBuffer * buf)

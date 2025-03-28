@@ -43,7 +43,7 @@ UniqueRef<T> makeUniqueRefWithoutFastMallocCheck(Args&&... args)
 template<typename T, class... Args>
 UniqueRef<T> makeUniqueRef(Args&&... args)
 {
-    static_assert(std::is_same<typename T::webkitFastMalloced, int>::value, "T is FastMalloced");
+    static_assert(std::is_same<typename T::WTFIsFastAllocated, int>::value, "T sould use FastMalloc (WTF_MAKE_FAST_ALLOCATED)");
     return makeUniqueRefWithoutFastMallocCheck<T>(std::forward<Args>(args)...);
 }
 
@@ -108,12 +108,14 @@ private:
 template <typename T>
 struct GetPtrHelper<UniqueRef<T>> {
     using PtrType = T*;
+    using UnderlyingType = T;
     static T* getPtr(const UniqueRef<T>& p) { return const_cast<T*>(p.ptr()); }
 };
 
 template <typename T>
 struct IsSmartPtr<UniqueRef<T>> {
     static constexpr bool value = true;
+    static constexpr bool isNullable = false;
 };
 
 template<typename ExpectedType, typename ArgType>

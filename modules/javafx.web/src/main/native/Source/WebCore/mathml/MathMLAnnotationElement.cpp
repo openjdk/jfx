@@ -37,11 +37,11 @@
 #include "RenderMathMLBlock.h"
 #include "SVGElementTypeHelpers.h"
 #include "SVGSVGElement.h"
-#include <wtf/IsoMallocInlines.h>
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
-WTF_MAKE_ISO_ALLOCATED_IMPL(MathMLAnnotationElement);
+WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(MathMLAnnotationElement);
 
 using namespace MathMLNames;
 
@@ -62,7 +62,7 @@ RenderPtr<RenderElement> MathMLAnnotationElement::createElementRenderer(RenderSt
         return MathMLElement::createElementRenderer(WTFMove(style), insertionPosition);
 
     ASSERT(hasTagName(annotation_xmlTag));
-    return createRenderer<RenderMathMLBlock>(*this, WTFMove(style));
+    return createRenderer<RenderMathMLBlock>(RenderObject::Type::MathMLBlock, *this, WTFMove(style));
 }
 
 bool MathMLAnnotationElement::childShouldCreateRenderer(const Node& child) const
@@ -78,7 +78,7 @@ bool MathMLAnnotationElement::childShouldCreateRenderer(const Node& child) const
 void MathMLAnnotationElement::attributeChanged(const QualifiedName& name, const AtomString& oldValue, const AtomString& newValue, AttributeModificationReason reason)
 {
     if (name == MathMLNames::srcAttr || name == MathMLNames::encodingAttr) {
-        auto* parent = parentElement();
+        RefPtr parent = parentElement();
         if (is<MathMLElement>(parent) && parent->hasTagName(semanticsTag))
             downcast<MathMLElement>(*parent).updateSelectedChild();
     }

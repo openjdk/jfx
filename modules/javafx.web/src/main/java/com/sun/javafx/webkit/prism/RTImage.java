@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -115,6 +115,10 @@ final class RTImage extends PrismImage implements ResourceFactoryListener {
                     (int) Math.ceil(width * pixelScale),
                     (int) Math.ceil(height * pixelScale),
                     Texture.WrapMode.CLAMP_NOT_NEEDED);
+            if (txt == null) {
+                log.fine("RTImage::getTexture : return null because rt texture not allocated");
+                return null;
+            }
             txt.contentsUseful();
             txt.makePermanent();
             if (registeredWithFactory == null || registeredWithFactory.get() != f) {

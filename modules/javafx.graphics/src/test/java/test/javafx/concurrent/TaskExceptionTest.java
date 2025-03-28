@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,38 +25,33 @@
 
 package test.javafx.concurrent;
 
-import java.util.Arrays;
-import java.util.Collection;
+import java.util.stream.Stream;
 import javafx.concurrent.Task;
 import javafx.concurrent.Worker;
 
 import test.javafx.concurrent.mocks.EpicFailTask;
-import org.junit.Before;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
 
-import static org.junit.Assert.*;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
 
-@RunWith(Parameterized.class)
 public class TaskExceptionTest {
-    @Parameterized.Parameters public static Collection implementations() {
-        return Arrays.asList(new Object[][]{
-                {new Exception("Exception")},
-                {new IllegalArgumentException("IAE")},
-                {new NullPointerException("NPE")},
-                {new RuntimeException("RuntimeException")}
-        });
+
+    public static Stream<Arguments> implementations() {
+        return Stream.of(
+            Arguments.of(new Exception("Exception")),
+            Arguments.of(new IllegalArgumentException("IAE")),
+            Arguments.of(new NullPointerException("NPE")),
+            Arguments.of(new RuntimeException("RuntimeException"))
+        );
     }
 
-    private Exception exception;
     private Task task;
 
-    public TaskExceptionTest(Exception th) {
-        this.exception = th;
-    }
-
-    @Before public void setup() {
+    public void setup(Exception exception) {
         task = new EpicFailTask(exception);
     }
 
@@ -66,32 +61,50 @@ public class TaskExceptionTest {
      * arbitrary state.
      ***********************************************************************/
 
-    @Test public void afterRunningExceptionShouldBeSet() {
+    @ParameterizedTest
+    @MethodSource("implementations")
+    public void afterRunningExceptionShouldBeSet(Exception exception) {
+        setup(exception); // NOTE this should be a @BeforeEach call, restore after JUnit5 adds Parametrized classes
         task.run();
         assertNotNull(task.getException());
     }
 
-    @Test public void afterRunningValueShouldBe_Null() {
+    @ParameterizedTest
+    @MethodSource("implementations")
+    public void afterRunningValueShouldBe_Null(Exception exception) {
+        setup(exception); // NOTE this should be a @BeforeEach call, restore after JUnit5 adds Parametrized classes
         task.run();
         assertNull(task.getValue());
     }
 
-    @Test public void afterRunningWorkDoneShouldBe_10() {
+    @ParameterizedTest
+    @MethodSource("implementations")
+    public void afterRunningWorkDoneShouldBe_10(Exception exception) {
+        setup(exception); // NOTE this should be a @BeforeEach call, restore after JUnit5 adds Parametrized classes
         task.run();
         assertEquals(10, task.getWorkDone(), 0);
     }
 
-    @Test public void afterRunningTotalWorkShouldBe_20() {
+    @ParameterizedTest
+    @MethodSource("implementations")
+    public void afterRunningTotalWorkShouldBe_20(Exception exception) {
+        setup(exception); // NOTE this should be a @BeforeEach call, restore after JUnit5 adds Parametrized classes
         task.run();
         assertEquals(20, task.getTotalWork(), 0);
     }
 
-    @Test public void afterRunningProgressShouldBe_FiftyPercent() {
+    @ParameterizedTest
+    @MethodSource("implementations")
+    public void afterRunningProgressShouldBe_FiftyPercent(Exception exception) {
+        setup(exception); // NOTE this should be a @BeforeEach call, restore after JUnit5 adds Parametrized classes
         task.run();
         assertEquals(.5, task.getProgress(), 0);
     }
 
-    @Test public void afterRunningStateShouldBe_FAILED() {
+    @ParameterizedTest
+    @MethodSource("implementations")
+    public void afterRunningStateShouldBe_FAILED(Exception exception) {
+        setup(exception); // NOTE this should be a @BeforeEach call, restore after JUnit5 adds Parametrized classes
         task.run();
         assertEquals(Worker.State.FAILED, task.getState());
     }

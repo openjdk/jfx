@@ -34,7 +34,7 @@ TARGET_TRIPLE_FLAGS = -target $(WK_CURRENT_ARCH)-$(LLVM_TARGET_TRIPLE_VENDOR)-$(
 FRAMEWORK_FLAGS := $(addprefix -F, $(BUILT_PRODUCTS_DIR) $(FRAMEWORK_SEARCH_PATHS) $(SYSTEM_FRAMEWORK_SEARCH_PATHS))
 HEADER_FLAGS := $(addprefix -I, $(BUILT_PRODUCTS_DIR) $(HEADER_SEARCH_PATHS) $(SYSTEM_HEADER_SEARCH_PATHS))
 EXTERNAL_FLAGS := -DRELEASE_WITHOUT_OPTIMIZATIONS $(addprefix -D, $(GCC_PREPROCESSOR_DEFINITIONS))
-FEATURE_AND_PLATFORM_DEFINES := $(shell $(CC) -std=c++2a -x c++ -E -P -dM $(SDK_FLAGS) $(TARGET_TRIPLE_FLAGS) $(FRAMEWORK_FLAGS) $(HEADER_FLAGS) $(EXTERNAL_FLAGS) -include "wtf/Platform.h" /dev/null | $(PERL) -ne "print if s/\#define ((HAVE_|USE_|ENABLE_|WTF_PLATFORM_)\w+) 1/\1/")
+FEATURE_AND_PLATFORM_DEFINES := $(shell $(CC) -std=c++2b -x c++ -E -P -dM $(SDK_FLAGS) $(TARGET_TRIPLE_FLAGS) $(FRAMEWORK_FLAGS) $(HEADER_FLAGS) $(EXTERNAL_FLAGS) -include "wtf/Platform.h" /dev/null | $(PERL) -ne "print if s/\#define ((HAVE_|USE_|ENABLE_|WTF_PLATFORM_)\w+) 1/\1/")
 
 # FIXME: This should list Platform.h and all the things it includes. Could do that by using the -MD flag in the CC line above.
 FEATURE_AND_PLATFORM_DEFINE_DEPENDENCIES = $(DumpRenderTree)/DerivedSources.make
@@ -59,16 +59,20 @@ SCRIPTS = \
 #
 
 IDL_ATTRIBUTES_FILE = $(WebCoreScripts)/IDLAttributes.json
+IDL_FILE_NAMES_LIST = IDLFileNamesList.txt
 
 .PHONY : all
-
-JS%.h JS%.cpp : %.idl $(SCRIPTS) $(IDL_ATTRIBUTES_FILE) $(FEATURE_AND_PLATFORM_DEFINE_DEPENDENCIES)
-	@echo Generating bindings for $*...
-	$(PERL) -I $(WebCoreScripts) -I $(UISCRIPTCONTEXT_DIR) -I $(DumpRenderTree)/Bindings $(WebCoreScripts)/generate-bindings.pl --defines "$(FEATURE_AND_PLATFORM_DEFINES)" --include $(UISCRIPTCONTEXT_DIR) --outputDir . --generator DumpRenderTree --idlAttributesFile $(IDL_ATTRIBUTES_FILE) $<
 
 all : \
     $(UICONTEXT_INTERFACES:%=JS%.h) \
     $(UICONTEXT_INTERFACES:%=JS%.cpp) \
+
+$(IDL_FILE_NAMES_LIST) : $(UICONTEXT_INTERFACES:%=%.idl)
+	echo $^ | tr " " "\n" > $@
+
+JS%.h JS%.cpp : %.idl $(SCRIPTS) $(IDL_ATTRIBUTES_FILE) $(IDL_FILE_NAMES_LIST) $(FEATURE_AND_PLATFORM_DEFINE_DEPENDENCIES)
+	@echo Generating bindings for $*...
+	$(PERL) -I $(WebCoreScripts) -I $(UISCRIPTCONTEXT_DIR) -I $(DumpRenderTree)/Bindings $(WebCoreScripts)/generate-bindings.pl --defines "$(FEATURE_AND_PLATFORM_DEFINES)" --idlFileNamesList $(IDL_FILE_NAMES_LIST) --outputDir . --generator DumpRenderTree --idlAttributesFile $(IDL_ATTRIBUTES_FILE) $<
 #
 
 

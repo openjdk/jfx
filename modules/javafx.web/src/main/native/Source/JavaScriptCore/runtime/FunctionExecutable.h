@@ -55,7 +55,7 @@ public:
         return executable;
     }
     static FunctionExecutable* fromGlobalCode(
-        const Identifier& name, JSGlobalObject*, const SourceCode&,
+        const Identifier& name, JSGlobalObject*, const SourceCode&, LexicallyScopedFeatures,
         JSObject*& exception, int overrideLineNumber, std::optional<int> functionConstructorParametersEndPosition);
 
     static void destroy(JSCell*);
@@ -132,6 +132,7 @@ public:
     ImplementationVisibility implementationVisibility() const { return m_unlinkedExecutable->implementationVisibility(); }
     bool isBuiltinFunction() const { return m_unlinkedExecutable->isBuiltinFunction(); }
     ConstructAbility constructAbility() const { return m_unlinkedExecutable->constructAbility(); }
+    InlineAttribute inlineAttribute() const { return m_unlinkedExecutable->inlineAttribute(); }
     bool isClass() const { return m_unlinkedExecutable->isClass(); }
     bool isArrowFunction() const { return parseMode() == SourceParseMode::ArrowFunctionMode; }
     bool isGetter() const { return parseMode() == SourceParseMode::GetterMode; }
@@ -162,10 +163,7 @@ public:
 
     DECLARE_VISIT_CHILDREN;
     DECLARE_VISIT_OUTPUT_CONSTRAINTS;
-    static Structure* createStructure(VM& vm, JSGlobalObject* globalObject, JSValue proto)
-    {
-        return Structure::create(vm, globalObject, proto, TypeInfo(FunctionExecutableType, StructureFlags), info());
-    }
+    inline static Structure* createStructure(VM&, JSGlobalObject*, JSValue);
 
     void setOverrideLineNumber(int overrideLineNumber)
     {
@@ -278,11 +276,11 @@ public:
         return m_rareData->m_asString.get();
     }
 
-    static inline ptrdiff_t offsetOfRareData() { return OBJECT_OFFSETOF(FunctionExecutable, m_rareData); }
-    static inline ptrdiff_t offsetOfCodeBlockForCall() { return OBJECT_OFFSETOF(FunctionExecutable, m_codeBlockForCall); }
-    static inline ptrdiff_t offsetOfCodeBlockForConstruct() { return OBJECT_OFFSETOF(FunctionExecutable, m_codeBlockForConstruct); }
+    static constexpr ptrdiff_t offsetOfRareData() { return OBJECT_OFFSETOF(FunctionExecutable, m_rareData); }
+    static constexpr ptrdiff_t offsetOfCodeBlockForCall() { return OBJECT_OFFSETOF(FunctionExecutable, m_codeBlockForCall); }
+    static constexpr ptrdiff_t offsetOfCodeBlockForConstruct() { return OBJECT_OFFSETOF(FunctionExecutable, m_codeBlockForConstruct); }
 
-    static ptrdiff_t offsetOfCodeBlockFor(CodeSpecializationKind kind)
+    static constexpr ptrdiff_t offsetOfCodeBlockFor(CodeSpecializationKind kind)
     {
         switch (kind) {
         case CodeForCall:
@@ -297,7 +295,7 @@ public:
     struct RareData {
         WTF_MAKE_STRUCT_FAST_ALLOCATED;
 
-        static inline ptrdiff_t offsetOfAsString() { return OBJECT_OFFSETOF(RareData, m_asString); }
+        static constexpr ptrdiff_t offsetOfAsString() { return OBJECT_OFFSETOF(RareData, m_asString); }
 
         RefPtr<TypeSet> m_returnStatementTypeSet;
         unsigned m_lineCount;

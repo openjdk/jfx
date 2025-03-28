@@ -25,18 +25,19 @@
 
 #pragma once
 
+#include "AdvancedPrivacyProtections.h"
 #include "ScriptExecutionContextIdentifier.h"
 #include "ServiceWorkerData.h"
 #include <wtf/CrossThreadCopier.h>
+#include <wtf/OptionSet.h>
 #include <wtf/text/WTFString.h>
 
 namespace WebCore {
 
 struct WorkerInitializationData {
-#if ENABLE(SERVICE_WORKER)
     std::optional<ServiceWorkerData> serviceWorkerData;
-#endif
     std::optional<ScriptExecutionContextIdentifier> clientIdentifier;
+    OptionSet<WebCore::AdvancedPrivacyProtections> advancedPrivacyProtections;
     String userAgent;
 
     WorkerInitializationData isolatedCopy() const;
@@ -45,10 +46,9 @@ struct WorkerInitializationData {
 inline WorkerInitializationData WorkerInitializationData::isolatedCopy() const
 {
     return {
-#if ENABLE(SERVICE_WORKER)
         crossThreadCopy(serviceWorkerData),
-#endif
         clientIdentifier,
+        advancedPrivacyProtections,
         userAgent.isolatedCopy()
     };
 }

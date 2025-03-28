@@ -33,15 +33,16 @@
 #include "UserGestureIndicator.h"
 #include "WorkerGlobalScope.h"
 #include <wtf/HexNumber.h>
-#include <wtf/IsoMallocInlines.h>
+#include <wtf/TZoneMallocInlines.h>
+#include <wtf/text/MakeString.h>
 #include <wtf/text/StringBuilder.h>
 #include <wtf/text/TextStream.h>
 
 namespace WebCore {
 
-WTF_MAKE_ISO_ALLOCATED_IMPL(Event);
+WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(Event);
 
-ALWAYS_INLINE Event::Event(MonotonicTime createTime, const AtomString& type, IsTrusted isTrusted, CanBubble canBubble, IsCancelable cancelable, IsComposed composed)
+ALWAYS_INLINE Event::Event(MonotonicTime createTime, enum EventInterfaceType eventInterface, const AtomString& type, IsTrusted isTrusted, CanBubble canBubble, IsCancelable cancelable, IsComposed composed)
     : m_isInitialized { !type.isNull() }
     , m_canBubble { canBubble == CanBubble::Yes }
     , m_cancelable { cancelable == IsCancelable::Yes }
@@ -55,30 +56,31 @@ ALWAYS_INLINE Event::Event(MonotonicTime createTime, const AtomString& type, IsT
     , m_isExecutingPassiveEventListener { false }
     , m_currentTargetIsInShadowTree { false }
     , m_eventPhase { NONE }
+    , m_eventInterface(enumToUnderlyingType(eventInterface))
     , m_type { type }
     , m_createTime { createTime }
 {
+    ASSERT(m_eventInterface == enumToUnderlyingType(eventInterface));
 }
 
-Event::Event(IsTrusted isTrusted)
-    : Event { MonotonicTime::now(), { }, isTrusted, CanBubble::No, IsCancelable::No, IsComposed::No }
+Event::Event(enum EventInterfaceType eventInterface, IsTrusted isTrusted)
+    : Event { MonotonicTime::now(), eventInterface, { }, isTrusted, CanBubble::No, IsCancelable::No, IsComposed::No }
 {
 }
 
-Event::Event(const AtomString& eventType, CanBubble canBubble, IsCancelable isCancelable, IsComposed isComposed)
-    : Event { MonotonicTime::now(), eventType, IsTrusted::Yes, canBubble, isCancelable, isComposed }
-{
-    ASSERT(!eventType.isNull());
-}
-
-Event::Event(const AtomString& eventType, CanBubble canBubble, IsCancelable isCancelable, IsComposed isComposed, MonotonicTime timestamp, IsTrusted isTrusted)
-    : Event { timestamp, eventType, isTrusted, canBubble, isCancelable, isComposed }
+Event::Event(enum EventInterfaceType eventInterface, const AtomString& eventType, CanBubble canBubble, IsCancelable isCancelable, IsComposed isComposed)
+    : Event { MonotonicTime::now(), eventInterface, eventType, IsTrusted::Yes, canBubble, isCancelable, isComposed }
 {
     ASSERT(!eventType.isNull());
 }
 
-Event::Event(const AtomString& eventType, const EventInit& initializer, IsTrusted isTrusted)
-    : Event { MonotonicTime::now(), eventType, isTrusted,
+Event::Event(enum EventInterfaceType eventInterface, const AtomString& eventType, CanBubble canBubble, IsCancelable cancelable, IsComposed composed, MonotonicTime timestamp, IsTrusted isTrusted)
+    : Event(timestamp, eventInterface, eventType, isTrusted, canBubble, cancelable, composed)
+{
+}
+
+Event::Event(enum EventInterfaceType eventInterface, const AtomString& eventType, const EventInit& initializer, IsTrusted isTrusted)
+    : Event { MonotonicTime::now(), eventInterface, eventType, isTrusted,
         initializer.bubbles ? CanBubble::Yes : CanBubble::No,
         initializer.cancelable ? IsCancelable::Yes : IsCancelable::No,
         initializer.composed ? IsComposed::Yes : IsComposed::No }
@@ -91,17 +93,17 @@ Event::~Event() = default;
 
 Ref<Event> Event::create(const AtomString& type, CanBubble canBubble, IsCancelable isCancelable, IsComposed isComposed)
 {
-    return adoptRef(*new Event(type, canBubble, isCancelable, isComposed));
+    return adoptRef(*new Event(EventInterfaceType::Event, type, canBubble, isCancelable, isComposed));
 }
 
 Ref<Event> Event::createForBindings()
 {
-    return adoptRef(*new Event);
+    return adoptRef(*new Event(EventInterfaceType::Event));
 }
 
 Ref<Event> Event::create(const AtomString& type, const EventInit& initializer, IsTrusted isTrusted)
 {
-    return adoptRef(*new Event(type, initializer, isTrusted));
+    return adoptRef(*new Event(EventInterfaceType::Event, type, initializer, isTrusted));
 }
 
 void Event::initEvent(const AtomString& eventTypeArg, bool canBubbleArg, bool cancelableArg)
@@ -132,10 +134,20 @@ void Event::setTarget(RefPtr<EventTarget>&& target)
         receivedTarget();
 }
 
-void Event::setCurrentTarget(EventTarget* currentTarget, std::optional<bool> isInShadowTree)
+RefPtr<EventTarget> Event::protectedCurrentTarget() const
 {
-    m_currentTarget = currentTarget;
-    m_currentTargetIsInShadowTree = isInShadowTree ? *isInShadowTree : (is<Node>(currentTarget) && downcast<Node>(*currentTarget).isInShadowTree());
+    return m_currentTarget;
+}
+
+void Event::setCurrentTarget(RefPtr<EventTarget>&& currentTarget, std::optional<bool> isInShadowTree)
+{
+    m_currentTarget = WTFMove(currentTarget);
+    if (isInShadowTree)
+        m_currentTargetIsInShadowTree = *isInShadowTree;
+    else {
+        auto* targetNode = dynamicDowncast<Node>(m_currentTarget.get());
+        m_currentTargetIsInShadowTree = targetNode && targetNode->isInShadowTree();
+    }
 }
 
 void Event::setEventPath(const EventPath& path)
@@ -147,7 +159,7 @@ Vector<Ref<EventTarget>> Event::composedPath() const
 {
     if (!m_eventPath)
         return Vector<Ref<EventTarget>>();
-    return m_eventPath->computePathUnclosedToTarget(*m_currentTarget);
+    return m_eventPath->computePathUnclosedToTarget(*protectedCurrentTarget());
 }
 
 void Event::setUnderlyingEvent(Event* underlyingEvent)
@@ -162,10 +174,10 @@ void Event::setUnderlyingEvent(Event* underlyingEvent)
 
 DOMHighResTimeStamp Event::timeStampForBindings(ScriptExecutionContext& context) const
 {
-    Performance* performance = nullptr;
-    if (is<WorkerGlobalScope>(context))
-        performance = &downcast<WorkerGlobalScope>(context).performance();
-    else if (auto* window = downcast<Document>(context).domWindow())
+    RefPtr<Performance> performance;
+    if (auto* globalScope = dynamicDowncast<WorkerGlobalScope>(context))
+        performance = &globalScope->performance();
+    else if (RefPtr window = downcast<Document>(context).domWindow())
         performance = &window->performance();
 
     if (!performance)
@@ -192,7 +204,7 @@ void Event::resetAfterDispatch()
 
 String Event::debugDescription() const
 {
-    return makeString(type(), " phase ", eventPhase(), bubbles() ? " bubbles " : " ", cancelable() ? "cancelable " : " ", "0x"_s, hex(reinterpret_cast<uintptr_t>(this), Lowercase));
+    return makeString(type(), " phase "_s, eventPhase(), bubbles() ? " bubbles "_s : " "_s, cancelable() ? "cancelable "_s : " "_s, "0x"_s, hex(reinterpret_cast<uintptr_t>(this), Lowercase));
 }
 
 TextStream& operator<<(TextStream& ts, const Event& event)

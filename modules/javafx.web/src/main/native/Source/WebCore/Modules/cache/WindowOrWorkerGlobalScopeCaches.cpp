@@ -34,7 +34,6 @@
 #include "LocalFrame.h"
 #include "Page.h"
 #include "Supplementable.h"
-#include "WorkerCacheStorageConnection.h"
 #include "WorkerGlobalScope.h"
 
 namespace WebCore {
@@ -49,7 +48,7 @@ public:
     DOMCacheStorage* caches() const;
 
 private:
-    static const char* supplementName() { return "DOMWindowCaches"; }
+    static ASCIILiteral supplementName() { return "DOMWindowCaches"_s; }
 
     mutable RefPtr<DOMCacheStorage> m_caches;
 };
@@ -64,7 +63,7 @@ public:
     DOMCacheStorage* caches() const;
 
 private:
-    static const char* supplementName() { return "WorkerGlobalScopeCaches"; }
+    static ASCIILiteral supplementName() { return "WorkerGlobalScopeCaches"_s; }
 
     WorkerGlobalScope& m_scope;
     mutable RefPtr<DOMCacheStorage> m_caches;
@@ -124,15 +123,19 @@ DOMCacheStorage* WorkerGlobalScopeCaches::caches() const
 
 // WindowOrWorkerGlobalScopeCaches.
 
-ExceptionOr<DOMCacheStorage*> WindowOrWorkerGlobalScopeCaches::caches(ScriptExecutionContext& context, LocalDOMWindow& window)
+ExceptionOr<DOMCacheStorage*> WindowOrWorkerGlobalScopeCaches::caches(ScriptExecutionContext& context, DOMWindow& window)
 {
     if (downcast<Document>(context).isSandboxed(SandboxOrigin))
-        return Exception { SecurityError, "Cache storage is disabled because the context is sandboxed and lacks the 'allow-same-origin' flag"_s };
+        return Exception { ExceptionCode::SecurityError, "Cache storage is disabled because the context is sandboxed and lacks the 'allow-same-origin' flag"_s };
 
-    if (!window.isCurrentlyDisplayedInFrame())
+    RefPtr localWindow = dynamicDowncast<LocalDOMWindow>(window);
+    if (!localWindow)
         return nullptr;
 
-    return DOMWindowCaches::from(window)->caches();
+    if (!localWindow->isCurrentlyDisplayedInFrame())
+        return nullptr;
+
+    return DOMWindowCaches::from(*localWindow)->caches();
 }
 
 DOMCacheStorage* WindowOrWorkerGlobalScopeCaches::caches(ScriptExecutionContext&, WorkerGlobalScope& scope)

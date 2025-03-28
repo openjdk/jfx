@@ -145,9 +145,7 @@ Settings::Values Settings::Values::isolatedCopy() const
     };
 }
 
-Settings::~Settings()
-{
-}
+Settings::~Settings() = default;
 
 void Settings::disableUnstableFeaturesForModernWebKit()
 {
@@ -171,6 +169,21 @@ void Settings::disableGlobalUnstableFeaturesForModernWebKit()
     <%= @setting.options["webcoreBinding"] %>::<%= @setting.setterFunctionName %>(false);
 <%-   if @setting.condition -%>
 #endif
+<%-   end -%>
+<%- end -%>
+}
+
+void Settings::disableFeaturesForLockdownMode()
+{
+<%- for @setting in @allSettingsSet.settings do -%>
+<%-   if @setting.disableInLockdownMode -%>
+<%-     if @setting.condition -%>
+#if <%= @setting.condition %>
+<%-     end -%>
+    <%= @setting.setterFunctionName %>(false);
+<%-     if @setting.condition -%>
+#endif
+<%-     end -%>
 <%-   end -%>
 <%- end -%>
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2009, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2009, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -835,7 +835,7 @@ is being used to size a border should also be in pixels.
     -fx-border-width: 1px;
 }
 
-/* Fix for RT-37971 */
+/* Fix for JDK-8094252 */
 .cell:selected .hyperlink,
 .cell:selected .hyperlink:hover,
 .cell:selected .hyperlink:hover:visited {
@@ -1227,7 +1227,7 @@ is being used to size a border should also be in pixels.
     -fx-fill: -fx-text-background-color;
 }
 .progress-indicator:indeterminate > .spinner {
-    /** Applying to undo styling from .spinner, reported in RT-37965 */
+    /** Applying to undo styling from .spinner, reported in JDK-8093574 */
     -fx-background-color: transparent;
     -fx-background-insets: 0;
     -fx-background-radius: 0;
@@ -2134,7 +2134,7 @@ is being used to size a border should also be in pixels.
     -fx-alignment: bottom-right;
 }
 
-/* The fix for RT-37494 forces the web color text's major direction to
+/* The fix for JDK-8095846 forces the web color text's major direction to
  * LTR. The following keeps the text right-aligned when in RTL mode. */
 .custom-color-dialog .webcolor-field:dir(rtl) > .text-field:dir(ltr) {
     -fx-alignment: baseline-right;
@@ -2402,7 +2402,7 @@ is being used to size a border should also be in pixels.
 }
 /* When in constrained resize mode, the right-most visible cell should not have
    a right-border, as it is not possible to get this cleanly out of view without
-   introducing horizontal scrollbars (see RT-14886). */
+   introducing horizontal scrollbars (see JDK-8114045). */
 .table-view:constrained-resize > .virtual-flow > .clipped-container > .sheet > .table-row-cell > .table-cell:last-visible,
 .tree-table-view:constrained-resize > .virtual-flow > .clipped-container > .sheet > .tree-table-row-cell > .tree-table-cell:last-visible {
     -fx-border-color: transparent;
@@ -2953,7 +2953,7 @@ is being used to size a border should also be in pixels.
     -fx-padding: 0;
  }
  .tab-pane > * > .scroll-pane > .corner {
-     -fx-background-insets: 0;  /* Fix for RT-35067 */
+     -fx-background-insets: 0;  /* Fix for JDK-8093820 */
  }
 .tab-pane.floating > * > .table-view,
 .tab-pane.floating > * > .tree-table-view,
@@ -3437,4 +3437,76 @@ is being used to size a border should also be in pixels.
 
 .alert.warning.dialog-pane {
     -fx-graphic: url("dialog-warning.png");
+}
+
+/*******************************************************************************
+ *                                                                             *
+ * Rich Text Area  (Incubator)                                                 *
+ *                                                                             *
+ ******************************************************************************/
+
+.rich-text-area {
+    -fx-text-fill: -fx-text-inner-color;
+    -fx-highlight-fill: derive(-fx-control-inner-background,-20%);
+    -fx-highlight-text-fill: -fx-text-inner-color;
+    -fx-prompt-text-fill: derive(-fx-control-inner-background,-30%);
+    -fx-background-color:
+        linear-gradient(to bottom, derive(-fx-text-box-border, -10%), -fx-text-box-border),
+        linear-gradient(from 0px 0px to 0px 5px, derive(-fx-control-inner-background, -9%), -fx-control-inner-background);
+    -fx-background-insets: 0, 1;
+    -fx-background-radius: 3, 2;
+    -fx-cursor: text;
+    -fx-padding: 0;
+    -fx-content-padding: 4 8 4 8;
+}
+
+.rich-text-area:disabled {
+    -fx-opacity: 0.4;
+}
+
+.rich-text-area:focused {
+    -fx-highlight-fill: -fx-accent;
+    -fx-highlight-text-fill: white;
+    -fx-background-color:
+        -fx-focus-color,
+        -fx-control-inner-background,
+        -fx-faint-focus-color,
+        linear-gradient(from 0px 0px to 0px 5px, derive(-fx-control-inner-background, -9%), -fx-control-inner-background);
+    -fx-background-insets: -0.2, 1, -1.4, 3;
+    -fx-background-radius: 3, 2, 4, 0;
+    -fx-prompt-text-fill: transparent;
+}
+
+.rich-text-area .caret {
+    -fx-stroke: black;
+}
+
+.rich-text-area .caret-line {
+    -fx-stroke: null;
+    -fx-fill: derive(-fx-accent,115%);
+}
+
+.rich-text-area .selection-highlight {
+    -fx-stroke: null;
+    -fx-fill: derive(-fx-accent,70%);
+}
+
+.rich-text-area .left-side {
+    -fx-background-color: rgba(127,127,127,0.1);
+}
+
+.rich-text-area .right-side {
+    -fx-background-color: rgba(127,127,127,0.1);
+}
+
+.rich-text-area .line-number-decorator {
+    -fx-font-family: Monospace;
+    -fx-font-size: 90%;
+    -fx-min-height:1;
+    -fx-pref-height:1;
+    -fx-padding: 0 1 0 1;
+}
+
+.line-number-decorator .text {
+    -fx-bounds-type: visual;
 }

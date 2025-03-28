@@ -25,6 +25,7 @@
 
 #pragma once
 
+#include "CustomElementDefaultARIA.h"
 #include "DocumentInlines.h"
 #include "Element.h"
 #include "ElementData.h"
@@ -51,17 +52,25 @@ inline unsigned Element::findAttributeIndexByName(const AtomString& name, bool s
 
 inline bool Node::hasAttributes() const
 {
-    return is<Element>(*this) && downcast<Element>(*this).hasAttributes();
+    auto* element = dynamicDowncast<Element>(*this);
+    return element && element->hasAttributes();
 }
 
 inline NamedNodeMap* Node::attributes() const
 {
-    return is<Element>(*this) ? &downcast<Element>(*this).attributes() : nullptr;
+    if (auto* element = dynamicDowncast<Element>(*this))
+        return &element->attributes();
+    return nullptr;
 }
 
 inline Element* Node::parentElement() const
 {
     return dynamicDowncast<Element>(parentNode());
+}
+
+inline RefPtr<Element> Node::protectedParentElement() const
+{
+    return parentElement();
 }
 
 inline const Element* Element::rootElement() const
@@ -90,9 +99,29 @@ inline const AtomString& Element::attributeWithoutSynchronization(const Qualifie
     return nullAtom();
 }
 
+inline const AtomString& Element::attributeWithDefaultARIA(const QualifiedName& name) const
+{
+    auto& value = attributeWithoutSynchronization(name);
+    if (!value.isNull())
+        return value;
+
+    auto* defaultARIA = customElementDefaultARIAIfExists();
+    return defaultARIA ? defaultARIA->valueForAttribute(*this, name) : nullAtom();
+}
+
+inline String Element::attributeTrimmedWithDefaultARIA(const QualifiedName& name) const
+{
+    const auto& originalValue = attributeWithDefaultARIA(name);
+    if (originalValue.isEmpty())
+        return { };
+
+    auto value = originalValue.string();
+    return value.trim(isASCIIWhitespace).simplifyWhiteSpace(isASCIIWhitespace);
+}
+
 inline URL Element::getURLAttributeForBindings(const QualifiedName& name) const
 {
-    return document().maskedURLForBindingsIfNeeded(getURLAttribute(name));
+    return protectedDocument()->maskedURLForBindingsIfNeeded(getURLAttribute(name));
 }
 
 inline bool Element::hasAttributesWithoutUpdate() const
@@ -129,6 +158,13 @@ inline const SpaceSplitString& Element::classNames() const
     ASSERT(hasClass());
     ASSERT(elementData());
     return elementData()->classNames();
+}
+
+inline bool Element::hasClassName(const AtomString& className) const
+{
+    if (!elementData())
+        return false;
+    return elementData()->classNames().contains(className);
 }
 
 inline unsigned Element::attributeCount() const
@@ -208,7 +244,7 @@ inline const AtomString& Element::getAttribute(const QualifiedName& name, const 
 
 inline bool isInTopLayerOrBackdrop(const RenderStyle& style, const Element* element)
 {
-    return (element && element->isInTopLayer()) || style.styleType() == PseudoId::Backdrop;
+    return (element && element->isInTopLayer()) || style.pseudoElementType() == PseudoId::Backdrop;
 }
 
 inline void Element::hideNonce()

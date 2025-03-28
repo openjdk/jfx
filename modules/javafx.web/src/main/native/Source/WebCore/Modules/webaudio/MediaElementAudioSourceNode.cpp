@@ -36,8 +36,9 @@
 #include "Logging.h"
 #include "MediaElementAudioSourceOptions.h"
 #include "MediaPlayer.h"
-#include <wtf/IsoMallocInlines.h>
+#include "SecurityOrigin.h"
 #include <wtf/Locker.h>
+#include <wtf/TZoneMallocInlines.h>
 
 // These are somewhat arbitrary limits, but we need to do some kind of sanity-checking.
 constexpr unsigned minSampleRate = 8000;
@@ -45,14 +46,14 @@ constexpr unsigned maxSampleRate = 192000;
 
 namespace WebCore {
 
-WTF_MAKE_ISO_ALLOCATED_IMPL(MediaElementAudioSourceNode);
+WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(MediaElementAudioSourceNode);
 
 ExceptionOr<Ref<MediaElementAudioSourceNode>> MediaElementAudioSourceNode::create(BaseAudioContext& context, MediaElementAudioSourceOptions&& options)
 {
     RELEASE_ASSERT(options.mediaElement);
 
     if (options.mediaElement->audioSourceNode())
-        return Exception { InvalidStateError, "Media element is already associated with an audio source node"_s };
+        return Exception { ExceptionCode::InvalidStateError, "Media element is already associated with an audio source node"_s };
 
     auto node = adoptRef(*new MediaElementAudioSourceNode(context, *options.mediaElement));
 
@@ -133,7 +134,7 @@ void MediaElementAudioSourceNode::provideInput(AudioBus* bus, size_t framesToPro
 
 bool MediaElementAudioSourceNode::wouldTaintOrigin()
 {
-    if (auto* origin = context().origin())
+    if (RefPtr origin = context().origin())
         return m_mediaElement->taintsOrigin(*origin);
 
     return true;

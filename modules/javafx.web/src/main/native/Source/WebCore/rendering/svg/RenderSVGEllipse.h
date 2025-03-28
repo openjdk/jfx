@@ -27,13 +27,13 @@
 
 #pragma once
 
-#if ENABLE(LAYER_BASED_SVG_ENGINE)
 #include "RenderSVGShape.h"
 
 namespace WebCore {
 
 class RenderSVGEllipse final : public RenderSVGShape {
-    WTF_MAKE_ISO_ALLOCATED(RenderSVGEllipse);
+    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(RenderSVGEllipse);
+    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(RenderSVGEllipse);
 public:
     RenderSVGEllipse(SVGGraphicsElement&, RenderStyle&&);
     virtual ~RenderSVGEllipse();
@@ -51,10 +51,10 @@ private:
     void calculateRadiiAndCenter();
 
 private:
+    bool canUseStrokeHitTestFastPath() const;
+
     FloatPoint m_center;
     FloatSize m_radii;
 };
 
 } // namespace WebCore
-
-#endif // ENABLE(LAYER_BASED_SVG_ENGINE)

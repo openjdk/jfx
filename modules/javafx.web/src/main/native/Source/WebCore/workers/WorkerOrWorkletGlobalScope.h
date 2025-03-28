@@ -39,8 +39,10 @@ class WorkerInspectorController;
 class WorkerOrWorkletScriptController;
 class WorkerOrWorkletThread;
 
-class WorkerOrWorkletGlobalScope : public ScriptExecutionContext, public RefCounted<WorkerOrWorkletGlobalScope>, public EventTarget {
-    WTF_MAKE_ISO_ALLOCATED(WorkerOrWorkletGlobalScope);
+enum class AdvancedPrivacyProtections : uint16_t;
+
+class WorkerOrWorkletGlobalScope : public RefCounted<WorkerOrWorkletGlobalScope>, public ScriptExecutionContext, public EventTarget {
+    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(WorkerOrWorkletGlobalScope);
     WTF_MAKE_NONCOPYABLE(WorkerOrWorkletGlobalScope);
 public:
     virtual ~WorkerOrWorkletGlobalScope();
@@ -74,6 +76,8 @@ public:
 
     using RefCounted::ref;
     using RefCounted::deref;
+    using RefCounted::refAllowingPartiallyDestroyed;
+    using RefCounted::derefAllowingPartiallyDestroyed;
 
     virtual void suspend() { }
     virtual void resume() { }
@@ -81,9 +85,10 @@ public:
     virtual FetchOptions::Destination destination() const = 0;
     ReferrerPolicy referrerPolicy() const final { return m_referrerPolicy; }
     std::optional<uint64_t> noiseInjectionHashSalt() const final { return m_noiseInjectionHashSalt; }
+    OptionSet<AdvancedPrivacyProtections> advancedPrivacyProtections() const final { return m_advancedPrivacyProtections; }
 
 protected:
-    WorkerOrWorkletGlobalScope(WorkerThreadType, PAL::SessionID, Ref<JSC::VM>&&, ReferrerPolicy, WorkerOrWorkletThread*, std::optional<uint64_t>,  ScriptExecutionContextIdentifier = { });
+    WorkerOrWorkletGlobalScope(WorkerThreadType, PAL::SessionID, Ref<JSC::VM>&&, ReferrerPolicy, WorkerOrWorkletThread*, std::optional<uint64_t>, OptionSet<AdvancedPrivacyProtections>, ScriptExecutionContextIdentifier = { });
 
     // ScriptExecutionContext.
     bool isJSExecutionForbidden() const final;
@@ -94,8 +99,7 @@ private:
     // ScriptExecutionContext.
     void disableEval(const String& errorMessage) final;
     void disableWebAssembly(const String& errorMessage) final;
-    void refScriptExecutionContext() final { ref(); }
-    void derefScriptExecutionContext() final { deref(); }
+    void setRequiresTrustedTypes(bool required) final;
 
     // EventTarget.
     ScriptExecutionContext* scriptExecutionContext() const final { return const_cast<WorkerOrWorkletGlobalScope*>(this); }
@@ -116,10 +120,11 @@ private:
     ReferrerPolicy m_referrerPolicy;
     bool m_isClosing { false };
     std::optional<uint64_t> m_noiseInjectionHashSalt;
+    OptionSet<AdvancedPrivacyProtections> m_advancedPrivacyProtections;
 };
 
 } // namespace WebCore
 
 SPECIALIZE_TYPE_TRAITS_BEGIN(WebCore::WorkerOrWorkletGlobalScope)
-    static bool isType(const WebCore::ScriptExecutionContext& context) { return context.isWorkerGlobalScope() || context.isWorkletGlobalScope(); }
+    static bool isType(const WebCore::ScriptExecutionContext& context) { return context.isWorkerOrWorkletGlobalScope(); }
 SPECIALIZE_TYPE_TRAITS_END()

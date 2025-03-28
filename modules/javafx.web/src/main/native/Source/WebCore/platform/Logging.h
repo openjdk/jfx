@@ -92,6 +92,7 @@ namespace WebCore {
     M(MemoryPressure) \
     M(MessagePorts) \
     M(ModelElement) \
+    M(NativePromise) \
     M(Network) \
     M(NotYetImplemented) \
     M(OverlayScrollbars) \
@@ -111,6 +112,7 @@ namespace WebCore {
     M(ResourceLoadObserver) \
     M(ResourceLoadStatistics) \
     M(ScrollAnimations) \
+    M(ScrollAnchoring) \
     M(ScrollSnap) \
     M(Scrolling) \
     M(ScrollingTree) \
@@ -126,13 +128,17 @@ namespace WebCore {
     M(StyleSheets) \
     M(SVG) \
     M(TextAutosizing) \
+    M(TextDecoding) \
     M(TextFragment) \
     M(TextManipulation) \
     M(TextShaping) \
     M(Tiling) \
     M(Threading) \
+    M(WritingTools) \
     M(URLParser) \
     M(Viewports) \
+    M(ViewTransitions) \
+    M(VirtualMemory) \
     M(WebAudio) \
     M(WebGL) \
     M(WebRTC) \

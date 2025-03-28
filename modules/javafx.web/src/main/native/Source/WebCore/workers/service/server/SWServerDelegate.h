@@ -25,14 +25,21 @@
 
 #pragma once
 
-#if ENABLE(SERVICE_WORKER)
-
 #include "BackgroundFetchRecordLoader.h"
 #include "ProcessIdentifier.h"
 #include "ScriptExecutionContextIdentifier.h"
 #include <wtf/CompletionHandler.h>
 #include <wtf/HashSet.h>
 #include <wtf/WeakPtr.h>
+
+namespace WebCore {
+class SWServerDelegate;
+}
+
+namespace WTF {
+template<typename T> struct IsDeprecatedWeakRefSmartPointerException;
+template<> struct IsDeprecatedWeakRefSmartPointerException<WebCore::SWServerDelegate> : std::true_type { };
+}
 
 namespace WebCore {
 
@@ -58,11 +65,9 @@ public:
     virtual void addAllowedFirstPartyForCookies(ProcessIdentifier, std::optional<ProcessIdentifier>, RegistrableDomain&&) = 0;
 
     virtual void requestBackgroundFetchPermission(const ClientOrigin&, CompletionHandler<void(bool)>&&) = 0;
-    virtual std::unique_ptr<BackgroundFetchRecordLoader> createBackgroundFetchRecordLoader(BackgroundFetchRecordLoader::Client&, const BackgroundFetchRequest&, size_t responseDataSize, const WebCore::ClientOrigin&) = 0;
+    virtual std::unique_ptr<BackgroundFetchRecordLoader> createBackgroundFetchRecordLoader(BackgroundFetchRecordLoaderClient&, const BackgroundFetchRequest&, size_t responseDataSize, const WebCore::ClientOrigin&) = 0;
     virtual Ref<BackgroundFetchStore> createBackgroundFetchStore() = 0;
     virtual std::unique_ptr<SWRegistrationStore> createUniqueRegistrationStore(SWServer&) = 0;
 };
 
 } // namespace WebCore
-
-#endif // ENABLE(SERVICE_WORKER)

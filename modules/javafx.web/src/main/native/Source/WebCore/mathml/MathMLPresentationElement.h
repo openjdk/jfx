@@ -34,13 +34,13 @@
 namespace WebCore {
 
 class MathMLPresentationElement : public MathMLElement {
-    WTF_MAKE_ISO_ALLOCATED(MathMLPresentationElement);
+    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(MathMLPresentationElement);
+    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(MathMLPresentationElement);
 public:
     static Ref<MathMLPresentationElement> create(const QualifiedName& tagName, Document&);
 
 protected:
-    constexpr static auto CreateMathMLPresentationElement = CreateMathMLElement;
-    MathMLPresentationElement(const QualifiedName& tagName, Document&, ConstructionType = CreateMathMLPresentationElement);
+    MathMLPresentationElement(const QualifiedName& tagName, Document&, OptionSet<TypeFlag> = { });
     void attributeChanged(const QualifiedName&, const AtomString& oldValue, const AtomString& newValue, AttributeModificationReason) override;
 
     static std::optional<bool> toOptionalBool(const BooleanValue& value) { return value == BooleanValue::Default ? std::nullopt : std::optional<bool>(value == BooleanValue::True); }

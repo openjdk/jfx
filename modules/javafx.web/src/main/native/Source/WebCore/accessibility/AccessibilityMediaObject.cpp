@@ -41,14 +41,14 @@ namespace WebCore {
 
 using namespace HTMLNames;
 
-AccessibilityMediaObject::AccessibilityMediaObject(RenderObject* renderer)
+AccessibilityMediaObject::AccessibilityMediaObject(RenderObject& renderer)
     : AccessibilityRenderObject(renderer)
 {
 }
 
 AccessibilityMediaObject::~AccessibilityMediaObject() = default;
 
-Ref<AccessibilityMediaObject> AccessibilityMediaObject::create(RenderObject* renderer)
+Ref<AccessibilityMediaObject> AccessibilityMediaObject::create(RenderObject& renderer)
 {
     return adoptRef(*new AccessibilityMediaObject(renderer));
 }
@@ -60,10 +60,7 @@ bool AccessibilityMediaObject::computeAccessibilityIsIgnored() const
 
 HTMLMediaElement* AccessibilityMediaObject::mediaElement() const
 {
-    Node* node = this->node();
-    if (!is<HTMLMediaElement>(*node))
-        return nullptr;
-    return downcast<HTMLMediaElement>(node);
+    return dynamicDowncast<HTMLMediaElement>(node());
 }
 
 String AccessibilityMediaObject::stringValue() const
@@ -92,7 +89,7 @@ void AccessibilityMediaObject::mediaSeek(AXSeekDirection direction)
     double duration = element->duration();
     double timeDelta = ceil(duration * seekStep);
 
-    double time = direction == AXSeekForward ? std::min(current + timeDelta, duration) : std::max(current - timeDelta, 0.0);
+    double time = direction == AXSeekDirection::Forward ? std::min(current + timeDelta, duration) : std::max(current - timeDelta, 0.0);
     element->setCurrentTime(time);
 }
 
@@ -107,12 +104,12 @@ void AccessibilityMediaObject::toggleMute()
 
 void AccessibilityMediaObject::increment()
 {
-    mediaSeek(AXSeekForward);
+    mediaSeek(AXSeekDirection::Forward);
 }
 
 void AccessibilityMediaObject::decrement()
 {
-    mediaSeek(AXSeekBackward);
+    mediaSeek(AXSeekDirection::Backward);
 }
 
 bool AccessibilityMediaObject::press()
@@ -165,11 +162,7 @@ bool AccessibilityMediaObject::isPlayingInline() const
 
 void AccessibilityMediaObject::enterFullscreen() const
 {
-    Node* node = this->node();
-    if (!is<HTMLVideoElement>(node))
-        return;
-
-    HTMLVideoElement* element = downcast<HTMLVideoElement>(node);
+    if (RefPtr element = dynamicDowncast<HTMLVideoElement>(node()))
     element->enterFullscreen();
 }
 

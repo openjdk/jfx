@@ -48,10 +48,7 @@ public:
         return vm.symbolSpace<mode>();
     }
 
-    static Structure* createStructure(VM& vm, JSGlobalObject* globalObject, JSValue prototype)
-    {
-        return Structure::create(vm, globalObject, prototype, TypeInfo(SymbolType, StructureFlags), info());
-    }
+    inline static Structure* createStructure(VM&, JSGlobalObject*, JSValue);
 
     static Symbol* create(VM&);
     static Symbol* createWithDescription(VM&, const String&);
@@ -67,7 +64,7 @@ public:
     JSObject* toObject(JSGlobalObject*) const;
     double toNumber(JSGlobalObject*) const;
 
-    static ptrdiff_t offsetOfSymbolImpl()
+    static constexpr ptrdiff_t offsetOfSymbolImpl()
     {
         // PrivateName is just a Ref<SymbolImpl> which can just be used as a SymbolImpl*.
         return OBJECT_OFFSETOF(Symbol, m_privateName);

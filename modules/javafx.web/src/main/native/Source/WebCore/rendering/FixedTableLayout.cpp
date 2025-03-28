@@ -1,7 +1,7 @@
 /*
  * Copyright (C) 2002 Lars Knoll (knoll@kde.org)
  *           (C) 2002 Dirk Mueller (mueller@kde.org)
- * Copyright (C) 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010 Apple Inc.
+ * Copyright (C) 2003-2024 Apple Inc.
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Library General Public
@@ -101,6 +101,8 @@ float FixedTableLayout::calcWidthArray()
         float effectiveColWidth = 0;
         if (colStyleLogicalWidth.isFixed() && colStyleLogicalWidth.value() > 0)
             effectiveColWidth = colStyleLogicalWidth.value();
+        else if (colStyleLogicalWidth.isCalculated())
+            colStyleLogicalWidth = Length { };
 
         unsigned span = col->span();
         while (span) {
@@ -118,7 +120,7 @@ float FixedTableLayout::calcWidthArray()
                 }
                 spanInCurrentEffectiveColumn = m_table->spanOfEffCol(currentEffectiveColumn);
             }
-            if ((colStyleLogicalWidth.isFixed() || colStyleLogicalWidth.isPercentOrCalculated()) && colStyleLogicalWidth.isPositive()) {
+            if ((colStyleLogicalWidth.isFixed() || colStyleLogicalWidth.isPercent()) && colStyleLogicalWidth.isPositive()) {
                 m_width[currentEffectiveColumn] = colStyleLogicalWidth;
                 m_width[currentEffectiveColumn] *= spanInCurrentEffectiveColumn;
                 usedWidth += effectiveColWidth * spanInCurrentEffectiveColumn;
@@ -145,13 +147,14 @@ float FixedTableLayout::calcWidthArray()
         if (logicalWidth.isFixed() && logicalWidth.isPositive()) {
             fixedBorderBoxLogicalWidth = cell->adjustBorderBoxLogicalWidthForBoxSizing(logicalWidth);
             logicalWidth.setValue(LengthType::Fixed, fixedBorderBoxLogicalWidth);
-        }
+        } else if (logicalWidth.isCalculated())
+            logicalWidth = Length { };
 
         unsigned usedSpan = 0;
         while (usedSpan < span && currentColumn < nEffCols) {
             float eSpan = m_table->spanOfEffCol(currentColumn);
             // Only set if no col element has already set it.
-            if (m_width[currentColumn].isAuto() && logicalWidth.type() != LengthType::Auto) {
+            if (m_width[currentColumn].isAuto() && !logicalWidth.isAuto()) {
                 m_width[currentColumn] = logicalWidth;
                 m_width[currentColumn] *= eSpan / span;
                 usedWidth += fixedBorderBoxLogicalWidth * eSpan / span;

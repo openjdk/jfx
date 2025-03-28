@@ -35,7 +35,8 @@ namespace WebCore {
 class HTMLOptionsCollection;
 
 class HTMLSelectElement : public HTMLFormControlElement, private TypeAheadDataSource {
-    WTF_MAKE_ISO_ALLOCATED(HTMLSelectElement);
+    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(HTMLSelectElement);
+    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(HTMLSelectElement);
 public:
     static Ref<HTMLSelectElement> create(const QualifiedName&, Document&, HTMLFormElement*);
     static Ref<HTMLSelectElement> create(Document&);
@@ -85,6 +86,8 @@ public:
     // Called by the bindings for the unnamed index-setter.
     ExceptionOr<void> setItem(unsigned index, HTMLOptionElement*);
     ExceptionOr<void> setLength(unsigned);
+
+    ExceptionOr<void> showPicker();
 
     WEBCORE_EXPORT HTMLOptionElement* namedItem(const AtomString& name);
     WEBCORE_EXPORT HTMLOptionElement* item(unsigned index);
@@ -156,7 +159,6 @@ private:
 
     void recalcListItems(bool updateSelectedStates = true, AllowStyleInvalidation = AllowStyleInvalidation::Yes) const;
 
-    void deselectItems(HTMLOptionElement* excludeElement = nullptr);
     void typeAheadFind(KeyboardEvent&);
     void saveLastSelection();
 

@@ -26,41 +26,42 @@
 #include "config.h"
 #include "WGSL.h"
 
+#include "ASTIdentifierExpression.h"
+#include "AttributeValidator.h"
+#include "BoundsCheck.h"
 #include "CallGraph.h"
-#include "ConstantRewriter.h"
 #include "EntryPointRewriter.h"
+#include "GlobalSorting.h"
 #include "GlobalVariableRewriter.h"
 #include "MangleNames.h"
 #include "Metal/MetalCodeGenerator.h"
 #include "Parser.h"
 #include "PhaseTimer.h"
+#include "PointerRewriter.h"
 #include "TypeCheck.h"
+#include "VisibilityValidator.h"
 #include "WGSLShaderModule.h"
 
 namespace WGSL {
 
-#define CHECK_PASS(name, pass, ...) \
-    dumpASTBetweenEachPassIfNeeded(ast, "AST before " # pass); \
-    auto name##Expected = [&]() { \
+#define CHECK_PASS(pass, ...) \
+    dumpASTBetweenEachPassIfNeeded(shaderModule, "AST before " # pass); \
+    auto maybe##pass##Failure = [&]() { \
         PhaseTimer phaseTimer(#pass, phaseTimes); \
         return pass(__VA_ARGS__); \
     }(); \
-    if (!name##Expected) { \
-        if (dumpPassFailure) \
-            dataLogLn("failed pass: " # pass, toString(name##Expected.error())); \
-        return makeUnexpected(name##Expected.error()); \
-    } \
-    auto& name = *name##Expected; \
+    if (maybe##pass##Failure) \
+        return { *maybe##pass##Failure };
 
 #define RUN_PASS(pass, ...) \
     do { \
         PhaseTimer phaseTimer(#pass, phaseTimes); \
-        dumpASTBetweenEachPassIfNeeded(ast, "AST before " # pass); \
+        dumpASTBetweenEachPassIfNeeded(shaderModule, "AST before " # pass); \
         pass(__VA_ARGS__); \
     } while (0)
 
 #define RUN_PASS_WITH_RESULT(name, pass, ...) \
-    dumpASTBetweenEachPassIfNeeded(ast, "AST before " # pass); \
+    dumpASTBetweenEachPassIfNeeded(shaderModule, "AST before " # pass); \
     auto name = [&]() { \
         PhaseTimer phaseTimer(#pass, phaseTimes); \
         return pass(__VA_ARGS__); \
@@ -68,21 +69,16 @@ namespace WGSL {
 
 std::variant<SuccessfulCheck, FailedCheck> staticCheck(const String& wgsl, const std::optional<SourceMap>&, const Configuration& configuration)
 {
+    PhaseTimes phaseTimes;
     auto shaderModule = makeUniqueRef<ShaderModule>(wgsl, configuration);
-    std::optional<Error> error = parse(shaderModule);
-    if (error.has_value()) {
-        // FIXME: Add support for returning multiple errors from the parser.
-        return FailedCheck { { *error }, { /* warnings */ } };
-    }
 
-    // FIXME: add more validation
-    auto maybeFailure = typeCheck(shaderModule);
-    if (maybeFailure.has_value())
-        return *maybeFailure;
-
-    maybeFailure = rewriteConstants(shaderModule);
-    if (maybeFailure.has_value())
-        return *maybeFailure;
+    CHECK_PASS(parse, shaderModule);
+    CHECK_PASS(reorderGlobals, shaderModule);
+    CHECK_PASS(typeCheck, shaderModule);
+    CHECK_PASS(validateAttributes, shaderModule);
+    RUN_PASS(buildCallGraph, shaderModule);
+    CHECK_PASS(validateIO, shaderModule);
+    CHECK_PASS(validateVisibility, shaderModule);
 
     Vector<Warning> warnings { };
     return std::variant<SuccessfulCheck, FailedCheck>(std::in_place_type<SuccessfulCheck>, WTFMove(warnings), WTFMove(shaderModule));
@@ -98,44 +94,66 @@ SuccessfulCheck::SuccessfulCheck(Vector<Warning>&& messages, UniqueRef<ShaderMod
 
 SuccessfulCheck::~SuccessfulCheck() = default;
 
-inline PrepareResult prepareImpl(ShaderModule& ast, const HashMap<String, std::optional<PipelineLayout>>& pipelineLayouts)
+inline std::variant<PrepareResult, Error> prepareImpl(ShaderModule& shaderModule, const HashMap<String, PipelineLayout*>& pipelineLayouts)
 {
-    ShaderModule::Compilation compilation(ast);
+    CompilationScope compilationScope(shaderModule);
 
     PhaseTimes phaseTimes;
-    PrepareResult result;
-
-    {
+    auto result = [&]() -> std::variant<PrepareResult, Error> {
         PhaseTimer phaseTimer("prepare total", phaseTimes);
 
-        RUN_PASS_WITH_RESULT(callGraph, buildCallGraph, ast, pipelineLayouts);
-        RUN_PASS(rewriteEntryPoints, callGraph, result);
-        RUN_PASS(rewriteGlobalVariables, callGraph, pipelineLayouts, result);
-        RUN_PASS(mangleNames, callGraph, result);
+        HashMap<String, Reflection::EntryPointInformation> entryPoints;
 
-        dumpASTAtEndIfNeeded(ast);
+        RUN_PASS(mangleNames, shaderModule);
+        RUN_PASS(insertBoundsChecks, shaderModule);
+        RUN_PASS(rewritePointers, shaderModule);
+        RUN_PASS(rewriteEntryPoints, shaderModule, pipelineLayouts);
+        CHECK_PASS(rewriteGlobalVariables, shaderModule, pipelineLayouts, entryPoints);
 
-        {
-            PhaseTimer phaseTimer("generateMetalCode", phaseTimes);
-            result.msl = Metal::generateMetalCode(callGraph);
-        }
-    }
+        dumpASTAtEndIfNeeded(shaderModule);
+
+        return { PrepareResult { WTFMove(entryPoints), WTFMove(compilationScope) } };
+    }();
 
     logPhaseTimes(phaseTimes);
 
     return result;
 }
 
-PrepareResult prepare(ShaderModule& ast, const HashMap<String, std::optional<PipelineLayout>>& pipelineLayouts)
+String generate(ShaderModule& shaderModule, PrepareResult& prepareResult, HashMap<String, ConstantValue>& constantValues)
+{
+    PhaseTimes phaseTimes;
+    String result;
+    {
+            PhaseTimer phaseTimer("generateMetalCode", phaseTimes);
+        result = Metal::generateMetalCode(shaderModule, prepareResult, constantValues);
+        }
+    logPhaseTimes(phaseTimes);
+    return result;
+}
+
+std::variant<PrepareResult, Error> prepare(ShaderModule& ast, const HashMap<String, PipelineLayout*>& pipelineLayouts)
 {
     return prepareImpl(ast, pipelineLayouts);
 }
 
-PrepareResult prepare(ShaderModule& ast, const String& entryPointName, const std::optional<PipelineLayout>& pipelineLayout)
+std::variant<PrepareResult, Error> prepare(ShaderModule& ast, const String& entryPointName, PipelineLayout* pipelineLayout)
 {
-    HashMap<String, std::optional<PipelineLayout>> pipelineLayouts;
+    HashMap<String, PipelineLayout*> pipelineLayouts;
     pipelineLayouts.add(entryPointName, pipelineLayout);
     return prepareImpl(ast, pipelineLayouts);
+}
+
+std::optional<ConstantValue> evaluate(const AST::Expression& expression, const HashMap<String, ConstantValue>& constants)
+{
+    if (auto constantValue = expression.constantValue())
+        return *constantValue;
+    auto* maybeIdentifierExpression = dynamicDowncast<const AST::IdentifierExpression>(expression);
+    if (!maybeIdentifierExpression)
+        return std::nullopt;
+    auto constantValue = constants.get(maybeIdentifierExpression->identifier());
+    const_cast<AST::Expression&>(expression).setConstantValue(constantValue);
+    return constantValue;
 }
 
 }

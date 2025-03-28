@@ -1,5 +1,6 @@
 /*
- * Copyright (C) 2018-2023 Apple Inc. All rights reserved.
+ * Copyright (C) 2018-2024 Apple Inc. All rights reserved.
+ * Copyright (C) 2014 Google Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -28,6 +29,7 @@
 
 #include "BreakLines.h"
 #include "FontCascade.h"
+#include "InlineLineTypes.h"
 #include "InlineTextItem.h"
 #include "Latin1TextIterator.h"
 #include "LayoutInlineTextBox.h"
@@ -68,9 +70,13 @@ InlineLayoutUnit TextUtil::width(const InlineTextBox& inlineTextBox, const FontC
         ++to;
     auto width = 0.f;
     auto useSimplifiedContentMeasuring = inlineTextBox.canUseSimplifiedContentMeasuring();
-    if (useSimplifiedContentMeasuring)
-        width = fontCascade.widthForSimpleText(StringView(text).substring(from, to - from));
-    else {
+    if (useSimplifiedContentMeasuring) {
+        auto view = StringView(text).substring(from, to - from);
+        if (fontCascade.canTakeFixedPitchFastContentMeasuring())
+            width = fontCascade.widthForSimpleTextWithFixedPitch(view, inlineTextBox.style().collapseWhiteSpace());
+        else
+            width = fontCascade.widthForTextUsingSimplifiedMeasuring(view);
+    } else {
         auto& style = inlineTextBox.style();
         auto directionalOverride = style.unicodeBidi() == UnicodeBidi::Override;
         auto run = WebCore::TextRun { StringView(text).substring(from, to - from), contentLogicalLeft, { }, ExpansionBehavior::defaultBehavior(), directionalOverride ? style.direction() : TextDirection::LTR, directionalOverride };
@@ -82,7 +88,9 @@ InlineLayoutUnit TextUtil::width(const InlineTextBox& inlineTextBox, const FontC
     if (extendedMeasuring)
         width -= (spaceWidth(fontCascade, useSimplifiedContentMeasuring) + fontCascade.wordSpacing());
 
-    return std::isnan(width) ? 0.0f : std::isinf(width) ? maxInlineLayoutUnit() : width;
+    if (UNLIKELY(std::isnan(width) || std::isinf(width)))
+        return std::isnan(width) ? 0.0f : maxInlineLayoutUnit();
+    return std::max(0.f, width);
 }
 
 InlineLayoutUnit TextUtil::width(const InlineTextItem& inlineTextItem, const FontCascade& fontCascade, InlineLayoutUnit contentLogicalLeft)
@@ -90,7 +98,7 @@ InlineLayoutUnit TextUtil::width(const InlineTextItem& inlineTextItem, const Fon
     return TextUtil::width(inlineTextItem, fontCascade, inlineTextItem.start(), inlineTextItem.end(), contentLogicalLeft);
 }
 
-InlineLayoutUnit TextUtil::width(const InlineTextItem& inlineTextItem, const FontCascade& fontCascade, unsigned from, unsigned to, InlineLayoutUnit contentLogicalLeft)
+InlineLayoutUnit TextUtil::width(const InlineTextItem& inlineTextItem, const FontCascade& fontCascade, unsigned from, unsigned to, InlineLayoutUnit contentLogicalLeft, UseTrailingWhitespaceMeasuringOptimization useTrailingWhitespaceMeasuringOptimization)
 {
     RELEASE_ASSERT(from >= inlineTextItem.start());
     RELEASE_ASSERT(to <= inlineTextItem.end());
@@ -103,10 +111,12 @@ InlineLayoutUnit TextUtil::width(const InlineTextItem& inlineTextItem, const Fon
 
         if (singleWhiteSpace) {
             auto width = spaceWidth(fontCascade, useSimplifiedContentMeasuring);
-            return std::isnan(width) ? 0.0f : std::isinf(width) ? maxInlineLayoutUnit() : width;
+            if (UNLIKELY(std::isnan(width) || std::isinf(width)))
+                return std::isnan(width) ? 0.0f : maxInlineLayoutUnit();
+            return std::max(0.f, width);
         }
     }
-    return width(inlineTextItem.inlineTextBox(), fontCascade, from, to, contentLogicalLeft);
+    return width(inlineTextItem.inlineTextBox(), fontCascade, from, to, contentLogicalLeft, useTrailingWhitespaceMeasuringOptimization);
 }
 
 InlineLayoutUnit TextUtil::trailingWhitespaceWidth(const InlineTextBox& inlineTextBox, const FontCascade& fontCascade, size_t startPosition, size_t endPosition)
@@ -119,18 +129,18 @@ InlineLayoutUnit TextUtil::trailingWhitespaceWidth(const InlineTextBox& inlineTe
 }
 
 template <typename TextIterator>
-static void fallbackFontsForRunWithIterator(HashSet<const Font*>& fallbackFonts, const FontCascade& fontCascade, const TextRun& run, TextIterator& textIterator)
+static void fallbackFontsForRunWithIterator(SingleThreadWeakHashSet<const Font>& fallbackFonts, const FontCascade& fontCascade, const TextRun& run, TextIterator& textIterator)
 {
     auto isRTL = run.rtl();
     auto isSmallCaps = fontCascade.isSmallCaps();
     auto& primaryFont = fontCascade.primaryFont();
 
-    UChar32 currentCharacter = 0;
+    char32_t currentCharacter = 0;
     unsigned clusterLength = 0;
     while (textIterator.consume(currentCharacter, clusterLength)) {
 
         auto addFallbackFontForCharacterIfApplicable = [&](auto character) {
-            if (isSmallCaps && character != u_toupper(character))
+            if (isSmallCaps)
                 character = u_toupper(character);
 
             auto glyphData = fontCascade.glyphDataForCharacter(character, isRTL);
@@ -144,7 +154,7 @@ static void fallbackFontsForRunWithIterator(HashSet<const Font*>& fallbackFonts,
                 // If we include the synthetic bold expansion, then even zero-width glyphs will have their fonts added.
                 if (isNonSpacingMark || glyphData.font->widthForGlyph(glyphData.glyph, Font::SyntheticBoldInclusion::Exclude))
                     if (!isIgnored)
-                    fallbackFonts.add(glyphData.font);
+                        fallbackFonts.add(*glyphData.font);
             }
         };
         addFallbackFontForCharacterIfApplicable(currentCharacter);
@@ -161,11 +171,11 @@ TextUtil::FallbackFontList TextUtil::fallbackFontsForText(StringView textContent
             return;
 
         if (textRun.is8Bit()) {
-            auto textIterator = Latin1TextIterator { textRun.data8(0), 0, textRun.length(), textRun.length() };
+            Latin1TextIterator textIterator { textRun.span8(), 0, textRun.length() };
             fallbackFontsForRunWithIterator(fallbackFonts, style.fontCascade(), textRun, textIterator);
             return;
         }
-        auto textIterator = SurrogatePairAwareTextIterator { textRun.data16(0), 0, textRun.length(), textRun.length() };
+        SurrogatePairAwareTextIterator textIterator { textRun.span16(), 0, textRun.length() };
         fallbackFontsForRunWithIterator(fallbackFonts, style.fontCascade(), textRun, textIterator);
     };
 
@@ -183,12 +193,12 @@ static TextUtil::EnclosingAscentDescent enclosingGlyphBoundsForRunWithIterator(c
     auto isSmallCaps = fontCascade.isSmallCaps();
     auto& primaryFont = fontCascade.primaryFont();
 
-    UChar32 currentCharacter = 0;
+    char32_t currentCharacter = 0;
     unsigned clusterLength = 0;
     while (textIterator.consume(currentCharacter, clusterLength)) {
 
         auto computeTopAndBottomForCharacter = [&](auto character) {
-            if (isSmallCaps && character != u_toupper(character))
+            if (isSmallCaps)
                 character = u_toupper(character);
 
             auto glyphData = fontCascade.glyphDataForCharacter(character, isRTL);
@@ -211,10 +221,10 @@ TextUtil::EnclosingAscentDescent TextUtil::enclosingGlyphBoundsForText(StringVie
         return { };
 
     if (textContent.is8Bit()) {
-        auto textIterator = Latin1TextIterator { textContent.characters8(), 0, textContent.length(), textContent.length() };
+        Latin1TextIterator textIterator { textContent.span8(), 0, textContent.length() };
         return enclosingGlyphBoundsForRunWithIterator(style.fontCascade(), !style.isLeftToRightDirection(), textIterator);
     }
-    auto textIterator = SurrogatePairAwareTextIterator { textContent.characters16(), 0, textContent.length(), textContent.length() };
+    SurrogatePairAwareTextIterator textIterator { textContent.span16(), 0, textContent.length() };
     return enclosingGlyphBoundsForRunWithIterator(style.fontCascade(), !style.isLeftToRightDirection(), textIterator);
 }
 
@@ -228,6 +238,11 @@ TextUtil::WordBreakLeft TextUtil::breakWord(const InlineTextBox& inlineTextBox, 
     ASSERT(availableWidth >= 0);
     ASSERT(length);
     auto text = inlineTextBox.content();
+
+    if (UNLIKELY(!textWidth)) {
+        ASSERT_NOT_REACHED();
+        return { };
+    }
 
     if (inlineTextBox.canUseSimpleFontCodePath()) {
 
@@ -312,26 +327,61 @@ TextUtil::WordBreakLeft TextUtil::breakWord(const InlineTextBox& inlineTextBox, 
     return leftSide;
 }
 
+bool TextUtil::mayBreakInBetween(const InlineTextItem& previousInlineItem, const InlineTextItem& nextInlineItem)
+{
+    // Check if these 2 adjacent non-whitespace inline items are connected at a breakable position.
+    ASSERT(!previousInlineItem.isWhitespace() && !nextInlineItem.isWhitespace());
+
+    auto previousContent = previousInlineItem.inlineTextBox().content();
+    auto nextContent = nextInlineItem.inlineTextBox().content();
+    // Now we need to collect at least 3 adjacent characters to be able to make a decision whether the previous text item ends with breaking opportunity.
+    // [ex-][ample] <- second to last[x] last[-] current[a]
+    // We need at least 1 character in the current inline text item and 2 more from previous inline items.
+    if (!previousContent.is8Bit()) {
+        // FIXME: Remove this workaround when we move over to a better way of handling prior-context with Unicode.
+        // See the templated CharacterType in nextBreakablePosition for last and lastlast characters.
+        nextContent.convertTo16Bit();
+    }
+    auto& previousContentStyle = previousInlineItem.style();
+    auto& nextContentStyle = nextInlineItem.style();
+    auto lineBreakIteratorFactory = CachedLineBreakIteratorFactory { nextContent, nextContentStyle.computedLocale(), TextUtil::lineBreakIteratorMode(nextContentStyle.lineBreak()), TextUtil::contentAnalysis(nextContentStyle.wordBreak()) };
+    auto previousContentLength = previousContent.length();
+    // FIXME: We should look into the entire uncommitted content for more text context.
+    UChar lastCharacter = previousContentLength ? previousContent[previousContentLength - 1] : 0;
+    if (lastCharacter == softHyphen && previousContentStyle.hyphens() == Hyphens::None)
+        return false;
+    UChar secondToLastCharacter = previousContentLength > 1 ? previousContent[previousContentLength - 2] : 0;
+    lineBreakIteratorFactory.priorContext().set({ secondToLastCharacter, lastCharacter });
+    // Now check if we can break right at the inline item boundary.
+    // With the [ex-ample], findNextBreakablePosition should return the startPosition (0).
+    // FIXME: Check if there's a more correct way of finding breaking opportunities.
+    return !findNextBreakablePosition(lineBreakIteratorFactory, 0, nextContentStyle);
+}
+
 unsigned TextUtil::findNextBreakablePosition(CachedLineBreakIteratorFactory& lineBreakIteratorFactory, unsigned startPosition, const RenderStyle& style)
 {
-    auto keepAllWordsForCJK = style.wordBreak() == WordBreak::KeepAll;
+    auto wordBreak = style.wordBreak();
     auto breakNBSP = style.autoWrap() && style.nbspMode() == NBSPMode::Space;
 
-    if (keepAllWordsForCJK) {
+    if (wordBreak == WordBreak::KeepAll) {
         if (breakNBSP)
-            return nextBreakablePositionKeepingAllWords(lineBreakIteratorFactory, startPosition);
-        return nextBreakablePositionKeepingAllWordsIgnoringNBSP(lineBreakIteratorFactory, startPosition);
+            return BreakLines::nextBreakablePosition<BreakLines::LineBreakRules::Special, BreakLines::WordBreakBehavior::KeepAll, BreakLines::NoBreakSpaceBehavior::Break>(lineBreakIteratorFactory, startPosition);
+        return BreakLines::nextBreakablePosition<BreakLines::LineBreakRules::Special, BreakLines::WordBreakBehavior::KeepAll, BreakLines::NoBreakSpaceBehavior::Normal>(lineBreakIteratorFactory, startPosition);
     }
+
+    if (wordBreak == WordBreak::AutoPhrase)
+        return BreakLines::nextBreakablePosition<BreakLines::LineBreakRules::Special, BreakLines::WordBreakBehavior::AutoPhrase, BreakLines::NoBreakSpaceBehavior::Normal>(lineBreakIteratorFactory, startPosition);
 
     if (lineBreakIteratorFactory.mode() == TextBreakIterator::LineMode::Behavior::Default) {
         if (breakNBSP)
-            return WebCore::nextBreakablePosition(lineBreakIteratorFactory, startPosition);
-        return nextBreakablePositionIgnoringNBSP(lineBreakIteratorFactory, startPosition);
+            return BreakLines::nextBreakablePosition<BreakLines::LineBreakRules::Normal, BreakLines::WordBreakBehavior::Normal, BreakLines::NoBreakSpaceBehavior::Break>(lineBreakIteratorFactory, startPosition);
+        return BreakLines::nextBreakablePosition<BreakLines::LineBreakRules::Normal, BreakLines::WordBreakBehavior::Normal, BreakLines::NoBreakSpaceBehavior::Normal>(lineBreakIteratorFactory, startPosition);
     }
 
     if (breakNBSP)
-        return nextBreakablePositionWithoutShortcut(lineBreakIteratorFactory, startPosition);
-    return nextBreakablePositionIgnoringNBSPWithoutShortcut(lineBreakIteratorFactory, startPosition);
+        return BreakLines::nextBreakablePosition<BreakLines::LineBreakRules::Special, BreakLines::WordBreakBehavior::Normal, BreakLines::NoBreakSpaceBehavior::Break>(lineBreakIteratorFactory, startPosition);
+
+    return BreakLines::nextBreakablePosition<BreakLines::LineBreakRules::Special, BreakLines::WordBreakBehavior::Normal, BreakLines::NoBreakSpaceBehavior::Normal>(lineBreakIteratorFactory, startPosition);
 }
 
 bool TextUtil::shouldPreserveSpacesAndTabs(const Box& layoutBox)
@@ -351,13 +401,13 @@ bool TextUtil::shouldPreserveNewline(const Box& layoutBox)
 bool TextUtil::isWrappingAllowed(const RenderStyle& style)
 {
     // https://www.w3.org/TR/css-text-4/#text-wrap
-    return style.textWrap() != TextWrap::NoWrap;
+    return style.textWrapMode() != TextWrapMode::NoWrap;
 }
 
 bool TextUtil::shouldTrailingWhitespaceHang(const RenderStyle& style)
 {
     // https://www.w3.org/TR/css-text-4/#white-space-phase-2
-    return style.whiteSpaceCollapse() == WhiteSpaceCollapse::Preserve && style.textWrap() != TextWrap::NoWrap;
+    return style.whiteSpaceCollapse() == WhiteSpaceCollapse::Preserve && style.textWrapMode() != TextWrapMode::NoWrap;
 }
 
 TextBreakIterator::LineMode::Behavior TextUtil::lineBreakIteratorMode(LineBreak lineBreak)
@@ -386,10 +436,50 @@ TextBreakIterator::ContentAnalysis TextUtil::contentAnalysis(WordBreak wordBreak
     case WordBreak::KeepAll:
     case WordBreak::BreakWord:
         return TextBreakIterator::ContentAnalysis::Mechanical;
-    case WordBreak::Auto:
+    case WordBreak::AutoPhrase:
         return TextBreakIterator::ContentAnalysis::Linguistic;
     }
     return TextBreakIterator::ContentAnalysis::Mechanical;
+}
+
+// True if the character may need the Bidi reordering. If false, the
+// `Bidi_Class` of `ch` isn't `R`, `AL`, nor Bidi controls.
+// https://util.unicode.org/UnicodeJsps/list-unicodeset.jsp?a=%5B%5B%3Abc%3DR%3A%5D%5B%3Abc%3DAL%3A%5D%5D&g=bc
+// https://util.unicode.org/UnicodeJsps/list-unicodeset.jsp?a=[:Bidi_C:]
+static ALWAYS_INLINE bool mayBeBidiRTL(char32_t ch)
+{
+    if (ch < 0x0590)
+        return false;
+    // General Punctuation such as curly quotes.
+    if (ch >= 0x2010 && ch <= 0x2029)
+        return false;
+    // CJK etc., up to Surrogate Pairs.
+    if (ch >= 0x206A && ch <= 0xD7FF)
+        return false;
+    // Common in CJK.
+    if (ch >= 0xFF00 && ch <= 0xFFFF)
+        return false;
+    return true;
+}
+
+bool TextUtil::isStrongDirectionalityCharacter(char32_t character)
+{
+    if (!mayBeBidiRTL(character))
+        return false;
+
+        auto bidiCategory = u_charDirection(character);
+    return bidiCategory == U_RIGHT_TO_LEFT
+            || bidiCategory == U_RIGHT_TO_LEFT_ARABIC
+            || bidiCategory == U_RIGHT_TO_LEFT_EMBEDDING
+            || bidiCategory == U_RIGHT_TO_LEFT_OVERRIDE
+            || bidiCategory == U_LEFT_TO_RIGHT_EMBEDDING
+            || bidiCategory == U_LEFT_TO_RIGHT_OVERRIDE
+            || bidiCategory == U_POP_DIRECTIONAL_FORMAT;
+}
+
+template<typename CharacterType> ALWAYS_INLINE constexpr bool isNotBidiRTL(CharacterType character)
+{
+    return !mayBeBidiRTL(character);
 }
 
 bool TextUtil::containsStrongDirectionalityText(StringView text)
@@ -397,20 +487,52 @@ bool TextUtil::containsStrongDirectionalityText(StringView text)
     if (text.is8Bit())
         return false;
 
-    auto length = text.length();
-    for (size_t position = 0; position < length;) {
-        UChar32 character;
-        U16_NEXT(text.characters16(), position, length, character);
+    if (![&](auto span) ALWAYS_INLINE_LAMBDA {
+        using UnsignedType = std::make_unsigned_t<typename decltype(span)::value_type>;
+        constexpr size_t stride = SIMD::stride<UnsignedType>;
+        if (span.size() >= stride) {
+            auto* cursor = span.data();
+            auto* end = cursor + span.size();
+            constexpr auto c0590 = SIMD::splat<UnsignedType>(0x0590);
+            constexpr auto c2010 = SIMD::splat<UnsignedType>(0x2010);
+            constexpr auto c2029 = SIMD::splat<UnsignedType>(0x2029);
+            constexpr auto c206A = SIMD::splat<UnsignedType>(0x206A);
+            constexpr auto cD7FF = SIMD::splat<UnsignedType>(0xD7FF);
+            constexpr auto cFF00 = SIMD::splat<UnsignedType>(0xFF00);
+            auto maybeBidiRTL = [&](auto* cursor) ALWAYS_INLINE_LAMBDA {
+                auto input = SIMD::load(bitwise_cast<const UnsignedType*>(cursor));
+                // ch < 0x0590
+                auto cond0 = SIMD::lessThan(input, c0590);
+                // General Punctuation such as curly quotes.
+                // ch >= 0x2010 && ch <= 0x2029
+                auto cond1 = SIMD::bitAnd(SIMD::greaterThanOrEqual(input, c2010), SIMD::lessThanOrEqual(input, c2029));
+                // CJK etc., up to Surrogate Pairs.
+                // ch >= 0x206A && ch <= 0xD7FF
+                auto cond2 = SIMD::bitAnd(SIMD::greaterThanOrEqual(input, c206A), SIMD::lessThanOrEqual(input, cD7FF));
+                // Common in CJK.
+                // ch >= 0xFF00 && ch <= 0xFFFF
+                auto cond3 = SIMD::greaterThanOrEqual(input, cFF00);
+                return SIMD::bitNot(SIMD::bitOr(cond0, cond1, cond2, cond3));
+            };
 
-        auto bidiCategory = u_charDirection(character);
-        bool hasBidiContent = bidiCategory == U_RIGHT_TO_LEFT
-            || bidiCategory == U_RIGHT_TO_LEFT_ARABIC
-            || bidiCategory == U_RIGHT_TO_LEFT_EMBEDDING
-            || bidiCategory == U_RIGHT_TO_LEFT_OVERRIDE
-            || bidiCategory == U_LEFT_TO_RIGHT_EMBEDDING
-            || bidiCategory == U_LEFT_TO_RIGHT_OVERRIDE
-            || bidiCategory == U_POP_DIRECTIONAL_FORMAT;
-        if (hasBidiContent)
+            auto result = SIMD::splat<UnsignedType>(0);
+            for (; cursor + (stride - 1) < end; cursor += stride)
+                result = SIMD::bitOr(result, maybeBidiRTL(cursor));
+            if (cursor < end)
+                result = SIMD::bitOr(result, maybeBidiRTL(end - stride));
+            return SIMD::isNonZero(result);
+        }
+
+        for (auto character : span) {
+            if (mayBeBidiRTL(character))
+                return true;
+        }
+        return false;
+    }(text.span16()))
+        return false;
+
+    for (char32_t character : text.codePoints()) {
+        if (isStrongDirectionalityCharacter(character))
             return true;
     }
 
@@ -425,9 +547,10 @@ size_t TextUtil::firstUserPerceivedCharacterLength(const InlineTextBox& inlineTe
     if (textContent.is8Bit())
         return 1;
     if (inlineTextBox.canUseSimpleFontCodePath()) {
-        UChar32 character;
+        char32_t character;
         size_t endOfCodePoint = startPosition;
-        U16_NEXT(textContent.characters16(), endOfCodePoint, textContent.length(), character);
+        auto characters = textContent.span16();
+        U16_NEXT(characters, endOfCodePoint, textContent.length(), character);
         ASSERT(endOfCodePoint > startPosition);
         return endOfCodePoint - startPosition;
     }
@@ -440,23 +563,25 @@ size_t TextUtil::firstUserPerceivedCharacterLength(const InlineTextBox& inlineTe
 
 size_t TextUtil::firstUserPerceivedCharacterLength(const InlineTextItem& inlineTextItem)
 {
-    return firstUserPerceivedCharacterLength(inlineTextItem.inlineTextBox(), inlineTextItem.start(), inlineTextItem.length());
+    auto length = firstUserPerceivedCharacterLength(inlineTextItem.inlineTextBox(), inlineTextItem.start(), inlineTextItem.length());
+    return std::min<size_t>(inlineTextItem.length(), length);
 }
 
 TextDirection TextUtil::directionForTextContent(StringView content)
 {
     if (content.is8Bit())
         return TextDirection::LTR;
-    return ubidi_getBaseDirection(content.characters16(), content.length()) == UBIDI_RTL ? TextDirection::RTL : TextDirection::LTR;
+    auto characters = content.span16();
+    return ubidi_getBaseDirection(characters.data(), characters.size()) == UBIDI_RTL ? TextDirection::RTL : TextDirection::LTR;
 }
 
 TextRun TextUtil::ellipsisTextRun(bool isHorizontal)
 {
     if (isHorizontal) {
-        static MainThreadNeverDestroyed<const AtomString> horizontalEllipsisStr(&horizontalEllipsis, 1);
+        static MainThreadNeverDestroyed<const AtomString> horizontalEllipsisStr(span(horizontalEllipsis));
         return TextRun { horizontalEllipsisStr->string() };
     }
-    static MainThreadNeverDestroyed<const AtomString> verticalEllipsisStr(&verticalEllipsis, 1);
+    static MainThreadNeverDestroyed<const AtomString> verticalEllipsisStr(span(verticalEllipsis));
     return TextRun { verticalEllipsisStr->string() };
 }
 
@@ -519,11 +644,22 @@ float TextUtil::hangableStopOrCommaEndWidth(const InlineTextItem& inlineTextItem
     return width(inlineTextItem, style.fontCascade(), trailingPosition, trailingPosition + 1, { });
 }
 
-bool TextUtil::canUseSimplifiedTextMeasuring(StringView textContent, const RenderStyle& style, const RenderStyle* firstLineStyle)
+template<typename CharacterType>
+static bool canUseSimplifiedTextMeasuringForCharacters(std::span<const CharacterType> characters, const FontCascade& fontCascade, const Font& primaryFont, bool whitespaceIsCollapsed)
 {
-    ASSERT(textContent.is8Bit() || FontCascade::characterRangeCodePath(textContent.characters16(), textContent.length()) == FontCascade::CodePath::Simple);
+    auto* rawCharacters = characters.data();
+    for (unsigned i = 0; i < characters.size(); ++i) {
+        auto character = rawCharacters[i]; // Not using characters[i] to bypass the bounds check.
+        if (!fontCascade.canUseSimplifiedTextMeasuring(character, AutoVariant, whitespaceIsCollapsed, primaryFont))
+            return false;
+    }
+    return true;
+}
+
+bool TextUtil::canUseSimplifiedTextMeasuring(StringView textContent, const FontCascade& fontCascade, bool whitespaceIsCollapsed, const RenderStyle* firstLineStyle)
+{
+    ASSERT(textContent.is8Bit() || FontCascade::characterRangeCodePath(textContent.span16()) == FontCascade::CodePath::Simple);
     // FIXME: All these checks should be more fine-grained at the inline item level.
-    auto& fontCascade = style.fontCascade();
     if (fontCascade.wordSpacing() || fontCascade.letterSpacing())
         return false;
 
@@ -540,16 +676,16 @@ bool TextUtil::canUseSimplifiedTextMeasuring(StringView textContent, const Rende
     if (primaryFont.syntheticBoldOffset())
         return false;
 
-    auto whitespaceIsCollapsed = style.collapseWhiteSpace();
-    for (unsigned i = 0; i < textContent.length(); ++i) {
-        auto character = textContent[i];
-        if (!WidthIterator::characterCanUseSimplifiedTextMeasuring(character, whitespaceIsCollapsed))
-            return false;
-        auto glyphData = fontCascade.glyphDataForCharacter(character, false);
-        if (!glyphData.isValid() || glyphData.font != &primaryFont)
-            return false;
-    }
-    return true;
+    if (textContent.is8Bit())
+        return canUseSimplifiedTextMeasuringForCharacters(textContent.span8(), fontCascade, primaryFont, whitespaceIsCollapsed);
+    return canUseSimplifiedTextMeasuringForCharacters(textContent.span16(), fontCascade, primaryFont, whitespaceIsCollapsed);
+}
+
+bool TextUtil::hasPositionDependentContentWidth(StringView textContent)
+{
+    if (textContent.is8Bit())
+        return charactersContain<LChar, tabCharacter>(textContent.span8());
+    return charactersContain<UChar, tabCharacter>(textContent.span16());
 }
 
 }

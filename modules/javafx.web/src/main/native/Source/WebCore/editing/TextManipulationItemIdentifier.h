@@ -27,7 +27,7 @@
 
 namespace WebCore {
 
-enum TextManipulationItemIdentifierType { };
-using TextManipulationItemIdentifier = ObjectIdentifier<TextManipulationItemIdentifierType>;
+enum class TextManipulationItemIdentifierType { };
+using TextManipulationItemIdentifier = LegacyNullableObjectIdentifier<TextManipulationItemIdentifierType>;
 
 } // namespace WebCore

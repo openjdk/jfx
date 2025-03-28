@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022, 2023 Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2022, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -31,6 +31,8 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import java.lang.ref.WeakReference;
+
+import javafx.beans.property.SimpleStringProperty;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.geometry.Insets;
@@ -328,6 +330,28 @@ public class TreeTableRowSkinTest {
         invisibleColumnsShouldRemoveCorrespondingCellsInRowImpl();
     }
 
+    /**
+     * The {@link TreeTableRowSkin} should add new cells after new columns are added.
+     * See: JDK-8321970
+     */
+    @Test
+    public void cellsShouldBeAddedInRowFixedCellSize() {
+        treeTableView.setPrefWidth(800);
+        treeTableView.setFixedCellSize(24);
+
+        TreeTableColumn<Person, String> otherColumn = new TreeTableColumn<>("other");
+        otherColumn.setPrefWidth(100);
+        otherColumn.setCellValueFactory(value -> new SimpleStringProperty("other"));
+        treeTableView.getColumns().add(otherColumn);
+
+        Toolkit.getToolkit().firePulse();
+        assertEquals(5, treeTableView.getColumns().size());
+
+        Toolkit.getToolkit().firePulse();
+        IndexedCell<?> row = VirtualFlowTestUtils.getCell(treeTableView, 1);
+        assertEquals(5, row.getChildrenUnmodifiable().stream().filter(TreeTableCell.class::isInstance).count());
+    }
+
     /** TreeTableView.refresh() must release all discarded cells JDK-8307538 */
     @Test
     public void cellsMustBeCollectableAfterRefresh() {
@@ -419,9 +443,8 @@ public class TreeTableRowSkinTest {
         Toolkit.getToolkit().firePulse();
 
         // We set 2 columns to invisible, so the cell count should be decremented by 2 as well.
-        // Note: TreeTableView has an additional children - the disclosure node - therefore we subtract 1 here.
         assertEquals(treeTableView.getColumns().size() - 2,
-                VirtualFlowTestUtils.getCell(treeTableView, 0).getChildrenUnmodifiable().size() - 1);
+                VirtualFlowTestUtils.getCell(treeTableView, 0).getChildrenUnmodifiable().size());
     }
 
     private void removedColumnsShouldRemoveCorrespondingCellsInRowImpl() {
@@ -431,9 +454,8 @@ public class TreeTableRowSkinTest {
         Toolkit.getToolkit().firePulse();
 
         // We removed 2 columns, so the cell count should be decremented by 2 as well.
-        // Note: TreeTableView has an additional children - the disclosure node - therefore we subtract 1 here.
         assertEquals(treeTableView.getColumns().size(),
-                VirtualFlowTestUtils.getCell(treeTableView, 0).getChildrenUnmodifiable().size() - 1);
+                VirtualFlowTestUtils.getCell(treeTableView, 0).getChildrenUnmodifiable().size());
     }
 
     private static class ThrowingTreeTableRowSkin<T> extends TreeTableRowSkin<T> {

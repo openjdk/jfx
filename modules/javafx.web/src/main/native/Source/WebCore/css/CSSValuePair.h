@@ -26,23 +26,41 @@
 #pragma once
 
 #include "CSSValue.h"
+#include <wtf/Function.h>
 
 namespace WebCore {
 
-class CSSValuePair : public CSSValue {
+class CSSValuePair final : public CSSValue {
 public:
     static Ref<CSSValuePair> create(Ref<CSSValue>, Ref<CSSValue>);
+    static Ref<CSSValuePair> createSlashSeparated(Ref<CSSValue>, Ref<CSSValue>);
     static Ref<CSSValuePair> createNoncoalescing(Ref<CSSValue>, Ref<CSSValue>);
 
     const CSSValue& first() const { return m_first; }
     const CSSValue& second() const { return m_second; }
+    Ref<CSSValue> protectedFirst() const { return m_first; }
+    Ref<CSSValue> protectedSecond() const { return m_second; }
 
     String customCSSText() const;
     bool equals(const CSSValuePair&) const;
+    bool canBeCoalesced() const;
+
+    IterationStatus customVisitChildren(const Function<IterationStatus(CSSValue&)>& func) const
+    {
+        if (func(m_first.get()) == IterationStatus::Done)
+            return IterationStatus::Done;
+        if (func(m_second.get()) == IterationStatus::Done)
+            return IterationStatus::Done;
+        return IterationStatus::Continue;
+    }
 
 private:
+    friend bool CSSValue::addHash(Hasher&) const;
+
     enum class IdenticalValueSerialization : bool { DoNotCoalesce, Coalesce };
-    CSSValuePair(Ref<CSSValue>, Ref<CSSValue>, IdenticalValueSerialization);
+    CSSValuePair(ValueSeparator, Ref<CSSValue>, Ref<CSSValue>, IdenticalValueSerialization);
+
+    bool addDerivedHash(Hasher&) const;
 
     // FIXME: Store coalesce bit in CSSValue to cut down on object size.
     bool m_coalesceIdenticalValues { true };
@@ -55,9 +73,19 @@ inline const CSSValue& CSSValue::first() const
     return downcast<CSSValuePair>(*this).first();
 }
 
+inline Ref<CSSValue> CSSValue::protectedFirst() const
+{
+    return downcast<CSSValuePair>(*this).protectedFirst();
+}
+
 inline const CSSValue& CSSValue::second() const
 {
     return downcast<CSSValuePair>(*this).second();
+}
+
+inline Ref<CSSValue> CSSValue::protectedSecond() const
+{
+    return downcast<CSSValuePair>(*this).protectedSecond();
 }
 
 } // namespace WebCore

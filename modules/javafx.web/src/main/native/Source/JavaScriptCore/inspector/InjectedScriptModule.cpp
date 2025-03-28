@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2013 Apple Inc. All rights reserved.
+ * Copyright (C) 2013-2024 Apple Inc. All rights reserved.
  * Copyright (C) 2012 Google Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -43,9 +43,7 @@ InjectedScriptModule::InjectedScriptModule(const String& name)
 {
 }
 
-InjectedScriptModule::~InjectedScriptModule()
-{
-}
+InjectedScriptModule::~InjectedScriptModule() = default;
 
 void InjectedScriptModule::ensureInjected(InjectedScriptManager* injectedScriptManager, JSC::JSGlobalObject* globalObject)
 {
@@ -68,12 +66,11 @@ void InjectedScriptModule::ensureInjected(InjectedScriptManager* injectedScriptM
     if (!hasInjectedModuleResult) {
         auto& error = hasInjectedModuleResult.error();
         ASSERT(error);
-        unsigned line = 0;
-        unsigned column = 0;
+        JSC::LineColumn lineColumn;
         auto& stack = error->stack();
         if (stack.size() > 0)
-            stack[0].computeLineAndColumn(line, column);
-        WTFLogAlways("Error when calling 'hasInjectedModule' for '%s': %s (%d:%d)\n", name().utf8().data(), error->value().toWTFString(injectedScript.globalObject()).utf8().data(), line, column);
+            lineColumn = stack[0].computeLineAndColumn();
+        WTFLogAlways("Error when calling 'hasInjectedModule' for '%s': %s (%d:%d)\n", name().utf8().data(), error->value().toWTFString(injectedScript.globalObject()).utf8().data(), lineColumn.line, lineColumn.column);
         RELEASE_ASSERT_NOT_REACHED();
     }
     if (!hasInjectedModuleResult.value()) {
@@ -89,12 +86,11 @@ void InjectedScriptModule::ensureInjected(InjectedScriptManager* injectedScriptM
         if (!injectModuleResult) {
             auto& error = injectModuleResult.error();
             ASSERT(error);
-            unsigned line = 0;
-            unsigned column = 0;
+            JSC::LineColumn lineColumn;
             auto& stack = error->stack();
             if (stack.size() > 0)
-                stack[0].computeLineAndColumn(line, column);
-            WTFLogAlways("Error when calling 'injectModule' for '%s': %s (%d:%d)\n", name().utf8().data(), error->value().toWTFString(injectedScript.globalObject()).utf8().data(), line, column);
+                lineColumn = stack[0].computeLineAndColumn();
+            WTFLogAlways("Error when calling 'injectModule' for '%s': %s (%d:%d)\n", name().utf8().data(), error->value().toWTFString(injectedScript.globalObject()).utf8().data(), lineColumn.line, lineColumn.column);
             RELEASE_ASSERT_NOT_REACHED();
         }
     }

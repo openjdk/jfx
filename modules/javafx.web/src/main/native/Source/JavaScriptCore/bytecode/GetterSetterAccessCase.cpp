@@ -32,10 +32,6 @@
 
 namespace JSC {
 
-namespace GetterSetterAccessCaseInternal {
-static constexpr bool verbose = false;
-}
-
 GetterSetterAccessCase::GetterSetterAccessCase(VM& vm, JSCell* owner, AccessType accessType, CacheableIdentifier identifier, PropertyOffset offset, Structure* structure, const ObjectPropertyConditionSet& conditionSet, bool viaGlobalProxy, WatchpointSet* additionalSet, JSObject* customSlotBase, RefPtr<PolyProtoAccessChain>&& prototypeAccessChain)
     : Base(vm, owner, accessType, identifier, offset, structure, conditionSet, viaGlobalProxy, additionalSet, WTFMove(prototypeAccessChain))
 {
@@ -74,33 +70,17 @@ GetterSetterAccessCase::GetterSetterAccessCase(const GetterSetterAccessCase& oth
     m_domAttribute = other.m_domAttribute;
 }
 
-Ref<AccessCase> GetterSetterAccessCase::cloneImpl() const
+JSObject* GetterSetterAccessCase::tryGetAlternateBaseImpl() const
 {
-    auto result = adoptRef(*new GetterSetterAccessCase(*this));
-    result->resetState();
-    return result;
-}
-
-bool GetterSetterAccessCase::hasAlternateBaseImpl() const
-{
-    if (customSlotBase())
-        return true;
-    return Base::hasAlternateBaseImpl();
-}
-
-JSObject* GetterSetterAccessCase::alternateBaseImpl() const
-{
-    if (customSlotBase())
-        return customSlotBase();
-    return Base::alternateBaseImpl();
+    if (auto* object = customSlotBase())
+        return object;
+    return Base::tryGetAlternateBaseImpl();
 }
 
 void GetterSetterAccessCase::dumpImpl(PrintStream& out, CommaPrinter& comma, Indenter& indent) const
 {
     Base::dumpImpl(out, comma, indent);
     out.print(comma, "customSlotBase = ", RawPointer(customSlotBase()));
-    if (callLinkInfo())
-        out.print(comma, "callLinkInfo = ", RawPointer(callLinkInfo()));
     out.print(comma, "customAccessor = ", RawPointer(m_customAccessor.taggedPtr()));
 }
 

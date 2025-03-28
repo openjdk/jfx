@@ -37,29 +37,6 @@
 #include "gvaluearray.h"
 
 
-/**
- * SECTION:param_value_types
- * @short_description: Standard Parameter and Value Types
- * @see_also: #GParamSpec, #GValue, g_object_class_install_property().
- * @title: Parameters and Values
- *
- * #GValue provides an abstract container structure which can be
- * copied, transformed and compared while holding a value of any
- * (derived) type, which is registered as a #GType with a
- * #GTypeValueTable in its #GTypeInfo structure.  Parameter
- * specifications for most value types can be created as #GParamSpec
- * derived instances, to implement e.g. #GObject properties which
- * operate on #GValue containers.
- *
- * Parameter names need to start with a letter (a-z or A-Z). Subsequent
- * characters can be letters, numbers or a '-'.
- * All other characters are replaced by a '-' during construction.
- *
- * See also #GValue for more information.
- *
- */
-
-
 #define G_FLOAT_EPSILON     (1e-30)
 #define G_DOUBLE_EPSILON    (1e-90)
 
@@ -1041,7 +1018,7 @@ param_value_array_validate (GParamSpec *pspec,
   guint changed = 0;
 
   if (!value->data[0].v_pointer && aspec->fixed_n_elements)
-    value->data[0].v_pointer = g_value_array_new (aspec->fixed_n_elements);
+    value_array = value->data[0].v_pointer = g_value_array_new (aspec->fixed_n_elements);
 
   if (value->data[0].v_pointer)
     {
@@ -1245,7 +1222,7 @@ param_gtype_set_default (GParamSpec *pspec,
 {
   GParamSpecGType *tspec = G_PARAM_SPEC_GTYPE (pspec);
 
-  value->data[0].v_pointer = GSIZE_TO_POINTER (tspec->is_a_type);
+  value->data[0].v_pointer = GTYPE_TO_POINTER (tspec->is_a_type);
 }
 
 static gboolean
@@ -1253,7 +1230,7 @@ param_gtype_is_valid (GParamSpec   *pspec,
                       const GValue *value)
 {
   GParamSpecGType *tspec = G_PARAM_SPEC_GTYPE (pspec);
-  GType gtype = GPOINTER_TO_SIZE (value->data[0].v_pointer);
+  GType gtype = GPOINTER_TO_TYPE (value->data[0].v_pointer);
 
   return tspec->is_a_type == G_TYPE_NONE ||
          g_type_is_a (gtype, tspec->is_a_type);
@@ -1264,12 +1241,12 @@ param_gtype_validate (GParamSpec *pspec,
           GValue     *value)
 {
   GParamSpecGType *tspec = G_PARAM_SPEC_GTYPE (pspec);
-  GType gtype = GPOINTER_TO_SIZE (value->data[0].v_pointer);
+  GType gtype = GPOINTER_TO_TYPE (value->data[0].v_pointer);
   guint changed = 0;
 
   if (tspec->is_a_type != G_TYPE_NONE && !g_type_is_a (gtype, tspec->is_a_type))
     {
-      value->data[0].v_pointer = GSIZE_TO_POINTER (tspec->is_a_type);
+      value->data[0].v_pointer = GTYPE_TO_POINTER (tspec->is_a_type);
       changed++;
     }
 
@@ -1281,8 +1258,8 @@ param_gtype_values_cmp (GParamSpec   *pspec,
       const GValue *value1,
       const GValue *value2)
 {
-  GType p1 = GPOINTER_TO_SIZE (value1->data[0].v_pointer);
-  GType p2 = GPOINTER_TO_SIZE (value2->data[0].v_pointer);
+  GType p1 = GPOINTER_TO_TYPE (value1->data[0].v_pointer);
+  GType p2 = GPOINTER_TO_TYPE (value2->data[0].v_pointer);
 
   /* not much to compare here, try to at least provide stable lesser/greater result */
 
@@ -1870,10 +1847,10 @@ GParamSpec*
 g_param_spec_char (const gchar *name,
                    const gchar *nick,
                    const gchar *blurb,
-           gint8    minimum,
-           gint8    maximum,
-           gint8    default_value,
-           GParamFlags  flags)
+                   gint8        minimum,
+                   gint8        maximum,
+                   gint8        default_value,
+                   GParamFlags  flags)
 {
   GParamSpecChar *cspec;
 

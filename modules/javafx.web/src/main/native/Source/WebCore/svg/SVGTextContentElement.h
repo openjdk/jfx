@@ -62,7 +62,8 @@ template<> struct SVGPropertyTraits<SVGLengthAdjustType> {
 };
 
 class SVGTextContentElement : public SVGGraphicsElement {
-    WTF_MAKE_ISO_ALLOCATED(SVGTextContentElement);
+    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(SVGTextContentElement);
+    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(SVGTextContentElement);
 public:
     enum {
         LENGTHADJUST_UNKNOWN = SVGLengthAdjustUnknown,
@@ -115,5 +116,9 @@ private:
 
 SPECIALIZE_TYPE_TRAITS_BEGIN(WebCore::SVGTextContentElement)
     static bool isType(const WebCore::SVGElement& element) { return element.isTextContent(); }
-    static bool isType(const WebCore::Node& node) { return is<WebCore::SVGElement>(node) && isType(downcast<WebCore::SVGElement>(node)); }
+    static bool isType(const WebCore::Node& node)
+    {
+        auto* svgElement = dynamicDowncast<WebCore::SVGElement>(node);
+        return svgElement && isType(*svgElement);
+    }
 SPECIALIZE_TYPE_TRAITS_END()

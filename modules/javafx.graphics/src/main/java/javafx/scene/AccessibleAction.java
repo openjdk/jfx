@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014, 2017, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2014, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -96,7 +96,7 @@ public enum AccessibleAction {
     /**
      * Request that the node take focus.  By default, a node will
      * request focus using  {@link javafx.scene.Node#requestFocus()}.
-     * Both JavaFX and the assisteve technology have the concept of
+     * Both JavaFX and the assistive technology have the concept of
      * a focus node and most of the time, they are the same.
      * In some cases, a control might want the JavaFX focus to remain
      * on the parent, while the assistive technology focus is on the child.
@@ -119,7 +119,7 @@ public enum AccessibleAction {
 
     /**
      * Request the node to show a text range, scrolling if required.
-     * <p>Used by TextField and TextArea. </p>
+     * <p>Used by TextArea. </p>
      *
      * Parameters:
      * <ul>

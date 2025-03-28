@@ -22,7 +22,9 @@
 #include "WindowProxy.h"
 
 #include "CommonVM.h"
+#include "DOMWrapperWorld.h"
 #include "GCController.h"
+#include "JSDOMWindowBase.h"
 #include "JSWindowProxy.h"
 #include "LocalFrame.h"
 #include "Page.h"
@@ -88,6 +90,8 @@ void WindowProxy::detachFromFrame()
 
 void WindowProxy::replaceFrame(Frame& frame)
 {
+    ASSERT(m_frame);
+    ASSERT(is<LocalFrame>(m_frame) != is<LocalFrame>(frame));
     m_frame = frame;
     setDOMWindow(frame.window());
 }
@@ -132,8 +136,8 @@ JSWindowProxy& WindowProxy::createJSWindowProxyWithInitializedScript(DOMWrapperW
 
     JSLockHolder lock(world.vm());
     auto& windowProxy = createJSWindowProxy(world);
-    if (is<LocalFrame>(*m_frame))
-        downcast<LocalFrame>(*m_frame).script().initScriptForWindowProxy(windowProxy);
+    if (auto* localFrame = dynamicDowncast<LocalFrame>(*m_frame))
+        localFrame->script().initScriptForWindowProxy(windowProxy);
     return windowProxy;
 }
 
@@ -179,15 +183,12 @@ void WindowProxy::setDOMWindow(DOMWindow* newDOMWindow)
         windowProxy->setWindow(*newDOMWindow);
 
         ScriptController* scriptController = nullptr;
-        Page* page = nullptr;
-        if (is<LocalFrame>(*m_frame)) {
-            auto& frame = downcast<LocalFrame>(*m_frame);
-            scriptController = &frame.script();
-            page = frame.page();
-        }
+        Page* page = m_frame->page();
+        if (auto* localFrame = dynamicDowncast<LocalFrame>(*m_frame))
+            scriptController = &localFrame->script();
 
         // ScriptController's m_cacheableBindingRootObject persists between page navigations
-        // so needs to know about the new JSLocalDOMWindow.
+        // so needs to know about the new JSDOMWindow.
         if (auto* cacheableBindingRootObject = scriptController ? scriptController->existingCacheableBindingRootObject() : nullptr)
             cacheableBindingRootObject->updateGlobalObject(windowProxy->window());
 

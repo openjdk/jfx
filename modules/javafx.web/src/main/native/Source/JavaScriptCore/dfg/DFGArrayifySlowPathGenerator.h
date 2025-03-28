@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012-2017 Apple Inc. All rights reserved.
+ * Copyright (C) 2012-2023 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -32,11 +32,13 @@
 #include "DFGOperations.h"
 #include "DFGSlowPathGenerator.h"
 #include "DFGSpeculativeJIT.h"
+#include <wtf/TZoneMallocInlines.h>
 #include <wtf/Vector.h>
 
 namespace JSC { namespace DFG {
 
 class ArrayifySlowPathGenerator final : public JumpingSlowPathGenerator<MacroAssembler::JumpList> {
+    WTF_MAKE_TZONE_ALLOCATED_INLINE(ArrayifySlowPathGenerator);
 public:
     ArrayifySlowPathGenerator(
         const MacroAssembler::JumpList& from, SpeculativeJIT* jit, Node* node, GPRReg baseGPR,
@@ -89,30 +91,25 @@ private:
             }
         }
 
-        for (unsigned i = 0; i < m_plans.size(); ++i)
-            jit->silentSpill(m_plans[i]);
         VM& vm = jit->vm();
         switch (m_arrayMode.type()) {
         case Array::Int32:
-            jit->callOperation(operationEnsureInt32, m_tempGPR, SpeculativeJIT::TrustedImmPtr(&vm), m_baseGPR);
+            jit->callOperationWithSilentSpill(m_plans.span(), operationEnsureInt32, m_tempGPR, SpeculativeJIT::TrustedImmPtr(&vm), m_baseGPR);
             break;
         case Array::Double:
-            jit->callOperation(operationEnsureDouble, m_tempGPR, SpeculativeJIT::TrustedImmPtr(&vm), m_baseGPR);
+            jit->callOperationWithSilentSpill(m_plans.span(), operationEnsureDouble, m_tempGPR, SpeculativeJIT::TrustedImmPtr(&vm), m_baseGPR);
             break;
         case Array::Contiguous:
-            jit->callOperation(operationEnsureContiguous, m_tempGPR, SpeculativeJIT::TrustedImmPtr(&vm), m_baseGPR);
+            jit->callOperationWithSilentSpill(m_plans.span(), operationEnsureContiguous, m_tempGPR, SpeculativeJIT::TrustedImmPtr(&vm), m_baseGPR);
             break;
         case Array::ArrayStorage:
         case Array::SlowPutArrayStorage:
-            jit->callOperation(operationEnsureArrayStorage, m_tempGPR, SpeculativeJIT::TrustedImmPtr(&vm), m_baseGPR);
+            jit->callOperationWithSilentSpill(m_plans.span(), operationEnsureArrayStorage, m_tempGPR, SpeculativeJIT::TrustedImmPtr(&vm), m_baseGPR);
             break;
         default:
             CRASH();
             break;
         }
-        for (unsigned i = m_plans.size(); i--;)
-            jit->silentFill(m_plans[i]);
-        jit->exceptionCheck();
 
         if (m_op == ArrayifyToStructure) {
             ASSERT(m_structure.get());

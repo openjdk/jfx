@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2013, 2015-2016 Apple Inc. All rights reserved.
+ * Copyright (C) 2013-2023 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -34,8 +34,11 @@
 #include "JSCJSValueInlines.h"
 #include "Options.h"
 #include "StructureRareDataInlines.h"
+#include <wtf/TZoneMallocInlines.h>
 
 namespace JSC { namespace FTL {
+
+WTF_MAKE_TZONE_ALLOCATED_IMPL(AbstractHeap);
 
 AbstractHeap::AbstractHeap(AbstractHeap* parent, const char* heapName, ptrdiff_t offset)
     : m_offset(offset)
@@ -135,9 +138,7 @@ IndexedAbstractHeap::IndexedAbstractHeap(AbstractHeap* parent, const char* heapN
 {
 }
 
-IndexedAbstractHeap::~IndexedAbstractHeap()
-{
-}
+IndexedAbstractHeap::~IndexedAbstractHeap() = default;
 
 TypedPointer IndexedAbstractHeap::baseIndex(Output& out, LValue base, LValue index, JSValue indexAsConstant, ptrdiff_t offset, LValue mask)
 {
@@ -243,9 +244,7 @@ NumberedAbstractHeap::NumberedAbstractHeap(AbstractHeap* heap, const char* heapN
 {
 }
 
-NumberedAbstractHeap::~NumberedAbstractHeap()
-{
-}
+NumberedAbstractHeap::~NumberedAbstractHeap() = default;
 
 void NumberedAbstractHeap::dump(PrintStream& out)
 {
@@ -257,9 +256,7 @@ AbsoluteAbstractHeap::AbsoluteAbstractHeap(AbstractHeap* heap, const char* heapN
 {
 }
 
-AbsoluteAbstractHeap::~AbsoluteAbstractHeap()
-{
-}
+AbsoluteAbstractHeap::~AbsoluteAbstractHeap() = default;
 
 void AbsoluteAbstractHeap::dump(PrintStream& out)
 {

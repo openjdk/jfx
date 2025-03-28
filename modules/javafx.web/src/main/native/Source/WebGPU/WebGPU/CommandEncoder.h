@@ -29,7 +29,17 @@
 #import <wtf/FastMalloc.h>
 #import <wtf/Ref.h>
 #import <wtf/RefCounted.h>
+#import <wtf/TZoneMalloc.h>
 #import <wtf/Vector.h>
+#import <wtf/WeakPtr.h>
+
+@interface TextureAndClearColor : NSObject
+- (instancetype)initWithTexture:(id<MTLTexture>)texture NS_DESIGNATED_INITIALIZER;
+- (instancetype)init NS_UNAVAILABLE;
+@property (nonatomic) id<MTLTexture> texture;
+@property (nonatomic) MTLClearColor clearColor;
+@property (nonatomic) NSUInteger depthPlane;
+@end
 
 struct WGPUCommandEncoderImpl {
 };
@@ -42,14 +52,15 @@ class ComputePassEncoder;
 class Device;
 class QuerySet;
 class RenderPassEncoder;
+class Texture;
 
 // https://gpuweb.github.io/gpuweb/#gpucommandencoder
-class CommandEncoder : public WGPUCommandEncoderImpl, public RefCounted<CommandEncoder>, public CommandsMixin {
-    WTF_MAKE_FAST_ALLOCATED;
+class CommandEncoder : public WGPUCommandEncoderImpl, public RefCounted<CommandEncoder>, public CommandsMixin, public CanMakeWeakPtr<CommandEncoder> {
+    WTF_MAKE_TZONE_ALLOCATED(CommandEncoder);
 public:
-    static Ref<CommandEncoder> create(id<MTLCommandBuffer> commandBuffer, Device& device)
+    static Ref<CommandEncoder> create(id<MTLCommandBuffer> commandBuffer, id<MTLSharedEvent> event, Device& device)
     {
-        return adoptRef(*new CommandEncoder(commandBuffer, device));
+        return adoptRef(*new CommandEncoder(commandBuffer, event, device));
     }
     static Ref<CommandEncoder> createInvalid(Device& device)
     {
@@ -60,49 +71,81 @@ public:
 
     Ref<ComputePassEncoder> beginComputePass(const WGPUComputePassDescriptor&);
     Ref<RenderPassEncoder> beginRenderPass(const WGPURenderPassDescriptor&);
-    void copyBufferToBuffer(const Buffer& source, uint64_t sourceOffset, const Buffer& destination, uint64_t destinationOffset, uint64_t size);
+    void copyBufferToBuffer(const Buffer& source, uint64_t sourceOffset, Buffer& destination, uint64_t destinationOffset, uint64_t size);
     void copyBufferToTexture(const WGPUImageCopyBuffer& source, const WGPUImageCopyTexture& destination, const WGPUExtent3D& copySize);
     void copyTextureToBuffer(const WGPUImageCopyTexture& source, const WGPUImageCopyBuffer& destination, const WGPUExtent3D& copySize);
     void copyTextureToTexture(const WGPUImageCopyTexture& source, const WGPUImageCopyTexture& destination, const WGPUExtent3D& copySize);
-    void clearBuffer(const Buffer&, uint64_t offset, uint64_t size);
+    void clearBuffer(Buffer&, uint64_t offset, uint64_t size);
     Ref<CommandBuffer> finish(const WGPUCommandBufferDescriptor&);
     void insertDebugMarker(String&& markerLabel);
     void popDebugGroup();
     void pushDebugGroup(String&& groupLabel);
-    void resolveQuerySet(const QuerySet&, uint32_t firstQuery, uint32_t queryCount, const Buffer& destination, uint64_t destinationOffset);
+    void resolveQuerySet(const QuerySet&, uint32_t firstQuery, uint32_t queryCount, Buffer& destination, uint64_t destinationOffset);
     void writeTimestamp(QuerySet&, uint32_t queryIndex);
     void setLabel(String&&);
 
     Device& device() const { return m_device; }
 
     bool isValid() const { return m_commandBuffer; }
+    void lock(bool);
+    bool isLocked() const;
+    bool isFinished() const;
 
-private:
-    CommandEncoder(id<MTLCommandBuffer>, Device&);
-    CommandEncoder(Device&);
-
-    bool validateCopyBufferToBuffer(const Buffer& source, uint64_t sourceOffset, const Buffer& destination, uint64_t destinationOffset, uint64_t size);
-    bool validateClearBuffer(const Buffer&, uint64_t offset, uint64_t size);
-    bool validateFinish() const;
-    bool validatePopDebugGroup() const;
-    bool validateComputePassDescriptor(const WGPUComputePassDescriptor&) const;
-    bool validateRenderPassDescriptor(const WGPURenderPassDescriptor&) const;
-
-    void makeInvalid() { m_commandBuffer = nil; }
-
-    void ensureBlitCommandEncoder();
+    id<MTLBlitCommandEncoder> ensureBlitCommandEncoder();
     void finalizeBlitCommandEncoder();
 
-    id<MTLCommandBuffer> m_commandBuffer { nil };
-    id<MTLBlitCommandEncoder> m_blitCommandEncoder { nil };
+    void runClearEncoder(NSMutableDictionary<NSNumber*, TextureAndClearColor*> *attachmentsToClear, id<MTLTexture> depthStencilAttachmentToClear, bool depthAttachmentToClear, bool stencilAttachmentToClear, float depthClearValue = 0, uint32_t stencilClearValue = 0, id<MTLRenderCommandEncoder> existingEncoder = nil);
+    static void clearTextureIfNeeded(const WGPUImageCopyTexture&, NSUInteger, const Device&, id<MTLBlitCommandEncoder>);
+    static void clearTextureIfNeeded(Texture&, NSUInteger, NSUInteger, const Device&, id<MTLBlitCommandEncoder>);
+    void makeInvalid(NSString*);
+    void makeSubmitInvalid(NSString* = nil);
+    void incrementBufferMapCount();
+    void decrementBufferMapCount();
+    void endEncoding(id<MTLCommandEncoder>);
+    void setLastError(NSString*);
+    void waitForCommandBufferCompletion();
+    bool encoderIsCurrent(id<MTLCommandEncoder>) const;
+    bool submitWillBeInvalid() const;
+    void addBuffer(id<MTLBuffer>);
+    void addTexture(id<MTLTexture>);
+    id<MTLCommandBuffer> commandBuffer() const;
+    void setExistingEncoder(id<MTLCommandEncoder>);
 
+private:
+    CommandEncoder(id<MTLCommandBuffer>, id<MTLSharedEvent>, Device&);
+    CommandEncoder(Device&);
+
+    NSString* errorValidatingCopyBufferToBuffer(const Buffer& source, uint64_t sourceOffset, const Buffer& destination, uint64_t destinationOffset, uint64_t size);
+    bool validateClearBuffer(const Buffer&, uint64_t offset, uint64_t size);
+    NSString* validateFinishError() const;
+    bool validatePopDebugGroup() const;
+    NSString* errorValidatingComputePassDescriptor(const WGPUComputePassDescriptor&) const;
+    NSString* errorValidatingRenderPassDescriptor(const WGPURenderPassDescriptor&) const;
+
+    void clearTextureIfNeeded(const WGPUImageCopyTexture&, NSUInteger);
+    NSString* errorValidatingImageCopyBuffer(const WGPUImageCopyBuffer&) const;
+    NSString* errorValidatingCopyBufferToTexture(const WGPUImageCopyBuffer&, const WGPUImageCopyTexture&, const WGPUExtent3D&) const;
+    NSString* errorValidatingCopyTextureToBuffer(const WGPUImageCopyTexture&, const WGPUImageCopyBuffer&, const WGPUExtent3D&) const;
+    void discardCommandBuffer();
+
+    id<MTLCommandBuffer> m_commandBuffer { nil };
+    id<MTLSharedEvent> m_abortCommandBuffer { nil };
+    id<MTLBlitCommandEncoder> m_blitCommandEncoder { nil };
+    id<MTLCommandEncoder> m_existingCommandEncoder { nil };
     struct PendingTimestampWrites {
         Ref<QuerySet> querySet;
         uint32_t queryIndex;
     };
-    Vector<PendingTimestampWrites> m_pendingTimestampWrites;
     uint64_t m_debugGroupStackSize { 0 };
+    WeakPtr<CommandBuffer> m_cachedCommandBuffer;
+    NSString* m_lastErrorString { nil };
+    int m_bufferMapCount { 0 };
+    bool m_makeSubmitInvalid { false };
 
+#if PLATFORM(MAC) || PLATFORM(MACCATALYST)
+    NSMutableSet<id<MTLTexture>> *m_managedTextures { nil };
+    NSMutableSet<id<MTLBuffer>> *m_managedBuffers { nil };
+#endif
     const Ref<Device> m_device;
 };
 

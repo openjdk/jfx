@@ -43,7 +43,6 @@ $(PROJECT_DIR)/builtins/AsyncFromSyncIteratorPrototype.js
 $(PROJECT_DIR)/builtins/AsyncFunctionPrototype.js
 $(PROJECT_DIR)/builtins/AsyncGeneratorPrototype.js
 $(PROJECT_DIR)/builtins/AsyncIteratorPrototype.js
-$(PROJECT_DIR)/builtins/DatePrototype.js
 $(PROJECT_DIR)/builtins/FunctionPrototype.js
 $(PROJECT_DIR)/builtins/GeneratorPrototype.js
 $(PROJECT_DIR)/builtins/GlobalObject.js
@@ -217,7 +216,7 @@ $(PROJECT_DIR)/ucd/UnicodeData.txt
 $(PROJECT_DIR)/ucd/emoji-data.txt
 $(PROJECT_DIR)/ucd/language-subtag-registry.txt
 $(PROJECT_DIR)/wasm/generateWasm.py
-$(PROJECT_DIR)/wasm/generateWasmB3IRGeneratorInlinesHeader.py
+$(PROJECT_DIR)/wasm/generateWasmOMGIRGeneratorInlinesHeader.py
 $(PROJECT_DIR)/wasm/generateWasmOpsHeader.py
 $(PROJECT_DIR)/wasm/js/JSWebAssembly.cpp
 $(PROJECT_DIR)/wasm/js/WebAssemblyArrayConstructor.cpp

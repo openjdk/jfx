@@ -38,12 +38,12 @@
 #include "Document.h"
 #include "EventNames.h"
 #include <JavaScriptCore/Float32Array.h>
-#include <wtf/IsoMallocInlines.h>
 #include <wtf/MainThread.h>
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
-WTF_MAKE_ISO_ALLOCATED_IMPL(ScriptProcessorNode);
+WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(ScriptProcessorNode);
 
 Ref<ScriptProcessorNode> ScriptProcessorNode::create(BaseAudioContext& context, size_t bufferSize, unsigned numberOfInputChannels, unsigned numberOfOutputChannels)
 {
@@ -257,7 +257,7 @@ ExceptionOr<void> ScriptProcessorNode::setChannelCount(unsigned channelCount)
     ASSERT(isMainThread());
 
     if (channelCount != this->channelCount())
-        return Exception { IndexSizeError, "ScriptProcessorNode's channelCount cannot be changed"_s };
+        return Exception { ExceptionCode::IndexSizeError, "ScriptProcessorNode's channelCount cannot be changed"_s };
     return { };
 }
 
@@ -266,7 +266,7 @@ ExceptionOr<void> ScriptProcessorNode::setChannelCountMode(ChannelCountMode mode
     ASSERT(isMainThread());
 
     if (mode != this->channelCountMode())
-        return Exception { NotSupportedError, "ScriptProcessorNode's channelCountMode cannot be changed from 'explicit'"_s };
+        return Exception { ExceptionCode::NotSupportedError, "ScriptProcessorNode's channelCountMode cannot be changed from 'explicit'"_s };
 
     return { };
 }

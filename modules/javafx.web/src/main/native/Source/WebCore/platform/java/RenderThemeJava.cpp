@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2023, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -168,7 +168,7 @@ bool RenderThemeJava::paintWidget(
     } else if (JNI_EXPAND(METER) == widgetIndex) {
         jfloat value = 0;
         jint region = 0;
-        if (object.isMeter()) {
+        if (object.isRenderMeter()) {
             HTMLMeterElement* meter = static_cast<HTMLMeterElement*>(object.node());
             value = meter->valueRatio();
             region = meter->gaugeRegion();
@@ -234,7 +234,7 @@ Seconds RenderThemeJava::animationRepeatIntervalForProgressBar(const RenderProgr
     return progressAnimationInterval;
 }
 
-Seconds RenderThemeJava::animationDurationForProgressBar(const RenderProgress&) const
+Seconds RenderThemeJava::animationDurationForProgressBar() const
 {
     return progressAnimationInterval * progressAnimationFrames;
 }
@@ -244,7 +244,7 @@ bool RenderThemeJava::paintProgressBar(const RenderObject&o, const PaintInfo& i,
     return paintWidget(JNI_EXPAND(PROGRESS_BAR), o, i, rect);
 }
 
-bool RenderThemeJava::supportsMeter(StyleAppearance part, const HTMLMeterElement&) const
+bool RenderThemeJava::supportsMeter(StyleAppearance part) const
 {
     if (part == StyleAppearance::ProgressBar) {
         return true;
@@ -261,37 +261,29 @@ void RenderThemeJava::setCheckboxSize(RenderStyle& style) const
 {
     setRadioSize(style);
 }
-
 bool RenderThemeJava::paintCheckbox(const RenderObject&o, const PaintInfo& i, const FloatRect& rect)
 {
+
     return paintWidget(JNI_EXPAND(CHECK_BOX), o, i, rect);
 }
 
 void RenderThemeJava::setRadioSize(RenderStyle& style) const
 {
-    // If the width and height are both specified, then we have nothing to do.
     if ((!style.width().isIntrinsicOrAuto() && !style.height().isAuto())) {
         return;
     }
-
     JNIEnv* env = WTF::GetJavaEnv();
-
     static jmethodID mid = env->GetMethodID(PG_GetRenderThemeClass(env), "getRadioButtonSize", "()I");
     ASSERT(mid);
-
-    // Get from default theme object.
     int radioRadius = env->CallIntMethod((jobject)PG_GetRenderThemeObjectFromPage(env, nullptr), mid);
     WTF::CheckAndClearException(env);
-
     if (style.width().isIntrinsicOrAuto()) {
         style.setWidth(Length(radioRadius, LengthType::Fixed));
     }
-
     if (style.height().isAuto()) {
         style.setHeight(Length(radioRadius, LengthType::Fixed));
     }
 }
-
 bool RenderThemeJava::paintRadio(const RenderObject&o, const PaintInfo& i, const FloatRect& rect)
 {
     return paintWidget(JNI_EXPAND(RADIO_BUTTON), o, i, rect);
@@ -317,6 +309,10 @@ void RenderThemeJava::adjustSearchFieldStyle(RenderStyle&, const Element*) const
     notImplemented();
 }
 
+void RenderThemeJava::adjustSwitchStyle(RenderStyle& style, const Element*) const
+{
+    notImplemented();
+}
 bool RenderThemeJava::paintSearchField(const RenderObject&o, const PaintInfo& i, const IntRect& rect)
 {
     return paintWidget(JNI_EXPAND(TEXT_FIELD), o, i, rect);
@@ -487,9 +483,7 @@ Color RenderThemeJava::platformInactiveSelectionForegroundColor(OptionSet<StyleC
 #if ENABLE(VIDEO)
 Vector<String, 2> RenderThemeJava::mediaControlsScripts()
 {
-
-    return { String(ModernMediaControlsJavaScript, sizeof(ModernMediaControlsJavaScript)) };
-
+    return { StringImpl::createWithoutCopying(ModernMediaControlsJavaScript) };
 }
 
 String RenderThemeJava::extraMediaControlsStyleSheet()
@@ -554,7 +548,7 @@ bool RenderThemeJava::paintMediaControl(jint type, const RenderObject&, const Pa
 
 String RenderThemeJava::mediaControlsStyleSheet()
 {
-    return String(ModernMediaControlsUserAgentStyleSheet, sizeof(ModernMediaControlsUserAgentStyleSheet));
+    return StringImpl::createWithoutCopying(ModernMediaControlsUserAgentStyleSheet);
 }
 
 String RenderThemeJava::mediaControlsBase64StringForIconNameAndType(const String& iconName, const String& iconType)

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2017-2021 Apple Inc. All rights reserved.
+ * Copyright (C) 2017-2023 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -27,6 +27,7 @@
 
 #include "MacroAssembler.h"
 #include "ProbeStack.h"
+#include <wtf/TZoneMalloc.h>
 
 #if ENABLE(ASSEMBLER)
 
@@ -38,9 +39,9 @@ struct CPUState {
     using SPRegisterID = MacroAssembler::SPRegisterID;
     using FPRegisterID = MacroAssembler::FPRegisterID;
 
-    static inline const char* gprName(RegisterID id) { return MacroAssembler::gprName(id); }
-    static inline const char* sprName(SPRegisterID id) { return MacroAssembler::sprName(id); }
-    static inline const char* fprName(FPRegisterID id) { return MacroAssembler::fprName(id); }
+    static ASCIILiteral gprName(RegisterID id) { return MacroAssembler::gprName(id); }
+    static ASCIILiteral sprName(SPRegisterID id) { return MacroAssembler::sprName(id); }
+    static ASCIILiteral fprName(FPRegisterID id) { return MacroAssembler::fprName(id); }
     inline UCPURegister& gpr(RegisterID);
     inline UCPURegister& spr(SPRegisterID);
     template<SavedFPWidth = SavedFPWidth::DontSaveVectors> inline double& fpr(FPRegisterID);
@@ -130,14 +131,12 @@ T CPUState::fpr(FPRegisterID id) const
 
 inline void*& CPUState::pc()
 {
-#if CPU(X86) || CPU(X86_64)
+#if CPU(X86_64)
     return *reinterpret_cast<void**>(&spr(X86Registers::eip));
 #elif CPU(ARM64)
     return *reinterpret_cast<void**>(&spr(ARM64Registers::pc));
 #elif CPU(ARM_THUMB2)
     return *reinterpret_cast<void**>(&gpr(ARMRegisters::pc));
-#elif CPU(MIPS)
-    return *reinterpret_cast<void**>(&spr(MIPSRegisters::pc));
 #elif CPU(RISCV64)
     return *reinterpret_cast<void**>(&spr(RISCV64Registers::pc));
 #else
@@ -147,14 +146,12 @@ inline void*& CPUState::pc()
 
 inline void*& CPUState::fp()
 {
-#if CPU(X86) || CPU(X86_64)
+#if CPU(X86_64)
     return *reinterpret_cast<void**>(&gpr(X86Registers::ebp));
 #elif CPU(ARM64)
     return *reinterpret_cast<void**>(&gpr(ARM64Registers::fp));
 #elif CPU(ARM_THUMB2)
     return *reinterpret_cast<void**>(&gpr(ARMRegisters::fp));
-#elif CPU(MIPS)
-    return *reinterpret_cast<void**>(&gpr(MIPSRegisters::fp));
 #elif CPU(RISCV64)
     return *reinterpret_cast<void**>(&gpr(RISCV64Registers::fp));
 #else
@@ -164,14 +161,12 @@ inline void*& CPUState::fp()
 
 inline void*& CPUState::sp()
 {
-#if CPU(X86) || CPU(X86_64)
+#if CPU(X86_64)
     return *reinterpret_cast<void**>(&gpr(X86Registers::esp));
 #elif CPU(ARM64)
     return *reinterpret_cast<void**>(&gpr(ARM64Registers::sp));
 #elif CPU(ARM_THUMB2)
     return *reinterpret_cast<void**>(&gpr(ARMRegisters::sp));
-#elif CPU(MIPS)
-    return *reinterpret_cast<void**>(&gpr(MIPSRegisters::sp));
 #elif CPU(RISCV64)
     return *reinterpret_cast<void**>(&gpr(RISCV64Registers::sp));
 #else
@@ -201,7 +196,7 @@ T CPUState::sp() const
 }
 
 struct State;
-typedef void (*StackInitializationFunction)(State*);
+typedef void (SYSV_ABI *StackInitializationFunction)(State*);
 
 #if CPU(ARM64E)
 #define PROBE_FUNCTION_PTRAUTH __ptrauth(ptrauth_key_process_dependent_code, 0, JITProbePtrTag)
@@ -220,7 +215,7 @@ struct State {
 };
 
 class Context {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_ALLOCATED(Context);
 public:
     using RegisterID = MacroAssembler::RegisterID;
     using SPRegisterID = MacroAssembler::SPRegisterID;
@@ -245,9 +240,9 @@ public:
 #if CPU(X86_64) || CPU(ARM64)
     v128_t& vector(FPRegisterID id) { return cpu.vector(id); }
 #endif
-    const char* gprName(RegisterID id) { return cpu.gprName(id); }
-    const char* sprName(SPRegisterID id) { return cpu.sprName(id); }
-    const char* fprName(FPRegisterID id) { return cpu.fprName(id); }
+    ASCIILiteral gprName(RegisterID id) { return cpu.gprName(id); }
+    ASCIILiteral sprName(SPRegisterID id) { return cpu.sprName(id); }
+    ASCIILiteral fprName(FPRegisterID id) { return cpu.fprName(id); }
 
     template<typename T> T gpr(RegisterID id) const { return cpu.gpr<T>(id); }
     template<typename T> T spr(SPRegisterID id) const { return cpu.spr<T>(id); }
@@ -279,7 +274,7 @@ private:
     friend JS_EXPORT_PRIVATE void* probeStateForContext(Context&); // Not for general use. This should only be for writing tests.
 };
 
-extern "C" void executeJSCJITProbe(State*) REFERENCED_FROM_ASM WTF_INTERNAL;
+extern "C" void SYSV_ABI executeJSCJITProbe(State*) REFERENCED_FROM_ASM WTF_INTERNAL;
 
 } // namespace Probe
 } // namespace JSC

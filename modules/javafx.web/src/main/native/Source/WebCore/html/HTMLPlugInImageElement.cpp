@@ -44,6 +44,7 @@
 #include "Page.h"
 #include "PlatformMouseEvent.h"
 #include "PluginViewBase.h"
+#include "RemoteFrame.h"
 #include "RenderImage.h"
 #include "RenderTreeUpdater.h"
 #include "ScriptController.h"
@@ -57,14 +58,14 @@
 #include "UserGestureIndicator.h"
 #include <JavaScriptCore/CatchScope.h>
 #include <JavaScriptCore/JSGlobalObjectInlines.h>
-#include <wtf/IsoMallocInlines.h>
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
-WTF_MAKE_ISO_ALLOCATED_IMPL(HTMLPlugInImageElement);
+WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(HTMLPlugInImageElement);
 
 HTMLPlugInImageElement::HTMLPlugInImageElement(const QualifiedName& tagName, Document& document)
-    : HTMLPlugInElement(tagName, document)
+    : HTMLPlugInElement(tagName, document, TypeFlag::HasDidMoveToNewDocument)
 {
 }
 
@@ -96,12 +97,13 @@ bool HTMLPlugInImageElement::canLoadURL(const String& relativeURL) const
     return canLoadURL(document().completeURL(relativeURL));
 }
 
-// Note that unlike HTMLFrameElementBase::canLoadURL this uses SecurityOrigin::canAccess.
 bool HTMLPlugInImageElement::canLoadURL(const URL& completeURL) const
 {
     if (completeURL.protocolIsJavaScript()) {
+        if (is<RemoteFrame>(contentFrame()))
+            return false;
         RefPtr<Document> contentDocument = this->contentDocument();
-        if (contentDocument && !document().securityOrigin().isSameOriginDomain(contentDocument->securityOrigin()))
+        if (contentDocument && !document().protectedSecurityOrigin()->isSameOriginDomain(contentDocument->securityOrigin()))
             return false;
     }
 
@@ -137,7 +139,7 @@ RenderPtr<RenderElement> HTMLPlugInImageElement::createElementRenderer(RenderSty
         return RenderElement::createFor(*this, WTFMove(style));
 
     if (isImageType())
-        return createRenderer<RenderImage>(*this, WTFMove(style));
+        return createRenderer<RenderImage>(RenderObject::Type::Image, *this, WTFMove(style));
 
     return HTMLPlugInElement::createElementRenderer(WTFMove(style), insertionPosition);
 }
@@ -172,10 +174,12 @@ void HTMLPlugInImageElement::didAttachRenderers()
     scheduleUpdateForAfterStyleResolution();
 
     // Update the RenderImageResource of the associated RenderImage.
-    if (m_imageLoader && is<RenderImage>(renderer())) {
-        auto& renderImageResource = downcast<RenderImage>(*renderer()).imageResource();
+    if (m_imageLoader) {
+        if (auto* renderImage = dynamicDowncast<RenderImage>(renderer())) {
+            auto& renderImageResource = renderImage->imageResource();
         if (!renderImageResource.cachedImage())
-            renderImageResource.setCachedImage(m_imageLoader->image());
+                renderImageResource.setCachedImage(m_imageLoader->protectedImage());
+    }
     }
 
     HTMLPlugInElement::didAttachRenderers();
@@ -269,14 +273,7 @@ void HTMLPlugInImageElement::resumeFromDocumentSuspension()
 
 bool HTMLPlugInImageElement::shouldBypassCSPForPDFPlugin(const String& contentType) const
 {
-#if ENABLE(PDFKIT_PLUGIN)
-    // We only consider bypassing this CSP check if plugins are disabled. In that case we know that
-    // any plugin used is a browser implementation detail. It is not safe to skip this check
-    // if plugins are enabled in case an external plugin is used to load PDF content.
-    // FIXME: Check for alternative PDF plugins here so we can bypass this CSP check for PDFPlugin even when plugins are enabled.
-    if (document().frame()->arePluginsEnabled())
-        return false;
-
+#if ENABLE(PDF_PLUGIN)
     return document().frame()->loader().client().shouldUsePDFPlugin(contentType, document().url().path());
 #else
     UNUSED_PARAM(contentType);
@@ -290,21 +287,22 @@ bool HTMLPlugInImageElement::canLoadPlugInContent(const String& relativeURL, con
     if (isInUserAgentShadowTree())
         return true;
 
+    Ref document = this->document();
     URL completedURL;
     if (!relativeURL.isEmpty())
-        completedURL = document().completeURL(relativeURL);
+        completedURL = document->completeURL(relativeURL);
 
-    ASSERT(document().contentSecurityPolicy());
-    const ContentSecurityPolicy& contentSecurityPolicy = *document().contentSecurityPolicy();
+    ASSERT(document->contentSecurityPolicy());
+    CheckedRef contentSecurityPolicy = *document->contentSecurityPolicy();
 
-    contentSecurityPolicy.upgradeInsecureRequestIfNeeded(completedURL, ContentSecurityPolicy::InsecureRequestType::Load);
+    contentSecurityPolicy->upgradeInsecureRequestIfNeeded(completedURL, ContentSecurityPolicy::InsecureRequestType::Load);
 
-    if (!shouldBypassCSPForPDFPlugin(mimeType) && !contentSecurityPolicy.allowObjectFromSource(completedURL))
+    if (!shouldBypassCSPForPDFPlugin(mimeType) && !contentSecurityPolicy->allowObjectFromSource(completedURL))
         return false;
 
-    auto& declaredMimeType = document().isPluginDocument() && document().ownerElement() ?
-        document().ownerElement()->attributeWithoutSynchronization(HTMLNames::typeAttr) : attributeWithoutSynchronization(HTMLNames::typeAttr);
-    return contentSecurityPolicy.allowPluginType(mimeType, declaredMimeType, completedURL);
+    auto& declaredMIMEType = document->isPluginDocument() && document->ownerElement() ?
+        document->ownerElement()->attributeWithoutSynchronization(HTMLNames::typeAttr) : attributeWithoutSynchronization(HTMLNames::typeAttr);
+    return contentSecurityPolicy->allowPluginType(mimeType, declaredMIMEType, completedURL);
 }
 
 bool HTMLPlugInImageElement::requestObject(const String& relativeURL, const String& mimeType, const Vector<AtomString>& paramNames, const Vector<AtomString>& paramValues)
@@ -326,8 +324,13 @@ bool HTMLPlugInImageElement::requestObject(const String& relativeURL, const Stri
     if (ScriptDisallowedScope::InMainThread::isScriptAllowed())
         return document->frame()->loader().subframeLoader().requestObject(*this, relativeURL, getNameAttribute(), mimeType, paramNames, paramValues);
 
-    document->eventLoop().queueTask(TaskSource::Networking, [this, protectedThis = Ref { *this }, document, relativeURL, nameAttribute = getNameAttribute(), mimeType, paramNames, paramValues]() mutable {
-        document->frame()->loader().subframeLoader().requestObject(*this, relativeURL, nameAttribute, mimeType, paramNames, paramValues);
+    document->eventLoop().queueTask(TaskSource::Networking, [this, protectedThis = Ref { *this }, relativeURL, nameAttribute = getNameAttribute(), mimeType, paramNames, paramValues, document]() mutable {
+        if (!this->isConnected() || &this->document() != document.ptr())
+            return;
+        RefPtr frame = this->document().frame();
+        if (!frame)
+            return;
+        frame->checkedLoader()->subframeLoader().requestObject(*this, relativeURL, nameAttribute, mimeType, paramNames, paramValues);
     });
     return true;
 }

@@ -56,37 +56,51 @@ public:
 
     DECLARE_EXPORT_INFO;
 
-    JS_EXPORT_PRIVATE static WebAssemblyFunction* create(VM&, JSGlobalObject*, Structure*, unsigned, const String&, JSWebAssemblyInstance*, Wasm::Callee& jsEntrypoint, WasmToWasmImportableFunction::LoadLocation, Wasm::TypeIndex, RefPtr<const Wasm::RTT>);
+    JS_EXPORT_PRIVATE static WebAssemblyFunction* create(VM&, JSGlobalObject*, Structure*, unsigned, const String&, JSWebAssemblyInstance*, Wasm::JSEntrypointCallee& jsEntrypoint, Wasm::Callee* wasmCallee, WasmToWasmImportableFunction::LoadLocation, Wasm::TypeIndex, RefPtr<const Wasm::RTT>);
     static Structure* createStructure(VM&, JSGlobalObject*, JSValue);
 
     CodePtr<WasmEntryPtrTag> jsEntrypoint(ArityCheckMode arity)
     {
         ASSERT_UNUSED(arity, arity == ArityCheckNotRequired || arity == MustCheckArity);
-        return m_jsEntrypoint;
+        return m_jsEntrypoint.entrypoint();
     }
 
     CodePtr<JSEntryPtrTag> jsCallEntrypoint()
     {
+#if ENABLE(JIT)
         if (m_jsToWasmICCallee)
             return m_jsToWasmICCallee->entrypoint().retagged<JSEntryPtrTag>();
         return jsCallEntrypointSlow();
+#else
+        return nullptr;
+#endif
     }
+
+    static constexpr ptrdiff_t offsetOfJSToWasmCallee() { return OBJECT_OFFSETOF(WebAssemblyFunction, m_jsToWasmCallee); }
 
 private:
     DECLARE_VISIT_CHILDREN;
-    WebAssemblyFunction(VM&, NativeExecutable*, JSGlobalObject*, Structure*, JSWebAssemblyInstance*, Wasm::Callee& jsEntrypoint, WasmToWasmImportableFunction::LoadLocation entrypointLoadLocation, Wasm::TypeIndex, RefPtr<const Wasm::RTT>);
+    WebAssemblyFunction(VM&, NativeExecutable*, JSGlobalObject*, Structure*, JSWebAssemblyInstance*, Wasm::JSEntrypointCallee& jsEntrypoint, Wasm::Callee* wasmCallee, WasmToWasmImportableFunction::LoadLocation entrypointLoadLocation, Wasm::TypeIndex, RefPtr<const Wasm::RTT>);
 
+#if ENABLE(JIT)
     CodePtr<JSEntryPtrTag> jsCallEntrypointSlow();
+#endif
     bool usesTagRegisters() const;
     RegisterAtOffsetList usedCalleeSaveRegisters() const;
 
     RegisterSet calleeSaves() const;
 
-    // It's safe to just hold the raw jsEntrypoint because we have a reference
+    // It's safe to just hold the raw callee because we have a reference
     // to our Instance, which points to the Module that exported us, which
     // ensures that the actual Signature/code doesn't get deallocated.
-    CodePtr<WasmEntryPtrTag> m_jsEntrypoint;
+    Wasm::JSEntrypointCallee& m_jsEntrypoint;
+    // This is the callee needed by LLInt/IPInt
+    uintptr_t m_boxedWasmCallee;
+    // This let's the JS->Wasm interpreter find its metadata
+    RefPtr<Wasm::JITLessJSEntrypointCallee> m_jsToWasmCallee;
+#if ENABLE(JIT)
     RefPtr<Wasm::JSToWasmICCallee> m_jsToWasmICCallee;
+#endif
 };
 
 } // namespace JSC

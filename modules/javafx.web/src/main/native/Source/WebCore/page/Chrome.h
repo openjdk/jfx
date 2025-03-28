@@ -21,10 +21,12 @@
 
 #pragma once
 
+#include "AXObjectCache.h"
 #include "Cursor.h"
 #include "DisabledAdaptations.h"
 #include "FocusDirection.h"
 #include "HostWindow.h"
+#include "ImageBufferPixelFormat.h"
 #include <wtf/CompletionHandler.h>
 #include <wtf/Forward.h>
 #include <wtf/FunctionDispatcher.h>
@@ -64,6 +66,7 @@ class DateTimeChooserClient;
 class FileChooser;
 class FileIconLoader;
 class FloatRect;
+class Frame;
 class Element;
 class Geolocation;
 class HitTestResult;
@@ -104,18 +107,21 @@ public:
     IntPoint accessibilityScreenToRootView(const IntPoint&) const override;
     IntRect rootViewToAccessibilityScreen(const IntRect&) const override;
     PlatformPageClient platformPageClient() const override;
+#if PLATFORM(IOS_FAMILY)
+    void relayAccessibilityNotification(const String&, const RetainPtr<NSData>&) const override;
+#endif
     void setCursor(const Cursor&) override;
     void setCursorHiddenUntilMouseMoves(bool) override;
 
-    RefPtr<ImageBuffer> createImageBuffer(const FloatSize&, RenderingMode, RenderingPurpose, float resolutionScale, const DestinationColorSpace&, PixelFormat, bool avoidBackendSizeCheck = false) const override;
+    RefPtr<ImageBuffer> createImageBuffer(const FloatSize&, RenderingPurpose, float resolutionScale, const DestinationColorSpace&, ImageBufferPixelFormat, OptionSet<ImageBufferOptions>) const override;
     RefPtr<WebCore::ImageBuffer> sinkIntoImageBuffer(std::unique_ptr<WebCore::SerializedImageBuffer>) override;
 
 #if ENABLE(WEBGL)
     RefPtr<GraphicsContextGL> createGraphicsContextGL(const GraphicsContextGLAttributes&) const override;
 #endif
-
-    RefPtr<WebGPU::GPU> createGPUForWebGPU() const;
-
+#if HAVE(WEBGPU_IMPLEMENTATION)
+    RefPtr<WebGPU::GPU> createGPUForWebGPU() const override;
+#endif
     RefPtr<ShapeDetection::BarcodeDetector> createBarcodeDetector(const ShapeDetection::BarcodeDetectorOptions&) const;
     void getBarcodeDetectorSupportedFormats(CompletionHandler<void(Vector<ShapeDetection::BarcodeFormat>&&)>&&) const;
     RefPtr<ShapeDetection::FaceDetector> createFaceDetector(const ShapeDetection::FaceDetectorOptions&) const;
@@ -127,6 +133,7 @@ public:
     FloatSize screenSize() const override;
     FloatSize availableScreenSize() const override;
     FloatSize overrideScreenSize() const override;
+    FloatSize overrideAvailableScreenSize() const override;
 
     void scrollContainingScrollViewsToRevealRect(const IntRect&) const;
     void scrollMainFrameToRevealRect(const IntRect&) const;
@@ -145,9 +152,9 @@ public:
     void takeFocus(FocusDirection);
 
     void focusedElementChanged(Element*);
-    void focusedFrameChanged(LocalFrame*);
+    void focusedFrameChanged(Frame*);
 
-    WEBCORE_EXPORT Page* createWindow(LocalFrame&, const WindowFeatures&, const NavigationAction&);
+    WEBCORE_EXPORT RefPtr<Page> createWindow(LocalFrame&, const WindowFeatures&, const NavigationAction&);
     WEBCORE_EXPORT void show();
 
     bool canRunModal() const;
@@ -198,10 +205,6 @@ public:
 
     std::unique_ptr<WorkerClient> createWorkerClient(SerialFunctionDispatcher&);
 
-#if ENABLE(APP_HIGHLIGHTS)
-    void storeAppHighlight(AppHighlight&&) const;
-#endif
-
     void runOpenPanel(LocalFrame&, FileChooser&);
     void showShareSheet(ShareDataWithParsedURL&, CompletionHandler<void(bool)>&&);
     void showContactPicker(const ContactsRequestData&, CompletionHandler<void(std::optional<Vector<ContactInfo>>&&)>&&);
@@ -235,11 +238,11 @@ public:
 
 private:
     void notifyPopupOpeningObservers() const;
+    Ref<Page> protectedPage() const;
 
-    Page& m_page;
+    WeakRef<Page> m_page;
     UniqueRef<ChromeClient> m_client;
-    // FIXME: This should be WeakPtr<PopupOpeningObserver>.
-    Vector<PopupOpeningObserver*> m_popupOpeningObservers;
+    Vector<WeakPtr<PopupOpeningObserver>> m_popupOpeningObservers;
 #if PLATFORM(IOS_FAMILY)
     bool m_isDispatchViewportDataDidChangeSuppressed { false };
 #endif

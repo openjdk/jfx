@@ -24,7 +24,7 @@
 #if ENABLE(XSLT)
 
 #include "CachedResourceLoader.h"
-#include "Document.h"
+#include "DocumentInlines.h"
 #include "FrameDestructionObserverInlines.h"
 #include "LocalFrame.h"
 #include "Page.h"
@@ -38,6 +38,7 @@
 #include <libxslt/xsltutils.h>
 #include <wtf/CheckedArithmetic.h>
 #include <wtf/HexNumber.h>
+#include <wtf/text/MakeString.h>
 #include <wtf/unicode/CharacterNames.h>
 
 namespace WebCore {

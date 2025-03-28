@@ -32,13 +32,13 @@
 #include "HTMLObjectElement.h"
 #include "LiveNodeListInlines.h"
 #include "NodeRareData.h"
-#include <wtf/IsoMallocInlines.h>
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
 using namespace HTMLNames;
 
-WTF_MAKE_ISO_ALLOCATED_IMPL(RadioNodeList);
+WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(RadioNodeList);
 
 RadioNodeList::RadioNodeList(ContainerNode& rootNode, const AtomString& name)
     : CachedLiveNodeList(rootNode, NodeListInvalidationType::InvalidateForFormControls)
@@ -59,13 +59,13 @@ RadioNodeList::~RadioNodeList()
 
 static RefPtr<HTMLInputElement> nonEmptyRadioButton(Node& node)
 {
-    if (!is<HTMLInputElement>(node))
+    auto* inputElement = dynamicDowncast<HTMLInputElement>(node);
+    if (!inputElement)
         return nullptr;
 
-    auto& inputElement = downcast<HTMLInputElement>(node);
-    if (!inputElement.isRadioButton() || inputElement.value().isEmpty())
+    if (!inputElement->isRadioButton() || inputElement->value().isEmpty())
         return nullptr;
-    return &inputElement;
+    return inputElement;
 }
 
 String RadioNodeList::value() const
@@ -98,7 +98,7 @@ bool RadioNodeList::elementMatches(Element& element) const
     if (!element.isFormListedElement())
         return false;
 
-    if (is<HTMLInputElement>(element) && downcast<HTMLInputElement>(element).isImageButton())
+    if (auto* input = dynamicDowncast<HTMLInputElement>(element); input && input->isImageButton())
         return false;
 
     if (is<HTMLFormElement>(ownerNode())) {

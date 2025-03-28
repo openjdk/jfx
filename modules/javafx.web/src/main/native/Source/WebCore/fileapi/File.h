@@ -27,15 +27,15 @@
 
 #include "Blob.h"
 #include <wtf/FileSystem.h>
-#include <wtf/IsoMalloc.h>
 #include <wtf/Ref.h>
+#include <wtf/TZoneMalloc.h>
 #include <wtf/TypeCasts.h>
 #include <wtf/text/WTFString.h>
 
 namespace WebCore {
 
 class File final : public Blob {
-    WTF_MAKE_ISO_ALLOCATED_EXPORT(File, WEBCORE_EXPORT);
+    WTF_MAKE_TZONE_OR_ISO_ALLOCATED_EXPORT(File, WEBCORE_EXPORT);
 public:
     struct PropertyBag : BlobPropertyBag {
         std::optional<int64_t> lastModified;
@@ -107,9 +107,6 @@ private:
 #if ENABLE(FILE_REPLACEMENT)
     static void computeNameAndContentTypeForReplacedFile(const String& path, const String& nameOverride, String& effectiveName, String& effectiveContentType);
 #endif
-
-    // ActiveDOMObject.
-    const char* activeDOMObjectName() const final;
 
     String m_path;
     String m_relativePath;

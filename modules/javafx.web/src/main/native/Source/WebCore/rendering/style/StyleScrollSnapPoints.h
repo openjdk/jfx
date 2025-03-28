@@ -36,21 +36,18 @@ namespace WebCore {
 struct ScrollSnapType {
     ScrollSnapAxis axis { ScrollSnapAxis::Both };
     ScrollSnapStrictness strictness { ScrollSnapStrictness::None };
-};
 
-inline bool operator==(const ScrollSnapType& a, const ScrollSnapType& b)
-{
-    return a.axis == b.axis && a.strictness == b.strictness;
-}
+    friend bool operator==(const ScrollSnapType&, const ScrollSnapType&) = default;
+};
 
 struct ScrollSnapAlign {
     ScrollSnapAxisAlignType blockAlign { ScrollSnapAxisAlignType::None };
     ScrollSnapAxisAlignType inlineAlign { ScrollSnapAxisAlignType::None };
+
+    friend bool operator==(const ScrollSnapAlign&, const ScrollSnapAlign&) = default;
 };
 
-inline bool operator==(const ScrollSnapAlign& a, const ScrollSnapAlign& b)
-{
-    return a.blockAlign == b.blockAlign && a.inlineAlign == b.inlineAlign;
-}
+TextStream& operator<<(TextStream&, ScrollSnapType);
+TextStream& operator<<(TextStream&, ScrollSnapAlign);
 
 } // namespace WebCore

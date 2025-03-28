@@ -30,7 +30,6 @@
 #include "PlatformVideoColorSpace.h"
 #include "SharedBuffer.h"
 #include <functional>
-#include <wtf/EnumTraits.h>
 #include <wtf/MediaTime.h>
 #include <wtf/PrintStream.h>
 #include <wtf/ThreadSafeRefCounted.h>
@@ -49,6 +48,8 @@ class MockSampleBox;
 class ProcessIdentity;
 class SharedBuffer;
 struct TrackInfo;
+
+using TrackID = uint64_t;
 
 struct PlatformSample {
     enum Type {
@@ -73,7 +74,7 @@ public:
     virtual MediaTime presentationTime() const = 0;
     virtual MediaTime decodeTime() const = 0;
     virtual MediaTime duration() const = 0;
-    virtual AtomString trackID() const = 0;
+    virtual TrackID trackID() const = 0;
     virtual size_t sizeInBytes() const = 0;
     virtual FloatSize presentationSize() const = 0;
     virtual void offsetTimestampsBy(const MediaTime&) = 0;

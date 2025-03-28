@@ -24,6 +24,7 @@
 #include "MatchResult.h"
 #include "MediaQueryEvaluator.h"
 #include "PropertyAllowlist.h"
+#include "PseudoElementRequest.h"
 #include "RuleSet.h"
 #include "SelectorChecker.h"
 #include "StyleScopeOrdinal.h"
@@ -33,34 +34,15 @@
 
 namespace WebCore::Style {
 
-class MatchRequest;
 class ScopeRuleSets;
+struct MatchRequest;
 struct SelectorMatchingState;
 enum class CascadeLevel : uint8_t;
 
-class PseudoElementRequest {
-public:
-    PseudoElementRequest(PseudoId pseudoId, std::optional<StyleScrollbarState> scrollbarState = std::nullopt)
-        : pseudoId(pseudoId)
-        , scrollbarState(scrollbarState)
-    {
-    }
-
-    PseudoElementRequest(PseudoId pseudoId, const AtomString& highlightName)
-        : pseudoId(pseudoId)
-        , highlightName(highlightName)
-    {
-        ASSERT(pseudoId == PseudoId::Highlight);
-    }
-
-    PseudoId pseudoId;
-    std::optional<StyleScrollbarState> scrollbarState;
-    AtomString highlightName;
-};
-
 struct MatchedRule {
-    const RuleData* ruleData;
-    unsigned specificity;
+    const RuleData* ruleData { nullptr };
+    unsigned specificity { 0 };
+    unsigned scopingRootDistance { 0 };
     ScopeOrdinal styleScopeOrdinal;
     CascadeLayerPriority cascadeLayerPriority;
 };
@@ -80,7 +62,7 @@ public:
     bool matchesAnyAuthorRules();
 
     void setMode(SelectorChecker::Mode mode) { m_mode = mode; }
-    void setPseudoElementRequest(const PseudoElementRequest& request) { m_pseudoElementRequest = request; }
+    void setPseudoElementRequest(const std::optional<PseudoElementRequest>& request) { m_pseudoElementRequest = request; }
     void setMedium(const MQ::MediaQueryEvaluator& medium) { m_isPrintStyle = medium.isPrintMedia(); }
 
     bool hasAnyMatchingRules(const RuleSet&);
@@ -99,25 +81,30 @@ public:
     void addAuthorKeyframeRules(const StyleRuleKeyframe&);
 
 private:
-    void addElementStyleProperties(const StyleProperties*, CascadeLayerPriority, bool isCacheable = true, FromStyleAttribute = FromStyleAttribute::No);
+    void addElementStyleProperties(const StyleProperties*, CascadeLayerPriority, IsCacheable = IsCacheable::Yes, FromStyleAttribute = FromStyleAttribute::No);
 
     void matchUARules(const RuleSet&);
 
     void addElementInlineStyleProperties(bool includeSMILProperties);
 
-    void matchShadowPseudoElementRules(CascadeLevel);
+    void matchUserAgentPartRules(CascadeLevel);
     void matchHostPseudoClassRules(CascadeLevel);
     void matchSlottedPseudoElementRules(CascadeLevel);
     void matchPartPseudoElementRules(CascadeLevel);
     void matchPartPseudoElementRulesForScope(const Element& partMatchingElement, CascadeLevel);
 
-    void collectMatchingShadowPseudoElementRules(const MatchRequest&);
+    void collectMatchingUserAgentPartRules(const MatchRequest&);
 
     void collectMatchingRules(CascadeLevel);
     void collectMatchingRules(const MatchRequest&);
     void collectMatchingRulesForList(const RuleSet::RuleDataVector*, const MatchRequest&);
-    bool ruleMatches(const RuleData&, unsigned& specificity, ScopeOrdinal);
+    bool ruleMatches(const RuleData&, unsigned& specificity, ScopeOrdinal, const ContainerNode* scopingRoot = nullptr);
     bool containerQueriesMatch(const RuleData&, const MatchRequest&);
+    struct ScopingRootWithDistance {
+        RefPtr<const ContainerNode> scopingRoot;
+        unsigned distance { std::numeric_limits<unsigned>::max() };
+    };
+    std::pair<bool, std::optional<Vector<ScopingRootWithDistance>>> scopeRulesMatch(const RuleData&, const MatchRequest&);
 
     void sortMatchedRules();
 
@@ -126,7 +113,7 @@ private:
     void sortAndTransferMatchedRules(DeclarationOrigin);
     void transferMatchedRules(DeclarationOrigin, std::optional<ScopeOrdinal> forScope = { });
 
-    void addMatchedRule(const RuleData&, unsigned specificity, const MatchRequest&);
+    void addMatchedRule(const RuleData&, unsigned specificity, unsigned scopingRootDistance, const MatchRequest&);
     void addMatchedProperties(MatchedProperties&&, DeclarationOrigin);
 
     const Element& element() const { return m_element.get(); }
@@ -135,11 +122,12 @@ private:
     Ref<const RuleSet> m_authorStyle;
     RefPtr<const RuleSet> m_userStyle;
     RefPtr<const RuleSet> m_userAgentMediaQueryStyle;
+    RefPtr<const RuleSet> m_dynamicViewTransitionsStyle;
     SelectorMatchingState* m_selectorMatchingState;
 
     bool m_shouldIncludeEmptyRules { false };
     bool m_isPrintStyle { false };
-    PseudoElementRequest m_pseudoElementRequest { PseudoId::None };
+    std::optional<PseudoElementRequest> m_pseudoElementRequest { };
     SelectorChecker::Mode m_mode { SelectorChecker::Mode::ResolvingStyle };
 
     Vector<MatchedRule, 64> m_matchedRules;

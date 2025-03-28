@@ -32,7 +32,6 @@
 #include "HTMLTableCellElement.h"
 #include "HTMLTableColElement.h"
 #include "HTMLTableElement.h"
-#include "InlineFormattingState.h"
 #include "LayoutBox.h"
 #include "LayoutBoxGeometry.h"
 #include "LayoutChildIterator.h"
@@ -58,13 +57,14 @@
 #include "RenderView.h"
 #include "TextUtil.h"
 #include "WidthIterator.h"
-#include <wtf/IsoMallocInlines.h>
+#include <wtf/TZoneMallocInlines.h>
+#include <wtf/text/MakeString.h>
 #include <wtf/text/TextStream.h>
 
 namespace WebCore {
 namespace Layout {
 
-WTF_MAKE_ISO_ALLOCATED_IMPL(LayoutTree);
+WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(LayoutTree);
 LayoutTree::LayoutTree(std::unique_ptr<ElementBox> root)
     : m_root(WTFMove(root))
 {
@@ -87,6 +87,19 @@ static std::optional<LayoutSize> accumulatedOffsetForInFlowPositionedContinuatio
     return block.relativePositionOffset();
 }
 
+template<typename CharacterType>
+static bool canUseSimplifiedTextMeasuringForCharacters(std::span<const CharacterType> characters, const FontCascade& fontCascade, bool whitespaceIsCollapsed)
+{
+    auto& primaryFont = fontCascade.primaryFont();
+    auto* rawCharacters = characters.data();
+    for (unsigned i = 0; i < characters.size(); ++i) {
+        auto character = rawCharacters[i]; // Not using characters[i] to bypass the bounds check.
+        if (!fontCascade.canUseSimplifiedTextMeasuring(character, AutoVariant, whitespaceIsCollapsed, primaryFont))
+            return false;
+    }
+    return true;
+}
+
 static bool canUseSimplifiedTextMeasuring(StringView content, const FontCascade& fontCascade, bool whitespaceIsCollapsed)
 {
     if (fontCascade.codePath(TextRun(content)) == FontCascade::CodePath::Complex)
@@ -95,15 +108,9 @@ static bool canUseSimplifiedTextMeasuring(StringView content, const FontCascade&
     if (fontCascade.wordSpacing() || fontCascade.letterSpacing())
         return false;
 
-    auto& primaryFont = fontCascade.primaryFont();
-    for (unsigned i = 0; i < content.length(); ++i) {
-        if (!WidthIterator::characterCanUseSimplifiedTextMeasuring(content[i], whitespaceIsCollapsed))
-            return false;
-        auto glyphData = fontCascade.glyphDataForCharacter(content[i], false);
-        if (!glyphData.isValid() || glyphData.font != &primaryFont)
-            return false;
-    }
-    return true;
+    if (content.is8Bit())
+        return canUseSimplifiedTextMeasuringForCharacters(content.span8(), fontCascade, whitespaceIsCollapsed);
+    return canUseSimplifiedTextMeasuringForCharacters(content.span16(), fontCascade, whitespaceIsCollapsed);
 }
 
 std::unique_ptr<Layout::LayoutTree> TreeBuilder::buildLayoutTree(const RenderView& renderView)
@@ -129,9 +136,18 @@ std::unique_ptr<Box> TreeBuilder::createReplacedBox(Box::ElementAttributes eleme
     return makeUnique<ElementBox>(WTFMove(elementAttributes), WTFMove(replacedAttributes), WTFMove(style));
 }
 
-std::unique_ptr<Box> TreeBuilder::createTextBox(String text, bool isCombined, bool canUseSimplifiedTextMeasuring, bool canUseSimpleFontCodePath,  RenderStyle&& style)
+std::unique_ptr<Box> TreeBuilder::createTextBox(String text, bool isCombined, bool canUseSimplifiedTextMeasuring, bool canUseSimpleFontCodePath, bool hasPositionDependentContentWidth, bool hasStrongDirectionalityContent, RenderStyle&& style)
 {
-    return makeUnique<InlineTextBox>(text, isCombined, canUseSimplifiedTextMeasuring, canUseSimpleFontCodePath, WTFMove(style));
+    auto contentCharacteristic = OptionSet<Layout::InlineTextBox::ContentCharacteristic> { };
+    if (canUseSimpleFontCodePath)
+        contentCharacteristic.add(Layout::InlineTextBox::ContentCharacteristic::CanUseSimpledFontCodepath);
+    if (canUseSimplifiedTextMeasuring)
+        contentCharacteristic.add(Layout::InlineTextBox::ContentCharacteristic::CanUseSimplifiedContentMeasuring);
+    if (hasPositionDependentContentWidth)
+        contentCharacteristic.add(Layout::InlineTextBox::ContentCharacteristic::HasPositionDependentContentWidth);
+    if (hasStrongDirectionalityContent)
+        contentCharacteristic.add(Layout::InlineTextBox::ContentCharacteristic::HasStrongDirectionalityContent);
+    return makeUnique<InlineTextBox>(text, isCombined, contentCharacteristic, WTFMove(style));
 }
 
 std::unique_ptr<ElementBox> TreeBuilder::createContainer(Box::ElementAttributes elementAttributes, RenderStyle&& style)
@@ -160,15 +176,24 @@ std::unique_ptr<Box> TreeBuilder::createLayoutBox(const ElementBox& parentContai
     };
 
     std::unique_ptr<Box> childLayoutBox = nullptr;
-    if (is<RenderText>(childRenderer)) {
-        auto& textRenderer = downcast<RenderText>(childRenderer);
+    if (auto* textRenderer = dynamicDowncast<RenderText>(childRenderer)) {
         // RenderText::text() has already applied text-transform and text-security properties.
-        String text = textRenderer.text();
+        String text = textRenderer->text();
         auto useSimplifiedTextMeasuring = canUseSimplifiedTextMeasuring(text, parentContainer.style().fontCascade(), parentContainer.style().collapseWhiteSpace());
+        auto hasPositionDependentContentWidth = textRenderer->hasPositionDependentContentWidth();
+        if (!hasPositionDependentContentWidth) {
+            hasPositionDependentContentWidth = TextUtil::hasPositionDependentContentWidth(text);
+            const_cast<RenderText*>(textRenderer)->setHasPositionDependentContentWidth(*hasPositionDependentContentWidth);
+        }
+        auto hasStrongDirectionalityContent = textRenderer->hasStrongDirectionalityContent();
+        if (!hasStrongDirectionalityContent) {
+            hasStrongDirectionalityContent = TextUtil::containsStrongDirectionalityText(text);
+            const_cast<RenderText*>(textRenderer)->setHasStrongDirectionalityContent(*hasStrongDirectionalityContent);
+        }
         if (parentContainer.style().display() == DisplayType::Inline)
-            childLayoutBox = createTextBox(text, is<RenderCombineText>(childRenderer), useSimplifiedTextMeasuring, textRenderer.canUseSimpleFontCodePath(), RenderStyle::clone(parentContainer.style()));
+            childLayoutBox = createTextBox(text, is<RenderCombineText>(childRenderer), useSimplifiedTextMeasuring, textRenderer->canUseSimpleFontCodePath(), *hasPositionDependentContentWidth, *hasStrongDirectionalityContent, RenderStyle::clone(parentContainer.style()));
         else
-            childLayoutBox = createTextBox(text, is<RenderCombineText>(childRenderer), useSimplifiedTextMeasuring, textRenderer.canUseSimpleFontCodePath(), RenderStyle::createAnonymousStyleWithDisplay(parentContainer.style(), DisplayType::Inline));
+            childLayoutBox = createTextBox(text, is<RenderCombineText>(childRenderer), useSimplifiedTextMeasuring, textRenderer->canUseSimpleFontCodePath(), *hasPositionDependentContentWidth, *hasStrongDirectionalityContent, RenderStyle::createAnonymousStyleWithDisplay(parentContainer.style(), DisplayType::Inline));
     } else {
         auto& renderer = downcast<RenderElement>(childRenderer);
         auto displayType = renderer.style().display();
@@ -200,16 +225,15 @@ std::unique_ptr<Box> TreeBuilder::createLayoutBox(const ElementBox& parentContai
             tableWrapperBoxStyle.setMarginRight(Length { renderer.style().marginRight() });
 
             childLayoutBox = createContainer(Box::ElementAttributes { Box::NodeType::TableWrapperBox, Box::IsAnonymous::Yes }, WTFMove(tableWrapperBoxStyle));
-        } else if (is<RenderReplaced>(renderer)) {
+        } else if (auto* replacedRenderer = dynamicDowncast<RenderReplaced>(renderer)) {
             auto replacedAttributes = ElementBox::ReplacedAttributes {
-                downcast<RenderReplaced>(renderer).intrinsicSize()
+                replacedRenderer->intrinsicSize()
             };
-            if (is<RenderImage>(renderer)) {
-                auto& imageRenderer = downcast<RenderImage>(renderer);
-                if (imageRenderer.shouldDisplayBrokenImageIcon())
+            if (auto* imageRenderer = dynamicDowncast<RenderImage>(*replacedRenderer)) {
+                if (imageRenderer->shouldDisplayBrokenImageIcon())
                     replacedAttributes.intrinsicRatio = 1;
-                if (imageRenderer.cachedImage())
-                    replacedAttributes.cachedImage = imageRenderer.cachedImage();
+                if (imageRenderer->cachedImage())
+                    replacedAttributes.cachedImage = imageRenderer->cachedImage();
             }
             childLayoutBox = createReplacedBox(elementAttributes(renderer), WTFMove(replacedAttributes), WTFMove(clonedStyle));
         } else {
@@ -249,12 +273,11 @@ std::unique_ptr<Box> TreeBuilder::createLayoutBox(const ElementBox& parentContai
 
         if (is<RenderTableCell>(renderer)) {
             auto* tableCellElement = renderer.element();
-            if (is<HTMLTableCellElement>(tableCellElement)) {
-                auto& cellElement = downcast<HTMLTableCellElement>(*tableCellElement);
-                auto rowSpan = cellElement.rowSpan();
+            if (auto* cellElement = dynamicDowncast<HTMLTableCellElement>(tableCellElement)) {
+                auto rowSpan = cellElement->rowSpan();
                 if (rowSpan > 1)
                     childLayoutBox->setRowSpan(rowSpan);
-                auto columnSpan = cellElement.colSpan();
+                auto columnSpan = cellElement->colSpan();
                 if (columnSpan > 1)
                     childLayoutBox->setColumnSpan(columnSpan);
             }
@@ -345,8 +368,8 @@ void TreeBuilder::buildSubTree(const RenderElement& parentRenderer, ElementBox& 
         auto& childLayoutBox = appendChild(parentContainer, createLayoutBox(parentContainer, childRenderer));
         if (childLayoutBox.isTableWrapperBox())
             buildTableStructure(downcast<RenderTable>(childRenderer), downcast<ElementBox>(childLayoutBox));
-        else if (is<ElementBox>(childLayoutBox))
-            buildSubTree(downcast<RenderElement>(childRenderer), downcast<ElementBox>(childLayoutBox));
+        else if (auto* elementBox = dynamicDowncast<ElementBox>(childLayoutBox))
+            buildSubTree(downcast<RenderElement>(childRenderer), *elementBox);
     }
 }
 
@@ -382,8 +405,8 @@ void showInlineTreeAndRuns(TextStream& stream, const LayoutState& layoutState, c
             stream << "    ";
             auto rect = inlineLevelBox.visualRectIgnoringBlockDirection();
             auto& layoutBox = inlineLevelBox.layoutBox();
-            if (layoutBox.isAtomicInlineLevelBox())
-                stream << "Atomic inline level box";
+            if (layoutBox.isAtomicInlineBox())
+                stream << "Atomic inline box";
             else if (layoutBox.isLineBreakBox())
                 stream << "Line break box";
             else if (layoutBox.isInlineBox())
@@ -470,8 +493,8 @@ static void outputLayoutBox(TextStream& stream, const Box& layoutBox, const BoxG
             stream << "inline-block box";
         else if (layoutBox.isLineBreakBox())
             stream << (layoutBox.isWordBreakOpportunity() ? "word break opportunity" : "line break");
-        else if (layoutBox.isAtomicInlineLevelBox())
-            stream << "atomic inline level box";
+        else if (layoutBox.isAtomicInlineBox())
+            stream << "atomic inline box";
         else if (layoutBox.isReplacedBox())
             stream << "replaced inline box";
         else if (layoutBox.isInlineBox())
@@ -488,8 +511,8 @@ static void outputLayoutBox(TextStream& stream, const Box& layoutBox, const BoxG
         stream << " at (" << borderBox.left() << "," << borderBox.top() << ") size " << borderBox.width() << "x" << borderBox.height();
     }
     stream << " (" << &layoutBox << ")";
-    if (is<InlineTextBox>(layoutBox)) {
-        auto textContent = downcast<InlineTextBox>(layoutBox).content();
+    if (auto* inlineTextBox = dynamicDowncast<InlineTextBox>(layoutBox)) {
+        auto textContent = inlineTextBox->content();
         stream << " length->(" << textContent.length() << ")";
 
         textContent = makeStringByReplacingAll(textContent, '\\', "\\\\"_s);
@@ -519,8 +542,8 @@ static void outputLayoutTree(const LayoutState* layoutState, TextStream& stream,
         } else
             outputLayoutBox(stream, child, nullptr, depth);
 
-        if (is<ElementBox>(child))
-            outputLayoutTree(layoutState, stream, downcast<ElementBox>(child), depth + 1);
+        if (auto* elementBox = dynamicDowncast<ElementBox>(child))
+            outputLayoutTree(layoutState, stream, *elementBox, depth + 1);
     }
 }
 
@@ -547,7 +570,7 @@ void showLayoutTree(const InitialContainingBlock& initialContainingBlock)
 
 void printLayoutTreeForLiveDocuments()
 {
-    for (const auto* document : Document::allDocuments()) {
+    for (auto& document : Document::allDocuments()) {
         if (!document->renderView())
             continue;
         if (document->frame() && document->frame()->isMainFrame())
@@ -556,7 +579,7 @@ void printLayoutTreeForLiveDocuments()
         // FIXME: Need to find a way to output geometry without layout context.
         auto& renderView = *document->renderView();
         auto layoutTree = TreeBuilder::buildLayoutTree(renderView);
-        auto layoutState = LayoutState { *document, layoutTree->root() };
+        auto layoutState = LayoutState { document, layoutTree->root(), Layout::LayoutState::Type::Secondary, { } };
 
         LayoutContext(layoutState).layout(renderView.size());
         showLayoutTree(downcast<InitialContainingBlock>(layoutState.root()), &layoutState);

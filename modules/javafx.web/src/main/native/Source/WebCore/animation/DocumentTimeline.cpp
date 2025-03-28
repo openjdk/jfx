@@ -32,7 +32,6 @@
 #include "CustomAnimationOptions.h"
 #include "CustomEffect.h"
 #include "CustomEffectCallback.h"
-#include "DeclarativeAnimation.h"
 #include "Document.h"
 #include "DocumentTimelinesController.h"
 #include "EventNames.h"
@@ -46,6 +45,7 @@
 #include "RenderElement.h"
 #include "RenderLayer.h"
 #include "RenderLayerBacking.h"
+#include "StyleOriginatedAnimation.h"
 #include "WebAnimationTypes.h"
 
 #if ENABLE(THREADED_ANIMATION_RESOLUTION)
@@ -71,6 +71,8 @@ DocumentTimeline::DocumentTimeline(Document& document, Seconds originTime)
 {
     document.ensureTimelinesController().addTimeline(*this);
 }
+
+DocumentTimeline::~DocumentTimeline() = default;
 
 DocumentTimelinesController* DocumentTimeline::controller() const
 {
@@ -149,6 +151,7 @@ std::optional<Seconds> DocumentTimeline::currentTime()
 void DocumentTimeline::animationTimingDidChange(WebAnimation& animation)
 {
     AnimationTimeline::animationTimingDidChange(animation);
+    if (!animation.isEffectInvalidationSuspended())
     scheduleAnimationResolution();
 }
 
@@ -213,6 +216,11 @@ void DocumentTimeline::documentDidUpdateAnimationsAndSendEvents()
         scheduleNextTick();
 }
 
+void DocumentTimeline::styleOriginatedAnimationsWereCreated()
+{
+    scheduleAnimationResolution();
+}
+
 bool DocumentTimeline::animationCanBeRemoved(WebAnimation& animation)
 {
     // https://drafts.csswg.org/web-animations/#removing-replaced-animations
@@ -228,12 +236,11 @@ bool DocumentTimeline::animationCanBeRemoved(WebAnimation& animation)
         return false;
 
     // - has an associated animation effect whose target element is a descendant of doc, and
-    auto* effect = animation.effect();
-    if (!is<KeyframeEffect>(effect))
+    auto* keyframeEffect = dynamicDowncast<KeyframeEffect>(animation.effect());
+    if (!keyframeEffect)
         return false;
 
-    auto& keyframeEffect = downcast<KeyframeEffect>(*effect);
-    auto target = keyframeEffect.targetStyleable();
+    auto target = keyframeEffect->targetStyleable();
     if (!target || !target->element.isDescendantOf(*m_document))
         return false;
 
@@ -245,14 +252,14 @@ IGNORE_GCC_WARNINGS_BEGIN("dangling-reference")
     }();
 IGNORE_GCC_WARNINGS_END
 
-    auto resolvedProperty = [&] (AnimatableProperty property) -> AnimatableProperty {
+    auto resolvedProperty = [&] (AnimatableCSSProperty property) -> AnimatableCSSProperty {
         if (std::holds_alternative<CSSPropertyID>(property))
             return CSSProperty::resolveDirectionAwareProperty(std::get<CSSPropertyID>(property), style.direction(), style.writingMode());
         return property;
     };
 
-    HashSet<AnimatableProperty> propertiesToMatch;
-    for (auto property : keyframeEffect.animatedProperties())
+    HashSet<AnimatableCSSProperty> propertiesToMatch;
+    for (auto property : keyframeEffect->animatedProperties())
         propertiesToMatch.add(resolvedProperty(property));
 
     auto protectedAnimations = [&]() -> Vector<RefPtr<WebAnimation>> {
@@ -455,6 +462,13 @@ void DocumentTimeline::enqueueAnimationEvent(AnimationEventBase& event)
         scheduleAnimationResolution();
 }
 
+bool DocumentTimeline::hasPendingAnimationEventForAnimation(const WebAnimation& animation) const
+{
+    return m_pendingAnimationEvents.containsIf([&](auto& event) {
+        return event->animation() == &animation;
+    });
+}
+
 AnimationEvents DocumentTimeline::prepareForPendingAnimationEventsDispatch()
 {
     m_shouldScheduleAnimationResolutionForNewPendingEvents = true;
@@ -481,7 +495,7 @@ unsigned DocumentTimeline::numberOfAnimationTimelineInvalidationsForTesting() co
 ExceptionOr<Ref<WebAnimation>> DocumentTimeline::animate(Ref<CustomEffectCallback>&& callback, std::optional<std::variant<double, CustomAnimationOptions>>&& options)
 {
     if (!m_document)
-        return Exception { InvalidStateError };
+        return Exception { ExceptionCode::InvalidStateError };
 
     String id = emptyString();
     std::variant<FramesPerSecond, AnimationFrameRatePreset> frameRate = AnimationFrameRatePreset::Auto;

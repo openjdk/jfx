@@ -38,6 +38,7 @@
 #include "JSObject.h"
 #include "JSStringInlines.h"
 #include "MathCommon.h"
+#include <wtf/text/MakeString.h>
 #include <wtf/text/StringImpl.h>
 
 namespace JSC {
@@ -58,7 +59,7 @@ inline uint32_t JSValue::toUInt32(JSGlobalObject* globalObject) const
     return toInt32(globalObject);
 }
 
-inline uint32_t JSValue::toIndex(JSGlobalObject* globalObject, const char* errorName) const
+inline uint32_t JSValue::toIndex(JSGlobalObject* globalObject, ASCIILiteral errorName) const
 {
     VM& vm = getVM(globalObject);
     auto scope = DECLARE_THROW_SCOPE(vm);
@@ -112,19 +113,21 @@ inline size_t JSValue::toTypedArrayIndex(JSGlobalObject* globalObject, ASCIILite
     RELEASE_AND_RETURN(scope, outputOffset + static_cast<size_t>(static_cast<uint32_t>(JSC::toInt32(d - inputOffset))));
 }
 
-// https://tc39.es/proposal-temporal/#sec-temporal-tointegerwithoutrounding
-inline double JSValue::toIntegerWithoutRounding(JSGlobalObject* globalObject) const
+// https://tc39.es/proposal-temporal/#sec-tointegerwithtruncation
+inline double JSValue::toIntegerWithTruncation(JSGlobalObject* globalObject) const
 {
     if (isInt32())
         return asInt32();
-    double d = toNumber(globalObject);
-    return std::isnan(d) ? 0.0 : d + 0.0;
+    return trunc(toNumber(globalObject) + 0.0);
 }
 
 // https://tc39.es/ecma262/#sec-tointegerorinfinity
 inline double JSValue::toIntegerOrInfinity(JSGlobalObject* globalObject) const
 {
-    return trunc(toIntegerWithoutRounding(globalObject));
+    if (isInt32())
+        return asInt32();
+    double d = toNumber(globalObject);
+    return trunc(std::isnan(d) ? 0.0 : d + 0.0);
 }
 
 inline bool JSValue::isUInt32() const
@@ -731,6 +734,28 @@ inline int32_t JSValue::bigInt32AsInt32() const
 }
 #endif // USE(BIGINT32)
 
+inline bool JSValue::isZeroBigInt() const
+{
+    ASSERT(isBigInt());
+#if USE(BIGINT32)
+    if (isBigInt32())
+        return !bigInt32AsInt32();
+#endif
+    ASSERT(isHeapBigInt());
+    return asHeapBigInt()->isZero();
+}
+
+inline bool JSValue::isNegativeBigInt() const
+{
+    ASSERT(isBigInt());
+#if USE(BIGINT32)
+    if (isBigInt32())
+        return bigInt32AsInt32() < 0;
+#endif
+    ASSERT(isHeapBigInt());
+    return asHeapBigInt()->sign();
+}
+
 inline bool JSValue::isSymbol() const
 {
     return isCell() && asCell()->isSymbol();
@@ -840,7 +865,7 @@ inline PreferredPrimitiveType toPreferredPrimitiveType(JSGlobalObject* globalObj
         return NoPreference;
     }
 
-    String hintString = asString(value)->value(globalObject);
+    auto hintString = asString(value)->view(globalObject);
     RETURN_IF_EXCEPTION(scope, NoPreference);
 
     if (WTF::equal(hintString, "default"_s))
@@ -1262,7 +1287,7 @@ ALWAYS_INLINE bool JSValue::equalSlowCaseInline(JSGlobalObject* globalObject, JS
         if (s1 || s2) {
             // We are guaranteed that the string is v2 (thanks to the swap above)
             if (v1.isBigInt()) {
-                String v2String = asString(v2)->value(globalObject);
+                auto v2String = asString(v2)->value(globalObject);
                 RETURN_IF_EXCEPTION(scope, false);
                 v2 = JSBigInt::stringToBigInt(globalObject, v2String);
                 RETURN_IF_EXCEPTION(scope, false);
@@ -1432,6 +1457,9 @@ ALWAYS_INLINE bool isThisValueAltered(const PutPropertySlot& slot, JSObject* bas
 // See section 7.2.9: https://tc39.github.io/ecma262/#sec-samevalue
 ALWAYS_INLINE bool sameValue(JSGlobalObject* globalObject, JSValue a, JSValue b)
 {
+    if (a == b)
+        return true;
+
     if (!a.isNumber())
         return JSValue::strictEqual(globalObject, a, b);
     if (!b.isNumber())

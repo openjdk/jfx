@@ -35,4 +35,84 @@ TextStream& operator<<(TextStream& ts, const StyleContentAlignmentData& o)
     return ts << o.position() << " " << o.distribution() << " " << o.overflow();
 }
 
+bool StyleContentAlignmentData::isStartward(std::optional<TextDirection> leftRightAxisDirection, bool isFlexReverse) const
+{
+    switch (static_cast<ContentPosition>(m_position)) {
+    case ContentPosition::Normal:
+        switch (static_cast<ContentDistribution>(m_distribution)) {
+        case ContentDistribution::Default:
+        case ContentDistribution::Stretch:
+        case ContentDistribution::SpaceBetween:
+            return !isFlexReverse;
+        default:
+            return false;
+        }
+    case ContentPosition::Start:
+    case ContentPosition::Baseline:
+        return true;
+    case ContentPosition::End:
+    case ContentPosition::LastBaseline:
+    case ContentPosition::Center:
+        return false;
+    case ContentPosition::FlexStart:
+        return !isFlexReverse;
+    case ContentPosition::FlexEnd:
+        return isFlexReverse;
+    case ContentPosition::Left:
+        if (leftRightAxisDirection)
+            return leftRightAxisDirection == TextDirection::LTR;
+        return true;
+    case ContentPosition::Right:
+        if (leftRightAxisDirection)
+            return leftRightAxisDirection == TextDirection::RTL;
+        return true;
+    default:
+        ASSERT("Invalid ContentPosition");
+        return true;
+    }
+}
+bool StyleContentAlignmentData::isEndward(std::optional<TextDirection> leftRightAxisDirection, bool isFlexReverse) const
+{
+    switch (static_cast<ContentPosition>(m_position)) {
+    case ContentPosition::Normal:
+        switch (static_cast<ContentDistribution>(m_distribution)) {
+        case ContentDistribution::Default:
+        case ContentDistribution::Stretch:
+        case ContentDistribution::SpaceBetween:
+            return isFlexReverse;
+        default:
+            return false;
+        }
+    case ContentPosition::Start:
+    case ContentPosition::Baseline:
+    case ContentPosition::Center:
+        return false;
+    case ContentPosition::End:
+    case ContentPosition::LastBaseline:
+        return true;
+    case ContentPosition::FlexStart:
+        return isFlexReverse;
+    case ContentPosition::FlexEnd:
+        return !isFlexReverse;
+    case ContentPosition::Left:
+        if (leftRightAxisDirection)
+            return leftRightAxisDirection == TextDirection::RTL;
+        return false;
+    case ContentPosition::Right:
+        if (leftRightAxisDirection)
+            return leftRightAxisDirection == TextDirection::LTR;
+        return false;
+    default:
+        ASSERT("Invalid ContentPosition");
+        return false;
+    }
+}
+
+bool StyleContentAlignmentData::isCentered() const
+{
+    return static_cast<ContentPosition>(m_position) == ContentPosition::Center
+        || static_cast<ContentDistribution>(m_distribution) == ContentDistribution::SpaceAround
+        || static_cast<ContentDistribution>(m_distribution) == ContentDistribution::SpaceEvenly;
+}
+
 }

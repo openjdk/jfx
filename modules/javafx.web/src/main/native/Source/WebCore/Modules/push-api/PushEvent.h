@@ -25,8 +25,6 @@
 
 #pragma once
 
-#if ENABLE(SERVICE_WORKER)
-
 #include "ExtendableEvent.h"
 #include "PushEventInit.h"
 
@@ -35,13 +33,12 @@ namespace WebCore {
 class PushMessageData;
 
 class PushEvent final : public ExtendableEvent {
-    WTF_MAKE_ISO_ALLOCATED(PushEvent);
+    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(PushEvent);
 public:
     static Ref<PushEvent> create(const AtomString&, PushEventInit&&, IsTrusted = IsTrusted::No);
     static Ref<PushEvent> create(const AtomString&, ExtendableEventInit&&, std::optional<Vector<uint8_t>>&&, IsTrusted);
     ~PushEvent();
 
-    EventInterface eventInterface() const final { return PushEventInterfaceType; }
     PushMessageData* data() { return m_data.get(); }
 
 private:
@@ -51,5 +48,3 @@ private:
 };
 
 } // namespace WebCore
-
-#endif // ENABLE(SERVICE_WORKER)

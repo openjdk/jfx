@@ -26,9 +26,11 @@
 #include "config.h"
 #include "EventTargetConcrete.h"
 
+#include "ContextDestructionObserverInlines.h"
+
 namespace WebCore {
 
-WTF_MAKE_ISO_ALLOCATED_IMPL(EventTargetConcrete);
+WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(EventTargetConcrete);
 
 Ref<EventTargetConcrete> EventTargetConcrete::create(ScriptExecutionContext& context)
 {

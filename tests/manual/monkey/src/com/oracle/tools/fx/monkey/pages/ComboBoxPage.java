@@ -31,11 +31,13 @@ import java.util.function.Function;
 import java.util.function.Supplier;
 import javafx.beans.property.ObjectProperty;
 import javafx.collections.ObservableList;
+import javafx.scene.AccessibleAttribute;
 import javafx.scene.Node;
 import javafx.scene.control.Button;
 import javafx.scene.control.ComboBox;
 import javafx.scene.control.skin.ComboBoxListViewSkin;
 import javafx.util.StringConverter;
+import com.oracle.tools.fx.monkey.Loggers;
 import com.oracle.tools.fx.monkey.options.ObjectOption;
 import com.oracle.tools.fx.monkey.sheets.ComboBoxBasePropertySheet;
 import com.oracle.tools.fx.monkey.sheets.Options;
@@ -56,7 +58,15 @@ public class ComboBoxPage extends TestPaneBase implements HasSkinnable {
     public ComboBoxPage() {
         super("ComboBoxPage");
 
-        control = new ComboBox<>();
+        control = new ComboBox<>() {
+            @Override
+            public Object queryAccessibleAttribute(AccessibleAttribute a, Object... ps) {
+                Object v = super.queryAccessibleAttribute(a, ps);
+                Loggers.accessibility.log(a, v);
+                return v;
+            }
+        };
+        control.setOnAction((ev) -> addItem());
 
         Button addButton = FX.button("Add Item", () -> {
             control.getItems().add(newItem(""));
@@ -92,6 +102,17 @@ public class ComboBoxPage extends TestPaneBase implements HasSkinnable {
         s.addChoice("<null>", null);
         s.selectFirst();
         return s;
+    }
+
+    private void addItem() {
+        Object v = control.getValue();
+        if (!control.getItems().contains(v)) {
+            System.out.println("added: " + v);
+            control.getItems().add(0, v);
+            if (control.getSelectionModel() != null) {
+                control.getSelectionModel().select(0);
+            }
+        }
     }
 
     // TODO common code with ListViewPage - move to utils?
@@ -151,6 +172,19 @@ public class ComboBoxPage extends TestPaneBase implements HasSkinnable {
                 @Override
                 public Object fromString(String s) {
                     return s;
+                }
+            };
+        });
+        op.addChoiceSupplier("Number", () -> {
+            return new StringConverter<Object>() {
+                @Override
+                public String toString(Object x) {
+                    return x == null ? null : String.valueOf(x);
+                }
+
+                @Override
+                public Object fromString(String s) {
+                    return s == null ? null : Double.parseDouble(s);
                 }
             };
         });

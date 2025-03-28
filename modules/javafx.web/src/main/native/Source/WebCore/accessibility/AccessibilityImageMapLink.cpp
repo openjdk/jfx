@@ -52,6 +52,15 @@ Ref<AccessibilityImageMapLink> AccessibilityImageMapLink::create()
     return adoptRef(*new AccessibilityImageMapLink());
 }
 
+void AccessibilityImageMapLink::setHTMLAreaElement(HTMLAreaElement* element)
+{
+    if (element == m_areaElement)
+        return;
+    m_areaElement = element;
+    // AccessibilityImageMapLink::determineAccessibilityRole() depends on m_areaElement, so re-compute it now.
+    updateRole();
+}
+
 AccessibilityObject* AccessibilityImageMapLink::parentObject() const
 {
     if (m_parent)
@@ -63,7 +72,7 @@ AccessibilityObject* AccessibilityImageMapLink::parentObject() const
     return m_mapElement->document().axObjectCache()->getOrCreate(m_mapElement->renderer());
 }
 
-AccessibilityRole AccessibilityImageMapLink::roleValue() const
+AccessibilityRole AccessibilityImageMapLink::determineAccessibilityRole()
 {
     if (!m_areaElement)
         return AccessibilityRole::WebCoreLink;
@@ -110,7 +119,7 @@ void AccessibilityImageMapLink::accessibilityText(Vector<AccessibilityText>& tex
 
 String AccessibilityImageMapLink::description() const
 {
-    const auto& ariaLabel = getAttribute(aria_labelAttr);
+    auto ariaLabel = getAttributeTrimmed(aria_labelAttr);
     if (!ariaLabel.isEmpty())
         return ariaLabel;
 
@@ -138,13 +147,9 @@ RenderElement* AccessibilityImageMapLink::imageMapLinkRenderer() const
     if (!m_mapElement || !m_areaElement)
         return nullptr;
 
-    RenderElement* renderer = nullptr;
-    if (is<AccessibilityRenderObject>(m_parent))
-        renderer = downcast<RenderElement>(downcast<AccessibilityRenderObject>(*m_parent).renderer());
-    else
-        renderer = m_mapElement->renderer();
-
-    return renderer;
+    if (auto* parent = dynamicDowncast<AccessibilityRenderObject>(m_parent.get()))
+        return downcast<RenderElement>(parent->renderer());
+    return m_mapElement->renderer();
 }
 
 void AccessibilityImageMapLink::detachFromParent()

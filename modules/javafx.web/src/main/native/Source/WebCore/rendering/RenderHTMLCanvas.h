@@ -32,9 +32,11 @@ namespace WebCore {
 class HTMLCanvasElement;
 
 class RenderHTMLCanvas final : public RenderReplaced {
-    WTF_MAKE_ISO_ALLOCATED(RenderHTMLCanvas);
+    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(RenderHTMLCanvas);
+    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(RenderHTMLCanvas);
 public:
     RenderHTMLCanvas(HTMLCanvasElement&, RenderStyle&&);
+    virtual ~RenderHTMLCanvas();
 
     HTMLCanvasElement& canvasElement() const;
 
@@ -43,7 +45,6 @@ public:
 private:
     void element() const = delete;
     bool requiresLayer() const override;
-    bool isCanvas() const override { return true; }
     ASCIILiteral renderName() const override { return "RenderHTMLCanvas"_s; }
     void paintReplaced(PaintInfo&, const LayoutPoint&) override;
     void intrinsicSizeChanged() override { canvasSizeChanged(); }
@@ -51,4 +52,4 @@ private:
 
 } // namespace WebCore
 
-SPECIALIZE_TYPE_TRAITS_RENDER_OBJECT(RenderHTMLCanvas, isCanvas())
+SPECIALIZE_TYPE_TRAITS_RENDER_OBJECT(RenderHTMLCanvas, isRenderHTMLCanvas())

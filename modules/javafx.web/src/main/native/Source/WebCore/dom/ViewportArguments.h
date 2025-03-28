@@ -34,11 +34,11 @@ namespace WebCore {
 
 class Document;
 
-enum ViewportErrorCode {
-    UnrecognizedViewportArgumentKeyError,
-    UnrecognizedViewportArgumentValueError,
-    TruncatedViewportArgumentValueError,
-    MaximumScaleTooLargeError
+enum class ViewportErrorCode : uint8_t {
+    UnrecognizedViewportArgumentKey,
+    UnrecognizedViewportArgumentValue,
+    TruncatedViewportArgumentValue,
+    MaximumScaleTooLarge,
 };
 
 enum class ViewportFit : uint8_t {
@@ -63,7 +63,7 @@ struct ViewportAttributes {
 
 struct ViewportArguments {
 
-    enum Type {
+    enum class Type : uint8_t {
         // These are ordered in increasing importance.
         Implicit,
 #if PLATFORM(IOS_FAMILY)
@@ -71,7 +71,6 @@ struct ViewportArguments {
         ImageDocument,
 #endif
         ViewportMeta,
-        CSSDeviceAdaptation
     } type;
 
     static constexpr int ValueAuto = -1;
@@ -80,8 +79,23 @@ struct ViewportArguments {
     static constexpr int ValuePortrait = -4;
     static constexpr int ValueLandscape = -5;
 
-    explicit ViewportArguments(Type type = Implicit)
+    explicit ViewportArguments(Type type = Type::Implicit)
         : type(type)
+    {
+    }
+
+    ViewportArguments(Type type, float width, float height, float zoom, float minZoom, float maxZoom, float userZoom, float orientation, float shrinkToFit, ViewportFit viewportFit, bool widthWasExplicit)
+        : type(type)
+        , width(width)
+        , height(height)
+        , zoom(zoom)
+        , minZoom(minZoom)
+        , maxZoom(maxZoom)
+        , userZoom(userZoom)
+        , orientation(orientation)
+        , shrinkToFit(shrinkToFit)
+        , viewportFit(viewportFit)
+        , widthWasExplicit(widthWasExplicit)
     {
     }
 
@@ -89,11 +103,7 @@ struct ViewportArguments {
     ViewportAttributes resolve(const FloatSize& initialViewportSize, const FloatSize& deviceSize, int defaultWidth) const;
 
     float width { ValueAuto };
-    float minWidth { ValueAuto };
-    float maxWidth { ValueAuto };
     float height { ValueAuto };
-    float minHeight { ValueAuto };
-    float maxHeight { ValueAuto };
     float zoom { ValueAuto };
     float minZoom { ValueAuto };
     float maxZoom { ValueAuto };
@@ -108,11 +118,7 @@ struct ViewportArguments {
         // Used for figuring out whether to reset the viewport or not,
         // thus we are not taking type into account.
         return width == other.width
-            && minWidth == other.minWidth
-            && maxWidth == other.maxWidth
             && height == other.height
-            && minHeight == other.minHeight
-            && maxHeight == other.maxHeight
             && zoom == other.zoom
             && minZoom == other.minZoom
             && maxZoom == other.maxZoom

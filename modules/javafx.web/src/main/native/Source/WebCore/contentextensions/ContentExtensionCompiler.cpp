@@ -182,8 +182,7 @@ static void addUniversalActionsToDFA(DFA& dfa, UniversalActionSet&& universalAct
     ASSERT(!root.actionsLength());
     unsigned actionsStart = dfa.actions.size();
     dfa.actions.reserveCapacity(dfa.actions.size() + universalActions.size());
-    for (uint64_t action : universalActions)
-        dfa.actions.uncheckedAppend(action);
+    dfa.actions.appendRange(universalActions.begin(), universalActions.end());
     unsigned actionsEnd = dfa.actions.size();
 
     unsigned actionsLength = actionsEnd - actionsStart;
@@ -307,7 +306,6 @@ std::error_code compileRuleList(ContentExtensionCompilationClient& client, Strin
         ASSERT(trigger.urlFilter.length());
 
         // High bits are used for flags. This should match how they are used in DFABytecodeCompiler::compileNode.
-        ASSERT(!trigger.flags || ActionFlagMask & (static_cast<uint64_t>(trigger.flags) << 32));
         ASSERT(!(~ActionFlagMask & (static_cast<uint64_t>(trigger.flags) << 32)));
         uint64_t actionLocationAndFlags = (static_cast<uint64_t>(trigger.flags) << 32) | static_cast<uint64_t>(actionLocations[ruleIndex]);
         URLFilterParser::ParseStatus status = URLFilterParser::Ok;

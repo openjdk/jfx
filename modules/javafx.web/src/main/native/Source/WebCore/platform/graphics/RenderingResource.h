@@ -26,28 +26,38 @@
 #pragma once
 
 #include "RenderingResourceIdentifier.h"
-#include <wtf/HashSet.h>
 #include <wtf/ThreadSafeWeakPtr.h>
+#include <wtf/WeakHashSet.h>
 
 namespace WebCore {
+class RenderingResourceObserver;
+}
+
+namespace WTF {
+template<typename T> struct IsDeprecatedWeakRefSmartPointerException;
+template<> struct IsDeprecatedWeakRefSmartPointerException<WebCore::RenderingResourceObserver> : std::true_type { };
+}
+
+namespace WebCore {
+
+class RenderingResourceObserver : public CanMakeWeakPtr<RenderingResourceObserver> {
+public:
+    virtual ~RenderingResourceObserver() = default;
+        virtual void releaseRenderingResource(RenderingResourceIdentifier) = 0;
+protected:
+    RenderingResourceObserver() = default;
+};
 
 class RenderingResource
     : public ThreadSafeRefCountedAndCanMakeThreadSafeWeakPtr<RenderingResource> {
 public:
-    class Observer {
-    public:
-        virtual ~Observer() = default;
-        virtual void releaseRenderingResource(RenderingResourceIdentifier) = 0;
-    protected:
-        Observer() = default;
-    };
-
     virtual ~RenderingResource()
     {
         if (!hasValidRenderingResourceIdentifier())
             return;
-        for (auto observer : m_observers)
-            observer->releaseRenderingResource(renderingResourceIdentifier());
+
+        for (auto& observer : m_observers)
+            observer.releaseRenderingResource(renderingResourceIdentifier());
     }
 
     virtual bool isNativeImage() const { return false; }
@@ -71,16 +81,16 @@ public:
         return m_renderingResourceIdentifier;
     }
 
-    void addObserver(Observer& observer)
+    void addObserver(RenderingResourceObserver& observer)
     {
         ASSERT(hasValidRenderingResourceIdentifier());
-        m_observers.add(&observer);
+        m_observers.add(observer);
     }
 
-    void removeObserver(Observer& observer)
+    void removeObserver(RenderingResourceObserver& observer)
     {
         ASSERT(hasValidRenderingResourceIdentifier());
-        m_observers.remove(&observer);
+        m_observers.remove(observer);
     }
 
 protected:
@@ -89,7 +99,7 @@ protected:
     {
     }
 
-    HashSet<Observer*> m_observers;
+    WeakHashSet<RenderingResourceObserver> m_observers;
     std::optional<RenderingResourceIdentifier> m_renderingResourceIdentifier;
 };
 

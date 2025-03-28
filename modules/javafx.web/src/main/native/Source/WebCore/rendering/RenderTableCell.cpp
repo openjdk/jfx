@@ -45,8 +45,8 @@
 #include "Settings.h"
 #include "StyleProperties.h"
 #include "TransformState.h"
-#include <wtf/IsoMallocInlines.h>
 #include <wtf/StackStats.h>
+#include <wtf/TZoneMallocInlines.h>
 
 #if ENABLE(MATHML)
 #include "MathMLElement.h"
@@ -57,7 +57,7 @@ namespace WebCore {
 
 using namespace HTMLNames;
 
-WTF_MAKE_ISO_ALLOCATED_IMPL(RenderTableCell);
+WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(RenderTableCell);
 
 struct SameSizeAsRenderTableCell : public RenderBlockFlow {
     unsigned bitfields;
@@ -68,7 +68,7 @@ static_assert(sizeof(RenderTableCell) == sizeof(SameSizeAsRenderTableCell), "Ren
 static_assert(sizeof(CollapsedBorderValue) <= 24, "CollapsedBorderValue should stay small");
 
 RenderTableCell::RenderTableCell(Element& element, RenderStyle&& style)
-    : RenderBlockFlow(element, WTFMove(style))
+    : RenderBlockFlow(Type::TableCell, element, WTFMove(style))
     , m_column(unsetColumnIndex)
     , m_cellWidthChanged(false)
     , m_hasColSpan(false)
@@ -81,10 +81,11 @@ RenderTableCell::RenderTableCell(Element& element, RenderStyle&& style)
     // We only update the flags when notified of DOM changes in colSpanOrRowSpanChanged()
     // so we need to set their initial values here in case something asks for colSpan()/rowSpan() before then.
     updateColAndRowSpanFlags();
+    ASSERT(isRenderTableCell());
 }
 
 RenderTableCell::RenderTableCell(Document& document, RenderStyle&& style)
-    : RenderBlockFlow(document, WTFMove(style))
+    : RenderBlockFlow(Type::TableCell, document, WTFMove(style))
     , m_column(unsetColumnIndex)
     , m_cellWidthChanged(false)
     , m_hasColSpan(false)
@@ -94,26 +95,31 @@ RenderTableCell::RenderTableCell(Document& document, RenderStyle&& style)
     , m_hasEmptyCollapsedStartBorder(false)
     , m_hasEmptyCollapsedEndBorder(false)
 {
+    ASSERT(isRenderTableCell());
 }
 
-void RenderTableCell::willBeRemovedFromTree(IsInternalMove isInternalMove)
+RenderTableCell::~RenderTableCell() = default;
+
+void RenderTableCell::willBeRemovedFromTree()
 {
-    RenderBlockFlow::willBeRemovedFromTree(isInternalMove);
+    RenderBlockFlow::willBeRemovedFromTree();
     if (!table() || !section())
         return;
     RenderTableSection* section = this->section();
     table()->invalidateCollapsedBorders();
+    section->removeCachedCollapsedBorders(*this);
     section->setNeedsCellRecalc();
 }
 
 unsigned RenderTableCell::parseColSpanFromDOM() const
 {
     ASSERT(element());
-    if (is<HTMLTableCellElement>(*element()))
-        return std::min<unsigned>(downcast<HTMLTableCellElement>(*element()).colSpan(), maxColumnIndex);
+    if (auto* cell = dynamicDowncast<HTMLTableCellElement>(*element()))
+        return std::min<unsigned>(cell->colSpan(), maxColumnIndex);
 #if ENABLE(MATHML)
-    if (element()->hasTagName(MathMLNames::mtdTag))
-        return std::min<unsigned>(downcast<MathMLElement>(*element()).colSpan(), maxColumnIndex);
+    auto* mathMLElement = dynamicDowncast<MathMLElement>(*element());
+    if (mathMLElement && mathMLElement->hasTagName(MathMLNames::mtdTag))
+        return std::min<unsigned>(mathMLElement->colSpan(), maxColumnIndex);
 #endif
     return 1;
 }
@@ -121,11 +127,12 @@ unsigned RenderTableCell::parseColSpanFromDOM() const
 unsigned RenderTableCell::parseRowSpanFromDOM() const
 {
     ASSERT(element());
-    if (is<HTMLTableCellElement>(*element()))
-        return std::min<unsigned>(downcast<HTMLTableCellElement>(*element()).rowSpan(), maxRowIndex);
+    if (auto* cell = dynamicDowncast<HTMLTableCellElement>(*element()))
+        return std::min<unsigned>(cell->rowSpan(), maxRowIndex);
 #if ENABLE(MATHML)
-    if (element()->hasTagName(MathMLNames::mtdTag))
-        return std::min<unsigned>(downcast<MathMLElement>(*element()).rowSpan(), maxRowIndex);
+    auto* mathMLElement = dynamicDowncast<MathMLElement>(*element());
+    if (mathMLElement && mathMLElement->hasTagName(MathMLNames::mtdTag))
+        return std::min<unsigned>(mathMLElement->rowSpan(), maxRowIndex);
 #endif
     return 1;
 }
@@ -228,7 +235,19 @@ void RenderTableCell::computeIntrinsicPadding(LayoutUnit rowHeight)
     LayoutUnit logicalHeightWithoutIntrinsicPadding = logicalHeight() - oldIntrinsicPaddingBefore - oldIntrinsicPaddingAfter;
 
     auto intrinsicPaddingBefore = oldIntrinsicPaddingBefore;
-    switch (style().verticalAlign()) {
+    VerticalAlign alignment = style().verticalAlign();
+    if (auto alignContent = style().alignContent(); !alignContent.isNormal()) {
+        // align-content overrides vertical-align
+        if (alignContent.position() == ContentPosition::Baseline)
+            alignment = VerticalAlign::Baseline;
+        else if (alignContent.isCentered())
+            alignment = VerticalAlign::Middle;
+        else if (alignContent.isStartward())
+            alignment = VerticalAlign::Top;
+        else if (alignContent.isEndward())
+            alignment = VerticalAlign::Bottom;
+    }
+    switch (alignment) {
     case VerticalAlign::Sub:
     case VerticalAlign::Super:
     case VerticalAlign::TextTop:
@@ -305,12 +324,37 @@ void RenderTableCell::layout()
     setCellWidthChanged(false);
 }
 
+RectEdges<LayoutUnit> RenderTableCell::padding() const
+{
+    auto top = computedCSSPaddingTop();
+    auto right = computedCSSPaddingRight();
+    auto bottom = computedCSSPaddingBottom();
+    auto left = computedCSSPaddingLeft();
+
+    if (isHorizontalWritingMode()) {
+        bool isTopToBottom = style().blockFlowDirection() == BlockFlowDirection::TopToBottom;
+        top += isTopToBottom ? intrinsicPaddingBefore() : intrinsicPaddingAfter();
+        bottom += isTopToBottom ? intrinsicPaddingAfter() : intrinsicPaddingBefore();
+    } else {
+        bool isLeftToRight = style().blockFlowDirection() == BlockFlowDirection::LeftToRight;
+        left += isLeftToRight ? intrinsicPaddingBefore() : intrinsicPaddingAfter();
+        right += isLeftToRight ? intrinsicPaddingAfter() : intrinsicPaddingBefore();
+    }
+
+    return {
+        top,
+        right,
+        bottom,
+        left
+    };
+}
+
 LayoutUnit RenderTableCell::paddingTop() const
 {
     LayoutUnit result = computedCSSPaddingTop();
     if (!isHorizontalWritingMode())
         return result;
-    return result + (style().writingMode() == WritingMode::TopToBottom ? intrinsicPaddingBefore() : intrinsicPaddingAfter());
+    return result + (style().blockFlowDirection() == BlockFlowDirection::TopToBottom ? intrinsicPaddingBefore() : intrinsicPaddingAfter());
 }
 
 LayoutUnit RenderTableCell::paddingBottom() const
@@ -318,7 +362,7 @@ LayoutUnit RenderTableCell::paddingBottom() const
     LayoutUnit result = computedCSSPaddingBottom();
     if (!isHorizontalWritingMode())
         return result;
-    return result + (style().writingMode() == WritingMode::TopToBottom ? intrinsicPaddingAfter() : intrinsicPaddingBefore());
+    return result + (style().blockFlowDirection() == BlockFlowDirection::TopToBottom ? intrinsicPaddingAfter() : intrinsicPaddingBefore());
 }
 
 LayoutUnit RenderTableCell::paddingLeft() const
@@ -326,7 +370,7 @@ LayoutUnit RenderTableCell::paddingLeft() const
     LayoutUnit result = computedCSSPaddingLeft();
     if (isHorizontalWritingMode())
         return result;
-    return result + (style().writingMode() == WritingMode::LeftToRight ? intrinsicPaddingBefore() : intrinsicPaddingAfter());
+    return result + (style().blockFlowDirection() == BlockFlowDirection::LeftToRight ? intrinsicPaddingBefore() : intrinsicPaddingAfter());
 }
 
 LayoutUnit RenderTableCell::paddingRight() const
@@ -334,7 +378,7 @@ LayoutUnit RenderTableCell::paddingRight() const
     LayoutUnit result = computedCSSPaddingRight();
     if (isHorizontalWritingMode())
         return result;
-    return result + (style().writingMode() == WritingMode::LeftToRight ? intrinsicPaddingAfter() : intrinsicPaddingBefore());
+    return result + (style().blockFlowDirection() == BlockFlowDirection::LeftToRight ? intrinsicPaddingAfter() : intrinsicPaddingBefore());
 }
 
 LayoutUnit RenderTableCell::paddingBefore() const
@@ -364,14 +408,14 @@ LayoutSize RenderTableCell::offsetFromContainer(RenderElement& container, const 
     return offset;
 }
 
-LayoutRect RenderTableCell::clippedOverflowRect(const RenderLayerModelObject* repaintContainer, VisibleRectContext context) const
+auto RenderTableCell::localRectsForRepaint(RepaintOutlineBounds repaintOutlineBounds) const -> RepaintRects
 {
     // If the table grid is dirty, we cannot get reliable information about adjoining cells,
     // so we ignore outside borders. This should not be a problem because it means that
     // the table is going to recalculate the grid, relayout and repaint its current rect, which
     // includes any outside borders of this cell.
     if (!table()->collapseBorders() || table()->needsSectionRecalc())
-        return RenderBlockFlow::clippedOverflowRect(repaintContainer, context);
+        return RenderBlockFlow::localRectsForRepaint(repaintOutlineBounds);
 
     bool rtl = !styleForCellFlow().isLeftToRightDirection();
     LayoutUnit outlineSize { style().outlineSize() };
@@ -403,23 +447,31 @@ LayoutRect RenderTableCell::clippedOverflowRect(const RenderLayerModelObject* re
             right = std::max(right, below->borderHalfRight(true));
         }
     }
+
     LayoutPoint location(std::max<LayoutUnit>(left, -visualOverflowRect().x()), std::max<LayoutUnit>(top, -visualOverflowRect().y()));
-    LayoutRect r(-location.x(), -location.y(), location.x() + std::max(width() + right, visualOverflowRect().maxX()), location.y() + std::max(height() + bottom, visualOverflowRect().maxY()));
+    auto overflowRect = LayoutRect(-location.x(), -location.y(), location.x() + std::max(width() + right, visualOverflowRect().maxX()), location.y() + std::max(height() + bottom, visualOverflowRect().maxY()));
 
     // FIXME: layoutDelta needs to be applied in parts before/after transforms and
     // repaint containers. https://bugs.webkit.org/show_bug.cgi?id=23308
-    r.move(view().frameView().layoutContext().layoutDelta());
-    return computeRect(r, repaintContainer, context);
+    overflowRect.move(view().frameView().layoutContext().layoutDelta());
+
+    auto rects = RepaintRects { overflowRect };
+    if (repaintOutlineBounds == RepaintOutlineBounds::Yes)
+        rects.outlineBoundsRect = localOutlineBoundsRepaintRect();
+
+    return rects;
 }
 
-std::optional<LayoutRect> RenderTableCell::computeVisibleRectInContainer(const LayoutRect& rect, const RenderLayerModelObject* container, VisibleRectContext context) const
+auto RenderTableCell::computeVisibleRectsInContainer(const RepaintRects& rects, const RenderLayerModelObject* container, VisibleRectContext context) const -> std::optional<RepaintRects>
 {
     if (container == this)
-        return rect;
-    LayoutRect adjustedRect = rect;
+        return rects;
+
+    auto adjustedRects = rects;
     if ((!view().frameView().layoutContext().isPaintOffsetCacheEnabled() || container || context.options.contains(VisibleRectContextOption::UseEdgeInclusiveIntersection)) && parent())
-        adjustedRect.moveBy(-parentBox()->location()); // Rows are in the same coordinate space, so don't add their offset in.
-    return RenderBlockFlow::computeVisibleRectInContainer(adjustedRect, container, context);
+        adjustedRects.moveBy(-parentBox()->location()); // Rows are in the same coordinate space, so don't add their offset in.
+
+    return RenderBlockFlow::computeVisibleRectsInContainer(adjustedRects, container, context);
 }
 
 LayoutUnit RenderTableCell::cellBaselinePosition() const
@@ -450,12 +502,12 @@ void RenderTableCell::styleDidChange(StyleDifference diff, const RenderStyle* ol
 
     // Our intrinsic padding pushes us down to align with the baseline of other cells on the row. If our vertical-align
     // has changed then so will the padding needed to align with other cells - clear it so we can recalculate it from scratch.
-    if (oldStyle && style().verticalAlign() != oldStyle->verticalAlign())
+    if (oldStyle && (style().verticalAlign() != oldStyle->verticalAlign() || style().alignContent() != oldStyle->alignContent()))
         clearIntrinsicPadding();
 
     // If border was changed, notify table.
     RenderTable* table = this->table();
-    if (table && oldStyle && oldStyle->border() != style().border()) {
+    if (table && oldStyle && !oldStyle->borderIsEquivalentForPainting(style())) {
         table->invalidateCollapsedBorders(this);
         if (table->collapseBorders() && diff == StyleDifference::Layout) {
             markCellDirtyWhenCollapsedBorderChanges(table->cellBelow(this));
@@ -992,6 +1044,23 @@ inline CollapsedBorderValue RenderTableCell::cachedCollapsedBottomBorder(const R
     return styleForCellFlow.isLeftToRightDirection() ? section()->cachedCollapsedBorder(*this, CBSEnd) : section()->cachedCollapsedBorder(*this, CBSStart);
 }
 
+RectEdges<LayoutUnit> RenderTableCell::borderWidths() const
+{
+    RenderTable* table = this->table();
+    if (!table)
+        return RenderBlockFlow::borderWidths();
+
+    if (!table->collapseBorders())
+        return RenderBlockFlow::borderWidths();
+
+    return {
+        borderHalfTop(false),
+        borderHalfRight(false),
+        borderHalfBottom(false),
+        borderHalfLeft(false)
+    };
+}
+
 LayoutUnit RenderTableCell::borderLeft() const
 {
     RenderTable* table = this->table();
@@ -1217,7 +1286,7 @@ void RenderTableCell::paintCollapsedBorders(PaintInfo& paintInfo, const LayoutPo
 {
     ASSERT(paintInfo.phase == PaintPhase::CollapsedTableBorders);
 
-    if (!paintInfo.shouldPaintWithinRoot(*this) || style().visibility() != Visibility::Visible)
+    if (!paintInfo.shouldPaintWithinRoot(*this) || style().usedVisibility() != Visibility::Visible)
         return;
 
     LayoutRect localRepaintRect = paintInfo.rect;
@@ -1282,15 +1351,50 @@ void RenderTableCell::paintCollapsedBorders(PaintInfo& paintInfo, const LayoutPo
     }
 }
 
-void RenderTableCell::paintBackgroundsBehindCell(PaintInfo& paintInfo, const LayoutPoint& paintOffset, RenderElement* backgroundObject)
+static LayoutRect backgroundRectForRow(const RenderBox& tableRow, const RenderTable& table)
 {
+    LayoutRect rect = tableRow.frameRect();
+    if (!table.collapseBorders()) {
+        // Row frameRects include unwanted hSpacing on both inline ends.
+        auto hSpacing = table.hBorderSpacing();
+        LayoutUnit vSpacing = 0_lu;
+        if (table.style().isHorizontalWritingMode())
+            rect.contract({ vSpacing, hSpacing, vSpacing, hSpacing });
+        else
+            rect.contract({ hSpacing, vSpacing, hSpacing, vSpacing });
+    }
+    return rect;
+}
+
+static LayoutRect backgroundRectForSection(const RenderTableSection& tableSection, const RenderTable& table)
+{
+    LayoutRect rect = { { }, tableSection.size() };
+    if (!table.collapseBorders()) {
+        auto hSpacing = table.hBorderSpacing();
+        auto vSpacing = table.vBorderSpacing();
+        // All sections' size()s include unwanted vSpacing at the block-end
+        // position. The first section's size() includes additional unwanted
+        // vSpacing at the block-start position. All sections' size()s include
+        // unwanted hSpacing on both inline ends.
+        auto beforeBlockSpacing = &tableSection == table.topSection() ? vSpacing : 0_lu;
+        if (table.style().isHorizontalWritingMode())
+            rect.contract({ beforeBlockSpacing, hSpacing, vSpacing, hSpacing });
+        else if (table.style().isFlippedBlocksWritingMode())
+            rect.contract({ hSpacing, beforeBlockSpacing, hSpacing, vSpacing });
+        else
+            rect.contract({ hSpacing, vSpacing, hSpacing, beforeBlockSpacing });
+    }
+    return rect;
+}
+
+void RenderTableCell::paintBackgroundsBehindCell(PaintInfo& paintInfo, LayoutPoint paintOffset, RenderBox* backgroundObject, LayoutPoint backgroundPaintOffset)
+{
+    ASSERT(backgroundObject);
+
     if (!paintInfo.shouldPaintWithinRoot(*this))
         return;
 
-    if (!backgroundObject)
-        return;
-
-    if (style().visibility() != Visibility::Visible)
+    if (style().usedVisibility() != Visibility::Visible)
         return;
 
     RenderTable* tableElt = table();
@@ -1310,17 +1414,31 @@ void RenderTableCell::paintBackgroundsBehindCell(PaintInfo& paintInfo, const Lay
     if (backgroundObject != this)
         adjustedPaintOffset.moveBy(location());
 
+    // Background images attached to the row or row group must span the row
+    // or row group. Draw them at the backgroundObject's dimensions, but
+    // clipped to this cell.
+    // FIXME: This should also apply to columns and column groups.
+    bool paintBackgroundObject = backgroundObject != this && bgLayer.hasImage() && !is<RenderTableCol>(backgroundObject);
     // We have to clip here because the background would paint
     // on top of the borders otherwise. This only matters for cells and rows.
-    bool shouldClip = backgroundObject->hasLayer() && (backgroundObject == this || backgroundObject == parent()) && tableElt->collapseBorders();
+    bool shouldClip = paintBackgroundObject || (backgroundObject->hasLayer() && (backgroundObject == this || backgroundObject == parent()) && tableElt->collapseBorders());
     GraphicsContextStateSaver stateSaver(paintInfo.context(), shouldClip);
     if (shouldClip) {
         LayoutRect clipRect(adjustedPaintOffset.x() + borderLeft(), adjustedPaintOffset.y() + borderTop(),
             width() - borderLeft() - borderRight(), height() - borderTop() - borderBottom());
         paintInfo.context().clip(clipRect);
     }
+    LayoutRect fillRect;
+    if (paintBackgroundObject) {
+        if (auto* tableSectionRenderer = dynamicDowncast<RenderTableSection>(backgroundObject))
+            fillRect = backgroundRectForSection(*tableSectionRenderer, *tableElt);
+        else
+            fillRect = backgroundRectForRow(*backgroundObject, *tableElt);
+        fillRect.moveBy(backgroundPaintOffset);
+    } else
+        fillRect = LayoutRect { adjustedPaintOffset, size() };
     auto compositeOp = document().compositeOperatorForBackgroundColor(color, *this);
-    BackgroundPainter { *this, paintInfo }.paintFillLayers(color, bgLayer, LayoutRect(adjustedPaintOffset, frameRect().size()), BackgroundBleedNone, compositeOp, backgroundObject);
+    BackgroundPainter { *this, paintInfo }.paintFillLayers(color, bgLayer, fillRect, BackgroundBleedNone, compositeOp, backgroundObject);
 }
 
 void RenderTableCell::paintBoxDecorations(PaintInfo& paintInfo, const LayoutPoint& paintOffset)
@@ -1339,7 +1457,7 @@ void RenderTableCell::paintBoxDecorations(PaintInfo& paintInfo, const LayoutPoin
     backgroundPainter.paintBoxShadow(paintRect, style(), ShadowStyle::Normal);
 
     // Paint our cell background.
-    paintBackgroundsBehindCell(paintInfo, paintOffset, this);
+    paintBackgroundsBehindCell(paintInfo, paintOffset, this, paintOffset);
 
     backgroundPainter.paintBoxShadow(paintRect, style(), ShadowStyle::Inset);
 
@@ -1352,7 +1470,7 @@ void RenderTableCell::paintBoxDecorations(PaintInfo& paintInfo, const LayoutPoin
 
 void RenderTableCell::paintMask(PaintInfo& paintInfo, const LayoutPoint& paintOffset)
 {
-    if (style().visibility() != Visibility::Visible || paintInfo.phase != PaintPhase::Mask)
+    if (style().usedVisibility() != Visibility::Visible || paintInfo.phase != PaintPhase::Mask)
         return;
 
     RenderTable* tableElt = table();
@@ -1377,7 +1495,8 @@ void RenderTableCell::scrollbarsChanged(bool horizontalScrollbarChanged, bool ve
         return;
 
     // Shrink our intrinsic padding as much as possible to accommodate the scrollbar.
-    if (style().verticalAlign() == VerticalAlign::Middle) {
+    if ((style().verticalAlign() == VerticalAlign::Middle && style().alignContent().isNormal())
+        || style().alignContent().isCentered()) {
         LayoutUnit totalHeight = logicalHeight();
         LayoutUnit heightWithoutIntrinsicPadding = totalHeight - intrinsicPaddingBefore() - intrinsicPaddingAfter();
         totalHeight -= scrollbarHeight;

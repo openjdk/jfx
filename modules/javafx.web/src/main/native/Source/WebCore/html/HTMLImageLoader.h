@@ -32,9 +32,8 @@ public:
     virtual ~HTMLImageLoader();
 
     void dispatchLoadEvent() override;
-    String sourceURI(const AtomString&) const override;
 
-    void notifyFinished(CachedResource&, const NetworkLoadMetrics&) final;
+    void notifyFinished(CachedResource&, const NetworkLoadMetrics&, LoadWillContinueInAnotherProcess) final;
 };
 
 }

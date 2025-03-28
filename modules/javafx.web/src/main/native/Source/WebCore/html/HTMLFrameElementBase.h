@@ -33,14 +33,14 @@ class CallFrame;
 namespace WebCore {
 
 class HTMLFrameElementBase : public HTMLFrameOwnerElement {
-    WTF_MAKE_ISO_ALLOCATED(HTMLFrameElementBase);
+    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(HTMLFrameElementBase);
+    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(HTMLFrameElementBase);
 public:
     void setLocation(JSC::JSGlobalObject&, const String&);
 
     ScrollbarMode scrollingMode() const final;
 
 protected:
-    constexpr static auto CreateHTMLFrameElementBase = CreateHTMLFrameOwnerElement | NodeFlag::HasCustomStyleResolveCallbacks;
     HTMLFrameElementBase(const QualifiedName&, Document&);
 
     bool canLoad() const;
@@ -78,5 +78,9 @@ private:
 
 SPECIALIZE_TYPE_TRAITS_BEGIN(WebCore::HTMLFrameElementBase)
     static bool isType(const WebCore::HTMLElement& element) { return is<WebCore::HTMLFrameElement>(element) || is<WebCore::HTMLIFrameElement>(element); }
-    static bool isType(const WebCore::Node& node) { return is<WebCore::HTMLElement>(node) && isType(downcast<WebCore::HTMLElement>(node)); }
+    static bool isType(const WebCore::Node& node)
+    {
+        auto* htmlElement = dynamicDowncast<WebCore::HTMLElement>(node);
+        return htmlElement && isType(*htmlElement);
+    }
 SPECIALIZE_TYPE_TRAITS_END()

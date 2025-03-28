@@ -25,6 +25,7 @@
 
 #pragma once
 
+#include "LoaderMalloc.h"
 #include "ResourceLoadStatistics.h"
 #include <wtf/CompletionHandler.h>
 #include <wtf/Forward.h>
@@ -37,7 +38,7 @@ class ResourceRequest;
 class ResourceResponse;
 
 class ResourceLoadObserver {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(Loader);
 public:
     using TopFrameDomain = WebCore::RegistrableDomain;
     using SubResourceDomain = WebCore::RegistrableDomain;
@@ -68,7 +69,7 @@ public:
     virtual bool hasStatistics() const { return false; }
 
     virtual void setDomainsWithUserInteraction(HashSet<RegistrableDomain>&&) { }
-    virtual void setDomainsWithCrossPageStorageAccess(HashMap<TopFrameDomain, SubResourceDomain>&&, CompletionHandler<void()>&& completionHandler) { completionHandler(); }
+    virtual void setDomainsWithCrossPageStorageAccess(HashMap<TopFrameDomain, Vector<SubResourceDomain>>&&, CompletionHandler<void()>&& completionHandler) { completionHandler(); }
     virtual bool hasCrossPageStorageAccess(const SubResourceDomain&, const TopFrameDomain&) const { return false; }
     virtual bool hasHadUserInteraction(const RegistrableDomain&) const { return false; }
 };

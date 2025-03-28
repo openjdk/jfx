@@ -63,6 +63,11 @@ InternalWritableStream& WritableStream::internalWritableStream()
     return m_internalWritableStream.get();
 }
 
+ExceptionOr<Ref<InternalWritableStream>> WritableStream::createInternalWritableStream(JSDOMGlobalObject& globalObject, Ref<WritableStreamSink>&& sink)
+{
+    return InternalWritableStream::createFromUnderlyingSink(globalObject, toJSNewlyCreated(&globalObject, &globalObject, WTFMove(sink)), JSC::jsUndefined());
+}
+
 ExceptionOr<Ref<WritableStream>> WritableStream::create(JSC::JSGlobalObject& globalObject, JSC::JSValue underlyingSink, JSC::JSValue strategy)
 {
     auto result = InternalWritableStream::createFromUnderlyingSink(*JSC::jsCast<JSDOMGlobalObject*>(&globalObject), underlyingSink, strategy);
@@ -87,14 +92,19 @@ WritableStream::WritableStream(Ref<InternalWritableStream>&& internalWritableStr
 {
 }
 
+void WritableStream::closeIfPossible()
+{
+    m_internalWritableStream->closeIfPossible();
+}
+
 JSC::JSValue JSWritableStream::abort(JSC::JSGlobalObject& globalObject, JSC::CallFrame& callFrame)
 {
-    return wrapped().internalWritableStream().abort(globalObject, callFrame.argument(0));
+    return wrapped().internalWritableStream().abortForBindings(globalObject, callFrame.argument(0));
 }
 
 JSC::JSValue JSWritableStream::close(JSC::JSGlobalObject& globalObject, JSC::CallFrame&)
 {
-    return wrapped().internalWritableStream().close(globalObject);
+    return wrapped().internalWritableStream().closeForBindings(globalObject);
 }
 
 JSC::JSValue JSWritableStream::getWriter(JSC::JSGlobalObject& globalObject, JSC::CallFrame&)

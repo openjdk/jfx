@@ -22,6 +22,7 @@
 
 #include "LayoutSize.h"
 #include "TranslateTransformOperation.h"
+#include <wtf/Scope.h>
 
 namespace Nicosia {
 
@@ -45,27 +46,35 @@ static FilterOperations applyFilterAnimation(const FilterOperations& from, const
     if (!from.isEmpty() && !to.isEmpty() && !from.operationsMatch(to))
         return to;
 
-    FilterOperations result;
-
-    size_t fromSize = from.operations().size();
-    size_t toSize = to.operations().size();
+    size_t fromSize = from.size();
+    size_t toSize = to.size();
     size_t size = std::max(fromSize, toSize);
+
+    Vector<Ref<FilterOperation>> operations;
+    operations.reserveInitialCapacity(size);
+
     for (size_t i = 0; i < size; i++) {
-        RefPtr<FilterOperation> fromOp = (i < fromSize) ? from.operations()[i].get() : nullptr;
-        RefPtr<FilterOperation> toOp = (i < toSize) ? to.operations()[i].get() : nullptr;
+        RefPtr<FilterOperation> fromOp = (i < fromSize) ? from[i].ptr() : nullptr;
+        RefPtr<FilterOperation> toOp = (i < toSize) ? to[i].ptr() : nullptr;
         RefPtr<FilterOperation> blendedOp = toOp ? blendFunc(fromOp.get(), *toOp, progress, boxSize) : (fromOp ? blendFunc(nullptr, *fromOp, progress, boxSize, true) : nullptr);
         if (blendedOp)
-            result.operations().append(blendedOp);
+            operations.append(blendedOp.releaseNonNull());
         else {
-            auto identityOp = PassthroughFilterOperation::create();
-            if (progress > 0.5)
-                result.operations().append(toOp ? toOp : WTFMove(identityOp));
+            if (progress > 0.5) {
+                if (toOp)
+                    operations.append(toOp.releaseNonNull());
             else
-                result.operations().append(fromOp ? fromOp : WTFMove(identityOp));
+                    operations.append(PassthroughFilterOperation::create());
+            } else {
+                if (fromOp)
+                    operations.append(fromOp.releaseNonNull());
+                else
+                    operations.append(PassthroughFilterOperation::create());
+            }
         }
     }
 
-    return result;
+    return FilterOperations { WTFMove(operations) };
 }
 
 static bool shouldReverseAnimationValue(WebCore::Animation::Direction direction, int loopCount)
@@ -116,17 +125,17 @@ static TransformationMatrix applyTransformAnimation(const TransformOperations& f
 
     // First frame of an animation.
     if (!progress) {
-        from.apply(boxSize, matrix);
+        from.apply(matrix, boxSize);
         return matrix;
     }
 
     // Last frame of an animation.
     if (progress == 1) {
-        to.apply(boxSize, matrix);
+        to.apply(matrix, boxSize);
         return matrix;
     }
 
-    to.blend(from, progress, LayoutSize { boxSize }).apply(boxSize, matrix);
+    to.blend(from, progress, LayoutSize { boxSize }).apply(matrix, boxSize);
     return matrix;
 }
 
@@ -152,9 +161,8 @@ static KeyframeValueList createThreadsafeKeyFrames(const KeyframeValueList& orig
     KeyframeValueList keyframes = originalKeyframes;
     for (unsigned i = 0; i < keyframes.size(); i++) {
         const auto& transformValue = static_cast<const TransformAnimationValue&>(keyframes.at(i));
-        for (auto& operation : transformValue.value().operations()) {
-            if (is<TranslateTransformOperation>(operation)) {
-                TranslateTransformOperation* translation = static_cast<TranslateTransformOperation*>(operation.get());
+        for (auto& operation : transformValue.value()) {
+            if (RefPtr translation = dynamicDowncast<TranslateTransformOperation>(operation)) {
                 translation->setX(Length(translation->xAsFloat(boxSize), LengthType::Fixed));
                 translation->setY(Length(translation->yAsFloat(boxSize), LengthType::Fixed));
                 translation->setZ(Length(translation->zAsFloat(), LengthType::Fixed));
@@ -217,8 +225,20 @@ Animation& Animation::operator=(const Animation& other)
     return *this;
 }
 
-void Animation::apply(ApplicationResult& applicationResults, MonotonicTime time)
+void Animation::apply(ApplicationResult& applicationResults, MonotonicTime time, KeepInternalState keepInternalState)
 {
+    MonotonicTime oldLastRefreshedTime = m_lastRefreshedTime;
+    Seconds oldTotalRunningTime = m_totalRunningTime;
+    AnimationState oldState = m_state;
+
+    auto maybeRestoreInternalState = makeScopeExit([&] {
+        if (keepInternalState == KeepInternalState::Yes) {
+            m_lastRefreshedTime = oldLastRefreshedTime;
+            m_totalRunningTime = oldTotalRunningTime;
+            m_state = oldState;
+        }
+    });
+
     // Even when m_state == AnimationState::Stopped && !m_fillsForwards, we should calculate the last value to avoid a flash.
     // CoordinatedGraphicsScene will soon remove the stopped animation and update the value instead of this function.
 
@@ -263,19 +283,6 @@ void Animation::apply(ApplicationResult& applicationResults, MonotonicTime time)
     }
 }
 
-void Animation::applyKeepingInternalState(ApplicationResult& applicationResults, MonotonicTime time)
-{
-    MonotonicTime oldLastRefreshedTime = m_lastRefreshedTime;
-    Seconds oldTotalRunningTime = m_totalRunningTime;
-    AnimationState oldState = m_state;
-
-    apply(applicationResults, time);
-
-    m_lastRefreshedTime = oldLastRefreshedTime;
-    m_totalRunningTime = oldTotalRunningTime;
-    m_state = oldState;
-}
-
 void Animation::pause(Seconds time)
 {
     m_state = AnimationState::Paused;
@@ -306,16 +313,20 @@ Seconds Animation::computeTotalRunningTime(MonotonicTime time)
 void Animation::applyInternal(ApplicationResult& applicationResults, const AnimationValue& from, const AnimationValue& to, float progress)
 {
     switch (m_keyframes.property()) {
-    case AnimatedProperty::Transform:
-        applicationResults.transform = applyTransformAnimation(static_cast<const TransformAnimationValue&>(from).value(), static_cast<const TransformAnimationValue&>(to).value(), progress, m_boxSize);
+    case AnimatedProperty::Translate:
+    case AnimatedProperty::Rotate:
+    case AnimatedProperty::Scale:
+    case AnimatedProperty::Transform: {
+        ASSERT(applicationResults.transform);
+        auto transform = applyTransformAnimation(static_cast<const TransformAnimationValue&>(from).value(), static_cast<const TransformAnimationValue&>(to).value(), progress, m_boxSize);
+        applicationResults.transform->multiply(transform);
         return;
+    }
     case AnimatedProperty::Opacity:
         applicationResults.opacity = applyOpacityAnimation((static_cast<const FloatAnimationValue&>(from).value()), (static_cast<const FloatAnimationValue&>(to).value()), progress);
         return;
     case AnimatedProperty::Filter:
-#if ENABLE(FILTERS_LEVEL_2)
     case AnimatedProperty::WebkitBackdropFilter:
-#endif
         applicationResults.filters = applyFilterAnimation(static_cast<const FilterAnimationValue&>(from).value(), static_cast<const FilterAnimationValue&>(to).value(), progress, m_boxSize);
         return;
     default:
@@ -367,16 +378,65 @@ void Animations::resume()
         animation.resume();
 }
 
-void Animations::apply(Animation::ApplicationResult& applicationResults, MonotonicTime time)
+void Animations::apply(Animation::ApplicationResult& applicationResults, MonotonicTime time, Animation::KeepInternalState keepInternalState)
 {
-    for (auto& animation : m_animations)
-        animation.apply(applicationResults, time);
-}
+    Vector<Animation*> translateAnimations;
+    Vector<Animation*> rotateAnimations;
+    Vector<Animation*> scaleAnimations;
+    Vector<Animation*> transformAnimations;
+    Vector<Animation*> leafAnimations;
 
-void Animations::applyKeepingInternalState(Animation::ApplicationResult& applicationResults, MonotonicTime time)
-{
-    for (auto& animation : m_animations)
-        animation.applyKeepingInternalState(applicationResults, time);
+    for (auto& animation : m_animations) {
+        switch (animation.keyframes().property()) {
+        case AnimatedProperty::Translate:
+            translateAnimations.append(&animation);
+            break;
+        case AnimatedProperty::Rotate:
+            rotateAnimations.append(&animation);
+            break;
+        case AnimatedProperty::Scale:
+            scaleAnimations.append(&animation);
+            break;
+        case AnimatedProperty::Transform:
+            transformAnimations.append(&animation);
+            break;
+        default:
+            leafAnimations.append(&animation);
+        }
+    }
+
+    if (!translateAnimations.isEmpty() || !rotateAnimations.isEmpty() || !scaleAnimations.isEmpty() || !transformAnimations.isEmpty()) {
+        applicationResults.transform = TransformationMatrix();
+
+        if (translateAnimations.isEmpty())
+            applicationResults.transform->multiply(m_translate);
+        else {
+            for (auto* animation : translateAnimations)
+                animation->apply(applicationResults, time, keepInternalState);
+        }
+
+        if (rotateAnimations.isEmpty())
+            applicationResults.transform->multiply(m_rotate);
+        else {
+            for (auto* animation : rotateAnimations)
+                animation->apply(applicationResults, time, keepInternalState);
+        }
+
+        if (scaleAnimations.isEmpty())
+            applicationResults.transform->multiply(m_scale);
+        else {
+            for (auto* animation : scaleAnimations)
+                animation->apply(applicationResults, time, keepInternalState);
+        }
+
+        if (transformAnimations.isEmpty())
+            applicationResults.transform->multiply(m_transform);
+        else
+            transformAnimations.last()->apply(applicationResults, time, keepInternalState);
+    }
+
+    for (auto* animation : leafAnimations)
+        animation->apply(applicationResults, time, keepInternalState);
 }
 
 bool Animations::hasActiveAnimationsOfType(AnimatedProperty type) const
@@ -392,6 +452,32 @@ bool Animations::hasRunningAnimations() const
     return std::any_of(m_animations.begin(), m_animations.end(),
         [](const Animation& animation) {
             return animation.state() == Animation::AnimationState::Playing;
+        });
+}
+
+bool Animations::hasRunningTransformAnimations() const
+{
+    return std::any_of(m_animations.begin(), m_animations.end(),
+        [](const Animation& animation) {
+            switch (animation.keyframes().property()) {
+            case AnimatedProperty::Translate:
+            case AnimatedProperty::Rotate:
+            case AnimatedProperty::Scale:
+            case AnimatedProperty::Transform:
+                break;
+            default:
+                return false;
+            }
+
+            switch (animation.state()) {
+            case Animation::AnimationState::Playing:
+            case Animation::AnimationState::Paused:
+                break;
+            default:
+                return false;
+            }
+
+            return true;
         });
 }
 

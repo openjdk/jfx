@@ -36,7 +36,7 @@ class DeviceMotionData;
 template<typename IDLType> class DOMPromiseDeferred;
 
 class DeviceMotionEvent final : public Event {
-    WTF_MAKE_ISO_ALLOCATED(DeviceMotionEvent);
+    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(DeviceMotionEvent);
 public:
     virtual ~DeviceMotionEvent();
 
@@ -80,8 +80,6 @@ public:
 private:
     DeviceMotionEvent();
     DeviceMotionEvent(const AtomString& eventType, DeviceMotionData*);
-
-    EventInterface eventInterface() const override;
 
     RefPtr<DeviceMotionData> m_deviceMotionData;
 };

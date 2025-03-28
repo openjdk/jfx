@@ -32,7 +32,8 @@ struct DOMPointInit;
 class SVGPoint;
 
 class SVGGeometryElement : public SVGGraphicsElement {
-    WTF_MAKE_ISO_ALLOCATED(SVGGeometryElement);
+    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(SVGGeometryElement);
+    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(SVGGeometryElement);
 public:
     virtual float getTotalLength() const;
     virtual ExceptionOr<Ref<SVGPoint>> getPointAtLength(float distance) const;
@@ -61,5 +62,9 @@ private:
 
 SPECIALIZE_TYPE_TRAITS_BEGIN(WebCore::SVGGeometryElement)
     static bool isType(const WebCore::SVGElement& element) { return element.isSVGGeometryElement(); }
-    static bool isType(const WebCore::Node& node) { return is<WebCore::SVGElement>(node) && isType(downcast<WebCore::SVGElement>(node)); }
+    static bool isType(const WebCore::Node& node)
+    {
+        auto* svgElement = dynamicDowncast<WebCore::SVGElement>(node);
+        return svgElement && isType(*svgElement);
+    }
 SPECIALIZE_TYPE_TRAITS_END()

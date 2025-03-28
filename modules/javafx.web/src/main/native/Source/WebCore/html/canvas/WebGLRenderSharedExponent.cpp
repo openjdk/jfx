@@ -28,24 +28,19 @@
 #if ENABLE(WEBGL)
 #include "WebGLRenderSharedExponent.h"
 
-#include <wtf/IsoMallocInlines.h>
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
-WTF_MAKE_ISO_ALLOCATED_IMPL(WebGLRenderSharedExponent);
+WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(WebGLRenderSharedExponent);
 
 WebGLRenderSharedExponent::WebGLRenderSharedExponent(WebGLRenderingContextBase& context)
-    : WebGLExtension(context)
+    : WebGLExtension(context, WebGLExtensionName::WebGLRenderSharedExponent)
 {
-    context.graphicsContextGL()->ensureExtensionEnabled("GL_QCOM_render_shared_exponent"_s);
+    context.protectedGraphicsContextGL()->ensureExtensionEnabled("GL_QCOM_render_shared_exponent"_s);
 }
 
 WebGLRenderSharedExponent::~WebGLRenderSharedExponent() = default;
-
-WebGLExtension::ExtensionName WebGLRenderSharedExponent::getName() const
-{
-    return WebGLRenderSharedExponentName;
-}
 
 bool WebGLRenderSharedExponent::supported(GraphicsContextGL& context)
 {

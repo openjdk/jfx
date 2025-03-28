@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2007, 2008, 2014, 2015 Apple Inc. All rights reserved.
+ * Copyright (C) 2007-2023 Apple Inc. All rights reserved.
  * Copyright (C) 2008 Matt Lilek <webkit@mattlilek.com>
  * Copyright (C) 2009, 2010 Google Inc. All rights reserved.
  *
@@ -39,8 +39,11 @@
 #include "ScriptCallFrame.h"
 #include "ScriptCallStack.h"
 #include "ScriptCallStackFactory.h"
+#include <wtf/TZoneMallocInlines.h>
 
 namespace Inspector {
+
+WTF_MAKE_TZONE_ALLOCATED_IMPL(ConsoleMessage);
 
 ConsoleMessage::ConsoleMessage(MessageSource source, MessageType type, MessageLevel level, const String& message, unsigned long requestIdentifier, WallTime timestamp)
     : m_source(source)
@@ -157,9 +160,7 @@ ConsoleMessage::ConsoleMessage(MessageSource source, MessageType type, MessageLe
         m_message = m_jsonLogValues[0].value;
 }
 
-ConsoleMessage::~ConsoleMessage()
-{
-}
+ConsoleMessage::~ConsoleMessage() = default;
 
 void ConsoleMessage::autogenerateMetadata(JSC::JSGlobalObject* globalObject)
 {
@@ -337,8 +338,24 @@ void ConsoleMessage::updateRepeatCountInConsole(ConsoleFrontendDispatcher& conso
     consoleFrontendDispatcher.messageRepeatCountUpdated(m_repeatCount, timestamp.secondsSinceEpoch().value());
 }
 
+static bool isGroupMessage(MessageType type)
+{
+    return type == MessageType::StartGroup
+        || type == MessageType::StartGroupCollapsed
+        || type == MessageType::EndGroup;
+}
+
 bool ConsoleMessage::isEqual(ConsoleMessage* msg) const
 {
+    // `console.clear()` might not always clear the console if the frontend doesn't allow it to, so
+    // ensure that the repeat count is never updated by treating each `console.clear()` as unique.
+    if (m_type == MessageType::Clear || msg->m_type == MessageType::Clear)
+        return false;
+
+    // Groups should always be considered unique.
+    if (isGroupMessage(m_type) || isGroupMessage(msg->m_type))
+        return false;
+
     if (m_arguments) {
         if (!msg->m_arguments || !m_arguments->isEqual(*msg->m_arguments))
             return false;

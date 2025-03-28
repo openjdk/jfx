@@ -54,12 +54,17 @@ Ref<CaptionUserPreferences> CaptionUserPreferences::create(PageGroup& group)
 
 CaptionUserPreferences::CaptionUserPreferences(PageGroup& group)
     : m_pageGroup(group)
-    , m_displayMode(ForcedOnly)
+    , m_displayMode(CaptionDisplayMode::ForcedOnly)
     , m_timer(*this, &CaptionUserPreferences::timerFired)
 {
 }
 
 CaptionUserPreferences::~CaptionUserPreferences() = default;
+
+UniqueRef<CaptionUserPreferencesTestingModeToken> CaptionUserPreferences::createTestingModeToken()
+{
+    return makeUniqueRef<CaptionUserPreferencesTestingModeToken>(*this);
+}
 
 void CaptionUserPreferences::timerFired()
 {
@@ -95,7 +100,7 @@ CaptionUserPreferences::CaptionDisplayMode CaptionUserPreferences::captionDispla
 void CaptionUserPreferences::setCaptionDisplayMode(CaptionUserPreferences::CaptionDisplayMode mode)
 {
     m_displayMode = mode;
-    if (testingMode() && mode != AlwaysOn) {
+    if (testingMode() && mode != CaptionDisplayMode::AlwaysOn) {
         setUserPrefersCaptions(false);
         setUserPrefersSubtitles(false);
     }
@@ -104,7 +109,7 @@ void CaptionUserPreferences::setCaptionDisplayMode(CaptionUserPreferences::Capti
 
 Page* CaptionUserPreferences::currentPage() const
 {
-    for (auto& page : m_pageGroup.pages())
+    for (auto& page : m_pageGroup->pages())
         return &page;
     return nullptr;
 }
@@ -120,7 +125,7 @@ bool CaptionUserPreferences::userPrefersCaptions() const
 
 void CaptionUserPreferences::setUserPrefersCaptions(bool preference)
 {
-    auto* page = currentPage();
+    RefPtr page = currentPage();
     if (!page)
         return;
 
@@ -130,7 +135,7 @@ void CaptionUserPreferences::setUserPrefersCaptions(bool preference)
 
 bool CaptionUserPreferences::userPrefersSubtitles() const
 {
-    auto* page = currentPage();
+    RefPtr page = currentPage();
     if (!page)
         return false;
 
@@ -139,7 +144,7 @@ bool CaptionUserPreferences::userPrefersSubtitles() const
 
 void CaptionUserPreferences::setUserPrefersSubtitles(bool preference)
 {
-    auto* page = currentPage();
+    RefPtr page = currentPage();
     if (!page)
         return;
 
@@ -149,17 +154,17 @@ void CaptionUserPreferences::setUserPrefersSubtitles(bool preference)
 
 bool CaptionUserPreferences::userPrefersTextDescriptions() const
 {
-    auto* page = currentPage();
+    RefPtr page = currentPage();
     if (!page)
         return false;
 
-    auto& settings = page->settings();
-    return settings.shouldDisplayTextDescriptions() && (settings.audioDescriptionsEnabled() || settings.extendedAudioDescriptionsEnabled());
+    Ref settings = page->settings();
+    return settings->shouldDisplayTextDescriptions() && (settings->audioDescriptionsEnabled() || settings->extendedAudioDescriptionsEnabled());
 }
 
 void CaptionUserPreferences::setUserPrefersTextDescriptions(bool preference)
 {
-    auto* page = currentPage();
+    RefPtr page = currentPage();
     if (!page)
         return;
 
@@ -169,7 +174,7 @@ void CaptionUserPreferences::setUserPrefersTextDescriptions(bool preference)
 
 void CaptionUserPreferences::captionPreferencesChanged()
 {
-    m_pageGroup.captionPreferencesChanged();
+    m_pageGroup->captionPreferencesChanged();
 }
 
 Vector<String> CaptionUserPreferences::preferredLanguages() const
@@ -322,11 +327,10 @@ int CaptionUserPreferences::textTrackSelectionScore(TextTrack* track, HTMLMediaE
     CaptionDisplayMode displayMode = captionDisplayMode();
     auto kind = track->kind();
     auto prefersTextDescriptions = kind == TextTrack::Kind::Descriptions && userPrefersTextDescriptions();
-    if (displayMode == Manual && !prefersTextDescriptions)
+    if (displayMode == CaptionDisplayMode::Manual && !prefersTextDescriptions)
         return 0;
 
-    bool legacyOverride = mediaElement->webkitClosedCaptionsVisible();
-    if (displayMode == AlwaysOn && (!userPrefersSubtitles() && !userPrefersCaptions() && !legacyOverride))
+    if (displayMode == CaptionDisplayMode::AlwaysOn && (!userPrefersSubtitles() && !userPrefersCaptions()))
         return 0;
 
     if (kind != TextTrack::Kind::Captions && kind != TextTrack::Kind::Subtitles && kind != TextTrack::Kind::Forced && !prefersTextDescriptions)
@@ -335,12 +339,12 @@ int CaptionUserPreferences::textTrackSelectionScore(TextTrack* track, HTMLMediaE
         return 0;
 
     bool trackHasOnlyForcedSubtitles = track->containsOnlyForcedSubtitles();
-    if (!legacyOverride && ((trackHasOnlyForcedSubtitles && displayMode != ForcedOnly) || (!trackHasOnlyForcedSubtitles && displayMode == ForcedOnly)))
+    if (((trackHasOnlyForcedSubtitles && displayMode != CaptionDisplayMode::ForcedOnly) || (!trackHasOnlyForcedSubtitles && displayMode == CaptionDisplayMode::ForcedOnly)))
         return 0;
 
     Vector<String> userPreferredCaptionLanguages = preferredLanguages();
 
-    if ((displayMode == Automatic && !legacyOverride) || trackHasOnlyForcedSubtitles || prefersTextDescriptions) {
+    if ((displayMode == CaptionDisplayMode::Automatic) || trackHasOnlyForcedSubtitles || prefersTextDescriptions) {
 
         String textTrackLanguage = track->validBCP47Language();
         if (textTrackLanguage.isEmpty())
@@ -353,7 +357,7 @@ int CaptionUserPreferences::textTrackSelectionScore(TextTrack* track, HTMLMediaE
         if (testingMode())
             audioTrackLanguage = primaryAudioTrackLanguageOverride();
         else
-            audioTrackLanguage = mediaElement->player()->languageOfPrimaryAudioTrack();
+            audioTrackLanguage = mediaElement->protectedPlayer()->languageOfPrimaryAudioTrack();
 
         if (audioTrackLanguage.isEmpty())
             return 0;
@@ -438,8 +442,8 @@ void CaptionUserPreferences::setCaptionsStyleSheetOverride(const String& overrid
 void CaptionUserPreferences::updateCaptionStyleSheetOverride()
 {
     String captionsOverrideStyleSheet = captionsStyleSheetOverride();
-    for (auto& page : m_pageGroup.pages())
-        page.setCaptionUserPreferencesStyleSheet(captionsOverrideStyleSheet);
+    for (Ref page : m_pageGroup->pages())
+        page->setCaptionUserPreferencesStyleSheet(captionsOverrideStyleSheet);
 }
 
 String CaptionUserPreferences::primaryAudioTrackLanguageOverride() const
@@ -449,6 +453,11 @@ String CaptionUserPreferences::primaryAudioTrackLanguageOverride() const
     return defaultLanguage(ShouldMinimizeLanguages::No);
 }
 
+PageGroup& CaptionUserPreferences::pageGroup() const
+{
+    return m_pageGroup.get();
 }
+
+} // namespace WebCore
 
 #endif // ENABLE(VIDEO)

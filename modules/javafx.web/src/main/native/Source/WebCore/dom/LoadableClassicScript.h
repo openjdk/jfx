@@ -51,6 +51,7 @@ public:
 
     Document* document() { return m_weakDocument.get(); }
     CachedScript& cachedScript() { return *m_cachedScript; }
+    CachedResourceHandle<CachedScript> protectedCachedScript() { return cachedScript(); }
 
     bool load(Document&, const URL&);
     bool isAsync() const { return m_isAsync; }
@@ -60,7 +61,7 @@ protected:
     LoadableNonModuleScriptBase(const AtomString& nonce, const AtomString& integrity, ReferrerPolicy, RequestPriority, const AtomString& crossOriginMode, const String& charset, const AtomString& initiatorType, bool isInUserAgentShadowTree, bool isAsync);
 
 private:
-    void notifyFinished(CachedResource&, const NetworkLoadMetrics&) final;
+    void notifyFinished(CachedResource&, const NetworkLoadMetrics&, LoadWillContinueInAnotherProcess) final;
 
 protected:
     CachedResourceHandle<CachedScript> m_cachedScript { };

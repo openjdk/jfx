@@ -28,6 +28,7 @@
 #include "StyleSheet.h"
 #include <memory>
 #include <variant>
+#include <wtf/CheckedPtr.h>
 #include <wtf/Noncopyable.h>
 #include <wtf/TypeCasts.h>
 #include <wtf/WeakHashSet.h>
@@ -57,7 +58,7 @@ namespace Style {
 class Scope;
 }
 
-class CSSStyleSheet final : public StyleSheet {
+class CSSStyleSheet final : public StyleSheet, public CanMakeSingleThreadWeakPtr<CSSStyleSheet> {
 public:
     struct Init {
         String baseURL;
@@ -120,10 +121,10 @@ public:
 
     bool hadRulesMutation() const { return m_mutatedRules; }
     void clearHadRulesMutation() { m_mutatedRules = false; }
-    RefPtr<StyleRuleWithNesting> prepareChildStyleRuleForNesting(StyleRule&&);
+    RefPtr<StyleRuleWithNesting> prepareChildStyleRuleForNesting(StyleRule&);
 
     enum RuleMutationType { OtherMutation, RuleInsertion, KeyframesRuleMutation, RuleReplace };
-    enum WhetherContentsWereClonedForMutation { ContentsWereNotClonedForMutation = 0, ContentsWereClonedForMutation };
+    enum class ContentsClonedForMutation : bool { No, Yes };
 
     class RuleMutationScope {
         WTF_MAKE_NONCOPYABLE(RuleMutationScope);
@@ -135,13 +136,13 @@ public:
     private:
         CSSStyleSheet* m_styleSheet;
         RuleMutationType m_mutationType;
-        WhetherContentsWereClonedForMutation m_contentsWereClonedForMutation;
+        ContentsClonedForMutation m_contentsClonedForMutation;
         RefPtr<StyleRuleKeyframes> m_insertedKeyframesRule;
         String m_modifiedKeyframesRuleName;
     };
 
-    WhetherContentsWereClonedForMutation willMutateRules();
-    void didMutateRules(RuleMutationType, WhetherContentsWereClonedForMutation, StyleRuleKeyframes* insertedKeyframesRule, const String& modifiedKeyframesRuleName);
+    ContentsClonedForMutation willMutateRules();
+    void didMutateRules(RuleMutationType, ContentsClonedForMutation, StyleRuleKeyframes* insertedKeyframesRule, const String& modifiedKeyframesRuleName);
     void didMutateRuleFromCSSStyleDeclaration();
     void didMutate();
 
@@ -149,6 +150,7 @@ public:
     void reattachChildRuleCSSOMWrappers();
 
     StyleSheetContents& contents() { return m_contents; }
+    Ref<StyleSheetContents> protectedContents();
 
     bool isInline() const { return m_isInlineStylesheet; }
     TextPosition startPosition() const { return m_startPosition; }
@@ -158,6 +160,10 @@ public:
     bool canAccessRules() const;
 
     String debugDescription() const final;
+    String cssTextWithReplacementURLs(const HashMap<String, String>&, const HashMap<RefPtr<CSSStyleSheet>, String>&);
+    void getChildStyleSheets(HashSet<RefPtr<CSSStyleSheet>>&);
+
+    bool isDetached() const;
 
 private:
     CSSStyleSheet(Ref<StyleSheetContents>&&, CSSImportRule* ownerRule);
@@ -169,6 +175,7 @@ private:
 
     bool isCSSStyleSheet() const final { return true; }
     String type() const final { return cssContentTypeAtom(); }
+    RefPtr<CSSRuleList> cssRulesSkippingAccessCheck();
 
     Ref<StyleSheetContents> m_contents;
     bool m_isInlineStylesheet { false };

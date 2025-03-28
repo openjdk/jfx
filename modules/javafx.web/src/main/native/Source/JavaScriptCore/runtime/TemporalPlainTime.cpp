@@ -401,9 +401,9 @@ TemporalPlainTime* TemporalPlainTime::from(JSGlobalObject* globalObject, JSValue
         RETURN_IF_EXCEPTION(scope, { });
         JSString* calendarString = calendar->toString(globalObject);
         RETURN_IF_EXCEPTION(scope, { });
-        String calendarWTFString = calendarString->value(globalObject);
+        auto calendarWTFString = calendarString->value(globalObject);
         RETURN_IF_EXCEPTION(scope, { });
-        if (calendarWTFString != "iso8601"_s) {
+        if (calendarWTFString.data != "iso8601"_s) {
             throwRangeError(globalObject, scope, "calendar is not iso8601"_s);
             return { };
         }
@@ -412,6 +412,11 @@ TemporalPlainTime* TemporalPlainTime::from(JSGlobalObject* globalObject, JSValue
         auto plainTime = regulateTime(globalObject, WTFMove(duration), overflow);
         RETURN_IF_EXCEPTION(scope, { });
         return TemporalPlainTime::create(vm, globalObject->plainTimeStructure(), WTFMove(plainTime));
+    }
+
+    if (!itemValue.isString()) {
+        throwTypeError(globalObject, scope, "can only convert to PlainTime from object or string values"_s);
+        return { };
     }
 
     // https://tc39.es/proposal-temporal/#sec-temporal-parsetemporaltimestring

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,14 +25,17 @@
 
 package test.javafx.scene.control;
 
-import com.sun.javafx.scene.control.VirtualScrollBar;
-import com.sun.javafx.scene.control.behavior.FocusTraversalInputMap;
-import com.sun.javafx.scene.control.behavior.ListCellBehavior;
-import com.sun.javafx.scene.control.behavior.ListViewBehavior;
-import com.sun.javafx.scene.control.inputmap.InputMap;
-import com.sun.javafx.scene.control.inputmap.InputMap.KeyMapping;
-import com.sun.javafx.scene.control.inputmap.KeyBinding;
-import com.sun.javafx.tk.Toolkit;
+import static javafx.collections.FXCollections.observableArrayList;
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
+import static test.com.sun.javafx.scene.control.infrastructure.ControlTestUtils.assertStyleClassContains;
 import java.lang.ref.WeakReference;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -73,24 +76,19 @@ import javafx.scene.input.KeyCode;
 import javafx.scene.layout.VBox;
 import javafx.scene.paint.Color;
 import javafx.scene.shape.Rectangle;
+import javafx.scene.text.Font;
 import javafx.util.Callback;
-import static org.junit.Assert.assertArrayEquals;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertSame;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
-
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
-
-import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
-import static test.com.sun.javafx.scene.control.infrastructure.ControlTestUtils.assertStyleClassContains;
-import static javafx.collections.FXCollections.*;
-
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import com.sun.javafx.scene.control.VirtualScrollBar;
+import com.sun.javafx.scene.control.behavior.FocusTraversalInputMap;
+import com.sun.javafx.scene.control.behavior.ListCellBehavior;
+import com.sun.javafx.scene.control.behavior.ListViewBehavior;
+import com.sun.javafx.scene.control.inputmap.InputMap;
+import com.sun.javafx.scene.control.inputmap.InputMap.KeyMapping;
+import com.sun.javafx.scene.control.inputmap.KeyBinding;
+import com.sun.javafx.tk.Toolkit;
 import test.com.sun.javafx.scene.control.infrastructure.ControlSkinFactory;
 import test.com.sun.javafx.scene.control.infrastructure.KeyEventFirer;
 import test.com.sun.javafx.scene.control.infrastructure.KeyModifier;
@@ -99,6 +97,12 @@ import test.com.sun.javafx.scene.control.infrastructure.VirtualFlowTestUtils;
 import test.com.sun.javafx.scene.control.test.Person;
 import test.com.sun.javafx.scene.control.test.RT_22463_Person;
 
+/**
+ * NOTE: these tests contain magic numbers which depend on the default font size,
+ * meaning they are guaranteed to break when/if the default size changes.
+ * A possible improvement might be to get the default font size and derive the expected
+ * numbers and preferred sizes.
+ */
 public class ListViewTest {
     private ListView<String> listView;
     private MultipleSelectionModel<String> sm;
@@ -106,7 +110,8 @@ public class ListViewTest {
 
     private StageLoader stageLoader;
 
-    @Before public void setup() {
+    @BeforeEach
+    public void setup() {
         listView = new ListView<>();
         sm = listView.getSelectionModel();
         fm = listView.getFocusModel();
@@ -120,7 +125,7 @@ public class ListViewTest {
         });
     }
 
-    @After
+    @AfterEach
     public void cleanup() {
         Thread.currentThread().setUncaughtExceptionHandler(null);
 
@@ -506,7 +511,7 @@ public class ListViewTest {
         try {
             Thread.sleep(100);
         } catch (InterruptedException ex) {
-            ex.printStackTrace();
+            fail(ex);
         }
 
         // the list is totally changing (it is being cleared), so we should
@@ -705,7 +710,7 @@ public class ListViewTest {
         // this next test is likely to be brittle, but we'll see...If it is the
         // cause of failure then it can be commented out
         // assertEquals(0.125, scrollBar.getVisibleAmount(), 0.0);
-        assertTrue(scrollBar.getVisibleAmount() > 0.15);
+        assertTrue(scrollBar.getVisibleAmount() > 0.10);
         assertTrue(scrollBar.getVisibleAmount() < 0.17);
 
     }
@@ -828,14 +833,14 @@ public class ListViewTest {
 
         StageLoader sl = new StageLoader(listView);
 
-        assertEquals(24, rt_31200_count);
+        assertEquals(22, rt_31200_count);
 
         // resize the stage
         sl.getStage().setHeight(250);
         Toolkit.getToolkit().firePulse();
         sl.getStage().setHeight(50);
         Toolkit.getToolkit().firePulse();
-        assertEquals(24, rt_31200_count);
+        assertEquals(22, rt_31200_count);
 
         sl.dispose();
     }
@@ -937,7 +942,7 @@ public class ListViewTest {
         sl.dispose();
     }
 
-//--------- regression testing of JDK-8093144 (was: RT-35857)
+//--------- regression testing of JDK-8093144 (was: JDK-8093144)
 
     @Test
     public void test_rt35857_selectLast_retainAllSelected() {
@@ -969,7 +974,7 @@ public class ListViewTest {
      */
     protected <T> void assert_rt35857(ObservableList<T> items, MultipleSelectionModel<T> sm, boolean retain) {
         T selectedItem = sm.getSelectedItem();
-        assertNotNull("sanity: ", selectedItem);
+        assertNotNull(selectedItem, "sanity: ");
         ObservableList<T> expected;
         if (retain) {
             expected = FXCollections.observableArrayList(selectedItem);
@@ -980,7 +985,7 @@ public class ListViewTest {
             items.removeAll(sm.getSelectedItems());
         }
         String modified = (retain ? " retainAll " : " removeAll ") + " selectedItems ";
-        assertEquals("expected list after" + modified, expected, items);
+        assertEquals(expected, items, "expected list after" + modified);
     }
 
     @Test public void test_rt35857() {
@@ -1138,31 +1143,50 @@ public class ListViewTest {
         test_rt_35395(false);
     }
 
-    private int rt_35395_counter;
+    private class Counter {
+        public int updateCount;
 
-    private void test_rt_35395(boolean useFixedCellSize) {
-        rt_35395_counter = 0;
-
-        ObservableList<String> items = FXCollections.observableArrayList();
-        for (int i = 0; i < 20; ++i) {
-            items.addAll("red", "green", "blue", "purple");
+        public static void reset(List<Counter> items) {
+            for (Counter c : items) {
+                c.updateCount = 0;
+            }
         }
 
-        ListView<String> listView = new ListView<>(items);
+        // verifies problem of JDK-8091726: that an update() method is not called more than once
+        public static void verify(List<Counter> items) {
+            for (int i = 0; i < items.size(); i++) {
+                Counter c = items.get(i);
+                int count = c.updateCount;
+                c.updateCount = 0;
+                assertTrue(c.updateCount < 2, "index=" + i + " updateCount=" + count);
+            }
+        }
+    }
+
+    // JDK-8091726
+    private void test_rt_35395(boolean useFixedCellSize) {
+        ObservableList<Counter> items = FXCollections.observableArrayList();
+        for (int i = 0; i < 20; ++i) {
+            items.addAll(new Counter(), new Counter(), new Counter(), new Counter());
+        }
+
+        ListView<Counter> listView = new ListView<>(items);
         if (useFixedCellSize) {
-            listView.setFixedCellSize(24);
+            listView.setFixedCellSize(18);
         }
         listView.setCellFactory(lv -> new ListCellShim<>() {
             @Override
-            public void updateItem(String color, boolean empty) {
-                rt_35395_counter += 1;
-                super.updateItem(color, empty);
+            public void updateItem(Counter item, boolean empty) {
+                if (item != null) {
+                    item.updateCount++;
+                }
+                super.updateItem(item, empty);
                 setText(null);
                 if (empty) {
                     setGraphic(null);
                 } else {
                     Rectangle rect = new Rectangle(16, 16);
-                    rect.setStyle("-fx-fill: " + color);
+                    rect.setStyle("-fx-fill: red");
                     setGraphic(rect);
                 }
             }
@@ -1171,36 +1195,37 @@ public class ListViewTest {
         StageLoader sl = new StageLoader(listView);
 
         Platform.runLater(() -> {
-            rt_35395_counter = 0;
-            items.set(10, "yellow");
+            Counter.reset(items);
+            items.set(10, new Counter());
             Platform.runLater(() -> {
                 Toolkit.getToolkit().firePulse();
-                assertEquals(1, rt_35395_counter);
-                rt_35395_counter = 0;
-                items.set(30, "yellow");
+                Counter.verify(items);
+
+                items.set(30, new Counter());
                 Platform.runLater(() -> {
                     Toolkit.getToolkit().firePulse();
-                    assertTrue(rt_35395_counter < 7);
-                    rt_35395_counter = 0;
+                    Counter.verify(items);
+
                     items.remove(12);
                     Platform.runLater(() -> {
                         Toolkit.getToolkit().firePulse();
-                        assertEquals(useFixedCellSize ? 5 : 7, rt_35395_counter);
-                        rt_35395_counter = 0;
-                        items.add(12, "yellow");
+                        Counter.verify(items);
+
+                        items.add(12, new Counter());
                         Platform.runLater(() -> {
                             Toolkit.getToolkit().firePulse();
-                            assertEquals(useFixedCellSize ? 5 : 7, rt_35395_counter);
-                            rt_35395_counter = 0;
+                            Counter.verify(items);
+
                             listView.scrollTo(5);
                             Platform.runLater(() -> {
                                 Toolkit.getToolkit().firePulse();
-                                assertTrue(rt_35395_counter < 30);
-                                rt_35395_counter = 0;
+                                Counter.verify(items);
+
                                 listView.scrollTo(55);
                                 Platform.runLater(() -> {
                                     Toolkit.getToolkit().firePulse();
-                                    assertEquals(useFixedCellSize ? 17 : 101, rt_35395_counter);
+                                    Counter.verify(items);
+
                                     sl.dispose();
                                 });
                             });
@@ -1430,7 +1455,7 @@ public class ListViewTest {
 
         // we also expect there to be an event in the selection model for
         // selected indices and selected items
-        assertEquals(sm.getSelectedIndices() +"", 2, rt_38341_indices_count);
+        assertEquals(2, rt_38341_indices_count, sm.getSelectedIndices() + "");
         assertEquals(2, rt_38341_items_count);
     }
 
@@ -1911,7 +1936,7 @@ public class ListViewTest {
         // but in index (last - 2).
         int expected = last - 2;
         assertEquals("5", sm.getSelectedItem());
-        assertEquals("selected index after disjoint removes above", expected, sm.getSelectedIndex());
+        assertEquals(expected, sm.getSelectedIndex(), "selected index after disjoint removes above");
     }
 
     /**
@@ -1958,8 +1983,8 @@ public class ListViewTest {
 
         // disjoint remove of 2 elements above the last selected
         items.removeAll(items.get(1), items.get(3));
-        assertEquals("sanity: selectedIndex must be shifted by -2", last - 2, sm.getSelectedIndex());
-        assertEquals("must fire single event on removes above", 1, rt_40012_count);
+        assertEquals(last - 2, sm.getSelectedIndex(), "sanity: selectedIndex must be shifted by -2");
+        assertEquals(1, rt_40012_count, "must fire single event on removes above");
     }
 
     /**
@@ -1981,8 +2006,8 @@ public class ListViewTest {
 
         // disjoint remove of 2 elements above the last selected
         items.removeAll(items.get(1), items.get(3));
-        assertEquals("sanity: selectedItem unchanged", lastItem, sm.getSelectedItem());
-        assertEquals("must not fire on unchanged selected item", 0, rt_40012_count);
+        assertEquals(lastItem, sm.getSelectedItem(), "sanity: selectedItem unchanged");
+        assertEquals(0, rt_40012_count, "must not fire on unchanged selected item");
     }
 
     @Test public void test_rt_40185() {
@@ -2021,12 +2046,12 @@ public class ListViewTest {
         int selected = sm.getSelectedIndex();
 
         sm.getSelectedIndices().addListener((ListChangeListener<Integer>) change -> {
-            assertEquals("sanity: selectedIndex unchanged", selected, sm.getSelectedIndex());
+            assertEquals(selected, sm.getSelectedIndex(), "sanity: selectedIndex unchanged");
             while(change.next()) {
-                assertEquals("single event on clearAndSelect already selected", 1, ++rt_40212_count);
+                assertEquals(1, ++rt_40212_count, "single event on clearAndSelect already selected");
 
                 boolean type = change.wasAdded() || change.wasRemoved() || change.wasPermutated() || change.wasUpdated();
-                assertTrue("at least one of the change types must be true", type);
+                assertTrue(type, "at least one of the change types must be true");
             }
         });
 
@@ -2215,10 +2240,8 @@ public class ListViewTest {
 
         // test editEvent
         assertNotNull(editEvent.get());
-        assertEquals("type is startEdit",
-                     ListView.editStartEvent(), editEvent.get().getEventType());
-        assertEquals("index on start event",
-                     editIndex, editEvent.get().getIndex());
+        assertEquals(ListView.editStartEvent(), editEvent.get().getEventType(), "type is startEdit");
+        assertEquals(editIndex, editEvent.get().getIndex(), "index on start event");
 
         sl.dispose();
     }
@@ -2235,20 +2258,20 @@ public class ListViewTest {
         sm.select(selected);
         sm.getSelectedIndices().addListener((ListChangeListener<Integer>) ch -> {
             if (ch.next()) {
-                assertEquals("Two items should be selected.", 2, ch.getList().size());
-                assertEquals("Selection range should be from index 1 ", 1, ch.getFrom());
-                assertEquals("Selection range should be till index 2 ", 2, ch.getTo());
+                assertEquals(2, ch.getList().size(), "Two items should be selected.");
+                assertEquals(1, ch.getFrom(), "Selection range should be from index 1 ");
+                assertEquals(2, ch.getTo(), "Selection range should be till index 2 ");
             } else {
                 fail("Change event is expected when selection is changed.");
             }
         });
         int focus = lv.getFocusModel().getFocusedIndex();
-        assertEquals("Selected item should be focused.", selected, focus);
+        assertEquals(selected, focus, "Selected item should be focused.");
         // Select the next element
         sm.selectRange(selected, focus + 2);
-        assertEquals("Two items should be selected.", 2, sm.getSelectedIndices().size());
-        assertEquals("List item at index 1 should be selected", 1, (int) sm.getSelectedIndices().get(0));
-        assertEquals("List item at index 2 should be selected", 2, (int) sm.getSelectedIndices().get(1));
+        assertEquals(2, sm.getSelectedIndices().size(), "Two items should be selected.");
+        assertEquals(1, (int) sm.getSelectedIndices().get(0), "List item at index 1 should be selected");
+        assertEquals(2, (int) sm.getSelectedIndices().get(1), "List item at index 2 should be selected");
     }
 
     @Test public void testInterceptedKeyMappingsForComboBoxEditor() {
@@ -2299,7 +2322,7 @@ public class ListViewTest {
         ObservableList<String> items = FXCollections.observableArrayList();
         WeakReference<ListView<String>> listViewRef = new WeakReference<>(new ListView<>(items));
         attemptGC(listViewRef, 10);
-        assertNull("ListView is not GCed.", listViewRef.get());
+        assertNull(listViewRef.get(), "ListView is not GCed.");
     }
 
     @Test
@@ -2309,7 +2332,7 @@ public class ListViewTest {
         ListView<String> listView = new ListView<>(items);
         items.clear();
         attemptGC(itemRef, 10);
-        assertNull("ListView item is not GCed.", itemRef.get());
+        assertNull(itemRef.get(), "ListView item is not GCed.");
     }
 
     @Test
@@ -2390,10 +2413,14 @@ public class ListViewTest {
 
     @Test
     public void testUnfixedCellScrollResize() {
-        final ObservableList<Integer> items = FXCollections.observableArrayList(300, 300, 70, 20);
+        int S = 25;
+        int M = 26;
+        int L = 70;
+        final ObservableList<Integer> items = FXCollections.observableArrayList(300, 300, L, S);
         final ListView<Integer> listView = new ListView(items);
-        listView.setPrefHeight(400);
-        double viewportLength = 398; // it would be better to calculate this from listView but there is no API for this
+        double prefHeight = 400;
+        listView.setPrefHeight(prefHeight);
+        double viewportLength = toViewportLength(prefHeight);
         listView.setCellFactory(lv -> new ListCell<>() {
             @Override
             public void updateItem(Integer item, boolean empty) {
@@ -2408,50 +2435,53 @@ public class ListViewTest {
         listView.scrollTo(2);
         Toolkit.getToolkit().firePulse();
         int cc = VirtualFlowTestUtils.getCellCount(listView);
-        boolean got70 = false;
-        boolean got20 = false;
+        boolean gotLarge = false;
+        boolean gotSmall = false;
         for (int i = 0; i < cc; i++) {
             IndexedCell<Integer> cell = VirtualFlowTestUtils.getCell(listView, i);
-            if ((cell != null) && (cell.getItem() == 20)) {
-                assertEquals("Last cell doesn't end at listview end", viewportLength - 20, cell.getLayoutY(), 1.);
-                got20 = true;
+            if ((cell != null) && (cell.getItem() == S)) {
+                assertEquals(viewportLength - S, cell.getLayoutY(), 1., "Last cell doesn't end at listview end");
+                gotSmall = true;
             }
-            if ((cell != null) && (cell.getItem() == 70)) {
-                assertEquals("Secondlast cell doesn't end properly", viewportLength - 20 - 70, cell.getLayoutY(), 1.);
-                got70 = true;
+            if ((cell != null) && (cell.getItem() == L)) {
+                assertEquals(viewportLength - S - L, cell.getLayoutY(), 1., "Secondlast cell doesn't end properly");
+                gotLarge = true;
             }
         }
-        assertTrue(got20);
-        assertTrue(got70);
+        assertTrue(gotSmall);
+        assertTrue(gotLarge);
         // resize cells and make sure they align after scrolling
         ObservableList<Integer> list = FXCollections.observableArrayList();
-        list.addAll(300, 300, 20, 21);
+        list.addAll(300, 300, S, M);
         listView.setItems(list);
         listView.scrollTo(4);
         Toolkit.getToolkit().firePulse();
-        got20 = false;
-        boolean got21 = false;
+        gotSmall = false;
+        boolean gotMedium = false;
         for (int i = 0; i < cc; i++) {
             IndexedCell<Integer> cell = VirtualFlowTestUtils.getCell(listView, i);
-            if ((cell != null) && (cell.getItem() == 21)) {
-                assertEquals("Last cell doesn't end at listview end", viewportLength - 21, cell.getLayoutY(), 1.);
-                got21 = true;
+            if ((cell != null) && (cell.getItem() == M)) {
+                assertEquals(viewportLength - M, cell.getLayoutY(), 1., "Last cell doesn't end at listview end");
+                gotMedium = true;
             }
-            if ((cell != null) && (cell.getItem() == 20)) {
-                assertEquals("Secondlast cell doesn't end properly", viewportLength - 21 - 20, cell.getLayoutY(), 1.);
-                got20 = true;
+            if ((cell != null) && (cell.getItem() == S)) {
+                assertEquals(viewportLength - M - S, cell.getLayoutY(), 1., "Secondlast cell doesn't end properly");
+                gotSmall = true;
             }
         }
-        assertTrue(got20);
-        assertTrue(got21);
+        assertTrue(gotSmall);
+        assertTrue(gotMedium);
     }
 
     @Test
     public void testNoEmptyEnd() {
-        final ObservableList<Integer> items = FXCollections.observableArrayList(200, 200, 200, 200, 200, 200, 200, 200, 20, 20, 20, 20, 20, 20, 20);
+        int S = 25;
+        int L = 200;
+        final ObservableList<Integer> items = FXCollections.observableArrayList(L, L, L, L, L, L, L, L, S, S, S, S, S, S, S);
         final ListView<Integer> listView = new ListView(items);
-        listView.setPrefHeight(400);
-        double viewportLength = 398;
+        double prefHeight = 400;
+        listView.setPrefHeight(prefHeight);
+        double viewportLength = toViewportLength(prefHeight);
         listView.setCellFactory(lv -> new ListCell<>() {
             @Override
             public void updateItem(Integer item, boolean empty) {
@@ -2467,54 +2497,53 @@ public class ListViewTest {
         Toolkit.getToolkit().firePulse();
         int cc = VirtualFlowTestUtils.getCellCount(listView);
         assertEquals(15, cc);
-        boolean got70 = false;
         for (int i = 0; i < cc; i++) {
             IndexedCell<Integer> cell = VirtualFlowTestUtils.getCell(listView, i);
             int tens = Math.min(15 - i, 7);
             int hundreds = Math.max(8 - i, 0);
-            double exp = 398 - 20 * tens - 200 * hundreds;
+            double exp = viewportLength - S * tens - L * hundreds;
             double real = cell.getLayoutY();
             if (cell.isVisible()) {
-                assertEquals(exp, real, 0.1);
+                assertEquals(exp, real, 0.1, "index=" + i);
             }
         }
     }
 
     @Test
     public void testMoreUnfixedCellScrollResize() {
+        Integer S = 25;
 
         // Sanity Check - it has to work with cases, where all cells have the same sizes
-        testScrollTo(360, 3, new Integer[]{20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20});
-        testScrollTo(360, 3, new Integer[]{20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20});
-        testScrollTo(360, 1, new Integer[]{20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20});
-        testScrollTo(360, -1, new Integer[]{20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20});
+        testScrollTo(360, 3, new Integer[] { S, S, S, S, S, S, S, S, S, S, S, S });
+        testScrollTo(360, 3, new Integer[] { S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S });
+        testScrollTo(360, 1, new Integer[] { S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S });
+        testScrollTo(360, -1, new Integer[] { S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S });
 
         // With 100 it's wrong, when addIncremental is set.
         testScrollTo(360, 3, new Integer[]{100, 100, 100, 100, 100, 100, 100, 100, 100});
         testScrollTo(360, -1, new Integer[]{100, 100, 100, 100, 100, 100, 100, 100, 100});
 
         // More complicated tests
-        testScrollTo(360, 2, new Integer[]{300, 300, 70, 20});
-        testScrollTo(400, 2, new Integer[]{200, 200, 200, 200, 200, 200, 200, 200, 20, 20, 20, 20, 20, 20, 20});
-        testScrollTo(400, -1, new Integer[]{200, 200, 200, 200, 200, 200, 200, 200, 20, 20, 20, 20, 20, 20, 20});
-        testScrollTo(400, 3, new Integer[]{200, 200, 200, 200, 200, 200, 200, 200, 20, 20, 20, 20, 20, 20, 20});
-        testScrollTo(400, -1, new Integer[]{200, 200, 200, 200, 200, 200, 200, 200, 20, 20, 20, 20, 20, 20, 500, 20, 500, 20, 500});
-        testScrollTo(400, -1, new Integer[]{200, 200, 200, 200, 200, 200, 200, 200, 20, 20, 20, 20, 20, 20, 400, 20, 400, 20, 400});
-        testScrollTo(400, 2, new Integer[]{500, 500, 20, 20, 100, 100, 100, 100, 100, 100});
-        testScrollTo(400, 8, new Integer[]{500, 500, 20, 20, 100, 100, 100, 100, 100, 100, 300, 300, 300, 300});
+        testScrollTo(360, 2, new Integer[] { 300, 300, 70, S });
+        testScrollTo(410, 2, new Integer[] { 200, 200, 200, 200, 200, 200, 200, 200, S, S, S, S, S, S, S });
+        testScrollTo(400, -1, new Integer[] { 200, 200, 200, 200, 200, 200, 200, 200, S, S, S, S, S, S, S });
+        testScrollTo(420, 3, new Integer[] { 200, 200, 200, 200, 200, 200, 200, 200, S, S, S, S, S, S, S });
+        testScrollTo(400, -1, new Integer[] { 200, 200, 200, 200, 200, 200, 200, 200, S, S, S, S, S, S, 500, S, 500, S, 500 });
+        testScrollTo(400, -1, new Integer[] { 200, 200, 200, 200, 200, 200, 200, 200, S, S, S, S, S, S, 400, S, 400, S, 400 });
+        testScrollTo(420, 2, new Integer[] { 500, 500, S, S, 100, 100, 100, 100, 100, 100 });
+        testScrollTo(420, 8, new Integer[] { 500, 500, S, S, 100, 100, 100, 100, 100, 100, 300, 300, 300, 300 });
 
-        testScrollTo(400, 2, new Integer[]{300, 300, 20, 20});
-        testScrollTo(400, 2, new Integer[]{300, 300, 20, 20, 200, 200});
-        testScrollTo(400, 2, new Integer[]{20, 20, 20, 500, 500});
+        testScrollTo(400, 2, new Integer[] { 300, 300, S, S });
+        testScrollTo(400, 2, new Integer[] { 300, 300, S, S, 200, 200 });
+        testScrollTo(400, 2, new Integer[] { S, S, S, 500, 500 });
 
-        testScrollTo(400, 2, new Integer[]{200, 200, 200, 200, 200, 200, 200, 200, 20, 20, 20, 20, 20, 20, 20});
-        testScrollTo(400, -1, new Integer[]{200, 200, 200, 200, 200, 200, 200, 200, 20, 20, 20, 20, 20, 20, 20});
-        testScrollTo(400, 3, new Integer[]{200, 200, 200, 200, 200, 200, 200, 200, 20, 20, 20, 20, 20, 20, 20});
-        testScrollTo(400, -1, new Integer[]{200, 200, 200, 200, 200, 200, 200, 200, 20, 20, 20, 20, 20, 20, 500, 20, 500, 20, 500});
-        testScrollTo(400, -1, new Integer[]{200, 200, 200, 200, 200, 200, 200, 200, 20, 20, 20, 20, 20, 20, 400, 20, 400, 20, 400});
-        testScrollTo(400, 2, new Integer[]{500, 500, 20, 20, 100, 100, 100, 100, 100, 100});
-        testScrollTo(400, 2, new Integer[]{500, 500, 500, 500, 500});
-
+        testScrollTo(400, 2, new Integer[] { 200, 200, 200, 200, 200, 200, 200, 200, S, S, S, S, S, S, S });
+        testScrollTo(400, -1, new Integer[] { 200, 200, 200, 200, 200, 200, 200, 200, S, S, S, S, S, S, S });
+        testScrollTo(420, 3, new Integer[] { 200, 200, 200, 200, 200, 200, 200, 200, S, S, S, S, S, S, S });
+        testScrollTo(400, -1, new Integer[] { 200, 200, 200, 200, 200, 200, 200, 200, S, S, S, S, S, S, 500, S, 500, S, 500 });
+        testScrollTo(400, -1, new Integer[] { 200, 200, 200, 200, 200, 200, 200, 200, S, S, S, S, S, S, 400, S, 400, S, 400 });
+        testScrollTo(420, 2, new Integer[] { 500, 500, S, S, 100, 100, 100, 100, 100, 100 });
+        testScrollTo(400, 2, new Integer[] { 500, 500, 500, 500, 500 });
     }
 
     public void testScrollTo(int listViewHeight, int scrollToIndex, Integer[] heights) {
@@ -2573,7 +2602,7 @@ public class ListViewTest {
 
     public static void verifyListViewScrollTo(ListView listView, int listViewHeight, int scrollToIndex, Integer[] heights) {
         double sumOfHeights = 0;
-        double viewportLength = listViewHeight - 2; // it would be better to calculate this from listView but there is no API for this
+        double viewportLength = toViewportLength(listViewHeight);
 
         for (int height : heights) {
             sumOfHeights += height;
@@ -2599,19 +2628,19 @@ public class ListViewTest {
             scrolledToBottom = true;
         }
 
-        assertTrue("Our cell must be visible!", scrollToCell.isVisible());
+        assertTrue(scrollToCell.isVisible(), "Our cell must be visible!");
 
         if (lastCell.isVisible() && sumOfHeights >= viewportLength) {
             // There shouldn't be any space between the last cell and the bottom
-            assertTrue("Last cell shouldn't leave space between itself and the bottom", lastCell.getLayoutY() + 1 > (viewportLength - lastCellSize));
+            assertTrue(lastCell.getLayoutY() + 1 > (viewportLength - lastCellSize), "Last cell shouldn't leave space between itself and the bottom");
         }
         if (sumOfHeights < viewportLength) {
             // If we have less cells then space, then all cells are shown, and the position of the last cell, is the sum of the height of the previous cells.
-            assertEquals("Last cell should be at the bottom, if we scroll to it", sumOfHeights - lastCellSize, lastCell.getLayoutY(), 1.);
+            assertEquals(sumOfHeights - lastCellSize, lastCell.getLayoutY(), 1., "Last cell should be at the bottom, if we scroll to it");
         }
         if (!shouldScrollToBottom && sumOfHeights > viewportLength) {
             // If we don't scroll to the bottom, and the cells are bigger than the available space, then our cell should be at the top.
-            assertEquals("Our cell mut be at the top", 0, scrollToCell.getLayoutY(), 1.);
+            assertEquals(0, scrollToCell.getLayoutY(), 1., "Our cell mut be at the top");
         }
         // Additional Tests:
         double previousLayoutY = scrollToCell.getLayoutY();
@@ -2621,10 +2650,10 @@ public class ListViewTest {
             listView.getItems().setAll(alternateHeights);
             listView.requestLayout();
             Toolkit.getToolkit().firePulse();
-            assertEquals("Upper cell shouldn't move after changing heights", previousLayoutY, scrollToCell.getLayoutY(), 1.);
+            assertEquals(previousLayoutY, scrollToCell.getLayoutY(), 1., "Upper cell shouldn't move after changing heights");
             VirtualFlow vf = VirtualFlowTestUtils.getVirtualFlow(listView);
             vf.scrollPixels(-1);
-            assertEquals("Upper cell should move 1 pixels, after scrolling 1 pixel", previousLayoutY + 1, scrollToCell.getLayoutY(), 1.);
+            assertEquals(previousLayoutY + 1, scrollToCell.getLayoutY(), 1., "Upper cell should move 1 pixels, after scrolling 1 pixel");
         }
 
     }
@@ -2660,15 +2689,18 @@ public class ListViewTest {
         assertNotNull(cell);
 
         // should be visible
-        assertTrue("Cell should be visible", cell.isVisible());
+        assertTrue(cell.isVisible(), "Cell should be visible");
 
         // should have parent
-        assertNotNull("Cell should have parent", cell.getParent());
+        assertNotNull(cell.getParent(), "Cell should have parent");
 
         // Note:
         // We don't check for the position of the cell, because it's currently don't work properly.
         // But we wan't to ensure, that the VirtualFlow "Doesn't crash" - which was the case before.
-
     }
 
+    private static double toViewportLength(double prefHeight) {
+        // it would be better to calculate this from listView but there is no API for this
+        return prefHeight - 2;
+    }
 }

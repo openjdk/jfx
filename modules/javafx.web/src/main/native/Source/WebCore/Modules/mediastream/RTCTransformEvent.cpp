@@ -27,11 +27,11 @@
 
 #if ENABLE(WEB_RTC)
 
-#include <wtf/IsoMallocInlines.h>
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
-WTF_MAKE_ISO_ALLOCATED_IMPL(RTCTransformEvent);
+WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(RTCTransformEvent);
 
 Ref<RTCTransformEvent> RTCTransformEvent::create(const AtomString& type, Ref<RTCRtpScriptTransformer>&& transformer, IsTrusted isTrusted)
 {
@@ -39,7 +39,7 @@ Ref<RTCTransformEvent> RTCTransformEvent::create(const AtomString& type, Ref<RTC
 }
 
 RTCTransformEvent::RTCTransformEvent(const AtomString& type, Ref<RTCRtpScriptTransformer>&& transformer, IsTrusted isTrusted)
-    : Event(type, { }, isTrusted)
+    : Event(EventInterfaceType::RTCTransformEvent, type, { }, isTrusted)
     , m_transformer(WTFMove(transformer))
 {
 }
@@ -47,11 +47,6 @@ RTCTransformEvent::RTCTransformEvent(const AtomString& type, Ref<RTCRtpScriptTra
 RTCRtpScriptTransformer& RTCTransformEvent::transformer()
 {
     return m_transformer.get();
-}
-
-EventInterface RTCTransformEvent::eventInterface() const
-{
-    return RTCTransformEventInterfaceType;
 }
 
 } // namespace WebCore

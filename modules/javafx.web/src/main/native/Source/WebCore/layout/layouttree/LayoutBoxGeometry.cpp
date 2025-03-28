@@ -26,19 +26,18 @@
 #include "config.h"
 #include "LayoutBoxGeometry.h"
 
-#include <wtf/IsoMallocInlines.h>
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 namespace Layout {
 
-WTF_MAKE_ISO_ALLOCATED_IMPL(BoxGeometry);
+WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(BoxGeometry);
 
 BoxGeometry::BoxGeometry(const BoxGeometry& other)
     : m_topLeft(other.m_topLeft)
     , m_contentBoxWidth(other.m_contentBoxWidth)
     , m_contentBoxHeight(other.m_contentBoxHeight)
-    , m_horizontalMargin(other.m_horizontalMargin)
-    , m_verticalMargin(other.m_verticalMargin)
+    , m_margin(other.m_margin)
     , m_border(other.m_border)
     , m_padding(other.m_padding)
     , m_verticalSpaceForScrollbar(other.m_verticalSpaceForScrollbar)

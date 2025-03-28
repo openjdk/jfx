@@ -56,20 +56,25 @@ public:
 
     unsigned char bidiLevel() const { return m_inlineBox->bidiLevel(); }
 
-    bool hasHyphen() const { return inlineTextBox()->hasHyphen(); }
+    bool hasHyphen() const { return false; }
     StringView originalText() const { return StringView(inlineTextBox()->renderer().text()).substring(inlineTextBox()->start(), inlineTextBox()->len()); }
+    size_t lineIndex() const
+    {
+        size_t precedingLines = 0;
+        for (auto* rootBox = rootInlineBox().prevRootBox(); rootBox; rootBox = rootBox->prevRootBox())
+            ++precedingLines;
+        return precedingLines;
+    }
     unsigned start() const { return inlineTextBox()->start(); }
     unsigned end() const { return inlineTextBox()->end(); }
     unsigned length() const { return inlineTextBox()->len(); }
 
     TextBoxSelectableRange selectableRange() const { return inlineTextBox()->selectableRange(); }
 
-    TextRun textRun(TextRunMode mode = TextRunMode::Painting) const
+    TextRun textRun(TextRunMode = TextRunMode::Painting) const
     {
-        bool ignoreCombinedText = mode == TextRunMode::Editing;
-        bool ignoreHyphen = mode == TextRunMode::Editing;
         if (isText())
-        return inlineTextBox()->createTextRun(ignoreCombinedText, ignoreHyphen);
+            return inlineTextBox()->createTextRun();
         ASSERT_NOT_REACHED();
         return TextRun { emptyString() };
     }
@@ -77,6 +82,11 @@ public:
     const RenderObject& renderer() const
     {
         return m_inlineBox->renderer();
+    }
+
+    bool hasRenderer() const
+    {
+        return true;
     }
 
     const RenderBlockFlow& formattingContextRoot() const
@@ -129,7 +139,7 @@ public:
     TextDirection direction() const { return bidiLevel() % 2 ? TextDirection::RTL : TextDirection::LTR; }
     bool isFirstLine() const { return !rootInlineBox().prevRootBox(); }
 
-    bool operator==(const BoxLegacyPath& other) const { return m_inlineBox == other.m_inlineBox; }
+    friend bool operator==(BoxLegacyPath, BoxLegacyPath) = default;
 
     bool atEnd() const { return !m_inlineBox; }
 

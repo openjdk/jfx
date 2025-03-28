@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -35,13 +35,14 @@ import java.util.Set;
 import javafx.scene.Group;
 import javafx.scene.Node;
 import javafx.scene.ParentShim;
-import org.junit.Test;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertSame;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+
+import org.junit.jupiter.api.Test;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 /**
  * Tests various aspects of Group.
@@ -304,7 +305,7 @@ public class GroupTest {
         try {
             ParentShim.getChildren(group2).add(node);
         } catch (Throwable t) {
-            assertNull("unexpected exception", t);
+            assertNull(t, "unexpected exception");
         }
 
         assertEquals(0, ParentShim.getChildren(group1).size());
@@ -374,7 +375,7 @@ public class GroupTest {
         try {
             ParentShim.getChildren(group2).add(node);
         } catch(Throwable t) {
-            assertNull("unexpected exception", t);
+            assertNull(t, "unexpected exception");
         }
 
         assertEquals(0, ParentShim.getChildren(group1).size());
@@ -426,7 +427,7 @@ public class GroupTest {
         try {
             ParentShim.getChildren(group2).add(node);
         } catch (Throwable t) {
-            assertNull("unexpected exception", t);
+            assertNull(t, "unexpected exception");
         }
 
         assertEquals(0, ParentShim.getChildren(group1).size());

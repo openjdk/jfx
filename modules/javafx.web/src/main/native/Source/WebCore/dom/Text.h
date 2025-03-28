@@ -30,7 +30,8 @@ namespace WebCore {
 class RenderText;
 
 class Text : public CharacterData {
-    WTF_MAKE_ISO_ALLOCATED(Text);
+    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(Text);
+    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(Text);
 public:
     static const unsigned defaultLengthLimit = 1 << 16;
 
@@ -58,14 +59,14 @@ public:
     String debugDescription() const final;
 
 protected:
-    Text(Document& document, String&& data, ConstructionType type)
-        : CharacterData(document, WTFMove(data), type)
+    Text(Document& document, String&& data, NodeType type, OptionSet<TypeFlag> typeFlags)
+        : CharacterData(document, WTFMove(data), type, typeFlags | TypeFlag::IsText)
     {
+        ASSERT(!isContainerNode());
     }
 
 private:
     String nodeName() const override;
-    NodeType nodeType() const override;
     Ref<Node> cloneNodeInternal(Document&, CloningOperation) override;
     void setDataAndUpdate(const String&, unsigned offsetOfReplacedData, unsigned oldLength, unsigned newLength, UpdateLiveRanges) final;
 

@@ -25,10 +25,10 @@
 
 #pragma once
 
-#if ENABLE(WEBASSEMBLY_B3JIT)
+#if ENABLE(WEBASSEMBLY_BBQJIT)
 
 #include "CompilationResult.h"
-#include "WasmB3IRGenerator.h"
+#include "WasmCallee.h"
 #include "WasmEntryPlan.h"
 #include "WasmModuleInformation.h"
 #include "WasmTierUpCount.h"
@@ -73,11 +73,10 @@ public:
 
     bool parseAndValidateModule()
     {
-        return Base::parseAndValidateModule(m_source.data(), m_source.size());
+        return Base::parseAndValidateModule(m_source.span());
     }
 
     static FunctionAllowlist& ensureGlobalBBQAllowlist();
-    static bool planGeneratesLoopOSREntrypoints(const ModuleInformation&);
 
 private:
     bool prepareImpl() final;
@@ -103,4 +102,4 @@ private:
 
 } } // namespace JSC::Wasm
 
-#endif // ENABLE(WEBASSEMBLY_B3JIT)
+#endif // ENABLE(WEBASSEMBLY_BBQJIT)

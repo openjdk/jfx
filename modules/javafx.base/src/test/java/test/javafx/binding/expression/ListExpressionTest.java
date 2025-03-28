@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -36,11 +36,11 @@ import javafx.beans.property.SimpleListProperty;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import test.com.sun.javafx.binding.ErrorLoggingUtiltity;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
 
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.*;
 
 public class ListExpressionTest {
 
@@ -54,7 +54,7 @@ public class ListExpressionTest {
     private ListProperty<Integer> op1;
     private ListProperty<Integer> op2;
 
-    @Before
+    @BeforeEach
     public void setUp() {
         opNull = new SimpleListProperty<>();
         opEmpty = new SimpleListProperty<>(FXCollections.<Integer>observableArrayList());
@@ -62,7 +62,7 @@ public class ListExpressionTest {
         op2 = new SimpleListProperty<>(FXCollections.observableArrayList(data2_0, data2_1));
     }
 
-    @BeforeClass
+    @BeforeAll
     public static void setUpClass() {
         ErrorLoggingUtiltity.reset();
     }
@@ -92,10 +92,13 @@ public class ListExpressionTest {
         ErrorLoggingUtiltity.checkFine(IndexOutOfBoundsException.class);
     }
 
-    @Test(expected = IllegalArgumentException.class)
+    @Test
     public void testValueAt_Constant_NegativeIndex() {
-        op1.valueAt(-1);
+        assertThrows(IllegalArgumentException.class, () -> {
+            op1.valueAt(-1);
+        });
     }
+
 
     @Test
     public void testValueAt_Variable() {

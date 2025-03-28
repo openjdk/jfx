@@ -28,6 +28,8 @@ package javafx.css;
 import com.sun.javafx.css.TransitionMediator;
 import com.sun.javafx.css.TransitionDefinition;
 import com.sun.javafx.scene.NodeHelper;
+import com.sun.javafx.tk.Toolkit;
+import com.sun.javafx.util.Utils;
 import javafx.beans.property.LongPropertyBase;
 import javafx.beans.value.ObservableValue;
 import javafx.scene.Node;
@@ -69,22 +71,21 @@ public abstract class StyleableLongProperty
     /** {@inheritDoc} */
     @Override
     public void applyStyle(StyleOrigin origin, Number v) {
-        // If this.origin == null, we're setting the value for the first time.
-        // No transition should be started in this case.
-        TransitionDefinition transition = this.origin != null && getBean() instanceof Node node ?
+        // If the value is applied for the first time, we don't start a transition.
+        TransitionDefinition transition = getBean() instanceof Node node && !NodeHelper.isInitialCssState(node) ?
             NodeHelper.findTransitionDefinition(node, getCssMetaData()) : null;
 
         long newValue = v != null ? v.longValue() : 0;
 
         if (transition == null) {
             set(newValue);
-        } else if (mediator == null || mediator.newValue != newValue) {
+        } else if (mediator == null || mediator.endValue != newValue) {
             // We only start a new transition if the new target value is different from the target
             // value of the existing transition. This scenario can sometimes happen when a CSS value
             // is redundantly applied, which would cause unexpected animations if we allowed the new
             // transition to interrupt the existing transition.
             mediator = new TransitionMediatorImpl(get(), newValue);
-            mediator.run(transition);
+            mediator.run(transition, getCssMetaData().getProperty(), Toolkit.getToolkit().getPrimaryTimer().nanos());
         }
 
         this.origin = origin;
@@ -94,59 +95,70 @@ public abstract class StyleableLongProperty
     @Override
     public void bind(ObservableValue<? extends Number> observable) {
         super.bind(observable);
-        origin = StyleOrigin.USER;
-
-        // Calling the 'bind' method always cancels a transition timer.
-        if (mediator != null) {
-            mediator.cancel(true);
-        }
+        onUserChange();
     }
 
     /** {@inheritDoc} */
     @Override
     public void set(long v) {
         super.set(v);
-
-        if (mediator == null || mediator.cancel(false)) {
-            origin = StyleOrigin.USER;
-        }
+        onUserChange();
     }
 
     /** {@inheritDoc} */
     @Override
     public StyleOrigin getStyleOrigin() { return origin; }
 
-    private StyleOrigin origin = null;
-    private TransitionMediatorImpl mediator = null;
+    private void onUserChange() {
+        origin = StyleOrigin.USER;
+
+        if (mediator != null) {
+            mediator.cancel();
+        }
+    }
+
+    private StyleOrigin origin;
+    private TransitionMediatorImpl mediator;
 
     private final class TransitionMediatorImpl extends TransitionMediator {
-        private final long oldValue;
-        private final long newValue;
+        private final long startValue;
+        private final long endValue;
+        private long reversingAdjustedStartValue;
 
-        public TransitionMediatorImpl(long oldValue, long newValue) {
-            this.oldValue = oldValue;
-            this.newValue = newValue;
+        public TransitionMediatorImpl(long startValue, long endValue) {
+            this.startValue = startValue;
+            this.endValue = endValue;
+            this.reversingAdjustedStartValue = startValue;
         }
 
         @Override
         public void onUpdate(double progress) {
-            set(progress < 1 ? oldValue + (long)((newValue - oldValue) * progress) : newValue);
+            // Longs are interpolated in real number space and rounded to the nearest long.
+            long diff = endValue - startValue;
+            long result = startValue + Math.round(progress * diff);
+            StyleableLongProperty.super.set(progress < 1 ? Utils.clamp(startValue, result, endValue) : endValue);
         }
 
         @Override
         public void onStop() {
-            // When the transition is cancelled or completed, we clear the reference to this mediator.
-            // However, when this mediator was cancelled by a reversing transition, the 'mediator' field
-            // refers to the reversing mediator, and not to this mediator. We need to be careful to only
-            // clear references to this mediator.
-            if (mediator == this) {
-                mediator = null;
-            }
+            mediator = null;
         }
 
         @Override
         public StyleableProperty<?> getStyleableProperty() {
             return StyleableLongProperty.this;
+        }
+
+        @Override
+        public boolean updateReversingAdjustedStartValue(TransitionMediator existingMediator) {
+            var mediator = (TransitionMediatorImpl)existingMediator;
+
+            if (mediator.reversingAdjustedStartValue == endValue) {
+                reversingAdjustedStartValue = mediator.endValue;
+                return true;
+            }
+
+            return false;
         }
     }
 }

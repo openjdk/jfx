@@ -26,9 +26,10 @@
 #include "config.h"
 #include "Logging.h"
 
-#include <wtf/text/WTFString.h>
-
 #if !LOG_DISABLED || !RELEASE_LOG_DISABLED
+
+#include <span>
+#include <wtf/text/MakeString.h>
 
 namespace PAL {
 
@@ -38,11 +39,11 @@ String logLevelString()
     if (char* logEnv = getenv("WEBKIT_DEBUG")) {
 
 #if defined(NDEBUG)
-        WTFLogAlways("WEBCORE_DEBUG is not empty, but this is a release build. Notice that many log messages will only appear in a debug build.");
+        WTFLogAlways("WEBKIT_DEBUG is not empty, but this is a release build. Notice that many log messages will only appear in a debug build.");
 #endif
 
         // To disable logging notImplemented set the DISABLE_NI_WARNING environment variable to 1.
-        return makeString("NotYetImplemented,"_s, logEnv);
+        return makeString("NotYetImplemented,"_s, span(logEnv));
     }
 #endif
     return String();

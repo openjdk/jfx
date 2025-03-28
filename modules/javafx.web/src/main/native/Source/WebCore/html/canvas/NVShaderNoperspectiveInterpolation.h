@@ -26,16 +26,18 @@
 #pragma once
 
 #include "WebGLExtension.h"
+#include "WebGLRenderingContextBase.h"
+#include <wtf/Noncopyable.h>
+#include <wtf/RefCounted.h>
+#include <wtf/TZoneMalloc.h>
 
 namespace WebCore {
 
-class NVShaderNoperspectiveInterpolation final : public WebGLExtension {
-    WTF_MAKE_ISO_ALLOCATED(NVShaderNoperspectiveInterpolation);
+class NVShaderNoperspectiveInterpolation final : public WebGLExtension<WebGLRenderingContextBase> {
+    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(NVShaderNoperspectiveInterpolation);
 public:
     explicit NVShaderNoperspectiveInterpolation(WebGLRenderingContextBase&);
-    virtual ~NVShaderNoperspectiveInterpolation();
-
-    ExtensionName getName() const override;
+    ~NVShaderNoperspectiveInterpolation();
 
     static bool supported(GraphicsContextGL&);
 };

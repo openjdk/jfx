@@ -41,14 +41,14 @@
 #include "IdTargetObserverRegistry.h"
 #include "NodeRareData.h"
 #include "TypedElementDescendantIteratorInlines.h"
-#include <wtf/IsoMallocInlines.h>
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
-WTF_MAKE_ISO_ALLOCATED_IMPL(HTMLDataListElement);
+WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(HTMLDataListElement);
 
 inline HTMLDataListElement::HTMLDataListElement(const QualifiedName& tagName, Document& document)
-    : HTMLElement(tagName, document)
+    : HTMLElement(tagName, document, TypeFlag::HasDidMoveToNewDocument)
 {
     document.incrementDataListElementCount();
 }
@@ -75,9 +75,19 @@ Ref<HTMLCollection> HTMLDataListElement::options()
     return ensureRareData().ensureNodeLists().addCachedCollection<GenericCachedHTMLCollection<CollectionTypeTraits<CollectionType::DataListOptions>::traversalType>>(*this, CollectionType::DataListOptions);
 }
 
+void HTMLDataListElement::childrenChanged(const ChildChange& change)
+{
+    HTMLElement::childrenChanged(change);
+    if (change.source == ChildChange::Source::API)
+        optionElementChildrenChanged();
+}
+
 void HTMLDataListElement::optionElementChildrenChanged()
 {
-    treeScope().idTargetObserverRegistry().notifyObservers(getIdAttribute());
+    if (auto& id = getIdAttribute(); !id.isEmpty()) {
+        if (CheckedPtr observerRegistry = treeScope().idTargetObserverRegistryIfExists())
+            observerRegistry->notifyObservers(id);
+    }
 }
 
 auto HTMLDataListElement::suggestions() const -> SuggestionRange

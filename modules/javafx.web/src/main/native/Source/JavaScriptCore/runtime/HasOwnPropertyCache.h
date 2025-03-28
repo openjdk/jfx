@@ -28,21 +28,22 @@
 #include "JSObject.h"
 #include "PropertySlot.h"
 #include "Structure.h"
+#include <wtf/UniqueRef.h>
 
 namespace JSC {
 
 DECLARE_ALLOCATOR_WITH_HEAP_IDENTIFIER(HasOwnPropertyCache);
 
-class HasOwnPropertyCache {
+class alignas(8) HasOwnPropertyCache {
     static const uint32_t size = 2 * 1024;
     static_assert(hasOneBitSet(size), "size should be a power of two.");
 public:
     static const uint32_t mask = size - 1;
 
     struct Entry {
-        static ptrdiff_t offsetOfStructureID() { return OBJECT_OFFSETOF(Entry, structureID); }
-        static ptrdiff_t offsetOfImpl() { return OBJECT_OFFSETOF(Entry, impl); }
-        static ptrdiff_t offsetOfResult() { return OBJECT_OFFSETOF(Entry, result); }
+        static constexpr ptrdiff_t offsetOfStructureID() { return OBJECT_OFFSETOF(Entry, structureID); }
+        static constexpr ptrdiff_t offsetOfImpl() { return OBJECT_OFFSETOF(Entry, impl); }
+        static constexpr ptrdiff_t offsetOfResult() { return OBJECT_OFFSETOF(Entry, result); }
 
         RefPtr<UniquedStringImpl> impl;
         StructureID structureID;
@@ -57,12 +58,12 @@ public:
         HasOwnPropertyCacheMalloc::free(cache);
     }
 
-    static HasOwnPropertyCache* create()
+    static UniqueRef<HasOwnPropertyCache> create()
     {
         size_t allocationSize = sizeof(Entry) * size;
         HasOwnPropertyCache* result = static_cast<HasOwnPropertyCache*>(HasOwnPropertyCacheMalloc::malloc(allocationSize));
         result->clearBuffer();
-        return result;
+        return UniqueRef { *result };
     }
 
     ALWAYS_INLINE static uint32_t hash(StructureID structureID, UniquedStringImpl* impl)
@@ -128,12 +129,5 @@ private:
             new (&buffer[i]) Entry();
     }
 };
-
-ALWAYS_INLINE HasOwnPropertyCache& VM::ensureHasOwnPropertyCache()
-{
-    if (UNLIKELY(!m_hasOwnPropertyCache))
-        m_hasOwnPropertyCache = std::unique_ptr<HasOwnPropertyCache>(HasOwnPropertyCache::create());
-    return *m_hasOwnPropertyCache;
-}
 
 } // namespace JSC

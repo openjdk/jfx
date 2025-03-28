@@ -263,6 +263,8 @@ GOBJECT_AVAILABLE_IN_ALL
 const gchar *         g_value_get_string    (const GValue *value);
 GOBJECT_AVAILABLE_IN_ALL
 gchar*            g_value_dup_string    (const GValue *value);
+GOBJECT_AVAILABLE_IN_2_80
+gchar*            g_value_steal_string  (GValue *value);
 GOBJECT_AVAILABLE_IN_ALL
 void              g_value_set_pointer   (GValue       *value,
              gpointer      v_pointer);

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2016 Apple Inc. All rights reserved.
+ * Copyright (C) 2016-2023 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -27,64 +27,43 @@
 
 #if ENABLE(MEDIA_STREAM)
 
+#include "JSMeteringMode.h"
 #include "RealtimeMediaSourceCapabilities.h"
 
 namespace WebCore {
 
-static DoubleRange capabilityDoubleRange(const CapabilityValueOrRange& value)
+static DoubleRange capabilityDoubleRange(const DoubleCapabilityRange& value)
 {
-    DoubleRange range;
-    switch (value.type()) {
-    case CapabilityValueOrRange::Double:
-        range.min = value.value().asDouble;
-        range.max = range.min;
-        break;
-    case CapabilityValueOrRange::DoubleRange: {
-        auto min = value.rangeMin().asDouble;
-        auto max = value.rangeMax().asDouble;
+    auto min = value.min();
+    auto max = value.max();
 
         ASSERT(min != std::numeric_limits<double>::min() || max != std::numeric_limits<double>::max());
 
+    DoubleRange range;
         if (min != std::numeric_limits<double>::min())
             range.min = min;
         if (max != std::numeric_limits<double>::max())
             range.max = max;
-        break;
-    }
-    case CapabilityValueOrRange::Undefined:
-    case CapabilityValueOrRange::ULong:
-    case CapabilityValueOrRange::ULongRange:
-        ASSERT_NOT_REACHED();
-        break;
-    }
-    return range;
+
+        return range;
 }
 
-static LongRange capabilityIntRange(const CapabilityValueOrRange& value)
+static LongRange capabilityLongRange(const LongCapabilityRange& value)
 {
-    LongRange range;
-    switch (value.type()) {
-    case CapabilityValueOrRange::ULong:
-        range.min = value.value().asInt;
-        range.max = range.min;
-        break;
-    case CapabilityValueOrRange::ULongRange:
-        range.min = value.rangeMin().asInt;
-        range.max = value.rangeMax().asInt;
-        break;
-    case CapabilityValueOrRange::Undefined:
-    case CapabilityValueOrRange::Double:
-    case CapabilityValueOrRange::DoubleRange:
-        ASSERT_NOT_REACHED();
-        break;
-    }
-    return range;
+    return { value.max(), value.min() };
 }
 
 static Vector<String> capabilityStringVector(const Vector<VideoFacingMode>& modes)
 {
     return modes.map([](auto& mode) {
-        return RealtimeMediaSourceSettings::facingMode(mode);
+        return convertEnumerationToString(mode);
+    });
+}
+
+static Vector<String> capabilityStringVector(const Vector<MeteringMode>& modes)
+{
+    return modes.map([](auto& mode) {
+        return convertEnumerationToString(mode);
     });
 }
 
@@ -92,9 +71,39 @@ static Vector<bool> capabilityBooleanVector(RealtimeMediaSourceCapabilities::Ech
 {
     Vector<bool> result;
     result.reserveInitialCapacity(2);
-    result.uncheckedAppend(true);
+    result.append(true);
     if (cancellation == RealtimeMediaSourceCapabilities::EchoCancellation::ReadWrite)
-        result.uncheckedAppend(false);
+        result.append(false);
+    return result;
+}
+
+static Vector<bool> capabilityBooleanVector(RealtimeMediaSourceCapabilities::BackgroundBlur backgroundBlur)
+{
+    Vector<bool> result;
+    result.reserveInitialCapacity(2);
+    switch (backgroundBlur) {
+    case RealtimeMediaSourceCapabilities::BackgroundBlur::On:
+        result.append(true);
+        break;
+    case RealtimeMediaSourceCapabilities::BackgroundBlur::Off:
+        result.append(false);
+        break;
+    case RealtimeMediaSourceCapabilities::BackgroundBlur::OnOff:
+        result.append(false);
+        result.append(true);
+        break;
+    }
+    return result;
+}
+
+static Vector<bool> powerEfficientCapabilityVector(bool powerEfficient)
+{
+    Vector<bool> result;
+    result.reserveInitialCapacity(2);
+    result.append(false);
+    if (powerEfficient)
+        result.append(true);
+
     return result;
 }
 
@@ -102,9 +111,9 @@ MediaTrackCapabilities toMediaTrackCapabilities(const RealtimeMediaSourceCapabil
 {
     MediaTrackCapabilities result;
     if (capabilities.supportsWidth())
-        result.width = capabilityIntRange(capabilities.width());
+        result.width = capabilityLongRange(capabilities.width());
     if (capabilities.supportsHeight())
-        result.height = capabilityIntRange(capabilities.height());
+        result.height = capabilityLongRange(capabilities.height());
     if (capabilities.supportsAspectRatio())
         result.aspectRatio = capabilityDoubleRange(capabilities.aspectRatio());
     if (capabilities.supportsFrameRate())
@@ -114,9 +123,9 @@ MediaTrackCapabilities toMediaTrackCapabilities(const RealtimeMediaSourceCapabil
     if (capabilities.supportsVolume())
         result.volume = capabilityDoubleRange(capabilities.volume());
     if (capabilities.supportsSampleRate())
-        result.sampleRate = capabilityIntRange(capabilities.sampleRate());
+        result.sampleRate = capabilityLongRange(capabilities.sampleRate());
     if (capabilities.supportsSampleSize())
-        result.sampleSize = capabilityIntRange(capabilities.sampleSize());
+        result.sampleSize = capabilityLongRange(capabilities.sampleSize());
     if (capabilities.supportsEchoCancellation())
         result.echoCancellation = capabilityBooleanVector(capabilities.echoCancellation());
     if (capabilities.supportsDeviceId())
@@ -125,8 +134,17 @@ MediaTrackCapabilities toMediaTrackCapabilities(const RealtimeMediaSourceCapabil
         result.groupId = groupId;
     if (capabilities.supportsFocusDistance())
         result.focusDistance = capabilityDoubleRange(capabilities.focusDistance());
+    if (capabilities.supportsWhiteBalanceMode())
+        result.whiteBalanceMode = capabilityStringVector(capabilities.whiteBalanceModes());
     if (capabilities.supportsZoom())
         result.zoom = capabilityDoubleRange(capabilities.zoom());
+    if (capabilities.supportsTorch())
+        result.torch = capabilities.torch();
+    if (capabilities.supportsBackgroundBlur())
+        result.backgroundBlur = capabilityBooleanVector(capabilities.backgroundBlur());
+
+    if (capabilities.supportsPowerEfficient())
+        result.powerEfficient = powerEfficientCapabilityVector(capabilities.powerEfficient());
 
     return result;
 }

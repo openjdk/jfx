@@ -197,7 +197,7 @@ public class HelloDatePicker extends Application {
 
                     if (item.equals(tomorrow)) {
                         // The tooltip won't show for disabled cells.
-                        // See RT-28850.
+                        // See JDK-8090379.
                         setTooltip(new Tooltip("Tomorrow is not a good day"));
                         setDisable(true);
                     }

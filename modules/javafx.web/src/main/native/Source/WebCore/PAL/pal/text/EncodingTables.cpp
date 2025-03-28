@@ -28,6 +28,7 @@
 
 #include "TextCodecICU.h"
 #include <mutex>
+#include <wtf/unicode/icu/ICUHelpers.h>
 
 namespace PAL {
 
@@ -1078,7 +1079,7 @@ const std::array<std::pair<uint16_t, UChar>, 7724>& jis0208()
                 icuInput[1] = 0xA1 + j;
 
                 UChar* output = &icuOutput;
-                const char* input = reinterpret_cast<const char*>(icuInput);
+                const char* input = byteCast<char>(&icuInput[0]);
                 ucnv_toUnicode(icuConverter.get(), &output, output + 1, &input, input + sizeof(icuInput), nullptr, true, &error);
                 ASSERT(!error);
                 if (icuOutput != 0xFFFD) {
@@ -1884,7 +1885,7 @@ const std::array<std::pair<uint16_t, UChar>, 6067>& jis0212()
                 icuInput[2] = 0xA1 + j;
 
                 UChar* output = &icuOutput;
-                const char* input = reinterpret_cast<const char*>(icuInput);
+                const char* input = byteCast<char>(&icuInput[0]);
                 ucnv_toUnicode(icuConverter.get(), &output, output + 1, &input, input + sizeof(icuInput), nullptr, true, &error);
                 ASSERT(!error);
                 if (icuOutput != 0xFFFD) {
@@ -1904,7 +1905,7 @@ const std::array<std::pair<uint16_t, UChar>, 6067>& jis0212()
 
 #if ASSERT_ENABLED
 // From https://encoding.spec.whatwg.org/index-big5.txt
-std::array<std::pair<uint16_t, UChar32>, 18590> big5Reference { {
+std::array<std::pair<uint16_t, char32_t>, 18590> big5Reference { {
     { 942, 0x43F0 }, { 943, 0x4C32 }, { 944, 0x4603 }, { 945, 0x45A6 }, { 946, 0x4578 }, { 947, 0x27267 }, { 948, 0x4D77 }, { 949, 0x45B3 },
     { 950, 0x27CB1 }, { 951, 0x4CE2 }, { 952, 0x27CC5 }, { 953, 0x3B95 }, { 954, 0x4736 }, { 955, 0x4744 }, { 956, 0x4C47 }, { 957, 0x4C40 },
     { 958, 0x242BF }, { 959, 0x23617 }, { 960, 0x27352 }, { 961, 0x26E8B }, { 962, 0x270D2 }, { 963, 0x4C57 }, { 964, 0x2A351 }, { 965, 0x474F },
@@ -4233,7 +4234,7 @@ std::array<std::pair<uint16_t, UChar32>, 18590> big5Reference { {
 #endif // ASSERT_ENABLED
 
 // These are values from https://encoding.spec.whatwg.org/index-big5.txt that are not in ICU.
-constexpr std::array<std::pair<uint16_t, UChar32>, 5088> big5Extras { {
+constexpr std::array<std::pair<uint16_t, char32_t>, 5088> big5Extras { {
     { 942, 0x43f0 }, { 943, 0x4c32 }, { 944, 0x4603 }, { 945, 0x45a6 }, { 946, 0x4578 }, { 947, 0x27267 }, { 948, 0x4d77 }, { 949, 0x45b3 },
     { 950, 0x27cb1 }, { 951, 0x4ce2 }, { 952, 0x27cc5 }, { 953, 0x3b95 }, { 954, 0x4736 }, { 955, 0x4744 }, { 956, 0x4c47 }, { 957, 0x4c40 },
     { 958, 0x242bf }, { 959, 0x23617 }, { 960, 0x27352 }, { 961, 0x26e8b }, { 962, 0x270d2 }, { 963, 0x4c57 }, { 964, 0x2a351 }, { 965, 0x474f },
@@ -4872,13 +4873,13 @@ constexpr std::array<std::pair<uint16_t, UChar32>, 5088> big5Extras { {
     { 19774, 0x793c }, { 19775, 0x79a9 }, { 19776, 0x6e2a }, { 19777, 0x27126 }, { 19778, 0x3ea8 }, { 19779, 0x79c6 }, { 19780, 0x2910d }, { 19781, 0x79d4 }
 } };
 
-const std::array<std::pair<uint16_t, UChar32>, 18590>& big5()
+const std::array<std::pair<uint16_t, char32_t>, 18590>& big5()
 {
     // Allocate this at runtime because building it at compile time would make the binary much larger and this is often not used.
-    static std::array<std::pair<uint16_t, UChar32>, 18590>* array;
+    static std::array<std::pair<uint16_t, char32_t>, 18590>* array;
     static std::once_flag flag;
     std::call_once(flag, [] {
-        array = new std::array<std::pair<uint16_t, UChar32>, 18590>();
+        array = new std::array<std::pair<uint16_t, char32_t>, 18590>();
         size_t arrayIndex = 0;
 
         UErrorCode error = U_ZERO_ERROR;
@@ -4908,7 +4909,7 @@ const std::array<std::pair<uint16_t, UChar32>, 18590>& big5()
                 icuInput[0] = lead;
                 icuInput[1] = trail + offset;
                 UChar* output = &icuOutput;
-                const char* input = reinterpret_cast<const char*>(icuInput);
+                const char* input = byteCast<char>(&icuInput[0]);
                 ucnv_toUnicode(icuConverter.get(), &output, output + 1, &input, input + sizeof(icuInput), nullptr, true, &error);
                 ASSERT(!error);
                 (*array)[arrayIndex++] = { pointer, icuOutput };
@@ -7076,7 +7077,7 @@ const std::array<std::pair<uint16_t, UChar>, 17048>& eucKR()
         ASSERT(U_SUCCESS(error));
         auto getPair = [icuConverter = WTFMove(icuConverter)] (uint16_t pointer) -> std::optional<std::pair<uint16_t, UChar>> {
             std::array<uint8_t, 2> icuInput { static_cast<uint8_t>(pointer / 190u + 0x81), static_cast<uint8_t>(pointer % 190u + 0x41) };
-            const char* input = reinterpret_cast<const char*>(icuInput.data());
+            const char* input = byteCast<char>(icuInput.data());
             UChar icuOutput[2];
             UChar* output = icuOutput;
             UErrorCode error = U_ZERO_ERROR;
@@ -8619,16 +8620,18 @@ const std::array<UChar, 23940>& gb18030()
             icuInput[1] += (icuInput[1] < 0x3F) ? 0x40 : 0x41;
             UChar icuOutput { 0 };
             UChar* output = &icuOutput;
-            const char* input = reinterpret_cast<const char*>(icuInput);
+            const char* input = byteCast<char>(&icuInput[0]);
             ucnv_toUnicode(icuConverter.get(), &output, output + 1, &input, input + sizeof(icuInput), nullptr, true, &error);
             ASSERT(!error);
             ASSERT(icuOutput != 0xFFFD);
             (*array)[pointer] = icuOutput;
         }
 
+        if (WTF::ICU::majorVersion() < 74) {
         // This is a difference between ICU and the encoding specification.
         ASSERT((*array)[6555] == 0xe5e5);
         (*array)[6555] = 0x3000;
+        }
 
 #if !HAVE(GB_18030_2022)
         static std::array<std::pair<size_t, UChar>, 18> gb18030_2022Differences { {

@@ -1194,7 +1194,7 @@ private:
                 && m_value->child(1)->hasInt()) {
                 uint64_t shiftAmount = m_value->child(0)->child(1)->asInt();
                 uint64_t maskShift = m_value->child(1)->asInt();
-                uint64_t maskShiftAmount = WTF::countTrailingZeros(maskShift);
+                uint64_t maskShiftAmount = WTF::ctz(maskShift);
                 uint64_t mask = maskShift >> maskShiftAmount;
                 uint64_t width = WTF::bitCount(mask);
                 uint64_t datasize = m_value->child(0)->child(0)->type() == Int64 ? 64 : 32;
@@ -1602,7 +1602,7 @@ private:
                 && m_value->child(1)->asInt() >= 0) {
                 uint64_t shiftAmount = m_value->child(1)->asInt();
                 uint64_t maskShift = m_value->child(0)->child(1)->asInt();
-                uint64_t maskShiftAmount = WTF::countTrailingZeros(maskShift);
+                uint64_t maskShiftAmount = WTF::ctz(maskShift);
                 uint64_t mask = maskShift >> maskShiftAmount;
                 uint64_t width = WTF::bitCount(mask);
                 uint64_t datasize = m_value->child(0)->child(0)->type() == Int64 ? 64 : 32;
@@ -2502,7 +2502,7 @@ private:
                 m_value->child(0), selectSpecializationBound,
                 [&] (Value* value) -> bool {
                     return value->opcode() == Select
-                        && (value->child(1)->isConstant() && value->child(2)->isConstant());
+                        && (value->child(1)->isConstant() || value->child(2)->isConstant());
                 });
 
             if (select) {
@@ -3108,7 +3108,7 @@ private:
         cloneValue(m_value);
 
         // Remove the values from the predecessor.
-        predecessor->values().resize(startIndex);
+        predecessor->values().shrink(startIndex);
 
         predecessor->appendNew<Value>(m_proc, Branch, source->origin(), predicate);
         predecessor->setSuccessors(FrequentedBlock(cases[0]), FrequentedBlock(cases[1]));
@@ -3652,7 +3652,7 @@ private:
 
 bool reduceStrength(Procedure& proc)
 {
-    PhaseScope phaseScope(proc, "reduceStrength");
+    PhaseScope phaseScope(proc, "reduceStrength"_s);
     ReduceStrength reduceStrength(proc);
     return reduceStrength.run();
 }

@@ -35,12 +35,12 @@
 #include "Logging.h"
 #include "MediaStreamAudioSourceOptions.h"
 #include "WebAudioSourceProvider.h"
-#include <wtf/IsoMallocInlines.h>
 #include <wtf/Locker.h>
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
-WTF_MAKE_ISO_ALLOCATED_IMPL(MediaStreamAudioSourceNode);
+WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(MediaStreamAudioSourceNode);
 
 ExceptionOr<Ref<MediaStreamAudioSourceNode>> MediaStreamAudioSourceNode::create(BaseAudioContext& context, MediaStreamAudioSourceOptions&& options)
 {
@@ -48,7 +48,7 @@ ExceptionOr<Ref<MediaStreamAudioSourceNode>> MediaStreamAudioSourceNode::create(
 
     auto audioTracks = options.mediaStream->getAudioTracks();
     if (audioTracks.isEmpty())
-        return Exception { InvalidStateError, "Media stream has no audio tracks"_s };
+        return Exception { ExceptionCode::InvalidStateError, "Media stream has no audio tracks"_s };
 
     RefPtr<WebAudioSourceProvider> provider;
     for (auto& track : audioTracks) {
@@ -57,7 +57,7 @@ ExceptionOr<Ref<MediaStreamAudioSourceNode>> MediaStreamAudioSourceNode::create(
             break;
     }
     if (!provider)
-        return Exception { InvalidStateError, "Could not find an audio track with an audio source provider"_s };
+        return Exception { ExceptionCode::InvalidStateError, "Could not find an audio track with an audio source provider"_s };
 
     auto node = adoptRef(*new MediaStreamAudioSourceNode(context, *options.mediaStream, provider.releaseNonNull()));
     node->setFormat(2, context.sampleRate());

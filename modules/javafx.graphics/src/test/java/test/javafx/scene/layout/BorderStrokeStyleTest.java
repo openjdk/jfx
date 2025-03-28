@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -31,14 +31,17 @@ import javafx.scene.layout.BorderStrokeStyle;
 import javafx.scene.shape.StrokeLineCap;
 import javafx.scene.shape.StrokeLineJoin;
 import javafx.scene.shape.StrokeType;
-import org.junit.Test;
 
-import static org.junit.Assert.*;
+import org.junit.jupiter.api.Test;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 /**
  */
 public class BorderStrokeStyleTest {
-    @Test public void instanceCreation() {
+    @Test
+    public void instanceCreation() {
         BorderStrokeStyle style = new BorderStrokeStyle(null, null, null, 1, 2, null);
         assertEquals(StrokeType.CENTERED, style.getType());
         assertEquals(StrokeLineJoin.MITER, style.getLineJoin());
@@ -48,7 +51,8 @@ public class BorderStrokeStyleTest {
         assertEquals(0, style.getDashArray().size());
     }
 
-    @Test public void instanceCreation2() {
+    @Test
+    public void instanceCreation2() {
         List<Double> dashArray = new ArrayList<>();
         dashArray.add(1.0);
         dashArray.add(4.0);
@@ -64,54 +68,63 @@ public class BorderStrokeStyleTest {
         assertEquals(4.0, style.getDashArray().get(1), 0);
     }
 
-    @Test(expected = UnsupportedOperationException.class)
+    @Test
     public void dashArrayIsImmutable() {
-        BorderStrokeStyle style = new BorderStrokeStyle(null, null, null, 10, 2, null);
-        style.getDashArray().add(1.0);
+        assertThrows(UnsupportedOperationException.class, () -> {
+            BorderStrokeStyle style = new BorderStrokeStyle(null, null, null, 10, 2, null);
+            style.getDashArray().add(1.0);
+        });
     }
 
-    @Test public void changesToDashArrayPassedToConstructorHaveNoEffect() {
+    @Test
+    public void changesToDashArrayPassedToConstructorHaveNoEffect() {
         List<Double> dashArray = new ArrayList<>();
         BorderStrokeStyle style = new BorderStrokeStyle(null, null, null, 1, 2, dashArray);
         dashArray.add(4.0);
         assertEquals(0, style.getDashArray().size());
     }
 
-    @Test public void identity() {
+    @Test
+    public void identity() {
         BorderStrokeStyle style = new BorderStrokeStyle(null, null, null, 10, 2, null);
         assertEquals(style, style);
         assertEquals(style.hashCode(), style.hashCode());
     }
 
-    @Test public void equality() {
+    @Test
+    public void equality() {
         BorderStrokeStyle a = new BorderStrokeStyle(null, null, null, 10, 2, null);
         BorderStrokeStyle b = new BorderStrokeStyle(null, null, null, 10, 2, null);
         assertEquals(a, b);
         assertEquals(a.hashCode(), b.hashCode());
     }
 
-    @Test public void equality2() {
+    @Test
+    public void equality2() {
         BorderStrokeStyle a = new BorderStrokeStyle(StrokeType.OUTSIDE, null, null, 10, 2, null);
         BorderStrokeStyle b = new BorderStrokeStyle(StrokeType.OUTSIDE, null, null, 10, 2, null);
         assertEquals(a, b);
         assertEquals(a.hashCode(), b.hashCode());
     }
 
-    @Test public void equality3() {
+    @Test
+    public void equality3() {
         BorderStrokeStyle a = new BorderStrokeStyle(null, StrokeLineJoin.ROUND, null, 10, 2, null);
         BorderStrokeStyle b = new BorderStrokeStyle(null, StrokeLineJoin.ROUND, null, 10, 2, null);
         assertEquals(a, b);
         assertEquals(a.hashCode(), b.hashCode());
     }
 
-    @Test public void equality4() {
+    @Test
+    public void equality4() {
         BorderStrokeStyle a = new BorderStrokeStyle(null, null, StrokeLineCap.ROUND, 10, 2, null);
         BorderStrokeStyle b = new BorderStrokeStyle(null, null, StrokeLineCap.ROUND, 10, 2, null);
         assertEquals(a, b);
         assertEquals(a.hashCode(), b.hashCode());
     }
 
-    @Test public void equality5() {
+    @Test
+    public void equality5() {
         List<Double> dashArray1 = new ArrayList<>();
         dashArray1.add(1.0);
         dashArray1.add(4.0);
@@ -126,37 +139,43 @@ public class BorderStrokeStyleTest {
         assertEquals(a.hashCode(), b.hashCode());
     }
 
-    @Test public void notEqual() {
+    @Test
+    public void notEqual() {
         BorderStrokeStyle a = new BorderStrokeStyle(null, null, null, 10, 0, null);
         BorderStrokeStyle b = new BorderStrokeStyle(StrokeType.OUTSIDE, null, null, 10, 0, null);
         assertFalse(a.equals(b));
     }
 
-    @Test public void notEqual2() {
+    @Test
+    public void notEqual2() {
         BorderStrokeStyle a = new BorderStrokeStyle(null, null, null, 10, 0, null);
         BorderStrokeStyle b = new BorderStrokeStyle(null, StrokeLineJoin.ROUND, null, 10, 0, null);
         assertFalse(a.equals(b));
     }
 
-    @Test public void notEqual3() {
+    @Test
+    public void notEqual3() {
         BorderStrokeStyle a = new BorderStrokeStyle(null, null, null, 10, 0, null);
         BorderStrokeStyle b = new BorderStrokeStyle(null, null, StrokeLineCap.ROUND, 10, 0, null);
         assertFalse(a.equals(b));
     }
 
-    @Test public void notEqual4() {
+    @Test
+    public void notEqual4() {
         BorderStrokeStyle a = new BorderStrokeStyle(null, null, null, 10, 0, null);
         BorderStrokeStyle b = new BorderStrokeStyle(null, null, null, 20, 0, null);
         assertFalse(a.equals(b));
     }
 
-    @Test public void notEqual5() {
+    @Test
+    public void notEqual5() {
         BorderStrokeStyle a = new BorderStrokeStyle(null, null, null, 10, 0, null);
         BorderStrokeStyle b = new BorderStrokeStyle(null, null, null, 10, 1, null);
         assertFalse(a.equals(b));
     }
 
-    @Test public void notEqual6() {
+    @Test
+    public void notEqual6() {
         List<Double> dashArray1 = new ArrayList<>();
         dashArray1.add(1.0);
         dashArray1.add(4.0);
@@ -165,13 +184,15 @@ public class BorderStrokeStyleTest {
         assertFalse(a.equals(b));
     }
 
-    @Test public void notEqualWithNull() {
+    @Test
+    public void notEqualWithNull() {
         BorderStrokeStyle a = new BorderStrokeStyle(null, null, null, 10, 0, null);
         assertFalse(a.equals(null));
     }
 
     @SuppressWarnings("unlikely-arg-type")
-    @Test public void notEqualWithRandom() {
+    @Test
+    public void notEqualWithRandom() {
         BorderStrokeStyle a = new BorderStrokeStyle(null, null, null, 10, 0, null);
         assertFalse(a.equals("Some random string"));
     }

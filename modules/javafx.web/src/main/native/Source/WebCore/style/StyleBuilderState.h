@@ -36,7 +36,9 @@
 namespace WebCore {
 
 class FilterOperations;
+class FontCascadeDescription;
 class RenderStyle;
+class StyleColor;
 class StyleImage;
 class StyleResolver;
 
@@ -48,6 +50,7 @@ class BuilderState;
 void maybeUpdateFontForLetterSpacing(BuilderState&, CSSValue&);
 
 enum class ForVisitedLink : bool { No, Yes };
+enum class ApplyValueType : uint8_t { Value, Initial, Inherit };
 
 struct BuilderContext {
     Ref<const Document> document;
@@ -63,6 +66,8 @@ public:
     Builder& builder() { return m_builder; }
 
     RenderStyle& style() { return m_style; }
+    const RenderStyle& style() const { return m_style; }
+
     const RenderStyle& parentStyle() const { return m_context.parentStyle; }
     const RenderStyle* rootElementStyle() const { return m_context.rootElementStyle; }
 
@@ -72,7 +77,7 @@ public:
     inline void setFontDescription(FontCascadeDescription&&);
     void setFontSize(FontCascadeDescription&, float size);
     inline void setZoom(float);
-    inline void setEffectiveZoom(float);
+    inline void setUsedZoom(float);
     inline void setWritingMode(WritingMode);
     inline void setTextOrientation(TextOrientation);
 
@@ -82,9 +87,8 @@ public:
     inline const FontCascadeDescription& fontDescription();
     inline const FontCascadeDescription& parentFontDescription();
 
-    // FIXME: These are mutually exclusive, clean up the code to take that into account.
     bool applyPropertyToRegularStyle() const { return m_linkMatch != SelectorChecker::MatchVisited; }
-    bool applyPropertyToVisitedLinkStyle() const { return m_linkMatch == SelectorChecker::MatchVisited; }
+    bool applyPropertyToVisitedLinkStyle() const { return m_linkMatch != SelectorChecker::MatchLink; }
 
     bool useSVGZoomRules() const;
     bool useSVGZoomRulesForLength() const;
@@ -95,8 +99,6 @@ public:
 
     static bool isColorFromPrimitiveValueDerivedFromElement(const CSSPrimitiveValue&);
     StyleColor colorFromPrimitiveValue(const CSSPrimitiveValue&, ForVisitedLink = ForVisitedLink::No) const;
-    // FIXME: Remove. 'currentcolor' should be resolved at use time. All call sites are broken with inheritance.
-    Color colorFromPrimitiveValueWithResolvedCurrentColor(const CSSPrimitiveValue&) const;
 
     const Vector<AtomString>& registeredContentAttributes() const { return m_registeredContentAttributes; }
     void registerContentAttribute(const AtomString& attributeLocalName);
@@ -110,6 +112,8 @@ public:
     {
         return m_currentProperty && m_currentProperty->cascadeLevel == CascadeLevel::Author;
     }
+
+    CSSPropertyID cssPropertyID() const;
 
 private:
     // See the comment in maybeUpdateFontForLetterSpacing() about why this needs to be a friend.
@@ -135,9 +139,9 @@ private:
 
     const CSSToLengthConversionData m_cssToLengthConversionData;
 
-    HashSet<String> m_appliedCustomProperties;
-    HashSet<String> m_inProgressCustomProperties;
-    HashSet<String> m_inCycleCustomProperties;
+    HashSet<AtomString> m_appliedCustomProperties;
+    HashSet<AtomString> m_inProgressCustomProperties;
+    HashSet<AtomString> m_inCycleCustomProperties;
     WTF::BitSet<numCSSProperties> m_inProgressProperties;
     WTF::BitSet<numCSSProperties> m_inUnitCycleProperties;
 

@@ -34,9 +34,9 @@ import javafx.scene.control.Accordion;
 import javafx.scene.control.TitledPane;
 import javafx.scene.layout.StackPane;
 import javafx.stage.Stage;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
 import test.util.Util;
 import test.util.memory.JMemoryBuddy;
 
@@ -63,13 +63,13 @@ public class AccordionTitlePaneLeakTest {
         }
     }
 
-    @BeforeClass
+    @BeforeAll
     public static void initFX() throws Exception {
         startupLatch = new CountDownLatch(1);
         Util.launch(startupLatch, TestApp.class);
     }
 
-    @AfterClass
+    @AfterAll
     public static void teardownOnce() {
         Util.shutdown();
     }

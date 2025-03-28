@@ -68,7 +68,7 @@ constexpr DecodedHTMLEntity::DecodedHTMLEntity(ConstructNotEnoughCharactersType)
 {
 }
 
-static constexpr DecodedHTMLEntity makeEntity(UChar32 character)
+static constexpr DecodedHTMLEntity makeEntity(char32_t character)
 {
     if (character <= 0 || character > UCHAR_MAX_VALUE || U_IS_SURROGATE(character))
         return { replacementCharacter };
@@ -82,7 +82,7 @@ static constexpr DecodedHTMLEntity makeEntity(UChar32 character)
     return { windowsLatin1ExtensionArray[character - 0x80] };
 }
 
-static DecodedHTMLEntity makeEntity(const Checked<UChar32, RecordOverflow>& character)
+static DecodedHTMLEntity makeEntity(const Checked<uint32_t, RecordOverflow>& character)
 {
     if (character.hasOverflowed())
         return { replacementCharacter };
@@ -152,7 +152,7 @@ void SegmentedStringSource::advance()
 
 void SegmentedStringSource::pushEverythingBack()
 {
-    m_source.pushBack(String { m_consumedCharacters });
+    m_source.pushBack(m_consumedCharacters.span());
     m_consumedCharacters.clear();
 }
 
@@ -160,13 +160,13 @@ void SegmentedStringSource::pushBackButKeep(unsigned keepCount)
 {
     ASSERT(keepCount < m_consumedCharacters.size());
     unsigned length = m_consumedCharacters.size() - keepCount;
-    m_source.pushBack(String { m_consumedCharacters.data() + keepCount, length });
+    m_source.pushBack(m_consumedCharacters.subspan(keepCount, length));
     m_consumedCharacters.shrink(keepCount);
 }
 
 template<typename SourceType> DecodedHTMLEntity consumeDecimalHTMLEntity(SourceType& source)
 {
-    Checked<UChar32, RecordOverflow> result = 0;
+    Checked<uint32_t, RecordOverflow> result = 0;
     UChar character = source.currentCharacter();
     do {
         source.advance();
@@ -184,7 +184,7 @@ template<typename SourceType> DecodedHTMLEntity consumeDecimalHTMLEntity(SourceT
 
 template<typename SourceType> DecodedHTMLEntity consumeHexHTMLEntity(SourceType& source)
 {
-    Checked<UChar32, RecordOverflow> result = 0;
+    Checked<uint32_t, RecordOverflow> result = 0;
     UChar character = source.currentCharacter();
     do {
         source.advance();

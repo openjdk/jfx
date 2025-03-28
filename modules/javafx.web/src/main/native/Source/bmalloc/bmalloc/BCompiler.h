@@ -93,6 +93,26 @@
 #define BFALLTHROUGH
 #endif
 
+/* BLIKELY */
+
+#if !defined(BLIKELY) && BCOMPILER(GCC_COMPATIBLE)
+#define BLIKELY(x) __builtin_expect(!!(x), 1)
+#endif
+
+#if !defined(BLIKELY)
+#define BLIKELY(x) (x)
+#endif
+
+/* BUNLIKELY */
+
+#if !defined(BUNLIKELY) && BCOMPILER(GCC_COMPATIBLE)
+#define BUNLIKELY(x) __builtin_expect(!!(x), 0)
+#endif
+
+#if !defined(BUNLIKELY)
+#define BUNLIKELY(x) (x)
+#endif
+
 /* BUNUSED_TYPE_ALIAS */
 
 #if !defined(BUNUSED_TYPE_ALIAS) && BCOMPILER(GCC_COMPATIBLE)
@@ -113,4 +133,17 @@
 #else
 #error "Unsupported compiler"
 #endif
+#endif
+
+/* BALLOW_DEPRECATED_DECLARATIONS_BEGIN and BALLOW_DEPRECATED_DECLARATIONS_END */
+
+#if BCOMPILER(GCC_COMPATIBLE)
+#define BALLOW_DEPRECATED_DECLARATIONS_BEGIN \
+    _Pragma("GCC diagnostic push") \
+    _Pragma("GCC diagnostic ignored \"-Wdeprecated-declarations\"")
+#define BALLOW_DEPRECATED_DECLARATIONS_END \
+    _Pragma("GCC diagnostic pop")
+#else
+#define BALLOW_DEPRECATED_DECLARATIONS_BEGIN
+#define BALLOW_DEPRECATED_DECLARATIONS_END
 #endif

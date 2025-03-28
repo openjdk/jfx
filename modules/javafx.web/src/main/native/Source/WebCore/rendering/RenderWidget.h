@@ -48,7 +48,7 @@ public:
     static void scheduleWidgetToMove(Widget&, LocalFrameView*);
 
 private:
-    using WidgetToParentMap = HashMap<RefPtr<Widget>, LocalFrameView*>;
+    using WidgetToParentMap = HashMap<RefPtr<Widget>, SingleThreadWeakPtr<LocalFrameView>>;
     static WidgetToParentMap& widgetNewParentMap();
 
     WEBCORE_EXPORT void moveWidgets();
@@ -63,13 +63,15 @@ inline void WidgetHierarchyUpdatesSuspensionScope::scheduleWidgetToMove(Widget& 
 }
 
 class RenderWidget : public RenderReplaced, private OverlapTestRequestClient, public RefCounted<RenderWidget> {
-    WTF_MAKE_ISO_ALLOCATED(RenderWidget);
+    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(RenderWidget);
+    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(RenderWidget);
 public:
     virtual ~RenderWidget();
 
     HTMLFrameOwnerElement& frameOwnerElement() const { return downcast<HTMLFrameOwnerElement>(nodeForNonAnonymous()); }
 
     Widget* widget() const { return m_widget.get(); }
+    RefPtr<Widget> protectedWidget() const { return m_widget; }
     WEBCORE_EXPORT void setWidget(RefPtr<Widget>&&);
 
     static RenderWidget* find(const Widget&);
@@ -78,12 +80,12 @@ public:
     ChildWidgetState updateWidgetPosition() WARN_UNUSED_RETURN;
     WEBCORE_EXPORT IntRect windowClipRect() const;
 
-    bool requiresAcceleratedCompositing() const;
+    virtual bool requiresAcceleratedCompositing() const;
 
     RemoteFrame* remoteFrame() const;
 
 protected:
-    RenderWidget(HTMLFrameOwnerElement&, RenderStyle&&);
+    RenderWidget(Type, HTMLFrameOwnerElement&, RenderStyle&&);
 
     void willBeDestroyed() override;
     void styleDidChange(StyleDifference, const RenderStyle* oldStyle) final;
@@ -94,8 +96,6 @@ protected:
 
 private:
     void element() const = delete;
-
-    bool isWidget() const final { return true; }
 
     bool needsPreferredWidthsRecalculation() const final;
     RenderBox* embeddedContentBox() const final;
@@ -114,4 +114,4 @@ private:
 
 } // namespace WebCore
 
-SPECIALIZE_TYPE_TRAITS_RENDER_OBJECT(RenderWidget, isWidget())
+SPECIALIZE_TYPE_TRAITS_RENDER_OBJECT(RenderWidget, isRenderWidget())

@@ -18,6 +18,7 @@
  */
 
 #include "config.h"
+#if PLATFORM(JAVA)
 #include "TextureMapperBackingStore.h"
 
 #include "FloatRect.h"
@@ -39,3 +40,17 @@ unsigned TextureMapperBackingStore::calculateExposedTileEdges(const FloatRect& t
 }
 
 } // namespace WebCore
+#else
+#include "TextureMapperBackingStore.h"
+
+#include "FloatRect.h"
+
+namespace WebCore {
+
+bool TextureMapperBackingStore::allTileEdgesExposed(const FloatRect& totalRect, const FloatRect& tileRect)
+{
+    return !tileRect.x() && !tileRect.y() && tileRect.width() + tileRect.x() >= totalRect.width() && tileRect.height() + tileRect.y() >= totalRect.height();
+}
+
+} // namespace WebCore
+#endif

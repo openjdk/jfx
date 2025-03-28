@@ -34,6 +34,7 @@
 #include "Exception.h"
 #include "JSCInlines.h"
 #include "RuntimeType.h"
+#include <wtf/text/MakeString.h>
 #include <wtf/text/StringBuilder.h>
 #include <wtf/text/StringView.h>
 
@@ -56,10 +57,10 @@ JSObject* createUndefinedVariableError(JSGlobalObject* globalObject, const Ident
 String errorDescriptionForValue(JSGlobalObject* globalObject, JSValue v)
 {
     if (v.isString()) {
-        String string = asString(v)->value(globalObject);
+        auto string = asString(v)->value(globalObject);
         if (!string)
             return string;
-        return tryMakeString('"', string, '"');
+        return tryMakeString('"', string.data, '"');
     }
 
     if (v.isSymbol()) {
@@ -158,7 +159,7 @@ static StringView functionCallBase(StringView sourceText)
     return sourceText.left(idx + 1);
 }
 
-static String notAFunctionSourceAppender(const String& originalMessage, StringView sourceText, RuntimeType type, ErrorInstance::SourceTextWhereErrorOccurred occurrence)
+String notAFunctionSourceAppender(const String& originalMessage, StringView sourceText, RuntimeType type, ErrorInstance::SourceTextWhereErrorOccurred occurrence)
 {
     ASSERT(type != TypeFunction);
 
@@ -168,22 +169,18 @@ static String notAFunctionSourceAppender(const String& originalMessage, StringVi
     ASSERT(occurrence == ErrorInstance::FoundExactSource);
     auto notAFunctionIndex = originalMessage.reverseFind("is not a function"_s);
     RELEASE_ASSERT(notAFunctionIndex != notFound);
-    StringView displayValue;
-    if (originalMessage.is8Bit())
-        displayValue = StringView(originalMessage.characters8(), notAFunctionIndex - 1);
-    else
-        displayValue = StringView(originalMessage.characters16(), notAFunctionIndex - 1);
+    auto displayValue = StringView { originalMessage }.left(notAFunctionIndex - 1);
 
     StringView base = functionCallBase(sourceText);
     if (!base)
         return defaultApproximateSourceError(originalMessage, sourceText);
     StringBuilder builder(StringBuilder::OverflowHandler::RecordOverflow);
-    builder.append(base, " is not a function. (In '", sourceText, "', '", base, "' is ");
+    builder.append(base, " is not a function. (In '"_s, sourceText, "', '"_s, base, "' is "_s);
     if (type == TypeSymbol)
-        builder.append("a Symbol");
+        builder.append("a Symbol"_s);
     else {
         if (type == TypeObject)
-            builder.append("an instance of ");
+            builder.append("an instance of "_s);
         builder.append(displayValue);
     }
     builder.append(')');
@@ -258,13 +255,23 @@ static String invalidPrototypeSourceAppender(const String& originalMessage, Stri
     return "The value of the superclass's prototype property is not an object or null."_s;
 }
 
+String constructErrorMessage(JSGlobalObject* globalObject, JSValue value, const String& message)
+{
+    auto scope = DECLARE_THROW_SCOPE(globalObject->vm());
+    String valueDescription = errorDescriptionForValue(globalObject, value);
+    RETURN_IF_EXCEPTION(scope, { });
+    if (!valueDescription)
+        return valueDescription;
+    return tryMakeString(valueDescription, ' ', message);
+}
+
 JSObject* createError(JSGlobalObject* globalObject, JSValue value, const String& message, ErrorInstance::SourceAppender appender)
 {
     VM& vm = globalObject->vm();
     auto scope = DECLARE_CATCH_SCOPE(vm);
 
-    String valueDescription = errorDescriptionForValue(globalObject, value);
-    if (scope.exception() || !valueDescription) {
+    auto errorMessage = constructErrorMessage(globalObject, value, message);
+    if (UNLIKELY(scope.exception() || !errorMessage)) {
         // When we see an exception, we're not returning immediately because
         // we're in a CatchScope, i.e. no exceptions are thrown past this scope.
         // We're using a CatchScope because the contract for createError() is
@@ -272,13 +279,9 @@ JSObject* createError(JSGlobalObject* globalObject, JSValue value, const String&
         scope.clearException();
         return createOutOfMemoryError(globalObject);
     }
-    String errorMessage = tryMakeString(valueDescription, ' ', message);
-    if (!errorMessage)
-        return createOutOfMemoryError(globalObject);
     scope.assertNoException();
     JSObject* exception = createTypeError(globalObject, errorMessage, appender, runtimeTypeForValue(value));
     ASSERT(exception->isErrorInstance());
-
     return exception;
 }
 
@@ -322,9 +325,19 @@ JSObject* createInvalidPrototypeError(JSGlobalObject* globalObject, JSValue valu
     return createError(globalObject, value, "is not an object or null"_s, invalidPrototypeSourceAppender);
 }
 
-JSObject* createErrorForInvalidGlobalAssignment(JSGlobalObject* globalObject, const String& propertyName)
+JSObject* createErrorForDuplicateGlobalVariableDeclaration(JSGlobalObject* globalObject, UniquedStringImpl* key)
 {
-    return createReferenceError(globalObject, makeString("Strict mode forbids implicit creation of global property '"_s, propertyName, '\''));
+    return createSyntaxError(globalObject, makeString("Can't create duplicate variable: '"_s, StringView(key), '\''));
+}
+
+JSObject* createErrorForInvalidGlobalFunctionDeclaration(JSGlobalObject* globalObject, const Identifier& ident)
+{
+    return createTypeError(globalObject, makeString("Can't declare global function '"_s, ident.string(), "': property must be either configurable or both writable and enumerable"_s));
+}
+
+JSObject* createErrorForInvalidGlobalVarDeclaration(JSGlobalObject* globalObject, const Identifier& ident)
+{
+    return createTypeError(globalObject, makeString("Can't declare global variable '"_s, ident.string(), "': global object must be extensible"_s));
 }
 
 JSObject* createTDZError(JSGlobalObject* globalObject)

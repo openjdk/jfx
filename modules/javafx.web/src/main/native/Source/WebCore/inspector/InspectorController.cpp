@@ -40,7 +40,6 @@
 #include "InspectorApplicationCacheAgent.h"
 #include "InspectorCPUProfilerAgent.h"
 #include "InspectorCSSAgent.h"
-#include "InspectorCanvasAgent.h"
 #include "InspectorClient.h"
 #include "InspectorDOMAgent.h"
 #include "InspectorDOMStorageAgent.h"
@@ -53,16 +52,15 @@
 #include "InspectorMemoryAgent.h"
 #include "InspectorPageAgent.h"
 #include "InspectorTimelineAgent.h"
-#include "InspectorWorkerAgent.h"
 #include "InstrumentingAgents.h"
 #include "JSDOMBindingSecurity.h"
+#include "JSDOMWindow.h"
 #include "JSExecState.h"
-#include "JSLocalDOMWindow.h"
-#include "JSLocalDOMWindowCustom.h"
 #include "LocalDOMWindow.h"
 #include "LocalFrame.h"
 #include "Page.h"
 #include "PageAuditAgent.h"
+#include "PageCanvasAgent.h"
 #include "PageConsoleAgent.h"
 #include "PageDOMDebuggerAgent.h"
 #include "PageDebugger.h"
@@ -70,6 +68,7 @@
 #include "PageHeapAgent.h"
 #include "PageNetworkAgent.h"
 #include "PageRuntimeAgent.h"
+#include "PageWorkerAgent.h"
 #include "Settings.h"
 #include "SharedBuffer.h"
 #include "WebInjectedScriptHost.h"
@@ -168,7 +167,7 @@ void InspectorController::createLazyAgents()
     m_agents.append(makeUnique<PageDOMDebuggerAgent>(pageContext, debuggerAgentPtr));
     m_agents.append(makeUnique<InspectorApplicationCacheAgent>(pageContext));
     m_agents.append(makeUnique<InspectorLayerTreeAgent>(pageContext));
-    m_agents.append(makeUnique<InspectorWorkerAgent>(pageContext));
+    m_agents.append(makeUnique<PageWorkerAgent>(pageContext));
     m_agents.append(makeUnique<InspectorDOMStorageAgent>(pageContext));
     m_agents.append(makeUnique<InspectorDatabaseAgent>(pageContext));
     m_agents.append(makeUnique<InspectorIndexedDBAgent>(pageContext));
@@ -183,7 +182,7 @@ void InspectorController::createLazyAgents()
 #endif
     m_agents.append(makeUnique<PageHeapAgent>(pageContext));
     m_agents.append(makeUnique<PageAuditAgent>(pageContext));
-    m_agents.append(makeUnique<InspectorCanvasAgent>(pageContext));
+    m_agents.append(makeUnique<PageCanvasAgent>(pageContext));
     m_agents.append(makeUnique<InspectorTimelineAgent>(pageContext));
     m_agents.append(makeUnique<InspectorAnimationAgent>(pageContext));
 
@@ -481,7 +480,7 @@ bool InspectorController::canAccessInspectedScriptState(JSC::JSGlobalObject* lex
 {
     JSLockHolder lock(lexicalGlobalObject);
 
-    auto* inspectedWindow = jsDynamicCast<JSLocalDOMWindow*>(lexicalGlobalObject);
+    auto* inspectedWindow = jsDynamicCast<JSDOMWindow*>(lexicalGlobalObject);
     if (!inspectedWindow)
         return false;
 

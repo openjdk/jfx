@@ -45,6 +45,8 @@ typedef FontFamilySpecificationNull FontFamilyPlatformSpecification;
 
 typedef std::variant<AtomString, FontFamilyPlatformSpecification> FontFamilySpecification;
 
+class Font;
+
 class FontCascadeDescription : public FontDescription {
 public:
     WEBCORE_EXPORT FontCascadeDescription();
@@ -118,6 +120,8 @@ public:
     }
 #endif
 
+    WEBCORE_EXPORT void resolveFontSizeAdjustFromFontIfNeeded(const Font&);
+
     // Initial values for font properties.
     static std::optional<FontSelectionValue> initialItalic() { return std::nullopt; }
     static FontStyleAxis initialFontStyleAxis() { return FontStyleAxis::slnt; }
@@ -133,10 +137,13 @@ public:
     static FontVariantPosition initialVariantPosition() { return FontVariantPosition::Normal; }
     static FontVariantCaps initialVariantCaps() { return FontVariantCaps::Normal; }
     static FontVariantAlternates initialVariantAlternates() { return FontVariantAlternates::Normal(); }
+    static FontVariantEmoji initialVariantEmoji() { return FontVariantEmoji::Normal; }
     static FontOpticalSizing initialOpticalSizing() { return FontOpticalSizing::Enabled; }
     static const AtomString& initialSpecifiedLocale() { return nullAtom(); }
     static FontPalette initialFontPalette() { return { FontPalette::Type::Normal, nullAtom() }; }
     static FontSizeAdjust initialFontSizeAdjust() { return { FontSizeAdjust::Metric::ExHeight }; }
+    static TextSpacingTrim initialTextSpacingTrim() { return { }; }
+    static TextAutospace initialTextAutospace() { return { }; }
 
 private:
     Ref<RefCountedFixedVector<AtomString>> m_families;
@@ -157,7 +164,7 @@ private:
 
 inline bool FontCascadeDescription::operator==(const FontCascadeDescription& other) const
 {
-    return FontDescription::operator==(other)
+    return static_cast<const FontDescription&>(*this) == static_cast<const FontDescription&>(other)
         && m_families.get() == other.m_families.get()
         && m_specifiedSize == other.m_specifiedSize
         && m_isAbsoluteSize == other.m_isAbsoluteSize

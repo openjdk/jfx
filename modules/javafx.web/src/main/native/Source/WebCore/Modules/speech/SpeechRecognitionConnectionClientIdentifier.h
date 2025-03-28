@@ -29,7 +29,7 @@
 
 namespace WebCore {
 
-enum SpeechRecognitionConnectionClientIdentifierType { };
-using SpeechRecognitionConnectionClientIdentifier = ObjectIdentifier<SpeechRecognitionConnectionClientIdentifierType>;
+enum class SpeechRecognitionConnectionClientIdentifierType { };
+using SpeechRecognitionConnectionClientIdentifier = LegacyNullableObjectIdentifier<SpeechRecognitionConnectionClientIdentifierType>;
 
 } // namespace WebCore

@@ -44,11 +44,12 @@
 #include "RenderBoxModelObjectInlines.h"
 #include "ScriptDisallowedScope.h"
 #include "Settings.h"
-#include "ShadowPseudoIds.h"
 #include "ShadowRoot.h"
 #include "StyleResolver.h"
 #include "Text.h"
+#include "UserAgentParts.h"
 #include "ValidationMessageClient.h"
+#include <wtf/text/MakeString.h>
 
 namespace WebCore {
 
@@ -95,7 +96,7 @@ void ValidationMessage::updateValidationMessage(HTMLElement& element, const Stri
         if (!updatedMessage.isEmpty()) {
             const AtomString& title = m_element->attributeWithoutSynchronization(titleAttr);
             if (!title.isEmpty())
-                updatedMessage = updatedMessage + '\n' + title;
+                updatedMessage = makeString(updatedMessage, '\n', title);
         }
     }
 
@@ -134,7 +135,7 @@ void ValidationMessage::setMessageDOMAndStartTimer()
     m_messageHeading->removeChildren();
     m_messageBody->removeChildren();
 
-    auto& document = m_messageHeading->document();
+    Ref document = m_messageHeading->document();
     auto lines = StringView(m_message).split('\n');
     auto it = lines.begin();
     if (it != lines.end()) {
@@ -147,7 +148,7 @@ void ValidationMessage::setMessageDOMAndStartTimer()
         }
     }
 
-    int magnification = document.page() ? document.page()->settings().validationMessageTimerMagnification() : -1;
+    int magnification = document->page() ? document->page()->settings().validationMessageTimerMagnification() : -1;
     if (magnification <= 0)
         m_timer = nullptr;
     else {
@@ -199,33 +200,33 @@ void ValidationMessage::buildBubbleTree()
     Document& document = m_element->document();
     m_bubble = HTMLDivElement::create(document);
     shadowRoot->appendChild(*m_bubble);
-    m_bubble->setPseudo(ShadowPseudoIds::webkitValidationBubble());
+    m_bubble->setUserAgentPart(UserAgentParts::webkitValidationBubble());
     // Need to force position:absolute because RenderMenuList doesn't assume it
     // contains non-absolute or non-fixed renderers as children.
     m_bubble->setInlineStyleProperty(CSSPropertyPosition, CSSValueAbsolute);
 
     auto clipper = HTMLDivElement::create(document);
     m_bubble->appendChild(clipper);
-    clipper->setPseudo(ShadowPseudoIds::webkitValidationBubbleArrowClipper());
+    clipper->setUserAgentPart(UserAgentParts::webkitValidationBubbleArrowClipper());
     auto bubbleArrow = HTMLDivElement::create(document);
     clipper->appendChild(bubbleArrow);
-    bubbleArrow->setPseudo(ShadowPseudoIds::webkitValidationBubbleArrow());
+    bubbleArrow->setUserAgentPart(UserAgentParts::webkitValidationBubbleArrow());
 
     auto message = HTMLDivElement::create(document);
     m_bubble->appendChild(message);
-    message->setPseudo(ShadowPseudoIds::webkitValidationBubbleMessage());
+    message->setUserAgentPart(UserAgentParts::webkitValidationBubbleMessage());
     auto icon = HTMLDivElement::create(document);
     message->appendChild(icon);
-    icon->setPseudo(ShadowPseudoIds::webkitValidationBubbleIcon());
+    icon->setUserAgentPart(UserAgentParts::webkitValidationBubbleIcon());
     auto textBlock = HTMLDivElement::create(document);
     message->appendChild(textBlock);
-    textBlock->setPseudo(ShadowPseudoIds::webkitValidationBubbleTextBlock());
+    textBlock->setUserAgentPart(UserAgentParts::webkitValidationBubbleTextBlock());
     m_messageHeading = HTMLDivElement::create(document);
     textBlock->appendChild(*m_messageHeading);
-    m_messageHeading->setPseudo(ShadowPseudoIds::webkitValidationBubbleHeading());
+    m_messageHeading->setUserAgentPart(UserAgentParts::webkitValidationBubbleHeading());
     m_messageBody = HTMLDivElement::create(document);
     textBlock->appendChild(*m_messageBody);
-    m_messageBody->setPseudo(ShadowPseudoIds::webkitValidationBubbleBody());
+    m_messageBody->setUserAgentPart(UserAgentParts::webkitValidationBubbleBody());
 
     setMessageDOMAndStartTimer();
 
@@ -255,11 +256,12 @@ bool ValidationMessage::shadowTreeContains(const Node& node) const
 void ValidationMessage::deleteBubbleTree()
 {
     ASSERT(!validationMessageClient());
-    if (m_bubble) {
-        ScriptDisallowedScope::EventAllowedScope allowedScope(*m_element->userAgentShadowRoot());
+    if (RefPtr bubble = m_bubble) {
+        Ref shadowRoot = *m_element->userAgentShadowRoot();
+        ScriptDisallowedScope::EventAllowedScope allowedScope(shadowRoot);
         m_messageHeading = nullptr;
         m_messageBody = nullptr;
-        m_element->userAgentShadowRoot()->removeChild(*m_bubble);
+        shadowRoot->removeChild(*bubble);
         m_bubble = nullptr;
     }
     m_message = String();

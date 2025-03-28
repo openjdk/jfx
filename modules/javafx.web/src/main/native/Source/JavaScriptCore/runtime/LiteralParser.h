@@ -30,6 +30,7 @@
 #include "Identifier.h"
 #include "JSCJSValue.h"
 #include <array>
+#include <wtf/text/MakeString.h>
 #include <wtf/text/StringBuilder.h>
 #include <wtf/text/WTFString.h>
 
@@ -56,6 +57,8 @@ enum TokenType : uint8_t {
     TokLParen, TokRParen, TokComma, TokTrue, TokFalse,
     TokNull, TokEnd, TokDot, TokAssign, TokSemi, TokError, TokErrorSpace };
 
+enum class JSONIdentifierHint : uint8_t { MaybeIdentifier, Unknown };
+
 struct JSONPPathEntry {
     Identifier m_pathEntryName;
     int m_pathIndex;
@@ -67,12 +70,9 @@ struct JSONPData {
     Strong<Unknown> m_value;
 };
 
-template <typename CharType>
-struct LiteralParserToken {
-private:
-WTF_MAKE_NONCOPYABLE(LiteralParserToken);
+template<typename CharacterType> struct LiteralParserToken {
+    WTF_MAKE_NONCOPYABLE(LiteralParserToken);
 
-public:
     LiteralParserToken() = default;
 
     TokenType type;
@@ -80,10 +80,14 @@ public:
     unsigned stringOrIdentifierLength : 31;
     union {
         double numberToken; // Only used for TokNumber.
-        const CharType* identifierStart;
+        const CharacterType* identifierStart;
         const LChar* stringStart8;
         const UChar* stringStart16;
     };
+
+    std::span<const CharacterType> identifier() const { return { identifierStart, stringOrIdentifierLength }; }
+    std::span<const LChar> string8() const { return { stringStart8, stringOrIdentifierLength }; }
+    std::span<const UChar> string16() const { return { stringStart16, stringOrIdentifierLength }; }
 };
 
 template <typename CharType>
@@ -92,10 +96,10 @@ ALWAYS_INLINE void setParserTokenString(LiteralParserToken<CharType>&, const Cha
 template <typename CharType>
 class LiteralParser {
 public:
-    LiteralParser(JSGlobalObject* globalObject, const CharType* characters, unsigned length, ParserMode mode, CodeBlock* nullOrCodeBlock = nullptr)
+    LiteralParser(JSGlobalObject* globalObject, std::span<const CharType> characters, ParserMode mode, CodeBlock* nullOrCodeBlock = nullptr)
         : m_globalObject(globalObject)
         , m_nullOrCodeBlock(nullOrCodeBlock)
-        , m_lexer(characters, length, mode)
+        , m_lexer(characters, mode)
         , m_mode(mode)
     {
     }
@@ -103,9 +107,9 @@ public:
     String getErrorMessage()
     {
         if (!m_lexer.getErrorMessage().isEmpty())
-            return "JSON Parse error: "_s + m_lexer.getErrorMessage();
+            return makeString("JSON Parse error: "_s, m_lexer.getErrorMessage());
         if (!m_parseErrorMessage.isEmpty())
-            return "JSON Parse error: "_s + m_parseErrorMessage;
+            return makeString("JSON Parse error: "_s, m_parseErrorMessage);
         return "JSON Parse error: Unable to parse JSON string"_s;
     }
 
@@ -131,14 +135,15 @@ public:
 private:
     class Lexer {
     public:
-        Lexer(const CharType* characters, unsigned length, ParserMode mode)
+        Lexer(std::span<const CharType> characters, ParserMode mode)
             : m_mode(mode)
-            , m_ptr(characters)
-            , m_end(characters + length)
+            , m_ptr(characters.data())
+            , m_end(characters.data() + characters.size())
         {
         }
 
         TokenType next();
+        TokenType nextMaybeIdentifier();
 
 #if !ASSERT_ENABLED
         using LiteralParserTokenPtr = const LiteralParserToken<CharType>*;
@@ -178,8 +183,10 @@ private:
         String getErrorMessage() { return m_lexErrorMessage; }
 
     private:
+        template<JSONIdentifierHint>
         TokenType lex(LiteralParserToken<CharType>&);
         ALWAYS_INLINE TokenType lexIdentifier(LiteralParserToken<CharType>&);
+        template<JSONIdentifierHint>
         ALWAYS_INLINE TokenType lexString(LiteralParserToken<CharType>&, CharType terminator);
         TokenType lexStringSlow(LiteralParserToken<CharType>&, const CharType* runStart, CharType terminator);
         ALWAYS_INLINE TokenType lexNumber(LiteralParserToken<CharType>&);

@@ -38,24 +38,27 @@
 #include "RenderMultiColumnFlow.h"
 #include "RenderMultiColumnSpannerPlaceholder.h"
 #include "RenderView.h"
-#include <wtf/IsoMallocInlines.h>
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
-WTF_MAKE_ISO_ALLOCATED_IMPL(RenderMultiColumnSet);
+WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(RenderMultiColumnSet);
 
 RenderMultiColumnSet::RenderMultiColumnSet(RenderFragmentedFlow& fragmentedFlow, RenderStyle&& style)
-    : RenderFragmentContainerSet(fragmentedFlow.document(), WTFMove(style), fragmentedFlow)
+    : RenderFragmentContainerSet(Type::MultiColumnSet, fragmentedFlow.document(), WTFMove(style), fragmentedFlow)
     , m_maxColumnHeight(RenderFragmentedFlow::maxLogicalHeight())
     , m_minSpaceShortage(RenderFragmentedFlow::maxLogicalHeight())
 {
+    ASSERT(isRenderMultiColumnSet());
 }
+
+RenderMultiColumnSet::~RenderMultiColumnSet() = default;
 
 RenderMultiColumnSet* RenderMultiColumnSet::nextSiblingMultiColumnSet() const
 {
     for (RenderObject* sibling = nextSibling(); sibling; sibling = sibling->nextSibling()) {
-        if (is<RenderMultiColumnSet>(*sibling))
-            return downcast<RenderMultiColumnSet>(sibling);
+        if (auto multiColumnSet = dynamicDowncast<RenderMultiColumnSet>(*sibling))
+            return multiColumnSet;
     }
     return nullptr;
 }
@@ -63,8 +66,8 @@ RenderMultiColumnSet* RenderMultiColumnSet::nextSiblingMultiColumnSet() const
 RenderMultiColumnSet* RenderMultiColumnSet::previousSiblingMultiColumnSet() const
 {
     for (RenderObject* sibling = previousSibling(); sibling; sibling = sibling->previousSibling()) {
-        if (is<RenderMultiColumnSet>(*sibling))
-            return downcast<RenderMultiColumnSet>(sibling);
+        if (auto* multiColumnSet = dynamicDowncast<RenderMultiColumnSet>(*sibling))
+            return multiColumnSet;
     }
     return nullptr;
 }
@@ -108,7 +111,7 @@ bool RenderMultiColumnSet::containsRendererInFragmentedFlow(const RenderObject& 
 {
     if (!previousSiblingMultiColumnSet() && !nextSiblingMultiColumnSet()) {
         // There is only one set. This is easy, then.
-        return renderer.isDescendantOf(m_fragmentedFlow);
+        return renderer.isDescendantOf(m_fragmentedFlow.get());
     }
 
     RenderObject* firstRenderer = firstRendererInFragmentedFlow();
@@ -576,7 +579,7 @@ LayoutRect RenderMultiColumnSet::fragmentedFlowPortionRectAt(unsigned index) con
     return portionRect;
 }
 
-LayoutRect RenderMultiColumnSet::fragmentedFlowPortionOverflowRect(const LayoutRect& portionRect, unsigned index, unsigned colCount, LayoutUnit colGap)
+LayoutRect RenderMultiColumnSet::fragmentedFlowPortionOverflowRect(const LayoutRect& portionRect, unsigned index, unsigned colCount, LayoutUnit colGap) const
 {
     // This function determines the portion of the flow thread that paints for the column. Along the inline axis, columns are
     // unclipped at outside edges (i.e., the first and last column in the set), and they clip to half the column
@@ -702,7 +705,7 @@ void RenderMultiColumnSet::paintColumnRules(PaintInfo& paintInfo, const LayoutPo
     }
 }
 
-void RenderMultiColumnSet::repaintFragmentedFlowContent(const LayoutRect& repaintRect)
+void RenderMultiColumnSet::repaintFragmentedFlowContent(const LayoutRect& repaintRect) const
 {
     // Figure out the start and end columns and only check within that range so that we don't walk the
     // entire column set. Put the repaint rect into flow thread coordinates by flipping it first.
@@ -742,7 +745,7 @@ void RenderMultiColumnSet::repaintFragmentedFlowContent(const LayoutRect& repain
     }
 }
 
-Vector<LayoutRect> RenderMultiColumnSet::fragmentRectsForFlowContentRect(const LayoutRect& rect)
+Vector<LayoutRect> RenderMultiColumnSet::fragmentRectsForFlowContentRect(const LayoutRect& rect) const
 {
     auto fragmentedFlowRect = rect;
     fragmentedFlow()->flipForWritingMode(fragmentedFlowRect);
@@ -786,6 +789,7 @@ LayoutUnit RenderMultiColumnSet::initialBlockOffsetForPainting() const
 
 void RenderMultiColumnSet::collectLayerFragments(LayerFragments& fragments, const LayoutRect& layerBoundingBox, const LayoutRect& dirtyRect)
 {
+    static constexpr size_t maximumNumberOfFragments = 2500000;
     // Let's start by introducing the different coordinate systems involved here. They are different
     // in how they deal with writing modes and columns. RenderLayer rectangles tend to be more
     // physical than the rectangles used in RenderObject & co.
@@ -901,7 +905,10 @@ void RenderMultiColumnSet::collectLayerFragments(LayerFragments& fragments, cons
         // Flip it into more a physical (RenderLayer-style) rectangle.
         fragmentedFlow()->flipForWritingMode(flippedFragmentedFlowOverflowPortion);
         fragment.paginationClip = flippedFragmentedFlowOverflowPortion;
+        if (fragments.size() < maximumNumberOfFragments)
         fragments.append(fragment);
+        else
+            break;
     }
 }
 
@@ -951,9 +958,9 @@ void RenderMultiColumnSet::addOverflowFromChildren()
         addVisualOverflow(lastRect);
 }
 
-VisiblePosition RenderMultiColumnSet::positionForPoint(const LayoutPoint& logicalPoint, const RenderFragmentContainer*)
+VisiblePosition RenderMultiColumnSet::positionForPoint(const LayoutPoint& logicalPoint, HitTestSource source, const RenderFragmentContainer*)
 {
-    return multiColumnFlow()->positionForPoint(translateFragmentPointToFragmentedFlow(logicalPoint, ClampHitTestTranslationToColumns), this);
+    return multiColumnFlow()->positionForPoint(translateFragmentPointToFragmentedFlow(logicalPoint, ClampHitTestTranslationToColumns), source, this);
 }
 
 LayoutPoint RenderMultiColumnSet::translateFragmentPointToFragmentedFlow(const LayoutPoint & logicalPoint, ColumnHitTestTranslationMode clampMode) const
@@ -1044,10 +1051,10 @@ void RenderMultiColumnSet::updateHitTestResult(HitTestResult& result, const Layo
 
     // Note this does not work with column spans, but once we implement RenderPageSet, we can move this code
     // over there instead (and spans of course won't be allowed on pages).
-    if (auto* node = nodeForHitTest()) {
-        result.setInnerNode(node);
+    if (RefPtr node = nodeForHitTest()) {
+        result.setInnerNode(node.get());
         if (!result.innerNonSharedNode())
-            result.setInnerNonSharedNode(node);
+            result.setInnerNonSharedNode(node.get());
         LayoutPoint adjustedPoint = translateFragmentPointToFragmentedFlow(point);
         view().offsetForContents(adjustedPoint);
         result.setLocalPoint(adjustedPoint);

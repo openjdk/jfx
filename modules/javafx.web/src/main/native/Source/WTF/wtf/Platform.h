@@ -115,6 +115,7 @@
 /* ICU configuration. Some of these match ICU defaults on some platforms, but we would like them consistently set everywhere we build WebKit. */
 #define U_HIDE_DEPRECATED_API 1
 #define U_SHOW_CPLUSPLUS_API 0
+#define U_SHOW_CPLUSPLUS_HEADER_API 0
 #ifdef __cplusplus
 #define UCHAR_TYPE char16_t
 #endif
@@ -158,6 +159,6 @@
 #endif
 
 /* FIXME: This is used to "turn on a specific feature of WebKit", so should be converted to an ENABLE macro. */
-#if (PLATFORM(COCOA) || PLATFORM(GTK) || PLATFORM(JAVA) || PLATFORM(WPE)) && ENABLE(ACCESSIBILITY)
+#if PLATFORM(COCOA) || PLATFORM(GTK) || PLATFORM(WPE)
 #define USE_ACCESSIBILITY_CONTEXT_MENUS 1
 #endif

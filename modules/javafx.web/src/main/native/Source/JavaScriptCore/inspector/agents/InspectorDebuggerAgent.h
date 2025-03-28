@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2010, 2013, 2015-2016 Apple Inc. All rights reserved.
+ * Copyright (C) 2010-2023 Apple Inc. All rights reserved.
  * Copyright (C) 2010, 2011 Google Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -42,6 +42,7 @@
 #include <wtf/HashSet.h>
 #include <wtf/Noncopyable.h>
 #include <wtf/RefPtr.h>
+#include <wtf/TZoneMalloc.h>
 #include <wtf/Vector.h>
 
 namespace Inspector {
@@ -56,7 +57,7 @@ class JS_EXPORT_PRIVATE InspectorDebuggerAgent
     , public JSC::Debugger::Client
     , public JSC::Debugger::Observer {
     WTF_MAKE_NONCOPYABLE(InspectorDebuggerAgent);
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_ALLOCATED(InspectorDebuggerAgent);
 public:
     ~InspectorDebuggerAgent() override;
 
@@ -97,7 +98,7 @@ public:
     Protocol::ErrorStringOr<void> setPauseOnMicrotasks(bool enabled, RefPtr<JSON::Object>&& options) final;
     Protocol::ErrorStringOr<void> setPauseForInternalScripts(bool shouldPause) final;
     Protocol::ErrorStringOr<std::tuple<Ref<Protocol::Runtime::RemoteObject>, std::optional<bool> /* wasThrown */, std::optional<int> /* savedResultIndex */>> evaluateOnCallFrame(const Protocol::Debugger::CallFrameId&, const String& expression, const String& objectGroup, std::optional<bool>&& includeCommandLineAPI, std::optional<bool>&& doNotPauseOnExceptionsAndMuteConsole, std::optional<bool>&& returnByValue, std::optional<bool>&& generatePreview, std::optional<bool>&& saveResult, std::optional<bool>&& emulateUserGesture) override;
-    Protocol::ErrorStringOr<void> setShouldBlackboxURL(const String& url, bool shouldBlackbox, std::optional<bool>&& caseSensitive, std::optional<bool>&& isRegex) final;
+    Protocol::ErrorStringOr<void> setShouldBlackboxURL(const String& url, bool shouldBlackbox, std::optional<bool>&& caseSensitive, std::optional<bool>&& isRegex, RefPtr<JSON::Array>&& sourceRanges) final;
     Protocol::ErrorStringOr<void> setBlackboxBreakpointEvaluations(bool) final;
 
     // JSC::Debugger::Client
@@ -181,12 +182,12 @@ protected:
     virtual void didClearAsyncStackTraceData();
 
 private:
-    bool shouldBlackboxURL(const String&) const;
+    void setBlackboxConfiguration(JSC::SourceID, const JSC::Debugger::Script&);
 
     Ref<JSON::ArrayOf<Protocol::Debugger::CallFrame>> currentCallFrames(const InjectedScript&);
 
     class ProtocolBreakpoint {
-        WTF_MAKE_FAST_ALLOCATED;
+        WTF_MAKE_TZONE_ALLOCATED(ProtocolBreakpoint);
     public:
         static std::optional<ProtocolBreakpoint> fromPayload(Protocol::ErrorString&, JSC::SourceID, unsigned lineNumber, unsigned columnNumber, RefPtr<JSON::Object>&& options = nullptr);
         static std::optional<ProtocolBreakpoint> fromPayload(Protocol::ErrorString&, const String& url, bool isRegex, unsigned lineNumber, unsigned columnNumber, RefPtr<JSON::Object>&& options = nullptr);
@@ -251,19 +252,8 @@ private:
     InjectedScriptManager& m_injectedScriptManager;
     HashMap<JSC::SourceID, JSC::Debugger::Script> m_scripts;
 
-    struct BlackboxConfig {
-        String url;
-        bool caseSensitive { false };
-        bool isRegex { false };
-
-        inline bool operator==(const BlackboxConfig& other) const
-        {
-            return url == other.url
-                && caseSensitive == other.caseSensitive
-                && isRegex == other.isRegex;
-        }
-    };
-    Vector<BlackboxConfig> m_blackboxedURLs;
+    using BlackboxParameters = std::tuple<String /* url */, bool /* caseSensitive */, bool /* isRegex */>;
+    HashMap<BlackboxParameters, HashSet<JSC::Debugger::BlackboxRange>> m_blackboxedURLs;
 
     HashSet<Listener*> m_listeners;
 

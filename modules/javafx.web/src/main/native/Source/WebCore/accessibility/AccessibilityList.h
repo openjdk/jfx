@@ -34,13 +34,12 @@ namespace WebCore {
 
 class AccessibilityList final : public AccessibilityRenderObject {
 public:
-    static Ref<AccessibilityList> create(RenderObject*);
+    static Ref<AccessibilityList> create(RenderObject&);
     static Ref<AccessibilityList> create(Node&);
     virtual ~AccessibilityList();
 
-    AccessibilityRole roleValue() const override;
 private:
-    explicit AccessibilityList(RenderObject*);
+    explicit AccessibilityList(RenderObject&);
     explicit AccessibilityList(Node&);
     bool isList() const override { return true; }
     bool isUnorderedList() const override;

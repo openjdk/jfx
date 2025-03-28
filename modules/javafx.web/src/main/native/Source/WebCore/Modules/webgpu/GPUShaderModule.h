@@ -31,13 +31,14 @@
 #include "WebGPUShaderModule.h"
 #include <wtf/Ref.h>
 #include <wtf/RefCounted.h>
+#include <wtf/WeakPtr.h>
 #include <wtf/text/WTFString.h>
 
 namespace WebCore {
 
 class DeferredPromise;
 
-class GPUShaderModule : public RefCounted<GPUShaderModule> {
+class GPUShaderModule : public RefCounted<GPUShaderModule>, public CanMakeWeakPtr<GPUShaderModule> {
 public:
     static Ref<GPUShaderModule> create(Ref<WebGPU::ShaderModule>&& backing)
     {
@@ -48,7 +49,7 @@ public:
     void setLabel(String&&);
 
     using CompilationInfoPromise = DOMPromiseDeferred<IDLInterface<GPUCompilationInfo>>;
-    void compilationInfo(CompilationInfoPromise&&);
+    void getCompilationInfo(CompilationInfoPromise&&);
 
     WebGPU::ShaderModule& backing() { return m_backing; }
     const WebGPU::ShaderModule& backing() const { return m_backing; }

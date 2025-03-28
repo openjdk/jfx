@@ -39,7 +39,7 @@ public:
     static Ref<AccessibilityImageMapLink> create();
     virtual ~AccessibilityImageMapLink();
 
-    void setHTMLAreaElement(HTMLAreaElement* element) { m_areaElement = element; }
+    void setHTMLAreaElement(HTMLAreaElement*);
     HTMLAreaElement* areaElement() const { return m_areaElement.get(); }
 
     void setHTMLMapElement(HTMLMapElement* element) { m_mapElement = element; }
@@ -47,7 +47,7 @@ public:
 
     Node* node() const override { return m_areaElement.get(); }
 
-    AccessibilityRole roleValue() const override;
+    AccessibilityRole determineAccessibilityRole() final;
     bool isEnabled() const override { return true; }
 
     Element* anchorElement() const override;
@@ -70,13 +70,17 @@ private:
     bool isImageMapLink() const final { return true; }
     bool supportsPath() const override { return true; }
 
-    RefPtr<HTMLAreaElement> m_areaElement;
-    RefPtr<HTMLMapElement> m_mapElement;
+    WeakPtr<HTMLAreaElement, WeakPtrImplWithEventTargetData> m_areaElement;
+    WeakPtr<HTMLMapElement, WeakPtrImplWithEventTargetData> m_mapElement;
 };
 
 } // namespace WebCore
 
-SPECIALIZE_TYPE_TRAITS_BEGIN(WebCore::AccessibilityImageMapLink) \
-    static bool isType(const WebCore::AXCoreObject& object) { return object.isAccessibilityObject() && downcast<WebCore::AccessibilityObject>(object).isImageMapLink(); } \
-    static bool isType(const WebCore::AccessibilityObject& object) { return object.isImageMapLink(); } \
+SPECIALIZE_TYPE_TRAITS_BEGIN(WebCore::AccessibilityImageMapLink)
+    static bool isType(const WebCore::AXCoreObject& object)
+    {
+        auto* accessibilityObject = dynamicDowncast<WebCore::AccessibilityObject>(object);
+        return accessibilityObject && accessibilityObject->isImageMapLink();
+    }
+    static bool isType(const WebCore::AccessibilityObject& object) { return object.isImageMapLink(); }
 SPECIALIZE_TYPE_TRAITS_END()

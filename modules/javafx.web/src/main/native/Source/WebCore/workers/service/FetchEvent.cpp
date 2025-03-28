@@ -33,13 +33,12 @@
 #include "JSDOMPromise.h"
 #include "JSFetchResponse.h"
 #include "Logging.h"
-#include <wtf/IsoMallocInlines.h>
-
-#if ENABLE(SERVICE_WORKER)
+#include <wtf/TZoneMallocInlines.h>
+#include <wtf/text/MakeString.h>
 
 namespace WebCore {
 
-WTF_MAKE_ISO_ALLOCATED_IMPL(FetchEvent);
+WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(FetchEvent);
 
 Ref<FetchEvent> FetchEvent::createForTesting(ScriptExecutionContext& context)
 {
@@ -61,7 +60,7 @@ static inline Ref<DOMPromise> retrieveHandledPromise(JSC::JSGlobalObject& global
 }
 
 FetchEvent::FetchEvent(JSC::JSGlobalObject& globalObject, const AtomString& type, Init&& initializer, IsTrusted isTrusted)
-    : ExtendableEvent(type, initializer, isTrusted)
+    : ExtendableEvent(EventInterfaceType::FetchEvent, type, initializer, isTrusted)
     , m_request(initializer.request.releaseNonNull())
     , m_clientId(WTFMove(initializer.clientId))
     , m_resultingClientId(WTFMove(initializer.resultingClientId))
@@ -79,17 +78,17 @@ FetchEvent::~FetchEvent()
 
 ResourceError FetchEvent::createResponseError(const URL& url, const String& errorMessage, ResourceError::IsSanitized isSanitized)
 {
-    return ResourceError { errorDomainWebKitServiceWorker, 0, url, makeString("FetchEvent.respondWith received an error: ", errorMessage), ResourceError::Type::General, isSanitized };
+    return ResourceError { errorDomainWebKitServiceWorker, 0, url, makeString("FetchEvent.respondWith received an error: "_s, errorMessage), ResourceError::Type::General, isSanitized };
 
 }
 
 ExceptionOr<void> FetchEvent::respondWith(Ref<DOMPromise>&& promise)
 {
     if (!isBeingDispatched())
-        return Exception { InvalidStateError, "Event is not being dispatched"_s };
+        return Exception { ExceptionCode::InvalidStateError, "Event is not being dispatched"_s };
 
     if (m_respondWithEntered)
-        return Exception { InvalidStateError, "Event respondWith flag is set"_s };
+        return Exception { ExceptionCode::InvalidStateError, "Event respondWith flag is set"_s };
 
     m_respondPromise = WTFMove(promise);
     addExtendLifetimePromise(*m_respondPromise);
@@ -202,9 +201,7 @@ void FetchEvent::navigationPreloadFailed(ResourceError&& error)
 {
     if (!m_preloadResponsePromise)
         m_preloadResponsePromise = makeUnique<PreloadResponsePromise>();
-    m_preloadResponsePromise->reject(Exception { TypeError, error.sanitizedDescription() });
+    m_preloadResponsePromise->reject(Exception { ExceptionCode::TypeError, error.sanitizedDescription() });
 }
 
 } // namespace WebCore
-
-#endif // ENABLE(SERVICE_WORKER)

@@ -50,72 +50,71 @@ ScrollingTreeScrollingNode::~ScrollingTreeScrollingNode() = default;
 
 bool ScrollingTreeScrollingNode::commitStateBeforeChildren(const ScrollingStateNode& stateNode)
 {
-    if (!is<ScrollingStateScrollingNode>(stateNode))
+    auto* state = dynamicDowncast<ScrollingStateScrollingNode>(stateNode);
+    if (!state)
         return false;
 
-    const auto& state = downcast<ScrollingStateScrollingNode>(stateNode);
+    if (state->hasChangedProperty(ScrollingStateNode::Property::ScrollableAreaSize))
+        m_scrollableAreaSize = state->scrollableAreaSize();
 
-    if (state.hasChangedProperty(ScrollingStateNode::Property::ScrollableAreaSize))
-        m_scrollableAreaSize = state.scrollableAreaSize();
-
-    if (state.hasChangedProperty(ScrollingStateNode::Property::TotalContentsSize)) {
+    if (state->hasChangedProperty(ScrollingStateNode::Property::TotalContentsSize)) {
         if (scrollingTree().isRubberBandInProgressForNode(scrollingNodeID()))
             m_totalContentsSizeForRubberBand = m_totalContentsSize;
         else
-            m_totalContentsSizeForRubberBand = state.totalContentsSize();
+            m_totalContentsSizeForRubberBand = state->totalContentsSize();
 
-        m_totalContentsSize = state.totalContentsSize();
+        m_totalContentsSize = state->totalContentsSize();
     }
 
-    if (state.hasChangedProperty(ScrollingStateNode::Property::ReachableContentsSize))
-        m_reachableContentsSize = state.reachableContentsSize();
+    if (state->hasChangedProperty(ScrollingStateNode::Property::ReachableContentsSize))
+        m_reachableContentsSize = state->reachableContentsSize();
 
-    if (state.hasChangedProperty(ScrollingStateNode::Property::ScrollPosition)) {
-        m_lastCommittedScrollPosition = state.scrollPosition();
-        if (m_isFirstCommit && !state.hasScrollPositionRequest())
+    if (state->hasChangedProperty(ScrollingStateNode::Property::ScrollPosition)) {
+        m_lastCommittedScrollPosition = state->scrollPosition();
+        if (m_isFirstCommit && !state->hasScrollPositionRequest())
             m_currentScrollPosition = m_lastCommittedScrollPosition;
     }
 
-    if (state.hasChangedProperty(ScrollingStateNode::Property::ScrollOrigin))
-        m_scrollOrigin = state.scrollOrigin();
+    if (state->hasChangedProperty(ScrollingStateNode::Property::ScrollOrigin))
+        m_scrollOrigin = state->scrollOrigin();
 
-    if (state.hasChangedProperty(ScrollingStateNode::Property::SnapOffsetsInfo))
-        m_snapOffsetsInfo = state.snapOffsetsInfo();
+    if (state->hasChangedProperty(ScrollingStateNode::Property::SnapOffsetsInfo))
+        m_snapOffsetsInfo = state->snapOffsetsInfo();
 
-    if (state.hasChangedProperty(ScrollingStateNode::Property::CurrentHorizontalSnapOffsetIndex))
-        m_currentHorizontalSnapPointIndex = state.currentHorizontalSnapPointIndex();
+    if (state->hasChangedProperty(ScrollingStateNode::Property::CurrentHorizontalSnapOffsetIndex))
+        m_currentHorizontalSnapPointIndex = state->currentHorizontalSnapPointIndex();
 
-    if (state.hasChangedProperty(ScrollingStateNode::Property::CurrentVerticalSnapOffsetIndex))
-        m_currentVerticalSnapPointIndex = state.currentVerticalSnapPointIndex();
+    if (state->hasChangedProperty(ScrollingStateNode::Property::CurrentVerticalSnapOffsetIndex))
+        m_currentVerticalSnapPointIndex = state->currentVerticalSnapPointIndex();
 
-    if (state.hasChangedProperty(ScrollingStateNode::Property::ScrollableAreaParams))
-        m_scrollableAreaParameters = state.scrollableAreaParameters();
+    if (state->hasChangedProperty(ScrollingStateNode::Property::ScrollableAreaParams))
+        m_scrollableAreaParameters = state->scrollableAreaParameters();
 
 #if ENABLE(SCROLLING_THREAD)
-    if (state.hasChangedProperty(ScrollingStateNode::Property::ReasonsForSynchronousScrolling))
-        m_synchronousScrollingReasons = state.synchronousScrollingReasons();
+    if (state->hasChangedProperty(ScrollingStateNode::Property::ReasonsForSynchronousScrolling))
+        m_synchronousScrollingReasons = state->synchronousScrollingReasons();
 #endif
 
-    if (state.hasChangedProperty(ScrollingStateNode::Property::ScrollContainerLayer))
-        m_scrollContainerLayer = state.scrollContainerLayer();
+    if (state->hasChangedProperty(ScrollingStateNode::Property::ScrollContainerLayer))
+        m_scrollContainerLayer = state->scrollContainerLayer();
 
-    if (state.hasChangedProperty(ScrollingStateNode::Property::ScrolledContentsLayer))
-        m_scrolledContentsLayer = state.scrolledContentsLayer();
+    if (state->hasChangedProperty(ScrollingStateNode::Property::ScrolledContentsLayer))
+        m_scrolledContentsLayer = state->scrolledContentsLayer();
 
     return true;
 }
 
 bool ScrollingTreeScrollingNode::commitStateAfterChildren(const ScrollingStateNode& stateNode)
 {
-    if (!is<ScrollingStateScrollingNode>(stateNode))
+    auto* scrollingStateNode = dynamicDowncast<ScrollingStateScrollingNode>(stateNode);
+    if (!scrollingStateNode)
         return false;
 
-    const auto& scrollingStateNode = downcast<ScrollingStateScrollingNode>(stateNode);
-    if (scrollingStateNode.hasChangedProperty(ScrollingStateNode::Property::RequestedScrollPosition))
-        handleScrollPositionRequest(scrollingStateNode.requestedScrollData());
+    if (scrollingStateNode->hasChangedProperty(ScrollingStateNode::Property::RequestedScrollPosition))
+        handleScrollPositionRequest(scrollingStateNode->requestedScrollData());
 
-    if (scrollingStateNode.hasChangedProperty(ScrollingStateNode::Property::KeyboardScrollData))
-        requestKeyboardScroll(scrollingStateNode.keyboardScrollData());
+    if (scrollingStateNode->hasChangedProperty(ScrollingStateNode::Property::KeyboardScrollData))
+        requestKeyboardScroll(scrollingStateNode->keyboardScrollData());
 
     // This synthetic bit is added back in ScrollingTree::propagateSynchronousScrollingReasons().
 #if ENABLE(SCROLLING_THREAD)
@@ -301,11 +300,11 @@ void ScrollingTreeScrollingNode::requestKeyboardScroll(const RequestedKeyboardSc
 
 void ScrollingTreeScrollingNode::handleScrollPositionRequest(const RequestedScrollData& requestedScrollData)
 {
-    LOG_WITH_STREAM(Scrolling, stream << "ScrollingTreeScrollingNode " << scrollingNodeID() << " handleScrollPositionRequest()" << " animated " << (requestedScrollData.animated == ScrollIsAnimated::Yes) << " requestedScrollData: " << requestedScrollData);
-
     stopAnimatedScroll();
 
     if (requestedScrollData.requestType == ScrollRequestType::CancelAnimatedScroll) {
+        ASSERT(!requestedScrollData.requestedDataBeforeAnimatedScroll);
+        LOG_WITH_STREAM(Scrolling, stream << "ScrollingTreeScrollingNode " << scrollingNodeID() << " handleScrollPositionRequest() - cancel animated scroll");
         scrollingTree().removePendingScrollAnimationForNode(scrollingNodeID());
         return;
     }
@@ -313,14 +312,31 @@ void ScrollingTreeScrollingNode::handleScrollPositionRequest(const RequestedScro
     if (scrollingTree().scrollingTreeNodeRequestsScroll(scrollingNodeID(), requestedScrollData))
         return;
 
-    auto scrollToPosition = requestedScrollData.destinationPosition(currentScrollPosition());
+    LOG_WITH_STREAM(Scrolling, stream << "ScrollingTreeScrollingNode " << scrollingNodeID() << " handleScrollPositionRequest() with data " << requestedScrollData);
 
+    if (requestedScrollData.requestedDataBeforeAnimatedScroll) {
+        auto& [requestType, positionOrDeltaBeforeAnimatedScroll, scrollType, clamping] = *requestedScrollData.requestedDataBeforeAnimatedScroll;
+
+        switch (requestType) {
+        case ScrollRequestType::PositionUpdate:
+        case ScrollRequestType::DeltaUpdate: {
+            auto intermediatePosition = RequestedScrollData::computeDestinationPosition(currentScrollPosition(), requestType, positionOrDeltaBeforeAnimatedScroll);
+            scrollTo(intermediatePosition, scrollType, clamping);
+            break;
+        }
+        case ScrollRequestType::CancelAnimatedScroll:
+            stopAnimatedScroll();
+            break;
+        }
+    }
+
+    auto destinationPosition = requestedScrollData.destinationPosition(currentScrollPosition());
     if (requestedScrollData.animated == ScrollIsAnimated::Yes) {
-        startAnimatedScrollToPosition(scrollToPosition);
+        startAnimatedScrollToPosition(destinationPosition);
         return;
     }
 
-    scrollTo(scrollToPosition, requestedScrollData.scrollType, requestedScrollData.clamping);
+    scrollTo(destinationPosition, requestedScrollData.scrollType, requestedScrollData.clamping);
 }
 
 FloatPoint ScrollingTreeScrollingNode::adjustedScrollPosition(const FloatPoint& scrollPosition, ScrollClamping clamping) const

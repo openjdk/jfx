@@ -33,6 +33,7 @@
 #include "NumberPrototype.h"
 #include "ParseInt.h"
 #include "TypeError.h"
+#include <wtf/text/MakeString.h>
 
 namespace JSC {
 
@@ -47,6 +48,8 @@ uint64_t JSValue::toLength(JSGlobalObject* globalObject) const
 {
     // ECMA 7.1.15
     // http://www.ecma-international.org/ecma-262/6.0/#sec-tolength
+    if (isInt32())
+        return static_cast<uint64_t>(std::max<int32_t>(asInt32(), 0));
     double d = toIntegerOrInfinity(globalObject);
     if (d <= 0)
         return 0;
@@ -422,27 +425,20 @@ String JSValue::toWTFStringSlowCase(JSGlobalObject* globalObject) const
     RELEASE_AND_RETURN(scope, string->value(globalObject));
 }
 
-#if !COMPILER(GCC_COMPATIBLE)
-// This makes the argument opaque from the compiler.
-NEVER_INLINE void ensureStillAliveHere(JSValue)
-{
-}
-#endif
-
 WTF::String JSValue::toWTFStringForConsole(JSGlobalObject* globalObject) const
 {
     VM& vm = globalObject->vm();
     auto scope = DECLARE_THROW_SCOPE(vm);
     JSString* string = toString(globalObject);
     RETURN_IF_EXCEPTION(scope, { });
-    String result = string->value(globalObject);
+    auto result = string->value(globalObject);
     RETURN_IF_EXCEPTION(scope, { });
     if (isString())
-        return tryMakeString('"', result, '"');
+        return tryMakeString('"', result.data, '"');
     if (jsDynamicCast<JSArray*>(*this))
-        return tryMakeString('[', result, ']');
+        return tryMakeString('[', result.data, ']');
     if (jsDynamicCast<JSBigInt*>(*this))
-        return tryMakeString(result, 'n');
+        return tryMakeString(result.data, 'n');
     return result;
 }
 

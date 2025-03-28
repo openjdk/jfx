@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017, 2018, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2017, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,8 +25,10 @@
 
 package test.robot.javafx.scene;
 
-import test.com.sun.javafx.scene.control.infrastructure.KeyEventFirer;
-import test.com.sun.javafx.scene.control.infrastructure.KeyModifier;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.concurrent.TimeUnit;
 import javafx.application.Platform;
 import javafx.scene.Scene;
 import javafx.scene.control.Button;
@@ -34,23 +36,24 @@ import javafx.scene.control.ToggleButton;
 import javafx.scene.control.ToggleGroup;
 import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyCodeCombination;
+import javafx.scene.layout.HBox;
 import javafx.scene.layout.Pane;
 import javafx.scene.layout.Priority;
-import javafx.scene.layout.HBox;
-import javafx.scene.layout.VBox;
 import javafx.scene.layout.StackPane;
+import javafx.scene.layout.VBox;
 import javafx.scene.paint.Color;
 import javafx.stage.Stage;
-import java.util.ArrayList;
-import java.util.List;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
+import test.com.sun.javafx.scene.control.infrastructure.KeyEventFirer;
+import test.com.sun.javafx.scene.control.infrastructure.KeyModifier;
 import test.robot.testharness.VisualTestBase;
-import static org.junit.Assert.assertEquals;
 
 /**
  * A visual styling regression has been fixed under JDK8183100.
  * This test validates it.
  */
+@Timeout(value=15000, unit=TimeUnit.MILLISECONDS)
 public class JDK8183100Test extends VisualTestBase {
 
     private Stage testStage;
@@ -78,7 +81,7 @@ public class JDK8183100Test extends VisualTestBase {
         }
     }
 
-    @Test(timeout = 15000)
+    @Test
     public void stackPaneColorTest() {
         final int WIDTH = 200;
         final int HEIGHT = 100;

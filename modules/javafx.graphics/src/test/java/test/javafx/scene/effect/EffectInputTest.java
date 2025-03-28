@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,15 +25,9 @@
 
 package test.javafx.scene.effect;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
-
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.List;
+import java.util.stream.Stream;
 
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.SimpleObjectProperty;
@@ -43,20 +37,20 @@ import javafx.scene.Scene;
 import javafx.scene.shape.Rectangle;
 import javafx.stage.Stage;
 
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
-import org.junit.runners.Parameterized.Parameters;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import test.com.sun.javafx.pgstub.StubToolkit;
 import com.sun.javafx.tk.Toolkit;
 import com.sun.scenario.effect.EffectHelper;
 import javafx.scene.effect.Effect;
 
-@RunWith(Parameterized.class)
 public class EffectInputTest {
-    private String effect1Name = null;
-    private String effect2Name = null;
     private Node n = null;
 
     final static String[] effects = new String[] {
@@ -66,21 +60,17 @@ public class EffectInputTest {
         "Reflection", "SepiaTone", "Shadow"
     };
 
-    @Parameters
-    public static Collection parameters() {
-        List list = new ArrayList();
+    public static Stream<Arguments> parameters() {
+        Stream<Arguments> stream = Stream.empty();
         for (int i = 0; i < effects.length; i++) {
             for (int j = i; j < effects.length; j++) {
-                list.add(new String[] { effects[i], effects[j] });
+                stream = Stream.concat(stream, Stream.of(Arguments.of( effects[i], effects[j] )));
             }
         }
-        return list;
+        return stream;
     }
 
-    public EffectInputTest(final String effect1,
-                           final String effect2) {
-        this.effect1Name = effect1;
-        this.effect2Name = effect2;
+    public EffectInputTest() {
         Group root = new Group();
         Scene scene = new Scene(root);
         Stage stage = new Stage();
@@ -108,8 +98,14 @@ public class EffectInputTest {
         }
     }
 
-    @Test
-    public void testInput() throws Exception  {
+    @AfterEach
+    private void tearDownEach() {
+        Thread.currentThread().setUncaughtExceptionHandler(null);
+    }
+
+    @ParameterizedTest
+    @MethodSource("parameters")
+    public void testInput(String effect1Name, String effect2Name) throws Exception  {
         final Class effect1Class = Class.forName("javafx.scene.effect." + effect1Name);
         final Class effect2Class = Class.forName("javafx.scene.effect." + effect2Name);
 
@@ -153,8 +149,9 @@ public class EffectInputTest {
         assertEquals(EffectHelper.getPeer(effect1), pgGetInput2.invoke(EffectHelper.getPeer(effect2)));
     }
 
-    @Test
-    public void testCycle() throws Exception  {
+    @ParameterizedTest
+    @MethodSource("parameters")
+    public void testCycle(String effect1Name, String effect2Name) throws Exception  {
         final Class effect1Class = Class.forName("javafx.scene.effect." + effect1Name);
         final Class effect2Class = Class.forName("javafx.scene.effect." + effect2Name);
 
@@ -186,8 +183,9 @@ public class EffectInputTest {
     }
 
     int countIllegalArgumentException = 0;
-    @Test
-    public void testCycleForBoundInput() throws Exception  {
+    @ParameterizedTest
+    @MethodSource("parameters")
+    public void testCycleForBoundInput(String effect1Name, String effect2Name) throws Exception  {
         Thread.currentThread().setUncaughtExceptionHandler((thread, throwable) -> {
             if (throwable instanceof IllegalArgumentException) {
                 countIllegalArgumentException++;
@@ -219,7 +217,7 @@ public class EffectInputTest {
         v.set(effect2);
         assertEquals(null, getInput1.invoke(effect1));
 
-        assertEquals("Cycle in effect chain detected, exception should occur 2 times.", 2, countIllegalArgumentException);
-        Thread.currentThread().setUncaughtExceptionHandler(null);
+        assertEquals(2, countIllegalArgumentException, "Cycle in effect chain detected, exception should occur 2 times.");
+        // UEH set to null in @AfterEach
     }
 }

@@ -59,7 +59,14 @@
 #define USE_LIBPAS_THREAD_SUSPEND_LOCK 1
 #include <bmalloc/pas_thread_suspend_lock.h>
 #endif
+#if USE(TZONE_MALLOC)
+#if BUSE(TZONE)
+#include <bmalloc/TZoneHeapManager.h>
+#else
+#error USE(TZONE_MALLOC) requires BUSE(TZONE)
 #endif
+#endif // USE(TZONE_MALLOC)
+#endif // !USE(SYSTEM_MALLOC)
 
 namespace WTF {
 
@@ -114,6 +121,14 @@ static std::optional<size_t> stackSize(ThreadType threadType)
         return 1 * MB; // ASan needs more stack space (especially on Debug builds).
 #elif PLATFORM(JAVA) && OS(WINDOWS) && USE(JSVALUE32_64)
     return 1 * MB;
+#elif OS(WINDOWS)
+    // WebGL conformance tests need more stack space <https://webkit.org/b/261297>
+    if (threadType == ThreadType::Graphics)
+#if defined(NDEBUG)
+        return 2 * MB;
+#else
+        return 4 * MB;
+#endif
 #else
     UNUSED_PARAM(threadType);
 #endif
@@ -143,7 +158,7 @@ uint32_t ThreadLike::currentSequence()
 
 struct Thread::NewThreadContext : public ThreadSafeRefCounted<NewThreadContext> {
 public:
-    NewThreadContext(const char* name, Function<void()>&& entryPoint, Ref<Thread>&& thread)
+    NewThreadContext(ASCIILiteral name, Function<void()>&& entryPoint, Ref<Thread>&& thread)
         : name(name)
         , entryPoint(WTFMove(entryPoint))
         , thread(WTFMove(thread))
@@ -152,7 +167,7 @@ public:
 
     enum class Stage { Start, EstablishedHandle, Initialized };
     Stage stage { Stage::Start };
-    const char* name;
+    ASCIILiteral name;
     Function<void()> entryPoint;
     Ref<Thread> thread;
     Mutex mutex;
@@ -199,8 +214,9 @@ const char* Thread::normalizeThreadName(const char* threadName)
     if (result.length() > kLinuxThreadNameLimit)
         result = result.right(kLinuxThreadNameLimit);
 #endif
-    ASSERT(result.characters8()[result.length()] == '\0');
-    return reinterpret_cast<const char*>(result.characters8());
+    auto characters = result.span8();
+    ASSERT(characters[characters.size()] == '\0');
+    return byteCast<char>(characters.data());
 #endif
 }
 
@@ -255,7 +271,7 @@ void Thread::entryPoint(NewThreadContext* newThreadContext)
     function();
 }
 
-Ref<Thread> Thread::create(const char* name, Function<void()>&& entryPoint, ThreadType threadType, QOS qos)
+Ref<Thread> Thread::create(ASCIILiteral name, Function<void()>&& entryPoint, ThreadType threadType, QOS qos, SchedulingPolicy schedulingPolicy)
 {
     WTF::initialize();
     Ref<Thread> thread = adoptRef(*new Thread());
@@ -268,7 +284,7 @@ Ref<Thread> Thread::create(const char* name, Function<void()>&& entryPoint, Thre
     context->ref();
     {
         MutexLocker locker(context->mutex);
-        bool success = thread->establishHandle(context.ptr(), stackSize(threadType), qos);
+        bool success = thread->establishHandle(context.ptr(), stackSize(threadType), qos, schedulingPolicy);
         RELEASE_ASSERT(success);
         context->stage = NewThreadContext::Stage::EstablishedHandle;
 
@@ -321,10 +337,15 @@ void Thread::didExit()
 
     if (shouldRemoveThreadFromThreadGroup()) {
         {
-            Vector<Ref<ThreadGroup>> threadGroups;
+            Vector<std::shared_ptr<ThreadGroup>> threadGroups;
             {
                 Locker locker { m_mutex };
-                threadGroups = m_threadGroups.values();
+                for (auto& threadGroupPointerPair : m_threadGroupMap) {
+                    // If ThreadGroup is just being destroyed,
+                    // we do not need to perform unregistering.
+                    if (auto retained = threadGroupPointerPair.value.lock())
+                        threadGroups.append(WTFMove(retained));
+                }
                 m_isShuttingDown = true;
             }
             for (auto& threadGroup : threadGroups) {
@@ -348,16 +369,25 @@ ThreadGroupAddResult Thread::addToThreadGroup(const AbstractLocker& threadGroupL
     if (m_isShuttingDown)
         return ThreadGroupAddResult::NotAdded;
     if (threadGroup.m_threads.add(*this).isNewEntry) {
-        m_threadGroups.add(threadGroup);
+        m_threadGroupMap.add(&threadGroup, threadGroup.weakFromThis());
         return ThreadGroupAddResult::NewlyAdded;
     }
     return ThreadGroupAddResult::AlreadyAdded;
 }
 
+void Thread::removeFromThreadGroup(const AbstractLocker& threadGroupLocker, ThreadGroup& threadGroup)
+{
+    UNUSED_PARAM(threadGroupLocker);
+    Locker locker { m_mutex };
+    if (m_isShuttingDown)
+        return;
+    m_threadGroupMap.remove(&threadGroup);
+}
+
 unsigned Thread::numberOfThreadGroups()
 {
     Locker locker { m_mutex };
-    return m_threadGroups.values().size();
+    return m_threadGroupMap.size();
 }
 
 bool Thread::exchangeIsCompilationThread(bool newValue)
@@ -375,7 +405,8 @@ void Thread::registerGCThread(GCThreadType gcThreadType)
 
 bool Thread::mayBeGCThread()
 {
-    return Thread::current().gcThreadType() != GCThreadType::None;
+    // TODO: FIX THIS
+    return Thread::current().gcThreadType() != GCThreadType::None || Thread::current().m_isCompilationThread;
 }
 
 void Thread::registerJSThread(Thread& thread)
@@ -476,6 +507,9 @@ void initialize()
     std::call_once(onceKey, [] {
         setPermissionsOfConfigPage();
         Config::initialize();
+#if USE(TZONE_MALLOC)
+        bmalloc::api::TZoneHeapManager::singleton(); // Force initialization.
+#endif
         Gigacage::ensureGigacage();
         Config::AssertNotFrozenScope assertScope;
 #if !HAVE(FAST_TLS) && !OS(WINDOWS)
@@ -483,13 +517,10 @@ void initialize()
 #endif
         initializeDates();
         Thread::initializePlatformThreading();
-#if USE(PTHREADS) && HAVE(MACHINE_CONTEXT)
-        SignalHandlers::initialize();
-#endif
 #if PLATFORM(COCOA)
         initializeLibraryPathDiagnostics();
 #endif
-#if OS(WINDOWS)
+#if USE(WINDOWS_EVENT_LOOP)
         RunLoop::registerRunLoopMessageWindowClass();
 #endif
     });

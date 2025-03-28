@@ -26,6 +26,8 @@
 
 #include "config.h"
 #include "JSWebAssemblyException.h"
+#include "WasmExceptionType.h"
+#include "WasmTypeDefinition.h"
 
 #if ENABLE(WEBASSEMBLY)
 
@@ -39,6 +41,11 @@
 namespace JSC {
 
 const ClassInfo JSWebAssemblyException::s_info = { "WebAssembly.Exception"_s, &Base::s_info, nullptr, nullptr, CREATE_METHOD_TABLE(JSWebAssemblyException) };
+
+Structure* JSWebAssemblyException::createStructure(VM& vm, JSGlobalObject* globalObject, JSValue prototype)
+{
+    return Structure::create(vm, globalObject, prototype, TypeInfo(ErrorInstanceType, StructureFlags), info());
+}
 
 JSWebAssemblyException::JSWebAssemblyException(VM& vm, Structure* structure, const Wasm::Tag& tag, FixedVector<uint64_t>&& payload)
     : Base(vm, structure)
@@ -54,9 +61,11 @@ void JSWebAssemblyException::visitChildrenImpl(JSCell* cell, Visitor& visitor)
 
     auto* exception = jsCast<JSWebAssemblyException*>(cell);
     const auto& tagType = exception->tag().type();
+    unsigned offset = 0;
     for (unsigned i = 0; i < tagType.argumentCount(); ++i) {
         if (isRefType(tagType.argumentType(i)))
-            visitor.append(bitwise_cast<WriteBarrier<Unknown>>(exception->payload()[i]));
+            visitor.append(bitwise_cast<WriteBarrier<Unknown>>(exception->payload()[offset]));
+        offset += tagType.argumentType(i).kind == Wasm::TypeKind::V128 ? 2 : 1;
     }
 }
 
@@ -69,8 +78,18 @@ void JSWebAssemblyException::destroy(JSCell* cell)
 
 JSValue JSWebAssemblyException::getArg(JSGlobalObject* globalObject, unsigned i) const
 {
-    ASSERT(i < tag().type().argumentCount());
-    return toJSValue(globalObject, tag().type().argumentType(i), payload()[i]);
+    const auto& tagType = tag().type();
+    ASSERT(i < tagType.argumentCount());
+
+    // It feels like maybe we should throw an exception here, but as far as I can tell,
+    // the current draft spec just asserts that we can't getArg a v128. Maybe we can
+    // revisit this later.
+    RELEASE_ASSERT(tagType.argumentType(i).kind != Wasm::TypeKind::V128);
+
+    unsigned offset = 0;
+    for (unsigned j = 0; j < i; ++j)
+        offset += tagType.argumentType(j).kind == Wasm::TypeKind::V128 ? 2 : 1;
+    return toJSValue(globalObject, tagType.argumentType(i), payload()[offset]);
 }
 
 } // namespace JSC

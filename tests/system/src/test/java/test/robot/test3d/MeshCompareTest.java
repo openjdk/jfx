@@ -25,9 +25,9 @@
 
 package test.robot.test3d;
 
-import static org.junit.Assume.assumeTrue;
-import java.util.ArrayList;
-import java.util.Collection;
+import static org.junit.jupiter.api.Assumptions.assumeTrue;
+import java.util.List;
+import java.util.concurrent.TimeUnit;
 import javafx.application.ConditionalFeature;
 import javafx.application.Platform;
 import javafx.scene.AmbientLight;
@@ -42,32 +42,21 @@ import javafx.scene.shape.MeshView;
 import javafx.scene.shape.TriangleMesh;
 import javafx.scene.shape.VertexFormat;
 import javafx.stage.Stage;
-import org.junit.Before;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Timeout;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
 import com.sun.javafx.geom.Vec3f;
 import test.robot.testharness.VisualTestBase;
 
 /**
  * 3D Snapshot validation tests.
  */
-@RunWith(Parameterized.class)
-public class MeshCompareTest extends VisualTestBase {
+@Timeout(value=15000, unit=TimeUnit.MILLISECONDS)
+public final class MeshCompareTest extends VisualTestBase {
 
-    private static Collection params = null;
-
-    private static final Object[] pNumLights = { 0, 1, 2, 3 };
-
-    @Parameterized.Parameters
-    public static Collection getParams() {
-        if (params == null) {
-            params = new ArrayList();
-            for (Object o1 : pNumLights) {
-                params.add(new Object[]{o1});
-            }
-        }
-        return params;
+    public static List<Integer> parameters() {
+        return List.of(0, 1, 2, 3);
     }
 
     private static final double TOLERANCE = 0.07;
@@ -85,12 +74,6 @@ public class MeshCompareTest extends VisualTestBase {
     private Scene testScene;
     private WritableImage wImage;
     private MeshView shape;
-
-    private int numLights;
-
-    public MeshCompareTest(int numLights) {
-        this.numLights = numLights;
-    }
 
     private TriangleMesh createICOSphere(float scale) {
         final int pointSize = 3; // x, y, z
@@ -239,7 +222,7 @@ public class MeshCompareTest extends VisualTestBase {
         return triangleMesh;
     }
 
-    private Scene buildScene() {
+    private Scene buildScene(int numLights) {
         Group root = new Group();
 
         PhongMaterial material = new PhongMaterial();
@@ -289,7 +272,7 @@ public class MeshCompareTest extends VisualTestBase {
         assertColorEquals(exColor, sColor, TOLERANCE);
     }
 
-    @Before
+    @BeforeEach
     public void setupEach() {
         assumeTrue(Platform.isSupported(ConditionalFeature.SCENE3D));
     }
@@ -298,14 +281,15 @@ public class MeshCompareTest extends VisualTestBase {
     // Tests
     // -------------------------------------------------------------
 
-    @Test(timeout = 15000)
-    public void testSnapshot3D() {
+    @ParameterizedTest
+    @MethodSource("parameters")
+    public void testSnapshot3D(int numLights) {
 
         runAndWait(() -> {
             testStage = getStage();
             testStage.setTitle("Mesh VertexFormat Compare Test");
 
-            testScene = buildScene();
+            testScene = buildScene(numLights);
 
             // Take snapshot
             wImage = testScene.snapshot(null);
@@ -322,5 +306,4 @@ public class MeshCompareTest extends VisualTestBase {
             compareColors(testScene, wImage, SAMPLE_X3, SAMPLE_Y3);
         });
     }
-
 }

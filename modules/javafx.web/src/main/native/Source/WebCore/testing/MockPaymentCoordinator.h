@@ -71,6 +71,7 @@ public:
     const Vector<ApplePayLineItem>& lineItems() const { return m_lineItems; }
     const Vector<MockPaymentError>& errors() const { return m_errors; }
     const Vector<ApplePayShippingMethod>& shippingMethods() const { return m_shippingMethods; }
+    const Vector<String>& supportedCountries() const { return m_supportedCountries; }
     const MockPaymentContactFields& requiredBillingContactFields() const { return m_requiredBillingContactFields; }
     const MockPaymentContactFields& requiredShippingContactFields() const { return m_requiredShippingContactFields; }
 
@@ -103,8 +104,16 @@ public:
     const std::optional<ApplePayDeferredPaymentRequest>& deferredPaymentRequest() const { return m_deferredPaymentRequest; }
 #endif
 
+#if ENABLE(APPLE_PAY_DISBURSEMENTS)
+    const std::optional<ApplePayDisbursementRequest>& disbursementRequest() const { return m_disbursementRequest; }
+#endif
+
 #if ENABLE(APPLE_PAY_LATER_AVAILABILITY)
     const std::optional<ApplePayLaterAvailability> applePayLaterAvailability() const { return m_applePayLaterAvailability; }
+#endif
+
+#if ENABLE(APPLE_PAY_MERCHANT_CATEGORY_CODE)
+    const String& merchantCategoryCode() const { return m_merchantCategoryCode; }
 #endif
 
     bool installmentConfigurationReturnsNil() const;
@@ -132,7 +141,7 @@ private:
     bool isMockPaymentCoordinator() const final { return true; }
 
     void getSetupFeatures(const ApplePaySetupConfiguration&, const URL&, CompletionHandler<void(Vector<Ref<ApplePaySetupFeature>>&&)>&&) final;
-    void beginApplePaySetup(const ApplePaySetupConfiguration&, const URL&, Vector<RefPtr<ApplePaySetupFeature>>&&, CompletionHandler<void(bool)>&&) final;
+    void beginApplePaySetup(const ApplePaySetupConfiguration&, const URL&, Vector<Ref<ApplePaySetupFeature>>&&, CompletionHandler<void(bool)>&&) final;
 
     void dispatchIfShowing(Function<void()>&&);
 
@@ -144,6 +153,7 @@ private:
     Vector<ApplePayLineItem> m_lineItems;
     Vector<MockPaymentError> m_errors;
     Vector<ApplePayShippingMethod> m_shippingMethods;
+    Vector<String> m_supportedCountries;
     HashSet<String, ASCIICaseInsensitiveHash> m_availablePaymentNetworks;
     MockPaymentContactFields m_requiredBillingContactFields;
     MockPaymentContactFields m_requiredShippingContactFields;
@@ -176,8 +186,16 @@ private:
     std::optional<ApplePayDeferredPaymentRequest> m_deferredPaymentRequest;
 #endif
 
+#if ENABLE(APPLE_PAY_DISBURSEMENTS)
+    std::optional<ApplePayDisbursementRequest> m_disbursementRequest;
+#endif
+
 #if ENABLE(APPLE_PAY_LATER_AVAILABILITY)
     std::optional<ApplePayLaterAvailability> m_applePayLaterAvailability;
+#endif
+
+#if ENABLE(APPLE_PAY_MERCHANT_CATEGORY_CODE)
+    String m_merchantCategoryCode;
 #endif
 };
 

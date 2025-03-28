@@ -56,6 +56,13 @@ struct ScrollToOptions {
 
 ScrollToOptions* toScrollToOptions(JSContextRef, JSValueRef);
 
+struct TextExtractionOptions {
+    bool clipToBounds { false };
+    bool includeRects { false };
+};
+
+TextExtractionOptions* toTextExtractionOptions(JSContextRef, JSValueRef);
+
 class UIScriptController : public JSWrappable {
 public:
     static Ref<UIScriptController> create(UIScriptContext&);
@@ -76,6 +83,7 @@ public:
     virtual void doAfterNextStablePresentationUpdate(JSValueRef callback) { doAfterPresentationUpdate(callback); }
     virtual void ensurePositionInformationIsUpToDateAt(long, long, JSValueRef callback) { doAsyncTask(callback); }
     virtual void doAfterVisibleContentRectUpdate(JSValueRef callback) { doAsyncTask(callback); }
+    virtual void doAfterNextVisibleContentRectAndStablePresentationUpdate(JSValueRef callback) { doAsyncTask(callback); }
 
     virtual void doAfterDoubleTapDelay(JSValueRef callback) { doAsyncTask(callback); }
 
@@ -106,6 +114,10 @@ public:
 
     virtual void setSafeAreaInsets(double, double, double, double) { notImplemented(); }
 
+    virtual void beginInteractiveObscuredInsetsChange() { notImplemented(); }
+    virtual void endInteractiveObscuredInsetsChange() { notImplemented(); }
+    virtual void setObscuredInsets(double, double, double, double) { notImplemented(); }
+
     // View Parenting and Visibility
 
     virtual void becomeFirstResponder() { notImplemented(); }
@@ -113,6 +125,7 @@ public:
 
     virtual void copyText(JSStringRef) { notImplemented(); }
     virtual void paste() { notImplemented(); }
+    virtual int64_t pasteboardChangeCount() const { return 0; }
 
     virtual void chooseMenuAction(JSStringRef, JSValueRef);
     virtual void dismissMenu();
@@ -122,8 +135,13 @@ public:
     virtual bool isWindowContentViewFirstResponder() const { notImplemented(); return false; }
     virtual bool isWebContentFirstResponder() const { notImplemented(); return false; }
 
+    virtual void setInlinePrediction(JSStringRef, unsigned) { notImplemented(); }
+    virtual void acceptInlinePrediction() { notImplemented(); }
+
     virtual void removeViewFromWindow(JSValueRef) { notImplemented(); }
     virtual void addViewToWindow(JSValueRef) { notImplemented(); }
+
+    virtual void resizeWindowTo(unsigned /* width */, unsigned /* height */) { notImplemented(); }
 
     virtual void installTapGestureOnWindow(JSValueRef) { notImplemented(); }
 
@@ -141,6 +159,8 @@ public:
     virtual bool scrollUpdatesDisabled() const { notImplemented(); return false; }
     virtual void setScrollUpdatesDisabled(bool) { notImplemented(); }
 
+    virtual bool isZoomingOrScrolling() const { notImplemented(); return false; }
+
     virtual void scrollToOffset(long, long, ScrollToOptions*) { notImplemented(); }
 
     virtual void immediateScrollToOffset(long, long, ScrollToOptions*) { notImplemented(); }
@@ -155,7 +175,7 @@ public:
     virtual JSRetainPtr<JSStringRef> uiViewTreeAsText() const { notImplemented(); return nullptr; }
     virtual JSRetainPtr<JSStringRef> caLayerTreeAsText() const { notImplemented(); return nullptr; }
 
-    virtual JSRetainPtr<JSStringRef> scrollbarStateForScrollingNodeID(unsigned long long, bool) const { notImplemented(); return nullptr; }
+    virtual JSRetainPtr<JSStringRef> scrollbarStateForScrollingNodeID(unsigned long long, unsigned long long, bool) const { notImplemented(); return nullptr; }
 
     // Touches
 
@@ -209,6 +229,8 @@ public:
     }
 
     virtual void setWebViewEditable(bool) { }
+
+    virtual void setWebViewAllowsMagnification(bool) { }
 
     virtual void rawKeyDown(JSStringRef) { notImplemented(); }
     virtual void rawKeyUp(JSStringRef) { notImplemented(); }
@@ -268,6 +290,7 @@ public:
     virtual JSObjectRef inputViewBounds() const { notImplemented(); return nullptr; }
     virtual void activateDataListSuggestion(unsigned, JSValueRef) { notImplemented(); }
     virtual void setSelectedColorForColorPicker(double, double, double) { notImplemented(); }
+    virtual void setAppAccentColor(unsigned short, unsigned short, unsigned short) { notImplemented(); }
 
     // Find in Page
 
@@ -290,6 +313,7 @@ public:
 
     // Child View Controllers
 
+    virtual bool isShowingFormValidationBubble() const { notImplemented(); return false; }
     virtual bool isShowingPopover() const { notImplemented(); return false; }
     virtual bool isPresentingModally() const { notImplemented(); return false; }
 
@@ -299,6 +323,7 @@ public:
     virtual bool isShowingMenu() const { notImplemented(); return false; }
     virtual JSObjectRef rectForMenuAction(JSStringRef) const { notImplemented(); return nullptr; }
     virtual JSObjectRef menuRect() const { notImplemented(); return nullptr; }
+    virtual JSObjectRef contextMenuPreviewRect() const { notImplemented(); return nullptr; }
     virtual JSObjectRef contextMenuRect() const { notImplemented(); return nullptr; }
     virtual bool isShowingContextMenu() const { notImplemented(); return false; }
 
@@ -308,6 +333,7 @@ public:
     virtual JSObjectRef textSelectionCaretRect() const { notImplemented(); return nullptr; }
     virtual JSObjectRef selectionStartGrabberViewRect() const { notImplemented(); return nullptr; }
     virtual JSObjectRef selectionEndGrabberViewRect() const { notImplemented(); return nullptr; }
+    virtual JSObjectRef selectionEndGrabberViewShapePathDescription() const { notImplemented(); return nullptr; }
     virtual JSObjectRef selectionCaretViewRect() const { notImplemented(); return nullptr; }
     virtual JSObjectRef selectionCaretViewRectInGlobalCoordinates() const { notImplemented(); return nullptr; }
     virtual JSObjectRef selectionRangeViewRects() const { notImplemented(); return nullptr; }
@@ -386,6 +412,15 @@ public:
     // Image Analysis
 
     virtual uint64_t currentImageAnalysisRequestID() const { return 0; }
+    virtual void installFakeMachineReadableCodeResultsForImageAnalysis() { }
+
+    // Text Extraction
+    virtual void requestTextExtraction(JSValueRef, TextExtractionOptions*) { notImplemented(); }
+
+    // Element Targeting
+    virtual void requestRenderedTextForFrontmostTarget(int, int, JSValueRef) { notImplemented(); }
+    virtual void adjustVisibilityForFrontmostTarget(int, int, JSValueRef) { notImplemented(); }
+    virtual void resetVisibilityAdjustments(JSValueRef) { notImplemented(); }
 
 protected:
     explicit UIScriptController(UIScriptContext&);

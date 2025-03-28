@@ -43,6 +43,8 @@ import javafx.util.Duration;
 import java.nio.charset.StandardCharsets;
 import java.util.Base64;
 import java.util.List;
+import java.util.Map;
+
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -65,7 +67,6 @@ public class Node_transition_Test {
         scene = new Scene(new Group(node));
         stage = new Stage();
         stage.setScene(scene);
-        stage.show();
     }
 
     @AfterEach
@@ -183,15 +184,19 @@ public class Node_transition_Test {
         node.getStyleClass().add("testClass");
         node.applyCss();
 
-        List<TransitionTimer> timers = NodeShim.getTransitionTimers(node);
+        Map<String, TransitionTimer> timers = NodeShim.getTransitionTimers(node);
         assertNull(timers);
+
+        // Showing the stage causes the first Scene CSS pass, after which the node is
+        // eligible for CSS transitions.
+        stage.show();
 
         // The hover state starts the timer.
         node.pseudoClassStateChanged(PseudoClass.getPseudoClass("hover"), true);
         node.applyCss();
         timers = NodeShim.getTransitionTimers(node);
         assertEquals(1, timers.size());
-        assertNotNull(timers.get(0));
+        assertNotNull(timers.values().iterator().next());
 
         // Complete the timer, which removes it from the list.
         toolkit.setCurrentTime(2000);
@@ -211,6 +216,10 @@ public class Node_transition_Test {
         node.applyCss();
         assertNull(NodeShim.getTransitionTimers(node));
 
+        // Showing the stage causes the first Scene CSS pass, after which the node is
+        // eligible for CSS transitions.
+        stage.show();
+
         // The hover state starts the timer.
         node.pseudoClassStateChanged(PseudoClass.getPseudoClass("hover"), true);
         node.applyCss();
@@ -220,7 +229,7 @@ public class Node_transition_Test {
         // The original node is removed from the scene graph, causing the timer to complete early
         // with the target value of the transition.
         scene.setRoot(new Group());
-        assertEquals(0, NodeShim.getTransitionTimers(node).size());
+        assertNull(NodeShim.getTransitionTimers(node));
         assertEquals(1, node.getOpacity(), 0.001);
     }
 
@@ -236,6 +245,10 @@ public class Node_transition_Test {
         node.applyCss();
         assertNull(NodeShim.getTransitionTimers(node));
 
+        // Showing the stage causes the first Scene CSS pass, after which the node is
+        // eligible for CSS transitions.
+        stage.show();
+
         // The hover state starts the timer.
         node.pseudoClassStateChanged(PseudoClass.getPseudoClass("hover"), true);
         node.applyCss();
@@ -245,8 +258,75 @@ public class Node_transition_Test {
         // The node is made invisible, causing the timer to complete early with the
         // target value of the transition.
         node.setVisible(false);
-        assertEquals(0, NodeShim.getTransitionTimers(node).size());
+        assertNull(NodeShim.getTransitionTimers(node));
         assertEquals(1, node.getOpacity(), 0.001);
     }
 
+    @Test
+    public void testTransitionIsStartedWhenInitialPropertyIsNotSpecifiedInStylesheet() {
+        String url = "data:text/css;base64," + Base64.getUrlEncoder().encodeToString("""
+            .testClass { transition: all 1s; }
+            .testClass:hover { -fx-opacity: 0.5; }
+            """.getBytes(StandardCharsets.UTF_8));
+
+        scene.getStylesheets().add(url);
+        node.getStyleClass().add("testClass");
+        node.applyCss();
+        assertNull(NodeShim.getTransitionTimers(node));
+
+        stage.show();
+        node.pseudoClassStateChanged(PseudoClass.getPseudoClass("hover"), true);
+        toolkit.firePulse();
+        assertEquals(1, NodeShim.getTransitionTimers(node).size());
+    }
+
+    @Test
+    public void testTransitionIsOnlyStartedAfterSceneHasProcessedCSS() {
+        String url = "data:text/css;base64," + Base64.getUrlEncoder().encodeToString("""
+            .testClass { -fx-opacity: 0; transition: all 1s; }
+            .testClass:hover { -fx-opacity: 1; }
+            """.getBytes(StandardCharsets.UTF_8));
+
+        scene.getStylesheets().add(url);
+        node.getStyleClass().add("testClass");
+        node.applyCss();
+        assertNull(NodeShim.getTransitionTimers(node));
+
+        // Even though we apply CSS here, no transition is started because the Scene has not
+        // processed CSS in response to a pulse event yet.
+        node.pseudoClassStateChanged(PseudoClass.getPseudoClass("hover"), true);
+        node.applyCss();
+        assertNull(NodeShim.getTransitionTimers(node));
+
+        // This will fire the first pulse event, which also does not start the transition
+        // because the initial CSS pass only establishes the initial CSS state for the node.
+        node.pseudoClassStateChanged(PseudoClass.getPseudoClass("hover"), false);
+        stage.show();
+        assertNull(NodeShim.getTransitionTimers(node));
+
+        // This will fire the second pulse event, which will start the transition.
+        node.pseudoClassStateChanged(PseudoClass.getPseudoClass("hover"), true);
+        toolkit.firePulse();
+        assertEquals(1, NodeShim.getTransitionTimers(node).size());
+    }
+
+    @Test
+    public void testInitialCssStateFlagIsSetWhenAddedToOrRemovedFromScene() {
+        stage.show();
+
+        // The initial CSS pass is already done, so the initialCssState flag is cleared.
+        assertFalse(NodeHelper.isInitialCssState(node));
+
+        // Removing the node from the scene resets the initialCssState flag.
+        ((Group)scene.getRoot()).getChildren().remove(0);
+        assertTrue(NodeHelper.isInitialCssState(node));
+
+        // The initialCssState flag is set on a newly-created node.
+        var node2 = new Rectangle();
+        assertTrue(NodeHelper.isInitialCssState(node2));
+
+        // The flag is also set when the new node is added to the scene.
+        ((Group)scene.getRoot()).getChildren().add(node2);
+        assertTrue(NodeHelper.isInitialCssState(node));
+    }
 }

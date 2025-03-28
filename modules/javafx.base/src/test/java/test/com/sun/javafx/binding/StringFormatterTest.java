@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,7 +25,7 @@
 
 package test.com.sun.javafx.binding;
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import java.util.Date;
 import java.util.IllegalFormatException;
@@ -50,8 +50,10 @@ import javafx.beans.property.SimpleStringProperty;
 import javafx.beans.property.StringProperty;
 import test.javafx.binding.DependencyUtils;
 
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 public class StringFormatterTest {
 
@@ -79,7 +81,7 @@ public class StringFormatterTest {
     private StringProperty stringV;
     private ObjectProperty<Date> dateV;
 
-    @Before
+    @BeforeEach
     public void setUp() {
         double0 = 90.1243987;
         float0 = -897.4509f;
@@ -109,37 +111,37 @@ public class StringFormatterTest {
     @Test
     public void testConvert() {
         StringExpression s = Bindings.convert(doubleV);
-        DependencyUtils.checkDependencies(((StringBinding)s).getDependencies(), doubleV);
+        DependencyUtils.checkDependencies(((StringBinding) s).getDependencies(), doubleV);
         assertEquals(Double.toString(double0), s.get());
         doubleV.set(double1);
         assertEquals(Double.toString(double1), s.get());
 
         s = Bindings.convert(floatV);
-        DependencyUtils.checkDependencies(((StringBinding)s).getDependencies(), floatV);
+        DependencyUtils.checkDependencies(((StringBinding) s).getDependencies(), floatV);
         assertEquals(Float.toString(float0), s.get());
         floatV.set(float1);
         assertEquals(Float.toString(float1), s.get());
 
         s = Bindings.convert(longV);
-        DependencyUtils.checkDependencies(((StringBinding)s).getDependencies(), longV);
+        DependencyUtils.checkDependencies(((StringBinding) s).getDependencies(), longV);
         assertEquals(Long.toString(long0), s.get());
         longV.set(long1);
         assertEquals(Long.toString(long1), s.get());
 
         s = Bindings.convert(intV);
-        DependencyUtils.checkDependencies(((StringBinding)s).getDependencies(), intV);
+        DependencyUtils.checkDependencies(((StringBinding) s).getDependencies(), intV);
         assertEquals(Integer.toString(int0), s.get());
         intV.set(int1);
         assertEquals(Integer.toString(int1), s.get());
 
         s = Bindings.convert(booleanV);
-        DependencyUtils.checkDependencies(((StringBinding)s).getDependencies(), booleanV);
+        DependencyUtils.checkDependencies(((StringBinding) s).getDependencies(), booleanV);
         assertEquals(Boolean.toString(boolean0), s.get());
         booleanV.set(boolean1);
         assertEquals(Boolean.toString(boolean1), s.get());
 
         s = Bindings.convert(dateV);
-        DependencyUtils.checkDependencies(((StringBinding)s).getDependencies(), dateV);
+        DependencyUtils.checkDependencies(((StringBinding) s).getDependencies(), dateV);
         assertEquals(date0.toString(), s.get());
         dateV.set(date1);
         assertEquals(date1.toString(), s.get());
@@ -150,9 +152,11 @@ public class StringFormatterTest {
         assertEquals(stringV, s);
     }
 
-    @Test(expected=NullPointerException.class)
+    @Test
     public void testConvert_Null() {
-        Bindings.convert(null);
+        assertThrows(NullPointerException.class, () -> {
+            Bindings.convert(null);
+        });
     }
 
     @Test
@@ -169,7 +173,7 @@ public class StringFormatterTest {
 
         // one variable
         s = Bindings.concat(dateV);
-        DependencyUtils.checkDependencies(((StringBinding)s).getDependencies(), dateV);
+        DependencyUtils.checkDependencies(((StringBinding) s).getDependencies(), dateV);
         assertEquals(date0.toString(), s.get());
         dateV.set(date1);
         assertEquals(date1.toString(), s.get());
@@ -184,7 +188,7 @@ public class StringFormatterTest {
         // test all
         s = Bindings.concat(doubleV, double1, floatV, float1, longV, long1, intV, int1, booleanV, boolean1, stringV, string1, dateV, date1);
         DependencyUtils.checkDependencies(((StringBinding)s).getDependencies(), doubleV, floatV, longV, intV, booleanV, stringV, dateV);
-        assertEquals("" + double0 + double1 + float0 + float1 + long0 + long1 + int0 + int1+ boolean0 + boolean1 + string0 + string1 + date0 + date1, s.get());
+        assertEquals("" + double0 + double1 + float0 + float1 + long0 + long1 + int0 + int1 + boolean0 + boolean1 + string0 + string1 + date0 + date1, s.get());
         doubleV.set(double1);
         floatV.set(float1);
         longV.set(long1);
@@ -192,10 +196,14 @@ public class StringFormatterTest {
         booleanV.set(boolean1);
         stringV.set(string1);
         dateV.set(date1);
-        assertEquals("" + double1 + double1 + float1 + float1 + long1 + long1 + int1 + int1 + boolean1 + boolean1 + string1 + string1 + date1 + date1, s.get());
+        assertEquals(
+                "" + double1 + double1 + float1 + float1 + long1 + long1 + int1 + int1 + boolean1 + boolean1 + string1 +
+                        string1 + date1 + date1, s.get());
         stringV.set(null);
         dateV.set(null);
-        assertEquals("" + double1 + double1 + float1 + float1 + long1 + long1 + int1 + int1 + boolean1 + boolean1 + "null" + string1 + "null" + date1, s.get());
+        assertEquals(
+                "" + double1 + double1 + float1 + float1 + long1 + long1 + int1 + int1 + boolean1 + boolean1 + "null" +
+                        string1 + "null" + date1, s.get());
     }
 
     @Test
@@ -213,7 +221,7 @@ public class StringFormatterTest {
             assertEquals(String.format(Locale.GERMAN, "Date: %tc", date1), s.get());
             // one variable
             s = Bindings.format("Date: %tc", dateV);
-            DependencyUtils.checkDependencies(((StringBinding)s).getDependencies(), dateV);
+            DependencyUtils.checkDependencies(((StringBinding) s).getDependencies(), dateV);
             assertEquals(String.format(Locale.GERMAN, "Date: %tc", date0), s.get());
             dateV.set(date1);
             assertEquals(String.format(Locale.GERMAN, "Date: %tc", date1), s.get());
@@ -223,10 +231,14 @@ public class StringFormatterTest {
 
             // test all
             s = Bindings.format("%8.3e, %8.3e, %6.3f, %6.3f, %d, %d, %d, %d, %s, %s, %s, %s, %tc, %tc",
-                    doubleV, double1, floatV, float1, longV, long1, intV, int1, booleanV, boolean1, stringV, string1, dateV, date1);
-            DependencyUtils.checkDependencies(((StringBinding)s).getDependencies(), doubleV, floatV, longV, intV, booleanV, stringV, dateV);
-            assertEquals(String.format(Locale.GERMAN, "%8.3e, %8.3e, %6.3f, %6.3f, %d, %d, %d, %d, %s, %s, %s, %s, %tc, %tc",
-                    double0, double1, float0, float1, long0, long1, int0, int1, boolean0, boolean1, string0, string1, date0, date1), s.get());
+                    doubleV, double1, floatV, float1, longV, long1, intV, int1, booleanV, boolean1, stringV, string1,
+                    dateV, date1);
+            DependencyUtils.checkDependencies(((StringBinding) s).getDependencies(), doubleV, floatV, longV, intV,
+                    booleanV, stringV, dateV);
+            assertEquals(
+                    String.format(Locale.GERMAN, "%8.3e, %8.3e, %6.3f, %6.3f, %d, %d, %d, %d, %s, %s, %s, %s, %tc, %tc",
+                            double0, double1, float0, float1, long0, long1, int0, int1, boolean0, boolean1, string0,
+                            string1, date0, date1), s.get());
             doubleV.set(double1);
             floatV.set(float1);
             longV.set(long1);
@@ -234,12 +246,16 @@ public class StringFormatterTest {
             booleanV.set(boolean1);
             stringV.set(string1);
             dateV.set(date1);
-            assertEquals(String.format(Locale.GERMAN, "%8.3e, %8.3e, %6.3f, %6.3f, %d, %d, %d, %d, %s, %s, %s, %s, %tc, %tc",
-                    double1, double1, float1, float1, long1, long1, int1, int1, boolean1, boolean1, string1, string1, date1, date1), s.get());
+            assertEquals(
+                    String.format(Locale.GERMAN, "%8.3e, %8.3e, %6.3f, %6.3f, %d, %d, %d, %d, %s, %s, %s, %s, %tc, %tc",
+                            double1, double1, float1, float1, long1, long1, int1, int1, boolean1, boolean1, string1,
+                            string1, date1, date1), s.get());
             stringV.set(null);
             dateV.set(null);
-            assertEquals(String.format(Locale.GERMAN, "%8.3e, %8.3e, %6.3f, %6.3f, %d, %d, %d, %d, %s, %s, %s, %s, %s, %tc",
-                    double1, double1, float1, float1, long1, long1, int1, int1, boolean1, boolean1, "null", string1, "null", date1), s.get());
+            assertEquals(
+                    String.format(Locale.GERMAN, "%8.3e, %8.3e, %6.3f, %6.3f, %d, %d, %d, %d, %s, %s, %s, %s, %s, %tc",
+                            double1, double1, float1, float1, long1, long1, int1, int1, boolean1, boolean1, "null",
+                            string1, "null", date1), s.get());
 
             // US Locale
             Locale.setDefault(Locale.US);
@@ -255,7 +271,7 @@ public class StringFormatterTest {
             assertEquals(String.format(Locale.US, "Date: %tc", date1), s.get());
             // one variable
             s = Bindings.format("Date: %tc", dateV);
-            DependencyUtils.checkDependencies(((StringBinding)s).getDependencies(), dateV);
+            DependencyUtils.checkDependencies(((StringBinding) s).getDependencies(), dateV);
             assertEquals(String.format(Locale.US, "Date: %tc", date0), s.get());
             dateV.set(date1);
             assertEquals(String.format(Locale.US, "Date: %tc", date1), s.get());
@@ -265,10 +281,14 @@ public class StringFormatterTest {
 
             // test all
             s = Bindings.format("%8.3e, %8.3e, %6.3f, %6.3f, %d, %d, %d, %d, %s, %s, %s, %s, %tc, %tc",
-                    doubleV, double1, floatV, float1, longV, long1, intV, int1, booleanV, boolean1, stringV, string1, dateV, date1);
-            DependencyUtils.checkDependencies(((StringBinding)s).getDependencies(), doubleV, floatV, longV, intV, booleanV, stringV, dateV);
-            assertEquals(String.format(Locale.US, "%8.3e, %8.3e, %6.3f, %6.3f, %d, %d, %d, %d, %s, %s, %s, %s, %tc, %tc",
-                    double0, double1, float0, float1, long0, long1, int0, int1, boolean0, boolean1, string0, string1, date0, date1), s.get());
+                    doubleV, double1, floatV, float1, longV, long1, intV, int1, booleanV, boolean1, stringV, string1,
+                    dateV, date1);
+            DependencyUtils.checkDependencies(((StringBinding) s).getDependencies(), doubleV, floatV, longV, intV,
+                    booleanV, stringV, dateV);
+            assertEquals(
+                    String.format(Locale.US, "%8.3e, %8.3e, %6.3f, %6.3f, %d, %d, %d, %d, %s, %s, %s, %s, %tc, %tc",
+                            double0, double1, float0, float1, long0, long1, int0, int1, boolean0, boolean1, string0,
+                            string1, date0, date1), s.get());
             doubleV.set(double1);
             floatV.set(float1);
             longV.set(long1);
@@ -276,30 +296,39 @@ public class StringFormatterTest {
             booleanV.set(boolean1);
             stringV.set(string1);
             dateV.set(date1);
-            assertEquals(String.format(Locale.US, "%8.3e, %8.3e, %6.3f, %6.3f, %d, %d, %d, %d, %s, %s, %s, %s, %tc, %tc",
-                    double1, double1, float1, float1, long1, long1, int1, int1, boolean1, boolean1, string1, string1, date1, date1), s.get());
+            assertEquals(
+                    String.format(Locale.US, "%8.3e, %8.3e, %6.3f, %6.3f, %d, %d, %d, %d, %s, %s, %s, %s, %tc, %tc",
+                            double1, double1, float1, float1, long1, long1, int1, int1, boolean1, boolean1, string1,
+                            string1, date1, date1), s.get());
             stringV.set(null);
             dateV.set(null);
             assertEquals(String.format(Locale.US, "%8.3e, %8.3e, %6.3f, %6.3f, %d, %d, %d, %d, %s, %s, %s, %s, %s, %tc",
-                    double1, double1, float1, float1, long1, long1, int1, int1, boolean1, boolean1, "null", string1, "null", date1), s.get());
+                    double1, double1, float1, float1, long1, long1, int1, int1, boolean1, boolean1, "null", string1,
+                    "null", date1), s.get());
         } finally {
             Locale.setDefault(defaultLocale);
         }
     }
 
-    @Test(expected=NullPointerException.class)
+    @Test
     public void testConvertWithDefaultLocale_Null() {
-        Bindings.format(null);
+        assertThrows(NullPointerException.class, () -> {
+            Bindings.format(null);
+        });
     }
 
-    @Test(expected=IllegalFormatException.class)
+    @Test
     public void testConvertWithDefaultLocale_IllegalObject() {
-        Bindings.format("%tc", double0);
+        assertThrows(IllegalFormatException.class, () -> {
+            Bindings.format("%tc", double0);
+        });
     }
 
-    @Test(expected=IllegalFormatException.class)
+    @Test
     public void testConvertWithDefaultLocale_IllegalValueModel() {
-        Bindings.format("%tc", doubleV);
+        assertThrows(IllegalFormatException.class, () -> {
+            Bindings.format("%tc", doubleV);
+        });
     }
 
     @Test
@@ -313,7 +342,7 @@ public class StringFormatterTest {
         assertEquals(String.format(Locale.GERMAN, "Date: %tc", date1), s.get());
         // one variable
         s = Bindings.format(Locale.GERMAN, "Date: %tc", dateV);
-        DependencyUtils.checkDependencies(((StringBinding)s).getDependencies(), dateV);
+        DependencyUtils.checkDependencies(((StringBinding) s).getDependencies(), dateV);
         assertEquals(String.format(Locale.GERMAN, "Date: %tc", date0), s.get());
         dateV.set(date1);
         assertEquals(String.format(Locale.GERMAN, "Date: %tc", date1), s.get());
@@ -323,10 +352,14 @@ public class StringFormatterTest {
 
         // test all
         s = Bindings.format(Locale.GERMAN, "%8.3e, %8.3e, %6.3f, %6.3f, %d, %d, %d, %d, %s, %s, %s, %s, %tc, %tc",
-                doubleV, double1, floatV, float1, longV, long1, intV, int1, booleanV, boolean1, stringV, string1, dateV, date1);
-        DependencyUtils.checkDependencies(((StringBinding)s).getDependencies(), doubleV, floatV, longV, intV, booleanV, stringV, dateV);
-        assertEquals(String.format(Locale.GERMAN, "%8.3e, %8.3e, %6.3f, %6.3f, %d, %d, %d, %d, %s, %s, %s, %s, %tc, %tc",
-                double0, double1, float0, float1, long0, long1, int0, int1, boolean0, boolean1, string0, string1, date0, date1), s.get());
+                doubleV, double1, floatV, float1, longV, long1, intV, int1, booleanV, boolean1, stringV, string1, dateV,
+                date1);
+        DependencyUtils.checkDependencies(((StringBinding) s).getDependencies(), doubleV, floatV, longV, intV, booleanV,
+                stringV, dateV);
+        assertEquals(
+                String.format(Locale.GERMAN, "%8.3e, %8.3e, %6.3f, %6.3f, %d, %d, %d, %d, %s, %s, %s, %s, %tc, %tc",
+                        double0, double1, float0, float1, long0, long1, int0, int1, boolean0, boolean1, string0,
+                        string1, date0, date1), s.get());
         doubleV.set(double1);
         floatV.set(float1);
         longV.set(long1);
@@ -334,12 +367,15 @@ public class StringFormatterTest {
         booleanV.set(boolean1);
         stringV.set(string1);
         dateV.set(date1);
-        assertEquals(String.format(Locale.GERMAN, "%8.3e, %8.3e, %6.3f, %6.3f, %d, %d, %d, %d, %s, %s, %s, %s, %tc, %tc",
-                double1, double1, float1, float1, long1, long1, int1, int1, boolean1, boolean1, string1, string1, date1, date1), s.get());
+        assertEquals(
+                String.format(Locale.GERMAN, "%8.3e, %8.3e, %6.3f, %6.3f, %d, %d, %d, %d, %s, %s, %s, %s, %tc, %tc",
+                        double1, double1, float1, float1, long1, long1, int1, int1, boolean1, boolean1, string1,
+                        string1, date1, date1), s.get());
         stringV.set(null);
         dateV.set(null);
         assertEquals(String.format(Locale.GERMAN, "%8.3e, %8.3e, %6.3f, %6.3f, %d, %d, %d, %d, %s, %s, %s, %s, %s, %tc",
-                double1, double1, float1, float1, long1, long1, int1, int1, boolean1, boolean1, "null", string1, "null", date1), s.get());
+                double1, double1, float1, float1, long1, long1, int1, int1, boolean1, boolean1, "null", string1, "null",
+                date1), s.get());
 
         // US Locale
         doubleV.set(double0);
@@ -357,7 +393,7 @@ public class StringFormatterTest {
         assertEquals(String.format(Locale.US, "Date: %tc", date1), s.get());
         // one variable
         s = Bindings.format(Locale.US, "Date: %tc", dateV);
-        DependencyUtils.checkDependencies(((StringBinding)s).getDependencies(), dateV);
+        DependencyUtils.checkDependencies(((StringBinding) s).getDependencies(), dateV);
         assertEquals(String.format(Locale.US, "Date: %tc", date0), s.get());
         dateV.set(date1);
         assertEquals(String.format(Locale.US, "Date: %tc", date1), s.get());
@@ -367,10 +403,13 @@ public class StringFormatterTest {
 
         // test all
         s = Bindings.format(Locale.US, "%8.3e, %8.3e, %6.3f, %6.3f, %d, %d, %d, %d, %s, %s, %s, %s, %tc, %tc",
-                doubleV, double1, floatV, float1, longV, long1, intV, int1, booleanV, boolean1, stringV, string1, dateV, date1);
-        DependencyUtils.checkDependencies(((StringBinding)s).getDependencies(), doubleV, floatV, longV, intV, booleanV, stringV, dateV);
+                doubleV, double1, floatV, float1, longV, long1, intV, int1, booleanV, boolean1, stringV, string1, dateV,
+                date1);
+        DependencyUtils.checkDependencies(((StringBinding) s).getDependencies(), doubleV, floatV, longV, intV, booleanV,
+                stringV, dateV);
         assertEquals(String.format(Locale.US, "%8.3e, %8.3e, %6.3f, %6.3f, %d, %d, %d, %d, %s, %s, %s, %s, %tc, %tc",
-                double0, double1, float0, float1, long0, long1, int0, int1, boolean0, boolean1, string0, string1, date0, date1), s.get());
+                double0, double1, float0, float1, long0, long1, int0, int1, boolean0, boolean1, string0, string1, date0,
+                date1), s.get());
         doubleV.set(double1);
         floatV.set(float1);
         longV.set(long1);
@@ -379,25 +418,34 @@ public class StringFormatterTest {
         stringV.set(string1);
         dateV.set(date1);
         assertEquals(String.format(Locale.US, "%8.3e, %8.3e, %6.3f, %6.3f, %d, %d, %d, %d, %s, %s, %s, %s, %tc, %tc",
-                double1, double1, float1, float1, long1, long1, int1, int1, boolean1, boolean1, string1, string1, date1, date1), s.get());
+                double1, double1, float1, float1, long1, long1, int1, int1, boolean1, boolean1, string1, string1, date1,
+                date1), s.get());
         stringV.set(null);
         dateV.set(null);
-        assertEquals(String.format(Locale.US, "%8.3e, %8.3e, %6.3f, %6.3f, %d, %d, %d, %d, %s, %s, %s, %s, %s, %tc",
-                double1, double1, float1, float1, long1, long1, int1, int1, boolean1, boolean1, "null", string1, "null", date1), s.get());
+        assertEquals(
+                String.format(Locale.US, "%8.3e, %8.3e, %6.3f, %6.3f, %d, %d, %d, %d, %s, %s, %s, %s, %s, %tc", double1,
+                        double1, float1, float1, long1, long1, int1, int1, boolean1, boolean1, "null", string1, "null",
+                        date1), s.get());
     }
 
-    @Test(expected=NullPointerException.class)
+    @Test
     public void testConvertWithCustomLocale_Null() {
-        Bindings.format(Locale.US, null);
+        assertThrows(NullPointerException.class, () -> {
+            Bindings.format(Locale.US, null);
+        });
     }
 
-    @Test(expected=IllegalFormatException.class)
+    @Test
     public void testConvertWithCustomLocale_IllegalObject() {
-        Bindings.format(Locale.US, "%tc", double0);
+        assertThrows(IllegalFormatException.class, () -> {
+            Bindings.format(Locale.US, "%tc", double0);
+        });
     }
 
-    @Test(expected=IllegalFormatException.class)
+    @Test
     public void testConvertWithCustomLocale_IllegalValueModel() {
-        Bindings.format(Locale.US, "%tc", doubleV);
+        assertThrows(IllegalFormatException.class, () -> {
+            Bindings.format(Locale.US, "%tc", doubleV);
+        });
     }
 }

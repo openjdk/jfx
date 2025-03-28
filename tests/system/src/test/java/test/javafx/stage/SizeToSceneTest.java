@@ -39,7 +39,6 @@ import test.util.Util;
 import java.util.concurrent.CountDownLatch;
 import java.util.function.Consumer;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class SizeToSceneTest {
@@ -71,11 +70,20 @@ class SizeToSceneTest {
     }
 
     private static void assertStageScreenBounds() {
-        Rectangle2D bounds = Screen.getPrimary().getVisualBounds();
+        Rectangle2D visualBounds = Screen.getPrimary().getVisualBounds();
+        double visualWidth = visualBounds.getWidth() - BOUNDS_DELTA;
+        double visualHeight = visualBounds.getHeight() - BOUNDS_DELTA;
 
-        // There might be small inconsistencies because of decoration, so we expect the bounds to be in the range.
-        assertEquals(mainStage.getWidth(), bounds.getWidth(), BOUNDS_DELTA);
-        assertEquals(mainStage.getHeight(), bounds.getHeight(), BOUNDS_DELTA);
+        Rectangle2D bounds = Screen.getPrimary().getBounds();
+        double width = bounds.getWidth() + BOUNDS_DELTA;
+        double height = bounds.getHeight() + BOUNDS_DELTA;
+
+        // There might be small inconsistencies because of decoration or different window managers.
+        assertTrue(mainStage.getWidth() >= visualWidth, mainStage.getWidth() + " >= " + visualWidth);
+        assertTrue(mainStage.getHeight() >= visualHeight, mainStage.getHeight() + " >= " + visualHeight);
+
+        assertTrue(mainStage.getWidth() <= width, mainStage.getWidth() + " <= " + width);
+        assertTrue(mainStage.getHeight() <= height, mainStage.getHeight() + " <= " + height);
     }
 
     private static void assertStageSceneBounds() {

@@ -35,7 +35,7 @@ class WeakObjectRefConstructor final : public InternalFunction {
 public:
     using Base = InternalFunction;
 
-    static WeakObjectRefConstructor* create(VM& vm, Structure* structure, WeakObjectRefPrototype* prototype, GetterSetter*)
+    static WeakObjectRefConstructor* create(VM& vm, Structure* structure, WeakObjectRefPrototype* prototype)
     {
         WeakObjectRefConstructor* constructor = new (NotNull, allocateCell<WeakObjectRefConstructor>(vm)) WeakObjectRefConstructor(vm, structure);
         constructor->finishCreation(vm, prototype);
@@ -44,10 +44,7 @@ public:
 
     DECLARE_INFO;
 
-    static Structure* createStructure(VM& vm, JSGlobalObject* globalObject, JSValue prototype)
-    {
-        return Structure::create(vm, globalObject, prototype, TypeInfo(InternalFunctionType, StructureFlags), info());
-    }
+    inline static Structure* createStructure(VM&, JSGlobalObject*, JSValue);
 
 private:
     WeakObjectRefConstructor(VM&, Structure*);

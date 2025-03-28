@@ -24,6 +24,7 @@
 #pragma once
 
 #include "ActiveDOMObject.h"
+#include "AttachmentAssociatedElement.h"
 #include "DecodingOptions.h"
 #include "FormAssociatedElement.h"
 #include "GraphicsTypes.h"
@@ -47,8 +48,15 @@ enum class ReferrerPolicy : uint8_t;
 enum class RelevantMutation : bool;
 enum class RequestPriority : uint8_t;
 
-class HTMLImageElement : public HTMLElement, public FormAssociatedElement, public ActiveDOMObject {
-    WTF_MAKE_ISO_ALLOCATED(HTMLImageElement);
+class HTMLImageElement
+    : public HTMLElement
+#if ENABLE(ATTACHMENT_ELEMENT)
+    , public AttachmentAssociatedElement
+#endif
+    , public FormAssociatedElement
+    , public ActiveDOMObject {
+    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(HTMLImageElement);
+    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(HTMLImageElement);
 public:
     static Ref<HTMLImageElement> create(Document&);
     static Ref<HTMLImageElement> create(const QualifiedName&, Document&, HTMLFormElement* = nullptr);
@@ -56,8 +64,9 @@ public:
 
     virtual ~HTMLImageElement();
 
-    using HTMLElement::ref;
-    using HTMLElement::deref;
+    // ActiveDOMObject.
+    void ref() const final { HTMLElement::ref(); }
+    void deref() const final { HTMLElement::deref(); }
 
     void formOwnerRemovedFromTree(const Node& formRoot);
 
@@ -67,7 +76,7 @@ public:
     WEBCORE_EXPORT unsigned naturalWidth() const;
     WEBCORE_EXPORT unsigned naturalHeight() const;
     const URL& currentURL() const { return m_currentURL; }
-    const AtomString& currentSrc() const { return m_currentSrc; }
+    WEBCORE_EXPORT const AtomString& currentSrc();
 
     bool isServerMap() const;
 
@@ -79,8 +88,8 @@ public:
 
     void setLoadManually(bool);
 
-    bool matchesUsemap(const AtomStringImpl&) const;
-    HTMLMapElement* associatedMapElement() const;
+    bool matchesUsemap(const AtomString&) const;
+    RefPtr<HTMLMapElement> associatedMapElement() const;
 
     WEBCORE_EXPORT const AtomString& alt() const;
 
@@ -114,10 +123,7 @@ public:
 #endif
 
 #if ENABLE(ATTACHMENT_ELEMENT)
-    void setAttachmentElement(Ref<HTMLAttachmentElement>&&);
-    RefPtr<HTMLAttachmentElement> attachmentElement() const;
-    const String& attachmentIdentifier() const;
-    void didUpdateAttachmentIdentifier();
+    void setAttachmentElement(Ref<HTMLAttachmentElement>&&) final;
 #endif
 
     WEBCORE_EXPORT size_t pendingDecodePromisesCountForTesting() const;
@@ -136,6 +142,10 @@ public:
 
 #if USE(SYSTEM_PREVIEW)
     WEBCORE_EXPORT bool isSystemPreviewImage() const;
+#endif
+
+#if ENABLE(MULTI_REPRESENTATION_HEIC)
+    bool isMultiRepresentationHEIC() const;
 #endif
 
     void loadDeferredImage();
@@ -175,8 +185,9 @@ public:
 
     bool originClean(const SecurityOrigin&) const;
 
+    Image* image() const;
+
 protected:
-    constexpr static auto CreateHTMLImageElement = CreateHTMLElement | NodeFlag::HasCustomStyleResolveCallbacks;
     HTMLImageElement(const QualifiedName&, Document&, HTMLFormElement* = nullptr);
 
     void didMoveToNewDocument(Document& oldDocument, Document& newDocument) override;
@@ -190,13 +201,12 @@ private:
     void attributeChanged(const QualifiedName&, const AtomString& oldValue, const AtomString& newValue, AttributeModificationReason) final;
     bool hasPresentationalHintsForAttribute(const QualifiedName&) const override;
     void collectPresentationalHintsForAttribute(const QualifiedName&, const AtomString&, MutableStyleProperties&) override;
-    void collectExtraStyleForPresentationalHints(MutableStyleProperties&) override;
     void invalidateAttributeMapping();
+    void collectExtraStyleForPresentationalHints(MutableStyleProperties&) override;
 
     Ref<Element> cloneElementWithoutAttributesAndChildren(Document& targetDocument) final;
 
     // ActiveDOMObject.
-    const char* activeDOMObjectName() const final;
     bool virtualHasPendingActivity() const final;
 
     void didAttachRenderers() override;
@@ -208,10 +218,12 @@ private:
     bool isURLAttribute(const Attribute&) const override;
     bool attributeContainsURL(const Attribute&) const override;
     String completeURLsInAttributeValue(const URL& base, const Attribute&, ResolveURLs = ResolveURLs::Yes) const override;
+    Attribute replaceURLsInAttributeValue(const Attribute&, const HashMap<String, String>&) const override;
 
     bool isDraggableIgnoringAttributes() const final { return true; }
 
     void addSubresourceAttributeURLs(ListHashSet<URL>&) const override;
+    void addCandidateSubresourceURLs(ListHashSet<URL>&) const override;
 
     InsertedIntoAncestorResult insertedIntoAncestor(InsertionType, ContainerNode&) override;
     void removedFromAncestor(RemovalType, ContainerNode&) override;
@@ -220,6 +232,15 @@ private:
     FormAssociatedElement* asFormAssociatedElement() final { return this; }
     HTMLImageElement& asHTMLElement() final { return *this; }
     const HTMLImageElement& asHTMLElement() const final { return *this; }
+
+#if ENABLE(ATTACHMENT_ELEMENT)
+    void refAttachmentAssociatedElement() const final { HTMLElement::ref(); }
+    void derefAttachmentAssociatedElement() const final { HTMLElement::deref(); }
+
+    AttachmentAssociatedElement* asAttachmentAssociatedElement() final { return this; }
+
+    AttachmentAssociatedElementType attachmentAssociatedElementType() const final { return AttachmentAssociatedElementType::Image; };
+#endif
 
     bool isInteractiveContent() const final;
 
@@ -238,13 +259,17 @@ private:
     HTMLSourceElement* sourceElement() const;
     void setSourceElement(HTMLSourceElement*);
 
-    std::unique_ptr<HTMLImageLoader> m_imageLoader;
+    IntersectionObserverData& ensureIntersectionObserverData() final;
+    IntersectionObserverData* intersectionObserverDataIfExists() final;
 
-    CompositeOperator m_compositeOperator;
+    std::unique_ptr<HTMLImageLoader> m_imageLoader;
+    std::unique_ptr<IntersectionObserverData> m_intersectionObserverData;
+
     AtomString m_bestFitImageURL;
-    AtomString m_currentSrc;
     URL m_currentURL;
+    AtomString m_currentSrc;
     AtomString m_parsedUsemap;
+    CompositeOperator m_compositeOperator;
     float m_imageDevicePixelRatio;
 #if ENABLE(SERVICE_CONTROLS)
     bool m_isImageMenuEnabled { false };
@@ -257,12 +282,6 @@ private:
     WeakPtr<HTMLSourceElement, WeakPtrImplWithEventTargetData> m_sourceElement;
 
     Vector<MQ::MediaQueryResult> m_dynamicMediaQueryResults;
-
-#if ENABLE(ATTACHMENT_ELEMENT)
-    String m_pendingClonedAttachmentID;
-#endif
-
-    Image* image() const;
 
     friend class HTMLPictureElement;
 };

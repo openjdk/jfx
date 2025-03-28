@@ -33,11 +33,11 @@
 #include "HTMLVideoElementPictureInPicture.h"
 #include "JSDOMPromiseDeferred.h"
 #include "PictureInPictureSupport.h"
-#include <wtf/IsoMallocInlines.h>
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
-WTF_MAKE_ISO_ALLOCATED_IMPL(DocumentPictureInPicture);
+WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(DocumentPictureInPicture);
 
 DocumentPictureInPicture::~DocumentPictureInPicture() = default;
 
@@ -51,7 +51,7 @@ void DocumentPictureInPicture::exitPictureInPicture(Document& document, Ref<Defe
     auto element = document.pictureInPictureElement();
 
     if (!element) {
-        promise->reject(InvalidStateError);
+        promise->reject(ExceptionCode::InvalidStateError);
         return;
     }
 

@@ -40,6 +40,10 @@
 typedef struct CGAffineTransform CGAffineTransform;
 #endif
 
+#if USE(SKIA)
+class SkMatrix;
+#endif
+
 namespace WTF {
 class TextStream;
 }
@@ -64,6 +68,10 @@ public:
 
 #if USE(CG)
     WEBCORE_EXPORT AffineTransform(const CGAffineTransform&);
+#endif
+
+#if USE(SKIA)
+    AffineTransform(const SkMatrix&);
 #endif
 
     void setMatrix(double a, double b, double c, double d, double e, double f);
@@ -165,15 +173,7 @@ public:
             && WTF::areEssentiallyEqual(narrowPrecisionToFloat(m_transform[5]), narrowPrecisionToFloat(m2.m_transform[5]));
     }
 
-    bool operator==(const AffineTransform& m2) const
-    {
-        return (m_transform[0] == m2.m_transform[0]
-            && m_transform[1] == m2.m_transform[1]
-            && m_transform[2] == m2.m_transform[2]
-            && m_transform[3] == m2.m_transform[3]
-            && m_transform[4] == m2.m_transform[4]
-            && m_transform[5] == m2.m_transform[5]);
-    }
+    friend bool operator==(const AffineTransform&, const AffineTransform&) = default;
 
     // *this = *this * t (i.e., a multRight)
     AffineTransform& operator*=(const AffineTransform& t)
@@ -191,6 +191,10 @@ public:
 
 #if USE(CG)
     WEBCORE_EXPORT operator CGAffineTransform() const;
+#endif
+
+#if USE(SKIA)
+    operator SkMatrix() const;
 #endif
 
     static AffineTransform makeTranslation(FloatSize delta)

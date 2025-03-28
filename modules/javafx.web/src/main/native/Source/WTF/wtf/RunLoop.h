@@ -72,7 +72,7 @@ using RunLoopMode = unsigned;
 #define DefaultRunLoopMode 0
 #endif
 
-class WTF_CAPABILITY("is current") RunLoop final : public SerialFunctionDispatcher, public ThreadSafeRefCounted<RunLoop> {
+class WTF_CAPABILITY("is current") RunLoop final : public RefCountedSerialFunctionDispatcher, public ThreadSafeRefCounted<RunLoop> {
     WTF_MAKE_NONCOPYABLE(RunLoop);
 public:
     // Must be called from the main thread.
@@ -82,15 +82,19 @@ public:
 #endif
 
     WTF_EXPORT_PRIVATE static RunLoop& current();
+    static Ref<RunLoop> protectedCurrent() { return current(); }
     WTF_EXPORT_PRIVATE static RunLoop& main();
+    static Ref<RunLoop> protectedMain() { return main(); }
 #if USE(WEB_THREAD)
     WTF_EXPORT_PRIVATE static RunLoop& web();
     WTF_EXPORT_PRIVATE static RunLoop* webIfExists();
 #endif
-    WTF_EXPORT_PRIVATE static Ref<RunLoop> create(const char* threadName, ThreadType = ThreadType::Unknown, Thread::QOS = Thread::QOS::UserInitiated);
+    WTF_EXPORT_PRIVATE static Ref<RunLoop> create(ASCIILiteral threadName, ThreadType = ThreadType::Unknown, Thread::QOS = Thread::QOS::UserInitiated);
 
     static bool isMain() { return main().isCurrent(); }
-    WTF_EXPORT_PRIVATE bool isCurrent() const;
+    void ref() const final { ThreadSafeRefCounted::ref(); }
+    void deref() const final { ThreadSafeRefCounted::deref(); }
+    WTF_EXPORT_PRIVATE bool isCurrent() const final;
     WTF_EXPORT_PRIVATE ~RunLoop() final;
 
     WTF_EXPORT_PRIVATE void dispatch(Function<void()>&&) final;
@@ -111,10 +115,6 @@ public:
     WTF_EXPORT_PRIVATE CycleResult static cycle(RunLoopMode = DefaultRunLoopMode);
 
     WTF_EXPORT_PRIVATE void threadWillExit();
-
-#if ASSERT_ENABLED
-    void assertIsCurrent() const final;
-#endif
 
 #if USE(GLIB_EVENT_LOOP)
     WTF_EXPORT_PRIVATE GMainContext* mainContext() const { return m_mainContext.get(); }
@@ -147,7 +147,7 @@ public:
         virtual void fired() = 0;
 
 #if USE(GLIB_EVENT_LOOP)
-        WTF_EXPORT_PRIVATE void setName(const char*);
+        WTF_EXPORT_PRIVATE void setName(ASCIILiteral);
         WTF_EXPORT_PRIVATE void setPriority(int);
 #endif
 

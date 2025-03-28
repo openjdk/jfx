@@ -32,7 +32,7 @@ namespace JSC {
 class AsyncGeneratorFunctionPrototype final : public JSNonFinalObject {
 public:
     using Base = JSNonFinalObject;
-    static constexpr unsigned StructureFlags = Base::StructureFlags | HasStaticPropertyTable;
+    static constexpr unsigned StructureFlags = Base::StructureFlags;
 
     template<typename CellType, SubspaceAccess>
     static GCClient::IsoSubspace* subspaceFor(VM& vm)
@@ -50,10 +50,7 @@ public:
         return prototype;
     }
 
-    static Structure* createStructure(VM& vm, JSGlobalObject* globalObject, JSValue proto)
-    {
-        return Structure::create(vm, globalObject, proto, TypeInfo(ObjectType, StructureFlags), info());
-    }
+    inline static Structure* createStructure(VM&, JSGlobalObject*, JSValue);
 
 private:
     AsyncGeneratorFunctionPrototype(VM&, Structure*);

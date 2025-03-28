@@ -32,17 +32,17 @@
 
 #include "CSSUnparsedValue.h"
 #include "ExceptionOr.h"
-#include <wtf/IsoMallocInlines.h>
+#include <wtf/TZoneMallocInlines.h>
 #include <wtf/text/StringBuilder.h>
 
 namespace WebCore {
 
-WTF_MAKE_ISO_ALLOCATED_IMPL(CSSOMVariableReferenceValue);
+WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(CSSOMVariableReferenceValue);
 
 ExceptionOr<Ref<CSSOMVariableReferenceValue>> CSSOMVariableReferenceValue::create(String&& variable, RefPtr<CSSUnparsedValue>&& fallback)
 {
     if (!variable.startsWith("--"_s))
-        return Exception { TypeError, "Custom Variable Reference needs to have \"--\" prefix."_s };
+        return Exception { ExceptionCode::TypeError, "Custom Variable Reference needs to have \"--\" prefix."_s };
 
     return adoptRef(*new CSSOMVariableReferenceValue(WTFMove(variable), WTFMove(fallback)));
 }
@@ -50,7 +50,7 @@ ExceptionOr<Ref<CSSOMVariableReferenceValue>> CSSOMVariableReferenceValue::creat
 ExceptionOr<void> CSSOMVariableReferenceValue::setVariable(String&& variable)
 {
     if (!variable.startsWith("--"_s))
-        return Exception { TypeError, "Custom Variable Reference needs to have \"--\" prefix."_s };
+        return Exception { ExceptionCode::TypeError, "Custom Variable Reference needs to have \"--\" prefix."_s };
 
     m_variable = WTFMove(variable);
     return { };
@@ -65,8 +65,7 @@ String CSSOMVariableReferenceValue::toString() const
 
 void CSSOMVariableReferenceValue::serialize(StringBuilder& builder, OptionSet<SerializationArguments> arguments) const
 {
-    builder.append("var(");
-    builder.append(m_variable);
+    builder.append("var("_s, m_variable);
     if (m_fallback) {
         builder.append(',');
         m_fallback->serialize(builder, arguments);

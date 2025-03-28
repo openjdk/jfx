@@ -34,7 +34,8 @@
 namespace WebCore {
 
 class HTMLFormControlElement : public HTMLElement, public ValidatedFormListedElement {
-    WTF_MAKE_ISO_ALLOCATED(HTMLFormControlElement);
+    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(HTMLFormControlElement);
+    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(HTMLFormControlElement);
 public:
     virtual ~HTMLFormControlElement();
 
@@ -98,15 +99,18 @@ public:
 
     virtual String resultForDialogSubmit() const;
 
-    HTMLElement* popoverTargetElement() const;
+    RefPtr<HTMLElement> popoverTargetElement() const;
     const AtomString& popoverTargetAction() const;
     void setPopoverTargetAction(const AtomString& value);
+
+    RefPtr<Element> commandForElement() const;
+
+    bool isKeyboardFocusable(KeyboardEvent*) const override;
 
     using Node::ref;
     using Node::deref;
 
 protected:
-    constexpr static auto CreateHTMLFormControlElement = CreateHTMLElement | NodeFlag::HasCustomStyleResolveCallbacks;
     HTMLFormControlElement(const QualifiedName& tagName, Document&, HTMLFormElement*);
 
     InsertedIntoAncestorResult insertedIntoAncestor(InsertionType, ContainerNode&) override;
@@ -120,7 +124,6 @@ protected:
     void readOnlyStateChanged() override;
     virtual void requiredStateChanged();
 
-    bool isKeyboardFocusable(KeyboardEvent*) const override;
     bool isMouseFocusable() const override;
 
     void didRecalcStyle(Style::Change) override;
@@ -128,6 +131,9 @@ protected:
     void dispatchBlurEvent(RefPtr<Element>&& newFocusedElement) override;
 
     void handlePopoverTargetAction() const;
+
+    CommandType commandType() const;
+    void handleCommand();
 
 private:
     void refFormAssociatedElement() const final { ref(); }
@@ -146,8 +152,6 @@ private:
     FormListedElement* asFormListedElement() final { return this; }
     ValidatedFormListedElement* asValidatedFormListedElement() final { return this; }
 
-    bool needsMouseFocusableQuirk() const;
-
     unsigned m_isRequired : 1;
     unsigned m_valueMatchesRenderer : 1;
     unsigned m_wasChangedSinceLastFormControlChangeEvent : 1;
@@ -157,6 +161,10 @@ private:
 
 SPECIALIZE_TYPE_TRAITS_BEGIN(WebCore::HTMLFormControlElement)
     static bool isType(const WebCore::Element& element) { return element.isFormControlElement(); }
-    static bool isType(const WebCore::Node& node) { return is<WebCore::Element>(node) && isType(downcast<WebCore::Element>(node)); }
+    static bool isType(const WebCore::Node& node)
+    {
+        auto* element = dynamicDowncast<WebCore::Element>(node);
+        return element && isType(*element);
+    }
     static bool isType(const WebCore::FormListedElement& element) { return element.isFormControlElement(); }
 SPECIALIZE_TYPE_TRAITS_END()

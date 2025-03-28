@@ -35,6 +35,7 @@
 #include "ResourceResponse.h"
 #include "SharedBuffer.h"
 #include <mutex>
+#include <wtf/EnumTraits.h>
 #include <wtf/text/CString.h>
 
 namespace WebCore {
@@ -113,7 +114,7 @@ void MockContentFilter::finishedAddingData()
 Ref<FragmentedSharedBuffer> MockContentFilter::replacementData() const
 {
     ASSERT(didBlockData());
-    return SharedBuffer::create(m_replacementData.data(), m_replacementData.size());
+    return SharedBuffer::create(m_replacementData.span());
 }
 
 ContentFilterUnblockHandler MockContentFilter::unblockHandler() const
@@ -142,15 +143,13 @@ void MockContentFilter::maybeDetermineStatus(DecisionPoint decisionPoint)
     if (m_state != State::Filtering || decisionPoint != settings().decisionPoint())
         return;
 
-    LOG(ContentFiltering, "MockContentFilter stopped buffering with state %u at decision point %hhu.\n", m_state, decisionPoint);
+    LOG(ContentFiltering, "MockContentFilter stopped buffering with state %u at decision point %hhu.\n", enumToUnderlyingType(m_state), enumToUnderlyingType(decisionPoint));
 
     m_state = settings().decision() == Decision::Allow ? State::Allowed : State::Blocked;
     if (m_state != State::Blocked)
         return;
 
-    m_replacementData.clear();
-    const CString utf8BlockedString = settings().blockedString().utf8();
-    m_replacementData.append(utf8BlockedString.data(), utf8BlockedString.length());
+    m_replacementData = settings().blockedString().utf8().span();
 }
 
 } // namespace WebCore

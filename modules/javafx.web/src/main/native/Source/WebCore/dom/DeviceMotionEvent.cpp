@@ -29,21 +29,37 @@
 #include "DeviceMotionData.h"
 #include "DeviceOrientationAndMotionAccessController.h"
 #include "JSDOMPromiseDeferred.h"
-#include <wtf/IsoMallocInlines.h>
+#include <wtf/TZoneMallocInlines.h>
+#include <wtf/text/MakeString.h>
 
 namespace WebCore {
 
-WTF_MAKE_ISO_ALLOCATED_IMPL(DeviceMotionEvent);
+WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(DeviceMotionEvent);
 
 DeviceMotionEvent::~DeviceMotionEvent() = default;
 
 DeviceMotionEvent::DeviceMotionEvent()
-    : m_deviceMotionData(DeviceMotionData::create())
+#if ENABLE(DEVICE_ORIENTATION)
+    : Event(EventInterfaceType::DeviceMotionEvent)
+#else
+    // FIXME: ENABLE(DEVICE_ORIENTATION) seems to be in a strange state where
+    // it is half-guarded by #ifdefs. DeviceMotionEvent.idl is guarded
+    // but DeviceMotionEvent.cpp itself is required by unguarded code.
+    : Event(EventInterfaceType::Event)
+#endif
+    , m_deviceMotionData(DeviceMotionData::create())
 {
 }
 
 DeviceMotionEvent::DeviceMotionEvent(const AtomString& eventType, DeviceMotionData* deviceMotionData)
-    : Event(eventType, CanBubble::No, IsCancelable::No)
+#if ENABLE(DEVICE_ORIENTATION)
+    : Event(EventInterfaceType::DeviceMotionEvent, eventType, CanBubble::No, IsCancelable::No)
+#else
+    // FIXME: ENABLE(DEVICE_ORIENTATION) seems to be in a strange state where
+    // it is half-guarded by #ifdefs. DeviceMotionEvent.idl is guarded
+    // but DeviceMotionEvent.cpp itself is required by unguarded code.
+    : Event(EventInterfaceType::Event, eventType, CanBubble::No, IsCancelable::No)
+#endif
     , m_deviceMotionData(deviceMotionData)
 {
 }
@@ -88,17 +104,20 @@ static RefPtr<DeviceMotionData::RotationRate> convert(std::optional<DeviceMotion
 
 std::optional<DeviceMotionEvent::Acceleration> DeviceMotionEvent::acceleration() const
 {
-    return convert(m_deviceMotionData->acceleration());
+    RefPtr acceleration = m_deviceMotionData->acceleration();
+    return convert(acceleration.get());
 }
 
 std::optional<DeviceMotionEvent::Acceleration> DeviceMotionEvent::accelerationIncludingGravity() const
 {
-    return convert(m_deviceMotionData->accelerationIncludingGravity());
+    RefPtr accelerationIncludingGravity = m_deviceMotionData->accelerationIncludingGravity();
+    return convert(accelerationIncludingGravity.get());
 }
 
 std::optional<DeviceMotionEvent::RotationRate> DeviceMotionEvent::rotationRate() const
 {
-    return convert(m_deviceMotionData->rotationRate());
+    RefPtr rotationRate = m_deviceMotionData->rotationRate();
+    return convert(rotationRate.get());
 }
 
 std::optional<double> DeviceMotionEvent::interval() const
@@ -115,35 +134,22 @@ void DeviceMotionEvent::initDeviceMotionEvent(const AtomString& type, bool bubbl
     m_deviceMotionData = DeviceMotionData::create(convert(WTFMove(acceleration)), convert(WTFMove(accelerationIncludingGravity)), convert(WTFMove(rotationRate)), interval);
 }
 
-EventInterface DeviceMotionEvent::eventInterface() const
-{
-#if ENABLE(DEVICE_ORIENTATION)
-    return DeviceMotionEventInterfaceType;
-#else
-    // FIXME: ENABLE(DEVICE_ORIENTATION) seems to be in a strange state where
-    // it is half-guarded by #ifdefs. DeviceMotionEvent.idl is guarded
-    // but DeviceMotionEvent.cpp itself is required by ungarded code.
-    return EventInterfaceType;
-#endif
-}
-
 #if ENABLE(DEVICE_ORIENTATION)
 void DeviceMotionEvent::requestPermission(Document& document, PermissionPromise&& promise)
 {
-    auto* window = document.domWindow();
-    auto* page = document.page();
-    if (!window || !page)
-        return promise.reject(Exception { InvalidStateError, "No browsing context"_s });
+    RefPtr window = document.domWindow();
+    if (!window || !document.page())
+        return promise.reject(Exception { ExceptionCode::InvalidStateError, "No browsing context"_s });
 
     String errorMessage;
     if (!window->isAllowedToUseDeviceMotion(errorMessage)) {
-        document.addConsoleMessage(MessageSource::JS, MessageLevel::Warning, makeString("Call to requestPermission() failed, reason: ", errorMessage, "."));
+        document.addConsoleMessage(MessageSource::JS, MessageLevel::Warning, makeString("Call to requestPermission() failed, reason: "_s, errorMessage, '.'));
         return promise.resolve(PermissionState::Denied);
     }
 
     document.deviceOrientationAndMotionAccessController().shouldAllowAccess(document, [promise = WTFMove(promise)](auto permissionState) mutable {
         if (permissionState == PermissionState::Prompt)
-            return promise.reject(Exception { NotAllowedError, "Requesting device motion access requires a user gesture to prompt"_s });
+            return promise.reject(Exception { ExceptionCode::NotAllowedError, "Requesting device motion access requires a user gesture to prompt"_s });
         promise.resolve(permissionState);
     });
 }

@@ -45,7 +45,7 @@ namespace WebCore {
 
 class LayoutRect {
 public:
-    LayoutRect() { }
+    LayoutRect() = default;
     LayoutRect(const LayoutPoint& location, const LayoutSize& size)
         : m_location(location), m_size(size) { }
     template<typename T1, typename T2, typename U1, typename U2>
@@ -204,6 +204,8 @@ public:
 
     operator FloatRect() const { return FloatRect(m_location, m_size); }
 
+    friend bool operator==(const LayoutRect&, const LayoutRect&) = default;
+
 private:
     friend struct IPC::ArgumentCoder<WebCore::LayoutRect, void>;
     void setLocationAndSizeFromEdges(LayoutUnit left, LayoutUnit top, LayoutUnit right, LayoutUnit bottom);
@@ -227,11 +229,6 @@ inline LayoutRect unionRect(const LayoutRect& a, const LayoutRect& b)
 }
 
 LayoutRect unionRect(const Vector<LayoutRect>&);
-
-inline bool operator==(const LayoutRect& a, const LayoutRect& b)
-{
-    return a.location() == b.location() && a.size() == b.size();
-}
 
 inline bool LayoutRect::isInfinite() const
 {

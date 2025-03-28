@@ -23,34 +23,33 @@
 #pragma once
 
 #include "Document.h"
+#include "TreeScopeOrderedMap.h"
 
 namespace WebCore {
 
 class HTMLDocument : public Document {
-    WTF_MAKE_ISO_ALLOCATED_EXPORT(HTMLDocument, WEBCORE_EXPORT);
+    WTF_MAKE_TZONE_OR_ISO_ALLOCATED_EXPORT(HTMLDocument, WEBCORE_EXPORT);
+    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(HTMLDocument);
 public:
     static Ref<HTMLDocument> create(LocalFrame*, const Settings&, const URL&, ScriptExecutionContextIdentifier = { });
     static Ref<HTMLDocument> createSynthesizedDocument(LocalFrame&, const URL&);
     virtual ~HTMLDocument();
 
-    WEBCORE_EXPORT int width();
-    WEBCORE_EXPORT int height();
-
     std::optional<std::variant<RefPtr<WindowProxy>, RefPtr<Element>, RefPtr<HTMLCollection>>> namedItem(const AtomString&);
     Vector<AtomString> supportedPropertyNames() const;
     bool isSupportedPropertyName(const AtomString&) const;
 
-    Element* documentNamedItem(const AtomStringImpl& name) const { return m_documentNamedItem.getElementByDocumentNamedItem(name, *this); }
-    bool hasDocumentNamedItem(const AtomStringImpl& name) const { return m_documentNamedItem.contains(name); }
-    bool documentNamedItemContainsMultipleElements(const AtomStringImpl& name) const { return m_documentNamedItem.containsMultiple(name); }
-    void addDocumentNamedItem(const AtomStringImpl&, Element&);
-    void removeDocumentNamedItem(const AtomStringImpl&, Element&);
+    RefPtr<Element> documentNamedItem(const AtomString& name) const { return m_documentNamedItem.getElementByDocumentNamedItem(name, *this); }
+    bool hasDocumentNamedItem(const AtomString& name) const { return m_documentNamedItem.contains(name); }
+    bool documentNamedItemContainsMultipleElements(const AtomString& name) const { return m_documentNamedItem.containsMultiple(name); }
+    void addDocumentNamedItem(const AtomString&, Element&);
+    void removeDocumentNamedItem(const AtomString&, Element&);
 
-    Element* windowNamedItem(const AtomStringImpl& name) const { return m_windowNamedItem.getElementByWindowNamedItem(name, *this); }
-    bool hasWindowNamedItem(const AtomStringImpl& name) const { return m_windowNamedItem.contains(name); }
-    bool windowNamedItemContainsMultipleElements(const AtomStringImpl& name) const { return m_windowNamedItem.containsMultiple(name); }
-    void addWindowNamedItem(const AtomStringImpl&, Element&);
-    void removeWindowNamedItem(const AtomStringImpl&, Element&);
+    RefPtr<Element> windowNamedItem(const AtomString& name) const { return m_windowNamedItem.getElementByWindowNamedItem(name, *this); }
+    bool hasWindowNamedItem(const AtomString& name) const { return m_windowNamedItem.contains(name); }
+    bool windowNamedItemContainsMultipleElements(const AtomString& name) const { return m_windowNamedItem.containsMultiple(name); }
+    void addWindowNamedItem(const AtomString&, Element&);
+    void removeWindowNamedItem(const AtomString&, Element&);
 
     static bool isCaseSensitiveAttribute(const QualifiedName&);
 
@@ -77,5 +76,9 @@ inline Ref<HTMLDocument> HTMLDocument::create(LocalFrame* frame, const Settings&
 
 SPECIALIZE_TYPE_TRAITS_BEGIN(WebCore::HTMLDocument)
     static bool isType(const WebCore::Document& document) { return document.isHTMLDocument(); }
-    static bool isType(const WebCore::Node& node) { return is<WebCore::Document>(node) && isType(downcast<WebCore::Document>(node)); }
+    static bool isType(const WebCore::Node& node)
+    {
+        auto* document = dynamicDowncast<WebCore::Document>(node);
+        return document && isType(*document);
+    }
 SPECIALIZE_TYPE_TRAITS_END()

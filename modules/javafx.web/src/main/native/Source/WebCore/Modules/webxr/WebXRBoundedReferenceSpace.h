@@ -28,8 +28,8 @@
 #if ENABLE(WEBXR)
 
 #include "WebXRReferenceSpace.h"
-#include <wtf/IsoMalloc.h>
 #include <wtf/Ref.h>
+#include <wtf/TZoneMalloc.h>
 #include <wtf/Vector.h>
 
 namespace WebCore {
@@ -37,7 +37,7 @@ namespace WebCore {
 class DOMPointReadOnly;
 
 class WebXRBoundedReferenceSpace final : public WebXRReferenceSpace {
-    WTF_MAKE_ISO_ALLOCATED(WebXRBoundedReferenceSpace);
+    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(WebXRBoundedReferenceSpace);
 public:
     static Ref<WebXRBoundedReferenceSpace> create(Document&, WebXRSession&, XRReferenceSpaceType);
     static Ref<WebXRBoundedReferenceSpace> create(Document&, WebXRSession&, Ref<WebXRRigidTransform>&&, XRReferenceSpaceType);
@@ -64,7 +64,11 @@ private:
 
 SPECIALIZE_TYPE_TRAITS_BEGIN(WebCore::WebXRBoundedReferenceSpace)
     static bool isType(const WebCore::WebXRReferenceSpace& element) { return element.isBoundedReferenceSpace(); }
-    static bool isType(const WebCore::WebXRSpace& element) { return is<WebCore::WebXRReferenceSpace>(element) && isType(downcast<WebCore::WebXRReferenceSpace>(element)); }
+    static bool isType(const WebCore::WebXRSpace& element)
+    {
+        auto* referenceSpace = dynamicDowncast<WebCore::WebXRReferenceSpace>(element);
+        return referenceSpace && isType(*referenceSpace);
+    }
 SPECIALIZE_TYPE_TRAITS_END()
 
 #endif // ENABLE(WEBXR)

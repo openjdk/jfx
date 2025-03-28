@@ -28,6 +28,59 @@
 
 #if ENABLE(B3_JIT) && !CPU(ARM)
 
+void testCSEStoreWithLoop()
+{
+    Procedure proc;
+    BasicBlock* root = proc.addBlock();
+    BasicBlock* loop = proc.addBlock();
+    BasicBlock* body = proc.addBlock();
+    BasicBlock* done = proc.addBlock();
+
+    // --------------------------- Root ---------------------------
+    Value* constZero = root->appendIntConstant(proc, Origin(), Int64, 0);
+    Value* constOne = root->appendIntConstant(proc, Origin(), Int64, 1);
+    Value* constTen = root->appendIntConstant(proc, Origin(), Int64, 10);
+    Value* address = root->appendNew<ArgumentRegValue>(proc, Origin(), GPRInfo::argumentGPR0);
+    Value* count = root->appendNew<ArgumentRegValue>(proc, Origin(), GPRInfo::argumentGPR1);
+    UpsilonValue* originalCounter = root->appendNew<UpsilonValue>(proc, Origin(), constZero);
+    root->appendNewControlValue(proc, Jump, Origin(), FrequentedBlock(loop));
+
+    // --------------------------- Loop ---------------------------
+    Value* loopCounter = loop->appendNew<Value>(proc, Phi, Int64, Origin());
+    Value* incCounter = loop->appendNew<Value>(proc, Add, Origin(), loopCounter, constOne);
+    UpsilonValue* incCounterUpsilon = loop->appendNew<UpsilonValue>(proc, Origin(), incCounter);
+    originalCounter->setPhi(loopCounter);
+    incCounterUpsilon->setPhi(loopCounter);
+    Value* valueFromAddress = loop->appendNew<MemoryValue>(proc, Load, Int64, Origin(), address);
+    loop->appendNewControlValue(proc, Branch, Origin(),
+        loop->appendNew<Value>(proc, Below, Origin(), incCounter, constTen),
+        FrequentedBlock(body),
+        FrequentedBlock(loop));
+
+    // --------------------------- Body ---------------------------
+    body->appendNew<MemoryValue>(proc, Store, Origin(), count, address);
+    CheckValue* checkAdd = body->appendNew<CheckValue>(proc, CheckAdd, Origin(), count, valueFromAddress);
+    checkAdd->setGenerator(
+        [&](CCallHelpers& jit, const StackmapGenerationParams&) {
+            AllowMacroScratchRegisterUsage allowScratch(jit);
+            jit.abortWithReason(B3Oops);
+        });
+    body->appendNew<MemoryValue>(proc, Store, Origin(), checkAdd, address);
+    body->appendNewControlValue(proc, Branch, Origin(),
+        body->appendNew<Value>(proc, Below, Origin(), incCounter, count),
+        FrequentedBlock(loop),
+        FrequentedBlock(done));
+
+    // --------------------------- Done ---------------------------
+    done->appendNew<MemoryValue>(proc, Store, Origin(), checkAdd, address);
+    done->appendNewControlValue(proc, Return, Origin(), address);
+
+
+    auto code = compileProc(proc);
+    int64_t num = 1;
+    invoke<int64_t>(*code, bitwise_cast<intptr_t>(&num), 2);
+    CHECK_EQ(num, 5);
+}
 
 void testLoadPreIndex32()
 {
@@ -89,17 +142,17 @@ void testLoadPreIndex32()
     fixSSA(proc);
 
     auto code = compileProc(proc);
-    if (isARM64())
+    if (isARM64() && Options::useB3CanonicalizePrePostIncrements())
         checkUsesInstruction(*code, "#4]!");
 
-    auto test = [&] () -> int32_t {
+    auto expected = [&] () -> int32_t {
         int32_t r = 0;
         while (r < 10)
             r += *++ptr;
         return r;
     };
 
-    CHECK_EQ(invoke<int32_t>(*code, bitwise_cast<intptr_t>(ptr)), test());
+    CHECK_EQ(invoke<int32_t>(*code, bitwise_cast<intptr_t>(ptr)), expected());
 }
 
 void testLoadPreIndex64()
@@ -162,17 +215,17 @@ void testLoadPreIndex64()
     fixSSA(proc);
 
     auto code = compileProc(proc);
-    if (isARM64())
+    if (isARM64() && Options::useB3CanonicalizePrePostIncrements())
         checkUsesInstruction(*code, "#8]!");
 
-    auto test = [&] () -> int64_t {
+    auto expected = [&] () -> int64_t {
         int64_t r = 0;
         while (r < 10)
             r += *++ptr;
         return r;
     };
 
-    CHECK_EQ(invoke<int64_t>(*code, bitwise_cast<intptr_t>(ptr)), test());
+    CHECK_EQ(invoke<int64_t>(*code, bitwise_cast<intptr_t>(ptr)), expected());
 }
 
 void testLoadPostIndex32()
@@ -235,17 +288,17 @@ void testLoadPostIndex32()
     fixSSA(proc);
 
     auto code = compileProc(proc);
-    if (isARM64())
+    if (isARM64() && Options::useB3CanonicalizePrePostIncrements())
         checkUsesInstruction(*code, "], #4");
 
-    auto test = [&] () -> int32_t {
+    auto expected = [&] () -> int32_t {
         int32_t r = 0;
         while (r < 10)
             r += *ptr++;
         return r;
     };
 
-    CHECK_EQ(invoke<int32_t>(*code, bitwise_cast<intptr_t>(ptr)), test());
+    CHECK_EQ(invoke<int32_t>(*code, bitwise_cast<intptr_t>(ptr)), expected());
 }
 
 void testLoadPostIndex64()
@@ -308,17 +361,94 @@ void testLoadPostIndex64()
     fixSSA(proc);
 
     auto code = compileProc(proc);
-    if (isARM64())
+    if (isARM64() && Options::useB3CanonicalizePrePostIncrements())
         checkUsesInstruction(*code, "], #8");
 
-    auto test = [&] () -> int64_t {
+    auto expected = [&] () -> int64_t {
         int64_t r = 0;
         while (r < 10)
             r += *ptr++;
         return r;
     };
 
-    CHECK_EQ(invoke<int64_t>(*code, bitwise_cast<intptr_t>(ptr)), test());
+    CHECK_EQ(invoke<int64_t>(*code, bitwise_cast<intptr_t>(ptr)), expected());
+}
+
+void testLoadPreIndex32WithStore()
+{
+    if (Options::defaultB3OptLevel() < 2)
+        return;
+
+    int32_t nums[] = { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10 };
+    int32_t* ptr = nums;
+
+    Procedure proc;
+    BasicBlock* root = proc.addBlock();
+    BasicBlock* loopTest = proc.addBlock();
+    BasicBlock* loopBody = proc.addBlock();
+    BasicBlock* done = proc.addBlock();
+
+    Variable* r = proc.addVariable(Int32);
+    Variable* p = proc.addVariable(Int64);
+
+    // ---------------------- Root_Block
+    // r1 = 0
+    // Upsilon(r1, ^r2)
+    // p1 = addr
+    // Upsilon(p1, ^p2)
+    Value* r1 = root->appendIntConstant(proc, Origin(), Int32, 0);
+    root->appendNew<VariableValue>(proc, B3::Set, Origin(), r, r1);
+    Value* p1 = root->appendNew<ArgumentRegValue>(proc, Origin(), GPRInfo::argumentGPR0);
+    root->appendNew<VariableValue>(proc, B3::Set, Origin(), p, p1);
+    root->appendNewControlValue(proc, Jump, Origin(), FrequentedBlock(loopTest));
+
+    // ---------------------- Loop_Test_Block
+    // loop:
+    // p2 = Phi()
+    // r2 = Phi()
+    // if r2 >= 10 goto done
+    Value* r2 = loopTest->appendNew<VariableValue>(proc, B3::Get, Origin(), r);
+    Value* p2 = loopTest->appendNew<VariableValue>(proc, B3::Get, Origin(), p);
+    Value* cond = loopTest->appendNew<Value>(proc, AboveEqual, Origin(), r2, loopTest->appendNew<Const32Value>(proc, Origin(), 10));
+    loopTest->appendNewControlValue(proc, Branch, Origin(), cond, FrequentedBlock(done), FrequentedBlock(loopBody));
+
+    // ---------------------- Loop_Body_Block
+    // p3 = p2 + 1
+    // Upsilon(p3, ^p2)
+    // p3' = p3
+    // store(5, p3')
+    // r3 = r2 + load(p3)
+    // Upsilon(r3, ^r2)
+    // goto loop
+    Value* p3 = loopBody->appendNew<Value>(proc, Add, Origin(), p2, loopBody->appendNew<Const64Value>(proc, Origin(), 4));
+    loopBody->appendNew<VariableValue>(proc, B3::Set, Origin(), p, p3);
+    Value* p3Prime = loopBody->appendNew<Value>(proc, Opaque, Origin(), p3);
+    loopBody->appendNew<MemoryValue>(proc, Store, Origin(), loopBody->appendNew<Const32Value>(proc, Origin(), 5), p3Prime);
+    Value* r3 = loopBody->appendNew<Value>(proc, Add, Origin(), r2, loopBody->appendNew<MemoryValue>(proc, Load, Int32, Origin(), p3));
+    loopBody->appendNew<VariableValue>(proc, B3::Set, Origin(), r, r3);
+    loopBody->appendNewControlValue(proc, Jump, Origin(), FrequentedBlock(loopTest));
+
+    // ---------------------- Done_Block
+    // done:
+    // return r2
+    done->appendNewControlValue(proc, Return, Origin(), r2);
+
+    proc.resetReachability();
+    validate(proc);
+    fixSSA(proc);
+
+    auto code = compileProc(proc);
+
+    auto expected = [&] () -> int32_t {
+        int32_t r = 0;
+        while (r < 10) {
+            *++ptr = 5;
+            r += *ptr;
+        }
+        return r;
+    };
+
+    CHECK_EQ(invoke<int32_t>(*code, bitwise_cast<intptr_t>(ptr)), expected());
 }
 
 void testStorePreIndex32()
@@ -342,7 +472,7 @@ void testStorePreIndex32()
     root->appendNewControlValue(proc, Return, Origin(), preIncrement);
 
     auto code = compileProc(proc);
-    if (isARM64())
+    if (isARM64() && Options::useB3CanonicalizePrePostIncrements())
         checkUsesInstruction(*code, "#4]!");
     intptr_t res = invoke<intptr_t>(*code, bitwise_cast<intptr_t>(ptr), 4);
     ptr = bitwise_cast<int32_t*>(res);
@@ -368,6 +498,8 @@ void testStorePreIndex64()
     root->appendNewControlValue(proc, Return, Origin(), preIncrement);
 
     auto code = compileProc(proc);
+    if (isARM64() && Options::useB3CanonicalizePrePostIncrements())
+        checkUsesInstruction(*code, "#8]!");
     intptr_t res = invoke<intptr_t>(*code, bitwise_cast<intptr_t>(ptr), 4);
     ptr = bitwise_cast<int64_t*>(res);
     CHECK_EQ(nums[2], *ptr);
@@ -394,7 +526,7 @@ void testStorePostIndex32()
     root->appendNewControlValue(proc, Return, Origin(), preIncrement);
 
     auto code = compileProc(proc);
-    if (isARM64())
+    if (isARM64() && Options::useB3CanonicalizePrePostIncrements())
         checkUsesInstruction(*code, "], #4");
     intptr_t res = invoke<intptr_t>(*code, bitwise_cast<intptr_t>(ptr), 4);
     ptr = bitwise_cast<int32_t*>(res);
@@ -421,7 +553,7 @@ void testStorePostIndex64()
     root->appendNewControlValue(proc, Return, Origin(), preIncrement);
 
     auto code = compileProc(proc);
-    if (isARM64())
+    if (isARM64() && Options::useB3CanonicalizePrePostIncrements())
         checkUsesInstruction(*code, "], #8");
     intptr_t res = invoke<intptr_t>(*code, bitwise_cast<intptr_t>(ptr), 4);
     ptr = bitwise_cast<int64_t*>(res);
@@ -1623,7 +1755,7 @@ static unsigned countLeadingZero(IntegerType value)
         return bitCount;
 
     unsigned counter = 0;
-    while (!(static_cast<uint64_t>(value) & (1l << (bitCount - 1)))) {
+    while (!(static_cast<uint64_t>(value) & (1ull << (bitCount - 1)))) {
         value <<= 1;
         ++counter;
     }
@@ -2287,7 +2419,7 @@ void testFloorArgWithEffectfulDoubleConversion(float a)
 
 double correctSqrt(double value)
 {
-#if CPU(X86) || CPU(X86_64)
+#if CPU(X86_64)
     double result;
     asm ("sqrtsd %1, %0" : "=x"(result) : "x"(value));
     return result;
@@ -4099,18 +4231,17 @@ void addShrTests(const TestConfig* config, Deque<RefPtr<SharedTask<void()>>>& ta
     RUN(testZShrArgImm32(0xffffffff, 0));
     RUN(testZShrArgImm32(0xffffffff, 1));
     RUN(testZShrArgImm32(0xffffffff, 63));
+    RUN(testCSEStoreWithLoop());
 
-    if (Options::useB3CanonicalizePrePostIncrements()) {
         RUN(testLoadPreIndex32());
         RUN(testLoadPreIndex64());
         RUN(testLoadPostIndex32());
         RUN(testLoadPostIndex64());
-
+    RUN(testLoadPreIndex32WithStore());
         RUN(testStorePreIndex32());
         RUN(testStorePreIndex64());
         RUN(testStorePostIndex32());
         RUN(testStorePostIndex64());
-    }
 }
 
 #endif // ENABLE(B3_JIT)

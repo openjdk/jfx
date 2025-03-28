@@ -1,7 +1,7 @@
 /*
  *  Copyright (C) 1999-2001 Harri Porten (porten@kde.org)
  *  Copyright (C) 2001 Peter Kelly (pmk@post.com)
- *  Copyright (C) 2003-2022 Apple Inc. All rights reserved.
+ *  Copyright (C) 2003-2024 Apple Inc. All rights reserved.
  *
  *  This library is free software; you can redistribute it and/or
  *  modify it under the terms of the GNU Library General Public
@@ -31,9 +31,8 @@
 #include <wtf/EnumClassOperatorOverloads.h>
 
 namespace JSC  {
-namespace Wasm {
-class Instance;
-}
+
+class JSWebAssemblyInstance;
 
 template<typename> struct BaseInstruction;
 struct JSOpcodeTraits;
@@ -66,7 +65,7 @@ using JSInstruction = BaseInstruction<JSOpcodeTraits>;
         { }
 
         explicit operator bool() const { return !!m_bits; }
-        bool operator==(const CallSiteIndex& other) const { return m_bits == other.m_bits; }
+        friend bool operator==(const CallSiteIndex&, const CallSiteIndex&) = default;
 
         unsigned hash() const { return intHash(m_bits); }
         static CallSiteIndex deletedValue() { return fromBits(s_invalidIndex - 1); }
@@ -203,13 +202,13 @@ using JSInstruction = BaseInstruction<JSOpcodeTraits>;
 
         JS_EXPORT_PRIVATE SourceOrigin callerSourceOrigin(VM&);
 
-        static ptrdiff_t callerFrameOffset() { return OBJECT_OFFSETOF(CallerFrameAndPC, callerFrame); }
+        static constexpr ptrdiff_t callerFrameOffset() { return OBJECT_OFFSETOF(CallerFrameAndPC, callerFrame); }
 
         void* rawReturnPCForInspection() const { return callerFrameAndPC().returnPC; }
         void* returnPCForInspection() const { return removeCodePtrTag(callerFrameAndPC().returnPC); }
         bool hasReturnPC() const { return !!callerFrameAndPC().returnPC; }
         void clearReturnPC() { callerFrameAndPC().returnPC = nullptr; }
-        static ptrdiff_t returnPCOffset() { return OBJECT_OFFSETOF(CallerFrameAndPC, returnPC); }
+        static constexpr ptrdiff_t returnPCOffset() { return OBJECT_OFFSETOF(CallerFrameAndPC, returnPC); }
 
         bool callSiteBitsAreBytecodeOffset() const;
         bool callSiteBitsAreCodeOriginIndex() const;
@@ -218,16 +217,18 @@ using JSInstruction = BaseInstruction<JSOpcodeTraits>;
         unsigned unsafeCallSiteAsRawBits() const;
         CallSiteIndex callSiteIndex() const;
         CallSiteIndex unsafeCallSiteIndex() const;
+        void setCallSiteIndex(CallSiteIndex);
 
 #if ENABLE(WEBASSEMBLY)
-        Wasm::Instance* wasmInstance() const;
+        JSWebAssemblyInstance* wasmInstance() const;
 #endif
+
+        JSCell* codeOwnerCell() const;
 
     private:
         unsigned callSiteBitsAsBytecodeOffset() const;
-#if ENABLE(WEBASSEMBLY)
-        JS_EXPORT_PRIVATE JSGlobalObject* lexicalGlobalObjectFromWasmCallee(VM&) const;
-#endif
+        JS_EXPORT_PRIVATE JSGlobalObject* lexicalGlobalObjectFromNativeCallee(VM&) const;
+        JS_EXPORT_PRIVATE JSCell* codeOwnerCellSlow() const;
     public:
 
         // This will try to get you the bytecode offset, but you should be aware that
@@ -257,8 +258,8 @@ using JSInstruction = BaseInstruction<JSOpcodeTraits>;
         // Access to arguments as passed. (After capture, arguments may move to a different location.)
         size_t argumentCount() const { return argumentCountIncludingThis() - 1; }
         size_t argumentCountIncludingThis() const { return this[static_cast<int>(CallFrameSlot::argumentCountIncludingThis)].payload(); }
-        static int argumentOffset(int argument) { return (CallFrameSlot::firstArgument + argument); }
-        static int argumentOffsetIncludingThis(int argument) { return (CallFrameSlot::thisArgument + argument); }
+        static constexpr int argumentOffset(int argument) { return (CallFrameSlot::firstArgument + argument); }
+        static constexpr int argumentOffsetIncludingThis(int argument) { return (CallFrameSlot::thisArgument + argument); }
 
         // In the following (argument() and setArgument()), the 'argument'
         // parameter is the index of the arguments of the target function of
@@ -307,7 +308,7 @@ using JSInstruction = BaseInstruction<JSOpcodeTraits>;
 
         static int offsetFor(size_t argumentCountIncludingThis) { return CallFrameSlot::thisArgument + argumentCountIncludingThis - 1; }
 
-        static CallFrame* noCaller() { return nullptr; }
+        static constexpr CallFrame* noCaller() { return nullptr; }
 
         bool isEmptyTopLevelCallFrameForDebugger() const
         {
@@ -315,11 +316,12 @@ using JSInstruction = BaseInstruction<JSOpcodeTraits>;
         }
 
         void convertToStackOverflowFrame(VM&, CodeBlock* codeBlockToKeepAliveUntilFrameIsUnwound);
-        bool isStackOverflowFrame() const;
-        bool isWasmFrame() const;
+        bool isPartiallyInitializedFrame() const;
+        bool isNativeCalleeFrame() const;
 
         void setArgumentCountIncludingThis(int count) { static_cast<Register*>(this)[static_cast<int>(CallFrameSlot::argumentCountIncludingThis)].payload() = count; }
         inline void setCallee(JSObject*);
+        inline void setCallee(NativeCallee*);
         inline void setCodeBlock(CodeBlock*);
         void setReturnPC(void* value) { callerFrameAndPC().returnPC = value; }
 
@@ -366,6 +368,24 @@ using JSInstruction = BaseInstruction<JSOpcodeTraits>;
 JS_EXPORT_PRIVATE bool isFromJSCode(void* returnAddress);
 
 #if USE(BUILTIN_FRAME_ADDRESS)
+#if OS(WINDOWS)
+// On Windows, __builtin_frame_address(1) doesn't work, it returns __builtin_frame_address(0)
+// We can't use __builtin_frame_address(0) either, as on Windows it points at the space after
+// function's local variables on the stack instead of before like other platforms.
+// Instead we use _AddressOfReturnAddress(), and clobber rbp so it should be the first parameter
+// saved by the currrent function.
+#define DECLARE_CALL_FRAME(vm) \
+    ({ \
+        asm volatile( \
+            "" \
+            : /* no outputs */ \
+            : /* no inputs */ \
+            : "rbp" /* clobber rbp */ \
+        ); \
+        ASSERT(JSC::isFromJSCode(removeCodePtrTag<void*>(__builtin_return_address(0)))); \
+        bitwise_cast<JSC::CallFrame*>(*((uintptr_t**) _AddressOfReturnAddress() - 1)); \
+    })
+#else // !OS(WINDOWS)
 // FIXME (see rdar://72897291): Work around a Clang bug where __builtin_return_address()
 // sometimes gives us a signed pointer, and sometimes does not.
 #define DECLARE_CALL_FRAME(vm) \
@@ -373,6 +393,7 @@ JS_EXPORT_PRIVATE bool isFromJSCode(void* returnAddress);
         ASSERT(JSC::isFromJSCode(removeCodePtrTag<void*>(__builtin_return_address(0)))); \
         bitwise_cast<JSC::CallFrame*>(__builtin_frame_address(1)); \
     })
+#endif // !OS(WINDOWS)
 #else
 #define DECLARE_CALL_FRAME(vm) ((vm).topCallFrame)
 #endif

@@ -30,14 +30,13 @@
     ActiveDOMObject,
     SecureContext,
     Exposed=(Window,Worker),
-    Conditional=SERVICE_WORKER,
     EnabledBySetting=ServiceWorkersEnabled,
     GenerateIsReachable=ReachableFromNavigator
 ] interface ServiceWorkerContainer : EventTarget {
     readonly attribute ServiceWorker? controller;
     readonly attribute Promise<ServiceWorkerRegistration> ready;
 
-    [NewObject, ImplementedAs=addRegistration] Promise<ServiceWorkerRegistration> register(USVString scriptURL, optional RegistrationOptions options);
+    [NewObject, ImplementedAs=addRegistration] Promise<ServiceWorkerRegistration> register((TrustedScriptURL or USVString) scriptURL, optional RegistrationOptions options);
     [NewObject] Promise<any> getRegistration(optional USVString clientURL = "");
     [NewObject] Promise<sequence<ServiceWorkerRegistration>> getRegistrations();
 

@@ -91,8 +91,7 @@ struct PasteboardWebContent {
     RefPtr<SharedBuffer> dataInAttributedStringFormat;
     String dataInHTMLFormat;
     String dataInStringFormat;
-    Vector<String> clientTypes;
-    Vector<RefPtr<SharedBuffer>> clientData;
+    Vector<std::pair<String, RefPtr<WebCore::SharedBuffer>>> clientTypesAndData;
 #endif
 #if PLATFORM(GTK)
     String contentOrigin;
@@ -129,8 +128,7 @@ struct PasteboardImage {
 #if !(PLATFORM(GTK) || PLATFORM(WIN) || PLATFORM(JAVA))
     RefPtr<SharedBuffer> resourceData;
     String resourceMIMEType;
-    Vector<String> clientTypes;
-    Vector<RefPtr<SharedBuffer>> clientData;
+    Vector<std::pair<String, RefPtr<WebCore::SharedBuffer>>> clientTypesAndData;
 #endif
     String suggestedName;
     FloatSize imageSize;
@@ -148,8 +146,6 @@ struct PasteboardBuffer {
 
 class PasteboardWebContentReader {
 public:
-    String contentOrigin;
-
     virtual ~PasteboardWebContentReader() = default;
 
 #if PLATFORM(COCOA) || PLATFORM(GTK)
@@ -167,6 +163,12 @@ public:
     virtual bool readRTF(SharedBuffer&) = 0;
     virtual bool readDataBuffer(SharedBuffer&, const String& type, const AtomString& name, PresentationSize preferredPresentationSize = { }) = 0;
 #endif
+
+    const String& contentOrigin() const { return m_contentOrigin; }
+    void setContentOrigin(const String& contentOrigin) { m_contentOrigin = contentOrigin; }
+
+private:
+    String m_contentOrigin;
 };
 
 struct PasteboardPlainText {

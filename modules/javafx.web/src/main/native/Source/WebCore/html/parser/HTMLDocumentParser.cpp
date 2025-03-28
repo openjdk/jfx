@@ -272,7 +272,7 @@ bool HTMLDocumentParser::pumpTokenizerLoop(SynchronousMode mode, bool parsingFra
         // how the parser has always handled stopping when the page assigns window.location. What should
         // happen instead is that assigning window.location causes the parser to stop parsing cleanly.
         // The problem is we're not prepared to do that at every point where we run JavaScript.
-        if (UNLIKELY(!parsingFragment && document()->frame() && document()->frame()->navigationScheduler().locationChangePending()))
+        if (UNLIKELY(!parsingFragment && document()->frame() && document()->frame()->checkedNavigationScheduler()->locationChangePending()))
             return false;
 
         if (UNLIKELY(mode == SynchronousMode::AllowYield && m_parserScheduler->shouldYieldBeforeToken(session)))
@@ -326,7 +326,7 @@ void HTMLDocumentParser::pumpTokenizer(SynchronousMode mode)
             m_preloadScanner = makeUnique<HTMLPreloadScanner>(m_options, document()->url(), document()->deviceScaleFactor());
             m_preloadScanner->appendToEnd(m_input.current());
         }
-        m_preloadScanner->scan(*m_preloader, *document());
+        m_preloadScanner->scan(*m_preloader, Ref { *document() });
     }
     // The viewport definition is known here, so we can load link preloads with media attributes.
     if (document()->loader())

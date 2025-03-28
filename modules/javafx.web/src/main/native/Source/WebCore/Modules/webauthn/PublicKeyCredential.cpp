@@ -59,7 +59,7 @@ AuthenticatorAttachment PublicKeyCredential::authenticatorAttachment() const
 }
 
 PublicKeyCredential::PublicKeyCredential(Ref<AuthenticatorResponse>&& response)
-    : BasicCredential(base64URLEncodeToString(response->rawId()->data(), response->rawId()->byteLength()), Type::PublicKey, Discovery::Remote)
+    : BasicCredential(base64URLEncodeToString(response->rawId()->span()), Type::PublicKey, Discovery::Remote)
     , m_response(WTFMove(response))
 {
 }
@@ -68,6 +68,12 @@ void PublicKeyCredential::isUserVerifyingPlatformAuthenticatorAvailable(Document
 {
     if (auto* page = document.page())
         page->authenticatorCoordinator().isUserVerifyingPlatformAuthenticatorAvailable(document, WTFMove(promise));
+}
+
+void PublicKeyCredential::getClientCapabilities(Document& document, DOMPromiseDeferred<IDLRecord<IDLDOMString, IDLBoolean>>&& promise)
+{
+    if (auto* page = document.page())
+        page->authenticatorCoordinator().getClientCapabilities(document, WTFMove(promise));
 }
 
 } // namespace WebCore

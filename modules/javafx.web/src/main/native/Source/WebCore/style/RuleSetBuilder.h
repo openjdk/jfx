@@ -85,10 +85,13 @@ private:
     CascadeLayerName m_resolvedCascadeLayerName;
     HashMap<CascadeLayerName, RuleSet::CascadeLayerIdentifier> m_cascadeLayerIdentifierMap;
     RuleSet::CascadeLayerIdentifier m_currentCascadeLayerIdentifier { 0 };
-    Vector<const CSSSelectorList*> m_styleRuleStack;
+    Vector<const CSSSelectorList*> m_selectorListStack;
     const ShouldResolveNesting m_shouldResolveNesting { ShouldResolveNesting::No };
 
     RuleSet::ContainerQueryIdentifier m_currentContainerQueryIdentifier { 0 };
+    RuleSet::ScopeRuleIdentifier m_currentScopeIdentifier { 0 };
+
+    IsStartingStyle m_isStartingStyle { IsStartingStyle::No };
 
     Vector<RuleSet::ResolverMutatingRule> m_collectedResolverMutatingRules;
     bool requiresStaticMediaQueryEvaluation { false };

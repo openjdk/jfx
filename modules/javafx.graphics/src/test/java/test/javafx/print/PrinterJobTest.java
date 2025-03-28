@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,25 +25,26 @@
 
 package test.javafx.print;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
-import org.junit.Before;
-import org.junit.Test;
-
 import javafx.beans.property.ObjectProperty;
 
 import javafx.print.Printer;
 import javafx.print.PrinterJob;
 
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+
 public class PrinterJobTest {
 
-  @Test public void dummyTest() {
+  @Test
+  public void dummyTest() {
   }
 
 
   private PrinterJob job;
 
-  @Before
+  @BeforeEach
   public void setUp() {
      try {
          job = PrinterJob.createPrinterJob();
@@ -57,7 +58,8 @@ public class PrinterJobTest {
      }
   }
 
-  @Test public void testPrinter() {
+  @Test
+  public void testPrinter() {
      if (job == null) {
          return;
      }
@@ -68,7 +70,8 @@ public class PrinterJobTest {
      assertEquals(printer, job.getPrinter());
    }
 
-  @Test public void testPrinterProperty() {
+  @Test
+  public void testPrinterProperty() {
      if (job == null) {
          return;
      }

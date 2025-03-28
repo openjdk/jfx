@@ -1,5 +1,5 @@
 // Copyright 2015 The Chromium Authors. All rights reserved.
-// Copyright (C) 2016 Apple Inc. All rights reserved.
+// Copyright (C) 2016-2024 Apple Inc. All rights reserved.
 //
 // Redistribution and use in source and binary forms, with or without
 // modification, are permitted provided that the following conditions are
@@ -33,12 +33,13 @@
 #include "CSSParserImpl.h"
 #include "CSSPropertyParserHelpers.h"
 #include "CSSSelectorParser.h"
+#include "CSSTokenizer.h"
 #include "FontCustomPlatformData.h"
 #include "StyleRule.h"
 
 namespace WebCore {
 
-CSSSupportsParser::SupportsResult CSSSupportsParser::supportsCondition(CSSParserTokenRange range, CSSParserImpl& parser, SupportsParsingMode mode, CSSParserEnum::IsNestedContext isNestedContext)
+CSSSupportsParser::SupportsResult CSSSupportsParser::supportsCondition(CSSParserTokenRange range, CSSParserImpl& parser, ParsingMode mode, CSSParserEnum::IsNestedContext isNestedContext)
 {
     // FIXME: The spec allows leading whitespace in @supports but not CSS.supports,
     // but major browser vendors allow it in CSS.supports also.
@@ -46,7 +47,7 @@ CSSSupportsParser::SupportsResult CSSSupportsParser::supportsCondition(CSSParser
     CSSSupportsParser supportsParser(parser, isNestedContext);
 
     auto result = supportsParser.consumeCondition(range);
-    if (mode != ForWindowCSS || result != Invalid)
+    if (mode != ParsingMode::AllowBareDeclarationAndGeneralEnclosed || result != Invalid)
         return result;
 
     // window.CSS.supports requires parsing as-if the condition was wrapped in
@@ -100,7 +101,7 @@ CSSSupportsParser::SupportsResult CSSSupportsParser::consumeCondition(CSSParserT
             return Invalid;
 
         range.consume();
-        if (range.peek().type() != WhitespaceToken)
+        if (!CSSTokenizer::isWhitespace(range.peek().type()))
             return Invalid;
         range.consumeWhitespace();
     }
@@ -114,7 +115,7 @@ CSSSupportsParser::SupportsResult CSSSupportsParser::consumeNegation(CSSParserTo
 
     if (range.peek().type() == IdentToken)
         range.consume();
-    if (range.peek().type() != WhitespaceToken)
+    if (!CSSTokenizer::isWhitespace(range.peek().type()))
         return Invalid;
     range.consumeWhitespace();
     auto result = consumeConditionInParenthesis(range, tokenType);

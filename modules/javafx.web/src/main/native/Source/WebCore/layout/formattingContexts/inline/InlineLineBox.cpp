@@ -26,6 +26,7 @@
 #include "config.h"
 #include "InlineLineBox.h"
 
+#include "InlineFormattingUtils.h"
 #include "InlineLevelBoxInlines.h"
 #include "LayoutBoxGeometry.h"
 #include "LayoutElementBox.h"
@@ -40,6 +41,7 @@ LineBox::LineBox(const Box& rootLayoutBox, InlineLayoutUnit contentLogicalLeft, 
 {
     m_nonRootInlineLevelBoxList.reserveInitialCapacity(nonSpanningInlineLevelBoxCount);
     m_nonRootInlineLevelBoxMap.reserveInitialCapacity(nonSpanningInlineLevelBoxCount);
+    m_rootInlineBox.setTextEmphasis(InlineFormattingUtils::textEmphasisForInlineBox(rootLayoutBox, downcast<ElementBox>(rootLayoutBox)));
 }
 
 void LineBox::addInlineLevelBox(InlineLevelBox&& inlineLevelBox)
@@ -55,7 +57,7 @@ InlineRect LineBox::logicalRectForTextRun(const Line::Run& run) const
     auto* ancestorInlineBox = &parentInlineBox(run);
     ASSERT(ancestorInlineBox->isInlineBox());
     auto runlogicalTop = ancestorInlineBox->logicalTop() - ancestorInlineBox->inlineBoxContentOffsetForTextBoxTrim();
-    InlineLayoutUnit logicalHeight = ancestorInlineBox->primarymetricsOfPrimaryFont().height();
+    InlineLayoutUnit logicalHeight = ancestorInlineBox->primarymetricsOfPrimaryFont().intHeight();
 
     while (ancestorInlineBox != &m_rootInlineBox && !ancestorInlineBox->hasLineBoxRelativeAlignment()) {
         ancestorInlineBox = &parentInlineBox(*ancestorInlineBox);
@@ -104,18 +106,14 @@ InlineRect LineBox::logicalRectForInlineLevelBox(const Box& layoutBox) const
     return InlineRect { inlineLevelBoxAbsoluteTop(*inlineBox), inlineBoxLogicalRect.left(), inlineBoxLogicalRect.width(), inlineBoxLogicalRect.height() };
 }
 
-InlineRect LineBox::logicalBorderBoxForAtomicInlineLevelBox(const Box& layoutBox, const BoxGeometry& boxGeometry) const
+InlineRect LineBox::logicalBorderBoxForAtomicInlineBox(const Box& layoutBox, const BoxGeometry& boxGeometry) const
 {
-    ASSERT(layoutBox.isAtomicInlineLevelBox());
+    ASSERT(layoutBox.isAtomicInlineBox());
     auto logicalRect = logicalRectForInlineLevelBox(layoutBox);
     // Inline level boxes use their margin box for vertical alignment. Let's covert them to border boxes.
     logicalRect.moveVertically(boxGeometry.marginBefore());
     auto verticalMargin = boxGeometry.marginBefore() + boxGeometry.marginAfter();
     logicalRect.expandVertically(-verticalMargin);
-
-    // FIXME: The overhang adjustment should be based on the computed value.
-    if (auto* rubyAdjustments = layoutBox.rubyAdjustments())
-        logicalRect.moveHorizontally(-rubyAdjustments->overhang.start);
 
     return logicalRect;
 }
@@ -124,9 +122,8 @@ InlineRect LineBox::logicalBorderBoxForInlineBox(const Box& layoutBox, const Box
 {
     auto logicalRect = logicalRectForInlineLevelBox(layoutBox);
     // This logical rect is as tall as the "text" content is. Let's adjust with vertical border and padding.
-    auto verticalBorderAndPadding = boxGeometry.verticalBorder() + boxGeometry.verticalPadding().value_or(0_lu);
-    logicalRect.expandVertically(verticalBorderAndPadding);
-    logicalRect.moveVertically(-(boxGeometry.borderBefore() + boxGeometry.paddingBefore().value_or(0_lu)));
+    logicalRect.expandVertically(boxGeometry.verticalBorderAndPadding());
+    logicalRect.moveVertically(-boxGeometry.borderAndPaddingBefore());
     return logicalRect;
 }
 

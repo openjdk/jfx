@@ -33,20 +33,14 @@
 
 namespace WGSL {
 
-CallGraph::CallGraph(ShaderModule& shaderModule)
-    : m_ast(shaderModule)
-{
-}
-
 class CallGraphBuilder : public AST::Visitor {
 public:
-    CallGraphBuilder(ShaderModule& shaderModule, const HashMap<String, std::optional<PipelineLayout>>& pipelineLayouts)
-        : m_callGraph(shaderModule)
-        , m_pipelineLayouts(pipelineLayouts)
+    CallGraphBuilder(ShaderModule& shaderModule)
+        : m_shaderModule(shaderModule)
     {
     }
 
-    CallGraph build();
+    void build();
 
     void visit(AST::Function&) override;
     void visit(AST::CallExpression&) override;
@@ -54,40 +48,39 @@ public:
 private:
     void initializeMappings();
 
+    ShaderModule& m_shaderModule;
     CallGraph m_callGraph;
-    const HashMap<String, std::optional<PipelineLayout>>& m_pipelineLayouts;
     HashMap<AST::Function*, unsigned> m_calleeBuildingMap;
     Vector<CallGraph::Callee>* m_callees { nullptr };
+    AST::Function* m_currentFunction { nullptr };
     Deque<AST::Function*> m_queue;
 };
 
-CallGraph CallGraphBuilder::build()
+void CallGraphBuilder::build()
 {
     initializeMappings();
-    return m_callGraph;
+    m_shaderModule.setCallGraph(WTFMove(m_callGraph));
 }
 
 void CallGraphBuilder::initializeMappings()
 {
-    for (auto& function : m_callGraph.m_ast.functions()) {
-        const auto& name = function.name();
+    for (auto& declaration : m_shaderModule.declarations()) {
+        auto* function = dynamicDowncast<AST::Function>(declaration);
+        if (!function)
+            continue;
+
+        const auto& name = function->name();
         {
-            auto result = m_callGraph.m_functionsByName.add(name, &function);
+            auto result = m_callGraph.m_functionsByName.add(name, function);
             ASSERT_UNUSED(result, result.isNewEntry);
         }
 
-        if (!m_pipelineLayouts.contains(name))
+        if (!function->stage())
             continue;
 
-        for (auto& attribute : function.attributes()) {
-            if (is<AST::StageAttribute>(attribute)) {
-                auto stage = downcast<AST::StageAttribute>(attribute).stage();
-                m_callGraph.m_entrypoints.append({ function, stage });
-                m_queue.append(&function);
-                break;
+        m_callGraph.m_entrypoints.append({ *function, *function->stage(), function->name() });
+        m_queue.append(function);
             }
-        }
-    }
 
     while (!m_queue.isEmpty())
         visit(*m_queue.takeFirst());
@@ -101,8 +94,10 @@ void CallGraphBuilder::visit(AST::Function& function)
 
     ASSERT(!m_callees);
     m_callees = &result.iterator->value;
+    m_currentFunction = &function;
     AST::Visitor::visit(function);
     m_calleeBuildingMap.clear();
+    m_currentFunction = nullptr;
     m_callees = nullptr;
 }
 
@@ -111,25 +106,25 @@ void CallGraphBuilder::visit(AST::CallExpression& call)
     for (auto& argument : call.arguments())
         AST::Visitor::visit(argument);
 
-    if (!is<AST::NamedTypeName>(call.target()))
+    auto* target = dynamicDowncast<AST::IdentifierExpression>(call.target());
+    if (!target)
         return;
 
-    auto& target = downcast<AST::NamedTypeName>(call.target());
-    auto it = m_callGraph.m_functionsByName.find(target.name());
+    auto it = m_callGraph.m_functionsByName.find(target->identifier());
     if (it == m_callGraph.m_functionsByName.end())
         return;
 
     m_queue.append(it->value);
     auto result = m_calleeBuildingMap.add(it->value, m_callees->size());
     if (result.isNewEntry)
-        m_callees->append(CallGraph::Callee { it->value, { &call } });
+        m_callees->append(CallGraph::Callee { it->value, { { m_currentFunction, &call } } });
     else
-        m_callees->at(result.iterator->value).callSites.append(&call);
+        m_callees->at(result.iterator->value).callSites.append({ m_currentFunction, &call });
 }
 
-CallGraph buildCallGraph(ShaderModule& shaderModule, const HashMap<String, std::optional<PipelineLayout>>& pipelineLayouts)
+void buildCallGraph(ShaderModule& shaderModule)
 {
-    return CallGraphBuilder(shaderModule, pipelineLayouts).build();
+    CallGraphBuilder(shaderModule).build();
 }
 
 } // namespace WGSL

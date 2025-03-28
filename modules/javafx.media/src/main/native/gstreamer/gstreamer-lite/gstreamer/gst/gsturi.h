@@ -260,6 +260,9 @@ GST_API
 gchar *  gst_uri_to_string             (const GstUri * uri) G_GNUC_MALLOC;
 
 GST_API
+gchar * gst_uri_to_string_with_keys    (const GstUri * uri, const GList *keys);
+
+GST_API
 gboolean gst_uri_is_normalized         (const GstUri * uri);
 
 GST_API
@@ -315,6 +318,9 @@ gboolean gst_uri_append_path_segment   (GstUri * uri,
                                         const gchar * path_segment);
 GST_API
 gchar * gst_uri_get_query_string       (const GstUri * uri);
+
+GST_API
+gchar * gst_uri_get_query_string_ordered (const GstUri * uri, const GList *keys);
 
 GST_API
 gboolean gst_uri_set_query_string      (GstUri * uri, const gchar * query);

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2021 Apple Inc. All rights reserved.
+ * Copyright (C) 2021-2023 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -31,6 +31,7 @@
 #include "VisitRaceKey.h"
 #include <wtf/ConcurrentPtrHashSet.h>
 #include <wtf/SharedTask.h>
+#include <wtf/TZoneMalloc.h>
 #include <wtf/text/CString.h>
 
 namespace JSC {
@@ -48,11 +49,12 @@ class VM;
 class VerifierSlotVisitor;
 template<typename T> class Weak;
 template<typename T, typename Traits> class WriteBarrierBase;
+template<typename T, typename Traits> class WriteBarrier;
 class WriteBarrierStructureID;
 
 class AbstractSlotVisitor {
     WTF_MAKE_NONCOPYABLE(AbstractSlotVisitor);
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_ALLOCATED(AbstractSlotVisitor);
 public:
     enum OpaqueRootTag { OpaqueRoot };
 
@@ -138,7 +140,7 @@ public:
 
     VM& vm();
     const VM& vm() const;
-    Heap* heap() const;
+    JSC::Heap* heap() const;
 
     virtual void append(const ConservativeRoots&) = 0;
 
@@ -147,6 +149,7 @@ public:
     void append(const WriteBarrierStructureID&);
     void appendHidden(const WriteBarrierStructureID&);
     template<typename Iterator> void append(Iterator begin , Iterator end);
+    ALWAYS_INLINE void appendValues(std::span<const WriteBarrier<Unknown, RawValueTraits<Unknown>>>);
     ALWAYS_INLINE void appendValues(const WriteBarrierBase<Unknown, RawValueTraits<Unknown>>*, size_t count);
     ALWAYS_INLINE void appendValuesHidden(const WriteBarrierBase<Unknown, RawValueTraits<Unknown>>*, size_t count);
 
@@ -193,7 +196,9 @@ public:
     virtual void reportExternalMemoryVisited(size_t) = 0;
 #endif
 
-    virtual void dump(PrintStream&) const = 0;
+    // This can't be pure virtual as it breaks our Dumpable concept.
+    // FIXME: Make this virtual after we stop suppporting the Montery Clang.
+    virtual void dump(PrintStream&) const { }
 
     RootMarkReason rootMarkReason() const { return m_rootMarkReason; }
     void setRootMarkReason(RootMarkReason reason) { m_rootMarkReason = reason; }
@@ -221,7 +226,7 @@ protected:
 
     size_t m_visitCount { 0 };
 
-    Heap& m_heap;
+    JSC::Heap& m_heap;
     ReferrerContext* m_context { nullptr };
     CString m_codeName;
 

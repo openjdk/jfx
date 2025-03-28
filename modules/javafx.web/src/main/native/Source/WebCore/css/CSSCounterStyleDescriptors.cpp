@@ -31,9 +31,9 @@
 #include "CSSPrimitiveValue.h"
 #include "CSSValueList.h"
 #include "CSSValuePair.h"
-#include <wtf/text/StringBuilder.h>
-
 #include <utility>
+#include <wtf/text/MakeString.h>
+#include <wtf/text/StringBuilder.h>
 
 namespace WebCore {
 
@@ -70,11 +70,11 @@ CSSCounterStyleDescriptors::Ranges rangeFromCSSValue(Ref<CSSValue> value)
 
 static CSSCounterStyleDescriptors::Symbol symbolFromCSSValue(const CSSValue* value)
 {
-    if (!value || !value->isPrimitiveValue())
+    auto* primitiveValue = dynamicDowncast<CSSPrimitiveValue>(value);
+    if (!primitiveValue)
         return { };
 
-    auto& primitiveValue = downcast<CSSPrimitiveValue>(*value);
-    return { primitiveValue.isCustomIdent(), primitiveValue.stringValue() };
+    return { primitiveValue->isCustomIdent(), primitiveValue->stringValue() };
 }
 
 CSSCounterStyleDescriptors::Symbol symbolFromCSSValue(RefPtr<CSSValue> value)
@@ -84,11 +84,11 @@ CSSCounterStyleDescriptors::Symbol symbolFromCSSValue(RefPtr<CSSValue> value)
 
 static CSSCounterStyleDescriptors::Name nameFromCSSValue(Ref<CSSValue> value)
 {
-    if (!value->isPrimitiveValue())
+    RefPtr primitiveValue = dynamicDowncast<CSSPrimitiveValue>(WTFMove(value));
+    if (!primitiveValue)
         return { };
 
-    auto& primitiveValue = downcast<CSSPrimitiveValue>(value);
-    return makeAtomString(primitiveValue.stringValue());
+    return makeAtomString(primitiveValue->stringValue());
 }
 
 static CSSCounterStyleDescriptors::AdditiveSymbols additiveSymbolsFromStyleProperties(const StyleProperties& properties)
@@ -102,7 +102,7 @@ static CSSCounterStyleDescriptors::AdditiveSymbols additiveSymbolsFromStylePrope
 CSSCounterStyleDescriptors::AdditiveSymbols additiveSymbolsFromCSSValue(Ref<CSSValue> value)
 {
     CSSCounterStyleDescriptors::AdditiveSymbols result;
-    for (auto& additiveSymbol : downcast<CSSValueList>(value)) {
+    for (auto& additiveSymbol : downcast<CSSValueList>(value.get())) {
         auto& pair = downcast<CSSValuePair>(additiveSymbol);
         auto weight = downcast<CSSPrimitiveValue>(pair.first()).value<unsigned>();
         auto symbol = symbolFromCSSValue(&pair.second());
@@ -121,11 +121,11 @@ static CSSCounterStyleDescriptors::Pad padFromStyleProperties(const StylePropert
 
 CSSCounterStyleDescriptors::Pad padFromCSSValue(Ref<CSSValue> value)
 {
-    auto& list = downcast<CSSValueList>(value);
-    ASSERT(list.size() == 2);
-    auto length = downcast<CSSPrimitiveValue>(list[0]).intValue();
+    auto list = downcast<CSSValueList>(WTFMove(value));
+    ASSERT(list->size() == 2);
+    auto length = downcast<CSSPrimitiveValue>(list.get()[0]).intValue();
     ASSERT(length >= 0);
-    return { static_cast<unsigned>(std::max(0, length)), symbolFromCSSValue(&list[1]) };
+    return { static_cast<unsigned>(std::max(0, length)), symbolFromCSSValue(&list.get()[1]) };
 }
 
 static CSSCounterStyleDescriptors::NegativeSymbols negativeSymbolsFromStyleProperties(const StyleProperties& properties)
@@ -159,7 +159,7 @@ static Vector<CSSCounterStyleDescriptors::Symbol> symbolsFromStyleProperties(con
 Vector<CSSCounterStyleDescriptors::Symbol> symbolsFromCSSValue(Ref<CSSValue> value)
 {
     Vector<CSSCounterStyleDescriptors::Symbol> result;
-    for (auto& symbolValue : downcast<CSSValueList>(value)) {
+    for (auto& symbolValue : downcast<CSSValueList>(value.get())) {
         auto symbol = symbolFromCSSValue(&symbolValue);
         if (!symbol.text.isNull())
             result.append(symbol);
@@ -300,6 +300,9 @@ bool CSSCounterStyleDescriptors::areSymbolsValidForSystem(CSSCounterStyleDescrip
     case System::EthiopicNumeric:
     case System::Extends:
         return !symbols.size() && !additiveSymbols.size();
+    case System::DisclosureClosed:
+    case System::DisclosureOpen:
+        return true;
     default:
         ASSERT_NOT_REACHED();
         return false;
@@ -433,6 +436,8 @@ String CSSCounterStyleDescriptors::systemCSSText() const
     case System::TraditionalChineseInformal:
     case System::TraditionalChineseFormal:
     case System::EthiopicNumeric:
+    case System::DisclosureClosed:
+    case System::DisclosureOpen:
         return emptyString();
     }
     return emptyString();
@@ -469,15 +474,15 @@ String CSSCounterStyleDescriptors::rangesCSSText() const
     StringBuilder builder;
     for (size_t i = 0; i < m_ranges.size(); ++i) {
         if (i)
-            builder.append(", ");
+            builder.append(", "_s);
         auto& range = m_ranges[i];
         if (range.first == std::numeric_limits<int>::min())
-            builder.append("infinite");
+            builder.append("infinite"_s);
         else
             builder.append(range.first);
-        builder.append(" ");
+        builder.append(" "_s);
         if (range.second== std::numeric_limits<int>::max())
-            builder.append("infinite");
+            builder.append("infinite"_s);
         else
             builder.append(range.second);
     }
@@ -486,7 +491,7 @@ String CSSCounterStyleDescriptors::rangesCSSText() const
 
 String CSSCounterStyleDescriptors::Pad::cssText() const
 {
-    return makeString(m_padMinimumLength, " ", m_padSymbol.cssText());
+    return makeString(m_padMinimumLength, ' ', m_padSymbol.cssText());
 }
 
 String CSSCounterStyleDescriptors::padCSSText() const
@@ -510,7 +515,7 @@ String CSSCounterStyleDescriptors::symbolsCSSText() const
     StringBuilder builder;
     for (size_t i = 0; i < m_symbols.size(); ++i) {
         if (i)
-            builder.append(" ");
+            builder.append(' ');
         builder.append(m_symbols[i].cssText());
     }
     return builder.toString();
@@ -523,10 +528,8 @@ String CSSCounterStyleDescriptors::additiveSymbolsCSSText() const
     StringBuilder builder;
     for (size_t i = 0; i < m_additiveSymbols.size(); ++i) {
         if (i)
-            builder.append(", ");
-        builder.append(m_additiveSymbols[i].second);
-        builder.append(" ");
-        builder.append(m_additiveSymbols[i].first.cssText());
+            builder.append(", "_s);
+        builder.append(m_additiveSymbols[i].second, ' ', m_additiveSymbols[i].first.cssText());
     }
     return builder.toString();
 }

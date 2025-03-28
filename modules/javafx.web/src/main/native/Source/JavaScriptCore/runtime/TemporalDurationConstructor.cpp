@@ -96,7 +96,7 @@ JSC_DEFINE_HOST_FUNCTION(constructTemporalDuration, (JSGlobalObject* globalObjec
         if (value.isUndefined())
             continue;
 
-        result[i] = value.toIntegerWithoutRounding(globalObject);
+        result[i] = value.toNumber(globalObject) + 0.0;
         RETURN_IF_EXCEPTION(scope, { });
 
         if (!isInteger(result[i]))
@@ -111,7 +111,7 @@ JSC_DEFINE_HOST_FUNCTION(callTemporalDuration, (JSGlobalObject* globalObject, Ca
     VM& vm = globalObject->vm();
     auto scope = DECLARE_THROW_SCOPE(vm);
 
-    return JSValue::encode(throwConstructorCannotBeCalledAsFunctionTypeError(globalObject, scope, "Duration"));
+    return JSValue::encode(throwConstructorCannotBeCalledAsFunctionTypeError(globalObject, scope, "Duration"_s));
 }
 
 JSC_DEFINE_HOST_FUNCTION(temporalDurationConstructorFuncFrom, (JSGlobalObject* globalObject, CallFrame* callFrame))

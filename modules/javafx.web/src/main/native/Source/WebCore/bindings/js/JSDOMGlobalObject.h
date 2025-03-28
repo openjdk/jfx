@@ -79,6 +79,8 @@ public:
 
     ScriptExecutionContext* scriptExecutionContext() const;
 
+    static bool canCompileStrings(JSC::JSGlobalObject*, JSC::CompilationType, String, JSC::JSValue);
+
     // https://tc39.es/ecma262/#sec-agent-clusters
     String agentClusterID() const;
     static String defaultAgentClusterID();
@@ -90,7 +92,7 @@ public:
 
     DOMWrapperWorld& world() { return m_world.get(); }
     bool worldIsNormal() const { return m_worldIsNormal; }
-    static ptrdiff_t offsetOfWorldIsNormal() { return OBJECT_OFFSETOF(JSDOMGlobalObject, m_worldIsNormal); }
+    static constexpr ptrdiff_t offsetOfWorldIsNormal() { return OBJECT_OFFSETOF(JSDOMGlobalObject, m_worldIsNormal); }
 
     JSBuiltinInternalFunctions& builtinInternalFunctions() { return m_builtinInternalFunctions; }
 
@@ -109,10 +111,7 @@ public:
 
     static constexpr const JSC::ClassInfo* info() { return &s_info; }
 
-    static JSC::Structure* createStructure(JSC::VM& vm, JSC::JSValue prototype)
-    {
-        return JSC::Structure::create(vm, 0, prototype, JSC::TypeInfo(JSC::GlobalObjectType, StructureFlags), info());
-    }
+    inline static JSC::Structure* createStructure(JSC::VM&, JSC::JSValue);
 
 protected:
     JSDOMGlobalObject(JSC::VM&, JSC::Structure*, Ref<DOMWrapperWorld>&&, const JSC::GlobalObjectMethodTable* = nullptr);

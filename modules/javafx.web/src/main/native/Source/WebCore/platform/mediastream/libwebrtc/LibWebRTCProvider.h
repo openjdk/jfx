@@ -52,7 +52,7 @@ class RTCCertificateGenerator;
 }
 
 namespace webrtc {
-class AsyncResolverFactory;
+class AsyncDnsResolverFactory;
 class PeerConnectionFactoryInterface;
 }
 
@@ -75,7 +75,6 @@ public:
     static void setRTCLogging(WTFLogLevel);
 
     virtual void setEnableWebRTCEncryption(bool);
-    virtual void setUseDTLS10(bool);
     virtual void disableNonLocalhostConnections();
 
     std::optional<RTCRtpCapabilities> receiverCapabilities(const String& kind) final;
@@ -101,8 +100,8 @@ public:
 
     virtual void setLoggingLevel(WTFLogLevel);
 
-    WEBCORE_EXPORT void setVP9VTBSupport(bool);
-    virtual bool isSupportingVP9VTB() const;
+    WEBCORE_EXPORT virtual void setVP9HardwareSupportForTesting(std::optional<bool> value) { m_supportsVP9VTBForTesting = value; }
+    virtual bool isSupportingVP9HardwareDecoder() const { return m_supportsVP9VTBForTesting.value_or(false); }
 
     WEBCORE_EXPORT void disableEnumeratingAllNetworkInterfaces();
     WEBCORE_EXPORT void enableEnumeratingAllNetworkInterfaces();
@@ -122,7 +121,7 @@ public:
 protected:
     LibWebRTCProvider();
 
-    rtc::scoped_refptr<webrtc::PeerConnectionInterface> createPeerConnection(webrtc::PeerConnectionObserver&, rtc::NetworkManager&, rtc::PacketSocketFactory&, webrtc::PeerConnectionInterface::RTCConfiguration&&, std::unique_ptr<webrtc::AsyncResolverFactory>&&);
+    rtc::scoped_refptr<webrtc::PeerConnectionInterface> createPeerConnection(webrtc::PeerConnectionObserver&, rtc::NetworkManager&, rtc::PacketSocketFactory&, webrtc::PeerConnectionInterface::RTCConfiguration&&, std::unique_ptr<webrtc::AsyncDnsResolverFactoryInterface>&&);
 
     rtc::scoped_refptr<webrtc::PeerConnectionFactoryInterface> createPeerConnectionFactory(rtc::Thread* networkThread, rtc::Thread* signalingThread);
     virtual std::unique_ptr<webrtc::VideoDecoderFactory> createDecoderFactory();
@@ -148,8 +147,7 @@ private:
     std::optional<MediaCapabilitiesDecodingInfo> videoDecodingCapabilitiesOverride(const VideoConfiguration&) final;
     std::optional<MediaCapabilitiesEncodingInfo> videoEncodingCapabilitiesOverride(const VideoConfiguration&) final;
 
-    bool m_supportsVP9VTB { false };
-    bool m_useDTLS10 { false };
+    std::optional<bool> m_supportsVP9VTBForTesting { false };
     bool m_disableNonLocalhostConnections { false };
     bool m_enableEnumeratingAllNetworkInterfaces { false };
     bool m_enableEnumeratingVisibleNetworkInterfaces { false };

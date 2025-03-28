@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2016-2022 Apple Inc. All rights reserved.
+ * Copyright (C) 2016-2023 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -36,6 +36,7 @@
 #include <wtf/RefCounted.h>
 #include <wtf/RefPtr.h>
 #include <wtf/StdSet.h>
+#include <wtf/TZoneMalloc.h>
 #include <wtf/Vector.h>
 #include <wtf/WeakPtr.h>
 
@@ -62,8 +63,6 @@ struct BufferMemoryResult {
         SyncTryToReclaimMemory
     };
 
-    static ASCIILiteral toString(Kind);
-
     BufferMemoryResult() { }
 
     BufferMemoryResult(void* basePtr, Kind kind)
@@ -79,7 +78,7 @@ struct BufferMemoryResult {
 };
 
 class BufferMemoryManager {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_ALLOCATED(BufferMemoryManager);
     WTF_MAKE_NONCOPYABLE(BufferMemoryManager);
 public:
     friend class LazyNeverDestroyed<BufferMemoryManager>;
@@ -117,7 +116,7 @@ private:
     BufferMemoryManager() = default;
 
     Lock m_lock;
-    unsigned m_maxFastMemoryCount { Options::maxNumWebAssemblyFastMemories() };
+    unsigned m_maxFastMemoryCount { Options::maxNumWasmFastMemories() };
     Vector<void*> m_fastMemories;
     StdSet<std::pair<uintptr_t, size_t>> m_growableBoundsCheckingMemories;
     size_t m_physicalBytes { 0 };
@@ -125,7 +124,7 @@ private:
 
 class BufferMemoryHandle final : public ThreadSafeRefCounted<BufferMemoryHandle> {
     WTF_MAKE_NONCOPYABLE(BufferMemoryHandle);
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_ALLOCATED_EXPORT(BufferMemoryHandle, JS_EXPORT_PRIVATE);
     friend LLIntOffsetsExtractor;
 public:
     BufferMemoryHandle(void*, size_t size, size_t mappedCapacity, PageCount initial, PageCount maximum, MemorySharingMode, MemoryMode);
@@ -139,12 +138,14 @@ public:
         return m_size.load(order);
     }
 
+    std::span<uint8_t> mutableSpan(std::memory_order order = std::memory_order_seq_cst) { return { static_cast<uint8_t*>(memory()), size(order) }; }
+
     size_t mappedCapacity() const { return m_mappedCapacity; }
     PageCount initial() const { return m_initial; }
     PageCount maximum() const { return m_maximum; }
     MemorySharingMode sharingMode() const { return m_sharingMode; }
     MemoryMode mode() const { return m_mode; }
-    static ptrdiff_t offsetOfSize() { return OBJECT_OFFSETOF(BufferMemoryHandle, m_size); }
+    static constexpr ptrdiff_t offsetOfSize() { return OBJECT_OFFSETOF(BufferMemoryHandle, m_size); }
     Lock& lock() { return m_lock; }
 
     void updateSize(size_t size, std::memory_order order = std::memory_order_seq_cst)
@@ -158,7 +159,7 @@ public:
     static void* nullBasePointer();
 
 private:
-    using CagedMemory = CagedPtr<Gigacage::Primitive, void, tagCagedPtr>;
+    using CagedMemory = CagedPtr<Gigacage::Primitive, void>;
 
     Lock m_lock;
     MemorySharingMode m_sharingMode { MemorySharingMode::Default };

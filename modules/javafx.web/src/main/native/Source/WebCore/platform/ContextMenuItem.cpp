@@ -55,7 +55,7 @@ ContextMenuItem::ContextMenuItem(ContextMenuItemType type, ContextMenuAction act
 }
 
 ContextMenuItem::ContextMenuItem(ContextMenuAction action, const String& title, bool enabled, bool checked, const Vector<ContextMenuItem>& subMenuItems, unsigned indentationLevel)
-    : m_type(SubmenuType)
+    : m_type(ContextMenuItemType::Submenu)
     , m_action(action)
     , m_title(title)
     , m_enabled(enabled)
@@ -66,7 +66,7 @@ ContextMenuItem::ContextMenuItem(ContextMenuAction action, const String& title, 
 }
 
 ContextMenuItem::ContextMenuItem()
-    : m_type(SeparatorType)
+    : m_type(ContextMenuItemType::Separator)
     , m_action(ContextMenuItemTagNoAction)
     , m_enabled(false)
     , m_checked(false)
@@ -85,10 +85,10 @@ bool ContextMenuItem::isNull() const
 void ContextMenuItem::setSubMenu(ContextMenu* subMenu)
 {
     if (subMenu) {
-        m_type = SubmenuType;
+        m_type = ContextMenuItemType::Submenu;
         m_subMenuItems = subMenu->items();
     } else {
-        m_type = ActionType;
+        m_type = ContextMenuItemType::Action;
         m_subMenuItems.clear();
     }
 }
@@ -155,7 +155,7 @@ static bool isValidContextMenuAction(WebCore::ContextMenuAction action)
     case ContextMenuAction::ContextMenuItemTagCopyImageToClipboard:
     case ContextMenuAction::ContextMenuItemTagCopySubject:
 #if PLATFORM(GTK)
-    case ContextMenuAction::ContextMenuItemTagCopyImageUrlToClipboard:
+    case ContextMenuAction::ContextMenuItemTagCopyImageURLToClipboard:
 #endif
     case ContextMenuAction::ContextMenuItemTagOpenFrameInNewWindow:
     case ContextMenuAction::ContextMenuItemTagCopy:
@@ -188,7 +188,6 @@ static bool isValidContextMenuAction(WebCore::ContextMenuAction action)
     case ContextMenuAction::ContextMenuItemTagIgnoreSpelling:
     case ContextMenuAction::ContextMenuItemTagLearnSpelling:
     case ContextMenuAction::ContextMenuItemTagOther:
-    case ContextMenuAction::ContextMenuItemTagSearchInSpotlight:
     case ContextMenuAction::ContextMenuItemTagSearchWeb:
     case ContextMenuAction::ContextMenuItemTagLookUpInDictionary:
     case ContextMenuAction::ContextMenuItemTagOpenWithDefaultApplication:
@@ -235,6 +234,7 @@ static bool isValidContextMenuAction(WebCore::ContextMenuAction action)
     case ContextMenuAction::ContextMenuItemTagTextDirectionRightToLeft:
     case ContextMenuAction::ContextMenuItemTagAddHighlightToCurrentQuickNote:
     case ContextMenuAction::ContextMenuItemTagAddHighlightToNewQuickNote:
+    case ContextMenuAction::ContextMenuItemTagCopyLinkToHighlight:
 #if PLATFORM(COCOA)
     case ContextMenuAction::ContextMenuItemTagCorrectSpellingAutomatically:
     case ContextMenuAction::ContextMenuItemTagSubstitutionsMenu:
@@ -262,9 +262,11 @@ static bool isValidContextMenuAction(WebCore::ContextMenuAction action)
     case ContextMenuAction::ContextMenuItemTagDictationAlternative:
     case ContextMenuAction::ContextMenuItemTagToggleVideoFullscreen:
     case ContextMenuAction::ContextMenuItemTagShareMenu:
+    case ContextMenuAction::ContextMenuItemTagToggleVideoViewer:
     case ContextMenuAction::ContextMenuItemTagToggleVideoEnhancedFullscreen:
     case ContextMenuAction::ContextMenuItemTagLookUpImage:
     case ContextMenuAction::ContextMenuItemTagTranslate:
+    case ContextMenuAction::ContextMenuItemTagWritingTools:
     case ContextMenuAction::ContextMenuItemBaseCustomTag:
     case ContextMenuAction::ContextMenuItemLastCustomTag:
     case ContextMenuAction::ContextMenuItemBaseApplicationTag:

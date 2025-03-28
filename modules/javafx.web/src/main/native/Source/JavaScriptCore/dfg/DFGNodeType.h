@@ -170,6 +170,7 @@ namespace JSC { namespace DFG {
     macro(ArithMin, NodeResultNumber | NodeHasVarArgs) \
     macro(ArithMax, NodeResultNumber | NodeHasVarArgs) \
     macro(ArithFRound, NodeResultDouble | NodeMustGenerate) \
+    macro(ArithF16Round, NodeResultDouble | NodeMustGenerate) \
     macro(ArithPow, NodeResultDouble) \
     macro(ArithRandom, NodeResultDouble | NodeMustGenerate) \
     macro(ArithRound, NodeResultNumber | NodeMustGenerate) \
@@ -270,6 +271,7 @@ namespace JSC { namespace DFG {
     macro(MultiPutByOffset, NodeMustGenerate) \
     macro(MultiDeleteByOffset, NodeMustGenerate | NodeResultJS) \
     macro(GetArrayLength, NodeResultInt32) \
+    macro(GetUndetachedTypeArrayLength, NodeResultInt32) \
     /* This is only relevant for TypedArrays, as they are the only ones that can have a length that does not fit in 32 bits. */ \
     macro(GetTypedArrayLengthAsInt52, NodeResultInt52) \
     macro(GetVectorLength, NodeResultInt32) \
@@ -282,6 +284,7 @@ namespace JSC { namespace DFG {
     macro(ResolveScopeForHoistingFuncDeclInEval, NodeResultJS | NodeMustGenerate) \
     macro(GetGlobalObject, NodeResultJS) \
     macro(GetGlobalThis, NodeResultJS) \
+    macro(UnwrapGlobalProxy, NodeResultJS) \
     macro(GetClosureVar, NodeResultJS) \
     macro(PutClosureVar, NodeMustGenerate) \
     macro(GetGlobalVar, NodeResultJS) \
@@ -379,6 +382,9 @@ namespace JSC { namespace DFG {
     macro(CallDirectEval, NodeResultJS | NodeMustGenerate | NodeHasVarArgs) \
     macro(CallWasm, NodeResultJS | NodeMustGenerate | NodeHasVarArgs) \
     \
+    macro(CallCustomAccessorGetter, NodeResultJS | NodeMustGenerate) \
+    macro(CallCustomAccessorSetter, NodeMustGenerate) \
+    \
     /* Shadow Chicken */\
     macro(LogShadowChickenPrologue, NodeMustGenerate) \
     macro(LogShadowChickenTail, NodeMustGenerate) \
@@ -398,6 +404,8 @@ namespace JSC { namespace DFG {
     macro(NewRegexp, NodeResultJS) \
     macro(NewSymbol, NodeResultJS | NodeMustGenerate) \
     macro(NewStringObject, NodeResultJS) \
+    macro(NewMap, NodeResultJS) \
+    macro(NewSet, NodeResultJS) \
     /* Rest Parameter */\
     macro(GetRestLength, NodeResultInt32) \
     macro(CreateRest, NodeResultJS | NodeMustGenerate) \
@@ -421,11 +429,13 @@ namespace JSC { namespace DFG {
     /* Nodes for misc operations. */\
     macro(OverridesHasInstance, NodeMustGenerate | NodeResultBoolean) \
     macro(InstanceOf, NodeMustGenerate | NodeResultBoolean) \
+    macro(InstanceOfMegamorphic, NodeMustGenerate | NodeResultBoolean) \
     macro(InstanceOfCustom, NodeMustGenerate | NodeResultBoolean) \
     macro(MatchStructure, NodeMustGenerate | NodeResultBoolean) \
     \
     macro(IsCellWithType, NodeResultBoolean) \
     macro(IsEmpty, NodeResultBoolean) \
+    macro(IsEmptyStorage, NodeResultBoolean) \
     macro(HasStructureWithFlags, NodeResultBoolean) \
     macro(TypeOfIsUndefined, NodeResultBoolean) \
     macro(TypeOfIsObject, NodeResultBoolean) \
@@ -447,10 +457,13 @@ namespace JSC { namespace DFG {
     macro(LogicalNot, NodeResultBoolean) \
     macro(ToPrimitive, NodeResultJS | NodeMustGenerate) \
     macro(ToPropertyKey, NodeResultJS | NodeMustGenerate) \
+    macro(ToPropertyKeyOrNumber, NodeResultJS | NodeMustGenerate) \
     macro(ToString, NodeResultJS | NodeMustGenerate) \
     macro(ToNumber, NodeResultJS | NodeMustGenerate) \
     macro(ToNumeric, NodeResultJS | NodeMustGenerate) \
     macro(ToObject, NodeResultJS | NodeMustGenerate) \
+    macro(ToIntegerOrInfinity, NodeResultJS | NodeMustGenerate) \
+    macro(ToLength, NodeResultJS | NodeMustGenerate) \
     macro(CallObjectConstructor, NodeResultJS) \
     macro(CallStringConstructor, NodeResultJS | NodeMustGenerate) \
     macro(CallNumberConstructor, NodeResultJS | NodeMustGenerate) \
@@ -461,7 +474,9 @@ namespace JSC { namespace DFG {
     macro(MakeRope, NodeResultJS) \
     macro(MakeAtomString, NodeResultJS) \
     macro(InByVal, NodeResultBoolean | NodeMustGenerate) \
+    macro(InByValMegamorphic, NodeResultBoolean | NodeMustGenerate) \
     macro(InById, NodeResultBoolean | NodeMustGenerate) \
+    macro(InByIdMegamorphic, NodeResultBoolean | NodeMustGenerate) \
     macro(HasPrivateName, NodeResultBoolean | NodeMustGenerate) \
     macro(HasPrivateBrand, NodeResultBoolean | NodeMustGenerate) \
     macro(ProfileType, NodeMustGenerate) \
@@ -543,13 +558,18 @@ namespace JSC { namespace DFG {
     /* Nodes for JSMap and JSSet */ \
     macro(MapHash, NodeResultInt32) \
     macro(NormalizeMapKey, NodeResultJS) \
-    macro(GetMapBucket, NodeResultJS) \
-    macro(GetMapBucketHead, NodeResultJS) \
-    macro(GetMapBucketNext, NodeResultJS) \
-    macro(LoadKeyFromMapBucket, NodeResultJS) \
-    macro(LoadValueFromMapBucket, NodeResultJS) \
-    macro(SetAdd, NodeMustGenerate | NodeResultJS) \
-    macro(MapSet, NodeMustGenerate | NodeHasVarArgs | NodeResultJS) \
+    macro(MapGet, NodeResultStorage) \
+    macro(LoadMapValue, NodeResultJS) \
+    macro(MapIteratorNext, NodeResultBoolean) \
+    macro(MapIteratorKey, NodeResultJS) \
+    macro(MapIteratorValue, NodeResultJS) \
+    macro(MapStorage, NodeResultJS) \
+    macro(MapIterationNext, NodeResultJS) \
+    macro(MapIterationEntry, NodeResultJS) \
+    macro(MapIterationEntryKey, NodeResultInt32) \
+    macro(MapIterationEntryValue, NodeResultJS) \
+    macro(SetAdd, NodeMustGenerate) \
+    macro(MapSet, NodeMustGenerate | NodeHasVarArgs) \
     macro(MapOrSetDelete, NodeMustGenerate | NodeResultBoolean) \
     /* Nodes for JSWeakMap and JSWeakSet */ \
     macro(WeakMapGet, NodeResultJS) \

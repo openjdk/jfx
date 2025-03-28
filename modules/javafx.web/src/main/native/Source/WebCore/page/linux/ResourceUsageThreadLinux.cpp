@@ -133,7 +133,7 @@ static HashMap<pid_t, ThreadInfo>& threadInfoMap()
 
 static bool threadCPUUsage(pid_t id, float period, ThreadInfo& info)
 {
-    String path = makeString("/proc/self/task/", id, "/stat");
+    String path = makeString("/proc/self/task/"_s, id, "/stat"_s);
     int fd = open(path.utf8().data(), O_RDONLY);
     if (fd < 0)
         return false;
@@ -171,7 +171,7 @@ static bool threadCPUUsage(pid_t id, float period, ThreadInfo& info)
         if (!name)
             return false;
         name++;
-        info.name = String::fromUTF8(name, position - name);
+        info.name = String::fromUTF8({ name, position });
     }
 
     // Move after state.
@@ -250,14 +250,13 @@ void ResourceUsageThread::platformCollectCPUData(JSC::VM*, ResourceUsageData& da
 
     HashMap<pid_t, String> knownWorkerThreads;
     {
-        Locker locker { WorkerOrWorkletThread::workerOrWorkletThreadsLock() };
-        for (auto* thread : WorkerOrWorkletThread::workerOrWorkletThreads()) {
+        for (auto& thread : WorkerOrWorkletThread::workerOrWorkletThreads()) {
             // Ignore worker threads that have not been fully started yet.
-            if (!thread->thread())
+            if (!thread.thread())
                 continue;
 
-            if (auto id = thread->thread()->id())
-                knownWorkerThreads.set(id, thread->inspectorIdentifier().isolatedCopy());
+            if (auto id = thread.thread()->id())
+                knownWorkerThreads.set(id, thread.inspectorIdentifier().isolatedCopy());
         }
     }
 

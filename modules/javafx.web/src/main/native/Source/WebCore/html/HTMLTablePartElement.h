@@ -32,7 +32,8 @@ namespace WebCore {
 class HTMLTableElement;
 
 class HTMLTablePartElement : public HTMLElement {
-    WTF_MAKE_ISO_ALLOCATED(HTMLTablePartElement);
+    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(HTMLTablePartElement);
+    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(HTMLTablePartElement);
 public:
     RefPtr<const HTMLTableElement> findParentTable() const;
     bool isHTMLTablePartElement() const override { return true; }
@@ -51,5 +52,9 @@ protected:
 
 SPECIALIZE_TYPE_TRAITS_BEGIN(WebCore::HTMLTablePartElement)
     static bool isType(const WebCore::Element& element) { return element.isHTMLTablePartElement(); }
-    static bool isType(const WebCore::Node& node) { return is<WebCore::Element>(node) && isType(downcast<WebCore::Element>(node)); }
+    static bool isType(const WebCore::Node& node)
+    {
+        auto* element = dynamicDowncast<WebCore::Element>(node);
+        return element && isType(*element);
+    }
 SPECIALIZE_TYPE_TRAITS_END()

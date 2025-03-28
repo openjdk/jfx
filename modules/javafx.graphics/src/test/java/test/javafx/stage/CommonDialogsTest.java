@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -36,16 +36,19 @@ import java.util.List;
 import javafx.stage.DirectoryChooser;
 import javafx.stage.FileChooser;
 import javafx.stage.FileChooser.ExtensionFilter;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
+
 
 public final class CommonDialogsTest {
     private StubToolkit toolkit;
     private StubCommonDialogs stubDialogs;
 
-    @Before
+    @BeforeEach
     public void setUp() {
         toolkit = (StubToolkit) Toolkit.getToolkit();
         stubDialogs = new StubCommonDialogs();
@@ -53,7 +56,7 @@ public final class CommonDialogsTest {
         toolkit.setCommonDialogsSupport(stubDialogs);
     }
 
-    @After
+    @AfterEach
     public void tearDown() {
         toolkit.setCommonDialogsSupport(null);
     }
@@ -73,19 +76,19 @@ public final class CommonDialogsTest {
         fileChooser.getExtensionFilters().addAll(txtFiles, jpgFiles);
         fileChooser.setSelectedExtensionFilter(txtFiles);
 
-        Assert.assertEquals(
+        assertEquals(
                 null, fileChooser.showOpenDialog(null));
-        Assert.assertEquals(FileChooserType.OPEN,
+        assertEquals(FileChooserType.OPEN,
                             stubDialogs.getFileChooserType());
-        Assert.assertEquals(null, stubDialogs.getOwnerWindow());
-        Assert.assertEquals("Open Single", stubDialogs.getTitle());
-        Assert.assertEquals(initialDirectory,
+        assertEquals(null, stubDialogs.getOwnerWindow());
+        assertEquals("Open Single", stubDialogs.getTitle());
+        assertEquals(initialDirectory,
                             stubDialogs.getInitialDirectory());
-        Assert.assertEquals("open.txt", stubDialogs.getInitialFileName());
-        Assert.assertArrayEquals(
+        assertEquals("open.txt", stubDialogs.getInitialFileName());
+        assertArrayEquals(
                 new Object[] { txtFiles, jpgFiles },
                 stubDialogs.getExtensionFilters().toArray());
-        Assert.assertEquals(txtFiles, stubDialogs.getSelectedExtensionFilter());
+        assertEquals(txtFiles, stubDialogs.getSelectedExtensionFilter());
     }
 
     @Test
@@ -97,18 +100,18 @@ public final class CommonDialogsTest {
         fileChooser.setTitle("Open Multiple");
         fileChooser.getExtensionFilters().addAll(allFiles);
 
-        Assert.assertEquals(
+        assertEquals(
                 null, fileChooser.showOpenMultipleDialog(null));
-        Assert.assertEquals(FileChooserType.OPEN_MULTIPLE,
+        assertEquals(FileChooserType.OPEN_MULTIPLE,
                             stubDialogs.getFileChooserType());
-        Assert.assertEquals(null, stubDialogs.getOwnerWindow());
-        Assert.assertEquals("Open Multiple", stubDialogs.getTitle());
-        Assert.assertEquals(null, stubDialogs.getInitialDirectory());
-        Assert.assertEquals(null, stubDialogs.getInitialFileName());
-        Assert.assertArrayEquals(
+        assertEquals(null, stubDialogs.getOwnerWindow());
+        assertEquals("Open Multiple", stubDialogs.getTitle());
+        assertEquals(null, stubDialogs.getInitialDirectory());
+        assertEquals(null, stubDialogs.getInitialFileName());
+        assertArrayEquals(
                 new Object[] { allFiles },
                 stubDialogs.getExtensionFilters().toArray());
-        Assert.assertEquals(null, stubDialogs.getSelectedExtensionFilter());
+        assertEquals(null, stubDialogs.getSelectedExtensionFilter());
     }
 
     @Test
@@ -120,17 +123,17 @@ public final class CommonDialogsTest {
         fileChooser.setInitialDirectory(initialDirectory);
         fileChooser.setInitialFileName("save.txt");
 
-        Assert.assertEquals(
+        assertEquals(
                 null, fileChooser.showSaveDialog(null));
-        Assert.assertEquals(FileChooserType.SAVE,
+        assertEquals(FileChooserType.SAVE,
                             stubDialogs.getFileChooserType());
-        Assert.assertEquals(null, stubDialogs.getOwnerWindow());
-        Assert.assertEquals("Save", stubDialogs.getTitle());
-        Assert.assertEquals(initialDirectory,
+        assertEquals(null, stubDialogs.getOwnerWindow());
+        assertEquals("Save", stubDialogs.getTitle());
+        assertEquals(initialDirectory,
                             stubDialogs.getInitialDirectory());
-        Assert.assertEquals("save.txt", stubDialogs.getInitialFileName());
-        Assert.assertEquals(0, stubDialogs.getExtensionFilters().size());
-        Assert.assertEquals(null, stubDialogs.getSelectedExtensionFilter());
+        assertEquals("save.txt", stubDialogs.getInitialFileName());
+        assertEquals(0, stubDialogs.getExtensionFilters().size());
+        assertEquals(null, stubDialogs.getSelectedExtensionFilter());
     }
 
     @Test
@@ -141,11 +144,11 @@ public final class CommonDialogsTest {
         directoryChooser.setTitle("Open");
         directoryChooser.setInitialDirectory(initialDirectory);
 
-        Assert.assertEquals(
+        assertEquals(
                 null, directoryChooser.showDialog(null));
-        Assert.assertEquals(null, stubDialogs.getOwnerWindow());
-        Assert.assertEquals("Open", stubDialogs.getTitle());
-        Assert.assertEquals(initialDirectory,
+        assertEquals(null, stubDialogs.getOwnerWindow());
+        assertEquals("Open", stubDialogs.getTitle());
+        assertEquals(initialDirectory,
                             stubDialogs.getInitialDirectory());
     }
 

@@ -22,6 +22,7 @@
 #include "CSSValueList.h"
 
 #include "CSSPrimitiveValue.h"
+#include <wtf/Hasher.h>
 #include <wtf/text/StringBuilder.h>
 
 namespace WebCore {
@@ -210,19 +211,14 @@ bool CSSValueContainingVector::hasValue(CSSValueID otherValue) const
 
 CSSValueListBuilder CSSValueContainingVector::copyValues() const
 {
-    CSSValueListBuilder builder;
-    builder.reserveInitialCapacity(size());
-    for (auto& value : *this)
-        builder.uncheckedAppend(const_cast<CSSValue&>(value));
-    return builder;
+    return WTF::map<CSSValueListBuilderInlineCapacity>(*this, [](auto& value) -> Ref<CSSValue> {
+        return const_cast<CSSValue&>(value);
+    });
 }
 
 void CSSValueContainingVector::serializeItems(StringBuilder& builder) const
 {
-    auto prefix = ""_s;
-    auto separator = separatorCSSText();
-    for (auto& value : *this)
-        builder.append(std::exchange(prefix, separator), value.cssText());
+    builder.append(interleave(*this, [](auto& value) { return value.cssText(); }, separatorCSSText()));
 }
 
 String CSSValueContainingVector::serializeItems() const
@@ -259,6 +255,17 @@ bool CSSValueContainingVector::containsSingleEqualItem(const CSSValue& other) co
     return size() == 1 && (*this)[0].equals(other);
 }
 
+bool CSSValueContainingVector::addDerivedHash(Hasher& hasher) const
+{
+    add(hasher, separator());
+
+    for (auto& item : *this) {
+        if (!item.addHash(hasher))
+            return false;
+    }
+    return true;
+}
+
 bool CSSValueContainingVector::customTraverseSubresources(const Function<bool(const CachedResource&)>& handler) const
 {
     for (auto& value : *this) {
@@ -266,6 +273,27 @@ bool CSSValueContainingVector::customTraverseSubresources(const Function<bool(co
             return true;
     }
     return false;
+}
+
+void CSSValueContainingVector::customSetReplacementURLForSubresources(const HashMap<String, String>& replacementURLStrings)
+{
+    for (auto& value : *this)
+        const_cast<CSSValue&>(value).setReplacementURLForSubresources(replacementURLStrings);
+}
+
+void CSSValueContainingVector::customClearReplacementURLForSubresources()
+{
+    for (auto& value : *this)
+        const_cast<CSSValue&>(value).clearReplacementURLForSubresources();
+}
+
+IterationStatus CSSValueContainingVector::customVisitChildren(const Function<IterationStatus(CSSValue&)>& func) const
+{
+    for (auto& value : *this) {
+        if (func(const_cast<CSSValue&>(value)) == IterationStatus::Done)
+            return IterationStatus::Done;
+    }
+    return IterationStatus::Continue;
 }
 
 } // namespace WebCore

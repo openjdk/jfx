@@ -25,8 +25,6 @@
 
 #pragma once
 
-#if ENABLE(SERVICE_WORKER)
-
 #include "EpochTimeStamp.h"
 #include "PushSubscriptionIdentifier.h"
 #include "SQLiteDatabase.h"
@@ -70,6 +68,15 @@ struct RemovedPushRecord {
     WEBCORE_EXPORT RemovedPushRecord isolatedCopy() &&;
 };
 
+struct PushSubscriptionSetRecord {
+    PushSubscriptionSetIdentifier identifier;
+    String securityOrigin;
+    bool enabled;
+
+    WEBCORE_EXPORT PushSubscriptionSetRecord isolatedCopy() const &;
+    WEBCORE_EXPORT PushSubscriptionSetRecord isolatedCopy() &&;
+};
+
 struct PushTopics {
     Vector<String> enabledTopics;
     Vector<String> ignoredTopics;
@@ -95,6 +102,7 @@ public:
     WEBCORE_EXPORT void getRecordByTopic(const String& topic, CompletionHandler<void(std::optional<PushRecord>&&)>&&);
     WEBCORE_EXPORT void getRecordBySubscriptionSetAndScope(const PushSubscriptionSetIdentifier&, const String& scope, CompletionHandler<void(std::optional<PushRecord>&&)>&&);
     WEBCORE_EXPORT void getIdentifiers(CompletionHandler<void(HashSet<PushSubscriptionIdentifier>&&)>&&);
+    WEBCORE_EXPORT void getPushSubscriptionSetRecords(CompletionHandler<void(Vector<PushSubscriptionSetRecord>&&)>&&);
     WEBCORE_EXPORT void getTopics(CompletionHandler<void(PushTopics&&)>&&);
 
     WEBCORE_EXPORT void incrementSilentPushCount(const PushSubscriptionSetIdentifier&, const String& securityOrigin, CompletionHandler<void(unsigned)>&&);
@@ -102,6 +110,7 @@ public:
     WEBCORE_EXPORT void removeRecordsBySubscriptionSet(const PushSubscriptionSetIdentifier&, CompletionHandler<void(Vector<RemovedPushRecord>&&)>&&);
     WEBCORE_EXPORT void removeRecordsBySubscriptionSetAndSecurityOrigin(const PushSubscriptionSetIdentifier&, const String& securityOrigin, CompletionHandler<void(Vector<RemovedPushRecord>&&)>&&);
 
+    WEBCORE_EXPORT void setPushesEnabled(const PushSubscriptionSetIdentifier&, bool, CompletionHandler<void(bool recordsChanged)>&&);
     WEBCORE_EXPORT void setPushesEnabledForOrigin(const PushSubscriptionSetIdentifier&, const String& securityOrigin, bool, CompletionHandler<void(bool recordsChanged)>&&);
 
 private:
@@ -112,13 +121,9 @@ private:
 
     void dispatchOnWorkQueue(Function<void()>&&);
 
-    enum class SubscriptionSetState { Enabled, Ignored };
-
     Ref<WorkQueue> m_queue;
     UniqueRef<WebCore::SQLiteDatabase> m_db;
-    HashMap<const char*, UniqueRef<WebCore::SQLiteStatement>> m_statements;
+    HashMap<ASCIILiteral, UniqueRef<WebCore::SQLiteStatement>> m_statements;
 };
 
 } // namespace WebCore
-
-#endif // ENABLE(SERVICE_WORKER)

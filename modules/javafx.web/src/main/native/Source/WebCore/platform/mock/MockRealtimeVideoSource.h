@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015-2022 Apple Inc. All rights reserved.
+ * Copyright (C) 2015-2023 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -38,6 +38,7 @@
 #include "OrientationNotifier.h"
 #include "RealtimeMediaSourceFactory.h"
 #include "RealtimeVideoCaptureSource.h"
+#include <wtf/Lock.h>
 #include <wtf/RunLoop.h>
 
 namespace WebCore {
@@ -50,11 +51,11 @@ enum class VideoFrameRotation : uint16_t;
 class MockRealtimeVideoSource : public RealtimeVideoCaptureSource, private OrientationNotifier::Observer {
 public:
     static CaptureSourceOrError create(String&& deviceID, AtomString&& name, MediaDeviceHashSalts&&, const MediaConstraints*, PageIdentifier);
-    ~MockRealtimeVideoSource();
+    virtual ~MockRealtimeVideoSource();
 
     static void setIsInterrupted(bool);
 
-    ImageBuffer* imageBuffer() const;
+    ImageBuffer* imageBuffer();
 
 protected:
     MockRealtimeVideoSource(String&& deviceID, AtomString&& name, MediaDeviceHashSalts&&, PageIdentifier);
@@ -68,21 +69,25 @@ protected:
 
     IntSize captureSize() const;
 
+    ImageBuffer* imageBufferInternal();
+
 private:
     friend class MockDisplayCaptureSourceGStreamer;
     friend class MockRealtimeVideoSourceGStreamer;
 
     const RealtimeMediaSourceCapabilities& capabilities() final;
     const RealtimeMediaSourceSettings& settings() final;
+    Ref<TakePhotoNativePromise> takePhotoInternal(PhotoSettings&&) final;
+    Ref<PhotoCapabilitiesNativePromise> getPhotoCapabilities() final;
+    Ref<PhotoSettingsNativePromise> getPhotoSettings() final;
 
     void startProducingData() override;
     void stopProducingData() override;
     bool isCaptureSource() const final { return true; }
     CaptureDevice::DeviceType deviceType() const final { return mockCamera() ? CaptureDevice::DeviceType::Camera : CaptureDevice::DeviceType::Screen; }
-    bool supportsSizeFrameRateAndZoom(std::optional<int> width, std::optional<int> height, std::optional<double>, std::optional<double>) final;
-    void setSizeFrameRateAndZoom(std::optional<int> width, std::optional<int> height, std::optional<double>, std::optional<double>) final;
-    void setFrameRateAndZoomWithPreset(double, double, std::optional<VideoPreset>&&) final;
-
+    bool supportsSizeFrameRateAndZoom(const VideoPresetConstraints&) final;
+    void setSizeFrameRateAndZoom(const VideoPresetConstraints&) override;
+    void applyFrameRateAndZoomWithPreset(double, double, std::optional<VideoPreset>&&) final;
 
     bool isMockSource() const final { return true; }
 
@@ -95,7 +100,9 @@ private:
     void drawBoxes(GraphicsContext&);
 
     void generateFrame();
+    RefPtr<ImageBuffer> generateFrameInternal();
     void startCaptureTimer();
+    RefPtr<ImageBuffer> generatePhoto();
 
     void delaySamples(Seconds) final;
 
@@ -105,11 +112,42 @@ private:
     bool mockWindow() const { return mockDisplayType(CaptureDevice::DeviceType::Window); }
     bool mockDisplayType(CaptureDevice::DeviceType) const;
 
+    void startApplyingConstraints() final;
+    void endApplyingConstraints() final;
+
+    class DrawingState {
+    public:
+        explicit DrawingState(float baseFontSize)
+            : m_baseFontSize(baseFontSize)
+            , m_bipBopFontSize(baseFontSize * 2.5)
+            , m_statsFontSize(baseFontSize * .5)
+        {
+        }
+
+        float baseFontSize() const { return m_baseFontSize; }
+        float statsFontSize() const { return m_statsFontSize; }
+
+        const FontCascade& timeFont();
+        const FontCascade& bipBopFont();
+        const FontCascade& statsFont();
+
+    private:
+        FontCascadeDescription& fontDescription();
+
     float m_baseFontSize { 0 };
     float m_bipBopFontSize { 0 };
     float m_statsFontSize { 0 };
+        std::optional<FontCascade> m_timeFont;
+        std::optional<FontCascade> m_bipBopFont;
+        std::optional<FontCascade> m_statsFont;
+        std::optional<FontCascadeDescription> m_fontDescription;
+    };
 
-    mutable RefPtr<ImageBuffer> m_imageBuffer;
+    DrawingState& drawingState();
+    void invalidateDrawingState();
+
+    std::optional<DrawingState> m_drawingState;
+    mutable RefPtr<ImageBuffer> m_imageBuffer WTF_GUARDED_BY_LOCK(m_imageBufferLock);
 
     Path m_path;
     DashArray m_dashWidths;
@@ -119,6 +157,7 @@ private:
     MonotonicTime m_delayUntil;
 
     unsigned m_frameNumber { 0 };
+    Ref<RunLoop> m_runLoop;
     RunLoop::Timer m_emitFrameTimer;
     std::optional<RealtimeMediaSourceCapabilities> m_capabilities;
     std::optional<RealtimeMediaSourceSettings> m_currentSettings;
@@ -128,6 +167,11 @@ private:
     MockMediaDevice m_device;
     std::optional<VideoPreset> m_preset;
     VideoFrameRotation m_deviceOrientation;
+
+    Lock m_imageBufferLock;
+    std::optional<PhotoCapabilities> m_photoCapabilities;
+    std::optional<PhotoSettings> m_photoSettings;
+    bool m_beingConfigured { false };
 };
 
 } // namespace WebCore

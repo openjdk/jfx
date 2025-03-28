@@ -28,24 +28,19 @@
 #if ENABLE(WEBGL)
 #include "EXTTextureMirrorClampToEdge.h"
 
-#include <wtf/IsoMallocInlines.h>
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
-WTF_MAKE_ISO_ALLOCATED_IMPL(EXTTextureMirrorClampToEdge);
+WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(EXTTextureMirrorClampToEdge);
 
 EXTTextureMirrorClampToEdge::EXTTextureMirrorClampToEdge(WebGLRenderingContextBase& context)
-    : WebGLExtension(context)
+    : WebGLExtension(context, WebGLExtensionName::EXTTextureMirrorClampToEdge)
 {
-    context.graphicsContextGL()->ensureExtensionEnabled("GL_EXT_texture_mirror_clamp_to_edge"_s);
+    context.protectedGraphicsContextGL()->ensureExtensionEnabled("GL_EXT_texture_mirror_clamp_to_edge"_s);
 }
 
 EXTTextureMirrorClampToEdge::~EXTTextureMirrorClampToEdge() = default;
-
-WebGLExtension::ExtensionName EXTTextureMirrorClampToEdge::getName() const
-{
-    return EXTTextureMirrorClampToEdgeName;
-}
 
 bool EXTTextureMirrorClampToEdge::supported(GraphicsContextGL& context)
 {

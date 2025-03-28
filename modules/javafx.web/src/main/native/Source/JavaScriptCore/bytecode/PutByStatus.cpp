@@ -34,7 +34,6 @@
 #include "ICStatusUtils.h"
 #include "InlineCacheCompiler.h"
 #include "InlineCallFrame.h"
-#include "ProxyObjectAccessCase.h"
 #include "StructureInlines.h"
 #include "StructureStubInfo.h"
 #include <wtf/ListDump.h>
@@ -62,6 +61,7 @@ PutByStatus PutByStatus::computeFromLLInt(CodeBlock* profiledBlock, BytecodeInde
     switch (instruction->opcodeID()) {
     case op_put_by_id:
         break;
+    case op_enumerator_put_by_val:
     case op_put_by_val:
     case op_put_by_val_direct:
         return PutByStatus(NoInformation);
@@ -93,7 +93,7 @@ PutByStatus PutByStatus::computeFromLLInt(CodeBlock* profiledBlock, BytecodeInde
         if (!isValidOffset(offset))
             return PutByStatus(NoInformation);
 
-        return PutByVariant::replace(nullptr, structure, offset);
+        return PutByVariant::replace(nullptr, structure, offset, /* viaGlobalProxy */ false);
     }
 
     Structure* newStructure = newStructureID.decode();
@@ -169,7 +169,7 @@ PutByStatus PutByStatus::computeForStubInfo(const ConcurrentJSLocker& locker, Co
     return computeForStubInfo(locker, baselineBlock, stubInfo, CallLinkStatus::computeExitSiteData(baselineBlock, codeOrigin.bytecodeIndex()), codeOrigin);
 }
 
-PutByStatus PutByStatus::computeForStubInfo(const ConcurrentJSLocker& locker, CodeBlock* profiledBlock, StructureStubInfo* stubInfo, CallLinkStatus::ExitSiteData callExitSiteData, CodeOrigin codeOrigin)
+PutByStatus PutByStatus::computeForStubInfo(const ConcurrentJSLocker& locker, CodeBlock* profiledBlock, StructureStubInfo* stubInfo, CallLinkStatus::ExitSiteData callExitSiteData, CodeOrigin)
 {
     StubInfoSummary summary = StructureStubInfo::summary(profiledBlock->vm(), stubInfo);
     if (!isInlineable(summary))
@@ -187,7 +187,7 @@ PutByStatus PutByStatus::computeForStubInfo(const ConcurrentJSLocker& locker, Co
         Structure* structure = stubInfo->inlineAccessBaseStructure();
         PropertyOffset offset = structure->getConcurrently(uid);
         if (isValidOffset(offset))
-            return PutByVariant::replace(WTFMove(identifier), structure, offset);
+            return PutByVariant::replace(WTFMove(identifier), structure, offset, /* viaGlobalProxy */ false);
         return PutByStatus(JSC::slowVersion(summary), *stubInfo);
     }
 
@@ -202,19 +202,22 @@ PutByStatus PutByStatus::computeForStubInfo(const ConcurrentJSLocker& locker, Co
             switch (access.type()) {
             case AccessCase::StoreMegamorphic:
             case AccessCase::IndexedMegamorphicStore: {
-                // Emitting StoreMegamorphic means that we give up polymorphic IC optimization. So this needs very careful handling.
-                // It is possible that one function can be inlined from the other function, and then it gets limited # of structures.
-                // In this case, continue using IC is better than falling back to megamorphic case. But if the function gets compiled before,
-                // and even optimizing JIT saw the megamorphism, then this is likely that this function continues having megamorphic behavior,
-                // and inlined megamorphic code is faster. Currently, we use StoreMegamorphic only when the exact same form of CodeOrigin gets
-                // this megamorphic GetById before (same level of inlining etc.). This is very conservative but effective since IC is very fast
-                // when it worked well (but costly if it doesn't work and get megamorphic). Once this cost-benefit tradeoff gets changed (via
-                // handler IC), we can revisit this condition.
-                // FIXME: Add this thing.
-                if (isSameStyledCodeOrigin(stubInfo->codeOrigin, codeOrigin) && !stubInfo->tookSlowPath)
+                if (!stubInfo->tookSlowPath)
                     return PutByStatus(Megamorphic);
                 break;
             }
+            case AccessCase::ProxyObjectStore:
+            case AccessCase::IndexedProxyObjectStore: {
+                auto callLinkStatus = makeUnique<CallLinkStatus>();
+                if (CallLinkInfo* callLinkInfo = stubInfo->callLinkInfoAt(locker, 0, access))
+                    *callLinkStatus = CallLinkStatus::computeFor(locker, profiledBlock, *callLinkInfo, callExitSiteData);
+                auto status = PutByStatus(PutByStatus::ProxyObject);
+                auto variant = PutByVariant::proxy(access.identifier(), access.structure(), WTFMove(callLinkStatus));
+                if (!status.appendVariant(variant))
+                    return PutByStatus(JSC::slowVersion(summary), *stubInfo);
+                return status;
+            }
+
             default:
                 break;
             }
@@ -222,8 +225,8 @@ PutByStatus PutByStatus::computeForStubInfo(const ConcurrentJSLocker& locker, Co
 
         for (unsigned i = 0; i < list->size(); ++i) {
             const AccessCase& access = list->at(i);
-            if (access.viaGlobalProxy())
-                return PutByStatus(JSC::slowVersion(summary), *stubInfo);
+            bool viaGlobalProxy = access.viaGlobalProxy();
+
             if (access.usesPolyProto())
                 return PutByStatus(JSC::slowVersion(summary), *stubInfo);
 
@@ -233,7 +236,7 @@ PutByStatus PutByStatus::computeForStubInfo(const ConcurrentJSLocker& locker, Co
                 PropertyOffset offset = structure->getConcurrently(access.uid());
                 if (!isValidOffset(offset))
                     return PutByStatus(JSC::slowVersion(summary), *stubInfo);
-                auto variant = PutByVariant::replace(access.identifier(), structure, offset);
+                auto variant = PutByVariant::replace(access.identifier(), structure, offset, viaGlobalProxy);
                 if (!result.appendVariant(variant))
                     return PutByStatus(JSC::slowVersion(summary), *stubInfo);
                 break;
@@ -247,6 +250,31 @@ PutByStatus PutByStatus::computeForStubInfo(const ConcurrentJSLocker& locker, Co
                 if (!conditionSet.structuresEnsureValidity())
                     return PutByStatus(JSC::slowVersion(summary), *stubInfo);
                 auto variant = PutByVariant::transition(access.identifier(), access.structure(), access.newStructure(), conditionSet, offset);
+                if (!result.appendVariant(variant))
+                    return PutByStatus(JSC::slowVersion(summary), *stubInfo);
+                break;
+            }
+
+            case AccessCase::CustomAccessorSetter: {
+                auto conditionSet = access.conditionSet();
+                if (!conditionSet.isStillValid())
+                    continue;
+
+                Structure* currStructure = access.structure();
+                if (auto* object = access.tryGetAlternateBase())
+                    currStructure = object->structure();
+
+                // For now, we only support cases which JSGlobalObject is the same to the currently profiledBlock.
+                if (currStructure->globalObject() != profiledBlock->globalObject())
+                    return PutByStatus(JSC::slowVersion(summary), *stubInfo);
+
+                auto customAccessorSetter = access.as<GetterSetterAccessCase>().customAccessor();
+                std::unique_ptr<DOMAttributeAnnotation> domAttribute;
+                if (access.as<GetterSetterAccessCase>().domAttribute())
+                    domAttribute = WTF::makeUnique<DOMAttributeAnnotation>(*access.as<GetterSetterAccessCase>().domAttribute());
+                result.m_state = CustomAccessor;
+
+                auto variant = PutByVariant::customSetter(access.identifier(), access.structure(), viaGlobalProxy, WTFMove(conditionSet), customAccessorSetter, WTFMove(domAttribute));
                 if (!result.appendVariant(variant))
                     return PutByStatus(JSC::slowVersion(summary), *stubInfo);
                 break;
@@ -266,33 +294,20 @@ PutByStatus PutByStatus::computeForStubInfo(const ConcurrentJSLocker& locker, Co
 
                 case ComplexGetStatus::Inlineable: {
                     auto callLinkStatus = makeUnique<CallLinkStatus>();
-                    if (CallLinkInfo* callLinkInfo = access.as<GetterSetterAccessCase>().callLinkInfo()) {
-                        *callLinkStatus = CallLinkStatus::computeFor(
-                            locker, profiledBlock, *callLinkInfo, callExitSiteData);
-                    }
+                    if (CallLinkInfo* callLinkInfo = stubInfo->callLinkInfoAt(locker, i, access))
+                        *callLinkStatus = CallLinkStatus::computeFor(locker, profiledBlock, *callLinkInfo, callExitSiteData);
 
-                    auto variant = PutByVariant::setter(access.identifier(), structure, complexGetStatus.offset(), complexGetStatus.conditionSet(), WTFMove(callLinkStatus));
+                    auto variant = PutByVariant::setter(access.identifier(), structure, complexGetStatus.offset(), viaGlobalProxy, complexGetStatus.conditionSet(), WTFMove(callLinkStatus));
                     if (!result.appendVariant(variant))
                         return PutByStatus(JSC::slowVersion(summary), *stubInfo);
+                    break;
                 }
                 }
                 break;
             }
 
             case AccessCase::CustomValueSetter:
-            case AccessCase::CustomAccessorSetter:
                 return PutByStatus(MakesCalls);
-
-            case AccessCase::ProxyObjectStore: {
-                auto& accessCase = access.as<ProxyObjectAccessCase>();
-                auto callLinkStatus = makeUnique<CallLinkStatus>();
-                if (CallLinkInfo* callLinkInfo = accessCase.callLinkInfo())
-                    *callLinkStatus = CallLinkStatus::computeFor(locker, profiledBlock, *callLinkInfo, callExitSiteData);
-                auto variant = PutByVariant::proxy(accessCase.identifier(), access.structure(), WTFMove(callLinkStatus));
-                if (!result.appendVariant(variant))
-                    return PutByStatus(JSC::slowVersion(summary), *stubInfo);
-                break;
-            }
 
             default:
                 return PutByStatus(JSC::slowVersion(summary), *stubInfo);
@@ -381,6 +396,16 @@ PutByStatus PutByStatus::computeFor(JSGlobalObject* globalObject, const Structur
             if (attributes & (PropertyAttribute::Accessor | PropertyAttribute::ReadOnly))
                 return PutByStatus(LikelyTakesSlowPath);
 
+            if (isDirect && attributes) {
+                Structure* existingTransition = Structure::attributeChangeTransitionToExistingStructureConcurrently(structure, identifier.uid(), 0, offset);
+                if (!existingTransition)
+                    return PutByStatus(LikelyTakesSlowPath);
+                bool didAppend = result.appendVariant(PutByVariant::transition(identifier, structure, existingTransition, { }, offset));
+                if (!didAppend)
+                    return PutByStatus(LikelyTakesSlowPath);
+                continue;
+            }
+
             WatchpointSet* replaceSet = structure->propertyReplacementWatchpointSet(offset);
             if (!replaceSet || replaceSet->isStillValid()) {
                 // When this executes, it'll create, and fire, this replacement watchpoint set.
@@ -391,7 +416,7 @@ PutByStatus PutByStatus::computeFor(JSGlobalObject* globalObject, const Structur
                 return PutByStatus(LikelyTakesSlowPath);
             }
 
-            PutByVariant variant = PutByVariant::replace(identifier, structure, offset);
+            PutByVariant variant = PutByVariant::replace(identifier, structure, offset, /* viaGlobalProxy */ false);
             if (!result.appendVariant(variant))
                 return PutByStatus(LikelyTakesSlowPath);
             continue;
@@ -455,6 +480,8 @@ bool PutByStatus::makesCalls() const
     case MakesCalls:
     case ObservedSlowPathAndMakesCalls:
     case Megamorphic:
+    case CustomAccessor:
+    case ProxyObject:
         return true;
     case Simple: {
         for (unsigned i = m_variants.size(); i--;) {
@@ -463,9 +490,8 @@ bool PutByStatus::makesCalls() const
         }
         return false;
     }
-    default:
-        RELEASE_ASSERT_NOT_REACHED();
     }
+    return false;
 }
 
 PutByStatus PutByStatus::slowVersion() const
@@ -536,7 +562,9 @@ void PutByStatus::merge(const PutByStatus& other)
         return;
 
     case Simple:
-        if (other.m_state != Simple)
+    case CustomAccessor:
+    case ProxyObject:
+        if (other.m_state != m_state)
             return mergeSlow();
 
         for (const PutByVariant& other : other.m_variants) {
@@ -569,31 +597,37 @@ void PutByStatus::filter(const StructureSet& set)
 
 void PutByStatus::dump(PrintStream& out) const
 {
+    out.print("(");
     switch (m_state) {
     case NoInformation:
-        out.print("(NoInformation)");
+        out.print("NoInformation");
         return;
     case Simple:
-        out.print("(", listDump(m_variants), ")");
-        return;
+        out.print("Simple");
+        break;
+    case CustomAccessor:
+        out.print("CustomAccessor");
+        break;
+    case ProxyObject:
+        out.print("ProxyObject");
+        break;
     case Megamorphic:
         out.print("Megamorphic");
-        return;
+        break;
     case LikelyTakesSlowPath:
         out.print("LikelyTakesSlowPath");
-        return;
+        break;
     case ObservedTakesSlowPath:
         out.print("ObservedTakesSlowPath");
-        return;
+        break;
     case MakesCalls:
         out.print("MakesCalls");
-        return;
+        break;
     case ObservedSlowPathAndMakesCalls:
         out.print("ObservedSlowPathAndMakesCalls");
-        return;
+        break;
     }
-
-    RELEASE_ASSERT_NOT_REACHED();
+    out.print(", ", listDump(m_variants), ")");
 }
 
 } // namespace JSC

@@ -26,27 +26,27 @@
 #include "config.h"
 #include "BoundaryPoint.h"
 #include "ContainerNode.h"
+#include "Document.h"
 
 namespace WebCore {
 
 template std::partial_ordering treeOrder<Tree>(const BoundaryPoint&, const BoundaryPoint&);
 template std::partial_ordering treeOrder<ShadowIncludingTree>(const BoundaryPoint&, const BoundaryPoint&);
-template std::partial_ordering treeOrder<ComposedTree>(const BoundaryPoint&, const BoundaryPoint&);
 
 std::optional<BoundaryPoint> makeBoundaryPointBeforeNode(Node& node)
 {
-    auto parent = node.parentNode();
+    RefPtr parent = node.parentNode();
     if (!parent)
         return std::nullopt;
-    return BoundaryPoint { *parent, node.computeNodeIndex() };
+    return BoundaryPoint { parent.releaseNonNull(), node.computeNodeIndex() };
 }
 
 std::optional<BoundaryPoint> makeBoundaryPointAfterNode(Node& node)
 {
-    auto parent = node.parentNode();
+    RefPtr parent = node.parentNode();
     if (!parent)
         return std::nullopt;
-    return BoundaryPoint { *parent, node.computeNodeIndex() + 1 };
+    return BoundaryPoint { parent.releaseNonNull(), node.computeNodeIndex() + 1 };
 }
 
 static bool isOffsetBeforeChild(ContainerNode& container, unsigned offset, Node& child)
@@ -64,26 +64,36 @@ static bool isOffsetBeforeChild(ContainerNode& container, unsigned offset, Node&
     return false;
 }
 
-template<TreeType treeType> std::partial_ordering treeOrder(const BoundaryPoint& a, const BoundaryPoint& b)
+template<TreeType treeType> std::partial_ordering treeOrderInternal(const BoundaryPoint& a, const BoundaryPoint& b)
 {
     if (a.container.ptr() == b.container.ptr())
         return a.offset <=> b.offset;
 
-    for (auto ancestor = b.container.ptr(); ancestor; ) {
-        auto nextAncestor = parent<treeType>(*ancestor);
+    for (RefPtr ancestor = b.container.copyRef(); ancestor; ) {
+        RefPtr nextAncestor = parent<treeType>(*ancestor);
         if (nextAncestor == a.container.ptr())
             return isOffsetBeforeChild(*nextAncestor, a.offset, *ancestor) ? std::strong_ordering::less : std::strong_ordering::greater;
-        ancestor = nextAncestor;
+        ancestor = WTFMove(nextAncestor);
     }
 
-    for (auto ancestor = a.container.ptr(); ancestor; ) {
-        auto nextAncestor = parent<treeType>(*ancestor);
+    for (RefPtr ancestor = a.container.copyRef(); ancestor; ) {
+        RefPtr nextAncestor = parent<treeType>(*ancestor);
         if (nextAncestor == b.container.ptr())
             return isOffsetBeforeChild(*nextAncestor, b.offset, *ancestor) ? std::strong_ordering::greater : std::strong_ordering::less;
-        ancestor = nextAncestor;
+        ancestor = WTFMove(nextAncestor);
     }
 
     return treeOrder<treeType>(a.container, b.container);
+}
+
+template<TreeType treeType> std::partial_ordering treeOrder(const BoundaryPoint& a, const BoundaryPoint& b)
+{
+    return treeOrderInternal<treeType>(a, b);
+}
+
+template<> std::partial_ordering treeOrder<ComposedTree>(const BoundaryPoint& a, const BoundaryPoint& b)
+{
+    return treeOrderInternal<ComposedTree>(a, b);
 }
 
 std::partial_ordering treeOrderForTesting(TreeType type, const BoundaryPoint& a, const BoundaryPoint& b)
@@ -107,6 +117,11 @@ TextStream& operator<<(TextStream& stream, const BoundaryPoint& boundaryPoint)
     stream.dumpProperty("node", boundaryPoint.container->debugDescription());
     stream.dumpProperty("offset", boundaryPoint.offset);
     return stream;
+}
+
+Ref<Document> BoundaryPoint::protectedDocument() const
+{
+    return document();
 }
 
 }

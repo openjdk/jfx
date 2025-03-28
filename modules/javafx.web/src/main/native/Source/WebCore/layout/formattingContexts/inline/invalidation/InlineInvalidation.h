@@ -27,7 +27,6 @@
 
 #include "InlineDamage.h"
 #include "InlineDisplayContent.h"
-#include "InlineFormattingState.h"
 #include <optional>
 #include <wtf/Forward.h>
 
@@ -38,34 +37,39 @@ class RenderStyle;
 namespace Layout {
 
 class Box;
+class ElementBox;
 class InlineTextBox;
-class InlineFormattingState;
-struct DamagedLine;
+struct InvalidatedLine;
 
 class InlineInvalidation {
 public:
-    InlineInvalidation(InlineDamage&, const InlineItems&, const InlineDisplay::Content&);
+    InlineInvalidation(InlineDamage&, const InlineItemList&, const InlineDisplay::Content&);
 
-    void styleChanged(const Box&, const RenderStyle& oldStyle);
+    bool rootStyleWillChange(const ElementBox& formattingContextRoot, const RenderStyle& newStyle);
+    bool styleWillChange(const Box&, const RenderStyle& newStyle);
 
     bool textInserted(const InlineTextBox& newOrDamagedInlineTextBox, std::optional<size_t> offset = { });
     bool textWillBeRemoved(const InlineTextBox&, std::optional<size_t> offset = { });
 
     bool inlineLevelBoxInserted(const Box&);
     bool inlineLevelBoxWillBeRemoved(const Box&);
+    bool inlineLevelBoxContentWillChange(const Box&);
 
-    void horizontalConstraintChanged();
+    bool restartForPagination(size_t lineIndex, LayoutUnit pageTopAdjustment);
+
+    static bool mayOnlyNeedPartialLayout(const InlineDamage* inlineDamage) { return inlineDamage && inlineDamage->layoutStartPosition(); }
+    static void resetInlineDamage(InlineDamage&);
 
 private:
     enum class ShouldApplyRangeLayout : bool { No, Yes };
-    void updateInlineDamage(InlineDamage::Type, std::optional<DamagedLine>, ShouldApplyRangeLayout = ShouldApplyRangeLayout::No);
-    bool applyFullDamageIfNeeded(const Box&);
+    bool updateInlineDamage(const InvalidatedLine&, InlineDamage::Reason, ShouldApplyRangeLayout = ShouldApplyRangeLayout::No, LayoutUnit restartPaginationAdjustment = 0_lu);
+    bool setFullLayoutIfNeeded(const Box&);
     const InlineDisplay::Boxes& displayBoxes() const { return m_displayContent.boxes; }
     const InlineDisplay::Lines& displayLines() const { return m_displayContent.lines; }
 
     InlineDamage& m_inlineDamage;
 
-    const InlineItems& m_inlineItems;
+    const InlineItemList& m_inlineItemList;
     const InlineDisplay::Content& m_displayContent;
 };
 

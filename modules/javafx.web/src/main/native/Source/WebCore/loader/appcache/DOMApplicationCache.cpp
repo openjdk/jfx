@@ -31,11 +31,11 @@
 #include "DocumentLoader.h"
 #include "FrameLoader.h"
 #include "LocalFrame.h"
-#include <wtf/IsoMallocInlines.h>
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
-WTF_MAKE_ISO_ALLOCATED_IMPL(DOMApplicationCache);
+WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(DOMApplicationCache);
 
 DOMApplicationCache::DOMApplicationCache(LocalDOMWindow& window)
     : LocalDOMWindowProperty(&window)
@@ -67,7 +67,7 @@ ExceptionOr<void> DOMApplicationCache::update()
 {
     auto* host = applicationCacheHost();
     if (!host || !host->update())
-        return Exception { InvalidStateError };
+        return Exception { ExceptionCode::InvalidStateError };
     return { };
 }
 
@@ -75,7 +75,7 @@ ExceptionOr<void> DOMApplicationCache::swapCache()
 {
     auto* host = applicationCacheHost();
     if (!host || !host->swapCache())
-        return Exception { InvalidStateError };
+        return Exception { ExceptionCode::InvalidStateError };
     return { };
 }
 

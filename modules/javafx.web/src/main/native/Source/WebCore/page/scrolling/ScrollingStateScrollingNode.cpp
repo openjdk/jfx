@@ -39,6 +39,67 @@ ScrollingStateScrollingNode::ScrollingStateScrollingNode(ScrollingStateTree& sta
     scrollingStateTree().scrollingNodeAdded();
 }
 
+ScrollingStateScrollingNode::ScrollingStateScrollingNode(
+    ScrollingNodeType nodeType,
+    ScrollingNodeID nodeID,
+    Vector<Ref<ScrollingStateNode>>&& children,
+    OptionSet<ScrollingStateNodeProperty> changedProperties,
+    std::optional<PlatformLayerIdentifier> layerID,
+    FloatSize scrollableAreaSize,
+    FloatSize totalContentsSize,
+    FloatSize reachableContentsSize,
+    FloatPoint scrollPosition,
+    IntPoint scrollOrigin,
+    ScrollableAreaParameters&& scrollableAreaParameters,
+#if ENABLE(SCROLLING_THREAD)
+    OptionSet<SynchronousScrollingReason> synchronousScrollingReasons,
+#endif
+    RequestedScrollData&& requestedScrollData,
+    FloatScrollSnapOffsetsInfo&& snapOffsetsInfo,
+    std::optional<unsigned> currentHorizontalSnapPointIndex,
+    std::optional<unsigned> currentVerticalSnapPointIndex,
+    bool isMonitoringWheelEvents,
+    std::optional<PlatformLayerIdentifier> scrollContainerLayer,
+    std::optional<PlatformLayerIdentifier> scrolledContentsLayer,
+    std::optional<PlatformLayerIdentifier> horizontalScrollbarLayer,
+    std::optional<PlatformLayerIdentifier> verticalScrollbarLayer,
+    bool mouseIsOverContentArea,
+    MouseLocationState&& mouseLocationState,
+    ScrollbarHoverState&& scrollbarHoverState,
+    ScrollbarEnabledState&& scrollbarEnabledState,
+    UserInterfaceLayoutDirection scrollbarLayoutDirection,
+    ScrollbarWidth scrollbarWidth,
+    RequestedKeyboardScrollData&& keyboardScrollData
+) : ScrollingStateNode(nodeType, nodeID, WTFMove(children), changedProperties, layerID)
+    , m_scrollableAreaSize(scrollableAreaSize)
+    , m_totalContentsSize(totalContentsSize)
+    , m_reachableContentsSize(reachableContentsSize)
+    , m_scrollPosition(scrollPosition)
+    , m_scrollOrigin(scrollOrigin)
+    , m_snapOffsetsInfo(WTFMove(snapOffsetsInfo))
+    , m_currentHorizontalSnapPointIndex(currentHorizontalSnapPointIndex)
+    , m_currentVerticalSnapPointIndex(currentVerticalSnapPointIndex)
+    , m_scrollContainerLayer(scrollContainerLayer.value_or(PlatformLayerIdentifier()))
+    , m_scrolledContentsLayer(scrolledContentsLayer.value_or(PlatformLayerIdentifier()))
+    , m_horizontalScrollbarLayer(horizontalScrollbarLayer.value_or(PlatformLayerIdentifier()))
+    , m_verticalScrollbarLayer(verticalScrollbarLayer.value_or(PlatformLayerIdentifier()))
+    , m_scrollbarHoverState(WTFMove(scrollbarHoverState))
+    , m_mouseLocationState(WTFMove(mouseLocationState))
+    , m_scrollbarEnabledState(WTFMove(scrollbarEnabledState))
+    , m_scrollableAreaParameters(WTFMove(scrollableAreaParameters))
+    , m_requestedScrollData(WTFMove(requestedScrollData))
+    , m_keyboardScrollData(WTFMove(keyboardScrollData))
+#if ENABLE(SCROLLING_THREAD)
+    , m_synchronousScrollingReasons(synchronousScrollingReasons)
+#endif
+    , m_scrollbarLayoutDirection(scrollbarLayoutDirection)
+    , m_scrollbarWidth(scrollbarWidth)
+    , m_isMonitoringWheelEvents(isMonitoringWheelEvents)
+    , m_mouseIsOverContentArea(mouseIsOverContentArea)
+{
+    // scrollingNodeAdded will be called in attachAfterDeserialization.
+}
+
 ScrollingStateScrollingNode::ScrollingStateScrollingNode(const ScrollingStateScrollingNode& stateNode, ScrollingStateTree& adoptiveTree)
     : ScrollingStateNode(stateNode, adoptiveTree)
     , m_scrollableAreaSize(stateNode.scrollableAreaSize())
@@ -60,6 +121,8 @@ ScrollingStateScrollingNode::ScrollingStateScrollingNode(const ScrollingStateScr
 #if ENABLE(SCROLLING_THREAD)
     , m_synchronousScrollingReasons(stateNode.synchronousScrollingReasons())
 #endif
+    , m_scrollbarLayoutDirection(stateNode.scrollbarLayoutDirection())
+    , m_scrollbarWidth(stateNode.scrollbarWidth())
     , m_isMonitoringWheelEvents(stateNode.isMonitoringWheelEvents())
     , m_mouseIsOverContentArea(stateNode.mouseIsOverContentArea())
 {
@@ -80,6 +143,7 @@ ScrollingStateScrollingNode::ScrollingStateScrollingNode(const ScrollingStateScr
 
 ScrollingStateScrollingNode::~ScrollingStateScrollingNode()
 {
+    if (isAttachedToScrollingStateTree())
     scrollingStateTree().scrollingNodeRemoved();
 }
 
@@ -268,7 +332,6 @@ void ScrollingStateScrollingNode::setVerticalScrollbarLayer(const LayerRepresent
 {
     if (layer == m_verticalScrollbarLayer)
         return;
-
     m_verticalScrollbarLayer = layer;
     setPropertyChanged(Property::VerticalScrollbarLayer);
 }
@@ -314,6 +377,23 @@ void ScrollingStateScrollingNode::setScrollbarEnabledState(ScrollbarOrientation 
         m_scrollbarEnabledState.verticalScrollbarIsEnabled = enabled;
 
     setPropertyChanged(Property::ScrollbarEnabledState);
+}
+
+void ScrollingStateScrollingNode::setScrollbarLayoutDirection(UserInterfaceLayoutDirection scrollbarLayoutDirection)
+{
+    if (scrollbarLayoutDirection == m_scrollbarLayoutDirection)
+        return;
+
+    m_scrollbarLayoutDirection = scrollbarLayoutDirection;
+    setPropertyChanged(Property::ScrollbarLayoutDirection);
+}
+
+void ScrollingStateScrollingNode::setScrollbarWidth(ScrollbarWidth scrollbarWidth)
+{
+    if (scrollbarWidth == m_scrollbarWidth)
+        return;
+    m_scrollbarWidth = scrollbarWidth;
+    setPropertyChanged(Property::ScrollbarWidth);
 }
 
 void ScrollingStateScrollingNode::dumpProperties(TextStream& ts, OptionSet<ScrollingStateTreeAsTextBehavior> behavior) const

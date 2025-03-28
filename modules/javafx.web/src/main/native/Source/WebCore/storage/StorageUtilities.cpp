@@ -28,9 +28,11 @@
 
 #include "ClientOrigin.h"
 #include "WebCorePersistentCoders.h"
+#include <pal/crypto/CryptoDigest.h>
 #include <wtf/FileSystem.h>
 #include <wtf/Scope.h>
 #include <wtf/persistence/PersistentCoders.h>
+#include <wtf/text/Base64.h>
 
 #if ASSERT_ENABLED
 #include <wtf/RunLoop.h>
@@ -82,8 +84,17 @@ bool writeOriginToFile(const String& filePath, const ClientOrigin& origin)
 
     WTF::Persistence::Encoder encoder;
     encoder << origin;
-    FileSystem::writeToFile(originFileHandle, encoder.buffer(), encoder.bufferSize());
+    FileSystem::writeToFile(originFileHandle, encoder.span());
     return true;
+}
+
+String encodeSecurityOriginForFileName(FileSystem::Salt salt, const SecurityOriginData& origin)
+{
+    auto crypto = PAL::CryptoDigest::create(PAL::CryptoDigest::Algorithm::SHA_256);
+    auto originString = origin.toString().utf8();
+    crypto->addBytes(originString.span());
+    crypto->addBytes(salt);
+    return base64URLEncodeToString(crypto->computeHash());
 }
 
 } // namespace StorageUtilities

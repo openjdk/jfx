@@ -32,7 +32,7 @@
 #include "Document.h"
 #include "WebXRRigidTransform.h"
 #include "WebXRSession.h"
-#include <wtf/IsoMallocInlines.h>
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
@@ -42,7 +42,7 @@ static constexpr float BoundsPrecisionInMeters = 0.05;
 // A valid polygon has at least 3 vertices.
 static constexpr int MinimumBoundsVertices = 3;
 
-WTF_MAKE_ISO_ALLOCATED_IMPL(WebXRBoundedReferenceSpace);
+WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(WebXRBoundedReferenceSpace);
 
 Ref<WebXRBoundedReferenceSpace> WebXRBoundedReferenceSpace::create(Document& document, WebXRSession& session, XRReferenceSpaceType type)
 {
@@ -77,11 +77,11 @@ const Vector<Ref<DOMPointReadOnly>>& WebXRBoundedReferenceSpace::boundsGeometry(
 ExceptionOr<Ref<WebXRReferenceSpace>> WebXRBoundedReferenceSpace::getOffsetReferenceSpace(const WebXRRigidTransform& offsetTransform)
 {
     if (!m_session)
-        return Exception { InvalidStateError };
+        return Exception { ExceptionCode::InvalidStateError };
 
-    auto* document = downcast<Document>(scriptExecutionContext());
+    RefPtr document = downcast<Document>(scriptExecutionContext());
     if (!document)
-        return Exception { InvalidStateError };
+        return Exception { ExceptionCode::InvalidStateError };
 
     // https://immersive-web.github.io/webxr/#dom-xrreferencespace-getoffsetreferencespace
     // Set offsetSpace’s origin offset to the result of multiplying base’s origin offset by originOffset in the relevant realm of base.

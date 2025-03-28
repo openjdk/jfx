@@ -48,6 +48,10 @@ MacroAssemblerCodeRef<JITThunkPtrTag> osrExitGenerationThunkGenerator(VM& vm)
     // This needs to happen before we use the scratch buffer because this function also uses the scratch buffer.
     adjustFrameAndStackInOSRExitCompilerThunk<DFG::JITCode>(jit, vm, JITType::DFGJIT);
 
+#if USE(JSVALUE64)
+    jit.store32(GPRInfo::numberTagRegister, &vm.osrExitIndex);
+#endif
+
     size_t scratchSize = sizeof(EncodedJSValue) * (GPRInfo::numberOfRegisters + FPRInfo::numberOfRegisters);
     ScratchBuffer* scratchBuffer = vm.scratchBufferForSize(scratchSize);
     EncodedJSValue* buffer = static_cast<EncodedJSValue*>(scratchBuffer->dataBuffer());
@@ -93,8 +97,7 @@ MacroAssemblerCodeRef<JITThunkPtrTag> osrExitGenerationThunkGenerator(VM& vm)
     // This will implicitly pass GPRInfo::callFrameRegister as the first argument based on the operation type.
     jit.setupArguments<decltype(operationCompileOSRExit)>(bufferGPR);
     jit.prepareCallOperation(vm);
-
-    MacroAssembler::Call functionCall = jit.call(OperationPtrTag);
+    jit.callOperation<OperationPtrTag>(operationCompileOSRExit);
 
     jit.move(CCallHelpers::TrustedImmPtr(buffer), bufferGPR);
     CCallHelpers::LoadRegSpooler loadSpooler(jit, bufferGPR);
@@ -124,10 +127,7 @@ MacroAssemblerCodeRef<JITThunkPtrTag> osrExitGenerationThunkGenerator(VM& vm)
     jit.farJump(MacroAssembler::AbsoluteAddress(&vm.osrExitJumpDestination), OSRExitPtrTag);
 
     LinkBuffer patchBuffer(jit, GLOBAL_THUNK_ID, LinkBuffer::Profile::DFGThunk);
-
-    patchBuffer.link<OperationPtrTag>(functionCall, operationCompileOSRExit);
-
-    return FINALIZE_THUNK(patchBuffer, JITThunkPtrTag, "DFG OSR exit generation thunk");
+    return FINALIZE_THUNK(patchBuffer, JITThunkPtrTag, nullptr, "DFG OSR exit generation thunk");
 }
 
 MacroAssemblerCodeRef<JITThunkPtrTag> osrEntryThunkGenerator(VM& vm)
@@ -168,14 +168,14 @@ MacroAssemblerCodeRef<JITThunkPtrTag> osrEntryThunkGenerator(VM& vm)
     jit.restoreCalleeSavesFromEntryFrameCalleeSavesBuffer(vm.topEntryFrame);
     jit.emitMaterializeTagCheckRegisters();
 #if USE(JSVALUE64)
-    jit.emitGetFromCallFrameHeaderPtr(CallFrameSlot::codeBlock, GPRInfo::constantsRegister);
-    jit.loadPtr(CCallHelpers::Address(GPRInfo::constantsRegister, CodeBlock::offsetOfJITData()), GPRInfo::constantsRegister);
+    jit.emitGetFromCallFrameHeaderPtr(CallFrameSlot::codeBlock, GPRInfo::jitDataRegister);
+    jit.loadPtr(CCallHelpers::Address(GPRInfo::jitDataRegister, CodeBlock::offsetOfJITData()), GPRInfo::jitDataRegister);
 #endif
 
     jit.farJump(GPRInfo::regT1, GPRInfo::callFrameRegister);
 
     LinkBuffer patchBuffer(jit, GLOBAL_THUNK_ID, LinkBuffer::Profile::DFGOSREntry);
-    return FINALIZE_THUNK(patchBuffer, JITThunkPtrTag, "DFG OSR entry thunk");
+    return FINALIZE_THUNK(patchBuffer, JITThunkPtrTag, nullptr, "DFG OSR entry thunk");
 }
 
 } } // namespace JSC::DFG

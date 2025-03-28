@@ -148,6 +148,8 @@ ExitMode mayExitImpl(Graph& graph, Node* node, StateType& state)
     case NewStringObject:
     case NewInternalFieldObject:
     case NewRegexp:
+    case NewMap:
+    case NewSet:
     case NewArrayWithConstantSize:
     case ToNumber:
     case ToNumeric:
@@ -155,6 +157,8 @@ ExitMode mayExitImpl(Graph& graph, Node* node, StateType& state)
     case RegExpExecNonGlobalOrSticky:
     case RegExpMatchFastGlobal:
     case CallWasm:
+    case CallCustomAccessorGetter:
+    case CallCustomAccessorSetter:
     case AllocatePropertyStorage:
     case ReallocatePropertyStorage:
         result = ExitsForExceptions;
@@ -220,8 +224,15 @@ ExitMode mayExitImpl(Graph& graph, Node* node, StateType& state)
             break;
         return Exits;
 
-    case CompareEq:
     case CompareStrictEq:
+        if (node->isBinaryUseKind(BooleanUse) || node->isSymmetricBinaryUseKind(BooleanUse, UntypedUse))
+            break;
+        if (node->isBinaryUseKind(MiscUse) || node->isSymmetricBinaryUseKind(MiscUse, UntypedUse))
+            break;
+        if (node->isBinaryUseKind(OtherUse) || node->isSymmetricBinaryUseKind(OtherUse, UntypedUse))
+            break;
+        FALLTHROUGH;
+    case CompareEq:
     case CompareLess:
     case CompareLessEq:
     case CompareGreater:
@@ -231,6 +242,8 @@ ExitMode mayExitImpl(Graph& graph, Node* node, StateType& state)
         if (node->isBinaryUseKind(DoubleRepUse))
             break;
         if (node->isBinaryUseKind(Int52RepUse))
+            break;
+        if (node->isBinaryUseKind(SymbolUse))
             break;
         return Exits;
 
@@ -252,6 +265,7 @@ ExitMode mayExitImpl(Graph& graph, Node* node, StateType& state)
     case ArithSqrt:
     case ArithUnary:
     case ArithFRound:
+    case ArithF16Round:
         if (node->child1().useKind() == DoubleRepUse)
             break;
         return Exits;
@@ -282,6 +296,8 @@ ExitMode mayExitImpl(Graph& graph, Node* node, StateType& state)
         case StringObjectUse:
         case StringOrStringObjectUse:
             result = ExitsForExceptions;
+            break;
+        case StringOrOtherUse:
             break;
         default:
             return Exits;

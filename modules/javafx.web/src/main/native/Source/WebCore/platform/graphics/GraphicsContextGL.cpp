@@ -30,12 +30,14 @@
 
 #if ENABLE(WEBGL)
 
+#include "BitmapImage.h"
 #include "FormatConverter.h"
 #include "GCGLSpan.h"
 #include "GraphicsContext.h"
 #include "HostWindow.h"
 #include "Image.h"
 #include "ImageObserver.h"
+#include "NotImplemented.h"
 #include "PixelBuffer.h"
 #include "VideoFrame.h"
 
@@ -502,7 +504,7 @@ bool GraphicsContextGL::extractPixelBuffer(const PixelBuffer& pixelBuffer, DataF
         return false;
     data.resize(packSizes->imageBytes);
 
-    if (!packPixels(pixelBuffer.bytes(), sourceDataFormat, width, height, sourceImageSubRectangle, depth, 0, unpackImageHeight, format, type, premultiplyAlpha ? AlphaOp::DoPremultiply : AlphaOp::DoNothing, data.data(), flipY))
+    if (!packPixels(pixelBuffer.bytes().data(), sourceDataFormat, width, height, sourceImageSubRectangle, depth, 0, unpackImageHeight, format, type, premultiplyAlpha ? AlphaOp::DoPremultiply : AlphaOp::DoNothing, data.data(), flipY))
         return false;
 
     return true;
@@ -570,42 +572,20 @@ GCGLint GraphicsContextGL::getInternalformati(GCGLenum target, GCGLenum internal
     return value[0];
 }
 
+void GraphicsContextGL::framebufferDiscard(GCGLenum, std::span<const GCGLenum>)
+{
+    notImplemented();
+}
+
+#if ENABLE(WEBXR)
+void GraphicsContextGL::framebufferResolveRenderbuffer(GCGLenum, GCGLenum, GCGLenum, PlatformGLObject)
+{
+    notImplemented();
+}
+#endif
+
 void GraphicsContextGL::setDrawingBufferColorSpace(const DestinationColorSpace&)
 {
-}
-
-void GraphicsContextGL::markContextChanged()
-{
-    m_layerComposited = false;
-}
-
-bool GraphicsContextGL::layerComposited() const
-{
-    return m_layerComposited;
-}
-
-void GraphicsContextGL::setBuffersToAutoClear(GCGLbitfield buffers)
-{
-    if (!contextAttributes().preserveDrawingBuffer)
-        m_buffersToAutoClear = buffers;
-}
-
-GCGLbitfield GraphicsContextGL::getBuffersToAutoClear() const
-{
-    return m_buffersToAutoClear;
-}
-
-void GraphicsContextGL::markLayerComposited()
-{
-    m_layerComposited = true;
-    auto attrs = contextAttributes();
-    if (!attrs.preserveDrawingBuffer) {
-        m_buffersToAutoClear = GraphicsContextGL::COLOR_BUFFER_BIT;
-        if (attrs.depth)
-            m_buffersToAutoClear |= GraphicsContextGL::DEPTH_BUFFER_BIT;
-        if (attrs.stencil)
-            m_buffersToAutoClear |= GraphicsContextGL::STENCIL_BUFFER_BIT;
-    }
 }
 
 void GraphicsContextGL::paintToCanvas(NativeImage& image, const IntSize& canvasSize, GraphicsContext& context)
@@ -626,7 +606,7 @@ void GraphicsContextGL::paintToCanvas(NativeImage& image, const IntSize& canvasS
     context.scale(FloatSize(1, -1));
     context.translate(0, -imageSize.height());
     context.setImageInterpolationQuality(InterpolationQuality::DoNotInterpolate);
-    context.drawNativeImage(image, imageSize, canvasRect, FloatRect(FloatPoint(), imageSize), { CompositeOperator::Copy });
+    context.drawNativeImage(image, canvasRect, FloatRect { { }, imageSize }, { CompositeOperator::Copy });
 }
 
 void GraphicsContextGL::paintToCanvas(const GraphicsContextGLAttributes& sourceContextAttributes, Ref<PixelBuffer>&& pixelBuffer, const IntSize& canvasSize, GraphicsContext& context)
@@ -640,26 +620,20 @@ void GraphicsContextGL::paintToCanvas(const GraphicsContextGLAttributes& sourceC
 
 void GraphicsContextGL::forceContextLost()
 {
+    m_contextLost = true;
     if (m_client)
         m_client->forceContextLost();
-}
-
-void GraphicsContextGL::dispatchContextChangedNotification()
-{
-    if (m_client)
-        m_client->dispatchContextChangedNotification();
 }
 
 #if ENABLE(VIDEO)
 RefPtr<Image> GraphicsContextGL::videoFrameToImage(VideoFrame& frame)
 {
     IntSize size { static_cast<int>(frame.presentationSize().width()), static_cast<int>(frame.presentationSize().height()) };
-    auto imageBuffer = ImageBuffer::create(size, RenderingPurpose::Unspecified, 1, DestinationColorSpace::SRGB(), PixelFormat::BGRA8);
+    auto imageBuffer = ImageBuffer::create(size, RenderingPurpose::Unspecified, 1, DestinationColorSpace::SRGB(), ImageBufferPixelFormat::BGRA8);
     if (!imageBuffer)
         return { };
-
     imageBuffer->context().paintVideoFrame(frame, { { }, size }, true);
-    return imageBuffer->copyImage(DontCopyBackingStore);
+    return BitmapImage::create(ImageBuffer::sinkIntoNativeImage(WTFMove(imageBuffer)));
 }
 #endif
 

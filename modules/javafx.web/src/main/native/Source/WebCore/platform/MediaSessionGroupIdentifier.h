@@ -29,7 +29,7 @@
 
 namespace WebCore {
 
-enum MediaSessionGroupIdentifierType { };
-using MediaSessionGroupIdentifier = ObjectIdentifier<MediaSessionGroupIdentifierType>;
+enum class MediaSessionGroupIdentifierType { };
+using MediaSessionGroupIdentifier = LegacyNullableObjectIdentifier<MediaSessionGroupIdentifierType>;
 
 }

@@ -56,13 +56,16 @@ public:
 
     SVGAngleValue::Type unitType() const
     {
+        // Per spec https://svgwg.org/svg2-draft/types.html#__svg__SVGAngle__SVG_ANGLETYPE_UNKNOWN
+        if (m_value.unitType() > SVGAngleValue::Type::SVG_ANGLETYPE_GRAD)
+            return SVGAngleValue::Type::SVG_ANGLETYPE_UNKNOWN;
         return m_value.unitType();
     }
 
     ExceptionOr<void> setValueForBindings(float value)
     {
         if (isReadOnly())
-            return Exception { NoModificationAllowedError };
+            return Exception { ExceptionCode::NoModificationAllowedError };
 
         m_value.setValue(value);
         commitChange();
@@ -77,7 +80,7 @@ public:
     ExceptionOr<void> setValueInSpecifiedUnits(float valueInSpecifiedUnits)
     {
         if (isReadOnly())
-            return Exception { NoModificationAllowedError };
+            return Exception { ExceptionCode::NoModificationAllowedError };
 
         m_value.setValueInSpecifiedUnits(valueInSpecifiedUnits);
         commitChange();
@@ -92,7 +95,7 @@ public:
     ExceptionOr<void> setValueAsString(const String& value)
     {
         if (isReadOnly())
-            return Exception { NoModificationAllowedError };
+            return Exception { ExceptionCode::NoModificationAllowedError };
 
         auto result = m_value.setValueAsString(value);
         if (result.hasException())
@@ -110,7 +113,7 @@ public:
     ExceptionOr<void> newValueSpecifiedUnits(unsigned short unitType, float valueInSpecifiedUnits)
     {
         if (isReadOnly())
-            return Exception { NoModificationAllowedError };
+            return Exception { ExceptionCode::NoModificationAllowedError };
 
         auto result = m_value.newValueSpecifiedUnits(unitType, valueInSpecifiedUnits);
         if (result.hasException())
@@ -123,7 +126,7 @@ public:
     ExceptionOr<void> convertToSpecifiedUnits(unsigned short unitType)
     {
         if (isReadOnly())
-            return Exception { NoModificationAllowedError };
+            return Exception { ExceptionCode::NoModificationAllowedError };
 
         auto result = m_value.convertToSpecifiedUnits(unitType);
         if (result.hasException())

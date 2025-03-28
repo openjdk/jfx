@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,11 +25,16 @@
 
 package test.javafx.scene.control;
 
-import javafx.css.CssMetaData;
-import static test.com.sun.javafx.scene.control.infrastructure.ControlTestUtils.*;
-
-import test.com.sun.javafx.pgstub.StubToolkit;
-import com.sun.javafx.tk.Toolkit;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
+import static test.com.sun.javafx.scene.control.infrastructure.ControlTestUtils.assertStyleClassContains;
+import java.nio.charset.StandardCharsets;
+import java.util.Base64;
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.DoubleProperty;
 import javafx.beans.property.ObjectProperty;
@@ -38,34 +43,49 @@ import javafx.beans.property.SimpleDoubleProperty;
 import javafx.beans.property.SimpleObjectProperty;
 import javafx.beans.property.SimpleStringProperty;
 import javafx.beans.property.StringProperty;
+import javafx.css.CssMetaData;
 import javafx.css.StyleableProperty;
 import javafx.scene.Node;
 import javafx.scene.control.ContentDisplay;
 import javafx.scene.control.OverrunStyle;
 import javafx.scene.control.Tooltip;
 import javafx.scene.control.TooltipShim;
+import javafx.scene.input.MouseEvent;
 import javafx.scene.shape.Rectangle;
 import javafx.scene.text.Font;
 import javafx.scene.text.TextAlignment;
-import static org.junit.Assert.*;
-
-
-import org.junit.Before;
-import org.junit.Ignore;
-import org.junit.Test;
+import javafx.util.Duration;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Disabled;
+import org.junit.jupiter.api.Test;
+import com.sun.javafx.tk.Toolkit;
+import test.com.sun.javafx.pgstub.StubToolkit;
+import test.com.sun.javafx.scene.control.infrastructure.MouseEventGenerator;
+import test.com.sun.javafx.scene.control.infrastructure.StageLoader;
 
 public class TooltipTest {
     private TooltipShim toolTip;//Empty string
     private TooltipShim dummyToolTip;//Empty string
 
-    @Before public void setup() {
-        assertTrue(Toolkit.getToolkit() instanceof StubToolkit);  // Ensure StubToolkit is loaded
+    private StageLoader stageLoader;
+    private StubToolkit toolkit;
 
+    @BeforeEach
+    public void setup() {
         toolTip = new TooltipShim();
         dummyToolTip = new TooltipShim("dummy");
+
+        toolkit = (StubToolkit) Toolkit.getToolkit();
+        toolkit.setAnimationTime(0);
     }
 
-
+    @AfterEach
+    public void tearDown() {
+        if (stageLoader != null) {
+            stageLoader.dispose();
+        }
+    }
 
     /*********************************************************************
      * Tests for the constructors                                        *
@@ -140,67 +160,67 @@ public class TooltipTest {
     @Test public void checkTextPropertyBind() {
         StringProperty strPr = new SimpleStringProperty("value");
         toolTip.textProperty().bind(strPr);
-        assertTrue("Text cannot be bound", toolTip.textProperty().getValue().equals("value"));
+        assertTrue(toolTip.textProperty().getValue().equals("value"), "Text cannot be bound");
         strPr.setValue("newvalue");
-        assertTrue("Text cannot be bound", toolTip.textProperty().getValue().equals("newvalue"));
+        assertTrue(toolTip.textProperty().getValue().equals("newvalue"), "Text cannot be bound");
     }
 
     @Test public void checkTextAlignmentPropertyBind() {
         ObjectProperty objPr = new SimpleObjectProperty<>(TextAlignment.CENTER);
         toolTip.textAlignmentProperty().bind(objPr);
-        assertSame("TextAlignment cannot be bound", toolTip.textAlignmentProperty().getValue(), TextAlignment.CENTER);
+        assertSame(toolTip.textAlignmentProperty().getValue(), TextAlignment.CENTER, "TextAlignment cannot be bound");
         objPr.setValue(TextAlignment.JUSTIFY);
-        assertSame("TextAlignment cannot be bound", toolTip.textAlignmentProperty().getValue(), TextAlignment.JUSTIFY);
+        assertSame(toolTip.textAlignmentProperty().getValue(), TextAlignment.JUSTIFY, "TextAlignment cannot be bound");
     }
 
     @Test public void checkTextOverrunPropertyBind() {
         ObjectProperty objPr = new SimpleObjectProperty<>(OverrunStyle.CENTER_WORD_ELLIPSIS);
         toolTip.textOverrunProperty().bind(objPr);
-        assertSame("TextOverrun cannot be bound", toolTip.textOverrunProperty().getValue(), OverrunStyle.CENTER_WORD_ELLIPSIS);
+        assertSame(toolTip.textOverrunProperty().getValue(), OverrunStyle.CENTER_WORD_ELLIPSIS, "TextOverrun cannot be bound");
         objPr.setValue(OverrunStyle.LEADING_ELLIPSIS);
-        assertSame("TextOverrun cannot be bound", toolTip.textOverrunProperty().getValue(), OverrunStyle.LEADING_ELLIPSIS);
+        assertSame(toolTip.textOverrunProperty().getValue(), OverrunStyle.LEADING_ELLIPSIS, "TextOverrun cannot be bound");
     }
 
     @Test public void checkTextWrapPropertyBind() {
         ObjectProperty objPr = new SimpleObjectProperty<>(true);
         toolTip.wrapTextProperty().bind(objPr);
-        assertEquals("TextWrap cannot be bound", toolTip.wrapTextProperty().getValue(), true);
+        assertEquals(toolTip.wrapTextProperty().getValue(), true, "TextWrap cannot be bound");
         objPr.setValue(false);
-        assertEquals("TextWrap cannot be bound", toolTip.wrapTextProperty().getValue(), false);
+        assertEquals(toolTip.wrapTextProperty().getValue(), false, "TextWrap cannot be bound");
     }
 
     @Test public void checkFontPropertyBind() {
         ObjectProperty objPr = new SimpleObjectProperty<Font>(null);
         toolTip.fontProperty().bind(objPr);
-        assertNull("Font cannot be bound", toolTip.fontProperty().getValue());
+        assertNull(toolTip.fontProperty().getValue(), "Font cannot be bound");
         objPr.setValue(Font.getDefault());
-        assertSame("Font cannot be bound", toolTip.fontProperty().getValue(), Font.getDefault());
+        assertSame(toolTip.fontProperty().getValue(), Font.getDefault(), "Font cannot be bound");
     }
 
     @Test public void checkGraphicPropertyBind() {
         ObjectProperty objPr = new SimpleObjectProperty<Node>(null);
         Rectangle rect = new Rectangle(10, 20);
         toolTip.graphicProperty().bind(objPr);
-        assertNull("Graphic cannot be bound", toolTip.graphicProperty().getValue());
+        assertNull(toolTip.graphicProperty().getValue(), "Graphic cannot be bound");
         objPr.setValue(rect);
-        assertSame("Graphic cannot be bound", toolTip.graphicProperty().getValue(), rect);
+        assertSame(toolTip.graphicProperty().getValue(), rect, "Graphic cannot be bound");
     }
 
     @Test public void checkContentDisplayPropertyBind() {
         ObjectProperty objPr = new SimpleObjectProperty<ContentDisplay>(null);
         ContentDisplay cont = ContentDisplay.GRAPHIC_ONLY;
         toolTip.contentDisplayProperty().bind(objPr);
-        assertNull("ContentDisplay cannot be bound", toolTip.contentDisplayProperty().getValue());
+        assertNull(toolTip.contentDisplayProperty().getValue(), "ContentDisplay cannot be bound");
         objPr.setValue(cont);
-        assertSame("ContentDisplay cannot be bound", toolTip.contentDisplayProperty().getValue(), cont);
+        assertSame(toolTip.contentDisplayProperty().getValue(), cont, "ContentDisplay cannot be bound");
     }
 
     @Test public void checkGraphicTextGapPropertyBind() {
         DoubleProperty objPr = new SimpleDoubleProperty(2.0);
         toolTip.graphicTextGapProperty().bind(objPr);
-        assertEquals("GraphicTextGap cannot be bound", toolTip.graphicTextGapProperty().getValue(), 2.0, 0.0);
+        assertEquals(toolTip.graphicTextGapProperty().getValue(), 2.0, 0.0, "GraphicTextGap cannot be bound");
         objPr.setValue(5.0);
-        assertEquals("GraphicTextGap cannot be bound", toolTip.graphicTextGapProperty().getValue(), 5.0, 0.0);
+        assertEquals(toolTip.graphicTextGapProperty().getValue(), 5.0, 0.0, "GraphicTextGap cannot be bound");
     }
 
     @Test public void textPropertyHasBeanReference() {
@@ -318,7 +338,7 @@ public class TooltipTest {
 
     @Test public void whenWrapTextIsSpecifiedViaCSSAndIsNotBound_CssMetaData_isSettable_ReturnsTrue() {
         CssMetaData styleable = ((StyleableProperty)toolTip.wrapTextProperty()).getCssMetaData();
-          assertTrue(styleable.isSettable(toolTip.get_bridge()));
+        assertTrue(styleable.isSettable(toolTip.get_bridge()));
     }
 
     @Test public void canSpecifyWrapTextViaCSS() {
@@ -328,15 +348,15 @@ public class TooltipTest {
 
     @Test public void whenFontIsBound_CssMetaData_isSettable_ReturnsFalse() {
         CssMetaData styleable = ((StyleableProperty)toolTip.fontProperty()).getCssMetaData();
-          assertTrue(styleable.isSettable(toolTip.get_bridge()));
+        assertTrue(styleable.isSettable(toolTip.get_bridge()));
         ObjectProperty<Font> other = new SimpleObjectProperty<>();
         toolTip.fontProperty().bind(other);
-          assertFalse(styleable.isSettable(toolTip.get_bridge()));
+        assertFalse(styleable.isSettable(toolTip.get_bridge()));
     }
 
     @Test public void whenFontIsSpecifiedViaCSSAndIsNotBound_CssMetaData_isSettable_ReturnsTrue() {
         CssMetaData styleable = ((StyleableProperty)toolTip.fontProperty()).getCssMetaData();
-          assertTrue(styleable.isSettable(toolTip.get_bridge()));
+        assertTrue(styleable.isSettable(toolTip.get_bridge()));
     }
 
     @Test public void canSpecifyFontViaCSS() {
@@ -349,15 +369,15 @@ public class TooltipTest {
         assertTrue(styleable.isSettable(toolTip.get_bridge()));
         ObjectProperty<Node> other = new SimpleObjectProperty<>();
         toolTip.graphicProperty().bind(other);
-          assertFalse(styleable.isSettable(toolTip.get_bridge()));
+        assertFalse(styleable.isSettable(toolTip.get_bridge()));
     }
 
     @Test public void whenGraphicIsSpecifiedViaCSSAndIsNotBound_CssMetaData_isSettable_ReturnsTrue() {
         CssMetaData styleable = ((StyleableProperty)toolTip.graphicProperty()).getCssMetaData();
-          assertTrue(styleable.isSettable(toolTip.get_bridge()));
+        assertTrue(styleable.isSettable(toolTip.get_bridge()));
     }
 
-    @Ignore("CSS sets graphicProperty indirectly")
+    @Disabled("CSS sets graphicProperty indirectly")
     @Test public void canSpecifyGraphicViaCSS() {
         ((StyleableProperty)toolTip.graphicProperty())
                 .applyStyle(null , "../../../../build/classes/com/sun/javafx/scene/control/skin/caspian/menu-shadow.png");
@@ -366,14 +386,14 @@ public class TooltipTest {
 
     @Test public void whenContentDisplayIsBound_CssMetaData_isSettable_ReturnsFalse() {
         CssMetaData styleable = ((StyleableProperty)toolTip.contentDisplayProperty()).getCssMetaData();
-          assertTrue(styleable.isSettable(toolTip.get_bridge()));
+        assertTrue(styleable.isSettable(toolTip.get_bridge()));
         ObjectProperty<ContentDisplay> other = new SimpleObjectProperty<>();
         toolTip.contentDisplayProperty().bind(other);
-          assertFalse(styleable.isSettable(toolTip.get_bridge()));
+        assertFalse(styleable.isSettable(toolTip.get_bridge()));
     }
-     @Test public void whenContentDisplayIsSpecifiedViaCSSAndIsNotBound_CssMetaData_isSettable_ReturnsTrue() {
+    @Test public void whenContentDisplayIsSpecifiedViaCSSAndIsNotBound_CssMetaData_isSettable_ReturnsTrue() {
         CssMetaData styleable = ((StyleableProperty)toolTip.contentDisplayProperty()).getCssMetaData();
-          assertTrue(styleable.isSettable(toolTip.get_bridge()));
+        assertTrue(styleable.isSettable(toolTip.get_bridge()));
     }
 
     @Test public void canSpecifyContentDisplayViaCSS() {
@@ -383,15 +403,15 @@ public class TooltipTest {
 
     @Test public void whenGraphicTextGapIsBound_CssMetaData_isSettable_ReturnsFalse() {
         CssMetaData styleable = ((StyleableProperty)toolTip.graphicTextGapProperty()).getCssMetaData();
-          assertTrue(styleable.isSettable(toolTip.get_bridge()));
+        assertTrue(styleable.isSettable(toolTip.get_bridge()));
         DoubleProperty other = new SimpleDoubleProperty();
         toolTip.graphicTextGapProperty().bind(other);
-          assertFalse(styleable.isSettable(toolTip.get_bridge()));
+        assertFalse(styleable.isSettable(toolTip.get_bridge()));
     }
 
     @Test public void whenGraphicTextGapIsSpecifiedViaCSSAndIsNotBound_CssMetaData_isSettable_ReturnsTrue() {
         CssMetaData styleable = ((StyleableProperty)toolTip.graphicTextGapProperty()).getCssMetaData();
-          assertTrue(styleable.isSettable(toolTip.get_bridge()));
+        assertTrue(styleable.isSettable(toolTip.get_bridge()));
     }
 
     @Test public void canSpecifyGraphicTextGapViaCSS() {
@@ -531,5 +551,161 @@ public class TooltipTest {
         }
     }
 
+    /**
+     * A {@link Tooltip} once was showing and quickly hiding itself in order to process the CSS.
+     * This was changed in <a href="https://bugs.openjdk.org/browse/JDK-8296387">JDK-8296387</a>
+     * and this test ensure that this is the case.
+     */
+    @Test
+    public void testTooltipShouldNotBeShownBeforeDelayIsUp() {
+        toolTip.showingProperty().addListener(inv -> fail());
+        Rectangle rect = new Rectangle(0, 0, 100, 100);
+
+        stageLoader = new StageLoader(rect);
+
+        Tooltip.install(rect, toolTip);
+
+        MouseEvent mouseEvent = MouseEventGenerator.generateMouseEvent(MouseEvent.MOUSE_MOVED, 1, 1);
+        rect.fireEvent(mouseEvent);
+    }
+
+    @Test
+    public void testTooltipShouldNotBeShownBeforeDefaultDelay() {
+        Rectangle rect = new Rectangle(0, 0, 100, 100);
+
+        stageLoader = new StageLoader(rect);
+
+        Tooltip.install(rect, toolTip);
+
+        MouseEvent mouseEvent = MouseEventGenerator.generateMouseEvent(MouseEvent.MOUSE_MOVED, 1, 1);
+        rect.fireEvent(mouseEvent);
+
+        assertFalse(toolTip.isShowing());
+
+        toolkit.setAnimationTime(999);
+
+        assertFalse(toolTip.isShowing());
+    }
+
+    @Test
+    public void testTooltipShouldBeShownAfterDefaultDelay() {
+        Rectangle rect = new Rectangle(0, 0, 100, 100);
+
+        stageLoader = new StageLoader(rect);
+
+        Tooltip.install(rect, toolTip);
+
+        assertFalse(toolTip.isShowing());
+
+        assertTooltipShownAfter(rect, 1000);
+        assertTooltipHiddenAfter(rect, 200);
+    }
+
+    @Test
+    public void testTooltipShouldBeHiddenAfterHideDelay() {
+        int delay = 50;
+        toolTip.setHideDelay(Duration.millis(delay));
+
+        Rectangle rect = new Rectangle(0, 0, 100, 100);
+
+        stageLoader = new StageLoader(rect);
+
+        Tooltip.install(rect, toolTip);
+
+        assertFalse(toolTip.isShowing());
+
+        assertTooltipShownAfter(rect, 1000);
+        assertTooltipHiddenAfter(rect, delay);
+    }
+
+    @Test
+    public void testTooltipShouldBeShownAfterSetShowDelay() {
+        int delay = 200;
+        toolTip.setShowDelay(Duration.millis(delay));
+
+        Rectangle rect = new Rectangle(0, 0, 100, 100);
+
+        stageLoader = new StageLoader(rect);
+
+        Tooltip.install(rect, toolTip);
+
+        assertFalse(toolTip.isShowing());
+
+        assertTooltipShownAfter(rect, delay);
+        assertTooltipHiddenAfter(rect, 200);
+    }
+
+    @Test
+    public void testTooltipShouldBeShownAfterSetStyleShowDelay() {
+        toolTip.setStyle("-fx-show-delay: 200ms;");
+
+        Rectangle rect = new Rectangle(0, 0, 100, 100);
+
+        stageLoader = new StageLoader(rect);
+
+        Tooltip.install(rect, toolTip);
+
+        assertFalse(toolTip.isShowing());
+
+        assertTooltipShownAfter(rect, 200);
+        assertTooltipHiddenAfter(rect, 200);
+    }
+
+    @Test
+    public void testTooltipShouldBeShownAfterSetCssShowDelay() {
+        Rectangle rect = new Rectangle(0, 0, 100, 100);
+
+        stageLoader = new StageLoader(rect);
+        stageLoader.getStage().getScene().getStylesheets().setAll(toBase64(".tooltip { -fx-show-delay: 200ms; }"));
+
+        Tooltip.install(rect, toolTip);
+
+        assertFalse(toolTip.isShowing());
+
+        assertTooltipShownAfter(rect, 200);
+        assertTooltipHiddenAfter(rect, 200);
+    }
+
+    @Test
+    public void testTooltipChangeShowDelayCss() {
+        Rectangle rect = new Rectangle(0, 0, 100, 100);
+
+        stageLoader = new StageLoader(rect);
+        stageLoader.getStage().getScene().getStylesheets().setAll(toBase64(".tooltip { -fx-show-delay: 200ms; }"));
+
+        Tooltip.install(rect, toolTip);
+
+        assertFalse(toolTip.isShowing());
+
+        assertTooltipShownAfter(rect, 200);
+        assertTooltipHiddenAfter(rect, 200);
+
+        stageLoader.getStage().getScene().getStylesheets().setAll(toBase64(".tooltip { -fx-show-delay: 450ms; }"));
+
+        assertTooltipShownAfter(rect, 450);
+        assertTooltipHiddenAfter(rect, 200);
+    }
+
+    private void assertTooltipShownAfter(Rectangle rect, int millis) {
+        MouseEvent mouseEvent = MouseEventGenerator.generateMouseEvent(MouseEvent.MOUSE_MOVED, 1, 1);
+        rect.fireEvent(mouseEvent);
+
+        toolkit.setAnimationTime(toolkit.getCurrentTime() + millis);
+
+        assertTrue(toolTip.isShowing());
+    }
+
+    private void assertTooltipHiddenAfter(Rectangle rect, int millis) {
+        MouseEvent mouseEvent = MouseEventGenerator.generateMouseEvent(MouseEvent.MOUSE_EXITED, -1, -1);
+        rect.fireEvent(mouseEvent);
+
+        toolkit.setAnimationTime(toolkit.getCurrentTime() + millis);
+
+        assertFalse(toolTip.isShowing());
+    }
+
+    private String toBase64(String css) {
+        return "data:base64," + Base64.getUrlEncoder().encodeToString(css.getBytes(StandardCharsets.UTF_8));
+    }
 
 }

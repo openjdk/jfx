@@ -47,8 +47,9 @@ inline bool RenderElement::canContainAbsolutelyPositionedObjects() const
     return isRenderView()
         || style().position() != PositionType::Static
         || (canEstablishContainingBlockWithTransform() && hasTransformRelatedProperty())
-        || (isRenderBlock() && style().willChange() && style().willChange()->createsContainingBlockForAbsolutelyPositioned()) // FIXME: will-change should create containing blocks on inline boxes (bug 225035)
-        || isSVGForeignObjectOrLegacySVGForeignObject()
+        || (hasBackdropFilter() && !isDocumentElementRenderer())
+        || (isRenderBlock() && style().willChange() && style().willChange()->createsContainingBlockForAbsolutelyPositioned(isDocumentElementRenderer()))
+        || isRenderOrLegacyRenderSVGForeignObject()
         || shouldApplyLayoutOrPaintContainment();
 }
 
@@ -56,8 +57,9 @@ inline bool RenderElement::canContainFixedPositionObjects() const
 {
     return isRenderView()
         || (canEstablishContainingBlockWithTransform() && hasTransformRelatedProperty())
-        || (isRenderBlock() && style().willChange() && style().willChange()->createsContainingBlockForOutOfFlowPositioned()) // FIXME: will-change should create containing blocks on inline boxes (bug 225035)
-        || isSVGForeignObjectOrLegacySVGForeignObject()
+        || (hasBackdropFilter() && !isDocumentElementRenderer())
+        || (isRenderBlock() && style().willChange() && style().willChange()->createsContainingBlockForOutOfFlowPositioned(isDocumentElementRenderer()))
+        || isRenderOrLegacyRenderSVGForeignObject()
         || shouldApplyLayoutOrPaintContainment();
 }
 
@@ -73,7 +75,7 @@ inline bool RenderElement::shouldApplyAnyContainment() const
 
 inline bool RenderElement::shouldApplyInlineSizeContainment() const
 {
-    return isSkippedContentRoot() || shouldApplySizeOrStyleContainment(style().containsInlineSize());
+    return WebCore::isSkippedContentRoot(style(), element()) || shouldApplySizeOrStyleContainment(style().containsInlineSize());
 }
 
 inline bool RenderElement::shouldApplyLayoutContainment() const
@@ -83,32 +85,33 @@ inline bool RenderElement::shouldApplyLayoutContainment() const
 
 inline bool RenderElement::shouldApplyLayoutOrPaintContainment(bool containsAccordingToStyle) const
 {
-    return containsAccordingToStyle && (!isInline() || isAtomicInlineLevelBox()) && !isRubyText() && (!isTablePart() || isRenderBlockFlow());
+    return containsAccordingToStyle && (!isInline() || isAtomicInlineLevelBox()) && style().display() != DisplayType::RubyAnnotation && (!isTablePart() || isRenderBlockFlow());
 }
 
 inline bool RenderElement::shouldApplyLayoutOrPaintContainment() const
 {
-    return shouldApplyLayoutOrPaintContainment(style().containsLayoutOrPaint() || style().contentVisibility() != ContentVisibility::Visible);
+    return shouldApplyLayoutOrPaintContainment(style().containsLayoutOrPaint()) || shouldApplySizeOrStyleContainment(style().contentVisibility() != ContentVisibility::Visible);
 }
 
 inline bool RenderElement::shouldApplyPaintContainment() const
 {
-    return shouldApplyLayoutOrPaintContainment(style().containsPaint() || style().contentVisibility() != ContentVisibility::Visible);
+    return shouldApplyLayoutOrPaintContainment(style().containsPaint()) || shouldApplySizeOrStyleContainment(style().contentVisibility() != ContentVisibility::Visible);
 }
 
 inline bool RenderElement::shouldApplySizeContainment() const
 {
-    return isSkippedContentRoot() || shouldApplySizeOrStyleContainment(style().containsSize());
+    return WebCore::isSkippedContentRoot(style(), element()) || shouldApplySizeOrStyleContainment(style().containsSize());
 }
 
 inline bool RenderElement::shouldApplySizeOrInlineSizeContainment() const
 {
-    return isSkippedContentRoot() || shouldApplySizeOrStyleContainment(style().containsSizeOrInlineSize());
+    return WebCore::isSkippedContentRoot(style(), element()) || shouldApplySizeOrStyleContainment(style().containsSizeOrInlineSize());
 }
 
+// FIXME: try to avoid duplication with isSkippedContentRoot.
 inline bool RenderElement::shouldApplySizeOrStyleContainment(bool containsAccordingToStyle) const
 {
-    return containsAccordingToStyle && (!isInline() || isAtomicInlineLevelBox()) && !isRubyText() && (!isTablePart() || isTableCaption()) && !isTable();
+    return containsAccordingToStyle && (!isInline() || isAtomicInlineLevelBox()) && style().display() != DisplayType::RubyAnnotation && (!isTablePart() || isRenderTableCaption()) && !isRenderTable();
 }
 
 inline bool RenderElement::shouldApplyStyleContainment() const
@@ -118,9 +121,10 @@ inline bool RenderElement::shouldApplyStyleContainment() const
 
 inline bool RenderElement::visibleToHitTesting(const std::optional<HitTestRequest>& request) const
 {
-    return style().visibility() == Visibility::Visible
+    auto visibility = !request || request->userTriggered() ? style().usedVisibility() : style().visibility();
+    return visibility == Visibility::Visible
         && !isSkippedContent()
-        && ((request && request->ignoreCSSPointerEventsProperty()) || style().effectivePointerEvents() != PointerEvents::None);
+        && ((request && request->ignoreCSSPointerEventsProperty()) || usedPointerEvents() != PointerEvents::None);
 }
 
 inline int adjustForAbsoluteZoom(int value, const RenderElement& renderer)

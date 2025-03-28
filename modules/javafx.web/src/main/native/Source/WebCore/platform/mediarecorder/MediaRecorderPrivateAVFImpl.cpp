@@ -44,7 +44,7 @@
 
 namespace WebCore {
 
-RefPtr<MediaRecorderPrivateAVFImpl> MediaRecorderPrivateAVFImpl::create(MediaStreamPrivate& stream, const MediaRecorderPrivateOptions& options)
+std::unique_ptr<MediaRecorderPrivateAVFImpl> MediaRecorderPrivateAVFImpl::create(MediaStreamPrivate& stream, const MediaRecorderPrivateOptions& options)
 {
     // FIXME: we will need to implement support for multiple audio/video tracks
     // Currently we only choose the first track as the recorded track.
@@ -56,7 +56,7 @@ RefPtr<MediaRecorderPrivateAVFImpl> MediaRecorderPrivateAVFImpl::create(MediaStr
     if (!writer)
         return nullptr;
 
-    auto recorder = adoptRef(*new MediaRecorderPrivateAVFImpl(writer.releaseNonNull()));
+    auto recorder = std::unique_ptr<MediaRecorderPrivateAVFImpl>(new MediaRecorderPrivateAVFImpl(writer.releaseNonNull()));
     if (selectedTracks.audioTrack) {
         recorder->setAudioSource(&selectedTracks.audioTrack->source());
         recorder->checkTrackState(*selectedTracks.audioTrack);
@@ -138,7 +138,7 @@ void MediaRecorderPrivateAVFImpl::resumeRecording(CompletionHandler<void()>&& co
 
 void MediaRecorderPrivateAVFImpl::fetchData(FetchDataCallback&& completionHandler)
 {
-    m_writer->fetchData([completionHandler = WTFMove(completionHandler), mimeType = mimeType()](auto&& buffer, auto timeCode) mutable {
+    m_writer->fetchData([completionHandler = WTFMove(completionHandler), mimeType = mimeType()](RefPtr<FragmentedSharedBuffer>&& buffer, auto timeCode) mutable {
         completionHandler(WTFMove(buffer), mimeType, timeCode);
     });
 }

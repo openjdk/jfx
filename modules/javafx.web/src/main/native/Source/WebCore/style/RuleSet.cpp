@@ -33,7 +33,9 @@
 #include "CSSKeyframesRule.h"
 #include "CSSSelector.h"
 #include "CSSSelectorList.h"
+#include "CSSViewTransitionRule.h"
 #include "CommonAtomStrings.h"
+#include "DocumentInlines.h"
 #include "HTMLNames.h"
 #include "MediaQueryEvaluator.h"
 #include "RuleSetBuilder.h"
@@ -46,6 +48,7 @@
 #include "StyleRule.h"
 #include "StyleRuleImport.h"
 #include "StyleSheetContents.h"
+#include "UserAgentParts.h"
 
 namespace WebCore {
 namespace Style {
@@ -73,14 +76,44 @@ static unsigned rulesCountForName(const RuleSet::AtomRuleMap& map, const AtomStr
     return 0;
 }
 
+// FIXME: Maybe we can unify both following functions
+
+static bool hasHostPseudoClassSubjectInSelectorList(const CSSSelectorList* selectorList)
+{
+    if (!selectorList)
+        return false;
+
+    for (auto& selector : *selectorList) {
+        if (selector.isHostPseudoClass())
+            return true;
+
+        if (hasHostPseudoClassSubjectInSelectorList(selector.selectorList()))
+            return true;
+    }
+
+    return false;
+}
+
 static bool isHostSelectorMatchingInShadowTree(const CSSSelector& startSelector)
 {
+    auto isHostSelectorMatchingInShadowTreeInSelectorList = [](const CSSSelectorList* selectorList) {
+        if (!selectorList || selectorList->isEmpty())
+            return false;
+        for (auto& selector : *selectorList) {
+            if (isHostSelectorMatchingInShadowTree(selector))
+                return true;
+        }
+        return false;
+    };
+
     bool hasOnlyOneCompound = true;
     bool hasHostInLastCompound = false;
     for (auto* selector = &startSelector; selector; selector = selector->tagHistory()) {
-        if (selector->match() == CSSSelector::Match::PseudoClass && selector->pseudoClassType() == CSSSelector::PseudoClassType::Host)
+        if (selector->match() == CSSSelector::Match::PseudoClass && selector->pseudoClass() == CSSSelector::PseudoClass::Host)
             hasHostInLastCompound = true;
-        if (selector->tagHistory() && selector->relation() != CSSSelector::RelationType::Subselector) {
+        if (isHostSelectorMatchingInShadowTreeInSelectorList(selector->selectorList()))
+            return true;
+        if (selector->tagHistory() && selector->relation() != CSSSelector::Relation::Subselector) {
             hasOnlyOneCompound = false;
             hasHostInLastCompound = false;
         }
@@ -100,31 +133,30 @@ static bool shouldHaveBucketForAttributeName(const CSSSelector& attributeSelecto
 
 void RuleSet::addRule(const StyleRule& rule, unsigned selectorIndex, unsigned selectorListIndex)
 {
-    RuleData ruleData(rule, selectorIndex, selectorListIndex, m_ruleCount);
-    addRule(WTFMove(ruleData), 0, 0);
+    RuleData ruleData(rule, selectorIndex, selectorListIndex, m_ruleCount, IsStartingStyle::No);
+    addRule(WTFMove(ruleData), 0, 0, 0);
 }
 
-void RuleSet::addRule(RuleData&& ruleData, CascadeLayerIdentifier cascadeLayerIdentifier, ContainerQueryIdentifier containerQueryIdentifier)
+void RuleSet::addRule(RuleData&& ruleData, CascadeLayerIdentifier cascadeLayerIdentifier, ContainerQueryIdentifier containerQueryIdentifier, ScopeRuleIdentifier scopeRuleIdentifier)
 {
     ASSERT(ruleData.position() == m_ruleCount);
 
     ++m_ruleCount;
 
-    if (cascadeLayerIdentifier) {
-        auto oldSize = m_cascadeLayerIdentifierForRulePosition.size();
-        m_cascadeLayerIdentifierForRulePosition.grow(m_ruleCount);
-        std::fill(m_cascadeLayerIdentifierForRulePosition.begin() + oldSize, m_cascadeLayerIdentifierForRulePosition.end(), 0);
-        m_cascadeLayerIdentifierForRulePosition.last() = cascadeLayerIdentifier;
+    auto storeIdentifier = [&](auto identifier, auto& container) {
+        if (identifier) {
+            auto oldSize = container.size();
+            container.grow(m_ruleCount);
+            std::fill(container.begin() + oldSize, container.end(), 0);
+            container.last() = identifier;
     }
+    };
+    storeIdentifier(cascadeLayerIdentifier, m_cascadeLayerIdentifierForRulePosition);
+    storeIdentifier(containerQueryIdentifier, m_containerQueryIdentifierForRulePosition);
+    storeIdentifier(scopeRuleIdentifier, m_scopeRuleIdentifierForRulePosition);
 
-    if (containerQueryIdentifier) {
-        auto oldSize = m_containerQueryIdentifierForRulePosition.size();
-        m_containerQueryIdentifierForRulePosition.grow(m_ruleCount);
-        std::fill(m_containerQueryIdentifierForRulePosition.begin() + oldSize, m_containerQueryIdentifierForRulePosition.end(), 0);
-        m_containerQueryIdentifierForRulePosition.last() = containerQueryIdentifier;
-    }
-
-    m_features.collectFeatures(ruleData);
+    const auto& scopeRules = scopeRulesFor(ruleData);
+    m_features.collectFeatures(ruleData, scopeRules);
 
     unsigned classBucketSize = 0;
     const CSSSelector* idSelector = nullptr;
@@ -133,10 +165,12 @@ void RuleSet::addRule(RuleData&& ruleData, CascadeLayerIdentifier cascadeLayerId
     const CSSSelector* attributeSelector = nullptr;
     const CSSSelector* linkSelector = nullptr;
     const CSSSelector* focusSelector = nullptr;
+    const CSSSelector* rootElementSelector = nullptr;
     const CSSSelector* hostPseudoClassSelector = nullptr;
     const CSSSelector* customPseudoElementSelector = nullptr;
     const CSSSelector* slottedPseudoElementSelector = nullptr;
     const CSSSelector* partPseudoElementSelector = nullptr;
+    const CSSSelector* namedPseudoElementSelector = nullptr;
 #if ENABLE(VIDEO)
     const CSSSelector* cuePseudoElementSelector = nullptr;
 #endif
@@ -175,51 +209,66 @@ void RuleSet::addRule(RuleData&& ruleData, CascadeLayerIdentifier cascadeLayerId
                 tagSelector = selector;
             break;
         case CSSSelector::Match::PseudoElement:
-            switch (selector->pseudoElementType()) {
-            case CSSSelector::PseudoElementWebKitCustom:
-            case CSSSelector::PseudoElementWebKitCustomLegacyPrefixed:
+            switch (selector->pseudoElement()) {
+            case CSSSelector::PseudoElement::UserAgentPart:
+            case CSSSelector::PseudoElement::UserAgentPartLegacyAlias:
                 customPseudoElementSelector = selector;
                 break;
-            case CSSSelector::PseudoElementSlotted:
+            case CSSSelector::PseudoElement::Slotted:
                 slottedPseudoElementSelector = selector;
                 break;
-            case CSSSelector::PseudoElementPart:
+            case CSSSelector::PseudoElement::Part:
                 partPseudoElementSelector = selector;
                 break;
 #if ENABLE(VIDEO)
-            case CSSSelector::PseudoElementCue:
+            case CSSSelector::PseudoElement::Cue:
                 cuePseudoElementSelector = selector;
                 break;
 #endif
+            case CSSSelector::PseudoElement::ViewTransitionGroup:
+            case CSSSelector::PseudoElement::ViewTransitionImagePair:
+            case CSSSelector::PseudoElement::ViewTransitionOld:
+            case CSSSelector::PseudoElement::ViewTransitionNew:
+                if (selector->argumentList()->first().identifier != starAtom())
+                    namedPseudoElementSelector = selector;
+                break;
             default:
                 break;
             }
             break;
         case CSSSelector::Match::PseudoClass:
-            switch (selector->pseudoClassType()) {
-            case CSSSelector::PseudoClassType::Link:
-            case CSSSelector::PseudoClassType::Visited:
-            case CSSSelector::PseudoClassType::AnyLink:
-            case CSSSelector::PseudoClassType::AnyLinkDeprecated:
+            switch (selector->pseudoClass()) {
+            case CSSSelector::PseudoClass::Link:
+            case CSSSelector::PseudoClass::Visited:
+            case CSSSelector::PseudoClass::AnyLink:
                 linkSelector = selector;
                 break;
-            case CSSSelector::PseudoClassType::Focus:
-            case CSSSelector::PseudoClassType::FocusVisible:
+            case CSSSelector::PseudoClass::Focus:
+            case CSSSelector::PseudoClass::FocusVisible:
                 focusSelector = selector;
                 break;
-            case CSSSelector::PseudoClassType::Host:
+            case CSSSelector::PseudoClass::Host:
                 hostPseudoClassSelector = selector;
                 break;
+            case CSSSelector::PseudoClass::Root:
+                rootElementSelector = selector;
+                break;
             default:
+                if (hasHostPseudoClassSubjectInSelectorList(selector->selectorList()))
+                    m_hasHostPseudoClassRulesInUniversalBucket = true;
                 break;
             }
             break;
         case CSSSelector::Match::Unknown:
+        case CSSSelector::Match::ForgivingUnknown:
+        case CSSSelector::Match::ForgivingUnknownNestContaining:
+        case CSSSelector::Match::HasScope:
         case CSSSelector::Match::NestingParent:
         case CSSSelector::Match::PagePseudoClass:
             break;
         }
-        if (selector->relation() != CSSSelector::RelationType::Subselector)
+        // We only process the subject (rightmost compound selector).
+        if (selector->relation() != CSSSelector::Relation::Subselector)
             break;
         selector = selector->tagHistory();
     } while (selector);
@@ -253,13 +302,36 @@ void RuleSet::addRule(RuleData&& ruleData, CascadeLayerIdentifier cascadeLayerId
         ruleData.disableSelectorFiltering();
 
         auto* nextSelector = customPseudoElementSelector->tagHistory();
-        if (nextSelector && nextSelector->match() == CSSSelector::Match::PseudoElement && nextSelector->pseudoElementType() == CSSSelector::PseudoElementPart) {
+        if (nextSelector && nextSelector->match() == CSSSelector::Match::PseudoElement && nextSelector->pseudoElement() == CSSSelector::PseudoElement::Part) {
             // Handle selectors like ::part(foo)::placeholder with the part codepath.
             m_partPseudoElementRules.append(ruleData);
             return;
         }
 
-        addToRuleSet(customPseudoElementSelector->value(), m_shadowPseudoElementRules, ruleData);
+        addToRuleSet(customPseudoElementSelector->value(), m_userAgentPartRules, ruleData);
+
+#if ENABLE(VIDEO)
+        // <https://w3c.github.io/webvtt/#the-cue-pseudo-element>
+        // * 8.2.1. The ::cue pseudo-element:
+        //     As a special exception, the properties corresponding to the background shorthand,
+        //     when they would have been applied to the list of WebVTT Node Objects, must instead
+        //     be applied to the WebVTT cue background box.
+        // To implement this exception, clone rules whose selector matches the `::cue` (a.k.a,
+        // `user-agent-part="cue"`), and replace the selector with one that matches the cue background
+        // box (a.k.a. `user-agent-part="internal-cue-background"`).
+        if (customPseudoElementSelector->value() == UserAgentParts::cue()
+            && customPseudoElementSelector->argument() == nullAtom()) {
+            std::unique_ptr cueBackgroundSelector = makeUnique<MutableCSSSelector>(*customPseudoElementSelector);
+            cueBackgroundSelector->setMatch(CSSSelector::Match::PseudoElement);
+            cueBackgroundSelector->setPseudoElement(CSSSelector::PseudoElement::UserAgentPart);
+            cueBackgroundSelector->setValue(UserAgentParts::internalCueBackground());
+
+            Ref cueBackgroundStyleRule = StyleRule::create(ruleData.styleRule().properties().immutableCopyIfNeeded(), ruleData.styleRule().hasDocumentSecurityOrigin(), CSSSelectorList { MutableCSSSelectorList::from(WTFMove(cueBackgroundSelector)) });
+
+            // Warning: Recursion!
+            addRule(WTFMove(cueBackgroundStyleRule), 0, 0);
+        }
+#endif
         return;
     }
 
@@ -294,6 +366,16 @@ void RuleSet::addRule(RuleData&& ruleData, CascadeLayerIdentifier cascadeLayerId
         return;
     }
 
+    if (namedPseudoElementSelector) {
+        addToRuleSet(namedPseudoElementSelector->argumentList()->first().identifier, m_namedPseudoElementRules, ruleData);
+        return;
+    }
+
+    if (rootElementSelector) {
+        m_rootElementRules.append(ruleData);
+        return;
+    }
+
     if (tagSelector) {
         addToRuleSet(tagSelector->tagQName().localName(), m_tagLocalNameRules, ruleData);
         addToRuleSet(tagSelector->tagLowercaseLocalName(), m_tagLowercaseLocalNameRules, ruleData);
@@ -307,6 +389,16 @@ void RuleSet::addRule(RuleData&& ruleData, CascadeLayerIdentifier cascadeLayerId
 void RuleSet::addPageRule(StyleRulePage& rule)
 {
     m_pageRules.append(&rule);
+}
+
+void RuleSet::setViewTransitionRule(StyleRuleViewTransition& rule)
+{
+    m_viewTransitionRule = &rule;
+}
+
+RefPtr<StyleRuleViewTransition> RuleSet::viewTransitionRule() const
+{
+    return m_viewTransitionRule;
 }
 
 template<typename Function>
@@ -328,7 +420,8 @@ void RuleSet::traverseRuleDatas(Function&& function)
     traverseMap(m_attributeLowercaseLocalNameRules);
     traverseMap(m_tagLocalNameRules);
     traverseMap(m_tagLowercaseLocalNameRules);
-    traverseMap(m_shadowPseudoElementRules);
+    traverseMap(m_userAgentPartRules);
+    traverseMap(m_namedPseudoElementRules);
     traverseVector(m_linkPseudoClassRules);
 #if ENABLE(VIDEO)
     traverseVector(m_cuePseudoRules);
@@ -337,6 +430,7 @@ void RuleSet::traverseRuleDatas(Function&& function)
     traverseVector(m_slottedPseudoElementRules);
     traverseVector(m_partPseudoElementRules);
     traverseVector(m_focusPseudoClassRules);
+    traverseVector(m_rootElementRules);
     traverseVector(m_universalRules);
 }
 
@@ -399,10 +493,8 @@ RuleSet::CollectedMediaQueryChanges RuleSet::evaluateDynamicMediaQueryRules(cons
         return collectedChanges;
 
     traverseRuleDatas([&](RuleData& ruleData) {
-        auto it = affectedRulePositionsAndResults.find(ruleData.position());
-        if (it == affectedRulePositionsAndResults.end())
-            return;
-        ruleData.setEnabled(it->value);
+        if (auto result = affectedRulePositionsAndResults.getOptional(ruleData.position()))
+            ruleData.setEnabled(*result);
     });
 
     return collectedChanges;
@@ -422,7 +514,8 @@ void RuleSet::shrinkToFit()
     shrinkMapVectorsToFit(m_attributeLowercaseLocalNameRules);
     shrinkMapVectorsToFit(m_tagLocalNameRules);
     shrinkMapVectorsToFit(m_tagLowercaseLocalNameRules);
-    shrinkMapVectorsToFit(m_shadowPseudoElementRules);
+    shrinkMapVectorsToFit(m_userAgentPartRules);
+    shrinkMapVectorsToFit(m_namedPseudoElementRules);
 
     m_linkPseudoClassRules.shrinkToFit();
 #if ENABLE(VIDEO)
@@ -432,6 +525,7 @@ void RuleSet::shrinkToFit()
     m_slottedPseudoElementRules.shrinkToFit();
     m_partPseudoElementRules.shrinkToFit();
     m_focusPseudoClassRules.shrinkToFit();
+    m_rootElementRules.shrinkToFit();
     m_universalRules.shrinkToFit();
 
     m_pageRules.shrinkToFit();
@@ -446,6 +540,33 @@ void RuleSet::shrinkToFit()
     m_containerQueries.shrinkToFit();
     m_containerQueryIdentifierForRulePosition.shrinkToFit();
     m_resolverMutatingRulesInLayers.shrinkToFit();
+}
+
+Vector<Ref<const StyleRuleContainer>> RuleSet::containerQueryRules() const
+{
+    return m_containerQueries.map([](auto& entry) {
+        return entry.containerRule;
+    });
+}
+
+Vector<Ref<const StyleRuleScope>> RuleSet::scopeRulesFor(const RuleData& ruleData) const
+{
+    if (m_scopeRuleIdentifierForRulePosition.size() <= ruleData.position())
+        return { };
+
+    Vector<Ref<const StyleRuleScope>> queries;
+
+    auto identifier = m_scopeRuleIdentifierForRulePosition[ruleData.position()];
+    while (identifier) {
+        auto& query = m_scopeRules[identifier - 1];
+        queries.append(query.scopeRule);
+        identifier = query.parent;
+    };
+
+    // Order scopes from outermost to innermost.
+    queries.reverse();
+
+    return queries;
 }
 
 } // namespace Style

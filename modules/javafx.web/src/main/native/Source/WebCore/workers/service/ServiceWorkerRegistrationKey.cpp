@@ -26,12 +26,11 @@
 #include "config.h"
 #include "ServiceWorkerRegistrationKey.h"
 
-#if ENABLE(SERVICE_WORKER)
-
 #include "ClientOrigin.h"
 #include "RegistrableDomain.h"
 #include "SecurityOrigin.h"
 #include <wtf/URLHash.h>
+#include <wtf/text/MakeString.h>
 #include <wtf/text/StringToIntegerConversion.h>
 
 namespace WebCore {
@@ -46,11 +45,6 @@ ServiceWorkerRegistrationKey::ServiceWorkerRegistrationKey(SecurityOriginData&& 
 ServiceWorkerRegistrationKey ServiceWorkerRegistrationKey::emptyKey()
 {
     return { };
-}
-
-bool ServiceWorkerRegistrationKey::operator==(const ServiceWorkerRegistrationKey& other) const
-{
-    return m_topOrigin == other.m_topOrigin && m_scope == other.m_scope;
 }
 
 ServiceWorkerRegistrationKey ServiceWorkerRegistrationKey::isolatedCopy() const &
@@ -124,7 +118,7 @@ std::optional<ServiceWorkerRegistrationKey> ServiceWorkerRegistrationKey::fromDa
     auto scheme = StringView(key).left(first);
     auto host = StringView(key).substring(first + 1, second - first - 1);
 
-    URL topOriginURL { makeString(scheme, "://", host) };
+    URL topOriginURL { makeString(scheme, "://"_s, host) };
     if (!topOriginURL.isValid())
         return std::nullopt;
 
@@ -144,10 +138,8 @@ ClientOrigin ServiceWorkerRegistrationKey::clientOrigin() const
 #if !LOG_DISABLED
 String ServiceWorkerRegistrationKey::loggingString() const
 {
-    return makeString(m_topOrigin.debugString(), "-", m_scope.string());
+    return makeString(m_topOrigin.debugString(), '-', m_scope.string());
 }
 #endif
 
 } // namespace WebCore
-
-#endif // ENABLE(SERVICE_WORKER)

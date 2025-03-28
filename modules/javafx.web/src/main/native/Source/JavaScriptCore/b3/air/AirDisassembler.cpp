@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2017-2022 Apple Inc. All rights reserved.
+ * Copyright (C) 2017-2023 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -34,8 +34,11 @@
 #include "CCallHelpers.h"
 #include "Disassembler.h"
 #include "LinkBuffer.h"
+#include <wtf/TZoneMallocInlines.h>
 
 namespace JSC { namespace B3 { namespace Air {
+
+WTF_MAKE_TZONE_ALLOCATED_IMPL(Disassembler);
 
 void Disassembler::startEntrypoint(CCallHelpers& jit)
 {
@@ -110,6 +113,15 @@ void Disassembler::dump(Code& code, PrintStream& out, LinkBuffer& linkBuffer, co
     // this later if we find a strong use for it.
     out.print(tierName, "# Late paths\n");
     dumpAsmRange(m_latePathStart, m_latePathEnd);
+
+    {
+        CodeLocationLabel<DisassemblyPtrTag> start = linkBuffer.locationOf<DisassemblyPtrTag>(m_latePathEnd);
+        size_t dumpedSize = start.dataLocation<uintptr_t>() - linkBuffer.entrypoint<DisassemblyPtrTag>().dataLocation<uintptr_t>();
+        if (dumpedSize < linkBuffer.size()) {
+            out.print(tierName, "# Remaining\n");
+            disassemble(start, linkBuffer.size() - dumpedSize, codeStart, codeEnd, asmPrefix, out);
+        }
+    }
 }
 
 } } } // namespace JSC::B3::Air

@@ -31,7 +31,7 @@
 #include "HTMLNames.h"
 #include "HTMLObjectElement.h"
 #include "HTMLOptionElement.h"
-#include <wtf/IsoMallocInlines.h>
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
@@ -40,8 +40,8 @@ using namespace HTMLNames;
 using GenericDescendantsCachedHTMLCollection = GenericCachedHTMLCollection<CollectionTraversalType::Descendants>;
 using GenericChildrenOnlyCachedHTMLCollection = GenericCachedHTMLCollection<CollectionTraversalType::ChildrenOnly>;
 
-WTF_MAKE_ISO_ALLOCATED_IMPL_TEMPLATE(GenericDescendantsCachedHTMLCollection);
-WTF_MAKE_ISO_ALLOCATED_IMPL_TEMPLATE(GenericChildrenOnlyCachedHTMLCollection);
+WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL_TEMPLATE(GenericDescendantsCachedHTMLCollection);
+WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL_TEMPLATE(GenericChildrenOnlyCachedHTMLCollection);
 
 template <CollectionTraversalType traversalType>
 GenericCachedHTMLCollection<traversalType>::GenericCachedHTMLCollection(ContainerNode& base, CollectionType collectionType)
@@ -49,6 +49,11 @@ GenericCachedHTMLCollection<traversalType>::GenericCachedHTMLCollection(Containe
 { }
 template GenericCachedHTMLCollection<CollectionTraversalType::Descendants>::GenericCachedHTMLCollection(ContainerNode&, CollectionType);
 template GenericCachedHTMLCollection<CollectionTraversalType::ChildrenOnly>::GenericCachedHTMLCollection(ContainerNode&, CollectionType);
+
+template <CollectionTraversalType traversalType>
+GenericCachedHTMLCollection<traversalType>::~GenericCachedHTMLCollection() = default;
+template GenericCachedHTMLCollection<CollectionTraversalType::Descendants>::~GenericCachedHTMLCollection();
+template GenericCachedHTMLCollection<CollectionTraversalType::ChildrenOnly>::~GenericCachedHTMLCollection();
 
 template <CollectionTraversalType traversalType>
 bool GenericCachedHTMLCollection<traversalType>::elementMatches(Element& element) const
@@ -68,8 +73,10 @@ bool GenericCachedHTMLCollection<traversalType>::elementMatches(Element& element
         return element.hasTagName(tdTag) || element.hasTagName(thTag);
     case CollectionType::TSectionRows:
         return element.hasTagName(trTag);
-    case CollectionType::SelectedOptions:
-        return is<HTMLOptionElement>(element) && downcast<HTMLOptionElement>(element).selected();
+    case CollectionType::SelectedOptions: {
+        auto* optionElement = dynamicDowncast<HTMLOptionElement>(element);
+        return optionElement && optionElement->selected();
+    }
     case CollectionType::DataListOptions:
         return is<HTMLOptionElement>(element);
     case CollectionType::MapAreas:

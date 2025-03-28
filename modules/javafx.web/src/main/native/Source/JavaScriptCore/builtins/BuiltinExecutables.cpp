@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2014-2019 Apple Inc. All rights reserved.
+ * Copyright (C) 2014-2023 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -31,12 +31,15 @@
 #include "JSCJSValueInlines.h"
 #include "Parser.h"
 #include <wtf/NeverDestroyed.h>
+#include <wtf/TZoneMallocInlines.h>
 
 namespace JSC {
 
+WTF_MAKE_TZONE_ALLOCATED_IMPL(BuiltinExecutables);
+
 BuiltinExecutables::BuiltinExecutables(VM& vm)
     : m_vm(vm)
-    , m_combinedSourceProvider(StringSourceProvider::create(StringImpl::createWithoutCopying(s_JSCCombinedCode, s_JSCCombinedCodeLength), { }, String()))
+    , m_combinedSourceProvider(StringSourceProvider::create(StringImpl::createWithoutCopying({ s_JSCCombinedCode, s_JSCCombinedCodeLength }), { }, String(), SourceTaintedOrigin::Untainted))
 {
 }
 
@@ -48,11 +51,11 @@ SourceCode BuiltinExecutables::defaultConstructorSourceCode(ConstructorKind cons
         break;
     case ConstructorKind::Base: {
         static NeverDestroyed<const String> baseConstructorCode(MAKE_STATIC_STRING_IMPL("(function () { })"));
-        return makeSource(baseConstructorCode, { });
+        return makeSource(baseConstructorCode, { }, SourceTaintedOrigin::Untainted);
     }
     case ConstructorKind::Extends: {
         static NeverDestroyed<const String> derivedConstructorCode(MAKE_STATIC_STRING_IMPL("(function (...args) { super(...args); })"));
-        return makeSource(derivedConstructorCode, { });
+        return makeSource(derivedConstructorCode, { }, SourceTaintedOrigin::Untainted);
     }
     }
     RELEASE_ASSERT_NOT_REACHED();
@@ -67,18 +70,18 @@ UnlinkedFunctionExecutable* BuiltinExecutables::createDefaultConstructor(Constru
         break;
     case ConstructorKind::Base:
     case ConstructorKind::Extends:
-        return createExecutable(m_vm, defaultConstructorSourceCode(constructorKind), name, ImplementationVisibility::Public, constructorKind, ConstructAbility::CanConstruct, needsClassFieldInitializer, privateBrandRequirement);
+        return createExecutable(m_vm, defaultConstructorSourceCode(constructorKind), name, ImplementationVisibility::Public, constructorKind, ConstructAbility::CanConstruct, InlineAttribute::Always, needsClassFieldInitializer, privateBrandRequirement);
     }
     ASSERT_NOT_REACHED();
     return nullptr;
 }
 
-UnlinkedFunctionExecutable* BuiltinExecutables::createBuiltinExecutable(const SourceCode& code, const Identifier& name, ImplementationVisibility implementationVisibility, ConstructorKind constructorKind, ConstructAbility constructAbility)
+UnlinkedFunctionExecutable* BuiltinExecutables::createBuiltinExecutable(const SourceCode& code, const Identifier& name, ImplementationVisibility implementationVisibility, ConstructorKind constructorKind, ConstructAbility constructAbility, InlineAttribute inlineAttribute)
 {
-    return createExecutable(m_vm, code, name, implementationVisibility, constructorKind, constructAbility, NeedsClassFieldInitializer::No);
+    return createExecutable(m_vm, code, name, implementationVisibility, constructorKind, constructAbility, inlineAttribute, NeedsClassFieldInitializer::No);
 }
 
-UnlinkedFunctionExecutable* BuiltinExecutables::createExecutable(VM& vm, const SourceCode& source, const Identifier& name, ImplementationVisibility implementationVisibility, ConstructorKind constructorKind, ConstructAbility constructAbility, NeedsClassFieldInitializer needsClassFieldInitializer, PrivateBrandRequirement privateBrandRequirement)
+UnlinkedFunctionExecutable* BuiltinExecutables::createExecutable(VM& vm, const SourceCode& source, const Identifier& name, ImplementationVisibility implementationVisibility, ConstructorKind constructorKind, ConstructAbility constructAbility, InlineAttribute inlineAttribute, NeedsClassFieldInitializer needsClassFieldInitializer, PrivateBrandRequirement privateBrandRequirement)
 {
     // FIXME: Can we just make MetaData computation be constexpr and have the compiler do this for us?
     // https://bugs.webkit.org/show_bug.cgi?id=193272
@@ -87,12 +90,12 @@ UnlinkedFunctionExecutable* BuiltinExecutables::createExecutable(VM& vm, const S
     StringView view = source.view();
     RELEASE_ASSERT(!view.isNull());
     RELEASE_ASSERT(view.is8Bit());
-    auto* characters = view.characters8();
+    auto characters = view.span8();
     const char* regularFunctionBegin = "(function (";
     const char* asyncFunctionBegin = "(async function (";
     RELEASE_ASSERT(view.length() >= strlen("(function (){})"));
-    bool isAsyncFunction = view.length() >= strlen("(async function (){})") && !memcmp(characters, asyncFunctionBegin, strlen(asyncFunctionBegin));
-    RELEASE_ASSERT(isAsyncFunction || !memcmp(characters, regularFunctionBegin, strlen(regularFunctionBegin)));
+    bool isAsyncFunction = view.length() >= strlen("(async function (){})") && !memcmp(characters.data(), asyncFunctionBegin, strlen(asyncFunctionBegin));
+    RELEASE_ASSERT(isAsyncFunction || !memcmp(characters.data(), regularFunctionBegin, strlen(regularFunctionBegin)));
 
     unsigned asyncOffset = isAsyncFunction ? strlen("async ") : 0;
     unsigned parametersStart = strlen("function (") + asyncOffset;
@@ -163,7 +166,7 @@ UnlinkedFunctionExecutable* BuiltinExecutables::createExecutable(VM& vm, const S
         if (!isInStrictContext && (characters[i] == '"' || characters[i] == '\'')) {
             const unsigned useStrictLength = strlen("use strict");
             if (i + 1 + useStrictLength < view.length()) {
-                if (!memcmp(characters + i + 1, "use strict", useStrictLength)) {
+                if (!memcmp(characters.data() + i + 1, "use strict", useStrictLength)) {
                     isInStrictContext = true;
                     i += 1 + useStrictLength;
                 }
@@ -200,12 +203,12 @@ UnlinkedFunctionExecutable* BuiltinExecutables::createExecutable(VM& vm, const S
     JSTokenLocation end;
     end.line = 1;
     end.lineStartOffset = source.startOffset();
-    end.startOffset = source.startOffset() + strlen("(") + asyncOffset;
+    end.startOffset = source.startOffset() + strlen("(");
     end.endOffset = std::numeric_limits<unsigned>::max();
 
     FunctionMetadataNode metadata(
         start, end, startColumn, endColumn, source.startOffset() + functionKeywordStart, source.startOffset() + functionNameStart, source.startOffset() + parametersStart, implementationVisibility,
-        isInStrictContext ? StrictModeLexicalFeature : NoLexicalFeatures, constructorKind, constructorKind == ConstructorKind::Extends ? SuperBinding::Needed : SuperBinding::NotNeeded,
+        isInStrictContext ? StrictModeLexicallyScopedFeature : NoLexicallyScopedFeatures, constructorKind, constructorKind == ConstructorKind::Extends ? SuperBinding::Needed : SuperBinding::NotNeeded,
         parameterCount, parseMode, isArrowFunctionBodyExpression);
 
     metadata.finishParsing(newSource, Identifier(), FunctionMode::FunctionExpression);
@@ -216,10 +219,10 @@ UnlinkedFunctionExecutable* BuiltinExecutables::createExecutable(VM& vm, const S
         JSTextPosition positionBeforeLastNewlineFromParser;
         ParserError error;
         JSParserBuiltinMode builtinMode = isBuiltinDefaultClassConstructor ? JSParserBuiltinMode::NotBuiltin : JSParserBuiltinMode::Builtin;
-        std::unique_ptr<ProgramNode> program = parse<ProgramNode>(
-            vm, source, Identifier(), implementationVisibility, builtinMode,
-            JSParserStrictMode::NotStrict, JSParserScriptMode::Classic, SourceParseMode::ProgramMode, SuperBinding::NotNeeded, error,
-            &positionBeforeLastNewlineFromParser, constructorKind);
+        std::unique_ptr<ProgramNode> program = parseRootNode<ProgramNode>(
+            vm, source, implementationVisibility, builtinMode,
+            NoLexicallyScopedFeatures, JSParserScriptMode::Classic, SourceParseMode::ProgramMode, error,
+            constructorKind, &positionBeforeLastNewlineFromParser);
 
         if (program) {
             StatementNode* exprStatement = program->singleStatement();
@@ -258,16 +261,24 @@ UnlinkedFunctionExecutable* BuiltinExecutables::createExecutable(VM& vm, const S
         }
     }
 
-    UnlinkedFunctionExecutable* functionExecutable = UnlinkedFunctionExecutable::create(vm, source, &metadata, kind, constructAbility, JSParserScriptMode::Classic, nullptr, std::nullopt, DerivedContextType::None, needsClassFieldInitializer, privateBrandRequirement, isBuiltinDefaultClassConstructor);
+    UnlinkedFunctionExecutable* functionExecutable = UnlinkedFunctionExecutable::create(vm, source, &metadata, kind, constructAbility, inlineAttribute, JSParserScriptMode::Classic, nullptr, std::nullopt, std::nullopt, DerivedContextType::None, needsClassFieldInitializer, privateBrandRequirement, isBuiltinDefaultClassConstructor);
     return functionExecutable;
 }
 
-void BuiltinExecutables::finalizeUnconditionally(CollectionScope)
+template<typename Visitor>
+void BuiltinExecutables::visitAggregateImpl(Visitor& visitor)
 {
     for (auto*& unlinkedExecutable : m_unlinkedExecutables) {
-        if (unlinkedExecutable && !m_vm.heap.isMarked(unlinkedExecutable))
-            unlinkedExecutable = nullptr;
+        if (unlinkedExecutable)
+            visitor.appendUnbarriered(unlinkedExecutable);
     }
+}
+
+DEFINE_VISIT_AGGREGATE(BuiltinExecutables);
+
+void BuiltinExecutables::clear()
+{
+    std::fill(std::begin(m_unlinkedExecutables), std::end(m_unlinkedExecutables), nullptr);
 }
 
 #define DEFINE_BUILTIN_EXECUTABLES(name, functionName, overrideName, length) \
@@ -283,7 +294,7 @@ UnlinkedFunctionExecutable* BuiltinExecutables::name##Executable() \
         Identifier executableName = m_vm.propertyNames->builtinNames().functionName##PublicName();\
         if (overrideName)\
             executableName = Identifier::fromString(m_vm, overrideName);\
-        m_unlinkedExecutables[index] = createBuiltinExecutable(name##Source(), executableName, s_##name##ImplementationVisibility, s_##name##ConstructorKind, s_##name##ConstructAbility);\
+        m_unlinkedExecutables[index] = createBuiltinExecutable(name##Source(), executableName, s_##name##ImplementationVisibility, s_##name##ConstructorKind, s_##name##ConstructAbility, s_##name##InlineAttribute);\
     }\
     return m_unlinkedExecutables[index];\
 }

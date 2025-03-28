@@ -38,6 +38,7 @@ public:
 
     const CSSCalcExpressionNode& child() const { return m_child.get(); }
     CSSCalcExpressionNode& child() { return m_child.get(); }
+    Ref<CSSCalcExpressionNode> protectedChild() const { return m_child; }
 
     void setChild(Ref<CSSCalcExpressionNode>&& child) { m_child = WTFMove(child); }
 
@@ -50,14 +51,14 @@ private:
 
     std::unique_ptr<CalcExpressionNode> createCalcExpression(const CSSToLengthConversionData&) const final;
 
+    bool isResolvable() const final;
     bool isZero() const final { return m_child->isZero(); }
-    double doubleValue(CSSUnitType) const final;
+    double doubleValue(CSSUnitType, const CSSCalcSymbolTable&) const final;
     double computeLengthPx(const CSSToLengthConversionData&) const final;
     Type type() const final { return Type::CssCalcInvert; }
     CSSUnitType primitiveType() const final { return m_child->primitiveType(); }
 
     void collectComputedStyleDependencies(ComputedStyleDependencies& dependencies) const final { m_child->collectComputedStyleDependencies(dependencies); }
-    bool convertingToLengthRequiresNonNullStyle(int lengthConversion) const final { return m_child->convertingToLengthRequiresNonNullStyle(lengthConversion); }
 
     void dump(TextStream&) const final;
 

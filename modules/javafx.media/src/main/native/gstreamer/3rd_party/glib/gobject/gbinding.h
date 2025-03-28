@@ -38,14 +38,6 @@ G_BEGIN_DECLS
 #define G_BINDING(obj)          (G_TYPE_CHECK_INSTANCE_CAST ((obj), G_TYPE_BINDING, GBinding))
 #define G_IS_BINDING(obj)       (G_TYPE_CHECK_INSTANCE_TYPE ((obj), G_TYPE_BINDING))
 
-/**
- * GBinding:
- *
- * GBinding is an opaque structure whose members
- * cannot be accessed directly.
- *
- * Since: 2.26
- */
 typedef struct _GBinding        GBinding;
 
 /**

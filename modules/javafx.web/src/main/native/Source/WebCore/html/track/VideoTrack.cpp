@@ -35,6 +35,7 @@
 #if ENABLE(VIDEO)
 
 #include "CommonAtomStrings.h"
+#include "ScriptExecutionContext.h"
 #include "VideoTrackClient.h"
 #include "VideoTrackConfiguration.h"
 #include "VideoTrackList.h"
@@ -54,19 +55,19 @@ const AtomString& VideoTrack::signKeyword()
 }
 
 VideoTrack::VideoTrack(ScriptExecutionContext* context, VideoTrackPrivate& trackPrivate)
-    : MediaTrackBase(context, MediaTrackBase::VideoTrack, trackPrivate.id(), trackPrivate.label(), trackPrivate.language())
+    : MediaTrackBase(context, MediaTrackBase::VideoTrack, trackPrivate.trackUID(), trackPrivate.id(), trackPrivate.label(), trackPrivate.language())
     , m_private(trackPrivate)
     , m_configuration(VideoTrackConfiguration::create())
     , m_selected(trackPrivate.selected())
 {
-    m_private->setClient(*this);
+    addClientToTrackPrivateBase(*this, trackPrivate);
     updateKindFromPrivate();
     updateConfigurationFromPrivate();
 }
 
 VideoTrack::~VideoTrack()
 {
-    m_private->clearClient();
+    removeClientFromTrackPrivateBase(Ref { m_private });
 }
 
 void VideoTrack::setPrivate(VideoTrackPrivate& trackPrivate)
@@ -74,9 +75,9 @@ void VideoTrack::setPrivate(VideoTrackPrivate& trackPrivate)
     if (m_private.ptr() == &trackPrivate)
         return;
 
-    m_private->clearClient();
+    removeClientFromTrackPrivateBase(Ref { m_private });
     m_private = trackPrivate;
-    m_private->setClient(*this);
+    addClientToTrackPrivateBase(*this, trackPrivate);
 #if !RELEASE_LOG_DISABLED
     m_private->setLogger(logger(), logIdentifier());
 #endif
@@ -89,12 +90,12 @@ void VideoTrack::setPrivate(VideoTrackPrivate& trackPrivate)
 
 bool VideoTrack::isValidKind(const AtomString& value) const
 {
-    return value == alternativeAtom()
-        || value == commentaryAtom()
-        || value == captionsAtom()
-        || value == mainAtom()
-        || value == signKeyword()
-        || value == subtitlesAtom();
+    return value == "alternative"_s
+        || value == "commentary"_s
+        || value == "captions"_s
+        || value == "main"_s
+        || value == "sign"_s
+        || value == "subtitles"_s;
 }
 
 void VideoTrack::setSelected(const bool selected)
@@ -140,7 +141,7 @@ void VideoTrack::configurationChanged(const PlatformVideoTrackConfiguration& con
     m_configuration->setState(configuration);
 }
 
-void VideoTrack::idChanged(const AtomString& id)
+void VideoTrack::idChanged(TrackID id)
 {
     setId(id);
     m_clients.forEach([this] (auto& client) {
@@ -211,25 +212,25 @@ void VideoTrack::setLanguage(const AtomString& language)
 void VideoTrack::updateKindFromPrivate()
 {
     switch (m_private->kind()) {
-    case VideoTrackPrivate::Alternative:
-        setKind(alternativeAtom());
+    case VideoTrackPrivate::Kind::Alternative:
+        setKind("alternative"_s);
         return;
-    case VideoTrackPrivate::Captions:
-        setKind(captionsAtom());
+    case VideoTrackPrivate::Kind::Captions:
+        setKind("captions"_s);
         return;
-    case VideoTrackPrivate::Main:
-        setKind(mainAtom());
+    case VideoTrackPrivate::Kind::Main:
+        setKind("main"_s);
         return;
-    case VideoTrackPrivate::Sign:
-        setKind(VideoTrack::signKeyword());
+    case VideoTrackPrivate::Kind::Sign:
+        setKind("sign"_s);
         return;
-    case VideoTrackPrivate::Subtitles:
-        setKind(subtitlesAtom());
+    case VideoTrackPrivate::Kind::Subtitles:
+        setKind("subtitles"_s);
         return;
-    case VideoTrackPrivate::Commentary:
-        setKind(commentaryAtom());
+    case VideoTrackPrivate::Kind::Commentary:
+        setKind("commentary"_s);
         return;
-    case VideoTrackPrivate::None:
+    case VideoTrackPrivate::Kind::None:
         setKind(emptyAtom());
         return;
     }

@@ -25,10 +25,17 @@
 
 #pragma once
 
-#if ENABLE(SERVICE_WORKER)
-
 #include "BackgroundFetch.h"
 #include <span>
+
+namespace WebCore {
+class BackgroundFetchEngine;
+}
+
+namespace WTF {
+template<typename T> struct IsDeprecatedWeakRefSmartPointerException;
+template<> struct IsDeprecatedWeakRefSmartPointerException<WebCore::BackgroundFetchEngine> : std::true_type { };
+}
 
 namespace WebCore {
 
@@ -78,5 +85,3 @@ private:
 };
 
 } // namespace WebCore
-
-#endif // ENABLE(SERVICE_WORKER)

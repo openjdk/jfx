@@ -38,15 +38,16 @@ class TimeContainer;
 enum AnimatedPropertyValueType { RegularPropertyValue, CurrentColorValue, InheritValue };
 
 class SVGAnimationElement : public SVGSMILElement, public SVGTests {
-    WTF_MAKE_ISO_ALLOCATED(SVGAnimationElement);
+    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(SVGAnimationElement);
+    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(SVGAnimationElement);
 public:
-    float getStartTime() const;
+    ExceptionOr<float> getStartTime() const;
     float getCurrentTime() const;
-    float getSimpleDuration() const;
+    ExceptionOr<float> getSimpleDuration() const;
 
-    void beginElement();
+    void beginElement() { beginElementAt(0); }
     void beginElementAt(float offset);
-    void endElement();
+    void endElement() { endElementAt(0); }
     void endElementAt(float offset);
 
     static bool isTargetAttributeCSSProperty(SVGElement*, const QualifiedName&);

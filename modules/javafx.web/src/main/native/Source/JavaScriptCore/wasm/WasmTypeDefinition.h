@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2016-2019 Apple Inc. All rights reserved.
+ * Copyright (C) 2016-2023 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -42,10 +42,11 @@
 #include <wtf/HashTraits.h>
 #include <wtf/Lock.h>
 #include <wtf/StdLibExtras.h>
+#include <wtf/TZoneMalloc.h>
 #include <wtf/ThreadSafeRefCounted.h>
 #include <wtf/Vector.h>
 
-#if ENABLE(WEBASSEMBLY_B3JIT)
+#if ENABLE(WEBASSEMBLY_OMGJIT) || ENABLE(WEBASSEMBLY_BBQJIT)
 #include "B3Type.h"
 #endif
 
@@ -59,12 +60,22 @@ namespace JSC {
 
 namespace Wasm {
 
-#if ENABLE(B3_JIT)
 #define CREATE_ENUM_VALUE(name, id, ...) name = id,
 enum class ExtSIMDOpType : uint32_t {
     FOR_EACH_WASM_EXT_SIMD_OP(CREATE_ENUM_VALUE)
 };
 #undef CREATE_ENUM_VALUE
+
+#define CREATE_CASE(name, ...) case ExtSIMDOpType::name: return #name ## _s;
+inline ASCIILiteral makeString(ExtSIMDOpType op)
+{
+    switch (op) {
+        FOR_EACH_WASM_EXT_SIMD_OP(CREATE_CASE)
+    }
+    RELEASE_ASSERT_NOT_REACHED();
+    return { };
+}
+#undef CREATE_CASE
 
 constexpr std::pair<size_t, size_t> countNumberOfWasmExtendedSIMDOpcodes()
 {
@@ -223,6 +234,17 @@ constexpr void dumpOpType(PrintStream& out, OpType op)
 
 MAKE_PRINT_ADAPTOR(OpTypeDump, OpType, dumpOpType);
 
+constexpr bool isCompareOpType(OpType op)
+{
+    switch (op) {
+#define CREATE_CASE(name, ...) case name: return true;
+    FOR_EACH_WASM_COMPARE_UNARY_OP(CREATE_CASE)
+    FOR_EACH_WASM_COMPARE_BINARY_OP(CREATE_CASE)
+#undef CREATE_CASE
+    default:
+        return false;
+    }
+}
 constexpr Type simdScalarType(SIMDLane lane)
 {
     switch (lane) {
@@ -242,13 +264,13 @@ constexpr Type simdScalarType(SIMDLane lane)
     }
     RELEASE_ASSERT_NOT_REACHED();
 }
-#endif
 
 using FunctionArgCount = uint32_t;
 using StructFieldCount = uint32_t;
 using RecursionGroupCount = uint32_t;
 using ProjectionIndex = uint32_t;
 using DisplayCount = uint32_t;
+using SupertypeCount = uint32_t;
 
 inline Width Type::width() const
 {
@@ -260,7 +282,7 @@ inline Width Type::width() const
     RELEASE_ASSERT_NOT_REACHED();
 }
 
-#if ENABLE(WEBASSEMBLY_B3JIT)
+#if ENABLE(WEBASSEMBLY_OMGJIT) || ENABLE(WEBASSEMBLY_BBQJIT)
 #define CREATE_CASE(name, id, b3type, ...) case TypeKind::name: return b3type;
 inline B3::Type toB3Type(Type type)
 {
@@ -284,6 +306,8 @@ constexpr size_t typeKindSizeInBytes(TypeKind kind)
     case TypeKind::F64: {
         return 8;
     }
+    case TypeKind::V128:
+        return 16;
 
     case TypeKind::Arrayref:
     case TypeKind::Structref:
@@ -293,16 +317,18 @@ constexpr size_t typeKindSizeInBytes(TypeKind kind)
     case TypeKind::RefNull: {
         return sizeof(WriteBarrierBase<Unknown>);
     }
-    case TypeKind::V128:
     case TypeKind::Array:
     case TypeKind::Func:
     case TypeKind::Struct:
     case TypeKind::Void:
     case TypeKind::Sub:
+    case TypeKind::Subfinal:
     case TypeKind::Rec:
     case TypeKind::Eqref:
     case TypeKind::Anyref:
     case TypeKind::Nullref:
+    case TypeKind::Nullfuncref:
+    case TypeKind::Nullexternref:
     case TypeKind::I31ref: {
         break;
     }
@@ -349,6 +375,15 @@ public:
                 ++n;
         }
         return n;
+    }
+
+    bool hasReturnVector() const
+    {
+        for (size_t i = 0; i < returnCount(); ++i) {
+            if (returnType(i).isV128())
+                return true;
+        }
+        return false;
     }
 
     bool operator==(const FunctionSignature& other) const
@@ -419,8 +454,15 @@ public:
             case Wasm::TypeKind::I32:
             case Wasm::TypeKind::F32:
                 return sizeof(uint32_t);
-            default:
+            case Wasm::TypeKind::I64:
+            case Wasm::TypeKind::F64:
+            case Wasm::TypeKind::Ref:
+            case Wasm::TypeKind::RefNull:
                 return sizeof(uint64_t);
+            case Wasm::TypeKind::V128:
+                return sizeof(v128_t);
+            default:
+                RELEASE_ASSERT_NOT_REACHED();
             }
         }
         switch (as<PackedType>()) {
@@ -461,7 +503,7 @@ private:
 
 };
 
-inline const char* makeString(const StorageType& storageType)
+inline ASCIILiteral makeString(const StorageType& storageType)
 {
     return(storageType.is<Type>() ? makeString(storageType.as<Type>().kind) :
         makeString(storageType.as<PackedType>()));
@@ -482,12 +524,17 @@ inline size_t typeSizeInBytes(const StorageType& storageType)
     return typeKindSizeInBytes(storageType.as<Type>().kind);
 }
 
+inline size_t typeAlignmentInBytes(const StorageType& storageType)
+{
+    return typeSizeInBytes(storageType);
+}
+
 class FieldType {
 public:
     StorageType type;
     Mutability mutability;
 
-    bool operator==(const FieldType& rhs) const { return type == rhs.type && mutability == rhs.mutability; }
+    friend bool operator==(const FieldType&, const FieldType&) = default;
 };
 
 class StructType {
@@ -614,30 +661,38 @@ static_assert(sizeof(ProjectionIndex) <= sizeof(TypeIndex));
 // A Subtype represents a type that is declared to be a subtype of another type
 // definition.
 //
-// The representation assumes a single supertype. The binary format is designed to allow
-// multiple supertypes, but these are not supported in the initial GC proposal.
+// The representation allows multiple supertypes for simplicity, as it needs to
+// support 0 or 1 supertypes. More than 1 supertype is not supported in the initial
+// GC proposal.
 class Subtype {
 public:
-    Subtype(TypeIndex* payload)
+    Subtype(TypeIndex* payload, SupertypeCount count, bool isFinal)
         : m_payload(payload)
+        , m_supertypeCount(count)
+        , m_final(isFinal)
     {
     }
 
     void cleanup();
 
-    TypeIndex superType() const { return const_cast<Subtype*>(this)->getSuperType(); }
+    SupertypeCount supertypeCount() const { return m_supertypeCount; }
+    bool isFinal() const { return m_final; }
+    TypeIndex firstSuperType() const { return superType(0); }
+    TypeIndex superType(SupertypeCount i) const { return const_cast<Subtype*>(this)->getSuperType(i); }
     TypeIndex underlyingType() const { return const_cast<Subtype*>(this)->getUnderlyingType(); }
 
     WTF::String toString() const;
     void dump(WTF::PrintStream& out) const;
 
-    TypeIndex& getSuperType() { return *storage(1); }
+    TypeIndex& getSuperType(SupertypeCount i) { return *storage(1 + i); }
     TypeIndex& getUnderlyingType() { return *storage(0); }
     TypeIndex* storage(uint32_t i) { return i + m_payload; }
     TypeIndex* storage(uint32_t i) const { return const_cast<Subtype*>(this)->storage(i); }
 
 private:
     TypeIndex* m_payload;
+    SupertypeCount m_supertypeCount;
+    bool m_final;
 };
 
 // An RTT encodes subtyping information in a way that is suitable for executing
@@ -654,7 +709,7 @@ enum class RTTKind : uint8_t {
 };
 
 class RTT_ALIGNMENT RTT : public ThreadSafeRefCounted<RTT> {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_FAST_COMPACT_ALLOCATED;
 
 public:
     RTT() = delete;
@@ -675,8 +730,9 @@ public:
     bool isSubRTT(const RTT& other) const;
     static size_t allocatedRTTSize(Checked<DisplayCount> count) { return sizeof(RTT) + count * sizeof(TypeIndex); }
 
-    static ptrdiff_t offsetOfKind() { return OBJECT_OFFSETOF(RTT, m_kind); }
-    static ptrdiff_t offsetOfDisplaySize() { return OBJECT_OFFSETOF(RTT, m_displaySize); }
+    static constexpr ptrdiff_t offsetOfKind() { return OBJECT_OFFSETOF(RTT, m_kind); }
+    static constexpr ptrdiff_t offsetOfDisplaySize() { return OBJECT_OFFSETOF(RTT, m_displaySize); }
+    static constexpr ptrdiff_t offsetOfPayload() { return sizeof(RTT); }
 
 private:
     // Payload starts past end of this object.
@@ -696,7 +752,7 @@ enum class TypeDefinitionKind : uint8_t {
 };
 
 class TypeDefinition : public ThreadSafeRefCounted<TypeDefinition> {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_ALLOCATED(TypeDefinition);
 
     TypeDefinition() = delete;
     TypeDefinition(const TypeDefinition&) = delete;
@@ -719,13 +775,17 @@ class TypeDefinition : public ThreadSafeRefCounted<TypeDefinition> {
         RELEASE_ASSERT(kind == TypeDefinitionKind::RecursionGroup);
     }
 
+    TypeDefinition(TypeDefinitionKind kind, SupertypeCount count, bool isFinal)
+        : m_typeHeader { Subtype { static_cast<TypeIndex*>(payload()), count, isFinal } }
+    {
+        RELEASE_ASSERT(kind == TypeDefinitionKind::Subtype);
+    }
+
     TypeDefinition(TypeDefinitionKind kind)
         : m_typeHeader { ArrayType { static_cast<FieldType*>(payload()) } }
     {
         if (kind == TypeDefinitionKind::Projection)
             m_typeHeader = { Projection { static_cast<TypeIndex*>(payload()) } };
-        else if (kind == TypeDefinitionKind::Subtype)
-            m_typeHeader = { Subtype { static_cast<TypeIndex*>(payload()) } };
         else
             RELEASE_ASSERT(kind == TypeDefinitionKind::ArrayType);
     }
@@ -761,6 +821,7 @@ public:
     const TypeDefinition& unroll() const;
     const TypeDefinition& expand() const;
     bool hasRecursiveReference() const;
+    bool isFinalType() const;
 
     // Type definitions that are compound and contain references to other definitions
     // via a type index should ref() the other definition when new unique instances are
@@ -785,7 +846,7 @@ private:
     static RefPtr<TypeDefinition> tryCreateArrayType();
     static RefPtr<TypeDefinition> tryCreateRecursionGroup(RecursionGroupCount);
     static RefPtr<TypeDefinition> tryCreateProjection();
-    static RefPtr<TypeDefinition> tryCreateSubtype();
+    static RefPtr<TypeDefinition> tryCreateSubtype(SupertypeCount, bool);
 
     static Type substitute(Type, TypeIndex);
 
@@ -854,7 +915,7 @@ namespace JSC { namespace Wasm {
 // Type information is held globally and shared by the entire process to allow all type definitions to be unique. This is required when wasm calls another wasm instance, and must work when modules are shared between multiple VMs.
 class TypeInformation {
     WTF_MAKE_NONCOPYABLE(TypeInformation);
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_ALLOCATED(TypeInformation);
 
     TypeInformation();
 
@@ -863,15 +924,16 @@ public:
 
     static const TypeDefinition& signatureForLLIntBuiltin(LLIntBuiltin);
 
-    static RefPtr<TypeDefinition> typeDefinitionForFunction(const Vector<Type, 1>& returnTypes, const Vector<Type>& argumentTypes);
+    static RefPtr<TypeDefinition> typeDefinitionForFunction(const Vector<Type, 16>& returnTypes, const Vector<Type, 16>& argumentTypes);
     static RefPtr<TypeDefinition> typeDefinitionForStruct(const Vector<FieldType>& fields);
     static RefPtr<TypeDefinition> typeDefinitionForArray(FieldType);
     static RefPtr<TypeDefinition> typeDefinitionForRecursionGroup(const Vector<TypeIndex>& types);
     static RefPtr<TypeDefinition> typeDefinitionForProjection(TypeIndex, ProjectionIndex);
-    static RefPtr<TypeDefinition> typeDefinitionForSubtype(TypeIndex, TypeIndex);
-    ALWAYS_INLINE const TypeDefinition* thunkFor(Type type) const { return thunkTypes[linearizeType(type.kind)]; }
+    static RefPtr<TypeDefinition> typeDefinitionForSubtype(const Vector<TypeIndex>&, TypeIndex, bool);
+    static RefPtr<TypeDefinition> getPlaceholderProjection(ProjectionIndex);
+    ALWAYS_INLINE const FunctionSignature* thunkFor(Type type) const { return thunkTypes[linearizeType(type.kind)]; }
 
-    static void addCachedUnrolling(TypeIndex, TypeIndex);
+    static void addCachedUnrolling(TypeIndex, const TypeDefinition*);
     static std::optional<TypeIndex> tryGetCachedUnrolling(TypeIndex);
 
     // Every type definition that is in a module's signature list should have a canonical RTT registered for subtyping checks.
@@ -891,19 +953,23 @@ public:
     static void tryCleanup();
 private:
     HashSet<Wasm::TypeHash> m_typeSet;
-    HashMap<TypeIndex, TypeIndex> m_unrollingCache;
+    HashMap<TypeIndex, RefPtr<const TypeDefinition>> m_unrollingCache;
     HashMap<TypeIndex, RefPtr<RTT>> m_rttMap;
-    const TypeDefinition* thunkTypes[numTypes];
+    HashSet<RefPtr<TypeDefinition>> m_placeholders;
+    const FunctionSignature* thunkTypes[numTypes];
     RefPtr<TypeDefinition> m_I64_Void;
     RefPtr<TypeDefinition> m_Void_I32;
     RefPtr<TypeDefinition> m_Void_I32I32I32;
     RefPtr<TypeDefinition> m_Void_I32I32I32I32;
     RefPtr<TypeDefinition> m_Void_I32I32I32I32I32;
     RefPtr<TypeDefinition> m_I32_I32;
-    RefPtr<TypeDefinition> m_I32_RefI32I32;
+    RefPtr<TypeDefinition> m_I32_RefI32I32I32;
     RefPtr<TypeDefinition> m_Ref_RefI32I32;
-    RefPtr<TypeDefinition> m_Ref_I32I32I32I32;
+    RefPtr<TypeDefinition> m_Arrayref_I32I32I32I32;
     RefPtr<TypeDefinition> m_Anyref_Externref;
+    RefPtr<TypeDefinition> m_Void_I32AnyrefI32;
+    RefPtr<TypeDefinition> m_Void_I32AnyrefI32I32I32I32;
+    RefPtr<TypeDefinition> m_Void_I32AnyrefI32I32AnyrefI32I32;
     Lock m_lock;
 };
 

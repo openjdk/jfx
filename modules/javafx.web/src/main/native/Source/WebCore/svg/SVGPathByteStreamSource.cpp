@@ -19,7 +19,6 @@
 
 #include "config.h"
 #include "SVGPathByteStreamSource.h"
-#include <wtf/text/StringConcatenateNumbers.h>
 
 namespace WebCore {
 
@@ -36,12 +35,12 @@ bool SVGPathByteStreamSource::hasMoreData() const
 
 SVGPathSegType SVGPathByteStreamSource::nextCommand(SVGPathSegType)
 {
-    return static_cast<SVGPathSegType>(readSVGSegmentType());
+    return readSVGSegmentType();
 }
 
 std::optional<SVGPathSegType> SVGPathByteStreamSource::parseSVGSegmentType()
 {
-    return static_cast<SVGPathSegType>(readSVGSegmentType());
+    return readSVGSegmentType();
 }
 
 std::optional<SVGPathSource::MoveToSegment> SVGPathByteStreamSource::parseMoveToSegment()

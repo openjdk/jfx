@@ -34,14 +34,14 @@
 #include "AudioNodeOutput.h"
 #include "AudioUtilities.h"
 #include "DynamicsCompressor.h"
-#include <wtf/IsoMallocInlines.h>
+#include <wtf/TZoneMallocInlines.h>
 
 // Set output to stereo by default.
 static constexpr unsigned defaultNumberOfOutputChannels = 2;
 
 namespace WebCore {
 
-WTF_MAKE_ISO_ALLOCATED_IMPL(DynamicsCompressorNode);
+WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(DynamicsCompressorNode);
 
 ExceptionOr<Ref<DynamicsCompressorNode>> DynamicsCompressorNode::create(BaseAudioContext& context, const DynamicsCompressorOptions& options)
 {
@@ -144,14 +144,14 @@ bool DynamicsCompressorNode::requiresTailProcessing() const
 ExceptionOr<void> DynamicsCompressorNode::setChannelCount(unsigned count)
 {
     if (count > 2)
-        return Exception { NotSupportedError, "DynamicsCompressorNode's channel count cannot be greater than 2"_s };
+        return Exception { ExceptionCode::NotSupportedError, "DynamicsCompressorNode's channel count cannot be greater than 2"_s };
     return AudioNode::setChannelCount(count);
 }
 
 ExceptionOr<void> DynamicsCompressorNode::setChannelCountMode(ChannelCountMode mode)
 {
     if (mode == ChannelCountMode::Max)
-        return Exception { NotSupportedError, "DynamicsCompressorNode's channel count mode cannot be set to 'max'"_s };
+        return Exception { ExceptionCode::NotSupportedError, "DynamicsCompressorNode's channel count mode cannot be set to 'max'"_s };
     return AudioNode::setChannelCountMode(mode);
 }
 

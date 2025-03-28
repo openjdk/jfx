@@ -30,7 +30,8 @@
 namespace WebCore {
 
 class XMLDocument : public Document {
-    WTF_MAKE_ISO_ALLOCATED(XMLDocument);
+    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(XMLDocument);
+    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(XMLDocument);
 public:
     static Ref<XMLDocument> create(LocalFrame* frame, const Settings& settings, const URL& url)
     {
@@ -52,5 +53,9 @@ protected:
 
 SPECIALIZE_TYPE_TRAITS_BEGIN(WebCore::XMLDocument)
     static bool isType(const WebCore::Document& document) { return document.isXMLDocument(); }
-    static bool isType(const WebCore::Node& node) { return is<WebCore::Document>(node) && isType(downcast<WebCore::Document>(node)); }
+    static bool isType(const WebCore::Node& node)
+    {
+        auto* document = dynamicDowncast<WebCore::Document>(node);
+        return document && isType(*document);
+    }
 SPECIALIZE_TYPE_TRAITS_END()

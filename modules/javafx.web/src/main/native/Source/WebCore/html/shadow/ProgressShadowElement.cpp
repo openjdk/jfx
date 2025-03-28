@@ -35,12 +35,15 @@
 #include "HTMLProgressElement.h"
 #include "RenderProgress.h"
 #include "RenderStyleInlines.h"
-#include "ShadowPseudoIds.h"
-#include <wtf/IsoMallocInlines.h>
+#include "UserAgentParts.h"
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
-WTF_MAKE_ISO_ALLOCATED_IMPL(ProgressShadowElement);
+WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(ProgressShadowElement);
+WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(ProgressInnerElement);
+WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(ProgressBarElement);
+WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(ProgressValueElement);
 
 using namespace HTMLNames;
 
@@ -51,13 +54,13 @@ ProgressShadowElement::ProgressShadowElement(Document& document)
 
 HTMLProgressElement* ProgressShadowElement::progressElement() const
 {
-    return checkedDowncast<HTMLProgressElement>(shadowHost());
+    return downcast<HTMLProgressElement>(shadowHost());
 }
 
 bool ProgressShadowElement::rendererIsNeeded(const RenderStyle& style)
 {
     RenderObject* progressRenderer = progressElement()->renderer();
-    return progressRenderer && !progressRenderer->style().hasEffectiveAppearance() && HTMLDivElement::rendererIsNeeded(style);
+    return progressRenderer && !progressRenderer->style().hasUsedAppearance() && HTMLDivElement::rendererIsNeeded(style);
 }
 
 ProgressInnerElement::ProgressInnerElement(Document& document)
@@ -72,8 +75,8 @@ RenderPtr<RenderElement> ProgressInnerElement::createElementRenderer(RenderStyle
 
 bool ProgressInnerElement::rendererIsNeeded(const RenderStyle& style)
 {
-    RenderObject* progressRenderer = progressElement()->renderer();
-    return progressRenderer && !progressRenderer->style().hasEffectiveAppearance() && HTMLDivElement::rendererIsNeeded(style);
+    auto* progressRenderer = progressElement()->renderer();
+    return progressRenderer && !progressRenderer->style().hasUsedAppearance() && HTMLDivElement::rendererIsNeeded(style);
 }
 
 ProgressBarElement::ProgressBarElement(Document& document)
@@ -94,21 +97,21 @@ void ProgressValueElement::setInlineSizePercentage(double size)
 Ref<ProgressInnerElement> ProgressInnerElement::create(Document& document)
 {
     Ref<ProgressInnerElement> result = adoptRef(*new ProgressInnerElement(document));
-    result->setPseudo(ShadowPseudoIds::webkitProgressInnerElement());
+    result->setUserAgentPart(UserAgentParts::webkitProgressInnerElement());
     return result;
 }
 
 Ref<ProgressBarElement> ProgressBarElement::create(Document& document)
 {
     Ref<ProgressBarElement> result = adoptRef(*new ProgressBarElement(document));
-    result->setPseudo(ShadowPseudoIds::webkitProgressBar());
+    result->setUserAgentPart(UserAgentParts::webkitProgressBar());
     return result;
 }
 
 Ref<ProgressValueElement> ProgressValueElement::create(Document& document)
 {
     Ref<ProgressValueElement> result = adoptRef(*new ProgressValueElement(document));
-    result->setPseudo(ShadowPseudoIds::webkitProgressValue());
+    result->setUserAgentPart(UserAgentParts::webkitProgressValue());
     return result;
 }
 

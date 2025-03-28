@@ -186,8 +186,8 @@ void VMTraps::invalidateCodeBlocksOnStack(Locker<Lock>&, CallFrame* topCallFrame
         return; // Not running JS code. Nothing to invalidate.
 
     while (callFrame) {
-        CodeBlock* codeBlock = callFrame->isWasmFrame() ? nullptr : callFrame->codeBlock();
-        if (codeBlock && JITCode::isOptimizingJIT(codeBlock->jitType()))
+        CodeBlock* codeBlock = callFrame->isNativeCalleeFrame() ? nullptr : callFrame->codeBlock();
+        if (codeBlock && JSC::JITCode::isOptimizingJIT(codeBlock->jitType()))
             codeBlock->jettison(Profiler::JettisonDueToVMTraps);
         callFrame = callFrame->callerFrame(entryFrame);
     }
@@ -256,9 +256,9 @@ public:
         });
     }
 
-    const char* name() const final
+    ASCIILiteral name() const final
     {
-        return "JSC VMTraps Signal Sender Thread";
+        return "JSC VMTraps Signal Sender Thread"_s;
     }
 
     VMTraps& traps() { return m_vm.traps(); }

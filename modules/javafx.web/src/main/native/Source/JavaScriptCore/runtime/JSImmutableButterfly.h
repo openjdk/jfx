@@ -44,12 +44,9 @@ class JSImmutableButterfly : public JSCell {
 public:
     static constexpr unsigned StructureFlags = Base::StructureFlags | StructureIsImmortal;
 
-    DECLARE_INFO;
+    DECLARE_EXPORT_INFO;
 
-    static Structure* createStructure(VM& vm, JSGlobalObject* globalObject, JSValue prototype, IndexingType indexingType)
-    {
-        return Structure::create(vm, globalObject, prototype, TypeInfo(JSImmutableButterflyType, StructureFlags), info(), indexingType);
-    }
+    inline static Structure* createStructure(VM&, JSGlobalObject*, JSValue, IndexingType);
 
     ALWAYS_INLINE static JSImmutableButterfly* tryCreate(VM& vm, Structure* structure, unsigned length)
     {
@@ -164,7 +161,7 @@ public:
     static CompleteSubspace* subspaceFor(VM& vm)
     {
         // We allocate out of the JSValue gigacage as other code expects all butterflies to live there.
-        return &vm.immutableButterflyJSValueGigacageAuxiliarySpace();
+        return &vm.immutableButterflyAuxiliarySpace();
     }
 
     // Only call this if you just allocated this butterfly.
@@ -181,12 +178,12 @@ public:
         return WTF::roundUpToMultipleOf<sizeof(WriteBarrier<Unknown>)>(sizeof(JSImmutableButterfly));
     }
 
-    static ptrdiff_t offsetOfPublicLength()
+    static constexpr ptrdiff_t offsetOfPublicLength()
     {
         return OBJECT_OFFSETOF(JSImmutableButterfly, m_header) + IndexingHeader::offsetOfPublicLength();
     }
 
-    static ptrdiff_t offsetOfVectorLength()
+    static constexpr ptrdiff_t offsetOfVectorLength()
     {
         return OBJECT_OFFSETOF(JSImmutableButterfly, m_header) + IndexingHeader::offsetOfVectorLength();
     }

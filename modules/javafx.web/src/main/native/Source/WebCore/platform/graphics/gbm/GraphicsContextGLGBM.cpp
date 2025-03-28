@@ -31,16 +31,16 @@
 
 #include "ANGLEHeaders.h"
 #include "DMABufEGLUtilities.h"
-#include "GBMDevice.h"
+#include "DRMDeviceManager.h"
+#include "GLFence.h"
 #include "Logging.h"
 #include "PixelBuffer.h"
 
-#if ENABLE(MEDIA_STREAM)
+#if ENABLE(MEDIA_STREAM) || ENABLE(WEB_CODECS)
 #include "VideoFrame.h"
-#endif
-
-#if USE(GSTREAMER) && ENABLE(MEDIA_STREAM)
+#if USE(GSTREAMER)
 #include "VideoFrameGStreamer.h"
+#endif
 #endif
 
 namespace WebCore {
@@ -71,7 +71,7 @@ RefPtr<GraphicsLayerContentsDisplayDelegate> GraphicsContextGLGBM::layerContents
 }
 
 #if ENABLE(MEDIA_STREAM) || ENABLE(WEB_CODECS)
-RefPtr<VideoFrame> GraphicsContextGLGBM::paintCompositedResultsToVideoFrame()
+RefPtr<VideoFrame> GraphicsContextGLGBM::surfaceBufferToVideoFrame(SurfaceBuffer)
 {
 #if USE(GSTREAMER)
     if (auto pixelBuffer = readCompositedResults())
@@ -93,31 +93,31 @@ RefPtr<PixelBuffer> GraphicsContextGLGBM::readCompositedResults()
     return readRenderingResults();
 }
 
-void GraphicsContextGLGBM::setContextVisibility(bool)
-{
-}
-
 void GraphicsContextGLGBM::prepareForDisplay()
 {
-    if (m_layerComposited || !makeContextCurrent())
+    if (!makeContextCurrent())
         return;
 
     prepareTexture();
-    markLayerComposited();
+    GL_Flush();
 
     m_swapchain.displayBO = WTFMove(m_swapchain.drawBO);
     allocateDrawBufferObject();
+
+#if USE(ANGLE_GBM)
+    m_frameFence = GLFence::create();
+#endif
 }
 
 bool GraphicsContextGLGBM::platformInitializeContext()
 {
-    auto* device = GBMDevice::singleton().device();
+    auto* device = DRMDeviceManager::singleton().mainGBMDeviceNode(DRMDeviceManager::NodeType::Render);
     if (!device) {
         LOG(WebGL, "Warning: Unable to access the GBM device, we fallback to common GL images, they require a copy, that causes a performance penalty.");
         return false;
     }
 
-    m_isForWebGL2 = contextAttributes().webGLVersion == GraphicsContextGLWebGLVersion::WebGL2;
+    m_isForWebGL2 = contextAttributes().isWebGL2;
 
     Vector<EGLint> displayAttributes {
         EGL_PLATFORM_ANGLE_TYPE_ANGLE, EGL_PLATFORM_ANGLE_TYPE_OPENGLES_ANGLE,
@@ -232,61 +232,13 @@ bool GraphicsContextGLGBM::platformInitializeContext()
     return true;
 }
 
-bool GraphicsContextGLGBM::platformInitialize()
+bool GraphicsContextGLGBM::platformInitializeExtensions()
 {
-    bool success = makeContextCurrent();
-    ASSERT_UNUSED(success, success);
-
     // We require this extension to render into the dmabuf-backed EGLImage.
     RELEASE_ASSERT(supportsExtension("GL_OES_EGL_image"_s));
-    GL_RequestExtensionANGLE("GL_OES_EGL_image");
-
-    validateAttributes();
-    auto attributes = contextAttributes(); // They may have changed during validation.
-
-    GLenum textureTarget = drawingBufferTextureTarget();
-    // Create a texture to render into.
-    GL_GenTextures(1, &m_texture);
-    GL_BindTexture(textureTarget, m_texture);
-    GL_TexParameterf(textureTarget, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-    GL_TexParameterf(textureTarget, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-    GL_TexParameteri(textureTarget, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-    GL_TexParameteri(textureTarget, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-    GL_BindTexture(textureTarget, 0);
-
-    // Create an FBO.
-    GL_GenFramebuffers(1, &m_fbo);
-    GL_BindFramebuffer(GL_FRAMEBUFFER, m_fbo);
-
-    // Create a multisample FBO.
-    ASSERT(m_state.boundReadFBO == m_state.boundDrawFBO);
-    if (attributes.antialias) {
-        GL_GenFramebuffers(1, &m_multisampleFBO);
-        GL_BindFramebuffer(GL_FRAMEBUFFER, m_multisampleFBO);
-        m_state.boundDrawFBO = m_state.boundReadFBO = m_multisampleFBO;
-        GL_GenRenderbuffers(1, &m_multisampleColorBuffer);
-        if (attributes.stencil || attributes.depth)
-            GL_GenRenderbuffers(1, &m_multisampleDepthStencilBuffer);
-    } else {
-        // Bind canvas FBO.
-        GL_BindFramebuffer(GL_FRAMEBUFFER, m_fbo);
-        m_state.boundDrawFBO = m_state.boundReadFBO = m_fbo;
-        if (attributes.stencil || attributes.depth)
-            GL_GenRenderbuffers(1, &m_depthStencilBuffer);
-    }
-
-    GL_ClearColor(0, 0, 0, 0);
-    return GraphicsContextGLANGLE::platformInitialize();
-}
-
-void GraphicsContextGLGBM::prepareTexture()
-{
-    ASSERT(!m_layerComposited);
-
-    if (contextAttributes().antialias)
-        resolveMultisamplingIfNecessary();
-
-    GL_Flush();
+    if (!enableExtension("GL_OES_EGL_image"_s))
+        return false;
+    return true;
 }
 
 bool GraphicsContextGLGBM::reshapeDrawingBuffer()
@@ -338,6 +290,21 @@ void GraphicsContextGLGBM::allocateDrawBufferObject()
     GL_BindTexture(textureTarget, m_texture);
     GL_EGLImageTargetTexture2DOES(textureTarget, result.iterator->value);
 }
+
+#if ENABLE(WEBXR)
+bool GraphicsContextGLGBM::addFoveation(IntSize, IntSize, IntSize, std::span<const GCGLfloat>, std::span<const GCGLfloat>, std::span<const GCGLfloat>)
+{
+    return false;
+}
+
+void GraphicsContextGLGBM::enableFoveation(GCGLuint)
+{
+}
+
+void GraphicsContextGLGBM::disableFoveation()
+{
+}
+#endif
 
 GraphicsContextGLGBM::Swapchain::Swapchain(GCGLDisplay platformDisplay)
     : platformDisplay(platformDisplay)

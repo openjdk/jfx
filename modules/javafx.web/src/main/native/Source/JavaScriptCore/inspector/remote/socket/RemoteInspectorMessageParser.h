@@ -35,11 +35,11 @@ namespace Inspector {
 class MessageParser {
     WTF_MAKE_FAST_ALLOCATED;
 public:
-    static Vector<uint8_t> createMessage(const uint8_t*, size_t);
+    static Vector<uint8_t> createMessage(std::span<const uint8_t>);
 
     MessageParser() { }
     MessageParser(Function<void(Vector<uint8_t>&&)>&&);
-    void pushReceivedData(const uint8_t*, size_t);
+    void pushReceivedData(std::span<const uint8_t>);
     void clearReceivedData();
 
 private:

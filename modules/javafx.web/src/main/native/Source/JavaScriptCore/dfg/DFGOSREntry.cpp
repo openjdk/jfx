@@ -75,15 +75,15 @@ void OSREntryData::dumpInContext(PrintStream& out, DumpContext* context) const
 
     CommaPrinter comma;
     for (size_t argumentIndex = m_expectedValues.numberOfArguments(); argumentIndex--;) {
-        out.print(comma, "arg", argumentIndex, ":");
+        out.print(comma, "arg"_s, argumentIndex, ":"_s);
         printOperand(virtualRegisterForArgumentIncludingThis(argumentIndex));
     }
     for (size_t localIndex = 0; localIndex < m_expectedValues.numberOfLocals(); ++localIndex) {
-        out.print(comma, "loc", localIndex, ":");
+        out.print(comma, "loc"_s, localIndex, ":"_s);
         printOperand(virtualRegisterForLocal(localIndex));
     }
 
-    out.print("], machine stack used = ", m_machineStackUsed);
+    out.print("], machine stack used = "_s, m_machineStackUsed);
 }
 
 void OSREntryData::dump(PrintStream& out) const
@@ -94,7 +94,7 @@ void OSREntryData::dump(PrintStream& out) const
 SUPPRESS_ASAN
 void* prepareOSREntry(VM& vm, CallFrame* callFrame, CodeBlock* codeBlock, BytecodeIndex bytecodeIndex)
 {
-    ASSERT(JITCode::isOptimizingJIT(codeBlock->jitType()));
+    ASSERT(JSC::JITCode::isOptimizingJIT(codeBlock->jitType()));
     ASSERT(codeBlock->alternative());
     ASSERT(codeBlock->alternative()->jitType() == JITType::BaselineJIT);
     ASSERT(codeBlock->jitCode()->dfgCommon()->isStillValid());

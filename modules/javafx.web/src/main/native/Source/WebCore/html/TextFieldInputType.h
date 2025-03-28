@@ -45,7 +45,7 @@ class TextControlInnerTextElement;
 
 // The class represents types of which UI contain text fields.
 // It supports not only the types for BaseTextInputType but also type=number.
-class TextFieldInputType : public InputType, protected SpinButtonElement::SpinButtonOwner, protected AutoFillButtonElement::AutoFillButtonOwner
+class TextFieldInputType : public InputType, protected SpinButtonOwner, protected AutoFillButtonElement::AutoFillButtonOwner
 #if ENABLE(DATALIST_ELEMENT)
     , private DataListSuggestionsClient, protected DataListButtonElement::DataListButtonOwner
 #endif
@@ -73,7 +73,7 @@ protected:
 
     virtual bool needsContainer() const;
     void createShadowSubtree() override;
-    void destroyShadowSubtree() override;
+    void removeShadowSubtree() override;
     void attributeChanged(const QualifiedName&) override;
     void disabledStateChanged() final;
     void readOnlyStateChanged() final;
@@ -105,7 +105,7 @@ private:
     void updateAutoFillButton() final;
     void elementDidBlur() final;
 
-    // SpinButtonElement::SpinButtonOwner functions.
+    // SpinButtonOwner functions.
     void focusAndSelectSpinButtonOwner() final;
     bool shouldSpinButtonRespondToMouseEvents() const final;
     bool shouldSpinButtonRespondToWheelEvents() const final;
@@ -132,13 +132,13 @@ private:
     void displaySuggestions(DataListSuggestionActivationType);
     void closeSuggestions();
 
+    void showPicker() override;
+
     // DataListSuggestionsClient
     IntRect elementRectInRootViewCoordinates() const final;
     Vector<DataListSuggestion> suggestions() final;
     void didSelectDataListOption(const String&) final;
     void didCloseSuggestions() final;
-
-    bool shouldOnlyShowDataListDropdownButtonWhenFocusedOrEdited() const;
 
     void dataListButtonElementWasClicked() final;
     bool m_isFocusingWithDataListDropdown { false };

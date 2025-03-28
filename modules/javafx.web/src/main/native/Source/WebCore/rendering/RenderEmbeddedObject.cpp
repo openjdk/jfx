@@ -56,14 +56,14 @@
 #include "SystemFontDatabase.h"
 #include "Text.h"
 #include "TextRun.h"
-#include <wtf/IsoMallocInlines.h>
 #include <wtf/StackStats.h>
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
 using namespace HTMLNames;
 
-WTF_MAKE_ISO_ALLOCATED_IMPL(RenderEmbeddedObject);
+WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(RenderEmbeddedObject);
 
 static const float replacementTextRoundedRectHeight = 22;
 static const float replacementTextRoundedRectLeftTextMargin = 10;
@@ -81,11 +81,12 @@ static constexpr auto replacementTextColor = SRGBA<uint8_t> { 240, 240, 240 };
 static constexpr auto unavailablePluginBorderColor = Color::white.colorWithAlphaByte(216);
 
 RenderEmbeddedObject::RenderEmbeddedObject(HTMLFrameOwnerElement& element, RenderStyle&& style)
-    : RenderWidget(element, WTFMove(style))
+    : RenderWidget(Type::EmbeddedObject, element, WTFMove(style))
     , m_isPluginUnavailable(false)
     , m_unavailablePluginIndicatorIsPressed(false)
     , m_mouseDownWasInUnavailablePluginIndicator(false)
 {
+    ASSERT(isRenderEmbeddedObject());
 }
 
 RenderEmbeddedObject::~RenderEmbeddedObject()
@@ -99,22 +100,56 @@ void RenderEmbeddedObject::willBeDestroyed()
     RenderWidget::willBeDestroyed();
 }
 
-bool RenderEmbeddedObject::requiresLayer() const
+bool RenderEmbeddedObject::requiresAcceleratedCompositing() const
 {
-    if (RenderWidget::requiresLayer())
+    if (RenderWidget::requiresAcceleratedCompositing())
         return true;
 
-    return allowsAcceleratedCompositing();
+    auto* pluginViewBase = dynamicDowncast<PluginViewBase>(widget());
+    if (!pluginViewBase)
+        return false;
+    return pluginViewBase->layerHostingStrategy() != PluginLayerHostingStrategy::None;
 }
 
-bool RenderEmbeddedObject::allowsAcceleratedCompositing() const
+ScrollableArea* RenderEmbeddedObject::scrollableArea() const
 {
-#if PLATFORM(IOS_FAMILY)
-    // The timing of layer creation is different on the phone, since the plugin can only be manipulated from the main thread.
-    return is<PluginViewBase>(widget()) && downcast<PluginViewBase>(*widget()).willProvidePluginLayer();
-#else
-    return is<PluginViewBase>(widget()) && downcast<PluginViewBase>(*widget()).platformLayer();
-#endif
+    RefPtr pluginViewBase = dynamicDowncast<PluginViewBase>(widget());
+    if (!pluginViewBase)
+        return nullptr;
+
+    return pluginViewBase->scrollableArea();
+}
+
+bool RenderEmbeddedObject::usesAsyncScrolling() const
+{
+    RefPtr pluginViewBase = dynamicDowncast<PluginViewBase>(widget());
+    if (!pluginViewBase)
+        return false;
+    return pluginViewBase->usesAsyncScrolling();
+}
+
+ScrollingNodeID RenderEmbeddedObject::scrollingNodeID() const
+{
+    RefPtr pluginViewBase = dynamicDowncast<PluginViewBase>(widget());
+    if (!pluginViewBase)
+        return { };
+    return pluginViewBase->scrollingNodeID();
+}
+
+void RenderEmbeddedObject::willAttachScrollingNode()
+{
+    RefPtr pluginViewBase = dynamicDowncast<PluginViewBase>(widget());
+    if (!pluginViewBase)
+        return;
+    pluginViewBase->willAttachScrollingNode();
+}
+
+void RenderEmbeddedObject::didAttachScrollingNode()
+{
+    RefPtr pluginViewBase = dynamicDowncast<PluginViewBase>(widget());
+    if (!pluginViewBase)
+        return;
+    pluginViewBase->didAttachScrollingNode();
 }
 
 #if !PLATFORM(IOS_FAMILY)
@@ -186,13 +221,13 @@ void RenderEmbeddedObject::paint(PaintInfo& paintInfo, const LayoutPoint& paintO
 
     if (isPluginUnavailable()) {
         if (countsTowardsRelevantObjects)
-            page().addRelevantUnpaintedObject(this, visualOverflowRect());
+            page().addRelevantUnpaintedObject(*this, visualOverflowRect());
         RenderReplaced::paint(paintInfo, paintOffset);
         return;
     }
 
     if (countsTowardsRelevantObjects)
-        page().addRelevantRepaintedObject(this, visualOverflowRect());
+        page().addRelevantRepaintedObject(*this, visualOverflowRect());
 
     RenderWidget::paint(paintInfo, paintOffset);
 }
@@ -260,7 +295,7 @@ void RenderEmbeddedObject::paintReplaced(PaintInfo& paintInfo, const LayoutPoint
 
     const FontMetrics& fontMetrics = font.metricsOfPrimaryFont();
     float labelX = roundf(replacementTextRect.location().x() + replacementTextRoundedRectLeftTextMargin);
-    float labelY = roundf(replacementTextRect.location().y() + (replacementTextRect.size().height() - fontMetrics.height()) / 2 + fontMetrics.ascent() + replacementTextRoundedRectTopTextMargin);
+    float labelY = roundf(replacementTextRect.location().y() + (replacementTextRect.size().height() - fontMetrics.intHeight()) / 2 + fontMetrics.intAscent() + replacementTextRoundedRectTopTextMargin);
     context.setFillColor(replacementTextColor);
     context.drawBidiText(font, run, FloatPoint(labelX, labelY));
 
@@ -310,7 +345,7 @@ void RenderEmbeddedObject::getReplacementTextGeometry(const LayoutPoint& accumul
     fontDescription.setOneFamily(SystemFontDatabase::singleton().systemFontShorthandFamily(SystemFontDatabase::FontShorthand::WebkitSmallControl));
     fontDescription.setWeight(boldWeightValue());
     fontDescription.setComputedSize(12);
-    font = FontCascade(WTFMove(fontDescription), 0, 0);
+    font = FontCascade(WTFMove(fontDescription));
     font.update(nullptr);
 
     run = TextRun(m_unavailablePluginReplacementText);
@@ -386,10 +421,8 @@ bool RenderEmbeddedObject::nodeAtPoint(const HitTestRequest& request, HitTestRes
 
 bool RenderEmbeddedObject::scroll(ScrollDirection direction, ScrollGranularity granularity, unsigned, Element**, RenderBox*, const IntPoint&)
 {
-    if (!is<PluginViewBase>(widget()))
-        return false;
-
-    return downcast<PluginViewBase>(*widget()).scroll(direction, granularity);
+    RefPtr pluginView = dynamicDowncast<PluginViewBase>(widget());
+    return pluginView && pluginView->scroll(direction, granularity);
 }
 
 bool RenderEmbeddedObject::logicalScroll(ScrollLogicalDirection direction, ScrollGranularity granularity, unsigned stepCount, Element** stopElement)
@@ -413,35 +446,35 @@ void RenderEmbeddedObject::handleUnavailablePluginIndicatorEvent(Event* event)
     if (!shouldUnavailablePluginMessageBeButton(page(), m_pluginUnavailabilityReason))
         return;
 
-    if (!is<MouseEvent>(*event))
+    RefPtr mouseEvent = dynamicDowncast<MouseEvent>(*event);
+    if (!mouseEvent)
         return;
 
-    MouseEvent& mouseEvent = downcast<MouseEvent>(*event);
-    HTMLPlugInElement& element = downcast<HTMLPlugInElement>(frameOwnerElement());
-    if (mouseEvent.type() == eventNames().mousedownEvent && mouseEvent.button() == LeftButton) {
-        m_mouseDownWasInUnavailablePluginIndicator = isInUnavailablePluginIndicator(mouseEvent);
+    Ref element = downcast<HTMLPlugInElement>(frameOwnerElement());
+    if (mouseEvent->type() == eventNames().mousedownEvent && mouseEvent->button() == MouseButton::Left) {
+        m_mouseDownWasInUnavailablePluginIndicator = isInUnavailablePluginIndicator(*mouseEvent);
         if (m_mouseDownWasInUnavailablePluginIndicator) {
-            frame().eventHandler().setCapturingMouseEventsElement(&element);
-            element.setIsCapturingMouseEvents(true);
+            frame().eventHandler().setCapturingMouseEventsElement(element.copyRef());
+            element->setIsCapturingMouseEvents(true);
             setUnavailablePluginIndicatorIsPressed(true);
         }
-        mouseEvent.setDefaultHandled();
+        mouseEvent->setDefaultHandled();
     }
-    if (mouseEvent.type() == eventNames().mouseupEvent && mouseEvent.button() == LeftButton) {
+    if (mouseEvent->type() == eventNames().mouseupEvent && mouseEvent->button() == MouseButton::Left) {
         if (m_unavailablePluginIndicatorIsPressed) {
             frame().eventHandler().setCapturingMouseEventsElement(nullptr);
-            element.setIsCapturingMouseEvents(false);
+            element->setIsCapturingMouseEvents(false);
             setUnavailablePluginIndicatorIsPressed(false);
         }
-        if (m_mouseDownWasInUnavailablePluginIndicator && isInUnavailablePluginIndicator(mouseEvent)) {
-            page().chrome().client().unavailablePluginButtonClicked(element, m_pluginUnavailabilityReason);
+        if (m_mouseDownWasInUnavailablePluginIndicator && isInUnavailablePluginIndicator(*mouseEvent)) {
+            page().chrome().client().unavailablePluginButtonClicked(element.get(), m_pluginUnavailabilityReason);
         }
         m_mouseDownWasInUnavailablePluginIndicator = false;
         event->setDefaultHandled();
     }
-    if (mouseEvent.type() == eventNames().mousemoveEvent) {
-        setUnavailablePluginIndicatorIsPressed(m_mouseDownWasInUnavailablePluginIndicator && isInUnavailablePluginIndicator(mouseEvent));
-        mouseEvent.setDefaultHandled();
+    if (mouseEvent->type() == eventNames().mousemoveEvent) {
+        setUnavailablePluginIndicatorIsPressed(m_mouseDownWasInUnavailablePluginIndicator && isInUnavailablePluginIndicator(*mouseEvent));
+        mouseEvent->setDefaultHandled();
     }
 }
 

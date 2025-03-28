@@ -76,17 +76,6 @@ protected:
     {
     }
 
-#if COMPILER(MSVC)
-    // Work around an MSVC bug.
-    PODIntervalBase(const T& low, const T& high, const UserData& data)
-        : m_low(low)
-        , m_high(high)
-        , m_data(data)
-        , m_maxHigh(high)
-    {
-    }
-#endif
-
 private:
     T m_low;
     T m_high;
@@ -130,10 +119,10 @@ private:
     using Base = PODIntervalBase<T, UserData>;
 };
 
-template<class T, class U> class PODInterval<T, WeakPtr<U>> : public PODIntervalBase<T, WeakPtr<U>> {
+template<typename T, typename U, typename WeakPtrImpl> class PODInterval<T, WeakPtr<U, WeakPtrImpl>> : public PODIntervalBase<T, WeakPtr<U, WeakPtrImpl>> {
 public:
-    PODInterval(const T& low, const T& high, WeakPtr<U>&& data)
-        : PODIntervalBase<T, WeakPtr<U>>(low, high, WTFMove(data))
+    PODInterval(const T& low, const T& high, WeakPtr<U, WeakPtrImpl>&& data)
+        : PODIntervalBase<T, WeakPtr<U, WeakPtrImpl>>(low, high, WTFMove(data))
     {
     }
 
@@ -147,7 +136,7 @@ public:
     }
 
 private:
-    using Base = PODIntervalBase<T, WeakPtr<U>>;
+    using Base = PODIntervalBase<T, WeakPtr<U, WeakPtrImpl>>;
 };
 
 #ifndef NDEBUG

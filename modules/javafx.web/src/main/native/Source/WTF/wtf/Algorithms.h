@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2017 Apple Inc. All rights reserved.
+ * Copyright (C) 2017-2023 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -26,7 +26,7 @@
 #pragma once
 
 #include <cstring>
-#include <span>
+#include <type_traits>
 #include <wtf/Assertions.h>
 
 namespace WTF {
@@ -58,22 +58,4 @@ bool allOf(ContainerType&& container, AllOfFunction allOfFunction)
     return true;
 }
 
-template<typename T, typename U>
-void memcpySpan(std::span<T> destination, std::span<U> source)
-{
-    RELEASE_ASSERT(destination.size() == source.size());
-    static_assert(sizeof(T) == sizeof(U));
-    memcpy(destination.data(), source.data(), destination.size() * sizeof(T));
-}
-
-template<typename T>
-void memsetSpan(std::span<T> destination, uint8_t byte)
-{
-    memset(destination.data(), byte, destination.size() * sizeof(T));
-}
-
 } // namespace WTF
-
-using WTF::memcpySpan;
-using WTF::memsetSpan;
-

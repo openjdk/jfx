@@ -27,9 +27,9 @@
 #include "CSSValueKeywords.h"
 #include "DOMPoint.h"
 #include "FrameSelection.h"
+#include "LegacyRenderSVGResource.h"
 #include "LocalFrame.h"
 #include "RenderObject.h"
-#include "RenderSVGResource.h"
 #include "RenderSVGText.h"
 #include "SVGElementTypeHelpers.h"
 #include "SVGNames.h"
@@ -37,12 +37,12 @@
 #include "SVGRect.h"
 #include "SVGTextQuery.h"
 #include "XMLNames.h"
-#include <wtf/IsoMallocInlines.h>
 #include <wtf/NeverDestroyed.h>
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
-WTF_MAKE_ISO_ALLOCATED_IMPL(SVGTextContentElement);
+WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(SVGTextContentElement);
 
 SVGTextContentElement::SVGTextContentElement(const QualifiedName& tagName, Document& document, UniqueRef<SVGPropertyRegistry>&& propertyRegistry)
     : SVGGraphicsElement(tagName, document, WTFMove(propertyRegistry))
@@ -56,76 +56,76 @@ SVGTextContentElement::SVGTextContentElement(const QualifiedName& tagName, Docum
 
 unsigned SVGTextContentElement::getNumberOfChars()
 {
-    document().updateLayoutIgnorePendingStylesheets();
-    return SVGTextQuery(renderer()).numberOfCharacters();
+    protectedDocument()->updateLayoutIgnorePendingStylesheets({ LayoutOptions::ContentVisibilityForceLayout }, this);
+    return SVGTextQuery(checkedRenderer().get()).numberOfCharacters();
 }
 
 float SVGTextContentElement::getComputedTextLength()
 {
-    document().updateLayoutIgnorePendingStylesheets();
-    return SVGTextQuery(renderer()).textLength();
+    protectedDocument()->updateLayoutIgnorePendingStylesheets({ LayoutOptions::ContentVisibilityForceLayout }, this);
+    return SVGTextQuery(checkedRenderer().get()).textLength();
 }
 
 ExceptionOr<float> SVGTextContentElement::getSubStringLength(unsigned charnum, unsigned nchars)
 {
     unsigned numberOfChars = getNumberOfChars();
     if (charnum >= numberOfChars)
-        return Exception { IndexSizeError };
+        return Exception { ExceptionCode::IndexSizeError };
 
     nchars = std::min(nchars, numberOfChars - charnum);
-    return SVGTextQuery(renderer()).subStringLength(charnum, nchars);
+    return SVGTextQuery(checkedRenderer().get()).subStringLength(charnum, nchars);
 }
 
 ExceptionOr<Ref<SVGPoint>> SVGTextContentElement::getStartPositionOfChar(unsigned charnum)
 {
     if (charnum >= getNumberOfChars())
-        return Exception { IndexSizeError };
+        return Exception { ExceptionCode::IndexSizeError };
 
-    return SVGPoint::create(SVGTextQuery(renderer()).startPositionOfCharacter(charnum));
+    return SVGPoint::create(SVGTextQuery(checkedRenderer().get()).startPositionOfCharacter(charnum));
 }
 
 ExceptionOr<Ref<SVGPoint>> SVGTextContentElement::getEndPositionOfChar(unsigned charnum)
 {
     if (charnum >= getNumberOfChars())
-        return Exception { IndexSizeError };
+        return Exception { ExceptionCode::IndexSizeError };
 
-    return SVGPoint::create(SVGTextQuery(renderer()).endPositionOfCharacter(charnum));
+    return SVGPoint::create(SVGTextQuery(checkedRenderer().get()).endPositionOfCharacter(charnum));
 }
 
 ExceptionOr<Ref<SVGRect>> SVGTextContentElement::getExtentOfChar(unsigned charnum)
 {
     if (charnum >= getNumberOfChars())
-        return Exception { IndexSizeError };
+        return Exception { ExceptionCode::IndexSizeError };
 
-    return SVGRect::create(SVGTextQuery(renderer()).extentOfCharacter(charnum));
+    return SVGRect::create(SVGTextQuery(checkedRenderer().get()).extentOfCharacter(charnum));
 }
 
 ExceptionOr<float> SVGTextContentElement::getRotationOfChar(unsigned charnum)
 {
     if (charnum >= getNumberOfChars())
-        return Exception { IndexSizeError };
+        return Exception { ExceptionCode::IndexSizeError };
 
-    return SVGTextQuery(renderer()).rotationOfCharacter(charnum);
+    return SVGTextQuery(checkedRenderer().get()).rotationOfCharacter(charnum);
 }
 
 int SVGTextContentElement::getCharNumAtPosition(DOMPointInit&& pointInit)
 {
-    document().updateLayoutIgnorePendingStylesheets();
+    protectedDocument()->updateLayoutIgnorePendingStylesheets({ LayoutOptions::ContentVisibilityForceLayout }, this);
     FloatPoint transformPoint {static_cast<float>(pointInit.x), static_cast<float>(pointInit.y)};
-    return SVGTextQuery(renderer()).characterNumberAtPosition(transformPoint);
+    return SVGTextQuery(checkedRenderer().get()).characterNumberAtPosition(transformPoint);
 }
 
 ExceptionOr<void> SVGTextContentElement::selectSubString(unsigned charnum, unsigned nchars)
 {
     unsigned numberOfChars = getNumberOfChars();
     if (charnum >= numberOfChars)
-        return Exception { IndexSizeError };
+        return Exception { ExceptionCode::IndexSizeError };
 
     nchars = std::min(nchars, numberOfChars - charnum);
 
-    ASSERT(document().frame());
-
-    FrameSelection& selection = document().frame()->selection();
+    RefPtr frame = document().frame();
+    ASSERT(frame);
+    CheckedRef selection = frame->selection();
 
     // Find selection start
     VisiblePosition start(firstPositionInNode(const_cast<SVGTextContentElement*>(this)));
@@ -137,7 +137,7 @@ ExceptionOr<void> SVGTextContentElement::selectSubString(unsigned charnum, unsig
     for (unsigned i = 0; i < nchars; ++i)
         end = end.next();
 
-    selection.setSelection(VisibleSelection(start, end));
+    selection->setSelection(VisibleSelection(start, end));
 
     return { };
 }
@@ -156,7 +156,7 @@ void SVGTextContentElement::collectPresentationalHintsForAttribute(const Qualifi
             addPropertyToPresentationalHintStyle(style, CSSPropertyWhiteSpaceCollapse, CSSValuePreserve);
         else
             addPropertyToPresentationalHintStyle(style, CSSPropertyWhiteSpaceCollapse, CSSValueCollapse);
-        addPropertyToPresentationalHintStyle(style, CSSPropertyTextWrap, CSSValueNowrap);
+        addPropertyToPresentationalHintStyle(style, CSSPropertyTextWrapMode, CSSValueNowrap);
         return;
     }
 
@@ -187,6 +187,7 @@ void SVGTextContentElement::svgAttributeChanged(const QualifiedName& attrName)
 
         InstanceInvalidationGuard guard(*this);
         updateSVGRendererForElementChange();
+        invalidateResourceImageBuffersIfNeeded();
         return;
     }
 
@@ -214,16 +215,12 @@ SVGTextContentElement* SVGTextContentElement::elementFromRenderer(RenderObject* 
     if (!renderer)
         return nullptr;
 
-    if (!renderer->isSVGText() && !renderer->isSVGInline())
+    if (!renderer->isRenderSVGText() && !renderer->isRenderSVGInline())
         return nullptr;
 
-    SVGElement* element = downcast<SVGElement>(renderer->node());
+    auto* element = downcast<SVGElement>(renderer->node());
     ASSERT(element);
-
-    if (!is<SVGTextContentElement>(element))
-        return nullptr;
-
-    return downcast<SVGTextContentElement>(element);
+    return dynamicDowncast<SVGTextContentElement>(element);
 }
 
 }

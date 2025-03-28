@@ -34,16 +34,16 @@
 #include "RenderLayerScrollableArea.h"
 #include "RenderMarquee.h"
 #include "RenderStyleInlines.h"
-#include <wtf/IsoMallocInlines.h>
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
-WTF_MAKE_ISO_ALLOCATED_IMPL(HTMLMarqueeElement);
+WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(HTMLMarqueeElement);
 
 using namespace HTMLNames;
 
 inline HTMLMarqueeElement::HTMLMarqueeElement(const QualifiedName& tagName, Document& document)
-    : HTMLElement(tagName, document)
+    : HTMLElement(tagName, document, TypeFlag::HasDidMoveToNewDocument)
     , ActiveDOMObject(document)
 {
     ASSERT(hasTagName(marqueeTag));
@@ -183,9 +183,15 @@ int HTMLMarqueeElement::loop() const
 ExceptionOr<void> HTMLMarqueeElement::setLoop(int loop)
 {
     if (loop <= 0 && loop != -1)
-        return Exception { IndexSizeError };
+        return Exception { ExceptionCode::IndexSizeError };
     setIntegralAttribute(loopAttr, loop);
     return { };
+}
+
+void HTMLMarqueeElement::didMoveToNewDocument(Document& oldDocument, Document& newDocument)
+{
+    HTMLElement::didMoveToNewDocument(oldDocument, newDocument);
+    ActiveDOMObject::didMoveToNewDocument(newDocument);
 }
 
 void HTMLMarqueeElement::suspend(ReasonForSuspension)

@@ -66,6 +66,7 @@ public:
 
     TagName tagName() const;
     bool selfClosing() const;
+    void setSelfClosingToFalse();
     const Vector<Attribute>& attributes() const;
 
     // Characters
@@ -136,6 +137,14 @@ inline bool AtomHTMLToken::selfClosing() const
 {
     ASSERT(m_type == Type::StartTag || m_type == Type::EndTag);
     return m_selfClosing;
+}
+
+inline void AtomHTMLToken::setSelfClosingToFalse()
+{
+    ASSERT(m_selfClosing);
+    ASSERT(m_type == Type::StartTag);
+    ASSERT(m_tagName == TagName::script);
+    m_selfClosing = false;
 }
 
 inline Vector<Attribute>& AtomHTMLToken::attributes()
@@ -221,18 +230,16 @@ inline void AtomHTMLToken::initializeAttributes(const HTMLToken::AttributeList& 
 
     HashSet<AtomString> addedAttributes;
     addedAttributes.reserveInitialCapacity(size);
-    m_attributes.reserveInitialCapacity(size);
-    for (auto& attribute : attributes) {
+    m_attributes = WTF::compactMap(attributes, [&](auto& attribute) -> std::optional<Attribute> {
         if (attribute.name.isEmpty())
-            continue;
+            return std::nullopt;
 
         auto qualifiedName = HTMLNameCache::makeAttributeQualifiedName(attribute.name);
-
         if (addedAttributes.add(qualifiedName.localName()).isNewEntry)
-            m_attributes.uncheckedAppend(Attribute(WTFMove(qualifiedName), HTMLNameCache::makeAttributeValue(attribute.value)));
-        else
+            return Attribute(WTFMove(qualifiedName), HTMLNameCache::makeAttributeValue(attribute.value));
             m_hasDuplicateAttribute = true;
-    }
+        return std::nullopt;
+    });
 }
 
 inline AtomHTMLToken::AtomHTMLToken(HTMLToken& token)
@@ -243,10 +250,10 @@ inline AtomHTMLToken::AtomHTMLToken(HTMLToken& token)
         ASSERT_NOT_REACHED();
         return;
     case Type::DOCTYPE:
-        if (LIKELY(token.name().size() == 4 && equal(HTMLNames::htmlTag->localName().impl(), token.name().data(), 4)))
+        if (LIKELY(token.name().size() == 4 && equal(HTMLNames::htmlTag->localName().impl(), token.name().span())))
             m_name = HTMLNames::htmlTag->localName();
         else
-            m_name = AtomString(token.name().data(), token.name().size());
+            m_name = AtomString(token.name().span());
         m_doctypeData = token.releaseDoctypeData();
         return;
     case Type::EndOfFile:
@@ -256,14 +263,14 @@ inline AtomHTMLToken::AtomHTMLToken(HTMLToken& token)
         m_selfClosing = token.selfClosing();
         m_tagName = findTagName(token.name());
         if (UNLIKELY(m_tagName == TagName::Unknown))
-            m_name = AtomString(token.name().data(), token.name().size());
+            m_name = AtomString(token.name().span());
         initializeAttributes(token.attributes());
         return;
     case Type::Comment: {
         if (token.commentIsAll8BitData())
-            m_data = String::make8Bit(token.comment().data(), token.comment().size());
+            m_data = String::make8Bit(token.comment().span());
         else
-            m_data = String(token.comment().data(), token.comment().size());
+            m_data = token.comment().span();
         return;
     }
     case Type::Character:

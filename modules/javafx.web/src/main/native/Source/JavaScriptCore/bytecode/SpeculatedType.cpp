@@ -40,9 +40,12 @@
 #include "JSDataView.h"
 #include "JSFunction.h"
 #include "JSGenericTypedArrayViewInlines.h"
+#include "JSGlobalProxy.h"
 #include "JSMap.h"
+#include "JSMapIterator.h"
 #include "JSPromise.h"
 #include "JSSet.h"
+#include "JSSetIterator.h"
 #include "JSWeakMap.h"
 #include "JSWeakSet.h"
 #include "ProxyObject.h"
@@ -58,7 +61,7 @@ namespace JSC {
 struct PrettyPrinter {
     PrettyPrinter(PrintStream& out)
         : out(out)
-        , separator("|")
+        , separator("|"_s)
     { }
 
     template<typename T>
@@ -145,6 +148,11 @@ void dumpSpeculation(PrintStream& outStream, SpeculatedType value)
             else
                 isTop = false;
 
+            if (value & SpecFloat16Array)
+                strOut.print("Float16array");
+            else
+                isTop = false;
+
             if (value & SpecFloat32Array)
                 strOut.print("Float32array");
             else
@@ -222,6 +230,11 @@ void dumpSpeculation(PrintStream& outStream, SpeculatedType value)
 
             if (value & SpecProxyObject)
                 strOut.print("ProxyObject");
+            else
+                isTop = false;
+
+            if (value & SpecGlobalProxy)
+                strOut.print("GlobalProxy");
             else
                 isTop = false;
 
@@ -367,6 +380,8 @@ static const char* speculationToAbbreviatedString(SpeculatedType prediction)
         return "<Uint16array>";
     if (isUint32ArraySpeculation(prediction))
         return "<Uint32array>";
+    if (isFloat16ArraySpeculation(prediction))
+        return "<Float16array>";
     if (isFloat32ArraySpeculation(prediction))
         return "<Float32array>";
     if (isFloat64ArraySpeculation(prediction))
@@ -436,6 +451,8 @@ SpeculatedType speculationFromTypedArrayType(TypedArrayType type)
         return SpecUint16Array;
     case TypeUint32:
         return SpecUint32Array;
+    case TypeFloat16:
+        return SpecFloat16Array;
     case TypeFloat32:
         return SpecFloat32Array;
     case TypeFloat64:
@@ -490,9 +507,17 @@ SpeculatedType speculationFromClassInfoInheritance(const ClassInfo* classInfo)
     if (classInfo == JSMap::info())
         return SpecMapObject;
 
+    static_assert(std::is_final_v<JSMapIterator>);
+    if (classInfo == JSMapIterator::info())
+        return SpecObjectOther;
+
     static_assert(std::is_final_v<JSSet>);
     if (classInfo == JSSet::info())
         return SpecSetObject;
+
+    static_assert(std::is_final_v<JSSetIterator>);
+    if (classInfo == JSSetIterator::info())
+        return SpecObjectOther;
 
     static_assert(std::is_final_v<JSWeakMap>);
     if (classInfo == JSWeakMap::info())
@@ -505,6 +530,9 @@ SpeculatedType speculationFromClassInfoInheritance(const ClassInfo* classInfo)
     static_assert(std::is_final_v<ProxyObject>);
     if (classInfo == ProxyObject::info())
         return SpecProxyObject;
+
+    if (classInfo->isSubClassOf(JSGlobalProxy::info()))
+        return SpecGlobalProxy;
 
     if (classInfo->isSubClassOf(JSDataView::info()))
         return SpecDataViewObject;
@@ -534,10 +562,12 @@ SpeculatedType speculationFromClassInfoInheritance(const ClassInfo* classInfo)
     return SpecCellOther;
 }
 
-using SpeculationMapping = std::array<SpeculatedType, static_cast<unsigned>(UINT8_MAX) + 1>;
-static const SpeculationMapping speculatedTypeMapping = ([]() -> SpeculationMapping {
+static constexpr unsigned SpeculationMappingSize { static_cast<unsigned>(UINT8_MAX) + 1 };
+using SpeculationMapping = std::array<SpeculatedType, SpeculationMappingSize>;
+static constexpr SpeculationMapping speculatedTypeMapping = ([]() -> SpeculationMapping {
     SpeculationMapping result { };
-    result.fill(SpecObjectOther);
+    for (unsigned i = 0; i < SpeculationMappingSize; ++i)
+        result[i] = SpecObjectOther;
 #define JSC_DEFINE_JS_TYPE(type, speculatedType) result[type] = speculatedType;
     FOR_EACH_JS_TYPE(JSC_DEFINE_JS_TYPE)
 #undef JSC_DEFINE_JS_TYPE
@@ -637,6 +667,9 @@ TypedArrayType typedArrayTypeFromSpeculation(SpeculatedType type)
     if (isUint32ArraySpeculation(type))
         return TypeUint32;
 
+    if (isFloat16ArraySpeculation(type))
+        return TypeFloat16;
+
     if (isFloat32ArraySpeculation(type))
         return TypeFloat32;
 
@@ -671,6 +704,8 @@ std::optional<SpeculatedType> speculationFromJSType(JSType type)
         return SpecDateObject;
     case ProxyObjectType:
         return SpecProxyObject;
+    case GlobalProxyType:
+        return SpecGlobalProxy;
     case JSPromiseType:
         return SpecPromiseObject;
     case JSMapType:
@@ -683,6 +718,9 @@ std::optional<SpeculatedType> speculationFromJSType(JSType type)
         return SpecWeakSetObject;
     case DataViewType:
         return SpecDataViewObject;
+    case JSMapIteratorType:
+    case JSSetIteratorType:
+        return SpecObjectOther;
     default:
         return std::nullopt;
     }
@@ -890,6 +928,8 @@ SpeculatedType speculationFromString(const char* speculation)
         return SpecUint16Array;
     if (!strncmp(speculation, "SpecUint32Array", strlen("SpecUint32Array")))
         return SpecUint32Array;
+    if (!strncmp(speculation, "SpecFloat16Array", strlen("SpecFloat16Array")))
+        return SpecFloat16Array;
     if (!strncmp(speculation, "SpecFloat32Array", strlen("SpecFloat32Array")))
         return SpecFloat32Array;
     if (!strncmp(speculation, "SpecFloat64Array", strlen("SpecFloat64Array")))
@@ -922,6 +962,8 @@ SpeculatedType speculationFromString(const char* speculation)
         return SpecWeakSetObject;
     if (!strncmp(speculation, "SpecProxyObject", strlen("SpecProxyObject")))
         return SpecProxyObject;
+    if (!strncmp(speculation, "SpecGlobalProxy", strlen("SpecGlobalProxy")))
+        return SpecGlobalProxy;
     if (!strncmp(speculation, "SpecDerivedArray", strlen("SpecDerivedArray")))
         return SpecDerivedArray;
     if (!strncmp(speculation, "SpecDataViewObject", strlen("SpecDataViewObject")))

@@ -30,14 +30,15 @@
 
 #include "Document.h"
 #include "LocalDOMWindow.h"
+#include "PermissionsPolicy.h"
 #include "RealtimeMediaSourceCenter.h"
 #include "UserMediaRequest.h"
 
 namespace WebCore {
 
-const char* UserMediaController::supplementName()
+ASCIILiteral UserMediaController::supplementName()
 {
-    return "UserMediaController";
+    return "UserMediaController"_s;
 }
 
 UserMediaController::UserMediaController(UserMediaClient* client)
@@ -57,23 +58,23 @@ void provideUserMediaTo(Page* page, UserMediaClient* client)
 
 void UserMediaController::logGetUserMediaDenial(Document& document)
 {
-    if (auto* window = document.domWindow())
-        window->printErrorMessage(makeString("Not allowed to call getUserMedia."));
+    if (RefPtr window = document.domWindow())
+        window->printErrorMessage("Not allowed to call getUserMedia."_s);
 }
 
 void UserMediaController::logGetDisplayMediaDenial(Document& document)
 {
-    if (auto* window = document.domWindow())
-        window->printErrorMessage(makeString("Not allowed to call getDisplayMedia."));
+    if (RefPtr window = document.domWindow())
+        window->printErrorMessage("Not allowed to call getDisplayMedia."_s);
 }
 
 void UserMediaController::logEnumerateDevicesDenial(Document& document)
 {
     // We redo the check to print to the console log.
-    isFeaturePolicyAllowedByDocumentAndAllOwners(FeaturePolicy::Type::Camera, document, LogFeaturePolicyFailure::Yes);
-    isFeaturePolicyAllowedByDocumentAndAllOwners(FeaturePolicy::Type::Microphone, document, LogFeaturePolicyFailure::Yes);
-    if (auto* window = document.domWindow())
-        window->printErrorMessage(makeString("Not allowed to call enumerateDevices."));
+    PermissionsPolicy::isFeatureEnabled(PermissionsPolicy::Feature::Camera, document);
+    PermissionsPolicy::isFeatureEnabled(PermissionsPolicy::Feature::Microphone, document);
+    if (RefPtr window = document.domWindow())
+        window->printErrorMessage("Not allowed to call enumerateDevices."_s);
 }
 
 } // namespace WebCore

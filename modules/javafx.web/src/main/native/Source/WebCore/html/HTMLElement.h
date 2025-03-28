@@ -27,9 +27,6 @@
 #include "HTMLNames.h"
 #include "InputMode.h"
 #include "StyledElement.h"
-#if PLATFORM(JAVA)
-#include "ElementInlines.h"
-#endif
 
 #if ENABLE(AUTOCAPITALIZE)
 #include "Autocapitalize.h"
@@ -63,7 +60,8 @@ enum class SelectionRenderingBehavior : bool;
 #endif
 
 class HTMLElement : public StyledElement {
-    WTF_MAKE_ISO_ALLOCATED(HTMLElement);
+    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(HTMLElement);
+    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(HTMLElement);
 public:
     static Ref<HTMLElement> create(const QualifiedName& tagName, Document&);
 
@@ -87,6 +85,9 @@ public:
     WEBCORE_EXPORT bool spellcheck() const;
     WEBCORE_EXPORT void setSpellcheck(bool);
 
+    WEBCORE_EXPORT bool writingsuggestions() const;
+    WEBCORE_EXPORT void setWritingsuggestions(bool);
+
     WEBCORE_EXPORT bool translate() const;
     WEBCORE_EXPORT void setTranslate(bool);
 
@@ -96,14 +97,8 @@ public:
 
     String accessKeyLabel() const;
 
-    bool rendererIsEverNeeded() final;
-
     WEBCORE_EXPORT const AtomString& dir() const;
     WEBCORE_EXPORT void setDir(const AtomString&);
-
-    bool hasDirectionAuto() const;
-
-    std::optional<TextDirection> directionalityIfDirIsAuto() const;
 
     virtual bool isTextControlInnerTextElement() const { return false; }
     virtual bool isSearchFieldResultsButtonElement() const { return false; }
@@ -162,12 +157,15 @@ public:
     void setPopover(const AtomString& value) { setAttributeWithoutSynchronization(HTMLNames::popoverAttr, value); };
     void popoverAttributeChanged(const AtomString& value);
 
+    bool isValidCommandType(const CommandType) override;
+    bool handleCommandInternal(const HTMLFormControlElement& invoker, const CommandType&) override;
+
 #if PLATFORM(IOS_FAMILY)
     static SelectionRenderingBehavior selectionRenderingBehavior(const Node*);
 #endif
 
 protected:
-    HTMLElement(const QualifiedName& tagName, Document&, ConstructionType);
+    HTMLElement(const QualifiedName& tagName, Document&, OptionSet<TypeFlag>);
 
     enum class AllowZeroValue : bool { No, Yes };
     void addHTMLLengthToStyle(MutableStyleProperties&, CSSPropertyID, StringView value, AllowZeroValue = AllowZeroValue::Yes);
@@ -193,11 +191,9 @@ protected:
     void collectPresentationalHintsForAttribute(const QualifiedName&, const AtomString&, MutableStyleProperties&) override;
     unsigned parseBorderWidthAttribute(const AtomString&) const;
 
-    void childrenChanged(const ChildChange&) override;
-    void updateTextDirectionalityAfterTelephoneInputTypeChange();
-    void updateEffectiveDirectionalityOfDirAuto();
+    virtual void effectiveSpellcheckAttributeChanged(bool);
 
-    using EventHandlerNameMap = HashMap<AtomStringImpl*, AtomString>;
+    using EventHandlerNameMap = HashMap<AtomString, AtomString>;
     static const AtomString& eventNameForEventHandlerAttribute(const QualifiedName& attributeName, const EventHandlerNameMap&);
 
 private:
@@ -205,39 +201,33 @@ private:
 
     void mapLanguageAttributeToLocale(const AtomString&, MutableStyleProperties&);
 
-    void dirAttributeChanged(const AtomString&);
-    void updateEffectiveDirectionality(std::optional<TextDirection>);
-    void adjustDirectionalityIfNeededAfterChildAttributeChanged(Element* child);
-    void adjustDirectionalityIfNeededAfterChildrenChanged(Element* beforeChange, ChildChange::Type);
-
-    struct TextDirectionWithStrongDirectionalityNode {
-        TextDirection direction;
-        RefPtr<Node> strongDirectionalityNode;
-    };
-    TextDirectionWithStrongDirectionalityNode computeDirectionalityFromText() const;
-
     enum class AllowPercentage : bool { No, Yes };
     enum class UseCSSPXAsUnitType : bool { No, Yes };
     enum class IsMultiLength : bool { No, Yes };
     void addHTMLLengthToStyle(MutableStyleProperties&, CSSPropertyID, StringView value, AllowPercentage, UseCSSPXAsUnitType, IsMultiLength, AllowZeroValue = AllowZeroValue::Yes);
 };
 
-inline HTMLElement::HTMLElement(const QualifiedName& tagName, Document& document, ConstructionType type = CreateHTMLElement)
-    : StyledElement(tagName, document, type)
+inline HTMLElement::HTMLElement(const QualifiedName& tagName, Document& document, OptionSet<TypeFlag> type = { })
+    : StyledElement(tagName, document, type | TypeFlag::IsHTMLElement)
 {
     ASSERT(tagName.localName().impl());
 }
 
 inline bool Node::hasTagName(const HTMLQualifiedName& name) const
 {
-    return is<HTMLElement>(*this) && downcast<HTMLElement>(*this).hasTagName(name);
+    auto* htmlElement = dynamicDowncast<HTMLElement>(*this);
+    return htmlElement && htmlElement->hasTagName(name);
 }
 
 } // namespace WebCore
 
 SPECIALIZE_TYPE_TRAITS_BEGIN(WebCore::HTMLElement)
     static bool isType(const WebCore::Node& node) { return node.isHTMLElement(); }
-    static bool isType(const WebCore::EventTarget& target) { return is<WebCore::Node>(target) && isType(downcast<WebCore::Node>(target)); }
+    static bool isType(const WebCore::EventTarget& target)
+    {
+        auto* node = dynamicDowncast<WebCore::Node>(target);
+        return node && isType(*node);
+    }
 SPECIALIZE_TYPE_TRAITS_END()
 
 #include "HTMLElementTypeHelpers.h"

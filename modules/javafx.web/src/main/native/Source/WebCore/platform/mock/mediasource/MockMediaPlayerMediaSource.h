@@ -31,6 +31,7 @@
 #include "MediaPlayerPrivate.h"
 #include <wtf/Logger.h>
 #include <wtf/MediaTime.h>
+#include <wtf/RefCounted.h>
 #include <wtf/WeakPtr.h>
 
 namespace WebCore {
@@ -38,27 +39,32 @@ namespace WebCore {
 class MediaSource;
 class MockMediaSourcePrivate;
 
-class MockMediaPlayerMediaSource : public MediaPlayerPrivateInterface, public CanMakeWeakPtr<MockMediaPlayerMediaSource> {
+class MockMediaPlayerMediaSource final
+    : public MediaPlayerPrivateInterface
+    , public RefCounted<MockMediaPlayerMediaSource>
+    , public CanMakeWeakPtr<MockMediaPlayerMediaSource> {
 public:
     explicit MockMediaPlayerMediaSource(MediaPlayer*);
 
     // MediaPlayer Engine Support
     WEBCORE_EXPORT static void registerMediaEngine(MediaEngineRegistrar);
-    static void getSupportedTypes(HashSet<String, ASCIICaseInsensitiveHash>& types);
+    static void getSupportedTypes(HashSet<String>& types);
     static MediaPlayer::SupportsType supportsType(const MediaEngineSupportParameters&);
 
     virtual ~MockMediaPlayerMediaSource();
 
+    void ref() final { RefCounted::ref(); }
+    void deref() final { RefCounted::deref(); }
+
     void advanceCurrentTime();
-    MediaTime currentMediaTime() const override;
-    bool currentMediaTimeMayProgress() const override;
+    MediaTime currentTime() const override;
+    bool timeIsProgressing() const override;
+    void notifyActiveSourceBuffersChanged() final;
     void updateDuration(const MediaTime&);
 
     MediaPlayer::ReadyState readyState() const override;
     void setReadyState(MediaPlayer::ReadyState);
     void setNetworkState(MediaPlayer::NetworkState);
-    void waitForSeekCompleted();
-    void seekCompleted();
 
 #if !RELEASE_LOG_DISABLED
     const void* mediaPlayerLogIdentifier() { return m_player.get()->mediaPlayerLogIdentifier(); }
@@ -79,16 +85,16 @@ private:
     bool hasVideo() const override;
     bool hasAudio() const override;
     void setPageIsVisible(bool) final;
-    bool seeking() const override;
+    void seekToTarget(const SeekTarget&) final;
+    bool seeking() const final;
     bool paused() const override;
     MediaPlayer::NetworkState networkState() const override;
-    MediaTime maxMediaTimeSeekable() const override;
+    MediaTime maxTimeSeekable() const override;
     const PlatformTimeRanges& buffered() const override;
     bool didLoadingProgress() const override;
     void setPresentationSize(const IntSize&) override;
     void paint(GraphicsContext&, const FloatRect&) override;
-    MediaTime durationMediaTime() const override;
-    void seekWithTolerance(const MediaTime&, const MediaTime&, const MediaTime&) override;
+    MediaTime duration() const override;
     std::optional<VideoPlaybackQualityMetrics> videoPlaybackQualityMetrics() override;
     DestinationColorSpace colorSpace() override;
 
@@ -97,10 +103,10 @@ private:
 
     MediaTime m_currentTime;
     MediaTime m_duration;
+    std::optional<SeekTarget> m_lastSeekTarget;
     MediaPlayer::ReadyState m_readyState { MediaPlayer::ReadyState::HaveNothing };
     MediaPlayer::NetworkState m_networkState { MediaPlayer::NetworkState::Empty };
     bool m_playing { false };
-    bool m_seekCompleted { false };
 };
 
 }

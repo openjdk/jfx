@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2003-2019 Apple Inc. All rights reserved.
+ *  Copyright (C) 2003-2023 Apple Inc. All rights reserved.
  *
  *  This library is free software; you can redistribute it and/or
  *  modify it under the terms of the GNU Library General Public
@@ -23,8 +23,11 @@
 
 #include "BuiltinNames.h"
 #include "IdentifierInlines.h"
+#include <wtf/TZoneMallocInlines.h>
 
 namespace JSC {
+
+WTF_MAKE_TZONE_ALLOCATED_IMPL(CommonIdentifiers);
 
 #define INITIALIZE_PROPERTY_NAME(name) , name(Identifier::fromString(vm, #name ""_s))
 #define INITIALIZE_KEYWORD(name) , name##Keyword(Identifier::fromString(vm, #name ""_s))
@@ -38,6 +41,7 @@ CommonIdentifiers::CommonIdentifiers(VM& vm)
     , underscoreProto(Identifier::fromString(vm, "__proto__"_s))
     , useStrictIdentifier(Identifier::fromString(vm, "use strict"_s))
     , timesIdentifier(Identifier::fromString(vm, "*"_s))
+    , negativeOneIdentifier(Identifier::fromString(vm, "-1"_s))
     , m_builtinNames(makeUnique<BuiltinNames>(vm, this))
     JSC_PARSER_PRIVATE_NAMES(INITIALIZE_PRIVATE_NAME)
     JSC_COMMON_IDENTIFIERS_EACH_KEYWORD(INITIALIZE_KEYWORD)
@@ -47,9 +51,7 @@ CommonIdentifiers::CommonIdentifiers(VM& vm)
 {
 }
 
-CommonIdentifiers::~CommonIdentifiers()
-{
-}
+CommonIdentifiers::~CommonIdentifiers() = default;
 
 void CommonIdentifiers::appendExternalName(const Identifier& publicName, const Identifier& privateName)
 {

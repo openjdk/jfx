@@ -41,7 +41,8 @@ class HTMLInputElement;
 class TouchEvent;
 
 class SliderThumbElement final : public HTMLDivElement {
-    WTF_MAKE_ISO_ALLOCATED(SliderThumbElement);
+    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(SliderThumbElement);
+    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(SliderThumbElement);
 public:
     static Ref<SliderThumbElement> create(Document&);
 
@@ -57,8 +58,7 @@ public:
     void hostDisabledStateChanged();
 
 private:
-    constexpr static auto CreateSliderThumbElement = CreateHTMLDivElement | NodeFlag::HasCustomStyleResolveCallbacks;
-    SliderThumbElement(Document&);
+    explicit SliderThumbElement(Document&);
     bool isSliderThumbElement() const final { return true; }
 
     Ref<Element> cloneElementWithoutAttributesAndChildren(Document&) final;
@@ -93,7 +93,6 @@ private:
     void unregisterForTouchEvents();
 #endif
 
-    AtomString m_shadowPseudoId;
     bool m_inDragMode { false };
 
 #if ENABLE(IOS_TOUCH_EVENTS)
@@ -107,13 +106,13 @@ private:
 // --------------------------------
 
 class SliderContainerElement final : public HTMLDivElement {
-    WTF_MAKE_ISO_ALLOCATED(SliderContainerElement);
+    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(SliderContainerElement);
+    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(SliderContainerElement);
 public:
     static Ref<SliderContainerElement> create(Document&);
 
 private:
-    constexpr static auto CreateSliderContainerElement = CreateHTMLDivElement | NodeFlag::HasCustomStyleResolveCallbacks;
-    SliderContainerElement(Document&);
+    explicit SliderContainerElement(Document&);
     RenderPtr<RenderElement> createElementRenderer(RenderStyle&&, const RenderTreePosition&) final;
     bool isSliderContainerElement() const final { return true; }
 };
@@ -122,10 +121,18 @@ private:
 
 SPECIALIZE_TYPE_TRAITS_BEGIN(WebCore::SliderThumbElement)
     static bool isType(const WebCore::Element& element) { return element.isSliderThumbElement(); }
-    static bool isType(const WebCore::Node& node) { return is<WebCore::Element>(node) && isType(downcast<WebCore::Element>(node)); }
+    static bool isType(const WebCore::Node& node)
+    {
+        auto* element = dynamicDowncast<WebCore::Element>(node);
+        return element && isType(*element);
+    }
 SPECIALIZE_TYPE_TRAITS_END()
 
 SPECIALIZE_TYPE_TRAITS_BEGIN(WebCore::SliderContainerElement)
     static bool isType(const WebCore::Element& element) { return element.isSliderContainerElement(); }
-    static bool isType(const WebCore::Node& node) { return is<WebCore::Element>(node) && isType(downcast<WebCore::Element>(node)); }
+    static bool isType(const WebCore::Node& node)
+    {
+        auto* element = dynamicDowncast<WebCore::Element>(node);
+        return element && isType(*element);
+    }
 SPECIALIZE_TYPE_TRAITS_END()

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -73,7 +73,7 @@ public abstract class VirtualContainerBase<C extends Control, I extends IndexedC
         flow = createVirtualFlow();
 
         ListenerHelper.get(this).addEventHandler(control, ScrollToEvent.scrollToTopIndex(), (ev) -> {
-            // Fix for RT-24630: The row count in VirtualFlow was incorrect
+            // Fix for JDK-8119687: The row count in VirtualFlow was incorrect
             // (normally zero), so the scrollTo call was misbehaving.
             if (itemCountDirty) {
                 // update row count before we do a scroll
@@ -118,7 +118,7 @@ public abstract class VirtualContainerBase<C extends Control, I extends IndexedC
      * Create the virtualized container that handles the layout and scrolling of
      * all the cells. This enables skin subclasses to provide
      * a custom {@link VirtualFlow} implementation.
-     * If not overridden, this method intantiates a default VirtualFlow instance.
+     * If not overridden, this method instantiates a default VirtualFlow instance.
      * @return newly created VirtualFlow instance
      * @since 10
      */

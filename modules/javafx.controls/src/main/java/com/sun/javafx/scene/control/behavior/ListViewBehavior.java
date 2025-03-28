@@ -57,7 +57,7 @@ public class ListViewBehavior<T> extends BehaviorBase<ListView<T>> {
 
     private final EventHandler<KeyEvent> keyEventListener = e -> {
         if (!e.isConsumed()) {
-            // RT-12751: we want to keep an eye on the user holding down the shift key,
+            // JDK-8114799: we want to keep an eye on the user holding down the shift key,
             // so that we know when they enter/leave multiple selection mode. This
             // changes what happens when certain key combinations are pressed.
             isShiftDown = e.getEventType() == KeyEvent.KEY_PRESSED && e.isShiftDown();
@@ -198,7 +198,7 @@ public class ListViewBehavior<T> extends BehaviorBase<ListView<T>> {
             control.getItems().addListener(weakItemsListListener);
         }
 
-        // Fix for RT-16565
+        // Fix for JDK-8128723
         control.selectionModelProperty().addListener(weakSelectionModelListener);
         if (control.getSelectionModel() != null) {
             control.getSelectionModel().getSelectedIndices().addListener(weakSelectedIndicesListener);
@@ -658,7 +658,7 @@ public class ListViewBehavior<T> extends BehaviorBase<ListView<T>> {
 
         int leadSelectedIndex = onScrollPageUp.call(false);
 
-        // fix for RT-34407
+        // fix for JDK-8097503
         int adjust = leadIndex < leadSelectedIndex ? 1 : -1;
 
         MultipleSelectionModel<T> sm = getNode().getSelectionModel();
@@ -686,7 +686,7 @@ public class ListViewBehavior<T> extends BehaviorBase<ListView<T>> {
 
         int leadSelectedIndex = onScrollPageDown.call(false);
 
-        // fix for RT-34407
+        // fix for JDK-8097503
         int adjust = leadIndex < leadSelectedIndex ? 1 : -1;
 
         MultipleSelectionModel<T> sm = getNode().getSelectionModel();
@@ -718,7 +718,7 @@ public class ListViewBehavior<T> extends BehaviorBase<ListView<T>> {
         sm.clearSelection();
         sm.selectRange(leadIndex, -1);
 
-        // RT-18413: Focus must go to first row
+        // JDK-8115478: Focus must go to first row
         fm.focus(0);
 
         if (isShiftDown) {
@@ -758,7 +758,7 @@ public class ListViewBehavior<T> extends BehaviorBase<ListView<T>> {
     }
 
     private void selectAllToFocus(boolean setAnchorToFocusIndex) {
-        // Fix for RT-31241
+        // Fix for JDK-8123409
         final ListView<T> listView = getNode();
         if (listView.getEditingIndex() >= 0) return;
 

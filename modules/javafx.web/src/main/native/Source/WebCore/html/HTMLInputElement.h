@@ -2,7 +2,7 @@
  * Copyright (C) 1999 Lars Knoll (knoll@kde.org)
  *           (C) 1999 Antti Koivisto (koivisto@kde.org)
  *           (C) 2000 Dirk Mueller (mueller@kde.org)
- * Copyright (C) 2004-2018 Apple Inc. All rights reserved.
+ * Copyright (C) 2004-2024 Apple Inc. All rights reserved.
  * Copyright (C) 2012 Samsung Electronics. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or
@@ -52,19 +52,21 @@ struct InputElementClickState {
     bool stateful { false };
     bool checked { false };
     bool indeterminate { false };
+    bool trusted { false };
     RefPtr<HTMLInputElement> checkedRadioButton;
 };
 
 enum class WasSetByJavaScript : bool { No, Yes };
 
-class HTMLInputElement : public HTMLTextFormControlElement {
-    WTF_MAKE_ISO_ALLOCATED(HTMLInputElement);
+class HTMLInputElement final : public HTMLTextFormControlElement {
+    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(HTMLInputElement);
+    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(HTMLInputElement);
 public:
     static Ref<HTMLInputElement> create(const QualifiedName&, Document&, HTMLFormElement*, bool createdByParser);
     virtual ~HTMLInputElement();
 
     bool checked() const { return m_isChecked; }
-    WEBCORE_EXPORT void setChecked(bool);
+    WEBCORE_EXPORT void setChecked(bool, WasSetByJavaScript = WasSetByJavaScript::Yes);
     WEBCORE_EXPORT FileList* files();
     WEBCORE_EXPORT void setFiles(RefPtr<FileList>&&, WasSetByJavaScript = WasSetByJavaScript::No);
     FileList* filesForBindings() { return files(); }
@@ -89,12 +91,14 @@ public:
     #if PLATFORM(JAVA)
     WEBCORE_EXPORT ExceptionOr<void> setValueAsDate(double value);
     #endif
+    WallTime accessibilityValueAsDate() const;
     WEBCORE_EXPORT double valueAsNumber() const;
     WEBCORE_EXPORT ExceptionOr<void> setValueAsNumber(double, TextFieldEventBehavior = DispatchNoEvent);
     WEBCORE_EXPORT ExceptionOr<void> stepUp(int = 1);
     WEBCORE_EXPORT ExceptionOr<void> stepDown(int = 1);
     WEBCORE_EXPORT unsigned width() const;
     WEBCORE_EXPORT void setWidth(unsigned);
+    bool hasSwitchAttribute() const { return m_hasSwitchAttribute; }
     WEBCORE_EXPORT String validationMessage() const final;
     std::optional<unsigned> selectionStartForBindings() const;
     ExceptionOr<void> setSelectionStartForBindings(std::optional<unsigned>);
@@ -139,7 +143,7 @@ public:
     bool isPresentingAttachedView() const;
 
     bool isSteppable() const; // stepUp()/stepDown() for user-interaction.
-    bool isTextButton() const;
+    WEBCORE_EXPORT bool isTextButton() const;
     bool isRadioButton() const;
     WEBCORE_EXPORT bool isTextField() const final;
     WEBCORE_EXPORT bool isSearchField() const;
@@ -147,6 +151,7 @@ public:
     WEBCORE_EXPORT bool isPasswordField() const;
     bool isSecureField() const { return isPasswordField() || isAutoFilledAndObscured(); }
     bool isCheckbox() const;
+    bool isSwitch() const;
     bool isRangeControl() const;
 #if ENABLE(INPUT_TYPE_COLOR)
     WEBCORE_EXPORT bool isColorControl() const;
@@ -157,11 +162,12 @@ public:
     // isTextField && !isPasswordField.
     WEBCORE_EXPORT bool isText() const;
     bool isTextType() const;
+    bool supportsWritingSuggestions() const;
     WEBCORE_EXPORT bool isEmailField() const;
     WEBCORE_EXPORT bool isFileUpload() const;
     bool isImageButton() const;
     WEBCORE_EXPORT bool isNumberField() const;
-    bool isSubmitButton() const final;
+    WEBCORE_EXPORT bool isSubmitButton() const final;
     WEBCORE_EXPORT bool isTelephoneField() const;
     WEBCORE_EXPORT bool isURLField() const;
     WEBCORE_EXPORT bool isDateField() const;
@@ -190,10 +196,9 @@ public:
     WEBCORE_EXPORT HTMLElement* dataListButtonElement() const;
 #endif
 
-    // shouldAppearChecked is used by the rendering tree/CSS while checked() is used by JS to determine checked state
-    bool shouldAppearChecked() const;
+    bool matchesCheckedPseudoClass() const;
     bool matchesIndeterminatePseudoClass() const final;
-    bool shouldAppearIndeterminate() const final;
+    void setDefaultCheckedState(bool);
 
     bool sizeShouldIncludeDecoration(int& preferredSize) const;
     float decorationWidth() const;
@@ -210,7 +215,7 @@ public:
     String localizeValue(const String&) const;
 
     // The value which is drawn by a renderer.
-    String visibleValue() const;
+    WEBCORE_EXPORT String visibleValue() const;
 
     String valueWithDefault() const;
 
@@ -341,12 +346,21 @@ public:
 
     bool hasEverBeenPasswordField() const { return m_hasEverBeenPasswordField; }
 
-protected:
-    HTMLInputElement(const QualifiedName&, Document&, HTMLFormElement*, bool createdByParser);
+    float switchAnimationVisuallyOnProgress() const;
+    bool isSwitchVisuallyOn() const;
+    float switchAnimationHeldProgress() const;
+    bool isSwitchHeld() const;
+
+    void initializeInputTypeAfterParsingOrCloning();
+
+private:
+    enum class CreationType : uint8_t { Normal, ByParser, ByCloning };
+    HTMLInputElement(const QualifiedName&, Document&, HTMLFormElement*, CreationType);
 
     void defaultEventHandler(Event&) final;
 
-private:
+    Ref<Element> cloneElementWithoutAttributesAndChildren(Document&) override;
+
     enum AutoCompleteSetting : uint8_t { Uninitialized, On, Off };
     static constexpr int defaultSize = 20;
 
@@ -386,7 +400,6 @@ private:
     void attributeChanged(const QualifiedName&, const AtomString& oldValue, const AtomString& newValue, AttributeModificationReason = AttributeModificationReason::Directly) final;
     bool hasPresentationalHintsForAttribute(const QualifiedName&) const final;
     void collectPresentationalHintsForAttribute(const QualifiedName&, const AtomString&, MutableStyleProperties&) final;
-    void parserDidSetAttributes() final;
 
     void copyNonAttributePropertiesFromElement(const Element&) final;
 
@@ -429,9 +442,12 @@ private:
     bool computeWillValidate() const final;
     void requiredStateChanged() final;
 
-    void initializeInputType();
     void updateType(const AtomString& typeAttributeValue);
     void runPostTypeUpdateTasks();
+
+#if ENABLE(TOUCH_EVENTS)
+    void updateTouchEventHandler();
+#endif
 
     void subtreeHasChanged() final;
     void disabledStateChanged() final;
@@ -452,12 +468,15 @@ private:
 
     void updateUserAgentShadowTree() final;
 
+    bool dirAutoUsesValue() const final;
+
     AtomString m_name;
     String m_valueIfDirty;
     unsigned m_size { defaultSize };
     short m_maxResults { -1 };
     bool m_isChecked : 1 { false };
     bool m_dirtyCheckednessFlag : 1 { false };
+    bool m_isDefaultChecked : 1 { false };
     bool m_isIndeterminate : 1 { false };
     bool m_hasType : 1 { false };
     bool m_isActivatedSubmit : 1 { false };
@@ -465,8 +484,8 @@ private:
     bool m_isAutoFilled : 1 { false };
     bool m_isAutoFilledAndViewable : 1 { false };
     bool m_isAutoFilledAndObscured : 1 { false };
-    unsigned m_autoFillButtonType : 3 { static_cast<uint8_t>(AutoFillButtonType::None) }; // AutoFillButtonType
-    unsigned m_lastAutoFillButtonType : 3 { static_cast<uint8_t>(AutoFillButtonType::None) }; // AutoFillButtonType
+    unsigned m_autoFillButtonType : 3 { enumToUnderlyingType(AutoFillButtonType::None) }; // AutoFillButtonType
+    unsigned m_lastAutoFillButtonType : 3 { enumToUnderlyingType(AutoFillButtonType::None) }; // AutoFillButtonType
     bool m_isAutoFillAvailable : 1 { false };
 #if ENABLE(DATALIST_ELEMENT)
     bool m_hasNonEmptyList : 1 { false };
@@ -481,6 +500,7 @@ private:
 #endif
     bool m_isSpellcheckDisabledExceptTextReplacement : 1 { false };
     bool m_hasPendingUserAgentShadowTreeUpdate : 1 { false };
+    bool m_hasSwitchAttribute : 1 { false };
     bool m_hasEverBeenPasswordField : 1 { false };
     RefPtr<InputType> m_inputType;
     // The ImageLoader must be owned by this element because the loader code assumes

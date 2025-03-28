@@ -36,7 +36,7 @@ g_io_condition_get_type (void)
 {
   static GType etype = 0;
 
-  if (g_once_init_enter (&etype))
+  if (g_once_init_enter_pointer (&etype))
     {
       static const GFlagsValue values[] = {
   { G_IO_IN,   "G_IO_IN",   "in" },
@@ -48,7 +48,7 @@ g_io_condition_get_type (void)
   { 0, NULL, NULL }
       };
       GType type_id = g_flags_register_static ("GIOCondition", values);
-      g_once_init_leave (&etype, type_id);
+      g_once_init_leave_pointer (&etype, type_id);
     }
   return etype;
 }

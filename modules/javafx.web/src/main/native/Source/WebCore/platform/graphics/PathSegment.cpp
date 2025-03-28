@@ -44,6 +44,13 @@ FloatPoint PathSegment::calculateEndPoint(const FloatPoint& currentPoint, FloatP
     });
 }
 
+std::optional<FloatPoint> PathSegment::tryGetEndPointWithoutContext() const
+{
+    return WTF::switchOn(m_data, [&](auto& data) {
+        return data.tryGetEndPointWithoutContext();
+    });
+}
+
 void PathSegment::extendFastBoundingRect(const FloatPoint& currentPoint, const FloatPoint& lastMoveToPoint, FloatRect& boundingRect) const
 {
     WTF::switchOn(m_data, [&](auto& data) {
@@ -58,13 +65,6 @@ void PathSegment::extendBoundingRect(const FloatPoint& currentPoint, const Float
     });
 }
 
-void PathSegment::addToImpl(PathImpl& impl) const
-{
-    WTF::switchOn(m_data, [&](auto& data) {
-        data.addToImpl(impl);
-    });
-}
-
 bool PathSegment::canApplyElements() const
 {
     return WTF::switchOn(m_data, [&](auto& data) {
@@ -74,8 +74,8 @@ bool PathSegment::canApplyElements() const
 
 bool PathSegment::applyElements(const PathElementApplier& applier) const
 {
-    return WTF::switchOn(m_data, [&](auto& data) -> bool {
-        if constexpr (std::decay_t<decltype(data)>::canApplyElements) {
+    return WTF::switchOn(m_data, [&]<typename DataType>(DataType& data) -> bool {
+        if constexpr (DataType::canApplyElements) {
             data.applyElements(applier);
             return true;
         }
@@ -92,8 +92,8 @@ bool PathSegment::canTransform() const
 
 bool PathSegment::transform(const AffineTransform& transform)
 {
-    return WTF::switchOn(m_data, [&](auto& data) {
-        if constexpr (std::decay_t<decltype(data)>::canTransform) {
+    return WTF::switchOn(m_data, [&]<typename DataType>(DataType& data) {
+        if constexpr (DataType::canTransform) {
             data.transform(transform);
             return true;
         }

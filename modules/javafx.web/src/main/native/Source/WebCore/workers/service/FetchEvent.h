@@ -25,8 +25,6 @@
 
 #pragma once
 
-#if ENABLE(SERVICE_WORKER)
-
 #include "ExtendableEvent.h"
 #include "FetchIdentifier.h"
 #include "JSDOMPromiseDeferredForward.h"
@@ -46,7 +44,7 @@ class FetchResponse;
 class ResourceResponse;
 
 class FetchEvent final : public ExtendableEvent {
-    WTF_MAKE_ISO_ALLOCATED(FetchEvent);
+    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(FetchEvent);
 public:
     struct Init : ExtendableEventInit {
         RefPtr<FetchRequest> request;
@@ -62,8 +60,6 @@ public:
         return adoptRef(*new FetchEvent(globalObject, type, WTFMove(initializer), isTrusted));
     }
     ~FetchEvent();
-
-    EventInterface eventInterface() const final { return FetchEventInterfaceType; }
 
     ExceptionOr<void> respondWith(Ref<DOMPromise>&&);
 
@@ -117,5 +113,3 @@ inline void FetchEvent::setNavigationPreloadIdentifier(FetchIdentifier identifie
 }
 
 } // namespace WebCore
-
-#endif // ENABLE(SERVICE_WORKER)

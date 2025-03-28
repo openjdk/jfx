@@ -47,7 +47,7 @@
 #include "TemporalTimeZoneConstructor.h"
 #include "TemporalTimeZonePrototype.h"
 #include <wtf/Int128.h>
-#include <wtf/text/StringConcatenate.h>
+#include <wtf/text/MakeString.h>
 #include <wtf/unicode/CharacterNames.h>
 
 namespace JSC {
@@ -355,7 +355,7 @@ std::optional<unsigned> temporalFractionalSecondDigits(JSGlobalObject* globalObj
         return std::nullopt;
 
     if (value.isNumber()) {
-        double doubleValue = std::trunc(value.asNumber());
+        double doubleValue = std::floor(value.asNumber());
         if (!(doubleValue >= 0 && doubleValue <= 9)) {
             throwRangeError(globalObject, scope, makeString("fractionalSecondDigits must be 'auto' or 0 through 9, not "_s, doubleValue));
             return std::nullopt;
@@ -515,7 +515,7 @@ static double doubleNumberOption(JSGlobalObject* globalObject, JSObject* options
     RETURN_IF_EXCEPTION(scope, 0);
 
     if (std::isnan(doubleValue)) {
-        throwRangeError(globalObject, scope, *property.publicName() + " is NaN"_s);
+        throwRangeError(globalObject, scope, makeString(property.publicName(), " is NaN"_s));
         return 0;
     }
 
@@ -531,7 +531,7 @@ double temporalRoundingIncrement(JSGlobalObject* globalObject, JSObject* options
 
     double maximum;
     if (!dividend)
-        maximum = std::numeric_limits<double>::infinity();
+        maximum = 1'000'000'000;
     else if (inclusive)
         maximum = dividend.value();
     else if (dividend.value() > 1)
@@ -542,12 +542,12 @@ double temporalRoundingIncrement(JSGlobalObject* globalObject, JSObject* options
     double increment = doubleNumberOption(globalObject, options, vm.propertyNames->roundingIncrement, 1);
     RETURN_IF_EXCEPTION(scope, 0);
 
+    increment = std::trunc(increment);
     if (increment < 1 || increment > maximum) {
         throwRangeError(globalObject, scope, "roundingIncrement is out of range"_s);
         return 0;
     }
 
-    increment = std::floor(increment);
     if (dividend && std::fmod(dividend.value(), increment)) {
         throwRangeError(globalObject, scope, makeString("roundingIncrement value does not divide "_s, dividend.value(), " evenly"_s));
         return 0;

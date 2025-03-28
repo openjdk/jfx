@@ -73,9 +73,9 @@ bool SVGTextLayoutAttributesBuilder::buildLayoutAttributesForForSubtree(RenderSV
     return true;
 }
 
-void SVGTextLayoutAttributesBuilder::rebuildMetricsForTextRenderer(RenderSVGInlineText& text)
+void SVGTextLayoutAttributesBuilder::rebuildMetricsForSubtree(RenderSVGText& text)
 {
-    m_metricsBuilder.measureTextRenderer(text);
+    m_metricsBuilder.measureTextRenderer(text, nullptr);
 }
 
 static inline void processRenderSVGInlineText(const RenderSVGInlineText& text, unsigned& atCharacter, bool& lastCharacterWasSpace)
@@ -103,22 +103,22 @@ void SVGTextLayoutAttributesBuilder::collectTextPositioningElements(RenderBoxMod
     ASSERT(!is<RenderSVGText>(start) || m_textPositions.isEmpty());
 
     for (auto& child : childrenOfType<RenderObject>(start)) {
-        if (is<RenderSVGInlineText>(child)) {
-            processRenderSVGInlineText(downcast<RenderSVGInlineText>(child), m_textLength, lastCharacterWasSpace);
+        if (CheckedPtr inlineText = dynamicDowncast<RenderSVGInlineText>(child)) {
+            processRenderSVGInlineText(*inlineText, m_textLength, lastCharacterWasSpace);
             continue;
         }
 
-        if (!is<RenderSVGInline>(child))
+        CheckedPtr inlineChild = dynamicDowncast<RenderSVGInline>(child);
+        if (!inlineChild)
             continue;
 
-        auto& inlineChild = downcast<RenderSVGInline>(child);
-        SVGTextPositioningElement* element = SVGTextPositioningElement::elementFromRenderer(inlineChild);
+        RefPtr element = SVGTextPositioningElement::elementFromRenderer(*inlineChild);
 
         unsigned atPosition = m_textPositions.size();
         if (element)
-            m_textPositions.append(TextPosition(element, m_textLength));
+            m_textPositions.append(TextPosition(element.get(), m_textLength));
 
-        collectTextPositioningElements(inlineChild, lastCharacterWasSpace);
+        collectTextPositioningElements(*inlineChild, lastCharacterWasSpace);
 
         if (!element)
             continue;
@@ -132,11 +132,11 @@ void SVGTextLayoutAttributesBuilder::collectTextPositioningElements(RenderBoxMod
 
 void SVGTextLayoutAttributesBuilder::buildCharacterDataMap(RenderSVGText& textRoot)
 {
-    SVGTextPositioningElement* outermostTextElement = SVGTextPositioningElement::elementFromRenderer(textRoot);
+    RefPtr outermostTextElement = SVGTextPositioningElement::elementFromRenderer(textRoot);
     ASSERT(outermostTextElement);
 
     // Grab outermost <text> element value lists and insert them in the character data map.
-    TextPosition wholeTextPosition(outermostTextElement, 0, m_textLength);
+    TextPosition wholeTextPosition(outermostTextElement.get(), 0, m_textLength);
     fillCharacterDataMap(wholeTextPosition);
 
     // Handle x/y default attributes.
@@ -193,7 +193,8 @@ void SVGTextLayoutAttributesBuilder::fillCharacterDataMap(const TextPosition& po
         return;
 
     float lastRotation = SVGTextLayoutAttributes::emptyValue();
-    SVGLengthContext lengthContext(position.element);
+    RefPtr positionElement = position.element;
+    SVGLengthContext lengthContext(positionElement.get());
     for (unsigned i = 0; i < position.length; ++i) {
         const SVGLengthList* xListPtr = i < xListSize ? &xList : nullptr;
         const SVGLengthList* yListPtr = i < yListSize ? &yList : nullptr;

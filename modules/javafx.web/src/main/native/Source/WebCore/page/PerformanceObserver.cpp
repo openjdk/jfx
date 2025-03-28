@@ -38,15 +38,18 @@ namespace WebCore {
 PerformanceObserver::PerformanceObserver(ScriptExecutionContext& scriptExecutionContext, Ref<PerformanceObserverCallback>&& callback)
     : m_callback(WTFMove(callback))
 {
-    if (is<Document>(scriptExecutionContext)) {
-        auto& document = downcast<Document>(scriptExecutionContext);
-        if (auto* window = document.domWindow())
+    if (RefPtr document = dynamicDowncast<Document>(scriptExecutionContext)) {
+        if (auto* window = document->domWindow())
             m_performance = &window->performance();
-    } else if (is<WorkerGlobalScope>(scriptExecutionContext)) {
-        auto& workerGlobalScope = downcast<WorkerGlobalScope>(scriptExecutionContext);
-        m_performance = &workerGlobalScope.performance();
-    } else
+    } else if (RefPtr workerGlobalScope = dynamicDowncast<WorkerGlobalScope>(scriptExecutionContext))
+        m_performance = &workerGlobalScope->performance();
+    else
         ASSERT_NOT_REACHED();
+}
+
+RefPtr<Performance> PerformanceObserver::protectedPerformance() const
+{
+    return m_performance;
 }
 
 void PerformanceObserver::disassociate()
@@ -58,15 +61,15 @@ void PerformanceObserver::disassociate()
 ExceptionOr<void> PerformanceObserver::observe(Init&& init)
 {
     if (!m_performance)
-        return Exception { TypeError };
+        return Exception { ExceptionCode::TypeError };
 
     bool isBuffered = false;
     OptionSet<PerformanceEntry::Type> filter;
     if (init.entryTypes) {
         if (init.type)
-            return Exception { TypeError, "either entryTypes or type must be provided"_s };
+            return Exception { ExceptionCode::TypeError, "either entryTypes or type must be provided"_s };
         if (m_registered && m_isTypeObserver)
-            return Exception { InvalidModificationError, "observer type can't be changed once registered"_s };
+            return Exception { ExceptionCode::InvalidModificationError, "observer type can't be changed once registered"_s };
         for (auto& entryType : *init.entryTypes) {
             if (auto type = PerformanceEntry::parseEntryTypeString(entryType))
                 filter.add(*type);
@@ -76,9 +79,9 @@ ExceptionOr<void> PerformanceObserver::observe(Init&& init)
         m_typeFilter = filter;
     } else {
         if (!init.type)
-            return Exception { TypeError, "no type or entryTypes were provided"_s };
+            return Exception { ExceptionCode::TypeError, "no type or entryTypes were provided"_s };
         if (m_registered && !m_isTypeObserver)
-            return Exception { InvalidModificationError, "observer type can't be changed once registered"_s };
+            return Exception { ExceptionCode::InvalidModificationError, "observer type can't be changed once registered"_s };
         m_isTypeObserver = true;
         if (auto type = PerformanceEntry::parseEntryTypeString(*init.type))
             filter.add(*type);
@@ -87,7 +90,7 @@ ExceptionOr<void> PerformanceObserver::observe(Init&& init)
         if (init.buffered) {
             isBuffered = true;
             auto oldSize = m_entriesToDeliver.size();
-            m_performance->appendBufferedEntriesByType(*init.type, m_entriesToDeliver, *this);
+            protectedPerformance()->appendBufferedEntriesByType(*init.type, m_entriesToDeliver, *this);
             auto begin = m_entriesToDeliver.begin();
             auto oldEnd = begin + oldSize;
             auto end = m_entriesToDeliver.end();
@@ -98,7 +101,7 @@ ExceptionOr<void> PerformanceObserver::observe(Init&& init)
     }
 
     if (!m_registered) {
-        m_performance->registerPerformanceObserver(*this);
+        protectedPerformance()->registerPerformanceObserver(*this);
         m_registered = true;
     }
     if (isBuffered)
@@ -107,15 +110,15 @@ ExceptionOr<void> PerformanceObserver::observe(Init&& init)
     return { };
 }
 
-Vector<RefPtr<PerformanceEntry>> PerformanceObserver::takeRecords()
+Vector<Ref<PerformanceEntry>> PerformanceObserver::takeRecords()
 {
     return std::exchange(m_entriesToDeliver, { });
 }
 
 void PerformanceObserver::disconnect()
 {
-    if (m_performance)
-        m_performance->unregisterPerformanceObserver(*this);
+    if (RefPtr performance = m_performance)
+        performance->unregisterPerformanceObserver(*this);
 
     m_registered = false;
     m_entriesToDeliver.clear();
@@ -124,7 +127,7 @@ void PerformanceObserver::disconnect()
 
 void PerformanceObserver::queueEntry(PerformanceEntry& entry)
 {
-    m_entriesToDeliver.append(&entry);
+    m_entriesToDeliver.append(entry);
 }
 
 void PerformanceObserver::deliver()
@@ -136,7 +139,7 @@ void PerformanceObserver::deliver()
     if (!context)
         return;
 
-    Vector<RefPtr<PerformanceEntry>> entries = std::exchange(m_entriesToDeliver, { });
+    Vector<Ref<PerformanceEntry>> entries = std::exchange(m_entriesToDeliver, { });
     auto list = PerformanceObserverEntryList::create(WTFMove(entries));
 
     InspectorInstrumentation::willFireObserverCallback(*context, "PerformanceObserver"_s);
@@ -149,12 +152,10 @@ Vector<String> PerformanceObserver::supportedEntryTypes(ScriptExecutionContext& 
     Vector<String> entryTypes = {
         "mark"_s,
         "measure"_s,
+        "navigation"_s,
     };
 
-    if (context.settingsValues().performanceNavigationTimingAPIEnabled)
-        entryTypes.append("navigation"_s);
-
-    if (is<Document>(context) && downcast<Document>(context).supportsPaintTiming())
+    if (RefPtr document = dynamicDowncast<Document>(context); document && document->supportsPaintTiming())
         entryTypes.append("paint"_s);
 
     entryTypes.append("resource"_s);

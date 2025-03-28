@@ -54,11 +54,13 @@ CSSAtRuleID cssAtRuleID(StringView name)
         { "ornaments", CSSAtRuleOrnaments },
         { "page", CSSAtRulePage },
         { "property", CSSAtRuleProperty },
+        { "scope",                 CSSAtRuleScope },
+        { "starting-style",        CSSAtRuleStartingStyle },
         { "styleset", CSSAtRuleStyleset },
         { "stylistic", CSSAtRuleStylistic },
         { "supports", CSSAtRuleSupports },
         { "swash", CSSAtRuleSwash },
-        { "viewport", CSSAtRuleViewport },
+        { "view-transition",       CSSAtRuleViewTransition },
     };
     static constexpr SortedArrayMap cssAtRules { mappings };
     return cssAtRules.get(name, CSSAtRuleInvalid);

@@ -26,8 +26,6 @@
 #include "config.h"
 #include "CustomPaintImage.h"
 
-#if ENABLE(CSS_PAINTING_API)
-
 #include "CSSComputedStyleDeclaration.h"
 #include "CSSImageValue.h"
 #include "CSSPrimitiveValue.h"
@@ -50,7 +48,7 @@
 
 namespace WebCore {
 
-CustomPaintImage::CustomPaintImage(PaintWorkletGlobalScope::PaintDefinition& definition, const FloatSize& size, const RenderElement& element, const Vector<String>& arguments)
+CustomPaintImage::CustomPaintImage(PaintDefinition& definition, const FloatSize& size, const RenderElement& element, const Vector<String>& arguments)
     : m_paintDefinition(definition)
     , m_inputProperties(definition.inputProperties)
     , m_element(element)
@@ -88,12 +86,12 @@ ImageDrawResult CustomPaintImage::doCustomPaint(GraphicsContext& destContext, co
     ASSERT(!m_element->needsLayout());
     ASSERT(!m_element->element()->document().needsStyleRecalc());
 
-    JSCSSPaintCallback& callback = static_cast<JSCSSPaintCallback&>(m_paintDefinition->paintCallback.get());
-    auto* scriptExecutionContext = callback.scriptExecutionContext();
+    Ref callback = static_cast<JSCSSPaintCallback&>(m_paintDefinition->paintCallback.get());
+    RefPtr scriptExecutionContext = callback->scriptExecutionContext();
     if (!scriptExecutionContext)
         return ImageDrawResult::DidNothing;
 
-    auto canvas = CustomPaintCanvas::create(*scriptExecutionContext, destSize.width(), destSize.height());
+    Ref canvas = CustomPaintCanvas::create(*scriptExecutionContext, destSize.width(), destSize.height());
     RefPtr context = canvas->getContext();
 
     HashMap<AtomString, RefPtr<CSSValue>> propertyValues;
@@ -120,16 +118,16 @@ ImageDrawResult CustomPaintImage::doCustomPaint(GraphicsContext& destContext, co
         return ImageDrawResult::DidNothing;
     }
 
-    auto result = callback.handleEvent(WTFMove(thisObject), *context, size, propertyMap, m_arguments);
+    auto result = callback->handleEvent(WTFMove(thisObject), *context, size, propertyMap, m_arguments);
     if (result.type() != CallbackResultType::Success)
         return ImageDrawResult::DidNothing;
 
-    canvas->replayDisplayList(&destContext);
+    canvas->replayDisplayList(destContext);
 
     return ImageDrawResult::DidDraw;
 }
 
-ImageDrawResult CustomPaintImage::draw(GraphicsContext& destContext, const FloatRect& destRect, const FloatRect& srcRect, const ImagePaintingOptions& options)
+ImageDrawResult CustomPaintImage::draw(GraphicsContext& destContext, const FloatRect& destRect, const FloatRect& srcRect, ImagePaintingOptions options)
 {
     GraphicsContextStateSaver stateSaver(destContext);
     destContext.setCompositeOperation(options.compositeOperator(), options.blendMode());
@@ -142,7 +140,7 @@ ImageDrawResult CustomPaintImage::draw(GraphicsContext& destContext, const Float
 }
 
 void CustomPaintImage::drawPattern(GraphicsContext& destContext, const FloatRect& destRect, const FloatRect& srcRect, const AffineTransform& patternTransform,
-    const FloatPoint& phase, const FloatSize& spacing, const ImagePaintingOptions& options)
+    const FloatPoint& phase, const FloatSize& spacing, ImagePaintingOptions options)
 {
     // Allow the generator to provide visually-equivalent tiling parameters for better performance.
     FloatSize adjustedSize = size();
@@ -168,5 +166,4 @@ void CustomPaintImage::drawPattern(GraphicsContext& destContext, const FloatRect
     destContext.setDrawLuminanceMask(false);
 }
 
-}
-#endif
+} // namespace WebCore

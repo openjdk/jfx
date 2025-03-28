@@ -29,7 +29,7 @@
 
 namespace WebCore {
 
-class CSSQuadValue : public CSSValue {
+class CSSQuadValue final : public CSSValue {
 public:
     static Ref<CSSQuadValue> create(Quad);
 
@@ -37,10 +37,11 @@ public:
 
     String customCSSText() const;
     bool equals(const CSSQuadValue&) const;
+    bool canBeCoalesced() const;
 
 private:
     explicit CSSQuadValue(Quad);
-
+    bool m_coalesceIdenticalValues { true };
     Quad m_quad;
 };
 

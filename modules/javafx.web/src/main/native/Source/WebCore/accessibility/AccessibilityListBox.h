@@ -34,24 +34,25 @@ namespace WebCore {
 
 class AccessibilityListBox final : public AccessibilityRenderObject {
 public:
-    static Ref<AccessibilityListBox> create(RenderObject*);
+    static Ref<AccessibilityListBox> create(RenderObject&);
     virtual ~AccessibilityListBox();
 
     bool canSetSelectedChildren() const override;
     WEBCORE_EXPORT void setSelectedChildren(const AccessibilityChildrenVector&) override;
-    AccessibilityRole roleValue() const override { return AccessibilityRole::ListBox; }
 
-    AccessibilityChildrenVector selectedChildren() final;
+    AccessibilityRole determineAccessibilityRole() final { return AccessibilityRole::ListBox; }
+
+    std::optional<AccessibilityChildrenVector> selectedChildren() final;
     AccessibilityChildrenVector visibleChildren() final;
 
     void addChildren() override;
 
 private:
-    explicit AccessibilityListBox(RenderObject*);
+    explicit AccessibilityListBox(RenderObject&);
 
     bool isAccessibilityListBoxInstance() const override { return true; }
     AccessibilityObject* listBoxOptionAccessibilityObject(HTMLElement*) const;
-    AXCoreObject* elementAccessibilityHitTest(const IntPoint&) const override;
+    AccessibilityObject* elementAccessibilityHitTest(const IntPoint&) const final;
 };
 
 } // namespace WebCore

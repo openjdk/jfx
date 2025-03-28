@@ -69,7 +69,7 @@ protected:
     RealtimeIncomingVideoSource(rtc::scoped_refptr<webrtc::VideoTrackInterface>&&, String&&);
 
 #if !RELEASE_LOG_DISABLED
-    const char* logClassName() const final { return "RealtimeIncomingVideoSource"; }
+    ASCIILiteral logClassName() const final { return "RealtimeIncomingVideoSource"_s; }
 #endif
 
     static VideoFrameTimeMetadata metadataFromVideoFrame(const webrtc::VideoFrame&);
@@ -93,6 +93,7 @@ private:
     std::optional<RealtimeMediaSourceSettings> m_currentSettings;
     rtc::scoped_refptr<webrtc::VideoTrackInterface> m_videoTrack;
 
+    double m_currentFrameRate { -1 };
     std::unique_ptr<FrameRateMonitor> m_frameRateMonitor;
 #if !RELEASE_LOG_DISABLED
     bool m_enableFrameRatedMonitoringLogging { false };

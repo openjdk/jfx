@@ -48,7 +48,9 @@ class FireDetail {
 public:
     FireDetail() = default;
     virtual ~FireDetail() = default;
-    virtual void dump(PrintStream&) const = 0;
+    // This can't be pure virtual as it breaks our Dumpable concept.
+    // FIXME: Make this virtual after we stop suppporting the Montery Clang.
+    virtual void dump(PrintStream&) const { }
 };
 
 class StringFireDetail final : public FireDetail {
@@ -93,7 +95,8 @@ class WatchpointSet;
 #if ENABLE(JIT)
 #define JSC_WATCHPOINT_TYPES_WITHOUT_DFG(macro) \
     JSC_WATCHPOINT_TYPES_WITHOUT_JIT(macro) \
-    macro(StructureTransitionStructureStubClearing, StructureTransitionStructureStubClearingWatchpoint)
+    macro(StructureTransitionStructureStubClearing, StructureTransitionStructureStubClearingWatchpoint) \
+    macro(StructureStubInfoClearing, StructureStubInfoClearingWatchpoint)
 
 #if ENABLE(DFG_JIT)
 #define JSC_WATCHPOINT_TYPES(macro) \
@@ -111,7 +114,7 @@ class WatchpointSet;
 
 DECLARE_ALLOCATOR_WITH_HEAP_IDENTIFIER(Watchpoint);
 
-class Watchpoint : public PackedRawSentinelNode<Watchpoint> {
+class Watchpoint : public BasicRawSentinelNode<Watchpoint> {
     WTF_MAKE_NONCOPYABLE(Watchpoint);
     WTF_MAKE_NONMOVABLE(Watchpoint);
     WTF_MAKE_STRUCT_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(Watchpoint);
@@ -255,7 +258,7 @@ public:
     }
 
     int8_t* addressOfState() { return &m_state; }
-    static ptrdiff_t offsetOfState() { return OBJECT_OFFSETOF(WatchpointSet, m_state); }
+    static constexpr ptrdiff_t offsetOfState() { return OBJECT_OFFSETOF(WatchpointSet, m_state); }
     int8_t* addressOfSetIsNotEmpty() { return &m_setIsNotEmpty; }
 
     JS_EXPORT_PRIVATE void fireAllSlow(VM&, const FireDetail&); // Call only if you've checked isWatched.
@@ -274,7 +277,7 @@ private:
     int8_t m_state;
     int8_t m_setIsNotEmpty;
 
-    SentinelLinkedList<Watchpoint, PackedRawSentinelNode<Watchpoint>> m_set;
+    SentinelLinkedList<Watchpoint, BasicRawSentinelNode<Watchpoint>> m_set;
 };
 
 // InlineWatchpointSet is a low-overhead, non-copyable watchpoint set in which

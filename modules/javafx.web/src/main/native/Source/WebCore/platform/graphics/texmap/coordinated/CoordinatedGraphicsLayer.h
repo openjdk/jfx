@@ -30,11 +30,20 @@
 #include "NicosiaAnimatedBackingStoreClient.h"
 #include "NicosiaAnimation.h"
 #include "NicosiaBuffer.h"
+#include "NicosiaCompositionLayer.h"
 #include "NicosiaPlatformLayer.h"
 #include "TransformationMatrix.h"
 #include <wtf/Function.h>
 #include <wtf/RunLoop.h>
+#include <wtf/WorkerPool.h>
 #include <wtf/text/StringHash.h>
+
+#if USE(SKIA)
+namespace WebCore {
+class BitmapTexture;
+class SkiaAcceleratedBufferPool;
+}
+#endif
 
 namespace Nicosia {
 class Animations;
@@ -51,9 +60,14 @@ public:
     virtual FloatRect visibleContentsRect() const = 0;
     virtual void detachLayer(CoordinatedGraphicsLayer*) = 0;
     virtual void attachLayer(CoordinatedGraphicsLayer*) = 0;
+#if USE(CAIRO)
     virtual Nicosia::PaintingEngine& paintingEngine() = 0;
+#elif USE(SKIA)
+    virtual SkiaAcceleratedBufferPool* skiaAcceleratedBufferPool() const = 0;
+    virtual WorkerPool* skiaUnacceleratedThreadedRenderingPool() const = 0;
+#endif
+
     virtual RefPtr<Nicosia::ImageBackingStore> imageBackingStore(uint64_t, Function<RefPtr<Nicosia::Buffer>()>) = 0;
-    virtual void syncLayerState() = 0;
 };
 
 class WEBCORE_EXPORT CoordinatedGraphicsLayer : public GraphicsLayer {
@@ -72,7 +86,7 @@ public:
     void addChildAbove(Ref<GraphicsLayer>&&, GraphicsLayer*) override;
     void addChildBelow(Ref<GraphicsLayer>&&, GraphicsLayer*) override;
     bool replaceChild(GraphicsLayer*, Ref<GraphicsLayer>&&) override;
-    void removeFromParent() override;
+    void willModifyChildren() override;
     void setEventRegion(EventRegion&&) override;
 #if ENABLE(SCROLLING_THREAD)
     void setScrollingNodeID(ScrollingNodeID) override;
@@ -109,6 +123,7 @@ public:
     void setNeedsDisplay() override;
     void setNeedsDisplayInRect(const FloatRect&, ShouldClipToLayer = ClipToLayer) override;
     void setContentsNeedsDisplay() override;
+    void markDamageRectsUnreliable() override;
     void deviceOrPageScaleFactorChanged() override;
     void flushCompositingState(const FloatRect&) override;
     void flushCompositingStateForThisLayerOnly() override;
@@ -117,9 +132,10 @@ public:
     void setBackdropFiltersRect(const FloatRoundedRect&) override;
     bool addAnimation(const KeyframeValueList&, const FloatSize&, const Animation*, const String&, double) override;
     void pauseAnimation(const String&, double) override;
-    void removeAnimation(const String&) override;
+    void removeAnimation(const String&, std::optional<AnimatedProperty>) override;
     void suspendAnimations(MonotonicTime) override;
     void resumeAnimations() override;
+    void transformRelatedPropertyDidChange() override;
     bool usesContentsLayer() const override;
     void dumpAdditionalProperties(WTF::TextStream&, OptionSet<LayerTreeAsTextOptions>) const override;
 
@@ -127,13 +143,13 @@ public:
     PlatformLayer* platformLayer() const override;
 #endif
 
-    void syncPendingStateChangesIncludingSubLayers();
-    void updateContentBuffersIncludingSubLayers();
+    std::pair<bool, bool> finalizeCompositingStateFlush();
 
     FloatPoint computePositionRelativeToBase();
     void computePixelAlignment(FloatPoint& position, FloatSize&, FloatPoint3D& anchorPoint, FloatSize& alignmentOffset);
 
     IntRect transformedVisibleRect();
+    IntRect transformedVisibleRectIncludingFuture();
 
     void invalidateCoordinator();
     void setCoordinatorIncludingSubLayersIfNeeded(CoordinatedGraphicsLayerClient*);
@@ -169,6 +185,8 @@ public:
 
     double backingStoreMemoryEstimate() const override;
 
+    Vector<std::pair<String, double>> acceleratedAnimationsForTesting(const Settings&) const final;
+
 private:
     enum class FlushNotification {
         Required,
@@ -192,6 +210,12 @@ private:
     void computeTransformedVisibleRect();
     void updateContentBuffers();
 
+    bool checkPendingStateChanges();
+    bool checkContentLayerUpdated();
+
+    Ref<Nicosia::Buffer> paintTile(const IntRect&, const IntRect& mappedTileRect, float contentsScale);
+    Ref<Nicosia::Buffer> paintImage(Image&);
+
     void notifyFlushRequired();
 
     bool shouldHaveBackingStore() const;
@@ -206,9 +230,16 @@ private:
 
     bool filtersCanBeComposited(const FilterOperations&) const;
 
+#if USE(SKIA)
+    RefPtr<BitmapTexture> acquireTextureForAcceleratedBuffer(const IntSize&);
+#endif
+
     Nicosia::PlatformLayer::LayerID m_id;
     GraphicsLayerTransform m_layerTransform;
+    GraphicsLayerTransform m_layerFutureTransform;
     TransformationMatrix m_cachedInverseTransform;
+    TransformationMatrix m_cachedFutureInverseTransform;
+    TransformationMatrix m_cachedCombinedTransform;
     FloatSize m_pixelAlignmentOffset;
     FloatSize m_adjustedSize;
     FloatPoint m_adjustedPosition;
@@ -229,8 +260,9 @@ private:
 
     struct {
         bool completeLayer { false };
-        Vector<FloatRect, 32> rects;
+        Vector<FloatRect> rects;
     } m_needsDisplay;
+    bool m_damagedRectsAreUnreliable { false };
 
     RefPtr<Image> m_compositedImage;
     RefPtr<NativeImage> m_compositedNativeImage;
@@ -246,6 +278,7 @@ private:
         Nicosia::CompositionLayer::LayerState::RepaintCounter repaintCounter;
         Nicosia::CompositionLayer::LayerState::DebugBorder debugBorder;
         bool performLayerSync { false };
+        bool contentLayerUpdated { false };
 
         RefPtr<Nicosia::BackingStore> backingStore;
         RefPtr<Nicosia::ContentLayer> contentLayer;

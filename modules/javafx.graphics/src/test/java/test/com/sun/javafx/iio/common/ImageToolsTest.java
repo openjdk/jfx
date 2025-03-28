@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2018, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2018, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -26,10 +26,10 @@
 package test.com.sun.javafx.iio.common;
 
 import com.sun.javafx.iio.common.ImageTools;
-import static org.junit.Assert.*;
-import org.junit.Test;
-
 import java.util.Random;
+import org.junit.jupiter.api.Test;
+
+import static org.junit.jupiter.api.Assertions.*;
 
 public class ImageToolsTest {
     private static final int RANDOM_SEED = 1;  // A random seed
@@ -92,19 +92,39 @@ public class ImageToolsTest {
 
         // Result should always return dimensions in the range of 0 < x <= size,
         // and one dimension must be equal to one of the target dimensions.
-        assertTrue(msg, x <= tw);
-        assertTrue(msg, y <= th);
-        assertTrue(msg, x > 0);
-        assertTrue(msg, y > 0);
-        assertTrue(msg, x == tw || y == th);
+        assertTrue(x <= tw, msg);
+        assertTrue(y <= th, msg);
+        assertTrue(x > 0, msg);
+        assertTrue(y > 0, msg);
+        assertTrue(x == tw || y == th, msg);
 
         // Check the non-maxed dimension to see if it is within 1 pixel of the expected value
         // when calculated with the original aspect ratio:
         if (x != tw) {
-            assertTrue(msg, x == Math.floor(th * originalAspect) || x == Math.ceil(th * originalAspect));
+            assertTrue(x == Math.floor(th * originalAspect) || x == Math.ceil(th * originalAspect), msg);
         }
         if (y != th) {
-            assertTrue(msg, y == Math.floor(tw / originalAspect) || y == Math.ceil(tw / originalAspect));
+            assertTrue(y == Math.floor(tw / originalAspect) || y == Math.ceil(tw / originalAspect), msg);
         }
+    }
+
+    @Test
+    public void testValidateMaxDimensions() {
+        assertDoesNotThrow(() -> ImageTools.validateMaxDimensions(Integer.MAX_VALUE, 1, 1));
+        assertDoesNotThrow(() -> ImageTools.validateMaxDimensions(1, Integer.MAX_VALUE, 1));
+        assertThrows(IllegalArgumentException.class, () -> ImageTools.validateMaxDimensions((double)Integer.MAX_VALUE + 1, 1, 1));
+        assertThrows(IllegalArgumentException.class, () -> ImageTools.validateMaxDimensions(1, (double)Integer.MAX_VALUE + 1, 1));
+        assertDoesNotThrow(() -> ImageTools.validateMaxDimensions(46340, 46341, 1));
+        assertThrows(IllegalArgumentException.class, () -> ImageTools.validateMaxDimensions(46340, 46342, 1));
+        assertThrows(IllegalArgumentException.class, () -> ImageTools.validateMaxDimensions(46342, 46340, 1));
+        assertDoesNotThrow(() -> ImageTools.validateMaxDimensions(37072, 37073, 1.25));
+        assertThrows(IllegalArgumentException.class, () -> ImageTools.validateMaxDimensions(37073, 37073, 1.25));
+        assertDoesNotThrow(() -> ImageTools.validateMaxDimensions(30893, 30894, 1.5));
+        assertThrows(IllegalArgumentException.class, () -> ImageTools.validateMaxDimensions(30894, 30894, 1.5));
+        assertDoesNotThrow(() -> ImageTools.validateMaxDimensions(26481, 26480, 1.75));
+        assertThrows(IllegalArgumentException.class, () -> ImageTools.validateMaxDimensions(26481, 26481, 1.75));
+        assertThrows(IllegalArgumentException.class, () -> ImageTools.validateMaxDimensions(Integer.MAX_VALUE - 1, Integer.MAX_VALUE - 1, 1));
+        assertThrows(IllegalArgumentException.class, () -> ImageTools.validateMaxDimensions(Integer.MAX_VALUE, Integer.MAX_VALUE, 1));
+        assertThrows(IllegalArgumentException.class, () -> ImageTools.validateMaxDimensions(Integer.MAX_VALUE, Integer.MAX_VALUE, 3));
     }
 }

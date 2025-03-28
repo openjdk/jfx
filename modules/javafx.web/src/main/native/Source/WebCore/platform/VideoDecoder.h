@@ -25,8 +25,7 @@
 
 #pragma once
 
-#if ENABLE(WEB_CODECS)
-
+#include "ProcessIdentity.h"
 #include <span>
 #include <wtf/CompletionHandler.h>
 #include <wtf/Expected.h>
@@ -41,10 +40,15 @@ public:
     WEBCORE_EXPORT VideoDecoder();
     WEBCORE_EXPORT virtual ~VideoDecoder();
 
+    enum class HardwareAcceleration { Yes, No };
+    enum class HardwareBuffer { Yes, No };
     struct Config {
         std::span<const uint8_t> description;
         uint64_t width { 0 };
         uint64_t height { 0 };
+        HardwareAcceleration decoding { HardwareAcceleration::No };
+        HardwareBuffer pixelBuffer { HardwareBuffer::No };
+        ProcessIdentity resourceOwner { };
     };
 
     struct EncodedFrame {
@@ -77,9 +81,9 @@ public:
     virtual void reset() = 0;
     virtual void close() = 0;
 
+    static String fourCCToCodecString(uint32_t fourCC);
+
     static CreatorFunction s_customCreator;
 };
 
 }
-
-#endif // ENABLE(WEB_CODECS)

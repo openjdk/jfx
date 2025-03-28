@@ -147,7 +147,6 @@ JNIEXPORT jobject JNICALL Java_com_sun_webkit_WCPluginWidget_twkConvertToPage
 PluginWidgetJava::PluginWidgetJava(
     jobject wfh,
     HTMLPlugInElement* element,
-    const IntSize& size,
     const String& url,
     const String& mimeType,
     const Vector<AtomString>& paramNames,
@@ -155,7 +154,6 @@ PluginWidgetJava::PluginWidgetJava(
       : m_element(element),
         m_url(url),
         m_mimeType(mimeType),
-        m_size(size),
         m_paramNames(paramNames),
         m_paramValues(paramValues)
 {
@@ -171,12 +169,12 @@ PluginWidgetJava::PluginWidgetJava(
 
     jobjectArray pNames = strVect2JArray(env, paramNames);
     jobjectArray pValues = strVect2JArray(env, paramValues);
-
+    jint width = 0,height=0;
     JLObject obj(env->CallStaticObjectMethod(
                                                        cls,
                                                        pluginWidgetCreateMID,
                                                        wfh,
-                                                       size.width(), size.height(),
+                                                       width,height,
                                                        (jstring)urlJavaString,
                                                        (jstring)mimeTypeJavaString,
                                                        pNames, pValues));

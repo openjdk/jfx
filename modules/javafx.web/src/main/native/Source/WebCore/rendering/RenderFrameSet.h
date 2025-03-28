@@ -51,7 +51,8 @@ private:
 };
 
 class RenderFrameSet final : public RenderBox {
-    WTF_MAKE_ISO_ALLOCATED(RenderFrameSet);
+    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(RenderFrameSet);
+    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(RenderFrameSet);
 public:
     RenderFrameSet(HTMLFrameSetElement&, RenderStyle&&);
     virtual ~RenderFrameSet();
@@ -87,7 +88,6 @@ private:
     };
 
     ASCIILiteral renderName() const override { return "RenderFrameSet"_s; }
-    bool isFrameSet() const override { return true; }
 
     void layout() override;
     void paint(PaintInfo&, const LayoutPoint&) override;
@@ -119,4 +119,4 @@ private:
 
 } // namespace WebCore
 
-SPECIALIZE_TYPE_TRAITS_RENDER_OBJECT(RenderFrameSet, isFrameSet())
+SPECIALIZE_TYPE_TRAITS_RENDER_OBJECT(RenderFrameSet, isRenderFrameSet())

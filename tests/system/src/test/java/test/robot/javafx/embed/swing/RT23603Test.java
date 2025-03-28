@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2018, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,34 +25,30 @@
 
 package test.robot.javafx.embed.swing;
 
-import javafx.application.Platform;
-import javafx.scene.Scene;
-import javafx.scene.layout.Region;
-
+import static org.junit.jupiter.api.Assertions.fail;
 import java.awt.AWTException;
 import java.awt.Color;
 import java.awt.Dimension;
 import java.awt.Point;
 import java.awt.Robot;
-
-import javax.swing.JFrame;
-import javax.swing.SwingUtilities;
-
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
-
+import javax.swing.JFrame;
+import javax.swing.SwingUtilities;
 import javafx.animation.AnimationTimer;
+import javafx.application.Platform;
 import javafx.embed.swing.JFXPanel;
-import junit.framework.Assert;
-
-import org.junit.Test;
-import org.junit.Ignore;
+import javafx.scene.Scene;
+import javafx.scene.layout.Region;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Disabled;
+import org.junit.jupiter.api.Test;
 import test.util.Util;
 
 /**
- * RT-23603: WebView does not display in JFXPanel on initialization
+ * JDK-8117363: WebView does not display in JFXPanel on initialization
  */
-@Ignore("RT-29515")
+@Disabled("JDK-8089433")
 public class RT23603Test {
     volatile JFrame frame;
     final CountDownLatch l1 = new CountDownLatch(2);
@@ -91,20 +87,21 @@ public class RT23603Test {
         try {
             r = new Robot();
         } catch (AWTException ex) {
-            Assert.fail("unexpected error: couldn't create java.awt.Robot: " + ex);
+            Assertions.fail(ex);
         }
         Point pt = frame.getLocationOnScreen();
         Color color = r.getPixelColor(pt.x + 100, pt.y + 100);
-        Assert.assertEquals(color, Color.GREEN);
+        Assertions.assertEquals(color, Color.GREEN);
     }
 
     private void waitForLatch(CountDownLatch latch, long ms) {
         try {
             latch.await(ms, TimeUnit.MILLISECONDS);
         } catch (InterruptedException e) {
+            fail(e);
         }
         if (latch.getCount() > 0) {
-            Assert.fail("unexpected error: waiting timeout " + ms + "ms elapsed for " + latch);
+            Assertions.fail("unexpected error: waiting timeout " + ms + "ms elapsed for " + latch);
         }
     }
 

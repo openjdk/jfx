@@ -36,7 +36,7 @@
 #include "CSSPropertyNames.h"
 #include "CSSPropertyParser.h"
 #include "Document.h"
-#include "HighlightRegister.h"
+#include "HighlightRegistry.h"
 #include "MutableStyleProperties.h"
 #include "StyleProperties.h"
 #include <wtf/text/StringBuilder.h>
@@ -53,8 +53,7 @@ bool DOMCSSNamespace::supports(Document& document, const String& property, const
     CSSPropertyID propertyID = cssPropertyID(propertyNameWithoutWhitespace);
     if (propertyID == CSSPropertyInvalid && isCustomPropertyName(propertyNameWithoutWhitespace)) {
         auto dummyStyle = MutableStyleProperties::create();
-        constexpr bool importance = false;
-        return CSSParser::parseCustomPropertyValue(dummyStyle, AtomString { propertyNameWithoutWhitespace }, value, importance, parserContext) != CSSParser::ParseResult::Error;
+        return CSSParser::parseCustomPropertyValue(dummyStyle, AtomString { propertyNameWithoutWhitespace }, value, IsImportant::No, parserContext) != CSSParser::ParseResult::Error;
     }
 
     if (!isExposed(propertyID, &document.settings()))
@@ -70,7 +69,7 @@ bool DOMCSSNamespace::supports(Document& document, const String& property, const
         return false;
 
     auto dummyStyle = MutableStyleProperties::create();
-    return CSSParser::parseValue(dummyStyle, propertyID, value, false, parserContext) != CSSParser::ParseResult::Error;
+    return CSSParser::parseValue(dummyStyle, propertyID, value, IsImportant::No, parserContext) != CSSParser::ParseResult::Error;
 }
 
 bool DOMCSSNamespace::supports(Document& document, const String& conditionText)
@@ -88,9 +87,9 @@ String DOMCSSNamespace::escape(const String& ident)
     return builder.toString();
 }
 
-HighlightRegister& DOMCSSNamespace::highlights(Document& document)
+HighlightRegistry& DOMCSSNamespace::highlights(Document& document)
 {
-    return document.highlightRegister();
+    return document.highlightRegistry();
 }
 
 }

@@ -26,6 +26,7 @@
 #include "config.h"
 #include "DragImage.h"
 
+#include "BitmapImage.h"
 #include "FrameSnapshotting.h"
 #include "ImageBuffer.h"
 #include "LocalFrame.h"
@@ -33,8 +34,8 @@
 #include "NotImplemented.h"
 #include "Position.h"
 #include "RenderElement.h"
+#include "RenderSelection.h"
 #include "RenderView.h"
-#include "SelectionRangeData.h"
 #include "SimpleRange.h"
 #include "TextIndicator.h"
 
@@ -103,14 +104,14 @@ static DragImageRef createDragImageFromSnapshot(RefPtr<ImageBuffer> snapshot, No
 
     ImageOrientation orientation;
     if (node) {
-        RenderObject* renderer = node->renderer();
-        if (!renderer || !is<RenderElement>(renderer))
+        auto* elementRenderer = dynamicDowncast<RenderElement>(node->renderer());
+        if (!elementRenderer)
             return nullptr;
 
-        orientation = downcast<RenderElement>(*renderer).imageOrientation();
+        orientation = elementRenderer->imageOrientation();
     }
 
-    RefPtr<Image> image = ImageBuffer::sinkIntoImage(WTFMove(snapshot), PreserveResolution::Yes);
+    auto image = BitmapImage::create(ImageBuffer::sinkIntoNativeImage(WTFMove(snapshot)));
     if (!image)
         return nullptr;
     return createDragImageFromImage(image.get(), orientation);
@@ -119,14 +120,14 @@ static DragImageRef createDragImageFromSnapshot(RefPtr<ImageBuffer> snapshot, No
 DragImageRef createDragImageForNode(LocalFrame& frame, Node& node)
 {
     ScopedNodeDragEnabler enableDrag(frame, node);
-    return createDragImageFromSnapshot(snapshotNode(frame, node, { { }, PixelFormat::BGRA8, DestinationColorSpace::SRGB() }), &node);
+    return createDragImageFromSnapshot(snapshotNode(frame, node, { { }, ImageBufferPixelFormat::BGRA8, DestinationColorSpace::SRGB() }), &node);
 }
 
 #if !PLATFORM(IOS_FAMILY) || !ENABLE(DRAG_SUPPORT)
 
 DragImageRef createDragImageForSelection(LocalFrame& frame, TextIndicatorData&, bool forceBlackText)
 {
-    SnapshotOptions options { { }, PixelFormat::BGRA8, DestinationColorSpace::SRGB() };
+    SnapshotOptions options { { }, ImageBufferPixelFormat::BGRA8, DestinationColorSpace::SRGB() };
     if (forceBlackText)
         options.flags.add(SnapshotFlags::ForceBlackText);
     return createDragImageFromSnapshot(snapshotSelection(frame, WTFMove(options)), nullptr);
@@ -146,7 +147,7 @@ struct ScopedFrameSelectionState {
     {
         if (auto* renderView = frame.contentRenderer()) {
             ASSERT(selection);
-            renderView->selection().set(selection.value(), SelectionRangeData::RepaintMode::Nothing);
+            renderView->selection().set(selection.value(), RenderSelection::RepaintMode::Nothing);
         }
     }
 
@@ -184,14 +185,14 @@ DragImageRef createDragImageForRange(LocalFrame& frame, const SimpleRange& range
     if (!startRenderer || !endRenderer)
         return nullptr;
 
-    SnapshotOptions options { { SnapshotFlags::PaintSelectionOnly }, PixelFormat::BGRA8, DestinationColorSpace::SRGB() };
+    SnapshotOptions options { { SnapshotFlags::PaintSelectionOnly }, ImageBufferPixelFormat::BGRA8, DestinationColorSpace::SRGB() };
     if (forceBlackText)
         options.flags.add(SnapshotFlags::ForceBlackText);
 
     int startOffset = start.deprecatedEditingOffset();
     int endOffset = end.deprecatedEditingOffset();
     ASSERT(startOffset >= 0 && endOffset >= 0);
-    view->selection().set({ startRenderer, endRenderer, static_cast<unsigned>(startOffset), static_cast<unsigned>(endOffset) }, SelectionRangeData::RepaintMode::Nothing);
+    view->selection().set({ startRenderer, endRenderer, static_cast<unsigned>(startOffset), static_cast<unsigned>(endOffset) }, RenderSelection::RepaintMode::Nothing);
     // We capture using snapshotFrameRect() because we fake up the selection using
     // FrameView but snapshotSelection() uses the selection from the Frame itself.
     return createDragImageFromSnapshot(snapshotFrameRect(frame, view->selection().boundsClippedToVisibleContent(), WTFMove(options)), nullptr);
@@ -217,7 +218,7 @@ DragImageRef createDragImageForImage(LocalFrame& frame, Node& node, IntRect& ima
     elementRect = snappedIntRect(topLevelRect);
     imageRect = paintingRect;
 
-    return createDragImageFromSnapshot(snapshotNode(frame, node, { { }, PixelFormat::BGRA8, DestinationColorSpace::SRGB() }), &node);
+    return createDragImageFromSnapshot(snapshotNode(frame, node, { { }, ImageBufferPixelFormat::BGRA8, DestinationColorSpace::SRGB() }), &node);
 }
 
 #if !PLATFORM(IOS_FAMILY) || !ENABLE(DRAG_SUPPORT)

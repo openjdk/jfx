@@ -53,11 +53,11 @@
 #include "RenderElement.h"
 #include "ScriptDisallowedScope.h"
 #include "Settings.h"
-#include "ShadowPseudoIds.h"
 #include "ShadowRoot.h"
 #include "StepRange.h"
 #include "Text.h"
 #include "TypedElementDescendantIteratorInlines.h"
+#include "UserAgentParts.h"
 #include "UserGestureIndicator.h"
 #include <limits>
 #include <wtf/DateMath.h>
@@ -141,6 +141,29 @@ ExceptionOr<void> BaseDateAndTimeInputType::setValueAsDate(WallTime value) const
     ASSERT(element());
     element()->setValue(serializeWithMilliseconds(value.secondsSinceEpoch().milliseconds()));
     return { };
+}
+
+WallTime BaseDateAndTimeInputType::accessibilityValueAsDate() const
+{
+    double dateAsDouble = valueAsDouble();
+    if (std::isnan(dateAsDouble) && m_dateTimeEditElement) {
+        // The value for this element has not been set. Try to get a value from
+        // m_dateTimeEditElement if exists. That value may have been indirectly
+        // set as placeholder values for the field elements.
+        String value = m_dateTimeEditElement->value();
+        if (value.isEmpty())
+            value = m_dateTimeEditElement->placeholderValue();
+        if (value.isEmpty())
+            return { };
+
+        auto decimal = parseToNumber(value, Decimal::nan());
+        if (decimal.isFinite())
+            dateAsDouble = decimal.toDouble();
+    }
+
+    if (std::isnan(dateAsDouble))
+        return { };
+    return WallTime::fromRawSeconds(Seconds::fromMilliseconds(dateAsDouble).value());
 }
 
 double BaseDateAndTimeInputType::valueAsDouble() const
@@ -302,6 +325,15 @@ void BaseDateAndTimeInputType::handleDOMActivateEvent(Event&)
 
     if (m_dateTimeChooser)
         return;
+
+    showPicker();
+}
+
+void BaseDateAndTimeInputType::showPicker()
+{
+    if (!element()->renderer())
+        return;
+
     if (!element()->document().page())
         return;
 
@@ -309,7 +341,7 @@ void BaseDateAndTimeInputType::handleDOMActivateEvent(Event&)
     if (!setupDateTimeChooserParameters(parameters))
         return;
 
-    if (auto chrome = this->chrome()) {
+    if (auto* chrome = this->chrome()) {
         m_dateTimeChooser = chrome->createDateTimeChooser(*this);
         if (m_dateTimeChooser)
             m_dateTimeChooser->showChooser(parameters);
@@ -321,25 +353,27 @@ void BaseDateAndTimeInputType::createShadowSubtree()
     ASSERT(needsShadowSubtree());
     ASSERT(element());
 
-    auto& element = *this->element();
-    auto& document = element.document();
+    Ref element = *this->element();
+    Ref document = element->document();
 
-    ScriptDisallowedScope::EventAllowedScope eventAllowedScope { *element.userAgentShadowRoot() };
+    Ref shadowRoot = *element->userAgentShadowRoot();
+    ScriptDisallowedScope::EventAllowedScope eventAllowedScope { shadowRoot };
 
-    if (document.settings().dateTimeInputsEditableComponentsEnabled()) {
-        m_dateTimeEditElement = DateTimeEditElement::create(document, *this);
-        element.userAgentShadowRoot()->appendChild(ContainerNode::ChildChange::Source::Parser, *m_dateTimeEditElement);
+    if (document->settings().dateTimeInputsEditableComponentsEnabled()) {
+        Ref dateTimeEditElement = DateTimeEditElement::create(document, *this);
+        m_dateTimeEditElement = dateTimeEditElement.copyRef();
+        shadowRoot->appendChild(ContainerNode::ChildChange::Source::Parser, dateTimeEditElement);
     } else {
-        auto valueContainer = HTMLDivElement::create(document);
-        element.userAgentShadowRoot()->appendChild(ContainerNode::ChildChange::Source::Parser, valueContainer);
-        valueContainer->setPseudo(ShadowPseudoIds::webkitDateAndTimeValue());
+        Ref valueContainer = HTMLDivElement::create(document);
+        shadowRoot->appendChild(ContainerNode::ChildChange::Source::Parser, valueContainer);
+        valueContainer->setUserAgentPart(UserAgentParts::webkitDateAndTimeValue());
     }
     updateInnerTextValue();
 }
 
-void BaseDateAndTimeInputType::destroyShadowSubtree()
+void BaseDateAndTimeInputType::removeShadowSubtree()
 {
-    InputType::destroyShadowSubtree();
+    InputType::removeShadowSubtree();
     m_dateTimeEditElement = nullptr;
 }
 
@@ -350,15 +384,15 @@ void BaseDateAndTimeInputType::updateInnerTextValue()
     createShadowSubtreeIfNeeded();
 
     if (!m_dateTimeEditElement) {
-        auto node = element()->userAgentShadowRoot()->firstChild();
-        if (!is<HTMLElement>(node))
+        RefPtr firstChildElement = dynamicDowncast<HTMLElement>(element()->userAgentShadowRoot()->firstChild());
+        if (!firstChildElement)
             return;
         auto displayValue = visibleValue();
         if (displayValue.isEmpty()) {
             // Need to put something to keep text baseline.
             displayValue = " "_s;
         }
-        downcast<HTMLElement>(*node).setInnerText(WTFMove(displayValue));
+        firstChildElement->setInnerText(WTFMove(displayValue));
         return;
     }
 
@@ -468,7 +502,7 @@ void BaseDateAndTimeInputType::handleFocusEvent(Node* oldFocusedNode, FocusDirec
         // so that this element no longer has focus. In this case, one of the children should
         // not be focused as the element is losing focus entirely.
         if (auto* page = element()->document().page())
-            CheckedRef(page->focusController())->advanceFocus(direction, 0);
+            page->checkedFocusController()->advanceFocus(direction, 0);
 
     } else {
         // If the element received focus in any other direction, transfer focus to the first focusable child.
@@ -486,12 +520,27 @@ bool BaseDateAndTimeInputType::accessKeyAction(bool sendMouseEvents)
 void BaseDateAndTimeInputType::didBlurFromControl()
 {
     closeDateTimeChooser();
+
+    RefPtr element = this->element();
+    if (element && element->wasChangedSinceLastFormControlChangeEvent())
+        element->dispatchFormControlChangeEvent();
 }
 
 void BaseDateAndTimeInputType::didChangeValueFromControl()
 {
     String value = sanitizeValue(m_dateTimeEditElement->value());
-    InputType::setValue(value, value != element()->value(), DispatchInputAndChangeEvent, DoNotSet);
+    bool valueChanged = !equalIgnoringNullity(value, element()->value());
+
+    InputType::setValue(value, valueChanged, DispatchNoEvent, DoNotSet);
+
+    if (!valueChanged)
+        return;
+
+    Ref input = *element();
+    if (input->protectedUserAgentShadowRoot()->containsFocusedElement())
+        input->dispatchFormControlInputEvent();
+    else
+        input->dispatchFormControlChangeEvent();
 
     DateTimeChooserParameters parameters;
     if (!setupDateTimeChooserParameters(parameters))
@@ -570,7 +619,6 @@ bool BaseDateAndTimeInputType::setupDateTimeChooserParameters(DateTimeChooserPar
     auto* computedStyle = element.computedStyle();
     parameters.isAnchorElementRTL = computedStyle->direction() == TextDirection::RTL;
     parameters.useDarkAppearance = document.useDarkAppearance(computedStyle);
-
     auto date = valueOrDefault(parseToDateComponents(element.value()));
     parameters.hasSecondField = shouldHaveSecondField(date);
     parameters.hasMillisecondField = shouldHaveMillisecondField(date);

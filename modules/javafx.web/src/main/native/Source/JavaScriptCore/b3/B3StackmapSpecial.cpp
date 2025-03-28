@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015-2018 Apple Inc. All rights reserved.
+ * Copyright (C) 2015-2023 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -31,20 +31,19 @@
 #include "AirCode.h"
 #include "AirGenerationContext.h"
 #include "B3ValueInlines.h"
+#include <wtf/TZoneMallocInlines.h>
 
 namespace JSC { namespace B3 {
+
+WTF_MAKE_TZONE_ALLOCATED_IMPL(StackmapSpecial);
 
 using Arg = Air::Arg;
 using Inst = Air::Inst;
 using Tmp = Air::Tmp;
 
-StackmapSpecial::StackmapSpecial()
-{
-}
+StackmapSpecial::StackmapSpecial() = default;
 
-StackmapSpecial::~StackmapSpecial()
-{
-}
+StackmapSpecial::~StackmapSpecial() = default;
 
 void StackmapSpecial::reportUsedRegisters(Inst& inst, const RegisterSetBuilder& usedRegisters)
 {
@@ -123,7 +122,21 @@ void StackmapSpecial::forEachArgImpl(
             case ValueRep::LateColdAny:
                 role = Arg::LateColdUse;
                 break;
-            default:
+#if USE(JSVALUE32_64)
+            case ValueRep::SomeRegisterPair:
+            case ValueRep::RegisterPair:
+                role = Arg::Use;
+                break;
+            case ValueRep::SomeRegisterPairWithClobber:
+                role = Arg::UseDef;
+                break;
+            case ValueRep::SomeLateRegisterPair:
+            case ValueRep::LateRegisterPair:
+                role = Arg::LateUse;
+                break;
+            case ValueRep::SomeEarlyRegisterPair:
+#endif
+            case ValueRep::SomeEarlyRegister:
                 RELEASE_ASSERT_NOT_REACHED();
                 break;
             }
@@ -232,6 +245,9 @@ bool StackmapSpecial::isArgValidForType(const Air::Arg& arg, Type type)
 {
     switch (arg.kind()) {
     case Arg::Tmp:
+#if USE(JSVALUE32_64)
+    case Arg::TmpPair:
+#endif
     case Arg::Imm:
     case Arg::BigImm:
         break;
@@ -272,10 +288,22 @@ bool StackmapSpecial::isArgValidForRep(Air::Code& code, const Air::Arg& arg, con
                 return true;
         }
         return false;
-    default:
+#if USE(JSVALUE32_64)
+    case ValueRep::SomeRegisterPair:
+    case ValueRep::SomeRegisterPairWithClobber:
+    case ValueRep::SomeEarlyRegisterPair:
+    case ValueRep::SomeLateRegisterPair:
+        return arg.isTmpPair();
+    case ValueRep::LateRegisterPair:
+    case ValueRep::RegisterPair:
+        return arg == Arg(Tmp(rep.regHi()), Tmp(rep.regLo()));
+#endif
+    case ValueRep::Stack:
+    case ValueRep::Constant:
         RELEASE_ASSERT_NOT_REACHED();
         return false;
     }
+    RELEASE_ASSERT_NOT_REACHED();
 }
 
 ValueRep StackmapSpecial::repForArg(Air::Code& code, const Arg& arg)
@@ -284,6 +312,10 @@ ValueRep StackmapSpecial::repForArg(Air::Code& code, const Arg& arg)
     case Arg::Tmp:
         return ValueRep::reg(arg.reg());
         break;
+#if USE(JSVALUE32_64)
+    case Arg::TmpPair:
+        return ValueRep::regPair(arg.regHi(), arg.regLo());
+#endif
     case Arg::Imm:
     case Arg::BigImm:
         return ValueRep::constant(arg.value());

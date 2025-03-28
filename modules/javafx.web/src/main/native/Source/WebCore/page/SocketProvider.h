@@ -33,6 +33,7 @@
 namespace WebCore {
 
 class Document;
+class ScriptExecutionContext;
 class ThreadableWebSocketChannel;
 class ScriptExecutionContext;
 class StorageSessionProvider;
@@ -41,6 +42,7 @@ class SocketStreamHandle;
 class SocketStreamHandleClient;
 class Page;
 class WebSocketChannelClient;
+class WebTransportSession;
 
 class WEBCORE_EXPORT SocketProvider : public ThreadSafeRefCounted<SocketProvider> {
 public:
@@ -54,7 +56,7 @@ public:
     virtual Ref<SocketStreamHandle> createSocketStreamHandle(const URL&, SocketStreamHandleClient&, WebSocketIdentifier, PAL::SessionID, const String& credentialPartition, const StorageSessionProvider*);
 #endif
     virtual RefPtr<ThreadableWebSocketChannel> createWebSocketChannel(Document&, WebSocketChannelClient&);
-
+    void initializeWebTransportSession(WebCore::ScriptExecutionContext&, const URL&, CompletionHandler<void(RefPtr<WebCore::WebTransportSession>&&)>&&);
     virtual ~SocketProvider() { };
 };
 

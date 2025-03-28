@@ -36,6 +36,7 @@
 #include "PlatformKeyboardEvent.h"
 #include "Widget.h"
 #include "DataTransfer.h"
+#include "HandleUserInputEventResult.h"
 
 namespace WebCore {
 

@@ -52,7 +52,6 @@ public:
     PluginWidgetJava(
         jobject wfh,
         HTMLPlugInElement* element,
-        const IntSize& size,
         const String& url,
         const String& mimeType,
         const Vector<AtomString>& paramNames,

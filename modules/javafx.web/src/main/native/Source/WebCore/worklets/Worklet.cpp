@@ -38,15 +38,16 @@
 #include "WorkletPendingTasks.h"
 #include <JavaScriptCore/IdentifiersFactory.h>
 #include <wtf/CrossThreadCopier.h>
-#include <wtf/IsoMallocInlines.h>
+#include <wtf/TZoneMallocInlines.h>
+#include <wtf/text/MakeString.h>
 
 namespace WebCore {
 
-WTF_MAKE_ISO_ALLOCATED_IMPL(Worklet);
+WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(Worklet);
 
 Worklet::Worklet(Document& document)
     : ActiveDOMObject(&document)
-    , m_identifier("worklet:" + Inspector::IdentifiersFactory::createIdentifier())
+    , m_identifier(makeString("worklet:"_s, Inspector::IdentifiersFactory::createIdentifier()))
 {
 }
 
@@ -62,18 +63,18 @@ void Worklet::addModule(const String& moduleURLString, WorkletOptions&& options,
 {
     auto* document = this->document();
     if (!document || !document->page()) {
-        promise.reject(Exception { InvalidStateError, "This frame is detached"_s });
+        promise.reject(Exception { ExceptionCode::InvalidStateError, "This frame is detached"_s });
         return;
     }
 
     URL moduleURL = document->completeURL(moduleURLString);
     if (!moduleURL.isValid()) {
-        promise.reject(Exception { SyntaxError, "Module URL is invalid"_s });
+        promise.reject(Exception { ExceptionCode::SyntaxError, "Module URL is invalid"_s });
         return;
     }
 
-    if (!document->contentSecurityPolicy()->allowScriptFromSource(moduleURL)) {
-        promise.reject(Exception { SecurityError, "Not allowed by CSP"_s });
+    if (!document->checkedContentSecurityPolicy()->allowScriptFromSource(moduleURL)) {
+        promise.reject(Exception { ExceptionCode::SecurityError, "Not allowed by CSP"_s });
         return;
     }
 
@@ -103,11 +104,6 @@ void Worklet::finishPendingTasks(WorkletPendingTasks& tasks)
     ASSERT(m_pendingTasksSet.contains(&tasks));
 
     m_pendingTasksSet.remove(&tasks);
-}
-
-const char* Worklet::activeDOMObjectName() const
-{
-    return "Worklet";
 }
 
 } // namespace WebCore

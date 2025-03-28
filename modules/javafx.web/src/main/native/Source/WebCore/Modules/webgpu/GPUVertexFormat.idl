@@ -27,8 +27,7 @@
 
 [
     EnabledBySetting=WebGPUEnabled
-]
-enum GPUVertexFormat {
+] enum GPUVertexFormat {
     "uint8x2",
     "uint8x4",
     "sint8x2",
@@ -58,5 +57,6 @@ enum GPUVertexFormat {
     "sint32",
     "sint32x2",
     "sint32x3",
-    "sint32x4"
+    "sint32x4",
+    "unorm10-10-10-2"
 };

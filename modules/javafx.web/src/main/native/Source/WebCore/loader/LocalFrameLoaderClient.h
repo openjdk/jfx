@@ -32,6 +32,7 @@
 #include "FrameLoaderClient.h"
 #include "LayoutMilestone.h"
 #include "LinkIcon.h"
+#include "LoaderMalloc.h"
 #include "RegistrableDomain.h"
 #include "ResourceLoaderIdentifier.h"
 #include <wtf/Expected.h>
@@ -95,14 +96,16 @@ class SharedBuffer;
 class SubstituteData;
 class Widget;
 
+enum class LoadWillContinueInAnotherProcess : bool;
 enum class LockBackForwardList : bool;
 enum class UsedLegacyTLS : bool;
 enum class WasPrivateRelayed : bool;
+enum class FromDownloadAttribute : bool { No , Yes };
 
 struct StringWithDirection;
 
 class WEBCORE_EXPORT LocalFrameLoaderClient : public FrameLoaderClient {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(Loader);
 public:
     // An inline function cannot be the first non-abstract virtual function declared
     // in the class as it results in the vtable being generated as a weak symbol.
@@ -177,8 +180,8 @@ public:
     virtual LocalFrame* dispatchCreatePage(const NavigationAction&, NewFrameOpenerPolicy) = 0;
     virtual void dispatchShow() = 0;
 
-    virtual void dispatchDecidePolicyForResponse(const ResourceResponse&, const ResourceRequest&, PolicyCheckIdentifier, const String& downloadAttribute, FramePolicyFunction&&) = 0;
-    virtual void dispatchDecidePolicyForNewWindowAction(const NavigationAction&, const ResourceRequest&, FormState*, const String& frameName, PolicyCheckIdentifier, FramePolicyFunction&&) = 0;
+    virtual void dispatchDecidePolicyForResponse(const ResourceResponse&, const ResourceRequest&, const String& downloadAttribute, FramePolicyFunction&&) = 0;
+    virtual void dispatchDecidePolicyForNewWindowAction(const NavigationAction&, const ResourceRequest&, FormState*, const String& frameName, std::optional<HitTestResult>&&, FramePolicyFunction&&) = 0;
     virtual void cancelPolicyCheck() = 0;
 
     virtual void dispatchUnableToImplementPolicy(const ResourceError&) = 0;
@@ -191,7 +194,7 @@ public:
 
     virtual void setMainFrameDocumentReady(bool) = 0;
 
-    virtual void startDownload(const ResourceRequest&, const String& suggestedName = String()) = 0;
+    virtual void startDownload(const ResourceRequest&, const String& suggestedName = String(), FromDownloadAttribute = FromDownloadAttribute::No) = 0;
 
     virtual void willChangeTitle(DocumentLoader*) = 0;
     virtual void didChangeTitle(DocumentLoader*) = 0;
@@ -207,11 +210,6 @@ public:
 
     virtual bool shouldGoToHistoryItem(HistoryItem&) const = 0;
 
-    // This frame has set its opener to null, disowning it for the lifetime of the frame.
-    // See http://html.spec.whatwg.org/#dom-opener.
-    // FIXME: JSC should allow disowning opener. - <https://bugs.webkit.org/show_bug.cgi?id=103913>.
-    virtual void didDisownOpener() { }
-
     // This frame has displayed inactive content (such as an image) from an
     // insecure source.  Inactive content cannot spread to other frames.
     virtual void didDisplayInsecureContent() = 0;
@@ -219,7 +217,7 @@ public:
     // The indicated security origin has run active content (such as a
     // script) from an insecure source.  Note that the insecure content can
     // spread to other frames in the same origin.
-    virtual void didRunInsecureContent(SecurityOrigin&, const URL&) = 0;
+    virtual void didRunInsecureContent(SecurityOrigin&) = 0;
 
     virtual ResourceError cancelledError(const ResourceRequest&) const = 0;
     virtual ResourceError blockedError(const ResourceRequest&) const = 0;
@@ -233,9 +231,12 @@ public:
     virtual ResourceError cannotShowMIMETypeError(const ResourceResponse&) const = 0;
     virtual ResourceError fileDoesNotExistError(const ResourceResponse&) const = 0;
     virtual ResourceError httpsUpgradeRedirectLoopError(const ResourceRequest&) const = 0;
+    virtual ResourceError httpNavigationWithHTTPSOnlyError(const ResourceRequest&) const = 0;
     virtual ResourceError pluginWillHandleLoadError(const ResourceResponse&) const = 0;
 
     virtual bool shouldFallBack(const ResourceError&) const = 0;
+
+    virtual void loadStorageAccessQuirksIfNeeded() = 0;
 
     virtual bool canHandleRequest(const ResourceRequest&) const = 0;
     virtual bool canShowMIMEType(const String& MIMEType) const = 0;
@@ -254,6 +255,7 @@ public:
     virtual void updateCachedDocumentLoader(DocumentLoader&) = 0;
     virtual void setTitle(const StringWithDirection&, const URL&) = 0;
 
+    virtual bool hasCustomUserAgent() const { return false; }
     virtual String userAgent(const URL&) const = 0;
 
     virtual String overrideContentSecurityPolicy() const { return String(); }
@@ -263,7 +265,8 @@ public:
 #if PLATFORM(IOS_FAMILY)
     virtual void didRestoreFrameHierarchyForCachedFrame() = 0;
 #endif
-    virtual void transitionToCommittedForNewPage() = 0;
+    enum class InitializingIframe : bool { No, Yes };
+    virtual void transitionToCommittedForNewPage(InitializingIframe) = 0;
 
     virtual void didRestoreFromBackForwardCache() = 0;
 
@@ -271,7 +274,7 @@ public:
     virtual void convertMainResourceLoadToDownload(DocumentLoader*, const ResourceRequest&, const ResourceResponse&) = 0;
 
     virtual RefPtr<LocalFrame> createFrame(const AtomString& name, HTMLFrameOwnerElement&) = 0;
-    virtual RefPtr<Widget> createPlugin(const IntSize&, HTMLPlugInElement&, const URL&, const Vector<AtomString>&, const Vector<AtomString>&, const String&, bool loadManually) = 0;
+    virtual RefPtr<Widget> createPlugin(HTMLPlugInElement&, const URL&, const Vector<AtomString>&, const Vector<AtomString>&, const String&, bool loadManually) = 0;
     virtual void redirectDataToPlugin(Widget&) = 0;
 
     virtual ObjectContentType objectContentType(const URL&, const String& mimeType) = 0;
@@ -284,6 +287,7 @@ public:
 #if PLATFORM(COCOA)
     // Allow an accessibility object to retrieve a Frame parent if there's no PlatformWidget.
     virtual RemoteAXObjectRef accessibilityRemoteObject() = 0;
+    virtual IntPoint accessibilityRemoteFrameOffset() = 0;
 #if ENABLE(ACCESSIBILITY_ISOLATED_TREE)
     virtual void setAXIsolatedTreeRoot(AXCoreObject*) = 0;
 #endif
@@ -294,8 +298,6 @@ public:
 #if PLATFORM(JAVA)
     virtual bool isJavaFrameLoaderClient() = 0;
 #endif
-
-    virtual bool shouldAlwaysUsePluginDocument(const String& /*mimeType*/) const { return false; }
     virtual bool shouldLoadMediaElementURL(const URL&) const { return true; }
 
     virtual void didChangeScrollOffset() { }
@@ -317,9 +319,7 @@ public:
 
     virtual void willInjectUserScript(DOMWrapperWorld&) { }
 
-#if ENABLE(SERVICE_WORKER)
     virtual void didFinishServiceWorkerPageRegistration(bool success) { UNUSED_PARAM(success); }
-#endif
 
 #if ENABLE(WEB_RTC)
     virtual void dispatchWillStartUsingPeerConnectionHandler(RTCPeerConnectionHandler*) { }
@@ -350,11 +350,9 @@ public:
     virtual void finishedLoadingApplicationManifest(uint64_t, const std::optional<ApplicationManifest>&) { }
 #endif
 
-#if ENABLE(TRACKING_PREVENTION)
     virtual bool hasFrameSpecificStorageAccess() { return false; }
     virtual void didLoadFromRegistrableDomain(RegistrableDomain&&) { }
     virtual Vector<RegistrableDomain> loadedSubresourceDomains() const { return { }; }
-#endif
 
     virtual AllowsContentJavaScript allowsContentJavaScriptFromMostRecentNavigation() const { return AllowsContentJavaScript::Yes; }
 
@@ -363,7 +361,7 @@ public:
     virtual void notifyPageOfAppBoundBehavior() { }
 #endif
 
-#if ENABLE(PDFKIT_PLUGIN)
+#if ENABLE(PDF_PLUGIN)
     virtual bool shouldUsePDFPlugin(const String&, StringView) const { return false; }
 #endif
 
@@ -373,7 +371,17 @@ public:
     virtual void modelInlinePreviewUUIDs(CompletionHandler<void(Vector<String>)>&&) const { }
 #endif
 
-    virtual void broadcastFrameRemovalToOtherProcesses() = 0;
+    virtual void broadcastMainFrameURLChangeToOtherProcesses(const URL&) = 0;
+
+    virtual void dispatchLoadEventToOwnerElementInAnotherProcess() = 0;
+
+#if ENABLE(WINDOW_PROXY_PROPERTY_ACCESS_NOTIFICATION)
+    virtual void didAccessWindowProxyPropertyViaOpener(SecurityOriginData&&, WindowProxyProperty) { }
+#endif
+
+    virtual void documentLoaderDetached(NavigationIdentifier, LoadWillContinueInAnotherProcess) { }
+
+    virtual void frameNameChanged(const String&) { }
 };
 
 } // namespace WebCore

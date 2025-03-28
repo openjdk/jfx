@@ -34,11 +34,11 @@
 #include "NodeList.h"
 #include "NodeRareData.h"
 #include "Text.h"
-#include <wtf/IsoMallocInlines.h>
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
-WTF_MAKE_ISO_ALLOCATED_IMPL(HTMLTableRowElement);
+WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(HTMLTableRowElement);
 
 using namespace HTMLNames;
 
@@ -61,12 +61,11 @@ Ref<HTMLTableRowElement> HTMLTableRowElement::create(const QualifiedName& tagNam
 static inline RefPtr<HTMLTableElement> findTable(const HTMLTableRowElement& row)
 {
     auto* parent = row.parentNode();
-    if (is<HTMLTableElement>(parent))
-        return downcast<HTMLTableElement>(parent);
+    if (auto* table = dynamicDowncast<HTMLTableElement>(parent))
+        return table;
     if (is<HTMLTableSectionElement>(parent)) {
-        auto* grandparent = parent->parentNode();
-        if (is<HTMLTableElement>(grandparent))
-            return downcast<HTMLTableElement>(grandparent);
+        if (auto* table = dynamicDowncast<HTMLTableElement>(parent->parentNode()))
+            return table;
     }
     return nullptr;
 }
@@ -90,10 +89,10 @@ int HTMLTableRowElement::rowIndex() const
 static inline RefPtr<HTMLCollection> findRows(const HTMLTableRowElement& row)
 {
     RefPtr parent = row.parentNode();
-    if (is<HTMLTableSectionElement>(parent))
-        return downcast<HTMLTableSectionElement>(*parent).rows();
-    if (is<HTMLTableElement>(parent))
-        return downcast<HTMLTableElement>(*parent).rows();
+    if (auto* section = dynamicDowncast<HTMLTableSectionElement>(parent.get()))
+        return section->rows();
+    if (auto* table = dynamicDowncast<HTMLTableElement>(parent.get()))
+        return table->rows();
     return nullptr;
 }
 
@@ -115,11 +114,11 @@ int HTMLTableRowElement::sectionRowIndex() const
 ExceptionOr<Ref<HTMLTableCellElement>> HTMLTableRowElement::insertCell(int index)
 {
     if (index < -1)
-        return Exception { IndexSizeError };
+        return Exception { ExceptionCode::IndexSizeError };
     auto children = cells();
     int numCells = children->length();
     if (index > numCells)
-        return Exception { IndexSizeError };
+        return Exception { ExceptionCode::IndexSizeError };
     auto cell = HTMLTableCellElement::create(tdTag, document());
     ExceptionOr<void> result;
     if (numCells == index || index == -1)
@@ -141,7 +140,7 @@ ExceptionOr<void> HTMLTableRowElement::deleteCell(int index)
         index = numCells - 1;
     }
     if (index < 0 || index >= numCells)
-        return Exception { IndexSizeError };
+        return Exception { ExceptionCode::IndexSizeError };
     return removeChild(*children->item(index));
 }
 

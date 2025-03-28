@@ -82,19 +82,15 @@ public:
 
     DECLARE_EXPORT_INFO;
 
-    static Structure* createStructure(VM& vm, JSGlobalObject* globalObject, JSValue prototype)
-    {
-        ASSERT(globalObject);
-        return Structure::create(vm, globalObject, prototype, TypeInfo(JSCalleeType, StructureFlags), info());
-    }
+    inline static Structure* createStructure(VM&, JSGlobalObject*, JSValue);
 
-    static inline ptrdiff_t offsetOfScopeChain()
+    static constexpr ptrdiff_t offsetOfScopeChain()
     {
         return OBJECT_OFFSETOF(JSCallee, m_scope);
     }
 
 protected:
-    JS_EXPORT_PRIVATE JSCallee(VM&, JSGlobalObject*, Structure*);
+    JSCallee(VM&, JSGlobalObject*, Structure*);
     JSCallee(VM&, JSScope*, Structure*);
 
     DECLARE_DEFAULT_FINISH_CREATION;

@@ -18,6 +18,9 @@
 #include "gstalsa.h"
 
 #include <gst/audio/audio.h>
+#ifndef GSTREAMER_LITE
+#include <gst/audio/gstdsd.h>
+#endif // GSTREAMER_LITE
 
 static GstCaps *
 gst_alsa_detect_rates (GstObject * obj, snd_pcm_hw_params_t * hw_params,
@@ -237,6 +240,211 @@ gst_alsa_detect_formats (GstObject * obj, snd_pcm_hw_params_t * hw_params,
   gst_caps_unref (in_caps);
   return caps;
 }
+
+#ifndef GSTREAMER_LITE
+/* Notes about what the "rate" means in DSD:
+ *
+ * In DSD, "sample formats" don't actually exist. There is only the DSD bit;
+ * this is what could be considered the closest equivalent to a "sample format".
+ * But since it is impractical to deal with individual bits in software, the
+ * bits are typically grouped into words (8/16/32 bit words). These are the
+ * DSDU8, DSDU16LE etc. "grouping formats".
+ *
+ * The "rate" in DSD information refers to the number of DSD _bytes_ per second
+ * (not bits per second, because, as said, per-bit handling in software does
+ * not usually make sense). ALSA however interprets "rate" as the number of
+ * DSD _words_ per minute. If the word format is DSDU8, then there's no difference.
+ * But if for example it is DSDU16LE, then ALSA's rate is half of the rate
+ * from GstDsdInfo. For this reason, before setting the rate in the ALSA
+ * hw params, it is essential to divide the rate from the DSD info by the
+ * word length (in bytes).
+ */
+
+typedef struct
+{
+  snd_pcm_format_t alsa_format;
+  const char *gstreamer_format_name;
+} DsdFormatInfo;
+
+static GstCaps *
+gst_alsa_detect_dsd_formats (GstObject * obj, snd_pcm_hw_params_t * hw_params)
+{
+  snd_pcm_format_mask_t *mask;
+  GValue format_list_value = G_VALUE_INIT;
+  gint table_idx;
+  gboolean dsd_is_supported = FALSE;
+  GstCaps *caps = NULL;
+
+  const DsdFormatInfo format_table[] = {
+    {SND_PCM_FORMAT_DSD_U8, "DSDU8"},
+    {SND_PCM_FORMAT_DSD_U16_LE, "DSDU16LE"},
+    {SND_PCM_FORMAT_DSD_U16_BE, "DSDU16BE"},
+    {SND_PCM_FORMAT_DSD_U32_LE, "DSDU32LE"},
+    {SND_PCM_FORMAT_DSD_U32_BE, "DSDU32BE"}
+  };
+  const gint format_table_size = sizeof (format_table) / sizeof (DsdFormatInfo);
+
+  g_value_init (&format_list_value, GST_TYPE_LIST);
+
+  snd_pcm_format_mask_malloc (&mask);
+  snd_pcm_hw_params_get_format_mask (hw_params, mask);
+
+  for (table_idx = 0; table_idx < format_table_size; ++table_idx) {
+    const DsdFormatInfo *format_info = &(format_table[table_idx]);
+    gboolean format_supported = snd_pcm_format_mask_test (mask,
+        format_info->alsa_format);
+
+    GST_DEBUG_OBJECT (obj, "%s supported: %s",
+        format_info->gstreamer_format_name, format_supported ? "yes" : "no");
+
+    if (format_supported) {
+      GValue format_value = G_VALUE_INIT;
+
+      g_value_init (&format_value, G_TYPE_STRING);
+      g_value_set_string (&format_value, format_info->gstreamer_format_name);
+      gst_value_list_append_and_take_value (&format_list_value, &format_value);
+
+      dsd_is_supported = TRUE;
+    }
+  }
+
+  if (dsd_is_supported) {
+    GstStructure *structure;
+    structure = gst_structure_new_empty ("audio/x-dsd");
+
+    /* As a small optimization, if we only support exactly one
+     * format, store it directly instead of an 1-item list. */
+
+    if (gst_value_list_get_size (&format_list_value) == 1) {
+      const GValue *supported_format_value =
+          gst_value_list_get_value (&format_list_value, 0);
+
+      gst_structure_set_value (structure, "format", supported_format_value);
+      g_value_unset (&format_list_value);
+    } else
+      gst_structure_take_value (structure, "format", &format_list_value);
+
+    caps = gst_caps_new_full (structure, NULL);
+  } else {
+    g_value_unset (&format_list_value);
+  }
+
+  snd_pcm_format_mask_free (mask);
+
+  return caps;
+}
+
+static GstCaps *
+gst_alsa_detect_dsd_rates (GstObject * obj, snd_pcm_t * handle,
+    snd_pcm_hw_params_t * hw_params, GstCaps * in_caps)
+{
+  GstCaps *caps = NULL;
+  guint min_rate, max_rate;
+  gint err, dir, caps_idx;
+  int cur_dsd_multiplier;
+  gboolean keep_testing_rates;
+  GValue rate_list_value = G_VALUE_INIT;
+  GValue rate_value = G_VALUE_INIT;
+
+  GST_LOG_OBJECT (obj, "probing DSD sample rates ...");
+
+  g_value_init (&rate_list_value, GST_TYPE_LIST);
+  g_value_init (&rate_value, G_TYPE_INT);
+
+  if ((err = snd_pcm_hw_params_get_rate_min (hw_params, &min_rate, &dir)) < 0)
+    goto min_rate_err;
+
+  if ((err = snd_pcm_hw_params_get_rate_max (hw_params, &max_rate, &dir)) < 0)
+    goto max_rate_err;
+
+  /* In DSD, valid rates are an integer multiple of 44100 (DSD-44x) or
+   * 48000 (DSD-48x), and those multipliers must themselves be a power of
+   * 2. For example, "DSD64-44x" means 64*44100 = 2822400 bits per second.
+   * In software, we use bytes, so DSD64-44x equals 2822400/8 = 352800 bytes
+   * per second. DSD64 is the lowest valid rate. The next higher valid rate
+   * would be DSD128-4x, and DSD256-44x after that etc. DSD200-44x is not
+   * valid, for example. For this reason, it makes sense to check for the
+   * individual valid rates that lie within the range defined by min_rate
+   * and max_rate. */
+
+  cur_dsd_multiplier = ((gint64) min_rate) * 8 / 44100;
+  /* Multipliers below 64 are not valid. If the hardware can't handle
+   * at least DSD64-44x, we can't play DSD, so this is a good starting
+   * point for the rate tests below. */
+  if (cur_dsd_multiplier < 64)
+    cur_dsd_multiplier = 64;
+
+  keep_testing_rates = TRUE;
+  while (keep_testing_rates) {
+    const int rates_to_test[] = {
+      GST_DSD_MAKE_DSD_RATE_44x (cur_dsd_multiplier),
+      GST_DSD_MAKE_DSD_RATE_48x (cur_dsd_multiplier)
+    };
+    const gchar *rates_desc[] = { "44x", "48x" };
+
+    int i;
+
+    for (i = 0; i < G_N_ELEMENTS (rates_to_test); ++i) {
+      int rate_to_test = rates_to_test[i];
+      if (rate_to_test > max_rate) {
+        keep_testing_rates = FALSE;
+        break;
+      }
+
+      if (snd_pcm_hw_params_test_rate (handle, hw_params, rate_to_test, 0) == 0) {
+        GST_DEBUG_OBJECT (obj,
+            "DSD%d-%s available (equals rate of %d DSD bytes per second)",
+            cur_dsd_multiplier, rates_desc[i], rate_to_test);
+        g_value_set_int (&rate_value, rate_to_test);
+        gst_value_list_append_value (&rate_list_value, &rate_value);
+      }
+    }
+
+    cur_dsd_multiplier *= 2;
+  }
+
+  caps = gst_caps_make_writable (in_caps);
+
+  if (gst_value_list_get_size (&rate_list_value) == 1) {
+    /* As a small optimization, if we only support exactly one
+     * rate, store it directly instead of an 1-item list. */
+
+    const GValue *supported_rate_value =
+        gst_value_list_get_value (&rate_list_value, 0);
+
+    for (caps_idx = 0; caps_idx < gst_caps_get_size (caps); ++caps_idx) {
+      GstStructure *structure = gst_caps_get_structure (caps, caps_idx);
+      gst_structure_set_value (structure, "rate", supported_rate_value);
+    }
+  } else {
+    for (caps_idx = 0; caps_idx < gst_caps_get_size (caps); ++caps_idx) {
+      GstStructure *structure = gst_caps_get_structure (caps, caps_idx);
+      gst_structure_set_value (structure, "rate", &rate_list_value);
+    }
+  }
+
+finish:
+  g_value_unset (&rate_list_value);
+  g_value_unset (&rate_value);
+  return caps;
+
+  /* ERRORS */
+min_rate_err:
+  {
+    GST_ERROR_OBJECT (obj, "failed to query minimum sample rate: %s",
+        snd_strerror (err));
+    gst_caps_unref (in_caps);
+    goto finish;
+  }
+max_rate_err:
+  {
+    GST_ERROR_OBJECT (obj, "failed to query maximum sample rate: %s",
+        snd_strerror (err));
+    gst_caps_unref (in_caps);
+    goto finish;
+  }
+}
+#endif // GSTREAMER_LITE
 
 /* we don't have channel mappings for more than this many channels */
 #define GST_ALSA_MAX_CHANNELS 8
@@ -514,6 +722,9 @@ gst_alsa_probe_supported_formats (GstObject * obj, gchar * device,
   snd_pcm_hw_params_t *hw_params;
   snd_pcm_stream_t stream_type;
   GstCaps *caps;
+#ifndef GSTREAMER_LITE
+  GstCaps *dsd_caps;
+#endif // GSTREAMER_LITE
   gint err;
 
   snd_pcm_hw_params_malloc (&hw_params);
@@ -522,26 +733,57 @@ gst_alsa_probe_supported_formats (GstObject * obj, gchar * device,
 
   stream_type = snd_pcm_stream (handle);
 
+  /* Try detecting PCM */
+
   caps = gst_alsa_detect_formats (obj, hw_params,
       gst_caps_copy (template_caps), G_BYTE_ORDER);
 
   /* if there are no formats in native endianness, try non-native as well */
   if (caps == NULL) {
-    GST_INFO_OBJECT (obj, "no formats in native endianness detected");
+    GST_INFO_OBJECT (obj, "no PCM formats in native endianness detected");
 
     caps = gst_alsa_detect_formats (obj, hw_params,
         gst_caps_copy (template_caps),
         (G_BYTE_ORDER == G_LITTLE_ENDIAN) ? G_BIG_ENDIAN : G_LITTLE_ENDIAN);
 
-    if (caps == NULL)
+    if (caps == NULL) {
+      GST_ERROR_OBJECT (obj, "failed to detect PCM formats");
       goto subroutine_error;
+    }
   }
 
-  if (!(caps = gst_alsa_detect_rates (obj, hw_params, caps)))
+  if (!(caps = gst_alsa_detect_rates (obj, hw_params, caps))) {
+    GST_ERROR_OBJECT (obj, "failed to detect PCM rates");
     goto subroutine_error;
+  }
 
-  if (!(caps = gst_alsa_detect_channels (obj, hw_params, caps)))
+  if (!(caps = gst_alsa_detect_channels (obj, hw_params, caps))) {
+    GST_ERROR_OBJECT (obj, "failed to detect PCM channels");
     goto subroutine_error;
+  }
+
+  /* Try detecting DSD */
+#ifndef GSTREAMER_LITE
+  dsd_caps = gst_alsa_detect_dsd_formats (obj, hw_params);
+  if (dsd_caps != NULL) {
+    GST_INFO_OBJECT (obj, "DSD support detected");
+
+    if (!(dsd_caps =
+            gst_alsa_detect_dsd_rates (obj, handle, hw_params, dsd_caps))) {
+      GST_ERROR_OBJECT (obj, "failed to detect DSD rates");
+      goto subroutine_error;
+    }
+
+    if (!(dsd_caps = gst_alsa_detect_channels (obj, hw_params, dsd_caps))) {
+      GST_ERROR_OBJECT (obj, "failed to detect DSD channels");
+      goto subroutine_error;
+    }
+
+    gst_caps_append (caps, dsd_caps);
+  } else {
+    GST_INFO_OBJECT (obj, "DSD support not detected");
+  }
+#endif // GSTREAMER_LITE
 
   /* Try opening IEC958 device to see if we can support that format (playback
    * only for now but we could add SPDIF capture later) */

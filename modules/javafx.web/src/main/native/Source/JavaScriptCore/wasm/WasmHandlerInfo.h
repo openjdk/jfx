@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2021 Apple Inc. All rights reserved.
+ * Copyright (C) 2021-2024 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -32,9 +32,10 @@
 #include <wtf/text/ASCIILiteral.h>
 
 namespace JSC {
+class JSWebAssemblyInstance;
+
 namespace Wasm {
 
-class Instance;
 class Tag;
 
 enum class HandlerType {
@@ -48,6 +49,7 @@ struct HandlerInfoBase {
     uint32_t m_start;
     uint32_t m_end;
     uint32_t m_target;
+    uint32_t m_targetMetadata { 0 };
     uint32_t m_tryDepth;
     uint32_t m_exceptionIndexOrDelegateTarget;
 };
@@ -63,6 +65,17 @@ struct UnlinkedHandlerInfo : public HandlerInfoBase {
         m_start = start;
         m_end = end;
         m_target = target;
+        m_tryDepth = tryDepth;
+        m_exceptionIndexOrDelegateTarget = exceptionIndexOrDelegateTarget;
+    }
+
+    UnlinkedHandlerInfo(HandlerType handlerType, uint32_t start, uint32_t end, uint32_t target, uint32_t targetMetadata, uint32_t tryDepth, uint32_t exceptionIndexOrDelegateTarget)
+    {
+        m_type = handlerType;
+        m_start = start;
+        m_end = end;
+        m_target = target;
+        m_targetMetadata = targetMetadata;
         m_tryDepth = tryDepth;
         m_exceptionIndexOrDelegateTarget = exceptionIndexOrDelegateTarget;
     }
@@ -85,7 +98,7 @@ struct UnlinkedHandlerInfo : public HandlerInfoBase {
 };
 
 struct HandlerInfo : public HandlerInfoBase {
-    static const HandlerInfo* handlerForIndex(Instance&, const FixedVector<HandlerInfo>& exeptionHandlers, unsigned index, const Wasm::Tag* exceptionTag);
+    static const HandlerInfo* handlerForIndex(JSWebAssemblyInstance&, const FixedVector<HandlerInfo>& exeptionHandlers, unsigned index, const Wasm::Tag* exceptionTag);
 
     void initialize(const UnlinkedHandlerInfo&, CodePtr<ExceptionHandlerPtrTag>);
 

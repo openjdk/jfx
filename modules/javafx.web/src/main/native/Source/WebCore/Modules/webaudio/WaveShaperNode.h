@@ -35,13 +35,13 @@
 namespace WebCore {
 
 class WaveShaperNode final : public AudioBasicProcessorNode {
-    WTF_MAKE_ISO_ALLOCATED(WaveShaperNode);
+    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(WaveShaperNode);
 public:
     static ExceptionOr<Ref<WaveShaperNode>> create(BaseAudioContext&, const WaveShaperOptions& = { });
 
     // setCurve() is called on the main thread.
     ExceptionOr<void> setCurveForBindings(RefPtr<Float32Array>&&);
-    Float32Array* curveForBindings();
+    RefPtr<Float32Array> curveForBindings();
 
     void setOversampleForBindings(OverSampleType);
     OverSampleType oversampleForBindings() const;

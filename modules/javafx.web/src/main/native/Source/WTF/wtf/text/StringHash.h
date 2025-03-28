@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2006-2019 Apple Inc. All rights reserved
+ * Copyright (C) 2006-2023 Apple Inc. All rights reserved
  * Copyright (C) Research In Motion Limited 2009. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or
@@ -25,6 +25,7 @@
 #include <wtf/HashTraits.h>
 #include <wtf/text/AtomString.h>
 #include <wtf/text/StringHasher.h>
+#include <wtf/text/StringView.h>
 
 namespace WTF {
 
@@ -50,7 +51,7 @@ namespace WTF {
     // closer to having all the nearly-identical hash functions in one place.
 
     struct StringHash {
-        static unsigned hash(StringImpl* key) { return key->hash(); }
+        static unsigned hash(const StringImpl* key) { return key->hash(); }
         static inline bool equal(const StringImpl* a, const StringImpl* b)
         {
             return WTF::equal(*a, *b);
@@ -109,39 +110,30 @@ namespace WTF {
     };
 
     struct ASCIICaseInsensitiveHash {
-        template<typename T>
         struct FoldCase {
+            template<typename T>
             static inline UChar convert(T character)
             {
                 return toASCIILower(character);
             }
         };
 
-        static unsigned hash(const UChar* data, unsigned length)
+        template<typename CharacterType>
+        static unsigned hash(std::span<const CharacterType> characters)
         {
-            return StringHasher::computeHashAndMaskTop8Bits<UChar, FoldCase<UChar>>(data, length);
+            return StringHasher::computeHashAndMaskTop8Bits<CharacterType, FoldCase>(characters);
         }
 
-        static unsigned hash(StringImpl& string)
+        static unsigned hash(const StringImpl& string)
         {
             if (string.is8Bit())
-                return hash(string.characters8(), string.length());
-            return hash(string.characters16(), string.length());
+                return hash(string.span8());
+            return hash(string.span16());
         }
-        static unsigned hash(StringImpl* string)
+        static unsigned hash(const StringImpl* string)
         {
             ASSERT(string);
             return hash(*string);
-        }
-
-        static unsigned hash(const LChar* data, unsigned length)
-        {
-            return StringHasher::computeHashAndMaskTop8Bits<LChar, FoldCase<LChar>>(data, length);
-        }
-
-        static inline unsigned hash(const char* data, unsigned length)
-        {
-            return hash(reinterpret_cast<const LChar*>(data), length);
         }
 
         static inline bool equal(const StringImpl& a, const StringImpl& b)
@@ -251,20 +243,25 @@ namespace WTF {
         static unsigned hash(StringView key)
         {
             if (key.is8Bit())
-                return ASCIICaseInsensitiveHash::hash(key.characters8(), key.length());
-            return ASCIICaseInsensitiveHash::hash(key.characters16(), key.length());
+                return ASCIICaseInsensitiveHash::hash(key.span8());
+            return ASCIICaseInsensitiveHash::hash(key.span16());
         }
 
         static bool equal(const String& a, StringView b)
         {
             return equalIgnoringASCIICaseCommon(a, b);
         }
+
+        static void translate(String& location, StringView view, unsigned)
+        {
+            location = view.toString();
+        }
     };
 
     struct HashTranslatorASCIILiteral {
         static unsigned hash(ASCIILiteral literal)
         {
-            return StringHasher::computeHashAndMaskTop8Bits(literal.characters(), literal.length());
+            return StringHasher::computeHashAndMaskTop8Bits(literal.span8());
         }
 
         static bool equal(const String& a, ASCIILiteral b)
@@ -282,7 +279,7 @@ namespace WTF {
     struct HashTranslatorASCIILiteralCaseInsensitive {
         static unsigned hash(ASCIILiteral key)
         {
-            return ASCIICaseInsensitiveHash::hash(key.characters(), key.length());
+            return ASCIICaseInsensitiveHash::hash(key.span8());
         }
 
         static bool equal(const String& a, ASCIILiteral b)

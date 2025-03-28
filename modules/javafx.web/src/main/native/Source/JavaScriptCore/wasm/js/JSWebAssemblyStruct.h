@@ -51,22 +51,20 @@ public:
 
     DECLARE_EXPORT_INFO;
 
-    static Structure* createStructure(VM& vm, JSGlobalObject* globalObject, JSValue prototype)
-    {
-        return Structure::create(vm, globalObject, prototype, TypeInfo(WebAssemblyGCObjectType, StructureFlags), info());
-    }
+    static Structure* createStructure(VM&, JSGlobalObject*, JSValue);
 
     static JSWebAssemblyStruct* tryCreate(JSGlobalObject*, Structure*, JSWebAssemblyInstance*, uint32_t, RefPtr<const Wasm::RTT>);
 
     DECLARE_VISIT_CHILDREN;
 
     uint64_t get(uint32_t) const;
-    void set(JSGlobalObject*, uint32_t, JSValue);
+    void set(uint32_t, uint64_t);
+    void set(uint32_t, v128_t);
     const Wasm::StructType* structType() const { return m_type->as<Wasm::StructType>(); }
     Wasm::FieldType fieldType(uint32_t fieldIndex) const { return structType()->field(fieldIndex); }
 
     // Returns the offset for m_payload.m_storage
-    static ptrdiff_t offsetOfPayload() { return OBJECT_OFFSETOF(JSWebAssemblyStruct, m_payload) + FixedVector<uint8_t>::offsetOfStorage(); }
+    static constexpr ptrdiff_t offsetOfPayload() { return OBJECT_OFFSETOF(JSWebAssemblyStruct, m_payload) + FixedVector<uint8_t>::offsetOfStorage(); }
 
     const uint8_t* fieldPointer(uint32_t fieldIndex) const;
     uint8_t* fieldPointer(uint32_t fieldIndex);

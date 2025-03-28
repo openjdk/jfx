@@ -33,6 +33,11 @@
 
 namespace JSC {
 
+inline Structure* RegExpObject::createStructure(VM& vm, JSGlobalObject* globalObject, JSValue prototype)
+{
+    return Structure::create(vm, globalObject, prototype, TypeInfo(RegExpObjectType, StructureFlags), info());
+}
+
 ALWAYS_INLINE unsigned getRegExpObjectLastIndexAsUnsigned(
     JSGlobalObject* globalObject, RegExpObject* regExpObject, const String& input)
 {
@@ -60,7 +65,7 @@ inline JSValue RegExpObject::execInline(JSGlobalObject* globalObject, JSString* 
     auto scope = DECLARE_THROW_SCOPE(vm);
 
     RegExp* regExp = this->regExp();
-    String input = string->value(globalObject);
+    auto input = string->value(globalObject);
     RETURN_IF_EXCEPTION(scope, { });
 
     bool globalOrSticky = regExp->globalOrSticky();
@@ -101,7 +106,7 @@ inline MatchResult RegExpObject::matchInline(
     auto scope = DECLARE_THROW_SCOPE(vm);
 
     RegExp* regExp = this->regExp();
-    String input = string->value(globalObject);
+    auto input = string->value(globalObject);
     RETURN_IF_EXCEPTION(scope, { });
 
     unsigned lastIndex = getRegExpObjectLastIndexAsUnsigned(globalObject, this, input);
@@ -157,7 +162,7 @@ JSValue collectMatches(VM& vm, JSGlobalObject* globalObject, JSString* string, c
 
     bool hasException = false;
     unsigned arrayIndex = 0;
-    auto iterate = [&] () {
+    auto iterate = [&]() ALWAYS_INLINE_LAMBDA {
         size_t end = result.end;
         size_t length = end - result.start;
         array->putDirectIndex(globalObject, arrayIndex++, jsSubstringOfResolved(vm, string, result.start, length));

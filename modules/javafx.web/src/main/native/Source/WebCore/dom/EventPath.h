@@ -24,15 +24,24 @@
 #include "PseudoElement.h"
 #include "SVGElement.h"
 #include "SVGUseElement.h"
-#include <wtf/CheckedPtr.h>
 #include <wtf/Forward.h>
 #include <wtf/Vector.h>
+#include <wtf/WeakPtr.h>
+
+namespace WebCore {
+class EventPath;
+}
+
+namespace WTF {
+template<typename T> struct IsDeprecatedWeakRefSmartPointerException;
+template<> struct IsDeprecatedWeakRefSmartPointerException<WebCore::EventPath> : std::true_type { };
+}
 
 namespace WebCore {
 
 class Touch;
 
-class EventPath : public CanMakeCheckedPtr {
+class EventPath : public CanMakeSingleThreadWeakPtr<EventPath> {
 public:
     EventPath(Node& origin, Event&);
     explicit EventPath(const Vector<EventTarget*>&);
@@ -59,17 +68,17 @@ private:
     void retargetTouchLists(const TouchEvent&);
 #endif
 
-    Vector<EventContext, 16> m_path;
+    Vector<EventContext, 32> m_path;
 };
 
 inline Node* EventPath::eventTargetRespectingTargetRules(Node& referenceNode)
 {
-    if (is<PseudoElement>(referenceNode))
-        return downcast<PseudoElement>(referenceNode).hostElement();
+    if (auto* pseudoElement = dynamicDowncast<PseudoElement>(referenceNode))
+        return pseudoElement->hostElement();
 
     // Events sent to elements inside an SVG use element's shadow tree go to the use element.
-    if (is<SVGElement>(referenceNode)) {
-        if (auto useElement = downcast<SVGElement>(referenceNode).correspondingUseElement())
+    if (auto* svgElement = dynamicDowncast<SVGElement>(referenceNode)) {
+        if (auto useElement = svgElement->correspondingUseElement())
             return useElement.get();
     }
 

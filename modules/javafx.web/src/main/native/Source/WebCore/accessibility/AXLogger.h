@@ -25,8 +25,9 @@
 
 #pragma once
 
+#include "AXCoreObject.h"
 #include "AXObjectCache.h"
-#include "AccessibilityObjectInterface.h"
+#include <wtf/MonotonicTime.h>
 
 namespace WebCore {
 
@@ -43,11 +44,14 @@ enum class AXStreamOptions : uint8_t {
     OuterHTML = 1 << 4,
     DisplayContents = 1 << 5,
     Address = 1 << 6,
+#if ENABLE(AX_THREAD_TEXT_APIS)
+    TextRuns = 1 << 7,
+#endif
 };
 
 #if !LOG_DISABLED
 
-class AXLogger {
+class AXLogger final {
 public:
     AXLogger() = default;
     AXLogger(const String& methodName);
@@ -57,9 +61,11 @@ public:
     void log(const AXCoreObject&);
     void log(RefPtr<AXCoreObject>);
     void log(const Vector<RefPtr<AXCoreObject>>&);
+    void log(const std::pair<Ref<AccessibilityObject>, AXObjectCache::AXNotification>&);
     void log(const std::pair<RefPtr<AXCoreObject>, AXObjectCache::AXNotification>&);
     void log(const AccessibilitySearchCriteria&);
     void log(AccessibilityObjectInclusion);
+    void log(AXRelationType);
 #if ENABLE(ACCESSIBILITY_ISOLATED_TREE)
     void log(AXIsolatedTree&);
 #endif
@@ -69,6 +75,7 @@ public:
 private:
     bool shouldLog();
     String m_methodName;
+    MonotonicTime m_startTime;
 };
 
 #define AXTRACE(methodName) AXLogger axLogger(methodName)

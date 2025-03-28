@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -92,9 +92,9 @@ public:
     LocalFrame* dispatchCreatePage(const NavigationAction&, NewFrameOpenerPolicy) override;
     void dispatchShow() override;
 
-    void dispatchDecidePolicyForResponse(const ResourceResponse&, const ResourceRequest&, PolicyCheckIdentifier, const String& downloadAttribute, FramePolicyFunction&&) override;
-    void dispatchDecidePolicyForNewWindowAction(const NavigationAction&, const ResourceRequest&, FormState*, const String& frameName, PolicyCheckIdentifier, FramePolicyFunction&&) override;
-    void dispatchDecidePolicyForNavigationAction(const NavigationAction&, const ResourceRequest&, const ResourceResponse& redirectResponse, FormState*, PolicyDecisionMode, PolicyCheckIdentifier, FramePolicyFunction&&) override;
+    void dispatchDecidePolicyForResponse(const ResourceResponse&, const ResourceRequest&, const String& downloadAttribute, FramePolicyFunction&&) override;
+    void dispatchDecidePolicyForNewWindowAction(const NavigationAction&, const ResourceRequest&, FormState*, const String& frameName, std::optional<HitTestResult>&&, FramePolicyFunction&&) override;
+    virtual void dispatchDecidePolicyForNavigationAction(const NavigationAction&, const ResourceRequest&, const ResourceResponse& redirectResponse, FormState*, const String& clientRedirectSourceForHistory, std::optional<NavigationIdentifier>, std::optional<HitTestResult>&&, bool hasOpener, SandboxFlags, PolicyDecisionMode, FramePolicyFunction&&) override;
     void cancelPolicyCheck() override;
 
     void dispatchUnableToImplementPolicy(const ResourceError&) override;
@@ -109,13 +109,13 @@ public:
 
     RefPtr<LocalFrame> createFrame(const AtomString& name, HTMLFrameOwnerElement& ownerElement) override;
     ObjectContentType objectContentType(const URL& url, const String& mimeTypeIn) override;
-    RefPtr<Widget> createPlugin(const IntSize&, HTMLPlugInElement& element, const URL& url, const Vector<AtomString>& paramNames, const Vector<AtomString>& paramValues, const String& mimeType, bool loadManually) override;
+    RefPtr<Widget> createPlugin(HTMLPlugInElement& element, const URL& url, const Vector<AtomString>& paramNames, const Vector<AtomString>& paramValues, const String& mimeType, bool loadManually) override;
     void redirectDataToPlugin(Widget&) override;
     AtomString overrideMediaType() const override;
 
     void setMainFrameDocumentReady(bool) override;
 
-    void startDownload(const ResourceRequest&, const String& suggestedName = String()) override;
+    void startDownload(const ResourceRequest&, const String& suggestedName = String(), FromDownloadAttribute = FromDownloadAttribute::No) override;
 
     void willChangeTitle(DocumentLoader*) override;
     void didChangeTitle(DocumentLoader*) override;
@@ -135,7 +135,7 @@ public:
     // The indicated security origin has run active content (such as a
     // script) from an insecure source.  Note that the insecure content can
     // spread to other frames in the same origin.
-    void didRunInsecureContent(SecurityOrigin&, const URL&) override;
+    void didRunInsecureContent(SecurityOrigin&) override;
 
     ResourceError cancelledError(const ResourceRequest&) const override;
     ResourceError blockedByContentBlockerError(const ResourceRequest& request) const override;
@@ -145,10 +145,11 @@ public:
 
     ResourceError cannotShowMIMETypeError(const ResourceResponse&) const override;
     ResourceError fileDoesNotExistError(const ResourceResponse&) const override;
-        ResourceError httpsUpgradeRedirectLoopError(const ResourceRequest&) const override;
+    ResourceError httpsUpgradeRedirectLoopError(const ResourceRequest&) const override;
     ResourceError pluginWillHandleLoadError(const ResourceResponse&) const override;
 
     bool shouldFallBack(const ResourceError&) const override;
+    void loadStorageAccessQuirksIfNeeded() override;
 
     bool shouldUseCredentialStorage(DocumentLoader*, ResourceLoaderIdentifier) override;
     void dispatchDidReceiveAuthenticationChallenge(DocumentLoader*, ResourceLoaderIdentifier, const AuthenticationChallenge&) override;
@@ -177,7 +178,7 @@ public:
 
     void savePlatformDataToCachedFrame(CachedFrame*) override;
     void transitionToCommittedFromCachedFrame(CachedFrame*) override;
-    void transitionToCommittedForNewPage() override;
+    void transitionToCommittedForNewPage(InitializingIframe initializingIframe) override;
 
     void didRestoreFromBackForwardCache() override;
     bool canCachePage() const override;
@@ -192,7 +193,10 @@ public:
     bool isJavaFrameLoaderClient() override { return true; }
     void prefetchDNS(const String&) override;
     void sendH2Ping(const URL&, CompletionHandler<void(Expected<Seconds, ResourceError>&&)>&&) override;
-    void broadcastFrameRemovalToOtherProcesses() override;
+    void broadcastFrameRemovalToOtherProcesses();
+        ResourceError httpNavigationWithHTTPSOnlyError(const ResourceRequest&) const override;
+        void broadcastMainFrameURLChangeToOtherProcesses(const URL&) override;
+        void dispatchLoadEventToOwnerElementInAnotherProcess() override;
 private:
     Page* m_page;
     Frame* m_frame;

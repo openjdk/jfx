@@ -181,7 +181,7 @@ helper_find_peek (gpointer data, gint64 offset, guint size)
     return NULL;
   }
 
-  bmap = g_slice_new0 (GstMappedBuffer);
+  bmap = g_new0 (GstMappedBuffer, 1);
 
   if (!gst_buffer_map (buffer, &bmap->map, GST_MAP_READ))
     goto map_failed;
@@ -210,7 +210,7 @@ map_failed:
   {
     GST_ERROR ("map failed");
     gst_buffer_unref (buffer);
-    g_slice_free (GstMappedBuffer, bmap);
+    g_free (bmap);
     return NULL;
   }
 }
@@ -436,7 +436,7 @@ gst_type_find_helper_get_range_full (GstObject * obj, GstObject * parent,
 
     gst_buffer_unmap (bmap->buffer, &bmap->map);
     gst_buffer_unref (bmap->buffer);
-    g_slice_free (GstMappedBuffer, bmap);
+    g_free (bmap);
   }
   g_slist_free (helper.buffers);
 
@@ -728,10 +728,9 @@ gst_type_find_helper_for_data_with_caps (GstObject * obj,
 {
   GstTypeFind *find;
   GstTypeFindData *find_data;
-  GstTypeFindFactory *factory;
   GList *l, *factories = NULL;
   GstCaps *result = NULL;
-  GstTypeFindProbability found_probability, last_found_probability;
+  GstTypeFindProbability last_found_probability;
 
   g_return_val_if_fail (data != NULL, NULL);
   g_return_val_if_fail (caps != NULL, NULL);
@@ -747,11 +746,11 @@ gst_type_find_helper_for_data_with_caps (GstObject * obj,
     goto out;
   }
 
-  found_probability = GST_TYPE_FIND_NONE;
   last_found_probability = GST_TYPE_FIND_NONE;
 
   for (l = factories; l; l = l->next) {
-    factory = GST_TYPE_FIND_FACTORY (l->data);
+    GstTypeFindProbability found_probability;
+    GstTypeFindFactory *factory = GST_TYPE_FIND_FACTORY (l->data);
 
     gst_type_find_factory_call_function (factory, find);
 

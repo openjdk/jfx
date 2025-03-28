@@ -65,7 +65,7 @@ CaptureSourceOrError MockRealtimeAudioSource::create(String&& deviceID, String&&
     auto source = adoptRef(*new MockRealtimeAudioSource(WTFMove(deviceID), WTFMove(name), WTFMove(hashSalts)));
     if (constraints) {
         if (auto error = source->applyConstraints(*constraints))
-            return CaptureSourceOrError({ WTFMove(error->badConstraint), MediaAccessDenialReason::InvalidConstraint });
+            return CaptureSourceOrError({ WTFMove(error->invalidConstraint), MediaAccessDenialReason::InvalidConstraint });
     }
 
     return CaptureSourceOrError(WTFMove(source));
@@ -74,7 +74,7 @@ CaptureSourceOrError MockRealtimeAudioSource::create(String&& deviceID, String&&
 
 MockRealtimeAudioSource::MockRealtimeAudioSource(String&& deviceID, AtomString&& name, MediaDeviceHashSalts&& hashSalts, PageIdentifier pageIdentifier)
     : RealtimeMediaSource(CaptureDevice { WTFMove(deviceID), CaptureDevice::DeviceType::Microphone, WTFMove(name) }, WTFMove(hashSalts), pageIdentifier)
-    , m_workQueue(WorkQueue::create("MockRealtimeAudioSource Render Queue"))
+    , m_workQueue(WorkQueue::create("MockRealtimeAudioSource Render Queue"_s))
     , m_timer(RunLoop::current(), this, &MockRealtimeAudioSource::tick)
 {
     auto device = MockRealtimeMediaSourceCenter::mockDeviceWithPersistentID(persistentID());
@@ -128,9 +128,9 @@ const RealtimeMediaSourceCapabilities& MockRealtimeAudioSource::capabilities()
         RealtimeMediaSourceCapabilities capabilities(settings().supportedConstraints());
 
         capabilities.setDeviceId(hashedId());
-        capabilities.setVolume(CapabilityValueOrRange(0.0, 1.0));
+        capabilities.setVolume({ 0.0, 1.0 });
         capabilities.setEchoCancellation(RealtimeMediaSourceCapabilities::EchoCancellation::ReadWrite);
-        capabilities.setSampleRate(CapabilityValueOrRange(44100, 96000));
+        capabilities.setSampleRate({ 44100, 96000 });
 
         m_capabilities = WTFMove(capabilities);
     }
@@ -165,7 +165,7 @@ void MockRealtimeAudioSource::stopProducingData()
 
 void MockRealtimeAudioSource::tick()
 {
-    if (std::isnan(m_lastRenderTime))
+    if (m_lastRenderTime.isNaN())
         m_lastRenderTime = MonotonicTime::now();
 
     MonotonicTime now = MonotonicTime::now();

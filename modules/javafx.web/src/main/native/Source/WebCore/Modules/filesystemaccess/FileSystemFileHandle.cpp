@@ -26,6 +26,7 @@
 #include "config.h"
 #include "FileSystemFileHandle.h"
 
+#include "ContextDestructionObserverInlines.h"
 #include "File.h"
 #include "FileSystemHandleCloseScope.h"
 #include "FileSystemStorageConnection.h"
@@ -34,11 +35,11 @@
 #include "JSFile.h"
 #include "JSFileSystemSyncAccessHandle.h"
 #include "WorkerFileSystemStorageConnection.h"
-#include <wtf/IsoMallocInlines.h>
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
-WTF_MAKE_ISO_ALLOCATED_IMPL(FileSystemFileHandle);
+WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(FileSystemFileHandle);
 
 Ref<FileSystemFileHandle> FileSystemFileHandle::create(ScriptExecutionContext& context, String&& name, FileSystemHandleIdentifier identifier, Ref<FileSystemStorageConnection>&& connection)
 {
@@ -55,24 +56,24 @@ FileSystemFileHandle::FileSystemFileHandle(ScriptExecutionContext& context, Stri
 void FileSystemFileHandle::getFile(DOMPromiseDeferred<IDLInterface<File>>&& promise)
 {
     if (isClosed())
-        return promise.reject(Exception { InvalidStateError, "Handle is closed"_s });
+        return promise.reject(Exception { ExceptionCode::InvalidStateError, "Handle is closed"_s });
 
     connection().getFile(identifier(), [protectedThis = Ref { *this }, promise = WTFMove(promise)](auto result) mutable {
         if (result.hasException())
             return promise.reject(result.releaseException());
 
-        auto* context = protectedThis->scriptExecutionContext();
+        RefPtr context = protectedThis->scriptExecutionContext();
         if (!context)
-            return promise.reject(Exception { InvalidStateError, "Context has stopped"_s });
+            return promise.reject(Exception { ExceptionCode::InvalidStateError, "Context has stopped"_s });
 
-        promise.resolve(File::create(context, result.returnValue(), { }, protectedThis->name()));
+        promise.resolve(File::create(context.get(), result.returnValue(), { }, protectedThis->name()));
     });
 }
 
 void FileSystemFileHandle::createSyncAccessHandle(DOMPromiseDeferred<IDLInterface<FileSystemSyncAccessHandle>>&& promise)
 {
     if (isClosed())
-        return promise.reject(Exception { InvalidStateError, "Handle is closed"_s });
+        return promise.reject(Exception { ExceptionCode::InvalidStateError, "Handle is closed"_s });
 
     connection().createSyncAccessHandle(identifier(), [protectedThis = Ref { *this }, promise = WTFMove(promise)](auto result) mutable {
         if (result.hasException())
@@ -80,12 +81,12 @@ void FileSystemFileHandle::createSyncAccessHandle(DOMPromiseDeferred<IDLInterfac
 
         auto info = result.releaseReturnValue();
         if (!info.file)
-            return promise.reject(Exception { UnknownError, "Invalid platform file handle"_s });
+            return promise.reject(Exception { ExceptionCode::UnknownError, "Invalid platform file handle"_s });
 
-        auto* context = protectedThis->scriptExecutionContext();
+        RefPtr context = protectedThis->scriptExecutionContext();
         if (!context) {
             protectedThis->closeSyncAccessHandle(info.identifier);
-            return promise.reject(Exception { InvalidStateError, "Context has stopped"_s });
+            return promise.reject(Exception { ExceptionCode::InvalidStateError, "Context has stopped"_s });
         }
 
         promise.resolve(FileSystemSyncAccessHandle::create(*context, protectedThis.get(), info.identifier, WTFMove(info.file), info.capacity));

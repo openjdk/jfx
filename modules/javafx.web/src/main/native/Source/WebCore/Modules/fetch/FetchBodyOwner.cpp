@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2016 Canon Inc.
- * Copyright (C) 2020 Apple Inc. All rights reserved.
+ * Copyright (C) 2020-2024 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted, provided that the following conditions
@@ -33,6 +33,7 @@
 #include "Document.h"
 #include "FetchLoader.h"
 #include "HTTPParsers.h"
+#include "HTTPStatusCodes.h"
 #include "JSBlob.h"
 #include "JSDOMFormData.h"
 #include "JSDOMPromiseDeferred.h"
@@ -108,11 +109,11 @@ void FetchBodyOwner::arrayBuffer(Ref<DeferredPromise>&& promise)
     }
 
     if (isBodyNullOrOpaque()) {
-        fulfillPromiseWithArrayBuffer(WTFMove(promise), nullptr, 0);
+        fulfillPromiseWithArrayBufferFromSpan(WTFMove(promise), { });
         return;
     }
     if (isDisturbedOrLocked()) {
-        promise->reject(Exception { TypeError, "Body is disturbed or locked"_s });
+        promise->reject(Exception { ExceptionCode::TypeError, "Body is disturbed or locked"_s });
         return;
     }
     m_isDisturbed = true;
@@ -133,11 +134,30 @@ void FetchBodyOwner::blob(Ref<DeferredPromise>&& promise)
         return;
     }
     if (isDisturbedOrLocked()) {
-        promise->reject(Exception { TypeError, "Body is disturbed or locked"_s });
+        promise->reject(Exception { ExceptionCode::TypeError, "Body is disturbed or locked"_s });
         return;
     }
     m_isDisturbed = true;
     m_body->blob(*this, WTFMove(promise));
+}
+
+void FetchBodyOwner::bytes(Ref<DeferredPromise>&& promise)
+{
+    if (auto exception = loadingException()) {
+        promise->reject(*exception);
+        return;
+    }
+
+    if (isBodyNullOrOpaque()) {
+        fulfillPromiseWithUint8ArrayFromSpan(WTFMove(promise), { });
+        return;
+    }
+    if (isDisturbedOrLocked()) {
+        promise->reject(Exception { ExceptionCode::TypeError, "Body is disturbed or locked"_s });
+        return;
+    }
+    m_isDisturbed = true;
+    m_body->bytes(*this, WTFMove(promise));
 }
 
 void FetchBodyOwner::cloneBody(FetchBodyOwner& owner)
@@ -167,7 +187,7 @@ ExceptionOr<void> FetchBodyOwner::extractBody(FetchBody::Init&& value)
 void FetchBodyOwner::consumeOnceLoadingFinished(FetchBodyConsumer::Type type, Ref<DeferredPromise>&& promise)
 {
     if (isDisturbedOrLocked()) {
-        promise->reject(Exception { TypeError, "Body is disturbed or locked"_s });
+        promise->reject(Exception { ExceptionCode::TypeError, "Body is disturbed or locked"_s });
         return;
     }
     m_isDisturbed = true;
@@ -182,20 +202,20 @@ void FetchBodyOwner::formData(Ref<DeferredPromise>&& promise)
     }
 
     if (isDisturbedOrLocked()) {
-        promise->reject(Exception { TypeError, "Body is disturbed or locked"_s });
+        promise->reject(Exception { ExceptionCode::TypeError, "Body is disturbed or locked"_s });
         return;
     }
 
     if (isBodyNullOrOpaque()) {
         if (isBodyNull()) {
             // If the content-type is 'application/x-www-form-urlencoded', a body is not required and we should package an empty byte sequence as per the specification.
-            if (auto formData = FetchBodyConsumer::packageFormData(promise->scriptExecutionContext(), contentType(), nullptr, 0)) {
+            if (auto formData = FetchBodyConsumer::packageFormData(promise->scriptExecutionContext(), contentType(), { })) {
                 promise->resolve<IDLInterface<DOMFormData>>(*formData);
                 return;
             }
         }
 
-        promise->reject(TypeError);
+        promise->reject(ExceptionCode::TypeError);
         return;
     }
 
@@ -211,11 +231,11 @@ void FetchBodyOwner::json(Ref<DeferredPromise>&& promise)
     }
 
     if (isBodyNullOrOpaque()) {
-        promise->reject(SyntaxError);
+        promise->reject(ExceptionCode::SyntaxError);
         return;
     }
     if (isDisturbedOrLocked()) {
-        promise->reject(Exception { TypeError, "Body is disturbed or locked"_s });
+        promise->reject(Exception { ExceptionCode::TypeError, "Body is disturbed or locked"_s });
         return;
     }
     m_isDisturbed = true;
@@ -234,7 +254,7 @@ void FetchBodyOwner::text(Ref<DeferredPromise>&& promise)
         return;
     }
     if (isDisturbedOrLocked()) {
-        promise->reject(Exception { TypeError, "Body is disturbed or locked"_s });
+        promise->reject(Exception { ExceptionCode::TypeError, "Body is disturbed or locked"_s });
         return;
     }
     m_isDisturbed = true;
@@ -248,7 +268,7 @@ void FetchBodyOwner::loadBlob(const Blob& blob, FetchBodyConsumer* consumer)
     ASSERT(!isBodyNull());
 
     if (!scriptExecutionContext()) {
-        m_body->loadingFailed(Exception { TypeError, "Blob loading failed"_s});
+        m_body->loadingFailed(Exception { ExceptionCode::TypeError, "Blob loading failed"_s });
         return;
     }
 
@@ -257,7 +277,7 @@ void FetchBodyOwner::loadBlob(const Blob& blob, FetchBodyConsumer* consumer)
 
     m_blobLoader->loader->start(*scriptExecutionContext(), blob);
     if (!m_blobLoader->loader->isStarted()) {
-        m_body->loadingFailed(Exception { TypeError, "Blob loading failed"_s});
+        m_body->loadingFailed(Exception { ExceptionCode::TypeError, "Blob loading failed"_s });
         m_blobLoader = std::nullopt;
         return;
     }
@@ -279,6 +299,9 @@ void FetchBodyOwner::blobLoadingSucceeded()
     }
 
     m_body->loadingSucceeded(contentType());
+    if (!m_blobLoader)
+        return;
+
     finishBlobLoading();
 }
 
@@ -287,10 +310,10 @@ void FetchBodyOwner::blobLoadingFailed()
     ASSERT(!isBodyNull());
     if (m_readableStreamSource) {
         if (!m_readableStreamSource->isCancelling())
-            m_readableStreamSource->error(Exception { TypeError, "Blob loading failed"_s});
+            m_readableStreamSource->error(Exception { ExceptionCode::TypeError, "Blob loading failed"_s });
         m_readableStreamSource = nullptr;
     } else
-        m_body->loadingFailed(Exception { TypeError, "Blob loading failed"_s});
+        m_body->loadingFailed(Exception { ExceptionCode::TypeError, "Blob loading failed"_s });
     finishBlobLoading();
 }
 
@@ -308,7 +331,7 @@ FetchBodyOwner::BlobLoader::BlobLoader(FetchBodyOwner& owner)
 
 void FetchBodyOwner::BlobLoader::didReceiveResponse(const ResourceResponse& response)
 {
-    if (response.httpStatusCode() != 200)
+    if (response.httpStatusCode() != httpStatus200OK)
         didFail({ });
 }
 
@@ -317,6 +340,12 @@ void FetchBodyOwner::BlobLoader::didFail(const ResourceError&)
     // didFail might be called within FetchLoader::start call.
     if (loader->isStarted())
         owner.blobLoadingFailed();
+}
+
+void FetchBodyOwner::BlobLoader::didSucceed(const NetworkLoadMetrics&)
+{
+    Ref protectedOwner = Ref { owner };
+    protectedOwner->blobLoadingSucceeded();
 }
 
 ExceptionOr<RefPtr<ReadableStream>> FetchBodyOwner::readableStream(JSC::JSGlobalObject& state)
@@ -383,7 +412,7 @@ ResourceError FetchBodyOwner::loadingError() const
 std::optional<Exception> FetchBodyOwner::loadingException() const
 {
     return WTF::switchOn(m_loadingError, [](const ResourceError& error) -> std::optional<Exception> {
-        return Exception { TypeError, error.sanitizedDescription() };
+        return Exception { ExceptionCode::TypeError, error.sanitizedDescription() };
     }, [](const Exception& exception) -> std::optional<Exception> {
         return Exception { exception };
     }, [](auto&&) -> std::optional<Exception> {

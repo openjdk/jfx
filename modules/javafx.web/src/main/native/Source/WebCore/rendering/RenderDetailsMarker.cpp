@@ -29,18 +29,21 @@
 #include "PaintInfo.h"
 #include "RenderBoxInlines.h"
 #include "RenderBoxModelObjectInlines.h"
-#include <wtf/IsoMallocInlines.h>
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
 using namespace HTMLNames;
 
-WTF_MAKE_ISO_ALLOCATED_IMPL(RenderDetailsMarker);
+WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(RenderDetailsMarker);
 
 RenderDetailsMarker::RenderDetailsMarker(DetailsMarkerControl& element, RenderStyle&& style)
-    : RenderBlockFlow(element, WTFMove(style))
+    : RenderBlockFlow(Type::DetailsMarker, element, WTFMove(style))
 {
+    ASSERT(isRenderDetailsMarker());
 }
+
+RenderDetailsMarker::~RenderDetailsMarker() = default;
 
 static Path createPath(const FloatPoint* path)
 {
@@ -77,20 +80,20 @@ static Path createRightArrowPath()
 
 RenderDetailsMarker::Orientation RenderDetailsMarker::orientation() const
 {
-    switch (style().writingMode()) {
-    case WritingMode::TopToBottom:
+    switch (style().blockFlowDirection()) {
+    case BlockFlowDirection::TopToBottom:
         if (style().isLeftToRightDirection())
             return isOpen() ? Down : Right;
         return isOpen() ? Down : Left;
-    case WritingMode::RightToLeft:
+    case BlockFlowDirection::RightToLeft:
         if (style().isLeftToRightDirection())
             return isOpen() ? Left : Down;
         return isOpen() ? Left : Up;
-    case WritingMode::LeftToRight:
+    case BlockFlowDirection::LeftToRight:
         if (style().isLeftToRightDirection())
             return isOpen() ? Right : Down;
         return isOpen() ? Right : Up;
-    case WritingMode::BottomToTop:
+    case BlockFlowDirection::BottomToTop:
         if (style().isLeftToRightDirection())
             return isOpen() ? Up : Right;
         return isOpen() ? Up : Left;
@@ -120,7 +123,7 @@ Path RenderDetailsMarker::getPath(const LayoutPoint& origin) const
 
 void RenderDetailsMarker::paint(PaintInfo& paintInfo, const LayoutPoint& paintOffset)
 {
-    if (paintInfo.phase != PaintPhase::Foreground || style().visibility() != Visibility::Visible) {
+    if (paintInfo.phase != PaintPhase::Foreground || style().usedVisibility() != Visibility::Visible) {
         RenderBlockFlow::paint(paintInfo, paintOffset);
         return;
     }
@@ -133,9 +136,6 @@ void RenderDetailsMarker::paint(PaintInfo& paintInfo, const LayoutPoint& paintOf
         return;
 
     const Color color(style().visitedDependentColorWithColorFilter(CSSPropertyColor));
-    paintInfo.context().setStrokeColor(color);
-    paintInfo.context().setStrokeStyle(StrokeStyle::SolidStroke);
-    paintInfo.context().setStrokeThickness(1.0f);
     paintInfo.context().setFillColor(color);
 
     boxOrigin.move(borderLeft() + paddingLeft(), borderTop() + paddingTop());
@@ -147,8 +147,8 @@ bool RenderDetailsMarker::isOpen() const
     for (RenderObject* renderer = parent(); renderer; renderer = renderer->parent()) {
         if (!renderer->node())
             continue;
-        if (is<HTMLDetailsElement>(*renderer->node()))
-            return !downcast<HTMLDetailsElement>(*renderer->node()).attributeWithoutSynchronization(openAttr).isNull();
+        if (auto* details = dynamicDowncast<HTMLDetailsElement>(*renderer->node()))
+            return !details->attributeWithoutSynchronization(openAttr).isNull();
         if (is<HTMLInputElement>(*renderer->node()))
             return true;
     }

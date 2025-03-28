@@ -25,10 +25,10 @@
 
 package test.robot.javafx.embed.swing;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
-import static org.junit.Assume.assumeTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
+import static org.junit.jupiter.api.Assumptions.assumeTrue;
 import static test.util.Util.TIMEOUT;
 import java.awt.Color;
 import java.awt.Dimension;
@@ -43,9 +43,9 @@ import javafx.embed.swing.JFXPanel;
 import javafx.embed.swing.JFXPanelShim;
 import javafx.scene.Scene;
 import javafx.scene.layout.Region;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
 import com.sun.javafx.PlatformUtil;
 
 public class JFXPanelScaledTest {
@@ -61,7 +61,7 @@ public class JFXPanelScaledTest {
 
     final static int TARGET_SCALED_SIZE = (int) Math.ceil(TARGET_BASE_SIZE *1.25);
 
-    @BeforeClass
+    @BeforeAll
     public static void setupOnce() throws Exception {
         assumeTrue(PlatformUtil.isWindows());
 
@@ -75,11 +75,10 @@ public class JFXPanelScaledTest {
         SwingUtilities.invokeLater(() -> {
             myApp = new MyApp();
         });
-        assertTrue("Timeout waiting for Application to launch",
-                launchLatch.await(5 * TIMEOUT, TimeUnit.MILLISECONDS));
+        assertTrue(launchLatch.await(5 * TIMEOUT, TimeUnit.MILLISECONDS), "Timeout waiting for Application to launch");
     }
 
-    @AfterClass
+    @AfterAll
     public static void teardownOnce() {
         if (myApp != null) {
             SwingUtilities.invokeLater(myApp::dispose);

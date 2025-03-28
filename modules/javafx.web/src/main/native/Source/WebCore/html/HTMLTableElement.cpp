@@ -41,12 +41,13 @@
 #include "NodeName.h"
 #include "NodeRareData.h"
 #include "RenderTable.h"
-#include <wtf/IsoMallocInlines.h>
+#include <wtf/NeverDestroyed.h>
 #include <wtf/Ref.h>
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
-WTF_MAKE_ISO_ALLOCATED_IMPL(HTMLTableElement);
+WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(HTMLTableElement);
 
 using namespace HTMLNames;
 
@@ -55,6 +56,8 @@ HTMLTableElement::HTMLTableElement(const QualifiedName& tagName, Document& docum
 {
     ASSERT(hasTagName(tableTag));
 }
+
+HTMLTableElement::~HTMLTableElement() = default;
 
 Ref<HTMLTableElement> HTMLTableElement::create(Document& document)
 {
@@ -76,14 +79,14 @@ ExceptionOr<void> HTMLTableElement::setCaption(RefPtr<HTMLTableCaptionElement>&&
     deleteCaption();
     if (!newCaption)
         return { };
-    return insertBefore(*newCaption, firstChild());
+    return insertBefore(*newCaption, protectedFirstChild());
 }
 
 RefPtr<HTMLTableSectionElement> HTMLTableElement::tHead() const
 {
-    for (RefPtr<Node> child = firstChild(); child; child = child->nextSibling()) {
+    for (Ref child : childrenOfType<HTMLTableSectionElement>(const_cast<HTMLTableElement&>(*this))) {
         if (child->hasTagName(theadTag))
-            return downcast<HTMLTableSectionElement>(child.get());
+            return child;
     }
     return nullptr;
 }
@@ -91,7 +94,7 @@ RefPtr<HTMLTableSectionElement> HTMLTableElement::tHead() const
 ExceptionOr<void> HTMLTableElement::setTHead(RefPtr<HTMLTableSectionElement>&& newHead)
 {
     if (UNLIKELY(newHead && !newHead->hasTagName(theadTag)))
-        return Exception { HierarchyRequestError };
+        return Exception { ExceptionCode::HierarchyRequestError };
 
     deleteTHead();
     if (!newHead)
@@ -103,14 +106,14 @@ ExceptionOr<void> HTMLTableElement::setTHead(RefPtr<HTMLTableSectionElement>&& n
             break;
     }
 
-    return insertBefore(*newHead, child.get());
+    return insertBefore(*newHead, WTFMove(child));
 }
 
 RefPtr<HTMLTableSectionElement> HTMLTableElement::tFoot() const
 {
-    for (RefPtr<Node> child = firstChild(); child; child = child->nextSibling()) {
+    for (Ref child : childrenOfType<HTMLTableSectionElement>(const_cast<HTMLTableElement&>(*this))) {
         if (child->hasTagName(tfootTag))
-            return downcast<HTMLTableSectionElement>(child.get());
+            return child;
     }
     return nullptr;
 }
@@ -118,7 +121,7 @@ RefPtr<HTMLTableSectionElement> HTMLTableElement::tFoot() const
 ExceptionOr<void> HTMLTableElement::setTFoot(RefPtr<HTMLTableSectionElement>&& newFoot)
 {
     if (UNLIKELY(newFoot && !newFoot->hasTagName(tfootTag)))
-        return Exception { HierarchyRequestError };
+        return Exception { ExceptionCode::HierarchyRequestError };
     deleteTFoot();
     if (!newFoot)
         return { };
@@ -159,7 +162,7 @@ Ref<HTMLTableSectionElement> HTMLTableElement::createTBody()
 {
     auto body = HTMLTableSectionElement::create(tbodyTag, document());
     RefPtr<Node> referenceElement = lastBody() ? lastBody()->nextSibling() : nullptr;
-    insertBefore(body, referenceElement.get());
+    insertBefore(body, WTFMove(referenceElement));
     return body;
 }
 
@@ -190,7 +193,7 @@ HTMLTableSectionElement* HTMLTableElement::lastBody() const
 ExceptionOr<Ref<HTMLElement>> HTMLTableElement::insertRow(int index)
 {
     if (index < -1)
-        return Exception { IndexSizeError };
+        return Exception { ExceptionCode::IndexSizeError };
 
     Ref<HTMLTableElement> protectedThis(*this);
 
@@ -203,7 +206,7 @@ ExceptionOr<Ref<HTMLElement>> HTMLTableElement::insertRow(int index)
             row = HTMLTableRowsCollection::rowAfter(*this, lastRow.get());
             if (!row) {
                 if (i != index)
-                    return Exception { IndexSizeError };
+                    return Exception { ExceptionCode::IndexSizeError };
                 break;
             }
             lastRow = row;
@@ -228,7 +231,7 @@ ExceptionOr<Ref<HTMLElement>> HTMLTableElement::insertRow(int index)
     }
 
     auto newRow = HTMLTableRowElement::create(document());
-    auto result = parent->insertBefore(newRow, row.get());
+    auto result = parent->insertBefore(newRow, WTFMove(row));
     if (result.hasException())
         return result.releaseException();
     return Ref<HTMLElement> { WTFMove(newRow) };
@@ -248,7 +251,7 @@ ExceptionOr<void> HTMLTableElement::deleteRow(int index)
                 break;
         }
         if (!row)
-            return Exception { IndexSizeError };
+            return Exception { ExceptionCode::IndexSizeError };
     }
     return row->remove();
 }
@@ -446,14 +449,14 @@ void HTMLTableElement::attributeChanged(const QualifiedName& name, const AtomStr
     }
 }
 
-static MutableStyleProperties* leakBorderStyle(CSSValueID value)
+static Ref<MutableStyleProperties> createBorderStyle(CSSValueID value)
 {
-    auto style = MutableStyleProperties::create();
+    Ref style = MutableStyleProperties::create();
     style->setProperty(CSSPropertyBorderTopStyle, value);
     style->setProperty(CSSPropertyBorderBottomStyle, value);
     style->setProperty(CSSPropertyBorderLeftStyle, value);
     style->setProperty(CSSPropertyBorderRightStyle, value);
-    return &style.leakRef();
+    return style;
 }
 
 const MutableStyleProperties* HTMLTableElement::additionalPresentationalHintStyle() const
@@ -465,14 +468,14 @@ const MutableStyleProperties* HTMLTableElement::additionalPresentationalHintStyl
         // Setting the border to 'hidden' allows it to win over any border
         // set on the table's cells during border-conflict resolution.
         if (m_rulesAttr != UnsetRules) {
-            static auto* solidBorderStyle = leakBorderStyle(CSSValueHidden);
-            return solidBorderStyle;
+            static NeverDestroyed<Ref<MutableStyleProperties>> solidBorderStyle = createBorderStyle(CSSValueHidden);
+            return solidBorderStyle.get().ptr();
         }
         return nullptr;
     }
 
-    static auto* outsetBorderStyle = leakBorderStyle(CSSValueOutset);
-    return outsetBorderStyle;
+    static NeverDestroyed<Ref<MutableStyleProperties>> outsetBorderStyle = createBorderStyle(CSSValueOutset);
+    return outsetBorderStyle.get().ptr();
 }
 
 HTMLTableElement::CellBorders HTMLTableElement::cellBorders() const

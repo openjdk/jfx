@@ -31,8 +31,9 @@
 
 namespace WebCore {
 
+DECLARE_ALLOCATOR_WITH_HEAP_IDENTIFIER(CSSCalcOperationNode);
 class CSSCalcOperationNode final : public CSSCalcExpressionNode {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(CSSCalcOperationNode);
 public:
     enum class IsRoot : bool { No, Yes };
 
@@ -113,21 +114,17 @@ private:
 
     Type type() const final { return CssCalcOperation; }
 
-    bool isZero() const final
-    {
-        return !doubleValue(primitiveType());
-    }
-
+    bool isResolvable() const final;
+    bool isZero() const final;
     bool equals(const CSSCalcExpressionNode&) const final;
 
     std::unique_ptr<CalcExpressionNode> createCalcExpression(const CSSToLengthConversionData&) const final;
 
     CSSUnitType primitiveType() const final;
-    double doubleValue(CSSUnitType) const final;
+    double doubleValue(CSSUnitType, const CSSCalcSymbolTable&) const final;
     double computeLengthPx(const CSSToLengthConversionData&) const final;
 
     void collectComputedStyleDependencies(ComputedStyleDependencies&) const final;
-    bool convertingToLengthRequiresNonNullStyle(int lengthConversion) const final;
 
     void dump(TextStream&) const final;
 

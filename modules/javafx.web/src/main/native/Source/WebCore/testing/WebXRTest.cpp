@@ -38,6 +38,11 @@
 
 namespace WebCore {
 
+WebXRTest::WebXRTest(WeakPtr<WebXRSystem, WeakPtrImplWithEventTargetData>&& system)
+    : m_context(WTFMove(system))
+{
+}
+
 WebXRTest::~WebXRTest() = default;
 
 static PlatformXR::Device::FeatureList parseFeatures(const Vector<JSC::JSValue>& featureList, ScriptExecutionContext& context)
@@ -71,7 +76,7 @@ void WebXRTest::simulateDeviceConnection(ScriptExecutionContext& context, const 
 
         if (init.boundsCoordinates) {
             if (init.boundsCoordinates->size() < 3) {
-                promise.reject(Exception { TypeError });
+                promise.reject(Exception { ExceptionCode::TypeError });
                 return;
             }
             simulatedDevice.setNativeBoundsGeometry(init.boundsCoordinates.value());
@@ -110,7 +115,7 @@ void WebXRTest::simulateUserActivation(Document& document, XRSimulateUserActivat
 {
     // https://immersive-web.github.io/webxr-test-api/#dom-xrtest-simulateuseractivation
     // Invoke function as if it had transient activation.
-    UserGestureIndicator gestureIndicator(ProcessingUserGesture, &document);
+    UserGestureIndicator gestureIndicator(IsProcessingUserGesture::Yes, &document);
     function.handleEvent();
 }
 

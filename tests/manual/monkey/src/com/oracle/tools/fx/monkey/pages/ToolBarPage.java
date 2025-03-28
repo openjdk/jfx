@@ -28,18 +28,23 @@ import java.util.List;
 import javafx.beans.property.Property;
 import javafx.collections.ObservableList;
 import javafx.geometry.Orientation;
+import javafx.scene.AccessibleAttribute;
 import javafx.scene.Node;
 import javafx.scene.control.Button;
 import javafx.scene.control.ButtonBase;
+import javafx.scene.control.CheckBox;
 import javafx.scene.control.ContextMenu;
 import javafx.scene.control.Label;
+import javafx.scene.control.ListView;
 import javafx.scene.control.SplitMenuButton;
 import javafx.scene.control.TextField;
 import javafx.scene.control.TextInputControl;
 import javafx.scene.control.ToolBar;
 import javafx.scene.layout.Region;
+import com.oracle.tools.fx.monkey.Loggers;
 import com.oracle.tools.fx.monkey.options.EnumOption;
 import com.oracle.tools.fx.monkey.sheets.ControlPropertySheet;
+import com.oracle.tools.fx.monkey.sheets.PropertiesMenu;
 import com.oracle.tools.fx.monkey.util.EnterTextDialog;
 import com.oracle.tools.fx.monkey.util.FX;
 import com.oracle.tools.fx.monkey.util.ObjectSelector;
@@ -57,12 +62,21 @@ public class ToolBarPage extends TestPaneBase {
     public ToolBarPage() {
         super("ToolBarPage");
 
-        control = new ToolBar();
+        control = new ToolBar() {
+            @Override
+            public Object queryAccessibleAttribute(AccessibleAttribute a, Object... ps) {
+                Object v = super.queryAccessibleAttribute(a, ps);
+                Loggers.accessibility.log(a, v);
+                return v;
+            }
+        };
 
         SplitMenuButton addButton = new SplitMenuButton(
             FX.menuItem("Button", () -> add(button())),
+            FX.menuItem("CheckBox", () -> add(checkBox("CheckBox"))),
             FX.menuItem("Label", () -> add(label("Label"))),
-            FX.menuItem("TextField", () -> add(textField(20)))
+            FX.menuItem("TextField", () -> add(textField(20))),
+            FX.menuItem("ListView", () -> add(listView()))
         );
         addButton.setText("Add");
 
@@ -101,10 +115,11 @@ public class ToolBarPage extends TestPaneBase {
         s.addChoiceSupplier("Mixed", () -> {
             return List.of(
                 button(),
-                label("Find:"),
+                label("Label"),
                 textField(20),
                 button(),
                 button(),
+                checkBox("checkbox"),
                 button(),
                 button(),
                 button(),
@@ -129,11 +144,27 @@ public class ToolBarPage extends TestPaneBase {
         return n;
     }
 
+    private Node checkBox(String text) {
+        CheckBox n = new CheckBox(text);
+        setContextMenu(n);
+        return n;
+    }
+
     private Node textField(int cols) {
         TextField n = new TextField();
         setContextMenu(n);
         n.setPrefColumnCount(cols);
         return n;
+    }
+
+    private Node listView() {
+        ListView<String> listView = new ListView<>();
+        for (int i = 0; i < 10; i++) {
+            listView.getItems().add("Item " + i);
+        }
+        listView.setPrefHeight(100);
+        setContextMenu(listView);
+        return listView;
     }
 
     private Property<String> getTextProperty(Node n) {
@@ -150,25 +181,15 @@ public class ToolBarPage extends TestPaneBase {
     private void setContextMenu(Region n) {
         n.setOnContextMenuRequested((ev) -> {
             ContextMenu m = new ContextMenu();
-            FX.item(m, "Remove", () -> {
-                control.getItems().remove(n);
-            });
-
+            FX.item(m, "Remove", () -> control.getItems().remove(n));
             FX.separator(m);
-
             FX.item(m, "Edit Text", EnterTextDialog.getRunnable(n, getTextProperty(n)));
-
             FX.separator(m);
-
-            FX.item(m, "Pref(50)", () -> {
-                n.setPrefWidth(50);
-            });
-            FX.item(m, "Pref(200)", () -> {
-                n.setPrefWidth(200);
-            });
-            FX.item(m, "Pref(500)", () -> {
-                n.setPrefWidth(500);
-            });
+            FX.item(m, "Pref(50)", () -> n.setPrefWidth(50));
+            FX.item(m, "Pref(200)", () -> n.setPrefWidth(200));
+            FX.item(m, "Pref(500)", () -> n.setPrefWidth(500));
+            FX.separator(m);
+            FX.item(m, "Properties...", () -> PropertiesMenu.openPropertiesDialog(this, n));
             m.show(n, ev.getScreenX(), ev.getScreenY());
         });
     }

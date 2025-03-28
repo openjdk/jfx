@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -126,7 +126,7 @@ text.setText("The quick brown fox jumps over the lazy dog");
  * @since JavaFX 2.0
  */
 @DefaultProperty("text")
-public class Text extends Shape {
+public non-sealed class Text extends Shape {
     static {
         TextHelper.setTextAccessor(new TextHelper.TextAccessor() {
             @Override
@@ -163,6 +163,11 @@ public class Text extends Shape {
             @Override
             public com.sun.javafx.geom.Shape doConfigShape(Shape shape) {
                 return ((Text) shape).doConfigShape();
+            }
+
+            @Override
+            public float getVisualWidth(Text t) {
+                return t.getVisualBounds().getWidth();
             }
         });
     }
@@ -1042,7 +1047,7 @@ public class Text extends Shape {
     private int findFirstRunStart() {
         int start = Integer.MAX_VALUE;
         for (GlyphList r: getRuns()) {
-            int runStart = ((TextRun) r).getStart();
+            int runStart = r.getStart();
             if (runStart < start) {
                 start = runStart;
             }

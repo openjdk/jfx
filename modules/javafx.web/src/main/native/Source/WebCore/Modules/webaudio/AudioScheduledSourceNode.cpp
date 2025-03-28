@@ -35,9 +35,9 @@
 #include "ScriptController.h"
 #include "ScriptExecutionContext.h"
 #include <algorithm>
-#include <wtf/IsoMallocInlines.h>
 #include <wtf/MathExtras.h>
 #include <wtf/Scope.h>
+#include <wtf/TZoneMallocInlines.h>
 
 #if PLATFORM(IOS_FAMILY)
 #include "ScriptController.h"
@@ -45,7 +45,7 @@
 
 namespace WebCore {
 
-WTF_MAKE_ISO_ALLOCATED_IMPL(AudioScheduledSourceNode);
+WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(AudioScheduledSourceNode);
 
 AudioScheduledSourceNode::AudioScheduledSourceNode(BaseAudioContext& context, NodeType type)
     : AudioNode(context, type)
@@ -150,10 +150,10 @@ ExceptionOr<void> AudioScheduledSourceNode::startLater(double when)
     ALWAYS_LOG(LOGIDENTIFIER, when);
 
     if (m_playbackState != UNSCHEDULED_STATE)
-        return Exception { InvalidStateError, "Cannot call start() more than once"_s };
+        return Exception { ExceptionCode::InvalidStateError, "Cannot call start() more than once"_s };
 
     if (!std::isfinite(when) || when < 0)
-        return Exception { RangeError, "when value should be positive"_s };
+        return Exception { ExceptionCode::RangeError, "when value should be positive"_s };
 
     context().sourceNodeWillBeginPlayback(*this);
 
@@ -169,10 +169,10 @@ ExceptionOr<void> AudioScheduledSourceNode::stopLater(double when)
     ALWAYS_LOG(LOGIDENTIFIER, when);
 
     if (m_playbackState == UNSCHEDULED_STATE)
-        return Exception { InvalidStateError, "cannot call stop without calling start first."_s };
+        return Exception { ExceptionCode::InvalidStateError, "cannot call stop without calling start first."_s };
 
     if (!std::isfinite(when) || when < 0)
-        return Exception { RangeError, "when value should be positive"_s };
+        return Exception { ExceptionCode::RangeError, "when value should be positive"_s };
 
     m_endTime = when;
 

@@ -30,7 +30,9 @@
 #include "StyleScopeRuleSets.h"
 
 #include "CSSStyleSheet.h"
+#include "CSSViewTransitionRule.h"
 #include "CascadeLevel.h"
+#include "DocumentInlines.h"
 #include "ExtensionStyleSheets.h"
 #include "FrameLoader.h"
 #include "HTMLNames.h"
@@ -82,6 +84,11 @@ void ScopeRuleSets::updateUserAgentMediaQueryStyleIfNeeded() const
     builder.addRulesFromSheet(*UserAgentStyle::mediaQueryStyleSheet);
 }
 
+RuleSet* ScopeRuleSets::dynamicViewTransitionsStyle() const
+{
+    return m_dynamicViewTransitionsStyle.get();
+}
+
 RuleSet* ScopeRuleSets::userStyle() const
 {
     if (m_usesSharedUserStyle)
@@ -108,12 +115,12 @@ RuleSet* ScopeRuleSets::styleForCascadeLevel(CascadeLevel level)
 
 void ScopeRuleSets::initializeUserStyle()
 {
-    auto& extensionStyleSheets = m_styleResolver.document().extensionStyleSheets();
+    CheckedRef extensionStyleSheets = m_styleResolver.document().extensionStyleSheets();
     auto& mediaQueryEvaluator = m_styleResolver.mediaQueryEvaluator();
 
     auto userStyle = RuleSet::create();
 
-    if (auto* pageUserSheet = extensionStyleSheets.pageUserSheet()) {
+    if (auto* pageUserSheet = extensionStyleSheets->pageUserSheet()) {
         RuleSetBuilder builder(userStyle, mediaQueryEvaluator, &m_styleResolver);
         builder.addRulesFromSheet(pageUserSheet->contents());
     }
@@ -121,17 +128,17 @@ void ScopeRuleSets::initializeUserStyle()
 #if ENABLE(APP_BOUND_DOMAINS)
     auto* page = m_styleResolver.document().page();
     auto* localMainFrame = page ? dynamicDowncast<LocalFrame>(page->mainFrame()) : nullptr;
-    if (!extensionStyleSheets.injectedUserStyleSheets().isEmpty() && page && localMainFrame && localMainFrame->loader().client().shouldEnableInAppBrowserPrivacyProtections())
+    if (!extensionStyleSheets->injectedUserStyleSheets().isEmpty() && page && localMainFrame && localMainFrame->loader().client().shouldEnableInAppBrowserPrivacyProtections())
         m_styleResolver.document().addConsoleMessage(MessageSource::Security, MessageLevel::Warning, "Ignoring user style sheet for non-app bound domain."_s);
     else {
-        collectRulesFromUserStyleSheets(extensionStyleSheets.injectedUserStyleSheets(), userStyle, mediaQueryEvaluator);
-        if (page && localMainFrame && !extensionStyleSheets.injectedUserStyleSheets().isEmpty())
+        collectRulesFromUserStyleSheets(extensionStyleSheets->injectedUserStyleSheets(), userStyle, mediaQueryEvaluator);
+        if (page && localMainFrame && !extensionStyleSheets->injectedUserStyleSheets().isEmpty())
             localMainFrame->loader().client().notifyPageOfAppBoundBehavior();
     }
 #else
-    collectRulesFromUserStyleSheets(extensionStyleSheets.injectedUserStyleSheets(), userStyle, mediaQueryEvaluator);
+    collectRulesFromUserStyleSheets(extensionStyleSheets->injectedUserStyleSheets(), userStyle, mediaQueryEvaluator);
 #endif
-    collectRulesFromUserStyleSheets(extensionStyleSheets.documentUserStyleSheets(), userStyle, mediaQueryEvaluator);
+    collectRulesFromUserStyleSheets(extensionStyleSheets->documentUserStyleSheets(), userStyle, mediaQueryEvaluator);
 
     if (userStyle->ruleCount() > 0 || userStyle->pageRules().size() > 0)
         m_userStyle = WTFMove(userStyle);
@@ -194,6 +201,29 @@ bool ScopeRuleSets::hasContainerQueries() const
     return false;
 }
 
+bool ScopeRuleSets::hasScopeRules() const
+{
+    if (m_authorStyle->hasScopeRules())
+        return true;
+    if (m_userStyle && m_userStyle->hasScopeRules())
+        return true;
+    if (m_userAgentMediaQueryStyle && m_userAgentMediaQueryStyle->hasScopeRules())
+        return true;
+
+    return false;
+}
+
+RefPtr<StyleRuleViewTransition> ScopeRuleSets::viewTransitionRule() const
+{
+    if (auto viewTransitionRule = m_authorStyle->viewTransitionRule())
+        return viewTransitionRule;
+    if (m_userStyle && m_userStyle->viewTransitionRule())
+        return m_userStyle->viewTransitionRule();
+    if (m_userAgentMediaQueryStyle && m_userAgentMediaQueryStyle->viewTransitionRule())
+        return m_userAgentMediaQueryStyle->viewTransitionRule();
+    return nullptr;
+}
+
 std::optional<DynamicMediaQueryEvaluationChanges> ScopeRuleSets::evaluateDynamicMediaQueryRules(const MQ::MediaQueryEvaluator& evaluator)
 {
     std::optional<DynamicMediaQueryEvaluationChanges> evaluationChanges;
@@ -220,10 +250,21 @@ void ScopeRuleSets::appendAuthorStyleSheets(const Vector<RefPtr<CSSStyleSheet>>&
 {
     RuleSetBuilder builder(*m_authorStyle, *mediaQueryEvaluator, &m_styleResolver, RuleSetBuilder::ShrinkToFit::Enable, RuleSetBuilder::ShouldResolveNesting::Yes);
 
+    RefPtr<CSSStyleSheet> previous;
     for (auto& cssSheet : styleSheets) {
         ASSERT(!cssSheet->disabled());
+        // In some cases, we have many identical <style> tags. To avoid pathological behavior, we check the one-previous <style> and skip adding a new one when
+        // the content is exact same to the previous one.
+        if (previous) {
+            if (&previous->contents() == &cssSheet->contents() && previous->mediaQueries().isEmpty() && cssSheet->mediaQueries().isEmpty()) {
+                inspectorCSSOMWrappers.collectFromStyleSheetIfNeeded(cssSheet.get());
+                continue;
+            }
+        }
+
         builder.addRulesFromSheet(cssSheet->contents(), cssSheet->mediaQueries());
         inspectorCSSOMWrappers.collectFromStyleSheetIfNeeded(cssSheet.get());
+        previous = cssSheet;
     }
 
     collectFeatures();
@@ -251,6 +292,7 @@ void ScopeRuleSets::collectFeatures() const
 
     m_siblingRuleSet = makeRuleSet(m_features.siblingRules);
     m_uncommonAttributeRuleSet = makeRuleSet(m_features.uncommonAttributeRules);
+    m_scopeBreakingHasPseudoClassInvalidationRuleSet = makeRuleSet(m_features.scopeBreakingHasPseudoClassRules);
 
     m_idInvalidationRuleSets.clear();
     m_classInvalidationRuleSets.clear();
@@ -258,7 +300,9 @@ void ScopeRuleSets::collectFeatures() const
     m_pseudoClassInvalidationRuleSets.clear();
     m_hasPseudoClassInvalidationRuleSets.clear();
 
-    m_cachedHasComplexSelectorsForStyleAttribute = std::nullopt;
+    m_customPropertyNamesInStyleContainerQueries = std::nullopt;
+
+    m_cachedSelectorsForStyleAttribute = std::nullopt;
 
     m_features.shrinkToFit();
 }
@@ -293,15 +337,10 @@ static Vector<InvalidationRuleSet>* ensureInvalidationRuleSets(const KeyType& ke
             }
         }
 
-        auto invalidationRuleSets = makeUnique<Vector<InvalidationRuleSet>>();
-        invalidationRuleSets->reserveInitialCapacity(invalidationRuleSetMap.size());
-
-        for (auto& invalidationRuleSet : invalidationRuleSetMap.values()) {
+        return makeUnique<Vector<InvalidationRuleSet>>(WTF::map(invalidationRuleSetMap.values(), [](auto&& invalidationRuleSet) {
             invalidationRuleSet.ruleSet->shrinkToFit();
-            invalidationRuleSets->uncheckedAppend(WTFMove(invalidationRuleSet));
-        }
-
-        return invalidationRuleSets;
+            return WTFMove(invalidationRuleSet);
+        }));
     }).iterator->value.get();
 }
 
@@ -330,23 +369,48 @@ const Vector<InvalidationRuleSet>* ScopeRuleSets::hasPseudoClassInvalidationRule
     return ensureInvalidationRuleSets(key, m_hasPseudoClassInvalidationRuleSets, m_features.hasPseudoClassRules);
 }
 
-bool ScopeRuleSets::hasComplexSelectorsForStyleAttribute() const
+const HashSet<AtomString>& ScopeRuleSets::customPropertyNamesInStyleContainerQueries() const
 {
+    if (!m_customPropertyNamesInStyleContainerQueries) {
+        HashSet<AtomString> propertyNames;
+
+        auto collectPropertyNames = [&](auto* ruleSet) {
+            if (!ruleSet)
+                return;
+            for (auto query : ruleSet->containerQueryRules()) {
+                traverseFeatures(query->containerQuery().condition, [&](auto& containerFeature) {
+                    if (isCustomPropertyName(containerFeature.name))
+                        propertyNames.add(containerFeature.name);
+                });
+            }
+        };
+
+        collectPropertyNames(&authorStyle());
+        collectPropertyNames(userStyle());
+
+        m_customPropertyNamesInStyleContainerQueries = propertyNames;
+    }
+    return *m_customPropertyNamesInStyleContainerQueries;
+}
+
+SelectorsForStyleAttribute ScopeRuleSets::selectorsForStyleAttribute() const
+{
+
     auto compute = [&] {
         auto* ruleSets = attributeInvalidationRuleSets(HTMLNames::styleAttr->localName());
         if (!ruleSets)
-            return false;
+            return SelectorsForStyleAttribute::None;
         for (auto& ruleSet : *ruleSets) {
             if (ruleSet.matchElement != MatchElement::Subject)
-                return true;
+                return SelectorsForStyleAttribute::NonSubjectPosition;
         }
-        return false;
+        return SelectorsForStyleAttribute::SubjectPositionOnly;
     };
 
-    if (!m_cachedHasComplexSelectorsForStyleAttribute)
-        m_cachedHasComplexSelectorsForStyleAttribute = compute();
+    if (!m_cachedSelectorsForStyleAttribute)
+        m_cachedSelectorsForStyleAttribute = compute();
 
-    return *m_cachedHasComplexSelectorsForStyleAttribute;
+    return *m_cachedSelectorsForStyleAttribute;
 }
 
 bool ScopeRuleSets::hasMatchingUserOrAuthorStyle(const Function<bool(RuleSet&)>& predicate)

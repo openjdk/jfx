@@ -80,7 +80,7 @@ public:
     CString toCanonical();
 
     void overrideLanguageScriptRegion(StringView language, StringView script, StringView region);
-    void setKeywordValue(ASCIILiteral key, StringView value);
+    bool setKeywordValue(ASCIILiteral key, StringView value);
 
 private:
     Vector<char, 32> m_buffer;
@@ -101,10 +101,9 @@ CString LocaleIDBuilder::toCanonical()
 
     auto buffer = canonicalizeLocaleIDWithoutNullTerminator(m_buffer.data());
     if (!buffer)
-        return CString();
+        return { };
 
-    auto result = canonicalizeUnicodeExtensionsAfterICULocaleCanonicalization(WTFMove(buffer.value()));
-    return CString(result.data(), result.size());
+    return canonicalizeUnicodeExtensionsAfterICULocaleCanonicalization(WTFMove(buffer.value())).span();
 }
 
 // Because ICU's C API doesn't have set[Language|Script|Region] functions...
@@ -112,7 +111,7 @@ void LocaleIDBuilder::overrideLanguageScriptRegion(StringView language, StringVi
 {
     unsigned length = strlen(m_buffer.data());
 
-    StringView localeIDView { m_buffer.data(), length };
+    StringView localeIDView { m_buffer.subspan(0, length) };
 
     auto endOfLanguageScriptRegionVariant = localeIDView.find(ULOC_KEYWORD_SEPARATOR);
     if (endOfLanguageScriptRegionVariant == notFound)
@@ -154,9 +153,9 @@ void LocaleIDBuilder::overrideLanguageScriptRegion(StringView language, StringVi
 
         ASSERT(subtag.containsOnlyASCII());
         if (subtag.is8Bit())
-            buffer.append(subtag.characters8(), subtag.length());
+            buffer.append(subtag.span8());
         else
-            buffer.append(subtag.characters16(), subtag.length());
+            buffer.append(subtag.span16());
     }
 
     if (endOfLanguageScriptRegionVariant != length) {
@@ -164,22 +163,22 @@ void LocaleIDBuilder::overrideLanguageScriptRegion(StringView language, StringVi
 
         ASSERT(rest.containsOnlyASCII());
         if (rest.is8Bit())
-            buffer.append(rest.characters8(), rest.length());
+            buffer.append(rest.span8());
         else
-            buffer.append(rest.characters16(), rest.length());
+            buffer.append(rest.span16());
     }
 
     buffer.append('\0');
     m_buffer.swap(buffer);
 }
 
-void LocaleIDBuilder::setKeywordValue(ASCIILiteral key, StringView value)
+bool LocaleIDBuilder::setKeywordValue(ASCIILiteral key, StringView value)
 {
     ASSERT(m_buffer.size());
 
     ASSERT(value.containsOnlyASCII());
     Vector<char, 32> rawValue(value.length() + 1);
-    value.getCharacters(reinterpret_cast<LChar*>(rawValue.data()));
+    value.getCharacters(byteCast<LChar>(rawValue.data()));
     rawValue[value.length()] = '\0';
 
     UErrorCode status = U_ZERO_ERROR;
@@ -190,7 +189,7 @@ void LocaleIDBuilder::setKeywordValue(ASCIILiteral key, StringView value)
         status = U_ZERO_ERROR;
         uloc_setKeywordValue(key.characters(), rawValue.data(), m_buffer.data(), length + 1, &status);
     }
-    ASSERT(U_SUCCESS(status));
+    return U_SUCCESS(status);
 }
 
 String IntlLocale::keywordValue(ASCIILiteral key, bool isBoolean) const
@@ -225,6 +224,28 @@ void IntlLocale::initializeLocale(JSGlobalObject* globalObject, JSValue tagValue
     RETURN_IF_EXCEPTION(scope, void());
     scope.release();
     initializeLocale(globalObject, tag, optionsValue);
+}
+
+// https://tc39.es/proposal-intl-locale-info/#sec-weekday-to-string
+static StringView weekdayToString(StringView fw)
+{
+    if (fw == "0"_s)
+        return "sun"_s;
+    if (fw == "1"_s)
+        return "mon"_s;
+    if (fw == "2"_s)
+        return "tue"_s;
+    if (fw == "3"_s)
+        return "wed"_s;
+    if (fw == "4"_s)
+        return "thu"_s;
+    if (fw == "5"_s)
+        return "fri"_s;
+    if (fw == "6"_s)
+        return "sat"_s;
+    if (fw == "7"_s)
+        return "sun"_s;
+    return fw;
 }
 
 // https://tc39.es/ecma402/#sec-Intl.Locale
@@ -269,46 +290,59 @@ void IntlLocale::initializeLocale(JSGlobalObject* globalObject, const String& ta
     String calendar = intlStringOption(globalObject, options, vm.propertyNames->calendar, { }, { }, { });
     RETURN_IF_EXCEPTION(scope, void());
     if (!calendar.isNull()) {
-        if (!isUnicodeLocaleIdentifierType(calendar)) {
+        if (!isUnicodeLocaleIdentifierType(calendar) || !localeID.setKeywordValue("calendar"_s, calendar)) {
             throwRangeError(globalObject, scope, "calendar is not a well-formed calendar value"_s);
             return;
         }
-        localeID.setKeywordValue("calendar"_s, calendar);
     }
 
     String collation = intlStringOption(globalObject, options, vm.propertyNames->collation, { }, { }, { });
     RETURN_IF_EXCEPTION(scope, void());
     if (!collation.isNull()) {
-        if (!isUnicodeLocaleIdentifierType(collation)) {
+        if (!isUnicodeLocaleIdentifierType(collation) || !localeID.setKeywordValue("collation"_s, collation)) {
             throwRangeError(globalObject, scope, "collation is not a well-formed collation value"_s);
             return;
         }
-        localeID.setKeywordValue("collation"_s, collation);
+    }
+
+    String firstDayOfWeek = intlStringOption(globalObject, options, vm.propertyNames->firstDayOfWeek, { }, { }, { });
+    RETURN_IF_EXCEPTION(scope, void());
+    if (!firstDayOfWeek.isNull()) {
+        auto fw = weekdayToString(firstDayOfWeek);
+        if (!isUnicodeLocaleIdentifierType(fw) || !localeID.setKeywordValue("fw"_s, fw)) {
+            throwRangeError(globalObject, scope, "firstDayOfWeek is not a well-formed firstDayOfWeek value"_s);
+            return;
+        }
     }
 
     String hourCycle = intlStringOption(globalObject, options, vm.propertyNames->hourCycle, { "h11"_s, "h12"_s, "h23"_s, "h24"_s }, "hourCycle must be \"h11\", \"h12\", \"h23\", or \"h24\""_s, { });
     RETURN_IF_EXCEPTION(scope, void());
-    if (!hourCycle.isNull())
-        localeID.setKeywordValue("hours"_s, hourCycle);
+    if (!hourCycle.isNull()) {
+        bool success = localeID.setKeywordValue("hours"_s, hourCycle);
+        ASSERT_UNUSED(success, success);
+    }
 
     String caseFirst = intlStringOption(globalObject, options, vm.propertyNames->caseFirst, { "upper"_s, "lower"_s, "false"_s }, "caseFirst must be either \"upper\", \"lower\", or \"false\""_s, { });
     RETURN_IF_EXCEPTION(scope, void());
-    if (!caseFirst.isNull())
-        localeID.setKeywordValue("colcasefirst"_s, caseFirst);
+    if (!caseFirst.isNull()) {
+        bool success = localeID.setKeywordValue("colcasefirst"_s, caseFirst);
+        ASSERT_UNUSED(success, success);
+    }
 
     TriState numeric = intlBooleanOption(globalObject, options, vm.propertyNames->numeric);
     RETURN_IF_EXCEPTION(scope, void());
-    if (numeric != TriState::Indeterminate)
-        localeID.setKeywordValue("colnumeric"_s, numeric == TriState::True ? "yes"_s : "no"_s);
+    if (numeric != TriState::Indeterminate) {
+        bool success = localeID.setKeywordValue("colnumeric"_s, numeric == TriState::True ? "yes"_s : "no"_s);
+        ASSERT_UNUSED(success, success);
+    }
 
     String numberingSystem = intlStringOption(globalObject, options, vm.propertyNames->numberingSystem, { }, { }, { });
     RETURN_IF_EXCEPTION(scope, void());
     if (!numberingSystem.isNull()) {
-        if (!isUnicodeLocaleIdentifierType(numberingSystem)) {
+        if (!isUnicodeLocaleIdentifierType(numberingSystem) || !localeID.setKeywordValue("numbers"_s, numberingSystem)) {
             throwRangeError(globalObject, scope, "numberingSystem is not a well-formed numbering system value"_s);
             return;
         }
-        localeID.setKeywordValue("numbers"_s, numberingSystem);
     }
 
     m_localeID = localeID.toCanonical();
@@ -359,7 +393,7 @@ const String& IntlLocale::maximal()
                 return m_maximal;
             }
 
-            auto endOfLanguageScriptRegionVariant = WTF::find(m_localeID.data(), m_localeID.length(), ULOC_KEYWORD_SEPARATOR);
+            auto endOfLanguageScriptRegionVariant = WTF::find(m_localeID.span(), ULOC_KEYWORD_SEPARATOR);
             if (endOfLanguageScriptRegionVariant != notFound)
                 maximal.appendRange(m_localeID.data() + endOfLanguageScriptRegionVariant, m_localeID.data() + m_localeID.length());
             maximal.append('\0');
@@ -410,7 +444,7 @@ const String& IntlLocale::minimal()
                 return m_minimal;
             }
 
-            auto endOfLanguageScriptRegionVariant = WTF::find(m_localeID.data(), m_localeID.length(), ULOC_KEYWORD_SEPARATOR);
+            auto endOfLanguageScriptRegionVariant = WTF::find(m_localeID.span(), ULOC_KEYWORD_SEPARATOR);
             if (endOfLanguageScriptRegionVariant != notFound)
                 minimal.appendRange(m_localeID.data() + endOfLanguageScriptRegionVariant, m_localeID.data() + m_localeID.length());
             minimal.append('\0');
@@ -454,7 +488,7 @@ const String& IntlLocale::language()
         Vector<char, 8> buffer;
         auto status = callBufferProducingFunction(uloc_getLanguage, m_localeID.data(), buffer);
         ASSERT_UNUSED(status, U_SUCCESS(status));
-        m_language = String(buffer.data(), buffer.size());
+        m_language = buffer.span();
     }
     return m_language;
 }
@@ -466,7 +500,7 @@ const String& IntlLocale::script()
         Vector<char, 4> buffer;
         auto status = callBufferProducingFunction(uloc_getScript, m_localeID.data(), buffer);
         ASSERT_UNUSED(status, U_SUCCESS(status));
-        m_script = String(buffer.data(), buffer.size());
+        m_script = buffer.span();
     }
     return m_script;
 }
@@ -478,7 +512,7 @@ const String& IntlLocale::region()
         Vector<char, 3> buffer;
         auto status = callBufferProducingFunction(uloc_getCountry, m_localeID.data(), buffer);
         ASSERT_UNUSED(status, U_SUCCESS(status));
-        m_region = String(buffer.data(), buffer.size());
+        m_region = buffer.span();
     }
     return m_region;
 }
@@ -505,6 +539,14 @@ const String& IntlLocale::collation()
     if (!m_collation)
         m_collation = keywordValue("collation"_s);
     return m_collation.value();
+}
+
+// https://tc39.es/proposal-intl-locale-info/#sec-Intl.Locale.prototype.firstDayOfWeek
+const String& IntlLocale::firstDayOfWeek()
+{
+    if (!m_firstDayOfWeek)
+        m_firstDayOfWeek = keywordValue("fw"_s);
+    return m_firstDayOfWeek.value();
 }
 
 // https://tc39.es/ecma402/#sec-Intl.Locale.prototype.hourCycle
@@ -556,7 +598,7 @@ JSArray* IntlLocale::calendars(JSGlobalObject* globalObject)
     const char* pointer;
     int32_t length = 0;
     while ((pointer = uenum_next(calendars.get(), &length, &status)) && U_SUCCESS(status)) {
-        String calendar(pointer, length);
+        String calendar({ pointer, static_cast<size_t>(length) });
         if (auto mapped = mapICUCalendarKeywordToBCP47(calendar))
             elements.append(WTFMove(mapped.value()));
         else
@@ -594,7 +636,7 @@ JSArray* IntlLocale::collations(JSGlobalObject* globalObject)
     const char* pointer;
     int32_t length = 0;
     while ((pointer = uenum_next(enumeration.get(), &length, &status)) && U_SUCCESS(status)) {
-        String collation(pointer, length);
+        String collation({ pointer, static_cast<size_t>(length) });
         // 1.1.3 step 4, The values "standard" and "search" must be excluded from list.
         if (collation == "standard"_s || collation == "search"_s)
             continue;
@@ -640,7 +682,7 @@ JSArray* IntlLocale::hourCycles(JSGlobalObject* globalObject)
         return nullptr;
     }
 
-    dataLogLnIf(IntlLocaleInternal::verbose, "pattern:(", StringView(pattern.data(), pattern.size()), ")");
+    dataLogLnIf(IntlLocaleInternal::verbose, "pattern:(", StringView { pattern.span() }, ")");
 
     switch (IntlDateTimeFormat::hourCycleFromPattern(pattern)) {
     case IntlDateTimeFormat::HourCycle::None:
@@ -711,7 +753,7 @@ JSValue IntlLocale::timeZones(JSGlobalObject* globalObject)
     int32_t length;
     const char* collation;
     while ((collation = uenum_next(enumeration.get(), &length, &status)) && U_SUCCESS(status))
-        elements.constructAndAppend(collation, length);
+        elements.constructAndAppend(std::span { collation, static_cast<size_t>(length) });
     if (!U_SUCCESS(status)) {
         throwTypeError(globalObject, scope, "invalid locale"_s);
         return { };

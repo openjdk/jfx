@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023 Apple Inc. All rights reserved.
+ * Copyright (C) 2023-2024 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -25,18 +25,21 @@
 
 #pragma once
 
-#if ENABLE(SERVICE_WORKER)
-
 #include "ImageResource.h"
 #include <wtf/Vector.h>
 
 namespace WebCore {
 
 struct BackgroundFetchUIOptions {
+    BackgroundFetchUIOptions() = default;
+    BackgroundFetchUIOptions(Vector<ImageResource>&& icons, String&& title)
+        : icons(WTFMove(icons))
+        , title(WTFMove(title))
+    {
+    }
+
     Vector<ImageResource> icons;
     String title;
 };
 
 } // namespace WebCore
-
-#endif // ENABLE(SERVICE_WORKER)

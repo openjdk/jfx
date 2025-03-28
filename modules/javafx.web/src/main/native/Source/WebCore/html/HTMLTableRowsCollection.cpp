@@ -35,13 +35,13 @@
 #include "HTMLNames.h"
 #include "HTMLTableElement.h"
 #include "HTMLTableRowElement.h"
-#include <wtf/IsoMallocInlines.h>
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
 using namespace HTMLNames;
 
-WTF_MAKE_ISO_ALLOCATED_IMPL(HTMLTableRowsCollection);
+WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(HTMLTableRowsCollection);
 
 static inline void assertRowIsInTable(HTMLTableElement& table, HTMLTableRowElement* row)
 {
@@ -102,8 +102,8 @@ HTMLTableRowElement* HTMLTableRowsCollection::rowAfter(HTMLTableElement& table, 
     else if (isInSection(*previous, tbodyTag))
         child = ElementTraversal::nextSibling(*previous->parentNode());
     for (; child; child = ElementTraversal::nextSibling(*child)) {
-        if (is<HTMLTableRowElement>(*child))
-            return downcast<HTMLTableRowElement>(child.get());
+        if (auto* row = dynamicDowncast<HTMLTableRowElement>(*child))
+            return row;
         if (child->hasTagName(tbodyTag)) {
             if (auto row = childrenOfType<HTMLTableRowElement>(*child).first())
                 return row;
@@ -135,8 +135,8 @@ HTMLTableRowElement* HTMLTableRowsCollection::lastRow(HTMLTableElement& table)
     }
 
     for (auto* child = ElementTraversal::lastChild(table); child; child = ElementTraversal::previousSibling(*child)) {
-        if (is<HTMLTableRowElement>(*child))
-            return downcast<HTMLTableRowElement>(child);
+        if (auto* row = dynamicDowncast<HTMLTableRowElement>(*child))
+            return row;
         if (child->hasTagName(tbodyTag)) {
             if (auto* row = childrenOfType<HTMLTableRowElement>(*child).last())
                 return row;

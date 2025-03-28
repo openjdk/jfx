@@ -27,6 +27,7 @@
 
 #if ENABLE(WEBGL) && USE(TEXTURE_MAPPER)
 
+#include "GLContextWrapper.h"
 #include "GraphicsContextGLANGLE.h"
 
 #if USE(NICOSIA)
@@ -37,9 +38,13 @@ class GCGLANGLELayer;
 
 namespace WebCore {
 
+#if PLATFORM(GTK) || PLATFORM(WPE)
+class GLFence;
+#endif
+
 class TextureMapperGCGLPlatformLayer;
 
-class WEBCORE_EXPORT GraphicsContextGLTextureMapperANGLE : public GraphicsContextGLANGLE {
+class WEBCORE_EXPORT GraphicsContextGLTextureMapperANGLE : public GLContextWrapper, public GraphicsContextGLANGLE {
 public:
     static RefPtr<GraphicsContextGLTextureMapperANGLE> create(WebCore::GraphicsContextGLAttributes&&);
     virtual ~GraphicsContextGLTextureMapperANGLE();
@@ -50,13 +55,17 @@ public:
     bool copyTextureFromMedia(MediaPlayer&, PlatformGLObject texture, GCGLenum target, GCGLint level, GCGLenum internalFormat, GCGLenum format, GCGLenum type, bool premultiplyAlpha, bool flipY) final;
 #endif
 #if ENABLE(MEDIA_STREAM) || ENABLE(WEB_CODECS)
-    RefPtr<VideoFrame> paintCompositedResultsToVideoFrame() final;
+    RefPtr<VideoFrame> surfaceBufferToVideoFrame(SurfaceBuffer) final;
 #endif
     RefPtr<PixelBuffer> readCompositedResults() final;
 
-    void setContextVisibility(bool) final;
     bool reshapeDrawingBuffer() final;
     void prepareForDisplay() final;
+#if ENABLE(WEBXR)
+    bool addFoveation(IntSize, IntSize, IntSize, std::span<const GCGLfloat>, std::span<const GCGLfloat>, std::span<const GCGLfloat>) final;
+    void enableFoveation(GCGLuint) final;
+    void disableFoveation() final;
+#endif
 
 private:
     GraphicsContextGLTextureMapperANGLE(WebCore::GraphicsContextGLAttributes&&);
@@ -64,15 +73,25 @@ private:
     bool platformInitializeContext() final;
     bool platformInitialize() final;
 
-    void prepareTexture() final;
+    void swapCompositorTexture();
 
 #if USE(NICOSIA)
     GCGLuint setupCurrentTexture();
 #endif
 
+    // GLContextWrapper
+    GLContextWrapper::Type type() const override;
+    bool makeCurrentImpl() override;
+    bool unmakeCurrentImpl() override;
+
     RefPtr<GraphicsLayerContentsDisplayDelegate> m_layerContentsDisplayDelegate;
 
     GCGLuint m_compositorTexture { 0 };
+    bool m_isCompositorTextureInitialized { false };
+
+#if PLATFORM(GTK) || PLATFORM(WPE)
+    std::unique_ptr<GLFence> m_frameFence;
+#endif
 
 #if USE(NICOSIA)
     GCGLuint m_textureID { 0 };

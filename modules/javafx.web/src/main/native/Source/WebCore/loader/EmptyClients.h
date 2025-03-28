@@ -29,6 +29,7 @@
 #pragma once
 
 #include "ChromeClient.h"
+#include "CryptoClient.h"
 #include <wtf/UniqueRef.h>
 
 // Empty client classes for use by WebCore.
@@ -60,7 +61,7 @@ class EmptyChromeClient : public ChromeClient {
     void takeFocus(FocusDirection) final { }
 
     void focusedElementChanged(Element*) final { }
-    void focusedFrameChanged(LocalFrame*) final { }
+    void focusedFrameChanged(Frame*) final { }
 
     Page* createWindow(LocalFrame&, const WindowFeatures&, const NavigationAction&) final { return nullptr; }
     void show() final { }
@@ -90,6 +91,9 @@ class EmptyChromeClient : public ChromeClient {
 
     void closeWindow() final { }
 
+    void rootFrameAdded(const LocalFrame&) final { }
+    void rootFrameRemoved(const LocalFrame&) final { }
+
     void runJavaScriptAlert(LocalFrame&, const String&) final { }
     bool runJavaScriptConfirm(LocalFrame&, const String&) final { return false; }
     bool runJavaScriptPrompt(LocalFrame&, const String&, const String&, String&) final { return false; }
@@ -117,6 +121,9 @@ class EmptyChromeClient : public ChromeClient {
     IntRect rootViewToScreen(const IntRect& r) const final { return r; }
     IntPoint accessibilityScreenToRootView(const IntPoint& p) const final { return p; };
     IntRect rootViewToAccessibilityScreen(const IntRect& r) const final { return r; };
+#if PLATFORM(IOS_FAMILY)
+    void relayAccessibilityNotification(const String&, const RetainPtr<NSData>&) const final { };
+#endif
 
     void didFinishLoadingImageForElement(HTMLImageElement&) final { }
 
@@ -146,10 +153,6 @@ class EmptyChromeClient : public ChromeClient {
     std::unique_ptr<DateTimeChooser> createDateTimeChooser(DateTimeChooserClient&) final;
 #endif
 
-#if ENABLE(APP_HIGHLIGHTS)
-    void storeAppHighlight(AppHighlight&&) const final;
-#endif
-
     void setTextIndicator(const TextIndicatorData&) const final;
 
     DisplayRefreshMonitorFactory* displayRefreshMonitorFactory() const final;
@@ -173,9 +176,14 @@ class EmptyChromeClient : public ChromeClient {
     void triggerRenderingUpdate() final { }
 
 #if PLATFORM(WIN)
-    void setLastSetCursorToCurrentCursor() final { }
     void AXStartFrameLoad() final { }
     void AXFinishFrameLoad() final { }
+#endif
+
+#if PLATFORM(PLAYSTATION)
+    void postAccessibilityNotification(AccessibilityObject&, AXObjectCache::AXNotification) final { }
+    void postAccessibilityNodeTextChangeNotification(AccessibilityObject*, AXTextChange, unsigned, const String&) final { }
+    void postAccessibilityFrameLoadingEventNotification(AccessibilityObject*, AXObjectCache::AXLoadingEvent) final { }
 #endif
 
 #if ENABLE(IOS_TOUCH_EVENTS)
@@ -229,5 +237,12 @@ class EmptyChromeClient : public ChromeClient {
 
 DiagnosticLoggingClient& emptyDiagnosticLoggingClient();
 WEBCORE_EXPORT PageConfiguration pageConfigurationWithEmptyClients(std::optional<PageIdentifier>, PAL::SessionID);
+
+class EmptyCryptoClient: public CryptoClient {
+    WTF_MAKE_FAST_ALLOCATED;
+public:
+    EmptyCryptoClient() = default;
+    ~EmptyCryptoClient() = default;
+};
 
 }

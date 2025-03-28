@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -420,7 +420,7 @@ public abstract class Axis<T> extends Region {
     // -------------- METHODS ------------------------------------------------------------------------------------------
 
     /**
-     * See if the current range is valid, if it is not then any range dependent calulcations need to redone on the next layout pass
+     * See if the current range is valid, if it is not then any range dependent calculations need to redone on the next layout pass
      *
      * @return true if current range calculations are valid
      */
@@ -706,7 +706,7 @@ public abstract class Axis<T> extends Region {
         if (lengthDiffers || rangeInvalid || measureInvalid || tickLabelsVisibleInvalid) {
             measureInvalid = false;
             tickLabelsVisibleInvalid = false;
-            // RT-12272 : tick labels overlapping
+            // JDK-8112169 : tick labels overlapping
             // first check if all visible labels fit, if not, retain every nth label
             labelsToSkip.clear();
             int numLabelsToSkip = 0;

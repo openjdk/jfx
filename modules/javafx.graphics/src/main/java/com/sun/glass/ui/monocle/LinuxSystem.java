@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2014, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -28,7 +28,6 @@ package com.sun.glass.ui.monocle;
 import com.sun.glass.utils.NativeLibLoader;
 
 import java.nio.ByteBuffer;
-import java.security.Permission;
 
 /**
  * LinuxSystem provides access to Linux system calls. Except where noted, each
@@ -40,28 +39,16 @@ import java.security.Permission;
  * LinuxSystem.getLinuxSystem().
  */
 class LinuxSystem {
-    private static Permission permission = new RuntimePermission("loadLibrary.*");
-
     private static LinuxSystem instance = new LinuxSystem();
 
     /**
-     * Obtains the single instance of LinuxSystem. Calling this method requires
-     * the RuntimePermission "loadLibrary.*".
+     * Obtains the single instance of LinuxSystem.
      *
      * loadLibrary() must be called on the LinuxSystem instance before any
      * system calls can be made using it.
      */
     static LinuxSystem getLinuxSystem() {
-        checkPermissions();
         return instance;
-    }
-
-    private static void checkPermissions() {
-        @SuppressWarnings("removal")
-        SecurityManager security = System.getSecurityManager();
-        if (security != null) {
-            security.checkPermission(permission);
-        }
     }
 
     private LinuxSystem() {
@@ -200,7 +187,6 @@ class LinuxSystem {
      */
     static class FbVarScreenInfo extends C.Structure {
         FbVarScreenInfo() {
-            checkPermissions();
         }
         @Override
         native int sizeof();

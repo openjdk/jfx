@@ -25,7 +25,7 @@
 
 #pragma once
 
-#include "PublicSuffix.h"
+#include "PublicSuffixStore.h"
 #include "SecurityOriginData.h"
 #include <wtf/HashTraits.h>
 #include <wtf/URL.h>
@@ -57,7 +57,7 @@ public:
     bool isEmpty() const { return m_registrableDomain.isEmpty() || m_registrableDomain == "nullOrigin"_s; }
     const String& string() const { return m_registrableDomain; }
 
-    bool operator==(const RegistrableDomain& other) const { return m_registrableDomain == other.m_registrableDomain; }
+    friend bool operator==(const RegistrableDomain&, const RegistrableDomain&) = default;
     bool operator==(ASCIILiteral other) const { return m_registrableDomain == other; }
 
     bool matches(const URL& url) const
@@ -91,14 +91,10 @@ public:
 
     static RegistrableDomain uncheckedCreateFromHost(const String& host)
     {
-#if ENABLE(PUBLIC_SUFFIX_LIST)
-        auto registrableDomain = topPrivatelyControlledDomain(host);
+        auto registrableDomain = PublicSuffixStore::singleton().topPrivatelyControlledDomain(host);
         if (registrableDomain.isEmpty())
             return uncheckedCreateFromRegistrableDomainString(host);
         return RegistrableDomain { WTFMove(registrableDomain) };
-#else
-        return uncheckedCreateFromRegistrableDomainString(host);
-#endif
     }
 
 private:
@@ -120,11 +116,7 @@ private:
 
     static inline String registrableDomainFromHost(const String& host)
     {
-#if ENABLE(PUBLIC_SUFFIX_LIST)
-        auto domain = topPrivatelyControlledDomain(host);
-#else
-        auto domain = host;
-#endif
+        auto domain = PublicSuffixStore::singleton().topPrivatelyControlledDomain(host);
         if (host.isEmpty())
             domain = "nullOrigin"_s;
         else if (domain.isEmpty())

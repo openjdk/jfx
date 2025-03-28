@@ -27,8 +27,12 @@
 #include "SpaceTimeMutatorScheduler.h"
 
 #include "JSCInlines.h"
+#include <wtf/TZoneMallocInlines.h>
+
 
 namespace JSC {
+
+WTF_MAKE_TZONE_ALLOCATED_IMPL(SpaceTimeMutatorScheduler);
 
 // The scheduler will often make decisions based on state that is in flux. It will be fine so
 // long as multiple uses of the same value all see the same value. We wouldn't get this for free,
@@ -51,15 +55,13 @@ private:
     double m_bytesAllocatedThisCycle;
 };
 
-SpaceTimeMutatorScheduler::SpaceTimeMutatorScheduler(Heap& heap)
+SpaceTimeMutatorScheduler::SpaceTimeMutatorScheduler(JSC::Heap& heap)
     : m_heap(heap)
     , m_period(Seconds::fromMilliseconds(Options::concurrentGCPeriodMS()))
 {
 }
 
-SpaceTimeMutatorScheduler::~SpaceTimeMutatorScheduler()
-{
-}
+SpaceTimeMutatorScheduler::~SpaceTimeMutatorScheduler() = default;
 
 MutatorScheduler::State SpaceTimeMutatorScheduler::state() const
 {
@@ -72,7 +74,7 @@ void SpaceTimeMutatorScheduler::beginCollection()
     m_state = Stopped;
     m_startTime = MonotonicTime::now();
 
-    m_bytesAllocatedThisCycleAtTheBeginning = m_heap.m_bytesAllocatedThisCycle;
+    m_bytesAllocatedThisCycleAtTheBeginning = bytesAllocatedThisCycleImpl();
     m_bytesAllocatedThisCycleAtTheEnd =
         Options::concurrentGCMaxHeadroom() *
         std::max<double>(m_bytesAllocatedThisCycleAtTheBeginning, m_heap.m_maxEdenSize);
@@ -154,7 +156,7 @@ void SpaceTimeMutatorScheduler::endCollection()
 
 double SpaceTimeMutatorScheduler::bytesAllocatedThisCycleImpl()
 {
-    return m_heap.m_bytesAllocatedThisCycle;
+    return m_heap.totalBytesAllocatedThisCycle();
 }
 
 double SpaceTimeMutatorScheduler::bytesSinceBeginningOfCycle(const Snapshot& snapshot)

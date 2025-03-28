@@ -30,7 +30,8 @@ namespace WebCore {
 class StyleCursorImage;
 
 class SVGCursorElement final : public SVGElement, public SVGTests, public SVGURIReference {
-    WTF_MAKE_ISO_ALLOCATED(SVGCursorElement);
+    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(SVGCursorElement);
+    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(SVGCursorElement);
 public:
     static Ref<SVGCursorElement> create(const QualifiedName&, Document&);
 
@@ -60,7 +61,7 @@ private:
 
     Ref<SVGAnimatedLength> m_x { SVGAnimatedLength::create(this, SVGLengthMode::Width) };
     Ref<SVGAnimatedLength> m_y { SVGAnimatedLength::create(this, SVGLengthMode::Height) };
-    HashSet<StyleCursorImage*> m_clients;
+    WeakHashSet<StyleCursorImage> m_clients;
 };
 
 } // namespace WebCore

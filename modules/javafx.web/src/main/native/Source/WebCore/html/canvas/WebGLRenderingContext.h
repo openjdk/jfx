@@ -32,37 +32,40 @@
 
 namespace WebCore {
 
+class WebGLTimerQueryEXT;
+
 class WebGLRenderingContext final : public WebGLRenderingContextBase {
-    WTF_MAKE_ISO_ALLOCATED(WebGLRenderingContext);
+    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(WebGLRenderingContext);
 public:
-    static std::unique_ptr<WebGLRenderingContext> create(CanvasBase&, Ref<GraphicsContextGL>&&, GraphicsContextGLAttributes);
+    static std::unique_ptr<WebGLRenderingContext> create(CanvasBase&, WebGLContextAttributes&&);
 
     ~WebGLRenderingContext();
 
     bool isWebGL1() const final { return true; }
 
-    WebGLExtension* getExtension(const String&) final;
+    std::optional<WebGLExtensionAny> getExtension(const String&) final;
     std::optional<Vector<String>> getSupportedExtensions() final;
 
     WebGLAny getFramebufferAttachmentParameter(GCGLenum target, GCGLenum attachment, GCGLenum pname) final;
 
     long long getInt64Parameter(GCGLenum) final;
 
-    GCGLint getMaxDrawBuffers() final;
-    GCGLint getMaxColorAttachments() final;
-    void initializeVertexArrayObjects() final;
-    bool validateBlendEquation(const char* functionName, GCGLenum mode) final;
+    GCGLint maxDrawBuffers() final;
+    GCGLint maxColorAttachments() final;
+    void initializeDefaultObjects() final;
 
     void addMembersToOpaqueRoots(JSC::AbstractSlotVisitor&) final;
 
 protected:
     friend class EXTDisjointTimerQuery;
 
-    RefPtr<WebGLTimerQueryEXT> m_activeQuery;
+    WebGLBindingPoint<WebGLTimerQueryEXT, GraphicsContextGL::TIME_ELAPSED_EXT> m_activeQuery;
 
 private:
-    WebGLRenderingContext(CanvasBase&, Ref<GraphicsContextGL>&&, GraphicsContextGLAttributes);
+    using WebGLRenderingContextBase::WebGLRenderingContextBase;
 };
+
+WebCoreOpaqueRoot root(const WebGLExtension<WebGLRenderingContext>*);
 
 } // namespace WebCore
 

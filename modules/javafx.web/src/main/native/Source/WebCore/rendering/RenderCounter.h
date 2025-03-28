@@ -31,7 +31,8 @@ class CSSCounterStyle;
 class CounterNode;
 
 class RenderCounter final : public RenderText {
-    WTF_MAKE_ISO_ALLOCATED(RenderCounter);
+    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(RenderCounter);
+    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(RenderCounter);
 public:
     RenderCounter(Document&, const CounterContent&);
     virtual ~RenderCounter();
@@ -48,22 +49,21 @@ private:
     static void rendererStyleChangedSlowCase(RenderElement&, const RenderStyle* oldStyle, const RenderStyle& newStyle);
 
     ASCIILiteral renderName() const override;
-    bool isCounter() const override;
     String originalText() const override;
 
     RefPtr<CSSCounterStyle> counterStyle() const;
 
     CounterContent m_counter;
-    CheckedPtr<CounterNode> m_counterNode;
-    RenderCounter* m_nextForSameCounter { nullptr };
+    SingleThreadWeakPtr<CounterNode> m_counterNode;
+    SingleThreadWeakPtr<RenderCounter> m_nextForSameCounter;
     friend class CounterNode;
 };
 
 } // namespace WebCore
 
-SPECIALIZE_TYPE_TRAITS_RENDER_OBJECT(RenderCounter, isCounter())
+SPECIALIZE_TYPE_TRAITS_RENDER_OBJECT(RenderCounter, isRenderCounter())
 
 #if ENABLE(TREE_DEBUGGING)
 // Outside the WebCore namespace for ease of invocation from the debugger.
-void showCounterRendererTree(const WebCore::RenderObject*, const char* counterName = nullptr);
+void showCounterRendererTree(const WebCore::RenderObject*, ASCIILiteral counterName = { });
 #endif

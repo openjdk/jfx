@@ -54,13 +54,14 @@ public:
     void setDefersLoading(bool);
 
 private:
-    void notifyFinished(CachedResource&, const NetworkLoadMetrics&) final;
+    void notifyFinished(CachedResource&, const NetworkLoadMetrics&, LoadWillContinueInAnotherProcess) final;
     void redirectReceived(CachedResource&, ResourceRequest&&, const ResourceResponse&, CompletionHandler<void(ResourceRequest&&)>&&) final;
 
     static void handleLoadingFailure(DocumentThreadableLoader&, unsigned long, const ResourceError&);
     static void validatePreflightResponse(DocumentThreadableLoader&, ResourceRequest&&, ResourceLoaderIdentifier, const ResourceResponse&);
+    Ref<DocumentThreadableLoader> protectedLoader() const;
 
-    DocumentThreadableLoader& m_loader;
+    SingleThreadWeakRef<DocumentThreadableLoader> m_loader;
     CachedResourceHandle<CachedRawResource> m_resource;
     ResourceRequest m_request;
 };

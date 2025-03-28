@@ -40,7 +40,6 @@ import java.util.List;
 import java.util.Map;
 import javafx.beans.binding.BooleanExpression;
 import javafx.beans.property.BooleanProperty;
-import javafx.beans.property.Property;
 import javafx.css.CssMetaData;
 import javafx.css.Style;
 import javafx.css.Styleable;
@@ -48,8 +47,6 @@ import javafx.css.StyleableProperty;
 import javafx.geometry.Bounds;
 import javafx.scene.Node;
 import javafx.scene.SubScene;
-import javafx.scene.shape.Shape;
-import javafx.scene.shape.Shape3D;
 import javafx.scene.text.Font;
 
 /**
@@ -66,23 +63,7 @@ public abstract class NodeHelper {
     }
 
     protected static NodeHelper getHelper(Node node) {
-
-        NodeHelper helper = nodeAccessor.getHelper(node);
-        if (helper == null) {
-            String nodeType;
-            if (node instanceof Shape) {
-                nodeType = "Shape";
-            } else if (node instanceof Shape3D) {
-                nodeType = "Shape3D";
-            } else {
-                nodeType = "Node";
-            }
-
-            throw new UnsupportedOperationException(
-                    "Applications should not extend the "
-                    + nodeType + " class directly.");
-        }
-        return helper;
+        return nodeAccessor.getHelper(node);
     }
 
     protected static void setHelper(Node node, NodeHelper nodeHelper) {
@@ -287,6 +268,10 @@ public abstract class NodeHelper {
         nodeAccessor.reapplyCSS(node);
     }
 
+    public static boolean isInitialCssState(Node node) {
+        return nodeAccessor.isInitialCssState(node);
+    }
+
     public static void recalculateRelativeSizeProperties(Node node, Font fontForRelativeSizes) {
         nodeAccessor.recalculateRelativeSizeProperties(node, fontForRelativeSizes);
     }
@@ -323,16 +308,21 @@ public abstract class NodeHelper {
         return nodeAccessor.findTransitionDefinition(node, metadata);
     }
 
-    public static void addTransitionTimer(Node node, TransitionTimer timer) {
-        nodeAccessor.addTransitionTimer(node, timer);
+    public static Map<CssMetaData<? extends Styleable, ?>, TransitionDefinition> findTransitionDefinitions(
+            Node node, CssMetaData<? extends Styleable, ?> metadata) {
+        return nodeAccessor.findTransitionDefinitions(node, metadata);
     }
 
-    public static void removeTransitionTimer(Node node, TransitionTimer timer) {
-        nodeAccessor.removeTransitionTimer(node, timer);
+    public static void addTransitionTimer(Node node, String propertyName, TransitionTimer timer) {
+        nodeAccessor.addTransitionTimer(node, propertyName, timer);
     }
 
-    public static TransitionTimer findTransitionTimer(Node node, Property<?> property) {
-        return nodeAccessor.findTransitionTimer(node, property);
+    public static void removeTransitionTimer(Node node, String propertyName) {
+        nodeAccessor.removeTransitionTimer(node, propertyName);
+    }
+
+    public static TransitionTimer findTransitionTimer(Node node, String propertyName) {
+        return nodeAccessor.findTransitionTimer(node, propertyName);
     }
 
     public static void setNodeAccessor(final NodeAccessor newAccessor) {
@@ -387,6 +377,7 @@ public abstract class NodeHelper {
         void setLabeledBy(Node node, Node labeledBy);
         Accessible getAccessible(Node node);
         void reapplyCSS(Node node);
+        boolean isInitialCssState(Node node);
         void recalculateRelativeSizeProperties(Node node, Font fontForRelativeSizes);
         boolean isTreeVisible(Node node);
         BooleanExpression treeVisibleProperty(Node node);
@@ -397,9 +388,11 @@ public abstract class NodeHelper {
         void requestFocusVisible(Node node);
         StyleableProperty<TransitionDefinition[]> getTransitionProperty(Node node);
         TransitionDefinition findTransitionDefinition(Node node, CssMetaData<? extends Styleable, ?> metadata);
-        void addTransitionTimer(Node node, TransitionTimer timer);
-        void removeTransitionTimer(Node node, TransitionTimer timer);
-        TransitionTimer findTransitionTimer(Node node, Property<?> property);
+        Map<CssMetaData<? extends Styleable, ?>, TransitionDefinition> findTransitionDefinitions(
+                Node node, CssMetaData<? extends Styleable, ?> metadata);
+        void addTransitionTimer(Node node, String propertyName, TransitionTimer timer);
+        void removeTransitionTimer(Node node, String propertyName);
+        TransitionTimer findTransitionTimer(Node node, String propertyName);
     }
 
 }

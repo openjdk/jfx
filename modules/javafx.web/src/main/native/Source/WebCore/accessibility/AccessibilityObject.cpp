@@ -27,11 +27,14 @@
  */
 
 #include "config.h"
+
 #include "AccessibilityObject.h"
 
 #include "AXLogger.h"
 #include "AXObjectCache.h"
+#include "AXSearchManager.h"
 #include "AXTextMarker.h"
+#include "AccessibilityMockObject.h"
 #include "AccessibilityRenderObject.h"
 #include "AccessibilityScrollView.h"
 #include "AccessibilityTable.h"
@@ -62,6 +65,8 @@
 #include "HTMLModelElement.h"
 #include "HTMLNames.h"
 #include "HTMLParserIdioms.h"
+#include "HTMLSlotElement.h"
+#include "HTMLTableSectionElement.h"
 #include "HTMLTextAreaElement.h"
 #include "HitTestResult.h"
 #include "LocalFrame.h"
@@ -84,16 +89,16 @@
 #include "RenderView.h"
 #include "RenderWidget.h"
 #include "RenderedPosition.h"
-#include "RuntimeApplicationChecks.h"
+#include "SVGNames.h"
 #include "Settings.h"
 #include "TextCheckerClient.h"
 #include "TextCheckingHelper.h"
 #include "TextIterator.h"
 #include "UserGestureIndicator.h"
 #include "VisibleUnits.h"
-#include <pal/SessionID.h>
 #include <wtf/NeverDestroyed.h>
 #include <wtf/StdLibExtras.h>
+#include <wtf/text/MakeString.h>
 #include <wtf/text/StringBuilder.h>
 #include <wtf/text/StringView.h>
 #include <wtf/text/WTFString.h>
@@ -108,9 +113,30 @@ AccessibilityObject::~AccessibilityObject()
     ASSERT(isDetached());
 }
 
-inline ProcessID AccessibilityObject::processID() const
+void AccessibilityObject::init()
 {
-    return presentingApplicationPID();
+    m_role = determineAccessibilityRole();
+}
+
+AXID AccessibilityObject::treeID() const
+{
+    auto* cache = axObjectCache();
+    return cache ? cache->treeID() : AXID();
+}
+
+String AccessibilityObject::dbg() const
+{
+    String backingEntityDescription;
+    if (auto* renderer = this->renderer())
+        backingEntityDescription = makeString(", "_s, renderer->debugDescription());
+    else if (auto* node = this->node())
+        backingEntityDescription = makeString(", "_s, node->debugDescription());
+
+    return makeString(
+        "{role: "_s, accessibilityRoleToString(roleValue()),
+        ", ID "_s, objectID().loggingString(),
+        backingEntityDescription, '}'
+    );
 }
 
 void AccessibilityObject::detachRemoteParts(AccessibilityDetachmentType detachmentType)
@@ -128,11 +154,7 @@ void AccessibilityObject::detachRemoteParts(AccessibilityDetachmentType detachme
 
 bool AccessibilityObject::isDetached() const
 {
-#if ENABLE(ACCESSIBILITY)
     return !wrapper();
-#else
-    return true;
-#endif
 }
 
 OptionSet<AXAncestorFlag> AccessibilityObject::computeAncestorFlags() const
@@ -153,6 +175,9 @@ OptionSet<AXAncestorFlag> AccessibilityObject::computeAncestorFlags() const
 
     if (hasAncestorFlag(AXAncestorFlag::IsInCell) || matchesAncestorFlag(AXAncestorFlag::IsInCell))
         computedFlags.set(AXAncestorFlag::IsInCell, 1);
+
+    if (hasAncestorFlag(AXAncestorFlag::IsInRow) || matchesAncestorFlag(AXAncestorFlag::IsInRow))
+        computedFlags.set(AXAncestorFlag::IsInRow, 1);
 
     return computedFlags;
 }
@@ -190,6 +215,8 @@ bool AccessibilityObject::matchesAncestorFlag(AXAncestorFlag flag) const
         return role == AccessibilityRole::DescriptionListTerm;
     case AXAncestorFlag::IsInCell:
         return role == AccessibilityRole::Cell;
+    case AXAncestorFlag::IsInRow:
+        return role == AccessibilityRole::Row;
     default:
         ASSERT_NOT_REACHED();
         return false;
@@ -246,6 +273,14 @@ bool AccessibilityObject::isInCell() const
     return hasAncestorMatchingFlag(AXAncestorFlag::IsInCell);
 }
 
+bool AccessibilityObject::isInRow() const
+{
+    if (ancestorFlagsAreInitialized())
+        return m_ancestorFlags.contains(AXAncestorFlag::IsInRow);
+
+    return hasAncestorMatchingFlag(AXAncestorFlag::IsInRow);
+}
+
 // ARIA marks elements as having their accessible name derive from either their contents, or their author provide name.
 bool AccessibilityObject::accessibleNameDerivesFromContent() const
 {
@@ -254,7 +289,6 @@ bool AccessibilityObject::accessibleNameDerivesFromContent() const
     case AccessibilityRole::ApplicationAlert:
     case AccessibilityRole::ApplicationAlertDialog:
     case AccessibilityRole::ApplicationDialog:
-    case AccessibilityRole::ApplicationGroup:
     case AccessibilityRole::ApplicationLog:
     case AccessibilityRole::ApplicationMarquee:
     case AccessibilityRole::ApplicationStatus:
@@ -324,7 +358,7 @@ String AccessibilityObject::computedLabel()
     accessibilityText(text);
     if (text.size())
         return text[0].text;
-    return String();
+    return { };
 }
 
 bool AccessibilityObject::isARIATextControl() const
@@ -337,38 +371,33 @@ bool AccessibilityObject::isNonNativeTextControl() const
     return (isARIATextControl() || hasContentEditableAttributeSet()) && !isNativeTextControl();
 }
 
-bool AccessibilityObject::hasMisspelling() const
+Vector<CharacterRange> AccessibilityObject::spellCheckerResultRanges() const
 {
     if (!node())
-        return false;
+        return { };
 
     auto* frame = node()->document().frame();
     if (!frame)
-        return false;
+        return { };
 
-    Editor& editor = frame->editor();
-
-    TextCheckerClient* textChecker = editor.textChecker();
+    auto* textChecker = frame->editor().textChecker();
     if (!textChecker)
-        return false;
-
-    bool isMisspelled = false;
+        return { };
 
     if (unifiedTextCheckerEnabled(frame)) {
         Vector<TextCheckingResult> results;
         checkTextOfParagraph(*textChecker, stringValue(), TextCheckingType::Spelling, results, frame->selection().selection());
-        if (!results.isEmpty())
-            isMisspelled = true;
-        return isMisspelled;
+        return results.map([] (const auto& result) {
+            return result.range;
+        });
+    } else {
+        int location = -1;
+        int length = 0;
+        textChecker->checkSpellingOfString(stringValue(), &location, &length);
+        if (location > -1 && length > 0)
+            return { { static_cast<uint64_t>(location), static_cast<uint64_t>(length) } };
+        return { };
     }
-
-    int misspellingLength = 0;
-    int misspellingLocation = -1;
-    textChecker->checkSpellingOfString(stringValue(), &misspellingLocation, &misspellingLength);
-    if (misspellingLength || misspellingLocation != -1)
-        isMisspelled = true;
-
-    return isMisspelled;
 }
 
 std::optional<SimpleRange> AccessibilityObject::misspellingRange(const SimpleRange& start, AccessibilitySearchDirection direction) const
@@ -460,23 +489,33 @@ AccessibilityObject* AccessibilityObject::parentObjectUnignored() const
 AccessibilityObject* AccessibilityObject::displayContentsParent() const
 {
     auto* parentNode = node() ? node()->parentNode() : nullptr;
-    if (!is<Element>(parentNode) || !downcast<Element>(parentNode)->hasDisplayContents())
+    if (RefPtr parentElement = dynamicDowncast<Element>(parentNode); !parentElement || !parentElement->hasDisplayContents())
         return nullptr;
 
     auto* cache = axObjectCache();
-    return cache ? cache->getOrCreate(parentNode) : nullptr;
+    return cache ? cache->getOrCreate(*parentNode) : nullptr;
 }
 
-AccessibilityObject* AccessibilityObject::previousSiblingUnignored(int limit) const
+AccessibilityObject* AccessibilityObject::nextSiblingUnignored(unsigned limit) const
 {
-    AccessibilityObject* previous;
-    ASSERT(limit >= 0);
-    for (previous = previousSibling(); previous && previous->accessibilityIsIgnored(); previous = previous->previousSibling()) {
-        limit--;
-        if (limit <= 0)
-            break;
+    ASSERT(limit);
+
+    for (auto sibling = iterator(nextSibling()); limit && sibling; --limit, ++sibling) {
+        if (!sibling->accessibilityIsIgnored())
+            return sibling.ptr();
     }
-    return previous;
+    return nullptr;
+}
+
+AccessibilityObject* AccessibilityObject::previousSiblingUnignored(unsigned limit) const
+{
+    ASSERT(limit);
+
+    for (auto sibling = iterator(previousSibling()); limit && sibling; --limit, --sibling) {
+        if (!sibling->accessibilityIsIgnored())
+            return sibling.ptr();
+    }
+    return nullptr;
 }
 
 FloatRect AccessibilityObject::convertFrameToSpace(const FloatRect& frameRect, AccessibilityConversionSpace conversionSpace) const
@@ -509,19 +548,9 @@ FloatRect AccessibilityObject::convertFrameToSpace(const FloatRect& frameRect, A
 
 FloatRect AccessibilityObject::relativeFrame() const
 {
-    return convertFrameToSpace(elementRect(), AccessibilityConversionSpace::Page);
-}
-
-AccessibilityObject* AccessibilityObject::nextSiblingUnignored(int limit) const
-{
-    AccessibilityObject* next;
-    ASSERT(limit >= 0);
-    for (next = nextSibling(); next && next->accessibilityIsIgnored(); next = next->nextSibling()) {
-        limit--;
-        if (limit <= 0)
-            break;
-    }
-    return next;
+    auto rect = elementRect();
+    rect.moveBy(remoteFrameOffset());
+    return convertFrameToSpace(rect, AccessibilityConversionSpace::Page);
 }
 
 AccessibilityObject* AccessibilityObject::firstAccessibleObjectFromNode(const Node* node)
@@ -564,28 +593,6 @@ bool AccessibilityObject::isDescendantOfRole(AccessibilityRole role) const
     }) != nullptr;
 }
 
-static void appendAccessibilityObject(RefPtr<AXCoreObject> object, AccessibilityObject::AccessibilityChildrenVector& results)
-{
-    // Find the next descendant of this attachment object so search can continue through frames.
-    if (object->isAttachment()) {
-        Widget* widget = object->widgetForAttachmentView();
-        auto* frameView = dynamicDowncast<LocalFrameView>(widget);
-        if (!frameView)
-            return;
-        auto* localFrame = dynamicDowncast<LocalFrame>(frameView->frame());
-        if (!localFrame)
-            return;
-        auto* document = localFrame->document();
-        if (!document || !document->hasLivingRenderTree())
-            return;
-
-        object = object->axObjectCache()->getOrCreate(document);
-    }
-
-    if (object)
-        results.append(object);
-}
-
 #if ASSERT_ENABLED
 static bool isTableComponent(AXCoreObject& axObject)
 {
@@ -598,11 +605,11 @@ void AccessibilityObject::insertChild(AXCoreObject* newChild, unsigned index, De
     if (!newChild)
         return;
 
-    ASSERT(is<AccessibilityObject>(newChild));
-    if (!is<AccessibilityObject>(newChild))
+    auto* child = dynamicDowncast<AccessibilityObject>(*newChild);
+    ASSERT(child);
+    if (!child)
         return;
 
-    auto* child = downcast<AccessibilityObject>(newChild);
     // If the parent is asking for this child's children, then either it's the first time (and clearing is a no-op),
     // or its visibility has changed. In the latter case, this child may have a stale child cached.
     // This can prevent aria-hidden changes from working correctly. Hence, whenever a parent is getting children, ensure data is not stale.
@@ -623,11 +630,20 @@ void AccessibilityObject::insertChild(AXCoreObject* newChild, unsigned index, De
         }
     }
 
-    auto* displayContentsParent = child->displayContentsParent();
+    RefPtr displayContentsParent = child->displayContentsParent();
     // To avoid double-inserting a child of a `display: contents` element, only insert if `this` is the rightful parent.
     if (displayContentsParent && displayContentsParent != this) {
         // Make sure the display:contents parent object knows it has a child it needs to add.
         displayContentsParent->setNeedsToUpdateChildren();
+
+        // Don't exit early for certain table components, as they rely on inserting children for which they are not the rightful parent to behave correctly.
+        bool allowInsert = isTableColumn() || roleValue() == AccessibilityRole::TableHeaderContainer;
+
+        // AccessibilityTable::addChildren never actually calls `insertChild` for table section elements
+        // (e.g. tbody, thead), so don't block this `insertChild` for display:contents section elements,
+        // or else the child elements of the section element will never be inserted into the tree.
+        allowInsert = allowInsert || (isAccessibilityTableInstance() && is<HTMLTableSectionElement>(displayContentsParent->element()));
+        if (!allowInsert)
         return;
     }
 
@@ -640,10 +656,11 @@ void AccessibilityObject::insertChild(AXCoreObject* newChild, unsigned index, De
             auto childAncestorFlags = child->computeAncestorFlags();
             for (auto grandchildCoreObject : child->children()) {
                 if (grandchildCoreObject) {
-                    ASSERT(is<AccessibilityObject>(grandchildCoreObject));
-                    if (!is<AccessibilityObject>(grandchildCoreObject))
+                    ASSERT(is<AccessibilityObject>(*grandchildCoreObject));
+                    RefPtr grandchild = dynamicDowncast<AccessibilityObject>(*grandchildCoreObject);
+                    if (!grandchild)
                         continue;
-                    auto* grandchild = downcast<AccessibilityObject>(grandchildCoreObject.get());
+
                     // Even though `child` is ignored, we still need to set ancestry flags based on it.
                     grandchild->initializeAncestorFlags(childAncestorFlags);
                     grandchild->addAncestorFlags(thisAncestorFlags);
@@ -671,17 +688,13 @@ void AccessibilityObject::addChild(AXCoreObject* child, DescendIfIgnored descend
     insertChild(child, m_children.size(), descendIfIgnored);
 }
 
-void AccessibilityObject::findMatchingObjects(AccessibilitySearchCriteria* criteria, AccessibilityChildrenVector& results)
+AXCoreObject::AccessibilityChildrenVector AccessibilityObject::findMatchingObjects(AccessibilitySearchCriteria&& criteria)
 {
-    ASSERT(criteria);
-    if (!criteria)
-        return;
-
-    if (AXObjectCache* cache = axObjectCache())
+    if (auto* cache = axObjectCache())
         cache->startCachingComputedObjectAttributesUntilTreeMutates();
 
-    criteria->anchorObject = this;
-    Accessibility::findMatchingObjects(*criteria, results);
+    criteria.anchorObject = this;
+    return AXSearchManager().findMatchingObjects(WTFMove(criteria));
 }
 
 // Returns the range that is fewer positions away from the reference range.
@@ -705,9 +718,9 @@ std::optional<SimpleRange> AccessibilityObject::rangeOfStringClosestToRangeInDir
         return std::nullopt;
 
     bool isBackwardSearch = searchDirection == AccessibilitySearchDirection::Previous;
-    FindOptions findOptions { AtWordStarts, AtWordEnds, CaseInsensitive, StartInSelection };
+    FindOptions findOptions { FindOption::AtWordStarts, FindOption::AtWordEnds, FindOption::CaseInsensitive, FindOption::StartInSelection };
     if (isBackwardSearch)
-        findOptions.add(FindOptionFlag::Backwards);
+        findOptions.add(FindOption::Backwards);
 
     std::optional<SimpleRange> closestStringRange;
     for (auto& searchString : searchStrings) {
@@ -777,7 +790,7 @@ Vector<BoundaryPoint> AccessibilityObject::previousLineStartBoundaryPoints(const
         if (!boundaryPoint || !contains(targetRange, *boundaryPoint))
             break;
 
-        boundaryPoints.uncheckedAppend(WTFMove(*boundaryPoint));
+        boundaryPoints.append(WTFMove(*boundaryPoint));
     }
     boundaryPoints.shrinkToFit();
     return boundaryPoints;
@@ -1050,27 +1063,10 @@ Vector<String> AccessibilityObject::performTextOperation(const AccessibilityText
     return result;
 }
 
-bool AccessibilityObject::hasAttributesRequiredForInclusion() const
-{
-    // These checks are simplified in the interest of execution speed.
-    if (!getAttribute(aria_helpAttr).isEmpty()
-        || !getAttribute(aria_describedbyAttr).isEmpty()
-        || !getAttribute(altAttr).isEmpty()
-        || !getAttribute(titleAttr).isEmpty())
-        return true;
-
-#if ENABLE(MATHML)
-    if (!getAttribute(MathMLNames::alttextAttr).isEmpty())
-        return true;
-#endif
-
-    return false;
-}
-
 bool AccessibilityObject::isARIAInput(AccessibilityRole ariaRole)
 {
     switch (ariaRole) {
-    case AccessibilityRole::CheckBox:
+    case AccessibilityRole::Checkbox:
     case AccessibilityRole::RadioButton:
     case AccessibilityRole::SearchField:
     case AccessibilityRole::Switch:
@@ -1122,7 +1118,7 @@ bool AccessibilityObject::isMeter() const
         return true;
 
     RenderObject* renderer = this->renderer();
-    return renderer && renderer->isMeter();
+    return renderer && renderer->isRenderMeter();
 }
 
 static IntRect boundsForRects(const LayoutRect& rect1, const LayoutRect& rect2, const SimpleRange& dataRange)
@@ -1243,8 +1239,8 @@ IntRect AccessibilityObject::boundingBoxForQuads(RenderObject* obj, const Vector
     for (const auto& quad : quads) {
         FloatRect r = quad.enclosingBoundingBox();
         if (!r.isEmpty()) {
-            if (obj->style().hasEffectiveAppearance())
-                obj->theme().adjustRepaintRect(*obj, r);
+            if (obj->style().hasUsedAppearance())
+                obj->theme().inflateRectForControlRenderer(*obj, r);
             result.unite(r);
         }
     }
@@ -1254,7 +1250,7 @@ IntRect AccessibilityObject::boundingBoxForQuads(RenderObject* obj, const Vector
 bool AccessibilityObject::press()
 {
     // The presence of the actionElement will confirm whether we should even attempt a press.
-    Element* actionElem = actionElement();
+    RefPtr actionElem = actionElement();
     if (!actionElem)
         return false;
     if (auto* frame = actionElem->document().frame())
@@ -1262,33 +1258,33 @@ bool AccessibilityObject::press()
 
     // Hit test at this location to determine if there is a sub-node element that should act
     // as the target of the action.
-    Element* hitTestElement = nullptr;
-    Document* document = this->document();
+    RefPtr<Element> hitTestElement;
+    RefPtr document = this->document();
     if (document) {
         constexpr OptionSet<HitTestRequest::Type> hitType { HitTestRequest::Type::ReadOnly, HitTestRequest::Type::Active, HitTestRequest::Type::AccessibilityHitTest };
         HitTestResult hitTestResult { clickPoint() };
         document->hitTest(hitType, hitTestResult);
-        if (auto* innerNode = hitTestResult.innerNode()) {
-            if (auto* shadowHost = innerNode->shadowHost())
-                hitTestElement = shadowHost;
-            else if (is<Element>(*innerNode))
-                hitTestElement = &downcast<Element>(*innerNode);
+        if (RefPtr innerNode = hitTestResult.innerNode()) {
+            if (RefPtr shadowHost = innerNode->shadowHost())
+                hitTestElement = WTFMove(shadowHost);
+            else if (RefPtr element = dynamicDowncast<Element>(*innerNode))
+                hitTestElement = WTFMove(element);
             else
                 hitTestElement = innerNode->parentElement();
         }
     }
 
     // Prefer the actionElement instead of this node, if the actionElement is inside this node.
-    Element* pressElement = this->element();
+    RefPtr pressElement = this->element();
     if (!pressElement || actionElem->isDescendantOf(*pressElement))
-        pressElement = actionElem;
+        pressElement = WTFMove(actionElem);
 
     ASSERT(pressElement);
     // Prefer the hit test element, if it is inside the target element.
     if (hitTestElement && hitTestElement->isDescendantOf(*pressElement))
-        pressElement = hitTestElement;
+        pressElement = WTFMove(hitTestElement);
 
-    UserGestureIndicator gestureIndicator(ProcessingUserGesture, document);
+    UserGestureIndicator gestureIndicator(IsProcessingUserGesture::Yes, document.get());
 
     bool dispatchedEvent = false;
 #if PLATFORM(IOS_FAMILY)
@@ -1296,7 +1292,6 @@ bool AccessibilityObject::press()
         dispatchedEvent = dispatchTouchEvent();
 #endif
 
-    Ref protectedPressElement { *pressElement };
     return dispatchedEvent || pressElement->accessKeyAction(true) || pressElement->dispatchSimulatedClick(nullptr, SendMouseUpDownEvents);
 }
 
@@ -1402,28 +1397,27 @@ VisiblePosition AccessibilityObject::visiblePositionForPoint(const IntPoint& poi
         pointResult = result.localPoint();
 
         // done if hit something other than a widget
-        if (!is<RenderWidget>(*renderer))
+        auto* renderWidget = dynamicDowncast<RenderWidget>(*renderer);
+        if (!renderWidget)
             break;
 
         // descend into widget (FRAME, IFRAME, OBJECT...)
-        auto* widget = downcast<RenderWidget>(*renderer).widget();
+        auto* widget = renderWidget->widget();
         auto* frameView = dynamicDowncast<LocalFrameView>(widget);
         if (!frameView)
             break;
-        auto* localFrame = dynamicDowncast<LocalFrame>(frameView->frame());
-        if (!localFrame)
-            break;
-        auto* document = localFrame->document();
+        auto* document = frameView->frame().document();
         if (!document)
             break;
 
         renderView = document->renderView();
 #if PLATFORM(MAC)
+        // FIXME: Can this be removed? This seems like a redundant assignment.
         frameView = downcast<LocalFrameView>(widget);
 #endif
     }
 
-    return innerNode->renderer()->positionForPoint(pointResult, nullptr);
+    return innerNode->renderer()->positionForPoint(pointResult, HitTestSource::User, nullptr);
 }
 
 VisiblePositionRange AccessibilityObject::visiblePositionRangeForUnorderedPositions(const VisiblePosition& visiblePos1, const VisiblePosition& visiblePos2) const
@@ -1456,18 +1450,6 @@ VisiblePositionRange AccessibilityObject::visiblePositionRangeForUnorderedPositi
     }
 
     return { startPos, endPos };
-}
-
-VisiblePositionRange AccessibilityObject::positionOfLeftWord(const VisiblePosition& visiblePos) const
-{
-    auto start = startOfWord(visiblePos, LeftWordIfOnBoundary);
-    return { start, endOfWord(start) };
-}
-
-VisiblePositionRange AccessibilityObject::positionOfRightWord(const VisiblePosition& visiblePos) const
-{
-    auto start = startOfWord(visiblePos, RightWordIfOnBoundary);
-    return { start, endOfWord(start) };
 }
 
 static VisiblePosition updateAXLineStartForVisiblePosition(const VisiblePosition& visiblePosition)
@@ -1551,20 +1533,6 @@ VisiblePositionRange AccessibilityObject::rightLineVisiblePositionRange(const Vi
     }
 
     return { startPosition, endPosition };
-}
-
-VisiblePositionRange AccessibilityObject::sentenceForPosition(const VisiblePosition& visiblePos) const
-{
-    // FIXME: FO 2 IMPLEMENT (currently returns incorrect answer)
-    // Related? <rdar://problem/3927736> Text selection broken in 8A336
-    auto startPosition = startOfSentence(visiblePos);
-    return { startPosition, endOfSentence(startPosition) };
-}
-
-VisiblePositionRange AccessibilityObject::paragraphForPosition(const VisiblePosition& visiblePos) const
-{
-    auto startPosition = startOfParagraph(visiblePos);
-    return { startPosition, endOfParagraph(startPosition) };
 }
 
 static VisiblePosition startOfStyleRange(const VisiblePosition& visiblePos)
@@ -1652,8 +1620,31 @@ std::optional<SimpleRange> AccessibilityObject::rangeForCharacterRange(const Cha
 
 VisiblePositionRange AccessibilityObject::lineRangeForPosition(const VisiblePosition& visiblePosition) const
 {
-    return { startOfLine(visiblePosition), endOfLine(visiblePosition) };
+    VisiblePosition startPosition = startOfLine(visiblePosition);
+    VisiblePosition endPosition = endOfLine(visiblePosition);
+
+    if (endPosition.isNull() || endPosition < startPosition) {
+        // When endOfLine fails to return a plausible result, try nextLineEndPosition, which is more robust, but ensure it doesn't return a result from a subsequent line.
+        VisiblePosition nextLineEnd = nextLineEndPosition(startPosition);
+        while (!nextLineEnd.isNull() && nextLineEnd > startPosition && !inSameLine(nextLineEnd, startPosition))
+            nextLineEnd = nextLineEnd.previous();
+
+        if (!nextLineEnd.isNull())
+            endPosition = nextLineEnd;
+    }
+
+    return { startPosition, endPosition };
 }
+
+#if PLATFORM(MAC)
+AXTextMarkerRange AccessibilityObject::selectedTextMarkerRange()
+{
+    auto visibleRange = selectedVisiblePositionRange();
+    if (visibleRange.isNull())
+        return { };
+    return { visibleRange };
+}
+#endif
 
 bool AccessibilityObject::replacedNodeNeedsCharacter(Node* replacedNode)
 {
@@ -1664,7 +1655,7 @@ bool AccessibilityObject::replacedNodeNeedsCharacter(Node* replacedNode)
 
     // create an AX object, but skip it if it is not supposed to be seen
     if (auto* cache = replacedNode->renderer()->document().axObjectCache()) {
-        if (auto* axObject = cache->getOrCreate(replacedNode))
+        if (auto* axObject = cache->getOrCreate(*replacedNode))
             return !axObject->accessibilityIsIgnored();
     }
 
@@ -1674,16 +1665,16 @@ bool AccessibilityObject::replacedNodeNeedsCharacter(Node* replacedNode)
 #if PLATFORM(COCOA) && ENABLE(MODEL_ELEMENT)
 Vector<RetainPtr<id>> AccessibilityObject::modelElementChildren()
 {
-    Node* node = this->node();
-    if (!is<HTMLModelElement>(node))
+    RefPtr model = dynamicDowncast<HTMLModelElement>(node());
+    if (!model)
         return { };
 
-    return downcast<HTMLModelElement>(node)->accessibilityChildren();
+    return model->accessibilityChildren();
 }
 #endif
 
 // Finds a RenderListItem parent give a node.
-static RenderListItem* renderListItemContainerForNode(Node* node)
+static RenderListItem* renderListItemContainer(Node* node)
 {
     for (; node; node = node->parentNode()) {
         if (auto* listItem = dynamicDowncast<RenderListItem>(node->renderBoxModelObject()))
@@ -1692,22 +1683,39 @@ static RenderListItem* renderListItemContainerForNode(Node* node)
     return nullptr;
 }
 
-// Returns the text representing a list marker if node is contained within a list item.
-StringView AccessibilityObject::listMarkerTextForNodeAndPosition(Node* node, const VisiblePosition& visiblePositionStart)
+// Returns the text representing a list marker taking into account the position of the text in the line of text.
+static StringView listMarkerText(RenderListItem* listItem, const VisiblePosition& startVisiblePosition, std::optional<StringView> markerText = std::nullopt)
 {
-    auto* listItem = renderListItemContainerForNode(node);
     if (!listItem)
         return { };
 
-    // Only include the list marker if the range includes the line start (where the marker would be), and is in the same line as the marker.
-    if (!isStartOfLine(visiblePositionStart) || !inSameLine(visiblePositionStart, firstPositionInNode(&listItem->element())))
+    if (!markerText)
+        markerText = listItem->markerTextWithSuffix();
+    if (markerText->isEmpty())
         return { };
-    return listItem->markerTextWithSuffix();
+
+    // Only include the list marker if the range includes the line start (where the marker would be), and is in the same line as the marker.
+    if (!isStartOfLine(startVisiblePosition) || !inSameLine(startVisiblePosition, firstPositionInNode(&listItem->element())))
+        return { };
+    return *markerText;
+}
+
+StringView AccessibilityObject::listMarkerTextForNodeAndPosition(Node* node, Position&& startPosition)
+{
+    auto* listItem = renderListItemContainer(node);
+    if (!listItem)
+        return { };
+    // Creating a VisiblePosition and determining its relationship to a line of text can be expensive.
+    // Thus perform that determination only if we have some text to return.
+    auto markerText = listItem->markerTextWithSuffix();
+    if (markerText.isEmpty())
+        return { };
+    return listMarkerText(listItem, startPosition, markerText);
 }
 
 String AccessibilityObject::stringForRange(const SimpleRange& range) const
 {
-    TextIterator it(range);
+    TextIterator it = textIteratorIgnoringFullSizeKana(range);
     if (it.atEnd())
         return String();
 
@@ -1719,7 +1727,7 @@ String AccessibilityObject::stringForRange(const SimpleRange& range) const
             // because a RenderListMarker does not have a Node equivalent and thus does not appear
             // when iterating text.
             // Don't add list marker text for new line character.
-            if (it.text().length() != 1 || !deprecatedIsSpaceOrNewline(it.text()[0]))
+            if (it.text().length() != 1 || !isASCIIWhitespace(it.text()[0]))
                 builder.append(listMarkerTextForNodeAndPosition(it.node(), makeDeprecatedLegacyPosition(it.range().start)));
             it.appendTextToStringBuilder(builder);
         } else {
@@ -1738,11 +1746,12 @@ String AccessibilityObject::stringForVisiblePositionRange(const VisiblePositionR
         return { };
 
     StringBuilder builder;
-    for (TextIterator it(*range); !it.atEnd(); it.advance()) {
+    TextIterator it = textIteratorIgnoringFullSizeKana(*range);
+    for (; !it.atEnd(); it.advance()) {
         // non-zero length means textual node, zero length means replaced node (AKA "attachments" in AX)
         if (it.text().length()) {
             // Add a textual representation for list marker text.
-            builder.append(listMarkerTextForNodeAndPosition(it.node(), visiblePositionRange.start));
+            builder.append(listMarkerText(renderListItemContainer(it.node()), visiblePositionRange.start));
             it.appendTextToStringBuilder(builder);
         } else {
             // locate the node and starting offset for this replaced range
@@ -1753,26 +1762,28 @@ String AccessibilityObject::stringForVisiblePositionRange(const VisiblePositionR
     return builder.toString();
 }
 
-VisiblePosition AccessibilityObject::nextLineEndPosition(const VisiblePosition& visiblePos) const
+VisiblePosition AccessibilityObject::nextLineEndPosition(const VisiblePosition& startPosition) const
 {
-    if (visiblePos.isNull())
-        return VisiblePosition();
+    if (startPosition.isNull())
+        return { };
 
-    // to make sure we move off of a line end
-    VisiblePosition nextVisiblePos = visiblePos.next();
-    if (nextVisiblePos.isNull())
-        return VisiblePosition();
+    // Move to the next position to ensure we move off a line end.
+    auto nextPosition = startPosition.next();
+    if (nextPosition.isNull())
+        return { };
 
-    VisiblePosition endPosition = endOfLine(nextVisiblePos);
-
-    // as long as the position hasn't reached the end of the doc,  keep searching for a valid line end position
-    // There are cases like when the position is next to a floating object that'll return null for end of line. This code will avoid returning null.
-    while (endPosition.isNull() && nextVisiblePos.isNotNull()) {
-        nextVisiblePos = nextVisiblePos.next();
-        endPosition = endOfLine(nextVisiblePos);
+    auto lineEndPosition = endOfLine(nextPosition);
+    // As long as the position hasn't reached the end of the document, keep searching for a valid line
+    // end position. Skip past null positions, as there are cases like when the position is next to a
+    // floating object that'll return null for end of line. Also, in certain scenarios, like when one
+    // position is editable and the other isn't (e.g. in mixed-contenteditable-visible-character-range-hang.html),
+    // we may end up back at the same position we started at. This is never valid, so keep moving forward
+    // trying to find the next line end.
+    while ((lineEndPosition.isNull() || lineEndPosition == startPosition) && nextPosition.isNotNull()) {
+        nextPosition = nextPosition.next();
+        lineEndPosition = endOfLine(nextPosition);
     }
-
-    return endPosition;
+    return lineEndPosition;
 }
 
 std::optional<VisiblePosition> AccessibilityObject::previousLineStartPositionInternal(const VisiblePosition& visiblePosition) const
@@ -1799,47 +1810,6 @@ std::optional<VisiblePosition> AccessibilityObject::previousLineStartPositionInt
     return startPosition;
 }
 
-VisiblePosition AccessibilityObject::nextSentenceEndPosition(const VisiblePosition& position) const
-{
-    // FIXME: FO 2 IMPLEMENT (currently returns incorrect answer)
-    // Related? <rdar://problem/3927736> Text selection broken in 8A336
-
-    // Make sure we move off of a sentence end.
-    auto nextPosition = position.next();
-    auto range = makeSimpleRange(startOfLine(nextPosition), endOfLine(nextPosition));
-    if (!range)
-        return { };
-
-    // An empty line is considered a sentence. If it's skipped, then the sentence parser will not
-    // see this empty line.  Instead, return the end position of the empty line.
-    return hasAnyPlainText(*range) ? endOfSentence(nextPosition) : nextPosition;
-}
-
-VisiblePosition AccessibilityObject::previousSentenceStartPosition(const VisiblePosition& position) const
-{
-    // FIXME: FO 2 IMPLEMENT (currently returns incorrect answer)
-    // Related? <rdar://problem/3927736> Text selection broken in 8A336
-
-    // Make sure we move off of a sentence start.
-    auto previousPosition = position.previous();
-    auto range = makeSimpleRange(startOfLine(previousPosition), endOfLine(previousPosition));
-    if (!range)
-        return { };
-
-    // Treat empty line as a separate sentence.
-    return hasAnyPlainText(*range) ? startOfSentence(previousPosition) : previousPosition;
-}
-
-VisiblePosition AccessibilityObject::nextParagraphEndPosition(const VisiblePosition& position) const
-{
-    return endOfParagraph(position.next());
-}
-
-VisiblePosition AccessibilityObject::previousParagraphStartPosition(const VisiblePosition& position) const
-{
-    return startOfParagraph(position.previous());
-}
-
 OptionSet<SpeakAs> AccessibilityObject::speakAsProperty() const
 {
     if (auto* style = this->style())
@@ -1862,11 +1832,48 @@ bool AccessibilityObject::hasContentEditableAttributeSet() const
     return contentEditableAttributeIsEnabled(element());
 }
 
+bool AccessibilityObject::dependsOnTextUnderElement() const
+{
+    switch (roleValue()) {
+    case AccessibilityRole::PopUpButton:
+        // Native popup buttons should not use their descendant's text as a title. That value is retrieved through stringValue().
+        if (hasTagName(selectTag))
+            break;
+        FALLTHROUGH;
+    case AccessibilityRole::Summary:
+    case AccessibilityRole::Button:
+    case AccessibilityRole::ToggleButton:
+    case AccessibilityRole::Checkbox:
+    case AccessibilityRole::ListBoxOption:
+#if !PLATFORM(COCOA)
+    // MacOS does not expect native <li> elements to expose label information, it only expects leaf node elements to do that.
+    case AccessibilityRole::ListItem:
+#endif
+    case AccessibilityRole::MenuButton:
+    case AccessibilityRole::MenuItem:
+    case AccessibilityRole::MenuItemCheckbox:
+    case AccessibilityRole::MenuItemRadio:
+    case AccessibilityRole::RadioButton:
+    case AccessibilityRole::Switch:
+    case AccessibilityRole::Tab:
+        return true;
+    default:
+        break;
+    }
+
+    // If it's focusable but it's not content editable or a known control type, then it will appear to
+    // the user as a single atomic object, so we should use its text as the default title.
+    if (isHeading() || isLink())
+        return true;
+
+    return isOutput();
+}
+
 bool AccessibilityObject::supportsReadOnly() const
 {
     AccessibilityRole role = roleValue();
 
-    return role == AccessibilityRole::CheckBox
+    return role == AccessibilityRole::Checkbox
         || role == AccessibilityRole::ColumnHeader
         || role == AccessibilityRole::ComboBox
         || role == AccessibilityRole::Grid
@@ -1932,7 +1939,6 @@ bool AccessibilityObject::contentEditableAttributeIsEnabled(Element* element)
     return contentEditableValue.isEmpty() || equalLettersIgnoringASCIICase(contentEditableValue, "true"_s);
 }
 
-#if ENABLE(ACCESSIBILITY)
 int AccessibilityObject::lineForPosition(const VisiblePosition& visiblePos) const
 {
     if (visiblePos.isNull() || !node())
@@ -1958,7 +1964,6 @@ int AccessibilityObject::lineForPosition(const VisiblePosition& visiblePos) cons
 
     return lineCount;
 }
-#endif
 
 // NOTE: Consider providing this utility method as AX API
 CharacterRange AccessibilityObject::plainTextRangeForVisiblePositionRange(const VisiblePositionRange& positionRange) const
@@ -2000,7 +2005,6 @@ unsigned AccessibilityObject::doAXLineForIndex(unsigned index)
     return lineForPosition(visiblePositionForIndex(index, false));
 }
 
-#if ENABLE(ACCESSIBILITY)
 void AccessibilityObject::updateBackingStore()
 {
     if (!axObjectCache())
@@ -2009,16 +2013,15 @@ void AccessibilityObject::updateBackingStore()
     // Updating the layout may delete this object.
     RefPtr<AccessibilityObject> protectedThis(this);
     if (auto* document = this->document()) {
-        if (!document->view()->layoutContext().isInRenderTreeLayout() && !document->inRenderTreeUpdate() && !document->inStyleRecalc())
+        if (!Accessibility::inRenderTreeOrStyleUpdate(*document))
             document->updateLayoutIgnorePendingStylesheets();
     }
 
-    if (auto cache = axObjectCache())
-        cache->performDeferredCacheUpdate();
+    if (auto* cache = axObjectCache())
+        cache->performDeferredCacheUpdate(ForceLayout::Yes);
 
     updateChildrenIfNecessary();
 }
-#endif
 
 const AccessibilityScrollView* AccessibilityObject::ancestorAccessibilityScrollView(bool includeSelf) const
 {
@@ -2030,13 +2033,22 @@ const AccessibilityScrollView* AccessibilityObject::ancestorAccessibilityScrollV
 #if PLATFORM(COCOA)
 RemoteAXObjectRef AccessibilityObject::remoteParentObject() const
 {
-    if (auto* document = this->document()) {
-        if (auto* frame = document->frame())
-            return frame->loader().client().accessibilityRemoteObject();
-    }
-    return nullptr;
+    auto* document = this->document();
+    auto* frame = document ? document->frame() : nullptr;
+    return frame ? frame->loader().client().accessibilityRemoteObject() : nullptr;
 }
 #endif
+
+IntPoint AccessibilityObject::remoteFrameOffset() const
+{
+#if PLATFORM(COCOA)
+    auto* document = this->document();
+    auto* frame = document ? document->frame() : nullptr;
+    return frame ? frame->loader().client().accessibilityRemoteFrameOffset() : IntPoint();
+#else
+    return IntPoint();
+#endif
+}
 
 Document* AccessibilityObject::document() const
 {
@@ -2044,11 +2056,12 @@ Document* AccessibilityObject::document() const
     if (!frameView)
         return nullptr;
 
-    auto* localFrame = dynamicDowncast<LocalFrame>(frameView->frame());
-    if (!localFrame)
-        return nullptr;
+    return frameView->frame().document();
+}
 
-    return localFrame->document();
+RefPtr<Document> AccessibilityObject::protectedDocument() const
+{
+    return document();
 }
 
 Page* AccessibilityObject::page() const
@@ -2071,7 +2084,6 @@ LocalFrameView* AccessibilityObject::documentFrameView() const
     return object->documentFrameView();
 }
 
-#if ENABLE(ACCESSIBILITY)
 const AccessibilityObject::AccessibilityChildrenVector& AccessibilityObject::children(bool updateChildrenIfNeeded)
 {
     if (updateChildrenIfNeeded)
@@ -2079,7 +2091,6 @@ const AccessibilityObject::AccessibilityChildrenVector& AccessibilityObject::chi
 
     return m_children;
 }
-#endif
 
 void AccessibilityObject::updateChildrenIfNecessary()
 {
@@ -2101,22 +2112,16 @@ void AccessibilityObject::clearChildren()
     m_childrenInitialized = false;
 }
 
-AccessibilityObject* AccessibilityObject::anchorElementForNode(Node* node)
+AccessibilityObject* AccessibilityObject::anchorElementForNode(Node& node)
 {
-    RenderObject* obj = node->renderer();
-    if (!obj)
+    CheckedPtr renderer = node.renderer();
+    if (!renderer)
         return nullptr;
 
-    RefPtr<AccessibilityObject> axObj = obj->document().axObjectCache()->getOrCreate(obj);
-    Element* anchor = axObj->anchorElement();
-    if (!anchor)
-        return nullptr;
-
-    RenderObject* anchorRenderer = anchor->renderer();
-    if (!anchorRenderer)
-        return nullptr;
-
-    return anchorRenderer->document().axObjectCache()->getOrCreate(anchorRenderer);
+    WeakPtr cache = renderer->document().axObjectCache();
+    RefPtr axObject = cache ? cache->getOrCreate(renderer.get()) : nullptr;
+    auto* anchor = axObject ? axObject->anchorElement() : nullptr;
+    return anchor ? cache->getOrCreate(anchor->renderer()) : nullptr;
 }
 
 AccessibilityObject* AccessibilityObject::headingElementForNode(Node* node)
@@ -2128,7 +2133,7 @@ AccessibilityObject* AccessibilityObject::headingElementForNode(Node* node)
     if (!renderObject)
         return nullptr;
 
-    AccessibilityObject* axObject = renderObject->document().axObjectCache()->getOrCreate(renderObject);
+    AccessibilityObject* axObject = renderObject->document().axObjectCache()->getOrCreate(*renderObject);
 
     return Accessibility::findAncestor<AccessibilityObject>(*axObject, true, [] (const AccessibilityObject& object) {
         return object.roleValue() == AccessibilityRole::Heading;
@@ -2160,8 +2165,8 @@ void AccessibilityObject::ariaTreeRows(AccessibilityChildrenVector& rows, Access
         }
 
         // Now see if this item also has rows hiding inside of it.
-        if (is<AccessibilityObject>(*child))
-            downcast<AccessibilityObject>(*child).ariaTreeRows(rows, ancestors);
+        if (auto* accessibilityObject = dynamicDowncast<AccessibilityObject>(*child))
+            accessibilityObject->ariaTreeRows(rows, ancestors);
     }
 
     // Now go through the aria-owns elements.
@@ -2184,28 +2189,19 @@ void AccessibilityObject::ariaTreeRows(AccessibilityChildrenVector& rows, Access
         }
 
         // Now see if this item also has rows hiding inside of it.
-        if (is<AccessibilityObject>(*child))
-            downcast<AccessibilityObject>(*child).ariaTreeRows(rows, ancestors);
+        if (auto* accessibilityObject = dynamicDowncast<AccessibilityObject>(*child))
+            accessibilityObject->ariaTreeRows(rows, ancestors);
     }
 
     ancestors.removeLast();
 }
 
-void AccessibilityObject::ariaTreeRows(AccessibilityChildrenVector& rows)
+AXCoreObject::AccessibilityChildrenVector AccessibilityObject::ariaTreeRows()
 {
+    AccessibilityChildrenVector rows;
     AccessibilityChildrenVector ancestors;
     ariaTreeRows(rows, ancestors);
-}
-
-AXCoreObject::AccessibilityChildrenVector AccessibilityObject::ariaTreeItemContent()
-{
-    AccessibilityChildrenVector result;
-    // The content of a treeitem excludes other treeitems or their containing groups.
-    for (const auto& child : children()) {
-        if (!child->isGroup() && child->roleValue() != AccessibilityRole::TreeItem)
-            result.append(child);
-    }
-    return result;
+    return rows;
 }
 
 AXCoreObject::AccessibilityChildrenVector AccessibilityObject::disclosedRows()
@@ -2218,7 +2214,7 @@ AXCoreObject::AccessibilityChildrenVector AccessibilityObject::disclosedRows()
             result.append(obj);
         // If it's not a tree item, then descend into the group to find more tree items.
         else
-            obj->ariaTreeRows(result);
+            result.appendVector(obj->ariaTreeRows());
     }
 
     return result;
@@ -2241,7 +2237,6 @@ const String AccessibilityObject::defaultLiveRegionStatusForRole(AccessibilityRo
     }
 }
 
-#if ENABLE(ACCESSIBILITY)
 String AccessibilityObject::localizedActionVerb() const
 {
 #if !PLATFORM(IOS_FAMILY)
@@ -2249,12 +2244,16 @@ String AccessibilityObject::localizedActionVerb() const
     static NeverDestroyed<const String> buttonAction(AXButtonActionVerb());
     static NeverDestroyed<const String> textFieldAction(AXTextFieldActionVerb());
     static NeverDestroyed<const String> radioButtonAction(AXRadioButtonActionVerb());
-    static NeverDestroyed<const String> checkedCheckBoxAction(AXCheckedCheckBoxActionVerb());
-    static NeverDestroyed<const String> uncheckedCheckBoxAction(AXUncheckedCheckBoxActionVerb());
+#if !PLATFORM(JAVA)
+    static NeverDestroyed<const String> checkedCheckboxAction(AXCheckedCheckboxActionVerb());
+    static NeverDestroyed<const String> uncheckedCheckboxAction(AXUncheckedCheckboxActionVerb());
+#endif
     static NeverDestroyed<const String> linkAction(AXLinkActionVerb());
     static NeverDestroyed<const String> menuListAction(AXMenuListActionVerb());
     static NeverDestroyed<const String> menuListPopupAction(AXMenuListPopupActionVerb());
+#if !PLATFORM(JAVA)
     static NeverDestroyed<const String> listItemAction(AXListItemActionVerb());
+#endif
 
     switch (roleValue()) {
     case AccessibilityRole::Button:
@@ -2265,9 +2264,11 @@ String AccessibilityObject::localizedActionVerb() const
         return textFieldAction;
     case AccessibilityRole::RadioButton:
         return radioButtonAction;
-    case AccessibilityRole::CheckBox:
+#if !PLATFORM(JAVA)
+    case AccessibilityRole::Checkbox:
     case AccessibilityRole::Switch:
-        return isChecked() ? checkedCheckBoxAction : uncheckedCheckBoxAction;
+        return isChecked() ? checkedCheckboxAction : uncheckedCheckboxAction;
+#endif
     case AccessibilityRole::Link:
     case AccessibilityRole::WebCoreLink:
         return linkAction;
@@ -2275,8 +2276,10 @@ String AccessibilityObject::localizedActionVerb() const
         return menuListAction;
     case AccessibilityRole::MenuListPopup:
         return menuListPopupAction;
+#if !PLATFORM(JAVA)
     case AccessibilityRole::ListItem:
         return listItemAction;
+#endif
     default:
         return nullAtom();
     }
@@ -2298,7 +2301,7 @@ String AccessibilityObject::actionVerb() const
         return "activate"_s;
     case AccessibilityRole::RadioButton:
         return "select"_s;
-    case AccessibilityRole::CheckBox:
+    case AccessibilityRole::Checkbox:
     case AccessibilityRole::Switch:
         return isChecked() ? "uncheck"_s : "check"_s;
     case AccessibilityRole::Link:
@@ -2314,7 +2317,6 @@ String AccessibilityObject::actionVerb() const
 #endif
     return { };
 }
-#endif
 
 bool AccessibilityObject::ariaIsMultiline() const
 {
@@ -2330,7 +2332,7 @@ String AccessibilityObject::invalidStatus() const
     String undefinedValue = "undefined"_s;
 
     // aria-invalid can return false (default), grammar, spelling, or true.
-    auto ariaInvalid = getAttribute(aria_invalidAttr).string().trim(isASCIIWhitespace);
+    auto ariaInvalid = getAttributeTrimmed(aria_invalidAttr);
 
     if (ariaInvalid.isEmpty()) {
         auto* htmlElement = dynamicDowncast<HTMLElement>(this->node());
@@ -2363,7 +2365,7 @@ bool AccessibilityObject::supportsCurrent() const
 AccessibilityCurrentState AccessibilityObject::currentState() const
 {
     // aria-current can return false (default), true, page, step, location, date or time.
-    auto currentStateValue = getAttribute(aria_currentAttr).string().trim(isASCIIWhitespace);
+    auto currentStateValue = getAttributeTrimmed(aria_currentAttr);
 
     // If "false", empty, or missing, return false state.
     if (currentStateValue.isEmpty() || currentStateValue == "false"_s)
@@ -2432,8 +2434,8 @@ bool AccessibilityObject::ignoredFromModalPresence() const
 
 bool AccessibilityObject::hasTagName(const QualifiedName& tagName) const
 {
-    Node* node = this->node();
-    return is<Element>(node) && downcast<Element>(*node).hasTagName(tagName);
+    RefPtr element = dynamicDowncast<Element>(node());
+    return element && element->hasTagName(tagName);
 }
 
 bool AccessibilityObject::hasAttribute(const QualifiedName& attribute) const
@@ -2453,24 +2455,22 @@ bool AccessibilityObject::hasAttribute(const QualifiedName& attribute) const
 
 const AtomString& AccessibilityObject::getAttribute(const QualifiedName& attribute) const
 {
-    if (RefPtr element = this->element()) {
-        auto& value = element->attributeWithoutSynchronization(attribute);
-        if (!value.isNull())
-            return value;
-        if (auto* defaultARIA = element->customElementDefaultARIAIfExists())
-            return defaultARIA->valueForAttribute(*element, attribute);
-    }
-    return nullAtom();
+    RefPtr element = this->element();
+    return element ? element->attributeWithDefaultARIA(attribute) : nullAtom();
 }
 
-std::optional<String> AccessibilityObject::attributeValue(const String& attributeName) const
+String AccessibilityObject::getAttributeTrimmed(const QualifiedName& attribute) const
 {
-    if (attributeName == "name"_s) {
-        auto value = getAttribute(nameAttr);
-        if (!value.isNull())
-            return value;
-    }
-    return std::nullopt;
+    const auto& rawValue = getAttribute(attribute);
+    if (rawValue.isEmpty())
+        return { };
+    auto value = rawValue.string();
+    return value.trim(isASCIIWhitespace).simplifyWhiteSpace(isASCIIWhitespace);
+}
+
+String AccessibilityObject::nameAttribute() const
+{
+    return getAttribute(nameAttr);
 }
 
 int AccessibilityObject::getIntegralAttribute(const QualifiedName& attributeName) const
@@ -2481,12 +2481,13 @@ int AccessibilityObject::getIntegralAttribute(const QualifiedName& attributeName
 bool AccessibilityObject::replaceTextInRange(const String& replacementString, const CharacterRange& range)
 {
     // If this is being called on the web area, redirect it to be on the body, which will have a renderer associated with it.
-    if (is<Document>(node())) {
-        if (auto bodyObject = axObjectCache()->getOrCreate(downcast<Document>(node())->body()))
+    if (RefPtr document = dynamicDowncast<Document>(node())) {
+        if (auto bodyObject = axObjectCache()->getOrCreate(document->body()))
             return bodyObject->replaceTextInRange(replacementString, range);
         return false;
     }
 
+    // FIXME: This checks node() is an Element, but below we assume that means renderer()->node() is an element.
     if (!renderer() || !is<Element>(node()))
         return false;
 
@@ -2501,12 +2502,12 @@ bool AccessibilityObject::replaceTextInRange(const String& replacementString, co
         return true;
     }
 
-    if (is<HTMLInputElement>(element)) {
-        downcast<HTMLInputElement>(element).setRangeText(replacementString, range.location, range.length, emptyString());
+    if (RefPtr input = dynamicDowncast<HTMLInputElement>(element)) {
+        input->setRangeText(replacementString, range.location, range.length, emptyString());
         return true;
     }
-    if (is<HTMLTextAreaElement>(element)) {
-        downcast<HTMLTextAreaElement>(element).setRangeText(replacementString, range.location, range.length, emptyString());
+    if (RefPtr textarea = dynamicDowncast<HTMLTextAreaElement>(element)) {
+        textarea->setRangeText(replacementString, range.location, range.length, emptyString());
         return true;
     }
 
@@ -2515,14 +2516,17 @@ bool AccessibilityObject::replaceTextInRange(const String& replacementString, co
 
 bool AccessibilityObject::insertText(const String& text)
 {
-    AXTRACE(makeString("AccessibilityObject::insertText text = ", text));
+    AXTRACE(makeString("AccessibilityObject::insertText text = "_s, text));
 
-    if (!renderer() || !is<Element>(node()))
+    if (!renderer())
         return false;
 
-    auto& element = downcast<Element>(*node());
+    RefPtr element = dynamicDowncast<Element>(node());
+    if (!element)
+        return false;
+
     // Only try to insert text if the field is in editing mode (excluding secure fields, which we do still want to try to insert into).
-    if (!isSecureField() && !element.shouldUseInputMethod())
+    if (!isSecureField() && !element->shouldUseInputMethod())
         return false;
 
     // Use Editor::insertText to mimic typing into the field.
@@ -2569,7 +2573,7 @@ static void initializeRoleMap()
         { "button"_s, AccessibilityRole::Button },
         { "caption"_s, AccessibilityRole::Caption },
         { "code"_s, AccessibilityRole::Code },
-        { "checkbox"_s, AccessibilityRole::CheckBox },
+        { "checkbox"_s, AccessibilityRole::Checkbox },
         { "complementary"_s, AccessibilityRole::LandmarkComplementary },
         { "contentinfo"_s, AccessibilityRole::LandmarkContentInfo },
         { "deletion"_s, AccessibilityRole::Deletion },
@@ -2577,7 +2581,7 @@ static void initializeRoleMap()
         { "directory"_s, AccessibilityRole::Directory },
         // The 'doc-*' roles are defined the ARIA DPUB mobile: https://www.w3.org/TR/dpub-aam-1.0
         // Editor's draft is currently at https://w3c.github.io/dpub-aam
-        { "doc-abstract"_s, AccessibilityRole::ApplicationTextGroup },
+        { "doc-abstract"_s, AccessibilityRole::TextGroup },
         { "doc-acknowledgments"_s, AccessibilityRole::LandmarkDocRegion },
         { "doc-afterword"_s, AccessibilityRole::LandmarkDocRegion },
         { "doc-appendix"_s, AccessibilityRole::LandmarkDocRegion },
@@ -2586,18 +2590,18 @@ static void initializeRoleMap()
         { "doc-bibliography"_s, AccessibilityRole::LandmarkDocRegion },
         { "doc-biblioref"_s, AccessibilityRole::WebCoreLink },
         { "doc-chapter"_s, AccessibilityRole::LandmarkDocRegion },
-        { "doc-colophon"_s, AccessibilityRole::ApplicationTextGroup },
+        { "doc-colophon"_s, AccessibilityRole::TextGroup },
         { "doc-conclusion"_s, AccessibilityRole::LandmarkDocRegion },
         { "doc-cover"_s, AccessibilityRole::Image },
-        { "doc-credit"_s, AccessibilityRole::ApplicationTextGroup },
+        { "doc-credit"_s, AccessibilityRole::TextGroup },
         { "doc-credits"_s, AccessibilityRole::LandmarkDocRegion },
-        { "doc-dedication"_s, AccessibilityRole::ApplicationTextGroup },
+        { "doc-dedication"_s, AccessibilityRole::TextGroup },
         { "doc-endnote"_s, AccessibilityRole::ListItem },
         { "doc-endnotes"_s, AccessibilityRole::LandmarkDocRegion },
-        { "doc-epigraph"_s, AccessibilityRole::ApplicationTextGroup },
+        { "doc-epigraph"_s, AccessibilityRole::TextGroup },
         { "doc-epilogue"_s, AccessibilityRole::LandmarkDocRegion },
         { "doc-errata"_s, AccessibilityRole::LandmarkDocRegion },
-        { "doc-example"_s, AccessibilityRole::ApplicationTextGroup },
+        { "doc-example"_s, AccessibilityRole::TextGroup },
         { "doc-footnote"_s, AccessibilityRole::Footnote },
         { "doc-foreword"_s, AccessibilityRole::LandmarkDocRegion },
         { "doc-glossary"_s, AccessibilityRole::LandmarkDocRegion },
@@ -2611,11 +2615,12 @@ static void initializeRoleMap()
         { "doc-part"_s, AccessibilityRole::LandmarkDocRegion },
         { "doc-preface"_s, AccessibilityRole::LandmarkDocRegion },
         { "doc-prologue"_s, AccessibilityRole::LandmarkDocRegion },
-        { "doc-pullquote"_s, AccessibilityRole::ApplicationTextGroup },
-        { "doc-qna"_s, AccessibilityRole::ApplicationTextGroup },
+        { "doc-pullquote"_s, AccessibilityRole::TextGroup },
+        { "doc-qna"_s, AccessibilityRole::TextGroup },
         { "doc-subtitle"_s, AccessibilityRole::Heading },
         { "doc-tip"_s, AccessibilityRole::DocumentNote },
         { "doc-toc"_s, AccessibilityRole::LandmarkNavigation },
+        { "emphasis"_s, AccessibilityRole::Emphasis },
         { "figure"_s, AccessibilityRole::Figure },
         { "generic"_s, AccessibilityRole::Generic },
         // The mappings for 'graphics-*' roles are defined in this spec: https://w3c.github.io/graphics-aam/
@@ -2633,7 +2638,7 @@ static void initializeRoleMap()
         { "feed"_s, AccessibilityRole::Feed },
         { "form"_s, AccessibilityRole::Form },
         { "rowheader"_s, AccessibilityRole::RowHeader },
-        { "group"_s, AccessibilityRole::ApplicationGroup },
+        { "group"_s, AccessibilityRole::Group },
         { "heading"_s, AccessibilityRole::Heading },
         // The "image" role is synonymous with the "img" role. https://w3c.github.io/aria/#image
         { "image"_s, AccessibilityRole::Image },
@@ -2676,6 +2681,7 @@ static void initializeRoleMap()
         { "subscript"_s, AccessibilityRole::Subscript },
         { "suggestion"_s, AccessibilityRole::Suggestion },
         { "superscript"_s, AccessibilityRole::Superscript },
+        { "strong"_s, AccessibilityRole::Strong },
         { "switch"_s, AccessibilityRole::Switch },
         { "tab"_s, AccessibilityRole::Tab },
         { "tablist"_s, AccessibilityRole::TabList },
@@ -2697,13 +2703,20 @@ static void initializeRoleMap()
     size_t roleLength = std::size(roles);
     for (size_t i = 0; i < roleLength; ++i) {
         gAriaRoleMap->set(roles[i].ariaRole, roles[i].webcoreRole);
-        gAriaReverseRoleMap->set(static_cast<int>(roles[i].webcoreRole), roles[i].ariaRole);
+        gAriaReverseRoleMap->set(enumToUnderlyingType(roles[i].webcoreRole), roles[i].ariaRole);
     }
 
     // Create specific synonyms for the computedRole which is used in WPT tests and the accessibility inspector.
-    gAriaReverseRoleMap->set(static_cast<int>(AccessibilityRole::Image), "image"_s);
-    gAriaReverseRoleMap->set(static_cast<int>(AccessibilityRole::TextArea), "textbox"_s);
-    gAriaReverseRoleMap->set(static_cast<int>(AccessibilityRole::Presentational), "none"_s);
+    gAriaReverseRoleMap->set(enumToUnderlyingType(AccessibilityRole::DateTime), "textbox"_s);
+    gAriaReverseRoleMap->set(enumToUnderlyingType(AccessibilityRole::TextArea), "textbox"_s);
+
+    gAriaReverseRoleMap->set(enumToUnderlyingType(AccessibilityRole::DescriptionListDetail), "definition"_s);
+    gAriaReverseRoleMap->set(enumToUnderlyingType(AccessibilityRole::DescriptionListTerm), "term"_s);
+    gAriaReverseRoleMap->set(enumToUnderlyingType(AccessibilityRole::Details), "group"_s);
+    gAriaReverseRoleMap->set(enumToUnderlyingType(AccessibilityRole::Image), "image"_s);
+    gAriaReverseRoleMap->set(enumToUnderlyingType(AccessibilityRole::ListBoxOption), "option"_s);
+    gAriaReverseRoleMap->set(enumToUnderlyingType(AccessibilityRole::MenuListOption), "option"_s);
+    gAriaReverseRoleMap->set(enumToUnderlyingType(AccessibilityRole::Presentational), "none"_s);
 }
 
 static ARIARoleMap& ariaRoleMap()
@@ -2722,10 +2735,10 @@ AccessibilityRole AccessibilityObject::ariaRoleToWebCoreRole(const String& value
 {
     if (value.isNull() || value.isEmpty())
         return AccessibilityRole::Unknown;
-
-    for (auto roleName : StringView(value).split(' ')) {
+    auto simplifiedValue = value.simplifyWhiteSpace(isASCIIWhitespace);
+    for (auto roleName : StringView(simplifiedValue).split(' ')) {
         AccessibilityRole role = ariaRoleMap().get<ASCIICaseInsensitiveStringViewHashTranslator>(roleName);
-        if (static_cast<int>(role))
+        if (enumToUnderlyingType(role))
             return role;
     }
     return AccessibilityRole::Unknown;
@@ -2737,34 +2750,44 @@ String AccessibilityObject::computedRoleString() const
     AccessibilityRole role = roleValue();
 
     if (role == AccessibilityRole::Image && accessibilityIsIgnored())
-        return reverseAriaRoleMap().get(static_cast<int>(AccessibilityRole::Presentational));
-
-    // We do not compute a role string for generic block elements with user-agent assigned roles.
-    if (role == AccessibilityRole::Group || role == AccessibilityRole::TextGroup)
-        return emptyString();
+        return reverseAriaRoleMap().get(enumToUnderlyingType(AccessibilityRole::Presentational));
 
     // We do compute a role string for block elements with author-provided roles.
-    if (role == AccessibilityRole::ApplicationTextGroup
+    if (ariaRoleAttribute() == AccessibilityRole::TextGroup
         || role == AccessibilityRole::Footnote
         || role == AccessibilityRole::GraphicsObject)
-        return reverseAriaRoleMap().get(static_cast<int>(AccessibilityRole::ApplicationGroup));
+        return reverseAriaRoleMap().get(enumToUnderlyingType(AccessibilityRole::Group));
+
+    // We do not compute a role string for generic block elements with user-agent assigned roles.
+    if (role == AccessibilityRole::TextGroup)
+        return emptyString();
 
     if (role == AccessibilityRole::GraphicsDocument)
-        return reverseAriaRoleMap().get(static_cast<int>(AccessibilityRole::Document));
+        return reverseAriaRoleMap().get(enumToUnderlyingType(AccessibilityRole::Document));
 
     if (role == AccessibilityRole::GraphicsSymbol)
-        return reverseAriaRoleMap().get(static_cast<int>(AccessibilityRole::Image));
+        return reverseAriaRoleMap().get(enumToUnderlyingType(AccessibilityRole::Image));
 
     if (role == AccessibilityRole::HorizontalRule)
-        return reverseAriaRoleMap().get(static_cast<int>(AccessibilityRole::Splitter));
+        return reverseAriaRoleMap().get(enumToUnderlyingType(AccessibilityRole::Splitter));
 
     if (role == AccessibilityRole::PopUpButton || role == AccessibilityRole::ToggleButton)
-        return reverseAriaRoleMap().get(static_cast<int>(AccessibilityRole::Button));
+        return reverseAriaRoleMap().get(enumToUnderlyingType(AccessibilityRole::Button));
 
     if (role == AccessibilityRole::LandmarkDocRegion)
-        return reverseAriaRoleMap().get(static_cast<int>(AccessibilityRole::LandmarkRegion));
+        return reverseAriaRoleMap().get(enumToUnderlyingType(AccessibilityRole::LandmarkRegion));
 
-    return reverseAriaRoleMap().get(static_cast<int>(role));
+    return reverseAriaRoleMap().get(enumToUnderlyingType(role));
+}
+
+void AccessibilityObject::updateRole()
+{
+    auto previousRole = m_role;
+    m_role = determineAccessibilityRole();
+    if (previousRole != m_role) {
+        if (auto* cache = axObjectCache())
+            cache->handleRoleChanged(*this);
+    }
 }
 
 bool AccessibilityObject::hasHighlighting() const
@@ -2802,16 +2825,17 @@ String AccessibilityObject::subrolePlatformString() const
 
 String AccessibilityObject::embeddedImageDescription() const
 {
-    if (!is<RenderImage>(renderer()))
+    CheckedPtr renderImage = dynamicDowncast<RenderImage>(renderer());
+    if (!renderImage)
         return { };
-    return downcast<RenderImage>(renderer())->accessibilityDescription();
+
+    return renderImage->accessibilityDescription();
 }
 
 // ARIA spec: User agents must not expose the aria-roledescription property if the element to which aria-roledescription is applied does not have a valid WAI-ARIA role or does not have an implicit WAI-ARIA role semantic.
 bool AccessibilityObject::supportsARIARoleDescription() const
 {
-    auto role = this->roleValue();
-    switch (role) {
+    switch (roleValue()) {
     case AccessibilityRole::Generic:
     case AccessibilityRole::Unknown:
         return false;
@@ -2824,7 +2848,7 @@ String AccessibilityObject::roleDescription() const
 {
     // aria-roledescription takes precedence over any other rule.
     if (supportsARIARoleDescription()) {
-        auto roleDescription = getAttribute(aria_roledescriptionAttr).string().trim(isASCIIWhitespace);
+        auto roleDescription = getAttributeTrimmed(aria_roledescriptionAttr);
     if (!roleDescription.isEmpty())
         return roleDescription;
     }
@@ -2841,7 +2865,7 @@ String AccessibilityObject::roleDescription() const
         return AXSuggestionRoleDescriptionText();
 #endif
 
-    return roleDescription;
+    return { };
 }
 
 bool nodeHasPresentationRole(Node* node)
@@ -2868,7 +2892,7 @@ bool AccessibilityObject::supportsPressAction() const
     if (!cache)
         return true;
 
-    auto* axObject = actionElement != element() ? cache->getOrCreate(actionElement.get()) : nullptr;
+    auto* axObject = actionElement != element() ? cache->getOrCreate(*actionElement) : nullptr;
     if (!axObject)
         return true;
 
@@ -2880,7 +2904,7 @@ bool AccessibilityObject::supportsPressAction() const
 
     Vector<RefPtr<AXCoreObject>> candidates;
     candidates.reserveInitialCapacity(std::min(static_cast<size_t>(searchLimit), axObject->children().size() + 1));
-    candidates.uncheckedAppend(axObject);
+    candidates.append(axObject);
 
     while (!candidates.isEmpty()) {
         RefPtr candidate = candidates.takeLast();
@@ -2904,7 +2928,7 @@ bool AccessibilityObject::supportsPressAction() const
         // Limit the amount of children we take. Some objects can have tens of thousands of children, so we don't want to unconditionally append `children()` to the candidate pool.
         const auto& children = candidate->children();
         if (size_t maxChildrenToTake = std::min(static_cast<size_t>(halfSearchLimit), candidatesLeftUntilLimit))
-            candidates.append(children.span().subspan(0, std::min(children.size(), maxChildrenToTake)));
+            candidates.append(children.subspan(0, std::min(children.size(), maxChildrenToTake)));
 
         // `candidates` should never be allowed to grow past `searchLimit`.
         ASSERT(searchLimit >= candidates.size());
@@ -2951,22 +2975,17 @@ String AccessibilityObject::keyShortcuts() const
 
 Element* AccessibilityObject::element() const
 {
-    Node* node = this->node();
-    if (is<Element>(node))
-        return downcast<Element>(node);
-    return nullptr;
+    return dynamicDowncast<Element>(node());
 }
 
 const RenderStyle* AccessibilityObject::style() const
 {
-    const RenderStyle* style = nullptr;
     if (auto* renderer = this->renderer())
-        style = &renderer->style();
-    if (!style) {
+        return &renderer->style();
+
         if (auto* element = this->element())
-            style = element->computedStyle();
-    }
-    return style;
+        return element->computedStyle();
+    return nullptr;
 }
 
 bool AccessibilityObject::isValueAutofillAvailable() const
@@ -2974,11 +2993,8 @@ bool AccessibilityObject::isValueAutofillAvailable() const
     if (!isNativeTextControl())
         return false;
 
-    Node* node = this->node();
-    if (!is<HTMLInputElement>(node))
-        return false;
-
-    return downcast<HTMLInputElement>(*node).isAutoFillAvailable() || downcast<HTMLInputElement>(*node).autoFillButtonType() != AutoFillButtonType::None;
+    RefPtr input = dynamicDowncast<HTMLInputElement>(node());
+    return input && (input->isAutoFillAvailable() || input->autoFillButtonType() != AutoFillButtonType::None);
 }
 
 AutoFillButtonType AccessibilityObject::valueAutofillButtonType() const
@@ -3001,8 +3017,12 @@ bool AccessibilityObject::isSelected() const
         return true;
 
     // Menu items are considered selectable by assistive technologies
-    if (isMenuItem())
-        return isFocused() || parentObjectUnignored()->activeDescendant() == this;
+    if (isMenuItem()) {
+        if (isFocused())
+            return true;
+        WeakPtr parent = parentObjectUnignored();
+        return parent && parent->activeDescendant() == this;
+    }
 
     return false;
 }
@@ -3019,7 +3039,7 @@ bool AccessibilityObject::isTabItemSelected() const
     // The ARIA spec says a tab item can also be selected if it is aria-labeled by a tabpanel
     // that has keyboard focus inside of it, or if a tabpanel in its aria-controls list has KB
     // focus inside of it.
-    auto* focusedElement = static_cast<AccessibilityObject*>(focusedUIElement());
+    auto* focusedElement = focusedUIElement();
     if (!focusedElement)
         return false;
 
@@ -3028,8 +3048,8 @@ bool AccessibilityObject::isTabItemSelected() const
         return false;
 
     auto elements = elementsFromAttribute(aria_controlsAttr);
-    for (const auto& element : elements) {
-        auto* tabPanel = cache->getOrCreate(element);
+    for (auto& element : elements) {
+        auto* tabPanel = cache->getOrCreate(element.ptr());
 
         // A tab item should only control tab panels.
         if (!tabPanel || tabPanel->roleValue() != AccessibilityRole::TabPanel)
@@ -3103,7 +3123,7 @@ bool AccessibilityObject::supportsARIAAttributes() const
         || hasAttribute(aria_relevantAttr);
 }
 
-AXCoreObject* AccessibilityObject::elementAccessibilityHitTest(const IntPoint& point) const
+AccessibilityObject* AccessibilityObject::elementAccessibilityHitTest(const IntPoint& point) const
 {
     // Send the hit test back into the sub-frame if necessary.
     if (isAttachment()) {
@@ -3111,14 +3131,14 @@ AXCoreObject* AccessibilityObject::elementAccessibilityHitTest(const IntPoint& p
         // Normalize the point for the widget's bounds.
         if (widget && widget->isLocalFrameView()) {
             if (AXObjectCache* cache = axObjectCache())
-                return cache->getOrCreate(widget)->accessibilityHitTest(IntPoint(point - widget->frameRect().location()));
+                return cache->getOrCreate(*widget)->accessibilityHitTest(IntPoint(point - widget->frameRect().location()));
         }
     }
 
     // Check if there are any mock elements that need to be handled.
     for (const auto& child : m_children) {
-        if (child->isMockObject() && child->elementRect().contains(point))
-            return child->elementAccessibilityHitTest(point);
+        if (auto* mockChild = dynamicDowncast<AccessibilityMockObject>(child.get()); mockChild && mockChild->elementRect().contains(point))
+            return mockChild->elementAccessibilityHitTest(point);
     }
 
     return const_cast<AccessibilityObject*>(this);
@@ -3130,30 +3150,11 @@ AXObjectCache* AccessibilityObject::axObjectCache() const
     return document ? document->axObjectCache() : nullptr;
 }
 
-AXCoreObject* AccessibilityObject::focusedUIElement() const
+AccessibilityObject* AccessibilityObject::focusedUIElement() const
 {
     auto* page = this->page();
     auto* axObjectCache = this->axObjectCache();
     return page && axObjectCache ? axObjectCache->focusedObjectForPage(page) : nullptr;
-}
-
-AXCoreObject::AccessibilityChildrenVector AccessibilityObject::selectedCells()
-{
-    if (!isTable())
-        return { };
-
-    AXCoreObject::AccessibilityChildrenVector selectedCells;
-    for (auto& cell : cells()) {
-        if (cell->isSelected())
-            selectedCells.append(cell);
-    }
-
-    if (auto* activeDescendant = this->activeDescendant()) {
-        if (activeDescendant->isExposedTableCell() && !selectedCells.contains(activeDescendant))
-            selectedCells.append(activeDescendant);
-    }
-
-    return selectedCells;
 }
 
 void AccessibilityObject::setSelectedRows(AccessibilityChildrenVector&& selectedRows)
@@ -3369,16 +3370,18 @@ bool AccessibilityObject::supportsExpanded() const
     if (popoverTargetElement())
         return true;
 
+    if (is<HTMLDetailsElement>(node()))
+        return true;
+
     switch (roleValue()) {
+    case AccessibilityRole::Details:
+        return true;
     case AccessibilityRole::Button:
-    case AccessibilityRole::CheckBox:
+    case AccessibilityRole::Checkbox:
     case AccessibilityRole::ColumnHeader:
     case AccessibilityRole::ComboBox:
-    case AccessibilityRole::Details:
-    case AccessibilityRole::DisclosureTriangle:
     case AccessibilityRole::GridCell:
     case AccessibilityRole::Link:
-    case AccessibilityRole::ListBox:
     case AccessibilityRole::MenuItem:
     case AccessibilityRole::MenuItemCheckbox:
     case AccessibilityRole::MenuItemRadio:
@@ -3411,8 +3414,8 @@ double AccessibilityObject::loadingProgress() const
 
 bool AccessibilityObject::isExpanded() const
 {
-    if (is<HTMLDetailsElement>(node()))
-        return downcast<HTMLDetailsElement>(node())->isOpen();
+    if (RefPtr details = dynamicDowncast<HTMLDetailsElement>(node()))
+        return details->hasAttribute(openAttr);
 
     // Summary element should use its details parent's expanded status.
     if (isSummary()) {
@@ -3423,7 +3426,7 @@ bool AccessibilityObject::isExpanded() const
     }
 
     if (supportsExpanded()) {
-        if (WeakPtr popoverTargetElement = this->popoverTargetElement())
+        if (RefPtr popoverTargetElement = this->popoverTargetElement())
             return popoverTargetElement->isPopoverShowing();
         return equalLettersIgnoringASCIICase(getAttribute(aria_expandedAttr), "true"_s);
     }
@@ -3434,7 +3437,7 @@ bool AccessibilityObject::isExpanded() const
 bool AccessibilityObject::supportsChecked() const
 {
     switch (roleValue()) {
-    case AccessibilityRole::CheckBox:
+    case AccessibilityRole::Checkbox:
     case AccessibilityRole::MenuItemCheckbox:
     case AccessibilityRole::MenuItemRadio:
     case AccessibilityRole::RadioButton:
@@ -3452,7 +3455,6 @@ bool AccessibilityObject::supportsRowCountChange() const
     case AccessibilityRole::TreeGrid:
     case AccessibilityRole::Grid:
     case AccessibilityRole::Table:
-    case AccessibilityRole::Browser:
         return true;
     default:
         return false;
@@ -3857,6 +3859,11 @@ void AccessibilityObject::setLastKnownIsIgnoredValue(bool isIgnored)
     m_lastKnownIsIgnoredValue = isIgnored ? AccessibilityObjectInclusion::IgnoreObject : AccessibilityObjectInclusion::IncludeObject;
 }
 
+bool AccessibilityObject::ignoredFromPresentationalRole() const
+{
+    return roleValue() == AccessibilityRole::Presentational || inheritsPresentationalRole();
+}
+
 bool AccessibilityObject::pressedIsPresent() const
 {
     return !getAttribute(aria_pressedAttr).isEmpty();
@@ -3864,7 +3871,7 @@ bool AccessibilityObject::pressedIsPresent() const
 
 TextIteratorBehaviors AccessibilityObject::textIteratorBehaviorForTextRange() const
 {
-    TextIteratorBehaviors behaviors { TextIteratorBehavior::IgnoresStyleVisibility };
+    TextIteratorBehaviors behaviors { TextIteratorBehavior::IgnoresStyleVisibility, TextIteratorBehavior::IgnoresFullSizeKana };
 
 #if USE(ATSPI)
     // We need to emit replaced elements for ATSPI, and present
@@ -3873,6 +3880,11 @@ TextIteratorBehaviors AccessibilityObject::textIteratorBehaviorForTextRange() co
 #endif
 
     return behaviors;
+}
+
+TextIterator AccessibilityObject::textIteratorIgnoringFullSizeKana(const SimpleRange& range)
+{
+    return TextIterator(range, { TextIteratorBehavior::IgnoresFullSizeKana });
 }
 
 AccessibilityRole AccessibilityObject::buttonRoleType() const
@@ -3891,12 +3903,34 @@ AccessibilityRole AccessibilityObject::buttonRoleType() const
 
 bool AccessibilityObject::isFileUploadButton() const
 {
-    return is<HTMLInputElement>(node()) && downcast<HTMLInputElement>(*node()).isFileUpload();
+    RefPtr input = dynamicDowncast<HTMLInputElement>(node());
+    return input && input->isFileUpload();
 }
 
 bool AccessibilityObject::accessibilityIsIgnoredByDefault() const
 {
     return defaultObjectInclusion() == AccessibilityObjectInclusion::IgnoreObject;
+}
+
+bool AccessibilityObject::isARIAHidden() const
+{
+    if (isFocused())
+        return false;
+
+    auto* node = this->node();
+    auto* element = dynamicDowncast<Element>(node);
+    AtomString tag = element ? element->localName() : nullAtom();
+    // https://github.com/w3c/aria/pull/1880
+    // To prevent authors from hiding all content from assistive technology users, do not respect
+    // aria-hidden on html, body, or document-root svg elements.
+    if (tag == bodyTag || tag == htmlTag || (tag == SVGNames::svgTag && !element->parentNode()))
+        return false;
+
+    if (auto* assignedSlot = node ? node->assignedSlot() : nullptr) {
+        if (equalLettersIgnoringASCIICase(assignedSlot->attributeWithDefaultARIA(aria_hiddenAttr), "true"_s))
+            return true;
+    }
+    return element && equalLettersIgnoringASCIICase(element->attributeWithDefaultARIA(aria_hiddenAttr), "true"_s);
 }
 
 // ARIA component of hidden definition.
@@ -3906,18 +3940,14 @@ bool AccessibilityObject::isAXHidden() const
     if (isFocused())
         return false;
 
-    return Accessibility::findAncestor<AccessibilityObject>(*this, true, [] (const AccessibilityObject& object) {
-        return equalLettersIgnoringASCIICase(object.getAttribute(aria_hiddenAttr), "true"_s) && !object.isFocused();
+    return Accessibility::findAncestor<AccessibilityObject>(*this, true, [] (const auto& object) {
+        return object.isARIAHidden();
     }) != nullptr;
 }
 
-// DOM component of hidden definition.
-// https://www.w3.org/TR/wai-aria/#dfn-hidden
 bool AccessibilityObject::isDOMHidden() const
 {
-    if (auto* style = this->style())
-        return style->display() == DisplayType::None || style->visibility() != Visibility::Visible;
-        return true;
+    return WebCore::isDOMHidden(style());
 }
 
 bool AccessibilityObject::isShowingValidationMessage() const
@@ -3943,7 +3973,7 @@ AccessibilityObjectInclusion AccessibilityObject::defaultObjectInclusion() const
     if (auto* style = this->style()) {
         if (style->effectiveInert())
             return AccessibilityObjectInclusion::IgnoreObject;
-        if (style->visibility() != Visibility::Visible) {
+        if (style->usedVisibility() != Visibility::Visible) {
             // aria-hidden is meant to override visibility as the determinant in AX hierarchy inclusion.
             if (equalLettersIgnoringASCIICase(getAttribute(aria_hiddenAttr), "false"_s))
                 return AccessibilityObjectInclusion::DefaultBehavior;
@@ -3953,17 +3983,24 @@ AccessibilityObjectInclusion AccessibilityObject::defaultObjectInclusion() const
     }
 
     bool useParentData = !m_isIgnoredFromParentData.isNull();
-    if (useParentData ? m_isIgnoredFromParentData.isAXHidden : isAXHidden())
+    if (useParentData && (m_isIgnoredFromParentData.isAXHidden || m_isIgnoredFromParentData.isPresentationalChildOfAriaRole))
         return AccessibilityObjectInclusion::IgnoreObject;
 
-    if (useParentData ? m_isIgnoredFromParentData.isPresentationalChildOfAriaRole : isPresentationalChildOfAriaRole())
+    if (isARIAHidden())
+        return AccessibilityObjectInclusion::IgnoreObject;
+
+    bool ignoreARIAHidden = isFocused();
+    if (Accessibility::findAncestor<AccessibilityObject>(*this, false, [&] (const auto& object) {
+        return (!ignoreARIAHidden && object.isARIAHidden()) || object.ariaRoleHasPresentationalChildren() || !object.canHaveChildren();
+    }))
         return AccessibilityObjectInclusion::IgnoreObject;
 
     // Include <dialog> elements and elements with role="dialog".
     if (roleValue() == AccessibilityRole::ApplicationDialog)
         return AccessibilityObjectInclusion::IncludeObject;
-
+#if !PLATFORM(JAVA)
     return accessibilityPlatformIncludesObject();
+#endif
 }
 
 bool AccessibilityObject::accessibilityIsIgnored() const
@@ -4014,48 +4051,37 @@ bool AccessibilityObject::accessibilityIsIgnoredWithoutCache(AXObjectCache* cach
     return ignored;
 }
 
-Vector<Element*> AccessibilityObject::elementsFromAttribute(const QualifiedName& attribute) const
+Vector<Ref<Element>> AccessibilityObject::elementsFromAttribute(const QualifiedName& attribute) const
 {
-    Node* node = this->node();
-    if (!node || !node->isElementNode())
+    RefPtr element = dynamicDowncast<Element>(node());
+    if (!element)
         return { };
 
-    auto& element = downcast<Element>(*node);
-    if (document()->settings().ariaReflectionForElementReferencesEnabled()) {
         if (Element::isElementReflectionAttribute(document()->settings(), attribute)) {
-            if (auto reflectedElement = element.getElementAttribute(attribute)) {
-                Vector<Element*> elements;
-                elements.append(reflectedElement);
+            if (RefPtr reflectedElement = element->getElementAttribute(attribute)) {
+                Vector<Ref<Element>> elements;
+                elements.append(reflectedElement.releaseNonNull());
                 return elements;
             }
-        } else if (Element::isElementsArrayReflectionAttribute(document()->settings(), attribute)) {
-            if (auto reflectedElements = element.getElementsArrayAttribute(attribute)) {
-                return WTF::map(reflectedElements.value(), [](RefPtr<Element> element) -> Element* {
-                    return element.get();
-                });
-            }
+    } else if (Element::isElementsArrayReflectionAttribute(attribute)) {
+            if (auto reflectedElements = element->getElementsArrayAttribute(attribute)) {
+            return reflectedElements.value();
         }
     }
 
     auto& idsString = getAttribute(attribute);
     if (idsString.isEmpty()) {
-        if (auto* defaultARIA = element.customElementDefaultARIAIfExists()) {
-            return WTF::map(defaultARIA->elementsForAttribute(element, attribute), [](RefPtr<Element> element) -> Element* {
-                return element.get();
-            });
+        if (auto* defaultARIA = element->customElementDefaultARIAIfExists()) {
+            return defaultARIA->elementsForAttribute(*element, attribute);
         }
         return { };
     }
 
-    Vector<Element*> elements;
-    auto& treeScope = node->treeScope();
-    SpaceSplitString spaceSplitString(idsString, SpaceSplitString::ShouldFoldCase::No);
-    size_t length = spaceSplitString.size();
-    for (size_t i = 0; i < length; ++i) {
-        if (auto* element = treeScope.getElementById(spaceSplitString[i]))
-            elements.append(element);
-    }
-    return elements;
+    auto& treeScope = element->treeScope();
+    SpaceSplitString ids(idsString, SpaceSplitString::ShouldFoldCase::No);
+    return WTF::compactMap(ids, [&](auto& id) {
+        return treeScope.getElementById(id);
+    });
 }
 
 #if PLATFORM(COCOA)
@@ -4081,35 +4107,10 @@ AccessibilityObject* AccessibilityObject::radioGroupAncestor() const
     });
 }
 
-String AccessibilityObject::documentURI() const
-{
-    if (auto* document = this->document())
-        return document->documentURI();
-    return String();
-}
-
-String AccessibilityObject::documentEncoding() const
-{
-    if (auto* document = this->document())
-        return document->encoding();
-    return String();
-}
-
-PAL::SessionID AccessibilityObject::sessionID() const
-{
-    if (auto* document = topDocument()) {
-        if (auto* page = document->page())
-            return page->sessionID();
-    }
-    return PAL::SessionID(PAL::SessionID::SessionConstants::HashTableEmptyValueID);
-}
-
 AtomString AccessibilityObject::tagName() const
 {
-    if (Element* element = this->element())
-        return element->localName();
-
-    return nullAtom();
+    auto* element = this->element();
+    return element ? element->localName() : nullAtom();
 }
 
 bool AccessibilityObject::isStyleFormatGroup() const
@@ -4156,8 +4157,8 @@ bool AccessibilityObject::isContainedBySecureField() const
     if (ariaRoleAttribute() != AccessibilityRole::Unknown)
         return false;
 
-    Element* element = node->shadowHost();
-    return is<HTMLInputElement>(element) && downcast<HTMLInputElement>(*element).isSecureField();
+    RefPtr input = dynamicDowncast<HTMLInputElement>(node->shadowHost());
+    return input && input->isSecureField();
 }
 
 AXCoreObject::AccessibilityChildrenVector AccessibilityObject::ariaSelectedRows()
@@ -4187,11 +4188,9 @@ AXCoreObject::AccessibilityChildrenVector AccessibilityObject::ariaSelectedRows(
         }
     };
 
-    if (isTree()) {
-        AccessibilityChildrenVector allRows;
-        ariaTreeRows(allRows);
-        rowsIteration(allRows);
-    } else if (auto* axTable = dynamicDowncast<AccessibilityTable>(this)) {
+    if (isTree())
+        rowsIteration(ariaTreeRows());
+    else if (auto* axTable = dynamicDowncast<AccessibilityTable>(this)) {
         if (axTable->supportsSelectedRows() && axTable->isExposable())
             rowsIteration(axTable->rows());
     }
@@ -4200,77 +4199,95 @@ AXCoreObject::AccessibilityChildrenVector AccessibilityObject::ariaSelectedRows(
 
 AXCoreObject::AccessibilityChildrenVector AccessibilityObject::ariaListboxSelectedChildren()
 {
-    bool isMulti = isMultiSelectable();
-
     AccessibilityChildrenVector result;
+    bool isMulti = isMultiSelectable();
     for (const auto& child : children()) {
-        auto* axChild = dynamicDowncast<AccessibilityObject>(child.get());
-        // Every child should have aria-role option, and if so, check for selected attribute/state.
-        if (!axChild || axChild->ariaRoleAttribute() != AccessibilityRole::ListBoxOption)
+        if (!child->isListBoxOption() || !child->isSelected())
             continue;
 
-        if (axChild->isSelected() || axChild->isActiveDescendantOfFocusedContainer()) {
-            result.append(axChild);
+        result.append(child);
             if (!isMulti)
                 return result;
         }
-    }
     return result;
 }
 
-AXCoreObject::AccessibilityChildrenVector AccessibilityObject::selectedChildren()
+bool AccessibilityObject::canHaveSelectedChildren() const
+{
+    switch (roleValue()) {
+    // These roles are containers whose children support aria-selected:
+    case AccessibilityRole::Grid:
+    case AccessibilityRole::ListBox:
+    case AccessibilityRole::TabList:
+    case AccessibilityRole::Tree:
+    case AccessibilityRole::TreeGrid:
+    case AccessibilityRole::List:
+    // These roles are containers whose children are treated as selected by assistive
+    // technologies. We can get the "selected" item via aria-activedescendant or the
+    // focused element.
+    case AccessibilityRole::Menu:
+    case AccessibilityRole::MenuBar:
+    case AccessibilityRole::ComboBox:
+#if USE(ATSPI)
+    case AccessibilityRole::MenuListPopup:
+#endif
+        return true;
+    default:
+        return false;
+    }
+}
+
+std::optional<AXCoreObject::AccessibilityChildrenVector> AccessibilityObject::selectedChildren()
 {
     if (!canHaveSelectedChildren())
-        return { };
+        return std::nullopt;
 
-    AccessibilityChildrenVector result;
     switch (roleValue()) {
+    case AccessibilityRole::ComboBox:
+        if (auto* descendant = activeDescendant())
+            return { { descendant } };
+        break;
     case AccessibilityRole::ListBox:
-        // native list boxes would be AccessibilityListBoxes, so only check for aria list boxes
-        result = ariaListboxSelectedChildren();
+        // Native list boxes would be AccessibilityListBoxes, so only check for aria list boxes.
+        return ariaListboxSelectedChildren();
         break;
     case AccessibilityRole::Grid:
     case AccessibilityRole::Tree:
     case AccessibilityRole::TreeGrid:
-        result = ariaSelectedRows();
+        return ariaSelectedRows();
         break;
     case AccessibilityRole::TabList:
         if (auto* selectedTab = selectedTabItem())
-            result = { selectedTab };
+            return { { selectedTab } };
         break;
-    case AccessibilityRole::List:
-        if (auto* selectedListItemChild = selectedListItem())
-            result = { selectedListItemChild };
+    case AccessibilityRole::List: {
+        auto selectedListItems = this->selectedListItems();
+        if (!selectedListItems.isEmpty())
+            return selectedListItems;
         break;
+    }
     case AccessibilityRole::Menu:
     case AccessibilityRole::MenuBar:
         if (auto* descendant = activeDescendant())
-            result = { descendant };
-        else if (auto* focusedElement = dynamicDowncast<AccessibilityObject>(focusedUIElement()))
-            result = { focusedElement };
+            return { { descendant } };
+        else if (auto* focusedElement = focusedUIElement())
+            return { { focusedElement } };
         break;
     default:
         ASSERT_NOT_REACHED();
         break;
     }
-    return result;
+    return std::nullopt;
 }
 
-AccessibilityObject* AccessibilityObject::selectedListItem()
+AXCoreObject::AccessibilityChildrenVector AccessibilityObject::selectedListItems()
 {
+    AccessibilityChildrenVector selectedListItems;
     for (const auto& child : children()) {
-        if (!child->isListItem())
-            continue;
-
-        auto* axObject = dynamicDowncast<AccessibilityObject>(child.get());
-        if (!axObject)
-            continue;
-
-        if (axObject->isSelected() || axObject->isActiveDescendantOfFocusedContainer())
-            return axObject;
+        if (child->isListItem() && child->isSelected())
+            selectedListItems.append(child);
     }
-
-    return nullptr;
+    return selectedListItems;
 }
 
 AXCoreObject::AccessibilityChildrenVector AccessibilityObject::relatedObjects(AXRelationType relationType) const
@@ -4288,7 +4305,7 @@ AXCoreObject::AccessibilityChildrenVector AccessibilityObject::relatedObjects(AX
 bool AccessibilityObject::shouldFocusActiveDescendant() const
 {
     switch (ariaRoleAttribute()) {
-    case AccessibilityRole::ApplicationGroup:
+    case AccessibilityRole::Group:
     case AccessibilityRole::ListBox:
     case AccessibilityRole::Menu:
     case AccessibilityRole::MenuBar:
@@ -4298,7 +4315,6 @@ bool AccessibilityObject::shouldFocusActiveDescendant() const
     case AccessibilityRole::Meter:
     case AccessibilityRole::ProgressIndicator:
     case AccessibilityRole::Toolbar:
-    case AccessibilityRole::Outline:
     case AccessibilityRole::Tree:
     case AccessibilityRole::Grid:
     /* FIXME: replace these with actual roles when they are added to AccessibilityRole
@@ -4312,15 +4328,6 @@ bool AccessibilityObject::shouldFocusActiveDescendant() const
     default:
         return false;
     }
-}
-
-AccessibilityObject* AccessibilityObject::activeDescendant() const
-{
-    auto activeDescendants = relatedObjects(AXRelationType::ActiveDescendant);
-    ASSERT(activeDescendants.size() <= 1);
-    if (!activeDescendants.isEmpty())
-        return dynamicDowncast<AccessibilityObject>(activeDescendants[0].get());
-    return nullptr;
 }
 
 bool AccessibilityObject::isActiveDescendantOfFocusedContainer() const
@@ -4348,13 +4355,6 @@ bool AccessibilityObject::ariaRoleHasPresentationalChildren() const
     }
 }
 
-bool AccessibilityObject::isPresentationalChildOfAriaRole() const
-{
-    return Accessibility::findAncestor(*this, false, [] (const auto& ancestor) {
-        return ancestor.ariaRoleHasPresentationalChildren();
-    });
-}
-
 void AccessibilityObject::setIsIgnoredFromParentDataForChild(AccessibilityObject* child)
 {
     if (!child)
@@ -4362,13 +4362,24 @@ void AccessibilityObject::setIsIgnoredFromParentDataForChild(AccessibilityObject
 
     AccessibilityIsIgnoredFromParentData result = AccessibilityIsIgnoredFromParentData(this);
     if (!m_isIgnoredFromParentData.isNull()) {
-        result.isAXHidden = (m_isIgnoredFromParentData.isAXHidden || equalLettersIgnoringASCIICase(child->getAttribute(aria_hiddenAttr), "true"_s)) && !child->isFocused();
+        result.isAXHidden = (m_isIgnoredFromParentData.isAXHidden || child->isARIAHidden()) && !child->isFocused();
         result.isPresentationalChildOfAriaRole = m_isIgnoredFromParentData.isPresentationalChildOfAriaRole || ariaRoleHasPresentationalChildren();
         result.isDescendantOfBarrenParent = m_isIgnoredFromParentData.isDescendantOfBarrenParent || !canHaveChildren();
     } else {
-        result.isAXHidden = child->isAXHidden();
-        result.isPresentationalChildOfAriaRole = child->isPresentationalChildOfAriaRole();
-        result.isDescendantOfBarrenParent = child->isDescendantOfBarrenParent();
+        if (child->isARIAHidden())
+            result.isAXHidden = true;
+
+        bool ignoreARIAHidden = child->isFocused();
+        for (auto* object = child->parentObject(); object; object = object->parentObject()) {
+            if (!result.isAXHidden && !ignoreARIAHidden && object->isARIAHidden())
+                result.isAXHidden = true;
+
+            if (!result.isPresentationalChildOfAriaRole && object->ariaRoleHasPresentationalChildren())
+                result.isPresentationalChildOfAriaRole = true;
+
+            if (!result.isDescendantOfBarrenParent && !object->canHaveChildren())
+                result.isDescendantOfBarrenParent = true;
+    }
     }
 
     child->setIsIgnoredFromParentData(result);
@@ -4386,6 +4397,17 @@ String AccessibilityObject::outerHTML() const
     return element ? element->outerHTML() : String();
 }
 
+bool AccessibilityObject::ignoredByRowAncestor() const
+{
+    auto* ancestor = Accessibility::findAncestor<AccessibilityObject>(*this, false, [] (const AccessibilityObject& ancestor) {
+        // If an object has a table cell ancestor (before a table row), that is a cell's contents, so don't ignore it.
+        // Similarly, if an object has a table ancestor (before a row), that could be a row, row group or other container, so don't ignore it.
+        return ancestor.isTableCell() || ancestor.isTableRow() || ancestor.isTable();
+    });
+
+    return ancestor && ancestor->isTableRow();
+}
+
 namespace Accessibility {
 
 #if !PLATFORM(MAC) && !USE(ATSPI)
@@ -4396,281 +4418,7 @@ PlatformRoleMap createPlatformRoleMap() { return PlatformRoleMap(); }
 String roleToPlatformString(AccessibilityRole role)
 {
     static NeverDestroyed<PlatformRoleMap> roleMap = createPlatformRoleMap();
-    return roleMap->get(static_cast<unsigned>(role));
-}
-
-// This function determines if the given `axObject` is a radio button part of a different ad-hoc radio group
-// than `referenceObject`, where ad-hoc radio group membership is determined by comparing `name` attributes.
-static bool isRadioButtonInDifferentAdhocGroup(RefPtr<AXCoreObject> axObject, AXCoreObject* referenceObject)
-{
-    if (!axObject || !axObject->isRadioButton())
-        return false;
-
-    // If the `referenceObject` is not a radio button and this `axObject` is, their radio group membership is different because
-    // `axObject` belongs to a group and `referenceObject` doesn't.
-    if (!referenceObject || !referenceObject->isRadioButton())
-        return true;
-
-    return axObject->attributeValue("name"_s) != referenceObject->attributeValue("name"_s);
-}
-
-static bool isAccessibilityObjectSearchMatchAtIndex(RefPtr<AXCoreObject> axObject, const AccessibilitySearchCriteria& criteria, size_t index)
-{
-    switch (criteria.searchKeys[index]) {
-    case AccessibilitySearchKey::AnyType:
-        // The AccessibilitySearchKey::AnyType matches any non-null AccessibilityObject.
-        return true;
-    case AccessibilitySearchKey::Article:
-        return axObject->roleValue() == AccessibilityRole::DocumentArticle;
-    case AccessibilitySearchKey::BlockquoteSameLevel:
-        return criteria.startObject
-            && axObject->isBlockquote()
-            && axObject->blockquoteLevel() == criteria.startObject->blockquoteLevel();
-    case AccessibilitySearchKey::Blockquote:
-        return axObject->isBlockquote();
-    case AccessibilitySearchKey::BoldFont:
-        return axObject->hasBoldFont();
-    case AccessibilitySearchKey::Button:
-        return axObject->isButton();
-    case AccessibilitySearchKey::CheckBox:
-        return axObject->isCheckbox();
-    case AccessibilitySearchKey::Control:
-        return axObject->isControl();
-    case AccessibilitySearchKey::DifferentType:
-        return criteria.startObject
-            && axObject->roleValue() != criteria.startObject->roleValue();
-    case AccessibilitySearchKey::FontChange:
-        return criteria.startObject
-            && !axObject->hasSameFont(*criteria.startObject);
-    case AccessibilitySearchKey::FontColorChange:
-        return criteria.startObject
-            && !axObject->hasSameFontColor(*criteria.startObject);
-    case AccessibilitySearchKey::Frame:
-        return axObject->isWebArea();
-    case AccessibilitySearchKey::Graphic:
-        return axObject->isImage();
-    case AccessibilitySearchKey::HeadingLevel1:
-        return axObject->headingLevel() == 1;
-    case AccessibilitySearchKey::HeadingLevel2:
-        return axObject->headingLevel() == 2;
-    case AccessibilitySearchKey::HeadingLevel3:
-        return axObject->headingLevel() == 3;
-    case AccessibilitySearchKey::HeadingLevel4:
-        return axObject->headingLevel() == 4;
-    case AccessibilitySearchKey::HeadingLevel5:
-        return axObject->headingLevel() == 5;
-    case AccessibilitySearchKey::HeadingLevel6:
-        return axObject->headingLevel() == 6;
-    case AccessibilitySearchKey::HeadingSameLevel:
-        return criteria.startObject
-            && axObject->isHeading()
-            && axObject->headingLevel() == criteria.startObject->headingLevel();
-    case AccessibilitySearchKey::Heading:
-        return axObject->isHeading();
-    case AccessibilitySearchKey::Highlighted:
-        return axObject->hasHighlighting();
-    case AccessibilitySearchKey::KeyboardFocusable:
-        return axObject->isKeyboardFocusable();
-    case AccessibilitySearchKey::ItalicFont:
-        return axObject->hasItalicFont();
-    case AccessibilitySearchKey::Landmark:
-        return axObject->isLandmark();
-    case AccessibilitySearchKey::Link: {
-        bool isLink = axObject->isLink();
-#if PLATFORM(IOS_FAMILY)
-        if (!isLink)
-            isLink = axObject->isDescendantOfRole(AccessibilityRole::WebCoreLink);
-#endif
-        return isLink;
-    }
-    case AccessibilitySearchKey::List:
-        return axObject->isList();
-    case AccessibilitySearchKey::LiveRegion:
-        return axObject->supportsLiveRegion();
-    case AccessibilitySearchKey::MisspelledWord:
-        return axObject->hasMisspelling();
-    case AccessibilitySearchKey::Outline:
-        return axObject->isTree();
-    case AccessibilitySearchKey::PlainText:
-        return axObject->hasPlainText();
-    case AccessibilitySearchKey::RadioGroup:
-        return axObject->isRadioGroup() || isRadioButtonInDifferentAdhocGroup(axObject, criteria.startObject);
-    case AccessibilitySearchKey::SameType:
-        return criteria.startObject
-            && axObject->roleValue() == criteria.startObject->roleValue();
-    case AccessibilitySearchKey::StaticText:
-        return axObject->isStaticText();
-    case AccessibilitySearchKey::StyleChange:
-        return criteria.startObject
-            && !axObject->hasSameStyle(*criteria.startObject);
-    case AccessibilitySearchKey::TableSameLevel:
-        return criteria.startObject
-            && axObject->isTable() && axObject->isExposable()
-            && axObject->tableLevel() == criteria.startObject->tableLevel();
-    case AccessibilitySearchKey::Table:
-        return axObject->isTable() && axObject->isExposable();
-    case AccessibilitySearchKey::TextField:
-        return axObject->isTextControl();
-    case AccessibilitySearchKey::Underline:
-        return axObject->hasUnderline();
-    case AccessibilitySearchKey::UnvisitedLink:
-        return axObject->isUnvisited();
-    case AccessibilitySearchKey::VisitedLink:
-        return axObject->isVisited();
-    default:
-        return false;
-    }
-}
-
-static bool isAccessibilityObjectSearchMatch(RefPtr<AXCoreObject> axObject, const AccessibilitySearchCriteria& criteria)
-{
-    if (!axObject)
-        return false;
-
-    size_t length = criteria.searchKeys.size();
-    for (size_t i = 0; i < length; ++i) {
-        if (isAccessibilityObjectSearchMatchAtIndex(axObject, criteria, i)) {
-            if (criteria.visibleOnly && !axObject->isOnScreen())
-                return false;
-            return true;
-        }
-    }
-    return false;
-}
-
-static bool isAccessibilityTextSearchMatch(RefPtr<AXCoreObject> axObject, const AccessibilitySearchCriteria& criteria)
-{
-    if (!axObject)
-        return false;
-
-    // If text is empty we return true.
-    if (criteria.searchText.isEmpty())
-        return true;
-
-    return containsPlainText(axObject->title(), criteria.searchText, CaseInsensitive)
-        || containsPlainText(axObject->description(), criteria.searchText, CaseInsensitive)
-        || containsPlainText(axObject->stringValue(), criteria.searchText, CaseInsensitive);
-}
-
-static bool objectMatchesSearchCriteriaWithResultLimit(RefPtr<AXCoreObject> object, const AccessibilitySearchCriteria& criteria, AXCoreObject::AccessibilityChildrenVector& results)
-{
-    if (isAccessibilityObjectSearchMatch(object, criteria) && isAccessibilityTextSearchMatch(object, criteria)) {
-        results.append(object);
-
-        // Enough results were found to stop searching.
-        if (results.size() >= criteria.resultsLimit)
-            return true;
-    }
-
-    return false;
-}
-
-static void appendChildrenToArray(RefPtr<AXCoreObject> object, bool isForward, RefPtr<AXCoreObject> startObject, AccessibilityObject::AccessibilityChildrenVector& results)
-{
-    // A table's children includes elements whose own children are also the table's children (due to the way the Mac exposes tables).
-    // The rows from the table should be queried, since those are direct descendants of the table, and they contain content.
-    const auto& searchChildren = object->isTable() && object->isExposable() ? object->rows() : object->children();
-
-    size_t childrenSize = searchChildren.size();
-
-    size_t startIndex = isForward ? childrenSize : 0;
-    size_t endIndex = isForward ? 0 : childrenSize;
-
-    // If the startObject is ignored, we should use an accessible sibling as a start element instead.
-    if (startObject && startObject->accessibilityIsIgnored() && startObject->isDescendantOfObject(object.get())) {
-        RefPtr<AXCoreObject> parentObject = startObject->parentObject();
-        // Go up the parent chain to find the highest ancestor that's also being ignored.
-        while (parentObject && parentObject->accessibilityIsIgnored()) {
-            if (parentObject == object)
-                break;
-            startObject = parentObject;
-            parentObject = parentObject->parentObject();
-        }
-
-        // We should only ever hit this case with a live object (not an isolated object), as it would require startObject to be ignored,
-        // and we should never have created an isolated object from an ignored live object.
-        ASSERT(is<AccessibilityObject>(startObject));
-        auto* newStartObject = dynamicDowncast<AccessibilityObject>(startObject.get());
-        // Get the un-ignored sibling based on the search direction, and update the searchPosition.
-        while (newStartObject && newStartObject->accessibilityIsIgnored())
-            newStartObject = isForward ? newStartObject->previousSibling() : newStartObject->nextSibling();
-        startObject = newStartObject;
-    }
-
-    size_t searchPosition = startObject ? searchChildren.find(startObject) : notFound;
-
-    if (searchPosition != notFound) {
-        if (isForward)
-            endIndex = searchPosition + 1;
-        else
-            endIndex = searchPosition;
-    }
-
-    // This is broken into two statements so that it's easier read.
-    if (isForward) {
-        for (size_t i = startIndex; i > endIndex; i--)
-            appendAccessibilityObject(searchChildren.at(i - 1), results);
-    } else {
-        for (size_t i = startIndex; i < endIndex; i++)
-            appendAccessibilityObject(searchChildren.at(i), results);
-    }
-}
-
-void findMatchingObjects(const AccessibilitySearchCriteria& criteria, AXCoreObject::AccessibilityChildrenVector& results)
-{
-    AXTRACE("Accessibility::findMatchingObjects"_s);
-    AXLOG(criteria);
-
-    // This search algorithm only searches the elements before/after the starting object.
-    // It does this by stepping up the parent chain and at each level doing a DFS.
-
-    // If there's no start object, it means we want to search everything.
-    RefPtr<AXCoreObject> startObject = criteria.startObject;
-    if (!startObject)
-        startObject = criteria.anchorObject;
-
-    bool isForward = criteria.searchDirection == AccessibilitySearchDirection::Next;
-
-    // The first iteration of the outer loop will examine the children of the start object for matches. However, when
-    // iterating backwards, the start object children should not be considered, so the loop is skipped ahead. We make an
-    // exception when no start object was specified because we want to search everything regardless of search direction.
-    RefPtr<AXCoreObject> previousObject;
-    if (!isForward && startObject != criteria.anchorObject) {
-        previousObject = startObject;
-        startObject = startObject->parentObjectUnignored();
-    }
-
-    // The outer loop steps up the parent chain each time (unignored is important here because otherwise elements would be searched twice)
-    for (auto* stopSearchElement = criteria.anchorObject->parentObjectUnignored(); startObject && startObject != stopSearchElement; startObject = startObject->parentObjectUnignored()) {
-        // Only append the children after/before the previous element, so that the search does not check elements that are
-        // already behind/ahead of start element.
-        AXCoreObject::AccessibilityChildrenVector searchStack;
-        if (!criteria.immediateDescendantsOnly || startObject == criteria.anchorObject)
-            appendChildrenToArray(startObject, isForward, previousObject, searchStack);
-
-        // This now does a DFS at the current level of the parent.
-        while (!searchStack.isEmpty()) {
-            auto searchObject = searchStack.last();
-            searchStack.removeLast();
-
-            if (objectMatchesSearchCriteriaWithResultLimit(searchObject, criteria, results))
-                break;
-
-            if (!criteria.immediateDescendantsOnly)
-                appendChildrenToArray(searchObject, isForward, nullptr, searchStack);
-        }
-
-        if (results.size() >= criteria.resultsLimit)
-            break;
-
-        // When moving backwards, the parent object needs to be checked, because technically it's "before" the starting element.
-        if (!isForward && startObject != criteria.anchorObject && objectMatchesSearchCriteriaWithResultLimit(startObject, criteria, results))
-            break;
-
-        previousObject = startObject;
-    }
-
-    AXLOG(results);
+    return roleMap->get(enumToUnderlyingType(role));
 }
 
 } // namespace Accessibility

@@ -53,6 +53,8 @@ public:
     static Ref<DocumentTimeline> create(Document&);
     static Ref<DocumentTimeline> create(Document&, DocumentTimelineOptions&&);
 
+    virtual ~DocumentTimeline();
+
     Document* document() const { return m_document.get(); }
 
     std::optional<Seconds> currentTime() override;
@@ -66,12 +68,14 @@ public:
     void detachFromDocument();
 
     void enqueueAnimationEvent(AnimationEventBase&);
+    bool hasPendingAnimationEventForAnimation(const WebAnimation&) const;
 
     enum class ShouldUpdateAnimationsAndSendEvents : bool { No, Yes };
     ShouldUpdateAnimationsAndSendEvents documentWillUpdateAnimationsAndSendEvents();
     void removeReplacedAnimations();
     AnimationEvents prepareForPendingAnimationEventsDispatch();
     void documentDidUpdateAnimationsAndSendEvents();
+    void styleOriginatedAnimationsWereCreated();
 
     WEBCORE_EXPORT Seconds animationInterval() const;
     void suspendAnimations();
@@ -87,6 +91,8 @@ public:
 
 private:
     DocumentTimeline(Document&, Seconds);
+
+    bool isDocumentTimeline() const final { return true; }
 
     DocumentTimelinesController* controller() const;
     void applyPendingAcceleratedAnimations();

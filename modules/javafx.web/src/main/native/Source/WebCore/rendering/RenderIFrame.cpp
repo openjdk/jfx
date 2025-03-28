@@ -35,19 +35,22 @@
 #include "RenderStyleInlines.h"
 #include "RenderView.h"
 #include "Settings.h"
-#include <wtf/IsoMallocInlines.h>
 #include <wtf/StackStats.h>
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
-WTF_MAKE_ISO_ALLOCATED_IMPL(RenderIFrame);
+WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(RenderIFrame);
 
 using namespace HTMLNames;
 
 RenderIFrame::RenderIFrame(HTMLIFrameElement& element, RenderStyle&& style)
-    : RenderFrameBase(element, WTFMove(style))
+    : RenderFrameBase(Type::IFrame, element, WTFMove(style))
 {
+    ASSERT(isRenderIFrame());
 }
+
+RenderIFrame::~RenderIFrame() = default;
 
 HTMLIFrameElement& RenderIFrame::iframeElement() const
 {

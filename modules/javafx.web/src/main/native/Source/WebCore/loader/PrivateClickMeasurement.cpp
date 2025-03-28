@@ -32,7 +32,7 @@
 #include <wtf/CryptographicallyRandomNumber.h>
 #include <wtf/Expected.h>
 #include <wtf/URL.h>
-#include <wtf/text/StringConcatenateNumbers.h>
+#include <wtf/text/MakeString.h>
 #include <wtf/text/StringToIntegerConversion.h>
 #include <wtf/text/StringView.h>
 
@@ -263,7 +263,7 @@ bool PrivateClickMeasurement::hasHigherPriorityThan(const PrivateClickMeasuremen
 
 static URL makeValidURL(const RegistrableDomain& domain, const char* path)
 {
-    URL validURL { makeString("https://", domain.string(), path) };
+    URL validURL { makeString("https://"_s, domain.string(), span(path)) };
     return validURL.isValid() ? validURL : URL { };
 }
 
@@ -290,7 +290,7 @@ URL PrivateClickMeasurement::attributionReportClickDestinationURL() const
 
 Ref<JSON::Object> PrivateClickMeasurement::attributionReportJSON() const
 {
-    auto reportDetails = JSON::Object::create();
+    Ref reportDetails = JSON::Object::create();
     if (!m_attributionTriggerData || !isValid())
         return reportDetails;
 
@@ -366,7 +366,7 @@ const std::optional<const URL> PrivateClickMeasurement::tokenSignatureURL() cons
 
 Ref<JSON::Object> PrivateClickMeasurement::tokenSignatureJSON() const
 {
-    auto reportDetails = JSON::Object::create();
+    Ref reportDetails = JSON::Object::create();
     if (!m_ephemeralSourceNonce || !m_ephemeralSourceNonce->isValid())
         return reportDetails;
 
@@ -383,7 +383,7 @@ Ref<JSON::Object> PrivateClickMeasurement::tokenSignatureJSON() const
 
 Ref<JSON::Object> PCM::AttributionTriggerData::tokenSignatureJSON() const
 {
-    auto reportDetails = JSON::Object::create();
+    Ref reportDetails = JSON::Object::create();
     if (!ephemeralDestinationNonce || !ephemeralDestinationNonce->isValid())
         return reportDetails;
 

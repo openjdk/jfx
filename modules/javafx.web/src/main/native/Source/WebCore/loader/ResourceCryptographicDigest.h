@@ -50,10 +50,7 @@ struct ResourceCryptographicDigest {
     Algorithm algorithm;
     Vector<uint8_t> value;
 
-    bool operator==(const ResourceCryptographicDigest& other) const
-    {
-        return algorithm == other.algorithm && value == other.value;
-    }
+    friend bool operator==(const ResourceCryptographicDigest&, const ResourceCryptographicDigest&) = default;
 };
 
 inline void add(Hasher& hasher, const ResourceCryptographicDigest& digest)
@@ -77,7 +74,7 @@ std::optional<EncodedResourceCryptographicDigest> parseEncodedCryptographicDiges
 std::optional<ResourceCryptographicDigest> decodeEncodedResourceCryptographicDigest(const EncodedResourceCryptographicDigest&);
 
 ResourceCryptographicDigest cryptographicDigestForSharedBuffer(ResourceCryptographicDigest::Algorithm, const FragmentedSharedBuffer*);
-ResourceCryptographicDigest cryptographicDigestForBytes(ResourceCryptographicDigest::Algorithm, const void* bytes, size_t length);
+ResourceCryptographicDigest cryptographicDigestForBytes(ResourceCryptographicDigest::Algorithm, std::span<const uint8_t> bytes);
 
 }
 

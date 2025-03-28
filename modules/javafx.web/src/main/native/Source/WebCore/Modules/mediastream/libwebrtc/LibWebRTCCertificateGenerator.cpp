@@ -29,6 +29,7 @@
 
 #include "LibWebRTCMacros.h"
 #include "LibWebRTCProvider.h"
+#include "LibWebRTCUtils.h"
 #include "RTCCertificate.h"
 
 ALLOW_UNUSED_PARAMETERS_BEGIN
@@ -45,11 +46,6 @@ namespace WebCore {
 
 namespace LibWebRTCCertificateGenerator {
 
-static inline String fromStdString(const std::string& value)
-{
-    return String::fromUTF8(value.data(), value.length());
-}
-
 class RTCCertificateGeneratorCallbackWrapper : public ThreadSafeRefCounted<RTCCertificateGeneratorCallbackWrapper, WTF::DestructionThread::Main> {
 public:
     static Ref<RTCCertificateGeneratorCallbackWrapper> create(Ref<SecurityOrigin>&& origin, Function<void(ExceptionOr<Ref<RTCCertificate>>&&)>&& resultCallback)
@@ -61,7 +57,7 @@ public:
     {
         callOnMainThread([origin = m_origin.releaseNonNull(), callback = WTFMove(m_resultCallback), certificate = WTFMove(certificate)]() mutable {
             if (!certificate) {
-                callback(Exception { TypeError, "Unable to create a certificate"_s });
+                callback(Exception { ExceptionCode::TypeError, "Unable to create a certificate"_s });
                 return;
     }
 
@@ -69,7 +65,7 @@ public:
             auto stats = certificate->GetSSLCertificate().GetStats();
             auto* info = stats.get();
             while (info) {
-                StringView fingerprint { reinterpret_cast<const unsigned char*>(info->fingerprint.data()), static_cast<unsigned>(info->fingerprint.length()) };
+                StringView fingerprint { std::span { info->fingerprint } };
                 fingerprints.append({ fromStdString(info->fingerprint_algorithm), fingerprint.convertToASCIILowercase() });
                 info = info->issuer.get();
             };

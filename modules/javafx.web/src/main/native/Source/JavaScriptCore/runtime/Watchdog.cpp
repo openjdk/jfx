@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2013-2017 Apple Inc. All rights reserved.
+ * Copyright (C) 2013-2023 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -28,8 +28,11 @@
 
 #include "VM.h"
 #include <wtf/CPUTime.h>
+#include <wtf/TZoneMallocInlines.h>
 
 namespace JSC {
+
+WTF_MAKE_TZONE_ALLOCATED_IMPL(Watchdog);
 
 Watchdog::Watchdog(VM* vm)
     : m_vm(vm)
@@ -39,7 +42,7 @@ Watchdog::Watchdog(VM* vm)
     , m_callback(nullptr)
     , m_callbackData1(nullptr)
     , m_callbackData2(nullptr)
-    , m_timerQueue(WorkQueue::create("jsc.watchdog.queue", WorkQueue::QOS::Utility))
+    , m_timerQueue(WorkQueue::create("jsc.watchdog.queue"_s, WorkQueue::QOS::Utility))
 {
 }
 

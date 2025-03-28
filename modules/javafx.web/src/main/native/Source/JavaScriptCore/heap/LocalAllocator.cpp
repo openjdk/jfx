@@ -109,7 +109,7 @@ void LocalAllocator::stopAllocatingForGood()
     reset();
 }
 
-void* LocalAllocator::allocateSlowCase(Heap& heap, size_t cellSize, GCDeferralContext* deferralContext, AllocationFailureMode failureMode)
+void* LocalAllocator::allocateSlowCase(JSC::Heap& heap, size_t cellSize, GCDeferralContext* deferralContext, AllocationFailureMode failureMode)
 {
     SuperSamplerScope superSamplerScope(false);
     ASSERT(heap.vm().currentThreadIsHoldingAPILock());
@@ -138,10 +138,12 @@ void* LocalAllocator::allocateSlowCase(Heap& heap, size_t cellSize, GCDeferralCo
 
     Subspace* subspace = m_directory->m_subspace;
     if (subspace->isIsoSubspace()) {
-        if (void* result = static_cast<IsoSubspace*>(subspace)->tryAllocateFromLowerTier())
+        if (void* result = static_cast<IsoSubspace*>(subspace)->tryAllocatePreciseOrLowerTierPrecise(cellSize))
             return result;
     }
 
+    ASSERT(!subspace->isPreciseOnly());
+    ASSERT_WITH_MESSAGE(cellSize == m_directory->cellSize(), "non-preciseOnly allocations should match allocator's the size class");
     MarkedBlock::Handle* block = m_directory->tryAllocateBlock(heap);
     if (!block) {
         if (failureMode == AllocationFailureMode::Assert)
@@ -224,6 +226,8 @@ void* LocalAllocator::tryAllocateIn(MarkedBlock::Handle* block, size_t cellSize)
 {
     ASSERT(block);
     ASSERT(!block->isFreeListed());
+    m_directory->assertIsMutatorOrMutatorIsStopped();
+    ASSERT(m_directory->isInUse(block));
 
     block->sweep(&m_freeList);
 
@@ -233,8 +237,8 @@ void* LocalAllocator::tryAllocateIn(MarkedBlock::Handle* block, size_t cellSize)
         ASSERT(block->isFreeListed());
         block->unsweepWithNoNewlyAllocated();
         ASSERT(!block->isFreeListed());
-        ASSERT(!m_directory->isEmpty(NoLockingNecessary, block));
-        ASSERT(!m_directory->isCanAllocateButNotEmpty(NoLockingNecessary, block));
+        ASSERT(!m_directory->isEmpty(block));
+        ASSERT(!m_directory->isCanAllocateButNotEmpty(block));
         return nullptr;
     }
 
@@ -245,12 +249,14 @@ void* LocalAllocator::tryAllocateIn(MarkedBlock::Handle* block, size_t cellSize)
             RELEASE_ASSERT_NOT_REACHED();
             return nullptr;
         }, cellSize);
-    m_directory->setIsEden(NoLockingNecessary, m_currentBlock, true);
+
+    // FIXME: We should make this work with thread safety analysis.
+    m_directory->m_bits.setIsEden(m_currentBlock->index(), true);
     m_directory->markedSpace().didAllocateInBlock(m_currentBlock);
     return result;
 }
 
-void LocalAllocator::doTestCollectionsIfNeeded(Heap& heap, GCDeferralContext* deferralContext)
+void LocalAllocator::doTestCollectionsIfNeeded(JSC::Heap& heap, GCDeferralContext* deferralContext)
 {
     if (LIKELY(!Options::slowPathAllocsBetweenGCs()))
         return;

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -31,6 +31,7 @@
 
 #include <wtf/MathExtras.h>
 #include <wtf/text/WTFString.h>
+#include <wtf/text/MakeString.h>
 
 namespace WebCore {
 
@@ -106,7 +107,8 @@ String fileButtonChooseMultipleFilesLabel()
 
 String multipleFileUploadText(unsigned numberOfFiles)
 {
-    return String::number(numberOfFiles) + " " + getLocalizedProperty("multipleFileUploadText"_s);
+    auto spaceString = String::fromUTF8(std::span(reinterpret_cast<const char8_t*>(" "), 1));
+    return makeString(String::number(numberOfFiles), spaceString, getLocalizedProperty("multipleFileUploadText"_s));
 }
 
 String contextMenuItemTagOpenLinkInNewWindow()
@@ -454,12 +456,12 @@ String mediaElementLiveBroadcastStateText()
 
 String localizedMediaControlElementString(const String& s)
 {
-    return getLocalizedProperty(String("localizedMediaControlElementString"_s) + s);
+    return getLocalizedProperty(makeString("localizedMediaControlElementString"_s, s));
 }
 
 String localizedMediaControlElementHelpText(const String& s)
 {
-    return getLocalizedProperty(String("localizedMediaControlElementHelpText"_s) + s);
+    return getLocalizedProperty(makeString("localizedMediaControlElementHelpText"_s, s));
 }
 
 String localizedMediaTimeDescription(float time)
@@ -477,20 +479,20 @@ String localizedMediaTimeDescription(float time)
     if (days) {
         String s = getLocalizedProperty("localizedMediaTimeDescriptionDays"_s);
         //result.append(String::number(days) + " " + s + "  ");
-        result = makeString(result, String::number(days), " ", s, "  ");
+        result = makeString(result, String::number(days), WTF::String::fromUTF8(" "), s, WTF::String::fromUTF8("  "));
     }
     if (days || hours) {
         String s = getLocalizedProperty("localizedMediaTimeDescriptionHours"_s);
         //result.append(String::number(hours) + " " + s + "  ");
-        result = makeString(result, String::number(hours), " ", s, "  ");
+        result = makeString(result, String::number(hours), WTF::String::fromUTF8(" "), s, WTF::String::fromUTF8("  "));
     }
     if (days || hours || minutes) {
         String s = getLocalizedProperty("localizedMediaTimeDescriptionMinutes"_s);
         //result.append(String::number(minutes) + " " + s + "  ");
-        result = makeString(result, String::number(minutes), " ", s, "  ");
+        result = makeString(result, String::number(minutes), WTF::String::fromUTF8(" "), s, WTF::String::fromUTF8("  "));
     }
     String s = getLocalizedProperty("localizedMediaTimeDescriptionSeconds"_s);
-    return result + String::number(days) + " " + s;
+    return makeString(result, String::number(days), WTF::String::fromUTF8(" ") ,s);
 }
 
 String AXWebAreaText()
@@ -546,7 +548,7 @@ String AXFigureText()
 
 String AXARIAContentGroupText(const String& ariaType)
 {
-    return getLocalizedProperty(String("AXARIAContentGroupText"_s) + ariaType);
+    return getLocalizedProperty(makeString("AXARIAContentGroupText"_s, ariaType));
 }
 
 String AXButtonActionVerb()
@@ -771,8 +773,19 @@ String localizedString(CFStringRef key)
 #else
 String localizedString(const char* key)
 {
-    return String::fromUTF8(key, strlen(key));
+    return String::fromLatin1(key);
 }
 #endif
+
+String formatLocalizedString(const char* format, ...)
+{
+    notImplemented();
+    return String::fromUTF8(format);
+}
+
+String validationMessageValueMissingForSwitchText()
+{
+    return WEB_UI_STRING("Tap this switch", "Validation message for required switches that are not on");
+}
 
 } // namespace WebCore

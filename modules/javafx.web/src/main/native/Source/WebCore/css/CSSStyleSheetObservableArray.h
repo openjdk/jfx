@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2022 Apple Inc.  All rights reserved.
+ * Copyright (C) 2022, 2023 Apple Inc.  All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -37,8 +37,8 @@ class CSSStyleSheetObservableArray : public JSC::ObservableArray {
 public:
     static Ref<CSSStyleSheetObservableArray> create(ContainerNode& treeScope);
 
-    ExceptionOr<void> setSheets(Vector<RefPtr<CSSStyleSheet>>&&);
-    const Vector<RefPtr<CSSStyleSheet>>& sheets() const { return m_sheets; }
+    ExceptionOr<void> setSheets(Vector<Ref<CSSStyleSheet>>&&);
+    const Vector<Ref<CSSStyleSheet>>& sheets() const { return m_sheets; }
 
 private:
     explicit CSSStyleSheetObservableArray(ContainerNode& treeScope);
@@ -47,9 +47,10 @@ private:
 
     // JSC::ObservableArray
     bool setValueAt(JSC::JSGlobalObject*, unsigned index, JSC::JSValue) final;
-    bool deleteValueAt(JSC::JSGlobalObject*, unsigned index) final;
+    void removeLast() final;
     JSC::JSValue valueAt(JSC::JSGlobalObject*, unsigned index) const final;
     unsigned length() const final { return m_sheets.size(); }
+    void shrinkTo(unsigned) final;
 
     TreeScope* treeScope() const;
 
@@ -57,7 +58,7 @@ private:
     void willRemoveSheet(CSSStyleSheet&);
 
     WeakPtr<ContainerNode, WeakPtrImplWithEventTargetData> m_treeScope;
-    Vector<RefPtr<CSSStyleSheet>> m_sheets;
+    Vector<Ref<CSSStyleSheet>> m_sheets;
 };
 
 } // namespace WebCore

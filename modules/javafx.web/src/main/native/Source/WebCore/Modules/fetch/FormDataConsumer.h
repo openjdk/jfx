@@ -34,6 +34,15 @@
 #include <wtf/WorkQueue.h>
 
 namespace WebCore {
+class FormDataConsumer;
+}
+
+namespace WTF {
+template<typename T> struct IsDeprecatedWeakRefSmartPointerException;
+template<> struct IsDeprecatedWeakRefSmartPointerException<WebCore::FormDataConsumer> : std::true_type { };
+}
+
+namespace WebCore {
 
 class BlobLoader;
 class FormData;
@@ -55,7 +64,7 @@ private:
 
     void consume(std::span<const uint8_t>);
     void read();
-    void didFail(auto &&exception);
+    void didFail(Exception&&);
     bool isCancelled() { return !m_context; }
 
     Ref<FormData> m_formData;

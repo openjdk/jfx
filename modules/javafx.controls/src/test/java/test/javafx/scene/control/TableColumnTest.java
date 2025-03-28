@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,9 +25,16 @@
 
 package test.javafx.scene.control;
 
-import test.com.sun.javafx.scene.control.infrastructure.StageLoader;
-import test.com.sun.javafx.scene.control.infrastructure.VirtualFlowTestUtils;
-import javafx.scene.control.skin.TableColumnHeader;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.Comparator;
+import java.util.List;
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.DoubleProperty;
 import javafx.beans.property.ObjectProperty;
@@ -42,13 +49,6 @@ import javafx.collections.ObservableList;
 import javafx.event.EventHandler;
 import javafx.event.EventType;
 import javafx.scene.Node;
-import javafx.scene.shape.Rectangle;
-import javafx.util.Callback;
-
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.Comparator;
-import java.util.List;
 import javafx.scene.control.CellShim;
 import javafx.scene.control.ContextMenu;
 import javafx.scene.control.TableCell;
@@ -56,12 +56,14 @@ import javafx.scene.control.TableColumn;
 import javafx.scene.control.TableColumnShim;
 import javafx.scene.control.TablePosition;
 import javafx.scene.control.TableView;
-
+import javafx.scene.control.skin.TableColumnHeader;
+import javafx.scene.shape.Rectangle;
+import javafx.util.Callback;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import test.com.sun.javafx.scene.control.infrastructure.StageLoader;
+import test.com.sun.javafx.scene.control.infrastructure.VirtualFlowTestUtils;
 import test.com.sun.javafx.scene.control.test.Person;
-import org.junit.Before;
-import org.junit.Test;
-
-import static org.junit.Assert.*;
 
 /**
  */
@@ -74,7 +76,8 @@ public class TableColumnTest {
     private TableView<Person> table;
     private ObservableList<Person> model;
 
-    @Before public void setup() {
+    @BeforeEach
+    public void setup() {
         column = new TableColumn<>("");
         model = FXCollections.observableArrayList(
                 new Person("Humphrey McPhee", 76),

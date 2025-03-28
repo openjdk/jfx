@@ -26,17 +26,18 @@
 #include "RenderBoxInlines.h"
 #include "RenderBoxModelObjectInlines.h"
 #include "RenderTheme.h"
-#include <wtf/IsoMallocInlines.h>
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
 using namespace HTMLNames;
 
-WTF_MAKE_ISO_ALLOCATED_IMPL(RenderMeter);
+WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(RenderMeter);
 
 RenderMeter::RenderMeter(HTMLElement& element, RenderStyle&& style)
-    : RenderBlockFlow(element, WTFMove(style))
+    : RenderBlockFlow(Type::Meter, element, WTFMove(style))
 {
+    ASSERT(isRenderMeter());
 }
 
 RenderMeter::~RenderMeter() = default;
@@ -45,8 +46,8 @@ HTMLMeterElement* RenderMeter::meterElement() const
 {
     ASSERT(element());
 
-    if (is<HTMLMeterElement>(*element()))
-        return downcast<HTMLMeterElement>(element());
+    if (auto* meterElement = dynamicDowncast<HTMLMeterElement>(*element()))
+        return meterElement;
 
     ASSERT(element()->shadowHost());
     return downcast<HTMLMeterElement>(element()->shadowHost());

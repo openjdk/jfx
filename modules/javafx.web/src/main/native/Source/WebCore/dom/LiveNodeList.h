@@ -29,7 +29,7 @@
 #include "HTMLNames.h"
 #include "NodeList.h"
 #include <wtf/Forward.h>
-#include <wtf/IsoMalloc.h>
+#include <wtf/TZoneMalloc.h>
 
 namespace WebCore {
 
@@ -38,7 +38,7 @@ class Element;
 inline bool shouldInvalidateTypeOnAttributeChange(NodeListInvalidationType, const QualifiedName&);
 
 class LiveNodeList : public NodeList {
-    WTF_MAKE_ISO_NONALLOCATABLE(LiveNodeList);
+    WTF_MAKE_TZONE_OR_ISO_NONALLOCATABLE(LiveNodeList);
 public:
     virtual ~LiveNodeList();
 
@@ -47,6 +47,7 @@ public:
 
     NodeListInvalidationType invalidationType() const { return m_invalidationType; }
     ContainerNode& ownerNode() const { return m_ownerNode; }
+    Ref<ContainerNode> protectedOwnerNode() const { return m_ownerNode; }
     void invalidateCacheForAttribute(const QualifiedName& attributeName) const;
     virtual void invalidateCacheForDocument(Document&) const = 0;
     void invalidateCache() const { invalidateCacheForDocument(document()); }
@@ -58,6 +59,7 @@ protected:
     LiveNodeList(ContainerNode& ownerNode, NodeListInvalidationType);
 
     Document& document() const { return m_ownerNode->document(); }
+    Ref<Document> protectedDocument() const { return document(); }
     ContainerNode& rootNode() const;
 
 private:
@@ -71,7 +73,7 @@ private:
 
 template <class NodeListType>
 class CachedLiveNodeList : public LiveNodeList {
-    WTF_MAKE_ISO_NONALLOCATABLE(CachedLiveNodeList);
+    WTF_MAKE_TZONE_OR_ISO_NONALLOCATABLE(CachedLiveNodeList);
 public:
     virtual ~CachedLiveNodeList();
 

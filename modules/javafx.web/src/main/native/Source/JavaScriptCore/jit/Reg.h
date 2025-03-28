@@ -137,10 +137,7 @@ public:
             MacroAssembler::firstFPRegister() + (m_index - MacroAssembler::numberOfRegisters()));
     }
 
-    constexpr bool operator==(const Reg& other) const
-    {
-        return m_index == other.m_index;
-    }
+    friend constexpr bool operator==(const Reg&, const Reg&) = default;
 
     constexpr bool operator<(const Reg& other) const
     {
@@ -167,7 +164,7 @@ public:
         return m_index;
     }
 
-    const char* debugName() const;
+    ASCIILiteral debugName() const;
 
     void dump(PrintStream&) const;
 
@@ -191,10 +188,7 @@ public:
                 return *this;
             }
 
-            bool operator==(const iterator& other) const
-            {
-                return m_regIndex == other.m_regIndex;
-            }
+            friend bool operator==(const iterator&, const iterator&) = default;
 
         private:
             unsigned m_regIndex;
@@ -211,8 +205,9 @@ private:
 
     static constexpr uint8_t deleted() { return invalid() - 1; }
 
-    unsigned m_index : 7;
+    uint8_t m_index : 7;
 };
+static_assert(sizeof(Reg) == 1);
 
 struct RegHash {
     static unsigned hash(const Reg& key) { return key.hash(); }

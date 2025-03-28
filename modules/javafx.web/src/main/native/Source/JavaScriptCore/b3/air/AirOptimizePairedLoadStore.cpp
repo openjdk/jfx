@@ -32,7 +32,9 @@
 #include "AirArgInlines.h"
 #include "AirCode.h"
 #include "AirInst.h"
+#include "AirInstInlines.h"
 #include "AirPhaseScope.h"
+#include "CCallHelpers.h"
 #include <wtf/Range.h>
 
 namespace JSC { namespace B3 { namespace Air {
@@ -261,7 +263,7 @@ bool optimizePairedLoadStore(Code& code)
 {
     constexpr bool verbose = false;
 
-    PhaseScope phaseScope(code, "optimizePairedLoadStore");
+    PhaseScope phaseScope(code, "optimizePairedLoadStore"_s);
 
     if (verbose) {
         dataLog("Air before an iteration of optimizePairedLoadStore:\n");

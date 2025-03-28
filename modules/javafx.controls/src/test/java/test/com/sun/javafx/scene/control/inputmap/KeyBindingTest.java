@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015, 2017, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2015, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,15 +25,16 @@
 
 package test.com.sun.javafx.scene.control.inputmap;
 
-import com.sun.javafx.scene.control.inputmap.KeyBinding;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyEvent;
-import org.junit.Test;
-import static org.junit.Assert.*;
+import org.junit.jupiter.api.Test;
+import com.sun.javafx.scene.control.inputmap.KeyBinding;
 
 public class KeyBindingTest {
 
-    @Test public void getSpecificity() {
+    @Test
+    public void getSpecificity() {
         final KeyCode code = KeyCode.ENTER;
 
         // Expected answer:

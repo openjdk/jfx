@@ -26,7 +26,6 @@ require "arm"
 require "arm64"
 require "ast"
 require "x86"
-require "mips"
 require "riscv64"
 require "cloop"
 
@@ -37,17 +36,12 @@ end
 
 BACKENDS =
     [
-     "X86",
-     "X86_WIN",
      "X86_64",
-     "X86_64_WIN",
      "ARMv7",
      "ARM64",
      "ARM64E",
-     "MIPS",
      "RISCV64",
-     "C_LOOP",
-     "C_LOOP_WIN"
+     "C_LOOP"
     ]
 
 # Keep the set of working backends separate from the set of backends that might be
@@ -57,17 +51,12 @@ BACKENDS =
 # the future while not actually supporting the backend yet.
 WORKING_BACKENDS =
     [
-     "X86",
-     "X86_WIN",
      "X86_64",
-     "X86_64_WIN",
      "ARMv7",
      "ARM64",
      "ARM64E",
-     "MIPS",
      "RISCV64",
-     "C_LOOP",
-     "C_LOOP_WIN"
+     "C_LOOP"
     ]
 
 BACKEND_PATTERN = Regexp.new('\\A(' + BACKENDS.join(')|(') + ')\\Z')
@@ -146,7 +135,7 @@ end
 class Label
     def lower(name)
         $asm.debugAnnotation codeOrigin.debugDirective if $enableDebugAnnotations
-        $asm.putsLabel(self.name[1..-1], @global, @aligned)
+        $asm.putsLabel(self.name[1..-1], @global, @export, @aligned, @alignTo)
     end
 end
 

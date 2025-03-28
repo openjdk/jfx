@@ -38,7 +38,7 @@ class CryptoKey;
 
 class RTCRtpSFrameTransformer : public ThreadSafeRefCounted<RTCRtpSFrameTransformer, WTF::DestructionThread::Main> {
 public:
-    enum class CompatibilityMode { None, H264, VP8 };
+    enum class CompatibilityMode : uint8_t { None, H264, VP8 };
 
     WEBCORE_EXPORT static Ref<RTCRtpSFrameTransformer> create(CompatibilityMode = CompatibilityMode::None);
     WEBCORE_EXPORT ~RTCRtpSFrameTransformer();
@@ -49,7 +49,7 @@ public:
 
     WEBCORE_EXPORT ExceptionOr<void> setEncryptionKey(const Vector<uint8_t>& rawKey, std::optional<uint64_t>);
 
-    enum class Error { KeyID, Authentication, Syntax, Other };
+    enum class Error : uint8_t { KeyID, Authentication, Syntax, Other };
     struct ErrorInformation {
         Error error;
         String message;
@@ -81,9 +81,9 @@ private:
     ExceptionOr<Vector<uint8_t>> computeAuthenticationKey(const Vector<uint8_t>&);
     ExceptionOr<Vector<uint8_t>> computeEncryptionKey(const Vector<uint8_t>&);
 
-    ExceptionOr<Vector<uint8_t>> encryptData(const uint8_t*, size_t, const Vector<uint8_t>& iv, const Vector<uint8_t>& key);
-    ExceptionOr<Vector<uint8_t>> decryptData(const uint8_t*, size_t, const Vector<uint8_t>& iv, const Vector<uint8_t>& key);
-    Vector<uint8_t> computeEncryptedDataSignature(const Vector<uint8_t>& nonce, const uint8_t* header, size_t headerSize, const uint8_t* data, size_t dataSize, const Vector<uint8_t>& key);
+    ExceptionOr<Vector<uint8_t>> encryptData(std::span<const uint8_t>, const Vector<uint8_t>& iv, const Vector<uint8_t>& key);
+    ExceptionOr<Vector<uint8_t>> decryptData(std::span<const uint8_t>, const Vector<uint8_t>& iv, const Vector<uint8_t>& key);
+    Vector<uint8_t> computeEncryptedDataSignature(const Vector<uint8_t>& nonce, std::span<const uint8_t> header, std::span<const uint8_t> data, const Vector<uint8_t>& key);
     void updateAuthenticationSize();
 
     mutable Lock m_keyLock;

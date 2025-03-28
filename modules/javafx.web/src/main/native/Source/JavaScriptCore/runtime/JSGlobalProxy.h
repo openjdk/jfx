@@ -55,15 +55,12 @@ public:
         return proxy;
     }
 
-    static Structure* createStructure(VM& vm, JSGlobalObject* globalObject, JSValue prototype)
-    {
-        return Structure::create(vm, globalObject, prototype, TypeInfo(GlobalProxyType, StructureFlags), info());
-    }
+    inline static Structure* createStructure(VM&, JSGlobalObject*, JSValue);
 
     DECLARE_EXPORT_INFO;
 
     JSGlobalObject* target() const { return m_target.get(); }
-    static ptrdiff_t targetOffset() { return OBJECT_OFFSETOF(JSGlobalProxy, m_target); }
+    static constexpr ptrdiff_t targetOffset() { return OBJECT_OFFSETOF(JSGlobalProxy, m_target); }
 
     JS_EXPORT_PRIVATE void setTarget(VM&, JSGlobalObject*);
 

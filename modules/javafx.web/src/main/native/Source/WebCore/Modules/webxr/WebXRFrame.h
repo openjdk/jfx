@@ -31,10 +31,10 @@
 #include "ExceptionOr.h"
 #include "PlatformXR.h"
 #include <JavaScriptCore/Float32Array.h>
-#include <wtf/IsoMalloc.h>
 #include <wtf/Ref.h>
 #include <wtf/RefCounted.h>
 #include <wtf/RefPtr.h>
+#include <wtf/TZoneMalloc.h>
 
 namespace WebCore {
 
@@ -48,7 +48,7 @@ class WebXRSpace;
 class WebXRViewerPose;
 
 class WebXRFrame : public RefCounted<WebXRFrame> {
-    WTF_MAKE_ISO_ALLOCATED(WebXRFrame);
+    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(WebXRFrame);
 public:
     enum class IsAnimationFrame : bool { No, Yes };
     static Ref<WebXRFrame> create(WebXRSession&, IsAnimationFrame);
@@ -61,8 +61,8 @@ public:
 
 #if ENABLE(WEBXR_HANDS)
     ExceptionOr<RefPtr<WebXRJointPose>> getJointPose(const Document&, const WebXRJointSpace&, const WebXRSpace&);
-    ExceptionOr<bool> fillJointRadii(const Vector<RefPtr<WebXRJointSpace>>&, Float32Array&);
-    ExceptionOr<bool> fillPoses(const Document&, const Vector<RefPtr<WebXRSpace>>&, const WebXRSpace&, Float32Array&);
+    ExceptionOr<bool> fillJointRadii(const Vector<Ref<WebXRJointSpace>>&, Float32Array&);
+    ExceptionOr<bool> fillPoses(const Document&, const Vector<Ref<WebXRSpace>>&, const WebXRSpace&, Float32Array&);
 #endif
 
     void setTime(DOMHighResTimeStamp time) { m_time = time; }
@@ -71,7 +71,7 @@ public:
     bool isActive() const { return m_active; }
     bool isAnimationFrame() const { return m_isAnimationFrame; }
 
-    static TransformationMatrix matrixFromPose(const PlatformXR::Device::FrameData::Pose&);
+    static TransformationMatrix matrixFromPose(const PlatformXR::FrameData::Pose&);
 
 private:
     WebXRFrame(WebXRSession&, IsAnimationFrame);

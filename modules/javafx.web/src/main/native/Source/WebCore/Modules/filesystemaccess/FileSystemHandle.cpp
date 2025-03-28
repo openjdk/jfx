@@ -28,11 +28,11 @@
 
 #include "FileSystemStorageConnection.h"
 #include "JSDOMPromiseDeferred.h"
-#include <wtf/IsoMallocInlines.h>
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
-WTF_MAKE_ISO_ALLOCATED_IMPL(FileSystemHandle);
+WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(FileSystemHandle);
 
 FileSystemHandle::FileSystemHandle(ScriptExecutionContext& context, FileSystemHandle::Kind kind, String&& name, FileSystemHandleIdentifier identifier, Ref<FileSystemStorageConnection>&& connection)
     : ActiveDOMObject(&context)
@@ -60,7 +60,7 @@ void FileSystemHandle::close()
 void FileSystemHandle::isSameEntry(FileSystemHandle& handle, DOMPromiseDeferred<IDLBoolean>&& promise) const
 {
     if (isClosed())
-        return promise.reject(Exception { InvalidStateError, "Handle is closed"_s });
+        return promise.reject(Exception { ExceptionCode::InvalidStateError, "Handle is closed"_s });
 
     if (m_kind != handle.kind() || m_name != handle.name())
         return promise.resolve(false);
@@ -73,10 +73,10 @@ void FileSystemHandle::isSameEntry(FileSystemHandle& handle, DOMPromiseDeferred<
 void FileSystemHandle::move(FileSystemHandle& destinationHandle, const String& newName, DOMPromiseDeferred<void>&& promise)
 {
     if (isClosed())
-        return promise.reject(Exception { InvalidStateError, "Handle is closed"_s });
+        return promise.reject(Exception { ExceptionCode::InvalidStateError, "Handle is closed"_s });
 
     if (destinationHandle.kind() != Kind::Directory)
-        return promise.reject(Exception { TypeMismatchError });
+        return promise.reject(Exception { ExceptionCode::TypeMismatchError });
 
     m_connection->move(m_identifier, destinationHandle.identifier(), newName, [this, protectedThis = Ref { *this }, newName, promise = WTFMove(promise)](auto result) mutable {
         if (!result.hasException())
@@ -84,11 +84,6 @@ void FileSystemHandle::move(FileSystemHandle& destinationHandle, const String& n
 
         promise.settle(WTFMove(result));
     });
-}
-
-const char* FileSystemHandle::activeDOMObjectName() const
-{
-    return "FileSystemHandle";
 }
 
 void FileSystemHandle::stop()

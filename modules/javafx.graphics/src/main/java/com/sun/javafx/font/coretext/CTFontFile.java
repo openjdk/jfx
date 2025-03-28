@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2023, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -24,6 +24,8 @@
  */
 
 package com.sun.javafx.font.coretext;
+
+import java.lang.ref.Reference;
 
 import com.sun.javafx.font.Disposer;
 import com.sun.javafx.font.DisposerRecord;
@@ -64,7 +66,7 @@ class CTFontFile extends PrismFontFile {
 
     private long ctFontRef = 0;
     CTFontFile(String name, String filename, int fIndex, long fontRef) throws Exception {
-        super(name, filename, fIndex, false, false, false, false);
+        super(name, filename, fIndex, false, false, false);
 
         if (fontRef == 0) {
            throw new InternalError("Zero fontref");
@@ -74,8 +76,8 @@ class CTFontFile extends PrismFontFile {
     }
 
     CTFontFile(String name, String filename, int fIndex, boolean register,
-               boolean embedded, boolean copy, boolean tracked) throws Exception {
-        super(name, filename, fIndex, register, embedded, copy, tracked);
+               boolean embedded, boolean copy) throws Exception {
+        super(name, filename, fIndex, register, embedded, copy);
 
         // The super-class code that opens and reads the font can't handle font variations,
         // as used by the macOS "System Font"
@@ -148,33 +150,45 @@ class CTFontFile extends PrismFontFile {
 
     CGRect getBBox(int gc, float size) {
         CTFontStrike strike = (CTFontStrike)getStrike(size, BaseTransform.IDENTITY_TRANSFORM);
-        long fontRef = strike.getFontRef();
-        if (fontRef == 0) return null;
-        long pathRef = OS.CTFontCreatePathForGlyph(fontRef, (short)gc, tx);
-        if (pathRef == 0) return null;
-        CGRect rect = OS.CGPathGetPathBoundingBox(pathRef);
-        OS.CGPathRelease(pathRef);
-        return rect;
+        try {
+            long fontRef = strike.getFontRef();
+            if (fontRef == 0) return null;
+            long pathRef = OS.CTFontCreatePathForGlyph(fontRef, (short)gc, tx);
+            if (pathRef == 0) return null;
+            CGRect rect = OS.CGPathGetPathBoundingBox(pathRef);
+            OS.CGPathRelease(pathRef);
+            return rect;
+      } finally {
+          Reference.reachabilityFence(strike);
+      }
     }
 
     Path2D getGlyphOutline(int gc, float size) {
         CTFontStrike strike = (CTFontStrike)getStrike(size, BaseTransform.IDENTITY_TRANSFORM);
-        long fontRef = strike.getFontRef();
-        if (fontRef == 0) return null;
-        long pathRef = OS.CTFontCreatePathForGlyph(fontRef, (short)gc, tx);
-        if (pathRef == 0) return null;
-        Path2D path = OS.CGPathApply(pathRef);
-        OS.CGPathRelease(pathRef);
-        return path;
+        try {
+            long fontRef = strike.getFontRef();
+            if (fontRef == 0) return null;
+            long pathRef = OS.CTFontCreatePathForGlyph(fontRef, (short)gc, tx);
+            if (pathRef == 0) return null;
+            Path2D path = OS.CGPathApply(pathRef);
+            OS.CGPathRelease(pathRef);
+            return path;
+      } finally {
+          Reference.reachabilityFence(strike);
+      }
     }
 
    @Override protected float getAdvanceFromPlatform(int glyphCode, float ptSize) {
       CTFontStrike strike =
           (CTFontStrike)getStrike(ptSize, BaseTransform.IDENTITY_TRANSFORM);
-      long fontRef = strike.getFontRef();
-      int orientation = OS.kCTFontOrientationDefault;
-      CGSize size = new CGSize();
-      return (float)OS.CTFontGetAdvancesForGlyphs(fontRef, orientation, (short)glyphCode, size);
+      try {
+          long fontRef = strike.getFontRef();
+          int orientation = OS.kCTFontOrientationDefault;
+          CGSize size = new CGSize();
+          return (float)OS.CTFontGetAdvancesForGlyphs(fontRef, orientation, (short)glyphCode, size);
+      } finally {
+          Reference.reachabilityFence(strike);
+      }
    }
 
    @Override protected int[] createGlyphBoundingBox(int gc) {
@@ -187,46 +201,50 @@ class CTFontFile extends PrismFontFile {
         CTFontStrike strike = (CTFontStrike)getStrike(size,
                                                       BaseTransform.IDENTITY_TRANSFORM);
 
-        long fontRef = strike.getFontRef();
-        if (fontRef == 0) return null;
-        int[] bb = new int[4];
+        try {
+            long fontRef = strike.getFontRef();
+            if (fontRef == 0) return null;
+            int[] bb = new int[4];
 
-        /* For some reason CTFontGetBoundingRectsForGlyphs has poor performance.
-         * The fix is to use the 'loca' and the 'glyf' tables to determine
-         * the glyph bounding box (same as T2K). This implementation
-         * uses native code to read these tables since they can be large.
-         * However for color (emoji) glyphs this returns the wrong bounds,
-         * so use CTFontGetBoundingRectsForGlyphs anyway.
-         * In case it fails, or the font doesn't have a glyph table
-         * (CFF fonts), then the bounds of the glyph outline is used instead.
-         */
-        if (!isCFF()) {
-            if (isColorGlyph(gc)) {
-                CGRect rect = OS.CTFontGetBoundingRectForGlyphs(fontRef, (short)gc);
-                float scale = getUnitsPerEm() / size;
-                bb[0] = (int)(Math.round(rect.origin.x * scale));
-                bb[1] = (int)(Math.round(rect.origin.y * scale));
-                bb[2] = (int)(Math.round((rect.origin.x + rect.size.width) * scale));
-                bb[3] = (int)(Math.round((rect.origin.y + rect.size.height) * scale));
-                return bb;
-            } else {
-                short format = getIndexToLocFormat();
-                if (OS.CTFontGetBoundingRectForGlyphUsingTables(fontRef, (short)gc, format, bb)) {
+            /* For some reason CTFontGetBoundingRectsForGlyphs has poor performance.
+             * The fix is to use the 'loca' and the 'glyf' tables to determine
+             * the glyph bounding box (same as T2K). This implementation
+             * uses native code to read these tables since they can be large.
+             * However for color (emoji) glyphs this returns the wrong bounds,
+             * so use CTFontGetBoundingRectsForGlyphs anyway.
+             * In case it fails, or the font doesn't have a glyph table
+             * (CFF fonts), then the bounds of the glyph outline is used instead.
+             */
+            if (!isCFF()) {
+                if (isColorGlyph(gc)) {
+                    CGRect rect = OS.CTFontGetBoundingRectForGlyphs(fontRef, (short)gc);
+                    float scale = getUnitsPerEm() / size;
+                    bb[0] = (int)(Math.round(rect.origin.x * scale));
+                    bb[1] = (int)(Math.round(rect.origin.y * scale));
+                    bb[2] = (int)(Math.round((rect.origin.x + rect.size.width) * scale));
+                    bb[3] = (int)(Math.round((rect.origin.y + rect.size.height) * scale));
                     return bb;
+                } else {
+                    short format = getIndexToLocFormat();
+                    if (OS.CTFontGetBoundingRectForGlyphUsingTables(fontRef, (short)gc, format, bb)) {
+                        return bb;
+                    }
                 }
             }
+            /* Note: not using tx here as the bounds need to be y up */
+            long pathRef = OS.CTFontCreatePathForGlyph(fontRef, (short)gc, null);
+            if (pathRef == 0) return null;
+            CGRect rect = OS.CGPathGetPathBoundingBox(pathRef);
+            OS.CGPathRelease(pathRef);
+            float scale = getUnitsPerEm() / size;
+            bb[0] = (int)(Math.round(rect.origin.x * scale));
+            bb[1] = (int)(Math.round(rect.origin.y * scale));
+            bb[2] = (int)(Math.round((rect.origin.x + rect.size.width) * scale));
+            bb[3] = (int)(Math.round((rect.origin.y + rect.size.height) * scale));
+            return bb;
+        } finally {
+            Reference.reachabilityFence(strike);
         }
-        /* Note: not using tx here as the bounds need to be y up */
-        long pathRef = OS.CTFontCreatePathForGlyph(fontRef, (short)gc, null);
-        if (pathRef == 0) return null;
-        CGRect rect = OS.CGPathGetPathBoundingBox(pathRef);
-        OS.CGPathRelease(pathRef);
-        float scale = getUnitsPerEm() / size;
-        bb[0] = (int)(Math.round(rect.origin.x * scale));
-        bb[1] = (int)(Math.round(rect.origin.y * scale));
-        bb[2] = (int)(Math.round((rect.origin.x + rect.size.width) * scale));
-        bb[3] = (int)(Math.round((rect.origin.y + rect.size.height) * scale));
-        return bb;
     }
 
     @Override

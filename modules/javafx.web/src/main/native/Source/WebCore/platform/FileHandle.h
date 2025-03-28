@@ -43,14 +43,14 @@ public:
     FileHandle& operator=(FileHandle&& other);
     FileHandle(const FileHandle&) = delete;
     FileHandle& operator=(const FileHandle&) = delete;
-    explicit FileHandle(FileSystem::PlatformFileHandle&&);
+    explicit FileHandle(FileSystem::PlatformFileHandle);
 
     explicit operator bool() const;
 
     bool open(const String& path, FileSystem::FileOpenMode);
     bool open();
-    int read(void* data, int length);
-    int write(const void* data, int length);
+    int read(void* data, int length); // FIXME: Should use a std::span.
+    int write(std::span<const uint8_t> data);
     bool printf(const char* format, ...) WTF_ATTRIBUTE_PRINTF(2, 3);
     void close();
 

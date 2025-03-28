@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2021 Apple Inc. All rights reserved.
+ * Copyright (C) 2021-2023 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -31,9 +31,13 @@
 #include "AbstractSlotVisitor.h"
 #include "CodeBlock.h"
 #include "HeapInlines.h"
+#include "JITSafepoint.h"
+#include "JITWorklistThread.h"
 #include "JSCellInlines.h"
 #include "VMInlines.h"
 #include <wtf/CompilationThread.h>
+#include <wtf/StringPrintStream.h>
+#include <wtf/SystemTracing.h>
 
 namespace JSC {
 
@@ -53,6 +57,7 @@ JITPlan::JITPlan(JITCompilationMode mode, CodeBlock* codeBlock)
 void JITPlan::cancel()
 {
     RELEASE_ASSERT(m_stage != JITPlanStage::Canceled);
+    RELEASE_ASSERT(!safepointKeepsDependenciesLive());
     ASSERT(m_vm);
     m_stage = JITPlanStage::Canceled;
     m_vm = nullptr;
@@ -136,6 +141,11 @@ bool JITPlan::checkLivenessAndVisitChildren(AbstractSlotVisitor& visitor)
     return true;
 }
 
+bool JITPlan::safepointKeepsDependenciesLive() const
+{
+    return m_thread && m_thread->safepoint() && m_thread->safepoint()->keepDependenciesLive();
+}
+
 bool JITPlan::computeCompileTimes() const
 {
     return reportCompileTimes()
@@ -153,29 +163,45 @@ bool JITPlan::reportCompileTimes() const
 
 void JITPlan::compileInThread(JITWorklistThread* thread)
 {
-    m_thread = thread;
+    SetForScope threadScope(m_thread, thread);
 
     MonotonicTime before;
     CString codeBlockName;
-    if (UNLIKELY(computeCompileTimes()))
+
+    bool computeCompileTimes = this->computeCompileTimes();
+    if (UNLIKELY(computeCompileTimes)) {
         before = MonotonicTime::now();
-    if (UNLIKELY(reportCompileTimes()))
+        if (reportCompileTimes())
         codeBlockName = toCString(*m_codeBlock);
+    }
 
     CompilationScope compilationScope;
 
 #if ENABLE(DFG_JIT)
-    if (DFG::logCompilationChanges(m_mode) || Options::logPhaseTimes())
+    if (UNLIKELY(DFG::logCompilationChanges(m_mode) || Options::logPhaseTimes()))
         dataLog("DFG(Plan) compiling ", *m_codeBlock, " with ", m_mode, ", instructions size = ", m_codeBlock->instructionsSize(), "\n");
 #endif // ENABLE(DFG_JIT)
+
+    CString signpostMessage;
+    UNUSED_VARIABLE(signpostMessage);
+    if (UNLIKELY(Options::useCompilerSignpost())) {
+        StringPrintStream stream;
+        stream.print(m_mode, " ", *m_codeBlock, " instructions size = ", m_codeBlock->instructionsSize());
+        signpostMessage = stream.toCString();
+        WTFBeginSignpost(this, JSCJITCompiler, "%" PUBLIC_LOG_STRING, signpostMessage.data() ? signpostMessage.data() : "(nullptr)");
+    }
 
     CompilationPath path = compileInThreadImpl();
 
     RELEASE_ASSERT((path == CancelPath) == (m_stage == JITPlanStage::Canceled));
 
-    MonotonicTime after;
-    if (UNLIKELY(computeCompileTimes())) {
-        after = MonotonicTime::now();
+    if (UNLIKELY(Options::useCompilerSignpost()))
+        WTFEndSignpost(this, JSCJITCompiler, "%" PUBLIC_LOG_STRING, signpostMessage.data() ? signpostMessage.data() : "(nullptr)");
+
+    if (LIKELY(!computeCompileTimes))
+        return;
+
+    MonotonicTime after = MonotonicTime::now();
 
         if (Options::reportTotalCompileTimes()) {
             if (isFTL()) {
@@ -187,7 +213,7 @@ void JITPlan::compileInThread(JITWorklistThread* thread)
             else
                 totalDFGCompileTime += after - before;
         }
-    }
+
     const char* pathName = nullptr;
     switch (path) {
     case FailPath:
@@ -210,10 +236,23 @@ void JITPlan::compileInThread(JITWorklistThread* thread)
         break;
     }
     if (m_codeBlock) { // m_codeBlock will be null if the compilation was cancelled.
-        if (path == FTLPath)
+        switch (path) {
+        case FTLPath:
             CODEBLOCK_LOG_EVENT(m_codeBlock, "ftlCompile", ("took ", (after - before).milliseconds(), " ms (DFG: ", (m_timeBeforeFTL - before).milliseconds(), ", B3: ", (after - m_timeBeforeFTL).milliseconds(), ") with ", pathName));
-        else
+            break;
+        case DFGPath:
             CODEBLOCK_LOG_EVENT(m_codeBlock, "dfgCompile", ("took ", (after - before).milliseconds(), " ms with ", pathName));
+            break;
+        case BaselinePath:
+            CODEBLOCK_LOG_EVENT(m_codeBlock, "baselineCompile", ("took ", (after - before).milliseconds(), " ms with ", pathName));
+            break;
+        case FailPath:
+            CODEBLOCK_LOG_EVENT(m_codeBlock, "failed compilation", ("took ", (after - before).milliseconds(), " ms with ", pathName));
+            break;
+        case CancelPath:
+            CODEBLOCK_LOG_EVENT(m_codeBlock, "cancelled compilation", ("took ", (after - before).milliseconds(), " ms with ", pathName));
+            break;
+        }
     }
     if (UNLIKELY(reportCompileTimes())) {
         dataLog("Optimized ", codeBlockName, " using ", m_mode, " with ", pathName, " into ", codeSize(), " bytes in ", (after - before).milliseconds(), " ms");
@@ -221,6 +260,13 @@ void JITPlan::compileInThread(JITWorklistThread* thread)
             dataLog(" (DFG: ", (m_timeBeforeFTL - before).milliseconds(), ", B3: ", (after - m_timeBeforeFTL).milliseconds(), ")");
         dataLog(".\n");
     }
+}
+
+void JITPlan::runMainThreadFinalizationTasks()
+{
+    auto tasks = std::exchange(m_mainThreadFinalizationTasks, { });
+    for (auto& task : tasks)
+        task->run();
 }
 
 } // namespace JSC

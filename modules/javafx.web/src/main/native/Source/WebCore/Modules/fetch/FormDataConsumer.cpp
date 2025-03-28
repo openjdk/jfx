@@ -36,14 +36,12 @@ FormDataConsumer::FormDataConsumer(const FormData& formData, ScriptExecutionCont
     : m_formData(formData.copy())
     , m_context(&context)
     , m_callback(WTFMove(callback))
-    , m_fileQueue(WorkQueue::create("FormDataConsumer file queue"))
+    , m_fileQueue(WorkQueue::create("FormDataConsumer file queue"_s))
 {
     read();
 }
 
-FormDataConsumer::~FormDataConsumer()
-{
-}
+FormDataConsumer::~FormDataConsumer() = default;
 
 void FormDataConsumer::read()
 {
@@ -80,7 +78,7 @@ void FormDataConsumer::consumeFile(const String& filename)
                 return;
 
             if (!content) {
-                weakThis->didFail(Exception { InvalidStateError, "Unable to read form data file"_s });
+                weakThis->didFail(Exception { ExceptionCode::InvalidStateError, "Unable to read form data file"_s });
                 return;
             }
 
@@ -100,18 +98,18 @@ void FormDataConsumer::consumeBlob(const URL& blobURL)
             return;
 
         if (auto optionalErrorCode = loader->errorCode()) {
-            weakThis->didFail(Exception { InvalidStateError, "Failed to read form data blob"_s });
+            weakThis->didFail(Exception { ExceptionCode::InvalidStateError, "Failed to read form data blob"_s });
             return;
         }
 
         if (auto data = loader->arrayBufferResult())
-            weakThis->consume(std::span<const uint8_t> { static_cast<const uint8_t*>(data->data()), data->byteLength() });
+            weakThis->consume(data->span());
     });
 
     m_blobLoader->start(blobURL, m_context.get(), FileReaderLoader::ReadAsArrayBuffer);
 
     if (!m_blobLoader || !m_blobLoader->isLoading())
-        didFail(Exception { InvalidStateError, "Unable to read form data blob"_s });
+        didFail(Exception { ExceptionCode::InvalidStateError, "Unable to read form data blob"_s });
 }
 
 void FormDataConsumer::consume(std::span<const uint8_t> content)
@@ -119,14 +117,16 @@ void FormDataConsumer::consume(std::span<const uint8_t> content)
     if (!m_callback)
         return;
 
+    if (!content.empty()) {
     m_callback(WTFMove(content));
     if (!m_callback)
         return;
+    }
 
     read();
 }
 
-void FormDataConsumer::didFail(auto&& exception)
+void FormDataConsumer::didFail(Exception&& exception)
 {
     auto callback = std::exchange(m_callback, nullptr);
     cancel();

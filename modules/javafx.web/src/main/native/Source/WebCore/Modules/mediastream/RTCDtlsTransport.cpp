@@ -29,6 +29,7 @@
 #if ENABLE(WEB_RTC)
 
 #include "Blob.h"
+#include "ContextDestructionObserverInlines.h"
 #include "EventNames.h"
 #include "Logging.h"
 #include "NotImplemented.h"
@@ -36,11 +37,11 @@
 #include "RTCIceTransport.h"
 #include "RTCPeerConnection.h"
 #include "ScriptExecutionContext.h"
-#include <wtf/IsoMallocInlines.h>
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
-WTF_MAKE_ISO_ALLOCATED_IMPL(RTCDtlsTransport);
+WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(RTCDtlsTransport);
 
 Ref<RTCDtlsTransport> RTCDtlsTransport::create(ScriptExecutionContext& context, UniqueRef<RTCDtlsTransportBackend>&& backend, Ref<RTCIceTransport>&& iceTransport)
 {
@@ -88,7 +89,7 @@ void RTCDtlsTransport::onStateChanged(RTCDtlsTransportState state, Vector<Ref<JS
 
         if (m_state != state) {
             m_state = state;
-            if (auto connection = m_iceTransport->connection())
+            if (RefPtr connection = m_iceTransport->connection())
                 connection->updateConnectionState();
             dispatchEvent(Event::create(eventNames().statechangeEvent, Event::CanBubble::Yes, Event::IsCancelable::No));
         }

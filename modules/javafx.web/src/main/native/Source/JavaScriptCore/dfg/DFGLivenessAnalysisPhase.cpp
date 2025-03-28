@@ -51,7 +51,7 @@ typedef IndexSparseSet<unsigned, DefaultIndexSparseSetTraits<unsigned>, UnsafeVe
 class LivenessAnalysisPhase : public Phase {
 public:
     LivenessAnalysisPhase(Graph& graph)
-        : Phase(graph, "liveness analysis")
+        : Phase(graph, "liveness analysis"_s)
         , m_dirtyBlocks(m_graph.numBlocks())
         , m_indexing(*m_graph.m_indexingCache)
         , m_liveAtHead(m_graph)
@@ -153,9 +153,7 @@ private:
             m_workset->remove(liveIndexAtHead);
         ASSERT(!m_workset->isEmpty());
 
-        liveAtHead.reserveCapacity(liveAtHead.size() + m_workset->size());
-        for (unsigned newValue : *m_workset)
-            liveAtHead.uncheckedAppend(newValue);
+        liveAtHead.appendRange(m_workset->begin(), m_workset->end());
 
         bool changedPredecessor = false;
         for (BasicBlock* predecessor : block->predecessors) {

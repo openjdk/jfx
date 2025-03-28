@@ -67,10 +67,7 @@ struct LocalTimeOffset {
     {
     }
 
-    bool operator==(const LocalTimeOffset& other) const
-    {
-        return isDST == other.isDST && offset == other.offset;
-    }
+    friend bool operator==(const LocalTimeOffset&, const LocalTimeOffset&) = default;
 
     bool isDST { false };
     int offset { 0 };
@@ -80,9 +77,9 @@ void initializeDates();
 int equivalentYearForDST(int year);
 
 // Not really math related, but this is currently the only shared place to put these.
-WTF_EXPORT_PRIVATE double parseES5DateFromNullTerminatedCharacters(const char* dateString, bool& isLocalTime);
-WTF_EXPORT_PRIVATE double parseDateFromNullTerminatedCharacters(const char* dateString);
-WTF_EXPORT_PRIVATE double parseDateFromNullTerminatedCharacters(const char* dateString, bool& isLocalTime);
+WTF_EXPORT_PRIVATE double parseES5Date(std::span<const LChar> dateString, bool& isLocalTime);
+WTF_EXPORT_PRIVATE double parseDate(std::span<const LChar> dateString);
+WTF_EXPORT_PRIVATE double parseDate(std::span<const LChar> dateString, bool& isLocalTime);
 // dayOfWeek: [0, 6] 0 being Monday, day: [1, 31], month: [0, 11], year: ex: 2011, hours: [0, 23], minutes: [0, 59], seconds: [0, 59], utcOffset: [-720,720].
 WTF_EXPORT_PRIVATE String makeRFC2822DateString(unsigned dayOfWeek, unsigned day, unsigned month, unsigned year, unsigned hours, unsigned minutes, unsigned seconds, int utcOffset);
 
@@ -528,7 +525,7 @@ using WTF::msToDays;
 using WTF::msToHours;
 using WTF::msToMinutes;
 using WTF::msToYear;
-using WTF::parseDateFromNullTerminatedCharacters;
+using WTF::parseDate;
 using WTF::secondsPerDay;
 using WTF::secondsPerMinute;
 using WTF::setTimeZoneOverride;

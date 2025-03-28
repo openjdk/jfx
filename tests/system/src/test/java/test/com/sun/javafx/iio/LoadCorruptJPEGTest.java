@@ -24,13 +24,11 @@
  */
 package test.com.sun.javafx.iio;
 
-import static org.junit.Assert.fail;
-
+import static org.junit.jupiter.api.Assertions.fail;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.net.URL;
 import java.util.concurrent.CountDownLatch;
-
 import javafx.application.Application;
 import javafx.application.Platform;
 import javafx.scene.Scene;
@@ -38,12 +36,10 @@ import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
 import javafx.scene.layout.HBox;
 import javafx.stage.Stage;
-
-import org.junit.After;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.Test;
-
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
 import test.util.Util;
 
 public class LoadCorruptJPEGTest {
@@ -84,17 +80,17 @@ public class LoadCorruptJPEGTest {
         }
     }
 
-    @BeforeClass
+    @BeforeAll
     public static void initFX() throws Exception {
         Util.launch(startupLatch, TestApp.class);
     }
 
-    @AfterClass
+    @AfterAll
     public static void exit() {
         Util.shutdown();
     }
 
-    @After
+    @AfterEach
     public void resetTest() {
         Util.runAndWait(() -> {
             root.getChildren().clear();

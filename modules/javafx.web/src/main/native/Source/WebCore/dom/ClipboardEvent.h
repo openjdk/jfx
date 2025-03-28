@@ -30,7 +30,7 @@ namespace WebCore {
 class DataTransfer;
 
 class ClipboardEvent final : public Event {
-    WTF_MAKE_ISO_ALLOCATED(ClipboardEvent);
+    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(ClipboardEvent);
 public:
     virtual ~ClipboardEvent();
 
@@ -54,7 +54,6 @@ private:
     ClipboardEvent(const AtomString& type, Ref<DataTransfer>&&);
     ClipboardEvent(const AtomString& type, const Init&);
 
-    EventInterface eventInterface() const final;
     bool isClipboardEvent() const final;
 
     RefPtr<DataTransfer> m_clipboardData;

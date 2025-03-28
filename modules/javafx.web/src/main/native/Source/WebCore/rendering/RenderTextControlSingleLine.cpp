@@ -26,6 +26,7 @@
 
 #include "CSSFontSelector.h"
 #include "CSSValueKeywords.h"
+#include "DocumentInlines.h"
 #include "Font.h"
 #include "FrameSelection.h"
 #include "HTMLNames.h"
@@ -45,8 +46,8 @@
 #include "RenderView.h"
 #include "StyleResolver.h"
 #include "TextControlInnerElements.h"
-#include <wtf/IsoMallocInlines.h>
 #include <wtf/StackStats.h>
+#include <wtf/TZoneMallocInlines.h>
 
 #if PLATFORM(IOS_FAMILY)
 #include "RenderThemeIOS.h"
@@ -56,12 +57,13 @@ namespace WebCore {
 
 using namespace HTMLNames;
 
-WTF_MAKE_ISO_ALLOCATED_IMPL(RenderTextControlSingleLine);
-WTF_MAKE_ISO_ALLOCATED_IMPL(RenderTextControlInnerBlock);
+WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(RenderTextControlSingleLine);
+WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(RenderTextControlInnerBlock);
 
-RenderTextControlSingleLine::RenderTextControlSingleLine(HTMLInputElement& element, RenderStyle&& style)
-    : RenderTextControl(element, WTFMove(style))
+RenderTextControlSingleLine::RenderTextControlSingleLine(Type type, HTMLInputElement& element, RenderStyle&& style)
+    : RenderTextControl(type, element, WTFMove(style))
 {
+    ASSERT(isRenderTextControlSingleLine());
 }
 
 RenderTextControlSingleLine::~RenderTextControlSingleLine() = default;
@@ -153,11 +155,11 @@ void RenderTextControlSingleLine::layout()
         oldContainerLogicalTop = containerRenderer->logicalTop();
         LayoutUnit containerLogicalHeight = containerRenderer->logicalHeight();
 
-        auto* autoFillStrongPasswordButtonRenderer = [&]() -> RenderBox* {
+        CheckedPtr autoFillStrongPasswordButtonRenderer = [&]() -> RenderBox* {
             if (!inputElement().hasAutoFillStrongPasswordButton())
                 return nullptr;
 
-            auto* autoFillButtonElement = inputElement().autoFillButtonElement();
+            RefPtr autoFillButtonElement = inputElement().autoFillButtonElement();
             if (!autoFillButtonElement)
                 return nullptr;
 
@@ -486,9 +488,17 @@ HTMLInputElement& RenderTextControlSingleLine::inputElement() const
     return downcast<HTMLInputElement>(RenderTextControl::textFormControlElement());
 }
 
-RenderTextControlInnerBlock::RenderTextControlInnerBlock(Element& element, RenderStyle&& style)
-    : RenderBlockFlow(element, WTFMove(style))
+Ref<HTMLInputElement> RenderTextControlSingleLine::protectedInputElement() const
 {
+    return downcast<HTMLInputElement>(RenderTextControl::textFormControlElement());
 }
+
+RenderTextControlInnerBlock::RenderTextControlInnerBlock(Element& element, RenderStyle&& style)
+    : RenderBlockFlow(Type::TextControlInnerBlock, element, WTFMove(style))
+{
+    ASSERT(isRenderTextControlInnerBlock());
+}
+
+RenderTextControlInnerBlock::~RenderTextControlInnerBlock() = default;
 
 }

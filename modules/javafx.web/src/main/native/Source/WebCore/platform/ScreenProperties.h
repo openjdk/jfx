@@ -28,7 +28,6 @@
 #include "DestinationColorSpace.h"
 #include "FloatRect.h"
 #include "PlatformScreen.h"
-#include <wtf/EnumTraits.h>
 #include <wtf/HashMap.h>
 #include <wtf/RetainPtr.h>
 #include <wtf/text/WTFString.h>
@@ -45,10 +44,16 @@ struct ScreenData {
     bool screenHasInvertedColors { false };
     bool screenSupportsHighDynamicRange { false };
 #if PLATFORM(MAC)
+    FloatSize screenSize; // In millimeters.
     bool screenIsMonochrome { false };
     uint32_t displayMask { 0 };
     PlatformGPUID gpuID { 0 };
     DynamicRangeMode preferredDynamicRangeMode { DynamicRangeMode::Standard };
+    WEBCORE_EXPORT double screenDPI() const;
+#endif
+#if PLATFORM(GTK) || (PLATFORM(WPE) && ENABLE(WPE_PLATFORM))
+    IntSize screenSize; // In millimeters.
+    double dpi; // Already corrected for device scaling.
 #endif
 
 #if PLATFORM(MAC) || PLATFORM(IOS_FAMILY)

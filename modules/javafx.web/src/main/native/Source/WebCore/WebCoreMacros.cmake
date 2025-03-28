@@ -18,20 +18,6 @@ macro(MAKE_HASH_TOOLS _source)
 endmacro()
 
 
-# Append the given dependencies to the source file
-# This one consider the given dependencies are in ${WebCore_DERIVED_SOURCES_DIR}
-# and prepends this to every member of dependencies list
-macro(ADD_SOURCE_WEBCORE_DERIVED_DEPENDENCIES _source _deps)
-    set(_tmp "")
-    foreach (f ${_deps})
-        list(APPEND _tmp "${WebCore_DERIVED_SOURCES_DIR}/${f}")
-    endforeach ()
-
-    WEBKIT_ADD_SOURCE_DEPENDENCIES(${_source} ${_tmp})
-    unset(_tmp)
-endmacro()
-
-
 macro(MAKE_JS_FILE_ARRAYS _output_cpp _output_h _namespace _scripts _scripts_dependencies)
     add_custom_command(
         OUTPUT ${_output_h} ${_output_cpp}
@@ -50,7 +36,7 @@ option(SHOW_BINDINGS_GENERATION_PROGRESS "Show progress of generating bindings" 
 #   INPUT_FILES are IDL files to generate.
 #   PP_INPUT_FILES are IDL files to preprocess.
 #   BASE_DIR is base directory where script is called.
-#   IDL_INCLUDES is value of --include argument. (eg. ${WEBCORE_DIR}/bindings/js)
+#   INCLUDED_FILES are additional IDL files that can be imported by the generator.
 #   FEATURES is a value of --defines argument.
 #   DESTINATION is a value of --outputDir argument.
 #   GENERATOR is a value of --generator argument.
@@ -60,12 +46,13 @@ option(SHOW_BINDINGS_GENERATION_PROGRESS "Show progress of generating bindings" 
 function(GENERATE_BINDINGS target)
     set(options)
     set(oneValueArgs OUTPUT_SOURCE BASE_DIR FEATURES DESTINATION GENERATOR SUPPLEMENTAL_DEPFILE)
-    set(multiValueArgs INPUT_FILES PP_INPUT_FILES IDL_INCLUDES PP_EXTRA_OUTPUT PP_EXTRA_ARGS)
+    set(multiValueArgs INPUT_FILES PP_INPUT_FILES INCLUDED_FILES PP_EXTRA_OUTPUT PP_EXTRA_ARGS)
     cmake_parse_arguments(arg "${options}" "${oneValueArgs}" "${multiValueArgs}" ${ARGN})
     set(binding_generator ${WEBCORE_DIR}/bindings/scripts/generate-bindings-all.pl)
     set(idl_attributes_file ${WEBCORE_DIR}/bindings/scripts/IDLAttributes.json)
     set(idl_files_list ${CMAKE_CURRENT_BINARY_DIR}/idl_files_${target}.tmp)
     set(pp_idl_files_list ${CMAKE_CURRENT_BINARY_DIR}/pp_idl_files_${target}.tmp)
+    set(included_idl_files_list ${CMAKE_CURRENT_BINARY_DIR}/included_idl_files_${target}.tmp)
     set(_supplemental_dependency)
 
     set(content)
@@ -86,11 +73,22 @@ function(GENERATE_BINDINGS target)
     endforeach ()
     file(WRITE ${pp_idl_files_list} ${pp_content})
 
+    set(include_content)
+    foreach (f ${arg_INPUT_FILES} ${arg_INCLUDED_FILES})
+        if (NOT IS_ABSOLUTE ${f})
+            set(f ${CMAKE_CURRENT_SOURCE_DIR}/${f})
+        endif ()
+        set(include_content "${include_content}${f}\n")
+    endforeach ()
+    file(WRITE ${included_idl_files_list} ${include_content})
+    configure_file(${included_idl_files_list}  ${included_idl_files_list} @ONLY NEWLINE_STYLE LF)
+
     set(args
         --defines ${arg_FEATURES}
         --generator ${arg_GENERATOR}
         --outputDir ${arg_DESTINATION}
         --idlFilesList ${idl_files_list}
+        --idlFileNamesList ${included_idl_files_list}
         --ppIDLFilesList ${pp_idl_files_list}
         --preprocessor "${CODE_GENERATOR_PREPROCESSOR}"
         --idlAttributesFile ${idl_attributes_file}
@@ -102,13 +100,30 @@ function(GENERATE_BINDINGS target)
     if (PROCESSOR_COUNT)
         list(APPEND args --numOfJobs ${PROCESSOR_COUNT})
     endif ()
-    foreach (i IN LISTS arg_IDL_INCLUDES)
-        if (IS_ABSOLUTE ${i})
-            list(APPEND args --include ${i})
-        else ()
-            list(APPEND args --include ${CMAKE_CURRENT_SOURCE_DIR}/${i})
-        endif ()
-    endforeach ()
+
+    # https://support.microsoft.com/en-in/help/830473/command-prompt-cmd-exe-command-line-string-limitation
+    # pass --include dir list to tmp file instead of multiple argument
+    if (WIN32 AND PORT STREQUAL "Java")
+        set(include_dir_list ${CMAKE_CURRENT_BINARY_DIR}/include_dir_${target}.tmp)
+        set(includeDirectories)
+        foreach (i IN LISTS arg_IDL_INCLUDES)
+            if (IS_ABSOLUTE ${i})
+                set(includeDirectories "${includeDirectories}${i}\n")
+            else ()
+                set(includeDirectories "${includeDirectories}${CMAKE_CURRENT_SOURCE_DIR}/${i}\n")
+            endif ()
+        endforeach ()
+        file(WRITE ${include_dir_list} ${includeDirectories})
+        list(APPEND args --includeDirlist ${include_dir_list})
+    else ()
+            foreach (i IN LISTS arg_IDL_INCLUDES)
+            if (IS_ABSOLUTE ${i})
+                list(APPEND args --include ${i})
+            else ()
+                list(APPEND args --include ${CMAKE_CURRENT_SOURCE_DIR}/${i})
+            endif ()
+        endforeach ()
+    endif ()
 
     foreach (i IN LISTS arg_PP_EXTRA_OUTPUT)
         list(APPEND args --ppExtraOutput ${i})
@@ -123,6 +138,8 @@ function(GENERATE_BINDINGS target)
         # Changing enabled features should trigger recompiling all IDL files
         # because some of them use #if.
         ${CMAKE_BINARY_DIR}/cmakeconfig.h
+        # Settings can be removed also which requires regeneration.
+        ${WTF_WEB_PREFERENCES}
     )
     if (EXISTS ${WEBCORE_DIR}/bindings/scripts/CodeGenerator${arg_GENERATOR}.pm)
         list(APPEND common_generator_dependencies ${WEBCORE_DIR}/bindings/scripts/CodeGenerator${arg_GENERATOR}.pm)
@@ -182,6 +199,20 @@ macro(GENERATE_EVENT_FACTORY _infile _namespace)
         MAIN_DEPENDENCY ${_infile}
         DEPENDS ${NAMES_GENERATOR} ${SCRIPTS_BINDINGS}
         COMMAND ${PERL_EXECUTABLE} ${NAMES_GENERATOR} --input ${_infile} --outputDir ${WebCore_DERIVED_SOURCES_DIR}
+        VERBATIM)
+endmacro()
+
+
+macro(GENERATE_EVENT_NAMES _infile)
+    set(NAMES_GENERATOR ${WEBCORE_DIR}/dom/make-event-names.py)
+    set(_outputfiles ${WebCore_DERIVED_SOURCES_DIR}/EventNames.h ${WebCore_DERIVED_SOURCES_DIR}/EventNames.cpp)
+
+    add_custom_command(
+        OUTPUT  ${_outputfiles}
+        MAIN_DEPENDENCY ${_infile}
+        DEPENDS ${NAMES_GENERATOR} ${SCRIPTS_BINDINGS}
+        WORKING_DIRECTORY ${WebCore_DERIVED_SOURCES_DIR}
+        COMMAND ${PYTHON_EXECUTABLE} ${NAMES_GENERATOR} --event-names ${_infile}
         VERBATIM)
 endmacro()
 

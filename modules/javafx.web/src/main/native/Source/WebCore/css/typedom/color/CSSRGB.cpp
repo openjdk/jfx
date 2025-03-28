@@ -28,11 +28,11 @@
 
 #include "CSSUnitValue.h"
 #include "CSSUnits.h"
-#include <wtf/IsoMallocInlines.h>
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
-WTF_MAKE_ISO_ALLOCATED_IMPL(CSSRGB);
+WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(CSSRGB);
 
 static CSSColorRGBComp toCSSColorRGBComp(const RectifiedCSSColorRGBComp& component)
 {
@@ -133,13 +133,13 @@ ExceptionOr<RectifiedCSSColorRGBComp> CSSRGB::rectifyCSSColorRGBComp(CSSColorRGB
     }, [](RefPtr<CSSNumericValue>&& numericValue) -> ExceptionOr<RectifiedCSSColorRGBComp> {
         if (numericValue->type().matchesNumber() || numericValue->type().matches<CSSNumericBaseType::Percent>())
             return { WTFMove(numericValue) };
-        return Exception { SyntaxError, "Invalid CSSColorRGBComp"_s };
+        return Exception { ExceptionCode::SyntaxError, "Invalid CSSColorRGBComp"_s };
     }, [](String&& string) -> ExceptionOr<RectifiedCSSColorRGBComp> {
         return { RefPtr<CSSKeywordValue> { CSSKeywordValue::rectifyKeywordish(WTFMove(string)) } };
     }, [](RefPtr<CSSKeywordValue>&& keywordValue) -> ExceptionOr<RectifiedCSSColorRGBComp> {
         if (equalIgnoringASCIICase(keywordValue->value(), "none"_s))
             return { WTFMove(keywordValue) };
-        return Exception { SyntaxError, "Invalid CSSColorRGBComp"_s };
+        return Exception { ExceptionCode::SyntaxError, "Invalid CSSColorRGBComp"_s };
     });
 }
 

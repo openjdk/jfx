@@ -2472,7 +2472,8 @@ vp9_caps_get_mime_codec (GstCaps * caps)
   GstStructure *caps_st;
   const char *profile_str, *chroma_format_str, *colorimetry_str;
   guint bitdepth_luma, bitdepth_chroma;
-  guint8 profile = -1, chroma_format = -1, level = -1;
+  guint8 profile = -1, chroma_format = -1, level = -1, color_primaries =
+      -1, color_transfer = -1, color_matrix = -1;
   gboolean video_full_range;
   GstVideoColorimetry cinfo = { 0, };
   GString *codec_string;
@@ -2540,11 +2541,16 @@ vp9_caps_get_mime_codec (GstCaps * caps)
     goto done;
   }
 
-  /* optional but all or nothing */
-  g_string_append_printf (codec_string, ".%02u.%02u.%02u.%02u.%02u",
-      chroma_format, gst_video_color_primaries_to_iso (cinfo.primaries),
-      gst_video_transfer_function_to_iso (cinfo.transfer),
-      gst_video_color_matrix_to_iso (cinfo.matrix), video_full_range);
+  /* optional but all or nothing. Include them if any parameter differs from the default value */
+  color_primaries = gst_video_color_primaries_to_iso (cinfo.primaries);
+  color_transfer = gst_video_transfer_function_to_iso (cinfo.transfer);
+  color_matrix = gst_video_color_matrix_to_iso (cinfo.matrix);
+  if (chroma_format != 1 || color_primaries != 1 || color_transfer != 1
+      || color_matrix != 1 || video_full_range) {
+    g_string_append_printf (codec_string, ".%02u.%02u.%02u.%02u.%02u",
+        chroma_format, color_primaries, color_transfer, color_matrix,
+        video_full_range);
+  }
 
 done:
   return g_string_free (codec_string, FALSE);

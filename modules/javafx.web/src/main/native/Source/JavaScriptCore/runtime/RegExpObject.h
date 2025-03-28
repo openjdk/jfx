@@ -111,17 +111,14 @@ public:
 
     DECLARE_EXPORT_INFO;
 
-    static Structure* createStructure(VM& vm, JSGlobalObject* globalObject, JSValue prototype)
-    {
-        return Structure::create(vm, globalObject, prototype, TypeInfo(RegExpObjectType, StructureFlags), info());
-    }
+    inline static Structure* createStructure(VM&, JSGlobalObject*, JSValue);
 
-    static ptrdiff_t offsetOfRegExpAndFlags()
+    static constexpr ptrdiff_t offsetOfRegExpAndFlags()
     {
         return OBJECT_OFFSETOF(RegExpObject, m_regExpAndFlags);
     }
 
-    static ptrdiff_t offsetOfLastIndex()
+    static constexpr ptrdiff_t offsetOfLastIndex()
     {
         return OBJECT_OFFSETOF(RegExpObject, m_lastIndex);
     }

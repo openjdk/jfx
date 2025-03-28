@@ -26,11 +26,13 @@
 package com.oracle.tools.fx.monkey.pages;
 
 import javafx.beans.property.ObjectProperty;
+import javafx.scene.AccessibleAttribute;
 import javafx.scene.Node;
 import javafx.scene.control.Pagination;
 import javafx.scene.control.skin.PaginationSkin;
 import javafx.scene.image.ImageView;
 import javafx.util.Callback;
+import com.oracle.tools.fx.monkey.Loggers;
 import com.oracle.tools.fx.monkey.options.IntOption;
 import com.oracle.tools.fx.monkey.options.ObjectOption;
 import com.oracle.tools.fx.monkey.sheets.ControlPropertySheet;
@@ -48,7 +50,14 @@ public class PaginationPage extends TestPaneBase implements HasSkinnable {
     public PaginationPage() {
         super("PaginationPage");
 
-        control = new Pagination();
+        control = new Pagination() {
+            @Override
+            public Object queryAccessibleAttribute(AccessibleAttribute a, Object... ps) {
+                Object v = super.queryAccessibleAttribute(a, ps);
+                Loggers.accessibility.log(a, v);
+                return v;
+            }
+        };
 
         OptionPane op = new OptionPane();
         op.section("Pagination");

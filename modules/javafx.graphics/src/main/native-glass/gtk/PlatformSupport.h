@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2023, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -47,7 +47,17 @@ public:
     void updatePreferences() const;
 
 private:
+    static constexpr const char* OBSERVED_SETTINGS[] = {
+        "notify::gtk-theme-name",
+        "notify::gtk-enable-animations",
+        "notify::gtk-overlay-scrolling"
+    };
+
+    static constexpr int NUM_OBSERVED_SETTINGS = sizeof(OBSERVED_SETTINGS) / sizeof(const char*);
+
     JNIEnv* env;
     jobject application;
+    unsigned long settingChangedHandlers[NUM_OBSERVED_SETTINGS] = {};
+    unsigned long networkChangedHandler = 0;
     mutable jobject preferences;
 };

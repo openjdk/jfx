@@ -25,6 +25,7 @@
 #include <wtf/NeverDestroyed.h>
 #include <wtf/text/AtomString.h>
 #include <wtf/text/AtomStringHash.h>
+#include <wtf/text/MakeString.h>
 
 namespace WebCore {
 
@@ -69,10 +70,10 @@ public:
         AtomString m_localNameLower;
         mutable AtomString m_localNameUpper;
 
-#if ENABLE(JIT)
-        static ptrdiff_t localNameMemoryOffset() { return OBJECT_OFFSETOF(QualifiedNameImpl, m_localName); }
-        static ptrdiff_t namespaceMemoryOffset() { return OBJECT_OFFSETOF(QualifiedNameImpl, m_namespaceURI); }
-#endif
+        static constexpr ptrdiff_t namespaceMemoryOffset() { return OBJECT_OFFSETOF(QualifiedNameImpl, m_namespace); }
+        static constexpr ptrdiff_t nodeNameMemoryOffset() { return OBJECT_OFFSETOF(QualifiedNameImpl, m_nodeName); }
+        static constexpr ptrdiff_t localNameMemoryOffset() { return OBJECT_OFFSETOF(QualifiedNameImpl, m_localName); }
+        static constexpr ptrdiff_t namespaceURIMemoryOffset() { return OBJECT_OFFSETOF(QualifiedNameImpl, m_namespaceURI); }
 
     private:
         friend class QualifiedName;
@@ -86,7 +87,7 @@ public:
     explicit QualifiedName(WTF::HashTableDeletedValueType) : m_impl(WTF::HashTableDeletedValue) { }
     bool isHashTableDeletedValue() const { return m_impl.isHashTableDeletedValue(); }
 
-    bool operator==(const QualifiedName& other) const { return m_impl == other.m_impl; }
+    friend bool operator==(const QualifiedName&, const QualifiedName&) = default;
 
     bool matches(const QualifiedName& other) const { return m_impl == other.m_impl || (localName() == other.localName() && namespaceURI() == other.namespaceURI()); }
 
@@ -107,7 +108,7 @@ public:
 
     QualifiedNameImpl* impl() const { return m_impl.get(); }
 #if ENABLE(JIT)
-    static ptrdiff_t implMemoryOffset() { return OBJECT_OFFSETOF(QualifiedName, m_impl); }
+    static constexpr ptrdiff_t implMemoryOffset() { return OBJECT_OFFSETOF(QualifiedName, m_impl); }
 #endif
 
     // Init routine for globals
@@ -126,13 +127,14 @@ inline void add(Hasher& hasher, const QualifiedName::QualifiedNameImpl& impl)
 
 inline void add(Hasher& hasher, const QualifiedName& name)
 {
-    add(hasher, *name.impl());
+    add(hasher, bitwise_cast<uintptr_t>(name.impl()));
 }
 
 extern LazyNeverDestroyed<const QualifiedName> anyName;
 inline const QualifiedName& anyQName() { return anyName; }
 
-const QualifiedName& nullQName();
+extern LazyNeverDestroyed<const QualifiedName> nullName;
+inline const QualifiedName& nullQName() { return nullName; }
 
 inline bool operator==(const AtomString& a, const QualifiedName& q) { return a == q.localName(); }
 inline bool operator==(const QualifiedName& q, const AtomString& a) { return a == q.localName(); }
@@ -159,7 +161,7 @@ inline String QualifiedName::toString() const
     if (!hasPrefix())
         return localName();
 
-    return prefix().string() + ':' + localName().string();
+    return makeString(prefix().string(), ':', localName().string());
 }
 
 inline AtomString QualifiedName::toAtomString() const

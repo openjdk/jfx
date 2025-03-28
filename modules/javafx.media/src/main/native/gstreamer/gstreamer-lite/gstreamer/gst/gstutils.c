@@ -1218,7 +1218,8 @@ gst_element_get_compatible_pad (GstElement * element, GstPad * pad,
           }
         } else {
           GST_CAT_DEBUG (GST_CAT_ELEMENT_PADS,
-              "already linked or cannot be linked (peer = %p)", peer);
+              "already linked or cannot be linked (peer = %" GST_PTR_FORMAT ")",
+              peer);
         }
         GST_CAT_DEBUG (GST_CAT_ELEMENT_PADS, "unreffing pads");
 
@@ -3546,15 +3547,12 @@ gst_parse_bin_from_description_full (const gchar * bin_description,
 GstClockTime
 gst_util_get_timestamp (void)
 {
-#if defined (HAVE_POSIX_TIMERS) && defined(HAVE_MONOTONIC_CLOCK) &&\
-    defined (HAVE_CLOCK_GETTIME)
-  struct timespec now;
-
-  clock_gettime (CLOCK_MONOTONIC, &now);
-  return GST_TIMESPEC_TO_TIME (now);
+#if defined(G_OS_WIN32) && !defined(GST_STATIC_COMPILATION)
+  /* priv_gst_clock_init() is called in DllMain */
 #else
-  return g_get_monotonic_time () * 1000;
+  priv_gst_clock_init ();
 #endif
+  return priv_gst_get_monotonic_time ();
 }
 
 /**
@@ -3694,6 +3692,73 @@ gst_util_greatest_common_divisor_int64 (gint64 a, gint64 b)
   return ABS (a);
 }
 
+/**
+ * gst_util_simplify_fraction:
+ * @numerator: First value as #gint
+ * @denominator: Second value as #gint
+ * @n_terms: non-significative terms (typical value: 8)
+ * @threshold: threshold (typical value: 333)
+ *
+ * Calculates the simpler representation of @numerator and @denominator and
+ * update both values with the resulting simplified fraction.
+ *
+ * Simplify a fraction using a simple continued fraction decomposition.
+ * The idea here is to convert fractions such as 333333/10000000 to 1/30
+ * using 32 bit arithmetic only. The algorithm is not perfect and relies
+ * upon two arbitrary parameters to remove non-significative terms from
+ * the simple continued fraction decomposition. Using 8 and 333 for
+ * @n_terms and @threshold respectively seems to give nice results.
+ *
+ * Since: 1.24
+ */
+void
+gst_util_simplify_fraction (gint * numerator, gint * denominator,
+    guint n_terms, guint threshold)
+{
+  guint *an;
+  guint x, y, r;
+  guint i, n;
+
+  an = g_malloc_n (n_terms, sizeof (*an));
+  if (an == NULL)
+    return;
+
+  /*
+   * Convert the fraction to a simple continued fraction. See
+   * https://en.wikipedia.org/wiki/Continued_fraction
+   * Stop if the current term is bigger than or equal to the given
+   * threshold.
+   */
+  x = *numerator;
+  y = *denominator;
+
+  for (n = 0; n < n_terms && y != 0; ++n) {
+    an[n] = x / y;
+    if (an[n] >= threshold) {
+      if (n < 2)
+        n++;
+      break;
+    }
+
+    r = x - an[n] * y;
+    x = y;
+    y = r;
+  }
+
+  /* Expand the simple continued fraction back to an integer fraction. */
+  x = 0;
+  y = 1;
+
+  for (i = n; i > 0; --i) {
+    r = y;
+    y = an[i - 1] * y + x;
+    x = r;
+  }
+
+  *numerator = y;
+  *denominator = x;
+  g_free (an);
+}
 
 /**
  * gst_util_fraction_to_double:
@@ -3991,28 +4056,16 @@ gst_util_fraction_compare (gint a_n, gint a_d, gint b_n, gint b_d)
 }
 
 static gchar *
-gst_pad_create_stream_id_internal (GstPad * pad, GstElement * parent,
+gst_element_decorate_stream_id_internal (GstElement * element,
     const gchar * stream_id)
 {
   GstEvent *upstream_event;
   gchar *upstream_stream_id = NULL, *new_stream_id;
   GstPad *sinkpad;
 
-  g_return_val_if_fail (GST_IS_PAD (pad), NULL);
-  g_return_val_if_fail (GST_PAD_IS_SRC (pad), NULL);
-  g_return_val_if_fail (GST_IS_ELEMENT (parent), NULL);
-
-  g_return_val_if_fail (parent->numsinkpads <= 1, NULL);
-
-  /* If the element has multiple source pads it must
-   * provide a stream-id for every source pad, otherwise
-   * all source pads will have the same and are not
-   * distinguishable */
-  g_return_val_if_fail (parent->numsrcpads <= 1 || stream_id, NULL);
-
   /* First try to get the upstream stream-start stream-id from the sinkpad.
    * This will only work for non-source elements */
-  sinkpad = gst_element_get_static_pad (parent, "sink");
+  sinkpad = gst_element_get_static_pad (element, "sink");
   if (sinkpad) {
     upstream_event =
         gst_pad_get_sticky_event (sinkpad, GST_EVENT_STREAM_START, 0);
@@ -4036,7 +4089,7 @@ gst_pad_create_stream_id_internal (GstPad * pad, GstElement * parent,
     /* Try to generate one from the URI query and
      * if it fails take a random number instead */
     query = gst_query_new_uri ();
-    if (gst_element_query (parent, query)) {
+    if (gst_element_query (element, query)) {
       gst_query_parse_uri (query, &uri);
     }
 
@@ -4051,7 +4104,7 @@ gst_pad_create_stream_id_internal (GstPad * pad, GstElement * parent,
       g_checksum_free (cs);
     } else {
       /* Just get some random number if the URI query fails */
-      GST_FIXME_OBJECT (pad, "Creating random stream-id, consider "
+      GST_FIXME_OBJECT (element, "Creating random stream-id, consider "
           "implementing a deterministic way of creating a stream-id");
       upstream_stream_id =
           g_strdup_printf ("%08x%08x%08x%08x", g_random_int (), g_random_int (),
@@ -4070,6 +4123,139 @@ gst_pad_create_stream_id_internal (GstPad * pad, GstElement * parent,
   g_free (upstream_stream_id);
 
   return new_stream_id;
+}
+
+/**
+ * gst_element_decorate_stream_id_printf_valist:
+ * @element: The  #GstElement to create a stream-id for
+ * @format: (not nullable): The stream-id
+ * @var_args: parameters for the @format string
+ *
+ * Creates a stream-id for @element by combining the upstream information with
+ * the @format.
+ *
+ * This function generates an unique stream-id by getting the upstream
+ * stream-start event stream ID and appending @format to it. If the element
+ * has no sinkpad it will generate an upstream stream-id by doing an URI query
+ * on the element and in the worst case just uses a random number. Source
+ * elements that don't implement the URI handler interface should ideally
+ * generate a unique, deterministic stream-id manually instead.
+ *
+ * Since stream IDs are sorted alphabetically, any numbers in the stream ID
+ * should be printed with a fixed number of characters, preceded by 0's, such as
+ * by using the format \%03u instead of \%u.
+ *
+ * Returns: (transfer full): A stream-id for @element.
+ *
+ * Since: 1.24
+ */
+gchar *
+gst_element_decorate_stream_id_printf_valist (GstElement * element,
+    const gchar * format, va_list var_args)
+{
+  gchar *stream_id, *res;
+
+  g_return_val_if_fail (format, NULL);
+
+  stream_id = g_strdup_vprintf (format, var_args);
+
+  res = gst_element_decorate_stream_id_internal (element, stream_id);
+
+  g_free (stream_id);
+
+  return res;
+}
+
+/**
+ * gst_element_decorate_stream_id_printf:
+ * @element: The  #GstElement to create a stream-id for
+ * @format: (not nullable): The stream-id
+ *
+ * Creates a stream-id for @element by combining the upstream information with
+ * the @format.
+ *
+ * This function generates an unique stream-id by getting the upstream
+ * stream-start event stream ID and appending the stream-id to it. If the element
+ * has no sinkpad it will generate an upstream stream-id by doing an URI query
+ * on the element and in the worst case just uses a random number. Source
+ * elements that don't implement the URI handler interface should ideally
+ * generate a unique, deterministic stream-id manually instead.
+ *
+ * Since stream IDs are sorted alphabetically, any numbers in the stream ID
+ * should be printed with a fixed number of characters, preceded by 0's, such as
+ * by using the format \%03u instead of \%u.
+ *
+ * Returns: (transfer full): A stream-id for @element.
+ *
+ * Since: 1.24
+ */
+gchar *
+gst_element_decorate_stream_id_printf (GstElement * element,
+    const gchar * format, ...)
+{
+  gchar *res;
+  va_list var_args;
+
+  g_return_val_if_fail (format, NULL);
+
+  va_start (var_args, format);
+  res =
+      gst_element_decorate_stream_id_printf_valist (element, format, var_args);
+  va_end (var_args);
+
+  return res;
+}
+
+
+/**
+ * gst_element_decorate_stream_id:
+ * @element: The  #GstElement to create a stream-id for
+ * @stream_id: (not nullable): The stream-id
+ *
+ * Creates a stream-id for @element by combining the upstream information with
+ * the @stream_id.
+ *
+ * This function generates an unique stream-id by getting the upstream
+ * stream-start event stream ID and appending @stream_id to it. If the element
+ * has no sinkpad it will generate an upstream stream-id by doing an URI query
+ * on the element and in the worst case just uses a random number. Source
+ * elements that don't implement the URI handler interface should ideally
+ * generate a unique, deterministic stream-id manually instead.
+ *
+ * Since stream IDs are sorted alphabetically, any numbers in the stream ID
+ * should be printed with a fixed number of characters, preceded by 0's, such as
+ * by using the format \%03u instead of \%u.
+ *
+ * Returns: (transfer full): A stream-id for @element.
+ *
+ * Since: 1.24
+ */
+gchar *
+gst_element_decorate_stream_id (GstElement * element, const gchar * stream_id)
+{
+  g_return_val_if_fail (stream_id, NULL);
+  g_return_val_if_fail (GST_IS_ELEMENT (element), NULL);
+
+  return gst_element_decorate_stream_id_internal (element, stream_id);
+}
+
+static gchar *
+gst_pad_create_stream_id_internal (GstPad * pad, GstElement * parent,
+    const gchar * stream_id)
+{
+  g_return_val_if_fail (GST_IS_PAD (pad), NULL);
+  g_return_val_if_fail (GST_PAD_IS_SRC (pad), NULL);
+  g_return_val_if_fail (GST_IS_ELEMENT (parent), NULL);
+
+  g_return_val_if_fail (parent->numsinkpads <= 1, NULL);
+
+  /* If the element has multiple source pads it must
+   * provide a stream-id for every source pad, otherwise
+   * all source pads will have the same and are not
+   * distinguishable */
+  g_return_val_if_fail (parent->numsrcpads <= 1 || stream_id, NULL);
+
+  return gst_element_decorate_stream_id_internal (parent, stream_id);
 }
 
 /**
@@ -4286,10 +4472,15 @@ gst_util_group_id_next (void)
   return ret;
 }
 
-/* Compute log2 of the passed 64-bit number by finding the highest set bit */
+/* Compute the number of bits needed at least to store `in` */
 static guint
-gst_log2 (GstClockTime in)
+gst_bit_storage_uint64 (guint64 in)
 {
+#if defined(__GNUC__) && __GNUC__ >= 4
+  return in ? 64 - __builtin_clzll (in) : 1;
+#else
+  /* integer log2(v) from:
+     <http://graphics.stanford.edu/~seander/bithacks.html#IntegerLog> */
   const guint64 b[] =
       { 0x2, 0xC, 0xF0, 0xFF00, 0xFFFF0000, 0xFFFFFFFF00000000LL };
   const guint64 S[] = { 1, 2, 4, 8, 16, 32 };
@@ -4303,8 +4494,49 @@ gst_log2 (GstClockTime in)
     }
   }
 
-  return count;
+  return count + 1;             // + 1 to get the number of storage bits needed
+#endif
 }
+
+#ifndef GSTREAMER_LITE
+/**
+ * gst_util_ceil_log2:
+ * @v: a #guint32 value.
+ *
+ * Returns smallest integral value not less than log2(v).
+ *
+ * Returns: a computed #guint val.
+ *
+ * Since: 1.24
+ */
+guint
+gst_util_ceil_log2 (guint32 v)
+{
+  static const unsigned int t[6] = {
+    0x00000000ull,
+    0xFFFF0000ull,
+    0x0000FF00ull,
+    0x000000F0ull,
+    0x0000000Cull,
+    0x000000002ull
+  };
+
+  g_return_val_if_fail (v != 0, -1);
+
+  int y = (((v & (v - 1)) == 0) ? 0 : 1);
+  int j = 32;
+  int i;
+
+  for (i = 0; i < 6; i++) {
+    int k = (((v & t[i]) == 0) ? 0 : j);
+    y += k;
+    v >>= k;
+    j >>= 1;
+  }
+
+  return y;
+}
+#endif // GSTREAMER_LITE
 
 /**
  * gst_calculate_linear_regression: (skip)
@@ -4436,10 +4668,20 @@ gst_calculate_linear_regression (const GstClockTime * xy,
    */
 
   /* Guess how many bits we might need for the usual distribution of input,
-   * with a fallback loop that drops precision if things go pear-shaped */
-  max_bits = gst_log2 (MAX (xmax - xmin, ymax - ymin)) * 7 / 8 + gst_log2 (n);
-  if (max_bits > 64)
-    pshift = max_bits - 64;
+   * with a fallback loop that drops precision if things go pear-shaped.
+   *
+   * Each calculation of tmp during the iteration is multiplying two numbers and
+   * then adding them together, or adding them together and then multiplying
+   * them. The second case is worse and means we need at least twice
+   * (multiplication) as many bits as the biggest number needs, plus another bit
+   * (addition). At most 63 bits (signed 64 bit integer) are available.
+   *
+   * That means that each number must require at most (63 - 1) / 2 bits = 31
+   * bits of storage.
+   */
+  max_bits = gst_bit_storage_uint64 (MAX (1, MAX (xmax - xmin, ymax - ymin)));
+  if (max_bits > 31)
+    pshift = max_bits - 31;
 
   i = 0;
   do {
@@ -4591,7 +4833,7 @@ gboolean
 gst_type_is_plugin_api (GType type, GstPluginAPIFlags * flags)
 {
   gboolean ret =
-      ! !GPOINTER_TO_INT (g_type_get_qdata (type, GST_QUARK (PLUGIN_API)));
+      !!GPOINTER_TO_INT (g_type_get_qdata (type, GST_QUARK (PLUGIN_API)));
 
   if (ret && flags) {
     *flags =
@@ -4600,3 +4842,41 @@ gst_type_is_plugin_api (GType type, GstPluginAPIFlags * flags)
 
   return ret;
 }
+
+#ifndef GSTREAMER_LITE
+/**
+ * gst_util_filename_compare:
+ * @a: (type filename): a filename to compare with @b
+ * @b: (type filename): a filename to compare with @a
+ *
+ * Compares the given filenames using natural ordering.
+ *
+ * Since: 1.24
+ */
+gint
+gst_util_filename_compare (const gchar * a, const gchar * b)
+{
+  gchar *a_utf8, *b_utf8;
+  gchar *a1, *b1;
+  gint ret;
+
+  /* Filenames in GLib are only guaranteed to be UTF-8 on Windows */
+  a_utf8 = g_filename_to_utf8 (a, -1, NULL, NULL, NULL);
+  b_utf8 = g_filename_to_utf8 (b, -1, NULL, NULL, NULL);
+
+  if (a_utf8 == NULL || b_utf8 == NULL) {
+    return strcmp (a, b);
+  }
+
+  a1 = g_utf8_collate_key_for_filename (a_utf8, -1);
+  b1 = g_utf8_collate_key_for_filename (b_utf8, -1);
+  ret = strcmp (a1, b1);
+  g_free (a1);
+  g_free (b1);
+
+  g_free (a_utf8);
+  g_free (b_utf8);
+
+  return ret;
+}
+#endif // GSTREAMER_LITE

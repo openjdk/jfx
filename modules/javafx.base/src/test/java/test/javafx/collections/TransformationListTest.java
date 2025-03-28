@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -30,15 +30,15 @@ import javafx.collections.FXCollections;
 import javafx.collections.ListChangeListener.Change;
 import javafx.collections.ObservableList;
 import javafx.collections.transformation.TransformationList;
-import org.junit.Before;
-import org.junit.Ignore;
-import org.junit.Test;
-import static org.junit.Assert.* ;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Disabled;
+import org.junit.jupiter.api.Test;
+import static org.junit.jupiter.api.Assertions.* ;
 
 /**
  *
  */
-@Ignore
+@Disabled
 public class TransformationListTest {
 
     private static class TransformationListImpl extends TransformationList<String, String> {
@@ -107,7 +107,7 @@ public class TransformationListTest {
     private TransformationList<String, String> list1, list2;
     private ObservableList<String> list3;
 
-    @Before
+    @BeforeEach
     public void setUp() {
         list3 = FXCollections.observableArrayList();
         list2 = new TransformationListImpl(list3);

@@ -30,6 +30,7 @@
 
 #include <wtf/Forward.h>
 #include <wtf/Vector.h>
+#include <wtf/cocoa/SpanCocoa.h>
 
 namespace WTF {
 
@@ -78,8 +79,12 @@ template<typename CollectionType> RetainPtr<NSMutableArray> createNSArray(Collec
 template<typename CollectionType, typename MapFunctionType> RetainPtr<NSMutableArray> createNSArray(CollectionType&& collection, MapFunctionType&& function)
 {
     auto array = adoptNS([[NSMutableArray alloc] initWithCapacity:std::size(collection)]);
-    for (auto&& element : collection)
-        addUnlessNil(array.get(), getPtr(std::invoke(std::forward<MapFunctionType>(function), std::forward<decltype(element)>(element))));
+    for (auto&& element : std::forward<CollectionType>(collection)) {
+        if constexpr (std::is_rvalue_reference_v<CollectionType&&> && !std::is_const_v<std::remove_reference_t<decltype(element)>>)
+            addUnlessNil(array.get(), getPtr(function(WTFMove(element))));
+        else
+            addUnlessNil(array.get(), getPtr(function(element)));
+    }
     return array;
 }
 
@@ -90,7 +95,7 @@ template<typename VectorElementType> Vector<VectorElementType> makeVector(NSArra
     for (id element in array) {
         constexpr const VectorElementType* typedNull = nullptr;
         if (auto vectorElement = makeVectorElement(typedNull, element))
-            vector.uncheckedAppend(WTFMove(*vectorElement));
+            vector.append(WTFMove(*vectorElement));
     }
     vector.shrinkToFit();
     return vector;
@@ -102,19 +107,18 @@ template<typename MapFunctionType> Vector<typename std::invoke_result_t<MapFunct
     vector.reserveInitialCapacity(array.count);
     for (id element in array) {
         if (auto vectorElement = std::invoke(std::forward<MapFunctionType>(function), element))
-            vector.uncheckedAppend(WTFMove(*vectorElement));
+            vector.append(WTFMove(*vectorElement));
     }
     vector.shrinkToFit();
     return vector;
 }
 
-inline Vector<uint8_t> vectorFromNSData(NSData* data)
+inline Vector<uint8_t> makeVector(NSData *data)
 {
-    return { reinterpret_cast<const uint8_t*>(data.bytes), data.length };
+    return span(data);
 }
 
 } // namespace WTF
 
 using WTF::createNSArray;
 using WTF::makeVector;
-using WTF::vectorFromNSData;

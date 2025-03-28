@@ -62,8 +62,44 @@ void setNumberFormatDigitOptions(JSGlobalObject* globalObject, IntlType* intlIns
 
     intlInstance->m_minimumIntegerDigits = minimumIntegerDigits;
 
+    unsigned roundingIncrement = intlNumberOption(globalObject, options, vm.propertyNames->roundingIncrement, 1, 5000, 1);
+    RETURN_IF_EXCEPTION(scope, void());
+    static constexpr const unsigned roundingIncrementCandidates[] = {
+        1, 2, 5, 10, 20, 25, 50, 100, 200, 250, 500, 1000, 2000, 2500, 5000
+    };
+    if (std::none_of(roundingIncrementCandidates, roundingIncrementCandidates + std::size(roundingIncrementCandidates),
+        [&](unsigned candidate) {
+            return candidate == roundingIncrement;
+        })) {
+        throwRangeError(globalObject, scope, "roundingIncrement must be one of 1, 2, 5, 10, 20, 25, 50, 100, 200, 250, 500, 1000, 2000, 2500, 5000"_s);
+        return;
+    }
+
+    RoundingMode roundingMode = intlOption<RoundingMode>(globalObject, options, vm.propertyNames->roundingMode, {
+            { "ceil"_s, RoundingMode::Ceil },
+            { "floor"_s, RoundingMode::Floor },
+            { "expand"_s, RoundingMode::Expand },
+            { "trunc"_s, RoundingMode::Trunc },
+            { "halfCeil"_s, RoundingMode::HalfCeil },
+            { "halfFloor"_s, RoundingMode::HalfFloor },
+            { "halfExpand"_s, RoundingMode::HalfExpand },
+            { "halfTrunc"_s, RoundingMode::HalfTrunc },
+            { "halfEven"_s, RoundingMode::HalfEven }
+        }, "roundingMode must be either \"ceil\", \"floor\", \"expand\", \"trunc\", \"halfCeil\", \"halfFloor\", \"halfExpand\", \"halfTrunc\", or \"halfEven\""_s, RoundingMode::HalfExpand);
+    RETURN_IF_EXCEPTION(scope, void());
+
     IntlRoundingPriority roundingPriority = intlOption<IntlRoundingPriority>(globalObject, options, vm.propertyNames->roundingPriority, { { "auto"_s, IntlRoundingPriority::Auto }, { "morePrecision"_s, IntlRoundingPriority::MorePrecision }, { "lessPrecision"_s, IntlRoundingPriority::LessPrecision } }, "roundingPriority must be either \"auto\", \"morePrecision\", or \"lessPrecision\""_s, IntlRoundingPriority::Auto);
     RETURN_IF_EXCEPTION(scope, void());
+
+    IntlTrailingZeroDisplay trailingZeroDisplay = intlOption<IntlTrailingZeroDisplay>(globalObject, options, vm.propertyNames->trailingZeroDisplay, { { "auto"_s, IntlTrailingZeroDisplay::Auto }, { "stripIfInteger"_s, IntlTrailingZeroDisplay::StripIfInteger } }, "trailingZeroDisplay must be either \"auto\" or \"stripIfInteger\""_s, IntlTrailingZeroDisplay::Auto);
+    RETURN_IF_EXCEPTION(scope, void());
+
+    if (roundingIncrement != 1)
+        maximumFractionDigitsDefault = minimumFractionDigitsDefault;
+
+    intlInstance->m_roundingIncrement = roundingIncrement;
+    intlInstance->m_roundingMode = roundingMode;
+    intlInstance->m_trailingZeroDisplay = trailingZeroDisplay;
 
     bool hasSd = !minimumSignificantDigitsValue.isUndefined() || !maximumSignificantDigitsValue.isUndefined();
     bool hasFd = !minimumFractionDigitsValue.isUndefined() || !maximumFractionDigitsValue.isUndefined();
@@ -94,9 +130,9 @@ void setNumberFormatDigitOptions(JSGlobalObject* globalObject, IntlType* intlIns
     if (needFd) {
         if (hasFd) {
             constexpr unsigned undefinedValue = UINT32_MAX;
-            unsigned minimumFractionDigits = intlDefaultNumberOption(globalObject, minimumFractionDigitsValue, vm.propertyNames->minimumFractionDigits, 0, 20, undefinedValue);
+            unsigned minimumFractionDigits = intlDefaultNumberOption(globalObject, minimumFractionDigitsValue, vm.propertyNames->minimumFractionDigits, 0, 100, undefinedValue);
             RETURN_IF_EXCEPTION(scope, void());
-            unsigned maximumFractionDigits = intlDefaultNumberOption(globalObject, maximumFractionDigitsValue, vm.propertyNames->maximumFractionDigits, 0, 20, undefinedValue);
+            unsigned maximumFractionDigits = intlDefaultNumberOption(globalObject, maximumFractionDigitsValue, vm.propertyNames->maximumFractionDigits, 0, 100, undefinedValue);
             RETURN_IF_EXCEPTION(scope, void());
 
             if (minimumFractionDigits == undefinedValue)
@@ -132,35 +168,86 @@ void setNumberFormatDigitOptions(JSGlobalObject* globalObject, IntlType* intlIns
         intlInstance->m_minimumSignificantDigits = 1;
         intlInstance->m_maximumSignificantDigits = 2;
     }
+
+    if (roundingIncrement != 1) {
+        if (intlInstance->m_roundingType != IntlRoundingType::FractionDigits) {
+            throwTypeError(globalObject, scope, "rounding type is not fraction-digits while roundingIncrement is specified"_s);
+            return;
+        }
+        if (intlInstance->m_maximumFractionDigits != intlInstance->m_minimumFractionDigits) {
+            throwRangeError(globalObject, scope, "maximumFractionDigits and minimumFractionDigits are different while roundingIncrement is specified"_s);
+            return;
+        }
+    }
 }
 
 template<typename IntlType>
 void appendNumberFormatDigitOptionsToSkeleton(IntlType* intlInstance, StringBuilder& skeletonBuilder)
 {
+    switch (intlInstance->m_roundingMode) {
+    case RoundingMode::Ceil:
+        skeletonBuilder.append(" rounding-mode-ceiling"_s);
+        break;
+    case RoundingMode::Floor:
+        skeletonBuilder.append(" rounding-mode-floor"_s);
+        break;
+    case RoundingMode::Expand:
+        skeletonBuilder.append(" rounding-mode-up"_s);
+        break;
+    case RoundingMode::Trunc:
+        skeletonBuilder.append(" rounding-mode-down"_s);
+        break;
+    case RoundingMode::HalfCeil: {
+        // Only ICU69~ supports half-ceiling. Ignore this option if linked ICU does not support it.
+        // https://github.com/unicode-org/icu/commit/e8dfea9bb6bb27596731173b352759e44ad06b21
+        if (WTF::ICU::majorVersion() >= 69)
+            skeletonBuilder.append(" rounding-mode-half-ceiling"_s);
+        else
+            skeletonBuilder.append(" rounding-mode-half-up"_s); // Default option.
+        break;
+    }
+    case RoundingMode::HalfFloor: {
+        // Only ICU69~ supports half-flooring. Ignore this option if linked ICU does not support it.
+        // https://github.com/unicode-org/icu/commit/e8dfea9bb6bb27596731173b352759e44ad06b21
+        if (WTF::ICU::majorVersion() >= 69)
+            skeletonBuilder.append(" rounding-mode-half-floor"_s);
+        else
+            skeletonBuilder.append(" rounding-mode-half-up"_s); // Default option.
+        break;
+    }
+    case RoundingMode::HalfExpand:
+        skeletonBuilder.append(" rounding-mode-half-up"_s);
+        break;
+    case RoundingMode::HalfTrunc:
+        skeletonBuilder.append(" rounding-mode-half-down"_s);
+        break;
+    case RoundingMode::HalfEven:
+        skeletonBuilder.append(" rounding-mode-half-even"_s);
+        break;
+    }
+
     // https://github.com/unicode-org/icu/blob/master/docs/userguide/format_parse/numbers/skeletons.md#integer-width
-    skeletonBuilder.append(" integer-width/", WTF::ICU::majorVersion() >= 67 ? '*' : '+'); // Prior to ICU 67, use the symbol + instead of *.
+    skeletonBuilder.append(" integer-width/"_s, WTF::ICU::majorVersion() >= 67 ? '*' : '+'); // Prior to ICU 67, use the symbol + instead of *.
     for (unsigned i = 0; i < intlInstance->m_minimumIntegerDigits; ++i)
         skeletonBuilder.append('0');
 
     if (intlInstance->m_roundingIncrement != 1) {
-        skeletonBuilder.append(" precision-increment/");
+        skeletonBuilder.append(" precision-increment/"_s);
         auto string = numberToStringUnsigned<Vector<LChar, 10>>(intlInstance->m_roundingIncrement);
         if (intlInstance->m_maximumFractionDigits >= string.size()) {
-            skeletonBuilder.append("0.");
+            skeletonBuilder.append("0."_s);
             for (unsigned i = 0; i < (intlInstance->m_maximumFractionDigits - string.size()); ++i)
                 skeletonBuilder.append('0');
-            skeletonBuilder.appendCharacters(string.data(), string.size());
+            skeletonBuilder.append(string);
         } else {
             unsigned nonFraction = string.size() - intlInstance->m_maximumFractionDigits;
-            skeletonBuilder.appendCharacters(string.data(), nonFraction);
-            skeletonBuilder.append('.');
-            skeletonBuilder.appendCharacters(string.data() + nonFraction, intlInstance->m_maximumFractionDigits);
+            skeletonBuilder.append(std::span(string.data(), nonFraction), '.', std::span(string.data() + nonFraction, intlInstance->m_maximumFractionDigits));
         }
     } else {
         switch (intlInstance->m_roundingType) {
         case IntlRoundingType::FractionDigits: {
             // https://github.com/unicode-org/icu/blob/master/docs/userguide/format_parse/numbers/skeletons.md#fraction-precision
-            skeletonBuilder.append(" .");
+            skeletonBuilder.append(" ."_s);
             for (unsigned i = 0; i < intlInstance->m_minimumFractionDigits; ++i)
                 skeletonBuilder.append('0');
             for (unsigned i = 0; i < intlInstance->m_maximumFractionDigits - intlInstance->m_minimumFractionDigits; ++i)
@@ -183,7 +270,7 @@ void appendNumberFormatDigitOptionsToSkeleton(IntlType* intlInstance, StringBuil
             if (WTF::ICU::majorVersion() >= 69) {
                 // https://github.com/unicode-org/icu/commit/d7db6c1f8655bb53153695b09a50029fd04a8364
                 // https://github.com/unicode-org/icu/blob/main/docs/userguide/format_parse/numbers/skeletons.md#precision
-                skeletonBuilder.append(" .");
+                skeletonBuilder.append(" ."_s);
                 for (unsigned i = 0; i < intlInstance->m_minimumFractionDigits; ++i)
                     skeletonBuilder.append('0');
                 for (unsigned i = 0; i < intlInstance->m_maximumFractionDigits - intlInstance->m_minimumFractionDigits; ++i)
@@ -197,6 +284,19 @@ void appendNumberFormatDigitOptionsToSkeleton(IntlType* intlInstance, StringBuil
             }
             break;
         }
+    }
+
+    // Configure this just after precision.
+    // https://github.com/unicode-org/icu/blob/main/docs/userguide/format_parse/numbers/skeletons.md#trailing-zero-display
+    switch (intlInstance->m_trailingZeroDisplay) {
+    case IntlTrailingZeroDisplay::Auto:
+        break;
+    case IntlTrailingZeroDisplay::StripIfInteger:
+        // Only ICU69~ supports trailing zero display. Ignore this option if linked ICU does not support it.
+        // https://github.com/unicode-org/icu/commit/b79c299f90d4023ac237db3d0335d568bf21cd36
+        if (WTF::ICU::majorVersion() >= 69)
+            skeletonBuilder.append("/w"_s);
+        break;
     }
 }
 
@@ -224,7 +324,7 @@ inline IntlNumberFormat* IntlNumberFormat::unwrapForOldFunctions(JSGlobalObject*
     return unwrapForLegacyIntlConstructor<IntlNumberFormat>(globalObject, thisValue, globalObject->numberFormatConstructor());
 }
 
-// https://tc39.es/proposal-intl-numberformat-v3/out/numberformat/diff.html#sec-tointlmathematicalvalue
+// https://tc39.es/ecma402/#sec-tointlmathematicalvalue
 inline IntlMathematicalValue toIntlMathematicalValue(JSGlobalObject* globalObject, JSValue value)
 {
     VM& vm = globalObject->vm();
@@ -259,22 +359,10 @@ inline IntlMathematicalValue toIntlMathematicalValue(JSGlobalObject* globalObjec
     if (!primitive.isString())
         RELEASE_AND_RETURN(scope, IntlMathematicalValue { primitive.toNumber(globalObject) });
 
-    String string = asString(primitive)->value(globalObject);
+    auto string = asString(primitive)->value(globalObject);
     RETURN_IF_EXCEPTION(scope, { });
 
-    JSValue bigInt = JSBigInt::stringToBigInt(globalObject, string);
-    if (bigInt) {
-        // If it is -0, we cannot handle it in JSBigInt. Reparse the string as double.
-#if USE(BIGINT32)
-        if (bigInt.isBigInt32() && !value.bigInt32AsInt32())
-            return IntlMathematicalValue { jsToNumber(string) };
-#endif
-        if (bigInt.isHeapBigInt() && !asHeapBigInt(bigInt)->length())
-            return IntlMathematicalValue { jsToNumber(string) };
-        RELEASE_AND_RETURN(scope, bigIntToIntlMathematicalValue(globalObject, bigInt));
-    }
-
-    return IntlMathematicalValue { jsToNumber(string) };
+    RELEASE_AND_RETURN(scope, IntlMathematicalValue::parseString(globalObject, WTFMove(string)));
 }
 
 } // namespace JSC

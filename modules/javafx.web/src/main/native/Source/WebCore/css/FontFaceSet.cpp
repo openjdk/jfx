@@ -28,6 +28,7 @@
 
 #include "DOMPromiseProxy.h"
 #include "Document.h"
+#include "DocumentInlines.h"
 #include "EventLoop.h"
 #include "FontFace.h"
 #include "FrameDestructionObserverInlines.h"
@@ -38,13 +39,13 @@
 #include "JSFontFaceSet.h"
 #include "Quirks.h"
 #include "ScriptExecutionContext.h"
-#include <wtf/IsoMallocInlines.h>
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
-WTF_MAKE_ISO_ALLOCATED_IMPL(FontFaceSet);
+WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(FontFaceSet);
 
-Ref<FontFaceSet> FontFaceSet::create(ScriptExecutionContext& context, const Vector<RefPtr<FontFace>>& initialFaces)
+Ref<FontFaceSet> FontFaceSet::create(ScriptExecutionContext& context, const Vector<Ref<FontFace>>& initialFaces)
 {
     Ref<FontFaceSet> result = adoptRef(*new FontFaceSet(context, initialFaces));
     result->suspendIfNeeded();
@@ -58,14 +59,14 @@ Ref<FontFaceSet> FontFaceSet::create(ScriptExecutionContext& context, CSSFontFac
     return result;
 }
 
-FontFaceSet::FontFaceSet(ScriptExecutionContext& context, const Vector<RefPtr<FontFace>>& initialFaces)
+FontFaceSet::FontFaceSet(ScriptExecutionContext& context, const Vector<Ref<FontFace>>& initialFaces)
     : ActiveDOMObject(&context)
     , m_backing(CSSFontFaceSet::create())
     , m_readyPromise(makeUniqueRef<ReadyPromise>(*this, &FontFaceSet::readyPromiseResolve))
 {
     m_backing->addFontEventClient(*this);
     for (auto& face : initialFaces)
-        add(*face);
+        add(face);
 }
 
 FontFaceSet::FontFaceSet(ScriptExecutionContext& context, CSSFontFaceSet& backing)
@@ -73,10 +74,9 @@ FontFaceSet::FontFaceSet(ScriptExecutionContext& context, CSSFontFaceSet& backin
     , m_backing(backing)
     , m_readyPromise(makeUniqueRef<ReadyPromise>(*this, &FontFaceSet::readyPromiseResolve))
 {
-    if (is<Document>(context)) {
-        auto& document = downcast<Document>(context);
-        if (document.frame())
-            m_isDocumentLoaded = document.loadEventFinished() && !document.processingLoadEvent();
+    if (auto* document = dynamicDowncast<Document>(context)) {
+        if (document->frame())
+            m_isDocumentLoaded = document->loadEventFinished() && !document->processingLoadEvent();
     }
 
     if (m_isDocumentLoaded && !backing.hasActiveFontFaces())
@@ -85,9 +85,7 @@ FontFaceSet::FontFaceSet(ScriptExecutionContext& context, CSSFontFaceSet& backin
     m_backing->addFontEventClient(*this);
 }
 
-FontFaceSet::~FontFaceSet()
-{
-}
+FontFaceSet::~FontFaceSet() = default;
 
 FontFaceSet::Iterator::Iterator(FontFaceSet& set)
     : m_target(set)
@@ -126,7 +124,7 @@ ExceptionOr<FontFaceSet&> FontFaceSet::add(FontFace& face)
     if (m_backing->hasFace(face.backing()))
         return *this;
     if (face.backing().cssConnection())
-        return Exception(InvalidModificationError);
+        return Exception(ExceptionCode::InvalidModificationError);
     m_backing->add(face.backing());
     return *this;
 }
@@ -168,7 +166,8 @@ void FontFaceSet::load(const String& font, const String& text, LoadPromise&& pro
     for (auto& face : matchingFaces)
         face.get().load();
 
-    if (is<Document>(scriptExecutionContext()) && downcast<Document>(scriptExecutionContext())->quirks().shouldEnableFontLoadingAPIQuirk()) {
+    auto* document = dynamicDowncast<Document>(scriptExecutionContext());
+    if (document && document->quirks().shouldEnableFontLoadingAPIQuirk()) {
         // HBOMax.com expects that loading fonts will succeed, and will totally break when it doesn't. But when lockdown mode is enabled, fonts
         // fail to load, because that's the whole point of lockdown mode.
         //
@@ -194,7 +193,7 @@ void FontFaceSet::load(const String& font, const String& text, LoadPromise&& pro
 
     for (auto& face : matchingFaces) {
         if (face.get().status() == CSSFontFace::Status::Failure) {
-            promise.reject(NetworkError);
+            promise.reject(ExceptionCode::NetworkError);
             return;
         }
     }
@@ -254,7 +253,7 @@ void FontFaceSet::faceFinished(CSSFontFace& face, CSSFontFace::Status newStatus)
             }
         } else {
             ASSERT(newStatus == CSSFontFace::Status::Failure);
-            pendingPromise->promise->reject(NetworkError);
+            pendingPromise->promise->reject(ExceptionCode::NetworkError);
             pendingPromise->hasReachedTerminalState = true;
         }
     }

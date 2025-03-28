@@ -30,14 +30,27 @@
 #include "ImplementationVisibility.h"
 #include "NativeExecutable.h"
 #include "ScriptExecutable.h"
+#include "StructureInlines.h"
 
 namespace JSC {
+
+inline Structure* ExecutableBase::createStructure(VM& vm, JSGlobalObject* globalObject, JSValue proto)
+{
+    return Structure::create(vm, globalObject, proto, TypeInfo(CellType, StructureFlags), info());
+}
 
 inline Intrinsic ExecutableBase::intrinsic() const
 {
     if (isHostFunction())
         return jsCast<const NativeExecutable*>(this)->intrinsic();
     return jsCast<const ScriptExecutable*>(this)->intrinsic();
+}
+
+inline Intrinsic ExecutableBase::intrinsicFor(CodeSpecializationKind kind) const
+{
+    if (isCall(kind))
+        return intrinsic();
+    return NoIntrinsic;
 }
 
 inline ImplementationVisibility ExecutableBase::implementationVisibility() const
@@ -47,6 +60,13 @@ inline ImplementationVisibility ExecutableBase::implementationVisibility() const
     if (isHostFunction())
         return jsCast<const NativeExecutable*>(this)->implementationVisibility();
     return ImplementationVisibility::Public;
+}
+
+inline InlineAttribute ExecutableBase::inlineAttribute() const
+{
+    if (isFunctionExecutable())
+        return jsCast<const FunctionExecutable*>(this)->inlineAttribute();
+    return InlineAttribute::None;
 }
 
 inline bool ExecutableBase::hasJITCodeForCall() const

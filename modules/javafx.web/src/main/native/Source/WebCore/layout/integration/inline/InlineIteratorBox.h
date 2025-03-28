@@ -27,7 +27,6 @@
 
 #include "InlineIteratorBoxLegacyPath.h"
 #include "InlineIteratorBoxModernPath.h"
-#include "LegacyInlineElementBox.h"
 #include <variant>
 
 namespace WebCore {
@@ -102,6 +101,7 @@ public:
     InlineBoxIterator parentInlineBox() const;
 
     LineBoxIterator lineBox() const;
+    size_t lineIndex() const;
 
     const BoxModernPath& modernPath() const;
     const BoxLegacyPath& legacyPath() const;
@@ -113,6 +113,9 @@ protected:
     friend class TextBoxIterator;
 
     PathVariant m_pathVariant;
+
+private:
+    bool hasRenderer() const;
 };
 
 class BoxIterator {
@@ -214,10 +217,24 @@ inline unsigned char Box::bidiLevel() const
     });
 }
 
+inline size_t Box::lineIndex() const
+{
+    return WTF::switchOn(m_pathVariant, [](auto& path) {
+        return path.lineIndex();
+    });
+}
+
 inline const RenderObject& Box::renderer() const
 {
     return WTF::switchOn(m_pathVariant, [](auto& path) -> const RenderObject& {
         return path.renderer();
+    });
+}
+
+inline bool Box::hasRenderer() const
+{
+    return WTF::switchOn(m_pathVariant, [](auto& path) -> bool {
+        return path.hasRenderer();
     });
 }
 

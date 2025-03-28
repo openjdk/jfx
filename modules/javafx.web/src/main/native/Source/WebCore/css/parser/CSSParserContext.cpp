@@ -28,7 +28,7 @@
 
 #include "CSSPropertyNames.h"
 #include "CSSValuePool.h"
-#include "Document.h"
+#include "DocumentInlines.h"
 #include "DocumentLoader.h"
 #include "OriginAccessPatterns.h"
 #include "Page.h"
@@ -54,21 +54,25 @@ CSSParserContext::CSSParserContext(CSSParserMode mode, const URL& baseURL)
     , mode(mode)
 {
     // FIXME: We should turn all of the features on from their WebCore Settings defaults.
-    if (mode == UASheetMode) {
-        colorMixEnabled = true;
-        focusVisibleEnabled = true;
-        propertySettings.cssContainmentEnabled = true;
-        propertySettings.cssIndividualTransformPropertiesEnabled = true;
+    if (isUASheetBehavior(mode)) {
+        cssTextUnderlinePositionLeftRightEnabled = true;
+        lightDarkEnabled = true;
+        popoverAttributeEnabled = true;
         propertySettings.cssInputSecurityEnabled = true;
         propertySettings.cssCounterStyleAtRulesEnabled = true;
+        propertySettings.viewTransitionsEnabled = true;
+        thumbAndTrackPseudoElementsEnabled = true;
 #if ENABLE(CSS_TRANSFORM_STYLE_OPTIMIZED_3D)
         transformStyleOptimized3DEnabled = true;
 #endif
     }
 
-    propertySettings.cssWhiteSpaceLonghandsEnabled = true;
-
     StaticCSSValuePool::init();
+}
+
+CSSParserContext::CSSParserContext(const Document& document)
+{
+    *this = document.cssParserContext();
 }
 
 CSSParserContext::CSSParserContext(const Document& document, const URL& sheetBaseURL, const String& charset)
@@ -76,130 +80,110 @@ CSSParserContext::CSSParserContext(const Document& document, const URL& sheetBas
     , charset { charset }
     , mode { document.inQuirksMode() ? HTMLQuirksMode : HTMLStandardMode }
     , isHTMLDocument { document.isHTMLDocument() }
-    , hasDocumentSecurityOrigin { sheetBaseURL.isNull() || document.securityOrigin().canRequest(baseURL, OriginAccessPatternsForWebProcess::singleton()) }
+    , hasDocumentSecurityOrigin { sheetBaseURL.isNull() || document.protectedSecurityOrigin()->canRequest(baseURL, OriginAccessPatternsForWebProcess::singleton()) }
     , useSystemAppearance { document.page() ? document.page()->useSystemAppearance() : false }
     , colorContrastEnabled { document.settings().cssColorContrastEnabled() }
-    , colorMixEnabled { document.settings().cssColorMixEnabled() }
-    , constantPropertiesEnabled { document.settings().constantPropertiesEnabled() }
     , counterStyleAtRuleImageSymbolsEnabled { document.settings().cssCounterStyleAtRuleImageSymbolsEnabled() }
-    , cssColor4 { document.settings().cssColor4() }
-    , relativeColorSyntaxEnabled { document.settings().cssRelativeColorSyntaxEnabled() }
     , springTimingFunctionEnabled { document.settings().springTimingFunctionEnabled() }
 #if ENABLE(CSS_TRANSFORM_STYLE_OPTIMIZED_3D)
     , transformStyleOptimized3DEnabled { document.settings().cssTransformStyleOptimized3DEnabled() }
 #endif
-    , useLegacyBackgroundSizeShorthandBehavior { document.settings().useLegacyBackgroundSizeShorthandBehavior() }
-    , focusVisibleEnabled { document.settings().focusVisibleEnabled() }
-    , hasPseudoClassEnabled { document.settings().hasPseudoClassEnabled() }
-    , cascadeLayersEnabled { document.settings().cssCascadeLayersEnabled() }
-    , overflowClipEnabled { document.settings().overflowClipEnabled() }
-    , gradientPremultipliedAlphaInterpolationEnabled { document.settings().cssGradientPremultipliedAlphaInterpolationEnabled() }
-    , gradientInterpolationColorSpacesEnabled { document.settings().cssGradientInterpolationColorSpacesEnabled() }
-    , subgridEnabled { document.settings().subgridEnabled() }
     , masonryEnabled { document.settings().masonryEnabled() }
     , cssNestingEnabled { document.settings().cssNestingEnabled() }
-#if ENABLE(CSS_PAINTING_API)
     , cssPaintingAPIEnabled { document.settings().cssPaintingAPIEnabled() }
-#endif
+    , cssScopeAtRuleEnabled { document.settings().cssScopeAtRuleEnabled() }
+    , cssShapeFunctionEnabled { document.settings().cssShapeFunctionEnabled() }
+    , cssStartingStyleAtRuleEnabled { document.settings().cssStartingStyleAtRuleEnabled() }
+    , cssStyleQueriesEnabled { document.settings().cssStyleQueriesEnabled() }
     , cssTextUnderlinePositionLeftRightEnabled { document.settings().cssTextUnderlinePositionLeftRightEnabled() }
-    , cssTextWrapNewValuesEnabled { document.settings().cssTextWrapNewValuesEnabled() }
-    , cssWordBreakAutoEnabled { document.settings().cssWordBreakAutoEnabled() }
+    , cssBackgroundClipBorderAreaEnabled  { document.settings().cssBackgroundClipBorderAreaEnabled() }
+    , cssWordBreakAutoPhraseEnabled { document.settings().cssWordBreakAutoPhraseEnabled() }
+    , popoverAttributeEnabled { document.settings().popoverAttributeEnabled() }
+    , sidewaysWritingModesEnabled { document.settings().sidewaysWritingModesEnabled() }
+    , cssTextWrapPrettyEnabled { document.settings().cssTextWrapPrettyEnabled() }
+    , highlightAPIEnabled { document.settings().highlightAPIEnabled() }
+    , grammarAndSpellingPseudoElementsEnabled { document.settings().grammarAndSpellingPseudoElementsEnabled() }
+    , customStateSetEnabled { document.settings().customStateSetEnabled() }
+    , thumbAndTrackPseudoElementsEnabled { document.settings().thumbAndTrackPseudoElementsEnabled() }
+#if ENABLE(SERVICE_CONTROLS)
+    , imageControlsEnabled { document.settings().imageControlsEnabled() }
+#endif
+    , colorLayersEnabled { document.settings().cssColorLayersEnabled() }
+    , lightDarkEnabled { document.settings().cssLightDarkEnabled() }
+    , targetTextPseudoElementEnabled { document.settings().targetTextPseudoElementEnabled() }
+    , viewTransitionTypesEnabled { document.settings().viewTransitionsEnabled() && document.settings().viewTransitionTypesEnabled() }
     , propertySettings { CSSPropertySettings { document.settings() } }
 {
 }
 
-bool operator==(const CSSParserContext& a, const CSSParserContext& b)
-{
-    return a.baseURL == b.baseURL
-        && a.charset == b.charset
-        && a.mode == b.mode
-        && a.enclosingRuleType == b.enclosingRuleType
-        && a.isHTMLDocument == b.isHTMLDocument
-        && a.hasDocumentSecurityOrigin == b.hasDocumentSecurityOrigin
-        && a.isContentOpaque == b.isContentOpaque
-        && a.useSystemAppearance == b.useSystemAppearance
-        && a.shouldIgnoreImportRules == b.shouldIgnoreImportRules
-        && a.colorContrastEnabled == b.colorContrastEnabled
-        && a.colorMixEnabled == b.colorMixEnabled
-        && a.constantPropertiesEnabled == b.constantPropertiesEnabled
-        && a.counterStyleAtRuleImageSymbolsEnabled == b.counterStyleAtRuleImageSymbolsEnabled
-        && a.cssColor4 == b.cssColor4
-        && a.relativeColorSyntaxEnabled == b.relativeColorSyntaxEnabled
-        && a.springTimingFunctionEnabled == b.springTimingFunctionEnabled
-#if ENABLE(CSS_TRANSFORM_STYLE_OPTIMIZED_3D)
-        && a.transformStyleOptimized3DEnabled == b.transformStyleOptimized3DEnabled
-#endif
-        && a.useLegacyBackgroundSizeShorthandBehavior == b.useLegacyBackgroundSizeShorthandBehavior
-        && a.focusVisibleEnabled == b.focusVisibleEnabled
-        && a.hasPseudoClassEnabled == b.hasPseudoClassEnabled
-        && a.cascadeLayersEnabled == b.cascadeLayersEnabled
-        && a.overflowClipEnabled == b.overflowClipEnabled
-        && a.gradientPremultipliedAlphaInterpolationEnabled == b.gradientPremultipliedAlphaInterpolationEnabled
-        && a.gradientInterpolationColorSpacesEnabled == b.gradientInterpolationColorSpacesEnabled
-        && a.subgridEnabled == b.subgridEnabled
-        && a.masonryEnabled == b.masonryEnabled
-        && a.cssNestingEnabled == b.cssNestingEnabled
-        && a.cssPaintingAPIEnabled == b.cssPaintingAPIEnabled
-        && a.cssTextUnderlinePositionLeftRightEnabled == b.cssTextUnderlinePositionLeftRightEnabled
-        && a.cssTextWrapNewValuesEnabled == b.cssTextWrapNewValuesEnabled
-        && a.cssWordBreakAutoEnabled == b.cssWordBreakAutoEnabled
-        && a.propertySettings == b.propertySettings
-    ;
-}
-
 void add(Hasher& hasher, const CSSParserContext& context)
 {
-    uint64_t bits = context.isHTMLDocument                  << 0
+    uint32_t bits = context.isHTMLDocument                  << 0
         | context.hasDocumentSecurityOrigin                 << 1
         | context.isContentOpaque                           << 2
         | context.useSystemAppearance                       << 3
         | context.colorContrastEnabled                      << 4
-        | context.colorMixEnabled                           << 5
-        | context.constantPropertiesEnabled                 << 6
-        | context.cssColor4                                 << 7
-        | context.relativeColorSyntaxEnabled                << 8
-        | context.springTimingFunctionEnabled               << 9
+        | context.springTimingFunctionEnabled               << 5
 #if ENABLE(CSS_TRANSFORM_STYLE_OPTIMIZED_3D)
-        | context.transformStyleOptimized3DEnabled          << 10
+        | context.transformStyleOptimized3DEnabled          << 6
 #endif
-        | context.useLegacyBackgroundSizeShorthandBehavior  << 11
-        | context.focusVisibleEnabled                       << 12
-        | context.hasPseudoClassEnabled                     << 13
-        | context.cascadeLayersEnabled                      << 14
-        | context.overflowClipEnabled                       << 15
-        | context.gradientPremultipliedAlphaInterpolationEnabled << 16
-        | context.gradientInterpolationColorSpacesEnabled   << 17
-        | context.subgridEnabled                            << 18
-        | context.masonryEnabled                            << 19
-        | context.cssNestingEnabled                         << 20
-        | context.cssPaintingAPIEnabled                     << 21
-        | context.cssTextUnderlinePositionLeftRightEnabled  << 22
-        | context.cssTextWrapNewValuesEnabled               << 23
-        | context.cssWordBreakAutoEnabled                   << 24
-        | (uint64_t)context.mode                            << 25; // This is multiple bits, so keep it last.
+        | context.masonryEnabled                            << 7
+        | context.cssNestingEnabled                         << 8
+        | context.cssPaintingAPIEnabled                     << 9
+        | context.cssScopeAtRuleEnabled                     << 10
+        | context.cssShapeFunctionEnabled                   << 11
+        | context.cssTextUnderlinePositionLeftRightEnabled  << 12
+        | context.cssBackgroundClipBorderAreaEnabled        << 13
+        | context.cssWordBreakAutoPhraseEnabled             << 14
+        | context.popoverAttributeEnabled                   << 15
+        | context.sidewaysWritingModesEnabled               << 16
+        | context.cssTextWrapPrettyEnabled                  << 17
+        | context.highlightAPIEnabled                       << 18
+        | context.grammarAndSpellingPseudoElementsEnabled   << 19
+        | context.customStateSetEnabled                     << 20
+        | context.thumbAndTrackPseudoElementsEnabled        << 21
+#if ENABLE(SERVICE_CONTROLS)
+        | context.imageControlsEnabled                      << 22
+#endif
+        | context.colorLayersEnabled                        << 23
+        | context.lightDarkEnabled                          << 24
+        | context.targetTextPseudoElementEnabled            << 25
+        | context.viewTransitionTypesEnabled                << 26
+        | (uint32_t)context.mode                            << 27; // This is multiple bits, so keep it last.
     add(hasher, context.baseURL, context.charset, context.propertySettings, bits);
 }
 
 ResolvedURL CSSParserContext::completeURL(const String& string) const
 {
     auto result = [&] () -> ResolvedURL {
-        // See also Document::completeURL(const String&)
+        // See also Document::completeURL(const String&), but note that CSS always uses UTF-8 for URLs
         if (string.isNull())
             return { };
 
         if (CSSValue::isCSSLocalURL(string))
             return { string, URL { string } };
 
-        if (charset.isEmpty())
             return { string, { baseURL, string } };
-        auto encodingForURLParsing = PAL::TextEncoding { charset }.encodingForFormSubmissionOrURLParsing();
-        return { string, { baseURL, string, encodingForURLParsing == PAL::UTF8Encoding() ? nullptr : &encodingForURLParsing } };
     }();
 
     if (mode == WebVTTMode && !result.resolvedURL.protocolIsData())
         return { };
 
     return result;
+}
+
+bool mayDependOnBaseURL(const ResolvedURL& resolved)
+{
+    if (resolved.specifiedURLString.isEmpty())
+        return false;
+
+    if (CSSValue::isCSSLocalURL(resolved.specifiedURLString))
+        return false;
+
+    if (protocolIs(resolved.specifiedURLString, "data"_s))
+        return false;
+
+    return true;
 }
 
 }

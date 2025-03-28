@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2016-2018 Apple Inc. All rights reserved.
+ * Copyright (C) 2016-2023 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -32,11 +32,7 @@
 #include "DFGNode.h"
 #include "LinkBuffer.h"
 #include "WasmOpcodeOrigin.h"
-
-#if COMPILER(MSVC)
-// See https://msdn.microsoft.com/en-us/library/4wz07268.aspx
-#pragma warning(disable: 4333)
-#endif
+#include <wtf/TZoneMallocInlines.h>
 
 namespace JSC {
 
@@ -125,7 +121,7 @@ PCToCodeOriginMapBuilder::PCToCodeOriginMapBuilder(JSTag, VM& vm, B3::PCToOrigin
 }
 #endif
 
-#if ENABLE(WEBASSEMBLY_B3JIT)
+#if ENABLE(WEBASSEMBLY_OMGJIT) || ENABLE(WEBASSEMBLY_BBQJIT)
 PCToCodeOriginMapBuilder::PCToCodeOriginMapBuilder(WasmTag, B3::PCToOriginMap b3PCToOriginMap)
     : m_shouldBuildMapping(true)
 {
@@ -247,6 +243,8 @@ PCToCodeOriginMap::PCToCodeOriginMap(PCToCodeOriginMapBuilder&& builder, LinkBuf
     m_compressedCodeOriginsSize = codeOriginCompressor.m_offset;
     m_compressedCodeOrigins = static_cast<uint8_t*>(fastRealloc(codeOriginCompressor.m_buffer, m_compressedCodeOriginsSize));
 }
+
+WTF_MAKE_TZONE_ALLOCATED_IMPL(PCToCodeOriginMap);
 
 PCToCodeOriginMap::~PCToCodeOriginMap()
 {

@@ -41,11 +41,12 @@ public:
     void reset();
     void resetContextElement() { m_contextElement = nullptr; }
 
-    SVGElement* viewTarget() const;
+    RefPtr<SVGElement> viewTarget() const;
     const String& viewTargetString() const { return m_viewTargetString; }
 
     String transformString() const { return m_transform->valueAsString(); }
     Ref<SVGTransformList>& transform() { return m_transform; }
+    Ref<SVGTransformList> protectedTransform();
 
     const WeakPtr<SVGElement, WeakPtrImplWithEventTargetData>& contextElementConcurrently() const { return m_contextElement; }
 

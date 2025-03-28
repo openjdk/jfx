@@ -25,7 +25,7 @@
 
 #pragma once
 
-#if ENABLE(WEBASSEMBLY_B3JIT)
+#if ENABLE(WEBASSEMBLY_OMGJIT)
 
 #include "WasmContext.h"
 #include "WasmModule.h"
@@ -67,8 +67,9 @@ private:
     bool m_completed { false };
     std::optional<bool> m_hasExceptionHandlers;
     uint32_t m_functionIndex;
+    RefPtr<JSEntrypointCallee> m_entrypoint;
 };
 
 } } // namespace JSC::Wasm
 
-#endif // ENABLE(WEBASSEMBLY_B3JIT)
+#endif // ENABLE(WEBASSEMBLY_OMGJIT)

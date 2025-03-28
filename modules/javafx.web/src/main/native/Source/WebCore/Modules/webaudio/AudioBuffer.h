@@ -48,7 +48,7 @@ public:
     static RefPtr<AudioBuffer> create(unsigned numberOfChannels, size_t numberOfFrames, float sampleRate, LegacyPreventDetaching = LegacyPreventDetaching::No);
     static ExceptionOr<Ref<AudioBuffer>> create(const AudioBufferOptions&);
     // Returns nullptr if data is not a valid audio file.
-    static RefPtr<AudioBuffer> createFromAudioFileData(const void* data, size_t dataSize, bool mixToMono, float sampleRate);
+    static RefPtr<AudioBuffer> createFromAudioFileData(std::span<const uint8_t> data, bool mixToMono, float sampleRate);
 
     // Format
     size_t originalLength() const { return m_originalLength; }
@@ -58,6 +58,8 @@ public:
     // The following function may start returning 0 if any of the underlying channel buffers gets detached.
     size_t length() const { return hasDetachedChannelBuffer() ? 0 : m_originalLength; }
     double duration() const { return length() / static_cast<double>(sampleRate()); }
+
+    void markBuffersAsNonDetachable();
 
     // Channel data access
     unsigned numberOfChannels() const { return m_channels.size(); }
@@ -86,7 +88,8 @@ public:
 
     bool topologyMatches(const AudioBuffer&) const;
 
-    void setNeedsAdditionalNoise() { m_needsAdditionalNoise = true; }
+    void increaseNoiseInjectionMultiplier(float amount = 0.001) { m_noiseInjectionMultiplier += amount; }
+    float noiseInjectionMultiplier() const { return m_noiseInjectionMultiplier; }
 
 private:
     AudioBuffer(unsigned numberOfChannels, size_t length, float sampleRate, LegacyPreventDetaching = LegacyPreventDetaching::No);
@@ -109,7 +112,7 @@ private:
     FixedVector<JSValueInWrappedObject> m_channelWrappers;
     bool m_isDetachable { true };
     mutable Lock m_channelsLock;
-    bool m_needsAdditionalNoise { false };
+    float m_noiseInjectionMultiplier { 0 };
 };
 
 WebCoreOpaqueRoot root(AudioBuffer*);

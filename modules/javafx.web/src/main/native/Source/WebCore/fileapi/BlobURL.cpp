@@ -29,14 +29,14 @@
  */
 
 #include "config.h"
-
 #include "BlobURL.h"
+
 #include "Document.h"
 #include "SecurityOrigin.h"
 #include "ThreadableBlobRegistry.h"
-
 #include <wtf/URL.h>
 #include <wtf/UUID.h>
+#include <wtf/text/MakeString.h>
 #include <wtf/text/WTFString.h>
 
 namespace WebCore {
@@ -57,9 +57,9 @@ static const Document* blobOwner(const SecurityOrigin& blobOrigin)
     if (!isMainThread())
         return nullptr;
 
-    for (const auto* document : Document::allDocuments()) {
+    for (auto& document : Document::allDocuments()) {
         if (document->securityOrigin().isSameOriginAs(blobOrigin))
-            return document;
+            return document.ptr();
     }
     return nullptr;
 }
@@ -89,5 +89,12 @@ URL BlobURL::createBlobURL(StringView originString)
     String urlString = makeString("blob:"_s, originString, '/', WTF::UUID::createVersion4());
     return URL({ }, urlString);
 }
+
+#if ASSERT_ENABLED
+bool BlobURL::isInternalURL(const URL& url)
+{
+    return url.string().startsWith("blob:blobinternal://"_s);
+}
+#endif
 
 } // namespace WebCore

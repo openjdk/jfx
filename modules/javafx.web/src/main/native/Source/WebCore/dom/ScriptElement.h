@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2008 Nikolas Zimmermann <zimmermann@kde.org>
- * Copyright (C) 2009-2017 Apple Inc. All rights reserved.
+ * Copyright (C) 2009-2022 Apple Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Library General Public
@@ -29,6 +29,7 @@
 #include "ScriptExecutionContextIdentifier.h"
 #include "ScriptType.h"
 #include "UserGestureIndicator.h"
+#include <JavaScriptCore/Forward.h>
 #include <wtf/MonotonicTime.h>
 #include <wtf/text/TextPosition.h>
 
@@ -45,8 +46,9 @@ class ScriptElement {
 public:
     virtual ~ScriptElement() = default;
 
-    Element& element() { return m_element; }
-    const Element& element() const { return m_element; }
+    Element& element() { return m_element.get(); }
+    const Element& element() const { return m_element.get(); }
+    Ref<Element> protectedElement() const { return m_element.get(); }
 
     bool prepareScript(const TextPosition& scriptStartPosition = TextPosition());
 
@@ -77,8 +79,10 @@ public:
 
     ScriptType scriptType() const { return m_scriptType; }
 
-    void ref();
-    void deref();
+    JSC::SourceTaintedOrigin sourceTaintedOrigin() const { return m_taintedOrigin; }
+
+    void ref() const;
+    void deref() const;
 
     static std::optional<ScriptType> determineScriptType(const String& typeAttribute, const String& languageAttribute, bool isHTMLDocument = true);
 
@@ -101,8 +105,14 @@ protected:
 
     void didFinishInsertingNode();
     void childrenChanged(const ContainerNode::ChildChange&);
+    void finishParsingChildren();
     void handleSourceAttribute(const String& sourceURL);
     void handleAsyncAttribute();
+
+    void setTrustedScriptText(const String&);
+
+    virtual void potentiallyBlockRendering() { }
+    virtual void unblockRendering() { }
 
 private:
     void executeScriptAndDispatchEvent(LoadableScript&);
@@ -124,8 +134,9 @@ private:
 
     virtual bool isScriptPreventedByAttributes() const { return false; }
 
-    Element& m_element;
+    WeakRef<Element, WeakPtrImplWithEventTargetData> m_element;
     OrdinalNumber m_startLineNumber { OrdinalNumber::beforeFirst() };
+    JSC::SourceTaintedOrigin m_taintedOrigin;
     ParserInserted m_parserInserted : bitWidthOfParserInserted;
     bool m_isExternalScript : 1 { false };
     bool m_alreadyStarted : 1;
@@ -136,6 +147,7 @@ private:
     bool m_willExecuteWhenDocumentFinishedParsing : 1 { false };
     bool m_forceAsync : 1;
     bool m_willExecuteInOrder : 1 { false };
+    bool m_childrenChangedByAPI : 1 { false };
     ScriptType m_scriptType : bitWidthOfScriptType { ScriptType::Classic };
     String m_characterEncoding;
     String m_fallbackCharacterEncoding;
@@ -146,10 +158,13 @@ private:
 
     MonotonicTime m_creationTime;
     RefPtr<UserGestureToken> m_userGestureToken;
+
+    // https://w3c.github.io/trusted-types/dist/spec/#slots-with-trusted-values
+    String m_trustedScriptText { emptyString() };
 };
 
 // FIXME: replace with is/downcast<ScriptElement>.
 bool isScriptElement(Element&);
-ScriptElement& downcastScriptElement(Element&);
+ScriptElement* dynamicDowncastScriptElement(Element&);
 
 }

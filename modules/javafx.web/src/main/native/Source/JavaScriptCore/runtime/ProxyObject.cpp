@@ -32,6 +32,7 @@
 #include "ObjectConstructor.h"
 #include "VMInlines.h"
 #include <wtf/NoTailCalls.h>
+#include <wtf/text/MakeString.h>
 
 // Note that we use NO_TAIL_CALLS() throughout this file because we rely on the machine stack
 // growing larger for throwing OOM errors for when we have an effectively cyclic prototype chain.
@@ -97,7 +98,7 @@ JSObject* ProxyObject::getHandlerTrap(JSGlobalObject* globalObject, JSObject* ha
 
         callData = JSC::getCallData(value);
         if (callData.type == CallData::Type::None) {
-            throwTypeError(globalObject, scope, makeString("'", String(ident.impl()), "' property of a Proxy's handler should be callable"));
+            throwTypeError(globalObject, scope, makeString('\'', String(ident.impl()), "' property of a Proxy's handler should be callable"_s));
             return nullptr;
         }
 
@@ -187,7 +188,7 @@ static JSValue performProxyGet(JSGlobalObject* globalObject, ProxyObject* proxyO
     MarkedArgumentBuffer arguments;
     arguments.append(target);
     arguments.append(identifierToSafePublicJSValue(vm, Identifier::fromUid(vm, propertyName.uid())));
-    arguments.append(receiver);
+    arguments.append(receiver.toThis(globalObject, ECMAMode::strict()));
     ASSERT(!arguments.hasOverflowed());
     JSValue trapResult = call(globalObject, getHandler, callData, handler, arguments);
     RETURN_IF_EXCEPTION(scope, { });
@@ -517,7 +518,7 @@ bool ProxyObject::performPut(JSGlobalObject* globalObject, JSValue putValue, JSV
     arguments.append(target);
     arguments.append(identifierToSafePublicJSValue(vm, Identifier::fromUid(vm, propertyName.uid())));
     arguments.append(putValue);
-    arguments.append(thisValue);
+    arguments.append(thisValue.toThis(globalObject, ECMAMode::strict()));
     ASSERT(!arguments.hasOverflowed());
     JSValue trapResult = call(globalObject, setMethod, callData, handler, arguments);
     RETURN_IF_EXCEPTION(scope, false);

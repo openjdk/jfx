@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015, 2018, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2015, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,11 +25,9 @@
 
 package test.javafx.scene.control.skin;
 
-import com.sun.javafx.scene.SceneHelper;
-import test.com.sun.javafx.scene.control.infrastructure.KeyEventFirer;
-import test.com.sun.javafx.scene.control.infrastructure.MouseEventFirer;
-import test.com.sun.javafx.scene.control.infrastructure.MouseEventGenerator;
-import com.sun.javafx.tk.Toolkit;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import javafx.scene.Scene;
 import javafx.scene.control.ColorPicker;
 import javafx.scene.control.Hyperlink;
@@ -40,19 +38,21 @@ import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.GridPane;
 import javafx.scene.layout.VBox;
 import javafx.stage.Stage;
-import org.junit.Before;
-import org.junit.Test;
-
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import com.sun.javafx.scene.SceneHelper;
+import com.sun.javafx.tk.Toolkit;
+import test.com.sun.javafx.scene.control.infrastructure.KeyEventFirer;
+import test.com.sun.javafx.scene.control.infrastructure.MouseEventFirer;
+import test.com.sun.javafx.scene.control.infrastructure.MouseEventGenerator;
 
 public class ColorPickerSkinTest {
     private ColorPicker colorPicker;
     private Toolkit tk;
     private Stage stage;
 
-    @Before public void setup() {
+    @BeforeEach
+    public void setup() {
         tk = Toolkit.getToolkit();
         colorPicker = new ColorPicker();
         Scene scene = new Scene(new VBox(20), 800, 600);

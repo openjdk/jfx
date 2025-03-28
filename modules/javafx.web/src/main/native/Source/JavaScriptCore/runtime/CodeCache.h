@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012-2019 Apple Inc. All Rights Reserved.
+ * Copyright (C) 2012-2023 Apple Inc. All Rights Reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -40,6 +40,7 @@
 #include "UnlinkedProgramCodeBlock.h"
 #include <wtf/ApproximateTime.h>
 #include <wtf/MainThread.h>
+#include <wtf/TZoneMalloc.h>
 
 namespace JSC {
 
@@ -220,12 +221,12 @@ private:
 
 // Caches top-level code such as <script>, window.eval(), new Function, and JSEvaluateScript().
 class CodeCache {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_ALLOCATED(CodeCache);
 public:
-    UnlinkedProgramCodeBlock* getUnlinkedProgramCodeBlock(VM&, ProgramExecutable*, const SourceCode&, JSParserStrictMode, OptionSet<CodeGenerationMode>, ParserError&);
-    UnlinkedEvalCodeBlock* getUnlinkedEvalCodeBlock(VM&, IndirectEvalExecutable*, const SourceCode&, JSParserStrictMode, OptionSet<CodeGenerationMode>, ParserError&, EvalContextType);
+    UnlinkedProgramCodeBlock* getUnlinkedProgramCodeBlock(VM&, ProgramExecutable*, const SourceCode&, OptionSet<CodeGenerationMode>, ParserError&);
+    UnlinkedEvalCodeBlock* getUnlinkedEvalCodeBlock(VM&, IndirectEvalExecutable*, const SourceCode&, OptionSet<CodeGenerationMode>, ParserError&, EvalContextType);
     UnlinkedModuleProgramCodeBlock* getUnlinkedModuleProgramCodeBlock(VM&, ModuleProgramExecutable*, const SourceCode&, OptionSet<CodeGenerationMode>, ParserError&);
-    UnlinkedFunctionExecutable* getUnlinkedGlobalFunctionExecutable(VM&, const Identifier&, const SourceCode&, OptionSet<CodeGenerationMode>, std::optional<int> functionConstructorParametersEndPosition, ParserError&);
+    UnlinkedFunctionExecutable* getUnlinkedGlobalFunctionExecutable(VM&, const Identifier&, const SourceCode&, LexicallyScopedFeatures, OptionSet<CodeGenerationMode>, std::optional<int> functionConstructorParametersEndPosition, ParserError&);
 
     void updateCache(const UnlinkedFunctionExecutable*, const SourceCode&, CodeSpecializationKind, const UnlinkedFunctionCodeBlock*);
 
@@ -234,7 +235,7 @@ public:
 
 private:
     template <class UnlinkedCodeBlockType, class ExecutableType>
-    UnlinkedCodeBlockType* getUnlinkedGlobalCodeBlock(VM&, ExecutableType*, const SourceCode&, JSParserStrictMode, JSParserScriptMode, OptionSet<CodeGenerationMode>, ParserError&, EvalContextType);
+    UnlinkedCodeBlockType* getUnlinkedGlobalCodeBlock(VM&, ExecutableType*, const SourceCode&, JSParserScriptMode, OptionSet<CodeGenerationMode>, ParserError&, EvalContextType);
 
     CodeCacheMap m_sourceCode;
 };
@@ -259,12 +260,12 @@ template <> struct CacheTypes<UnlinkedModuleProgramCodeBlock> {
     static constexpr SourceParseMode parseMode = SourceParseMode::ModuleEvaluateMode;
 };
 
-UnlinkedEvalCodeBlock* generateUnlinkedCodeBlockForDirectEval(VM&, DirectEvalExecutable*, const SourceCode&, JSParserStrictMode, JSParserScriptMode, OptionSet<CodeGenerationMode>, ParserError&, EvalContextType, const TDZEnvironment* variablesUnderTDZ, const PrivateNameEnvironment*);
-UnlinkedProgramCodeBlock* recursivelyGenerateUnlinkedCodeBlockForProgram(VM&, const SourceCode&, JSParserStrictMode, JSParserScriptMode, OptionSet<CodeGenerationMode>, ParserError&, EvalContextType);
-UnlinkedModuleProgramCodeBlock* recursivelyGenerateUnlinkedCodeBlockForModuleProgram(VM&, const SourceCode&, JSParserStrictMode, JSParserScriptMode, OptionSet<CodeGenerationMode>, ParserError&, EvalContextType);
+UnlinkedEvalCodeBlock* generateUnlinkedCodeBlockForDirectEval(VM&, DirectEvalExecutable*, const SourceCode&, JSParserScriptMode, OptionSet<CodeGenerationMode>, ParserError&, EvalContextType, const TDZEnvironment* variablesUnderTDZ, const PrivateNameEnvironment*);
+UnlinkedProgramCodeBlock* recursivelyGenerateUnlinkedCodeBlockForProgram(VM&, const SourceCode&, LexicallyScopedFeatures, JSParserScriptMode, OptionSet<CodeGenerationMode>, ParserError&, EvalContextType);
+UnlinkedModuleProgramCodeBlock* recursivelyGenerateUnlinkedCodeBlockForModuleProgram(VM&, const SourceCode&, LexicallyScopedFeatures, JSParserScriptMode, OptionSet<CodeGenerationMode>, ParserError&, EvalContextType);
 
 void writeCodeBlock(const SourceCodeKey&, const SourceCodeValue&);
-RefPtr<CachedBytecode> serializeBytecode(VM&, UnlinkedCodeBlock*, const SourceCode&, SourceCodeType, JSParserStrictMode, JSParserScriptMode, FileSystem::PlatformFileHandle fd, BytecodeCacheError&, OptionSet<CodeGenerationMode>);
+RefPtr<CachedBytecode> serializeBytecode(VM&, UnlinkedCodeBlock*, const SourceCode&, SourceCodeType, LexicallyScopedFeatures, JSParserScriptMode, FileSystem::PlatformFileHandle fd, BytecodeCacheError&, OptionSet<CodeGenerationMode>);
 SourceCodeKey sourceCodeKeyForSerializedProgram(VM&, const SourceCode&);
 SourceCodeKey sourceCodeKeyForSerializedModule(VM&, const SourceCode&);
 

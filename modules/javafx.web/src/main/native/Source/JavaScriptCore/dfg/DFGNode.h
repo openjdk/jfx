@@ -51,6 +51,7 @@
 #include "DOMJITSignature.h"
 #include "DeleteByVariant.h"
 #include "GetByVariant.h"
+#include "InlineCacheCompiler.h"
 #include "JSCJSValue.h"
 #include "JSPropertyNameEnumerator.h"
 #include "Operands.h"
@@ -296,6 +297,16 @@ struct CallDOMGetterData {
     const ClassInfo* requiredClassInfo { nullptr };
 };
 
+struct CallCustomAccessorData {
+    CodePtr<CustomAccessorPtrTag> m_customAccessor;
+    CacheableIdentifier m_identifier;
+};
+
+struct GetByIdData {
+    CacheableIdentifier m_identifier;
+    CacheType m_cacheType;
+};
+
 enum class BucketOwnerType : uint32_t {
     Map,
     Set
@@ -519,6 +530,7 @@ public:
 
     void convertToGetByIdMaybeMegamorphic(Graph&, CacheableIdentifier);
     void convertToPutByIdMaybeMegamorphic(Graph&, CacheableIdentifier);
+    void convertToInByIdMaybeMegamorphic(Graph&, CacheableIdentifier);
 
     bool mustGenerate() const
     {
@@ -782,7 +794,7 @@ public:
 
     void convertToToString()
     {
-        ASSERT(m_op == ToPrimitive || m_op == StringValueOf || m_op == ToPropertyKey);
+        ASSERT(m_op == ToPrimitive || m_op == StringValueOf || m_op == ToPropertyKey || m_op == ToPropertyKeyOrNumber);
         m_op = ToString;
     }
 
@@ -834,7 +846,7 @@ public:
 
     void convertToNewObject(RegisteredStructure structure)
     {
-        ASSERT(m_op == CallObjectConstructor || m_op == CreateThis || m_op == ObjectCreate);
+        ASSERT(m_op == CallObjectConstructor || m_op == CreateThis || m_op == ObjectCreate || m_op == Construct);
         setOpAndDefaultFlags(NewObject);
         children.reset();
         m_opInfo = structure;
@@ -879,15 +891,6 @@ public:
     {
         setOp(SetRegExpObjectLastIndex);
         m_opInfo = false;
-    }
-
-    void convertToInById(CacheableIdentifier identifier)
-    {
-        ASSERT(m_op == InByVal);
-        setOpAndDefaultFlags(InById);
-        children.setChild2(Edge());
-        m_opInfo = identifier;
-        m_opInfo2 = OpInfoWrapper();
     }
 
     JSValue asJSValue()
@@ -1148,12 +1151,15 @@ public:
         case GetPrivateNameById:
         case DeleteById:
         case InById:
+        case InByIdMegamorphic:
         case PutById:
         case PutByIdFlush:
         case PutByIdDirect:
         case PutByIdMegamorphic:
         case PutByIdWithThis:
         case PutPrivateNameById:
+        case CallCustomAccessorGetter:
+        case CallCustomAccessorSetter:
             return true;
         default:
             return false;
@@ -1163,7 +1169,34 @@ public:
     CacheableIdentifier cacheableIdentifier()
     {
         ASSERT(hasCacheableIdentifier());
+        switch (op()) {
+        case TryGetById:
+        case GetById:
+        case GetByIdFlush:
+        case GetByIdWithThis:
+        case GetByIdDirect:
+        case GetByIdDirectFlush:
+        case GetPrivateNameById:
+        case GetByIdMegamorphic:
+        case GetByIdWithThisMegamorphic:
+            return getByIdData().m_identifier;
+        case DeleteById:
+        case InById:
+        case InByIdMegamorphic:
+        case PutById:
+        case PutByIdFlush:
+        case PutByIdDirect:
+        case PutByIdMegamorphic:
+        case PutByIdWithThis:
+        case PutPrivateNameById:
         return CacheableIdentifier::createFromRawBits(m_opInfo.as<uintptr_t>());
+        case CallCustomAccessorGetter:
+        case CallCustomAccessorSetter:
+            return callCustomAccessorData()->m_identifier;
+        default:
+            RELEASE_ASSERT_NOT_REACHED();
+            return { };
+    }
     }
 
     bool hasIdentifier()
@@ -1181,6 +1214,41 @@ public:
         default:
             return false;
         }
+    }
+
+    bool hasGetByIdData() const
+    {
+        switch (op()) {
+        case TryGetById:
+        case GetById:
+        case GetByIdFlush:
+        case GetByIdWithThis:
+        case GetByIdDirect:
+        case GetByIdDirectFlush:
+        case GetPrivateNameById:
+        case GetByIdMegamorphic:
+        case GetByIdWithThisMegamorphic:
+            return true;
+        default:
+            return false;
+        }
+    }
+
+    GetByIdData& getByIdData()
+    {
+        ASSERT(hasGetByIdData());
+        return *m_opInfo.as<GetByIdData*>();
+    }
+
+    bool hasCacheType() const
+    {
+        return hasGetByIdData();
+    }
+
+    CacheType cacheType()
+    {
+        ASSERT(hasCacheType());
+        return getByIdData().m_cacheType;
     }
 
     unsigned identifierNumber()
@@ -1935,6 +2003,7 @@ public:
         case CallForwardVarargs:
         case TailCallForwardVarargsInlinedCaller:
         case CallWasm:
+        case CallCustomAccessorGetter:
         case GetByOffset:
         case MultiGetByOffset:
         case GetClosureVar:
@@ -1958,11 +2027,17 @@ public:
         case ToObject:
         case CallNumberConstructor:
         case CallObjectConstructor:
-        case LoadKeyFromMapBucket:
-        case LoadValueFromMapBucket:
+        case MapGet:
+        case LoadMapValue:
+        case MapIteratorKey:
+        case MapIteratorValue:
+        case MapIterationEntryKey:
+        case MapIterationEntryValue:
         case CallDOMGetter:
         case CallDOM:
         case ParseInt:
+        case ToIntegerOrInfinity:
+        case ToLength:
         case AtomicsAdd:
         case AtomicsAnd:
         case AtomicsCompareExchange:
@@ -2127,6 +2202,7 @@ public:
         case ArrayPush:
         case ArrayPop:
         case GetArrayLength:
+        case GetUndetachedTypeArrayLength:
         case GetTypedArrayLengthAsInt52:
         case HasIndexedProperty:
         case EnumeratorNextUpdateIndexAndMode:
@@ -2167,6 +2243,7 @@ public:
 
         case ArrayPop:
         case GetArrayLength:
+        case GetUndetachedTypeArrayLength:
         case GetTypedArrayLengthAsInt52:
             return 2;
 
@@ -2251,6 +2328,8 @@ public:
         case NewAsyncGenerator:
         case NewInternalFieldObject:
         case NewStringObject:
+        case NewMap:
+        case NewSet:
             return true;
         default:
             return false;
@@ -2441,11 +2520,13 @@ public:
         switch (op()) {
         case GetIndexedPropertyStorage:
         case GetArrayLength:
+        case GetUndetachedTypeArrayLength:
         case GetTypedArrayLengthAsInt52:
         case GetTypedArrayByteOffset:
         case GetTypedArrayByteOffsetAsInt52:
         case GetVectorLength:
         case InByVal:
+        case InByValMegamorphic:
         case PutByValDirect:
         case PutByVal:
         case PutByValAlias:
@@ -2512,7 +2593,6 @@ public:
     bool hasECMAMode()
     {
         switch (op()) {
-        case CallDirectEval:
         case DeleteById:
         case DeleteByVal:
         case PutById:
@@ -2538,7 +2618,6 @@ public:
     {
         ASSERT(hasECMAMode());
         switch (op()) {
-        case CallDirectEval:
         case DeleteByVal:
         case PutByValWithThis:
         case ToThis:
@@ -2667,6 +2746,12 @@ public:
         return m_opInfo.as<unsigned>();
     }
 
+    LexicallyScopedFeatures lexicallyScopedFeatures()
+    {
+        ASSERT(op() == CallDirectEval);
+        return m_opInfo.as<uint8_t>();
+    }
+
     DataViewData dataViewData()
     {
         ASSERT(op() == DataViewGetInt || op() == DataViewGetFloat || op() == DataViewSet);
@@ -2757,6 +2842,11 @@ public:
     bool isBinaryUseKind(UseKind useKind)
     {
         return isBinaryUseKind(useKind, useKind);
+    }
+
+    bool isSymmetricBinaryUseKind(UseKind left, UseKind right)
+    {
+        return isBinaryUseKind(left, right) || isBinaryUseKind(right, left);
     }
 
     Edge childFor(UseKind useKind)
@@ -2981,6 +3071,11 @@ public:
         return isProxyObjectSpeculation(prediction());
     }
 
+    bool shouldSpeculateGlobalProxy()
+    {
+        return isGlobalProxySpeculation(prediction());
+    }
+
     bool shouldSpeculateDerivedArray()
     {
         return isDerivedArraySpeculation(prediction());
@@ -3029,6 +3124,11 @@ public:
     bool shouldSpeculateUint32Array()
     {
         return isUint32ArraySpeculation(prediction());
+    }
+
+    bool shouldSpeculateFloat16Array()
+    {
+        return isFloat16ArraySpeculation(prediction());
     }
 
     bool shouldSpeculateFloat32Array()
@@ -3293,6 +3393,29 @@ public:
         return nullptr;
     }
 
+    bool hasCallCustomAccessorData() const
+    {
+        switch (op()) {
+        case CallCustomAccessorGetter:
+        case CallCustomAccessorSetter:
+            return true;
+        default:
+            return false;
+        }
+    }
+
+    CallCustomAccessorData* callCustomAccessorData()
+    {
+        ASSERT(hasCallCustomAccessorData());
+        return m_opInfo.as<CallCustomAccessorData*>();
+    }
+
+    CodePtr<CustomAccessorPtrTag> customAccessor()
+    {
+        ASSERT(hasCallCustomAccessorData());
+        return callCustomAccessorData()->m_customAccessor;
+    }
+
     Node* replacement() const
     {
         return m_misc.replacement;
@@ -3337,7 +3460,7 @@ public:
 
     bool hasBucketOwnerType()
     {
-        return op() == GetMapBucketNext || op() == LoadKeyFromMapBucket || op() == LoadValueFromMapBucket;
+        return op() == MapIterationNext || op() == MapIterationEntry || op() == MapIterationEntryKey || op() == MapIterationEntryValue || op() == MapStorage;
     }
 
     unsigned numberOfBoundArguments()
@@ -3712,7 +3835,7 @@ CString nodeMapDump(const T& nodeMap, DumpContext* context = nullptr)
     StringPrintStream out;
     CommaPrinter comma;
     for(unsigned i = 0; i < keys.size(); ++i)
-        out.print(comma, keys[i], "=>", inContext(nodeMap.get(keys[i]), context));
+        out.print(comma, keys[i], "=>"_s, inContext(nodeMap.get(keys[i]), context));
     return out.toCString();
 }
 
@@ -3728,7 +3851,7 @@ CString nodeValuePairListDump(const T& nodeValuePairList, DumpContext* context =
     StringPrintStream out;
     CommaPrinter comma;
     for (const auto& pair : sortedList)
-        out.print(comma, pair.node, "=>", inContext(pair.value, context));
+        out.print(comma, pair.node, "=>"_s, inContext(pair.value, context));
     return out.toCString();
 }
 

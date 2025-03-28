@@ -32,14 +32,15 @@
 #include "FormListedElement.h"
 #include "HTMLFormControlElement.h"
 #include "HTMLNames.h"
+#include "MouseEvent.h"
 #include "SelectionRestorationMode.h"
 #include "TypedElementDescendantIteratorInlines.h"
-#include <wtf/IsoMallocInlines.h>
 #include <wtf/SetForScope.h>
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
-WTF_MAKE_ISO_ALLOCATED_IMPL(HTMLLabelElement);
+WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(HTMLLabelElement);
 
 using namespace HTMLNames;
 
@@ -123,15 +124,16 @@ void HTMLLabelElement::setHovered(bool over, Style::InvalidationScope invalidati
 
 bool HTMLLabelElement::isEventTargetedAtInteractiveDescendants(Event& event) const
 {
-    if (!is<Node>(event.target()))
+    RefPtr node = dynamicDowncast<Node>(*event.target());
+    if (!node)
         return false;
 
-    auto& node = downcast<Node>(*event.target());
-    if (!containsIncludingShadowDOM(&node))
+    if (!containsIncludingShadowDOM(node.get()))
         return false;
 
-    for (const auto* it = &node; it && it != this; it = it->parentElementInComposedTree()) {
-        if (is<HTMLElement>(it) && downcast<HTMLElement>(*it).isInteractiveContent())
+    for (const auto* it = node.get(); it && it != this; it = it->parentElementInComposedTree()) {
+        auto* element = dynamicDowncast<HTMLElement>(*it);
+        if (element && element->isInteractiveContent())
             return true;
     }
 
@@ -139,12 +141,13 @@ bool HTMLLabelElement::isEventTargetedAtInteractiveDescendants(Event& event) con
 }
 void HTMLLabelElement::defaultEventHandler(Event& event)
 {
-    if (event.type() == eventNames().clickEvent && !m_processingClick) {
+    if (isAnyClick(event) && !m_processingClick) {
         auto control = this->control();
 
         // If we can't find a control or if the control received the click
         // event, then there's no need for us to do anything.
-        if (!control || (is<Node>(event.target()) && control->containsIncludingShadowDOM(&downcast<Node>(*event.target())))) {
+        auto* eventTarget = dynamicDowncast<Node>(event.target());
+        if (!control || (eventTarget && control->containsIncludingShadowDOM(eventTarget))) {
             HTMLElement::defaultEventHandler(event);
             return;
         }
@@ -181,8 +184,9 @@ bool HTMLLabelElement::willRespondToMouseClickEventsWithEditability(Editability 
 void HTMLLabelElement::focus(const FocusOptions& options)
 {
     Ref<HTMLLabelElement> protectedThis(*this);
-    if (document().haveStylesheetsLoaded()) {
-        document().updateLayout();
+    auto document = protectedDocument();
+    if (document->haveStylesheetsLoaded()) {
+        document->updateLayout();
         if (isFocusable()) {
             // The value of restorationMode is not used for label elements as it doesn't override updateFocusAppearance.
             Element::focus(options);
@@ -214,6 +218,20 @@ auto HTMLLabelElement::insertedIntoAncestor(InsertionType insertionType, Contain
     }
 
     return result;
+}
+
+void HTMLLabelElement::updateLabel(TreeScope& scope, const AtomString& oldForAttributeValue, const AtomString& newForAttributeValue)
+{
+    if (!isConnected())
+        return;
+
+    if (oldForAttributeValue == newForAttributeValue)
+        return;
+
+    if (!oldForAttributeValue.isEmpty())
+        scope.removeLabel(oldForAttributeValue, *this);
+    if (!newForAttributeValue.isEmpty())
+        scope.addLabel(newForAttributeValue, *this);
 }
 
 void HTMLLabelElement::removedFromAncestor(RemovalType removalType, ContainerNode& oldParentOfRemovedTree)

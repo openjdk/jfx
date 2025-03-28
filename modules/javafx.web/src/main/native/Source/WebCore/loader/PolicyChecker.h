@@ -39,6 +39,15 @@
 #include "ContentFilterUnblockHandler.h"
 #endif
 
+namespace WebCore {
+class PolicyChecker;
+}
+
+namespace WTF {
+template<typename T> struct IsDeprecatedWeakRefSmartPointerException;
+template<> struct IsDeprecatedWeakRefSmartPointerException<WebCore::PolicyChecker> : std::true_type { };
+}
+
 namespace WTF {
 template<typename> class CompletionHandler;
 class CompletionHandlerCallingScope;
@@ -48,6 +57,7 @@ namespace WebCore {
 
 class DocumentLoader;
 class FormState;
+class HitTestResult;
 class LocalFrame;
 class NavigationAction;
 class ResourceError;
@@ -62,9 +72,9 @@ enum class NavigationPolicyDecision : uint8_t {
 
 enum class PolicyDecisionMode { Synchronous, Asynchronous };
 
-class FrameLoader::PolicyChecker : public CanMakeWeakPtr<FrameLoader::PolicyChecker> {
+class PolicyChecker : public CanMakeWeakPtr<PolicyChecker> {
     WTF_MAKE_NONCOPYABLE(PolicyChecker);
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(Loader);
 public:
     explicit PolicyChecker(LocalFrame&);
 
@@ -92,11 +102,13 @@ public:
 private:
     void handleUnimplementablePolicy(const ResourceError&);
     URLKeepingBlobAlive extendBlobURLLifetimeIfNecessary(const ResourceRequest&, const Document&, PolicyDecisionMode = PolicyDecisionMode::Asynchronous) const;
+    std::optional<HitTestResult> hitTestResult(const NavigationAction&);
 
-    LocalFrame& m_frame;
+    Ref<LocalFrame> protectedFrame() const;
 
-    HashMap<PolicyCheckIdentifier, FramePolicyFunction> m_javaScriptURLPolicyChecks;
+    WeakRef<LocalFrame> m_frame;
 
+    uint64_t m_javaScriptURLPolicyCheckIdentifier { 0 };
     bool m_delegateIsDecidingNavigationPolicy;
     bool m_delegateIsHandlingUnimplementablePolicy;
 

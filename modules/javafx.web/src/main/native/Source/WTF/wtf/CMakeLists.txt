@@ -24,8 +24,10 @@ set(WTF_PUBLIC_HEADERS
     Brigand.h
     BubbleSort.h
     BumpPointerAllocator.h
+    ButterflyArray.h
     ByteOrder.h
     CPUTime.h
+    CanMakeWeakPtr.h
     CagedPtr.h
     CagedUniquePtr.h
     CallbackAggregator.h
@@ -85,13 +87,13 @@ set(WTF_PUBLIC_HEADERS
     FixedVector.h
     FixedWidthDouble.h
     FlipBytes.h
+    Float16.h
     ForbidHeapAllocation.h
     Forward.h
     Function.h
     FunctionDispatcher.h
     FunctionPtr.h
     FunctionTraits.h
-    GenerateProfiles.h
     GenericHashKey.h
     GenericTimeMixin.h
     GetPtr.h
@@ -131,6 +133,8 @@ set(WTF_PUBLIC_HEADERS
     KeyValuePair.h
     LEBDecoder.h
     Language.h
+    LazyRef.h
+    LazyUniqueRef.h
     LikelyDenseUnsignedIntegerSet.h
     ListDump.h
     ListHashSet.h
@@ -154,6 +158,7 @@ set(WTF_PUBLIC_HEADERS
     MachSendRight.h
     MainThread.h
     MainThreadData.h
+    MainThreadDispatcher.h
     MallocPtr.h
     Markable.h
     MathExtras.h
@@ -166,6 +171,7 @@ set(WTF_PUBLIC_HEADERS
     MonotonicTime.h
     NakedPtr.h
     NakedRef.h
+    NativePromise.h
     NaturalLoops.h
     NeverDestroyed.h
     NoLock.h
@@ -201,8 +207,9 @@ set(WTF_PUBLIC_HEADERS
     PlatformCPU.h
     PlatformEnable.h
     PlatformEnableCocoa.h
+    PlatformEnableGlib.h
     PlatformEnablePlayStation.h
-    PlatformEnableWinCairo.h
+    PlatformEnableWin.h
     PlatformHave.h
     PlatformLegacy.h
     PlatformOS.h
@@ -242,6 +249,8 @@ set(WTF_PUBLIC_HEADERS
     RobinHoodHashTable.h
     RunLoop.h
     SHA1.h
+    SIMDHelpers.h
+    SIMDUTF.h
     SafeStrerror.h
     SaturatedArithmetic.h
     SchedulePair.h
@@ -255,9 +264,11 @@ set(WTF_PUBLIC_HEADERS
     SignedPtr.h
     SimpleStats.h
     SingleRootGraph.h
+    SingleThreadIntegralWrapper.h
     SinglyLinkedList.h
     SinglyLinkedListWithTail.h
     SixCharacterHash.h
+    SmallMap.h
     SmallSet.h
     SoftLinking.h
     SortedArrayMap.h
@@ -275,6 +286,7 @@ set(WTF_PUBLIC_HEADERS
     StdLibExtras.h
     StdList.h
     StdMap.h
+    StdMultimap.h
     StdSet.h
     StdUnorderedMap.h
     StdUnorderedSet.h
@@ -288,6 +300,8 @@ set(WTF_PUBLIC_HEADERS
     SystemFree.h
     SystemMalloc.h
     SystemTracing.h
+    TZoneMalloc.h
+    TZoneMallocInlines.h
     TaggedArrayStoragePtr.h
     ThreadAssertions.h
     ThreadGroup.h
@@ -308,6 +322,7 @@ set(WTF_PUBLIC_HEADERS
     TranslatedProcess.h
     TriState.h
     TypeCasts.h
+    TypeTraits.h
     URL.h
     URLHelpers.h
     URLHash.h
@@ -333,14 +348,32 @@ set(WTF_PUBLIC_HEADERS
     WeakHashMap.h
     WeakHashSet.h
     WeakListHashSet.h
+    WeakObjCPtr.h
     WeakPtr.h
+    WeakPtrFactory.h
+    WeakPtrImpl.h
     WeakRandom.h
     WeakRandomNumber.h
+    WeakRef.h
     WindowsExtras.h
     WordLock.h
     WorkQueue.h
     WorkerPool.h
     dtoa.h
+
+    dragonbox/dragonbox.h
+    dragonbox/dragonbox_to_chars.h
+    dragonbox/ieee754_format.h
+
+    dragonbox/detail/bits.h
+    dragonbox/detail/cache_holder.h
+    dragonbox/detail/decimal_fp.h
+    dragonbox/detail/div.h
+    dragonbox/detail/log.h
+    dragonbox/detail/policy.h
+    dragonbox/detail/policy_holder.h
+    dragonbox/detail/util.h
+    dragonbox/detail/wuint.h
 
     dtoa/bignum-dtoa.h
     dtoa/bignum.h
@@ -367,21 +400,31 @@ set(WTF_PUBLIC_HEADERS
     persistence/PersistentDecoder.h
     persistence/PersistentEncoder.h
 
+    simde/simde.h
+    simde/arm/neon.h
+    simde/arm/sve.h
+
+    simdutf/simdutf_impl.h
+
     text/ASCIIFastPath.h
     text/ASCIILiteral.h
+    text/AdaptiveStringSearcher.h
     text/AtomString.h
     text/AtomStringHash.h
     text/AtomStringImpl.h
     text/AtomStringTable.h
     text/Base64.h
     text/CString.h
+    text/CharacterProperties.h
     text/CodePointIterator.h
     text/ConversionMode.h
     text/EscapedFormsForJSON.h
     text/ExternalStringImpl.h
+    text/FastCharacterComparison.h
     text/IntegerToStringConversion.h
     text/LChar.h
     text/LineEnding.h
+    text/MakeString.h
     text/NullTextBreakIterator.h
     text/OrdinalNumber.h
     text/StringBuffer.h
@@ -392,8 +435,10 @@ set(WTF_PUBLIC_HEADERS
     text/StringConcatenateNumbers.h
     text/StringHash.h
     text/StringHasher.h
+    text/StringHasherInlines.h
+    text/SuperFastHash.h
+    text/WYHash.h
     text/StringImpl.h
-    text/StringOperators.h
     text/StringParsingBuffer.h
     text/StringSearch.h
     text/StringToIntegerConversion.h
@@ -428,7 +473,6 @@ set(WTF_SOURCES
     ApproximateTime.cpp
     Assertions.cpp
     AutomaticThread.cpp
-    Bag.cpp
     BitVector.cpp
     BloomFilter.cpp
     CPUTime.cpp
@@ -460,7 +504,6 @@ set(WTF_SOURCES
     HexNumber.cpp
     Int128.cpp
     JSONValues.cpp
-    JSValueMalloc.cpp
     Language.cpp
     LikelyDenseUnsignedIntegerSet.cpp
     Lock.cpp
@@ -470,10 +513,12 @@ set(WTF_SOURCES
     Logger.cpp
     Logging.cpp
     MainThread.cpp
+    MainThreadDispatcher.cpp
     MediaTime.cpp
     MemoryPressureHandler.cpp
     MetaAllocator.cpp
     MonotonicTime.cpp
+    NativePromise.cpp
     NumberOfCores.cpp
     OSRandomSource.cpp
     ObjectIdentifier.cpp
@@ -490,6 +535,7 @@ set(WTF_SOURCES
     RefCountedLeakCounter.cpp
     RunLoop.cpp
     SHA1.cpp
+    SIMDUTF.cpp
     SafeStrerror.cpp
     Seconds.cpp
     SegmentedVector.cpp
@@ -523,6 +569,8 @@ set(WTF_SOURCES
     WorkQueue.cpp
     WorkerPool.cpp
     dtoa.cpp
+
+    dragonbox/dragonbox_to_chars.cpp
 
     dtoa/bignum-dtoa.cc
     dtoa/bignum.cc
@@ -571,11 +619,21 @@ set(WTF_SOURCES
     unicode/icu/ICUHelpers.cpp
 )
 
+
 if (APPLE)
+
     list(APPEND WTF_PUBLIC_HEADERS
+
+
         darwin/OSLogPrintStream.h
+
+
+
+
+
     )
 endif ()
+
 
 set(WTF_PRIVATE_INCLUDE_DIRECTORIES
     "${CMAKE_BINARY_DIR}"
@@ -585,6 +643,7 @@ set(WTF_PRIVATE_INCLUDE_DIRECTORIES
     "${WTF_DIR}/wtf/dtoa"
     "${WTF_DIR}/wtf/fast_float"
     "${WTF_DIR}/wtf/persistence"
+    "${WTF_DIR}/wtf/simdutf"
     "${WTF_DIR}/wtf/text"
     "${WTF_DIR}/wtf/text/icu"
     "${WTF_DIR}/wtf/threads"
@@ -629,6 +688,14 @@ WEBKIT_FRAMEWORK(WTF)
 if (MSVC AND NOT PORT STREQUAL Java)
     set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} /SUBSYSTEM:WINDOWS")
     set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} /SUBSYSTEM:WINDOWS")
+else ()
+    # Prior to GCC 13, GCC has a bug that warning suppression pragma cannot be effective on preprocessor itself.
+    # We need to disable preprocessor related warnings manually here.
+    # https://gcc.gnu.org/bugzilla/show_bug.cgi?id=53431
+    set_source_files_properties(
+        SIMDUTF.cpp
+        text/Base64.cpp
+        PROPERTIES COMPILE_FLAGS "-Wno-error=undef -Wno-undef")
 endif ()
 
 file(MAKE_DIRECTORY ${WTF_SCRIPTS_DIR})

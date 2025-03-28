@@ -154,11 +154,13 @@ void clobberize(Graph& graph, Node* node, const ReadFunctor& read, const WriteFu
         case EnumeratorHasOwnProperty:
         case GetIndexedPropertyStorage:
         case GetArrayLength:
+        case GetUndetachedTypeArrayLength:
         case GetTypedArrayLengthAsInt52:
         case GetTypedArrayByteOffset:
         case GetTypedArrayByteOffsetAsInt52:
         case GetVectorLength:
         case InByVal:
+        case InByValMegamorphic:
         case PutByValDirect:
         case PutByVal:
         case PutByValAlias:
@@ -223,6 +225,11 @@ void clobberize(Graph& graph, Node* node, const ReadFunctor& read, const WriteFu
         def(PureValue(node, node->cellOperand()->cell()));
         return;
 
+    case UnwrapGlobalProxy:
+        read(JSGlobalProxy_target);
+        def(HeapLocation(GlobalProxyTargetLoc, JSGlobalProxy_target, node->child1()), LazyNode(node));
+        return;
+
     case ArithIMul:
     case ArithPow:
     case GetScope:
@@ -234,6 +241,7 @@ void clobberize(Graph& graph, Node* node, const ReadFunctor& read, const WriteFu
     case CompareStrictEq:
     case SameValue:
     case IsEmpty:
+    case IsEmptyStorage:
     case TypeOfIsUndefined:
     case IsUndefinedOrNull:
     case IsBoolean:
@@ -303,6 +311,7 @@ void clobberize(Graph& graph, Node* node, const ReadFunctor& read, const WriteFu
         return;
 
     case ArithFRound:
+    case ArithF16Round:
     case ArithSqrt:
         if (node->child1().useKind() == DoubleRepUse)
             def(PureValue(node));
@@ -768,12 +777,17 @@ void clobberize(Graph& graph, Node* node, const ReadFunctor& read, const WriteFu
     case ConstructForwardVarargs:
     case CallDirectEval:
     case CallWasm:
+    case CallCustomAccessorGetter:
+    case CallCustomAccessorSetter:
     case ToPrimitive:
     case ToPropertyKey:
+    case ToPropertyKeyOrNumber:
     case InByVal:
+    case InByValMegamorphic:
     case EnumeratorInByVal:
     case EnumeratorHasOwnProperty:
     case InById:
+    case InByIdMegamorphic:
     case HasPrivateName:
     case HasPrivateBrand:
     case HasOwnProperty:
@@ -793,6 +807,7 @@ void clobberize(Graph& graph, Node* node, const ReadFunctor& read, const WriteFu
     case CreateGenerator:
     case CreateAsyncGenerator:
     case InstanceOf:
+    case InstanceOfMegamorphic:
     case StringValueOf:
     case ObjectKeys:
     case ObjectGetOwnPropertyNames:
@@ -958,6 +973,7 @@ void clobberize(Graph& graph, Node* node, const ReadFunctor& read, const WriteFu
     }
 
     case LoadVarargs: {
+        if (node->argumentsChild().useKind() != OtherUse)
         clobberTop();
         LoadVarargsData* data = node->loadVarargsData();
         write(AbstractHeap(Stack, data->count));
@@ -1091,15 +1107,20 @@ void clobberize(Graph& graph, Node* node, const ReadFunctor& read, const WriteFu
         case Array::Uint8ClampedArray:
         case Array::Uint16Array:
         case Array::Uint32Array:
+        case Array::Float16Array:
         case Array::Float32Array:
         case Array::Float64Array:
+            // Even if we hit out-of-bounds, this is fine. TypedArray does not propagate access to its [[Prototype]] when out-of-bounds access happens.
             read(TypedArrayProperties);
             read(MiscFields);
             if (mode.mayBeResizableOrGrowableSharedTypedArray()) {
                 write(MiscFields);
                 write(TypedArrayProperties);
-            } else
+            } else {
+                if (mode.isOutOfBounds())
+                    indexedPropertyLoc = indexedPropertyLocToOutOfBoundsSaneChain(indexedPropertyLoc);
             def(HeapLocation(indexedPropertyLoc, TypedArrayProperties, graph.varArgChild(node, 0), graph.varArgChild(node, 1)), LazyNode(node));
+            }
             return;
         // We should not get an AnyTypedArray in a GetByVal as AnyTypedArray is only created from intrinsics, which
         // are only added from Inline Caching a GetById.
@@ -1149,7 +1170,7 @@ void clobberize(Graph& graph, Node* node, const ReadFunctor& read, const WriteFu
             return;
 
         case Array::Int32:
-            if (node->arrayMode().isOutOfBounds()) {
+            if (mode.isOutOfBounds()) {
                 clobberTop();
                 return;
             }
@@ -1157,14 +1178,14 @@ void clobberize(Graph& graph, Node* node, const ReadFunctor& read, const WriteFu
             read(Butterfly_vectorLength);
             read(IndexedInt32Properties);
             write(IndexedInt32Properties);
-            if (node->arrayMode().mayStoreToHole())
+            if (mode.mayStoreToHole())
                 write(Butterfly_publicLength);
             def(HeapLocation(indexedPropertyLoc, IndexedInt32Properties, base, index), LazyNode(value));
             def(HeapLocation(IndexedPropertyInt32OutOfBoundsSaneChainLoc, IndexedInt32Properties, base, index), LazyNode(value));
             return;
 
         case Array::Double:
-            if (node->arrayMode().isOutOfBounds()) {
+            if (mode.isOutOfBounds()) {
                 clobberTop();
                 return;
             }
@@ -1172,7 +1193,7 @@ void clobberize(Graph& graph, Node* node, const ReadFunctor& read, const WriteFu
             read(Butterfly_vectorLength);
             read(IndexedDoubleProperties);
             write(IndexedDoubleProperties);
-            if (node->arrayMode().mayStoreToHole())
+            if (mode.mayStoreToHole())
                 write(Butterfly_publicLength);
             def(HeapLocation(IndexedPropertyDoubleLoc, IndexedDoubleProperties, base, index), LazyNode(value));
             def(HeapLocation(IndexedPropertyDoubleSaneChainLoc, IndexedDoubleProperties, base, index), LazyNode(value));
@@ -1180,7 +1201,7 @@ void clobberize(Graph& graph, Node* node, const ReadFunctor& read, const WriteFu
             return;
 
         case Array::Contiguous:
-            if (node->arrayMode().isOutOfBounds()) {
+            if (mode.isOutOfBounds()) {
                 clobberTop();
                 return;
             }
@@ -1188,7 +1209,7 @@ void clobberize(Graph& graph, Node* node, const ReadFunctor& read, const WriteFu
             read(Butterfly_vectorLength);
             read(IndexedContiguousProperties);
             write(IndexedContiguousProperties);
-            if (node->arrayMode().mayStoreToHole())
+            if (mode.mayStoreToHole())
                 write(Butterfly_publicLength);
             def(HeapLocation(indexedPropertyLoc, IndexedContiguousProperties, base, index), LazyNode(value));
             def(HeapLocation(IndexedPropertyJSOutOfBoundsSaneChainLoc, IndexedContiguousProperties, base, index), LazyNode(value));
@@ -1203,12 +1224,12 @@ void clobberize(Graph& graph, Node* node, const ReadFunctor& read, const WriteFu
             read(Butterfly_vectorLength);
             read(IndexedArrayStorageProperties);
             write(IndexedArrayStorageProperties);
-            if (node->arrayMode().mayStoreToHole())
+            if (mode.mayStoreToHole())
                 write(Butterfly_publicLength);
             return;
 
         case Array::SlowPutArrayStorage:
-            if (node->arrayMode().mayStoreToHole()) {
+            if (mode.mayStoreToHole()) {
                 clobberTop();
                 return;
             }
@@ -1225,9 +1246,10 @@ void clobberize(Graph& graph, Node* node, const ReadFunctor& read, const WriteFu
         case Array::Uint8ClampedArray:
         case Array::Uint16Array:
         case Array::Uint32Array:
+        case Array::Float16Array:
         case Array::Float32Array:
         case Array::Float64Array:
-            if (node->arrayMode().mayBeResizableOrGrowableSharedTypedArray()) {
+            if (mode.mayBeResizableOrGrowableSharedTypedArray()) {
                 read(TypedArrayProperties);
                 read(MiscFields);
                 write(TypedArrayProperties);
@@ -1290,6 +1312,15 @@ void clobberize(Graph& graph, Node* node, const ReadFunctor& read, const WriteFu
 
         clobberTop();
         return;
+
+    case ToIntegerOrInfinity:
+    case ToLength: {
+        if (node->child1().useKind() == UntypedUse)
+            clobberTop();
+        else
+            def(PureValue(node));
+        return;
+    }
 
     case OverridesHasInstance:
         read(JSCell_typeInfoFlags);
@@ -1476,7 +1507,17 @@ void clobberize(Graph& graph, Node* node, const ReadFunctor& read, const WriteFu
         unsigned identifierNumber = node->storageAccessData().identifierNumber;
         AbstractHeap heap(NamedProperties, identifierNumber);
         read(heap);
+
+        // Since LICM might break the uniqueness assumption of HeapLocation for
+        // *byOffset nodes. Then, the HeapLocation constructor with an extra state
+        // is introduced and applied in this phase in order to resolve the potential
+        // HeapLocation collisions for *byteOffset nodes after LICM phase. Note
+        // that the constructor with an extra state should be used only after LICM
+        // since it might affect performance.
+        if (graph.m_planStage >= PlanStage::LICMAndLater)
         def(HeapLocation(NamedPropertyLoc, heap, node->child2(), &node->storageAccessData()), LazyNode(node));
+        else
+            def(HeapLocation(NamedPropertyLoc, heap, node->child2()), LazyNode(node));
         return;
     }
 
@@ -1485,7 +1526,10 @@ void clobberize(Graph& graph, Node* node, const ReadFunctor& read, const WriteFu
         read(JSObject_butterfly);
         AbstractHeap heap(NamedProperties, node->multiGetByOffsetData().identifierNumber);
         read(heap);
+        if (graph.m_planStage >= PlanStage::LICMAndLater)
         def(HeapLocation(NamedPropertyLoc, heap, node->child1(), &node->multiGetByOffsetData()), LazyNode(node));
+        else
+            def(HeapLocation(NamedPropertyLoc, heap, node->child1()), LazyNode(node));
         return;
     }
 
@@ -1498,7 +1542,10 @@ void clobberize(Graph& graph, Node* node, const ReadFunctor& read, const WriteFu
             write(JSCell_structureID);
         if (node->multiPutByOffsetData().reallocatesStorage())
             write(JSObject_butterfly);
+        if (graph.m_planStage >= PlanStage::LICMAndLater)
         def(HeapLocation(NamedPropertyLoc, heap, node->child1(), &node->multiPutByOffsetData()), LazyNode(node->child2().node()));
+        else
+            def(HeapLocation(NamedPropertyLoc, heap, node->child1()), LazyNode(node->child2().node()));
         return;
     }
 
@@ -1520,7 +1567,10 @@ void clobberize(Graph& graph, Node* node, const ReadFunctor& read, const WriteFu
         unsigned identifierNumber = node->storageAccessData().identifierNumber;
         AbstractHeap heap(NamedProperties, identifierNumber);
         write(heap);
+        if (graph.m_planStage >= PlanStage::LICMAndLater)
         def(HeapLocation(NamedPropertyLoc, heap, node->child2(), &node->storageAccessData()), LazyNode(node->child3().node()));
+        else
+            def(HeapLocation(NamedPropertyLoc, heap, node->child2()), LazyNode(node->child3().node()));
         return;
     }
 
@@ -1561,6 +1611,14 @@ void clobberize(Graph& graph, Node* node, const ReadFunctor& read, const WriteFu
             def(HeapLocation(ArrayLengthLoc, MiscFields, node->child1()), LazyNode(node));
             return;
         }
+    }
+
+    case GetUndetachedTypeArrayLength: {
+        ArrayMode mode = node->arrayMode();
+        DFG_ASSERT(graph, node, mode.isSomeTypedArrayView());
+        DFG_ASSERT(graph, node, !mode.mayBeResizableOrGrowableSharedTypedArray());
+        def(PureValue(node, mode.asWord()));
+        return;
     }
 
     case GetTypedArrayLengthAsInt52: {
@@ -1878,6 +1936,8 @@ void clobberize(Graph& graph, Node* node, const ReadFunctor& read, const WriteFu
     case NewInternalFieldObject:
     case NewRegexp:
     case NewStringObject:
+    case NewMap:
+    case NewSet:
     case PhantomNewObject:
     case MaterializeNewObject:
     case PhantomNewFunction:
@@ -1996,6 +2056,7 @@ void clobberize(Graph& graph, Node* node, const ReadFunctor& read, const WriteFu
             // original String or StringObject structure. Therefore, we don't have an overridden
             // valueOf, etc.
 
+        case StringOrOtherUse:
         case Int32Use:
         case Int52RepUse:
         case DoubleRepUse:
@@ -2036,44 +2097,81 @@ void clobberize(Graph& graph, Node* node, const ReadFunctor& read, const WriteFu
         def(PureValue(node));
         return;
 
-    case GetMapBucket: {
+    case MapGet: {
         Edge& mapEdge = node->child1();
         Edge& keyEdge = node->child2();
+        Edge& hashEdge = node->child3();
         AbstractHeapKind heap = (mapEdge.useKind() == MapObjectUse) ? JSMapFields : JSSetFields;
         read(heap);
-        def(HeapLocation(MapBucketLoc, heap, mapEdge, keyEdge), LazyNode(node));
+        def(HeapLocation(MapEntryKeyLoc, heap, mapEdge, keyEdge, hashEdge), LazyNode(node));
+        return;
+    }
+    case LoadMapValue: {
+        Edge& keySlotEdge = node->child1();
+        AbstractHeapKind heap = JSMapFields;
+        read(heap);
+        def(HeapLocation(LoadMapValueLoc, heap, keySlotEdge), LazyNode(node));
         return;
     }
 
-    case GetMapBucketHead: {
+    case MapIteratorNext: {
+        Edge& mapIteratorEdge = node->child1();
+        AbstractHeapKind heap = (mapIteratorEdge.useKind() == MapIteratorObjectUse) ? JSMapIteratorFields : JSSetIteratorFields;
+        read(heap);
+        write(heap);
+        def(HeapLocation(MapIteratorNextLoc, heap, mapIteratorEdge), LazyNode(node));
+        return;
+    }
+    case MapIteratorKey: {
+        Edge& mapIteratorEdge = node->child1();
+        AbstractHeapKind heap = (mapIteratorEdge.useKind() == MapIteratorObjectUse) ? JSMapIteratorFields : JSSetIteratorFields;
+        read(heap);
+        def(HeapLocation(MapIteratorKeyLoc, heap, mapIteratorEdge), LazyNode(node));
+        return;
+    }
+    case MapIteratorValue: {
+        Edge& mapIteratorEdge = node->child1();
+        AbstractHeapKind heap = (mapIteratorEdge.useKind() == MapIteratorObjectUse) ? JSMapIteratorFields : JSSetIteratorFields;
+        read(heap);
+        def(HeapLocation(MapIteratorValueLoc, heap, mapIteratorEdge), LazyNode(node));
+        return;
+    }
+
+    case MapStorage: {
         Edge& mapEdge = node->child1();
         AbstractHeapKind heap = (mapEdge.useKind() == MapObjectUse) ? JSMapFields : JSSetFields;
         read(heap);
-        def(HeapLocation(MapBucketHeadLoc, heap, mapEdge), LazyNode(node));
+        def(HeapLocation(MapStorageLoc, heap, mapEdge), LazyNode(node));
         return;
     }
-
-    case GetMapBucketNext: {
+    case MapIterationNext: {
+        Edge& mapEdge = node->child1();
+        Edge& entryEdge = node->child2();
         AbstractHeapKind heap = (node->bucketOwnerType() == BucketOwnerType::Map) ? JSMapFields : JSSetFields;
         read(heap);
-        Edge& bucketEdge = node->child1();
-        def(HeapLocation(MapBucketNextLoc, heap, bucketEdge), LazyNode(node));
+        write(heap);
+        def(HeapLocation(MapIterationNextLoc, heap, mapEdge, entryEdge), LazyNode(node));
         return;
     }
-
-    case LoadKeyFromMapBucket: {
+    case MapIterationEntry: {
+        Edge& mapEdge = node->child1();
         AbstractHeapKind heap = (node->bucketOwnerType() == BucketOwnerType::Map) ? JSMapFields : JSSetFields;
         read(heap);
-        Edge& bucketEdge = node->child1();
-        def(HeapLocation(MapBucketKeyLoc, heap, bucketEdge), LazyNode(node));
+        def(HeapLocation(MapIterationEntryLoc, heap, mapEdge), LazyNode(node));
         return;
     }
-
-    case LoadValueFromMapBucket: {
+    case MapIterationEntryKey: {
+        Edge& mapEdge = node->child1();
         AbstractHeapKind heap = (node->bucketOwnerType() == BucketOwnerType::Map) ? JSMapFields : JSSetFields;
         read(heap);
-        Edge& bucketEdge = node->child1();
-        def(HeapLocation(MapBucketValueLoc, heap, bucketEdge), LazyNode(node));
+        def(HeapLocation(MapIterationEntryKeyLoc, heap, mapEdge), LazyNode(node));
+        return;
+    }
+    case MapIterationEntryValue: {
+        Edge& mapEdge = node->child1();
+        AbstractHeapKind heap = (node->bucketOwnerType() == BucketOwnerType::Map) ? JSMapFields : JSSetFields;
+        read(heap);
+        def(HeapLocation(MapIterationEntryValueLoc, heap, mapEdge), LazyNode(node));
         return;
     }
 
@@ -2090,7 +2188,7 @@ void clobberize(Graph& graph, Node* node, const ReadFunctor& read, const WriteFu
         Edge& mapEdge = node->child1();
         Edge& keyEdge = node->child2();
         write(JSSetFields);
-        def(HeapLocation(MapBucketLoc, JSSetFields, mapEdge, keyEdge), LazyNode(node));
+        def(HeapLocation(MapEntryValueLoc, JSSetFields, mapEdge, keyEdge), LazyNode(node));
         return;
     }
 
@@ -2098,7 +2196,7 @@ void clobberize(Graph& graph, Node* node, const ReadFunctor& read, const WriteFu
         Edge& mapEdge = graph.varArgChild(node, 0);
         Edge& keyEdge = graph.varArgChild(node, 1);
         write(JSMapFields);
-        def(HeapLocation(MapBucketLoc, JSMapFields, mapEdge, keyEdge), LazyNode(node));
+        def(HeapLocation(MapEntryValueLoc, JSMapFields, mapEdge, keyEdge), LazyNode(node));
         return;
     }
 
@@ -2171,7 +2269,7 @@ void clobberize(Graph& graph, Node* node, const ReadFunctor& read, const WriteFu
             write(MiscFields);
             write(TypedArrayProperties);
         } else {
-        LocationKind indexedPropertyLoc = indexedPropertyLocForResultType(node->result());
+            LocationKind indexedPropertyLoc = indexedPropertyLocToOutOfBoundsSaneChain(indexedPropertyLocForResultType(node->result()));
             def(HeapLocation(indexedPropertyLoc, AbstractHeap(TypedArrayProperties, node->dataViewData().asQuadWord), node->child1(), node->child2(), node->child3()), LazyNode(node));
         }
         return;

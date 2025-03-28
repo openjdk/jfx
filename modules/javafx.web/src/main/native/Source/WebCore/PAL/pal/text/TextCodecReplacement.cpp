@@ -34,29 +34,29 @@ namespace PAL {
 
 void TextCodecReplacement::registerEncodingNames(EncodingNameRegistrar registrar)
 {
-    registrar("replacement", "replacement");
+    registrar("replacement"_s, "replacement"_s);
 
-    registrar("csiso2022kr", "replacement");
-    registrar("hz-gb-2312", "replacement");
-    registrar("iso-2022-cn", "replacement");
-    registrar("iso-2022-cn-ext", "replacement");
-    registrar("iso-2022-kr", "replacement");
+    registrar("csiso2022kr"_s, "replacement"_s);
+    registrar("hz-gb-2312"_s, "replacement"_s);
+    registrar("iso-2022-cn"_s, "replacement"_s);
+    registrar("iso-2022-cn-ext"_s, "replacement"_s);
+    registrar("iso-2022-kr"_s, "replacement"_s);
 }
 
 void TextCodecReplacement::registerCodecs(TextCodecRegistrar registrar)
 {
-    registrar("replacement", [] {
+    registrar("replacement"_s, [] {
         return makeUnique<TextCodecReplacement>();
     });
 }
 
-String TextCodecReplacement::decode(const char*, size_t, bool, bool, bool& sawError)
+String TextCodecReplacement::decode(std::span<const uint8_t>, bool, bool, bool& sawError)
 {
     sawError = true;
     if (m_sentEOF)
         return emptyString();
     m_sentEOF = true;
-    return String { &replacementCharacter, 1 };
+    return span(replacementCharacter);
 }
 
 Vector<uint8_t> TextCodecReplacement::encode(StringView string, UnencodableHandling) const

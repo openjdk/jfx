@@ -26,6 +26,7 @@
 #pragma once
 
 #include <initializer_list>
+#include <optional>
 
 namespace WTF {
 class TextStream;
@@ -80,35 +81,56 @@ enum class StyleDifferenceContextSensitiveProperty : uint8_t {
 };
 
 // Static pseudo styles. Dynamic ones are produced on the fly.
-enum class PseudoId : uint16_t {
+enum class PseudoId : uint32_t {
     // The order must be None, public IDs, and then internal IDs.
     None,
 
     // Public:
     FirstLine,
     FirstLetter,
+    GrammarError,
     Highlight,
     Marker,
     Before,
     After,
     Selection,
     Backdrop,
-    Scrollbar,
+    WebKitScrollbar,
+    SpellingError,
+    TargetText,
+    ViewTransition,
+    ViewTransitionGroup,
+    ViewTransitionImagePair,
+    ViewTransitionOld,
+    ViewTransitionNew,
 
     // Internal:
-    ScrollbarThumb,
-    ScrollbarButton,
-    ScrollbarTrack,
-    ScrollbarTrackPiece,
-    ScrollbarCorner,
-    Resizer,
+    WebKitScrollbarThumb,
+    WebKitScrollbarButton,
+    WebKitScrollbarTrack,
+    WebKitScrollbarTrackPiece,
+    WebKitScrollbarCorner,
+    WebKitResizer,
+    InternalWritingSuggestions,
 
     AfterLastInternalPseudoId,
 
     FirstPublicPseudoId = FirstLine,
-    FirstInternalPseudoId = ScrollbarThumb,
+    FirstInternalPseudoId = WebKitScrollbarThumb,
     PublicPseudoIdMask = ((1 << FirstInternalPseudoId) - 1) & ~((1 << FirstPublicPseudoId) - 1)
 };
+
+inline std::optional<PseudoId> parentPseudoElement(PseudoId pseudoId)
+{
+    switch (pseudoId) {
+    case PseudoId::FirstLetter: return PseudoId::FirstLine;
+    case PseudoId::ViewTransitionGroup: return PseudoId::ViewTransition;
+    case PseudoId::ViewTransitionImagePair: return PseudoId::ViewTransitionGroup;
+    case PseudoId::ViewTransitionNew: return PseudoId::ViewTransitionImagePair;
+    case PseudoId::ViewTransitionOld: return PseudoId::ViewTransitionImagePair;
+    default: return std::nullopt;
+    }
+}
 
 class PseudoIdSet {
 public:
@@ -169,7 +191,7 @@ public:
 
     unsigned data() const { return m_data; }
 
-    static ptrdiff_t dataMemoryOffset() { return OBJECT_OFFSETOF(PseudoIdSet, m_data); }
+    static constexpr ptrdiff_t dataMemoryOffset() { return OBJECT_OFFSETOF(PseudoIdSet, m_data); }
 
 private:
     explicit PseudoIdSet(unsigned rawPseudoIdSet)
@@ -243,9 +265,9 @@ enum class Float : uint8_t {
 };
 
 enum class UsedFloat : uint8_t {
-    None,
-    Left,
-    Right,
+    None  = 1 << 0,
+    Left  = 1 << 1,
+    Right = 1 << 2
 };
 
 // Box decoration attributes. Not inherited.
@@ -320,9 +342,10 @@ enum class FillAttachment : uint8_t {
 };
 
 enum class FillBox : uint8_t {
-    Border,
-    Padding,
-    Content,
+    BorderBox,
+    PaddingBox,
+    ContentBox,
+    BorderArea,
     Text,
     NoClip
 };
@@ -537,7 +560,7 @@ enum class WordBreak : uint8_t {
     BreakAll,
     KeepAll,
     BreakWord,
-    Auto
+    AutoPhrase
 };
 
 enum class OverflowWrap : uint8_t {
@@ -681,20 +704,11 @@ enum class TextGroupAlign : uint8_t {
     Center
 };
 
-enum class TextUnderlinePosition : uint8_t {
-    // FIXME: Implement support for 'under left' and 'under right' values.
-    Auto,
-    Under,
-    FromFont,
-    Left,
-    Right
-};
-
 enum class TextBoxTrim : uint8_t {
     None,
-    Start,
-    End,
-    Both
+    TrimStart,
+    TrimEnd,
+    TrimBoth
 };
 
 enum class MarginTrimType : uint8_t {
@@ -704,7 +718,10 @@ enum class MarginTrimType : uint8_t {
     InlineEnd = 1 << 3
 };
 
-enum class TextBoxEdgeType : uint8_t {
+enum class TextEdgeType : uint8_t {
+    // Note that TextEdgeType is shared between text-box-edge and line-fit-edge,
+    // where text-box-edge's default value is auto, and line-fit-edge has leading.
+    Auto,
     Leading,
     Text,
     CapHeight,
@@ -819,7 +836,6 @@ enum class CursorVisibility : bool {
 };
 #endif
 
-// The order of this enum must match the order of the display values in CSSValueKeywords.in.
 enum class DisplayType : uint8_t {
     Inline,
     Block,
@@ -843,6 +859,10 @@ enum class DisplayType : uint8_t {
     Grid,
     InlineGrid,
     FlowRoot,
+    Ruby,
+    RubyBlock,
+    RubyBase,
+    RubyAnnotation,
     None
 };
 
@@ -928,6 +948,13 @@ enum class TextEmphasisPosition : uint8_t {
     Right = 1 << 3
 };
 
+enum class TextUnderlinePosition : uint8_t {
+    Under    = 1 << 0,
+    FromFont = 1 << 1,
+    Left     = 1 << 2,
+    Right    = 1 << 3
+};
+
 enum class TextOrientation : uint8_t {
     Mixed,
     Upright,
@@ -939,12 +966,16 @@ enum class TextOverflow : bool {
     Ellipsis
 };
 
-enum class TextWrap : uint8_t {
+enum class TextWrapMode : bool {
     Wrap,
-    NoWrap,
+    NoWrap
+};
+
+enum class TextWrapStyle : uint8_t {
+    Auto,
     Balance,
-    Stable,
-    Pretty
+    Pretty,
+    Stable
 };
 
 enum class ImageRendering : uint8_t {
@@ -993,9 +1024,16 @@ enum class LineAlign : bool {
 };
 
 enum class RubyPosition : uint8_t {
-    Before,
-    After,
+    Over,
+    Under,
     InterCharacter
+};
+
+enum class RubyAlign : uint8_t {
+    Start,
+    Center,
+    SpaceBetween,
+    SpaceAround
 };
 
 #if ENABLE(DARK_MODE_CSS)
@@ -1168,6 +1206,11 @@ enum class BlockStepInsert : bool {
     Padding
 };
 
+enum class FieldSizing : bool {
+    Fixed,
+    Content
+};
+
 CSSBoxType transformBoxToCSSBoxType(TransformBox);
 
 constexpr float defaultMiterLimit = 4;
@@ -1177,6 +1220,7 @@ WTF::TextStream& operator<<(WTF::TextStream&, AnimationPlayState);
 WTF::TextStream& operator<<(WTF::TextStream&, AspectRatioType);
 WTF::TextStream& operator<<(WTF::TextStream&, AutoRepeatType);
 WTF::TextStream& operator<<(WTF::TextStream&, BackfaceVisibility);
+WTF::TextStream& operator<<(WTF::TextStream&, BlockStepInsert);
 WTF::TextStream& operator<<(WTF::TextStream&, BorderCollapse);
 WTF::TextStream& operator<<(WTF::TextStream&, BorderStyle);
 WTF::TextStream& operator<<(WTF::TextStream&, BoxAlignment);
@@ -1201,6 +1245,7 @@ WTF::TextStream& operator<<(WTF::TextStream&, ColumnProgression);
 WTF::TextStream& operator<<(WTF::TextStream&, ColumnSpan);
 WTF::TextStream& operator<<(WTF::TextStream&, ContentDistribution);
 WTF::TextStream& operator<<(WTF::TextStream&, ContentPosition);
+WTF::TextStream& operator<<(WTF::TextStream&, ContentVisibility);
 WTF::TextStream& operator<<(WTF::TextStream&, CursorType);
 #if ENABLE(CURSOR_VISIBILITY)
 WTF::TextStream& operator<<(WTF::TextStream&, CursorVisibility);
@@ -1248,6 +1293,7 @@ WTF::TextStream& operator<<(WTF::TextStream&, QuoteType);
 WTF::TextStream& operator<<(WTF::TextStream&, ReflectionDirection);
 WTF::TextStream& operator<<(WTF::TextStream&, Resize);
 WTF::TextStream& operator<<(WTF::TextStream&, RubyPosition);
+WTF::TextStream& operator<<(WTF::TextStream&, RubyAlign);
 WTF::TextStream& operator<<(WTF::TextStream&, ScrollSnapAxis);
 WTF::TextStream& operator<<(WTF::TextStream&, ScrollSnapAxisAlignType);
 WTF::TextStream& operator<<(WTF::TextStream&, ScrollSnapStop);
@@ -1271,9 +1317,10 @@ WTF::TextStream& operator<<(WTF::TextStream&, TextOverflow);
 WTF::TextStream& operator<<(WTF::TextStream&, TextSecurity);
 WTF::TextStream& operator<<(WTF::TextStream&, TextTransform);
 WTF::TextStream& operator<<(WTF::TextStream&, TextUnderlinePosition);
-WTF::TextStream& operator<<(WTF::TextStream&, TextWrap);
+WTF::TextStream& operator<<(WTF::TextStream&, TextWrapMode);
+WTF::TextStream& operator<<(WTF::TextStream&, TextWrapStyle);
 WTF::TextStream& operator<<(WTF::TextStream&, TextBoxTrim);
-WTF::TextStream& operator<<(WTF::TextStream&, TextBoxEdgeType);
+WTF::TextStream& operator<<(WTF::TextStream&, TextEdgeType);
 WTF::TextStream& operator<<(WTF::TextStream&, TextZoom);
 WTF::TextStream& operator<<(WTF::TextStream&, TransformBox);
 WTF::TextStream& operator<<(WTF::TextStream&, TransformStyle3D);
@@ -1287,5 +1334,6 @@ WTF::TextStream& operator<<(WTF::TextStream&, WhiteSpaceCollapse);
 WTF::TextStream& operator<<(WTF::TextStream&, WordBreak);
 WTF::TextStream& operator<<(WTF::TextStream&, MathStyle);
 WTF::TextStream& operator<<(WTF::TextStream&, ContainIntrinsicSizeType);
+WTF::TextStream& operator<<(WTF::TextStream&, FieldSizing);
 
 } // namespace WebCore

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2009-2021 Apple Inc. All rights reserved.
+ * Copyright (C) 2009-2023 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -104,15 +104,7 @@ static RefPtr<BufferMemoryHandle> tryAllocateResizableMemory(VM* vm, size_t size
 
     constexpr bool readable = false;
     constexpr bool writable = false;
-    if (!OSAllocator::protect(slowMemory + initialBytes, maximumBytes - initialBytes, readable, writable)) {
-#if OS(WINDOWS)
-        dataLogLn("mprotect failed: ", static_cast<int>(GetLastError()));
-#else
-        dataLogLn("mprotect failed: ", safeStrerror(errno).data());
-#endif
-        RELEASE_ASSERT_NOT_REACHED();
-    }
-
+    OSAllocator::protect(slowMemory + initialBytes, maximumBytes - initialBytes, readable, writable);
     return adoptRef(*new BufferMemoryHandle(slowMemory, initialBytes, maximumBytes, PageCount::fromBytes(initialBytes), PageCount::fromBytes(maximumBytes), MemorySharingMode::Shared, MemoryMode::BoundsChecking));
 }
 
@@ -134,7 +126,7 @@ void ArrayBufferContents::tryAllocate(size_t numElements, unsigned elementByteSi
         data = Gigacage::tryZeroedMalloc(Gigacage::Primitive, allocationSize);
     else
         data = Gigacage::tryMalloc(Gigacage::Primitive, allocationSize);
-    m_data = DataType(data, sizeInBytes.value());
+    m_data = DataType(data);
     if (!data) {
         reset();
         return;
@@ -149,13 +141,13 @@ void ArrayBufferContents::tryAllocate(size_t numElements, unsigned elementByteSi
 
 void ArrayBufferContents::makeShared()
 {
-    m_shared = SharedArrayBufferContents::create(data(), sizeInBytes(), maxByteLength(), m_memoryHandle, WTFMove(m_destructor), SharedArrayBufferContents::Mode::Default);
+    m_shared = SharedArrayBufferContents::create(mutableSpan(), maxByteLength(), m_memoryHandle, WTFMove(m_destructor), SharedArrayBufferContents::Mode::Default);
     m_destructor = nullptr;
 }
 
 SharedArrayBufferContents::~SharedArrayBufferContents()
 {
-    WaiterListManager::singleton().unregisterSharedArrayBuffer(bitwise_cast<uint8_t*>(data()), m_sizeInBytes);
+    WaiterListManager::singleton().unregister(bitwise_cast<uint8_t*>(data()), m_sizeInBytes);
     if (m_destructor) {
         // FIXME: we shouldn't use getUnsafe here https://bugs.webkit.org/show_bug.cgi?id=197698
         m_destructor->run(m_data.getUnsafe());
@@ -197,12 +189,12 @@ Ref<ArrayBuffer> ArrayBuffer::create(size_t numElements, unsigned elementByteSiz
 
 Ref<ArrayBuffer> ArrayBuffer::create(ArrayBuffer& other)
 {
-    return ArrayBuffer::create(other.data(), other.byteLength());
+    return ArrayBuffer::create(other.span());
 }
 
-Ref<ArrayBuffer> ArrayBuffer::create(const void* source, size_t byteLength)
+Ref<ArrayBuffer> ArrayBuffer::create(std::span<const uint8_t> span)
 {
-    auto buffer = tryCreate(source, byteLength);
+    auto buffer = tryCreate(span);
     if (!buffer)
         CRASH();
     return buffer.releaseNonNull();
@@ -213,19 +205,14 @@ Ref<ArrayBuffer> ArrayBuffer::create(ArrayBufferContents&& contents)
     return adoptRef(*new ArrayBuffer(WTFMove(contents)));
 }
 
-Ref<ArrayBuffer> ArrayBuffer::create(const Vector<uint8_t>& vector)
-{
-    return ArrayBuffer::create(vector.data(), vector.size());
-}
-
 // FIXME: We cannot use this except if the memory comes from the cage.
 // Current this is only used from:
 // - JSGenericTypedArrayView<>::slowDownAndWasteMemory. But in that case, the memory should have already come
 //   from the cage.
-Ref<ArrayBuffer> ArrayBuffer::createAdopted(const void* data, size_t byteLength)
+Ref<ArrayBuffer> ArrayBuffer::createAdopted(std::span<const uint8_t> data)
 {
-    ASSERT(!Gigacage::isEnabled() || (Gigacage::contains(data) && Gigacage::contains(static_cast<const uint8_t*>(data) + byteLength - 1)));
-    return createFromBytes(data, byteLength, ArrayBuffer::primitiveGigacageDestructor());
+    ASSERT(!Gigacage::isEnabled() || (Gigacage::contains(data.data()) && Gigacage::contains(data.data() + data.size() - 1)));
+    return createFromBytes(data, ArrayBuffer::primitiveGigacageDestructor());
 }
 
 // FIXME: We cannot use this except if the memory comes from the cage.
@@ -234,12 +221,12 @@ Ref<ArrayBuffer> ArrayBuffer::createAdopted(const void* data, size_t byteLength)
 //   longer caged, or we could introduce a new set of typed array types that are uncaged and get accessed
 //   differently.
 // - WebAssembly. Wasm should allocate from the cage.
-Ref<ArrayBuffer> ArrayBuffer::createFromBytes(const void* data, size_t byteLength, ArrayBufferDestructorFunction&& destructor)
+Ref<ArrayBuffer> ArrayBuffer::createFromBytes(std::span<const uint8_t> data, ArrayBufferDestructorFunction&& destructor)
 {
-    if (data && !Gigacage::isCaged(Gigacage::Primitive, data))
+    if (data.data() && !Gigacage::isCaged(Gigacage::Primitive, data.data()))
         Gigacage::disablePrimitiveGigacage();
 
-    ArrayBufferContents contents(const_cast<void*>(data), byteLength, std::nullopt, WTFMove(destructor));
+    ArrayBufferContents contents(data, std::nullopt, WTFMove(destructor));
     return create(WTFMove(contents));
 }
 
@@ -256,16 +243,16 @@ RefPtr<ArrayBuffer> ArrayBuffer::tryCreate(size_t numElements, unsigned elementB
 
 RefPtr<ArrayBuffer> ArrayBuffer::tryCreate(ArrayBuffer& other)
 {
-    return tryCreate(other.data(), other.byteLength());
+    return tryCreate(other.span());
 }
 
-RefPtr<ArrayBuffer> ArrayBuffer::tryCreate(const void* source, size_t byteLength)
+RefPtr<ArrayBuffer> ArrayBuffer::tryCreate(std::span<const uint8_t> span)
 {
     ArrayBufferContents contents;
-    contents.tryAllocate(byteLength, 1, ArrayBufferContents::InitializationPolicy::DontInitialize);
+    contents.tryAllocate(span.size(), 1, ArrayBufferContents::InitializationPolicy::DontInitialize);
     if (!contents.m_data)
         return nullptr;
-    return createInternal(WTFMove(contents), source, byteLength);
+    return createInternal(WTFMove(contents), span.data(), span.size());
 }
 
 Ref<ArrayBuffer> ArrayBuffer::createUninitialized(size_t numElements, unsigned elementByteSize)
@@ -359,7 +346,7 @@ RefPtr<ArrayBuffer> ArrayBuffer::slice(double begin) const
 RefPtr<ArrayBuffer> ArrayBuffer::sliceWithClampedIndex(size_t begin, size_t end) const
 {
     size_t size = begin <= end ? end - begin : 0;
-    auto result = ArrayBuffer::tryCreate(static_cast<const char*>(data()) + begin, size);
+    auto result = ArrayBuffer::tryCreate(span().subspan(begin, size));
     if (result)
         result->setSharingMode(sharingMode());
     return result;
@@ -412,9 +399,7 @@ bool ArrayBuffer::transferTo(VM& vm, ArrayBufferContents& result)
         return true;
     }
 
-    bool isDetachable = !m_pinCount && !m_locked;
-
-    if (!isDetachable) {
+    if (!isDetachable()) {
         m_contents.copyTo(result);
         if (!result.m_data)
             return false;
@@ -439,7 +424,7 @@ void ArrayBuffer::notifyDetaching(VM& vm)
     for (size_t i = numberOfIncomingReferences(); i--;) {
         JSCell* cell = incomingReferenceAt(i);
         if (JSArrayBufferView* view = jsDynamicCast<JSArrayBufferView*>(cell))
-            view->detach();
+            view->detachFromArrayBuffer();
     }
     m_detachingWatchpointSet.fireAll(vm, "Array buffer was detached");
 }
@@ -451,7 +436,7 @@ Expected<int64_t, GrowFailReason> ArrayBuffer::grow(VM& vm, size_t newByteLength
         return makeUnexpected(GrowFailReason::GrowSharedUnavailable);
     auto result = shared->grow(vm, newByteLength);
     if (result && result.value() > 0)
-        vm.heap.reportExtraMemoryAllocated(result.value());
+        vm.heap.reportExtraMemoryAllocated(static_cast<JSCell*>(nullptr), result.value());
     return result;
 }
 
@@ -503,14 +488,7 @@ Expected<int64_t, GrowFailReason> ArrayBuffer::resize(VM& vm, size_t newByteLeng
                 dataLogLnIf(ArrayBufferInternal::verbose, "Marking memory's ", RawPointer(memory), " as read+write in range [", RawPointer(startAddress), ", ", RawPointer(startAddress + bytesToAdd), ")");
                 constexpr bool readable = true;
                 constexpr bool writable = true;
-                if (!OSAllocator::protect(startAddress, bytesToAdd, readable, writable)) {
-#if OS(WINDOWS)
-                    dataLogLn("mprotect failed: ", static_cast<int>(GetLastError()));
-#else
-                    dataLogLn("mprotect failed: ", safeStrerror(errno).data());
-#endif
-                    RELEASE_ASSERT_NOT_REACHED();
-                }
+                OSAllocator::protect(startAddress, bytesToAdd, readable, writable);
             } else {
                 size_t bytesToSubtract = memoryHandle->size() - desiredSize;
                 ASSERT(bytesToSubtract);
@@ -526,14 +504,7 @@ Expected<int64_t, GrowFailReason> ArrayBuffer::resize(VM& vm, size_t newByteLeng
                 dataLogLnIf(ArrayBufferInternal::verbose, "Marking memory's ", RawPointer(memory), " as none in range [", RawPointer(startAddress), ", ", RawPointer(startAddress + bytesToSubtract), ")");
                 constexpr bool readable = false;
                 constexpr bool writable = false;
-                if (!OSAllocator::protect(startAddress, bytesToSubtract, readable, writable)) {
-#if OS(WINDOWS)
-                    dataLogLn("mprotect failed: ", static_cast<int>(GetLastError()));
-#else
-                    dataLogLn("mprotect failed: ", safeStrerror(errno).data());
-#endif
-                    RELEASE_ASSERT_NOT_REACHED();
-                }
+                OSAllocator::protect(startAddress, bytesToSubtract, readable, writable);
             }
             memoryHandle->updateSize(desiredSize);
         }
@@ -545,7 +516,7 @@ Expected<int64_t, GrowFailReason> ArrayBuffer::resize(VM& vm, size_t newByteLeng
     }
 
     if (deltaByteLength > 0)
-        vm.heap.reportExtraMemoryAllocated(deltaByteLength);
+        vm.heap.reportExtraMemoryAllocated(static_cast<JSCell*>(nullptr), deltaByteLength);
 
     return deltaByteLength;
 }
@@ -561,8 +532,8 @@ RefPtr<ArrayBuffer> ArrayBuffer::tryCreateShared(VM& vm, size_t numElements, uns
     if (!handle)
         return nullptr;
 
-    void* memory = handle->memory();
-    return createShared(SharedArrayBufferContents::create(memory, sizeInBytes.value(), maxByteLength, WTFMove(handle), nullptr, SharedArrayBufferContents::Mode::Default));
+    auto* memory = static_cast<uint8_t*>(handle->memory());
+    return createShared(SharedArrayBufferContents::create({ memory, sizeInBytes.value() }, maxByteLength, WTFMove(handle), nullptr, SharedArrayBufferContents::Mode::Default));
 }
 
 Expected<int64_t, GrowFailReason> SharedArrayBufferContents::grow(VM& vm, size_t newByteLength)
@@ -613,15 +584,7 @@ Expected<int64_t, GrowFailReason> SharedArrayBufferContents::grow(const Abstract
         dataLogLnIf(ArrayBufferInternal::verbose, "Marking memory's ", RawPointer(memory), " as read+write in range [", RawPointer(startAddress), ", ", RawPointer(startAddress + extraBytes), ")");
         constexpr bool readable = true;
         constexpr bool writable = true;
-        if (!OSAllocator::protect(startAddress, extraBytes, readable, writable)) {
-#if OS(WINDOWS)
-            dataLogLn("mprotect failed: ", static_cast<int>(GetLastError()));
-#else
-            dataLogLn("mprotect failed: ", safeStrerror(errno).data());
-#endif
-            RELEASE_ASSERT_NOT_REACHED();
-        }
-
+        OSAllocator::protect(startAddress, extraBytes, readable, writable);
         m_memoryHandle->updateSize(desiredSize);
     }
 
@@ -639,6 +602,17 @@ ASCIILiteral errorMessageForTransfer(ArrayBuffer* buffer)
     if (buffer->isWasmMemory())
         return "Cannot transfer a WebAssembly.Memory"_s;
     return "Cannot transfer an ArrayBuffer whose backing store has been accessed by the JavaScriptCore C API"_s;
+}
+
+std::optional<ArrayBufferContents> ArrayBufferContents::fromSpan(std::span<const uint8_t> data)
+{
+    void* buffer = Gigacage::tryMalloc(Gigacage::Primitive, data.size_bytes());
+    if (!buffer)
+        return std::nullopt;
+
+    memcpy(buffer, data.data(), data.size_bytes());
+
+    return ArrayBufferContents { buffer, data.size_bytes(), std::nullopt, ArrayBuffer::primitiveGigacageDestructor() };
 }
 
 } // namespace JSC

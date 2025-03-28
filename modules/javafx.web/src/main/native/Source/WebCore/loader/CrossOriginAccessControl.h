@@ -56,7 +56,7 @@ enum class CrossOriginEmbedderPolicyValue : bool;
 WEBCORE_EXPORT bool isSimpleCrossOriginAccessRequest(const String& method, const HTTPHeaderMap&);
 bool isOnAccessControlSimpleRequestMethodAllowlist(const String&);
 
-void updateRequestReferrer(ResourceRequest&, ReferrerPolicy, const String&, const OriginAccessPatterns&);
+void updateRequestReferrer(ResourceRequest&, ReferrerPolicy, const URL&, const OriginAccessPatterns&);
 
 WEBCORE_EXPORT void updateRequestForAccessControl(ResourceRequest&, SecurityOrigin&, StoredCredentialsPolicy);
 
@@ -70,7 +70,8 @@ enum class HTTPHeadersToKeepFromCleaning : uint8_t {
     Origin = 1 << 2,
     UserAgent = 1 << 3,
     AcceptEncoding = 1 << 4,
-    CacheControl = 1 << 5
+    CacheControl = 1 << 5,
+    Pragma = 1 << 6
 };
 
 OptionSet<HTTPHeadersToKeepFromCleaning> httpHeadersToKeepFromCleaning(const HTTPHeaderMap&);
@@ -87,7 +88,7 @@ private:
 };
 
 WEBCORE_EXPORT Expected<void, String> passesAccessControlCheck(const ResourceResponse&, StoredCredentialsPolicy, const SecurityOrigin&, const CrossOriginAccessControlCheckDisabler*);
-WEBCORE_EXPORT Expected<void, String> validatePreflightResponse(PAL::SessionID, const ResourceRequest&, const ResourceResponse&, StoredCredentialsPolicy, const SecurityOrigin&, const CrossOriginAccessControlCheckDisabler*);
+WEBCORE_EXPORT Expected<void, String> validatePreflightResponse(PAL::SessionID, const ResourceRequest&, const ResourceResponse&, StoredCredentialsPolicy, const SecurityOrigin& topOrigin, const SecurityOrigin& securityOrigin, const CrossOriginAccessControlCheckDisabler*);
 
 enum class ForNavigation : bool { No, Yes };
 WEBCORE_EXPORT std::optional<ResourceError> validateCrossOriginResourcePolicy(CrossOriginEmbedderPolicyValue, const SecurityOrigin&, const URL&, const ResourceResponse&, ForNavigation, const OriginAccessPatterns&);
@@ -96,19 +97,3 @@ std::optional<ResourceError> validateRangeRequestedFlag(const ResourceRequest&, 
 String validateCrossOriginRedirectionURL(const URL&);
 
 } // namespace WebCore
-
-namespace WTF {
-
-template<> struct EnumTraits<WebCore::HTTPHeadersToKeepFromCleaning> {
-    using values = EnumValues<
-        WebCore::HTTPHeadersToKeepFromCleaning,
-        WebCore::HTTPHeadersToKeepFromCleaning::ContentType,
-        WebCore::HTTPHeadersToKeepFromCleaning::Referer,
-        WebCore::HTTPHeadersToKeepFromCleaning::Origin,
-        WebCore::HTTPHeadersToKeepFromCleaning::UserAgent,
-        WebCore::HTTPHeadersToKeepFromCleaning::AcceptEncoding,
-        WebCore::HTTPHeadersToKeepFromCleaning::CacheControl
-    >;
-};
-
-} // namespace WTF

@@ -33,6 +33,7 @@
 #include "HTMLNames.h"
 #include <wtf/Assertions.h>
 #include <wtf/SortedArrayMap.h>
+#include <wtf/text/MakeString.h>
 
 namespace WebCore {
 
@@ -69,6 +70,8 @@ static constexpr std::pair<ComparableLettersLiteral, AutofillFieldNameMapping> f
     { "country", { AutofillFieldName::Country, AutofillCategory::Normal } },
     { "country-name", { AutofillFieldName::CountryName, AutofillCategory::Normal } },
     { "current-password", { AutofillFieldName::CurrentPassword, AutofillCategory::Normal } },
+    { "device-eid", { AutofillFieldName::DeviceEID, AutofillCategory::Normal } },
+    { "device-imei", { AutofillFieldName::DeviceIMEI, AutofillCategory::Normal } },
     { "email", { AutofillFieldName::Email, AutofillCategory::Contact } },
     { "family-name", { AutofillFieldName::FamilyName, AutofillCategory::Normal } },
     { "given-name", { AutofillFieldName::GivenName, AutofillCategory::Normal } },
@@ -81,6 +84,7 @@ static constexpr std::pair<ComparableLettersLiteral, AutofillFieldNameMapping> f
     { "nickname", { AutofillFieldName::Nickname, AutofillCategory::Normal } },
     { "off", { AutofillFieldName::None, AutofillCategory::Off } },
     { "on", { AutofillFieldName::None, AutofillCategory::Automatic } },
+    { "one-time-code", { AutofillFieldName::OneTimeCode, AutofillCategory::Normal } },
     { "organization", { AutofillFieldName::Organization, AutofillCategory::Normal } },
     { "organization-title", { AutofillFieldName::OrganizationTitle, AutofillCategory::Normal } },
     { "photo", { AutofillFieldName::Photo, AutofillCategory::Normal } },
@@ -246,11 +250,14 @@ AutofillData AutofillData::createFromHTMLFormControlElement(const HTMLFormContro
             return defaultLabel();
 
         category = mapEntry->category;
+        // 5. If category is not Normal and category is not Contact, then jump to the step labeled default.
         if (category != AutofillCategory::Normal && category != AutofillCategory::Contact)
             return defaultLabel();
-        if (tokens.size() > maxTokensForAutofillFieldCategory(category))
+        // 6. If index is greater than maximum tokens minus one (i.e. if the number of remaining tokens is
+        // greater than maximum tokens), then jump to the step labeled default
+        if (index > maxTokensForAutofillFieldCategory(category) - 1)
             return defaultLabel();
-        idlValue = makeString(tokens[index], " ", idlValue);
+        idlValue = makeString(tokens[index], ' ', idlValue);
     }
 
     // 12, If the indexth token in tokens is the first entry, then skip to the step labeled done.
@@ -274,7 +281,7 @@ AutofillData AutofillData::createFromHTMLFormControlElement(const HTMLFormContro
 
         // 4. Let IDL value be the concatenation of contact, a U+0020 SPACE character, and the previous
         // value of IDL value (which at this point will always be field).
-        idlValue = makeString(contact, " ", idlValue);
+        idlValue = makeString(contact, ' ', idlValue);
 
         // 5. If the indexth entry in tokens is the first entry, then skip to the step labeled done.
         if (index == 0)
@@ -299,7 +306,7 @@ AutofillData AutofillData::createFromHTMLFormControlElement(const HTMLFormContro
         // 4. Let IDL value be the concatenation of mode, a U+0020 SPACE character, and the previous
         // value of IDL value (which at this point will either be field or the concatenation of contact,
         // a space, and field).
-        idlValue = makeString(mode, " ", idlValue);
+        idlValue = makeString(mode, ' ', idlValue);
 
         // 5. If the indexth entry in tokens is the first entry, then skip to the step labeled done.
         if (index == 0)
@@ -328,7 +335,7 @@ AutofillData AutofillData::createFromHTMLFormControlElement(const HTMLFormContro
 
     // 20. Let IDL value be the concatenation of section, a U+0020 SPACE character, and the previous
     // value of IDL value.
-    idlValue = makeString(section, " ", idlValue);
+    idlValue = makeString(section, ' ', idlValue);
 
     return { field, idlValue, credentialType };
 }

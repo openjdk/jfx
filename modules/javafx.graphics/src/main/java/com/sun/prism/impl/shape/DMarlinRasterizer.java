@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -54,7 +54,7 @@ public final class DMarlinRasterizer implements ShapeRasterizer {
                                 boolean close, boolean antialiasedShape)
     {
         if (stroke != null && stroke.getType() != BasicStroke.TYPE_CENTERED) {
-            // RT-27427
+            // JDK-8090672
             // TODO: Optimize the combinatorial strokes for simple
             // shapes and/or teach the rasterizer to be able to
             // do a "differential fill" between two shapes.
@@ -73,7 +73,7 @@ public final class DMarlinRasterizer implements ShapeRasterizer {
             }
 
             xformBounds = new RectBounds();
-            //TODO: Need to verify that this is a safe cast ... (RT-27427)
+            //TODO: Need to verify that this is a safe cast ... (JDK-8090672)
             xformBounds = (RectBounds) xform.transform(shape.getBounds(), xformBounds);
         }
         if (xformBounds.isEmpty()) {

@@ -38,36 +38,39 @@
 #include "RenderMathMLFencedOperator.h"
 #include "RenderText.h"
 #include "RenderTreeBuilder.h"
-#include <wtf/IsoMallocInlines.h>
+#include <wtf/TZoneMallocInlines.h>
 #include <wtf/text/StringBuilder.h>
 
 namespace WebCore {
 
 using namespace MathMLNames;
 
-WTF_MAKE_ISO_ALLOCATED_IMPL(RenderMathMLFenced);
+WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(RenderMathMLFenced);
 
 static constexpr auto gOpeningBraceChar = "("_s;
 static constexpr auto gClosingBraceChar = ")"_s;
 
 RenderMathMLFenced::RenderMathMLFenced(MathMLRowElement& element, RenderStyle&& style)
-    : RenderMathMLRow(element, WTFMove(style))
+    : RenderMathMLRow(Type::MathMLFenced, element, WTFMove(style))
 {
+    ASSERT(isRenderMathMLFenced());
 }
+
+RenderMathMLFenced::~RenderMathMLFenced() = default;
 
 void RenderMathMLFenced::updateFromElement()
 {
-    const auto& fenced = element();
+    const Ref fenced = element();
 
     // The open operator defaults to a left parenthesis.
-    auto& open = fenced.attributeWithoutSynchronization(MathMLNames::openAttr);
+    auto& open = fenced->attributeWithoutSynchronization(MathMLNames::openAttr);
     m_open = open.isNull() ? gOpeningBraceChar : open;
 
     // The close operator defaults to a right parenthesis.
-    auto& close = fenced.attributeWithoutSynchronization(MathMLNames::closeAttr);
+    auto& close = fenced->attributeWithoutSynchronization(MathMLNames::closeAttr);
     m_close = close.isNull() ? gClosingBraceChar : close;
 
-    auto& separators = fenced.attributeWithoutSynchronization(MathMLNames::separatorsAttr);
+    auto& separators = fenced->attributeWithoutSynchronization(MathMLNames::separatorsAttr);
     if (!separators.isNull()) {
         StringBuilder characters;
         for (unsigned i = 0; i < separators.length(); i++) {
@@ -82,8 +85,8 @@ void RenderMathMLFenced::updateFromElement()
 
     if (firstChild()) {
         // FIXME: The mfenced element fails to update dynamically when its open, close and separators attributes are changed (https://bugs.webkit.org/show_bug.cgi?id=57696).
-        if (is<RenderMathMLFencedOperator>(*firstChild()))
-            downcast<RenderMathMLFencedOperator>(*firstChild()).updateOperatorContent(m_open);
+        if (auto* fencedOperator = dynamicDowncast<RenderMathMLFencedOperator>(*firstChild()))
+            fencedOperator->updateOperatorContent(m_open);
         m_closeFenceRenderer->updateOperatorContent(m_close);
     }
 }

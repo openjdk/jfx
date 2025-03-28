@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008-2023 Apple Inc. All rights reserved.
+ * Copyright (C) 2008-2024 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -30,22 +30,21 @@
 #include "InitializeThreading.h"
 
 #include "AssemblyComments.h"
+#include "AssertInvariants.h"
 #include "ExecutableAllocator.h"
 #include "InPlaceInterpreter.h"
 #include "JITOperationList.h"
 #include "JSCConfig.h"
 #include "JSCPtrTag.h"
 #include "LLIntData.h"
+#include "NativeCalleeRegistry.h"
 #include "Options.h"
-#include "StructureAlignedMemoryAllocator.h"
 #include "SuperSampler.h"
 #include "VMTraps.h"
-#include "WasmCalleeRegistry.h"
 #include "WasmCapabilities.h"
 #include "WasmFaultSignalHandler.h"
 #include "WasmThunks.h"
 #include <mutex>
-#include <wtf/GenerateProfiles.h>
 #include <wtf/Threading.h>
 #include <wtf/threads/Signals.h>
 
@@ -54,6 +53,10 @@
 #if BUSE(LIBPAS)
 #include <bmalloc/pas_scavenger.h>
 #endif
+#endif
+
+#if ENABLE(LLVM_PROFILE_GENERATION)
+extern "C" char __llvm_profile_filename[] = "/private/tmp/WebKitPGO/JavaScriptCore_%m_pid%p%c.profraw";
 #endif
 
 namespace JSC {
@@ -89,7 +92,6 @@ void initialize()
                 isARM64E_FPAC(); // Call this to initialize g_jscConfig.canUseFPAC.
 #endif
             }
-            StructureAlignedMemoryAllocator::initializeStructureAddressSpace();
         }
         Options::finalize();
 
@@ -114,10 +116,10 @@ void initialize()
         Thread& thread = Thread::current();
         thread.setSavedLastStackTop(thread.stack().origin());
 
-#if ENABLE(WEBASSEMBLY)
+        NativeCalleeRegistry::initialize();
+#if ENABLE(WEBASSEMBLY) && ENABLE(JIT)
         if (Wasm::isSupported()) {
             Wasm::Thunks::initialize();
-            Wasm::CalleeRegistry::initialize();
         }
 #endif
 
@@ -125,21 +127,17 @@ void initialize()
             WTF::fastEnableMiniMode();
 
         if (Wasm::isSupported() || !Options::usePollingTraps()) {
-        // JSLock::lock() can call registerThreadForMachExceptionHandling() which crashes if this has not been called first.
-            initializeSignalHandling();
-
             if (!Options::usePollingTraps())
         VMTraps::initializeSignals();
             if (Wasm::isSupported())
         Wasm::prepareSignalingMemory();
-        } else
-            disableSignalHandling();
+        }
+
+        assertInvariants();
 
         WTF::compilerFence();
         RELEASE_ASSERT(!g_jscConfig.initializeHasBeenCalled);
         g_jscConfig.initializeHasBeenCalled = true;
-
-        WTF::registerProfileGenerationCallback<JSCProfileTag>("JavaScriptCore");
     });
 }
 

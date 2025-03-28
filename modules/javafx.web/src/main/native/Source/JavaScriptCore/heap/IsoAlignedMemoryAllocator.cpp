@@ -25,14 +25,19 @@
 
 #include "config.h"
 #include "IsoAlignedMemoryAllocator.h"
+
 #include "MarkedBlock.h"
+
+#if ENABLE(MALLOC_HEAP_BREAKDOWN)
+#include <wtf/text/MakeString.h>
+#endif
 
 namespace JSC {
 
 IsoAlignedMemoryAllocator::IsoAlignedMemoryAllocator(CString name)
     : Base(name)
 #if ENABLE(MALLOC_HEAP_BREAKDOWN)
-    , m_heap(makeString("IsoAlignedAllocator ", name.data()).utf8().data())
+    , m_heap(makeString("IsoAlignedAllocator "_s, name.span()).utf8().data())
 #endif
 {
 }
@@ -52,7 +57,7 @@ void* IsoAlignedMemoryAllocator::tryAllocateMemory(size_t size)
 #if ENABLE(MALLOC_HEAP_BREAKDOWN)
     return m_heap.malloc(size);
 #else
-    return FastMalloc::tryMalloc(size);
+    return FastCompactMalloc::tryMalloc(size);
 #endif
 }
 
@@ -76,7 +81,7 @@ void* IsoAlignedMemoryAllocator::tryMallocBlock()
 #if ENABLE(MALLOC_HEAP_BREAKDOWN)
     return m_heap.memalign(MarkedBlock::blockSize, MarkedBlock::blockSize, true);
 #else
-    return tryFastAlignedMalloc(MarkedBlock::blockSize, MarkedBlock::blockSize);
+    return tryFastCompactAlignedMalloc(MarkedBlock::blockSize, MarkedBlock::blockSize);
 #endif
 }
 

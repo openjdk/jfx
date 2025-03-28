@@ -27,10 +27,13 @@
 #pragma once
 
 #include "EditorInsertAction.h"
+#include "FrameIdentifier.h"
 #include "SerializedAttachmentData.h"
 #include "TextAffinity.h"
 #include "TextChecking.h"
 #include "UndoStep.h"
+#include <wtf/CheckedPtr.h>
+#include <wtf/FastMalloc.h>
 #include <wtf/Forward.h>
 #include <wtf/Vector.h>
 #include <wtf/WeakPtr.h>
@@ -39,6 +42,10 @@ namespace WebCore {
 
 enum class DOMPasteAccessCategory : uint8_t;
 enum class DOMPasteAccessResponse : uint8_t;
+
+#if ENABLE(ATTACHMENT_ELEMENT)
+enum class AttachmentAssociatedElementType : uint8_t;
+#endif
 
 class SharedBuffer;
 class Document;
@@ -56,7 +63,9 @@ struct GapRects;
 struct GrammarDetail;
 struct SimpleRange;
 
-class EditorClient : public CanMakeWeakPtr<EditorClient> {
+class EditorClient : public CanMakeWeakPtr<EditorClient>, public CanMakeCheckedPtr<EditorClient> {
+    WTF_MAKE_FAST_ALLOCATED;
+    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(EditorClient);
 public:
     virtual ~EditorClient() = default;
 
@@ -76,6 +85,7 @@ public:
     virtual bool shouldChangeSelectedRange(const std::optional<SimpleRange>& fromRange, const std::optional<SimpleRange>& toRange, Affinity, bool stillSelecting) = 0;
     virtual bool shouldRevealCurrentSelectionAfterInsertion() const { return true; };
     virtual bool shouldSuppressPasswordEcho() const { return false; };
+    virtual bool shouldRemoveDictationAlternativesAfterEditing() const { return true; }
 
     virtual bool shouldApplyStyle(const StyleProperties&, const std::optional<SimpleRange>&) = 0;
     virtual void didApplyStyle() = 0;
@@ -87,7 +97,7 @@ public:
     virtual void registerAttachments(Vector<SerializedAttachmentData>&&) { }
     virtual void registerAttachmentIdentifier(const String& /* identifier */) { }
     virtual void cloneAttachmentData(const String& /* fromIdentifier */, const String& /* toIdentifier */) { }
-    virtual void didInsertAttachmentWithIdentifier(const String& /* identifier */, const String& /* source */, bool /* hasEnclosingImage */) { }
+    virtual void didInsertAttachmentWithIdentifier(const String& /* identifier */, const String& /* source */, AttachmentAssociatedElementType /* associatedElementType */) { }
     virtual void didRemoveAttachmentWithIdentifier(const String&) { }
     virtual bool supportsClientSideAttachmentData() const { return false; }
     virtual Vector<SerializedAttachmentData> serializedAttachmentDataForIdentifiers(const Vector<String>&) { return { }; }
@@ -101,11 +111,11 @@ public:
     virtual void didEndEditing() = 0;
     virtual void willWriteSelectionToPasteboard(const std::optional<SimpleRange>&) = 0;
     virtual void didWriteSelectionToPasteboard() = 0;
-    virtual void getClientPasteboardData(const std::optional<SimpleRange>&, Vector<String>& pasteboardTypes, Vector<RefPtr<SharedBuffer>>& pasteboardData) = 0;
+    virtual void getClientPasteboardData(const std::optional<SimpleRange>&, Vector<std::pair<String, RefPtr<WebCore::SharedBuffer>>>& pasteboardTypesAndData) = 0;
     virtual void requestCandidatesForSelection(const VisibleSelection&) { }
     virtual void handleAcceptedCandidateWithSoftSpaces(TextCheckingResult) { }
 
-    virtual DOMPasteAccessResponse requestDOMPasteAccess(DOMPasteAccessCategory, const String& originIdentifier) = 0;
+    virtual DOMPasteAccessResponse requestDOMPasteAccess(DOMPasteAccessCategory, FrameIdentifier, const String& originIdentifier) = 0;
 
     // Notify an input method that a composition was voluntarily discarded by WebCore, so that it could clean up too.
     // This function is not called when a composition is closed per a request from an input method.

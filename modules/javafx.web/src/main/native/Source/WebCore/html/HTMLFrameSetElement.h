@@ -31,7 +31,8 @@ namespace WebCore {
 class WindowProxy;
 
 class HTMLFrameSetElement final : public HTMLElement {
-    WTF_MAKE_ISO_ALLOCATED(HTMLFrameSetElement);
+    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(HTMLFrameSetElement);
+    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(HTMLFrameSetElement);
 public:
     static Ref<HTMLFrameSetElement> create(const QualifiedName&, Document&);
 
@@ -54,7 +55,6 @@ public:
     bool isSupportedPropertyName(const AtomString&);
 
 private:
-    constexpr static auto CreateHTMLFrameSetElement = CreateHTMLElement | NodeFlag::HasCustomStyleResolveCallbacks;
     HTMLFrameSetElement(const QualifiedName&, Document&);
 
     void attributeChanged(const QualifiedName&, const AtomString& oldValue, const AtomString& newValue, AttributeModificationReason) final;

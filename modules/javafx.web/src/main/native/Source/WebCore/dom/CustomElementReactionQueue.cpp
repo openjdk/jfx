@@ -142,15 +142,15 @@ void CustomElementReactionQueue::tryToUpgradeElement(Element& element)
 {
     ASSERT(CustomElementReactionDisallowedScope::isReactionAllowed());
     ASSERT(element.isCustomElementUpgradeCandidate());
-    auto* window = element.document().domWindow();
+    RefPtr window = element.document().domWindow();
     if (!window)
         return;
 
-    auto* registry = window->customElementRegistry();
+    RefPtr registry = window->customElementRegistry();
     if (!registry)
         return;
 
-    auto* elementInterface = registry->findInterface(element);
+    RefPtr elementInterface = registry->findInterface(element);
     if (!elementInterface)
         return;
 
@@ -173,7 +173,7 @@ void CustomElementReactionQueue::enqueueConnectedCallbackIfNeeded(Element& eleme
 void CustomElementReactionQueue::enqueueDisconnectedCallbackIfNeeded(Element& element)
 {
     ASSERT(element.isDefinedCustomElement());
-    if (element.document().refCount() <= 0)
+    if (element.document().wasRemovedLastRefCalled())
         return; // Don't enqueue disconnectedCallback if the entire document is getting destructed.
     ASSERT(CustomElementReactionDisallowedScope::isReactionAllowed());
     ASSERT(element.reactionQueue());
@@ -213,7 +213,7 @@ void CustomElementReactionQueue::enqueueAttributeChangedCallbackIfNeeded(Element
 void CustomElementReactionQueue::enqueueFormAssociatedCallbackIfNeeded(Element& element, HTMLFormElement* associatedForm)
 {
     ASSERT(CustomElementReactionDisallowedScope::isReactionAllowed());
-    if (element.document().refCount() <= 0)
+    if (element.document().wasRemovedLastRefCalled())
         return; // Don't enqueue formAssociatedCallback if the entire document is getting destructed.
     auto& queue = *element.reactionQueue();
     if (!queue.m_interface->hasFormAssociatedCallback())
@@ -319,9 +319,6 @@ void CustomElementReactionQueue::invokeAll(Element& element)
     }
 }
 
-CustomElementQueue::CustomElementQueue() = default;
-CustomElementQueue::~CustomElementQueue() = default;
-
 inline void CustomElementQueue::add(Element& element)
 {
     ASSERT(!m_invoking);
@@ -337,8 +334,9 @@ inline void CustomElementQueue::invokeAll()
     // It's possible for more elements to be enqueued if some IDL attributes were missing CEReactions.
     // Invoke callbacks slightly later here instead of crashing / ignoring those cases.
     for (unsigned i = 0; i < m_elements.size(); ++i) {
-        auto& element = m_elements[i].get();
-        auto* queue = element.reactionQueue();
+        Ref element = m_elements[i].get();
+        element->clearIsInCustomElementReactionQueue();
+        auto* queue = element->reactionQueue();
         ASSERT(queue);
         queue->invokeAll(element);
     }
@@ -346,14 +344,14 @@ inline void CustomElementQueue::invokeAll()
     m_elements.clear();
 }
 
-inline void CustomElementQueue::processQueue(JSC::JSGlobalObject* state)
+void CustomElementQueue::processQueue(JSC::JSGlobalObject* state)
 {
     if (!state) {
         invokeAll();
         return;
     }
 
-    auto& vm = state->vm();
+    Ref vm = state->vm();
     JSC::JSLockHolder lock(vm);
 
     JSC::Exception* previousException = nullptr;
@@ -372,7 +370,7 @@ inline void CustomElementQueue::processQueue(JSC::JSGlobalObject* state)
     }
 }
 
-Vector<GCReachableRef<Element>, 4> CustomElementQueue::takeElements()
+Vector<Ref<Element>, 4> CustomElementQueue::takeElements()
 {
     RELEASE_ASSERT(!m_invoking);
     return std::exchange(m_elements, { });
@@ -388,15 +386,13 @@ void CustomElementReactionQueue::enqueueElementsOnAppropriateElementQueue(const 
 void CustomElementReactionQueue::enqueueElementOnAppropriateElementQueue(Element& element)
 {
     ASSERT(element.reactionQueue());
+    element.setIsInCustomElementReactionQueue();
     if (!CustomElementReactionStack::s_currentProcessingStack) {
         element.document().windowEventLoop().backupElementQueue().add(element);
         return;
     }
 
-    auto*& queue = CustomElementReactionStack::s_currentProcessingStack->m_queue;
-    if (!queue) // We use a raw pointer to avoid genearing code to delete it in ~CustomElementReactionStack.
-        queue = new CustomElementQueue;
-    queue->add(element);
+    CustomElementReactionStack::s_currentProcessingStack->m_queue.add(element);
 }
 
 #if ASSERT_ENABLED
@@ -404,24 +400,6 @@ unsigned CustomElementReactionDisallowedScope::s_customElementReactionDisallowed
 #endif
 
 CustomElementReactionStack* CustomElementReactionStack::s_currentProcessingStack = nullptr;
-
-void CustomElementReactionStack::processQueue(JSC::JSGlobalObject* state)
-{
-    ASSERT(m_queue);
-    m_queue->processQueue(state);
-    delete m_queue;
-    m_queue = nullptr;
-}
-
-Vector<GCReachableRef<Element>, 4> CustomElementReactionStack::takeElements()
-{
-    if (!m_queue)
-        return { };
-    auto elements = m_queue->takeElements();
-    delete m_queue;
-    m_queue = nullptr;
-    return elements;
-}
 
 void CustomElementReactionQueue::processBackupQueue(CustomElementQueue& backupElementQueue)
 {

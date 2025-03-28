@@ -33,7 +33,8 @@
 namespace WebCore {
 
 class RenderVideo final : public RenderMedia {
-    WTF_MAKE_ISO_ALLOCATED(RenderVideo);
+    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(RenderVideo);
+    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(RenderVideo);
 public:
     RenderVideo(HTMLVideoElement&, RenderStyle&&);
     virtual ~RenderVideo();
@@ -71,7 +72,6 @@ private:
     ASCIILiteral renderName() const final { return "RenderVideo"_s; }
 
     bool requiresLayer() const final { return true; }
-    bool isVideo() const final { return true; }
 
     void paintReplaced(PaintInfo&, const LayoutPoint&) final;
 
@@ -97,6 +97,6 @@ inline RenderVideo* HTMLVideoElement::renderer() const
 
 } // namespace WebCore
 
-SPECIALIZE_TYPE_TRAITS_RENDER_OBJECT(RenderVideo, isVideo())
+SPECIALIZE_TYPE_TRAITS_RENDER_OBJECT(RenderVideo, isRenderVideo())
 
 #endif // ENABLE(VIDEO)

@@ -36,6 +36,7 @@
 #include <WebCore/Credential.h>
 #include <WebCore/CredentialStorage.h>
 #include <WebCore/DeprecatedGlobalSettings.h>
+#include <WebCore/HTTPStatusCodes.h>
 #include <WebCore/Logging.h>
 #include <WebCore/NetworkStorageSession.h>
 #include <WebCore/ProtectionSpace.h>
@@ -47,6 +48,7 @@
 #include <wtf/MainThread.h>
 #include <wtf/SoftLinking.h>
 #include <wtf/cf/TypeCastsCF.h>
+#include <wtf/text/MakeString.h>
 #include <wtf/text/WTFString.h>
 
 #if PLATFORM(IOS_FAMILY)
@@ -88,7 +90,7 @@ SocketStreamHandleImpl::SocketStreamHandleImpl(const URL& url, SocketStreamHandl
 
     ASSERT(url.protocolIs("ws"_s) || url.protocolIs("wss"_s));
 
-    URL httpsURL { "https://" + m_url.host() };
+    URL httpsURL { makeString("https://"_s, m_url.host()) };
     m_httpsURL = httpsURL.createCFURL();
 
     // Don't check for HSTS violation for ephemeral sessions since
@@ -331,7 +333,6 @@ void SocketStreamHandleImpl::createStreams()
     }
 
     if (shouldUseSSL()) {
-        // FIXME: rdar://86641948 Remove shouldAcceptInsecureCertificatesForWebSockets once HAVE(NSURLSESSION_WEBSOCKET) is supported on all Cocoa platforms.
         CFBooleanRef validateCertificateChain = DeprecatedGlobalSettings::allowsAnySSLCertificate() || m_shouldAcceptInsecureCertificates ? kCFBooleanFalse : kCFBooleanTrue;
         const void* keys[] = {
             kCFStreamSSLPeerName,
@@ -451,7 +452,7 @@ void SocketStreamHandleImpl::addCONNECTCredentials(CFHTTPMessageRef proxyRespons
 CFStringRef SocketStreamHandleImpl::copyCFStreamDescription(void* info)
 {
     SocketStreamHandleImpl* handle = static_cast<SocketStreamHandleImpl*>(info);
-    return String("WebKit socket stream, " + handle->m_url.string()).createCFString().leakRef();
+    return makeString("WebKit socket stream, "_s, handle->m_url.string()).createCFString().leakRef();
 }
 
 void SocketStreamHandleImpl::readStreamCallback(CFReadStreamRef stream, CFStreamEventType type, void* clientCallBackInfo)
@@ -530,10 +531,10 @@ void SocketStreamHandleImpl::readStreamCallback(CFStreamEventType type)
 
                 CFIndex proxyResponseCode = CFHTTPMessageGetResponseStatusCode(proxyResponse.get());
                 switch (proxyResponseCode) {
-                case 200:
+                case httpStatus200OK:
                     // Successful connection.
                     break;
-                case 407:
+                case httpStatus407ProxyAuthenticationRequired:
                     addCONNECTCredentials(proxyResponse.get());
                     return;
                 default:
@@ -569,7 +570,7 @@ void SocketStreamHandleImpl::readStreamCallback(CFStreamEventType type)
         if (length == -1)
             m_client.didFailToReceiveSocketStreamData(*this);
         else
-            m_client.didReceiveSocketStreamData(*this, ptr, length);
+            m_client.didReceiveSocketStreamData(*this, std::span { ptr, static_cast<size_t>(length) });
 
         return;
     }
@@ -614,7 +615,7 @@ void SocketStreamHandleImpl::writeStreamCallback(CFStreamEventType type)
                 // Don't write anything until read stream callback has dealt with CONNECT credentials.
                 // The order of callbacks is not defined, so this can be called before readStreamCallback's kCFStreamEventHasBytesAvailable.
                 CFIndex proxyResponseCode = CFHTTPMessageGetResponseStatusCode(proxyResponse.get());
-                if (proxyResponseCode != 200)
+                if (proxyResponseCode != httpStatus200OK)
                     return;
             }
             m_connectingSubstate = Connected;
@@ -655,7 +656,7 @@ ALLOW_DEPRECATED_DECLARATIONS_BEGIN
     if (CFEqual(CFErrorGetDomain(error), kCFErrorDomainOSStatus)) {
         const char* descriptionOSStatus = GetMacOSStatusCommentString(static_cast<OSStatus>(errorCode));
         if (descriptionOSStatus && descriptionOSStatus[0] != '\0')
-            description = makeString("OSStatus Error ", errorCode, ": ", descriptionOSStatus);
+            description = makeString("OSStatus Error "_s, errorCode, ": "_s, span(descriptionOSStatus));
     }
 
 ALLOW_DEPRECATED_DECLARATIONS_END
@@ -677,7 +678,7 @@ SocketStreamHandleImpl::~SocketStreamHandleImpl()
     ASSERT(!m_pacRunLoopSource);
 }
 
-std::optional<size_t> SocketStreamHandleImpl::platformSendInternal(const uint8_t* data, size_t length)
+std::optional<size_t> SocketStreamHandleImpl::platformSendInternal(std::span<const uint8_t> data)
 {
     if (!m_writeStream)
         return 0;
@@ -685,7 +686,7 @@ std::optional<size_t> SocketStreamHandleImpl::platformSendInternal(const uint8_t
     if (!CFWriteStreamCanAcceptBytes(m_writeStream.get()))
         return 0;
 
-    CFIndex result = CFWriteStreamWrite(m_writeStream.get(), data, length);
+    CFIndex result = CFWriteStreamWrite(m_writeStream.get(), data.data(), data.size());
     if (result == -1)
         return std::nullopt;
 

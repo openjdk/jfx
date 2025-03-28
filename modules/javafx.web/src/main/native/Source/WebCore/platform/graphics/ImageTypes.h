@@ -92,4 +92,21 @@ enum class ImageDrawResult {
     DidDraw
 };
 
+enum class ShowDebugBackground : bool {
+    No,
+    Yes
+};
+
+enum class AllowImageSubsampling : bool {
+    No,
+    Yes
+};
+
+#if USE(SKIA)
+enum class StrictImageClamping : bool {
+    No,
+    Yes
+};
+#endif
+
 }

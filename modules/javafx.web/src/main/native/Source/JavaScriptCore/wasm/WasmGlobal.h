@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2017-2021 Apple Inc. All rights reserved.
+ * Copyright (C) 2017-2023 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -32,6 +32,7 @@
 #include "WasmLimits.h"
 #include "WriteBarrier.h"
 #include <wtf/Ref.h>
+#include <wtf/TZoneMalloc.h>
 #include <wtf/ThreadSafeRefCounted.h>
 
 namespace JSC {
@@ -40,11 +41,9 @@ class JSWebAssemblyGlobal;
 
 namespace Wasm {
 
-class Instance;
-
 class Global final : public ThreadSafeRefCounted<Global> {
     WTF_MAKE_NONCOPYABLE(Global);
-    WTF_MAKE_FAST_ALLOCATED(Global);
+    WTF_MAKE_TZONE_ALLOCATED(Global);
 public:
     union Value {
         v128_t m_vector { };
@@ -80,8 +79,8 @@ public:
         m_owner = owner;
     }
 
-    static ptrdiff_t offsetOfValue() { ASSERT(!OBJECT_OFFSETOF(Value, m_primitive)); ASSERT(!OBJECT_OFFSETOF(Value, m_externref)); return OBJECT_OFFSETOF(Global, m_value); }
-    static ptrdiff_t offsetOfOwner() { return OBJECT_OFFSETOF(Global, m_owner); }
+    static constexpr ptrdiff_t offsetOfValue() { ASSERT(!OBJECT_OFFSETOF(Value, m_primitive)); ASSERT(!OBJECT_OFFSETOF(Value, m_externref)); return OBJECT_OFFSETOF(Global, m_value); }
+    static constexpr ptrdiff_t offsetOfOwner() { return OBJECT_OFFSETOF(Global, m_owner); }
 
     static Global& fromBinding(Value& value)
     {

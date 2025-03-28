@@ -29,6 +29,7 @@
 #include "UnencodableHandling.h"
 #include <array>
 #include <memory>
+#include <span>
 #include <unicode/umachine.h>
 #include <wtf/Forward.h>
 #include <wtf/Noncopyable.h>
@@ -46,21 +47,21 @@ public:
     virtual ~TextCodec() = default;
 
     virtual void stripByteOrderMark() { }
-    virtual String decode(const char*, size_t length, bool flush, bool stopOnError, bool& sawError) = 0;
+    virtual String decode(std::span<const uint8_t> data, bool flush, bool stopOnError, bool& sawError) = 0;
 
     virtual Vector<uint8_t> encode(StringView, UnencodableHandling) const = 0;
 
     // Fills a null-terminated string representation of the given
     // unencodable character into the given replacement buffer.
     // The length of the string (not including the null) will be returned.
-    static int getUnencodableReplacement(UChar32, UnencodableHandling, UnencodableReplacementArray&);
+    static int getUnencodableReplacement(char32_t, UnencodableHandling, UnencodableReplacementArray&);
 };
 
-Function<void(UChar32, Vector<uint8_t>&)> unencodableHandler(UnencodableHandling);
+Function<void(char32_t, Vector<uint8_t>&)> unencodableHandler(UnencodableHandling);
 
-using EncodingNameRegistrar = void (*)(const char* alias, const char* name);
+using EncodingNameRegistrar = void (*)(ASCIILiteral alias, ASCIILiteral name);
 
 using NewTextCodecFunction = Function<std::unique_ptr<TextCodec>()>;
-using TextCodecRegistrar = void (*)(const char* name, NewTextCodecFunction&&);
+using TextCodecRegistrar = void (*)(ASCIILiteral name, NewTextCodecFunction&&);
 
 } // namespace PAL

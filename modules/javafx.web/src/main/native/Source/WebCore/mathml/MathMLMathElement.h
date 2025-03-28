@@ -34,12 +34,12 @@
 namespace WebCore {
 
 class MathMLMathElement final : public MathMLRowElement {
-    WTF_MAKE_ISO_ALLOCATED(MathMLMathElement);
+    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(MathMLMathElement);
+    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(MathMLMathElement);
 public:
     static Ref<MathMLMathElement> create(const QualifiedName& tagName, Document&);
 
 private:
-    constexpr static auto CreateMathMLMathElement = CreateMathMLRowElement | NodeFlag::HasCustomStyleResolveCallbacks;
     MathMLMathElement(const QualifiedName& tagName, Document&);
     void attributeChanged(const QualifiedName&, const AtomString& oldValue, const AtomString& newValue, AttributeModificationReason) final;
     void didAttachRenderers() final;

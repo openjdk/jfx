@@ -26,12 +26,12 @@
 #include "CollectionIndexCacheInlines.h"
 #include "ElementIterator.h"
 #include "NodeRareData.h"
-#include <wtf/IsoMallocInlines.h>
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
-WTF_MAKE_ISO_ALLOCATED_IMPL(EmptyNodeList);
-WTF_MAKE_ISO_ALLOCATED_IMPL(ChildNodeList);
+WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(EmptyNodeList);
+WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(ChildNodeList);
 
 EmptyNodeList::~EmptyNodeList()
 {
@@ -45,7 +45,7 @@ ChildNodeList::ChildNodeList(ContainerNode& parent)
 
 ChildNodeList::~ChildNodeList()
 {
-    m_parent.get().nodeLists()->removeChildNodeList(this);
+    Ref { m_parent }->nodeLists()->removeChildNodeList(this);
 }
 
 unsigned ChildNodeList::length() const
