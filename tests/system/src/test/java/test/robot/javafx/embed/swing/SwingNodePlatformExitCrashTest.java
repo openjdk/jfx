@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2017, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -31,6 +31,7 @@ import javax.swing.SwingUtilities;
 import javafx.application.Platform;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Assumptions;
 import test.util.Util;
 
 public class SwingNodePlatformExitCrashTest extends SwingNodeBase {
@@ -53,6 +54,7 @@ public class SwingNodePlatformExitCrashTest extends SwingNodeBase {
 
     @BeforeAll
     public static void skipShutDown() {
+        Assumptions.assumeTrue(!Util.isOnWayland());
         // Skip shutdown as Toolkit shutdown is already done in Platform.exit
         // and will cause hang if called
         doShutdown = false;
