@@ -40,7 +40,7 @@
 #include "ResourceError.h"
 #include "ScriptExecutionContext.h"
 #include <JavaScriptCore/JSONObject.h>
-#include <wtf/text/StringConcatenateNumbers.h>
+#include <wtf/text/MakeString.h>
 
 namespace WebCore {
 
@@ -49,6 +49,8 @@ static inline bool isNullBodyStatus(int status)
 {
     return status == 101 || status == 204 || status == 205 || status == 304;
 }
+
+FetchResponse::~FetchResponse() = default;
 
 Ref<FetchResponse> FetchResponse::create(ScriptExecutionContext* context, std::optional<FetchBody>&& body, FetchHeaders::Guard guard, ResourceResponse&& response)
 {
@@ -151,11 +153,11 @@ ExceptionOr<Ref<FetchResponse>> FetchResponse::redirect(ScriptExecutionContext& 
 {
     URL requestURL = context.completeURL(url, ScriptExecutionContext::ForceUTF8::Yes);
     if (!requestURL.isValid())
-        return Exception { ExceptionCode::TypeError, makeString("Redirection URL '", requestURL.string(), "' is invalid") };
+        return Exception { ExceptionCode::TypeError, makeString("Redirection URL '"_s, requestURL.string(), "' is invalid"_s) };
     if (requestURL.hasCredentials())
         return Exception { ExceptionCode::TypeError, "Redirection URL contains credentials"_s };
     if (!ResourceResponse::isRedirectionStatusCode(status))
-        return Exception { ExceptionCode::RangeError, makeString("Status code ", status, "is not a redirection status code") };
+        return Exception { ExceptionCode::RangeError, makeString("Status code "_s, status, "is not a redirection status code"_s) };
     auto redirectResponse = adoptRef(*new FetchResponse(&context, { }, FetchHeaders::create(FetchHeaders::Guard::Immutable), { }));
     redirectResponse->suspendIfNeeded();
     redirectResponse->m_internalResponse.setHTTPStatusCode(status);
@@ -351,9 +353,7 @@ FetchResponse::Loader::Loader(FetchResponse& response, NotificationCallback&& re
 {
 }
 
-FetchResponse::Loader::~Loader()
-{
-}
+FetchResponse::Loader::~Loader() = default;
 
 void FetchResponse::Loader::didReceiveResponse(const ResourceResponse& resourceResponse)
 {
@@ -368,7 +368,7 @@ void FetchResponse::Loader::didReceiveData(const SharedBuffer& buffer)
     ASSERT(m_response.m_readableStreamSource || m_consumeDataCallback);
 
     if (m_consumeDataCallback) {
-        auto chunk = buffer.dataAsSpanForContiguousData();
+        auto chunk = buffer.span();
         m_consumeDataCallback(&chunk);
         return;
     }
@@ -424,7 +424,7 @@ void FetchResponse::Loader::consumeDataByChunk(ConsumeDataByChunkCallback&& cons
         return;
 
     auto contiguousBuffer = data->makeContiguous();
-    auto chunk = contiguousBuffer->dataAsSpanForContiguousData();
+    auto chunk = contiguousBuffer->span();
     m_consumeDataCallback(&chunk);
 }
 
@@ -484,7 +484,7 @@ void FetchResponse::setBodyData(ResponseData&& data, uint64_t bodySizeWithPaddin
 
 void FetchResponse::consumeChunk(Ref<JSC::Uint8Array>&& chunk)
 {
-    body().consumer().append(SharedBuffer::create(chunk->data(), chunk->byteLength()));
+    body().consumer().append(SharedBuffer::create(chunk->span()));
 }
 
 void FetchResponse::consumeBodyAsStream()
@@ -567,11 +567,6 @@ void FetchResponse::stop()
         loader->stop();
     if (auto bodyLoader = WTFMove(m_bodyLoader))
         bodyLoader->stop();
-}
-
-const char* FetchResponse::activeDOMObjectName() const
-{
-    return "Response";
 }
 
 void FetchResponse::loadBody()

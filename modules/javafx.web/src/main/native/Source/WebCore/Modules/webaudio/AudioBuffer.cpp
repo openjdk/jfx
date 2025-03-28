@@ -76,9 +76,9 @@ ExceptionOr<Ref<AudioBuffer>> AudioBuffer::create(const AudioBufferOptions& opti
     return buffer;
 }
 
-RefPtr<AudioBuffer> AudioBuffer::createFromAudioFileData(const void* data, size_t dataSize, bool mixToMono, float sampleRate)
+RefPtr<AudioBuffer> AudioBuffer::createFromAudioFileData(std::span<const uint8_t> data, bool mixToMono, float sampleRate)
 {
-    RefPtr<AudioBus> bus = createBusFromInMemoryAudioFile(data, dataSize, mixToMono, sampleRate);
+    RefPtr bus = createBusFromInMemoryAudioFile(data, mixToMono, sampleRate);
     if (!bus)
         return nullptr;
     return adoptRef(*new AudioBuffer(*bus));
@@ -142,6 +142,19 @@ AudioBuffer::AudioBuffer(AudioBus& bus)
 
     m_channels = WTFMove(channels);
     m_channelWrappers = FixedVector<JSValueInWrappedObject> { m_channels.size() };
+}
+
+// FIXME: We don't currently implement "acquire the content" [1] and
+// AudioBuffer::getChannelData() correctly. As a result, the audio thread
+// may be reading an array buffer that the JS can detach. To guard against
+// this, we mark the array buffers as non-detachable as soon as their content
+// has been acquired.
+// [1] https://www.w3.org/TR/webaudio/#acquire-the-content
+void AudioBuffer::markBuffersAsNonDetachable()
+{
+    Locker locker { m_channelsLock };
+    for (auto& channel : m_channels)
+        channel->setDetachable(false);
 }
 
 void AudioBuffer::invalidate()

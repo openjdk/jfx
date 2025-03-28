@@ -34,6 +34,7 @@
 
 namespace WebCore {
 
+class Frame;
 class HistoryItem;
 class HistoryItemClient;
 class LocalFrame;
@@ -43,17 +44,17 @@ enum class ShouldTreatAsContinuingLoad : uint8_t;
 
 struct StringWithDirection;
 
-class HistoryController : public CanMakeCheckedPtr {
+class HistoryController final : public CanMakeCheckedPtr<HistoryController> {
     WTF_MAKE_NONCOPYABLE(HistoryController);
     WTF_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(Loader);
+    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(HistoryController);
 public:
     enum HistoryUpdateType { UpdateAll, UpdateAllExceptBackForwardList };
 
-    explicit HistoryController(LocalFrame&);
+    explicit HistoryController(Frame&);
     ~HistoryController();
 
     WEBCORE_EXPORT void saveScrollPositionAndViewStateToItem(HistoryItem*);
-    void clearScrollPositionAndViewState();
     WEBCORE_EXPORT void restoreScrollPositionAndViewState();
 
     void updateBackForwardListForFragmentScroll();
@@ -76,6 +77,7 @@ public:
     HistoryItem* currentItem() const { return m_currentItem.get(); }
     RefPtr<HistoryItem> protectedCurrentItem() const;
     WEBCORE_EXPORT void setCurrentItem(Ref<HistoryItem>&&);
+    void setCurrentItemTitle(const StringWithDirection&);
     bool currentItemShouldBeReplaced() const;
     WEBCORE_EXPORT void replaceCurrentItem(RefPtr<HistoryItem>&&);
 
@@ -108,13 +110,12 @@ private:
     void recursiveUpdateForCommit();
     void recursiveUpdateForSameDocumentNavigation();
     bool itemsAreClones(HistoryItem&, HistoryItem*) const;
-    bool currentFramesMatchItem(HistoryItem&) const;
     void updateBackForwardListClippedAtTarget(bool doClip);
     void updateCurrentItem();
 
-    Ref<LocalFrame> protectedFrame() const;
+    Ref<Frame> protectedFrame() const;
 
-    WeakRef<LocalFrame> m_frame;
+    WeakRef<Frame> m_frame;
 
     RefPtr<HistoryItem> m_currentItem;
     RefPtr<HistoryItem> m_previousItem;

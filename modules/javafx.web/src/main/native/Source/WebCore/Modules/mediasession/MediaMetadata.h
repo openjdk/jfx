@@ -32,6 +32,7 @@
 #include "MediaMetadataInit.h"
 #include "MediaSession.h"
 #include <wtf/Function.h>
+#include <wtf/URL.h>
 #include <wtf/Vector.h>
 #include <wtf/WeakPtr.h>
 
@@ -56,7 +57,7 @@ public:
     WEBCORE_EXPORT void requestImageResource();
 
 protected:
-    void notifyFinished(CachedResource&, const NetworkLoadMetrics&) override;
+    void notifyFinished(CachedResource&, const NetworkLoadMetrics&, LoadWillContinueInAnotherProcess) override;
 
 private:
     Document& m_document;
@@ -65,9 +66,10 @@ private:
     CachedResourceHandle<CachedImage> m_cachedImage;
 };
 
-class MediaMetadata : public RefCounted<MediaMetadata> {
+class MediaMetadata final : public RefCounted<MediaMetadata> {
 public:
     static ExceptionOr<Ref<MediaMetadata>> create(ScriptExecutionContext&, std::optional<MediaMetadataInit>&&);
+    static Ref<MediaMetadata> create(MediaSession&, Vector<URL>&&);
     ~MediaMetadata();
 
     void setMediaSession(MediaSession&);
@@ -96,16 +98,26 @@ public:
 #endif
 
 private:
+    struct Pair {
+        float score;
+        String src;
+    };
+
     MediaMetadata();
     void setArtworkImage(Image*);
     void metadataUpdated();
     void refreshArtworkImage();
+    void tryNextArtworkImage(uint32_t, Vector<Pair>&&);
+
+    static constexpr int s_minimumSize = 128;
+    static constexpr int s_idealSize = 512;
 
     WeakPtr<MediaSession> m_session;
     MediaSessionMetadata m_metadata;
     std::unique_ptr<ArtworkImageLoader> m_artworkLoader;
     String m_artworkImageSrc;
     RefPtr<Image> m_artworkImage;
+    Vector<URL> m_defaultImages;
 };
 
 }

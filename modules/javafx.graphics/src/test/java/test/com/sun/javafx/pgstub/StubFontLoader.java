@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -50,9 +50,7 @@ public class StubFontLoader extends FontLoader {
 
     @Override
     public void loadFont(Font font) {
-        StubFont stub = new StubFont();
-        stub.font = font;
-
+        StubFont stub = new StubFont(font);
         String name = font.getName();
         String nameLower = name.trim().toLowerCase(Locale.ROOT);
         switch (nameLower) {
@@ -201,7 +199,11 @@ public class StubFontLoader extends FontLoader {
     }
 
     public static class StubFont implements PGFont {
-        public Font font;
+        private final Font font;
+
+        public StubFont(Font font) {
+            this.font = font;
+        }
 
         @Override public String getFullName() {
             return font.getName();
@@ -225,12 +227,12 @@ public class StubFontLoader extends FontLoader {
 
         @Override
         public FontResource getFontResource() {
-            return null;
+            return new StubFontResource(font);
         }
 
         @Override
         public FontStrike getStrike(BaseTransform transform) {
-            return null;
+            return new StubFontStrike(getFontResource(), getSize(), transform);
         }
 
         @Override

@@ -446,7 +446,7 @@ gst_audio_quantize_new (GstAudioDitherMethod dither,
   g_return_val_if_fail (format == GST_AUDIO_FORMAT_S32, NULL);
   g_return_val_if_fail (channels > 0, NULL);
 
-  quant = g_slice_new0 (GstAudioQuantize);
+  quant = g_new0 (GstAudioQuantize, 1);
   quant->dither = dither;
   quant->ns = ns;
   quant->flags = flags;
@@ -490,7 +490,7 @@ gst_audio_quantize_free (GstAudioQuantize * quant)
   g_free (quant->last_random);
   g_free (quant->dither_buf);
 
-  g_slice_free (GstAudioQuantize, quant);
+  g_free (quant);
 }
 
 /**

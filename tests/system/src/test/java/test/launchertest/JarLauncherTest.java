@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017, 2018, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2017, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,30 +25,31 @@
 
 package test.launchertest;
 
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.fail;
+import static test.launchertest.Constants.ERROR_NONE;
+import static test.launchertest.Constants.ERROR_UNEXPECTED_EXCEPTION;
 import java.util.ArrayList;
-import junit.framework.AssertionFailedError;
-import org.junit.Test;
-
-import static org.junit.Assert.*;
-import static test.launchertest.Constants.*;
+import java.util.concurrent.TimeUnit;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 
 /**
  * Unit test for legacy FX .jar support in Java 8 (and later) launcher
  */
+@Timeout(value=15000, unit=TimeUnit.MILLISECONDS)
 public class JarLauncherTest {
 
     private final String testAppName = System.getProperty("launchertest.testapp1.jar");
     private final int testExitCode = ERROR_NONE;
 
-    @Test (timeout = 15000)
+    @Test
     public void testJarLauncher() throws Exception {
         assertNotNull(testAppName);
         final ArrayList<String> cmd =
                 test.util.Util.createApplicationLaunchCommand(
                         testAppName,
-                        null,
-                        null
-                        );
+                        null);
 
         final ProcessBuilder builder = new ProcessBuilder(cmd);
 
@@ -60,24 +61,23 @@ public class JarLauncherTest {
             case 0:// SUCCESS
             case ERROR_NONE:
                 if (retVal != testExitCode) {
-                    throw new AssertionFailedError(testAppName
+                    fail(testAppName
                             + ": Unexpected 'success' exit; expected:"
                             + testExitCode + " was:" + retVal);
                 }
                 return;
 
             case 1:
-                throw new AssertionFailedError(testAppName
+                fail(testAppName
                         + ": unable to launch java application");
 
             case ERROR_UNEXPECTED_EXCEPTION:
-                throw new AssertionFailedError(testAppName
+                fail(testAppName
                 + ": unexpected exception");
 
             default:
-                throw new AssertionFailedError(testAppName
+                fail(testAppName
                         + ": Unexpected error exit: " + retVal);
         }
     }
-
 }

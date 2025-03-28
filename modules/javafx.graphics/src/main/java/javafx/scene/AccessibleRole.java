@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014, 2023, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2014, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -483,6 +483,7 @@ public enum AccessibleRole {
      * <ul>
      * <li> {@link AccessibleAction#SET_TEXT} </li>
      * <li> {@link AccessibleAction#SET_TEXT_SELECTION} </li>
+     * <li> {@link AccessibleAction#SHOW_TEXT_RANGE} </li>
      * </ul>
      */
     TEXT_AREA,

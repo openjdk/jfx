@@ -174,7 +174,8 @@ gst_osx_audio_ring_buffer_acquire (GstAudioRingBuffer * buf,
 {
   gboolean ret = FALSE, is_passthrough = FALSE;
   GstOsxAudioRingBuffer *osxbuf;
-  AudioStreamBasicDescription format;
+  AudioStreamBasicDescription format = { 0 };
+  guint32 frames_per_packet = 0;
 
   osxbuf = GST_OSX_AUDIO_RING_BUFFER (buf);
 
@@ -225,6 +226,8 @@ gst_osx_audio_ring_buffer_acquire (GstAudioRingBuffer * buf,
         (spec->latency_time * GST_AUDIO_INFO_RATE (&spec->info) /
         G_USEC_PER_SEC) * GST_AUDIO_INFO_BPF (&spec->info);
     spec->segtotal = spec->buffer_time / spec->latency_time;
+    frames_per_packet = spec->segsize / GST_AUDIO_INFO_BPF (&spec->info);
+
     is_passthrough = FALSE;
   }
 
@@ -239,7 +242,7 @@ gst_osx_audio_ring_buffer_acquire (GstAudioRingBuffer * buf,
   buf->memory = g_malloc0 (buf->size);
 
   ret = gst_core_audio_initialize (osxbuf->core_audio, format, spec->caps,
-      is_passthrough);
+      frames_per_packet, is_passthrough);
 
   if (!ret) {
     g_free (buf->memory);

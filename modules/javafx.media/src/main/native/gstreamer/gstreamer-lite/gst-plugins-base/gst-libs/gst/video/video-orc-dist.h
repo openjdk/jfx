@@ -143,6 +143,10 @@ void video_orc_unpack_BGR16 (guint32 * ORC_RESTRICT d1, const guint16 * ORC_REST
 void video_orc_unpack_BGR16_trunc (guint32 * ORC_RESTRICT d1, const guint16 * ORC_RESTRICT s1, int n);
 void video_orc_pack_BGR16_le (guint16 * ORC_RESTRICT d1, const guint32 * ORC_RESTRICT s1, int n);
 void video_orc_pack_BGR16_be (guint16 * ORC_RESTRICT d1, const guint32 * ORC_RESTRICT s1, int n);
+void video_orc_unpack_RBGA_le (guint8 * ORC_RESTRICT d1, const guint8 * ORC_RESTRICT s1, int n);
+void video_orc_unpack_RBGA_be (guint8 * ORC_RESTRICT d1, const guint8 * ORC_RESTRICT s1, int n);
+void video_orc_pack_RBGA_le (guint8 * ORC_RESTRICT d1, const guint8 * ORC_RESTRICT s1, int n);
+void video_orc_pack_RBGA_be (guint8 * ORC_RESTRICT d1, const guint8 * ORC_RESTRICT s1, int n);
 void video_orc_resample_bilinear_u32 (guint8 * ORC_RESTRICT d1, const guint8 * ORC_RESTRICT s1, int p1, int p2, int n);
 void video_orc_merge_linear_u8 (orc_uint8 * ORC_RESTRICT d1, const orc_uint8 * ORC_RESTRICT s1, const orc_uint8 * ORC_RESTRICT s2, int p1, int n);
 void video_orc_memset_2d (guint8 * ORC_RESTRICT d1, int d1_stride, int p1, int n, int m);

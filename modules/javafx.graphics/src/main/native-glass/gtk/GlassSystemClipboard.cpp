@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2017, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -629,7 +629,7 @@ JNIEXPORT jobjectArray JNICALL Java_com_sun_glass_ui_gtk_GtkSystemClipboard_mime
             *(convertible_ptr++) = MIME_JAVA_IMAGE;
             image_added = true;
         }
-        //TODO text/x-moz-url ? RT-17802
+        //TODO text/x-moz-url ? JDK-8090861
 
         if (targets[i] == MIME_TEXT_URI_LIST_TARGET) {
             if (uri_list_added) {

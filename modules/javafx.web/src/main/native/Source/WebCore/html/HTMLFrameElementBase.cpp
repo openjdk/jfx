@@ -40,12 +40,12 @@
 #include "ScriptController.h"
 #include "Settings.h"
 #include "SubframeLoader.h"
-#include <wtf/IsoMallocInlines.h>
+#include <wtf/TZoneMallocInlines.h>
 #include <wtf/URL.h>
 
 namespace WebCore {
 
-WTF_MAKE_ISO_ALLOCATED_IMPL(HTMLFrameElementBase);
+WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(HTMLFrameElementBase);
 
 using namespace HTMLNames;
 
@@ -179,6 +179,9 @@ void HTMLFrameElementBase::didAttachRenderers()
 void HTMLFrameElementBase::setLocation(const String& str)
 {
     if (document().settings().needsAcrobatFrameReloadingQuirk() && m_frameURL == str)
+        return;
+
+    if (!SubframeLoadingDisabler::canLoadFrame(*this))
         return;
 
     m_frameURL = AtomString(str);

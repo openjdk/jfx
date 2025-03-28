@@ -65,6 +65,7 @@ public:
 
     void willQueueIdleCallback() { m_mayHavePendingIdleCallbacks = true; }
 
+    bool isScheduled() const { return m_runLoopObserver->isScheduled(); }
     void rescheduleIfNeeded(MonotonicTime deadline);
     bool hasImminentlyScheduledWork() const { return m_imminentlyScheduledWorkCount; }
 
@@ -120,7 +121,7 @@ private:
 
     bool shouldAllowOpportunisticallyScheduledTasks() const;
 
-    SingleThreadWeakPtr<Page> m_page;
+    WeakPtr<Page> m_page;
     uint64_t m_imminentlyScheduledWorkCount { 0 };
     uint64_t m_runloopCountAfterBeingScheduled { 0 };
     MonotonicTime m_currentDeadline;

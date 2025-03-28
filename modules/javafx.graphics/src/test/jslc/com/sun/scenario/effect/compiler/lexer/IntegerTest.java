@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008, 2019, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2008, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -26,19 +26,20 @@
 package com.sun.scenario.effect.compiler.lexer;
 
 import com.sun.scenario.effect.compiler.JSLLexer;
-import org.junit.Test;
+
+import org.junit.jupiter.api.Test;
 
 public class IntegerTest extends LexerBase {
 
     @Test
-    public void uptoOneMillion() throws Exception {
+    public void uptoOneMillion() {
         for (int i = 0; i < 1e6; ++i) {
             assertRecognized(String.valueOf(i));
         }
     }
 
     @Test
-    public void badDigits() throws Exception {
+    public void badDigits() {
         recognize("H128376");
     }
 

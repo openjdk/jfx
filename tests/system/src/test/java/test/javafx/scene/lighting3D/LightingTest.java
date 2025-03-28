@@ -26,7 +26,6 @@
 package test.javafx.scene.lighting3D;
 
 import java.util.concurrent.CountDownLatch;
-
 import javafx.application.Application;
 import javafx.application.Platform;
 import javafx.scene.Group;
@@ -36,9 +35,7 @@ import javafx.scene.image.WritableImage;
 import javafx.scene.shape.Box;
 import javafx.stage.Stage;
 import javafx.stage.WindowEvent;
-
-import org.junit.AfterClass;
-
+import org.junit.jupiter.api.AfterAll;
 import test.util.Util;
 
 // Since there appears to be a bug in snapshot with subscene, we are taking a snapshot of the scene and not
@@ -93,7 +90,7 @@ public abstract class LightingTest {
         return Math.cos(Math.atan(x/LIGHT_DIST));
     }
 
-    @AfterClass
+    @AfterAll
     public static void teardown() {
         Util.shutdown();
     }

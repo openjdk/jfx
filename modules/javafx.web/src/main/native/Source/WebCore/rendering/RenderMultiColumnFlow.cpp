@@ -38,11 +38,11 @@
 #include "RenderTreeBuilder.h"
 #include "RenderView.h"
 #include "TransformState.h"
-#include <wtf/IsoMallocInlines.h>
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
-WTF_MAKE_ISO_ALLOCATED_IMPL(RenderMultiColumnFlow);
+WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(RenderMultiColumnFlow);
 
 RenderMultiColumnFlow::RenderMultiColumnFlow(Document& document, RenderStyle&& style)
     : RenderFragmentedFlow(Type::MultiColumnFlow, document, WTFMove(style))
@@ -143,14 +143,14 @@ void RenderMultiColumnFlow::addFragmentToThread(RenderFragmentContainer* fragmen
     fragmentContainer->setIsValid(true);
 }
 
-void RenderMultiColumnFlow::willBeRemovedFromTree(IsInternalMove isInternalMove)
+void RenderMultiColumnFlow::willBeRemovedFromTree()
 {
     // Detach all column sets from the flow thread. Cannot destroy them at this point, since they
     // are siblings of this object, and there may be pointers to this object's sibling somewhere
     // further up on the call stack.
     for (RenderMultiColumnSet* columnSet = firstMultiColumnSet(); columnSet; columnSet = columnSet->nextSiblingMultiColumnSet())
         columnSet->detachFragment();
-    RenderFragmentedFlow::willBeRemovedFromTree(isInternalMove);
+    RenderFragmentedFlow::willBeRemovedFromTree();
 }
 
 void RenderMultiColumnFlow::fragmentedFlowDescendantBoxLaidOut(RenderBox* descendant)
@@ -203,6 +203,9 @@ void RenderMultiColumnFlow::setPageBreak(const RenderBlock* block, LayoutUnit of
 
 void RenderMultiColumnFlow::updateMinimumPageHeight(const RenderBlock* block, LayoutUnit offset, LayoutUnit minHeight)
 {
+    if (!hasValidFragmentInfo())
+        return;
+
     if (auto* multicolSet = downcast<RenderMultiColumnSet>(fragmentAtBlockOffset(block, offset)))
         multicolSet->updateMinimumColumnHeight(minHeight);
 }

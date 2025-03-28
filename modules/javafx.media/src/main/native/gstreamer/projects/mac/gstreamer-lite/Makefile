@@ -122,7 +122,6 @@ C_SOURCES = gstreamer/gst/gst.c \
             gstreamer/gst/gstpipeline.c \
             gstreamer/gst/gstplugin.c \
             gstreamer/gst/gstpluginfeature.c \
-            gstreamer/gst/gstpluginloader.c \
             gstreamer/gst/gstpoll.c \
             gstreamer/gst/gstprotection.c \
             gstreamer/gst/gstquark.c \
@@ -167,6 +166,7 @@ C_SOURCES = gstreamer/gst/gst.c \
             gstreamer/libs/gst/base/gsttypefindhelper.c \
             gst-plugins-base/gst-libs/gst/app/gstapp-marshal.c \
             gst-plugins-base/gst-libs/gst/app/gstappsink.c \
+            gst-plugins-base/gst-libs/gst/app/gstapputils.c \
             gst-plugins-base/gst-libs/gst/audio/audio.c \
             gst-plugins-base/gst-libs/gst/audio/audio-channels.c \
             gst-plugins-base/gst-libs/gst/audio/audio-channel-mixer.c \
@@ -197,8 +197,6 @@ C_SOURCES = gstreamer/gst/gst.c \
             gst-plugins-base/gst-libs/gst/fft/kiss_fftr_f32.c \
             gst-plugins-base/gst-libs/gst/pbutils/codec-utils.c \
             gst-plugins-base/gst-libs/gst/pbutils/descriptions.c \
-            gst-plugins-base/gst-libs/gst/pbutils/gstdiscoverer.c \
-            gst-plugins-base/gst-libs/gst/pbutils/gstdiscoverer-types.c \
             gst-plugins-base/gst-libs/gst/pbutils/gstpluginsbaseversion.c \
             gst-plugins-base/gst-libs/gst/pbutils/missing-plugins.c \
             gst-plugins-base/gst-libs/gst/pbutils/pbutils.c \

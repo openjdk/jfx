@@ -34,7 +34,7 @@ class AudioBus;
 struct AudioIOPosition;
 
 class AudioDestinationNode : public AudioNode {
-    WTF_MAKE_ISO_ALLOCATED(AudioDestinationNode);
+    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(AudioDestinationNode);
 public:
     ~AudioDestinationNode();
 
@@ -55,8 +55,8 @@ public:
     virtual void restartRendering() { }
 
     // AudioDestinationNodes are owned by the BaseAudioContext so we forward the refcounting to its BaseAudioContext.
-    void ref() final;
-    void deref() final;
+    void ref() const final;
+    void deref() const final;
 
 protected:
     AudioDestinationNode(BaseAudioContext&, float sampleRate);

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -294,6 +294,7 @@ public class ScrollPaneSkin extends SkinBase<ScrollPane> {
             () -> {
                 getSkinnable().requestLayout();
                 viewRect.requestLayout();
+                viewContent.requestLayout();
             },
             control.fitToWidthProperty(),
             control.fitToHeightProperty()
@@ -879,7 +880,7 @@ public class ScrollPaneSkin extends SkinBase<ScrollPane> {
          * scroll event handling.
          *
          * Note that we use viewRect here, rather than setting the eventHandler
-         * on the ScrollPane itself. This is for RT-31582, and effectively
+         * on the ScrollPane itself. This is for JDK-8096155, and effectively
          * allows for us to prioritise handling (and consuming) the event
          * internally, before it is made available to users listening to events
          * on the control. This is consistent with the VirtualFlow-based controls.
@@ -966,7 +967,7 @@ public class ScrollPaneSkin extends SkinBase<ScrollPane> {
         // ScrollPanes do not block all MouseEvents by default, unlike most other UI Controls.
         consumeMouseEvents(false);
 
-        // update skin initial state to match control (see RT-35554)
+        // update skin initial state to match control (see JDK-8096249)
         hsb.setValue(control.getHvalue());
         vsb.setValue(control.getVvalue());
     }
@@ -1074,7 +1075,7 @@ public class ScrollPaneSkin extends SkinBase<ScrollPane> {
             return (tempVisibility && (nodeWidth > contentWidth));
         }
         else {
-            // RT-17395: ScrollBarPolicy might be null. If so, treat it as "AS_NEEDED", which is the default
+            // JDK-8093908: ScrollBarPolicy might be null. If so, treat it as "AS_NEEDED", which is the default
             ScrollBarPolicy hbarPolicy = sp.getHbarPolicy();
             return (ScrollBarPolicy.NEVER == hbarPolicy) ? false :
                    ((ScrollBarPolicy.ALWAYS == hbarPolicy) ? true :
@@ -1090,7 +1091,7 @@ public class ScrollPaneSkin extends SkinBase<ScrollPane> {
             return (tempVisibility && (nodeHeight > contentHeight));
         }
         else {
-            // RT-17395: ScrollBarPolicy might be null. If so, treat it as "AS_NEEDED", which is the default
+            // JDK-8093908: ScrollBarPolicy might be null. If so, treat it as "AS_NEEDED", which is the default
             ScrollBarPolicy vbarPolicy = sp.getVbarPolicy();
             return (ScrollBarPolicy.NEVER == vbarPolicy) ? false :
                    ((ScrollBarPolicy.ALWAYS == vbarPolicy) ? true :

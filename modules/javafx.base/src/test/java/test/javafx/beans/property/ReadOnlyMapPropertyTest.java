@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -32,16 +32,16 @@ import javafx.beans.property.ReadOnlyMapProperty;
 import javafx.beans.value.ChangeListener;
 import javafx.collections.MapChangeListener;
 import javafx.collections.ObservableMap;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.*;
 
 public class ReadOnlyMapPropertyTest {
 
     private static final Object DEFAULT = null;
 
-    @Before
+    @BeforeEach
     public void setUp() throws Exception {
     }
 

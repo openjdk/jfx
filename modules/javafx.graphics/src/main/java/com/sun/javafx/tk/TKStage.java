@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2009, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2009, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,7 +25,6 @@
 
 package com.sun.javafx.tk;
 
-import java.security.AccessControlContext;
 import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyCodeCombination;
 import javafx.scene.input.KeyCombination.ModifierValue;
@@ -47,7 +46,7 @@ public interface TKStage {
      *
      * @return scenePeer The peer of the scene to be displayed
      */
-    public TKScene createTKScene(boolean depthBuffer, boolean msaa, @SuppressWarnings("removal") AccessControlContext acc);
+    public TKScene createTKScene(boolean depthBuffer, boolean msaa);
 
     /**
      * Set the scene to be displayed in this stage

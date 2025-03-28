@@ -273,7 +273,7 @@ static void showGlyphsWithAdvances(const FloatPoint& point, const Font& font, CG
         Vector<CGSize, 256> translations(count);
         CTFontGetVerticalTranslationsForGlyphs(platformData.ctFont(), glyphs, translations.data(), count);
 
-        auto ascentDelta = font.fontMetrics().floatAscent(IdeographicBaseline) - font.fontMetrics().floatAscent();
+        auto ascentDelta = font.fontMetrics().ascent(IdeographicBaseline) - font.fontMetrics().ascent();
         fillVectorWithVerticalGlyphPositions(positions, translations.data(), advances, count, point, ascentDelta, CGContextGetTextMatrix(context));
         CTFontDrawGlyphs(platformData.ctFont(), glyphs, positions.data(), count, context);
     } else {
@@ -368,12 +368,12 @@ void FontCascade::drawGlyphs(GraphicsContext& context, const Font& font, const G
         Color fillColor = context.fillColor();
         Color shadowFillColor = shadow->color.colorWithAlphaMultipliedBy(fillColor.alphaAsFloat());
         context.setFillColor(shadowFillColor);
-        float shadowTextX = point.x() + shadow->offset.width();
-        // If shadows are ignoring transforms, then we haven't applied the Y coordinate flip yet, so down is negative.
-        float shadowTextY = point.y() + shadow->offset.height() * (context.shadowsIgnoreTransforms() ? -1 : 1);
-        showGlyphsWithAdvances(FloatPoint(shadowTextX, shadowTextY), font, cgContext, glyphs, advances, numGlyphs, textMatrix);
-        if (syntheticBoldOffset)
-            showGlyphsWithAdvances(FloatPoint(shadowTextX + syntheticBoldOffset, shadowTextY), font, cgContext, glyphs, advances, numGlyphs, textMatrix);
+        auto shadowTextOffset = point + context.platformShadowOffset(shadow->offset);
+        showGlyphsWithAdvances(shadowTextOffset, font, cgContext, glyphs, advances, numGlyphs, textMatrix);
+        if (syntheticBoldOffset) {
+            shadowTextOffset.move(syntheticBoldOffset, 0);
+            showGlyphsWithAdvances(shadowTextOffset, font, cgContext, glyphs, advances, numGlyphs, textMatrix);
+        }
         context.setFillColor(fillColor);
     }
 
@@ -397,7 +397,7 @@ void FontCascade::drawGlyphs(GraphicsContext& context, const Font& font, const G
 bool FontCascade::primaryFontIsSystemFont() const
 {
     const auto& fontData = primaryFont();
-    return isSystemFont(fontData.platformData().ctFont());
+    return isSystemFont(fontData.getCTFont());
 }
 
 const Font* FontCascade::fontForCombiningCharacterSequence(StringView stringView) const
@@ -422,7 +422,7 @@ const Font* FontCascade::fontForCombiningCharacterSequence(StringView stringView
 
     for (unsigned i = 0; !fallbackRangesAt(i).isNull(); ++i) {
         auto& fontRanges = fallbackRangesAt(i);
-        if (fontRanges.isGeneric() && isPrivateUseAreaCharacter(baseCharacter))
+        if (fontRanges.isGenericFontFamily() && isPrivateUseAreaCharacter(baseCharacter))
             continue;
         const Font* font = fontRanges.fontForCharacter(baseCharacter);
         if (!font)
@@ -504,7 +504,7 @@ ResolvedEmojiPolicy FontCascade::resolveEmojiPolicy(FontVariantEmoji fontVariant
         // The first category are characters with Emoji=Yes and Emoji_Presentation=Yes.
         // The second category are characters with Emoji=Yes and Emoji_Presentation=No.
         // The third category are characters with Emoji=No.
-        if (u_hasBinaryProperty(character, UCHAR_EMOJI_PRESENTATION))
+        if (isEmojiWithPresentationByDefault(character))
             return ResolvedEmojiPolicy::RequireEmoji;
         return ResolvedEmojiPolicy::NoPreference;
     case FontVariantEmoji::Text:

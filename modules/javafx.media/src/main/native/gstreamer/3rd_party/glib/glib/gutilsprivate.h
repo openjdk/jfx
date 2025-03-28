@@ -59,6 +59,8 @@ void _g_unset_cached_tmp_dir (void);
 
 gboolean _g_localtime (time_t timet, struct tm *tm);
 
+gboolean g_set_prgname_once (const gchar *prgname);
+
 G_END_DECLS
 
 #endif /* __G_UTILS_PRIVATE_H__ */

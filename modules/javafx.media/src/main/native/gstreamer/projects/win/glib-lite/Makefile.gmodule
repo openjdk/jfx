@@ -30,7 +30,7 @@ CFLAGS =   -DWIN32 \
            -DG_LOG_DOMAIN=\"GModule\" \
            -D_MBCS \
            -DG_OS_WIN32 \
-           -DFFI_BUILDING \
+           -DFFI_STATIC_BUILD \
            -DG_DISABLE_DEPRECATED \
            $(INCLUDES) \
            $(COMPILER_FLAGS)

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2018, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2018, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -39,13 +39,13 @@ import javafx.concurrent.Worker.State;
 import javafx.scene.web.WebEngineShim;
 
 import static javafx.concurrent.Worker.State.SUCCEEDED;
-import static org.junit.Assert.assertArrayEquals;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import netscape.javascript.JSObject;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 public class FileReaderTest extends TestBase {
     private final WebPage page = WebEngineShim.getPage(getEngine());
@@ -87,7 +87,7 @@ public class FileReaderTest extends TestBase {
         return scriptContent;
     }
 
-    @Before
+    @BeforeEach
     public void before() {
         latch = new CountDownLatch(1);
         UIClientImplShim.test_setChooseFiles(fileList);
@@ -99,8 +99,8 @@ public class FileReaderTest extends TestBase {
     }
 
     private void testLatch(CountDownLatch latch) {
-        assertTrue("Page load is not finished yet", getLoadState() == SUCCEEDED);
-        assertNotNull("Document should not be null", getEngine().getDocument());
+        assertTrue(getLoadState() == SUCCEEDED, "Page load is not finished yet");
+        assertNotNull(getEngine().getDocument(), "Document should not be null");
         submit(() -> {
             final JSObject window = (JSObject) getEngine().executeScript("window");
             assertNotNull(window);
@@ -119,84 +119,96 @@ public class FileReaderTest extends TestBase {
     @Test public void testReadAsTextWithoutSlice() {
         loadFileReaderTestScript(getScriptString("readAsText", "", false));
         submit(() -> {
-            assertEquals("Unexpected file content received", "Hello World", getEngine().executeScript("window.result"));
+            assertEquals("Hello World", getEngine().executeScript("window.result"),
+                    "Unexpected file content received");
         });
     }
 
     @Test public void testReadAsTextWithSlice() {
         loadFileReaderTestScript(getScriptString("readAsText", ".slice()", false));
         submit(() -> {
-            assertEquals("Unexpected file content received", "Hello World", getEngine().executeScript("window.result"));
+            assertEquals("Hello World", getEngine().executeScript("window.result"),
+                    "Unexpected file content received");
         });
     }
 
     @Test public void testReadAsTexWithSliceWithValidStartAndEnd() {
         loadFileReaderTestScript(getScriptString("readAsText", ".slice(3, 7)", false));
         submit(() -> {
-            assertEquals("Unexpected file content received", "lo W", getEngine().executeScript("window.result"));
+            assertEquals("lo W", getEngine().executeScript("window.result"),
+                    "Unexpected file content received");
         });
     }
 
     @Test public void testReadAsTexWithSliceWithEndAsFileLength() {
         loadFileReaderTestScript(getScriptString("readAsText", ".slice(3, file.length)", false));
         submit(() -> {
-            assertEquals("Unexpected file content received", "lo World", getEngine().executeScript("window.result"));
+            assertEquals("lo World", getEngine().executeScript("window.result"),
+                    "Unexpected file content received");
         });
     }
 
     @Test public void testReadAsTexWithSliceWithOnlyStartAsFileLength() {
         loadFileReaderTestScript(getScriptString("readAsText", ".slice(file.length)", false));
         submit(() -> {
-            assertEquals("Unexpected file content received", "Hello World", getEngine().executeScript("window.result"));
+            assertEquals("Hello World", getEngine().executeScript("window.result"),
+                    "Unexpected file content received");
         });
     }
 
     @Test public void testReadAsTexWithSliceWithStartAsNegetiveValue() {
         loadFileReaderTestScript(getScriptString("readAsText", ".slice(-7, file.length)", false));
         submit(() -> {
-            assertEquals("Unexpected file content received", "o World", getEngine().executeScript("window.result"));
+            assertEquals("o World", getEngine().executeScript("window.result"),
+                    "Unexpected file content received");
         });
     }
 
     @Test public void testReadAsTexWithSliceWithStartAsFileLength() {
         loadFileReaderTestScript(getScriptString("readAsText", ".slice(file.length, 3)", false));
         submit(() -> {
-            assertEquals("Unexpected file content received", "Hel", getEngine().executeScript("window.result"));
+            assertEquals("Hel", getEngine().executeScript("window.result"),
+                    "Unexpected file content received");
         });
     }
 
     @Test public void testReadAsTexWithSliceWithEndAsNegetiveValue() {
         loadFileReaderTestScript(getScriptString("readAsText", ".slice(file.length, -3)", false));
         submit(() -> {
-            assertEquals("Unexpected file content received", "Hello Wo", getEngine().executeScript("window.result"));
+            assertEquals("Hello Wo", getEngine().executeScript("window.result"),
+                    "Unexpected file content received");
         });
     }
 
     @Test public void testReadAsTexWithSliceWithEndAsBeyondFileLength() {
         loadFileReaderTestScript(getScriptString("readAsText", ".slice(file.length, -100)", false));
         submit(() -> {
-            assertEquals("Unexpected file content received", "", getEngine().executeScript("window.result"));
+            assertEquals("", getEngine().executeScript("window.result"),
+                    "Unexpected file content received");
         });
     }
 
     @Test public void testReadAsTexWithSliceWithBeginAsValidValue() {
         loadFileReaderTestScript(getScriptString("readAsText", ".slice(6)", false));
         submit(() -> {
-            assertEquals("Unexpected file content received", "World", getEngine().executeScript("window.result"));
+            assertEquals("World", getEngine().executeScript("window.result"),
+                    "Unexpected file content received");
         });
     }
 
     @Test public void testReadAsTexWithSliceWithOnlyStartAsNegetiveValue() {
         loadFileReaderTestScript(getScriptString("readAsText", ".slice(-3)", false));
         submit(() -> {
-            assertEquals("Unexpected file content received", "rld", getEngine().executeScript("window.result"));
+            assertEquals("rld", getEngine().executeScript("window.result"),
+                    "Unexpected file content received");
         });
     }
 
     @Test public void testReadAsTexWithSliceWithStartAndEndAsNegetiveValues() {
         loadFileReaderTestScript(getScriptString("readAsText", ".slice(-3, -7)", false));
         submit(() -> {
-            assertEquals("Unexpected file content received", "", getEngine().executeScript("window.result"));
+            assertEquals("", getEngine().executeScript("window.result"),
+                    "Unexpected file content received");
         });
     }
 
@@ -206,14 +218,14 @@ public class FileReaderTest extends TestBase {
         loadFileReaderTestScript(getScriptString("readAsBinaryString", "", false));
         FileInputStream in = new FileInputStream(binaryFile[0]);
         final byte[] expectedBinaryData = in.readAllBytes();
-        assertNotNull("BinaryFile content should not be null", expectedBinaryData);
+        assertNotNull(expectedBinaryData, "BinaryFile content should not be null");
         submit(() -> {
             try {
                 final String obj = (String) getEngine().executeScript("window.result");
                 // setting encoding scheme to ISO-8859-1 for binary data as webkit uses the same.
                 final byte[] binBytes = obj.getBytes("ISO-8859-1");
-                assertNotNull("BinaryFile content read should not be null", binBytes);
-                assertArrayEquals("Unexpected file content received", expectedBinaryData, binBytes);
+                assertNotNull(binBytes, "BinaryFile content read should not be null");
+                assertArrayEquals(expectedBinaryData, binBytes, "Unexpected file content received");
             } catch (UnsupportedEncodingException ex) {
                 throw new AssertionError(ex);
             }
@@ -226,10 +238,14 @@ public class FileReaderTest extends TestBase {
             final byte[] expectedArrayBuffer = in.readAllBytes();
             submit(() -> {
                 final JSObject obj = (JSObject) getEngine().executeScript("new Uint8Array(window.result)");
-                assertEquals(String.format("%s length must be equal in both Java & JavaScript", fileList),
-                                       expectedArrayBuffer.length, obj.getMember("length"));
+                String filePath = fileList[0];
+                int expectedLength = expectedArrayBuffer.length;
+                int actualLength = (Integer) obj.getMember("length");
+                String message = String.format("File at %s: Expected length %d but got %d",
+                        filePath, expectedLength, actualLength);
+                assertEquals(expectedLength, actualLength, message);
                 for (int i = 0; i < expectedArrayBuffer.length; i++) {
-                    assertEquals("Unexpected file content received", expectedArrayBuffer[i], ((Number)(obj.getSlot(i))).byteValue());
+                    assertEquals(expectedArrayBuffer[i], ((Number)(obj.getSlot(i))).byteValue(), "Unexpected file content received");
                 }
             });
         } catch (IOException ex){
@@ -244,15 +260,14 @@ public class FileReaderTest extends TestBase {
             submit(() -> {
                 try {
                     String encodedData = (String) getEngine().executeScript("window.result");
-                    assertNotNull("window.result must have base64 encoded data", encodedData);
-                    assertEquals("Base64 EncodedData is not same as window.result",
-                                   "data:text/plain;base64,SGVsbG8gV29ybGQ=", encodedData);
+                    assertNotNull(encodedData, "window.result must have base64 encoded data");
+                    assertEquals("data:text/plain;base64,SGVsbG8gV29ybGQ=", encodedData, "Base64 EncodedData is not same as window.result");
                     encodedData = encodedData.split(",")[1];
                     assertNotNull(encodedData);
                     final byte[] decodedData = Base64.getDecoder().decode(encodedData);
-                    assertNotNull("Base64 decoded data must be valid", decodedData);
-                    assertEquals("Base64 DecodedData is not same as File Content",
-                        new String(expectedArrayBuffer, "utf-8"), new String(decodedData, "utf-8"));
+                    assertNotNull(decodedData, "Base64 decoded data must be valid");
+                    assertEquals(new String(expectedArrayBuffer, "utf-8"), new String(decodedData, "utf-8"),
+                            "Base64 DecodedData is not same as File Content");
                 } catch (UnsupportedEncodingException e) {
                     throw new AssertionError(e);
                 }
@@ -265,8 +280,8 @@ public class FileReaderTest extends TestBase {
     @Test public void testAbort() {
         loadFileReaderTestScript(getScriptString("readAsText", "", true));
         submit(() -> {
-            assertEquals("Unexpected file content received", "failed due to abort",
-                          getEngine().executeScript("window.result"));
+            assertEquals("failed due to abort", getEngine().executeScript("window.result"),
+                    "Unexpected file content received");
         });
     }
 }

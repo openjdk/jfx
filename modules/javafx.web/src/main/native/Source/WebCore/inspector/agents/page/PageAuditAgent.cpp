@@ -29,10 +29,10 @@
 #include "InspectorAuditAccessibilityObject.h"
 #include "InspectorAuditDOMObject.h"
 #include "InspectorAuditResourcesObject.h"
+#include "JSDOMWindowCustom.h"
 #include "JSInspectorAuditAccessibilityObject.h"
 #include "JSInspectorAuditDOMObject.h"
 #include "JSInspectorAuditResourcesObject.h"
-#include "JSLocalDOMWindowCustom.h"
 #include "Page.h"
 #include "PageConsoleClient.h"
 #include <JavaScriptCore/CallFrame.h>
@@ -56,7 +56,7 @@ PageAuditAgent::PageAuditAgent(PageAgentContext& context)
 
 PageAuditAgent::~PageAuditAgent() = default;
 
-InjectedScript PageAuditAgent::injectedScriptForEval(std::optional<Protocol::Runtime::ExecutionContextId>&& executionContextId)
+InjectedScript PageAuditAgent::injectedScriptForEval(std::optional<Inspector::Protocol::Runtime::ExecutionContextId>&& executionContextId)
 {
     if (executionContextId)
         return injectedScriptManager().injectedScriptForId(*executionContextId);
@@ -65,7 +65,7 @@ InjectedScript PageAuditAgent::injectedScriptForEval(std::optional<Protocol::Run
     return InjectedScript();
 }
 
-InjectedScript PageAuditAgent::injectedScriptForEval(Protocol::ErrorString& errorString, std::optional<Protocol::Runtime::ExecutionContextId>&& executionContextId)
+InjectedScript PageAuditAgent::injectedScriptForEval(Inspector::Protocol::ErrorString& errorString, std::optional<Inspector::Protocol::Runtime::ExecutionContextId>&& executionContextId)
 {
     InjectedScript injectedScript = injectedScriptForEval(WTFMove(executionContextId));
     if (injectedScript.hasNoValue()) {

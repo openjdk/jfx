@@ -28,6 +28,7 @@
 #include "ContactInfo.h"
 #include "ContactsRequestData.h"
 #include "Document.h"
+#include "DocumentInlines.h"
 #include "DocumentType.h"
 #include "FaceDetectorInterface.h"
 #include "FileList.h"
@@ -86,6 +87,11 @@ Chrome::~Chrome()
     m_client->chromeDestroyed();
 }
 
+Ref<Page> Chrome::protectedPage() const
+{
+    return m_page.get();
+}
+
 void Chrome::invalidateRootView(const IntRect& updateRect)
 {
     m_client->invalidateRootView(updateRect);
@@ -104,7 +110,7 @@ void Chrome::invalidateContentsForSlowScroll(const IntRect& updateRect)
 void Chrome::scroll(const IntSize& scrollDelta, const IntRect& rectToScroll, const IntRect& clipRect)
 {
     m_client->scroll(scrollDelta, rectToScroll, clipRect);
-    InspectorInstrumentation::didScroll(m_page);
+    InspectorInstrumentation::didScroll(protectedPage());
 }
 
 IntPoint Chrome::screenToRootView(const IntPoint& point) const
@@ -199,17 +205,11 @@ void Chrome::focusedFrameChanged(Frame* frame)
     m_client->focusedFrameChanged(frame);
 }
 
-Page* Chrome::createWindow(LocalFrame& frame, const WindowFeatures& features, const NavigationAction& action)
+RefPtr<Page> Chrome::createWindow(LocalFrame& frame, const WindowFeatures& features, const NavigationAction& action)
 {
-    Page* newPage = m_client->createWindow(frame, features, action);
+    RefPtr newPage = m_client->createWindow(frame, features, action);
     if (!newPage)
         return nullptr;
-#if !PLATFORM(JAVA)
-    if (!features.wantsNoOpener())
-#else
-     if (!features.noopener && !features.noreferrer)
-#endif
-        m_page.storageNamespaceProvider().copySessionStorageNamespace(m_page, *newPage);
 
     return newPage;
 }
@@ -233,7 +233,7 @@ void Chrome::runModal()
     // JavaScript that runs within the nested event loop must not be run in the context of the
     // script that called showModalDialog. Null out entryScope to break the connection.
 
-    auto* localMainFrame = dynamicDowncast<LocalFrame>(m_page.mainFrame());
+    RefPtr localMainFrame = dynamicDowncast<LocalFrame>(m_page->mainFrame());
     if (!localMainFrame)
         return;
 
@@ -323,7 +323,7 @@ bool Chrome::runJavaScriptConfirm(LocalFrame& frame, const String& message)
 {
     // Defer loads in case the client method runs a new event loop that would
     // otherwise cause the load to continue while we're in the middle of executing JavaScript.
-    PageGroupLoadDeferrer deferrer(m_page, true);
+    PageGroupLoadDeferrer deferrer(protectedPage(), true);
 
     notifyPopupOpeningObservers();
     return m_client->runJavaScriptConfirm(frame, frame.displayStringModifiedByEncoding(message));
@@ -333,7 +333,7 @@ bool Chrome::runJavaScriptPrompt(LocalFrame& frame, const String& prompt, const 
 {
     // Defer loads in case the client method runs a new event loop that would
     // otherwise cause the load to continue while we're in the middle of executing JavaScript.
-    PageGroupLoadDeferrer deferrer(m_page, true);
+    PageGroupLoadDeferrer deferrer(protectedPage(), true);
 
     notifyPopupOpeningObservers();
     String displayPrompt = frame.displayStringModifiedByEncoding(prompt);
@@ -352,19 +352,17 @@ void Chrome::setStatusbarText(LocalFrame& frame, const String& status)
 
 void Chrome::mouseDidMoveOverElement(const HitTestResult& result, OptionSet<PlatformEventModifier> modifiers)
 {
-    auto* localMainFrame = dynamicDowncast<LocalFrame>(m_page.mainFrame());
-    if (!localMainFrame)
-        return;
-
+    if (RefPtr localMainFrame = dynamicDowncast<LocalFrame>(m_page->mainFrame())) {
     if (result.innerNode() && result.innerNode()->document().isDNSPrefetchEnabled())
-        localMainFrame->loader().client().prefetchDNS(result.absoluteLinkURL().host().toString());
+            localMainFrame->checkedLoader()->client().prefetchDNS(result.absoluteLinkURL().host().toString());
+    }
 
     String toolTip;
     TextDirection toolTipDirection;
     getToolTip(result, toolTip, toolTipDirection);
     m_client->mouseDidMoveOverElement(result, modifiers, toolTip, toolTipDirection);
 
-    InspectorInstrumentation::mouseDidMoveOverElement(m_page, result, modifiers);
+    InspectorInstrumentation::mouseDidMoveOverElement(protectedPage(), result, modifiers);
 }
 
 void Chrome::getToolTip(const HitTestResult& result, String& toolTip, TextDirection& toolTipDirection)
@@ -373,7 +371,7 @@ void Chrome::getToolTip(const HitTestResult& result, String& toolTip, TextDirect
     toolTip = result.spellingToolTip(toolTipDirection);
 
     // Next priority is a toolTip from a URL beneath the mouse (if preference is set to show those).
-    if (toolTip.isEmpty() && m_page.settings().showsURLsInToolTips()) {
+    if (toolTip.isEmpty() && m_page->settings().showsURLsInToolTips()) {
         if (RefPtr element = result.innerNonSharedElement()) {
             // Get tooltip representing form action, if relevant
             if (RefPtr input = dynamicDowncast<HTMLInputElement>(*element)) {
@@ -402,7 +400,7 @@ void Chrome::getToolTip(const HitTestResult& result, String& toolTip, TextDirect
     if (toolTip.isEmpty())
         toolTip = result.title(toolTipDirection);
 
-    if (toolTip.isEmpty() && m_page.settings().showsToolTipOverTruncatedText())
+    if (toolTip.isEmpty() && m_page->settings().showsToolTipOverTruncatedText())
         toolTip = result.innerTextIfTruncated(toolTipDirection);
 
     // Lastly, for <input type="file"> that allow multiple files, we'll consider a tooltip for the selected filenames
@@ -427,7 +425,7 @@ bool Chrome::print(LocalFrame& frame)
     // FIXME: This should have PageGroupLoadDeferrer, like runModal() or runJavaScriptAlert(), because it's no different from those.
 
     if (frame.document()->isSandboxed(SandboxModals)) {
-        frame.document()->domWindow()->printErrorMessage("Use of window.print is not allowed in a sandboxed frame when the allow-modals flag is not set."_s);
+        frame.document()->protectedWindow()->printErrorMessage("Use of window.print is not allowed in a sandboxed frame when the allow-modals flag is not set."_s);
         return false;
     }
 
@@ -522,6 +520,11 @@ FloatSize Chrome::overrideScreenSize() const
     return m_client->overrideScreenSize();
 }
 
+FloatSize Chrome::overrideAvailableScreenSize() const
+{
+    return m_client->overrideAvailableScreenSize();
+}
+
 void Chrome::dispatchDisabledAdaptationsDidChange(const OptionSet<DisabledAdaptations>& disabledAdaptations) const
 {
     m_client->dispatchDisabledAdaptationsDidChange(disabledAdaptations);
@@ -536,13 +539,6 @@ void Chrome::dispatchViewportPropertiesDidChange(const ViewportArguments& argume
     m_client->dispatchViewportPropertiesDidChange(arguments);
 }
 
-#if ENABLE(APP_HIGHLIGHTS)
-void Chrome::storeAppHighlight(AppHighlight&& highlight) const
-{
-    m_client->storeAppHighlight(WTFMove(highlight));
-}
-#endif
-
 void Chrome::setCursor(const Cursor& cursor)
 {
     m_client->setCursor(cursor);
@@ -553,7 +549,7 @@ void Chrome::setCursorHiddenUntilMouseMoves(bool hiddenUntilMouseMoves)
     m_client->setCursorHiddenUntilMouseMoves(hiddenUntilMouseMoves);
 }
 
-RefPtr<ImageBuffer> Chrome::createImageBuffer(const FloatSize& size, RenderingPurpose purpose, float resolutionScale, const DestinationColorSpace& colorSpace, PixelFormat pixelFormat, OptionSet<ImageBufferOptions> options) const
+RefPtr<ImageBuffer> Chrome::createImageBuffer(const FloatSize& size, RenderingPurpose purpose, float resolutionScale, const DestinationColorSpace& colorSpace, ImageBufferPixelFormat pixelFormat, OptionSet<ImageBufferOptions> options) const
 {
     return m_client->createImageBuffer(size, purpose, resolutionScale, colorSpace, pixelFormat, options);
 }
@@ -603,12 +599,12 @@ RefPtr<ShapeDetection::TextDetector> Chrome::createTextDetector() const
 
 PlatformDisplayID Chrome::displayID() const
 {
-    return m_page.displayID();
+    return m_page->displayID();
 }
 
 void Chrome::windowScreenDidChange(PlatformDisplayID displayID, std::optional<FramesPerSecond> nominalFrameInterval)
 {
-    m_page.windowScreenDidChange(displayID, nominalFrameInterval);
+    protectedPage()->windowScreenDidChange(displayID, nominalFrameInterval);
 }
 
 bool Chrome::selectItemWritingDirectionIsNatural()
@@ -653,18 +649,18 @@ void Chrome::didReceiveDocType(LocalFrame& frame)
 
 void Chrome::registerPopupOpeningObserver(PopupOpeningObserver& observer)
 {
-    m_popupOpeningObservers.append(&observer);
+    m_popupOpeningObservers.append(observer);
 }
 
 void Chrome::unregisterPopupOpeningObserver(PopupOpeningObserver& observer)
 {
-    bool removed = m_popupOpeningObservers.removeFirst(&observer);
+    bool removed = m_popupOpeningObservers.removeFirst(WeakPtr { observer });
     ASSERT_UNUSED(removed, removed);
 }
 
 void Chrome::notifyPopupOpeningObservers() const
 {
-    const Vector<PopupOpeningObserver*> observers(m_popupOpeningObservers);
+    auto observers = m_popupOpeningObservers;
     for (auto& observer : observers)
         observer->willOpenPopup();
 }

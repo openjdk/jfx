@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -30,6 +30,7 @@ import java.text.BreakIterator;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Hashtable;
+import java.util.concurrent.atomic.AtomicBoolean;
 import javafx.scene.shape.LineTo;
 import javafx.scene.shape.MoveTo;
 import javafx.scene.shape.PathElement;
@@ -38,7 +39,6 @@ import com.sun.javafx.font.FontResource;
 import com.sun.javafx.font.FontStrike;
 import com.sun.javafx.font.Metrics;
 import com.sun.javafx.font.PGFont;
-import com.sun.javafx.font.PrismFontFactory;
 import com.sun.javafx.geom.BaseBounds;
 import com.sun.javafx.geom.Path2D;
 import com.sun.javafx.geom.Point2D;
@@ -51,6 +51,9 @@ import com.sun.javafx.scene.text.GlyphList;
 import com.sun.javafx.scene.text.TextLayout;
 import com.sun.javafx.scene.text.TextSpan;
 
+/**
+ * Prism TextLayout
+ */
 public class PrismTextLayout implements TextLayout {
     private static final BaseTransform IDENTITY = BaseTransform.IDENTITY_TRANSFORM;
     private static final int X_MIN_INDEX = 0;
@@ -62,8 +65,8 @@ public class PrismTextLayout implements TextLayout {
     private static final Object  CACHE_SIZE_LOCK = new Object();
     private static int cacheSize = 0;
     private static final int MAX_STRING_SIZE = 256;
-    private static final int MAX_CACHE_SIZE = PrismFontFactory.cacheLayoutSize;
 
+    private final int maxCacheSize;
     private char[] text;
     private TextSpan[] spans;   /* Rich text  (null for single font text) */
     private PGFont font;        /* Single font text (null for rich text) */
@@ -81,7 +84,8 @@ public class PrismTextLayout implements TextLayout {
     private int flags;
     private int tabSize = DEFAULT_TAB_SIZE;
 
-    public PrismTextLayout() {
+    public PrismTextLayout(int maxCacheSize) {
+        this.maxCacheSize = maxCacheSize;
         logicalBounds = new RectBounds();
         flags = ALIGN_LEFT;
     }
@@ -138,7 +142,7 @@ public class PrismTextLayout implements TextLayout {
         this.font = (PGFont)font;
         this.strike = ((PGFont)font).getStrike(IDENTITY);
         this.text = text.toCharArray();
-        if (MAX_CACHE_SIZE > 0) {
+        if (maxCacheSize > 0) {
             int length = text.length();
             if (0 < length && length <= MAX_STRING_SIZE) {
                 cacheKey = text.hashCode() * strike.hashCode();
@@ -448,9 +452,9 @@ public class PrismTextLayout implements TextLayout {
                 }
             }
             if (run != null) {
-                int[] trailing = new int[1];
+                AtomicBoolean trailing = new AtomicBoolean();
                 charIndex = run.getStart() + run.getOffsetAtX(x, trailing);
-                leading = (trailing[0] == 0);
+                leading = !trailing.get();
 
                 insertionIndex = charIndex;
                 if (getText() != null && insertionIndex < getText().length) {
@@ -819,12 +823,16 @@ public class PrismTextLayout implements TextLayout {
             int count = Math.max(4, Math.min(chars.length / 16, 16));
             runs = new TextRun[count];
         }
-        GlyphLayout layout = GlyphLayout.getInstance();
+        GlyphLayout layout = glyphLayout();
         flags = layout.breakRuns(this, chars, flags);
         layout.dispose();
         for (int j = runCount; j < runs.length; j++) {
             runs[j] = null;
         }
+    }
+
+    protected GlyphLayout glyphLayout() {
+        return GlyphLayoutManager.getInstance();
     }
 
     private void shape(TextRun run, char[] chars, GlyphLayout layout) {
@@ -1199,7 +1207,7 @@ public class PrismTextLayout implements TextLayout {
 
         GlyphLayout layout = null;
         if ((flags & (FLAGS_HAS_COMPLEX)) != 0) {
-            layout = GlyphLayout.getInstance();
+            layout = glyphLayout();
         }
 
         float tabAdvance = 0;
@@ -1475,7 +1483,7 @@ public class PrismTextLayout implements TextLayout {
                 layoutCache.analysis = flags & ANALYSIS_MASK;
                 synchronized (CACHE_SIZE_LOCK) {
                     int charCount = chars.length;
-                    if (cacheSize + charCount > MAX_CACHE_SIZE) {
+                    if (cacheSize + charCount > maxCacheSize) {
                         stringCache.clear();
                         cacheSize = 0;
                     }

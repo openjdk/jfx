@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -41,8 +41,6 @@ import test.javafx.scene.NodeTest;
 import javafx.scene.Scene;
 import javafx.scene.shape.Rectangle;
 import test.javafx.scene.shape.RectangleTest;
-import org.junit.Assert;
-import org.junit.Test;
 
 import java.lang.reflect.Method;
 import javafx.scene.transform.Affine;
@@ -51,13 +49,15 @@ import javafx.scene.transform.Scale;
 import javafx.scene.transform.Transform;
 import javafx.scene.transform.TransformShim;
 
-import static org.junit.Assert.*;
-
+import org.junit.jupiter.api.Test;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class TransformTest {
 
     public static void assertTx(Node n, BaseTransform trans) {
-        Assert.assertEquals(trans, NodeHelper.getLeafTransform(n));
+        assertEquals(trans, NodeHelper.getLeafTransform(n));
     }
 
 

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -618,7 +618,7 @@ static const NSString *ItemPresentationSizeContext = @"AVPlayerItemPresentationS
 
 - (jint) getVolume: (float *) volume {
 
-    // http://javafx-jira.kenai.com/browse/RT-27005
+    // JDK-8096014
     // TODO: Figure out how to retrieve current volume setting from AVPlayer.
     //       For the time being we assume that the last setVolume() was successful
     //       and return the last value

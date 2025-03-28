@@ -47,13 +47,14 @@
 #include <JavaScriptCore/CatchScope.h>
 #include <JavaScriptCore/HeapInlines.h>
 #include <JavaScriptCore/JSCJSValueInlines.h>
-#include <wtf/IsoMallocInlines.h>
 #include <wtf/Locker.h>
+#include <wtf/TZoneMallocInlines.h>
+#include <wtf/text/MakeString.h>
 
 namespace WebCore {
 using namespace JSC;
 
-WTF_MAKE_ISO_ALLOCATED_IMPL(IDBObjectStore);
+WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(IDBObjectStore);
 
 UniqueRef<IDBObjectStore> IDBObjectStore::create(ScriptExecutionContext& context, const IDBObjectStoreInfo& info, IDBTransaction& transaction)
 {
@@ -74,11 +75,6 @@ IDBObjectStore::IDBObjectStore(ScriptExecutionContext& context, const IDBObjectS
 IDBObjectStore::~IDBObjectStore()
 {
     ASSERT(canCurrentThreadAccessThreadLocalData(m_transaction.database().originThread()));
-}
-
-const char* IDBObjectStore::activeDOMObjectName() const
-{
-    return "IDBObjectStore";
 }
 
 bool IDBObjectStore::virtualHasPendingActivity() const
@@ -109,7 +105,7 @@ ExceptionOr<void> IDBObjectStore::setName(const String& name)
         return { };
 
     if (m_transaction.database().info().hasObjectStore(name))
-        return Exception { ExceptionCode::ConstraintError, makeString("Failed set property 'name' on 'IDBObjectStore': The database already has an object store named '", name, "'.") };
+        return Exception { ExceptionCode::ConstraintError, makeString("Failed set property 'name' on 'IDBObjectStore': The database already has an object store named '"_s, name, "'."_s) };
 
     m_transaction.database().renameObjectStore(*this, name);
     m_info.rename(name);
@@ -767,12 +763,12 @@ void IDBObjectStore::renameReferencedIndex(IDBIndex& index, const String& newNam
     m_referencedIndexes.set(newName, m_referencedIndexes.take(index.info().name()));
 }
 
-void IDBObjectStore::ref()
+void IDBObjectStore::ref() const
 {
     m_transaction.ref();
 }
 
-void IDBObjectStore::deref()
+void IDBObjectStore::deref() const
 {
     m_transaction.deref();
 }

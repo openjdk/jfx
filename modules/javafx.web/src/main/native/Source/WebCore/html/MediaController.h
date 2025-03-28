@@ -47,7 +47,7 @@ class MediaController final
     , public MediaControllerInterface
     , public ContextDestructionObserver
     , public EventTarget {
-    WTF_MAKE_ISO_ALLOCATED(MediaController);
+    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(MediaController);
 public:
     static Ref<MediaController> create(ScriptExecutionContext&);
     virtual ~MediaController();
@@ -99,7 +99,7 @@ private:
 
     void refEventTarget() final { ref(); }
     void derefEventTarget() final { deref(); }
-    EventTargetInterface eventTargetInterface() const final { return MediaControllerEventTargetInterfaceType; }
+    enum EventTargetInterfaceType eventTargetInterface() const final { return EventTargetInterfaceType::MediaController; }
     ScriptExecutionContext* scriptExecutionContext() const final { return ContextDestructionObserver::scriptExecutionContext(); };
 
     void addMediaElement(HTMLMediaElement&);

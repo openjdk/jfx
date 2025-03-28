@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2004 Apple Inc.  All rights reserved.
+ * Copyright (C) 2004-2024 Apple Inc.  All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -32,6 +32,7 @@
 #include "HTMLInterchange.h"
 #include "MarkupExclusionRule.h"
 #include "ParserContentPolicy.h"
+#include "ShadowRoot.h"
 #include <wtf/Forward.h>
 #include <wtf/Function.h>
 #include <wtf/HashMap.h>
@@ -94,14 +95,16 @@ ExceptionOr<void> replaceChildrenWithFragment(ContainerNode&, Ref<DocumentFragme
 enum class ConvertBlocksToInlines : bool { No, Yes };
 enum class SerializeComposedTree : bool { No, Yes };
 enum class IgnoreUserSelectNone : bool { No, Yes };
+enum class PreserveBaseElement : bool { No, Yes };
 WEBCORE_EXPORT String serializePreservingVisualAppearance(const SimpleRange&, Vector<Ref<Node>>* = nullptr, AnnotateForInterchange = AnnotateForInterchange::No, ConvertBlocksToInlines = ConvertBlocksToInlines::No, ResolveURLs = ResolveURLs::No);
 String serializePreservingVisualAppearance(const VisibleSelection&, ResolveURLs = ResolveURLs::No, SerializeComposedTree = SerializeComposedTree::No,
-    IgnoreUserSelectNone = IgnoreUserSelectNone::Yes, Vector<Ref<Node>>* = nullptr);
+    IgnoreUserSelectNone = IgnoreUserSelectNone::Yes, PreserveBaseElement = PreserveBaseElement::No, Vector<Ref<Node>>* = nullptr);
 
 enum class SerializedNodes : uint8_t { SubtreeIncludingNode, SubtreesOfChildren };
 enum class SerializationSyntax : uint8_t { HTML, XML };
-enum class ShouldIncludeShadowDOM : bool { No, Yes };
-WEBCORE_EXPORT String serializeFragment(const Node&, SerializedNodes, Vector<Ref<Node>>* = nullptr, ResolveURLs = ResolveURLs::No, std::optional<SerializationSyntax> = std::nullopt, HashMap<String, String>&& replacementURLStrings = { }, HashMap<RefPtr<CSSStyleSheet>, String>&& replacementURLStringsForCSSStyleSheet = { }, ShouldIncludeShadowDOM = ShouldIncludeShadowDOM::No, const Vector<MarkupExclusionRule>& exclusionRules = { });
+enum class SerializeShadowRoots : uint8_t { Explicit, Serializable, AllForInterchange };
+WEBCORE_EXPORT String serializeFragment(const Node&, SerializedNodes, Vector<Ref<Node>>* = nullptr, ResolveURLs = ResolveURLs::No, std::optional<SerializationSyntax> = std::nullopt, SerializeShadowRoots = SerializeShadowRoots::Explicit, Vector<Ref<ShadowRoot>>&& explicitShadowRoots = { }, const Vector<MarkupExclusionRule>& exclusionRules = { });
+WEBCORE_EXPORT String serializeFragmentWithURLReplacement(const Node&, SerializedNodes, Vector<Ref<Node>>*, ResolveURLs, std::optional<SerializationSyntax>, HashMap<String, String>&& replacementURLStrings, HashMap<RefPtr<CSSStyleSheet>, String>&& replacementURLStringsForCSSStyleSheet, SerializeShadowRoots = SerializeShadowRoots::Explicit, Vector<Ref<ShadowRoot>>&& explicitShadowRoots = { }, const Vector<MarkupExclusionRule>& exclusionRules = { });
 
 String urlToMarkup(const URL&, const String& title);
 

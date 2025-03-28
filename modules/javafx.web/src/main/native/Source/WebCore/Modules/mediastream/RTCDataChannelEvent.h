@@ -34,7 +34,7 @@
 namespace WebCore {
 
 class RTCDataChannelEvent final : public Event {
-    WTF_MAKE_ISO_ALLOCATED(RTCDataChannelEvent);
+    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(RTCDataChannelEvent);
 public:
     struct Init : EventInit {
         RefPtr<RTCDataChannel> channel;
@@ -44,8 +44,6 @@ public:
     static Ref<RTCDataChannelEvent> create(const AtomString& type, Init&&, IsTrusted = IsTrusted::No);
 
     RTCDataChannel& channel();
-
-    virtual EventInterface eventInterface() const;
 
 private:
     RTCDataChannelEvent(const AtomString& type, CanBubble, IsCancelable, Ref<RTCDataChannel>&&);

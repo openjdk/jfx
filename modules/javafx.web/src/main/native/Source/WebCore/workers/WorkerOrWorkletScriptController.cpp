@@ -203,6 +203,14 @@ void WorkerOrWorkletScriptController::disableWebAssembly(const String& errorMess
     m_globalScopeWrapper->setWebAssemblyEnabled(false, errorMessage);
 }
 
+void WorkerOrWorkletScriptController::setRequiresTrustedTypes(bool required)
+{
+    initScriptIfNeeded();
+    JSLockHolder lock { vm() };
+
+    m_globalScopeWrapper->setRequiresTrustedTypes(required);
+}
+
 void WorkerOrWorkletScriptController::evaluate(const ScriptSourceCode& sourceCode, String* returnedExceptionMessage)
 {
     if (isExecutionForbidden())
@@ -285,7 +293,7 @@ bool WorkerOrWorkletScriptController::loadModuleSynchronously(WorkerScriptFetche
 
     Ref protector { scriptFetcher };
     {
-        auto& promise = JSExecState::loadModule(globalObject, sourceCode.jsSourceCode(), JSC::JSScriptFetcher::create(vm, { &scriptFetcher }));
+        auto* promise = JSExecState::loadModule(globalObject, sourceCode.jsSourceCode(), JSC::JSScriptFetcher::create(vm, { &scriptFetcher }));
         scope.assertNoExceptionExceptTermination();
         RETURN_IF_EXCEPTION(scope, false);
 
@@ -365,7 +373,7 @@ bool WorkerOrWorkletScriptController::loadModuleSynchronously(WorkerScriptFetche
             return JSValue::encode(jsUndefined());
         });
 
-        promise.then(&globalObject, &fulfillHandler, &rejectHandler);
+        promise->then(&globalObject, &fulfillHandler, &rejectHandler);
     }
     m_globalScope->eventLoop().performMicrotaskCheckpoint();
 
@@ -442,9 +450,9 @@ void WorkerOrWorkletScriptController::loadAndEvaluateModule(const URL& moduleURL
 
     auto parameters = ModuleFetchParameters::create(JSC::ScriptFetchParameters::Type::JavaScript, emptyString(), /* isTopLevelModule */ true);
     auto scriptFetcher = WorkerScriptFetcher::create(WTFMove(parameters), credentials, globalScope()->destination(), globalScope()->referrerPolicy());
-    {
-        auto& promise = JSExecState::loadModule(globalObject, moduleURL, JSC::JSScriptFetchParameters::create(vm, scriptFetcher->parameters()), JSC::JSScriptFetcher::create(vm, { scriptFetcher.ptr() }));
 
+    auto* promise = JSExecState::loadModule(globalObject, moduleURL, JSC::JSScriptFetchParameters::create(vm, scriptFetcher->parameters()), JSC::JSScriptFetcher::create(vm, { scriptFetcher.ptr() }));
+    if (LIKELY(promise)) {
         auto task = createSharedTask<void(std::optional<Exception>&&)>([completionHandler = WTFMove(completionHandler)](std::optional<Exception>&& exception) mutable {
             completionHandler(WTFMove(exception));
         });
@@ -537,7 +545,7 @@ void WorkerOrWorkletScriptController::loadAndEvaluateModule(const URL& moduleURL
             return JSValue::encode(jsUndefined());
         });
 
-        promise.then(&globalObject, &fulfillHandler, &rejectHandler);
+        promise->then(&globalObject, &fulfillHandler, &rejectHandler);
     }
     m_globalScope->eventLoop().performMicrotaskCheckpoint();
 }
@@ -568,7 +576,6 @@ void WorkerOrWorkletScriptController::initScriptWithSubclass()
     contextPrototype->structure()->setPrototypeWithoutTransition(*m_vm, globalScopePrototype);
 
     proxy->setTarget(*m_vm, m_globalScopeWrapper.get());
-    proxy->structure()->setGlobalObject(*m_vm, m_globalScopeWrapper.get());
 
     ASSERT(m_globalScopeWrapper->globalObject() == m_globalScopeWrapper);
     ASSERT(asObject(m_globalScopeWrapper->getPrototypeDirect())->globalObject() == m_globalScopeWrapper);
@@ -597,12 +604,10 @@ void WorkerOrWorkletScriptController::initScript()
         return;
     }
 
-#if ENABLE(CSS_PAINTING_API)
     if (is<PaintWorkletGlobalScope>(m_globalScope)) {
         initScriptWithSubclass<JSPaintWorkletGlobalScopePrototype, JSPaintWorkletGlobalScope, PaintWorkletGlobalScope>();
         return;
     }
-#endif
 
 #if ENABLE(WEB_AUDIO)
     if (is<AudioWorkletGlobalScope>(m_globalScope)) {

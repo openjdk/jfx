@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2023, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -282,13 +282,13 @@ JNIEXPORT jstring JNICALL Java_com_sun_webkit_dom_DocumentImpl_getReadyStateImpl
     auto readyState = IMPL->readyState();
     const char* readyStateStr { };
     switch (readyState) {
-    case WebCore::Document::Loading:
+    case WebCore::Document::ReadyState::Loading:
         readyStateStr = "loading";
         break;
-    case WebCore::Document::Interactive:
+    case WebCore::Document::ReadyState::Interactive:
         readyStateStr = "interactive";
         break;
-    case WebCore::Document::Complete:
+    case WebCore::Document::ReadyState::Complete:
         readyStateStr = "complete";
         break;
     default:

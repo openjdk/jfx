@@ -28,6 +28,7 @@ import com.sun.glass.events.KeyEvent;
 import com.sun.glass.ui.*;
 import com.sun.glass.ui.CommonDialogs.ExtensionFilter;
 import com.sun.glass.ui.CommonDialogs.FileChooserResult;
+import com.sun.javafx.application.preferences.PreferenceMapping;
 import com.sun.javafx.util.Logging;
 import javafx.scene.paint.Color;
 
@@ -35,8 +36,6 @@ import java.io.File;
 import java.nio.ByteBuffer;
 import java.nio.IntBuffer;
 
-import java.security.AccessController;
-import java.security.PrivilegedAction;
 import java.util.Map;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
@@ -45,15 +44,9 @@ final class MacApplication extends Application implements InvokeLaterDispatcher.
 
     private native static void _initIDs(boolean disableSyncRendering);
     static {
-        @SuppressWarnings("removal")
-        var dummy = AccessController.doPrivileged((PrivilegedAction<Void>) () -> {
-            Application.loadNativeLibrary();
-            return null;
-        });
-        @SuppressWarnings("removal")
-        boolean disableSyncRendering = AccessController
-                .doPrivileged((PrivilegedAction<Boolean>) () ->
-                        Boolean.getBoolean("glass.disableSyncRendering"));
+        Application.loadNativeLibrary();
+        boolean disableSyncRendering =
+            Boolean.getBoolean("glass.disableSyncRendering");
         _initIDs(disableSyncRendering);
     }
 
@@ -63,11 +56,43 @@ final class MacApplication extends Application implements InvokeLaterDispatcher.
     private boolean isTaskbarApplication = false;
     private final InvokeLaterDispatcher invokeLaterDispatcher;
 
+    private static final CountDownLatch keepAliveLatch = new CountDownLatch(1);
+
+    /**
+     * Starts a non-daemon KeepAlive thread to ensure that the
+     * JavaFX toolkit keeps running until the toolkit exits. On
+     * other platforms, the JavaFX Application Thread is created
+     * as a non-daemon Java thread when the toolkit starts. On
+     * macOS, we use the existing AppKit thread as the JavaFX
+     * Application thread, and attach it to the JVM as a daemon
+     * thread. In the case of Swing / JavaFX interop, AWT attaches
+     * the AppKit thread as a daemon thread. Since there is no other
+     * non-daemon thread, we create one so that the JavaFX toolkit
+     * will not exit prematurely.
+     */
+    private static void startKeepAliveThread() {
+        Thread thr = new Thread(() -> {
+            try {
+                keepAliveLatch.await();
+            } catch (InterruptedException ex) {
+                throw new RuntimeException("Unexpected exception: ", ex);
+            }
+        });
+        thr.setName("JavaFX-KeepAlive");
+        thr.setDaemon(false);
+        thr.start();
+    }
+
+    /**
+     * Terminates the KeepAlive thread.
+     */
+    private static void finishKeepAliveThread() {
+        keepAliveLatch.countDown();
+    }
+
     MacApplication() {
         // Embedded in SWT, with shared event thread
-        @SuppressWarnings("removal")
-        boolean isEventThread = AccessController
-                .doPrivileged((PrivilegedAction<Boolean>) () -> Boolean.getBoolean("javafx.embed.isEventThread"));
+        boolean isEventThread = Boolean.getBoolean("javafx.embed.isEventThread");
         if (!isEventThread) {
             invokeLaterDispatcher = new InvokeLaterDispatcher(this);
             invokeLaterDispatcher.start();
@@ -78,8 +103,12 @@ final class MacApplication extends Application implements InvokeLaterDispatcher.
 
     private Menu appleMenu;
 
-    native void _runLoop(ClassLoader classLoader, Runnable launchable,
-                         boolean isTaskbarApplication);
+    private long delegateHandle;
+
+    native long _initDelegate(ClassLoader classLoader, Runnable launchable, boolean isTaskbarApplication);
+
+    native void _runLoop(long delegate);
+
     @Override
     protected void runLoop(final Runnable launchable) {
         // For normal (not embedded) taskbar applications the masOS activation
@@ -96,16 +125,15 @@ final class MacApplication extends Application implements InvokeLaterDispatcher.
             launchable.run();
         };
 
-        @SuppressWarnings("removal")
-        boolean tmp =
-            AccessController.doPrivileged((PrivilegedAction<Boolean>) () -> {
-                String taskbarAppProp = System.getProperty("glass.taskbarApplication");
-                return  !"false".equalsIgnoreCase(taskbarAppProp);
-            });
-        isTaskbarApplication = tmp;
+        String taskbarAppProp = System.getProperty("glass.taskbarApplication");
+        isTaskbarApplication = !"false".equalsIgnoreCase(taskbarAppProp);
+        // Create a non-daemon KeepAlive thread so the FX toolkit
+        // doesn't exit prematurely.
+        startKeepAliveThread();
 
         ClassLoader classLoader = MacApplication.class.getClassLoader();
-        _runLoop(classLoader, wrappedRunnable, isTaskbarApplication);
+        delegateHandle = _initDelegate(classLoader, wrappedRunnable, isTaskbarApplication);
+        _runLoop(delegateHandle);
     }
 
     private final CountDownLatch reactivationLatch = new CountDownLatch(1);
@@ -131,10 +159,11 @@ final class MacApplication extends Application implements InvokeLaterDispatcher.
         eventLoop.enter();
     }
 
-    native private void _finishTerminating();
+    native private void _finishTerminating(long delegateHandle);
     @Override
     protected void finishTerminating() {
-        _finishTerminating();
+        _finishTerminating(delegateHandle);
+        finishKeepAliveThread();
 
         super.finishTerminating();
     }
@@ -396,15 +425,23 @@ final class MacApplication extends Application implements InvokeLaterDispatcher.
 
     private native String _getApplicationClassName();
 
-    @Override
-    public native Map<String, Object> getPlatformPreferences();
+    private native Map<String, Object> _getPlatformPreferences(long delegateHandle);
 
     @Override
-    public Map<String, String> getPlatformKeyMappings() {
+    public Map<String, Object> getPlatformPreferences() {
+        return _getPlatformPreferences(delegateHandle);
+    }
+
+    @Override
+    public Map<String, PreferenceMapping<?, ?>> getPlatformKeyMappings() {
         return Map.of(
-            "macOS.NSColor.textColor", "foregroundColor",
-            "macOS.NSColor.textBackgroundColor", "backgroundColor",
-            "macOS.NSColor.controlAccentColor", "accentColor"
+            "macOS.NSColor.textColor", new PreferenceMapping<>("foregroundColor", Color.class),
+            "macOS.NSColor.textBackgroundColor", new PreferenceMapping<>("backgroundColor", Color.class),
+            "macOS.NSColor.controlAccentColor", new PreferenceMapping<>("accentColor", Color.class),
+            "macOS.NSWorkspace.accessibilityDisplayShouldReduceMotion", new PreferenceMapping<>("reducedMotion", Boolean.class),
+            "macOS.NSWorkspace.accessibilityDisplayShouldReduceTransparency", new PreferenceMapping<>("reducedTransparency", Boolean.class),
+            "macOS.NSScroller.preferredScrollerStyle", new PreferenceMapping<>("persistentScrollBars", String.class, "NSScrollerStyleLegacy"::equals),
+            "macOS.NWPathMonitor.currentPathConstrained", new PreferenceMapping<>("reducedData", Boolean.class)
         );
     }
 
@@ -457,7 +494,12 @@ final class MacApplication extends Application implements InvokeLaterDispatcher.
             Map.entry("macOS.NSColor.systemPurpleColor", Color.class),
             Map.entry("macOS.NSColor.systemRedColor", Color.class),
             Map.entry("macOS.NSColor.systemTealColor", Color.class),
-            Map.entry("macOS.NSColor.systemYellowColor", Color.class)
+            Map.entry("macOS.NSColor.systemYellowColor", Color.class),
+            Map.entry("macOS.NSWorkspace.accessibilityDisplayShouldReduceMotion", Boolean.class),
+            Map.entry("macOS.NSWorkspace.accessibilityDisplayShouldReduceTransparency", Boolean.class),
+            Map.entry("macOS.NSScroller.preferredScrollerStyle", String.class),
+            Map.entry("macOS.NWPathMonitor.currentPathConstrained", Boolean.class),
+            Map.entry("macOS.NWPathMonitor.currentPathExpensive", Boolean.class)
         );
     }
 
@@ -466,16 +508,12 @@ final class MacApplication extends Application implements InvokeLaterDispatcher.
     private static final String AWT_APPLICATION_CLASS = "NSApplicationAWT";
     private static final String AWT_SYSTEM_APPEARANCE = "system";
 
-    @SuppressWarnings("removal")
-    private boolean checkSystemAppearance = AccessController.doPrivileged(
-            (PrivilegedAction<Boolean>) () -> !Boolean.getBoolean(SUPPRESS_AWT_WARNING_PROPERTY));
+    private boolean checkSystemAppearance = !Boolean.getBoolean(SUPPRESS_AWT_WARNING_PROPERTY);
 
     @Override
     public void checkPlatformPreferencesSupport() {
         if (checkSystemAppearance && AWT_APPLICATION_CLASS.equals(applicationClassName)) {
-            @SuppressWarnings("removal")
-            String awtAppearanceProperty = AccessController.doPrivileged(
-                (PrivilegedAction<String>) () -> System.getProperty(AWT_APPEARANCE_PROPERTY));
+            String awtAppearanceProperty = System.getProperty(AWT_APPEARANCE_PROPERTY);
 
             if (!AWT_SYSTEM_APPEARANCE.equals(awtAppearanceProperty)) {
                 Logging.getJavaFXLogger().warning(String.format(

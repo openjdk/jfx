@@ -37,11 +37,11 @@
 #include "FloatConversion.h"
 #include "ScriptExecutionContext.h"
 #include <JavaScriptCore/JSGenericTypedArrayViewInlines.h>
-#include <wtf/IsoMallocInlines.h>
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
-WTF_MAKE_ISO_ALLOCATED_IMPL(AudioBufferSourceNode);
+WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(AudioBufferSourceNode);
 
 constexpr double DefaultGrainDuration = 0.020; // 20ms
 
@@ -299,6 +299,10 @@ bool AudioBufferSourceNode::renderFromBuffer(AudioBus* bus, unsigned destination
     } else if (pitchRate == -1 && !needsInterpolation) {
         int readIndex = static_cast<int>(virtualReadIndex);
         int deltaFrames = static_cast<int>(virtualDeltaFrames);
+        int maxFrame = static_cast<int>(virtualMaxFrame);
+        if (readIndex > maxFrame)
+            readIndex = maxFrame;
+
         int minFrame = static_cast<int>(virtualMinFrame) - 1;
         while (framesToProcess > 0) {
             int framesToEnd = readIndex - minFrame;
@@ -328,9 +332,16 @@ bool AudioBufferSourceNode::renderFromBuffer(AudioBus* bus, unsigned destination
         virtualReadIndex = readIndex;
     } else if (!pitchRate) {
         unsigned readIndex = static_cast<unsigned>(virtualReadIndex);
+        int deltaFrames = static_cast<int>(virtualDeltaFrames);
+        maxFrame = static_cast<unsigned>(virtualMaxFrame);
+
+        if (readIndex >= maxFrame)
+            readIndex -= deltaFrames;
 
         for (unsigned i = 0; i < numberOfChannels; ++i)
             std::fill_n(destinationChannels[i] + writeIndex, framesToProcess, sourceChannels[i][readIndex]);
+
+        virtualReadIndex = readIndex;
     } else if (reverse) {
         unsigned maxFrame = static_cast<unsigned>(virtualMaxFrame);
         unsigned minFrame = static_cast<unsigned>(floorf(virtualMinFrame));
@@ -342,6 +353,12 @@ bool AudioBufferSourceNode::renderFromBuffer(AudioBus* bus, unsigned destination
             unsigned readIndex2 = readIndex + 1;
             if (readIndex2 >= maxFrame)
                 readIndex2 = m_isLooping ? minFrame : readIndex;
+
+            // Final sanity check on buffer access.
+            // FIXME: as an optimization, try to get rid of this inner-loop check and
+            // put assertions and guards before the loop.
+            if (readIndex >= bufferLength || readIndex2 >= bufferLength)
+                break;
 
             // Linear interpolation.
             for (unsigned i = 0; i < numberOfChannels; ++i) {
@@ -409,16 +426,27 @@ bool AudioBufferSourceNode::renderFromBuffer(AudioBus* bus, unsigned destination
     return true;
 }
 
+void AudioBufferSourceNode::acquireBufferContent()
+{
+    ASSERT(isMainThread());
+
+    // FIXME: We should implement https://www.w3.org/TR/webaudio/#acquire-the-content.
+    if (m_buffer)
+        m_buffer->markBuffersAsNonDetachable();
+}
+
 ExceptionOr<void> AudioBufferSourceNode::setBufferForBindings(RefPtr<AudioBuffer>&& buffer)
 {
     ASSERT(isMainThread());
     DEBUG_LOG(LOGIDENTIFIER);
 
+    // This synchronizes with process(), it is important to acquire the processLock before the
+    // graphLock to avoid a deadlock given that this is the order process() acquires the locks
+    // in.
+    Locker locker { m_processLock };
+
     // The context must be locked since changing the buffer can re-configure the number of channels that are output.
     Locker contextLocker { context().graphLock() };
-
-    // This synchronizes with process().
-    Locker locker { m_processLock };
 
     if (buffer && m_wasBufferSet)
         return Exception { ExceptionCode::InvalidStateError, "The buffer was already set"_s };
@@ -445,6 +473,9 @@ ExceptionOr<void> AudioBufferSourceNode::setBufferForBindings(RefPtr<AudioBuffer
     // In case the buffer gets set after playback has started, we need to clamp the grain parameters now.
     if (m_isGrain)
         adjustGrainParameters();
+
+    if (isPlayingOrScheduled())
+        acquireBufferContent();
 
     return { };
 }
@@ -513,6 +544,7 @@ ExceptionOr<void> AudioBufferSourceNode::startPlaying(double when, double grainO
 
     adjustGrainParameters();
 
+    acquireBufferContent();
     m_playbackState = SCHEDULED_STATE;
 
     return { };

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2023, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -30,6 +30,7 @@ import javafx.collections.ObservableList;
 import javafx.scene.Node;
 
 import com.sun.javafx.collections.TrackableObservableList;
+import com.sun.javafx.css.BinarySerializer;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
@@ -331,7 +332,7 @@ final public class Rule {
         os.writeShort(nSelectors);
         for (int i = 0; i < nSelectors; i++) {
             Selector sel = this.selectors.get(i);
-            sel.writeBinary(os, stringStore);
+            BinarySerializer.write(sel, os, stringStore);
         }
 
         List<Declaration> decls = getUnobservedDeclarationList();
@@ -363,7 +364,7 @@ final public class Rule {
         short nSelectors = is.readShort();
         List<Selector> selectors = new ArrayList<>(nSelectors);
         for (int i = 0; i < nSelectors; i++) {
-            Selector s = Selector.readBinary(bssVersion, is, strings);
+            Selector s = BinarySerializer.read(is, strings);
             selectors.add(s);
         }
 

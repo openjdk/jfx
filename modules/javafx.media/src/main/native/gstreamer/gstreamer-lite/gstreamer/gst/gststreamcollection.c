@@ -97,7 +97,7 @@ gst_stream_collection_class_init (GstStreamCollectionClass * klass)
   gobject_class->get_property = gst_stream_collection_get_property;
 
   /**
-   * GstStream:upstream-id:
+   * GstStreamCollection:upstream-id:
    *
    * stream-id
    */
@@ -108,7 +108,7 @@ gst_stream_collection_class_init (GstStreamCollectionClass * klass)
           G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_STRINGS));
 
   /**
-   * GstStream::stream-notify:
+   * GstStreamCollection::stream-notify:
    * @collection: a #GstStreamCollection
    * @prop_stream: the #GstStream that originated the signal
    * @prop: the property that changed
@@ -189,6 +189,7 @@ gst_stream_collection_set_upstream_id (GstStreamCollection * collection,
 {
   g_return_if_fail (collection->upstream_id == NULL);
 
+  GST_OBJECT_LOCK (collection);
   /* Upstream ID should only be set once on construction, but let's
    * not leak in case someone does something silly */
   if (collection->upstream_id)
@@ -196,6 +197,15 @@ gst_stream_collection_set_upstream_id (GstStreamCollection * collection,
 
   if (upstream_id)
     collection->upstream_id = g_strdup (upstream_id);
+
+  /* We hold the object lock, replace directly */
+  g_free (GST_OBJECT_NAME (collection));
+  if (upstream_id)
+    GST_OBJECT_NAME (collection) = g_strdup (upstream_id);
+  else
+    GST_OBJECT_NAME (collection) = g_strdup ("unparented");
+
+  GST_OBJECT_UNLOCK (collection);
 }
 
 /**

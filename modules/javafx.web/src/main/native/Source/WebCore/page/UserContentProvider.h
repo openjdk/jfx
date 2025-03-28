@@ -37,6 +37,15 @@
 #endif
 
 namespace WebCore {
+class UserContentProviderInvalidationClient;
+}
+
+namespace WTF {
+template<typename T> struct IsDeprecatedWeakRefSmartPointerException;
+template<> struct IsDeprecatedWeakRefSmartPointerException<WebCore::UserContentProviderInvalidationClient> : std::true_type { };
+}
+
+namespace WebCore {
 
 class DOMWrapperWorld;
 class DocumentLoader;
@@ -84,7 +93,7 @@ protected:
     WEBCORE_EXPORT void invalidateInjectedStyleSheetCacheInAllFramesInAllPages();
 
 private:
-    SingleThreadWeakHashSet<Page> m_pages;
+    WeakHashSet<Page> m_pages;
     WeakHashSet<UserContentProviderInvalidationClient> m_userMessageHandlerInvalidationClients;
 };
 

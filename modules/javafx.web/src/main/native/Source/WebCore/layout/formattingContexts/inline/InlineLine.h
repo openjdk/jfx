@@ -86,7 +86,7 @@ public:
             HardLineBreak,
             SoftLineBreak,
             WordBreakOpportunity,
-            GenericInlineLevelBox,
+            AtomicInlineBox,
             ListMarkerInside,
             ListMarkerOutside,
             InlineBoxStart,
@@ -98,7 +98,7 @@ public:
         bool isText() const { return m_type == Type::Text || isWordSeparator() || isNonBreakingSpace(); }
         bool isNonBreakingSpace() const { return m_type == Type::NonBreakingSpace; }
         bool isWordSeparator() const { return m_type == Type::WordSeparator; }
-        bool isBox() const { return m_type == Type::GenericInlineLevelBox; }
+        bool isAtomicInlineBox() const { return m_type == Type::AtomicInlineBox; }
         bool isListMarker() const { return isListMarkerInside() || isListMarkerOutside(); }
         bool isListMarkerInside() const { return m_type == Type::ListMarkerInside; }
         bool isListMarkerOutside() const { return m_type == Type::ListMarkerOutside; }
@@ -112,7 +112,7 @@ public:
         bool isInlineBoxEnd() const { return m_type == Type::InlineBoxEnd; }
         bool isOpaque() const { return m_type == Type::Opaque; }
 
-        bool isContentful() const { return (isText() && textContent()->length) || isBox() || isLineBreak() || isListMarker(); }
+        bool isContentful() const { return (isText() && textContent()->length) || isAtomicInlineBox() || isLineBreak() || isListMarker(); }
         bool isGenerated() const { return isListMarker(); }
         static bool isContentfulOrHasDecoration(const Run&, const InlineFormattingContext&);
 
@@ -140,6 +140,10 @@ public:
 
         UBiDiLevel bidiLevel() const { return m_bidiLevel; }
 
+        // FIXME: Maybe add create functions intead?
+        Run(const InlineItem&, const RenderStyle&, InlineLayoutUnit logicalLeft);
+        Run(const InlineItem& lineSpanningInlineBoxItem, InlineLayoutUnit logicalLeft, InlineLayoutUnit logicalWidth);
+
     private:
         friend class Line;
         friend class InlineContentAligner;
@@ -148,8 +152,6 @@ public:
         Run(const InlineTextItem&, const RenderStyle&, InlineLayoutUnit logicalLeft, InlineLayoutUnit logicalWidth);
         Run(const InlineSoftLineBreakItem&, const RenderStyle&, InlineLayoutUnit logicalLeft);
         Run(const InlineItem&, const RenderStyle&, InlineLayoutUnit logicalLeft, InlineLayoutUnit logicalWidth);
-        Run(const InlineItem&, const RenderStyle&, InlineLayoutUnit logicalLeft);
-        Run(const InlineItem& lineSpanningInlineBoxItem, InlineLayoutUnit logicalLeft, InlineLayoutUnit logicalWidth);
 
         const RenderStyle& style() const { return m_style; }
         void expand(const InlineTextItem&, InlineLayoutUnit logicalWidth);
@@ -207,6 +209,7 @@ public:
         InlineLayoutUnit contentLogicalRight { 0.f };
         bool isHangingTrailingContentWhitespace { false };
         InlineLayoutUnit hangingTrailingContentWidth { 0.f };
+        InlineLayoutUnit hangablePunctuationStartWidth { 0.f };
         bool contentNeedsBidiReordering { false };
         size_t nonSpanningInlineLevelBoxCount { 0 };
     };
@@ -218,7 +221,7 @@ private:
     InlineLayoutUnit lastRunLogicalRight() const { return m_runs.isEmpty() ? 0.0f : m_runs.last().logicalRight(); }
 
     void appendTextContent(const InlineTextItem&, const RenderStyle&, InlineLayoutUnit logicalWidth);
-    void appendGenericInlineLevelBox(const InlineItem&, const RenderStyle&, InlineLayoutUnit marginBoxLogicalWidth);
+    void appendAtomicInlineBox(const InlineItem&, const RenderStyle&, InlineLayoutUnit marginBoxLogicalWidth);
     void appendInlineBoxStart(const InlineItem&, const RenderStyle&, InlineLayoutUnit logicalWidth);
     void appendInlineBoxEnd(const InlineItem&, const RenderStyle&, InlineLayoutUnit logicalWidth);
     void appendLineBreak(const InlineItem&, const RenderStyle&);
@@ -269,6 +272,7 @@ private:
         InlineLayoutUnit trailingWidth() const { return m_trailingContent ? m_trailingContent->width : 0.f; }
         InlineLayoutUnit trailingWhitespaceWidth() const { return m_trailingContent && m_trailingContent->type == TrailingContent::Type::Whitespace ? m_trailingContent->width : 0.f; }
 
+        InlineLayoutUnit leadingPunctuationWidth() const { return m_leadingPunctuationWidth; }
         InlineLayoutUnit width() const { return m_leadingPunctuationWidth + trailingWidth(); }
 
         size_t length() const;

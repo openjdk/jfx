@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,7 +25,6 @@
 
 package javafx.scene.control.skin;
 
-import java.lang.ref.WeakReference;
 import java.util.ArrayList;
 import java.util.List;
 import javafx.beans.property.ObjectProperty;
@@ -47,7 +46,6 @@ import javafx.scene.control.TreeTableRow;
 import javafx.scene.control.TreeTableView;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.StackPane;
-import com.sun.javafx.scene.control.IDisconnectable;
 import com.sun.javafx.scene.control.ListenerHelper;
 import com.sun.javafx.scene.control.TreeTableViewBackingList;
 import com.sun.javafx.scene.control.behavior.TreeTableViewBehavior;
@@ -69,10 +67,8 @@ public class TreeTableViewSkin<T> extends TableViewSkinBase<T, TreeItem<T>, Tree
 
     TreeTableViewBackingList<T> tableBackingList;
     ObjectProperty<ObservableList<TreeItem<T>>> tableBackingListProperty;
-
-    private WeakReference<TreeItem<T>> weakRootRef;
     private final TreeTableViewBehavior<T>  behavior;
-    private IDisconnectable rootListener;
+    private final EventHandler<TreeItem.TreeModificationEvent<T>> rootListener;
 
 
 
@@ -97,8 +93,6 @@ public class TreeTableViewSkin<T> extends TableViewSkinBase<T, TreeItem<T>, Tree
 
         flow.setFixedCellSize(control.getFixedCellSize());
         flow.setCellFactory(flow -> createCell());
-
-        setRoot(getSkinnable().getRoot());
 
         ListenerHelper lh = ListenerHelper.get(this);
 
@@ -131,18 +125,57 @@ public class TreeTableViewSkin<T> extends TableViewSkinBase<T, TreeItem<T>, Tree
         behavior.setOnHorizontalUnitScroll(this::horizontalUnitScroll);
         behavior.setOnVerticalUnitScroll(this::verticalUnitScroll);
 
-        lh.addChangeListener(control.rootProperty(), (ev) -> {
-            // fix for RT-37853
-            getSkinnable().edit(-1, null);
-            setRoot(getSkinnable().getRoot());
+        rootListener = (ch) -> {
+            if (ch.wasAdded() && ch.wasRemoved() && ch.getAddedSize() == ch.getRemovedSize()) {
+                // Fix for JDK-8114432, where the children of a TreeItem were changing,
+                // but because the overall item count was staying the same, there was
+                // no event being fired to the skin to be informed that the items
+                // had changed. So, here we just watch for the case where the number
+                // of items being added is equal to the number of items being removed.
+                markItemCountDirty();
+                control.requestLayout();
+            } else if (ch.getEventType().equals(TreeItem.valueChangedEvent())) {
+                // Fix for JDK-8114657 and JDK-8114610.
+                requestRebuildCells();
+            } else {
+                // Fix for JDK-8115929. We are checking to see if the event coming
+                // from the TreeItem root is an event where the count has changed.
+                EventType<?> eventType = ch.getEventType();
+                while (eventType != null) {
+                    if (eventType.equals(TreeItem.<T>expandedItemCountChangeEvent())) {
+                        markItemCountDirty();
+                        control.requestLayout();
+                        break;
+                    }
+                    eventType = eventType.getSuperType();
+                }
+            }
+
+            // fix for JDK-8094887
+            control.edit(-1, null);
+        };
+
+        lh.addChangeListener(control.rootProperty(), true, (src, prev, root) -> {
+            if (prev != null) {
+                prev.removeEventHandler(TreeItem.<T>treeNotificationEvent(), rootListener);
+            }
+            if (root != null) {
+                root.addEventHandler(TreeItem.<T>treeNotificationEvent(), rootListener);
+            }
+            // fix for JDK-8094887
+            control.edit(-1, null);
+            updateItemCount();
         });
 
         lh.addChangeListener(control.showRootProperty(), (ev) -> {
             // if we turn off showing the root, then we must ensure the root
             // is expanded - otherwise we end up with no visible items in
             // the tree.
-            if (! getSkinnable().isShowRoot() && getRoot() != null) {
-                getRoot().setExpanded(true);
+            if (!control.isShowRoot()) {
+                TreeItem<T> root = control.getRoot();
+                if (root != null) {
+                    root.setExpanded(true);
+                }
             }
             // update the item count in the flow and behavior instances
             updateItemCount();
@@ -155,6 +188,8 @@ public class TreeTableViewSkin<T> extends TableViewSkinBase<T, TreeItem<T>, Tree
         lh.addChangeListener(control.fixedCellSizeProperty(), (ev) -> {
             flow.setFixedCellSize(getSkinnable().getFixedCellSize());
         });
+
+        updateItemCount();
     }
 
 
@@ -168,11 +203,6 @@ public class TreeTableViewSkin<T> extends TableViewSkinBase<T, TreeItem<T>, Tree
     @Override
     public void dispose() {
         flow.setCellFactory(null);
-
-        if (rootListener != null) {
-            rootListener.disconnect();
-            rootListener = null;
-        }
 
         if (behavior != null) {
             behavior.dispose();
@@ -277,52 +307,6 @@ public class TreeTableViewSkin<T> extends TableViewSkinBase<T, TreeItem<T>, Tree
 
         cell.updateTreeTableView(treeTableView);
         return cell;
-    }
-
-    private TreeItem<T> getRoot() {
-        return weakRootRef == null ? null : weakRootRef.get();
-    }
-    private void setRoot(TreeItem<T> newRoot) {
-        if (rootListener != null) {
-            rootListener.disconnect();
-            rootListener = null;
-        }
-        weakRootRef = new WeakReference<>(newRoot);
-        if (getRoot() != null) {
-            // TODO I wonder if it might be possible for the root ref to get collected between these two lines
-            // which would throw an NPE.  Perhaps we should simply use newRoot instance instead of getRoot().
-            rootListener = ListenerHelper.get(this).addEventHandler(getRoot(), TreeItem.<T>treeNotificationEvent(), e -> {
-                if (e.wasAdded() && e.wasRemoved() && e.getAddedSize() == e.getRemovedSize()) {
-                    // Fix for RT-14842, where the children of a TreeItem were changing,
-                    // but because the overall item count was staying the same, there was
-                    // no event being fired to the skin to be informed that the items
-                    // had changed. So, here we just watch for the case where the number
-                    // of items being added is equal to the number of items being removed.
-                    markItemCountDirty();
-                    getSkinnable().requestLayout();
-                } else if (e.getEventType().equals(TreeItem.valueChangedEvent())) {
-                    // Fix for RT-14971 and RT-15338.
-                    requestRebuildCells();
-                } else {
-                    // Fix for RT-20090. We are checking to see if the event coming
-                    // from the TreeItem root is an event where the count has changed.
-                    EventType<?> eventType = e.getEventType();
-                    while (eventType != null) {
-                        if (eventType.equals(TreeItem.<T>expandedItemCountChangeEvent())) {
-                            markItemCountDirty();
-                            getSkinnable().requestLayout();
-                            break;
-                        }
-                        eventType = eventType.getSuperType();
-                    }
-                }
-
-                // fix for RT-37853
-                getSkinnable().edit(-1, null);
-            });
-        }
-
-        updateItemCount();
     }
 
     /** {@inheritDoc} */

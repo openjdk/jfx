@@ -42,6 +42,7 @@
 #include "WorkerRunLoop.h"
 #include "WorkerThreadableLoader.h"
 #include "WorkletGlobalScope.h"
+#include <wtf/text/MakeString.h>
 
 namespace WebCore {
 
@@ -100,6 +101,7 @@ ThreadableLoaderOptions ThreadableLoaderOptions::isolatedCopy() const
     copy.preflightPolicy = this->preflightPolicy;
     copy.navigationPreloadIdentifier = this->navigationPreloadIdentifier;
     copy.fetchPriorityHint = this->fetchPriorityHint;
+    copy.shouldEnableContentExtensionsCheck = this->shouldEnableContentExtensionsCheck;
 
     // ThreadableLoaderOptions
     copy.contentSecurityPolicyEnforcement = this->contentSecurityPolicyEnforcement;

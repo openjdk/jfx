@@ -342,7 +342,7 @@ public class Affine3D extends AffineBase {
         switch (state) {
             default:
             /* NOBREAK */
-                // TODO: Optimize these cases ... (RT-26800)
+                // TODO: Optimize these cases ... (JDK-8091788)
             case (APPLY_SHEAR | APPLY_SCALE | APPLY_TRANSLATE):
             /* NOBREAK */
             case (APPLY_SHEAR | APPLY_SCALE):
@@ -433,7 +433,7 @@ public class Affine3D extends AffineBase {
         if ((state & APPLY_3D) == 0) {
             super.inverseTransform(srcPts, srcOff, dstPts, dstOff, numPts);
         } else {
-            // TODO: Optimize... (RT-26800)
+            // TODO: Optimize... (JDK-8091788)
             createInverse().transform(srcPts, srcOff, dstPts, dstOff, numPts);
         }
     }
@@ -446,7 +446,7 @@ public class Affine3D extends AffineBase {
         if ((state & APPLY_3D) == 0) {
             super.inverseDeltaTransform(srcPts, srcOff, dstPts, dstOff, numPts);
         } else {
-            // TODO: Optimize... (RT-26800)
+            // TODO: Optimize... (JDK-8091788)
             createInverse().deltaTransform(srcPts, srcOff, dstPts, dstOff, numPts);
         }
     }
@@ -459,7 +459,7 @@ public class Affine3D extends AffineBase {
         if ((state & APPLY_3D) == 0) {
             super.inverseTransform(srcPts, srcOff, dstPts, dstOff, numPts);
         } else {
-            // TODO: Optimize... (RT-26800)
+            // TODO: Optimize... (JDK-8091788)
             createInverse().transform(srcPts, srcOff, dstPts, dstOff, numPts);
         }
     }
@@ -470,7 +470,7 @@ public class Affine3D extends AffineBase {
         if ((state & APPLY_3D) == 0) {
             return super.inverseTransform(src, dst);
         } else {
-            // TODO: Optimize... (RT-26800)
+            // TODO: Optimize... (JDK-8091788)
             return createInverse().transform(src, dst);
         }
     }
@@ -481,7 +481,7 @@ public class Affine3D extends AffineBase {
         if ((state & APPLY_3D) == 0) {
             return super.inverseTransform(src, dst);
         } else {
-            // TODO: Optimize... (RT-26800)
+            // TODO: Optimize... (JDK-8091788)
             return createInverse().transform(src, dst);
         }
     }
@@ -492,7 +492,7 @@ public class Affine3D extends AffineBase {
         if ((state & APPLY_3D) == 0) {
             return super.inverseDeltaTransform(src, dst);
         } else {
-            // TODO: Optimize... (RT-26800)
+            // TODO: Optimize... (JDK-8091788)
             return createInverse().deltaTransform(src, dst);
         }
     }
@@ -503,7 +503,7 @@ public class Affine3D extends AffineBase {
         if ((state & APPLY_3D) == 0) {
             result = super.inverseTransform(bounds, result);
         } else {
-            // TODO: Optimize... (RT-26800)
+            // TODO: Optimize... (JDK-8091788)
             result = createInverse().transform(bounds, result);
         }
         return result;
@@ -515,7 +515,7 @@ public class Affine3D extends AffineBase {
         if ((state & APPLY_3D) == 0) {
             super.inverseTransform(bounds, result);
         } else {
-            // TODO: Optimize... (RT-26800)
+            // TODO: Optimize... (JDK-8091788)
             createInverse().transform(bounds, result);
         }
     }
@@ -543,7 +543,7 @@ public class Affine3D extends AffineBase {
         // which generates {0, 0, 0, 1} and so can be ignored.
 
         // TODO: Inlining the minor calculations should allow them
-        // to be simplified... (RT-26800)
+        // to be simplified... (JDK-8091788)
         double cxx = minor(0, 0);
         double cyx = -minor(0, 1);
         double czx = minor(0, 2);
@@ -741,7 +741,7 @@ public class Affine3D extends AffineBase {
         this.mzy *= sy;
         this.mzz *= sz;
 
-        // TODO: Optimize the state... (RT-26800)
+        // TODO: Optimize the state... (JDK-8091788)
         updateState();
     }
 

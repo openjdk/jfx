@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2020, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -72,10 +72,14 @@ public class DataUrlWithModuleLayerLauncher {
         ModuleLayer parent = ModuleLayer.boot();
         Configuration cf = parent.configuration().resolve(finder, ModuleFinder.of(), Set.of("mymod"));
         ClassLoader scl = ClassLoader.getSystemClassLoader();
-        ModuleLayer layer = parent.defineModulesWithOneLoader(cf, scl);
+        ModuleLayer.Controller controller = ModuleLayer.defineModulesWithOneLoader(cf, List.of(parent), scl);
+        ModuleLayer layer = controller.layer();
         ClassLoader moduleClassLoader = layer.findLoader("mymod");
         Class appClass = moduleClassLoader.loadClass("javafx.application.Application");
+        Class webClass = moduleClassLoader.loadClass("javafx.scene.web.WebView");
+        controller.enableNativeAccess(webClass.getModule());
         Class testClass = moduleClassLoader.loadClass("myapp7.DataUrlWithModuleLayer");
+        controller.enableNativeAccess(appClass.getModule());
         Method launchMethod = appClass.getMethod("launch", Class.class, String[].class);
         launchMethod.invoke(null, new Object[]{testClass, args});
         System.exit(DataUrlWithModuleLayer.ERROR_UNEXPECTED_EXIT);

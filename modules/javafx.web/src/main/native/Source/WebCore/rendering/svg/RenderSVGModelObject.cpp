@@ -32,7 +32,6 @@
 #include "config.h"
 #include "RenderSVGModelObject.h"
 
-#if ENABLE(LAYER_BASED_SVG_ENGINE)
 #include "RenderElementInlines.h"
 #include "RenderGeometryMap.h"
 #include "RenderLayer.h"
@@ -49,11 +48,11 @@
 #include "SVGPathData.h"
 #include "SVGUseElement.h"
 #include "TransformState.h"
-#include <wtf/IsoMallocInlines.h>
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
-WTF_MAKE_ISO_ALLOCATED_IMPL(RenderSVGModelObject);
+WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(RenderSVGModelObject);
 
 RenderSVGModelObject::RenderSVGModelObject(Type type, Document& document, RenderStyle&& style, OptionSet<SVGModelObjectFlag> typeFlags)
     : RenderLayerModelObject(type, document, WTFMove(style), { }, typeFlags)
@@ -68,6 +67,8 @@ RenderSVGModelObject::RenderSVGModelObject(Type type, SVGElement& element, Rende
     ASSERT(!isLegacyRenderSVGModelObject());
     ASSERT(isRenderSVGModelObject());
 }
+
+RenderSVGModelObject::~RenderSVGModelObject() = default;
 
 void RenderSVGModelObject::updateFromStyle()
 {
@@ -107,14 +108,14 @@ const RenderObject* RenderSVGModelObject::pushMappingToContainer(const RenderLay
     ASSERT(style().position() == PositionType::Static);
 
     bool ancestorSkipped;
-    RenderElement* container = this->container(ancestorToStopAt, ancestorSkipped);
+    CheckedPtr container = this->container(ancestorToStopAt, ancestorSkipped);
     if (!container)
         return nullptr;
 
     ASSERT_UNUSED(ancestorSkipped, !ancestorSkipped);
 
-    pushOntoGeometryMap(geometryMap, ancestorToStopAt, container, ancestorSkipped);
-    return container;
+    pushOntoGeometryMap(geometryMap, ancestorToStopAt, container.get(), ancestorSkipped);
+    return container.get();
 }
 
 LayoutRect RenderSVGModelObject::outlineBoundsForRepaint(const RenderLayerModelObject* repaintContainer, const RenderGeometryMap* geometryMap) const
@@ -154,7 +155,7 @@ void RenderSVGModelObject::styleDidChange(StyleDifference diff, const RenderStyl
     // FIXME: [LBSE] Upstream RenderElement changes
     // bool hasSVGMask = hasSVGMask();
     bool hasSVGMask = false;
-    if (hasSVGMask && hasLayer() && style().visibility() != Visibility::Visible)
+    if (hasSVGMask && hasLayer() && style().usedVisibility() != Visibility::Visible)
         layer()->setHasVisibleContent();
 }
 
@@ -220,11 +221,11 @@ static bool isGraphicsElement(const RenderElement& renderer)
 
 bool RenderSVGModelObject::checkIntersection(RenderElement* renderer, const FloatRect& rect)
 {
-    if (!renderer || renderer->style().effectivePointerEvents() == PointerEvents::None)
+    if (!renderer || renderer->usedPointerEvents() == PointerEvents::None)
         return false;
     if (!isGraphicsElement(*renderer))
         return false;
-    auto* svgElement = downcast<SVGGraphicsElement>(renderer->element());
+    RefPtr svgElement = downcast<SVGGraphicsElement>(renderer->element());
     auto ctm = svgElement->getCTM(SVGLocatable::DisallowStyleUpdate);
     // FIXME: [SVG] checkEnclosure implementation is inconsistent
     // https://bugs.webkit.org/show_bug.cgi?id=262709
@@ -233,11 +234,11 @@ bool RenderSVGModelObject::checkIntersection(RenderElement* renderer, const Floa
 
 bool RenderSVGModelObject::checkEnclosure(RenderElement* renderer, const FloatRect& rect)
 {
-    if (!renderer || renderer->style().effectivePointerEvents() == PointerEvents::None)
+    if (!renderer || renderer->usedPointerEvents() == PointerEvents::None)
         return false;
     if (!isGraphicsElement(*renderer))
         return false;
-    auto* svgElement = downcast<SVGGraphicsElement>(renderer->element());
+    RefPtr svgElement = downcast<SVGGraphicsElement>(renderer->element());
     auto ctm = svgElement->getCTM(SVGLocatable::DisallowStyleUpdate);
     // FIXME: [SVG] checkEnclosure implementation is inconsistent
     // https://bugs.webkit.org/show_bug.cgi?id=262709
@@ -277,16 +278,19 @@ Path RenderSVGModelObject::computeClipPath(AffineTransform& transform) const
     if (layer()->isTransformed())
         transform.multiply(layer()->currentTransform(RenderStyle::individualTransformOperations()).toAffineTransform());
 
-    if (auto* useElement = dynamicDowncast<SVGUseElement>(element())) {
-        if (auto* clipChildRenderer = useElement->rendererClipChild())
+    if (RefPtr useElement = dynamicDowncast<SVGUseElement>(protectedElement())) {
+        if (CheckedPtr clipChildRenderer = useElement->rendererClipChild())
             transform.multiply(downcast<RenderLayerModelObject>(*clipChildRenderer).checkedLayer()->currentTransform(RenderStyle::individualTransformOperations()).toAffineTransform());
-        if (auto clipChild = useElement->clipChild())
+        if (RefPtr clipChild = useElement->clipChild())
             return pathFromGraphicsElement(*clipChild);
     }
 
-    return pathFromGraphicsElement(downcast<SVGGraphicsElement>(element()));
+    return pathFromGraphicsElement(Ref { downcast<SVGGraphicsElement>(element()) });
+}
+
+void RenderSVGModelObject::paintSVGOutline(PaintInfo& paintInfo, const LayoutPoint& adjustedPaintOffset)
+{
+    paintOutline(paintInfo, LayoutRect(adjustedPaintOffset, borderBoxRectEquivalent().size()));
 }
 
 } // namespace WebCore
-
-#endif // ENABLE(LAYER_BASED_SVG_ENGINE)

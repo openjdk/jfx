@@ -25,7 +25,6 @@
 #include "config.h"
 #include "ComplexTextController.h"
 
-#include "CharacterProperties.h"
 #include "FloatSize.h"
 #include "FontCascade.h"
 #include "GlyphBuffer.h"
@@ -35,6 +34,7 @@
 #include <unicode/ubrk.h>
 #include <unicode/utf16.h>
 #include <wtf/StdLibExtras.h>
+#include <wtf/text/CharacterProperties.h>
 #include <wtf/text/TextBreakIterator.h>
 #include <wtf/unicode/CharacterNames.h>
 
@@ -62,11 +62,11 @@ public:
 
     float width(unsigned from, unsigned len, SingleThreadWeakHashSet<const Font>* fallbackFonts)
     {
-        m_controller->advance(from, 0, ByWholeGlyphs, fallbackFonts);
+        m_controller->advance(from, 0, GlyphIterationStyle::ByWholeGlyphs, fallbackFonts);
         float beforeWidth = m_controller->runWidthSoFar();
         if (m_font.wordSpacing() && from && FontCascade::treatAsSpace(m_run[from]))
             beforeWidth += m_font.wordSpacing();
-        m_controller->advance(from + len, 0, ByWholeGlyphs, fallbackFonts);
+        m_controller->advance(from + len, 0, GlyphIterationStyle::ByWholeGlyphs, fallbackFonts);
         float afterWidth = m_controller->runWidthSoFar();
         return afterWidth - beforeWidth;
     }
@@ -211,7 +211,7 @@ unsigned ComplexTextController::offsetForPosition(float h, bool includePartialGl
                 }
 
                 unsigned stringLength = complexTextRun.stringLength();
-                CachedTextBreakIterator cursorPositionIterator(StringView(complexTextRun.characters(), stringLength), nullptr, 0, TextBreakIterator::CaretMode { }, nullAtom());
+                CachedTextBreakIterator cursorPositionIterator(complexTextRun.span(), { }, TextBreakIterator::CaretMode { }, nullAtom());
                 unsigned clusterStart;
                 if (cursorPositionIterator.isBoundary(hitIndex))
                     clusterStart = hitIndex;
@@ -262,7 +262,7 @@ unsigned ComplexTextController::offsetForPosition(float h, bool includePartialGl
     return 0;
 }
 
-bool ComplexTextController::advanceByCombiningCharacterSequence(const CachedTextBreakIterator& graphemeClusterIterator, unsigned& currentIndex, char32_t& baseCharacter, unsigned& markCount)
+void ComplexTextController::advanceByCombiningCharacterSequence(const CachedTextBreakIterator& graphemeClusterIterator, unsigned& currentIndex, char32_t& baseCharacter)
 {
     unsigned remainingCharacters = m_end - currentIndex;
     ASSERT(remainingCharacters);
@@ -279,9 +279,8 @@ bool ComplexTextController::advanceByCombiningCharacterSequence(const CachedText
     unsigned i = 0;
     U16_NEXT(buffer, i, bufferLength, baseCharacter);
     if (U_IS_SURROGATE(baseCharacter)) {
-        markCount = 0;
         currentIndex += i;
-        return false;
+        return;
     }
 
     int delta = remainingCharacters;
@@ -289,10 +288,7 @@ bool ComplexTextController::advanceByCombiningCharacterSequence(const CachedText
     if (auto following = graphemeClusterIterator.following(currentIndex))
         delta = *following - currentIndex;
 
-    markCount = delta - 1;
     currentIndex += delta;
-
-    return true;
 }
 
 void ComplexTextController::collectComplexTextRuns()
@@ -302,13 +298,13 @@ void ComplexTextController::collectComplexTextRuns()
 
     // We break up glyph run generation for the string by Font.
 
-    const UChar* baseOfString = [&] {
+    std::span<const UChar> baseOfString = [&] {
         // We need a 16-bit string to pass to Core Text.
         if (!m_run.is8Bit())
-            return m_run.characters16();
+            return m_run.span16();
         String stringConvertedTo16Bit = m_run.textAsString();
         stringConvertedTo16Bit.convertTo16Bit();
-        auto characters = stringConvertedTo16Bit.characters16();
+        auto characters = stringConvertedTo16Bit.span16();
         m_stringsFor8BitRuns.append(WTFMove(stringConvertedTo16Bit));
         return characters;
     }();
@@ -329,17 +325,15 @@ void ComplexTextController::collectComplexTextRuns()
     const Font* synthesizedFont = nullptr;
     const Font* smallSynthesizedFont = nullptr;
 
-    CachedTextBreakIterator graphemeClusterIterator(m_run.text(), nullptr, 0, TextBreakIterator::CharacterMode { }, m_font.fontDescription().computedLocale());
+    CachedTextBreakIterator graphemeClusterIterator(m_run.text(), { }, TextBreakIterator::CharacterMode { }, m_font.fontDescription().computedLocale());
 
-    unsigned markCount;
     char32_t baseCharacter;
-    if (!advanceByCombiningCharacterSequence(graphemeClusterIterator, currentIndex, baseCharacter, markCount))
-        return;
+    advanceByCombiningCharacterSequence(graphemeClusterIterator, currentIndex, baseCharacter);
 
     // We don't perform font fallback on the capitalized characters when small caps is synthesized.
     // We may want to change this code to do so in the future; if we do, then the logic in initiateFontLoadingByAccessingGlyphDataIfApplicable()
     // would need to be updated accordingly too.
-    nextFont = m_font.fontForCombiningCharacterSequence({ baseOfString, currentIndex });
+    nextFont = m_font.fontForCombiningCharacterSequence(baseOfString.first(currentIndex));
 
     bool isSmallCaps = false;
     bool nextIsSmallCaps = false;
@@ -361,8 +355,7 @@ void ComplexTextController::collectComplexTextRuns()
         isSmallCaps = nextIsSmallCaps;
         auto previousIndex = currentIndex;
 
-        if (!advanceByCombiningCharacterSequence(graphemeClusterIterator, currentIndex, baseCharacter, markCount))
-            return;
+        advanceByCombiningCharacterSequence(graphemeClusterIterator, currentIndex, baseCharacter);
 
         if (synthesizedFont) {
             if (auto capitalizedBase = capitalized(baseCharacter)) {
@@ -380,7 +373,7 @@ void ComplexTextController::collectComplexTextRuns()
             }
         }
 
-        nextFont = m_font.fontForCombiningCharacterSequence({ baseOfString + previousIndex, currentIndex - previousIndex });
+        nextFont = m_font.fontForCombiningCharacterSequence(baseOfString.subspan(previousIndex, currentIndex - previousIndex));
 
         capitalizedBase = capitalized(baseCharacter);
         if (!synthesizedFont && shouldSynthesizeSmallCaps(dontSynthesizeSmallCaps, nextFont, baseCharacter, capitalizedBase, fontVariantCaps, engageAllSmallCapsProcessing)) {
@@ -398,11 +391,11 @@ void ComplexTextController::collectComplexTextRuns()
                 unsigned itemStart = indexOfFontTransition;
                 if (synthesizedFont) {
                     if (isSmallCaps)
-                        collectComplexTextRunsForCharacters(m_smallCapsBuffer.data() + itemStart, itemLength, itemStart, smallSynthesizedFont);
+                        collectComplexTextRunsForCharacters(m_smallCapsBuffer.subspan(itemStart, itemLength), itemStart, smallSynthesizedFont);
                     else
-                        collectComplexTextRunsForCharacters(baseOfString + itemStart, itemLength, itemStart, synthesizedFont);
+                        collectComplexTextRunsForCharacters(baseOfString.subspan(itemStart, itemLength), itemStart, synthesizedFont);
                 } else
-                    collectComplexTextRunsForCharacters(baseOfString + itemStart, itemLength, itemStart, font);
+                    collectComplexTextRunsForCharacters(baseOfString.subspan(itemStart, itemLength), itemStart, font);
                 if (nextFont != font) {
                     synthesizedFont = nullptr;
                     smallSynthesizedFont = nullptr;
@@ -419,11 +412,11 @@ void ComplexTextController::collectComplexTextRuns()
         unsigned itemStart = indexOfFontTransition;
         if (synthesizedFont) {
             if (nextIsSmallCaps)
-                collectComplexTextRunsForCharacters(m_smallCapsBuffer.data() + itemStart, itemLength, itemStart, smallSynthesizedFont);
+                collectComplexTextRunsForCharacters(m_smallCapsBuffer.subspan(itemStart, itemLength), itemStart, smallSynthesizedFont);
             else
-                collectComplexTextRunsForCharacters(baseOfString + itemStart, itemLength, itemStart, synthesizedFont);
+                collectComplexTextRunsForCharacters(baseOfString.subspan(itemStart, itemLength), itemStart, synthesizedFont);
         } else
-            collectComplexTextRunsForCharacters(baseOfString + itemStart, itemLength, itemStart, nextFont);
+            collectComplexTextRunsForCharacters(baseOfString.subspan(itemStart, itemLength), itemStart, nextFont);
     }
 
     if (!m_run.ltr())
@@ -502,7 +495,7 @@ float ComplexTextController::runWidthSoFarFraction(unsigned glyphStartOffset, un
         return 1;
     }
 
-    if (iterationStyle == ByWholeGlyphs) {
+    if (iterationStyle == GlyphIterationStyle::ByWholeGlyphs) {
         if (!oldCharacterInCurrentGlyph)
             return 1;
         return 0;
@@ -655,33 +648,32 @@ void ComplexTextController::adjustGlyphsAndAdvances()
 
         // Lower in this function, synthetic bold is blanket-applied to everything, so no need to double-apply it here.
         float spaceWidth = font.spaceWidth(Font::SyntheticBoldInclusion::Exclude);
-        const UChar* cp = complexTextRun.characters();
+        const UChar* charactersPointer = complexTextRun.characters();
         FloatPoint glyphOrigin;
-        unsigned lastCharacterIndex = m_run.ltr() ? std::numeric_limits<unsigned>::min() : std::numeric_limits<unsigned>::max();
+        unsigned previousCharacterIndex = m_run.ltr() ? std::numeric_limits<unsigned>::min() : std::numeric_limits<unsigned>::max();
         bool isMonotonic = true;
 
-        for (unsigned i = 0; i < glyphCount; i++) {
-            unsigned characterIndex = complexTextRun.indexAt(i);
+        for (unsigned glyphIndex = 0; glyphIndex < glyphCount; glyphIndex++) {
+            unsigned characterIndex = complexTextRun.indexAt(glyphIndex);
             if (m_run.ltr()) {
-                if (characterIndex < lastCharacterIndex)
+                if (characterIndex < previousCharacterIndex)
                     isMonotonic = false;
             } else {
-                if (characterIndex > lastCharacterIndex)
+                if (characterIndex > previousCharacterIndex)
                     isMonotonic = false;
             }
-            UChar ch = *(cp + characterIndex);
+            UChar character = *(charactersPointer + characterIndex);
 
-            bool treatAsSpace = FontCascade::treatAsSpace(ch);
-            CGGlyph glyph = glyphs[i];
-            FloatSize advance = treatAsSpace ? FloatSize(spaceWidth, advances[i].height()) : advances[i];
+            bool treatAsSpace = FontCascade::treatAsSpace(character);
+            CGGlyph glyph = glyphs[glyphIndex];
+            FloatSize advance = treatAsSpace ? FloatSize(spaceWidth, advances[glyphIndex].height()) : advances[glyphIndex];
 
-            if (ch == tabCharacter && m_run.allowTabs()) {
+            if (character == tabCharacter && m_run.allowTabs()) {
                 advance.setWidth(m_font.tabWidth(font, m_run.tabSize(), m_run.xPos() + m_totalAdvance.width(), Font::SyntheticBoldInclusion::Exclude));
                 // Like simple text path in WidthIterator::applyCSSVisibilityRules,
                 // make tabCharacter glyph invisible after advancing.
                 glyph = deletedGlyph;
-            }
-            else if (FontCascade::treatAsZeroWidthSpace(ch) && !treatAsSpace) {
+            } else if (FontCascade::treatAsZeroWidthSpace(character) && !treatAsSpace) {
                 advance.setWidth(0);
                 glyph = font.spaceGlyph();
             }
@@ -689,13 +681,13 @@ void ComplexTextController::adjustGlyphsAndAdvances()
             // https://www.w3.org/TR/css-text-3/#white-space-processing
             // "Control characters (Unicode category Cc)—other than tabs (U+0009), line feeds (U+000A), carriage returns (U+000D) and sequences that form a segment break—must be rendered as a visible glyph"
             // Also, we're omitting Null (U+0000) from this set because Chrome and Firefox do so and it's needed for compat. See https://github.com/w3c/csswg-drafts/pull/6983.
-            if (ch != newlineCharacter && ch != carriageReturn && ch != noBreakSpace && ch != tabCharacter && ch != nullCharacter && isControlCharacter(ch)) {
+            if (character != newlineCharacter && character != carriageReturn && character != noBreakSpace && character != tabCharacter && character != nullCharacter && isControlCharacter(character)) {
                 // Let's assume that .notdef is visible.
                 glyph = 0;
                 advance.setWidth(font.widthForGlyph(glyph));
             }
 
-            if (!i) {
+            if (!glyphIndex) {
                 advance.expand(complexTextRun.initialAdvance().width(), complexTextRun.initialAdvance().height());
                 if (auto* origins = complexTextRun.glyphOrigins())
                     advance.expand(-origins[0].x(), -origins[0].y());
@@ -711,7 +703,7 @@ void ComplexTextController::adjustGlyphsAndAdvances()
 
                 unsigned characterIndexInRun = characterIndex + complexTextRun.stringLocation();
                 bool isFirstCharacter = !(characterIndex + complexTextRun.stringLocation());
-                bool isLastCharacter = characterIndexInRun + 1 == m_run.length() || (U16_IS_LEAD(ch) && characterIndexInRun + 2 == m_run.length() && U16_IS_TRAIL(*(cp + characterIndex + 1)));
+                bool isLastCharacter = characterIndexInRun + 1 == m_run.length() || (U16_IS_LEAD(character) && characterIndexInRun + 2 == m_run.length() && U16_IS_TRAIL(*(charactersPointer + characterIndex + 1)));
 
                 bool forceLeftExpansion = false; // On the left, regardless of m_run.ltr()
                 bool forceRightExpansion = false; // On the right, regardless of m_run.ltr()
@@ -726,7 +718,7 @@ void ComplexTextController::adjustGlyphsAndAdvances()
                 if (runForbidsRightExpansion)
                     forbidRightExpansion = m_run.ltr() ? isLastCharacter : isFirstCharacter;
                 // Handle justification and word-spacing.
-                bool ideograph = FontCascade::canExpandAroundIdeographsInComplexText() && FontCascade::isCJKIdeographOrSymbol(ch);
+                bool ideograph = FontCascade::canExpandAroundIdeographsInComplexText() && FontCascade::isCJKIdeographOrSymbol(character);
                 if (treatAsSpace || ideograph || forceLeftExpansion || forceRightExpansion) {
                     // Distribute the run's total expansion evenly over all expansion opportunities in the run.
                     if (m_expansion) {
@@ -751,7 +743,7 @@ void ComplexTextController::adjustGlyphsAndAdvances()
                         afterExpansion = false;
 
                     // Account for word-spacing.
-                    if (treatAsSpace && (ch != '\t' || !m_run.allowTabs()) && (characterIndex > 0 || runIndex > 0 || ch == noBreakSpace) && m_font.wordSpacing())
+                    if (treatAsSpace && (character != '\t' || !m_run.allowTabs()) && (characterIndex > 0 || runIndex > 0 || character == noBreakSpace) && m_font.wordSpacing())
                         advance.expand(m_font.wordSpacing(), 0);
                 } else
                     afterExpansion = false;
@@ -760,11 +752,11 @@ void ComplexTextController::adjustGlyphsAndAdvances()
             m_totalAdvance += advance;
 
             if (m_forTextEmphasis) {
-                char32_t ch32 = ch;
-                if (U16_IS_SURROGATE(ch))
-                    U16_GET(cp, 0, characterIndex, complexTextRun.stringLength(), ch32);
+                char32_t ch32 = character;
+                if (U16_IS_SURROGATE(character))
+                    U16_GET(charactersPointer, 0, characterIndex, complexTextRun.stringLength(), ch32);
             // FIXME: Combining marks should receive a text emphasis mark if they are combine with a space.
-                if (!FontCascade::canReceiveTextEmphasis(ch32) || (U_GET_GC_MASK(ch) & U_GC_M_MASK))
+                if (!FontCascade::canReceiveTextEmphasis(ch32) || (U_GET_GC_MASK(character) & U_GC_M_MASK))
                     glyph = deletedGlyph;
             }
 
@@ -772,7 +764,7 @@ void ComplexTextController::adjustGlyphsAndAdvances()
             if (auto* origins = complexTextRun.glyphOrigins()) {
                 ASSERT(m_glyphOrigins.size() < m_adjustedBaseAdvances.size());
                 m_glyphOrigins.grow(m_adjustedBaseAdvances.size());
-                m_glyphOrigins[m_glyphOrigins.size() - 1] = origins[i];
+                m_glyphOrigins[m_glyphOrigins.size() - 1] = origins[glyphIndex];
                 ASSERT(m_glyphOrigins.size() == m_adjustedBaseAdvances.size());
             }
             m_adjustedGlyphs.append(glyph);
@@ -785,7 +777,7 @@ void ComplexTextController::adjustGlyphsAndAdvances()
             m_maxGlyphBoundingBoxY = std::max(m_maxGlyphBoundingBoxY, glyphBounds.maxY());
             glyphOrigin.move(advance);
 
-            lastCharacterIndex = characterIndex;
+            previousCharacterIndex = characterIndex;
         }
         if (!isMonotonic)
             complexTextRun.setIsNonMonotonic();

@@ -73,8 +73,6 @@ namespace WebCore {
 typedef double Vector4[4];
 typedef double Vector3[3];
 
-const double SMALL_NUMBER = 1.e-8;
-
 const TransformationMatrix TransformationMatrix::identity { };
 
 // inverse(original_matrix, inverse_matrix)
@@ -216,16 +214,15 @@ static bool inverse(const TransformationMatrix::Matrix4& matrix, TransformationM
     // Calculate the 4x4 determinant
     // If the determinant is zero,
     // then the inverse matrix is not unique.
-    double det = determinant4x4(matrix);
-
-    if (std::abs(det) < SMALL_NUMBER)
+    double determinant = determinant4x4(matrix);
+    if (!std::isnormal(determinant))
         return false;
 
     // Scale the adjoint matrix to get the inverse
 
     for (int i = 0; i < 4; i++)
         for (int j = 0; j < 4; j++)
-            result[i][j] = result[i][j] / det;
+            result[i][j] = result[i][j] / determinant;
 
     return true;
 }
@@ -1588,7 +1585,7 @@ bool TransformationMatrix::isInvertible() const
     if (type == Type::IdentityOrTranslation)
         return true;
 
-    return std::abs(type == Type::Affine ? (m11() * m22() - m12() * m21()) : WebCore::determinant4x4(m_matrix)) >= SMALL_NUMBER;
+    return std::isnormal(type == Type::Affine ? (m11() * m22() - m12() * m21()) : WebCore::determinant4x4(m_matrix));
 }
 
 std::optional<TransformationMatrix> TransformationMatrix::inverse() const
@@ -1614,7 +1611,7 @@ std::optional<TransformationMatrix> TransformationMatrix::inverse() const
         double e = m41();
         double f = m42();
         double determinant = a * d - b * c;
-        if (std::abs(determinant) < SMALL_NUMBER)
+        if (!std::isnormal(determinant))
             return std::nullopt;
 
         double inverseDeterminant = 1 / determinant;
@@ -1652,6 +1649,20 @@ void TransformationMatrix::makeAffine()
 
     m_matrix[3][2] = 0;
     m_matrix[3][3] = 1;
+}
+
+void TransformationMatrix::flatten()
+{
+    m_matrix[0][2] = 0;
+
+    m_matrix[1][2] = 0;
+
+    m_matrix[2][0] = 0;
+    m_matrix[2][1] = 0;
+    m_matrix[2][2] = 1;
+    m_matrix[2][3] = 0;
+
+    m_matrix[3][2] = 0;
 }
 
 AffineTransform TransformationMatrix::toAffineTransform() const
@@ -1917,7 +1928,7 @@ bool TransformationMatrix::isBackFaceVisible() const
     double determinant = WebCore::determinant4x4(m_matrix);
 
     // If the matrix is not invertible, then we assume its backface is not visible.
-    if (std::abs(determinant) < SMALL_NUMBER)
+    if (!std::isnormal(determinant))
         return false;
 
     double cofactor33 = determinant3x3(m11(), m12(), m14(), m21(), m22(), m24(), m41(), m42(), m44());
@@ -1926,6 +1937,12 @@ bool TransformationMatrix::isBackFaceVisible() const
     return zComponentOfTransformedNormal < 0;
 }
 
+TransformationMatrix TransformationMatrix::transpose() const
+{
+    TransformationMatrix transpose;
+    transposeMatrix4(m_matrix, transpose.m_matrix);
+    return transpose;
+}
 TextStream& operator<<(TextStream& ts, const TransformationMatrix& transform)
 {
     TextStream::IndentScope indentScope(ts);

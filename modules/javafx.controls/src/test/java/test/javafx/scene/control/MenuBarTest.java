@@ -25,52 +25,48 @@
 
 package test.javafx.scene.control;
 
-import com.sun.javafx.scene.SceneHelper;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
-
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import javafx.scene.Node;
 import javafx.scene.Parent;
 import javafx.scene.Scene;
+import javafx.scene.control.CheckBox;
+import javafx.scene.control.Menu;
+import javafx.scene.control.MenuBar;
+import javafx.scene.control.MenuButton;
+import javafx.scene.control.MenuItem;
+import javafx.scene.control.skin.MenuBarSkin;
 import javafx.scene.control.skin.MenuBarSkinShim;
 import javafx.scene.input.KeyCode;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.AnchorPane;
 import javafx.scene.layout.VBox;
 import javafx.stage.Stage;
-
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
-
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import com.sun.javafx.scene.SceneHelper;
+import com.sun.javafx.scene.control.ContextMenuContent;
+import com.sun.javafx.scene.control.MenuBarMenuButtonShim;
+import com.sun.javafx.tk.Toolkit;
 import test.com.sun.javafx.pgstub.StubToolkit;
 import test.com.sun.javafx.scene.control.infrastructure.KeyEventFirer;
 import test.com.sun.javafx.scene.control.infrastructure.KeyModifier;
 import test.com.sun.javafx.scene.control.infrastructure.MouseEventGenerator;
-import com.sun.javafx.scene.control.ContextMenuContent;
-import com.sun.javafx.scene.control.MenuBarMenuButtonShim;
-import javafx.scene.control.skin.MenuBarSkin;
-import com.sun.javafx.tk.Toolkit;
-import javafx.scene.control.CheckBox;
-import javafx.scene.control.Menu;
-import javafx.scene.control.MenuBar;
-import javafx.scene.control.MenuButton;
-import javafx.scene.control.MenuItem;
-
 
 /**
  *
  * @author lubermud
  */
-
 public class MenuBarTest {
     private MenuBar menuBar;
     private Toolkit tk;
     private Scene scene;
     private Stage stage;
 
-    @Before public void setup() {
+    @BeforeEach
+    public void setup() {
         setUncaughtExceptionHandler();
 
         tk = Toolkit.getToolkit();
@@ -81,7 +77,8 @@ public class MenuBarTest {
         menuBar.setUseSystemMenuBar(false);
     }
 
-    @After public void cleanup() {
+    @AfterEach
+    public void cleanup() {
         if (stage != null) {
             stage.hide();
         }

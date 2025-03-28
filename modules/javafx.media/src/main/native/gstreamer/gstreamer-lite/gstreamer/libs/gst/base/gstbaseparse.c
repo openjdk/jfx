@@ -699,7 +699,7 @@ gst_base_parse_frame_copy (GstBaseParseFrame * frame)
 {
   GstBaseParseFrame *copy;
 
-  copy = g_slice_dup (GstBaseParseFrame, frame);
+  copy = g_memdup2 (frame, sizeof (GstBaseParseFrame));
   copy->buffer = gst_buffer_ref (frame->buffer);
   copy->_private_flags &= ~GST_BASE_PARSE_FRAME_PRIVATE_FLAG_NOALLOC;
 
@@ -725,7 +725,7 @@ gst_base_parse_frame_free (GstBaseParseFrame * frame)
   }
 
   if (!(frame->_private_flags & GST_BASE_PARSE_FRAME_PRIVATE_FLAG_NOALLOC)) {
-    g_slice_free (GstBaseParseFrame, frame);
+    g_free (frame);
   } else {
     memset (frame, 0, sizeof (*frame));
   }
@@ -774,7 +774,7 @@ gst_base_parse_frame_new (GstBuffer * buffer, GstBaseParseFrameFlags flags,
 {
   GstBaseParseFrame *frame;
 
-  frame = g_slice_new0 (GstBaseParseFrame);
+  frame = g_new0 (GstBaseParseFrame, 1);
   frame->buffer = gst_buffer_ref (buffer);
 
   GST_TRACE ("created frame %p", frame);
@@ -2297,6 +2297,10 @@ gst_base_parse_handle_buffer (GstBaseParse * parse, GstBuffer * buffer,
       outbuf = gst_buffer_make_writable (outbuf);
       GST_BUFFER_PTS (outbuf) = pts;
       GST_BUFFER_DTS (outbuf) = dts;
+      GST_BUFFER_OFFSET (outbuf) = GST_BUFFER_OFFSET_NONE;
+      GST_BUFFER_DURATION (outbuf) = GST_CLOCK_TIME_NONE;
+      GST_BUFFER_OFFSET_END (outbuf) = GST_BUFFER_OFFSET_NONE;
+      GST_BUFFER_FLAGS (outbuf) = 0;
       parse->priv->buffers_head =
           g_slist_prepend (parse->priv->buffers_head, outbuf);
       outbuf = NULL;
@@ -2689,10 +2693,13 @@ no_caps:
  * @frame: a #GstBaseParseFrame
  * @size: consumed input data represented by frame
  *
- * Collects parsed data and pushes this downstream.
+ * Collects parsed data and pushes it downstream.
  * Source pad caps must be set when this is called.
  *
- * If @frame's out_buffer is set, that will be used as subsequent frame data.
+ * If @frame's out_buffer is set, that will be used as subsequent frame data,
+ * and @size amount will be flushed from the input data. The output_buffer size
+ * can differ from the consumed size indicated by @size.
+ *
  * Otherwise, @size samples will be taken from the input and used for output,
  * and the output's metadata (timestamps etc) will be taken as (optionally)
  * set by the subclass on @frame's (input) buffer (which is otherwise
@@ -2739,6 +2746,7 @@ gst_base_parse_finish_frame (GstBaseParse * parse, GstBaseParseFrame * frame,
     GstBuffer *src, *dest;
 
     frame->out_buffer = gst_adapter_take_buffer (parse->priv->adapter, size);
+    frame->out_buffer = gst_buffer_make_writable (frame->out_buffer);
     dest = frame->out_buffer;
     src = frame->buffer;
     GST_BUFFER_PTS (dest) = GST_BUFFER_PTS (src);
@@ -2746,7 +2754,7 @@ gst_base_parse_finish_frame (GstBaseParse * parse, GstBaseParseFrame * frame,
     GST_BUFFER_OFFSET (dest) = GST_BUFFER_OFFSET (src);
     GST_BUFFER_DURATION (dest) = GST_BUFFER_DURATION (src);
     GST_BUFFER_OFFSET_END (dest) = GST_BUFFER_OFFSET_END (src);
-    GST_MINI_OBJECT_FLAGS (dest) = GST_MINI_OBJECT_FLAGS (src);
+    GST_BUFFER_FLAGS (dest) = GST_BUFFER_FLAGS (src);
   } else {
     gst_adapter_flush (parse->priv->adapter, size);
   }

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014, 2018, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2014, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,6 +25,8 @@
 
 package test.robot.test3d;
 
+import static org.junit.jupiter.api.Assumptions.assumeTrue;
+import java.util.concurrent.TimeUnit;
 import javafx.application.ConditionalFeature;
 import javafx.application.Platform;
 import javafx.scene.Group;
@@ -35,16 +37,16 @@ import javafx.scene.shape.Circle;
 import javafx.scene.text.Text;
 import javafx.scene.transform.Rotate;
 import javafx.stage.Stage;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 import test.robot.testharness.VisualTestBase;
-
-import static org.junit.Assume.assumeTrue;
 
 /**
  * Test 2D shapes rendered with a 3D transform where some of the shapes
  * have empty bounds.
  */
+@Timeout(value=15000, unit=TimeUnit.MILLISECONDS)
 public class RT35019Test extends VisualTestBase {
 
     private Stage testStage;
@@ -52,12 +54,12 @@ public class RT35019Test extends VisualTestBase {
 
     private static final double TOLERANCE = 0.07;
 
-    @Before
+    @BeforeEach
     public void setupEach() {
         assumeTrue(Platform.isSupported(ConditionalFeature.SCENE3D));
     }
 
-    @Test(timeout = 15000)
+    @Test
     public void testEmptyShapes() {
         final int WIDTH = 400;
         final int HEIGHT = 300;

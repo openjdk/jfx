@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,10 +25,11 @@
 
 package test.javafx.scene.control;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import javafx.scene.control.IndexRange;
-import org.junit.Test;
-
-import static org.junit.Assert.*;
+import org.junit.jupiter.api.Test;
 
 /**
  */
@@ -50,9 +51,11 @@ public class IndexRangeTest {
         assertEquals(20, range.getEnd());
     }
 
-    @Test (expected = IllegalArgumentException.class)
+    @Test
     public void createRangeWithEndLessThanStartResultsIn_IAE() {
-        new IndexRange(20, 10);
+        assertThrows(IllegalArgumentException.class, () -> {
+            new IndexRange(20, 10);
+        });
     }
 
     @Test public void createRangeUsingCopyConstructor() {
@@ -62,9 +65,11 @@ public class IndexRangeTest {
         assertEquals(20, range.getEnd());
     }
 
-    @Test (expected = NullPointerException.class)
+    @Test
     public void createRangeUsingCopyConstructorPassingNullResultsIn_NPE() {
-        new IndexRange(null);
+        assertThrows(NullPointerException.class, () -> {
+            new IndexRange(null);
+        });
     }
 
     /*********************************************************************

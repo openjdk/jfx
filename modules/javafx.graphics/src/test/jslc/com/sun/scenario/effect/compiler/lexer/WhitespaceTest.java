@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008, 2019, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2008, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -26,32 +26,33 @@
 package com.sun.scenario.effect.compiler.lexer;
 
 import com.sun.scenario.effect.compiler.JSLLexer;
-import org.junit.Test;
+
+import org.junit.jupiter.api.Test;
 
 public class WhitespaceTest extends LexerBase {
 
     @Test
-    public void tab() throws Exception {
+    public void tab() {
         assertRecognized('\t');
     }
 
     @Test
-    public void space() throws Exception {
+    public void space() {
         assertRecognized(' ');
     }
 
     @Test
-    public void newLine() throws Exception {
+    public void newLine() {
         assertRecognized('\n');
     }
 
     @Test
-    public void carriageReturn() throws Exception {
+    public void carriageReturn() {
         assertRecognized('\r');
     }
 
     @Test
-    public void nonSpace() throws Exception {
+    public void nonSpace() {
         assertNotRecognized('4');
     }
 

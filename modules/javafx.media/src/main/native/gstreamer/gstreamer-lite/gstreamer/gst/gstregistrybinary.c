@@ -105,7 +105,7 @@ typedef struct BinaryRegistryCache
 static BinaryRegistryCache *
 gst_registry_binary_cache_init (GstRegistry * registry, const char *location)
 {
-  BinaryRegistryCache *cache = g_slice_new0 (BinaryRegistryCache);
+  BinaryRegistryCache *cache = g_new0 (BinaryRegistryCache, 1);
   cache->location = location;
   return cache;
 }
@@ -159,7 +159,7 @@ gst_registry_binary_cache_finish (BinaryRegistryCache * cache, gboolean success)
   }
 
   g_free (cache->mem);
-  g_slice_free (BinaryRegistryCache, cache);
+  g_free (cache);
   return ret;
 }
 
@@ -175,7 +175,7 @@ typedef struct BinaryRegistryCache
 static BinaryRegistryCache *
 gst_registry_binary_cache_init (GstRegistry * registry, const char *location)
 {
-  BinaryRegistryCache *cache = g_slice_new0 (BinaryRegistryCache);
+  BinaryRegistryCache *cache = g_new0 (BinaryRegistryCache, 1);
   int fd;
 
   cache->location = location;
@@ -205,7 +205,7 @@ gst_registry_binary_cache_init (GstRegistry * registry, const char *location)
     if (fd == -1) {
       GST_DEBUG ("g_mkstemp() failed: %s", g_strerror (errno));
       g_free (cache->tmp_location);
-      g_slice_free (BinaryRegistryCache, cache);
+      g_free (cache);
       return NULL;
     }
 
@@ -220,7 +220,7 @@ gst_registry_binary_cache_init (GstRegistry * registry, const char *location)
     GST_DEBUG ("fdopen() failed: %s", g_strerror (errno));
     close (fd);
     g_free (cache->tmp_location);
-    g_slice_free (BinaryRegistryCache, cache);
+    g_free (cache);
     return NULL;
   }
 
@@ -312,7 +312,7 @@ gst_registry_binary_cache_finish (BinaryRegistryCache * cache, gboolean success)
   }
 
   g_free (cache->tmp_location);
-  g_slice_free (BinaryRegistryCache, cache);
+  g_free (cache);
   GST_INFO ("Wrote binary registry cache");
   return TRUE;
 
@@ -326,7 +326,7 @@ fail_after_fclose:
   {
     g_unlink (cache->tmp_location);
     g_free (cache->tmp_location);
-    g_slice_free (BinaryRegistryCache, cache);
+    g_free (cache);
     return FALSE;
   }
 fflush_failed:

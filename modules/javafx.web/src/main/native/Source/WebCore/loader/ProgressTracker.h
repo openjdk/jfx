@@ -43,9 +43,10 @@ class ResourceResponse;
 class ProgressTrackerClient;
 struct ProgressItem;
 
-class ProgressTracker : public CanMakeCheckedPtr {
+class ProgressTracker final : public CanMakeCheckedPtr<ProgressTracker> {
     WTF_MAKE_NONCOPYABLE(ProgressTracker);
     WTF_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(Loader);
+    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(ProgressTracker);
 public:
     explicit ProgressTracker(Page&, UniqueRef<ProgressTrackerClient>&&);
     ~ProgressTracker();
@@ -74,7 +75,7 @@ private:
     void progressHeartbeatTimerFired();
     Ref<Page> protectedPage() const;
 
-    SingleThreadWeakRef<Page> m_page;
+    WeakRef<Page> m_page;
     UniqueRef<ProgressTrackerClient> m_client;
     RefPtr<LocalFrame> m_originatingProgressFrame;
     HashMap<ResourceLoaderIdentifier, std::unique_ptr<ProgressItem>> m_progressItems;

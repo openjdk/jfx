@@ -34,12 +34,12 @@
 #include "AuthenticatorCoordinatorClient.h"
 #include "AuthenticatorResponseData.h"
 #include "Document.h"
-#include "FeaturePolicy.h"
 #include "FrameDestructionObserverInlines.h"
 #include "JSBasicCredential.h"
 #include "JSCredentialCreationOptions.h"
 #include "JSCredentialRequestOptions.h"
 #include "JSDOMPromiseDeferred.h"
+#include "PermissionsPolicy.h"
 #include "PublicKeyCredential.h"
 #include "PublicKeyCredentialCreationOptions.h"
 #include "PublicKeyCredentialRequestOptions.h"
@@ -86,6 +86,26 @@ static String processAppIdExtension(const SecurityOrigin& facetId, const String&
     return appId;
 }
 
+static ScopeAndCrossOriginParent scopeAndCrossOriginParent(const Document& document)
+{
+    bool isSameSite = true;
+    Ref origin = document.securityOrigin();
+    auto url = document.url();
+    std::optional<SecurityOriginData> crossOriginParent;
+    for (RefPtr parentDocument = document.parentDocument(); parentDocument; parentDocument = parentDocument->parentDocument()) {
+        if (!origin->isSameOriginDomain(parentDocument->securityOrigin()) && !areRegistrableDomainsEqual(url, parentDocument->url()))
+            isSameSite = false;
+        if (!crossOriginParent && !origin->isSameOriginAs(parentDocument->securityOrigin()))
+            crossOriginParent = parentDocument->securityOrigin().data();
+    }
+
+    if (!crossOriginParent)
+        return std::pair { WebAuthn::Scope::SameOrigin, std::nullopt };
+    if (isSameSite)
+        return std::pair { WebAuthn::Scope::SameSite, crossOriginParent };
+    return std::pair { WebAuthn::Scope::CrossOrigin, crossOriginParent };
+}
+
 } // namespace AuthenticatorCoordinatorInternal
 
 AuthenticatorCoordinator::AuthenticatorCoordinator(std::unique_ptr<AuthenticatorCoordinatorClient>&& client)
@@ -98,18 +118,24 @@ void AuthenticatorCoordinator::setClient(std::unique_ptr<AuthenticatorCoordinato
     m_client = WTFMove(client);
 }
 
-void AuthenticatorCoordinator::create(const Document& document, CredentialCreationOptions&& createOptions, WebAuthn::Scope scope, RefPtr<AbortSignal>&& abortSignal, CredentialPromise&& promise)
+void AuthenticatorCoordinator::create(const Document& document, CredentialCreationOptions&& createOptions, RefPtr<AbortSignal>&& abortSignal, CredentialPromise&& promise)
 {
     using namespace AuthenticatorCoordinatorInternal;
 
     const auto& callerOrigin = document.securityOrigin();
     auto* frame = document.frame();
-    const auto& options = createOptions.publicKey.value();
     ASSERT(frame);
     // The following implements https://www.w3.org/TR/webauthn-2/#createCredential as of 28 June 2022.
     // Step 1, 3, 16 are handled by the caller.
+    // Step 1
+    if (!createOptions.publicKey) {
+        promise.reject(Exception { ExceptionCode::NotSupportedError, "Only PublicKeyCredential is supported."_s });
+        return;
+    }
+    const auto& options = createOptions.publicKey.value();
+
     // Step 2.
-    if (scope != WebAuthn::Scope::SameOrigin) {
+    if (scopeAndCrossOriginParent(document).first != WebAuthn::Scope::SameOrigin) {
         promise.reject(Exception { ExceptionCode::NotAllowedError, "The origin of the document is not the same as its ancestors."_s });
         return;
     }
@@ -131,10 +157,6 @@ void AuthenticatorCoordinator::create(const Document& document, CredentialCreati
     // Step 8.
     if (!options.rp.id)
         options.rp.id = callerOrigin.domain();
-    else if (!callerOrigin.isMatchingRegistrableDomainSuffix(*options.rp.id)) {
-        promise.reject(Exception { ExceptionCode::SecurityError, "The provided RP ID is not a registrable domain suffix of the effective domain of the document."_s });
-        return;
-    }
 
     // Step 9-11.
     // Most of the jobs are done by bindings.
@@ -155,17 +177,25 @@ void AuthenticatorCoordinator::create(const Document& document, CredentialCreati
     ASSERT(options.rp.id);
 
     AuthenticationExtensionsClientInputs extensionInputs = {
-        String(),
+        nullString(),
         false,
+        std::nullopt,
         std::nullopt
     };
 
     if (auto extensions = options.extensions) {
         extensionInputs.credProps = extensions->credProps;
         extensionInputs.largeBlob = extensions->largeBlob;
+        extensionInputs.prf = extensions->prf;
     }
 
     options.extensions = extensionInputs;
+    if (options.extensions && options.extensions->largeBlob) {
+        if (options.extensions->largeBlob->read || options.extensions->largeBlob->write) {
+            promise.reject(Exception { ExceptionCode::NotAllowedError, "Read and write may not be present in largeBlob for registration."_s });
+            return;
+        }
+    }
 
     // Step 4, 18-22.
     if (!m_client) {
@@ -181,10 +211,9 @@ void AuthenticatorCoordinator::create(const Document& document, CredentialCreati
             weakThis->m_client->cancel([weakThis = WTFMove(weakThis)] () mutable {
                 if (!weakThis)
                     return;
-                if (auto queuedRequest = WTFMove(weakThis->m_queuedRequest)) {
                     weakThis->m_isCancelling = false;
+                if (auto queuedRequest = WTFMove(weakThis->m_queuedRequest))
                     queuedRequest();
-                }
             });
         });
     }
@@ -219,19 +248,31 @@ void AuthenticatorCoordinator::create(const Document& document, CredentialCreati
     m_client->makeCredential(*frame, options, createOptions.mediation, WTFMove(callback));
 }
 
-void AuthenticatorCoordinator::discoverFromExternalSource(const Document& document, CredentialRequestOptions&& requestOptions, const ScopeAndCrossOriginParent& scopeAndCrossOriginParent, CredentialPromise&& promise)
+void AuthenticatorCoordinator::discoverFromExternalSource(const Document& document, CredentialRequestOptions&& requestOptions, CredentialPromise&& promise)
 {
     using namespace AuthenticatorCoordinatorInternal;
 
     auto& callerOrigin = document.securityOrigin();
     RefPtr frame = document.frame();
-    const auto& options = requestOptions.publicKey.value();
     ASSERT(frame);
     // The following implements https://www.w3.org/TR/webauthn/#createCredential as of 5 December 2017.
-    // Step 1, 3, 13 are handled by the caller.
+    // Step 3, 13 are handled by the caller.
     // Step 2.
     // This implements https://www.w3.org/TR/webauthn-2/#sctn-permissions-policy
-    if (scopeAndCrossOriginParent.first != WebAuthn::Scope::SameOrigin && !isFeaturePolicyAllowedByDocumentAndAllOwners(FeaturePolicy::Type::PublickeyCredentialsGetRule, document, LogFeaturePolicyFailure::No)) {
+    if (!requestOptions.publicKey) {
+        promise.reject(Exception { ExceptionCode::NotSupportedError, "Only PublicKeyCredential is supported."_s });
+        return;
+    }
+
+    // The request will be aborted in WebAuthenticatorCoordinatorProxy if conditional mediation is not available.
+    if (requestOptions.mediation != MediationRequirement::Conditional && !document.hasFocus()) {
+        promise.reject(Exception { ExceptionCode::NotAllowedError, "The document is not focused."_s });
+        return;
+    }
+
+    const auto& options = requestOptions.publicKey.value();
+    auto scopeCrossOriginParent = scopeAndCrossOriginParent(document);
+    if (scopeCrossOriginParent.first != WebAuthn::Scope::SameOrigin && !PermissionsPolicy::isFeatureEnabled(PermissionsPolicy::Feature::PublickeyCredentialsGetRule, document, PermissionsPolicy::ShouldReportViolation::No)) {
         promise.reject(Exception { ExceptionCode::NotAllowedError, "The origin of the document is not the same as its ancestors."_s });
         return;
     }
@@ -245,10 +286,6 @@ void AuthenticatorCoordinator::discoverFromExternalSource(const Document& docume
     }
 
     // Step 7.
-    if (!options.rpId.isEmpty() && !callerOrigin.isMatchingRegistrableDomainSuffix(options.rpId)) {
-        promise.reject(Exception { ExceptionCode::SecurityError, "The provided RP ID is not a registrable domain suffix of the effective domain of the document."_s });
-        return;
-    }
     if (options.rpId.isEmpty())
         options.rpId = callerOrigin.domain();
 
@@ -256,12 +293,27 @@ void AuthenticatorCoordinator::discoverFromExternalSource(const Document& docume
     // Only FIDO AppID Extension is supported.
     if (options.extensions && !options.extensions->appid.isNull()) {
         // The following implements https://www.w3.org/TR/webauthn/#sctn-appid-extension as of 4 March 2019.
+        if (options.extensions->appid.isEmpty()) {
+            promise.reject(Exception { ExceptionCode::NotAllowedError, "Empty appid in create request."_s });
+            return;
+        }
         auto appid = processAppIdExtension(callerOrigin, options.extensions->appid);
         if (!appid) {
             promise.reject(Exception { ExceptionCode::SecurityError, "The origin of the document is not authorized for the provided App ID."_s });
             return;
         }
         options.extensions->appid = appid;
+    }
+
+    if (options.extensions && options.extensions->largeBlob) {
+        if (!options.extensions->largeBlob->support.isEmpty()) {
+            promise.reject(Exception { ExceptionCode::NotAllowedError, "Support should not be present in largeBlob for assertion."_s });
+            return;
+        }
+        if (options.extensions->largeBlob->read && options.extensions->largeBlob->write) {
+            promise.reject(Exception { ExceptionCode::NotAllowedError, "Both read and write may not be present together in largeBlob."_s });
+            return;
+        }
     }
 
     // Step 4, 14-19.
@@ -278,10 +330,9 @@ void AuthenticatorCoordinator::discoverFromExternalSource(const Document& docume
             weakThis->m_client->cancel([weakThis = WTFMove(weakThis)] () mutable {
                 if (!weakThis)
                     return;
-                if (auto queuedRequest = WTFMove(weakThis->m_queuedRequest)) {
                     weakThis->m_isCancelling = false;
+                if (auto queuedRequest = WTFMove(weakThis->m_queuedRequest))
                     queuedRequest();
-                }
         });
         });
     }
@@ -301,19 +352,19 @@ void AuthenticatorCoordinator::discoverFromExternalSource(const Document& docume
     };
 
     if (m_isCancelling) {
-        m_queuedRequest = [weakThis = WeakPtr { *this }, weakFrame = WeakPtr { *frame }, requestOptions = WTFMove(requestOptions), scopeAndCrossOriginParent, callback = WTFMove(callback)]() mutable {
+        m_queuedRequest = [weakThis = WeakPtr { *this }, weakFrame = WeakPtr { *frame }, requestOptions = WTFMove(requestOptions), scopeCrossOriginParent, callback = WTFMove(callback)]() mutable {
             if (!weakThis || !weakFrame)
                 return;
             const auto options = requestOptions.publicKey.value();
             RefPtr frame = weakFrame.get();
             if (!frame)
                 return;
-            weakThis->m_client->getAssertion(*weakFrame, options, requestOptions.mediation, scopeAndCrossOriginParent, WTFMove(callback));
+            weakThis->m_client->getAssertion(*weakFrame, options, requestOptions.mediation, scopeCrossOriginParent, WTFMove(callback));
         };
         return;
     }
     // Async operations are dispatched and handled in the messenger.
-    m_client->getAssertion(*frame, options, requestOptions.mediation, scopeAndCrossOriginParent, WTFMove(callback));
+    m_client->getAssertion(*frame, options, requestOptions.mediation, scopeCrossOriginParent, WTFMove(callback));
 }
 
 void AuthenticatorCoordinator::isUserVerifyingPlatformAuthenticatorAvailable(const Document& document, DOMPromiseDeferred<IDLBoolean>&& promise) const

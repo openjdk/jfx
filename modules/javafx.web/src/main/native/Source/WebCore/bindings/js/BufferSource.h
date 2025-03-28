@@ -33,6 +33,7 @@
 #include <wtf/RefPtr.h>
 
 #if PLATFORM(COCOA) && defined(__OBJC__)
+#include <wtf/cocoa/SpanCocoa.h>
 OBJC_CLASS NSData;
 #endif
 
@@ -47,51 +48,48 @@ public:
         : m_variant(WTFMove(variant))
     { }
     explicit BufferSource(std::span<const uint8_t> span)
-        : m_variant(JSC::ArrayBuffer::tryCreate(span.data(), span.size_bytes())) { }
+        : m_variant(JSC::ArrayBuffer::tryCreate(span)) { }
 
     const VariantType& variant() const { return m_variant; }
 
-    const uint8_t* data() const
-    {
-        return std::visit([](auto& buffer) -> const uint8_t* {
-            return buffer ? static_cast<const uint8_t*>(buffer->data()) : nullptr;
-        }, m_variant);
-    }
-
-    void* mutableData() const
-    {
-        return std::visit([](auto& buffer) -> void* {
-            return buffer->data();
-        }, m_variant);
-    }
-
     size_t length() const
     {
-        return std::visit([](auto& buffer) -> size_t {
+        return std::visit([](auto& buffer) {
             return buffer ? buffer->byteLength() : 0;
         }, m_variant);
     }
 
-    std::span<const uint8_t> span() const { return { data(), length() }; }
+    std::span<const uint8_t> span() const
+    {
+        return std::visit([](auto& buffer) {
+            return buffer ? buffer->span() : std::span<const uint8_t> { };
+        }, m_variant);
+    }
+    std::span<uint8_t> mutableSpan()
+    {
+        return std::visit([](auto& buffer) {
+            return buffer ? buffer->mutableSpan() : std::span<uint8_t> { };
+        }, m_variant);
+    }
 
 private:
     VariantType m_variant;
 };
 
-inline BufferSource toBufferSource(const uint8_t* data, size_t length)
+inline BufferSource toBufferSource(std::span<const uint8_t> data)
 {
-    return BufferSource(JSC::ArrayBuffer::tryCreate(data, length));
+    return BufferSource(JSC::ArrayBuffer::tryCreate(data));
 }
 
 #if PLATFORM(COCOA) && defined(__OBJC__)
 inline BufferSource toBufferSource(NSData *data)
 {
-    return BufferSource(JSC::ArrayBuffer::tryCreate(static_cast<const uint8_t*>(data.bytes), data.length));
+    return BufferSource(JSC::ArrayBuffer::tryCreate(span(data)));
 }
 
 inline RetainPtr<NSData> toNSData(const BufferSource& data)
 {
-    return adoptNS([[NSData alloc] initWithBytes:data.data() length:data.length()]);
+    return WTF::toNSData(data.span());
 }
 #endif
 

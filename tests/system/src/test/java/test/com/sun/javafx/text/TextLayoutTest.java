@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,18 +25,16 @@
 
 package test.com.sun.javafx.text;
 
-import static org.junit.Assume.assumeTrue;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-
+import static org.junit.jupiter.api.Assumptions.assumeTrue;
 import java.util.Arrays;
 import java.util.List;
-
+import javafx.scene.text.Font;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.EnumSource;
-
 import com.sun.javafx.PlatformUtil;
 import com.sun.javafx.font.CharToGlyphMapper;
 import com.sun.javafx.font.PGFont;
@@ -44,19 +42,18 @@ import com.sun.javafx.geom.Point2D;
 import com.sun.javafx.geom.RectBounds;
 import com.sun.javafx.scene.text.FontHelper;
 import com.sun.javafx.scene.text.GlyphList;
+import com.sun.javafx.scene.text.TextLayout;
 import com.sun.javafx.scene.text.TextLine;
 import com.sun.javafx.scene.text.TextSpan;
-import com.sun.javafx.text.PrismTextLayout;
+import com.sun.javafx.text.PrismTextLayoutFactory;
 import com.sun.javafx.text.TextRun;
-
-import javafx.scene.text.Font;
 
 public class TextLayoutTest {
     private static final String J = "\u3041";  // Japanese not complex
     private static final String D = "\u0907";  // Devanagari complex
     private static final String T = "\u0E34";  // Thai complex
 
-    private final PrismTextLayout layout = new PrismTextLayout();
+    private final TextLayout layout = PrismTextLayoutFactory.getFactory().createLayout();
     private final PGFont arialFont = (PGFont) FontHelper.getNativeFont(Font.font("Arial", 12));
     private final PGFont tahomaFont = (PGFont) FontHelper.getNativeFont(Font.font("Tahoma", 12));
 
@@ -77,7 +74,7 @@ public class TextLayoutTest {
         }
     }
 
-    private void setContent(PrismTextLayout layout, Object... content) {
+    private void setContent(TextLayout layout, Object... content) {
         int count = content.length / 2;
         TextSpan[] spans = new TextSpan[count];
         int i = 0;
@@ -587,18 +584,18 @@ public class TextLayoutTest {
     }
 
     private void assumeArialFontAvailable() {
-        assumeTrue("Arial font missing", arialFont.getName().equals("Arial"));
+        assumeTrue(arialFont.getName().equals("Arial"), "Arial font missing");
     }
 
     private void assumeTahomaFontAvailable() {
-        assumeTrue("Tahoma font missing", arialFont.getName().equals("Tahoma"));
+        assumeTrue(arialFont.getName().equals("Tahoma"), "Tahoma font missing");
     }
 
     private static void assumeMac() {
-        assumeTrue("Platform is not Mac", PlatformUtil.isMac());
+        assumeTrue(PlatformUtil.isMac(), "Platform is not Mac");
     }
 
     private static void assumeWindows() {
-        assumeTrue("Platform is not Windows", PlatformUtil.isWindows());
+        assumeTrue(PlatformUtil.isWindows(), "Platform is not Windows");
     }
 }

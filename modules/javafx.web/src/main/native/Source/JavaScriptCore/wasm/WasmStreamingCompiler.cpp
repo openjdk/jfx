@@ -47,21 +47,21 @@ StreamingCompiler::StreamingCompiler(VM& vm, CompilerMode compilerMode, JSGlobal
     , m_info(Wasm::ModuleInformation::create())
     , m_parser(m_info.get(), *this)
 {
-    Vector<Strong<JSCell>> dependencies;
-    dependencies.append(Strong<JSCell>(vm, globalObject));
+    Vector<Weak<JSCell>> dependencies;
+    dependencies.append(Weak<JSCell>(globalObject));
     if (importObject)
-        dependencies.append(Strong<JSCell>(vm, importObject));
-    m_ticket = vm.deferredWorkTimer->addPendingWork(vm, promise, WTFMove(dependencies));
+        dependencies.append(Weak<JSCell>(importObject));
+    m_ticket = vm.deferredWorkTimer->addPendingWork(DeferredWorkTimer::WorkType::AtSomePoint, vm, promise, WTFMove(dependencies));
     ASSERT(vm.deferredWorkTimer->hasPendingWork(m_ticket));
-    ASSERT(vm.deferredWorkTimer->hasDependancyInPendingWork(m_ticket, globalObject));
-    ASSERT(!importObject || vm.deferredWorkTimer->hasDependancyInPendingWork(m_ticket, importObject));
+    ASSERT(vm.deferredWorkTimer->hasDependencyInPendingWork(m_ticket, globalObject));
+    ASSERT(!importObject || vm.deferredWorkTimer->hasDependencyInPendingWork(m_ticket, importObject));
 }
 
 StreamingCompiler::~StreamingCompiler()
 {
     if (m_ticket) {
         auto ticket = std::exchange(m_ticket, nullptr);
-        m_vm.deferredWorkTimer->scheduleWorkSoon(ticket, [](DeferredWorkTimer::Ticket) mutable { });
+        m_vm.deferredWorkTimer->scheduleWorkSoon(ticket, [](DeferredWorkTimer::Ticket) { });
     }
 }
 
@@ -141,15 +141,17 @@ void StreamingCompiler::didComplete()
     case CompilerMode::Validation: {
         m_vm.deferredWorkTimer->scheduleWorkSoon(ticket, [result = WTFMove(result)](DeferredWorkTimer::Ticket ticket) mutable {
             JSPromise* promise = jsCast<JSPromise*>(ticket->target());
-            JSGlobalObject* globalObject = jsCast<JSGlobalObject*>(ticket->dependencies[0].get());
+            JSGlobalObject* globalObject = jsCast<JSGlobalObject*>(ticket->dependencies()[0].get());
             VM& vm = globalObject->vm();
             auto scope = DECLARE_THROW_SCOPE(vm);
 
-            JSWebAssemblyModule* module = JSWebAssemblyModule::createStub(vm, globalObject, globalObject->webAssemblyModuleStructure(), WTFMove(result));
-            if (UNLIKELY(scope.exception())) {
+            if (UNLIKELY(!result.has_value())) {
+                throwException(globalObject, scope, createJSWebAssemblyCompileError(globalObject, vm, result.error()));
                 promise->rejectWithCaughtException(globalObject, scope);
                 return;
             }
+
+            JSWebAssemblyModule* module = JSWebAssemblyModule::create(vm, globalObject->webAssemblyModuleStructure(), WTFMove(result.value()));
 
             scope.release();
             promise->resolve(globalObject, module);
@@ -160,17 +162,18 @@ void StreamingCompiler::didComplete()
     case CompilerMode::FullCompile: {
         m_vm.deferredWorkTimer->scheduleWorkSoon(ticket, [result = WTFMove(result)](DeferredWorkTimer::Ticket ticket) mutable {
             JSPromise* promise = jsCast<JSPromise*>(ticket->target());
-            JSGlobalObject* globalObject = jsCast<JSGlobalObject*>(ticket->dependencies[0].get());
-            JSObject* importObject = jsCast<JSObject*>(ticket->dependencies[1].get());
+            JSGlobalObject* globalObject = jsCast<JSGlobalObject*>(ticket->dependencies()[0].get());
+            JSObject* importObject = jsCast<JSObject*>(ticket->dependencies()[1].get());
             VM& vm = globalObject->vm();
             auto scope = DECLARE_THROW_SCOPE(vm);
 
-            JSWebAssemblyModule* module = JSWebAssemblyModule::createStub(vm, globalObject, globalObject->webAssemblyModuleStructure(), WTFMove(result));
-            if (UNLIKELY(scope.exception())) {
+            if (UNLIKELY(!result.has_value())) {
+                throwException(globalObject, scope, createJSWebAssemblyCompileError(globalObject, vm, result.error()));
                 promise->rejectWithCaughtException(globalObject, scope);
                 return;
             }
 
+            JSWebAssemblyModule* module = JSWebAssemblyModule::create(vm, globalObject->webAssemblyModuleStructure(), WTFMove(result.value()));
             JSWebAssembly::instantiateForStreaming(vm, globalObject, promise, module, importObject);
             if (UNLIKELY(scope.exception())) {
                 promise->rejectWithCaughtException(globalObject, scope);

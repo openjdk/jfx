@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2023, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -40,11 +40,15 @@ import com.sun.glass.ui.MenuItem;
 import com.sun.glass.ui.Pixels;
 import com.sun.javafx.tk.Toolkit;
 
+import java.util.HashMap;
+import java.util.Map;
 import java.util.List;
 
 import javafx.collections.ListChangeListener;
 import javafx.collections.ObservableList;
 import javafx.beans.InvalidationListener;
+import javafx.beans.property.BooleanProperty;
+import javafx.beans.property.SimpleBooleanProperty;
 import javafx.collections.transformation.FilteredList;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
@@ -57,6 +61,9 @@ class GlassSystemMenu implements TKSystemMenu {
 
     private List<MenuBase>      systemMenus = null;
     private MenuBar             glassSystemMenuBar = null;
+    private final Map<Menu, ListChangeListener<MenuItemBase>> menuListeners = new HashMap<>();
+    private final Map<ListChangeListener<MenuItemBase>, ObservableList<MenuItemBase>> listenerItems = new HashMap<>();
+    private BooleanProperty active;
 
     private InvalidationListener visibilityListener = valueModel -> {
         if (systemMenus != null) {
@@ -85,6 +92,10 @@ class GlassSystemMenu implements TKSystemMenu {
     }
 
     @Override public void setMenus(List<MenuBase> menus) {
+        if (active != null) {
+            active.set(false);
+        }
+        active = new SimpleBooleanProperty(true);
         systemMenus = menus;
         if (glassSystemMenuBar != null) {
 
@@ -109,13 +120,21 @@ class GlassSystemMenu implements TKSystemMenu {
         }
     }
 
-    // Clear the menu to prevent a memory leak, as outlined in RT-34779
+    // Clear the menu to prevent a memory leak, as outlined in JDK-8094232
     private void clearMenu(Menu menu) {
+        ListChangeListener<MenuItemBase> lcl = menuListeners.get(menu);
+        if (lcl != null) {
+            ObservableList<MenuItemBase> target = listenerItems.get(lcl);
+            target.removeListener(lcl);
+            menuListeners.remove(menu);
+            listenerItems.remove(lcl);
+        }
+
         for (int i = menu.getItems().size() - 1; i >= 0; i--) {
             Object o = menu.getItems().get(i);
-
             if (o instanceof MenuItem) {
                 ((MenuItem)o).setCallback(null);
+                menu.remove(i);
             } else if (o instanceof Menu) {
                 clearMenu((Menu) o);
             }
@@ -148,33 +167,15 @@ class GlassSystemMenu implements TKSystemMenu {
 
         final FilteredList<MenuItemBase> filteredItems = items.filtered(x -> x.isVisible());
 
-        filteredItems.addListener((ListChangeListener.Change<? extends MenuItemBase> change) -> {
-            while (change.next()) {
-                int from = change.getFrom();
-                int to = change.getTo();
-                List<? extends MenuItemBase> removed = change.getRemoved();
-
-                for (int i = from + removed.size() - 1; i >= from ; i--) {
-                    List<Object> menuItemList = glassMenu.getItems();
-                    if (i >= 0 && menuItemList.size() > i) {
-                        glassMenu.remove(i);
-                    }
-                }
-                for (int i = from; i < to; i++) {
-                    MenuItemBase item = change.getList().get(i);
-                    if (item instanceof MenuBase) {
-                        insertMenu(glassMenu, (MenuBase)item, i);
-                    } else {
-                        insertMenuItem(glassMenu, item, i);
-                    }
-                }
-            }
-        });
+        ListChangeListener<MenuItemBase> menuItemListener = createListener(glassMenu);
+        filteredItems.addListener(menuItemListener);
+        menuListeners.put(glassMenu, menuItemListener);
+        listenerItems.put(menuItemListener, filteredItems);
 
         for (MenuItemBase item : items) {
-            if (item instanceof MenuBase) {
+            if (item instanceof MenuBase baseItem) {
                 // submenu
-                addMenu(glassMenu, (MenuBase)item);
+                addMenu(glassMenu, baseItem);
             } else {
                 // menu item
                 addMenuItem(glassMenu, item);
@@ -191,10 +192,38 @@ class GlassSystemMenu implements TKSystemMenu {
         }
     }
 
-    private void setMenuBindings(final Menu glassMenu, final MenuBase mb) {
-        mb.textProperty().addListener(valueModel -> glassMenu.setTitle(parseText(mb)));
-        mb.disableProperty().addListener(valueModel -> glassMenu.setEnabled(!mb.isDisable()));
-        mb.mnemonicParsingProperty().addListener(valueModel -> glassMenu.setTitle(parseText(mb)));
+    private ListChangeListener<MenuItemBase> createListener(final Menu glassMenu) {
+        return (ListChangeListener.Change<? extends MenuItemBase> change) -> {
+            while (change.next()) {
+                int from = change.getFrom();
+                int to = change.getTo();
+                List<? extends MenuItemBase> removed = change.getRemoved();
+
+                for (int i = from + removed.size() - 1; i >= from ; i--) {
+                    List<Object> menuItemList = glassMenu.getItems();
+                    if (i >= 0 && menuItemList.size() > i) {
+                        Object item = menuItemList.get(i);
+                        if (item instanceof Menu menu) clearMenu(menu);
+                        glassMenu.remove(i);
+                    }
+                }
+                for (int i = from; i < to; i++) {
+                    MenuItemBase item = change.getList().get(i);
+                    if (item instanceof MenuBase) {
+                        insertMenu(glassMenu, (MenuBase)item, i);
+                    } else {
+                        insertMenuItem(glassMenu, item, i);
+                    }
+                }
+            }
+        };
+    }
+
+
+    protected void setMenuBindings(final Menu glassMenu, final MenuBase mb) {
+        mb.textProperty().when(active).subscribe(valueModel -> glassMenu.setTitle(parseText(mb)));
+        mb.disableProperty().when(active).subscribe(valueModel -> glassMenu.setEnabled(!mb.isDisable()));
+        mb.mnemonicParsingProperty().when(active).subscribe(valueModel -> glassMenu.setTitle(parseText(mb)));
     }
 
     private void addMenuItem(Menu parent, final MenuItemBase menuitem) {
@@ -256,7 +285,7 @@ class GlassSystemMenu implements TKSystemMenu {
                 glassSubMenuItem.setPixels(getPixels(menuitem));
             });
 
-            glassSubMenuItem.setEnabled(! menuitem.isDisable());
+            glassSubMenuItem.setEnabled(!menuitem.isDisable());
             menuitem.disableProperty().addListener(valueModel -> glassSubMenuItem.setEnabled(!menuitem.isDisable()));
 
             setShortcut(glassSubMenuItem, menuitem);
@@ -265,11 +294,11 @@ class GlassSystemMenu implements TKSystemMenu {
             menuitem.mnemonicParsingProperty().addListener(valueModel -> glassSubMenuItem.setTitle(parseText(menuitem)));
 
             if (menuitem instanceof CheckMenuItemBase) {
-                final CheckMenuItemBase checkItem = (CheckMenuItemBase)menuitem;
+                final CheckMenuItemBase checkItem = (CheckMenuItemBase) menuitem;
                 glassSubMenuItem.setChecked(checkItem.isSelected());
                 checkItem.selectedProperty().addListener(valueModel -> glassSubMenuItem.setChecked(checkItem.isSelected()));
             } else if (menuitem instanceof RadioMenuItemBase) {
-                final RadioMenuItemBase radioItem = (RadioMenuItemBase)menuitem;
+                final RadioMenuItemBase radioItem = (RadioMenuItemBase) menuitem;
                 glassSubMenuItem.setChecked(radioItem.isSelected());
                 radioItem.selectedProperty().addListener(valueModel -> glassSubMenuItem.setChecked(radioItem.isSelected()));
             }
@@ -359,7 +388,7 @@ class GlassSystemMenu implements TKSystemMenu {
         }
         if (kcc.getMeta() == KeyCombination.ModifierValue.DOWN) {
             if (PlatformUtil.isLinux()) {
-                ret += KeyEvent.MODIFIER_WINDOWS;   // RT-19326 - Linux shortcut support
+                ret += KeyEvent.MODIFIER_WINDOWS;   // JDK-8127216 - Linux shortcut support
             } else if (PlatformUtil.isMac()) {
                 ret += KeyEvent.MODIFIER_COMMAND;
             }

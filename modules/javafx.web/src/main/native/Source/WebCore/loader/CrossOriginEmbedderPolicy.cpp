@@ -41,6 +41,7 @@
 #include "SecurityOrigin.h"
 #include "ViolationReportType.h"
 #include <wtf/persistence/PersistentCoders.h>
+#include <wtf/text/MakeString.h>
 
 namespace WebCore {
 
@@ -98,14 +99,14 @@ void CrossOriginEmbedderPolicy::addPolicyHeadersTo(ResourceResponse& response) c
         if (reportingEndpoint.isEmpty())
             response.setHTTPHeaderField(HTTPHeaderName::CrossOriginEmbedderPolicy, "require-corp"_s);
         else
-            response.setHTTPHeaderField(HTTPHeaderName::CrossOriginEmbedderPolicy, makeString("require-corp; report-to=\"", reportingEndpoint, '\"'));
+            response.setHTTPHeaderField(HTTPHeaderName::CrossOriginEmbedderPolicy, makeString("require-corp; report-to=\""_s, reportingEndpoint, '\"'));
     }
     if (reportOnlyValue != CrossOriginEmbedderPolicyValue::UnsafeNone) {
         ASSERT(reportOnlyValue == CrossOriginEmbedderPolicyValue::RequireCORP);
         if (reportOnlyReportingEndpoint.isEmpty())
             response.setHTTPHeaderField(HTTPHeaderName::CrossOriginEmbedderPolicyReportOnly, "require-corp"_s);
         else
-            response.setHTTPHeaderField(HTTPHeaderName::CrossOriginEmbedderPolicyReportOnly, makeString("require-corp; report-to=\"", reportOnlyReportingEndpoint, '\"'));
+            response.setHTTPHeaderField(HTTPHeaderName::CrossOriginEmbedderPolicyReportOnly, makeString("require-corp; report-to=\""_s, reportOnlyReportingEndpoint, '\"'));
     }
 }
 

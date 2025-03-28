@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,14 +25,7 @@
 
 package test.javafx.scene.transform;
 
-import java.util.Arrays;
-import java.util.Collection;
-
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
-import org.junit.runners.Parameterized.Parameters;
-
-import test.com.sun.javafx.test.PropertiesTestBase;
+import java.util.stream.Stream;
 import javafx.geometry.Point3D;
 import javafx.scene.transform.Affine;
 import javafx.scene.transform.Rotate;
@@ -40,10 +33,12 @@ import javafx.scene.transform.Scale;
 import javafx.scene.transform.Shear;
 import javafx.scene.transform.Translate;
 
-@RunWith(Parameterized.class)
+import org.junit.jupiter.params.provider.Arguments;
+import test.com.sun.javafx.test.PropertiesTestBase;
+
 public class Transform_properties_Test extends PropertiesTestBase {
-    @Parameters
-    public static Collection data() {
+
+    public static Stream<Arguments> data() {
         final Affine a = new Affine(
                 1,  2,  3,  4,
                 5,  6,  7,  8,
@@ -54,7 +49,7 @@ public class Transform_properties_Test extends PropertiesTestBase {
         final Translate t = new Translate();
         final Scale c = new Scale();
 
-        return Arrays.asList(new Object[] {
+        return Stream.of(
             config(a, "mxx", 10.0, 20.0),
             config(a, "mxy", 10.0, 20.0),
             config(a, "mxz", 10.0, 20.0),
@@ -84,11 +79,7 @@ public class Transform_properties_Test extends PropertiesTestBase {
             config(c, "z", 10.0, 20.0),
             config(c, "pivotX", 10.0, 20.0),
             config(c, "pivotY", 10.0, 20.0),
-            config(c, "pivotZ", 10.0, 20.0),
-        });
-    }
-
-    public Transform_properties_Test(final Configuration configuration) {
-        super(configuration);
+            config(c, "pivotZ", 10.0, 20.0)
+        );
     }
 }

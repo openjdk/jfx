@@ -26,6 +26,7 @@
 #include "config.h"
 #include "SWServer.h"
 
+#include "AdvancedPrivacyProtections.h"
 #include "BackgroundFetchEngine.h"
 #include "BackgroundFetchInformation.h"
 #include "BackgroundFetchOptions.h"
@@ -195,8 +196,9 @@ void SWServer::addRegistrationFromStore(ServiceWorkerContextData&& data, Complet
 
     LOG(ServiceWorker, "Adding registration from store for %s", data.registration.key.loggingString().utf8().data());
 
-    auto registrableDomain = WebCore::RegistrableDomain(data.registration.key.topOrigin());
-    validateRegistrationDomain(registrableDomain, ServiceWorkerJobType::Register, m_scopeToRegistrationMap.contains(data.registration.key), [this, weakThis = WeakPtr { *this }, data = WTFMove(data), completionHandler = WTFMove(completionHandler)] (bool isValid) mutable {
+    auto registrationKey = data.registration.key;
+    auto registrableDomain = WebCore::RegistrableDomain(registrationKey.topOrigin());
+    validateRegistrationDomain(registrableDomain, ServiceWorkerJobType::Register, m_scopeToRegistrationMap.contains(registrationKey), [this, weakThis = WeakPtr { *this }, data = WTFMove(data), completionHandler = WTFMove(completionHandler)] (bool isValid) mutable {
         ASSERT(isMainThread());
         RefPtr protectedThis = weakThis.get();
         if (!protectedThis)
@@ -466,7 +468,8 @@ void SWServer::scheduleJob(ServiceWorkerJobData&& jobData)
 {
     ASSERT(m_connections.contains(jobData.connectionIdentifier()) || jobData.connectionIdentifier() == Process::identifier());
 
-    validateRegistrationDomain(WebCore::RegistrableDomain(jobData.topOrigin), jobData.type, m_scopeToRegistrationMap.contains(jobData.registrationKey()), [weakThis = WeakPtr { *this }, jobData = WTFMove(jobData)] (bool isValid) mutable {
+    auto registrationKey = jobData.registrationKey();
+    validateRegistrationDomain(WebCore::RegistrableDomain(jobData.topOrigin), jobData.type, m_scopeToRegistrationMap.contains(registrationKey), [weakThis = WeakPtr { *this }, jobData = WTFMove(jobData)] (bool isValid) mutable {
         RefPtr protectedThis = weakThis.get();
         if (!protectedThis)
             return;
@@ -556,7 +559,7 @@ ResourceRequest SWServer::createScriptRequest(const URL& url, const ServiceWorke
 
     request.setDomainForCachePartition(jobData.domainForCachePartition);
     request.setAllowCookies(true);
-    request.setFirstPartyForCookies(originURL(topOrigin));
+    request.setFirstPartyForCookies(topOrigin->toURL());
 
     request.setHTTPHeaderField(HTTPHeaderName::Origin, origin->toString());
     request.setHTTPReferrer(originURL(origin).string());
@@ -695,7 +698,7 @@ void SWServer::terminatePreinstallationWorker(SWServerWorker& worker)
 
 void SWServer::didFinishInstall(const std::optional<ServiceWorkerJobDataIdentifier>& jobDataIdentifier, SWServerWorker& worker, bool wasSuccessful)
 {
-    RELEASE_LOG(ServiceWorker, "%p - SWServer::didFinishInstall: Finished install for service worker %llu, success is %d", this, worker.identifier().toUInt64(), wasSuccessful);
+    RELEASE_LOG(ServiceWorker, "%p - SWServer::didFinishInstall: Finished install for service worker %" PRIu64 ", success is %d", this, worker.identifier().toUInt64(), wasSuccessful);
 
     if (!jobDataIdentifier)
         return;
@@ -709,7 +712,7 @@ void SWServer::didFinishInstall(const std::optional<ServiceWorkerJobDataIdentifi
 
 void SWServer::didFinishActivation(SWServerWorker& worker)
 {
-    RELEASE_LOG(ServiceWorker, "%p - SWServer::didFinishActivation: Finished activation for service worker %llu", this, worker.identifier().toUInt64());
+    RELEASE_LOG(ServiceWorker, "%p - SWServer::didFinishActivation: Finished activation for service worker %" PRIu64, this, worker.identifier().toUInt64());
 
     if (RefPtr registration = worker.registration())
     registration->didFinishActivation(worker.identifier());
@@ -743,17 +746,28 @@ void SWServer::matchAll(SWServerWorker& worker, const ServiceWorkerClientQueryOp
     callback(WTFMove(matchingClients));
 }
 
+template<typename ClientDataType, typename ClientsByIDType>
+void forEachClientForOriginImpl(const Vector<ScriptExecutionContextIdentifier>& identifiers, ClientsByIDType& clientsById, const Function<void(ClientDataType&)>& apply)
+{
+    for (auto& clientIdentifier : identifiers) {
+        auto clientIterator = clientsById.find(clientIdentifier);
+        ASSERT(clientIterator != clientsById.end());
+        apply(clientIterator->value);
+    }
+}
+
+void SWServer::forEachClientForOrigin(const ClientOrigin& origin, const Function<void(const ServiceWorkerClientData&)>& apply) const
+{
+    auto iterator = m_clientIdentifiersPerOrigin.find(origin);
+    if (iterator != m_clientIdentifiersPerOrigin.end())
+        forEachClientForOriginImpl(iterator->value.identifiers, m_clientsById, apply);
+}
+
 void SWServer::forEachClientForOrigin(const ClientOrigin& origin, const Function<void(ServiceWorkerClientData&)>& apply)
 {
     auto iterator = m_clientIdentifiersPerOrigin.find(origin);
-    if (iterator == m_clientIdentifiersPerOrigin.end())
-        return;
-
-    for (auto& clientIdentifier : iterator->value.identifiers) {
-        auto clientIterator = m_clientsById.find(clientIdentifier);
-        ASSERT(clientIterator != m_clientsById.end());
-        apply(clientIterator->value);
-    }
+    if (iterator != m_clientIdentifiersPerOrigin.end())
+        forEachClientForOriginImpl(iterator->value.identifiers, m_clientsById, apply);
 }
 
 std::optional<ExceptionData> SWServer::claim(SWServerWorker& worker)
@@ -893,6 +907,15 @@ void SWServer::terminateContextConnectionWhenPossible(const RegistrableDomain& r
     contextConnection->terminateWhenPossible();
 }
 
+OptionSet<AdvancedPrivacyProtections> SWServer::advancedPrivacyProtectionsFromClient(const ClientOrigin& origin) const
+{
+    OptionSet<AdvancedPrivacyProtections> result;
+    forEachClientForOrigin(origin, [&result](auto& clientData) {
+        result.add(clientData.advancedPrivacyProtections);
+    });
+    return result;
+}
+
 void SWServer::installContextData(const ServiceWorkerContextData& data)
 {
     ASSERT_WITH_MESSAGE(!data.loadedFromDisk, "Workers we just read from disk should only be launched as needed");
@@ -916,7 +939,7 @@ void SWServer::installContextData(const ServiceWorkerContextData& data)
     auto result = m_runningOrTerminatingWorkers.add(data.serviceWorkerIdentifier, worker.copyRef());
     ASSERT_UNUSED(result, result.isNewEntry);
 
-    connection->installServiceWorkerContext(data, worker->data(), userAgent, worker->workerThreadMode());
+    connection->installServiceWorkerContext(data, worker->data(), userAgent, worker->workerThreadMode(), advancedPrivacyProtectionsFromClient(worker->registrationKey().clientOrigin()));
 }
 
 void SWServer::runServiceWorkerIfNecessary(ServiceWorkerIdentifier identifier, RunServiceWorkerCallback&& callback)
@@ -993,7 +1016,7 @@ bool SWServer::runServiceWorker(SWServerWorker& worker)
     CheckedPtr contextConnection = worker.contextConnection();
     ASSERT(contextConnection);
 
-    contextConnection->installServiceWorkerContext(worker.contextData(), worker.data(), worker.userAgent(), worker.workerThreadMode());
+    contextConnection->installServiceWorkerContext(worker.contextData(), worker.data(), worker.userAgent(), worker.workerThreadMode(), advancedPrivacyProtectionsFromClient(worker.registrationKey().clientOrigin()));
 
     return true;
 }
@@ -1035,7 +1058,7 @@ void SWServer::fireInstallEvent(SWServerWorker& worker)
         return;
     }
 
-    RELEASE_LOG(ServiceWorker, "%p - SWServer::fireInstallEvent on worker %llu", this, worker.identifier().toUInt64());
+    RELEASE_LOG(ServiceWorker, "%p - SWServer::fireInstallEvent on worker %" PRIu64, this, worker.identifier().toUInt64());
     contextConnection->fireInstallEvent(worker.identifier());
 }
 
@@ -1050,7 +1073,7 @@ void SWServer::runServiceWorkerAndFireActivateEvent(SWServerWorker& worker)
         if (worker->state() != ServiceWorkerState::Activating)
             return;
 
-        RELEASE_LOG(ServiceWorker, "SWServer::runServiceWorkerAndFireActivateEvent on worker %llu", worker->identifier().toUInt64());
+        RELEASE_LOG(ServiceWorker, "SWServer::runServiceWorkerAndFireActivateEvent on worker %" PRIu64, worker->identifier().toUInt64());
         worker->markActivateEventAsFired();
         contextConnection->fireActivateEvent(worker->identifier());
     });
@@ -1389,7 +1412,7 @@ void SWServer::getAllOrigins(CompletionHandler<void(HashSet<ClientOrigin>&&)>&& 
 
 void SWServer::addContextConnection(SWServerToContextConnection& connection)
 {
-    RELEASE_LOG(ServiceWorker, "SWServer::addContextConnection %llu", connection.identifier().toUInt64());
+    RELEASE_LOG(ServiceWorker, "SWServer::addContextConnection %" PRIu64, connection.identifier().toUInt64());
 
     ASSERT(!m_contextConnections.contains(connection.registrableDomain()));
 
@@ -1400,7 +1423,7 @@ void SWServer::addContextConnection(SWServerToContextConnection& connection)
 
 void SWServer::removeContextConnection(SWServerToContextConnection& connection)
 {
-    RELEASE_LOG(ServiceWorker, "SWServer::removeContextConnection %llu", connection.identifier().toUInt64());
+    RELEASE_LOG(ServiceWorker, "SWServer::removeContextConnection %" PRIu64, connection.identifier().toUInt64());
 
     auto registrableDomain = connection.registrableDomain();
     auto serviceWorkerPageIdentifier = connection.serviceWorkerPageIdentifier();
@@ -1664,7 +1687,7 @@ void SWServer::fireFunctionalEvent(SWServerRegistration& registration, Completio
 
     // FIXME: we should check whether we can skip the event and if skipping do a soft-update.
 
-    RELEASE_LOG(ServiceWorker, "SWServer::fireFunctionalEvent serviceWorkerID=%llu, state=%hhu", worker->identifier().toUInt64(), enumToUnderlyingType(worker->state()));
+    RELEASE_LOG(ServiceWorker, "SWServer::fireFunctionalEvent serviceWorkerID=%" PRIu64 ", state=%hhu", worker->identifier().toUInt64(), enumToUnderlyingType(worker->state()));
 
     worker->whenActivated([weakThis = WeakPtr { *this }, callback = WTFMove(callback), registrationIdentifier = registration.identifier(), serviceWorkerIdentifier = worker->identifier()](bool success) mutable {
         RefPtr protectedThis = weakThis.get();

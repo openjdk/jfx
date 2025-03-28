@@ -26,6 +26,7 @@
 #include "config.h"
 #include "ServiceWorkerClientData.h"
 
+#include "AdvancedPrivacyProtections.h"
 #include "Document.h"
 #include "DocumentLoader.h"
 #include "FrameDestructionObserverInlines.h"
@@ -39,16 +40,16 @@ namespace WebCore {
 
 static ServiceWorkerClientFrameType toServiceWorkerClientFrameType(ScriptExecutionContext& context)
 {
-    if (!is<Document>(context))
+    auto* document = dynamicDowncast<Document>(context);
+    if (!document)
         return ServiceWorkerClientFrameType::None;
 
-    auto& document = downcast<Document>(context);
-    auto* frame = document.frame();
+    auto* frame = document->frame();
     if (!frame)
         return ServiceWorkerClientFrameType::None;
 
     if (frame->isMainFrame()) {
-        if (auto* window = document.domWindow()) {
+        if (auto* window = document->domWindow()) {
             if (window->opener())
                 return ServiceWorkerClientFrameType::Auxiliary;
         }
@@ -59,12 +60,12 @@ static ServiceWorkerClientFrameType toServiceWorkerClientFrameType(ScriptExecuti
 
 ServiceWorkerClientData ServiceWorkerClientData::isolatedCopy() const &
 {
-    return { identifier, type, frameType, url.isolatedCopy(), ownerURL.isolatedCopy(), pageIdentifier, frameIdentifier, lastNavigationWasAppInitiated, isVisible, isFocused, focusOrder, crossThreadCopy(ancestorOrigins) };
+    return { identifier, type, frameType, url.isolatedCopy(), ownerURL.isolatedCopy(), pageIdentifier, frameIdentifier, lastNavigationWasAppInitiated, advancedPrivacyProtections, isVisible, isFocused, focusOrder, crossThreadCopy(ancestorOrigins) };
 }
 
 ServiceWorkerClientData ServiceWorkerClientData::isolatedCopy() &&
 {
-    return { identifier, type, frameType, WTFMove(url).isolatedCopy(), WTFMove(ownerURL).isolatedCopy(), pageIdentifier, frameIdentifier, lastNavigationWasAppInitiated, isVisible, isFocused, focusOrder, crossThreadCopy(WTFMove(ancestorOrigins)) };
+    return { identifier, type, frameType, WTFMove(url).isolatedCopy(), WTFMove(ownerURL).isolatedCopy(), pageIdentifier, frameIdentifier, lastNavigationWasAppInitiated, advancedPrivacyProtections, isVisible, isFocused, focusOrder, crossThreadCopy(WTFMove(ancestorOrigins)) };
 }
 
 ServiceWorkerClientData ServiceWorkerClientData::from(ScriptExecutionContext& context)
@@ -89,6 +90,7 @@ ServiceWorkerClientData ServiceWorkerClientData::from(ScriptExecutionContext& co
             document->pageID(),
             document->frameID(),
             lastNavigationWasAppInitiated,
+            context.advancedPrivacyProtections(),
             !document->hidden(),
             document->hasFocus(),
             0,
@@ -107,6 +109,7 @@ ServiceWorkerClientData ServiceWorkerClientData::from(ScriptExecutionContext& co
         { },
         { },
         LastNavigationWasAppInitiated::No,
+        context.advancedPrivacyProtections(),
         false,
         false,
         0,

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -164,7 +164,7 @@ public class ScrollBarSkin extends SkinBase<ScrollBar> {
                 decButton.relocate(snapPositionX(x), snapPositionY(y));
                 incButton.relocate(snapPositionX(x), snapPositionY(y + h - incHeight));
                 track.resizeRelocate(snapPositionX(x), snapPositionY(y + decHeight), w, trackLength);
-                thumb.resize(snapSizeX(x >= 0 ? w : w + x), thumbLength); // Account for negative padding (see also RT-10719)
+                thumb.resize(snapSizeX(x >= 0 ? w : w + x), thumbLength); // Account for negative padding (see also JDK-8111392)
                 positionThumb();
             }
             else {
@@ -172,7 +172,7 @@ public class ScrollBarSkin extends SkinBase<ScrollBar> {
                 thumbLength = snapSizeY(Utils.clamp(minThumbLength(), (trackLength * visiblePortion), trackLength));
 
                 track.resizeRelocate(snapPositionX(x), snapPositionY(y), w, trackLength);
-                thumb.resize(snapSizeX(x >= 0 ? w : w + x), thumbLength); // Account for negative padding (see also RT-10719)
+                thumb.resize(snapSizeX(x >= 0 ? w : w + x), thumbLength); // Account for negative padding (see also JDK-8111392)
                 positionThumb();
             }
         } else {
@@ -190,7 +190,7 @@ public class ScrollBarSkin extends SkinBase<ScrollBar> {
                 decButton.relocate(snapPositionX(x), snapPositionY(y));
                 incButton.relocate(snapPositionX(x + w - incWidth), snapPositionY(y));
                 track.resizeRelocate(snapPositionX(x + decWidth), snapPositionY(y), trackLength, h);
-                thumb.resize(thumbLength, snapSizeY(y >= 0 ? h : h + y)); // Account for negative padding (see also RT-10719)
+                thumb.resize(thumbLength, snapSizeY(y >= 0 ? h : h + y)); // Account for negative padding (see also JDK-8111392)
                 positionThumb();
             }
             else {
@@ -198,7 +198,7 @@ public class ScrollBarSkin extends SkinBase<ScrollBar> {
                 thumbLength = snapSizeX(Utils.clamp(minThumbLength(), (trackLength * visiblePortion), trackLength));
 
                 track.resizeRelocate(snapPositionX(x), snapPositionY(y), trackLength, h);
-                thumb.resize(thumbLength, snapSizeY(y >= 0 ? h : h + y)); // Account for negative padding (see also RT-10719)
+                thumb.resize(thumbLength, snapSizeY(y >= 0 ? h : h + y)); // Account for negative padding (see also JDK-8111392)
                 positionThumb();
             }
 
@@ -532,10 +532,10 @@ public class ScrollBarSkin extends SkinBase<ScrollBar> {
                 double delta = (getSkinnable().getOrientation() == Orientation.VERTICAL ? dy : dx);
 
                 /*
-                ** RT-22941 - If this is either a touch or inertia scroll
+                ** JDK-8126191 - If this is either a touch or inertia scroll
                 ** then we move to the position of the touch point.
                 *
-                * TODO: this fix causes RT-23406 ([ScrollBar, touch] Dragging scrollbar from the
+                * TODO: this fix causes JDK-8095841 ([ScrollBar, touch] Dragging scrollbar from the
                 * track on touchscreen causes flickering)
                 */
                 if (event.isDirect()) {

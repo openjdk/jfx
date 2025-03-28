@@ -33,6 +33,7 @@
 #include "Settings.h"
 #include "ShadowRoot.h"
 #include "YouTubeEmbedShadowElement.h"
+#include <wtf/text/MakeString.h>
 #include <wtf/text/StringBuilder.h>
 
 namespace WebCore {
@@ -65,6 +66,8 @@ YouTubePluginReplacement::YouTubePluginReplacement(HTMLPlugInElement& plugin, co
     for (size_t i = 0; i < paramNames.size(); ++i)
         m_attributes.add(paramNames[i], paramValues[i]);
 }
+
+YouTubePluginReplacement::~YouTubePluginReplacement() = default;
 
 RenderPtr<RenderElement> YouTubePluginReplacement::createElementRenderer(HTMLPlugInElement& plugin, RenderStyle&& style, const RenderTreePosition& insertionPosition)
 {

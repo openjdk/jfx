@@ -27,6 +27,7 @@
 
 #include "AXObjectCache.h"
 #include "Autofill.h"
+#include "CommandEvent.h"
 #include "Document.h"
 #include "DocumentInlines.h"
 #include "ElementInlines.h"
@@ -37,7 +38,6 @@
 #include "HTMLButtonElement.h"
 #include "HTMLFormElement.h"
 #include "HTMLInputElement.h"
-#include "InvokeEvent.h"
 #include "LocalFrame.h"
 #include "LocalFrameView.h"
 #include "PopoverData.h"
@@ -49,14 +49,14 @@
 #include "Settings.h"
 #include "StyleTreeResolver.h"
 #include "ValidationMessage.h"
-#include <wtf/IsoMallocInlines.h>
 #include <wtf/Ref.h>
 #include <wtf/SetForScope.h>
+#include <wtf/TZoneMallocInlines.h>
 #include <wtf/Vector.h>
 
 namespace WebCore {
 
-WTF_MAKE_ISO_ALLOCATED_IMPL(HTMLFormControlElement);
+WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(HTMLFormControlElement);
 
 using namespace HTMLNames;
 
@@ -171,8 +171,8 @@ void HTMLFormControlElement::finishParsingChildren()
 void HTMLFormControlElement::disabledStateChanged()
 {
     ValidatedFormListedElement::disabledStateChanged();
-    if (renderer() && renderer()->style().hasEffectiveAppearance())
-        renderer()->theme().stateChanged(*renderer(), ControlStyle::State::Enabled);
+    if (renderer() && renderer()->style().hasUsedAppearance())
+        renderer()->repaint();
 }
 
 void HTMLFormControlElement::readOnlyStateChanged()
@@ -253,7 +253,8 @@ bool HTMLFormControlElement::isMouseFocusable() const
 #if (PLATFORM(GTK) || PLATFORM(WPE))
     return HTMLElement::isMouseFocusable();
 #else
-    if (!!tabIndexSetExplicitly() || needsMouseFocusableQuirk())
+    // FIXME: We should remove the quirk once <rdar://problem/47334655> is fixed.
+    if (!!tabIndexSetExplicitly() || document().quirks().needsFormControlToBeMouseFocusable())
         return HTMLElement::isMouseFocusable();
     return false;
 #endif
@@ -350,7 +351,7 @@ static const AtomString& hideAtom()
 RefPtr<HTMLElement> HTMLFormControlElement::popoverTargetElement() const
 {
     auto canInvokePopovers = [](const HTMLFormControlElement& element) -> bool {
-        if (!element.document().settings().popoverAttributeEnabled() || element.document().quirks().shouldDisablePopoverAttributeQuirk())
+        if (!element.document().settings().popoverAttributeEnabled())
             return false;
         if (auto* inputElement = dynamicDowncast<HTMLInputElement>(element))
             return inputElement->isTextButton() || inputElement->isImageButton();
@@ -410,7 +411,7 @@ void HTMLFormControlElement::handlePopoverTargetAction() const
         target->showPopover(this);
 }
 
-RefPtr<HTMLElement> HTMLFormControlElement::invokeTargetElement() const
+RefPtr<Element> HTMLFormControlElement::commandForElement() const
 {
     auto canInvoke = [](const HTMLFormControlElement& element) -> bool {
         if (!element.document().settings().invokerAttributesEnabled())
@@ -423,49 +424,69 @@ RefPtr<HTMLElement> HTMLFormControlElement::invokeTargetElement() const
     if (!canInvoke(*this))
         return nullptr;
 
-    return dynamicDowncast<HTMLElement>(getElementAttribute(invoketargetAttr));
+    return getElementAttribute(commandforAttr);
 }
 
-const AtomString& HTMLFormControlElement::invokeAction() const
+constexpr ASCIILiteral togglePopoverLiteral = "togglepopover"_s;
+constexpr ASCIILiteral showPopoverLiteral = "showpopover"_s;
+constexpr ASCIILiteral hidePopoverLiteral = "hidepopover"_s;
+constexpr ASCIILiteral showModalLiteral = "showmodal"_s;
+constexpr ASCIILiteral closeLiteral = "close"_s;
+CommandType HTMLFormControlElement::commandType() const
 {
-    const AtomString& value = attributeWithoutSynchronization(HTMLNames::invokeactionAttr);
+    auto action = attributeWithoutSynchronization(HTMLNames::commandAttr);
+    if (action.isNull() || action.isEmpty())
+        return CommandType::Invalid;
 
-    if (!value || value.isNull() || value.isEmpty())
-        return autoAtom();
-    return value;
+    if (equalLettersIgnoringASCIICase(action, togglePopoverLiteral))
+        return CommandType::TogglePopover;
+
+    if (equalLettersIgnoringASCIICase(action, showPopoverLiteral))
+        return CommandType::ShowPopover;
+
+    if (equalLettersIgnoringASCIICase(action, hidePopoverLiteral))
+        return CommandType::HidePopover;
+
+    if (equalLettersIgnoringASCIICase(action, showModalLiteral))
+        return CommandType::ShowModal;
+
+    if (equalLettersIgnoringASCIICase(action, closeLiteral))
+        return CommandType::Close;
+
+    if (action.contains('-'))
+        return CommandType::Custom;
+
+    return CommandType::Invalid;
 }
 
-void HTMLFormControlElement::setInvokeAction(const AtomString& value)
+void HTMLFormControlElement::handleCommand()
 {
-    setAttributeWithoutSynchronization(HTMLNames::invokeactionAttr, value);
-}
-
-void HTMLFormControlElement::handleInvokeAction()
-{
-    RefPtr invokee = invokeTargetElement();
+    RefPtr invokee = commandForElement();
     if (!invokee)
         return;
 
-    auto action = invokeAction();
+    auto commandRaw = attributeWithoutSynchronization(HTMLNames::commandAttr);
+    auto command = commandType();
 
-    InvokeEvent::Init init;
+    if (command == CommandType::Invalid)
+        return;
+
+    if (command != CommandType::Custom && !invokee->isValidCommandType(command))
+        return;
+
+    CommandEvent::Init init;
     init.bubbles = false;
     init.cancelable = true;
     init.composed = true;
     init.invoker = this;
-    init.action = action;
-    Ref<InvokeEvent> event = InvokeEvent::create(eventNames().invokeEvent, init,
-        InvokeEvent::IsTrusted::Yes);
+    init.command = commandRaw.isNull() ? emptyAtom() : commandRaw;
+
+    Ref<CommandEvent> event = CommandEvent::create(eventNames().commandEvent, init,
+        CommandEvent::IsTrusted::Yes);
     invokee->dispatchEvent(event);
 
-    if (!event->defaultPrevented())
-        invokee->handleInvokeInternal(action);
-}
-
-// FIXME: We should remove the quirk once <rdar://problem/47334655> is fixed.
-bool HTMLFormControlElement::needsMouseFocusableQuirk() const
-{
-    return document().quirks().needsFormControlToBeMouseFocusable();
+    if (!event->defaultPrevented() && command != CommandType::Custom)
+        invokee->handleCommandInternal(*this, command);
 }
 
 } // namespace Webcore

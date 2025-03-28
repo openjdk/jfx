@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2023, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -483,9 +483,7 @@ Color RenderThemeJava::platformInactiveSelectionForegroundColor(OptionSet<StyleC
 #if ENABLE(VIDEO)
 Vector<String, 2> RenderThemeJava::mediaControlsScripts()
 {
-
-    return { String(ModernMediaControlsJavaScript, sizeof(ModernMediaControlsJavaScript)) };
-
+    return { StringImpl::createWithoutCopying(ModernMediaControlsJavaScript) };
 }
 
 String RenderThemeJava::extraMediaControlsStyleSheet()
@@ -550,7 +548,7 @@ bool RenderThemeJava::paintMediaControl(jint type, const RenderObject&, const Pa
 
 String RenderThemeJava::mediaControlsStyleSheet()
 {
-    return String(ModernMediaControlsUserAgentStyleSheet, sizeof(ModernMediaControlsUserAgentStyleSheet));
+    return StringImpl::createWithoutCopying(ModernMediaControlsUserAgentStyleSheet);
 }
 
 String RenderThemeJava::mediaControlsBase64StringForIconNameAndType(const String& iconName, const String& iconType)

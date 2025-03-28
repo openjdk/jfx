@@ -40,12 +40,12 @@ import javafx.scene.text.Text;
 import javafx.scene.text.TextFlow;
 import javafx.stage.Stage;
 import javafx.stage.StageStyle;
-import org.junit.After;
-import org.junit.AfterClass;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import test.util.Util;
 
 /*
@@ -189,12 +189,12 @@ public class TextFlowSurrogatePairInsertionIndexTest {
         Util.waitForIdle(scene);
 
         moveMouseOverTextFlow(X_LEADING_OFFSET, Y_OFFSET);
-        Assert.assertTrue(isLeading);
-        Assert.assertEquals(charIndex, insertionIndex);
+        Assertions.assertTrue(isLeading);
+        Assertions.assertEquals(charIndex, insertionIndex);
 
         moveMouseOverTextFlow(X_TRAILING_OFFSET, Y_OFFSET);
-        Assert.assertFalse(isLeading);
-        Assert.assertEquals(charIndex, insertionIndex - 2);
+        Assertions.assertFalse(isLeading);
+        Assertions.assertEquals(charIndex, insertionIndex - 2);
     }
 
     @Test
@@ -207,9 +207,9 @@ public class TextFlowSurrogatePairInsertionIndexTest {
         while (charIndex < textLength - 2) {
             moveMouseOverTextFlow(x, Y_OFFSET);
             if (isLeading) {
-                Assert.assertEquals(charIndex, insertionIndex);
+                Assertions.assertEquals(charIndex, insertionIndex);
             } else {
-                Assert.assertEquals(charIndex, insertionIndex - 2);
+                Assertions.assertEquals(charIndex, insertionIndex - 2);
             }
             x += step();
         }
@@ -225,11 +225,11 @@ public class TextFlowSurrogatePairInsertionIndexTest {
         while (charIndex < textLength - 2) {
             moveMouseOverTextFlow(x, Y_OFFSET);
             if (isLeading) {
-                Assert.assertEquals(charIndex, insertionIndex);
+                Assertions.assertEquals(charIndex, insertionIndex);
             } else if (!isLeading && charIndex < 5) {
-                Assert.assertEquals(charIndex, insertionIndex - 1);
+                Assertions.assertEquals(charIndex, insertionIndex - 1);
             } else {
-                Assert.assertEquals(charIndex, insertionIndex - 2);
+                Assertions.assertEquals(charIndex, insertionIndex - 2);
             }
             x += step();
         }
@@ -246,11 +246,11 @@ public class TextFlowSurrogatePairInsertionIndexTest {
         while (charIndex < textLength - 2) {
             moveMouseOverTextFlow(x, Y_OFFSET);
             if (isLeading) {
-                Assert.assertEquals(charIndex, insertionIndex);
+                Assertions.assertEquals(charIndex, insertionIndex);
             } else if (isSurrogatePair) {
-                Assert.assertEquals(charIndex, insertionIndex - 2);
+                Assertions.assertEquals(charIndex, insertionIndex - 2);
             } else {
-                Assert.assertEquals(charIndex, insertionIndex - 1);
+                Assertions.assertEquals(charIndex, insertionIndex - 1);
             }
             x += step();
         }
@@ -265,9 +265,9 @@ public class TextFlowSurrogatePairInsertionIndexTest {
         while (x < (HEIGHT - Y_OFFSET)) {
             moveMouseOverTextFlow(X_LEADING_OFFSET, (Y_OFFSET + x));
             if (isLeading) {
-                Assert.assertEquals(charIndex, insertionIndex);
+                Assertions.assertEquals(charIndex, insertionIndex);
             } else {
-                Assert.assertEquals(charIndex, insertionIndex - 1);
+                Assertions.assertEquals(charIndex, insertionIndex - 1);
             }
             x += step();
         }
@@ -282,11 +282,11 @@ public class TextFlowSurrogatePairInsertionIndexTest {
             for (double x = 0.0; x < (WIDTH - X_LEADING_OFFSET); x += step()) {
                 moveMouseOverTextFlow(x, (Y_OFFSET + (Y_OFFSET * (y * 2))));
                 if (isLeading) {
-                    Assert.assertEquals(charIndex, insertionIndex);
+                    Assertions.assertEquals(charIndex, insertionIndex);
                 } else if (isSurrogatePair) {
-                    Assert.assertEquals(charIndex, insertionIndex - 2);
+                    Assertions.assertEquals(charIndex, insertionIndex - 2);
                 } else {
-                    Assert.assertEquals(charIndex, insertionIndex - 1);
+                    Assertions.assertEquals(charIndex, insertionIndex - 1);
                 }
             }
         }
@@ -308,30 +308,30 @@ public class TextFlowSurrogatePairInsertionIndexTest {
             isSurrogatePair = Character.isSurrogate(c);
         }
 
-        Assert.assertTrue(insertionIndex >= 0);
+        Assertions.assertTrue(insertionIndex >= 0);
         String s = hitInfo.toString();
-        Assert.assertTrue(s != null);
+        Assertions.assertTrue(s != null);
     }
 
     private double step() {
         return 1.0 + random.nextDouble() * 8.0;
     }
 
-    @After
+    @AfterEach
     public void resetUI() {
         Platform.runLater(() -> {
             textFlow.removeEventHandler(MouseEvent.MOUSE_PRESSED, this::handleMouseEvent);
         });
     }
 
-    @Before
+    @BeforeEach
     public void setupUI() {
         Platform.runLater(() -> {
             textFlow.addEventHandler(MouseEvent.MOUSE_PRESSED, this::handleMouseEvent);
         });
     }
 
-    @BeforeClass
+    @BeforeAll
     public static void initFX() {
         long seed = new Random().nextLong();
         // if any test fails, we can use the seed found in the log to reproduce exact sequence of events
@@ -341,7 +341,7 @@ public class TextFlowSurrogatePairInsertionIndexTest {
         Util.launch(startupLatch, TestApp.class);
     }
 
-    @AfterClass
+    @AfterAll
     public static void exit() {
         Util.shutdown();
     }

@@ -26,8 +26,10 @@ package com.oracle.tools.fx.monkey.pages;
 
 import javafx.geometry.Point2D;
 import javafx.geometry.Point3D;
+import javafx.scene.AccessibleAttribute;
 import javafx.scene.Node;
 import javafx.scene.control.Button;
+import javafx.scene.control.ContextMenu;
 import javafx.scene.control.Label;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.input.PickResult;
@@ -36,13 +38,16 @@ import javafx.scene.text.HitInfo;
 import javafx.scene.text.Text;
 import javafx.scene.text.TextAlignment;
 import javafx.scene.text.TextFlow;
+import com.oracle.tools.fx.monkey.Loggers;
 import com.oracle.tools.fx.monkey.options.ActionSelector;
 import com.oracle.tools.fx.monkey.options.BooleanOption;
 import com.oracle.tools.fx.monkey.options.EnumOption;
 import com.oracle.tools.fx.monkey.options.FontOption;
 import com.oracle.tools.fx.monkey.sheets.Options;
 import com.oracle.tools.fx.monkey.sheets.RegionPropertySheet;
+import com.oracle.tools.fx.monkey.tools.AccessibilityPropertyViewer;
 import com.oracle.tools.fx.monkey.util.EnterTextDialog;
+import com.oracle.tools.fx.monkey.util.FX;
 import com.oracle.tools.fx.monkey.util.OptionPane;
 import com.oracle.tools.fx.monkey.util.ShowCaretPaths;
 import com.oracle.tools.fx.monkey.util.ShowCharacterRuns;
@@ -66,8 +71,16 @@ public class TextFlowPage extends TestPaneBase {
     public TextFlowPage() {
         super("TextFlowPage");
 
-        textFlow = new TextFlow();
+        textFlow = new TextFlow() {
+            @Override
+            public Object queryAccessibleAttribute(AccessibleAttribute a, Object... ps) {
+                Object v = super.queryAccessibleAttribute(a, ps);
+                Loggers.accessibility.log(a, v);
+                return v;
+            }
+        };
         textFlow.addEventHandler(MouseEvent.ANY, this::handleMouseEvent);
+        FX.setPopupMenu(textFlow, this::createPopupMenu);
 
         pickResult = new Label();
 
@@ -95,9 +108,9 @@ public class TextFlowPage extends TestPaneBase {
             }
         });
 
-        showChars = new BooleanOption("showChars", "show characters", () -> updateShowCharacters());
+        showChars = new BooleanOption("showChars", "show characters", (v) -> updateShowCharacters(v));
 
-        showCaretPaths = new BooleanOption("showCaretPaths", "show caret paths", () -> updateShowCaretPaths());
+        showCaretPaths = new BooleanOption("showCaretPaths", "show caret paths", (v) -> updateShowCaretPaths(v));
 
         OptionPane op = new OptionPane();
         op.section("TextFlow");
@@ -226,19 +239,25 @@ public class TextFlowPage extends TestPaneBase {
         return sb.toString();
     }
 
-    private void updateShowCaretPaths() {
-        if (showCaretPaths.getValue()) {
+    private void updateShowCaretPaths(boolean on) {
+        if (on) {
             ShowCaretPaths.createFor(textFlow);
         } else {
             ShowCaretPaths.remove(textFlow);
         }
     }
 
-    private void updateShowCharacters() {
-        if (showChars.getValue()) {
+    private void updateShowCharacters(boolean on) {
+        if (on) {
             ShowCharacterRuns.createFor(textFlow);
         } else {
             ShowCharacterRuns.remove(textFlow);
         }
+    }
+
+    private ContextMenu createPopupMenu(PickResult pick) {
+        ContextMenu m = new ContextMenu();
+        FX.item(m, "Accessibility Attributes", () -> AccessibilityPropertyViewer.open(pick));
+        return m;
     }
 }

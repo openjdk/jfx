@@ -26,6 +26,7 @@
 #pragma once
 
 #include "ExceptionOr.h"
+#include "FrameLoaderTypes.h"
 #include "JSValueInWrappedObject.h"
 #include "LocalDOMWindowProperty.h"
 #include "ScriptWrappable.h"
@@ -37,7 +38,7 @@ namespace WebCore {
 class Document;
 
 class History final : public ScriptWrappable, public RefCounted<History>, public LocalDOMWindowProperty {
-    WTF_MAKE_ISO_ALLOCATED(History);
+    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(History);
 public:
     static Ref<History> create(LocalDOMWindow& window) { return adoptRef(*new History(window)); }
 
@@ -50,6 +51,8 @@ public:
 
     ExceptionOr<ScrollRestoration> scrollRestoration() const;
     ExceptionOr<void> setScrollRestoration(ScrollRestoration);
+
+    void setTotalStateObjectPayloadLimitOverride(std::optional<uint32_t> limit) { m_totalStateObjectPayloadLimitOverride = limit; }
 
     ExceptionOr<SerializedScriptValue*> state();
     JSValueInWrappedObject& cachedState();
@@ -71,13 +74,13 @@ public:
 private:
     explicit History(LocalDOMWindow&);
 
-    enum class StateObjectType { Push, Replace };
-    ExceptionOr<void> stateObjectAdded(RefPtr<SerializedScriptValue>&&, const String& url, StateObjectType);
+    ExceptionOr<void> stateObjectAdded(RefPtr<SerializedScriptValue>&&, const String& url, NavigationHistoryBehavior);
     bool stateChanged() const;
 
     URL urlForState(const String& url);
 
     SerializedScriptValue* stateInternal() const;
+    uint32_t totalStateObjectPayloadLimit() const;
 
     RefPtr<SerializedScriptValue> m_lastStateObjectRequested;
     JSValueInWrappedObject m_cachedState;
@@ -87,6 +90,7 @@ private:
 
     // For the main frame's History object to keep track of all state object usage.
     uint64_t m_totalStateObjectUsage { 0 };
+    std::optional<uint32_t> m_totalStateObjectPayloadLimitOverride;
 
     // For each individual History object to keep track of the most recent state object added.
     uint64_t m_mostRecentStateObjectUsage { 0 };
@@ -94,12 +98,12 @@ private:
 
 inline ExceptionOr<void> History::pushState(RefPtr<SerializedScriptValue>&& data, const String&, const String& urlString)
 {
-    return stateObjectAdded(WTFMove(data), urlString, StateObjectType::Push);
+    return stateObjectAdded(WTFMove(data), urlString, NavigationHistoryBehavior::Push);
 }
 
 inline ExceptionOr<void> History::replaceState(RefPtr<SerializedScriptValue>&& data, const String&, const String& urlString)
 {
-    return stateObjectAdded(WTFMove(data), urlString, StateObjectType::Replace);
+    return stateObjectAdded(WTFMove(data), urlString, NavigationHistoryBehavior::Replace);
 }
 
 } // namespace WebCore

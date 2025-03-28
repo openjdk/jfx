@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -251,7 +251,7 @@ class WinSystemClipboard extends SystemClipboard {
         if (data != null) {
             if (TEXT_TYPE.equals(mime) || URI_TYPE.equals(mime)) {
                 try {
-                    // RT-16199 - internal Windows data null terminated
+                    // JDK-8118474 - internal Windows data null terminated
                     return new String(data, 0, data.length - 2, defaultCharset);
                 } catch (UnsupportedEncodingException ex) {
                     //never happen
@@ -289,7 +289,7 @@ class WinSystemClipboard extends SystemClipboard {
                 data = popBytes(mime + ";locale", parser.getIndex());
                 if (data != null) {
                     try {
-                        // RT-16199 - internal Windows data null terminated
+                        // JDK-8118474 - internal Windows data null terminated
                         // Here we can request the "ms-stuff/locale" mime data
                         // from GlassClipbord for codepage detection, but
                         // for the most of cases [UTF-8] is ok.

@@ -30,11 +30,11 @@
 #if ENABLE(PICTURE_IN_PICTURE_API)
 
 #include "PictureInPictureWindow.h"
-#include <wtf/IsoMallocInlines.h>
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
-WTF_MAKE_ISO_ALLOCATED_IMPL(PictureInPictureEvent);
+WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(PictureInPictureEvent);
 
 Ref<PictureInPictureEvent> PictureInPictureEvent::create(const AtomString& type, Init&& init, IsTrusted isTrusted)
 {
@@ -42,7 +42,7 @@ Ref<PictureInPictureEvent> PictureInPictureEvent::create(const AtomString& type,
 }
 
 PictureInPictureEvent::PictureInPictureEvent(const AtomString& type, Init&& init, IsTrusted isTrusted)
-    : Event(type, init, isTrusted)
+    : Event(EventInterfaceType::PictureInPictureEvent, type, init, isTrusted)
     , m_pictureInPictureWindow(init.pictureInPictureWindow.releaseNonNull())
 {
 }

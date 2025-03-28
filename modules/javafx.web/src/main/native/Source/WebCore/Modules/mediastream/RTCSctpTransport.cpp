@@ -33,11 +33,11 @@
 #include "RTCDtlsTransport.h"
 #include "RTCSctpTransportBackend.h"
 #include "ScriptExecutionContext.h"
-#include <wtf/IsoMallocInlines.h>
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
-WTF_MAKE_ISO_ALLOCATED_IMPL(RTCSctpTransport);
+WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(RTCSctpTransport);
 
 Ref<RTCSctpTransport> RTCSctpTransport::create(ScriptExecutionContext& context, UniqueRef<RTCSctpTransportBackend>&& backend, Ref<RTCDtlsTransport>&& transport)
 {
@@ -75,8 +75,7 @@ void RTCSctpTransport::onStateChanged(RTCSctpTransportState state, std::optional
         if (m_state == RTCSctpTransportState::Closed)
             return;
 
-        if (maxMessageSize)
-            m_maxMessageSize = *maxMessageSize;
+        m_maxMessageSize = maxMessageSize;
         if (maxChannels)
             m_maxChannels = *maxChannels;
 
@@ -85,6 +84,11 @@ void RTCSctpTransport::onStateChanged(RTCSctpTransportState state, std::optional
             dispatchEvent(Event::create(eventNames().statechangeEvent, Event::CanBubble::Yes, Event::IsCancelable::No));
         }
     });
+}
+
+void RTCSctpTransport::updateMaxMessageSize(std::optional<double> maxMessageSize)
+{
+    m_maxMessageSize = maxMessageSize;
 }
 
 } // namespace WebCore

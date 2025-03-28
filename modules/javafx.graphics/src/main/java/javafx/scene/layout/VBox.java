@@ -441,17 +441,9 @@ public class VBox extends Pane {
             Node child = managed.get(i);
             Insets margin = getMargin(child);
             if (minimum) {
-                if (insideWidth != -1 && isFillWidth) {
-                    temp[0][i] = computeChildMinAreaHeight(child, -1, margin, insideWidth);
-                } else {
-                    temp[0][i] = computeChildMinAreaHeight(child, -1, margin, -1);
-                }
+                temp[0][i] = computeChildMinAreaHeight(child, -1, margin, insideWidth, isFillWidth);
             } else {
-                if (insideWidth != -1 && isFillWidth) {
-                    temp[0][i] = computeChildPrefAreaHeight(child, -1, margin, insideWidth);
-                } else {
-                    temp[0][i] = computeChildPrefAreaHeight(child, -1, margin, -1);
-                }
+                temp[0][i] = computeChildPrefAreaHeight(child, -1, margin, insideWidth, isFillWidth);
             }
         }
         return temp;
@@ -482,23 +474,24 @@ public class VBox extends Pane {
 
         double[] usedHeights = areaHeights[0];
         double[] temp = areaHeights[1];
+        final boolean isFillWidth = isFillWidth();
 
         if (shrinking) {
             adjustingNumber = managed.size();
             for (int i = 0, size = managed.size(); i < size; i++) {
                 final Node child = managed.get(i);
-                temp[i] = computeChildMinAreaHeight(child, -1, getMargin(child), width);
+                temp[i] = computeChildMinAreaHeight(child, -1, getMargin(child), width, isFillWidth);
             }
         } else {
             for (int i = 0, size = managed.size(); i < size; i++) {
-            final Node child = managed.get(i);
-            if (getVgrow(child) == priority) {
-                temp[i] = computeChildMaxAreaHeight(child, -1, getMargin(child), width);
-                adjustingNumber++;
-            } else {
-                temp[i] = -1;
+                final Node child = managed.get(i);
+                if (getVgrow(child) == priority) {
+                    temp[i] = computeChildMaxAreaHeight(child, -1, getMargin(child), width, isFillWidth);
+                    adjustingNumber++;
+                } else {
+                    temp[i] = -1;
+                }
             }
-        }
         }
 
         double pixelSize = isSnapToPixel() ? 1 / Region.getSnapScaleY(this) : 0.0;

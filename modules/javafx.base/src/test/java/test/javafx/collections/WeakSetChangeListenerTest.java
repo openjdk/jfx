@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -27,20 +27,23 @@ package test.javafx.collections;
 
 import com.sun.javafx.binding.SetExpressionHelper;
 import com.sun.javafx.collections.ObservableSetWrapper;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import java.util.HashSet;
 import javafx.collections.SetChangeListener;
 import javafx.collections.WeakSetChangeListener;
 
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.*;
 
 public class WeakSetChangeListenerTest {
 
-    @Test(expected=NullPointerException.class)
+    @Test
     public void testConstructWithNull() {
-        new WeakSetChangeListener<>(null);
+        assertThrows(NullPointerException.class, () -> {
+            new WeakSetChangeListener<>(null);
+        });
     }
+
 
     @Test
     public void testHandle() {

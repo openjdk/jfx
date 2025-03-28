@@ -28,6 +28,28 @@
 #include <gst/gl/gstglmemory.h>
 #endif
 
+#ifndef GST_DISABLE_GST_DEBUG
+#define GST_CAT_DEFAULT ensure_debug_category()
+static GstDebugCategory *
+ensure_debug_category (void)
+{
+  static gsize cat_gonce = 0;
+
+  if (g_once_init_enter (&cat_gonce)) {
+    gsize cat_done;
+
+    cat_done = (gsize) _gst_debug_category_new ("video-frame-converter", 0,
+        "video-frame-converter object");
+
+    g_once_init_leave (&cat_gonce, cat_done);
+  }
+
+  return (GstDebugCategory *) cat_gonce;
+}
+#else
+#define ensure_debug_category() /* NOOP */
+#endif /* GST_DISABLE_GST_DEBUG */
+
 static gboolean
 caps_are_raw (const GstCaps * caps)
 {
@@ -246,8 +268,11 @@ build_convert_frame_pipeline (GstElement ** src_element,
   if (dl)
     gst_bin_add (GST_BIN (pipeline), dl);
 
-  /* set caps */
-  g_object_set (src, "caps", from_caps, NULL);
+  /* set input and output caps */
+  g_object_set (src, "caps", from_caps, "emit-signals", TRUE,
+      "format", GST_FORMAT_TIME, NULL);
+  g_object_set (sink, "caps", to_caps, "emit-signals", TRUE, NULL);
+
   if (vcrop) {
     gst_video_info_from_caps (&info, from_caps);
     g_object_set (vcrop, "left", cmeta->x, NULL);
@@ -259,7 +284,6 @@ build_convert_frame_pipeline (GstElement ** src_element,
     GST_DEBUG ("crop meta [x,y,width,height]: %d %d %d %d", cmeta->x, cmeta->y,
         cmeta->width, cmeta->height);
   }
-  g_object_set (sink, "caps", to_caps, NULL);
 
   /* FIXME: linking is still way too expensive, profile this properly */
   if (vcrop) {
@@ -325,9 +349,6 @@ build_convert_frame_pipeline (GstElement ** src_element,
     if (!gst_element_link_pads (encoder, "src", sink, "sink"))
       goto link_failed;
   }
-
-  g_object_set (src, "emit-signals", TRUE, NULL);
-  g_object_set (sink, "emit-signals", TRUE, NULL);
 
   *src_element = src;
   *sink_element = sink;
@@ -409,7 +430,7 @@ link_failed:
  *
  * The width, height and pixel-aspect-ratio can also be specified in the output caps.
  *
- * Returns: The converted #GstSample, or %NULL if an error happened (in which case @err
+ * Returns: (nullable) (transfer full): The converted #GstSample, or %NULL if an error happened (in which case @err
  * will point to the #GError).
  */
 GstSample *
@@ -579,7 +600,7 @@ gst_video_convert_frame_context_unref (GstVideoConvertSampleContext * ctx)
    * must not end up here without finish() being called */
   g_warn_if_fail (ctx->pipeline == NULL);
 
-  g_slice_free (GstVideoConvertSampleContext, ctx);
+  g_free (ctx);
 }
 
 static gboolean
@@ -838,7 +859,7 @@ gst_video_convert_sample_async (GstSample * sample,
   /* There's a reference cycle between the context and the pipeline, which is
    * broken up once the finish() is called on the context. At latest when the
    * timeout triggers the context will be freed */
-  ctx = g_slice_new0 (GstVideoConvertSampleContext);
+  ctx = g_new0 (GstVideoConvertSampleContext, 1);
   ctx->ref_count = 1;
   g_mutex_init (&ctx->mutex);
   ctx->sample = gst_sample_ref (sample);

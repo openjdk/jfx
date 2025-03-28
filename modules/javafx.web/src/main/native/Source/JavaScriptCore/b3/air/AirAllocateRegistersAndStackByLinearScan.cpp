@@ -49,14 +49,6 @@ namespace JSC { namespace B3 { namespace Air {
 
 namespace {
 
-#undef RELEASE_ASSERT
-#define RELEASE_ASSERT(assertion) do { \
-    if (!(assertion)) { \
-        WTFReportAssertionFailure(__FILE__, __LINE__, WTF_PRETTY_FUNCTION, #assertion); \
-        CRASH(); \
-    } \
-} while (0)
-
 bool verbose() { return Options::airLinearScanVerbose(); }
 
 // Phase constants we use for the PhaseInsertionSet.
@@ -229,7 +221,7 @@ private:
 
     void buildIntervals()
     {
-        CompilerTimingScope timingScope("Air", "LinearScan::buildIntervals");
+        CompilerTimingScope timingScope("Air"_s, "LinearScan::buildIntervals"_s);
         UnifiedTmpLiveness liveness(m_code);
 
         for (BasicBlock* block : m_code) {
@@ -690,7 +682,7 @@ private:
 void allocateRegistersAndStackByLinearScan(Code& code)
 {
     RELEASE_ASSERT(!code.usesSIMD());
-    PhaseScope phaseScope(code, "allocateRegistersAndStackByLinearScan");
+    PhaseScope phaseScope(code, "allocateRegistersAndStackByLinearScan"_s);
     if (verbose())
         dataLog("Air before linear scan:\n", code);
     LinearScan linearScan(code);

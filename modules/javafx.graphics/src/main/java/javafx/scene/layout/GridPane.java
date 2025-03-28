@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2023, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -421,7 +421,7 @@ public class GridPane extends Pane {
      * If set, will override the gridpane's default horizontal alignment.
      * Setting the value to null will remove the constraint.
      * @param child the child node of a gridpane
-     * @param value the hozizontal alignment for the child
+     * @param value the horizontal alignment for the child
      */
     public static void setHalignment(Node child, HPos value) {
         setConstraint(child, HALIGNMENT_CONSTRAINT, value);
@@ -547,7 +547,7 @@ public class GridPane extends Pane {
     }
 
     /**
-     * Sets the column,row indeces for the child when contained in a gridpane.
+     * Sets the column,row indices for the child when contained in a gridpane.
      * @param child the child node of a gridpane
      * @param columnIndex the column index position for the child
      * @param rowIndex the row index position for the child
@@ -1447,8 +1447,13 @@ public class GridPane extends Pane {
             Node child = managed.get(i);
             int start = getNodeRowIndex(child);
             int end = getNodeRowEndConvertRemaining(child);
-            double childPrefAreaHeight = computeChildPrefAreaHeight(child, isNodePositionedByBaseline(child) ? rowPrefBaselineComplement[start] : -1, getMargin(child),
-                    widths == null ? -1 : getTotalWidthOfNodeColumns(child, widths));
+            double childPrefAreaHeight = computeChildPrefAreaHeight(
+                child,
+                isNodePositionedByBaseline(child) ? rowPrefBaselineComplement[start] : -1,
+                getMargin(child),
+                widths == null ? -1 : getTotalWidthOfNodeColumns(child, widths),
+                false
+            );
             if (start == end && !result.isPreset(start)) {
                 double min = getRowMinHeight(start);
                 double max = getRowMaxHeight(start);
@@ -1490,8 +1495,13 @@ public class GridPane extends Pane {
             Node child = managed.get(i);
             int start = getNodeRowIndex(child);
             int end = getNodeRowEndConvertRemaining(child);
-            double childMinAreaHeight = computeChildMinAreaHeight(child, isNodePositionedByBaseline(child) ? rowMinBaselineComplement[start] : -1, getMargin(child),
-                             widths == null ? -1 : getTotalWidthOfNodeColumns(child, widths));
+            double childMinAreaHeight = computeChildMinAreaHeight(
+                child,
+                isNodePositionedByBaseline(child) ? rowMinBaselineComplement[start] : -1,
+                getMargin(child),
+                widths == null ? -1 : getTotalWidthOfNodeColumns(child, widths),
+                false
+            );
             if (start == end && !result.isPreset(start)) {
                 result.setMaxSize(start, childMinAreaHeight);
             } else if (start != end){
@@ -1581,17 +1591,20 @@ public class GridPane extends Pane {
             Node child = managed.get(i);
             int start = getNodeColumnIndex(child);
             int end = getNodeColumnEndConvertRemaining(child);
+            double childPrefAreaWidth = computeChildPrefAreaWidth(
+                child,
+                getBaselineComplementForChild(child),
+                getMargin(child),
+                heights == null ? -1 : getTotalHeightOfNodeRows(child, heights),
+                false
+            );
             if (start == end && !result.isPreset(start)) {
                 double min = getColumnMinWidth(start);
                 double max = getColumnMaxWidth(start);
-                result.setMaxSize(start, boundedSize(min < 0 ? 0 : min, computeChildPrefAreaWidth(child,
-                        getBaselineComplementForChild(child), getMargin(child),
-                        heights == null ? -1 : getTotalHeightOfNodeRows(child, heights), false),
+                result.setMaxSize(start, boundedSize(min < 0 ? 0 : min, childPrefAreaWidth,
                         max < 0 ? Double.MAX_VALUE : max));
             } else if (start != end) {
-                result.setMaxMultiSize(start, end + 1, computeChildPrefAreaWidth(child, getBaselineComplementForChild(child),
-                        getMargin(child),
-                        heights == null ? -1 : getTotalHeightOfNodeRows(child, heights), false));
+                result.setMaxMultiSize(start, end + 1, childPrefAreaWidth);
             }
         }
         return result;
@@ -1627,14 +1640,17 @@ public class GridPane extends Pane {
             Node child = managed.get(i);
             int start = getNodeColumnIndex(child);
             int end = getNodeColumnEndConvertRemaining(child);
+            double childMinAreaWidth = computeChildMinAreaWidth(
+                child,
+                getBaselineComplementForChild(child),
+                getMargin(child),
+                heights == null ? -1 : getTotalHeightOfNodeRows(child, heights),
+                false
+            );
             if (start == end && !result.isPreset(start)) {
-                result.setMaxSize(start, computeChildMinAreaWidth(child, getBaselineComplementForChild(child),
-                        getMargin(child),
-                        heights == null ? -1 : getTotalHeightOfNodeRows(child, heights),false));
+                result.setMaxSize(start, childMinAreaWidth);
             } else if (start != end){
-                result.setMaxMultiSize(start, end + 1, computeChildMinAreaWidth(child, getBaselineComplementForChild(child),
-                        getMargin(child),
-                        heights == null ? -1 : getTotalHeightOfNodeRows(child, heights), false));
+                result.setMaxMultiSize(start, end + 1, childMinAreaWidth);
             }
         }
         return result;
@@ -1676,7 +1692,7 @@ public class GridPane extends Pane {
     }
 
     @Override public void requestLayout() {
-        // RT-18878: Do not update metrics dirty if we are performing layout.
+        // JDK-8119502: Do not update metrics dirty if we are performing layout.
         // If metricsDirty is set true during a layout pass the next call to computeGridMetrics()
         // will clear all the cell bounds resulting in out of date info until the
         // next layout pass.
@@ -2024,7 +2040,7 @@ public class GridPane extends Pane {
         boolean handleRemainder = false;
         double portion = 0;
 
-        // RT-25684: We have to be careful that when subtracting change
+        // JDK-8125641: We have to be careful that when subtracting change
         // that we don't jump right past 0 - this leads to an infinite
         // loop
         final boolean wasPositive = available >= 0.0;
@@ -2268,7 +2284,7 @@ public class GridPane extends Pane {
         boolean handleRemainder = false;
         double portion = 0;
 
-        // RT-25684: We have to be careful that when subtracting change
+        // JDK-8125641: We have to be careful that when subtracting change
         // that we don't jump right past 0 - this leads to an infinite
         // loop
         final boolean wasPositive = available >= 0.0;

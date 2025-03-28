@@ -34,7 +34,9 @@ namespace WebCore {
 
 class RenderThemeAdwaita : public RenderTheme {
 public:
-    virtual ~RenderThemeAdwaita() = default;
+    virtual ~RenderThemeAdwaita();
+
+    bool isControlStyled(const RenderStyle&, const RenderStyle& userAgentStyle) const final;
 
     void setAccentColor(const Color&);
 
@@ -52,7 +54,7 @@ private:
     String m_mediaControlsStyleSheet;
 #endif // ENABLE(VIDEO) && ENABLE(MODERN_MEDIA_CONTROLS)
 
-    bool supportsHover(const RenderStyle&) const final { return true; }
+    bool supportsHover() const final { return true; }
     bool supportsFocusRing(const RenderStyle&) const final;
     bool supportsSelectionForegroundColors(OptionSet<StyleColorOptions>) const final { return false; }
     bool supportsListBoxSelectionForegroundColors(OptionSet<StyleColorOptions>) const final { return true; }

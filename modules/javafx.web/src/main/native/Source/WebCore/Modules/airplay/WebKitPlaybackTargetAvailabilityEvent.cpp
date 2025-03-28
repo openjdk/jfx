@@ -26,14 +26,14 @@
 #include "config.h"
 #include "WebKitPlaybackTargetAvailabilityEvent.h"
 
-#include <wtf/IsoMallocInlines.h>
 #include <wtf/NeverDestroyed.h>
+#include <wtf/TZoneMallocInlines.h>
 
 #if ENABLE(WIRELESS_PLAYBACK_TARGET_AVAILABILITY_API)
 
 namespace WebCore {
 
-WTF_MAKE_ISO_ALLOCATED_IMPL(WebKitPlaybackTargetAvailabilityEvent);
+WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(WebKitPlaybackTargetAvailabilityEvent);
 
 static const AtomString& stringForPlaybackTargetAvailability(bool available)
 {
@@ -44,13 +44,13 @@ static const AtomString& stringForPlaybackTargetAvailability(bool available)
 }
 
 WebKitPlaybackTargetAvailabilityEvent::WebKitPlaybackTargetAvailabilityEvent(const AtomString& eventType, bool available)
-    : Event(eventType, CanBubble::No, IsCancelable::No)
+    : Event(EventInterfaceType::WebKitPlaybackTargetAvailabilityEvent, eventType, CanBubble::No, IsCancelable::No)
     , m_availability(stringForPlaybackTargetAvailability(available))
 {
 }
 
 WebKitPlaybackTargetAvailabilityEvent::WebKitPlaybackTargetAvailabilityEvent(const AtomString& eventType, const Init& initializer, IsTrusted isTrusted)
-    : Event(eventType, initializer, isTrusted)
+    : Event(EventInterfaceType::WebKitPlaybackTargetAvailabilityEvent, eventType, initializer, isTrusted)
     , m_availability(initializer.availability)
 {
 }

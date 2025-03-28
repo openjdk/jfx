@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2014, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,12 +25,11 @@
 
 package test.robot.com.sun.glass.ui.monocle.input.devices;
 
-import test.robot.com.sun.glass.ui.monocle.TestApplication;
-import test.robot.com.sun.glass.ui.monocle.UInput;
-import org.junit.Assume;
-
 import java.util.HashMap;
 import java.util.Map;
+import org.junit.jupiter.api.Assumptions;
+import test.robot.com.sun.glass.ui.monocle.TestApplication;
+import test.robot.com.sun.glass.ui.monocle.UInput;
 
 /**
  * TouchRevolutionFusionDevice sends ABS_X, ABS_Y, ABS_MT_POSITION_X and
@@ -50,7 +49,7 @@ public class TouchRevolutionFusionDevice extends TestTouchDevice {
 
     @Override
     public void create() {
-        Assume.assumeTrue(TestApplication.isMonocle());
+        Assumptions.assumeTrue(TestApplication.isMonocle());
         ui = new UInput();
         ui.processLine("OPEN");
         ui.processLine("EVBIT EV_SYN");

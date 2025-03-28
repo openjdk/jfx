@@ -25,16 +25,28 @@
 
 package test.robot.javafx.embed.swing;
 
-import org.junit.Test;
-import test.util.Util;
-
-import javax.swing.SwingUtilities;
+import static org.junit.jupiter.api.Assumptions.assumeTrue;
 import java.lang.reflect.InvocationTargetException;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
+import javax.swing.SwingUtilities;
 
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
+import test.util.Util;
+
+@Timeout(value=15000, unit=TimeUnit.MILLISECONDS)
 public class SwingNodeJDialogTest extends SwingNodeBase {
 
-    @Test(timeout = 15000)
+    @BeforeAll
+    public static void init() throws Exception {
+        if (Util.isOnWayland()) {
+            assumeTrue(Runtime.version().feature() >= 24);
+        }
+    }
+
+    @Test
     public void testJDialogAbove() throws InterruptedException, InvocationTargetException {
         myApp.createStageAndDialog();
         myApp.showDialog();
@@ -44,7 +56,7 @@ public class SwingNodeJDialogTest extends SwingNodeBase {
         myApp.closeStageAndDialog();
     }
 
-    @Test(timeout = 15000)
+    @Test
     public void testNodeRemovalAfterShow() throws InterruptedException, InvocationTargetException {
         myApp.createStageAndDialog();
         myApp.showDialog();
@@ -58,7 +70,7 @@ public class SwingNodeJDialogTest extends SwingNodeBase {
         myApp.attachSwingNode();
     }
 
-    @Test(timeout = 15000)
+    @Test
     public void testNodeRemovalBeforeShow() throws InterruptedException, InvocationTargetException {
         myApp.createStageAndDialog();
         myApp.detachSwingNode();
@@ -70,7 +82,7 @@ public class SwingNodeJDialogTest extends SwingNodeBase {
         myApp.attachSwingNode();
     }
 
-    @Test(timeout = 15000)
+    @Test
     public void testStageCloseAfterShow() throws InvocationTargetException, InterruptedException {
         myApp.createStageAndDialog();
         myApp.showDialog();
@@ -79,7 +91,7 @@ public class SwingNodeJDialogTest extends SwingNodeBase {
         myApp.disposeDialog();
     }
 
-    @Test(timeout = 15000)
+    @Test
     public void testStageCloseBeforeShow() throws InvocationTargetException, InterruptedException {
         myApp.createStageAndDialog();
         myApp.closeStage();
@@ -89,7 +101,7 @@ public class SwingNodeJDialogTest extends SwingNodeBase {
     }
 
 
-    @Test(timeout = 15000)
+    @Test
     public void testNodeRemovalBeforeShowHoldEDT() throws InterruptedException, InvocationTargetException {
         myApp.createAndShowStage();
         CountDownLatch latch = new CountDownLatch(1);
@@ -106,7 +118,7 @@ public class SwingNodeJDialogTest extends SwingNodeBase {
         myApp.attachSwingNode();
     }
 
-    @Test(timeout = 15000)
+    @Test
     public void testStageCloseBeforeShowHoldEDT() throws InvocationTargetException, InterruptedException {
         myApp.createAndShowStage();
         CountDownLatch latch = new CountDownLatch(1);

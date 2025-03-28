@@ -55,6 +55,7 @@ public:
 
     CustomElementQueue& backupElementQueue();
 
+    void scheduleIdlePeriod(Page&);
     void didScheduleRenderingUpdate(Page&, MonotonicTime);
     void didStartRenderingUpdate(Page&);
     void opportunisticallyRunIdleCallbacks();
@@ -74,6 +75,8 @@ private:
     std::optional<MonotonicTime> nextRenderingTime() const;
     void didReachTimeToRun();
 
+    void decayIdleCallbackDuration() { m_expectedIdleCallbackDuration /= 2; }
+
     String m_agentClusterKey;
     Timer m_timer;
     std::unique_ptr<MicrotaskQueue> m_microtaskQueue;
@@ -89,12 +92,13 @@ private:
     HashSet<RefPtr<MutationObserver>> m_activeObservers;
     HashSet<RefPtr<MutationObserver>> m_suspendedObservers;
 
-    SingleThreadWeakHashMap<Page, MonotonicTime> m_pagesWithRenderingOpportunity;
+    WeakHashMap<Page, MonotonicTime> m_pagesWithRenderingOpportunity;
 
     std::unique_ptr<CustomElementQueue> m_customElementQueue;
     bool m_processingBackupElementQueue { false };
 
     MonotonicTime m_lastIdlePeriodStartTime;
+    Seconds m_expectedIdleCallbackDuration { 4_ms };
 };
 
 } // namespace WebCore

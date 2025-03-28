@@ -892,7 +892,7 @@ gst_tag_demux_seek_pull (GstTagDemux * tagdemux, GstEvent * event)
   gst_segment_do_seek (&seeksegment, rate, format, flags,
       start_type, start, stop_type, stop, NULL);
 
-  flush = ! !(flags & GST_SEEK_FLAG_FLUSH);
+  flush = !!(flags & GST_SEEK_FLAG_FLUSH);
 
   GST_DEBUG_OBJECT (tagdemux, "New segment %" GST_SEGMENT_FORMAT, &seeksegment);
 

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2018-2022 Apple Inc. All rights reserved.
+ * Copyright (C) 2018-2024 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -63,6 +63,7 @@ using PtrTag = WTF::PtrTag;
     /* Callee:JIT Caller:Native */ \
     v(NativeToJITGatePtrTag, PtrTagCalleeType::JIT, PtrTagCallerType::Native) \
     v(YarrEntryPtrTag, PtrTagCalleeType::JIT, PtrTagCallerType::Native) \
+    v(LLIntToWasmEntryPtrTag, PtrTagCalleeType::JIT, PtrTagCallerType::Native) \
     v(CSSSelectorPtrTag, PtrTagCalleeType::JIT, PtrTagCallerType::Native) \
     /* Callee:Native Caller:JIT */ \
     v(OperationPtrTag, PtrTagCalleeType::Native, PtrTagCallerType::JIT) \
@@ -116,16 +117,7 @@ using PtrTag = WTF::PtrTag;
         } \
     };
 
-#if COMPILER(MSVC)
-#pragma warning(push)
-#pragma warning(disable:4307)
-#endif
-
 FOR_EACH_JSC_PTRTAG(JSC_DECLARE_PTRTAG)
-
-#if COMPILER(MSVC)
-#pragma warning(pop)
-#endif
 
 #if CPU(ARM64E)
 JS_EXPORT_PRIVATE PtrTagCallerType callerType(PtrTag);
@@ -141,7 +133,7 @@ ALWAYS_INLINE static PtrType tagJSCCodePtrImpl(PtrType ptr)
         JITOperationList::assertIsJITOperation(ptr);
 #if ENABLE(JIT_CAGE)
         if (Options::useJITCage())
-            return bitwise_cast<PtrType>(JITOperationList::instance().map(ptr));
+            return bitwise_cast<PtrType>(JITOperationList::singleton().map(ptr));
     } else {
         if (Options::useJITCage())
             return bitwise_cast<PtrType>(jitCagePtr(bitwise_cast<void*>(ptr), tag));
@@ -182,8 +174,8 @@ ALWAYS_INLINE static bool isTaggedJSCCodePtrImpl(PtrType ptr)
         static_assert(tag == OperationPtrTag);
 #if ENABLE(JIT_CAGE)
         if (Options::useJITCage()) {
-#if JIT_OPERATION_VALIDATION_ASSERT_ENABLED
-            return JITOperationList::instance().inverseMap(ptr);
+#if ENABLE(JIT_OPERATION_VALIDATION_ASSERT)
+            return JITOperationList::singleton().inverseMap(ptr);
 #else
             // Not supported. We currently don't use this, and don't have an
             // efficient way to implement this. So, just assert that it's not used.
@@ -260,15 +252,6 @@ const char* ptrTagName(PtrTag);
 } // namespace JSC
 namespace WTF {
 
-#if COMPILER(MSVC)
-#pragma warning(push)
-#pragma warning(disable:4307)
-#endif
-
 FOR_EACH_JSC_PTRTAG(JSC_DECLARE_PTRTAG_TRAIT)
-
-#if COMPILER(MSVC)
-#pragma warning(pop)
-#endif
 
 } // namespace WTF

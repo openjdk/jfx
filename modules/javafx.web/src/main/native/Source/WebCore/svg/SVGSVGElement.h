@@ -40,7 +40,8 @@ class SVGViewElement;
 class SVGViewSpec;
 
 class SVGSVGElement final : public SVGGraphicsElement, public SVGFitToViewBox, public SVGZoomAndPan {
-    WTF_MAKE_ISO_ALLOCATED(SVGSVGElement);
+    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(SVGSVGElement);
+    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(SVGSVGElement);
 public: // DOM
     float currentScale() const;
     void setCurrentScale(float);
@@ -92,6 +93,7 @@ public:
     using SVGGraphicsElement::deref;
 
     SMILTimeContainer& timeContainer() { return m_timeContainer.get(); }
+    Ref<SMILTimeContainer> protectedTimeContainer() const;
 
     void setCurrentTranslate(const FloatPoint&); // Used to pan.
     void updateCurrentTranslate();

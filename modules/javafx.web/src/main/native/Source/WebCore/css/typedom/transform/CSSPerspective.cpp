@@ -38,11 +38,11 @@
 #include "CSSUnitValue.h"
 #include "DOMMatrix.h"
 #include "ExceptionOr.h"
-#include <wtf/IsoMallocInlines.h>
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
-WTF_MAKE_ISO_ALLOCATED_IMPL(CSSPerspective);
+WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(CSSPerspective);
 
 static ExceptionOr<CSSPerspectiveValue> checkLength(CSSPerspectiveValue length)
 {
@@ -102,6 +102,8 @@ CSSPerspective::CSSPerspective(CSSPerspectiveValue length)
 {
 }
 
+CSSPerspective::~CSSPerspective() = default;
+
 ExceptionOr<void> CSSPerspective::setLength(CSSPerspectiveValue length)
 {
     auto checkedLength = checkLength(WTFMove(length));
@@ -119,11 +121,11 @@ void CSSPerspective::setIs2D(bool)
 void CSSPerspective::serialize(StringBuilder& builder) const
 {
     // https://drafts.css-houdini.org/css-typed-om/#serialize-a-cssperspective
-    builder.append("perspective(");
+    builder.append("perspective("_s);
     WTF::switchOn(m_length,
         [&] (const RefPtr<CSSNumericValue>& value) {
             if (auto* unitValue = dynamicDowncast<CSSUnitValue>(value.get()); unitValue && unitValue->value() < 0.0) {
-                builder.append("calc(");
+                builder.append("calc("_s);
                 value->serialize(builder);
                 builder.append(')');
                 return;

@@ -41,12 +41,13 @@
 #include "RawDataDocumentParser.h"
 #include "RenderEmbeddedObject.h"
 #include "StyleSheetContents.h"
-#include <wtf/IsoMallocInlines.h>
+#include <wtf/TZoneMallocInlines.h>
+#include <wtf/text/MakeString.h>
 #include <wtf/text/TextStream.h>
 
 namespace WebCore {
 
-WTF_MAKE_ISO_ALLOCATED_IMPL(PluginDocument);
+WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(PluginDocument);
 
 using namespace HTMLNames;
 
@@ -64,7 +65,7 @@ private:
     {
     }
 
-    void appendBytes(DocumentWriter&, const uint8_t*, size_t) final;
+    void appendBytes(DocumentWriter&, std::span<const uint8_t>) final;
     void createDocumentStructure();
     static Ref<HTMLStyleElement> createStyleElement(Document&);
 
@@ -93,7 +94,6 @@ void PluginDocumentParser::createDocumentStructure()
 
     auto rootElement = HTMLHtmlElement::create(document);
     document.appendChild(rootElement);
-    rootElement->insertedByParser();
 
     auto headElement = HTMLHeadElement::create(document);
     auto styleElement = createStyleElement(document);
@@ -126,7 +126,7 @@ void PluginDocumentParser::createDocumentStructure()
     document.setHasVisuallyNonEmptyCustomContent();
 }
 
-void PluginDocumentParser::appendBytes(DocumentWriter&, const uint8_t*, size_t)
+void PluginDocumentParser::appendBytes(DocumentWriter&, std::span<const uint8_t>)
 {
     if (m_embedElement)
         return;
@@ -166,6 +166,8 @@ PluginDocument::PluginDocument(LocalFrame& frame, const URL& url)
     lockCompatibilityMode();
 }
 
+PluginDocument::~PluginDocument() = default;
+
 Ref<DocumentParser> PluginDocument::createParser()
 {
     return PluginDocumentParser::create(*this);
@@ -190,6 +192,12 @@ void PluginDocument::detachFromPluginElement()
 {
     // Release the plugin Element so that we don't have a circular reference.
     m_pluginElement = nullptr;
+}
+
+void PluginDocument::releaseMemory()
+{
+    if (RefPtr pluginView = pluginWidget())
+        pluginView->releaseMemory();
 }
 
 }

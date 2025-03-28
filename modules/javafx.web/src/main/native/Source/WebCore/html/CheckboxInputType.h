@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2010 Google Inc. All rights reserved.
+ * Copyright (C) 2013-2024 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -31,12 +32,16 @@
 #pragma once
 
 #include "BaseCheckableInputType.h"
+#include "SwitchTrigger.h"
 
 namespace WebCore {
 
-enum class WasSetByJavaScript : bool;
+#if ENABLE(IOS_TOUCH_EVENTS)
+class Touch;
+#endif
 
-enum class SwitchAnimationType : bool { VisuallyOn, Pressed };
+enum class WasSetByJavaScript : bool;
+enum class SwitchAnimationType : bool { VisuallyOn, Held };
 
 class CheckboxInputType final : public BaseCheckableInputType {
 public:
@@ -48,7 +53,8 @@ public:
     bool valueMissing(const String&) const final;
     float switchAnimationVisuallyOnProgress() const;
     bool isSwitchVisuallyOn() const;
-    float switchAnimationPressedProgress() const;
+    float switchAnimationHeldProgress() const;
+    bool isSwitchHeld() const;
 
 private:
     explicit CheckboxInputType(HTMLInputElement& element)
@@ -65,9 +71,10 @@ private:
 // FIXME: It should not be iOS-specific, but it's not been tested with a non-iOS touch
 // implementation thus far.
 #if ENABLE(IOS_TOUCH_EVENTS)
+    Touch* subsequentTouchEventTouch(const TouchEvent&) const;
     void handleTouchEvent(TouchEvent&) final;
 #endif
-    void startSwitchPointerTracking(LayoutPoint, std::optional<unsigned> = std::nullopt);
+    void startSwitchPointerTracking(LayoutPoint);
     void stopSwitchPointerTracking();
     bool isSwitchPointerTracking() const;
     void willDispatchClick(InputElementClickState&) final;
@@ -79,6 +86,8 @@ private:
     void setSwitchAnimationStartTime(SwitchAnimationType, Seconds);
     bool isSwitchAnimating(SwitchAnimationType) const;
     void performSwitchAnimation(SwitchAnimationType);
+    void performSwitchVisuallyOnAnimation(SwitchTrigger);
+    void setIsSwitchHeld(bool /* isHeld */);
     void stopSwitchAnimation(SwitchAnimationType);
     float switchAnimationProgress(SwitchAnimationType) const;
     void updateIsSwitchVisuallyOnFromAbsoluteLocation(LayoutPoint);
@@ -89,10 +98,14 @@ private:
     std::optional<int> m_switchPointerTrackingLogicalLeftPositionStart { std::nullopt };
     bool m_hasSwitchVisuallyOnChanged { false };
     bool m_isSwitchVisuallyOn { false };
+    bool m_isSwitchHeld { false };
     Seconds m_switchAnimationVisuallyOnStartTime { 0_s };
-    Seconds m_switchAnimationPressedStartTime { 0_s };
+    Seconds m_switchAnimationHeldStartTime { 0_s };
     std::unique_ptr<Timer> m_switchAnimationTimer;
+#if ENABLE(IOS_TOUCH_EVENTS)
+    std::unique_ptr<Timer> m_switchHeldTimer;
     std::optional<unsigned> m_switchPointerTrackingTouchIdentifier { std::nullopt };
+#endif
 };
 
 } // namespace WebCore

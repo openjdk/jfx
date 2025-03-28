@@ -25,13 +25,13 @@
 
 #pragma once
 
+#include "AdvancedPrivacyProtections.h"
 #include "EventLoop.h"
 #include "Microtasks.h"
 #include "ReferrerPolicy.h"
 #include "ScriptExecutionContext.h"
 #include "SecurityOrigin.h"
-
-#include <wtf/IsoMalloc.h>
+#include <wtf/TZoneMalloc.h>
 
 namespace WebCore {
 
@@ -61,6 +61,7 @@ public:
 
     void disableEval(const String&) final { };
     void disableWebAssembly(const String&) final { };
+    void setRequiresTrustedTypes(bool) final { };
 
     IDBClient::IDBConnectionProxy* idbConnectionProxy() final { return nullptr; }
     SocketProvider* socketProvider() final { return nullptr; }
@@ -70,14 +71,14 @@ public:
 
     SecurityOrigin& topOrigin() const final { return m_origin.get(); };
 
+    OptionSet<AdvancedPrivacyProtections> advancedPrivacyProtections() const final { return { }; }
     std::optional<uint64_t> noiseInjectionHashSalt() const { return std::nullopt; }
 
     void postTask(Task&&) final { ASSERT_NOT_REACHED(); }
     EventTarget* errorEventTarget() final { return nullptr; };
-
 #if ENABLE(WEB_CRYPTO)
-    bool wrapCryptoKey(const Vector<uint8_t>&, Vector<uint8_t>&) final { return false; }
-    bool unwrapCryptoKey(const Vector<uint8_t>&, Vector<uint8_t>&) final { return false; }
+    std::optional<Vector<uint8_t>> wrapCryptoKey(const Vector<uint8_t>&) final { return std::nullopt; }
+    std::optional<Vector<uint8_t>> unwrapCryptoKey(const Vector<uint8_t>&) final { return std::nullopt; }
 #endif
 
     JSC::VM& vm() final { return m_vm; }

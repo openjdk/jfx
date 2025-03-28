@@ -31,6 +31,8 @@
 #define _GNU_SOURCE 1
 #endif
 
+#ifndef __EMSCRIPTEN__
+
 #include <fficonfig.h>
 #include <ffi.h>
 #include <ffi_common.h>
@@ -597,7 +599,7 @@ open_temp_exec_file_memfd (const char *name)
 
 /* Open a temporary file name, and immediately unlink it.  */
 static int
-open_temp_exec_file_name (char *name, int flags)
+open_temp_exec_file_name (char *name, int flags MAYBE_UNUSED)
 {
   int fd;
 
@@ -793,9 +795,9 @@ open_temp_exec_file (void)
    Failure to allocate the space will cause SIGBUS to be thrown when
    the mapping is subsequently written to.  */
 static int
-allocate_space (int fd, off_t offset, off_t len)
+allocate_space (int fd, off_t len)
 {
-  static size_t page_size;
+  static long page_size;
 
   /* Obtain system page size. */
   if (!page_size)
@@ -836,7 +838,7 @@ dlmmap_locked (void *start, size_t length, int prot, int flags, off_t offset)
 
   offset = execsize;
 
-  if (allocate_space (execfd, offset, length))
+  if (allocate_space (execfd, length))
     return MFAIL;
 
   flags &= ~(MAP_PRIVATE | MAP_ANONYMOUS);
@@ -993,7 +995,7 @@ ffi_closure_alloc (size_t size, void **code)
   if (!code)
     return NULL;
 
-  ptr = FFI_CLOSURE_PTR (dlmalloc (size));
+  ptr = dlmalloc (size);
 
   if (ptr)
     {
@@ -1003,17 +1005,17 @@ ffi_closure_alloc (size_t size, void **code)
         return NULL;
 #endif // GSTREAMER_LITE
 
-      *code = add_segment_exec_offset (ptr, seg);
+      *code = FFI_FN (add_segment_exec_offset (ptr, seg));
       if (!ffi_tramp_is_supported ())
         return ptr;
 
       ftramp = ffi_tramp_alloc (0);
       if (ftramp == NULL)
       {
-        dlfree (FFI_RESTORE_PTR (ptr));
+        dlfree (ptr);
         return NULL;
     }
-      *code = ffi_tramp_get_addr (ftramp);
+      *code = FFI_FN (ffi_tramp_get_addr (ftramp));
       ((ffi_closure *) ptr)->ftramp = ftramp;
     }
 
@@ -1054,7 +1056,7 @@ ffi_closure_free (void *ptr)
   if (ffi_tramp_is_supported ())
     ffi_tramp_free (((ffi_closure *) ptr)->ftramp);
 
-  dlfree (FFI_RESTORE_PTR (ptr));
+  dlfree (ptr);
 }
 
 int
@@ -1074,16 +1076,20 @@ ffi_tramp_is_present (void *ptr)
 void *
 ffi_closure_alloc (size_t size, void **code)
 {
+  void *c;
+
   if (!code)
     return NULL;
 
-  return *code = FFI_CLOSURE_PTR (malloc (size));
+  c = malloc (size);
+  *code = FFI_FN (c);
+  return c;
 }
 
 void
 ffi_closure_free (void *ptr)
 {
-  free (FFI_RESTORE_PTR (ptr));
+  free (ptr);
 }
 
 void *
@@ -1102,3 +1108,4 @@ ffi_tramp_is_present (__attribute__((unused)) void *ptr)
 #endif /* FFI_CLOSURES */
 
 #endif /* NetBSD with PROT_MPROTECT */
+#endif /* __EMSCRIPTEN__ */

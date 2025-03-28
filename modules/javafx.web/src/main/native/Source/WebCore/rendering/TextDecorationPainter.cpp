@@ -38,7 +38,7 @@
 namespace WebCore {
 
 /*
- * Draw one cubic Bezier curve and repeat the same pattern long the the decoration's axis.
+ * Draw one cubic Bezier curve and repeat the same pattern along the the decoration's axis.
  * The start point (p1), controlPoint1, controlPoint2 and end point (p2) of the Bezier curve
  * form a diamond shape:
  *
@@ -140,8 +140,10 @@ static DashArray translateIntersectionPointsToSkipInkBoundaries(const DashArray&
             else
                 intermediateTuples.append(*i);
         }
-    } else
-        intermediateTuples = tuples;
+    } else {
+        // XXX(274780): A plain assignment or move here makes Clang generate bad code in LTO builds.
+        intermediateTuples.swap(tuples);
+    }
 
     // Step 3: Output the space between the ranges, but only if the space warrants an underline.
     float previous = 0;
@@ -349,8 +351,8 @@ static void collectStylesForRenderer(TextDecorationPainter::Styles& result, cons
     auto styleForRenderer = [&] (const RenderObject& renderer) -> const RenderStyle& {
         if (pseudoId != PseudoId::None && renderer.style().hasPseudoStyle(pseudoId)) {
             if (auto textRenderer = dynamicDowncast<RenderText>(renderer))
-                return *textRenderer->getCachedPseudoStyle(pseudoId);
-            return *downcast<RenderElement>(renderer).getCachedPseudoStyle(pseudoId);
+                return *textRenderer->getCachedPseudoStyle({ pseudoId });
+            return *downcast<RenderElement>(renderer).getCachedPseudoStyle({ pseudoId });
         }
         return firstLineStyle ? renderer.firstLineStyle() : renderer.style();
     };
@@ -360,7 +362,7 @@ static void collectStylesForRenderer(TextDecorationPainter::Styles& result, cons
         const auto& style = styleForRenderer(*current);
         extractDecorations(style, style.textDecorationLine());
 
-        if (current->isRenderRubyText() || current->style().display() == DisplayType::RubyAnnotation)
+        if (current->style().display() == DisplayType::RubyAnnotation)
             return;
 
         current = current->parent();
@@ -382,6 +384,12 @@ static void collectStylesForRenderer(TextDecorationPainter::Styles& result, cons
 
 Color TextDecorationPainter::decorationColor(const RenderStyle& style, OptionSet<PaintBehavior> paintBehavior)
 {
+    if (paintBehavior.contains(PaintBehavior::ForceBlackText))
+        return Color::black;
+
+    if (paintBehavior.contains(PaintBehavior::ForceWhiteText))
+        return Color::white;
+
     return style.visitedDependentColorWithColorFilter(CSSPropertyTextDecorationColor, paintBehavior);
 }
 

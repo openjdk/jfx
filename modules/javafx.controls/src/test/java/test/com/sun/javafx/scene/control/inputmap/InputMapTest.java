@@ -24,7 +24,7 @@
  */
 package test.com.sun.javafx.scene.control.inputmap;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 /**
  * Thoughts / Considerations (search for [1], etc in comments below):

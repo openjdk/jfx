@@ -31,6 +31,7 @@
 
 #include <wtf/CheckedArithmetic.h>
 #include <wtf/FastMalloc.h>
+#include <wtf/text/MakeString.h>
 
 namespace JSC { namespace Wasm {
 
@@ -58,9 +59,7 @@ void Segment::destroy(Segment *segment)
 
 String makeString(const Name& characters)
 {
-    String result = String::fromUTF8(characters);
-    ASSERT(result);
-    return result;
+    return WTF::makeString(characters);
 }
 
 } } // namespace JSC::Wasm

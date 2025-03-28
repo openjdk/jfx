@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,8 +25,6 @@
 
 package test.javafx.scene.paint;
 
-import static org.junit.Assert.assertEquals;
-
 import java.util.Arrays;
 import java.util.List;
 import javafx.scene.paint.Color;
@@ -34,8 +32,11 @@ import javafx.scene.paint.CycleMethod;
 import javafx.scene.paint.LinearGradient;
 import javafx.scene.paint.RadialGradient;
 import javafx.scene.paint.Stop;
+import javafx.scene.paint.StopShim;
+import org.junit.jupiter.api.Nested;
+import org.junit.jupiter.api.Test;
 
-import org.junit.Test;
+import static org.junit.jupiter.api.Assertions.*;
 
 public class StopListTest {
 
@@ -150,5 +151,148 @@ public class StopListTest {
 
         assertEquals(sortedList, normalize(unordered));
         assertEquals(dupSortedList, normalize(unordereddups));
+    }
+
+    @Test
+    public void testInterpolateStop() {
+        assertSame(zerostop, zerostop.interpolate(onestop, -0.5));
+        assertSame(zerostop, zerostop.interpolate(onestop, 0));
+        assertSame(onestop, zerostop.interpolate(onestop, 1));
+        assertSame(onestop, zerostop.interpolate(onestop, 1.5));
+        assertEquals(new Stop(0.5, color2), zerostop.interpolate(onestop, 0.5));
+    }
+
+    @Nested
+    class ListInterpolationTest {
+        @Test
+        public void returnFirstListBeforeInterval() {
+            var firstList = List.of(new Stop(0, color1), new Stop(1, color3));
+            var secondList = List.of(new Stop(0, color3), new Stop(1, color1));
+            assertSame(firstList, StopShim.interpolateLists(firstList, secondList, 0));
+            assertSame(firstList, StopShim.interpolateLists(firstList, secondList, -0.5));
+        }
+
+        @Test
+        public void returnSecondListAfterInterval() {
+            var firstList = List.of(new Stop(0, color1), new Stop(1, color3));
+            var secondList = List.of(new Stop(0, color3), new Stop(1, color1));
+            assertSame(secondList, StopShim.interpolateLists(firstList, secondList, 1));
+            assertSame(secondList, StopShim.interpolateLists(firstList, secondList, 1.5));
+        }
+
+        @Test
+        public void sameSize_sameOffsets() {
+            var firstList = List.of(new Stop(0, color1), new Stop(1, color3));
+            var secondList = List.of(new Stop(0, color3), new Stop(1, color1));
+            var res = StopShim.interpolateLists(firstList, secondList, 0.5);
+            assertEquals(List.of(
+                new Stop(0, color2),
+                new Stop(1, color2)),
+            res);
+        }
+
+        @Test
+        public void sameSize_differentOffsets() {
+            double t = 0.5;
+            var firstList = normalize(List.of(new Stop(0.1, color1), new Stop(0.9, color3)));
+            var secondList = normalize(List.of(new Stop(0.2, color3), new Stop(0.8, color1)));
+            var res = StopShim.interpolateLists(firstList, secondList, t);
+            assertEquals(List.of(
+                new Stop(0, color2),
+                new Stop(0.1, color2),
+                new Stop(0.2, color1.interpolate(color3, 0.125).interpolate(color3, t)),
+                new Stop(0.8, color1.interpolate(color3, 0.875).interpolate(color1, t)),
+                new Stop(0.9, color2),
+                new Stop(1, color2)),
+            res);
+        }
+
+        @Test
+        public void firstListLargerThanSecondList_sameFirstAndLastOffset() {
+            var firstList = normalize(List.of(new Stop(0, color1), new Stop(0.5, color3), new Stop(1, color1)));
+            var secondList = normalize(List.of(new Stop(0, color1), new Stop(1, color3)));
+
+            var expected = List.of(
+                new Stop(0, color1),
+                new Stop(0.5, color2.interpolate(color3, 0.5)),
+                new Stop(1, color2));
+            assertEquals(expected, StopShim.interpolateLists(firstList, secondList, 0.5));
+
+            // An interpolation factor close to zero should yield a stop list very similar to the first list
+            expected = firstList;
+            assertSimilar(expected, StopShim.interpolateLists(firstList, secondList, 0.001));
+
+            // An interpolation factor close to one should yield a stop list very similar to the second list,
+            // but with a different number of stops (3 instead of 2).
+            expected = List.of(new Stop(0, color1), new Stop(0.5, color2), new Stop(1, color3));
+            assertSimilar(expected, StopShim.interpolateLists(firstList, secondList, 0.999));
+        }
+
+        @Test
+        public void firstListSmallerThanSecondList_sameFirstAndLastOffset() {
+            var firstList = normalize(List.of(new Stop(0, color1), new Stop(1, color3)));
+            var secondList = normalize(List.of(new Stop(0, color1), new Stop(0.5, color3), new Stop(1, color1)));
+
+            var expected = List.of(
+                new Stop(0, color1),
+                new Stop(0.5, color2.interpolate(color3, 0.5)),
+                new Stop(1, color2));
+            assertEquals(expected, StopShim.interpolateLists(firstList, secondList, 0.5));
+
+            // An interpolation factor close to zero should yield a stop list very similar to the first list,
+            // but with a different number of stops (3 instead of 2).
+            expected = List.of( new Stop(0, color1), new Stop(0.5, color2), new Stop(1, color3));
+            assertSimilar(expected, StopShim.interpolateLists(firstList, secondList, 0.001));
+
+            // An interpolation factor close to one should yield a stop list very similar to the second list.
+            expected = secondList;
+            assertSimilar(expected, StopShim.interpolateLists(firstList, secondList, 0.999));
+        }
+
+        @Test
+        public void differentSize_differentOffsets() {
+            double t = 0.5;
+            var firstList = normalize(List.of(new Stop(0, color1), new Stop(1, color3)));
+            var secondList = normalize(List.of(new Stop(0.25, color3), new Stop(0.75, color1)));
+            var res = StopShim.interpolateLists(firstList, secondList, t);
+            assertEquals(List.of(
+                new Stop(0, color2),
+                new Stop(0.25, color1.interpolate(color3, 0.25).interpolate(color3, t)),
+                new Stop(0.75, color1.interpolate(color3, 0.75).interpolate(color1, t)),
+                new Stop(1, color2)),
+            res);
+        }
+
+        @Test
+        public void interpolatedVirtualStopIsEqualToExistingStop() {
+            double t = 0.5;
+            var firstList = normalize(List.of(new Stop(0, color1), new Stop(1, color3)));
+            var secondList = normalize(List.of(new Stop(0, color3), new Stop(0.5, color2), new Stop(1, color1)));
+            var res = StopShim.interpolateLists(firstList, secondList, t);
+            assertEquals(List.of(
+                new Stop(0, color2),
+                new Stop(0.5, color2),
+                new Stop(1, color2)),
+            res);
+        }
+
+        private void assertSimilar(List<Stop> a, List<Stop> b) {
+            assertEquals(a.size(), b.size());
+            for (int i = 0; i < a.size(); ++i) {
+                assertSimilar(a.get(i), b.get(i));
+            }
+        }
+
+        private void assertSimilar(Stop a, Stop b) {
+            assertSimilar(a.getColor(), b.getColor());
+            assertTrue(Math.abs(a.getOffset() - b.getOffset()) < 0.1);
+        }
+
+        private void assertSimilar(Color a, Color b) {
+            assertTrue(Math.abs(a.getRed() - b.getRed()) < 0.01);
+            assertTrue(Math.abs(a.getGreen() - b.getGreen()) < 0.01);
+            assertTrue(Math.abs(a.getBlue() - b.getBlue()) < 0.01);
+            assertTrue(Math.abs(a.getOpacity() - b.getOpacity()) < 0.01);
+        }
     }
 }

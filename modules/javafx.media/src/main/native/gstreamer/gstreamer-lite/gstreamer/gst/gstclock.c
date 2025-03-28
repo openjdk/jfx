@@ -254,7 +254,7 @@ gst_clock_entry_new (GstClock * clock, GstClockTime time,
 {
   GstClockEntry *entry;
 
-  entry = (GstClockEntry *) g_slice_new0 (GstClockEntryImpl);
+  entry = (GstClockEntry *) g_new0 (GstClockEntryImpl, 1);
 
   /* FIXME: add tracer hook for struct allocations such as clock entries */
 
@@ -398,7 +398,7 @@ _gst_clock_id_free (GstClockID id)
 
   /* FIXME: add tracer hook for struct allocations such as clock entries */
 
-  g_slice_free (GstClockEntryImpl, (GstClockEntryImpl *) id);
+  g_free (id);
 }
 
 /**
@@ -1778,11 +1778,11 @@ gst_clock_set_synced (GstClock * clock, gboolean synced)
           GST_CLOCK_FLAG_NEEDS_STARTUP_SYNC));
 
   GST_OBJECT_LOCK (clock);
-  if (clock->priv->synced != ! !synced) {
-    clock->priv->synced = ! !synced;
+  if (clock->priv->synced != !!synced) {
+    clock->priv->synced = !!synced;
     g_cond_signal (&clock->priv->sync_cond);
     GST_OBJECT_UNLOCK (clock);
-    g_signal_emit (clock, gst_clock_signals[SIGNAL_SYNCED], 0, ! !synced);
+    g_signal_emit (clock, gst_clock_signals[SIGNAL_SYNCED], 0, !!synced);
   } else {
     GST_OBJECT_UNLOCK (clock);
   }

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -33,10 +33,10 @@ import javafx.beans.property.SimpleObjectProperty;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
 import test.com.sun.javafx.binding.ErrorLoggingUtiltity;
-import org.junit.BeforeClass;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
 
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.*;
 
 public class DoublePropertyTest {
 
@@ -48,7 +48,7 @@ public class DoublePropertyTest {
     private static final double DEFAULT = 0.0;
     private static final double EPSILON = 1e-12;
 
-    @BeforeClass
+    @BeforeAll
     public static void setUpClass() {
         ErrorLoggingUtiltity.reset();
     }

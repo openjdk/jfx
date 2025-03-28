@@ -53,7 +53,7 @@ G_BEGIN_DECLS \
 static gboolean \
 G_PASTE(_private_type_find_start_with_, typefind_name) (GstPlugin * plugin) \
 { \
-  GstTypeFindData *sw_data = g_slice_new (GstTypeFindData);             \
+  GstTypeFindData *sw_data = g_new (GstTypeFindData, 1);             \
   sw_data->data = (const guint8 *)_data;                                \
   sw_data->size = _size;                                                \
   sw_data->probability = _probability;                                  \
@@ -177,3 +177,7 @@ TYPE_FIND_REGISTER_START_WITH_DEFINE (xi, "audio/x-xi", GST_RANK_SECONDARY,
     "xi", "Extended Instrument: ", 21, GST_TYPE_FIND_MAXIMUM);
 TYPE_FIND_REGISTER_START_WITH_DEFINE (dmp, "audio/x-tap-dmp",
     GST_RANK_SECONDARY, "dmp", "DC2N-TAP-RAW", 12, GST_TYPE_FIND_LIKELY);
+TYPE_FIND_REGISTER_START_WITH_DEFINE (avs, "video/x-avs",
+    GST_RANK_SECONDARY, NULL, "wW\x10\x00", 4, GST_TYPE_FIND_LIKELY);
+TYPE_FIND_REGISTER_START_WITH_DEFINE (yuv4mpeg, "application/x-yuv4mpeg",
+    GST_RANK_MARGINAL, NULL, "YUV4MPEG2", 9, GST_TYPE_FIND_MAXIMUM);

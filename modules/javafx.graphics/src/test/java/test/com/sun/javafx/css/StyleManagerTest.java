@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -43,9 +43,6 @@ import javafx.scene.layout.StackPane;
 import javafx.scene.paint.Color;
 import javafx.scene.paint.Paint;
 import javafx.scene.shape.Rectangle;
-import org.junit.AfterClass;
-import org.junit.Before;
-import org.junit.Test;
 
 import java.net.URL;
 import java.util.ArrayList;
@@ -55,7 +52,14 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicBoolean;
 
-import static org.junit.Assert.*;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 /**
  *
@@ -75,12 +79,12 @@ public class StyleManagerTest {
         sm.set_hasDefaultUserAgentStylesheet(false);
     }
 
-    @Before
+    @BeforeEach
     public void setUp() {
         resetStyleManager();
     }
 
-    @AfterClass
+    @AfterAll
     public static void cleanupOnce() {
         resetStyleManager();
     }
@@ -934,7 +938,7 @@ public class StyleManagerTest {
     public void testRT_37025() {
 
         //
-        // The issue in RT-37025 was that the stylesheet container wasn't getting removed even
+        // The issue in JDK-8096738 was that the stylesheet container wasn't getting removed even
         // though the parent had been forgotten. The StyleManager#forget(Parent) method didn't
         // look to see if _any_ stylesheet container had the parent as a reference.
         //
@@ -1109,7 +1113,7 @@ public class StyleManagerTest {
             fail("Unexpected exception waiting for threads to finish");
         }
 
-        assertFalse("Exception during CSS processing on BG thread", err.get());
+        assertFalse(err.get(), "Exception during CSS processing on BG thread");
     }
 
     @Test

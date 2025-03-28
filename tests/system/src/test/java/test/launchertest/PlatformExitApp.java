@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2021, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -42,28 +42,6 @@ import static test.launchertest.Constants.*;
  */
 public class PlatformExitApp extends Application {
 
-    // Timeout in milliseconds (must be at least 15 seconds)
-    private static final int TIMEOUT = 20000;
-
-    public static void sleep(long msec) {
-        try {
-            Thread.sleep(msec);
-        } catch (InterruptedException ex) {
-            ex.printStackTrace();
-            System.exit(ERROR_UNEXPECTED_EXCEPTION);
-        }
-    }
-
-    public static void setupTimeoutThread() {
-        // Timeout thread
-        Thread th = new Thread(() -> {
-            sleep(TIMEOUT);
-            System.exit(ERROR_TIMEOUT);
-        });
-        th.setDaemon(true);
-        th.start();
-    }
-
     @Override public void start(Stage stage) throws Exception {
         StackPane root = new StackPane();
         Scene scene = new Scene(root, 400, 300);
@@ -77,7 +55,7 @@ public class PlatformExitApp extends Application {
 
         // Show window for 1 second before calling Platform.exit
         Thread thr = new Thread(() -> {
-            sleep(1000);
+            Util.sleep(1000);
             Platform.exit();
         });
         thr.start();
@@ -87,11 +65,11 @@ public class PlatformExitApp extends Application {
      * @param args the command line arguments
      */
     public static void main(String[] args) {
-        setupTimeoutThread();
+        Util.setupTimeoutThread();
         Application.launch(args);
 
         // Short delay to allow any pending output to be flushed
-        sleep(500);
+        Util.sleep(500);
         System.exit(ERROR_NONE);
     }
 

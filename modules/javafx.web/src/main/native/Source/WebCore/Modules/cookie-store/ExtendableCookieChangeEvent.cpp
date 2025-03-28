@@ -28,13 +28,13 @@
 
 #include "CookieListItem.h"
 #include "ExtendableCookieChangeEventInit.h"
-#include <wtf/IsoMallocInlines.h>
 #include <wtf/Ref.h>
+#include <wtf/TZoneMallocInlines.h>
 #include <wtf/Vector.h>
 
 namespace WebCore {
 
-WTF_MAKE_ISO_ALLOCATED_IMPL(ExtendableCookieChangeEvent);
+WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(ExtendableCookieChangeEvent);
 
 Ref<ExtendableCookieChangeEvent> ExtendableCookieChangeEvent::create(const AtomString& type, ExtendableCookieChangeEventInit&& eventInitDict, IsTrusted isTrusted)
 {
@@ -42,16 +42,11 @@ Ref<ExtendableCookieChangeEvent> ExtendableCookieChangeEvent::create(const AtomS
 }
 
 ExtendableCookieChangeEvent::ExtendableCookieChangeEvent(const AtomString& type, ExtendableCookieChangeEventInit&& eventInitDict, IsTrusted isTrusted)
-    : ExtendableEvent(type, eventInitDict, isTrusted)
+    : ExtendableEvent(EventInterfaceType::ExtendableCookieChangeEvent, type, eventInitDict, isTrusted)
     , m_changed(WTFMove(eventInitDict.changed))
     , m_deleted(WTFMove(eventInitDict.deleted))
 { }
 
 ExtendableCookieChangeEvent::~ExtendableCookieChangeEvent() = default;
-
-EventInterface ExtendableCookieChangeEvent::eventInterface() const
-{
-    return ExtendableCookieChangeEventInterfaceType;
-}
 
 } // namespace WebCore
