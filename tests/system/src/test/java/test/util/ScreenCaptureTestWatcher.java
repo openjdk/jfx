@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2024, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -72,35 +72,21 @@ public class ScreenCaptureTestWatcher implements TestWatcher {
     }
 
     @Override
-    public void testDisabled(ExtensionContext cx, Optional<String> optional) {
-        System.out.println("Test Disabled: " + optional.get());
-    }
-
-    @Override
     public void testFailed(ExtensionContext extensionContext, Throwable err) {
         err.printStackTrace();
-        // TODO perhaps this should be atomic, and output a valid JSON object so any
-        // JSON-compatible log viewer could extract the image.
-        System.err.println("Screenshot:{");
-        System.err.println(generateScreenshot());
-        System.err.println("}");
+        System.err.println(generateScreenshot("Screenshot:{", "}"));
     }
 
-    @Override
-    public void testSuccessful(ExtensionContext cx) {
-        //System.out.println("Test Successful: " + cx.getDisplayName());
-    }
-
-    private String generateScreenshot() {
+    private String generateScreenshot(String prefix, String postfix) {
         AtomicReference<String> ref = new AtomicReference<>();
         Util.runAndWait(() -> {
-            String s = generateScreenshotFX();
+            String s = generateScreenshotFX(prefix, postfix);
             ref.set(s);
         });
         return ref.get();
     }
 
-    private String generateScreenshotFX() {
+    private String generateScreenshotFX(String prefix, String postfix) {
         try {
             // there should be a JavaFX way to create images without requiring ImageIO and Swing!
             ImageIO.setUseCache(false);
@@ -113,7 +99,14 @@ public class ScreenCaptureTestWatcher implements TestWatcher {
             BufferedImage im2 = SwingFXUtils.fromFXImage(im, null);
             ImageIO.write(im2, "PNG", os);
             byte[] b = os.toByteArray();
-            return Base64.getEncoder().encodeToString(b);
+            String s = Base64.getEncoder().encodeToString(b);
+            if ((prefix == null) && (postfix == null)) {
+                return s;
+            }
+            return
+                (prefix == null ? "" : prefix) +
+                s +
+                (postfix == null ? "" : postfix);
         } catch (IOException e) {
             return "error generating screenshot: " + e;
         }
