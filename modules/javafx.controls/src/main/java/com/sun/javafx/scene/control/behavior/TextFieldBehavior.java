@@ -156,7 +156,6 @@ public class TextFieldBehavior extends TextInputControlBehavior<TextField> {
 
     @Override protected void fire(KeyEvent event) {
         TextField textField = getNode();
-        EventHandler<ActionEvent> onAction = textField.getOnAction();
         // use textField as target to prevent immediate copy in dispatch
         ActionEvent actionEvent = new ActionEvent(textField, textField);
 
@@ -164,7 +163,7 @@ public class TextFieldBehavior extends TextInputControlBehavior<TextField> {
         textField.fireEvent(actionEvent);
         // fix of JDK-8207759: reverted logic
         // mapping not auto-consume and consume if handled by action
-        if (onAction != null || actionEvent.isConsumed()) {
+        if (actionEvent.isConsumed()) {
             event.consume();
         }
     }
