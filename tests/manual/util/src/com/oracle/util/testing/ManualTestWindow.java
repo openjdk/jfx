@@ -175,7 +175,7 @@ public abstract class ManualTestWindow extends Application {
         stage.show();
     }
 
-    private Node toTextFlow(String text) {
+    private static Node toTextFlow(String text) {
         TextFlow f = new TextFlow();
         Text t = new Text(text);
         f.getChildren().add(t);
