@@ -204,11 +204,11 @@ _bstr_t getMime(CLIPFORMAT cf)
 int create_mime_stuff()
 {
     addPair(GLASS_TEXT_PLAIN, CF_UNICODETEXT);
-    addPair(GLASS_TEXT_PLAIN_LOCALE, CF_UNICODETEXT);
+    addPair(GLASS_TEXT_PLAIN_LOCALE, CF_TEXT);
     addPair(GLASS_IMAGE, CF_JAVA_BITMAP);
     addPair(GLASS_FILE_LIST, CF_HDROP);
     addPair(MS_LOCALE, CF_LOCALE);
-    addPair(MS_OEMTEXT, CF_UNICODETEXT);
+    addPair(MS_OEMTEXT, CF_OEMTEXT);
     Mime2oscfstrPair *p = pairs;
     for (int i = 0; i < sizeof(pairs)/sizeof(*pairs); ++i, ++p) {
         addPair(p->mime, ::RegisterClipboardFormat(p->osString));
