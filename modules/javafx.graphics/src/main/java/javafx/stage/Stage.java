@@ -398,6 +398,8 @@ public class Stage extends Window {
      *     other than the JavaFX Application Thread.
      * @throws IllegalStateException if this method is called during
      *     animation or layout processing.
+     * @throws IllegalStateException if this call would exceed the maximum
+     *      number of nested event loops.
      * @throws IllegalStateException if this method is called on the
      *     primary stage.
      * @throws IllegalStateException if this stage is already showing.

@@ -302,6 +302,9 @@ public final class Platform {
      * @throws IllegalStateException if this method is called on a thread
      * other than the JavaFX Application Thread.
      *
+     * @throws IllegalStateException if this call would exceed the maximum
+     * number of nested event loops.
+     *
      * @return the value passed into the corresponding call to exitEventLoop
      *
      * @since 9
