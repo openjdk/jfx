@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2024, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -121,14 +121,16 @@ public abstract class ManualTestWindow extends Application {
 
         Region fill = new Region();
 
-        Button failButton = new Button("✘ Fail");
+        Button failButton = new Button("Fail");
+        setIcon(failButton, "✘", Color.RED);
         failButton.setMinWidth(100);
         failButton.setOnAction((ev) -> {
             Platform.exit();
             throw new AssertionError("Failed Manual Test: " + stage.getTitle());
         });
 
-        Button passButton = new Button("✔ Pass");
+        Button passButton = new Button("Pass");
+        setIcon(passButton, "✔", Color.GREEN);
         passButton.setMinWidth(100);
         passButton.setOnAction((ev) -> {
             Platform.exit();
@@ -189,5 +191,11 @@ public abstract class ManualTestWindow extends Application {
             m.show(f, ev.getScreenX(), ev.getScreenY());
         });
         return f;
+    }
+
+    private static void setIcon(Button b, String text, Color c) {
+        Text t = new Text(text);
+        t.setFill(c);
+        b.setGraphic(t);
     }
 }
