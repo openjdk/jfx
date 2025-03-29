@@ -328,7 +328,7 @@ extern NSSize maxScreenDimensions;
 
 - (void)_restorePreZoomedRect
 {
-    NSRect frame = [self _constrainFrame: NSMakeRect(self->preZoomedRect.origin.x, self->preZoomedRect.origin.y, self->preZoomedRect.size.width, self->preZoomedRect.size.height)];
+    NSRect frame = [self _constrainFrame: self->preZoomedRect];
     [self->nsWindow setFrame:frame display:YES animate:YES];
     [self _sendJavaWindowMoveEventForFrame:[self _flipFrame]];
     [self _sendJavaWindowResizeEvent:com_sun_glass_events_WindowEvent_RESTORE forFrame:[self _flipFrame]];
