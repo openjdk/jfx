@@ -1069,6 +1069,17 @@ void WindowContextTop::set_bounds(int x, int y, bool xSet, bool ySet, int w, int
     geometry.gravity_x = gravity_x;
     geometry.gravity_y = gravity_y;
 
+    // When the window is programmatically resized while maximized
+    if (is_maximized) {
+        if (w < 0 && cw < 0) {
+            cw = gdk_window_get_width(gdk_window);
+        }
+
+        if (h < 0 && ch < 0) {
+            ch = gdk_window_get_height(gdk_window);
+        }
+    }
+
     if (w > 0) {
         geometry.final_width.type = BOUNDSTYPE_WINDOW;
         geometry.final_width.value = w;
@@ -1078,7 +1089,9 @@ void WindowContextTop::set_bounds(int x, int y, bool xSet, bool ySet, int w, int
         geometry.final_width.value = cw;
         newW = cw;
     } else {
-        newW = geometry_get_content_width(&geometry);
+        newW = (is_maximized)
+                ? gdk_window_get_width(gdk_window)
+                : geometry_get_content_width(&geometry);
     }
 
     if (h > 0) {
@@ -1092,7 +1105,6 @@ void WindowContextTop::set_bounds(int x, int y, bool xSet, bool ySet, int w, int
     } else {
         newH = geometry_get_content_height(&geometry);
     }
-
 
     if (newW > 0 || newH > 0) {
         // call update_window_constraints() to let gtk_window_resize succeed, because it's bound to geometry constraints
