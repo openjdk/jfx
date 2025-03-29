@@ -157,8 +157,6 @@ public class TitledPaneSkin extends LabeledSkinBase<TitledPane>  {
         registerChangeListener(control.heightProperty(), e -> updateClip());
         registerChangeListener(titleRegion.alignmentProperty(), e -> pos = titleRegion.getAlignment());
 
-        // NOTE: Listening to two different alignment properties, and using the last value of either is likely a bug!
-
         pos = control.getAlignment();
     }
 
@@ -391,7 +389,7 @@ public class TitledPaneSkin extends LabeledSkinBase<TitledPane>  {
     }
 
     /*
-     * TitledSpanSkin borrows the Label calculations from LabeledSkinBase, but
+     * TitledPaneSkin borrows the Label calculations from LabeledSkinBase, but
      * places the actual label inside a title region instead of as a direct child
      * of the skinnable. The padding to apply to the label therefore comes from
      * the padding set on this region, and should not be the one that is set on
