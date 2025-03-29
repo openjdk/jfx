@@ -1069,6 +1069,17 @@ void WindowContextTop::set_bounds(int x, int y, bool xSet, bool ySet, int w, int
     geometry.gravity_x = gravity_x;
     geometry.gravity_y = gravity_y;
 
+    // When the window is programmatically resized while maximized
+    if (is_maximized) {
+        if (w < 0 && cw < 0) {
+            cw = gdk_window_get_width(gdk_window);
+        }
+
+        if (h < 0 && ch < 0) {
+            ch = gdk_window_get_height(gdk_window);
+        }
+    }
+
     if (w > 0) {
         geometry.final_width.type = BOUNDSTYPE_WINDOW;
         geometry.final_width.value = w;
