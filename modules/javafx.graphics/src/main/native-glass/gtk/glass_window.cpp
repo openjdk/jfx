@@ -1089,9 +1089,7 @@ void WindowContextTop::set_bounds(int x, int y, bool xSet, bool ySet, int w, int
         geometry.final_width.value = cw;
         newW = cw;
     } else {
-        newW = (is_maximized)
-                ? gdk_window_get_width(gdk_window)
-                : geometry_get_content_width(&geometry);
+        newW = geometry_get_content_width(&geometry);
     }
 
     if (h > 0) {
