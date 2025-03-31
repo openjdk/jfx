@@ -156,7 +156,7 @@ public class PropertiesMonitor extends BorderPane {
                 Object x = getTableRow().getItem();
                 if (x instanceof Entry en) {
                     boolean hdr = en.isHeader();
-                    backgroundProperty().unbind();                    
+                    backgroundProperty().unbind();
                     setBackground(hdr ? Background.fill(Color.rgb(0, 0, 0, 0.1)) : null);
                     setStyle(hdr ? "-fx-font-weight:bold;" : "-fx-font-weight:normal;");
                     if (trackChanges) {
@@ -372,7 +372,7 @@ public class PropertiesMonitor extends BorderPane {
             }
             return value;
         }
-        
+
         private void setValue(Object x) {
             if (x instanceof Node) {
                 // do not set nodes!

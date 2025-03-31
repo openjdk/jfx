@@ -51,7 +51,7 @@ public class KeyboardEventViewer extends BorderPane {
         textField.setOnInputMethodTextChanged(this::inputMethodTextChangedEvent);
 
         Button clearButton = FX.button("Clear", this::clear);
-        
+
         Button copyButton = FX.button("Copy", this::copy);
 
         ToolBar tp = new ToolBar(
