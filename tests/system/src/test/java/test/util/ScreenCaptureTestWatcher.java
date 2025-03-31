@@ -55,8 +55,8 @@ import org.junit.jupiter.api.extension.TestWatcher;
 public class ScreenCaptureTestWatcher implements TestWatcher {
     @Override
     public void testFailed(ExtensionContext extensionContext, Throwable err) {
-        err.printStackTrace();
-        System.err.println(generateScreenshot("Screenshot:{", "}"));
+        // can be pasted into Safari address bar
+        System.err.println(generateScreenshot("Screenshot:{\ndata:image/png;base64,", null));
     }
 
     private String generateScreenshot(String prefix, String postfix) {
