@@ -43,6 +43,11 @@ public class TextAreaBehaviorRobotTest extends TextInputBehaviorRobotTest<TextAr
     public TextAreaBehaviorRobotTest() {
         super(new TextArea());
     }
+    
+    @Test // FIX remove
+    public void fail() {
+        throw new Error();
+    }
 
     @BeforeEach
     @Override
