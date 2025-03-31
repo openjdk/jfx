@@ -10,7 +10,7 @@ This is a testing tool developed to support manual ad-hoc testing of individual 
 JavaFX SDK is required to build the tool.  You can use a JavaFX SDK that you build or you can download the JavaFX SDK.
 The latest SDK can be found here:
 
-https://jdk.java.net/javafx21/
+https://jdk.java.net/
 
 
 ## Build
@@ -24,12 +24,12 @@ ant -Djavafx.home=<JAVAFX>
 
 ## Run
 
-The tool requires JDK 21+ and JavaFX 21+.
+The tool requires JDK 23+ and JavaFX 24+.
 
 To launch, specify the path to the JavaFX SDK lib/ folder on the command line, example:
 
 ```
-java -p <JAVAFX>/javafx-sdk-21/lib/ --add-modules ALL-MODULE-PATH -jar MonkeyTester.jar
+java -p <JAVAFX>/javafx-sdk-24/lib/ --add-modules ALL-MODULE-PATH -jar MonkeyTester.jar
 ```
 
 
