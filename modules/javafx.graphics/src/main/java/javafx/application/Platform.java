@@ -288,6 +288,12 @@ public final class Platform {
      * It must not be called during animation or layout processing.
      * </p>
      *
+     * There is a finite limit on the depth of the nested event loop stack. An
+     * exception will be thrown if this limit is exceeded. Applications that
+     * want to avoid an exception can call
+     * {@link #canStartNestedEventLoop canStartNestedEventLoop} to check
+     * whether it is possible to start one.
+     *
      * @param key the Object that identifies the nested event loop, which
      * must not be null
      *
