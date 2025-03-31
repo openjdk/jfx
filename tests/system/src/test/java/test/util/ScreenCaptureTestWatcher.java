@@ -41,36 +41,18 @@ import org.junit.jupiter.api.extension.ExtensionContext;
 import org.junit.jupiter.api.extension.TestWatcher;
 
 /**
- * Standard Test Watcher for Headful Tests (JUnit 5 Only).
- * <p>
- * This facility takes a screenshot of any failed test, then logs the base64-encoded screenshot
- * to {@code stderr}.
+ * This TestWatcher writes a base-64 encoded PNG screenshot of the desktop to {@code stderr}
+ * when a test fails.
  * <p>
  * To use, simply add the following annotation to your class:
  * <pre>{@code
  * @ExtendWith(ScreenCaptureTestWatcher.class)
  * }</pre>
  * <p>
- * For Eclipse users, override dependencies with the following entries:
- * <pre>{@code
- * --add-modules=javafx.base,javafx.graphics,javafx.controls,javafx.swing
- * --add-opens javafx.controls/test.com.sun.javafx.scene.control.test=javafx.base
- * --add-exports javafx.base/com.sun.javafx=ALL-UNNAMED
- * -Djava.library.path="../../../../build/sdk/lib"
- * -ea
- * }</pre>
- * <p>
  * WARNING: using this utility may significantly increase the size of your logs!
  * Make sure there is plenty of free disk space.
  */
-// TODO investigate having a hard-coded or programmable via property limit on the number of
-// captured screenshots.
 public class ScreenCaptureTestWatcher implements TestWatcher {
-    @Override
-    public void testAborted(ExtensionContext extensionContext, Throwable err) {
-        err.printStackTrace();
-    }
-
     @Override
     public void testFailed(ExtensionContext extensionContext, Throwable err) {
         err.printStackTrace();
