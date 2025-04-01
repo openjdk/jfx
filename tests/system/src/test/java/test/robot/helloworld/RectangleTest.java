@@ -31,33 +31,38 @@ import javafx.scene.Scene;
 import javafx.scene.paint.Color;
 import javafx.scene.shape.Rectangle;
 import javafx.stage.Stage;
-import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
-import org.junit.jupiter.api.extension.ExtendWith;
 import test.robot.testharness.VisualTestBase;
-import test.util.ScreenCaptureTestWatcher;
-import test.util.ScreenshotCapture;
 
 /**
  * Basic visual tests using glass Robot to sample pixels.
  */
 @Timeout(value=15000, unit=TimeUnit.MILLISECONDS)
-@ExtendWith(ScreenCaptureTestWatcher.class)
 public class RectangleTest extends VisualTestBase {
-    
-    @BeforeAll
-    public static void beforeAll() {
-        Thread.setDefaultUncaughtExceptionHandler((t, e) -> {
-            System.err.println(ScreenshotCapture.takeScreenshotBase64("xxScreenshot:{\ndata:image/png;base64,", null));
-        });
-    }
 
     private Stage testStage;
     private Scene testScene;
 
     private static final double TOLERANCE = 0.07;
 
+    @Test
+    public void testSceneDefaultFill() {
+        final int WIDTH = 400;
+        final int HEIGHT = 300;
+
+        runAndWait(() -> {
+            testStage = getStage();
+            testScene = new Scene(new Group(), WIDTH, HEIGHT);
+            testStage.setScene(testScene);
+            testStage.show();
+        });
+        waitFirstFrame();
+        runAndWait(() -> {
+            Color color = getColor(testScene, WIDTH / 2, HEIGHT / 2);
+            assertColorEquals(Color.WHITE, color, TOLERANCE);
+        });
+    }
 
     @Test
     public void testSceneFillColor() {
@@ -74,11 +79,11 @@ public class RectangleTest extends VisualTestBase {
         waitFirstFrame();
         runAndWait(() -> {
             Color color = getColor(testScene, WIDTH / 2, HEIGHT / 2);
-            assertColorEquals(Color.GREEN, color, TOLERANCE); // FIX
+            assertColorEquals(Color.CORNFLOWERBLUE, color, TOLERANCE);
         });
     }
 
-//    @Test
+    @Test
     public void testFillRect() {
         final int WIDTH = 400;
         final int HEIGHT = 300;
@@ -110,7 +115,7 @@ public class RectangleTest extends VisualTestBase {
         });
     }
 
-//    @Test
+    @Test
     public void testAddFillRect() {
         final int WIDTH = 400;
         final int HEIGHT = 300;
