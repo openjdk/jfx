@@ -24,19 +24,6 @@
  */
 package test.util;
 
-import java.awt.image.BufferedImage;
-import java.io.ByteArrayOutputStream;
-import java.io.IOException;
-import java.util.Base64;
-import java.util.Optional;
-import java.util.concurrent.atomic.AtomicReference;
-import javax.imageio.ImageIO;
-import javafx.embed.swing.SwingFXUtils;
-import javafx.geometry.Rectangle2D;
-import javafx.scene.image.WritableImage;
-import javafx.scene.robot.Robot;
-import javafx.stage.Screen;
-import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.api.extension.ExtensionContext;
 import org.junit.jupiter.api.extension.TestWatcher;
 
@@ -56,41 +43,6 @@ public class ScreenCaptureTestWatcher implements TestWatcher {
     @Override
     public void testFailed(ExtensionContext extensionContext, Throwable err) {
         // can be pasted into Safari address bar
-        System.err.println(generateScreenshot("Screenshot:{\ndata:image/png;base64,", null));
-    }
-
-    private String generateScreenshot(String prefix, String postfix) {
-        AtomicReference<String> ref = new AtomicReference<>();
-        Util.runAndWait(() -> {
-            String s = generateScreenshotFX(prefix, postfix);
-            ref.set(s);
-        });
-        return ref.get();
-    }
-
-    private String generateScreenshotFX(String prefix, String postfix) {
-        try {
-            // there should be a JavaFX way to create images without requiring ImageIO and Swing!
-            ImageIO.setUseCache(false);
-
-            Rectangle2D bounds = Screen.getPrimary().getBounds();
-            Robot r = new Robot();
-            // do not scale to fit, capture all pixels
-            WritableImage im = r.getScreenCapture(null, bounds, false);
-            ByteArrayOutputStream os = new ByteArrayOutputStream();
-            BufferedImage im2 = SwingFXUtils.fromFXImage(im, null);
-            ImageIO.write(im2, "PNG", os);
-            byte[] b = os.toByteArray();
-            String s = Base64.getEncoder().encodeToString(b);
-            if ((prefix == null) && (postfix == null)) {
-                return s;
-            }
-            return
-                (prefix == null ? "" : prefix) +
-                s +
-                (postfix == null ? "" : postfix);
-        } catch (IOException e) {
-            return "error generating screenshot: " + e;
-        }
+        ScreenshotCapture.writeScreenshot(System.err);
     }
 }
