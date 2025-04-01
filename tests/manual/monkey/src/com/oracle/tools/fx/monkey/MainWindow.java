@@ -286,7 +286,7 @@ public class MainWindow extends Stage {
         }
     }
 
-    void openPlatformPreferencesMonitor() {
+    private void openPlatformPreferencesMonitor() {
         PropertiesMonitor.openPreferences(this);
     }
 }

@@ -30,7 +30,7 @@ package com.oracle.tools.fx.monkey.util;
  */
 public class WritingSystemsDemo {
     public static final String[] PAIRS = {
-        "Arabic", "العربية",
+        "Arabic", "السَّلَامُ عَلَيْكُمْ",
         "Aramaic", "Classical Syriac: ܐܪܡܝܐ, Old Aramaic: 𐤀𐤓𐤌𐤉𐤀; Imperial Aramaic: 𐡀𐡓𐡌𐡉𐡀; Jewish Babylonian Aramaic: אֲרָמִית‎",
         "Akkadian", "𒀝𒅗𒁺𒌑",
         "Armenian", "հայերէն/հայերեն",

@@ -7,24 +7,22 @@ This is a testing tool developed to support manual ad-hoc testing of individual 
 
 ## Prerequisites
 
-JavaFX SDK is required to build the tool.  You can use a JavaFX SDK that you build or you can download the JavaFX SDK.
-The latest SDK can be found here:
+JavaFX SDK 24+ and JDK 23+ are required to build and run the tool.
+You can use a JavaFX SDK that you build or you can download the JavaFX SDK found here:
 
 https://jdk.java.net/
 
 
 ## Build
 
-The tool uses `ant` to build a non-modular JAR.  You'll need to specify the path to JavaFX SDK 20+
-(using absolute path, the script apparently does not understand ~ symbols):
+The tool uses `ant` to build a non-modular JAR.  You'll need to specify the path to JavaFX SDK
+using absolute path:
 ```
 ant -Djavafx.home=<JAVAFX>
 ```
 
 
 ## Run
-
-The tool requires JDK 23+ and JavaFX 24+.
 
 To launch, specify the path to the JavaFX SDK lib/ folder on the command line, example:
 
@@ -42,5 +40,3 @@ having them fight over the preferences, one can redefine the `user.home` system 
 `-Duser.home=<DIR>`.
 
 To disable loading and saving, specify `-Ddisable.settings=true` VM agrument.
-
-
