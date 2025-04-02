@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2014, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2015, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,20 +25,24 @@
 
 package com.sun.javafx.scene.traversal;
 
+import static com.sun.javafx.scene.traversal.Direction.DOWN;
+import static com.sun.javafx.scene.traversal.Direction.LEFT;
+import static com.sun.javafx.scene.traversal.Direction.NEXT;
+import static com.sun.javafx.scene.traversal.Direction.NEXT_IN_LINE;
+import static com.sun.javafx.scene.traversal.Direction.PREVIOUS;
+import static com.sun.javafx.scene.traversal.Direction.RIGHT;
+import static com.sun.javafx.scene.traversal.Direction.UP;
 import java.util.List;
 import java.util.Stack;
+import java.util.function.Function;
 import javafx.geometry.BoundingBox;
 import javafx.geometry.Bounds;
 import javafx.geometry.Point2D;
 import javafx.scene.Node;
 
-import static com.sun.javafx.scene.traversal.Direction.*;
-import java.util.function.Function;
+public class Heuristic2D implements Algorithm {
 
-
-public class Hueristic2D implements Algorithm {
-
-    Hueristic2D() {
+    Heuristic2D() {
     }
 
     @Override

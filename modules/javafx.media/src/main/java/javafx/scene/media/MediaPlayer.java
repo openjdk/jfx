@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -1737,7 +1737,7 @@ public final class MediaPlayer {
         Platform.runLater(() -> {
             setError(error);
 
-            // Propogate errors that related to media to media object
+            // Propagate errors that related to media to media object
             if (error.getType() == MediaException.Type.MEDIA_CORRUPTED
                     || error.getType() == MediaException.Type.MEDIA_UNSUPPORTED
                     || error.getType() == MediaException.Type.MEDIA_INACCESSIBLE
