@@ -58,10 +58,11 @@ public class ObservableValueFluentBindingsTest {
     private final ChangeListener<String> changeListener = (obs, old, current) -> values.add(current);
     private final InvalidationListener invalidationListener = obs -> invalidations++;
 
-    private StringProperty property = new SimpleStringProperty("Initial");
+    private final StringProperty property = new SimpleStringProperty("Initial");
 
     @Nested
     class GivenAQuadMappedObservable {
+
         AtomicInteger calls1 = new AtomicInteger(0);
         AtomicInteger calls2 = new AtomicInteger(0);
         AtomicInteger calls3 = new AtomicInteger(0);
