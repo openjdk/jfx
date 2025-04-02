@@ -40,6 +40,12 @@ import javafx.stage.Screen;
 
 /**
  * A utility to capture a screenshot via JavaFX {@link Robot}.
+ * <p>
+ * Example:
+ * <pre>
+ * // write a base-64 encoded screenshot to stderr
+ * ScreenshotCapture.writeScreenshot(System.err);
+ * </pre>
  */
 public class ScreenshotCapture {
     /**
