@@ -726,21 +726,17 @@ if (hasProperty("TEST_SDK_PATH")) {
         fail("TEST_ONLY must be set to true when using an external TEST_SDK_PATH for running tests: include -PTEST_ONLY=true")
     }
     String testSdkPath = "${TEST_SDK_PATH}"
-    if (testSdkPath.startsWith("~")) {
-        testSdkPath = testSdkPath.replaceFirst("~", System.getProperty("user.home"))
-    } else if (testSdkPath.startsWith(".")) {
+    if (testSdkPath.startsWith(".")) {
         testSdkPath = file(testSdkPath).absolutePath
     }
     ext.TEST_SDK_DIR = testSdkPath
     def sdkShimsPath = file("${TEST_SDK_DIR}")
     def sdkPath = file("${TEST_SDK_DIR}/sdk")
     def shimsPath = file("${TEST_SDK_DIR}/shims")
-    if (!sdkShimsPath.exists() || !sdkShimsPath.isDirectory()) {
-        fail("The provided TEST_SDK_DIR=${TEST_SDK_DIR} directory does not exist")
-    }
-    if (!sdkPath.exists() || !sdkPath.isDirectory() ||
-        !shimsPath.exists() || !shimsPath.isDirectory()) {
-        fail("The provided TEST_SDK_DIR=${TEST_SDK_DIR} is invalid")
+    if (!sdkShimsPath.exists() || !sdkShimsPath.isDirectory() ||
+             !sdkPath.exists() || !sdkPath.isDirectory() ||
+           !shimsPath.exists() || !shimsPath.isDirectory()) {
+        fail("The provided TEST_SDK_PATH=${TEST_SDK_PATH} is invalid")
     }
     ext.IS_TEST_SDK = true
 } else {
