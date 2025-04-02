@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023, 2025, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2023, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -29,15 +29,12 @@ import static javafx.scene.input.KeyCode.*;
 import javafx.scene.control.TextArea;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
 import com.sun.javafx.PlatformUtil;
-import test.util.ScreenCaptureTestWatcher;
 
 /**
  * Tests TextArea behavior by exercising every key binding not covered by TextAreaBehaviorTest,
  * since the mapped functions require rendered text.
  */
-@ExtendWith(ScreenCaptureTestWatcher.class)
 public class TextAreaBehaviorRobotTest extends TextInputBehaviorRobotTest<TextArea> {
 
     public TextAreaBehaviorRobotTest() {

@@ -43,13 +43,11 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import test.util.ScreenCaptureTestWatcher;
 import test.util.Util;
 
 /**
  * Tests TextArea RTL/LTR behavior.
  */
-@ExtendWith(ScreenCaptureTestWatcher.class)
 public class TextAreaRTLTest extends TextInputBehaviorRobotTest<TextArea> {
     private Color selectionColor;
 
