@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2024, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -94,22 +94,6 @@ public final class TransitionEvent extends Event {
      * not including the time spent in the delay phase.
      */
     private final Duration elapsedTime;
-
-    /**
-     * Creates a new instance of the {@code TransitionEvent} class.
-     *
-     * @param eventType the event type
-     * @param property the {@code StyleableProperty} that is targeted by the transition
-     * @param elapsedTime the time that has elapsed since the transition has entered its active period
-     * @throws NullPointerException if {@code eventType}, {@code property} or {@code elapsedTime} is {@code null}
-     * @deprecated use {@link #TransitionEvent(EventType, StyleableProperty, String, Duration)} instead
-     */
-    @Deprecated(since = "24", forRemoval = true)
-    public TransitionEvent(EventType<? extends Event> eventType,
-                           StyleableProperty<?> property,
-                           Duration elapsedTime) {
-        this(eventType, property, property.getCssMetaData().getProperty(), elapsedTime);
-    }
 
     /**
      * Creates a new instance of the {@code TransitionEvent} class.
