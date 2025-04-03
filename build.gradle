@@ -725,11 +725,7 @@ if (hasProperty("TEST_SDK_PATH")) {
     if (!IS_TEST_ONLY) {
         fail("TEST_ONLY must be set to true when using an external TEST_SDK_PATH for running tests: include -PTEST_ONLY=true")
     }
-    String testSdkPath = "${TEST_SDK_PATH}"
-    if (testSdkPath.startsWith(".")) {
-        testSdkPath = file(testSdkPath).absolutePath
-    }
-    ext.TEST_SDK_DIR = testSdkPath
+    ext.TEST_SDK_DIR = file("${TEST_SDK_PATH}").absolutePath
     def sdkShimsPath = file("${TEST_SDK_DIR}")
     def sdkPath = file("${TEST_SDK_DIR}/sdk")
     def shimsPath = file("${TEST_SDK_DIR}/shims")
@@ -742,7 +738,6 @@ if (hasProperty("TEST_SDK_PATH")) {
 } else {
     ext.TEST_SDK_DIR = "${rootProject.buildDir}"
 }
-println "TEST_SDK_PATH: " + TEST_SDK_DIR
 
 // Make sure JDK_HOME/bin/java exists
 if (!file(JAVA).exists()) throw new Exception("Missing or incorrect path to 'java': '$JAVA'. Perhaps bad JDK_HOME? $JDK_HOME")
@@ -1503,6 +1498,9 @@ logger.quiet("OS_NAME: $OS_NAME")
 logger.quiet("OS_ARCH: $OS_ARCH")
 logger.quiet("JAVA_HOME: $JAVA_HOME")
 logger.quiet("JDK_HOME: $JDK_HOME")
+if (IS_TEST_SDK) {
+    logger.quiet("TEST_SDK_PATH: ${TEST_SDK_DIR}")
+}
 
 Version javaVersionInfo = Runtime.version()
 logger.quiet("java.runtime.version: " + javaVersionInfo)
