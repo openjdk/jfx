@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,8 +25,8 @@
 
 package javafx.css;
 
-import com.sun.javafx.scene.SceneMediaQueryContext;
 import javafx.application.ColorScheme;
+import javafx.scene.Scene;
 
 /**
  * A media query is evaluated against a {@code MediaQueryContext}, which provides the media feature
@@ -34,7 +34,7 @@ import javafx.application.ColorScheme;
  *
  * @since 25
  */
-public sealed interface MediaQueryContext permits SceneMediaQueryContext {
+public sealed interface MediaQueryContext permits Scene {
 
     /**
      * Provides the value for the {@code prefers-color-scheme} media feature.

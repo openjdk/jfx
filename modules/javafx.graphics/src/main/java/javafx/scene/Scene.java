@@ -28,7 +28,6 @@ package javafx.scene;
 import com.sun.glass.ui.Application;
 import com.sun.glass.ui.Accessible;
 import com.sun.javafx.beans.property.NullCoalescingPropertyBase;
-import com.sun.javafx.scene.SceneMediaQueryContext;
 import com.sun.javafx.scene.traversal.TraversalMethod;
 import com.sun.javafx.util.Logging;
 import com.sun.javafx.util.Utils;
@@ -179,9 +178,7 @@ root.getChildren().add(r);
  * @since JavaFX 2.0
  */
 @DefaultProperty("root")
-public class Scene implements EventTarget {
-
-    private final MediaQueryContext mediaQueryContext = new SceneMediaQueryContext(this);
+public non-sealed class Scene implements EventTarget, MediaQueryContext {
 
     private double widthSetByUser = -1.0;
     private double heightSetByUser = -1.0;
@@ -506,11 +503,6 @@ public class Scene implements EventTarget {
                         @Override
                         public Accessible getAccessible(Scene scene) {
                             return scene.getAccessible();
-                        }
-
-                        @Override
-                        public MediaQueryContext getMediaQueryContext(Scene scene) {
-                            return scene.mediaQueryContext;
                         }
                     });
         }
@@ -1266,6 +1258,7 @@ public class Scene implements EventTarget {
         return colorScheme;
     }
 
+    @Override
     public final ColorScheme getColorScheme() {
         return colorScheme.get();
     }
@@ -1314,6 +1307,7 @@ public class Scene implements EventTarget {
      * @see #setPersistentScrollBars(Boolean)
      * @since 25
      */
+    @Override
     public final boolean isPersistentScrollBars() {
         return persistentScrollBars.get();
     }
@@ -1370,6 +1364,7 @@ public class Scene implements EventTarget {
      * @see #setReducedMotion(Boolean)
      * @since 25
      */
+    @Override
     public final boolean isReducedMotion() {
         return reducedMotion.get();
     }
@@ -1426,6 +1421,7 @@ public class Scene implements EventTarget {
      * @see #setReducedTransparency(Boolean)
      * @since 25
      */
+    @Override
     public final boolean isReducedTransparency() {
         return reducedTransparency.get();
     }

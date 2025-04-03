@@ -25,7 +25,6 @@
 
 package com.sun.javafx.css;
 
-import com.sun.javafx.scene.SceneHelper;
 import javafx.css.MediaRule;
 import javafx.css.PseudoClass;
 import javafx.css.Rule;
@@ -290,11 +289,7 @@ final public class SimpleSelector extends Selector {
             }
 
             Scene scene = node.getScene();
-            if (scene != null) {
-                return mediaRule.evaluate(SceneHelper.getMediaQueryContext(scene));
-            }
-
-            return false;
+            return scene != null && mediaRule.evaluate(scene);
         }
 
         return true;

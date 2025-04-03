@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -26,14 +26,15 @@
 package javafx.css;
 
 import com.sun.javafx.css.media.MediaQuerySerializer;
+import javafx.scene.Scene;
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
 import java.util.List;
 
 /**
- * CSS media rules are @-rules that contain media queries. A media query tests aspects of the
- * user agent (the JavaFX application), and is independent of the scene graph content.
+ * CSS media rules are @-rules that contain media queries. A media query tests the "external"
+ * configuration of a {@link Scene}, and is independent of its scene graph content.
  *
  * @since 25
  */
