@@ -963,8 +963,7 @@ public class PrismTextLayout implements TextLayout {
         width -= collapsedSpaceWidth;
 
         if (width > layoutWidth) layoutWidth = width;
-        return new PrismTextLine(startOffset, length, lineRuns,
-                            width, ascent, descent, leading);
+        return new PrismTextLine(startOffset, length, lineRuns, width, ascent, descent, leading);
     }
 
     /**
