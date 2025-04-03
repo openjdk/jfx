@@ -540,7 +540,7 @@ public class ObservableSubListTest {
         try { sublist.retainAll(Arrays.asList("c", "d")); } catch (ConcurrentModificationException e) {return;}
         fail("Expected ConcurrentModificationException");
     }
-    
+
     @ParameterizedTest
     @MethodSource("createParameters")
     public void testConcurrencyRetainSize(Callable<ObservableList<String>> listFactory) throws Exception {
