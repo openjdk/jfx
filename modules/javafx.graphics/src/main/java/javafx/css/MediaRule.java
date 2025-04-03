@@ -35,7 +35,7 @@ import java.util.List;
  * CSS media rules are @-rules that contain media queries. A media query tests aspects of the
  * user agent (the JavaFX application), and is independent of the scene graph content.
  *
- * @since 24
+ * @since 25
  */
 public final class MediaRule {
 
@@ -71,7 +71,7 @@ public final class MediaRule {
      * Evaluates whether any of the media queries is {@code true}.
      *
      * @param context the evaluation context
-     * @return {@code true} if any of the media queries is {@code true} of if the list is empty,
+     * @return {@code true} if any of the media queries is {@code true} or if the list is empty,
      *         {@code false} otherwise
      */
     public boolean evaluate(MediaQueryContext context) {

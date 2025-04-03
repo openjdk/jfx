@@ -32,7 +32,7 @@ import javafx.application.ColorScheme;
  * A media query is evaluated against a {@code MediaQueryContext}, which provides the media feature
  * values that can be referenced in a media query expression.
  *
- * @since 24
+ * @since 25
  */
 public sealed interface MediaQueryContext permits SceneMediaQueryContext {
 

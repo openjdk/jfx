@@ -142,7 +142,7 @@ final public class Rule {
      * Gets the {@code MediaRule} associated with this {@code Rule}.
      *
      * @return the {@code MediaRule} or {@code null}
-     * @since 24
+     * @since 25
      */
     public MediaRule getMediaRule() {
         return mediaRule;

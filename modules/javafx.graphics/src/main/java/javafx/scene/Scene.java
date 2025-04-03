@@ -1242,8 +1242,8 @@ public class Scene implements EventTarget {
      * on light backgrounds.
      * <p>
      * This is a <em>null-coalescing</em> property: if set to {@code null}, it evaluates to the
-     * value of {@link Platform.Preferences#colorSchemeProperty()}. Therefore, specifying a value
-     * for this property overrides the platform-provided value.
+     * value of {@link Platform.Preferences#colorSchemeProperty()}. Therefore, specifying a
+     * non-null value for this property overrides the platform-provided value.
      * <p>
      * This property corresponds to the following CSS media feature:
      * <table class="striped">
@@ -1257,7 +1257,7 @@ public class Scene implements EventTarget {
      * </table>
      *
      * @defaultValue {@link Platform.Preferences#getColorScheme()}
-     * @since 24
+     * @since 25
      */
     private final ObjectProperty<ColorScheme> colorScheme = new MediaProperty<>(
             "colorScheme", PlatformImpl.getPlatformPreferences().colorSchemeProperty());
@@ -1283,7 +1283,7 @@ public class Scene implements EventTarget {
      * <p>
      * This is a <em>null-coalescing</em> property: if set to {@code null}, it evaluates to the
      * value of {@link Platform.Preferences#persistentScrollBarsProperty()}. Therefore, specifying
-     * a value for this property overrides the platform-provided value.
+     * a non-null value for this property overrides the platform-provided value.
      * <p>
      * This property corresponds to the following CSS media feature:
      * <table class="striped">
@@ -1300,7 +1300,7 @@ public class Scene implements EventTarget {
      *
      * @return the {@code persistentScrollBars} property
      * @defaultValue {@link Platform.Preferences#isPersistentScrollBars()}
-     * @since 24
+     * @since 25
      */
     public final ObjectProperty<Boolean> persistentScrollBarsProperty() {
         return persistentScrollBars;
@@ -1312,7 +1312,7 @@ public class Scene implements EventTarget {
      * @return the value of the {@code persistentScrollBars} property
      * @see #persistentScrollBarsProperty()
      * @see #setPersistentScrollBars(Boolean)
-     * @since 24
+     * @since 25
      */
     public final boolean isPersistentScrollBars() {
         return persistentScrollBars.get();
@@ -1324,7 +1324,7 @@ public class Scene implements EventTarget {
      * @param value the value
      * @see #persistentScrollBarsProperty()
      * @see #isPersistentScrollBars()
-     * @since 24
+     * @since 25
      */
     public final void setPersistentScrollBars(Boolean value) {
         this.persistentScrollBars.set(value);
@@ -1339,7 +1339,7 @@ public class Scene implements EventTarget {
      * <p>
      * This is a <em>null-coalescing</em> property: if set to {@code null}, it evaluates to the
      * value of {@link Platform.Preferences#reducedMotionProperty()}. Therefore, specifying a
-     * value for this property overrides the platform-provided value.
+     * non-null value for this property overrides the platform-provided value.
      * <p>
      * This property corresponds to the following CSS media feature:
      * <table class="striped">
@@ -1356,7 +1356,7 @@ public class Scene implements EventTarget {
      *
      * @return the {@code reducedMotion} property
      * @defaultValue {@link Platform.Preferences#isReducedMotion()}
-     * @since 24
+     * @since 25
      */
     public final ObjectProperty<Boolean> reducedMotionProperty() {
         return reducedMotion;
@@ -1368,7 +1368,7 @@ public class Scene implements EventTarget {
      * @return the value of the {@code reducedMotion} property
      * @see #reducedMotionProperty()
      * @see #setReducedMotion(Boolean)
-     * @since 24
+     * @since 25
      */
     public final boolean isReducedMotion() {
         return reducedMotion.get();
@@ -1380,7 +1380,7 @@ public class Scene implements EventTarget {
      * @param value the value
      * @see #reducedMotionProperty()
      * @see #isReducedMotion()
-     * @since 24
+     * @since 25
      */
     public final void setReducedMotion(Boolean value) {
         this.reducedMotion.set(value);
@@ -1395,7 +1395,7 @@ public class Scene implements EventTarget {
      * <p>
      * This is a <em>null-coalescing</em> property: if set to {@code null}, it evaluates to the
      * value of {@link Platform.Preferences#reducedTransparencyProperty()}. Therefore, specifying
-     * a value for this property overrides the platform-provided value.
+     * a non-null value for this property overrides the platform-provided value.
      * <p>
      * This property corresponds to the following CSS media feature:
      * <table class="striped">
@@ -1412,7 +1412,7 @@ public class Scene implements EventTarget {
      *
      * @return the {@code reducedTransparency} property
      * @defaultValue {@link Platform.Preferences#isReducedTransparency()}
-     * @since 24
+     * @since 25
      */
     public final ObjectProperty<Boolean> reducedTransparencyProperty() {
         return reducedTransparency;
@@ -1424,7 +1424,7 @@ public class Scene implements EventTarget {
      * @return the value of the {@code reducedTransparency} property
      * @see #reducedTransparencyProperty()
      * @see #setReducedTransparency(Boolean)
-     * @since 24
+     * @since 25
      */
     public final boolean isReducedTransparency() {
         return reducedTransparency.get();
@@ -1436,7 +1436,7 @@ public class Scene implements EventTarget {
      * @param value the value
      * @see #reducedTransparencyProperty()
      * @see #isReducedTransparency()
-     * @since 24
+     * @since 25
      */
     public final void setReducedTransparency(Boolean value) {
         this.reducedTransparency.set(value);

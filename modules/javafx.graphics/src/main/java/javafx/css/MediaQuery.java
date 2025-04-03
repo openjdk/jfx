@@ -37,7 +37,7 @@ import com.sun.javafx.css.media.expression.DisjunctionExpression;
  * It is evaluated against a context that provides the values that are referenced in the expression,
  * and evaluates to either {@code true} or {@code false}.
  *
- * @since 24
+ * @since 25
  */
 public sealed interface MediaQuery
         permits ConstantExpression,
