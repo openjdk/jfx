@@ -32,31 +32,30 @@ import test.javafx.beans.value.ChangeListenerMock;
 import javafx.beans.value.ObservableValueBase;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
 
 import java.lang.reflect.Constructor;
 import java.util.Arrays;
 import java.util.Collection;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
-@RunWith(Parameterized.class)
 public class GenericBindingTest<T> {
 
     private static final Object UNDEFINED = null;
 
-    private final ObservableStub dependency1 = new ObservableStub();
-    private final ObservableStub dependency2 = new ObservableStub();
-    private final T value1;
-    private final T value2;
-    private final Constructor<BindingMock<T>> bindingMockClassConstructor;
+    private  ObservableStub dependency1 = new ObservableStub();
+    private  ObservableStub dependency2 = new ObservableStub();
+    private  T value1;
+    private  T value2;
+    private  Constructor<BindingMock<T>> bindingMockClassConstructor;
 
     private BindingMock<T> binding0;
     private BindingMock<T> binding1;
@@ -64,7 +63,7 @@ public class GenericBindingTest<T> {
     private InvalidationListenerMock invalidationListener;
     private ChangeListenerMock<Object> changeListener;
 
-    public GenericBindingTest(
+    public void GenericBindingTest_(
             T value1, T value2,
             Class<BindingMock<T>> bindingMockClass) throws Exception {
         this.value1 = value1;
@@ -72,7 +71,6 @@ public class GenericBindingTest<T> {
         this.bindingMockClassConstructor = bindingMockClass.getConstructor(Observable[].class);
     }
 
-    @Before
     public void setUp() throws Exception {
         // Recreate bindings as they may have been altered by one of the tests
         binding0 = bindingMockClassConstructor.newInstance((Object)new Observable[] {});
@@ -86,7 +84,7 @@ public class GenericBindingTest<T> {
         binding2.setValue(value2);
     }
 
-    @After
+    @AfterEach
     public void tearDown() {
         binding0.removeListener(invalidationListener);
         binding0.removeListener(changeListener);
@@ -96,8 +94,11 @@ public class GenericBindingTest<T> {
         binding2.removeListener(changeListener);
     }
 
-    @Test
-    public void testNoDependencyLazy() {
+    @ParameterizedTest
+    @MethodSource("parameters")
+    public void testNoDependencyLazy(T value1, T value2, Class<BindingMock<T>> bindingMockClass) throws Exception  {
+        GenericBindingTest_(value1, value2, bindingMockClass);
+        setUp();
         binding0.getValue();
         binding0.addListener(invalidationListener);
         System.gc(); // making sure we did not not overdo weak references
@@ -111,8 +112,11 @@ public class GenericBindingTest<T> {
         assertEquals(true, binding0.isValid());
     }
 
-    @Test
-    public void testNoDependencyEager() {
+    @ParameterizedTest
+    @MethodSource("parameters")
+    public void testNoDependencyEager(T value1, T value2, Class<BindingMock<T>> bindingMockClass) throws Exception  {
+        GenericBindingTest_(value1, value2, bindingMockClass);
+        setUp();
         binding0.getValue();
         binding0.addListener(changeListener);
         System.gc(); // making sure we did not not overdo weak references
@@ -126,8 +130,11 @@ public class GenericBindingTest<T> {
         assertEquals(true, binding0.isValid());
     }
 
-    @Test
-    public void testSingleDependencyLazy() {
+    @ParameterizedTest
+    @MethodSource("parameters")
+    public void testSingleDependencyLazy(T value1, T value2, Class<BindingMock<T>> bindingMockClass) throws Exception  {
+        GenericBindingTest_(value1, value2, bindingMockClass);
+        setUp();
         binding1.getValue();
         binding1.addListener(invalidationListener);
         System.gc(); // making sure we did not not overdo weak references
@@ -188,8 +195,11 @@ public class GenericBindingTest<T> {
         assertEquals(true, binding1.isValid());
     }
 
-    @Test
-    public void testSingleDependencyEager() {
+    @ParameterizedTest
+    @MethodSource("parameters")
+    public void testSingleDependencyEager(T value1, T value2, Class<BindingMock<T>> bindingMockClass) throws Exception  {
+        GenericBindingTest_(value1, value2, bindingMockClass);
+        setUp();
         binding1.getValue();
         binding1.addListener(changeListener);
         System.gc(); // making sure we did not not overdo weak references
@@ -250,8 +260,11 @@ public class GenericBindingTest<T> {
         assertEquals(true, binding1.isValid());
     }
 
-    @Test
-    public void testTwoDependencies() {
+    @ParameterizedTest
+    @MethodSource("parameters")
+    public void testTwoDependencies(T value1, T value2, Class<BindingMock<T>> bindingMockClass) throws Exception  {
+        GenericBindingTest_(value1, value2, bindingMockClass);
+        setUp();
         binding2.getValue();
         binding2.addListener(invalidationListener);
         System.gc(); // making sure we did not not overdo weak references
@@ -296,8 +309,11 @@ public class GenericBindingTest<T> {
         assertEquals(true, binding2.isValid());
     }
 
-    @Test
-    public void testUnbindDependencies() {
+    @ParameterizedTest
+    @MethodSource("parameters")
+    public void testUnbindDependencies(T value1, T value2, Class<BindingMock<T>> bindingMockClass) throws Exception  {
+        GenericBindingTest_(value1, value2, bindingMockClass);
+        setUp();
         // Start by making binding valid:
         binding2.getValue();
         assertTrue(binding2.isValid());
@@ -341,7 +357,6 @@ public class GenericBindingTest<T> {
         assertTrue(binding2.isValid());   // Fixed by 8243115
     }
 
-    @Parameterized.Parameters
     public static Collection<Object[]> parameters() {
         return Arrays.asList(new Object[][] {
             {

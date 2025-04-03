@@ -36,23 +36,20 @@ import javafx.beans.Observable;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.util.Callback;
-import org.junit.Before;
-import org.junit.Test;
-import static org.junit.Assert.*;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
-import org.junit.runners.Parameterized.Parameters;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import static org.junit.jupiter.api.Assertions.*;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
 
-@RunWith(Parameterized.class)
 public class ObservableListWithExtractor {
-    private final Mode mode;
+    private Mode mode;
 
     public static enum Mode {
         OBSERVABLE_LIST_WRAPPER,
         DECORATOR
     }
 
-    @Parameters
     public static Collection<Object[]> data() {
         return Arrays.asList(new Object[][]{{Mode.OBSERVABLE_LIST_WRAPPER}, {Mode.DECORATOR}});
     }
@@ -62,7 +59,7 @@ public class ObservableListWithExtractor {
     private MockListObserver obs;
     private Person p0;
 
-    public ObservableListWithExtractor(Mode mode) {
+    public void ObservableListWithExtractor_(Mode mode) {
         this.mode = mode;
     }
 
@@ -71,7 +68,6 @@ public class ObservableListWithExtractor {
     }
 
 
-    @Before
     public void setUp() {
         p0 = new Person();
         obs = new MockListObserver();
@@ -87,14 +83,20 @@ public class ObservableListWithExtractor {
         observedList.addListener(obs);
     }
 
-    @Test
-    public void testUpdate_add() {
+    @ParameterizedTest
+    @MethodSource("data")
+    public void testUpdate_add(Mode mode) {
+        ObservableListWithExtractor_(mode);
+        setUp();
         updateP0();
         obs.check1Update(modifiedList, 0, 1);
     }
 
-    @Test
-    public void testUpdate_add1() {
+    @ParameterizedTest
+    @MethodSource("data")
+    public void testUpdate_add1(Mode mode) {
+        ObservableListWithExtractor_(mode);
+        setUp();
         modifiedList.clear();
         modifiedList.add(0, p0);
         obs.clear();
@@ -102,8 +104,11 @@ public class ObservableListWithExtractor {
         obs.check1Update(observedList, 0, 1);
     }
 
-    @Test
-    public void testUpdate_addAll() {
+    @ParameterizedTest
+    @MethodSource("data")
+    public void testUpdate_addAll(Mode mode) {
+        ObservableListWithExtractor_(mode);
+        setUp();
         modifiedList.clear();
         modifiedList.addAll(Arrays.asList(p0, p0));
         obs.clear();
@@ -111,8 +116,11 @@ public class ObservableListWithExtractor {
         obs.check1Update(observedList, 0, 2);
     }
 
-    @Test
-    public void testUpdate_addAll1() {
+    @ParameterizedTest
+    @MethodSource("data")
+    public void testUpdate_addAll1(Mode mode) {
+        ObservableListWithExtractor_(mode);
+        setUp();
         modifiedList.clear();
         modifiedList.addAll(0, Arrays.asList(p0, p0));
         obs.clear();
@@ -120,8 +128,11 @@ public class ObservableListWithExtractor {
         obs.check1Update(observedList, 0, 2);
     }
 
-    @Test
-    public void testUpdate_addAll2() {
+    @ParameterizedTest
+    @MethodSource("data")
+    public void testUpdate_addAll2(Mode mode) {
+        ObservableListWithExtractor_(mode);
+        setUp();
         modifiedList.clear();
         modifiedList.addAll(p0, p0);
         obs.clear();
@@ -129,8 +140,11 @@ public class ObservableListWithExtractor {
         obs.check1Update(observedList, 0, 2);
     }
 
-    @Test
-    public void testUpdate_set() {
+    @ParameterizedTest
+    @MethodSource("data")
+    public void testUpdate_set(Mode mode) {
+        ObservableListWithExtractor_(mode);
+        setUp();
         Person p1 = new Person();
         modifiedList.set(0, p1);
         obs.clear();
@@ -140,8 +154,11 @@ public class ObservableListWithExtractor {
         obs.check1Update(observedList, 0, 1);
     }
 
-    @Test
-    public void testUpdate_setAll() {
+    @ParameterizedTest
+    @MethodSource("data")
+    public void testUpdate_setAll(Mode mode) {
+        ObservableListWithExtractor_(mode);
+        setUp();
         Person p1 = new Person();
         modifiedList.setAll(p1);
         obs.clear();
@@ -151,40 +168,55 @@ public class ObservableListWithExtractor {
         obs.check1Update(observedList, 0, 1);
     }
 
-    @Test
-    public void testUpdate_remove() {
+    @ParameterizedTest
+    @MethodSource("data")
+    public void testUpdate_remove(Mode mode) {
+        ObservableListWithExtractor_(mode);
+        setUp();
         modifiedList.remove(p0);
         obs.clear();
         updateP0();
         obs.check0();
     }
 
-    @Test
-    public void testUpdate_remove1() {
+    @ParameterizedTest
+    @MethodSource("data")
+    public void testUpdate_remove1(Mode mode) {
+        ObservableListWithExtractor_(mode);
+        setUp();
         modifiedList.remove(0);
         obs.clear();
         updateP0();
         obs.check0();
     }
 
-    @Test
-    public void testUpdate_removeAll() {
+    @ParameterizedTest
+    @MethodSource("data")
+    public void testUpdate_removeAll(Mode mode) {
+        ObservableListWithExtractor_(mode);
+        setUp();
         modifiedList.removeAll(p0);
         obs.clear();
         updateP0();
         obs.check0();
     }
 
-    @Test
-    public void testUpdate_retainAll() {
+    @ParameterizedTest
+    @MethodSource("data")
+    public void testUpdate_retainAll(Mode mode) {
+        ObservableListWithExtractor_(mode);
+        setUp();
         modifiedList.retainAll();
         obs.clear();
         updateP0();
         obs.check0();
     }
 
-    @Test
-    public void testUpdate_iterator_add() {
+    @ParameterizedTest
+    @MethodSource("data")
+    public void testUpdate_iterator_add(Mode mode) {
+        ObservableListWithExtractor_(mode);
+        setUp();
         modifiedList.clear();
         modifiedList.listIterator().add(p0);
         obs.clear();
@@ -192,8 +224,11 @@ public class ObservableListWithExtractor {
         obs.check1Update(observedList, 0, 1);
     }
 
-    @Test
-    public void testUpdate_iterator_set() {
+    @ParameterizedTest
+    @MethodSource("data")
+    public void testUpdate_iterator_set(Mode mode) {
+        ObservableListWithExtractor_(mode);
+        setUp();
         Person p1 = new Person();
         ListIterator<Person> listIterator = modifiedList.listIterator();
         listIterator.next();
@@ -205,8 +240,11 @@ public class ObservableListWithExtractor {
         obs.check1Update(observedList, 0, 1);
     }
 
-    @Test
-    public void testUpdate_sublist_add() {
+    @ParameterizedTest
+    @MethodSource("data")
+    public void testUpdate_sublist_add(Mode mode) {
+        ObservableListWithExtractor_(mode);
+        setUp();
         List<Person> sublist = modifiedList.subList(0, 1);
         sublist.add(p0);
         obs.clear();
@@ -214,8 +252,11 @@ public class ObservableListWithExtractor {
         obs.check1Update(observedList, 0, 2);
     }
 
-    @Test
-    public void testUpdate_sublist_add1() {
+    @ParameterizedTest
+    @MethodSource("data")
+    public void testUpdate_sublist_add1(Mode mode) {
+        ObservableListWithExtractor_(mode);
+        setUp();
         List<Person> sublist = modifiedList.subList(0, 1);
         sublist.clear();
         sublist.add(0, p0);
@@ -224,8 +265,11 @@ public class ObservableListWithExtractor {
         obs.check1Update(observedList, 0, 1);
     }
 
-    @Test
-    public void testUpdate_sublist_addAll() {
+    @ParameterizedTest
+    @MethodSource("data")
+    public void testUpdate_sublist_addAll(Mode mode) {
+        ObservableListWithExtractor_(mode);
+        setUp();
         List<Person> sublist = modifiedList.subList(0, 1);
         sublist.clear();
         sublist.addAll(Arrays.asList(p0, p0));
@@ -234,8 +278,11 @@ public class ObservableListWithExtractor {
         obs.check1Update(observedList, 0, 2);
     }
 
-    @Test
-    public void testUpdate_sublist_addAll1() {
+    @ParameterizedTest
+    @MethodSource("data")
+    public void testUpdate_sublist_addAll1(Mode mode) {
+        ObservableListWithExtractor_(mode);
+        setUp();
         List<Person> sublist = modifiedList.subList(0, 1);
         sublist.clear();
         sublist.addAll(0, Arrays.asList(p0, p0));
@@ -244,8 +291,11 @@ public class ObservableListWithExtractor {
         obs.check1Update(observedList, 0, 2);
     }
 
-    @Test
-    public void testUpdate_sublist_set() {
+    @ParameterizedTest
+    @MethodSource("data")
+    public void testUpdate_sublist_set(Mode mode) {
+        ObservableListWithExtractor_(mode);
+        setUp();
         List<Person> sublist = modifiedList.subList(0, 1);
         Person p1 = new Person();
         sublist.set(0, p1);
@@ -256,8 +306,11 @@ public class ObservableListWithExtractor {
         obs.check1Update(observedList, 0, 1);
     }
 
-    @Test
-    public void testUpdate_sublist_remove() {
+    @ParameterizedTest
+    @MethodSource("data")
+    public void testUpdate_sublist_remove(Mode mode) {
+        ObservableListWithExtractor_(mode);
+        setUp();
         List<Person> sublist = modifiedList.subList(0, 1);
         sublist.remove(p0);
         obs.clear();
@@ -265,8 +318,11 @@ public class ObservableListWithExtractor {
         obs.check0();
     }
 
-    @Test
-    public void testUpdate_sublist_remove1() {
+    @ParameterizedTest
+    @MethodSource("data")
+    public void testUpdate_sublist_remove1(Mode mode) {
+        ObservableListWithExtractor_(mode);
+        setUp();
         List<Person> sublist = modifiedList.subList(0, 1);
         sublist.remove(0);
         obs.clear();
@@ -274,8 +330,11 @@ public class ObservableListWithExtractor {
         obs.check0();
     }
 
-    @Test
-    public void testUpdate_sublist_removeAll() {
+    @ParameterizedTest
+    @MethodSource("data")
+    public void testUpdate_sublist_removeAll(Mode mode) {
+        ObservableListWithExtractor_(mode);
+        setUp();
         List<Person> sublist = modifiedList.subList(0, 1);
         sublist.removeAll(Arrays.asList(p0));
         obs.clear();
@@ -283,8 +342,11 @@ public class ObservableListWithExtractor {
         obs.check0();
     }
 
-    @Test
-    public void testUpdate_sublist_retainAll() {
+    @ParameterizedTest
+    @MethodSource("data")
+    public void testUpdate_sublist_retainAll(Mode mode) {
+        ObservableListWithExtractor_(mode);
+        setUp();
         List<Person> sublist = modifiedList.subList(0, 1);
         sublist.retainAll(Collections.<Person>emptyList());
         obs.clear();
@@ -292,8 +354,11 @@ public class ObservableListWithExtractor {
         obs.check0();
     }
 
-    @Test
-    public void testUpdate_iterator_sublist_add() {
+    @ParameterizedTest
+    @MethodSource("data")
+    public void testUpdate_iterator_sublist_add(Mode mode) {
+        ObservableListWithExtractor_(mode);
+        setUp();
         List<Person> sublist = modifiedList.subList(0, 1);
         sublist.clear();
         sublist.listIterator().add(p0);
@@ -302,8 +367,11 @@ public class ObservableListWithExtractor {
         obs.check1Update(observedList, 0, 1);
     }
 
-    @Test
-    public void testUpdate_iterator_sublist_set() {
+    @ParameterizedTest
+    @MethodSource("data")
+    public void testUpdate_iterator_sublist_set(Mode mode) {
+        ObservableListWithExtractor_(mode);
+        setUp();
         List<Person> sublist = modifiedList.subList(0, 1);
         Person p1 = new Person();
         ListIterator<Person> listIterator = sublist.listIterator();
@@ -316,8 +384,11 @@ public class ObservableListWithExtractor {
         obs.check1Update(observedList, 0, 1);
     }
 
-    @Test
-    public void testMultipleUpdate() {
+    @ParameterizedTest
+    @MethodSource("data")
+    public void testMultipleUpdate(Mode mode) {
+        ObservableListWithExtractor_(mode);
+        setUp();
 
         modifiedList.add(new Person());
         modifiedList.addAll(p0, p0);
@@ -332,8 +403,11 @@ public class ObservableListWithExtractor {
 
     }
 
-    @Test
-    public void testPreFilledList() {
+    @ParameterizedTest
+    @MethodSource("data")
+    public void testPreFilledList(Mode mode) {
+        ObservableListWithExtractor_(mode);
+        setUp();
         ArrayList<Person> arrayList = new ArrayList<>();
         arrayList.add(p0);
         obs = new MockListObserver();

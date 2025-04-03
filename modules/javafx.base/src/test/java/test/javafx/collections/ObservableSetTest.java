@@ -32,29 +32,25 @@ import java.util.Iterator;
 import java.util.Set;
 import javafx.collections.ObservableSet;
 import javafx.collections.SetChangeListener;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import static test.javafx.collections.MockSetObserver.Call.*;
 import static test.javafx.collections.MockSetObserver.Tuple.*;
-import static org.junit.Assert.*;
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.*;
+import org.junit.jupiter.params.provider.MethodSource;
+import org.junit.jupiter.params.ParameterizedTest;
 
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
-
-@RunWith(Parameterized.class)
 public class ObservableSetTest {
 
-    final Callable<ObservableSet<String>> setFactory;
+    Callable<ObservableSet<String>> setFactory;
     private ObservableSet<String> observableSet;
     private MockSetObserver<String> observer;
 
-    public ObservableSetTest(final Callable<ObservableSet<String>> setFactory) {
+    public void ObservableSetTest_(Callable<ObservableSet<String>> setFactory) {
         this.setFactory = setFactory;
     }
 
-    @Parameterized.Parameters
     public static Collection createParameters() {
         Object[][] data = new Object[][] {
             { TestedObservableSets.HASH_SET },
@@ -67,7 +63,6 @@ public class ObservableSetTest {
         return Arrays.asList(data);
     }
 
-    @Before
     public void setUp() throws Exception {
         observableSet = setFactory.call();
         observer = new MockSetObserver<>();
@@ -89,8 +84,11 @@ public class ObservableSetTest {
         observer.clear();
     }
 
-    @Test
-    public void testAddRemove() {
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    public void testAddRemove(Callable<ObservableSet<String>> setFactory) throws Exception {
+        ObservableSetTest_(setFactory);
+        setUp();
         observableSet.add("observedFoo");
         observableSet.add("foo");
         assertTrue(observableSet.contains("observedFoo"));
@@ -109,9 +107,12 @@ public class ObservableSetTest {
         assertEquals(observer.getCallsNumber(), 3);
     }
 
-    @Test
+    @ParameterizedTest
+    @MethodSource("createParameters")
     @SuppressWarnings("unchecked")
-    public void testAddAll() {
+    public void testAddAll(Callable<ObservableSet<String>> setFactory) throws Exception {
+        ObservableSetTest_(setFactory);
+        setUp();
         Set<String> set = new HashSet<>();
         set.add("oFoo");
         set.add("pFoo");
@@ -123,18 +124,24 @@ public class ObservableSetTest {
         observer.assertMultipleCalls(call(null, "oFoo"), call(null, "pFoo"));
     }
 
-    @Test
+    @ParameterizedTest
+    @MethodSource("createParameters")
     @SuppressWarnings("unchecked")
-    public void testRemoveAll() {
+    public void testRemoveAll(Callable<ObservableSet<String>> setFactory) throws Exception {
+        ObservableSetTest_(setFactory);
+        setUp();
         observableSet.removeAll(Arrays.asList("one", "two", "three"));
 
         observer.assertMultipleRemoved(tup("one"), tup("two"));
         assertTrue(observableSet.size() == 1);
     }
 
-    @Test
+    @ParameterizedTest
+    @MethodSource("createParameters")
     @SuppressWarnings("unchecked")
-    public void testClear() {
+    public void testClear(Callable<ObservableSet<String>> setFactory) throws Exception {
+        ObservableSetTest_(setFactory);
+        setUp();
         observableSet.clear();
 
         assertTrue(observableSet.isEmpty());
@@ -142,16 +149,22 @@ public class ObservableSetTest {
 
     }
 
-    @Test
-    public void testRetainAll() {
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    public void testRetainAll(Callable<ObservableSet<String>> setFactory) throws Exception {
+        ObservableSetTest_(setFactory);
+        setUp();
         observableSet.retainAll(Arrays.asList("one", "two", "three"));
 
         observer.assertRemoved(tup("foo"));
         assertTrue(observableSet.size() == 2);
     }
 
-    @Test
-    public void testIterator() {
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    public void testIterator(Callable<ObservableSet<String>> setFactory) throws Exception {
+        ObservableSetTest_(setFactory);
+        setUp();
         Iterator<String> iterator = observableSet.iterator();
         assertTrue(iterator.hasNext());
 
@@ -162,8 +175,11 @@ public class ObservableSetTest {
         observer.assertRemoved(tup(toBeRemoved));
     }
 
-    @Test
-    public void testOther() {
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    public void testOther(Callable<ObservableSet<String>> setFactory) throws Exception {
+        ObservableSetTest_(setFactory);
+        setUp();
         assertEquals(3, observableSet.size());
         assertFalse(observableSet.isEmpty());
 
@@ -171,8 +187,11 @@ public class ObservableSetTest {
         assertFalse(observableSet.contains("bar"));
     }
 
-    @Test
-    public void testNull() {
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    public void testNull(Callable<ObservableSet<String>> setFactory) throws Exception {
+        ObservableSetTest_(setFactory);
+        setUp();
         if (setFactory instanceof TestedObservableSets.CallableTreeSetImpl) {
             return; // TreeSet doesn't accept nulls
         }
@@ -187,8 +206,11 @@ public class ObservableSetTest {
     }
 
 
-    @Test
-    public void testObserverCanRemoveObservers() {
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    public void testObserverCanRemoveObservers(Callable<ObservableSet<String>> setFactory) throws Exception {
+        ObservableSetTest_(setFactory);
+        setUp();
         final SetChangeListener<String> listObserver = change -> {
             change.getSet().removeListener(observer);
         };
@@ -220,8 +242,11 @@ public class ObservableSetTest {
         }
     }
 
-    @Test
-    public void testEqualsAndHashCode() {
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    public void testEqualsAndHashCode(Callable<ObservableSet<String>> setFactory) throws Exception {
+        ObservableSetTest_(setFactory);
+        setUp();
         final Set<String> other = new HashSet<>(Arrays.asList("one", "two", "foo"));
         assertTrue(observableSet.equals(other));
         assertEquals(observableSet.hashCode(), other.hashCode());

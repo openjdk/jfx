@@ -22,7 +22,7 @@
  * or visit www.oracle.com if you need additional information or have any
  * questions.
  */
-
+//test is disabled already
 package test.com.sun.javafx.property.adapter;
 
 //package com.sun.javafx.property.adapter;

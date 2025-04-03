@@ -27,24 +27,23 @@ package test.javafx.util.converter;
 
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
-import java.util.Arrays;
+import java.time.ZoneId;
 import java.util.Calendar;
-import java.util.Collection;
 import java.util.Date;
 import java.util.Locale;
 import java.util.TimeZone;
+import java.util.stream.Stream;
+
 import javafx.util.converter.DateTimeStringConverter;
 import javafx.util.converter.DateTimeStringConverterShim;
-import static org.junit.Assert.*;
 
-import org.junit.Before;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
+import static org.junit.jupiter.api.Assertions.*;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
 
-/**
- */
-@RunWith(Parameterized.class)
 public class DateTimeStringConverterTest {
     private static final Date VALID_DATE_WITH_SECONDS;
     private static final Date VALID_DATE_WITHOUT_SECONDS;
@@ -64,110 +63,262 @@ public class DateTimeStringConverterTest {
         VALID_DATE_WITHOUT_SECONDS = c.getTime();
     }
 
-    @Parameterized.Parameters public static Collection implementations() {
-        return Arrays.asList(new Object[][] {
-            { new DateTimeStringConverter(),
-              Locale.getDefault(Locale.Category.FORMAT), DateFormat.DEFAULT, DateFormat.DEFAULT,
-              VALID_DATE_WITH_SECONDS, null, null },
-
-            { new DateTimeStringConverter(DateFormat.SHORT, DateFormat.SHORT),
-              Locale.getDefault(Locale.Category.FORMAT), DateFormat.SHORT, DateFormat.SHORT,
-              VALID_DATE_WITHOUT_SECONDS, null, null },
-
-            { new DateTimeStringConverter(Locale.UK),
-              Locale.UK, DateFormat.DEFAULT, DateFormat.DEFAULT,
-              VALID_DATE_WITH_SECONDS, null, null },
-
-            { new DateTimeStringConverter(Locale.UK, DateFormat.SHORT, DateFormat.SHORT),
-              Locale.UK, DateFormat.SHORT, DateFormat.SHORT,
-              VALID_DATE_WITHOUT_SECONDS, null, null },
-
-            { new DateTimeStringConverter("dd MM yyyy HH mm ss"),
-              Locale.getDefault(Locale.Category.FORMAT), DateFormat.DEFAULT, DateFormat.DEFAULT,
-              VALID_DATE_WITH_SECONDS, "dd MM yyyy HH mm ss", null },
-
-            { new DateTimeStringConverter(DateFormat.getDateTimeInstance(DateFormat.LONG, DateFormat.FULL)),
-              Locale.getDefault(Locale.Category.FORMAT), DateFormat.DEFAULT, DateFormat.DEFAULT,
-              VALID_DATE_WITH_SECONDS, null, DateFormat.getDateTimeInstance(DateFormat.LONG, DateFormat.FULL) },
-        });
+    static Stream<Arguments> provideTestParameters() {
+        return Stream.of(
+                Arguments.of(
+                        "no-args",
+                        new Object[]{},
+                        Locale.getDefault(Locale.Category.FORMAT),
+                        DateFormat.DEFAULT,
+                        DateFormat.DEFAULT,
+                        VALID_DATE_WITH_SECONDS,
+                        null,
+                        null,
+                        null
+                ),
+                Arguments.of(
+                        "styles",
+                        new Object[]{DateFormat.SHORT, DateFormat.SHORT},
+                        Locale.getDefault(Locale.Category.FORMAT),
+                        DateFormat.SHORT,
+                        DateFormat.SHORT,
+                        VALID_DATE_WITHOUT_SECONDS,
+                        null,
+                        null,
+                        null
+                ),
+                Arguments.of(
+                        "locale",
+                        new Object[]{Locale.UK},
+                        Locale.UK,
+                        DateFormat.DEFAULT,
+                        DateFormat.DEFAULT,
+                        VALID_DATE_WITH_SECONDS,
+                        null,
+                        null,
+                        null
+                ),
+                Arguments.of(
+                        "localeStyles",
+                        new Object[]{Locale.UK, DateFormat.SHORT, DateFormat.SHORT},
+                        Locale.UK,
+                        DateFormat.SHORT,
+                        DateFormat.SHORT,
+                        VALID_DATE_WITHOUT_SECONDS,
+                        null,
+                        null,
+                        null
+                ),
+                Arguments.of(
+                        "pattern",
+                        new Object[]{"dd MM yyyy HH mm ss"},
+                        Locale.getDefault(Locale.Category.FORMAT),
+                        DateFormat.DEFAULT,
+                        DateFormat.DEFAULT,
+                        VALID_DATE_WITH_SECONDS,
+                        "dd MM yyyy HH mm ss",
+                        null,
+                        null
+                ),
+                Arguments.of(
+                        "dateFormatInstance",
+                        new Object[]{DateFormat.LONG, DateFormat.FULL},
+                        Locale.getDefault(Locale.Category.FORMAT),
+                        DateFormat.DEFAULT,
+                        DateFormat.DEFAULT,
+                        VALID_DATE_WITH_SECONDS,
+                        null,
+                        DateFormat.LONG,
+                        DateFormat.FULL
+                )
+        );
     }
 
-    private DateTimeStringConverter converter;
-    private Locale locale;
-    private int dateStyle;
-    private int timeStyle;
-    private String pattern;
-    private DateFormat dateFormat;
-    private Date validDate;
-    private DateFormat validFormatter;
+    @BeforeAll
+    static void setup() {
+        TimeZone.setDefault(TimeZone.getTimeZone("GMT"));
+    }
 
-    public DateTimeStringConverterTest(DateTimeStringConverter converter, Locale locale, int dateStyle, int timeStyle, Date validDate, String pattern, DateFormat dateFormat) {
-        this.converter = converter;
-        this.locale = locale;
-        this.dateStyle = dateStyle;
-        this.timeStyle = timeStyle;
-        this.validDate = validDate;
-        this.pattern = pattern;
-        this.dateFormat = dateFormat;
-
-        if (dateFormat != null) {
-            validFormatter = dateFormat;
-        } else if (pattern != null) {
-            validFormatter = new SimpleDateFormat(pattern);
-        } else {
-            validFormatter = DateFormat.getDateTimeInstance(dateStyle, timeStyle, locale);
+    private DateTimeStringConverter createConverter(String constructorType, Object[] constructorArgs) {
+        switch (constructorType) {
+            case "no-args":
+                return new DateTimeStringConverter();
+            case "styles":
+                return new DateTimeStringConverter(
+                        (Integer) constructorArgs[0],
+                        (Integer) constructorArgs[1]
+                );
+            case "locale":
+                return new DateTimeStringConverter((Locale) constructorArgs[0]);
+            case "localeStyles":
+                return new DateTimeStringConverter(
+                        (Locale) constructorArgs[0],
+                        (Integer) constructorArgs[1],
+                        (Integer) constructorArgs[2]
+                );
+            case "pattern":
+                return new DateTimeStringConverter((String) constructorArgs[0]);
+            case "dateFormatInstance":
+                DateFormat dateFormat = DateFormat.getDateTimeInstance(
+                        (Integer) constructorArgs[0],
+                        (Integer) constructorArgs[1]
+                );
+                return new DateTimeStringConverter(dateFormat);
+            default:
+                fail("Unknown constructor type: " + constructorType);
+                return null;
         }
     }
 
-    @Before public void setup() {
+    private DateFormat createValidFormatter(
+            Integer dateFormatDateStyle,
+            Integer dateFormatTimeStyle,
+            String pattern,
+            int dateStyle,
+            int timeStyle,
+            Locale locale
+    ) {
+        DateFormat formatter;
+        if (dateFormatDateStyle != null && dateFormatTimeStyle != null) {
+            formatter = DateFormat.getDateTimeInstance(dateFormatDateStyle, dateFormatTimeStyle, locale);
+        } else if (pattern != null) {
+            formatter = new SimpleDateFormat(pattern);
+        } else {
+            formatter = DateFormat.getDateTimeInstance(dateStyle, timeStyle, locale);
+        }
+        formatter.setTimeZone(TimeZone.getTimeZone("GMT"));
+        return formatter;
     }
 
-    /*********************************************************************
-     * Test constructors
-     ********************************************************************/
+    @ParameterizedTest
+    @MethodSource("provideTestParameters")
+    void testConstructor(
+            String constructorType,
+            Object[] constructorArgs,
+            Locale expectedLocale,
+            int expectedDateStyle,
+            int expectedTimeStyle,
+            Date validDate,
+            String expectedPattern,
+            Integer dateFormatDateStyle,
+            Integer dateFormatTimeStyle
+    ) {
+        DateTimeStringConverter converter = createConverter(constructorType, constructorArgs);
 
-    @Test public void testConstructor() {
-        assertEquals(locale, DateTimeStringConverterShim.getLocale(converter));
-        assertEquals(dateStyle, DateTimeStringConverterShim.getDateStyle(converter));
-        assertEquals(pattern, DateTimeStringConverterShim.getPattern(converter));
-        assertEquals(dateFormat, DateTimeStringConverterShim.getDateFormatVar(converter));
-        assertEquals(timeStyle, DateTimeStringConverterShim.getTimeStyle(converter));
+        assertEquals(expectedLocale, DateTimeStringConverterShim.getLocale(converter));
+        assertEquals(expectedDateStyle, DateTimeStringConverterShim.getDateStyle(converter));
+        assertEquals(expectedTimeStyle, DateTimeStringConverterShim.getTimeStyle(converter));
+        assertEquals(expectedPattern, DateTimeStringConverterShim.getPattern(converter));
+
+        if (dateFormatDateStyle != null) {
+            DateFormat dateFormat = DateTimeStringConverterShim.getDateFormatVar(converter);
+            assertNotNull(dateFormat);
+        }
     }
 
-    /*********************************************************************
-     * Test methods
-     ********************************************************************/
-
-    @Test public void getDateFormat_default() {
+    @Test
+    void getDateFormat_default() {
+        DateTimeStringConverter converter = new DateTimeStringConverter();
         assertNotNull(DateTimeStringConverterShim.getDateFormat(converter));
     }
 
-    @Test public void getDateFormat_nonNullPattern() {
-        converter = new DateTimeStringConverter("yyyy/MM/dd HH:mm:ss");
-        assertTrue(DateTimeStringConverterShim.getDateFormat(converter)
-                instanceof SimpleDateFormat);
+    @Test
+    void getDateFormat_nonNullPattern() {
+        DateTimeStringConverter converter = new DateTimeStringConverter("yyyy/MM/dd HH:mm:ss");
+        assertTrue(DateTimeStringConverterShim.getDateFormat(converter) instanceof SimpleDateFormat);
     }
 
-    /*********************************************************************
-     * Test toString / fromString methods
-     ********************************************************************/
-
-    @Test public void fromString_testValidInput() {
+    @ParameterizedTest
+    @MethodSource("provideTestParameters")
+    void fromString_testValidInput(
+            String constructorType,
+            Object[] constructorArgs,
+            Locale expectedLocale,
+            int expectedDateStyle,
+            int expectedTimeStyle,
+            Date validDate,
+            String expectedPattern,
+            Integer dateFormatDateStyle,
+            Integer dateFormatTimeStyle
+    ) {
+        DateTimeStringConverter converter = createConverter(constructorType, constructorArgs);
+        DateFormat validFormatter = createValidFormatter(
+                dateFormatDateStyle,
+                dateFormatTimeStyle,
+                expectedPattern,
+                expectedDateStyle,
+                expectedTimeStyle,
+                expectedLocale
+        );
         String input = validFormatter.format(validDate);
-        assertEquals("Input = "+input, validDate, converter.fromString(input));
+        assertEquals(validDate, converter.fromString(input), "Input = " + input);
     }
 
-    @Test public void fromString_testValidInputWithWhiteSpace() {
+    @ParameterizedTest
+    @MethodSource("provideTestParameters")
+    void fromString_testValidInputWithWhiteSpace(
+            String constructorType,
+            Object[] constructorArgs,
+            Locale expectedLocale,
+            int expectedDateStyle,
+            int expectedTimeStyle,
+            Date validDate,
+            String expectedPattern,
+            Integer dateFormatDateStyle,
+            Integer dateFormatTimeStyle
+    ) {
+        DateTimeStringConverter converter = createConverter(constructorType, constructorArgs);
+        DateFormat validFormatter = createValidFormatter(
+                dateFormatDateStyle,
+                dateFormatTimeStyle,
+                expectedPattern,
+                expectedDateStyle,
+                expectedTimeStyle,
+                expectedLocale
+        );
         String input = validFormatter.format(validDate);
-        assertEquals("Input = "+input, validDate, converter.fromString("      " + input + "      "));
+        assertEquals(validDate, converter.fromString("      " + input + "      "), "Input = " + input);
     }
 
-    @Test(expected=RuntimeException.class)
-    public void fromString_testInvalidInput() {
-        converter.fromString("abcdefg");
+    @ParameterizedTest
+    @MethodSource("provideTestParameters")
+    void fromString_testInvalidInput(
+            String constructorType,
+            Object[] constructorArgs,
+            Locale expectedLocale,
+            int expectedDateStyle,
+            int expectedTimeStyle,
+            Date validDate,
+            String expectedPattern,
+            Integer dateFormatDateStyle,
+            Integer dateFormatTimeStyle
+    ) {
+        DateTimeStringConverter converter = createConverter(constructorType, constructorArgs);
+        assertThrows(RuntimeException.class, () -> converter.fromString("abcdefg"));
     }
 
-    @Test public void toString_validOutput() {
+    @ParameterizedTest
+    @MethodSource("provideTestParameters")
+    void toString_validOutput(
+            String constructorType,
+            Object[] constructorArgs,
+            Locale expectedLocale,
+            int expectedDateStyle,
+            int expectedTimeStyle,
+            Date validDate,
+            String expectedPattern,
+            Integer dateFormatDateStyle,
+            Integer dateFormatTimeStyle
+    ) {
+        DateTimeStringConverter converter = createConverter(constructorType, constructorArgs);
+        DateFormat validFormatter = createValidFormatter(
+                dateFormatDateStyle,
+                dateFormatTimeStyle,
+                expectedPattern,
+                expectedDateStyle,
+                expectedTimeStyle,
+                expectedLocale
+        );
         assertEquals(validFormatter.format(validDate), converter.toString(validDate));
     }
 }

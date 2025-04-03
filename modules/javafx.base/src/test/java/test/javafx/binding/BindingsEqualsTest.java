@@ -25,7 +25,7 @@
 
 package test.javafx.binding;
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.*;
 
 import java.util.Arrays;
 import java.util.Collection;
@@ -47,12 +47,11 @@ import javafx.beans.property.SimpleStringProperty;
 import javafx.beans.property.StringProperty;
 import javafx.beans.value.*;
 
-import org.junit.Before;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;;
 
-@RunWith(Parameterized.class)
 public class BindingsEqualsTest<T> {
 
     private static final float EPSILON_FLOAT = 1e-5f;
@@ -67,13 +66,13 @@ public class BindingsEqualsTest<T> {
         void check(T op1, T op2, BooleanBinding exp);
     }
 
-    private final ObservableValue op1;
-    private final ObservableValue op2;
-    private final Functions<T> func;
-    private final T[] v;
+    private  ObservableValue op1;
+    private  ObservableValue op2;
+    private  Functions<T> func;
+    private  T[] v;
     private InvalidationListenerMock observer;
 
-    public BindingsEqualsTest(ObservableValue op1, ObservableValue op2, Functions<T> func, T... v) {
+    public void BindingsEqualsTest_(ObservableValue op1, ObservableValue op2, Functions<T> func, T... v) {
         this.op1 = op1;
         this.op2 = op2;
         this.func = func;
@@ -84,15 +83,18 @@ public class BindingsEqualsTest<T> {
         return value == null? "" : value;
     }
 
-    @Before
+
     public void setUp() {
         func.setOp1(v[0]);
         func.setOp2(v[1]);
         observer = new InvalidationListenerMock();
     }
 
-    @Test
-    public void test_Expression_Expression() {
+    @ParameterizedTest
+    @MethodSource("parameters")
+    public void test_Expression_Expression(ObservableValue op1, ObservableValue op2, Functions<T> func, T... v) {
+        BindingsEqualsTest_(op1, op2, func, v);
+        setUp();
         final BooleanBinding binding = func.generateExpressionExpression(op1, op2);
         binding.addListener(observer);
 
@@ -118,8 +120,11 @@ public class BindingsEqualsTest<T> {
         observer.check(binding, 1);
     }
 
-    @Test
-    public void test_Self() {
+    @ParameterizedTest
+    @MethodSource("parameters")
+    public void test_Self(ObservableValue op1, ObservableValue op2, Functions<T> func, T... v) {
+        BindingsEqualsTest_(op1, op2, func, v);
+        setUp();
         // using same FloatValue twice
         final BooleanBinding binding = func.generateExpressionExpression(op1, op1);
         binding.addListener(observer);
@@ -133,18 +138,27 @@ public class BindingsEqualsTest<T> {
         observer.check(binding, 1);
     }
 
-    @Test(expected=NullPointerException.class)
-    public void test_null_Expression() {
-        func.generateExpressionExpression(null, op1);
+    @ParameterizedTest
+    @MethodSource("parameters")
+    public void test_null_Expression(ObservableValue op1, ObservableValue op2, Functions<T> func, T... v) {
+        BindingsEqualsTest_(op1, op2, func, v);
+        setUp();
+        assertThrows(NullPointerException.class, () -> func.generateExpressionExpression(null, op1));
     }
 
-    @Test(expected=NullPointerException.class)
-    public void test_Expression_null() {
-        func.generateExpressionExpression(op1, null);
+    @ParameterizedTest
+    @MethodSource("parameters")
+    public void test_Expression_null(ObservableValue op1, ObservableValue op2, Functions<T> func, T... v) {
+        BindingsEqualsTest_(op1, op2, func, v);
+        setUp();
+        assertThrows(NullPointerException.class, () -> func.generateExpressionExpression(op1, null));
     }
 
-    @Test
-    public void test_Expression_Primitive() {
+    @ParameterizedTest
+    @MethodSource("parameters")
+    public void test_Expression_Primitive(ObservableValue op1, ObservableValue op2, Functions<T> func, T... v) {
+        BindingsEqualsTest_(op1, op2, func, v);
+        setUp();
         final BooleanBinding binding = func.generateExpressionPrimitive(op1, v[1]);
         binding.addListener(observer);
 
@@ -164,13 +178,19 @@ public class BindingsEqualsTest<T> {
         observer.check(binding, 1);
     }
 
-    @Test(expected=NullPointerException.class)
-    public void test_null_Primitive() {
-        func.generateExpressionPrimitive(null, v[0]);
+    @ParameterizedTest
+    @MethodSource("parameters")
+    public void test_null_Primitive(ObservableValue op1, ObservableValue op2, Functions<T> func, T... v) {
+        BindingsEqualsTest_(op1, op2, func, v);
+        setUp();
+        assertThrows(NullPointerException.class, () -> func.generateExpressionPrimitive(null, v[0]));
     }
 
-    @Test
-    public void test_Primitive_Expression() {
+    @ParameterizedTest
+    @MethodSource("parameters")
+    public void test_Primitive_Expression(ObservableValue op1, ObservableValue op2, Functions<T> func, T... v) {
+        BindingsEqualsTest_(op1, op2, func, v);
+        setUp();
         final BooleanBinding binding = func.generatePrimitiveExpression(v[1], op1);
         binding.addListener(observer);
 
@@ -190,12 +210,14 @@ public class BindingsEqualsTest<T> {
         observer.check(binding, 1);
     }
 
-    @Test(expected=NullPointerException.class)
-    public void test_Primitive_null() {
-        func.generatePrimitiveExpression(v[0], null);
+    @ParameterizedTest
+    @MethodSource("parameters")
+    public void test_Primitive_null(ObservableValue op1, ObservableValue op2, Functions<T> func, T... v) {
+        BindingsEqualsTest_(op1, op2, func, v);
+        setUp();
+        assertThrows(NullPointerException.class, () -> func.generatePrimitiveExpression(v[0], null));
     }
 
-    @Parameterized.Parameters
     public static Collection<Object[]> parameters() {
         final FloatProperty float1 = new SimpleFloatProperty();
         final FloatProperty float2 = new SimpleFloatProperty();

@@ -25,8 +25,8 @@
 
 package test.javafx.collections;
 
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -36,29 +36,27 @@ import java.util.List;
 import javafx.collections.ListChangeListener;
 import javafx.collections.ObservableList;
 
-import static org.junit.Assert.*;
-import org.junit.Ignore;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
+import static org.junit.jupiter.api.Assertions.*;
+import org.junit.jupiter.api.Disabled;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
 
 /**
  * Tests for ObservableList.
  *
  */
-@RunWith(Parameterized.class)
 public class ObservableListTest  {
 
     static final List<String> EMPTY = Collections.emptyList();
-    final Callable<ObservableList<String>> listFactory;
+    Callable<ObservableList<String>> listFactory;
     ObservableList<String> list;
     MockListObserver<String> mlo;
 
 
-    public ObservableListTest(final Callable<ObservableList<String>> listFactory) {
+    public void ObservableListTest_(Callable<ObservableList<String>> listFactory) {
         this.listFactory = listFactory;
     }
 
-    @Parameterized.Parameters
     public static Collection createParameters() {
         Object[][] data = new Object[][] {
             { TestedObservableLists.ARRAY_LIST },
@@ -71,7 +69,6 @@ public class ObservableListTest  {
         return Arrays.asList(data);
     }
 
-    @Before
     public void setUp() throws Exception {
         list = listFactory.call();
         mlo = new MockListObserver<>();
@@ -95,8 +92,11 @@ public class ObservableListTest  {
 
     // ========== observer add/remove tests ==========
 
-    @Test
-    public void testObserverAddRemove() {
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    public void testObserverAddRemove(Callable<ObservableList<String>> listFactory) throws Exception {
+        ObservableListTest_(listFactory);
+        setUp();
         MockListObserver<String> mlo2 = new MockListObserver<>();
         list.addListener(mlo2);
         list.removeListener(mlo);
@@ -106,15 +106,20 @@ public class ObservableListTest  {
     }
 
     @Test
-    @Ignore
-    public void testObserverAddTwice() {
+    @Disabled
+    public void testObserverAddTwice(Callable<ObservableList<String>> listFactory) throws Exception {
+        ObservableListTest_(listFactory);
+        setUp();
         list.addListener(mlo); // add it a second time
         list.add("plugh");
         mlo.check1AddRemove(list, EMPTY, 3, 4);
     }
 
-    @Test
-    public void testObserverRemoveTwice() {
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    public void testObserverRemoveTwice(Callable<ObservableList<String>> listFactory) throws Exception {
+        ObservableListTest_(listFactory);
+        setUp();
         list.removeListener(mlo);
         list.removeListener(mlo);
         list.add("plugh");
@@ -123,75 +128,108 @@ public class ObservableListTest  {
 
     // ========== list mutation tests ==========
 
-    @Test
-    public void testAddToEmpty() {
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    public void testAddToEmpty(Callable<ObservableList<String>> listFactory) throws Exception {
+        ObservableListTest_(listFactory);
+        setUp();
         useListData();
         list.add("asdf");
         mlo.check1AddRemove(list, EMPTY, 0, 1);
     }
 
-    @Test
-    public void testAddAtEnd() {
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    public void testAddAtEnd(Callable<ObservableList<String>> listFactory) throws Exception {
+        ObservableListTest_(listFactory);
+        setUp();
         list.add("four");
         mlo.check1AddRemove(list, EMPTY, 3, 4);
     }
 
-    @Test
-    public void testAddInMiddle() {
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    public void testAddInMiddle(Callable<ObservableList<String>> listFactory) throws Exception {
+        ObservableListTest_(listFactory);
+        setUp();
         list.add(1, "xyz");
         mlo.check1AddRemove(list, EMPTY, 1, 2);
     }
 
-    @Test
-    public void testAddSeveralToEmpty() {
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    public void testAddSeveralToEmpty(Callable<ObservableList<String>> listFactory) throws Exception {
+        ObservableListTest_(listFactory);
+        setUp();
         useListData();
         list.addAll(Arrays.asList("alpha", "bravo", "charlie"));
         mlo.check1AddRemove(list, EMPTY, 0, 3);
     }
 
-    @Test
-    public void testAddSeveralAtEnd() {
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    public void testAddSeveralAtEnd(Callable<ObservableList<String>> listFactory) throws Exception {
+        ObservableListTest_(listFactory);
+        setUp();
         list.addAll(Arrays.asList("four", "five"));
         mlo.check1AddRemove(list, EMPTY, 3, 5);
     }
 
-    @Test
-    public void testAddSeveralInMiddle() {
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    public void testAddSeveralInMiddle(Callable<ObservableList<String>> listFactory) throws Exception {
+        ObservableListTest_(listFactory);
+        setUp();
         list.addAll(1, Arrays.asList("a", "b"));
         mlo.check1AddRemove(list, EMPTY, 1, 3);
     }
 
-    @Test
-    public void testClearNonempty() {
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    public void testClearNonempty(Callable<ObservableList<String>> listFactory) throws Exception {
+        ObservableListTest_(listFactory);
+        setUp();
         list.clear();
         mlo.check1AddRemove(list, Arrays.asList("one", "two", "three"), 0, 0);
     }
 
-    @Test
-    public void testRemoveByIndex() {
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    public void testRemoveByIndex(Callable<ObservableList<String>> listFactory) throws Exception {
+        ObservableListTest_(listFactory);
+        setUp();
         String r = list.remove(1);
         mlo.check1AddRemove(list, Arrays.asList("two"), 1, 1);
         assertEquals("two", r);
     }
 
-    @Test
-    public void testRemoveObject() {
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    public void testRemoveObject(Callable<ObservableList<String>> listFactory) throws Exception {
+        ObservableListTest_(listFactory);
+        setUp();
         useListData("one", "x", "two", "three");
         boolean b = list.remove("two");
         mlo.check1AddRemove(list, Arrays.asList("two"), 2, 2);
         assertTrue(b);
     }
 
-    @Test
-    public void testRemoveNull() {
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    public void testRemoveNull(Callable<ObservableList<String>> listFactory) throws Exception {
+        ObservableListTest_(listFactory);
+        setUp();
         useListData("one", "two", null, "three");
         boolean b = list.remove(null);
         mlo.check1AddRemove(list, Arrays.asList((String)null), 2, 2);
         assertTrue(b);
     }
 
-    @Test
-    public void testRemoveAll() {
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    public void testRemoveAll(Callable<ObservableList<String>> listFactory) throws Exception {
+        ObservableListTest_(listFactory);
+        setUp();
         useListData("one", "two", "three", "four", "five");
         list.removeAll(Arrays.asList("one", "two", "four", "six"));
         assertEquals(2, mlo.calls.size());
@@ -199,8 +237,11 @@ public class ObservableListTest  {
         mlo.checkAddRemove(1, list, Arrays.asList("four"), 1, 1);
     }
 
-    @Test
-    public void testRemoveAll_1() {
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    public void testRemoveAll_1(Callable<ObservableList<String>> listFactory) throws Exception {
+        ObservableListTest_(listFactory);
+        setUp();
         useListData("a", "c", "d", "c");
         list.removeAll(Arrays.asList("c"));
         assertEquals(2, mlo.calls.size());
@@ -209,31 +250,43 @@ public class ObservableListTest  {
     }
 
 
-    @Test
-    public void testRemoveAll_2() {
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    public void testRemoveAll_2(Callable<ObservableList<String>> listFactory) throws Exception {
+        ObservableListTest_(listFactory);
+        setUp();
         useListData("one", "two");
         list.removeAll(Arrays.asList("three", "four"));
         mlo.check0();
     }
 
-    @Test
-    public void testRemoveAll_3() {
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    public void testRemoveAll_3(Callable<ObservableList<String>> listFactory) throws Exception {
+        ObservableListTest_(listFactory);
+        setUp();
         useListData("a", "c", "d", "c");
         list.removeAll(Arrays.asList("d"));
         assertEquals(1, mlo.calls.size());
         mlo.checkAddRemove(0, list, Arrays.asList("d"), 2, 2);
     }
 
-    @Test
-    public void testRemoveAll_4() {
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    public void testRemoveAll_4(Callable<ObservableList<String>> listFactory) throws Exception {
+        ObservableListTest_(listFactory);
+        setUp();
         useListData("a", "c", "d", "c");
         list.removeAll(Arrays.asList("d", "c"));
         assertEquals(1, mlo.calls.size());
         mlo.checkAddRemove(0, list, Arrays.asList("c", "d", "c"), 1, 1);
     }
 
-    @Test
-    public void testRetainAll() {
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    public void testRetainAll(Callable<ObservableList<String>> listFactory) throws Exception {
+        ObservableListTest_(listFactory);
+        setUp();
         useListData("one", "two", "three", "four", "five");
         list.retainAll(Arrays.asList("two", "five", "six"));
         assertEquals(2, mlo.calls.size());
@@ -241,8 +294,11 @@ public class ObservableListTest  {
         mlo.checkAddRemove(1, list, Arrays.asList("three", "four"), 1, 1);
     }
 
-    @Test
-    public void testRetainAllEmptySource() {
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    public void testRetainAllEmptySource(Callable<ObservableList<String>> listFactory) throws Exception {
+        ObservableListTest_(listFactory);
+        setUp();
         // grab default data
         List<String> data = new ArrayList<>(list);
         // retain none == remove all
@@ -251,23 +307,32 @@ public class ObservableListTest  {
         mlo.check1AddRemove(list, data, 0, 0);
     }
 
-    @Test
-    public void testRemoveNonexistent() {
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    public void testRemoveNonexistent(Callable<ObservableList<String>> listFactory) throws Exception {
+        ObservableListTest_(listFactory);
+        setUp();
         useListData("one", "two", "x", "three");
         boolean b = list.remove("four");
         mlo.check0();
         assertFalse(b);
     }
 
-    @Test
-    public void testSet() {
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    public void testSet(Callable<ObservableList<String>> listFactory) throws Exception {
+        ObservableListTest_(listFactory);
+        setUp();
         String r = list.set(1, "fnord");
         mlo.check1AddRemove(list, Arrays.asList("two"), 1, 2);
         assertEquals("two", r);
     }
 
-    @Test
-    public void testSetAll() {
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    public void testSetAll(Callable<ObservableList<String>> listFactory) throws Exception {
+        ObservableListTest_(listFactory);
+        setUp();
         useListData("one", "two", "three");
         boolean r = list.setAll("one");
         assertTrue(r);
@@ -282,15 +347,21 @@ public class ObservableListTest  {
         assertTrue(r);
     }
 
-    @Test
-    public void testSetAllNoUpdate() {
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    public void testSetAllNoUpdate(Callable<ObservableList<String>> listFactory) throws Exception {
+        ObservableListTest_(listFactory);
+        setUp();
         useListData();
         boolean r = list.setAll();
         assertFalse(r);
     }
 
-    @Test
-    public void testObserverCanRemoveObservers() {
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    public void testObserverCanRemoveObservers(Callable<ObservableList<String>> listFactory) throws Exception {
+        ObservableListTest_(listFactory);
+        setUp();
         final ListChangeListener<String> listObserver = change -> {
             change.getList().removeListener(mlo);
         };
@@ -310,8 +381,11 @@ public class ObservableListTest  {
         assertEquals(listener.counter, 1);
     }
 
-    @Test
-    public void testEqualsAndHashCode() {
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    public void testEqualsAndHashCode(Callable<ObservableList<String>> listFactory) throws Exception {
+        ObservableListTest_(listFactory);
+        setUp();
         final List<String> other = Arrays.asList("one", "two", "three");
         assertTrue(list.equals(other));
         assertEquals(list.hashCode(), other.hashCode());

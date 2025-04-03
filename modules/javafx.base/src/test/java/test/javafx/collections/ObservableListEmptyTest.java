@@ -27,33 +27,31 @@ package test.javafx.collections;
 
 import java.util.Arrays;
 import java.util.Collection;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.util.Collections;
 import java.util.List;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
 
 /**
  * Tests for initially empty ObservableList.
  */
-@RunWith(Parameterized.class)
 public class ObservableListEmptyTest {
 
-    static final List<String> EMPTY = Collections.emptyList();
-    final Callable<ObservableList<String>> listFactory;
+    static List<String> EMPTY = Collections.emptyList();
+    Callable<ObservableList<String>> listFactory;
     ObservableList<String> list;
     MockListObserver<String> mlo;
 
 
-    public ObservableListEmptyTest(final Callable<ObservableList<String>> listFactory) {
+    public void ObservableListEmptyTest_(Callable<ObservableList<String>> listFactory) {
         this.listFactory = listFactory;
     }
 
-    @Parameterized.Parameters
     public static Collection createParameters() {
         Object[][] data = new Object[][] {
             { TestedObservableLists.ARRAY_LIST },
@@ -65,15 +63,17 @@ public class ObservableListEmptyTest {
         return Arrays.asList(data);
     }
 
-    @Before
     public void setUp() throws Exception {
         list = listFactory.call();
         mlo = new MockListObserver<>();
         list.addListener(mlo);
     }
 
-    @Test
-    public void testClearEmpty() {
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    public void testClearEmpty(Callable<ObservableList<String>> listFactory) throws Exception {
+        ObservableListEmptyTest_(listFactory);
+        setUp();
         list = FXCollections.observableList(EMPTY);
         list.addListener(mlo);
         list.clear();
