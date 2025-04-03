@@ -170,7 +170,7 @@ IDBFactory* WindowOrWorkerGlobalScopeIndexedDatabase::indexedDB(WorkerGlobalScop
 #endif /* PLATFORM(JAVA) */
 }
 
-IDBFactory* WindowOrWorkerGlobalScopeIndexedDatabase::indexedDB(LocalDOMWindow& window)
+IDBFactory* WindowOrWorkerGlobalScopeIndexedDatabase::indexedDB(DOMWindow& window)
 {
 #if PLATFORM(JAVA)
     UNUSED_PARAM(window);

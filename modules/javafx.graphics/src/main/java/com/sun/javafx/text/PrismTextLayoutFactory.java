@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,51 +25,46 @@
 
 package com.sun.javafx.text;
 
+import java.util.concurrent.atomic.AtomicBoolean;
+import com.sun.javafx.font.PrismFontFactory;
+import com.sun.javafx.scene.text.TextLayout;
 import com.sun.javafx.scene.text.TextLayoutFactory;
 
 public class PrismTextLayoutFactory implements TextLayoutFactory {
-
+    private static final PrismTextLayoutFactory FACTORY = new PrismTextLayoutFactory();
     /* Same strategy as GlyphLayout */
-    private static final PrismTextLayout reusableTL = new PrismTextLayout();
-    private static boolean inUse;
+    private static final TextLayout REUSABLE_INSTANCE = FACTORY.createLayout();
+    private static final AtomicBoolean IN_USE = new AtomicBoolean(false);
 
     private PrismTextLayoutFactory() {
     }
 
     @Override
-    public com.sun.javafx.scene.text.TextLayout createLayout() {
-        return new PrismTextLayout();
+    public TextLayout createLayout() {
+        return new PrismTextLayout(PrismFontFactory.cacheLayoutSize);
     }
 
     @Override
-    public com.sun.javafx.scene.text.TextLayout getLayout() {
-        if (inUse) {
-            return new PrismTextLayout();
+    public TextLayout getLayout() {
+        if (IN_USE.compareAndSet(false, true)) {
+            REUSABLE_INSTANCE.setAlignment(0);
+            REUSABLE_INSTANCE.setWrapWidth(0);
+            REUSABLE_INSTANCE.setDirection(0);
+            REUSABLE_INSTANCE.setContent(null);
+            return REUSABLE_INSTANCE;
         } else {
-            synchronized(PrismTextLayoutFactory.class) {
-                if (inUse) {
-                    return new PrismTextLayout();
-                } else {
-                    inUse = true;
-                    reusableTL.setAlignment(0);
-                    reusableTL.setWrapWidth(0);
-                    reusableTL.setDirection(0);
-                    reusableTL.setContent(null);
-                    return reusableTL;
-                }
-            }
+            return createLayout();
         }
     }
 
     @Override
-    public void disposeLayout(com.sun.javafx.scene.text.TextLayout layout) {
-        if (layout == reusableTL) {
-            inUse = false;
+    public void disposeLayout(TextLayout layout) {
+        if (layout == REUSABLE_INSTANCE) {
+            IN_USE.set(false);
         }
     }
 
-    private static final PrismTextLayoutFactory factory = new PrismTextLayoutFactory();
     public static PrismTextLayoutFactory getFactory() {
-        return factory;
+        return FACTORY;
     }
 }

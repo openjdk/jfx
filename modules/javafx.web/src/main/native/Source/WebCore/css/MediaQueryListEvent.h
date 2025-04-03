@@ -30,7 +30,7 @@
 namespace WebCore {
 
 class MediaQueryListEvent final : public Event {
-    WTF_MAKE_ISO_ALLOCATED(MediaQueryListEvent);
+    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(MediaQueryListEvent);
 public:
     struct Init : EventInit {
         String media;
@@ -42,8 +42,6 @@ public:
 
     const String& media() const { return m_media; }
     bool matches() const { return m_matches; }
-
-    EventInterface eventInterface() const final { return MediaQueryListEventInterfaceType; }
 
 private:
     MediaQueryListEvent(const AtomString& type, const String& media, bool matches);

@@ -26,9 +26,20 @@
 
 #pragma once
 
+#include <wtf/WeakPtr.h>
+
+namespace WebCore {
+class DeviceClient;
+}
+
+namespace WTF {
+template<typename T> struct IsDeprecatedWeakRefSmartPointerException;
+template<> struct IsDeprecatedWeakRefSmartPointerException<WebCore::DeviceClient> : std::true_type { };
+}
+
 namespace WebCore {
 
-class DeviceClient {
+class DeviceClient : public CanMakeWeakPtr<DeviceClient> {
     WTF_MAKE_FAST_ALLOCATED;
 public:
     virtual ~DeviceClient() = default;

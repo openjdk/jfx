@@ -33,7 +33,7 @@
 namespace WebCore {
 
 class XRSessionEvent final : public Event {
-    WTF_MAKE_ISO_ALLOCATED(XRSessionEvent);
+    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(XRSessionEvent);
 public:
     struct Init : EventInit {
         Init() = default;
@@ -51,9 +51,6 @@ public:
 
 private:
     XRSessionEvent(const AtomString&, const Init&, IsTrusted);
-
-    // Event.
-    EventInterface eventInterface() const final;
 
     RefPtr<WebXRSession> m_session;
 };

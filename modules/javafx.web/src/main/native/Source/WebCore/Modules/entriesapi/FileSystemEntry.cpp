@@ -35,11 +35,11 @@
 #include "ScriptExecutionContext.h"
 #include "WindowEventLoop.h"
 #include <wtf/FileSystem.h>
-#include <wtf/IsoMallocInlines.h>
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
-WTF_MAKE_ISO_ALLOCATED_IMPL(FileSystemEntry);
+WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(FileSystemEntry);
 
 FileSystemEntry::FileSystemEntry(ScriptExecutionContext& context, DOMFileSystem& filesystem, const String& virtualPath)
     : ActiveDOMObject(&context)
@@ -56,11 +56,6 @@ DOMFileSystem& FileSystemEntry::filesystem() const
     return m_filesystem.get();
 }
 
-const char* FileSystemEntry::activeDOMObjectName() const
-{
-    return "FileSystemEntry";
-}
-
 Document* FileSystemEntry::document() const
 {
     return downcast<Document>(scriptExecutionContext());
@@ -71,12 +66,12 @@ void FileSystemEntry::getParent(ScriptExecutionContext& context, RefPtr<FileSyst
     if (!successCallback && !errorCallback)
         return;
 
-    filesystem().getParent(context, *this, [this, pendingActivity = makePendingActivity(*this), successCallback = WTFMove(successCallback), errorCallback = WTFMove(errorCallback)](auto&& result) mutable {
+    filesystem().getParent(context, *this, [this, pendingActivity = makePendingActivity(*this), successCallback = WTFMove(successCallback), errorCallback = WTFMove(errorCallback)]<typename Result> (Result&& result) mutable {
         RefPtr document = this->document();
         if (!document)
             return;
 
-        document->eventLoop().queueTask(TaskSource::Networking, [successCallback = WTFMove(successCallback), errorCallback = WTFMove(errorCallback), result = std::forward<decltype(result)>(result), pendingActivity = WTFMove(pendingActivity)]() mutable {
+        document->eventLoop().queueTask(TaskSource::Networking, [successCallback = WTFMove(successCallback), errorCallback = WTFMove(errorCallback), result = std::forward<Result>(result), pendingActivity = WTFMove(pendingActivity)] () mutable {
             if (result.hasException()) {
                 if (errorCallback)
                     errorCallback->handleEvent(DOMException::create(result.releaseException()));

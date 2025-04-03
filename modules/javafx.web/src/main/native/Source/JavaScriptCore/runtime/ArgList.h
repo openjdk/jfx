@@ -48,13 +48,14 @@ public:
             m_markSet->remove(this);
 
         if (EncodedJSValue* base = mallocBase())
-            Gigacage::free(Gigacage::JSValue, base);
+            FastMalloc::free(base);
     }
 
     size_t size() const { return m_size; }
     bool isEmpty() const { return !m_size; }
 
     const EncodedJSValue* data() const { return m_buffer; }
+    EncodedJSValue* data() { return m_buffer; }
 
     void removeLast()
     {
@@ -147,6 +148,13 @@ public:
                 return static_cast<T>(nullptr);
             return jsCast<T>(JSValue::decode(slotFor(i)).asCell());
         }
+    }
+
+    void set(unsigned i, T value)
+    {
+        if (i >= m_size)
+            return;
+        slotFor(i) = JSValue::encode(value);
     }
 
     void clear()

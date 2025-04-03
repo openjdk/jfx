@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2023, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -26,90 +26,50 @@
 package test.robot.javafx.scene.control.behavior;
 
 import java.util.HashMap;
-import java.util.concurrent.CountDownLatch;
 import java.util.function.BooleanSupplier;
-import javafx.application.Application;
 import javafx.application.Platform;
 import javafx.event.EventHandler;
-import javafx.scene.Scene;
+import javafx.geometry.Point2D;
 import javafx.scene.control.Control;
 import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyEvent;
-import javafx.scene.layout.BorderPane;
-import javafx.scene.robot.Robot;
-import javafx.stage.Stage;
-import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Assertions;
-import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import com.sun.javafx.PlatformUtil;
+import test.robot.testharness.RobotTestBase;
 import test.util.Util;
 
 /**
  * Base class for testing behaviors with Robot.
  */
-public abstract class BehaviorRobotTestBase<C extends Control> {
+public abstract class BehaviorRobotTestBase<C extends Control> extends RobotTestBase {
 
-    private static CountDownLatch startupLatch;
-    /** Scene valid only during test */
-    protected static Scene scene;
-    /** Stage valid only during test */
-    protected static Stage stage;
-    private static BorderPane content;
-    /** The Robot instance */
-    protected static Robot robot;
+    /** causes the execute() function to wait for idle */
+    protected static final Object PULSE = new Object();
     private int step;
     private static HashMap<Character,KeyCode> keyCodes;
-    protected C control;
+    protected final C control;
     private final EventHandler<KeyEvent> keyListener = (ev) -> System.out.println(ev);
 
     protected BehaviorRobotTestBase(C c) {
         this.control = c;
     }
 
-    public static class App extends Application {
-        @Override
-        public void start(Stage primaryStage) throws Exception {
-            stage = primaryStage;
-            robot = new Robot();
-            content = new BorderPane();
-            scene = new Scene(content);
-            stage.setScene(scene);
-            stage.setWidth(400);
-            stage.setHeight(300);
-            stage.setOnShown(l -> {
-                Platform.runLater(() -> startupLatch.countDown());
-            });
-            stage.show();
-        }
-    }
-
     @BeforeEach
     public void beforeEach() {
         Platform.runLater(() -> {
             step = 0;
-            content.setCenter(control);
+            contentPane.setCenter(control);
         });
     }
 
     @AfterEach
     public void afterEach() {
         Platform.runLater(() -> {
-            content.setCenter(null);
+            contentPane.setCenter(null);
         });
-        content.removeEventFilter(KeyEvent.ANY, keyListener);
-    }
-
-    @BeforeAll
-    public static void initFX() throws Exception {
-        startupLatch = new CountDownLatch(1);
-        Util.launch(startupLatch, App.class);
-    }
-
-    @AfterAll
-    public static void teardownOnce() {
-        Util.shutdown();
+        contentPane.removeEventFilter(KeyEvent.ANY, keyListener);
     }
 
     /**
@@ -118,13 +78,15 @@ public abstract class BehaviorRobotTestBase<C extends Control> {
      * <ul>
      * <li> if a String, emulates KEY_PRESSED + KEY_TYPED + KEY_RELEASED events for each character
      * <li> if a KeyCode, emulates KEY_PRESSED + KEY_RELEASED events for that KeyCode
-     * <li> if a Runnable, runs it
+     * <li> if a Runnable, runs it in the FX application thread
      * </ul>
      * @param items the sequence of KeyCodes/Runnables/String
      */
     protected void execute(Object ... items) {
-        for (Object x : items) {
-            if (x instanceof Runnable r) {
+        for (Object x: items) {
+            if (x == PULSE) {
+                Util.waitForIdle(scene);
+            } else if (x instanceof Runnable r) {
                 Util.runAndWait(() -> {
                     r.run();
                 });
@@ -224,6 +186,11 @@ public abstract class BehaviorRobotTestBase<C extends Control> {
         };
     }
 
+    /**
+     * Returns the Runnable argument.  This method simplifies construction of execute() vararg.
+     * @param r the runnable to return
+     * @return the runnable
+     */
     protected Runnable exe(Runnable r) {
         return r;
     }
@@ -330,10 +297,8 @@ public abstract class BehaviorRobotTestBase<C extends Control> {
         };
     }
 
-    /**
-     * Triggers and waits for 10 pulses to complete in this test's scene.
-     */
-    protected void waitForIdle() {
-        Util.waitForIdle(scene);
+    protected void mouseMove(double x, double y) {
+        Point2D p = control.localToScreen(x, y);
+        robot.mouseMove(p.getX(), p.getY());
     }
 }

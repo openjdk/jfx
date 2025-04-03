@@ -56,14 +56,14 @@
 #include "SystemFontDatabase.h"
 #include "Text.h"
 #include "TextRun.h"
-#include <wtf/IsoMallocInlines.h>
 #include <wtf/StackStats.h>
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
 using namespace HTMLNames;
 
-WTF_MAKE_ISO_ALLOCATED_IMPL(RenderEmbeddedObject);
+WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(RenderEmbeddedObject);
 
 static const float replacementTextRoundedRectHeight = 22;
 static const float replacementTextRoundedRectLeftTextMargin = 10;
@@ -111,9 +111,18 @@ bool RenderEmbeddedObject::requiresAcceleratedCompositing() const
     return pluginViewBase->layerHostingStrategy() != PluginLayerHostingStrategy::None;
 }
 
+ScrollableArea* RenderEmbeddedObject::scrollableArea() const
+{
+    RefPtr pluginViewBase = dynamicDowncast<PluginViewBase>(widget());
+    if (!pluginViewBase)
+        return nullptr;
+
+    return pluginViewBase->scrollableArea();
+}
+
 bool RenderEmbeddedObject::usesAsyncScrolling() const
 {
-    auto* pluginViewBase = dynamicDowncast<PluginViewBase>(widget());
+    RefPtr pluginViewBase = dynamicDowncast<PluginViewBase>(widget());
     if (!pluginViewBase)
         return false;
     return pluginViewBase->usesAsyncScrolling();
@@ -121,10 +130,26 @@ bool RenderEmbeddedObject::usesAsyncScrolling() const
 
 ScrollingNodeID RenderEmbeddedObject::scrollingNodeID() const
 {
-    auto* pluginViewBase = dynamicDowncast<PluginViewBase>(widget());
+    RefPtr pluginViewBase = dynamicDowncast<PluginViewBase>(widget());
     if (!pluginViewBase)
-        return false;
+        return { };
     return pluginViewBase->scrollingNodeID();
+}
+
+void RenderEmbeddedObject::willAttachScrollingNode()
+{
+    RefPtr pluginViewBase = dynamicDowncast<PluginViewBase>(widget());
+    if (!pluginViewBase)
+        return;
+    pluginViewBase->willAttachScrollingNode();
+}
+
+void RenderEmbeddedObject::didAttachScrollingNode()
+{
+    RefPtr pluginViewBase = dynamicDowncast<PluginViewBase>(widget());
+    if (!pluginViewBase)
+        return;
+    pluginViewBase->didAttachScrollingNode();
 }
 
 #if !PLATFORM(IOS_FAMILY)
@@ -270,7 +295,7 @@ void RenderEmbeddedObject::paintReplaced(PaintInfo& paintInfo, const LayoutPoint
 
     const FontMetrics& fontMetrics = font.metricsOfPrimaryFont();
     float labelX = roundf(replacementTextRect.location().x() + replacementTextRoundedRectLeftTextMargin);
-    float labelY = roundf(replacementTextRect.location().y() + (replacementTextRect.size().height() - fontMetrics.height()) / 2 + fontMetrics.ascent() + replacementTextRoundedRectTopTextMargin);
+    float labelY = roundf(replacementTextRect.location().y() + (replacementTextRect.size().height() - fontMetrics.intHeight()) / 2 + fontMetrics.intAscent() + replacementTextRoundedRectTopTextMargin);
     context.setFillColor(replacementTextColor);
     context.drawBidiText(font, run, FloatPoint(labelX, labelY));
 

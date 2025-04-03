@@ -52,19 +52,19 @@
 #include "TextEvent.h"
 #include "TextEventInputType.h"
 #include "UserAgentParts.h"
-#include <wtf/IsoMallocInlines.h>
 #include <wtf/Ref.h>
 #include <wtf/RefPtr.h>
 #include <wtf/SetForScope.h>
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
-WTF_MAKE_ISO_ALLOCATED_IMPL(TextControlInnerContainer);
-WTF_MAKE_ISO_ALLOCATED_IMPL(TextControlInnerElement);
-WTF_MAKE_ISO_ALLOCATED_IMPL(TextControlInnerTextElement);
-WTF_MAKE_ISO_ALLOCATED_IMPL(TextControlPlaceholderElement);
-WTF_MAKE_ISO_ALLOCATED_IMPL(SearchFieldResultsButtonElement);
-WTF_MAKE_ISO_ALLOCATED_IMPL(SearchFieldCancelButtonElement);
+WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(TextControlInnerContainer);
+WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(TextControlInnerElement);
+WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(TextControlInnerTextElement);
+WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(TextControlPlaceholderElement);
+WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(SearchFieldResultsButtonElement);
+WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(SearchFieldCancelButtonElement);
 
 using namespace HTMLNames;
 
@@ -195,12 +195,12 @@ RenderPtr<RenderElement> TextControlInnerTextElement::createElementRenderer(Rend
 
 RenderTextControlInnerBlock* TextControlInnerTextElement::renderer() const
 {
-    return checkedDowncast<RenderTextControlInnerBlock>(HTMLDivElement::renderer());
+    return downcast<RenderTextControlInnerBlock>(HTMLDivElement::renderer());
 }
 
 std::optional<Style::ResolvedStyle> TextControlInnerTextElement::resolveCustomStyle(const Style::ResolutionContext&, const RenderStyle* shadowHostStyle)
 {
-    auto style = checkedDowncast<HTMLTextFormControlElement>(*shadowHost()).createInnerTextStyle(*shadowHostStyle);
+    auto style = downcast<HTMLTextFormControlElement>(*shadowHost()).createInnerTextStyle(*shadowHostStyle);
     return Style::ResolvedStyle { makeUnique<RenderStyle>(WTFMove(style)) };
 }
 
@@ -223,7 +223,7 @@ std::optional<Style::ResolvedStyle> TextControlPlaceholderElement::resolveCustom
 {
     auto style = resolveStyle(resolutionContext);
 
-    Ref controlElement = checkedDowncast<HTMLTextFormControlElement>(*containingShadowRoot()->host());
+    Ref controlElement = downcast<HTMLTextFormControlElement>(*containingShadowRoot()->host());
     style.style->setDisplay(controlElement->isPlaceholderVisible() ? DisplayType::Block : DisplayType::None);
 
     if (RefPtr inputElement = dynamicDowncast<HTMLInputElement>(controlElement)) {
@@ -239,7 +239,7 @@ std::optional<Style::ResolvedStyle> TextControlPlaceholderElement::resolveCustom
 static inline bool searchFieldStyleHasExplicitlySpecifiedTextFieldAppearance(const RenderStyle& style)
 {
     auto appearance = style.appearance();
-    return appearance == StyleAppearance::TextField && appearance == style.effectiveAppearance();
+    return appearance == StyleAppearance::TextField && appearance == style.usedAppearance();
 }
 
 inline SearchFieldResultsButtonElement::SearchFieldResultsButtonElement(Document& document)
@@ -271,8 +271,8 @@ std::optional<Style::ResolvedStyle> SearchFieldResultsButtonElement::resolveCust
 
     // By default, input[type=search] can use either the searchfield or textfield appearance depending
     // on the platform and writing mode. Only adjust the style when that default is used.
-    auto effectiveAppearance = shadowHostStyle->effectiveAppearance();
-    if (effectiveAppearance != StyleAppearance::SearchField && effectiveAppearance != StyleAppearance::TextField) {
+    auto usedAppearance = shadowHostStyle->usedAppearance();
+    if (usedAppearance != StyleAppearance::SearchField && usedAppearance != StyleAppearance::TextField) {
         SetForScope canAdjustStyleForAppearance(m_canAdjustStyleForAppearance, false);
         return resolveStyle(resolutionContext);
     }
@@ -283,7 +283,7 @@ std::optional<Style::ResolvedStyle> SearchFieldResultsButtonElement::resolveCust
 void SearchFieldResultsButtonElement::defaultEventHandler(Event& event)
 {
     // On mousedown, bring up a menu, if needed
-    if (RefPtr input = checkedDowncast<HTMLInputElement>(shadowHost())) {
+    if (RefPtr input = downcast<HTMLInputElement>(shadowHost())) {
         auto* mouseEvent = dynamicDowncast<MouseEvent>(event);
         if (event.type() == eventNames().mousedownEvent && mouseEvent && mouseEvent->button() == MouseButton::Left) {
         input->focus();
@@ -337,8 +337,8 @@ Ref<SearchFieldCancelButtonElement> SearchFieldCancelButtonElement::create(Docum
 std::optional<Style::ResolvedStyle> SearchFieldCancelButtonElement::resolveCustomStyle(const Style::ResolutionContext& resolutionContext, const RenderStyle* shadowHostStyle)
 {
     auto elementStyle = resolveStyle(resolutionContext);
-    Ref inputElement = checkedDowncast<HTMLInputElement>(*shadowHost());
-    elementStyle.style->setVisibility(elementStyle.style->visibility() == Visibility::Hidden || inputElement->value().isEmpty() ? Visibility::Hidden : Visibility::Visible);
+    Ref inputElement = downcast<HTMLInputElement>(*shadowHost());
+    elementStyle.style->setVisibility(elementStyle.style->usedVisibility() == Visibility::Hidden || inputElement->value().isEmpty() ? Visibility::Hidden : Visibility::Visible);
 
     if (shadowHostStyle && searchFieldStyleHasExplicitlySpecifiedTextFieldAppearance(*shadowHostStyle))
         elementStyle.style->setDisplay(DisplayType::None);
@@ -348,7 +348,7 @@ std::optional<Style::ResolvedStyle> SearchFieldCancelButtonElement::resolveCusto
 
 void SearchFieldCancelButtonElement::defaultEventHandler(Event& event)
 {
-    RefPtr input = checkedDowncast<HTMLInputElement>(shadowHost());
+    RefPtr input = downcast<HTMLInputElement>(shadowHost());
     if (!input || !input->isMutable()) {
         if (!event.defaultHandled())
             HTMLDivElement::defaultEventHandler(event);
@@ -361,7 +361,7 @@ void SearchFieldCancelButtonElement::defaultEventHandler(Event& event)
         event.setDefaultHandled();
     }
 
-    if (event.type() == eventNames().clickEvent) {
+    if (isAnyClick(event)) {
         input->setValue(emptyString(), DispatchChangeEvent);
         if (input->document().settings().searchInputIncrementalAttributeAndSearchEventEnabled())
         input->onSearch();
@@ -375,7 +375,7 @@ void SearchFieldCancelButtonElement::defaultEventHandler(Event& event)
 #if !PLATFORM(IOS_FAMILY)
 bool SearchFieldCancelButtonElement::willRespondToMouseClickEventsWithEditability(Editability editability) const
 {
-    RefPtr input = checkedDowncast<HTMLInputElement>(shadowHost());
+    RefPtr input = downcast<HTMLInputElement>(shadowHost());
     if (input && input->isMutable())
         return true;
 

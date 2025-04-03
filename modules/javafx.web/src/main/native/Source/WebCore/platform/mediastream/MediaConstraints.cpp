@@ -161,6 +161,10 @@ void MediaTrackConstraintSetMap::filter(const Function<bool(MediaConstraintType,
         return;
     if (m_torch && !m_torch->isEmpty() && callback(MediaConstraintType::Torch, *m_torch))
         return;
+    if (m_backgroundBlur && !m_backgroundBlur->isEmpty() && callback(MediaConstraintType::BackgroundBlur, *m_backgroundBlur))
+        return;
+    if (m_powerEfficient && !m_powerEfficient->isEmpty() && callback(MediaConstraintType::PowerEfficient, *m_powerEfficient))
+        return;
 }
 
 void MediaTrackConstraintSetMap::set(MediaConstraintType constraintType, std::optional<IntConstraint>&& constraint)
@@ -192,6 +196,8 @@ void MediaTrackConstraintSetMap::set(MediaConstraintType constraintType, std::op
     case MediaConstraintType::WhiteBalanceMode:
     case MediaConstraintType::Zoom:
     case MediaConstraintType::Torch:
+    case MediaConstraintType::BackgroundBlur:
+    case MediaConstraintType::PowerEfficient:
     case MediaConstraintType::Unknown:
         ASSERT_NOT_REACHED();
         break;
@@ -227,6 +233,8 @@ void MediaTrackConstraintSetMap::set(MediaConstraintType constraintType, std::op
     case MediaConstraintType::FocusDistance:
     case MediaConstraintType::WhiteBalanceMode:
     case MediaConstraintType::Torch:
+    case MediaConstraintType::BackgroundBlur:
+    case MediaConstraintType::PowerEfficient:
     case MediaConstraintType::Unknown:
         ASSERT_NOT_REACHED();
         break;
@@ -249,7 +257,12 @@ void MediaTrackConstraintSetMap::set(MediaConstraintType constraintType, std::op
     case MediaConstraintType::Torch:
         m_torch = WTFMove(constraint);
         break;
-
+    case MediaConstraintType::BackgroundBlur:
+        m_backgroundBlur = WTFMove(constraint);
+        break;
+    case MediaConstraintType::PowerEfficient:
+        m_powerEfficient = WTFMove(constraint);
+        break;
     case MediaConstraintType::Width:
     case MediaConstraintType::Height:
     case MediaConstraintType::SampleRate:
@@ -300,6 +313,8 @@ void MediaTrackConstraintSetMap::set(MediaConstraintType constraintType, std::op
     case MediaConstraintType::FocusDistance:
     case MediaConstraintType::Zoom:
     case MediaConstraintType::Torch:
+    case MediaConstraintType::BackgroundBlur:
+    case MediaConstraintType::PowerEfficient:
     case MediaConstraintType::Unknown:
         ASSERT_NOT_REACHED();
         break;
@@ -364,6 +379,8 @@ void MediaTrackConstraintSetMap::merge(MediaConstraintType constraintType, const
     case MediaConstraintType::LogicalSurface:
     case MediaConstraintType::Torch:
     case MediaConstraintType::FocusDistance:
+    case MediaConstraintType::BackgroundBlur:
+    case MediaConstraintType::PowerEfficient:
     case MediaConstraintType::Unknown:
         ASSERT_NOT_REACHED();
         break;
@@ -410,6 +427,8 @@ void MediaTrackConstraintSetMap::merge(MediaConstraintType constraintType, const
     case MediaConstraintType::LogicalSurface:
     case MediaConstraintType::Torch:
     case MediaConstraintType::FocusDistance:
+    case MediaConstraintType::BackgroundBlur:
+    case MediaConstraintType::PowerEfficient:
     case MediaConstraintType::Unknown:
         ASSERT_NOT_REACHED();
         break;
@@ -456,6 +475,8 @@ void MediaTrackConstraintSetMap::merge(MediaConstraintType constraintType, const
     case MediaConstraintType::LogicalSurface:
     case MediaConstraintType::Torch:
     case MediaConstraintType::FocusDistance:
+    case MediaConstraintType::BackgroundBlur:
+    case MediaConstraintType::PowerEfficient:
     case MediaConstraintType::Unknown:
         ASSERT_NOT_REACHED();
         break;
@@ -489,6 +510,19 @@ void MediaTrackConstraintSetMap::merge(MediaConstraintType constraintType, const
         else
             m_torch->merge(constraint);
         break;
+    case MediaConstraintType::BackgroundBlur:
+        if (!m_backgroundBlur)
+            m_backgroundBlur = constraint;
+        else
+            m_backgroundBlur->merge(constraint);
+        break;
+    case MediaConstraintType::PowerEfficient:
+        if (!m_powerEfficient)
+            m_powerEfficient = constraint;
+        else
+            m_powerEfficient->merge(constraint);
+        break;
+
     case MediaConstraintType::FacingMode:
     case MediaConstraintType::DeviceId:
     case MediaConstraintType::GroupId:
@@ -539,6 +573,50 @@ size_t MediaTrackConstraintSetMap::size() const
 bool MediaTrackConstraintSetMap::isEmpty() const
 {
     return !size();
+}
+
+bool MediaTrackConstraintSetMap::isValid() const
+{
+    bool isValid = true;
+    if (isEmpty())
+        return true;
+    forEach([&isValid] (MediaConstraintType constraintType, const MediaConstraint& constraint) {
+        switch (constraintType) {
+        case MediaConstraintType::Width:
+        case MediaConstraintType::Height:
+        case MediaConstraintType::SampleRate:
+        case MediaConstraintType::SampleSize:
+            isValid &= (constraint.dataType() == MediaConstraint::DataType::Integer);
+            break;
+        case MediaConstraintType::AspectRatio:
+        case MediaConstraintType::FrameRate:
+        case MediaConstraintType::Volume:
+        case MediaConstraintType::Zoom:
+        case MediaConstraintType::FocusDistance:
+            isValid &= (constraint.dataType() == MediaConstraint::DataType::Double);
+            break;
+        case MediaConstraintType::FacingMode:
+        case MediaConstraintType::DeviceId:
+        case MediaConstraintType::GroupId:
+        case MediaConstraintType::WhiteBalanceMode:
+            isValid &= (constraint.dataType() == MediaConstraint::DataType::String);
+            break;
+        case MediaConstraintType::EchoCancellation:
+        case MediaConstraintType::DisplaySurface:
+        case MediaConstraintType::LogicalSurface:
+        case MediaConstraintType::Torch:
+        case MediaConstraintType::BackgroundBlur:
+            isValid &= (constraint.dataType() == MediaConstraint::DataType::Boolean);
+            break;
+        case MediaConstraintType::PowerEfficient:
+            isValid &= (constraint.dataType() == MediaConstraint::DataType::Boolean);
+            break;
+        case MediaConstraintType::Unknown:
+            ASSERT_NOT_REACHED();
+            break;
+        }
+    });
+    return isValid;
 }
 
 static inline void addDefaultVideoConstraints(MediaTrackConstraintSetMap& videoConstraints, bool addFrameRateConstraint, bool addWidthConstraint, bool addHeightConstraint)
@@ -597,7 +675,7 @@ void MediaConstraints::setDefaultVideoConstraints()
     });
 
     bool needsHeightConstraint = !isConstraintSet([](const MediaTrackConstraintSetMap& constraint) {
-        return !!constraint.width() || !!constraint.height() || !!constraint.aspectRatio();
+        return !!constraint.width() || !!constraint.height() || !!constraint.aspectRatio() || !!constraint.powerEfficient();
     });
 
     addDefaultVideoConstraints(mandatoryConstraints, needsFrameRateConstraint, needsWidthConstraint, needsHeightConstraint);
@@ -642,12 +720,33 @@ StringConstraint StringConstraint::isolatedCopy() const
 
 MediaTrackConstraintSetMap MediaTrackConstraintSetMap::isolatedCopy() const
 {
-    return { m_width, m_height, m_sampleRate, m_sampleSize, m_aspectRatio, m_frameRate, m_volume, m_echoCancellation, m_displaySurface, m_logicalSurface, crossThreadCopy(m_facingMode), crossThreadCopy(m_deviceId), crossThreadCopy(m_groupId), crossThreadCopy(m_whiteBalanceMode), m_zoom, m_torch };
+    return { m_width, m_height, m_sampleRate, m_sampleSize, m_aspectRatio, m_frameRate, m_volume, m_echoCancellation, m_displaySurface, m_logicalSurface, crossThreadCopy(m_facingMode), crossThreadCopy(m_deviceId), crossThreadCopy(m_groupId), crossThreadCopy(m_whiteBalanceMode), m_zoom, m_torch, m_backgroundBlur, m_powerEfficient };
 }
 
 MediaConstraints MediaConstraints::isolatedCopy() const
 {
     return { crossThreadCopy(mandatoryConstraints), crossThreadCopy(advancedConstraints), isValid };
+}
+
+static bool isAllowedRequiredConstraintForDeviceSelection(MediaConstraints::DeviceType deviceType, MediaConstraintType type)
+{
+    // https://w3c.github.io/mediacapture-main/#dfn-allowed-required-constraints-for-device-selection
+    if (type <= MediaConstraintType::GroupId)
+        return true;
+
+    if (deviceType == MediaConstraints::DeviceType::Microphone)
+        return true;
+
+    return deviceType == MediaConstraints::DeviceType::Microphone || type == MediaConstraintType::DisplaySurface || type == MediaConstraintType::LogicalSurface;
+}
+
+bool MediaConstraints::hasDisallowedRequiredConstraintForDeviceSelection(DeviceType deviceType) const
+{
+    bool result = false;
+    mandatoryConstraints.forEach([&] (auto type, const MediaConstraint& constraint) mutable {
+        result |= !isAllowedRequiredConstraintForDeviceSelection(deviceType, type) && constraint.isRequired();
+    });
+    return result;
 }
 
 }

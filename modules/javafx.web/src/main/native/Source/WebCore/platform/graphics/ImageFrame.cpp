@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2016-2023 Apple Inc.  All rights reserved.
+ * Copyright (C) 2016-2024 Apple Inc.  All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -32,6 +32,31 @@ namespace WebCore {
 
 ImageFrame::ImageFrame()
 {
+}
+
+ImageFrame::ImageFrame(Ref<NativeImage>&& nativeImage)
+    : m_nativeImage(WTFMove(nativeImage))
+{
+#if PLATFORM(JAVA)
+/* Ref: Webkit 619.1 javafx.web/src/main/native/Source/WebCore/platform/graphics/ImageSource.cpp refactoring in 620.1
+ *
+ * In the case of the canvas pattern using a transform property filled with an SVGMatrix()
+ * created by an SVG element, `frame.m_nativeImage->size()` calls `NativeImage::size()`
+ * from NativeImageJava.cpp.
+ *
+ * In this scenario, `*m_platformImage->getImage().get()` may be invalid,
+ * as the image decoder has already populated `frame.m_size` during image metadata caching.
+ *
+ * To avoid potential invalid accesses and unintended size resets, only update `m_size`
+ * if the frame does not already have a valid native image.
+ */
+    if (!hasNativeImage() && m_nativeImage)
+        m_size = m_nativeImage->size();
+#else
+    m_size = m_nativeImage->size();
+#endif
+    m_hasAlpha = m_nativeImage->hasAlpha();
+
 }
 
 ImageFrame::~ImageFrame()
@@ -96,11 +121,6 @@ unsigned ImageFrame::clear()
     return frameBytes;
 }
 
-IntSize ImageFrame::size() const
-{
-    return m_size;
-}
-
 bool ImageFrame::hasNativeImage(const std::optional<SubsamplingLevel>& subsamplingLevel) const
 {
     return m_nativeImage && (!subsamplingLevel || *subsamplingLevel >= m_subsamplingLevel);
@@ -114,14 +134,6 @@ bool ImageFrame::hasFullSizeNativeImage(const std::optional<SubsamplingLevel>& s
 bool ImageFrame::hasDecodedNativeImageCompatibleWithOptions(const std::optional<SubsamplingLevel>& subsamplingLevel, const DecodingOptions& decodingOptions) const
 {
     return isComplete() && hasNativeImage(subsamplingLevel) && m_decodingOptions.isCompatibleWith(decodingOptions);
-}
-
-Color ImageFrame::singlePixelSolidColor() const
-{
-    if (!hasNativeImage() || m_size != IntSize(1, 1))
-        return Color();
-
-    return m_nativeImage->singlePixelSolidColor();
 }
 
 } // namespace WebCore

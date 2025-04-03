@@ -60,7 +60,7 @@ void ICEvent::dump(PrintStream& out) const
 
 void ICEvent::log() const
 {
-    ICStats::instance().add(*this);
+    ICStats::singleton().add(*this);
 }
 
 Atomic<ICStats*> ICStats::s_instance;
@@ -68,7 +68,7 @@ Atomic<ICStats*> ICStats::s_instance;
 ICStats::ICStats()
 {
     m_thread = Thread::create(
-        "JSC ICStats",
+        "JSC ICStats"_s,
         [this] () {
             Locker locker { m_lock };
             for (;;) {
@@ -104,7 +104,7 @@ void ICStats::add(const ICEvent& event)
     m_spectrum.add(event);
 }
 
-ICStats& ICStats::instance()
+ICStats& ICStats::singleton()
 {
     for (;;) {
         ICStats* result = s_instance.load();

@@ -35,10 +35,12 @@ namespace WebCore {
 class MathMLRowElement;
 
 class RenderMathMLRow : public RenderMathMLBlock {
-    WTF_MAKE_ISO_ALLOCATED(RenderMathMLRow);
+    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(RenderMathMLRow);
+    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(RenderMathMLRow);
 public:
     RenderMathMLRow(Type, MathMLRowElement&, RenderStyle&&);
     MathMLRowElement& element() const;
+    virtual ~RenderMathMLRow();
 
 protected:
     void layoutBlock(bool relayoutChildren, LayoutUnit pageLogicalHeight = 0_lu) override;
@@ -47,6 +49,8 @@ protected:
     void stretchVerticalOperatorsAndLayoutChildren();
     void getContentBoundingBox(LayoutUnit& width, LayoutUnit& ascent, LayoutUnit& descent) const;
     void layoutRowItems(LayoutUnit width, LayoutUnit ascent);
+    void shiftRowItems(LayoutUnit left, LayoutUnit top);
+    LayoutUnit preferredLogicalWidthOfRowItems();
     void computePreferredLogicalWidths() override;
 
 private:

@@ -22,7 +22,8 @@ typedef [EnforceRange] unsigned long WebCodecsAudioFlacEncoderConfigParameter;
 [
  Conditional=WEB_CODECS,
  JSGenerateToJSObject,
- ] dictionary FlacEncoderConfig {
+    JSGenerateToNativeObject
+] dictionary FlacEncoderConfig {
     WebCodecsAudioFlacEncoderConfigParameter blockSize = 0;
     WebCodecsAudioFlacEncoderConfigParameter compressLevel = 5;
 };

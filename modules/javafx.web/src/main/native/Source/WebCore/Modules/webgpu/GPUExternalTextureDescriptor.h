@@ -50,13 +50,27 @@ struct GPUExternalTextureDescriptor : public GPUObjectDescriptorBase {
     {
 #if ENABLE(WEB_CODECS)
         return WTF::switchOn(videoSource, [&](const RefPtr<HTMLVideoElement> videoElement) -> WebGPU::VideoSourceIdentifier {
-            return videoElement->playerIdentifier().value_or(MediaPlayerIdentifier(0));
+            return videoElement->playerIdentifier();
         }
         , [&](const RefPtr<WebCodecsVideoFrame> videoFrame) -> WebGPU::VideoSourceIdentifier {
             return videoFrame->internalFrame();
         });
 #else
-        return videoSource->playerIdentifier().value_or(MediaPlayerIdentifier(0));
+        return videoSource->playerIdentifier();
+#endif
+    }
+
+    std::optional<WebCore::MediaPlayerIdentifier> mediaIdentifier() const
+    {
+#if ENABLE(WEB_CODECS)
+        return WTF::switchOn(source, [&](const RefPtr<HTMLVideoElement> videoElement) -> std::optional<WebCore::MediaPlayerIdentifier> {
+            return videoElement->playerIdentifier();
+        }
+        , [&](const RefPtr<WebCodecsVideoFrame>) -> std::optional<WebCore::MediaPlayerIdentifier> {
+            return std::nullopt;
+        });
+#else
+        return source->playerIdentifier();
 #endif
     }
 #endif

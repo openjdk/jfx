@@ -32,7 +32,7 @@
 #include <wtf/CryptographicallyRandomNumber.h>
 #include <wtf/Expected.h>
 #include <wtf/URL.h>
-#include <wtf/text/StringConcatenateNumbers.h>
+#include <wtf/text/MakeString.h>
 #include <wtf/text/StringToIntegerConversion.h>
 #include <wtf/text/StringView.h>
 
@@ -263,7 +263,7 @@ bool PrivateClickMeasurement::hasHigherPriorityThan(const PrivateClickMeasuremen
 
 static URL makeValidURL(const RegistrableDomain& domain, const char* path)
 {
-    URL validURL { makeString("https://", domain.string(), path) };
+    URL validURL { makeString("https://"_s, domain.string(), span(path)) };
     return validURL.isValid() ? validURL : URL { };
 }
 

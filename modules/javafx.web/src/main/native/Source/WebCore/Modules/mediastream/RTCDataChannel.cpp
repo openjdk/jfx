@@ -39,13 +39,14 @@
 #include "ScriptExecutionContext.h"
 #include "SharedBuffer.h"
 #include <JavaScriptCore/ArrayBufferView.h>
-#include <wtf/IsoMallocInlines.h>
 #include <wtf/Lock.h>
 #include <wtf/NeverDestroyed.h>
+#include <wtf/TZoneMallocInlines.h>
+#include <wtf/text/MakeString.h>
 
 namespace WebCore {
 
-WTF_MAKE_ISO_ALLOCATED_IMPL(RTCDataChannel);
+WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(RTCDataChannel);
 
 Ref<RTCDataChannel> RTCDataChannel::create(ScriptExecutionContext& context, std::unique_ptr<RTCDataChannelHandler>&& handler, String&& label, RTCDataChannelInit&& options, RTCDataChannelState state)
 {
@@ -69,13 +70,13 @@ NetworkSendQueue RTCDataChannel::createMessageQueue(ScriptExecutionContext& cont
     return { context, [&channel](auto& utf8) {
         if (!channel.m_handler->sendStringData(utf8))
             channel.scriptExecutionContext()->addConsoleMessage(MessageSource::JS, MessageLevel::Error, "Error sending string through RTCDataChannel."_s);
-    }, [&channel](auto& span) {
-        if (!channel.m_handler->sendRawData(span.data(), span.size()))
+    }, [&channel](auto span) {
+        if (!channel.m_handler->sendRawData(span))
             channel.scriptExecutionContext()->addConsoleMessage(MessageSource::JS, MessageLevel::Error, "Error sending binary data through RTCDataChannel."_s);
     }, [&channel](ExceptionCode errorCode) {
         if (RefPtr context = channel.scriptExecutionContext()) {
             auto code = static_cast<int>(errorCode);
-            context->addConsoleMessage(MessageSource::JS, MessageLevel::Error, makeString("Error ", code, " in retrieving a blob data to be sent through RTCDataChannel."));
+            context->addConsoleMessage(MessageSource::JS, MessageLevel::Error, makeString("Error "_s, code, " in retrieving a blob data to be sent through RTCDataChannel."_s));
         }
         return NetworkSendQueue::Continue::Yes;
     } };
@@ -206,14 +207,14 @@ void RTCDataChannel::didReceiveStringData(const String& text)
     scheduleDispatchEvent(MessageEvent::create(text));
 }
 
-void RTCDataChannel::didReceiveRawData(const uint8_t* data, size_t dataLength)
+void RTCDataChannel::didReceiveRawData(std::span<const uint8_t> data)
 {
     switch (m_binaryType) {
     case BinaryType::Blob:
-        scheduleDispatchEvent(MessageEvent::create(Blob::create(scriptExecutionContext(), Vector { data, dataLength }, emptyString()), { }));
+        scheduleDispatchEvent(MessageEvent::create(Blob::create(scriptExecutionContext(), Vector(data), emptyString()), { }));
         return;
     case BinaryType::Arraybuffer:
-        scheduleDispatchEvent(MessageEvent::create(ArrayBuffer::create(data, dataLength)));
+        scheduleDispatchEvent(MessageEvent::create(ArrayBuffer::create(data)));
         return;
     }
     ASSERT_NOT_REACHED();

@@ -35,7 +35,7 @@
 namespace WebCore {
 
 class TrackEvent final : public Event {
-    WTF_MAKE_ISO_ALLOCATED(TrackEvent);
+    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(TrackEvent);
 public:
     virtual ~TrackEvent();
 
@@ -60,8 +60,6 @@ public:
 private:
     TrackEvent(const AtomString& type, CanBubble, IsCancelable, Ref<TrackBase>&&);
     TrackEvent(const AtomString& type, Init&& initializer, IsTrusted);
-
-    EventInterface eventInterface() const override;
 
     std::optional<TrackEventTrack> m_track;
 };

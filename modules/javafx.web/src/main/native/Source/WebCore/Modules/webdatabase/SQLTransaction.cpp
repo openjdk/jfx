@@ -110,7 +110,7 @@ void SQLTransaction::performNextStep()
 void SQLTransaction::performPendingCallback()
 {
     ASSERT(isMainThread());
-    LOG(StorageAPI, "Callback %s\n", debugStepName(m_nextStep));
+    LOG(StorageAPI, "Callback %s\n", debugStepName(m_nextStep).characters());
 
     ASSERT(m_nextStep == &SQLTransaction::deliverTransactionCallback
            || m_nextStep == &SQLTransaction::deliverTransactionErrorCallback
@@ -176,7 +176,7 @@ SQLTransaction::StateFunction SQLTransaction::stateFunctionFor(SQLTransactionSta
 // modify is m_requestedState which is meant for this purpose.
 void SQLTransaction::requestTransitToState(SQLTransactionState nextState)
 {
-    LOG(StorageAPI, "Scheduling %s for transaction %p\n", nameForSQLTransactionState(nextState), this);
+    LOG(StorageAPI, "Scheduling %s for transaction %p\n", nameForSQLTransactionState(nextState).characters(), this);
     m_requestedState = nextState;
     m_database->scheduleTransactionCallback(this);
 }
@@ -218,7 +218,7 @@ void SQLTransaction::scheduleCallback(void (SQLTransaction::*step)())
 {
     m_nextStep = step;
 
-    LOG(StorageAPI, "Scheduling %s for transaction %p\n", debugStepName(step), this);
+    LOG(StorageAPI, "Scheduling %s for transaction %p\n", debugStepName(step).characters(), this);
     m_database->scheduleTransactionCallback(this);
 }
 
@@ -259,7 +259,7 @@ void SQLTransaction::openTransactionAndPreflight()
     // Spec 4.3.2.1+2: Open a transaction to the database, jumping to the error callback if that fails
     if (!m_sqliteTransaction->inProgress()) {
         ASSERT(!m_database->sqliteDatabase().transactionInProgress());
-        m_transactionError = SQLError::create(SQLError::DATABASE_ERR, "unable to begin transaction", m_database->sqliteDatabase().lastError(), m_database->sqliteDatabase().lastErrorMsg());
+        m_transactionError = SQLError::create(SQLError::DATABASE_ERR, "unable to begin transaction"_s, m_database->sqliteDatabase().lastError(), m_database->sqliteDatabase().lastErrorMsg());
         m_sqliteTransaction = nullptr;
 
         handleTransactionError();
@@ -271,7 +271,7 @@ void SQLTransaction::openTransactionAndPreflight()
     // the actual version. In single-process browsers, this is just a map lookup.
     String actualVersion;
     if (!m_database->getActualVersionForTransaction(actualVersion)) {
-        m_transactionError = SQLError::create(SQLError::DATABASE_ERR, "unable to read version", m_database->sqliteDatabase().lastError(), m_database->sqliteDatabase().lastErrorMsg());
+        m_transactionError = SQLError::create(SQLError::DATABASE_ERR, "unable to read version"_s, m_database->sqliteDatabase().lastError(), m_database->sqliteDatabase().lastErrorMsg());
         m_database->disableAuthorizer();
         m_sqliteTransaction = nullptr;
         m_database->enableAuthorizer();
@@ -494,7 +494,7 @@ void SQLTransaction::computeNextStateAndCleanupIfNeeded()
             || m_nextState == SQLTransactionState::DeliverQuotaIncreaseCallback
             || m_nextState == SQLTransactionState::DeliverSuccessCallback);
 
-        LOG(StorageAPI, "Callback %s\n", nameForSQLTransactionState(m_nextState));
+        LOG(StorageAPI, "Callback %s\n", nameForSQLTransactionState(m_nextState).characters());
         return;
     } else
         callErrorCallbackDueToInterruption();
@@ -613,7 +613,7 @@ void SQLTransaction::postflightAndCommit()
     if (m_sqliteTransaction->inProgress()) {
         if (m_wrapper)
             m_wrapper->handleCommitFailedAfterPostflight(*this);
-        m_transactionError = SQLError::create(SQLError::DATABASE_ERR, "unable to commit transaction", m_database->sqliteDatabase().lastError(), m_database->sqliteDatabase().lastErrorMsg());
+        m_transactionError = SQLError::create(SQLError::DATABASE_ERR, "unable to commit transaction"_s, m_database->sqliteDatabase().lastError(), m_database->sqliteDatabase().lastErrorMsg());
 
         handleTransactionError();
         return;
@@ -647,31 +647,31 @@ void SQLTransaction::releaseOriginLockIfNeeded()
 }
 
 #if !LOG_DISABLED
-const char* SQLTransaction::debugStepName(void (SQLTransaction::*step)())
+ASCIILiteral SQLTransaction::debugStepName(void (SQLTransaction::*step)())
 {
     if (step == &SQLTransaction::acquireLock)
-        return "acquireLock";
+        return "acquireLock"_s;
     if (step == &SQLTransaction::openTransactionAndPreflight)
-        return "openTransactionAndPreflight";
+        return "openTransactionAndPreflight"_s;
     if (step == &SQLTransaction::runStatements)
-        return "runStatements";
+        return "runStatements"_s;
     if (step == &SQLTransaction::postflightAndCommit)
-        return "postflightAndCommit";
+        return "postflightAndCommit"_s;
     if (step == &SQLTransaction::cleanupAfterTransactionErrorCallback)
-        return "cleanupAfterTransactionErrorCallback";
+        return "cleanupAfterTransactionErrorCallback"_s;
     if (step == &SQLTransaction::deliverTransactionCallback)
-        return "deliverTransactionCallback";
+        return "deliverTransactionCallback"_s;
     if (step == &SQLTransaction::deliverTransactionErrorCallback)
-        return "deliverTransactionErrorCallback";
+        return "deliverTransactionErrorCallback"_s;
     if (step == &SQLTransaction::deliverStatementCallback)
-        return "deliverStatementCallback";
+        return "deliverStatementCallback"_s;
     if (step == &SQLTransaction::deliverQuotaIncreaseCallback)
-        return "deliverQuotaIncreaseCallback";
+        return "deliverQuotaIncreaseCallback"_s;
     if (step == &SQLTransaction::deliverSuccessCallback)
-        return "deliverSuccessCallback";
+        return "deliverSuccessCallback"_s;
 
     ASSERT_NOT_REACHED();
-    return "UNKNOWN";
+    return "UNKNOWN"_s;
 }
 #endif
 

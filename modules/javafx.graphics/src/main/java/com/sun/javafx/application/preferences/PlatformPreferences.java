@@ -224,6 +224,16 @@ public final class PlatformPreferences extends AbstractMap<String, Object> imple
     }
 
     @Override
+    public ReadOnlyBooleanProperty reducedDataProperty() {
+        return properties.reducedDataProperty();
+    }
+
+    @Override
+    public boolean isReducedData() {
+        return properties.isReducedData();
+    }
+
+    @Override
     public ReadOnlyBooleanProperty persistentScrollBarsProperty() {
         return properties.persistentScrollBarsProperty();
     }

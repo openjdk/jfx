@@ -36,13 +36,13 @@
 #include "TextManipulationController.h"
 #include "TextNodeTraversal.h"
 #include <wtf/CheckedArithmetic.h>
-#include <wtf/IsoMallocInlines.h>
+#include <wtf/TZoneMallocInlines.h>
 #include <wtf/text/CString.h>
 #include <wtf/text/StringBuilder.h>
 
 namespace WebCore {
 
-WTF_MAKE_ISO_ALLOCATED_IMPL(Text);
+WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(Text);
 
 Ref<Text> Text::create(Document& document, String&& data)
 {
@@ -212,9 +212,9 @@ static void appendTextRepresentation(StringBuilder& builder, const Text& text)
 
     constexpr size_t maxDumpLength = 30;
     if (value.length() > maxDumpLength)
-        builder.append(" \"", StringView(value).left(maxDumpLength - 10), "...\"");
+        builder.append(" \""_s, StringView(value).left(maxDumpLength - 10), "...\""_s);
     else
-        builder.append(" \"", value, '\"');
+        builder.append(" \""_s, value, '\"');
 }
 
 String Text::description() const

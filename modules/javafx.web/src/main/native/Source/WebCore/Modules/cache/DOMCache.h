@@ -40,6 +40,10 @@ public:
     static Ref<DOMCache> create(ScriptExecutionContext&, String&&, DOMCacheIdentifier, Ref<CacheStorageConnection>&&);
     ~DOMCache();
 
+    // ActiveDOMObject.
+    void ref() const final { RefCounted::ref(); }
+    void deref() const final { RefCounted::deref(); }
+
     using RequestInfo = FetchRequest::Info;
 
     using KeysPromise = DOMPromiseDeferred<IDLSequence<IDLInterface<FetchRequest>>>;
@@ -70,7 +74,6 @@ private:
 
     // ActiveDOMObject
     void stop() final;
-    const char* activeDOMObjectName() const final;
 
     void putWithResponseData(DOMPromiseDeferred<void>&&, Ref<FetchRequest>&&, Ref<FetchResponse>&&, ExceptionOr<RefPtr<SharedBuffer>>&&);
 

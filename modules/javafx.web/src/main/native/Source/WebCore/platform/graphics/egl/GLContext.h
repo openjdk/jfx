@@ -19,7 +19,7 @@
 
 #pragma once
 
-#if USE(EGL)
+#include "GLContextWrapper.h"
 #include "IntSize.h"
 #include "PlatformDisplay.h"
 #include <wtf/Noncopyable.h>
@@ -43,7 +43,7 @@ typedef void* EGLSurface;
 
 namespace WebCore {
 
-class GLContext {
+class GLContext final : public GLContextWrapper {
     WTF_MAKE_NONCOPYABLE(GLContext); WTF_MAKE_FAST_ALLOCATED;
 public:
     WEBCORE_EXPORT static std::unique_ptr<GLContext> create(GLNativeWindowType, PlatformDisplay&);
@@ -52,6 +52,7 @@ public:
 
     static GLContext* current();
     static bool isExtensionSupported(const char* extensionList, const char* extension);
+    static unsigned versionFromString(const char* versionString);
 
     static const char* errorString(int statusCode);
     static const char* lastErrorString();
@@ -75,6 +76,7 @@ public:
     struct GLExtensions {
         bool OES_texture_npot { false };
         bool EXT_unpack_subimage { false };
+        bool APPLE_sync { false };
         bool OES_packed_depth_stencil { false };
     };
     const GLExtensions& glExtensions() const;
@@ -86,6 +88,7 @@ public:
         ~ScopedGLContext();
     private:
         struct {
+            GLContext* glContext { nullptr };
             EGLDisplay display { nullptr };
             EGLContext context { nullptr };
             EGLSurface readSurface { nullptr };
@@ -124,6 +127,11 @@ private:
 
     static bool getEGLConfig(PlatformDisplay&, EGLConfig*, EGLSurfaceType);
 
+    // GLContextWrapper
+    GLContextWrapper::Type type() const override { return GLContextWrapper::Type::Native; }
+    bool makeCurrentImpl() override;
+    bool unmakeCurrentImpl() override;
+
     PlatformDisplay& m_display;
     unsigned m_version { 0 };
     EGLContext m_context { nullptr };
@@ -137,5 +145,3 @@ private:
 };
 
 } // namespace WebCore
-
-#endif // USE(EGL)

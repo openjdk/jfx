@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2023, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -71,7 +71,7 @@ JNIEXPORT jint JNICALL Java_com_sun_webkit_SharedBuffer_twkGetSomeData
     }
 
     const auto& dataView = p->getSomeData(position);
-    const uint8_t* segment = dataView.data();
+    const uint8_t* segment = dataView.span().data();
     int len = dataView.size();
     if (len) {
         if (len > length) {
@@ -98,7 +98,8 @@ JNIEXPORT void JNICALL Java_com_sun_webkit_SharedBuffer_twkAppend
 
     char* bufferBody = static_cast<char*>(
             env->GetPrimitiveArrayCritical(buffer, NULL));
-    p->append(bufferBody + offset, length);
+    std::span<const uint8_t> spanBuffer(reinterpret_cast<const uint8_t*>(bufferBody + offset), length);
+    p->append(spanBuffer);
     env->ReleasePrimitiveArrayCritical(buffer, bufferBody, JNI_ABORT);
 }
 

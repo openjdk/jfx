@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2016, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -62,6 +62,10 @@ public class TextHelper extends ShapeHelper {
 
     public static Bounds superComputeLayoutBounds(Node node) {
         return ((TextHelper) getHelper(node)).superComputeLayoutBoundsImpl(node);
+    }
+
+    public static float getVisualWidth(Text t) {
+        return textAccessor.getVisualWidth(t);
     }
 
     @Override
@@ -127,8 +131,8 @@ public class TextHelper extends ShapeHelper {
         boolean doComputeContains(Node node, double localX, double localY);
         void doGeomChanged(Node node);
         com.sun.javafx.geom.Shape doConfigShape(Shape shape);
+        public float getVisualWidth(Text t);
     }
-
 }
 
 

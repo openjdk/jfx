@@ -44,7 +44,7 @@ WorkQueueBase::WorkQueueBase(RunLoop& runLoop)
 {
 }
 
-void WorkQueueBase::platformInitialize(const char* name, Type, QOS qos)
+void WorkQueueBase::platformInitialize(ASCIILiteral name, Type, QOS qos)
 {
     m_runLoop = RunLoop::create(name, ThreadType::Unknown, qos).ptr();
     BinarySemaphore semaphore;

@@ -30,16 +30,18 @@
 #include "RenderStyleInlines.h"
 #include "SVGRenderStyle.h"
 #include "SVGRenderingContext.h"
-#include <wtf/IsoMallocInlines.h>
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
-WTF_MAKE_ISO_ALLOCATED_IMPL(LegacyRenderSVGResourceGradient);
+WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(LegacyRenderSVGResourceGradient);
 
 LegacyRenderSVGResourceGradient::LegacyRenderSVGResourceGradient(Type type, SVGGradientElement& node, RenderStyle&& style)
     : LegacyRenderSVGResourceContainer(type, node, WTFMove(style))
 {
 }
+
+LegacyRenderSVGResourceGradient::~LegacyRenderSVGResourceGradient() = default;
 
 void LegacyRenderSVGResourceGradient::removeAllClientsFromCacheIfNeeded(bool markForInvalidation, SingleThreadWeakHashSet<RenderObject>* visitedRenderers)
 {
@@ -61,7 +63,9 @@ static inline bool createMaskAndSwapContextForTextGradient(GraphicsContext*& con
     ASSERT(textRootBlock);
 
     AffineTransform absoluteTransform = SVGRenderingContext::calculateTransformationToOutermostCoordinateSystem(*textRootBlock);
-    FloatRect repaintRect = textRootBlock->repaintRectInLocalCoordinates();
+    // FIXME: This needs to be bounding box and should not use repaint rect.
+    // https://bugs.webkit.org/show_bug.cgi?id=278551
+    FloatRect repaintRect = textRootBlock->repaintRectInLocalCoordinates(RepaintRectCalculation::Accurate);
 
     // Ignore 2D rotation, as it doesn't affect the size of the mask.
     FloatSize scale(absoluteTransform.xScale(), absoluteTransform.yScale());
@@ -88,7 +92,9 @@ static inline AffineTransform clipToTextMask(GraphicsContext& context, RefPtr<Im
 
     AffineTransform absoluteTransform = SVGRenderingContext::calculateTransformationToOutermostCoordinateSystem(*textRootBlock);
 
-    targetRect = textRootBlock->repaintRectInLocalCoordinates();
+    // FIXME: This needs to be bounding box and should not use repaint rect.
+    // https://bugs.webkit.org/show_bug.cgi?id=278551
+    targetRect = textRootBlock->repaintRectInLocalCoordinates(RepaintRectCalculation::Accurate);
 
     // Ignore 2D rotation, as it doesn't affect the size of the mask.
     FloatSize scale(absoluteTransform.xScale(), absoluteTransform.yScale());
@@ -122,7 +128,7 @@ GradientData::Inputs LegacyRenderSVGResourceGradient::computeInputs(RenderElemen
     return { objectBoundingBox, textPaintingScale };
 }
 
-bool LegacyRenderSVGResourceGradient::applyResource(RenderElement& renderer, const RenderStyle& style, GraphicsContext*& context, OptionSet<RenderSVGResourceMode> resourceMode)
+auto LegacyRenderSVGResourceGradient::applyResource(RenderElement& renderer, const RenderStyle& style, GraphicsContext*& context, OptionSet<RenderSVGResourceMode> resourceMode) -> OptionSet<ApplyResult>
 {
     ASSERT(context);
     ASSERT(!resourceMode.isEmpty());
@@ -134,7 +140,7 @@ bool LegacyRenderSVGResourceGradient::applyResource(RenderElement& renderer, con
     if (m_shouldCollectGradientAttributes) {
         gradientElement().synchronizeAllAttributes();
         if (!collectGradientAttributes())
-            return false;
+            return { };
 
         m_shouldCollectGradientAttributes = false;
     }
@@ -143,7 +149,7 @@ bool LegacyRenderSVGResourceGradient::applyResource(RenderElement& renderer, con
     // then the given effect (e.g. a gradient or a filter) will be ignored.
     auto inputs = computeInputs(renderer, resourceMode);
     if (inputs.objectBoundingBox && inputs.objectBoundingBox->isEmpty())
-        return false;
+        return { };
 
     bool isPaintingText = resourceMode.contains(RenderSVGResourceMode::ApplyToText);
 
@@ -182,7 +188,7 @@ bool LegacyRenderSVGResourceGradient::applyResource(RenderElement& renderer, con
 #if USE(CG)
         if (!createMaskAndSwapContextForTextGradient(context, m_savedContext, m_imageBuffer, renderer)) {
             context->restore();
-            return false;
+            return { };
         }
 #endif
         context->setTextDrawingMode(resourceMode.contains(RenderSVGResourceMode::ApplyToFill) ? TextDrawingMode::Fill : TextDrawingMode::Stroke);
@@ -203,7 +209,7 @@ bool LegacyRenderSVGResourceGradient::applyResource(RenderElement& renderer, con
         SVGRenderSupport::applyStrokeStyleToContext(*context, style, renderer);
     }
 
-    return true;
+    return { ApplyResult::ResourceApplied };
 }
 
 void LegacyRenderSVGResourceGradient::postApplyResource(RenderElement& renderer, GraphicsContext*& context, OptionSet<RenderSVGResourceMode> resourceMode, const Path* path, const RenderElement* shape)
@@ -217,7 +223,7 @@ void LegacyRenderSVGResourceGradient::postApplyResource(RenderElement& renderer,
         if (m_savedContext) {
             auto gradientData = m_gradientMap.find(&renderer);
             if (gradientData != m_gradientMap.end()) {
-                auto& gradient = *gradientData->value->gradient;
+                Ref gradient = *gradientData->value->gradient;
 
                 // Restore on-screen drawing context
                 context = std::exchange(m_savedContext, nullptr);
@@ -225,7 +231,7 @@ void LegacyRenderSVGResourceGradient::postApplyResource(RenderElement& renderer,
                 FloatRect targetRect;
                 AffineTransform userspaceTransform = clipToTextMask(*context, m_imageBuffer, targetRect, renderer, gradientUnits() == SVGUnitTypes::SVG_UNIT_TYPE_OBJECTBOUNDINGBOX, gradientTransform());
 
-                context->setFillGradient(gradient, userspaceTransform);
+                context->setFillGradient(WTFMove(gradient), userspaceTransform);
                 context->fillRect(targetRect);
 
                 m_imageBuffer = nullptr;

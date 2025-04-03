@@ -31,8 +31,12 @@
 #include <wtf/ThreadSafeRefCounted.h>
 #include <wtf/Threading.h>
 #include <wtf/TypeCasts.h>
+#include <wtf/TypeTraits.h>
+#include <wtf/WeakPtrImpl.h>
 
 namespace WTF {
+// Classes that offer weak pointers should also offer RefPtr or CheckedPtr. Please do not add new exceptions.
+template<typename T> struct IsDeprecatedWeakRefSmartPointerException : std::false_type { };
 
 enum class EnableWeakPtrThreadingAssertions : bool { No, Yes };
 
@@ -71,11 +75,19 @@ public:
 
     T* ptrAllowingHashTableEmptyValue() const
     {
+        static_assert(
+            HasRefPtrMethods<T>::value || HasCheckedPtrMethods<T>::value || IsDeprecatedWeakRefSmartPointerException<std::remove_cv_t<T>>::value,
+            "Classes that offer weak pointers should also offer RefPtr or CheckedPtr. Please do not add new exceptions.");
+
         return !m_impl.isHashTableEmptyValue() ? static_cast<T*>(m_impl->template get<T>()) : nullptr;
     }
 
     T* ptr() const
     {
+        static_assert(
+            HasRefPtrMethods<T>::value || HasCheckedPtrMethods<T>::value || IsDeprecatedWeakRefSmartPointerException<std::remove_cv_t<T>>::value,
+            "Classes that offer weak pointers should also offer RefPtr or CheckedPtr. Please do not add new exceptions.");
+
         auto* ptr = static_cast<T*>(m_impl->template get<T>());
         ASSERT(ptr);
         return ptr;
@@ -83,10 +95,15 @@ public:
 
     T& get() const
     {
+        static_assert(
+            HasRefPtrMethods<T>::value || HasCheckedPtrMethods<T>::value || IsDeprecatedWeakRefSmartPointerException<std::remove_cv_t<T>>::value,
+            "Classes that offer weak pointers should also offer RefPtr or CheckedPtr. Please do not add new exceptions.");
+
         auto* ptr = static_cast<T*>(m_impl->template get<T>());
         ASSERT(ptr);
         return *ptr;
     }
+
     operator T&() const { return get(); }
 
     T* operator->() const
@@ -173,105 +190,6 @@ template<typename P, typename WeakPtrImpl> struct PtrHash<WeakRef<P, WeakPtrImpl
 
 template<typename P, typename WeakPtrImpl> struct DefaultHash<WeakRef<P, WeakPtrImpl>> : PtrHash<WeakRef<P, WeakPtrImpl>> { };
 
-DECLARE_COMPACT_ALLOCATOR_WITH_HEAP_IDENTIFIER(WeakPtrImplBase);
-
-template<typename Derived>
-class WeakPtrImplBase : public ThreadSafeRefCounted<Derived> {
-    WTF_MAKE_NONCOPYABLE(WeakPtrImplBase);
-    WTF_MAKE_FAST_COMPACT_ALLOCATED_WITH_HEAP_IDENTIFIER(WeakPtrImplBase);
-public:
-    ~WeakPtrImplBase() = default;
-
-    template<typename T> typename T::WeakValueType* get()
-    {
-        return static_cast<typename T::WeakValueType*>(m_ptr);
-    }
-
-    explicit operator bool() const { return m_ptr; }
-    void clear() { m_ptr = nullptr; }
-
-#if ASSERT_ENABLED
-    bool wasConstructedOnMainThread() const { return m_wasConstructedOnMainThread; }
-#endif
-
-    template<typename T>
-    explicit WeakPtrImplBase(T* ptr)
-        : m_ptr(static_cast<typename T::WeakValueType*>(ptr))
-#if ASSERT_ENABLED
-        , m_wasConstructedOnMainThread(isMainThread())
-#endif
-    {
-    }
-
-private:
-    void* m_ptr;
-#if ASSERT_ENABLED
-    bool m_wasConstructedOnMainThread;
-#endif
-};
-
-class DefaultWeakPtrImpl final : public WeakPtrImplBase<DefaultWeakPtrImpl> {
-public:
-    template<typename T>
-    explicit DefaultWeakPtrImpl(T* ptr) : WeakPtrImplBase<DefaultWeakPtrImpl>(ptr) { }
-};
-
-DECLARE_COMPACT_ALLOCATOR_WITH_HEAP_IDENTIFIER(WeakPtrImplBaseSingleThread);
-
-template<typename Derived>
-class WeakPtrImplBaseSingleThread {
-    WTF_MAKE_NONCOPYABLE(WeakPtrImplBaseSingleThread);
-    WTF_MAKE_FAST_COMPACT_ALLOCATED_WITH_HEAP_IDENTIFIER(WeakPtrImplBaseSingleThread);
-public:
-    ~WeakPtrImplBaseSingleThread() = default;
-
-    template<typename T> typename T::WeakValueType* get()
-    {
-        return static_cast<typename T::WeakValueType*>(m_ptr);
-    }
-
-    explicit operator bool() const { return m_ptr; }
-    void clear() { m_ptr = nullptr; }
-
-#if ASSERT_ENABLED
-    bool wasConstructedOnMainThread() const { return m_wasConstructedOnMainThread; }
-#endif
-
-    template<typename T>
-    explicit WeakPtrImplBaseSingleThread(T* ptr)
-        : m_ptr(static_cast<typename T::WeakValueType*>(ptr))
-#if ASSERT_ENABLED
-        , m_wasConstructedOnMainThread(isMainThread())
-#endif
-    {
-    }
-
-    uint32_t refCount() const { return m_refCount; }
-    void ref() const { ++m_refCount; }
-    void deref() const
-    {
-        uint32_t tempRefCount = m_refCount - 1;
-        if (!tempRefCount) {
-            delete this;
-            return;
-        }
-        m_refCount = tempRefCount;
-    }
-
-private:
-    mutable SingleThreadIntegralWrapper<uint32_t> m_refCount { 1 };
-    void* m_ptr;
-#if ASSERT_ENABLED
-    bool m_wasConstructedOnMainThread;
-#endif
-};
-
-class SingleThreadWeakPtrImpl final : public WeakPtrImplBaseSingleThread<SingleThreadWeakPtrImpl> {
-public:
-    template<typename T>
-    explicit SingleThreadWeakPtrImpl(T* ptr) : WeakPtrImplBaseSingleThread<SingleThreadWeakPtrImpl>(ptr) { }
-};
-
 template<typename T> using SingleThreadWeakRef = WeakRef<T, SingleThreadWeakPtrImpl>;
 
 template<typename ExpectedType, typename ArgType, typename WeakPtrImpl>
@@ -291,13 +209,7 @@ inline WeakRef<match_constness_t<Source, Target>, WeakPtrImpl> downcast(WeakRef<
 {
     static_assert(!std::is_same_v<Source, Target>, "Unnecessary cast to same type");
     static_assert(std::is_base_of_v<Source, Target>, "Should be a downcast");
-    // FIXME: This is too expensive to enable on x86 for now but we should try and
-    // enable the RELEASE_ASSERT() on all architectures.
-#if CPU(ARM64)
     RELEASE_ASSERT(is<Target>(source));
-#else
-    ASSERT_WITH_SECURITY_IMPLICATION(is<Target>(source));
-#endif
     return WeakRef<match_constness_t<Source, Target>, WeakPtrImpl> { static_reference_cast<match_constness_t<Source, Target>>(source.releaseImpl()), source.enableWeakPtrThreadingAssertions() };
 }
 
@@ -314,6 +226,5 @@ inline WeakPtr<match_constness_t<Source, Target>, WeakPtrImpl> dynamicDowncast(W
 } // namespace WTF
 
 using WTF::EnableWeakPtrThreadingAssertions;
-using WTF::SingleThreadWeakPtrImpl;
 using WTF::SingleThreadWeakRef;
 using WTF::WeakRef;

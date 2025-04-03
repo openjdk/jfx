@@ -33,7 +33,7 @@ namespace WebCore {
 class WebAnimation;
 
 class AnimationEventBase : public Event {
-    WTF_MAKE_ISO_ALLOCATED(AnimationEventBase);
+    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(AnimationEventBase);
 public:
     virtual ~AnimationEventBase();
 
@@ -45,8 +45,8 @@ public:
     std::optional<Seconds> scheduledTime() const { return m_scheduledTime; }
 
 protected:
-    AnimationEventBase(const AtomString&, WebAnimation*, std::optional<Seconds> scheduledTime);
-    AnimationEventBase(const AtomString&, const EventInit&, IsTrusted);
+    AnimationEventBase(enum EventInterfaceType, const AtomString&, WebAnimation*, std::optional<Seconds> scheduledTime);
+    AnimationEventBase(enum EventInterfaceType, const AtomString&, const EventInit&, IsTrusted);
 
 private:
     RefPtr<WebAnimation> m_animation;

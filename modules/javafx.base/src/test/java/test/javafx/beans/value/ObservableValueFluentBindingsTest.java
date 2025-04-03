@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022, 2023, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2022, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -35,6 +35,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -57,7 +58,130 @@ public class ObservableValueFluentBindingsTest {
     private final ChangeListener<String> changeListener = (obs, old, current) -> values.add(current);
     private final InvalidationListener invalidationListener = obs -> invalidations++;
 
-    private StringProperty property = new SimpleStringProperty("Initial");
+    private final StringProperty property = new SimpleStringProperty("Initial");
+
+    @Nested
+    class GivenAQuadMappedObservable {
+
+        AtomicInteger calls1 = new AtomicInteger(0);
+        AtomicInteger calls2 = new AtomicInteger(0);
+        AtomicInteger calls3 = new AtomicInteger(0);
+        AtomicInteger calls4 = new AtomicInteger(0);
+
+        ObservableValue<String> observableValue = property
+            .map(x -> x + calls1.incrementAndGet())
+            .map(x -> x + calls2.incrementAndGet())
+            .map(x -> x + calls3.incrementAndGet())
+            .map(x -> x + calls4.incrementAndGet());
+
+        {
+            assertEquals(0, calls1.get());
+            assertEquals(0, calls2.get());
+            assertEquals(0, calls3.get());
+            assertEquals(0, calls4.get());
+        }
+
+        @Nested
+        class WhenObservedByInvalidationListener {
+            {
+                observableValue.addListener(obs -> {});
+            }
+
+            @Test
+            void computeValueShouldBeCalledOnlyOnce() {
+                assertEquals(1, calls1.get());
+                assertEquals(1, calls2.get());
+                assertEquals(1, calls3.get());
+                assertEquals(1, calls4.get());
+            }
+        }
+
+        @Nested
+        class WhenObservedByChangeListener {
+            {
+                observableValue.addListener((obs, o, n) -> {});
+            }
+
+            @Test
+            void computeValueShouldBeCalledOnlyOnce() {
+                assertEquals(1, calls1.get());
+                assertEquals(1, calls2.get());
+                assertEquals(1, calls3.get());
+                assertEquals(1, calls4.get());
+            }
+        }
+
+        @Nested
+        class WhenObservedByInvalidationSubscriber {
+            {
+                observableValue.subscribe(() -> {});
+            }
+
+            @Test
+            void computeValueShouldBeCalledOnlyOnce() {
+                assertEquals(1, calls1.get());
+                assertEquals(1, calls2.get());
+                assertEquals(1, calls3.get());
+                assertEquals(1, calls4.get());
+            }
+        }
+
+        @Nested
+        class WhenObservedByValueSubscriber {
+            {
+                observableValue.subscribe(v -> {});
+            }
+
+            @Test
+            void computeValueShouldBeCalledOnlyOnce() {
+                assertEquals(1, calls1.get());
+                assertEquals(1, calls2.get());
+                assertEquals(1, calls3.get());
+                assertEquals(1, calls4.get());
+            }
+        }
+
+        @Nested
+        class WhenObservedByChangeSubscriber {
+            {
+                observableValue.subscribe((o, n) -> {});
+            }
+
+            @Test
+            void computeValueShouldBeCalledOnlyOnce() {
+                assertEquals(1, calls1.get());
+                assertEquals(1, calls2.get());
+                assertEquals(1, calls3.get());
+                assertEquals(1, calls4.get());
+            }
+        }
+    }
+
+    @Test
+    void computeValueShouldBeCalledOnlyOnceWhenNewlyObserved() {
+        AtomicInteger calls1 = new AtomicInteger(0);
+        AtomicInteger calls2 = new AtomicInteger(0);
+        AtomicInteger calls3 = new AtomicInteger(0);
+        AtomicInteger calls4 = new AtomicInteger(0);
+
+        ObservableValue<String> observableValue = property
+            .map(x -> x + calls1.incrementAndGet())
+            .map(x -> x + calls2.incrementAndGet())
+            .map(x -> x + calls3.incrementAndGet())
+            .map(x -> x + calls4.incrementAndGet());
+
+        assertEquals(0, calls1.get());
+        assertEquals(0, calls2.get());
+        assertEquals(0, calls3.get());
+        assertEquals(0, calls4.get());
+
+        observableValue.addListener((obs, o, n) -> {});
+
+        assertEquals(1, calls1.get());
+        assertEquals(1, calls2.get());
+        assertEquals(1, calls3.get());
+        assertEquals(1, calls4.get());
+    }
 
     @Nested
     class When_map_Called {

@@ -38,11 +38,11 @@
 #include "PictureInPictureSupport.h"
 #include "PictureInPictureWindow.h"
 #include "VideoTrackList.h"
-#include <wtf/IsoMallocInlines.h>
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
-WTF_MAKE_ISO_ALLOCATED_IMPL(HTMLVideoElementPictureInPicture);
+WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(HTMLVideoElementPictureInPicture);
 
 HTMLVideoElementPictureInPicture::HTMLVideoElementPictureInPicture(HTMLVideoElement& videoElement)
     : m_videoElement(videoElement)
@@ -53,13 +53,13 @@ HTMLVideoElementPictureInPicture::HTMLVideoElementPictureInPicture(HTMLVideoElem
 #endif
 {
     ALWAYS_LOG(LOGIDENTIFIER);
-    m_videoElement.setPictureInPictureObserver(this);
+    m_videoElement->setPictureInPictureObserver(this);
 }
 
 HTMLVideoElementPictureInPicture::~HTMLVideoElementPictureInPicture()
 {
     ALWAYS_LOG(LOGIDENTIFIER);
-    m_videoElement.setPictureInPictureObserver(nullptr);
+    m_videoElement->setPictureInPictureObserver(nullptr);
 }
 
 HTMLVideoElementPictureInPicture* HTMLVideoElementPictureInPicture::from(HTMLVideoElement& videoElement)
@@ -148,19 +148,19 @@ void HTMLVideoElementPictureInPicture::exitPictureInPicture(Ref<DeferredPromise>
     }
 
     m_exitPictureInPicturePromise = WTFMove(promise);
-    m_videoElement.webkitSetPresentationMode(HTMLVideoElement::VideoPresentationMode::Inline);
+    m_videoElement->webkitSetPresentationMode(HTMLVideoElement::VideoPresentationMode::Inline);
 }
 
 void HTMLVideoElementPictureInPicture::didEnterPictureInPicture(const IntSize& windowSize)
 {
     INFO_LOG(LOGIDENTIFIER);
-    m_videoElement.document().setPictureInPictureElement(&m_videoElement);
+    m_videoElement->document().setPictureInPictureElement(m_videoElement.ptr());
     m_pictureInPictureWindow->setSize(windowSize);
 
     PictureInPictureEvent::Init initializer;
     initializer.bubbles = true;
     initializer.pictureInPictureWindow = m_pictureInPictureWindow;
-    m_videoElement.scheduleEvent(PictureInPictureEvent::create(eventNames().enterpictureinpictureEvent, WTFMove(initializer)));
+    m_videoElement->scheduleEvent(PictureInPictureEvent::create(eventNames().enterpictureinpictureEvent, WTFMove(initializer)));
 
     if (m_enterPictureInPicturePromise) {
         m_enterPictureInPicturePromise->resolve<IDLInterface<PictureInPictureWindow>>(*m_pictureInPictureWindow);
@@ -172,12 +172,12 @@ void HTMLVideoElementPictureInPicture::didExitPictureInPicture()
 {
     INFO_LOG(LOGIDENTIFIER);
     m_pictureInPictureWindow->close();
-    m_videoElement.document().setPictureInPictureElement(nullptr);
+    m_videoElement->document().setPictureInPictureElement(nullptr);
 
     PictureInPictureEvent::Init initializer;
     initializer.bubbles = true;
     initializer.pictureInPictureWindow = m_pictureInPictureWindow;
-    m_videoElement.scheduleEvent(PictureInPictureEvent::create(eventNames().leavepictureinpictureEvent, WTFMove(initializer)));
+    m_videoElement->scheduleEvent(PictureInPictureEvent::create(eventNames().leavepictureinpictureEvent, WTFMove(initializer)));
 
     if (m_exitPictureInPicturePromise) {
         m_exitPictureInPicturePromise->resolve();

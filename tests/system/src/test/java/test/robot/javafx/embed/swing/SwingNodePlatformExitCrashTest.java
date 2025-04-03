@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2017, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -29,9 +29,9 @@ import java.lang.reflect.InvocationTargetException;
 import java.util.concurrent.CountDownLatch;
 import javax.swing.SwingUtilities;
 import javafx.application.Platform;
-import org.junit.jupiter.api.AfterAll;
-import org.junit.jupiter.api.Disabled;
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Assumptions;
 import test.util.Util;
 
 public class SwingNodePlatformExitCrashTest extends SwingNodeBase {
@@ -52,9 +52,12 @@ public class SwingNodePlatformExitCrashTest extends SwingNodeBase {
         myApp.disposeDialog();
     }
 
-    @AfterAll
-    public static void teardownOnce() {
-        // No-op as Toolkit shutdown is already done in Platform.exit
-        // and calling superclass teardownOnce will cause hang
+    @BeforeAll
+    public static void skipShutDown() {
+        // This test requires JDK 24 or later on Wayland
+        Assumptions.assumeTrue(!Util.isOnWayland() || Runtime.version().feature() >= 24);
+        // Skip shutdown as Toolkit shutdown is already done in Platform.exit
+        // and will cause hang if called
+        doShutdown = false;
     }
 }

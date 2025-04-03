@@ -904,6 +904,8 @@ gvs_variable_sized_array_is_normal (GVariantSerialised value)
   if (value.size != 0 && offsets.length == 0)
     return FALSE;
 
+  g_assert (value.size != 0 || offsets.length == 0);
+
   child.type_info = g_variant_type_info_element (value.type_info);
   g_variant_type_info_query (child.type_info, &alignment, NULL);
   child.depth = value.depth + 1;

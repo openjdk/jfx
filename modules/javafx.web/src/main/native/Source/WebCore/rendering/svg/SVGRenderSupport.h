@@ -23,6 +23,7 @@
 
 #pragma once
 
+#include "LayoutRepainter.h"
 #include "PaintInfo.h"
 #include "RenderObject.h"
 
@@ -71,7 +72,7 @@ public:
     static const RenderElement& localToParentTransform(const RenderElement&, AffineTransform&);
     static void mapLocalToContainer(const RenderElement&, const RenderLayerModelObject* ancestorContainer, TransformState&, bool* wasFixed);
     static const RenderElement* pushMappingToContainer(const RenderElement&, const RenderLayerModelObject* ancestorToStopAt, RenderGeometryMap&);
-    static bool checkForSVGRepaintDuringLayout(const RenderElement&);
+    static LayoutRepainter::CheckForRepaint checkForSVGRepaintDuringLayout(const RenderElement&);
 
     static FloatRect calculateApproximateStrokeBoundingBox(const RenderElement&);
 
@@ -95,19 +96,6 @@ private:
     // This class is not constructable.
     SVGRenderSupport();
     ~SVGRenderSupport();
-};
-
-class SVGHitTestCycleDetectionScope {
-    WTF_MAKE_NONCOPYABLE(SVGHitTestCycleDetectionScope);
-public:
-    explicit SVGHitTestCycleDetectionScope(const RenderElement&, bool condition = true);
-    ~SVGHitTestCycleDetectionScope();
-    static bool isEmpty();
-    static bool isVisiting(const RenderElement&);
-
-private:
-    static SingleThreadWeakHashSet<RenderElement>& visitedElements();
-    SingleThreadWeakPtr<RenderElement> m_element;
 };
 
 } // namespace WebCore

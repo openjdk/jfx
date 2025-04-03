@@ -36,10 +36,10 @@ class SetConstructor final : public InternalFunction {
 public:
     typedef InternalFunction Base;
 
-    static SetConstructor* create(VM& vm, Structure* structure, SetPrototype* setPrototype, GetterSetter* speciesSymbol)
+    static SetConstructor* create(VM& vm, Structure* structure, SetPrototype* setPrototype)
     {
         SetConstructor* constructor = new (NotNull, allocateCell<SetConstructor>(vm)) SetConstructor(vm, structure);
-        constructor->finishCreation(vm, setPrototype, speciesSymbol);
+        constructor->finishCreation(vm, setPrototype);
         return constructor;
     }
 
@@ -49,13 +49,14 @@ public:
 
 private:
     SetConstructor(VM&, Structure*);
-    void finishCreation(VM&, SetPrototype*, GetterSetter* speciesSymbol);
+    void finishCreation(VM&, SetPrototype*);
 };
 STATIC_ASSERT_ISO_SUBSPACE_SHARABLE(SetConstructor, InternalFunction);
 
-JSC_DECLARE_HOST_FUNCTION(setPrivateFuncSetBucketHead);
-JSC_DECLARE_HOST_FUNCTION(setPrivateFuncSetBucketNext);
-JSC_DECLARE_HOST_FUNCTION(setPrivateFuncSetBucketKey);
+JSC_DECLARE_HOST_FUNCTION(setPrivateFuncSetStorage);
+JSC_DECLARE_HOST_FUNCTION(setPrivateFuncSetIterationNext);
+JSC_DECLARE_HOST_FUNCTION(setPrivateFuncSetIterationEntry);
+JSC_DECLARE_HOST_FUNCTION(setPrivateFuncSetIterationEntryKey);
 JSC_DECLARE_HOST_FUNCTION(setPrivateFuncClone);
 
 } // namespace JSC

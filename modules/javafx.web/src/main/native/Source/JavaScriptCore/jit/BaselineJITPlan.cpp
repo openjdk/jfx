@@ -26,36 +26,70 @@
 #include "config.h"
 #include "BaselineJITPlan.h"
 
+#include "JITSafepoint.h"
+
 #if ENABLE(JIT)
 
 namespace JSC {
 
-BaselineJITPlan::BaselineJITPlan(CodeBlock* codeBlock, BytecodeIndex loopOSREntryBytecodeIndex)
+BaselineJITPlan::BaselineJITPlan(CodeBlock* codeBlock)
     : JITPlan(JITCompilationMode::Baseline, codeBlock)
-    , m_loopOSREntryBytecodeIndex(loopOSREntryBytecodeIndex)
 {
     JIT::doMainThreadPreparationBeforeCompile(codeBlock->vm());
 }
 
+auto BaselineJITPlan::compileInThreadImpl(JITCompilationEffort effort) -> CompilationPath
+{
+    // BaselineJITPlan can keep underlying CodeBlock alive while running.
+    // So we do not need to suspend this compilation thread while running GC.
+    Safepoint::Result result;
+    {
+        Safepoint safepoint(*this, result);
+        safepoint.begin(false);
+
+        JIT jit(*m_vm, *this, m_codeBlock);
+        auto jitCode = jit.compileAndLinkWithoutFinalizing(effort);
+    m_jitCode = WTFMove(jitCode);
+    }
+    if (result.didGetCancelled())
+        return CancelPath;
+    return BaselinePath;
+}
+
 auto BaselineJITPlan::compileInThreadImpl() -> CompilationPath
 {
-    JIT jit(*m_vm, m_codeBlock, m_loopOSREntryBytecodeIndex);
-    auto [ linkBuffer, jitCode ] = jit.compileAndLinkWithoutFinalizing(JITCompilationCanFail);
-    m_linkBuffer = WTFMove(linkBuffer);
-    m_jitCode = WTFMove(jitCode);
-    return BaselinePath;
+    return compileInThreadImpl(JITCompilationCanFail);
+}
+
+auto BaselineJITPlan::compileSync(JITCompilationEffort effort) -> CompilationPath
+{
+    return compileInThreadImpl(effort);
 }
 
 size_t BaselineJITPlan::codeSize() const
 {
-    if (m_linkBuffer)
-        return m_linkBuffer->size();
+    if (m_jitCode)
+        return m_jitCode->size();
     return 0;
+}
+
+bool BaselineJITPlan::isKnownToBeLiveAfterGC()
+{
+    // If stage is not JITPlanStage::Canceled, we should keep this alive and mark underlying CodeBlock anyway.
+    // Regardless of whether the owner ScriptExecutable / CodeBlock dies, compiled code would be still usable
+    // since Baseline JIT is *unlinked*. So, let's not stop compilation.
+    return m_stage != JITPlanStage::Canceled;
+}
+
+bool BaselineJITPlan::isKnownToBeLiveDuringGC(AbstractSlotVisitor&)
+{
+    // Ditto to isKnownToBeLiveAfterGC. Unless plan gets completely cancelled before running, we should keep compilation running.
+    return m_stage != JITPlanStage::Canceled;
 }
 
 CompilationResult BaselineJITPlan::finalize()
 {
-    CompilationResult result = JIT::finalizeOnMainThread(m_codeBlock, *m_linkBuffer, m_jitCode);
+    CompilationResult result = JIT::finalizeOnMainThread(m_codeBlock, *this, m_jitCode);
     switch (result) {
     case CompilationFailed:
         CODEBLOCK_LOG_EVENT(m_codeBlock, "delayJITCompile", ("compilation failed"));

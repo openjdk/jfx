@@ -45,6 +45,7 @@
 #include "StyleContentAlignmentData.h"
 #include "StyleScrollSnapPoints.h"
 #include "StyleSelfAlignmentData.h"
+#include "StyleTextEdge.h"
 #include "TextDecorationThickness.h"
 #include "TouchAction.h"
 #include "TranslateTransformOperation.h"
@@ -77,11 +78,11 @@ struct StyleMarqueeData;
 // Page size type.
 // StyleRareNonInheritedData::pageSize is meaningful only when
 // StyleRareNonInheritedData::pageSizeType is PAGE_SIZE_RESOLVED.
-enum PageSizeType : uint8_t {
-    PAGE_SIZE_AUTO, // size: auto
-    PAGE_SIZE_AUTO_LANDSCAPE, // size: landscape
-    PAGE_SIZE_AUTO_PORTRAIT, // size: portrait
-    PAGE_SIZE_RESOLVED // Size is fully resolved.
+enum class PageSizeType : uint8_t {
+    Auto, // size: auto
+    AutoLandscape, // size: landscape
+    AutoPortrait, // size: portrait
+    Resolved // Size is fully resolved.
 };
 
 // This struct is for rarely used non-inherited CSS3, CSS2, and WebKit-specific properties.
@@ -101,7 +102,7 @@ public:
 
     bool hasBackdropFilters() const;
 
-    OptionSet<Containment> effectiveContainment() const;
+    OptionSet<Containment> usedContain() const;
 
     std::optional<Length> containIntrinsicWidth;
     std::optional<Length> containIntrinsicHeight;
@@ -153,6 +154,8 @@ public:
     RefPtr<PathOperation> offsetPath;
 
     Vector<Style::ScopedName> containerNames;
+
+    Vector<Style::ScopedName> viewTransitionClasses;
     std::optional<Style::ScopedName> viewTransitionName;
 
     GapLength columnGap;
@@ -187,6 +190,11 @@ public:
 
     float zoom;
     AtomString pseudoElementNameArgument;
+
+    Vector<AtomString> anchorNames;
+    AtomString positionAnchor;
+
+    TextEdge textBoxEdge;
 
     std::optional<Length> blockStepSize;
     unsigned blockStepInsert : 1; // BlockStepInsert
@@ -231,6 +239,8 @@ public:
     unsigned overflowAnchor : 1; // Scroll Anchoring- OverflowAnchor
 
     bool hasClip : 1;
+
+    FieldSizing fieldSizing { FieldSizing::Fixed };
 
 private:
     StyleRareNonInheritedData();

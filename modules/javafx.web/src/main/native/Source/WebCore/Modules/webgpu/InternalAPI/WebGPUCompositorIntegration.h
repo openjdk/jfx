@@ -25,11 +25,14 @@
 
 #pragma once
 
+#include "AlphaPremultiplication.h"
+
 #include <optional>
 #include <wtf/CompletionHandler.h>
 #include <wtf/Function.h>
 #include <wtf/Ref.h>
 #include <wtf/RefCounted.h>
+#include <wtf/WeakPtr.h>
 #include <wtf/text/WTFString.h>
 
 #if PLATFORM(COCOA)
@@ -38,22 +41,27 @@
 #endif
 
 namespace WebCore {
+class DestinationColorSpace;
 class ImageBuffer;
 class NativeImage;
 }
 
 namespace WebCore::WebGPU {
 
-class CompositorIntegration : public RefCounted<CompositorIntegration> {
+class Device;
+
+enum class TextureFormat : uint8_t;
+
+class CompositorIntegration : public RefCounted<CompositorIntegration>, public CanMakeWeakPtr<CompositorIntegration> {
 public:
     virtual ~CompositorIntegration() = default;
 
 #if PLATFORM(COCOA)
-    virtual Vector<MachSendRight> recreateRenderBuffers(int width, int height) = 0;
+    virtual Vector<MachSendRight> recreateRenderBuffers(int width, int height, WebCore::DestinationColorSpace&&, WebCore::AlphaPremultiplication, WebCore::WebGPU::TextureFormat, Device&) = 0;
 #endif
 
     virtual void prepareForDisplay(CompletionHandler<void()>&&) = 0;
-    virtual void withDisplayBufferAsNativeImage(uint32_t bufferIndex, Function<void(WebCore::NativeImage&)>) = 0;
+    virtual void withDisplayBufferAsNativeImage(uint32_t bufferIndex, Function<void(WebCore::NativeImage*)>) = 0;
     virtual void paintCompositedResultsToCanvas(WebCore::ImageBuffer&, uint32_t bufferIndex) = 0;
 
 protected:

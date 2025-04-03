@@ -478,7 +478,23 @@ static const char* fragmentTemplateCommon =
                 vec2 topRightRadii = u_roundedRect[(rectIndex * 3) + 1].zw;
                 vec2 bottomLeftRadii = u_roundedRect[(rectIndex * 3) + 2].xy;
                 vec2 bottomRightRadii = u_roundedRect[(rectIndex * 3) + 2].zw;
-                color *= roundedRectCoverage(fragCoord.xy, bounds, topLeftRadii, topRightRadii, bottomLeftRadii, bottomRightRadii);
+                float coverage = roundedRectCoverage(fragCoord.xy, bounds, topLeftRadii, topRightRadii, bottomLeftRadii, bottomRightRadii);
+
+                // Pixels outside the rect have coverage 0.0.
+                // Pixels inside the rect have coverage 1.0.
+                // Pixels on the border of the rounded parts have coverage between 0.0 and 1.0.
+
+                // Discard the fragments that are outside the rect.
+                if (coverage == 0.0)
+                    discard;
+
+                // By multiplying the color by the coverage, pixels on the border of the rounded corners get
+                // a bit more transparent.
+                // If blending is enabled, this does some antialiasing on the border pixels.
+                // If blending is disabled it means that we're rendering a holepunch buffer, so the color
+                // is always (0,0,0,0). In this case, multiplying by the coverage doesn't cause any effect
+                // and no antialiasing is done.
+                color *= coverage;
             }
         }
 
@@ -520,7 +536,7 @@ Ref<TextureMapperShaderProgram> TextureMapperShaderProgram::create(TextureMapper
 {
 #define SET_APPLIER_FROM_OPTIONS(Applier) \
     optionsApplierBuilder.append(\
-        (options & TextureMapperShaderProgram::Applier) ? ENABLE_APPLIER(Applier) : DISABLE_APPLIER(Applier))
+        (options & TextureMapperShaderProgram::Applier) ? span(ENABLE_APPLIER(Applier)) : span(DISABLE_APPLIER(Applier)))
 
     unsigned glVersion = GLContext::current()->version();
 
@@ -558,10 +574,10 @@ Ref<TextureMapperShaderProgram> TextureMapperShaderProgram::create(TextureMapper
     vertexShaderBuilder.append(optionsApplierBuilder.toString());
 
     // Append the appropriate input/output variable definitions.
-        vertexShaderBuilder.append(vertexTemplateLT320Vars);
+    vertexShaderBuilder.append(span(vertexTemplateLT320Vars));
 
     // Append the common code.
-    vertexShaderBuilder.append(vertexTemplateCommon);
+    vertexShaderBuilder.append(span(vertexTemplateCommon));
 
     StringBuilder fragmentShaderBuilder;
 
@@ -569,18 +585,18 @@ Ref<TextureMapperShaderProgram> TextureMapperShaderProgram::create(TextureMapper
     fragmentShaderBuilder.append(optionsApplierBuilder.toString());
 
     if (glVersion >= 300)
-        fragmentShaderBuilder.append(GLSL_DIRECTIVE(define GaussianKernelHalfSize u_gaussianKernelHalfSize));
+        fragmentShaderBuilder.append(span(GLSL_DIRECTIVE(define GaussianKernelHalfSize u_gaussianKernelHalfSize)));
     else
-        fragmentShaderBuilder.append(GLSL_DIRECTIVE(define GaussianKernelHalfSize GAUSSIAN_KERNEL_MAX_HALF_SIZE));
+        fragmentShaderBuilder.append(span(GLSL_DIRECTIVE(define GaussianKernelHalfSize GAUSSIAN_KERNEL_MAX_HALF_SIZE)));
 
     // Append the common header.
-    fragmentShaderBuilder.append(fragmentTemplateHeaderCommon);
+    fragmentShaderBuilder.append(span(fragmentTemplateHeaderCommon));
 
     // Append the appropriate input/output variable definitions.
-        fragmentShaderBuilder.append(fragmentTemplateLT320Vars);
+    fragmentShaderBuilder.append(span(fragmentTemplateLT320Vars));
 
     // Append the common code.
-    fragmentShaderBuilder.append(fragmentTemplateCommon);
+    fragmentShaderBuilder.append(span(fragmentTemplateCommon));
 
     return adoptRef(*new TextureMapperShaderProgram(vertexShaderBuilder.toString(), fragmentShaderBuilder.toString()));
 }
@@ -598,7 +614,7 @@ static CString getShaderLog(GLuint shader)
     glGetShaderInfoLog(shader, logLength, &infoLength, info.data());
 
     size_t stringLength = std::max(infoLength, 0);
-    return { info.data(), stringLength };
+    return std::span<const char> { info.data(), stringLength };
 }
 
 static CString getProgramLog(GLuint program)
@@ -613,7 +629,7 @@ static CString getProgramLog(GLuint program)
     glGetProgramInfoLog(program, logLength, &infoLength, info.data());
 
     size_t stringLength = std::max(infoLength, 0);
-    return { info.data(), stringLength };
+    return std::span<const char> { info.data(), stringLength };
 }
 #endif
 

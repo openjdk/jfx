@@ -33,9 +33,12 @@
 namespace WebCore {
 
 class RenderMathMLSpace final : public RenderMathMLBlock {
-    WTF_MAKE_ISO_ALLOCATED(RenderMathMLSpace);
+    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(RenderMathMLSpace);
+    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(RenderMathMLSpace);
 public:
     RenderMathMLSpace(MathMLSpaceElement&, RenderStyle&&);
+    virtual ~RenderMathMLSpace();
+
     MathMLSpaceElement& element() const { return static_cast<MathMLSpaceElement&>(nodeForNonAnonymous()); }
 
 private:

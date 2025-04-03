@@ -40,9 +40,9 @@
 #include <wtf/Forward.h>
 #include <wtf/Function.h>
 #include <wtf/HashSet.h>
-#include <wtf/IsoMalloc.h>
 #include <wtf/ListHashSet.h>
 #include <wtf/OptionSet.h>
+#include <wtf/TZoneMalloc.h>
 #include <wtf/WeakHashSet.h>
 #include <wtf/WeakRef.h>
 #include <wtf/text/WTFString.h>
@@ -89,7 +89,8 @@ Pagination::Mode paginationModeForRenderStyle(const RenderStyle&);
 enum class LayoutViewportConstraint : bool { Unconstrained, ConstrainedToDocumentRect };
 
 class LocalFrameView final : public FrameView {
-    WTF_MAKE_ISO_ALLOCATED(LocalFrameView);
+    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(LocalFrameView);
+    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(LocalFrameView);
 public:
     friend class Internals;
     friend class LocalFrameViewLayoutContext;
@@ -448,6 +449,8 @@ public:
     void incrementVisuallyNonEmptyCharacterCount(const String&);
     void incrementVisuallyNonEmptyPixelCount(const IntSize&);
     bool isVisuallyNonEmpty() const { return m_contentQualifiesAsVisuallyNonEmpty; }
+
+    bool hasEnoughContentForVisualMilestones() const;
     bool hasContentfulDescendants() const;
     void checkAndDispatchDidReachVisuallyNonEmptyState();
 
@@ -512,13 +515,13 @@ public:
     //    Similar to client coordinates, but affected by page zoom (but not page scale).
     //
 
-    float documentToAbsoluteScaleFactor(std::optional<float> effectiveZoom = std::nullopt) const;
-    float absoluteToDocumentScaleFactor(std::optional<float> effectiveZoom = std::nullopt) const;
+    float documentToAbsoluteScaleFactor(std::optional<float> usedZoom = std::nullopt) const;
+    float absoluteToDocumentScaleFactor(std::optional<float> usedZoom = std::nullopt) const;
 
-    WEBCORE_EXPORT FloatRect absoluteToDocumentRect(FloatRect, std::optional<float> effectiveZoom = std::nullopt) const;
-    WEBCORE_EXPORT FloatPoint absoluteToDocumentPoint(FloatPoint, std::optional<float> effectiveZoom = std::nullopt) const;
+    WEBCORE_EXPORT FloatRect absoluteToDocumentRect(FloatRect, std::optional<float> usedZoom = std::nullopt) const;
+    WEBCORE_EXPORT FloatPoint absoluteToDocumentPoint(FloatPoint, std::optional<float> usedZoom = std::nullopt) const;
 
-    FloatRect absoluteToClientRect(FloatRect, std::optional<float> effectiveZoom = std::nullopt) const;
+    FloatRect absoluteToClientRect(FloatRect, std::optional<float> usedZoom = std::nullopt) const;
 
     FloatSize documentToClientOffset() const;
     WEBCORE_EXPORT FloatRect documentToClientRect(FloatRect) const;
@@ -719,6 +722,12 @@ public:
     void invalidateScrollAnchoringElement() final;
     ScrollAnchoringController* scrollAnchoringController() { return m_scrollAnchoringController.get(); }
 
+    WEBCORE_EXPORT void scrollbarStyleDidChange();
+
+    void scrollbarWidthChanged(ScrollbarWidth) override;
+
+    FrameIdentifier rootFrameID() const final;
+
 private:
     explicit LocalFrameView(LocalFrame&);
 
@@ -764,8 +773,6 @@ private:
 
     void applyOverflowToViewport(const RenderElement&, ScrollbarMode& hMode, ScrollbarMode& vMode);
     void applyPaginationToViewport();
-
-    void updateOverflowStatus(bool horizontalOverflow, bool verticalOverflow);
 
     void forceLayoutParentViewIfNeeded();
     void flushPostLayoutTasksQueue();
@@ -883,7 +890,7 @@ private:
     RenderElement* viewportRenderer() const;
 
     void willDoLayout(SingleThreadWeakPtr<RenderElement> layoutRoot);
-    void didLayout(SingleThreadWeakPtr<RenderElement> layoutRoot);
+    void didLayout(SingleThreadWeakPtr<RenderElement> layoutRoot, bool didRunSimplifiedLayout);
 
     FloatSize calculateSizeForCSSViewportUnitsOverride(std::optional<OverrideViewportSize>) const;
 
@@ -1003,9 +1010,6 @@ private:
     std::unique_ptr<ScrollAnchoringController> m_scrollAnchoringController;
 
     bool m_shouldUpdateWhileOffscreen { true };
-    bool m_overflowStatusDirty { true };
-    bool m_horizontalOverflow { false };
-    bool m_verticalOverflow { false };
     bool m_canHaveScrollbars { true };
     bool m_cannotBlitToWindow { false };
     bool m_isOverlapped { false };
@@ -1065,6 +1069,13 @@ inline void LocalFrameView::incrementVisuallyNonEmptyCharacterCount(const String
         return;
 
     incrementVisuallyNonEmptyCharacterCountSlowCase(inlineText);
+}
+
+inline bool LocalFrameView::hasEnoughContentForVisualMilestones() const
+{
+    if (!m_frame->page())
+        return false;
+    return isVisuallyNonEmpty() && hasContentfulDescendants() && (!m_frame->page()->requestedLayoutMilestones().contains(LayoutMilestone::DidRenderSignificantAmountOfText) || m_renderedSignificantAmountOfText);
 }
 
 inline RefPtr<LocalFrameView> LocalFrame::protectedView() const

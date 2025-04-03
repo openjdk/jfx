@@ -35,12 +35,12 @@
 #if ENABLE(WEB_RTC)
 
 #include "RTCPeerConnection.h"
-#include <wtf/IsoMallocInlines.h>
 #include <wtf/NeverDestroyed.h>
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
-WTF_MAKE_ISO_ALLOCATED_IMPL(RTCRtpTransceiver);
+WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(RTCRtpTransceiver);
 
 RTCRtpTransceiver::RTCRtpTransceiver(Ref<RTCRtpSender>&& sender, Ref<RTCRtpReceiver>&& receiver, std::unique_ptr<RTCRtpTransceiverBackend>&& backend)
     : m_direction(RTCRtpTransceiverDirection::Sendrecv)
@@ -49,6 +49,8 @@ RTCRtpTransceiver::RTCRtpTransceiver(Ref<RTCRtpSender>&& sender, Ref<RTCRtpRecei
     , m_backend(WTFMove(backend))
 {
 }
+
+RTCRtpTransceiver::~RTCRtpTransceiver() = default;
 
 String RTCRtpTransceiver::mid() const
 {

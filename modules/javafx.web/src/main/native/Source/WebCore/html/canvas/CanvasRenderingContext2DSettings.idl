@@ -31,10 +31,12 @@ enum RenderingMode {
 // https://html.spec.whatwg.org/multipage/canvas.html#canvasrenderingcontext2dsettings
 [
     JSGenerateToJSObject,
+    JSGenerateToNativeObject,
 ] dictionary CanvasRenderingContext2DSettings {
     // FIXME: Add support for 'alpha'.
     // boolean alpha = true;
     boolean desynchronized = false;
+    boolean willReadFrequently = false;
     [EnabledBySetting=CanvasColorSpaceEnabled] PredefinedColorSpace colorSpace = "srgb";
     [EnabledBySetting=DOMTestingAPIsEnabled] RenderingMode? renderingModeForTesting;
 };

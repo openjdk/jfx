@@ -75,9 +75,14 @@ class TiledBacking;
 class TimingFunction;
 class TransformationMatrix;
 
+typedef unsigned TileCoverage;
+
 #if ENABLE(THREADED_ANIMATION_RESOLUTION)
 struct AcceleratedEffectValues;
+String acceleratedEffectPropertyIDAsString(AcceleratedEffectProperty);
 #endif
+
+String animatedPropertyIDAsString(AnimatedProperty);
 
 namespace DisplayList {
 enum class AsTextFlag : uint8_t;
@@ -153,9 +158,8 @@ public:
 
     TransformAnimationValue(double keyTime, TransformOperation* value, TimingFunction* timingFunction = nullptr)
         : AnimationValue(keyTime, timingFunction)
+        , m_value(value ? TransformOperations { *value } : TransformOperations { })
     {
-        if (value)
-            m_value.operations().append(value);
     }
 
     std::unique_ptr<AnimationValue> clone() const override
@@ -165,10 +169,8 @@ public:
 
     TransformAnimationValue(const TransformAnimationValue& other)
         : AnimationValue(other)
+        , m_value(other.m_value.clone())
     {
-        m_value.operations().appendContainerWithMapping(other.m_value.operations(), [](auto& operation) {
-            return operation->clone();
-        });
     }
 
     TransformAnimationValue(TransformAnimationValue&&) = default;
@@ -196,10 +198,8 @@ public:
 
     FilterAnimationValue(const FilterAnimationValue& other)
         : AnimationValue(other)
+        , m_value(other.m_value.clone())
     {
-        m_value.operations().appendContainerWithMapping(other.m_value.operations(), [](auto& operation) {
-            return operation->clone();
-        });
     }
 
     FilterAnimationValue(FilterAnimationValue&&) = default;
@@ -478,6 +478,8 @@ public:
 
     virtual void setContentsNeedsDisplay() { };
 
+    virtual void markDamageRectsUnreliable() { };
+
     // The tile phase is relative to the GraphicsLayer bounds.
     virtual void setContentsTilePhase(const FloatSize& p) { m_contentsTilePhase = p; }
     FloatSize contentsTilePhase() const { return m_contentsTilePhase; }
@@ -539,6 +541,7 @@ public:
         BackgroundColor,
         Plugin,
         Model,
+        HostedModel,
         Host,
     };
 
@@ -546,6 +549,7 @@ public:
     virtual void setContentsToSolidColor(const Color&) { }
     virtual void setContentsToPlatformLayer(PlatformLayer*, ContentsLayerPurpose) { }
     virtual void setContentsToPlatformLayerHost(LayerHostingContextIdentifier) { }
+    virtual void setContentsToRemotePlatformContext(LayerHostingContextIdentifier, ContentsLayerPurpose) { }
     virtual void setContentsToVideoElement(HTMLVideoElement&, ContentsLayerPurpose) { }
     virtual void setContentsDisplayDelegate(RefPtr<GraphicsLayerContentsDisplayDelegate>&&, ContentsLayerPurpose);
     WEBCORE_EXPORT virtual RefPtr<GraphicsLayerAsyncContentsDisplayDelegate> createAsyncContentsDisplayDelegate(GraphicsLayerAsyncContentsDisplayDelegate* existing);
@@ -623,7 +627,7 @@ public:
 
     WEBCORE_EXPORT void noteDeviceOrPageScaleFactorChangedIncludingDescendants();
 
-    void setIsInWindow(bool);
+    WEBCORE_EXPORT void setIsInWindow(bool);
 
     // Some compositing systems may do internal batching to synchronize compositing updates
     // with updates drawn into the window. These methods flush internal batched state on this layer
@@ -657,6 +661,7 @@ public:
     virtual bool backingStoreAttachedForTesting() const { return backingStoreAttached(); }
 
     virtual TiledBacking* tiledBacking() const { return 0; }
+    WEBCORE_EXPORT virtual void setTileCoverage(TileCoverage);
 
     void resetTrackedRepaints();
     WEBCORE_EXPORT void addRepaintRect(const FloatRect&);
@@ -673,6 +678,9 @@ public:
 
     bool shouldPaintUsingCompositeCopy() const { return m_shouldPaintUsingCompositeCopy; }
     void setShouldPaintUsingCompositeCopy(bool copy) { m_shouldPaintUsingCompositeCopy = copy; }
+
+    bool renderingIsSuppressedIncludingDescendants() const { return m_renderingIsSuppressedIncludingDescendants; }
+    void setRenderingIsSuppressedIncludingDescendants(bool suppressed) { m_renderingIsSuppressedIncludingDescendants = suppressed; }
 
     const std::optional<FloatRect>& animationExtent() const { return m_animationExtent; }
     void setAnimationExtent(std::optional<FloatRect> animationExtent) { m_animationExtent = animationExtent; }
@@ -701,8 +709,8 @@ protected:
     // This method is used by platform GraphicsLayer classes to clear the filters
     // when compositing is not done in hardware. It is not virtual, so the caller
     // needs to notifiy the change to the platform layer as needed.
-    void clearFilters() { m_filters.clear(); }
-    void clearBackdropFilters() { m_backdropFilters.clear(); }
+    void clearFilters() { m_filters = { }; }
+    void clearBackdropFilters() { m_backdropFilters = { }; }
 
     // Given a KeyframeValueList containing filterOperations, return true if the operations are valid.
     static int validateFilterOperations(const KeyframeValueList&);
@@ -762,7 +770,7 @@ protected:
     FilterOperations m_backdropFilters;
 
 #if ENABLE(SCROLLING_THREAD)
-    ScrollingNodeID m_scrollingNodeID { 0 };
+    ScrollingNodeID m_scrollingNodeID;
 #endif
 
     BlendMode m_blendMode { BlendMode::Normal };
@@ -793,6 +801,7 @@ protected:
     bool m_userInteractionEnabled : 1;
     bool m_canDetachBackingStore : 1;
     bool m_shouldPaintUsingCompositeCopy : 1;
+    bool m_renderingIsSuppressedIncludingDescendants : 1 { false };
 #if HAVE(CORE_ANIMATION_SEPARATED_LAYERS)
     bool m_isSeparated : 1;
 #if HAVE(CORE_ANIMATION_SEPARATED_PORTALS)

@@ -142,20 +142,20 @@ const uint8_t kBogusChallenge[] = {
 
 // String key values for CTAP request optional parameters and
 // AuthenticatorGetInfo response.
-const char kResidentKeyMapKey[] = "rk";
-const char kUserVerificationMapKey[] = "uv";
-const char kUserPresenceMapKey[] = "up";
-const char kClientPinMapKey[] = "clientPin";
-const char kPlatformDeviceMapKey[] = "plat";
-const char kEntityIdMapKey[] = "id";
+constexpr auto kResidentKeyMapKey = "rk"_s;
+constexpr auto kUserVerificationMapKey = "uv"_s;
+constexpr auto kUserPresenceMapKey = "up"_s;
+constexpr auto kClientPinMapKey = "clientPin"_s;
+constexpr auto kPlatformDeviceMapKey = "plat"_s;
+constexpr auto kEntityIdMapKey = "id"_s;
 constexpr auto kEntityNameMapKey = "name"_s;
 constexpr auto kDisplayNameMapKey = "displayName"_s;
-const char kIconUrlMapKey[] = "icon";
-const char kCredentialTypeMapKey[] = "type";
-const char kCredentialAlgorithmMapKey[] = "alg";
+constexpr auto kIconUrlMapKey = "icon"_s;
+constexpr auto kCredentialTypeMapKey = "type"_s;
+constexpr auto kCredentialAlgorithmMapKey = "alg"_s;
 // Keys for storing credential descriptor information in CBOR map.
-const char kCredentialIdKey[] = "id";
-const char kCredentialTypeKey[] = "type";
+constexpr auto kCredentialIdKey = "id"_s;
+constexpr auto kCredentialTypeKey = "type"_s;
 
 // HID transport specific constants.
 const size_t kHidPacketSize = 64;
@@ -208,15 +208,15 @@ enum class U2fApduInstruction : uint8_t {
 
 // String key values for attestation object as a response to MakeCredential
 // request.
-const char kFormatKey[] = "fmt";
-const char kAttestationStatementKey[] = "attStmt";
-const char kAuthDataKey[] = "authData";
+constexpr auto kFormatKey = "fmt"_s;
+constexpr auto kAttestationStatementKey = "attStmt"_s;
+constexpr auto kAuthDataKey = "authData"_s;
 
 // String representation of public key credential enum.
 // https://w3c.github.io/webauthn/#credentialType
-const char kPublicKey[] = "public-key";
+constexpr auto kPublicKey = "public-key"_s;
 
-const char* publicKeyCredentialTypeToString(WebCore::PublicKeyCredentialType);
+ASCIILiteral publicKeyCredentialTypeToString(WebCore::PublicKeyCredentialType);
 
 // FIXME: Add url to the official spec once it's standardized.
 constexpr auto kCtap2Version = "FIDO_2_0"_s;
@@ -261,21 +261,44 @@ const uint8_t kCtapNfcApduIns = 0x10;
 const size_t kCtapChannelIdSize = 4;
 const uint8_t kCtapKeepAliveStatusProcessing = 1;
 // https://fidoalliance.org/specs/fido-v2.0-ps-20170927/fido-client-to-authenticator-protocol-v2.0-ps-20170927.html#commands
-const int64_t kCtapMakeCredentialClientDataHashKey = 1;
-const int64_t kCtapMakeCredentialRpKey = 2;
-const int64_t kCtapMakeCredentialUserKey = 3;
-const int64_t kCtapMakeCredentialPubKeyCredParamsKey = 4;
-const int64_t kCtapMakeCredentialExcludeListKey = 5;
-const int64_t kCtapMakeCredentialExtensionsKey = 6;
-const int64_t kCtapMakeCredentialRequestOptionsKey = 7;
+constexpr int64_t kCtapMakeCredentialClientDataHashKey = 1;
+constexpr int64_t kCtapMakeCredentialRpKey = 2;
+constexpr int64_t kCtapMakeCredentialUserKey = 3;
+constexpr int64_t kCtapMakeCredentialPubKeyCredParamsKey = 4;
+constexpr int64_t kCtapMakeCredentialExcludeListKey = 5;
+constexpr int64_t kCtapMakeCredentialExtensionsKey = 6;
+constexpr int64_t kCtapMakeCredentialRequestOptionsKey = 7;
 
-const int64_t kCtapGetAssertionRpIdKey = 1;
-const int64_t kCtapGetAssertionClientDataHashKey = 2;
-const int64_t kCtapGetAssertionAllowListKey = 3;
-const int64_t kCtapGetAssertionExtensionsKey = 4;
-const int64_t kCtapGetAssertionRequestOptionsKey = 5;
-const int64_t kCtapGetAssertionPinUvAuthParamKey = 6;
-const int64_t kCtapGetAssertionPinUvAuthProtocolKey = 7;
+constexpr int64_t kCtapGetAssertionRpIdKey = 1;
+constexpr int64_t kCtapGetAssertionClientDataHashKey = 2;
+constexpr int64_t kCtapGetAssertionAllowListKey = 3;
+constexpr int64_t kCtapGetAssertionExtensionsKey = 4;
+constexpr int64_t kCtapGetAssertionRequestOptionsKey = 5;
+constexpr int64_t kCtapGetAssertionPinUvAuthParamKey = 6;
+constexpr int64_t kCtapGetAssertionPinUvAuthProtocolKey = 7;
+
+constexpr int64_t kCtapAuthenticatorGetInfoVersionsKey = 0x01;
+constexpr int64_t kCtapAuthenticatorGetInfoExtensionsKey = 0x02;
+constexpr int64_t kCtapAuthenticatorGetInfoAAGUIDKey = 0x03;
+constexpr int64_t kCtapAuthenticatorGetInfoOptionsKey = 0x04;
+constexpr int64_t kCtapAuthenticatorGetInfoMaxMsgSizeKey = 0x05;
+constexpr int64_t kCtapAuthenticatorGetInfoPinUVAuthProtocolsKey = 0x06;
+constexpr int64_t kCtapAuthenticatorGetInfoMaxCredentialCountInListKey = 0x07;
+constexpr int64_t kCtapAuthenticatorGetInfoMaxCredentialIdLengthKey = 0x08;
+constexpr int64_t kCtapAuthenticatorGetInfoTransportsKey = 0x09;
+constexpr int64_t kCtapAuthenticatorGetInfoAlgorithmsKey = 0x0a;
+constexpr int64_t kCtapAuthenticatorGetInfoMaxSerializedLargeBlobArrayKey = 0x0b;
+constexpr int64_t kCtapAuthenticatorGetInfoForcePINChangeKey = 0x0c;
+constexpr int64_t kCtapAuthenticatorGetInfoMinPINLengthKey = 0x0d;
+constexpr int64_t kCtapAuthenticatorGetInfoFirmwareVersionKey = 0x0e;
+constexpr int64_t kCtapAuthenticatorGetInfoMaxCredBlobLengthKey = 0x0f;
+constexpr int64_t kCtapAuthenticatorGetInfoMaxRPIDsForSetMinPINLengthKey = 0x10;
+constexpr int64_t kCtapAuthenticatorGetInfoPreferredPlatformUvAttemptsKey = 0x11;
+constexpr int64_t kCtapAuthenticatorGetInfoUVModalitysKey = 0x12;
+constexpr int64_t kCtapAuthenticatorGetInfoCertificationsKey = 0x13;
+constexpr int64_t kCtapAuthenticatorGetInfoRemainingDiscoverableCredentialsKey = 0x14;
+constexpr int64_t kCtapAuthenticatorGetInfoVendorPrototypeConfigCommandsKey = 0x15;
+
 
 } // namespace fido
 

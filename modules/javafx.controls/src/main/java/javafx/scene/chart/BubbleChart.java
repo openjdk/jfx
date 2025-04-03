@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -28,10 +28,8 @@ package javafx.scene.chart;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
-
 import javafx.animation.FadeTransition;
 import javafx.animation.ParallelTransition;
-import javafx.application.Platform;
 import javafx.beans.NamedArg;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
@@ -41,7 +39,6 @@ import javafx.scene.Node;
 import javafx.scene.layout.StackPane;
 import javafx.scene.shape.Ellipse;
 import javafx.util.Duration;
-
 import com.sun.javafx.charts.Legend.LegendItem;
 
 /**
@@ -270,7 +267,7 @@ public class BubbleChart<X,Y> extends XYChart<X,Y> {
             };
             bubble.setAccessibleRole(AccessibleRole.TEXT);
             bubble.setAccessibleRoleDescription("Bubble");
-            bubble.focusTraversableProperty().bind(Platform.accessibilityActiveProperty());
+            bubble.setFocusTraversable(isAccessibilityActive());
             item.setNode(bubble);
         }
         // set bubble styles

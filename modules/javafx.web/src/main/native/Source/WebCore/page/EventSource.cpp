@@ -47,13 +47,14 @@
 #include "SharedBuffer.h"
 #include "TextResourceDecoder.h"
 #include "ThreadableLoader.h"
-#include <wtf/IsoMallocInlines.h>
 #include <wtf/SetForScope.h>
+#include <wtf/TZoneMallocInlines.h>
+#include <wtf/text/MakeString.h>
 #include <wtf/text/StringToIntegerConversion.h>
 
 namespace WebCore {
 
-WTF_MAKE_ISO_ALLOCATED_IMPL(EventSource);
+WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(EventSource);
 
 const uint64_t EventSource::defaultReconnectDelay = 3000;
 
@@ -179,7 +180,7 @@ bool EventSource::responseIsValid(const ResourceResponse& response) const
         return false;
 
     if (!equalLettersIgnoringASCIICase(response.mimeType(), "text/event-stream"_s)) {
-        auto message = makeString("EventSource's response has a MIME type (\"", response.mimeType(), "\") that is not \"text/event-stream\". Aborting the connection.");
+        auto message = makeString("EventSource's response has a MIME type (\""_s, response.mimeType(), "\") that is not \"text/event-stream\". Aborting the connection."_s);
         // FIXME: Console message would be better with a source code location; where would we get that?
         scriptExecutionContext()->addConsoleMessage(MessageSource::JS, MessageLevel::Error, WTFMove(message));
         return false;
@@ -189,7 +190,7 @@ bool EventSource::responseIsValid(const ResourceResponse& response) const
     // message but keep going anyway.
     auto& charset = response.textEncodingName();
     if (!charset.isEmpty() && !equalLettersIgnoringASCIICase(charset, "utf-8"_s)) {
-        auto message = makeString("EventSource's response has a charset (\"", charset, "\") that is not UTF-8. The response will be decoded as UTF-8.");
+        auto message = makeString("EventSource's response has a charset (\""_s, charset, "\") that is not UTF-8. The response will be decoded as UTF-8."_s);
         // FIXME: Console message would be better with a source code location; where would we get that?
         scriptExecutionContext()->addConsoleMessage(MessageSource::JS, MessageLevel::Error, WTFMove(message));
     }
@@ -197,7 +198,7 @@ bool EventSource::responseIsValid(const ResourceResponse& response) const
     return true;
 }
 
-void EventSource::didReceiveResponse(ResourceLoaderIdentifier, const ResourceResponse& response)
+void EventSource::didReceiveResponse(ScriptExecutionContextIdentifier, ResourceLoaderIdentifier, const ResourceResponse& response)
 {
     ASSERT(m_state == CONNECTING);
     ASSERT(m_requestInFlight);
@@ -225,11 +226,11 @@ void EventSource::didReceiveData(const SharedBuffer& buffer)
     ASSERT(m_requestInFlight);
     RELEASE_ASSERT_WITH_SECURITY_IMPLICATION(!m_isSuspendedForBackForwardCache);
 
-    append(m_receiveBuffer, m_decoder->decode(buffer.data(), buffer.size()));
+    append(m_receiveBuffer, m_decoder->decode(buffer.span()));
     parseEventStream();
 }
 
-void EventSource::didFinishLoading(ResourceLoaderIdentifier, const NetworkLoadMetrics&)
+void EventSource::didFinishLoading(ScriptExecutionContextIdentifier, ResourceLoaderIdentifier, const NetworkLoadMetrics&)
 {
     ASSERT(m_state == OPEN);
     ASSERT(m_requestInFlight);
@@ -249,7 +250,7 @@ void EventSource::didFinishLoading(ResourceLoaderIdentifier, const NetworkLoadMe
     networkRequestEnded();
 }
 
-void EventSource::didFail(const ResourceError& error)
+void EventSource::didFail(ScriptExecutionContextIdentifier, const ResourceError& error)
 {
     ASSERT(m_state != CLOSED);
 
@@ -363,7 +364,7 @@ void EventSource::parseEventStreamLine(unsigned position, std::optional<unsigned
     if (fieldLength && !fieldLength.value())
         return;
 
-    StringView field { &m_receiveBuffer[position], fieldLength ? fieldLength.value() : lineLength };
+    StringView field { m_receiveBuffer.subspan(position, fieldLength ? fieldLength.value() : lineLength) };
 
     unsigned step;
     if (!fieldLength)
@@ -376,12 +377,12 @@ void EventSource::parseEventStreamLine(unsigned position, std::optional<unsigned
     unsigned valueLength = lineLength - step;
 
     if (field == "data"_s) {
-        m_data.append(&m_receiveBuffer[position], valueLength);
+        m_data.append(m_receiveBuffer.subspan(position, valueLength));
         m_data.append('\n');
     } else if (field == "event"_s)
-        m_eventName = { &m_receiveBuffer[position], valueLength };
+        m_eventName = m_receiveBuffer.subspan(position, valueLength);
     else if (field == "id"_s) {
-        StringView parsedEventId = { &m_receiveBuffer[position], valueLength };
+        StringView parsedEventId = m_receiveBuffer.subspan(position, valueLength);
         constexpr UChar nullCharacter = '\0';
         if (!parsedEventId.contains(nullCharacter))
             m_currentlyParsedEventId = parsedEventId.toString();
@@ -389,7 +390,7 @@ void EventSource::parseEventStreamLine(unsigned position, std::optional<unsigned
         if (!valueLength)
             m_reconnectDelay = defaultReconnectDelay;
         else {
-            if (auto reconnectDelay = parseInteger<uint64_t>({ &m_receiveBuffer[position], valueLength }))
+            if (auto reconnectDelay = parseInteger<uint64_t>(m_receiveBuffer.subspan(position, valueLength)))
                 m_reconnectDelay = *reconnectDelay;
         }
     }
@@ -398,11 +399,6 @@ void EventSource::parseEventStreamLine(unsigned position, std::optional<unsigned
 void EventSource::stop()
 {
     close();
-}
-
-const char* EventSource::activeDOMObjectName() const
-{
-    return "EventSource";
 }
 
 void EventSource::suspend(ReasonForSuspension reason)
@@ -440,7 +436,7 @@ void EventSource::dispatchMessageEvent()
     ASSERT(!m_data.isEmpty());
 
     // Omit the trailing "\n" character.
-    String data(m_data.data(), m_data.size() - 1);
+    String data(m_data.subspan(0, m_data.size() - 1));
     m_data = { };
 
     dispatchEvent(MessageEvent::create(name, WTFMove(data), m_eventStreamOrigin, m_lastEventId));

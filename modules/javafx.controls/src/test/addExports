@@ -34,3 +34,4 @@
 --add-opens javafx.controls/javafx.scene.control=ALL-UNNAMED
 # compile additions
 --add-exports=javafx.graphics/com.sun.javafx.menu=ALL-UNNAMED
+--add-exports=javafx.graphics/com.sun.javafx.text=ALL-UNNAMED

@@ -63,6 +63,7 @@ public:
     bool isIPv4() const { return std::holds_alternative<struct in_addr>(m_address); }
     bool isIPv6() const { return std::holds_alternative<struct in6_addr>(m_address); }
     bool containsOnlyZeros() const;
+    WEBCORE_EXPORT bool isLoopback() const;
 
     const struct in_addr& ipv4Address() const { return std::get<struct in_addr>(m_address); }
     const struct in6_addr& ipv6Address() const { return std::get<struct in6_addr>(m_address); }
@@ -109,6 +110,7 @@ using DNSCompletionHandler = CompletionHandler<void(DNSAddressesOrError&&)>;
 WEBCORE_EXPORT void prefetchDNS(const String& hostname);
 WEBCORE_EXPORT void resolveDNS(const String& hostname, uint64_t identifier, DNSCompletionHandler&&);
 WEBCORE_EXPORT void stopResolveDNS(uint64_t identifier);
+WEBCORE_EXPORT bool isIPAddressDisallowed(const URL&);
 
 } // namespace WebCore
 

@@ -1,7 +1,7 @@
 /*
  * Copyright (C) 2004, 2005, 2008 Nikolas Zimmermann <zimmermann@kde.org>
  * Copyright (C) 2004, 2005, 2007 Rob Buis <buis@kde.org>
- * Copyright (C) 2008-2018 Apple Inc. All rights reserved.
+ * Copyright (C) 2008-2024 Apple Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Library General Public
@@ -29,7 +29,8 @@
 namespace WebCore {
 
 class SVGScriptElement final : public SVGElement, public SVGURIReference, public ScriptElement {
-    WTF_MAKE_ISO_ALLOCATED(SVGScriptElement);
+    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(SVGScriptElement);
+    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(SVGScriptElement);
 public:
     static Ref<SVGScriptElement> create(const QualifiedName&, Document&, bool wasInsertedByParser);
 
@@ -47,12 +48,14 @@ private:
     InsertedIntoAncestorResult insertedIntoAncestor(InsertionType, ContainerNode&) final;
     void didFinishInsertingNode() final;
     void childrenChanged(const ChildChange&) final;
+    void finishParsingChildren() final;
 
     bool isURLAttribute(const Attribute& attribute) const final { return attribute.name() == AtomString { sourceAttributeValue() }; }
     void addSubresourceAttributeURLs(ListHashSet<URL>&) const final;
 
     Ref<Element> cloneElementWithoutAttributesAndChildren(Document&) final;
     bool rendererIsNeeded(const RenderStyle&) final { return false; }
+    bool supportsFocus() const final { return false; }
 
     // ScriptElement
     String sourceAttributeValue() const final { return href(); }

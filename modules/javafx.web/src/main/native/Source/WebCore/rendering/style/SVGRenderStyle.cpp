@@ -86,6 +86,7 @@ inline SVGRenderStyle::SVGRenderStyle(const SVGRenderStyle& other)
     , m_miscData(other.m_miscData)
     , m_layoutData(other.m_layoutData)
 {
+    ASSERT(other == *this, "SVGRenderStyle should be properly copied.");
 }
 
 Ref<SVGRenderStyle> SVGRenderStyle::copy() const
@@ -302,6 +303,8 @@ void SVGRenderStyle::conservativelyCollectChangedAnimatableProperties(const SVGR
             changingProperties.m_properties.set(CSSPropertyX);
         if (first.y != second.y)
             changingProperties.m_properties.set(CSSPropertyY);
+        if (first.d != second.d)
+            changingProperties.m_properties.set(CSSPropertyD);
     };
 
     auto conservativelyCollectChangedAnimatablePropertiesViaInheritedResourceData = [&](auto& first, auto& second) {
@@ -333,18 +336,18 @@ void SVGRenderStyle::conservativelyCollectChangedAnimatableProperties(const SVGR
     };
 
     auto conservativelyCollectChangedAnimatablePropertiesViaNonInheritedFlags = [&](auto& first, auto& second) {
-        if (first.flagBits.dominantBaseline != second.flagBits.dominantBaseline)
-            changingProperties.m_properties.set(CSSPropertyDominantBaseline);
+        if (first.flagBits.alignmentBaseline != second.flagBits.alignmentBaseline)
+            changingProperties.m_properties.set(CSSPropertyAlignmentBaseline);
         if (first.flagBits.baselineShift != second.flagBits.baselineShift)
             changingProperties.m_properties.set(CSSPropertyBaselineShift);
-        if (first.flagBits.vectorEffect != second.flagBits.vectorEffect)
-            changingProperties.m_properties.set(CSSPropertyVectorEffect);
+        if (first.flagBits.bufferedRendering != second.flagBits.bufferedRendering)
+            changingProperties.m_properties.set(CSSPropertyBufferedRendering);
+        if (first.flagBits.dominantBaseline != second.flagBits.dominantBaseline)
+            changingProperties.m_properties.set(CSSPropertyDominantBaseline);
         if (first.flagBits.maskType != second.flagBits.maskType)
             changingProperties.m_properties.set(CSSPropertyMaskType);
-
-        // Non animated styles are followings.
-        // alignmentBaseline
-        // bufferedRendering
+        if (first.flagBits.vectorEffect != second.flagBits.vectorEffect)
+            changingProperties.m_properties.set(CSSPropertyVectorEffect);
     };
 
     if (m_fillData.ptr() != other.m_fillData.ptr())

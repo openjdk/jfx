@@ -71,12 +71,45 @@ namespace
         env->CallObjectMethod(preferences, jMapPut, prefKey, prefValue);
         CHECK_JNI_EXCEPTION(env);
     }
+
+    void notifySettingChanged(GObject*, GParamSpec*, PlatformSupport* instance) {
+        instance->updatePreferences();
+    }
+
+    void notifyNetworkChanged(GNetworkMonitor*, gboolean, PlatformSupport* instance) {
+        instance->updatePreferences();
+    }
 }
 
 PlatformSupport::PlatformSupport(JNIEnv* env, jobject application)
-    : env(env), application(env->NewGlobalRef(application)), preferences(NULL) {}
+        : env(env), application(env->NewGlobalRef(application)), preferences(NULL) {
+    GtkSettings* settings = gtk_settings_get_default();
+    if (settings != NULL) {
+        for (int i = 0; i < NUM_OBSERVED_SETTINGS; ++i) {
+            settingChangedHandlers[i] = g_signal_connect_data(
+                G_OBJECT(settings), OBSERVED_SETTINGS[i],
+                G_CALLBACK(notifySettingChanged), this,
+                NULL, G_CONNECT_AFTER);
+        }
+    }
+
+    networkChangedHandler = g_signal_connect_data(
+        G_OBJECT(g_network_monitor_get_default()), "network-changed",
+        G_CALLBACK(notifyNetworkChanged), this,
+        NULL, G_CONNECT_AFTER);
+}
 
 PlatformSupport::~PlatformSupport() {
+    GtkSettings* settings = gtk_settings_get_default();
+
+    for (int i = 0; i < NUM_OBSERVED_SETTINGS; ++i) {
+        if (settingChangedHandlers[i] != 0) {
+            g_signal_handler_disconnect(G_OBJECT(settings), settingChangedHandlers[i]);
+        }
+    }
+
+    g_signal_handler_disconnect(G_OBJECT(g_network_monitor_get_default()), networkChangedHandler);
+
     env->DeleteGlobalRef(application);
 
     if (preferences) {
@@ -128,6 +161,10 @@ jobject PlatformSupport::collectPreferences() const {
             putBoolean(env, prefs, "GTK.overlay_scrolling", overlayScrolling);
         }
     }
+
+    GNetworkMonitor* networkMonitor = g_network_monitor_get_default();
+    bool metered = g_network_monitor_get_network_metered(networkMonitor);
+    putBoolean(env, prefs, "GTK.network_metered", metered);
 
     return prefs;
 }

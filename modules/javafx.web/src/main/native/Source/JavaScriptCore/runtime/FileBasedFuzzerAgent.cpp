@@ -62,6 +62,7 @@ SpeculatedType FileBasedFuzzerAgent::getPredictionInternal(CodeBlock* codeBlock,
     case op_get_from_arguments: // partially broken https://bugs.webkit.org/show_bug.cgi?id=203608
     case op_get_by_val: // partially broken https://bugs.webkit.org/show_bug.cgi?id=203665
     case op_get_by_id: // sometimes occurs implicitly for things related to Symbol.iterator
+    case op_get_length: // sometimes occurs implicitly for things related to Symbol.iterator
         if (!generated)
             return original;
         break;
@@ -97,7 +98,7 @@ SpeculatedType FileBasedFuzzerAgent::getPredictionInternal(CodeBlock* codeBlock,
         break;
 
     default:
-        RELEASE_ASSERT_NOT_REACHED_WITH_MESSAGE("Unhandled opcode %s", opcodeNames[target.opcodeId]);
+        RELEASE_ASSERT_NOT_REACHED_WITH_MESSAGE("Unhandled opcode %s", opcodeNames[target.opcodeId].characters());
     }
     if (!generated) {
         if (Options::dumpFuzzerAgentPredictions())

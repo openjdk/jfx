@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2021 Apple Inc. All rights reserved.
+ * Copyright (C) 2021-2024 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -31,10 +31,13 @@
 #include "CSSCalcNegateNode.h"
 #include "CSSCalcOperationNode.h"
 #include "CSSCalcPrimitiveValueNode.h"
+#include "CSSCalcSymbolNode.h"
 #include "CSSCalcSymbolTable.h"
+#include "CSSCalcSymbolsAllowed.h"
 #include "CSSCalcValue.h"
 #include "CSSParserTokenRange.h"
 #include "CSSPropertyParserHelpers.h"
+#include "CSSTokenizer.h"
 #include "Logging.h"
 #include <wtf/text/TextStream.h>
 
@@ -300,7 +303,15 @@ static bool checkRoundKeyword(CSSValueID functionID, RefPtr<CSSCalcExpressionNod
 
 bool CSSCalcExpressionNodeParser::parseValue(CSSParserTokenRange& tokens, CSSValueID functionID, RefPtr<CSSCalcExpressionNode>& result)
 {
-    auto makeCSSCalcPrimitiveValueNode = [&] (CSSUnitType type, double value) -> bool {
+    auto makeCSSCalcSymbolNode = [&](CSSValueID value, CSSUnitType type) -> bool {
+        if (calcUnitCategory(type) == CalculationCategory::Other)
+            return false;
+
+        result = CSSCalcSymbolNode::create(value, type);
+        return true;
+    };
+
+    auto makeCSSCalcPrimitiveValueNode = [&](double value, CSSUnitType type) -> bool {
         if (calcUnitCategory(type) == CalculationCategory::Other)
             return false;
 
@@ -314,17 +325,17 @@ bool CSSCalcExpressionNodeParser::parseValue(CSSParserTokenRange& tokens, CSSVal
     case IdentToken: {
         if (checkRoundKeyword(functionID, result, token.id()))
             return true;
-        auto value = m_symbolTable->get(token.id());
-        value = value ? value : getConstantTable().get(token.id());
-        if (!value)
+        if (auto value = m_symbolsAllowed.get(token.id()))
+            return makeCSSCalcSymbolNode(token.id(), *value);
+        if (auto value = getConstantTable().get(token.id()))
+            return makeCSSCalcPrimitiveValueNode(value->value, value->type);
             return false;
-        return makeCSSCalcPrimitiveValueNode(value->type, value->value);
     }
 
     case NumberToken:
     case PercentageToken:
     case DimensionToken:
-        return makeCSSCalcPrimitiveValueNode(token.unitType(), token.numericValue());
+        return makeCSSCalcPrimitiveValueNode(token.numericValue(), token.unitType());
 
     default:
         return false;
@@ -415,11 +426,11 @@ bool CSSCalcExpressionNodeParser::parseCalcSum(CSSParserTokenRange& tokens, CSSV
         if (operatorCharacter != static_cast<char>(CalcOperator::Add) && operatorCharacter != static_cast<char>(CalcOperator::Subtract))
             break;
 
-        if ((&tokens.peek() - 1)->type() != WhitespaceToken)
+        if (!CSSTokenizer::isWhitespace((&tokens.peek() - 1)->type()))
             return false; // calc(1px+ 2px) is invalid
 
         tokens.consume();
-        if (tokens.peek().type() != WhitespaceToken)
+        if (!CSSTokenizer::isWhitespace(tokens.peek().type()))
             return false; // calc(1px +2px) is invalid
 
         tokens.consumeIncludingWhitespace();

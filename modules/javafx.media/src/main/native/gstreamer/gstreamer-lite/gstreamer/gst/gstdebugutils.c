@@ -82,7 +82,8 @@ static const gchar spaces[] = {
 static gchar *
 debug_dump_make_object_name (GstObject * obj)
 {
-  return g_strcanon (g_strdup_printf ("%s_%p", GST_OBJECT_NAME (obj), obj),
+  /* must start with a letter to prevent dot from splitting names starting with [0-9] */
+  return g_strcanon (g_strdup_printf ("node_%s_%p", GST_OBJECT_NAME (obj), obj),
       G_CSET_A_2_Z G_CSET_a_2_z G_CSET_DIGITS "_", '_');
 }
 

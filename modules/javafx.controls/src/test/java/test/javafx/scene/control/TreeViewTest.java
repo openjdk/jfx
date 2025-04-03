@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -58,6 +58,7 @@ import javafx.scene.Scene;
 import javafx.scene.control.Button;
 import javafx.scene.control.FocusModel;
 import javafx.scene.control.IndexedCell;
+import javafx.scene.control.Label;
 import javafx.scene.control.MultipleSelectionModel;
 import javafx.scene.control.SelectionMode;
 import javafx.scene.control.SelectionModel;
@@ -71,8 +72,10 @@ import javafx.scene.control.cell.CheckBoxTreeCell;
 import javafx.scene.control.cell.TextFieldTreeCell;
 import javafx.scene.control.skin.TextFieldSkin;
 import javafx.scene.control.skin.TreeCellSkin;
+import javafx.scene.control.skin.VirtualFlow;
 import javafx.scene.image.ImageView;
 import javafx.scene.input.KeyCode;
+import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
 import javafx.scene.paint.Color;
 import javafx.scene.shape.Circle;
@@ -998,7 +1001,7 @@ public class TreeViewTest {
         // this next test is likely to be brittle, but we'll see...If it is the
         // cause of failure then it can be commented out
         // assertEquals(0.125, scrollBar.getVisibleAmount(), 0.0);
-        assertTrue(scrollBar.getVisibleAmount() > 0.15);
+        assertTrue(scrollBar.getVisibleAmount() > 0.10);
         assertTrue(scrollBar.getVisibleAmount() < 0.17);
     }
 
@@ -1206,14 +1209,14 @@ public class TreeViewTest {
 
         StageLoader sl = new StageLoader(treeView);
 
-        assertEquals(24, rt_31200_count);
+        assertEquals(22, rt_31200_count);
 
         // resize the stage
         sl.getStage().setHeight(250);
         Toolkit.getToolkit().firePulse();
         sl.getStage().setHeight(50);
         Toolkit.getToolkit().firePulse();
-        assertEquals(24, rt_31200_count);
+        assertEquals(22, rt_31200_count);
 
         sl.dispose();
     }
@@ -4099,6 +4102,77 @@ public class TreeViewTest {
         Toolkit.getToolkit().firePulse();
         IndexedCell scrolledCell = VirtualFlowTestUtils.getCell(treeView, 100);
         assertTrue(scrolledCell.isVisible());
+    }
+
+    /**
+     * When the height is changed and a TreeItem is collapsed, the graphics of the cells below that TreeItem
+     * should still be visible and not disappear.
+     *
+     * @see <a href="https://bugs.openjdk.org/browse/JDK-8346824">JDK-8346824</a>
+     */
+    @Test
+    void testGraphicShouldNotDisappear() {
+        treeView.setShowRoot(false);
+        treeView.setRoot(new TreeItem<>(""));
+        treeView.setFixedCellSize(24);
+
+        for (int rootIndex = 0; rootIndex < 3; rootIndex++) {
+            TreeItem<String> child = new TreeItem<>("root: " + rootIndex);
+            child.setExpanded(true);
+            for (int childIndex = 0; childIndex < 5; childIndex++) {
+                TreeItem<String> treeItem = new TreeItem<>();
+                treeItem.setValue("text: " + rootIndex + "-" + childIndex);
+                treeItem.setGraphic(new Label("graphic: " + rootIndex + "-" + childIndex));
+                child.getChildren().add(treeItem);
+            }
+            treeView.getRoot().getChildren().add(child);
+        }
+
+        stageLoader = new StageLoader(new Scene(new StackPane(treeView), 500, 500));
+        VirtualFlow<IndexedCell<String>> virtualFlow =
+                (VirtualFlow<IndexedCell<String>>) VirtualFlowTestUtils.getVirtualFlow(treeView);
+        IndexedCell<String> cell;
+
+        // Check children of first root [1..5]
+        for (int cellIndex = 1; cellIndex < 6; cellIndex++) {
+            cell = virtualFlow.getCell(cellIndex);
+            assertTrue(cell.getChildrenUnmodifiable().contains(cell.getGraphic()),
+                    "Cell does not contain graphic for index: " + cellIndex);
+        }
+
+        // Check children of second root [7..11]
+        for (int cellIndex = 1; cellIndex < 6; cellIndex++) {
+            cell = virtualFlow.getCell(cellIndex);
+            assertTrue(cell.getChildrenUnmodifiable().contains(cell.getGraphic()),
+                    "Cell does not contain graphic for index: " + cellIndex);
+        }
+
+        // Check children of third root [13..17]
+        for (int cellIndex = 13; cellIndex < 18; cellIndex++) {
+            cell = virtualFlow.getCell(cellIndex);
+            assertTrue(cell.getChildrenUnmodifiable().contains(cell.getGraphic()),
+                    "Cell does not contain graphic for index: " + cellIndex);
+        }
+
+        stageLoader.getStage().getScene().getRoot().resize(500, 300);
+        Toolkit.getToolkit().firePulse();
+
+        treeView.getRoot().getChildren().get(1).setExpanded(false);
+        Toolkit.getToolkit().firePulse();
+
+        // Check children of first root [1..5]
+        for (int cellIndex = 1; cellIndex < 6; cellIndex++) {
+            cell = virtualFlow.getCell(cellIndex);
+            assertTrue(cell.getChildrenUnmodifiable().contains(cell.getGraphic()),
+                    "Cell does not contain graphic for index: " + cellIndex);
+        }
+        // Second root is collapsed [6]
+        // Check children of third root [8..12]
+        for (int cellIndex = 8; cellIndex < 12; cellIndex++) {
+            cell = virtualFlow.getCell(cellIndex);
+            assertTrue(cell.getChildrenUnmodifiable().contains(cell.getGraphic()),
+                    "Cell does not contain graphic for index: " + cellIndex);
+        }
     }
 
     public static class MisbehavingOnCancelTreeCell<S> extends TreeCell<S> {

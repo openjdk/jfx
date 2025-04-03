@@ -28,13 +28,13 @@
 #include "WebGLExtension.h"
 #include "WebGLRenderingContextBase.h"
 #include <JavaScriptCore/TypedArrays.h>
-#include <wtf/IsoMalloc.h>
 #include <wtf/Noncopyable.h>
+#include <wtf/TZoneMalloc.h>
 
 namespace WebCore {
 
 class WebGLMultiDraw final : public WebGLExtension<WebGLRenderingContextBase> {
-    WTF_MAKE_ISO_ALLOCATED(WebGLMultiDraw);
+    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(WebGLMultiDraw);
     WTF_MAKE_NONCOPYABLE(WebGLMultiDraw);
 public:
     using Int32List = WebGLRenderingContextBase::TypedList<Int32Array, int32_t>;
@@ -53,8 +53,8 @@ public:
     void multiDrawElementsInstancedWEBGL(GCGLenum mode, Int32List&& countsList, GCGLuint countsOffset, GCGLenum type, Int32List&& offsetsList, GCGLuint offsetsOffset, Int32List&& instanceCountsList, GCGLuint instanceCountsOffset, GCGLsizei drawcount);
 
 private:
-    bool validateDrawcount(WebGLRenderingContextBase&, const char* functionName, GCGLsizei drawcount);
-    bool validateOffset(WebGLRenderingContextBase&, const char* functionName, const char* outOfBoundsDescription, GCGLsizei, GCGLuint offset, GCGLsizei drawcount);
+    bool validateDrawcount(WebGLRenderingContextBase&, ASCIILiteral functionName, GCGLsizei drawcount);
+    bool validateOffset(WebGLRenderingContextBase&, ASCIILiteral functionName, ASCIILiteral outOfBoundsDescription, GCGLsizei, GCGLuint offset, GCGLsizei drawcount);
 };
 
 } // namespace WebCore

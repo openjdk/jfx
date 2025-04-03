@@ -33,6 +33,7 @@
 #include <wtf/dragonbox/dragonbox_to_chars.h>
 #include <wtf/dtoa.h>
 #include <wtf/dtoa/double-conversion.h>
+#include <wtf/text/MakeString.h>
 
 using DoubleToStringConverter = WTF::double_conversion::DoubleToStringConverter;
 
@@ -107,7 +108,7 @@ static ALWAYS_INLINE EncodedJSValue throwVMToThisNumberError(JSGlobalObject* glo
 {
     auto typeString = jsTypeStringForValue(globalObject, thisValue)->value(globalObject);
     scope.assertNoException();
-    return throwVMTypeError(globalObject, scope, WTF::makeString("thisNumberValue called on incompatible "_s, typeString));
+    return throwVMTypeError(globalObject, scope, WTF::makeString("thisNumberValue called on incompatible "_s, typeString.data));
 }
 
 // The largest finite floating point number is 1.mantissa * 2^(0x7fe-0x3ff).
@@ -354,14 +355,14 @@ static String toStringWithRadixInternal(int32_t number, unsigned radix)
     do {
         uint32_t index = positiveNumber % radix;
         ASSERT(index < sizeof(radixDigits));
-        *--p = static_cast<LChar>(radixDigits[index]);
+        *--p = radixDigits[index];
         positiveNumber /= radix;
     } while (positiveNumber);
 
     if (negative)
         *--p = '-';
 
-    return String(p, static_cast<unsigned>(end - p));
+    return String({ p, end });
 }
 
 String toStringWithRadix(double doubleValue, int32_t radix)
@@ -504,6 +505,20 @@ JSString* NumericStrings::addJSString(VM& vm, int i)
     return entry.jsString;
 }
 
+JSString* NumericStrings::addJSString(VM& vm, double value)
+{
+    auto& entry = lookup(value);
+    if (value != entry.key || entry.value.isNull()) {
+        entry.key = value;
+        entry.value = String::number(value);
+    } else {
+        if (entry.jsString)
+            return entry.jsString;
+    }
+    entry.jsString = jsNontrivialString(vm, entry.value);
+    return entry.jsString;
+}
+
 void NumericStrings::initializeSmallIntCache(VM& vm)
 {
     for (int i = 0; i < 10; ++i) {
@@ -542,7 +557,7 @@ static ALWAYS_INLINE JSString* numberToStringInternal(VM& vm, double doubleValue
         return int32ToStringInternal(vm, integerValue, radix);
 
     if (radix == 10)
-        return jsString(vm, vm.numericStrings.add(doubleValue));
+        return vm.numericStrings.addJSString(vm, doubleValue);
 
     if (!std::isfinite(doubleValue))
         return jsNontrivialString(vm, String::number(doubleValue));
@@ -565,6 +580,9 @@ JSString* int52ToString(VM& vm, int64_t value, int32_t radix)
         ASSERT(value >= 0);
         return vm.smallStrings.singleCharacterString(radixDigits[value]);
     }
+
+    if (isInRange<int64_t>(value, INT32_MIN, INT32_MAX))
+        return int32ToString(vm, static_cast<int32_t>(value), radix);
 
     if (radix == 10)
         return jsNontrivialString(vm, vm.numericStrings.add(static_cast<double>(value)));

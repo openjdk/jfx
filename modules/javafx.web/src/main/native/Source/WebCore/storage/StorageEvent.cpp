@@ -27,18 +27,16 @@
 #include "StorageEvent.h"
 
 #include "Storage.h"
-#include <wtf/IsoMallocInlines.h>
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
-WTF_MAKE_ISO_ALLOCATED_IMPL(StorageEvent);
+WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(StorageEvent);
 
 Ref<StorageEvent> StorageEvent::createForBindings()
 {
     return adoptRef(*new StorageEvent);
 }
-
-StorageEvent::StorageEvent() = default;
 
 StorageEvent::~StorageEvent() = default;
 
@@ -52,8 +50,13 @@ Ref<StorageEvent> StorageEvent::create(const AtomString& type, const Init& initi
     return adoptRef(*new StorageEvent(type, initializer, isTrusted));
 }
 
+StorageEvent::StorageEvent()
+    : Event(EventInterfaceType::StorageEvent)
+{
+}
+
 StorageEvent::StorageEvent(const AtomString& type, const String& key, const String& oldValue, const String& newValue, const String& url, Storage* storageArea)
-    : Event(type, CanBubble::No, IsCancelable::No)
+    : Event(EventInterfaceType::StorageEvent, type, CanBubble::No, IsCancelable::No)
     , m_key(key)
     , m_oldValue(oldValue)
     , m_newValue(newValue)
@@ -63,7 +66,7 @@ StorageEvent::StorageEvent(const AtomString& type, const String& key, const Stri
 }
 
 StorageEvent::StorageEvent(const AtomString& type, const Init& initializer, IsTrusted isTrusted)
-    : Event(type, initializer, isTrusted)
+    : Event(EventInterfaceType::StorageEvent, type, initializer, isTrusted)
     , m_key(initializer.key)
     , m_oldValue(initializer.oldValue)
     , m_newValue(initializer.newValue)
@@ -84,11 +87,6 @@ void StorageEvent::initStorageEvent(const AtomString& type, bool canBubble, bool
     m_newValue = newValue;
     m_url = url;
     m_storageArea = storageArea;
-}
-
-EventInterface StorageEvent::eventInterface() const
-{
-    return StorageEventInterfaceType;
 }
 
 } // namespace WebCore

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2023, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -54,18 +54,6 @@ JNIEXPORT void JNICALL Java_com_sun_webkit_dom_HTMLHtmlElementImpl_setVersionImp
 {
     WebCore::JSMainThreadNullState state;
     IMPL->setAttributeWithoutSynchronization(WebCore::HTMLNames::versionAttr, AtomString {String(env, value)});
-}
-
-JNIEXPORT jstring JNICALL Java_com_sun_webkit_dom_HTMLHtmlElementImpl_getManifestImpl(JNIEnv* env, jclass, jlong peer)
-{
-    WebCore::JSMainThreadNullState state;
-    return JavaReturn<String>(env, IMPL->getURLAttribute(WebCore::HTMLNames::manifestAttr).string());
-}
-
-JNIEXPORT void JNICALL Java_com_sun_webkit_dom_HTMLHtmlElementImpl_setManifestImpl(JNIEnv* env, jclass, jlong peer, jstring value)
-{
-    WebCore::JSMainThreadNullState state;
-    IMPL->setAttributeWithoutSynchronization(WebCore::HTMLNames::manifestAttr, AtomString {String(env, value)});
 }
 
 }
