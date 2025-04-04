@@ -6550,6 +6550,7 @@ public class Scene implements EventTarget {
          *     </tbody>
          * </table>
          *
+         * @return the {@code colorScheme} property
          * @defaultValue {@link Platform.Preferences#getColorScheme()}
          * @see Platform.Preferences#colorSchemeProperty()
          */
