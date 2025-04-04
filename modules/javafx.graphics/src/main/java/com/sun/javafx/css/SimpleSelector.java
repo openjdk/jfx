@@ -289,7 +289,7 @@ final public class SimpleSelector extends Selector {
             }
 
             Scene scene = node.getScene();
-            return scene != null && mediaRule.evaluate(scene);
+            return scene != null && mediaRule.evaluate(scene.getPreferences());
         }
 
         return true;

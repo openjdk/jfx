@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2023, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -34,6 +34,7 @@ import javafx.beans.property.ReadOnlyBooleanWrapper;
 import javafx.beans.property.ReadOnlyObjectProperty;
 import javafx.beans.property.ReadOnlyObjectPropertyBase;
 import javafx.beans.property.ReadOnlyObjectWrapper;
+import javafx.beans.value.ChangeListener;
 import javafx.scene.paint.Color;
 import java.util.HashMap;
 import java.util.Map;
@@ -62,16 +63,16 @@ final class PreferenceProperties {
     PreferenceProperties(Object bean) {
         this.bean = bean;
 
-        reducedMotionFlag = new ReadOnlyBooleanWrapper(bean, reducedMotion.getName());
+        reducedMotionFlag = new ReadOnlyBooleanPropertyImpl(bean, reducedMotion.getName());
         reducedMotionFlag.bind(reducedMotion);
 
-        reducedTransparencyFlag = new ReadOnlyBooleanWrapper(bean, reducedTransparency.getName());
+        reducedTransparencyFlag = new ReadOnlyBooleanPropertyImpl(bean, reducedTransparency.getName());
         reducedTransparencyFlag.bind(reducedTransparency);
 
-        reducedDataFlag = new ReadOnlyBooleanWrapper(bean, reducedData.getName());
+        reducedDataFlag = new ReadOnlyBooleanPropertyImpl(bean, reducedData.getName());
         reducedDataFlag.bind(reducedData);
 
-        persistentScrollBarsFlag = new ReadOnlyBooleanWrapper(bean, persistentScrollBars.getName());
+        persistentScrollBarsFlag = new ReadOnlyBooleanPropertyImpl(bean, persistentScrollBars.getName());
         persistentScrollBarsFlag.bind(persistentScrollBars);
     }
 
@@ -221,7 +222,7 @@ final class PreferenceProperties {
         }
 
         @Override
-        public T get() {
+        public synchronized T get() {
             return effectiveValue;
         }
 
@@ -230,19 +231,19 @@ final class PreferenceProperties {
          * Change notifications are fired after the new values of all deferred properties have been set.
          */
         @SuppressWarnings("unchecked")
-        public void setPlatformValue(Object value) {
+        public synchronized void setPlatformValue(Object value) {
             Class<?> expectedType = defaultValue.getClass();
             this.platformValue = expectedType.isInstance(value) ? (T)value : null;
             updateEffectiveValue();
         }
 
-        public void setValueOverride(T value) {
+        public synchronized void setValueOverride(T value) {
             this.overrideValue = value;
             updateEffectiveValue();
             fireValueChangedEvent();
         }
 
-        public void fireValueChangedIfNecessary() {
+        public synchronized void fireValueChangedIfNecessary() {
             if (!Objects.equals(lastEffectiveValue, effectiveValue)) {
                 lastEffectiveValue = effectiveValue;
                 fireValueChangedEvent();
@@ -268,12 +269,12 @@ final class PreferenceProperties {
             update();
         }
 
-        public void setValueOverride(ColorScheme colorScheme) {
+        public synchronized void setValueOverride(ColorScheme colorScheme) {
             colorSchemeOverride = colorScheme;
             update();
         }
 
-        private void update() {
+        private synchronized void update() {
             if (colorSchemeOverride != null) {
                 set(colorSchemeOverride);
             } else {
@@ -282,6 +283,82 @@ final class PreferenceProperties {
                 boolean isDark = Utils.calculateBrightness(background) < Utils.calculateBrightness(foreground);
                 set(isDark ? ColorScheme.DARK : ColorScheme.LIGHT);
             }
+        }
+
+        @Override
+        public synchronized ReadOnlyObjectProperty<ColorScheme> getReadOnlyProperty() {
+            return super.getReadOnlyProperty();
+        }
+
+        @Override
+        public synchronized ColorScheme get() {
+            return super.get();
+        }
+
+        @Override
+        protected synchronized void fireValueChangedEvent() {
+            super.fireValueChangedEvent();
+        }
+
+        @Override
+        public synchronized void addListener(ChangeListener<? super ColorScheme> listener) {
+            super.addListener(listener);
+        }
+
+        @Override
+        public synchronized void removeListener(ChangeListener<? super ColorScheme> listener) {
+            super.removeListener(listener);
+        }
+
+        @Override
+        public synchronized void addListener(InvalidationListener listener) {
+            super.addListener(listener);
+        }
+
+        @Override
+        public synchronized void removeListener(InvalidationListener listener) {
+            super.removeListener(listener);
+        }
+    }
+
+    private static class ReadOnlyBooleanPropertyImpl extends ReadOnlyBooleanWrapper {
+        ReadOnlyBooleanPropertyImpl(Object bean, String name) {
+            super(bean, name);
+        }
+
+        @Override
+        public synchronized ReadOnlyBooleanProperty getReadOnlyProperty() {
+            return super.getReadOnlyProperty();
+        }
+
+        @Override
+        public synchronized boolean get() {
+            return super.get();
+        }
+
+        @Override
+        protected synchronized void fireValueChangedEvent() {
+            super.fireValueChangedEvent();
+        }
+
+        @Override
+        public synchronized void addListener(ChangeListener<? super Boolean> listener) {
+            super.addListener(listener);
+        }
+
+        @Override
+        public synchronized void removeListener(ChangeListener<? super Boolean> listener) {
+            super.removeListener(listener);
+        }
+
+        @Override
+        public synchronized void addListener(InvalidationListener listener) {
+            super.addListener(listener);
+        }
+
+        @Override
+        public synchronized void removeListener(InvalidationListener listener) {
+            super.removeListener(listener);
         }
     }
 }

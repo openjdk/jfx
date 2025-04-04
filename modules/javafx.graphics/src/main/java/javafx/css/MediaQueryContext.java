@@ -34,7 +34,7 @@ import javafx.scene.Scene;
  *
  * @since 25
  */
-public sealed interface MediaQueryContext permits Scene {
+public sealed interface MediaQueryContext permits Scene.Preferences {
 
     /**
      * Provides the value for the {@code prefers-color-scheme} media feature.
@@ -56,6 +56,13 @@ public sealed interface MediaQueryContext permits Scene {
      * @return {@code true} if the application should reduce transparency
      */
     boolean isReducedTransparency();
+
+    /**
+     * Provides the value for the {@code prefers-reduced-data} media feature.
+     *
+     * @return {@code true} if the application should reduce internet traffic
+     */
+    boolean isReducedData();
 
     /**
      * Provides the value for the {@code prefers-persistent-scrollbars} media feature.

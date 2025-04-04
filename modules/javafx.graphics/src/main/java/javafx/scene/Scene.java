@@ -27,7 +27,7 @@ package javafx.scene;
 
 import com.sun.glass.ui.Application;
 import com.sun.glass.ui.Accessible;
-import com.sun.javafx.beans.property.NullCoalescingPropertyBase;
+import com.sun.javafx.scene.ScenePreferences;
 import com.sun.javafx.scene.traversal.TraversalMethod;
 import com.sun.javafx.util.Logging;
 import com.sun.javafx.util.Utils;
@@ -178,7 +178,7 @@ root.getChildren().add(r);
  * @since JavaFX 2.0
  */
 @DefaultProperty("root")
-public non-sealed class Scene implements EventTarget, MediaQueryContext {
+public class Scene implements EventTarget {
 
     private double widthSetByUser = -1.0;
     private double heightSetByUser = -1.0;
@@ -1227,215 +1227,6 @@ public non-sealed class Scene implements EventTarget, MediaQueryContext {
             };
         }
         return fill;
-    }
-
-    /**
-     * Specifies whether the scene should prefer light text on dark backgrounds, or dark text
-     * on light backgrounds.
-     * <p>
-     * This is a <em>null-coalescing</em> property: if set to {@code null}, it evaluates to the
-     * value of {@link Platform.Preferences#colorSchemeProperty()}. Therefore, specifying a
-     * non-null value for this property overrides the platform-provided value.
-     * <p>
-     * This property corresponds to the following CSS media feature:
-     * <table class="striped">
-     *     <caption>Media Feature</caption>
-     *     <tbody>
-     *         <tr><th>Name</th><td><code>prefers-color-scheme</code></td></tr>
-     *         <tr><th>For</th><td><code>@media</code></td></tr>
-     *         <tr><th>Value</th><td><code>light</code> | <code>dark</code></td></tr>
-     *         <tr><th>Boolean Context</th><td>not applicable</td></tr>
-     *     </tbody>
-     * </table>
-     *
-     * @defaultValue {@link Platform.Preferences#getColorScheme()}
-     * @since 25
-     */
-    private final ObjectProperty<ColorScheme> colorScheme = new MediaProperty<>(
-            "colorScheme", PlatformImpl.getPlatformPreferences().colorSchemeProperty());
-
-    public final ObjectProperty<ColorScheme> colorSchemeProperty() {
-        return colorScheme;
-    }
-
-    @Override
-    public final ColorScheme getColorScheme() {
-        return colorScheme.get();
-    }
-
-    public final void setColorScheme(ColorScheme colorScheme) {
-        this.colorScheme.set(colorScheme);
-    }
-
-    private final ObjectProperty<Boolean> persistentScrollBars = new MediaProperty<>(
-            "persistentScrollBars", PlatformImpl.getPlatformPreferences().persistentScrollBarsProperty());
-
-    /**
-     * Specifies whether applications should always show scroll bars. If set to {@code false}, applications
-     * may choose to hide scroll bars that are not actively used, or make them smaller or less noticeable.
-     * <p>
-     * This is a <em>null-coalescing</em> property: if set to {@code null}, it evaluates to the
-     * value of {@link Platform.Preferences#persistentScrollBarsProperty()}. Therefore, specifying
-     * a non-null value for this property overrides the platform-provided value.
-     * <p>
-     * This property corresponds to the following CSS media feature:
-     * <table class="striped">
-     *     <caption>Media Feature</caption>
-     *     <tbody>
-     *         <tr><th>Name</th><td><code>prefers-persistent-scrollbars</code></td></tr>
-     *         <tr><th>For</th><td><code>@media</code></td></tr>
-     *         <tr><th>Value</th><td><code>no-preference</code> | <code>persistent</code></td></tr>
-     *         <tr><th>Boolean Context</th>
-     *             <td><code>no-preference</code> evaluates as <code>false</code></td>
-     *         </tr>
-     *     </tbody>
-     * </table>
-     *
-     * @return the {@code persistentScrollBars} property
-     * @defaultValue {@link Platform.Preferences#isPersistentScrollBars()}
-     * @since 25
-     */
-    public final ObjectProperty<Boolean> persistentScrollBarsProperty() {
-        return persistentScrollBars;
-    }
-
-    /**
-     * Gets the value of the {@code persistentScrollBars} property.
-     *
-     * @return the value of the {@code persistentScrollBars} property
-     * @see #persistentScrollBarsProperty()
-     * @see #setPersistentScrollBars(Boolean)
-     * @since 25
-     */
-    @Override
-    public final boolean isPersistentScrollBars() {
-        return persistentScrollBars.get();
-    }
-
-    /**
-     * Sets the value of the {@code persistentScrollBars} property.
-     *
-     * @param value the value
-     * @see #persistentScrollBarsProperty()
-     * @see #isPersistentScrollBars()
-     * @since 25
-     */
-    public final void setPersistentScrollBars(Boolean value) {
-        this.persistentScrollBars.set(value);
-    }
-
-    private final ObjectProperty<Boolean> reducedMotion = new MediaProperty<>(
-            "reducedMotion", PlatformImpl.getPlatformPreferences().reducedMotionProperty());
-
-    /**
-     * Specifies whether the scene should minimize the amount of non-essential animations,
-     * reducing discomfort for users who experience motion sickness or vertigo.
-     * <p>
-     * This is a <em>null-coalescing</em> property: if set to {@code null}, it evaluates to the
-     * value of {@link Platform.Preferences#reducedMotionProperty()}. Therefore, specifying a
-     * non-null value for this property overrides the platform-provided value.
-     * <p>
-     * This property corresponds to the following CSS media feature:
-     * <table class="striped">
-     *     <caption>Media Feature</caption>
-     *     <tbody>
-     *         <tr><th>Name</th><td><code>prefers-reduced-motion</code></td></tr>
-     *         <tr><th>For</th><td><code>@media</code></td></tr>
-     *         <tr><th>Value</th><td><code>no-preference</code> | <code>reduce</code></td></tr>
-     *         <tr><th>Boolean Context</th>
-     *             <td><code>no-preference</code> evaluates as <code>false</code></td>
-     *         </tr>
-     *     </tbody>
-     * </table>
-     *
-     * @return the {@code reducedMotion} property
-     * @defaultValue {@link Platform.Preferences#isReducedMotion()}
-     * @since 25
-     */
-    public final ObjectProperty<Boolean> reducedMotionProperty() {
-        return reducedMotion;
-    }
-
-    /**
-     * Gets the value of the {@code reducedMotion} property.
-     *
-     * @return the value of the {@code reducedMotion} property
-     * @see #reducedMotionProperty()
-     * @see #setReducedMotion(Boolean)
-     * @since 25
-     */
-    @Override
-    public final boolean isReducedMotion() {
-        return reducedMotion.get();
-    }
-
-    /**
-     * Sets the value of the {@code reducedMotion} property.
-     *
-     * @param value the value
-     * @see #reducedMotionProperty()
-     * @see #isReducedMotion()
-     * @since 25
-     */
-    public final void setReducedMotion(Boolean value) {
-        this.reducedMotion.set(value);
-    }
-
-    private final ObjectProperty<Boolean> reducedTransparency = new MediaProperty<>(
-            "reducedTransparency", PlatformImpl.getPlatformPreferences().reducedTransparencyProperty());
-
-    /**
-     * Specifies whether the scene should minimize the amount of transparent or translucent
-     * layer effects, which can help to increase contrast and readability for some users.
-     * <p>
-     * This is a <em>null-coalescing</em> property: if set to {@code null}, it evaluates to the
-     * value of {@link Platform.Preferences#reducedTransparencyProperty()}. Therefore, specifying
-     * a non-null value for this property overrides the platform-provided value.
-     * <p>
-     * This property corresponds to the following CSS media feature:
-     * <table class="striped">
-     *     <caption>Media Feature</caption>
-     *     <tbody>
-     *         <tr><th>Name</th><td><code>prefers-reduced-transparency</code></td></tr>
-     *         <tr><th>For</th><td><code>@media</code></td></tr>
-     *         <tr><th>Value</th><td><code>no-preference</code> | <code>reduce</code></td></tr>
-     *         <tr><th>Boolean Context</th>
-     *             <td><code>no-preference</code> evaluates as <code>false</code></td>
-     *         </tr>
-     *     </tbody>
-     * </table>
-     *
-     * @return the {@code reducedTransparency} property
-     * @defaultValue {@link Platform.Preferences#isReducedTransparency()}
-     * @since 25
-     */
-    public final ObjectProperty<Boolean> reducedTransparencyProperty() {
-        return reducedTransparency;
-    }
-
-    /**
-     * Gets the value of the {@code reducedTransparency} property.
-     *
-     * @return the value of the {@code reducedTransparency} property
-     * @see #reducedTransparencyProperty()
-     * @see #setReducedTransparency(Boolean)
-     * @since 25
-     */
-    @Override
-    public final boolean isReducedTransparency() {
-        return reducedTransparency.get();
-    }
-
-    /**
-     * Sets the value of the {@code reducedTransparency} property.
-     *
-     * @param value the value
-     * @see #reducedTransparencyProperty()
-     * @see #isReducedTransparency()
-     * @since 25
-     */
-    public final void setReducedTransparency(Boolean value) {
-        this.reducedTransparency.set(value);
     }
 
     /**
@@ -6462,6 +6253,18 @@ public non-sealed class Scene implements EventTarget, MediaQueryContext {
         return getProperties().get(USER_DATA_KEY);
     }
 
+    private final Preferences preferences = new ScenePreferences(this);
+
+    /**
+     * Gets the scene preferences that can be queried with {@code @media} CSS rules.
+     *
+     * @return the {@code Preferences} instance
+     * @since 25
+     */
+    public final Preferences getPreferences() {
+        return preferences;
+    }
+
     /* *************************************************************************
      *                                                                         *
      *                       Component Orientation Properties                  *
@@ -6721,33 +6524,209 @@ public non-sealed class Scene implements EventTarget, MediaQueryContext {
     }
 
     /**
-     * Property implementation for media features that causes CSS to be re-applied when the property
-     * value is changed. This is required to re-evaluate media queries in stylesheets.
+     * Contains preferences of the scene that can be queried with {@code @media} CSS rules.
+     * <p>
+     * All preferences are <em>null-coalesting</em> properties: if set to {@code null} (using the setter method,
+     * {@link Property#setValue(Object)}, or with a binding), the property evalutes to the value of the corresponding
+     * platform-provided preference (see {@link Platform.Preferences}. Likewise, specifying a non-null value for any
+     * given property will override the platform-provided value.
+     *
+     * @see Platform.Preferences
+     * @since 25
      */
-    private class MediaProperty<T> extends NullCoalescingPropertyBase<T> {
-        private final String name;
+    public sealed interface Preferences extends MediaQueryContext permits ScenePreferences {
 
-        MediaProperty(String name, ObservableValue<T> defaultValue) {
-            super(defaultValue);
-            this.name = name;
-        }
+        /**
+         * Specifies whether the scene should prefer light text on dark backgrounds, or dark text
+         * on light backgrounds.
+         * <p>
+         * This property corresponds to the following CSS media feature:
+         * <table class="striped">
+         *     <caption>Media Feature</caption>
+         *     <tbody>
+         *         <tr><th>Name</th><td><code>prefers-color-scheme</code></td></tr>
+         *         <tr><th>For</th><td><code>@media</code></td></tr>
+         *         <tr><th>Value</th><td><code>light</code> | <code>dark</code></td></tr>
+         *         <tr><th>Boolean Context</th><td>not applicable</td></tr>
+         *     </tbody>
+         * </table>
+         *
+         * @defaultValue {@link Platform.Preferences#getColorScheme()}
+         * @see Platform.Preferences#colorSchemeProperty()
+         */
+        ObjectProperty<ColorScheme> colorSchemeProperty();
 
         @Override
-        public Object getBean() {
-            return Scene.this;
-        }
+        ColorScheme getColorScheme();
 
-        @Override
-        public String getName() {
-            return name;
-        }
+        void setColorScheme(ColorScheme colorScheme);
 
+        /**
+         * Specifies whether applications should always show scroll bars. If set to {@code false}, applications
+         * may choose to hide scroll bars that are not actively used, or make them smaller or less noticeable.
+         * <p>
+         * This property corresponds to the following CSS media feature:
+         * <table class="striped">
+         *     <caption>Media Feature</caption>
+         *     <tbody>
+         *         <tr><th>Name</th><td><code>prefers-persistent-scrollbars</code></td></tr>
+         *         <tr><th>For</th><td><code>@media</code></td></tr>
+         *         <tr><th>Value</th><td><code>no-preference</code> | <code>persistent</code></td></tr>
+         *         <tr><th>Boolean Context</th>
+         *             <td><code>no-preference</code> evaluates as <code>false</code></td>
+         *         </tr>
+         *     </tbody>
+         * </table>
+         *
+         * @return the {@code persistentScrollBars} property
+         * @defaultValue {@link Platform.Preferences#isPersistentScrollBars()}
+         * @see Platform.Preferences#persistentScrollBarsProperty()
+         */
+        ObjectProperty<Boolean> persistentScrollBarsProperty();
+
+        /**
+         * Gets the value of the {@code persistentScrollBars} property.
+         *
+         * @return the value of the {@code persistentScrollBars} property
+         * @see #persistentScrollBarsProperty()
+         * @see #setPersistentScrollBars(Boolean)
+         */
         @Override
-        protected void invalidated() {
-            Node root = getRoot();
-            if (root != null) {
-                NodeHelper.reapplyCSS(root);
-            }
-        }
+        boolean isPersistentScrollBars();
+
+        /**
+         * Sets the value of the {@code persistentScrollBars} property.
+         *
+         * @param value the value
+         * @see #persistentScrollBarsProperty()
+         * @see #isPersistentScrollBars()
+         */
+        void setPersistentScrollBars(Boolean value);
+
+        /**
+         * Specifies whether the scene should minimize the amount of non-essential animations,
+         * reducing discomfort for users who experience motion sickness or vertigo.
+         * <p>
+         * This property corresponds to the following CSS media feature:
+         * <table class="striped">
+         *     <caption>Media Feature</caption>
+         *     <tbody>
+         *         <tr><th>Name</th><td><code>prefers-reduced-motion</code></td></tr>
+         *         <tr><th>For</th><td><code>@media</code></td></tr>
+         *         <tr><th>Value</th><td><code>no-preference</code> | <code>reduce</code></td></tr>
+         *         <tr><th>Boolean Context</th>
+         *             <td><code>no-preference</code> evaluates as <code>false</code></td>
+         *         </tr>
+         *     </tbody>
+         * </table>
+         *
+         * @return the {@code reducedMotion} property
+         * @defaultValue {@link Platform.Preferences#isReducedMotion()}
+         * @see Platform.Preferences#reducedMotionProperty()
+         */
+        ObjectProperty<Boolean> reducedMotionProperty();
+
+        /**
+         * Gets the value of the {@code reducedMotion} property.
+         *
+         * @return the value of the {@code reducedMotion} property
+         * @see #reducedMotionProperty()
+         * @see #setReducedMotion(Boolean)
+         */
+        @Override
+        boolean isReducedMotion();
+
+        /**
+         * Sets the value of the {@code reducedMotion} property.
+         *
+         * @param value the value
+         * @see #reducedMotionProperty()
+         * @see #isReducedMotion()
+         */
+        void setReducedMotion(Boolean value);
+
+        /**
+         * Specifies whether the scene should minimize the amount of transparent or translucent
+         * layer effects, which can help to increase contrast and readability for some users.
+         * <p>
+         * This property corresponds to the following CSS media feature:
+         * <table class="striped">
+         *     <caption>Media Feature</caption>
+         *     <tbody>
+         *         <tr><th>Name</th><td><code>prefers-reduced-transparency</code></td></tr>
+         *         <tr><th>For</th><td><code>@media</code></td></tr>
+         *         <tr><th>Value</th><td><code>no-preference</code> | <code>reduce</code></td></tr>
+         *         <tr><th>Boolean Context</th>
+         *             <td><code>no-preference</code> evaluates as <code>false</code></td>
+         *         </tr>
+         *     </tbody>
+         * </table>
+         *
+         * @return the {@code reducedTransparency} property
+         * @defaultValue {@link Platform.Preferences#isReducedTransparency()}
+         * @see Platform.Preferences#reducedTransparencyProperty()
+         */
+        ObjectProperty<Boolean> reducedTransparencyProperty();
+
+        /**
+         * Gets the value of the {@code reducedTransparency} property.
+         *
+         * @return the value of the {@code reducedTransparency} property
+         * @see #reducedTransparencyProperty()
+         * @see #setReducedTransparency(Boolean)
+         */
+        @Override
+        boolean isReducedTransparency();
+
+        /**
+         * Sets the value of the {@code reducedTransparency} property.
+         *
+         * @param value the value
+         * @see #reducedTransparencyProperty()
+         * @see #isReducedTransparency()
+         */
+        void setReducedTransparency(Boolean value);
+
+        /**
+         * Specifies whether the scene should minimize the amount of internet traffic, which users
+         * might request because they are on a metered network or a limited data plan.
+         * <p>
+         * This property corresponds to the following CSS media feature:
+         * <table class="striped">
+         *     <caption>Media Feature</caption>
+         *     <tbody>
+         *         <tr><th>Name</th><td><code>prefers-reduced-data</code></td></tr>
+         *         <tr><th>For</th><td><code>@media</code></td></tr>
+         *         <tr><th>Value</th><td><code>no-preference</code> | <code>reduce</code></td></tr>
+         *         <tr><th>Boolean Context</th>
+         *             <td><code>no-preference</code> evaluates as <code>false</code></td>
+         *         </tr>
+         *     </tbody>
+         * </table>
+         *
+         * @return the {@code reducedData} property
+         * @defaultValue {@link Platform.Preferences#isReducedData()}
+         * @see Platform.Preferences#reducedDataProperty()
+         */
+        ObjectProperty<Boolean> reducedDataProperty();
+
+        /**
+         * Gets the value of the {@code reducedData} property.
+         *
+         * @return the value of the {@code reducedData} property
+         * @see #reducedDataProperty()
+         * @see #setReducedData(Boolean)
+         */
+        @Override
+        boolean isReducedData();
+
+        /**
+         * Sets the value of the {@code reducedData} property.
+         *
+         * @param value the value
+         * @see #reducedDataProperty()
+         * @see #isReducedData()
+         */
+        void setReducedData(Boolean value);
     }
 }

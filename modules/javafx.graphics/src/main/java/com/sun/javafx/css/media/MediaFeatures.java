@@ -67,6 +67,9 @@ final class MediaFeatures {
             case "prefers-reduced-transparency" -> booleanPreferenceExpression(
                 featureName, featureValue, "reduce", MediaQueryContext::isReducedTransparency);
 
+            case "prefers-reduced-data" -> booleanPreferenceExpression(
+                featureName, featureValue, "reduce", MediaQueryContext::isReducedData);
+
             case "prefers-persistent-scrollbars" -> booleanPreferenceExpression(
                 featureName, featureValue, "persistent", MediaQueryContext::isPersistentScrollBars);
 
