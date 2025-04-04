@@ -44,7 +44,7 @@ import javafx.stage.Screen;
  * Example:
  * <pre>
  * // write a base-64 encoded screenshot to stderr
- * ScreenshotCapture.writeScreenshot(System.err);
+ * ScreenshotCapture.writeScreenshot();
  * </pre>
  */
 public class ScreenshotCapture {
@@ -81,17 +81,15 @@ public class ScreenshotCapture {
 
     /**
      * Captures a screenshot using JavaFX {@link Robot} in PNG format,
-     * then writes it in a Base-64 encoding to the specified {@code PrintStream}.
+     * then writes it in a Base-64 encoding to {@code System.err}.
      * <p>
      * Example:
      * <pre>
      * Screenshot:
      * data:image/png;base64,iVBORw0KGgoA...</pre>
-     *
-     * @param out the output print stream
      */
-    public static void writeScreenshot(PrintStream out) {
-        out.println(ScreenshotCapture.takeScreenshotBase64("Screenshot:\ndata:image/png;base64,", null));
+    public static void writeScreenshot() {
+        System.err.println(ScreenshotCapture.takeScreenshotBase64("Screenshot:\ndata:image/png;base64,", null));
     }
 
     /**

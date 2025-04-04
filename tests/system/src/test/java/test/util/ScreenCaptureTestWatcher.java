@@ -42,7 +42,7 @@ import org.junit.jupiter.api.extension.TestWatcher;
 public class ScreenCaptureTestWatcher implements TestWatcher {
     @Override
     public void testFailed(ExtensionContext extensionContext, Throwable err) {
-        // can be pasted into Safari address bar
-        ScreenshotCapture.writeScreenshot(System.err);
+        // the data url can be pasted into Safari address bar to view the screenshot
+        ScreenshotCapture.writeScreenshot();
     }
 }
