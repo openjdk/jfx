@@ -57,7 +57,7 @@ public class ObservableListWithExtractor {
     private ObservableList<Person> observedList;
     private MockListObserver obs;
     private Person p0;
-    
+
     private void updateP0() {
         p0.name.set("bar");
     }
