@@ -288,6 +288,12 @@ public final class Platform {
      * It must not be called during animation or layout processing.
      * </p>
      *
+     * There is a finite limit on the depth of the nested event loop stack. An
+     * exception will be thrown if this limit is exceeded. Applications that
+     * want to avoid an exception can call
+     * {@link #canStartNestedEventLoop canStartNestedEventLoop} to check
+     * whether it is possible to start one.
+     *
      * @param key the Object that identifies the nested event loop, which
      * must not be null
      *
@@ -301,6 +307,9 @@ public final class Platform {
      *
      * @throws IllegalStateException if this method is called on a thread
      * other than the JavaFX Application Thread.
+     *
+     * @throws IllegalStateException if this call would exceed the maximum
+     * number of nested event loops.
      *
      * @return the value passed into the corresponding call to exitEventLoop
      *

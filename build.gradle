@@ -719,13 +719,16 @@ defineProperty("TEST_ONLY", "false")
 ext.IS_TEST_ONLY = Boolean.parseBoolean(TEST_ONLY) || !buildSdkForTest
 
 ext.IS_TEST_SDK = false
+ext.TEST_SDK_DIR = ""
+
 if (hasProperty("TEST_SDK_PATH")) {
     if (!IS_TEST_ONLY) {
         fail("TEST_ONLY must be set to true when using an external TEST_SDK_PATH for running tests: include -PTEST_ONLY=true")
     }
-    def sdkShimsPath = file("${TEST_SDK_PATH}")
-    def sdkPath = file("${TEST_SDK_PATH}/sdk")
-    def shimsPath = file("${TEST_SDK_PATH}/shims")
+    ext.TEST_SDK_DIR = file("${TEST_SDK_PATH}").absolutePath
+    def sdkShimsPath = file("${TEST_SDK_DIR}")
+    def sdkPath = file("${TEST_SDK_DIR}/sdk")
+    def shimsPath = file("${TEST_SDK_DIR}/shims")
     if (!sdkShimsPath.exists() || !sdkShimsPath.isDirectory() ||
              !sdkPath.exists() || !sdkPath.isDirectory() ||
            !shimsPath.exists() || !shimsPath.isDirectory()) {
@@ -733,7 +736,7 @@ if (hasProperty("TEST_SDK_PATH")) {
     }
     ext.IS_TEST_SDK = true
 } else {
-    defineProperty("TEST_SDK_PATH", "${rootProject.buildDir}")
+    ext.TEST_SDK_DIR = "${rootProject.buildDir}"
 }
 
 // Make sure JDK_HOME/bin/java exists
@@ -992,7 +995,7 @@ List<String> computeLibraryPath(boolean working) {
     } else {
         def platformPrefix = ""
         def standaloneSdkDirName = "${platformPrefix}sdk"
-        def standaloneSdkDir = "${TEST_SDK_PATH}/${standaloneSdkDirName}"
+        def standaloneSdkDir = "${TEST_SDK_DIR}/${standaloneSdkDirName}"
         def modulesLibName = IS_WINDOWS ? "bin" : "lib"
         def modulesLibsDir = "${standaloneSdkDir}/${modulesLibName}"
         lp << cygpath("${modulesLibsDir}")
@@ -1030,9 +1033,9 @@ List<String> computePatchModuleArgs(List<String> deps, boolean test, boolean inc
                 String moduleName = proj.ext.moduleName
                 File dir;
                 if (test && proj.sourceSets.hasProperty('shims')) {
-                    dir = file("${TEST_SDK_PATH}/shims/${moduleName}")
+                    dir = file("${TEST_SDK_DIR}/shims/${moduleName}")
                 } else {
-                    dir = file("${TEST_SDK_PATH}/sdk/lib/${moduleName}.jar")
+                    dir = file("${TEST_SDK_DIR}/sdk/lib/${moduleName}.jar")
                 }
                 if (mp == null) {
                     mp = dir.path
@@ -1495,6 +1498,9 @@ logger.quiet("OS_NAME: $OS_NAME")
 logger.quiet("OS_ARCH: $OS_ARCH")
 logger.quiet("JAVA_HOME: $JAVA_HOME")
 logger.quiet("JDK_HOME: $JDK_HOME")
+if (IS_TEST_SDK) {
+    logger.quiet("TEST_SDK_PATH: ${TEST_SDK_DIR}")
+}
 
 Version javaVersionInfo = Runtime.version()
 logger.quiet("java.runtime.version: " + javaVersionInfo)
@@ -2686,7 +2692,7 @@ project(":graphics") {
     processResources.dependsOn processDecoraShaders, processPrismShaders
 
     test {
-        def cssDir = file("${TEST_SDK_PATH}/shims/${moduleName}/javafx")
+        def cssDir = file("${TEST_SDK_DIR}/shims/${moduleName}/javafx")
         jvmArgs enableNativeGraphics
         // FIXME: Remove this when JDK-8334137 is fixed
         if (jdk24OrLater) {
@@ -2779,7 +2785,7 @@ project(":controls") {
     }
 
     test {
-        def cssDir = file("${TEST_SDK_PATH}/shims/${moduleName}/javafx")
+        def cssDir = file("${TEST_SDK_DIR}/shims/${moduleName}/javafx")
         jvmArgs enableNativeGraphics
         // FIXME: Remove this when JDK-8334137 is fixed
         if (jdk24OrLater) {
@@ -5213,7 +5219,7 @@ compileTargets { t ->
     // ============================================================
 
     def standaloneSdkDirName = "${platformPrefix}sdk"
-    def standaloneSdkDir = "${TEST_SDK_PATH}/${standaloneSdkDirName}"
+    def standaloneSdkDir = "${TEST_SDK_DIR}/${standaloneSdkDirName}"
     def standaloneLibDir = "${standaloneSdkDir}/lib"
     def libDest=targetProperties.libDest
     def standaloneNativeDir = "${standaloneSdkDir}/${libDest}"
@@ -5892,9 +5898,9 @@ compileTargets { t ->
                         modnames << project.ext.moduleName
                         File dir;
                         if (project.sourceSets.hasProperty('shims')) {
-                           dir = new File(TEST_SDK_PATH, "shims/${project.ext.moduleName}")
+                           dir = new File(TEST_SDK_DIR, "shims/${project.ext.moduleName}")
                         } else {
-                           dir = new File(TEST_SDK_PATH, "sdk/lib/${project.ext.moduleName}.jar")
+                           dir = new File(TEST_SDK_DIR, "sdk/lib/${project.ext.moduleName}.jar")
                         }
 
                         def dstModuleDir = cygpath(dir.path)
