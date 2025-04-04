@@ -29,7 +29,6 @@ import com.sun.javafx.binding.BidirectionalBinding;
 import javafx.beans.binding.Bindings;
 import javafx.beans.property.*;
 
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
@@ -70,12 +69,8 @@ public class BidirectionalBindingTest<T> {
     private Property<T> op4;
     private T[] v;
 
-    public void BidirectionalBindingTest_(Factory<T> factory) {
+    private void setUp(Factory<T> factory) {
         this.factory = factory;
-    }
-
-    //@BeforeEach
-    public void setUp() {
         op1 = factory.createProperty();
         op2 = factory.createProperty();
         op3 = factory.createProperty();
@@ -88,8 +83,7 @@ public class BidirectionalBindingTest<T> {
     @ParameterizedTest
     @MethodSource("parameters")
     public void testBind(Factory<T> factory) {
-        BidirectionalBindingTest_(factory);
-        setUp();
+        setUp(factory);
         Bindings.bindBidirectional(op1, op2);
         Bindings.bindBidirectional(op1, op2);
         System.gc(); // making sure we did not not overdo weak references
@@ -108,8 +102,7 @@ public class BidirectionalBindingTest<T> {
     @ParameterizedTest
     @MethodSource("parameters")
     public void testUnbind(Factory<T> factory) {
-        BidirectionalBindingTest_(factory);
-        setUp();
+        setUp(factory);
         // unbind non-existing binding => no-op
         Bindings.unbindBidirectional(op1, op2);
 
@@ -136,8 +129,7 @@ public class BidirectionalBindingTest<T> {
     @ParameterizedTest
     @MethodSource("parameters")
     public void testChaining(Factory<T> factory) {
-        BidirectionalBindingTest_(factory);
-        setUp();
+        setUp(factory);
         op3.setValue(v[2]);
         Bindings.bindBidirectional(op1, op2);
         Bindings.bindBidirectional(op2, op3);
@@ -191,8 +183,7 @@ public class BidirectionalBindingTest<T> {
     @ParameterizedTest
     @MethodSource("parameters")
     public void testWeakReferencing(Factory<T> factory) {
-        BidirectionalBindingTest_(factory);
-        setUp();
+        setUp(factory);
         Bindings.bindBidirectional(op1, op2);
 
         assertEquals(1, getListenerCount(op1));
@@ -216,8 +207,7 @@ public class BidirectionalBindingTest<T> {
     @ParameterizedTest
     @MethodSource("parameters")
     public void testHashCode(Factory<T> factory) {
-        BidirectionalBindingTest_(factory);
-        setUp();
+        setUp(factory);
         final int hc1 = BidirectionalBinding.bind(op1, op2).hashCode();
         final int hc2 = BidirectionalBinding.bind(op2, op1).hashCode();
         assertEquals(hc1, hc2);
@@ -227,8 +217,7 @@ public class BidirectionalBindingTest<T> {
     @ParameterizedTest
     @MethodSource("parameters")
     public void testEquals(Factory<T> factory) {
-        BidirectionalBindingTest_(factory);
-        setUp();
+        setUp(factory);
         final BidirectionalBinding golden = BidirectionalBinding.bind(op1, op2);
 
         assertTrue(golden.equals(golden));
@@ -245,8 +234,7 @@ public class BidirectionalBindingTest<T> {
     @ParameterizedTest
     @MethodSource("parameters")
     public void testEqualsWithGCedProperty(Factory<T> factory) {
-        BidirectionalBindingTest_(factory);
-        setUp();
+        setUp(factory);
         final BidirectionalBinding binding1 = BidirectionalBinding.bind(op1, op2);
         final BidirectionalBinding binding2 = BidirectionalBinding.bind(op1, op2);
         final BidirectionalBinding binding3 = BidirectionalBinding.bind(op2, op1);
@@ -266,56 +254,49 @@ public class BidirectionalBindingTest<T> {
     @ParameterizedTest
     @MethodSource("parameters")
     public void testBind_Null_X(Factory<T> factory) {
-        BidirectionalBindingTest_(factory);
-        setUp();
+        setUp(factory);
         assertThrows(NullPointerException.class, () -> Bindings.bindBidirectional(null, op2));
     }
 
     @ParameterizedTest
     @MethodSource("parameters")
     public void testBind_X_Null(Factory<T> factory) {
-        BidirectionalBindingTest_(factory);
-        setUp();
+        setUp(factory);
         assertThrows(NullPointerException.class, () -> Bindings.bindBidirectional(op1, null));
     }
 
     @ParameterizedTest
     @MethodSource("parameters")
     public void testBind_X_Self(Factory<T> factory) {
-        BidirectionalBindingTest_(factory);
-        setUp();
+        setUp(factory);
         assertThrows(IllegalArgumentException.class, () -> Bindings.bindBidirectional(op1, op1));
     }
 
     @ParameterizedTest
     @MethodSource("parameters")
     public void testUnbind_Null_X(Factory<T> factory) {
-        BidirectionalBindingTest_(factory);
-        setUp();
+        setUp(factory);
         assertThrows(NullPointerException.class, () -> Bindings.unbindBidirectional(null, op2));
     }
 
     @ParameterizedTest
     @MethodSource("parameters")
     public void testUnbind_X_Null(Factory<T> factory) {
-        BidirectionalBindingTest_(factory);
-        setUp();
+        setUp(factory);
         assertThrows(NullPointerException.class, () -> Bindings.unbindBidirectional(op1, null));
     }
 
     @ParameterizedTest
     @MethodSource("parameters")
     public void testUnbind_X_Self(Factory<T> factory) {
-        BidirectionalBindingTest_(factory);
-        setUp();
+        setUp(factory);
         assertThrows(IllegalArgumentException.class, () -> Bindings.unbindBidirectional(op1, op1));
     }
 
     @ParameterizedTest
     @MethodSource("parameters")
     public void testBrokenBind(Factory<T> factory) {
-        BidirectionalBindingTest_(factory);
-        setUp();
+        setUp(factory);
         Bindings.bindBidirectional(op1, op2);
         op1.bind(op3);
         assertEquals(op3.getValue(), op1.getValue());
@@ -329,8 +310,7 @@ public class BidirectionalBindingTest<T> {
     @ParameterizedTest
     @MethodSource("parameters")
     public void testDoubleBrokenBind(Factory<T> factory) {
-        BidirectionalBindingTest_(factory);
-        setUp();
+        setUp(factory);
         Bindings.bindBidirectional(op1, op2);
         op1.bind(op3);
         op4.setValue(v[0]);
@@ -350,8 +330,7 @@ public class BidirectionalBindingTest<T> {
     @ParameterizedTest
     @MethodSource("parameters")
     public void testSetValueWithoutIntermediateValidation(Factory<T> factory) {
-        BidirectionalBindingTest_(factory);
-        setUp();
+        setUp(factory);
         BidirectionalBinding.bind(op1, op2);
         op1.setValue(v[0]);
         op2.setValue(v[1]);

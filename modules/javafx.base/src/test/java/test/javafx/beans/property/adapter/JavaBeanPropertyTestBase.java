@@ -52,7 +52,7 @@ public abstract class JavaBeanPropertyTestBase<T> {
     protected abstract JavaBeanProperty<T> extractProperty(Object bean) throws NoSuchMethodException;
 
     @BeforeEach
-    public void setUp() {
+    private void setUp() {
         this.bean = createBean(getValue(0));
         try {
             this.property = extractProperty(bean);

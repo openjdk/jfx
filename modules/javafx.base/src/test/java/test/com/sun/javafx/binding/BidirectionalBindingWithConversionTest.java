@@ -30,7 +30,6 @@ import javafx.beans.InvalidationListener;
 import javafx.beans.binding.Bindings;
 import javafx.beans.property.*;
 import javafx.util.StringConverter;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
@@ -65,7 +64,7 @@ public class BidirectionalBindingWithConversionTest<S, T> {
     private PropertyMock<S> op0;
     private PropertyMock<T> op1;
 
-    public void BidirectionalBindingWithConversionTest_(Functions<S, T> func, S[] v0, T[] v1) {
+    private void setUP(Functions<S, T> func, S[] v0, T[] v1) {
         this.op0 = func.create0();
         this.op1 = func.create1();
         this.func = func;
@@ -77,7 +76,7 @@ public class BidirectionalBindingWithConversionTest<S, T> {
     @ParameterizedTest
     @MethodSource("parameters")
     public void testBind(Functions<S, T> func, S[] v0, T[] v1) {
-        BidirectionalBindingWithConversionTest_(func, v0, v1);
+        setUP(func, v0, v1);
         op0.setValue(v0[0]);
         op1.setValue(v1[1]);
         func.bind(op0, op1);
@@ -97,7 +96,7 @@ public class BidirectionalBindingWithConversionTest<S, T> {
     @ParameterizedTest
     @MethodSource("parameters")
     public void testUnbind(Functions<S, T> func, S[] v0, T[] v1) {
-        BidirectionalBindingWithConversionTest_(func, v0, v1);
+        setUP(func, v0, v1);
         op0.setValue(v0[0]);
         op1.setValue(v1[1]);
         // unbind non-existing binding => no-op
@@ -126,7 +125,7 @@ public class BidirectionalBindingWithConversionTest<S, T> {
     @ParameterizedTest
     @MethodSource("parameters")
     public void testWeakReferencing(Functions<S, T> func, S[] v0, T[] v1) {
-        BidirectionalBindingWithConversionTest_(func, v0, v1);
+        setUP(func, v0, v1);
         op0.setValue(v0[0]);
         op1.setValue(v1[1]);
         func.bind(op0, op1);
@@ -152,21 +151,21 @@ public class BidirectionalBindingWithConversionTest<S, T> {
     @ParameterizedTest
     @MethodSource("parameters")
     public void testBind_Null_X(Functions<S, T> func, S[] v0, T[] v1) {
-        BidirectionalBindingWithConversionTest_(func, v0, v1);
+        setUP(func, v0, v1);
         op0.setValue(v0[0]);
         op1.setValue(v1[1]);
         assertThrows(NullPointerException.class, () -> func.bind(null, op1));
     }
 
     public void testBind_X_Null(Functions<S, T> func, S[] v0, T[] v1) {
-        BidirectionalBindingWithConversionTest_(func, v0, v1);
+        setUP(func, v0, v1);
         op0.setValue(v0[0]);
         op1.setValue(v1[1]);
         assertThrows(NullPointerException.class, () -> func.bind(op0, null));
     }
 
     public void testUnbind_Null_X(Functions<S, T> func, S[] v0, T[] v1) {
-        BidirectionalBindingWithConversionTest_(func, v0, v1);
+        setUP(func, v0, v1);
         op0.setValue(v0[0]);
         op1.setValue(v1[1]);
         assertThrows(NullPointerException.class, () -> func.unbind(null, op1));
@@ -175,7 +174,7 @@ public class BidirectionalBindingWithConversionTest<S, T> {
     @ParameterizedTest
     @MethodSource("parameters")
     public void testUnbind_X_Null(Functions<S, T> func, S[] v0, T[] v1) {
-        BidirectionalBindingWithConversionTest_(func, v0, v1);
+        setUP(func, v0, v1);
         op0.setValue(v0[0]);
         op1.setValue(v1[1]);
         assertThrows(NullPointerException.class, () ->  func.unbind(op0, null));
@@ -184,7 +183,7 @@ public class BidirectionalBindingWithConversionTest<S, T> {
     @ParameterizedTest
     @MethodSource("parameters")
     public void testUnbind_X_Self(Functions<S, T> func, S[] v0, T[] v1) {
-        BidirectionalBindingWithConversionTest_(func, v0, v1);
+        setUP(func, v0, v1);
         op0.setValue(v0[0]);
         op1.setValue(v1[1]);
         assertThrows(IllegalArgumentException.class, () ->  func.unbind(op0, op0));

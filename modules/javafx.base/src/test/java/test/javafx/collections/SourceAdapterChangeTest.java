@@ -74,11 +74,8 @@ public class SourceAdapterChangeTest {
     ObservableList<Person> list;
     MockListObserver<Person> mlo;
 
-    public void SourceAdapterChangeTest_(ListFactory listFactory) {
+    private void setUp(ListFactory listFactory) throws Exception {
         this.listFactory = listFactory;
-    }
-
-    public void setUp() throws Exception {
         items = FXCollections.observableArrayList(
                 (Person p) -> new Observable[]{p.name});
         items.addAll(
@@ -92,8 +89,7 @@ public class SourceAdapterChangeTest {
     @ParameterizedTest
     @MethodSource("createParameters")
     public void testUpdate(ListFactory listFactory) throws Exception {
-        SourceAdapterChangeTest_(listFactory);
-        setUp();
+        setUp(listFactory);
         items.get(3).name.set("zero"); // four -> zero
         ObservableList<Person> expected = FXCollections.observableArrayList(
                 new Person("one"), new Person("two"), new Person("three"),
@@ -104,8 +100,7 @@ public class SourceAdapterChangeTest {
     @ParameterizedTest
     @MethodSource("createParameters")
     public void testPermutation(ListFactory listFactory) throws Exception {
-        SourceAdapterChangeTest_(listFactory);
-        setUp();
+        setUp(listFactory);
         FXCollections.sort(items);
         ObservableList<Person> expected = FXCollections.observableArrayList(
                 new Person("five"), new Person("four"), new Person("one"),
@@ -116,8 +111,7 @@ public class SourceAdapterChangeTest {
     @ParameterizedTest
     @MethodSource("createParameters")
     public void testPermutationUpdate(ListFactory listFactory) throws Exception {
-        SourceAdapterChangeTest_(listFactory);
-        setUp();
+        setUp(listFactory);
         SortedList<Person> sorted = items.sorted((o1, o2) -> o1.compareTo(o2));
         list.removeListener(mlo);
         list = listFactory.createList(sorted);

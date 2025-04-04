@@ -27,7 +27,6 @@ package test.javafx.collections;
 
 import java.util.Arrays;
 import java.util.Collection;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import java.util.Collections;
@@ -47,11 +46,6 @@ public class ObservableListEmptyTest {
     ObservableList<String> list;
     MockListObserver<String> mlo;
 
-
-    public void ObservableListEmptyTest_(Callable<ObservableList<String>> listFactory) {
-        this.listFactory = listFactory;
-    }
-
     public static Collection createParameters() {
         Object[][] data = new Object[][] {
             { TestedObservableLists.ARRAY_LIST },
@@ -63,7 +57,8 @@ public class ObservableListEmptyTest {
         return Arrays.asList(data);
     }
 
-    public void setUp() throws Exception {
+    public void setUp(Callable<ObservableList<String>> listFactory) throws Exception {
+        listFactory = listFactory;
         list = listFactory.call();
         mlo = new MockListObserver<>();
         list.addListener(mlo);
@@ -72,8 +67,7 @@ public class ObservableListEmptyTest {
     @ParameterizedTest
     @MethodSource("createParameters")
     public void testClearEmpty(Callable<ObservableList<String>> listFactory) throws Exception {
-        ObservableListEmptyTest_(listFactory);
-        setUp();
+        setUp(listFactory);
         list = FXCollections.observableList(EMPTY);
         list.addListener(mlo);
         list.clear();

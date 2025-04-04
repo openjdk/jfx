@@ -43,7 +43,6 @@ import javafx.beans.property.SimpleIntegerProperty;
 import javafx.beans.property.SimpleLongProperty;
 import javafx.beans.value.*;
 
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
@@ -68,14 +67,11 @@ public class BindingsNumberCalculationsTest<T> {
     private  T[] v;
     private InvalidationListenerMock observer;
 
-    public void BindingsNumberCalculationsTest_(ObservableValue op1, ObservableValue op2, Functions<T> func, T[] v) {
+    private void setUp(ObservableValue op1, ObservableValue op2, Functions<T> func, T[] v) {
         this.op1 = op1;
         this.op2 = op2;
         this.func = func;
         this.v = v;
-    }
-
-    public void setUp() {
         func.setOp1(v[0]);
         func.setOp2(v[1]);
         observer = new InvalidationListenerMock();
@@ -84,8 +80,7 @@ public class BindingsNumberCalculationsTest<T> {
     @ParameterizedTest
     @MethodSource("parameters")
     public void test_Expression_Expression(ObservableValue op1, ObservableValue op2, Functions<T> func, T[] v) {
-        BindingsNumberCalculationsTest_(op1, op2, func, v);
-        setUp();
+        setUp(op1, op2, func, v);
         final Binding binding = func.generateExpressionExpression(op1, op2);
         binding.addListener(observer);
 
@@ -114,8 +109,7 @@ public class BindingsNumberCalculationsTest<T> {
     @ParameterizedTest
     @MethodSource("parameters")
     public void test_Self(ObservableValue op1, ObservableValue op2, Functions<T> func, T[] v) {
-        BindingsNumberCalculationsTest_(op1, op2, func, v);
-        setUp();
+        setUp(op1, op2, func, v);
         // using same FloatValue twice
         final Binding binding = func.generateExpressionExpression(op1, op1);
         binding.addListener(observer);
@@ -133,24 +127,21 @@ public class BindingsNumberCalculationsTest<T> {
     @ParameterizedTest
     @MethodSource("parameters")
     public void test_null_Expression(ObservableValue op1, ObservableValue op2, Functions<T> func, T[] v) {
-        BindingsNumberCalculationsTest_(op1, op2, func, v);
-        setUp();
+        setUp(op1, op2, func, v);
         assertThrows(NullPointerException.class, () -> func.generateExpressionExpression(null, op1));
     }
 
     @ParameterizedTest
     @MethodSource("parameters")
     public void test_Expression_null(ObservableValue op1, ObservableValue op2, Functions<T> func, T[] v) {
-        BindingsNumberCalculationsTest_(op1, op2, func, v);
-        setUp();
+        setUp(op1, op2, func, v);
         assertThrows(NullPointerException.class, () -> func.generateExpressionExpression(op1, null));
     }
 
     @ParameterizedTest
     @MethodSource("parameters")
     public void test_Expression_Primitive(ObservableValue op1, ObservableValue op2, Functions<T> func, T[] v) {
-        BindingsNumberCalculationsTest_(op1, op2, func, v);
-        setUp();
+        setUp(op1, op2, func, v);
         final Binding binding = func.generateExpressionPrimitive(op1, v[7]);
         binding.addListener(observer);
 
@@ -168,16 +159,14 @@ public class BindingsNumberCalculationsTest<T> {
     @ParameterizedTest
     @MethodSource("parameters")
     public void test_null_Primitive(ObservableValue op1, ObservableValue op2, Functions<T> func, T[] v) {
-        BindingsNumberCalculationsTest_(op1, op2, func, v);
-        setUp();
+        setUp(op1, op2, func, v);
         assertThrows(NullPointerException.class, () -> func.generateExpressionPrimitive(null, v[0]));
     }
 
     @ParameterizedTest
     @MethodSource("parameters")
     public void test_Primitive_Expression(ObservableValue op1, ObservableValue op2, Functions<T> func, T[] v) {
-        BindingsNumberCalculationsTest_(op1, op2, func, v);
-        setUp();
+        setUp(op1, op2, func, v);
         final Binding binding = func.generatePrimitiveExpression(v[9], op1);
         binding.addListener(observer);
 
@@ -193,8 +182,7 @@ public class BindingsNumberCalculationsTest<T> {
     }
 
     public void test_Primitive_null(ObservableValue op1, ObservableValue op2, Functions<T> func, T[] v) {
-        BindingsNumberCalculationsTest_(op1, op2, func, v);
-        setUp();
+        setUp(op1, op2, func, v);
         assertThrows(IllegalArgumentException.class, () -> func.generatePrimitiveExpression(v[0], null));
     }
 

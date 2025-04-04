@@ -50,7 +50,6 @@ import org.junit.jupiter.params.provider.MethodSource;
 
 public class LocalDateTimeStringConverterTest {
 
-    // Constants and enums remain the same
     private static String JAPANESE_DATE_STRING;
     private static final LocalDateTime VALID_LDT_WITH_SECONDS = LocalDateTime.of(1985, 1, 12, 12, 34, 56);
     private static final LocalDateTime VALID_LDT_WITHOUT_SECONDS = LocalDateTime.of(1985, 1, 12, 12, 34, 0);
@@ -95,6 +94,7 @@ public class LocalDateTimeStringConverterTest {
 
     @AfterAll
     public static void teardownAfterAll() {
+        // Restore VM's old locale
         Locale.setDefault(oldLocale);
     }
 

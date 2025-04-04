@@ -25,7 +25,6 @@
 
 package test.javafx.collections;
 
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import java.util.Arrays;
@@ -48,11 +47,6 @@ public class UnmodifiableObservableMapTest {
     private ObservableMap<String, String> unmodifiableMap;
     private MockMapObserver<String, String> observer;
 
-
-    public void UnmodifiableObservableMapTest_(Callable<ObservableMap<String, String>> mapFactory) {
-        this.mapFactory = mapFactory;
-    }
-
     public static Collection createParameters() {
         Object[][] data = new Object[][] {
             { TestedObservableMaps.HASH_MAP },
@@ -65,7 +59,8 @@ public class UnmodifiableObservableMapTest {
         return Arrays.asList(data);
     }
 
-    public void setUp() throws Exception {
+    private void setUp(Callable<ObservableMap<String, String>> mapFactory) throws Exception {
+        this.mapFactory = mapFactory;
         observableMap = mapFactory.call();
         unmodifiableMap = FXCollections.unmodifiableObservableMap(observableMap);
         observer = new MockMapObserver<>();
@@ -97,8 +92,7 @@ public class UnmodifiableObservableMapTest {
          * Observability of changes to the underlying Map, we won't test the full
          * ObservableMap API since that is already done.
          */
-        UnmodifiableObservableMapTest_(mapFactory);
-        setUp();
+        setUp(mapFactory);
         observableMap.put("observedFoo", "barVal");
         observableMap.put("foo", "barfoo");
         assertEquals("barVal", unmodifiableMap.get("observedFoo"));
@@ -120,8 +114,7 @@ public class UnmodifiableObservableMapTest {
     @ParameterizedTest
     @MethodSource("createParameters")
     public void testPutAll(Callable<ObservableMap<String, String>> mapFactory) throws Exception {
-        UnmodifiableObservableMapTest_(mapFactory);
-        setUp();
+        setUp(mapFactory);
         Map<String, String> map = new HashMap<>();
         map.put("oFoo", "OFoo");
         map.put("pFoo", "PFoo");
@@ -136,8 +129,7 @@ public class UnmodifiableObservableMapTest {
     @ParameterizedTest
     @MethodSource("createParameters")
     public void testClear(Callable<ObservableMap<String, String>> mapFactory) throws Exception {
-        UnmodifiableObservableMapTest_(mapFactory);
-        setUp();
+        setUp(mapFactory);
         try {
             unmodifiableMap.clear();
             fail("Expected UnsupportedOperationException");
@@ -147,8 +139,7 @@ public class UnmodifiableObservableMapTest {
     @ParameterizedTest
     @MethodSource("createParameters")
     public void testKeySet(Callable<ObservableMap<String, String>> mapFactory) throws Exception {
-        UnmodifiableObservableMapTest_(mapFactory);
-        setUp();
+        setUp(mapFactory);
         try {
             unmodifiableMap.keySet().remove("one");
             fail("Expected UnsupportedOperationException");
@@ -170,8 +161,7 @@ public class UnmodifiableObservableMapTest {
     @ParameterizedTest
     @MethodSource("createParameters")
     public void testKeySet_Iterator(Callable<ObservableMap<String, String>> mapFactory) throws Exception {
-        UnmodifiableObservableMapTest_(mapFactory);
-        setUp();
+        setUp(mapFactory);
         // iterators should not be removable
         Iterator<String> iterator = unmodifiableMap.keySet().iterator();
         assertTrue(iterator.hasNext(), () -> "Test error, underlying Map should not be empty!");
@@ -184,8 +174,7 @@ public class UnmodifiableObservableMapTest {
     @ParameterizedTest
     @MethodSource("createParameters")
     public void testValues(Callable<ObservableMap<String, String>> mapFactory) throws Exception {
-        UnmodifiableObservableMapTest_(mapFactory);
-        setUp();
+        setUp(mapFactory);
         try {
             unmodifiableMap.values().remove("1");
             fail("Expected UnsupportedOperationException");
@@ -207,8 +196,7 @@ public class UnmodifiableObservableMapTest {
     @ParameterizedTest
     @MethodSource("createParameters")
     public void testValues_Iterator(Callable<ObservableMap<String, String>> mapFactory) throws Exception {
-        UnmodifiableObservableMapTest_(mapFactory);
-        setUp();
+        setUp(mapFactory);
         Iterator<String> iterator = unmodifiableMap.values().iterator();
         assertTrue(iterator.hasNext(), () -> "Test error, underlying Map should not be empty!");
         try {
@@ -220,8 +208,7 @@ public class UnmodifiableObservableMapTest {
     @ParameterizedTest
     @MethodSource("createParameters")
     public void testEntrySet(Callable<ObservableMap<String, String>> mapFactory) throws Exception {
-        UnmodifiableObservableMapTest_(mapFactory);
-        setUp();
+        setUp(mapFactory);
         try {
             unmodifiableMap.entrySet().remove(entry("one","1"));
             fail("Expected UnsupportedOperationException");
@@ -243,8 +230,7 @@ public class UnmodifiableObservableMapTest {
     @ParameterizedTest
     @MethodSource("createParameters")
     public void testEntrySet_Iterator(Callable<ObservableMap<String, String>> mapFactory) throws Exception {
-        UnmodifiableObservableMapTest_(mapFactory);
-        setUp();
+        setUp(mapFactory);
         Iterator<Map.Entry<String, String>> iterator = unmodifiableMap.entrySet().iterator();
         assertTrue(iterator.hasNext(), () -> "Test error, underlying Map should not be empty!");
         try {

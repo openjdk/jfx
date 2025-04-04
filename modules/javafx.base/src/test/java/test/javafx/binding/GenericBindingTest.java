@@ -63,15 +63,10 @@ public class GenericBindingTest<T> {
     private InvalidationListenerMock invalidationListener;
     private ChangeListenerMock<Object> changeListener;
 
-    public void GenericBindingTest_(
-            T value1, T value2,
-            Class<BindingMock<T>> bindingMockClass) throws Exception {
+    private void setUp(T value1, T value2, Class<BindingMock<T>> bindingMockClass) throws Exception {
         this.value1 = value1;
         this.value2 = value2;
         this.bindingMockClassConstructor = bindingMockClass.getConstructor(Observable[].class);
-    }
-
-    public void setUp() throws Exception {
         // Recreate bindings as they may have been altered by one of the tests
         binding0 = bindingMockClassConstructor.newInstance((Object)new Observable[] {});
         binding1 = bindingMockClassConstructor.newInstance((Object)new Observable[] {dependency1});
@@ -97,8 +92,7 @@ public class GenericBindingTest<T> {
     @ParameterizedTest
     @MethodSource("parameters")
     public void testNoDependencyLazy(T value1, T value2, Class<BindingMock<T>> bindingMockClass) throws Exception  {
-        GenericBindingTest_(value1, value2, bindingMockClass);
-        setUp();
+        setUp(value1, value2, bindingMockClass);
         binding0.getValue();
         binding0.addListener(invalidationListener);
         System.gc(); // making sure we did not not overdo weak references
@@ -115,8 +109,7 @@ public class GenericBindingTest<T> {
     @ParameterizedTest
     @MethodSource("parameters")
     public void testNoDependencyEager(T value1, T value2, Class<BindingMock<T>> bindingMockClass) throws Exception  {
-        GenericBindingTest_(value1, value2, bindingMockClass);
-        setUp();
+        setUp(value1, value2, bindingMockClass);
         binding0.getValue();
         binding0.addListener(changeListener);
         System.gc(); // making sure we did not not overdo weak references
@@ -133,8 +126,7 @@ public class GenericBindingTest<T> {
     @ParameterizedTest
     @MethodSource("parameters")
     public void testSingleDependencyLazy(T value1, T value2, Class<BindingMock<T>> bindingMockClass) throws Exception  {
-        GenericBindingTest_(value1, value2, bindingMockClass);
-        setUp();
+        setUp(value1, value2, bindingMockClass);
         binding1.getValue();
         binding1.addListener(invalidationListener);
         System.gc(); // making sure we did not not overdo weak references
@@ -198,8 +190,7 @@ public class GenericBindingTest<T> {
     @ParameterizedTest
     @MethodSource("parameters")
     public void testSingleDependencyEager(T value1, T value2, Class<BindingMock<T>> bindingMockClass) throws Exception  {
-        GenericBindingTest_(value1, value2, bindingMockClass);
-        setUp();
+        setUp(value1, value2, bindingMockClass);
         binding1.getValue();
         binding1.addListener(changeListener);
         System.gc(); // making sure we did not not overdo weak references
@@ -263,8 +254,7 @@ public class GenericBindingTest<T> {
     @ParameterizedTest
     @MethodSource("parameters")
     public void testTwoDependencies(T value1, T value2, Class<BindingMock<T>> bindingMockClass) throws Exception  {
-        GenericBindingTest_(value1, value2, bindingMockClass);
-        setUp();
+        setUp(value1, value2, bindingMockClass);
         binding2.getValue();
         binding2.addListener(invalidationListener);
         System.gc(); // making sure we did not not overdo weak references
@@ -312,8 +302,7 @@ public class GenericBindingTest<T> {
     @ParameterizedTest
     @MethodSource("parameters")
     public void testUnbindDependencies(T value1, T value2, Class<BindingMock<T>> bindingMockClass) throws Exception  {
-        GenericBindingTest_(value1, value2, bindingMockClass);
-        setUp();
+        setUp(value1, value2, bindingMockClass);
         // Start by making binding valid:
         binding2.getValue();
         assertTrue(binding2.isValid());
@@ -713,6 +702,4 @@ public class GenericBindingTest<T> {
             super.unbind(observables);
         }
     }
-
-
 }

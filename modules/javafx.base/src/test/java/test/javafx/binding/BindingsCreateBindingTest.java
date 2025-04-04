@@ -72,7 +72,7 @@ public class BindingsCreateBindingTest<T> {
         ErrorLoggingUtiltity.reset();
     }
 
-    public void BindingsCreateBindingTest_(Property<T> p0, Property<T> p1, Functions<T> f, T value0, T value1, T defaultValue) {
+    private void setup(Property<T> p0, Property<T> p1, Functions<T> f, T value0, T value1, T defaultValue) {
         this.p0 = p0;
         this.p1 = p1;
         this.f = f;
@@ -85,7 +85,7 @@ public class BindingsCreateBindingTest<T> {
     @MethodSource("parameters")
     public void testNoDependencies(Property<T> p0, Property<T> p1, Functions<T> f, T value0, T value1, T defaultValue) {
         // func returns value0, no dependencies specified
-        BindingsCreateBindingTest_(p0, p1, f, value0, value1, defaultValue);
+        setup(p0, p1, f, value0, value1, defaultValue);
         final Callable<T> func0 = () -> value0;
         final Binding<T> binding0 = f.create(func0);
 
@@ -116,7 +116,7 @@ public class BindingsCreateBindingTest<T> {
     @ParameterizedTest
     @MethodSource("parameters")
     public void testOneDependency(Property<T> p0, Property<T> p1, Functions<T> f, T value0, T value1, T defaultValue) {
-        BindingsCreateBindingTest_(p0, p1, f, value0, value1, defaultValue);
+        setup(p0, p1, f, value0, value1, defaultValue);
         final Callable<T> func = () -> p0.getValue();
         final Binding<T> binding = f.create(func, p0);
 
@@ -130,7 +130,7 @@ public class BindingsCreateBindingTest<T> {
     @ParameterizedTest
     @MethodSource("parameters")
     public void testCreateBoolean_TwoDependencies(Property<T> p0, Property<T> p1, Functions<T> f, T value0, T value1, T defaultValue) {
-        BindingsCreateBindingTest_(p0, p1, f, value0, value1, defaultValue);
+        setup(p0, p1, f, value0, value1, defaultValue);
         final Callable<T> func = () -> p0.getValue();
         final Binding<T> binding = f.create(func, p0, p1);
 
