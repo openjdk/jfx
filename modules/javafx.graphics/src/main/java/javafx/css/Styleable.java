@@ -92,6 +92,20 @@ public interface Styleable {
     List<CssMetaData<? extends Styleable, ?>> getCssMetaData();
 
     /**
+     * Provides an immutable list of CSS meta data that a parent may contribute
+     * to any of its direct children.
+     * <p>
+     * Note: this method does not provide CSS meta data for <b>this</b> Styleable,
+     * only for its direct children!
+     *
+     * @return an immutable list of CSS meta data, never {@code null}
+     * @since 25
+     */
+    default List<CssMetaData<Styleable, ?>> getChildCssMetaData() {
+        return List.of();
+    }
+
+    /**
      * Return the parent of this Styleable, or null if there is no parent.
      * @return the parent of this Styleable, or null if there is no parent
      */
