@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023, 2025, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -24,24 +24,18 @@
  */
 package com.oracle.tools.fx.monkey.pages;
 
-import java.util.List;
 import javafx.geometry.Pos;
 import javafx.scene.AccessibleAttribute;
 import javafx.scene.Node;
 import javafx.scene.control.Button;
 import javafx.scene.control.ContextMenu;
 import javafx.scene.control.MenuButton;
-import javafx.scene.layout.Background;
-import javafx.scene.layout.HBox;
 import javafx.scene.layout.Pane;
-import javafx.scene.layout.Priority;
 import javafx.scene.layout.Region;
-import javafx.scene.paint.Color;
+import javafx.scene.layout.StackPane;
 import com.oracle.tools.fx.monkey.Loggers;
-import com.oracle.tools.fx.monkey.options.BooleanOption;
 import com.oracle.tools.fx.monkey.options.EnumOption;
 import com.oracle.tools.fx.monkey.options.PaneContentOptions;
-import com.oracle.tools.fx.monkey.sheets.Options;
 import com.oracle.tools.fx.monkey.sheets.PropertiesMonitor;
 import com.oracle.tools.fx.monkey.sheets.RegionPropertySheet;
 import com.oracle.tools.fx.monkey.util.FX;
@@ -51,16 +45,15 @@ import com.oracle.tools.fx.monkey.util.TestPaneBase;
 import com.oracle.tools.fx.monkey.util.Utils;
 
 /**
- * HBox Page.
- * @see VBoxPage
+ * StackPane Page.
  */
-public class HBoxPage extends TestPaneBase {
-    private final HBox box;
+public class StackPanePage extends TestPaneBase {
+    private final StackPane pane;
 
-    public HBoxPage() {
-        super("HBoxPage");
+    public StackPanePage() {
+        super("StackPanePage");
 
-        box = new HBox() {
+        pane = new StackPane() {
             @Override
             public Object queryAccessibleAttribute(AccessibleAttribute a, Object... ps) {
                 Object v = super.queryAccessibleAttribute(a, ps);
@@ -70,48 +63,27 @@ public class HBoxPage extends TestPaneBase {
         };
 
         MenuButton addButton = new MenuButton("Add");
-        PaneContentOptions.addChildOption(addButton.getItems(), box.getChildren(), this::createMenu);
+        PaneContentOptions.addChildOption(addButton.getItems(), pane.getChildren(), this::createMenu);
 
         Button clearButton = FX.button("Clear Items", () -> {
-            box.getChildren().clear();
+            pane.getChildren().clear();
         });
 
         OptionPane op = new OptionPane();
-        op.section("HBox");
-        op.option("Alignment:", new EnumOption<Pos>("alignment", Pos.class, box.alignmentProperty()));
-        op.option("Children:", PaneContentOptions.createOptions(box.getChildren(), this::createBuilder));
-        op.option(Utils.buttons(addButton, clearButton));
-        op.option(new BooleanOption("fillHeight", "fill height", box.fillHeightProperty()));
-        op.option("Spacing:", Options.spacing("spacing", box.spacingProperty()));
+        op.section("StackPane");
+        op.option("Alignment:", new EnumOption<>("alignment", Pos.class, pane.alignmentProperty()));
+        op.option("Children:", Utils.buttons(addButton, clearButton));
+        RegionPropertySheet.appendTo(op, pane);
 
-        RegionPropertySheet.appendTo(op, box);
-
-        setContent(box);
+        setContent(pane);
         setOptions(op);
-    }
-
-    private Region addItem(List<Node> children) {
-        boolean even = (children.size() % 2) == 0;
-        Background bg = Background.fill(even ? Color.GRAY : Color.LIGHTGRAY);
-        Region r = createRegion();
-        r.setBackground(bg);
-        children.add(r);
-        return r;
-    }
-
-    private Region createRegion() {
-        Region r = new Region();
-        r.setPrefWidth(30);
-        r.setMinWidth(10);
-        createMenu(r);
-        return r;
     }
 
     private void createMenu(Node n) {
         FX.setPopupMenu(n, () -> {
             ContextMenu cm = new ContextMenu();
-            Menus.enumSubMenu(cm, "HGrow", Priority.class, true, (v) -> HBox.setHgrow(n, v), () -> HBox.getHgrow(n));
-            Menus.marginSubMenu(cm, (v) -> HBox.setMargin(n, v), () -> HBox.getMargin(n));
+            Menus.enumSubMenu(cm, "Alignment", Pos.class, true, (v) -> StackPane.setAlignment(n, v), () -> StackPane.getAlignment(n));
+            Menus.marginSubMenu(cm, (v) -> StackPane.setMargin(n, v), () -> StackPane.getMargin(n));
             if(n instanceof Region r) {
                 FX.separator(cm);
                 Menus.sizeSubMenus(cm, r);
@@ -128,29 +100,5 @@ public class HBoxPage extends TestPaneBase {
             });
             return cm;
         });
-    }
-
-    private PaneContentOptions.Builder createBuilder() {
-        return new PaneContentOptions.Builder(this::addItem) {
-            @Override
-            protected void setGrow(Node n, Priority p) {
-                HBox.setHgrow(n, p);
-            }
-
-            @Override
-            protected void setMin(Region r, double v) {
-                r.setMinWidth(v);
-            }
-
-            @Override
-            protected void setPref(Region r, double v) {
-                r.setPrefWidth(v);
-            }
-
-            @Override
-            protected void setMax(Region r, double v) {
-                r.setMaxWidth(v);
-            }
-        };
     }
 }

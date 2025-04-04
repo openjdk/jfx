@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2024, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -50,7 +50,7 @@ public class NodePropertySheet {
         op.option("Blend Mode:", new EnumOption<>("blendMode", BlendMode.class, n.blendModeProperty()));
         op.option(new BooleanOption("cache", "cache", n.cacheProperty()));
         op.option("Cache Hint:", new EnumOption<>("cacheHint", CacheHint.class, n.cacheHintProperty()));
-        op.option("Clip: TODO", null); // TODO
+        op.option("Clip:", Options.clip("clip", n, n.clipProperty()));
         op.option("Cursor: TODO", null); // TODO
         op.option("Depth Test:", new EnumOption<>("depthText", CacheHint.class, n.cacheHintProperty()));
         op.option(new BooleanOption("disable", "disable", n.disableProperty()));
@@ -63,7 +63,6 @@ public class NodePropertySheet {
         op.option(new BooleanOption("managed", "managed", n.managedProperty()));
         op.option(new BooleanOption("mouseTransparent", "mouse transparent", n.mouseTransparentProperty()));
         op.option("Node Orientation:", new EnumOption<>("nodeOrientation", NodeOrientation.class, n.nodeOrientationProperty()));
-        //op.option("On Various Events: TODO", null); // TODO own section?
         op.option("Opacity:", new DoubleSpinner("opacity", -0.1, 1.1, 0.1, n.opacityProperty()));
         op.option(new BooleanOption("pickOnBounds", "pick on bounds", n.pickOnBoundsProperty()));
         op.option("Rotate:", new DoubleOption("rotate", n.rotateProperty()));
