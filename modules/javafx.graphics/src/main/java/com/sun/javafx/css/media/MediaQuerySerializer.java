@@ -30,7 +30,6 @@ import com.sun.javafx.css.media.expression.ConstantExpression;
 import com.sun.javafx.css.media.expression.FunctionExpression;
 import com.sun.javafx.css.media.expression.NegationExpression;
 import com.sun.javafx.css.media.expression.DisjunctionExpression;
-import javafx.css.MediaQuery;
 import javafx.css.StyleConverter;
 import java.io.DataInputStream;
 import java.io.DataOutputStream;

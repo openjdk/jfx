@@ -23,28 +23,32 @@
  * questions.
  */
 
-package com.sun.javafx.css.media.expression;
+package com.sun.javafx.css.media;
 
-import com.sun.javafx.css.media.MediaQuery;
-import com.sun.javafx.css.media.MediaQueryContext;
-import java.util.Objects;
+import com.sun.javafx.css.media.expression.ConjunctionExpression;
+import com.sun.javafx.css.media.expression.ConstantExpression;
+import com.sun.javafx.css.media.expression.FunctionExpression;
+import com.sun.javafx.css.media.expression.NegationExpression;
+import com.sun.javafx.css.media.expression.DisjunctionExpression;
 
 /**
- * Logical negation of the specified expression.
+ * {@code MediaQuery} is the runtime representation of a CSS media query expression.
+ * <p>
+ * It is evaluated against a context that provides the values that are referenced in the expression,
+ * and evaluates to either {@code true} or {@code false}.
  */
-public record NegationExpression(MediaQuery expression) implements MediaQuery {
+public sealed interface MediaQuery
+        permits ConstantExpression,
+                ConjunctionExpression,
+                DisjunctionExpression,
+                FunctionExpression,
+                NegationExpression {
 
-    public NegationExpression {
-        Objects.requireNonNull(expression, "expression cannot be null");
-    }
-
-    @Override
-    public boolean evaluate(MediaQueryContext context) {
-        return !expression.evaluate(context);
-    }
-
-    @Override
-    public String toString() {
-        return "not " + expression;
-    }
+    /**
+     * Evaluates this media query against the provided context.
+     *
+     * @param context the evaluation context
+     * @return {@code true} if the media query matches, {@code false} otherwise
+     */
+    boolean evaluate(MediaQueryContext context);
 }

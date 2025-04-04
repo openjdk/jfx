@@ -23,9 +23,9 @@
  * questions.
  */
 
-package javafx.css;
+package com.sun.javafx.css.media;
 
-import com.sun.javafx.css.media.MediaQuerySerializer;
+import javafx.css.StyleConverter;
 import javafx.scene.Scene;
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
@@ -35,8 +35,6 @@ import java.util.List;
 /**
  * CSS media rules are @-rules that contain media queries. A media query tests the "external"
  * configuration of a {@link Scene}, and is independent of its scene graph content.
- *
- * @since 25
  */
 public final class MediaRule {
 
@@ -44,7 +42,7 @@ public final class MediaRule {
     private final MediaRule parent;
     private final int hash;
 
-    MediaRule(List<MediaQuery> queries, MediaRule parent) {
+    public MediaRule(List<MediaQuery> queries, MediaRule parent) {
         this.queries = List.copyOf(queries);
         this.parent = parent;
         this.hash = queries.hashCode();
@@ -93,7 +91,7 @@ public final class MediaRule {
         return false;
     }
 
-    void writeBinary(DataOutputStream stream, StyleConverter.StringStore stringStore) throws IOException {
+    public void writeBinary(DataOutputStream stream, StyleConverter.StringStore stringStore) throws IOException {
         stream.writeInt(queries.size());
 
         for (MediaQuery query : queries) {
@@ -107,7 +105,7 @@ public final class MediaRule {
         }
     }
 
-    static MediaRule readBinary(DataInputStream stream, String[] strings) throws IOException {
+    public static MediaRule readBinary(DataInputStream stream, String[] strings) throws IOException {
         int size = stream.readInt();
         var queries = new MediaQuery[size];
 

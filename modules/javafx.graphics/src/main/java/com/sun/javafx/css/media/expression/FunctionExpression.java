@@ -25,8 +25,8 @@
 
 package com.sun.javafx.css.media.expression;
 
-import javafx.css.MediaQuery;
-import javafx.css.MediaQueryContext;
+import com.sun.javafx.css.media.MediaQuery;
+import com.sun.javafx.css.media.MediaQueryContext;
 import java.util.Objects;
 import java.util.function.Function;
 

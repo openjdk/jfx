@@ -32,6 +32,7 @@ import javafx.collections.ObservableList;
 
 import com.sun.javafx.collections.TrackableObservableList;
 import com.sun.javafx.css.FontFaceImpl;
+import com.sun.javafx.css.RuleHelper;
 
 import java.io.BufferedInputStream;
 import java.io.ByteArrayOutputStream;
@@ -414,7 +415,7 @@ public class Stylesheet {
         for (Rule rule : rulesToImport) {
             List<Selector> selectors = rule.getSelectors();
             List<Declaration> declarations = rule.getUnobservedDeclarationList();
-            importedRules.add(new Rule(rule.getMediaRule(), selectors, declarations));
+            importedRules.add(new Rule(RuleHelper.getMediaRule(rule), selectors, declarations));
         }
 
         rules.addAll(importedRules);

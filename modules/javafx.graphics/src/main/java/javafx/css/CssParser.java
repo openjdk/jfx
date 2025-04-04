@@ -27,6 +27,7 @@ package javafx.css;
 
 import com.sun.javafx.css.Combinator;
 import com.sun.javafx.css.CompoundSelector;
+import com.sun.javafx.css.media.MediaRule;
 import com.sun.javafx.css.parser.CssLexer;
 import com.sun.javafx.css.FontFaceImpl;
 import com.sun.javafx.css.InterpolatorConverter;

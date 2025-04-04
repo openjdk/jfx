@@ -26,8 +26,6 @@
 package com.sun.javafx.css.media;
 
 import com.sun.javafx.css.media.expression.FunctionExpression;
-import javafx.css.MediaQuery;
-import javafx.css.MediaQueryContext;
 import javafx.application.ColorScheme;
 import java.util.Locale;
 import java.util.function.Function;

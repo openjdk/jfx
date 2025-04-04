@@ -31,7 +31,7 @@ import com.sun.javafx.css.media.expression.ConstantExpression;
 import com.sun.javafx.css.media.expression.FunctionExpression;
 import com.sun.javafx.css.media.expression.NegationExpression;
 import com.sun.javafx.css.media.expression.DisjunctionExpression;
-import javafx.css.MediaQuery;
+import com.sun.javafx.css.media.MediaQuery;
 import javafx.css.StyleConverter;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;

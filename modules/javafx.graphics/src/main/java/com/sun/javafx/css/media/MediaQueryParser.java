@@ -25,7 +25,6 @@
 
 package com.sun.javafx.css.media;
 
-import javafx.css.MediaQuery;
 import com.sun.javafx.css.media.expression.ConjunctionExpression;
 import com.sun.javafx.css.media.expression.ConstantExpression;
 import com.sun.javafx.css.media.expression.DisjunctionExpression;

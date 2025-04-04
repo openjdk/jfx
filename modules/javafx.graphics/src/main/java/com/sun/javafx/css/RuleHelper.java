@@ -23,34 +23,31 @@
  * questions.
  */
 
-package javafx.css;
+package com.sun.javafx.css;
 
-import com.sun.javafx.css.media.expression.ConjunctionExpression;
-import com.sun.javafx.css.media.expression.ConstantExpression;
-import com.sun.javafx.css.media.expression.FunctionExpression;
-import com.sun.javafx.css.media.expression.NegationExpression;
-import com.sun.javafx.css.media.expression.DisjunctionExpression;
+import com.sun.javafx.util.Utils;
+import com.sun.javafx.css.media.MediaRule;
+import javafx.css.Rule;
 
-/**
- * {@code MediaQuery} is the runtime representation of a CSS media query expression.
- * <p>
- * It is evaluated against a context that provides the values that are referenced in the expression,
- * and evaluates to either {@code true} or {@code false}.
- *
- * @since 25
- */
-public sealed interface MediaQuery
-        permits ConstantExpression,
-                ConjunctionExpression,
-                DisjunctionExpression,
-                FunctionExpression,
-                NegationExpression {
+public final class RuleHelper {
 
-    /**
-     * Evaluates this media query against the provided context.
-     *
-     * @param context the evaluation context
-     * @return {@code true} if the media query matches, {@code false} otherwise
-     */
-    boolean evaluate(MediaQueryContext context);
+    private RuleHelper() {}
+
+    static {
+        Utils.forceInit(Rule.class);
+    }
+
+    private static Accessor accessor;
+
+    public static void setAccessor(Accessor accessor) {
+        RuleHelper.accessor = accessor;
+    }
+
+    public static MediaRule getMediaRule(Rule rule) {
+        return accessor.getMediaRule(rule);
+    }
+
+    public interface Accessor {
+        MediaRule getMediaRule(Rule rule);
+    }
 }

@@ -23,7 +23,7 @@
  * questions.
  */
 
-package javafx.css;
+package com.sun.javafx.css.media;
 
 import javafx.application.ColorScheme;
 import javafx.scene.Scene;
@@ -31,8 +31,6 @@ import javafx.scene.Scene;
 /**
  * A media query is evaluated against a {@code MediaQueryContext}, which provides the media feature
  * values that can be referenced in a media query expression.
- *
- * @since 25
  */
 public sealed interface MediaQueryContext permits Scene.Preferences {
 

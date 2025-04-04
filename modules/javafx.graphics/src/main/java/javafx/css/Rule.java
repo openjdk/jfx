@@ -31,6 +31,8 @@ import javafx.scene.Node;
 
 import com.sun.javafx.collections.TrackableObservableList;
 import com.sun.javafx.css.BinarySerializer;
+import com.sun.javafx.css.RuleHelper;
+import com.sun.javafx.css.media.MediaRule;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
@@ -47,6 +49,17 @@ import java.util.Set;
  * @since 9
  */
 final public class Rule {
+
+    static {
+        RuleHelper.setAccessor(new RuleHelper.Accessor() {
+            @Override
+            public MediaRule getMediaRule(Rule rule) {
+                return rule.mediaRule;
+            }
+        });
+    }
+
+    private final MediaRule mediaRule;
 
     private List<Selector> selectors = null;
 
@@ -134,18 +147,6 @@ final public class Rule {
         }
 
         return observables.getSelectors();
-    }
-
-    private final MediaRule mediaRule;
-
-    /**
-     * Gets the {@code MediaRule} associated with this {@code Rule}.
-     *
-     * @return the {@code MediaRule} or {@code null}
-     * @since 25
-     */
-    public MediaRule getMediaRule() {
-        return mediaRule;
     }
 
     private Stylesheet stylesheet;

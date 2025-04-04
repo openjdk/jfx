@@ -25,7 +25,7 @@
 
 package com.sun.javafx.css;
 
-import javafx.css.MediaRule;
+import com.sun.javafx.css.media.MediaRule;
 import javafx.css.PseudoClass;
 import javafx.css.Rule;
 import javafx.css.Selector;
@@ -278,7 +278,7 @@ final public class SimpleSelector extends Selector {
         }
 
         Rule rule = getRule();
-        MediaRule mediaRule = rule != null ? rule.getMediaRule() : null;
+        MediaRule mediaRule = rule != null ? RuleHelper.getMediaRule(rule) : null;
 
         // If we have a media rule, evaluate it against the scene's media query context.
         // If the media rule evaluates to false, the selector doesn't apply.
