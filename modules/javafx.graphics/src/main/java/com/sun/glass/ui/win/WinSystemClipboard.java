@@ -251,8 +251,7 @@ class WinSystemClipboard extends SystemClipboard {
         if (data != null) {
             if (TEXT_TYPE.equals(mime) || URI_TYPE.equals(mime)) {
                 try {
-                    // JDK-8118474 - internal Windows data null terminated
-                    return new String(data, 0, data.length - 2, defaultCharset);
+                    return new String(data, 0, data.length, defaultCharset);
                 } catch (UnsupportedEncodingException ex) {
                     //never happen
                 }

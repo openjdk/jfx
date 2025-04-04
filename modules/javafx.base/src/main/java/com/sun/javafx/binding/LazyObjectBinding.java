@@ -43,9 +43,9 @@ abstract class LazyObjectBinding<T> extends ObjectBinding<T> {
 
     @Override
     public void addListener(ChangeListener<? super T> listener) {
-        super.addListener(listener);
+        updateSubscriptionBeforeAdd();
 
-        updateSubscriptionAfterAdd();
+        super.addListener(listener);
     }
 
     @Override
@@ -57,9 +57,9 @@ abstract class LazyObjectBinding<T> extends ObjectBinding<T> {
 
     @Override
     public void addListener(InvalidationListener listener) {
-        super.addListener(listener);
+        updateSubscriptionBeforeAdd();
 
-        updateSubscriptionAfterAdd();
+        super.addListener(listener);
     }
 
     @Override
@@ -75,9 +75,14 @@ abstract class LazyObjectBinding<T> extends ObjectBinding<T> {
     }
 
     /**
-     * Called after a listener was added to start observing inputs if they're not observed already.
+     * Called before a listener was added to start observing inputs if they're not observed already.
+     * This is done before the addition of a listener to be able to start observing its source
+     * before the first listener queries the current value. By doing this, this first query will
+     * also be immediately cached, as observed bindings are allowed to do so. This potentially avoids
+     * many redundant compute value calls, especially if the source was also not yet observed (and
+     * its source, and so on).
      */
-    private void updateSubscriptionAfterAdd() {
+    private void updateSubscriptionBeforeAdd() {
         if (!wasObserved) { // was first observer registered?
             subscription = observeSources(); // start observing source
             wasObserved = true;

@@ -403,6 +403,14 @@ HRESULT PopMemory(
                 //as well as corrupted format
                 cdata = 0;
             }
+        } else if (CF_UNICODETEXT == cf){
+            for (int i = 0; i < cdata - 1; i += 2) {
+                jbyte *pos = me.getMem() + i;
+                if (*(pos) == 0 && *(pos + 1) == 0) {
+                    cdata = i;
+                    break;
+                }
+            }
         }
         if (0 != cdata) {
             *pret = env->NewByteArray((jsize)cdata);

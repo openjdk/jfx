@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -907,7 +907,7 @@ static jint getSwipeDirFromEvent(NSEvent *theEvent)
     int y = (int)draggingLocation.y;
 
     int xAbs = (int)([info draggingLocation].x + [self->nsView window].frame.origin.x);
-    int yAbs = (int)([[self->nsView window] screen].frame.size.height - [self->nsView window].frame.origin.y
+    int yAbs = (int)([[NSScreen screens] objectAtIndex: 0].frame.size.height - [self->nsView window].frame.origin.y
                      - [info draggingLocation].y);
 
     int mask;
