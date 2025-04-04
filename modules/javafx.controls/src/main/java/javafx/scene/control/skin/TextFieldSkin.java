@@ -144,7 +144,6 @@ public class TextFieldSkin extends TextInputControlSkin<TextField> {
      */
     public TextFieldSkin(final TextField control) {
         super(control);
-
         // install default input map for the text field control
         this.behavior = (control instanceof PasswordField)
                 ? new PasswordFieldBehavior((PasswordField)control)
@@ -733,7 +732,7 @@ public class TextFieldSkin extends TextInputControlSkin<TextField> {
         promptNode.visibleProperty().bind(usePromptText);
         promptNode.fontProperty().bind(getSkinnable().fontProperty());
 
-        promptNode.textProperty().bind(getSkinnable().promptTextProperty());
+        promptNode.textProperty().bind(getSkinnable().promptTextProperty().map(s -> s.replace("\n", "")));
         promptNode.fillProperty().bind(promptTextFillProperty());
         updateSelection();
     }
