@@ -25,6 +25,7 @@
 
 package test.javafx.util.converter;
 
+import static org.junit.jupiter.api.Assertions.*;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.Calendar;
@@ -32,9 +33,10 @@ import java.util.Date;
 import java.util.Locale;
 import java.util.TimeZone;
 import java.util.stream.Stream;
+
 import javafx.util.converter.DateTimeStringConverterShim;
 import javafx.util.converter.TimeStringConverter;
-import static org.junit.jupiter.api.Assertions.*;
+
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
