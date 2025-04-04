@@ -49,12 +49,13 @@ import javafx.stage.Screen;
  */
 public class ScreenshotCapture {
     /**
-     * Captures a screenshot using JavaFX {@link Robot} in the PNG format.
+     * Captures a screenshot using JavaFX {@link Robot} in PNG format,
+     * returning it as a byte array.
      * <p>
      * This method can be called from any thread.  If called from a thread other than
      * the JavaFX Application Thread, the current thread will be paused until the screenshot is taken.
      *
-     * @return the byte array containing the screenshot
+     * @return the byte array containing the screenshot in PNG format
      * @throws IOException when an I/O error occurs
      */
     public static byte[] takeScreenshot() throws IOException {
@@ -79,7 +80,7 @@ public class ScreenshotCapture {
     }
 
     /**
-     * Captures a screenshot using JavaFX {@link Robot} in the PNG format,
+     * Captures a screenshot using JavaFX {@link Robot} in PNG format,
      * then writes it in a Base-64 encoding to the specified {@code PrintStream}.
      * <p>
      * Example:
@@ -94,7 +95,7 @@ public class ScreenshotCapture {
     }
 
     /**
-     * Captures a screenshot using JavaFX {@link Robot} in the PNG format,
+     * Captures a screenshot using JavaFX {@link Robot} in PNG format,
      * in the form of a Base-64 encoded {@code String}.
      * <p>
      * This method can be called from any thread.  If called from a thread other than
