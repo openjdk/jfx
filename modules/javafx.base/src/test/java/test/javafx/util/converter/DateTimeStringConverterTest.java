@@ -61,7 +61,7 @@ public class DateTimeStringConverterTest {
         c.set(Calendar.SECOND, 0);
         VALID_DATE_WITHOUT_SECONDS = c.getTime();
     }
-    
+
     public static Collection implementations() {
         return Arrays.asList(new Object[][] {
                 { new DateTimeStringConverter(),
