@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,11 +25,9 @@
 
 package com.sun.javafx.scene.text;
 
-import javafx.scene.shape.PathElement;
+import java.util.Objects;
 import com.sun.javafx.geom.BaseBounds;
 import com.sun.javafx.geom.Shape;
-
-import java.util.Objects;
 
 public interface TextLayout {
 
@@ -78,6 +76,12 @@ public interface TextLayout {
     public static final int TYPE_BEARINGS       = 1 << 5;
 
     public static final int DEFAULT_TAB_SIZE = 8;
+
+    /** Callback to be called for each rectangular shape */
+    @FunctionalInterface
+    public static interface GeometryCallback {
+        public void addRectangle(float left, float top, float right, float bottom);
+    }
 
     public static class Hit {
         int charIndex;
@@ -233,8 +237,36 @@ public interface TextLayout {
      */
     public Hit getHitInfo(float x, float y);
 
-    public PathElement[] getCaretShape(int offset, boolean isLeading,
-                                       float x, float y);
-    public PathElement[] getRange(int start, int end, int type,
-                                  float x, float y);
+    /**
+     * Queries the caret geometry and associated information at the specified text position.
+     * <p>
+     * The geometry is encoded as a sequence of coordinates using two different formats,
+     * depending on whether the caret is drawn as a single vertical line or as two separate
+     * lines (a "split" caret).
+     * <ul>
+     * <li>{@code [x, y, h]} - corresponds to a single line from (x, y) to (x, y + h)
+     * <li>{@code [x, y, x2, h]} - corresponds to a split caret drawn as two lines, the first line
+     * drawn from (x, y) to (x, y + h/2), the second line drawn from (x2, y + h/2) to (x2, y + h).
+     * </ul>
+     *
+     * @param offset the character offset
+     * @param leading whether the caret is biased on the leading edge of the character
+     * @return the caret geometry
+     */
+    public float[] getCaretGeometry(int offset, boolean leading);
+
+    /**
+     * Queries the range geometry of the range of text within the text layout for one of the three possible types:
+     * <ul>
+     * <li>{@link #TYPE_STRIKETHROUGH} - strike-through shape
+     * <li>{@link #TYPE_TEXT} - text selection shape
+     * <li>{@link #TYPE_UNDERLINE} - underline shape
+     * </ul>
+     *
+     * @param start the start offset
+     * @param end the end offset
+     * @param type the type of the geometry
+     * @param client the callback to invoke for each rectangular shape
+     */
+    public void getRange(int start, int end, int type, GeometryCallback client);
 }
