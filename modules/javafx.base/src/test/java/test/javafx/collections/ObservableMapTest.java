@@ -25,8 +25,7 @@
 
 package test.javafx.collections;
 
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import java.util.Arrays;
 import java.util.Collection;
@@ -38,25 +37,17 @@ import javafx.collections.MapChangeListener;
 import javafx.collections.ObservableMap;
 import static test.javafx.collections.MockMapObserver.Call.call;
 import static test.javafx.collections.MockMapObserver.Tuple.tup;
-import static org.junit.Assert.*;
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.*;
 
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
 
-@RunWith(Parameterized.class)
 public class ObservableMapTest {
 
-    final Callable<ObservableMap<String, String>> mapFactory;
+    Callable<ObservableMap<String, String>> mapFactory;
     private ObservableMap<String, String> observableMap;
     private MockMapObserver<String, String> observer;
 
-
-    public ObservableMapTest(final Callable<ObservableMap<String, String>> mapFactory) {
-        this.mapFactory = mapFactory;
-    }
-
-    @Parameterized.Parameters
     public static Collection createParameters() {
         Object[][] data = new Object[][] {
             { TestedObservableMaps.HASH_MAP },
@@ -70,8 +61,8 @@ public class ObservableMapTest {
         return Arrays.asList(data);
     }
 
-    @Before
-    public void setUp() throws Exception {
+    private void setUp(Callable<ObservableMap<String, String>> mapFactory) throws Exception {
+        this.mapFactory = mapFactory;
         observableMap = mapFactory.call();
         observer = new MockMapObserver<>();
         observableMap.addListener(observer);
@@ -94,8 +85,10 @@ public class ObservableMapTest {
         observer.clear();
     }
 
-    @Test
-    public void testPutRemove() {
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    public void testPutRemove(Callable<ObservableMap<String, String>> mapFactory) throws Exception {
+        setUp(mapFactory);
         observableMap.put("observedFoo", "barVal");
         observableMap.put("foo", "barfoo");
         assertEquals("barVal", observableMap.get("observedFoo"));
@@ -116,8 +109,10 @@ public class ObservableMapTest {
         assertEquals(observer.getCallsNumber(), 4);
     }
 
-    @Test
-    public void testPutRemove_Null() {
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    public void testPutRemove_Null(Callable<ObservableMap<String, String>> mapFactory) throws Exception {
+        setUp(mapFactory);
         if (mapFactory instanceof TestedObservableMaps.CallableConcurrentHashMapImpl) {
             return; // Do not perform on ConcurrentHashMap, as it doesn't accept nulls
         }
@@ -148,8 +143,10 @@ public class ObservableMapTest {
         assertEquals(observer.getCallsNumber(), 6);
     }
 
-    @Test
-    public void testPutRemove_NullKey() {
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    public void testPutRemove_NullKey(Callable<ObservableMap<String, String>> mapFactory) throws Exception {
+        setUp(mapFactory);
         if (mapFactory instanceof TestedObservableMaps.CallableConcurrentHashMapImpl ||
                 mapFactory instanceof TestedObservableMaps.CallableTreeMapImpl) {
             return; // Do not perform on ConcurrentHashMap and TreeMap, as they doesn't accept null keys
@@ -169,9 +166,11 @@ public class ObservableMapTest {
         assertEquals(observer.getCallsNumber(), 2);
     }
 
-    @Test
+    @ParameterizedTest
+    @MethodSource("createParameters")
     @SuppressWarnings("unchecked")
-    public void testPutAll() {
+    public void testPutAll(Callable<ObservableMap<String, String>> mapFactory) throws Exception {
+        setUp(mapFactory);
         Map<String, String> map = new HashMap<>();
         map.put("oFoo", "OFoo");
         map.put("pFoo", "PFoo");
@@ -183,9 +182,11 @@ public class ObservableMapTest {
         observer.assertMultipleCalls(call("oFoo", null, "OFoo"), call("pFoo", null, "PFoo"), call("foo", "bar", "foofoo"));
     }
 
-    @Test
+    @ParameterizedTest
+    @MethodSource("createParameters")
     @SuppressWarnings("unchecked")
-    public void testClear() {
+    public void testClear(Callable<ObservableMap<String, String>> mapFactory) throws Exception {
+        setUp(mapFactory);
         observableMap.clear();
 
         assertTrue(observableMap.isEmpty());
@@ -193,8 +194,10 @@ public class ObservableMapTest {
 
     }
 
-    @Test
-    public void testOther() {
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    public void testOther(Callable<ObservableMap<String, String>> mapFactory) throws Exception {
+        setUp(mapFactory);
         assertEquals(3, observableMap.size());
         assertFalse(observableMap.isEmpty());
 
@@ -205,8 +208,10 @@ public class ObservableMapTest {
         assertTrue(observableMap.containsValue("bar"));
     }
 
-    @Test
-    public void testKeySet_Remove() {
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    public void testKeySet_Remove(Callable<ObservableMap<String, String>> mapFactory) throws Exception {
+        setUp(mapFactory);
         observableMap.keySet().remove("one");
         observableMap.keySet().remove("two");
         observableMap.keySet().remove("three");
@@ -216,33 +221,41 @@ public class ObservableMapTest {
         assertTrue(observer.getCallsNumber() == 2);
     }
 
-    @Test
+    @ParameterizedTest
+    @MethodSource("createParameters")
     @SuppressWarnings("unchecked")
-    public void testKeySet_RemoveAll() {
+    public void testKeySet_RemoveAll(Callable<ObservableMap<String, String>> mapFactory) throws Exception {
+        setUp(mapFactory);
         observableMap.keySet().removeAll(Arrays.asList("one", "two", "three"));
 
         observer.assertMultipleRemoved(tup("one", "1"), tup("two", "2"));
         assertTrue(observableMap.size() == 1);
     }
 
-    @Test
-    public void testKeySet_RetainAll() {
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    public void testKeySet_RetainAll(Callable<ObservableMap<String, String>> mapFactory) throws Exception {
+        setUp(mapFactory);
         observableMap.keySet().retainAll(Arrays.asList("one", "two", "three"));
 
         observer.assertRemoved(tup("foo", "bar"));
         assertTrue(observableMap.size() == 2);
     }
 
-    @Test
+    @ParameterizedTest
+    @MethodSource("createParameters")
     @SuppressWarnings("unchecked")
-    public void testKeySet_Clear() {
+    public void testKeySet_Clear(Callable<ObservableMap<String, String>> mapFactory) throws Exception {
+        setUp(mapFactory);
         observableMap.keySet().clear();
         assertTrue(observableMap.keySet().isEmpty());
         observer.assertMultipleRemoved(tup("one", "1"), tup("two", "2"), tup("foo", "bar"));
     }
 
-    @Test
-    public void testKeySet_Iterator() {
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    public void testKeySet_Iterator(Callable<ObservableMap<String, String>> mapFactory) throws Exception {
+        setUp(mapFactory);
         Iterator<String> iterator = observableMap.keySet().iterator();
         assertTrue(iterator.hasNext());
 
@@ -254,8 +267,10 @@ public class ObservableMapTest {
         observer.assertRemoved(tup(toBeRemoved, toBeRemovedVal));
     }
 
-    @Test
-    public void testKeySet_Other() {
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    public void testKeySet_Other(Callable<ObservableMap<String, String>> mapFactory) throws Exception {
+        setUp(mapFactory);
         assertEquals(3, observableMap.keySet().size());
         assertTrue(observableMap.keySet().contains("foo"));
         assertFalse(observableMap.keySet().contains("bar"));
@@ -267,8 +282,10 @@ public class ObservableMapTest {
         assertTrue(observableMap.keySet().toArray().length == 3);
     }
 
-    @Test
-    public void testValues_Remove() {
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    public void testValues_Remove(Callable<ObservableMap<String, String>> mapFactory) throws Exception {
+        setUp(mapFactory);
         observableMap.values().remove("1");
         observableMap.values().remove("2");
         observableMap.values().remove("3");
@@ -278,33 +295,41 @@ public class ObservableMapTest {
         assertTrue(observer.getCallsNumber() == 2);
     }
 
-    @Test
+    @ParameterizedTest
+    @MethodSource("createParameters")
     @SuppressWarnings("unchecked")
-    public void testValues_RemoveAll() {
+    public void testValues_RemoveAll(Callable<ObservableMap<String, String>> mapFactory) throws Exception {
+        setUp(mapFactory);
         observableMap.values().removeAll(Arrays.asList("1", "2", "3"));
 
         observer.assertMultipleRemoved(tup("one", "1"), tup("two", "2"));
         assertTrue(observableMap.size() == 1);
     }
 
-    @Test
-    public void testValues_RetainAll() {
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    public void testValues_RetainAll(Callable<ObservableMap<String, String>> mapFactory) throws Exception {
+        setUp(mapFactory);
         observableMap.values().retainAll(Arrays.asList("1", "2", "3"));
 
         observer.assertRemoved(tup("foo", "bar"));
         assertTrue(observableMap.size() == 2);
     }
 
-    @Test
+    @ParameterizedTest
+    @MethodSource("createParameters")
     @SuppressWarnings("unchecked")
-    public void testValues_Clear() {
+    public void testValues_Clear(Callable<ObservableMap<String, String>> mapFactory) throws Exception {
+        setUp(mapFactory);
         observableMap.values().clear();
         assertTrue(observableMap.values().isEmpty());
         observer.assertMultipleRemoved(tup("one", "1"), tup("two", "2"), tup("foo", "bar"));
     }
 
-    @Test
-    public void testValues_Iterator() {
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    public void testValues_Iterator(Callable<ObservableMap<String, String>> mapFactory) throws Exception {
+        setUp(mapFactory);
         Iterator<String> iterator = observableMap.values().iterator();
         assertTrue(iterator.hasNext());
 
@@ -317,8 +342,10 @@ public class ObservableMapTest {
                 : toBeRemovedVal.equals("bar") ? "foo" : null, toBeRemovedVal));
     }
 
-    @Test
-    public void testValues_Other() {
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    public void testValues_Other(Callable<ObservableMap<String, String>> mapFactory) throws Exception {
+        setUp(mapFactory);
         assertEquals(3, observableMap.values().size());
         assertFalse(observableMap.values().contains("foo"));
         assertTrue(observableMap.values().contains("bar"));
@@ -330,8 +357,10 @@ public class ObservableMapTest {
         assertTrue(observableMap.values().toArray().length == 3);
     }
 
-    @Test
-    public void testEntrySet_Remove() {
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    public void testEntrySet_Remove(Callable<ObservableMap<String, String>> mapFactory) throws Exception {
+        setUp(mapFactory);
         observableMap.entrySet().remove(entry("one","1"));
         observableMap.entrySet().remove(entry("two","2"));
         observableMap.entrySet().remove(entry("three","3"));
@@ -341,33 +370,41 @@ public class ObservableMapTest {
         assertTrue(observer.getCallsNumber() == 2);
     }
 
-    @Test
+    @ParameterizedTest
+    @MethodSource("createParameters")
     @SuppressWarnings("unchecked")
-    public void testEntrySet_RemoveAll() {
+    public void testEntrySet_RemoveAll(Callable<ObservableMap<String, String>> mapFactory) throws Exception {
+        setUp(mapFactory);
         observableMap.entrySet().removeAll(Arrays.asList(entry("one","1"), entry("two","2"), entry("three","3")));
 
         observer.assertMultipleRemoved(tup("one", "1"), tup("two", "2"));
         assertTrue(observableMap.size() == 1);
     }
 
-    @Test
-    public void testEntrySet_RetainAll() {
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    public void testEntrySet_RetainAll(Callable<ObservableMap<String, String>> mapFactory) throws Exception {
+        setUp(mapFactory);
         observableMap.entrySet().retainAll(Arrays.asList(entry("one","1"), entry("two","2"), entry("three","3")));
 
         observer.assertRemoved(tup("foo", "bar"));
         assertTrue(observableMap.size() == 2);
     }
 
-    @Test
+    @ParameterizedTest
+    @MethodSource("createParameters")
     @SuppressWarnings("unchecked")
-    public void testEntrySet_Clear() {
+    public void testEntrySet_Clear(Callable<ObservableMap<String, String>> mapFactory) throws Exception {
+        setUp(mapFactory);
         observableMap.entrySet().clear();
         assertTrue(observableMap.entrySet().isEmpty());
         observer.assertMultipleRemoved(tup("one", "1"), tup("two", "2"), tup("foo", "bar"));
     }
 
-    @Test
-    public void testEntrySet_Iterator() {
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    public void testEntrySet_Iterator(Callable<ObservableMap<String, String>> mapFactory) throws Exception {
+        setUp(mapFactory);
         Iterator<Map.Entry<String, String>> iterator = observableMap.entrySet().iterator();
         assertTrue(iterator.hasNext());
 
@@ -381,8 +418,10 @@ public class ObservableMapTest {
         observer.assertRemoved(tup(toBeRemovedKey, toBeRemovedVal));
     }
 
-    @Test
-    public void testEntrySet_Other() {
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    public void testEntrySet_Other(Callable<ObservableMap<String, String>> mapFactory) throws Exception {
+        setUp(mapFactory);
         assertEquals(3, observableMap.entrySet().size());
         assertTrue(observableMap.entrySet().contains(entry("foo", "bar")));
         assertFalse(observableMap.entrySet().contains(entry("bar", "foo")));
@@ -394,8 +433,10 @@ public class ObservableMapTest {
         assertTrue(observableMap.entrySet().toArray().length == 3);
     }
 
-    @Test
-    public void testObserverCanRemoveObservers() {
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    public void testObserverCanRemoveObservers(Callable<ObservableMap<String, String>> mapFactory) throws Exception {
+        setUp(mapFactory);
         final MapChangeListener<String, String> listObserver = change -> {
             change.getMap().removeListener(observer);
         };
@@ -426,8 +467,10 @@ public class ObservableMapTest {
         }
     }
 
-    @Test
-    public void testEqualsAndHashCode() {
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    public void testEqualsAndHashCode(Callable<ObservableMap<String, String>> mapFactory) throws Exception {
+        setUp(mapFactory);
         final Map<String, String> other = new HashMap<>(observableMap);
         assertTrue(observableMap.equals(other));
         assertEquals(observableMap.hashCode(), other.hashCode());

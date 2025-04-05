@@ -30,8 +30,8 @@ import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.Property;
 import javafx.beans.property.SimpleBooleanProperty;
 import javafx.beans.value.ChangeListener;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.beans.PropertyChangeListener;
 import java.beans.PropertyVetoException;
@@ -39,10 +39,8 @@ import java.beans.VetoableChangeListener;
 import java.lang.reflect.UndeclaredThrowableException;
 import javafx.beans.property.adapter.JavaBeanProperty;
 
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.*;
 
-/**
-*/
 public abstract class JavaBeanPropertyTestBase<T> {
     private BeanStub<T> bean;
     private JavaBeanProperty<T> property;
@@ -53,8 +51,8 @@ public abstract class JavaBeanPropertyTestBase<T> {
     protected abstract Property<T> createObservable(T value);
     protected abstract JavaBeanProperty<T> extractProperty(Object bean) throws NoSuchMethodException;
 
-    @Before
-    public void setUp() {
+    @BeforeEach
+    private void setUp() {
         this.bean = createBean(getValue(0));
         try {
             this.property = extractProperty(bean);
@@ -63,13 +61,11 @@ public abstract class JavaBeanPropertyTestBase<T> {
         }
     }
 
-    @Test(expected = NullPointerException.class)
+    @Test
     public void testSetup_WithNull() {
-        try {
+        assertThrows(NullPointerException.class, () -> {
             this.property = extractProperty(null);
-        } catch (NoSuchMethodException e) {
-            fail();
-        }
+        });
     }
 
     @Test
@@ -94,23 +90,23 @@ public abstract class JavaBeanPropertyTestBase<T> {
         assertEquals(bean.getValue(), getValue(0));
     }
 
-    @Test(expected = UndeclaredThrowableException.class)
+    @Test
     public void testGet_Exception() {
         bean.setFailureMode(true);
-        property.getValue();
+        assertThrows(UndeclaredThrowableException.class, () -> property.getValue());
     }
 
-    @Test(expected = UndeclaredThrowableException.class)
+    @Test
     public void testSet_Exception() {
         bean.setFailureMode(true);
-        property.setValue(getValue(1));
+        assertThrows(UndeclaredThrowableException.class, () -> property.setValue(getValue(1)));
     }
 
-    @Test(expected = RuntimeException.class)
+    @Test
     public void testSet_Bound() {
         final Property<T> observable = createObservable(getValue(1));
         property.bind(observable);
-        property.setValue(getValue(0));
+        assertThrows(RuntimeException.class, () -> property.setValue(getValue(0)));
     }
 
     @Test
@@ -202,9 +198,9 @@ public abstract class JavaBeanPropertyTestBase<T> {
         assertFalse(property.isBound());
     }
 
-    @Test(expected = NullPointerException.class)
+    @Test
     public void testBindWithNull() {
-        property.bind(null);
+        assertThrows(NullPointerException.class, () -> property.bind(null));
     }
 
     public static abstract class BeanStub<U> {
@@ -223,7 +219,7 @@ public abstract class JavaBeanPropertyTestBase<T> {
         }
 
         public void removeXListener(PropertyChangeListener listener) {
-            listenerCount = Math.max(0, listenerCount-1);
+            listenerCount = Math.max(0, listenerCount - 1);
         }
 
         public void addXListener(VetoableChangeListener listener) {
@@ -231,7 +227,7 @@ public abstract class JavaBeanPropertyTestBase<T> {
         }
 
         public void removeXListener(VetoableChangeListener listener) {
-            listenerCount = Math.max(0, listenerCount-1);
+            listenerCount = Math.max(0, listenerCount - 1);
         }
     }
 }

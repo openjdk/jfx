@@ -25,46 +25,42 @@
 
 package test.javafx.collections;
 
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.TestInstance;
+import org.junit.jupiter.api.Test;
 
 import java.util.*;
 
-import static org.junit.Assert.*;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
+import static org.junit.jupiter.api.Assertions.*;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
+import org.junit.jupiter.params.provider.Arguments;
+import java.util.stream.Stream;
 
 
 /**
  * Tests for iterators of ObservableList.
  *
  */
-@RunWith(Parameterized.class)
 public class ObservableListIteratorTest {
 
     // ========== Test Fixture ==========
-    final Callable<? extends List<String>> listFactory;
+    protected Callable<? extends List<String>> listFactory;
     List<String> list;
     ListIterator<String> iter;
 
-    public ObservableListIteratorTest(final Callable<? extends List<String>> listFactory) {
-        this.listFactory = listFactory;
+
+    public static Stream<Arguments> createParameters() {
+        return Stream.of(
+                Arguments.of(TestedObservableLists.ARRAY_LIST),
+                Arguments.of(TestedObservableLists.LINKED_LIST),
+                Arguments.of(TestedObservableLists.VETOABLE_LIST),
+                Arguments.of(TestedObservableLists.CHECKED_OBSERVABLE_ARRAY_LIST),
+                Arguments.of(TestedObservableLists.SYNCHRONIZED_OBSERVABLE_ARRAY_LIST)
+        );
     }
 
-    @Parameterized.Parameters
-    public static Collection createParameters() {
-        Object[][] data = new Object[][] {
-            { TestedObservableLists.ARRAY_LIST },
-            { TestedObservableLists.LINKED_LIST },
-            { TestedObservableLists.VETOABLE_LIST },
-            { TestedObservableLists.CHECKED_OBSERVABLE_ARRAY_LIST },
-            { TestedObservableLists.SYNCHRONIZED_OBSERVABLE_ARRAY_LIST }
-         };
-        return Arrays.asList(data);
-    }
-
-    @Before
-    public void setup() throws Exception {
+    private void setup(Callable<? extends List<String>> listFactory) throws Exception {
         list = listFactory.call();
         list.addAll(Arrays.asList("a", "b", "c", "d", "e", "f"));
         iter = list.listIterator();
@@ -105,21 +101,27 @@ public class ObservableListIteratorTest {
 
     // ========== Basic Tests ==========
 
-    @Test
-    public void testCompleteIteration() {
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    public void testCompleteIteration(Callable<? extends List<String>> listFactory) throws Exception {
+        setup(listFactory);
         assertEquals("[a, b, c, d, e, f]", copyOut(iter).toString());
     }
 
-    @Test
-    public void testBeginningState() {
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    public void testBeginningState(Callable<? extends List<String>> listFactory) throws Exception {
+        setup(listFactory);
         assertTrue(iter.hasNext());
         assertFalse(iter.hasPrevious());
         assertEquals(-1, iter.previousIndex());
         assertEquals(0, iter.nextIndex());
     }
 
-    @Test
-    public void testMiddleState() {
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    public void testMiddleState(Callable<? extends List<String>> listFactory) throws Exception {
+        setup(listFactory);
         advance(iter, 3);
         assertTrue(iter.hasNext());
         assertTrue(iter.hasPrevious());
@@ -127,8 +129,10 @@ public class ObservableListIteratorTest {
         assertEquals(3, iter.nextIndex());
     }
 
-    @Test
-    public void testEndState() {
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    public void testEndState(Callable<? extends List<String>> listFactory) throws Exception {
+        setup(listFactory);
         toEnd(iter);
         assertFalse(iter.hasNext());
         assertTrue(iter.hasPrevious());
@@ -136,8 +140,10 @@ public class ObservableListIteratorTest {
         assertEquals(6, iter.nextIndex());
     }
 
-    @Test
-    public void testSwitchDirections() {
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    public void testSwitchDirections(Callable<? extends List<String>> listFactory) throws Exception {
+        setup(listFactory);
         advance(iter, 2);
         assertEquals("c", iter.next());
         assertEquals("d", iter.next());
@@ -146,19 +152,25 @@ public class ObservableListIteratorTest {
         assertEquals("c", iter.next());
     }
 
-    @Test(expected = NoSuchElementException.class)
-    public void testBoundaryStart() {
-        iter.previous();
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    public void testBoundaryStart(Callable<? extends List<String>> listFactory) throws Exception {
+        setup(listFactory);
+        assertThrows(NoSuchElementException.class, () -> iter.previous());
     }
 
-    @Test(expected = NoSuchElementException.class)
-    public void testBoundaryEnd() {
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    public void testBoundaryEnd(Callable<? extends List<String>> listFactory) throws Exception {
+        setup(listFactory);
         advance(iter, 6);
-        iter.next();
+        assertThrows(NoSuchElementException.class, () -> iter.next());
     }
 
-    @Test
-    public void testForEachLoop() {
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    public void testForEachLoop(Callable<? extends List<String>> listFactory) throws Exception {
+        setup(listFactory);
         List<String> output = new ArrayList<>();
         for (String s : list) {
             output.add(s);
@@ -168,8 +180,10 @@ public class ObservableListIteratorTest {
 
     // ========== Add Tests ==========
 
-    @Test
-    public void testAddBeginning() {
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    public void testAddBeginning(Callable<? extends List<String>> listFactory) throws Exception {
+        setup(listFactory);
         iter.add("X");
 
         assertEquals(0, iter.previousIndex());
@@ -178,8 +192,10 @@ public class ObservableListIteratorTest {
         assertEquals("[X, a, b, c, d, e, f]", list.toString());
     }
 
-    @Test
-    public void testAddMiddle() {
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    public void testAddMiddle(Callable<? extends List<String>> listFactory) throws Exception {
+        setup(listFactory);
         advance(iter, 3);
         iter.add("X");
 
@@ -189,8 +205,10 @@ public class ObservableListIteratorTest {
         assertEquals("[a, b, c, X, d, e, f]", list.toString());
     }
 
-    @Test
-    public void testAddEnd() {
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    public void testAddEnd(Callable<? extends List<String>> listFactory) throws Exception {
+        setup(listFactory);
         advance(iter, 6);
         iter.add("X");
 
@@ -200,8 +218,10 @@ public class ObservableListIteratorTest {
         assertEquals("[a, b, c, d, e, f, X]", list.toString());
     }
 
-    @Test
-    public void testPreviousAfterAddBeginning() {
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    public void testPreviousAfterAddBeginning(Callable<? extends List<String>> listFactory) throws Exception {
+        setup(listFactory);
         iter.add("X");
         assertEquals("X", iter.previous());
         assertEquals(-1, iter.previousIndex());
@@ -209,8 +229,10 @@ public class ObservableListIteratorTest {
         assertEquals("[X, a, b, c, d, e, f]", list.toString());
     }
 
-    @Test
-    public void testPreviousAfterAddMiddle() {
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    public void testPreviousAfterAddMiddle(Callable<? extends List<String>> listFactory) throws Exception {
+        setup(listFactory);
         advance(iter, 3);
         iter.add("X");
         assertEquals("X", iter.previous());
@@ -219,8 +241,10 @@ public class ObservableListIteratorTest {
         assertEquals("[a, b, c, X, d, e, f]", list.toString());
     }
 
-    @Test
-    public void testPreviousAfterAddEnd() {
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    public void testPreviousAfterAddEnd(Callable<? extends List<String>> listFactory) throws Exception {
+        setup(listFactory);
         advance(iter, 6);
         iter.add("X");
         assertEquals("X", iter.previous());
@@ -229,8 +253,10 @@ public class ObservableListIteratorTest {
         assertEquals("[a, b, c, d, e, f, X]", list.toString());
     }
 
-    @Test
-    public void testAddMultiple() {
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    public void testAddMultiple(Callable<? extends List<String>> listFactory) throws Exception {
+        setup(listFactory);
         advance(iter, 3);
         iter.add("X");
         iter.add("Y");
@@ -243,8 +269,10 @@ public class ObservableListIteratorTest {
         assertEquals("[a, b, c, X, Y, Z, d, e, f]", list.toString());
     }
 
-    @Test
-    public void testAddAfterPrevious() {
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    public void testAddAfterPrevious(Callable<? extends List<String>> listFactory) throws Exception {
+        setup(listFactory);
         advance(iter, 3);
         iter.previous(); // c
         iter.add("X");
@@ -253,8 +281,10 @@ public class ObservableListIteratorTest {
         assertEquals("[a, b, X, c, d, e, f]", list.toString());
     }
 
-    @Test
-    public void testAddAfterRemove() {
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    public void testAddAfterRemove(Callable<? extends List<String>> listFactory) throws Exception {
+        setup(listFactory);
         advance(iter, 3);
         iter.remove();
         iter.add("X");
@@ -263,8 +293,10 @@ public class ObservableListIteratorTest {
         assertEquals("[a, b, X, d, e, f]", list.toString());
     }
 
-    @Test
-    public void testAddAfterSet() {
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    public void testAddAfterSet(Callable<? extends List<String>> listFactory) throws Exception {
+        setup(listFactory);
         advance(iter, 3);
         iter.set("X");
         iter.add("Y");
@@ -275,8 +307,10 @@ public class ObservableListIteratorTest {
 
     // ========== Remove Tests ==========
 
-    @Test
-    public void testRemoveBeginning() {
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    public void testRemoveBeginning(Callable<? extends List<String>> listFactory) throws Exception {
+        setup(listFactory);
         iter.next();
         iter.remove();
         assertEquals(-1, iter.previousIndex());
@@ -284,8 +318,10 @@ public class ObservableListIteratorTest {
         assertEquals("[b, c, d, e, f]", list.toString());
     }
 
-    @Test
-    public void testRemoveMiddle() {
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    public void testRemoveMiddle(Callable<? extends List<String>> listFactory) throws Exception {
+        setup(listFactory);
         advance(iter, 3);
         iter.remove();
         assertEquals(1, iter.previousIndex());
@@ -293,8 +329,10 @@ public class ObservableListIteratorTest {
         assertEquals("[a, b, d, e, f]", list.toString());
     }
 
-    @Test
-    public void testRemoveEnd() {
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    public void testRemoveEnd(Callable<? extends List<String>> listFactory) throws Exception {
+        setup(listFactory);
         toEnd(iter);
         iter.remove();
         assertEquals(4, iter.previousIndex());
@@ -302,8 +340,10 @@ public class ObservableListIteratorTest {
         assertEquals("[a, b, c, d, e]", list.toString());
     }
 
-    @Test
-    public void testRemoveAfterPrevious() {
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    public void testRemoveAfterPrevious(Callable<? extends List<String>> listFactory) throws Exception {
+        setup(listFactory);
         advance(iter, 4);
         iter.previous(); // d
         iter.previous(); // c
@@ -313,8 +353,10 @@ public class ObservableListIteratorTest {
         assertEquals("[a, b, d, e, f]", list.toString());
     }
 
-    @Test
-    public void testRemoveAfterSet() {
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    public void testRemoveAfterSet(Callable<? extends List<String>> listFactory) throws Exception {
+        setup(listFactory);
         advance(iter, 3);
         iter.set("X");
         iter.remove();
@@ -323,21 +365,27 @@ public class ObservableListIteratorTest {
         assertEquals("[a, b, d, e, f]", list.toString());
     }
 
-    @Test(expected = IllegalStateException.class)
-    public void testRemoveInitialThrowsException() {
-        iter.remove();
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    public void testRemoveInitialThrowsException(Callable<? extends List<String>> listFactory) throws Exception {
+        setup(listFactory);
+        assertThrows(IllegalStateException.class, () -> iter.remove());
     }
 
-    @Test
-    public void testRemoveTwiceThrowsException() {
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    public void testRemoveTwiceThrowsException(Callable<? extends List<String>> listFactory) throws Exception {
+        setup(listFactory);
         iter.next();
         iter.remove();
         try { iter.remove(); } catch (IllegalStateException e) {return;}
         fail("Expected IllegalStateException");
     }
 
-    @Test
-    public void testRemoveAfterAddThrowsException() {
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    public void testRemoveAfterAddThrowsException(Callable<? extends List<String>> listFactory) throws Exception {
+        setup(listFactory);
         iter.next();
         iter.add("X");
         try { iter.remove(); } catch (IllegalStateException e) {return;}
@@ -346,8 +394,10 @@ public class ObservableListIteratorTest {
 
     // ========== Set Tests ==========
 
-    @Test
-    public void testSetBeginning() {
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    public void testSetBeginning(Callable<? extends List<String>> listFactory) throws Exception {
+        setup(listFactory);
         iter.next();
         iter.set("X");
         assertEquals(0, iter.previousIndex());
@@ -355,8 +405,10 @@ public class ObservableListIteratorTest {
         assertEquals("[X, b, c, d, e, f]", list.toString());
     }
 
-    @Test
-    public void testSetMiddle() {
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    public void testSetMiddle(Callable<? extends List<String>> listFactory) throws Exception {
+        setup(listFactory);
         advance(iter, 3);
         iter.set("X");
         assertEquals(2, iter.previousIndex());
@@ -364,8 +416,10 @@ public class ObservableListIteratorTest {
         assertEquals("[a, b, X, d, e, f]", list.toString());
     }
 
-    @Test
-    public void testSetEnd() {
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    public void testSetEnd(Callable<? extends List<String>> listFactory) throws Exception {
+        setup(listFactory);
         toEnd(iter);
         iter.set("X");
         assertEquals(5, iter.previousIndex());
@@ -373,8 +427,10 @@ public class ObservableListIteratorTest {
         assertEquals("[a, b, c, d, e, X]", list.toString());
     }
 
-    @Test
-    public void testSetTwice() {
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    public void testSetTwice(Callable<? extends List<String>> listFactory) throws Exception {
+        setup(listFactory);
         advance(iter, 3);
         iter.set("X");
         assertEquals(2, iter.previousIndex());
@@ -386,8 +442,10 @@ public class ObservableListIteratorTest {
         assertEquals("[a, b, Y, d, e, f]", list.toString());
     }
 
-    @Test
-    public void testSetAfterPrevious() {
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    public void testSetAfterPrevious(Callable<? extends List<String>> listFactory) throws Exception {
+        setup(listFactory);
         advance(iter, 4);
         iter.previous(); // d
         iter.previous(); // c
@@ -397,22 +455,28 @@ public class ObservableListIteratorTest {
         assertEquals("[a, b, X, d, e, f]", list.toString());
     }
 
-    @Test
-    public void testSetInitialThrowsException() {
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    public void testSetInitialThrowsException(Callable<? extends List<String>> listFactory) throws Exception {
+        setup(listFactory);
         try { iter.set("X"); } catch (IllegalStateException e) {return;}
         fail("Expected IllegalStateException");
     }
 
-    @Test
-    public void testSetAfterAddThrowsException() {
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    public void testSetAfterAddThrowsException(Callable<? extends List<String>> listFactory) throws Exception {
+        setup(listFactory);
         iter.next();
         iter.add("X");
         try { iter.set("Y"); } catch (IllegalStateException e) {return;}
         fail("Expected IllegalStateException");
     }
 
-    @Test
-    public void testSetAfterRemoveThrowsException() {
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    public void testSetAfterRemoveThrowsException(Callable<? extends List<String>> listFactory) throws Exception {
+        setup(listFactory);
         iter.next();
         iter.remove();
         try { iter.set("X"); } catch (IllegalStateException e) {return;}
@@ -421,8 +485,10 @@ public class ObservableListIteratorTest {
 
     // ========== Positioned Iterator Tests ==========
 
-    @Test
-    public void testPosBeginning() {
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    public void testPosBeginning(Callable<? extends List<String>> listFactory) throws Exception {
+        setup(listFactory);
         iter = list.listIterator(0);
         assertFalse(iter.hasPrevious());
         assertTrue(iter.hasNext());
@@ -431,8 +497,10 @@ public class ObservableListIteratorTest {
         assertEquals("a", iter.next());
     }
 
-    @Test
-    public void testPosMiddle() {
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    public void testPosMiddle(Callable<? extends List<String>> listFactory) throws Exception {
+        setup(listFactory);
         iter = list.listIterator(3);
         assertTrue(iter.hasPrevious());
         assertTrue(iter.hasNext());
@@ -441,8 +509,10 @@ public class ObservableListIteratorTest {
         assertEquals("d", iter.next());
     }
 
-    @Test
-    public void testPosEnd() {
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    public void testPosEnd(Callable<? extends List<String>> listFactory) throws Exception {
+        setup(listFactory);
         iter = list.listIterator(6);
         assertTrue(iter.hasPrevious());
         assertFalse(iter.hasNext());
@@ -451,8 +521,10 @@ public class ObservableListIteratorTest {
         assertEquals("f", iter.previous());
     }
 
-    @Test
-    public void testPosAdd() {
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    public void testPosAdd(Callable<? extends List<String>> listFactory) throws Exception {
+        setup(listFactory);
         iter = list.listIterator(3);
         iter.add("X");
         assertEquals(3, iter.previousIndex());
@@ -460,15 +532,19 @@ public class ObservableListIteratorTest {
         assertEquals("[a, b, c, X, d, e, f]", list.toString());
     }
 
-    @Test
-    public void testPosInitialRemoveThrowsException() {
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    public void testPosInitialRemoveThrowsException(Callable<? extends List<String>> listFactory) throws Exception {
+        setup(listFactory);
         iter = list.listIterator(3);
         try { iter.remove(); } catch (IllegalStateException e) {return;}
         fail("Expected IllegalStateException");
     }
 
-    @Test
-    public void testPosInitialSetThrowsException() {
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    public void testPosInitialSetThrowsException(Callable<? extends List<String>> listFactory) throws Exception {
+        setup(listFactory);
         iter = list.listIterator(3);
         try { iter.set("X"); } catch (IllegalStateException e) {return;}
         fail("Expected IllegalStateException");
@@ -476,75 +552,99 @@ public class ObservableListIteratorTest {
 
     // ========== Concurrency Tests ==========
 
-    @Test
-    public void testConcurrencyAddIteratorNext() {
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    public void testConcurrencyAddIteratorNext(Callable<? extends List<String>> listFactory) throws Exception {
+        setup(listFactory);
         iter = list.listIterator();
         list.add("aa");
         try { iter.next(); } catch (ConcurrentModificationException e) {return;}
         fail("Expected ConcurrentModificationException");
     }
-    @Test
-    public void testConcurrencyAddIndexedIteratorNext() {
+
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    public void testConcurrencyAddIndexedIteratorNext(Callable<? extends List<String>> listFactory) throws Exception {
+        setup(listFactory);
         iter = list.listIterator();
         list.add(1, "aa");
         try { iter.next(); } catch (ConcurrentModificationException e) {return;}
         fail("Expected ConcurrentModificationException");
     }
-    @Test
-    public void testConcurrencyRemoveIteratorNext() {
+
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    public void testConcurrencyRemoveIteratorNext(Callable<? extends List<String>> listFactory) throws Exception {
+        setup(listFactory);
         iter = list.listIterator();
         list.remove("b");
         try { iter.next(); } catch (ConcurrentModificationException e) {return;}
         fail("Expected ConcurrentModificationException");
     }
 
-    @Test
-    public void testConcurrencyRemoveIndexedIteratorNext() {
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    public void testConcurrencyRemoveIndexedIteratorNext(Callable<? extends List<String>> listFactory) throws Exception {
+        setup(listFactory);
         iter = list.listIterator();
         list.remove(2);
         try { iter.next(); } catch (ConcurrentModificationException e) {return;}
         fail("Expected ConcurrentModificationException");
     }
-    @Test
-    public void testConcurrencyAddAllIteratorNext() {
+
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    public void testConcurrencyAddAllIteratorNext(Callable<? extends List<String>> listFactory) throws Exception {
+        setup(listFactory);
         iter = list.listIterator();
         list.addAll(Collections.singleton("f"));
         try { iter.next(); } catch (ConcurrentModificationException e) {return;}
         fail("Expected ConcurrentModificationException");
     }
-    @Test
-    public void testConcurrencyAddAllIndexedIteratorNext() {
+
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    public void testConcurrencyAddAllIndexedIteratorNext(Callable<? extends List<String>> listFactory) throws Exception {
+        setup(listFactory);
         iter = list.listIterator();
         list.addAll(1, Collections.singleton("f"));
         try { iter.next(); } catch (ConcurrentModificationException e) {return;}
         fail("Expected ConcurrentModificationException");
     }
 
-    @Test
-    public void testConcurrencyGetIteratorNext() {
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    public void testConcurrencyGetIteratorNext(Callable<? extends List<String>> listFactory) throws Exception {
+        setup(listFactory);
         iter = list.listIterator();
         list.get(2);
         iter.next();
     }
 
-    @Test
-    public void testConcurrencyRemoveAllIteratorNext() {
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    public void testConcurrencyRemoveAllIteratorNext(Callable<? extends List<String>> listFactory) throws Exception {
+        setup(listFactory);
         iter = list.listIterator();
         list.removeAll(Arrays.asList("a", "c"));
         try { iter.next(); } catch (ConcurrentModificationException e) {return;}
         fail("Expected ConcurrentModificationException");
     }
 
-    @Test
-    public void testConcurrencyRetainAllIteratorNext() {
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    public void testConcurrencyRetainAllIteratorNext(Callable<? extends List<String>> listFactory) throws Exception {
+        setup(listFactory);
         iter = list.listIterator();
         list.retainAll(Arrays.asList("a", "c"));
         try { iter.next(); } catch (ConcurrentModificationException e) {return;}
         fail("Expected ConcurrentModificationException");
     }
 
-    @Test
-    public void testConcurrencyIteratorIteratorNext() {
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    public void testConcurrencyIteratorIteratorNext(Callable<? extends List<String>> listFactory) throws Exception {
+        setup(listFactory);
         iter = list.listIterator();
         final Iterator<String> iterator = list.iterator();
         iterator.next();
@@ -552,75 +652,100 @@ public class ObservableListIteratorTest {
         try { iter.next(); } catch (ConcurrentModificationException e) {return;}
         fail("Expected ConcurrentModificationException");
     }
-    @Test
-    public void testConcurrencyAddIteratorPrevious() {
+
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    public void testConcurrencyAddIteratorPrevious(Callable<? extends List<String>> listFactory) throws Exception {
+        setup(listFactory);
         iter = list.listIterator(2);
         list.add("aa");
         try { iter.previous(); } catch (ConcurrentModificationException e) {return;}
         fail("Expected ConcurrentModificationException");
     }
-    @Test
-    public void testConcurrencyAddIndexedIteratorPrevious() {
+
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    public void testConcurrencyAddIndexedIteratorPrevious(Callable<? extends List<String>> listFactory) throws Exception {
+        setup(listFactory);
         iter = list.listIterator(2);
         list.add(1, "aa");
         try { iter.previous(); } catch (ConcurrentModificationException e) {return;}
         fail("Expected ConcurrentModificationException");
     }
-    @Test
-    public void testConcurrencyRemoveIteratorPrevious() {
+
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    public void testConcurrencyRemoveIteratorPrevious(Callable<? extends List<String>> listFactory) throws Exception {
+        setup(listFactory);
         iter = list.listIterator(2);
         list.remove("b");
         try { iter.previous(); } catch (ConcurrentModificationException e) {return;}
         fail("Expected ConcurrentModificationException");
     }
 
-    @Test
-    public void testConcurrencyRemoveIndexedIteratorPrevious() {
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    public void testConcurrencyRemoveIndexedIteratorPrevious(Callable<? extends List<String>> listFactory) throws Exception {
+        setup(listFactory);
         iter = list.listIterator(2);
         list.remove(2);
         try { iter.previous(); } catch (ConcurrentModificationException e) {return;}
         fail("Expected ConcurrentModificationException");
     }
-    @Test
-    public void testConcurrencyAddAllIteratorPrevious() {
+
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    public void testConcurrencyAddAllIteratorPrevious(Callable<? extends List<String>> listFactory) throws Exception {
+        setup(listFactory);
         iter = list.listIterator(2);
         list.addAll(Collections.singleton("f"));
         try { iter.previous(); } catch (ConcurrentModificationException e) {return;}
         fail("Expected ConcurrentModificationException");
     }
-    @Test
-    public void testConcurrencyAddAllIndexedIteratorPrevious() {
+
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    public void testConcurrencyAddAllIndexedIteratorPrevious(Callable<? extends List<String>> listFactory) throws Exception {
+        setup(listFactory);
         iter = list.listIterator(2);
         list.addAll(1, Collections.singleton("f"));
         try { iter.previous(); } catch (ConcurrentModificationException e) {return;}
         fail("Expected ConcurrentModificationException");
     }
 
-    @Test
-    public void testConcurrencyGetIteratorPrevious() {
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    public void testConcurrencyGetIteratorPrevious(Callable<? extends List<String>> listFactory) throws Exception {
+        setup(listFactory);
         iter = list.listIterator(2);
         list.get(2);
         iter.previous();
     }
 
-    @Test
-    public void testConcurrencyRemoveAllIteratorPrevious() {
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    public void testConcurrencyRemoveAllIteratorPrevious(Callable<? extends List<String>> listFactory) throws Exception  {
+        setup(listFactory);
         iter = list.listIterator(2);
         list.removeAll(Arrays.asList("a", "c"));
         try { iter.previous(); } catch (ConcurrentModificationException e) {return;}
         fail("Expected ConcurrentModificationException");
     }
 
-    @Test
-    public void testConcurrencyRetainAllIteratorPrevious() {
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    public void testConcurrencyRetainAllIteratorPrevious(Callable<? extends List<String>> listFactory) throws Exception {
+        setup(listFactory);
         iter = list.listIterator(2);
         list.retainAll(Arrays.asList("a", "c"));
         try { iter.previous(); } catch (ConcurrentModificationException e) {return;}
         fail("Expected ConcurrentModificationException");
     }
 
-    @Test
-    public void testConcurrencyIteratorIteratorPrevious() {
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    public void testConcurrencyIteratorIteratorPrevious(Callable<? extends List<String>> listFactory) throws Exception {
+        setup(listFactory);
         iter = list.listIterator(2);
         final Iterator<String> iterator = list.iterator();
         iterator.next();
@@ -629,8 +754,10 @@ public class ObservableListIteratorTest {
         fail("Expected ConcurrentModificationException");
     }
 
-    @Test
-    public void testConcurrencyAddIteratorRemove() {
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    public void testConcurrencyAddIteratorRemove(Callable<? extends List<String>> listFactory) throws Exception {
+        setup(listFactory);
         iter = list.listIterator();
         iter.next();
         list.add("aa");
@@ -638,8 +765,10 @@ public class ObservableListIteratorTest {
         fail("Expected ConcurrentModificationException");
     }
 
-    @Test
-    public void testConcurrencyAddIndexedIteratorRemove() {
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    public void testConcurrencyAddIndexedIteratorRemove(Callable<? extends List<String>> listFactory) throws Exception {
+        setup(listFactory);
         iter = list.listIterator();
         iter.next();
         list.add(1, "aa");
@@ -647,8 +776,10 @@ public class ObservableListIteratorTest {
         fail("Expected ConcurrentModificationException");
     }
 
-    @Test
-    public void testConcurrencyRemoveIteratorRemove() {
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    public void testConcurrencyRemoveIteratorRemove(Callable<? extends List<String>> listFactory) throws Exception {
+        setup(listFactory);
         iter = list.listIterator();
         iter.next();
         list.remove("b");
@@ -656,24 +787,32 @@ public class ObservableListIteratorTest {
         fail("Expected ConcurrentModificationException");
     }
 
-    @Test
-    public void testConcurrencyRemoveIndexedIteratorRemove() {
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    public void testConcurrencyRemoveIndexedIteratorRemove(Callable<? extends List<String>> listFactory) throws Exception {
+        setup(listFactory);
         iter = list.listIterator();
         iter.next();
         list.remove(2);
         try { iter.remove(); } catch (ConcurrentModificationException e) {return;}
         fail("Expected ConcurrentModificationException");
     }
-    @Test
-    public void testConcurrencyAddAllIteratorRemove() {
+
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    public void testConcurrencyAddAllIteratorRemove(Callable<? extends List<String>> listFactory) throws Exception {
+        setup(listFactory);
         iter = list.listIterator();
         iter.next();
         list.addAll(Collections.singleton("f"));
         try { iter.remove(); } catch (ConcurrentModificationException e) {return;}
         fail("Expected ConcurrentModificationException");
     }
-    @Test
-    public void testConcurrencyAddAllIndexedIteratorRemove() {
+
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    public void testConcurrencyAddAllIndexedIteratorRemove(Callable<? extends List<String>> listFactory) throws Exception {
+        setup(listFactory);
         iter = list.listIterator();
         iter.next();
         list.addAll(1, Collections.singleton("f"));
@@ -681,16 +820,20 @@ public class ObservableListIteratorTest {
         fail("Expected ConcurrentModificationException");
     }
 
-    @Test
-    public void testConcurrencyGetIteratorRemove() {
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    public void testConcurrencyGetIteratorRemove(Callable<? extends List<String>> listFactory) throws Exception {
+        setup(listFactory);
         iter = list.listIterator();
         iter.next();
         list.get(2);
         iter.remove();
     }
 
-    @Test
-    public void testConcurrencyRemoveAllIteratorRemove() {
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    public void testConcurrencyRemoveAllIteratorRemove(Callable<? extends List<String>> listFactory) throws Exception {
+        setup(listFactory);
         iter = list.listIterator();
         iter.next();
         list.removeAll(Arrays.asList("a", "c"));
@@ -698,8 +841,10 @@ public class ObservableListIteratorTest {
         fail("Expected ConcurrentModificationException");
     }
 
-    @Test
-    public void testConcurrencyRetainAllIteratorRemove() {
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    public void testConcurrencyRetainAllIteratorRemove(Callable<? extends List<String>> listFactory) throws Exception {
+        setup(listFactory);
         iter = list.listIterator();
         iter.next();
         list.retainAll(Arrays.asList("a", "c"));
@@ -707,8 +852,10 @@ public class ObservableListIteratorTest {
         fail("Expected ConcurrentModificationException");
     }
 
-    @Test
-    public void testConcurrencyIteratorIteratorRemove() {
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    public void testConcurrencyIteratorIteratorRemove(Callable<? extends List<String>> listFactory) throws Exception {
+        setup(listFactory);
         iter = list.listIterator();
         iter.next();
         final Iterator<String> iterator = list.iterator();
@@ -718,8 +865,10 @@ public class ObservableListIteratorTest {
         fail("Expected ConcurrentModificationException");
     }
 
-    @Test
-    public void testConcurrencyAddIteratorSet() {
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    public void testConcurrencyAddIteratorSet(Callable<? extends List<String>> listFactory) throws Exception {
+        setup(listFactory);
         iter = list.listIterator();
         iter.next();
         list.add("aa");
@@ -727,8 +876,10 @@ public class ObservableListIteratorTest {
         fail("Expected ConcurrentModificationException");
     }
 
-    @Test
-    public void testConcurrencyAddIndexedIteratorSet() {
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    public void testConcurrencyAddIndexedIteratorSet(Callable<? extends List<String>> listFactory) throws Exception {
+        setup(listFactory);
         iter = list.listIterator();
         iter.next();
         list.add(1, "aa");
@@ -736,8 +887,10 @@ public class ObservableListIteratorTest {
         fail("Expected ConcurrentModificationException");
     }
 
-    @Test
-    public void testConcurrencyRemoveIteratorSet() {
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    public void testConcurrencyRemoveIteratorSet(Callable<? extends List<String>> listFactory) throws Exception {
+        setup(listFactory);
         iter = list.listIterator();
         iter.next();
         list.remove("b");
@@ -745,24 +898,32 @@ public class ObservableListIteratorTest {
         fail("Expected ConcurrentModificationException");
     }
 
-    @Test
-    public void testConcurrencyRemoveIndexedIteratorSet() {
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    public void testConcurrencyRemoveIndexedIteratorSet(Callable<? extends List<String>> listFactory) throws Exception {
+        setup(listFactory);
         iter = list.listIterator();
         iter.next();
         list.remove(2);
         try { iter.set("x"); } catch (ConcurrentModificationException e) {return;}
         fail("Expected ConcurrentModificationException");
     }
-    @Test
-    public void testConcurrencyAddAllIteratorSet() {
+
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    public void testConcurrencyAddAllIteratorSet(Callable<? extends List<String>> listFactory) throws Exception {
+        setup(listFactory);
         iter = list.listIterator();
         iter.next();
         list.addAll(Collections.singleton("f"));
         try { iter.set("x"); } catch (ConcurrentModificationException e) {return;}
         fail("Expected ConcurrentModificationException");
     }
-    @Test
-    public void testConcurrencyAddAllIndexedIteratorSet() {
+
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    public void testConcurrencyAddAllIndexedIteratorSet(Callable<? extends List<String>> listFactory) throws Exception {
+        setup(listFactory);
         iter = list.listIterator();
         iter.next();
         list.addAll(1, Collections.singleton("f"));
@@ -770,16 +931,20 @@ public class ObservableListIteratorTest {
         fail("Expected ConcurrentModificationException");
     }
 
-    @Test
-    public void testConcurrencyGetIteratorSet() {
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    public void testConcurrencyGetIteratorSet(Callable<? extends List<String>> listFactory) throws Exception {
+        setup(listFactory);
         iter = list.listIterator();
         iter.next();
         list.get(2);
         iter.set("x");
     }
 
-    @Test
-    public void testConcurrencyRemoveAllIteratorSet() {
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    public void testConcurrencyRemoveAllIteratorSet(Callable<? extends List<String>> listFactory) throws Exception {
+        setup(listFactory);
         iter = list.listIterator();
         iter.next();
         list.removeAll(Arrays.asList("a", "c"));
@@ -787,8 +952,10 @@ public class ObservableListIteratorTest {
         fail("Expected ConcurrentModificationException");
     }
 
-    @Test
-    public void testConcurrencyRetainAllIteratorSet() {
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    public void testConcurrencyRetainAllIteratorSet(Callable<? extends List<String>> listFactory) throws Exception {
+        setup(listFactory);
         iter = list.listIterator();
         iter.next();
         list.retainAll(Arrays.asList("a", "c"));
@@ -796,8 +963,10 @@ public class ObservableListIteratorTest {
         fail("Expected ConcurrentModificationException");
     }
 
-    @Test
-    public void testConcurrencyIteratorIteratorSet() {
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    public void testConcurrencyIteratorIteratorSet(Callable<? extends List<String>> listFactory) throws Exception {
+        setup(listFactory);
         iter = list.listIterator();
         iter.next();
         final Iterator<String> iterator = list.iterator();

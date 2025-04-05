@@ -25,93 +25,70 @@
 
 package test.javafx.util.converter;
 
-import java.util.Arrays;
-import java.util.Collection;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNull;
 import javafx.util.StringConverter;
-import javafx.util.converter.BigDecimalStringConverter;
-import javafx.util.converter.BigIntegerStringConverter;
-import javafx.util.converter.BooleanStringConverter;
-import javafx.util.converter.ByteStringConverter;
-import javafx.util.converter.CharacterStringConverter;
-import javafx.util.converter.CurrencyStringConverter;
-import javafx.util.converter.DateStringConverter;
-import javafx.util.converter.DateTimeStringConverter;
-import javafx.util.converter.DefaultStringConverter;
-import javafx.util.converter.DoubleStringConverter;
-import javafx.util.converter.FloatStringConverter;
-import javafx.util.converter.IntegerStringConverter;
-import javafx.util.converter.LongStringConverter;
-import javafx.util.converter.NumberStringConverter;
-import javafx.util.converter.PercentageStringConverter;
-import javafx.util.converter.ShortStringConverter;
-import javafx.util.converter.TimeStringConverter;
+import javafx.util.converter.*;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
 
-import org.junit.Before;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
+import java.util.stream.Stream;
 
-/**
- */
-@RunWith(Parameterized.class)
+import static org.junit.jupiter.api.Assertions.*;
+
 public class ParameterizedConverterTest {
-    private final Class<? extends StringConverter> converterClass;
-    private StringConverter converter;
 
-    @Parameterized.Parameters public static Collection implementations() {
-        return Arrays.asList(new Object[][] {
-            { BigDecimalStringConverter.class },
-            { BigIntegerStringConverter.class },
-            { BooleanStringConverter.class },
-            { ByteStringConverter.class },
-            { CharacterStringConverter.class },
-            { CurrencyStringConverter.class },
-            { DateStringConverter.class },
-            { DateTimeStringConverter.class },
-            { DefaultStringConverter.class },
-            { DoubleStringConverter.class },
-            { FloatStringConverter.class },
-            { IntegerStringConverter.class },
-            { LongStringConverter.class },
-            { NumberStringConverter.class },
-            { PercentageStringConverter.class },
-            { ShortStringConverter.class },
-            { TimeStringConverter.class },
-        });
+    static Stream<Arguments> converterClasses() {
+        return Stream.of(
+                Arguments.of(BigDecimalStringConverter.class),
+                Arguments.of(BigIntegerStringConverter.class),
+                Arguments.of(BooleanStringConverter.class),
+                Arguments.of(ByteStringConverter.class),
+                Arguments.of(CharacterStringConverter.class),
+                Arguments.of(CurrencyStringConverter.class),
+                Arguments.of(DateStringConverter.class),
+                Arguments.of(DateTimeStringConverter.class),
+                Arguments.of(DefaultStringConverter.class),
+                Arguments.of(DoubleStringConverter.class),
+                Arguments.of(FloatStringConverter.class),
+                Arguments.of(IntegerStringConverter.class),
+                Arguments.of(LongStringConverter.class),
+                Arguments.of(NumberStringConverter.class),
+                Arguments.of(PercentageStringConverter.class),
+                Arguments.of(ShortStringConverter.class),
+                Arguments.of(TimeStringConverter.class)
+        );
     }
 
-    public ParameterizedConverterTest(Class<? extends StringConverter> converterClass) {
-        this.converterClass = converterClass;
-    }
-
-    @Before public void setup() {
-        try {
-            converter = converterClass.getDeclaredConstructor().newInstance();
-        } catch (Exception ex) {
-            ex.printStackTrace();
-        }
-    }
-
-    @Test public void toString_testNull() {
+    @ParameterizedTest
+    @MethodSource("converterClasses")
+    void toString_testNull(Class<? extends StringConverter<?>> converterClass) throws Exception {
+        StringConverter<?> converter = converterClass.getDeclaredConstructor().newInstance();
         assertEquals("", converter.toString(null));
     }
 
-    @Test public void fromString_testEmptyStringWithWhiteSpace() {
-        if (converterClass == DefaultStringConverter.class) {
+    @ParameterizedTest
+    @MethodSource("converterClasses")
+    void fromString_testEmptyStringWithWhiteSpace(Class<? extends StringConverter<?>> converterClass) throws Exception {
+        StringConverter<?> converter = converterClass.getDeclaredConstructor().newInstance();
+        if (converter instanceof DefaultStringConverter) {
             assertEquals("      ", converter.fromString("      "));
         } else {
             assertNull(converter.fromString("      "));
         }
     }
 
-    @Test public void fromString_testNull() {
+    @ParameterizedTest
+    @MethodSource("converterClasses")
+    void fromString_testNull(Class<? extends StringConverter<?>> converterClass) throws Exception {
+        StringConverter<?> converter = converterClass.getDeclaredConstructor().newInstance();
         assertNull(converter.fromString(null));
     }
 
-    @Test public void fromString_testEmptyString() {
-        if (converterClass == DefaultStringConverter.class) {
+    @ParameterizedTest
+    @MethodSource("converterClasses")
+    void fromString_testEmptyString(Class<? extends StringConverter<?>> converterClass) throws Exception {
+        StringConverter<?> converter = converterClass.getDeclaredConstructor().newInstance();
+        if (converter instanceof DefaultStringConverter) {
             assertEquals("", converter.fromString(""));
         } else {
             assertNull(converter.fromString(""));
