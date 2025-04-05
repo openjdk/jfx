@@ -56,9 +56,6 @@ public class ObservableSubListIteratorTest extends ObservableListIteratorTest {
     // ========== Test Fixture ==========
 
     List<String> fullList;
-    private Callable<? extends List<String>> listFactory;
-    private List<String> list;
-    private ListIterator<String> iter;
 
     public static Stream<Arguments> createParameters() {
         return Stream.of(

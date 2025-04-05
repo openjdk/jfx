@@ -59,7 +59,7 @@ public class ObservableSetTest {
     }
 
     private void setUp(Callable<ObservableSet<String>> setFactory) throws Exception {
-        setFactory = setFactory;
+        this.setFactory = setFactory;
         observableSet = setFactory.call();
         observer = new MockSetObserver<>();
         observableSet.addListener(observer);

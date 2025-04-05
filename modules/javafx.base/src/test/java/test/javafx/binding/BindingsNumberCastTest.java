@@ -42,7 +42,6 @@ import javafx.beans.property.SimpleFloatProperty;
 import javafx.beans.property.SimpleIntegerProperty;
 import javafx.beans.property.SimpleLongProperty;
 import javafx.beans.value.ObservableNumberValue;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
@@ -76,8 +75,8 @@ public class BindingsNumberCastTest {
     private LongProperty long1;
     private IntegerProperty integer1;
 
-    @BeforeEach
-    public void setUp() {
+    private void setUp(Functions func) {
+        this.func = func;
         double0 = Double.valueOf(3.1415);
         float0 = Float.valueOf(2.71f);
         long0 = Long.valueOf(111L);
@@ -92,8 +91,7 @@ public class BindingsNumberCastTest {
     @ParameterizedTest
     @MethodSource("parameters")
     void testBindings(Functions func) {
-        this.func = func;
-        setUp(); // Call setup before each parameterized run
+        setUp(func);
 
         // Test Double
         Binding binding = func.generateExpression(double1, double1);

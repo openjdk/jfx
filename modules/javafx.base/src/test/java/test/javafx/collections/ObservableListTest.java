@@ -65,7 +65,7 @@ public class ObservableListTest  {
     }
 
     private void setUp(Callable<ObservableList<String>> listFactory) throws Exception {
-        listFactory = listFactory;
+        this.listFactory = listFactory;
         list = listFactory.call();
         mlo = new MockListObserver<>();
         list.addListener(mlo);

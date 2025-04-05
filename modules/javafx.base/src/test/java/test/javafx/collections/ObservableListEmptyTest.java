@@ -41,7 +41,7 @@ import org.junit.jupiter.params.provider.MethodSource;
  */
 public class ObservableListEmptyTest {
 
-    static List<String> EMPTY = Collections.emptyList();
+    static final List<String> EMPTY = Collections.emptyList();
     Callable<ObservableList<String>> listFactory;
     ObservableList<String> list;
     MockListObserver<String> mlo;
@@ -57,8 +57,8 @@ public class ObservableListEmptyTest {
         return Arrays.asList(data);
     }
 
-    public void setUp(Callable<ObservableList<String>> listFactory) throws Exception {
-        listFactory = listFactory;
+    private void setUp(Callable<ObservableList<String>> listFactory) throws Exception {
+        this.listFactory = listFactory;
         list = listFactory.call();
         mlo = new MockListObserver<>();
         list.addListener(mlo);
