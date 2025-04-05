@@ -25,14 +25,14 @@
 
 package com.sun.javafx.css.media;
 
+import com.sun.javafx.scene.ScenePreferences;
 import javafx.application.ColorScheme;
-import javafx.scene.Scene;
 
 /**
  * A media query is evaluated against a {@code MediaQueryContext}, which provides the media feature
  * values that can be referenced in a media query expression.
  */
-public sealed interface MediaQueryContext permits Scene.Preferences {
+public sealed interface MediaQueryContext permits ScenePreferences {
 
     /**
      * Provides the value for the {@code prefers-color-scheme} media feature.

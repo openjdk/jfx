@@ -503,6 +503,11 @@ public class Scene implements EventTarget {
                         public Accessible getAccessible(Scene scene) {
                             return scene.getAccessible();
                         }
+
+                        @Override
+                        public MediaQueryContext getMediaQueryContext(Scene scene) {
+                            return scene.preferences;
+                        }
                     });
         }
 
@@ -6252,7 +6257,7 @@ public class Scene implements EventTarget {
         return getProperties().get(USER_DATA_KEY);
     }
 
-    private final Preferences preferences = new ScenePreferences(this);
+    private final ScenePreferences preferences = new ScenePreferences(this);
 
     /**
      * Gets the scene preferences that can be queried with {@code @media} CSS rules.
@@ -6533,7 +6538,7 @@ public class Scene implements EventTarget {
      * @see Platform.Preferences
      * @since 25
      */
-    public sealed interface Preferences extends MediaQueryContext permits ScenePreferences {
+    public sealed interface Preferences permits ScenePreferences {
 
         /**
          * Specifies whether the scene should prefer light text on dark backgrounds, or dark text
@@ -6556,7 +6561,6 @@ public class Scene implements EventTarget {
          */
         ObjectProperty<ColorScheme> colorSchemeProperty();
 
-        @Override
         ColorScheme getColorScheme();
 
         void setColorScheme(ColorScheme colorScheme);
@@ -6591,7 +6595,6 @@ public class Scene implements EventTarget {
          * @see #persistentScrollBarsProperty()
          * @see #setPersistentScrollBars(Boolean)
          */
-        @Override
         boolean isPersistentScrollBars();
 
         /**
@@ -6633,7 +6636,6 @@ public class Scene implements EventTarget {
          * @see #reducedMotionProperty()
          * @see #setReducedMotion(Boolean)
          */
-        @Override
         boolean isReducedMotion();
 
         /**
@@ -6675,7 +6677,6 @@ public class Scene implements EventTarget {
          * @see #reducedTransparencyProperty()
          * @see #setReducedTransparency(Boolean)
          */
-        @Override
         boolean isReducedTransparency();
 
         /**
@@ -6717,7 +6718,6 @@ public class Scene implements EventTarget {
          * @see #reducedDataProperty()
          * @see #setReducedData(Boolean)
          */
-        @Override
         boolean isReducedData();
 
         /**

@@ -27,13 +27,14 @@ package com.sun.javafx.scene;
 
 import com.sun.javafx.application.PlatformImpl;
 import com.sun.javafx.beans.property.NullCoalescingPropertyBase;
+import com.sun.javafx.css.media.MediaQueryContext;
 import javafx.application.ColorScheme;
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.value.ObservableValue;
 import javafx.scene.Node;
 import javafx.scene.Scene;
 
-public final class ScenePreferences implements Scene.Preferences {
+public final class ScenePreferences implements Scene.Preferences, MediaQueryContext {
 
     private final Scene scene;
 
