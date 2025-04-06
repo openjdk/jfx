@@ -56,11 +56,12 @@ import javafx.stage.StageStyle;
 import javafx.util.Subscription;
 
 /**
- * A client-area header bar that is used as a replacement for the system-provided header bar in stages
- * with the {@link StageStyle#EXTENDED} style. This class enables the <em>click-and-drag to move</em> and
- * <em>double-click to maximize</em> behaviors that are usually afforded by system-provided header bars.
- * The entire {@code HeaderBar} background is draggable by default, but its content is not. Applications
- * can specify draggable content nodes of the {@code HeaderBar} with the {@link #setDraggable} method.
+ * A client-area header bar that is used as a replacement for the system-provided header bar in
+ * {@link StageStyle#EXTENDED} or {@link StageStyle#EXTENDED_UTILITY} stages. This class enables the
+ * <em>click-and-drag to move</em> and <em>double-click to maximize</em> behaviors that are usually afforded
+ * by system-provided header bars. The entire {@code HeaderBar} background is draggable by default, but its
+ * content is not. Applications can specify draggable content nodes of the {@code HeaderBar} with the
+ * {@link #setDraggable} method.
  * <p>
  * {@code HeaderBar} is a layout container that allows applications to place scene graph nodes in three areas:
  * {@link #leadingProperty() leading}, {@link #centerProperty() center}, and {@link #trailingProperty() trailing}.
@@ -86,13 +87,13 @@ import javafx.util.Subscription;
  * Applications can specify the preferred height for system-provided header buttons by setting the static
  * {@link #setPrefButtonHeight(Stage, double)} property on the {@code Stage} associated with the header bar.
  * This can be used to achieve a more cohesive visual appearance by having the system-provided header buttons
- * match the height of the header bar.
+ * match the height of the client-area header bar.
  *
  * <h2>Custom header buttons</h2>
  * If more control over the header buttons is desired, applications can opt out of the system-provided header
- * buttons by setting {@link #setPrefButtonHeight(Stage, double)} to zero and provide custom header buttons
- * instead. Any JavaFX control can be used as a custom header button by setting its semantic type with the
- * {@link #setButtonType(Node, HeaderButtonType)} method.
+ * buttons by setting {@link #setPrefButtonHeight(Stage, double)} to zero and place custom header buttons in
+ * the JavaFX scene graph instead. Any JavaFX control can be used as a custom header button by setting its
+ * semantic type with the {@link #setButtonType(Node, HeaderButtonType)} method.
  *
  * <h2>System menu</h2>
  * Some platforms support a system menu that can be summoned by right-clicking the draggable area.
@@ -849,8 +850,8 @@ public class HeaderBar extends Region {
         if (child != null && child.isManaged()) {
             Insets margin = getNodeMargin(child);
             return minimum
-                ? computeChildMinAreaHeight(child, -1, margin, width)
-                : computeChildPrefAreaHeight(child, -1, margin, width);
+                ? computeChildMinAreaHeight(child, -1, margin, width, false)
+                : computeChildPrefAreaHeight(child, -1, margin, width, false);
         }
 
         return 0;
