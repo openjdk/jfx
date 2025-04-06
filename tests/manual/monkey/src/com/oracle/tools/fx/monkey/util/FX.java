@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2022, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,6 +25,7 @@
 package com.oracle.tools.fx.monkey.util;
 
 import java.util.List;
+import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Supplier;
 import javafx.application.Platform;
@@ -71,6 +72,13 @@ public class FX {
         return m;
     }
 
+    public static Menu menu(ContextMenu cm, String text) {
+        Menu m = new Menu(text);
+        applyMnemonic(m);
+        cm.getItems().add(m);
+        return m;
+    }
+
     public static final MenuItem menuItem(String text, Runnable action) {
         MenuItem mi = new MenuItem(text);
         if (action == null) {
@@ -97,6 +105,16 @@ public class FX {
         CheckMenuItem mi = new CheckMenuItem(name);
         mi.selectedProperty().bindBidirectional(prop);
         lastMenu(b).getItems().add(mi);
+        return mi;
+    }
+
+    public static CheckMenuItem checkItem(ContextMenu m, String name, boolean selected, Consumer<Boolean> client) {
+        CheckMenuItem mi = new CheckMenuItem(name);
+        mi.setSelected(selected);
+        mi.selectedProperty().addListener((s, p, on) -> {
+            client.accept(on);
+        });
+        m.getItems().add(mi);
         return mi;
     }
 
@@ -159,8 +177,8 @@ public class FX {
         return mi;
     }
 
-    public static final void item(ContextMenu m, String name) {
-        item(m, name, null);
+    public static MenuItem item(ContextMenu m, String name) {
+        return item(m, name, null);
     }
 
     public static void add(GridPane p, Node n, int col, int row) {

@@ -907,7 +907,7 @@ static jint getSwipeDirFromEvent(NSEvent *theEvent)
     int y = (int)draggingLocation.y;
 
     int xAbs = (int)([info draggingLocation].x + [self->nsView window].frame.origin.x);
-    int yAbs = (int)([[self->nsView window] screen].frame.size.height - [self->nsView window].frame.origin.y
+    int yAbs = (int)([[NSScreen screens] objectAtIndex: 0].frame.size.height - [self->nsView window].frame.origin.y
                      - [info draggingLocation].y);
 
     int mask;
