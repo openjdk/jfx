@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2021, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2021, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -42,6 +42,8 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
 import test.util.Util;
 
+import static org.junit.jupiter.api.Assumptions.assumeTrue;
+
 @Timeout(value=25000, unit=TimeUnit.MILLISECONDS)
 public class WrongStageFocusWithApplicationModalityTest {
     private static Robot robot;
@@ -62,6 +64,7 @@ public class WrongStageFocusWithApplicationModalityTest {
 
     @Test
     public void testWindowFocusByClosingAlerts() throws Exception {
+        assumeTrue(!Util.isOnWayland()); // JDK-8353643
         Thread.sleep(3000);
         mouseClick();
         Thread.sleep(1000);

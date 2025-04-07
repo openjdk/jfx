@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2024, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -52,6 +52,10 @@ public class ObjectOption<T> extends ComboBox<NamedValue<T>> {
                 property.set(v);
             }
         });
+
+        property.addListener((s,prev,v) -> {
+            selectValue(v);
+        });
     }
 
     public void clearChoices() {
@@ -89,6 +93,21 @@ public class ObjectOption<T> extends ComboBox<NamedValue<T>> {
         String text = "<INITIAL " + value + ">";
         items.add(new NamedValue<T>(text, value));
         select(sz);
+    }
+
+    /**
+     * Selects the specified value.
+     */
+    public void selectValue(T value) {
+        List<NamedValue<T>> items = getItems();
+        int sz = items.size();
+        for (int i = 0; i < sz; i++) {
+            NamedValue<T> item = items.get(i);
+            if (Objects.equals(value, item.getValue())) {
+                select(i);
+                return;
+            }
+        }
     }
 
     /**
