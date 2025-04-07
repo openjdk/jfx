@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2024, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -47,6 +47,7 @@ import com.oracle.tools.fx.monkey.sheets.ControlPropertySheet;
 import com.oracle.tools.fx.monkey.sheets.PropertiesMenu;
 import com.oracle.tools.fx.monkey.util.EnterTextDialog;
 import com.oracle.tools.fx.monkey.util.FX;
+import com.oracle.tools.fx.monkey.util.Menus;
 import com.oracle.tools.fx.monkey.util.ObjectSelector;
 import com.oracle.tools.fx.monkey.util.OptionPane;
 import com.oracle.tools.fx.monkey.util.TestPaneBase;
@@ -179,18 +180,16 @@ public class ToolBarPage extends TestPaneBase {
     }
 
     private void setContextMenu(Region n) {
-        n.setOnContextMenuRequested((ev) -> {
+        FX.setPopupMenu(n, () -> {
             ContextMenu m = new ContextMenu();
-            FX.item(m, "Remove", () -> control.getItems().remove(n));
-            FX.separator(m);
             FX.item(m, "Edit Text", EnterTextDialog.getRunnable(n, getTextProperty(n)));
             FX.separator(m);
-            FX.item(m, "Pref(50)", () -> n.setPrefWidth(50));
-            FX.item(m, "Pref(200)", () -> n.setPrefWidth(200));
-            FX.item(m, "Pref(500)", () -> n.setPrefWidth(500));
+            Menus.sizeSubMenus(m, n);
+            FX.separator(m);
+            FX.item(m, "Remove", () -> control.getItems().remove(n));
             FX.separator(m);
             FX.item(m, "Properties...", () -> PropertiesMenu.openPropertiesDialog(this, n));
-            m.show(n, ev.getScreenX(), ev.getScreenY());
+            return m;
         });
     }
 }
