@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2021, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2021, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -29,6 +29,7 @@ import static javafx.concurrent.Worker.State.SUCCEEDED;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
+import static org.junit.jupiter.api.Assumptions.assumeTrue;
 import java.util.concurrent.CountDownLatch;
 import javafx.application.Application;
 import javafx.application.Platform;
@@ -45,6 +46,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import com.sun.webkit.WebPage;
 import com.sun.webkit.WebPageShim;
+import com.sun.javafx.PlatformUtil;
 import test.util.Util;
 
 public class PageFillTest {
@@ -122,6 +124,7 @@ public class PageFillTest {
     }
 
     @Test public void testPageFillRendering() {
+        assumeTrue(!PlatformUtil.isLinux()); // JDK-8353561
         final CountDownLatch webViewStateLatch = new CountDownLatch(1);
 
         Util.runAndWait(() -> {

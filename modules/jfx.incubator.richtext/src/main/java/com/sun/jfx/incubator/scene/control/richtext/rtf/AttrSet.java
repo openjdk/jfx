@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2023, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -41,6 +41,7 @@ public class AttrSet {
     private AttrSet parent;
 
     public AttrSet(AttrSet a) {
+        addAttributes(a);
     }
 
     public AttrSet() {
@@ -84,13 +85,19 @@ public class AttrSet {
     }
 
     public StyleAttributeMap getStyleAttributeMap() {
-        return StyleAttributeMap.builder().
+        StyleAttributeMap.Builder b = StyleAttributeMap.builder();
+        b.
             setBold(getBoolean(StyleAttributeMap.BOLD)).
             setFontFamily(getString(StyleAttributeMap.FONT_FAMILY)).
             setItalic(getBoolean(StyleAttributeMap.ITALIC)).
+            setStrikeThrough(getBoolean(StyleAttributeMap.STRIKE_THROUGH)).
             setTextColor(getColor(StyleAttributeMap.TEXT_COLOR)).
-            setUnderline(getBoolean(StyleAttributeMap.UNDERLINE)).
-            build();
+            setUnderline(getBoolean(StyleAttributeMap.UNDERLINE));
+        Double d = getDouble(StyleAttributeMap.FONT_SIZE);
+        if (d != null) {
+            b.setFontSize(d);
+        }
+        return b.build();
     }
 
     private boolean getBoolean(Object attr) {
@@ -109,6 +116,14 @@ public class AttrSet {
         Object v = attrs.get(attr);
         if (v instanceof Color c) {
             return c;
+        }
+        return null;
+    }
+
+    private Double getDouble(Object attr) {
+        Object v = attrs.get(attr);
+        if (v instanceof Number n) {
+            return n.doubleValue();
         }
         return null;
     }
