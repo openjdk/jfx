@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2023, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -33,6 +33,7 @@ import java.util.Set;
 import java.util.function.BooleanSupplier;
 import javafx.event.Event;
 import javafx.event.EventHandler;
+import javafx.event.EventTarget;
 import javafx.event.EventType;
 import javafx.scene.control.Control;
 import javafx.scene.input.KeyEvent;
@@ -76,7 +77,7 @@ import com.sun.javafx.scene.control.input.PHList;
  */
 public final class InputMap {
     private static final Object NULL = new Object();
-    private final Control control;
+    private final EventTarget eventTarget;
     /**
      * <pre> KeyBinding -> FunctionTag or Runnable
      * FunctionTag -> Runnable
@@ -93,10 +94,10 @@ public final class InputMap {
 
     /**
      * The constructor.
-     * @param control the owner control
+     * @param target the owner
      */
-    public InputMap(Control control) {
-        this.control = control;
+    public InputMap(EventTarget target) {
+        this.eventTarget = target;
     }
 
     /**
@@ -123,7 +124,7 @@ public final class InputMap {
         if (x instanceof PHList hs) {
             if (hs.remove(handler)) {
                 map.remove(type);
-                control.removeEventHandler(type, eventHandler);
+                eventTarget.removeEventHandler(type, eventHandler);
             }
         }
     }
@@ -133,7 +134,7 @@ public final class InputMap {
         if (x instanceof PHList hs) {
             if (hs.removeHandlers(Set.of(pri))) {
                 map.remove(type);
-                control.removeEventHandler(type, eventHandler);
+                eventTarget.removeEventHandler(type, eventHandler);
             }
         }
     }
@@ -147,7 +148,7 @@ public final class InputMap {
             // first entry for this event type
             hs = new PHList();
             map.put(t, hs);
-            control.addEventHandler(t, eventHandler);
+            eventTarget.addEventHandler(t, eventHandler);
         }
 
         hs.add(pri, handler);
@@ -399,7 +400,7 @@ public final class InputMap {
                     PHList hs = (PHList)en.getValue();
                     if (hs.removeHandlers(EventHandlerPriority.ALL_SKIN)) {
                         it.remove();
-                        control.removeEventHandler(t, eventHandler);
+                        eventTarget.removeEventHandler(t, eventHandler);
                     }
                 }
             }
