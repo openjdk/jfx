@@ -58,7 +58,7 @@ public class DateStringConverterTest {
         VALID_DATE = c.getTime();
     }
 
-    public static Collection implementations() {
+    private static Collection implementations() {
         return Arrays.asList(new Object[][] {
                 { new DateStringConverter(),
                         Locale.getDefault(Locale.Category.FORMAT), DateFormat.DEFAULT,

@@ -62,7 +62,7 @@ public class DateTimeStringConverterTest {
         VALID_DATE_WITHOUT_SECONDS = c.getTime();
     }
 
-    public static Collection implementations() {
+    private static Collection implementations() {
         return Arrays.asList(new Object[][] {
                 { new DateTimeStringConverter(),
                         Locale.getDefault(Locale.Category.FORMAT), DateFormat.DEFAULT, DateFormat.DEFAULT,
