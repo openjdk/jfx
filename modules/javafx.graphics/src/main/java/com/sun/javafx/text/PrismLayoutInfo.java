@@ -40,7 +40,7 @@ import com.sun.javafx.scene.text.TextLine;
 /**
  * Layout information as reported by PrismLayout.
  */
-public abstract class PrismLayoutInfo extends LayoutInfo {
+public abstract non-sealed class PrismLayoutInfo extends LayoutInfo {
 
     protected abstract double lineSpacing();
 

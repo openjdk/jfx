@@ -26,6 +26,7 @@ package javafx.scene.text;
 
 import java.util.List;
 import javafx.geometry.Rectangle2D;
+import com.sun.javafx.text.PrismLayoutInfo;
 
 /**
  * Provides a view into the text layout used in a {@code Text} or a {@code TextFlow} node,
@@ -38,7 +39,7 @@ import javafx.geometry.Rectangle2D;
  *
  * @since 25
  */
-public abstract class LayoutInfo {
+public abstract sealed class LayoutInfo permits PrismLayoutInfo {
     /**
      * Constructor for subclasses to call.
      */
