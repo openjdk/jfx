@@ -38,7 +38,7 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.fail;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import test.com.sun.javafx.test.objects.TestGroup;
 import test.com.sun.javafx.test.objects.TestNode;
@@ -242,15 +242,11 @@ public final class Popup_owner_Test {
         }
 
         public void assertCalled() {
-            if (counter != expected) {
-                fail(String.format("Listener has not been called, or was not called enough times! Called %d times, expected %d", counter, expected));
-            }
+            assertEquals(expected, counter, "Listener has not been called, or was not called enough times!");
         }
 
         public void assertNotCalled() {
-            if (counter != 0) {
-                fail("Listener has been called when it shouldn't be!");
-            }
+            assertTrue(counter == 0, "Listener has been called when it shouldn't be!");
         }
 
         @Override
