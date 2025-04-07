@@ -28,12 +28,11 @@ package test.javafx.beans.value;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import org.junit.jupiter.api.Test;
 
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.BiConsumer;
 import java.util.function.Consumer;
-
-import org.junit.jupiter.api.Test;
 
 import javafx.beans.property.SimpleStringProperty;
 import javafx.beans.property.StringProperty;
