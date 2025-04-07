@@ -35,7 +35,7 @@ import java.util.Locale;
 import java.util.TimeZone;
 import javafx.util.converter.DateTimeStringConverter;
 import javafx.util.converter.DateTimeStringConverterShim;
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.*;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -161,7 +161,7 @@ public class DateTimeStringConverterTest {
     public void fromString_testValidInput(DateTimeStringConverter converter, Locale locale, int dateStyle, int timeStyle, Date validDate, String pattern, DateFormat dateFormat) {
         setUp(converter, locale, dateStyle, timeStyle, validDate, pattern, dateFormat);
         String input = validFormatter.format(validDate);
-        assertEquals("Input = "+input, validDate, converter.fromString(input));
+        assertEquals(validDate, converter.fromString(input), "Input = " + input);
     }
 
     @ParameterizedTest
@@ -169,7 +169,7 @@ public class DateTimeStringConverterTest {
     public void fromString_testValidInputWithWhiteSpace(DateTimeStringConverter converter, Locale locale, int dateStyle, int timeStyle, Date validDate, String pattern, DateFormat dateFormat) {
         setUp(converter, locale, dateStyle, timeStyle, validDate, pattern, dateFormat);
         String input = validFormatter.format(validDate);
-        assertEquals("Input = "+input, validDate, converter.fromString("      " + input + "      "));
+        assertEquals(validDate, converter.fromString("      " + input + "      "), "Input = " + input);
     }
 
     @ParameterizedTest
