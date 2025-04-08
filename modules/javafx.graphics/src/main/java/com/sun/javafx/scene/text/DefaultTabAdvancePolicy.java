@@ -25,29 +25,48 @@
 
 package com.sun.javafx.scene.text;
 
+import javafx.geometry.Point2D;
+import javafx.scene.Node;
 import javafx.scene.text.TabStop;
 import javafx.scene.text.TabStopPolicy;
+import javafx.scene.text.TextFlow;
 
-public class SimpleTabAdvancePolicy implements TabAdvancePolicy {
+/**
+ * This TabAdvancePolicy converts the high level {@code TabStopPolicy}
+ * to {@code TabAdvancePolicy} that the text layout can use.
+ */
+public class DefaultTabAdvancePolicy implements TabAdvancePolicy {
+    private final TextFlow flow;
+    private final Node reference;
     private final double[] tabs;
     private final double defaultStops;
+    private float offset;
 
-    private SimpleTabAdvancePolicy(double[] tabs, double defaultStops) {
+    private DefaultTabAdvancePolicy(TextFlow flow, Node ref, double[] tabs, double defaultStops) {
+        this.flow = flow;
+        this.reference = ref;
         this.tabs = tabs;
         this.defaultStops = defaultStops;
     }
 
-    public static SimpleTabAdvancePolicy of(TabStopPolicy p) {
+    public static DefaultTabAdvancePolicy of(TextFlow flow, TabStopPolicy p) {
+        Node ref = p.getReference();
         double[] tabs = p.tabStops().stream()
             .map(TabStop::getPosition)
             .mapToDouble(Double::doubleValue)
             .toArray();
         double defaultStops = p.getDefaultStops();
-        return new SimpleTabAdvancePolicy(tabs, defaultStops);
+        return new DefaultTabAdvancePolicy(flow, ref, tabs, defaultStops);
+    }
+
+    @Override
+    public void reset() {
+        offset = computeOffset();
     }
 
     @Override
     public float nextTabStop(float position) {
+        position += offset;
         for (int i = 0; i < tabs.length; i++) {
             double p = tabs[i];
             if (position < p) {
@@ -55,5 +74,17 @@ public class SimpleTabAdvancePolicy implements TabAdvancePolicy {
             }
         }
         return (float)(((int)(position / defaultStops) + 1) * defaultStops);
+    }
+
+    // this could be a method in the base class (change interface to an abstract class)
+    private float computeOffset() {
+        if (reference == null) {
+            return 0.0f;
+        } else {
+            Point2D p0 = reference.localToScreen(0, 0);
+            Point2D p1 = flow.localToScreen(0, 0);
+            // TODO rtl
+            return (float)(flow.snappedLeftInset() + p1.getX() - p0.getX());
+        }
     }
 }

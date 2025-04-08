@@ -44,6 +44,11 @@ public class FixedTabAdvancePolicy implements TabAdvancePolicy {
     }
 
     @Override
+    public void reset() {
+        // TODO borders/padding?
+    }
+
+    @Override
     public float nextTabStop(float position) {
         return ((int)(position / tabAdvance) + 1) * tabAdvance;
     }

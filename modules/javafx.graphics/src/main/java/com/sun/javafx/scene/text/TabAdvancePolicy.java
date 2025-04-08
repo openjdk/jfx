@@ -29,6 +29,12 @@ package com.sun.javafx.scene.text;
  * TabAdvancePolicy provides the next tab advance for any given position within the TextLayout.
  */
 public interface TabAdvancePolicy {
+
+    /**
+     * Indicates the start of the layout cycle.
+     */
+    public void reset();
+
     /**
      * Provides next tab stop for the given position.
      *

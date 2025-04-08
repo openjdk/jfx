@@ -57,7 +57,7 @@ import com.sun.javafx.geom.BaseBounds;
 import com.sun.javafx.geom.Point2D;
 import com.sun.javafx.geom.RectBounds;
 import com.sun.javafx.scene.text.GlyphList;
-import com.sun.javafx.scene.text.SimpleTabAdvancePolicy;
+import com.sun.javafx.scene.text.DefaultTabAdvancePolicy;
 import com.sun.javafx.scene.text.TabAdvancePolicy;
 import com.sun.javafx.scene.text.TextFlowHelper;
 import com.sun.javafx.scene.text.TextLayout;
@@ -628,7 +628,7 @@ public class TextFlow extends Pane {
     private TabAdvancePolicy getTabAdvancePolicy() {
         // isolate the public tab stop policy from the internal tab advance policy
         TabStopPolicy p = getTabStopPolicy();
-        return p == null ? null : SimpleTabAdvancePolicy.of(p);
+        return p == null ? null : DefaultTabAdvancePolicy.of(this, p);
     }
 
     @Override public final double getBaselineOffset() {

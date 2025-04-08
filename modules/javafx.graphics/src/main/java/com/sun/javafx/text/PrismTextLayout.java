@@ -50,6 +50,7 @@ import com.sun.javafx.geom.transform.Translate2D;
 import com.sun.javafx.scene.text.GlyphList;
 import com.sun.javafx.scene.text.TabAdvancePolicy;
 import com.sun.javafx.scene.text.TextLayout;
+import com.sun.javafx.scene.text.TextLine;
 import com.sun.javafx.scene.text.TextSpan;
 
 /**
@@ -236,7 +237,7 @@ public class PrismTextLayout implements TextLayout {
     }
 
     @Override
-    public com.sun.javafx.scene.text.TextLine[] getLines() {
+    public TextLine[] getLines() {
         ensureLayout();
         return lines;
     }
@@ -1237,6 +1238,10 @@ public class PrismTextLayout implements TextLayout {
             }
         } else {
             layoutCache = null;
+        }
+
+        if (tabAdvancePolicy != null) {
+            tabAdvancePolicy.reset();
         }
 
         float lineWidth = 0;
