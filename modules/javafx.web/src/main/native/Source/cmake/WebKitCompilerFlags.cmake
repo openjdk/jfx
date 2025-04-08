@@ -151,6 +151,9 @@ if (COMPILER_IS_GCC_OR_CLANG)
         # FIXME: These warnings should be addressed
         WEBKIT_PREPEND_GLOBAL_COMPILER_FLAGS(-Wno-sign-compare
                                              -Wno-deprecated-declarations)
+        if (WTF_CPU_X86 AND NOT CMAKE_CROSSCOMPILING)
+            WEBKIT_APPEND_GLOBAL_COMPILER_FLAGS(-mno-sse)
+        endif ()
     else ()
         WEBKIT_APPEND_GLOBAL_COMPILER_FLAGS(-fno-exceptions)
         WEBKIT_APPEND_GLOBAL_CXX_FLAGS(-fno-rtti)
