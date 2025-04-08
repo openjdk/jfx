@@ -22,6 +22,7 @@
  * or visit www.oracle.com if you need additional information or have any
  * questions.
  */
+
 package test.com.sun.javafx.property.adapter;//package com.sun.javafx.property.adapter;
 //
 //import javafx.beans.property.ObjectProperty;
