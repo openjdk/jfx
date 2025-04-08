@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2023, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -33,9 +33,14 @@ import javafx.scene.Scene;
 import javafx.scene.control.Button;
 import javafx.scene.control.ColorPicker;
 import javafx.scene.control.Label;
+import javafx.scene.control.Tab;
+import javafx.scene.control.TabPane;
 import javafx.scene.control.TextArea;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.GridPane;
+import javafx.scene.layout.HBox;
+import javafx.scene.layout.Priority;
+import javafx.scene.layout.Region;
 import javafx.scene.paint.Color;
 import javafx.stage.Window;
 import com.oracle.tools.fx.monkey.util.FX;
@@ -46,7 +51,8 @@ import com.oracle.tools.fx.monkey.util.FX;
 public class CssPlaygroundPane extends BorderPane {
     private final ColorPicker colorPicker;
     private final TextArea cssField;
-    private static String oldStylesheet;
+    private static String oldCustom;
+    private static String oldQuick;
     private int fontSize = 12;
     private static final int[] SIZES = {
         7,
@@ -82,6 +88,7 @@ public class CssPlaygroundPane extends BorderPane {
         fs.setRight(fsLarger);
 
         Button updateButton = FX.button("Update", this::update);
+        Button resetButton = FX.button("Reset", this::reset);
 
         GridPane p = new GridPane();
         p.setPadding(new Insets(10));
@@ -93,22 +100,32 @@ public class CssPlaygroundPane extends BorderPane {
         r++;
         p.add(new Label("Font Size:"), 0, r);
         p.add(fs, 1, r);
-        r++;
-        p.add(new Label("Custom CSS:"), 0, r);
-        p.add(updateButton, 1, r);
 
-        setTop(p);
-        setCenter(cssField);
+        Region spacer = new Region();
+        HBox hb = new HBox(resetButton, spacer, updateButton);
+        HBox.setHgrow(spacer, Priority.ALWAYS);
+        hb.setPadding(new Insets(5, 10, 5, 10));
+        BorderPane cssPane = new BorderPane(cssField);
+        cssPane.setBottom(hb);
+        cssPane.setPadding(new Insets(2));
+
+        TabPane tp = new TabPane();
+        tp.getTabs().setAll(
+            new Tab("Custom CSS", cssPane),
+            new Tab("Quick", p)
+            );
+
+        setCenter(tp);
 
         colorPicker.setOnAction((ev) -> {
-            update();
+            updateQuick();
         });
     }
 
     private void fontSize(boolean larger) {
         fontSize = nextFontSize(larger);
         fontSizeLabel.setText(String.valueOf(fontSize));
-        update();
+        updateQuick();
     }
 
     private int nextFontSize(boolean larger) {
@@ -136,20 +153,20 @@ public class CssPlaygroundPane extends BorderPane {
     }
 
     private void update() {
+        String css = cssField.getText();
+        applyStyleSheet(css, false);
+    }
+
+    private void updateQuick() {
         Color c = colorPicker.getValue();
         if (c == null) {
             c = Color.WHITE;
         }
-
         String css = generate(c);
-        //System.out.println(css); // FIX
-
-        applyStyleSheet(css);
+        applyStyleSheet(css, true);
     }
 
     private String generate(Color bg) {
-        String css = cssField.getText();
-
         StringBuilder sb = new StringBuilder();
         sb.append(".root {\n");
 
@@ -160,9 +177,6 @@ public class CssPlaygroundPane extends BorderPane {
         sb.append("%;\n");
 
         sb.append("}\n");
-
-        sb.append(css);
-        sb.append("\n");
 
         return sb.toString();
     }
@@ -193,20 +207,48 @@ public class CssPlaygroundPane extends BorderPane {
         return "data:text/css;base64," + Base64.getEncoder().encodeToString(b);
     }
 
-    private static void applyStyleSheet(String styleSheet) {
+    private static void applyStyleSheet(String styleSheet, boolean quick) {
         String ss = encode(styleSheet);
         if (ss != null) {
-            for (Window w : Window.getWindows()) {
+            for (Window w: Window.getWindows()) {
                 Scene scene = w.getScene();
                 if (scene != null) {
                     ObservableList<String> sheets = scene.getStylesheets();
-                    if (oldStylesheet != null) {
-                        sheets.remove(oldStylesheet);
+                    if (quick) {
+                        if (oldQuick != null) {
+                            sheets.remove(oldQuick);
+                        }
+                    } else {
+                        if (oldCustom != null) {
+                            sheets.remove(oldCustom);
+                        }
                     }
                     sheets.add(ss);
                 }
             }
         }
-        oldStylesheet = ss;
+
+        if (quick) {
+            oldQuick = ss;
+        } else {
+            oldCustom = ss;
+        }
+    }
+
+    private void reset() {
+        for (Window w: Window.getWindows()) {
+            Scene scene = w.getScene();
+            if (scene != null) {
+                ObservableList<String> sheets = scene.getStylesheets();
+                if (oldCustom != null) {
+                    sheets.remove(oldCustom);
+                }
+                if (oldQuick != null) {
+                    sheets.remove(oldQuick);
+                }
+            }
+        }
+        oldCustom = null;
+        oldQuick = null;
     }
 }

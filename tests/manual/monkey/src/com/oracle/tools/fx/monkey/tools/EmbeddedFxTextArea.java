@@ -120,7 +120,7 @@ public class EmbeddedFxTextArea {
     }
 
     private static void initFX() {
-        textArea = new TextArea("Arabic: العربية\nHebrew: עברית");
+        textArea = new TextArea("Arabic: السَّلَامُ عَلَيْكُمْ\nHebrew: עברית");
         textArea.setStyle("-fx-font-size:200%;");
         jfxPanel.setScene(new Scene(textArea));
     }
