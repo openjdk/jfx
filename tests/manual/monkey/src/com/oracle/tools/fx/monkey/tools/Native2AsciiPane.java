@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2023, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -35,6 +35,7 @@ import javafx.scene.control.TextArea;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.GridPane;
 import javafx.scene.layout.Priority;
+import com.oracle.tools.fx.monkey.util.Native2Ascii;
 
 /**
  * Native-to-ASCII and ASCII-to-Native Converter Pane.
@@ -128,99 +129,16 @@ public class Native2AsciiPane extends BorderPane {
 
         if (fromNative) {
             String s = nat.getText();
-            String text = native2ascii(s);
+            String text = Native2Ascii.native2ascii(s);
             ascii.setText(text);
             updateSymbols(s);
         } else {
             String s = ascii.getText();
-            String text = ascii2native(s);
+            String text = Native2Ascii.ascii2native(s);
             nat.setText(text);
             updateSymbols(text);
         }
         ignoreEvent = false;
-    }
-
-    private String ascii2native(String text) {
-        if (text == null) {
-            return null;
-        }
-
-        int sz = text.length();
-        StringBuilder sb = new StringBuilder(sz);
-        for (int i = 0; i < sz; i++) {
-            char c = text.charAt(i);
-            switch (c) {
-            case '\\':
-                int u = toUnicode(text, i + 1);
-                if (u < 0) {
-                    sb.append(c);
-                } else {
-                    sb.append((char)u);
-                    i += 5;
-                }
-                break;
-            default:
-                sb.append(c);
-                break;
-            }
-        }
-        return sb.toString();
-    }
-
-    public static String native2ascii(String text) {
-        if (text == null) {
-            return null;
-        }
-
-        int sz = text.length();
-        StringBuilder sb = new StringBuilder(sz + 256);
-        for (int i = 0; i < sz; i++) {
-            char c = text.charAt(i);
-            switch (c) {
-            case ' ':
-            case '\n':
-                sb.append(c);
-                break;
-            default:
-                if ((c > ' ') && (c < 0x7f)) {
-                    sb.append(c);
-                } else {
-                    sb.append("\\u");
-                    sb.append(hex(c >> 12));
-                    sb.append(hex(c >> 8));
-                    sb.append(hex(c >> 4));
-                    sb.append(hex(c));
-                }
-            }
-        }
-        return sb.toString();
-    }
-
-    private static char hex(int n) {
-        return "0123456789abcdef".charAt(n & 0x0f);
-    }
-
-    private int toUnicode(String text, int ix) {
-        if (text.length() < (ix + 5)) {
-            return -1;
-        }
-
-        char c = text.charAt(ix++);
-        switch (c) {
-        case 'u':
-        case 'U':
-            break;
-        default:
-            return -1;
-        }
-
-        try {
-            String s = text.substring(ix, ix + 4);
-            int v = Integer.parseInt(s, 16);
-            return v;
-        } catch (NumberFormatException e) {
-            return -1;
-        }
     }
 
     protected void updateSymbols(String text) {

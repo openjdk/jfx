@@ -48,7 +48,6 @@ import test.util.Util;
 /**
  * Tests TextArea RTL/LTR behavior.
  */
-@ExtendWith(ScreenshotFailedTestWatcher.class)
 public class TextAreaRTLTest extends TextInputBehaviorRobotTest<TextArea> {
     private Color selectionColor;
 

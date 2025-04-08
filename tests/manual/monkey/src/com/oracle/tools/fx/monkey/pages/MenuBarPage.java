@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2024, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -140,6 +140,11 @@ public class MenuBarPage extends TestPaneBase implements HasSkinnable {
 
     private Node createItemsOptions(String name, ObservableList<Menu> items) {
         ObjectSelector<List<Menu>> s = new ObjectSelector<>(name, items::setAll);
+        s.addChoiceSupplier("No Custom Menus", () -> {
+            Menu m = new Menu("No Custom Menus");
+            m.getItems().add(new MenuItem("Regular Menu Item"));
+            return List.of(m);
+        });
         s.addChoiceSupplier("1 Menu", mk(1));
         s.addChoiceSupplier("5 Items", mk(5));
         s.addChoiceSupplier("Invisible/Disabled", createInvisibleDisabled());
