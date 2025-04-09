@@ -187,6 +187,11 @@ public class BitSetShim<T> {
     }
 
     @Override
+    public int hashCode() {
+        return delegate.hashCode();
+    }
+
+    @Override
     public boolean equals(Object other) {
         return delegate.equals(other);
     }
