@@ -27,6 +27,7 @@ package test.com.sun.javafx.css;
 
 import static org.junit.jupiter.api.Assertions.*;
 
+import java.util.HashSet;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -175,5 +176,13 @@ public class BitSetTest {
 
         assertEquals(Set.of(), new PseudoClassState());
         assertEquals(new PseudoClassState(), Set.of());
+    }
+
+    @Test
+    void bitSetShouldEqualHashSet() {
+        var bitSet = new PseudoClassState();
+        bitSet.addAll(Set.of(a, b, c));
+        var hashSet = new HashSet<>(Set.of(c, a, b));
+        assertEquals(bitSet, hashSet);
     }
 }

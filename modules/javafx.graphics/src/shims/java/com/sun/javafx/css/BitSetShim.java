@@ -186,6 +186,7 @@ public class BitSetShim<T> {
         return delegate.parallelStream();
     }
 
+    @Override
     public boolean equals(Object other) {
         return delegate.equals(other);
     }

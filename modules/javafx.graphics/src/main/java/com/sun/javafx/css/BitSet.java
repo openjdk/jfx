@@ -532,9 +532,7 @@ abstract class BitSet<T> extends AbstractSet<T> implements ObservableSet<T> {
         // the Set contract to interact correctly with sets of other types!
         if (obj == this) {
             return true;
-        }
-
-        if (obj == null) {
+        } else if (obj == null) {
             return false;
         }
 
