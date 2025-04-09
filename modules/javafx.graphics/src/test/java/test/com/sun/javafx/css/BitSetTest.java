@@ -184,5 +184,6 @@ public class BitSetTest {
         bitSet.addAll(Set.of(a, b, c));
         var hashSet = new HashSet<>(Set.of(c, a, b));
         assertEquals(bitSet, hashSet);
+        assertEquals(hashSet, bitSet);
     }
 }
