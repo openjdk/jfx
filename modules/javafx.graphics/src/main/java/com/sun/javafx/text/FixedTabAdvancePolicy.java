@@ -31,6 +31,7 @@ import com.sun.javafx.scene.text.TabAdvancePolicy;
  * TabAdvancePolicy based on a fixed tab size.
  */
 public class FixedTabAdvancePolicy implements TabAdvancePolicy {
+
     private final float tabAdvance;
 
     /**
@@ -50,7 +51,11 @@ public class FixedTabAdvancePolicy implements TabAdvancePolicy {
 
     @Override
     public float nextTabStop(float position) {
-        return ((int)(position / tabAdvance) + 1) * tabAdvance;
+// FIX
+//        return ((int)(position / tabAdvance) + 1) * tabAdvance;
+        float f = ((int)(position / tabAdvance) + 1) * tabAdvance;
+        System.out.println("pos=" + position + " next=" + f + " fixed)"); // FIX
+        return f;
     }
 
     @Override

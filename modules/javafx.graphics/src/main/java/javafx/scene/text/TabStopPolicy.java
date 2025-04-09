@@ -29,7 +29,7 @@ import javafx.beans.property.DoubleProperty;
 import javafx.beans.property.SimpleDoubleProperty;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
-import javafx.scene.Node;
+import javafx.scene.layout.Region;
 
 /**
  * TabStopPolicy determines the tab stop positions within the text layout.
@@ -42,26 +42,28 @@ public class TabStopPolicy {
     private final ObservableList<TabStop> tabStopsRO = FXCollections.unmodifiableObservableList(tabStops);
     private final SimpleDoubleProperty defaultStops = new SimpleDoubleProperty(100); // FIX use 8x of space char advance of the default font
     private static final double EPS = 0.01;
-    private final Node reference;
+    private final Region reference;
 
     /**
      * Constructs a new {@code TabStopPolicy} instance.
+     *
+     * @param reference the node which provides the leading edge for the document layout (can be null)
      */
-    public TabStopPolicy(Node reference) {
+    public TabStopPolicy(Region reference) {
         this.reference = reference;
     }
 
     /**
-     * The reference {@code Node} provides the leading {@code x} coordinate for this {@code TabStopPolicy}.
+     * The reference {@code Region} provides the leading {@code x} coordinate for this {@code TabStopPolicy}.
      * A non-null reference ensures that the tab stops are aligned within a document which is represented by
      * more than one {@code TextFlow} instance.
      * <p>
      * A null reference node results in the leading edge to be set to the leading edge of the {@code TextFlow}
      * being laid out.
      *
-     * @return the reference node
+     * @return the reference region
      */
-    public final Node getReference() {
+    public final Region getReference() {
         return reference;
     }
 

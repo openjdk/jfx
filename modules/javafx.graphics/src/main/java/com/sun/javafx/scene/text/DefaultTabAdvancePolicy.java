@@ -26,7 +26,7 @@
 package com.sun.javafx.scene.text;
 
 import javafx.geometry.Point2D;
-import javafx.scene.Node;
+import javafx.scene.layout.Region;
 import javafx.scene.text.TabStop;
 import javafx.scene.text.TabStopPolicy;
 import javafx.scene.text.TextFlow;
@@ -37,12 +37,12 @@ import javafx.scene.text.TextFlow;
  */
 public class DefaultTabAdvancePolicy implements TabAdvancePolicy {
     private final TextFlow flow;
-    private final Node reference;
+    private final Region reference;
     private final double[] tabs;
     private final double defaultStops;
     private float offset;
 
-    private DefaultTabAdvancePolicy(TextFlow flow, Node ref, double[] tabs, double defaultStops) {
+    private DefaultTabAdvancePolicy(Region ref, TextFlow flow, double[] tabs, double defaultStops) {
         this.flow = flow;
         this.reference = ref;
         this.tabs = tabs;
@@ -50,41 +50,49 @@ public class DefaultTabAdvancePolicy implements TabAdvancePolicy {
     }
 
     public static DefaultTabAdvancePolicy of(TextFlow flow, TabStopPolicy p) {
-        Node ref = p.getReference();
+        Region ref = p.getReference();
         double[] tabs = p.tabStops().stream()
             .map(TabStop::getPosition)
             .mapToDouble(Double::doubleValue)
             .toArray();
         double defaultStops = p.getDefaultStops();
-        return new DefaultTabAdvancePolicy(flow, ref, tabs, defaultStops);
+        return new DefaultTabAdvancePolicy(ref, flow, tabs, defaultStops);
     }
 
     @Override
     public void reset() {
         offset = computeOffset();
+        System.out.println("offset=" + offset); // FIX
     }
 
     @Override
     public float nextTabStop(float position) {
-        position += offset;
+        float f = nextTabStop2(position);
+        System.out.println("pos=" + position + " next=" + f); // FIX
+        return f;
+    }
+    float nextTabStop2(float position) {
+        position = Math.max(0, position + offset);
         for (int i = 0; i < tabs.length; i++) {
             double p = tabs[i];
             if (position < p) {
-                return (float)p;
+                return (float)p - offset;
             }
         }
-        return (float)(((int)(position / defaultStops) + 1) * defaultStops);
+        return (float)(((int)(position / defaultStops) + 1) * defaultStops) - offset;
     }
 
     // this could be a method in the base class (change interface to an abstract class)
     private float computeOffset() {
-        if (reference == null) {
-            return 0.0f;
-        } else {
+        if (reference != null) {
             Point2D p0 = reference.localToScreen(0, 0);
-            Point2D p1 = flow.localToScreen(0, 0);
+            Point2D p1 = flow.localToScreen(flow.snappedLeftInset(), 0);
             // TODO rtl
-            return (float)(flow.snappedLeftInset() + p1.getX() - p0.getX());
+            float v = (float)(p1.getX() - p0.getX());
+            if (!Float.isNaN(v)) {
+                return v;
+            }
         }
+        return 0.0f;
     }
 }
