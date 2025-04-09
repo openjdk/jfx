@@ -56,12 +56,11 @@ import javafx.stage.StageStyle;
 import javafx.util.Subscription;
 
 /**
- * A client-area header bar that is used as a replacement for the system-provided header bar in
- * {@link StageStyle#EXTENDED} or {@link StageStyle#EXTENDED_UTILITY} stages. This class enables the
- * <em>click-and-drag to move</em> and <em>double-click to maximize</em> behaviors that are usually afforded
- * by system-provided header bars. The entire {@code HeaderBar} background is draggable by default, but its
- * content is not. Applications can specify draggable content nodes of the {@code HeaderBar} with the
- * {@link #setDraggable} method.
+ * A client-area header bar that is used as a replacement for the system-provided header bar in stages
+ * with the {@link StageStyle#EXTENDED} style. This class enables the <em>click-and-drag to move</em> and
+ * <em>double-click to maximize</em> behaviors that are usually afforded by system-provided header bars.
+ * The entire {@code HeaderBar} background is draggable by default, but its content is not. Applications
+ * can specify draggable content nodes of the {@code HeaderBar} with the {@link #setDraggable} method.
  * <p>
  * {@code HeaderBar} is a layout container that allows applications to place scene graph nodes in three areas:
  * {@link #leadingProperty() leading}, {@link #centerProperty() center}, and {@link #trailingProperty() trailing}.

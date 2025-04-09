@@ -468,9 +468,8 @@ public class Stage extends Window {
      */
     @SuppressWarnings("deprecation")
     public final void initStyle(StageStyle style) {
-        switch (style) {
-            case StageStyle.EXTENDED -> PreviewFeature.STAGE_STYLE_EXTENDED.checkEnabled();
-            case StageStyle.EXTENDED_UTILITY -> PreviewFeature.STAGE_STYLE_EXTENDED_UTILITY.checkEnabled();
+        if (style == StageStyle.EXTENDED) {
+            PreviewFeature.STAGE_STYLE_EXTENDED.checkEnabled();
         }
         if (hasBeenVisible) {
             throw new IllegalStateException("Cannot set style once stage has been set visible");

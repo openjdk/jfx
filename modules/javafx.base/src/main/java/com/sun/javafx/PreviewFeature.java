@@ -39,7 +39,6 @@ public enum PreviewFeature {
     // Add preview feature constants here:
     // TEST_FEATURE("Test Feature")
     STAGE_STYLE_EXTENDED("StageStyle.EXTENDED"),
-    STAGE_STYLE_EXTENDED_UTILITY("StageStyle.EXTENDED_UTILITY"),
     HEADER_BAR("HeaderBar");
 
     PreviewFeature(String featureName) {

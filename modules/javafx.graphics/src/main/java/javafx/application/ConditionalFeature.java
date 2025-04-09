@@ -153,7 +153,7 @@ public enum ConditionalFeature {
     UNIFIED_WINDOW,
 
     /**
-     * Indicates that a system supports {@link StageStyle#EXTENDED} and {@link StageStyle#EXTENDED_UTILITY}.
+     * Indicates that a system supports {@link StageStyle#EXTENDED}.
      * <p>
      * This feature is currently supported on Windows, Linux, and macOS.
      *
