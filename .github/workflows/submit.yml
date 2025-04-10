@@ -413,7 +413,7 @@ jobs:
           which java
           java -version
           .\gradlew.bat -version
-          .\gradlew.bat --info all
+          .\gradlew.bat --info -PCHMOD_ARTIFACTS=false all
 
       - name: Run JavaFX headless tests
         working-directory: jfx
