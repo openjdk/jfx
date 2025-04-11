@@ -1204,52 +1204,6 @@ public class TabPaneTest {
         assertEquals(3, tabsMenu.getItems().size(), "ContextMenu should contain 3 items.");
     }
 
-    private ContextMenu setupMenuGraphicFactory() {
-        TabPaneSkin skin = new TabPaneSkin(tabPane);
-        skin.setMenuGraphicFactory(new Function<Tab, Node>() {
-            @Override
-            public Node apply(Tab t) {
-                return new Path();
-            }
-        });
-        tabPane.setSkin(skin);
-
-        tabPane.setMaxSize(20, 20);
-        root.getChildren().add(tabPane);
-        tabPane.getTabs().addAll(tab1, tab2, tab3);
-        show();
-        tk.firePulse();
-
-        ContextMenu menu = TabPaneSkinShim.getTabsMenu(skin);
-        assertNotNull(menu);
-        assertEquals(3, menu.getItems().size());
-        return menu;
-    }
-
-    // FIX
-    @Test
-    public void menuGraphicFactory() {
-        ContextMenu menu = setupMenuGraphicFactory();
-        for (MenuItem mi : menu.getItems()) {
-            assertTrue(mi.getGraphic() instanceof Path);
-        }
-    }
-
-    @Test
-    public void menuBindings() {
-        ContextMenu menu = setupMenuGraphicFactory();
-        MenuItem mi = menu.getItems().get(0);
-
-        assertFalse(mi.isDisable());
-        assertEquals("one", mi.getText());
-
-        tab1.setText("yo");
-        tab1.setDisable(true);
-
-        assertTrue(mi.isDisable());
-        assertEquals("yo", mi.getText());
-    }
-
     private int sortCompare(Tab t1, Tab t2) {
         return t2.getText().compareTo(t1.getText());
     }
@@ -1387,5 +1341,50 @@ public class TabPaneTest {
             assertEquals(firstTabBounds.getMinX(), newFirstTabBounds.getMinX(), 0);
             assertEquals(firstTabBounds.getMinY() - deltaY, newFirstTabBounds.getMinY(), 0);
         }
+    }
+
+    private ContextMenu setupMenuGraphicFactory() {
+        TabPaneSkin skin = new TabPaneSkin(tabPane);
+        skin.setMenuGraphicFactory(new Function<Tab, Node>() {
+            @Override
+            public Node apply(Tab t) {
+                return new Path();
+            }
+        });
+        tabPane.setSkin(skin);
+
+        tabPane.setMaxSize(20, 20);
+        root.getChildren().add(tabPane);
+        tabPane.getTabs().addAll(tab1, tab2, tab3);
+        show();
+        tk.firePulse();
+
+        ContextMenu menu = TabPaneSkinShim.getTabsMenu(skin);
+        assertNotNull(menu);
+        assertEquals(3, menu.getItems().size());
+        return menu;
+    }
+
+    @Test
+    public void menuGraphicFactory() {
+        ContextMenu menu = setupMenuGraphicFactory();
+        for (MenuItem mi : menu.getItems()) {
+            assertTrue(mi.getGraphic() instanceof Path);
+        }
+    }
+
+    @Test
+    public void menuBindings() {
+        ContextMenu menu = setupMenuGraphicFactory();
+        MenuItem mi = menu.getItems().get(0);
+
+        assertFalse(mi.isDisable());
+        assertEquals("one", mi.getText());
+
+        tab1.setText("yo");
+        tab1.setDisable(true);
+
+        assertTrue(mi.isDisable());
+        assertEquals("yo", mi.getText());
     }
 }
