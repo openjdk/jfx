@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2020, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,10 +25,9 @@
 
 package test.javafx.embed.swt;
 
-import static org.junit.Assert.fail;
-
 import java.util.Timer;
 import java.util.TimerTask;
+import java.util.concurrent.TimeUnit;
 
 import org.eclipse.swt.SWT;
 import org.eclipse.swt.graphics.GC;
@@ -38,25 +37,25 @@ import org.eclipse.swt.graphics.RGB;
 import org.eclipse.swt.layout.FillLayout;
 import org.eclipse.swt.widgets.Display;
 import org.eclipse.swt.widgets.Shell;
-import org.junit.Test;
 
 import javafx.embed.swt.FXCanvas;
 import javafx.scene.Scene;
 import javafx.scene.layout.Region;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
+
+import static org.junit.jupiter.api.Assertions.fail;
 
 public class FXCanvasScaledTest {
 
     private int cnt;
 
-    static Shell shell;
-
-    static Display display;
-
     /* Base size, so that with a scaling of 125% there are different results for Math.round and Math.ceil */
     final static int TARGET_BASE_SIZE = 101;
 
-    @Test(timeout = 10000)
-    public void testScale() throws Throwable {
+    @Test
+    @Timeout(value = 10000, unit = TimeUnit.MILLISECONDS)
+    public void testScale() {
         System.setProperty("sun.java2d.uiScale.enabled", "true");
         System.setProperty("sun.java2d.uiScale", "125%");
         System.setProperty("glass.win.uiScale", "125%");
@@ -65,8 +64,8 @@ public class FXCanvasScaledTest {
         System.setProperty("swt.autoScale", "125");
 
         // Start the Application
-        display = new Display();
-        shell = new Shell(display);
+        Display display = new Display();
+        Shell shell = new Shell(display);
         shell.setLayout(new FillLayout());
         final FXCanvas canvas = new FXCanvas(shell, SWT.NONE);
         initFX(canvas);
@@ -114,8 +113,9 @@ public class FXCanvasScaledTest {
 
         shell.open();
         while (!shell.isDisposed()) {
-            if (!display.readAndDispatch())
+            if (!display.readAndDispatch()) {
                 display.sleep();
+            }
         }
         display.dispose();
     }
