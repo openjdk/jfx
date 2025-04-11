@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -41,6 +41,7 @@ import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.function.Function;
 import javafx.application.Platform;
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.DoubleProperty;
@@ -55,9 +56,11 @@ import javafx.event.Event;
 import javafx.geometry.Bounds;
 import javafx.geometry.Side;
 import javafx.scene.Group;
+import javafx.scene.Node;
 import javafx.scene.Scene;
 import javafx.scene.control.Button;
 import javafx.scene.control.ContextMenu;
+import javafx.scene.control.MenuItem;
 import javafx.scene.control.ScrollPane;
 import javafx.scene.control.SelectionModel;
 import javafx.scene.control.SingleSelectionModel;
@@ -73,6 +76,7 @@ import javafx.scene.input.MouseEvent;
 import javafx.scene.input.ScrollEvent;
 import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
+import javafx.scene.shape.Path;
 import javafx.stage.Stage;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -1198,6 +1202,52 @@ public class TabPaneTest {
         tabPane.getTabs().sort((o1, o2) -> sortCompare(o1, o2));
         tk.firePulse();
         assertEquals(3, tabsMenu.getItems().size(), "ContextMenu should contain 3 items.");
+    }
+
+    private ContextMenu setupMenuGraphicFactory() {
+        TabPaneSkin skin = new TabPaneSkin(tabPane);
+        skin.setMenuGraphicFactory(new Function<Tab, Node>() {
+            @Override
+            public Node apply(Tab t) {
+                return new Path();
+            }
+        });
+        tabPane.setSkin(skin);
+
+        tabPane.setMaxSize(20, 20);
+        root.getChildren().add(tabPane);
+        tabPane.getTabs().addAll(tab1, tab2, tab3);
+        show();
+        tk.firePulse();
+
+        ContextMenu menu = TabPaneSkinShim.getTabsMenu(skin);
+        assertNotNull(menu);
+        assertEquals(3, menu.getItems().size());
+        return menu;
+    }
+
+    // FIX
+    @Test
+    public void menuGraphicFactory() {
+        ContextMenu menu = setupMenuGraphicFactory();
+        for (MenuItem mi : menu.getItems()) {
+            assertTrue(mi.getGraphic() instanceof Path);
+        }
+    }
+
+    @Test
+    public void menuBindings() {
+        ContextMenu menu = setupMenuGraphicFactory();
+        MenuItem mi = menu.getItems().get(0);
+
+        assertFalse(mi.isDisable());
+        assertEquals("one", mi.getText());
+
+        tab1.setText("yo");
+        tab1.setDisable(true);
+
+        assertTrue(mi.isDisable());
+        assertEquals("yo", mi.getText());
     }
 
     private int sortCompare(Tab t1, Tab t2) {

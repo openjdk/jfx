@@ -29,6 +29,7 @@ import static com.sun.javafx.scene.control.skin.resources.ControlResources.getSt
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.function.Function;
 import javafx.animation.Animation;
 import javafx.animation.Interpolator;
 import javafx.animation.KeyFrame;
@@ -42,6 +43,7 @@ import javafx.beans.WeakInvalidationListener;
 import javafx.beans.property.DoubleProperty;
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.SimpleDoubleProperty;
+import javafx.beans.property.SimpleObjectProperty;
 import javafx.beans.value.WritableValue;
 import javafx.collections.FXCollections;
 import javafx.collections.ListChangeListener;
@@ -66,7 +68,6 @@ import javafx.scene.AccessibleAttribute;
 import javafx.scene.AccessibleRole;
 import javafx.scene.Node;
 import javafx.scene.control.ContextMenu;
-import javafx.scene.control.Control;
 import javafx.scene.control.Label;
 import javafx.scene.control.MenuItem;
 import javafx.scene.control.RadioMenuItem;
@@ -254,6 +255,45 @@ public class TabPaneSkin extends SkinBase<TabPane> {
             return "closeTabAnimation";
         }
     };
+
+    /**
+     * This property allows to control the graphic for the overflow menu items,
+     * by generating graphic {@code Node}s when the menu is shown.
+     * <p>
+     * When this property is {@code null}, the menu provides only the basic graphic copied from the corresponding
+     * {@link Tab} - either an {@link ImageView} or a {@link Label} with an {@link ImageView} as its graphic.
+     * <p>
+     * Changing this property while the menu is shown has no effect.
+     *
+     * @since 25
+     * @defaultValue null
+     */
+    private ObjectProperty<Function<Tab, Node>> menuGraphicFactory;
+
+    public final ObjectProperty<Function<Tab, Node>> menuGraphicFactoryProperty() {
+        if (menuGraphicFactory == null) {
+            menuGraphicFactory = new SimpleObjectProperty<>() {
+                @Override
+                public Object getBean() {
+                    return TabPaneSkin.this;
+                }
+
+                @Override
+                public String getName() {
+                    return "menuGraphicFactory";
+                }
+            };
+        }
+        return menuGraphicFactory;
+    }
+
+    public final Function<Tab,Node> getMenuGraphicFactory() {
+        return menuGraphicFactory == null ? null : menuGraphicFactory.get();
+    }
+
+    public final void setMenuGraphicFactory(Function<Tab,Node> f) {
+        menuGraphicFactoryProperty().set(f);
+    }
 
     /* *************************************************************************
      *                                                                         *
@@ -476,27 +516,28 @@ public class TabPaneSkin extends SkinBase<TabPane> {
         }
     }
 
-    /**
-     * VERY HACKY - this lets us 'duplicate' Label and ImageView nodes to be used in a
-     * Tab and the tabs menu at the same time.
-     */
-    private static Node clone(Node n) {
-        if (n == null) {
-            return null;
+    private Node prepareGraphic(Tab t) {
+        Function<Tab, Node> f = getMenuGraphicFactory();
+        if (f != null) {
+            return f.apply(t);
         }
-        if (n instanceof ImageView) {
-            ImageView iv = (ImageView) n;
+
+        Node n = t.getGraphic();
+        return extractGraphic(n);
+    }
+
+    private Node extractGraphic(Node n) {
+        if (n instanceof ImageView v) {
             ImageView imageview = new ImageView();
-            imageview.imageProperty().bind(iv.imageProperty());
+            imageview.imageProperty().bind(v.imageProperty());
             return imageview;
-        }
-        if (n instanceof Label) {
-            Label l = (Label)n;
-            Label label = new Label(l.getText(), clone(l.getGraphic()));
+        } else if (n instanceof Label l) {
+            Label label = new Label(l.getText(), extractGraphic(l.getGraphic()));
             label.textProperty().bind(l.textProperty());
             return label;
+        } else {
+            return null;
         }
-        return null;
     }
 
     private void removeTabs(List<? extends Tab> removedList) {
@@ -1919,7 +1960,8 @@ public class TabPaneSkin extends SkinBase<TabPane> {
             ToggleGroup group = new ToggleGroup();
             ObservableList<RadioMenuItem> menuitems = FXCollections.<RadioMenuItem>observableArrayList();
             for (final Tab tab : getSkinnable().getTabs()) {
-                TabMenuItem item = new TabMenuItem(tab);
+                Node graphic = prepareGraphic(tab);
+                TabMenuItem item = new TabMenuItem(tab, graphic);
                 item.setToggleGroup(group);
                 item.setOnAction(t -> getSkinnable().getSelectionModel().select(tab));
                 menuitems.add(item);
@@ -1946,23 +1988,14 @@ public class TabPaneSkin extends SkinBase<TabPane> {
         }
     } /* End TabControlButtons*/
 
+    /** The MenuItem for use in the overflow menu */
     static class TabMenuItem extends RadioMenuItem {
-        Tab tab;
+        private Tab tab;
 
-        private InvalidationListener disableListener = new InvalidationListener() {
-            @Override public void invalidated(Observable o) {
-                setDisable(tab.isDisable());
-            }
-        };
-
-        private WeakInvalidationListener weakDisableListener =
-                new WeakInvalidationListener(disableListener);
-
-        public TabMenuItem(final Tab tab) {
-            super(tab.getText(), TabPaneSkin.clone(tab.getGraphic()));
+        public TabMenuItem(Tab tab, Node graphic) {
+            super(tab.getText(), graphic);
             this.tab = tab;
-            setDisable(tab.isDisable());
-            tab.disableProperty().addListener(weakDisableListener);
+            disableProperty().bind(tab.disableProperty());
             textProperty().bind(tab.textProperty());
         }
 
@@ -1970,9 +2003,10 @@ public class TabPaneSkin extends SkinBase<TabPane> {
             return tab;
         }
 
+        // is this really necessary?
         public void dispose() {
             textProperty().unbind();
-            tab.disableProperty().removeListener(weakDisableListener);
+            disableProperty().unbind();
             tab = null;
         }
     }
