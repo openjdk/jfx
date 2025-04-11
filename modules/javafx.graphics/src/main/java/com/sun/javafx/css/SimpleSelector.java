@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2008, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,13 +25,16 @@
 
 package com.sun.javafx.css;
 
+import com.sun.javafx.css.media.MediaRule;
+import com.sun.javafx.scene.SceneHelper;
 import javafx.css.PseudoClass;
+import javafx.css.Rule;
 import javafx.css.Selector;
 import javafx.css.StyleClass;
 import javafx.css.Styleable;
 import javafx.geometry.NodeOrientation;
 import javafx.scene.Node;
-
+import javafx.scene.Scene;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
@@ -273,6 +276,25 @@ final public class SimpleSelector extends Selector {
             if (!matchesStyleClasses(styleable.getStyleClass())) {
                 return false;
             }
+        }
+
+        Rule rule = getRule();
+        MediaRule mediaRule = rule != null ? RuleHelper.getMediaRule(rule) : null;
+
+        // If we have a media rule, evaluate it against the scene's media query context.
+        // If the media rule evaluates to false, the selector doesn't apply.
+        if (mediaRule != null) {
+            Node node = styleable instanceof Node n ? n : styleable.getStyleableNode();
+            if (node == null) {
+                return false;
+            }
+
+            Scene scene = node.getScene();
+            if (scene == null) {
+                return false;
+            }
+
+            return mediaRule.evaluate(SceneHelper.getMediaQueryContext(scene));
         }
 
         return true;
