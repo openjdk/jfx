@@ -520,7 +520,7 @@ static PathData* checkSize(void* user, int coordCount)
         if (info->lenCoords > SIZE_MAX - DEFAULT_LEN_COORDS) goto fail;
         info->lenCoords += DEFAULT_LEN_COORDS;
 
-        jbyte* newPointCoords = (jfloat*)realloc(info->pointCoords, info->lenCoords * sizeof(jfloat));
+        jfloat* newPointCoords = (jfloat*)realloc(info->pointCoords, info->lenCoords * sizeof(jfloat));
         if (newPointCoords == NULL) goto fail;
         info->pointCoords = newPointCoords;
     }
