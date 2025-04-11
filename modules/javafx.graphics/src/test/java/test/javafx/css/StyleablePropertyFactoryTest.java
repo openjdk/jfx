@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2014, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -43,6 +43,8 @@ import javafx.scene.paint.Stop;
 import javafx.scene.text.Font;
 import javafx.util.Duration;
 
+import java.util.Objects;
+import java.util.function.Predicate;
 import java.util.stream.Stream;
 import java.util.List;
 import javafx.css.CssMetaData;
@@ -55,27 +57,23 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 
-import org.hamcrest.BaseMatcher;
-import org.hamcrest.CoreMatchers;
-import org.hamcrest.Description;
-import org.hamcrest.Matcher;
-import static org.hamcrest.MatcherAssert.assertThat;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class StyleablePropertyFactoryTest {
 
     private static class Data<T> {
 
-        final PropertyReference propertyReference;
+        final PropertyReference<T> propertyReference;
         final String style;
         final T value;
-        final Matcher<T> matcher;
+        final Predicate<T> matcher;
 
         Data(String name, String style, T value) {
-            this(name,style,value,CoreMatchers.equalTo(value));
+            this(name, style, value, arg -> Objects.equals(arg, value));
         }
 
-        Data(String name, String style, T value, Matcher<T> matcher) {
-            this.propertyReference = new PropertyReference(MyStyleable.class, name);
+        Data(String name, String style, T value, Predicate<T> matcher) {
+            this.propertyReference = new PropertyReference<>(MyStyleable.class, name);
             this.style = style;
             this.value = value;
             this.matcher = matcher;
@@ -83,57 +81,46 @@ public class StyleablePropertyFactoryTest {
     }
 
     public static Stream<Arguments> data() {
-
         return Stream.of(
-            Arguments.of(new Data("myBoolean", "-my-boolean: true;", Boolean.TRUE)),
-            Arguments.of(new Data("myColor", "-my-color: red;", Color.RED)),
-            Arguments.of(new Data("myDuration", "-my-duration: 30ms;", Duration.millis(30))),
-            Arguments.of(new Data("myEffect", "-my-effect: innershadow(gaussian, red, 10, .5, 1, 1);",
-                        new InnerShadow(BlurType.GAUSSIAN, Color.RED, 10, .5, 1, 1),
-                        new BaseMatcher<InnerShadow>() {
-                            @Override
-                            public boolean matches(Object o) {
-                                InnerShadow actual = (InnerShadow)o;
-                                return (actual.getBlurType() == BlurType.GAUSSIAN &&
-                                        actual.getColor().equals(Color.RED) &&
-                                        Double.compare(actual.getRadius(),10d) ==  0 &&
-                                        Double.compare(actual.getChoke(),.5d) ==  0 &&
-                                        Double.compare(actual.getOffsetX(),1d) ==  0 &&
-                                        Double.compare(actual.getOffsetY(),1d) ==  0);
-                            }
-                            @Override
-                            public void describeTo(Description description) {
-                                description.appendText("InnerShadow(BlurType.GAUSSIAN, Color.RED, 10, .5, 1, 1)");
-                            }
-                        })
-                ),
-            Arguments.of(new Data("myPos", "-my-pos: bottom-right;", Pos.BOTTOM_RIGHT)),
-            Arguments.of(new Data("myFont", "-my-font: 18 system;", Font.font("system", 18))),
-            Arguments.of(new Data("myInsets", "-my-insets: 1 2 3 4;", new Insets(1,2,3,4))),
-            Arguments.of(new Data("myInsets", "-my-insets: 5;", new Insets(5,5,5,5))),
-            Arguments.of(new Data("myInsets", "-my-insets: 7 8;", new Insets(7,8,7,8))),
-            Arguments.of(new Data("myInsets", "-my-insets: 9 10 11;", new Insets(9,10,11,10))),
-            Arguments.of(new Data("myPaint", "-my-paint: linear-gradient(from 0% 0% to 100% 100%, red 0%, black 100%);",
-                        new LinearGradient(0,0,1,1,true, CycleMethod.NO_CYCLE,new Stop[] { new Stop(0,Color.RED), new Stop(1,Color.BLACK) }))
-                ),
-            Arguments.of(new Data("myNumber", "-my-number: 2em;", Font.getDefault().getSize()*2)),
-            Arguments.of(new Data("myString", "-my-string: \"yaba daba do\";", "yaba daba do")),
-            Arguments.of(new Data("myUrl", "-my-url: url('http://www.oracle.com');", "http://www.oracle.com")),
-            Arguments.of(new Data("mySelected", "-my-selected: false;", Boolean.FALSE))
+            Arguments.of(new Data<>("myBoolean", "-my-boolean: true;", Boolean.TRUE)),
+            Arguments.of(new Data<>("myColor", "-my-color: red;", Color.RED)),
+            Arguments.of(new Data<>("myDuration", "-my-duration: 30ms;", Duration.millis(30))),
+            Arguments.of(new Data<>("myEffect", "-my-effect: innershadow(gaussian, red, 10, .5, 1, 1);",
+                    new InnerShadow(BlurType.GAUSSIAN, Color.RED, 10, .5, 1, 1),
+                    actual -> (actual.getBlurType() == BlurType.GAUSSIAN
+                            && actual.getColor().equals(Color.RED)
+                            && Double.compare(actual.getRadius(), 10d) == 0
+                            && Double.compare(actual.getChoke(), .5d) == 0
+                            && Double.compare(actual.getOffsetX(), 1d) == 0
+                            && Double.compare(actual.getOffsetY(), 1d) == 0))),
+            Arguments.of(new Data<>("myPos", "-my-pos: bottom-right;", Pos.BOTTOM_RIGHT)),
+            Arguments.of(new Data<>("myFont", "-my-font: 18 system;", Font.font("system", 18))),
+            Arguments.of(new Data<>("myInsets", "-my-insets: 1 2 3 4;", new Insets(1,2,3,4))),
+            Arguments.of(new Data<>("myInsets", "-my-insets: 5;", new Insets(5,5,5,5))),
+            Arguments.of(new Data<>("myInsets", "-my-insets: 7 8;", new Insets(7,8,7,8))),
+            Arguments.of(new Data<>("myInsets", "-my-insets: 9 10 11;", new Insets(9,10,11,10))),
+            Arguments.of(new Data<>("myPaint", "-my-paint: linear-gradient(from 0% 0% to 100% 100%, red 0%, black 100%);",
+                    new LinearGradient(0, 0, 1, 1, true, CycleMethod.NO_CYCLE,
+                            new Stop(0, Color.RED),
+                            new Stop(1, Color.BLACK)))),
+            Arguments.of(new Data<>("myNumber", "-my-number: 2em;", Font.getDefault().getSize()*2)),
+            Arguments.of(new Data<>("myString", "-my-string: \"yaba daba do\";", "yaba daba do")),
+            Arguments.of(new Data<>("myUrl", "-my-url: url('http://www.oracle.com');", "http://www.oracle.com")),
+            Arguments.of(new Data<>("mySelected", "-my-selected: false;", Boolean.FALSE))
         );
     }
 
     @ParameterizedTest
     @MethodSource("data")
-    public void theTest(Data data) {
+    public <T> void testCssStyling(Data<T> data) {
         MyStyleable styleable = new MyStyleable();
         styleable.setStyle(data.style);
 
         Scene scene = new Scene(styleable);
         styleable.applyCss();
 
-        ReadOnlyProperty prop = data.propertyReference.getProperty(styleable);
-        assertThat(prop.getValue(), data.matcher);
+        ReadOnlyProperty<T> prop = data.propertyReference.getProperty(styleable);
+        assertTrue(data.matcher.test(prop.getValue()), prop.getValue() + " does not match expected value");
     }
 
     public static class MyStyleable extends Group {
@@ -141,7 +128,7 @@ public class StyleablePropertyFactoryTest {
         public MyStyleable() {
         }
 
-        private static final StyleablePropertyFactory fac = new StyleablePropertyFactory<>(null);
+        private static final StyleablePropertyFactory<Styleable> fac = new StyleablePropertyFactory<>(null);
 
         public ObservableValue<Boolean> myBooleanProperty () { return (ObservableValue<Boolean>) myBoolean; }
         public Boolean getMyBoolean() { return myBoolean.getValue(); }

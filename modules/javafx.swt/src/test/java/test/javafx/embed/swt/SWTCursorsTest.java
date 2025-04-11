@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2016, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -33,19 +33,20 @@ import javafx.scene.image.Image;
 import org.eclipse.swt.SWT;
 import org.eclipse.swt.widgets.Display;
 import org.eclipse.swt.widgets.Shell;
-import org.junit.Rule;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 
-import static org.junit.Assert.assertNotNull;
+import java.util.concurrent.TimeUnit;
+
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 
 public class SWTCursorsTest {
 
-    @Rule
-    public SwtRule ctx = new SwtRule();
-
-    @Test(timeout = 10000)
-    public void testImageCursor() throws Throwable {
-        final Shell shell = new Shell(Display.getCurrent());
+    @Test
+    @Timeout(value = 10000, unit = TimeUnit.MILLISECONDS)
+    public void testImageCursor() {
+        Display display = new Display();
+        final Shell shell = new Shell(display);
         final FXCanvas canvas = new FXCanvas(shell, SWT.NONE);
         shell.open();
 
@@ -57,11 +58,15 @@ public class SWTCursorsTest {
         Image cursorImage = new Image("test/javafx/embed/swt/cursor.png");
         scene.setCursor(new ImageCursor(cursorImage));
 
-        Display.getCurrent().asyncExec(() -> {
+        display.asyncExec(() -> {
             assertNotNull(canvas.getCursor());
-
-            // FIXME: We cannot close the shell here because of https://bugs.eclipse.org/bugs/show_bug.cgi?id=435066.
-            //shell.close();
         });
+
+        while (!shell.isDisposed()) {
+            if (!display.readAndDispatch()) {
+                display.sleep();
+            }
+        }
+        display.dispose();
     }
 }

@@ -24,8 +24,9 @@
  */
 package test.robot.javafx.scene;
 
-import static org.junit.Assume.assumeFalse;
 import static org.junit.jupiter.api.Assertions.fail;
+import static org.junit.jupiter.api.Assumptions.assumeFalse;
+
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
