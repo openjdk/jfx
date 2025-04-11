@@ -43,7 +43,7 @@ import test.util.Util;
 public class MouseLocationOnScreenTest {
     static CountDownLatch startupLatch = new CountDownLatch(1);
     static Robot robot;
-    private static int DELAY_TIME = 1;
+    private static int DELAY_TIME = 3;
 
     public static class TestApp extends Application {
 
