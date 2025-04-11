@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2023, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,10 +25,9 @@
 
 package test.com.sun.javafx.css;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNotEquals;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.*;
 
+import java.util.HashSet;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -46,6 +45,11 @@ public class BitSetTest {
     private final PseudoClass a = PseudoClass.getPseudoClass("a");
     private final PseudoClass b = PseudoClass.getPseudoClass("b");
     private final PseudoClass c = PseudoClass.getPseudoClass("c");
+
+    @Test
+    void equalsNullShouldBeFalse() {
+        assertFalse(set.equals(null));
+    }
 
     @Test
     void setShouldProcessAddAndRemoveCorrectly() {
@@ -172,5 +176,14 @@ public class BitSetTest {
 
         assertEquals(Set.of(), new PseudoClassState());
         assertEquals(new PseudoClassState(), Set.of());
+    }
+
+    @Test
+    void bitSetShouldEqualHashSet() {
+        var bitSet = new PseudoClassState();
+        bitSet.addAll(Set.of(a, b, c));
+        var hashSet = new HashSet<>(Set.of(c, a, b));
+        assertEquals(bitSet, hashSet);
+        assertEquals(hashSet, bitSet);
     }
 }

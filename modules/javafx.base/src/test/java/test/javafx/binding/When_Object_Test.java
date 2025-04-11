@@ -25,6 +25,8 @@
 
 package test.javafx.binding;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+
 import javafx.beans.binding.Binding;
 import javafx.beans.binding.Bindings;
 import javafx.beans.property.ObjectProperty;
@@ -75,6 +77,6 @@ public class When_Object_Test extends WhenTestBase<Object, ObjectProperty<Object
     }
     @Override
     public void check(Object expected, Binding<Object> binding) {
-        org.junit.Assert.assertEquals(expected, binding.getValue());
+        assertEquals(expected, binding.getValue());
     }
 }
