@@ -103,11 +103,11 @@ final class WinView extends View {
     protected void notifyMenu(int x, int y, int xAbs, int yAbs, boolean isKeyboardTrigger) {
         // If all of the following conditions are satisfied, we open a system menu at the specified coordinates:
         // 1. The application didn't consume the menu event.
-        // 2. The window is an EXTENDED window.
+        // 2. The window is an EXTENDED window and is not in full-screen mode.
         // 3. The menu event occurred on a draggable area.
         if (!handleMenuEvent(x, y, xAbs, yAbs, isKeyboardTrigger)) {
             var window = (WinWindow)getWindow();
-            if (!window.isExtendedWindow()) {
+            if (!window.isExtendedWindow() || isInFullscreen()) {
                 return;
             }
 
