@@ -94,6 +94,7 @@ struct _GstMFWrapper
 
     BYTE *header;
     gsize header_size;
+    gboolean send_header;
 
     guint width;
     guint height;
@@ -103,6 +104,8 @@ struct _GstMFWrapper
     guint defaultStride;
     guint pixel_num;
     guint pixel_den;
+
+    gboolean set_caps;
 };
 
 struct _GstMFWrapperClass
