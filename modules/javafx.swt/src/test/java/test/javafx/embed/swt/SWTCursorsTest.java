@@ -40,33 +40,38 @@ import java.util.concurrent.TimeUnit;
 
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 
-public class SWTCursorsTest {
+public class SWTCursorsTest extends SWTTest {
+
+    private FXCanvas canvas;
 
     @Test
     @Timeout(value = 10000, unit = TimeUnit.MILLISECONDS)
-    public void testImageCursor() {
-        Display display = new Display();
-        final Shell shell = new Shell(display);
-        final FXCanvas canvas = new FXCanvas(shell, SWT.NONE);
-        shell.open();
+    public void testImageCursor() throws Throwable {
+        runOnSwtThread(() -> {
+            Display display = Display.getCurrent();
+            final Shell shell = new Shell(display);
+            canvas = new FXCanvas(shell, SWT.NONE);
+            shell.open();
 
-        // create and hook scene
-        Scene scene = new Scene(new Group());
-        canvas.setScene(scene);
+            // create and hook scene
+            Scene scene = new Scene(new Group());
+            canvas.setScene(scene);
 
-        // set image cursor to scene
-        Image cursorImage = new Image("test/javafx/embed/swt/cursor.png");
-        scene.setCursor(new ImageCursor(cursorImage));
+            // set image cursor to scene
+            Image cursorImage = new Image("test/javafx/embed/swt/cursor.png");
+            scene.setCursor(new ImageCursor(cursorImage));
 
-        display.asyncExec(() -> {
-            assertNotNull(canvas.getCursor());
-        });
+            display.asyncExec(() -> {
+                assertNotNull(canvas.getCursor());
 
-        while (!shell.isDisposed()) {
-            if (!display.readAndDispatch()) {
-                display.sleep();
+                shell.close();
+            });
+
+            while (!shell.isDisposed()) {
+                if (!display.readAndDispatch()) {
+                    display.sleep();
+                }
             }
-        }
-        display.dispose();
+        });
     }
 }

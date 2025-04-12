@@ -38,28 +38,35 @@ import java.util.concurrent.TimeUnit;
 
 import static org.junit.jupiter.api.Assertions.assertSame;
 
-public class FXCanvasTest {
+public class FXCanvasTest extends SWTTest {
+
+    private FXCanvas canvas;
 
     @Test
     @Timeout(value = 10000, unit = TimeUnit.MILLISECONDS)
-    public void getFXCanvas() throws Throwable {
-        Display display = new Display();
-        Shell shell = new Shell(display);
-        final FXCanvas canvas = new FXCanvas(shell, SWT.NONE);
-        shell.open();
+    public void testFXCanvas() throws Throwable {
+        runOnSwtThread(() -> {
+            Display display = Display.getCurrent();
+            Shell shell = new Shell(display);
+            canvas = new FXCanvas(shell, SWT.NONE);
+            shell.open();
 
-        // create and hook scene
-        Scene scene = new Scene(new Group());
-        canvas.setScene(scene);
+            // create and hook scene
+            Scene scene = new Scene(new Group());
+            canvas.setScene(scene);
 
-        // check FXCanvas is properly retrieved
-        assertSame(canvas, FXCanvas.getFXCanvas(canvas.getScene()));
+            display.asyncExec(() -> {
+                // check FXCanvas is properly retrieved
+                assertSame(canvas, FXCanvas.getFXCanvas(canvas.getScene()));
 
-        while (!shell.isDisposed()) {
-            if (!display.readAndDispatch()) {
-                display.sleep();
+                shell.close();
+            });
+
+            while (!shell.isDisposed()) {
+                if (!display.readAndDispatch()) {
+                    display.sleep();
+                }
             }
-        }
-        display.dispose();
+        });
     }
 }
