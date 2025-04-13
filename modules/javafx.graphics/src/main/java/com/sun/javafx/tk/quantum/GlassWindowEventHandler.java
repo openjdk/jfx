@@ -63,6 +63,19 @@ class GlassWindowEventHandler extends Window.EventHandler implements Supplier<Vo
                 stage.stageListener.changedIconified(false);
                 stage.stageListener.changedMaximized(false);
                 break;
+            case WindowEvent.UNMINIMIZE:
+                stage.stageListener.changedIconified(false);
+                QuantumToolkit.runWithRenderLock(() -> {
+                    GlassScene scene = stage.getScene();
+                    if (scene != null) {
+                        scene.updateSceneState();
+                    }
+                    return null;
+                });
+                break;
+            case WindowEvent.UNMAXIMIZE:
+                stage.stageListener.changedMaximized(false);
+                break;
             case WindowEvent.MOVE: {
                 float wx = window.getX();
                 float wy = window.getY();

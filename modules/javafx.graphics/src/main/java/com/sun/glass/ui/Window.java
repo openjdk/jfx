@@ -164,12 +164,11 @@ public abstract class Window {
      */
     @Native public static final int MODAL = 1 << 9;
 
-    final static public class State {
-        @Native public static final int NORMAL = 1;
-        @Native public static final int MINIMIZED = 2;
-        @Native public static final int MAXIMIZED = 3;
+    public static final class State {
+        @Native public static final int NORMAL     = 1 << 0;
+        @Native public static final int MINIMIZED  = 1 << 2;
+        @Native public static final int MAXIMIZED  = 1 << 3;
     }
-
     /**
      * Available window levels.
      *
@@ -1192,17 +1191,65 @@ public abstract class Window {
         setScreen(newScreen);
     }
 
+    /**
+     * Derecated: Use the {@link #notifyState(int)} as the Window can have
+     * multiple states at the same time.
+     */
+    @Deprecated
     protected void setState(int state) {
         this.state = state;
     }
 
     /**
-     * type values:
-     *   - WindowEvent.RESIZE
-     *   - WindowEvent.MINIMIZE
-     *   - WindowEvent.MAXIMIZE
-     *   - WindowEvent.RESTORE
+     * Notifies a window state change
+     * @param type {@link WindowEvent#MINIMIZE}, {@link WindowEvent#UNMINIMIZE},
+     *             {@link WindowEvent#MAXIMIZE}, {@link WindowEvent#UNMAXIMIZE}
      */
+    protected void notifyState(final int type) {
+        switch (type) {
+            case WindowEvent.MAXIMIZE:
+                this.state |= State.MAXIMIZED;
+                break;
+            case WindowEvent.UNMAXIMIZE:
+                this.state &= ~State.MAXIMIZED;
+                break;
+            case WindowEvent.MINIMIZE:
+                this.state |= State.MINIMIZED;
+                break;
+            case WindowEvent.UNMINIMIZE:
+                this.state &= ~State.MINIMIZED;
+                break;
+            default:
+                break;
+        }
+
+        if ((type & (WindowEvent.MAXIMIZE | WindowEvent.UNMAXIMIZE
+                | WindowEvent.MINIMIZE | WindowEvent.UNMINIMIZE)) == 0) {
+            handleWindowEvent(System.nanoTime(), type);
+        }
+    }
+
+    /**
+     * Notifies a window resize event. Note that it should notify only
+     * when the window is floating on the screen (not when maximized,
+     * iconified of fullscreen).
+     * @param width The width of the window
+     * @param height The height of the window
+     */
+    protected void notifyResize(int width, int height) {
+        this.width = width;
+        this.height = height;
+        handleWindowEvent(System.nanoTime(), WindowEvent.RESIZE);
+    }
+
+    /**
+     * Deprecated: Call specific methods {@link #notifyResize(int, int)} or {@link #notifyState(int)}
+     * @param type {@link WindowEvent#RESIZE}, {@link WindowEvent#MINIMIZE}, {@link WindowEvent#UNMINIMIZE},
+     *             {@link WindowEvent#MAXIMIZE}, {@link WindowEvent#UNMAXIMIZE}, {@link WindowEvent#RESTORE}
+     * @param width the Window width value
+     * @param height the Window height value
+     */
+    @Deprecated
     protected void notifyResize(final int type, final int width, final int height) {
         if (type == WindowEvent.MINIMIZE) {
             this.state = State.MINIMIZED;

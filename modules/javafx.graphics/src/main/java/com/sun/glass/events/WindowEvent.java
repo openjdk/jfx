@@ -36,7 +36,14 @@ public class WindowEvent {
 
     @Native final static public int MINIMIZE              = 531;
     @Native final static public int MAXIMIZE              = 532;
+    /**
+     * Deprecated in favor of specific restore events: {@link #UNMAXIMIZE}
+     * and {@link #UNMINIMIZE}.
+     */
+    @Deprecated
     @Native final static public int RESTORE               = 533;
+    @Native final static public int UNMINIMIZE            = 534;
+    @Native final static public int UNMAXIMIZE            = 535;
 
     @Native final static public int _FOCUS_MIN            = 541;
     @Native final static public int FOCUS_LOST            = 541;
@@ -49,37 +56,24 @@ public class WindowEvent {
     @Native final static public int FOCUS_UNGRAB          = 546;
 
     public static String getEventName(final int eventType) {
-        switch(eventType) {
-            case WindowEvent.RESIZE:
-                return "RESIZE";
-            case WindowEvent.MOVE:
-                return "MOVE";
-            case WindowEvent.RESCALE:
-                return "RESCALE";
-            case WindowEvent.CLOSE:
-                return "CLOSE";
-            case WindowEvent.DESTROY:
-                return "DESTROY";
-            case WindowEvent.MINIMIZE:
-                return "MINIMIZE";
-            case WindowEvent.MAXIMIZE:
-                return "MAXIMIZE";
-            case WindowEvent.RESTORE:
-                return "RESTORE";
-            case WindowEvent.FOCUS_LOST:
-                return "FOCUS_LOST";
-            case WindowEvent.FOCUS_GAINED:
-                return "FOCUS_GAINED";
-            case WindowEvent.FOCUS_GAINED_FORWARD:
-                return "FOCUS_GAINED_FORWARD";
-            case WindowEvent.FOCUS_GAINED_BACKWARD:
-                return "FOCUS_GAINED_BACKWARD";
-            case WindowEvent.FOCUS_DISABLED:
-                return "FOCUS_DISABLED";
-            case WindowEvent.FOCUS_UNGRAB:
-                return "FOCUS_UNGRAB";
-            default:
-                return "UNKNOWN";
-        }
+        return switch (eventType) {
+            case WindowEvent.RESIZE -> "RESIZE";
+            case WindowEvent.MOVE -> "MOVE";
+            case WindowEvent.RESCALE -> "RESCALE";
+            case WindowEvent.CLOSE -> "CLOSE";
+            case WindowEvent.DESTROY -> "DESTROY";
+            case WindowEvent.MINIMIZE -> "MINIMIZE";
+            case WindowEvent.MAXIMIZE -> "MAXIMIZE";
+            case WindowEvent.RESTORE -> "RESTORE";
+            case WindowEvent.UNMINIMIZE -> "UNMINIMIZE";
+            case WindowEvent.UNMAXIMIZE -> "UNMAXIMIZE";
+            case WindowEvent.FOCUS_LOST -> "FOCUS_LOST";
+            case WindowEvent.FOCUS_GAINED -> "FOCUS_GAINED";
+            case WindowEvent.FOCUS_GAINED_FORWARD -> "FOCUS_GAINED_FORWARD";
+            case WindowEvent.FOCUS_GAINED_BACKWARD -> "FOCUS_GAINED_BACKWARD";
+            case WindowEvent.FOCUS_DISABLED -> "FOCUS_DISABLED";
+            case WindowEvent.FOCUS_UNGRAB -> "FOCUS_UNGRAB";
+            default -> "UNKNOWN";
+        };
     }
 }
