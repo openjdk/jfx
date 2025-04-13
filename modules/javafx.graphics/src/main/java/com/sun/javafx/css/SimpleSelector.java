@@ -25,8 +25,9 @@
 
 package com.sun.javafx.css;
 
+import com.sun.javafx.css.media.MediaQueryContext;
 import com.sun.javafx.css.media.MediaRule;
-import com.sun.javafx.scene.SceneHelper;
+import com.sun.javafx.scene.NodeHelper;
 import javafx.css.PseudoClass;
 import javafx.css.Rule;
 import javafx.css.Selector;
@@ -34,7 +35,6 @@ import javafx.css.StyleClass;
 import javafx.css.Styleable;
 import javafx.geometry.NodeOrientation;
 import javafx.scene.Node;
-import javafx.scene.Scene;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
@@ -289,12 +289,8 @@ final public class SimpleSelector extends Selector {
                 return false;
             }
 
-            Scene scene = node.getScene();
-            if (scene == null) {
-                return false;
-            }
-
-            return mediaRule.evaluate(SceneHelper.getMediaQueryContext(scene));
+            MediaQueryContext context = NodeHelper.getMediaQueryContext(node);
+            return context != null && mediaRule.evaluate(context);
         }
 
         return true;

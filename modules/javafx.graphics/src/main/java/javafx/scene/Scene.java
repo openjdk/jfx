@@ -503,11 +503,6 @@ public class Scene implements EventTarget {
                         public Accessible getAccessible(Scene scene) {
                             return scene.getAccessible();
                         }
-
-                        @Override
-                        public MediaQueryContext getMediaQueryContext(Scene scene) {
-                            return scene.preferences;
-                        }
                     });
         }
 
@@ -6257,7 +6252,7 @@ public class Scene implements EventTarget {
         return getProperties().get(USER_DATA_KEY);
     }
 
-    private final ScenePreferences preferences = new ScenePreferences(this);
+    final ScenePreferences preferences = new ScenePreferences(this);
 
     /**
      * Gets the scene preferences that can be queried with {@code @media} CSS rules.
