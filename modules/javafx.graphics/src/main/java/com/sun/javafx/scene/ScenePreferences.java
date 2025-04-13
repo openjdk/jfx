@@ -155,7 +155,7 @@ public final class ScenePreferences implements Scene.Preferences, MediaQueryCont
         }
 
         @Override
-        protected void invalidated() {
+        protected void onInvalidated() {
             Node root = scene.getRoot();
             if (root != null) {
                 NodeHelper.reapplyCSS(root);

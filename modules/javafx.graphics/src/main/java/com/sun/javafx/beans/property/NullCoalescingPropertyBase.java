@@ -29,6 +29,7 @@ import javafx.beans.property.ObjectPropertyBase;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
 import javafx.beans.value.WeakChangeListener;
+import java.util.Objects;
 
 /**
  * Base class for null-coalescing properties that evaluate to their local value if non-{@code null},
@@ -38,37 +39,54 @@ import javafx.beans.value.WeakChangeListener;
  */
 public abstract class NullCoalescingPropertyBase<T> extends ObjectPropertyBase<T> {
 
-    private final ChangeListener<T> listener = (_, _, value) -> {
-        baseValue = value;
+    private final ChangeListener<T> listener = (_, _, _) -> {
         invalidated();
         fireValueChangedEvent();
     };
 
-    private T baseValue;
+    private final ObservableValue<T> baseObservable;
+    private boolean currentValueChanged;
     private T currentValue;
 
     /**
      * Initializes a new {@code NullCoalescingPropertyBase} with the specified base value.
      *
-     * @param baseValue the base value
-     * @throws NullPointerException if {@code baseValue} is {@code null}
+     * @param baseObservable the base observable
+     * @throws NullPointerException if {@code baseObservable} is {@code null}
      */
-    protected NullCoalescingPropertyBase(ObservableValue<T> baseValue) {
-        this.currentValue = this.baseValue = baseValue.getValue();
-        baseValue.addListener(new WeakChangeListener<>(listener));
+    protected NullCoalescingPropertyBase(ObservableValue<T> baseObservable) {
+        this.baseObservable = Objects.requireNonNull(baseObservable, "baseObservable");
+        this.currentValue = baseObservable.getValue();
+        baseObservable.addListener(new WeakChangeListener<>(listener));
     }
 
     @Override
-    public T get() {
-        T value = super.get();
-        return value != null ? value : baseValue;
+    public final T get() {
+        return currentValue;
     }
 
     @Override
-    protected void fireValueChangedEvent() {
-        if (currentValue != get()) {
-            currentValue = get();
+    protected final void fireValueChangedEvent() {
+        if (currentValueChanged) {
+            currentValueChanged = false;
             super.fireValueChangedEvent();
         }
     }
+
+    @Override
+    protected final void invalidated() {
+        T localValue = super.get();
+        T newValue = localValue != null ? localValue : baseObservable.getValue();
+
+        if (currentValue != newValue) {
+            currentValue = newValue;
+            currentValueChanged = true;
+            onInvalidated();
+        }
+    }
+
+    /**
+     * Called when the current value has changed.
+     */
+    protected void onInvalidated() {}
 }

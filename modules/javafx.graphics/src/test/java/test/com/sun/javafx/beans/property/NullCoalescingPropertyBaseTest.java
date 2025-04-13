@@ -106,6 +106,58 @@ public class NullCoalescingPropertyBaseTest {
         assertEquals(List.of(property, property), trace);
     }
 
+    @Test
+    void currentValueInOnInvalidatedMethodIsCorrect() {
+        var actual = new String[1];
+        var base = new SimpleStringProperty();
+        var property = new NullCoalescingPropertyImpl<>(base) {
+            @Override
+            protected void onInvalidated() {
+                actual[0] = get();
+            }
+        };
+
+        base.set("foo");
+        assertEquals("foo", actual[0]);
+
+        property.set("bar");
+        assertEquals("bar", actual[0]);
+
+        property.set(null);
+        assertEquals("foo", actual[0]);
+    }
+
+    @Test
+    void notificationsAreOnlyFiredWhenCurrentValueHasChanged() {
+        var invalidatedCount = new int[1];
+        var listenerCount = new int[1];
+        var base = new SimpleStringProperty();
+        var property = new NullCoalescingPropertyImpl<>(base) {
+            @Override
+            protected void onInvalidated() {
+                invalidatedCount[0]++;
+            }
+        };
+
+        property.addListener((_, _, _) -> listenerCount[0]++);
+
+        base.set("foo");
+        assertEquals(1, invalidatedCount[0]);
+        assertEquals(1, listenerCount[0]);
+
+        property.set("foo");
+        assertEquals(1, invalidatedCount[0]);
+        assertEquals(1, listenerCount[0]);
+
+        base.set("bar");
+        assertEquals(1, invalidatedCount[0]);
+        assertEquals(1, listenerCount[0]);
+
+        property.set(null);
+        assertEquals(2, invalidatedCount[0]);
+        assertEquals(2, listenerCount[0]);
+    }
+
     private static class NullCoalescingPropertyImpl<T> extends NullCoalescingPropertyBase<T> {
         public NullCoalescingPropertyImpl(ObservableValue<T> baseValue) {
             super(baseValue);
