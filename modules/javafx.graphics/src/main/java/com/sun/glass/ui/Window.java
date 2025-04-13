@@ -1192,7 +1192,7 @@ public abstract class Window {
     }
 
     /**
-     * Derecated: Use the {@link #notifyState(int)} as the Window can have
+     * Deprecated: Use the {@link #notifyState(int)} as the Window can have
      * multiple states at the same time.
      */
     @Deprecated
