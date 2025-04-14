@@ -29,29 +29,18 @@ import java.util.ArrayList;
 import java.util.List;
 
 import com.sun.javafx.tk.Toolkit;
+import javafx.scene.text.Text;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Disabled;
-import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.MethodSource;
-import org.junit.jupiter.params.provider.Arguments;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
-import static org.junit.jupiter.api.Assertions.assertNotSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
-import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.junit.jupiter.api.Assertions.assertArrayEquals;
-import static org.junit.jupiter.api.Assertions.assertTimeout;
-import static org.junit.jupiter.api.Assertions.assertNotEquals;
-import org.junit.jupiter.api.Assumptions;
-import org.junit.jupiter.api.BeforeAll;
-import org.junit.jupiter.api.AfterAll;
-import org.junit.jupiter.params.provider.Arguments;
 import static javafx.scene.input.KeyCode.*;
 import static javafx.scene.input.KeyEvent.*;
 import static java.util.stream.Collectors.*;
@@ -258,6 +247,59 @@ public class TextFieldTest {
         txtField.onActionProperty().bind(op);
         assertEquals(ev, op.getValue());
     }
+
+    @Test
+    public void testPromptTextWithBindingWithLineBreaks() {
+        initStage();
+        txtField.setSkin(new TextFieldSkin(txtField));
+        String promptWithLineBreaks = "Prompt\nwith\nLineBreaks";
+        StringProperty promptProperty = new SimpleStringProperty(promptWithLineBreaks);
+        txtField.promptTextProperty().bind(promptProperty);
+        root.getChildren().add(txtField);
+        Text promptNode = TextInputSkinShim.getPromptNode(txtField);
+        assertEquals(promptWithLineBreaks.replace("\n",""), promptNode.getText());
+        txtField.promptTextProperty().unbind();
+    }
+
+    @Test
+    public void testPromptTextWithBindingWithoutLineBreaks() {
+        initStage();
+        txtField.setSkin(new TextFieldSkin(txtField));
+        String promptWithoutLineBreaks = "Prompt without LineBreaks";
+        StringProperty promptProperty = new SimpleStringProperty(promptWithoutLineBreaks);
+        txtField.promptTextProperty().bind(promptProperty);
+        root.getChildren().add(txtField);
+        Text promptNode = TextInputSkinShim.getPromptNode(txtField);
+        assertEquals(promptWithoutLineBreaks, promptNode.getText());
+        txtField.promptTextProperty().unbind();
+    }
+
+    @Test
+    public void testPromptTextWhenSettingValueWithLineBreaks() {
+        initStage();
+        txtField.setSkin(new TextFieldSkin(txtField));
+        String promptWithoutLineBreaks = "Prompt without LineBreaks";
+        String promptWithLineBreaks = "Prompt\nwith\nLineBreaks";
+        txtField.setPromptText(promptWithoutLineBreaks);
+        root.getChildren().add(txtField);
+        Text promptNode = TextInputSkinShim.getPromptNode(txtField);
+        assertEquals(promptWithoutLineBreaks, promptNode.getText());
+        txtField.setPromptText(promptWithLineBreaks);
+        assertEquals(promptWithLineBreaks.replace("\n",""), promptNode.getText());
+    }
+
+    @Test
+    public void testPromptTextWithNullValue() {
+        initStage();
+        txtField.setSkin(new TextFieldSkin(txtField));
+        String promptWithNull = null;
+        StringProperty promptPropertyNull = new SimpleStringProperty(promptWithNull);
+        txtField.promptTextProperty().bind(promptPropertyNull);
+        root.getChildren().add(txtField);
+        Text promptNode = TextInputSkinShim.getPromptNode(txtField);
+        assertNull(promptNode);
+    }
+
     /*********************************************************************
      * Miscellaneous Tests                                               *
      ********************************************************************/

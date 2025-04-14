@@ -413,7 +413,8 @@ jobs:
           which java
           java -version
           .\gradlew.bat -version
-          .\gradlew.bat --info all
+          # Skip "chmod" task for GHA builds. See JDK-8354337 for details.
+          .\gradlew.bat --info -PCHMOD_ARTIFACTS=false all
 
       - name: Run JavaFX headless tests
         working-directory: jfx
