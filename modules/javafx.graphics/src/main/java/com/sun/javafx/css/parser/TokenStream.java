@@ -44,10 +44,6 @@ public final class TokenStream {
         return size;
     }
 
-    public int index() {
-        return currentIndex;
-    }
-
     public Token current() {
         return currentItem;
     }
@@ -64,7 +60,7 @@ public final class TokenStream {
         return null;
     }
 
-    public Token consume(Predicate<Token> predicate) {
+    public Token consumeIf(Predicate<Token> predicate) {
         Token nextToken = consume();
         if (nextToken != null && predicate.test(nextToken)) {
             return nextToken;
@@ -91,24 +87,20 @@ public final class TokenStream {
      * Returns whether the next tokens in the stream satisfy the specified predicates.
      */
     @SafeVarargs
-    public final boolean peekMany(Predicate<Token>... predicates) {
-        int index = index();
+    public final boolean matches(Predicate<Token>... predicates) {
+        int index = currentIndex;
 
         try {
             for (Predicate<Token> predicate : predicates) {
-                if (consume(predicate) == null) {
+                if (consumeIf(predicate) == null) {
                     return false;
                 }
             }
 
             return true;
         } finally {
-            reset(index);
+            currentIndex = index;
+            currentItem = index >= 0 ? source.get(index) : null;
         }
-    }
-
-    public void reset(int index) {
-        currentIndex = index;
-        currentItem = index >= 0 ? source.get(index) : null;
     }
 }

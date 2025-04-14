@@ -88,7 +88,7 @@ public final class MediaQueryParser {
                     if (expression != null) {
                         expressions.add(expression);
                     } else {
-                        while (stream.consume(NOT_COMMA) != null) {
+                        while (stream.consumeIf(NOT_COMMA) != null) {
                             // If the expression is null, this means that we have encountered a parse error.
                             // Skip forward to the next comma and resume parsing with the next media query.
                         }
@@ -121,7 +121,7 @@ public final class MediaQueryParser {
      */
     private MediaQuery parseMediaCondition(TokenStream tokens) {
         // <media-not>
-        if (tokens.consume(NOT_KEYWORD) != null) {
+        if (tokens.consumeIf(NOT_KEYWORD) != null) {
             MediaQuery mediaInParens = parseMediaInParens(tokens);
             return mediaInParens != null ? new NegationExpression(mediaInParens) : null;
         }
@@ -172,7 +172,7 @@ public final class MediaQueryParser {
                                                  List<MediaQuery> expressions,
                                                  Predicate<Token> keyword,
                                                  Predicate<Token> otherKeyword) {
-        while (tokens.consume(keyword) != null) {
+        while (tokens.consumeIf(keyword) != null) {
             MediaQuery expression = parseMediaInParens(tokens);
             if (expression == null) {
                 return false;
@@ -204,15 +204,15 @@ public final class MediaQueryParser {
      */
     private MediaQuery parseMediaInParens(TokenStream tokens) {
         // <media-feature>
-        if (tokens.peekMany(LPAREN, IDENT, RPAREN) || tokens.peekMany(LPAREN, IDENT, COLON)) {
+        if (tokens.matches(LPAREN, IDENT, RPAREN) || tokens.matches(LPAREN, IDENT, COLON)) {
             return parseMediaFeature(tokens);
         }
 
         // ( <media-condition> )
-        if (tokens.consume(LPAREN) != null) {
+        if (tokens.consumeIf(LPAREN) != null) {
             MediaQuery expression = parseMediaCondition(tokens);
 
-            if (tokens.consume(RPAREN) == null) {
+            if (tokens.consumeIf(RPAREN) == null) {
                 errorHandler.accept(tokens.consume(), "Expected RPAREN");
                 return null;
             }
@@ -237,25 +237,25 @@ public final class MediaQueryParser {
      * @return the expression
      */
     private MediaQuery parseMediaFeature(TokenStream tokens) {
-        if (tokens.consume(LPAREN) == null) {
+        if (tokens.consumeIf(LPAREN) == null) {
             errorHandler.accept(tokens.consume(), "Expected LPAREN");
             return null;
         }
 
-        Token featureName = tokens.consume(IDENT);
+        Token featureName = tokens.consumeIf(IDENT);
         if (featureName == null) {
             errorHandler.accept(tokens.consume(), "Expected IDENT");
             return null;
         }
 
         Token featureValue = null;
-        if (tokens.consume(COLON) != null && (featureValue = tokens.consume()) == null) {
+        if (tokens.consumeIf(COLON) != null && (featureValue = tokens.consume()) == null) {
             while (tokens.peek() != null) tokens.consume(); // Skip forward to the last token
             errorHandler.accept(tokens.current(), "Expected token");
             return null;
         }
 
-        if (tokens.consume(RPAREN) == null) {
+        if (tokens.consumeIf(RPAREN) == null) {
             errorHandler.accept(tokens.consume(), "Expected RPAREN");
             return null;
         }
