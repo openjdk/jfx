@@ -56,9 +56,9 @@ public record FunctionExpression<T>(String featureName,
     @Override
     public boolean equals(Object obj) {
         return obj instanceof FunctionExpression<?> expr
-                && expr.featureName.equals(featureName)
-                && Objects.equals(expr.featureValue, featureValue)
-                && Objects.equals(expr.value, value);
+            && expr.featureName.equals(featureName)
+            && Objects.equals(expr.featureValue, featureValue)
+            && Objects.equals(expr.value, value);
     }
 
     @Override
