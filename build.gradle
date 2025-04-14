@@ -601,6 +601,12 @@ ext.DO_JCOV = Boolean.parseBoolean(JCOV)
 defineProperty("USE_CYGWIN", "true")
 ext.IS_USE_CYGWIN = Boolean.parseBoolean(USE_CYGWIN)
 
+// Specifies whether to run "chmod -R artifacts/sdk" as the last step of
+// copying the sdk to the artifacts dir. This is only done on Windows;
+// the flag is ignored on other platforms.
+defineProperty("CHMOD_ARTIFACTS", "true")
+ext.IS_CHMOD_ARTIFACTS = Boolean.parseBoolean(CHMOD_ARTIFACTS)
+
 // Define the number of threads to use when compiling (specifically for native compilation, including webkit)
 defineProperty("NUM_COMPILE_THREADS", "${Runtime.runtime.availableProcessors()}")
 
@@ -4972,9 +4978,13 @@ compileTargets { t ->
         def chmodArtifactsSdkTask = task("chmodArtifactsSdk$t.capital", dependsOn: copyArtifactsSdkTask) {
             if (IS_WINDOWS && IS_USE_CYGWIN) {
                 doLast {
-                    exec {
-                        workingDir(sdkArtifactsDir)
-                        commandLine("chmod", "-R", "755", ".")
+                    if (IS_CHMOD_ARTIFACTS) {
+                        exec {
+                            workingDir(sdkArtifactsDir)
+                            commandLine("chmod", "-R", "755", ".")
+                        }
+                    } else {
+                        println "Skipping 'chmod -R', CHMOD_ARTIFACTS=$CHMOD_ARTIFACTS"
                     }
                 }
             }
