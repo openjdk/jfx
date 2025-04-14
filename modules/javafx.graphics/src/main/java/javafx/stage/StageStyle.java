@@ -55,8 +55,8 @@ public enum StageStyle {
     TRANSPARENT,
 
     /**
-     * Defines a lightweight {@code Stage} with minimal decorations, intended for
-     * supporting tasks such as tool palettes.
+     * Defines a lightweight {@code Stage} style with minimal decorations, intended
+     * for supporting tasks such as tool palettes.
      * <p>
      * Utility stages may restrict window operations like maximize, minimize,
      * and fullscreen depending on the platform. They are designed to float above
