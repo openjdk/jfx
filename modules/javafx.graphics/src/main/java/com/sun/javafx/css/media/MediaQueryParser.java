@@ -166,7 +166,7 @@ public final class MediaQueryParser {
      * }</pre>
      *
      * @param tokens the token stream
-     * @return {@code true} if ast least one {@code media-and} or {@code media-or} production was parsed
+     * @return {@code true} if at least one {@code media-and} or {@code media-or} production was parsed
      */
     private boolean parseRepeatingMediaCondition(TokenStream tokens,
                                                  List<MediaQuery> expressions,
