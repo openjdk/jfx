@@ -40,6 +40,7 @@ import javafx.beans.property.ReadOnlyObjectProperty;
 import javafx.beans.property.ReadOnlyObjectWrapper;
 import javafx.beans.value.ObservableValue;
 import javafx.css.StyleableDoubleProperty;
+import javafx.event.Event;
 import javafx.geometry.Dimension2D;
 import javafx.geometry.HPos;
 import javafx.geometry.Insets;
@@ -96,8 +97,12 @@ import javafx.util.Subscription;
  *
  * <h2>System menu</h2>
  * Some platforms support a system menu that can be summoned by right-clicking the draggable area.
- * This platform-provided menu will only be shown if the {@link ContextMenuEvent#CONTEXT_MENU_REQUESTED}
- * event that is targeted at the header bar is not consumed by the application.
+ * The system menu will not be shown when:
+ * <ol>
+ *     <li>the {@code Stage} is in {@link Stage#fullScreenProperty() full-screen mode}, or
+ *     <li>the {@code HeaderBar} has {@link Event#consume() consumed} the
+ *         {@link ContextMenuEvent#CONTEXT_MENU_REQUESTED} event.
+ * </ol>
  *
  * <h2>Layout constraints</h2>
  * The {@code leading} and {@code trailing} children will be resized to their preferred widths and extend the
