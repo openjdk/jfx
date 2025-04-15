@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014, 2023, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2014, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -50,7 +50,7 @@ import org.junit.jupiter.params.provider.MethodSource;
 
 public class LocalDateTimeStringConverterTest {
 
-    private static String JAPANESE_DATE_STRING;
+    private static final String JAPANESE_DATE_STRING = "Saturday, January 12, 60 Shōwa, 12:34:56\u202fPM";;
     private static final LocalDateTime VALID_LDT_WITH_SECONDS = LocalDateTime.of(1985, 1, 12, 12, 34, 56);
     private static final LocalDateTime VALID_LDT_WITHOUT_SECONDS = LocalDateTime.of(1985, 1, 12, 12, 34, 0);
 
@@ -84,15 +84,6 @@ public class LocalDateTimeStringConverterTest {
         // DateTimeFormatter uses default locale, so we can init this after updating locale
         aFormatter = DateTimeFormatter.ofPattern("dd MM yyyy HH mm ss");
         aParser = DateTimeFormatter.ofPattern("yyyy MM dd hh mm ss a");
-
-        final var version = Runtime.Version.parse(System.getProperty("java.version"));
-        if (version.major() < 20) {
-            // TODO: This can be removed when the minimum version of boot jdk
-            // for JFX build is updated to JDK20 or above.
-            JAPANESE_DATE_STRING = "Saturday, January 12, 60 Shōwa, 12:34:56 PM";
-        } else {
-            JAPANESE_DATE_STRING = "Saturday, January 12, 60 Shōwa, 12:34:56\u202fPM";
-        }
     }
 
     @AfterAll
@@ -230,4 +221,3 @@ public class LocalDateTimeStringConverterTest {
         assertEquals(VALID_LDT_WITH_SECONDS, converter.fromString(JAPANESE_DATE_STRING));
     }
 }
-
