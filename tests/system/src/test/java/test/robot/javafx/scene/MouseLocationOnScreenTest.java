@@ -121,7 +121,7 @@ public class MouseLocationOnScreenTest {
     static void validate(Robot robot, int x, int y) {
         Boolean equalValue = false;
         for (int i = 0; i < VALIDATE_COUNT; i++) {
-            //Making Delay and Check at 1 ms and every 2 ms gap onwards
+            // Making delay and check at 1 ms and every 2 ms gap onwards
             Util.sleep(i == 0 ? DELAY_TIME : DELAY_TIME + 1);
             if (x == (int)robot.getMouseX() &&
                 y == (int)robot.getMouseY()) {
@@ -130,16 +130,12 @@ public class MouseLocationOnScreenTest {
             }
         }
 
-        if(equalValue == true) {
-            Assertions.assertEquals(x, (int) robot.getMouseX());
-            Assertions.assertEquals(y, (int) robot.getMouseY());
-        }
-        else {
-            //Making Delay and Check after 500 ms.
-            Util.sleep(DELAY_TIME * 500);
-            Assertions.assertEquals(x, (int) robot.getMouseX());
-            Assertions.assertEquals(y, (int) robot.getMouseY());
-        }
+        if (!equalValue) {
+            // Delay for 500ms more
+            Util.sleep(500);
+        }    
+        Assertions.assertEquals(x, (int) robot.getMouseX());
+        Assertions.assertEquals(y, (int) robot.getMouseY());
     }
 
     private static void edge(Robot robot, int x1, int y1, int x2, int y2) {
