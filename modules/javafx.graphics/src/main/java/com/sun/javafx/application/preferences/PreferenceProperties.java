@@ -25,16 +25,16 @@
 
 package com.sun.javafx.application.preferences;
 
+import com.sun.javafx.scene.ScenePreferences;
+import com.sun.javafx.tk.Toolkit;
 import com.sun.javafx.util.Utils;
 import javafx.application.ColorScheme;
-import javafx.beans.InvalidationListener;
 import javafx.beans.property.Property;
 import javafx.beans.property.ReadOnlyBooleanProperty;
 import javafx.beans.property.ReadOnlyBooleanWrapper;
 import javafx.beans.property.ReadOnlyObjectProperty;
 import javafx.beans.property.ReadOnlyObjectPropertyBase;
 import javafx.beans.property.ReadOnlyObjectWrapper;
-import javafx.beans.value.ChangeListener;
 import javafx.scene.paint.Color;
 import java.util.HashMap;
 import java.util.Map;
@@ -42,6 +42,12 @@ import java.util.Objects;
 
 /**
  * Contains {@link Property}-based preference implementations.
+ * <p>
+ * All properties in this class can be read from any thread in order to allow {@link ScenePreferences} to safely
+ * initialize its values on a background thread (creating and configuring a {@code Scene} on a background thread
+ * is allowed by its specification). This is not a specified capability for users, it is an implementation detail.
+ * <p>
+ * Importantly, even though properties can be read from any thread, changes always happen on the FX thread.
  */
 final class PreferenceProperties {
 
@@ -58,21 +64,22 @@ final class PreferenceProperties {
     private final ReadOnlyBooleanWrapper reducedTransparencyFlag;
     private final ReadOnlyBooleanWrapper reducedDataFlag;
     private final ReadOnlyBooleanWrapper persistentScrollBarsFlag;
+    private final Object mutex = new Object();
     private final Object bean;
 
     PreferenceProperties(Object bean) {
         this.bean = bean;
 
-        reducedMotionFlag = new ReadOnlyBooleanPropertyImpl(bean, reducedMotion.getName());
+        reducedMotionFlag = new ReadOnlyBooleanWrapper(bean, reducedMotion.getName());
         reducedMotionFlag.bind(reducedMotion);
 
-        reducedTransparencyFlag = new ReadOnlyBooleanPropertyImpl(bean, reducedTransparency.getName());
+        reducedTransparencyFlag = new ReadOnlyBooleanWrapper(bean, reducedTransparency.getName());
         reducedTransparencyFlag.bind(reducedTransparency);
 
-        reducedDataFlag = new ReadOnlyBooleanPropertyImpl(bean, reducedData.getName());
+        reducedDataFlag = new ReadOnlyBooleanWrapper(bean, reducedData.getName());
         reducedDataFlag.bind(reducedData);
 
-        persistentScrollBarsFlag = new ReadOnlyBooleanPropertyImpl(bean, persistentScrollBars.getName());
+        persistentScrollBarsFlag = new ReadOnlyBooleanWrapper(bean, persistentScrollBars.getName());
         persistentScrollBarsFlag.bind(persistentScrollBars);
     }
 
@@ -174,15 +181,19 @@ final class PreferenceProperties {
 
     public void update(Map<String, ChangedValue> changedPreferences,
                        Map<String, PreferenceMapping<?, ?>> platformKeyMappings) {
-        for (Map.Entry<String, ChangedValue> entry : changedPreferences.entrySet()) {
-            if (platformKeyMappings.get(entry.getKey()) instanceof PreferenceMapping<?, ?> mapping
-                    && deferredProperties.get(mapping.keyName()) instanceof DeferredProperty<?> property) {
-                property.setPlatformValue(mapping.map(entry.getValue().newValue()));
+        synchronized (mutex) {
+            for (Map.Entry<String, ChangedValue> entry : changedPreferences.entrySet()) {
+                if (platformKeyMappings.get(entry.getKey()) instanceof PreferenceMapping<?, ?> mapping
+                        && deferredProperties.get(mapping.keyName()) instanceof DeferredProperty<?> property) {
+                    property.setPlatformValue(mapping.map(entry.getValue().newValue()));
+                }
             }
-        }
 
-        for (DeferredProperty<?> property : deferredProperties.values()) {
-            property.fireValueChangedIfNecessary();
+            colorScheme.update();
+
+            for (DeferredProperty<?> property : deferredProperties.values()) {
+                property.fireValueChangedIfNecessary();
+            }
         }
     }
 
@@ -222,8 +233,10 @@ final class PreferenceProperties {
         }
 
         @Override
-        public synchronized T get() {
-            return effectiveValue;
+        public T get() {
+            synchronized (mutex) {
+                return effectiveValue;
+            }
         }
 
         /**
@@ -231,25 +244,33 @@ final class PreferenceProperties {
          * Change notifications are fired after the new values of all deferred properties have been set.
          */
         @SuppressWarnings("unchecked")
-        public synchronized void setPlatformValue(Object value) {
+        public void setPlatformValue(Object value) {
+            // No need to synchronize here, because the update() method already synchronizes on 'mutex'.
+            Toolkit.getToolkit().checkFxUserThread();
             Class<?> expectedType = defaultValue.getClass();
-            this.platformValue = expectedType.isInstance(value) ? (T)value : null;
+            this.platformValue = expectedType.isInstance(value) ? (T) value : null;
             updateEffectiveValue();
         }
 
-        public synchronized void setValueOverride(T value) {
-            this.overrideValue = value;
-            updateEffectiveValue();
-            fireValueChangedEvent();
+        public void setValueOverride(T value) {
+            Toolkit.getToolkit().checkFxUserThread();
+
+            synchronized (mutex) {
+                this.overrideValue = value;
+                updateEffectiveValue();
+                fireValueChangedIfNecessary();
+            }
         }
 
-        public synchronized void fireValueChangedIfNecessary() {
+        // This method must only be called when synchronized on 'mutex'.
+        public void fireValueChangedIfNecessary() {
             if (!Objects.equals(lastEffectiveValue, effectiveValue)) {
                 lastEffectiveValue = effectiveValue;
                 fireValueChangedEvent();
             }
         }
 
+        // This method must only be called when synchronized on 'mutex'.
         private void updateEffectiveValue() {
             // Choose the first non-null value in this order: overrideValue, platformValue, defaultValue.
             effectiveValue = Objects.requireNonNullElse(
@@ -263,102 +284,46 @@ final class PreferenceProperties {
 
         ColorSchemeProperty() {
             super(bean, "colorScheme");
-            InvalidationListener listener = observable -> update();
-            backgroundColor.addListener(listener);
-            foregroundColor.addListener(listener);
-            update();
         }
 
-        public synchronized void setValueOverride(ColorScheme colorScheme) {
-            colorSchemeOverride = colorScheme;
-            update();
+        public void setValueOverride(ColorScheme colorScheme) {
+            synchronized (mutex) {
+                colorSchemeOverride = colorScheme;
+                update();
+            }
         }
 
-        private synchronized void update() {
-            if (colorSchemeOverride != null) {
-                set(colorSchemeOverride);
-            } else {
-                Color background = backgroundColor.get();
-                Color foreground = foregroundColor.get();
-                boolean isDark = Utils.calculateBrightness(background) < Utils.calculateBrightness(foreground);
-                set(isDark ? ColorScheme.DARK : ColorScheme.LIGHT);
+        public void update() {
+            synchronized (mutex) {
+                if (colorSchemeOverride != null) {
+                    super.set(colorSchemeOverride);
+                } else {
+                    Color background = backgroundColor.get();
+                    Color foreground = foregroundColor.get();
+                    boolean isDark = Utils.calculateBrightness(background) < Utils.calculateBrightness(foreground);
+                    super.set(isDark ? ColorScheme.DARK : ColorScheme.LIGHT);
+                }
             }
         }
 
         @Override
-        public synchronized ReadOnlyObjectProperty<ColorScheme> getReadOnlyProperty() {
-            return super.getReadOnlyProperty();
+        public ReadOnlyObjectProperty<ColorScheme> getReadOnlyProperty() {
+            synchronized (mutex) {
+                return super.getReadOnlyProperty();
+            }
         }
 
         @Override
-        public synchronized ColorScheme get() {
-            return super.get();
+        public ColorScheme get() {
+            synchronized (mutex) {
+                return super.get();
+            }
         }
 
         @Override
-        protected synchronized void fireValueChangedEvent() {
-            super.fireValueChangedEvent();
-        }
-
-        @Override
-        public synchronized void addListener(ChangeListener<? super ColorScheme> listener) {
-            super.addListener(listener);
-        }
-
-        @Override
-        public synchronized void removeListener(ChangeListener<? super ColorScheme> listener) {
-            super.removeListener(listener);
-        }
-
-        @Override
-        public synchronized void addListener(InvalidationListener listener) {
-            super.addListener(listener);
-        }
-
-        @Override
-        public synchronized void removeListener(InvalidationListener listener) {
-            super.removeListener(listener);
-        }
-    }
-
-    private static class ReadOnlyBooleanPropertyImpl extends ReadOnlyBooleanWrapper {
-        ReadOnlyBooleanPropertyImpl(Object bean, String name) {
-            super(bean, name);
-        }
-
-        @Override
-        public synchronized ReadOnlyBooleanProperty getReadOnlyProperty() {
-            return super.getReadOnlyProperty();
-        }
-
-        @Override
-        public synchronized boolean get() {
-            return super.get();
-        }
-
-        @Override
-        protected synchronized void fireValueChangedEvent() {
-            super.fireValueChangedEvent();
-        }
-
-        @Override
-        public synchronized void addListener(ChangeListener<? super Boolean> listener) {
-            super.addListener(listener);
-        }
-
-        @Override
-        public synchronized void removeListener(ChangeListener<? super Boolean> listener) {
-            super.removeListener(listener);
-        }
-
-        @Override
-        public synchronized void addListener(InvalidationListener listener) {
-            super.addListener(listener);
-        }
-
-        @Override
-        public synchronized void removeListener(InvalidationListener listener) {
-            super.removeListener(listener);
+        public void set(ColorScheme newValue) {
+            // Make sure that we only set the value in the update() method.
+            throw new UnsupportedOperationException();
         }
     }
 }

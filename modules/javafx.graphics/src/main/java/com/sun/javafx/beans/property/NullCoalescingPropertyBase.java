@@ -44,6 +44,7 @@ public abstract class NullCoalescingPropertyBase<T> extends ObjectPropertyBase<T
         fireValueChangedEvent();
     };
 
+    private final WeakChangeListener<T> weakListener = new WeakChangeListener<>(listener);
     private final ObservableValue<T> baseObservable;
     private boolean currentValueChanged;
     private T currentValue;
@@ -57,7 +58,22 @@ public abstract class NullCoalescingPropertyBase<T> extends ObjectPropertyBase<T
     protected NullCoalescingPropertyBase(ObservableValue<T> baseObservable) {
         this.baseObservable = Objects.requireNonNull(baseObservable, "baseObservable");
         this.currentValue = baseObservable.getValue();
-        baseObservable.addListener(new WeakChangeListener<>(listener));
+    }
+
+    /**
+     * Connects this property to the base observable and starts observing.
+     */
+    public final void connect() {
+        baseObservable.addListener(weakListener);
+        invalidated();
+        fireValueChangedEvent();
+    }
+
+    /**
+     * Disconnects this property from the base observable and stops observing.
+     */
+    public final void disconnect() {
+        baseObservable.removeListener(weakListener);
     }
 
     @Override

@@ -28,11 +28,13 @@ package com.sun.javafx.scene;
 import com.sun.javafx.application.PlatformImpl;
 import com.sun.javafx.beans.property.NullCoalescingPropertyBase;
 import com.sun.javafx.css.media.MediaQueryContext;
+import java.util.List;
 import javafx.application.ColorScheme;
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.value.ObservableValue;
 import javafx.scene.Node;
 import javafx.scene.Scene;
+import javafx.stage.Window;
 
 public final class ScenePreferences implements Scene.Preferences, MediaQueryContext {
 
@@ -40,9 +42,14 @@ public final class ScenePreferences implements Scene.Preferences, MediaQueryCont
 
     public ScenePreferences(Scene scene) {
         this.scene = scene;
+
+        scene.windowProperty()
+            .flatMap(Window::showingProperty)
+            .orElse(false)
+            .subscribe(this::onShowingChanged);
     }
 
-    private final ObjectProperty<ColorScheme> colorScheme = new MediaProperty<>(
+    private final MediaProperty<ColorScheme> colorScheme = new MediaProperty<>(
             "colorScheme", PlatformImpl.getPlatformPreferences().colorSchemeProperty());
 
     @Override
@@ -60,7 +67,7 @@ public final class ScenePreferences implements Scene.Preferences, MediaQueryCont
         this.colorScheme.set(colorScheme);
     }
 
-    private final ObjectProperty<Boolean> persistentScrollBars = new MediaProperty<>(
+    private final MediaProperty<Boolean> persistentScrollBars = new MediaProperty<>(
             "persistentScrollBars", PlatformImpl.getPlatformPreferences().persistentScrollBarsProperty());
 
     @Override
@@ -78,7 +85,7 @@ public final class ScenePreferences implements Scene.Preferences, MediaQueryCont
         this.persistentScrollBars.set(value);
     }
 
-    private final ObjectProperty<Boolean> reducedMotion = new MediaProperty<>(
+    private final MediaProperty<Boolean> reducedMotion = new MediaProperty<>(
             "reducedMotion", PlatformImpl.getPlatformPreferences().reducedMotionProperty());
 
     @Override
@@ -96,7 +103,7 @@ public final class ScenePreferences implements Scene.Preferences, MediaQueryCont
         this.reducedMotion.set(value);
     }
 
-    private final ObjectProperty<Boolean> reducedTransparency = new MediaProperty<>(
+    private final MediaProperty<Boolean> reducedTransparency = new MediaProperty<>(
             "reducedTransparency", PlatformImpl.getPlatformPreferences().reducedTransparencyProperty());
 
     @Override
@@ -114,7 +121,7 @@ public final class ScenePreferences implements Scene.Preferences, MediaQueryCont
         this.reducedTransparency.set(value);
     }
 
-    private final ObjectProperty<Boolean> reducedData = new MediaProperty<>(
+    private final MediaProperty<Boolean> reducedData = new MediaProperty<>(
             "reducedData", PlatformImpl.getPlatformPreferences().reducedDataProperty());
 
     @Override
@@ -130,6 +137,17 @@ public final class ScenePreferences implements Scene.Preferences, MediaQueryCont
     @Override
     public void setReducedData(Boolean value) {
         this.reducedData.set(value);
+    }
+
+    private void onShowingChanged(Boolean showing) {
+        for (var property : List.of(colorScheme, persistentScrollBars, reducedData,
+                                    reducedMotion, reducedTransparency)) {
+            if (showing) {
+                property.connect();
+            } else {
+                property.disconnect();
+            }
+        }
     }
 
     /**

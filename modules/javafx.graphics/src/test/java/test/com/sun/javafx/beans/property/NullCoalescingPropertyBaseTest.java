@@ -39,7 +39,7 @@ public class NullCoalescingPropertyBaseTest {
     @Test
     void nullEvaluatesToBaseValue() {
         var base = new SimpleStringProperty("foo");
-        var property = new NullCoalescingPropertyImpl<>(base);
+        var property = new NullCoalescingPropertyImpl<>(base, true);
         property.set(null);
         assertEquals("foo", property.get());
         assertEquals("foo", property.getValue());
@@ -48,7 +48,7 @@ public class NullCoalescingPropertyBaseTest {
     @Test
     void nonNullEvaluatesToLocalValue() {
         var base = new SimpleStringProperty("foo");
-        var property = new NullCoalescingPropertyImpl<>(base);
+        var property = new NullCoalescingPropertyImpl<>(base, true);
         property.set("bar");
         assertEquals("bar", property.get());
         assertEquals("bar", property.getValue());
@@ -57,7 +57,7 @@ public class NullCoalescingPropertyBaseTest {
     @Test
     void baseValueChangeIsVisible() {
         var base = new SimpleStringProperty("foo");
-        var property = new NullCoalescingPropertyImpl<>(base);
+        var property = new NullCoalescingPropertyImpl<>(base, true);
         property.set(null);
         assertEquals("foo", property.get());
         base.set("bar");
@@ -67,8 +67,8 @@ public class NullCoalescingPropertyBaseTest {
     @Test
     void propertiesCanBeChained() {
         var base = new SimpleStringProperty("foo");
-        var property1 = new NullCoalescingPropertyImpl<>(base);
-        var property2 = new NullCoalescingPropertyImpl<>(property1);
+        var property1 = new NullCoalescingPropertyImpl<>(base, true);
+        var property2 = new NullCoalescingPropertyImpl<>(property1, true);
 
         property2.set(null);
         assertEquals("foo", property2.get());
@@ -83,7 +83,7 @@ public class NullCoalescingPropertyBaseTest {
     @Test
     void bindingOverridesBaseValueIfNotNull() {
         var base = new SimpleStringProperty("foo");
-        var property = new NullCoalescingPropertyImpl<>(base);
+        var property = new NullCoalescingPropertyImpl<>(base, true);
         assertEquals("foo", property.get());
 
         var bindSource = new SimpleStringProperty("bar");
@@ -97,7 +97,7 @@ public class NullCoalescingPropertyBaseTest {
     @Test
     void changeEventObservableIsCorrectlyReported() {
         var base = new SimpleStringProperty();
-        var property = new NullCoalescingPropertyImpl<>(base);
+        var property = new NullCoalescingPropertyImpl<>(base, true);
         var trace = new ArrayList<>();
         property.addListener(((observable, _, _) -> trace.add(observable)));
         base.set("foo");
@@ -110,7 +110,7 @@ public class NullCoalescingPropertyBaseTest {
     void currentValueInOnInvalidatedMethodIsCorrect() {
         var actual = new String[1];
         var base = new SimpleStringProperty();
-        var property = new NullCoalescingPropertyImpl<>(base) {
+        var property = new NullCoalescingPropertyImpl<>(base, true) {
             @Override
             protected void onInvalidated() {
                 actual[0] = get();
@@ -132,7 +132,7 @@ public class NullCoalescingPropertyBaseTest {
         var invalidatedCount = new int[1];
         var listenerCount = new int[1];
         var base = new SimpleStringProperty();
-        var property = new NullCoalescingPropertyImpl<>(base) {
+        var property = new NullCoalescingPropertyImpl<>(base, true) {
             @Override
             protected void onInvalidated() {
                 invalidatedCount[0]++;
@@ -158,9 +158,48 @@ public class NullCoalescingPropertyBaseTest {
         assertEquals(2, listenerCount[0]);
     }
 
+    @Test
+    void baseChangedNotificationsAreNotFiredWhenPropertyIsDisconnected() {
+        var invalidatedCount = new int[1];
+        var base = new SimpleStringProperty();
+        var property = new NullCoalescingPropertyImpl<>(base, false) {
+            @Override
+            protected void onInvalidated() {
+                invalidatedCount[0]++;
+            }
+        };
+
+        base.set("foo");
+        assertEquals(0, invalidatedCount[0]);
+
+        base.set("bar");
+        assertEquals(0, invalidatedCount[0]);
+
+        property.connect();
+        assertEquals(1, invalidatedCount[0]);
+
+        base.set("baz");
+        assertEquals(2, invalidatedCount[0]);
+    }
+
+    @Test
+    void connectingPropertyUpdatesCurrentValue() {
+        var base = new SimpleStringProperty("foo");
+        var property = new NullCoalescingPropertyImpl<>(base, false);
+        assertEquals("foo", property.getValue());
+        base.set("bar");
+        assertEquals("foo", property.getValue());
+        property.connect();
+        assertEquals("bar", property.getValue());
+    }
+
     private static class NullCoalescingPropertyImpl<T> extends NullCoalescingPropertyBase<T> {
-        public NullCoalescingPropertyImpl(ObservableValue<T> baseValue) {
+        public NullCoalescingPropertyImpl(ObservableValue<T> baseValue, boolean connected) {
             super(baseValue);
+
+            if (connected) {
+                connect();
+            }
         }
 
         @Override public Object getBean() { return null; }
