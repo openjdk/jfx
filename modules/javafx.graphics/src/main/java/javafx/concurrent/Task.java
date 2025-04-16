@@ -31,6 +31,7 @@ import static javafx.concurrent.WorkerStateEvent.WORKER_STATE_RUNNING;
 import static javafx.concurrent.WorkerStateEvent.WORKER_STATE_SCHEDULED;
 import static javafx.concurrent.WorkerStateEvent.WORKER_STATE_SUCCEEDED;
 import java.util.concurrent.Callable;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.FutureTask;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
@@ -1025,20 +1026,19 @@ public abstract class Task<V> extends FutureTask<V> implements Worker<V>, EventT
 
                 setState(Worker.State.CANCELLED);
             } else {
-                AtomicBoolean rv = new AtomicBoolean(flag);
                 runLater(() -> {
+                    // the state must be accessed only in the fx application thread
                     switch (getState()) {
                     case FAILED:
                     case SUCCEEDED:
                         // a finished or failed task retains its state
-                        rv.set(false);
                         break;
                     default:
                         setState(Worker.State.CANCELLED);
                         break;
                     }
                 });
-                return rv.get();
+                return flag;
             }
         }
         return flag;
