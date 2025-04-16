@@ -36,6 +36,7 @@ import java.util.Collection;
 import java.util.Comparator;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
+import javafx.beans.property.Property;
 import javafx.scene.Group;
 import javafx.scene.GroupShim;
 import javafx.scene.Node;
@@ -511,6 +512,13 @@ public class ParentTest {
         stage.show();
 
         // there are assertions tested down the stack (see JDK-8115729)
+    }
+
+    @Test
+    public void needsLayoutPropertyIsReadOnly() {
+        assertThrows(
+            ClassCastException.class,
+            () -> { var _ = (Property<Boolean>)new Group().needsLayoutProperty(); });
     }
 
     @Test

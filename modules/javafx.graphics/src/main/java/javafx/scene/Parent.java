@@ -969,7 +969,7 @@ public abstract non-sealed class Parent extends Node {
         if (needsLayout == null) {
             needsLayout = new ReadOnlyBooleanWrapper(this, "needsLayout", layoutFlag == LayoutFlags.NEEDS_LAYOUT);
         }
-        return needsLayout;
+        return needsLayout.getReadOnlyProperty();
     }
 
     /**
