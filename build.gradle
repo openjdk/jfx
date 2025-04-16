@@ -3082,9 +3082,7 @@ project(":swt") {
     }
 
     test {
-        //enabled = IS_FULL_TEST && IS_SWT_TEST
-        enabled = false // FIXME: JIGSAW -- support this with modules
-        logger.info("JIGSAW Testing disabled for swt")
+        enabled = IS_SWT_TEST
 
         jvmArgs enableNativeGraphics
 
