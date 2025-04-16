@@ -31,10 +31,11 @@ import com.sun.javafx.util.Utils;
 import javafx.application.ColorScheme;
 import javafx.beans.property.Property;
 import javafx.beans.property.ReadOnlyBooleanProperty;
-import javafx.beans.property.ReadOnlyBooleanWrapper;
+import javafx.beans.property.ReadOnlyBooleanPropertyBase;
 import javafx.beans.property.ReadOnlyObjectProperty;
 import javafx.beans.property.ReadOnlyObjectPropertyBase;
 import javafx.beans.property.ReadOnlyObjectWrapper;
+import javafx.beans.property.ReadOnlyProperty;
 import javafx.scene.paint.Color;
 import java.util.HashMap;
 import java.util.Map;
@@ -60,31 +61,19 @@ final class PreferenceProperties {
     private final DeferredProperty<Boolean> reducedTransparency = new DeferredProperty<>("reducedTransparency", false);
     private final DeferredProperty<Boolean> reducedData = new DeferredProperty<>("reducedData", false);
     private final DeferredProperty<Boolean> persistentScrollBars = new DeferredProperty<>("persistentScrollBars", false);
-    private final ReadOnlyBooleanWrapper reducedMotionFlag;
-    private final ReadOnlyBooleanWrapper reducedTransparencyFlag;
-    private final ReadOnlyBooleanWrapper reducedDataFlag;
-    private final ReadOnlyBooleanWrapper persistentScrollBarsFlag;
+    private final ReadOnlyBooleanWrapperImpl reducedMotionFlag = new ReadOnlyBooleanWrapperImpl(reducedMotion);
+    private final ReadOnlyBooleanWrapperImpl reducedTransparencyFlag = new ReadOnlyBooleanWrapperImpl(reducedTransparency);
+    private final ReadOnlyBooleanWrapperImpl reducedDataFlag = new ReadOnlyBooleanWrapperImpl(reducedData);
+    private final ReadOnlyBooleanWrapperImpl persistentScrollBarsFlag = new ReadOnlyBooleanWrapperImpl(persistentScrollBars);
     private final Object mutex = new Object();
     private final Object bean;
 
     PreferenceProperties(Object bean) {
         this.bean = bean;
-
-        reducedMotionFlag = new ReadOnlyBooleanWrapper(bean, reducedMotion.getName());
-        reducedMotionFlag.bind(reducedMotion);
-
-        reducedTransparencyFlag = new ReadOnlyBooleanWrapper(bean, reducedTransparency.getName());
-        reducedTransparencyFlag.bind(reducedTransparency);
-
-        reducedDataFlag = new ReadOnlyBooleanWrapper(bean, reducedData.getName());
-        reducedDataFlag.bind(reducedData);
-
-        persistentScrollBarsFlag = new ReadOnlyBooleanWrapper(bean, persistentScrollBars.getName());
-        persistentScrollBarsFlag.bind(persistentScrollBars);
     }
 
     public ReadOnlyBooleanProperty reducedMotionProperty() {
-        return reducedMotionFlag.getReadOnlyProperty();
+        return reducedMotionFlag;
     }
 
     public boolean isReducedMotion() {
@@ -96,7 +85,7 @@ final class PreferenceProperties {
     }
 
     public ReadOnlyBooleanProperty reducedTransparencyProperty() {
-        return reducedTransparencyFlag.getReadOnlyProperty();
+        return reducedTransparencyFlag;
     }
 
     public boolean isReducedTransparency() {
@@ -108,7 +97,7 @@ final class PreferenceProperties {
     }
 
     public ReadOnlyBooleanProperty reducedDataProperty() {
-        return reducedDataFlag.getReadOnlyProperty();
+        return reducedDataFlag;
     }
 
     public boolean isReducedData() {
@@ -120,7 +109,7 @@ final class PreferenceProperties {
     }
 
     public ReadOnlyBooleanProperty persistentScrollBarsProperty() {
-        return persistentScrollBarsFlag.getReadOnlyProperty();
+        return persistentScrollBarsFlag;
     }
 
     public boolean isPersistentScrollBars() {
@@ -279,7 +268,7 @@ final class PreferenceProperties {
         }
     }
 
-    private class ColorSchemeProperty extends ReadOnlyObjectWrapper<ColorScheme> {
+    private final class ColorSchemeProperty extends ReadOnlyObjectWrapper<ColorScheme> {
         private ColorScheme colorSchemeOverride;
 
         ColorSchemeProperty() {
@@ -324,6 +313,30 @@ final class PreferenceProperties {
         public void set(ColorScheme newValue) {
             // Make sure that we only set the value in the update() method.
             throw new UnsupportedOperationException();
+        }
+    }
+
+    private static final class ReadOnlyBooleanWrapperImpl extends ReadOnlyBooleanPropertyBase {
+        private final ReadOnlyProperty<Boolean> observable;
+
+        ReadOnlyBooleanWrapperImpl(ReadOnlyProperty<Boolean> observable) {
+            this.observable = observable;
+            observable.addListener((_, _, _) -> fireValueChangedEvent());
+        }
+
+        @Override
+        public Object getBean() {
+            return observable.getBean();
+        }
+
+        @Override
+        public String getName() {
+            return observable.getName();
+        }
+
+        @Override
+        public boolean get() {
+            return observable.getValue();
         }
     }
 }
