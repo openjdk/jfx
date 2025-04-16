@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -36,6 +36,7 @@ import java.util.Collection;
 import java.util.Comparator;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
+import javafx.beans.property.Property;
 import javafx.scene.Group;
 import javafx.scene.GroupShim;
 import javafx.scene.Node;
@@ -510,6 +511,13 @@ public class ParentTest {
         stage.show();
 
         // there are assertions tested down the stack (see JDK-8115729)
+    }
+
+    @Test
+    public void needsLayoutPropertyIsReadOnly() {
+        assertThrows(
+            ClassCastException.class,
+            () -> { var _ = (Property<Boolean>)new Group().needsLayoutProperty(); });
     }
 
     private static class LGroup extends Group {
