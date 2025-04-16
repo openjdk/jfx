@@ -3082,7 +3082,7 @@ project(":swt") {
     }
 
     test {
-        enabled = IS_SWT_TEST
+        enabled = IS_FULL_TEST && IS_SWT_TEST
 
         jvmArgs enableNativeGraphics
 
