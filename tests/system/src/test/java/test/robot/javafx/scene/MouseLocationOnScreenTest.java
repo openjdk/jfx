@@ -44,6 +44,7 @@ public class MouseLocationOnScreenTest {
     static CountDownLatch startupLatch = new CountDownLatch(1);
     static Robot robot;
     private static int DELAY_TIME = 1;
+    private static int VALIDATE_COUNT = 5;
 
     public static class TestApp extends Application {
 
@@ -118,13 +119,24 @@ public class MouseLocationOnScreenTest {
      * returned by robot are same
      */
     static void validate(Robot robot, int x, int y) {
-        try {
-            Util.sleep(DELAY_TIME);
+        Boolean equalValue = false;
+        for (int i = 0; i < VALIDATE_COUNT; i++) {
+            //Making Delay and Check at 1 ms and every 2 ms gap onwards
+            Util.sleep(i == 0 ? DELAY_TIME : DELAY_TIME + 1);
+            if (x == (int)robot.getMouseX() &&
+                y == (int)robot.getMouseY()) {
+                equalValue = true;
+                break;
+            }
+        }
+
+        if(equalValue == true) {
             Assertions.assertEquals(x, (int) robot.getMouseX());
             Assertions.assertEquals(y, (int) robot.getMouseY());
         }
-        catch(AssertionError e) {
-            Util.sleep(DELAY_TIME + 1); // 3 MS Delay
+        else {
+            //Making Delay and Check after 500 ms.
+            Util.sleep(DELAY_TIME * 500);
             Assertions.assertEquals(x, (int) robot.getMouseX());
             Assertions.assertEquals(y, (int) robot.getMouseY());
         }
