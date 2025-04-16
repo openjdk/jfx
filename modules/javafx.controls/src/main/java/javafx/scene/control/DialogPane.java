@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2014, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -34,7 +34,6 @@ import java.util.WeakHashMap;
 import com.sun.javafx.scene.control.skin.Utils;
 import com.sun.javafx.scene.control.skin.resources.ControlResources;
 import javafx.beans.DefaultProperty;
-import javafx.beans.InvalidationListener;
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.SimpleBooleanProperty;
@@ -818,16 +817,15 @@ public class DialogPane extends Pane {
         final Hyperlink detailsButton = new Hyperlink();
         final String moreText = ControlResources.getString("Dialog.detail.button.more"); //$NON-NLS-1$
         final String lessText = ControlResources.getString("Dialog.detail.button.less"); //$NON-NLS-1$
+        final ObservableList<String> styleClasses = detailsButton.getStyleClass();
 
-        InvalidationListener expandedListener = o -> {
-            final boolean isExpanded = isExpanded();
-            detailsButton.setText(isExpanded ? lessText : moreText);
-            detailsButton.getStyleClass().setAll("details-button", (isExpanded ? "less" : "more")); //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$
-        };
+        styleClasses.add("details-button");  //$NON-NLS-1$
 
-        // we call the listener immediately to ensure the state is correct at start up
-        expandedListener.invalidated(null);
-        expandedProperty().addListener(expandedListener);
+        expandedProperty().subscribe(expanded -> {
+            styleClasses.remove(expanded ? "more" : "less");  //$NON-NLS-1$ //$NON-NLS-2$
+            styleClasses.add(expanded ? "less" : "more");  //$NON-NLS-1$ //$NON-NLS-2$
+            detailsButton.setText(expanded ? lessText : moreText);
+        });
 
         detailsButton.setOnAction(ae -> setExpanded(!isExpanded()));
         return detailsButton;
