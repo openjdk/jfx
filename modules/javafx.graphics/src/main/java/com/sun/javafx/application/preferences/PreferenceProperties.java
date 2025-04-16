@@ -52,6 +52,8 @@ import java.util.Objects;
  */
 final class PreferenceProperties {
 
+    private final Object mutex = new Object();
+    private final Object bean;
     private final Map<String, DeferredProperty<?>> deferredProperties = new HashMap<>();
     private final DeferredProperty<Color> backgroundColor = new DeferredProperty<>("backgroundColor", Color.WHITE);
     private final DeferredProperty<Color> foregroundColor = new DeferredProperty<>("foregroundColor", Color.BLACK);
@@ -65,8 +67,6 @@ final class PreferenceProperties {
     private final ReadOnlyBooleanWrapperImpl reducedTransparencyFlag = new ReadOnlyBooleanWrapperImpl(reducedTransparency);
     private final ReadOnlyBooleanWrapperImpl reducedDataFlag = new ReadOnlyBooleanWrapperImpl(reducedData);
     private final ReadOnlyBooleanWrapperImpl persistentScrollBarsFlag = new ReadOnlyBooleanWrapperImpl(persistentScrollBars);
-    private final Object mutex = new Object();
-    private final Object bean;
 
     PreferenceProperties(Object bean) {
         this.bean = bean;
