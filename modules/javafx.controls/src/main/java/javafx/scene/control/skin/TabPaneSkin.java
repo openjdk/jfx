@@ -1541,7 +1541,6 @@ public class TabPaneSkin extends SkinBase<TabPane> {
             });
 
             getProperties().put(Tab.class, tab);
-            getProperties().put(ContextMenu.class, tab.getContextMenu());
 
             setOnContextMenuRequested((ContextMenuEvent me) -> {
                if (getTab().getContextMenu() != null) {
@@ -1799,8 +1798,6 @@ public class TabPaneSkin extends SkinBase<TabPane> {
                 showPopupMenu();
             });
 
-            setupPopupMenu();
-
             inner = new StackPane() {
                 @Override protected double computePrefWidth(double height) {
                     double pw;
@@ -1862,7 +1859,6 @@ public class TabPaneSkin extends SkinBase<TabPane> {
                 showControlButtons = true;
                 requestLayout();
             }
-            getProperties().put(ContextMenu.class, popup);
         }
 
         InvalidationListener sidePropListener =  e -> {
@@ -1977,6 +1973,9 @@ public class TabPaneSkin extends SkinBase<TabPane> {
         }
 
         private void showPopupMenu() {
+            if (popup == null) {
+                setupPopupMenu();
+            }
             for (MenuItem mi: popup.getItems()) {
                 TabMenuItem tmi = (TabMenuItem)mi;
                 if (selectedTab.equals(tmi.getTab())) {
@@ -1985,6 +1984,13 @@ public class TabPaneSkin extends SkinBase<TabPane> {
                 }
             }
             popup.show(downArrowBtn, Side.BOTTOM, 0, 0);
+        }
+
+        private ContextMenu test_getTabsMenu() {
+            if (popup == null) {
+                setupPopupMenu();
+            }
+            return popup;
         }
     } /* End TabControlButtons*/
 
@@ -2372,7 +2378,7 @@ public class TabPaneSkin extends SkinBase<TabPane> {
 
     // For testing purpose.
     ContextMenu test_getTabsMenu() {
-        return tabHeaderArea.controlButtons.popup;
+        return tabHeaderArea.controlButtons.test_getTabsMenu();
     }
 
     void test_disableAnimations() {
