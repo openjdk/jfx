@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2023, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,15 +25,17 @@
 
 package com.sun.javafx.application.preferences;
 
+import com.sun.javafx.scene.ScenePreferences;
+import com.sun.javafx.tk.Toolkit;
 import com.sun.javafx.util.Utils;
 import javafx.application.ColorScheme;
-import javafx.beans.InvalidationListener;
 import javafx.beans.property.Property;
 import javafx.beans.property.ReadOnlyBooleanProperty;
-import javafx.beans.property.ReadOnlyBooleanWrapper;
+import javafx.beans.property.ReadOnlyBooleanPropertyBase;
 import javafx.beans.property.ReadOnlyObjectProperty;
 import javafx.beans.property.ReadOnlyObjectPropertyBase;
 import javafx.beans.property.ReadOnlyObjectWrapper;
+import javafx.beans.property.ReadOnlyProperty;
 import javafx.scene.paint.Color;
 import java.util.HashMap;
 import java.util.Map;
@@ -41,9 +43,17 @@ import java.util.Objects;
 
 /**
  * Contains {@link Property}-based preference implementations.
+ * <p>
+ * All properties in this class can be read from any thread in order to allow {@link ScenePreferences} to safely
+ * initialize its values on a background thread (creating and configuring a {@code Scene} on a background thread
+ * is allowed by its specification). This is not a specified capability for users, it is an implementation detail.
+ * <p>
+ * Importantly, even though properties can be read from any thread, changes always happen on the FX thread.
  */
 final class PreferenceProperties {
 
+    private final Object mutex = new Object();
+    private final Object bean;
     private final Map<String, DeferredProperty<?>> deferredProperties = new HashMap<>();
     private final DeferredProperty<Color> backgroundColor = new DeferredProperty<>("backgroundColor", Color.WHITE);
     private final DeferredProperty<Color> foregroundColor = new DeferredProperty<>("foregroundColor", Color.BLACK);
@@ -53,30 +63,17 @@ final class PreferenceProperties {
     private final DeferredProperty<Boolean> reducedTransparency = new DeferredProperty<>("reducedTransparency", false);
     private final DeferredProperty<Boolean> reducedData = new DeferredProperty<>("reducedData", false);
     private final DeferredProperty<Boolean> persistentScrollBars = new DeferredProperty<>("persistentScrollBars", false);
-    private final ReadOnlyBooleanWrapper reducedMotionFlag;
-    private final ReadOnlyBooleanWrapper reducedTransparencyFlag;
-    private final ReadOnlyBooleanWrapper reducedDataFlag;
-    private final ReadOnlyBooleanWrapper persistentScrollBarsFlag;
-    private final Object bean;
+    private final ReadOnlyBooleanWrapperImpl reducedMotionFlag = new ReadOnlyBooleanWrapperImpl(reducedMotion);
+    private final ReadOnlyBooleanWrapperImpl reducedTransparencyFlag = new ReadOnlyBooleanWrapperImpl(reducedTransparency);
+    private final ReadOnlyBooleanWrapperImpl reducedDataFlag = new ReadOnlyBooleanWrapperImpl(reducedData);
+    private final ReadOnlyBooleanWrapperImpl persistentScrollBarsFlag = new ReadOnlyBooleanWrapperImpl(persistentScrollBars);
 
     PreferenceProperties(Object bean) {
         this.bean = bean;
-
-        reducedMotionFlag = new ReadOnlyBooleanWrapper(bean, reducedMotion.getName());
-        reducedMotionFlag.bind(reducedMotion);
-
-        reducedTransparencyFlag = new ReadOnlyBooleanWrapper(bean, reducedTransparency.getName());
-        reducedTransparencyFlag.bind(reducedTransparency);
-
-        reducedDataFlag = new ReadOnlyBooleanWrapper(bean, reducedData.getName());
-        reducedDataFlag.bind(reducedData);
-
-        persistentScrollBarsFlag = new ReadOnlyBooleanWrapper(bean, persistentScrollBars.getName());
-        persistentScrollBarsFlag.bind(persistentScrollBars);
     }
 
     public ReadOnlyBooleanProperty reducedMotionProperty() {
-        return reducedMotionFlag.getReadOnlyProperty();
+        return reducedMotionFlag;
     }
 
     public boolean isReducedMotion() {
@@ -88,7 +85,7 @@ final class PreferenceProperties {
     }
 
     public ReadOnlyBooleanProperty reducedTransparencyProperty() {
-        return reducedTransparencyFlag.getReadOnlyProperty();
+        return reducedTransparencyFlag;
     }
 
     public boolean isReducedTransparency() {
@@ -100,7 +97,7 @@ final class PreferenceProperties {
     }
 
     public ReadOnlyBooleanProperty reducedDataProperty() {
-        return reducedDataFlag.getReadOnlyProperty();
+        return reducedDataFlag;
     }
 
     public boolean isReducedData() {
@@ -112,7 +109,7 @@ final class PreferenceProperties {
     }
 
     public ReadOnlyBooleanProperty persistentScrollBarsProperty() {
-        return persistentScrollBarsFlag.getReadOnlyProperty();
+        return persistentScrollBarsFlag;
     }
 
     public boolean isPersistentScrollBars() {
@@ -173,15 +170,19 @@ final class PreferenceProperties {
 
     public void update(Map<String, ChangedValue> changedPreferences,
                        Map<String, PreferenceMapping<?, ?>> platformKeyMappings) {
-        for (Map.Entry<String, ChangedValue> entry : changedPreferences.entrySet()) {
-            if (platformKeyMappings.get(entry.getKey()) instanceof PreferenceMapping<?, ?> mapping
-                    && deferredProperties.get(mapping.keyName()) instanceof DeferredProperty<?> property) {
-                property.setPlatformValue(mapping.map(entry.getValue().newValue()));
+        synchronized (mutex) {
+            for (Map.Entry<String, ChangedValue> entry : changedPreferences.entrySet()) {
+                if (platformKeyMappings.get(entry.getKey()) instanceof PreferenceMapping<?, ?> mapping
+                        && deferredProperties.get(mapping.keyName()) instanceof DeferredProperty<?> property) {
+                    property.setPlatformValue(mapping.map(entry.getValue().newValue()));
+                }
             }
-        }
 
-        for (DeferredProperty<?> property : deferredProperties.values()) {
-            property.fireValueChangedIfNecessary();
+            colorScheme.update();
+
+            for (DeferredProperty<?> property : deferredProperties.values()) {
+                property.fireValueChangedIfNecessary();
+            }
         }
     }
 
@@ -222,7 +223,9 @@ final class PreferenceProperties {
 
         @Override
         public T get() {
-            return effectiveValue;
+            synchronized (mutex) {
+                return effectiveValue;
+            }
         }
 
         /**
@@ -231,17 +234,24 @@ final class PreferenceProperties {
          */
         @SuppressWarnings("unchecked")
         public void setPlatformValue(Object value) {
+            // No need to synchronize here, because the update() method already synchronizes on 'mutex'.
+            Toolkit.getToolkit().checkFxUserThread();
             Class<?> expectedType = defaultValue.getClass();
-            this.platformValue = expectedType.isInstance(value) ? (T)value : null;
+            this.platformValue = expectedType.isInstance(value) ? (T) value : null;
             updateEffectiveValue();
         }
 
         public void setValueOverride(T value) {
-            this.overrideValue = value;
-            updateEffectiveValue();
-            fireValueChangedEvent();
+            Toolkit.getToolkit().checkFxUserThread();
+
+            synchronized (mutex) {
+                this.overrideValue = value;
+                updateEffectiveValue();
+                fireValueChangedIfNecessary();
+            }
         }
 
+        // This method must only be called when synchronized on 'mutex'.
         public void fireValueChangedIfNecessary() {
             if (!Objects.equals(lastEffectiveValue, effectiveValue)) {
                 lastEffectiveValue = effectiveValue;
@@ -249,6 +259,7 @@ final class PreferenceProperties {
             }
         }
 
+        // This method must only be called when synchronized on 'mutex'.
         private void updateEffectiveValue() {
             // Choose the first non-null value in this order: overrideValue, platformValue, defaultValue.
             effectiveValue = Objects.requireNonNullElse(
@@ -257,31 +268,75 @@ final class PreferenceProperties {
         }
     }
 
-    private class ColorSchemeProperty extends ReadOnlyObjectWrapper<ColorScheme> {
+    private final class ColorSchemeProperty extends ReadOnlyObjectWrapper<ColorScheme> {
         private ColorScheme colorSchemeOverride;
 
         ColorSchemeProperty() {
             super(bean, "colorScheme");
-            InvalidationListener listener = observable -> update();
-            backgroundColor.addListener(listener);
-            foregroundColor.addListener(listener);
-            update();
         }
 
         public void setValueOverride(ColorScheme colorScheme) {
-            colorSchemeOverride = colorScheme;
-            update();
+            synchronized (mutex) {
+                colorSchemeOverride = colorScheme;
+                update();
+            }
         }
 
-        private void update() {
-            if (colorSchemeOverride != null) {
-                set(colorSchemeOverride);
-            } else {
-                Color background = backgroundColor.get();
-                Color foreground = foregroundColor.get();
-                boolean isDark = Utils.calculateBrightness(background) < Utils.calculateBrightness(foreground);
-                set(isDark ? ColorScheme.DARK : ColorScheme.LIGHT);
+        public void update() {
+            synchronized (mutex) {
+                if (colorSchemeOverride != null) {
+                    super.set(colorSchemeOverride);
+                } else {
+                    Color background = backgroundColor.get();
+                    Color foreground = foregroundColor.get();
+                    boolean isDark = Utils.calculateBrightness(background) < Utils.calculateBrightness(foreground);
+                    super.set(isDark ? ColorScheme.DARK : ColorScheme.LIGHT);
+                }
             }
+        }
+
+        @Override
+        public ReadOnlyObjectProperty<ColorScheme> getReadOnlyProperty() {
+            synchronized (mutex) {
+                return super.getReadOnlyProperty();
+            }
+        }
+
+        @Override
+        public ColorScheme get() {
+            synchronized (mutex) {
+                return super.get();
+            }
+        }
+
+        @Override
+        public void set(ColorScheme newValue) {
+            // Make sure that we only set the value in the update() method.
+            throw new UnsupportedOperationException();
+        }
+    }
+
+    private static final class ReadOnlyBooleanWrapperImpl extends ReadOnlyBooleanPropertyBase {
+        private final ReadOnlyProperty<Boolean> observable;
+
+        ReadOnlyBooleanWrapperImpl(ReadOnlyProperty<Boolean> observable) {
+            this.observable = observable;
+            observable.addListener((_, _, _) -> fireValueChangedEvent());
+        }
+
+        @Override
+        public Object getBean() {
+            return observable.getBean();
+        }
+
+        @Override
+        public String getName() {
+            return observable.getName();
+        }
+
+        @Override
+        public boolean get() {
+            return observable.getValue();
         }
     }
 }

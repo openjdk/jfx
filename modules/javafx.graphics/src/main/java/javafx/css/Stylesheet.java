@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -32,6 +32,7 @@ import javafx.collections.ObservableList;
 
 import com.sun.javafx.collections.TrackableObservableList;
 import com.sun.javafx.css.FontFaceImpl;
+import com.sun.javafx.css.RuleHelper;
 
 import java.io.BufferedInputStream;
 import java.io.ByteArrayOutputStream;
@@ -63,8 +64,9 @@ public class Stylesheet {
      * binary stream changes. This number does not correlate with JavaFX versions.
      * Version 5: persist @font-face
      * Version 6: converter classes moved to public package
+     * Version 7: media queries
      */
-    final static int BINARY_CSS_VERSION = 6;
+    final static int BINARY_CSS_VERSION = 7;
 
     private final String url;
     /**
@@ -413,7 +415,7 @@ public class Stylesheet {
         for (Rule rule : rulesToImport) {
             List<Selector> selectors = rule.getSelectors();
             List<Declaration> declarations = rule.getUnobservedDeclarationList();
-            importedRules.add(new Rule(selectors, declarations));
+            importedRules.add(new Rule(RuleHelper.getMediaRule(rule), selectors, declarations));
         }
 
         rules.addAll(importedRules);
