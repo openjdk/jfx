@@ -474,6 +474,21 @@ jint JNICALL JNI_OnLoad(JavaVM *vm, void *reserved)
     return YES;
 }
 
+- (void) application:(NSApplication *)theApplication openURLs:(NSArray<NSURL *> *)urls
+{
+    for (NSURL* url in urls) {
+         NSDictionary *userInfo = @{
+            @"name": @"openURL",
+            @"url": url.absoluteString
+        };
+
+        [[NSNotificationCenter defaultCenter]
+                postNotificationName:@"EmbeddedEvent"
+                object:nil
+                userInfo:userInfo];
+    }
+}
+
 - (BOOL)applicationShouldOpenUntitledFile:(NSApplication *)sender
 {
     LOG("GlassApplication:applicationShouldOpenUntitledFile");
