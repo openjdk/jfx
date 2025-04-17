@@ -119,7 +119,7 @@ public class MouseLocationOnScreenTest {
      * returned by robot are same
      */
     static void validate(Robot robot, int x, int y) {
-        Boolean equalValue = false;
+        boolean equalValue = false;
         for (int i = 0; i < VALIDATE_COUNT; i++) {
             // Making delay and check at 1 ms and every 2 ms gap onwards
             Util.sleep(i == 0 ? DELAY_TIME : DELAY_TIME + 1);
@@ -133,7 +133,7 @@ public class MouseLocationOnScreenTest {
         if (!equalValue) {
             // Delay for 500ms more
             Util.sleep(500);
-        }    
+        }
         Assertions.assertEquals(x, (int) robot.getMouseX());
         Assertions.assertEquals(y, (int) robot.getMouseY());
     }
