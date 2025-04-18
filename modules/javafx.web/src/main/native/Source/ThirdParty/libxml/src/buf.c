@@ -41,13 +41,13 @@
  */
 
 struct _xmlBuf {
-    xmlChar *content;    	/* The buffer content UTF8 */
+    xmlChar *content;        /* The buffer content UTF8 */
     unsigned int compat_use;    /* for binary compatibility */
     unsigned int compat_size;   /* for binary compatibility */
     xmlBufferAllocationScheme alloc; /* The realloc method */
-    xmlChar *contentIO;    	/* in IO mode we may have a different base */
-    size_t use;    	        /* The buffer size used */
-    size_t size;    	/* The buffer size */
+    xmlChar *contentIO;        /* in IO mode we may have a different base */
+    size_t use;                /* The buffer size used */
+    size_t size;        /* The buffer size */
     xmlBufferPtr buffer;        /* wrapper for an old buffer */
     int error;                  /* an error code if a failure occurred */
 };
@@ -57,9 +57,9 @@ struct _xmlBuf {
  * Macro for compatibility with xmlBuffer to be used after an xmlBuf
  * is updated. This makes sure the compat fields are updated too.
  */
-#define UPDATE_COMPAT(buf)    			    \
+#define UPDATE_COMPAT(buf)        		    \
      if (buf->size < INT_MAX) buf->compat_size = buf->size; \
-     else buf->compat_size = INT_MAX;    		    \
+     else buf->compat_size = INT_MAX;        	    \
      if (buf->use < INT_MAX) buf->compat_use = buf->use; \
      else buf->compat_use = INT_MAX;
 
@@ -68,12 +68,12 @@ struct _xmlBuf {
  * entry points, it checks that the compat fields have not been modified
  * by direct call to xmlBuffer function from code compiled before 2.9.0 .
  */
-#define CHECK_COMPAT(buf)    			    \
+#define CHECK_COMPAT(buf)        		    \
      if (buf->size != (size_t) buf->compat_size)        \
-         if (buf->compat_size < INT_MAX)    	    \
-         buf->size = buf->compat_size;		    \
-     if (buf->use != (size_t) buf->compat_use)    	    \
-         if (buf->compat_use < INT_MAX)    		    \
+         if (buf->compat_size < INT_MAX)            \
+         buf->size = buf->compat_size;    	    \
+     if (buf->use != (size_t) buf->compat_use)            \
+         if (buf->compat_use < INT_MAX)        	    \
          buf->use = buf->compat_use;
 
 #else /* ! WITH_BUFFER_COMPAT */
@@ -347,10 +347,10 @@ xmlBufShrink(xmlBufPtr buf, size_t len) {
     if ((buf->alloc == XML_BUFFER_ALLOC_IO) && (buf->contentIO != NULL)) {
         size_t start_buf = buf->content - buf->contentIO;
         if (start_buf >= buf->size) {
-    	memmove(buf->contentIO, &buf->content[0], buf->use);
-    	buf->content = buf->contentIO;
-    	buf->content[buf->use] = 0;
-    	buf->size += start_buf;
+        memmove(buf->contentIO, &buf->content[0], buf->use);
+        buf->content = buf->contentIO;
+        buf->content[buf->use] = 0;
+        buf->size += start_buf;
         }
     }
     } else {
@@ -703,8 +703,8 @@ xmlBufResize(xmlBufPtr buf, size_t size)
     } else {
         rebuf = (xmlChar *) xmlRealloc(buf->contentIO, start_buf + newSize);
         if (rebuf == NULL) {
-    	xmlBufMemoryError(buf);
-    	return 0;
+        xmlBufMemoryError(buf);
+        return 0;
         }
         buf->contentIO = rebuf;
         buf->content = rebuf + start_buf;
@@ -725,9 +725,9 @@ xmlBufResize(xmlBufPtr buf, size_t size)
          */
         rebuf = (xmlChar *) xmlMallocAtomic(newSize);
         if (rebuf != NULL) {
-    	memcpy(rebuf, buf->content, buf->use);
-    	xmlFree(buf->content);
-    	rebuf[buf->use] = 0;
+        memcpy(rebuf, buf->content, buf->use);
+        xmlFree(buf->content);
+        rebuf[buf->use] = 0;
         }
     }
     if (rebuf == NULL) {
@@ -784,8 +784,8 @@ xmlBufAdd(xmlBufPtr buf, const xmlChar *str, int len) {
          * Used to provide parsing limits
          */
         if (needSize >= XML_MAX_TEXT_LENGTH) {
-    	xmlBufMemoryError(buf);
-    	return(-1);
+        xmlBufMemoryError(buf);
+        return(-1);
         }
     }
         if (!xmlBufResize(buf, needSize))

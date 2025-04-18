@@ -50,19 +50,19 @@ extern "C" {
 
 
 XSLTPUBFUN void XSLTCALL
-    	xsltFunctionNodeSet	(xmlXPathParserContextPtr ctxt,
-    				 int nargs);
+        xsltFunctionNodeSet	(xmlXPathParserContextPtr ctxt,
+        			 int nargs);
 XSLTPUBFUN void XSLTCALL
-    	xsltDebug		(xsltTransformContextPtr ctxt,
-    				 xmlNodePtr node,
-    				 xmlNodePtr inst,
-    				 xsltElemPreCompPtr comp);
+        xsltDebug		(xsltTransformContextPtr ctxt,
+        			 xmlNodePtr node,
+        			 xmlNodePtr inst,
+        			 xsltElemPreCompPtr comp);
 
 
 XSLTPUBFUN void XSLTCALL
-    	xsltRegisterExtras	(xsltTransformContextPtr ctxt);
+        xsltRegisterExtras	(xsltTransformContextPtr ctxt);
 XSLTPUBFUN void XSLTCALL
-    	xsltRegisterAllExtras	(void);
+        xsltRegisterAllExtras	(void);
 
 #ifdef __cplusplus
 }

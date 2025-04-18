@@ -88,9 +88,9 @@ xmlParserNsUpdateSax(xmlParserCtxtPtr ctxt, const xmlChar *prefix,
 XML_HIDDEN void *
 xmlParserNsLookupSax(xmlParserCtxtPtr ctxt, const xmlChar *prefix);
 
-#define XML_INPUT_BUF_STATIC    	(1u << 1)
+#define XML_INPUT_BUF_STATIC        (1u << 1)
 #define XML_INPUT_BUF_ZERO_TERMINATED    (1u << 2)
-#define XML_INPUT_UNZIP    		(1u << 3)
+#define XML_INPUT_UNZIP        	(1u << 3)
 
 /* Internal parser option */
 #define XML_PARSE_UNZIP     (1 << 24)

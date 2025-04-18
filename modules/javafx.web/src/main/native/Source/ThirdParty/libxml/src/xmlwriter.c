@@ -126,7 +126,7 @@ xmlWriterErrMsg(xmlTextWriterPtr ctxt, xmlParserErrors error,
     if (ctxt != NULL) {
     __xmlRaiseError(NULL, NULL, NULL, ctxt->ctxt,
                 NULL, XML_FROM_WRITER, error, XML_ERR_FATAL,
-    	    NULL, 0, NULL, NULL, NULL, 0, 0, "%s", msg);
+            NULL, 0, NULL, NULL, NULL, 0, 0, "%s", msg);
     } else {
     __xmlRaiseError(NULL, NULL, NULL, NULL, NULL, XML_FROM_WRITER, error,
                     XML_ERR_FATAL, NULL, 0, NULL, NULL, NULL, 0, 0, "%s", msg);
@@ -149,7 +149,7 @@ xmlWriterErrMsgInt(xmlTextWriterPtr ctxt, xmlParserErrors error,
     if (ctxt != NULL) {
     __xmlRaiseError(NULL, NULL, NULL, ctxt->ctxt,
                 NULL, XML_FROM_WRITER, error, XML_ERR_FATAL,
-    	    NULL, 0, NULL, NULL, NULL, val, 0, msg, val);
+            NULL, 0, NULL, NULL, NULL, val, 0, msg, val);
     } else {
     __xmlRaiseError(NULL, NULL, NULL, NULL, NULL, XML_FROM_WRITER, error,
                     XML_ERR_FATAL, NULL, 0, NULL, NULL, NULL, val, 0, msg, val);
@@ -967,12 +967,12 @@ xmlTextWriterStartElement(xmlTextWriterPtr writer, const xmlChar * name)
                     return -1;
                 case XML_TEXTWRITER_NONE:
                     break;
-    			case XML_TEXTWRITER_ATTRIBUTE:
-    				count = xmlTextWriterEndAttribute(writer);
-    				if (count < 0)
-    					return -1;
-    				sum += count;
-    				/* fallthrough */
+        		case XML_TEXTWRITER_ATTRIBUTE:
+        			count = xmlTextWriterEndAttribute(writer);
+        			if (count < 0)
+        				return -1;
+        			sum += count;
+        			/* fallthrough */
                 case XML_TEXTWRITER_NAME:
                     /* Output namespace declarations */
                     count = xmlTextWriterOutputNSDecl(writer);
@@ -1490,7 +1490,7 @@ xmlTextWriterWriteString(xmlTextWriterPtr writer, const xmlChar * content)
                 case XML_TEXTWRITER_TEXT:
 #if 0
                     buf = NULL;
-    	    xmlOutputBufferWriteEscape(writer->out, content, NULL);
+            xmlOutputBufferWriteEscape(writer->out, content, NULL);
 #endif
                     buf = xmlEncodeSpecialChars(NULL, content);
                     break;
@@ -1499,8 +1499,8 @@ xmlTextWriterWriteString(xmlTextWriterPtr writer, const xmlChar * content)
                     xmlBufAttrSerializeTxtContent(writer->out, writer->doc,
                                                   content);
                     break;
-    	default:
-    	    break;
+        default:
+            break;
             }
         }
     }
@@ -1863,7 +1863,7 @@ xmlTextWriterStartAttributeNS(xmlTextWriterPtr writer,
                 xmlMalloc(sizeof(xmlTextWriterNsStackEntry));
             if (p == 0) {
                 xmlWriterErrMsg(writer, XML_ERR_NO_MEMORY,
-    							        "xmlTextWriterStartAttributeNS : out of memory!\n");
+        						        "xmlTextWriterStartAttributeNS : out of memory!\n");
                 return -1;
             }
 
@@ -2622,7 +2622,7 @@ xmlTextWriterStartCDATA(xmlTextWriterPtr writer)
         if (p != 0) {
             switch (p->state) {
                 case XML_TEXTWRITER_NONE:
-    	case XML_TEXTWRITER_TEXT:
+        case XML_TEXTWRITER_TEXT:
                 case XML_TEXTWRITER_PI:
                 case XML_TEXTWRITER_PI_TEXT:
                     break;
@@ -2918,7 +2918,7 @@ xmlTextWriterStartDTD(xmlTextWriterPtr writer,
                 return -1;
             sum += count;
         } else {
-    		if (writer->indent)
+        	if (writer->indent)
             count = xmlOutputBufferWriteString(writer->out, "\n       ");
             else
                 count = xmlOutputBufferWrite(writer->out, 1, " ");

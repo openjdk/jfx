@@ -203,9 +203,9 @@ static void globfree(glob_t *pglob) {
 #endif
 
 /************************************************************************
- *    								*
- *    	Libxml2 specific routines				*
- *    								*
+ *        							*
+ *        Libxml2 specific routines				*
+ *        							*
  ************************************************************************/
 
 static int nb_tests = 0;
@@ -226,7 +226,7 @@ fatalError(void) {
  */
 static xmlParserInputPtr
 testExternalEntityLoader(const char *URL, const char *ID,
-    		 xmlParserCtxtPtr ctxt) {
+        	 xmlParserCtxtPtr ctxt) {
     xmlParserInputPtr ret;
 
     if (checkTestFile(URL)) {
@@ -257,7 +257,7 @@ testErrorHandler(void *ctx  ATTRIBUTE_UNUSED, const char *msg, ...) {
     va_start(args, msg);
     res = vsnprintf(&testErrors[testErrorsSize],
                     32768 - testErrorsSize,
-    	    msg, args);
+            msg, args);
     va_end(args);
     if (testErrorsSize + res >= 32768) {
         /* buffer is full */
@@ -295,9 +295,9 @@ initializeLibxml2(void) {
 
 
 /************************************************************************
- *    								*
- *    	File name and path utilities				*
- *    								*
+ *        							*
+ *        File name and path utilities				*
+ *        							*
  ************************************************************************/
 
 static const char *baseFilename(const char *filename) {
@@ -462,8 +462,8 @@ static int compareFileMem(const char *filename, const char *mem, int size) {
     if (memcmp(bytes, &mem[idx], res) != 0) {
         int ix;
         for (ix=0; ix<res; ix++)
-    	if (bytes[ix] != mem[idx+ix])
-    		break;
+        if (bytes[ix] != mem[idx+ix])
+        	break;
         fprintf(stderr,"Compare error at position %d\n", idx+ix);
         close(fd);
         return(1);
@@ -513,15 +513,15 @@ static int unloadMem(const char *mem) {
 }
 
 /************************************************************************
- *    								*
- *    	Tests implementations					*
- *    								*
+ *        							*
+ *        Tests implementations					*
+ *        							*
  ************************************************************************/
 
 /************************************************************************
- *    								*
- *    	Parse to SAX based tests				*
- *    								*
+ *        							*
+ *        Parse to SAX based tests				*
+ *        							*
  ************************************************************************/
 
 static FILE *SAXdebug = NULL;
@@ -883,8 +883,8 @@ notationDeclDebug(void *ctx ATTRIBUTE_UNUSED, const xmlChar *name,
  */
 static void
 unparsedEntityDeclDebug(void *ctx ATTRIBUTE_UNUSED, const xmlChar *name,
-    	   const xmlChar *publicId, const xmlChar *systemId,
-    	   const xmlChar *notationName)
+           const xmlChar *publicId, const xmlChar *systemId,
+           const xmlChar *notationName)
 {
 const xmlChar *nullstr = BAD_CAST "(null)";
 
@@ -1075,10 +1075,10 @@ processingInstructionDebug(void *ctx ATTRIBUTE_UNUSED, const xmlChar *target,
     return;
     if (data != NULL)
     fprintf(SAXdebug, "SAX.processingInstruction(%s, %s)\n",
-    	(char *) target, (char *) data);
+        (char *) target, (char *) data);
     else
     fprintf(SAXdebug, "SAX.processingInstruction(%s, NULL)\n",
-    	(char *) target);
+        (char *) target);
 }
 
 /**
@@ -1236,11 +1236,11 @@ startElementNsDebug(void *ctx ATTRIBUTE_UNUSED,
                     const xmlChar *localname,
                     const xmlChar *prefix,
                     const xmlChar *URI,
-    	    int nb_namespaces,
-    	    const xmlChar **namespaces,
-    	    int nb_attributes,
-    	    int nb_defaulted,
-    	    const xmlChar **attributes)
+            int nb_namespaces,
+            const xmlChar **namespaces,
+            int nb_attributes,
+            int nb_defaulted,
+            const xmlChar **attributes)
 {
     int i;
 
@@ -1271,11 +1271,11 @@ startElementNsDebug(void *ctx ATTRIBUTE_UNUSED,
     if (attributes != NULL) {
         for (i = 0;i < nb_attributes * 5;i += 5) {
         if (attributes[i + 1] != NULL)
-    	fprintf(SAXdebug, ", %s:%s='", attributes[i + 1], attributes[i]);
+        fprintf(SAXdebug, ", %s:%s='", attributes[i + 1], attributes[i]);
         else
-    	fprintf(SAXdebug, ", %s='", attributes[i]);
+        fprintf(SAXdebug, ", %s='", attributes[i]);
         fprintf(SAXdebug, "%.4s...', %d", attributes[i + 3],
-    	    (int)(attributes[i + 4] - attributes[i + 3]));
+            (int)(attributes[i + 4] - attributes[i + 3]));
     }
     }
     fprintf(SAXdebug, ")\n");
@@ -1363,18 +1363,18 @@ htmlstartElementDebug(void *ctx ATTRIBUTE_UNUSED, const xmlChar *name, const xml
         for (i = 0;(atts[i] != NULL);i++) {
         fprintf(SAXdebug, ", %s", atts[i++]);
         if (atts[i] != NULL) {
-    	unsigned char output[40];
-    	const unsigned char *att = atts[i];
-    	int outlen, attlen;
+        unsigned char output[40];
+        const unsigned char *att = atts[i];
+        int outlen, attlen;
             fprintf(SAXdebug, "='");
-    	while ((attlen = strlen((char*)att)) > 0) {
-    	    outlen = sizeof output - 1;
-    	    htmlEncodeEntities(output, &outlen, att, &attlen, '\'');
-    	    output[outlen] = 0;
-    	    fprintf(SAXdebug, "%s", (char *) output);
-    	    att += attlen;
-    	}
-    	fprintf(SAXdebug, "'");
+        while ((attlen = strlen((char*)att)) > 0) {
+            outlen = sizeof output - 1;
+            htmlEncodeEntities(output, &outlen, att, &attlen, '\'');
+            output[outlen] = 0;
+            fprintf(SAXdebug, "%s", (char *) output);
+            att += attlen;
+        }
+        fprintf(SAXdebug, "'");
         }
     }
     }
@@ -1574,9 +1574,9 @@ done:
 }
 
 /************************************************************************
- *    								*
- *    	Parse to tree based tests				*
- *    								*
+ *        							*
+ *        Parse to tree based tests				*
+ *        							*
  ************************************************************************/
 /**
  * oldParseTest:
@@ -1698,7 +1698,7 @@ pushParseTest(const char *filename, const char *result,
         if (cur + chunkSize >= size) {
 #ifdef LIBXML_HTML_ENABLED
         if (options & XML_PARSE_HTML)
-    	htmlParseChunk(ctxt, base + cur, size - cur, 1);
+        htmlParseChunk(ctxt, base + cur, size - cur, 1);
         else
 #endif
         xmlParseChunk(ctxt, base + cur, size - cur, 1);
@@ -1706,7 +1706,7 @@ pushParseTest(const char *filename, const char *result,
     } else {
 #ifdef LIBXML_HTML_ENABLED
         if (options & XML_PARSE_HTML)
-    	htmlParseChunk(ctxt, base + cur, chunkSize, 0);
+        htmlParseChunk(ctxt, base + cur, chunkSize, 0);
         else
 #endif
         xmlParseChunk(ctxt, base + cur, chunkSize, 0);
@@ -2221,7 +2221,7 @@ errParseTest(const char *filename, const char *result, const char *err,
     } else {
 #ifdef LIBXML_HTML_ENABLED
         if (options & XML_PARSE_HTML) {
-    	htmlDocDumpMemory(doc, (xmlChar **) &base, &size);
+        htmlDocDumpMemory(doc, (xmlChar **) &base, &size);
         } else
 #endif
         xmlDocDumpMemory(doc, (xmlChar **) &base, &size);
@@ -2294,7 +2294,7 @@ fdParseTest(const char *filename, const char *result, const char *err,
     } else {
 #ifdef LIBXML_HTML_ENABLED
         if (options & XML_PARSE_HTML) {
-    	htmlDocDumpMemory(doc, (xmlChar **) &base, &size);
+        htmlDocDumpMemory(doc, (xmlChar **) &base, &size);
         } else
 #endif
         xmlDocDumpMemory(doc, (xmlChar **) &base, &size);
@@ -2328,9 +2328,9 @@ fdParseTest(const char *filename, const char *result, const char *err,
 
 #ifdef LIBXML_READER_ENABLED
 /************************************************************************
- *    								*
- *    	Reader based tests					*
- *    								*
+ *        							*
+ *        Reader based tests					*
+ *        							*
  ************************************************************************/
 
 static void processNode(FILE *out, xmlTextReaderPtr reader) {
@@ -2530,9 +2530,9 @@ streamMemParseTest(const char *filename, const char *result, const char *err,
 #ifdef LIBXML_XPATH_ENABLED
 #ifdef LIBXML_DEBUG_ENABLED
 /************************************************************************
- *    								*
- *    	XPath and XPointer based tests				*
- *    								*
+ *        							*
+ *        XPath and XPointer based tests				*
+ *        							*
  ************************************************************************/
 
 static FILE *xpathOutput;
@@ -2562,10 +2562,10 @@ testXPath(const char *str, int xptr, int expr) {
 
         comp = xmlXPathCompile(BAD_CAST str);
         if (comp != NULL) {
-    	res = xmlXPathCompiledEval(comp, ctxt);
-    	xmlXPathFreeCompExpr(comp);
+        res = xmlXPathCompiledEval(comp, ctxt);
+        xmlXPathFreeCompExpr(comp);
         } else
-    	res = NULL;
+        res = NULL;
     }
 #if defined(LIBXML_XPTR_ENABLED)
     }
@@ -2608,7 +2608,7 @@ xpathCommonTest(const char *filename, const char *result,
     input = fopen(filename, "rb");
     if (input == NULL) {
         fprintf(stderr,
-    	"Cannot open %s for reading\n", filename);
+        "Cannot open %s for reading\n", filename);
         free(temp);
     return(-1);
     }
@@ -2617,12 +2617,12 @@ xpathCommonTest(const char *filename, const char *result,
     len--;
     while ((len >= 0) &&
            ((expression[len] == '\n') || (expression[len] == '\t') ||
-    	(expression[len] == '\r') || (expression[len] == ' '))) len--;
+        (expression[len] == '\r') || (expression[len] == ' '))) len--;
     expression[len + 1] = 0;
     if (len >= 0) {
         fprintf(xpathOutput,
                 "\n========================\nExpression: %s\n",
-    	    expression) ;
+            expression) ;
         testXPath(expression, xptr, expr);
     }
     }
@@ -2841,9 +2841,9 @@ xmlidDocTest(const char *filename,
 #endif /* LIBXML_DEBUG_ENABLED */
 #endif /* XPATH */
 /************************************************************************
- *    								*
- *    		URI based tests					*
- *    								*
+ *        							*
+ *        	URI based tests					*
+ *        							*
  ************************************************************************/
 
 static void
@@ -2931,7 +2931,7 @@ uriCommonTest(const char *filename,
     i = strlen(str);
     while ((i > 0) &&
            ((str[i - 1] == '\n') || (str[i - 1] == '\r') ||
-    	(str[i - 1] == ' ') || (str[i - 1] == '\t'))) {
+        (str[i - 1] == ' ') || (str[i - 1] == '\t'))) {
         i--;
         str[i] = 0;
     }
@@ -3176,9 +3176,9 @@ uriPathTest(const char *filename ATTRIBUTE_UNUSED,
 
 #ifdef LIBXML_SCHEMAS_ENABLED
 /************************************************************************
- *    								*
- *    		Schemas tests					*
- *    								*
+ *        							*
+ *        	Schemas tests					*
+ *        							*
  ************************************************************************/
 static int
 schemasOneTest(const char *sch,
@@ -3345,11 +3345,11 @@ schemasTest(const char *filename,
     if ((len > 6) && (base2[len - 6] == '_')) {
         count = base2[len - 5];
         ret = snprintf(result, 499, "result/schemas/%s_%c",
-    	     prefix, count);
+             prefix, count);
             if (ret >= 499)
             result[499] = 0;
         ret = snprintf(err, 499, "result/schemas/%s_%c.err",
-    	     prefix, count);
+             prefix, count);
             if (ret >= 499)
             err[499] = 0;
     } else {
@@ -3370,9 +3370,9 @@ schemasTest(const char *filename,
 }
 
 /************************************************************************
- *    								*
- *    		Schemas tests					*
- *    								*
+ *        							*
+ *        	Schemas tests					*
+ *        							*
  ************************************************************************/
 static int
 rngOneTest(const char *sch,
@@ -3500,11 +3500,11 @@ rngTest(const char *filename,
     if ((len > 6) && (base2[len - 6] == '_')) {
         count = base2[len - 5];
         res = snprintf(result, 499, "result/relaxng/%s_%c",
-    	     prefix, count);
+             prefix, count);
             if (res >= 499)
             result[499] = 0;
         res = snprintf(err, 499, "result/relaxng/%s_%c.err",
-    	     prefix, count);
+             prefix, count);
             if (res >= 499)
             err[499] = 0;
     } else {
@@ -3515,7 +3515,7 @@ rngTest(const char *filename,
         nb_tests++;
         res = rngOneTest(filename, instance, result, options, schemas);
         if (res != 0)
-    	ret = res;
+        ret = res;
     }
         if (compareFileMem(err, testErrors, testErrorsSize)) {
             fprintf(stderr, "Error for %s on %s failed\n", instance,
@@ -3594,11 +3594,11 @@ rngStreamTest(const char *filename,
     if ((len > 6) && (base2[len - 6] == '_')) {
         count = base2[len - 5];
         ret = snprintf(result, 499, "result/relaxng/%s_%c",
-    	     prefix, count);
+             prefix, count);
             if (ret >= 499)
             result[499] = 0;
         ret = snprintf(err, 499, "result/relaxng/%s_%c.err",
-    	     prefix, count);
+             prefix, count);
             if (ret >= 499)
             err[499] = 0;
     } else {
@@ -3634,13 +3634,13 @@ rngStreamTest(const char *filename,
 #ifdef LIBXML_PATTERN_ENABLED
 #ifdef LIBXML_READER_ENABLED
 /************************************************************************
- *    								*
- *    		Patterns tests					*
- *    								*
+ *        							*
+ *        	Patterns tests					*
+ *        							*
  ************************************************************************/
 static void patternNode(FILE *out, xmlTextReaderPtr reader,
                         const char *pattern, xmlPatternPtr patternc,
-    		xmlStreamCtxtPtr patstream) {
+        	xmlStreamCtxtPtr patstream) {
     xmlChar *path = NULL;
     int match = -1;
     int type, empty;
@@ -3662,22 +3662,22 @@ static void patternNode(FILE *out, xmlTextReaderPtr reader,
 
     if (type == XML_READER_TYPE_ELEMENT) {
         ret = xmlStreamPush(patstream,
-    			xmlTextReaderConstLocalName(reader),
-    			xmlTextReaderConstNamespaceUri(reader));
+        		xmlTextReaderConstLocalName(reader),
+        		xmlTextReaderConstNamespaceUri(reader));
         if (ret < 0) {
-    	fprintf(out, "xmlStreamPush() failure\n");
-    	xmlFreeStreamCtxt(patstream);
-    	patstream = NULL;
+        fprintf(out, "xmlStreamPush() failure\n");
+        xmlFreeStreamCtxt(patstream);
+        patstream = NULL;
         } else if (ret != match) {
-    	if (path == NULL) {
-    	    path = xmlGetNodePath(
-    			   xmlTextReaderCurrentNode(reader));
-    	}
-    	fprintf(out,
-    		"xmlPatternMatch and xmlStreamPush disagree\n");
-    	fprintf(out,
-    		"  pattern %s node %s\n",
-    		pattern, path);
+        if (path == NULL) {
+            path = xmlGetNodePath(
+        		   xmlTextReaderCurrentNode(reader));
+        }
+        fprintf(out,
+        	"xmlPatternMatch and xmlStreamPush disagree\n");
+        fprintf(out,
+        	"  pattern %s node %s\n",
+        	pattern, path);
         }
 
 
@@ -3686,9 +3686,9 @@ static void patternNode(FILE *out, xmlTextReaderPtr reader,
         ((type == XML_READER_TYPE_ELEMENT) && (empty))) {
         ret = xmlStreamPop(patstream);
         if (ret < 0) {
-    	fprintf(out, "xmlStreamPop() failure\n");
-    	xmlFreeStreamCtxt(patstream);
-    	patstream = NULL;
+        fprintf(out, "xmlStreamPop() failure\n");
+        xmlFreeStreamCtxt(patstream);
+        patstream = NULL;
         }
     }
     }
@@ -3765,7 +3765,7 @@ patternTest(const char *filename,
     i = strlen(str);
     while ((i > 0) &&
            ((str[i - 1] == '\n') || (str[i - 1] == '\r') ||
-    	(str[i - 1] == ' ') || (str[i - 1] == '\t'))) {
+        (str[i - 1] == ' ') || (str[i - 1] == '\t'))) {
         i--;
         str[i] = 0;
     }
@@ -3781,40 +3781,40 @@ patternTest(const char *filename,
 
         root = xmlDocGetRootElement(doc);
         for (ns = root->nsDef, j = 0;ns != NULL && j < 20;ns=ns->next) {
-    	namespaces[j++] = ns->href;
-    	namespaces[j++] = ns->prefix;
+        namespaces[j++] = ns->href;
+        namespaces[j++] = ns->prefix;
         }
         namespaces[j++] = NULL;
         namespaces[j] = NULL;
 
         patternc = xmlPatterncompile((const xmlChar *) str, doc->dict,
-    				 0, &namespaces[0]);
+        			 0, &namespaces[0]);
         if (patternc == NULL) {
-    	testErrorHandler(NULL,
-    		"Pattern %s failed to compile\n", str);
-    	xmlFreeDoc(doc);
-    	ret = 1;
-    	continue;
+        testErrorHandler(NULL,
+        	"Pattern %s failed to compile\n", str);
+        xmlFreeDoc(doc);
+        ret = 1;
+        continue;
         }
         patstream = xmlPatternGetStreamCtxt(patternc);
         if (patstream != NULL) {
-    	ret = xmlStreamPush(patstream, NULL, NULL);
-    	if (ret < 0) {
-    	    fprintf(stderr, "xmlStreamPush() failure\n");
-    	    xmlFreeStreamCtxt(patstream);
-    	    patstream = NULL;
-    	}
+        ret = xmlStreamPush(patstream, NULL, NULL);
+        if (ret < 0) {
+            fprintf(stderr, "xmlStreamPush() failure\n");
+            xmlFreeStreamCtxt(patstream);
+            patstream = NULL;
+        }
         }
         nb_tests++;
 
         reader = xmlReaderWalker(doc);
         res = xmlTextReaderRead(reader);
         while (res == 1) {
-    	patternNode(o, reader, str, patternc, patstream);
-    	res = xmlTextReaderRead(reader);
+        patternNode(o, reader, str, patternc, patstream);
+        res = xmlTextReaderRead(reader);
         }
         if (res != 0) {
-    	fprintf(o, "%s : failed to parse\n", filename);
+        fprintf(o, "%s : failed to parse\n", filename);
         }
         xmlFreeTextReader(reader);
         xmlFreeDoc(doc);
@@ -3843,9 +3843,9 @@ patternTest(const char *filename,
 #endif /* PATTERN */
 #ifdef LIBXML_C14N_ENABLED
 /************************************************************************
- *    								*
- *    		Canonicalization tests				*
- *    								*
+ *        							*
+ *        	Canonicalization tests				*
+ *        							*
  ************************************************************************/
 static xmlXPathObjectPtr
 load_xpath_expr (xmlDocPtr parent_doc, const char* filename) {
@@ -3938,14 +3938,14 @@ xmlFree(expr);
 /*
  * Macro used to grow the current buffer.
  */
-#define xxx_growBufferReentrant() {    					\
-    buffer_size *= 2;    						\
-    buffer = (xmlChar **)    					\
-    xmlRealloc(buffer, buffer_size * sizeof(xmlChar*));	\
-    if (buffer == NULL) {    					\
-    perror("realloc failed");					\
-    return(NULL);							\
-    }    								\
+#define xxx_growBufferReentrant() {        				\
+    buffer_size *= 2;        					\
+    buffer = (xmlChar **)        				\
+    xmlRealloc(buffer, buffer_size * sizeof(xmlChar*));    \
+    if (buffer == NULL) {        				\
+    perror("realloc failed");    				\
+    return(NULL);    						\
+    }        							\
 }
 
 static xmlChar **
@@ -4056,8 +4056,8 @@ c14nRunTest(const char* xml_filename, int with_comments, int mode,
     if (ret >= 0) {
     if(result != NULL) {
         if (compareFileMem(result_file, (const char *) result, ret)) {
-    	fprintf(stderr, "Result mismatch for %s\n", xml_filename);
-    	fprintf(stderr, "RESULT:\n%s\n", (const char*)result);
+        fprintf(stderr, "Result mismatch for %s\n", xml_filename);
+        fprintf(stderr, "RESULT:\n%s\n", (const char*)result);
             ret = -1;
         }
     }
@@ -4124,43 +4124,43 @@ c14nCommonTest(const char *filename, int with_comments, int mode,
 static int
 c14nWithCommentTest(const char *filename,
                     const char *resul ATTRIBUTE_UNUSED,
-    	    const char *err ATTRIBUTE_UNUSED,
-    	    int options ATTRIBUTE_UNUSED) {
+            const char *err ATTRIBUTE_UNUSED,
+            int options ATTRIBUTE_UNUSED) {
     return(c14nCommonTest(filename, 1, XML_C14N_1_0, "with-comments"));
 }
 static int
 c14nWithoutCommentTest(const char *filename,
                     const char *resul ATTRIBUTE_UNUSED,
-    	    const char *err ATTRIBUTE_UNUSED,
-    	    int options ATTRIBUTE_UNUSED) {
+            const char *err ATTRIBUTE_UNUSED,
+            int options ATTRIBUTE_UNUSED) {
     return(c14nCommonTest(filename, 0, XML_C14N_1_0, "without-comments"));
 }
 static int
 c14nExcWithoutCommentTest(const char *filename,
                     const char *resul ATTRIBUTE_UNUSED,
-    	    const char *err ATTRIBUTE_UNUSED,
-    	    int options ATTRIBUTE_UNUSED) {
+            const char *err ATTRIBUTE_UNUSED,
+            int options ATTRIBUTE_UNUSED) {
     return(c14nCommonTest(filename, 0, XML_C14N_EXCLUSIVE_1_0, "exc-without-comments"));
 }
 static int
 c14n11WithoutCommentTest(const char *filename,
                     const char *resul ATTRIBUTE_UNUSED,
-    	    const char *err ATTRIBUTE_UNUSED,
-    	    int options ATTRIBUTE_UNUSED) {
+            const char *err ATTRIBUTE_UNUSED,
+            int options ATTRIBUTE_UNUSED) {
     return(c14nCommonTest(filename, 0, XML_C14N_1_1, "1-1-without-comments"));
 }
 #endif
 #if defined(LIBXML_THREAD_ENABLED) && defined(LIBXML_CATALOG_ENABLED)
 /************************************************************************
- *    								*
- *    		Catalog and threads test			*
- *    								*
+ *        							*
+ *        	Catalog and threads test			*
+ *        							*
  ************************************************************************/
 
 /*
  * mostly a cut and paste from testThreads.c
  */
-#define    MAX_ARGC	20
+#define    MAX_ARGC    20
 
 typedef struct {
     const char *filename;
@@ -4239,7 +4239,7 @@ testThread(void)
 
             tid[i] = CreateThread(NULL, 0,
                                   win32_thread_specific_data,
-    			  (void *) &threadParams[i], 0,
+        		  (void *) &threadParams[i], 0,
                                   &useless);
             if (tid[i] == NULL) {
                 fprintf(stderr, "CreateThread failed\n");
@@ -4267,7 +4267,7 @@ testThread(void)
         for (i = 0; i < num_threads; i++) {
             if (threadParams[i].okay == 0) {
                 fprintf(stderr, "Thread %d handling %s failed\n",
-    	        i, threadParams[i].filename);
+                i, threadParams[i].filename);
             res = 1;
         }
         }
@@ -4346,9 +4346,9 @@ threadsTest(const char *filename ATTRIBUTE_UNUSED,
 
 #if defined(LIBXML_REGEXP_ENABLED)
 /************************************************************************
- *    								*
- *    		Regexp tests					*
- *    								*
+ *        							*
+ *        	Regexp tests					*
+ *        							*
  ************************************************************************/
 
 static void testRegexp(FILE *output, xmlRegexpPtr comp, const char *value) {
@@ -4382,7 +4382,7 @@ regexpTest(const char *filename, const char *result, const char *err,
     input = fopen(filename, "rb");
     if (input == NULL) {
         fprintf(stderr,
-    	"Cannot open %s for reading\n", filename);
+        "Cannot open %s for reading\n", filename);
     ret = -1;
         goto done;
     }
@@ -4403,33 +4403,33 @@ regexpTest(const char *filename, const char *result, const char *err,
     len--;
     while ((len >= 0) &&
            ((expression[len] == '\n') || (expression[len] == '\t') ||
-    	(expression[len] == '\r') || (expression[len] == ' '))) len--;
+        (expression[len] == '\r') || (expression[len] == ' '))) len--;
     expression[len + 1] = 0;
     if (len >= 0) {
         if (expression[0] == '#')
-    	continue;
+        continue;
         if ((expression[0] == '=') && (expression[1] == '>')) {
-    	char *pattern = &expression[2];
+        char *pattern = &expression[2];
 
-    	if (comp != NULL) {
-    	    xmlRegFreeRegexp(comp);
-    	    comp = NULL;
-    	}
-    	fprintf(output, "Regexp: %s\n", pattern) ;
-    	comp = xmlRegexpCompile((const xmlChar *) pattern);
-    	if (comp == NULL) {
-    	    fprintf(output, "   failed to compile\n");
-    	    break;
-    	}
+        if (comp != NULL) {
+            xmlRegFreeRegexp(comp);
+            comp = NULL;
+        }
+        fprintf(output, "Regexp: %s\n", pattern) ;
+        comp = xmlRegexpCompile((const xmlChar *) pattern);
+        if (comp == NULL) {
+            fprintf(output, "   failed to compile\n");
+            break;
+        }
         } else if (comp == NULL) {
-    	fprintf(output, "Regexp: %s\n", expression) ;
-    	comp = xmlRegexpCompile((const xmlChar *) expression);
-    	if (comp == NULL) {
-    	    fprintf(output, "   failed to compile\n");
-    	    break;
-    	}
+        fprintf(output, "Regexp: %s\n", expression) ;
+        comp = xmlRegexpCompile((const xmlChar *) expression);
+        if (comp == NULL) {
+            fprintf(output, "   failed to compile\n");
+            break;
+        }
         } else if (comp != NULL) {
-    	testRegexp(output, comp, expression);
+        testRegexp(output, comp, expression);
         }
     }
     }
@@ -4464,9 +4464,9 @@ done:
 
 #ifdef LIBXML_AUTOMATA_ENABLED
 /************************************************************************
- *    								*
- *    		Automata tests					*
- *    								*
+ *        							*
+ *        	Automata tests					*
+ *        							*
  ************************************************************************/
 
 static int scanNumber(char **ptr) {
@@ -4505,7 +4505,7 @@ automataTest(const char *filename, const char *result,
     input = fopen(filename, "rb");
     if (input == NULL) {
         fprintf(stderr,
-    	"Cannot open %s for reading\n", filename);
+        "Cannot open %s for reading\n", filename);
     return(-1);
     }
     temp = resultFilename(filename, "", ".res");
@@ -4523,14 +4523,14 @@ automataTest(const char *filename, const char *result,
     am = xmlNewAutomata();
     if (am == NULL) {
         fprintf(stderr,
-    	"Cannot create automata\n");
+        "Cannot create automata\n");
     fclose(input);
     return(-1);
     }
     states[0] = xmlAutomataGetInitState(am);
     if (states[0] == NULL) {
         fprintf(stderr,
-    	"Cannot get start state\n");
+        "Cannot get start state\n");
     xmlFreeAutomata(am);
     fclose(input);
     return(-1);
@@ -4544,136 +4544,136 @@ automataTest(const char *filename, const char *result,
     len--;
     while ((len >= 0) &&
            ((expr[len] == '\n') || (expr[len] == '\t') ||
-    	(expr[len] == '\r') || (expr[len] == ' '))) len--;
+        (expr[len] == '\r') || (expr[len] == ' '))) len--;
     expr[len + 1] = 0;
     if (len >= 0) {
         if ((am != NULL) && (expr[0] == 't') && (expr[1] == ' ')) {
-    	char *ptr = &expr[2];
-    	int from, to;
+        char *ptr = &expr[2];
+        int from, to;
 
-    	from = scanNumber(&ptr);
-    	if (*ptr != ' ') {
-    	    fprintf(stderr,
-    		    "Bad line %s\n", expr);
-    	    break;
-    	}
-    	if (states[from] == NULL)
-    	    states[from] = xmlAutomataNewState(am);
-    	ptr++;
-    	to = scanNumber(&ptr);
-    	if (*ptr != ' ') {
-    	    fprintf(stderr,
-    		    "Bad line %s\n", expr);
-    	    break;
-    	}
-    	if (states[to] == NULL)
-    	    states[to] = xmlAutomataNewState(am);
-    	ptr++;
-    	xmlAutomataNewTransition(am, states[from], states[to],
-    		                 BAD_CAST ptr, NULL);
+        from = scanNumber(&ptr);
+        if (*ptr != ' ') {
+            fprintf(stderr,
+        	    "Bad line %s\n", expr);
+            break;
+        }
+        if (states[from] == NULL)
+            states[from] = xmlAutomataNewState(am);
+        ptr++;
+        to = scanNumber(&ptr);
+        if (*ptr != ' ') {
+            fprintf(stderr,
+        	    "Bad line %s\n", expr);
+            break;
+        }
+        if (states[to] == NULL)
+            states[to] = xmlAutomataNewState(am);
+        ptr++;
+        xmlAutomataNewTransition(am, states[from], states[to],
+        	                 BAD_CAST ptr, NULL);
         } else if ((am != NULL) && (expr[0] == 'e') && (expr[1] == ' ')) {
-    	char *ptr = &expr[2];
-    	int from, to;
+        char *ptr = &expr[2];
+        int from, to;
 
-    	from = scanNumber(&ptr);
-    	if (*ptr != ' ') {
-    	    fprintf(stderr,
-    		    "Bad line %s\n", expr);
-    	    break;
-    	}
-    	if (states[from] == NULL)
-    	    states[from] = xmlAutomataNewState(am);
-    	ptr++;
-    	to = scanNumber(&ptr);
-    	if (states[to] == NULL)
-    	    states[to] = xmlAutomataNewState(am);
-    	xmlAutomataNewEpsilon(am, states[from], states[to]);
+        from = scanNumber(&ptr);
+        if (*ptr != ' ') {
+            fprintf(stderr,
+        	    "Bad line %s\n", expr);
+            break;
+        }
+        if (states[from] == NULL)
+            states[from] = xmlAutomataNewState(am);
+        ptr++;
+        to = scanNumber(&ptr);
+        if (states[to] == NULL)
+            states[to] = xmlAutomataNewState(am);
+        xmlAutomataNewEpsilon(am, states[from], states[to]);
         } else if ((am != NULL) && (expr[0] == 'f') && (expr[1] == ' ')) {
-    	char *ptr = &expr[2];
-    	int state;
+        char *ptr = &expr[2];
+        int state;
 
-    	state = scanNumber(&ptr);
-    	if (states[state] == NULL) {
-    	    fprintf(stderr,
-    		    "Bad state %d : %s\n", state, expr);
-    	    break;
-    	}
-    	xmlAutomataSetFinalState(am, states[state]);
+        state = scanNumber(&ptr);
+        if (states[state] == NULL) {
+            fprintf(stderr,
+        	    "Bad state %d : %s\n", state, expr);
+            break;
+        }
+        xmlAutomataSetFinalState(am, states[state]);
         } else if ((am != NULL) && (expr[0] == 'c') && (expr[1] == ' ')) {
-    	char *ptr = &expr[2];
-    	int from, to;
-    	int min, max;
+        char *ptr = &expr[2];
+        int from, to;
+        int min, max;
 
-    	from = scanNumber(&ptr);
-    	if (*ptr != ' ') {
-    	    fprintf(stderr,
-    		    "Bad line %s\n", expr);
-    	    break;
-    	}
-    	if (states[from] == NULL)
-    	    states[from] = xmlAutomataNewState(am);
-    	ptr++;
-    	to = scanNumber(&ptr);
-    	if (*ptr != ' ') {
-    	    fprintf(stderr,
-    		    "Bad line %s\n", expr);
-    	    break;
-    	}
-    	if (states[to] == NULL)
-    	    states[to] = xmlAutomataNewState(am);
-    	ptr++;
-    	min = scanNumber(&ptr);
-    	if (*ptr != ' ') {
-    	    fprintf(stderr,
-    		    "Bad line %s\n", expr);
-    	    break;
-    	}
-    	ptr++;
-    	max = scanNumber(&ptr);
-    	if (*ptr != ' ') {
-    	    fprintf(stderr,
-    		    "Bad line %s\n", expr);
-    	    break;
-    	}
-    	ptr++;
-    	xmlAutomataNewCountTrans(am, states[from], states[to],
-    		                 BAD_CAST ptr, min, max, NULL);
+        from = scanNumber(&ptr);
+        if (*ptr != ' ') {
+            fprintf(stderr,
+        	    "Bad line %s\n", expr);
+            break;
+        }
+        if (states[from] == NULL)
+            states[from] = xmlAutomataNewState(am);
+        ptr++;
+        to = scanNumber(&ptr);
+        if (*ptr != ' ') {
+            fprintf(stderr,
+        	    "Bad line %s\n", expr);
+            break;
+        }
+        if (states[to] == NULL)
+            states[to] = xmlAutomataNewState(am);
+        ptr++;
+        min = scanNumber(&ptr);
+        if (*ptr != ' ') {
+            fprintf(stderr,
+        	    "Bad line %s\n", expr);
+            break;
+        }
+        ptr++;
+        max = scanNumber(&ptr);
+        if (*ptr != ' ') {
+            fprintf(stderr,
+        	    "Bad line %s\n", expr);
+            break;
+        }
+        ptr++;
+        xmlAutomataNewCountTrans(am, states[from], states[to],
+        	                 BAD_CAST ptr, min, max, NULL);
         } else if ((am != NULL) && (expr[0] == '-') && (expr[1] == '-')) {
-    	/* end of the automata */
-    	regexp = xmlAutomataCompile(am);
-    	xmlFreeAutomata(am);
-    	am = NULL;
-    	if (regexp == NULL) {
-    	    fprintf(stderr,
-    		    "Failed to compile the automata");
-    	    break;
-    	}
+        /* end of the automata */
+        regexp = xmlAutomataCompile(am);
+        xmlFreeAutomata(am);
+        am = NULL;
+        if (regexp == NULL) {
+            fprintf(stderr,
+        	    "Failed to compile the automata");
+            break;
+        }
         } else if ((expr[0] == '=') && (expr[1] == '>')) {
-    	if (regexp == NULL) {
-    	    fprintf(output, "=> failed not compiled\n");
-    	} else {
-    	    if (exec == NULL)
-    		exec = xmlRegNewExecCtxt(regexp, NULL, NULL);
-    	    if (ret == 0) {
-    		ret = xmlRegExecPushString(exec, NULL, NULL);
-    	    }
-    	    if (ret == 1)
-    		fprintf(output, "=> Passed\n");
-    	    else if ((ret == 0) || (ret == -1))
-    		fprintf(output, "=> Failed\n");
-    	    else if (ret < 0)
-    		fprintf(output, "=> Error\n");
-    	    xmlRegFreeExecCtxt(exec);
-    	    exec = NULL;
-    	}
-    	ret = 0;
-        } else if (regexp != NULL) {
-    	if (exec == NULL)
-    	    exec = xmlRegNewExecCtxt(regexp, NULL, NULL);
-    	ret = xmlRegExecPushString(exec, BAD_CAST expr, NULL);
+        if (regexp == NULL) {
+            fprintf(output, "=> failed not compiled\n");
         } else {
-    	fprintf(stderr,
-    		"Unexpected line %s\n", expr);
+            if (exec == NULL)
+        	exec = xmlRegNewExecCtxt(regexp, NULL, NULL);
+            if (ret == 0) {
+        	ret = xmlRegExecPushString(exec, NULL, NULL);
+            }
+            if (ret == 1)
+        	fprintf(output, "=> Passed\n");
+            else if ((ret == 0) || (ret == -1))
+        	fprintf(output, "=> Failed\n");
+            else if (ret < 0)
+        	fprintf(output, "=> Error\n");
+            xmlRegFreeExecCtxt(exec);
+            exec = NULL;
+        }
+        ret = 0;
+        } else if (regexp != NULL) {
+        if (exec == NULL)
+            exec = xmlRegNewExecCtxt(regexp, NULL, NULL);
+        ret = xmlRegExecPushString(exec, BAD_CAST expr, NULL);
+        } else {
+        fprintf(stderr,
+        	"Unexpected line %s\n", expr);
         }
     }
     }
@@ -4702,9 +4702,9 @@ automataTest(const char *filename, const char *result,
 #endif /* LIBXML_AUTOMATA_ENABLED */
 
 /************************************************************************
- *    								*
- *    		Tests Descriptions				*
- *    								*
+ *        							*
+ *        	Tests Descriptions				*
+ *        							*
  ************************************************************************/
 
 static
@@ -4922,9 +4922,9 @@ testDesc testDescriptions[] = {
 };
 
 /************************************************************************
- *    								*
- *    	The main code driving the tests				*
- *    								*
+ *        							*
+ *        The main code driving the tests				*
+ *        							*
  ************************************************************************/
 
 static int
@@ -4973,22 +4973,22 @@ launchTests(testDescPtr tst) {
                  (strstr(globbuf.gl_pathv[i], "icu_parse_test") != NULL)))
                 continue;
         if (tst->suffix != NULL) {
-    	result = resultFilename(globbuf.gl_pathv[i], tst->out,
-    				tst->suffix);
-    	if (result == NULL) {
-    	    fprintf(stderr, "Out of memory !\n");
-    	    fatalError();
-    	}
+        result = resultFilename(globbuf.gl_pathv[i], tst->out,
+        			tst->suffix);
+        if (result == NULL) {
+            fprintf(stderr, "Out of memory !\n");
+            fatalError();
+        }
         } else {
             result = NULL;
         }
         if (tst->err != NULL) {
-    	error = resultFilename(globbuf.gl_pathv[i], tst->out,
-    	                        tst->err);
-    	if (error == NULL) {
-    	    fprintf(stderr, "Out of memory !\n");
-    	    fatalError();
-    	}
+        error = resultFilename(globbuf.gl_pathv[i], tst->out,
+                                tst->err);
+        if (error == NULL) {
+            fprintf(stderr, "Out of memory !\n");
+            fatalError();
+        }
         } else {
             error = NULL;
         }
@@ -5016,9 +5016,9 @@ launchTests(testDescPtr tst) {
             }
             testErrorsSize = 0;
         if (result)
-    	free(result);
+        free(result);
         if (error)
-    	free(error);
+        free(error);
     }
     globfree(&globbuf);
     } else {
@@ -5060,9 +5060,9 @@ runtest(int i) {
         printf("Ran %d tests, no errors\n", nb_tests - old_tests);
     else
         printf("Ran %d tests, %d errors, %d leaks\n",
-    	   nb_tests - old_tests,
-    	   nb_errors - old_errors,
-    	   nb_leaks - old_leaks);
+           nb_tests - old_tests,
+           nb_errors - old_errors,
+           nb_leaks - old_leaks);
     }
     return(ret);
 }
@@ -5095,9 +5095,9 @@ main(int argc ATTRIBUTE_UNUSED, char **argv ATTRIBUTE_UNUSED) {
     else {
         for (i = 0; testDescriptions[i].func != NULL; i++) {
             if (strstr(testDescriptions[i].desc, argv[a])) {
-    	    ret += runtest(i);
-    	    subset++;
-    	}
+            ret += runtest(i);
+            subset++;
+        }
         }
     }
     }

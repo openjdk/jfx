@@ -59,7 +59,7 @@
  */
 xmlXPathFunction
 xsltXPathFunctionLookup (void *vctxt,
-    		 const xmlChar *name, const xmlChar *ns_uri) {
+        	 const xmlChar *name, const xmlChar *ns_uri) {
     xmlXPathContextPtr ctxt = (xmlXPathContextPtr) vctxt;
     xmlXPathFunction ret;
 
@@ -90,9 +90,9 @@ xsltXPathFunctionLookup (void *vctxt,
 
 
 /************************************************************************
- *    								*
- *    		Module interfaces				*
- *    								*
+ *        							*
+ *        	Module interfaces				*
+ *        							*
  ************************************************************************/
 
 static void
@@ -359,7 +359,7 @@ xsltKeyFunction(xmlXPathParserContextPtr ctxt, int nargs){
 
     if (nargs != 2) {
     xsltTransformError(xsltXPathGetTransformContext(ctxt), NULL, NULL,
-    	"key() : expects two arguments\n");
+        "key() : expects two arguments\n");
     ctxt->error = XPATH_INVALID_ARITY;
     return;
     }
@@ -397,16 +397,16 @@ xsltKeyFunction(xmlXPathParserContextPtr ctxt, int nargs){
 
     if (obj2->nodesetval != NULL) {
         for (i = 0; i < obj2->nodesetval->nodeNr; i++) {
-    	valuePush(ctxt, xmlXPathObjectCopy(obj1));
-    	valuePush(ctxt,
-    		  xmlXPathNewNodeSet(obj2->nodesetval->nodeTab[i]));
-    	xmlXPathStringFunction(ctxt, 1);
-    	xsltKeyFunction(ctxt, 2);
-    	newobj = valuePop(ctxt);
+        valuePush(ctxt, xmlXPathObjectCopy(obj1));
+        valuePush(ctxt,
+        	  xmlXPathNewNodeSet(obj2->nodesetval->nodeTab[i]));
+        xmlXPathStringFunction(ctxt, 1);
+        xsltKeyFunction(ctxt, 2);
+        newobj = valuePop(ctxt);
                 if (newobj != NULL)
-    	    ret->nodesetval = xmlXPathNodeSetMerge(ret->nodesetval,
-    					           newobj->nodesetval);
-    	xmlXPathFreeObject(newobj);
+            ret->nodesetval = xmlXPathNodeSetMerge(ret->nodesetval,
+        				           newobj->nodesetval);
+        xmlXPathFreeObject(newobj);
         }
     }
     valuePush(ctxt, ret);
@@ -426,8 +426,8 @@ xsltKeyFunction(xmlXPathParserContextPtr ctxt, int nargs){
 
     if (xpctxt->node == NULL) {
         xsltTransformError(tctxt, NULL, tctxt->inst,
-    	"Internal error in xsltKeyFunction(): "
-    	"The context node is not set on the XPath context.\n");
+        "Internal error in xsltKeyFunction(): "
+        "The context node is not set on the XPath context.\n");
         tctxt->state = XSLT_STATE_STOPPED;
         goto error;
     }
@@ -440,20 +440,20 @@ xsltKeyFunction(xmlXPathParserContextPtr ctxt, int nargs){
         key = xmlStrdup(obj1->stringval);
         keyURI = NULL;
         if (prefix != NULL)
-    	xmlFree(prefix);
+        xmlFree(prefix);
     } else {
         if (prefix != NULL) {
-    	keyURI = xmlXPathNsLookup(xpctxt, prefix);
-    	if (keyURI == NULL) {
-    	    xsltTransformError(tctxt, NULL, tctxt->inst,
-    		"key() : prefix %s is not bound\n", prefix);
-    	    /*
-    	    * TODO: Shouldn't we stop here?
-    	    */
-    	}
-    	xmlFree(prefix);
+        keyURI = xmlXPathNsLookup(xpctxt, prefix);
+        if (keyURI == NULL) {
+            xsltTransformError(tctxt, NULL, tctxt->inst,
+        	"key() : prefix %s is not bound\n", prefix);
+            /*
+            * TODO: Shouldn't we stop here?
+            */
+        }
+        xmlFree(prefix);
         } else {
-    	keyURI = NULL;
+        keyURI = NULL;
         }
     }
 
@@ -465,7 +465,7 @@ xsltKeyFunction(xmlXPathParserContextPtr ctxt, int nargs){
     obj2 = valuePop(ctxt);
     if ((obj2 == NULL) || (obj2->type != XPATH_STRING)) {
         xsltTransformError(tctxt, NULL, tctxt->inst,
-    	"key() : invalid arg expecting a string\n");
+        "key() : invalid arg expecting a string\n");
         ctxt->error = XPATH_INVALID_TYPE;
         goto error;
     }
@@ -488,17 +488,17 @@ xsltKeyFunction(xmlXPathParserContextPtr ctxt, int nargs){
         * the ns->next field.
         */
         if ((((xmlNsPtr) xpctxt->node)->next != NULL) &&
-    	(((xmlNsPtr) xpctxt->node)->next->type == XML_ELEMENT_NODE))
+        (((xmlNsPtr) xpctxt->node)->next->type == XML_ELEMENT_NODE))
         {
-    	tmpNode = (xmlNodePtr) ((xmlNsPtr) xpctxt->node)->next;
+        tmpNode = (xmlNodePtr) ((xmlNsPtr) xpctxt->node)->next;
         }
     } else
         tmpNode = xpctxt->node;
 
     if ((tmpNode == NULL) || (tmpNode->doc == NULL)) {
         xsltTransformError(tctxt, NULL, tctxt->inst,
-    	"Internal error in xsltKeyFunction(): "
-    	"Couldn't get the doc of the XPath context node.\n");
+        "Internal error in xsltKeyFunction(): "
+        "Couldn't get the doc of the XPath context node.\n");
         goto error;
     }
 
@@ -506,28 +506,28 @@ xsltKeyFunction(xmlXPathParserContextPtr ctxt, int nargs){
         (tctxt->document->doc != tmpNode->doc))
     {
         if (tmpNode->doc->name && (tmpNode->doc->name[0] == ' ')) {
-    	/*
-    	* This is a Result Tree Fragment.
-    	*/
-    	if (tmpNode->doc->_private == NULL) {
-    	    tmpNode->doc->_private = xsltNewDocument(tctxt, tmpNode->doc);
-    	    if (tmpNode->doc->_private == NULL)
-    		goto error;
-    	}
-    	tctxt->document = (xsltDocumentPtr) tmpNode->doc->_private;
+        /*
+        * This is a Result Tree Fragment.
+        */
+        if (tmpNode->doc->_private == NULL) {
+            tmpNode->doc->_private = xsltNewDocument(tctxt, tmpNode->doc);
+            if (tmpNode->doc->_private == NULL)
+        	goto error;
+        }
+        tctxt->document = (xsltDocumentPtr) tmpNode->doc->_private;
         } else {
-    	/*
-    	* May be the initial source doc or a doc acquired via the
-    	* document() function.
-    	*/
-    	tctxt->document = xsltFindDocument(tctxt, tmpNode->doc);
+        /*
+        * May be the initial source doc or a doc acquired via the
+        * document() function.
+        */
+        tctxt->document = xsltFindDocument(tctxt, tmpNode->doc);
         }
         if (tctxt->document == NULL) {
-    	xsltTransformError(tctxt, NULL, tctxt->inst,
-    	    "Internal error in xsltKeyFunction(): "
-    	    "Could not get the document info of a context doc.\n");
-    	tctxt->state = XSLT_STATE_STOPPED;
-    	goto error;
+        xsltTransformError(tctxt, NULL, tctxt->inst,
+            "Internal error in xsltKeyFunction(): "
+            "Could not get the document info of a context doc.\n");
+        tctxt->state = XSLT_STATE_STOPPED;
+        goto error;
         }
     }
     /*
@@ -564,7 +564,7 @@ xsltUnparsedEntityURIFunction(xmlXPathParserContextPtr ctxt, int nargs){
 
     if ((nargs != 1) || (ctxt->value == NULL)) {
         xsltGenericError(xsltGenericErrorContext,
-    	"unparsed-entity-uri() : expects one string arg\n");
+        "unparsed-entity-uri() : expects one string arg\n");
     ctxt->error = XPATH_INVALID_ARITY;
     return;
     }
@@ -588,9 +588,9 @@ xsltUnparsedEntityURIFunction(xmlXPathParserContextPtr ctxt, int nargs){
         valuePush(ctxt, xmlXPathNewString((const xmlChar *)""));
     } else {
         if (entity->URI != NULL)
-    	valuePush(ctxt, xmlXPathNewString(entity->URI));
+        valuePush(ctxt, xmlXPathNewString(entity->URI));
         else
-    	valuePush(ctxt, xmlXPathNewString((const xmlChar *)""));
+        valuePush(ctxt, xmlXPathNewString((const xmlChar *)""));
     }
     }
     xmlXPathFreeObject(obj);
@@ -650,8 +650,8 @@ xsltFormatNumberFunction(xmlXPathParserContextPtr ctxt, int nargs)
         }
     if (formatValues == NULL) {
         xsltTransformError(tctxt, NULL, NULL,
-    	    "format-number() : undeclared decimal format '%s'\n",
-    	    decimalObj->stringval);
+            "format-number() : undeclared decimal format '%s'\n",
+            decimalObj->stringval);
     }
     /* Intentional fall-through */
     case 2:
@@ -670,9 +670,9 @@ xsltFormatNumberFunction(xmlXPathParserContextPtr ctxt, int nargs)
     if ((ctxt->error == 0) &&
         (formatValues != NULL) && (formatObj != NULL) && (numberObj != NULL)) {
     if (xsltFormatNumberConversion(formatValues,
-    			       formatObj->stringval,
-    			       numberObj->floatval,
-    			       &result) == XPATH_EXPRESSION_OK) {
+        		       formatObj->stringval,
+        		       numberObj->floatval,
+        		       &result) == XPATH_EXPRESSION_OK) {
         valuePush(ctxt, xmlXPathNewString(result));
         xmlFree(result);
     }
@@ -713,7 +713,7 @@ xsltGenerateIdFunction(xmlXPathParserContextPtr ctxt, int nargs){
     if ((ctxt->value == NULL) || (ctxt->value->type != XPATH_NODESET)) {
         ctxt->error = XPATH_INVALID_TYPE;
         xsltTransformError(tctxt, NULL, NULL,
-    	"generate-id() : invalid arg expecting a node-set\n");
+        "generate-id() : invalid arg expecting a node-set\n");
             goto out;
     }
     obj = valuePop(ctxt);
@@ -730,7 +730,7 @@ xsltGenerateIdFunction(xmlXPathParserContextPtr ctxt, int nargs){
     }
     } else {
     xsltTransformError(tctxt, NULL, NULL,
-    	"generate-id() : invalid number of args %d\n", nargs);
+        "generate-id() : invalid number of args %d\n", nargs);
     ctxt->error = XPATH_INVALID_ARITY;
     goto out;
     }
@@ -834,7 +834,7 @@ xsltSystemPropertyFunction(xmlXPathParserContextPtr ctxt, int nargs){
 
     if (nargs != 1) {
     xsltTransformError(xsltXPathGetTransformContext(ctxt), NULL, NULL,
-    	"system-property() : expects one string arg\n");
+        "system-property() : expects one string arg\n");
     ctxt->error = XPATH_INVALID_ARITY;
     return;
     }
@@ -854,52 +854,52 @@ xsltSystemPropertyFunction(xmlXPathParserContextPtr ctxt, int nargs){
     } else {
         nsURI = xmlXPathNsLookup(ctxt->context, prefix);
         if (nsURI == NULL) {
-    	xsltTransformError(xsltXPathGetTransformContext(ctxt), NULL, NULL,
-    	    "system-property() : prefix %s is not bound\n", prefix);
+        xsltTransformError(xsltXPathGetTransformContext(ctxt), NULL, NULL,
+            "system-property() : prefix %s is not bound\n", prefix);
         }
     }
 
     if (xmlStrEqual(nsURI, XSLT_NAMESPACE)) {
 #ifdef DOCBOOK_XSL_HACK
         if (xmlStrEqual(name, (const xmlChar *)"vendor")) {
-    	xsltStylesheetPtr sheet;
-    	xsltTransformContextPtr tctxt;
+        xsltStylesheetPtr sheet;
+        xsltTransformContextPtr tctxt;
 
-    	tctxt = xsltXPathGetTransformContext(ctxt);
-    	if ((tctxt != NULL) && (tctxt->inst != NULL) &&
-    	    (xmlStrEqual(tctxt->inst->name, BAD_CAST "variable")) &&
-    	    (tctxt->inst->parent != NULL) &&
-    	    (xmlStrEqual(tctxt->inst->parent->name,
-    			 BAD_CAST "template")))
-    	    sheet = tctxt->style;
-    	else
-    	    sheet = NULL;
-    	if ((sheet != NULL) && (sheet->doc != NULL) &&
-    	    (sheet->doc->URL != NULL) &&
-    	    (xmlStrstr(sheet->doc->URL,
-    		       (const xmlChar *)"chunk") != NULL)) {
-    	    valuePush(ctxt, xmlXPathNewString(
-    		(const xmlChar *)"libxslt (SAXON 6.2 compatible)"));
+        tctxt = xsltXPathGetTransformContext(ctxt);
+        if ((tctxt != NULL) && (tctxt->inst != NULL) &&
+            (xmlStrEqual(tctxt->inst->name, BAD_CAST "variable")) &&
+            (tctxt->inst->parent != NULL) &&
+            (xmlStrEqual(tctxt->inst->parent->name,
+        		 BAD_CAST "template")))
+            sheet = tctxt->style;
+        else
+            sheet = NULL;
+        if ((sheet != NULL) && (sheet->doc != NULL) &&
+            (sheet->doc->URL != NULL) &&
+            (xmlStrstr(sheet->doc->URL,
+        	       (const xmlChar *)"chunk") != NULL)) {
+            valuePush(ctxt, xmlXPathNewString(
+        	(const xmlChar *)"libxslt (SAXON 6.2 compatible)"));
 
-    	} else {
-    	    valuePush(ctxt, xmlXPathNewString(
-    		(const xmlChar *)XSLT_DEFAULT_VENDOR));
-    	}
+        } else {
+            valuePush(ctxt, xmlXPathNewString(
+        	(const xmlChar *)XSLT_DEFAULT_VENDOR));
+        }
         } else
 #else
         if (xmlStrEqual(name, (const xmlChar *)"vendor")) {
-    	valuePush(ctxt, xmlXPathNewString(
-    		  (const xmlChar *)XSLT_DEFAULT_VENDOR));
+        valuePush(ctxt, xmlXPathNewString(
+        	  (const xmlChar *)XSLT_DEFAULT_VENDOR));
         } else
 #endif
         if (xmlStrEqual(name, (const xmlChar *)"version")) {
-    	valuePush(ctxt, xmlXPathNewString(
-    	    (const xmlChar *)XSLT_DEFAULT_VERSION));
+        valuePush(ctxt, xmlXPathNewString(
+            (const xmlChar *)XSLT_DEFAULT_VERSION));
         } else if (xmlStrEqual(name, (const xmlChar *)"vendor-url")) {
-    	valuePush(ctxt, xmlXPathNewString(
-    	    (const xmlChar *)XSLT_DEFAULT_URL));
+        valuePush(ctxt, xmlXPathNewString(
+            (const xmlChar *)XSLT_DEFAULT_URL));
         } else {
-    	valuePush(ctxt, xmlXPathNewString((const xmlChar *)""));
+        valuePush(ctxt, xmlXPathNewString((const xmlChar *)""));
         }
     } else {
         valuePush(ctxt, xmlXPathNewString((const xmlChar *)""));
@@ -929,7 +929,7 @@ xsltElementAvailableFunction(xmlXPathParserContextPtr ctxt, int nargs){
 
     if (nargs != 1) {
     xsltTransformError(xsltXPathGetTransformContext(ctxt), NULL, NULL,
-    	"element-available() : expects one string arg\n");
+        "element-available() : expects one string arg\n");
     ctxt->error = XPATH_INVALID_ARITY;
     return;
     }
@@ -944,7 +944,7 @@ xsltElementAvailableFunction(xmlXPathParserContextPtr ctxt, int nargs){
     tctxt = xsltXPathGetTransformContext(ctxt);
     if ((tctxt == NULL) || (tctxt->inst == NULL)) {
     xsltTransformError(xsltXPathGetTransformContext(ctxt), NULL, NULL,
-    	"element-available() : internal error tctxt == NULL\n");
+        "element-available() : internal error tctxt == NULL\n");
     xmlXPathFreeObject(obj);
     valuePush(ctxt, xmlXPathNewBoolean(0));
     return;
@@ -962,7 +962,7 @@ xsltElementAvailableFunction(xmlXPathParserContextPtr ctxt, int nargs){
     nsURI = xmlXPathNsLookup(ctxt->context, prefix);
     if (nsURI == NULL) {
         xsltTransformError(xsltXPathGetTransformContext(ctxt), NULL, NULL,
-    	"element-available() : prefix %s is not bound\n", prefix);
+        "element-available() : prefix %s is not bound\n", prefix);
     }
     }
 
@@ -995,7 +995,7 @@ xsltFunctionAvailableFunction(xmlXPathParserContextPtr ctxt, int nargs){
 
     if (nargs != 1) {
     xsltTransformError(xsltXPathGetTransformContext(ctxt), NULL, NULL,
-    	"function-available() : expects one string arg\n");
+        "function-available() : expects one string arg\n");
     ctxt->error = XPATH_INVALID_ARITY;
     return;
     }
@@ -1015,7 +1015,7 @@ xsltFunctionAvailableFunction(xmlXPathParserContextPtr ctxt, int nargs){
     nsURI = xmlXPathNsLookup(ctxt->context, prefix);
     if (nsURI == NULL) {
         xsltTransformError(xsltXPathGetTransformContext(ctxt), NULL, NULL,
-    	"function-available() : prefix %s is not bound\n", prefix);
+        "function-available() : prefix %s is not bound\n", prefix);
     }
     }
 
@@ -1046,14 +1046,14 @@ xsltCurrentFunction(xmlXPathParserContextPtr ctxt, int nargs){
 
     if (nargs != 0) {
     xsltTransformError(xsltXPathGetTransformContext(ctxt), NULL, NULL,
-    	"current() : function uses no argument\n");
+        "current() : function uses no argument\n");
     ctxt->error = XPATH_INVALID_ARITY;
     return;
     }
     tctxt = xsltXPathGetTransformContext(ctxt);
     if (tctxt == NULL) {
     xsltTransformError(xsltXPathGetTransformContext(ctxt), NULL, NULL,
-    	"current() : internal error tctxt == NULL\n");
+        "current() : internal error tctxt == NULL\n");
     valuePush(ctxt, xmlXPathNewNodeSet(NULL));
     } else {
     valuePush(ctxt, xmlXPathNewNodeSet(tctxt->node)); /* current */
@@ -1061,9 +1061,9 @@ xsltCurrentFunction(xmlXPathParserContextPtr ctxt, int nargs){
 }
 
 /************************************************************************
- *    								*
- *    	Registration of XSLT and libxslt functions		*
- *    								*
+ *        							*
+ *        Registration of XSLT and libxslt functions		*
+ *        							*
  ************************************************************************/
 
 /**

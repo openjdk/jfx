@@ -32,9 +32,9 @@ static int verbose = 0;
 
 
 /************************************************************************
- *    								*
- *    	File name and path utilities				*
- *    								*
+ *        							*
+ *        File name and path utilities				*
+ *        							*
  ************************************************************************/
 
 static int checkTestFile(const char *filename) {
@@ -65,9 +65,9 @@ static xmlChar *composeDir(const xmlChar *dir, const xmlChar *path) {
 }
 
 /************************************************************************
- *    								*
- *    	Libxml2 specific routines				*
- *    								*
+ *        							*
+ *        Libxml2 specific routines				*
+ *        							*
  ************************************************************************/
 
 static int nb_tests = 0;
@@ -120,7 +120,7 @@ static int addEntity(char *name, char *content) {
  */
 static xmlParserInputPtr
 testExternalEntityLoader(const char *URL, const char *ID,
-    		 xmlParserCtxtPtr ctxt) {
+        	 xmlParserCtxtPtr ctxt) {
     xmlParserInputPtr ret;
     int i;
 
@@ -130,7 +130,7 @@ testExternalEntityLoader(const char *URL, const char *ID,
                     (const xmlChar *) testEntitiesValue[i]);
         if (ret != NULL) {
             ret->filename = (const char *)
-    	                xmlStrdup((xmlChar *)testEntitiesName[i]);
+                        xmlStrdup((xmlChar *)testEntitiesName[i]);
         }
         return(ret);
     }
@@ -185,7 +185,7 @@ testErrorHandler(void *ctx  ATTRIBUTE_UNUSED, const char *msg, ...) {
     va_start(args, msg);
     res = vsnprintf(&testErrors[testErrorsSize],
                     32768 - testErrorsSize,
-    	    msg, args);
+            msg, args);
     va_end(args);
     if (testErrorsSize + res >= 32768) {
         /* buffer is full */
@@ -282,9 +282,9 @@ getString(xmlNodePtr cur, const char *xpath) {
 }
 
 /************************************************************************
- *    								*
- *    	Test test/xsdtest/xsdtestsuite.xml			*
- *    								*
+ *        							*
+ *        Test test/xsdtest/xsdtestsuite.xml			*
+ *        							*
  ************************************************************************/
 
 static int
@@ -326,7 +326,7 @@ xsdIncorrectTestCase(xmlNodePtr cur) {
     xmlRelaxNGFreeParserCtxt(pctxt);
     if (rng != NULL) {
     test_log("Failed to detect incorrect RNG line %ld\n",
-    	    xmlGetLineNo(test));
+            xmlGetLineNo(test));
         ret = 1;
     goto done;
     }
@@ -339,7 +339,7 @@ done:
     xmlResetLastError();
     if ((memt < xmlMemUsed()) && (extraMemoryFromResolver == 0)) {
     test_log("Validation of tests starting line %ld leaked %d\n",
-    	xmlGetLineNo(cur), xmlMemUsed() - memt);
+        xmlGetLineNo(cur), xmlMemUsed() - memt);
     nb_leaks++;
     }
     return(ret);
@@ -368,7 +368,7 @@ installResources(xmlNodePtr tst, const xmlChar *base) {
         content = xmlStrdup(buf->content);
         if ((name != NULL) && (content != NULL)) {
             res = composeDir(base, name);
-    	xmlFree(name);
+        xmlFree(name);
             addEntity((char *) res, (char *) content);
         } else {
             if (name != NULL) xmlFree(name);
@@ -478,12 +478,12 @@ xsdTestCase(xmlNodePtr tst) {
     test = getNext(tmp, "./*");
     if (test == NULL) {
         fprintf(stderr, "Failed to find test in <valid> line %ld\n",
-    	    xmlGetLineNo(tmp));
+            xmlGetLineNo(tmp));
 
     } else {
         xmlBufferEmpty(buf);
         if (dtd != NULL)
-    	xmlBufferAdd(buf, dtd, -1);
+        xmlBufferAdd(buf, dtd, -1);
         xmlNodeDump(buf, test->doc, test, 0, 0);
 
         /*
@@ -494,31 +494,31 @@ xsdTestCase(xmlNodePtr tst) {
             doc = xmlReadMemory((const char *)buf->content, buf->use,
                             "test", NULL, 0);
         if (doc == NULL) {
-    	test_log("Failed to parse valid instance line %ld\n",
-    		xmlGetLineNo(tmp));
-    	nb_errors++;
+        test_log("Failed to parse valid instance line %ld\n",
+        	xmlGetLineNo(tmp));
+        nb_errors++;
         } else {
-    	nb_tests++;
+        nb_tests++;
             ctxt = xmlRelaxNGNewValidCtxt(rng);
-    	xmlRelaxNGSetValidErrors(ctxt,
+        xmlRelaxNGSetValidErrors(ctxt,
                         testErrorHandler, testErrorHandler, ctxt);
-    	ret = xmlRelaxNGValidateDoc(ctxt, doc);
-    	xmlRelaxNGFreeValidCtxt(ctxt);
-    	if (ret > 0) {
-    	    test_log("Failed to validate valid instance line %ld\n",
-    			xmlGetLineNo(tmp));
-    	    nb_errors++;
-    	} else if (ret < 0) {
-    	    test_log("Internal error validating instance line %ld\n",
-    		    xmlGetLineNo(tmp));
-    	    nb_errors++;
-    	}
-    	xmlFreeDoc(doc);
+        ret = xmlRelaxNGValidateDoc(ctxt, doc);
+        xmlRelaxNGFreeValidCtxt(ctxt);
+        if (ret > 0) {
+            test_log("Failed to validate valid instance line %ld\n",
+        		xmlGetLineNo(tmp));
+            nb_errors++;
+        } else if (ret < 0) {
+            test_log("Internal error validating instance line %ld\n",
+        	    xmlGetLineNo(tmp));
+            nb_errors++;
+        }
+        xmlFreeDoc(doc);
         }
         xmlResetLastError();
         if ((mem != xmlMemUsed()) && (extraMemoryFromResolver == 0)) {
             test_log("Validation of instance line %ld leaked %d\n",
-    	        xmlGetLineNo(tmp), xmlMemUsed() - mem);
+                xmlGetLineNo(tmp), xmlMemUsed() - mem);
             nb_leaks++;
         }
     }
@@ -534,7 +534,7 @@ xsdTestCase(xmlNodePtr tst) {
     test = getNext(tmp, "./*");
     if (test == NULL) {
         fprintf(stderr, "Failed to find test in <invalid> line %ld\n",
-    	    xmlGetLineNo(tmp));
+            xmlGetLineNo(tmp));
 
     } else {
         xmlBufferEmpty(buf);
@@ -548,31 +548,31 @@ xsdTestCase(xmlNodePtr tst) {
             doc = xmlReadMemory((const char *)buf->content, buf->use,
                             "test", NULL, 0);
         if (doc == NULL) {
-    	test_log("Failed to parse valid instance line %ld\n",
-    		xmlGetLineNo(tmp));
-    	nb_errors++;
+        test_log("Failed to parse valid instance line %ld\n",
+        	xmlGetLineNo(tmp));
+        nb_errors++;
         } else {
-    	nb_tests++;
+        nb_tests++;
             ctxt = xmlRelaxNGNewValidCtxt(rng);
-    	xmlRelaxNGSetValidErrors(ctxt,
+        xmlRelaxNGSetValidErrors(ctxt,
                         testErrorHandler, testErrorHandler, ctxt);
-    	ret = xmlRelaxNGValidateDoc(ctxt, doc);
-    	xmlRelaxNGFreeValidCtxt(ctxt);
-    	if (ret == 0) {
-    	    test_log("Failed to detect invalid instance line %ld\n",
-    			xmlGetLineNo(tmp));
-    	    nb_errors++;
-    	} else if (ret < 0) {
-    	    test_log("Internal error validating instance line %ld\n",
-    		    xmlGetLineNo(tmp));
-    	    nb_errors++;
-    	}
-    	xmlFreeDoc(doc);
+        ret = xmlRelaxNGValidateDoc(ctxt, doc);
+        xmlRelaxNGFreeValidCtxt(ctxt);
+        if (ret == 0) {
+            test_log("Failed to detect invalid instance line %ld\n",
+        		xmlGetLineNo(tmp));
+            nb_errors++;
+        } else if (ret < 0) {
+            test_log("Internal error validating instance line %ld\n",
+        	    xmlGetLineNo(tmp));
+            nb_errors++;
+        }
+        xmlFreeDoc(doc);
         }
         xmlResetLastError();
         if ((mem != xmlMemUsed()) && (extraMemoryFromResolver == 0)) {
             test_log("Validation of instance line %ld leaked %d\n",
-    	        xmlGetLineNo(tmp), xmlMemUsed() - mem);
+                xmlGetLineNo(tmp), xmlMemUsed() - mem);
             nb_leaks++;
         }
     }
@@ -587,7 +587,7 @@ done:
     xmlResetLastError();
     if ((memt != xmlMemUsed()) && (memt != 0)) {
     test_log("Validation of tests starting line %ld leaked %d\n",
-    	xmlGetLineNo(cur), xmlMemUsed() - memt);
+        xmlGetLineNo(cur), xmlMemUsed() - memt);
     nb_leaks++;
     }
     return(ret);
@@ -661,8 +661,8 @@ rngTestSuite(xmlNodePtr cur) {
     } else {
         doc = getString(cur, "string(section)");
         if (doc != NULL) {
-    	printf("Section %s\n", doc);
-    	xmlFree(doc);
+        printf("Section %s\n", doc);
+        xmlFree(doc);
         }
     }
     }
@@ -752,9 +752,9 @@ done:
 }
 
 /************************************************************************
- *    								*
- *    	Schemas test suites from W3C/NIST/MS/Sun		*
- *    								*
+ *        							*
+ *        Schemas test suites from W3C/NIST/MS/Sun		*
+ *        							*
  ************************************************************************/
 
 static int
@@ -774,7 +774,7 @@ xstcTestInstance(xmlNodePtr cur, xmlSchemaPtr schemas,
                      "string(ts:instanceDocument/@xlink:href)");
     if ((href == NULL) || (href[0] == 0)) {
     test_log("testGroup line %ld misses href for schemaDocument\n",
-    	    xmlGetLineNo(cur));
+            xmlGetLineNo(cur));
     ret = -1;
     goto done;
     }
@@ -782,13 +782,13 @@ xstcTestInstance(xmlNodePtr cur, xmlSchemaPtr schemas,
     if (path == NULL) {
     fprintf(stderr,
             "Failed to build path to schemas testGroup line %ld : %s\n",
-    	xmlGetLineNo(cur), href);
+        xmlGetLineNo(cur), href);
     ret = -1;
     goto done;
     }
     if (checkTestFile((const char *) path) <= 0) {
     test_log("schemas for testGroup line %ld is missing: %s\n",
-    	xmlGetLineNo(cur), path);
+        xmlGetLineNo(cur), path);
     ret = -1;
     goto done;
     }
@@ -816,18 +816,18 @@ xstcTestInstance(xmlNodePtr cur, xmlSchemaPtr schemas,
     if (xmlStrEqual(validity, BAD_CAST "valid")) {
     if (ret > 0) {
         test_log("valid instance %s failed to validate against %s\n",
-    		path, spath);
+        	path, spath);
         nb_errors++;
     } else if (ret < 0) {
         test_log("valid instance %s got internal error validating %s\n",
-    		path, spath);
+        	path, spath);
         nb_internals++;
         nb_errors++;
     }
     } else if (xmlStrEqual(validity, BAD_CAST "invalid")) {
     if (ret == 0) {
         test_log("Failed to detect invalid instance %s against %s\n",
-    		path, spath);
+        	path, spath);
         nb_errors++;
     }
     } else {
@@ -846,7 +846,7 @@ done:
     xmlResetLastError();
     if (mem != xmlMemUsed()) {
     test_log("Validation of tests starting line %ld leaked %d\n",
-    	xmlGetLineNo(cur), xmlMemUsed() - mem);
+        xmlGetLineNo(cur), xmlMemUsed() - mem);
     nb_leaks++;
     }
     return(ret);
@@ -869,20 +869,20 @@ xstcTestGroup(xmlNodePtr cur, const char *base) {
                      "string(ts:schemaTest/ts:schemaDocument/@xlink:href)");
     if ((href == NULL) || (href[0] == 0)) {
         test_log("testGroup line %ld misses href for schemaDocument\n",
-    	    xmlGetLineNo(cur));
+            xmlGetLineNo(cur));
     ret = -1;
     goto done;
     }
     path = xmlBuildURI(href, BAD_CAST base);
     if (path == NULL) {
     test_log("Failed to build path to schemas testGroup line %ld : %s\n",
-    	xmlGetLineNo(cur), href);
+        xmlGetLineNo(cur), href);
     ret = -1;
     goto done;
     }
     if (checkTestFile((const char *) path) <= 0) {
     test_log("schemas for testGroup line %ld is missing: %s\n",
-    	xmlGetLineNo(cur), path);
+        xmlGetLineNo(cur), path);
     ret = -1;
     goto done;
     }
@@ -904,13 +904,13 @@ xstcTestGroup(xmlNodePtr cur, const char *base) {
     xmlSchemaFreeParserCtxt(ctxt);
     if (schemas == NULL) {
         test_log("valid schemas %s failed to parse\n",
-    		path);
+        	path);
         ret = 1;
         nb_errors++;
     }
     if ((ret == 0) && (strstr(testErrors, "nimplemented") != NULL)) {
         test_log("valid schemas %s hit an unimplemented block\n",
-    		path);
+        	path);
         ret = 1;
         nb_unimplemented++;
         nb_errors++;
@@ -918,16 +918,16 @@ xstcTestGroup(xmlNodePtr cur, const char *base) {
     instance = getNext(cur, "./ts:instanceTest[1]");
     while (instance != NULL) {
         if (schemas != NULL) {
-    	xstcTestInstance(instance, schemas, path, base);
+        xstcTestInstance(instance, schemas, path, base);
         } else {
-    	/*
-    	* We'll automatically mark the instances as failed
-    	* if the schema was broken.
-    	*/
-    	nb_errors++;
+        /*
+        * We'll automatically mark the instances as failed
+        * if the schema was broken.
+        */
+        nb_errors++;
         }
         instance = getNext(instance,
-    	"following-sibling::ts:instanceTest[1]");
+        "following-sibling::ts:instanceTest[1]");
     }
     } else if (xmlStrEqual(validity, BAD_CAST "invalid")) {
         nb_schematas++;
@@ -938,14 +938,14 @@ xstcTestGroup(xmlNodePtr cur, const char *base) {
     xmlSchemaFreeParserCtxt(ctxt);
     if (schemas != NULL) {
         test_log("Failed to detect error in schemas %s\n",
-    		path);
+        	path);
         nb_errors++;
         ret = 1;
     }
     if ((ret == 0) && (strstr(testErrors, "nimplemented") != NULL)) {
         nb_unimplemented++;
         test_log("invalid schemas %s hit an unimplemented block\n",
-    		path);
+        	path);
         ret = 1;
         nb_errors++;
     }
@@ -964,7 +964,7 @@ done:
     xmlResetLastError();
     if ((mem != xmlMemUsed()) && (extraMemoryFromResolver == 0)) {
     test_log("Processing test line %ld %s leaked %d\n",
-    	xmlGetLineNo(cur), path, xmlMemUsed() - mem);
+        xmlGetLineNo(cur), path, xmlMemUsed() - mem);
     nb_leaks++;
     }
     return(ret);
@@ -1018,9 +1018,9 @@ done:
 }
 
 /************************************************************************
- *    								*
- *    	The driver for the tests				*
- *    								*
+ *        							*
+ *        The driver for the tests				*
+ *        							*
  ************************************************************************/
 
 int
@@ -1088,7 +1088,7 @@ main(int argc ATTRIBUTE_UNUSED, char **argv ATTRIBUTE_UNUSED) {
     nb_internals = 0;
     nb_schematas = 0;
     xstcMetadata("xstc/Tests/Metadata/NISTXMLSchemaDatatypes.testSet",
-    	 "xstc/Tests/Metadata/");
+         "xstc/Tests/Metadata/");
     if ((nb_errors == old_errors) && (nb_leaks == old_leaks))
     printf("Ran %d tests (%d schemata), no errors\n",
            nb_tests - old_tests, nb_schematas);
@@ -1106,7 +1106,7 @@ main(int argc ATTRIBUTE_UNUSED, char **argv ATTRIBUTE_UNUSED) {
     nb_internals = 0;
     nb_schematas = 0;
     xstcMetadata("xstc/Tests/Metadata/SunXMLSchema1-0-20020116.testSet",
-    	 "xstc/Tests/");
+         "xstc/Tests/");
     if ((nb_errors == old_errors) && (nb_leaks == old_leaks)) {
     printf("Ran %d tests (%d schemata), no errors\n",
            nb_tests - old_tests, nb_schematas);
@@ -1127,7 +1127,7 @@ main(int argc ATTRIBUTE_UNUSED, char **argv ATTRIBUTE_UNUSED) {
     nb_internals = 0;
     nb_schematas = 0;
     xstcMetadata("xstc/Tests/Metadata/MSXMLSchema1-0-20020116.testSet",
-    	 "xstc/Tests/");
+         "xstc/Tests/");
     if ((nb_errors == old_errors) && (nb_leaks == old_leaks)) {
     printf("Ran %d tests (%d schemata), no errors\n",
            nb_tests - old_tests, nb_schematas);

@@ -30,9 +30,9 @@
 
 
 /************************************************************************
- *    								*
- *    		Module interfaces				*
- *    								*
+ *        							*
+ *        	Module interfaces				*
+ *        							*
  ************************************************************************/
 /**
  * xsltFixImportedCompSteps:
@@ -44,7 +44,7 @@
  *
  */
 static void xsltFixImportedCompSteps(xsltStylesheetPtr master,
-    		xsltStylesheetPtr style) {
+        	xsltStylesheetPtr style) {
     xsltStylesheetPtr res;
     xmlHashScan(style->templatesHash, xsltNormalizeCompSteps, master);
     master->extrasNr += style->extrasNr;
@@ -364,13 +364,13 @@ xsltFindElemSpaceHandling(xsltTransformContextPtr ctxt, xmlNodePtr node) {
             }
     } else {
         val = (const xmlChar *)
-    	  xmlHashLookup2(style->stripSpaces, node->name, NULL);
+          xmlHashLookup2(style->stripSpaces, node->name, NULL);
     }
     if (val != NULL) {
         if (xmlStrEqual(val, (xmlChar *) "strip"))
-    	return(1);
+        return(1);
         if (xmlStrEqual(val, (xmlChar *) "preserve"))
-    	return(0);
+        return(0);
     }
     if (style->stripAll == 1)
         return(1);

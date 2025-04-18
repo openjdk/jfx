@@ -25,9 +25,9 @@ static unsigned long  debugMemBlocks = 0;
 static xmlMutex xmlMemMutex;
 
 /************************************************************************
- *    								*
- *    	Macros, variables and associated types			*
- *    								*
+ *        							*
+ *        Macros, variables and associated types			*
+ *        							*
  ************************************************************************/
 
 /*
@@ -47,7 +47,7 @@ typedef struct memnod {
 #define ALIGN_SIZE  sizeof(double)
 #endif
 #define RESERVE_SIZE (((sizeof(MEMHDR) + ALIGN_SIZE - 1) \
-    	      / ALIGN_SIZE ) * ALIGN_SIZE)
+              / ALIGN_SIZE ) * ALIGN_SIZE)
 
 #define MAX_SIZE_T ((size_t)-1)
 
@@ -386,9 +386,9 @@ xmlMemoryDump(void)
 
 
 /****************************************************************
- *    							*
- *    	Initialization Routines				*
- *    							*
+ *        						*
+ *        Initialization Routines				*
+ *        						*
  ****************************************************************/
 
 /**

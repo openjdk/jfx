@@ -20,9 +20,9 @@
 #include "private/string.h"
 
 /************************************************************************
- *    								*
- *    		Error struct					*
- *    								*
+ *        							*
+ *        	Error struct					*
+ *        							*
  ************************************************************************/
 
 static int
@@ -177,9 +177,9 @@ xmlVUpdateError(xmlError *err,
 }
 
 /************************************************************************
- *    								*
- *    		Handling of out of context errors		*
- *    								*
+ *        							*
+ *        	Handling of out of context errors		*
+ *        							*
  ************************************************************************/
 
 /**
@@ -287,9 +287,9 @@ xmlSetStructuredErrorFunc(void *ctx, xmlStructuredErrorFunc handler) {
 }
 
 /************************************************************************
- *    								*
- *    		Handling of parsing errors			*
- *    								*
+ *        							*
+ *        	Handling of parsing errors			*
+ *        							*
  ************************************************************************/
 
 /**
@@ -306,11 +306,11 @@ xmlParserPrintFileInfo(xmlParserInputPtr input) {
     if (input != NULL) {
     if (input->filename)
         xmlGenericError(xmlGenericErrorContext,
-    	    "%s:%d: ", input->filename,
-    	    input->line);
+            "%s:%d: ", input->filename,
+            input->line);
     else
         xmlGenericError(xmlGenericErrorContext,
-    	    "Entity: line %d: ", input->line);
+            "Entity: line %d: ", input->line);
     }
 }
 
@@ -323,7 +323,7 @@ xmlParserPrintFileInfo(xmlParserInputPtr input) {
 
 static void
 xmlParserPrintFileContextInternal(xmlParserInputPtr input ,
-    	xmlGenericErrorFunc channel, void *data ) {
+        xmlGenericErrorFunc channel, void *data ) {
     const xmlChar *cur, *base, *start;
     unsigned int n, col;    /* GCC warns if signed, because compared with sizeof() */
     xmlChar  content[81]; /* space for 80 chars + line terminator */
@@ -470,8 +470,8 @@ xmlFormatError(const xmlError *err, xmlGenericErrorFunc channel, void *data)
             channel(data, "%s:%d: ", file, line);
         else if ((line != 0) &&
              ((domain == XML_FROM_PARSER) || (domain == XML_FROM_SCHEMASV)||
-    	  (domain == XML_FROM_SCHEMASP)||(domain == XML_FROM_DTD) ||
-    	  (domain == XML_FROM_RELAXNGP)||(domain == XML_FROM_RELAXNGV)))
+          (domain == XML_FROM_SCHEMASP)||(domain == XML_FROM_DTD) ||
+          (domain == XML_FROM_RELAXNGP)||(domain == XML_FROM_RELAXNGV)))
             channel(data, "Entity: line %d: ", line);
     }
     if (name != NULL) {
@@ -905,9 +905,9 @@ xmlParserValidityWarning(void *ctx, const char *msg ATTRIBUTE_UNUSED, ...)
 
 
 /************************************************************************
- *    								*
- *    		Extended Error Handling				*
- *    								*
+ *        							*
+ *        	Extended Error Handling				*
+ *        							*
  ************************************************************************/
 
 /**

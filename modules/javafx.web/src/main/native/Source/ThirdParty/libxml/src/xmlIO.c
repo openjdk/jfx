@@ -109,9 +109,9 @@ static int xmlOutputCallbackNr;
 #endif /* LIBXML_OUTPUT_ENABLED */
 
 /************************************************************************
- *    								*
- *    		Error handling					*
- *    								*
+ *        							*
+ *        	Error handling					*
+ *        							*
  ************************************************************************/
 
 /**
@@ -344,9 +344,9 @@ xmlIOErr(int code, const char *extra)
 }
 
 /************************************************************************
- *    								*
- *    	Standard I/O for file accesses				*
- *    								*
+ *        							*
+ *        Standard I/O for file accesses				*
+ *        							*
  ************************************************************************/
 
 #if defined(_WIN32)
@@ -877,9 +877,9 @@ xmlBufferWrite (void * context, const char * buffer, int len) {
 
 #ifdef LIBXML_ZLIB_ENABLED
 /************************************************************************
- *    								*
- *    	I/O for compressed file accesses			*
- *    								*
+ *        							*
+ *        I/O for compressed file accesses			*
+ *        							*
  ************************************************************************/
 
 /**
@@ -939,9 +939,9 @@ xmlGzfileClose (void * context) {
 #endif /* LIBXML_ZLIB_ENABLED */
 
 /************************************************************************
- *    								*
- *    	I/O for compressed file accesses			*
- *    								*
+ *        							*
+ *        I/O for compressed file accesses			*
+ *        							*
  ************************************************************************/
 
 #ifdef LIBXML_LZMA_ENABLED
@@ -984,9 +984,9 @@ xmlXzfileClose (void * context) {
 #endif /* LIBXML_LZMA_ENABLED */
 
 /************************************************************************
- *    								*
- *    		I/O for HTTP file accesses			*
- *    								*
+ *        							*
+ *        	I/O for HTTP file accesses			*
+ *        							*
  ************************************************************************/
 
 #ifdef LIBXML_HTTP_ENABLED
@@ -1077,9 +1077,9 @@ xmlIOHTTPClose (void * context) {
 
 #ifdef LIBXML_FTP_ENABLED
 /************************************************************************
- *    								*
- *    		I/O for FTP file accesses			*
- *    								*
+ *        							*
+ *        	I/O for FTP file accesses			*
+ *        							*
  ************************************************************************/
 /**
  * xmlIOFTPMatch:
@@ -1148,9 +1148,9 @@ xmlIOFTPClose (void * context) {
 #endif /* LIBXML_FTP_ENABLED */
 
 /************************************************************************
- *    								*
- *    		Input/output buffers				*
- *    								*
+ *        							*
+ *        	Input/output buffers				*
+ *        							*
  ************************************************************************/
 
 static int
@@ -1797,7 +1797,7 @@ xmlOutputBufferCreateFilename(const char *URI,
                               xmlCharEncodingHandlerPtr encoder,
                               int compression ATTRIBUTE_UNUSED) {
     if ((xmlOutputBufferCreateFilenameValue)) {
-    	return xmlOutputBufferCreateFilenameValue(URI, encoder, compression);
+        return xmlOutputBufferCreateFilenameValue(URI, encoder, compression);
     }
     return __xmlOutputBufferCreateFilename(URI, encoder, compression);
 }
@@ -2277,7 +2277,7 @@ xmlOutputBufferCreateFilenameDefault(xmlOutputBufferCreateFilenameFunc func)
     xmlOutputBufferCreateFilenameFunc old = xmlOutputBufferCreateFilenameValue;
 #ifdef LIBXML_OUTPUT_ENABLED
     if (old == NULL) {
-    	old = __xmlOutputBufferCreateFilename;
+        old = __xmlOutputBufferCreateFilename;
     }
 #endif
     xmlOutputBufferCreateFilenameValue = func;
@@ -2487,7 +2487,7 @@ xmlOutputBufferWrite(xmlOutputBufferPtr out, int len, const char *buf) {
          * Store the data in the incoming raw buffer
          */
         if (out->conv == NULL) {
-    	out->conv = xmlBufCreate();
+        out->conv = xmlBufCreate();
                 if (out->conv == NULL) {
                     out->error = XML_ERR_NO_MEMORY;
                     return(-1);
@@ -2500,14 +2500,14 @@ xmlOutputBufferWrite(xmlOutputBufferPtr out, int len, const char *buf) {
             }
 
         if ((xmlBufUse(out->buffer) < MINLEN) && (chunk == len))
-    	goto done;
+        goto done;
 
         /*
          * convert as much as possible to the parser reading buffer.
          */
         ret = xmlCharEncOutput(out, 0);
         if (ret < 0)
-    	return(-1);
+        return(-1);
             if (out->writecallback)
             nbchars = xmlBufUse(out->conv);
             else
@@ -2534,22 +2534,22 @@ xmlOutputBufferWrite(xmlOutputBufferPtr out, int len, const char *buf) {
          * second write the stuff to the I/O channel
          */
         if (out->encoder != NULL) {
-    	ret = out->writecallback(out->context,
+        ret = out->writecallback(out->context,
                            (const char *)xmlBufContent(out->conv), nbchars);
-    	if (ret >= 0)
-    	    xmlBufShrink(out->conv, ret);
+        if (ret >= 0)
+            xmlBufShrink(out->conv, ret);
         } else {
-    	ret = out->writecallback(out->context,
+        ret = out->writecallback(out->context,
                            (const char *)xmlBufContent(out->buffer), nbchars);
-    	if (ret >= 0)
-    	    xmlBufShrink(out->buffer, ret);
+        if (ret >= 0)
+            xmlBufShrink(out->buffer, ret);
         }
         if (ret < 0) {
                 int errNo = (ret == -1) ? XML_IO_WRITE : -ret;
 
-    	xmlIOErr(errNo, NULL);
-    	out->error = errNo;
-    	return(ret);
+        xmlIOErr(errNo, NULL);
+        out->error = errNo;
+        return(ret);
         }
             if (out->written > INT_MAX - ret)
                 out->written = INT_MAX;
@@ -2687,7 +2687,7 @@ xmlOutputBufferWriteEscape(xmlOutputBufferPtr out, const xmlChar *str,
          * Store the data in the incoming raw buffer
          */
         if (out->conv == NULL) {
-    	out->conv = xmlBufCreate();
+        out->conv = xmlBufCreate();
                 if (out->conv == NULL) {
                     out->error = XML_ERR_NO_MEMORY;
                     return(-1);
@@ -2702,14 +2702,14 @@ xmlOutputBufferWriteEscape(xmlOutputBufferPtr out, const xmlChar *str,
             xmlBufAddLen(out->buffer, chunk);
 
         if ((xmlBufUse(out->buffer) < MINLEN) && (cons == len))
-    	goto done;
+        goto done;
 
         /*
          * convert as much as possible to the output buffer.
          */
         ret = xmlCharEncOutput(out, 0);
         if (ret < 0)
-    	return(-1);
+        return(-1);
             if (out->writecallback)
             nbchars = xmlBufUse(out->conv);
             else
@@ -2737,21 +2737,21 @@ xmlOutputBufferWriteEscape(xmlOutputBufferPtr out, const xmlChar *str,
          * second write the stuff to the I/O channel
          */
         if (out->encoder != NULL) {
-    	ret = out->writecallback(out->context,
+        ret = out->writecallback(out->context,
                            (const char *)xmlBufContent(out->conv), nbchars);
-    	if (ret >= 0)
-    	    xmlBufShrink(out->conv, ret);
+        if (ret >= 0)
+            xmlBufShrink(out->conv, ret);
         } else {
-    	ret = out->writecallback(out->context,
+        ret = out->writecallback(out->context,
                            (const char *)xmlBufContent(out->buffer), nbchars);
-    	if (ret >= 0)
-    	    xmlBufShrink(out->buffer, ret);
+        if (ret >= 0)
+            xmlBufShrink(out->buffer, ret);
         }
         if (ret < 0) {
                 int errNo = (ret == -1) ? XML_IO_WRITE : -ret;
-    	xmlIOErr(errNo, NULL);
-    	out->error = errNo;
-    	return(-1);
+        xmlIOErr(errNo, NULL);
+        out->error = errNo;
+        return(-1);
         }
             if (out->written > INT_MAX - ret)
                 out->written = INT_MAX;
@@ -2870,7 +2870,7 @@ xmlOutputBufferFlush(xmlOutputBufferPtr out) {
     do {
         nbchars = xmlCharEncOutput(out, 0);
         if (nbchars < 0)
-    	return(-1);
+        return(-1);
     } while (nbchars);
     }
 
@@ -2978,9 +2978,9 @@ xmlNoNetExists(const char *filename) {
 }
 
 /************************************************************************
- *    								*
- *    		Input/output callbacks				*
- *    								*
+ *        							*
+ *        	Input/output callbacks				*
+ *        							*
  ************************************************************************/
 
 /**

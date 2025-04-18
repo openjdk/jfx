@@ -38,9 +38,9 @@ const char *skipped_tests[] = {
 };
 
 /************************************************************************
- *    								*
- *    	File name and path utilities				*
- *    								*
+ *        							*
+ *        File name and path utilities				*
+ *        							*
  ************************************************************************/
 
 static int checkTestFile(const char *filename) {
@@ -71,9 +71,9 @@ static xmlChar *composeDir(const xmlChar *dir, const xmlChar *path) {
 }
 
 /************************************************************************
- *    								*
- *    	Libxml2 specific routines				*
- *    								*
+ *        							*
+ *        Libxml2 specific routines				*
+ *        							*
  ************************************************************************/
 
 static int nb_skipped = 0;
@@ -87,7 +87,7 @@ static int nb_leaks = 0;
  */
 static xmlParserInputPtr
 testExternalEntityLoader(const char *URL, const char *ID ATTRIBUTE_UNUSED,
-    		 xmlParserCtxtPtr ctxt) {
+        	 xmlParserCtxtPtr ctxt) {
     xmlParserInputPtr ret;
 
     ret = xmlNewInputFromFile(ctxt, (const char *) URL);
@@ -129,8 +129,8 @@ testErrorHandler(void *userData ATTRIBUTE_UNUSED, const xmlError *error) {
         return;
     res = snprintf(&testErrors[testErrorsSize],
                     32768 - testErrorsSize,
-    	   "%s:%d: %s\n", (error->file ? error->file : "entity"),
-    	   error->line, error->message);
+           "%s:%d: %s\n", (error->file ? error->file : "entity"),
+           error->line, error->message);
     if (error->level == XML_ERR_FATAL)
         nbFatal++;
     else if (error->level == XML_ERR_ERROR)
@@ -166,9 +166,9 @@ initializeLibxml2(void) {
 }
 
 /************************************************************************
- *    								*
- *    	Run the xmlconf test if found				*
- *    								*
+ *        							*
+ *        Run the xmlconf test if found				*
+ *        							*
  ************************************************************************/
 
 static int
@@ -192,7 +192,7 @@ xmlconfTestInvalid(const char *id, const char *filename, int options) {
     /* invalidity should be reported both in the context and in the document */
         if ((ctxt->valid != 0) || (doc->properties & XML_DOC_DTDVALID)) {
         test_log("test %s : %s failed to detect invalid document\n",
-    	     id, filename);
+             id, filename);
         nb_errors++;
         ret = 0;
     }
@@ -225,7 +225,7 @@ xmlconfTestValid(const char *id, const char *filename, int options) {
     /* validity should be reported both in the context and in the document */
         if ((ctxt->valid == 0) || ((doc->properties & XML_DOC_DTDVALID) == 0)) {
         test_log("test %s : %s failed to validate a valid document\n",
-    	     id, filename);
+             id, filename);
         nb_errors++;
         ret = 0;
     }
@@ -259,7 +259,7 @@ xmlconfTestNotNSWF(const char *id, const char *filename, int options) {
     if ((error->code == XML_ERR_OK) ||
         (error->domain != XML_FROM_NAMESPACE)) {
         test_log("test %s : %s failed to detect namespace error\n",
-    	     id, filename);
+             id, filename);
         nb_errors++;
         ret = 0;
     }
@@ -464,8 +464,8 @@ xmlconfTestCases(xmlDocPtr doc, xmlNodePtr cur, int level) {
             ret += xmlconfTestCases(doc, cur, level);
         } else if (xmlStrEqual(cur->name, BAD_CAST "TEST")) {
             if (xmlconfTestItem(doc, cur) >= 0)
-    	    ret++;
-    	tests++;
+            ret++;
+        tests++;
         } else {
             fprintf(stderr, "Unhandled element %s\n", (char *)cur->name);
         }
@@ -545,9 +545,9 @@ xmlconfTest(void) {
 }
 
 /************************************************************************
- *    								*
- *    	The driver for the tests				*
- *    								*
+ *        							*
+ *        The driver for the tests				*
+ *        							*
  ************************************************************************/
 
 int

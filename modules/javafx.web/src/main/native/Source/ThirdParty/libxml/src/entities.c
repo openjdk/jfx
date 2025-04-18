@@ -154,7 +154,7 @@ xmlCreateEntity(xmlDocPtr doc, const xmlChar *name, int type,
         ret->content = NULL;
     }
     ret->URI = NULL; /* to be computed by the layer knowing
-    		the defining entity */
+        	the defining entity */
     ret->orig = NULL;
 
     return(ret);
@@ -243,7 +243,7 @@ xmlAddEntity(xmlDocPtr doc, int extSubset, const xmlChar *name, int type,
                     return(XML_ERR_REDECL_PREDEF_ENTITY);
             }
         if (dtd->entities == NULL) {
-    	dtd->entities = xmlHashCreateDict(0, dict);
+        dtd->entities = xmlHashCreateDict(0, dict);
                 if (dtd->entities == NULL)
                     return(XML_ERR_NO_MEMORY);
             }
@@ -252,7 +252,7 @@ xmlAddEntity(xmlDocPtr doc, int extSubset, const xmlChar *name, int type,
         case XML_INTERNAL_PARAMETER_ENTITY:
         case XML_EXTERNAL_PARAMETER_ENTITY:
         if (dtd->pentities == NULL) {
-    	dtd->pentities = xmlHashCreateDict(0, dict);
+        dtd->pentities = xmlHashCreateDict(0, dict);
                 if (dtd->pentities == NULL)
                     return(XML_ERR_NO_MEMORY);
             }
@@ -347,7 +347,7 @@ xmlGetPredefinedEntity(const xmlChar *name) {
 xmlEntityPtr
 xmlAddDtdEntity(xmlDocPtr doc, const xmlChar *name, int type,
             const xmlChar *ExternalID, const xmlChar *SystemID,
-    	const xmlChar *content) {
+        const xmlChar *content) {
     xmlEntityPtr ret;
 
     xmlAddEntity(doc, 1, name, type, ExternalID, SystemID, content, &ret);
@@ -497,15 +497,15 @@ xmlGetDocEntity(const xmlDoc *doc, const xmlChar *name) {
         table = (xmlEntitiesTablePtr) doc->intSubset->entities;
         cur = xmlGetEntityFromTable(table, name);
         if (cur != NULL)
-    	return(cur);
+        return(cur);
     }
     if (doc->standalone != 1) {
         if ((doc->extSubset != NULL) &&
-    	(doc->extSubset->entities != NULL)) {
-    	table = (xmlEntitiesTablePtr) doc->extSubset->entities;
-    	cur = xmlGetEntityFromTable(table, name);
-    	if (cur != NULL)
-    	    return(cur);
+        (doc->extSubset->entities != NULL)) {
+        table = (xmlEntitiesTablePtr) doc->extSubset->entities;
+        cur = xmlGetEntityFromTable(table, name);
+        if (cur != NULL)
+            return(cur);
         }
     }
     }
@@ -515,14 +515,14 @@ xmlGetDocEntity(const xmlDoc *doc, const xmlChar *name) {
 /*
  * Macro used to grow the current buffer.
  */
-#define growBufferReentrant() {    					\
+#define growBufferReentrant() {        				\
     xmlChar *tmp;                                                       \
     size_t new_size = buffer_size * 2;                                  \
     if (new_size < buffer_size) goto mem_error;                         \
     tmp = (xmlChar *) xmlRealloc(buffer, new_size);                    \
     if (tmp == NULL) goto mem_error;                                    \
-    buffer = tmp;    						\
-    buffer_size = new_size;    					\
+    buffer = tmp;        					\
+    buffer_size = new_size;        				\
 }
 
 /**
@@ -580,17 +580,17 @@ xmlEncodeEntitiesInternal(xmlDocPtr doc, const xmlChar *input, int attr) {
             (cur[1] == '!') && (cur[2] == '-') && (cur[3] == '-') &&
             ((end = xmlStrstr(cur, BAD_CAST "-->")) != NULL)) {
             while (cur != end) {
-    	    *out++ = *cur++;
-    	    indx = out - buffer;
-    	    if (indx + 100 > buffer_size) {
-    		growBufferReentrant();
-    		out = &buffer[indx];
-    	    }
-    	}
-    	*out++ = *cur++;
-    	*out++ = *cur++;
-    	*out++ = *cur++;
-    	continue;
+            *out++ = *cur++;
+            indx = out - buffer;
+            if (indx + 100 > buffer_size) {
+        	growBufferReentrant();
+        	out = &buffer[indx];
+            }
+        }
+        *out++ = *cur++;
+        *out++ = *cur++;
+        *out++ = *cur++;
+        continue;
         }
         *out++ = '&';
         *out++ = 'l';
@@ -609,15 +609,15 @@ xmlEncodeEntitiesInternal(xmlDocPtr doc, const xmlChar *input, int attr) {
         if (html && attr && (cur[1] == '{') &&
             (strchr((const char *) cur, '}'))) {
             while (*cur != '}') {
-    	    *out++ = *cur++;
-    	    indx = out - buffer;
-    	    if (indx + 100 > buffer_size) {
-    		growBufferReentrant();
-    		out = &buffer[indx];
-    	    }
-    	}
-    	*out++ = *cur++;
-    	continue;
+            *out++ = *cur++;
+            indx = out - buffer;
+            if (indx + 100 > buffer_size) {
+        	growBufferReentrant();
+        	out = &buffer[indx];
+            }
+        }
+        *out++ = *cur++;
+        continue;
         }
         *out++ = '&';
         *out++ = 'a';
@@ -632,32 +632,32 @@ xmlEncodeEntitiesInternal(xmlDocPtr doc, const xmlChar *input, int attr) {
         *out++ = *cur;
     } else if (*cur >= 0x80) {
         if (((doc != NULL) && (doc->encoding != NULL)) || (html)) {
-    	/*
-    	 * Bjørn Reese <br@sseusa.com> provided the patch
+        /*
+         * Bjørn Reese <br@sseusa.com> provided the patch
             xmlChar xc;
             xc = (*cur & 0x3F) << 6;
             if (cur[1] != 0) {
-    	    xc += *(++cur) & 0x3F;
-    	    *out++ = xc;
+            xc += *(++cur) & 0x3F;
+            *out++ = xc;
             } else
-    	 */
-    	*out++ = *cur;
+         */
+        *out++ = *cur;
         } else {
-    	/*
-    	 * We assume we have UTF-8 input.
-    	 * It must match either:
-    	 *   110xxxxx 10xxxxxx
-    	 *   1110xxxx 10xxxxxx 10xxxxxx
-    	 *   11110xxx 10xxxxxx 10xxxxxx 10xxxxxx
-    	 * That is:
-    	 *   cur[0] is 11xxxxxx
-    	 *   cur[1] is 10xxxxxx
-    	 *   cur[2] is 10xxxxxx if cur[0] is 111xxxxx
-    	 *   cur[3] is 10xxxxxx if cur[0] is 1111xxxx
-    	 *   cur[0] is not 11111xxx
-    	 */
-    	char buf[13], *ptr;
-    	int val, l;
+        /*
+         * We assume we have UTF-8 input.
+         * It must match either:
+         *   110xxxxx 10xxxxxx
+         *   1110xxxx 10xxxxxx 10xxxxxx
+         *   11110xxx 10xxxxxx 10xxxxxx 10xxxxxx
+         * That is:
+         *   cur[0] is 11xxxxxx
+         *   cur[1] is 10xxxxxx
+         *   cur[2] is 10xxxxxx if cur[0] is 111xxxxx
+         *   cur[3] is 10xxxxxx if cur[0] is 1111xxxx
+         *   cur[0] is not 11111xxx
+         */
+        char buf[13], *ptr;
+        int val, l;
 
                 l = 4;
                 val = xmlGetUTF8Char(cur, &l);
@@ -668,15 +668,15 @@ xmlEncodeEntitiesInternal(xmlDocPtr doc, const xmlChar *input, int attr) {
                     if (!IS_CHAR(val))
                         val = 0xFFFD;
                     cur += l;
-    	}
-    	/*
-    	 * We could do multiple things here. Just save as a char ref
-    	 */
-    	snprintf(buf, sizeof(buf), "&#x%X;", val);
-    	buf[sizeof(buf) - 1] = 0;
-    	ptr = buf;
-    	while (*ptr != 0) *out++ = *ptr++;
-    	continue;
+        }
+        /*
+         * We could do multiple things here. Just save as a char ref
+         */
+        snprintf(buf, sizeof(buf), "&#x%X;", val);
+        buf[sizeof(buf) - 1] = 0;
+        ptr = buf;
+        while (*ptr != 0) *out++ = *ptr++;
+        continue;
         }
     } else if (IS_BYTE_CHAR(*cur)) {
         char buf[11], *ptr;

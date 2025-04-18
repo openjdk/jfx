@@ -106,19 +106,19 @@
 typedef struct xmlNanoHTTPCtxt {
     char *protocol;    /* the protocol name */
     char *hostname;    /* the host name */
-    int port;    	/* the port */
-    char *path;    	/* the path within the URL */
+    int port;        /* the port */
+    char *path;        /* the path within the URL */
     char *query;    /* the query string */
-    SOCKET fd;    	/* the file descriptor for the socket */
-    int state;    	/* WRITE / READ / CLOSED */
-    char *out;    	/* buffer sent (zero terminated) */
+    SOCKET fd;        /* the file descriptor for the socket */
+    int state;        /* WRITE / READ / CLOSED */
+    char *out;        /* buffer sent (zero terminated) */
     char *outptr;    /* index within the buffer sent */
-    char *in;    	/* the receiving buffer */
+    char *in;        /* the receiving buffer */
     char *content;    /* the start of the content */
     char *inptr;    /* the next byte to read from network */
     char *inrptr;    /* the next byte to give back to the client */
-    int inlen;    	/* len of the input buffer */
-    int last;    	/* return code for last operation */
+    int inlen;        /* len of the input buffer */
+    int last;        /* return code for last operation */
     int returnValue;    /* the protocol return value */
     int version;        /* the protocol version */
     int ContentLength;  /* specified content length from HTTP header */
@@ -625,11 +625,11 @@ xmlNanoHTTPReadLine(xmlNanoHTTPCtxtPtr ctxt) {
     while (bp - buf < 4095) {
     if (ctxt->inrptr == ctxt->inptr) {
         if ( (rc = xmlNanoHTTPRecv(ctxt)) == 0) {
-    	if (bp == buf)
-    	    return(NULL);
-    	else
-    	    *bp = 0;
-    	return(xmlMemStrdup(buf));
+        if (bp == buf)
+            return(NULL);
+        else
+            *bp = 0;
+        return(xmlMemStrdup(buf));
         }
         else if ( rc == -1 ) {
             return ( NULL );
@@ -681,12 +681,12 @@ xmlNanoHTTPScanAnswer(xmlNanoHTTPCtxtPtr ctxt, const char *line) {
     if (*cur == '.') {
         cur++;
         if ((*cur >= '0') && (*cur <= '9')) {
-    	version *= 10;
-    	version += *cur - '0';
-    	cur++;
+        version *= 10;
+        version += *cur - '0';
+        cur++;
         }
         while ((*cur >= '0') && (*cur <= '9'))
-    	cur++;
+        cur++;
     } else
         version *= 10;
     if ((*cur != ' ') && (*cur != '\t')) return;
@@ -721,7 +721,7 @@ xmlNanoHTTPScanAnswer(xmlNanoHTTPCtxtPtr ctxt, const char *line) {
         last = charset;
         while ((*last != 0) && (*last != ' ') && (*last != '\t') &&
                (*last != ';') && (*last != ','))
-    	last++;
+        last++;
         if (ctxt->encoding != NULL)
             xmlFree(ctxt->encoding);
         ctxt->encoding = (char *) xmlStrndup(charset, last - charset);
@@ -746,7 +746,7 @@ xmlNanoHTTPScanAnswer(xmlNanoHTTPCtxtPtr ctxt, const char *line) {
         last = charset;
         while ((*last != 0) && (*last != ' ') && (*last != '\t') &&
                (*last != ';') && (*last != ','))
-    	last++;
+        last++;
         if (ctxt->encoding != NULL)
             xmlFree(ctxt->encoding);
         ctxt->encoding = (char *) xmlStrndup(charset, last - charset);
@@ -787,13 +787,13 @@ xmlNanoHTTPScanAnswer(xmlNanoHTTPCtxtPtr ctxt, const char *line) {
         ctxt->strm = xmlMalloc(sizeof(z_stream));
 
         if (ctxt->strm != NULL) {
-    	ctxt->strm->zalloc = Z_NULL;
-    	ctxt->strm->zfree = Z_NULL;
-    	ctxt->strm->opaque = Z_NULL;
-    	ctxt->strm->avail_in = 0;
-    	ctxt->strm->next_in = Z_NULL;
+        ctxt->strm->zalloc = Z_NULL;
+        ctxt->strm->zfree = Z_NULL;
+        ctxt->strm->opaque = Z_NULL;
+        ctxt->strm->avail_in = 0;
+        ctxt->strm->next_in = Z_NULL;
 
-    	inflateInit2( ctxt->strm, 31 );
+        inflateInit2( ctxt->strm, 31 );
         }
     }
 #endif
@@ -1018,30 +1018,30 @@ xmlNanoHTTPConnectHost(const char *host, int port)
 
     for (res = result; res; res = res->ai_next) {
         if (res->ai_family == AF_INET) {
-    	if ((size_t)res->ai_addrlen > sizeof(sockin)) {
-    	    __xmlIOErr(XML_FROM_HTTP, 0, "address size mismatch\n");
-    	    freeaddrinfo (result);
-    	    return INVALID_SOCKET;
-    	}
-    	memcpy (&sockin, res->ai_addr, res->ai_addrlen);
-    	sockin.sin_port = htons (port);
-    	addr = (struct sockaddr *)&sockin;
+        if ((size_t)res->ai_addrlen > sizeof(sockin)) {
+            __xmlIOErr(XML_FROM_HTTP, 0, "address size mismatch\n");
+            freeaddrinfo (result);
+            return INVALID_SOCKET;
+        }
+        memcpy (&sockin, res->ai_addr, res->ai_addrlen);
+        sockin.sin_port = htons (port);
+        addr = (struct sockaddr *)&sockin;
         } else if (res->ai_family == AF_INET6) {
-    	if ((size_t)res->ai_addrlen > sizeof(sockin6)) {
-    	    __xmlIOErr(XML_FROM_HTTP, 0, "address size mismatch\n");
-    	    freeaddrinfo (result);
-    	    return INVALID_SOCKET;
-    	}
-    	memcpy (&sockin6, res->ai_addr, res->ai_addrlen);
-    	sockin6.sin6_port = htons (port);
-    	addr = (struct sockaddr *)&sockin6;
+        if ((size_t)res->ai_addrlen > sizeof(sockin6)) {
+            __xmlIOErr(XML_FROM_HTTP, 0, "address size mismatch\n");
+            freeaddrinfo (result);
+            return INVALID_SOCKET;
+        }
+        memcpy (&sockin6, res->ai_addr, res->ai_addrlen);
+        sockin6.sin6_port = htons (port);
+        addr = (struct sockaddr *)&sockin6;
         } else
-    	continue;              /* for */
+        continue;              /* for */
 
         s = xmlNanoHTTPConnectAttempt (addr);
         if (s != INVALID_SOCKET) {
-    	freeaddrinfo (result);
-    	return (s);
+        freeaddrinfo (result);
+        return (s);
         }
     }
 
@@ -1066,30 +1066,30 @@ xmlNanoHTTPConnectHost(const char *host, int port)
         const char *h_err_txt = "";
 
         switch (h_errno) {
-    	case HOST_NOT_FOUND:
-    	    h_err_txt = "Authoritative host not found";
-    	    break;
+        case HOST_NOT_FOUND:
+            h_err_txt = "Authoritative host not found";
+            break;
 
-    	case TRY_AGAIN:
-    	    h_err_txt =
-    		"Non-authoritative host not found or server failure.";
-    	    break;
+        case TRY_AGAIN:
+            h_err_txt =
+        	"Non-authoritative host not found or server failure.";
+            break;
 
-    	case NO_RECOVERY:
-    	    h_err_txt =
-    		"Non-recoverable errors:  FORMERR, REFUSED, or NOTIMP.";
-    	    break;
+        case NO_RECOVERY:
+            h_err_txt =
+        	"Non-recoverable errors:  FORMERR, REFUSED, or NOTIMP.";
+            break;
 
 #ifdef NO_ADDRESS
-    	case NO_ADDRESS:
-    	    h_err_txt =
-    		"Valid name, no data record of requested type.";
-    	    break;
+        case NO_ADDRESS:
+            h_err_txt =
+        	"Valid name, no data record of requested type.";
+            break;
 #endif
 
-    	default:
-    	    h_err_txt = "No error text defined.";
-    	    break;
+        default:
+            h_err_txt = "No error text defined.";
+            break;
         }
         __xmlIOErr(XML_FROM_HTTP, 0, h_err_txt);
 #else
@@ -1100,22 +1100,22 @@ xmlNanoHTTPConnectHost(const char *host, int port)
 
     for (i = 0; h->h_addr_list[i]; i++) {
         if (h->h_addrtype == AF_INET) {
-    	/* A records (IPv4) */
-    	if ((unsigned int) h->h_length > sizeof(ia)) {
-    	    __xmlIOErr(XML_FROM_HTTP, 0, "address size mismatch\n");
-    	    return INVALID_SOCKET;
-    	}
-    	memcpy (&ia, h->h_addr_list[i], h->h_length);
-    	sockin.sin_family = h->h_addrtype;
-    	sockin.sin_addr = ia;
-    	sockin.sin_port = (unsigned short)htons ((unsigned short)port);
-    	addr = (struct sockaddr *) &sockin;
+        /* A records (IPv4) */
+        if ((unsigned int) h->h_length > sizeof(ia)) {
+            __xmlIOErr(XML_FROM_HTTP, 0, "address size mismatch\n");
+            return INVALID_SOCKET;
+        }
+        memcpy (&ia, h->h_addr_list[i], h->h_length);
+        sockin.sin_family = h->h_addrtype;
+        sockin.sin_addr = ia;
+        sockin.sin_port = (unsigned short)htons ((unsigned short)port);
+        addr = (struct sockaddr *) &sockin;
         } else
-    	break;              /* for */
+        break;              /* for */
 
         s = xmlNanoHTTPConnectAttempt (addr);
         if (s != INVALID_SOCKET)
-    	return (s);
+        return (s);
     }
     }
 #endif
@@ -1200,7 +1200,7 @@ xmlNanoHTTPRead(void *ctx, void *dest, int len) {
         while (ctxt->strm->avail_out > 0 &&
            (ctxt->strm->avail_in > 0 || xmlNanoHTTPRecv(ctxt) > 0)) {
             orig_avail_in = ctxt->strm->avail_in =
-    		    ctxt->inptr - ctxt->inrptr - bytes_read;
+        	    ctxt->inptr - ctxt->inrptr - bytes_read;
             ctxt->strm->next_in = BAD_CAST (ctxt->inrptr + bytes_read);
 
             z_ret = inflate(ctxt->strm, Z_NO_FLUSH);
@@ -1364,7 +1364,7 @@ xmlNanoHTTPBypassProxy(const char *hostname) {
 void*
 xmlNanoHTTPMethodRedir(const char *URL, const char *method, const char *input,
                   char **contentType, char **redir,
-    	  const char *headers, int ilen ) {
+          const char *headers, int ilen ) {
     xmlNanoHTTPCtxtPtr ctxt;
     char *bp, *p;
     int blen;
@@ -1455,12 +1455,12 @@ retry:
     if (use_proxy) {
     if (ctxt->port != 80) {
         p += snprintf( p, blen - (p - bp), "%s http://%s:%d%s",
-    		method, ctxt->hostname,
-    		ctxt->port, ctxt->path );
+        	method, ctxt->hostname,
+        	ctxt->port, ctxt->path );
     }
     else
         p += snprintf( p, blen - (p - bp), "%s http://%s%s", method,
-    		ctxt->hostname, ctxt->path);
+        	ctxt->hostname, ctxt->path);
     }
     else
     p += snprintf( p, blen - (p - bp), "%s %s", method, ctxt->path);
@@ -1470,10 +1470,10 @@ retry:
 
     if (ctxt->port == 80) {
         p += snprintf( p, blen - (p - bp), " HTTP/1.0\r\nHost: %s\r\n",
-    	    ctxt->hostname);
+            ctxt->hostname);
     } else {
         p += snprintf( p, blen - (p - bp), " HTTP/1.0\r\nHost: %s:%d\r\n",
-    	    ctxt->hostname, ctxt->port);
+            ctxt->hostname, ctxt->port);
     }
 
 #ifdef LIBXML_ZLIB_ENABLED
@@ -1520,7 +1520,7 @@ retry:
         if (nbRedirects < XML_NANO_HTTP_MAX_REDIR) {
         nbRedirects++;
         if (redirURL != NULL)
-    	xmlFree(redirURL);
+        xmlFree(redirURL);
         redirURL = xmlMemStrdup(ctxt->location);
         xmlNanoHTTPFreeCtxt(ctxt);
         goto retry;
@@ -1570,7 +1570,7 @@ void*
 xmlNanoHTTPMethod(const char *URL, const char *method, const char *input,
                   char **contentType, const char *headers, int ilen) {
     return(xmlNanoHTTPMethodRedir(URL, method, input, contentType,
-    	                  NULL, headers, ilen));
+                          NULL, headers, ilen));
 }
 
 /**
@@ -1606,7 +1606,7 @@ xmlNanoHTTPFetch(const char *URL, const char *filename, char **contentType) {
         xmlNanoHTTPClose(ctxt);
         if ((contentType != NULL) && (*contentType != NULL)) {
             xmlFree(*contentType);
-    	*contentType = NULL;
+        *contentType = NULL;
         }
         return(-1);
     }
@@ -1780,11 +1780,11 @@ static int
 xmlNanoHTTPFetchContent( void * ctx, char ** ptr, int * len ) {
     xmlNanoHTTPCtxtPtr    ctxt = (xmlNanoHTTPCtxtPtr)ctx;
 
-    int    		rc = 0;
-    int    		cur_lgth;
-    int    		rcvd_lgth;
-    int    		dummy_int;
-    char *    	dummy_ptr = NULL;
+    int        	rc = 0;
+    int        	cur_lgth;
+    int        	rcvd_lgth;
+    int        	dummy_int;
+    char *        dummy_ptr = NULL;
 
     /*  Dummy up return input parameters if not provided  */
 
@@ -1834,9 +1834,9 @@ int main(int argc, char **argv) {
     if (contentType != NULL) xmlFree(contentType);
     } else {
         fprintf(stderr,
-    	"%s: minimal HTTP GET implementation\n", argv[0]);
+        "%s: minimal HTTP GET implementation\n", argv[0]);
         fprintf(stderr,
-    	"\tusage %s [ URL [ filename ] ]\n", argv[0]);
+        "\tusage %s [ URL [ filename ] ]\n", argv[0]);
     }
     xmlNanoHTTPCleanup();
     return(0);

@@ -49,10 +49,10 @@
 #define ISALPHA(c) ((unsigned)(TOUPPER(c) - 'A') < 26)
 
 /*without terminating null character*/
-#define XSLTMAX_ISO639LANGLEN    	8
-#define XSLTMAX_ISO3166CNTRYLEN    	8
-    				/* <lang>-<cntry> */
-#define XSLTMAX_LANGTAGLEN    	(XSLTMAX_ISO639LANGLEN+1+XSLTMAX_ISO3166CNTRYLEN)
+#define XSLTMAX_ISO639LANGLEN        8
+#define XSLTMAX_ISO3166CNTRYLEN        8
+        			/* <lang>-<cntry> */
+#define XSLTMAX_LANGTAGLEN        (XSLTMAX_ISO639LANGLEN+1+XSLTMAX_ISO3166CNTRYLEN)
 
 static const xmlChar* xsltDefaultRegion(const xmlChar *localeName);
 

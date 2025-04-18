@@ -952,15 +952,15 @@ xmlCheckUTF8(const unsigned char *utf)
     } else if ((c & 0xf0) == 0xe0) {/* 3-byte code, starts with 1110 */
         if (((utf[1] & 0xc0) != 0x80) ||
             ((utf[2] & 0xc0) != 0x80))
-    	    return 0;
+            return 0;
         ix = 3;
     } else if ((c & 0xf8) == 0xf0) {/* 4-byte code, starts with 11110 */
         if (((utf[1] & 0xc0) != 0x80) ||
             ((utf[2] & 0xc0) != 0x80) ||
-    	((utf[3] & 0xc0) != 0x80))
-    	    return 0;
+        ((utf[3] & 0xc0) != 0x80))
+            return 0;
         ix = 4;
-    } else				/* unknown encoding */
+    } else    			/* unknown encoding */
         return 0;
         utf += ix;
       }
@@ -996,7 +996,7 @@ xmlUTF8Strsize(const xmlChar *utf, int len) {
             break;
         if ( (ch = *ptr++) & 0x80)
             while ((ch<<=1) & 0x80 ) {
-    	if (*ptr == 0) break;
+        if (*ptr == 0) break;
                 ptr++;
         }
     }

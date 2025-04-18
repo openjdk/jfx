@@ -29,9 +29,9 @@
 #include "private/save.h"
 
 /************************************************************************
- *    								*
- *    	Getting/Setting encoding meta tags			*
- *    								*
+ *        							*
+ *        Getting/Setting encoding meta tags			*
+ *        							*
  ************************************************************************/
 
 /**
@@ -58,11 +58,11 @@ htmlGetMetaEncoding(htmlDocPtr doc) {
     while (cur != NULL) {
     if ((cur->type == XML_ELEMENT_NODE) && (cur->name != NULL)) {
         if (xmlStrEqual(cur->name, BAD_CAST"html"))
-    	break;
+        break;
         if (xmlStrEqual(cur->name, BAD_CAST"head"))
-    	goto found_head;
+        goto found_head;
         if (xmlStrEqual(cur->name, BAD_CAST"meta"))
-    	goto found_meta;
+        goto found_meta;
     }
     cur = cur->next;
     }
@@ -76,9 +76,9 @@ htmlGetMetaEncoding(htmlDocPtr doc) {
     while (cur != NULL) {
     if ((cur->type == XML_ELEMENT_NODE) && (cur->name != NULL)) {
         if (xmlStrEqual(cur->name, BAD_CAST"head"))
-    	break;
+        break;
         if (xmlStrEqual(cur->name, BAD_CAST"meta"))
-    	goto found_meta;
+        goto found_meta;
     }
     cur = cur->next;
     }
@@ -94,28 +94,28 @@ found_meta:
     while (cur != NULL) {
     if ((cur->type == XML_ELEMENT_NODE) && (cur->name != NULL)) {
         if (xmlStrEqual(cur->name, BAD_CAST"meta")) {
-    	xmlAttrPtr attr = cur->properties;
-    	int http;
-    	const xmlChar *value;
+        xmlAttrPtr attr = cur->properties;
+        int http;
+        const xmlChar *value;
 
-    	content = NULL;
-    	http = 0;
-    	while (attr != NULL) {
-    	    if ((attr->children != NULL) &&
-    	        (attr->children->type == XML_TEXT_NODE) &&
-    	        (attr->children->next == NULL)) {
-    		value = attr->children->content;
-    		if ((!xmlStrcasecmp(attr->name, BAD_CAST"http-equiv"))
-    		 && (!xmlStrcasecmp(value, BAD_CAST"Content-Type")))
-    		    http = 1;
-    		else if ((value != NULL)
-    		 && (!xmlStrcasecmp(attr->name, BAD_CAST"content")))
-    		    content = value;
-    		if ((http != 0) && (content != NULL))
-    		    goto found_content;
-    	    }
-    	    attr = attr->next;
-    	}
+        content = NULL;
+        http = 0;
+        while (attr != NULL) {
+            if ((attr->children != NULL) &&
+                (attr->children->type == XML_TEXT_NODE) &&
+                (attr->children->next == NULL)) {
+        	value = attr->children->content;
+        	if ((!xmlStrcasecmp(attr->name, BAD_CAST"http-equiv"))
+        	 && (!xmlStrcasecmp(value, BAD_CAST"Content-Type")))
+        	    http = 1;
+        	else if ((value != NULL)
+        	 && (!xmlStrcasecmp(attr->name, BAD_CAST"content")))
+        	    content = value;
+        	if ((http != 0) && (content != NULL))
+        	    goto found_content;
+            }
+            attr = attr->next;
+        }
         }
     }
     cur = cur->next;
@@ -185,11 +185,11 @@ htmlSetMetaEncoding(htmlDocPtr doc, const xmlChar *encoding) {
     while (cur != NULL) {
     if ((cur->type == XML_ELEMENT_NODE) && (cur->name != NULL)) {
         if (xmlStrcasecmp(cur->name, BAD_CAST"html") == 0)
-    	break;
+        break;
         if (xmlStrcasecmp(cur->name, BAD_CAST"head") == 0)
-    	goto found_head;
+        goto found_head;
         if (xmlStrcasecmp(cur->name, BAD_CAST"meta") == 0)
-    	goto found_meta;
+        goto found_meta;
     }
     cur = cur->next;
     }
@@ -203,10 +203,10 @@ htmlSetMetaEncoding(htmlDocPtr doc, const xmlChar *encoding) {
     while (cur != NULL) {
     if ((cur->type == XML_ELEMENT_NODE) && (cur->name != NULL)) {
         if (xmlStrcasecmp(cur->name, BAD_CAST"head") == 0)
-    	break;
+        break;
         if (xmlStrcasecmp(cur->name, BAD_CAST"meta") == 0) {
                 head = cur->parent;
-    	goto found_meta;
+        goto found_meta;
             }
     }
     cur = cur->next;
@@ -227,35 +227,35 @@ found_meta:
     while (cur != NULL) {
     if ((cur->type == XML_ELEMENT_NODE) && (cur->name != NULL)) {
         if (xmlStrcasecmp(cur->name, BAD_CAST"meta") == 0) {
-    	xmlAttrPtr attr = cur->properties;
-    	int http;
-    	const xmlChar *value;
+        xmlAttrPtr attr = cur->properties;
+        int http;
+        const xmlChar *value;
 
-    	content = NULL;
-    	http = 0;
-    	while (attr != NULL) {
-    	    if ((attr->children != NULL) &&
-    	        (attr->children->type == XML_TEXT_NODE) &&
-    	        (attr->children->next == NULL)) {
-    		value = attr->children->content;
-    		if ((!xmlStrcasecmp(attr->name, BAD_CAST"http-equiv"))
-    		 && (!xmlStrcasecmp(value, BAD_CAST"Content-Type")))
-    		    http = 1;
-    		else
+        content = NULL;
+        http = 0;
+        while (attr != NULL) {
+            if ((attr->children != NULL) &&
+                (attr->children->type == XML_TEXT_NODE) &&
+                (attr->children->next == NULL)) {
+        	value = attr->children->content;
+        	if ((!xmlStrcasecmp(attr->name, BAD_CAST"http-equiv"))
+        	 && (!xmlStrcasecmp(value, BAD_CAST"Content-Type")))
+        	    http = 1;
+        	else
                         {
                            if ((value != NULL) &&
                                (!xmlStrcasecmp(attr->name, BAD_CAST"content")))
-    		       content = value;
+        	       content = value;
                         }
-    	        if ((http != 0) && (content != NULL))
-    		    break;
-    	    }
-    	    attr = attr->next;
-    	}
-    	if ((http != 0) && (content != NULL)) {
-    	    meta = cur;
-    	    break;
-    	}
+                if ((http != 0) && (content != NULL))
+        	    break;
+            }
+            attr = attr->next;
+        }
+        if ((http != 0) && (content != NULL)) {
+            meta = cur;
+            break;
+        }
 
         }
     }
@@ -330,9 +330,9 @@ htmlIsBooleanAttr(const xmlChar *name)
 
 #ifdef LIBXML_OUTPUT_ENABLED
 /************************************************************************
- *    								*
- *    		Output error handlers				*
- *    								*
+ *        							*
+ *        	Output error handlers				*
+ *        							*
  ************************************************************************/
 
 /**
@@ -375,9 +375,9 @@ htmlSaveErr(int code, xmlNodePtr node, const char *extra)
 }
 
 /************************************************************************
- *    								*
- *    	Dumping HTML tree content to a simple buffer		*
- *    								*
+ *        							*
+ *        Dumping HTML tree content to a simple buffer		*
+ *        							*
  ************************************************************************/
 
 static xmlCharEncodingHandler *
@@ -599,9 +599,9 @@ htmlDocDumpMemory(xmlDocPtr cur, xmlChar**mem, int *size) {
 
 
 /************************************************************************
- *    								*
- *    	Dumping HTML tree content to an I/O output buffer	*
- *    								*
+ *        							*
+ *        Dumping HTML tree content to an I/O output buffer	*
+ *        							*
  ************************************************************************/
 
 /**
@@ -673,35 +673,35 @@ htmlAttrDumpOutput(xmlOutputBufferPtr buf, xmlDocPtr doc, xmlAttrPtr cur) {
     if (value) {
         xmlOutputBufferWriteString(buf, "=");
         if ((cur->ns == NULL) && (cur->parent != NULL) &&
-    	(cur->parent->ns == NULL) &&
-    	((!xmlStrcasecmp(cur->name, BAD_CAST "href")) ||
+        (cur->parent->ns == NULL) &&
+        ((!xmlStrcasecmp(cur->name, BAD_CAST "href")) ||
              (!xmlStrcasecmp(cur->name, BAD_CAST "action")) ||
-    	 (!xmlStrcasecmp(cur->name, BAD_CAST "src")) ||
-    	 ((!xmlStrcasecmp(cur->name, BAD_CAST "name")) &&
-    	  (!xmlStrcasecmp(cur->parent->name, BAD_CAST "a"))))) {
-    	xmlChar *escaped;
-    	xmlChar *tmp = value;
+         (!xmlStrcasecmp(cur->name, BAD_CAST "src")) ||
+         ((!xmlStrcasecmp(cur->name, BAD_CAST "name")) &&
+          (!xmlStrcasecmp(cur->parent->name, BAD_CAST "a"))))) {
+        xmlChar *escaped;
+        xmlChar *tmp = value;
 
-    	while (IS_BLANK_CH(*tmp)) tmp++;
+        while (IS_BLANK_CH(*tmp)) tmp++;
 
-    	/*
+        /*
                  * Angle brackets are technically illegal in URIs, but they're
                  * used in server side includes, for example. Curly brackets
                  * are illegal as well and often used in templates.
                  * Don't escape non-whitespace, printable ASCII chars for
                  * improved interoperability. Only escape space, control
                  * and non-ASCII chars.
-    	 */
-    	escaped = xmlURIEscapeStr(tmp,
+         */
+        escaped = xmlURIEscapeStr(tmp,
                         BAD_CAST "\"#$%&+,/:;<=>?@[\\]^`{|}");
-    	if (escaped != NULL) {
-    	    xmlOutputBufferWriteQuotedString(buf, escaped);
-    	    xmlFree(escaped);
-    	} else {
-                    buf->error = XML_ERR_NO_MEMORY;
-    	}
+        if (escaped != NULL) {
+            xmlOutputBufferWriteQuotedString(buf, escaped);
+            xmlFree(escaped);
         } else {
-    	xmlOutputBufferWriteQuotedString(buf, value);
+                    buf->error = XML_ERR_NO_MEMORY;
+        }
+        } else {
+        xmlOutputBufferWriteQuotedString(buf, value);
         }
         xmlFree(value);
     } else  {
@@ -999,9 +999,9 @@ htmlDocContentDumpOutput(xmlOutputBufferPtr buf, xmlDocPtr cur,
 }
 
 /************************************************************************
- *    								*
- *    	Saving functions front-ends				*
- *    								*
+ *        							*
+ *        Saving functions front-ends				*
+ *        							*
  ************************************************************************/
 
 /**

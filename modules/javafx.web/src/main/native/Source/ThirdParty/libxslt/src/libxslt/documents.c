@@ -36,9 +36,9 @@
 #endif
 
 /************************************************************************
- *    								*
- *    	Hooks for the document loader				*
- *    								*
+ *        							*
+ *        Hooks for the document loader				*
+ *        							*
  ************************************************************************/
 
 /**
@@ -60,7 +60,7 @@
 static xmlDocPtr
 xsltDocDefaultLoaderFunc(const xmlChar * URI, xmlDictPtr dict, int options,
                          void *ctxt ATTRIBUTE_UNUSED,
-    		 xsltLoadType type ATTRIBUTE_UNUSED)
+        	 xsltLoadType type ATTRIBUTE_UNUSED)
 {
     xmlParserCtxtPtr pctxt;
     xmlParserInputPtr inputStream;
@@ -130,9 +130,9 @@ xsltSetLoaderFunc(xsltDocLoaderFunc f) {
 }
 
 /************************************************************************
- *    								*
- *    		Module interfaces				*
- *    								*
+ *        							*
+ *        	Module interfaces				*
+ *        							*
  ************************************************************************/
 
 /**
@@ -151,7 +151,7 @@ xsltNewDocument(xsltTransformContextPtr ctxt, xmlDocPtr doc) {
     cur = (xsltDocumentPtr) xmlMalloc(sizeof(xsltDocument));
     if (cur == NULL) {
     xsltTransformError(ctxt, NULL, (xmlNodePtr) doc,
-    	"xsltNewDocument : malloc failed\n");
+        "xsltNewDocument : malloc failed\n");
     return(NULL);
     }
     memset(cur, 0, sizeof(xsltDocument));
@@ -190,7 +190,7 @@ xsltNewStyleDocument(xsltStylesheetPtr style, xmlDocPtr doc) {
     cur = (xsltDocumentPtr) xmlMalloc(sizeof(xsltDocument));
     if (cur == NULL) {
     xsltTransformError(NULL, style, (xmlNodePtr) doc,
-    	"xsltNewStyleDocument : malloc failed\n");
+        "xsltNewStyleDocument : malloc failed\n");
     return(NULL);
     }
     memset(cur, 0, sizeof(xsltDocument));

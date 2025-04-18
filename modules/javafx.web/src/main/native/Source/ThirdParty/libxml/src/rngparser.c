@@ -58,7 +58,7 @@ struct _token {
 typedef struct _xmlCRelaxNGParserCtxt xmlCRelaxNGParserCtxt;
 typedef xmlCRelaxNGParserCtxt *xmlCRelaxNGParserCtxtPtr;
 struct _xmlCRelaxNGParserCtxt {
-    void *userData;    		/* user specific data block */
+    void *userData;        	/* user specific data block */
     xmlRelaxNGValidityErrorFunc error;    /* the callback in case of errors */
     xmlRelaxNGValidityWarningFunc warning;/* the callback in case of warning */
     xmlRelaxNGValidErr err;
@@ -80,8 +80,8 @@ struct _xmlCRelaxNGParserCtxt {
 
     int            nbErrors;
 
-    xmlDocPtr      res;    		/* the result */
-    xmlNodePtr     ins;    		/* the current insertion node */
+    xmlDocPtr      res;        	/* the result */
+    xmlNodePtr     ins;        	/* the current insertion node */
 
     xmlNsPtr       nsDef;
     tokenPtr token;
@@ -150,14 +150,14 @@ static const xmlChar *xmlCRelaxNGDefault = BAD_CAST "Default string";
 #define IS_SEPARATOR(c) (((c) == 0x20) || ((c) == 0x09) || ((c) == 0xA) || \
                      ((c) == 0x0D) || (c == '#'))
 
-#define CRNG_ERROR0(X)    						\
+#define CRNG_ERROR0(X)        					\
     { xmlCRNGErr(ctxt, X, NULL); return(0); }
-#define CRNG_ERROR(X)    						\
+#define CRNG_ERROR(X)        					\
     { xmlCRNGErr(ctxt, X, NULL); }
 
-#define CRNG_MEM_ERROR0()    					\
+#define CRNG_MEM_ERROR0()        				\
     { xmlCRNGErr(ctxt, CRNG_MEMORY_ERROR, NULL); return(0); }
-#define CRNG_MEM_ERROR()    					\
+#define CRNG_MEM_ERROR()        				\
     { xmlCRNGErr(ctxt, CRNG_MEMORY_ERROR, NULL); }
 
 #define ERROR(str) xmlCRNGErr(ctxt, 0, str);
@@ -200,10 +200,10 @@ xmlCRNGErr(xmlCRelaxNGParserCtxtPtr ctxt, int err_no, const char *err_msg) {
  */
 #ifndef IS_OP
 #define IS_OP(c) (((c) == ',') || ((c) == '&') || ((c) == '|') ||    \
-    	  ((c) == '?') || ((c) == '-') || ((c) == '*') ||	\
-    	  ((c) == '{') || ((c) == '}') || ((c) == '(') ||	\
-    	  ((c) == ')') || ((c) == '+') || ((c) == '=') ||	\
-    	  ((c) == ':'))
+          ((c) == '?') || ((c) == '-') || ((c) == '*') ||	\
+          ((c) == '{') || ((c) == '}') || ((c) == '(') ||	\
+          ((c) == ')') || ((c) == '+') || ((c) == '=') ||	\
+          ((c) == ':'))
 #endif
 
 static int
@@ -332,23 +332,23 @@ retry:
     if (*ctxt->cur == ':') {
         ctxt->cur++;
         if (*ctxt->cur == '*') {
-    	ctxt->cur++;
-    	token->toktype = CRNG_NSNAME;
+        ctxt->cur++;
+        token->toktype = CRNG_NSNAME;
         } else {
             cur = ctxt->cur;
-    	while ((cur < ctxt->end) &&
-    	       (!(IS_SEPARATOR(*cur))) && (!(IS_OP(*cur)))) cur++;
-    	token->prefix = token->token;
-    	token->toklen = cur - ctxt->cur;
-    	token->token = xmlDictLookup(ctxt->dict, ctxt->cur,
-    	                             token->toklen);
-    	ctxt->cur = cur;
-    	if (xmlValidateNCName(token->token, 0) == 0)
-    	    token->toktype = CRNG_QNAME;
-    	else {
-    	    /* TODO: sounds like an error ! */
-    	    token->toktype = CRNG_IDENTIFIER;
-    	}
+        while ((cur < ctxt->end) &&
+               (!(IS_SEPARATOR(*cur))) && (!(IS_OP(*cur)))) cur++;
+        token->prefix = token->token;
+        token->toklen = cur - ctxt->cur;
+        token->token = xmlDictLookup(ctxt->dict, ctxt->cur,
+                                     token->toklen);
+        ctxt->cur = cur;
+        if (xmlValidateNCName(token->token, 0) == 0)
+            token->toktype = CRNG_QNAME;
+        else {
+            /* TODO: sounds like an error ! */
+            token->toktype = CRNG_IDENTIFIER;
+        }
         }
     }
     }
@@ -448,7 +448,7 @@ static int
 xmlParseCRNG_attribute(xmlCRelaxNGParserCtxtPtr ctxt,
                        const xmlChar *name,
                        xmlNsPtr ns,
-    	       const xmlChar *value)
+               const xmlChar *value)
 {
     xmlAttrPtr attr;
 
@@ -474,7 +474,7 @@ xmlParseCRNG_attribute(xmlCRelaxNGParserCtxtPtr ctxt,
 static int
 xmlParseCRNG_bindPrefix(xmlCRelaxNGParserCtxtPtr ctxt,
                         const xmlChar *prefix,
-    		const xmlChar *namespace)
+        	const xmlChar *namespace)
 {
     int ret;
 
@@ -524,13 +524,13 @@ xmlParseCRNG_bindPrefix(xmlCRelaxNGParserCtxtPtr ctxt,
 static int
 xmlParseCRNG_bindDatatypePrefix(xmlCRelaxNGParserCtxtPtr ctxt ATTRIBUTE_UNUSED,
                                 const xmlChar *prefix,
-    		        const xmlChar *namespace)
+        	        const xmlChar *namespace)
 {
     int ret;
 
     if ((prefix != NULL) && (xmlStrEqual(prefix, BAD_CAST "xsd"))  &&
         (!xmlStrEqual(namespace,
-    	  BAD_CAST "http://www.w3.org/2001/XMLSchema-datatypes"))) {
+          BAD_CAST "http://www.w3.org/2001/XMLSchema-datatypes"))) {
     ERROR("The \"xsd\" prefix must be bound to \"http://www.w3.org/2001/XMLSchema-datatypes\"");
     return(-1);
     }
@@ -702,7 +702,7 @@ xmlParseCRNG_innerNameClass(xmlCRelaxNGParserCtxtPtr ctxt)
         token = xmlParseCRNGGetToken(ctxt, 1);
         if ((token->toktype != CRNG_OP) ||
             (token->token[0] != ')') || (token->token[1] != 0)) {
-    	ERROR("Expecting \")\" here");
+        ERROR("Expecting \")\" here");
         }
         xmlParseCRNGDropTokens(ctxt, 1);
     } else if ((token->token[0] == '*') && (token->token[1] == 0)) {
@@ -710,7 +710,7 @@ xmlParseCRNG_innerNameClass(xmlCRelaxNGParserCtxtPtr ctxt)
         cur = xmlNewNode(NULL, BAD_CAST "anyName");
         if (cur == NULL) CRNG_MEM_ERROR0();
         if (ctxt->insert != NULL)
-    	xmlAddChild(ctxt->insert, cur);
+        xmlAddChild(ctxt->insert, cur);
         ctxt->insert = cur;
         xmlParseCRNG_exceptNameClass(ctxt);
     } else {
@@ -850,7 +850,7 @@ xmlParseCRNG_datatype(xmlCRelaxNGParserCtxtPtr ctxt ATTRIBUTE_UNUSED)
     } else if (token->toktype == CRNG_QNAME) {
     attrs = xmlParseCRNG_datatypeAttributes(ctxt,
                 xmlParseCRNG_lookupDatatypePrefix(ctxt, token->prefix),
-    	    token->token);
+            token->token);
     } else {
         /* TODO */
     }
@@ -861,7 +861,7 @@ xmlParseCRNG_datatype(xmlCRelaxNGParserCtxtPtr ctxt ATTRIBUTE_UNUSED)
         xmlParseCRNGDropTokens(ctxt, 1);
         if (ctxt->insert == NULL) {
             xmlFreePropList(attrs);
-    	CRNG_MEM_ERROR0();
+        CRNG_MEM_ERROR0();
         }
         ctxt->insert->properties = attrs;
         xmlNodeAddContent(ctxt->insert, token->token);
@@ -871,7 +871,7 @@ xmlParseCRNG_datatype(xmlCRelaxNGParserCtxtPtr ctxt ATTRIBUTE_UNUSED)
         xmlParseCRNGDropTokens(ctxt, 1);
         if (ctxt->insert == NULL) {
             xmlFreePropList(attrs);
-    	CRNG_MEM_ERROR0();
+        CRNG_MEM_ERROR0();
         }
         ctxt->insert->properties = attrs;
         xmlParseCRNG_params(ctxt);
@@ -880,7 +880,7 @@ xmlParseCRNG_datatype(xmlCRelaxNGParserCtxtPtr ctxt ATTRIBUTE_UNUSED)
         xmlParseCRNGDropTokens(ctxt, 1);
         if (ctxt->insert == NULL) {
             xmlFreePropList(attrs);
-    	CRNG_MEM_ERROR0();
+        CRNG_MEM_ERROR0();
         }
         ctxt->insert->properties = attrs;
         xmlNodeAddContent(ctxt->insert, token->token);
@@ -1107,15 +1107,15 @@ xmlParseCRNG_component(xmlCRelaxNGParserCtxtPtr ctxt)
             (token->token == ctxt->key_equal)) {
         } else if ((token->toktype == CRNG_OP) &&
                    (token->token == ctxt->key_orequal)) {
-    	xmlParseCRNG_attribute(ctxt, ctxt->key_combine, NULL,
-    	                       BAD_CAST "choice");
+        xmlParseCRNG_attribute(ctxt, ctxt->key_combine, NULL,
+                               BAD_CAST "choice");
         } else if ((token->toktype == CRNG_OP) &&
                    (token->token == ctxt->key_andequal)) {
-    	xmlParseCRNG_attribute(ctxt, ctxt->key_combine, NULL,
-    	                       BAD_CAST "interleave");
+        xmlParseCRNG_attribute(ctxt, ctxt->key_combine, NULL,
+                               BAD_CAST "interleave");
         } else {
             ERROR("expecting \"=\" or \"&=\" or \"|=\" here")
-    	return(-1);
+        return(-1);
         }
         start->properties = ctxt->attrs;
         ctxt->attrs = NULL;
@@ -1138,13 +1138,13 @@ xmlParseCRNG_component(xmlCRelaxNGParserCtxtPtr ctxt)
     if ((tok2->toktype == CRNG_OP) &&
         (tok2->token == ctxt->key_equal)) {
     } else if ((tok2->toktype == CRNG_OP) &&
-    	   (tok2->token == ctxt->key_orequal)) {
+           (tok2->token == ctxt->key_orequal)) {
         xmlParseCRNG_attribute(ctxt, ctxt->key_combine, NULL,
-    			   BAD_CAST "choice");
+        		   BAD_CAST "choice");
     } else if ((tok2->toktype == CRNG_OP) &&
-    	   (tok2->token == ctxt->key_andequal)) {
+           (tok2->token == ctxt->key_andequal)) {
         xmlParseCRNG_attribute(ctxt, ctxt->key_combine, NULL,
-    			   BAD_CAST "interleave");
+        		   BAD_CAST "interleave");
     } else {
         ERROR("expecting \"=\" or \"&=\" or \"|=\" here")
         return(-1);
@@ -1318,7 +1318,7 @@ xmlParseCRNG_decl(xmlCRelaxNGParserCtxtPtr ctxt)
         xmlParseCRNGDropTokens(ctxt, 1);
         if (namespace != NULL) {
         if (prefix != NULL)
-    	xmlParseCRNG_bindPrefix(ctxt, prefix, namespace);
+        xmlParseCRNG_bindPrefix(ctxt, prefix, namespace);
             xmlParseCRNG_bindPrefix(ctxt, NULL, namespace);
     }
     } else if (token->token == ctxt->key_namespace) {

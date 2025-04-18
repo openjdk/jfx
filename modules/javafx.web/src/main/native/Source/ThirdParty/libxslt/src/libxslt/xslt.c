@@ -105,7 +105,7 @@ extern xmlRMutexPtr xsltLocaleMutex;
 #ifdef    IS_BLANK_NODE
 #undef    IS_BLANK_NODE
 #endif
-#define IS_BLANK_NODE(n)    					\
+#define IS_BLANK_NODE(n)        				\
     (((n)->type == XML_TEXT_NODE) && (xsltIsBlank((n)->content)))
 
 /**
@@ -118,7 +118,7 @@ extern xmlRMutexPtr xsltLocaleMutex;
  */
 static void
 xsltParseContentError(xsltStylesheetPtr style,
-    	       xmlNodePtr node)
+               xmlNodePtr node)
 {
     if ((style == NULL) || (node == NULL))
     return;
@@ -210,9 +210,9 @@ exclPrefixPop(xsltStylesheetPtr style)
 #endif
 
 /************************************************************************
- *    								*
- *    		Helper functions				*
- *    								*
+ *        							*
+ *        	Helper functions				*
+ *        							*
  ************************************************************************/
 
 static int initialized = 0;
@@ -267,9 +267,9 @@ xsltIsBlank(xmlChar *str) {
 }
 
 /************************************************************************
- *    								*
- *    	Routines to handle XSLT data structures			*
- *    								*
+ *        							*
+ *        Routines to handle XSLT data structures			*
+ *        							*
  ************************************************************************/
 static xsltDecimalFormatPtr
 xsltNewDecimalFormat(const xmlChar *nsUri, xmlChar *name)
@@ -368,7 +368,7 @@ xsltDecimalFormatGetByName(xsltStylesheetPtr style, xmlChar *name)
          result != NULL;
          result = result->next) {
         if ((result->nsUri == NULL) && xmlStrEqual(name, result->name))
-    	return result;
+        return result;
     }
     style = xsltNextImport(style);
     }
@@ -400,7 +400,7 @@ xsltDecimalFormatGetByQName(xsltStylesheetPtr style, const xmlChar *nsUri,
          result = result->next) {
         if (xmlStrEqual(nsUri, result->nsUri) &&
                 xmlStrEqual(name, result->name))
-    	return result;
+        return result;
     }
     style = xsltNextImport(style);
     }
@@ -422,7 +422,7 @@ xsltNewTemplate(void) {
     cur = (xsltTemplatePtr) xmlMalloc(sizeof(xsltTemplate));
     if (cur == NULL) {
     xsltTransformError(NULL, NULL, NULL,
-    	"xsltNewTemplate : malloc failed\n");
+        "xsltNewTemplate : malloc failed\n");
     return(NULL);
     }
     memset(cur, 0, sizeof(xsltTemplate));
@@ -508,9 +508,9 @@ xsltFreeNamespaceMap(xsltNsMapPtr item)
 
 static xsltNsMapPtr
 xsltNewNamespaceMapItem(xsltCompilerCtxtPtr cctxt,
-    		xmlDocPtr doc,
-    		xmlNsPtr ns,
-    		xmlNodePtr elem)
+        	xmlDocPtr doc,
+        	xmlNsPtr ns,
+        	xmlNodePtr elem)
 {
     xsltNsMapPtr ret;
 
@@ -661,7 +661,7 @@ xsltFreePrincipalStylesheetData(xsltPrincipalStylesheetDataPtr data)
         */
         nsi = (xsltNsListContainerPtr) list->items[i];
         if (nsi->list != NULL)
-    	xmlFree(nsi->list);
+        xmlFree(nsi->list);
         xmlFree(nsi);
     }
     xsltPointerListFree(list);
@@ -758,7 +758,7 @@ xsltNewStylesheetInternal(xsltStylesheetPtr parent) {
     ret = (xsltStylesheetPtr) xmlMalloc(sizeof(xsltStylesheet));
     if (ret == NULL) {
     xsltTransformError(NULL, NULL, NULL,
-    	"xsltNewStylesheet : malloc failed\n");
+        "xsltNewStylesheet : malloc failed\n");
     goto internal_err;
     }
     memset(ret, 0, sizeof(xsltStylesheet));
@@ -854,16 +854,16 @@ xsltAllocateExtraCtxt(xsltTransformContextPtr ctxt)
     if (ctxt->extrasNr == 0) {
         ctxt->extrasMax = 20;
         ctxt->extras = (xsltRuntimeExtraPtr)
-    	xmlMalloc(ctxt->extrasMax * sizeof(xsltRuntimeExtra));
+        xmlMalloc(ctxt->extrasMax * sizeof(xsltRuntimeExtra));
         if (ctxt->extras == NULL) {
-    	xsltTransformError(ctxt, NULL, NULL,
-    		"xsltAllocateExtraCtxt: out of memory\n");
-    	return(0);
+        xsltTransformError(ctxt, NULL, NULL,
+        	"xsltAllocateExtraCtxt: out of memory\n");
+        return(0);
         }
         for (i = 0;i < ctxt->extrasMax;i++) {
-    	ctxt->extras[i].info = NULL;
-    	ctxt->extras[i].deallocate = NULL;
-    	ctxt->extras[i].val.ptr = NULL;
+        ctxt->extras[i].info = NULL;
+        ctxt->extras[i].deallocate = NULL;
+        ctxt->extras[i].val.ptr = NULL;
         }
 
     } else {
@@ -871,17 +871,17 @@ xsltAllocateExtraCtxt(xsltTransformContextPtr ctxt)
 
         ctxt->extrasMax += 100;
         tmp = (xsltRuntimeExtraPtr) xmlRealloc(ctxt->extras,
-    	            ctxt->extrasMax * sizeof(xsltRuntimeExtra));
+                    ctxt->extrasMax * sizeof(xsltRuntimeExtra));
         if (tmp == NULL) {
-    	xsltTransformError(ctxt, NULL, NULL,
-    		"xsltAllocateExtraCtxt: out of memory\n");
-    	return(0);
+        xsltTransformError(ctxt, NULL, NULL,
+        	"xsltAllocateExtraCtxt: out of memory\n");
+        return(0);
         }
         ctxt->extras = tmp;
         for (i = ctxt->extrasNr;i < ctxt->extrasMax;i++) {
-    	ctxt->extras[i].info = NULL;
-    	ctxt->extras[i].deallocate = NULL;
-    	ctxt->extras[i].val.ptr = NULL;
+        ctxt->extras[i].info = NULL;
+        ctxt->extras[i].deallocate = NULL;
+        ctxt->extras[i].val.ptr = NULL;
         }
     }
     }
@@ -918,7 +918,7 @@ xsltFreeStylesheetList(xsltStylesheetPtr style) {
  */
 static int
 xsltCleanupStylesheetTree(xmlDocPtr doc ATTRIBUTE_UNUSED,
-    		  xmlNodePtr rootElem ATTRIBUTE_UNUSED)
+        	  xmlNodePtr rootElem ATTRIBUTE_UNUSED)
 {
 #if 0 /* TODO: Currently disabled, since probably not needed. */
     xmlNodePtr cur;
@@ -944,8 +944,8 @@ xsltCleanupStylesheetTree(xmlDocPtr doc ATTRIBUTE_UNUSED,
         */
         cur->psvi = NULL;
         if (cur->children) {
-    	cur = cur->children;
-    	continue;
+        cur = cur->children;
+        continue;
         }
     }
 
@@ -957,7 +957,7 @@ leave_node:
     else {
         cur = cur->parent;
         if (cur == NULL)
-    	break;
+        break;
         goto leave_node;
     }
     }
@@ -1085,9 +1085,9 @@ xsltFreeStylesheet(xsltStylesheetPtr style)
 }
 
 /************************************************************************
- *    								*
- *    	Parsing of an XSLT Stylesheet				*
- *    								*
+ *        							*
+ *        Parsing of an XSLT Stylesheet				*
+ *        							*
  ************************************************************************/
 
 #ifdef XSLT_REFACTORED
@@ -1125,24 +1125,24 @@ xsltGetInheritedNsList(xsltStylesheetPtr style,
         if (node->type == XML_ELEMENT_NODE) {
             cur = node->nsDef;
             while (cur != NULL) {
-    	if (xmlStrEqual(cur->href, XSLT_NAMESPACE))
-    	    goto skip_ns;
+        if (xmlStrEqual(cur->href, XSLT_NAMESPACE))
+            goto skip_ns;
 
-    	if ((cur->prefix != NULL) &&
-    	    (xsltCheckExtPrefix(style, cur->prefix)))
-    	    goto skip_ns;
-    	/*
-    	* Check if this namespace was excluded.
-    	* Note that at this point only the exclusions defined
-    	* on the topmost stylesheet element are in the exclusion-list.
-    	*/
-    	for (i = 0;i < style->exclPrefixNr;i++) {
-    	    if (xmlStrEqual(cur->href, style->exclPrefixTab[i]))
-    		goto skip_ns;
-    	}
-    	/*
-    	* Skip shadowed namespace bindings.
-    	*/
+        if ((cur->prefix != NULL) &&
+            (xsltCheckExtPrefix(style, cur->prefix)))
+            goto skip_ns;
+        /*
+        * Check if this namespace was excluded.
+        * Note that at this point only the exclusions defined
+        * on the topmost stylesheet element are in the exclusion-list.
+        */
+        for (i = 0;i < style->exclPrefixNr;i++) {
+            if (xmlStrEqual(cur->href, style->exclPrefixTab[i]))
+        	goto skip_ns;
+        }
+        /*
+        * Skip shadowed namespace bindings.
+        */
                 for (i = 0; i < nbns; i++) {
                     if ((cur->prefix == ret[i]->prefix) ||
                         (xmlStrEqual(cur->prefix, ret[i]->prefix)))
@@ -1242,7 +1242,7 @@ xsltParseStylesheetOutput(xsltStylesheetPtr style, xmlNodePtr cur)
                 (xmlStrEqual(prop, (const xmlChar *) "text"))) {
                 style->method = prop;
             } else {
-    	xsltTransformError(NULL, style, cur,
+        xsltTransformError(NULL, style, cur,
                                  "invalid value for method: %s\n", prop);
                 if (style != NULL) style->warnings++;
                 xmlFree(prop);
@@ -1336,49 +1336,49 @@ xsltParseStylesheetOutput(xsltStylesheetPtr style, xmlNodePtr cur)
                                  "add cdata section output element %s\n",
                                  element);
 #endif
-    	if (xmlValidateQName(BAD_CAST element, 0) != 0) {
-    	    xsltTransformError(NULL, style, cur,
-    		"Attribute 'cdata-section-elements': The value "
-    		"'%s' is not a valid QName.\n", element);
-    	    xmlFree(element);
-    	    style->errors++;
-    	} else {
-    	    const xmlChar *URI;
+        if (xmlValidateQName(BAD_CAST element, 0) != 0) {
+            xsltTransformError(NULL, style, cur,
+        	"Attribute 'cdata-section-elements': The value "
+        	"'%s' is not a valid QName.\n", element);
+            xmlFree(element);
+            style->errors++;
+        } else {
+            const xmlChar *URI;
 
-    	    /*
-    	    * TODO: Don't use xsltGetQNameURI().
-    	    */
-    	    URI = xsltGetQNameURI(cur, &element);
-    	    if (element == NULL) {
-    		/*
-    		* TODO: We'll report additionally an error
-    		*  via the stylesheet's error handling.
-    		*/
-    		xsltTransformError(NULL, style, cur,
-    		    "Attribute 'cdata-section-elements': "
-    		    "Not a valid QName.\n");
-    		style->errors++;
-    	    } else {
-    		xmlNsPtr ns;
+            /*
+            * TODO: Don't use xsltGetQNameURI().
+            */
+            URI = xsltGetQNameURI(cur, &element);
+            if (element == NULL) {
+        	/*
+        	* TODO: We'll report additionally an error
+        	*  via the stylesheet's error handling.
+        	*/
+        	xsltTransformError(NULL, style, cur,
+        	    "Attribute 'cdata-section-elements': "
+        	    "Not a valid QName.\n");
+        	style->errors++;
+            } else {
+        	xmlNsPtr ns;
 
-    		/*
-    		* XSLT-1.0 "Each QName is expanded into an
-    		*  expanded-name using the namespace declarations in
-    		*  effect on the xsl:output element in which the QName
-    		*  occurs; if there is a default namespace, it is used
-    		*  for QNames that do not have a prefix"
-    		* NOTE: Fix of bug #339570.
-    		*/
-    		if (URI == NULL) {
-    		    ns = xmlSearchNs(style->doc, cur, NULL);
-    		    if (ns != NULL)
-    			URI = ns->href;
-    		}
-    		xmlHashAddEntry2(style->cdataSection, element, URI,
-    		    (void *) "cdata");
-    		xmlFree(element);
-    	    }
-    	}
+        	/*
+        	* XSLT-1.0 "Each QName is expanded into an
+        	*  expanded-name using the namespace declarations in
+        	*  effect on the xsl:output element in which the QName
+        	*  occurs; if there is a default namespace, it is used
+        	*  for QNames that do not have a prefix"
+        	* NOTE: Fix of bug #339570.
+        	*/
+        	if (URI == NULL) {
+        	    ns = xmlSearchNs(style->doc, cur, NULL);
+        	    if (ns != NULL)
+        		URI = ns->href;
+        	}
+        	xmlHashAddEntry2(style->cdataSection, element, URI,
+        	    (void *) "cdata");
+        	xmlFree(element);
+            }
+        }
             }
             element = end;
         }
@@ -1572,20 +1572,20 @@ xsltParseStylesheetPreserveSpace(xsltStylesheetPtr style, xmlNodePtr cur) {
     if (element) {
 #ifdef WITH_XSLT_DEBUG_PARSING
         xsltGenericDebug(xsltGenericDebugContext,
-    	"add preserved space element %s\n", element);
+        "add preserved space element %s\n", element);
 #endif
         if (xmlStrEqual(element, (const xmlChar *)"*")) {
-    	style->stripAll = -1;
+        style->stripAll = -1;
         } else {
-    	const xmlChar *URI;
+        const xmlChar *URI;
 
-    	/*
-    	* TODO: Don't use xsltGetQNameURI().
-    	*/
+        /*
+        * TODO: Don't use xsltGetQNameURI().
+        */
                 URI = xsltGetQNameURI(cur, &element);
 
-    	xmlHashAddEntry2(style->stripSpaces, element, URI,
-    			(xmlChar *) "preserve");
+        xmlHashAddEntry2(style->stripSpaces, element, URI,
+        		(xmlChar *) "preserve");
         }
         xmlFree(element);
     }
@@ -1615,7 +1615,7 @@ xsltParseStylesheetPreserveSpace(xsltStylesheetPtr style, xmlNodePtr cur) {
  */
 static void
 xsltParseStylesheetExtPrefix(xsltStylesheetPtr style, xmlNodePtr cur,
-    		     int isXsltElem) {
+        	     int isXsltElem) {
     xmlChar *prefixes;
     xmlChar *prefix, *end;
 
@@ -1647,20 +1647,20 @@ xsltParseStylesheetExtPrefix(xsltStylesheetPtr style, xmlNodePtr cur,
         xmlNsPtr ns;
 
         if (xmlStrEqual(prefix, (const xmlChar *)"#default"))
-    	ns = xmlSearchNs(style->doc, cur, NULL);
+        ns = xmlSearchNs(style->doc, cur, NULL);
         else
-    	ns = xmlSearchNs(style->doc, cur, prefix);
+        ns = xmlSearchNs(style->doc, cur, prefix);
         if (ns == NULL) {
-    	xsltTransformError(NULL, style, cur,
+        xsltTransformError(NULL, style, cur,
         "xsl:extension-element-prefix : undefined namespace %s\n",
                              prefix);
-    	if (style != NULL) style->warnings++;
+        if (style != NULL) style->warnings++;
         } else {
 #ifdef WITH_XSLT_DEBUG_PARSING
-    	xsltGenericDebug(xsltGenericDebugContext,
-    	    "add extension prefix %s\n", prefix);
+        xsltGenericDebug(xsltGenericDebugContext,
+            "add extension prefix %s\n", prefix);
 #endif
-    	xsltRegisterExtPrefix(style, prefix, ns->href);
+        xsltRegisterExtPrefix(style, prefix, ns->href);
         }
         xmlFree(prefix);
     }
@@ -1711,20 +1711,20 @@ xsltParseStylesheetStripSpace(xsltStylesheetPtr style, xmlNodePtr cur) {
     if (element) {
 #ifdef WITH_XSLT_DEBUG_PARSING
         xsltGenericDebug(xsltGenericDebugContext,
-    	"add stripped space element %s\n", element);
+        "add stripped space element %s\n", element);
 #endif
         if (xmlStrEqual(element, (const xmlChar *)"*")) {
-    	style->stripAll = 1;
+        style->stripAll = 1;
         } else {
-    	const xmlChar *URI;
+        const xmlChar *URI;
 
-    	/*
-    	* TODO: Don't use xsltGetQNameURI().
-    	*/
+        /*
+        * TODO: Don't use xsltGetQNameURI().
+        */
                 URI = xsltGetQNameURI(cur, &element);
 
-    	xmlHashAddEntry2(style->stripSpaces, element, URI,
-    		        (xmlChar *) "strip");
+        xmlHashAddEntry2(style->stripSpaces, element, URI,
+        	        (xmlChar *) "strip");
         }
         xmlFree(element);
     }
@@ -1751,7 +1751,7 @@ xsltParseStylesheetStripSpace(xsltStylesheetPtr style, xmlNodePtr cur) {
 
 static int
 xsltParseStylesheetExcludePrefix(xsltStylesheetPtr style, xmlNodePtr cur,
-    			 int isXsltElem)
+        		 int isXsltElem)
 {
     int nb = 0;
     xmlChar *prefixes;
@@ -1783,22 +1783,22 @@ xsltParseStylesheetExcludePrefix(xsltStylesheetPtr style, xmlNodePtr cur,
         xmlNsPtr ns;
 
         if (xmlStrEqual(prefix, (const xmlChar *)"#default"))
-    	ns = xmlSearchNs(style->doc, cur, NULL);
+        ns = xmlSearchNs(style->doc, cur, NULL);
         else
-    	ns = xmlSearchNs(style->doc, cur, prefix);
+        ns = xmlSearchNs(style->doc, cur, prefix);
         if (ns == NULL) {
-    	xsltTransformError(NULL, style, cur,
+        xsltTransformError(NULL, style, cur,
         "xsl:exclude-result-prefixes : undefined namespace %s\n",
                              prefix);
-    	if (style != NULL) style->warnings++;
+        if (style != NULL) style->warnings++;
         } else {
-    	if (exclPrefixPush(style, (xmlChar *) ns->href) >= 0) {
+        if (exclPrefixPush(style, (xmlChar *) ns->href) >= 0) {
 #ifdef WITH_XSLT_DEBUG_PARSING
-    	    xsltGenericDebug(xsltGenericDebugContext,
-    		"exclude result prefix %s\n", prefix);
+            xsltGenericDebug(xsltGenericDebugContext,
+        	"exclude result prefix %s\n", prefix);
 #endif
-    	    nb++;
-    	}
+            nb++;
+        }
         }
         xmlFree(prefix);
     }
@@ -1833,8 +1833,8 @@ xsltTreeEnsureXMLDecl(xmlDocPtr doc)
     ns = (xmlNsPtr) xmlMalloc(sizeof(xmlNs));
     if (ns == NULL) {
         xmlGenericError(xmlGenericErrorContext,
-    	"xsltTreeEnsureXMLDecl: Failed to allocate "
-    	"the XML namespace.\n");
+        "xsltTreeEnsureXMLDecl: Failed to allocate "
+        "the XML namespace.\n");
         return (NULL);
     }
     memset(ns, 0, sizeof(xmlNs));
@@ -1872,8 +1872,8 @@ xsltTreeEnsureXMLDecl(xmlDocPtr doc)
 */
 static xmlNsPtr
 xsltTreeAcquireStoredNs(xmlDocPtr doc,
-    		const xmlChar *nsName,
-    		const xmlChar *prefix)
+        	const xmlChar *nsName,
+        	const xmlChar *prefix)
 {
     xmlNsPtr ns;
 
@@ -1890,19 +1890,19 @@ xsltTreeAcquireStoredNs(xmlDocPtr doc,
     ns = ns->next;
     while (ns != NULL) {
         if ((ns->prefix == NULL) != (prefix == NULL)) {
-    	/* NOP */
+        /* NOP */
         } else if (prefix == NULL) {
-    	if (xmlStrEqual(ns->href, nsName))
-    	    return (ns);
+        if (xmlStrEqual(ns->href, nsName))
+            return (ns);
         } else {
-    	if ((ns->prefix[0] == prefix[0]) &&
-    	     xmlStrEqual(ns->prefix, prefix) &&
-    	     xmlStrEqual(ns->href, nsName))
-    	    return (ns);
+        if ((ns->prefix[0] == prefix[0]) &&
+             xmlStrEqual(ns->prefix, prefix) &&
+             xmlStrEqual(ns->href, nsName))
+            return (ns);
 
         }
         if (ns->next == NULL)
-    	break;
+        break;
         ns = ns->next;
     }
     }
@@ -1919,7 +1919,7 @@ xsltTreeAcquireStoredNs(xmlDocPtr doc,
  */
 static int
 xsltLREBuildEffectiveNs(xsltCompilerCtxtPtr cctxt,
-    		xmlNodePtr elem)
+        	xmlNodePtr elem)
 {
     xmlNsPtr ns;
     xsltNsAliasPtr alias;
@@ -1941,68 +1941,68 @@ xsltLREBuildEffectiveNs(xsltCompilerCtxtPtr cctxt,
         xmlStrEqual(elem->ns->href, alias->literalNs->href) ) )
     {
         if ((alias->targetNs != NULL) &&
-    	(alias->targetNs->href != NULL))
+        (alias->targetNs->href != NULL))
         {
-    	/*
-    	* Convert namespace.
-    	*/
-    	if (elem->doc == alias->docOfTargetNs) {
-    	    /*
-    	    * This is the nice case: same docs.
-    	    * This will eventually assign a ns-decl which
-    	    * is shadowed, but this has no negative effect on
-    	    * the generation of the result tree.
-    	    */
-    	    elem->ns = alias->targetNs;
-    	} else {
-    	    /*
-    	    * This target xmlNs originates from a different
-    	    * stylesheet tree. Try to locate it in the
-    	    * in-scope namespaces.
-    	    * OPTIMIZE TODO: Use the compiler-node-info inScopeNs.
-    	    */
-    	    ns = xmlSearchNs(elem->doc, elem,
-    		alias->targetNs->prefix);
-    	    /*
-    	    * If no matching ns-decl found, then assign a
-    	    * ns-decl stored in xmlDoc.
-    	    */
-    	    if ((ns == NULL) ||
-    		(! xmlStrEqual(ns->href, alias->targetNs->href)))
-    	    {
-    		/*
-    		* BIG NOTE: The use of xsltTreeAcquireStoredNs()
-    		*  is not very efficient, but currently I don't
-    		*  see an other way of *safely* changing a node's
-    		*  namespace, since the xmlNs struct in
-    		*  alias->targetNs might come from an other
-    		*  stylesheet tree. So we need to anchor it in the
-    		*  current document, without adding it to the tree,
-    		*  which would otherwise change the in-scope-ns
-    		*  semantic of the tree.
-    		*/
-    		ns = xsltTreeAcquireStoredNs(elem->doc,
-    		    alias->targetNs->href,
-    		    alias->targetNs->prefix);
-
-    		if (ns == NULL) {
-    		    xsltTransformError(NULL, cctxt->style, elem,
-    			"Internal error in "
-    			"xsltLREBuildEffectiveNs(): "
-    			"failed to acquire a stored "
-    			"ns-declaration.\n");
-    		    cctxt->style->errors++;
-    		    return(-1);
-
-    		}
-    	    }
-    	    elem->ns = ns;
-    	}
+        /*
+        * Convert namespace.
+        */
+        if (elem->doc == alias->docOfTargetNs) {
+            /*
+            * This is the nice case: same docs.
+            * This will eventually assign a ns-decl which
+            * is shadowed, but this has no negative effect on
+            * the generation of the result tree.
+            */
+            elem->ns = alias->targetNs;
         } else {
-    	/*
-    	* Move into or leave in the NULL namespace.
-    	*/
-    	elem->ns = NULL;
+            /*
+            * This target xmlNs originates from a different
+            * stylesheet tree. Try to locate it in the
+            * in-scope namespaces.
+            * OPTIMIZE TODO: Use the compiler-node-info inScopeNs.
+            */
+            ns = xmlSearchNs(elem->doc, elem,
+        	alias->targetNs->prefix);
+            /*
+            * If no matching ns-decl found, then assign a
+            * ns-decl stored in xmlDoc.
+            */
+            if ((ns == NULL) ||
+        	(! xmlStrEqual(ns->href, alias->targetNs->href)))
+            {
+        	/*
+        	* BIG NOTE: The use of xsltTreeAcquireStoredNs()
+        	*  is not very efficient, but currently I don't
+        	*  see an other way of *safely* changing a node's
+        	*  namespace, since the xmlNs struct in
+        	*  alias->targetNs might come from an other
+        	*  stylesheet tree. So we need to anchor it in the
+        	*  current document, without adding it to the tree,
+        	*  which would otherwise change the in-scope-ns
+        	*  semantic of the tree.
+        	*/
+        	ns = xsltTreeAcquireStoredNs(elem->doc,
+        	    alias->targetNs->href,
+        	    alias->targetNs->prefix);
+
+        	if (ns == NULL) {
+        	    xsltTransformError(NULL, cctxt->style, elem,
+        		"Internal error in "
+        		"xsltLREBuildEffectiveNs(): "
+        		"failed to acquire a stored "
+        		"ns-declaration.\n");
+        	    cctxt->style->errors++;
+        	    return(-1);
+
+        	}
+            }
+            elem->ns = ns;
+        }
+        } else {
+        /*
+        * Move into or leave in the NULL namespace.
+        */
+        elem->ns = NULL;
         }
         break;
     }
@@ -2016,57 +2016,57 @@ xsltLREBuildEffectiveNs(xsltCompilerCtxtPtr cctxt,
 
     while (attr != NULL) {
         if (attr->ns == NULL) {
-    	attr = attr->next;
-    	continue;
+        attr = attr->next;
+        continue;
         }
         alias = cctxt->nsAliases;
         while (alias != NULL) {
-    	if ( /* If both namespaces are NULL... */
-    	    ( (elem->ns == NULL) &&
-    	    ((alias->literalNs == NULL) ||
-    	    (alias->literalNs->href == NULL)) ) ||
-    	    /* ... or both namespace are equal */
-    	    ( (elem->ns != NULL) &&
-    	    (alias->literalNs != NULL) &&
-    	    xmlStrEqual(elem->ns->href, alias->literalNs->href) ) )
-    	{
-    	    if ((alias->targetNs != NULL) &&
-    		(alias->targetNs->href != NULL))
-    	    {
-    		if (elem->doc == alias->docOfTargetNs) {
-    		    elem->ns = alias->targetNs;
-    		} else {
-    		    ns = xmlSearchNs(elem->doc, elem,
-    			alias->targetNs->prefix);
-    		    if ((ns == NULL) ||
-    			(! xmlStrEqual(ns->href, alias->targetNs->href)))
-    		    {
-    			ns = xsltTreeAcquireStoredNs(elem->doc,
-    			    alias->targetNs->href,
-    			    alias->targetNs->prefix);
+        if ( /* If both namespaces are NULL... */
+            ( (elem->ns == NULL) &&
+            ((alias->literalNs == NULL) ||
+            (alias->literalNs->href == NULL)) ) ||
+            /* ... or both namespace are equal */
+            ( (elem->ns != NULL) &&
+            (alias->literalNs != NULL) &&
+            xmlStrEqual(elem->ns->href, alias->literalNs->href) ) )
+        {
+            if ((alias->targetNs != NULL) &&
+        	(alias->targetNs->href != NULL))
+            {
+        	if (elem->doc == alias->docOfTargetNs) {
+        	    elem->ns = alias->targetNs;
+        	} else {
+        	    ns = xmlSearchNs(elem->doc, elem,
+        		alias->targetNs->prefix);
+        	    if ((ns == NULL) ||
+        		(! xmlStrEqual(ns->href, alias->targetNs->href)))
+        	    {
+        		ns = xsltTreeAcquireStoredNs(elem->doc,
+        		    alias->targetNs->href,
+        		    alias->targetNs->prefix);
 
-    			if (ns == NULL) {
-    			    xsltTransformError(NULL, cctxt->style, elem,
-    				"Internal error in "
-    				"xsltLREBuildEffectiveNs(): "
-    				"failed to acquire a stored "
-    				"ns-declaration.\n");
-    			    cctxt->style->errors++;
-    			    return(-1);
+        		if (ns == NULL) {
+        		    xsltTransformError(NULL, cctxt->style, elem,
+        			"Internal error in "
+        			"xsltLREBuildEffectiveNs(): "
+        			"failed to acquire a stored "
+        			"ns-declaration.\n");
+        		    cctxt->style->errors++;
+        		    return(-1);
 
-    			}
-    		    }
-    		    elem->ns = ns;
-    		}
-    	    } else {
-    	    /*
-    	    * Move into or leave in the NULL namespace.
-    		*/
-    		elem->ns = NULL;
-    	    }
-    	    break;
-    	}
-    	alias = alias->next;
+        		}
+        	    }
+        	    elem->ns = ns;
+        	}
+            } else {
+            /*
+            * Move into or leave in the NULL namespace.
+        	*/
+        	elem->ns = NULL;
+            }
+            break;
+        }
+        alias = alias->next;
         }
 
         attr = attr->next;
@@ -2090,9 +2090,9 @@ xsltLREBuildEffectiveNs(xsltCompilerCtxtPtr cctxt,
  */
 static int
 xsltLREBuildEffectiveNsNodes(xsltCompilerCtxtPtr cctxt,
-    		     xsltStyleItemLRElementInfoPtr item,
-    		     xmlNodePtr elem,
-    		     int isLRE)
+        	     xsltStyleItemLRElementInfoPtr item,
+        	     xmlNodePtr elem,
+        	     int isLRE)
 {
     xmlNsPtr ns, tmpns;
     xsltEffectiveNsPtr effNs, lastEffNs = NULL;
@@ -2150,35 +2150,35 @@ xsltLREBuildEffectiveNsNodes(xsltCompilerCtxtPtr cctxt,
         */
         alias = cctxt->nsAliases;
         do {
-    	/*
-    	* TODO: Is xmlns="" handled already?
-    	*/
-    	if ((alias->targetNs != NULL) &&
-    	    (xmlStrEqual(alias->targetNs->href, ns->href)))
-    	{
-    	    /*
-    	    * Recognized as a target namespace; use it regardless
-    	    * if excluded otherwise.
-    	    */
-    	    goto add_effective_ns;
-    	}
-    	alias = alias->next;
+        /*
+        * TODO: Is xmlns="" handled already?
+        */
+        if ((alias->targetNs != NULL) &&
+            (xmlStrEqual(alias->targetNs->href, ns->href)))
+        {
+            /*
+            * Recognized as a target namespace; use it regardless
+            * if excluded otherwise.
+            */
+            goto add_effective_ns;
+        }
+        alias = alias->next;
         } while (alias != NULL);
 
         alias = cctxt->nsAliases;
         do {
-    	/*
-    	* TODO: Is xmlns="" handled already?
-    	*/
-    	if ((alias->literalNs != NULL) &&
-    	    (xmlStrEqual(alias->literalNs->href, ns->href)))
-    	{
-    	    /*
-    	    * Recognized as an namespace alias; do not use it.
-    	    */
-    	    goto skip_ns;
-    	}
-    	alias = alias->next;
+        /*
+        * TODO: Is xmlns="" handled already?
+        */
+        if ((alias->literalNs != NULL) &&
+            (xmlStrEqual(alias->literalNs->href, ns->href)))
+        {
+            /*
+            * Recognized as an namespace alias; do not use it.
+            */
+            goto skip_ns;
+        }
+        alias = alias->next;
         } while (alias != NULL);
     }
 
@@ -2187,16 +2187,16 @@ xsltLREBuildEffectiveNsNodes(xsltCompilerCtxtPtr cctxt,
     */
     if (exclResultNs) {
         for (j = 0; j < exclResultNs->number; j++)
-    	if (xmlStrEqual(ns->href, BAD_CAST exclResultNs->items[j]))
-    	    goto skip_ns;
+        if (xmlStrEqual(ns->href, BAD_CAST exclResultNs->items[j]))
+            goto skip_ns;
     }
     /*
     * Exclude extension-element namespaces.
     */
     if (extElemNs) {
         for (j = 0; j < extElemNs->number; j++)
-    	if (xmlStrEqual(ns->href, BAD_CAST extElemNs->items[j]))
-    	    goto skip_ns;
+        if (xmlStrEqual(ns->href, BAD_CAST extElemNs->items[j]))
+            goto skip_ns;
     }
 
 add_effective_ns:
@@ -2207,11 +2207,11 @@ add_effective_ns:
         holdByElem = 0;
         tmpns = elem->nsDef;
         do {
-    	if (tmpns == ns) {
-    	    holdByElem = 1;
-    	    break;
-    	}
-    	tmpns = tmpns->next;
+        if (tmpns == ns) {
+            holdByElem = 1;
+            break;
+        }
+        tmpns = tmpns->next;
         } while (tmpns != NULL);
     } else
         holdByElem = 0;
@@ -2223,8 +2223,8 @@ add_effective_ns:
     effNs = (xsltEffectiveNsPtr) xmlMalloc(sizeof(xsltEffectiveNs));
     if (effNs == NULL) {
         xsltTransformError(NULL, cctxt->style, elem,
-    	"Internal error in xsltLREBuildEffectiveNs(): "
-    	"failed to allocate memory.\n");
+        "Internal error in xsltLREBuildEffectiveNs(): "
+        "failed to allocate memory.\n");
         cctxt->style->errors++;
         return(-1);
     }
@@ -2263,8 +2263,8 @@ skip_ns:
  */
 static int
 xsltLREInfoCreate(xsltCompilerCtxtPtr cctxt,
-    	  xmlNodePtr elem,
-    	  int isLRE)
+          xmlNodePtr elem,
+          int isLRE)
 {
     xsltStyleItemLRElementInfoPtr item;
 
@@ -2312,9 +2312,9 @@ xsltLREInfoCreate(xsltCompilerCtxtPtr cctxt,
  */
 static xsltVarInfoPtr
 xsltCompilerVarInfoPush(xsltCompilerCtxtPtr cctxt,
-    			  xmlNodePtr inst,
-    			  const xmlChar *name,
-    			  const xmlChar *nsName)
+        		  xmlNodePtr inst,
+        		  const xmlChar *name,
+        		  const xmlChar *nsName)
 {
     xsltVarInfoPtr ivar;
 
@@ -2326,7 +2326,7 @@ xsltCompilerVarInfoPush(xsltCompilerCtxtPtr cctxt,
     ivar = (xsltVarInfoPtr) xmlMalloc(sizeof(xsltVarInfo));
     if (ivar == NULL) {
         xsltTransformError(NULL, cctxt->style, inst,
-    	"xsltParseInScopeVarPush: xmlMalloc() failed!\n");
+        "xsltParseInScopeVarPush: xmlMalloc() failed!\n");
         cctxt->style->errors++;
         return(NULL);
     }
@@ -2393,7 +2393,7 @@ xsltCompilerNodePush(xsltCompilerCtxtPtr cctxt, xmlNodePtr node)
         xmlMalloc(sizeof(xsltCompilerNodeInfo));
     if (inode == NULL) {
         xsltTransformError(NULL, cctxt->style, NULL,
-    	"xsltCompilerNodePush: malloc failed.\n");
+        "xsltCompilerNodePush: malloc failed.\n");
         return(NULL);
     }
     memset(inode, 0, sizeof(xsltCompilerNodeInfo));
@@ -2521,28 +2521,28 @@ mismatch:
 
     if (node) {
         if (node->type == XML_ELEMENT_NODE) {
-    	name = node->name;
-    	if (node->ns != NULL)
-    	    nsName = node->ns->href;
-    	else
-    	    nsName = BAD_CAST "";
+        name = node->name;
+        if (node->ns != NULL)
+            nsName = node->ns->href;
+        else
+            nsName = BAD_CAST "";
         } else {
-    	name = BAD_CAST "#document";
-    	nsName = BAD_CAST "";
+        name = BAD_CAST "#document";
+        nsName = BAD_CAST "";
         }
     } else
         name = BAD_CAST "Not given";
 
     if (cctxt->inode->node) {
         if (node->type == XML_ELEMENT_NODE) {
-    	infname = cctxt->inode->node->name;
-    	if (cctxt->inode->node->ns != NULL)
-    	    infnsName = cctxt->inode->node->ns->href;
-    	else
-    	    infnsName = BAD_CAST "";
+        infname = cctxt->inode->node->name;
+        if (cctxt->inode->node->ns != NULL)
+            infnsName = cctxt->inode->node->ns->href;
+        else
+            infnsName = BAD_CAST "";
         } else {
-    	infname = BAD_CAST "#document";
-    	infnsName = BAD_CAST "";
+        infname = BAD_CAST "#document";
+        infnsName = BAD_CAST "";
         }
     } else
         infname = BAD_CAST "Not given";
@@ -2585,44 +2585,44 @@ xsltCompilerBuildInScopeNsList(xsltCompilerCtxtPtr cctxt, xmlNodePtr node)
             ns = node->nsDef;
             while (ns != NULL) {
                 if (nsi == NULL) {
-    	    nsi = (xsltNsListContainerPtr)
-    		xmlMalloc(sizeof(xsltNsListContainer));
-    	    if (nsi == NULL) {
-    		xsltTransformError(NULL, cctxt->style, NULL,
-    		    "xsltCompilerBuildInScopeNsList: "
-    		    "malloc failed!\n");
-    		goto internal_err;
-    	    }
-    	    memset(nsi, 0, sizeof(xsltNsListContainer));
+            nsi = (xsltNsListContainerPtr)
+        	xmlMalloc(sizeof(xsltNsListContainer));
+            if (nsi == NULL) {
+        	xsltTransformError(NULL, cctxt->style, NULL,
+        	    "xsltCompilerBuildInScopeNsList: "
+        	    "malloc failed!\n");
+        	goto internal_err;
+            }
+            memset(nsi, 0, sizeof(xsltNsListContainer));
                     nsi->list =
                         (xmlNsPtr *) xmlMalloc(maxns * sizeof(xmlNsPtr));
                     if (nsi->list == NULL) {
-    		xsltTransformError(NULL, cctxt->style, NULL,
-    		    "xsltCompilerBuildInScopeNsList: "
-    		    "malloc failed!\n");
-    		goto internal_err;
+        	xsltTransformError(NULL, cctxt->style, NULL,
+        	    "xsltCompilerBuildInScopeNsList: "
+        	    "malloc failed!\n");
+        	goto internal_err;
                     }
                     nsi->list[0] = NULL;
                 }
-    	/*
-    	* Skip shadowed namespace bindings.
-    	*/
+        /*
+        * Skip shadowed namespace bindings.
+        */
                 for (i = 0; i < nsi->totalNumber; i++) {
                     if ((ns->prefix == nsi->list[i]->prefix) ||
                         (xmlStrEqual(ns->prefix, nsi->list[i]->prefix)))
-    	    break;
+            break;
                 }
                 if (i >= nsi->totalNumber) {
                     if (nsi->totalNumber +1 >= maxns) {
                         maxns *= 2;
-    		nsi->list =
-    		    (xmlNsPtr *) xmlRealloc(nsi->list,
-    			maxns * sizeof(xmlNsPtr));
+        	nsi->list =
+        	    (xmlNsPtr *) xmlRealloc(nsi->list,
+        		maxns * sizeof(xmlNsPtr));
                         if (nsi->list == NULL) {
                             xsltTransformError(NULL, cctxt->style, NULL,
-    			"xsltCompilerBuildInScopeNsList: "
-    			"realloc failed!\n");
-    			goto internal_err;
+        		"xsltCompilerBuildInScopeNsList: "
+        		"realloc failed!\n");
+        		goto internal_err;
                         }
                     }
                     nsi->list[nsi->totalNumber++] = ns;
@@ -2679,9 +2679,9 @@ internal_err:
 
 static int
 xsltParseNsPrefixList(xsltCompilerCtxtPtr cctxt,
-    	      xsltPointerListPtr list,
-    	      xmlNodePtr node,
-    	      const xmlChar *value)
+              xsltPointerListPtr list,
+              xmlNodePtr node,
+              const xmlChar *value)
 {
     xmlChar *cur, *end;
     xmlNsPtr ns;
@@ -2722,7 +2722,7 @@ xsltParseNsPrefixList(xsltCompilerCtxtPtr cctxt,
         *  the user won't know which attribute was invalid.
         */
         xsltTransformError(NULL, cctxt->style, node,
-    	"No namespace binding in scope for prefix '%s'.\n", cur);
+        "No namespace binding in scope for prefix '%s'.\n", cur);
         /*
         * XSLT-1.0: "It is an error if there is no namespace
         *  bound to the prefix on the element bearing the
@@ -2733,17 +2733,17 @@ xsltParseNsPrefixList(xsltCompilerCtxtPtr cctxt,
     } else {
 #ifdef WITH_XSLT_DEBUG_PARSING
         xsltGenericDebug(xsltGenericDebugContext,
-    	"resolved prefix '%s'\n", cur);
+        "resolved prefix '%s'\n", cur);
 #endif
         /*
         * Note that we put the namespace name into the dict.
         */
         if (xsltPointerListAddSize(list,
-    	(void *) xmlDictLookup(cctxt->style->dict,
-    	ns->href, -1), 5) == -1)
+        (void *) xmlDictLookup(cctxt->style->dict,
+        ns->href, -1), 5) == -1)
         {
-    	xmlFree(cur);
-    	goto internal_err;
+        xmlFree(cur);
+        goto internal_err;
         }
     }
     xmlFree(cur);
@@ -2770,7 +2770,7 @@ internal_err:
  */
 static xsltPointerListPtr
 xsltCompilerUtilsCreateMergedList(xsltPointerListPtr first,
-    		    xsltPointerListPtr second)
+        	    xsltPointerListPtr second)
 {
     xsltPointerListPtr ret;
     size_t num;
@@ -2794,7 +2794,7 @@ xsltCompilerUtilsCreateMergedList(xsltPointerListPtr first,
         first->number * sizeof(void *));
     if ((second != NULL) && (second->number != 0))
         memcpy(ret->items + first->number, second->items,
-    	second->number * sizeof(void *));
+        second->number * sizeof(void *));
     } else if ((second != NULL) && (second->number != 0))
     memcpy(ret->items, (void *) second->items,
         second->number * sizeof(void *));
@@ -2814,8 +2814,8 @@ xsltCompilerUtilsCreateMergedList(xsltPointerListPtr first,
 */
 static xsltPointerListPtr
 xsltParseExclResultPrefixes(xsltCompilerCtxtPtr cctxt, xmlNodePtr node,
-    		    xsltPointerListPtr def,
-    		    int instrCategory)
+        	    xsltPointerListPtr def,
+        	    int instrCategory)
 {
     xsltPointerListPtr list = NULL;
     xmlChar *value;
@@ -2895,8 +2895,8 @@ exit:
 */
 static xsltPointerListPtr
 xsltParseExtElemPrefixes(xsltCompilerCtxtPtr cctxt, xmlNodePtr node,
-    		 xsltPointerListPtr def,
-    		 int instrCategory)
+        	 xsltPointerListPtr def,
+        	 int instrCategory)
 {
     xsltPointerListPtr list = NULL;
     xmlAttrPtr attr;
@@ -2987,7 +2987,7 @@ exit:
 */
 static int
 xsltParseAttrXSLTVersion(xsltCompilerCtxtPtr cctxt, xmlNodePtr node,
-    		 int instrCategory)
+        	 int instrCategory)
 {
     xmlChar *value;
     xmlAttrPtr attr;
@@ -3028,10 +3028,10 @@ xsltParseAttrXSLTVersion(xsltCompilerCtxtPtr cctxt, xmlNodePtr node,
         cctxt->hasForwardsCompat = 1;
         cctxt->errSeverity = XSLT_ERROR_SEVERITY_WARNING;
         xsltTransformError(NULL, cctxt->style, node,
-    	"Warning: the attribute xsl:version specifies a value "
-    	"different from '1.0'. Switching to forwards-compatible "
-    	"mode. Only features of XSLT 1.0 are supported by this "
-    	"processor.\n");
+        "Warning: the attribute xsl:version specifies a value "
+        "different from '1.0'. Switching to forwards-compatible "
+        "mode. Only features of XSLT 1.0 are supported by this "
+        "processor.\n");
         cctxt->style->warnings++;
         cctxt->errSeverity = XSLT_ERROR_SEVERITY_ERROR;
     }
@@ -3104,7 +3104,7 @@ xsltParsePreprocessStylesheetTree(xsltCompilerCtxtPtr cctxt, xmlNodePtr node)
     deleteNode = NULL;
     cur = node;
     while (cur != NULL) {
-    if (deleteNode != NULL)	{
+    if (deleteNode != NULL)    {
 
 #ifdef WITH_XSLT_DEBUG_BLANKS
         xsltGenericDebug(xsltGenericDebugContext,
@@ -3132,117 +3132,117 @@ xsltParsePreprocessStylesheetTree(xsltCompilerCtxtPtr cctxt, xmlNodePtr node)
         */
         if (IS_XSLT_ELEM(cur)) {
 #ifdef XSLT_REFACTORED_XSLT_NSCOMP
-    	if (cur->ns->href != nsNameXSLT) {
-    	    nsMapItem = xsltNewNamespaceMapItem(cctxt,
-    		doc, cur->ns, cur);
-    	    if (nsMapItem == NULL)
-    		goto internal_err;
-    	    cur->ns->href = nsNameXSLT;
-    	}
+        if (cur->ns->href != nsNameXSLT) {
+            nsMapItem = xsltNewNamespaceMapItem(cctxt,
+        	doc, cur->ns, cur);
+            if (nsMapItem == NULL)
+        	goto internal_err;
+            cur->ns->href = nsNameXSLT;
+        }
 #endif
 
-    	if (cur->name == NULL)
-    	    goto process_attributes;
-    	/*
-    	* Mark the XSLT element for later recognition.
-    	* TODO: Using the marker is still too dangerous, since if
-    	*   the parsing mechanism leaves out an XSLT element, then
-    	*   this might hit the transformation-mechanism, which
-    	*   will break if it doesn't expect such a marker.
-    	*/
-    	/* cur->psvi = (void *) xsltXSLTElemMarker; */
+        if (cur->name == NULL)
+            goto process_attributes;
+        /*
+        * Mark the XSLT element for later recognition.
+        * TODO: Using the marker is still too dangerous, since if
+        *   the parsing mechanism leaves out an XSLT element, then
+        *   this might hit the transformation-mechanism, which
+        *   will break if it doesn't expect such a marker.
+        */
+        /* cur->psvi = (void *) xsltXSLTElemMarker; */
 
-    	/*
-    	* XSLT 2.0: "Any whitespace text node whose parent is
-    	* one of the following elements is removed from the "
-    	* tree, regardless of any xml:space attributes:..."
-    	* xsl:apply-imports,
-    	* xsl:apply-templates,
-    	* xsl:attribute-set,
-    	* xsl:call-template,
-    	* xsl:choose,
-    	* xsl:stylesheet, xsl:transform.
-    	* XSLT 2.0: xsl:analyze-string,
-    	*           xsl:character-map,
-    	*           xsl:next-match
-    	*
-    	* TODO: I'd love to use a string pointer comparison here :-/
-    	*/
-    	name = cur->name;
-    	switch (*name) {
-    	    case 't':
-    		if ((name[0] == 't') && (name[1] == 'e') &&
-    		    (name[2] == 'x') && (name[3] == 't') &&
-    		    (name[4] == 0))
-    		{
-    		    /*
-    		    * Process the xsl:text element.
-    		    * ----------------------------
-    		    * Mark it for later recognition.
-    		    */
-    		    cur->psvi = (void *) xsltXSLTTextMarker;
-    		    /*
-    		    * For stylesheets, the set of
-    		    * whitespace-preserving element names
-    		    * consists of just xsl:text.
-    		    */
-    		    findSpaceAttr = 0;
-    		    cctxt->inode->preserveWhitespace = 1;
-    		    inXSLText = 1;
-    		}
-    		break;
-    	    case 'c':
-    		if (xmlStrEqual(name, BAD_CAST "choose") ||
-    		    xmlStrEqual(name, BAD_CAST "call-template"))
-    		    cctxt->inode->stripWhitespace = 1;
-    		break;
-    	    case 'a':
-    		if (xmlStrEqual(name, BAD_CAST "apply-templates") ||
-    		    xmlStrEqual(name, BAD_CAST "apply-imports") ||
-    		    xmlStrEqual(name, BAD_CAST "attribute-set"))
+        /*
+        * XSLT 2.0: "Any whitespace text node whose parent is
+        * one of the following elements is removed from the "
+        * tree, regardless of any xml:space attributes:..."
+        * xsl:apply-imports,
+        * xsl:apply-templates,
+        * xsl:attribute-set,
+        * xsl:call-template,
+        * xsl:choose,
+        * xsl:stylesheet, xsl:transform.
+        * XSLT 2.0: xsl:analyze-string,
+        *           xsl:character-map,
+        *           xsl:next-match
+        *
+        * TODO: I'd love to use a string pointer comparison here :-/
+        */
+        name = cur->name;
+        switch (*name) {
+            case 't':
+        	if ((name[0] == 't') && (name[1] == 'e') &&
+        	    (name[2] == 'x') && (name[3] == 't') &&
+        	    (name[4] == 0))
+        	{
+        	    /*
+        	    * Process the xsl:text element.
+        	    * ----------------------------
+        	    * Mark it for later recognition.
+        	    */
+        	    cur->psvi = (void *) xsltXSLTTextMarker;
+        	    /*
+        	    * For stylesheets, the set of
+        	    * whitespace-preserving element names
+        	    * consists of just xsl:text.
+        	    */
+        	    findSpaceAttr = 0;
+        	    cctxt->inode->preserveWhitespace = 1;
+        	    inXSLText = 1;
+        	}
+        	break;
+            case 'c':
+        	if (xmlStrEqual(name, BAD_CAST "choose") ||
+        	    xmlStrEqual(name, BAD_CAST "call-template"))
+        	    cctxt->inode->stripWhitespace = 1;
+        	break;
+            case 'a':
+        	if (xmlStrEqual(name, BAD_CAST "apply-templates") ||
+        	    xmlStrEqual(name, BAD_CAST "apply-imports") ||
+        	    xmlStrEqual(name, BAD_CAST "attribute-set"))
 
-    		    cctxt->inode->stripWhitespace = 1;
-    		break;
-    	    default:
-    		if (xsltStylesheetElemDepth == cctxt->depth) {
-    		    /*
-    		    * This is a xsl:stylesheet/xsl:transform.
-    		    */
-    		    cctxt->inode->stripWhitespace = 1;
-    		    break;
-    		}
+        	    cctxt->inode->stripWhitespace = 1;
+        	break;
+            default:
+        	if (xsltStylesheetElemDepth == cctxt->depth) {
+        	    /*
+        	    * This is a xsl:stylesheet/xsl:transform.
+        	    */
+        	    cctxt->inode->stripWhitespace = 1;
+        	    break;
+        	}
 
-    		if ((cur->prev != NULL) &&
-    		    (cur->prev->type == XML_TEXT_NODE))
-    		{
-    		    /*
-    		    * XSLT 2.0 : "Any whitespace text node whose
-    		    *  following-sibling node is an xsl:param or
-    		    *  xsl:sort element is removed from the tree,
-    		    *  regardless of any xml:space attributes."
-    		    */
-    		    if (((*name == 'p') || (*name == 's')) &&
-    			(xmlStrEqual(name, BAD_CAST "param") ||
-    			 xmlStrEqual(name, BAD_CAST "sort")))
-    		    {
-    			do {
-    			    if (IS_BLANK_NODE(cur->prev)) {
-    				txt = cur->prev;
-    				xmlUnlinkNode(txt);
-    				xmlFreeNode(txt);
-    			    } else {
-    				/*
-    				* This will result in a content
-    				* error, when hitting the parsing
-    				* functions.
-    				*/
-    				break;
-    			    }
-    			} while (cur->prev);
-    		    }
-    		}
-    		break;
-    	}
+        	if ((cur->prev != NULL) &&
+        	    (cur->prev->type == XML_TEXT_NODE))
+        	{
+        	    /*
+        	    * XSLT 2.0 : "Any whitespace text node whose
+        	    *  following-sibling node is an xsl:param or
+        	    *  xsl:sort element is removed from the tree,
+        	    *  regardless of any xml:space attributes."
+        	    */
+        	    if (((*name == 'p') || (*name == 's')) &&
+        		(xmlStrEqual(name, BAD_CAST "param") ||
+        		 xmlStrEqual(name, BAD_CAST "sort")))
+        	    {
+        		do {
+        		    if (IS_BLANK_NODE(cur->prev)) {
+        			txt = cur->prev;
+        			xmlUnlinkNode(txt);
+        			xmlFreeNode(txt);
+        		    } else {
+        			/*
+        			* This will result in a content
+        			* error, when hitting the parsing
+        			* functions.
+        			*/
+        			break;
+        		    }
+        		} while (cur->prev);
+        	    }
+        	}
+        	break;
+        }
         }
 
 process_attributes:
@@ -3251,85 +3251,85 @@ process_attributes:
         * ------------------
         */
         if (cur->properties != NULL) {
-    	if (cur->children == NULL)
-    	    findSpaceAttr = 0;
-    	attr = cur->properties;
-    	do {
+        if (cur->children == NULL)
+            findSpaceAttr = 0;
+        attr = cur->properties;
+        do {
 #ifdef XSLT_REFACTORED_XSLT_NSCOMP
-    	    if ((attr->ns) && (attr->ns->href != nsNameXSLT) &&
-    		xmlStrEqual(attr->ns->href, nsNameXSLT))
-    	    {
-    		nsMapItem = xsltNewNamespaceMapItem(cctxt,
-    		    doc, attr->ns, cur);
-    		if (nsMapItem == NULL)
-    		    goto internal_err;
-    		attr->ns->href = nsNameXSLT;
-    	    }
+            if ((attr->ns) && (attr->ns->href != nsNameXSLT) &&
+        	xmlStrEqual(attr->ns->href, nsNameXSLT))
+            {
+        	nsMapItem = xsltNewNamespaceMapItem(cctxt,
+        	    doc, attr->ns, cur);
+        	if (nsMapItem == NULL)
+        	    goto internal_err;
+        	attr->ns->href = nsNameXSLT;
+            }
 #endif
-    	    if (internalize) {
-    		/*
-    		* Internalize the attribute's value; the goal is to
-    		* speed up operations and minimize used space by
-    		* compiled stylesheets.
-    		*/
-    		txt = attr->children;
-    		/*
-    		* NOTE that this assumes only one
-    		*  text-node in the attribute's content.
-    		*/
-    		if ((txt != NULL) && (txt->content != NULL) &&
-    		    (!xmlDictOwns(style->dict, txt->content)))
-    		{
-    		    value = (xmlChar *) xmlDictLookup(style->dict,
-    			txt->content, -1);
-    		    xmlNodeSetContent(txt, NULL);
-    		    txt->content = value;
-    		}
-    	    }
-    	    /*
-    	    * Process xml:space attributes.
-    	    * ----------------------------
-    	    */
-    	    if ((findSpaceAttr != 0) &&
-    		(attr->ns != NULL) &&
-    		(attr->name != NULL) &&
-    		(attr->name[0] == 's') &&
-    		(attr->ns->prefix != NULL) &&
-    		(attr->ns->prefix[0] == 'x') &&
-    		(attr->ns->prefix[1] == 'm') &&
-    		(attr->ns->prefix[2] == 'l') &&
-    		(attr->ns->prefix[3] == 0))
-    	    {
-    		value = xmlGetNsProp(cur, BAD_CAST "space",
-    		    XML_XML_NAMESPACE);
-    		if (value != NULL) {
-    		    if (xmlStrEqual(value, BAD_CAST "preserve")) {
-    			cctxt->inode->preserveWhitespace = 1;
-    		    } else if (xmlStrEqual(value, BAD_CAST "default")) {
-    			cctxt->inode->preserveWhitespace = 0;
-    		    } else {
-    			/* Invalid value for xml:space. */
-    			xsltTransformError(NULL, style, cur,
-    			    "Attribute xml:space: Invalid value.\n");
-    			cctxt->style->warnings++;
-    		    }
-    		    findSpaceAttr = 0;
-    		    xmlFree(value);
-    		}
+            if (internalize) {
+        	/*
+        	* Internalize the attribute's value; the goal is to
+        	* speed up operations and minimize used space by
+        	* compiled stylesheets.
+        	*/
+        	txt = attr->children;
+        	/*
+        	* NOTE that this assumes only one
+        	*  text-node in the attribute's content.
+        	*/
+        	if ((txt != NULL) && (txt->content != NULL) &&
+        	    (!xmlDictOwns(style->dict, txt->content)))
+        	{
+        	    value = (xmlChar *) xmlDictLookup(style->dict,
+        		txt->content, -1);
+        	    xmlNodeSetContent(txt, NULL);
+        	    txt->content = value;
+        	}
+            }
+            /*
+            * Process xml:space attributes.
+            * ----------------------------
+            */
+            if ((findSpaceAttr != 0) &&
+        	(attr->ns != NULL) &&
+        	(attr->name != NULL) &&
+        	(attr->name[0] == 's') &&
+        	(attr->ns->prefix != NULL) &&
+        	(attr->ns->prefix[0] == 'x') &&
+        	(attr->ns->prefix[1] == 'm') &&
+        	(attr->ns->prefix[2] == 'l') &&
+        	(attr->ns->prefix[3] == 0))
+            {
+        	value = xmlGetNsProp(cur, BAD_CAST "space",
+        	    XML_XML_NAMESPACE);
+        	if (value != NULL) {
+        	    if (xmlStrEqual(value, BAD_CAST "preserve")) {
+        		cctxt->inode->preserveWhitespace = 1;
+        	    } else if (xmlStrEqual(value, BAD_CAST "default")) {
+        		cctxt->inode->preserveWhitespace = 0;
+        	    } else {
+        		/* Invalid value for xml:space. */
+        		xsltTransformError(NULL, style, cur,
+        		    "Attribute xml:space: Invalid value.\n");
+        		cctxt->style->warnings++;
+        	    }
+        	    findSpaceAttr = 0;
+        	    xmlFree(value);
+        	}
 
-    	    }
-    	    attr = attr->next;
-    	} while (attr != NULL);
+            }
+            attr = attr->next;
+        } while (attr != NULL);
         }
         /*
         * We'll descend into the children of element nodes only.
         */
         if (cur->children != NULL) {
-    	cur = cur->children;
-    	continue;
+        cur = cur->children;
+        continue;
         }
     } else if ((cur->type == XML_TEXT_NODE) ||
-    	(cur->type == XML_CDATA_SECTION_NODE))
+        (cur->type == XML_CDATA_SECTION_NODE))
     {
         /*
         * Merge adjacent text/CDATA-section-nodes
@@ -3353,28 +3353,28 @@ process_attributes:
         */
         cur->type = XML_TEXT_NODE;
         if ((strictWhitespace != 0) || (inXSLText != 0)) {
-    	/*
-    	* New behaviour; merge nodes.
-    	*/
-    	if (textNode == NULL)
-    	    textNode = cur;
-    	else {
-    	    if (cur->content != NULL)
-    		xmlNodeAddContent(textNode, cur->content);
-    	    deleteNode = cur;
-    	}
-    	if ((cur->next == NULL) ||
-    	    (cur->next->type == XML_ELEMENT_NODE))
-    	    goto end_of_text;
-    	else
-    	    goto next_sibling;
+        /*
+        * New behaviour; merge nodes.
+        */
+        if (textNode == NULL)
+            textNode = cur;
+        else {
+            if (cur->content != NULL)
+        	xmlNodeAddContent(textNode, cur->content);
+            deleteNode = cur;
+        }
+        if ((cur->next == NULL) ||
+            (cur->next->type == XML_ELEMENT_NODE))
+            goto end_of_text;
+        else
+            goto next_sibling;
         } else {
-    	/*
-    	* Old behaviour.
-    	*/
-    	if (textNode == NULL)
-    	    textNode = cur;
-    	goto end_of_text;
+        /*
+        * Old behaviour.
+        */
+        if (textNode == NULL)
+            textNode = cur;
+        goto end_of_text;
         }
     } else if ((cur->type == XML_COMMENT_NODE) ||
         (cur->type == XML_PI_NODE))
@@ -3384,17 +3384,17 @@ process_attributes:
         */
         deleteNode = cur;
         if ((cur->next == NULL) ||
-    	(cur->next->type == XML_ELEMENT_NODE))
-    	goto end_of_text;
+        (cur->next->type == XML_ELEMENT_NODE))
+        goto end_of_text;
         else
-    	goto next_sibling;
+        goto next_sibling;
     } else {
         textNode = NULL;
         /*
         * Invalid node-type for this data-model.
         */
         xsltTransformError(NULL, style, cur,
-    	"Invalid type of node for the XSLT data model.\n");
+        "Invalid type of node for the XSLT data model.\n");
         cctxt->style->errors++;
         goto next_sibling;
     }
@@ -3410,38 +3410,38 @@ end_of_text:
         * (cctxt->inode->stripWhitespace)
         */
         if ((value == NULL) || (*value == 0) ||
-    	(((cctxt->inode->stripWhitespace) ||
-    	  (! cctxt->inode->preserveWhitespace)) &&
-    	 IS_BLANK(*value) &&
-    	 xsltIsBlank(value)))
+        (((cctxt->inode->stripWhitespace) ||
+          (! cctxt->inode->preserveWhitespace)) &&
+         IS_BLANK(*value) &&
+         xsltIsBlank(value)))
         {
-    	if (textNode != cur) {
-    	    xmlUnlinkNode(textNode);
-    	    xmlFreeNode(textNode);
-    	} else
-    	    deleteNode = textNode;
-    	textNode = NULL;
-    	goto next_sibling;
+        if (textNode != cur) {
+            xmlUnlinkNode(textNode);
+            xmlFreeNode(textNode);
+        } else
+            deleteNode = textNode;
+        textNode = NULL;
+        goto next_sibling;
         }
         /*
         * Convert CDATA-section nodes to text-nodes.
         * TODO: Can this produce problems?
         */
         if (textNode->type != XML_TEXT_NODE) {
-    	textNode->type = XML_TEXT_NODE;
-    	textNode->name = xmlStringText;
+        textNode->type = XML_TEXT_NODE;
+        textNode->name = xmlStringText;
         }
         if (internalize &&
-    	(textNode->content != NULL) &&
-    	(!xmlDictOwns(style->dict, textNode->content)))
+        (textNode->content != NULL) &&
+        (!xmlDictOwns(style->dict, textNode->content)))
         {
-    	/*
-    	* Internalize the string.
-    	*/
-    	value = (xmlChar *) xmlDictLookup(style->dict,
-    	    textNode->content, -1);
-    	xmlNodeSetContent(textNode, NULL);
-    	textNode->content = value;
+        /*
+        * Internalize the string.
+        */
+        value = (xmlChar *) xmlDictLookup(style->dict,
+            textNode->content, -1);
+        xmlNodeSetContent(textNode, NULL);
+        textNode->content = value;
         }
         textNode = NULL;
         /*
@@ -3528,108 +3528,108 @@ xsltPreprocessStylesheet(xsltStylesheetPtr style, xmlNodePtr cur)
          */
         if ((internalize) && (cur->properties != NULL)) {
             xmlAttrPtr attr = cur->properties;
-    	xmlNodePtr txt;
+        xmlNodePtr txt;
 
-    	while (attr != NULL) {
-    	    txt = attr->children;
-    	    if ((txt != NULL) && (txt->type == XML_TEXT_NODE) &&
-    	        (txt->content != NULL) &&
-    		(!xmlDictOwns(style->dict, txt->content)))
-    	    {
-    		xmlChar *tmp;
+        while (attr != NULL) {
+            txt = attr->children;
+            if ((txt != NULL) && (txt->type == XML_TEXT_NODE) &&
+                (txt->content != NULL) &&
+        	(!xmlDictOwns(style->dict, txt->content)))
+            {
+        	xmlChar *tmp;
 
-    		/*
-    		 * internalize the text string, goal is to speed
-    		 * up operations and minimize used space by compiled
-    		 * stylesheets.
-    		 */
-    		tmp = (xmlChar *) xmlDictLookup(style->dict,
-    		                                txt->content, -1);
-    		if (tmp != txt->content) {
-    		    xmlNodeSetContent(txt, NULL);
-    		    txt->content = tmp;
-    		}
-    	    }
-    	    attr = attr->next;
-    	}
+        	/*
+        	 * internalize the text string, goal is to speed
+        	 * up operations and minimize used space by compiled
+        	 * stylesheets.
+        	 */
+        	tmp = (xmlChar *) xmlDictLookup(style->dict,
+        	                                txt->content, -1);
+        	if (tmp != txt->content) {
+        	    xmlNodeSetContent(txt, NULL);
+        	    txt->content = tmp;
+        	}
+            }
+            attr = attr->next;
+        }
         }
         if (IS_XSLT_ELEM(cur)) {
-    	exclPrefixes = 0;
-    	if (IS_XSLT_NAME(cur, "text")) {
-    	    for (;exclPrefixes > 0;exclPrefixes--)
-    		exclPrefixPop(style);
-    	    goto skip_children;
-    	}
+        exclPrefixes = 0;
+        if (IS_XSLT_NAME(cur, "text")) {
+            for (;exclPrefixes > 0;exclPrefixes--)
+        	exclPrefixPop(style);
+            goto skip_children;
+        }
         } else {
-    	exclPrefixes = xsltParseStylesheetExcludePrefix(style, cur, 0);
+        exclPrefixes = xsltParseStylesheetExcludePrefix(style, cur, 0);
         }
 
         if ((cur->nsDef != NULL) && (style->exclPrefixNr > 0)) {
-    	xmlNsPtr ns = cur->nsDef, prev = NULL, next;
-    	xmlNodePtr root = NULL;
-    	int i, moved;
+        xmlNsPtr ns = cur->nsDef, prev = NULL, next;
+        xmlNodePtr root = NULL;
+        int i, moved;
 
-    	root = xmlDocGetRootElement(cur->doc);
-    	if ((root != NULL) && (root != cur)) {
-    	    while (ns != NULL) {
-    		moved = 0;
-    		next = ns->next;
-    		for (i = 0;i < style->exclPrefixNr;i++) {
-    		    if ((ns->prefix != NULL) &&
-    		        (xmlStrEqual(ns->href,
-    				     style->exclPrefixTab[i]))) {
-    			/*
-    			 * Move the namespace definition on the root
-    			 * element to avoid duplicating it without
-    			 * loosing it.
-    			 */
-    			if (prev == NULL) {
-    			    cur->nsDef = ns->next;
-    			} else {
-    			    prev->next = ns->next;
-    			}
-    			ns->next = root->nsDef;
-    			root->nsDef = ns;
-    			moved = 1;
-    			break;
-    		    }
-    		}
-    		if (moved == 0)
-    		    prev = ns;
-    		ns = next;
-    	    }
-    	}
+        root = xmlDocGetRootElement(cur->doc);
+        if ((root != NULL) && (root != cur)) {
+            while (ns != NULL) {
+        	moved = 0;
+        	next = ns->next;
+        	for (i = 0;i < style->exclPrefixNr;i++) {
+        	    if ((ns->prefix != NULL) &&
+        	        (xmlStrEqual(ns->href,
+        			     style->exclPrefixTab[i]))) {
+        		/*
+        		 * Move the namespace definition on the root
+        		 * element to avoid duplicating it without
+        		 * loosing it.
+        		 */
+        		if (prev == NULL) {
+        		    cur->nsDef = ns->next;
+        		} else {
+        		    prev->next = ns->next;
+        		}
+        		ns->next = root->nsDef;
+        		root->nsDef = ns;
+        		moved = 1;
+        		break;
+        	    }
+        	}
+        	if (moved == 0)
+        	    prev = ns;
+        	ns = next;
+            }
+        }
         }
         /*
          * If we have prefixes locally, recurse and pop them up when
          * going back
          */
         if (exclPrefixes > 0) {
-    	xsltPreprocessStylesheet(style, cur->children);
-    	for (;exclPrefixes > 0;exclPrefixes--)
-    	    exclPrefixPop(style);
-    	goto skip_children;
+        xsltPreprocessStylesheet(style, cur->children);
+        for (;exclPrefixes > 0;exclPrefixes--)
+            exclPrefixPop(style);
+        goto skip_children;
         }
     } else if (cur->type == XML_TEXT_NODE) {
         if (IS_BLANK_NODE(cur)) {
-    	if (xmlNodeGetSpacePreserve(cur->parent) != 1) {
-    	    deleteNode = cur;
-    	}
+        if (xmlNodeGetSpacePreserve(cur->parent) != 1) {
+            deleteNode = cur;
+        }
         } else if ((cur->content != NULL) && (internalize) &&
                    (!xmlDictOwns(style->dict, cur->content))) {
-    	xmlChar *tmp;
+        xmlChar *tmp;
 
-    	/*
-    	 * internalize the text string, goal is to speed
-    	 * up operations and minimize used space by compiled
-    	 * stylesheets.
-    	 */
-    	tmp = (xmlChar *) xmlDictLookup(style->dict, cur->content, -1);
-    	xmlNodeSetContent(cur, NULL);
-    	cur->content = tmp;
+        /*
+         * internalize the text string, goal is to speed
+         * up operations and minimize used space by compiled
+         * stylesheets.
+         */
+        tmp = (xmlChar *) xmlDictLookup(style->dict, cur->content, -1);
+        xmlNodeSetContent(cur, NULL);
+        cur->content = tmp;
         }
     } else if ((cur->type != XML_ELEMENT_NODE) &&
-    	   (cur->type != XML_CDATA_SECTION_NODE)) {
+           (cur->type != XML_CDATA_SECTION_NODE)) {
         deleteNode = cur;
         goto skip_children;
     }
@@ -3658,14 +3658,14 @@ skip_children:
 
         cur = cur->parent;
         if (cur == NULL)
-    	break;
+        break;
         if (cur == (xmlNodePtr) style->doc) {
-    	cur = NULL;
-    	break;
+        cur = NULL;
+        break;
         }
         if (cur->next != NULL) {
-    	cur = cur->next;
-    	break;
+        cur = cur->next;
+        break;
         }
     } while (cur != NULL);
     }
@@ -3712,32 +3712,32 @@ xsltGatherNamespaces(xsltStylesheetPtr style) {
     if (cur->type == XML_ELEMENT_NODE) {
         xmlNsPtr ns = cur->nsDef;
         while (ns != NULL) {
-    	if (ns->prefix != NULL) {
-    	    if (style->nsHash == NULL) {
-    		style->nsHash = xmlHashCreate(10);
-    		if (style->nsHash == NULL) {
-    		    xsltTransformError(NULL, style, cur,
-    	 "xsltGatherNamespaces: failed to create hash table\n");
-    		    style->errors++;
-    		    return;
-    		}
-    	    }
-    	    URI = xmlHashLookup(style->nsHash, ns->prefix);
-    	    if ((URI != NULL) && (!xmlStrEqual(URI, ns->href))) {
-    		xsltTransformError(NULL, style, cur,
+        if (ns->prefix != NULL) {
+            if (style->nsHash == NULL) {
+        	style->nsHash = xmlHashCreate(10);
+        	if (style->nsHash == NULL) {
+        	    xsltTransformError(NULL, style, cur,
+         "xsltGatherNamespaces: failed to create hash table\n");
+        	    style->errors++;
+        	    return;
+        	}
+            }
+            URI = xmlHashLookup(style->nsHash, ns->prefix);
+            if ((URI != NULL) && (!xmlStrEqual(URI, ns->href))) {
+        	xsltTransformError(NULL, style, cur,
          "Namespaces prefix %s used for multiple namespaces\n",ns->prefix);
-    		style->warnings++;
-    	    } else if (URI == NULL) {
-    		xmlHashUpdateEntry(style->nsHash, ns->prefix,
-    		    (void *) ns->href, NULL);
+        	style->warnings++;
+            } else if (URI == NULL) {
+        	xmlHashUpdateEntry(style->nsHash, ns->prefix,
+        	    (void *) ns->href, NULL);
 
 #ifdef WITH_XSLT_DEBUG_PARSING
-    		xsltGenericDebug(xsltGenericDebugContext,
-    	 "Added namespace: %s mapped to %s\n", ns->prefix, ns->href);
+        	xsltGenericDebug(xsltGenericDebugContext,
+         "Added namespace: %s mapped to %s\n", ns->prefix, ns->href);
 #endif
-    	    }
-    	}
-    	ns = ns->next;
+            }
+        }
+        ns = ns->next;
         }
     }
 
@@ -3746,8 +3746,8 @@ xsltGatherNamespaces(xsltStylesheetPtr style) {
      */
     if (cur->children != NULL) {
         if (cur->children->type != XML_ENTITY_DECL) {
-    	cur = cur->children;
-    	continue;
+        cur = cur->children;
+        continue;
         }
     }
     if (cur->next != NULL) {
@@ -3758,14 +3758,14 @@ xsltGatherNamespaces(xsltStylesheetPtr style) {
     do {
         cur = cur->parent;
         if (cur == NULL)
-    	break;
+        break;
         if (cur == (xmlNodePtr) style->doc) {
-    	cur = NULL;
-    	break;
+        cur = NULL;
+        break;
         }
         if (cur->next != NULL) {
-    	cur = cur->next;
-    	break;
+        cur = cur->next;
+        break;
         }
     } while (cur != NULL);
     }
@@ -3775,7 +3775,7 @@ xsltGatherNamespaces(xsltStylesheetPtr style) {
 
 static xsltStyleType
 xsltGetXSLTElementTypeByNode(xsltCompilerCtxtPtr cctxt,
-    		     xmlNodePtr node)
+        	     xmlNodePtr node)
 {
     if ((node == NULL) || (node->type != XML_ELEMENT_NODE) ||
     (node->name == NULL))
@@ -3998,23 +3998,23 @@ xsltParseAnyXSLTElem(xsltCompilerCtxtPtr cctxt, xmlNodePtr elem)
         * Check for redefinition.
         */
         if ((elem->psvi != NULL) && (cctxt->ivar != NULL)) {
-    	xsltVarInfoPtr ivar = cctxt->ivar;
+        xsltVarInfoPtr ivar = cctxt->ivar;
 
-    	do {
-    	    if ((ivar->name ==
-    		 ((xsltStyleItemParamPtr) elem->psvi)->name) &&
-    		(ivar->nsName ==
-    		 ((xsltStyleItemParamPtr) elem->psvi)->ns))
-    	    {
-    		elem->psvi = NULL;
-    		xsltTransformError(NULL, cctxt->style, elem,
-    		    "Redefinition of variable or parameter '%s'.\n",
-    		    ivar->name);
-    		cctxt->style->errors++;
-    		goto error;
-    	    }
-    	    ivar = ivar->prev;
-    	} while (ivar != NULL);
+        do {
+            if ((ivar->name ==
+        	 ((xsltStyleItemParamPtr) elem->psvi)->name) &&
+        	(ivar->nsName ==
+        	 ((xsltStyleItemParamPtr) elem->psvi)->ns))
+            {
+        	elem->psvi = NULL;
+        	xsltTransformError(NULL, cctxt->style, elem,
+        	    "Redefinition of variable or parameter '%s'.\n",
+        	    ivar->name);
+        	cctxt->style->errors++;
+        	goto error;
+            }
+            ivar = ivar->prev;
+        } while (ivar != NULL);
         }
         /*  <!-- Content: template --> */
         goto sequence_constructor;
@@ -4035,23 +4035,23 @@ xsltParseAnyXSLTElem(xsltCompilerCtxtPtr cctxt, xmlNodePtr elem)
         * Check for redefinition.
         */
         if ((elem->psvi != NULL) && (cctxt->ivar != NULL)) {
-    	xsltVarInfoPtr ivar = cctxt->ivar;
+        xsltVarInfoPtr ivar = cctxt->ivar;
 
-    	do {
-    	    if ((ivar->name ==
-    		 ((xsltStyleItemVariablePtr) elem->psvi)->name) &&
-    		(ivar->nsName ==
-    		 ((xsltStyleItemVariablePtr) elem->psvi)->ns))
-    	    {
-    		elem->psvi = NULL;
-    		xsltTransformError(NULL, cctxt->style, elem,
-    		    "Redefinition of variable or parameter '%s'.\n",
-    		    ivar->name);
-    		cctxt->style->errors++;
-    		goto error;
-    	    }
-    	    ivar = ivar->prev;
-    	} while (ivar != NULL);
+        do {
+            if ((ivar->name ==
+        	 ((xsltStyleItemVariablePtr) elem->psvi)->name) &&
+        	(ivar->nsName ==
+        	 ((xsltStyleItemVariablePtr) elem->psvi)->ns))
+            {
+        	elem->psvi = NULL;
+        	xsltTransformError(NULL, cctxt->style, elem,
+        	    "Redefinition of variable or parameter '%s'.\n",
+        	    ivar->name);
+        	cctxt->style->errors++;
+        	goto error;
+            }
+            ivar = ivar->prev;
+        } while (ivar != NULL);
         }
         /* <!-- Content: template --> */
         goto sequence_constructor;
@@ -4064,12 +4064,12 @@ xsltParseAnyXSLTElem(xsltCompilerCtxtPtr cctxt, xmlNodePtr elem)
     default:
 #ifdef WITH_XSLT_DEBUG_PARSING
         xsltGenericDebug(xsltGenericDebugContext,
-    	"xsltParseXSLTNode: Unhandled XSLT element '%s'.\n",
-    	elem->name);
+        "xsltParseXSLTNode: Unhandled XSLT element '%s'.\n",
+        elem->name);
 #endif
         xsltTransformError(NULL, cctxt->style, elem,
-    	"xsltParseXSLTNode: Internal error; "
-    	"unhandled XSLT element '%s'.\n", elem->name);
+        "xsltParseXSLTNode: Internal error; "
+        "unhandled XSLT element '%s'.\n", elem->name);
         cctxt->style->errors++;
         goto internal_err;
     }
@@ -4080,17 +4080,17 @@ apply_templates:
     xmlNodePtr child = elem->children;
     do {
         if (child->type == XML_ELEMENT_NODE) {
-    	if (IS_XSLT_ELEM_FAST(child)) {
-    	    if (xmlStrEqual(child->name, BAD_CAST "with-param")) {
-    		cctxt->inode->curChildType = XSLT_FUNC_WITHPARAM;
-    		xsltParseAnyXSLTElem(cctxt, child);
-    	    } else if (xmlStrEqual(child->name, BAD_CAST "sort")) {
-    		cctxt->inode->curChildType = XSLT_FUNC_SORT;
-    		xsltParseAnyXSLTElem(cctxt, child);
-    	    } else
-    		xsltParseContentError(cctxt->style, child);
-    	} else
-    	    xsltParseContentError(cctxt->style, child);
+        if (IS_XSLT_ELEM_FAST(child)) {
+            if (xmlStrEqual(child->name, BAD_CAST "with-param")) {
+        	cctxt->inode->curChildType = XSLT_FUNC_WITHPARAM;
+        	xsltParseAnyXSLTElem(cctxt, child);
+            } else if (xmlStrEqual(child->name, BAD_CAST "sort")) {
+        	cctxt->inode->curChildType = XSLT_FUNC_SORT;
+        	xsltParseAnyXSLTElem(cctxt, child);
+            } else
+        	xsltParseContentError(cctxt->style, child);
+        } else
+            xsltParseContentError(cctxt->style, child);
         }
         child = child->next;
     } while (child != NULL);
@@ -4103,18 +4103,18 @@ call_template:
     xmlNodePtr child = elem->children;
     do {
         if (child->type == XML_ELEMENT_NODE) {
-    	if (IS_XSLT_ELEM_FAST(child)) {
-    	    xsltStyleType type;
+        if (IS_XSLT_ELEM_FAST(child)) {
+            xsltStyleType type;
 
-    	    type = xsltGetXSLTElementTypeByNode(cctxt, child);
-    	    if (type == XSLT_FUNC_WITHPARAM) {
-    		cctxt->inode->curChildType = XSLT_FUNC_WITHPARAM;
-    		xsltParseAnyXSLTElem(cctxt, child);
-    	    } else {
-    		xsltParseContentError(cctxt->style, child);
-    	    }
-    	} else
-    	    xsltParseContentError(cctxt->style, child);
+            type = xsltGetXSLTElementTypeByNode(cctxt, child);
+            if (type == XSLT_FUNC_WITHPARAM) {
+        	cctxt->inode->curChildType = XSLT_FUNC_WITHPARAM;
+        	xsltParseAnyXSLTElem(cctxt, child);
+            } else {
+        	xsltParseContentError(cctxt->style, child);
+            }
+        } else
+            xsltParseContentError(cctxt->style, child);
         }
         child = child->next;
     } while (child != NULL);
@@ -4126,11 +4126,11 @@ text:
     xmlNodePtr child = elem->children;
     do {
         if ((child->type != XML_TEXT_NODE) &&
-    	(child->type != XML_CDATA_SECTION_NODE))
+        (child->type != XML_CDATA_SECTION_NODE))
         {
-    	xsltTransformError(NULL, cctxt->style, elem,
-    	    "The XSLT 'text' element must have only character "
-    	    "data as content.\n");
+        xsltTransformError(NULL, cctxt->style, elem,
+            "The XSLT 'text' element must have only character "
+            "data as content.\n");
         }
         child = child->next;
     } while (child != NULL);
@@ -4145,13 +4145,13 @@ empty_content:
     */
     do {
         if (((child->type != XML_TEXT_NODE) &&
-    	 (child->type != XML_CDATA_SECTION_NODE)) ||
-    	(! IS_BLANK_NODE(child)))
+         (child->type != XML_CDATA_SECTION_NODE)) ||
+        (! IS_BLANK_NODE(child)))
         {
-    	xsltTransformError(NULL, cctxt->style, elem,
-    	    "This XSLT element must have no content.\n");
-    	cctxt->style->errors++;
-    	break;
+        xsltTransformError(NULL, cctxt->style, elem,
+            "This XSLT element must have no content.\n");
+        cctxt->style->errors++;
+        break;
         }
         child = child->next;
     } while (child != NULL);
@@ -4171,52 +4171,52 @@ choose:
     int nbWhen = 0, nbOtherwise = 0, err = 0;
     do {
         if (child->type == XML_ELEMENT_NODE) {
-    	if (IS_XSLT_ELEM_FAST(child)) {
-    	    xsltStyleType type;
+        if (IS_XSLT_ELEM_FAST(child)) {
+            xsltStyleType type;
 
-    	    type = xsltGetXSLTElementTypeByNode(cctxt, child);
-    	    if (type == XSLT_FUNC_WHEN) {
-    		nbWhen++;
-    		if (nbOtherwise) {
-    		    xsltParseContentError(cctxt->style, child);
-    		    err = 1;
-    		    break;
-    		}
-    		cctxt->inode->curChildType = XSLT_FUNC_WHEN;
-    		xsltParseAnyXSLTElem(cctxt, child);
-    	    } else if (type == XSLT_FUNC_OTHERWISE) {
-    		if (! nbWhen) {
-    		    xsltParseContentError(cctxt->style, child);
-    		    err = 1;
-    		    break;
-    		}
-    		if (nbOtherwise) {
-    		    xsltTransformError(NULL, cctxt->style, elem,
-    			"The XSLT 'choose' element must not contain "
-    			"more than one XSLT 'otherwise' element.\n");
-    		    cctxt->style->errors++;
-    		    err = 1;
-    		    break;
-    		}
-    		nbOtherwise++;
-    		cctxt->inode->curChildType = XSLT_FUNC_OTHERWISE;
-    		xsltParseAnyXSLTElem(cctxt, child);
-    	    } else
-    		xsltParseContentError(cctxt->style, child);
-    	} else
-    	    xsltParseContentError(cctxt->style, child);
+            type = xsltGetXSLTElementTypeByNode(cctxt, child);
+            if (type == XSLT_FUNC_WHEN) {
+        	nbWhen++;
+        	if (nbOtherwise) {
+        	    xsltParseContentError(cctxt->style, child);
+        	    err = 1;
+        	    break;
+        	}
+        	cctxt->inode->curChildType = XSLT_FUNC_WHEN;
+        	xsltParseAnyXSLTElem(cctxt, child);
+            } else if (type == XSLT_FUNC_OTHERWISE) {
+        	if (! nbWhen) {
+        	    xsltParseContentError(cctxt->style, child);
+        	    err = 1;
+        	    break;
+        	}
+        	if (nbOtherwise) {
+        	    xsltTransformError(NULL, cctxt->style, elem,
+        		"The XSLT 'choose' element must not contain "
+        		"more than one XSLT 'otherwise' element.\n");
+        	    cctxt->style->errors++;
+        	    err = 1;
+        	    break;
+        	}
+        	nbOtherwise++;
+        	cctxt->inode->curChildType = XSLT_FUNC_OTHERWISE;
+        	xsltParseAnyXSLTElem(cctxt, child);
+            } else
+        	xsltParseContentError(cctxt->style, child);
+        } else
+            xsltParseContentError(cctxt->style, child);
         }
         /*
-    	else
-    	    xsltParseContentError(cctxt, child);
+        else
+            xsltParseContentError(cctxt, child);
         */
         child = child->next;
     } while (child != NULL);
     if ((! err) && (! nbWhen)) {
         xsltTransformError(NULL, cctxt->style, elem,
-    	"The XSLT element 'choose' must contain at least one "
-    	"XSLT element 'when'.\n");
-    	cctxt->style->errors++;
+        "The XSLT element 'choose' must contain at least one "
+        "XSLT element 'when'.\n");
+        cctxt->style->errors++;
     }
     }
     goto exit;
@@ -4237,17 +4237,17 @@ for_each:
     */
     do {
         if ((child->type == XML_ELEMENT_NODE) &&
-    	IS_XSLT_ELEM_FAST(child))
+        IS_XSLT_ELEM_FAST(child))
         {
-    	if (xsltGetXSLTElementTypeByNode(cctxt, child) ==
-    	    XSLT_FUNC_SORT)
-    	{
-    	    cctxt->inode->curChildType = XSLT_FUNC_SORT;
-    	    xsltParseAnyXSLTElem(cctxt, child);
-    	} else
-    	    break;
+        if (xsltGetXSLTElementTypeByNode(cctxt, child) ==
+            XSLT_FUNC_SORT)
+        {
+            cctxt->inode->curChildType = XSLT_FUNC_SORT;
+            xsltParseAnyXSLTElem(cctxt, child);
         } else
-    	break;
+            break;
+        } else
+        break;
         child = child->next;
     } while (child != NULL);
     /*
@@ -4277,8 +4277,8 @@ sequence_constructor:
         (((xsltStyleBasicItemVariablePtr) elem->psvi)->name))
     {
         xsltCompilerVarInfoPush(cctxt, elem,
-    	((xsltStyleBasicItemVariablePtr) elem->psvi)->name,
-    	((xsltStyleBasicItemVariablePtr) elem->psvi)->ns);
+        ((xsltStyleBasicItemVariablePtr) elem->psvi)->name,
+        ((xsltStyleBasicItemVariablePtr) elem->psvi)->ns);
     }
     }
 
@@ -4341,7 +4341,7 @@ xsltForwardsCompatUnkownItemCreate(xsltCompilerCtxtPtr cctxt)
  */
 static int
 xsltParseUnknownXSLTElem(xsltCompilerCtxtPtr cctxt,
-    		    xmlNodePtr node)
+        	    xmlNodePtr node)
 {
     if ((cctxt == NULL) || (node == NULL) || (node->type != XML_ELEMENT_NODE))
     return(-1);
@@ -4393,17 +4393,17 @@ xsltParseUnknownXSLTElem(xsltCompilerCtxtPtr cctxt,
     */
     if (node->nsDef != NULL)
         cctxt->inode->inScopeNs =
-    	xsltCompilerBuildInScopeNsList(cctxt, node);
+        xsltCompilerBuildInScopeNsList(cctxt, node);
     /*
     * Parse all xsl:fallback children.
     */
     do {
         if ((child->type == XML_ELEMENT_NODE) &&
-    	IS_XSLT_ELEM_FAST(child) &&
-    	IS_XSLT_NAME(child, "fallback"))
+        IS_XSLT_ELEM_FAST(child) &&
+        IS_XSLT_NAME(child, "fallback"))
         {
-    	cctxt->inode->curChildType = XSLT_FUNC_FALLBACK;
-    	xsltParseAnyXSLTElem(cctxt, child);
+        cctxt->inode->curChildType = XSLT_FUNC_FALLBACK;
+        xsltParseAnyXSLTElem(cctxt, child);
         }
         child = child->next;
     } while (child != NULL);
@@ -4472,7 +4472,7 @@ xsltParseSequenceConstructor(xsltCompilerCtxtPtr cctxt, xmlNodePtr cur)
     while (cur != NULL) {
         cctxt->style->principal->opCount += 1;
 
-    if (deleteNode != NULL)	{
+    if (deleteNode != NULL)    {
 #ifdef WITH_XSLT_DEBUG_BLANKS
         xsltGenericDebug(xsltGenericDebugContext,
          "xsltParseSequenceConstructor: removing xsl:text element\n");
@@ -4484,342 +4484,342 @@ xsltParseSequenceConstructor(xsltCompilerCtxtPtr cctxt, xmlNodePtr cur)
     if (cur->type == XML_ELEMENT_NODE) {
 
         if (cur->psvi == xsltXSLTTextMarker) {
-    	/*
-    	* xsl:text elements
-    	* --------------------------------------------------------
-    	*/
-    	xmlNodePtr tmp;
+        /*
+        * xsl:text elements
+        * --------------------------------------------------------
+        */
+        xmlNodePtr tmp;
 
-    	cur->psvi = NULL;
-    	/*
-    	* Mark the xsl:text element for later deletion.
-    	*/
-    	deleteNode = cur;
-    	/*
-    	* Validate content.
-    	*/
-    	tmp = cur->children;
-    	if (tmp) {
-    	    /*
-    	    * We don't expect more than one text-node in the
-    	    * content, since we already merged adjacent
-    	    * text/CDATA-nodes and eliminated PI/comment-nodes.
-    	    */
-    	    if ((tmp->type == XML_TEXT_NODE) ||
-    		(tmp->next == NULL))
-    	    {
-    		/*
-    		* Leave the contained text-node in the tree.
-    		*/
-    		xmlUnlinkNode(tmp);
-    		if (xmlAddPrevSibling(cur, tmp) == NULL) {
+        cur->psvi = NULL;
+        /*
+        * Mark the xsl:text element for later deletion.
+        */
+        deleteNode = cur;
+        /*
+        * Validate content.
+        */
+        tmp = cur->children;
+        if (tmp) {
+            /*
+            * We don't expect more than one text-node in the
+            * content, since we already merged adjacent
+            * text/CDATA-nodes and eliminated PI/comment-nodes.
+            */
+            if ((tmp->type == XML_TEXT_NODE) ||
+        	(tmp->next == NULL))
+            {
+        	/*
+        	* Leave the contained text-node in the tree.
+        	*/
+        	xmlUnlinkNode(tmp);
+        	if (xmlAddPrevSibling(cur, tmp) == NULL) {
                             xsltTransformError(ctxt, NULL, NULL,
                                     "out of memory\n");
                             xmlFreeNode(tmp);
                         }
-    	    } else {
-    		tmp = NULL;
-    		xsltTransformError(NULL, cctxt->style, cur,
-    		    "Element 'xsl:text': Invalid type "
-    		    "of node found in content.\n");
-    		cctxt->style->errors++;
-    	    }
-    	}
-    	if (cur->properties) {
-    	    xmlAttrPtr attr;
-    	    /*
-    	    * TODO: We need to report errors for
-    	    *  invalid attrs.
-    	    */
-    	    attr = cur->properties;
-    	    do {
-    		if ((attr->ns == NULL) &&
-    		    (attr->name != NULL) &&
-    		    (attr->name[0] == 'd') &&
-    		    xmlStrEqual(attr->name,
-    		    BAD_CAST "disable-output-escaping"))
-    		{
-    		    /*
-    		    * Attr "disable-output-escaping".
-    		    * XSLT-2: This attribute is deprecated.
-    		    */
-    		    if ((attr->children != NULL) &&
-    			xmlStrEqual(attr->children->content,
-    			BAD_CAST "yes"))
-    		    {
-    			/*
-    			* Disable output escaping for this
-    			* text node.
-    			*/
-    			if (tmp)
-    			    tmp->name = xmlStringTextNoenc;
-    		    } else if ((attr->children == NULL) ||
-    			(attr->children->content == NULL) ||
-    			(!xmlStrEqual(attr->children->content,
-    			BAD_CAST "no")))
-    		    {
-    			xsltTransformError(NULL, cctxt->style,
-    			    cur,
-    			    "Attribute 'disable-output-escaping': "
-    			    "Invalid value. Expected is "
-    			    "'yes' or 'no'.\n");
-    			cctxt->style->errors++;
-    		    }
-    		    break;
-    		}
-    		attr = attr->next;
-    	    } while (attr != NULL);
-    	}
+            } else {
+        	tmp = NULL;
+        	xsltTransformError(NULL, cctxt->style, cur,
+        	    "Element 'xsl:text': Invalid type "
+        	    "of node found in content.\n");
+        	cctxt->style->errors++;
+            }
+        }
+        if (cur->properties) {
+            xmlAttrPtr attr;
+            /*
+            * TODO: We need to report errors for
+            *  invalid attrs.
+            */
+            attr = cur->properties;
+            do {
+        	if ((attr->ns == NULL) &&
+        	    (attr->name != NULL) &&
+        	    (attr->name[0] == 'd') &&
+        	    xmlStrEqual(attr->name,
+        	    BAD_CAST "disable-output-escaping"))
+        	{
+        	    /*
+        	    * Attr "disable-output-escaping".
+        	    * XSLT-2: This attribute is deprecated.
+        	    */
+        	    if ((attr->children != NULL) &&
+        		xmlStrEqual(attr->children->content,
+        		BAD_CAST "yes"))
+        	    {
+        		/*
+        		* Disable output escaping for this
+        		* text node.
+        		*/
+        		if (tmp)
+        		    tmp->name = xmlStringTextNoenc;
+        	    } else if ((attr->children == NULL) ||
+        		(attr->children->content == NULL) ||
+        		(!xmlStrEqual(attr->children->content,
+        		BAD_CAST "no")))
+        	    {
+        		xsltTransformError(NULL, cctxt->style,
+        		    cur,
+        		    "Attribute 'disable-output-escaping': "
+        		    "Invalid value. Expected is "
+        		    "'yes' or 'no'.\n");
+        		cctxt->style->errors++;
+        	    }
+        	    break;
+        	}
+        	attr = attr->next;
+            } while (attr != NULL);
+        }
         } else if (IS_XSLT_ELEM_FAST(cur)) {
-    	/*
-    	* TODO: Using the XSLT-marker is still not stable yet.
-    	*/
-    	/* if (cur->psvi == xsltXSLTElemMarker) { */
-    	/*
-    	* XSLT instructions
-    	* --------------------------------------------------------
-    	*/
-    	cur->psvi = NULL;
-    	type = xsltGetXSLTElementTypeByNode(cctxt, cur);
-    	switch (type) {
-    	    case XSLT_FUNC_APPLYIMPORTS:
-    	    case XSLT_FUNC_APPLYTEMPLATES:
-    	    case XSLT_FUNC_ATTRIBUTE:
-    	    case XSLT_FUNC_CALLTEMPLATE:
-    	    case XSLT_FUNC_CHOOSE:
-    	    case XSLT_FUNC_COMMENT:
-    	    case XSLT_FUNC_COPY:
-    	    case XSLT_FUNC_COPYOF:
-    	    case XSLT_FUNC_DOCUMENT: /* Extra one */
-    	    case XSLT_FUNC_ELEMENT:
-    	    case XSLT_FUNC_FALLBACK:
-    	    case XSLT_FUNC_FOREACH:
-    	    case XSLT_FUNC_IF:
-    	    case XSLT_FUNC_MESSAGE:
-    	    case XSLT_FUNC_NUMBER:
-    	    case XSLT_FUNC_PI:
-    	    case XSLT_FUNC_TEXT:
-    	    case XSLT_FUNC_VALUEOF:
-    	    case XSLT_FUNC_VARIABLE:
-    		/*
-    		* Parse the XSLT element.
-    		*/
-    		cctxt->inode->curChildType = type;
-    		xsltParseAnyXSLTElem(cctxt, cur);
-    		break;
-    	    default:
-    		xsltParseUnknownXSLTElem(cctxt, cur);
-    		cur = cur->next;
-    		continue;
-    	}
+        /*
+        * TODO: Using the XSLT-marker is still not stable yet.
+        */
+        /* if (cur->psvi == xsltXSLTElemMarker) { */
+        /*
+        * XSLT instructions
+        * --------------------------------------------------------
+        */
+        cur->psvi = NULL;
+        type = xsltGetXSLTElementTypeByNode(cctxt, cur);
+        switch (type) {
+            case XSLT_FUNC_APPLYIMPORTS:
+            case XSLT_FUNC_APPLYTEMPLATES:
+            case XSLT_FUNC_ATTRIBUTE:
+            case XSLT_FUNC_CALLTEMPLATE:
+            case XSLT_FUNC_CHOOSE:
+            case XSLT_FUNC_COMMENT:
+            case XSLT_FUNC_COPY:
+            case XSLT_FUNC_COPYOF:
+            case XSLT_FUNC_DOCUMENT: /* Extra one */
+            case XSLT_FUNC_ELEMENT:
+            case XSLT_FUNC_FALLBACK:
+            case XSLT_FUNC_FOREACH:
+            case XSLT_FUNC_IF:
+            case XSLT_FUNC_MESSAGE:
+            case XSLT_FUNC_NUMBER:
+            case XSLT_FUNC_PI:
+            case XSLT_FUNC_TEXT:
+            case XSLT_FUNC_VALUEOF:
+            case XSLT_FUNC_VARIABLE:
+        	/*
+        	* Parse the XSLT element.
+        	*/
+        	cctxt->inode->curChildType = type;
+        	xsltParseAnyXSLTElem(cctxt, cur);
+        	break;
+            default:
+        	xsltParseUnknownXSLTElem(cctxt, cur);
+        	cur = cur->next;
+        	continue;
+        }
         } else {
-    	/*
-    	* Non-XSLT elements
-    	* -----------------
-    	*/
-    	xsltCompilerNodePush(cctxt, cur);
-    	/*
-    	* Update the in-scope namespaces if needed.
-    	*/
-    	if (cur->nsDef != NULL)
-    	    cctxt->inode->inScopeNs =
-    		xsltCompilerBuildInScopeNsList(cctxt, cur);
-    	/*
-    	* The current element is either a literal result element
-    	* or an extension instruction.
-    	*
-    	* Process attr "xsl:extension-element-prefixes".
-    	* FUTURE TODO: IIRC in XSLT 2.0 this attribute must be
-    	* processed by the implementor of the extension function;
-    	* i.e., it won't be handled by the XSLT processor.
-    	*/
-    	/* SPEC 1.0:
-    	*   "exclude-result-prefixes" is only allowed on literal
-    	*   result elements and "xsl:exclude-result-prefixes"
-    	*   on xsl:stylesheet/xsl:transform.
-    	* SPEC 2.0:
-    	*   "There are a number of standard attributes
-    	*   that may appear on any XSLT element: specifically
-    	*   version, exclude-result-prefixes,
-    	*   extension-element-prefixes, xpath-default-namespace,
-    	*   default-collation, and use-when."
-    	*
-    	* SPEC 2.0:
-    	*   For literal result elements:
-    	*   "xsl:version, xsl:exclude-result-prefixes,
-    	*    xsl:extension-element-prefixes,
-    	*    xsl:xpath-default-namespace,
-    	*    xsl:default-collation, or xsl:use-when."
-    	*/
-    	if (cur->properties)
-    	    cctxt->inode->extElemNs =
-    		xsltParseExtElemPrefixes(cctxt,
-    		    cur, cctxt->inode->extElemNs,
-    		    XSLT_ELEMENT_CATEGORY_LRE);
-    	/*
-    	* Eval if we have an extension instruction here.
-    	*/
-    	if ((cur->ns != NULL) &&
-    	    (cctxt->inode->extElemNs != NULL) &&
-    	    (xsltCheckExtPrefix(cctxt->style, cur->ns->href) == 1))
-    	{
-    	    /*
-    	    * Extension instructions
-    	    * ----------------------------------------------------
-    	    * Mark the node information.
-    	    */
-    	    cctxt->inode->category = XSLT_ELEMENT_CATEGORY_EXTENSION;
-    	    cctxt->inode->extContentHandled = 0;
-    	    if (cur->psvi != NULL) {
-    		cur->psvi = NULL;
-    		/*
-    		* TODO: Temporary sanity check.
-    		*/
-    		xsltTransformError(NULL, cctxt->style, cur,
-    		    "Internal error in xsltParseSequenceConstructor(): "
-    		    "Occupied PSVI field.\n");
-    		cctxt->style->errors++;
-    		cur = cur->next;
-    		continue;
-    	    }
-    	    cur->psvi = (void *)
-    		xsltPreComputeExtModuleElement(cctxt->style, cur);
+        /*
+        * Non-XSLT elements
+        * -----------------
+        */
+        xsltCompilerNodePush(cctxt, cur);
+        /*
+        * Update the in-scope namespaces if needed.
+        */
+        if (cur->nsDef != NULL)
+            cctxt->inode->inScopeNs =
+        	xsltCompilerBuildInScopeNsList(cctxt, cur);
+        /*
+        * The current element is either a literal result element
+        * or an extension instruction.
+        *
+        * Process attr "xsl:extension-element-prefixes".
+        * FUTURE TODO: IIRC in XSLT 2.0 this attribute must be
+        * processed by the implementor of the extension function;
+        * i.e., it won't be handled by the XSLT processor.
+        */
+        /* SPEC 1.0:
+        *   "exclude-result-prefixes" is only allowed on literal
+        *   result elements and "xsl:exclude-result-prefixes"
+        *   on xsl:stylesheet/xsl:transform.
+        * SPEC 2.0:
+        *   "There are a number of standard attributes
+        *   that may appear on any XSLT element: specifically
+        *   version, exclude-result-prefixes,
+        *   extension-element-prefixes, xpath-default-namespace,
+        *   default-collation, and use-when."
+        *
+        * SPEC 2.0:
+        *   For literal result elements:
+        *   "xsl:version, xsl:exclude-result-prefixes,
+        *    xsl:extension-element-prefixes,
+        *    xsl:xpath-default-namespace,
+        *    xsl:default-collation, or xsl:use-when."
+        */
+        if (cur->properties)
+            cctxt->inode->extElemNs =
+        	xsltParseExtElemPrefixes(cctxt,
+        	    cur, cctxt->inode->extElemNs,
+        	    XSLT_ELEMENT_CATEGORY_LRE);
+        /*
+        * Eval if we have an extension instruction here.
+        */
+        if ((cur->ns != NULL) &&
+            (cctxt->inode->extElemNs != NULL) &&
+            (xsltCheckExtPrefix(cctxt->style, cur->ns->href) == 1))
+        {
+            /*
+            * Extension instructions
+            * ----------------------------------------------------
+            * Mark the node information.
+            */
+            cctxt->inode->category = XSLT_ELEMENT_CATEGORY_EXTENSION;
+            cctxt->inode->extContentHandled = 0;
+            if (cur->psvi != NULL) {
+        	cur->psvi = NULL;
+        	/*
+        	* TODO: Temporary sanity check.
+        	*/
+        	xsltTransformError(NULL, cctxt->style, cur,
+        	    "Internal error in xsltParseSequenceConstructor(): "
+        	    "Occupied PSVI field.\n");
+        	cctxt->style->errors++;
+        	cur = cur->next;
+        	continue;
+            }
+            cur->psvi = (void *)
+        	xsltPreComputeExtModuleElement(cctxt->style, cur);
 
-    	    if (cur->psvi == NULL) {
-    		/*
-    		* OLD COMMENT: "Unknown element, maybe registered
-    		*  at the context level. Mark it for later
-    		*  recognition."
-    		* QUESTION: What does the xsltExtMarker mean?
-    		*  ANSWER: It is used in
-    		*   xsltApplySequenceConstructor() at
-    		*   transformation-time to look out for extension
-    		*   registered in the transformation context.
-    		*/
-    		cur->psvi = (void *) xsltExtMarker;
-    	    }
-    	    /*
-    	    * BIG NOTE: Now the ugly part. In previous versions
-    	    *  of Libxslt (until 1.1.16), all the content of an
-    	    *  extension instruction was processed and compiled without
-    	    *  the need of the extension-author to explicitely call
-    	    *  such a processing;.We now need to mimic this old
-    	    *  behaviour in order to avoid breaking old code
-    	    *  on the extension-author's side.
-    	    * The mechanism:
-    	    *  1) If the author does *not* set the
-    	    *    compile-time-flag @extContentHandled, then we'll
-    	    *    parse the content assuming that it's a "template"
-    	    *    (or "sequence constructor in XSLT 2.0 terms).
-    	    *    NOTE: If the extension is registered at
-    	    *    transformation-time only, then there's no way of
-    	    *    knowing that content shall be valid, and we'll
-    	    *    process the content the same way.
-    	    *  2) If the author *does* set the flag, then we'll assume
-    	    *   that the author has handled the parsing him/herself
-    	    *   (e.g. called xsltParseSequenceConstructor(), etc.
-    	    *   explicitely in his/her code).
-    	    */
-    	    if ((cur->children != NULL) &&
-    		(cctxt->inode->extContentHandled == 0))
-    	    {
-    		/*
-    		* Default parsing of the content using the
-    		* sequence-constructor model.
-    		*/
-    		xsltParseSequenceConstructor(cctxt, cur->children);
-    	    }
-    	} else {
-    	    /*
-    	    * Literal result element
-    	    * ----------------------------------------------------
-    	    * Allowed XSLT attributes:
-    	    *  xsl:extension-element-prefixes CDATA #IMPLIED
-    	    *  xsl:exclude-result-prefixes CDATA #IMPLIED
-    	    *  TODO: xsl:use-attribute-sets %qnames; #IMPLIED
-    	    *  xsl:version NMTOKEN #IMPLIED
-    	    */
-    	    cur->psvi = NULL;
-    	    cctxt->inode->category = XSLT_ELEMENT_CATEGORY_LRE;
-    	    if (cur->properties != NULL) {
-    		xmlAttrPtr attr = cur->properties;
-    		/*
-    		* Attribute "xsl:exclude-result-prefixes".
-    		*/
-    		cctxt->inode->exclResultNs =
-    		    xsltParseExclResultPrefixes(cctxt, cur,
-    			cctxt->inode->exclResultNs,
-    			XSLT_ELEMENT_CATEGORY_LRE);
-    		/*
-    		* Attribute "xsl:version".
-    		*/
-    		xsltParseAttrXSLTVersion(cctxt, cur,
-    		    XSLT_ELEMENT_CATEGORY_LRE);
-    		/*
-    		* Report invalid XSLT attributes.
-    		* For XSLT 1.0 only xsl:use-attribute-sets is allowed
-    		* next to xsl:version, xsl:exclude-result-prefixes and
-    		* xsl:extension-element-prefixes.
-    		*
-    		* Mark all XSLT attributes, in order to skip such
-    		* attributes when instantiating the LRE.
-    		*/
-    		do {
-    		    if ((attr->psvi != xsltXSLTAttrMarker) &&
-    			IS_XSLT_ATTR_FAST(attr))
-    		    {
-    			if (! xmlStrEqual(attr->name,
-    			    BAD_CAST "use-attribute-sets"))
-    			{
-    			    xsltTransformError(NULL, cctxt->style,
-    				cur,
-    				"Unknown XSLT attribute '%s'.\n",
-    				attr->name);
-    			    cctxt->style->errors++;
-    			} else {
-    			    /*
-    			    * XSLT attr marker.
-    			    */
-    			    attr->psvi = (void *) xsltXSLTAttrMarker;
-    			}
-    		    }
-    		    attr = attr->next;
-    		} while (attr != NULL);
-    	    }
-    	    /*
-    	    * Create/reuse info for the literal result element.
-    	    */
-    	    if (cctxt->inode->nsChanged)
-    		xsltLREInfoCreate(cctxt, cur, 1);
-    	    cur->psvi = cctxt->inode->litResElemInfo;
-    	    /*
-    	    * Apply ns-aliasing on the element and on its attributes.
-    	    */
-    	    if (cctxt->hasNsAliases)
-    		xsltLREBuildEffectiveNs(cctxt, cur);
-    	    /*
-    	    * Compile attribute value templates (AVT).
-    	    */
-    	    if (cur->properties) {
-    		xmlAttrPtr attr = cur->properties;
+            if (cur->psvi == NULL) {
+        	/*
+        	* OLD COMMENT: "Unknown element, maybe registered
+        	*  at the context level. Mark it for later
+        	*  recognition."
+        	* QUESTION: What does the xsltExtMarker mean?
+        	*  ANSWER: It is used in
+        	*   xsltApplySequenceConstructor() at
+        	*   transformation-time to look out for extension
+        	*   registered in the transformation context.
+        	*/
+        	cur->psvi = (void *) xsltExtMarker;
+            }
+            /*
+            * BIG NOTE: Now the ugly part. In previous versions
+            *  of Libxslt (until 1.1.16), all the content of an
+            *  extension instruction was processed and compiled without
+            *  the need of the extension-author to explicitely call
+            *  such a processing;.We now need to mimic this old
+            *  behaviour in order to avoid breaking old code
+            *  on the extension-author's side.
+            * The mechanism:
+            *  1) If the author does *not* set the
+            *    compile-time-flag @extContentHandled, then we'll
+            *    parse the content assuming that it's a "template"
+            *    (or "sequence constructor in XSLT 2.0 terms).
+            *    NOTE: If the extension is registered at
+            *    transformation-time only, then there's no way of
+            *    knowing that content shall be valid, and we'll
+            *    process the content the same way.
+            *  2) If the author *does* set the flag, then we'll assume
+            *   that the author has handled the parsing him/herself
+            *   (e.g. called xsltParseSequenceConstructor(), etc.
+            *   explicitely in his/her code).
+            */
+            if ((cur->children != NULL) &&
+        	(cctxt->inode->extContentHandled == 0))
+            {
+        	/*
+        	* Default parsing of the content using the
+        	* sequence-constructor model.
+        	*/
+        	xsltParseSequenceConstructor(cctxt, cur->children);
+            }
+        } else {
+            /*
+            * Literal result element
+            * ----------------------------------------------------
+            * Allowed XSLT attributes:
+            *  xsl:extension-element-prefixes CDATA #IMPLIED
+            *  xsl:exclude-result-prefixes CDATA #IMPLIED
+            *  TODO: xsl:use-attribute-sets %qnames; #IMPLIED
+            *  xsl:version NMTOKEN #IMPLIED
+            */
+            cur->psvi = NULL;
+            cctxt->inode->category = XSLT_ELEMENT_CATEGORY_LRE;
+            if (cur->properties != NULL) {
+        	xmlAttrPtr attr = cur->properties;
+        	/*
+        	* Attribute "xsl:exclude-result-prefixes".
+        	*/
+        	cctxt->inode->exclResultNs =
+        	    xsltParseExclResultPrefixes(cctxt, cur,
+        		cctxt->inode->exclResultNs,
+        		XSLT_ELEMENT_CATEGORY_LRE);
+        	/*
+        	* Attribute "xsl:version".
+        	*/
+        	xsltParseAttrXSLTVersion(cctxt, cur,
+        	    XSLT_ELEMENT_CATEGORY_LRE);
+        	/*
+        	* Report invalid XSLT attributes.
+        	* For XSLT 1.0 only xsl:use-attribute-sets is allowed
+        	* next to xsl:version, xsl:exclude-result-prefixes and
+        	* xsl:extension-element-prefixes.
+        	*
+        	* Mark all XSLT attributes, in order to skip such
+        	* attributes when instantiating the LRE.
+        	*/
+        	do {
+        	    if ((attr->psvi != xsltXSLTAttrMarker) &&
+        		IS_XSLT_ATTR_FAST(attr))
+        	    {
+        		if (! xmlStrEqual(attr->name,
+        		    BAD_CAST "use-attribute-sets"))
+        		{
+        		    xsltTransformError(NULL, cctxt->style,
+        			cur,
+        			"Unknown XSLT attribute '%s'.\n",
+        			attr->name);
+        		    cctxt->style->errors++;
+        		} else {
+        		    /*
+        		    * XSLT attr marker.
+        		    */
+        		    attr->psvi = (void *) xsltXSLTAttrMarker;
+        		}
+        	    }
+        	    attr = attr->next;
+        	} while (attr != NULL);
+            }
+            /*
+            * Create/reuse info for the literal result element.
+            */
+            if (cctxt->inode->nsChanged)
+        	xsltLREInfoCreate(cctxt, cur, 1);
+            cur->psvi = cctxt->inode->litResElemInfo;
+            /*
+            * Apply ns-aliasing on the element and on its attributes.
+            */
+            if (cctxt->hasNsAliases)
+        	xsltLREBuildEffectiveNs(cctxt, cur);
+            /*
+            * Compile attribute value templates (AVT).
+            */
+            if (cur->properties) {
+        	xmlAttrPtr attr = cur->properties;
 
-    		while (attr != NULL) {
-    		    xsltCompileAttr(cctxt->style, attr);
-    		    attr = attr->next;
-    		}
-    	    }
-    	    /*
-    	    * Parse the content, which is defined to be a "template"
-    	    * (or "sequence constructor" in XSLT 2.0 terms).
-    	    */
-    	    if (cur->children != NULL) {
-    		xsltParseSequenceConstructor(cctxt, cur->children);
-    	    }
-    	}
-    	/*
-    	* Leave the non-XSLT element.
-    	*/
-    	xsltCompilerNodePop(cctxt, cur);
+        	while (attr != NULL) {
+        	    xsltCompileAttr(cctxt->style, attr);
+        	    attr = attr->next;
+        	}
+            }
+            /*
+            * Parse the content, which is defined to be a "template"
+            * (or "sequence constructor" in XSLT 2.0 terms).
+            */
+            if (cur->children != NULL) {
+        	xsltParseSequenceConstructor(cctxt, cur->children);
+            }
+        }
+        /*
+        * Leave the non-XSLT element.
+        */
+        xsltCompilerNodePop(cctxt, cur);
         }
     }
     cur = cur->next;
@@ -4873,13 +4873,13 @@ xsltParseTemplateContent(xsltStylesheetPtr style, xmlNodePtr templ) {
             style->principal->opCount += 1;
 
         if ((child->type == XML_ELEMENT_NODE) &&
-    	IS_XSLT_ELEM_FAST(child) &&
-    	IS_XSLT_NAME(child, "param"))
+        IS_XSLT_ELEM_FAST(child) &&
+        IS_XSLT_NAME(child, "param"))
         {
-    	XSLT_CCTXT(style)->inode->curChildType = XSLT_FUNC_PARAM;
-    	xsltParseAnyXSLTElem(XSLT_CCTXT(style), child);
+        XSLT_CCTXT(style)->inode->curChildType = XSLT_FUNC_PARAM;
+        xsltParseAnyXSLTElem(XSLT_CCTXT(style), child);
         } else
-    	break;
+        break;
         child = child->next;
     } while (child != NULL);
     /*
@@ -4930,93 +4930,93 @@ xsltParseTemplateContent(xsltStylesheetPtr style, xmlNodePtr templ) {
             xsltStylePreCompute(style, cur);
 
         if (IS_XSLT_NAME(cur, "text")) {
-    	/*
-    	* TODO: Processing of xsl:text should be moved to
-    	*   xsltPreprocessStylesheet(), since otherwise this
-    	*   will be performed for every multiply included
-    	*   stylesheet; i.e. this here is not skipped with
-    	*   the use of the style->nopreproc flag.
-    	*/
-    	if (cur->children != NULL) {
-    	    xmlChar *prop;
-    	    xmlNodePtr text = cur->children, next;
-    	    int noesc = 0;
+        /*
+        * TODO: Processing of xsl:text should be moved to
+        *   xsltPreprocessStylesheet(), since otherwise this
+        *   will be performed for every multiply included
+        *   stylesheet; i.e. this here is not skipped with
+        *   the use of the style->nopreproc flag.
+        */
+        if (cur->children != NULL) {
+            xmlChar *prop;
+            xmlNodePtr text = cur->children, next;
+            int noesc = 0;
 
-    	    prop = xmlGetNsProp(cur,
-    		(const xmlChar *)"disable-output-escaping",
-    		NULL);
-    	    if (prop != NULL) {
+            prop = xmlGetNsProp(cur,
+        	(const xmlChar *)"disable-output-escaping",
+        	NULL);
+            if (prop != NULL) {
 #ifdef WITH_XSLT_DEBUG_PARSING
-    		xsltGenericDebug(xsltGenericDebugContext,
-    		     "Disable escaping: %s\n", text->content);
+        	xsltGenericDebug(xsltGenericDebugContext,
+        	     "Disable escaping: %s\n", text->content);
 #endif
-    		if (xmlStrEqual(prop, (const xmlChar *)"yes")) {
-    		    noesc = 1;
-    		} else if (!xmlStrEqual(prop,
-    					(const xmlChar *)"no")){
-    		    xsltTransformError(NULL, style, cur,
+        	if (xmlStrEqual(prop, (const xmlChar *)"yes")) {
+        	    noesc = 1;
+        	} else if (!xmlStrEqual(prop,
+        				(const xmlChar *)"no")){
+        	    xsltTransformError(NULL, style, cur,
          "xsl:text: disable-output-escaping allows only yes or no\n");
-    		    style->warnings++;
+        	    style->warnings++;
 
-    		}
-    		xmlFree(prop);
-    	    }
+        	}
+        	xmlFree(prop);
+            }
 
-    	    while (text != NULL) {
-    		if (text->type == XML_COMMENT_NODE) {
-    		    text = text->next;
-    		    continue;
-    		}
-    		if ((text->type != XML_TEXT_NODE) &&
-    		     (text->type != XML_CDATA_SECTION_NODE)) {
-    		    xsltTransformError(NULL, style, cur,
-    	 "xsltParseTemplateContent: xslt:text content problem\n");
-    		    style->errors++;
-    		    break;
-    		}
-    		if ((noesc) && (text->type != XML_CDATA_SECTION_NODE))
-    		    text->name = xmlStringTextNoenc;
-    		text = text->next;
-    	    }
+            while (text != NULL) {
+        	if (text->type == XML_COMMENT_NODE) {
+        	    text = text->next;
+        	    continue;
+        	}
+        	if ((text->type != XML_TEXT_NODE) &&
+        	     (text->type != XML_CDATA_SECTION_NODE)) {
+        	    xsltTransformError(NULL, style, cur,
+         "xsltParseTemplateContent: xslt:text content problem\n");
+        	    style->errors++;
+        	    break;
+        	}
+        	if ((noesc) && (text->type != XML_CDATA_SECTION_NODE))
+        	    text->name = xmlStringTextNoenc;
+        	text = text->next;
+            }
 
-    	    /*
-    	     * replace xsl:text by the list of childs
-    	     */
-    	    if (text == NULL) {
-    		text = cur->children;
-    		while (text != NULL) {
-    		    if ((style->internalized) &&
-    		        (text->content != NULL) &&
-    		        (!xmlDictOwns(style->dict, text->content))) {
+            /*
+             * replace xsl:text by the list of childs
+             */
+            if (text == NULL) {
+        	text = cur->children;
+        	while (text != NULL) {
+        	    if ((style->internalized) &&
+        	        (text->content != NULL) &&
+        	        (!xmlDictOwns(style->dict, text->content))) {
 
-    			/*
-    			 * internalize the text string
-    			 */
-    			if (text->doc->dict != NULL) {
-    			    const xmlChar *tmp;
+        		/*
+        		 * internalize the text string
+        		 */
+        		if (text->doc->dict != NULL) {
+        		    const xmlChar *tmp;
 
-    			    tmp = xmlDictLookup(text->doc->dict,
-    			                        text->content, -1);
-    			    if (tmp != text->content) {
-    			        xmlNodeSetContent(text, NULL);
-    				text->content = (xmlChar *) tmp;
-    			    }
-    			}
-    		    }
+        		    tmp = xmlDictLookup(text->doc->dict,
+        		                        text->content, -1);
+        		    if (tmp != text->content) {
+        		        xmlNodeSetContent(text, NULL);
+        			text->content = (xmlChar *) tmp;
+        		    }
+        		}
+        	    }
 
-    		    next = text->next;
-    		    xmlUnlinkNode(text);
+        	    next = text->next;
+        	    xmlUnlinkNode(text);
                             if (xmlAddPrevSibling(cur, text) == NULL) {
                                 xsltTransformError(NULL, style, NULL,
                                         "out of memory\n");
                                 xmlFreeNode(text);
                             }
-    		    text = next;
-    		}
-    	    }
-    	}
-    	delete = cur;
-    	goto skip_children;
+        	    text = next;
+        	}
+            }
+        }
+        delete = cur;
+        goto skip_children;
         }
     }
     else if ((cur->ns != NULL) && (style->nsDefs != NULL) &&
@@ -5034,16 +5034,16 @@ xsltParseTemplateContent(xsltStylesheetPtr style, xmlNodePtr templ) {
          * template exectution, precompile AVT if found.
          */
         if ((cur->ns == NULL) && (style->defaultAlias != NULL)) {
-    	cur->ns = xmlSearchNsByHref(cur->doc, cur,
-    		style->defaultAlias);
+        cur->ns = xmlSearchNsByHref(cur->doc, cur,
+        	style->defaultAlias);
         }
         if (cur->properties != NULL) {
             xmlAttrPtr attr = cur->properties;
 
-    	while (attr != NULL) {
-    	    xsltCompileAttr(style, attr);
-    	    attr = attr->next;
-    	}
+        while (attr != NULL) {
+            xsltCompileAttr(style, attr);
+            attr = attr->next;
+        }
         }
     }
     /*
@@ -5051,8 +5051,8 @@ xsltParseTemplateContent(xsltStylesheetPtr style, xmlNodePtr templ) {
      */
     if (cur->children != NULL) {
         if (cur->children->type != XML_ENTITY_DECL) {
-    	cur = cur->children;
-    	continue;
+        cur = cur->children;
+        continue;
         }
     }
 skip_children:
@@ -5064,14 +5064,14 @@ skip_children:
     do {
         cur = cur->parent;
         if (cur == NULL)
-    	break;
+        break;
         if (cur == templ) {
-    	cur = NULL;
-    	break;
+        cur = NULL;
+        break;
         }
         if (cur->next != NULL) {
-    	cur = cur->next;
-    	break;
+        cur = cur->next;
+        break;
         }
     } while (cur != NULL);
     }
@@ -5103,7 +5103,7 @@ skip_children:
         xmlNodePtr param = cur;
 
         xsltTransformError(NULL, style, cur,
-    	"xsltParseTemplateContent: ignoring misplaced param element\n");
+        "xsltParseTemplateContent: ignoring misplaced param element\n");
         if (style != NULL) style->warnings++;
             cur = cur->next;
         xmlUnlinkNode(param);
@@ -5154,7 +5154,7 @@ xsltParseStylesheetKey(xsltStylesheetPtr style, xmlNodePtr key) {
     } else {
         name = prop;
         if (URI != NULL)
-    	nameURI = xmlStrdup(URI);
+        nameURI = xmlStrdup(URI);
     }
 #ifdef WITH_XSLT_DEBUG_PARSING
     xsltGenericDebug(xsltGenericDebugContext,
@@ -5267,8 +5267,8 @@ xsltParseXSLTTemplate(xsltCompilerCtxtPtr cctxt, xmlNodePtr templNode) {
     prop = NULL;
     if (xmlValidateNCName(templ->mode, 0)) {
         xsltTransformError(NULL, cctxt->style, templNode,
-    	"xsl:template: Attribute 'mode': The local part '%s' "
-    	"of the value is not a valid NCName.\n", templ->name);
+        "xsl:template: Attribute 'mode': The local part '%s' "
+        "of the value is not a valid NCName.\n", templ->name);
         cctxt->style->errors++;
         goto error;
     }
@@ -5318,8 +5318,8 @@ xsltParseXSLTTemplate(xsltCompilerCtxtPtr cctxt, xmlNodePtr templNode) {
     prop = NULL;
     if (xmlValidateNCName(templ->name, 0)) {
         xsltTransformError(NULL, cctxt->style, templNode,
-    	"xsl:template: Attribute 'name': The local part '%s' of "
-    	"the value is not a valid NCName.\n", templ->name);
+        "xsl:template: Attribute 'name': The local part '%s' of "
+        "the value is not a valid NCName.\n", templ->name);
         cctxt->style->errors++;
         goto error;
     }
@@ -5328,14 +5328,14 @@ xsltParseXSLTTemplate(xsltCompilerCtxtPtr cctxt, xmlNodePtr templNode) {
     curTempl = templ->next;
     while (curTempl != NULL) {
         if ((nameURI != NULL && xmlStrEqual(curTempl->name, templ->name) &&
-    	xmlStrEqual(curTempl->nameURI, nameURI) ) ||
-    	(nameURI == NULL && curTempl->nameURI == NULL &&
-    	xmlStrEqual(curTempl->name, templ->name)))
+        xmlStrEqual(curTempl->nameURI, nameURI) ) ||
+        (nameURI == NULL && curTempl->nameURI == NULL &&
+        xmlStrEqual(curTempl->name, templ->name)))
         {
-    	xsltTransformError(NULL, cctxt->style, templNode,
-    	    "xsl:template: error duplicate name '%s'\n", templ->name);
-    	cctxt->style->errors++;
-    	goto error;
+        xsltTransformError(NULL, cctxt->style, templNode,
+            "xsl:template: error duplicate name '%s'\n", templ->name);
+        cctxt->style->errors++;
+        goto error;
         }
         curTempl = curTempl->next;
     }
@@ -5435,7 +5435,7 @@ xsltParseStylesheetTemplate(xsltStylesheetPtr style, xmlNodePtr template) {
     } else {
         mode = prop;
         if (URI != NULL)
-    	modeURI = xmlStrdup(URI);
+        modeURI = xmlStrdup(URI);
     }
     ret->mode = xmlDictLookup(style->dict, mode, -1);
     ret->modeURI = xmlDictLookup(style->dict, modeURI, -1);
@@ -5474,17 +5474,17 @@ xsltParseStylesheetTemplate(xsltStylesheetPtr style, xmlNodePtr template) {
         if (xmlValidateNCName(prop,0)) {
             xsltTransformError(NULL, style, template,
                 "xsl:template : error invalid name '%s'\n", prop);
-    	if (style != NULL) style->errors++;
+        if (style != NULL) style->errors++;
                 xmlFree(prop);
-    	goto error;
+        goto error;
         }
         ret->name = xmlDictLookup(style->dict, BAD_CAST prop, -1);
         xmlFree(prop);
         prop = NULL;
         if (URI != NULL)
-    	ret->nameURI = xmlDictLookup(style->dict, BAD_CAST URI, -1);
+        ret->nameURI = xmlDictLookup(style->dict, BAD_CAST URI, -1);
         else
-    	ret->nameURI = NULL;
+        ret->nameURI = NULL;
     }
     }
 
@@ -5522,7 +5522,7 @@ xsltCompileXSLTIncludeElem(xsltCompilerCtxtPtr cctxt, xmlNodePtr node) {
     item = (xsltStyleItemIncludePtr) xmlMalloc(sizeof(xsltStyleItemInclude));
     if (item == NULL) {
     xsltTransformError(NULL, cctxt->style, node,
-    	"xsltIncludeComp : malloc failed\n");
+        "xsltIncludeComp : malloc failed\n");
     cctxt->style->errors++;
     return(NULL);
     }
@@ -5540,11 +5540,11 @@ xsltCompileXSLTIncludeElem(xsltCompilerCtxtPtr cctxt, xmlNodePtr node) {
 
 static int
 xsltParseFindTopLevelElem(xsltCompilerCtxtPtr cctxt,
-    		      xmlNodePtr cur,
-    		      const xmlChar *name,
-    		      const xmlChar *namespaceURI,
-    		      int breakOnOtherElem,
-    		      xmlNodePtr *resultNode)
+        	      xmlNodePtr cur,
+        	      const xmlChar *name,
+        	      const xmlChar *namespaceURI,
+        	      int breakOnOtherElem,
+        	      xmlNodePtr *resultNode)
 {
     if (name == NULL)
     return(-1);
@@ -5553,16 +5553,16 @@ xsltParseFindTopLevelElem(xsltCompilerCtxtPtr cctxt,
     while (cur != NULL) {
     if (cur->type == XML_ELEMENT_NODE) {
         if ((cur->ns != NULL) && (cur->name != NULL)) {
-    	if ((*(cur->name) == *name) &&
-    	    xmlStrEqual(cur->name, name) &&
-    	    xmlStrEqual(cur->ns->href, namespaceURI))
-    	{
-    	    *resultNode = cur;
-    	    return(1);
-    	}
+        if ((*(cur->name) == *name) &&
+            xmlStrEqual(cur->name, name) &&
+            xmlStrEqual(cur->ns->href, namespaceURI))
+        {
+            *resultNode = cur;
+            return(1);
+        }
         }
         if (breakOnOtherElem)
-    	break;
+        break;
     }
     cur = cur->next;
     }
@@ -5572,8 +5572,8 @@ xsltParseFindTopLevelElem(xsltCompilerCtxtPtr cctxt,
 
 static int
 xsltParseTopLevelXSLTElem(xsltCompilerCtxtPtr cctxt,
-    		  xmlNodePtr node,
-    		  xsltStyleType type)
+        	  xmlNodePtr node,
+        	  xsltStyleType type)
 {
     int ret = 0;
 
@@ -5595,20 +5595,20 @@ xsltParseTopLevelXSLTElem(xsltCompilerCtxtPtr cctxt,
     switch (type) {
     case XSLT_FUNC_INCLUDE:
         {
-    	int oldIsInclude;
+        int oldIsInclude;
 
-    	if (xsltCompileXSLTIncludeElem(cctxt, node) == NULL)
-    	    goto exit;
-    	/*
-    	* Mark this stylesheet tree as being currently included.
-    	*/
-    	oldIsInclude = cctxt->isInclude;
-    	cctxt->isInclude = 1;
+        if (xsltCompileXSLTIncludeElem(cctxt, node) == NULL)
+            goto exit;
+        /*
+        * Mark this stylesheet tree as being currently included.
+        */
+        oldIsInclude = cctxt->isInclude;
+        cctxt->isInclude = 1;
 
-    	if (xsltParseStylesheetInclude(cctxt->style, node) != 0) {
-    	    cctxt->style->errors++;
-    	}
-    	cctxt->isInclude = oldIsInclude;
+        if (xsltParseStylesheetInclude(cctxt->style, node) != 0) {
+            cctxt->style->errors++;
+        }
+        cctxt->isInclude = oldIsInclude;
         }
         break;
     case XSLT_FUNC_PARAM:
@@ -5624,8 +5624,8 @@ xsltParseTopLevelXSLTElem(xsltCompilerCtxtPtr cctxt,
         break;
     default:
         xsltTransformError(NULL, cctxt->style, node,
-    	"Internal error: (xsltParseTopLevelXSLTElem) "
-    	"Cannot handle this top-level declaration.\n");
+        "Internal error: (xsltParseTopLevelXSLTElem) "
+        "Cannot handle this top-level declaration.\n");
         cctxt->style->errors++;
         ret = -1;
     }
@@ -5647,14 +5647,14 @@ xsltParseRemoveWhitespace(xmlNodePtr node)
 
     do {
         if (delNode) {
-    	xmlUnlinkNode(delNode);
-    	xmlFreeNode(delNode);
-    	delNode = NULL;
+        xmlUnlinkNode(delNode);
+        xmlFreeNode(delNode);
+        delNode = NULL;
         }
         if (((child->type == XML_TEXT_NODE) ||
-    	 (child->type == XML_CDATA_SECTION_NODE)) &&
-    	(IS_BLANK_NODE(child)))
-    	delNode = child;
+         (child->type == XML_CDATA_SECTION_NODE)) &&
+        (IS_BLANK_NODE(child)))
+        delNode = child;
         child = child->next;
     } while (child != NULL);
     if (delNode) {
@@ -5759,7 +5759,7 @@ xsltParseXSLTStylesheetElemCore(xsltCompilerCtxtPtr cctxt, xmlNodePtr node)
 #ifdef XSLT_REFACTORED_MANDATORY_VERSION
     if (isXsltElem)
         xsltTransformError(NULL, cctxt->style, node,
-    	"The attribute 'version' is missing.\n");
+        "The attribute 'version' is missing.\n");
     cctxt->style->errors++;
 #else
     /* OLD behaviour. */
@@ -5817,8 +5817,8 @@ xsltParseXSLTStylesheetElemCore(xsltCompilerCtxtPtr cctxt, xmlNodePtr node)
     while (cur != NULL) {
     if (cur->type == XML_TEXT_NODE) {
         xsltTransformError(NULL, style, cur,
-    	"Misplaced text node (content: '%s').\n",
-    	(cur->content != NULL) ? cur->content : BAD_CAST "");
+        "Misplaced text node (content: '%s').\n",
+        (cur->content != NULL) ? cur->content : BAD_CAST "");
         style->errors++;
     } else if (cur->type != XML_ELEMENT_NODE) {
         xsltTransformError(NULL, style, cur, "Misplaced node.\n");
@@ -5869,116 +5869,116 @@ xsltParseXSLTStylesheetElemCore(xsltCompilerCtxtPtr cctxt, xmlNodePtr node)
     */
     if (cur->type == XML_ELEMENT_NODE) {
         if (cur->ns == NULL) {
-    	xsltTransformError(NULL, style, cur,
-    	    "Unexpected top-level element in no namespace.\n");
-    	style->errors++;
-    	cur = cur->next;
-    	continue;
+        xsltTransformError(NULL, style, cur,
+            "Unexpected top-level element in no namespace.\n");
+        style->errors++;
+        cur = cur->next;
+        continue;
         }
         /*
         * Process all XSLT elements.
         */
         if (IS_XSLT_ELEM_FAST(cur)) {
-    	/*
-    	* xsl:import is only allowed at the beginning.
-    	*/
-    	if (IS_XSLT_NAME(cur, "import")) {
-    	    xsltTransformError(NULL, style, cur,
-    		"Misplaced xsl:import element.\n");
-    	    style->errors++;
-    	    cur = cur->next;
-    	    continue;
-    	}
-    	/*
-    	* TODO: Change the return type of the parsing functions
-    	*  to int.
-    	*/
-    	if (IS_XSLT_NAME(cur, "template")) {
+        /*
+        * xsl:import is only allowed at the beginning.
+        */
+        if (IS_XSLT_NAME(cur, "import")) {
+            xsltTransformError(NULL, style, cur,
+        	"Misplaced xsl:import element.\n");
+            style->errors++;
+            cur = cur->next;
+            continue;
+        }
+        /*
+        * TODO: Change the return type of the parsing functions
+        *  to int.
+        */
+        if (IS_XSLT_NAME(cur, "template")) {
 #ifdef WITH_XSLT_DEBUG_PARSING
-    	    templates++;
+            templates++;
 #endif
-    	    /*
-    	    * TODO: Is the position of xsl:template in the
-    	    *  tree significant? If not it would be easier to
-    	    *  parse them at a later stage.
-    	    */
-    	    xsltParseXSLTTemplate(cctxt, cur);
-    	} else if (IS_XSLT_NAME(cur, "variable")) {
-    	    /* NOP; done already */
-    	} else if (IS_XSLT_NAME(cur, "param")) {
-    	    /* NOP; done already */
-    	} else if (IS_XSLT_NAME(cur, "include")) {
-    	    if (cur->psvi != NULL)
-    		xsltParseXSLTStylesheetElemCore(cctxt, cur);
-    	    else {
-    		xsltTransformError(NULL, style, cur,
-    		    "Internal error: "
-    		    "(xsltParseXSLTStylesheetElemCore) "
-    		    "The xsl:include element was not compiled.\n");
-    		style->errors++;
-    	    }
-    	} else if (IS_XSLT_NAME(cur, "strip-space")) {
-    	    /* No node info needed. */
-    	    xsltParseStylesheetStripSpace(style, cur);
-    	} else if (IS_XSLT_NAME(cur, "preserve-space")) {
-    	    /* No node info needed. */
-    	    xsltParseStylesheetPreserveSpace(style, cur);
-    	} else if (IS_XSLT_NAME(cur, "output")) {
-    	    /* No node-info needed. */
-    	    xsltParseStylesheetOutput(style, cur);
-    	} else if (IS_XSLT_NAME(cur, "key")) {
-    	    /* TODO: node-info needed for expressions ? */
-    	    xsltParseStylesheetKey(style, cur);
-    	} else if (IS_XSLT_NAME(cur, "decimal-format")) {
-    	    /* No node-info needed. */
-    	    xsltParseStylesheetDecimalFormat(style, cur);
-    	} else if (IS_XSLT_NAME(cur, "attribute-set")) {
-    	    xsltParseTopLevelXSLTElem(cctxt, cur,
-    		XSLT_FUNC_ATTRSET);
-    	} else if (IS_XSLT_NAME(cur, "namespace-alias")) {
-    	    /* NOP; done already */
-    	} else {
-    	    if (cctxt->inode->forwardsCompat) {
-    		/*
-    		* Forwards-compatible mode:
-    		*
-    		* XSLT-1: "if it is a top-level element and
-    		*  XSLT 1.0 does not allow such elements as top-level
-    		*  elements, then the element must be ignored along
-    		*  with its content;"
-    		*/
-    		/*
-    		* TODO: I don't think we should generate a warning.
-    		*/
-    		xsltTransformError(NULL, style, cur,
-    		    "Forwards-compatible mode: Ignoring unknown XSLT "
-    		    "element '%s'.\n", cur->name);
-    		style->warnings++;
-    	    } else {
-    		xsltTransformError(NULL, style, cur,
-    		    "Unknown XSLT element '%s'.\n", cur->name);
-    		style->errors++;
-    	    }
-    	}
+            /*
+            * TODO: Is the position of xsl:template in the
+            *  tree significant? If not it would be easier to
+            *  parse them at a later stage.
+            */
+            xsltParseXSLTTemplate(cctxt, cur);
+        } else if (IS_XSLT_NAME(cur, "variable")) {
+            /* NOP; done already */
+        } else if (IS_XSLT_NAME(cur, "param")) {
+            /* NOP; done already */
+        } else if (IS_XSLT_NAME(cur, "include")) {
+            if (cur->psvi != NULL)
+        	xsltParseXSLTStylesheetElemCore(cctxt, cur);
+            else {
+        	xsltTransformError(NULL, style, cur,
+        	    "Internal error: "
+        	    "(xsltParseXSLTStylesheetElemCore) "
+        	    "The xsl:include element was not compiled.\n");
+        	style->errors++;
+            }
+        } else if (IS_XSLT_NAME(cur, "strip-space")) {
+            /* No node info needed. */
+            xsltParseStylesheetStripSpace(style, cur);
+        } else if (IS_XSLT_NAME(cur, "preserve-space")) {
+            /* No node info needed. */
+            xsltParseStylesheetPreserveSpace(style, cur);
+        } else if (IS_XSLT_NAME(cur, "output")) {
+            /* No node-info needed. */
+            xsltParseStylesheetOutput(style, cur);
+        } else if (IS_XSLT_NAME(cur, "key")) {
+            /* TODO: node-info needed for expressions ? */
+            xsltParseStylesheetKey(style, cur);
+        } else if (IS_XSLT_NAME(cur, "decimal-format")) {
+            /* No node-info needed. */
+            xsltParseStylesheetDecimalFormat(style, cur);
+        } else if (IS_XSLT_NAME(cur, "attribute-set")) {
+            xsltParseTopLevelXSLTElem(cctxt, cur,
+        	XSLT_FUNC_ATTRSET);
+        } else if (IS_XSLT_NAME(cur, "namespace-alias")) {
+            /* NOP; done already */
         } else {
-    	xsltTopLevelFunction function;
+            if (cctxt->inode->forwardsCompat) {
+        	/*
+        	* Forwards-compatible mode:
+        	*
+        	* XSLT-1: "if it is a top-level element and
+        	*  XSLT 1.0 does not allow such elements as top-level
+        	*  elements, then the element must be ignored along
+        	*  with its content;"
+        	*/
+        	/*
+        	* TODO: I don't think we should generate a warning.
+        	*/
+        	xsltTransformError(NULL, style, cur,
+        	    "Forwards-compatible mode: Ignoring unknown XSLT "
+        	    "element '%s'.\n", cur->name);
+        	style->warnings++;
+            } else {
+        	xsltTransformError(NULL, style, cur,
+        	    "Unknown XSLT element '%s'.\n", cur->name);
+        	style->errors++;
+            }
+        }
+        } else {
+        xsltTopLevelFunction function;
 
-    	/*
-    	* Process non-XSLT elements, which are in a
-    	*  non-NULL namespace.
-    	*/
-    	/*
-    	* QUESTION: What does xsltExtModuleTopLevelLookup()
-    	*  do exactly?
-    	*/
-    	function = xsltExtModuleTopLevelLookup(cur->name,
-    	    cur->ns->href);
-    	if (function != NULL)
-    	    function(style, cur);
+        /*
+        * Process non-XSLT elements, which are in a
+        *  non-NULL namespace.
+        */
+        /*
+        * QUESTION: What does xsltExtModuleTopLevelLookup()
+        *  do exactly?
+        */
+        function = xsltExtModuleTopLevelLookup(cur->name,
+            cur->ns->href);
+        if (function != NULL)
+            function(style, cur);
 #ifdef WITH_XSLT_DEBUG_PARSING
-    	xsltGenericDebug(xsltGenericDebugContext,
-    	    "xsltParseXSLTStylesheetElemCore : User-defined "
-    	    "data element '%s'.\n", cur->name);
+        xsltGenericDebug(xsltGenericDebugContext,
+            "xsltParseXSLTStylesheetElemCore : User-defined "
+            "data element '%s'.\n", cur->name);
 #endif
         }
     }
@@ -6141,7 +6141,7 @@ xsltParseStylesheetTop(xsltStylesheetPtr style, xmlNodePtr top) {
     if ((!xmlStrEqual(prop, (const xmlChar *)"1.0")) &&
             (!xmlStrEqual(prop, (const xmlChar *)"1.1"))) {
         xsltTransformError(NULL, style, top,
-    	"xsl:version: only 1.1 features are supported\n");
+        "xsl:version: only 1.1 features are supported\n");
         if (style != NULL) {
                 style->forwards_compatible = 1;
                 style->warnings++;
@@ -6158,14 +6158,14 @@ xsltParseStylesheetTop(xsltStylesheetPtr style, xmlNodePtr top) {
             style->principal->opCount += 1;
 
         if (IS_BLANK_NODE(cur)) {
-    	    cur = cur->next;
-    	    continue;
+            cur = cur->next;
+            continue;
         }
         if (IS_XSLT_ELEM(cur) && IS_XSLT_NAME(cur, "import")) {
-    	    if (xsltParseStylesheetImport(style, cur) != 0)
-    		    if (style != NULL) style->errors++;
+            if (xsltParseStylesheetImport(style, cur) != 0)
+        	    if (style != NULL) style->errors++;
         } else
-    	    break;
+            break;
         cur = cur->next;
     }
 
@@ -6181,8 +6181,8 @@ xsltParseStylesheetTop(xsltStylesheetPtr style, xmlNodePtr top) {
     }
     if (cur->type == XML_TEXT_NODE) {
         if (cur->content != NULL) {
-    	xsltTransformError(NULL, style, cur,
-    	    "misplaced text node: '%s'\n", cur->content);
+        xsltTransformError(NULL, style, cur,
+            "misplaced text node: '%s'\n", cur->content);
         }
         if (style != NULL) style->errors++;
             cur = cur->next;
@@ -6190,8 +6190,8 @@ xsltParseStylesheetTop(xsltStylesheetPtr style, xmlNodePtr top) {
     }
     if ((cur->type == XML_ELEMENT_NODE) && (cur->ns == NULL)) {
         xsltGenericError(xsltGenericErrorContext,
-    	     "Found a top-level element %s with null namespace URI\n",
-    	     cur->name);
+             "Found a top-level element %s with null namespace URI\n",
+             cur->name);
         if (style != NULL) style->errors++;
         cur = cur->next;
         continue;
@@ -6200,25 +6200,25 @@ xsltParseStylesheetTop(xsltStylesheetPtr style, xmlNodePtr top) {
         xsltTopLevelFunction function;
 
         function = xsltExtModuleTopLevelLookup(cur->name,
-    					   cur->ns->href);
+        				   cur->ns->href);
         if (function != NULL)
-    	function(style, cur);
+        function(style, cur);
 
 #ifdef WITH_XSLT_DEBUG_PARSING
         xsltGenericDebug(xsltGenericDebugContext,
-    	    "xsltParseStylesheetTop : found foreign element %s\n",
-    	    cur->name);
+            "xsltParseStylesheetTop : found foreign element %s\n",
+            cur->name);
 #endif
             cur = cur->next;
         continue;
     }
     if (IS_XSLT_NAME(cur, "import")) {
         xsltTransformError(NULL, style, cur,
-    		"xsltParseStylesheetTop: ignoring misplaced import element\n");
+        	"xsltParseStylesheetTop: ignoring misplaced import element\n");
         if (style != NULL) style->errors++;
         } else if (IS_XSLT_NAME(cur, "include")) {
         if (xsltParseStylesheetInclude(style, cur) != 0)
-    	if (style != NULL) style->errors++;
+        if (style != NULL) style->errors++;
         } else if (IS_XSLT_NAME(cur, "strip-space")) {
         xsltParseStylesheetStripSpace(style, cur);
         } else if (IS_XSLT_NAME(cur, "preserve-space")) {
@@ -6245,8 +6245,8 @@ xsltParseStylesheetTop(xsltStylesheetPtr style, xmlNodePtr top) {
     } else {
             if ((style != NULL) && (style->forwards_compatible == 0)) {
             xsltTransformError(NULL, style, cur,
-    		"xsltParseStylesheetTop: unknown %s element\n",
-    		cur->name);
+        	"xsltParseStylesheetTop: unknown %s element\n",
+        	cur->name);
             if (style != NULL) style->errors++;
         }
     }
@@ -6254,7 +6254,7 @@ xsltParseStylesheetTop(xsltStylesheetPtr style, xmlNodePtr top) {
     }
 #ifdef WITH_XSLT_DEBUG_PARSING
     xsltGenericDebug(xsltGenericDebugContext,
-    	    "parsed %d templates\n", templates);
+            "parsed %d templates\n", templates);
 #endif
 }
 
@@ -6273,8 +6273,8 @@ xsltParseStylesheetTop(xsltStylesheetPtr style, xmlNodePtr top) {
  */
 static int
 xsltParseSimplifiedStylesheetTree(xsltCompilerCtxtPtr cctxt,
-    			  xmlDocPtr doc,
-    			  xmlNodePtr node)
+        		  xmlDocPtr doc,
+        		  xmlNodePtr node)
 {
     xsltTemplatePtr templ;
 
@@ -6397,7 +6397,7 @@ xsltParseStylesheetProcess(xsltStylesheetPtr style, xmlDocPtr doc)
     cur = xmlDocGetRootElement(doc);
     if (cur == NULL) {
     xsltTransformError(NULL, style, (xmlNodePtr) doc,
-    	"xsltParseStylesheetProcess : empty stylesheet\n");
+        "xsltParseStylesheetProcess : empty stylesheet\n");
     return(NULL);
     }
     oldIsSimplifiedStylesheet = cctxt->simplified;
@@ -6407,7 +6407,7 @@ xsltParseStylesheetProcess(xsltStylesheetPtr style, xmlDocPtr doc)
      (IS_XSLT_NAME(cur, "transform")))) {
 #ifdef WITH_XSLT_DEBUG_PARSING
     xsltGenericDebug(xsltGenericDebugContext,
-    	"xsltParseStylesheetProcess : found stylesheet\n");
+        "xsltParseStylesheetProcess : found stylesheet\n");
 #endif
     cctxt->simplified = 0;
     style->literal_result = 0;
@@ -6472,7 +6472,7 @@ xsltParseStylesheetProcess(xsltStylesheetPtr ret, xmlDocPtr doc) {
     cur = xmlDocGetRootElement(doc);
     if (cur == NULL) {
     xsltTransformError(NULL, ret, (xmlNodePtr) doc,
-    	"xsltParseStylesheetProcess : empty stylesheet\n");
+        "xsltParseStylesheetProcess : empty stylesheet\n");
     return(NULL);
     }
 
@@ -6481,7 +6481,7 @@ xsltParseStylesheetProcess(xsltStylesheetPtr ret, xmlDocPtr doc) {
      (IS_XSLT_NAME(cur, "transform")))) {
 #ifdef WITH_XSLT_DEBUG_PARSING
     xsltGenericDebug(xsltGenericDebugContext,
-    	"xsltParseStylesheetProcess : found stylesheet\n");
+        "xsltParseStylesheetProcess : found stylesheet\n");
 #endif
     ret->literal_result = 0;
     xsltParseStylesheetExcludePrefix(ret, cur, 1);
@@ -6506,19 +6506,19 @@ xsltParseStylesheetProcess(xsltStylesheetPtr ret, xmlDocPtr doc) {
     prop = xmlGetNsProp(cur, (const xmlChar *)"version", XSLT_NAMESPACE);
     if (prop == NULL) {
         xsltTransformError(NULL, ret, cur,
-    	"xsltParseStylesheetProcess : document is not a stylesheet\n");
+        "xsltParseStylesheetProcess : document is not a stylesheet\n");
         return(NULL);
     }
 
 #ifdef WITH_XSLT_DEBUG_PARSING
         xsltGenericDebug(xsltGenericDebugContext,
-    	"xsltParseStylesheetProcess : document is stylesheet\n");
+        "xsltParseStylesheetProcess : document is stylesheet\n");
 #endif
 
     if ((!xmlStrEqual(prop, (const xmlChar *)"1.0")) &&
             (!xmlStrEqual(prop, (const xmlChar *)"1.1"))) {
         xsltTransformError(NULL, ret, cur,
-    	"xsl:version: only 1.1 features are supported\n");
+        "xsl:version: only 1.1 features are supported\n");
             ret->forwards_compatible = 1;
         ret->warnings++;
     }
@@ -6563,7 +6563,7 @@ xsltParseStylesheetProcess(xsltStylesheetPtr ret, xmlDocPtr doc) {
 
 xsltStylesheetPtr
 xsltParseStylesheetImportedDoc(xmlDocPtr doc,
-    		       xsltStylesheetPtr parentStyle) {
+        	       xsltStylesheetPtr parentStyle) {
     xsltStylesheetPtr retStyle;
 
     if (doc == NULL)
@@ -6627,7 +6627,7 @@ xsltParseStylesheetUser(xsltStylesheetPtr style, xmlDocPtr doc) {
         */
         principalData = xsltNewPrincipalStylesheetData();
         if (principalData == NULL) {
-    	return(-1);
+        return(-1);
         }
         style->principalData = principalData;
         /*
@@ -6639,7 +6639,7 @@ xsltParseStylesheetUser(xsltStylesheetPtr style, xmlDocPtr doc) {
         */
         cctxt = xsltCompilationCtxtCreate(style);
         if (cctxt == NULL) {
-    	return(-1);
+        return(-1);
         }
         style->compCtxt = (void *) cctxt;
         cctxt->style = style;
@@ -6795,7 +6795,7 @@ xsltParseStylesheetFile(const xmlChar* filename) {
                                NULL, XSLT_LOAD_START);
     if (doc == NULL) {
     xsltTransformError(NULL, NULL, NULL,
-    	"xsltParseStylesheetFile : cannot parse %s\n", filename);
+        "xsltParseStylesheetFile : cannot parse %s\n", filename);
     return(NULL);
     }
     ret = xsltParseStylesheetDoc(doc);
@@ -6808,15 +6808,15 @@ xsltParseStylesheetFile(const xmlChar* filename) {
 }
 
 /************************************************************************
- *    								*
- *    		Handling of Stylesheet PI			*
- *    								*
+ *        							*
+ *        	Handling of Stylesheet PI			*
+ *        							*
  ************************************************************************/
 
 #define CUR (*cur)
 #define SKIP(val) cur += (val)
 #define NXT(val) cur[(val)]
-#define SKIP_BLANKS    					\
+#define SKIP_BLANKS        				\
     while (IS_BLANK(CUR)) NEXT
 #define NEXT ((*cur) ?  cur++ : cur)
 
@@ -6850,26 +6850,26 @@ xsltParseStylesheetPI(const xmlChar *value) {
         SKIP(4);
         SKIP_BLANKS;
         if (CUR != '=')
-    	continue;
+        continue;
         NEXT;
         if ((CUR != '\'') && (CUR != '"'))
-    	continue;
+        continue;
         tmp = CUR;
         NEXT;
         start = cur;
         while ((CUR != 0) && (CUR != tmp))
-    	NEXT;
+        NEXT;
         if (CUR != tmp)
-    	continue;
+        continue;
         val = xmlStrndup(start, cur - start);
         NEXT;
         if (val == NULL)
-    	return(NULL);
+        return(NULL);
         if ((xmlStrcasecmp(val, BAD_CAST "text/xml")) &&
-    	(xmlStrcasecmp(val, BAD_CAST "text/xsl")) &&
-    	(xmlStrcasecmp(val, BAD_CAST "application/xslt+xml"))) {
+        (xmlStrcasecmp(val, BAD_CAST "text/xsl")) &&
+        (xmlStrcasecmp(val, BAD_CAST "application/xslt+xml"))) {
                 xmlFree(val);
-    	break;
+        break;
         }
         isXml = 1;
         xmlFree(val);
@@ -6878,23 +6878,23 @@ xsltParseStylesheetPI(const xmlChar *value) {
         SKIP(4);
         SKIP_BLANKS;
         if (CUR != '=')
-    	continue;
+        continue;
         NEXT;
         if ((CUR != '\'') && (CUR != '"'))
-    	continue;
+        continue;
         tmp = CUR;
         NEXT;
         start = cur;
         while ((CUR != 0) && (CUR != tmp))
-    	NEXT;
+        NEXT;
         if (CUR != tmp)
-    	continue;
+        continue;
         if (href == NULL)
-    	href = xmlStrndup(start, cur - start);
+        href = xmlStrndup(start, cur - start);
         NEXT;
     } else {
         while ((CUR != 0) && (!IS_BLANK(CUR)))
-    	NEXT;
+        NEXT;
     }
 
     }
@@ -6942,7 +6942,7 @@ xsltLoadStylesheetPI(xmlDocPtr doc) {
         (xmlStrEqual(child->name, BAD_CAST "xml-stylesheet"))) {
         href = xsltParseStylesheetPI(child->content);
         if (href != NULL)
-    	break;
+        break;
     }
     child = child->next;
     }
@@ -6953,12 +6953,12 @@ xsltLoadStylesheetPI(xmlDocPtr doc) {
     if (href != NULL) {
 #ifdef WITH_XSLT_DEBUG_PARSING
     xsltGenericDebug(xsltGenericDebugContext,
-    	"xsltLoadStylesheetPI : found PI href=%s\n", href);
+        "xsltLoadStylesheetPI : found PI href=%s\n", href);
 #endif
     URI = xmlParseURI((const char *) href);
     if (URI == NULL) {
         xsltTransformError(NULL, NULL, child,
-    	    "xml-stylesheet : href %s is not valid\n", href);
+            "xml-stylesheet : href %s is not valid\n", href);
         xmlFree(href);
         return(NULL);
     }
@@ -6970,68 +6970,68 @@ xsltLoadStylesheetPI(xmlDocPtr doc) {
 
 #ifdef WITH_XSLT_DEBUG_PARSING
         xsltGenericDebug(xsltGenericDebugContext,
-    	    "xsltLoadStylesheetPI : Reference to ID %s\n", href);
+            "xsltLoadStylesheetPI : Reference to ID %s\n", href);
 #endif
         if (URI->fragment[0] == '#')
-    	ID = xmlGetID(doc, (const xmlChar *) &(URI->fragment[1]));
+        ID = xmlGetID(doc, (const xmlChar *) &(URI->fragment[1]));
         else
-    	ID = xmlGetID(doc, (const xmlChar *) URI->fragment);
+        ID = xmlGetID(doc, (const xmlChar *) URI->fragment);
         if (ID == NULL) {
-    	xsltTransformError(NULL, NULL, child,
-    	    "xml-stylesheet : no ID %s found\n", URI->fragment);
+        xsltTransformError(NULL, NULL, child,
+            "xml-stylesheet : no ID %s found\n", URI->fragment);
         } else {
-    	xmlDocPtr fake;
-    	xmlNodePtr subtree, newtree;
-    	xmlNsPtr ns;
+        xmlDocPtr fake;
+        xmlNodePtr subtree, newtree;
+        xmlNsPtr ns;
 
 #ifdef WITH_XSLT_DEBUG
-    	xsltGenericDebug(xsltGenericDebugContext,
-    	    "creating new document from %s for embedded stylesheet\n",
-    	    doc->URL);
+        xsltGenericDebug(xsltGenericDebugContext,
+            "creating new document from %s for embedded stylesheet\n",
+            doc->URL);
 #endif
-    	/*
-    	 * move the subtree in a new document passed to
-    	 * the stylesheet analyzer
-    	 */
-    	subtree = ID->parent;
-    	fake = xmlNewDoc(NULL);
-    	if (fake != NULL) {
-    	    /*
-    	    * Should the dictionary still be shared even though
-    	    * the nodes are being copied rather than moved?
-    	    */
-    	    fake->dict = doc->dict;
-    	    xmlDictReference(doc->dict);
+        /*
+         * move the subtree in a new document passed to
+         * the stylesheet analyzer
+         */
+        subtree = ID->parent;
+        fake = xmlNewDoc(NULL);
+        if (fake != NULL) {
+            /*
+            * Should the dictionary still be shared even though
+            * the nodes are being copied rather than moved?
+            */
+            fake->dict = doc->dict;
+            xmlDictReference(doc->dict);
 #ifdef WITH_XSLT_DEBUG
-    	    xsltGenericDebug(xsltGenericDebugContext,
-    		"reusing dictionary from %s for embedded stylesheet\n",
-    		doc->URL);
+            xsltGenericDebug(xsltGenericDebugContext,
+        	"reusing dictionary from %s for embedded stylesheet\n",
+        	doc->URL);
 #endif
 
-    	    newtree = xmlDocCopyNode(subtree, fake, 1);
+            newtree = xmlDocCopyNode(subtree, fake, 1);
 
-    	    fake->URL = xmlNodeGetBase(doc, subtree->parent);
+            fake->URL = xmlNodeGetBase(doc, subtree->parent);
 #ifdef WITH_XSLT_DEBUG
-    	    xsltGenericDebug(xsltGenericDebugContext,
-    		"set base URI for embedded stylesheet as %s\n",
-    		fake->URL);
+            xsltGenericDebug(xsltGenericDebugContext,
+        	"set base URI for embedded stylesheet as %s\n",
+        	fake->URL);
 #endif
 
-    	    /*
-    	    * Add all namespaces in scope of embedded stylesheet to
-    	    * root element of newly created stylesheet document
-    	    */
-    	    while ((subtree = subtree->parent) != (xmlNodePtr)doc) {
-    		for (ns = subtree->ns; ns; ns = ns->next) {
-    		    xmlNewNs(newtree,  ns->href, ns->prefix);
-    		}
-    	    }
+            /*
+            * Add all namespaces in scope of embedded stylesheet to
+            * root element of newly created stylesheet document
+            */
+            while ((subtree = subtree->parent) != (xmlNodePtr)doc) {
+        	for (ns = subtree->ns; ns; ns = ns->next) {
+        	    xmlNewNs(newtree,  ns->href, ns->prefix);
+        	}
+            }
 
-    	    xmlAddChild((xmlNodePtr)fake, newtree);
-    	    ret = xsltParseStylesheetDoc(fake);
-    	    if (ret == NULL)
-    		xmlFreeDoc(fake);
-    	}
+            xmlAddChild((xmlNodePtr)fake, newtree);
+            ret = xsltParseStylesheetDoc(fake);
+            if (ret == NULL)
+        	xmlFreeDoc(fake);
+        }
         }
     } else {
         xmlChar *URL, *base;
@@ -7044,20 +7044,20 @@ xsltLoadStylesheetPI(xmlDocPtr doc) {
         URL = xmlBuildURI(href, base);
         if (URL != NULL) {
 #ifdef WITH_XSLT_DEBUG_PARSING
-    	xsltGenericDebug(xsltGenericDebugContext,
-    		"xsltLoadStylesheetPI : fetching %s\n", URL);
+        xsltGenericDebug(xsltGenericDebugContext,
+        	"xsltLoadStylesheetPI : fetching %s\n", URL);
 #endif
-    	ret = xsltParseStylesheetFile(URL);
-    	xmlFree(URL);
+        ret = xsltParseStylesheetFile(URL);
+        xmlFree(URL);
         } else {
 #ifdef WITH_XSLT_DEBUG_PARSING
-    	xsltGenericDebug(xsltGenericDebugContext,
-    		"xsltLoadStylesheetPI : fetching %s\n", href);
+        xsltGenericDebug(xsltGenericDebugContext,
+        	"xsltLoadStylesheetPI : fetching %s\n", href);
 #endif
-    	ret = xsltParseStylesheetFile(href);
+        ret = xsltParseStylesheetFile(href);
         }
         if (base != NULL)
-    	xmlFree(base);
+        xmlFree(base);
     }
     xmlFreeURI(URI);
     xmlFree(href);

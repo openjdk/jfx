@@ -41,13 +41,13 @@
 static int htmlOmittedDefaultValue = 1;
 
 xmlChar * htmlDecodeEntities(htmlParserCtxtPtr ctxt, int len,
-    		     xmlChar end, xmlChar  end2, xmlChar end3);
+        	     xmlChar end, xmlChar  end2, xmlChar end3);
 static void htmlParseComment(htmlParserCtxtPtr ctxt);
 
 /************************************************************************
- *    								*
- *    	Some factorized error routines				*
- *    								*
+ *        							*
+ *        Some factorized error routines				*
+ *        							*
  ************************************************************************/
 
 /**
@@ -99,9 +99,9 @@ htmlParseErrInt(xmlParserCtxtPtr ctxt, xmlParserErrors error,
 }
 
 /************************************************************************
- *    								*
- *    Parser stacks related functions and macros		*
- *    								*
+ *        							*
+ *    Parser stacks related functions and macros    	*
+ *        							*
  ************************************************************************/
 
 /**
@@ -276,11 +276,11 @@ htmlNodeInfoPop(htmlParserCtxtPtr ctxt)
 #define RAW (*ctxt->input->cur)
 
 
-#define NEXTL(l) do {    						\
-    if (*(ctxt->input->cur) == '\n') {    				\
-    ctxt->input->line++; ctxt->input->col = 1;			\
-    } else ctxt->input->col++;    					\
-    ctxt->input->cur += l;    					\
+#define NEXTL(l) do {        					\
+    if (*(ctxt->input->cur) == '\n') {        			\
+    ctxt->input->line++; ctxt->input->col = 1;    		\
+    } else ctxt->input->col++;        				\
+    ctxt->input->cur += l;        				\
   } while (0)
 
 /************
@@ -291,8 +291,8 @@ htmlNodeInfoPop(htmlParserCtxtPtr ctxt)
 
 #define CUR_CHAR(l) htmlCurrentChar(ctxt, &l)
 
-#define COPY_BUF(l,b,i,v)    					\
-    if (l == 1) b[i++] = v;    					\
+#define COPY_BUF(l,b,i,v)        				\
+    if (l == 1) b[i++] = v;        				\
     else i += xmlCopyChar(l,&b[i],v)
 
 /**
@@ -525,9 +525,9 @@ htmlSkipBlankChars(xmlParserCtxtPtr ctxt) {
 
 
 /************************************************************************
- *    								*
- *    The list of HTML elements and their properties		*
- *    								*
+ *        							*
+ *    The list of HTML elements and their properties    	*
+ *        							*
  ************************************************************************/
 
 /*
@@ -613,8 +613,8 @@ static const char* const inline_p[] = { INLINE, "p", NULL } ;
 
 static const char* const flow_param[] = { FLOW, "param", NULL } ;
 static const char* const applet_attrs[] = { COREATTRS , "codebase",
-    	"archive", "alt", "name", "height", "width", "align",
-    	"hspace", "vspace", NULL } ;
+        "archive", "alt", "name", "height", "width", "align",
+        "hspace", "vspace", NULL } ;
 static const char* const area_attrs[] = { "shape", "coords", "href", "nohref",
     "tabindex", "accesskey", "onfocus", "onblur", NULL } ;
 static const char* const basefont_attrs[] =
@@ -697,7 +697,7 @@ static const char* const dir_attr[] = { "dir", NULL} ;
 
 static const htmlElemDesc
 html40ElementTable[] = {
-{ "a",    	0, 0, 0, 0, 0, 0, 1, "anchor ",
+{ "a",        0, 0, 0, 0, 0, 0, 1, "anchor ",
     DECL html_inline , NULL , DECL a_attrs , DECL target_attr, NULL
 },
 { "abbr",    0, 0, 0, 0, 0, 0, 1, "abbreviated form",
@@ -715,7 +715,7 @@ html40ElementTable[] = {
 { "area",    0, 2, 2, 1, 0, 0, 0, "client-side image map area ",
     EMPTY ,  NULL , DECL area_attrs , DECL target_attr, DECL alt_attr
 },
-{ "b",    	0, 3, 0, 0, 0, 0, 1, "bold text style",
+{ "b",        0, 3, 0, 0, 0, 0, 1, "bold text style",
     DECL html_inline , NULL , DECL html_attrs, NULL, NULL
 },
 { "base",    0, 2, 2, 1, 0, 0, 0, "document base uri ",
@@ -736,7 +736,7 @@ html40ElementTable[] = {
 { "body",    1, 1, 0, 0, 0, 0, 0, "document body ",
     DECL body_contents , "div" , DECL body_attrs, DECL body_depr, NULL
 },
-{ "br",    	0, 2, 2, 1, 0, 0, 1, "forced line break ",
+{ "br",        0, 2, 2, 1, 0, 0, 1, "forced line break ",
     EMPTY , NULL , DECL core_attrs, DECL clear_attrs , NULL
 },
 { "button",    0, 0, 0, 0, 0, 0, 2, "push button ",
@@ -760,7 +760,7 @@ html40ElementTable[] = {
 { "colgroup",    0, 1, 0, 0, 0, 0, 0, "table column group ",
     DECL col_elt , "col" , DECL col_attrs , NULL, NULL
 },
-{ "dd",    	0, 1, 0, 0, 0, 0, 0, "definition description ",
+{ "dd",        0, 1, 0, 0, 0, 0, 0, "definition description ",
     DECL html_flow , NULL , DECL html_attrs, NULL, NULL
 },
 { "del",    0, 0, 0, 0, 0, 0, 2, "deleted text ",
@@ -775,13 +775,13 @@ html40ElementTable[] = {
 { "div",    0, 0, 0, 0, 0, 0, 0, "generic language/style container",
     DECL html_flow, NULL, DECL html_attrs, DECL align_attr, NULL
 },
-{ "dl",    	0, 0, 0, 0, 0, 0, 0, "definition list ",
+{ "dl",        0, 0, 0, 0, 0, 0, 0, "definition list ",
     DECL dl_contents , "dd" , DECL html_attrs, DECL compact_attr, NULL
 },
-{ "dt",    	0, 1, 0, 0, 0, 0, 0, "definition term ",
+{ "dt",        0, 1, 0, 0, 0, 0, 0, "definition term ",
     DECL html_inline, NULL, DECL html_attrs, NULL, NULL
 },
-{ "em",    	0, 3, 0, 0, 0, 0, 1, "emphasis",
+{ "em",        0, 3, 0, 0, 0, 0, 1, "emphasis",
     DECL html_inline, NULL, DECL html_attrs, NULL, NULL
 },
 { "embed",    0, 1, 0, 0, 1, 1, 1, "generic embedded object ",
@@ -802,34 +802,34 @@ html40ElementTable[] = {
 { "frameset",    0, 0, 0, 0, 0, 2, 0, "window subdivision" ,
     DECL frameset_contents, "noframes" , NULL , DECL frameset_attrs, NULL
 },
-{ "h1",    	0, 0, 0, 0, 0, 0, 0, "heading ",
+{ "h1",        0, 0, 0, 0, 0, 0, 0, "heading ",
     DECL html_inline, NULL, DECL html_attrs, DECL align_attr, NULL
 },
-{ "h2",    	0, 0, 0, 0, 0, 0, 0, "heading ",
+{ "h2",        0, 0, 0, 0, 0, 0, 0, "heading ",
     DECL html_inline, NULL, DECL html_attrs, DECL align_attr, NULL
 },
-{ "h3",    	0, 0, 0, 0, 0, 0, 0, "heading ",
+{ "h3",        0, 0, 0, 0, 0, 0, 0, "heading ",
     DECL html_inline, NULL, DECL html_attrs, DECL align_attr, NULL
 },
-{ "h4",    	0, 0, 0, 0, 0, 0, 0, "heading ",
+{ "h4",        0, 0, 0, 0, 0, 0, 0, "heading ",
     DECL html_inline, NULL, DECL html_attrs, DECL align_attr, NULL
 },
-{ "h5",    	0, 0, 0, 0, 0, 0, 0, "heading ",
+{ "h5",        0, 0, 0, 0, 0, 0, 0, "heading ",
     DECL html_inline, NULL, DECL html_attrs, DECL align_attr, NULL
 },
-{ "h6",    	0, 0, 0, 0, 0, 0, 0, "heading ",
+{ "h6",        0, 0, 0, 0, 0, 0, 0, "heading ",
     DECL html_inline, NULL, DECL html_attrs, DECL align_attr, NULL
 },
 { "head",    1, 1, 0, 0, 0, 0, 0, "document head ",
     DECL head_contents, NULL, DECL head_attrs, NULL, NULL
 },
-{ "hr",    	0, 2, 2, 1, 0, 0, 0, "horizontal rule " ,
+{ "hr",        0, 2, 2, 1, 0, 0, 0, "horizontal rule " ,
     EMPTY, NULL, DECL html_attrs, DECL hr_depr, NULL
 },
 { "html",    1, 1, 0, 0, 0, 0, 0, "document root element ",
     DECL html_content , NULL , DECL i18n_attrs, DECL version_attr, NULL
 },
-{ "i",    	0, 3, 0, 0, 0, 0, 1, "italic text style",
+{ "i",        0, 3, 0, 0, 0, 0, 1, "italic text style",
     DECL html_inline, NULL, DECL html_attrs, NULL, NULL
 },
 { "iframe",    0, 0, 0, 0, 0, 1, 2, "inline subwindow ",
@@ -856,7 +856,7 @@ html40ElementTable[] = {
 { "legend",    0, 0, 0, 0, 0, 0, 0, "fieldset legend ",
     DECL html_inline, NULL, DECL legend_attrs , DECL align_attr, NULL
 },
-{ "li",    	0, 1, 1, 0, 0, 0, 0, "list item ",
+{ "li",        0, 1, 1, 0, 0, 0, 0, "list item ",
     DECL html_flow, NULL, DECL html_attrs, NULL, NULL
 },
 { "link",    0, 2, 2, 1, 0, 0, 0, "a media-independent link ",
@@ -880,7 +880,7 @@ html40ElementTable[] = {
 { "object",    0, 0, 0, 0, 0, 0, 2, "generic embedded object ",
     DECL object_contents , "div" , DECL object_attrs, DECL object_depr, NULL
 },
-{ "ol",    	0, 0, 0, 0, 0, 0, 0, "ordered list ",
+{ "ol",        0, 0, 0, 0, 0, 0, 0, "ordered list ",
     DECL li_elt , "li" , DECL html_attrs, DECL ol_attrs, NULL
 },
 { "optgroup",    0, 0, 0, 0, 0, 0, 0, "option group ",
@@ -889,7 +889,7 @@ html40ElementTable[] = {
 { "option",    0, 1, 0, 0, 0, 0, 0, "selectable choice " ,
     DECL html_pcdata, NULL, DECL option_attrs, NULL, NULL
 },
-{ "p",    	0, 1, 0, 0, 0, 0, 0, "paragraph ",
+{ "p",        0, 1, 0, 0, 0, 0, 0, "paragraph ",
     DECL html_inline, NULL, DECL html_attrs, DECL align_attr, NULL
 },
 { "param",    0, 2, 2, 1, 0, 0, 0, "named property value ",
@@ -898,10 +898,10 @@ html40ElementTable[] = {
 { "pre",    0, 0, 0, 0, 0, 0, 0, "preformatted text ",
     DECL pre_content, NULL, DECL html_attrs, DECL width_attr, NULL
 },
-{ "q",    	0, 0, 0, 0, 0, 0, 1, "short inline quotation ",
+{ "q",        0, 0, 0, 0, 0, 0, 1, "short inline quotation ",
     DECL html_inline, NULL, DECL quote_attrs, NULL, NULL
 },
-{ "s",    	0, 3, 0, 0, 1, 1, 1, "strike-through text style",
+{ "s",        0, 3, 0, 0, 1, 1, 1, "strike-through text style",
     DECL html_inline, NULL, NULL, DECL html_attrs, NULL
 },
 { "samp",    0, 0, 0, 0, 0, 0, 1, "sample program output, scripts, etc.",
@@ -940,7 +940,7 @@ html40ElementTable[] = {
 { "tbody",    1, 0, 0, 0, 0, 0, 0, "table body ",
     DECL tr_elt , "tr" , DECL talign_attrs, NULL, NULL
 },
-{ "td",    	0, 0, 0, 0, 0, 0, 0, "table data cell",
+{ "td",        0, 0, 0, 0, 0, 0, 0, "table data cell",
     DECL html_flow, NULL, DECL th_td_attr, DECL th_td_depr, NULL
 },
 { "textarea",    0, 0, 0, 0, 0, 0, 1, "multi-line text field ",
@@ -949,7 +949,7 @@ html40ElementTable[] = {
 { "tfoot",    0, 1, 0, 0, 0, 0, 0, "table footer ",
     DECL tr_elt , "tr" , DECL talign_attrs, NULL, NULL
 },
-{ "th",    	0, 1, 0, 0, 0, 0, 0, "table header cell",
+{ "th",        0, 1, 0, 0, 0, 0, 0, "table header cell",
     DECL html_flow, NULL, DECL th_td_attr, DECL th_td_depr, NULL
 },
 { "thead",    0, 1, 0, 0, 0, 0, 0, "table header ",
@@ -958,16 +958,16 @@ html40ElementTable[] = {
 { "title",    0, 0, 0, 0, 0, 0, 0, "document title ",
     DECL html_pcdata, NULL, DECL i18n_attrs, NULL, NULL
 },
-{ "tr",    	0, 0, 0, 0, 0, 0, 0, "table row ",
+{ "tr",        0, 0, 0, 0, 0, 0, 0, "table row ",
     DECL tr_contents , "td" , DECL talign_attrs, DECL bgcolor_attr, NULL
 },
-{ "tt",    	0, 3, 0, 0, 0, 0, 1, "teletype or monospaced text style",
+{ "tt",        0, 3, 0, 0, 0, 0, 1, "teletype or monospaced text style",
     DECL html_inline, NULL, DECL html_attrs, NULL, NULL
 },
-{ "u",    	0, 3, 0, 0, 1, 1, 1, "underlined text style",
+{ "u",        0, 3, 0, 0, 1, 1, 1, "underlined text style",
     DECL html_inline, NULL, NULL, DECL html_attrs, NULL
 },
-{ "ul",    	0, 0, 0, 0, 0, 0, 0, "unordered list ",
+{ "ul",        0, 0, 0, 0, 0, 0, 0, "unordered list ",
     DECL li_elt , "li" , DECL html_attrs, DECL ul_depr, NULL
 },
 { "var",    0, 0, 0, 0, 0, 0, 1, "instance of a variable or program argument",
@@ -1303,9 +1303,9 @@ static const elementPriority htmlEndPriority[] = {
 };
 
 /************************************************************************
- *    								*
- *    functions to handle HTML specific data			*
- *    								*
+ *        							*
+ *    functions to handle HTML specific data    		*
+ *        							*
  ************************************************************************/
 
 /**
@@ -1435,7 +1435,7 @@ htmlAutoCloseOnClose(htmlParserCtxtPtr ctxt, const xmlChar * newtag)
         if ((info != NULL) && (info->endTag == 3)) {
             htmlParseErr(ctxt, XML_ERR_TAG_NAME_MISMATCH,
                      "Opening and ending tag mismatch: %s and %s\n",
-    		 newtag, ctxt->name);
+        	 newtag, ctxt->name);
         }
         if ((ctxt->sax != NULL) && (ctxt->sax->endElement != NULL))
             ctxt->sax->endElement(ctxt->userData, ctxt->name);
@@ -1594,10 +1594,10 @@ htmlCheckImplied(htmlParserCtxtPtr ctxt, const xmlChar *newtag) {
         }
     for (i = 0;i < ctxt->nameNr;i++) {
         if (xmlStrEqual(ctxt->nameTab[i], BAD_CAST"body")) {
-    	return;
+        return;
         }
         if (xmlStrEqual(ctxt->nameTab[i], BAD_CAST"head")) {
-    	return;
+        return;
         }
     }
 
@@ -1642,7 +1642,7 @@ htmlCheckParagraph(htmlParserCtxtPtr ctxt) {
         htmlCheckImplied(ctxt, BAD_CAST"p");
         htmlnamePush(ctxt, BAD_CAST"p");
         if ((ctxt->sax != NULL) && (ctxt->sax->startElement != NULL))
-    	ctxt->sax->startElement(ctxt->userData, BAD_CAST"p", NULL);
+        ctxt->sax->startElement(ctxt->userData, BAD_CAST"p", NULL);
         return(1);
     }
     }
@@ -1678,9 +1678,9 @@ htmlIsScriptAttribute(const xmlChar *name) {
 }
 
 /************************************************************************
- *    								*
- *    The list of HTML predefined entities			*
- *    								*
+ *        							*
+ *    The list of HTML predefined entities    		*
+ *        							*
  ************************************************************************/
 
 
@@ -1688,43 +1688,43 @@ static const htmlEntityDesc  html40EntitiesTable[] = {
 /*
  * the 4 absolute ones, plus apostrophe.
  */
-{ 34,    "quot",	"quotation mark = APL quote, U+0022 ISOnum" },
-{ 38,    "amp",	"ampersand, U+0026 ISOnum" },
-{ 39,    "apos",	"single quote" },
-{ 60,    "lt",	"less-than sign, U+003C ISOnum" },
-{ 62,    "gt",	"greater-than sign, U+003E ISOnum" },
+{ 34,    "quot",    "quotation mark = APL quote, U+0022 ISOnum" },
+{ 38,    "amp",    "ampersand, U+0026 ISOnum" },
+{ 39,    "apos",    "single quote" },
+{ 60,    "lt",    "less-than sign, U+003C ISOnum" },
+{ 62,    "gt",    "greater-than sign, U+003E ISOnum" },
 
 /*
  * A bunch still in the 128-255 range
  * Replacing them depend really on the charset used.
  */
-{ 160,    "nbsp",	"no-break space = non-breaking space, U+00A0 ISOnum" },
+{ 160,    "nbsp",    "no-break space = non-breaking space, U+00A0 ISOnum" },
 { 161,    "iexcl","inverted exclamation mark, U+00A1 ISOnum" },
-{ 162,    "cent",	"cent sign, U+00A2 ISOnum" },
+{ 162,    "cent",    "cent sign, U+00A2 ISOnum" },
 { 163,    "pound","pound sign, U+00A3 ISOnum" },
 { 164,    "curren","currency sign, U+00A4 ISOnum" },
-{ 165,    "yen",	"yen sign = yuan sign, U+00A5 ISOnum" },
+{ 165,    "yen",    "yen sign = yuan sign, U+00A5 ISOnum" },
 { 166,    "brvbar","broken bar = broken vertical bar, U+00A6 ISOnum" },
-{ 167,    "sect",	"section sign, U+00A7 ISOnum" },
-{ 168,    "uml",	"diaeresis = spacing diaeresis, U+00A8 ISOdia" },
-{ 169,    "copy",	"copyright sign, U+00A9 ISOnum" },
-{ 170,    "ordf",	"feminine ordinal indicator, U+00AA ISOnum" },
+{ 167,    "sect",    "section sign, U+00A7 ISOnum" },
+{ 168,    "uml",    "diaeresis = spacing diaeresis, U+00A8 ISOdia" },
+{ 169,    "copy",    "copyright sign, U+00A9 ISOnum" },
+{ 170,    "ordf",    "feminine ordinal indicator, U+00AA ISOnum" },
 { 171,    "laquo","left-pointing double angle quotation mark = left pointing guillemet, U+00AB ISOnum" },
-{ 172,    "not",	"not sign, U+00AC ISOnum" },
-{ 173,    "shy",	"soft hyphen = discretionary hyphen, U+00AD ISOnum" },
-{ 174,    "reg",	"registered sign = registered trade mark sign, U+00AE ISOnum" },
-{ 175,    "macr",	"macron = spacing macron = overline = APL overbar, U+00AF ISOdia" },
-{ 176,    "deg",	"degree sign, U+00B0 ISOnum" },
+{ 172,    "not",    "not sign, U+00AC ISOnum" },
+{ 173,    "shy",    "soft hyphen = discretionary hyphen, U+00AD ISOnum" },
+{ 174,    "reg",    "registered sign = registered trade mark sign, U+00AE ISOnum" },
+{ 175,    "macr",    "macron = spacing macron = overline = APL overbar, U+00AF ISOdia" },
+{ 176,    "deg",    "degree sign, U+00B0 ISOnum" },
 { 177,    "plusmn","plus-minus sign = plus-or-minus sign, U+00B1 ISOnum" },
-{ 178,    "sup2",	"superscript two = superscript digit two = squared, U+00B2 ISOnum" },
-{ 179,    "sup3",	"superscript three = superscript digit three = cubed, U+00B3 ISOnum" },
+{ 178,    "sup2",    "superscript two = superscript digit two = squared, U+00B2 ISOnum" },
+{ 179,    "sup3",    "superscript three = superscript digit three = cubed, U+00B3 ISOnum" },
 { 180,    "acute","acute accent = spacing acute, U+00B4 ISOdia" },
 { 181,    "micro","micro sign, U+00B5 ISOnum" },
-{ 182,    "para",	"pilcrow sign = paragraph sign, U+00B6 ISOnum" },
+{ 182,    "para",    "pilcrow sign = paragraph sign, U+00B6 ISOnum" },
 { 183,    "middot","middle dot = Georgian comma Greek middle dot, U+00B7 ISOnum" },
 { 184,    "cedil","cedilla = spacing cedilla, U+00B8 ISOdia" },
-{ 185,    "sup1",	"superscript one = superscript digit one, U+00B9 ISOnum" },
-{ 186,    "ordm",	"masculine ordinal indicator, U+00BA ISOnum" },
+{ 185,    "sup1",    "superscript one = superscript digit one, U+00B9 ISOnum" },
+{ 186,    "ordm",    "masculine ordinal indicator, U+00BA ISOnum" },
 { 187,    "raquo","right-pointing double angle quotation mark right pointing guillemet, U+00BB ISOnum" },
 { 188,    "frac14","vulgar fraction one quarter = fraction one quarter, U+00BC ISOnum" },
 { 189,    "frac12","vulgar fraction one half = fraction one half, U+00BD ISOnum" },
@@ -1734,31 +1734,31 @@ static const htmlEntityDesc  html40EntitiesTable[] = {
 { 193,    "Aacute","latin capital letter A with acute, U+00C1 ISOlat1" },
 { 194,    "Acirc","latin capital letter A with circumflex, U+00C2 ISOlat1" },
 { 195,    "Atilde","latin capital letter A with tilde, U+00C3 ISOlat1" },
-{ 196,    "Auml",	"latin capital letter A with diaeresis, U+00C4 ISOlat1" },
+{ 196,    "Auml",    "latin capital letter A with diaeresis, U+00C4 ISOlat1" },
 { 197,    "Aring","latin capital letter A with ring above = latin capital letter A ring, U+00C5 ISOlat1" },
 { 198,    "AElig","latin capital letter AE = latin capital ligature AE, U+00C6 ISOlat1" },
 { 199,    "Ccedil","latin capital letter C with cedilla, U+00C7 ISOlat1" },
 { 200,    "Egrave","latin capital letter E with grave, U+00C8 ISOlat1" },
 { 201,    "Eacute","latin capital letter E with acute, U+00C9 ISOlat1" },
 { 202,    "Ecirc","latin capital letter E with circumflex, U+00CA ISOlat1" },
-{ 203,    "Euml",	"latin capital letter E with diaeresis, U+00CB ISOlat1" },
+{ 203,    "Euml",    "latin capital letter E with diaeresis, U+00CB ISOlat1" },
 { 204,    "Igrave","latin capital letter I with grave, U+00CC ISOlat1" },
 { 205,    "Iacute","latin capital letter I with acute, U+00CD ISOlat1" },
 { 206,    "Icirc","latin capital letter I with circumflex, U+00CE ISOlat1" },
-{ 207,    "Iuml",	"latin capital letter I with diaeresis, U+00CF ISOlat1" },
-{ 208,    "ETH",	"latin capital letter ETH, U+00D0 ISOlat1" },
+{ 207,    "Iuml",    "latin capital letter I with diaeresis, U+00CF ISOlat1" },
+{ 208,    "ETH",    "latin capital letter ETH, U+00D0 ISOlat1" },
 { 209,    "Ntilde","latin capital letter N with tilde, U+00D1 ISOlat1" },
 { 210,    "Ograve","latin capital letter O with grave, U+00D2 ISOlat1" },
 { 211,    "Oacute","latin capital letter O with acute, U+00D3 ISOlat1" },
 { 212,    "Ocirc","latin capital letter O with circumflex, U+00D4 ISOlat1" },
 { 213,    "Otilde","latin capital letter O with tilde, U+00D5 ISOlat1" },
-{ 214,    "Ouml",	"latin capital letter O with diaeresis, U+00D6 ISOlat1" },
+{ 214,    "Ouml",    "latin capital letter O with diaeresis, U+00D6 ISOlat1" },
 { 215,    "times","multiplication sign, U+00D7 ISOnum" },
 { 216,    "Oslash","latin capital letter O with stroke latin capital letter O slash, U+00D8 ISOlat1" },
 { 217,    "Ugrave","latin capital letter U with grave, U+00D9 ISOlat1" },
 { 218,    "Uacute","latin capital letter U with acute, U+00DA ISOlat1" },
 { 219,    "Ucirc","latin capital letter U with circumflex, U+00DB ISOlat1" },
-{ 220,    "Uuml",	"latin capital letter U with diaeresis, U+00DC ISOlat1" },
+{ 220,    "Uuml",    "latin capital letter U with diaeresis, U+00DC ISOlat1" },
 { 221,    "Yacute","latin capital letter Y with acute, U+00DD ISOlat1" },
 { 222,    "THORN","latin capital letter THORN, U+00DE ISOlat1" },
 { 223,    "szlig","latin small letter sharp s = ess-zed, U+00DF ISOlat1" },
@@ -1766,110 +1766,110 @@ static const htmlEntityDesc  html40EntitiesTable[] = {
 { 225,    "aacute","latin small letter a with acute, U+00E1 ISOlat1" },
 { 226,    "acirc","latin small letter a with circumflex, U+00E2 ISOlat1" },
 { 227,    "atilde","latin small letter a with tilde, U+00E3 ISOlat1" },
-{ 228,    "auml",	"latin small letter a with diaeresis, U+00E4 ISOlat1" },
+{ 228,    "auml",    "latin small letter a with diaeresis, U+00E4 ISOlat1" },
 { 229,    "aring","latin small letter a with ring above = latin small letter a ring, U+00E5 ISOlat1" },
 { 230,    "aelig","latin small letter ae = latin small ligature ae, U+00E6 ISOlat1" },
 { 231,    "ccedil","latin small letter c with cedilla, U+00E7 ISOlat1" },
 { 232,    "egrave","latin small letter e with grave, U+00E8 ISOlat1" },
 { 233,    "eacute","latin small letter e with acute, U+00E9 ISOlat1" },
 { 234,    "ecirc","latin small letter e with circumflex, U+00EA ISOlat1" },
-{ 235,    "euml",	"latin small letter e with diaeresis, U+00EB ISOlat1" },
+{ 235,    "euml",    "latin small letter e with diaeresis, U+00EB ISOlat1" },
 { 236,    "igrave","latin small letter i with grave, U+00EC ISOlat1" },
 { 237,    "iacute","latin small letter i with acute, U+00ED ISOlat1" },
 { 238,    "icirc","latin small letter i with circumflex, U+00EE ISOlat1" },
-{ 239,    "iuml",	"latin small letter i with diaeresis, U+00EF ISOlat1" },
-{ 240,    "eth",	"latin small letter eth, U+00F0 ISOlat1" },
+{ 239,    "iuml",    "latin small letter i with diaeresis, U+00EF ISOlat1" },
+{ 240,    "eth",    "latin small letter eth, U+00F0 ISOlat1" },
 { 241,    "ntilde","latin small letter n with tilde, U+00F1 ISOlat1" },
 { 242,    "ograve","latin small letter o with grave, U+00F2 ISOlat1" },
 { 243,    "oacute","latin small letter o with acute, U+00F3 ISOlat1" },
 { 244,    "ocirc","latin small letter o with circumflex, U+00F4 ISOlat1" },
 { 245,    "otilde","latin small letter o with tilde, U+00F5 ISOlat1" },
-{ 246,    "ouml",	"latin small letter o with diaeresis, U+00F6 ISOlat1" },
+{ 246,    "ouml",    "latin small letter o with diaeresis, U+00F6 ISOlat1" },
 { 247,    "divide","division sign, U+00F7 ISOnum" },
 { 248,    "oslash","latin small letter o with stroke, = latin small letter o slash, U+00F8 ISOlat1" },
 { 249,    "ugrave","latin small letter u with grave, U+00F9 ISOlat1" },
 { 250,    "uacute","latin small letter u with acute, U+00FA ISOlat1" },
 { 251,    "ucirc","latin small letter u with circumflex, U+00FB ISOlat1" },
-{ 252,    "uuml",	"latin small letter u with diaeresis, U+00FC ISOlat1" },
+{ 252,    "uuml",    "latin small letter u with diaeresis, U+00FC ISOlat1" },
 { 253,    "yacute","latin small letter y with acute, U+00FD ISOlat1" },
 { 254,    "thorn","latin small letter thorn with, U+00FE ISOlat1" },
-{ 255,    "yuml",	"latin small letter y with diaeresis, U+00FF ISOlat1" },
+{ 255,    "yuml",    "latin small letter y with diaeresis, U+00FF ISOlat1" },
 
 { 338,    "OElig","latin capital ligature OE, U+0152 ISOlat2" },
 { 339,    "oelig","latin small ligature oe, U+0153 ISOlat2" },
 { 352,    "Scaron","latin capital letter S with caron, U+0160 ISOlat2" },
 { 353,    "scaron","latin small letter s with caron, U+0161 ISOlat2" },
-{ 376,    "Yuml",	"latin capital letter Y with diaeresis, U+0178 ISOlat2" },
+{ 376,    "Yuml",    "latin capital letter Y with diaeresis, U+0178 ISOlat2" },
 
 /*
  * Anything below should really be kept as entities references
  */
-{ 402,    "fnof",	"latin small f with hook = function = florin, U+0192 ISOtech" },
+{ 402,    "fnof",    "latin small f with hook = function = florin, U+0192 ISOtech" },
 
-{ 710,    "circ",	"modifier letter circumflex accent, U+02C6 ISOpub" },
+{ 710,    "circ",    "modifier letter circumflex accent, U+02C6 ISOpub" },
 { 732,    "tilde","small tilde, U+02DC ISOdia" },
 
 { 913,    "Alpha","greek capital letter alpha, U+0391" },
-{ 914,    "Beta",	"greek capital letter beta, U+0392" },
+{ 914,    "Beta",    "greek capital letter beta, U+0392" },
 { 915,    "Gamma","greek capital letter gamma, U+0393 ISOgrk3" },
 { 916,    "Delta","greek capital letter delta, U+0394 ISOgrk3" },
 { 917,    "Epsilon","greek capital letter epsilon, U+0395" },
-{ 918,    "Zeta",	"greek capital letter zeta, U+0396" },
-{ 919,    "Eta",	"greek capital letter eta, U+0397" },
+{ 918,    "Zeta",    "greek capital letter zeta, U+0396" },
+{ 919,    "Eta",    "greek capital letter eta, U+0397" },
 { 920,    "Theta","greek capital letter theta, U+0398 ISOgrk3" },
-{ 921,    "Iota",	"greek capital letter iota, U+0399" },
+{ 921,    "Iota",    "greek capital letter iota, U+0399" },
 { 922,    "Kappa","greek capital letter kappa, U+039A" },
 { 923,    "Lambda", "greek capital letter lambda, U+039B ISOgrk3" },
-{ 924,    "Mu",	"greek capital letter mu, U+039C" },
-{ 925,    "Nu",	"greek capital letter nu, U+039D" },
-{ 926,    "Xi",	"greek capital letter xi, U+039E ISOgrk3" },
+{ 924,    "Mu",    "greek capital letter mu, U+039C" },
+{ 925,    "Nu",    "greek capital letter nu, U+039D" },
+{ 926,    "Xi",    "greek capital letter xi, U+039E ISOgrk3" },
 { 927,    "Omicron","greek capital letter omicron, U+039F" },
-{ 928,    "Pi",	"greek capital letter pi, U+03A0 ISOgrk3" },
-{ 929,    "Rho",	"greek capital letter rho, U+03A1" },
+{ 928,    "Pi",    "greek capital letter pi, U+03A0 ISOgrk3" },
+{ 929,    "Rho",    "greek capital letter rho, U+03A1" },
 { 931,    "Sigma","greek capital letter sigma, U+03A3 ISOgrk3" },
-{ 932,    "Tau",	"greek capital letter tau, U+03A4" },
+{ 932,    "Tau",    "greek capital letter tau, U+03A4" },
 { 933,    "Upsilon","greek capital letter upsilon, U+03A5 ISOgrk3" },
-{ 934,    "Phi",	"greek capital letter phi, U+03A6 ISOgrk3" },
-{ 935,    "Chi",	"greek capital letter chi, U+03A7" },
-{ 936,    "Psi",	"greek capital letter psi, U+03A8 ISOgrk3" },
+{ 934,    "Phi",    "greek capital letter phi, U+03A6 ISOgrk3" },
+{ 935,    "Chi",    "greek capital letter chi, U+03A7" },
+{ 936,    "Psi",    "greek capital letter psi, U+03A8 ISOgrk3" },
 { 937,    "Omega","greek capital letter omega, U+03A9 ISOgrk3" },
 
 { 945,    "alpha","greek small letter alpha, U+03B1 ISOgrk3" },
-{ 946,    "beta",	"greek small letter beta, U+03B2 ISOgrk3" },
+{ 946,    "beta",    "greek small letter beta, U+03B2 ISOgrk3" },
 { 947,    "gamma","greek small letter gamma, U+03B3 ISOgrk3" },
 { 948,    "delta","greek small letter delta, U+03B4 ISOgrk3" },
 { 949,    "epsilon","greek small letter epsilon, U+03B5 ISOgrk3" },
-{ 950,    "zeta",	"greek small letter zeta, U+03B6 ISOgrk3" },
-{ 951,    "eta",	"greek small letter eta, U+03B7 ISOgrk3" },
+{ 950,    "zeta",    "greek small letter zeta, U+03B6 ISOgrk3" },
+{ 951,    "eta",    "greek small letter eta, U+03B7 ISOgrk3" },
 { 952,    "theta","greek small letter theta, U+03B8 ISOgrk3" },
-{ 953,    "iota",	"greek small letter iota, U+03B9 ISOgrk3" },
+{ 953,    "iota",    "greek small letter iota, U+03B9 ISOgrk3" },
 { 954,    "kappa","greek small letter kappa, U+03BA ISOgrk3" },
 { 955,    "lambda","greek small letter lambda, U+03BB ISOgrk3" },
-{ 956,    "mu",	"greek small letter mu, U+03BC ISOgrk3" },
-{ 957,    "nu",	"greek small letter nu, U+03BD ISOgrk3" },
-{ 958,    "xi",	"greek small letter xi, U+03BE ISOgrk3" },
+{ 956,    "mu",    "greek small letter mu, U+03BC ISOgrk3" },
+{ 957,    "nu",    "greek small letter nu, U+03BD ISOgrk3" },
+{ 958,    "xi",    "greek small letter xi, U+03BE ISOgrk3" },
 { 959,    "omicron","greek small letter omicron, U+03BF NEW" },
-{ 960,    "pi",	"greek small letter pi, U+03C0 ISOgrk3" },
-{ 961,    "rho",	"greek small letter rho, U+03C1 ISOgrk3" },
+{ 960,    "pi",    "greek small letter pi, U+03C0 ISOgrk3" },
+{ 961,    "rho",    "greek small letter rho, U+03C1 ISOgrk3" },
 { 962,    "sigmaf","greek small letter final sigma, U+03C2 ISOgrk3" },
 { 963,    "sigma","greek small letter sigma, U+03C3 ISOgrk3" },
-{ 964,    "tau",	"greek small letter tau, U+03C4 ISOgrk3" },
+{ 964,    "tau",    "greek small letter tau, U+03C4 ISOgrk3" },
 { 965,    "upsilon","greek small letter upsilon, U+03C5 ISOgrk3" },
-{ 966,    "phi",	"greek small letter phi, U+03C6 ISOgrk3" },
-{ 967,    "chi",	"greek small letter chi, U+03C7 ISOgrk3" },
-{ 968,    "psi",	"greek small letter psi, U+03C8 ISOgrk3" },
+{ 966,    "phi",    "greek small letter phi, U+03C6 ISOgrk3" },
+{ 967,    "chi",    "greek small letter chi, U+03C7 ISOgrk3" },
+{ 968,    "psi",    "greek small letter psi, U+03C8 ISOgrk3" },
 { 969,    "omega","greek small letter omega, U+03C9 ISOgrk3" },
 { 977,    "thetasym","greek small letter theta symbol, U+03D1 NEW" },
 { 978,    "upsih","greek upsilon with hook symbol, U+03D2 NEW" },
-{ 982,    "piv",	"greek pi symbol, U+03D6 ISOgrk3" },
+{ 982,    "piv",    "greek pi symbol, U+03D6 ISOgrk3" },
 
-{ 8194,    "ensp",	"en space, U+2002 ISOpub" },
-{ 8195,    "emsp",	"em space, U+2003 ISOpub" },
+{ 8194,    "ensp",    "en space, U+2002 ISOpub" },
+{ 8195,    "emsp",    "em space, U+2003 ISOpub" },
 { 8201,    "thinsp","thin space, U+2009 ISOpub" },
-{ 8204,    "zwnj",	"zero width non-joiner, U+200C NEW RFC 2070" },
-{ 8205,    "zwj",	"zero width joiner, U+200D NEW RFC 2070" },
-{ 8206,    "lrm",	"left-to-right mark, U+200E NEW RFC 2070" },
-{ 8207,    "rlm",	"right-to-left mark, U+200F NEW RFC 2070" },
+{ 8204,    "zwnj",    "zero width non-joiner, U+200C NEW RFC 2070" },
+{ 8205,    "zwj",    "zero width joiner, U+200D NEW RFC 2070" },
+{ 8206,    "lrm",    "left-to-right mark, U+200E NEW RFC 2070" },
+{ 8207,    "rlm",    "right-to-left mark, U+200F NEW RFC 2070" },
 { 8211,    "ndash","en dash, U+2013 ISOpub" },
 { 8212,    "mdash","em dash, U+2014 ISOpub" },
 { 8216,    "lsquo","left single quotation mark, U+2018 ISOnum" },
@@ -1881,7 +1881,7 @@ static const htmlEntityDesc  html40EntitiesTable[] = {
 { 8224,    "dagger","dagger, U+2020 ISOpub" },
 { 8225,    "Dagger","double dagger, U+2021 ISOpub" },
 
-{ 8226,    "bull",	"bullet = black small circle, U+2022 ISOpub" },
+{ 8226,    "bull",    "bullet = black small circle, U+2022 ISOpub" },
 { 8230,    "hellip","horizontal ellipsis = three dot leader, U+2026 ISOpub" },
 
 { 8240,    "permil","per mille sign, U+2030 ISOtech" },
@@ -1895,70 +1895,70 @@ static const htmlEntityDesc  html40EntitiesTable[] = {
 { 8254,    "oline","overline = spacing overscore, U+203E NEW" },
 { 8260,    "frasl","fraction slash, U+2044 NEW" },
 
-{ 8364,    "euro",	"euro sign, U+20AC NEW" },
+{ 8364,    "euro",    "euro sign, U+20AC NEW" },
 
 { 8465,    "image","blackletter capital I = imaginary part, U+2111 ISOamso" },
 { 8472,    "weierp","script capital P = power set = Weierstrass p, U+2118 ISOamso" },
-{ 8476,    "real",	"blackletter capital R = real part symbol, U+211C ISOamso" },
+{ 8476,    "real",    "blackletter capital R = real part symbol, U+211C ISOamso" },
 { 8482,    "trade","trade mark sign, U+2122 ISOnum" },
 { 8501,    "alefsym","alef symbol = first transfinite cardinal, U+2135 NEW" },
-{ 8592,    "larr",	"leftwards arrow, U+2190 ISOnum" },
-{ 8593,    "uarr",	"upwards arrow, U+2191 ISOnum" },
-{ 8594,    "rarr",	"rightwards arrow, U+2192 ISOnum" },
-{ 8595,    "darr",	"downwards arrow, U+2193 ISOnum" },
-{ 8596,    "harr",	"left right arrow, U+2194 ISOamsa" },
+{ 8592,    "larr",    "leftwards arrow, U+2190 ISOnum" },
+{ 8593,    "uarr",    "upwards arrow, U+2191 ISOnum" },
+{ 8594,    "rarr",    "rightwards arrow, U+2192 ISOnum" },
+{ 8595,    "darr",    "downwards arrow, U+2193 ISOnum" },
+{ 8596,    "harr",    "left right arrow, U+2194 ISOamsa" },
 { 8629,    "crarr","downwards arrow with corner leftwards = carriage return, U+21B5 NEW" },
-{ 8656,    "lArr",	"leftwards double arrow, U+21D0 ISOtech" },
-{ 8657,    "uArr",	"upwards double arrow, U+21D1 ISOamsa" },
-{ 8658,    "rArr",	"rightwards double arrow, U+21D2 ISOtech" },
-{ 8659,    "dArr",	"downwards double arrow, U+21D3 ISOamsa" },
-{ 8660,    "hArr",	"left right double arrow, U+21D4 ISOamsa" },
+{ 8656,    "lArr",    "leftwards double arrow, U+21D0 ISOtech" },
+{ 8657,    "uArr",    "upwards double arrow, U+21D1 ISOamsa" },
+{ 8658,    "rArr",    "rightwards double arrow, U+21D2 ISOtech" },
+{ 8659,    "dArr",    "downwards double arrow, U+21D3 ISOamsa" },
+{ 8660,    "hArr",    "left right double arrow, U+21D4 ISOamsa" },
 
 { 8704,    "forall","for all, U+2200 ISOtech" },
-{ 8706,    "part",	"partial differential, U+2202 ISOtech" },
+{ 8706,    "part",    "partial differential, U+2202 ISOtech" },
 { 8707,    "exist","there exists, U+2203 ISOtech" },
 { 8709,    "empty","empty set = null set = diameter, U+2205 ISOamso" },
 { 8711,    "nabla","nabla = backward difference, U+2207 ISOtech" },
-{ 8712,    "isin",	"element of, U+2208 ISOtech" },
+{ 8712,    "isin",    "element of, U+2208 ISOtech" },
 { 8713,    "notin","not an element of, U+2209 ISOtech" },
-{ 8715,    "ni",	"contains as member, U+220B ISOtech" },
-{ 8719,    "prod",	"n-ary product = product sign, U+220F ISOamsb" },
-{ 8721,    "sum",	"n-ary summation, U+2211 ISOamsb" },
+{ 8715,    "ni",    "contains as member, U+220B ISOtech" },
+{ 8719,    "prod",    "n-ary product = product sign, U+220F ISOamsb" },
+{ 8721,    "sum",    "n-ary summation, U+2211 ISOamsb" },
 { 8722,    "minus","minus sign, U+2212 ISOtech" },
 { 8727,    "lowast","asterisk operator, U+2217 ISOtech" },
 { 8730,    "radic","square root = radical sign, U+221A ISOtech" },
-{ 8733,    "prop",	"proportional to, U+221D ISOtech" },
+{ 8733,    "prop",    "proportional to, U+221D ISOtech" },
 { 8734,    "infin","infinity, U+221E ISOtech" },
-{ 8736,    "ang",	"angle, U+2220 ISOamso" },
-{ 8743,    "and",	"logical and = wedge, U+2227 ISOtech" },
-{ 8744,    "or",	"logical or = vee, U+2228 ISOtech" },
-{ 8745,    "cap",	"intersection = cap, U+2229 ISOtech" },
-{ 8746,    "cup",	"union = cup, U+222A ISOtech" },
-{ 8747,    "int",	"integral, U+222B ISOtech" },
+{ 8736,    "ang",    "angle, U+2220 ISOamso" },
+{ 8743,    "and",    "logical and = wedge, U+2227 ISOtech" },
+{ 8744,    "or",    "logical or = vee, U+2228 ISOtech" },
+{ 8745,    "cap",    "intersection = cap, U+2229 ISOtech" },
+{ 8746,    "cup",    "union = cup, U+222A ISOtech" },
+{ 8747,    "int",    "integral, U+222B ISOtech" },
 { 8756,    "there4","therefore, U+2234 ISOtech" },
-{ 8764,    "sim",	"tilde operator = varies with = similar to, U+223C ISOtech" },
-{ 8773,    "cong",	"approximately equal to, U+2245 ISOtech" },
+{ 8764,    "sim",    "tilde operator = varies with = similar to, U+223C ISOtech" },
+{ 8773,    "cong",    "approximately equal to, U+2245 ISOtech" },
 { 8776,    "asymp","almost equal to = asymptotic to, U+2248 ISOamsr" },
-{ 8800,    "ne",	"not equal to, U+2260 ISOtech" },
+{ 8800,    "ne",    "not equal to, U+2260 ISOtech" },
 { 8801,    "equiv","identical to, U+2261 ISOtech" },
-{ 8804,    "le",	"less-than or equal to, U+2264 ISOtech" },
-{ 8805,    "ge",	"greater-than or equal to, U+2265 ISOtech" },
-{ 8834,    "sub",	"subset of, U+2282 ISOtech" },
-{ 8835,    "sup",	"superset of, U+2283 ISOtech" },
-{ 8836,    "nsub",	"not a subset of, U+2284 ISOamsn" },
-{ 8838,    "sube",	"subset of or equal to, U+2286 ISOtech" },
-{ 8839,    "supe",	"superset of or equal to, U+2287 ISOtech" },
+{ 8804,    "le",    "less-than or equal to, U+2264 ISOtech" },
+{ 8805,    "ge",    "greater-than or equal to, U+2265 ISOtech" },
+{ 8834,    "sub",    "subset of, U+2282 ISOtech" },
+{ 8835,    "sup",    "superset of, U+2283 ISOtech" },
+{ 8836,    "nsub",    "not a subset of, U+2284 ISOamsn" },
+{ 8838,    "sube",    "subset of or equal to, U+2286 ISOtech" },
+{ 8839,    "supe",    "superset of or equal to, U+2287 ISOtech" },
 { 8853,    "oplus","circled plus = direct sum, U+2295 ISOamsb" },
 { 8855,    "otimes","circled times = vector product, U+2297 ISOamsb" },
-{ 8869,    "perp",	"up tack = orthogonal to = perpendicular, U+22A5 ISOtech" },
-{ 8901,    "sdot",	"dot operator, U+22C5 ISOamsb" },
+{ 8869,    "perp",    "up tack = orthogonal to = perpendicular, U+22A5 ISOtech" },
+{ 8901,    "sdot",    "dot operator, U+22C5 ISOamsb" },
 { 8968,    "lceil","left ceiling = apl upstile, U+2308 ISOamsc" },
 { 8969,    "rceil","right ceiling, U+2309 ISOamsc" },
 { 8970,    "lfloor","left floor = apl downstile, U+230A ISOamsc" },
 { 8971,    "rfloor","right floor, U+230B ISOamsc" },
-{ 9001,    "lang",	"left-pointing angle bracket = bra, U+2329 ISOtech" },
-{ 9002,    "rang",	"right-pointing angle bracket = ket, U+232A ISOtech" },
-{ 9674,    "loz",	"lozenge, U+25CA ISOpub" },
+{ 9001,    "lang",    "left-pointing angle bracket = bra, U+2329 ISOtech" },
+{ 9002,    "rang",    "right-pointing angle bracket = ket, U+232A ISOtech" },
+{ 9674,    "loz",    "lozenge, U+25CA ISOpub" },
 
 { 9824,    "spades","black spade suit, U+2660 ISOpub" },
 { 9827,    "clubs","black club suit = shamrock, U+2663 ISOpub" },
@@ -1968,24 +1968,24 @@ static const htmlEntityDesc  html40EntitiesTable[] = {
 };
 
 /************************************************************************
- *    								*
- *    	Commodity functions to handle entities			*
- *    								*
+ *        							*
+ *        Commodity functions to handle entities			*
+ *        							*
  ************************************************************************/
 
 /*
  * Macro used to grow the current buffer.
  */
-#define growBuffer(buffer) {    					\
-    xmlChar *tmp;    						\
-    buffer##_size *= 2;    						\
-    tmp = (xmlChar *) xmlRealloc(buffer, buffer##_size);     	\
-    if (tmp == NULL) {    						\
-    htmlErrMemory(ctxt);			\
-    xmlFree(buffer);						\
-    return(NULL);							\
-    }    								\
-    buffer = tmp;    						\
+#define growBuffer(buffer) {        				\
+    xmlChar *tmp;        					\
+    buffer##_size *= 2;        					\
+    tmp = (xmlChar *) xmlRealloc(buffer, buffer##_size);         \
+    if (tmp == NULL) {        					\
+    htmlErrMemory(ctxt);    		\
+    xmlFree(buffer);    					\
+    return(NULL);    						\
+    }        							\
+    buffer = tmp;        					\
 }
 
 /**
@@ -2102,7 +2102,7 @@ UTF8ToHtml(unsigned char* out, int *outlen,
 
     for ( ; trailing; trailing--) {
         if ((in >= inend) || (((d= *in++) & 0xC0) != 0x80))
-    	break;
+        break;
         c <<= 6;
         c |= d & 0x3F;
     }
@@ -2110,7 +2110,7 @@ UTF8ToHtml(unsigned char* out, int *outlen,
     /* assertion: c is a single UTF-4 value */
     if (c < 0x80) {
         if (out + 1 >= outend)
-    	break;
+        break;
         *out++ = c;
     } else {
         int len;
@@ -2131,7 +2131,7 @@ UTF8ToHtml(unsigned char* out, int *outlen,
           cp = ent->name;
         len = strlen(cp);
         if (out + 2 + len >= outend)
-    	break;
+        break;
         *out++ = '&';
         memcpy(out, cp, len);
         out += len;
@@ -2162,7 +2162,7 @@ UTF8ToHtml(unsigned char* out, int *outlen,
  */
 int
 htmlEncodeEntities(unsigned char* out, int *outlen,
-    	   const unsigned char* in, int *inlen, int quoteChar) {
+           const unsigned char* in, int *inlen, int quoteChar) {
     const unsigned char* processed = in;
     const unsigned char* outend;
     const unsigned char* outstart = out;
@@ -2198,9 +2198,9 @@ htmlEncodeEntities(unsigned char* out, int *outlen,
 
     while (trailing--) {
         if (((d= *in++) & 0xC0) != 0x80) {
-    	*outlen = out - outstart;
-    	*inlen = processed - instart;
-    	return(-2);
+        *outlen = out - outstart;
+        *inlen = processed - instart;
+        return(-2);
         }
         c <<= 6;
         c |= d & 0x3F;
@@ -2210,7 +2210,7 @@ htmlEncodeEntities(unsigned char* out, int *outlen,
     if ((c < 0x80) && (c != (unsigned int) quoteChar) &&
         (c != '&') && (c != '<') && (c != '>')) {
         if (out >= outend)
-    	break;
+        break;
         *out++ = c;
     } else {
         const htmlEntityDesc * ent;
@@ -2223,14 +2223,14 @@ htmlEncodeEntities(unsigned char* out, int *outlen,
          */
         ent = htmlEntityValueLookup(c);
         if (ent == NULL) {
-    	snprintf(nbuf, sizeof(nbuf), "#%u", c);
-    	cp = nbuf;
+        snprintf(nbuf, sizeof(nbuf), "#%u", c);
+        cp = nbuf;
         }
         else
-    	cp = ent->name;
+        cp = ent->name;
         len = strlen(cp);
         if (outend - out < len + 2)
-    	break;
+        break;
         *out++ = '&';
         memcpy(out, cp, len);
         out += len;
@@ -2244,9 +2244,9 @@ htmlEncodeEntities(unsigned char* out, int *outlen,
 }
 
 /************************************************************************
- *    								*
- *    	Commodity functions, cleanup needed ?			*
- *    								*
+ *        							*
+ *        Commodity functions, cleanup needed ?			*
+ *        							*
  ************************************************************************/
 /*
  * all tags allowing pc data from the html 4.01 loose dtd
@@ -2313,7 +2313,7 @@ static int areBlanks(htmlParserCtxtPtr ctxt, const xmlChar *str, int len) {
        for all tags "b" allowing PCDATA */
     for ( i = 0; i < sizeof(allowPCData)/sizeof(allowPCData[0]); i++ ) {
         if ( xmlStrEqual(ctxt->name, BAD_CAST allowPCData[i]) ) {
-    	return(0);
+        return(0);
         }
     }
     } else if (xmlNodeIsText(lastChild)) {
@@ -2323,7 +2323,7 @@ static int areBlanks(htmlParserCtxtPtr ctxt, const xmlChar *str, int len) {
        for all tags "p" allowing PCDATA */
     for ( i = 0; i < sizeof(allowPCData)/sizeof(allowPCData[0]); i++ ) {
         if ( xmlStrEqual(lastChild->name, BAD_CAST allowPCData[i]) ) {
-    	return(0);
+        return(0);
         }
     }
     }
@@ -2396,24 +2396,24 @@ htmlDocPtr
 htmlNewDoc(const xmlChar *URI, const xmlChar *ExternalID) {
     if ((URI == NULL) && (ExternalID == NULL))
     return(htmlNewDocNoDtD(
-    	    BAD_CAST "http://www.w3.org/TR/REC-html40/loose.dtd",
-    	    BAD_CAST "-//W3C//DTD HTML 4.0 Transitional//EN"));
+            BAD_CAST "http://www.w3.org/TR/REC-html40/loose.dtd",
+            BAD_CAST "-//W3C//DTD HTML 4.0 Transitional//EN"));
 
     return(htmlNewDocNoDtD(URI, ExternalID));
 }
 
 
 /************************************************************************
- *    								*
- *    		The parser itself				*
- *    Relates to http://www.w3.org/TR/html40				*
- *    								*
+ *        							*
+ *        	The parser itself				*
+ *    Relates to http://www.w3.org/TR/html40    			*
+ *        							*
  ************************************************************************/
 
 /************************************************************************
- *    								*
- *    		The parser itself				*
- *    								*
+ *        							*
+ *        	The parser itself				*
+ *        							*
  ************************************************************************/
 
 static const xmlChar * htmlParseNameComplex(xmlParserCtxtPtr ctxt);
@@ -2657,98 +2657,98 @@ htmlParseHTMLAttribute(htmlParserCtxtPtr ctxt, const xmlChar stop) {
     if ((stop == 0) && (IS_BLANK_CH(CUR))) break;
         if (CUR == '&') {
         if (NXT(1) == '#') {
-    	unsigned int c;
-    	int bits;
+        unsigned int c;
+        int bits;
 
-    	c = htmlParseCharRef(ctxt);
-    	if      (c <    0x80)
-    	        { *out++  = c;                bits= -6; }
-    	else if (c <   0x800)
-    	        { *out++  =((c >>  6) & 0x1F) | 0xC0;  bits=  0; }
-    	else if (c < 0x10000)
-    	        { *out++  =((c >> 12) & 0x0F) | 0xE0;  bits=  6; }
-    	else
-    	        { *out++  =((c >> 18) & 0x07) | 0xF0;  bits= 12; }
+        c = htmlParseCharRef(ctxt);
+        if      (c <    0x80)
+                { *out++  = c;                bits= -6; }
+        else if (c <   0x800)
+                { *out++  =((c >>  6) & 0x1F) | 0xC0;  bits=  0; }
+        else if (c < 0x10000)
+                { *out++  =((c >> 12) & 0x0F) | 0xE0;  bits=  6; }
+        else
+                { *out++  =((c >> 18) & 0x07) | 0xF0;  bits= 12; }
 
-    	for ( ; bits >= 0; bits-= 6) {
-    	    *out++  = ((c >> bits) & 0x3F) | 0x80;
-    	}
+        for ( ; bits >= 0; bits-= 6) {
+            *out++  = ((c >> bits) & 0x3F) | 0x80;
+        }
 
-    	if (out - buffer > buffer_size - 100) {
-    		int indx = out - buffer;
+        if (out - buffer > buffer_size - 100) {
+        	int indx = out - buffer;
 
-    		growBuffer(buffer);
-    		out = &buffer[indx];
-    	}
+        	growBuffer(buffer);
+        	out = &buffer[indx];
+        }
         } else {
-    	ent = htmlParseEntityRef(ctxt, &name);
-    	if (name == NULL) {
-    	    *out++ = '&';
-    	    if (out - buffer > buffer_size - 100) {
-    		int indx = out - buffer;
+        ent = htmlParseEntityRef(ctxt, &name);
+        if (name == NULL) {
+            *out++ = '&';
+            if (out - buffer > buffer_size - 100) {
+        	int indx = out - buffer;
 
-    		growBuffer(buffer);
-    		out = &buffer[indx];
-    	    }
-    	} else if (ent == NULL) {
-    	    *out++ = '&';
-    	    cur = name;
-    	    while (*cur != 0) {
-    		if (out - buffer > buffer_size - 100) {
-    		    int indx = out - buffer;
+        	growBuffer(buffer);
+        	out = &buffer[indx];
+            }
+        } else if (ent == NULL) {
+            *out++ = '&';
+            cur = name;
+            while (*cur != 0) {
+        	if (out - buffer > buffer_size - 100) {
+        	    int indx = out - buffer;
 
-    		    growBuffer(buffer);
-    		    out = &buffer[indx];
-    		}
-    		*out++ = *cur++;
-    	    }
-    	} else {
-    	    unsigned int c;
-    	    int bits;
+        	    growBuffer(buffer);
+        	    out = &buffer[indx];
+        	}
+        	*out++ = *cur++;
+            }
+        } else {
+            unsigned int c;
+            int bits;
 
-    	    if (out - buffer > buffer_size - 100) {
-    		int indx = out - buffer;
+            if (out - buffer > buffer_size - 100) {
+        	int indx = out - buffer;
 
-    		growBuffer(buffer);
-    		out = &buffer[indx];
-    	    }
-    	    c = ent->value;
-    	    if      (c <    0x80)
-    		{ *out++  = c;                bits= -6; }
-    	    else if (c <   0x800)
-    		{ *out++  =((c >>  6) & 0x1F) | 0xC0;  bits=  0; }
-    	    else if (c < 0x10000)
-    		{ *out++  =((c >> 12) & 0x0F) | 0xE0;  bits=  6; }
-    	    else
-    		{ *out++  =((c >> 18) & 0x07) | 0xF0;  bits= 12; }
+        	growBuffer(buffer);
+        	out = &buffer[indx];
+            }
+            c = ent->value;
+            if      (c <    0x80)
+        	{ *out++  = c;                bits= -6; }
+            else if (c <   0x800)
+        	{ *out++  =((c >>  6) & 0x1F) | 0xC0;  bits=  0; }
+            else if (c < 0x10000)
+        	{ *out++  =((c >> 12) & 0x0F) | 0xE0;  bits=  6; }
+            else
+        	{ *out++  =((c >> 18) & 0x07) | 0xF0;  bits= 12; }
 
-    	    for ( ; bits >= 0; bits-= 6) {
-    		*out++  = ((c >> bits) & 0x3F) | 0x80;
-    	    }
-    	}
+            for ( ; bits >= 0; bits-= 6) {
+        	*out++  = ((c >> bits) & 0x3F) | 0x80;
+            }
+        }
         }
     } else {
         unsigned int c;
         int bits, l;
 
         if (out - buffer > buffer_size - 100) {
-    	int indx = out - buffer;
+        int indx = out - buffer;
 
-    	growBuffer(buffer);
-    	out = &buffer[indx];
+        growBuffer(buffer);
+        out = &buffer[indx];
         }
         c = CUR_CHAR(l);
         if      (c <    0x80)
-    	    { *out++  = c;                bits= -6; }
+            { *out++  = c;                bits= -6; }
         else if (c <   0x800)
-    	    { *out++  =((c >>  6) & 0x1F) | 0xC0;  bits=  0; }
+            { *out++  =((c >>  6) & 0x1F) | 0xC0;  bits=  0; }
         else if (c < 0x10000)
-    	    { *out++  =((c >> 12) & 0x0F) | 0xE0;  bits=  6; }
+            { *out++  =((c >> 12) & 0x0F) | 0xE0;  bits=  6; }
         else
-    	    { *out++  =((c >> 18) & 0x07) | 0xF0;  bits= 12; }
+            { *out++  =((c >> 18) & 0x07) | 0xF0;  bits= 12; }
 
         for ( ; bits >= 0; bits-= 6) {
-    	*out++  = ((c >> bits) & 0x3F) | 0x80;
+        *out++  = ((c >> bits) & 0x3F) | 0x80;
         }
         NEXTL(l);
     }
@@ -2795,20 +2795,20 @@ htmlParseEntityRef(htmlParserCtxtPtr ctxt, const xmlChar **str) {
         GROW;
         if (CUR == ';') {
             if (str != NULL)
-    	    *str = name;
+            *str = name;
 
-    	/*
-    	 * Lookup the entity in the table.
-    	 */
-    	ent = htmlEntityLookup(name);
-    	if (ent != NULL) /* OK that's ugly !!! */
-    	    NEXT;
+        /*
+         * Lookup the entity in the table.
+         */
+        ent = htmlEntityLookup(name);
+        if (ent != NULL) /* OK that's ugly !!! */
+            NEXT;
         } else {
-    	htmlParseErr(ctxt, XML_ERR_ENTITYREF_SEMICOL_MISSING,
-    	             "htmlParseEntityRef: expecting ';'\n",
-    		     NULL, NULL);
+        htmlParseErr(ctxt, XML_ERR_ENTITYREF_SEMICOL_MISSING,
+                     "htmlParseEntityRef: expecting ';'\n",
+        	     NULL, NULL);
             if (str != NULL)
-    	    *str = name;
+            *str = name;
         }
     }
     }
@@ -3022,14 +3022,14 @@ htmlParseScript(htmlParserCtxtPtr ctxt) {
              */
             if (ctxt->recovery) {
                 if (xmlStrncasecmp(ctxt->name, ctxt->input->cur+2,
-    			   xmlStrlen(ctxt->name)) == 0)
+        		   xmlStrlen(ctxt->name)) == 0)
                 {
                     break; /* while */
                 } else {
-    	    htmlParseErr(ctxt, XML_ERR_TAG_NAME_MISMATCH,
-    			 "Element %s embeds close tag\n",
-    	                 ctxt->name, NULL);
-    	}
+            htmlParseErr(ctxt, XML_ERR_TAG_NAME_MISMATCH,
+        		 "Element %s embeds close tag\n",
+                         ctxt->name, NULL);
+        }
             } else {
                 if (((NXT(2) >= 'A') && (NXT(2) <= 'Z')) ||
                     ((NXT(2) >= 'a') && (NXT(2) <= 'z')))
@@ -3048,12 +3048,12 @@ htmlParseScript(htmlParserCtxtPtr ctxt) {
     if (nbchar >= HTML_PARSER_BIG_BUFFER_SIZE) {
             buf[nbchar] = 0;
         if (ctxt->sax->cdataBlock!= NULL) {
-    	/*
-    	 * Insert as CDATA, which is the same as HTML_PRESERVE_NODE
-    	 */
-    	ctxt->sax->cdataBlock(ctxt->userData, buf, nbchar);
+        /*
+         * Insert as CDATA, which is the same as HTML_PRESERVE_NODE
+         */
+        ctxt->sax->cdataBlock(ctxt->userData, buf, nbchar);
         } else if (ctxt->sax->characters != NULL) {
-    	ctxt->sax->characters(ctxt->userData, buf, nbchar);
+        ctxt->sax->characters(ctxt->userData, buf, nbchar);
         }
         nbchar = 0;
             SHRINK;
@@ -3114,20 +3114,20 @@ htmlParseCharDataInternal(htmlParserCtxtPtr ctxt, int readahead) {
          * Ok the segment is to be consumed as chars.
          */
         if ((ctxt->sax != NULL) && (!ctxt->disableSAX)) {
-    	if (areBlanks(ctxt, buf, nbchar)) {
-    	    if (ctxt->keepBlanks) {
-    		if (ctxt->sax->characters != NULL)
-    		    ctxt->sax->characters(ctxt->userData, buf, nbchar);
-    	    } else {
-    		if (ctxt->sax->ignorableWhitespace != NULL)
-    		    ctxt->sax->ignorableWhitespace(ctxt->userData,
-    		                                   buf, nbchar);
-    	    }
-    	} else {
-    	    htmlCheckParagraph(ctxt);
-    	    if (ctxt->sax->characters != NULL)
-    		ctxt->sax->characters(ctxt->userData, buf, nbchar);
-    	}
+        if (areBlanks(ctxt, buf, nbchar)) {
+            if (ctxt->keepBlanks) {
+        	if (ctxt->sax->characters != NULL)
+        	    ctxt->sax->characters(ctxt->userData, buf, nbchar);
+            } else {
+        	if (ctxt->sax->ignorableWhitespace != NULL)
+        	    ctxt->sax->ignorableWhitespace(ctxt->userData,
+        	                                   buf, nbchar);
+            }
+        } else {
+            htmlCheckParagraph(ctxt);
+            if (ctxt->sax->characters != NULL)
+        	ctxt->sax->characters(ctxt->userData, buf, nbchar);
+        }
         }
         nbchar = 0;
             SHRINK;
@@ -3142,18 +3142,18 @@ htmlParseCharDataInternal(htmlParserCtxtPtr ctxt, int readahead) {
      */
     if ((ctxt->sax != NULL) && (!ctxt->disableSAX)) {
         if (areBlanks(ctxt, buf, nbchar)) {
-    	if (ctxt->keepBlanks) {
-    	    if (ctxt->sax->characters != NULL)
-    		ctxt->sax->characters(ctxt->userData, buf, nbchar);
-    	} else {
-    	    if (ctxt->sax->ignorableWhitespace != NULL)
-    		ctxt->sax->ignorableWhitespace(ctxt->userData,
-    		                               buf, nbchar);
-    	}
+        if (ctxt->keepBlanks) {
+            if (ctxt->sax->characters != NULL)
+        	ctxt->sax->characters(ctxt->userData, buf, nbchar);
         } else {
-    	htmlCheckParagraph(ctxt);
-    	if (ctxt->sax->characters != NULL)
-    	    ctxt->sax->characters(ctxt->userData, buf, nbchar);
+            if (ctxt->sax->ignorableWhitespace != NULL)
+        	ctxt->sax->ignorableWhitespace(ctxt->userData,
+        	                               buf, nbchar);
+        }
+        } else {
+        htmlCheckParagraph(ctxt);
+        if (ctxt->sax->characters != NULL)
+            ctxt->sax->characters(ctxt->userData, buf, nbchar);
         }
     }
     }
@@ -3222,7 +3222,7 @@ htmlParseExternalID(htmlParserCtxtPtr ctxt, xmlChar **publicID) {
     if (*publicID == NULL) {
         htmlParseErr(ctxt, XML_ERR_PUBID_REQUIRED,
                      "htmlParseExternalID: PUBLIC, no Public Identifier\n",
-    		 NULL, NULL);
+        	 NULL, NULL);
     }
         SKIP_BLANKS;
         if ((CUR == '"') || (CUR == '\'')) {
@@ -3266,44 +3266,44 @@ htmlParsePI(htmlParserCtxtPtr ctxt) {
         target = htmlParseName(ctxt);
     if (target != NULL) {
         if (RAW == '>') {
-    	SKIP(1);
+        SKIP(1);
 
-    	/*
-    	 * SAX: PI detected.
-    	 */
-    	if ((ctxt->sax) && (!ctxt->disableSAX) &&
-    	    (ctxt->sax->processingInstruction != NULL))
-    	    ctxt->sax->processingInstruction(ctxt->userData,
-    	                                     target, NULL);
+        /*
+         * SAX: PI detected.
+         */
+        if ((ctxt->sax) && (!ctxt->disableSAX) &&
+            (ctxt->sax->processingInstruction != NULL))
+            ctxt->sax->processingInstruction(ctxt->userData,
+                                             target, NULL);
                 goto done;
         }
         buf = (xmlChar *) xmlMallocAtomic(size);
         if (buf == NULL) {
-    	htmlErrMemory(ctxt);
-    	return;
+        htmlErrMemory(ctxt);
+        return;
         }
         cur = CUR;
         if (!IS_BLANK(cur)) {
-    	htmlParseErr(ctxt, XML_ERR_SPACE_REQUIRED,
-    		  "ParsePI: PI %s space expected\n", target, NULL);
+        htmlParseErr(ctxt, XML_ERR_SPACE_REQUIRED,
+        	  "ParsePI: PI %s space expected\n", target, NULL);
         }
             SKIP_BLANKS;
         cur = CUR_CHAR(l);
         while ((cur != 0) && (cur != '>')) {
-    	if (len + 5 >= size) {
-    	    xmlChar *tmp;
+        if (len + 5 >= size) {
+            xmlChar *tmp;
 
-    	    size *= 2;
-    	    tmp = (xmlChar *) xmlRealloc(buf, size);
-    	    if (tmp == NULL) {
-    		htmlErrMemory(ctxt);
-    		xmlFree(buf);
-    		return;
-    	    }
-    	    buf = tmp;
-    	}
+            size *= 2;
+            tmp = (xmlChar *) xmlRealloc(buf, size);
+            if (tmp == NULL) {
+        	htmlErrMemory(ctxt);
+        	xmlFree(buf);
+        	return;
+            }
+            buf = tmp;
+        }
                 if (IS_CHAR(cur)) {
-    	    COPY_BUF(l,buf,len,cur);
+            COPY_BUF(l,buf,len,cur);
                 } else {
                     htmlParseErrInt(ctxt, XML_ERR_INVALID_CHAR,
                                     "Invalid char in processing instruction "
@@ -3315,23 +3315,23 @@ htmlParsePI(htmlParserCtxtPtr ctxt) {
                     xmlFree(buf);
                     goto done;
                 }
-    	NEXTL(l);
-    	cur = CUR_CHAR(l);
+        NEXTL(l);
+        cur = CUR_CHAR(l);
         }
         buf[len] = 0;
         if (cur != '>') {
-    	htmlParseErr(ctxt, XML_ERR_PI_NOT_FINISHED,
-    	      "ParsePI: PI %s never end ...\n", target, NULL);
+        htmlParseErr(ctxt, XML_ERR_PI_NOT_FINISHED,
+              "ParsePI: PI %s never end ...\n", target, NULL);
         } else {
-    	SKIP(1);
+        SKIP(1);
 
-    	/*
-    	 * SAX: PI detected.
-    	 */
-    	if ((ctxt->sax) && (!ctxt->disableSAX) &&
-    	    (ctxt->sax->processingInstruction != NULL))
-    	    ctxt->sax->processingInstruction(ctxt->userData,
-    	                                     target, buf);
+        /*
+         * SAX: PI detected.
+         */
+        if ((ctxt->sax) && (!ctxt->disableSAX) &&
+            (ctxt->sax->processingInstruction != NULL))
+            ctxt->sax->processingInstruction(ctxt->userData,
+                                             target, buf);
         }
         xmlFree(buf);
     } else {
@@ -3407,7 +3407,7 @@ htmlParseComment(htmlParserCtxtPtr ctxt) {
 
     if ((q == '-') && (r == '-') && (cur == '!') && (next == '>')) {
       htmlParseErr(ctxt, XML_ERR_COMMENT_NOT_FINISHED,
-    	       "Comment incorrectly closed by '--!>'", NULL, NULL);
+               "Comment incorrectly closed by '--!>'", NULL, NULL);
       cur = '>';
       break;
     }
@@ -3420,7 +3420,7 @@ htmlParseComment(htmlParserCtxtPtr ctxt) {
         if (tmp == NULL) {
             xmlFree(buf);
             htmlErrMemory(ctxt);
-    	return;
+        return;
         }
         buf = tmp;
     }
@@ -3459,7 +3459,7 @@ finished:
 
 unfinished:
     htmlParseErr(ctxt, XML_ERR_COMMENT_NOT_FINISHED,
-    	 "Comment not terminated \n<!--%.50s\n", buf, NULL);
+         "Comment not terminated \n<!--%.50s\n", buf, NULL);
     xmlFree(buf);
 }
 
@@ -3497,9 +3497,9 @@ htmlParseCharRef(htmlParserCtxtPtr ctxt) {
                 val = val * 16 + (CUR - 'A') + 10;
             } else {
             htmlParseErr(ctxt, XML_ERR_INVALID_HEX_CHARREF,
-    	             "htmlParseCharRef: missing semicolon\n",
-    		     NULL, NULL);
-    	break;
+                     "htmlParseCharRef: missing semicolon\n",
+        	     NULL, NULL);
+        break;
         }
         NEXT;
     }
@@ -3513,9 +3513,9 @@ htmlParseCharRef(htmlParserCtxtPtr ctxt) {
                 val = val * 10 + (CUR - '0');
             } else {
             htmlParseErr(ctxt, XML_ERR_INVALID_DEC_CHARREF,
-    	             "htmlParseCharRef: missing semicolon\n",
-    		     NULL, NULL);
-    	break;
+                     "htmlParseCharRef: missing semicolon\n",
+        	     NULL, NULL);
+        break;
         }
         NEXT;
     }
@@ -3532,11 +3532,11 @@ htmlParseCharRef(htmlParserCtxtPtr ctxt) {
         return(val);
     } else if (val >= 0x110000) {
     htmlParseErr(ctxt, XML_ERR_INVALID_CHAR,
-    	     "htmlParseCharRef: value too large\n", NULL, NULL);
+             "htmlParseCharRef: value too large\n", NULL, NULL);
     } else {
     htmlParseErrInt(ctxt, XML_ERR_INVALID_CHAR,
-    		"htmlParseCharRef: invalid xmlChar value %d\n",
-    		val);
+        	"htmlParseCharRef: invalid xmlChar value %d\n",
+        	val);
     }
     return(0);
 }
@@ -3572,7 +3572,7 @@ htmlParseDocTypeDecl(htmlParserCtxtPtr ctxt) {
     if (name == NULL) {
     htmlParseErr(ctxt, XML_ERR_NAME_REQUIRED,
                  "htmlParseDocTypeDecl : no DOCTYPE name !\n",
-    	     NULL, NULL);
+             NULL, NULL);
     }
     /*
      * Check that upper(name) == "HTML" !!!!!!!!!!!!!
@@ -3786,7 +3786,7 @@ htmlParseStartTag(htmlParserCtxtPtr ctxt) {
     if (name == NULL) {
     htmlParseErr(ctxt, XML_ERR_NAME_REQUIRED,
                  "htmlParseStartTag: invalid element name\n",
-    	     NULL, NULL);
+             NULL, NULL);
     /* Dump the bogus tag like browsers do */
     while ((CUR != 0) && (CUR != '>') &&
                (PARSER_STOPPED(ctxt) == 0))
@@ -3813,7 +3813,7 @@ htmlParseStartTag(htmlParserCtxtPtr ctxt) {
     if ((ctxt->nameNr > 0) && (xmlStrEqual(name, BAD_CAST"html"))) {
     htmlParseErr(ctxt, XML_HTML_STRUCURE_ERROR,
                  "htmlParseStartTag: misplaced <html> tag\n",
-    	     name, NULL);
+             name, NULL);
     discardtag = 1;
     ctxt->depth++;
     }
@@ -3821,7 +3821,7 @@ htmlParseStartTag(htmlParserCtxtPtr ctxt) {
     (xmlStrEqual(name, BAD_CAST"head"))) {
     htmlParseErr(ctxt, XML_HTML_STRUCURE_ERROR,
                  "htmlParseStartTag: misplaced <head> tag\n",
-    	     name, NULL);
+             name, NULL);
     discardtag = 1;
     ctxt->depth++;
     }
@@ -3829,11 +3829,11 @@ htmlParseStartTag(htmlParserCtxtPtr ctxt) {
     int indx;
     for (indx = 0;indx < ctxt->nameNr;indx++) {
         if (xmlStrEqual(ctxt->nameTab[indx], BAD_CAST"body")) {
-    	htmlParseErr(ctxt, XML_HTML_STRUCURE_ERROR,
-    	             "htmlParseStartTag: misplaced <body> tag\n",
-    		     name, NULL);
-    	discardtag = 1;
-    	ctxt->depth++;
+        htmlParseErr(ctxt, XML_HTML_STRUCURE_ERROR,
+                     "htmlParseStartTag: misplaced <body> tag\n",
+        	     name, NULL);
+        discardtag = 1;
+        ctxt->depth++;
         }
     }
     }
@@ -3857,12 +3857,12 @@ htmlParseStartTag(htmlParserCtxtPtr ctxt) {
          */
         for (i = 0; i < nbatts;i += 2) {
             if (xmlStrEqual(atts[i], attname)) {
-    	    htmlParseErr(ctxt, XML_ERR_ATTRIBUTE_REDEFINED,
-    	                 "Attribute %s redefined\n", attname, NULL);
-    	    if (attvalue != NULL)
-    		xmlFree(attvalue);
-    	    goto failed;
-    	}
+            htmlParseErr(ctxt, XML_ERR_ATTRIBUTE_REDEFINED,
+                         "Attribute %s redefined\n", attname, NULL);
+            if (attvalue != NULL)
+        	xmlFree(attvalue);
+            goto failed;
+        }
         }
 
         /*
@@ -3871,30 +3871,30 @@ htmlParseStartTag(htmlParserCtxtPtr ctxt) {
         if (atts == NULL) {
             maxatts = 22; /* allow for 10 attrs by default */
             atts = (const xmlChar **)
-    	       xmlMalloc(maxatts * sizeof(xmlChar *));
-    	if (atts == NULL) {
-    	    htmlErrMemory(ctxt);
-    	    if (attvalue != NULL)
-    		xmlFree(attvalue);
-    	    goto failed;
-    	}
-    	ctxt->atts = atts;
-    	ctxt->maxatts = maxatts;
+               xmlMalloc(maxatts * sizeof(xmlChar *));
+        if (atts == NULL) {
+            htmlErrMemory(ctxt);
+            if (attvalue != NULL)
+        	xmlFree(attvalue);
+            goto failed;
+        }
+        ctxt->atts = atts;
+        ctxt->maxatts = maxatts;
         } else if (nbatts + 4 > maxatts) {
             const xmlChar **n;
 
             maxatts *= 2;
             n = (const xmlChar **) xmlRealloc((void *) atts,
-    				     maxatts * sizeof(const xmlChar *));
-    	if (n == NULL) {
-    	    htmlErrMemory(ctxt);
-    	    if (attvalue != NULL)
-    		xmlFree(attvalue);
-    	    goto failed;
-    	}
-    	atts = n;
-    	ctxt->atts = atts;
-    	ctxt->maxatts = maxatts;
+        			     maxatts * sizeof(const xmlChar *));
+        if (n == NULL) {
+            htmlErrMemory(ctxt);
+            if (attvalue != NULL)
+        	xmlFree(attvalue);
+            goto failed;
+        }
+        atts = n;
+        ctxt->atts = atts;
+        ctxt->maxatts = maxatts;
         }
         atts[nbatts++] = attname;
         atts[nbatts++] = attvalue;
@@ -3908,9 +3908,9 @@ htmlParseStartTag(htmlParserCtxtPtr ctxt) {
          * the end of the tag. */
         while ((CUR != 0) &&
                !(IS_BLANK_CH(CUR)) && (CUR != '>') &&
-    	   ((CUR != '/') || (NXT(1) != '>')) &&
+           ((CUR != '/') || (NXT(1) != '>')) &&
                    (PARSER_STOPPED(ctxt) == 0))
-    	NEXT;
+        NEXT;
     }
 
 failed:
@@ -3930,16 +3930,16 @@ failed:
     htmlnamePush(ctxt, name);
     if ((ctxt->sax != NULL) && (ctxt->sax->startElement != NULL)) {
         if (nbatts != 0)
-    	ctxt->sax->startElement(ctxt->userData, name, atts);
+        ctxt->sax->startElement(ctxt->userData, name, atts);
         else
-    	ctxt->sax->startElement(ctxt->userData, name, NULL);
+        ctxt->sax->startElement(ctxt->userData, name, NULL);
     }
     }
 
     if (atts != NULL) {
         for (i = 1;i < nbatts;i += 2) {
         if (atts[i] != NULL)
-    	xmlFree((xmlChar *) atts[i]);
+        xmlFree((xmlChar *) atts[i]);
     }
     }
 
@@ -4102,9 +4102,9 @@ htmlParseReference(htmlParserCtxtPtr ctxt) {
     if ((ent == NULL) || !(ent->value > 0)) {
         htmlCheckParagraph(ctxt);
         if ((ctxt->sax != NULL) && (ctxt->sax->characters != NULL)) {
-    	ctxt->sax->characters(ctxt->userData, BAD_CAST "&", 1);
-    	ctxt->sax->characters(ctxt->userData, name, xmlStrlen(name));
-    	/* ctxt->sax->characters(ctxt->userData, BAD_CAST ";", 1); */
+        ctxt->sax->characters(ctxt->userData, BAD_CAST "&", 1);
+        ctxt->sax->characters(ctxt->userData, name, xmlStrlen(name));
+        /* ctxt->sax->characters(ctxt->userData, BAD_CAST ";", 1); */
         }
     } else {
         unsigned int c;
@@ -4121,13 +4121,13 @@ htmlParseReference(htmlParserCtxtPtr ctxt) {
                 { out[i++]=((c >> 18) & 0x07) | 0xF0;  bits= 12; }
 
         for ( ; bits >= 0; bits-= 6) {
-    	out[i++]= ((c >> bits) & 0x3F) | 0x80;
+        out[i++]= ((c >> bits) & 0x3F) | 0x80;
         }
         out[i] = 0;
 
         htmlCheckParagraph(ctxt);
         if ((ctxt->sax != NULL) && (ctxt->sax->characters != NULL))
-    	ctxt->sax->characters(ctxt->userData, out, i);
+        ctxt->sax->characters(ctxt->userData, out, i);
     }
     }
 }
@@ -4156,22 +4156,22 @@ htmlParseContent(htmlParserCtxtPtr ctxt) {
      */
         if ((CUR == '<') && (NXT(1) == '/')) {
         if (htmlParseEndTag(ctxt) &&
-    	((currentNode != NULL) || (ctxt->nameNr == 0))) {
-    	if (currentNode != NULL)
-    	    xmlFree(currentNode);
-    	return;
+        ((currentNode != NULL) || (ctxt->nameNr == 0))) {
+        if (currentNode != NULL)
+            xmlFree(currentNode);
+        return;
         }
         continue; /* while */
         }
 
     else if ((CUR == '<') &&
              ((IS_ASCII_LETTER(NXT(1))) ||
-    	  (NXT(1) == '_') || (NXT(1) == ':'))) {
+          (NXT(1) == '_') || (NXT(1) == ':'))) {
         name = htmlParseHTMLName_nonInvasive(ctxt);
         if (name == NULL) {
             htmlParseErr(ctxt, XML_ERR_NAME_REQUIRED,
-    		 "htmlParseStartTag: invalid element name\n",
-    		 NULL, NULL);
+        	 "htmlParseStartTag: invalid element name\n",
+        	 NULL, NULL);
             /* Dump the bogus tag like browsers do */
                 while ((CUR != 0) && (CUR != '>'))
                 NEXT;
@@ -4362,7 +4362,7 @@ htmlParseElement(htmlParserCtxtPtr ctxt) {
      */
     if (ctxt->record_info) {
        node_info.end_pos = ctxt->input->consumed +
-    		      (CUR_PTR - ctxt->input->base);
+        	      (CUR_PTR - ctxt->input->base);
        node_info.end_line = ctxt->input->line;
        node_info.node = ctxt->node;
        xmlParserAddNodeInfo(ctxt, &node_info);
@@ -4550,9 +4550,9 @@ htmlParseContentInternal(htmlParserCtxtPtr ctxt) {
      */
         if ((CUR == '<') && (NXT(1) == '/')) {
         if (htmlParseEndTag(ctxt) &&
-    	((currentNode != NULL) || (ctxt->nameNr == 0))) {
-    	if (currentNode != NULL)
-    	    xmlFree(currentNode);
+        ((currentNode != NULL) || (ctxt->nameNr == 0))) {
+        if (currentNode != NULL)
+            xmlFree(currentNode);
 
             depth = ctxt->nameNr;
                 if (depth <= 0) {
@@ -4570,12 +4570,12 @@ htmlParseContentInternal(htmlParserCtxtPtr ctxt) {
 
     else if ((CUR == '<') &&
              ((IS_ASCII_LETTER(NXT(1))) ||
-    	  (NXT(1) == '_') || (NXT(1) == ':'))) {
+          (NXT(1) == '_') || (NXT(1) == ':'))) {
         name = htmlParseHTMLName_nonInvasive(ctxt);
         if (name == NULL) {
             htmlParseErr(ctxt, XML_ERR_NAME_REQUIRED,
-    		 "htmlParseStartTag: invalid element name\n",
-    		 NULL, NULL);
+        	 "htmlParseStartTag: invalid element name\n",
+        	 NULL, NULL);
             /* Dump the bogus tag like browsers do */
             while ((CUR == 0) && (CUR != '>'))
                 NEXT;
@@ -4839,9 +4839,9 @@ htmlParseDocument(htmlParserCtxtPtr ctxt) {
     dtd = xmlGetIntSubset(ctxt->myDoc);
     if (dtd == NULL) {
         ctxt->myDoc->intSubset =
-    	xmlCreateIntSubset(ctxt->myDoc, BAD_CAST "html",
-    	    BAD_CAST "-//W3C//DTD HTML 4.0 Transitional//EN",
-    	    BAD_CAST "http://www.w3.org/TR/REC-html40/loose.dtd");
+        xmlCreateIntSubset(ctxt->myDoc, BAD_CAST "html",
+            BAD_CAST "-//W3C//DTD HTML 4.0 Transitional//EN",
+            BAD_CAST "http://www.w3.org/TR/REC-html40/loose.dtd");
             if (ctxt->myDoc->intSubset == NULL)
                 htmlErrMemory(ctxt);
         }
@@ -4852,9 +4852,9 @@ htmlParseDocument(htmlParserCtxtPtr ctxt) {
 
 
 /************************************************************************
- *    								*
- *    		Parser contexts handling			*
- *    								*
+ *        							*
+ *        	Parser contexts handling			*
+ *        							*
  ************************************************************************/
 
 /**
@@ -5098,9 +5098,9 @@ htmlCreateDocParserCtxt(const xmlChar *str, const char *url,
 
 #ifdef LIBXML_PUSH_ENABLED
 /************************************************************************
- *    								*
- *    Progressive parsing interfaces				*
- *    								*
+ *        							*
+ *    Progressive parsing interfaces    			*
+ *        							*
  ************************************************************************/
 
 /**
@@ -5246,12 +5246,12 @@ htmlParseTryOrFinish(htmlParserCtxtPtr ctxt, int terminate) {
     if ((avail == 0) && (terminate)) {
         htmlAutoCloseOnEnd(ctxt);
         if ((ctxt->nameNr == 0) && (ctxt->instate != XML_PARSER_EOF)) {
-    	/*
-    	 * SAX: end of the document processing.
-    	 */
-    	ctxt->instate = XML_PARSER_EOF;
-    	if ((ctxt->sax) && (ctxt->sax->endDocument != NULL))
-    	    ctxt->sax->endDocument(ctxt->userData);
+        /*
+         * SAX: end of the document processing.
+         */
+        ctxt->instate = XML_PARSER_EOF;
+        if ((ctxt->sax) && (ctxt->sax->endDocument != NULL))
+            ctxt->sax->endDocument(ctxt->userData);
         }
     }
         if (avail < 1)
@@ -5271,8 +5271,8 @@ htmlParseTryOrFinish(htmlParserCtxtPtr ctxt, int terminate) {
         switch (ctxt->instate) {
             case XML_PARSER_EOF:
             /*
-    	 * Document parsing is done !
-    	 */
+         * Document parsing is done !
+         */
             goto done;
             case XML_PARSER_START:
                 /*
@@ -5286,182 +5286,182 @@ htmlParseTryOrFinish(htmlParserCtxtPtr ctxt, int terminate) {
                 }
 
             /*
-    	 * Very first chars read from the document flow.
-    	 */
-    	cur = in->cur[0];
-    	if (IS_BLANK_CH(cur)) {
-    	    SKIP_BLANKS;
+         * Very first chars read from the document flow.
+         */
+        cur = in->cur[0];
+        if (IS_BLANK_CH(cur)) {
+            SKIP_BLANKS;
                     avail = in->end - in->cur;
-    	}
+        }
                 if ((ctxt->sax) && (ctxt->sax->setDocumentLocator)) {
                     ctxt->sax->setDocumentLocator(ctxt->userData,
                             (xmlSAXLocator *) &xmlDefaultSAXLocator);
                 }
-    	if ((ctxt->sax) && (ctxt->sax->startDocument) &&
+        if ((ctxt->sax) && (ctxt->sax->startDocument) &&
                 (!ctxt->disableSAX))
-    	    ctxt->sax->startDocument(ctxt->userData);
+            ctxt->sax->startDocument(ctxt->userData);
 
-    	cur = in->cur[0];
-    	next = in->cur[1];
-    	if ((cur == '<') && (next == '!') &&
-    	    (UPP(2) == 'D') && (UPP(3) == 'O') &&
-    	    (UPP(4) == 'C') && (UPP(5) == 'T') &&
-    	    (UPP(6) == 'Y') && (UPP(7) == 'P') &&
-    	    (UPP(8) == 'E')) {
-    	    if ((!terminate) &&
-    	        (htmlParseLookupSequence(ctxt, '>', 0, 0, 1) < 0))
-    		goto done;
-    	    htmlParseDocTypeDecl(ctxt);
-    	    ctxt->instate = XML_PARSER_PROLOG;
+        cur = in->cur[0];
+        next = in->cur[1];
+        if ((cur == '<') && (next == '!') &&
+            (UPP(2) == 'D') && (UPP(3) == 'O') &&
+            (UPP(4) == 'C') && (UPP(5) == 'T') &&
+            (UPP(6) == 'Y') && (UPP(7) == 'P') &&
+            (UPP(8) == 'E')) {
+            if ((!terminate) &&
+                (htmlParseLookupSequence(ctxt, '>', 0, 0, 1) < 0))
+        	goto done;
+            htmlParseDocTypeDecl(ctxt);
+            ctxt->instate = XML_PARSER_PROLOG;
                 } else {
-    	    ctxt->instate = XML_PARSER_MISC;
-    	}
-    	break;
+            ctxt->instate = XML_PARSER_MISC;
+        }
+        break;
             case XML_PARSER_MISC:
-    	SKIP_BLANKS;
+        SKIP_BLANKS;
                 avail = in->end - in->cur;
-    	/*
-    	 * no chars in buffer
-    	 */
-    	if (avail < 1)
-    	    goto done;
-    	/*
-    	 * not enough chars in buffer
-    	 */
-    	if (avail < 2) {
-    	    if (!terminate)
-    		goto done;
-    	    else
-    		next = ' ';
-    	} else {
-    	    next = in->cur[1];
-    	}
-    	cur = in->cur[0];
+        /*
+         * no chars in buffer
+         */
+        if (avail < 1)
+            goto done;
+        /*
+         * not enough chars in buffer
+         */
+        if (avail < 2) {
+            if (!terminate)
+        	goto done;
+            else
+        	next = ' ';
+        } else {
+            next = in->cur[1];
+        }
+        cur = in->cur[0];
             if ((cur == '<') && (next == '!') &&
-    	    (in->cur[2] == '-') && (in->cur[3] == '-')) {
-    	    if ((!terminate) && (htmlParseLookupCommentEnd(ctxt) < 0))
-    		goto done;
-    	    htmlParseComment(ctxt);
-    	    ctxt->instate = XML_PARSER_MISC;
+            (in->cur[2] == '-') && (in->cur[3] == '-')) {
+            if ((!terminate) && (htmlParseLookupCommentEnd(ctxt) < 0))
+        	goto done;
+            htmlParseComment(ctxt);
+            ctxt->instate = XML_PARSER_MISC;
             } else if ((cur == '<') && (next == '?')) {
-    	    if ((!terminate) &&
-    	        (htmlParseLookupSequence(ctxt, '>', 0, 0, 0) < 0))
-    		goto done;
-    	    htmlParsePI(ctxt);
-    	    ctxt->instate = XML_PARSER_MISC;
-    	} else if ((cur == '<') && (next == '!') &&
-    	    (UPP(2) == 'D') && (UPP(3) == 'O') &&
-    	    (UPP(4) == 'C') && (UPP(5) == 'T') &&
-    	    (UPP(6) == 'Y') && (UPP(7) == 'P') &&
-    	    (UPP(8) == 'E')) {
-    	    if ((!terminate) &&
-    	        (htmlParseLookupSequence(ctxt, '>', 0, 0, 1) < 0))
-    		goto done;
-    	    htmlParseDocTypeDecl(ctxt);
-    	    ctxt->instate = XML_PARSER_PROLOG;
-    	} else if ((cur == '<') && (next == '!') &&
-    	           (avail < 9)) {
-    	    goto done;
-    	} else {
-    	    ctxt->instate = XML_PARSER_CONTENT;
-    	}
-    	break;
+            if ((!terminate) &&
+                (htmlParseLookupSequence(ctxt, '>', 0, 0, 0) < 0))
+        	goto done;
+            htmlParsePI(ctxt);
+            ctxt->instate = XML_PARSER_MISC;
+        } else if ((cur == '<') && (next == '!') &&
+            (UPP(2) == 'D') && (UPP(3) == 'O') &&
+            (UPP(4) == 'C') && (UPP(5) == 'T') &&
+            (UPP(6) == 'Y') && (UPP(7) == 'P') &&
+            (UPP(8) == 'E')) {
+            if ((!terminate) &&
+                (htmlParseLookupSequence(ctxt, '>', 0, 0, 1) < 0))
+        	goto done;
+            htmlParseDocTypeDecl(ctxt);
+            ctxt->instate = XML_PARSER_PROLOG;
+        } else if ((cur == '<') && (next == '!') &&
+                   (avail < 9)) {
+            goto done;
+        } else {
+            ctxt->instate = XML_PARSER_CONTENT;
+        }
+        break;
             case XML_PARSER_PROLOG:
-    	SKIP_BLANKS;
+        SKIP_BLANKS;
                 avail = in->end - in->cur;
-    	if (avail < 2)
-    	    goto done;
-    	cur = in->cur[0];
-    	next = in->cur[1];
-    	if ((cur == '<') && (next == '!') &&
-    	    (in->cur[2] == '-') && (in->cur[3] == '-')) {
-    	    if ((!terminate) && (htmlParseLookupCommentEnd(ctxt) < 0))
-    		goto done;
-    	    htmlParseComment(ctxt);
-    	    ctxt->instate = XML_PARSER_PROLOG;
+        if (avail < 2)
+            goto done;
+        cur = in->cur[0];
+        next = in->cur[1];
+        if ((cur == '<') && (next == '!') &&
+            (in->cur[2] == '-') && (in->cur[3] == '-')) {
+            if ((!terminate) && (htmlParseLookupCommentEnd(ctxt) < 0))
+        	goto done;
+            htmlParseComment(ctxt);
+            ctxt->instate = XML_PARSER_PROLOG;
             } else if ((cur == '<') && (next == '?')) {
-    	    if ((!terminate) &&
-    	        (htmlParseLookupSequence(ctxt, '>', 0, 0, 0) < 0))
-    		goto done;
-    	    htmlParsePI(ctxt);
-    	    ctxt->instate = XML_PARSER_PROLOG;
-    	} else if ((cur == '<') && (next == '!') &&
-    	           (avail < 4)) {
-    	    goto done;
-    	} else {
-    	    ctxt->instate = XML_PARSER_CONTENT;
-    	}
-    	break;
+            if ((!terminate) &&
+                (htmlParseLookupSequence(ctxt, '>', 0, 0, 0) < 0))
+        	goto done;
+            htmlParsePI(ctxt);
+            ctxt->instate = XML_PARSER_PROLOG;
+        } else if ((cur == '<') && (next == '!') &&
+                   (avail < 4)) {
+            goto done;
+        } else {
+            ctxt->instate = XML_PARSER_CONTENT;
+        }
+        break;
             case XML_PARSER_EPILOG:
                 avail = in->end - in->cur;
-    	if (avail < 1)
-    	    goto done;
-    	cur = in->cur[0];
-    	if (IS_BLANK_CH(cur)) {
-    	    htmlParseCharData(ctxt);
-    	    goto done;
-    	}
-    	if (avail < 2)
-    	    goto done;
-    	next = in->cur[1];
+        if (avail < 1)
+            goto done;
+        cur = in->cur[0];
+        if (IS_BLANK_CH(cur)) {
+            htmlParseCharData(ctxt);
+            goto done;
+        }
+        if (avail < 2)
+            goto done;
+        next = in->cur[1];
             if ((cur == '<') && (next == '!') &&
-    	    (in->cur[2] == '-') && (in->cur[3] == '-')) {
-    	    if ((!terminate) && (htmlParseLookupCommentEnd(ctxt) < 0))
-    		goto done;
-    	    htmlParseComment(ctxt);
-    	    ctxt->instate = XML_PARSER_EPILOG;
+            (in->cur[2] == '-') && (in->cur[3] == '-')) {
+            if ((!terminate) && (htmlParseLookupCommentEnd(ctxt) < 0))
+        	goto done;
+            htmlParseComment(ctxt);
+            ctxt->instate = XML_PARSER_EPILOG;
             } else if ((cur == '<') && (next == '?')) {
-    	    if ((!terminate) &&
-    	        (htmlParseLookupSequence(ctxt, '>', 0, 0, 0) < 0))
-    		goto done;
-    	    htmlParsePI(ctxt);
-    	    ctxt->instate = XML_PARSER_EPILOG;
-    	} else if ((cur == '<') && (next == '!') &&
-    	           (avail < 4)) {
-    	    goto done;
-    	} else {
-    	    ctxt->errNo = XML_ERR_DOCUMENT_END;
-    	    ctxt->wellFormed = 0;
-    	    ctxt->instate = XML_PARSER_EOF;
-    	    if ((ctxt->sax) && (ctxt->sax->endDocument != NULL))
-    		ctxt->sax->endDocument(ctxt->userData);
-    	    goto done;
-    	}
-    	break;
+            if ((!terminate) &&
+                (htmlParseLookupSequence(ctxt, '>', 0, 0, 0) < 0))
+        	goto done;
+            htmlParsePI(ctxt);
+            ctxt->instate = XML_PARSER_EPILOG;
+        } else if ((cur == '<') && (next == '!') &&
+                   (avail < 4)) {
+            goto done;
+        } else {
+            ctxt->errNo = XML_ERR_DOCUMENT_END;
+            ctxt->wellFormed = 0;
+            ctxt->instate = XML_PARSER_EOF;
+            if ((ctxt->sax) && (ctxt->sax->endDocument != NULL))
+        	ctxt->sax->endDocument(ctxt->userData);
+            goto done;
+        }
+        break;
             case XML_PARSER_START_TAG: {
             const xmlChar *name;
-    	int failed;
-    	const htmlElemDesc * info;
+        int failed;
+        const htmlElemDesc * info;
 
-    	/*
-    	 * no chars in buffer
-    	 */
-    	if (avail < 1)
-    	    goto done;
-    	/*
-    	 * not enough chars in buffer
-    	 */
-    	if (avail < 2) {
-    	    if (!terminate)
-    		goto done;
-    	    else
-    		next = ' ';
-    	} else {
-    	    next = in->cur[1];
-    	}
-    	cur = in->cur[0];
+        /*
+         * no chars in buffer
+         */
+        if (avail < 1)
+            goto done;
+        /*
+         * not enough chars in buffer
+         */
+        if (avail < 2) {
+            if (!terminate)
+        	goto done;
+            else
+        	next = ' ';
+        } else {
+            next = in->cur[1];
+        }
+        cur = in->cur[0];
             if (cur != '<') {
-    	    ctxt->instate = XML_PARSER_CONTENT;
-    	    break;
-    	}
-    	if (next == '/') {
-    	    ctxt->instate = XML_PARSER_END_TAG;
-    	    ctxt->checkIndex = 0;
-    	    break;
-    	}
-    	if ((!terminate) &&
-    	    (htmlParseLookupSequence(ctxt, '>', 0, 0, 1) < 0))
-    	    goto done;
+            ctxt->instate = XML_PARSER_CONTENT;
+            break;
+        }
+        if (next == '/') {
+            ctxt->instate = XML_PARSER_END_TAG;
+            ctxt->checkIndex = 0;
+            break;
+        }
+        if ((!terminate) &&
+            (htmlParseLookupSequence(ctxt, '>', 0, 0, 1) < 0))
+            goto done;
 
                 /* Capture start position */
             if (ctxt->record_info) {
@@ -5471,139 +5471,139 @@ htmlParseTryOrFinish(htmlParserCtxtPtr ctxt, int terminate) {
             }
 
 
-    	failed = htmlParseStartTag(ctxt);
-    	name = ctxt->name;
-    	if ((failed == -1) ||
-    	    (name == NULL)) {
-    	    if (CUR == '>')
-    		NEXT;
-    	    break;
-    	}
+        failed = htmlParseStartTag(ctxt);
+        name = ctxt->name;
+        if ((failed == -1) ||
+            (name == NULL)) {
+            if (CUR == '>')
+        	NEXT;
+            break;
+        }
 
-    	/*
-    	 * Lookup the info for that element.
-    	 */
-    	info = htmlTagLookup(name);
-    	if (info == NULL) {
-    	    htmlParseErr(ctxt, XML_HTML_UNKNOWN_TAG,
-    	                 "Tag %s invalid\n", name, NULL);
-    	}
+        /*
+         * Lookup the info for that element.
+         */
+        info = htmlTagLookup(name);
+        if (info == NULL) {
+            htmlParseErr(ctxt, XML_HTML_UNKNOWN_TAG,
+                         "Tag %s invalid\n", name, NULL);
+        }
 
-    	/*
-    	 * Check for an Empty Element labeled the XML/SGML way
-    	 */
-    	if ((CUR == '/') && (NXT(1) == '>')) {
-    	    SKIP(2);
-    	    if ((ctxt->sax != NULL) && (ctxt->sax->endElement != NULL))
-    		ctxt->sax->endElement(ctxt->userData, name);
-    	    htmlnamePop(ctxt);
-    	    ctxt->instate = XML_PARSER_CONTENT;
-    	    break;
-    	}
+        /*
+         * Check for an Empty Element labeled the XML/SGML way
+         */
+        if ((CUR == '/') && (NXT(1) == '>')) {
+            SKIP(2);
+            if ((ctxt->sax != NULL) && (ctxt->sax->endElement != NULL))
+        	ctxt->sax->endElement(ctxt->userData, name);
+            htmlnamePop(ctxt);
+            ctxt->instate = XML_PARSER_CONTENT;
+            break;
+        }
 
-    	if (CUR == '>') {
-    	    NEXT;
-    	} else {
-    	    htmlParseErr(ctxt, XML_ERR_GT_REQUIRED,
-    	                 "Couldn't find end of Start Tag %s\n",
-    			 name, NULL);
+        if (CUR == '>') {
+            NEXT;
+        } else {
+            htmlParseErr(ctxt, XML_ERR_GT_REQUIRED,
+                         "Couldn't find end of Start Tag %s\n",
+        		 name, NULL);
 
-    	    /*
-    	     * end of parsing of this node.
-    	     */
-    	    if (xmlStrEqual(name, ctxt->name)) {
-    		nodePop(ctxt);
-    		htmlnamePop(ctxt);
-    	    }
+            /*
+             * end of parsing of this node.
+             */
+            if (xmlStrEqual(name, ctxt->name)) {
+        	nodePop(ctxt);
+        	htmlnamePop(ctxt);
+            }
 
-    	    if (ctxt->record_info)
-    	        htmlNodeInfoPush(ctxt, &node_info);
+            if (ctxt->record_info)
+                htmlNodeInfoPush(ctxt, &node_info);
 
-    	    ctxt->instate = XML_PARSER_CONTENT;
-    	    break;
-    	}
+            ctxt->instate = XML_PARSER_CONTENT;
+            break;
+        }
 
-    	/*
-    	 * Check for an Empty Element from DTD definition
-    	 */
-    	if ((info != NULL) && (info->empty)) {
-    	    if ((ctxt->sax != NULL) && (ctxt->sax->endElement != NULL))
-    		ctxt->sax->endElement(ctxt->userData, name);
-    	    htmlnamePop(ctxt);
-    	}
+        /*
+         * Check for an Empty Element from DTD definition
+         */
+        if ((info != NULL) && (info->empty)) {
+            if ((ctxt->sax != NULL) && (ctxt->sax->endElement != NULL))
+        	ctxt->sax->endElement(ctxt->userData, name);
+            htmlnamePop(ctxt);
+        }
 
                 if (ctxt->record_info)
                 htmlNodeInfoPush(ctxt, &node_info);
 
-    	ctxt->instate = XML_PARSER_CONTENT;
+        ctxt->instate = XML_PARSER_CONTENT;
                 break;
         }
             case XML_PARSER_CONTENT: {
-    	xmlChar chr[2] = { 0, 0 };
+        xmlChar chr[2] = { 0, 0 };
 
                 /*
-    	 * Handle preparsed entities and charRef
-    	 */
-    	if ((avail == 1) && (terminate)) {
-    	    cur = in->cur[0];
-    	    if ((cur != '<') && (cur != '&')) {
-    		if (ctxt->sax != NULL) {
+         * Handle preparsed entities and charRef
+         */
+        if ((avail == 1) && (terminate)) {
+            cur = in->cur[0];
+            if ((cur != '<') && (cur != '&')) {
+        	if (ctxt->sax != NULL) {
                             chr[0] = cur;
-    		    if (IS_BLANK_CH(cur)) {
-    			if (ctxt->keepBlanks) {
-    			    if (ctxt->sax->characters != NULL)
-    				ctxt->sax->characters(
-    					ctxt->userData, chr, 1);
-    			} else {
-    			    if (ctxt->sax->ignorableWhitespace != NULL)
-    				ctxt->sax->ignorableWhitespace(
-    					ctxt->userData, chr, 1);
-    			}
-    		    } else {
-    			htmlCheckParagraph(ctxt);
-    			if (ctxt->sax->characters != NULL)
-    			    ctxt->sax->characters(
-    				    ctxt->userData, chr, 1);
-    		    }
-    		}
-    		ctxt->checkIndex = 0;
-    		in->cur++;
-    		break;
-    	    }
-    	}
-    	if (avail < 2)
-    	    goto done;
-    	cur = in->cur[0];
-    	next = in->cur[1];
-    	if ((xmlStrEqual(ctxt->name, BAD_CAST"script")) ||
-    	    (xmlStrEqual(ctxt->name, BAD_CAST"style"))) {
-    	    /*
-    	     * Handle SCRIPT/STYLE separately
-    	     */
-    	    if (!terminate) {
-    	        int idx;
-    		xmlChar val;
+        	    if (IS_BLANK_CH(cur)) {
+        		if (ctxt->keepBlanks) {
+        		    if (ctxt->sax->characters != NULL)
+        			ctxt->sax->characters(
+        				ctxt->userData, chr, 1);
+        		} else {
+        		    if (ctxt->sax->ignorableWhitespace != NULL)
+        			ctxt->sax->ignorableWhitespace(
+        				ctxt->userData, chr, 1);
+        		}
+        	    } else {
+        		htmlCheckParagraph(ctxt);
+        		if (ctxt->sax->characters != NULL)
+        		    ctxt->sax->characters(
+        			    ctxt->userData, chr, 1);
+        	    }
+        	}
+        	ctxt->checkIndex = 0;
+        	in->cur++;
+        	break;
+            }
+        }
+        if (avail < 2)
+            goto done;
+        cur = in->cur[0];
+        next = in->cur[1];
+        if ((xmlStrEqual(ctxt->name, BAD_CAST"script")) ||
+            (xmlStrEqual(ctxt->name, BAD_CAST"style"))) {
+            /*
+             * Handle SCRIPT/STYLE separately
+             */
+            if (!terminate) {
+                int idx;
+        	xmlChar val;
 
-    		idx = htmlParseLookupSequence(ctxt, '<', '/', 0, 0);
-    		if (idx < 0)
-    		    goto done;
-    	        val = in->cur[idx + 2];
-    		if (val == 0) { /* bad cut of input */
+        	idx = htmlParseLookupSequence(ctxt, '<', '/', 0, 0);
+        	if (idx < 0)
+        	    goto done;
+                val = in->cur[idx + 2];
+        	if (val == 0) { /* bad cut of input */
                             /*
                              * FIXME: htmlParseScript checks for additional
                              * characters after '</'.
                              */
                             ctxt->checkIndex = idx;
-    		    goto done;
+        	    goto done;
                         }
-    	    }
-    	    htmlParseScript(ctxt);
-    	    if ((cur == '<') && (next == '/')) {
-    		ctxt->instate = XML_PARSER_END_TAG;
-    		ctxt->checkIndex = 0;
-    		break;
-    	    }
-    	} else if ((cur == '<') && (next == '!')) {
+            }
+            htmlParseScript(ctxt);
+            if ((cur == '<') && (next == '/')) {
+        	ctxt->instate = XML_PARSER_END_TAG;
+        	ctxt->checkIndex = 0;
+        	break;
+            }
+        } else if ((cur == '<') && (next == '!')) {
                     if (avail < 4)
                         goto done;
                     /*
@@ -5674,29 +5674,29 @@ htmlParseTryOrFinish(htmlParserCtxtPtr ctxt, int terminate) {
                         }
                         cur = in->cur[0];
                     }
-    	}
+        }
 
-    	break;
+        break;
         }
             case XML_PARSER_END_TAG:
-    	if (avail < 2)
-    	    goto done;
-    	if ((!terminate) &&
-    	    (htmlParseLookupSequence(ctxt, '>', 0, 0, 0) < 0))
-    	    goto done;
-    	htmlParseEndTag(ctxt);
-    	if (ctxt->nameNr == 0) {
-    	    ctxt->instate = XML_PARSER_EPILOG;
-    	} else {
-    	    ctxt->instate = XML_PARSER_CONTENT;
-    	}
-    	ctxt->checkIndex = 0;
+        if (avail < 2)
+            goto done;
+        if ((!terminate) &&
+            (htmlParseLookupSequence(ctxt, '>', 0, 0, 0) < 0))
+            goto done;
+        htmlParseEndTag(ctxt);
+        if (ctxt->nameNr == 0) {
+            ctxt->instate = XML_PARSER_EPILOG;
+        } else {
+            ctxt->instate = XML_PARSER_CONTENT;
+        }
+        ctxt->checkIndex = 0;
             break;
         default:
-    	htmlParseErr(ctxt, XML_ERR_INTERNAL_ERROR,
-    		     "HPP: internal error\n", NULL, NULL);
-    	ctxt->instate = XML_PARSER_EOF;
-    	break;
+        htmlParseErr(ctxt, XML_ERR_INTERNAL_ERROR,
+        	     "HPP: internal error\n", NULL, NULL);
+        ctxt->instate = XML_PARSER_EOF;
+        break;
     }
     }
 done:
@@ -5708,7 +5708,7 @@ done:
          */
         ctxt->instate = XML_PARSER_EOF;
         if ((ctxt->sax) && (ctxt->sax->endDocument != NULL))
-    	ctxt->sax->endDocument(ctxt->userData);
+        ctxt->sax->endDocument(ctxt->userData);
     }
     }
     if ((!(ctxt->options & HTML_PARSE_NODEFDTD)) && (ctxt->myDoc != NULL) &&
@@ -5718,9 +5718,9 @@ done:
     dtd = xmlGetIntSubset(ctxt->myDoc);
     if (dtd == NULL) {
         ctxt->myDoc->intSubset =
-    	xmlCreateIntSubset(ctxt->myDoc, BAD_CAST "html",
-    	    BAD_CAST "-//W3C//DTD HTML 4.0 Transitional//EN",
-    	    BAD_CAST "http://www.w3.org/TR/REC-html40/loose.dtd");
+        xmlCreateIntSubset(ctxt->myDoc, BAD_CAST "html",
+            BAD_CAST "-//W3C//DTD HTML 4.0 Transitional//EN",
+            BAD_CAST "http://www.w3.org/TR/REC-html40/loose.dtd");
             if (ctxt->myDoc->intSubset == NULL)
                 htmlErrMemory(ctxt);
         }
@@ -5774,7 +5774,7 @@ htmlParseChunk(htmlParserCtxtPtr ctxt, const char *chunk, int size,
     if (terminate) {
     if (ctxt->instate != XML_PARSER_EOF) {
         if ((ctxt->sax) && (ctxt->sax->endDocument != NULL))
-    	ctxt->sax->endDocument(ctxt->userData);
+        ctxt->sax->endDocument(ctxt->userData);
     }
     ctxt->instate = XML_PARSER_EOF;
     }
@@ -5782,9 +5782,9 @@ htmlParseChunk(htmlParserCtxtPtr ctxt, const char *chunk, int size,
 }
 
 /************************************************************************
- *    								*
- *    		User entry points				*
- *    								*
+ *        							*
+ *        	User entry points				*
+ *        							*
  ************************************************************************/
 
 /**
@@ -5804,7 +5804,7 @@ htmlParseChunk(htmlParserCtxtPtr ctxt, const char *chunk, int size,
 htmlParserCtxtPtr
 htmlCreatePushParserCtxt(htmlSAXHandlerPtr sax, void *user_data,
                          const char *chunk, int size, const char *filename,
-    		 xmlCharEncoding enc) {
+        	 xmlCharEncoding enc) {
     htmlParserCtxtPtr ctxt;
     htmlParserInputPtr input;
     const char *encoding;
@@ -6108,11 +6108,11 @@ htmlNodeStatus(htmlNodePtr node, int legacy) {
     case XML_ELEMENT_NODE:
       return legacy
     ? ( htmlElementAllowedHere (
-    	htmlTagLookup(node->parent->name) , node->name
-    	) ? HTML_VALID : HTML_INVALID )
+        htmlTagLookup(node->parent->name) , node->name
+        ) ? HTML_VALID : HTML_INVALID )
     : htmlElementStatusHere(
-    	htmlTagLookup(node->parent->name) ,
-    	htmlTagLookup(node->name) )
+        htmlTagLookup(node->parent->name) ,
+        htmlTagLookup(node->name) )
     ;
     case XML_ATTRIBUTE_NODE:
       return htmlAttrAllowed(
@@ -6121,9 +6121,9 @@ htmlNodeStatus(htmlNodePtr node, int legacy) {
   }
 }
 /************************************************************************
- *    								*
- *    New set (2.6.0) of simpler and more flexible APIs		*
- *    								*
+ *        							*
+ *    New set (2.6.0) of simpler and more flexible APIs    	*
+ *        							*
  ************************************************************************/
 /**
  * DICT_FREE:
@@ -6132,9 +6132,9 @@ htmlNodeStatus(htmlNodePtr node, int legacy) {
  * Free a string if it is not owned by the "dict" dictionary in the
  * current scope
  */
-#define DICT_FREE(str)    					\
-    if ((str) && ((!dict) ||				\
-        (xmlDictOwns(dict, (const xmlChar *)(str)) == 0)))	\
+#define DICT_FREE(str)        				\
+    if ((str) && ((!dict) ||    			\
+        (xmlDictOwns(dict, (const xmlChar *)(str)) == 0)))    \
         xmlFree((char *)(str));
 
 /**

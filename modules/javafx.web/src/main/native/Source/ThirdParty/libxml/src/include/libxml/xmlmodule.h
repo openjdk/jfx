@@ -34,19 +34,19 @@ typedef xmlModule *xmlModulePtr;
  */
 typedef enum {
     XML_MODULE_LAZY = 1,    /* lazy binding */
-    XML_MODULE_LOCAL= 2    	/* local binding */
+    XML_MODULE_LOCAL= 2        /* local binding */
 } xmlModuleOption;
 
 XMLPUBFUN xmlModulePtr xmlModuleOpen    (const char *filename,
-    					 int options);
+        				 int options);
 
-XMLPUBFUN int xmlModuleSymbol    	(xmlModulePtr module,
-    					 const char* name,
-    					 void **result);
+XMLPUBFUN int xmlModuleSymbol        (xmlModulePtr module,
+        				 const char* name,
+        				 void **result);
 
-XMLPUBFUN int xmlModuleClose    	(xmlModulePtr module);
+XMLPUBFUN int xmlModuleClose        (xmlModulePtr module);
 
-XMLPUBFUN int xmlModuleFree    	(xmlModulePtr module);
+XMLPUBFUN int xmlModuleFree        (xmlModulePtr module);
 
 #ifdef __cplusplus
 }

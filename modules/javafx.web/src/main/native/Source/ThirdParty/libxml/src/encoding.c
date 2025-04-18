@@ -72,9 +72,9 @@ static int xmlCharEncodingAliasesMax = 0;
 static int xmlLittleEndian = 1;
 
 /************************************************************************
- *    								*
- *    	Conversions To/From UTF8 encoding			*
- *    								*
+ *        							*
+ *        Conversions To/From UTF8 encoding			*
+ *        							*
  ************************************************************************/
 
 /**
@@ -188,7 +188,7 @@ UTF8Toascii(unsigned char* out, int *outlen,
 
     for ( ; trailing; trailing--) {
         if ((in >= inend) || (((d= *in++) & 0xC0) != 0x80))
-    	break;
+        break;
         c <<= 6;
         c |= d & 0x3F;
     }
@@ -196,7 +196,7 @@ UTF8Toascii(unsigned char* out, int *outlen,
     /* assertion: c is a single UTF-4 value */
     if (c < 0x80) {
         if (out >= outend)
-    	break;
+        break;
         *out++ = c;
     } else {
         /* no chance for this in Ascii */
@@ -376,11 +376,11 @@ UTF8Toisolat1(unsigned char* out, int *outlen,
 
     for ( ; trailing; trailing--) {
         if (in >= inend)
-    	break;
+        break;
         if (((d= *in++) & 0xC0) != 0x80) {
-    	*outlen = out - outstart;
-    	*inlen = processed - instart;
-    	return(XML_ENC_ERR_INPUT);
+        *outlen = out - outstart;
+        *inlen = processed - instart;
+        return(XML_ENC_ERR_INPUT);
         }
         c <<= 6;
         c |= d & 0x3F;
@@ -389,7 +389,7 @@ UTF8Toisolat1(unsigned char* out, int *outlen,
     /* assertion: c is a single UTF-4 value */
     if (c <= 0xFF) {
         if (out >= outend)
-    	break;
+        break;
         *out++ = c;
     } else {
         /* no chance for this in IsoLat1 */
@@ -455,15 +455,15 @@ UTF16LEToUTF8(unsigned char* out, int *outlen,
     }
         if ((c & 0xFC00) == 0xD800) {    /* surrogates */
         if (in >= inend) {           /* handle split mutli-byte characters */
-    	break;
+        break;
         }
         if (xmlLittleEndian) {
-    	d = *in++;
+        d = *in++;
         } else {
-    	tmp = (unsigned char *) in;
-    	d = *tmp++;
-    	d = d | (*tmp << 8);
-    	in++;
+        tmp = (unsigned char *) in;
+        d = *tmp++;
+        d = d | (*tmp << 8);
+        in++;
         }
             if ((d & 0xFC00) == 0xDC00) {
                 c &= 0x03FF;
@@ -472,8 +472,8 @@ UTF16LEToUTF8(unsigned char* out, int *outlen,
                 c += 0x10000;
             }
             else {
-    	*outlen = out - outstart;
-    	*inlenb = processed - inb;
+        *outlen = out - outstart;
+        *inlenb = processed - inb;
             return(XML_ENC_ERR_INPUT);
         }
         }
@@ -570,12 +570,12 @@ UTF8ToUTF16LE(unsigned char* outb, int *outlen,
             if (out >= outend)
             break;
         if (xmlLittleEndian) {
-    	*out++ = c;
+        *out++ = c;
         } else {
-    	tmp = (unsigned char *) out;
-    	*tmp = (unsigned char) c; /* Explicit truncation */
-    	*(tmp + 1) = c >> 8 ;
-    	out++;
+        tmp = (unsigned char *) out;
+        *tmp = (unsigned char) c; /* Explicit truncation */
+        *(tmp + 1) = c >> 8 ;
+        out++;
         }
         }
         else if (c < 0x110000) {
@@ -583,20 +583,20 @@ UTF8ToUTF16LE(unsigned char* outb, int *outlen,
             break;
             c -= 0x10000;
         if (xmlLittleEndian) {
-    	*out++ = 0xD800 | (c >> 10);
-    	*out++ = 0xDC00 | (c & 0x03FF);
+        *out++ = 0xD800 | (c >> 10);
+        *out++ = 0xDC00 | (c & 0x03FF);
         } else {
-    	tmp1 = 0xD800 | (c >> 10);
-    	tmp = (unsigned char *) out;
-    	*tmp = (unsigned char) tmp1; /* Explicit truncation */
-    	*(tmp + 1) = tmp1 >> 8;
-    	out++;
+        tmp1 = 0xD800 | (c >> 10);
+        tmp = (unsigned char *) out;
+        *tmp = (unsigned char) tmp1; /* Explicit truncation */
+        *(tmp + 1) = tmp1 >> 8;
+        out++;
 
-    	tmp2 = 0xDC00 | (c & 0x03FF);
-    	tmp = (unsigned char *) out;
-    	*tmp  = (unsigned char) tmp2; /* Explicit truncation */
-    	*(tmp + 1) = tmp2 >> 8;
-    	out++;
+        tmp2 = 0xDC00 | (c & 0x03FF);
+        tmp = (unsigned char *) out;
+        *tmp  = (unsigned char) tmp2; /* Explicit truncation */
+        *(tmp + 1) = tmp2 >> 8;
+        out++;
         }
         }
         else
@@ -696,12 +696,12 @@ UTF16BEToUTF8(unsigned char* out, int *outlen,
                 break;
         }
         if (xmlLittleEndian) {
-    	tmp = (unsigned char *) in;
-    	d = *tmp++;
-    	d = (d << 8) | *tmp;
-    	in++;
+        tmp = (unsigned char *) in;
+        d = *tmp++;
+        d = (d << 8) | *tmp;
+        in++;
         } else {
-    	d= *in++;
+        d= *in++;
         }
             if ((d & 0xFC00) == 0xDC00) {
                 c &= 0x03FF;
@@ -710,8 +710,8 @@ UTF16BEToUTF8(unsigned char* out, int *outlen,
                 c += 0x10000;
             }
             else {
-    	*outlen = out - outstart;
-    	*inlenb = processed - inb;
+        *outlen = out - outstart;
+        *inlenb = processed - inb;
             return(XML_ENC_ERR_INPUT);
         }
         }
@@ -806,32 +806,32 @@ UTF8ToUTF16BE(unsigned char* outb, int *outlen,
         if (c < 0x10000) {
             if (out >= outend)  break;
         if (xmlLittleEndian) {
-    	tmp = (unsigned char *) out;
-    	*tmp = c >> 8;
-    	*(tmp + 1) = (unsigned char) c; /* Explicit truncation */
-    	out++;
+        tmp = (unsigned char *) out;
+        *tmp = c >> 8;
+        *(tmp + 1) = (unsigned char) c; /* Explicit truncation */
+        out++;
         } else {
-    	*out++ = c;
+        *out++ = c;
         }
         }
         else if (c < 0x110000) {
             if (out+1 >= outend)  break;
             c -= 0x10000;
         if (xmlLittleEndian) {
-    	tmp1 = 0xD800 | (c >> 10);
-    	tmp = (unsigned char *) out;
-    	*tmp = tmp1 >> 8;
-    	*(tmp + 1) = (unsigned char) tmp1; /* Explicit truncation */
-    	out++;
+        tmp1 = 0xD800 | (c >> 10);
+        tmp = (unsigned char *) out;
+        *tmp = tmp1 >> 8;
+        *(tmp + 1) = (unsigned char) tmp1; /* Explicit truncation */
+        out++;
 
-    	tmp2 = 0xDC00 | (c & 0x03FF);
-    	tmp = (unsigned char *) out;
-    	*tmp = tmp2 >> 8;
-    	*(tmp + 1) = (unsigned char) tmp2; /* Explicit truncation */
-    	out++;
+        tmp2 = 0xDC00 | (c & 0x03FF);
+        tmp = (unsigned char *) out;
+        *tmp = tmp2 >> 8;
+        *(tmp + 1) = (unsigned char) tmp2; /* Explicit truncation */
+        out++;
         } else {
-    	*out++ = 0xD800 | (c >> 10);
-    	*out++ = 0xDC00 | (c & 0x03FF);
+        *out++ = 0xD800 | (c >> 10);
+        *out++ = 0xDC00 | (c & 0x03FF);
         }
         }
         else
@@ -845,9 +845,9 @@ UTF8ToUTF16BE(unsigned char* outb, int *outlen,
 #endif /* LIBXML_OUTPUT_ENABLED */
 
 /************************************************************************
- *    								*
- *    	Generic encoding handling routines			*
- *    								*
+ *        							*
+ *        Generic encoding handling routines			*
+ *        							*
  ************************************************************************/
 
 /**
@@ -1075,7 +1075,7 @@ xmlDelEncodingAlias(const char *alias) {
         xmlFree((char *) xmlCharEncodingAliases[i].alias);
         xmlCharEncodingAliasesNb--;
         memmove(&xmlCharEncodingAliases[i], &xmlCharEncodingAliases[i + 1],
-    	    sizeof(xmlCharEncodingAlias) * (xmlCharEncodingAliasesNb - i));
+            sizeof(xmlCharEncodingAlias) * (xmlCharEncodingAliasesNb - i));
         return(0);
     }
     }
@@ -1230,9 +1230,9 @@ xmlGetCharEncodingName(xmlCharEncoding enc) {
 }
 
 /************************************************************************
- *    								*
- *    		Char encoding handlers				*
- *    								*
+ *        							*
+ *        	Char encoding handlers				*
+ *        							*
  ************************************************************************/
 
 #if !defined(LIBXML_ICONV_ENABLED) && !defined(LIBXML_ICU_ENABLED) && \
@@ -1449,7 +1449,7 @@ xmlCleanupCharEncodingHandlers(void) {
         nbCharEncodingHandler--;
     if (handlers[nbCharEncodingHandler] != NULL) {
         if (handlers[nbCharEncodingHandler]->name != NULL)
-    	xmlFree(handlers[nbCharEncodingHandler]->name);
+        xmlFree(handlers[nbCharEncodingHandler]->name);
         xmlFree(handlers[nbCharEncodingHandler]);
     }
     }
@@ -2005,15 +2005,15 @@ xmlFindCharEncodingHandler(const char *name) {
 }
 
 /************************************************************************
- *    								*
- *    	ICONV based generic conversion functions		*
- *    								*
+ *        							*
+ *        ICONV based generic conversion functions		*
+ *        							*
  ************************************************************************/
 
 #ifdef LIBXML_ICONV_ENABLED
 /**
  * xmlIconvWrapper:
- * @cd:    	iconv converter data structure
+ * @cd:        iconv converter data structure
  * @out:  a pointer to an array of bytes to store the result
  * @outlen:  the length of @out
  * @in:  a pointer to an array of input bytes
@@ -2059,9 +2059,9 @@ xmlIconvWrapper(iconv_t cd, unsigned char *out, int *outlen,
 #endif /* LIBXML_ICONV_ENABLED */
 
 /************************************************************************
- *    								*
- *    	ICU based generic conversion functions		*
- *    								*
+ *        							*
+ *        ICU based generic conversion functions		*
+ *        							*
  ************************************************************************/
 
 #ifdef LIBXML_ICU_ENABLED
@@ -2133,9 +2133,9 @@ xmlUconvWrapper(uconv_t *cd, int toUnicode, unsigned char *out, int *outlen,
 #endif /* LIBXML_ICU_ENABLED */
 
 /************************************************************************
- *    								*
- *    	The real API used by libxml for on-the-fly conversion	*
- *    								*
+ *        							*
+ *        The real API used by libxml for on-the-fly conversion	*
+ *        							*
  ************************************************************************/
 
 /**
@@ -2680,12 +2680,12 @@ xmlCharEncCloseFunc(xmlCharEncodingHandler *handler) {
         tofree = 1;
     if (handler->iconv_out != (iconv_t) -1) {
         if (iconv_close(handler->iconv_out))
-    	ret = -1;
+        ret = -1;
         handler->iconv_out = (iconv_t) -1;
     }
     if (handler->iconv_in != (iconv_t) -1) {
         if (iconv_close(handler->iconv_in))
-    	ret = -1;
+        ret = -1;
         handler->iconv_in = (iconv_t) -1;
     }
     }
@@ -2870,7 +2870,7 @@ UTF8ToISO8859x(unsigned char* out, int *outlen,
             c2 = c2 & 0x3F;
         d = d & 0x0F;
         d = xlattable [48 + c2 + xlattable [48 + c1 +
-    		xlattable [32 + d] * 64] * 64];
+        	xlattable [32 + d] * 64] * 64];
             if (d == 0) {
                 /* not in character set */
                 *outlen = out - outstart;

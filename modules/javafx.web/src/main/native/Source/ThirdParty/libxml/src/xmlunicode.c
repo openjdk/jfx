@@ -30,7 +30,7 @@ typedef struct {
 
 typedef struct {
     const xmlUnicodeRange *table;
-    int    	    numentries;
+    int            numentries;
 } xmlUnicodeNameTable;
 
 

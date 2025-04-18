@@ -61,12 +61,12 @@ struct _htmlElemDesc {
  *    are allowed.  Some element relationships are not fully represented:
  *    these are flagged with the word MODIFIER
  */
-    const char** subelts;    	/* allowed sub-elements of this element */
+    const char** subelts;        /* allowed sub-elements of this element */
     const char* defaultsubelt;    /* subelement for suggested auto-repair
-    				   if necessary or NULL */
-    const char** attrs_opt;    	/* Optional Attributes */
-    const char** attrs_depr;    	/* Additional deprecated attributes */
-    const char** attrs_req;    	/* Required attributes */
+        			   if necessary or NULL */
+    const char** attrs_opt;        /* Optional Attributes */
+    const char** attrs_depr;        /* Additional deprecated attributes */
+    const char** attrs_req;        /* Required attributes */
 };
 
 /*
@@ -97,101 +97,101 @@ XMLPUBFUN const xmlSAXHandlerV1 *__htmlDefaultSAXHandler(void);
  */
 XML_DEPRECATED
 XMLPUBFUN void
-    		htmlInitAutoClose	(void);
+        	htmlInitAutoClose	(void);
 XMLPUBFUN const htmlElemDesc *
-    		htmlTagLookup	(const xmlChar *tag);
+        	htmlTagLookup	(const xmlChar *tag);
 XMLPUBFUN const htmlEntityDesc *
-    		htmlEntityLookup(const xmlChar *name);
+        	htmlEntityLookup(const xmlChar *name);
 XMLPUBFUN const htmlEntityDesc *
-    		htmlEntityValueLookup(unsigned int value);
+        	htmlEntityValueLookup(unsigned int value);
 
 XMLPUBFUN int
-    		htmlIsAutoClosed(htmlDocPtr doc,
-    				 htmlNodePtr elem);
+        	htmlIsAutoClosed(htmlDocPtr doc,
+        			 htmlNodePtr elem);
 XMLPUBFUN int
-    		htmlAutoCloseTag(htmlDocPtr doc,
-    				 const xmlChar *name,
-    				 htmlNodePtr elem);
+        	htmlAutoCloseTag(htmlDocPtr doc,
+        			 const xmlChar *name,
+        			 htmlNodePtr elem);
 XML_DEPRECATED
 XMLPUBFUN const htmlEntityDesc *
-    		htmlParseEntityRef(htmlParserCtxtPtr ctxt,
-    				 const xmlChar **str);
+        	htmlParseEntityRef(htmlParserCtxtPtr ctxt,
+        			 const xmlChar **str);
 XML_DEPRECATED
 XMLPUBFUN int
-    		htmlParseCharRef(htmlParserCtxtPtr ctxt);
+        	htmlParseCharRef(htmlParserCtxtPtr ctxt);
 XML_DEPRECATED
 XMLPUBFUN void
-    		htmlParseElement(htmlParserCtxtPtr ctxt);
+        	htmlParseElement(htmlParserCtxtPtr ctxt);
 
 XMLPUBFUN htmlParserCtxtPtr
-    		htmlNewParserCtxt(void);
+        	htmlNewParserCtxt(void);
 XMLPUBFUN htmlParserCtxtPtr
-    		htmlNewSAXParserCtxt(const htmlSAXHandler *sax,
-    				     void *userData);
+        	htmlNewSAXParserCtxt(const htmlSAXHandler *sax,
+        			     void *userData);
 
 XMLPUBFUN htmlParserCtxtPtr
-    		htmlCreateMemoryParserCtxt(const char *buffer,
-    					   int size);
+        	htmlCreateMemoryParserCtxt(const char *buffer,
+        				   int size);
 
 XMLPUBFUN int
-    		htmlParseDocument(htmlParserCtxtPtr ctxt);
+        	htmlParseDocument(htmlParserCtxtPtr ctxt);
 XML_DEPRECATED
 XMLPUBFUN htmlDocPtr
-    		htmlSAXParseDoc	(const xmlChar *cur,
-    				 const char *encoding,
-    				 htmlSAXHandlerPtr sax,
-    				 void *userData);
+        	htmlSAXParseDoc	(const xmlChar *cur,
+        			 const char *encoding,
+        			 htmlSAXHandlerPtr sax,
+        			 void *userData);
 XMLPUBFUN htmlDocPtr
-    		htmlParseDoc	(const xmlChar *cur,
-    				 const char *encoding);
+        	htmlParseDoc	(const xmlChar *cur,
+        			 const char *encoding);
 XMLPUBFUN htmlParserCtxtPtr
-    		htmlCreateFileParserCtxt(const char *filename,
+        	htmlCreateFileParserCtxt(const char *filename,
                                              const char *encoding);
 XML_DEPRECATED
 XMLPUBFUN htmlDocPtr
-    		htmlSAXParseFile(const char *filename,
-    				 const char *encoding,
-    				 htmlSAXHandlerPtr sax,
-    				 void *userData);
+        	htmlSAXParseFile(const char *filename,
+        			 const char *encoding,
+        			 htmlSAXHandlerPtr sax,
+        			 void *userData);
 XMLPUBFUN htmlDocPtr
-    		htmlParseFile	(const char *filename,
-    				 const char *encoding);
+        	htmlParseFile	(const char *filename,
+        			 const char *encoding);
 XMLPUBFUN int
-    		UTF8ToHtml	(unsigned char *out,
-    				 int *outlen,
-    				 const unsigned char *in,
-    				 int *inlen);
+        	UTF8ToHtml	(unsigned char *out,
+        			 int *outlen,
+        			 const unsigned char *in,
+        			 int *inlen);
 XMLPUBFUN int
-    		htmlEncodeEntities(unsigned char *out,
-    				 int *outlen,
-    				 const unsigned char *in,
-    				 int *inlen, int quoteChar);
+        	htmlEncodeEntities(unsigned char *out,
+        			 int *outlen,
+        			 const unsigned char *in,
+        			 int *inlen, int quoteChar);
 XMLPUBFUN int
-    		htmlIsScriptAttribute(const xmlChar *name);
+        	htmlIsScriptAttribute(const xmlChar *name);
 XML_DEPRECATED
 XMLPUBFUN int
-    		htmlHandleOmittedElem(int val);
+        	htmlHandleOmittedElem(int val);
 
 #ifdef LIBXML_PUSH_ENABLED
 /**
  * Interfaces for the Push mode.
  */
 XMLPUBFUN htmlParserCtxtPtr
-    		htmlCreatePushParserCtxt(htmlSAXHandlerPtr sax,
-    					 void *user_data,
-    					 const char *chunk,
-    					 int size,
-    					 const char *filename,
-    					 xmlCharEncoding enc);
+        	htmlCreatePushParserCtxt(htmlSAXHandlerPtr sax,
+        				 void *user_data,
+        				 const char *chunk,
+        				 int size,
+        				 const char *filename,
+        				 xmlCharEncoding enc);
 XMLPUBFUN int
-    		htmlParseChunk		(htmlParserCtxtPtr ctxt,
-    					 const char *chunk,
-    					 int size,
-    					 int terminate);
+        	htmlParseChunk		(htmlParserCtxtPtr ctxt,
+        				 const char *chunk,
+        				 int size,
+        				 int terminate);
 #endif /* LIBXML_PUSH_ENABLED */
 
 XMLPUBFUN void
-    		htmlFreeParserCtxt	(htmlParserCtxtPtr ctxt);
+        	htmlFreeParserCtxt	(htmlParserCtxtPtr ctxt);
 
 /*
  * New set of simpler/more flexible APIs
@@ -205,10 +205,10 @@ XMLPUBFUN void
 typedef enum {
     HTML_PARSE_RECOVER  = 1<<0, /* Relaxed parsing */
     HTML_PARSE_NODEFDTD = 1<<2, /* do not default a doctype if not found */
-    HTML_PARSE_NOERROR    = 1<<5,	/* suppress error reports */
+    HTML_PARSE_NOERROR    = 1<<5,    /* suppress error reports */
     HTML_PARSE_NOWARNING= 1<<6,    /* suppress warning reports */
-    HTML_PARSE_PEDANTIC    = 1<<7,	/* pedantic error reporting */
-    HTML_PARSE_NOBLANKS    = 1<<8,	/* remove blank nodes */
+    HTML_PARSE_PEDANTIC    = 1<<7,    /* pedantic error reporting */
+    HTML_PARSE_NOBLANKS    = 1<<8,    /* remove blank nodes */
     HTML_PARSE_NONET    = 1<<11,/* Forbid network access */
     HTML_PARSE_NOIMPLIED= 1<<13,/* Do not add implied html/body... elements */
     HTML_PARSE_COMPACT  = 1<<16,/* compact small text nodes */
@@ -216,77 +216,77 @@ typedef enum {
 } htmlParserOption;
 
 XMLPUBFUN void
-    	htmlCtxtReset		(htmlParserCtxtPtr ctxt);
+        htmlCtxtReset		(htmlParserCtxtPtr ctxt);
 XMLPUBFUN int
-    	htmlCtxtUseOptions	(htmlParserCtxtPtr ctxt,
-    				 int options);
+        htmlCtxtUseOptions	(htmlParserCtxtPtr ctxt,
+        			 int options);
 XMLPUBFUN htmlDocPtr
-    	htmlReadDoc		(const xmlChar *cur,
-    				 const char *URL,
-    				 const char *encoding,
-    				 int options);
+        htmlReadDoc		(const xmlChar *cur,
+        			 const char *URL,
+        			 const char *encoding,
+        			 int options);
 XMLPUBFUN htmlDocPtr
-    	htmlReadFile		(const char *URL,
-    				 const char *encoding,
-    				 int options);
+        htmlReadFile		(const char *URL,
+        			 const char *encoding,
+        			 int options);
 XMLPUBFUN htmlDocPtr
-    	htmlReadMemory		(const char *buffer,
-    				 int size,
-    				 const char *URL,
-    				 const char *encoding,
-    				 int options);
+        htmlReadMemory		(const char *buffer,
+        			 int size,
+        			 const char *URL,
+        			 const char *encoding,
+        			 int options);
 XMLPUBFUN htmlDocPtr
-    	htmlReadFd		(int fd,
-    				 const char *URL,
-    				 const char *encoding,
-    				 int options);
+        htmlReadFd		(int fd,
+        			 const char *URL,
+        			 const char *encoding,
+        			 int options);
 XMLPUBFUN htmlDocPtr
-    	htmlReadIO		(xmlInputReadCallback ioread,
-    				 xmlInputCloseCallback ioclose,
-    				 void *ioctx,
-    				 const char *URL,
-    				 const char *encoding,
-    				 int options);
+        htmlReadIO		(xmlInputReadCallback ioread,
+        			 xmlInputCloseCallback ioclose,
+        			 void *ioctx,
+        			 const char *URL,
+        			 const char *encoding,
+        			 int options);
 XMLPUBFUN htmlDocPtr
-    	htmlCtxtParseDocument	(htmlParserCtxtPtr ctxt,
-    				 xmlParserInputPtr input);
+        htmlCtxtParseDocument	(htmlParserCtxtPtr ctxt,
+        			 xmlParserInputPtr input);
 XMLPUBFUN htmlDocPtr
-    	htmlCtxtReadDoc		(xmlParserCtxtPtr ctxt,
-    				 const xmlChar *cur,
-    				 const char *URL,
-    				 const char *encoding,
-    				 int options);
+        htmlCtxtReadDoc		(xmlParserCtxtPtr ctxt,
+        			 const xmlChar *cur,
+        			 const char *URL,
+        			 const char *encoding,
+        			 int options);
 XMLPUBFUN htmlDocPtr
-    	htmlCtxtReadFile		(xmlParserCtxtPtr ctxt,
-    				 const char *filename,
-    				 const char *encoding,
-    				 int options);
+        htmlCtxtReadFile		(xmlParserCtxtPtr ctxt,
+        			 const char *filename,
+        			 const char *encoding,
+        			 int options);
 XMLPUBFUN htmlDocPtr
-    	htmlCtxtReadMemory		(xmlParserCtxtPtr ctxt,
-    				 const char *buffer,
-    				 int size,
-    				 const char *URL,
-    				 const char *encoding,
-    				 int options);
+        htmlCtxtReadMemory		(xmlParserCtxtPtr ctxt,
+        			 const char *buffer,
+        			 int size,
+        			 const char *URL,
+        			 const char *encoding,
+        			 int options);
 XMLPUBFUN htmlDocPtr
-    	htmlCtxtReadFd		(xmlParserCtxtPtr ctxt,
-    				 int fd,
-    				 const char *URL,
-    				 const char *encoding,
-    				 int options);
+        htmlCtxtReadFd		(xmlParserCtxtPtr ctxt,
+        			 int fd,
+        			 const char *URL,
+        			 const char *encoding,
+        			 int options);
 XMLPUBFUN htmlDocPtr
-    	htmlCtxtReadIO		(xmlParserCtxtPtr ctxt,
-    				 xmlInputReadCallback ioread,
-    				 xmlInputCloseCallback ioclose,
-    				 void *ioctx,
-    				 const char *URL,
-    				 const char *encoding,
-    				 int options);
+        htmlCtxtReadIO		(xmlParserCtxtPtr ctxt,
+        			 xmlInputReadCallback ioread,
+        			 xmlInputCloseCallback ioclose,
+        			 void *ioctx,
+        			 const char *URL,
+        			 const char *encoding,
+        			 int options);
 
 /* NRK/Jan2003: further knowledge of HTML structure
  */
 typedef enum {
-  HTML_NA = 0 ,    	/* something we don't check at all */
+  HTML_NA = 0 ,        /* something we don't check at all */
   HTML_INVALID = 0x1 ,
   HTML_DEPRECATED = 0x2 ,
   HTML_VALID = 0x4 ,
