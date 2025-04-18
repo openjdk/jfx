@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -291,8 +291,8 @@ public class TextFieldSkin extends TextInputControlSkin<TextField> {
             updateTextPos();
         });
 
-        registerInvalidationListener(control.textProperty(), e -> {
-            if (!behavior.isEditing()) {
+        registerInvalidationListener(control.textProperty(), (ev) -> {
+            if ((behavior != null) && !behavior.isEditing()) {
                 // Text changed, but not by user action
                 updateTextPos();
             }
@@ -733,7 +733,7 @@ public class TextFieldSkin extends TextInputControlSkin<TextField> {
         promptNode.visibleProperty().bind(usePromptText);
         promptNode.fontProperty().bind(getSkinnable().fontProperty());
 
-        promptNode.textProperty().bind(getSkinnable().promptTextProperty());
+        promptNode.textProperty().bind(getSkinnable().promptTextProperty().map(s -> s.replace("\n", "")));
         promptNode.fillProperty().bind(promptTextFillProperty());
         updateSelection();
     }
