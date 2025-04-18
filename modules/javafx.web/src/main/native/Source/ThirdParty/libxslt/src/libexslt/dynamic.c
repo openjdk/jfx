@@ -45,44 +45,44 @@
 
 static void
 exsltDynEvaluateFunction(xmlXPathParserContextPtr ctxt, int nargs) {
-	xmlChar *str = NULL;
-	xmlXPathObjectPtr ret = NULL;
+    xmlChar *str = NULL;
+    xmlXPathObjectPtr ret = NULL;
 
-	if (ctxt == NULL)
-		return;
-	if (nargs != 1) {
-		xsltPrintErrorContext(xsltXPathGetTransformContext(ctxt), NULL, NULL);
+    if (ctxt == NULL)
+        return;
+    if (nargs != 1) {
+        xsltPrintErrorContext(xsltXPathGetTransformContext(ctxt), NULL, NULL);
         xsltGenericError(xsltGenericErrorContext,
-			"dyn:evalute() : invalid number of args %d\n", nargs);
-		ctxt->error = XPATH_INVALID_ARITY;
-		return;
-	}
-	str = xmlXPathPopString(ctxt);
-	/* return an empty node-set if an empty string is passed in */
-	if (!str||!xmlStrlen(str)) {
-		if (str) xmlFree(str);
-		valuePush(ctxt,xmlXPathNewNodeSet(NULL));
-		return;
-	}
+            "dyn:evalute() : invalid number of args %d\n", nargs);
+        ctxt->error = XPATH_INVALID_ARITY;
+        return;
+    }
+    str = xmlXPathPopString(ctxt);
+    /* return an empty node-set if an empty string is passed in */
+    if (!str||!xmlStrlen(str)) {
+        if (str) xmlFree(str);
+        valuePush(ctxt,xmlXPathNewNodeSet(NULL));
+        return;
+    }
 #if LIBXML_VERSION >= 20911
         /*
          * Recursive evaluation can grow the call stack quickly.
          */
         ctxt->context->depth += 5;
 #endif
-	ret = xmlXPathEval(str,ctxt->context);
+    ret = xmlXPathEval(str,ctxt->context);
 #if LIBXML_VERSION >= 20911
         ctxt->context->depth -= 5;
 #endif
-	if (ret)
-		valuePush(ctxt,ret);
-	else {
-		xsltGenericError(xsltGenericErrorContext,
-			"dyn:evaluate() : unable to evaluate expression '%s'\n",str);
-		valuePush(ctxt,xmlXPathNewNodeSet(NULL));
-	}
-	xmlFree(str);
-	return;
+    if (ret)
+        valuePush(ctxt,ret);
+    else {
+        xsltGenericError(xsltGenericErrorContext,
+            "dyn:evaluate() : unable to evaluate expression '%s'\n",str);
+        valuePush(ctxt,xmlXPathNewNodeSet(NULL));
+    }
+    xmlFree(str);
+    return;
 }
 
 /**
@@ -131,9 +131,9 @@ exsltDynMapFunction(xmlXPathParserContextPtr ctxt, int nargs)
 
     tctxt = xsltXPathGetTransformContext(ctxt);
     if (tctxt == NULL) {
-	xsltTransformError(xsltXPathGetTransformContext(ctxt), NULL, NULL,
-	      "dyn:map : internal error tctxt == NULL\n");
-	goto cleanup;
+    xsltTransformError(xsltXPathGetTransformContext(ctxt), NULL, NULL,
+          "dyn:map : internal error tctxt == NULL\n");
+    goto cleanup;
     }
 
     if (str == NULL || !xmlStrlen(str) ||
@@ -146,14 +146,14 @@ exsltDynMapFunction(xmlXPathParserContextPtr ctxt, int nargs)
     oldProximityPosition = ctxt->context->proximityPosition;
 
         /**
-	 * since we really don't know we're going to be adding node(s)
-	 * down the road we create the RVT regardless
-	 */
+     * since we really don't know we're going to be adding node(s)
+     * down the road we create the RVT regardless
+     */
     container = xsltCreateRVT(tctxt);
     if (container == NULL) {
-	xsltTransformError(tctxt, NULL, NULL,
-	      "dyn:map : internal error container == NULL\n");
-	goto cleanup;
+    xsltTransformError(tctxt, NULL, NULL,
+          "dyn:map : internal error container == NULL\n");
+    goto cleanup;
     }
     xsltRegisterLocalRVT(tctxt, container);
     if (nodeset && nodeset->nodeNr > 0) {
@@ -252,7 +252,7 @@ exsltDynMapFunction(xmlXPathParserContextPtr ctxt, int nargs)
                             }
                         }
                         break;
-		    default:
+            default:
                         break;
                 }
                 xmlXPathFreeObject(subResult);
@@ -287,10 +287,10 @@ exsltDynMapFunction(xmlXPathParserContextPtr ctxt, int nargs)
 void
 exsltDynRegister (void) {
     xsltRegisterExtModuleFunction ((const xmlChar *) "evaluate",
-				   EXSLT_DYNAMIC_NAMESPACE,
-				   exsltDynEvaluateFunction);
+                   EXSLT_DYNAMIC_NAMESPACE,
+                   exsltDynEvaluateFunction);
   xsltRegisterExtModuleFunction ((const xmlChar *) "map",
-				   EXSLT_DYNAMIC_NAMESPACE,
-				   exsltDynMapFunction);
+                   EXSLT_DYNAMIC_NAMESPACE,
+                   exsltDynMapFunction);
 
 }

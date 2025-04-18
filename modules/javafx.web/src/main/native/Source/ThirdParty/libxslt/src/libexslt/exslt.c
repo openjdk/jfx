@@ -7,7 +7,7 @@
 #include "exslt.h"
 
 const char *exsltLibraryVersion = LIBEXSLT_VERSION_STRING
-				LIBEXSLT_VERSION_EXTRA;
+                LIBEXSLT_VERSION_EXTRA;
 const int exsltLibexsltVersion = LIBEXSLT_VERSION;
 const int exsltLibxsltVersion = LIBXSLT_VERSION;
 const int exsltLibxmlVersion = LIBXML_VERSION;

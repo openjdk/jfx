@@ -24,7 +24,7 @@
  */
 static void *
 exsltSaxonInit (xsltTransformContextPtr ctxt ATTRIBUTE_UNUSED,
-		const xmlChar *URI ATTRIBUTE_UNUSED) {
+        const xmlChar *URI ATTRIBUTE_UNUSED) {
     return xmlHashCreate(1);
 }
 
@@ -44,8 +44,8 @@ exsltSaxonFreeCompExprEntry(void *payload,
  */
 static void
 exsltSaxonShutdown (xsltTransformContextPtr ctxt ATTRIBUTE_UNUSED,
-		    const xmlChar *URI ATTRIBUTE_UNUSED,
-		    void *vdata) {
+            const xmlChar *URI ATTRIBUTE_UNUSED,
+            void *vdata) {
     xmlHashTablePtr data = (xmlHashTablePtr) vdata;
     xmlHashFree(data, exsltSaxonFreeCompExprEntry);
 }
@@ -82,18 +82,18 @@ exsltSaxonExpressionFunction (xmlXPathParserContextPtr ctxt, int nargs) {
     xsltTransformContextPtr tctxt = xsltXPathGetTransformContext(ctxt);
 
     if (nargs != 1) {
-	xmlXPathSetArityError(ctxt);
-	return;
+    xmlXPathSetArityError(ctxt);
+    return;
     }
 
     arg = xmlXPathPopString(ctxt);
     if (xmlXPathCheckError(ctxt) || (arg == NULL)) {
-	xmlXPathSetTypeError(ctxt);
-	return;
+    xmlXPathSetTypeError(ctxt);
+    return;
     }
 
     hash = (xmlHashTablePtr) xsltGetExtData(tctxt,
-					    ctxt->context->functionURI);
+                        ctxt->context->functionURI);
 
     ret = xmlHashLookup(hash, arg);
 
@@ -138,21 +138,21 @@ exsltSaxonEvalFunction (xmlXPathParserContextPtr ctxt, int nargs) {
      xmlXPathObjectPtr ret;
 
      if (nargs != 1) {
-	  xmlXPathSetArityError(ctxt);
-	  return;
+      xmlXPathSetArityError(ctxt);
+      return;
      }
 
      if (!xmlXPathStackIsExternal(ctxt)) {
-	  xmlXPathSetTypeError(ctxt);
-	  return;
+      xmlXPathSetTypeError(ctxt);
+      return;
      }
 
      expr = (xmlXPathCompExprPtr) xmlXPathPopExternal(ctxt);
 
      ret = xmlXPathCompiledEval(expr, ctxt->context);
      if (ret == NULL) {
-	  xmlXPathSetError(ctxt, XPATH_EXPR_ERROR);
-	  return;
+      xmlXPathSetError(ctxt, XPATH_EXPR_ERROR);
+      return;
      }
 
      valuePush(ctxt, ret);
@@ -178,8 +178,8 @@ exsltSaxonEvalFunction (xmlXPathParserContextPtr ctxt, int nargs) {
 static void
 exsltSaxonEvaluateFunction (xmlXPathParserContextPtr ctxt, int nargs) {
      if (nargs != 1) {
-	  xmlXPathSetArityError(ctxt);
-	  return;
+      xmlXPathSetArityError(ctxt);
+      return;
      }
 
      exsltSaxonExpressionFunction(ctxt, 1);
@@ -207,9 +207,9 @@ exsltSaxonSystemIdFunction(xmlXPathParserContextPtr ctxt, int nargs)
 
     if ((ctxt->context) && (ctxt->context->doc) &&
         (ctxt->context->doc->URL))
-	valuePush(ctxt, xmlXPathNewString(ctxt->context->doc->URL));
+    valuePush(ctxt, xmlXPathNewString(ctxt->context->doc->URL));
     else
-	valuePush(ctxt, xmlXPathNewString(BAD_CAST ""));
+    valuePush(ctxt, xmlXPathNewString(BAD_CAST ""));
 }
 
 /**
@@ -238,21 +238,21 @@ exsltSaxonLineNumberFunction(xmlXPathParserContextPtr ctxt, int nargs) {
     long lineNo = -1;
 
     if (nargs == 0) {
-	cur = ctxt->context->node;
+    cur = ctxt->context->node;
     } else if (nargs == 1) {
-	xmlNodeSetPtr nodelist;
-	int i;
+    xmlNodeSetPtr nodelist;
+    int i;
 
-	if ((ctxt->value == NULL) || (ctxt->value->type != XPATH_NODESET)) {
-	    xsltTransformError(xsltXPathGetTransformContext(ctxt), NULL, NULL,
-		"saxon:line-number() : invalid arg expecting a node-set\n");
-	    ctxt->error = XPATH_INVALID_TYPE;
-	    return;
-	}
+    if ((ctxt->value == NULL) || (ctxt->value->type != XPATH_NODESET)) {
+        xsltTransformError(xsltXPathGetTransformContext(ctxt), NULL, NULL,
+        "saxon:line-number() : invalid arg expecting a node-set\n");
+        ctxt->error = XPATH_INVALID_TYPE;
+        return;
+    }
 
-	obj = valuePop(ctxt);
-	nodelist = obj->nodesetval;
-	if ((nodelist != NULL) && (nodelist->nodeNr > 0)) {
+    obj = valuePop(ctxt);
+    nodelist = obj->nodesetval;
+    if ((nodelist != NULL) && (nodelist->nodeNr > 0)) {
             cur = nodelist->nodeTab[0];
             for (i = 1;i < nodelist->nodeNr;i++) {
                 int ret = xmlXPathCmpNodes(cur, nodelist->nodeTab[i]);
@@ -261,11 +261,11 @@ exsltSaxonLineNumberFunction(xmlXPathParserContextPtr ctxt, int nargs) {
             }
         }
     } else {
-	xsltTransformError(xsltXPathGetTransformContext(ctxt), NULL, NULL,
-		"saxon:line-number() : invalid number of args %d\n",
-		nargs);
-	ctxt->error = XPATH_INVALID_ARITY;
-	return;
+    xsltTransformError(xsltXPathGetTransformContext(ctxt), NULL, NULL,
+        "saxon:line-number() : invalid number of args %d\n",
+        nargs);
+    ctxt->error = XPATH_INVALID_ARITY;
+    return;
     }
 
     if ((cur != NULL) && (cur->type == XML_NAMESPACE_DECL)) {
@@ -298,21 +298,21 @@ exsltSaxonLineNumberFunction(xmlXPathParserContextPtr ctxt, int nargs) {
 void
 exsltSaxonRegister (void) {
      xsltRegisterExtModule (SAXON_NAMESPACE,
-			    exsltSaxonInit,
-			    exsltSaxonShutdown);
+                exsltSaxonInit,
+                exsltSaxonShutdown);
      xsltRegisterExtModuleFunction((const xmlChar *) "expression",
-				   SAXON_NAMESPACE,
-				   exsltSaxonExpressionFunction);
+                   SAXON_NAMESPACE,
+                   exsltSaxonExpressionFunction);
      xsltRegisterExtModuleFunction((const xmlChar *) "eval",
-				   SAXON_NAMESPACE,
-				   exsltSaxonEvalFunction);
+                   SAXON_NAMESPACE,
+                   exsltSaxonEvalFunction);
      xsltRegisterExtModuleFunction((const xmlChar *) "evaluate",
-				   SAXON_NAMESPACE,
-				   exsltSaxonEvaluateFunction);
+                   SAXON_NAMESPACE,
+                   exsltSaxonEvaluateFunction);
     xsltRegisterExtModuleFunction ((const xmlChar *) "line-number",
-				   SAXON_NAMESPACE,
-				   exsltSaxonLineNumberFunction);
+                   SAXON_NAMESPACE,
+                   exsltSaxonLineNumberFunction);
     xsltRegisterExtModuleFunction ((const xmlChar *) "systemId",
-				   SAXON_NAMESPACE,
-				   exsltSaxonSystemIdFunction);
+                   SAXON_NAMESPACE,
+                   exsltSaxonSystemIdFunction);
 }

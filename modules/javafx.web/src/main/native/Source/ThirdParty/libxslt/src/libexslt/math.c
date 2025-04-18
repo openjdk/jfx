@@ -31,16 +31,16 @@ exsltMathMin (xmlNodeSetPtr ns) {
     int i;
 
     if ((ns == NULL) || (ns->nodeNr == 0))
-	return(NAN);
+    return(NAN);
     ret = xmlXPathCastNodeToNumber(ns->nodeTab[0]);
     if (xmlXPathIsNaN(ret))
-	return(NAN);
+    return(NAN);
     for (i = 1; i < ns->nodeNr; i++) {
-	cur = xmlXPathCastNodeToNumber(ns->nodeTab[i]);
-	if (xmlXPathIsNaN(cur))
-	    return(NAN);
-	if (cur < ret)
-	    ret = cur;
+    cur = xmlXPathCastNodeToNumber(ns->nodeTab[i]);
+    if (xmlXPathIsNaN(cur))
+        return(NAN);
+    if (cur < ret)
+        ret = cur;
     }
     return(ret);
 }
@@ -59,20 +59,20 @@ exsltMathMinFunction (xmlXPathParserContextPtr ctxt, int nargs) {
     void *user = NULL;
 
     if (nargs != 1) {
-	xsltGenericError(xsltGenericErrorContext,
-			 "math:min: invalid number of arguments\n");
-	ctxt->error = XPATH_INVALID_ARITY;
-	return;
+    xsltGenericError(xsltGenericErrorContext,
+             "math:min: invalid number of arguments\n");
+    ctxt->error = XPATH_INVALID_ARITY;
+    return;
     }
     /* We need to delay the freeing of value->user */
     if ((ctxt->value != NULL) && (ctxt->value->boolval != 0)) {
         user = ctxt->value->user;
-	ctxt->value->boolval = 0;
-	ctxt->value->user = NULL;
+    ctxt->value->boolval = 0;
+    ctxt->value->user = NULL;
     }
     ns = xmlXPathPopNodeSet(ctxt);
     if (xmlXPathCheckError(ctxt))
-	return;
+    return;
 
     ret = exsltMathMin(ns);
 
@@ -100,16 +100,16 @@ exsltMathMax (xmlNodeSetPtr ns) {
     int i;
 
     if ((ns == NULL) || (ns->nodeNr == 0))
-	return(NAN);
+    return(NAN);
     ret = xmlXPathCastNodeToNumber(ns->nodeTab[0]);
     if (xmlXPathIsNaN(ret))
-	return(NAN);
+    return(NAN);
     for (i = 1; i < ns->nodeNr; i++) {
-	cur = xmlXPathCastNodeToNumber(ns->nodeTab[i]);
-	if (xmlXPathIsNaN(cur))
-	    return(NAN);
-	if (cur > ret)
-	    ret = cur;
+    cur = xmlXPathCastNodeToNumber(ns->nodeTab[i]);
+    if (xmlXPathIsNaN(cur))
+        return(NAN);
+    if (cur > ret)
+        ret = cur;
     }
     return(ret);
 }
@@ -128,19 +128,19 @@ exsltMathMaxFunction (xmlXPathParserContextPtr ctxt, int nargs) {
     void *user = NULL;
 
     if (nargs != 1) {
-	xmlXPathSetArityError(ctxt);
-	return;
+    xmlXPathSetArityError(ctxt);
+    return;
     }
 
     /* We need to delay the freeing of value->user */
     if ((ctxt->value != NULL) && (ctxt->value->boolval != 0)) {
-	user = ctxt->value->user;
-	ctxt->value->boolval = 0;
-	ctxt->value->user = 0;
+    user = ctxt->value->user;
+    ctxt->value->boolval = 0;
+    ctxt->value->user = 0;
     }
     ns = xmlXPathPopNodeSet(ctxt);
     if (xmlXPathCheckError(ctxt))
-	return;
+    return;
 
     ret = exsltMathMax(ns);
 
@@ -168,29 +168,29 @@ exsltMathHighest (xmlNodeSetPtr ns) {
     int i;
 
     if ((ns == NULL) || (ns->nodeNr == 0))
-	return(ret);
+    return(ret);
 
     max = xmlXPathCastNodeToNumber(ns->nodeTab[0]);
     if (xmlXPathIsNaN(max))
-	return(ret);
+    return(ret);
     else
-	xmlXPathNodeSetAddUnique(ret, ns->nodeTab[0]);
+    xmlXPathNodeSetAddUnique(ret, ns->nodeTab[0]);
 
     for (i = 1; i < ns->nodeNr; i++) {
-	cur = xmlXPathCastNodeToNumber(ns->nodeTab[i]);
-	if (xmlXPathIsNaN(cur)) {
-	    xmlXPathEmptyNodeSet(ret);
-	    return(ret);
-	}
-	if (cur < max)
-	    continue;
-	if (cur > max) {
-	    max = cur;
-	    xmlXPathEmptyNodeSet(ret);
-	    xmlXPathNodeSetAddUnique(ret, ns->nodeTab[i]);
-	    continue;
-	}
-	xmlXPathNodeSetAddUnique(ret, ns->nodeTab[i]);
+    cur = xmlXPathCastNodeToNumber(ns->nodeTab[i]);
+    if (xmlXPathIsNaN(cur)) {
+        xmlXPathEmptyNodeSet(ret);
+        return(ret);
+    }
+    if (cur < max)
+        continue;
+    if (cur > max) {
+        max = cur;
+        xmlXPathEmptyNodeSet(ret);
+        xmlXPathNodeSetAddUnique(ret, ns->nodeTab[i]);
+        continue;
+    }
+    xmlXPathNodeSetAddUnique(ret, ns->nodeTab[i]);
     }
     return(ret);
 }
@@ -208,19 +208,19 @@ exsltMathHighestFunction (xmlXPathParserContextPtr ctxt, int nargs) {
     void *user = NULL;
 
     if (nargs != 1) {
-	xmlXPathSetArityError(ctxt);
-	return;
+    xmlXPathSetArityError(ctxt);
+    return;
     }
 
     /* We need to delay the freeing of value->user */
     if ((ctxt->value != NULL) && ctxt->value->boolval != 0) {
         user = ctxt->value->user;
-	ctxt->value->boolval = 0;
-	ctxt->value->user = NULL;
+    ctxt->value->boolval = 0;
+    ctxt->value->user = NULL;
     }
     ns = xmlXPathPopNodeSet(ctxt);
     if (xmlXPathCheckError(ctxt))
-	return;
+    return;
 
     ret = exsltMathHighest(ns);
 
@@ -248,29 +248,29 @@ exsltMathLowest (xmlNodeSetPtr ns) {
     int i;
 
     if ((ns == NULL) || (ns->nodeNr == 0))
-	return(ret);
+    return(ret);
 
     min = xmlXPathCastNodeToNumber(ns->nodeTab[0]);
     if (xmlXPathIsNaN(min))
-	return(ret);
+    return(ret);
     else
-	xmlXPathNodeSetAddUnique(ret, ns->nodeTab[0]);
+    xmlXPathNodeSetAddUnique(ret, ns->nodeTab[0]);
 
     for (i = 1; i < ns->nodeNr; i++) {
-	cur = xmlXPathCastNodeToNumber(ns->nodeTab[i]);
-	if (xmlXPathIsNaN(cur)) {
-	    xmlXPathEmptyNodeSet(ret);
-	    return(ret);
-	}
+    cur = xmlXPathCastNodeToNumber(ns->nodeTab[i]);
+    if (xmlXPathIsNaN(cur)) {
+        xmlXPathEmptyNodeSet(ret);
+        return(ret);
+    }
         if (cur > min)
-	    continue;
-	if (cur < min) {
-	    min = cur;
-	    xmlXPathEmptyNodeSet(ret);
-	    xmlXPathNodeSetAddUnique(ret, ns->nodeTab[i]);
+        continue;
+    if (cur < min) {
+        min = cur;
+        xmlXPathEmptyNodeSet(ret);
+        xmlXPathNodeSetAddUnique(ret, ns->nodeTab[i]);
             continue;
-	}
-	xmlXPathNodeSetAddUnique(ret, ns->nodeTab[i]);
+    }
+    xmlXPathNodeSetAddUnique(ret, ns->nodeTab[i]);
     }
     return(ret);
 }
@@ -289,19 +289,19 @@ exsltMathLowestFunction (xmlXPathParserContextPtr ctxt, int nargs) {
 
 
     if (nargs != 1) {
-	xmlXPathSetArityError(ctxt);
-	return;
+    xmlXPathSetArityError(ctxt);
+    return;
     }
 
     /* We need to delay the freeing of value->user */
     if ((ctxt->value != NULL) && (ctxt->value->boolval != 0)) {
         user = ctxt->value->user;
-	ctxt->value->boolval = 0;
-	ctxt->value->user = NULL;
+    ctxt->value->boolval = 0;
+    ctxt->value->user = NULL;
     }
     ns = xmlXPathPopNodeSet(ctxt);
     if (xmlXPathCheckError(ctxt))
-	return;
+    return;
 
     ret = exsltMathLowest(ns);
 
@@ -316,19 +316,19 @@ exsltMathLowestFunction (xmlXPathParserContextPtr ctxt, int nargs) {
 
 /* constant values */
 #define EXSLT_PI        (const xmlChar *) \
-			"3.1415926535897932384626433832795028841971693993751"
+            "3.1415926535897932384626433832795028841971693993751"
 #define EXSLT_E         (const xmlChar *) \
-			"2.71828182845904523536028747135266249775724709369996"
+            "2.71828182845904523536028747135266249775724709369996"
 #define EXSLT_SQRRT2    (const xmlChar *) \
-			"1.41421356237309504880168872420969807856967187537694"
+            "1.41421356237309504880168872420969807856967187537694"
 #define EXSLT_LN2       (const xmlChar *) \
-			"0.69314718055994530941723212145817656807550013436025"
+            "0.69314718055994530941723212145817656807550013436025"
 #define EXSLT_LN10      (const xmlChar *) \
-			"2.30258509299404568402"
+            "2.30258509299404568402"
 #define EXSLT_LOG2E     (const xmlChar *) \
-			"1.4426950408889634074"
+            "1.4426950408889634074"
 #define EXSLT_SQRT1_2   (const xmlChar *) \
-			"0.70710678118654752440"
+            "0.70710678118654752440"
 
 /**
  * exsltMathConstant
@@ -408,7 +408,7 @@ exsltMathConstant (xmlChar *name, double precision) {
         str = xmlStrsub(EXSLT_SQRT1_2, 0, len);
 
     } else {
-	str = NULL;
+    str = NULL;
     }
     if (str == NULL)
         return NAN;
@@ -430,20 +430,20 @@ exsltMathConstantFunction (xmlXPathParserContextPtr ctxt, int nargs) {
     xmlChar *name;
 
     if (nargs != 2) {
-	xmlXPathSetArityError(ctxt);
-	return;
+    xmlXPathSetArityError(ctxt);
+    return;
     }
     ret = xmlXPathPopNumber(ctxt);
     if (xmlXPathCheckError(ctxt))
-	return;
+    return;
 
     name = xmlXPathPopString(ctxt);
     if (xmlXPathCheckError(ctxt))
-	return;
+    return;
 
     ret = exsltMathConstant(name, ret);
     if (name != NULL)
-	xmlFree(name);
+    xmlFree(name);
 
     xmlXPathReturnNumber(ctxt, ret);
 }
@@ -478,8 +478,8 @@ exsltMathRandomFunction (xmlXPathParserContextPtr ctxt, int nargs) {
     double ret;
 
     if (nargs != 0) {
-	xmlXPathSetArityError(ctxt);
-	return;
+    xmlXPathSetArityError(ctxt);
+    return;
     }
 
     ret = exsltMathRandom();
@@ -501,7 +501,7 @@ exsltMathAbs (double num) {
     double ret;
 
     if (xmlXPathIsNaN(num))
-	return(NAN);
+    return(NAN);
     ret = fabs(num);
     return(ret);
 }
@@ -518,12 +518,12 @@ exsltMathAbsFunction (xmlXPathParserContextPtr ctxt, int nargs) {
     double ret;
 
     if (nargs != 1) {
-	xmlXPathSetArityError(ctxt);
-	return;
+    xmlXPathSetArityError(ctxt);
+    return;
     }
     ret = xmlXPathPopNumber(ctxt);
     if (xmlXPathCheckError(ctxt))
-	return;
+    return;
 
     ret = exsltMathAbs(ret);
 
@@ -544,7 +544,7 @@ exsltMathSqrt (double num) {
     double ret;
 
     if (xmlXPathIsNaN(num))
-	return(NAN);
+    return(NAN);
     ret = sqrt(num);
     return(ret);
 }
@@ -561,12 +561,12 @@ exsltMathSqrtFunction (xmlXPathParserContextPtr ctxt, int nargs) {
     double ret;
 
     if (nargs != 1) {
-	xmlXPathSetArityError(ctxt);
-	return;
+    xmlXPathSetArityError(ctxt);
+    return;
     }
     ret = xmlXPathPopNumber(ctxt);
     if (xmlXPathCheckError(ctxt))
-	return;
+    return;
 
     ret = exsltMathSqrt(ret);
 
@@ -589,7 +589,7 @@ exsltMathPower (double base, double power) {
     double ret;
 
     if ((xmlXPathIsNaN(base) || xmlXPathIsNaN(power)))
-	return(NAN);
+    return(NAN);
     ret = pow(base, power);
     return(ret);
 }
@@ -606,17 +606,17 @@ exsltMathPowerFunction (xmlXPathParserContextPtr ctxt, int nargs) {
     double ret, base;
 
     if (nargs != 2) {
-	xmlXPathSetArityError(ctxt);
-	return;
+    xmlXPathSetArityError(ctxt);
+    return;
     }
     ret = xmlXPathPopNumber(ctxt);
     if (xmlXPathCheckError(ctxt))
-	return;
+    return;
 
     /* power */
     base = xmlXPathPopNumber(ctxt);
     if (xmlXPathCheckError(ctxt))
-	return;
+    return;
 
     ret = exsltMathPower(base, ret);
 
@@ -637,7 +637,7 @@ exsltMathLog (double num) {
     double ret;
 
     if (xmlXPathIsNaN(num))
-	return(NAN);
+    return(NAN);
     ret = log(num);
     return(ret);
 }
@@ -654,12 +654,12 @@ exsltMathLogFunction (xmlXPathParserContextPtr ctxt, int nargs) {
     double ret;
 
     if (nargs != 1) {
-	xmlXPathSetArityError(ctxt);
-	return;
+    xmlXPathSetArityError(ctxt);
+    return;
     }
     ret = xmlXPathPopNumber(ctxt);
     if (xmlXPathCheckError(ctxt))
-	return;
+    return;
 
     ret = exsltMathLog(ret);
 
@@ -680,7 +680,7 @@ exsltMathSin (double num) {
     double ret;
 
     if (xmlXPathIsNaN(num))
-	return(NAN);
+    return(NAN);
     ret = sin(num);
     return(ret);
 }
@@ -697,12 +697,12 @@ exsltMathSinFunction (xmlXPathParserContextPtr ctxt, int nargs) {
     double ret;
 
     if (nargs != 1) {
-	xmlXPathSetArityError(ctxt);
-	return;
+    xmlXPathSetArityError(ctxt);
+    return;
     }
     ret = xmlXPathPopNumber(ctxt);
     if (xmlXPathCheckError(ctxt))
-	return;
+    return;
 
     ret = exsltMathSin(ret);
 
@@ -723,7 +723,7 @@ exsltMathCos (double num) {
     double ret;
 
     if (xmlXPathIsNaN(num))
-	return(NAN);
+    return(NAN);
     ret = cos(num);
     return(ret);
 }
@@ -740,12 +740,12 @@ exsltMathCosFunction (xmlXPathParserContextPtr ctxt, int nargs) {
     double ret;
 
     if (nargs != 1) {
-	xmlXPathSetArityError(ctxt);
-	return;
+    xmlXPathSetArityError(ctxt);
+    return;
     }
     ret = xmlXPathPopNumber(ctxt);
     if (xmlXPathCheckError(ctxt))
-	return;
+    return;
 
     ret = exsltMathCos(ret);
 
@@ -766,7 +766,7 @@ exsltMathTan (double num) {
     double ret;
 
     if (xmlXPathIsNaN(num))
-	return(NAN);
+    return(NAN);
     ret = tan(num);
     return(ret);
 }
@@ -783,12 +783,12 @@ exsltMathTanFunction (xmlXPathParserContextPtr ctxt, int nargs) {
     double ret;
 
     if (nargs != 1) {
-	xmlXPathSetArityError(ctxt);
-	return;
+    xmlXPathSetArityError(ctxt);
+    return;
     }
     ret = xmlXPathPopNumber(ctxt);
     if (xmlXPathCheckError(ctxt))
-	return;
+    return;
 
     ret = exsltMathTan(ret);
 
@@ -809,7 +809,7 @@ exsltMathAsin (double num) {
     double ret;
 
     if (xmlXPathIsNaN(num))
-	return(NAN);
+    return(NAN);
     ret = asin(num);
     return(ret);
 }
@@ -826,12 +826,12 @@ exsltMathAsinFunction (xmlXPathParserContextPtr ctxt, int nargs) {
     double ret;
 
     if (nargs != 1) {
-	xmlXPathSetArityError(ctxt);
-	return;
+    xmlXPathSetArityError(ctxt);
+    return;
     }
     ret = xmlXPathPopNumber(ctxt);
     if (xmlXPathCheckError(ctxt))
-	return;
+    return;
 
     ret = exsltMathAsin(ret);
 
@@ -852,7 +852,7 @@ exsltMathAcos (double num) {
     double ret;
 
     if (xmlXPathIsNaN(num))
-	return(NAN);
+    return(NAN);
     ret = acos(num);
     return(ret);
 }
@@ -869,12 +869,12 @@ exsltMathAcosFunction (xmlXPathParserContextPtr ctxt, int nargs) {
     double ret;
 
     if (nargs != 1) {
-	xmlXPathSetArityError(ctxt);
-	return;
+    xmlXPathSetArityError(ctxt);
+    return;
     }
     ret = xmlXPathPopNumber(ctxt);
     if (xmlXPathCheckError(ctxt))
-	return;
+    return;
 
     ret = exsltMathAcos(ret);
 
@@ -895,7 +895,7 @@ exsltMathAtan (double num) {
     double ret;
 
     if (xmlXPathIsNaN(num))
-	return(NAN);
+    return(NAN);
     ret = atan(num);
     return(ret);
 }
@@ -912,12 +912,12 @@ exsltMathAtanFunction (xmlXPathParserContextPtr ctxt, int nargs) {
     double ret;
 
     if (nargs != 1) {
-	xmlXPathSetArityError(ctxt);
-	return;
+    xmlXPathSetArityError(ctxt);
+    return;
     }
     ret = xmlXPathPopNumber(ctxt);
     if (xmlXPathCheckError(ctxt))
-	return;
+    return;
 
     ret = exsltMathAtan(ret);
 
@@ -940,7 +940,7 @@ exsltMathAtan2 (double y, double x) {
     double ret;
 
     if ((xmlXPathIsNaN(y) || xmlXPathIsNaN(x)))
-	return(NAN);
+    return(NAN);
     ret = atan2(y, x);
     return(ret);
 }
@@ -957,17 +957,17 @@ exsltMathAtan2Function (xmlXPathParserContextPtr ctxt, int nargs) {
     double ret, x;
 
     if (nargs != 2) {
-	xmlXPathSetArityError(ctxt);
-	return;
+    xmlXPathSetArityError(ctxt);
+    return;
     }
     x = xmlXPathPopNumber(ctxt);
     if (xmlXPathCheckError(ctxt))
-	return;
+    return;
 
     /* y */
     ret = xmlXPathPopNumber(ctxt);
     if (xmlXPathCheckError(ctxt))
-	return;
+    return;
 
     ret = exsltMathAtan2(ret, x);
 
@@ -989,7 +989,7 @@ exsltMathExp (double num) {
     double ret;
 
     if (xmlXPathIsNaN(num))
-	return(NAN);
+    return(NAN);
     ret = exp(num);
     return(ret);
 }
@@ -1006,12 +1006,12 @@ exsltMathExpFunction (xmlXPathParserContextPtr ctxt, int nargs) {
     double ret;
 
     if (nargs != 1) {
-	xmlXPathSetArityError(ctxt);
-	return;
+    xmlXPathSetArityError(ctxt);
+    return;
     }
     ret = xmlXPathPopNumber(ctxt);
     if (xmlXPathCheckError(ctxt))
-	return;
+    return;
 
     ret = exsltMathExp(ret);
 
@@ -1027,59 +1027,59 @@ exsltMathExpFunction (xmlXPathParserContextPtr ctxt, int nargs) {
 void
 exsltMathRegister (void) {
     xsltRegisterExtModuleFunction ((const xmlChar *) "min",
-				   EXSLT_MATH_NAMESPACE,
-				   exsltMathMinFunction);
+                   EXSLT_MATH_NAMESPACE,
+                   exsltMathMinFunction);
     xsltRegisterExtModuleFunction ((const xmlChar *) "max",
-				   EXSLT_MATH_NAMESPACE,
-				   exsltMathMaxFunction);
+                   EXSLT_MATH_NAMESPACE,
+                   exsltMathMaxFunction);
     xsltRegisterExtModuleFunction ((const xmlChar *) "highest",
-				   EXSLT_MATH_NAMESPACE,
-				   exsltMathHighestFunction);
+                   EXSLT_MATH_NAMESPACE,
+                   exsltMathHighestFunction);
     xsltRegisterExtModuleFunction ((const xmlChar *) "lowest",
-				   EXSLT_MATH_NAMESPACE,
-				   exsltMathLowestFunction);
+                   EXSLT_MATH_NAMESPACE,
+                   exsltMathLowestFunction);
     xsltRegisterExtModuleFunction ((const xmlChar *) "constant",
-				   EXSLT_MATH_NAMESPACE,
-				   exsltMathConstantFunction);
+                   EXSLT_MATH_NAMESPACE,
+                   exsltMathConstantFunction);
     xsltRegisterExtModuleFunction ((const xmlChar *) "random",
-				   EXSLT_MATH_NAMESPACE,
-				   exsltMathRandomFunction);
+                   EXSLT_MATH_NAMESPACE,
+                   exsltMathRandomFunction);
     xsltRegisterExtModuleFunction ((const xmlChar *) "abs",
-				   EXSLT_MATH_NAMESPACE,
-				   exsltMathAbsFunction);
+                   EXSLT_MATH_NAMESPACE,
+                   exsltMathAbsFunction);
     xsltRegisterExtModuleFunction ((const xmlChar *) "sqrt",
-				   EXSLT_MATH_NAMESPACE,
-				   exsltMathSqrtFunction);
+                   EXSLT_MATH_NAMESPACE,
+                   exsltMathSqrtFunction);
     xsltRegisterExtModuleFunction ((const xmlChar *) "power",
-				   EXSLT_MATH_NAMESPACE,
-				   exsltMathPowerFunction);
+                   EXSLT_MATH_NAMESPACE,
+                   exsltMathPowerFunction);
     xsltRegisterExtModuleFunction ((const xmlChar *) "log",
-				   EXSLT_MATH_NAMESPACE,
-				   exsltMathLogFunction);
+                   EXSLT_MATH_NAMESPACE,
+                   exsltMathLogFunction);
     xsltRegisterExtModuleFunction ((const xmlChar *) "sin",
-				   EXSLT_MATH_NAMESPACE,
-				   exsltMathSinFunction);
+                   EXSLT_MATH_NAMESPACE,
+                   exsltMathSinFunction);
     xsltRegisterExtModuleFunction ((const xmlChar *) "cos",
-				   EXSLT_MATH_NAMESPACE,
-				   exsltMathCosFunction);
+                   EXSLT_MATH_NAMESPACE,
+                   exsltMathCosFunction);
     xsltRegisterExtModuleFunction ((const xmlChar *) "tan",
-				   EXSLT_MATH_NAMESPACE,
-				   exsltMathTanFunction);
+                   EXSLT_MATH_NAMESPACE,
+                   exsltMathTanFunction);
     xsltRegisterExtModuleFunction ((const xmlChar *) "asin",
-				   EXSLT_MATH_NAMESPACE,
-				   exsltMathAsinFunction);
+                   EXSLT_MATH_NAMESPACE,
+                   exsltMathAsinFunction);
     xsltRegisterExtModuleFunction ((const xmlChar *) "acos",
-				   EXSLT_MATH_NAMESPACE,
-				   exsltMathAcosFunction);
+                   EXSLT_MATH_NAMESPACE,
+                   exsltMathAcosFunction);
     xsltRegisterExtModuleFunction ((const xmlChar *) "atan",
-				   EXSLT_MATH_NAMESPACE,
-				   exsltMathAtanFunction);
+                   EXSLT_MATH_NAMESPACE,
+                   exsltMathAtanFunction);
     xsltRegisterExtModuleFunction ((const xmlChar *) "atan2",
-				   EXSLT_MATH_NAMESPACE,
-				   exsltMathAtan2Function);
+                   EXSLT_MATH_NAMESPACE,
+                   exsltMathAtan2Function);
     xsltRegisterExtModuleFunction ((const xmlChar *) "exp",
-				   EXSLT_MATH_NAMESPACE,
-				   exsltMathExpFunction);
+                   EXSLT_MATH_NAMESPACE,
+                   exsltMathExpFunction);
 }
 
 /**

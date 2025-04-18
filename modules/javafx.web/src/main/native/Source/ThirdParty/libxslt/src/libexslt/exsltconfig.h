@@ -39,7 +39,7 @@ extern "C" {
  *
  * extra version information, used to show a Git commit description
  */
-#define	LIBEXSLT_VERSION_EXTRA ""
+#define    LIBEXSLT_VERSION_EXTRA ""
 
 /**
  * WITH_CRYPTO:

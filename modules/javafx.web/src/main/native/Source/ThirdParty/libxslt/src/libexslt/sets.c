@@ -23,24 +23,24 @@ exsltSetsDifferenceFunction (xmlXPathParserContextPtr ctxt, int nargs) {
     xmlNodeSetPtr arg1, arg2, ret;
 
     if (nargs != 2) {
-	xmlXPathSetArityError(ctxt);
-	return;
+    xmlXPathSetArityError(ctxt);
+    return;
     }
 
     arg2 = xmlXPathPopNodeSet(ctxt);
     if (xmlXPathCheckError(ctxt))
-	return;
+    return;
 
     arg1 = xmlXPathPopNodeSet(ctxt);
     if (xmlXPathCheckError(ctxt)) {
         xmlXPathFreeNodeSet(arg2);
-	return;
+    return;
     }
 
     ret = xmlXPathDifference(arg1, arg2);
 
     if (ret != arg1)
-	xmlXPathFreeNodeSet(arg1);
+    xmlXPathFreeNodeSet(arg1);
     xmlXPathFreeNodeSet(arg2);
 
     xmlXPathReturnNodeSet(ctxt, ret);
@@ -58,18 +58,18 @@ exsltSetsIntersectionFunction (xmlXPathParserContextPtr ctxt, int nargs) {
     xmlNodeSetPtr arg1, arg2, ret;
 
     if (nargs != 2) {
-	xmlXPathSetArityError(ctxt);
-	return;
+    xmlXPathSetArityError(ctxt);
+    return;
     }
 
     arg2 = xmlXPathPopNodeSet(ctxt);
     if (xmlXPathCheckError(ctxt))
-	return;
+    return;
 
     arg1 = xmlXPathPopNodeSet(ctxt);
     if (xmlXPathCheckError(ctxt)) {
         xmlXPathFreeNodeSet(arg2);
-	return;
+    return;
     }
 
     ret = xmlXPathIntersection(arg1, arg2);
@@ -95,25 +95,25 @@ exsltSetsDistinctFunction (xmlXPathParserContextPtr ctxt, int nargs) {
     void *user = NULL;
 
     if (nargs != 1) {
-	xmlXPathSetArityError(ctxt);
-	return;
+    xmlXPathSetArityError(ctxt);
+    return;
     }
 
     if (ctxt->value != NULL) {
         boolval = ctxt->value->boolval;
-	user = ctxt->value->user;
-	ctxt->value->boolval = 0;
-	ctxt->value->user = NULL;
+    user = ctxt->value->user;
+    ctxt->value->boolval = 0;
+    ctxt->value->user = NULL;
     }
     ns = xmlXPathPopNodeSet(ctxt);
     if (xmlXPathCheckError(ctxt))
-	return;
+    return;
 
     /* !!! must be sorted !!! */
     ret = xmlXPathDistinctSorted(ns);
 
     if (ret != ns)
-	xmlXPathFreeNodeSet(ns);
+    xmlXPathFreeNodeSet(ns);
 
     obj = xmlXPathWrapNodeSet(ret);
     if (obj != NULL) {
@@ -132,23 +132,23 @@ exsltSetsDistinctFunction (xmlXPathParserContextPtr ctxt, int nargs) {
  */
 static void
 exsltSetsHasSameNodesFunction (xmlXPathParserContextPtr ctxt,
-			      int nargs) {
+                  int nargs) {
     xmlNodeSetPtr arg1, arg2;
     int ret;
 
     if (nargs != 2) {
-	xmlXPathSetArityError(ctxt);
-	return;
+    xmlXPathSetArityError(ctxt);
+    return;
     }
 
     arg2 = xmlXPathPopNodeSet(ctxt);
     if (xmlXPathCheckError(ctxt))
-	return;
+    return;
 
     arg1 = xmlXPathPopNodeSet(ctxt);
     if (xmlXPathCheckError(ctxt)) {
         xmlXPathFreeNodeSet(arg2);
-	return;
+    return;
     }
 
     ret = xmlXPathHasSameNodes(arg1, arg2);
@@ -171,29 +171,29 @@ exsltSetsLeadingFunction (xmlXPathParserContextPtr ctxt, int nargs) {
     xmlNodeSetPtr arg1, arg2, ret;
 
     if (nargs != 2) {
-	xmlXPathSetArityError(ctxt);
-	return;
+    xmlXPathSetArityError(ctxt);
+    return;
     }
 
     arg2 = xmlXPathPopNodeSet(ctxt);
     if (xmlXPathCheckError(ctxt))
-	return;
+    return;
 
     arg1 = xmlXPathPopNodeSet(ctxt);
     if (xmlXPathCheckError(ctxt)) {
-	xmlXPathFreeNodeSet(arg2);
-	return;
+    xmlXPathFreeNodeSet(arg2);
+    return;
     }
 
     /*  If the second node set is empty, then the first node set is
      * returned.
      */
     if (xmlXPathNodeSetIsEmpty(arg2)) {
-	xmlXPathReturnNodeSet(ctxt, arg1);
+    xmlXPathReturnNodeSet(ctxt, arg1);
 
-	xmlXPathFreeNodeSet(arg2);
+    xmlXPathFreeNodeSet(arg2);
 
-	return;
+    return;
     }
     /* !!! must be sorted */
     ret = xmlXPathNodeLeadingSorted(arg1, xmlXPathNodeSetItem(arg2, 0));
@@ -216,29 +216,29 @@ exsltSetsTrailingFunction (xmlXPathParserContextPtr ctxt, int nargs) {
     xmlNodeSetPtr arg1, arg2, ret;
 
     if (nargs != 2) {
-	xmlXPathSetArityError(ctxt);
-	return;
+    xmlXPathSetArityError(ctxt);
+    return;
     }
 
     arg2 = xmlXPathPopNodeSet(ctxt);
     if (xmlXPathCheckError(ctxt))
-	return;
+    return;
 
     arg1 = xmlXPathPopNodeSet(ctxt);
     if (xmlXPathCheckError(ctxt)) {
-	xmlXPathFreeNodeSet(arg2);
-	return;
+    xmlXPathFreeNodeSet(arg2);
+    return;
     }
 
     /*  If the second node set is empty, then the first node set is
      * returned.
      */
     if (xmlXPathNodeSetIsEmpty(arg2)) {
-	xmlXPathReturnNodeSet(ctxt, arg1);
+    xmlXPathReturnNodeSet(ctxt, arg1);
 
-	xmlXPathFreeNodeSet(arg2);
+    xmlXPathFreeNodeSet(arg2);
 
-	return;
+    return;
     }
     /* !!! mist be sorted */
     ret = xmlXPathNodeTrailingSorted(arg1, xmlXPathNodeSetItem(arg2, 0));
@@ -258,23 +258,23 @@ exsltSetsTrailingFunction (xmlXPathParserContextPtr ctxt, int nargs) {
 void
 exsltSetsRegister (void) {
     xsltRegisterExtModuleFunction ((const xmlChar *) "difference",
-				   EXSLT_SETS_NAMESPACE,
-				   exsltSetsDifferenceFunction);
+                   EXSLT_SETS_NAMESPACE,
+                   exsltSetsDifferenceFunction);
     xsltRegisterExtModuleFunction ((const xmlChar *) "intersection",
-				   EXSLT_SETS_NAMESPACE,
-				   exsltSetsIntersectionFunction);
+                   EXSLT_SETS_NAMESPACE,
+                   exsltSetsIntersectionFunction);
     xsltRegisterExtModuleFunction ((const xmlChar *) "distinct",
-				   EXSLT_SETS_NAMESPACE,
-				   exsltSetsDistinctFunction);
+                   EXSLT_SETS_NAMESPACE,
+                   exsltSetsDistinctFunction);
     xsltRegisterExtModuleFunction ((const xmlChar *) "has-same-node",
-				   EXSLT_SETS_NAMESPACE,
-				   exsltSetsHasSameNodesFunction);
+                   EXSLT_SETS_NAMESPACE,
+                   exsltSetsHasSameNodesFunction);
     xsltRegisterExtModuleFunction ((const xmlChar *) "leading",
-				   EXSLT_SETS_NAMESPACE,
-				   exsltSetsLeadingFunction);
+                   EXSLT_SETS_NAMESPACE,
+                   exsltSetsLeadingFunction);
     xsltRegisterExtModuleFunction ((const xmlChar *) "trailing",
-				   EXSLT_SETS_NAMESPACE,
-				   exsltSetsTrailingFunction);
+                   EXSLT_SETS_NAMESPACE,
+                   exsltSetsTrailingFunction);
 }
 
 /**
