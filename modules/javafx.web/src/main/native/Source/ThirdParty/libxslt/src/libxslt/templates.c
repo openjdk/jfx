@@ -36,9 +36,9 @@
 #endif
 
 /************************************************************************
- *        							*
- *        	Module interfaces				*
- *        							*
+ *                                    *
+ *            Module interfaces                *
+ *                                    *
  ************************************************************************/
 
 /**
@@ -309,15 +309,15 @@ xsltAttrTemplateValueProcessNode(xsltTransformContextPtr ctxt,
         if ((*cur == '\'') || (*cur == '"')) {
             char delim = *(cur++);
             while ((*cur != 0) && (*cur != delim))
-        	cur++;
+            cur++;
             if (*cur != 0)
-        	cur++;	/* skip the ending delimiter */
+            cur++;    /* skip the ending delimiter */
         } else
             cur++;
             }
         if (*cur == 0) {
             xsltTransformError(ctxt, NULL, inst,
-        	"xsltAttrTemplateValueProcessNode: unmatched '{'\n");
+            "xsltAttrTemplateValueProcessNode: unmatched '{'\n");
         ret = xmlStrncat(ret, str, cur - str);
         goto exit;
         }
@@ -338,9 +338,9 @@ xsltAttrTemplateValueProcessNode(xsltTransformContextPtr ctxt,
 
             nsList = xmlGetNsList(inst->doc, inst);
             if (nsList != NULL) {
-        	while (nsList[i] != NULL)
-        	    i++;
-        	nsNr = i;
+            while (nsList[i] != NULL)
+                i++;
+            nsNr = i;
             }
         }
         comp = xmlXPathCtxtCompile(ctxt->xpathCtxt, expr);
@@ -457,7 +457,7 @@ xsltEvalAttrValueTemplate(xsltTransformContextPtr ctxt, xmlNodePtr inst,
  */
 const xmlChar *
 xsltEvalStaticAttrValueTemplate(xsltStylesheetPtr style, xmlNodePtr inst,
-        	const xmlChar *name, const xmlChar *ns, int *found) {
+            const xmlChar *name, const xmlChar *ns, int *found) {
     const xmlChar *ret;
     xmlChar *expr;
 
@@ -595,15 +595,15 @@ xsltAttrTemplateProcess(xsltTransformContextPtr ctxt, xmlNodePtr target,
             * qualified names!
             */
             if (attr->ns) {
-        	xsltTransformError(ctxt, NULL, attr->parent,
-        	    "Internal error: Failed to evaluate the AVT "
-        	    "of attribute '{%s}%s'.\n",
-        	    attr->ns->href, attr->name);
+            xsltTransformError(ctxt, NULL, attr->parent,
+                "Internal error: Failed to evaluate the AVT "
+                "of attribute '{%s}%s'.\n",
+                attr->ns->href, attr->name);
             } else {
-        	xsltTransformError(ctxt, NULL, attr->parent,
-        	    "Internal error: Failed to evaluate the AVT "
-        	    "of attribute '%s'.\n",
-        	    attr->name);
+            xsltTransformError(ctxt, NULL, attr->parent,
+                "Internal error: Failed to evaluate the AVT "
+                "of attribute '%s'.\n",
+                attr->name);
             }
             text->content = xmlStrdup(BAD_CAST "");
         } else {
@@ -813,15 +813,15 @@ xsltAttrListTemplateProcess(xsltTransformContextPtr ctxt,
             * qualified names!
             */
             if (attr->ns) {
-        	xsltTransformError(ctxt, NULL, attr->parent,
-        	    "Internal error: Failed to evaluate the AVT "
-        	    "of attribute '{%s}%s'.\n",
-        	    attr->ns->href, attr->name);
+            xsltTransformError(ctxt, NULL, attr->parent,
+                "Internal error: Failed to evaluate the AVT "
+                "of attribute '{%s}%s'.\n",
+                attr->ns->href, attr->name);
             } else {
-        	xsltTransformError(ctxt, NULL, attr->parent,
-        	    "Internal error: Failed to evaluate the AVT "
-        	    "of attribute '%s'.\n",
-        	    attr->name);
+            xsltTransformError(ctxt, NULL, attr->parent,
+                "Internal error: Failed to evaluate the AVT "
+                "of attribute '%s'.\n",
+                attr->name);
             }
             text->content = xmlStrdup(BAD_CAST "");
             goto error;

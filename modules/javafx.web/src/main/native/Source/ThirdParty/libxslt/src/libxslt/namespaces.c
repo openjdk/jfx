@@ -32,9 +32,9 @@
 #include "imports.h"
 
 /************************************************************************
- *        							*
- *        	Module interfaces				*
- *        							*
+ *                                    *
+ *            Module interfaces                *
+ *                                    *
  ************************************************************************/
 
 #ifdef XSLT_REFACTORED
@@ -225,7 +225,7 @@ xsltNamespaceAlias(xsltStylesheetPtr style, xmlNodePtr node)
     if ((literalNs == NULL) || (literalNs->href == NULL)) {
         xsltTransformError(NULL, style, node,
             "namespace-alias: prefix %s not bound to any namespace\n",
-        			stylePrefix);
+                    stylePrefix);
         goto error;
     } else
         literalNsName = literalNs->href;
@@ -248,7 +248,7 @@ xsltNamespaceAlias(xsltStylesheetPtr style, xmlNodePtr node)
         if ((targetNs == NULL) || (targetNs->href == NULL)) {
         xsltTransformError(NULL, style, node,
             "namespace-alias: prefix %s not bound to any namespace\n",
-        			resultPrefix);
+                    resultPrefix);
         goto error;
     } else
         targetNsName = targetNs->href;
@@ -360,21 +360,21 @@ xsltGetSpecialNamespace(xsltTransformContextPtr ctxt, xmlNodePtr invocNode,
         do {
         if (ns->prefix == NULL) {
             if ((ns->href != NULL) && (ns->href[0] != 0)) {
-        	/*
-        	* Raise a namespace normalization error.
-        	*/
-        	xsltTransformError(ctxt, NULL, invocNode,
-        	    "Namespace normalization error: Cannot undeclare "
-        	    "the default namespace, since the default namespace "
-        	    "'%s' is already declared on the result element "
-        	    "'%s'.\n", ns->href, target->name);
-        	return(NULL);
+            /*
+            * Raise a namespace normalization error.
+            */
+            xsltTransformError(ctxt, NULL, invocNode,
+                "Namespace normalization error: Cannot undeclare "
+                "the default namespace, since the default namespace "
+                "'%s' is already declared on the result element "
+                "'%s'.\n", ns->href, target->name);
+            return(NULL);
             } else {
-        	/*
-        	* The default namespace was undeclared on the
-        	* result element.
-        	*/
-        	return(NULL);
+            /*
+            * The default namespace was undeclared on the
+            * result element.
+            */
+            return(NULL);
             }
             break;
         }
@@ -428,12 +428,12 @@ xsltGetSpecialNamespace(xsltTransformContextPtr ctxt, xmlNodePtr invocNode,
         if ((ns->prefix == NULL) == (nsPrefix == NULL)) {
         if (ns->prefix == nsPrefix) {
             if (xmlStrEqual(ns->href, nsName))
-        	return(ns);
+            return(ns);
             prefixOccupied = 1;
             break;
         } else if (xmlStrEqual(ns->prefix, nsPrefix)) {
             if (xmlStrEqual(ns->href, nsName))
-        	return(ns);
+            return(ns);
             prefixOccupied = 1;
             break;
         }
@@ -503,18 +503,18 @@ xsltGetSpecialNamespace(xsltTransformContextPtr ctxt, xmlNodePtr invocNode,
         xmlAttrPtr attr = target->properties;
         do {
             if ((attr->ns) &&
-        	xmlStrEqual(attr->ns->prefix, nsPrefix))
+            xmlStrEqual(attr->ns->prefix, nsPrefix))
             {
-        	/*
-        	* Bad, this prefix is already in use.
-        	* Since we'll change the prefix anyway, try
-        	* a search for a matching ns-decl based on the
-        	* namespace name.
-        	*/
-        	ns = xmlSearchNsByHref(target->doc, target, nsName);
-        	if (ns != NULL)
-        	    return(ns);
-        	goto declare_new_prefix;
+            /*
+            * Bad, this prefix is already in use.
+            * Since we'll change the prefix anyway, try
+            * a search for a matching ns-decl based on the
+            * namespace name.
+            */
+            ns = xmlSearchNsByHref(target->doc, target, nsName);
+            if (ns != NULL)
+                return(ns);
+            goto declare_new_prefix;
             }
             attr = attr->next;
         } while (attr != NULL);

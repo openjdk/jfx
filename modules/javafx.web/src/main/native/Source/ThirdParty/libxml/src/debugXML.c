@@ -43,7 +43,7 @@ struct _xmlDebugCtxt {
     xmlDictPtr dict;        /* the doc dictionary */
     int check;                  /* do just checkings */
     int errors;                 /* number of errors found */
-    int nodict;        	/* if the document has no dictionary */
+    int nodict;            /* if the document has no dictionary */
     int options;        /* options */
 };
 
@@ -188,20 +188,20 @@ xmlCtxtNsCheckScope(xmlDebugCtxtPtr ctxt, xmlNodePtr node, xmlNsPtr ns)
     if (ret == -2) {
         if (ns->prefix == NULL)
         xmlDebugErr(ctxt, XML_CHECK_NS_SCOPE,
-        	"Reference to default namespace not in scope\n");
+            "Reference to default namespace not in scope\n");
     else
         xmlDebugErr3(ctxt, XML_CHECK_NS_SCOPE,
-        	 "Reference to namespace '%s' not in scope\n",
-        	 (char *) ns->prefix);
+             "Reference to namespace '%s' not in scope\n",
+             (char *) ns->prefix);
     }
     if (ret == -3) {
         if (ns->prefix == NULL)
         xmlDebugErr(ctxt, XML_CHECK_NS_ANCESTOR,
-        	"Reference to default namespace not on ancestor\n");
+            "Reference to default namespace not on ancestor\n");
     else
         xmlDebugErr3(ctxt, XML_CHECK_NS_ANCESTOR,
-        	 "Reference to namespace '%s' not on ancestor\n",
-        	 (char *) ns->prefix);
+             "Reference to namespace '%s' not on ancestor\n",
+             (char *) ns->prefix);
     }
 }
 
@@ -219,7 +219,7 @@ xmlCtxtCheckString(xmlDebugCtxtPtr ctxt, const xmlChar * str)
     if (ctxt->check) {
         if (!xmlCheckUTF8(str)) {
         xmlDebugErr3(ctxt, XML_CHECK_NOT_UTF8,
-        	 "String is not UTF-8 %s", (const char *) str);
+             "String is not UTF-8 %s", (const char *) str);
     }
     }
 }
@@ -243,7 +243,7 @@ xmlCtxtCheckName(xmlDebugCtxtPtr ctxt, const xmlChar * name)
 #if defined(LIBXML_TREE_ENABLED) || defined(LIBXML_SCHEMAS_ENABLED)
         if (xmlValidateName(name, 0)) {
         xmlDebugErr3(ctxt, XML_CHECK_NOT_NCNAME,
-        	 "Name is not an NCName '%s'", (const char *) name);
+             "Name is not an NCName '%s'", (const char *) name);
     }
 #endif
     if ((ctxt->dict != NULL) &&
@@ -251,8 +251,8 @@ xmlCtxtCheckName(xmlDebugCtxtPtr ctxt, const xmlChar * name)
             ((ctxt->doc == NULL) ||
              ((ctxt->doc->parseFlags & (XML_PARSE_SAX1 | XML_PARSE_NODICT)) == 0))) {
         xmlDebugErr3(ctxt, XML_CHECK_OUTSIDE_DICT,
-        	 "Name is not from the document dictionary '%s'",
-        	 (const char *) name);
+             "Name is not from the document dictionary '%s'",
+             (const char *) name);
     }
     }
 }
@@ -278,7 +278,7 @@ xmlCtxtGenericNodeCheck(xmlDebugCtxtPtr ctxt, xmlNodePtr node) {
             /* deactivated right now as it raises too many errors */
         if (doc->type == XML_DOCUMENT_NODE)
         xmlDebugErr(ctxt, XML_CHECK_NO_DICT,
-        	    "Document has no dictionary\n");
+                "Document has no dictionary\n");
 #endif
         ctxt->nodict = 1;
     }
@@ -363,15 +363,15 @@ xmlCtxtGenericNodeCheck(xmlDebugCtxtPtr ctxt, xmlNodePtr node) {
         break;
 
         xmlDebugErr3(ctxt, XML_CHECK_WRONG_NAME,
-        	 "Text node has wrong name '%s'",
-        	 (const char *) node->name);
+             "Text node has wrong name '%s'",
+             (const char *) node->name);
         break;
         case XML_COMMENT_NODE:
         if (node->name == xmlStringComment)
         break;
         xmlDebugErr3(ctxt, XML_CHECK_WRONG_NAME,
-        	 "Comment node has wrong name '%s'",
-        	 (const char *) node->name);
+             "Comment node has wrong name '%s'",
+             (const char *) node->name);
         break;
         case XML_PI_NODE:
         xmlCtxtCheckName(ctxt, node->name);
@@ -380,8 +380,8 @@ xmlCtxtGenericNodeCheck(xmlDebugCtxtPtr ctxt, xmlNodePtr node) {
         if (node->name == NULL)
         break;
         xmlDebugErr3(ctxt, XML_CHECK_NAME_NOT_NULL,
-        	 "CData section has non NULL name '%s'",
-        	 (const char *) node->name);
+             "CData section has non NULL name '%s'",
+             (const char *) node->name);
         break;
         case XML_ENTITY_REF_NODE:
         case XML_ENTITY_NODE:
@@ -898,11 +898,11 @@ xmlCtxtDumpOneNode(xmlDebugCtxtPtr ctxt, xmlNodePtr node)
                     fprintf(ctxt->output, "TEXT");
         if (ctxt->options & DUMP_TEXT_TYPE) {
             if (node->content == (xmlChar *) &(node->properties))
-        	fprintf(ctxt->output, " compact\n");
+            fprintf(ctxt->output, " compact\n");
             else if (xmlDictOwns(ctxt->dict, node->content) == 1)
-        	fprintf(ctxt->output, " interned\n");
+            fprintf(ctxt->output, " interned\n");
             else
-        	fprintf(ctxt->output, "\n");
+            fprintf(ctxt->output, "\n");
         } else
             fprintf(ctxt->output, "\n");
             }
@@ -1242,7 +1242,7 @@ xmlCtxtDumpEntityCallback(void *payload, void *data,
                 break;
             default:
         xmlDebugErr2(ctxt, XML_CHECK_ENTITY_TYPE,
-        	     "Unknown entity type %d\n", cur->etype);
+                 "Unknown entity type %d\n", cur->etype);
         }
         if (cur->ExternalID != NULL)
             fprintf(ctxt->output, "ID \"%s\"", (char *) cur->ExternalID);
@@ -1315,9 +1315,9 @@ xmlCtxtDumpDTD(xmlDebugCtxtPtr ctxt, xmlDtdPtr dtd)
 }
 
 /************************************************************************
- *        							*
- *        	Public entry points for dump			*
- *        							*
+ *                                    *
+ *            Public entry points for dump            *
+ *                                    *
  ************************************************************************/
 
 /**
@@ -1540,9 +1540,9 @@ xmlDebugDumpDTD(FILE * output, xmlDtdPtr dtd)
 }
 
 /************************************************************************
- *        							*
- *        	Public entry points for checkings		*
- *        							*
+ *                                    *
+ *            Public entry points for checkings        *
+ *                                    *
  ************************************************************************/
 
 /**
@@ -1571,9 +1571,9 @@ xmlDebugCheckDocument(FILE * output, xmlDocPtr doc)
 }
 
 /************************************************************************
- *        							*
- *        	Helpers for Shell				*
- *        							*
+ *                                    *
+ *            Helpers for Shell                *
+ *                                    *
  ************************************************************************/
 
 /**
@@ -1754,7 +1754,7 @@ xmlLsOneNode(FILE *output, xmlNodePtr node) {
         fprintf(output, "default -> %s", (char *)ns->href);
         else
         fprintf(output, "%s -> %s", (char *)ns->prefix,
-        	(char *)ns->href);
+            (char *)ns->href);
         break;
     }
     default:
@@ -1783,9 +1783,9 @@ xmlBoolToText(int boolval)
 
 #ifdef LIBXML_XPATH_ENABLED
 /****************************************************************
- *        						*
- *        The XML shell related functions			*
- *        						*
+ *                                *
+ *        The XML shell related functions            *
+ *                                *
  ****************************************************************/
 
 
@@ -1927,7 +1927,7 @@ xmlShellPrintXPathResultCtxt(xmlShellCtxtPtr ctxt,xmlXPathObjectPtr list)
                         for (indx = 0; indx < list->nodesetval->nodeNr;
                              indx++) {
                             xmlShellPrintNodeCtxt(ctxt,
-        		    list->nodesetval->nodeTab[indx]);
+                    list->nodesetval->nodeTab[indx]);
                         }
                     } else {
                         fprintf(ctxt->output,
@@ -1936,7 +1936,7 @@ xmlShellPrintXPathResultCtxt(xmlShellCtxtPtr ctxt,xmlXPathObjectPtr list)
                     break;
 #else
             fprintf(ctxt->output,
-        		    "Node set\n");
+                    "Node set\n");
 #endif /* LIBXML_OUTPUT_ENABLED */
                 }
             case XPATH_BOOLEAN:
@@ -3033,7 +3033,7 @@ xmlShell(xmlDocPtr doc, const char *filename, xmlShellReadlineFunc input,
         } else if (!strcmp(command, "setns")) {
             if (arg[0] == 0) {
         fprintf(ctxt->output,
-        		"setns: prefix=[nsuri] required\n");
+                "setns: prefix=[nsuri] required\n");
             } else {
                 xmlShellRegisterNamespace(ctxt, arg, NULL, NULL);
             }
@@ -3045,7 +3045,7 @@ xmlShell(xmlDocPtr doc, const char *filename, xmlShellReadlineFunc input,
         } else if (!strcmp(command, "xpath")) {
             if (arg[0] == 0) {
         fprintf(ctxt->output,
-        		"xpath: expression required\n");
+                "xpath: expression required\n");
         } else {
                 ctxt->pctxt->node = ctxt->node;
                 list = xmlXPathEval((xmlChar *) arg, ctxt->pctxt);
@@ -3082,8 +3082,8 @@ xmlShell(xmlDocPtr doc, const char *filename, xmlShellReadlineFunc input,
                         case XPATH_NODESET:{
                                 int indx;
 
-        		if (list->nodesetval == NULL)
-        		    break;
+                if (list->nodesetval == NULL)
+                    break;
 
                                 for (indx = 0;
                                      indx < list->nodesetval->nodeNr;
@@ -3166,8 +3166,8 @@ xmlShell(xmlDocPtr doc, const char *filename, xmlShellReadlineFunc input,
                         case XPATH_NODESET:{
                                 int indx;
 
-        		if (list->nodesetval == NULL)
-        		    break;
+                if (list->nodesetval == NULL)
+                    break;
 
                                 for (indx = 0;
                                      indx < list->nodesetval->nodeNr;
@@ -3246,20 +3246,20 @@ xmlShell(xmlDocPtr doc, const char *filename, xmlShellReadlineFunc input,
                             break;
                         case XPATH_NODESET:
                             if (list->nodesetval != NULL) {
-        		if (list->nodesetval->nodeNr == 1) {
-        		    ctxt->node = list->nodesetval->nodeTab[0];
-        		    if ((ctxt->node != NULL) &&
-        		        (ctxt->node->type ==
-        			 XML_NAMESPACE_DECL)) {
-        			fprintf(ctxt->output,
-        				    "cannot cd to namespace\n");
-        			ctxt->node = NULL;
-        		    }
-        		} else
-        		    fprintf(ctxt->output,
-        				    "%s is a %d Node Set\n",
-        				    arg,
-        				    list->nodesetval->nodeNr);
+                if (list->nodesetval->nodeNr == 1) {
+                    ctxt->node = list->nodesetval->nodeTab[0];
+                    if ((ctxt->node != NULL) &&
+                        (ctxt->node->type ==
+                     XML_NAMESPACE_DECL)) {
+                    fprintf(ctxt->output,
+                            "cannot cd to namespace\n");
+                    ctxt->node = NULL;
+                    }
+                } else
+                    fprintf(ctxt->output,
+                            "%s is a %d Node Set\n",
+                            arg,
+                            list->nodesetval->nodeNr);
                             } else
                                 fprintf(ctxt->output,
                                                 "%s is an empty Node Set\n",
@@ -3331,8 +3331,8 @@ xmlShell(xmlDocPtr doc, const char *filename, xmlShellReadlineFunc input,
                         case XPATH_NODESET:{
                                 int indx;
 
-        		if (list->nodesetval == NULL)
-        		    break;
+                if (list->nodesetval == NULL)
+                    break;
 
                                 for (indx = 0;
                                      indx < list->nodesetval->nodeNr;

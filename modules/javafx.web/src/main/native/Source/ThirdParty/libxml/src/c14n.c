@@ -27,9 +27,9 @@
 #include "private/io.h"
 
 /************************************************************************
- *        							*
- *        Some declaration better left private ATM		*
- *        							*
+ *                                    *
+ *        Some declaration better left private ATM        *
+ *                                    *
  ************************************************************************/
 
 typedef enum {
@@ -75,20 +75,20 @@ static void     xmlC14NVisibleNsStackDestroy    (xmlC14NVisibleNsStackPtr cur);
 static int      xmlC14NVisibleNsStackAdd        (xmlC14NVisibleNsStackPtr cur,
                                                  xmlNsPtr ns,
                                                  xmlNodePtr node);
-static void        	xmlC14NVisibleNsStackSave	(xmlC14NVisibleNsStackPtr cur,
-        						 xmlC14NVisibleNsStackPtr state);
-static void        	xmlC14NVisibleNsStackRestore	(xmlC14NVisibleNsStackPtr cur,
-        						 xmlC14NVisibleNsStackPtr state);
-static void        	xmlC14NVisibleNsStackShift	(xmlC14NVisibleNsStackPtr cur);
-static int        	xmlC14NVisibleNsStackFind	(xmlC14NVisibleNsStackPtr cur,
-        						 xmlNsPtr ns);
-static int        	xmlExcC14NVisibleNsStackFind	(xmlC14NVisibleNsStackPtr cur,
-        						 xmlNsPtr ns,
-        						 xmlC14NCtxPtr ctx);
+static void            xmlC14NVisibleNsStackSave    (xmlC14NVisibleNsStackPtr cur,
+                                 xmlC14NVisibleNsStackPtr state);
+static void            xmlC14NVisibleNsStackRestore    (xmlC14NVisibleNsStackPtr cur,
+                                 xmlC14NVisibleNsStackPtr state);
+static void            xmlC14NVisibleNsStackShift    (xmlC14NVisibleNsStackPtr cur);
+static int            xmlC14NVisibleNsStackFind    (xmlC14NVisibleNsStackPtr cur,
+                                 xmlNsPtr ns);
+static int            xmlExcC14NVisibleNsStackFind    (xmlC14NVisibleNsStackPtr cur,
+                                 xmlNsPtr ns,
+                                 xmlC14NCtxPtr ctx);
 
-static int        	xmlC14NIsNodeInNodeset		(void *user_data,
-        						 xmlNodePtr node,
-        						 xmlNodePtr parent);
+static int            xmlC14NIsNodeInNodeset        (void *user_data,
+                                 xmlNodePtr node,
+                                 xmlNodePtr parent);
 
 
 
@@ -122,9 +122,9 @@ static xmlChar *xmlC11NNormalizeString(const xmlChar * input,
     ( (ctx)->mode == XML_C14N_EXCLUSIVE_1_0 )
 
 /************************************************************************
- *        							*
- *        Some factorized error routines				*
- *        							*
+ *                                    *
+ *        Some factorized error routines                *
+ *                                    *
  ************************************************************************/
 
 /**
@@ -235,9 +235,9 @@ xmlC14NErr(xmlC14NCtxPtr ctxt, xmlNodePtr node, int error,
 }
 
 /************************************************************************
- *        							*
- *        The implementation internals				*
- *        							*
+ *                                    *
+ *        The implementation internals                *
+ *                                    *
  ************************************************************************/
 #define XML_NAMESPACES_DEFAULT        16
 
@@ -386,7 +386,7 @@ xmlC14NStrEqual(const xmlChar *str1, const xmlChar *str2) {
 /**
  * xmlC14NVisibleNsStackFind:
  * @ctx:        the C14N context
- * @ns:        	the namespace to check
+ * @ns:            the namespace to check
  *
  * Checks whether the given namespace was already rendered or not
  *
@@ -513,7 +513,7 @@ xmlC14NNsCompare(const void *data1, const void *data2)
 
 /**
  * xmlC14NPrintNamespaces:
- * @ns:        	the pointer to namespace
+ * @ns:            the pointer to namespace
  * @ctx:        the C14N context
  *
  * Prints the given namespace to the output buffer from C14N context.
@@ -1754,18 +1754,18 @@ xmlC14NFreeCtx(xmlC14NCtxPtr ctx)
  * xmlC14NNewCtx:
  * @doc:        the XML document for canonization
  * @is_visible_callback:the function to use to determine is node visible
- *        	or not
+ *            or not
  * @user_data:        the first parameter for @is_visible_callback function
- *        	(in most cases, it is nodes set)
+ *            (in most cases, it is nodes set)
  * @mode:   the c14n mode (see @xmlC14NMode)
  * @inclusive_ns_prefixe the list of inclusive namespace prefixes
- *        	ended with a NULL or NULL if there is no
- *        	inclusive namespaces (only for `
- *        	canonicalization)
+ *            ended with a NULL or NULL if there is no
+ *            inclusive namespaces (only for `
+ *            canonicalization)
  * @with_comments:    include comments in the result (!=0) or not (==0)
  * @buf:        the output buffer to store canonical XML; this
- *        	buffer MUST have encoder==NULL because C14N requires
- *        	UTF-8 output
+ *            buffer MUST have encoder==NULL because C14N requires
+ *            UTF-8 output
  *
  * Creates new C14N context object to store C14N parameters.
  *
@@ -1837,18 +1837,18 @@ xmlC14NNewCtx(xmlDocPtr doc,
  * xmlC14NExecute:
  * @doc:        the XML document for canonization
  * @is_visible_callback:the function to use to determine is node visible
- *        	or not
+ *            or not
  * @user_data:        the first parameter for @is_visible_callback function
- *        	(in most cases, it is nodes set)
+ *            (in most cases, it is nodes set)
  * @mode:    the c14n mode (see @xmlC14NMode)
  * @inclusive_ns_prefixes: the list of inclusive namespace prefixes
- *        	ended with a NULL or NULL if there is no
- *        	inclusive namespaces (only for exclusive
- *        	canonicalization, ignored otherwise)
+ *            ended with a NULL or NULL if there is no
+ *            inclusive namespaces (only for exclusive
+ *            canonicalization, ignored otherwise)
  * @with_comments:    include comments in the result (!=0) or not (==0)
  * @buf:        the output buffer to store canonical XML; this
- *        	buffer MUST have encoder==NULL because C14N requires
- *        	UTF-8 output
+ *            buffer MUST have encoder==NULL because C14N requires
+ *            UTF-8 output
  *
  * Dumps the canonized image of given XML document into the provided buffer.
  * For details see "Canonical XML" (http://www.w3.org/TR/xml-c14n) or
@@ -1943,13 +1943,13 @@ xmlC14NExecute(xmlDocPtr doc, xmlC14NIsVisibleCallback is_visible_callback,
  *        or NULL if all document nodes should be included
  * @mode:        the c14n mode (see @xmlC14NMode)
  * @inclusive_ns_prefixes: the list of inclusive namespace prefixes
- *        	ended with a NULL or NULL if there is no
- *        	inclusive namespaces (only for exclusive
- *        	canonicalization, ignored otherwise)
+ *            ended with a NULL or NULL if there is no
+ *            inclusive namespaces (only for exclusive
+ *            canonicalization, ignored otherwise)
  * @with_comments:    include comments in the result (!=0) or not (==0)
  * @buf:        the output buffer to store canonical XML; this
- *        	buffer MUST have encoder==NULL because C14N requires
- *        	UTF-8 output
+ *            buffer MUST have encoder==NULL because C14N requires
+ *            UTF-8 output
  *
  * Dumps the canonized image of given XML document into the provided buffer.
  * For details see "Canonical XML" (http://www.w3.org/TR/xml-c14n) or
@@ -1962,12 +1962,12 @@ xmlC14NDocSaveTo(xmlDocPtr doc, xmlNodeSetPtr nodes,
                  int mode, xmlChar ** inclusive_ns_prefixes,
                  int with_comments, xmlOutputBufferPtr buf) {
     return(xmlC14NExecute(doc,
-        	xmlC14NIsNodeInNodeset,
-        	nodes,
-        	mode,
-        	inclusive_ns_prefixes,
-        	with_comments,
-        	buf));
+            xmlC14NIsNodeInNodeset,
+            nodes,
+            mode,
+            inclusive_ns_prefixes,
+            with_comments,
+            buf));
 }
 
 
@@ -1978,13 +1978,13 @@ xmlC14NDocSaveTo(xmlDocPtr doc, xmlNodeSetPtr nodes,
  *        or NULL if all document nodes should be included
  * @mode:        the c14n mode (see @xmlC14NMode)
  * @inclusive_ns_prefixes: the list of inclusive namespace prefixes
- *        	ended with a NULL or NULL if there is no
- *        	inclusive namespaces (only for exclusive
- *        	canonicalization, ignored otherwise)
+ *            ended with a NULL or NULL if there is no
+ *            inclusive namespaces (only for exclusive
+ *            canonicalization, ignored otherwise)
  * @with_comments:    include comments in the result (!=0) or not (==0)
  * @doc_txt_ptr:    the memory pointer for allocated canonical XML text;
- *        	the caller of this functions is responsible for calling
- *        	xmlFree() to free allocated memory
+ *            the caller of this functions is responsible for calling
+ *            xmlFree() to free allocated memory
  *
  * Dumps the canonized image of given XML document into memory.
  * For details see "Canonical XML" (http://www.w3.org/TR/xml-c14n) or
@@ -2046,15 +2046,15 @@ xmlC14NDocDumpMemory(xmlDocPtr doc, xmlNodeSetPtr nodes,
  *        or NULL if all document nodes should be included
  * @mode:        the c14n mode (see @xmlC14NMode)
  * @inclusive_ns_prefixes: the list of inclusive namespace prefixes
- *        	ended with a NULL or NULL if there is no
- *        	inclusive namespaces (only for exclusive
- *        	canonicalization, ignored otherwise)
+ *            ended with a NULL or NULL if there is no
+ *            inclusive namespaces (only for exclusive
+ *            canonicalization, ignored otherwise)
  * @with_comments:    include comments in the result (!=0) or not (==0)
  * @filename:        the filename to store canonical XML image
  * @compression:    the compression level (zlib required):
- *        		-1 - libxml default,
- *        		 0 - uncompressed,
- *        		>0 - compression level
+ *                -1 - libxml default,
+ *                 0 - uncompressed,
+ *                >0 - compression level
  *
  * Dumps the canonized image of given XML document into the file.
  * For details see "Canonical XML" (http://www.w3.org/TR/xml-c14n) or
@@ -2193,7 +2193,7 @@ xmlC11NNormalizeString(const xmlChar * input,
         } else if ((*cur == '\x0D') && ((mode == XMLC14N_NORMALIZE_ATTR) ||
                                         (mode == XMLC14N_NORMALIZE_TEXT) ||
                                         (mode == XMLC14N_NORMALIZE_COMMENT) ||
-        			(mode == XMLC14N_NORMALIZE_PI))) {
+                    (mode == XMLC14N_NORMALIZE_PI))) {
             *out++ = '&';
             *out++ = '#';
             *out++ = 'x';

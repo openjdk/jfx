@@ -29,9 +29,9 @@
 #include "private/save.h"
 
 /************************************************************************
- *        							*
- *        Getting/Setting encoding meta tags			*
- *        							*
+ *                                    *
+ *        Getting/Setting encoding meta tags            *
+ *                                    *
  ************************************************************************/
 
 /**
@@ -104,15 +104,15 @@ found_meta:
             if ((attr->children != NULL) &&
                 (attr->children->type == XML_TEXT_NODE) &&
                 (attr->children->next == NULL)) {
-        	value = attr->children->content;
-        	if ((!xmlStrcasecmp(attr->name, BAD_CAST"http-equiv"))
-        	 && (!xmlStrcasecmp(value, BAD_CAST"Content-Type")))
-        	    http = 1;
-        	else if ((value != NULL)
-        	 && (!xmlStrcasecmp(attr->name, BAD_CAST"content")))
-        	    content = value;
-        	if ((http != 0) && (content != NULL))
-        	    goto found_content;
+            value = attr->children->content;
+            if ((!xmlStrcasecmp(attr->name, BAD_CAST"http-equiv"))
+             && (!xmlStrcasecmp(value, BAD_CAST"Content-Type")))
+                http = 1;
+            else if ((value != NULL)
+             && (!xmlStrcasecmp(attr->name, BAD_CAST"content")))
+                content = value;
+            if ((http != 0) && (content != NULL))
+                goto found_content;
             }
             attr = attr->next;
         }
@@ -237,18 +237,18 @@ found_meta:
             if ((attr->children != NULL) &&
                 (attr->children->type == XML_TEXT_NODE) &&
                 (attr->children->next == NULL)) {
-        	value = attr->children->content;
-        	if ((!xmlStrcasecmp(attr->name, BAD_CAST"http-equiv"))
-        	 && (!xmlStrcasecmp(value, BAD_CAST"Content-Type")))
-        	    http = 1;
-        	else
+            value = attr->children->content;
+            if ((!xmlStrcasecmp(attr->name, BAD_CAST"http-equiv"))
+             && (!xmlStrcasecmp(value, BAD_CAST"Content-Type")))
+                http = 1;
+            else
                         {
                            if ((value != NULL) &&
                                (!xmlStrcasecmp(attr->name, BAD_CAST"content")))
-        	       content = value;
+                   content = value;
                         }
                 if ((http != 0) && (content != NULL))
-        	    break;
+                break;
             }
             attr = attr->next;
         }
@@ -330,9 +330,9 @@ htmlIsBooleanAttr(const xmlChar *name)
 
 #ifdef LIBXML_OUTPUT_ENABLED
 /************************************************************************
- *        							*
- *        	Output error handlers				*
- *        							*
+ *                                    *
+ *            Output error handlers                *
+ *                                    *
  ************************************************************************/
 
 /**
@@ -375,9 +375,9 @@ htmlSaveErr(int code, xmlNodePtr node, const char *extra)
 }
 
 /************************************************************************
- *        							*
- *        Dumping HTML tree content to a simple buffer		*
- *        							*
+ *                                    *
+ *        Dumping HTML tree content to a simple buffer        *
+ *                                    *
  ************************************************************************/
 
 static xmlCharEncodingHandler *
@@ -599,9 +599,9 @@ htmlDocDumpMemory(xmlDocPtr cur, xmlChar**mem, int *size) {
 
 
 /************************************************************************
- *        							*
- *        Dumping HTML tree content to an I/O output buffer	*
- *        							*
+ *                                    *
+ *        Dumping HTML tree content to an I/O output buffer    *
+ *                                    *
  ************************************************************************/
 
 /**
@@ -999,9 +999,9 @@ htmlDocContentDumpOutput(xmlOutputBufferPtr buf, xmlDocPtr cur,
 }
 
 /************************************************************************
- *        							*
- *        Saving functions front-ends				*
- *        							*
+ *                                    *
+ *        Saving functions front-ends                *
+ *                                    *
  ************************************************************************/
 
 /**

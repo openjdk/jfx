@@ -72,9 +72,9 @@ static int xmlCharEncodingAliasesMax = 0;
 static int xmlLittleEndian = 1;
 
 /************************************************************************
- *        							*
- *        Conversions To/From UTF8 encoding			*
- *        							*
+ *                                    *
+ *        Conversions To/From UTF8 encoding            *
+ *                                    *
  ************************************************************************/
 
 /**
@@ -845,9 +845,9 @@ UTF8ToUTF16BE(unsigned char* outb, int *outlen,
 #endif /* LIBXML_OUTPUT_ENABLED */
 
 /************************************************************************
- *        							*
- *        Generic encoding handling routines			*
- *        							*
+ *                                    *
+ *        Generic encoding handling routines            *
+ *                                    *
  ************************************************************************/
 
 /**
@@ -1230,9 +1230,9 @@ xmlGetCharEncodingName(xmlCharEncoding enc) {
 }
 
 /************************************************************************
- *        							*
- *        	Char encoding handlers				*
- *        							*
+ *                                    *
+ *            Char encoding handlers                *
+ *                                    *
  ************************************************************************/
 
 #if !defined(LIBXML_ICONV_ENABLED) && !defined(LIBXML_ICU_ENABLED) && \
@@ -2005,9 +2005,9 @@ xmlFindCharEncodingHandler(const char *name) {
 }
 
 /************************************************************************
- *        							*
- *        ICONV based generic conversion functions		*
- *        							*
+ *                                    *
+ *        ICONV based generic conversion functions        *
+ *                                    *
  ************************************************************************/
 
 #ifdef LIBXML_ICONV_ENABLED
@@ -2059,9 +2059,9 @@ xmlIconvWrapper(iconv_t cd, unsigned char *out, int *outlen,
 #endif /* LIBXML_ICONV_ENABLED */
 
 /************************************************************************
- *        							*
- *        ICU based generic conversion functions		*
- *        							*
+ *                                    *
+ *        ICU based generic conversion functions        *
+ *                                    *
  ************************************************************************/
 
 #ifdef LIBXML_ICU_ENABLED
@@ -2133,9 +2133,9 @@ xmlUconvWrapper(uconv_t *cd, int toUnicode, unsigned char *out, int *outlen,
 #endif /* LIBXML_ICU_ENABLED */
 
 /************************************************************************
- *        							*
- *        The real API used by libxml for on-the-fly conversion	*
- *        							*
+ *                                    *
+ *        The real API used by libxml for on-the-fly conversion    *
+ *                                    *
  ************************************************************************/
 
 /**
@@ -2870,7 +2870,7 @@ UTF8ToISO8859x(unsigned char* out, int *outlen,
             c2 = c2 & 0x3F;
         d = d & 0x0F;
         d = xlattable [48 + c2 + xlattable [48 + c1 +
-        	xlattable [32 + d] * 64] * 64];
+            xlattable [32 + d] * 64] * 64];
             if (d == 0) {
                 /* not in character set */
                 *outlen = out - outstart;

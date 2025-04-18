@@ -204,7 +204,7 @@ xsltCompileAttr(xsltStylesheetPtr style, xmlAttrPtr attr) {
     if (attr->psvi != NULL) {
 #ifdef WITH_XSLT_DEBUG_AVT
     xsltGenericDebug(xsltGenericDebugContext,
-        	"AVT %s: already compiled\n", attr->name);
+            "AVT %s: already compiled\n", attr->name);
 #endif
         return;
     }
@@ -257,9 +257,9 @@ xsltCompileAttr(xsltStylesheetPtr style, xmlAttrPtr attr) {
         if ((*cur == '\'') || (*cur == '"')) {
             char delim = *(cur++);
             while ((*cur != 0) && (*cur != delim))
-        	cur++;
+            cur++;
             if (*cur != 0)
-        	cur++;	/* skip the ending delimiter */
+            cur++;    /* skip the ending delimiter */
         } else
             cur++;
         }
@@ -282,8 +282,8 @@ xsltCompileAttr(xsltStylesheetPtr style, xmlAttrPtr attr) {
         comp = xsltXPathCompile(style, expr);
         if (comp == NULL) {
             xsltTransformError(NULL, style, attr->parent,
-        	 "Attribute '%s': Failed to compile the expression "
-        	 "'%s' in the AVT.\n", attr->name, expr);
+             "Attribute '%s': Failed to compile the expression "
+             "'%s' in the AVT.\n", attr->name, expr);
             style->errors++;
             goto error;
         }

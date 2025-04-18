@@ -53,9 +53,9 @@
 #endif
 
 /************************************************************************
- *        							*
- *        	Private Types and Globals			*
- *        							*
+ *                                    *
+ *            Private Types and Globals            *
+ *                                    *
  ************************************************************************/
 
 typedef struct _xsltExtDef xsltExtDef;
@@ -98,9 +98,9 @@ static xmlHashTablePtr xsltModuleHash = NULL;
 static xmlMutexPtr xsltExtMutex = NULL;
 
 /************************************************************************
- *        							*
- *        	Type functions					*
- *        							*
+ *                                    *
+ *            Type functions                    *
+ *                                    *
  ************************************************************************/
 
 /**
@@ -498,9 +498,9 @@ xsltExtModuleRegisterDynamic(const xmlChar * URI ATTRIBUTE_UNUSED)
 #endif
 
 /************************************************************************
- *        							*
- *        The stylesheet extension prefixes handling		*
- *        							*
+ *                                    *
+ *        The stylesheet extension prefixes handling        *
+ *                                    *
  ************************************************************************/
 
 
@@ -602,9 +602,9 @@ xsltRegisterExtPrefix(xsltStylesheetPtr style,
 }
 
 /************************************************************************
- *        							*
- *        The extensions modules interfaces			*
- *        							*
+ *                                    *
+ *        The extensions modules interfaces            *
+ *                                    *
  ************************************************************************/
 
 /**
@@ -696,7 +696,7 @@ xsltFreeCtxtExts(xsltTransformContextPtr ctxt)
  */
 static xsltExtDataPtr
 xsltStyleInitializeStylesheetModule(xsltStylesheetPtr style,
-        		     const xmlChar * URI)
+                     const xmlChar * URI)
 {
     xsltExtDataPtr dataContainer;
     void *userData = NULL;
@@ -855,7 +855,7 @@ xsltStyleGetExtData(xsltStylesheetPtr style, const xmlChar * URI)
  */
 void *
 xsltStyleStylesheetLevelGetExtData(xsltStylesheetPtr style,
-        		   const xmlChar * URI)
+                   const xmlChar * URI)
 {
     xsltExtDataPtr dataContainer = NULL;
 
@@ -1990,9 +1990,9 @@ xsltGetExtInfo(xsltStylesheetPtr style, const xmlChar * URI)
 }
 
 /************************************************************************
- *        							*
- *        Test of the extension module API			*
- *        							*
+ *                                    *
+ *        Test of the extension module API            *
+ *                                    *
  ************************************************************************/
 
 static xmlChar *testData = NULL;

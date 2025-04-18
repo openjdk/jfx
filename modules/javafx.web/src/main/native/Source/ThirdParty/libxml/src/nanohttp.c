@@ -1072,18 +1072,18 @@ xmlNanoHTTPConnectHost(const char *host, int port)
 
         case TRY_AGAIN:
             h_err_txt =
-        	"Non-authoritative host not found or server failure.";
+            "Non-authoritative host not found or server failure.";
             break;
 
         case NO_RECOVERY:
             h_err_txt =
-        	"Non-recoverable errors:  FORMERR, REFUSED, or NOTIMP.";
+            "Non-recoverable errors:  FORMERR, REFUSED, or NOTIMP.";
             break;
 
 #ifdef NO_ADDRESS
         case NO_ADDRESS:
             h_err_txt =
-        	"Valid name, no data record of requested type.";
+            "Valid name, no data record of requested type.";
             break;
 #endif
 
@@ -1200,7 +1200,7 @@ xmlNanoHTTPRead(void *ctx, void *dest, int len) {
         while (ctxt->strm->avail_out > 0 &&
            (ctxt->strm->avail_in > 0 || xmlNanoHTTPRecv(ctxt) > 0)) {
             orig_avail_in = ctxt->strm->avail_in =
-        	    ctxt->inptr - ctxt->inrptr - bytes_read;
+                ctxt->inptr - ctxt->inrptr - bytes_read;
             ctxt->strm->next_in = BAD_CAST (ctxt->inrptr + bytes_read);
 
             z_ret = inflate(ctxt->strm, Z_NO_FLUSH);
@@ -1455,12 +1455,12 @@ retry:
     if (use_proxy) {
     if (ctxt->port != 80) {
         p += snprintf( p, blen - (p - bp), "%s http://%s:%d%s",
-        	method, ctxt->hostname,
-        	ctxt->port, ctxt->path );
+            method, ctxt->hostname,
+            ctxt->port, ctxt->path );
     }
     else
         p += snprintf( p, blen - (p - bp), "%s http://%s%s", method,
-        	ctxt->hostname, ctxt->path);
+            ctxt->hostname, ctxt->path);
     }
     else
     p += snprintf( p, blen - (p - bp), "%s %s", method, ctxt->path);
@@ -1780,10 +1780,10 @@ static int
 xmlNanoHTTPFetchContent( void * ctx, char ** ptr, int * len ) {
     xmlNanoHTTPCtxtPtr    ctxt = (xmlNanoHTTPCtxtPtr)ctx;
 
-    int        	rc = 0;
-    int        	cur_lgth;
-    int        	rcvd_lgth;
-    int        	dummy_int;
+    int            rc = 0;
+    int            cur_lgth;
+    int            rcvd_lgth;
+    int            dummy_int;
     char *        dummy_ptr = NULL;
 
     /*  Dummy up return input parameters if not provided  */

@@ -57,9 +57,9 @@ struct _xmlBuf {
  * Macro for compatibility with xmlBuffer to be used after an xmlBuf
  * is updated. This makes sure the compat fields are updated too.
  */
-#define UPDATE_COMPAT(buf)        		    \
+#define UPDATE_COMPAT(buf)                    \
      if (buf->size < INT_MAX) buf->compat_size = buf->size; \
-     else buf->compat_size = INT_MAX;        	    \
+     else buf->compat_size = INT_MAX;                \
      if (buf->use < INT_MAX) buf->compat_use = buf->use; \
      else buf->compat_use = INT_MAX;
 
@@ -68,12 +68,12 @@ struct _xmlBuf {
  * entry points, it checks that the compat fields have not been modified
  * by direct call to xmlBuffer function from code compiled before 2.9.0 .
  */
-#define CHECK_COMPAT(buf)        		    \
+#define CHECK_COMPAT(buf)                    \
      if (buf->size != (size_t) buf->compat_size)        \
          if (buf->compat_size < INT_MAX)            \
-         buf->size = buf->compat_size;    	    \
+         buf->size = buf->compat_size;            \
      if (buf->use != (size_t) buf->compat_use)            \
-         if (buf->compat_use < INT_MAX)        	    \
+         if (buf->compat_use < INT_MAX)                \
          buf->use = buf->compat_use;
 
 #else /* ! WITH_BUFFER_COMPAT */

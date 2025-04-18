@@ -20,9 +20,9 @@
 #include "private/string.h"
 
 /************************************************************************
- *        							*
- *        	Error struct					*
- *        							*
+ *                                    *
+ *            Error struct                    *
+ *                                    *
  ************************************************************************/
 
 static int
@@ -177,9 +177,9 @@ xmlVUpdateError(xmlError *err,
 }
 
 /************************************************************************
- *        							*
- *        	Handling of out of context errors		*
- *        							*
+ *                                    *
+ *            Handling of out of context errors        *
+ *                                    *
  ************************************************************************/
 
 /**
@@ -287,9 +287,9 @@ xmlSetStructuredErrorFunc(void *ctx, xmlStructuredErrorFunc handler) {
 }
 
 /************************************************************************
- *        							*
- *        	Handling of parsing errors			*
- *        							*
+ *                                    *
+ *            Handling of parsing errors            *
+ *                                    *
  ************************************************************************/
 
 /**
@@ -905,9 +905,9 @@ xmlParserValidityWarning(void *ctx, const char *msg ATTRIBUTE_UNUSED, ...)
 
 
 /************************************************************************
- *        							*
- *        	Extended Error Handling				*
- *        							*
+ *                                    *
+ *            Extended Error Handling                *
+ *                                    *
  ************************************************************************/
 
 /**

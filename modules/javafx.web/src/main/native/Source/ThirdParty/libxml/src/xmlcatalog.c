@@ -43,9 +43,9 @@ static char *filename = NULL;
 #endif
 
 /************************************************************************
- *        							*
- *        	Shell Interface					*
- *        							*
+ *                                    *
+ *            Shell Interface                    *
+ *                                    *
  ************************************************************************/
 /**
  * xmlShellReadline:
@@ -215,10 +215,10 @@ static void usershell(void) {
         } else {
         if (argv[2] == NULL)
         ret = xmlCatalogAdd(BAD_CAST argv[0], NULL,
-        		    BAD_CAST argv[1]);
+                    BAD_CAST argv[1]);
         else
             ret = xmlCatalogAdd(BAD_CAST argv[0], BAD_CAST argv[1],
-        			BAD_CAST argv[2]);
+                    BAD_CAST argv[2]);
         if (ret != 0)
             printf("add command failed\n");
         }
@@ -236,7 +236,7 @@ static void usershell(void) {
         printf("resolve requires 2 arguments\n");
         } else {
         ans = xmlCatalogResolve(BAD_CAST argv[0],
-        	                BAD_CAST argv[1]);
+                            BAD_CAST argv[1]);
         if (ans == NULL) {
             printf("Resolver failed to find an answer\n");
         } else {
@@ -285,9 +285,9 @@ static void usershell(void) {
 }
 
 /************************************************************************
- *        							*
- *        	Main						*
- *        							*
+ *                                    *
+ *            Main                        *
+ *                                    *
  ************************************************************************/
 static void usage(const char *name) {
     /* split into 2 printf's to avoid overly long string (gcc warning) */
@@ -438,78 +438,78 @@ int main(int argc, char **argv) {
         if ((!strcmp(argv[i], "-add")) ||
             (!strcmp(argv[i], "--add"))) {
             if (catal == NULL)
-        	catal = xmlNewCatalog(1);
+            catal = xmlNewCatalog(1);
             xmlACatalogAdd(catal, BAD_CAST "CATALOG",
-        			 BAD_CAST argv[i + 2], NULL);
+                     BAD_CAST argv[i + 2], NULL);
 
             if (!no_super_update) {
-        	super = xmlLoadSGMLSuperCatalog(XML_SGML_DEFAULT_CATALOG);
-        	if (super == NULL)
-        	    super = xmlNewCatalog(1);
+            super = xmlLoadSGMLSuperCatalog(XML_SGML_DEFAULT_CATALOG);
+            if (super == NULL)
+                super = xmlNewCatalog(1);
 
-        	xmlACatalogAdd(super, BAD_CAST "CATALOG",
-        			     BAD_CAST argv[i + 1], NULL);
+            xmlACatalogAdd(super, BAD_CAST "CATALOG",
+                         BAD_CAST argv[i + 1], NULL);
             }
         } else {
             if (catal != NULL)
-        	ret = xmlACatalogRemove(catal, BAD_CAST argv[i + 2]);
+            ret = xmlACatalogRemove(catal, BAD_CAST argv[i + 2]);
             else
-        	ret = -1;
+            ret = -1;
             if (ret < 0) {
-        	fprintf(stderr, "Failed to remove entry from %s\n",
-        		argv[i + 1]);
-        	exit_value = 1;
+            fprintf(stderr, "Failed to remove entry from %s\n",
+                argv[i + 1]);
+            exit_value = 1;
             }
             if ((!no_super_update) && (noout) && (catal != NULL) &&
-        	(xmlCatalogIsEmpty(catal))) {
-        	super = xmlLoadSGMLSuperCatalog(
-        		   XML_SGML_DEFAULT_CATALOG);
-        	if (super != NULL) {
-        	    ret = xmlACatalogRemove(super,
-        		    BAD_CAST argv[i + 1]);
-        	    if (ret < 0) {
-        		fprintf(stderr,
-        			"Failed to remove entry from %s\n",
-        			XML_SGML_DEFAULT_CATALOG);
-        		exit_value = 1;
-        	    }
-        	}
+            (xmlCatalogIsEmpty(catal))) {
+            super = xmlLoadSGMLSuperCatalog(
+                   XML_SGML_DEFAULT_CATALOG);
+            if (super != NULL) {
+                ret = xmlACatalogRemove(super,
+                    BAD_CAST argv[i + 1]);
+                if (ret < 0) {
+                fprintf(stderr,
+                    "Failed to remove entry from %s\n",
+                    XML_SGML_DEFAULT_CATALOG);
+                exit_value = 1;
+                }
+            }
             }
         }
         if (noout) {
             FILE *out;
 
             if (xmlCatalogIsEmpty(catal)) {
-        	remove(argv[i + 1]);
+            remove(argv[i + 1]);
             } else {
-        	out = fopen(argv[i + 1], "w");
-        	if (out == NULL) {
-        	    fprintf(stderr, "could not open %s for saving\n",
-        		    argv[i + 1]);
-        	    exit_value = 2;
-        	    noout = 0;
-        	} else {
-        	    xmlACatalogDump(catal, out);
-        	    fclose(out);
-        	}
+            out = fopen(argv[i + 1], "w");
+            if (out == NULL) {
+                fprintf(stderr, "could not open %s for saving\n",
+                    argv[i + 1]);
+                exit_value = 2;
+                noout = 0;
+            } else {
+                xmlACatalogDump(catal, out);
+                fclose(out);
+            }
             }
             if (!no_super_update && super != NULL) {
-        	if (xmlCatalogIsEmpty(super)) {
-        	    remove(XML_SGML_DEFAULT_CATALOG);
-        	} else {
-        	    out = fopen(XML_SGML_DEFAULT_CATALOG, "w");
-        	    if (out == NULL) {
-        		fprintf(stderr,
-        			"could not open %s for saving\n",
-        			XML_SGML_DEFAULT_CATALOG);
-        		exit_value = 2;
-        		noout = 0;
-        	    } else {
+            if (xmlCatalogIsEmpty(super)) {
+                remove(XML_SGML_DEFAULT_CATALOG);
+            } else {
+                out = fopen(XML_SGML_DEFAULT_CATALOG, "w");
+                if (out == NULL) {
+                fprintf(stderr,
+                    "could not open %s for saving\n",
+                    XML_SGML_DEFAULT_CATALOG);
+                exit_value = 2;
+                noout = 0;
+                } else {
 
-        		xmlACatalogDump(super, out);
-        		fclose(out);
-        	    }
-        	}
+                xmlACatalogDump(super, out);
+                fclose(out);
+                }
+            }
             }
         } else {
             xmlACatalogDump(catal, stdout);
@@ -521,25 +521,25 @@ int main(int argc, char **argv) {
         } else {
         if ((!strcmp(argv[i], "-add")) ||
             (!strcmp(argv[i], "--add"))) {
-        	if ((argv[i + 3] == NULL) || (argv[i + 3][0] == 0))
-        	    ret = xmlCatalogAdd(BAD_CAST argv[i + 1], NULL,
-        				BAD_CAST argv[i + 2]);
-        	else
-        	    ret = xmlCatalogAdd(BAD_CAST argv[i + 1],
-        				BAD_CAST argv[i + 2],
-        				BAD_CAST argv[i + 3]);
-        	if (ret != 0) {
-        	    printf("add command failed\n");
-        	    exit_value = 3;
-        	}
-        	i += 3;
+            if ((argv[i + 3] == NULL) || (argv[i + 3][0] == 0))
+                ret = xmlCatalogAdd(BAD_CAST argv[i + 1], NULL,
+                        BAD_CAST argv[i + 2]);
+            else
+                ret = xmlCatalogAdd(BAD_CAST argv[i + 1],
+                        BAD_CAST argv[i + 2],
+                        BAD_CAST argv[i + 3]);
+            if (ret != 0) {
+                printf("add command failed\n");
+                exit_value = 3;
+            }
+            i += 3;
         } else if ((!strcmp(argv[i], "-del")) ||
             (!strcmp(argv[i], "--del"))) {
             ret = xmlCatalogRemove(BAD_CAST argv[i + 1]);
             if (ret < 0) {
-        	fprintf(stderr, "Failed to remove entry %s\n",
-        		argv[i + 1]);
-        	exit_value = 1;
+            fprintf(stderr, "Failed to remove entry %s\n",
+                argv[i + 1]);
+            exit_value = 1;
             }
             i += 1;
         }
@@ -570,11 +570,11 @@ int main(int argc, char **argv) {
             printf("No entry for SYSTEM %s\n", argv[i]);
             ans = xmlCatalogResolveURI ((const xmlChar *) argv[i]);
             if (ans == NULL) {
-        	printf ("No entry for URI %s\n", argv[i]);
+            printf ("No entry for URI %s\n", argv[i]);
                 exit_value = 4;
             } else {
                 printf("%s\n", (char *) ans);
-        	xmlFree (ans);
+            xmlFree (ans);
             }
         } else {
             printf("%s\n", (char *) ans);

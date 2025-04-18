@@ -38,9 +38,9 @@ const char *skipped_tests[] = {
 };
 
 /************************************************************************
- *        							*
- *        File name and path utilities				*
- *        							*
+ *                                    *
+ *        File name and path utilities                *
+ *                                    *
  ************************************************************************/
 
 static int checkTestFile(const char *filename) {
@@ -71,9 +71,9 @@ static xmlChar *composeDir(const xmlChar *dir, const xmlChar *path) {
 }
 
 /************************************************************************
- *        							*
- *        Libxml2 specific routines				*
- *        							*
+ *                                    *
+ *        Libxml2 specific routines                *
+ *                                    *
  ************************************************************************/
 
 static int nb_skipped = 0;
@@ -87,7 +87,7 @@ static int nb_leaks = 0;
  */
 static xmlParserInputPtr
 testExternalEntityLoader(const char *URL, const char *ID ATTRIBUTE_UNUSED,
-        	 xmlParserCtxtPtr ctxt) {
+             xmlParserCtxtPtr ctxt) {
     xmlParserInputPtr ret;
 
     ret = xmlNewInputFromFile(ctxt, (const char *) URL);
@@ -166,9 +166,9 @@ initializeLibxml2(void) {
 }
 
 /************************************************************************
- *        							*
- *        Run the xmlconf test if found				*
- *        							*
+ *                                    *
+ *        Run the xmlconf test if found                *
+ *                                    *
  ************************************************************************/
 
 static int
@@ -545,9 +545,9 @@ xmlconfTest(void) {
 }
 
 /************************************************************************
- *        							*
- *        The driver for the tests				*
- *        							*
+ *                                    *
+ *        The driver for the tests                *
+ *                                    *
  ************************************************************************/
 
 int

@@ -50,9 +50,9 @@ struct _xmlSaveCtxt {
 };
 
 /************************************************************************
- *        							*
- *        	Output error handlers				*
- *        							*
+ *                                    *
+ *            Output error handlers                *
+ *                                    *
  ************************************************************************/
 /**
  * xmlSaveErrMemory:
@@ -121,9 +121,9 @@ xmlSaveErr(xmlOutputBufferPtr out, int code, xmlNodePtr node,
 }
 
 /************************************************************************
- *        							*
- *        	Special escaping routines			*
- *        							*
+ *                                    *
+ *            Special escaping routines            *
+ *                                    *
  ************************************************************************/
 static unsigned char *
 xmlSerializeHexCharRef(unsigned char *out, int val) {
@@ -267,9 +267,9 @@ xmlEscapeEntities(unsigned char* out, int *outlen,
 }
 
 /************************************************************************
- *        							*
- *        	Allocation and deallocation			*
- *        							*
+ *                                    *
+ *            Allocation and deallocation            *
+ *                                    *
  ************************************************************************/
 /**
  * xmlSaveCtxtInit:
@@ -372,9 +372,9 @@ xmlNewSaveCtxt(const char *encoding, int options)
 }
 
 /************************************************************************
- *        							*
- *        Dumping XML tree content to a simple buffer		*
- *        							*
+ *                                    *
+ *        Dumping XML tree content to a simple buffer        *
+ *                                    *
  ************************************************************************/
 /**
  * xmlAttrSerializeContent:
@@ -788,9 +788,9 @@ xmlBufDumpEntityDecl(xmlOutputBufferPtr buf, xmlEntityPtr ent) {
 }
 
 /************************************************************************
- *        							*
- *        Dumping XML tree content to an I/O output buffer	*
- *        							*
+ *                                    *
+ *        Dumping XML tree content to an I/O output buffer    *
+ *                                    *
  ************************************************************************/
 
 static int xmlSaveSwitchEncoding(xmlSaveCtxtPtr ctxt, const char *encoding) {
@@ -1065,10 +1065,10 @@ htmlNodeDumpOutputInternal(xmlSaveCtxtPtr ctxt, xmlNodePtr cur) {
     }
     if (ctxt->options & XML_SAVE_FORMAT)
     htmlNodeDumpFormatOutput(buf, doc, cur,
-        		       (const char *)encoding, 1);
+                       (const char *)encoding, 1);
     else
     htmlNodeDumpFormatOutput(buf, doc, cur,
-        		       (const char *)encoding, 0);
+                       (const char *)encoding, 0);
     /*
      * Restore the state of the saving context at the end of the document
      */
@@ -1136,9 +1136,9 @@ xmlNodeDumpOutputInternal(xmlSaveCtxtPtr ctxt, xmlNodePtr cur) {
         if ((cur != root) && (ctxt->format == 1) &&
                 (xmlIndentTreeOutput))
         xmlOutputBufferWrite(buf, ctxt->indent_size *
-        		     (ctxt->level > ctxt->indent_nr ?
-        		      ctxt->indent_nr : ctxt->level),
-        		     ctxt->indent);
+                     (ctxt->level > ctxt->indent_nr ?
+                      ctxt->indent_nr : ctxt->level),
+                     ctxt->indent);
 
             /*
              * Some users like lxml are known to pass nodes with a corrupted
@@ -1222,9 +1222,9 @@ xmlNodeDumpOutputInternal(xmlSaveCtxtPtr ctxt, xmlNodePtr cur) {
         case XML_PI_NODE:
         if ((cur != root) && (ctxt->format == 1) && (xmlIndentTreeOutput))
         xmlOutputBufferWrite(buf, ctxt->indent_size *
-        		     (ctxt->level > ctxt->indent_nr ?
-        		      ctxt->indent_nr : ctxt->level),
-        		     ctxt->indent);
+                     (ctxt->level > ctxt->indent_nr ?
+                      ctxt->indent_nr : ctxt->level),
+                     ctxt->indent);
 
             if (cur->content != NULL) {
                 xmlOutputBufferWrite(buf, 2, "<?");
@@ -1250,9 +1250,9 @@ xmlNodeDumpOutputInternal(xmlSaveCtxtPtr ctxt, xmlNodePtr cur) {
         case XML_COMMENT_NODE:
         if ((cur != root) && (ctxt->format == 1) && (xmlIndentTreeOutput))
         xmlOutputBufferWrite(buf, ctxt->indent_size *
-        		     (ctxt->level > ctxt->indent_nr ?
-        		      ctxt->indent_nr : ctxt->level),
-        		     ctxt->indent);
+                     (ctxt->level > ctxt->indent_nr ?
+                      ctxt->indent_nr : ctxt->level),
+                     ctxt->indent);
 
             if (cur->content != NULL) {
                 xmlOutputBufferWrite(buf, 4, "<!--");
@@ -1508,9 +1508,9 @@ xmlDocContentDumpOutput(xmlSaveCtxtPtr ctxt, xmlDocPtr cur) {
 
 #ifdef LIBXML_HTML_ENABLED
 /************************************************************************
- *        							*
- *        Functions specific to XHTML serialization		*
- *        							*
+ *                                    *
+ *        Functions specific to XHTML serialization        *
+ *                                    *
  ************************************************************************/
 
 /**
@@ -1714,9 +1714,9 @@ xhtmlNodeDumpOutput(xmlSaveCtxtPtr ctxt, xmlNodePtr cur) {
 
         if ((cur != root) && (ctxt->format == 1) && (xmlIndentTreeOutput))
         xmlOutputBufferWrite(buf, ctxt->indent_size *
-        		     (ctxt->level > ctxt->indent_nr ?
-        		      ctxt->indent_nr : ctxt->level),
-        		     ctxt->indent);
+                     (ctxt->level > ctxt->indent_nr ?
+                      ctxt->indent_nr : ctxt->level),
+                     ctxt->indent);
 
             /*
              * Some users like lxml are known to pass nodes with a corrupted
@@ -1987,9 +1987,9 @@ xhtmlNodeDumpOutput(xmlSaveCtxtPtr ctxt, xmlNodePtr cur) {
 #endif
 
 /************************************************************************
- *        							*
- *        	Public entry points				*
- *        							*
+ *                                    *
+ *            Public entry points                *
+ *                                    *
  ************************************************************************/
 
 /**
@@ -2294,9 +2294,9 @@ xmlSaveSetAttrEscape(xmlSaveCtxtPtr ctxt, xmlCharEncodingOutputFunc escape)
 }
 
 /************************************************************************
- *        							*
- *        Public entry points based on buffers			*
- *        							*
+ *                                    *
+ *        Public entry points based on buffers            *
+ *                                    *
  ************************************************************************/
 
 /**
@@ -2551,9 +2551,9 @@ xmlElemDump(FILE * f, xmlDocPtr doc, xmlNodePtr cur)
 }
 
 /************************************************************************
- *        							*
- *        Saving functions front-ends				*
- *        							*
+ *                                    *
+ *        Saving functions front-ends                *
+ *                                    *
  ************************************************************************/
 
 /**
@@ -2909,7 +2909,7 @@ xmlSaveFormatFileTo(xmlOutputBufferPtr buf, xmlDocPtr cur,
  */
 int
 xmlSaveFormatFileEnc( const char * filename, xmlDocPtr cur,
-        	const char * encoding, int format ) {
+            const char * encoding, int format ) {
     xmlSaveCtxt ctxt;
     xmlOutputBufferPtr buf;
     xmlCharEncodingHandlerPtr handler = NULL;

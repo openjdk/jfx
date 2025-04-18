@@ -960,7 +960,7 @@ xmlCheckUTF8(const unsigned char *utf)
         ((utf[3] & 0xc0) != 0x80))
             return 0;
         ix = 4;
-    } else    			/* unknown encoding */
+    } else                /* unknown encoding */
         return 0;
         utf += ix;
       }

@@ -38,9 +38,9 @@ xsltInitDocKeyTable(xsltTransformContextPtr ctxt, const xmlChar *name,
                     const xmlChar *nameURI);
 
 /************************************************************************
- *        							*
- *        	Type functions					*
- *        							*
+ *                                    *
+ *            Type functions                    *
+ *                                    *
  ************************************************************************/
 
 /**
@@ -187,9 +187,9 @@ xsltFreeKeyTableList(xsltKeyTablePtr keyt) {
 }
 
 /************************************************************************
- *        							*
- *        The interpreter for the precompiled patterns		*
- *        							*
+ *                                    *
+ *        The interpreter for the precompiled patterns        *
+ *                                    *
  ************************************************************************/
 
 
@@ -330,7 +330,7 @@ xsltAddKey(xsltStylesheetPtr style, const xmlChar *name,
     }
     if (current == end) {
         xsltTransformError(NULL, style, inst,
-        	       "xsl:key : 'match' pattern is empty\n");
+                   "xsl:key : 'match' pattern is empty\n");
         if (style != NULL) style->errors++;
         goto error;
     }
@@ -715,7 +715,7 @@ fprintf(stderr, "xsltInitCtxtKey %s : %d\n", keyDef->name, ctxt->keyInitLevel);
         if (matchList != NULL)
         XSLT_TRACE(ctxt,XSLT_TRACE_KEYS,xsltGenericDebug(xsltGenericDebugContext,
              "xsltInitCtxtKey: %s evaluates to %d nodes\n",
-        		 keyDef->match, matchList->nodeNr));
+                 keyDef->match, matchList->nodeNr));
 #endif
     } else {
         /*

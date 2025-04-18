@@ -120,15 +120,15 @@ static void xmlCleanURI(xmlURIPtr uri);
 #define STRNDUP(s, n) (char *) xmlStrndup((const xmlChar *)(s), (n))
 
 /************************************************************************
- *        							*
- *                         RFC 3986 parser        		*
- *        							*
+ *                                    *
+ *                         RFC 3986 parser                *
+ *                                    *
  ************************************************************************/
 
 #define ISA_DIGIT(p) ((*(p) >= '0') && (*(p) <= '9'))
 #define ISA_ALPHA(p) (((*(p) >= 'a') && (*(p) <= 'z')) ||        \
                       ((*(p) >= 'A') && (*(p) <= 'Z')))
-#define ISA_HEXDIG(p)        					\
+#define ISA_HEXDIG(p)                            \
        (ISA_DIGIT(p) || ((*(p) >= 'a') && (*(p) <= 'f')) ||        \
         ((*(p) >= 'A') && (*(p) <= 'F')))
 
@@ -136,7 +136,7 @@ static void xmlCleanURI(xmlURIPtr uri);
  *    sub-delims    = "!" / "$" / "&" / "'" / "(" / ")"
  *                     / "*" / "+" / "," / ";" / "="
  */
-#define ISA_SUB_DELIM(p)        				\
+#define ISA_SUB_DELIM(p)                        \
       (((*(p) == '!')) || ((*(p) == '$')) || ((*(p) == '&')) ||        \
        ((*(p) == '(')) || ((*(p) == ')')) || ((*(p) == '*')) ||        \
        ((*(p) == '+')) || ((*(p) == ',')) || ((*(p) == ';')) ||        \
@@ -145,7 +145,7 @@ static void xmlCleanURI(xmlURIPtr uri);
 /*
  *    gen-delims    = ":" / "/" / "?" / "#" / "[" / "]" / "@"
  */
-#define ISA_GEN_DELIM(p)        				\
+#define ISA_GEN_DELIM(p)                        \
       (((*(p) == ':')) || ((*(p) == '/')) || ((*(p) == '?')) ||         \
        ((*(p) == '#')) || ((*(p) == '[')) || ((*(p) == ']')) ||         \
        ((*(p) == '@')))
@@ -158,20 +158,20 @@ static void xmlCleanURI(xmlURIPtr uri);
 /*
  *    unreserved    = ALPHA / DIGIT / "-" / "." / "_" / "~"
  */
-#define ISA_STRICTLY_UNRESERVED(p)        			\
+#define ISA_STRICTLY_UNRESERVED(p)                    \
       ((ISA_ALPHA(p)) || (ISA_DIGIT(p)) || ((*(p) == '-')) ||        \
        ((*(p) == '.')) || ((*(p) == '_')) || ((*(p) == '~')))
 
 /*
  *    pct-encoded   = "%" HEXDIG HEXDIG
  */
-#define ISA_PCT_ENCODED(p)        				\
+#define ISA_PCT_ENCODED(p)                        \
      ((*(p) == '%') && (ISA_HEXDIG(p + 1)) && (ISA_HEXDIG(p + 2)))
 
 /*
  *    pchar         = unreserved / pct-encoded / sub-delims / ":" / "@"
  */
-#define ISA_PCHAR(u, p)        					\
+#define ISA_PCHAR(u, p)                            \
      (ISA_UNRESERVED(u, p) || ISA_PCT_ENCODED(p) || ISA_SUB_DELIM(p) ||    \
       ((*(p) == ':')) || ((*(p) == '@')))
 
@@ -1086,9 +1086,9 @@ xmlParseURIRaw(const char *str, int raw) {
 }
 
 /************************************************************************
- *        							*
- *        	Generic URI structure functions			*
- *        							*
+ *                                    *
+ *            Generic URI structure functions            *
+ *                                    *
  ************************************************************************/
 
 /**
@@ -1209,17 +1209,17 @@ xmlSaveUri(xmlURIPtr uri) {
                         ret = temp;
             }
             if ((IS_UNRESERVED(*(p))) ||
-        	((*(p) == ';')) || ((*(p) == ':')) ||
-        	((*(p) == '&')) || ((*(p) == '=')) ||
-        	((*(p) == '+')) || ((*(p) == '$')) ||
-        	((*(p) == ',')))
-        	ret[len++] = *p++;
+            ((*(p) == ';')) || ((*(p) == ':')) ||
+            ((*(p) == '&')) || ((*(p) == '=')) ||
+            ((*(p) == '+')) || ((*(p) == '$')) ||
+            ((*(p) == ',')))
+            ret[len++] = *p++;
             else {
-        	int val = *(unsigned char *)p++;
-        	int hi = val / 0x10, lo = val % 0x10;
-        	ret[len++] = '%';
-        	ret[len++] = hi + (hi > 9? 'A'-10 : '0');
-        	ret[len++] = lo + (lo > 9? 'A'-10 : '0');
+            int val = *(unsigned char *)p++;
+            int hi = val / 0x10, lo = val % 0x10;
+            ret[len++] = '%';
+            ret[len++] = hi + (hi > 9? 'A'-10 : '0');
+            ret[len++] = lo + (lo > 9? 'A'-10 : '0');
             }
         }
         if (len + 3 >= max) {
@@ -1233,9 +1233,9 @@ xmlSaveUri(xmlURIPtr uri) {
         p = uri->server;
         while (*p != 0) {
             if (len >= max) {
-        	temp = xmlSaveUriRealloc(ret, &max);
-        	if (temp == NULL) goto mem_error;
-        	ret = temp;
+            temp = xmlSaveUriRealloc(ret, &max);
+            if (temp == NULL) goto mem_error;
+            ret = temp;
             }
                     /* TODO: escaping? */
             ret[len++] = (xmlChar) *p++;
@@ -1476,9 +1476,9 @@ xmlFreeURI(xmlURIPtr uri) {
 }
 
 /************************************************************************
- *        							*
- *        	Helper functions				*
- *        							*
+ *                                    *
+ *            Helper functions                *
+ *                                    *
  ************************************************************************/
 
 static int
@@ -1883,9 +1883,9 @@ xmlURIEscape(const xmlChar * str)
 }
 
 /************************************************************************
- *        							*
- *        	Public functions				*
- *        							*
+ *                                    *
+ *            Public functions                *
+ *                                    *
  ************************************************************************/
 
 static int
@@ -2660,7 +2660,7 @@ xmlBuildRelativeURISafe(const xmlChar * URI, const xmlChar * base,
         val = xmlStrdup(BAD_CAST "");
             if (val == NULL)
                 ret = -1;
-        goto done;    	/* (I can't imagine why anyone would do this) */
+        goto done;        /* (I can't imagine why anyone would do this) */
     }
 
     /*

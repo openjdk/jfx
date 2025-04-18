@@ -154,7 +154,7 @@ xmlCreateEntity(xmlDocPtr doc, const xmlChar *name, int type,
         ret->content = NULL;
     }
     ret->URI = NULL; /* to be computed by the layer knowing
-        	the defining entity */
+            the defining entity */
     ret->orig = NULL;
 
     return(ret);
@@ -515,14 +515,14 @@ xmlGetDocEntity(const xmlDoc *doc, const xmlChar *name) {
 /*
  * Macro used to grow the current buffer.
  */
-#define growBufferReentrant() {        				\
+#define growBufferReentrant() {                        \
     xmlChar *tmp;                                                       \
     size_t new_size = buffer_size * 2;                                  \
     if (new_size < buffer_size) goto mem_error;                         \
     tmp = (xmlChar *) xmlRealloc(buffer, new_size);                    \
     if (tmp == NULL) goto mem_error;                                    \
-    buffer = tmp;        					\
-    buffer_size = new_size;        				\
+    buffer = tmp;                            \
+    buffer_size = new_size;                        \
 }
 
 /**
@@ -583,8 +583,8 @@ xmlEncodeEntitiesInternal(xmlDocPtr doc, const xmlChar *input, int attr) {
             *out++ = *cur++;
             indx = out - buffer;
             if (indx + 100 > buffer_size) {
-        	growBufferReentrant();
-        	out = &buffer[indx];
+            growBufferReentrant();
+            out = &buffer[indx];
             }
         }
         *out++ = *cur++;
@@ -612,8 +612,8 @@ xmlEncodeEntitiesInternal(xmlDocPtr doc, const xmlChar *input, int attr) {
             *out++ = *cur++;
             indx = out - buffer;
             if (indx + 100 > buffer_size) {
-        	growBufferReentrant();
-        	out = &buffer[indx];
+            growBufferReentrant();
+            out = &buffer[indx];
             }
         }
         *out++ = *cur++;

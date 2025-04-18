@@ -485,7 +485,7 @@ xmlSAX2GetEntity(void *ctx, const xmlChar *name)
         if (ret != NULL) {
             xmlFatalErrMsg(ctxt, XML_ERR_NOT_STANDALONE,
      "Entity(%s) document marked standalone but requires external subset\n",
-        		   name, NULL);
+                   name, NULL);
         }
         ctxt->myDoc->standalone = 1;
         }
@@ -981,12 +981,12 @@ xmlSAX2AttributeInternal(void *ctx, const xmlChar *fullname,
     if ((name != NULL) && (name[0] == 0)) {
         if (xmlStrEqual(ns, BAD_CAST "xmlns")) {
         xmlNsErrMsg(ctxt, XML_ERR_NS_DECL_ERROR,
-        	    "invalid namespace declaration '%s'\n",
-        	    fullname, NULL);
+                "invalid namespace declaration '%s'\n",
+                fullname, NULL);
         } else {
         xmlNsWarnMsg(ctxt, XML_WAR_NS_COLUMN,
-        	     "Avoid attribute ending with ':' like '%s'\n",
-        	     fullname, NULL);
+                 "Avoid attribute ending with ':' like '%s'\n",
+                 fullname, NULL);
         }
         if (ns != NULL)
         xmlFree(ns);
@@ -1090,7 +1090,7 @@ xmlSAX2AttributeInternal(void *ctx, const xmlChar *fullname,
         else if (ctxt->validate && ctxt->wellFormed &&
                  ctxt->myDoc && ctxt->myDoc->intSubset) {
         ctxt->valid &= xmlValidateOneNamespace(&ctxt->vctxt, ctxt->myDoc,
-        			   ctxt->node, prefix, nsret, val);
+                       ctxt->node, prefix, nsret, val);
         }
 #endif /* LIBXML_VALID_ENABLED */
     if (name != NULL)
@@ -1137,11 +1137,11 @@ xmlSAX2AttributeInternal(void *ctx, const xmlChar *fullname,
                 xmlSAX2ErrMemory(ctxt);
         if (uri == NULL) {
             xmlNsWarnMsg(ctxt, XML_WAR_NS_URI,
-        	 "xmlns:%s: %s not a valid URI\n", name, value);
+             "xmlns:%s: %s not a valid URI\n", name, value);
         } else {
         if (uri->scheme == NULL) {
             xmlNsWarnMsg(ctxt, XML_WAR_NS_URI_RELATIVE,
-        	   "xmlns:%s: URI %s is not absolute\n", name, value);
+               "xmlns:%s: URI %s is not absolute\n", name, value);
         }
         xmlFreeURI(uri);
         }
@@ -1162,7 +1162,7 @@ xmlSAX2AttributeInternal(void *ctx, const xmlChar *fullname,
         else if (ctxt->validate && ctxt->wellFormed &&
              ctxt->myDoc && ctxt->myDoc->intSubset) {
         ctxt->valid &= xmlValidateOneNamespace(&ctxt->vctxt, ctxt->myDoc,
-        			   ctxt->node, prefix, nsret, value);
+                       ctxt->node, prefix, nsret, value);
         }
 #endif /* LIBXML_VALID_ENABLED */
     if (name != NULL)
@@ -1247,7 +1247,7 @@ xmlSAX2AttributeInternal(void *ctx, const xmlChar *fullname,
 
         if (val == NULL)
         ctxt->valid &= xmlValidateOneAttribute(&ctxt->vctxt,
-        		ctxt->myDoc, ctxt->node, ret, value);
+                ctxt->myDoc, ctxt->node, ret, value);
         else {
         xmlChar *nvalnorm;
 
@@ -1265,12 +1265,12 @@ xmlSAX2AttributeInternal(void *ctx, const xmlChar *fullname,
         }
 
         ctxt->valid &= xmlValidateOneAttribute(&ctxt->vctxt,
-        	        ctxt->myDoc, ctxt->node, ret, val);
+                    ctxt->myDoc, ctxt->node, ret, val);
                 xmlFree(val);
         }
     } else {
         ctxt->valid &= xmlValidateOneAttribute(&ctxt->vctxt, ctxt->myDoc,
-        			       ctxt->node, ret, value);
+                           ctxt->node, ret, value);
     }
     } else
 #endif /* LIBXML_VALID_ENABLED */
@@ -1349,21 +1349,21 @@ process_external_subset:
         while (attr != NULL) {
         if ((attr->defaultValue != NULL) &&
             (xmlGetDtdQAttrDesc(ctxt->myDoc->extSubset,
-        			attr->elem, attr->name,
-        			attr->prefix) == attr) &&
+                    attr->elem, attr->name,
+                    attr->prefix) == attr) &&
             (xmlGetDtdQAttrDesc(ctxt->myDoc->intSubset,
-        			attr->elem, attr->name,
-        			attr->prefix) == NULL)) {
+                    attr->elem, attr->name,
+                    attr->prefix) == NULL)) {
             xmlChar *fulln;
 
             if (attr->prefix != NULL) {
-        	fulln = xmlStrdup(attr->prefix);
+            fulln = xmlStrdup(attr->prefix);
                         if (fulln != NULL)
-        	    fulln = xmlStrcat(fulln, BAD_CAST ":");
+                fulln = xmlStrcat(fulln, BAD_CAST ":");
                         if (fulln != NULL)
-        	    fulln = xmlStrcat(fulln, attr->name);
+                fulln = xmlStrcat(fulln, attr->name);
             } else {
-        	fulln = xmlStrdup(attr->name);
+            fulln = xmlStrdup(attr->name);
             }
                     if (fulln == NULL) {
                         xmlSAX2ErrMemory(ctxt);
@@ -1376,20 +1376,20 @@ process_external_subset:
              */
             att = NULL;
             if (atts != NULL) {
-        	i = 0;
-        	att = atts[i];
-        	while (att != NULL) {
-        	    if (xmlStrEqual(att, fulln))
-        		break;
-        	    i += 2;
-        	    att = atts[i];
-        	}
+            i = 0;
+            att = atts[i];
+            while (att != NULL) {
+                if (xmlStrEqual(att, fulln))
+                break;
+                i += 2;
+                att = atts[i];
+            }
             }
             if (att == NULL) {
                 xmlErrValid(ctxt, XML_DTD_STANDALONE_DEFAULTED,
       "standalone: attribute %s on %s defaulted from external subset\n",
-        		    fulln,
-        		    attr->elem);
+                    fulln,
+                    attr->elem);
             }
                     xmlFree(fulln);
         }
@@ -1424,39 +1424,39 @@ process_external_subset:
             xmlAttributePtr tst;
 
             tst = xmlGetDtdQAttrDesc(ctxt->myDoc->intSubset,
-        			     attr->elem, attr->name,
-        			     attr->prefix);
+                         attr->elem, attr->name,
+                         attr->prefix);
             if ((tst == attr) || (tst == NULL)) {
                 xmlChar fn[50];
-        	xmlChar *fulln;
+            xmlChar *fulln;
 
                         fulln = xmlBuildQName(attr->name, attr->prefix, fn, 50);
-        	if (fulln == NULL) {
-        	    xmlSAX2ErrMemory(ctxt);
-        	    return;
-        	}
+            if (fulln == NULL) {
+                xmlSAX2ErrMemory(ctxt);
+                return;
+            }
 
-        	/*
-        	 * Check that the attribute is not declared in the
-        	 * serialization
-        	 */
-        	att = NULL;
-        	if (atts != NULL) {
-        	    i = 0;
-        	    att = atts[i];
-        	    while (att != NULL) {
-        		if (xmlStrEqual(att, fulln))
-        		    break;
-        		i += 2;
-        		att = atts[i];
-        	    }
-        	}
-        	if (att == NULL) {
-        	    xmlSAX2AttributeInternal(ctxt, fulln,
-        				 attr->defaultValue, prefix);
-        	}
-        	if ((fulln != fn) && (fulln != attr->name))
-        	    xmlFree(fulln);
+            /*
+             * Check that the attribute is not declared in the
+             * serialization
+             */
+            att = NULL;
+            if (atts != NULL) {
+                i = 0;
+                att = atts[i];
+                while (att != NULL) {
+                if (xmlStrEqual(att, fulln))
+                    break;
+                i += 2;
+                att = atts[i];
+                }
+            }
+            if (att == NULL) {
+                xmlSAX2AttributeInternal(ctxt, fulln,
+                         attr->defaultValue, prefix);
+            }
+            if ((fulln != fn) && (fulln != attr->name))
+                xmlFree(fulln);
             }
         }
         }
@@ -1687,7 +1687,7 @@ xmlSAX2EndElement(void *ctx, const xmlChar *name ATTRIBUTE_UNUSED)
     if (ctxt->validate && ctxt->wellFormed &&
         ctxt->myDoc && ctxt->myDoc->intSubset)
         ctxt->valid &= xmlValidateOneElement(&ctxt->vctxt, ctxt->myDoc,
-        			     ctxt->node);
+                         ctxt->node);
 #endif /* LIBXML_VALID_ENABLED */
 
 
@@ -1943,7 +1943,7 @@ xmlSAX2AttributeNs(xmlParserCtxtPtr ctxt,
         if (dup == NULL) {
             if (*valueend == 0) {
             ctxt->valid &= xmlValidateOneAttribute(&ctxt->vctxt,
-        		    ctxt->myDoc, ctxt->node, ret, value);
+                    ctxt->myDoc, ctxt->node, ret, value);
         } else {
             /*
              * That should already be normalized.
@@ -1955,7 +1955,7 @@ xmlSAX2AttributeNs(xmlParserCtxtPtr ctxt,
                         xmlSAX2ErrMemory(ctxt);
 
             ctxt->valid &= xmlValidateOneAttribute(&ctxt->vctxt,
-        		    ctxt->myDoc, ctxt->node, ret, dup);
+                    ctxt->myDoc, ctxt->node, ret, dup);
         }
         } else {
             /*
@@ -1974,24 +1974,24 @@ xmlSAX2AttributeNs(xmlParserCtxtPtr ctxt,
                     if (fullname == NULL) {
                         xmlSAX2ErrMemory(ctxt);
                     } else {
-        	ctxt->vctxt.valid = 1;
+            ctxt->vctxt.valid = 1;
                 nvalnorm = xmlValidCtxtNormalizeAttributeValue(
-        	                 &ctxt->vctxt, ctxt->myDoc,
-        			 ctxt->node, fullname, dup);
-        	if (ctxt->vctxt.valid != 1)
-        	    ctxt->valid = 0;
+                             &ctxt->vctxt, ctxt->myDoc,
+                     ctxt->node, fullname, dup);
+            if (ctxt->vctxt.valid != 1)
+                ctxt->valid = 0;
 
-        	if ((fullname != fn) && (fullname != localname))
-        	    xmlFree(fullname);
-        	if (nvalnorm != NULL) {
-        	    xmlFree(dup);
-        	    dup = nvalnorm;
-        	}
+            if ((fullname != fn) && (fullname != localname))
+                xmlFree(fullname);
+            if (nvalnorm != NULL) {
+                xmlFree(dup);
+                dup = nvalnorm;
+            }
             }
         }
 
         ctxt->valid &= xmlValidateOneAttribute(&ctxt->vctxt,
-        	        ctxt->myDoc, ctxt->node, ret, dup);
+                    ctxt->myDoc, ctxt->node, ret, dup);
         }
     } else {
         /*

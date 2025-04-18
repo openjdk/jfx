@@ -51,54 +51,54 @@ struct _xmlURI {
  *                               xmlNodePtr cur);
  */
 XMLPUBFUN xmlURIPtr
-        xmlCreateURI		(void);
+        xmlCreateURI        (void);
 XMLPUBFUN int
-        xmlBuildURISafe		(const xmlChar *URI,
-        			 const xmlChar *base,
-        			 xmlChar **out);
+        xmlBuildURISafe        (const xmlChar *URI,
+                     const xmlChar *base,
+                     xmlChar **out);
 XMLPUBFUN xmlChar *
-        xmlBuildURI		(const xmlChar *URI,
-        			 const xmlChar *base);
+        xmlBuildURI        (const xmlChar *URI,
+                     const xmlChar *base);
 XMLPUBFUN int
-        xmlBuildRelativeURISafe	(const xmlChar *URI,
-        			 const xmlChar *base,
-        			 xmlChar **out);
+        xmlBuildRelativeURISafe    (const xmlChar *URI,
+                     const xmlChar *base,
+                     xmlChar **out);
 XMLPUBFUN xmlChar *
-        xmlBuildRelativeURI	(const xmlChar *URI,
-        			 const xmlChar *base);
+        xmlBuildRelativeURI    (const xmlChar *URI,
+                     const xmlChar *base);
 XMLPUBFUN xmlURIPtr
-        xmlParseURI		(const char *str);
+        xmlParseURI        (const char *str);
 XMLPUBFUN int
-        xmlParseURISafe		(const char *str,
-        			 xmlURIPtr *uri);
+        xmlParseURISafe        (const char *str,
+                     xmlURIPtr *uri);
 XMLPUBFUN xmlURIPtr
-        xmlParseURIRaw		(const char *str,
-        			 int raw);
+        xmlParseURIRaw        (const char *str,
+                     int raw);
 XMLPUBFUN int
-        xmlParseURIReference	(xmlURIPtr uri,
-        			 const char *str);
+        xmlParseURIReference    (xmlURIPtr uri,
+                     const char *str);
 XMLPUBFUN xmlChar *
-        xmlSaveUri		(xmlURIPtr uri);
+        xmlSaveUri        (xmlURIPtr uri);
 XMLPUBFUN void
-        xmlPrintURI		(FILE *stream,
-        			 xmlURIPtr uri);
+        xmlPrintURI        (FILE *stream,
+                     xmlURIPtr uri);
 XMLPUBFUN xmlChar *
         xmlURIEscapeStr         (const xmlChar *str,
-        			 const xmlChar *list);
+                     const xmlChar *list);
 XMLPUBFUN char *
-        xmlURIUnescapeString	(const char *str,
-        			 int len,
-        			 char *target);
+        xmlURIUnescapeString    (const char *str,
+                     int len,
+                     char *target);
 XMLPUBFUN int
-        xmlNormalizeURIPath	(char *path);
+        xmlNormalizeURIPath    (char *path);
 XMLPUBFUN xmlChar *
-        xmlURIEscape		(const xmlChar *str);
+        xmlURIEscape        (const xmlChar *str);
 XMLPUBFUN void
-        xmlFreeURI		(xmlURIPtr uri);
+        xmlFreeURI        (xmlURIPtr uri);
 XMLPUBFUN xmlChar*
-        xmlCanonicPath		(const xmlChar *path);
+        xmlCanonicPath        (const xmlChar *path);
 XMLPUBFUN xmlChar*
-        xmlPathToURI		(const xmlChar *path);
+        xmlPathToURI        (const xmlChar *path);
 
 #ifdef __cplusplus
 }

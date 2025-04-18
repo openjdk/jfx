@@ -104,26 +104,26 @@ typedef char *(*xmlStrdupFunc)(const char *str);
  */
 XMLPUBFUN int
     xmlMemSetup    (xmlFreeFunc freeFunc,
-        	 xmlMallocFunc mallocFunc,
-        	 xmlReallocFunc reallocFunc,
-        	 xmlStrdupFunc strdupFunc);
+             xmlMallocFunc mallocFunc,
+             xmlReallocFunc reallocFunc,
+             xmlStrdupFunc strdupFunc);
 XMLPUBFUN int
     xmlMemGet    (xmlFreeFunc *freeFunc,
-        	 xmlMallocFunc *mallocFunc,
-        	 xmlReallocFunc *reallocFunc,
-        	 xmlStrdupFunc *strdupFunc);
+             xmlMallocFunc *mallocFunc,
+             xmlReallocFunc *reallocFunc,
+             xmlStrdupFunc *strdupFunc);
 XMLPUBFUN int
     xmlGcMemSetup    (xmlFreeFunc freeFunc,
-        	 xmlMallocFunc mallocFunc,
-        	 xmlMallocFunc mallocAtomicFunc,
-        	 xmlReallocFunc reallocFunc,
-        	 xmlStrdupFunc strdupFunc);
+             xmlMallocFunc mallocFunc,
+             xmlMallocFunc mallocAtomicFunc,
+             xmlReallocFunc reallocFunc,
+             xmlStrdupFunc strdupFunc);
 XMLPUBFUN int
     xmlGcMemGet    (xmlFreeFunc *freeFunc,
-        	 xmlMallocFunc *mallocFunc,
-        	 xmlMallocFunc *mallocAtomicFunc,
-        	 xmlReallocFunc *reallocFunc,
-        	 xmlStrdupFunc *strdupFunc);
+             xmlMallocFunc *mallocFunc,
+             xmlMallocFunc *mallocAtomicFunc,
+             xmlReallocFunc *reallocFunc,
+             xmlStrdupFunc *strdupFunc);
 
 /*
  * Initialization of the memory layer.

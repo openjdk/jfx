@@ -45,7 +45,7 @@
 #define IS_BLANK(c) (((c) == 0x20) || ((c) == 0x09) || ((c) == 0xA) ||    \
                      ((c) == 0x0D))
 
-#define IS_BLANK_NODE(n)        				\
+#define IS_BLANK_NODE(n)                        \
     (((n)->type == XML_TEXT_NODE) && (xsltIsBlank((n)->content)))
 
 #define ATTRSET_UNRESOLVED 0
@@ -96,9 +96,9 @@ xsltResolveAttrSet(xsltAttrSetPtr set, xsltStylesheetPtr topStyle,
                    const xmlChar *ns, int depth);
 
 /************************************************************************
- *        							*
- *        	XSLT Attribute handling				*
- *        							*
+ *                                    *
+ *            XSLT Attribute handling                *
+ *                                    *
  ************************************************************************/
 
 /**
@@ -351,9 +351,9 @@ xsltMergeAttrSets(xsltAttrSetPtr set, xsltAttrSetPtr other) {
 }
 
 /************************************************************************
- *        							*
- *        	Module interfaces				*
- *        							*
+ *                                    *
+ *            Module interfaces                *
+ *                                    *
  ************************************************************************/
 
 /**
@@ -444,11 +444,11 @@ xsltParseStylesheetAttributeSet(xsltStylesheetPtr style, xmlNodePtr cur) {
     {
         if (child->type == XML_ELEMENT_NODE)
         xsltTransformError(NULL, style, child,
-        	"xsl:attribute-set : unexpected child %s\n",
+            "xsl:attribute-set : unexpected child %s\n",
                          child->name);
         else
         xsltTransformError(NULL, style, child,
-        	"xsl:attribute-set : child of unexpected type\n");
+            "xsl:attribute-set : child of unexpected type\n");
     } else if (!IS_XSLT_NAME(child, "attribute")) {
         xsltTransformError(NULL, style, child,
         "xsl:attribute-set : unexpected child xsl:%s\n",
@@ -1197,7 +1197,7 @@ xsltApplyAttributeSet(xsltTransformContextPtr ctxt, xmlNodePtr node,
                 if ((set != NULL) && (set->attrs != NULL) &&
                     (set->attrs->attr != NULL))
                     xslHandleDebugger(set->attrs->attr->parent, node, NULL,
-        	ctxt);
+            ctxt);
             }
 #endif
         /*

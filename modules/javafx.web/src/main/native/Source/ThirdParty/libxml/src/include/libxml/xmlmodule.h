@@ -38,11 +38,11 @@ typedef enum {
 } xmlModuleOption;
 
 XMLPUBFUN xmlModulePtr xmlModuleOpen    (const char *filename,
-        				 int options);
+                         int options);
 
 XMLPUBFUN int xmlModuleSymbol        (xmlModulePtr module,
-        				 const char* name,
-        				 void **result);
+                         const char* name,
+                         void **result);
 
 XMLPUBFUN int xmlModuleClose        (xmlModulePtr module);
 

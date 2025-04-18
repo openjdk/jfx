@@ -34,9 +34,9 @@
 #define XINCLUDE_MAX_DEPTH 40
 
 /************************************************************************
- *        							*
- *        	XInclude context handling			*
- *        							*
+ *                                    *
+ *            XInclude context handling            *
+ *                                    *
  ************************************************************************/
 
 /*
@@ -98,7 +98,7 @@ struct _xmlXIncludeCtxt {
 #ifdef FUZZING_BUILD_MODE_UNSAFE_FOR_PRODUCTION
     unsigned long    incTotal; /* total number of processed inclusions */
 #endif
-    int        	depth; /* recursion depth */
+    int            depth; /* recursion depth */
     int             isStream; /* streaming mode */
 
     xmlXPathContextPtr xpctxt;
@@ -118,9 +118,9 @@ xmlXIncludeDoProcess(xmlXIncludeCtxtPtr ctxt, xmlNodePtr tree);
 
 
 /************************************************************************
- *        							*
- *        	XInclude error handler				*
- *        							*
+ *                                    *
+ *            XInclude error handler                *
+ *                                    *
  ************************************************************************/
 
 /**
@@ -607,9 +607,9 @@ xmlXIncludeRecurseDoc(xmlXIncludeCtxtPtr ctxt, xmlDocPtr doc) {
 }
 
 /************************************************************************
- *        							*
- *        	Node copy with specific semantic		*
- *        							*
+ *                                    *
+ *            Node copy with specific semantic        *
+ *                                    *
  ************************************************************************/
 
 static void
@@ -890,10 +890,10 @@ xmlXIncludeCopyRange(xmlXIncludeCtxtPtr ctxt, xmlXPathObjectPtr range) {
         } else {
             len = index2;
             if ((cur == start) && (index1 > 1)) {
-        	content += (index1 - 1);
-        	len -= (index1 - 1);
+            content += (index1 - 1);
+            len -= (index1 - 1);
             } else {
-        	len = index2;
+            len = index2;
             }
             tmp = xmlNewDocTextLen(ctxt->doc, content, len);
         }
@@ -917,10 +917,10 @@ xmlXIncludeCopyRange(xmlXIncludeCtxtPtr ctxt, xmlXPathObjectPtr range) {
             last = tmp;
         } else {
             if (level == lastLevel)
-        	last = xmlAddNextSibling(last, tmp);
+            last = xmlAddNextSibling(last, tmp);
             else {
-        	last = xmlAddChild(last, tmp);
-        	lastLevel = level;
+            last = xmlAddChild(last, tmp);
+            lastLevel = level;
             }
         }
 
@@ -934,11 +934,11 @@ xmlXIncludeCopyRange(xmlXIncludeCtxtPtr ctxt, xmlXPathObjectPtr range) {
         }  else {
             cur = cur->children;
         }
-        level++;	/* increment level to show change */
+        level++;    /* increment level to show change */
         /*
          * Now gather the remaining nodes from cur to end
          */
-        continue;	/* while */
+        continue;    /* while */
         }
     } else if (cur == start) {    /* Not at the end, are we at start? */
         if ((cur->type == XML_TEXT_NODE) ||
@@ -949,14 +949,14 @@ xmlXIncludeCopyRange(xmlXIncludeCtxtPtr ctxt, xmlXPathObjectPtr range) {
             tmp = xmlNewDocTextLen(ctxt->doc, NULL, 0);
         } else {
             if (index1 > 1) {
-        	content += (index1 - 1);
-        	index1 = 0;
+            content += (index1 - 1);
+            index1 = 0;
             }
             tmp = xmlNewDocText(ctxt->doc, content);
         }
         last = list = tmp;
         listParent = cur->parent;
-        } else {    	/* Not text node */
+        } else {        /* Not text node */
             /*
          * start of the range - need to take care of
          * properties and namespaces
@@ -964,7 +964,7 @@ xmlXIncludeCopyRange(xmlXIncludeCtxtPtr ctxt, xmlXPathObjectPtr range) {
         tmp = xmlDocCopyNode(cur, ctxt->doc, 2);
         list = last = tmp;
         listParent = cur->parent;
-        if (index1 > 1) {	/* Do we need to position? */
+        if (index1 > 1) {    /* Do we need to position? */
             cur = xmlXIncludeGetNthChild(cur, index1 - 1);
             level = lastLevel = 1;
             index1 = 0;
@@ -1069,13 +1069,13 @@ xmlXIncludeCopyXPointer(xmlXIncludeCtxtPtr ctxt, xmlXPathObjectPtr obj,
             case XML_PI_NODE:
             case XML_COMMENT_NODE:
                         node = set->nodeTab[i];
-        	break;
+            break;
                     default:
                         xmlXIncludeErr(ctxt, set->nodeTab[i],
                                        XML_XINCLUDE_XPTR_RESULT,
                                        "invalid node type in XPtr result\n",
                                        NULL);
-        	continue; /* for */
+            continue; /* for */
         }
                 /*
                  * OPTIMIZE TODO: External documents should already be
@@ -1108,15 +1108,15 @@ xmlXIncludeCopyXPointer(xmlXIncludeCtxtPtr ctxt, xmlXPathObjectPtr obj,
         for (i = 0;i < set->locNr;i++) {
         if (last == NULL)
             list = last = xmlXIncludeCopyXPointer(ctxt,
-        	                                  set->locTab[i],
+                                              set->locTab[i],
                                                           targetBase);
         else
             xmlAddNextSibling(last,
-        	    xmlXIncludeCopyXPointer(ctxt, set->locTab[i],
+                xmlXIncludeCopyXPointer(ctxt, set->locTab[i],
                                                     targetBase));
         if (last != NULL) {
             while (last->next != NULL)
-        	last = last->next;
+            last = last->next;
         }
         }
         break;
@@ -1135,9 +1135,9 @@ xmlXIncludeCopyXPointer(xmlXIncludeCtxtPtr ctxt, xmlXPathObjectPtr obj,
 #endif
 
 /************************************************************************
- *        							*
- *        	XInclude I/O handling				*
- *        							*
+ *                                    *
+ *            XInclude I/O handling                *
+ *                                    *
  ************************************************************************/
 
 typedef struct _xmlXIncludeMergeData xmlXIncludeMergeData;
@@ -1285,7 +1285,7 @@ xmlXIncludeMergeEntities(xmlXIncludeCtxtPtr ctxt, xmlDocPtr doc,
     if ((!xmlStrEqual(target->ExternalID, source->ExternalID)) &&
         (!xmlStrEqual(target->SystemID, source->SystemID))) {
         xmlHashScan((xmlHashTablePtr) source->entities,
-        	xmlXIncludeMergeEntity, &data);
+            xmlXIncludeMergeEntity, &data);
     }
     }
     return(0);
@@ -1456,7 +1456,7 @@ loaded:
 
         if (ctxt->isStream && doc == ctxt->doc) {
         xmlXIncludeErr(ctxt, ref->elem, XML_XINCLUDE_XPTR_FAILED,
-        	   "XPointer expressions not allowed in streaming"
+               "XPointer expressions not allowed in streaming"
                            " mode\n", NULL);
             goto error;
         }
@@ -1499,8 +1499,8 @@ loaded:
         case XPATH_USERS:
         case XPATH_XSLT_TREE:
         xmlXIncludeErr(ctxt, ref->elem, XML_XINCLUDE_XPTR_RESULT,
-        	       "XPointer is not a range: #%s\n",
-        	       fragment);
+                   "XPointer is not a range: #%s\n",
+                   fragment);
                 xmlXPathFreeObject(xptr);
                 goto error;
         case XPATH_NODESET:
@@ -1527,22 +1527,22 @@ loaded:
             case XML_COMMENT_NODE:
             case XML_DOCUMENT_NODE:
             case XML_HTML_DOCUMENT_NODE:
-        	continue;
+            continue;
 
             case XML_ATTRIBUTE_NODE:
-        	xmlXIncludeErr(ctxt, ref->elem,
-        	               XML_XINCLUDE_XPTR_RESULT,
-        		       "XPointer selects an attribute: #%s\n",
-        		       fragment);
-        	set->nodeTab[i] = NULL;
-        	continue;
+            xmlXIncludeErr(ctxt, ref->elem,
+                           XML_XINCLUDE_XPTR_RESULT,
+                       "XPointer selects an attribute: #%s\n",
+                       fragment);
+            set->nodeTab[i] = NULL;
+            continue;
             case XML_NAMESPACE_DECL:
-        	xmlXIncludeErr(ctxt, ref->elem,
-        	               XML_XINCLUDE_XPTR_RESULT,
-        		       "XPointer selects a namespace: #%s\n",
-        		       fragment);
-        	set->nodeTab[i] = NULL;
-        	continue;
+            xmlXIncludeErr(ctxt, ref->elem,
+                           XML_XINCLUDE_XPTR_RESULT,
+                       "XPointer selects a namespace: #%s\n",
+                       fragment);
+            set->nodeTab[i] = NULL;
+            continue;
             case XML_DOCUMENT_TYPE_NODE:
             case XML_DOCUMENT_FRAG_NODE:
             case XML_NOTATION_NODE:
@@ -1552,13 +1552,13 @@ loaded:
             case XML_ENTITY_DECL:
             case XML_XINCLUDE_START:
             case XML_XINCLUDE_END:
-        	xmlXIncludeErr(ctxt, ref->elem,
-        	               XML_XINCLUDE_XPTR_RESULT,
-        		   "XPointer selects unexpected nodes: #%s\n",
-        		       fragment);
-        	set->nodeTab[i] = NULL;
-        	set->nodeTab[i] = NULL;
-        	continue; /* for */
+            xmlXIncludeErr(ctxt, ref->elem,
+                           XML_XINCLUDE_XPTR_RESULT,
+                   "XPointer selects unexpected nodes: #%s\n",
+                       fragment);
+            set->nodeTab[i] = NULL;
+            set->nodeTab[i] = NULL;
+            continue; /* for */
         }
         }
     }
@@ -1800,9 +1800,9 @@ xmlXIncludeLoadFallback(xmlXIncludeCtxtPtr ctxt, xmlNodePtr fallback,
 }
 
 /************************************************************************
- *        							*
- *        	XInclude Processing				*
- *        							*
+ *                                    *
+ *            XInclude Processing                *
+ *                                    *
  ************************************************************************/
 
 /**
@@ -1970,7 +1970,7 @@ xmlXIncludeIncludeNode(xmlXIncludeCtxtPtr ctxt, xmlXIncludeRefPtr ref) {
     if (nb_elem > 1) {
         xmlXIncludeErr(ctxt, ref->elem, XML_XINCLUDE_MULTIPLE_ROOT,
                "XInclude error: would result in multiple root nodes\n",
-        	   NULL);
+               NULL);
             xmlFreeNodeList(list);
         return(-1);
     }
@@ -2082,21 +2082,21 @@ xmlXIncludeTestNode(xmlXIncludeCtxtPtr ctxt, xmlNodePtr node) {
             ((xmlStrEqual(child->ns->href, XINCLUDE_NS)) ||
              (xmlStrEqual(child->ns->href, XINCLUDE_OLD_NS)))) {
             if (xmlStrEqual(child->name, XINCLUDE_NODE)) {
-        	xmlXIncludeErr(ctxt, node,
-        	               XML_XINCLUDE_INCLUDE_IN_INCLUDE,
-        		       "%s has an 'include' child\n",
-        		       XINCLUDE_NODE);
-        	return(0);
+            xmlXIncludeErr(ctxt, node,
+                           XML_XINCLUDE_INCLUDE_IN_INCLUDE,
+                       "%s has an 'include' child\n",
+                       XINCLUDE_NODE);
+            return(0);
             }
             if (xmlStrEqual(child->name, XINCLUDE_FALLBACK)) {
-        	nb_fallback++;
+            nb_fallback++;
             }
         }
         child = child->next;
         }
         if (nb_fallback > 1) {
         xmlXIncludeErr(ctxt, node, XML_XINCLUDE_FALLBACKS_IN_INCLUDE,
-        	       "%s has multiple fallback children\n",
+                   "%s has multiple fallback children\n",
                        XINCLUDE_NODE);
         return(0);
         }
@@ -2111,8 +2111,8 @@ xmlXIncludeTestNode(xmlXIncludeCtxtPtr ctxt, xmlNodePtr node) {
         (!xmlStrEqual(node->parent->name, XINCLUDE_NODE))) {
         xmlXIncludeErr(ctxt, node,
                        XML_XINCLUDE_FALLBACK_NOT_IN_INCLUDE,
-        	       "%s is not the child of an 'include'\n",
-        	       XINCLUDE_FALLBACK);
+                   "%s is not the child of an 'include'\n",
+                   XINCLUDE_FALLBACK);
         }
     }
     }

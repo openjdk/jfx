@@ -30,9 +30,9 @@
 
 
 /************************************************************************
- *        							*
- *        	Module interfaces				*
- *        							*
+ *                                    *
+ *            Module interfaces                *
+ *                                    *
  ************************************************************************/
 /**
  * xsltFixImportedCompSteps:
@@ -44,7 +44,7 @@
  *
  */
 static void xsltFixImportedCompSteps(xsltStylesheetPtr master,
-        	xsltStylesheetPtr style) {
+            xsltStylesheetPtr style) {
     xsltStylesheetPtr res;
     xmlHashScan(style->templatesHash, xsltNormalizeCompSteps, master);
     master->extrasNr += style->extrasNr;

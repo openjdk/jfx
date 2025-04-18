@@ -54,7 +54,7 @@ typedef xsltFormat *xsltFormatPtr;
 struct _xsltFormat {
     xmlChar        *start;
     xsltFormatToken     tokens[MAX_TOKENS];
-    int        	 nTokens;
+    int             nTokens;
     xmlChar        *end;
 };
 
@@ -128,12 +128,12 @@ xsltIsLetterDigit(int val) {
 }
 
 /************************************************************************
- *        							*
- *        	Utility functions				*
- *        							*
+ *                                    *
+ *            Utility functions                *
+ *                                    *
  ************************************************************************/
 
-#define IS_SPECIAL(self,letter)        	\
+#define IS_SPECIAL(self,letter)            \
     ((xsltUTF8Charcmp((letter), (self)->zeroDigit) == 0)        ||    \
      (xsltUTF8Charcmp((letter), (self)->digit) == 0)        ||    \
      (xsltUTF8Charcmp((letter), (self)->decimalPoint) == 0)  ||    \
@@ -165,12 +165,12 @@ xsltIsDigitZero(int ch)
 
 static void
 xsltNumberFormatDecimal(xmlBufferPtr buffer,
-        	double number,
-        	int digit_zero,
-        	int width,
-        	int digitsPerGroup,
-        	int groupingCharacter,
-        	int groupingCharacterLen)
+            double number,
+            int digit_zero,
+            int width,
+            int digitsPerGroup,
+            int groupingCharacter,
+            int groupingCharacterLen)
 {
     /*
      * This used to be
@@ -198,7 +198,7 @@ xsltNumberFormatDecimal(xmlBufferPtr buffer,
         (digitsPerGroup > 0) &&
         ((i % digitsPerGroup) == 0)) {
         if (pointer - groupingCharacterLen < temp_string) {
-            i = -1;    	/* flag error */
+            i = -1;        /* flag error */
         break;
         }
         pointer -= groupingCharacterLen;
@@ -206,7 +206,7 @@ xsltNumberFormatDecimal(xmlBufferPtr buffer,
     }
 
     val = digit_zero + (int)fmod(number, 10.0);
-    if (val < 0x80) {    		/* shortcut if ASCII */
+    if (val < 0x80) {            /* shortcut if ASCII */
         if (pointer <= temp_string) {    /* Check enough room */
             i = -1;
         break;
@@ -361,7 +361,7 @@ xsltNumberFormatRoman(xsltNumberDataPtr data,
 
 static void
 xsltNumberFormatTokenize(const xmlChar *format,
-        	 xsltFormatPtr tokens)
+             xsltFormatPtr tokens)
 {
     int ix = 0;
     int j;
@@ -377,7 +377,7 @@ xsltNumberFormatTokenize(const xmlChar *format,
      * There is always such a token in the list, even if NULL
      */
     while (!xsltIsLetterDigit(val = xsltGetUTF8CharZ(format+ix, &len))) {
-    if (format[ix] == 0)    	/* if end of format string */
+    if (format[ix] == 0)        /* if end of format string */
         break; /* while */
     ix += len;
     }
@@ -464,10 +464,10 @@ xsltNumberFormatTokenize(const xmlChar *format,
 
 static void
 xsltNumberFormatInsertNumbers(xsltNumberDataPtr data,
-        	      double *numbers,
-        	      int numbers_max,
-        	      xsltFormatPtr tokens,
-        	      xmlBufferPtr buffer)
+                  double *numbers,
+                  int numbers_max,
+                  xsltFormatPtr tokens,
+                  xmlBufferPtr buffer)
 {
     int i = 0;
     double number;
@@ -555,13 +555,13 @@ xsltNumberFormatInsertNumbers(xsltNumberDataPtr data,
             break;
         default:
             if (IS_DIGIT_ZERO(token->token)) {
-        	xsltNumberFormatDecimal(buffer,
-        				number,
-        				token->token,
-        				token->width,
-        				data->digitsPerGroup,
-        				data->groupingCharacter,
-        				data->groupingCharacterLen);
+            xsltNumberFormatDecimal(buffer,
+                        number,
+                        token->token,
+                        token->width,
+                        data->digitsPerGroup,
+                        data->groupingCharacter,
+                        data->groupingCharacterLen);
             }
             break;
         }
@@ -617,10 +617,10 @@ xsltTestCompMatchCount(xsltTransformContextPtr context,
 
 static int
 xsltNumberFormatGetAnyLevel(xsltTransformContextPtr context,
-        	    xmlNodePtr node,
-        	    xsltCompMatchPtr countPat,
-        	    xsltCompMatchPtr fromPat,
-        	    double *array)
+                xmlNodePtr node,
+                xsltCompMatchPtr countPat,
+                xsltCompMatchPtr fromPat,
+                double *array)
 {
     int amount = 0;
     int cnt = 0;
@@ -671,11 +671,11 @@ xsltNumberFormatGetAnyLevel(xsltTransformContextPtr context,
 
 static int
 xsltNumberFormatGetMultipleLevel(xsltTransformContextPtr context,
-        		 xmlNodePtr node,
-        		 xsltCompMatchPtr countPat,
-        		 xsltCompMatchPtr fromPat,
-        		 double *array,
-        		 int max)
+                 xmlNodePtr node,
+                 xsltCompMatchPtr countPat,
+                 xsltCompMatchPtr fromPat,
+                 double *array,
+                 int max)
 {
     int amount = 0;
     int cnt;
@@ -726,9 +726,9 @@ xsltNumberFormatGetMultipleLevel(xsltTransformContextPtr context,
 
 static int
 xsltNumberFormatGetValue(xmlXPathContextPtr context,
-        	 xmlNodePtr node,
-        	 const xmlChar *value,
-        	 double *number)
+             xmlNodePtr node,
+             const xmlChar *value,
+             double *number)
 {
     int amount = 0;
     xmlBufferPtr pattern;
@@ -744,7 +744,7 @@ xsltNumberFormatGetValue(xmlXPathContextPtr context,
     xmlBufferCCat(pattern, ")");
     context->node = node;
     obj = xmlXPathEvalExpression(xmlBufferContent(pattern),
-        		     context);
+                     context);
     if (obj != NULL) {
         *number = obj->floatval;
         amount++;
@@ -785,8 +785,8 @@ xsltNumberFormat(xsltTransformContextPtr ctxt,
         if (data->has_format == 0)
             return;
     format = xsltEvalAttrValueTemplate(ctxt, data->node,
-        			     (const xmlChar *) "format",
-        			     XSLT_NAMESPACE);
+                         (const xmlChar *) "format",
+                         XSLT_NAMESPACE);
         if (format == NULL)
             return;
         xsltNumberFormatTokenize(format, &tokens);
@@ -802,61 +802,61 @@ xsltNumberFormat(xsltTransformContextPtr ctxt,
      */
     if (data->value) {
     amount = xsltNumberFormatGetValue(ctxt->xpathCtxt,
-        			  node,
-        			  data->value,
-        			  &number);
+                      node,
+                      data->value,
+                      &number);
     if (amount == 1) {
         xsltNumberFormatInsertNumbers(data,
-        			  &number,
-        			  1,
-        			  &tokens,
-        			  output);
+                      &number,
+                      1,
+                      &tokens,
+                      output);
     }
 
     } else if (data->level) {
 
     if (xmlStrEqual(data->level, (const xmlChar *) "single")) {
         amount = xsltNumberFormatGetMultipleLevel(ctxt,
-        				      node,
-        				      data->countPat,
-        				      data->fromPat,
-        				      &number,
-        				      1);
+                              node,
+                              data->countPat,
+                              data->fromPat,
+                              &number,
+                              1);
         if (amount == 1) {
         xsltNumberFormatInsertNumbers(data,
-        			      &number,
-        			      1,
-        			      &tokens,
-        			      output);
+                          &number,
+                          1,
+                          &tokens,
+                          output);
         }
     } else if (xmlStrEqual(data->level, (const xmlChar *) "multiple")) {
         double numarray[1024];
         int max = sizeof(numarray)/sizeof(numarray[0]);
         amount = xsltNumberFormatGetMultipleLevel(ctxt,
-        				      node,
-        				      data->countPat,
-        				      data->fromPat,
-        				      numarray,
-        				      max);
+                              node,
+                              data->countPat,
+                              data->fromPat,
+                              numarray,
+                              max);
         if (amount > 0) {
         xsltNumberFormatInsertNumbers(data,
-        			      numarray,
-        			      amount,
-        			      &tokens,
-        			      output);
+                          numarray,
+                          amount,
+                          &tokens,
+                          output);
         }
     } else if (xmlStrEqual(data->level, (const xmlChar *) "any")) {
         amount = xsltNumberFormatGetAnyLevel(ctxt,
-        				 node,
-        				 data->countPat,
-        				 data->fromPat,
-        				 &number);
+                         node,
+                         data->countPat,
+                         data->fromPat,
+                         &number);
         if (amount > 0) {
         xsltNumberFormatInsertNumbers(data,
-        			      &number,
-        			      1,
-        			      &tokens,
-        			      output);
+                          &number,
+                          1,
+                          &tokens,
+                          output);
         }
     }
 
@@ -980,9 +980,9 @@ xsltFormatNumberPreSuffix(xsltDecimalFormatPtr self, xmlChar **format, xsltForma
  */
 xmlXPathError
 xsltFormatNumberConversion(xsltDecimalFormatPtr self,
-        	   xmlChar *format,
-        	   double number,
-        	   xmlChar **result)
+               xmlChar *format,
+               double number,
+               xmlChar **result)
 {
     xmlXPathError status = XPATH_EXPRESSION_OK;
     xmlBufferPtr buffer;
@@ -1204,7 +1204,7 @@ xsltFormatNumberConversion(xsltDecimalFormatPtr self,
         /* First do the -ve prefix */
         nprefix = the_format;
         nprefix_length = xsltFormatNumberPreSuffix(self,
-        			&the_format, &format_info);
+                    &the_format, &format_info);
         if (nprefix_length<0) {
         found_error = 1;
         goto OUTPUT_NUMBER;
@@ -1214,8 +1214,8 @@ xsltFormatNumberConversion(xsltDecimalFormatPtr self,
         if ( (xsltUTF8Charcmp(the_format, (self)->percent) == 0) ||
              (xsltUTF8Charcmp(the_format, (self)->permille)== 0) ) {
             if (format_info.is_multiplier_set) {
-        	found_error = 1;
-        	goto OUTPUT_NUMBER;
+            found_error = 1;
+            goto OUTPUT_NUMBER;
             }
             format_info.is_multiplier_set = TRUE;
             delayed_multiplier = 1;
@@ -1239,7 +1239,7 @@ xsltFormatNumberConversion(xsltDecimalFormatPtr self,
         if (*the_format != 0) {
         nsuffix = the_format;
         nsuffix_length = xsltFormatNumberPreSuffix(self,
-        			&the_format, &format_info);
+                    &the_format, &format_info);
         if (nsuffix_length < 0) {
             found_error = 1;
             goto OUTPUT_NUMBER;
@@ -1351,14 +1351,14 @@ OUTPUT_NUMBER:
     len = xmlStrlen(self->grouping);
     gchar = xsltGetUTF8Char(self->grouping, &len);
     xsltNumberFormatDecimal(buffer, floor(number), self->zeroDigit[0],
-        		format_info.integer_digits,
-        		format_info.group,
-        		gchar, len);
+                format_info.integer_digits,
+                format_info.group,
+                gchar, len);
     } else
     xsltNumberFormatDecimal(buffer, floor(number), self->zeroDigit[0],
-        		format_info.integer_digits,
-        		format_info.group,
-        		',', 1);
+                format_info.integer_digits,
+                format_info.group,
+                ',', 1);
 
     /* Special case: java treats '.#' like '.0', '.##' like '.0#', etc. */
     if ((format_info.integer_digits + format_info.integer_hash +
@@ -1377,13 +1377,13 @@ OUTPUT_NUMBER:
     if (format_info.frac_digits + format_info.frac_hash == 0) {
         if (format_info.add_decimal)
         xmlBufferAdd(buffer, self->decimalPoint,
-        	 xmlUTF8Strsize(self->decimalPoint, 1));
+             xmlUTF8Strsize(self->decimalPoint, 1));
     }
     else {
       number -= floor(number);
     if ((number != 0) || (format_info.frac_digits != 0)) {
         xmlBufferAdd(buffer, self->decimalPoint,
-        	 xmlUTF8Strsize(self->decimalPoint, 1));
+             xmlUTF8Strsize(self->decimalPoint, 1));
         number = floor(scale * number + 0.5);
         for (j = format_info.frac_hash; j > 0; j--) {
         if (fmod(number, 10.0) >= 1.0)
@@ -1391,8 +1391,8 @@ OUTPUT_NUMBER:
         number /= 10.0;
         }
         xsltNumberFormatDecimal(buffer, floor(number), self->zeroDigit[0],
-        		format_info.frac_digits + j,
-        		0, 0, 0);
+                format_info.frac_digits + j,
+                0, 0, 0);
     }
     }
     /* Put the suffix into the buffer */

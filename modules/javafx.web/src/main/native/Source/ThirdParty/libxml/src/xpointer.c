@@ -48,9 +48,9 @@
 #include "private/xpath.h"
 
 /************************************************************************
- *        							*
- *        Some factorized error routines				*
- *        							*
+ *                                    *
+ *        Some factorized error routines                *
+ *                                    *
  ************************************************************************/
 
 /**
@@ -109,9 +109,9 @@ xmlXPtrErr(xmlXPathParserContextPtr ctxt, int code,
 }
 
 /************************************************************************
- *        							*
- *        A few helper functions for child sequences		*
- *        							*
+ *                                    *
+ *        A few helper functions for child sequences        *
+ *                                    *
  ************************************************************************/
 #ifdef LIBXML_XPTR_LOCS_ENABLED
 /* xmlXPtrAdvanceNode is a private function, but used by xinclude.c */
@@ -190,9 +190,9 @@ xmlXPtrGetNthChild(xmlNodePtr cur, int no) {
 
 #ifdef LIBXML_XPTR_LOCS_ENABLED
 /************************************************************************
- *        							*
- *        Handling of XPointer specific types			*
- *        							*
+ *                                    *
+ *        Handling of XPointer specific types            *
+ *                                    *
  ************************************************************************/
 
 /**
@@ -582,7 +582,7 @@ xmlXPtrLocationSetCreate(xmlXPathObjectPtr val) {
     memset(ret, 0 , sizeof(xmlLocationSet));
     if (val != NULL) {
         ret->locTab = (xmlXPathObjectPtr *) xmlMalloc(XML_RANGESET_DEFAULT *
-        			     sizeof(xmlXPathObjectPtr));
+                         sizeof(xmlXPathObjectPtr));
     if (ret->locTab == NULL) {
         xmlXPtrErrMemory("allocating locationset");
         xmlFree(ret);
@@ -625,7 +625,7 @@ xmlXPtrLocationSetAdd(xmlLocationSetPtr cur, xmlXPathObjectPtr val) {
      */
     if (cur->locMax == 0) {
         cur->locTab = (xmlXPathObjectPtr *) xmlMalloc(XML_RANGESET_DEFAULT *
-        			     sizeof(xmlXPathObjectPtr));
+                         sizeof(xmlXPathObjectPtr));
     if (cur->locTab == NULL) {
         xmlXPtrErrMemory("adding location to set");
         return;
@@ -638,7 +638,7 @@ xmlXPtrLocationSetAdd(xmlLocationSetPtr cur, xmlXPathObjectPtr val) {
 
         cur->locMax *= 2;
     temp = (xmlXPathObjectPtr *) xmlRealloc(cur->locTab, cur->locMax *
-        		      sizeof(xmlXPathObjectPtr));
+                      sizeof(xmlXPathObjectPtr));
     if (temp == NULL) {
         xmlXPtrErrMemory("adding location to set");
         return;
@@ -831,9 +831,9 @@ xmlXPtrWrapLocationSet(xmlLocationSetPtr val) {
 #endif /* LIBXML_XPTR_LOCS_ENABLED */
 
 /************************************************************************
- *        							*
- *        	The parser					*
- *        							*
+ *                                    *
+ *            The parser                    *
+ *                                    *
  ************************************************************************/
 
 static void xmlXPtrEvalChildSeq(xmlXPathParserContextPtr ctxt, xmlChar *name);
@@ -864,7 +864,7 @@ static void xmlXPtrEvalChildSeq(xmlXPathParserContextPtr ctxt, xmlChar *name);
 #define SKIP(val) ctxt->cur += (val)
 #define NXT(val) ctxt->cur[(val)]
 
-#define SKIP_BLANKS        					\
+#define SKIP_BLANKS                            \
     while (IS_BLANK_CH(*(ctxt->cur))) NEXT
 
 #define CURRENT (*ctxt->cur)
@@ -1127,14 +1127,14 @@ xmlXPtrEvalFullXPtr(xmlXPathParserContextPtr ctxt, xmlChar *name) {
         case XPATH_LOCATIONSET: {
             xmlLocationSetPtr loc = ctxt->value->user;
             if ((loc != NULL) && (loc->locNr > 0))
-        	return;
+            return;
             break;
         }
 #endif
         case XPATH_NODESET: {
             xmlNodeSetPtr loc = ctxt->value->nodesetval;
             if ((loc != NULL) && (loc->nodeNr > 0))
-        	return;
+            return;
             break;
         }
         default:
@@ -1228,7 +1228,7 @@ xmlXPtrEvalXPointer(xmlXPathParserContextPtr ctxt) {
     if (ctxt->valueTab == NULL) {
     /* Allocate the value stack */
     ctxt->valueTab = (xmlXPathObjectPtr *)
-        	 xmlMalloc(10 * sizeof(xmlXPathObjectPtr));
+             xmlMalloc(10 * sizeof(xmlXPathObjectPtr));
     if (ctxt->valueTab == NULL) {
         xmlXPathPErrMemory(ctxt);
         return;
@@ -1263,9 +1263,9 @@ xmlXPtrEvalXPointer(xmlXPathParserContextPtr ctxt) {
 
 
 /************************************************************************
- *        							*
- *        	General routines				*
- *        							*
+ *                                    *
+ *            General routines                *
+ *                                    *
  ************************************************************************/
 
 #ifdef LIBXML_XPTR_LOCS_ENABLED
@@ -1385,8 +1385,8 @@ xmlXPtrEval(const xmlChar *str, xmlXPathContextPtr ctx) {
             xmlNodeSetPtr set;
             set = tmp->nodesetval;
             if ((set == NULL) || (set->nodeNr != 1) ||
-        	(set->nodeTab[0] != (xmlNodePtr) ctx->doc))
-        	stack++;
+            (set->nodeTab[0] != (xmlNodePtr) ctx->doc))
+            stack++;
         } else
             stack++;
         }
@@ -1454,11 +1454,11 @@ xmlXPtrBuildRangeNodeList(xmlXPathObjectPtr range) {
         } else {
             len = index2;
             if ((cur == start) && (index1 > 1)) {
-        	content += (index1 - 1);
-        	len -= (index1 - 1);
-        	index1 = 0;
+            content += (index1 - 1);
+            len -= (index1 - 1);
+            index1 = 0;
             } else {
-        	len = index2;
+            len = index2;
             }
             tmp = xmlNewTextLen(content, len);
         }
@@ -1478,9 +1478,9 @@ xmlXPtrBuildRangeNodeList(xmlXPathObjectPtr range) {
             parent = tmp;
         } else {
             if (last != NULL)
-        	parent = xmlAddNextSibling(last, tmp);
+            parent = xmlAddNextSibling(last, tmp);
             else
-        	parent = xmlAddChild(parent, tmp);
+            parent = xmlAddChild(parent, tmp);
         }
         last = NULL;
 
@@ -1509,7 +1509,7 @@ xmlXPtrBuildRangeNodeList(xmlXPathObjectPtr range) {
             tmp = xmlNewTextLen(NULL, 0);
         } else {
             if (index1 > 1) {
-        	content += (index1 - 1);
+            content += (index1 - 1);
             }
             tmp = xmlNewText(content);
         }
@@ -1614,7 +1614,7 @@ xmlXPtrBuildNodeList(xmlXPathObjectPtr obj) {
             case XML_HTML_DOCUMENT_NODE:
             case XML_XINCLUDE_START:
             case XML_XINCLUDE_END:
-        	break;
+            break;
             case XML_ATTRIBUTE_NODE:
             case XML_NAMESPACE_DECL:
             case XML_DOCUMENT_TYPE_NODE:
@@ -1624,14 +1624,14 @@ xmlXPtrBuildNodeList(xmlXPathObjectPtr obj) {
             case XML_ELEMENT_DECL:
             case XML_ATTRIBUTE_DECL:
             case XML_ENTITY_DECL:
-        	continue; /* for */
+            continue; /* for */
         }
         if (last == NULL)
             list = last = xmlCopyNode(set->nodeTab[i], 1);
         else {
             xmlAddNextSibling(last, xmlCopyNode(set->nodeTab[i], 1));
             if (last->next != NULL)
-        	last = last->next;
+            last = last->next;
         }
         }
         break;
@@ -1645,10 +1645,10 @@ xmlXPtrBuildNodeList(xmlXPathObjectPtr obj) {
             list = last = xmlXPtrBuildNodeList(set->locTab[i]);
         else
             xmlAddNextSibling(last,
-        	    xmlXPtrBuildNodeList(set->locTab[i]));
+                xmlXPtrBuildNodeList(set->locTab[i]));
         if (last != NULL) {
             while (last->next != NULL)
-        	last = last->next;
+            last = last->next;
         }
         }
         break;
@@ -1664,9 +1664,9 @@ xmlXPtrBuildNodeList(xmlXPathObjectPtr obj) {
 }
 
 /************************************************************************
- *        							*
- *        	XPointer functions				*
- *        							*
+ *                                    *
+ *            XPointer functions                *
+ *                                    *
  ************************************************************************/
 
 /**
@@ -1814,13 +1814,13 @@ xmlXPtrStartPointFunction(xmlXPathParserContextPtr ctxt, int nargs) {
         case XPATH_RANGE: {
             xmlNodePtr node = tmp->user;
             if (node != NULL) {
-        	if ((node->type == XML_ATTRIBUTE_NODE) ||
+            if ((node->type == XML_ATTRIBUTE_NODE) ||
                             (node->type == XML_NAMESPACE_DECL)) {
-        	    xmlXPathFreeObject(obj);
-        	    xmlXPtrFreeLocationSet(newset);
-        	    XP_ERROR(XPTR_SYNTAX_ERROR);
-        	}
-        	point = xmlXPtrNewPoint(node, tmp->index);
+                xmlXPathFreeObject(obj);
+                xmlXPtrFreeLocationSet(newset);
+                XP_ERROR(XPTR_SYNTAX_ERROR);
+            }
+            point = xmlXPtrNewPoint(node, tmp->index);
             }
             break;
             }
@@ -1910,16 +1910,16 @@ xmlXPtrEndPointFunction(xmlXPathParserContextPtr ctxt, int nargs) {
         case XPATH_RANGE: {
             xmlNodePtr node = tmp->user2;
             if (node != NULL) {
-        	if ((node->type == XML_ATTRIBUTE_NODE) ||
+            if ((node->type == XML_ATTRIBUTE_NODE) ||
                             (node->type == XML_NAMESPACE_DECL)) {
-        	    xmlXPathFreeObject(obj);
-        	    xmlXPtrFreeLocationSet(newset);
-        	    XP_ERROR(XPTR_SYNTAX_ERROR);
-        	}
-        	point = xmlXPtrNewPoint(node, tmp->index2);
+                xmlXPathFreeObject(obj);
+                xmlXPtrFreeLocationSet(newset);
+                XP_ERROR(XPTR_SYNTAX_ERROR);
+            }
+            point = xmlXPtrNewPoint(node, tmp->index2);
             } else if (tmp->user == NULL) {
-        	point = xmlXPtrNewPoint(node,
-        		       xmlXPtrNbLocChildren(node));
+            point = xmlXPtrNewPoint(node,
+                       xmlXPtrNbLocChildren(node));
             }
             break;
             }
@@ -1961,39 +1961,39 @@ xmlXPtrCoveringRange(xmlXPathParserContextPtr ctxt, xmlXPathObjectPtr loc) {
     switch (loc->type) {
         case XPATH_POINT:
         return(xmlXPtrNewRange(loc->user, loc->index,
-        	           loc->user, loc->index));
+                       loc->user, loc->index));
         case XPATH_RANGE:
         if (loc->user2 != NULL) {
         return(xmlXPtrNewRange(loc->user, loc->index,
-        	              loc->user2, loc->index2));
+                          loc->user2, loc->index2));
         } else {
         xmlNodePtr node = (xmlNodePtr) loc->user;
         if (node == (xmlNodePtr) ctxt->context->doc) {
             return(xmlXPtrNewRange(node, 0, node,
-        			   xmlXPtrGetArity(node)));
+                       xmlXPtrGetArity(node)));
         } else {
             switch (node->type) {
-        	case XML_ATTRIBUTE_NODE:
-        	/* !!! our model is slightly different than XPath */
-        	    return(xmlXPtrNewRange(node, 0, node,
-        			           xmlXPtrGetArity(node)));
-        	case XML_ELEMENT_NODE:
-        	case XML_TEXT_NODE:
-        	case XML_CDATA_SECTION_NODE:
-        	case XML_ENTITY_REF_NODE:
-        	case XML_PI_NODE:
-        	case XML_COMMENT_NODE:
-        	case XML_DOCUMENT_NODE:
-        	case XML_NOTATION_NODE:
-        	case XML_HTML_DOCUMENT_NODE: {
-        	    int indx = xmlXPtrGetIndex(node);
+            case XML_ATTRIBUTE_NODE:
+            /* !!! our model is slightly different than XPath */
+                return(xmlXPtrNewRange(node, 0, node,
+                               xmlXPtrGetArity(node)));
+            case XML_ELEMENT_NODE:
+            case XML_TEXT_NODE:
+            case XML_CDATA_SECTION_NODE:
+            case XML_ENTITY_REF_NODE:
+            case XML_PI_NODE:
+            case XML_COMMENT_NODE:
+            case XML_DOCUMENT_NODE:
+            case XML_NOTATION_NODE:
+            case XML_HTML_DOCUMENT_NODE: {
+                int indx = xmlXPtrGetIndex(node);
 
-        	    node = node->parent;
-        	    return(xmlXPtrNewRange(node, indx - 1,
-        			           node, indx + 1));
-        	}
-        	default:
-        	    return(NULL);
+                node = node->parent;
+                return(xmlXPtrNewRange(node, indx - 1,
+                               node, indx + 1));
+            }
+            default:
+                return(NULL);
             }
         }
         }
@@ -2092,10 +2092,10 @@ xmlXPtrInsideRange(xmlXPathParserContextPtr ctxt, xmlXPathObjectPtr loc) {
         case XML_TEXT_NODE:
         case XML_CDATA_SECTION_NODE: {
             if (node->content == NULL) {
-        	return(xmlXPtrNewRange(node, 0, node, 0));
+            return(xmlXPtrNewRange(node, 0, node, 0));
             } else {
-        	return(xmlXPtrNewRange(node, 0, node,
-        			       xmlStrlen(node->content)));
+            return(xmlXPtrNewRange(node, 0, node,
+                           xmlStrlen(node->content)));
             }
         }
         case XML_ATTRIBUTE_NODE:
@@ -2105,7 +2105,7 @@ xmlXPtrInsideRange(xmlXPathParserContextPtr ctxt, xmlXPathObjectPtr loc) {
         case XML_NOTATION_NODE:
         case XML_HTML_DOCUMENT_NODE: {
             return(xmlXPtrNewRange(node, 0, node,
-        			   xmlXPtrGetArity(node)));
+                       xmlXPtrGetArity(node)));
         }
         default:
             break;
@@ -2116,19 +2116,19 @@ xmlXPtrInsideRange(xmlXPathParserContextPtr ctxt, xmlXPathObjectPtr loc) {
         xmlNodePtr node = (xmlNodePtr) loc->user;
         if (loc->user2 != NULL) {
         return(xmlXPtrNewRange(node, loc->index,
-        	               loc->user2, loc->index2));
+                           loc->user2, loc->index2));
         } else {
         switch (node->type) {
             case XML_PI_NODE:
             case XML_COMMENT_NODE:
             case XML_TEXT_NODE:
             case XML_CDATA_SECTION_NODE: {
-        	if (node->content == NULL) {
-        	    return(xmlXPtrNewRange(node, 0, node, 0));
-        	} else {
-        	    return(xmlXPtrNewRange(node, 0, node,
-        				   xmlStrlen(node->content)));
-        	}
+            if (node->content == NULL) {
+                return(xmlXPtrNewRange(node, 0, node, 0));
+            } else {
+                return(xmlXPtrNewRange(node, 0, node,
+                           xmlStrlen(node->content)));
+            }
             }
             case XML_ATTRIBUTE_NODE:
             case XML_ELEMENT_NODE:
@@ -2136,11 +2136,11 @@ xmlXPtrInsideRange(xmlXPathParserContextPtr ctxt, xmlXPathObjectPtr loc) {
             case XML_DOCUMENT_NODE:
             case XML_NOTATION_NODE:
             case XML_HTML_DOCUMENT_NODE: {
-        	return(xmlXPtrNewRange(node, 0, node,
-        			       xmlXPtrGetArity(node)));
+            return(xmlXPtrNewRange(node, 0, node,
+                           xmlXPtrGetArity(node)));
             }
             default:
-        	break;
+            break;
         }
         return(NULL);
         }
@@ -2484,16 +2484,16 @@ xmlXPtrSearchString(const xmlChar *string, xmlNodePtr *start, int *startindex,
         if (first != 0) {
             str = xmlStrchr(&cur->content[pos], first);
             if (str != NULL) {
-        	pos = (str - (xmlChar *)(cur->content));
-        	if (xmlXPtrMatchString(string, cur, pos + 1,
-        			       end, endindex)) {
-        	    *start = cur;
-        	    *startindex = pos + 1;
-        	    return(1);
-        	}
-        	pos++;
+            pos = (str - (xmlChar *)(cur->content));
+            if (xmlXPtrMatchString(string, cur, pos + 1,
+                           end, endindex)) {
+                *start = cur;
+                *startindex = pos + 1;
+                return(1);
+            }
+            pos++;
             } else {
-        	pos = len + 1;
+            pos = len + 1;
             }
         } else {
             /*
@@ -2764,28 +2764,28 @@ xmlXPtrStringRangeFunction(xmlXPathParserContextPtr ctxt, int nargs) {
         if (found == 1) {
         if (position == NULL) {
             xmlXPtrLocationSetAdd(newset,
-        	 xmlXPtrNewRange(start, startindex, fend, fendindex));
+             xmlXPtrNewRange(start, startindex, fend, fendindex));
         } else if (xmlXPtrAdvanceChar(&start, &startindex,
-        	                      pos - 1) == 0) {
+                                  pos - 1) == 0) {
             if ((number != NULL) && (num > 0)) {
-        	int rindx;
-        	xmlNodePtr rend;
-        	rend = start;
-        	rindx = startindex - 1;
-        	if (xmlXPtrAdvanceChar(&rend, &rindx,
-        		               num) == 0) {
-        	    xmlXPtrLocationSetAdd(newset,
-        			xmlXPtrNewRange(start, startindex,
-        					rend, rindx));
-        	}
+            int rindx;
+            xmlNodePtr rend;
+            rend = start;
+            rindx = startindex - 1;
+            if (xmlXPtrAdvanceChar(&rend, &rindx,
+                               num) == 0) {
+                xmlXPtrLocationSetAdd(newset,
+                    xmlXPtrNewRange(start, startindex,
+                            rend, rindx));
+            }
             } else if ((number != NULL) && (num <= 0)) {
-        	xmlXPtrLocationSetAdd(newset,
-        		    xmlXPtrNewRange(start, startindex,
-        				    start, startindex));
+            xmlXPtrLocationSetAdd(newset,
+                    xmlXPtrNewRange(start, startindex,
+                            start, startindex));
             } else {
-        	xmlXPtrLocationSetAdd(newset,
-        		    xmlXPtrNewRange(start, startindex,
-        				    fend, fendindex));
+            xmlXPtrLocationSetAdd(newset,
+                    xmlXPtrNewRange(start, startindex,
+                            fend, fendindex));
             }
         }
         start = fend;
@@ -2886,7 +2886,7 @@ xmlXPtrEvalRangePredicate(xmlXPathParserContextPtr ctxt) {
         res = valuePop(ctxt);
         if (xmlXPathEvaluatePredicateResult(ctxt, res)) {
             xmlXPtrLocationSetAdd(newset,
-        	xmlXPathObjectCopy(oldset->locTab[i]));
+            xmlXPathObjectCopy(oldset->locTab[i]));
         }
 
         /*

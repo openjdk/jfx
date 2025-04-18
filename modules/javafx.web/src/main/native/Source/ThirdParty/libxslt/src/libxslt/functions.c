@@ -59,7 +59,7 @@
  */
 xmlXPathFunction
 xsltXPathFunctionLookup (void *vctxt,
-        	 const xmlChar *name, const xmlChar *ns_uri) {
+             const xmlChar *name, const xmlChar *ns_uri) {
     xmlXPathContextPtr ctxt = (xmlXPathContextPtr) vctxt;
     xmlXPathFunction ret;
 
@@ -90,9 +90,9 @@ xsltXPathFunctionLookup (void *vctxt,
 
 
 /************************************************************************
- *        							*
- *        	Module interfaces				*
- *        							*
+ *                                    *
+ *            Module interfaces                *
+ *                                    *
  ************************************************************************/
 
 static void
@@ -399,13 +399,13 @@ xsltKeyFunction(xmlXPathParserContextPtr ctxt, int nargs){
         for (i = 0; i < obj2->nodesetval->nodeNr; i++) {
         valuePush(ctxt, xmlXPathObjectCopy(obj1));
         valuePush(ctxt,
-        	  xmlXPathNewNodeSet(obj2->nodesetval->nodeTab[i]));
+              xmlXPathNewNodeSet(obj2->nodesetval->nodeTab[i]));
         xmlXPathStringFunction(ctxt, 1);
         xsltKeyFunction(ctxt, 2);
         newobj = valuePop(ctxt);
                 if (newobj != NULL)
             ret->nodesetval = xmlXPathNodeSetMerge(ret->nodesetval,
-        				           newobj->nodesetval);
+                                   newobj->nodesetval);
         xmlXPathFreeObject(newobj);
         }
     }
@@ -446,7 +446,7 @@ xsltKeyFunction(xmlXPathParserContextPtr ctxt, int nargs){
         keyURI = xmlXPathNsLookup(xpctxt, prefix);
         if (keyURI == NULL) {
             xsltTransformError(tctxt, NULL, tctxt->inst,
-        	"key() : prefix %s is not bound\n", prefix);
+            "key() : prefix %s is not bound\n", prefix);
             /*
             * TODO: Shouldn't we stop here?
             */
@@ -512,7 +512,7 @@ xsltKeyFunction(xmlXPathParserContextPtr ctxt, int nargs){
         if (tmpNode->doc->_private == NULL) {
             tmpNode->doc->_private = xsltNewDocument(tctxt, tmpNode->doc);
             if (tmpNode->doc->_private == NULL)
-        	goto error;
+            goto error;
         }
         tctxt->document = (xsltDocumentPtr) tmpNode->doc->_private;
         } else {
@@ -670,9 +670,9 @@ xsltFormatNumberFunction(xmlXPathParserContextPtr ctxt, int nargs)
     if ((ctxt->error == 0) &&
         (formatValues != NULL) && (formatObj != NULL) && (numberObj != NULL)) {
     if (xsltFormatNumberConversion(formatValues,
-        		       formatObj->stringval,
-        		       numberObj->floatval,
-        		       &result) == XPATH_EXPRESSION_OK) {
+                       formatObj->stringval,
+                       numberObj->floatval,
+                       &result) == XPATH_EXPRESSION_OK) {
         valuePush(ctxt, xmlXPathNewString(result));
         xmlFree(result);
     }
@@ -870,26 +870,26 @@ xsltSystemPropertyFunction(xmlXPathParserContextPtr ctxt, int nargs){
             (xmlStrEqual(tctxt->inst->name, BAD_CAST "variable")) &&
             (tctxt->inst->parent != NULL) &&
             (xmlStrEqual(tctxt->inst->parent->name,
-        		 BAD_CAST "template")))
+                 BAD_CAST "template")))
             sheet = tctxt->style;
         else
             sheet = NULL;
         if ((sheet != NULL) && (sheet->doc != NULL) &&
             (sheet->doc->URL != NULL) &&
             (xmlStrstr(sheet->doc->URL,
-        	       (const xmlChar *)"chunk") != NULL)) {
+                   (const xmlChar *)"chunk") != NULL)) {
             valuePush(ctxt, xmlXPathNewString(
-        	(const xmlChar *)"libxslt (SAXON 6.2 compatible)"));
+            (const xmlChar *)"libxslt (SAXON 6.2 compatible)"));
 
         } else {
             valuePush(ctxt, xmlXPathNewString(
-        	(const xmlChar *)XSLT_DEFAULT_VENDOR));
+            (const xmlChar *)XSLT_DEFAULT_VENDOR));
         }
         } else
 #else
         if (xmlStrEqual(name, (const xmlChar *)"vendor")) {
         valuePush(ctxt, xmlXPathNewString(
-        	  (const xmlChar *)XSLT_DEFAULT_VENDOR));
+              (const xmlChar *)XSLT_DEFAULT_VENDOR));
         } else
 #endif
         if (xmlStrEqual(name, (const xmlChar *)"version")) {
@@ -1061,9 +1061,9 @@ xsltCurrentFunction(xmlXPathParserContextPtr ctxt, int nargs){
 }
 
 /************************************************************************
- *        							*
- *        Registration of XSLT and libxslt functions		*
- *        							*
+ *                                    *
+ *        Registration of XSLT and libxslt functions        *
+ *                                    *
  ************************************************************************/
 
 /**

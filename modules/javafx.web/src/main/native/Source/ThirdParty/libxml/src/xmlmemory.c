@@ -25,9 +25,9 @@ static unsigned long  debugMemBlocks = 0;
 static xmlMutex xmlMemMutex;
 
 /************************************************************************
- *        							*
- *        Macros, variables and associated types			*
- *        							*
+ *                                    *
+ *        Macros, variables and associated types            *
+ *                                    *
  ************************************************************************/
 
 /*
@@ -386,9 +386,9 @@ xmlMemoryDump(void)
 
 
 /****************************************************************
- *        						*
- *        Initialization Routines				*
- *        						*
+ *                                *
+ *        Initialization Routines                *
+ *                                *
  ****************************************************************/
 
 /**

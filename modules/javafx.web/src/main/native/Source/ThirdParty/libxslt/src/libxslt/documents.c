@@ -36,9 +36,9 @@
 #endif
 
 /************************************************************************
- *        							*
- *        Hooks for the document loader				*
- *        							*
+ *                                    *
+ *        Hooks for the document loader                *
+ *                                    *
  ************************************************************************/
 
 /**
@@ -60,7 +60,7 @@
 static xmlDocPtr
 xsltDocDefaultLoaderFunc(const xmlChar * URI, xmlDictPtr dict, int options,
                          void *ctxt ATTRIBUTE_UNUSED,
-        	 xsltLoadType type ATTRIBUTE_UNUSED)
+             xsltLoadType type ATTRIBUTE_UNUSED)
 {
     xmlParserCtxtPtr pctxt;
     xmlParserInputPtr inputStream;
@@ -130,9 +130,9 @@ xsltSetLoaderFunc(xsltDocLoaderFunc f) {
 }
 
 /************************************************************************
- *        							*
- *        	Module interfaces				*
- *        							*
+ *                                    *
+ *            Module interfaces                *
+ *                                    *
  ************************************************************************/
 
 /**

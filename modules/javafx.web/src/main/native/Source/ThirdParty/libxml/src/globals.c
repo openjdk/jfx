@@ -162,9 +162,9 @@ xmlFreeGlobalState(void *state);
 #endif /* LIBXML_THREAD_ENABLED */
 
 /************************************************************************
- *        							*
- *    All the user accessible global variables of the library    	*
- *        							*
+ *                                    *
+ *    All the user accessible global variables of the library        *
+ *                                    *
  ************************************************************************/
 
 #ifdef LIBXML_THREAD_ENABLED
@@ -547,9 +547,9 @@ const xmlSAXHandlerV1 htmlDefaultSAXHandler = {
 #endif /* LIBXML_HTML_ENABLED */
 
 /************************************************************************
- *        							*
- *        	Per thread global state handling		*
- *        							*
+ *                                    *
+ *            Per thread global state handling        *
+ *                                    *
  ************************************************************************/
 
 /**

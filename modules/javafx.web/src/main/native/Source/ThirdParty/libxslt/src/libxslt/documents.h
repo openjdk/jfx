@@ -21,25 +21,25 @@ extern "C" {
 #endif
 
 XSLTPUBFUN xsltDocumentPtr XSLTCALL
-        xsltNewDocument		(xsltTransformContextPtr ctxt,
-        			 xmlDocPtr doc);
+        xsltNewDocument        (xsltTransformContextPtr ctxt,
+                     xmlDocPtr doc);
 XSLTPUBFUN xsltDocumentPtr XSLTCALL
-        xsltLoadDocument	(xsltTransformContextPtr ctxt,
-        			 const xmlChar *URI);
+        xsltLoadDocument    (xsltTransformContextPtr ctxt,
+                     const xmlChar *URI);
 XSLTPUBFUN xsltDocumentPtr XSLTCALL
-        xsltFindDocument	(xsltTransformContextPtr ctxt,
-        			 xmlDocPtr doc);
+        xsltFindDocument    (xsltTransformContextPtr ctxt,
+                     xmlDocPtr doc);
 XSLTPUBFUN void XSLTCALL
-        xsltFreeDocuments	(xsltTransformContextPtr ctxt);
+        xsltFreeDocuments    (xsltTransformContextPtr ctxt);
 
 XSLTPUBFUN xsltDocumentPtr XSLTCALL
-        xsltLoadStyleDocument	(xsltStylesheetPtr style,
-        			 const xmlChar *URI);
+        xsltLoadStyleDocument    (xsltStylesheetPtr style,
+                     const xmlChar *URI);
 XSLTPUBFUN xsltDocumentPtr XSLTCALL
-        xsltNewStyleDocument	(xsltStylesheetPtr style,
-        			 xmlDocPtr doc);
+        xsltNewStyleDocument    (xsltStylesheetPtr style,
+                     xmlDocPtr doc);
 XSLTPUBFUN void XSLTCALL
-        xsltFreeStyleDocuments	(xsltStylesheetPtr style);
+        xsltFreeStyleDocuments    (xsltStylesheetPtr style);
 
 /*
  * Hooks for document loading
@@ -74,13 +74,13 @@ typedef enum {
  * freed by the engine later), or NULL in case of error.
  */
 typedef xmlDocPtr (*xsltDocLoaderFunc)        (const xmlChar *URI,
-        				 xmlDictPtr dict,
-        				 int options,
-        				 void *ctxt,
-        				 xsltLoadType type);
+                         xmlDictPtr dict,
+                         int options,
+                         void *ctxt,
+                         xsltLoadType type);
 
 XSLTPUBFUN void XSLTCALL
-        xsltSetLoaderFunc		(xsltDocLoaderFunc f);
+        xsltSetLoaderFunc        (xsltDocLoaderFunc f);
 
 /* the loader may be needed by extension libraries so it is exported */
 XSLTPUBVAR xsltDocLoaderFunc xsltDocDefaultLoader;

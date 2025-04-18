@@ -61,9 +61,9 @@ extern "C" {
 typedef void (*ftpListCallback) (void *userData,
                              const char *filename, const char *attrib,
                              const char *owner, const char *group,
-        		 unsigned long size, int links, int year,
-        		 const char *month, int day, int hour,
-        		 int minute);
+                 unsigned long size, int links, int year,
+                 const char *month, int day, int hour,
+                 int minute);
 /**
  * ftpDataCallback:
  * @userData: the user provided context
@@ -73,15 +73,15 @@ typedef void (*ftpListCallback) (void *userData,
  * A callback for the xmlNanoFTPGet command.
  */
 typedef void (*ftpDataCallback) (void *userData,
-        		 const char *data,
-        		 int len);
+                 const char *data,
+                 int len);
 
 /*
  * Init
  */
 XML_DEPRECATED
 XMLPUBFUN void
-    xmlNanoFTPInit    	(void);
+    xmlNanoFTPInit        (void);
 XML_DEPRECATED
 XMLPUBFUN void
     xmlNanoFTPCleanup    (void);
@@ -98,36 +98,36 @@ XMLPUBFUN void
 XML_DEPRECATED
 XMLPUBFUN void *
     xmlNanoFTPConnectTo    (const char *server,
-        		 int port);
+                 int port);
 /*
  * Opening/closing session connections.
  */
 XML_DEPRECATED
 XMLPUBFUN void *
-    xmlNanoFTPOpen    	(const char *URL);
+    xmlNanoFTPOpen        (const char *URL);
 XML_DEPRECATED
 XMLPUBFUN int
     xmlNanoFTPConnect    (void *ctx);
 XML_DEPRECATED
 XMLPUBFUN int
-    xmlNanoFTPClose    	(void *ctx);
+    xmlNanoFTPClose        (void *ctx);
 XML_DEPRECATED
 XMLPUBFUN int
-    xmlNanoFTPQuit    	(void *ctx);
+    xmlNanoFTPQuit        (void *ctx);
 XML_DEPRECATED
 XMLPUBFUN void
     xmlNanoFTPScanProxy    (const char *URL);
 XML_DEPRECATED
 XMLPUBFUN void
-    xmlNanoFTPProxy    	(const char *host,
-        		 int port,
-        		 const char *user,
-        		 const char *passwd,
-        		 int type);
+    xmlNanoFTPProxy        (const char *host,
+                 int port,
+                 const char *user,
+                 const char *passwd,
+                 int type);
 XML_DEPRECATED
 XMLPUBFUN int
     xmlNanoFTPUpdateURL    (void *ctx,
-        		 const char *URL);
+                 const char *URL);
 
 /*
  * Rather internal commands.
@@ -144,12 +144,12 @@ XMLPUBFUN int
  */
 XML_DEPRECATED
 XMLPUBFUN int
-    xmlNanoFTPCwd    	(void *ctx,
-        		 const char *directory);
+    xmlNanoFTPCwd        (void *ctx,
+                 const char *directory);
 XML_DEPRECATED
 XMLPUBFUN int
-    xmlNanoFTPDele    	(void *ctx,
-        		 const char *file);
+    xmlNanoFTPDele        (void *ctx,
+                 const char *file);
 
 XML_DEPRECATED
 XMLPUBFUN SOCKET
@@ -159,25 +159,25 @@ XMLPUBFUN int
     xmlNanoFTPCloseConnection(void *ctx);
 XML_DEPRECATED
 XMLPUBFUN int
-    xmlNanoFTPList    	(void *ctx,
-        		 ftpListCallback callback,
-        		 void *userData,
-        		 const char *filename);
+    xmlNanoFTPList        (void *ctx,
+                 ftpListCallback callback,
+                 void *userData,
+                 const char *filename);
 XML_DEPRECATED
 XMLPUBFUN SOCKET
     xmlNanoFTPGetSocket    (void *ctx,
-        		 const char *filename);
+                 const char *filename);
 XML_DEPRECATED
 XMLPUBFUN int
-    xmlNanoFTPGet    	(void *ctx,
-        		 ftpDataCallback callback,
-        		 void *userData,
-        		 const char *filename);
+    xmlNanoFTPGet        (void *ctx,
+                 ftpDataCallback callback,
+                 void *userData,
+                 const char *filename);
 XML_DEPRECATED
 XMLPUBFUN int
-    xmlNanoFTPRead    	(void *ctx,
-        		 void *dest,
-        		 int len);
+    xmlNanoFTPRead        (void *ctx,
+                 void *dest,
+                 int len);
 
 #ifdef __cplusplus
 }

@@ -69,14 +69,14 @@ typedef struct {
     lzma_stream strm;           /* stream structure in-place (not a pointer) */
     char padding1[32];          /* padding allowing to cope with possible
                                    extensions of above structure without
-        		   too much side effect */
+                   too much side effect */
 #ifdef LIBXML_ZLIB_ENABLED
     /* zlib inflate or deflate stream */
     z_stream zstrm;             /* stream structure in-place (not a pointer) */
 #endif
     char padding2[32];          /* padding allowing to cope with possible
                                    extensions of above structure without
-        		   too much side effect */
+                   too much side effect */
 } xz_state, *xz_statep;
 
 static void

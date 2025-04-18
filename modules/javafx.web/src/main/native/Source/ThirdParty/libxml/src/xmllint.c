@@ -187,9 +187,9 @@ static int options = XML_PARSE_COMPACT | XML_PARSE_BIG_LINES;
 static unsigned maxAmpl = 0;
 
 /************************************************************************
- *        							*
- *         Entity loading control and customization.		*
- *        							*
+ *                                    *
+ *         Entity loading control and customization.        *
+ *                                    *
  ************************************************************************/
 #define MAX_PATHS 64
 #ifdef _WIN32
@@ -231,7 +231,7 @@ static xmlExternalEntityLoader defaultEntityLoader = NULL;
 
 static xmlParserInputPtr
 xmllintExternalEntityLoader(const char *URL, const char *ID,
-        	     xmlParserCtxtPtr ctxt) {
+                 xmlParserCtxtPtr ctxt) {
     xmlParserInputPtr ret;
     warningSAXFunc warning = NULL;
     errorSAXFunc err = NULL;
@@ -264,10 +264,10 @@ xmllintExternalEntityLoader(const char *URL, const char *ID,
         ctxt->sax->error = err;
         if (load_trace) {
         fprintf \
-        	(ERR_STREAM,
-        	 "Loaded URL=\"%s\" ID=\"%s\"\n",
-        	 URL ? URL : "(null)",
-        	 ID ? ID : "(null)");
+            (ERR_STREAM,
+             "Loaded URL=\"%s\" ID=\"%s\"\n",
+             URL ? URL : "(null)",
+             ID ? ID : "(null)");
         }
         return(ret);
     }
@@ -287,10 +287,10 @@ xmllintExternalEntityLoader(const char *URL, const char *ID,
             ctxt->sax->error = err;
         if (load_trace) {
             fprintf \
-        	(ERR_STREAM,
-        	 "Loaded URL=\"%s\" ID=\"%s\"\n",
-        	 newURL,
-        	 ID ? ID : "(null)");
+            (ERR_STREAM,
+             "Loaded URL=\"%s\" ID=\"%s\"\n",
+             newURL,
+             ID ? ID : "(null)");
         }
         xmlFree(newURL);
         return(ret);
@@ -311,9 +311,9 @@ xmllintExternalEntityLoader(const char *URL, const char *ID,
 }
 
 /************************************************************************
- *        							*
- * Memory allocation consumption debugging        		*
- *        							*
+ *                                    *
+ * Memory allocation consumption debugging                *
+ *                                    *
  ************************************************************************/
 
 static void
@@ -371,10 +371,10 @@ myStrdupFunc(const char *str)
     return (ret);
 }
 /************************************************************************
- *        							*
+ *                                    *
  * Internal timing routines to remove the necessity to have        *
- * unix-specific function calls.        			*
- *        							*
+ * unix-specific function calls.                    *
+ *                                    *
  ************************************************************************/
 
 #ifndef HAVE_GETTIMEOFDAY
@@ -468,9 +468,9 @@ endTimer(const char *fmt, ...)
 }
 #endif
 /************************************************************************
- *        							*
- *        	HTML output					*
- *        							*
+ *                                    *
+ *            HTML output                    *
+ *                                    *
  ************************************************************************/
 static char buffer[50000];
 
@@ -718,9 +718,9 @@ xmlHTMLValidityWarning(void *ctx, const char *msg, ...)
 }
 
 /************************************************************************
- *        							*
- *        	Shell Interface					*
- *        							*
+ *                                    *
+ *            Shell Interface                    *
+ *                                    *
  ************************************************************************/
 #ifdef LIBXML_DEBUG_ENABLED
 #ifdef LIBXML_XPATH_ENABLED
@@ -769,9 +769,9 @@ xmlShellReadline(char *prompt) {
 #endif /* LIBXML_DEBUG_ENABLED */
 
 /************************************************************************
- *        							*
- *        	I/O Interfaces					*
- *        							*
+ *                                    *
+ *            I/O Interfaces                    *
+ *                                    *
  ************************************************************************/
 
 static int myRead(void *f, char *buf, int len) {
@@ -785,9 +785,9 @@ static int myClose(void *context) {
 }
 
 /************************************************************************
- *        							*
- *        	SAX based tests					*
- *        							*
+ *                                    *
+ *            SAX based tests                    *
+ *                                    *
  ************************************************************************/
 
 /*
@@ -1666,9 +1666,9 @@ testSAX(const char *filename) {
 }
 
 /************************************************************************
- *        							*
- *        	Stream Test processing				*
- *        							*
+ *                                    *
+ *            Stream Test processing                *
+ *                                    *
  ************************************************************************/
 #ifdef LIBXML_READER_ENABLED
 static void processNode(xmlTextReaderPtr reader) {
@@ -1723,7 +1723,7 @@ static void processNode(xmlTextReaderPtr reader) {
         if (type == XML_READER_TYPE_ELEMENT) {
         ret = xmlStreamPush(patstream,
                             xmlTextReaderConstLocalName(reader),
-        		    xmlTextReaderConstNamespaceUri(reader));
+                    xmlTextReaderConstNamespaceUri(reader));
         if (ret < 0) {
             fprintf(ERR_STREAM, "xmlStreamPush() failure\n");
                     xmlFreeStreamCtxt(patstream);
@@ -1742,7 +1742,7 @@ static void processNode(xmlTextReaderPtr reader) {
                                 pattern, path);
                     else
                 fprintf(ERR_STREAM, "  pattern %s node %s\n",
-        	    pattern, xmlTextReaderConstName(reader));
+                pattern, xmlTextReaderConstName(reader));
         }
 
         }
@@ -1817,7 +1817,7 @@ static void streamFile(const char *filename) {
         ret = xmlTextReaderRelaxNGValidate(reader, relaxng);
         if (ret < 0) {
         fprintf(ERR_STREAM,
-        	"Relax-NG schema %s failed to compile\n", relaxng);
+            "Relax-NG schema %s failed to compile\n", relaxng);
         progresult = XMLLINT_ERR_SCHEMACOMP;
         relaxng = NULL;
         }
@@ -1832,7 +1832,7 @@ static void streamFile(const char *filename) {
         ret = xmlTextReaderSchemaValidate(reader, schema);
         if (ret < 0) {
         fprintf(ERR_STREAM,
-        	"XSD schema %s failed to compile\n", schema);
+            "XSD schema %s failed to compile\n", schema);
         progresult = XMLLINT_ERR_SCHEMACOMP;
         schema = NULL;
         }
@@ -1876,7 +1876,7 @@ static void streamFile(const char *filename) {
     if (options & XML_PARSE_DTDVALID) {
         if (xmlTextReaderIsValid(reader) != 1) {
         fprintf(ERR_STREAM,
-        	"Document %s does not validate\n", filename);
+            "Document %s does not validate\n", filename);
         progresult = XMLLINT_ERR_VALID;
         }
     }
@@ -2015,9 +2015,9 @@ error:
 
 #ifdef LIBXML_XPATH_ENABLED
 /************************************************************************
- *        							*
- *        	XPath Query                                     *
- *        							*
+ *                                    *
+ *            XPath Query                                     *
+ *                                    *
  ************************************************************************/
 
 static void doXPathDump(xmlXPathObjectPtr cur) {
@@ -2111,9 +2111,9 @@ static void doXPathQuery(xmlDocPtr doc, const char *query) {
 #endif /* LIBXML_XPATH_ENABLED */
 
 /************************************************************************
- *        							*
- *        	Tree Test processing				*
- *        							*
+ *                                    *
+ *            Tree Test processing                *
+ *                                    *
  ************************************************************************/
 
 static xmlDocPtr
@@ -2478,7 +2478,7 @@ parseAndPrintFile(const char *filename, xmlParserCtxtPtr rectxt) {
             fprintf(ERR_STREAM, "%d element types can be inserted under root:\n",
                    nb);
             for (i = 0;i < nb;i++) {
-        	 fprintf(ERR_STREAM, "%s\n", (char *) list[i]);
+             fprintf(ERR_STREAM, "%s\n", (char *) list[i]);
             }
         }
         }
@@ -2511,10 +2511,10 @@ parseAndPrintFile(const char *filename, xmlParserCtxtPtr rectxt) {
         }
         else if (encoding != NULL) {
             if (format == 1) {
-        	htmlSaveFileFormat(output ? output : "-", doc, encoding, 1);
+            htmlSaveFileFormat(output ? output : "-", doc, encoding, 1);
             }
             else {
-        	htmlSaveFileFormat(output ? output : "-", doc, encoding, 0);
+            htmlSaveFileFormat(output ? output : "-", doc, encoding, 0);
             }
         }
         else if (format == 1) {
@@ -2523,19 +2523,19 @@ parseAndPrintFile(const char *filename, xmlParserCtxtPtr rectxt) {
         else {
             FILE *out;
             if (output == NULL)
-        	out = stdout;
+            out = stdout;
             else {
-        	out = fopen(output,"wb");
+            out = fopen(output,"wb");
             }
             if (out != NULL) {
-        	if (htmlDocDump(out, doc) < 0)
-        	    progresult = XMLLINT_ERR_OUT;
+            if (htmlDocDump(out, doc) < 0)
+                progresult = XMLLINT_ERR_OUT;
 
-        	if (output != NULL)
-        	    fclose(out);
+            if (output != NULL)
+                fclose(out);
             } else {
-        	fprintf(ERR_STREAM, "failed to open %s\n", output);
-        	progresult = XMLLINT_ERR_OUT;
+            fprintf(ERR_STREAM, "failed to open %s\n", output);
+            progresult = XMLLINT_ERR_OUT;
             }
         }
         if ((timing) && (!repeat)) {
@@ -2598,13 +2598,13 @@ parseAndPrintFile(const char *filename, xmlParserCtxtPtr rectxt) {
             if (format == 1) {
                 xmlDocDumpFormatMemoryEnc(doc, &result, &len, encoding, 1);
             } else {
-        	xmlDocDumpMemoryEnc(doc, &result, &len, encoding);
+            xmlDocDumpMemoryEnc(doc, &result, &len, encoding);
             }
         } else {
             if (format == 1)
-        	xmlDocDumpFormatMemory(doc, &result, &len, 1);
+            xmlDocDumpFormatMemory(doc, &result, &len, 1);
             else
-        	xmlDocDumpMemory(doc, &result, &len);
+            xmlDocDumpMemory(doc, &result, &len);
         }
         if (result == NULL) {
             fprintf(ERR_STREAM, "Failed to save\n");
@@ -2641,9 +2641,9 @@ parseAndPrintFile(const char *filename, xmlParserCtxtPtr rectxt) {
 
         if (ctxt != NULL) {
             if (xmlSaveDoc(ctxt, doc) < 0) {
-        	fprintf(ERR_STREAM, "failed save to %s\n",
-        		output ? output : "-");
-        	progresult = XMLLINT_ERR_OUT;
+            fprintf(ERR_STREAM, "failed save to %s\n",
+                output ? output : "-");
+            progresult = XMLLINT_ERR_OUT;
             }
             xmlSaveClose(ctxt);
         } else {
@@ -2695,17 +2695,17 @@ parseAndPrintFile(const char *filename, xmlParserCtxtPtr rectxt) {
     if (dtd == NULL) {
         if (dtdvalid != NULL)
         fprintf(ERR_STREAM,
-        	"Could not parse DTD %s\n", dtdvalid);
+            "Could not parse DTD %s\n", dtdvalid);
         else
         fprintf(ERR_STREAM,
-        	"Could not parse DTD %s\n", dtdvalidfpi);
+            "Could not parse DTD %s\n", dtdvalidfpi);
         progresult = XMLLINT_ERR_DTD;
     } else {
         xmlValidCtxtPtr cvp;
 
         if ((cvp = xmlNewValidCtxt()) == NULL) {
         fprintf(ERR_STREAM,
-        	"Couldn't allocate validation context\n");
+            "Couldn't allocate validation context\n");
                 progresult = XMLLINT_ERR_MEM;
                 xmlFreeDtd(dtd);
                 return;
@@ -2717,12 +2717,12 @@ parseAndPrintFile(const char *filename, xmlParserCtxtPtr rectxt) {
         if (!xmlValidateDtd(cvp, doc, dtd)) {
         if (dtdvalid != NULL)
             fprintf(ERR_STREAM,
-        	    "Document %s does not validate against %s\n",
-        	    filename, dtdvalid);
+                "Document %s does not validate against %s\n",
+                filename, dtdvalid);
         else
             fprintf(ERR_STREAM,
-        	    "Document %s does not validate against %s\n",
-        	    filename, dtdvalidfpi);
+                "Document %s does not validate against %s\n",
+                filename, dtdvalidfpi);
         progresult = XMLLINT_ERR_VALID;
         }
         if ((timing) && (!repeat)) {
@@ -2885,9 +2885,9 @@ parseAndPrintFile(const char *filename, xmlParserCtxtPtr rectxt) {
 }
 
 /************************************************************************
- *        							*
- *        	Usage and Main					*
- *        							*
+ *                                    *
+ *            Usage and Main                    *
+ *                                    *
  ************************************************************************/
 
 static void showVersion(const char *name) {

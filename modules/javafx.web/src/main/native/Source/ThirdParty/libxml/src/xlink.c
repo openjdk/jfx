@@ -25,9 +25,9 @@
 #define XHTML_NAMESPACE (BAD_CAST "http://www.w3.org/1999/xhtml/")
 
 /****************************************************************
- *        						*
+ *                                *
  *           Default setting and related functions        *
- *        						*
+ *                                *
  ****************************************************************/
 
 static xlinkHandlerPtr xlinkDefaultHandler = NULL;
@@ -81,9 +81,9 @@ xlinkSetDefaultDetect    (xlinkNodeDetectFunc func) {
 }
 
 /****************************************************************
- *        						*
- *                  The detection routines        	*
- *        						*
+ *                                *
+ *                  The detection routines            *
+ *                                *
  ****************************************************************/
 
 
@@ -140,14 +140,14 @@ xlinkIsLink    (xmlDocPtr doc, xmlNodePtr node) {
         if (xlink == NULL) {
             /* Humm, fallback method */
             if (xmlStrEqual(role, BAD_CAST"xlink:external-linkset"))
-        	ret = XLINK_TYPE_EXTENDED_SET;
+            ret = XLINK_TYPE_EXTENDED_SET;
         } else {
             xmlChar buf[200];
             snprintf((char *) buf, sizeof(buf), "%s:external-linkset",
-        	     (char *) xlink->prefix);
+                 (char *) xlink->prefix);
                     buf[sizeof(buf) - 1] = 0;
             if (xmlStrEqual(role, buf))
-        	ret = XLINK_TYPE_EXTENDED_SET;
+            ret = XLINK_TYPE_EXTENDED_SET;
 
         }
 

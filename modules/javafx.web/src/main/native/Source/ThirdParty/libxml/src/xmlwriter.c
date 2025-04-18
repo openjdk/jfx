@@ -967,12 +967,12 @@ xmlTextWriterStartElement(xmlTextWriterPtr writer, const xmlChar * name)
                     return -1;
                 case XML_TEXTWRITER_NONE:
                     break;
-        		case XML_TEXTWRITER_ATTRIBUTE:
-        			count = xmlTextWriterEndAttribute(writer);
-        			if (count < 0)
-        				return -1;
-        			sum += count;
-        			/* fallthrough */
+                case XML_TEXTWRITER_ATTRIBUTE:
+                    count = xmlTextWriterEndAttribute(writer);
+                    if (count < 0)
+                        return -1;
+                    sum += count;
+                    /* fallthrough */
                 case XML_TEXTWRITER_NAME:
                     /* Output namespace declarations */
                     count = xmlTextWriterOutputNSDecl(writer);
@@ -1863,7 +1863,7 @@ xmlTextWriterStartAttributeNS(xmlTextWriterPtr writer,
                 xmlMalloc(sizeof(xmlTextWriterNsStackEntry));
             if (p == 0) {
                 xmlWriterErrMsg(writer, XML_ERR_NO_MEMORY,
-        						        "xmlTextWriterStartAttributeNS : out of memory!\n");
+                                        "xmlTextWriterStartAttributeNS : out of memory!\n");
                 return -1;
             }
 
@@ -2918,7 +2918,7 @@ xmlTextWriterStartDTD(xmlTextWriterPtr writer,
                 return -1;
             sum += count;
         } else {
-        	if (writer->indent)
+            if (writer->indent)
             count = xmlOutputBufferWriteString(writer->out, "\n       ");
             else
                 count = xmlOutputBufferWrite(writer->out, 1, " ");

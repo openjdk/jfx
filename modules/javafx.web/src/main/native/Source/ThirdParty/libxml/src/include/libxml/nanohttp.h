@@ -20,7 +20,7 @@ extern "C" {
 #endif
 XML_DEPRECATED
 XMLPUBFUN void
-    xmlNanoHTTPInit    	(void);
+    xmlNanoHTTPInit        (void);
 XML_DEPRECATED
 XMLPUBFUN void
     xmlNanoHTTPCleanup    (void);
@@ -30,34 +30,34 @@ XMLPUBFUN void
 XML_DEPRECATED
 XMLPUBFUN int
     xmlNanoHTTPFetch    (const char *URL,
-        		 const char *filename,
-        		 char **contentType);
+                 const char *filename,
+                 char **contentType);
 XML_DEPRECATED
 XMLPUBFUN void *
     xmlNanoHTTPMethod    (const char *URL,
-        		 const char *method,
-        		 const char *input,
-        		 char **contentType,
-        		 const char *headers,
-        		 int   ilen);
+                 const char *method,
+                 const char *input,
+                 char **contentType,
+                 const char *headers,
+                 int   ilen);
 XML_DEPRECATED
 XMLPUBFUN void *
     xmlNanoHTTPMethodRedir    (const char *URL,
-        		 const char *method,
-        		 const char *input,
-        		 char **contentType,
-        		 char **redir,
-        		 const char *headers,
-        		 int   ilen);
+                 const char *method,
+                 const char *input,
+                 char **contentType,
+                 char **redir,
+                 const char *headers,
+                 int   ilen);
 XML_DEPRECATED
 XMLPUBFUN void *
-    xmlNanoHTTPOpen    	(const char *URL,
-        		 char **contentType);
+    xmlNanoHTTPOpen        (const char *URL,
+                 char **contentType);
 XML_DEPRECATED
 XMLPUBFUN void *
     xmlNanoHTTPOpenRedir    (const char *URL,
-        		 char **contentType,
-        		 char **redir);
+                 char **contentType,
+                 char **redir);
 XML_DEPRECATED
 XMLPUBFUN int
     xmlNanoHTTPReturnCode    (void *ctx);
@@ -78,14 +78,14 @@ XMLPUBFUN const char *
     xmlNanoHTTPMimeType    (void *ctx);
 XML_DEPRECATED
 XMLPUBFUN int
-    xmlNanoHTTPRead    	(void *ctx,
-        		 void *dest,
-        		 int len);
+    xmlNanoHTTPRead        (void *ctx,
+                 void *dest,
+                 int len);
 #ifdef LIBXML_OUTPUT_ENABLED
 XML_DEPRECATED
 XMLPUBFUN int
-    xmlNanoHTTPSave    	(void *ctxt,
-        		 const char *filename);
+    xmlNanoHTTPSave        (void *ctxt,
+                 const char *filename);
 #endif /* LIBXML_OUTPUT_ENABLED */
 XML_DEPRECATED
 XMLPUBFUN void

@@ -42,45 +42,45 @@ typedef struct _xmlSaveCtxt xmlSaveCtxt;
 typedef xmlSaveCtxt *xmlSaveCtxtPtr;
 
 XMLPUBFUN xmlSaveCtxtPtr
-        xmlSaveToFd		(int fd,
-        			 const char *encoding,
-        			 int options);
+        xmlSaveToFd        (int fd,
+                     const char *encoding,
+                     int options);
 XMLPUBFUN xmlSaveCtxtPtr
-        xmlSaveToFilename	(const char *filename,
-        			 const char *encoding,
-        			 int options);
+        xmlSaveToFilename    (const char *filename,
+                     const char *encoding,
+                     int options);
 
 XMLPUBFUN xmlSaveCtxtPtr
-        xmlSaveToBuffer		(xmlBufferPtr buffer,
-        			 const char *encoding,
-        			 int options);
+        xmlSaveToBuffer        (xmlBufferPtr buffer,
+                     const char *encoding,
+                     int options);
 
 XMLPUBFUN xmlSaveCtxtPtr
-        xmlSaveToIO		(xmlOutputWriteCallback iowrite,
-        			 xmlOutputCloseCallback ioclose,
-        			 void *ioctx,
-        			 const char *encoding,
-        			 int options);
+        xmlSaveToIO        (xmlOutputWriteCallback iowrite,
+                     xmlOutputCloseCallback ioclose,
+                     void *ioctx,
+                     const char *encoding,
+                     int options);
 
 XMLPUBFUN long
-        xmlSaveDoc		(xmlSaveCtxtPtr ctxt,
-        			 xmlDocPtr doc);
+        xmlSaveDoc        (xmlSaveCtxtPtr ctxt,
+                     xmlDocPtr doc);
 XMLPUBFUN long
-        xmlSaveTree		(xmlSaveCtxtPtr ctxt,
-        			 xmlNodePtr node);
+        xmlSaveTree        (xmlSaveCtxtPtr ctxt,
+                     xmlNodePtr node);
 
 XMLPUBFUN int
-        xmlSaveFlush		(xmlSaveCtxtPtr ctxt);
+        xmlSaveFlush        (xmlSaveCtxtPtr ctxt);
 XMLPUBFUN int
-        xmlSaveClose		(xmlSaveCtxtPtr ctxt);
+        xmlSaveClose        (xmlSaveCtxtPtr ctxt);
 XMLPUBFUN int
-        xmlSaveFinish		(xmlSaveCtxtPtr ctxt);
+        xmlSaveFinish        (xmlSaveCtxtPtr ctxt);
 XMLPUBFUN int
-        xmlSaveSetEscape	(xmlSaveCtxtPtr ctxt,
-        			 xmlCharEncodingOutputFunc escape);
+        xmlSaveSetEscape    (xmlSaveCtxtPtr ctxt,
+                     xmlCharEncodingOutputFunc escape);
 XMLPUBFUN int
-        xmlSaveSetAttrEscape	(xmlSaveCtxtPtr ctxt,
-        			 xmlCharEncodingOutputFunc escape);
+        xmlSaveSetAttrEscape    (xmlSaveCtxtPtr ctxt,
+                     xmlCharEncodingOutputFunc escape);
 
 XML_DEPRECATED
 XMLPUBFUN int

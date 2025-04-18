@@ -109,9 +109,9 @@ static int xmlOutputCallbackNr;
 #endif /* LIBXML_OUTPUT_ENABLED */
 
 /************************************************************************
- *        							*
- *        	Error handling					*
- *        							*
+ *                                    *
+ *            Error handling                    *
+ *                                    *
  ************************************************************************/
 
 /**
@@ -344,9 +344,9 @@ xmlIOErr(int code, const char *extra)
 }
 
 /************************************************************************
- *        							*
- *        Standard I/O for file accesses				*
- *        							*
+ *                                    *
+ *        Standard I/O for file accesses                *
+ *                                    *
  ************************************************************************/
 
 #if defined(_WIN32)
@@ -877,9 +877,9 @@ xmlBufferWrite (void * context, const char * buffer, int len) {
 
 #ifdef LIBXML_ZLIB_ENABLED
 /************************************************************************
- *        							*
- *        I/O for compressed file accesses			*
- *        							*
+ *                                    *
+ *        I/O for compressed file accesses            *
+ *                                    *
  ************************************************************************/
 
 /**
@@ -939,9 +939,9 @@ xmlGzfileClose (void * context) {
 #endif /* LIBXML_ZLIB_ENABLED */
 
 /************************************************************************
- *        							*
- *        I/O for compressed file accesses			*
- *        							*
+ *                                    *
+ *        I/O for compressed file accesses            *
+ *                                    *
  ************************************************************************/
 
 #ifdef LIBXML_LZMA_ENABLED
@@ -984,9 +984,9 @@ xmlXzfileClose (void * context) {
 #endif /* LIBXML_LZMA_ENABLED */
 
 /************************************************************************
- *        							*
- *        	I/O for HTTP file accesses			*
- *        							*
+ *                                    *
+ *            I/O for HTTP file accesses            *
+ *                                    *
  ************************************************************************/
 
 #ifdef LIBXML_HTTP_ENABLED
@@ -1077,9 +1077,9 @@ xmlIOHTTPClose (void * context) {
 
 #ifdef LIBXML_FTP_ENABLED
 /************************************************************************
- *        							*
- *        	I/O for FTP file accesses			*
- *        							*
+ *                                    *
+ *            I/O for FTP file accesses            *
+ *                                    *
  ************************************************************************/
 /**
  * xmlIOFTPMatch:
@@ -1148,9 +1148,9 @@ xmlIOFTPClose (void * context) {
 #endif /* LIBXML_FTP_ENABLED */
 
 /************************************************************************
- *        							*
- *        	Input/output buffers				*
- *        							*
+ *                                    *
+ *            Input/output buffers                *
+ *                                    *
  ************************************************************************/
 
 static int
@@ -2978,9 +2978,9 @@ xmlNoNetExists(const char *filename) {
 }
 
 /************************************************************************
- *        							*
- *        	Input/output callbacks				*
- *        							*
+ *                                    *
+ *            Input/output callbacks                *
+ *                                    *
  ************************************************************************/
 
 /**

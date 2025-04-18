@@ -32,9 +32,9 @@ static int verbose = 0;
 
 
 /************************************************************************
- *        							*
- *        File name and path utilities				*
- *        							*
+ *                                    *
+ *        File name and path utilities                *
+ *                                    *
  ************************************************************************/
 
 static int checkTestFile(const char *filename) {
@@ -65,9 +65,9 @@ static xmlChar *composeDir(const xmlChar *dir, const xmlChar *path) {
 }
 
 /************************************************************************
- *        							*
- *        Libxml2 specific routines				*
- *        							*
+ *                                    *
+ *        Libxml2 specific routines                *
+ *                                    *
  ************************************************************************/
 
 static int nb_tests = 0;
@@ -120,7 +120,7 @@ static int addEntity(char *name, char *content) {
  */
 static xmlParserInputPtr
 testExternalEntityLoader(const char *URL, const char *ID,
-        	 xmlParserCtxtPtr ctxt) {
+             xmlParserCtxtPtr ctxt) {
     xmlParserInputPtr ret;
     int i;
 
@@ -282,9 +282,9 @@ getString(xmlNodePtr cur, const char *xpath) {
 }
 
 /************************************************************************
- *        							*
- *        Test test/xsdtest/xsdtestsuite.xml			*
- *        							*
+ *                                    *
+ *        Test test/xsdtest/xsdtestsuite.xml            *
+ *                                    *
  ************************************************************************/
 
 static int
@@ -495,7 +495,7 @@ xsdTestCase(xmlNodePtr tst) {
                             "test", NULL, 0);
         if (doc == NULL) {
         test_log("Failed to parse valid instance line %ld\n",
-        	xmlGetLineNo(tmp));
+            xmlGetLineNo(tmp));
         nb_errors++;
         } else {
         nb_tests++;
@@ -506,11 +506,11 @@ xsdTestCase(xmlNodePtr tst) {
         xmlRelaxNGFreeValidCtxt(ctxt);
         if (ret > 0) {
             test_log("Failed to validate valid instance line %ld\n",
-        		xmlGetLineNo(tmp));
+                xmlGetLineNo(tmp));
             nb_errors++;
         } else if (ret < 0) {
             test_log("Internal error validating instance line %ld\n",
-        	    xmlGetLineNo(tmp));
+                xmlGetLineNo(tmp));
             nb_errors++;
         }
         xmlFreeDoc(doc);
@@ -549,7 +549,7 @@ xsdTestCase(xmlNodePtr tst) {
                             "test", NULL, 0);
         if (doc == NULL) {
         test_log("Failed to parse valid instance line %ld\n",
-        	xmlGetLineNo(tmp));
+            xmlGetLineNo(tmp));
         nb_errors++;
         } else {
         nb_tests++;
@@ -560,11 +560,11 @@ xsdTestCase(xmlNodePtr tst) {
         xmlRelaxNGFreeValidCtxt(ctxt);
         if (ret == 0) {
             test_log("Failed to detect invalid instance line %ld\n",
-        		xmlGetLineNo(tmp));
+                xmlGetLineNo(tmp));
             nb_errors++;
         } else if (ret < 0) {
             test_log("Internal error validating instance line %ld\n",
-        	    xmlGetLineNo(tmp));
+                xmlGetLineNo(tmp));
             nb_errors++;
         }
         xmlFreeDoc(doc);
@@ -752,9 +752,9 @@ done:
 }
 
 /************************************************************************
- *        							*
- *        Schemas test suites from W3C/NIST/MS/Sun		*
- *        							*
+ *                                    *
+ *        Schemas test suites from W3C/NIST/MS/Sun        *
+ *                                    *
  ************************************************************************/
 
 static int
@@ -816,18 +816,18 @@ xstcTestInstance(xmlNodePtr cur, xmlSchemaPtr schemas,
     if (xmlStrEqual(validity, BAD_CAST "valid")) {
     if (ret > 0) {
         test_log("valid instance %s failed to validate against %s\n",
-        	path, spath);
+            path, spath);
         nb_errors++;
     } else if (ret < 0) {
         test_log("valid instance %s got internal error validating %s\n",
-        	path, spath);
+            path, spath);
         nb_internals++;
         nb_errors++;
     }
     } else if (xmlStrEqual(validity, BAD_CAST "invalid")) {
     if (ret == 0) {
         test_log("Failed to detect invalid instance %s against %s\n",
-        	path, spath);
+            path, spath);
         nb_errors++;
     }
     } else {
@@ -904,13 +904,13 @@ xstcTestGroup(xmlNodePtr cur, const char *base) {
     xmlSchemaFreeParserCtxt(ctxt);
     if (schemas == NULL) {
         test_log("valid schemas %s failed to parse\n",
-        	path);
+            path);
         ret = 1;
         nb_errors++;
     }
     if ((ret == 0) && (strstr(testErrors, "nimplemented") != NULL)) {
         test_log("valid schemas %s hit an unimplemented block\n",
-        	path);
+            path);
         ret = 1;
         nb_unimplemented++;
         nb_errors++;
@@ -938,14 +938,14 @@ xstcTestGroup(xmlNodePtr cur, const char *base) {
     xmlSchemaFreeParserCtxt(ctxt);
     if (schemas != NULL) {
         test_log("Failed to detect error in schemas %s\n",
-        	path);
+            path);
         nb_errors++;
         ret = 1;
     }
     if ((ret == 0) && (strstr(testErrors, "nimplemented") != NULL)) {
         nb_unimplemented++;
         test_log("invalid schemas %s hit an unimplemented block\n",
-        	path);
+            path);
         ret = 1;
         nb_errors++;
     }
@@ -1018,9 +1018,9 @@ done:
 }
 
 /************************************************************************
- *        							*
- *        The driver for the tests				*
- *        							*
+ *                                    *
+ *        The driver for the tests                *
+ *                                    *
  ************************************************************************/
 
 int

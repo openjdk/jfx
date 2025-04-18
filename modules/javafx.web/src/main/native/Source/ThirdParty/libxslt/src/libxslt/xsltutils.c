@@ -47,9 +47,9 @@
 #endif
 
 /************************************************************************
- *        							*
- *        	Convenience function				*
- *        							*
+ *                                    *
+ *            Convenience function                *
+ *                                    *
  ************************************************************************/
 
 /**
@@ -475,9 +475,9 @@ xsltPointerListClear(xsltPointerListPtr list)
 #endif /* XSLT_REFACTORED */
 
 /************************************************************************
- *        							*
- *        Handling of XSLT stylesheets messages			*
- *        							*
+ *                                    *
+ *        Handling of XSLT stylesheets messages            *
+ *                                    *
  ************************************************************************/
 
 /**
@@ -529,39 +529,39 @@ xsltMessage(xsltTransformContextPtr ctxt, xmlNodePtr node, xmlNodePtr inst) {
 }
 
 /************************************************************************
- *        							*
- *        Handling of out of context errors			*
- *        							*
+ *                                    *
+ *        Handling of out of context errors            *
+ *                                    *
  ************************************************************************/
 
-#define XSLT_GET_VAR_STR(msg, str) {        		\
-    int       size;        				\
-    int       chars;        				\
-    char      *larger;        				\
-    va_list   ap;        				\
-        						\
-    str = (char *) xmlMalloc(150);        		\
-    if (str == NULL)        				\
-    return;    						\
-        						\
-    size = 150;        					\
-        						\
-    while (size < 64000) {        			\
-    va_start(ap, msg);    				\
-    chars = vsnprintf(str, size, msg, ap);    		\
-    va_end(ap);    					\
-    if ((chars > -1) && (chars < size))    		\
-        break;    					\
-    if (chars > -1)    					\
-        size += chars + 1;    				\
-    else    						\
-        size += 100;    				\
+#define XSLT_GET_VAR_STR(msg, str) {                \
+    int       size;                        \
+    int       chars;                        \
+    char      *larger;                        \
+    va_list   ap;                        \
+                                \
+    str = (char *) xmlMalloc(150);                \
+    if (str == NULL)                        \
+    return;                            \
+                                \
+    size = 150;                            \
+                                \
+    while (size < 64000) {                    \
+    va_start(ap, msg);                    \
+    chars = vsnprintf(str, size, msg, ap);            \
+    va_end(ap);                        \
+    if ((chars > -1) && (chars < size))            \
+        break;                        \
+    if (chars > -1)                        \
+        size += chars + 1;                    \
+    else                            \
+        size += 100;                    \
     if ((larger = (char *) xmlRealloc(str, size)) == NULL) {\
-        xmlFree(str);    				\
-        return;    					\
-    }    						\
-    str = larger;    					\
-    }        						\
+        xmlFree(str);                    \
+        return;                        \
+    }                            \
+    str = larger;                        \
+    }                                \
 }
 /**
  * xsltGenericErrorDefaultFunc:
@@ -785,9 +785,9 @@ xsltTransformError(xsltTransformContextPtr ctxt,
 }
 
 /************************************************************************
- *        							*
- *        		QNames					*
- *        							*
+ *                                    *
+ *                QNames                    *
+ *                                    *
  ************************************************************************/
 
 /**
@@ -848,7 +848,7 @@ xsltGetQNameURI(xmlNodePtr node, xmlChar ** name)
     if (node == NULL) {
     xsltGenericError(xsltGenericErrorContext,
                  "QName: no element for namespace lookup %s\n",
-        	 qname);
+             qname);
     xmlFree(qname);
     *name = NULL;
     return(NULL);
@@ -971,9 +971,9 @@ xsltGetQNameURI2(xsltStylesheetPtr style, xmlNodePtr node,
 }
 
 /************************************************************************
- *        							*
- *        		Sorting					*
- *        							*
+ *                                    *
+ *                Sorting                    *
+ *                                    *
  ************************************************************************/
 
 /**
@@ -1104,14 +1104,14 @@ xsltComputeSortResultInternal(xsltTransformContextPtr ctxt, xmlNodePtr sort,
         } else {
 #ifdef WITH_XSLT_DEBUG_PROCESS
             xsltGenericDebug(xsltGenericDebugContext,
-        	"xsltComputeSortResult: select didn't evaluate to a number\n");
+            "xsltComputeSortResult: select didn't evaluate to a number\n");
 #endif
             results[i] = NULL;
         }
         } else {
         if (res->type == XPATH_STRING) {
             if (locale != NULL) {
-        	xmlChar *str = res->stringval;
+            xmlChar *str = res->stringval;
                         xmlChar *sortKey = ctxt->genSortKey(locale, str);
 
                         if (sortKey == NULL) {
@@ -1127,7 +1127,7 @@ xsltComputeSortResultInternal(xsltTransformContextPtr ctxt, xmlNodePtr sort,
         } else {
 #ifdef WITH_XSLT_DEBUG_PROCESS
             xsltGenericDebug(xsltGenericDebugContext,
-        	"xsltComputeSortResult: select didn't evaluate to a string\n");
+            "xsltComputeSortResult: select didn't evaluate to a string\n");
 #endif
             results[i] = NULL;
         }
@@ -1217,7 +1217,7 @@ xsltDefaultSortFunction(xsltTransformContextPtr ctxt, xmlNodePtr *sorts,
     if ((comp->stype == NULL) && (comp->has_stype != 0)) {
         xmlChar *stype =
         xsltEvalAttrValueTemplate(ctxt, sorts[j],
-        			  BAD_CAST "data-type", NULL);
+                      BAD_CAST "data-type", NULL);
         number[j] = 0;
         if (stype != NULL) {
         if (xmlStrEqual(stype, (const xmlChar *) "text"))
@@ -1226,8 +1226,8 @@ xsltDefaultSortFunction(xsltTransformContextPtr ctxt, xmlNodePtr *sorts,
             number[j] = 1;
         else {
             xsltTransformError(ctxt, NULL, sorts[j],
-        	  "xsltDoSortFunction: no support for data-type = %s\n",
-        	  stype);
+              "xsltDoSortFunction: no support for data-type = %s\n",
+              stype);
         }
                 xmlFree(stype);
         }
@@ -1245,8 +1245,8 @@ xsltDefaultSortFunction(xsltTransformContextPtr ctxt, xmlNodePtr *sorts,
             desc[j] = 1;
         else {
             xsltTransformError(ctxt, NULL, sorts[j],
-        	     "xsltDoSortFunction: invalid value %s for order\n",
-        	     order);
+                 "xsltDoSortFunction: invalid value %s for order\n",
+                 order);
         }
                 xmlFree(order);
         }
@@ -1255,8 +1255,8 @@ xsltDefaultSortFunction(xsltTransformContextPtr ctxt, xmlNodePtr *sorts,
     }
     if ((comp->lang == NULL) && (comp->has_lang != 0)) {
             lang = xsltEvalAttrValueTemplate(ctxt, sorts[j],
-        				      (xmlChar *) "lang",
-        				      NULL);
+                              (xmlChar *) "lang",
+                              NULL);
     } else {
             lang = (xmlChar *) comp->lang;
         }
@@ -1294,28 +1294,28 @@ xsltDefaultSortFunction(xsltTransformContextPtr ctxt, xmlNodePtr *sorts,
             tst = 1;
         else {
             if (number[0]) {
-        	/* We make NaN smaller than number in accordance
-        	   with XSLT spec */
-        	if (xmlXPathIsNaN(results[j]->floatval)) {
-        	    if (xmlXPathIsNaN(results[j + incr]->floatval))
-        		tst = 0;
-        	    else
-        		tst = -1;
-        	} else if (xmlXPathIsNaN(results[j + incr]->floatval))
-        	    tst = 1;
-        	else if (results[j]->floatval ==
-        		results[j + incr]->floatval)
-        	    tst = 0;
-        	else if (results[j]->floatval >
-        		results[j + incr]->floatval)
-        	    tst = 1;
-        	else tst = -1;
+            /* We make NaN smaller than number in accordance
+               with XSLT spec */
+            if (xmlXPathIsNaN(results[j]->floatval)) {
+                if (xmlXPathIsNaN(results[j + incr]->floatval))
+                tst = 0;
+                else
+                tst = -1;
+            } else if (xmlXPathIsNaN(results[j + incr]->floatval))
+                tst = 1;
+            else if (results[j]->floatval ==
+                results[j + incr]->floatval)
+                tst = 0;
+            else if (results[j]->floatval >
+                results[j + incr]->floatval)
+                tst = 1;
+            else tst = -1;
             } else {
-        	tst = xmlStrcmp(results[j]->stringval,
-        		     results[j + incr]->stringval);
+            tst = xmlStrcmp(results[j]->stringval,
+                     results[j + incr]->stringval);
             }
             if (desc[0])
-        	tst = -tst;
+            tst = -tst;
         }
         if (tst == 0) {
             /*
@@ -1323,65 +1323,65 @@ xsltDefaultSortFunction(xsltTransformContextPtr ctxt, xmlNodePtr *sorts,
              */
             depth = 1;
             while (depth < nbsorts) {
-        	if (sorts[depth] == NULL)
-        	    break;
-        	comp = sorts[depth]->psvi;
-        	if (comp == NULL)
-        	    break;
+            if (sorts[depth] == NULL)
+                break;
+            comp = sorts[depth]->psvi;
+            if (comp == NULL)
+                break;
 
-        	/*
-        	 * Compute the result of the next level for the
-        	 * full set, this might be optimized ... or not
-        	 */
-        	if (resultsTab[depth] == NULL)
-        	    resultsTab[depth] =
+            /*
+             * Compute the result of the next level for the
+             * full set, this might be optimized ... or not
+             */
+            if (resultsTab[depth] == NULL)
+                resultsTab[depth] =
                                 xsltComputeSortResultInternal(ctxt,
                                                               sorts[depth],
                                                               number[depth],
                                                               locale[depth]);
-        	res = resultsTab[depth];
-        	if (res == NULL)
-        	    break;
-        	if (res[j] == NULL) {
-        	    if (res[j+incr] != NULL)
-        		tst = 1;
-        	} else if (res[j+incr] == NULL) {
-        	    tst = -1;
-        	} else {
-        	    if (number[depth]) {
-        		/* We make NaN smaller than number in
-        		   accordance with XSLT spec */
-        		if (xmlXPathIsNaN(res[j]->floatval)) {
-        		    if (xmlXPathIsNaN(res[j +
-        				incr]->floatval))
-        			tst = 0;
-        		    else
-        		        tst = -1;
-        		} else if (xmlXPathIsNaN(res[j + incr]->
-        				floatval))
-        		    tst = 1;
-        		else if (res[j]->floatval == res[j + incr]->
-        				floatval)
-        		    tst = 0;
-        		else if (res[j]->floatval >
-        			res[j + incr]->floatval)
-        		    tst = 1;
-        		else tst = -1;
-        	    } else {
-        		tst = xmlStrcmp(res[j]->stringval,
-        			     res[j + incr]->stringval);
-        	    }
-        	    if (desc[depth])
-        		tst = -tst;
-        	}
+            res = resultsTab[depth];
+            if (res == NULL)
+                break;
+            if (res[j] == NULL) {
+                if (res[j+incr] != NULL)
+                tst = 1;
+            } else if (res[j+incr] == NULL) {
+                tst = -1;
+            } else {
+                if (number[depth]) {
+                /* We make NaN smaller than number in
+                   accordance with XSLT spec */
+                if (xmlXPathIsNaN(res[j]->floatval)) {
+                    if (xmlXPathIsNaN(res[j +
+                        incr]->floatval))
+                    tst = 0;
+                    else
+                        tst = -1;
+                } else if (xmlXPathIsNaN(res[j + incr]->
+                        floatval))
+                    tst = 1;
+                else if (res[j]->floatval == res[j + incr]->
+                        floatval)
+                    tst = 0;
+                else if (res[j]->floatval >
+                    res[j + incr]->floatval)
+                    tst = 1;
+                else tst = -1;
+                } else {
+                tst = xmlStrcmp(res[j]->stringval,
+                         res[j + incr]->stringval);
+                }
+                if (desc[depth])
+                tst = -tst;
+            }
 
-        	/*
-        	 * if we still can't differenciate at this level
-        	 * try one level deeper.
-        	 */
-        	if (tst != 0)
-        	    break;
-        	depth++;
+            /*
+             * if we still can't differenciate at this level
+             * try one level deeper.
+             */
+            if (tst != 0)
+                break;
+            depth++;
             }
         }
         if (tst == 0) {
@@ -1396,15 +1396,15 @@ xsltDefaultSortFunction(xsltTransformContextPtr ctxt, xmlNodePtr *sorts,
             list->nodeTab[j + incr] = node;
             depth = 1;
             while (depth < nbsorts) {
-        	if (sorts[depth] == NULL)
-        	    break;
-        	if (resultsTab[depth] == NULL)
-        	    break;
-        	res = resultsTab[depth];
-        	tmp = res[j];
-        	res[j] = res[j + incr];
-        	res[j + incr] = tmp;
-        	depth++;
+            if (sorts[depth] == NULL)
+                break;
+            if (resultsTab[depth] == NULL)
+                break;
+            res = resultsTab[depth];
+            tmp = res[j];
+            res[j] = res[j + incr];
+            res[j + incr] = tmp;
+            depth++;
             }
             j -= incr;
         } else
@@ -1510,9 +1510,9 @@ xsltSetCtxtLocaleHandlers(xsltTransformContextPtr ctxt,
 }
 
 /************************************************************************
- *        							*
- *        		Parsing options				*
- *        							*
+ *                                    *
+ *                Parsing options                *
+ *                                    *
  ************************************************************************/
 
 /**
@@ -1544,9 +1544,9 @@ xsltSetCtxtParseOptions(xsltTransformContextPtr ctxt, int options)
 }
 
 /************************************************************************
- *        							*
- *        		Output					*
- *        							*
+ *                                    *
+ *                Output                    *
+ *                                    *
  ************************************************************************/
 
 /**
@@ -1673,8 +1673,8 @@ xsltSaveResultTo(xmlOutputBufferPtr buf, xmlDocPtr result,
             encoding = result->encoding;
         else if (result->charset != XML_CHAR_ENCODING_UTF8)
             encoding = (const xmlChar *)
-        	       xmlGetCharEncodingName((xmlCharEncoding)
-        	                              result->charset);
+                   xmlGetCharEncodingName((xmlCharEncoding)
+                                          result->charset);
         }
         if (encoding != NULL) {
         xmlOutputBufferWriteString(buf, " encoding=");
@@ -1707,7 +1707,7 @@ xsltSaveResultTo(xmlOutputBufferPtr buf, xmlDocPtr result,
 
         while (child != NULL) {
         xmlNodeDumpOutput(buf, result, child, 0, (indent == 1),
-        	          (const char *) encoding);
+                      (const char *) encoding);
         if (indent && ((child->type == XML_DTD_NODE) ||
             ((child->type == XML_COMMENT_NODE) &&
              (child->next != NULL))))
@@ -1715,7 +1715,7 @@ xsltSaveResultTo(xmlOutputBufferPtr buf, xmlDocPtr result,
         child = child->next;
         }
         if (indent)
-        	xmlOutputBufferWriteString(buf, "\n");
+            xmlOutputBufferWriteString(buf, "\n");
 
             result->children = children;
     }
@@ -1738,7 +1738,7 @@ xsltSaveResultTo(xmlOutputBufferPtr buf, xmlDocPtr result,
  */
 int
 xsltSaveResultToFilename(const char *URL, xmlDocPtr result,
-        	 xsltStylesheetPtr style, int compression) {
+             xsltStylesheetPtr style, int compression) {
     xmlOutputBufferPtr buf;
     const xmlChar *encoding;
     int ret;
@@ -2049,9 +2049,9 @@ xsltGetPSVIPtr(xmlNodePtr cur) {
 #ifdef WITH_PROFILER
 
 /************************************************************************
- *        							*
- *        Generating profiling information			*
- *        							*
+ *                                    *
+ *        Generating profiling information            *
+ *                                    *
  ************************************************************************/
 
 static long calibration = -1;
@@ -2411,9 +2411,9 @@ xsltSaveProfiling(xsltTransformContextPtr ctxt, FILE *output) {
 }
 
 /************************************************************************
- *        							*
- *        Fetching profiling information				*
- *        							*
+ *                                    *
+ *        Fetching profiling information                *
+ *                                    *
  ************************************************************************/
 
 /**
@@ -2528,9 +2528,9 @@ xsltGetProfileInformation(xsltTransformContextPtr ctxt)
 #endif /* WITH_PROFILER */
 
 /************************************************************************
- *        							*
- *        Hooks for libxml2 XPath					*
- *        							*
+ *                                    *
+ *        Hooks for libxml2 XPath                    *
+ *                                    *
  ************************************************************************/
 
 /**
@@ -2593,9 +2593,9 @@ xsltXPathCompile(xsltStylesheetPtr style, const xmlChar *str) {
 }
 
 /************************************************************************
- *        							*
- *        Hooks for the debugger					*
- *        							*
+ *                                    *
+ *        Hooks for the debugger                    *
+ *                                    *
  ************************************************************************/
 
 int xslDebugStatus;
