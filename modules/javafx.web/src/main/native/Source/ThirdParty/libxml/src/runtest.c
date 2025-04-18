@@ -1930,7 +1930,7 @@ pushBoundaryTest(const char *filename, const char *result,
                 isText = 1;
         }
 
-        oldConsumed = ctxt->input->consumed +
+        oldConsumed = ctxt->input->consumed
                       (unsigned long) (ctxt->input->cur - ctxt->input->base);
 
         pushBoundaryCount = 0;
@@ -1981,7 +1981,7 @@ pushBoundaryTest(const char *filename, const char *result,
          * Buffer check: If input was consumed, check that the input
          * buffer is (almost) empty.
          */
-        consumed = ctxt->input->consumed +
+        consumed = ctxt->input->consumed
                    (unsigned long) (ctxt->input->cur - ctxt->input->base);
         if ((ctxt->instate != XML_PARSER_DTD) &&
             (consumed >= 4) &&

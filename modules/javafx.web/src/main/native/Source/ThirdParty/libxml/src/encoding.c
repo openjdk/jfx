@@ -2869,7 +2869,7 @@ UTF8ToISO8859x(unsigned char* out, int *outlen,
             c1 = c1 & 0x3F;
             c2 = c2 & 0x3F;
         d = d & 0x0F;
-        d = xlattable [48 + c2 + xlattable [48 + c1 +
+        d = xlattable [48 + c2 + xlattable [48 + c1
             xlattable [32 + d] * 64] * 64];
             if (d == 0) {
                 /* not in character set */

@@ -9928,7 +9928,7 @@ xmlParseElementStart(xmlParserCtxtPtr ctxt) {
 
     /* Capture start position */
     if (ctxt->record_info) {
-        node_info.begin_pos = ctxt->input->consumed +
+        node_info.begin_pos = ctxt->input->consumed
                           (CUR_PTR - ctxt->input->base);
     node_info.begin_line = ctxt->input->line;
     }
@@ -9989,7 +9989,7 @@ xmlParseElementStart(xmlParserCtxtPtr ctxt) {
         xmlParserNsPop(ctxt, nbNs);
     if (cur != NULL && ctxt->record_info) {
             node_info.node = cur;
-            node_info.end_pos = ctxt->input->consumed +
+            node_info.end_pos = ctxt->input->consumed
                                 (CUR_PTR - ctxt->input->base);
             node_info.end_line = ctxt->input->line;
             xmlParserAddNodeInfo(ctxt, &node_info);
@@ -10059,7 +10059,7 @@ xmlParseElementEnd(xmlParserCtxtPtr ctxt) {
 
         node_info = (xmlParserNodeInfoPtr) xmlParserFindNodeInfo(ctxt, cur);
         if (node_info != NULL) {
-            node_info->end_pos = ctxt->input->consumed +
+            node_info->end_pos = ctxt->input->consumed
                                  (CUR_PTR - ctxt->input->base);
             node_info->end_line = ctxt->input->line;
         }

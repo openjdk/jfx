@@ -4112,14 +4112,14 @@ _xmlSchemaDateCastYMToDays (const xmlSchemaValPtr dt)
     if (mon <= 0) mon = 1; /* normalization */
 
     if (dt->value.date.year <= 0)
-        ret = (dt->value.date.year * 365) +
+        ret = (dt->value.date.year * 365)
               (((dt->value.date.year+1)/4)-((dt->value.date.year+1)/100)+
-               ((dt->value.date.year+1)/400)) +
+               ((dt->value.date.year+1)/400))
               DAY_IN_YEAR(0, mon, dt->value.date.year);
     else
-        ret = ((dt->value.date.year-1) * 365) +
+        ret = ((dt->value.date.year-1) * 365)
               (((dt->value.date.year-1)/4)-((dt->value.date.year-1)/100)+
-               ((dt->value.date.year-1)/400)) +
+               ((dt->value.date.year-1)/400))
               DAY_IN_YEAR(0, mon, dt->value.date.year);
 
     return ret;

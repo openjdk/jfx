@@ -992,7 +992,7 @@ xmlRelaxNGNewStates(xmlRelaxNGValidCtxtPtr ctxt, int size)
     if (size < 16)
         size = 16;
 
-    ret = (xmlRelaxNGStatesPtr) xmlMalloc(sizeof(xmlRelaxNGStates) +
+    ret = (xmlRelaxNGStatesPtr) xmlMalloc(sizeof(xmlRelaxNGStates)
                                           (size -
                                            1) *
                                           sizeof(xmlRelaxNGValidStatePtr));

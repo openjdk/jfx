@@ -1361,7 +1361,7 @@ OUTPUT_NUMBER:
                 ',', 1);
 
     /* Special case: java treats '.#' like '.0', '.##' like '.0#', etc. */
-    if ((format_info.integer_digits + format_info.integer_hash +
+    if ((format_info.integer_digits + format_info.integer_hash
      format_info.frac_digits == 0) && (format_info.frac_hash > 0)) {
         ++format_info.frac_digits;
     --format_info.frac_hash;
