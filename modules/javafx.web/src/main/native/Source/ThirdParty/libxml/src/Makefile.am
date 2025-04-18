@@ -97,9 +97,6 @@ endif
 if WITH_SCHEMATRON_SOURCES
 libxml2_la_SOURCES += schematron.c
 endif
-if WITH_TRIO_SOURCES
-libxml2_la_SOURCES += triostr.c trio.c
-endif
 if WITH_WRITER_SOURCES
 libxml2_la_SOURCES += xmlwriter.c
 endif
@@ -113,15 +110,14 @@ if WITH_XPTR_SOURCES
 libxml2_la_SOURCES += xlink.c xpointer.c
 endif
 
-DEPS = $(top_builddir)/libxml2.la
-LDADDS = $(top_builddir)/libxml2.la
+DEPS = libxml2.la
+LDADDS = libxml2.la
 
 
 m4datadir = $(datadir)/aclocal
 dist_m4data_DATA = libxml.m4
 
 runtest_SOURCES=runtest.c
-runtest_CFLAGS = $(AM_CFLAGS) $(THREAD_CFLAGS)
 runtest_DEPENDENCIES = $(DEPS)
 runtest_LDADD= $(BASE_THREAD_LIBS) $(THREAD_LIBS) $(LDADDS)
 
@@ -160,7 +156,6 @@ xmlcatalog_DEPENDENCIES = $(DEPS)
 xmlcatalog_LDADD = $(RDL_LIBS) $(LDADDS)
 
 testThreads_SOURCES = testThreads.c
-testThreads_CFLAGS = $(AM_CFLAGS) $(THREAD_CFLAGS)
 testThreads_DEPENDENCIES = $(DEPS)
 testThreads_LDADD= $(BASE_THREAD_LIBS) $(THREAD_LIBS) $(LDADDS)
 
@@ -185,10 +180,6 @@ testapi_LDADD= $(LDADDS)
 runxmlconf_SOURCES=runxmlconf.c
 runxmlconf_DEPENDENCIES = $(DEPS)
 runxmlconf_LDADD= $(LDADDS)
-
-#testOOM_SOURCES=testOOM.c testOOMlib.h testOOMlib.c
-#testOOM_DEPENDENCIES = $(DEPS)
-#testOOM_LDADD= $(LDADDS)
 
 check-local:
 	[ -d test   ] || $(LN_S) $(srcdir)/test   .
@@ -379,7 +370,7 @@ cleanup:
 	-@(find . -name \*.orig -o -name \*.rej -o -name \*.old -exec rm -f {} \;)
 
 dist-hook: cleanup
-	(cd $(srcdir) ; tar -cf - --exclude .git win32 os400 vms test result) | (cd $(distdir); tar xf -)
+	(cd $(srcdir) ; tar -cf - --exclude .git win32 os400 test result) | (cd $(distdir); tar xf -)
 
 CLEANFILES = runsuite.log runxmlconf.log test.out *.gcda *.gcno *.res
 DISTCLEANFILES = COPYING missing.lst
@@ -387,15 +378,14 @@ DISTCLEANFILES = COPYING missing.lst
 EXTRA_DIST = Copyright check-xml-test-suite.py gentest.py \
 	     check-relaxng-test-suite.py check-relaxng-test-suite2.py \
 	     check-xsddata-test-suite.py check-xinclude-test-suite.py \
-             example/Makefile.am example/gjobread.c example/gjobs.xml \
 	     libxml2-config.cmake.in autogen.sh \
-	     trionan.c trionan.h triostr.c triostr.h trio.c trio.h \
-	     triop.h triodef.h libxml.h \
+	     libxml.h \
 	     genUnicode.py \
 	     dbgen.pl dbgenattr.pl \
 	     libxml2.syms timsort.h \
 	     README.zOS README.md \
-	     CMakeLists.txt config.h.cmake.in libxml2-config.cmake.cmake.in
+	     CMakeLists.txt config.h.cmake.in libxml2-config.cmake.cmake.in \
+	     meson.build meson_options.txt
 
 
 pkgconfigdir = $(libdir)/pkgconfig
@@ -403,12 +393,6 @@ pkgconfig_DATA = libxml-2.0.pc
 
 cmakedir = $(libdir)/cmake/libxml2
 cmake_DATA = libxml2-config.cmake
-
-#
-# Install the tests program sources as examples 
-#
-examplesdir = $(docdir)/examples
-examples_DATA = xmllint.c
 
 tst: tst.c
 	$(CC) $(CFLAGS) -Iinclude -o tst tst.c .libs/libxml2.a -lpthread -lm -lz -llzma
