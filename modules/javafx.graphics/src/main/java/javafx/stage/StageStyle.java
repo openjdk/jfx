@@ -37,7 +37,11 @@ public enum StageStyle {
     DECORATED,
 
     /**
-     * Defines a {@code Stage} style with a solid white background and no decorations.
+     * Defines a {@code Stage} style with a solid white background and no window
+     * decorations, such as a title bar, borders, or window controls.
+     * This style allows window operations such as resize, minimize, maximize
+     * and fullscreen to be either programmatically controlled or achieved through
+     * platform-specific functions, such as key shortcuts or menu options.
      */
     UNDECORATED,
 
@@ -51,8 +55,12 @@ public enum StageStyle {
     TRANSPARENT,
 
     /**
-     * Defines a {@code Stage} style with a solid white background and minimal
-     * platform decorations used for a utility window.
+     * Defines a lightweight {@code Stage} style with a solid white background and minimal
+     * decorations, intended for supporting tasks such as tool palettes.
+     * <p>
+     * Utility stages may restrict window operations like maximize, minimize,
+     * and fullscreen depending on the platform. They are designed to float above
+     * primary windows without acting as a main application stage.
      */
     UTILITY,
 
