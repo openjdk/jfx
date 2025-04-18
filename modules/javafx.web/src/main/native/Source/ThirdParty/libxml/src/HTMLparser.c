@@ -4310,7 +4310,7 @@ htmlParseElement(htmlParserCtxtPtr ctxt) {
 
     /* Capture start position */
     if (ctxt->record_info) {
-        node_info.begin_pos = ctxt->input->consumed
+        node_info.begin_pos = ctxt->input->consumed +
                           (CUR_PTR - ctxt->input->base);
     node_info.begin_line = ctxt->input->line;
     }
@@ -4361,7 +4361,7 @@ htmlParseElement(htmlParserCtxtPtr ctxt) {
      * Capture end position and add node
      */
     if (ctxt->record_info) {
-       node_info.end_pos = ctxt->input->consumed
+       node_info.end_pos = ctxt->input->consumed +
                   (CUR_PTR - ctxt->input->base);
        node_info.end_line = ctxt->input->line;
        node_info.node = ctxt->node;
@@ -4396,7 +4396,7 @@ htmlParseElement(htmlParserCtxtPtr ctxt) {
      * Capture end position and add node
      */
     if ( currentNode != NULL && ctxt->record_info ) {
-       node_info.end_pos = ctxt->input->consumed
+       node_info.end_pos = ctxt->input->consumed +
                           (CUR_PTR - ctxt->input->base);
        node_info.end_line = ctxt->input->line;
        node_info.node = ctxt->node;
@@ -4416,7 +4416,7 @@ htmlParserFinishElementParsing(htmlParserCtxtPtr ctxt) {
      * Capture end position and add node
      */
     if ( ctxt->node != NULL && ctxt->record_info ) {
-       ctxt->nodeInfo->end_pos = ctxt->input->consumed
+       ctxt->nodeInfo->end_pos = ctxt->input->consumed +
                                 (CUR_PTR - ctxt->input->base);
        ctxt->nodeInfo->end_line = ctxt->input->line;
        ctxt->nodeInfo->node = ctxt->node;
@@ -4451,7 +4451,7 @@ htmlParseElementInternal(htmlParserCtxtPtr ctxt) {
 
     /* Capture start position */
     if (ctxt->record_info) {
-        node_info.begin_pos = ctxt->input->consumed
+        node_info.begin_pos = ctxt->input->consumed +
                           (CUR_PTR - ctxt->input->base);
     node_info.begin_line = ctxt->input->line;
     }
@@ -5465,7 +5465,7 @@ htmlParseTryOrFinish(htmlParserCtxtPtr ctxt, int terminate) {
 
                 /* Capture start position */
             if (ctxt->record_info) {
-                 node_info.begin_pos = ctxt->input->consumed
+                 node_info.begin_pos = ctxt->input->consumed +
                                     (CUR_PTR - ctxt->input->base);
                  node_info.begin_line = ctxt->input->line;
             }

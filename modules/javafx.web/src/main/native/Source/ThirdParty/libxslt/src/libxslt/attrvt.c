@@ -152,7 +152,7 @@ xsltFreeAVTList(void *avt) {
 static xsltAttrVTPtr
 xsltSetAttrVTsegment(xsltAttrVTPtr avt, void *val) {
     if (avt->nb_seg >= avt->max_seg) {
-        size_t size = sizeof(xsltAttrVT)
+        size_t size = sizeof(xsltAttrVT) +
                       (avt->max_seg + MAX_AVT_SEG) * sizeof(void *);
     avt = (xsltAttrVTPtr) xmlRealloc(avt, size);
     if (avt == NULL)

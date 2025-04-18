@@ -19763,7 +19763,7 @@ xmlSchemaCheckElemSubstGroup(xmlSchemaParserCtxtPtr ctxt,
         type = type->baseType;
         }
         /*
-        * The {prohibited substitutions} of all intermediate types
+        * The {prohibited substitutions} of all intermediate types +
         * the head's type.
         */
         type = elemDecl->subtypes->baseType;

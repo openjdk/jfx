@@ -1352,7 +1352,7 @@ xsltDefaultSortFunction(xsltTransformContextPtr ctxt, xmlNodePtr *sorts,
                 /* We make NaN smaller than number in
                    accordance with XSLT spec */
                 if (xmlXPathIsNaN(res[j]->floatval)) {
-                    if (xmlXPathIsNaN(res[j
+                    if (xmlXPathIsNaN(res[j +
                         incr]->floatval))
                     tst = 0;
                     else
