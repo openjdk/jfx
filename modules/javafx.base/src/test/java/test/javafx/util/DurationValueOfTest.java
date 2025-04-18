@@ -25,68 +25,62 @@
 
 package test.javafx.util;
 
-import java.util.Arrays;
-import java.util.Collection;
+import java.util.stream.Stream;
 import javafx.util.Duration;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
 
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
-import static org.junit.Assert.assertEquals;
-
-/**
- */
-@RunWith(Parameterized.class)
 public class DurationValueOfTest {
-    @SuppressWarnings("rawtypes")
-    @Parameterized.Parameters public static Collection implementations() {
-        return Arrays.asList(new Object[][]{
-                {"5ms", Duration.millis(5)},
-                {"0ms", Duration.ZERO},
-                {"25.5ms", Duration.millis(25.5)},
-                {"-10ms", Duration.millis(-10)},
-                {"5s", Duration.seconds(5)},
-                {"0s", Duration.ZERO},
-                {"25.5s", Duration.seconds(25.5)},
-                {"-10s", Duration.seconds(-10)},
-                {"5m", Duration.minutes(5)},
-                {"0m", Duration.ZERO},
-                {"25.5m", Duration.minutes(25.5)},
-                {"-10m", Duration.minutes(-10)},
-                {"5h", Duration.hours(5)},
-                {"0h", Duration.ZERO},
-                {"25.5h", Duration.hours(25.5)},
-                {"-10h", Duration.hours(-10)}
-        });
+
+    static Stream<Arguments> provideTestCases() {
+        return Stream.of(
+                Arguments.of("5ms", Duration.millis(5)),
+                Arguments.of("0ms", Duration.ZERO),
+                Arguments.of("25.5ms", Duration.millis(25.5)),
+                Arguments.of("-10ms", Duration.millis(-10)),
+                Arguments.of("5s", Duration.seconds(5)),
+                Arguments.of("0s", Duration.ZERO),
+                Arguments.of("25.5s", Duration.seconds(25.5)),
+                Arguments.of("-10s", Duration.seconds(-10)),
+                Arguments.of("5m", Duration.minutes(5)),
+                Arguments.of("0m", Duration.ZERO),
+                Arguments.of("25.5m", Duration.minutes(25.5)),
+                Arguments.of("-10m", Duration.minutes(-10)),
+                Arguments.of("5h", Duration.hours(5)),
+                Arguments.of("0h", Duration.ZERO),
+                Arguments.of("25.5h", Duration.hours(25.5)),
+                Arguments.of("-10h", Duration.hours(-10))
+        );
     }
 
-    private String asString;
-    private Duration expected;
-
-    public DurationValueOfTest(String asString, Duration expected) {
-        this.asString = asString;
-        this.expected = expected;
-    }
-
-    @Test public void testValueOf() {
+    @ParameterizedTest
+    @MethodSource("provideTestCases")
+    void testValueOf(String asString, Duration expected) {
         Duration actual = Duration.valueOf(asString);
         assertEquals(expected, actual);
     }
 
-    @Test(expected = IllegalArgumentException.class)
-    public void leadingSpaceResultsInException() {
-        Duration.valueOf(" " + asString);
+    @ParameterizedTest
+    @MethodSource("provideTestCases")
+    void leadingSpaceResultsInException(String asString, Duration expected) {
+        assertThrows(IllegalArgumentException.class, () -> Duration.valueOf(" " + asString));
     }
 
-    @Test(expected = IllegalArgumentException.class)
-    public void trailingSpaceResultsInException() {
-        Duration.valueOf(asString + " ");
+    @ParameterizedTest
+    @MethodSource("provideTestCases")
+    void trailingSpaceResultsInException(String asString, Duration expected) {
+        assertThrows(IllegalArgumentException.class, () -> Duration.valueOf(asString + " "));
     }
 
-    @Test(expected = IllegalArgumentException.class)
-    public void wrongCaseResultsInException() {
-        String mangled = asString.substring(0, asString.length()-1) + Character.toUpperCase(asString.charAt(asString.length()-1));
-        Duration.valueOf(mangled);
+    @ParameterizedTest
+    @MethodSource("provideTestCases")
+    void wrongCaseResultsInException(String asString, Duration expected) {
+        String mangled = asString.substring(0, asString.length() - 1)
+                + Character.toUpperCase(asString.charAt(asString.length() - 1));
+        assertThrows(IllegalArgumentException.class, () -> Duration.valueOf(mangled));
     }
 }
