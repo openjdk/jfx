@@ -11,9 +11,11 @@
 #define IN_LIBXML
 #include "libxml.h"
 #include <string.h>
+#include <stdarg.h>
 
 #include <libxml/xmlmemory.h>
 #include <libxml/parser.h>
+#include <libxml/parserInternals.h>
 #include <libxml/uri.h>
 #include <libxml/HTMLtree.h>
 #include <libxml/SAX2.h>
@@ -30,26 +32,11 @@
 #define B64LINELEN 72
 #define B64CRLF "\r\n"
 
-/*
- * The following VA_COPY was coded following an example in
- * the Samba project.  It may not be sufficient for some
- * esoteric implementations of va_list but (hopefully) will
- * be sufficient for libxml2.
- */
-#ifndef VA_COPY
-  #ifdef HAVE_VA_COPY
-    #define VA_COPY(dest, src) va_copy(dest, src)
+#ifndef va_copy
+  #ifdef __va_copy
+    #define va_copy(dest, src) __va_copy(dest, src)
   #else
-    #ifdef HAVE___VA_COPY
-      #define VA_COPY(dest,src) __va_copy(dest, src)
-    #else
-      #ifndef VA_LIST_IS_ARRAY
-        #define VA_COPY(dest,src) (dest) = (src)
-      #else
-        #include <string.h>
-        #define VA_COPY(dest,src) memcpy((char *)(dest),(char *)(src),sizeof(va_list))
-      #endif
-    #endif
+    #define va_copy(dest, src) memcpy(&(dest), &(src), sizeof(va_list))
   #endif
 #endif
 
@@ -137,11 +124,11 @@ xmlWriterErrMsg(xmlTextWriterPtr ctxt, xmlParserErrors error,
                const char *msg)
 {
     if (ctxt != NULL) {
-        __xmlRaiseError(NULL, NULL, NULL, ctxt->ctxt,
-                    NULL, XML_FROM_WRITER, error, XML_ERR_FATAL,
-                    NULL, 0, NULL, NULL, NULL, 0, 0, "%s", msg);
+    __xmlRaiseError(NULL, NULL, NULL, ctxt->ctxt,
+                NULL, XML_FROM_WRITER, error, XML_ERR_FATAL,
+            NULL, 0, NULL, NULL, NULL, 0, 0, "%s", msg);
     } else {
-        __xmlRaiseError(NULL, NULL, NULL, NULL, NULL, XML_FROM_WRITER, error,
+    __xmlRaiseError(NULL, NULL, NULL, NULL, NULL, XML_FROM_WRITER, error,
                     XML_ERR_FATAL, NULL, 0, NULL, NULL, NULL, 0, 0, "%s", msg);
     }
 }
@@ -160,11 +147,11 @@ xmlWriterErrMsgInt(xmlTextWriterPtr ctxt, xmlParserErrors error,
                const char *msg, int val)
 {
     if (ctxt != NULL) {
-        __xmlRaiseError(NULL, NULL, NULL, ctxt->ctxt,
-                    NULL, XML_FROM_WRITER, error, XML_ERR_FATAL,
-                    NULL, 0, NULL, NULL, NULL, val, 0, msg, val);
+    __xmlRaiseError(NULL, NULL, NULL, ctxt->ctxt,
+                NULL, XML_FROM_WRITER, error, XML_ERR_FATAL,
+            NULL, 0, NULL, NULL, NULL, val, 0, msg, val);
     } else {
-        __xmlRaiseError(NULL, NULL, NULL, NULL, NULL, XML_FROM_WRITER, error,
+    __xmlRaiseError(NULL, NULL, NULL, NULL, NULL, XML_FROM_WRITER, error,
                     XML_ERR_FATAL, NULL, 0, NULL, NULL, NULL, val, 0, msg, val);
     }
 }
@@ -404,7 +391,7 @@ xmlNewTextWriterDoc(xmlDocPtr * doc, int compression)
 
     if (doc != NULL) {
         *doc = ctxt->myDoc;
-        ret->no_doc_free = 1;
+    ret->no_doc_free = 1;
     }
 
     return ret;
@@ -492,9 +479,9 @@ xmlFreeTextWriter(xmlTextWriterPtr writer)
 
     if (writer->ctxt != NULL) {
         if ((writer->ctxt->myDoc != NULL) && (writer->no_doc_free == 0)) {
-            xmlFreeDoc(writer->ctxt->myDoc);
-            writer->ctxt->myDoc = NULL;
-        }
+        xmlFreeDoc(writer->ctxt->myDoc);
+        writer->ctxt->myDoc = NULL;
+    }
         xmlFreeParserCtxt(writer->ctxt);
     }
 
@@ -551,9 +538,9 @@ xmlTextWriterStartDocument(xmlTextWriterPtr writer, const char *version,
 
     writer->out->encoder = encoder;
     if (encoder != NULL) {
-        if (writer->out->conv == NULL) {
-            writer->out->conv = xmlBufCreateSize(4000);
-        }
+    if (writer->out->conv == NULL) {
+        writer->out->conv = xmlBufCreateSize(4000);
+    }
         xmlCharEncOutput(writer->out, 1);
         if ((writer->doc != NULL) && (writer->doc->encoding == NULL))
             writer->doc->encoding = xmlStrdup((xmlChar *)writer->out->encoder->name);
@@ -980,12 +967,12 @@ xmlTextWriterStartElement(xmlTextWriterPtr writer, const xmlChar * name)
                     return -1;
                 case XML_TEXTWRITER_NONE:
                     break;
-                                case XML_TEXTWRITER_ATTRIBUTE:
-                                        count = xmlTextWriterEndAttribute(writer);
-                                        if (count < 0)
-                                                return -1;
-                                        sum += count;
-                                        /* fallthrough */
+                case XML_TEXTWRITER_ATTRIBUTE:
+                    count = xmlTextWriterEndAttribute(writer);
+                    if (count < 0)
+                        return -1;
+                    sum += count;
+                    /* fallthrough */
                 case XML_TEXTWRITER_NAME:
                     /* Output namespace declarations */
                     count = xmlTextWriterOutputNSDecl(writer);
@@ -1503,17 +1490,17 @@ xmlTextWriterWriteString(xmlTextWriterPtr writer, const xmlChar * content)
                 case XML_TEXTWRITER_TEXT:
 #if 0
                     buf = NULL;
-                    xmlOutputBufferWriteEscape(writer->out, content, NULL);
+            xmlOutputBufferWriteEscape(writer->out, content, NULL);
 #endif
                     buf = xmlEncodeSpecialChars(NULL, content);
                     break;
                 case XML_TEXTWRITER_ATTRIBUTE:
                     buf = NULL;
-                    xmlBufAttrSerializeTxtContent(writer->out->buffer,
-                                                  writer->doc, NULL, content);
+                    xmlBufAttrSerializeTxtContent(writer->out, writer->doc,
+                                                  content);
                     break;
-                default:
-                    break;
+        default:
+            break;
             }
         }
     }
@@ -1549,10 +1536,10 @@ xmlOutputBufferWriteBase64(xmlOutputBufferPtr out, int len,
 {
     static const unsigned char dtable[64] =
             {'A','B','C','D','E','F','G','H','I','J','K','L','M',
-             'N','O','P','Q','R','S','T','U','V','W','X','Y','Z',
-             'a','b','c','d','e','f','g','h','i','j','k','l','m',
-             'n','o','p','q','r','s','t','u','v','w','x','y','z',
-             '0','1','2','3','4','5','6','7','8','9','+','/'};
+         'N','O','P','Q','R','S','T','U','V','W','X','Y','Z',
+         'a','b','c','d','e','f','g','h','i','j','k','l','m',
+         'n','o','p','q','r','s','t','u','v','w','x','y','z',
+         '0','1','2','3','4','5','6','7','8','9','+','/'};
 
     int i;
     int linelen;
@@ -1681,7 +1668,7 @@ xmlOutputBufferWriteBinHex(xmlOutputBufferPtr out,
     int count;
     int sum;
     static const char hex[16] =
-        {'0','1','2','3','4','5','6','7','8','9','A','B','C','D','E','F'};
+    {'0','1','2','3','4','5','6','7','8','9','A','B','C','D','E','F'};
     int i;
 
     if ((out == NULL) || (data == NULL) || (len < 0)) {
@@ -1876,7 +1863,7 @@ xmlTextWriterStartAttributeNS(xmlTextWriterPtr writer,
                 xmlMalloc(sizeof(xmlTextWriterNsStackEntry));
             if (p == 0) {
                 xmlWriterErrMsg(writer, XML_ERR_NO_MEMORY,
-                                                                        "xmlTextWriterStartAttributeNS : out of memory!\n");
+                                        "xmlTextWriterStartAttributeNS : out of memory!\n");
                 return -1;
             }
 
@@ -2243,10 +2230,10 @@ xmlTextWriterWriteElement(xmlTextWriterPtr writer, const xmlChar * name,
         return -1;
     sum += count;
     if (content != NULL) {
-        count = xmlTextWriterWriteString(writer, content);
-        if (count == -1)
-            return -1;
-        sum += count;
+    count = xmlTextWriterWriteString(writer, content);
+    if (count == -1)
+        return -1;
+    sum += count;
     }
     count = xmlTextWriterEndElement(writer);
     if (count == -1)
@@ -2506,8 +2493,8 @@ xmlTextWriterEndPI(xmlTextWriterPtr writer)
 
     if (writer->indent) {
         count = xmlOutputBufferWriteString(writer->out, "\n");
-        if (count < 0)
-        return -1;
+    if (count < 0)
+    return -1;
         sum += count;
     }
 
@@ -2635,7 +2622,7 @@ xmlTextWriterStartCDATA(xmlTextWriterPtr writer)
         if (p != 0) {
             switch (p->state) {
                 case XML_TEXTWRITER_NONE:
-                case XML_TEXTWRITER_TEXT:
+        case XML_TEXTWRITER_TEXT:
                 case XML_TEXTWRITER_PI:
                 case XML_TEXTWRITER_PI_TEXT:
                     break;
@@ -2931,7 +2918,7 @@ xmlTextWriterStartDTD(xmlTextWriterPtr writer,
                 return -1;
             sum += count;
         } else {
-                        if (writer->indent)
+            if (writer->indent)
             count = xmlOutputBufferWriteString(writer->out, "\n       ");
             else
                 count = xmlOutputBufferWrite(writer->out, 1, " ");
@@ -4250,6 +4237,35 @@ xmlTextWriterFlush(xmlTextWriterPtr writer)
 }
 
 /**
+ * xmlTextWriterClose:
+ * @writer:  the xmlTextWriterPtr
+ *
+ * Flushes and closes the output buffer.
+ *
+ * Available since 2.13.0.
+ *
+ * Returns an xmlParserErrors code.
+ */
+int
+xmlTextWriterClose(xmlTextWriterPtr writer)
+{
+    int result;
+
+    if ((writer == NULL) || (writer->out == NULL))
+        return XML_ERR_ARGUMENT;
+
+    result = xmlOutputBufferClose(writer->out);
+    writer->out = NULL;
+
+    if (result >= 0)
+        result = XML_ERR_OK;
+    else
+        result = -result;
+
+    return result;
+}
+
+/**
  * misc
  */
 
@@ -4486,10 +4502,10 @@ xmlTextWriterVSprintf(const char *format, va_list argptr)
         return NULL;
     }
 
-    VA_COPY(locarg, argptr);
+    va_copy(locarg, argptr);
     while (((count = vsnprintf((char *) buf, size, format, locarg)) < 0)
            || (count == size - 1) || (count == size) || (count > size)) {
-        va_end(locarg);
+    va_end(locarg);
         xmlFree(buf);
         size += BUFSIZ;
         buf = (xmlChar *) xmlMalloc(size);
@@ -4498,7 +4514,7 @@ xmlTextWriterVSprintf(const char *format, va_list argptr)
                             "xmlTextWriterVSprintf : out of memory!\n");
             return NULL;
         }
-        VA_COPY(locarg, argptr);
+    va_copy(locarg, argptr);
     }
     va_end(locarg);
 
@@ -4517,28 +4533,17 @@ xmlTextWriterStartDocumentCallback(void *ctx)
     xmlParserCtxtPtr ctxt = (xmlParserCtxtPtr) ctx;
     xmlDocPtr doc;
 
-    if (ctxt->html) {
 #ifdef LIBXML_HTML_ENABLED
+    if (ctxt->html) {
         if (ctxt->myDoc == NULL)
             ctxt->myDoc = htmlNewDocNoDtD(NULL, NULL);
         if (ctxt->myDoc == NULL) {
-            if ((ctxt->sax != NULL) && (ctxt->sax->error != NULL))
-                ctxt->sax->error(ctxt->userData,
-                                 "SAX.startDocument(): out of memory\n");
-            ctxt->errNo = XML_ERR_NO_MEMORY;
-            ctxt->instate = XML_PARSER_EOF;
-            ctxt->disableSAX = 1;
+            xmlCtxtErrMemory(ctxt);
             return;
         }
-#else
-        xmlWriterErrMsg(NULL, XML_ERR_INTERNAL_ERROR,
-                        "libxml2 built without HTML support\n");
-        ctxt->errNo = XML_ERR_INTERNAL_ERROR;
-        ctxt->instate = XML_PARSER_EOF;
-        ctxt->disableSAX = 1;
-        return;
+    } else
 #endif
-    } else {
+    {
         doc = ctxt->myDoc;
         if (doc == NULL)
             doc = ctxt->myDoc = xmlNewDoc(ctxt->version);
@@ -4551,12 +4556,7 @@ xmlTextWriterStartDocumentCallback(void *ctx)
                 doc->standalone = ctxt->standalone;
             }
         } else {
-            if ((ctxt->sax != NULL) && (ctxt->sax->error != NULL))
-                ctxt->sax->error(ctxt->userData,
-                                 "SAX.startDocument(): out of memory\n");
-            ctxt->errNo = XML_ERR_NO_MEMORY;
-            ctxt->instate = XML_PARSER_EOF;
-            ctxt->disableSAX = 1;
+            xmlCtxtErrMemory(ctxt);
             return;
         }
     }

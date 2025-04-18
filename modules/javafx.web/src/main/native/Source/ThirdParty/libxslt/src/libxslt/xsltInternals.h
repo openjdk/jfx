@@ -222,11 +222,11 @@ struct _xsltPointerList {
 typedef struct _xsltRuntimeExtra xsltRuntimeExtra;
 typedef xsltRuntimeExtra *xsltRuntimeExtraPtr;
 struct _xsltRuntimeExtra {
-    void       *info;           /* pointer to the extra data */
-    xmlFreeFunc deallocate;     /* pointer to the deallocation routine */
-    union {                     /* dual-purpose field */
-        void   *ptr;            /* data not needing deallocation */
-        int    ival;            /* integer value storage */
+    void       *info;        /* pointer to the extra data */
+    xmlFreeFunc deallocate;    /* pointer to the deallocation routine */
+    union {            /* dual-purpose field */
+        void   *ptr;        /* data not needing deallocation */
+    int    ival;        /* integer value storage */
     } val;
 };
 
@@ -253,7 +253,7 @@ struct _xsltRuntimeExtra {
  *
  * Macro used to define extra information stored in the context
  */
-#define XSLT_RUNTIME_EXTRA(ctxt, nr, typ) (ctxt)->extras[(nr)].val.typ
+#define    XSLT_RUNTIME_EXTRA(ctxt, nr, typ) (ctxt)->extras[(nr)].val.typ
 
 /**
  * xsltTemplate:
@@ -265,13 +265,13 @@ typedef xsltTemplate *xsltTemplatePtr;
 struct _xsltTemplate {
     struct _xsltTemplate *next;/* chained list sorted by priority */
     struct _xsltStylesheet *style;/* the containing stylesheet */
-    xmlChar *match;     /* the matching string */
-    float priority;     /* as given from the stylesheet, not computed */
+    xmlChar *match;    /* the matching string */
+    float priority;    /* as given from the stylesheet, not computed */
     const xmlChar *name; /* the local part of the name QName */
     const xmlChar *nameURI; /* the URI part of the name QName */
     const xmlChar *mode;/* the local part of the mode QName */
     const xmlChar *modeURI;/* the URI part of the mode QName */
-    xmlNodePtr content; /* the template replacement value */
+    xmlNodePtr content;    /* the template replacement value */
     xmlNodePtr elem;    /* the source element */
 
     /*
@@ -286,8 +286,8 @@ struct _xsltTemplate {
     unsigned long time; /* the time spent in this template */
     void *params;       /* xsl:param instructions */
 
-    int              templNr;           /* Nb of templates in the stack */
-    int              templMax;          /* Size of the templtes stack */
+    int              templNr;        /* Nb of templates in the stack */
+    int              templMax;        /* Size of the templtes stack */
     xsltTemplatePtr *templCalledTab;    /* templates called */
     int             *templCountTab;  /* .. and how often */
 
@@ -329,12 +329,12 @@ struct _xsltDecimalFormat {
 typedef struct _xsltDocument xsltDocument;
 typedef xsltDocument *xsltDocumentPtr;
 struct _xsltDocument {
-    struct _xsltDocument *next; /* documents are kept in a chained list */
-    int main;                   /* is this the main document */
-    xmlDocPtr doc;              /* the parsed document */
-    void *keys;                 /* key tables storage */
+    struct _xsltDocument *next;    /* documents are kept in a chained list */
+    int main;            /* is this the main document */
+    xmlDocPtr doc;        /* the parsed document */
+    void *keys;            /* key tables storage */
     struct _xsltDocument *includes; /* subsidiary includes */
-    int preproc;                /* pre-processing already done */
+    int preproc;        /* pre-processing already done */
     int nbKeysComputed;
 };
 
@@ -404,9 +404,9 @@ typedef xsltElemPreComp *xsltElemPreCompPtr;
  * stylesheet language like xsl:if or xsl:apply-templates.
  */
 typedef void (*xsltTransformFunction) (xsltTransformContextPtr ctxt,
-                                       xmlNodePtr node,
-                                       xmlNodePtr inst,
-                                       xsltElemPreCompPtr comp);
+                                   xmlNodePtr node,
+                       xmlNodePtr inst,
+                           xsltElemPreCompPtr comp);
 
 /**
  * xsltSortFunc:
@@ -417,7 +417,7 @@ typedef void (*xsltTransformFunction) (xsltTransformContextPtr ctxt,
  * Signature of the function to use during sorting
  */
 typedef void (*xsltSortFunc) (xsltTransformContextPtr ctxt, xmlNodePtr *sorts,
-                              int nbsorts);
+                  int nbsorts);
 
 typedef enum {
     XSLT_FUNC_COPY=1,
@@ -471,12 +471,12 @@ typedef void (*xsltElemPreCompDeallocator) (xsltElemPreCompPtr comp);
  *   derived stylesheet-structs do not have.
  */
 struct _xsltElemPreComp {
-    xsltElemPreCompPtr next;            /* next item in the global chained
-                                           list held by xsltStylesheet. */
-    xsltStyleType type;         /* type of the element */
-    xsltTransformFunction func; /* handling function */
-    xmlNodePtr inst;                    /* the node in the stylesheet's tree
-                                           corresponding to this item */
+    xsltElemPreCompPtr next;        /* next item in the global chained
+                       list held by xsltStylesheet. */
+    xsltStyleType type;        /* type of the element */
+    xsltTransformFunction func;    /* handling function */
+    xmlNodePtr inst;            /* the node in the stylesheet's tree
+                       corresponding to this item */
 
     /* end of common part */
     xsltElemPreCompDeallocator free;    /* the deallocator */
@@ -500,20 +500,20 @@ typedef xsltStylePreComp *xsltStylePreCompPtr;
 * Some pointer-list utility functions.
 */
 XSLTPUBFUN xsltPointerListPtr XSLTCALL
-                xsltPointerListCreate           (int initialSize);
+        xsltPointerListCreate        (int initialSize);
 XSLTPUBFUN void XSLTCALL
-                xsltPointerListFree             (xsltPointerListPtr list);
+        xsltPointerListFree        (xsltPointerListPtr list);
 XSLTPUBFUN void XSLTCALL
-                xsltPointerListClear            (xsltPointerListPtr list);
+        xsltPointerListClear        (xsltPointerListPtr list);
 XSLTPUBFUN int XSLTCALL
-                xsltPointerListAddSize          (xsltPointerListPtr list,
-                                                 void *item,
-                                                 int initialSize);
+        xsltPointerListAddSize        (xsltPointerListPtr list,
+                         void *item,
+                         int initialSize);
 
 /************************************************************************
- *                                                                      *
+ *                                    *
  * Refactored structures                                                *
- *                                                                      *
+ *                                    *
  ************************************************************************/
 
 typedef struct _xsltNsListContainer xsltNsListContainer;
@@ -584,11 +584,11 @@ struct _xsltNsListContainer {
  */
 struct _xsltStylePreComp {
     xsltElemPreCompPtr next;    /* next item in the global chained
-                                   list held by xsltStylesheet */
+                   list held by xsltStylesheet */
     xsltStyleType type;         /* type of the item */
     xsltTransformFunction func; /* handling function */
-    xmlNodePtr inst;            /* the node in the stylesheet's tree
-                                   corresponding to this item. */
+    xmlNodePtr inst;        /* the node in the stylesheet's tree
+                   corresponding to this item. */
     /* Currently no navigational fields. */
     xsltNsListContainerPtr inScopeNs;
 };
@@ -625,9 +625,9 @@ struct _xsltStyleBasicExpressionItem {
 };
 
 /************************************************************************
- *                                                                      *
+ *                                    *
  * XSLT-instructions/declarations                                       *
- *                                                                      *
+ *                                    *
  ************************************************************************/
 
 /**
@@ -692,7 +692,7 @@ typedef xsltStyleItemText *xsltStyleItemTextPtr;
 
 struct _xsltStyleItemText {
     XSLT_ITEM_COMMON_FIELDS
-    int      noescape;          /* text */
+    int      noescape;        /* text */
 };
 
 /**
@@ -749,10 +749,10 @@ typedef xsltStyleItemApplyTemplates *xsltStyleItemApplyTemplatesPtr;
 struct _xsltStyleItemApplyTemplates {
     XSLT_ITEM_COMMON_FIELDS
 
-    const xmlChar *mode;        /* apply-templates */
-    const xmlChar *modeURI;     /* apply-templates */
-    const xmlChar *select;      /* sort, copy-of, value-of, apply-templates */
-    xmlXPathCompExprPtr comp;   /* a precompiled XPath expression */
+    const xmlChar *mode;    /* apply-templates */
+    const xmlChar *modeURI;    /* apply-templates */
+    const xmlChar *select;    /* sort, copy-of, value-of, apply-templates */
+    xmlXPathCompExprPtr comp;    /* a precompiled XPath expression */
     /* TODO: with-params */
 };
 
@@ -771,11 +771,11 @@ typedef xsltStyleItemCallTemplate *xsltStyleItemCallTemplatePtr;
 struct _xsltStyleItemCallTemplate {
     XSLT_ITEM_COMMON_FIELDS
 
-    xsltTemplatePtr templ;      /* call-template */
-    const xmlChar *name;        /* element, attribute, pi */
-    int      has_name;          /* element, attribute, pi */
-    const xmlChar *ns;          /* element */
-    int      has_ns;            /* element */
+    xsltTemplatePtr templ;    /* call-template */
+    const xmlChar *name;    /* element, attribute, pi */
+    int      has_name;        /* element, attribute, pi */
+    const xmlChar *ns;        /* element */
+    int      has_ns;        /* element */
     /* TODO: with-params */
 };
 
@@ -793,8 +793,8 @@ typedef xsltStyleItemCopy *xsltStyleItemCopyPtr;
 
 struct _xsltStyleItemCopy {
    XSLT_ITEM_COMMON_FIELDS
-    const xmlChar *use;         /* copy, element */
-    int      has_use;           /* copy, element */
+    const xmlChar *use;        /* copy, element */
+    int      has_use;        /* copy, element */
 };
 
 /**
@@ -812,8 +812,8 @@ typedef xsltStyleItemIf *xsltStyleItemIfPtr;
 struct _xsltStyleItemIf {
     XSLT_ITEM_COMMON_FIELDS
 
-    const xmlChar *test;        /* if */
-    xmlXPathCompExprPtr comp;   /* a precompiled XPath expression */
+    const xmlChar *test;    /* if */
+    xmlXPathCompExprPtr comp;    /* a precompiled XPath expression */
 };
 
 
@@ -842,7 +842,7 @@ struct _xsltStyleItemValueOf {
     XSLT_ITEM_COMMON_FIELDS
 
     const xmlChar *select;
-    xmlXPathCompExprPtr comp;   /* a precompiled XPath expression */
+    xmlXPathCompExprPtr comp;    /* a precompiled XPath expression */
     int      noescape;
 };
 
@@ -866,7 +866,7 @@ typedef xsltStyleItemNumber *xsltStyleItemNumberPtr;
 
 struct _xsltStyleItemNumber {
     XSLT_ITEM_COMMON_FIELDS
-    xsltNumberData numdata;     /* number */
+    xsltNumberData numdata;    /* number */
 };
 
 /**
@@ -930,7 +930,7 @@ typedef xsltStyleItemDocument *xsltStyleItemDocumentPtr;
 
 struct _xsltStyleItemDocument {
     XSLT_ITEM_COMMON_FIELDS
-    int      ver11;             /* assigned: in xsltDocumentComp;
+    int      ver11;        /* assigned: in xsltDocumentComp;
                                   read: nowhere;
                                   TODO: Check if we need. */
     const xmlChar *filename;    /* document URL */
@@ -938,9 +938,9 @@ struct _xsltStyleItemDocument {
 };
 
 /************************************************************************
- *                                                                      *
+ *                                    *
  * Non-instructions (actually properties of instructions/declarations)  *
- *                                                                      *
+ *                                    *
  ************************************************************************/
 
 /**
@@ -1039,22 +1039,22 @@ struct _xsltStyleItemSort {
     XSLT_ITEM_COMMON_FIELDS
 
     const xmlChar *stype;       /* sort */
-    int      has_stype;         /* sort */
-    int      number;            /* sort */
-    const xmlChar *order;       /* sort */
-    int      has_order;         /* sort */
-    int      descending;        /* sort */
-    const xmlChar *lang;        /* sort */
-    int      has_lang;          /* sort */
-    const xmlChar *case_order;  /* sort */
-    int      lower_first;       /* sort */
+    int      has_stype;        /* sort */
+    int      number;        /* sort */
+    const xmlChar *order;    /* sort */
+    int      has_order;        /* sort */
+    int      descending;    /* sort */
+    const xmlChar *lang;    /* sort */
+    int      has_lang;        /* sort */
+    const xmlChar *case_order;    /* sort */
+    int      lower_first;    /* sort */
 
     const xmlChar *use;
     int      has_use;
 
-    const xmlChar *select;      /* sort, copy-of, value-of, apply-templates */
+    const xmlChar *select;    /* sort, copy-of, value-of, apply-templates */
 
-    xmlXPathCompExprPtr comp;   /* a precompiled XPath expression */
+    xmlXPathCompExprPtr comp;    /* a precompiled XPath expression */
 };
 
 
@@ -1101,9 +1101,9 @@ struct _xsltStyleItemInclude {
 };
 
 /************************************************************************
- *                                                                      *
+ *                                    *
  *  XSLT elements in forwards-compatible mode                           *
- *                                                                      *
+ *                                    *
  ************************************************************************/
 
 typedef struct _xsltStyleItemUknown xsltStyleItemUknown;
@@ -1114,9 +1114,9 @@ struct _xsltStyleItemUknown {
 
 
 /************************************************************************
- *                                                                      *
+ *                                    *
  *  Extension elements                                                  *
- *                                                                      *
+ *                                    *
  ************************************************************************/
 
 /*
@@ -1147,9 +1147,9 @@ struct _xsltStyleItemExtElement {
 };
 
 /************************************************************************
- *                                                                      *
+ *                                    *
  *  Literal result elements                                             *
- *                                                                      *
+ *                                    *
  ************************************************************************/
 
 typedef struct _xsltEffectiveNs xsltEffectiveNs;
@@ -1217,9 +1217,9 @@ struct _xsltNsMap {
 #endif
 
 /************************************************************************
- *                                                                      *
+ *                                    *
  *  Compile-time structures for *internal* use only                     *
- *                                                                      *
+ *                                    *
  ************************************************************************/
 
 typedef struct _xsltPrincipalStylesheetData xsltPrincipalStylesheetData;
@@ -1260,7 +1260,7 @@ struct _xsltCompilerNodeInfo {
     xmlNodePtr node;
     int depth;
     xsltTemplatePtr templ;   /* The owning template */
-    int category;            /* XSLT element, LR-element or
+    int category;         /* XSLT element, LR-element or
                                 extension element */
     xsltStyleType type;
     xsltElemPreCompPtr item; /* The compiled information */
@@ -1310,9 +1310,9 @@ struct _xsltCompilerCtxt {
     /*
     * used for error/warning reports; e.g. XSLT_ERROR_SEVERITY_WARNING */
     xsltErrorSeverityType errSeverity;
-    int warnings;               /* TODO: number of warnings found at
+    int warnings;        /* TODO: number of warnings found at
                                    compilation */
-    int errors;                 /* TODO: number of errors found at
+    int errors;            /* TODO: number of errors found at
                                    compilation */
     xmlDictPtr dict;
     xsltStylesheetPtr style;
@@ -1329,7 +1329,7 @@ struct _xsltCompilerCtxt {
     */
     int isInclude;
     int hasForwardsCompat; /* whether forwards-compatible mode was used
-                             in a parsing episode */
+                 in a parsing episode */
     int maxNodeInfos; /* TEMP TODO: just for the interest */
     int maxLREs;  /* TEMP TODO: just for the interest */
     /*
@@ -1359,53 +1359,53 @@ struct _xsltCompilerCtxt {
  */
 struct _xsltStylePreComp {
     xsltElemPreCompPtr next;    /* chained list */
-    xsltStyleType type;         /* type of the element */
+    xsltStyleType type;        /* type of the element */
     xsltTransformFunction func; /* handling function */
-    xmlNodePtr inst;            /* the instruction */
+    xmlNodePtr inst;        /* the instruction */
 
     /*
      * Pre computed values.
      */
 
     const xmlChar *stype;       /* sort */
-    int      has_stype;         /* sort */
-    int      number;            /* sort */
-    const xmlChar *order;       /* sort */
-    int      has_order;         /* sort */
-    int      descending;        /* sort */
-    const xmlChar *lang;        /* sort */
-    int      has_lang;          /* sort */
-    const xmlChar *case_order;  /* sort */
-    int      lower_first;       /* sort */
+    int      has_stype;        /* sort */
+    int      number;        /* sort */
+    const xmlChar *order;    /* sort */
+    int      has_order;        /* sort */
+    int      descending;    /* sort */
+    const xmlChar *lang;    /* sort */
+    int      has_lang;        /* sort */
+    const xmlChar *case_order;    /* sort */
+    int      lower_first;    /* sort */
 
-    const xmlChar *use;         /* copy, element */
-    int      has_use;           /* copy, element */
+    const xmlChar *use;        /* copy, element */
+    int      has_use;        /* copy, element */
 
-    int      noescape;          /* text */
+    int      noescape;        /* text */
 
-    const xmlChar *name;        /* element, attribute, pi */
-    int      has_name;          /* element, attribute, pi */
-    const xmlChar *ns;          /* element */
-    int      has_ns;            /* element */
+    const xmlChar *name;    /* element, attribute, pi */
+    int      has_name;        /* element, attribute, pi */
+    const xmlChar *ns;        /* element */
+    int      has_ns;        /* element */
 
-    const xmlChar *mode;        /* apply-templates */
-    const xmlChar *modeURI;     /* apply-templates */
+    const xmlChar *mode;    /* apply-templates */
+    const xmlChar *modeURI;    /* apply-templates */
 
-    const xmlChar *test;        /* if */
+    const xmlChar *test;    /* if */
 
-    xsltTemplatePtr templ;      /* call-template */
+    xsltTemplatePtr templ;    /* call-template */
 
-    const xmlChar *select;      /* sort, copy-of, value-of, apply-templates */
+    const xmlChar *select;    /* sort, copy-of, value-of, apply-templates */
 
-    int      ver11;             /* document */
+    int      ver11;        /* document */
     const xmlChar *filename;    /* document URL */
-    int      has_filename;      /* document */
+    int      has_filename;    /* document */
 
-    xsltNumberData numdata;     /* number */
+    xsltNumberData numdata;    /* number */
 
-    xmlXPathCompExprPtr comp;   /* a precompiled XPath expression */
-    xmlNsPtr *nsList;           /* the namespaces in scope */
-    int nsNr;                   /* the number of namespaces in scope */
+    xmlXPathCompExprPtr comp;    /* a precompiled XPath expression */
+    xmlNsPtr *nsList;        /* the namespaces in scope */
+    int nsNr;            /* the number of namespaces in scope */
 };
 
 #endif /* XSLT_REFACTORED */
@@ -1420,15 +1420,15 @@ typedef xsltStackElem *xsltStackElemPtr;
 struct _xsltStackElem {
     struct _xsltStackElem *next;/* chained list */
     xsltStylePreCompPtr comp;   /* the compiled form */
-    int computed;               /* was the evaluation done */
-    const xmlChar *name;        /* the local part of the name QName */
-    const xmlChar *nameURI;     /* the URI part of the name QName */
-    const xmlChar *select;      /* the eval string */
-    xmlNodePtr tree;            /* the sequence constructor if no eval
-                                    string or the location */
+    int computed;        /* was the evaluation done */
+    const xmlChar *name;    /* the local part of the name QName */
+    const xmlChar *nameURI;    /* the URI part of the name QName */
+    const xmlChar *select;    /* the eval string */
+    xmlNodePtr tree;        /* the sequence constructor if no eval
+                    string or the location */
     xmlXPathObjectPtr value;    /* The value if computed */
-    xmlDocPtr fragment;         /* The Result Tree Fragments (needed for XSLT 1.0)
-                                   which are bound to the variable's lifetime. */
+    xmlDocPtr fragment;        /* The Result Tree Fragments (needed for XSLT 1.0)
+                   which are bound to the variable's lifetime. */
     int level;                  /* the depth in the tree;
                                    -1 if persistent (e.g. a given xsl:with-param) */
     xsltTransformContextPtr context; /* The transformation context; needed to cache
@@ -1481,15 +1481,15 @@ struct _xsltStylesheet {
     struct _xsltStylesheet *next;
     struct _xsltStylesheet *imports;
 
-    xsltDocumentPtr docList;            /* the include document list */
+    xsltDocumentPtr docList;        /* the include document list */
 
     /*
      * General data on the style sheet document.
      */
-    xmlDocPtr doc;              /* the parsed XML stylesheet */
+    xmlDocPtr doc;        /* the parsed XML stylesheet */
     xmlHashTablePtr stripSpaces;/* the hash table of the strip-space and
-                                   preserve space elements */
-    int             stripAll;   /* strip-space * (1) preserve-space * (-1) */
+                   preserve space elements */
+    int             stripAll;    /* strip-space * (1) preserve-space * (-1) */
     xmlHashTablePtr cdataSection;/* the hash table of the cdata-section */
 
     /*
@@ -1517,7 +1517,7 @@ struct _xsltStylesheet {
      * Namespace aliases.
      * NOTE: Not used in the refactored code.
      */
-    xmlHashTablePtr nsAliases;  /* the namespace alias hash tables */
+    xmlHashTablePtr nsAliases;    /* the namespace alias hash tables */
 
     /*
      * Attribute sets.
@@ -1533,25 +1533,25 @@ struct _xsltStylesheet {
                                    execution of XPath expressions; unfortunately
                                    it restricts the stylesheet to have distinct
                                    prefixes.
-                                   TODO: We need to get rid of this.
-                                 */
+                   TODO: We need to get rid of this.
+                 */
     void           *nsDefs;     /* ATTENTION TODO: This is currently used to store
-                                   xsltExtDefPtr (in extensions.c) and
+                   xsltExtDefPtr (in extensions.c) and
                                    *not* xmlNsPtr.
-                                 */
+                 */
 
     /*
      * Key definitions.
      */
-    void *keys;                 /* key definitions */
+    void *keys;            /* key definitions */
 
     /*
      * Output related stuff.
      */
-    xmlChar *method;            /* the output method */
-    xmlChar *methodURI;         /* associated namespace if any */
-    xmlChar *version;           /* version string */
-    xmlChar *encoding;          /* encoding string */
+    xmlChar *method;        /* the output method */
+    xmlChar *methodURI;        /* associated namespace if any */
+    xmlChar *version;        /* version string */
+    xmlChar *encoding;        /* encoding string */
     int omitXmlDeclaration;     /* omit-xml-declaration = "yes" | "no" */
 
     /*
@@ -1561,33 +1561,33 @@ struct _xsltStylesheet {
     int standalone;             /* standalone = "yes" | "no" */
     xmlChar *doctypePublic;     /* doctype-public string */
     xmlChar *doctypeSystem;     /* doctype-system string */
-    int indent;                 /* should output being indented */
-    xmlChar *mediaType;         /* media-type string */
+    int indent;            /* should output being indented */
+    xmlChar *mediaType;        /* media-type string */
 
     /*
      * Precomputed blocks.
      */
     xsltElemPreCompPtr preComps;/* list of precomputed blocks */
-    int warnings;               /* number of warnings found at compilation */
-    int errors;                 /* number of errors found at compilation */
+    int warnings;        /* number of warnings found at compilation */
+    int errors;            /* number of errors found at compilation */
 
-    xmlChar  *exclPrefix;       /* last excluded prefixes */
+    xmlChar  *exclPrefix;    /* last excluded prefixes */
     xmlChar **exclPrefixTab;    /* array of excluded prefixes */
-    int       exclPrefixNr;     /* number of excluded prefixes in scope */
+    int       exclPrefixNr;    /* number of excluded prefixes in scope */
     int       exclPrefixMax;    /* size of the array */
 
-    void     *_private;         /* user defined data */
+    void     *_private;        /* user defined data */
 
     /*
      * Extensions.
      */
-    xmlHashTablePtr extInfos;   /* the extension data */
-    int             extrasNr;   /* the number of extras required */
+    xmlHashTablePtr extInfos;    /* the extension data */
+    int            extrasNr;    /* the number of extras required */
 
     /*
      * For keeping track of nested includes
      */
-    xsltDocumentPtr includes;   /* points to last nested include */
+    xsltDocumentPtr includes;    /* points to last nested include */
 
     /*
      * dictionary: shared between stylesheet, context and documents.
@@ -1677,101 +1677,101 @@ typedef enum {
 } xsltTransformState;
 
 struct _xsltTransformContext {
-    xsltStylesheetPtr style;            /* the stylesheet used */
-    xsltOutputType type;                /* the type of output */
+    xsltStylesheetPtr style;        /* the stylesheet used */
+    xsltOutputType type;        /* the type of output */
 
-    xsltTemplatePtr  templ;             /* the current template */
-    int              templNr;           /* Nb of templates in the stack */
-    int              templMax;          /* Size of the templtes stack */
-    xsltTemplatePtr *templTab;          /* the template stack */
+    xsltTemplatePtr  templ;        /* the current template */
+    int              templNr;        /* Nb of templates in the stack */
+    int              templMax;        /* Size of the templtes stack */
+    xsltTemplatePtr *templTab;        /* the template stack */
 
-    xsltStackElemPtr  vars;             /* the current variable list */
-    int               varsNr;           /* Nb of variable list in the stack */
-    int               varsMax;          /* Size of the variable list stack */
-    xsltStackElemPtr *varsTab;          /* the variable list stack */
-    int               varsBase;         /* the var base for current templ */
+    xsltStackElemPtr  vars;        /* the current variable list */
+    int               varsNr;        /* Nb of variable list in the stack */
+    int               varsMax;        /* Size of the variable list stack */
+    xsltStackElemPtr *varsTab;        /* the variable list stack */
+    int               varsBase;        /* the var base for current templ */
 
     /*
      * Extensions
      */
-    xmlHashTablePtr   extFunctions;     /* the extension functions */
-    xmlHashTablePtr   extElements;      /* the extension elements */
-    xmlHashTablePtr   extInfos;         /* the extension data */
+    xmlHashTablePtr   extFunctions;    /* the extension functions */
+    xmlHashTablePtr   extElements;    /* the extension elements */
+    xmlHashTablePtr   extInfos;        /* the extension data */
 
-    const xmlChar *mode;                /* the current mode */
-    const xmlChar *modeURI;             /* the current mode URI */
+    const xmlChar *mode;        /* the current mode */
+    const xmlChar *modeURI;        /* the current mode URI */
 
-    xsltDocumentPtr docList;            /* the document list */
+    xsltDocumentPtr docList;        /* the document list */
 
-    xsltDocumentPtr document;           /* the current source document; can be NULL if an RTF */
-    xmlNodePtr node;                    /* the current node being processed */
-    xmlNodeSetPtr nodeList;             /* the current node list */
-    /* xmlNodePtr current;                      the node */
+    xsltDocumentPtr document;        /* the current source document; can be NULL if an RTF */
+    xmlNodePtr node;            /* the current node being processed */
+    xmlNodeSetPtr nodeList;        /* the current node list */
+    /* xmlNodePtr current;            the node */
 
-    xmlDocPtr output;                   /* the resulting document */
-    xmlNodePtr insert;                  /* the insertion node */
+    xmlDocPtr output;            /* the resulting document */
+    xmlNodePtr insert;            /* the insertion node */
 
-    xmlXPathContextPtr xpathCtxt;       /* the XPath context */
-    xsltTransformState state;           /* the current state */
+    xmlXPathContextPtr xpathCtxt;    /* the XPath context */
+    xsltTransformState state;        /* the current state */
 
     /*
      * Global variables
      */
-    xmlHashTablePtr   globalVars;       /* the global variables and params */
+    xmlHashTablePtr   globalVars;    /* the global variables and params */
 
-    xmlNodePtr inst;                    /* the instruction in the stylesheet */
+    xmlNodePtr inst;            /* the instruction in the stylesheet */
 
-    int xinclude;                       /* should XInclude be processed */
+    int xinclude;            /* should XInclude be processed */
 
-    const char *      outputFile;       /* the output URI if known */
+    const char *      outputFile;    /* the output URI if known */
 
     int profile;                        /* is this run profiled */
-    long             prof;              /* the current profiled value */
-    int              profNr;            /* Nb of templates in the stack */
-    int              profMax;           /* Size of the templtaes stack */
-    long            *profTab;           /* the profile template stack */
+    long             prof;        /* the current profiled value */
+    int              profNr;        /* Nb of templates in the stack */
+    int              profMax;        /* Size of the templtaes stack */
+    long            *profTab;        /* the profile template stack */
 
-    void            *_private;          /* user defined data */
+    void            *_private;        /* user defined data */
 
-    int              extrasNr;          /* the number of extras used */
-    int              extrasMax;         /* the number of extras allocated */
-    xsltRuntimeExtraPtr extras;         /* extra per runtime information */
+    int              extrasNr;        /* the number of extras used */
+    int              extrasMax;        /* the number of extras allocated */
+    xsltRuntimeExtraPtr extras;        /* extra per runtime information */
 
-    xsltDocumentPtr  styleList;         /* the stylesheet docs list */
-    void                 * sec;         /* the security preferences if any */
+    xsltDocumentPtr  styleList;        /* the stylesheet docs list */
+    void                 * sec;        /* the security preferences if any */
 
-    xmlGenericErrorFunc  error;         /* a specific error handler */
-    void              * errctx;         /* context for the error handler */
+    xmlGenericErrorFunc  error;        /* a specific error handler */
+    void              * errctx;        /* context for the error handler */
 
-    xsltSortFunc      sortfunc;         /* a ctxt specific sort routine */
+    xsltSortFunc      sortfunc;        /* a ctxt specific sort routine */
 
     /*
      * handling of temporary Result Value Tree
      * (XSLT 1.0 term: "Result Tree Fragment")
      */
-    xmlDocPtr       tmpRVT;             /* list of RVT without persistance */
-    xmlDocPtr       persistRVT;         /* list of persistant RVTs */
+    xmlDocPtr       tmpRVT;        /* list of RVT without persistance */
+    xmlDocPtr       persistRVT;        /* list of persistant RVTs */
     int             ctxtflags;          /* context processing flags */
 
     /*
      * Speed optimization when coalescing text nodes
      */
-    const xmlChar  *lasttext;           /* last text node content */
-    int             lasttsize;          /* last text node size */
-    int             lasttuse;           /* last text node use */
+    const xmlChar  *lasttext;        /* last text node content */
+    int             lasttsize;        /* last text node size */
+    int             lasttuse;        /* last text node use */
     /*
      * Per Context Debugging
      */
-    int debugStatus;                    /* the context level debug status */
-    unsigned long* traceCode;           /* pointer to the variable holding the mask */
+    int debugStatus;            /* the context level debug status */
+    unsigned long* traceCode;        /* pointer to the variable holding the mask */
 
-    int parserOptions;                  /* parser options xmlParserOption */
+    int parserOptions;            /* parser options xmlParserOption */
 
     /*
      * dictionary: shared between stylesheet, context and documents.
      */
     xmlDictPtr dict;
-    xmlDocPtr           tmpDoc; /* Obsolete; not used in the library. */
+    xmlDocPtr        tmpDoc; /* Obsolete; not used in the library. */
     /*
      * all document text strings are internalized
      */
@@ -1784,7 +1784,7 @@ struct _xsltTransformContext {
     xsltTransformCachePtr cache;
     void *contextVariable; /* the current variable item */
     xmlDocPtr localRVT; /* list of local tree fragments; will be freed when
-                           the instruction which created the fragment
+               the instruction which created the fragment
                            exits */
     xmlDocPtr localRVTBase; /* Obsolete */
     int keyInitLevel;   /* Needed to catch recursive keys issues */
@@ -1850,143 +1850,143 @@ struct _xsltTransformContext {
 /*
  * Functions associated to the internal types
 xsltDecimalFormatPtr    xsltDecimalFormatGetByName(xsltStylesheetPtr sheet,
-                                                   xmlChar *name);
+                           xmlChar *name);
  */
 XSLTPUBFUN xsltStylesheetPtr XSLTCALL
-                        xsltNewStylesheet       (void);
+            xsltNewStylesheet    (void);
 XSLTPUBFUN xsltStylesheetPtr XSLTCALL
-                        xsltParseStylesheetFile (const xmlChar* filename);
+            xsltParseStylesheetFile    (const xmlChar* filename);
 XSLTPUBFUN void XSLTCALL
-                        xsltFreeStylesheet      (xsltStylesheetPtr style);
+            xsltFreeStylesheet    (xsltStylesheetPtr style);
 XSLTPUBFUN int XSLTCALL
-                        xsltIsBlank             (xmlChar *str);
+            xsltIsBlank        (xmlChar *str);
 XSLTPUBFUN void XSLTCALL
-                        xsltFreeStackElemList   (xsltStackElemPtr elem);
+            xsltFreeStackElemList    (xsltStackElemPtr elem);
 XSLTPUBFUN xsltDecimalFormatPtr XSLTCALL
-                        xsltDecimalFormatGetByName(xsltStylesheetPtr style,
-                                                 xmlChar *name);
+            xsltDecimalFormatGetByName(xsltStylesheetPtr style,
+                         xmlChar *name);
 XSLTPUBFUN xsltDecimalFormatPtr XSLTCALL
-                        xsltDecimalFormatGetByQName(xsltStylesheetPtr style,
-                                                 const xmlChar *nsUri,
+            xsltDecimalFormatGetByQName(xsltStylesheetPtr style,
+                         const xmlChar *nsUri,
                                                  const xmlChar *name);
 
 XSLTPUBFUN xsltStylesheetPtr XSLTCALL
-                        xsltParseStylesheetProcess(xsltStylesheetPtr ret,
-                                                 xmlDocPtr doc);
+            xsltParseStylesheetProcess(xsltStylesheetPtr ret,
+                         xmlDocPtr doc);
 XSLTPUBFUN void XSLTCALL
-                        xsltParseStylesheetOutput(xsltStylesheetPtr style,
-                                                 xmlNodePtr cur);
+            xsltParseStylesheetOutput(xsltStylesheetPtr style,
+                         xmlNodePtr cur);
 XSLTPUBFUN xsltStylesheetPtr XSLTCALL
-                        xsltParseStylesheetDoc  (xmlDocPtr doc);
+            xsltParseStylesheetDoc    (xmlDocPtr doc);
 XSLTPUBFUN xsltStylesheetPtr XSLTCALL
-                        xsltParseStylesheetImportedDoc(xmlDocPtr doc,
-                                                xsltStylesheetPtr style);
+            xsltParseStylesheetImportedDoc(xmlDocPtr doc,
+                        xsltStylesheetPtr style);
 XSLTPUBFUN int XSLTCALL
-                        xsltParseStylesheetUser(xsltStylesheetPtr style,
-                                                xmlDocPtr doc);
+            xsltParseStylesheetUser(xsltStylesheetPtr style,
+                        xmlDocPtr doc);
 XSLTPUBFUN xsltStylesheetPtr XSLTCALL
-                        xsltLoadStylesheetPI    (xmlDocPtr doc);
+            xsltLoadStylesheetPI    (xmlDocPtr doc);
 XSLTPUBFUN void XSLTCALL
-                        xsltNumberFormat        (xsltTransformContextPtr ctxt,
-                                                 xsltNumberDataPtr data,
-                                                 xmlNodePtr node);
+            xsltNumberFormat    (xsltTransformContextPtr ctxt,
+                         xsltNumberDataPtr data,
+                         xmlNodePtr node);
 XSLTPUBFUN xmlXPathError XSLTCALL
-                        xsltFormatNumberConversion(xsltDecimalFormatPtr self,
-                                                 xmlChar *format,
-                                                 double number,
-                                                 xmlChar **result);
+            xsltFormatNumberConversion(xsltDecimalFormatPtr self,
+                         xmlChar *format,
+                         double number,
+                         xmlChar **result);
 
 XSLTPUBFUN void XSLTCALL
-                        xsltParseTemplateContent(xsltStylesheetPtr style,
-                                                 xmlNodePtr templ);
+            xsltParseTemplateContent(xsltStylesheetPtr style,
+                         xmlNodePtr templ);
 XSLTPUBFUN int XSLTCALL
-                        xsltAllocateExtra       (xsltStylesheetPtr style);
+            xsltAllocateExtra    (xsltStylesheetPtr style);
 XSLTPUBFUN int XSLTCALL
-                        xsltAllocateExtraCtxt   (xsltTransformContextPtr ctxt);
+            xsltAllocateExtraCtxt    (xsltTransformContextPtr ctxt);
 /*
  * Extra functions for Result Value Trees
  */
 XSLTPUBFUN xmlDocPtr XSLTCALL
-                        xsltCreateRVT           (xsltTransformContextPtr ctxt);
+            xsltCreateRVT        (xsltTransformContextPtr ctxt);
 XSLTPUBFUN int XSLTCALL
-                        xsltRegisterTmpRVT      (xsltTransformContextPtr ctxt,
-                                                 xmlDocPtr RVT);
+            xsltRegisterTmpRVT    (xsltTransformContextPtr ctxt,
+                         xmlDocPtr RVT);
 XSLTPUBFUN int XSLTCALL
-                        xsltRegisterLocalRVT    (xsltTransformContextPtr ctxt,
-                                                 xmlDocPtr RVT);
+            xsltRegisterLocalRVT    (xsltTransformContextPtr ctxt,
+                         xmlDocPtr RVT);
 XSLTPUBFUN int XSLTCALL
-                        xsltRegisterPersistRVT  (xsltTransformContextPtr ctxt,
-                                                 xmlDocPtr RVT);
+            xsltRegisterPersistRVT    (xsltTransformContextPtr ctxt,
+                         xmlDocPtr RVT);
 XSLTPUBFUN int XSLTCALL
-                        xsltExtensionInstructionResultRegister(
-                                                 xsltTransformContextPtr ctxt,
-                                                 xmlXPathObjectPtr obj);
+            xsltExtensionInstructionResultRegister(
+                         xsltTransformContextPtr ctxt,
+                         xmlXPathObjectPtr obj);
 XSLTPUBFUN int XSLTCALL
-                        xsltExtensionInstructionResultFinalize(
-                                                 xsltTransformContextPtr ctxt);
+            xsltExtensionInstructionResultFinalize(
+                         xsltTransformContextPtr ctxt);
 XSLTPUBFUN int XSLTCALL
-                        xsltFlagRVTs(
-                                                 xsltTransformContextPtr ctxt,
-                                                 xmlXPathObjectPtr obj,
-                                                 int val);
+            xsltFlagRVTs(
+                         xsltTransformContextPtr ctxt,
+                         xmlXPathObjectPtr obj,
+                         int val);
 XSLTPUBFUN void XSLTCALL
-                        xsltFreeRVTs            (xsltTransformContextPtr ctxt);
+            xsltFreeRVTs        (xsltTransformContextPtr ctxt);
 XSLTPUBFUN void XSLTCALL
-                        xsltReleaseRVT          (xsltTransformContextPtr ctxt,
-                                                 xmlDocPtr RVT);
+            xsltReleaseRVT        (xsltTransformContextPtr ctxt,
+                         xmlDocPtr RVT);
 /*
  * Extra functions for Attribute Value Templates
  */
 XSLTPUBFUN void XSLTCALL
-                        xsltCompileAttr         (xsltStylesheetPtr style,
-                                                 xmlAttrPtr attr);
+            xsltCompileAttr        (xsltStylesheetPtr style,
+                         xmlAttrPtr attr);
 XSLTPUBFUN xmlChar * XSLTCALL
-                        xsltEvalAVT             (xsltTransformContextPtr ctxt,
-                                                 void *avt,
-                                                 xmlNodePtr node);
+            xsltEvalAVT        (xsltTransformContextPtr ctxt,
+                         void *avt,
+                         xmlNodePtr node);
 XSLTPUBFUN void XSLTCALL
-                        xsltFreeAVTList         (void *avt);
+            xsltFreeAVTList        (void *avt);
 
 /*
  * Extra function for successful xsltCleanupGlobals / xsltInit sequence.
  */
 
 XSLTPUBFUN void XSLTCALL
-                        xsltUninit              (void);
+            xsltUninit        (void);
 
 /************************************************************************
- *                                                                      *
+ *                                    *
  *  Compile-time functions for *internal* use only                      *
- *                                                                      *
+ *                                    *
  ************************************************************************/
 
 #ifdef XSLT_REFACTORED
 XSLTPUBFUN void XSLTCALL
-                        xsltParseSequenceConstructor(
-                                                 xsltCompilerCtxtPtr cctxt,
-                                                 xmlNodePtr start);
+            xsltParseSequenceConstructor(
+                         xsltCompilerCtxtPtr cctxt,
+                         xmlNodePtr start);
 XSLTPUBFUN int XSLTCALL
-                        xsltParseAnyXSLTElem    (xsltCompilerCtxtPtr cctxt,
-                                                 xmlNodePtr elem);
+            xsltParseAnyXSLTElem    (xsltCompilerCtxtPtr cctxt,
+                         xmlNodePtr elem);
 #ifdef XSLT_REFACTORED_XSLT_NSCOMP
 XSLTPUBFUN int XSLTCALL
-                        xsltRestoreDocumentNamespaces(
-                                                 xsltNsMapPtr ns,
-                                                 xmlDocPtr doc);
+            xsltRestoreDocumentNamespaces(
+                         xsltNsMapPtr ns,
+                         xmlDocPtr doc);
 #endif
 #endif /* XSLT_REFACTORED */
 
 /************************************************************************
- *                                                                      *
+ *                                    *
  *  Transformation-time functions for *internal* use only               *
- *                                                                      *
+ *                                    *
  ************************************************************************/
 XSLTPUBFUN int XSLTCALL
-                        xsltInitCtxtKey         (xsltTransformContextPtr ctxt,
-                                                 xsltDocumentPtr doc,
-                                                 xsltKeyDefPtr keyd);
+            xsltInitCtxtKey        (xsltTransformContextPtr ctxt,
+                         xsltDocumentPtr doc,
+                         xsltKeyDefPtr keyd);
 XSLTPUBFUN int XSLTCALL
-                        xsltInitAllDocKeys      (xsltTransformContextPtr ctxt);
+            xsltInitAllDocKeys    (xsltTransformContextPtr ctxt);
 #ifdef __cplusplus
 }
 #endif

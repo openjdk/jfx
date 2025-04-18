@@ -24,12 +24,12 @@ extern "C" {
  *
  * A macro to import pointers from the stylesheet cascading order.
  */
-#define XSLT_GET_IMPORT_PTR(res, style, name) {                 \
-    xsltStylesheetPtr st = style;                               \
-    res = NULL;                                                 \
-    while (st != NULL) {                                        \
-        if (st->name != NULL) { res = st->name; break; }        \
-        st = xsltNextImport(st);                                \
+#define XSLT_GET_IMPORT_PTR(res, style, name) {            \
+    xsltStylesheetPtr st = style;                \
+    res = NULL;                            \
+    while (st != NULL) {                    \
+    if (st->name != NULL) { res = st->name; break; }    \
+    st = xsltNextImport(st);                \
     }}
 
 /**
@@ -37,35 +37,35 @@ extern "C" {
  *
  * A macro to import intergers from the stylesheet cascading order.
  */
-#define XSLT_GET_IMPORT_INT(res, style, name) {                 \
-    xsltStylesheetPtr st = style;                               \
-    res = -1;                                                   \
-    while (st != NULL) {                                        \
-        if (st->name != -1) { res = st->name; break; }  \
-        st = xsltNextImport(st);                                \
+#define XSLT_GET_IMPORT_INT(res, style, name) {            \
+    xsltStylesheetPtr st = style;                \
+    res = -1;                            \
+    while (st != NULL) {                    \
+    if (st->name != -1) { res = st->name; break; }    \
+    st = xsltNextImport(st);                \
     }}
 
 /*
  * Module interfaces
  */
 XSLTPUBFUN int XSLTCALL
-                        xsltParseStylesheetImport(xsltStylesheetPtr style,
-                                                  xmlNodePtr cur);
+            xsltParseStylesheetImport(xsltStylesheetPtr style,
+                          xmlNodePtr cur);
 XSLTPUBFUN int XSLTCALL
-                        xsltParseStylesheetInclude
-                                                 (xsltStylesheetPtr style,
-                                                  xmlNodePtr cur);
+            xsltParseStylesheetInclude
+                         (xsltStylesheetPtr style,
+                          xmlNodePtr cur);
 XSLTPUBFUN xsltStylesheetPtr XSLTCALL
-                        xsltNextImport           (xsltStylesheetPtr style);
+            xsltNextImport         (xsltStylesheetPtr style);
 XSLTPUBFUN int XSLTCALL
-                        xsltNeedElemSpaceHandling(xsltTransformContextPtr ctxt);
+            xsltNeedElemSpaceHandling(xsltTransformContextPtr ctxt);
 XSLTPUBFUN int XSLTCALL
-                        xsltFindElemSpaceHandling(xsltTransformContextPtr ctxt,
-                                                  xmlNodePtr node);
+            xsltFindElemSpaceHandling(xsltTransformContextPtr ctxt,
+                          xmlNodePtr node);
 XSLTPUBFUN xsltTemplatePtr XSLTCALL
-                        xsltFindTemplate         (xsltTransformContextPtr ctxt,
-                                                  const xmlChar *name,
-                                                  const xmlChar *nameURI);
+            xsltFindTemplate     (xsltTransformContextPtr ctxt,
+                          const xmlChar *name,
+                          const xmlChar *nameURI);
 
 #ifdef __cplusplus
 }

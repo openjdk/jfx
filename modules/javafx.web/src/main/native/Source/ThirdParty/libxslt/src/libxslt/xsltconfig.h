@@ -20,28 +20,28 @@ extern "C" {
  *
  * the version string like "1.2.3"
  */
-#define LIBXSLT_DOTTED_VERSION "1.1.42"
+#define LIBXSLT_DOTTED_VERSION "1.1.44"
 
 /**
  * LIBXSLT_VERSION:
  *
  * the version number: 1.2.3 value is 10203
  */
-#define LIBXSLT_VERSION 10142
+#define LIBXSLT_VERSION 10144
 
 /**
  * LIBXSLT_VERSION_STRING:
  *
  * the version number string, 1.2.3 value is "10203"
  */
-#define LIBXSLT_VERSION_STRING "10142"
+#define LIBXSLT_VERSION_STRING "10144"
 
 /**
  * LIBXSLT_VERSION_EXTRA:
  *
  * extra version information, used to show a Git commit description
  */
-#define LIBXSLT_VERSION_EXTRA ""
+#define    LIBXSLT_VERSION_EXTRA ""
 
 /**
  * WITH_XSLT_DEBUG:
@@ -72,8 +72,8 @@ extern "C" {
 #endif
 #endif
 
-#ifdef  XSLT_NEED_TRIO
-#define TRIO_REPLACE_STDIO
+#ifdef    XSLT_NEED_TRIO
+#define    TRIO_REPLACE_STDIO
 #endif
 
 /**
@@ -83,7 +83,7 @@ extern "C" {
  * is insignifiant.
  * On by default unless --without-debugger is passed to configure
  */
-#if 0
+#if 1
 #ifndef WITH_DEBUGGER
 #define WITH_DEBUGGER
 #endif
@@ -96,7 +96,7 @@ extern "C" {
  * is insignifiant.
  * On by default unless --without-profiler is passed to configure
  */
-#if 0
+#if 1
 #ifndef WITH_PROFILER
 #define WITH_PROFILER
 #endif

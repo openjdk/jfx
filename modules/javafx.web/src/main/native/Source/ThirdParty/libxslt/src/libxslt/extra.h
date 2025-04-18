@@ -45,24 +45,24 @@ extern "C" {
  *
  * This is the Apache project XALAN processor namespace for extensions.
  */
-#define XSLT_XALAN_NAMESPACE ((xmlChar *)       \
-                                "org.apache.xalan.xslt.extensions.Redirect")
+#define XSLT_XALAN_NAMESPACE ((xmlChar *)    \
+                            "org.apache.xalan.xslt.extensions.Redirect")
 
 
 XSLTPUBFUN void XSLTCALL
-                xsltFunctionNodeSet     (xmlXPathParserContextPtr ctxt,
-                                         int nargs);
+        xsltFunctionNodeSet    (xmlXPathParserContextPtr ctxt,
+                     int nargs);
 XSLTPUBFUN void XSLTCALL
-                xsltDebug               (xsltTransformContextPtr ctxt,
-                                         xmlNodePtr node,
-                                         xmlNodePtr inst,
-                                         xsltElemPreCompPtr comp);
+        xsltDebug        (xsltTransformContextPtr ctxt,
+                     xmlNodePtr node,
+                     xmlNodePtr inst,
+                     xsltElemPreCompPtr comp);
 
 
 XSLTPUBFUN void XSLTCALL
-                xsltRegisterExtras      (xsltTransformContextPtr ctxt);
+        xsltRegisterExtras    (xsltTransformContextPtr ctxt);
 XSLTPUBFUN void XSLTCALL
-                xsltRegisterAllExtras   (void);
+        xsltRegisterAllExtras    (void);
 
 #ifdef __cplusplus
 }

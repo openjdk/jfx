@@ -26,6 +26,14 @@
 #include "private/parser.h"
 #include "private/string.h"
 
+#ifndef va_copy
+  #ifdef __va_copy
+    #define va_copy(dest, src) __va_copy(dest, src)
+  #else
+    #define va_copy(dest, src) memcpy(&(dest), &(src), sizeof(va_list))
+  #endif
+#endif
+
 /************************************************************************
  *                                                                      *
  *                Commodity functions to handle xmlChars                *
@@ -452,7 +460,7 @@ xmlStrncat(xmlChar *cur, const xmlChar *add, int len) {
     if ((add == NULL) || (len == 0))
         return(cur);
     if (len < 0)
-        return(NULL);
+    return(NULL);
     if (cur == NULL)
         return(xmlStrndup(add, len));
 
@@ -461,7 +469,8 @@ xmlStrncat(xmlChar *cur, const xmlChar *add, int len) {
         return(NULL);
     ret = (xmlChar *) xmlRealloc(cur, (size_t) size + len + 1);
     if (ret == NULL) {
-        return(cur);
+        xmlFree(cur);
+        return(NULL);
     }
     memcpy(&ret[size], add, len);
     ret[size + len] = 0;
@@ -490,18 +499,17 @@ xmlStrncatNew(const xmlChar *str1, const xmlChar *str2, int len) {
         if (len < 0)
             return(NULL);
     }
-    if ((str2 == NULL) || (len == 0))
-        return(xmlStrdup(str1));
     if (str1 == NULL)
         return(xmlStrndup(str2, len));
+    if ((str2 == NULL) || (len == 0))
+        return(xmlStrdup(str1));
 
     size = xmlStrlen(str1);
     if ((size < 0) || (size > INT_MAX - len))
         return(NULL);
     ret = (xmlChar *) xmlMalloc((size_t) size + len + 1);
-    if (ret == NULL) {
-        return(xmlStrndup(str1, size));
-    }
+    if (ret == NULL)
+        return(NULL);
     memcpy(ret, str1, size);
     memcpy(&ret[size], str2, len);
     ret[size + len] = 0;
@@ -581,6 +589,148 @@ xmlStrVPrintf(xmlChar *buf, int len, const char *msg, va_list ap) {
 
     ret = vsnprintf((char *) buf, len, (const char *) msg, ap);
     buf[len - 1] = 0; /* be safe ! */
+
+    return(ret);
+}
+
+/**
+ * xmlStrVASPrintf:
+ * @out:  pointer to the resulting string
+ * @maxSize:  maximum size of the output buffer
+ * @msg:  printf format string
+ * @ap:  arguments for format string
+ *
+ * Creates a newly allocated string according to format.
+ *
+ * Returns 0 on success, 1 if the result was truncated or on other
+ * errors, -1 if a memory allocation failed.
+ */
+int
+xmlStrVASPrintf(xmlChar **out, int maxSize, const char *msg, va_list ap) {
+    char empty[1];
+    va_list copy;
+    xmlChar *buf;
+    int res, size;
+    int truncated = 0;
+
+    if (out == NULL)
+        return(1);
+    *out = NULL;
+    if (msg == NULL)
+        return(1);
+    if (maxSize < 32)
+        maxSize = 32;
+
+    va_copy(copy, ap);
+    res = vsnprintf(empty, 1, msg, copy);
+    va_end(copy);
+
+    if (res > 0) {
+        /* snprintf seems to work according to C99. */
+
+        if (res < maxSize) {
+            size = res + 1;
+        } else {
+            size = maxSize;
+            truncated = 1;
+        }
+        buf = xmlMalloc(size);
+        if (buf == NULL)
+            return(-1);
+        if (vsnprintf((char *) buf, size, msg, ap) < 0) {
+            xmlFree(buf);
+            return(1);
+        }
+    } else {
+        /*
+         * Unfortunately, older snprintf implementations don't follow the
+         * C99 spec. If the output exceeds the size of the buffer, they can
+         * return -1, 0 or the number of characters written instead of the
+         * needed size. Older MSCVRT also won't write a terminating null
+         * byte if the buffer is too small.
+         *
+         * If the value returned is non-negative and strictly less than
+         * the buffer size (without terminating null), the result should
+         * have been written completely, so we double the buffer size
+         * until this condition is true. This assumes that snprintf will
+         * eventually return a non-negative value. Otherwise, we will
+         * allocate more and more memory until we run out.
+         *
+         * Note that this code path is also executed on conforming
+         * platforms if the output is the empty string.
+         */
+
+        buf = NULL;
+        size = 32;
+        while (1) {
+            buf = xmlMalloc(size);
+            if (buf == NULL)
+                return(-1);
+
+            va_copy(copy, ap);
+            res = vsnprintf((char *) buf, size, msg, copy);
+            va_end(copy);
+            if ((res >= 0) && (res < size - 1))
+                break;
+
+            if (size >= maxSize) {
+                truncated = 1;
+                break;
+            }
+
+            xmlFree(buf);
+
+            if (size > maxSize / 2)
+                size = maxSize;
+            else
+                size *= 2;
+        }
+    }
+
+    /*
+     * If the output was truncated, make sure that the buffer doesn't
+     * end with a truncated UTF-8 sequence.
+     */
+    if (truncated != 0) {
+        int i = size - 1;
+
+        while (i > 0) {
+            /* Break after ASCII */
+            if (buf[i-1] < 0x80)
+                break;
+            i -= 1;
+            /* Break before non-ASCII */
+            if (buf[i] >= 0xc0)
+                break;
+        }
+
+        buf[i] = 0;
+    }
+
+    *out = (xmlChar *) buf;
+    return(truncated);
+}
+
+/**
+ * xmlStrASPrintf:
+ * @out:  pointer to the resulting string
+ * @maxSize:  maximum size of the output buffer
+ * @msg:  printf format string
+ * @...:  arguments for format string
+ *
+ * See xmlStrVASPrintf.
+ *
+ * Returns 0 on success, 1 if the result was truncated or on other
+ * errors, -1 if a memory allocation failed.
+ */
+int
+xmlStrASPrintf(xmlChar **out, int maxSize, const char *msg, ...) {
+    va_list ap;
+    int ret;
+
+    va_start(ap, msg);
+    ret = xmlStrVASPrintf(out, maxSize, msg, ap);
+    va_end(ap);
 
     return(ret);
 }
@@ -758,7 +908,7 @@ xmlGetUTF8Char(const unsigned char *utf, int *len) {
 
 error:
     if (len != NULL)
-        *len = 0;
+    *len = 0;
     return(-1);
 }
 
@@ -793,25 +943,25 @@ xmlCheckUTF8(const unsigned char *utf)
      */
     while ((c = utf[0])) {      /* string is 0-terminated */
         ix = 0;
-        if ((c & 0x80) == 0x00) {       /* 1-byte code, starts with 10 */
+        if ((c & 0x80) == 0x00) {    /* 1-byte code, starts with 10 */
             ix = 1;
-        } else if ((c & 0xe0) == 0xc0) {/* 2-byte code, starts with 110 */
-            if ((utf[1] & 0xc0 ) != 0x80)
-                return 0;
-            ix = 2;
-        } else if ((c & 0xf0) == 0xe0) {/* 3-byte code, starts with 1110 */
-            if (((utf[1] & 0xc0) != 0x80) ||
-                ((utf[2] & 0xc0) != 0x80))
-                    return 0;
-            ix = 3;
-        } else if ((c & 0xf8) == 0xf0) {/* 4-byte code, starts with 11110 */
-            if (((utf[1] & 0xc0) != 0x80) ||
-                ((utf[2] & 0xc0) != 0x80) ||
-                ((utf[3] & 0xc0) != 0x80))
-                    return 0;
-            ix = 4;
-        } else                          /* unknown encoding */
+    } else if ((c & 0xe0) == 0xc0) {/* 2-byte code, starts with 110 */
+        if ((utf[1] & 0xc0 ) != 0x80)
             return 0;
+        ix = 2;
+    } else if ((c & 0xf0) == 0xe0) {/* 3-byte code, starts with 1110 */
+        if (((utf[1] & 0xc0) != 0x80) ||
+            ((utf[2] & 0xc0) != 0x80))
+            return 0;
+        ix = 3;
+    } else if ((c & 0xf8) == 0xf0) {/* 4-byte code, starts with 11110 */
+        if (((utf[1] & 0xc0) != 0x80) ||
+            ((utf[2] & 0xc0) != 0x80) ||
+        ((utf[3] & 0xc0) != 0x80))
+            return 0;
+        ix = 4;
+    } else                /* unknown encoding */
+        return 0;
         utf += ix;
       }
       return(1);
@@ -846,9 +996,9 @@ xmlUTF8Strsize(const xmlChar *utf, int len) {
             break;
         if ( (ch = *ptr++) & 0x80)
             while ((ch<<=1) & 0x80 ) {
-                if (*ptr == 0) break;
+        if (*ptr == 0) break;
                 ptr++;
-            }
+        }
     }
     ret = ptr - utf;
     return (ret > INT_MAX ? 0 : ret);
@@ -956,8 +1106,9 @@ xmlUTF8Strloc(const xmlChar *utf, const xmlChar *utfchar) {
  * Create a substring from a given UTF-8 string
  * Note:  positions are given in units of UTF-8 chars
  *
- * Returns a pointer to a newly created string
- * or NULL if any problem
+ * Returns a pointer to a newly created string or NULL if the
+ * start index is out of bounds or a memory allocation failed.
+ * If len is too large, the result is truncated.
  */
 
 xmlChar *
@@ -972,16 +1123,18 @@ xmlUTF8Strsub(const xmlChar *utf, int start, int len) {
     /*
      * Skip over any leading chars
      */
-    for (i = 0;i < start;i++) {
-        if ((ch=*utf++) == 0) return(NULL);
-        if ( ch & 0x80 ) {
-            /* if not simple ascii, verify proper format */
-            if ( (ch & 0xc0) != 0xc0 )
-                return(NULL);
-            /* then skip over remaining bytes for this char */
-            while ( (ch <<= 1) & 0x80 )
-                if ( (*utf++ & 0xc0) != 0x80 )
+    for (i = 0; i < start; i++) {
+        ch = *utf++;
+        if (ch == 0)
+            return(NULL);
+        /* skip over remaining bytes for this char */
+        if (ch & 0x80) {
+            ch <<= 1;
+            while (ch & 0x80) {
+                if (*utf++ == 0)
                     return(NULL);
+                ch <<= 1;
+            }
         }
     }
 

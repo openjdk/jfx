@@ -37,60 +37,66 @@ typedef xmlPattern *xmlPatternPtr;
  *
  */
 typedef enum {
-    XML_PATTERN_DEFAULT         = 0,    /* simple pattern match */
-    XML_PATTERN_XPATH           = 1<<0, /* standard XPath pattern */
-    XML_PATTERN_XSSEL           = 1<<1, /* XPath subset for schema selector */
-    XML_PATTERN_XSFIELD         = 1<<2  /* XPath subset for schema field */
+    XML_PATTERN_DEFAULT        = 0,    /* simple pattern match */
+    XML_PATTERN_XPATH        = 1<<0,    /* standard XPath pattern */
+    XML_PATTERN_XSSEL        = 1<<1,    /* XPath subset for schema selector */
+    XML_PATTERN_XSFIELD        = 1<<2    /* XPath subset for schema field */
 } xmlPatternFlags;
 
 XMLPUBFUN void
-                        xmlFreePattern          (xmlPatternPtr comp);
+            xmlFreePattern        (xmlPatternPtr comp);
 
 XMLPUBFUN void
-                        xmlFreePatternList      (xmlPatternPtr comp);
+            xmlFreePatternList    (xmlPatternPtr comp);
 
 XMLPUBFUN xmlPatternPtr
-                        xmlPatterncompile       (const xmlChar *pattern,
-                                                 xmlDict *dict,
-                                                 int flags,
-                                                 const xmlChar **namespaces);
+            xmlPatterncompile    (const xmlChar *pattern,
+                         xmlDict *dict,
+                         int flags,
+                         const xmlChar **namespaces);
 XMLPUBFUN int
-                        xmlPatternMatch         (xmlPatternPtr comp,
-                                                 xmlNodePtr node);
+            xmlPatternCompileSafe    (const xmlChar *pattern,
+                         xmlDict *dict,
+                         int flags,
+                         const xmlChar **namespaces,
+                         xmlPatternPtr *patternOut);
+XMLPUBFUN int
+            xmlPatternMatch        (xmlPatternPtr comp,
+                         xmlNodePtr node);
 
 /* streaming interfaces */
 typedef struct _xmlStreamCtxt xmlStreamCtxt;
 typedef xmlStreamCtxt *xmlStreamCtxtPtr;
 
 XMLPUBFUN int
-                        xmlPatternStreamable    (xmlPatternPtr comp);
+            xmlPatternStreamable    (xmlPatternPtr comp);
 XMLPUBFUN int
-                        xmlPatternMaxDepth      (xmlPatternPtr comp);
+            xmlPatternMaxDepth    (xmlPatternPtr comp);
 XMLPUBFUN int
-                        xmlPatternMinDepth      (xmlPatternPtr comp);
+            xmlPatternMinDepth    (xmlPatternPtr comp);
 XMLPUBFUN int
-                        xmlPatternFromRoot      (xmlPatternPtr comp);
+            xmlPatternFromRoot    (xmlPatternPtr comp);
 XMLPUBFUN xmlStreamCtxtPtr
-                        xmlPatternGetStreamCtxt (xmlPatternPtr comp);
+            xmlPatternGetStreamCtxt    (xmlPatternPtr comp);
 XMLPUBFUN void
-                        xmlFreeStreamCtxt       (xmlStreamCtxtPtr stream);
+            xmlFreeStreamCtxt    (xmlStreamCtxtPtr stream);
 XMLPUBFUN int
-                        xmlStreamPushNode       (xmlStreamCtxtPtr stream,
-                                                 const xmlChar *name,
-                                                 const xmlChar *ns,
-                                                 int nodeType);
+            xmlStreamPushNode    (xmlStreamCtxtPtr stream,
+                         const xmlChar *name,
+                         const xmlChar *ns,
+                         int nodeType);
 XMLPUBFUN int
-                        xmlStreamPush           (xmlStreamCtxtPtr stream,
-                                                 const xmlChar *name,
-                                                 const xmlChar *ns);
+            xmlStreamPush        (xmlStreamCtxtPtr stream,
+                         const xmlChar *name,
+                         const xmlChar *ns);
 XMLPUBFUN int
-                        xmlStreamPushAttr       (xmlStreamCtxtPtr stream,
-                                                 const xmlChar *name,
-                                                 const xmlChar *ns);
+            xmlStreamPushAttr    (xmlStreamCtxtPtr stream,
+                         const xmlChar *name,
+                         const xmlChar *ns);
 XMLPUBFUN int
-                        xmlStreamPop            (xmlStreamCtxtPtr stream);
+            xmlStreamPop        (xmlStreamCtxtPtr stream);
 XMLPUBFUN int
-                        xmlStreamWantsAnyNode   (xmlStreamCtxtPtr stream);
+            xmlStreamWantsAnyNode    (xmlStreamCtxtPtr stream);
 #ifdef __cplusplus
 }
 #endif

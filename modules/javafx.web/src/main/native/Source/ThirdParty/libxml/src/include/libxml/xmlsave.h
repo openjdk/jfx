@@ -27,11 +27,11 @@ extern "C" {
  * to the xmlSaveToFd() and similar calls.
  */
 typedef enum {
-    XML_SAVE_FORMAT     = 1<<0, /* format save output */
-    XML_SAVE_NO_DECL    = 1<<1, /* drop the xml declaration */
-    XML_SAVE_NO_EMPTY   = 1<<2, /* no empty tags */
-    XML_SAVE_NO_XHTML   = 1<<3, /* disable XHTML1 specific rules */
-    XML_SAVE_XHTML      = 1<<4, /* force XHTML1 specific rules */
+    XML_SAVE_FORMAT     = 1<<0,    /* format save output */
+    XML_SAVE_NO_DECL    = 1<<1,    /* drop the xml declaration */
+    XML_SAVE_NO_EMPTY    = 1<<2, /* no empty tags */
+    XML_SAVE_NO_XHTML    = 1<<3, /* disable XHTML1 specific rules */
+    XML_SAVE_XHTML    = 1<<4, /* force XHTML1 specific rules */
     XML_SAVE_AS_XML     = 1<<5, /* force XML serialization on HTML doc */
     XML_SAVE_AS_HTML    = 1<<6, /* force HTML serialization on XML doc */
     XML_SAVE_WSNONSIG   = 1<<7  /* format with non-significant whitespace */
@@ -42,48 +42,53 @@ typedef struct _xmlSaveCtxt xmlSaveCtxt;
 typedef xmlSaveCtxt *xmlSaveCtxtPtr;
 
 XMLPUBFUN xmlSaveCtxtPtr
-                xmlSaveToFd             (int fd,
-                                         const char *encoding,
-                                         int options);
+        xmlSaveToFd        (int fd,
+                     const char *encoding,
+                     int options);
 XMLPUBFUN xmlSaveCtxtPtr
-                xmlSaveToFilename       (const char *filename,
-                                         const char *encoding,
-                                         int options);
+        xmlSaveToFilename    (const char *filename,
+                     const char *encoding,
+                     int options);
 
 XMLPUBFUN xmlSaveCtxtPtr
-                xmlSaveToBuffer         (xmlBufferPtr buffer,
-                                         const char *encoding,
-                                         int options);
+        xmlSaveToBuffer        (xmlBufferPtr buffer,
+                     const char *encoding,
+                     int options);
 
 XMLPUBFUN xmlSaveCtxtPtr
-                xmlSaveToIO             (xmlOutputWriteCallback iowrite,
-                                         xmlOutputCloseCallback ioclose,
-                                         void *ioctx,
-                                         const char *encoding,
-                                         int options);
+        xmlSaveToIO        (xmlOutputWriteCallback iowrite,
+                     xmlOutputCloseCallback ioclose,
+                     void *ioctx,
+                     const char *encoding,
+                     int options);
 
 XMLPUBFUN long
-                xmlSaveDoc              (xmlSaveCtxtPtr ctxt,
-                                         xmlDocPtr doc);
+        xmlSaveDoc        (xmlSaveCtxtPtr ctxt,
+                     xmlDocPtr doc);
 XMLPUBFUN long
-                xmlSaveTree             (xmlSaveCtxtPtr ctxt,
-                                         xmlNodePtr node);
+        xmlSaveTree        (xmlSaveCtxtPtr ctxt,
+                     xmlNodePtr node);
 
 XMLPUBFUN int
-                xmlSaveFlush            (xmlSaveCtxtPtr ctxt);
+        xmlSaveFlush        (xmlSaveCtxtPtr ctxt);
 XMLPUBFUN int
-                xmlSaveClose            (xmlSaveCtxtPtr ctxt);
+        xmlSaveClose        (xmlSaveCtxtPtr ctxt);
 XMLPUBFUN int
-                xmlSaveSetEscape        (xmlSaveCtxtPtr ctxt,
-                                         xmlCharEncodingOutputFunc escape);
+        xmlSaveFinish        (xmlSaveCtxtPtr ctxt);
 XMLPUBFUN int
-                xmlSaveSetAttrEscape    (xmlSaveCtxtPtr ctxt,
-                                         xmlCharEncodingOutputFunc escape);
+        xmlSaveSetEscape    (xmlSaveCtxtPtr ctxt,
+                     xmlCharEncodingOutputFunc escape);
+XMLPUBFUN int
+        xmlSaveSetAttrEscape    (xmlSaveCtxtPtr ctxt,
+                     xmlCharEncodingOutputFunc escape);
 
+XML_DEPRECATED
 XMLPUBFUN int
                 xmlThrDefIndentTreeOutput(int v);
+XML_DEPRECATED
 XMLPUBFUN const char *
                 xmlThrDefTreeIndentString(const char * v);
+XML_DEPRECATED
 XMLPUBFUN int
                 xmlThrDefSaveNoEmptyTags(int v);
 

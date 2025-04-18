@@ -3,7 +3,7 @@ AC_PREREQ(2.63)
 
 m4_define([MAJOR_VERSION], [1])
 m4_define([MINOR_VERSION], [1])
-m4_define([MICRO_VERSION], [42])
+m4_define([MICRO_VERSION], [44])
 
 AC_INIT([libxslt], [MAJOR_VERSION.MINOR_VERSION.MICRO_VERSION])
 AC_CONFIG_SRCDIR([libxslt/xslt.c])
@@ -21,7 +21,7 @@ LIBXSLT_MINOR_VERSION=MINOR_VERSION
 LIBXSLT_MICRO_VERSION=MICRO_VERSION
 LIBEXSLT_MAJOR_VERSION=0
 LIBEXSLT_MINOR_VERSION=8
-LIBEXSLT_MICRO_VERSION=23
+LIBEXSLT_MICRO_VERSION=25
 LIBXML_REQUIRED_VERSION=2.6.27
 
 
@@ -199,14 +199,14 @@ AS_IF([test "x$with_python" != "xno"], [
 AC_SUBST(PYTHON_LDFLAGS)
 AM_CONDITIONAL([WITH_PYTHON], [test "x$with_python" != "xno"])
 
-AC_ARG_WITH(crypto, [  --with-crypto           Add crypto support to exslt (on)])
+AC_ARG_WITH(crypto, [  --with-crypto           Add crypto support to exslt (off)])
 WITH_CRYPTO=0
 CRYPTO_TESTDIR=
-if test "$with_crypto" = "no" ; then
-    echo Disabling crypto support
+if test "$with_crypto" != "yes" ; then
     LIBGCRYPT_CFLAGS=""
     LIBGCRYPT_LIBS=""
 else
+echo Enabling crypto support
 case $host in
   *-mingw*)
     dnl Use only native crypto-API for mingw* hosts
@@ -233,9 +233,16 @@ case $host in
         CRYPTO_TESTDIR=crypto
       fi
     else
-      LIBGCRYPT_CFLAGS=""
-      LIBGCRYPT_LIBS=""
-      echo 'Crypto extensions will not be available. Install libgcrypt and reconfigure to make available.'
+      PKG_CHECK_MODULES([LIBGCRYPT], [libgcrypt >= 1.1.42], [
+          AC_DEFINE(HAVE_GCRYPT, 1, [Define if gcrypt library is available.])
+          echo 'Crypto extensions will be available.'
+          WITH_CRYPTO=1
+          CRYPTO_TESTDIR=crypt
+      ], [
+          LIBGCRYPT_CFLAGS=""
+          LIBGCRYPT_LIBS=""
+          echo 'Crypto extensions will not be available. Install libgcrypt >= 1.1.42 and reconfigure to make available.'
+      ])
     fi
 esac
 fi
@@ -245,10 +252,10 @@ AC_SUBST(LIBGCRYPT_CFLAGS)
 AC_SUBST(LIBGCRYPT_LIBS)
 
 AC_ARG_WITH(debug, [  --with-debug            Add the debugging code (on)])
-if test "$with_debug" = "no" ; then
-    echo Disabling debug support
+if test "$with_debug" != "yes" ; then
     WITH_XSLT_DEBUG=0
 else    
+    echo Enabling debug support
     WITH_XSLT_DEBUG=1
 fi
 AC_SUBST(WITH_XSLT_DEBUG)
@@ -257,8 +264,7 @@ dnl
 dnl Is debugger support requested
 dnl
 AC_ARG_WITH(debugger, [  --with-debugger        Add the debugging support (on)])
-if test "$with_debugger" = "no" ; then
-    echo Disabling debugger
+if test "$with_debugger" != "yes" ; then
     WITH_DEBUGGER=0
 else
     echo Enabling debugger
@@ -386,7 +392,6 @@ if test "x$LIBXML_SRC" != "x"; then
             fi
         fi
         LIBXML_LIBS="-L${LIBXML_SRC} `$XML_CONFIG --libs $xml_config_dynamic`"
-        WITH_MODULES="`$XML_CONFIG --modules`"
         cd $CWD
     else
         AC_MSG_ERROR([libxml source dir not found (${LIBXML_SRC}), typo?])
@@ -399,9 +404,8 @@ dnl
 
 if test "x$LIBXML_CONFIG_PREFIX" = "x" && test "x$LIBXML_LIBS" = "x"; then
     if test "$build_shared_libs" = "yes"; then
-        PKG_CHECK_MODULES([LIBXML], [libxml-2.0 >= $LIBXML_REQUIRED_VERSION], [
-            WITH_MODULES="`$PKG_CONFIG --variable=modules libxml-2.0`"
-        ], [ ])
+        PKG_CHECK_MODULES([LIBXML], [libxml-2.0 >= $LIBXML_REQUIRED_VERSION],
+                          [ ], [ ])
     else
         PKG_CHECK_MODULES_STATIC([LIBXML], [libxml-2.0 >= $LIBXML_REQUIRED_VERSION],
         [ ], [ ])
@@ -430,7 +434,6 @@ then
     fi
     LIBXML_LIBS="`$XML_CONFIG --libs $xml_config_dynamic`"
     LIBXML_CFLAGS="`$XML_CONFIG --cflags`"
-    WITH_MODULES="`$XML_CONFIG --modules`"
 fi
 
 if test "x$LIBXML_LIBS" = "x"
@@ -442,10 +445,10 @@ AM_CFLAGS="$AM_CFLAGS $LIBXML_CFLAGS"
 
 
 AC_ARG_WITH(plugins,
-[  --with-plugins          Add plugin extension support (on)])
+[  --with-plugins          Add plugin extension support (off)])
 if test "$with_plugins" = ""
 then
-    with_plugins=yes
+    with_plugins=no
 fi
 
 AC_MSG_CHECKING([whether shared libraries will be built (required for plugins)])
@@ -459,34 +462,53 @@ else
 fi
 
 if test "$with_plugins" = "yes" ; then
-  AC_MSG_CHECKING([libxml2 module support])
-  if test "${WITH_MODULES}" = "1"; then
-    AC_MSG_RESULT(yes)
-  else
-    AC_MSG_RESULT(no)
-    WITH_MODULES="0"
-  fi
+    WITH_MODULES=1
+
+    case "$host" in
+        *-*-cygwin* | *-*-mingw* | *-*-msys* )
+            AC_DEFINE([MODULE_EXTENSION], [".dll"], [plugin file extension])
+            ;;
+        *)
+            AC_DEFINE([MODULE_EXTENSION], [".so"], [plugin file extension])
+	    ;;
+    esac
+
+    case "$host" in
+        *-*-mingw*)
+            ;;
+        *)
+            _libs=$LIBS
+            AC_SEARCH_LIBS([dlopen], [dl], [
+                WITH_MODULES=1
+                if test "$ac_cv_search_dlopen" != "none required"; then
+                    MODULE_LIBS=$ac_cv_search_dlopen
+                fi], [
+                    AC_MSG_ERROR([dlopen or equivalent not found])
+                ])
+            LIBS=$_libs
+	    ;;
+    esac
+
+    dnl
+    dnl setup default module path
+    dnl
+    expanded_libdir=$(
+        test "x$prefix" = xNONE && prefix="$ac_default_prefix"
+        test "x$exec_prefix" = xNONE && exec_prefix="$prefix"
+        while test "$libdir_old" != "$libdir"; do
+          libdir_old="$libdir"
+          eval libdir="$libdir"
+        done
+        echo "$libdir"
+    )
+    LIBXSLT_DEFAULT_PLUGINS_PATH="$expanded_libdir/libxslt-plugins"
+    AC_SUBST(LIBXSLT_DEFAULT_PLUGINS_PATH)
 else
-  WITH_MODULES="0"
+    WITH_MODULES="0"
 fi
 
 AC_SUBST(WITH_MODULES)
 AM_CONDITIONAL(WITH_MODULES, test "$WITH_MODULES" = "1")
-
-dnl
-dnl setup default module path
-dnl
-expanded_libdir=$(
-    test "x$prefix" = xNONE && prefix="$ac_default_prefix"
-    test "x$exec_prefix" = xNONE && exec_prefix="$prefix"
-    while test "$libdir_old" != "$libdir"; do
-      libdir_old="$libdir"
-      eval libdir="$libdir"
-    done
-    echo "$libdir"
-)
-LIBXSLT_DEFAULT_PLUGINS_PATH="$expanded_libdir/libxslt-plugins"
-AC_SUBST(LIBXSLT_DEFAULT_PLUGINS_PATH)
 
 AC_SUBST(XML_CONFIG)
 AC_SUBST(LIBXML_LIBS)
@@ -495,7 +517,7 @@ AC_SUBST(LIBXML_CFLAGS)
 XSLT_LIBDIR='-L${libdir}'
 XSLT_INCLUDEDIR='-I${includedir}'
 XSLT_LIBS="-lxslt $LIBXML_LIBS"
-XSLT_PRIVATE_LIBS="$LIBM"
+XSLT_PRIVATE_LIBS="$MODULE_LIBS $LIBM"
 AC_SUBST(XSLT_LIBDIR)
 AC_SUBST(XSLT_INCLUDEDIR)
 AC_SUBST(XSLT_LIBS)

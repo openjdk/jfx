@@ -20,13 +20,13 @@
 #include <libxml/xmlerror.h>
 #include <libxml/xmlmemory.h>
 #include <libxml/xmlIO.h>
-#include <libxml/HTMLparser.h>
 #include <libxml/parser.h>
 #include <libxml/threads.h>
 #include <libxml/tree.h>
 #include <libxml/SAX.h>
 #include <libxml/SAX2.h>
 
+#include "private/dict.h"
 #include "private/error.h"
 #include "private/globals.h"
 #include "private/threads.h"
@@ -76,10 +76,13 @@ struct _xmlGlobalState {
     void *waitHandle;
 #endif
 
+#ifdef LIBXML_THREAD_ENABLED
+    unsigned localRngState[2];
+#endif
+
 #define XML_OP XML_DECLARE_MEMBER
 XML_GLOBALS_ALLOC
 XML_GLOBALS_ERROR
-XML_GLOBALS_HTML
 XML_GLOBALS_IO
 XML_GLOBALS_PARSER
 XML_GLOBALS_TREE
@@ -159,22 +162,19 @@ xmlFreeGlobalState(void *state);
 #endif /* LIBXML_THREAD_ENABLED */
 
 /************************************************************************
- *                                                                      *
- *      All the user accessible global variables of the library         *
- *                                                                      *
+ *                                    *
+ *    All the user accessible global variables of the library        *
+ *                                    *
  ************************************************************************/
+
+#ifdef LIBXML_THREAD_ENABLED
+static unsigned xmlMainThreadRngState[2];
+#endif
 
 /*
  * Memory allocation routines
  */
 
-#if defined(DEBUG_MEMORY_LOCATION)
-xmlFreeFunc xmlFree = (xmlFreeFunc) xmlMemFree;
-xmlMallocFunc xmlMalloc = (xmlMallocFunc) xmlMemMalloc;
-xmlMallocFunc xmlMallocAtomic = (xmlMallocFunc) xmlMemMalloc;
-xmlReallocFunc xmlRealloc = (xmlReallocFunc) xmlMemRealloc;
-xmlStrdupFunc xmlMemStrdup = (xmlStrdupFunc) xmlMemoryStrdup;
-#else
 /**
  * xmlFree:
  * @mem: an already allocated block of memory
@@ -233,7 +233,6 @@ xmlPosixStrdup(const char *cur) {
  * Returns the copy of the string or NULL in case of error
  */
 xmlStrdupFunc xmlMemStrdup = xmlPosixStrdup;
-#endif /* DEBUG_MEMORY_LOCATION */
 
 /**
  * xmlBufferAllocScheme:
@@ -264,7 +263,7 @@ static int xmlDefaultBufferSizeThrDef = BASE_BUFFER_SIZE;
  *
  * Global setting, DEPRECATED.
  */
-int oldXMLWDcompatibility = 0; /* DEPRECATED */
+const int oldXMLWDcompatibility = 0; /* DEPRECATED */
 /**
  * xmlParserDebugEntities:
  *
@@ -274,8 +273,7 @@ int oldXMLWDcompatibility = 0; /* DEPRECATED */
  * while handling entities.
  * Disabled by default
  */
-int xmlParserDebugEntities = 0;
-static int xmlParserDebugEntitiesThrDef = 0;
+const int xmlParserDebugEntities = 0;
 /**
  * xmlDoValidityCheckingDefaultValue:
  *
@@ -289,7 +287,7 @@ static int xmlDoValidityCheckingDefaultValueThrDef = 0;
 /**
  * xmlGetWarningsDefaultValue:
  *
- * DEPRECATED: Don't use
+ * DEPRECATED: Use the modern options API with XML_PARSE_NOWARNING.
  *
  * Global setting, indicate that the DTD validation should provide warnings.
  * Activated by default.
@@ -460,7 +458,7 @@ static int xmlSaveNoEmptyTagsThrDef = 0;
  *
  * Default SAX version1 handler for XML, builds the DOM tree
  */
-xmlSAXHandlerV1 xmlDefaultSAXHandler = {
+const xmlSAXHandlerV1 xmlDefaultSAXHandler = {
     xmlSAX2InternalSubset,
     xmlSAX2IsStandalone,
     xmlSAX2HasInternalSubset,
@@ -500,7 +498,7 @@ xmlSAXHandlerV1 xmlDefaultSAXHandler = {
  * The default SAX Locator
  * { getPublicId, getSystemId, getLineNumber, getColumnNumber}
  */
-xmlSAXLocator xmlDefaultSAXLocator = {
+const xmlSAXLocator xmlDefaultSAXLocator = {
     xmlSAX2GetPublicId,
     xmlSAX2GetSystemId,
     xmlSAX2GetLineNumber,
@@ -516,7 +514,7 @@ xmlSAXLocator xmlDefaultSAXLocator = {
  *
  * Default old SAX v1 handler for HTML, builds the DOM tree
  */
-xmlSAXHandlerV1 htmlDefaultSAXHandler = {
+const xmlSAXHandlerV1 htmlDefaultSAXHandler = {
     xmlSAX2InternalSubset,
     NULL,
     NULL,
@@ -549,9 +547,9 @@ xmlSAXHandlerV1 htmlDefaultSAXHandler = {
 #endif /* LIBXML_HTML_ENABLED */
 
 /************************************************************************
- *                                                                      *
- *                      Per thread global state handling                *
- *                                                                      *
+ *                                    *
+ *            Per thread global state handling        *
+ *                                    *
  ************************************************************************/
 
 /**
@@ -595,6 +593,11 @@ void xmlInitGlobalsInternal(void) {
     globalkey = TlsAlloc();
 #endif
     mainthread = GetCurrentThreadId();
+#endif
+
+#ifdef LIBXML_THREAD_ENABLED
+    xmlMainThreadRngState[0] = xmlGlobalRandom();
+    xmlMainThreadRngState[1] = xmlGlobalRandom();
 #endif
 }
 
@@ -756,36 +759,21 @@ static void
 xmlInitGlobalState(xmlGlobalStatePtr gs) {
     xmlMutexLock(&xmlThrDefMutex);
 
-#if defined(LIBXML_HTML_ENABLED) && defined(LIBXML_LEGACY_ENABLED) && defined(LIBXML_SAX1_ENABLED)
-    inithtmlDefaultSAXHandler(&gs->gs_htmlDefaultSAXHandler);
+#ifdef LIBXML_THREAD_ENABLED
+    gs->localRngState[0] = xmlGlobalRandom();
+    gs->localRngState[1] = xmlGlobalRandom();
 #endif
 
-    gs->gs_oldXMLWDcompatibility = 0;
     gs->gs_xmlBufferAllocScheme = xmlBufferAllocSchemeThrDef;
     gs->gs_xmlDefaultBufferSize = xmlDefaultBufferSizeThrDef;
-#if defined(LIBXML_SAX1_ENABLED) && defined(LIBXML_LEGACY_ENABLED)
-    initxmlDefaultSAXHandler(&gs->gs_xmlDefaultSAXHandler, 1);
-#endif /* LIBXML_SAX1_ENABLED */
-    gs->gs_xmlDefaultSAXLocator.getPublicId = xmlSAX2GetPublicId;
-    gs->gs_xmlDefaultSAXLocator.getSystemId = xmlSAX2GetSystemId;
-    gs->gs_xmlDefaultSAXLocator.getLineNumber = xmlSAX2GetLineNumber;
-    gs->gs_xmlDefaultSAXLocator.getColumnNumber = xmlSAX2GetColumnNumber;
     gs->gs_xmlDoValidityCheckingDefaultValue =
          xmlDoValidityCheckingDefaultValueThrDef;
 #ifdef LIBXML_THREAD_ALLOC_ENABLED
-#ifdef DEBUG_MEMORY_LOCATION
-    gs->gs_xmlFree = xmlMemFree;
-    gs->gs_xmlMalloc = xmlMemMalloc;
-    gs->gs_xmlMallocAtomic = xmlMemMalloc;
-    gs->gs_xmlRealloc = xmlMemRealloc;
-    gs->gs_xmlMemStrdup = xmlMemoryStrdup;
-#else
     gs->gs_xmlFree = free;
     gs->gs_xmlMalloc = malloc;
     gs->gs_xmlMallocAtomic = malloc;
     gs->gs_xmlRealloc = realloc;
     gs->gs_xmlMemStrdup = xmlPosixStrdup;
-#endif
 #endif
     gs->gs_xmlGetWarningsDefaultValue = xmlGetWarningsDefaultValueThrDef;
 #ifdef LIBXML_OUTPUT_ENABLED
@@ -796,7 +784,6 @@ xmlInitGlobalState(xmlGlobalStatePtr gs) {
     gs->gs_xmlKeepBlanksDefaultValue = xmlKeepBlanksDefaultValueThrDef;
     gs->gs_xmlLineNumbersDefaultValue = xmlLineNumbersDefaultValueThrDef;
     gs->gs_xmlLoadExtDtdDefaultValue = xmlLoadExtDtdDefaultValueThrDef;
-    gs->gs_xmlParserDebugEntities = xmlParserDebugEntitiesThrDef;
     gs->gs_xmlPedanticParserDefaultValue = xmlPedanticParserDefaultValueThrDef;
     gs->gs_xmlSubstituteEntitiesDefaultValue =
         xmlSubstituteEntitiesDefaultValueThrDef;
@@ -904,11 +891,25 @@ xmlGetThreadLocalStorage(int allowFailure) {
 #define XML_OP XML_DEFINE_GLOBAL_WRAPPER
 XML_GLOBALS_ALLOC
 XML_GLOBALS_ERROR
-XML_GLOBALS_HTML
 XML_GLOBALS_IO
 XML_GLOBALS_PARSER
 XML_GLOBALS_TREE
 #undef XML_OP
+
+#ifdef LIBXML_THREAD_ENABLED
+/**
+ * xmlGetLocalRngState:
+ *
+ * Returns the local RNG state.
+ */
+unsigned *
+xmlGetLocalRngState(void) {
+    if (IS_MAIN_THREAD)
+        return(xmlMainThreadRngState);
+    else
+        return(xmlGetThreadLocalStorage(0)->localRngState);
+}
+#endif
 
 /* For backward compatibility */
 
@@ -916,6 +917,35 @@ const char *const *
 __xmlParserVersion(void) {
     return &xmlParserVersion;
 }
+
+const int *
+__oldXMLWDcompatibility(void) {
+    return &oldXMLWDcompatibility;
+}
+
+const int *
+__xmlParserDebugEntities(void) {
+    return &xmlParserDebugEntities;
+}
+
+const xmlSAXLocator *
+__xmlDefaultSAXLocator(void) {
+    return &xmlDefaultSAXLocator;
+}
+
+#ifdef LIBXML_SAX1_ENABLED
+const xmlSAXHandlerV1 *
+__xmlDefaultSAXHandler(void) {
+    return &xmlDefaultSAXHandler;
+}
+
+#ifdef LIBXML_HTML_ENABLED
+const xmlSAXHandlerV1 *
+__htmlDefaultSAXHandler(void) {
+    return &htmlDefaultSAXHandler;
+}
+#endif /* LIBXML_HTML_ENABLED */
+#endif /* LIBXML_SAX1_ENABLED */
 
 #endif /* LIBXML_THREAD_ENABLED */
 
@@ -949,6 +979,8 @@ xmlCheckThreadLocalStorage(void) {
 #endif
     return(0);
 }
+
+/** DOC_DISABLE */
 
 /**
  * DllMain:
@@ -1009,9 +1041,9 @@ xmlThrDefSetGenericErrorFunc(void *ctx, xmlGenericErrorFunc handler) {
     xmlMutexLock(&xmlThrDefMutex);
     xmlGenericErrorContextThrDef = ctx;
     if (handler != NULL)
-        xmlGenericErrorThrDef = handler;
+    xmlGenericErrorThrDef = handler;
     else
-        xmlGenericErrorThrDef = xmlGenericErrorDefaultFunc;
+    xmlGenericErrorThrDef = xmlGenericErrorDefaultFunc;
     xmlMutexUnlock(&xmlThrDefMutex);
 }
 
@@ -1115,13 +1147,8 @@ int xmlThrDefLoadExtDtdDefaultValue(int v) {
     return ret;
 }
 
-int xmlThrDefParserDebugEntities(int v) {
-    int ret;
-    xmlMutexLock(&xmlThrDefMutex);
-    ret = xmlParserDebugEntitiesThrDef;
-    xmlParserDebugEntitiesThrDef = v;
-    xmlMutexUnlock(&xmlThrDefMutex);
-    return ret;
+int xmlThrDefParserDebugEntities(int v ATTRIBUTE_UNUSED) {
+    return(xmlParserDebugEntities);
 }
 
 int xmlThrDefPedanticParserDefaultValue(int v) {
@@ -1180,8 +1207,8 @@ xmlThrDefParserInputBufferCreateFilenameDefault(xmlParserInputBufferCreateFilena
     xmlMutexLock(&xmlThrDefMutex);
     old = xmlParserInputBufferCreateFilenameValueThrDef;
     if (old == NULL) {
-                old = __xmlParserInputBufferCreateFilename;
-        }
+        old = __xmlParserInputBufferCreateFilename;
+    }
 
     xmlParserInputBufferCreateFilenameValueThrDef = func;
     xmlMutexUnlock(&xmlThrDefMutex);
@@ -1198,12 +1225,14 @@ xmlThrDefOutputBufferCreateFilenameDefault(xmlOutputBufferCreateFilenameFunc fun
     old = xmlOutputBufferCreateFilenameValueThrDef;
 #ifdef LIBXML_OUTPUT_ENABLED
     if (old == NULL) {
-                old = __xmlOutputBufferCreateFilename;
-        }
+        old = __xmlOutputBufferCreateFilename;
+    }
 #endif
     xmlOutputBufferCreateFilenameValueThrDef = func;
     xmlMutexUnlock(&xmlThrDefMutex);
 
     return(old);
 }
+
+/** DOC_ENABLE */
 

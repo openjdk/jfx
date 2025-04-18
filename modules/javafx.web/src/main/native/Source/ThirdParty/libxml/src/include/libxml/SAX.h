@@ -22,174 +22,174 @@ extern "C" {
 #endif
 XML_DEPRECATED
 XMLPUBFUN const xmlChar *
-                getPublicId                     (void *ctx);
+        getPublicId            (void *ctx);
 XML_DEPRECATED
 XMLPUBFUN const xmlChar *
-                getSystemId                     (void *ctx);
+        getSystemId            (void *ctx);
 XML_DEPRECATED
 XMLPUBFUN void
-                setDocumentLocator              (void *ctx,
-                                                 xmlSAXLocatorPtr loc);
+        setDocumentLocator        (void *ctx,
+                         xmlSAXLocatorPtr loc);
 
 XML_DEPRECATED
 XMLPUBFUN int
-                getLineNumber                   (void *ctx);
+        getLineNumber            (void *ctx);
 XML_DEPRECATED
 XMLPUBFUN int
-                getColumnNumber                 (void *ctx);
+        getColumnNumber            (void *ctx);
 
 XML_DEPRECATED
 XMLPUBFUN int
-                isStandalone                    (void *ctx);
+        isStandalone            (void *ctx);
 XML_DEPRECATED
 XMLPUBFUN int
-                hasInternalSubset               (void *ctx);
+        hasInternalSubset        (void *ctx);
 XML_DEPRECATED
 XMLPUBFUN int
-                hasExternalSubset               (void *ctx);
+        hasExternalSubset        (void *ctx);
 
 XML_DEPRECATED
 XMLPUBFUN void
-                internalSubset                  (void *ctx,
-                                                 const xmlChar *name,
-                                                 const xmlChar *ExternalID,
-                                                 const xmlChar *SystemID);
+        internalSubset            (void *ctx,
+                         const xmlChar *name,
+                         const xmlChar *ExternalID,
+                         const xmlChar *SystemID);
 XML_DEPRECATED
 XMLPUBFUN void
-                externalSubset                  (void *ctx,
-                                                 const xmlChar *name,
-                                                 const xmlChar *ExternalID,
-                                                 const xmlChar *SystemID);
+        externalSubset            (void *ctx,
+                         const xmlChar *name,
+                         const xmlChar *ExternalID,
+                         const xmlChar *SystemID);
 XML_DEPRECATED
 XMLPUBFUN xmlEntityPtr
-                getEntity                       (void *ctx,
-                                                 const xmlChar *name);
+        getEntity            (void *ctx,
+                         const xmlChar *name);
 XML_DEPRECATED
 XMLPUBFUN xmlEntityPtr
-                getParameterEntity              (void *ctx,
-                                                 const xmlChar *name);
+        getParameterEntity        (void *ctx,
+                         const xmlChar *name);
 XML_DEPRECATED
 XMLPUBFUN xmlParserInputPtr
-                resolveEntity                   (void *ctx,
-                                                 const xmlChar *publicId,
-                                                 const xmlChar *systemId);
+        resolveEntity            (void *ctx,
+                         const xmlChar *publicId,
+                         const xmlChar *systemId);
 
 XML_DEPRECATED
 XMLPUBFUN void
-                entityDecl                      (void *ctx,
-                                                 const xmlChar *name,
-                                                 int type,
-                                                 const xmlChar *publicId,
-                                                 const xmlChar *systemId,
-                                                 xmlChar *content);
+        entityDecl            (void *ctx,
+                         const xmlChar *name,
+                         int type,
+                         const xmlChar *publicId,
+                         const xmlChar *systemId,
+                         xmlChar *content);
 XML_DEPRECATED
 XMLPUBFUN void
-                attributeDecl                   (void *ctx,
-                                                 const xmlChar *elem,
-                                                 const xmlChar *fullname,
-                                                 int type,
-                                                 int def,
-                                                 const xmlChar *defaultValue,
-                                                 xmlEnumerationPtr tree);
+        attributeDecl            (void *ctx,
+                         const xmlChar *elem,
+                         const xmlChar *fullname,
+                         int type,
+                         int def,
+                         const xmlChar *defaultValue,
+                         xmlEnumerationPtr tree);
 XML_DEPRECATED
 XMLPUBFUN void
-                elementDecl                     (void *ctx,
-                                                 const xmlChar *name,
-                                                 int type,
-                                                 xmlElementContentPtr content);
+        elementDecl            (void *ctx,
+                         const xmlChar *name,
+                         int type,
+                         xmlElementContentPtr content);
 XML_DEPRECATED
 XMLPUBFUN void
-                notationDecl                    (void *ctx,
-                                                 const xmlChar *name,
-                                                 const xmlChar *publicId,
-                                                 const xmlChar *systemId);
+        notationDecl            (void *ctx,
+                         const xmlChar *name,
+                         const xmlChar *publicId,
+                         const xmlChar *systemId);
 XML_DEPRECATED
 XMLPUBFUN void
-                unparsedEntityDecl              (void *ctx,
-                                                 const xmlChar *name,
-                                                 const xmlChar *publicId,
-                                                 const xmlChar *systemId,
-                                                 const xmlChar *notationName);
+        unparsedEntityDecl        (void *ctx,
+                         const xmlChar *name,
+                         const xmlChar *publicId,
+                         const xmlChar *systemId,
+                         const xmlChar *notationName);
 
 XML_DEPRECATED
 XMLPUBFUN void
-                startDocument                   (void *ctx);
+        startDocument            (void *ctx);
 XML_DEPRECATED
 XMLPUBFUN void
-                endDocument                     (void *ctx);
+        endDocument            (void *ctx);
 XML_DEPRECATED
 XMLPUBFUN void
-                attribute                       (void *ctx,
-                                                 const xmlChar *fullname,
-                                                 const xmlChar *value);
+        attribute            (void *ctx,
+                         const xmlChar *fullname,
+                         const xmlChar *value);
 XML_DEPRECATED
 XMLPUBFUN void
-                startElement                    (void *ctx,
-                                                 const xmlChar *fullname,
-                                                 const xmlChar **atts);
+        startElement            (void *ctx,
+                         const xmlChar *fullname,
+                         const xmlChar **atts);
 XML_DEPRECATED
 XMLPUBFUN void
-                endElement                      (void *ctx,
-                                                 const xmlChar *name);
+        endElement            (void *ctx,
+                         const xmlChar *name);
 XML_DEPRECATED
 XMLPUBFUN void
-                reference                       (void *ctx,
-                                                 const xmlChar *name);
+        reference            (void *ctx,
+                         const xmlChar *name);
 XML_DEPRECATED
 XMLPUBFUN void
-                characters                      (void *ctx,
-                                                 const xmlChar *ch,
-                                                 int len);
+        characters            (void *ctx,
+                         const xmlChar *ch,
+                         int len);
 XML_DEPRECATED
 XMLPUBFUN void
-                ignorableWhitespace             (void *ctx,
-                                                 const xmlChar *ch,
-                                                 int len);
+        ignorableWhitespace        (void *ctx,
+                         const xmlChar *ch,
+                         int len);
 XML_DEPRECATED
 XMLPUBFUN void
-                processingInstruction           (void *ctx,
-                                                 const xmlChar *target,
-                                                 const xmlChar *data);
+        processingInstruction        (void *ctx,
+                         const xmlChar *target,
+                         const xmlChar *data);
 XML_DEPRECATED
 XMLPUBFUN void
-                globalNamespace                 (void *ctx,
-                                                 const xmlChar *href,
-                                                 const xmlChar *prefix);
+        globalNamespace            (void *ctx,
+                         const xmlChar *href,
+                         const xmlChar *prefix);
 XML_DEPRECATED
 XMLPUBFUN void
-                setNamespace                    (void *ctx,
-                                                 const xmlChar *name);
+        setNamespace            (void *ctx,
+                         const xmlChar *name);
 XML_DEPRECATED
 XMLPUBFUN xmlNsPtr
-                getNamespace                    (void *ctx);
+        getNamespace            (void *ctx);
 XML_DEPRECATED
 XMLPUBFUN int
-                checkNamespace                  (void *ctx,
-                                                 xmlChar *nameSpace);
+        checkNamespace            (void *ctx,
+                         xmlChar *nameSpace);
 XML_DEPRECATED
 XMLPUBFUN void
-                namespaceDecl                   (void *ctx,
-                                                 const xmlChar *href,
-                                                 const xmlChar *prefix);
+        namespaceDecl            (void *ctx,
+                         const xmlChar *href,
+                         const xmlChar *prefix);
 XML_DEPRECATED
 XMLPUBFUN void
-                comment                         (void *ctx,
-                                                 const xmlChar *value);
+        comment                (void *ctx,
+                         const xmlChar *value);
 XML_DEPRECATED
 XMLPUBFUN void
-                cdataBlock                      (void *ctx,
-                                                 const xmlChar *value,
-                                                 int len);
+        cdataBlock            (void *ctx,
+                         const xmlChar *value,
+                         int len);
 
 #ifdef LIBXML_SAX1_ENABLED
 XML_DEPRECATED
 XMLPUBFUN void
-                initxmlDefaultSAXHandler        (xmlSAXHandlerV1 *hdlr,
-                                                 int warning);
+        initxmlDefaultSAXHandler    (xmlSAXHandlerV1 *hdlr,
+                         int warning);
 #ifdef LIBXML_HTML_ENABLED
 XML_DEPRECATED
 XMLPUBFUN void
-                inithtmlDefaultSAXHandler       (xmlSAXHandlerV1 *hdlr);
+        inithtmlDefaultSAXHandler    (xmlSAXHandlerV1 *hdlr);
 #endif
 #endif /* LIBXML_SAX1_ENABLED */
 

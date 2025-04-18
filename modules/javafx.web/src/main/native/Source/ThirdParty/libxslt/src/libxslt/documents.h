@@ -21,25 +21,25 @@ extern "C" {
 #endif
 
 XSLTPUBFUN xsltDocumentPtr XSLTCALL
-                xsltNewDocument         (xsltTransformContextPtr ctxt,
-                                         xmlDocPtr doc);
+        xsltNewDocument        (xsltTransformContextPtr ctxt,
+                     xmlDocPtr doc);
 XSLTPUBFUN xsltDocumentPtr XSLTCALL
-                xsltLoadDocument        (xsltTransformContextPtr ctxt,
-                                         const xmlChar *URI);
+        xsltLoadDocument    (xsltTransformContextPtr ctxt,
+                     const xmlChar *URI);
 XSLTPUBFUN xsltDocumentPtr XSLTCALL
-                xsltFindDocument        (xsltTransformContextPtr ctxt,
-                                         xmlDocPtr doc);
+        xsltFindDocument    (xsltTransformContextPtr ctxt,
+                     xmlDocPtr doc);
 XSLTPUBFUN void XSLTCALL
-                xsltFreeDocuments       (xsltTransformContextPtr ctxt);
+        xsltFreeDocuments    (xsltTransformContextPtr ctxt);
 
 XSLTPUBFUN xsltDocumentPtr XSLTCALL
-                xsltLoadStyleDocument   (xsltStylesheetPtr style,
-                                         const xmlChar *URI);
+        xsltLoadStyleDocument    (xsltStylesheetPtr style,
+                     const xmlChar *URI);
 XSLTPUBFUN xsltDocumentPtr XSLTCALL
-                xsltNewStyleDocument    (xsltStylesheetPtr style,
-                                         xmlDocPtr doc);
+        xsltNewStyleDocument    (xsltStylesheetPtr style,
+                     xmlDocPtr doc);
 XSLTPUBFUN void XSLTCALL
-                xsltFreeStyleDocuments  (xsltStylesheetPtr style);
+        xsltFreeStyleDocuments    (xsltStylesheetPtr style);
 
 /*
  * Hooks for document loading
@@ -51,9 +51,9 @@ XSLTPUBFUN void XSLTCALL
  * Enum defining the kind of loader requirement.
  */
 typedef enum {
-    XSLT_LOAD_START = 0,        /* loading for a top stylesheet */
-    XSLT_LOAD_STYLESHEET = 1,   /* loading for a stylesheet include/import */
-    XSLT_LOAD_DOCUMENT = 2      /* loading document at transformation time */
+    XSLT_LOAD_START = 0,    /* loading for a top stylesheet */
+    XSLT_LOAD_STYLESHEET = 1,    /* loading for a stylesheet include/import */
+    XSLT_LOAD_DOCUMENT = 2    /* loading document at transformation time */
 } xsltLoadType;
 
 /**
@@ -73,14 +73,14 @@ typedef enum {
  * Returns the pointer to the document (which will be modified and
  * freed by the engine later), or NULL in case of error.
  */
-typedef xmlDocPtr (*xsltDocLoaderFunc)          (const xmlChar *URI,
-                                                 xmlDictPtr dict,
-                                                 int options,
-                                                 void *ctxt,
-                                                 xsltLoadType type);
+typedef xmlDocPtr (*xsltDocLoaderFunc)        (const xmlChar *URI,
+                         xmlDictPtr dict,
+                         int options,
+                         void *ctxt,
+                         xsltLoadType type);
 
 XSLTPUBFUN void XSLTCALL
-                xsltSetLoaderFunc               (xsltDocLoaderFunc f);
+        xsltSetLoaderFunc        (xsltDocLoaderFunc f);
 
 /* the loader may be needed by extension libraries so it is exported */
 XSLTPUBVAR xsltDocLoaderFunc xsltDocDefaultLoader;

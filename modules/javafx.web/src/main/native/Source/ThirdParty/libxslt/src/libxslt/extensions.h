@@ -31,7 +31,7 @@ extern "C" {
  */
 
 XSLTPUBFUN void XSLTCALL
-                xsltInitGlobals                 (void);
+        xsltInitGlobals                 (void);
 
 /**
  * xsltStyleExtInitFunction:
@@ -42,8 +42,8 @@ XSLTPUBFUN void XSLTCALL
  *
  * Returns a pointer to the module specific data for this transformation.
  */
-typedef void * (*xsltStyleExtInitFunction)      (xsltStylesheetPtr style,
-                                                 const xmlChar *URI);
+typedef void * (*xsltStyleExtInitFunction)    (xsltStylesheetPtr style,
+                         const xmlChar *URI);
 
 /**
  * xsltStyleExtShutdownFunction:
@@ -54,8 +54,8 @@ typedef void * (*xsltStyleExtInitFunction)      (xsltStylesheetPtr style,
  * A function called at shutdown time of an XSLT extension module.
  */
 typedef void (*xsltStyleExtShutdownFunction)    (xsltStylesheetPtr style,
-                                                 const xmlChar *URI,
-                                                 void *data);
+                         const xmlChar *URI,
+                         void *data);
 
 /**
  * xsltExtInitFunction:
@@ -66,8 +66,8 @@ typedef void (*xsltStyleExtShutdownFunction)    (xsltStylesheetPtr style,
  *
  * Returns a pointer to the module specific data for this transformation.
  */
-typedef void * (*xsltExtInitFunction)   (xsltTransformContextPtr ctxt,
-                                         const xmlChar *URI);
+typedef void * (*xsltExtInitFunction)    (xsltTransformContextPtr ctxt,
+                     const xmlChar *URI);
 
 /**
  * xsltExtShutdownFunction:
@@ -78,137 +78,137 @@ typedef void * (*xsltExtInitFunction)   (xsltTransformContextPtr ctxt,
  * A function called at shutdown time of an XSLT extension module.
  */
 typedef void (*xsltExtShutdownFunction) (xsltTransformContextPtr ctxt,
-                                         const xmlChar *URI,
-                                         void *data);
+                     const xmlChar *URI,
+                     void *data);
 
 XSLTPUBFUN int XSLTCALL
-                xsltRegisterExtModule   (const xmlChar *URI,
-                                         xsltExtInitFunction initFunc,
-                                         xsltExtShutdownFunction shutdownFunc);
+        xsltRegisterExtModule    (const xmlChar *URI,
+                     xsltExtInitFunction initFunc,
+                     xsltExtShutdownFunction shutdownFunc);
 XSLTPUBFUN int XSLTCALL
-                xsltRegisterExtModuleFull
-                                        (const xmlChar * URI,
-                                         xsltExtInitFunction initFunc,
-                                         xsltExtShutdownFunction shutdownFunc,
-                                         xsltStyleExtInitFunction styleInitFunc,
-                                         xsltStyleExtShutdownFunction styleShutdownFunc);
+        xsltRegisterExtModuleFull
+                    (const xmlChar * URI,
+                     xsltExtInitFunction initFunc,
+                     xsltExtShutdownFunction shutdownFunc,
+                     xsltStyleExtInitFunction styleInitFunc,
+                     xsltStyleExtShutdownFunction styleShutdownFunc);
 
 XSLTPUBFUN int XSLTCALL
-                xsltUnregisterExtModule (const xmlChar * URI);
+        xsltUnregisterExtModule    (const xmlChar * URI);
 
 XSLTPUBFUN void * XSLTCALL
-                xsltGetExtData          (xsltTransformContextPtr ctxt,
-                                         const xmlChar *URI);
+        xsltGetExtData        (xsltTransformContextPtr ctxt,
+                     const xmlChar *URI);
 
 XSLTPUBFUN void * XSLTCALL
-                xsltStyleGetExtData     (xsltStylesheetPtr style,
-                                         const xmlChar *URI);
+        xsltStyleGetExtData    (xsltStylesheetPtr style,
+                     const xmlChar *URI);
 #ifdef XSLT_REFACTORED
 XSLTPUBFUN void * XSLTCALL
-                xsltStyleStylesheetLevelGetExtData(
-                                         xsltStylesheetPtr style,
-                                         const xmlChar * URI);
+        xsltStyleStylesheetLevelGetExtData(
+                     xsltStylesheetPtr style,
+                     const xmlChar * URI);
 #endif
 XSLTPUBFUN void XSLTCALL
-                xsltShutdownCtxtExts    (xsltTransformContextPtr ctxt);
+        xsltShutdownCtxtExts    (xsltTransformContextPtr ctxt);
 
 XSLTPUBFUN void XSLTCALL
-                xsltShutdownExts        (xsltStylesheetPtr style);
+        xsltShutdownExts    (xsltStylesheetPtr style);
 
 XSLTPUBFUN xsltTransformContextPtr XSLTCALL
-                xsltXPathGetTransformContext
-                                        (xmlXPathParserContextPtr ctxt);
+        xsltXPathGetTransformContext
+                    (xmlXPathParserContextPtr ctxt);
 
 /*
  * extension functions
 */
 XSLTPUBFUN int XSLTCALL
-                xsltRegisterExtModuleFunction
-                                        (const xmlChar *name,
-                                         const xmlChar *URI,
-                                         xmlXPathFunction function);
+        xsltRegisterExtModuleFunction
+                    (const xmlChar *name,
+                     const xmlChar *URI,
+                     xmlXPathFunction function);
 XSLTPUBFUN xmlXPathFunction XSLTCALL
-        xsltExtModuleFunctionLookup     (const xmlChar *name,
-                                         const xmlChar *URI);
+    xsltExtModuleFunctionLookup    (const xmlChar *name,
+                     const xmlChar *URI);
 XSLTPUBFUN int XSLTCALL
-                xsltUnregisterExtModuleFunction
-                                        (const xmlChar *name,
-                                         const xmlChar *URI);
+        xsltUnregisterExtModuleFunction
+                    (const xmlChar *name,
+                     const xmlChar *URI);
 
 /*
  * extension elements
  */
 typedef xsltElemPreCompPtr (*xsltPreComputeFunction)
-                                        (xsltStylesheetPtr style,
-                                         xmlNodePtr inst,
-                                         xsltTransformFunction function);
+                    (xsltStylesheetPtr style,
+                     xmlNodePtr inst,
+                     xsltTransformFunction function);
 
 XSLTPUBFUN xsltElemPreCompPtr XSLTCALL
-                xsltNewElemPreComp      (xsltStylesheetPtr style,
-                                         xmlNodePtr inst,
-                                         xsltTransformFunction function);
+        xsltNewElemPreComp    (xsltStylesheetPtr style,
+                     xmlNodePtr inst,
+                     xsltTransformFunction function);
 XSLTPUBFUN void XSLTCALL
-                xsltInitElemPreComp     (xsltElemPreCompPtr comp,
-                                         xsltStylesheetPtr style,
-                                         xmlNodePtr inst,
-                                         xsltTransformFunction function,
-                                         xsltElemPreCompDeallocator freeFunc);
+        xsltInitElemPreComp    (xsltElemPreCompPtr comp,
+                     xsltStylesheetPtr style,
+                     xmlNodePtr inst,
+                     xsltTransformFunction function,
+                     xsltElemPreCompDeallocator freeFunc);
 
 XSLTPUBFUN int XSLTCALL
-                xsltRegisterExtModuleElement
-                                        (const xmlChar *name,
-                                         const xmlChar *URI,
-                                         xsltPreComputeFunction precomp,
-                                         xsltTransformFunction transform);
+        xsltRegisterExtModuleElement
+                    (const xmlChar *name,
+                     const xmlChar *URI,
+                     xsltPreComputeFunction precomp,
+                     xsltTransformFunction transform);
 XSLTPUBFUN xsltTransformFunction XSLTCALL
-                xsltExtElementLookup    (xsltTransformContextPtr ctxt,
-                                         const xmlChar *name,
-                                         const xmlChar *URI);
+        xsltExtElementLookup    (xsltTransformContextPtr ctxt,
+                     const xmlChar *name,
+                     const xmlChar *URI);
 XSLTPUBFUN xsltTransformFunction XSLTCALL
-                xsltExtModuleElementLookup
-                                        (const xmlChar *name,
-                                         const xmlChar *URI);
+        xsltExtModuleElementLookup
+                    (const xmlChar *name,
+                     const xmlChar *URI);
 XSLTPUBFUN xsltPreComputeFunction XSLTCALL
-                xsltExtModuleElementPreComputeLookup
-                                        (const xmlChar *name,
-                                         const xmlChar *URI);
+        xsltExtModuleElementPreComputeLookup
+                    (const xmlChar *name,
+                     const xmlChar *URI);
 XSLTPUBFUN int XSLTCALL
-                xsltUnregisterExtModuleElement
-                                        (const xmlChar *name,
-                                         const xmlChar *URI);
+        xsltUnregisterExtModuleElement
+                    (const xmlChar *name,
+                     const xmlChar *URI);
 
 /*
  * top-level elements
  */
 typedef void (*xsltTopLevelFunction)    (xsltStylesheetPtr style,
-                                         xmlNodePtr inst);
+                     xmlNodePtr inst);
 
 XSLTPUBFUN int XSLTCALL
-                xsltRegisterExtModuleTopLevel
-                                        (const xmlChar *name,
-                                         const xmlChar *URI,
-                                         xsltTopLevelFunction function);
+        xsltRegisterExtModuleTopLevel
+                    (const xmlChar *name,
+                     const xmlChar *URI,
+                     xsltTopLevelFunction function);
 XSLTPUBFUN xsltTopLevelFunction XSLTCALL
-                xsltExtModuleTopLevelLookup
-                                        (const xmlChar *name,
-                                         const xmlChar *URI);
+        xsltExtModuleTopLevelLookup
+                    (const xmlChar *name,
+                     const xmlChar *URI);
 XSLTPUBFUN int XSLTCALL
-                xsltUnregisterExtModuleTopLevel
-                                        (const xmlChar *name,
-                                         const xmlChar *URI);
+        xsltUnregisterExtModuleTopLevel
+                    (const xmlChar *name,
+                     const xmlChar *URI);
 
 
 /* These 2 functions are deprecated for use within modules. */
 XSLTPUBFUN int XSLTCALL
-                xsltRegisterExtFunction (xsltTransformContextPtr ctxt,
-                                         const xmlChar *name,
-                                         const xmlChar *URI,
-                                         xmlXPathFunction function);
+        xsltRegisterExtFunction    (xsltTransformContextPtr ctxt,
+                     const xmlChar *name,
+                     const xmlChar *URI,
+                     xmlXPathFunction function);
 XSLTPUBFUN int XSLTCALL
-                xsltRegisterExtElement  (xsltTransformContextPtr ctxt,
-                                         const xmlChar *name,
-                                         const xmlChar *URI,
-                                         xsltTransformFunction function);
+        xsltRegisterExtElement    (xsltTransformContextPtr ctxt,
+                     const xmlChar *name,
+                     const xmlChar *URI,
+                     xsltTransformFunction function);
 
 /*
  * Extension Prefix handling API.
@@ -216,42 +216,42 @@ XSLTPUBFUN int XSLTCALL
  */
 
 XSLTPUBFUN int XSLTCALL
-                xsltRegisterExtPrefix   (xsltStylesheetPtr style,
-                                         const xmlChar *prefix,
-                                         const xmlChar *URI);
+        xsltRegisterExtPrefix    (xsltStylesheetPtr style,
+                     const xmlChar *prefix,
+                     const xmlChar *URI);
 XSLTPUBFUN int XSLTCALL
-                xsltCheckExtPrefix      (xsltStylesheetPtr style,
-                                         const xmlChar *URI);
+        xsltCheckExtPrefix    (xsltStylesheetPtr style,
+                     const xmlChar *URI);
 XSLTPUBFUN int XSLTCALL
-                xsltCheckExtURI         (xsltStylesheetPtr style,
-                                         const xmlChar *URI);
+        xsltCheckExtURI        (xsltStylesheetPtr style,
+                     const xmlChar *URI);
 XSLTPUBFUN int XSLTCALL
-                xsltInitCtxtExts        (xsltTransformContextPtr ctxt);
+        xsltInitCtxtExts    (xsltTransformContextPtr ctxt);
 XSLTPUBFUN void XSLTCALL
-                xsltFreeCtxtExts        (xsltTransformContextPtr ctxt);
+        xsltFreeCtxtExts    (xsltTransformContextPtr ctxt);
 XSLTPUBFUN void XSLTCALL
-                xsltFreeExts            (xsltStylesheetPtr style);
+        xsltFreeExts        (xsltStylesheetPtr style);
 
 XSLTPUBFUN xsltElemPreCompPtr XSLTCALL
-                xsltPreComputeExtModuleElement
-                                        (xsltStylesheetPtr style,
-                                         xmlNodePtr inst);
+        xsltPreComputeExtModuleElement
+                    (xsltStylesheetPtr style,
+                     xmlNodePtr inst);
 /*
  * Extension Infos access.
  * Used by exslt initialisation
  */
 
 XSLTPUBFUN xmlHashTablePtr XSLTCALL
-                xsltGetExtInfo          (xsltStylesheetPtr style,
-                                         const xmlChar *URI);
+        xsltGetExtInfo        (xsltStylesheetPtr style,
+                     const xmlChar *URI);
 
 /**
  * Test of the extension module API
  */
 XSLTPUBFUN void XSLTCALL
-                xsltRegisterTestModule  (void);
+        xsltRegisterTestModule    (void);
 XSLTPUBFUN void XSLTCALL
-                xsltDebugDumpExtensions (FILE * output);
+        xsltDebugDumpExtensions    (FILE * output);
 
 
 #ifdef __cplusplus

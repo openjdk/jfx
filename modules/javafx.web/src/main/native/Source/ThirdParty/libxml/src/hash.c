@@ -445,16 +445,9 @@ xmlHashUpdateInternal(xmlHashTablePtr hash, const xmlChar *key,
             if (dealloc)
                 dealloc(entry->payload, entry->key);
             entry->payload = payload;
-            return(0);
-        } else {
-            /*
-             * xmlHashAddEntry found an existing entry.
-             *
-             * TODO: We should return a different error code here to
-             * distinguish from malloc failures.
-             */
-            return(-1);
         }
+
+        return(0);
     }
 
     /*
@@ -589,7 +582,7 @@ xmlHashUpdateInternal(xmlHashTablePtr hash, const xmlChar *key,
 
     hash->nbElems++;
 
-    return(0);
+    return(1);
 }
 
 /**
@@ -605,6 +598,70 @@ xmlHashDefaultDeallocator(void *entry, const xmlChar *key ATTRIBUTE_UNUSED) {
 }
 
 /**
+ * xmlHashAdd:
+ * @hash: hash table
+ * @key: string key
+ * @payload: pointer to the payload
+ *
+ * Add a hash table entry. If an entry with this key already exists,
+ * payload will not be updated and 0 is returned. This return value
+ * can't be distinguished from out-of-memory errors, so this function
+ * should be used with care.
+ *
+ * Available since 2.13.0.
+ *
+ * Returns 1 on success, 0 if an entry exists and -1 in case of error.
+ */
+int
+xmlHashAdd(xmlHashTablePtr hash, const xmlChar *key, void *payload) {
+    return(xmlHashUpdateInternal(hash, key, NULL, NULL, payload, NULL, 0));
+}
+
+/**
+ * xmlHashAdd2:
+ * @hash: hash table
+ * @key: first string key
+ * @key2: second string key
+ * @payload: pointer to the payload
+ *
+ * Add a hash table entry with two strings as key.
+ *
+ * See xmlHashAdd.
+ *
+ * Available since 2.13.0.
+ *
+ * Returns 1 on success, 0 if an entry exists and -1 in case of error.
+ */
+int
+xmlHashAdd2(xmlHashTablePtr hash, const xmlChar *key,
+                 const xmlChar *key2, void *payload) {
+    return(xmlHashUpdateInternal(hash, key, key2, NULL, payload, NULL, 0));
+}
+
+/**
+ * xmlHashAdd3:
+ * @hash: hash table
+ * @key: first string key
+ * @key2: second string key
+ * @key3: third string key
+ * @payload: pointer to the payload
+ *
+ * Add a hash table entry with three strings as key.
+ *
+ * See xmlHashAdd.
+ *
+ * Available since 2.13.0.
+ *
+ * Returns 1 on success, 0 if an entry exists and -1 in case of error.
+ */
+int
+xmlHashAdd3(xmlHashTablePtr hash, const xmlChar *key,
+                 const xmlChar *key2, const xmlChar *key3,
+                 void *payload) {
+    return(xmlHashUpdateInternal(hash, key, key2, key3, payload, NULL, 0));
+}
+
+/**
  * xmlHashAddEntry:
  * @hash: hash table
  * @key: string key
@@ -615,11 +672,21 @@ xmlHashDefaultDeallocator(void *entry, const xmlChar *key ATTRIBUTE_UNUSED) {
  * can't be distinguished from out-of-memory errors, so this function
  * should be used with care.
  *
+ * NOTE: This function doesn't allow to distinguish malloc failures from
+ *       existing entries. Use xmlHashAdd instead.
+ *
  * Returns 0 on success and -1 in case of error.
  */
 int
 xmlHashAddEntry(xmlHashTablePtr hash, const xmlChar *key, void *payload) {
-    return(xmlHashUpdateInternal(hash, key, NULL, NULL, payload, NULL, 0));
+    int res = xmlHashUpdateInternal(hash, key, NULL, NULL, payload, NULL, 0);
+
+    if (res == 0)
+        res = -1;
+    else if (res == 1)
+        res = 0;
+
+    return(res);
 }
 
 /**
@@ -638,7 +705,14 @@ xmlHashAddEntry(xmlHashTablePtr hash, const xmlChar *key, void *payload) {
 int
 xmlHashAddEntry2(xmlHashTablePtr hash, const xmlChar *key,
                  const xmlChar *key2, void *payload) {
-    return(xmlHashUpdateInternal(hash, key, key2, NULL, payload, NULL, 0));
+    int res = xmlHashUpdateInternal(hash, key, key2, NULL, payload, NULL, 0);
+
+    if (res == 0)
+        res = -1;
+    else if (res == 1)
+        res = 0;
+
+    return(res);
 }
 
 /**
@@ -659,7 +733,14 @@ int
 xmlHashAddEntry3(xmlHashTablePtr hash, const xmlChar *key,
                  const xmlChar *key2, const xmlChar *key3,
                  void *payload) {
-    return(xmlHashUpdateInternal(hash, key, key2, key3, payload, NULL, 0));
+    int res = xmlHashUpdateInternal(hash, key, key2, key3, payload, NULL, 0);
+
+    if (res == 0)
+        res = -1;
+    else if (res == 1)
+        res = 0;
+
+    return(res);
 }
 
 /**
@@ -677,8 +758,13 @@ xmlHashAddEntry3(xmlHashTablePtr hash, const xmlChar *key,
 int
 xmlHashUpdateEntry(xmlHashTablePtr hash, const xmlChar *key,
                    void *payload, xmlHashDeallocator dealloc) {
-    return(xmlHashUpdateInternal(hash, key, NULL, NULL, payload,
-                                 dealloc, 1));
+    int res = xmlHashUpdateInternal(hash, key, NULL, NULL, payload,
+                                    dealloc, 1);
+
+    if (res == 1)
+        res = 0;
+
+    return(res);
 }
 
 /**
@@ -699,8 +785,13 @@ int
 xmlHashUpdateEntry2(xmlHashTablePtr hash, const xmlChar *key,
                    const xmlChar *key2, void *payload,
                    xmlHashDeallocator dealloc) {
-    return(xmlHashUpdateInternal(hash, key, key2, NULL, payload,
-                                 dealloc, 1));
+    int res = xmlHashUpdateInternal(hash, key, key2, NULL, payload,
+                                    dealloc, 1);
+
+    if (res == 1)
+        res = 0;
+
+    return(res);
 }
 
 /**
@@ -722,8 +813,13 @@ int
 xmlHashUpdateEntry3(xmlHashTablePtr hash, const xmlChar *key,
                    const xmlChar *key2, const xmlChar *key3,
                    void *payload, xmlHashDeallocator dealloc) {
-    return(xmlHashUpdateInternal(hash, key, key2, key3, payload,
-                                 dealloc, 1));
+    int res = xmlHashUpdateInternal(hash, key, key2, key3, payload,
+                                    dealloc, 1);
+
+    if (res == 1)
+        res = 0;
+
+    return(res);
 }
 
 /**
@@ -1037,21 +1133,25 @@ xmlHashScanFull3(xmlHashTablePtr hash, const xmlChar *key,
     }
 }
 
-/**
- * xmlHashCopy:
+/*
+ * xmlHashCopySafe:
  * @hash: hash table
- * @copy: copier function for items in the hash
+ * @copyFunc: copier function for items in the hash
+ * @deallocFunc: deallocation function in case of errors
  *
- * Copy the hash @table using @copy to copy payloads.
+ * Copy the hash table using @copyFunc to copy payloads.
+ *
+ * Available since 2.13.0.
  *
  * Returns the new table or NULL if a memory allocation failed.
  */
 xmlHashTablePtr
-xmlHashCopy(xmlHashTablePtr hash, xmlHashCopier copy) {
+xmlHashCopySafe(xmlHashTablePtr hash, xmlHashCopier copyFunc,
+                xmlHashDeallocator deallocFunc) {
     const xmlHashEntry *entry, *end;
     xmlHashTablePtr ret;
 
-    if ((hash == NULL) || (copy == NULL))
+    if ((hash == NULL) || (copyFunc == NULL))
         return(NULL);
 
     ret = xmlHashCreate(hash->size);
@@ -1064,12 +1164,42 @@ xmlHashCopy(xmlHashTablePtr hash, xmlHashCopier copy) {
     end = &hash->table[hash->size];
 
     for (entry = hash->table; entry < end; entry++) {
-        if (entry->hashValue != 0)
-            xmlHashAddEntry3(ret, entry->key, entry->key2, entry->key3,
-                             copy(entry->payload, entry->key));
+        if (entry->hashValue != 0) {
+            void *copy;
+
+            copy = copyFunc(entry->payload, entry->key);
+            if (copy == NULL)
+                goto error;
+            if (xmlHashAdd3(ret, entry->key, entry->key2, entry->key3,
+                            copy) <= 0) {
+                if (deallocFunc != NULL)
+                    deallocFunc(copy, entry->key);
+                goto error;
+            }
+        }
     }
 
     return(ret);
+
+error:
+    xmlHashFree(ret, deallocFunc);
+    return(NULL);
+}
+
+/*
+ * xmlHashCopy:
+ * @hash: hash table
+ * @copy: copier function for items in the hash
+ *
+ * DEPRECATED: Leaks memory in error case.
+ *
+ * Copy the hash table using @copy to copy payloads.
+ *
+ * Returns the new table or NULL if a memory allocation failed.
+ */
+xmlHashTablePtr
+xmlHashCopy(xmlHashTablePtr hash, xmlHashCopier copy) {
+    return(xmlHashCopySafe(hash, copy, NULL));
 }
 
 /**

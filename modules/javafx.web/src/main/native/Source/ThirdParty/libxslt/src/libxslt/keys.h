@@ -26,24 +26,24 @@ extern "C" {
 #define NODE_IS_KEYED (1 >> 15)
 
 XSLTPUBFUN int XSLTCALL
-                xsltAddKey              (xsltStylesheetPtr style,
-                                         const xmlChar *name,
-                                         const xmlChar *nameURI,
-                                         const xmlChar *match,
-                                         const xmlChar *use,
-                                         xmlNodePtr inst);
+        xsltAddKey        (xsltStylesheetPtr style,
+                     const xmlChar *name,
+                     const xmlChar *nameURI,
+                     const xmlChar *match,
+                     const xmlChar *use,
+                     xmlNodePtr inst);
 XSLTPUBFUN xmlNodeSetPtr XSLTCALL
-                xsltGetKey              (xsltTransformContextPtr ctxt,
-                                         const xmlChar *name,
-                                         const xmlChar *nameURI,
-                                         const xmlChar *value);
+        xsltGetKey        (xsltTransformContextPtr ctxt,
+                     const xmlChar *name,
+                     const xmlChar *nameURI,
+                     const xmlChar *value);
 XSLTPUBFUN void XSLTCALL
-                xsltInitCtxtKeys        (xsltTransformContextPtr ctxt,
-                                         xsltDocumentPtr doc);
+        xsltInitCtxtKeys    (xsltTransformContextPtr ctxt,
+                     xsltDocumentPtr doc);
 XSLTPUBFUN void XSLTCALL
-                xsltFreeKeys            (xsltStylesheetPtr style);
+        xsltFreeKeys        (xsltStylesheetPtr style);
 XSLTPUBFUN void XSLTCALL
-                xsltFreeDocumentKeys    (xsltDocumentPtr doc);
+        xsltFreeDocumentKeys    (xsltDocumentPtr doc);
 
 #ifdef __cplusplus
 }

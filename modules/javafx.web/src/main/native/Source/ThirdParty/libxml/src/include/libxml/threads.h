@@ -30,45 +30,45 @@ typedef struct _xmlRMutex xmlRMutex;
 typedef xmlRMutex *xmlRMutexPtr;
 
 XMLPUBFUN int
-                        xmlCheckThreadLocalStorage(void);
+            xmlCheckThreadLocalStorage(void);
 
 XMLPUBFUN xmlMutexPtr
-                        xmlNewMutex     (void);
+            xmlNewMutex    (void);
 XMLPUBFUN void
-                        xmlMutexLock    (xmlMutexPtr tok);
+            xmlMutexLock    (xmlMutexPtr tok);
 XMLPUBFUN void
-                        xmlMutexUnlock  (xmlMutexPtr tok);
+            xmlMutexUnlock    (xmlMutexPtr tok);
 XMLPUBFUN void
-                        xmlFreeMutex    (xmlMutexPtr tok);
+            xmlFreeMutex    (xmlMutexPtr tok);
 
 XMLPUBFUN xmlRMutexPtr
-                        xmlNewRMutex    (void);
+            xmlNewRMutex    (void);
 XMLPUBFUN void
-                        xmlRMutexLock   (xmlRMutexPtr tok);
+            xmlRMutexLock    (xmlRMutexPtr tok);
 XMLPUBFUN void
-                        xmlRMutexUnlock (xmlRMutexPtr tok);
+            xmlRMutexUnlock    (xmlRMutexPtr tok);
 XMLPUBFUN void
-                        xmlFreeRMutex   (xmlRMutexPtr tok);
+            xmlFreeRMutex    (xmlRMutexPtr tok);
 
 /*
  * Library wide APIs.
  */
 XML_DEPRECATED
 XMLPUBFUN void
-                        xmlInitThreads  (void);
+            xmlInitThreads    (void);
 XMLPUBFUN void
-                        xmlLockLibrary  (void);
+            xmlLockLibrary    (void);
 XMLPUBFUN void
-                        xmlUnlockLibrary(void);
+            xmlUnlockLibrary(void);
 XML_DEPRECATED
 XMLPUBFUN int
-                        xmlGetThreadId  (void);
+            xmlGetThreadId    (void);
 XML_DEPRECATED
 XMLPUBFUN int
-                        xmlIsMainThread (void);
+            xmlIsMainThread    (void);
 XML_DEPRECATED
 XMLPUBFUN void
-                        xmlCleanupThreads(void);
+            xmlCleanupThreads(void);
 
 /** DOC_DISABLE */
 #if defined(LIBXML_THREAD_ENABLED) && defined(_WIN32) && \
