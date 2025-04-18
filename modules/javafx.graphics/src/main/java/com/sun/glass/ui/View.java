@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -26,7 +26,7 @@ package com.sun.glass.ui;
 
 import com.sun.glass.events.MouseEvent;
 import com.sun.glass.events.ViewEvent;
-
+import com.sun.javafx.tk.HeaderAreaType;
 import java.lang.annotation.Native;
 import java.lang.ref.WeakReference;
 import java.util.Map;
@@ -67,8 +67,9 @@ public abstract class View {
                 int keyCode, char[] keyChars, int modifiers) {
             return false;
         }
-        public void handleMenuEvent(View view, int x, int y, int xAbs,
+        public boolean handleMenuEvent(View view, int x, int y, int xAbs,
                 int yAbs, boolean isKeyboardTrigger) {
+            return false;
         }
         public void handleMouseEvent(View view, long time, int type, int button,
                                      int x, int y, int xAbs, int yAbs,
@@ -363,6 +364,18 @@ public abstract class View {
                                             int yAbs) {
         }
 
+        /**
+         * Returns the header area type at the specified coordinates, or {@code null}
+         * if the specified coordinates do not intersect with a header area.
+         *
+         * @param x the X coordinate
+         * @param y the Y coordinate
+         * @return the header area type, or {@code null}
+         */
+        public HeaderAreaType pickHeaderArea(double x, double y) {
+            return null;
+        }
+
         public Accessible getSceneAccessible() {
             return null;
         }
@@ -527,7 +540,7 @@ public abstract class View {
         this.eventHandler = eventHandler;
     }
 
-    private boolean shouldHandleEvent() {
+    protected boolean shouldHandleEvent() {
         // Don't send any more events if the application has shutdown
         if (Application.GetApplication() == null) {
             return false;
@@ -552,10 +565,10 @@ public abstract class View {
         return false;
     }
 
-    private void handleMouseEvent(long time, int type, int button, int x, int y,
-                                  int xAbs, int yAbs,
-                                  int modifiers, boolean isPopupTrigger,
-                                  boolean isSynthesized) {
+    protected void handleMouseEvent(long time, int type, int button, int x, int y,
+                                    int xAbs, int yAbs,
+                                    int modifiers, boolean isPopupTrigger,
+                                    boolean isSynthesized) {
         if (shouldHandleEvent()) {
             eventHandler.handleMouseEvent(this, time, type, button, x, y, xAbs,
                                           yAbs, modifiers,
@@ -563,10 +576,16 @@ public abstract class View {
         }
     }
 
-    private void handleMenuEvent(int x, int y, int xAbs, int yAbs, boolean isKeyboardTrigger) {
+    protected boolean handleNonClientMouseEvent(long time, int type, int button, int x, int y,
+                                                int xAbs, int yAbs, int modifiers, int clickCount) {
+        return false;
+    }
+
+    protected boolean handleMenuEvent(int x, int y, int xAbs, int yAbs, boolean isKeyboardTrigger) {
         if (shouldHandleEvent()) {
-            this.eventHandler.handleMenuEvent(this, x, y, xAbs, yAbs, isKeyboardTrigger);
+            return this.eventHandler.handleMenuEvent(this, x, y, xAbs, yAbs, isKeyboardTrigger);
         }
+        return false;
     }
 
     public void handleBeginTouchEvent(View view, long time, int modifiers,
@@ -911,15 +930,6 @@ public abstract class View {
     protected void notifyMouse(int type, int button, int x, int y, int xAbs,
                                int yAbs, int modifiers, boolean isPopupTrigger,
                                boolean isSynthesized) {
-        // gznote: optimize - only call for undecorated Windows!
-        if (this.window != null) {
-            // handled by window (programmatical move/resize)
-            if (this.window.handleMouseEvent(type, button, x, y, xAbs, yAbs)) {
-                // The evnet has been processed by Glass
-                return;
-            }
-        }
-
         long now = System.nanoTime();
         if (type == MouseEvent.DOWN) {
             View lastClickedView = View.lastClickedView == null ? null : View.lastClickedView.get();
@@ -941,6 +951,25 @@ public abstract class View {
             }
 
             lastClickedTime = now;
+        }
+
+        // If this is an extended window, we give the non-client handler the first chance to handle the event.
+        // Note that a full-screen window has no non-client area, and thus the non-client event handler
+        // is not notified.
+        // Some implementations (like GTK) can fire synthesized events when they receive a mouse button
+        // event on the resize border. These events, even though happening on non-client regions, must
+        // not be processed by the non-client event handler. For example, if a mouse click happens on
+        // the resize border that straddles the window close button, we don't want the close button to
+        // act on this click, because we just started a resize-drag operation.
+        boolean handled = window != null
+            && window.isExtendedWindow()
+            && !isSynthesized
+            && !inFullscreen
+            && shouldHandleEvent()
+            && handleNonClientMouseEvent(now, type, button, x, y, xAbs, yAbs, modifiers, clickCount);
+
+        if (handled) {
+            return;
         }
 
         handleMouseEvent(now, type, button, x, y, xAbs, yAbs,
