@@ -47,11 +47,15 @@ public class FixedTabAdvancePolicy implements TabAdvancePolicy {
     @Override
     public void reset() {
         // TODO borders/padding?
-        System.out.println("reset"); // FIX
+        //System.out.println("reset"); // FIX
     }
 
     @Override
     public float nextTabStop(float position) {
+        return nextPosition(position, tabAdvance);
+    }
+    
+    static float nextPosition(float position, float tabAdvance) {
         // there is a weird case (tabAdvance=57.6 and position=172.79999)
         // when the original formula
         // float f = ((int)(position / tabAdvance) + 1) * tabAdvance;

@@ -67,9 +67,6 @@ public class TabStopPolicy {
     /**
      * Specifies the unmodifiable list of tab stops, sorted by position from smallest to largest.
      * The list can be changed using
-     * {@link #addTabStop(double)},
-     * {@link #clearTabStops()}, or
-     * {@link #removeTabStop(TabStop)}.
      *
      * @return the non-null, unmodifiable list of tab stops, sorted by position
      */
@@ -87,7 +84,6 @@ public class TabStopPolicy {
      * The value of {@code 0} disabled the default stops.
      *
      * @return the default tab stops property, in pixels.
-     * @defaultValue 0
      */
     public final DoubleProperty defaultStopsProperty() {
         return defaultStops;

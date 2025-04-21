@@ -34,8 +34,6 @@ import javafx.beans.property.DoubleProperty;
 import javafx.beans.property.IntegerProperty;
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.SimpleObjectProperty;
-import javafx.beans.value.ObservableValue;
-import javafx.collections.ListChangeListener;
 import javafx.css.CssMetaData;
 import javafx.css.Styleable;
 import javafx.css.StyleableDoubleProperty;
@@ -44,6 +42,7 @@ import javafx.css.StyleableObjectProperty;
 import javafx.css.StyleableProperty;
 import javafx.css.converter.EnumConverter;
 import javafx.css.converter.SizeConverter;
+import javafx.event.EventHandler;
 import javafx.geometry.HPos;
 import javafx.geometry.Insets;
 import javafx.geometry.NodeOrientation;
@@ -54,16 +53,18 @@ import javafx.scene.AccessibleRole;
 import javafx.scene.Node;
 import javafx.scene.layout.Pane;
 import javafx.scene.shape.PathElement;
+import javafx.scene.transform.Transform;
+import javafx.scene.transform.TransformChangedEvent;
 import com.sun.javafx.geom.BaseBounds;
 import com.sun.javafx.geom.Point2D;
 import com.sun.javafx.geom.RectBounds;
-import com.sun.javafx.scene.text.DefaultTabAdvancePolicy;
 import com.sun.javafx.scene.text.GlyphList;
 import com.sun.javafx.scene.text.TabAdvancePolicy;
 import com.sun.javafx.scene.text.TextFlowHelper;
 import com.sun.javafx.scene.text.TextLayout;
 import com.sun.javafx.scene.text.TextLayoutFactory;
 import com.sun.javafx.scene.text.TextSpan;
+import com.sun.javafx.text.DefaultTabAdvancePolicy;
 import com.sun.javafx.tk.Toolkit;
 
 /**
@@ -566,15 +567,14 @@ public class TextFlow extends Pane {
     public final ObjectProperty<TabStopPolicy> tabStopPolicyProperty() {
         if (tabStopPolicy == null) {
             tabStopPolicy = new SimpleObjectProperty<>() {
-                class Monitor implements /*ListChangeListener<TabStop>,*/ InvalidationListener {
-// FIX
-//                    @Override
-//                    public void onChanged(Change<? extends TabStop> ch) {
-//                        updateTabAdvancePolicy();
-//                    }
-
+                class Monitor implements InvalidationListener, EventHandler<TransformChangedEvent> {
                     @Override
                     public void invalidated(Observable observable) {
+                        updateTabAdvancePolicy();
+                    }
+
+                    @Override
+                    public void handle(TransformChangedEvent ev) {
                         updateTabAdvancePolicy();
                     }
                 };
@@ -583,8 +583,22 @@ public class TextFlow extends Pane {
                 private TabStopPolicy old;
 
                 {
-                    localToSceneTransformProperty().addListener(monitor);
                     sceneProperty().addListener(monitor);
+                    localToSceneTransformProperty().addListener(monitor);
+
+                    // this is painful
+//                    localToSceneTransformProperty().addListener((src, old, cur) -> {
+//                        if (old != null) {
+//                            old.removeEventHandler(TransformChangedEvent.TRANSFORM_CHANGED, monitor);
+//                        }
+//                        if (cur != null) {
+//                            cur.addEventHandler(TransformChangedEvent.TRANSFORM_CHANGED, monitor);
+//                        }
+//                    });
+//                    Transform t = getLocalToSceneTransform();
+//                    if (t != null) {
+//                        t.addEventHandler(TransformChangedEvent.TRANSFORM_CHANGED, monitor);
+//                    }
                 }
 
                 @Override
@@ -624,7 +638,7 @@ public class TextFlow extends Pane {
                 private void updateTabAdvancePolicy() {
                     TextLayout layout = getTextLayout();
                     if (layout.setTabAdvancePolicy(getTabSize(), getTabAdvancePolicy())) {
-                        System.err.println("updateTabAdvancePolicy"); // FIX
+                        System.err.println("updateTabAdvancePolicy " + getTabAdvancePolicy()); // FIX
                         requestLayout();
                     }
                 }
