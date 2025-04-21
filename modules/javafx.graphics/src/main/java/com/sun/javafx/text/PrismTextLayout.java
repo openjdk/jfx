@@ -696,6 +696,7 @@ public class PrismTextLayout implements TextLayout {
         }
         if (tabAdvancePolicy == null || (!tabAdvancePolicy.equals(policy))) {
             tabAdvancePolicy = policy;
+            System.out.println("setTabAdvancePolicy: " + policy);
             relayout();
             return true;
         }
@@ -1254,6 +1255,7 @@ public class PrismTextLayout implements TextLayout {
 
             if (run.isTab()) {
                 float tabStop = tabAdvancePolicy.nextTabStop(lineWidth);
+                // TODO if no more stops?
                 run.setWidth(tabStop - lineWidth);
             }
 

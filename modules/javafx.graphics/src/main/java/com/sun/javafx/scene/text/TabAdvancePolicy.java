@@ -37,6 +37,7 @@ public interface TabAdvancePolicy {
 
     /**
      * Provides next tab stop for the given position.
+     * TODO if returns 0 or negative value?
      *
      * @param position the current position
      * @return the next tab stop, always greater than the supplied position

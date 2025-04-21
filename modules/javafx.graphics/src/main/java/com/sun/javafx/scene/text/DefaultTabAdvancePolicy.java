@@ -61,17 +61,12 @@ public class DefaultTabAdvancePolicy implements TabAdvancePolicy {
 
     @Override
     public void reset() {
+        // FIX may not need if created upon change!
         offset = computeOffset();
-        System.out.println("offset=" + offset); // FIX
     }
 
     @Override
     public float nextTabStop(float position) {
-        float f = nextTabStop2(position);
-        System.out.println("pos=" + position + " next=" + f); // FIX
-        return f;
-    }
-    float nextTabStop2(float position) {
         position = Math.max(0, position + offset);
         for (int i = 0; i < tabs.length; i++) {
             double p = tabs[i];
@@ -94,5 +89,21 @@ public class DefaultTabAdvancePolicy implements TabAdvancePolicy {
             }
         }
         return 0.0f;
+    }
+
+    @Override
+    public String toString() {
+        StringBuilder sb = new StringBuilder(64);
+        sb.append("DefaultTabAdvancePolicy{");
+        sb.append("tabs=[");
+        for (int i = 0; i < tabs.length; i++) {
+            if (i > 0) {
+                sb.append(", ");
+            }
+            sb.append(tabs[i]);
+        }
+        sb.append("], defaultStops=").append(defaultStops);
+        sb.append("}");
+        return sb.toString();
     }
 }

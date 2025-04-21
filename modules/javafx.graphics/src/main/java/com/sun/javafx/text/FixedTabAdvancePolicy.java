@@ -47,14 +47,18 @@ public class FixedTabAdvancePolicy implements TabAdvancePolicy {
     @Override
     public void reset() {
         // TODO borders/padding?
+        System.out.println("reset"); // FIX
     }
 
     @Override
     public float nextTabStop(float position) {
-// FIX
-//        return ((int)(position / tabAdvance) + 1) * tabAdvance;
-        float f = ((int)(position / tabAdvance) + 1) * tabAdvance;
-        System.out.println("pos=" + position + " next=" + f + " fixed)"); // FIX
+        // there is a weird case (tabAdvance=57.6 and position=172.79999)
+        // when the original formula
+        // float f = ((int)(position / tabAdvance) + 1) * tabAdvance;
+        // returns the same pos=172.79999 next=172.79999
+        float n = (position / tabAdvance);
+        float f = ((int)(n + Math.ulp(n)) + 1) * tabAdvance;
+        System.out.println("pos=" + position + " next=" + f); // FIX
         return f;
     }
 
@@ -72,5 +76,10 @@ public class FixedTabAdvancePolicy implements TabAdvancePolicy {
     public int hashCode() {
         int h = FixedTabAdvancePolicy.class.hashCode();
         return h * 31 + Float.floatToIntBits(tabAdvance);
+    }
+
+    @Override
+    public String toString() {
+        return "FixedTabAdvancePolicy{tabAdvance=" + tabAdvance + "}";
     }
 }

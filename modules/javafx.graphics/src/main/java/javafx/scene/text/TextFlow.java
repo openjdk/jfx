@@ -28,11 +28,12 @@ package javafx.scene.text;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import javafx.beans.InvalidationListener;
+import javafx.beans.Observable;
 import javafx.beans.property.DoubleProperty;
 import javafx.beans.property.IntegerProperty;
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.SimpleObjectProperty;
-import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
 import javafx.collections.ListChangeListener;
 import javafx.css.CssMetaData;
@@ -56,8 +57,8 @@ import javafx.scene.shape.PathElement;
 import com.sun.javafx.geom.BaseBounds;
 import com.sun.javafx.geom.Point2D;
 import com.sun.javafx.geom.RectBounds;
-import com.sun.javafx.scene.text.GlyphList;
 import com.sun.javafx.scene.text.DefaultTabAdvancePolicy;
+import com.sun.javafx.scene.text.GlyphList;
 import com.sun.javafx.scene.text.TabAdvancePolicy;
 import com.sun.javafx.scene.text.TextFlowHelper;
 import com.sun.javafx.scene.text.TextLayout;
@@ -558,27 +559,33 @@ public class TextFlow extends Pane {
      *
      * @defaultValue null
      *
-     * @since 25
+     * @since 999 TODO
      */
     private SimpleObjectProperty<TabStopPolicy> tabStopPolicy;
 
     public final ObjectProperty<TabStopPolicy> tabStopPolicyProperty() {
         if (tabStopPolicy == null) {
             tabStopPolicy = new SimpleObjectProperty<>() {
-                class Monitor implements ListChangeListener<TabStop>, ChangeListener<Number> {
-                    @Override
-                    public void changed(ObservableValue<? extends Number> src, Number prev, Number v) {
-                        updateTabAdvancePolicy();
-                    }
+                class Monitor implements /*ListChangeListener<TabStop>,*/ InvalidationListener {
+// FIX
+//                    @Override
+//                    public void onChanged(Change<? extends TabStop> ch) {
+//                        updateTabAdvancePolicy();
+//                    }
 
                     @Override
-                    public void onChanged(Change<? extends TabStop> ch) {
+                    public void invalidated(Observable observable) {
                         updateTabAdvancePolicy();
                     }
                 };
 
                 private Monitor monitor = new Monitor();
                 private TabStopPolicy old;
+
+                {
+                    localToSceneTransformProperty().addListener(monitor);
+                    sceneProperty().addListener(monitor);
+                }
 
                 @Override
                 public Object getBean() {
@@ -595,12 +602,20 @@ public class TextFlow extends Pane {
                     if (old != null) {
                         old.tabStops().removeListener(monitor);
                         old.defaultStopsProperty().removeListener(monitor);
+                        if (old.getReference() != null) {
+                            old.getReference().localToSceneTransformProperty().removeListener(monitor);
+                            old.getReference().sceneProperty().removeListener(monitor);
+                        }
                     }
 
                     TabStopPolicy p = get();
                     if (p != null) {
                         p.tabStops().addListener(monitor);
                         p.defaultStopsProperty().addListener(monitor);
+                        if (p.getReference() != null) {
+                            p.getReference().localToSceneTransformProperty().addListener(monitor);
+                            p.getReference().sceneProperty().addListener(monitor);
+                        }
                     }
                     old = p;
                     updateTabAdvancePolicy();
@@ -609,6 +624,7 @@ public class TextFlow extends Pane {
                 private void updateTabAdvancePolicy() {
                     TextLayout layout = getTextLayout();
                     if (layout.setTabAdvancePolicy(getTabSize(), getTabAdvancePolicy())) {
+                        System.err.println("updateTabAdvancePolicy"); // FIX
                         requestLayout();
                     }
                 }

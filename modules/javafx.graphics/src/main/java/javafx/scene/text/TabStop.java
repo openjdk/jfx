@@ -32,7 +32,7 @@ package javafx.scene.text;
  *
  * @since 999 TODO
  */
-public final class TabStop {
+public class TabStop {
     private final double position;
 
     /**
@@ -48,7 +48,7 @@ public final class TabStop {
      * Returns the position, in pixels, of the tab.
      * @return the position of the tab
      */
-    public double getPosition() {
+    public final double getPosition() {
         return position;
     }
 

@@ -32,16 +32,13 @@ import javafx.collections.ObservableList;
 import javafx.scene.layout.Region;
 
 /**
- * TabStopPolicy determines the tab stop positions within the text layout.
- * // TODO container Node to specify the leading edge of a multi-TextFlow document
+ * The TabStopPolicy determines the tab stop positions within the text layout.
  *
  * @since 999 TODO
  */
 public class TabStopPolicy {
     private final ObservableList<TabStop> tabStops = FXCollections.observableArrayList();
-    private final ObservableList<TabStop> tabStopsRO = FXCollections.unmodifiableObservableList(tabStops);
-    private final SimpleDoubleProperty defaultStops = new SimpleDoubleProperty(100); // FIX use 8x of space char advance of the default font
-    private static final double EPS = 0.01;
+    private final SimpleDoubleProperty defaultStops = new SimpleDoubleProperty(0.0);
     private final Region reference;
 
     /**
@@ -77,54 +74,20 @@ public class TabStopPolicy {
      * @return the non-null, unmodifiable list of tab stops, sorted by position
      */
     public final ObservableList<TabStop> tabStops() {
-        return tabStopsRO;
+        return tabStops;
     }
 
     /**
-     * Adds a new tab stop at the specified position.
-     * This method does nothing if the position coincides with an already existing tab stop.
-     *
-     * @param position the tab stop position
-     */
-    public final void addTabStop(double position) {
-        for (int i = 0; i < tabStops.size(); i++) {
-            TabStop t = tabStops.get(i);
-            double p = t.getPosition();
-            if (Math.abs(position - p) < EPS) {
-                return;
-            } else if (p > position) {
-                tabStops.add(i, new TabStop(position));
-                return;
-            }
-        }
-        tabStops.add(new TabStop(position));
-    }
-
-    /**
-     * Removes the specified tab stop.
-     *
-     * @param stop the tab stop to remove
-     */
-    public final void removeTabStop(TabStop stop) {
-        tabStops.remove(stop);
-    }
-
-    /**
-     * Removes all tab stops.
-     */
-    public final void clearTabStops() {
-        tabStops.clear();
-    }
-
-    /**
-     * Provides default tab stops (beyond the last tab stop specified by {@code #tabStops()}, as a distance
-     * in points from the last tab stop position.
+     * Provides default tab stops (beyond the last tab stop specified by {@code #tabStops()},
+     * as a fixed repeating distance in pixels from the last tab stop position.
+     * The position of default tab stops is computed at regular intervals relative to the leading edge
+     * of the {@link #getReference() reference Rectangle} (or, if the reference rectangle is {@code null),
+     * the leading edge of the {@code TextFlow} this policy is registered with).
      * <p>
-     * TODO
-     * It is unclear how to specify NONE value (negative perhaps?).  MS Word does not allow for NONE, but allows 0.
+     * The value of {@code 0} disabled the default stops.
      *
      * @return the default tab stops property, in pixels.
-     * @defaultValue TODO
+     * @defaultValue 0
      */
     public final DoubleProperty defaultStopsProperty() {
         return defaultStops;
