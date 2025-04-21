@@ -77,8 +77,8 @@ struct _GstMFWrapper
     // This flag should be set if decoder calls failed.
     gboolean is_decoder_error;
 
-    gboolean force_discontinuity;
-    gboolean force_output_discontinuity;
+    gboolean is_force_discontinuity;
+    gboolean is_force_output_discontinuity;
 
     HRESULT hr_mfstartup;
 
@@ -94,6 +94,7 @@ struct _GstMFWrapper
 
     BYTE *header;
     gsize header_size;
+    gboolean is_send_header;
 
     guint width;
     guint height;
@@ -103,6 +104,8 @@ struct _GstMFWrapper
     guint defaultStride;
     guint pixel_num;
     guint pixel_den;
+
+    gboolean is_set_caps;
 };
 
 struct _GstMFWrapperClass
