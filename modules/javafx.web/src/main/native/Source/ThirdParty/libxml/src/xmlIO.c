@@ -1180,7 +1180,8 @@ xmlInputFromFd(xmlParserInputBufferPtr buf, int fd, int unzip) {
         if (xzStream == NULL) {
             close(copy);
         } else {
-            if ((__libxml2_xzcompressed(xzStream) > 0) ||
+            int compressed = (__libxml2_xzcompressed(xzStream) > 0);
+            if ((compressed) ||
                 /* Try to rewind if not gzip compressed */
                 (pos < 0) ||
                 (lseek(fd, pos, SEEK_SET) < 0)) {
@@ -1191,7 +1192,7 @@ xmlInputFromFd(xmlParserInputBufferPtr buf, int fd, int unzip) {
                 buf->context = xzStream;
                 buf->readcallback = xmlXzfileRead;
                 buf->closecallback = xmlXzfileClose;
-                buf->compressed = 1;
+                buf->compressed = compressed;
 
                 return(XML_ERR_OK);
             }
@@ -1217,7 +1218,8 @@ xmlInputFromFd(xmlParserInputBufferPtr buf, int fd, int unzip) {
         if (gzStream == NULL) {
             close(copy);
         } else {
-            if ((gzdirect(gzStream) == 0) ||
+            int compressed = (gzdirect(gzStream) == 0);
+            if ((compressed) ||
                 /* Try to rewind if not gzip compressed */
                 (pos < 0) ||
                 (lseek(fd, pos, SEEK_SET) < 0)) {
@@ -1228,7 +1230,7 @@ xmlInputFromFd(xmlParserInputBufferPtr buf, int fd, int unzip) {
                 buf->context = gzStream;
                 buf->readcallback = xmlGzfileRead;
                 buf->closecallback = xmlGzfileClose;
-                buf->compressed = 1;
+                buf->compressed = compressed;
 
                 return(XML_ERR_OK);
             }

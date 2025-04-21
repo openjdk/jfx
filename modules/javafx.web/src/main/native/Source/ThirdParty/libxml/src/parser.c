@@ -7153,7 +7153,11 @@ xmlParseMarkupDecl(xmlParserCtxtPtr ctxt) {
             xmlParseComment(ctxt);
             break;
         default:
-            /* there is an error but it will be detected later */
+                    xmlFatalErr(ctxt,
+                                ctxt->inSubset == 2 ?
+                                    XML_ERR_EXT_SUBSET_NOT_FINISHED :
+                                    XML_ERR_INT_SUBSET_NOT_FINISHED,
+                                NULL);
                     SKIP(2);
             break;
         }

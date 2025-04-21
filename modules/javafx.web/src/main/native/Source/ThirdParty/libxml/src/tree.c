@@ -5865,8 +5865,12 @@ xmlNodeAddContent(xmlNodePtr cur, const xmlChar *content) {
  */
 xmlNodePtr
 xmlTextMerge(xmlNodePtr first, xmlNodePtr second) {
-    if ((first == NULL) || (first->type != XML_TEXT_NODE) ||
-        (second == NULL) || (second->type != XML_TEXT_NODE) ||
+    if (first == NULL)
+        return(second);
+    if (second == NULL)
+        return(first);
+    if ((first->type != XML_TEXT_NODE) ||
+        (second->type != XML_TEXT_NODE) ||
         (first == second) ||
         (first->name != second->name))
     return(NULL);
