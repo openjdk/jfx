@@ -42,8 +42,6 @@ class LocalFrameView;
 class RenderBlock;
 class RenderBlockFlow;
 class RenderBox;
-class RenderObject;
-class RenderElement;
 class RenderLayoutState;
 class RenderView;
 namespace Layout {
@@ -61,7 +59,9 @@ struct UpdateScrollInfoAfterLayoutTransaction {
     SingleThreadWeakHashSet<RenderBlock> blocks;
 };
 
-class LocalFrameViewLayoutContext : public CanMakeCheckedPtr {
+class LocalFrameViewLayoutContext final : public CanMakeCheckedPtr<LocalFrameViewLayoutContext> {
+    WTF_MAKE_FAST_ALLOCATED;
+    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(LocalFrameViewLayoutContext);
 public:
     LocalFrameViewLayoutContext(LocalFrameView&);
     ~LocalFrameViewLayoutContext();
@@ -135,6 +135,8 @@ public:
     void setBoxNeedsTransformUpdateAfterContainerLayout(RenderBox&, RenderBlock& container);
     Vector<SingleThreadWeakPtr<RenderBox>> takeBoxesNeedingTransformUpdateAfterContainerLayout(RenderBlock&);
 
+    RenderElement::LayoutIdentifier layoutIdentifier() const { return m_layoutIdentifier; }
+
 private:
     friend class LayoutScope;
     friend class LayoutStateMaintainer;
@@ -172,14 +174,18 @@ private:
     void enablePaintOffsetCache() { ASSERT(m_paintOffsetCacheDisableCount > 0); m_paintOffsetCacheDisableCount--; }
 
     LocalFrame& frame() const;
+    Ref<LocalFrame> protectedFrame();
     LocalFrameView& view() const;
+    Ref<LocalFrameView> protectedView() const;
     RenderView* renderView() const;
     Document* document() const;
 
-    LocalFrameView& m_frameView;
+    SingleThreadWeakRef<LocalFrameView> m_frameView;
     Timer m_layoutTimer;
     Timer m_postLayoutTaskTimer;
     SingleThreadWeakPtr<RenderElement> m_subtreeLayoutRoot;
+    // Note that arithmetic overflow is perfectly acceptable as long as we use this only for repaint optimization.
+    RenderElement::LayoutIdentifier m_layoutIdentifier : 12 { 0 };
 
     bool m_layoutSchedulingIsEnabled { true };
     bool m_firstLayout { true };

@@ -30,7 +30,7 @@
 namespace WebCore {
 
 class BeforeTextInsertedEvent final : public Event {
-    WTF_MAKE_ISO_ALLOCATED(BeforeTextInsertedEvent);
+    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(BeforeTextInsertedEvent);
 public:
     virtual ~BeforeTextInsertedEvent();
 
@@ -38,8 +38,6 @@ public:
     {
         return adoptRef(*new BeforeTextInsertedEvent(text));
     }
-
-    EventInterface eventInterface() const override;
 
     const String& text() const { return m_text; }
     void setText(const String& s) { m_text = s; }

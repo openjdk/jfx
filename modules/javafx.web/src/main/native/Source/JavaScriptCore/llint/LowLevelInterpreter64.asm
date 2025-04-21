@@ -99,7 +99,7 @@ end
 # After calling, calling bytecode is claiming input registers are not used.
 macro dispatchAfterRegularCall(size, opcodeStruct, valueProfileName, dstVirtualRegister, dispatch)
     loadPC()
-    if C_LOOP or C_LOOP_WIN
+    if C_LOOP
         # On non C_LOOP builds, CSR restore takes care of this.
         loadp CodeBlock[cfr], PB
         loadp CodeBlock::m_instructionsRawPointer[PB], PB
@@ -112,7 +112,7 @@ end
 
 macro dispatchAfterTailCall(size, opcodeStruct, valueProfileName, dstVirtualRegister, dispatch)
     loadPC()
-    if C_LOOP or C_LOOP_WIN
+    if C_LOOP
         # On non C_LOOP builds, CSR restore takes care of this.
         loadp CodeBlock[cfr], PB
         loadp CodeBlock::m_instructionsRawPointer[PB], PB
@@ -125,7 +125,7 @@ end
 
 macro dispatchAfterRegularCallIgnoreResult(size, opcodeStruct, valueProfileName, dstVirtualRegister, dispatch)
     loadPC()
-    if C_LOOP or C_LOOP_WIN
+    if C_LOOP
         # On non C_LOOP builds, CSR restore takes care of this.
         loadp CodeBlock[cfr], PB
         loadp CodeBlock::m_instructionsRawPointer[PB], PB
@@ -135,45 +135,18 @@ end
 
 macro cCall2(function)
     checkStackPointerAlignment(t4, 0xbad0c002)
-    if C_LOOP or C_LOOP_WIN
+    if C_LOOP
         cloopCallSlowPath function, a0, a1
     elsif X86_64 or ARM64 or ARM64E or RISCV64
         call function
-    elsif X86_64_WIN
-        # Note: this implementation is only correct if the return type size is > 8 bytes.
-        # See macro cCall2Void for an implementation when the return type <= 8 bytes.
-        # On Win64, when the return type is larger than 8 bytes, we need to allocate space on the stack for the return value.
-        # On entry rcx (a0), should contain a pointer to this stack space. The other parameters are shifted to the right,
-        # rdx (a1) should contain the first argument, and r8 (a2) should contain the second argument.
-        # On return, rax contains a pointer to this stack value, and we then need to copy the 16 byte return value into rax (r0) and rdx (r1)
-        # since the return value is expected to be split between the two.
-        # See http://msdn.microsoft.com/en-us/library/7572ztz4.aspx
-        move a1, a2
-        move a0, a1
-        subp 48, sp
-        move sp, a0
-        addp 32, a0
-        call function
-        move 8[r0], r1
-        move [r0], r0
-        addp 48, sp
     else
         error
     end
 end
 
 macro cCall2Void(function)
-    if C_LOOP or C_LOOP_WIN
+    if C_LOOP
         cloopCallSlowPathVoid function, a0, a1
-    elsif X86_64_WIN
-        # Note: we cannot use the cCall2 macro for Win64 in this case,
-        # as the Win64 cCall2 implemenation is only correct when the return type size is > 8 bytes.
-        # On Win64, rcx and rdx are used for passing the first two parameters.
-        # We also need to make room on the stack for all four parameter registers.
-        # See http://msdn.microsoft.com/en-us/library/ms235286.aspx
-        subp 32, sp 
-        call function
-        addp 32, sp
     else
         cCall2(function)
     end
@@ -181,29 +154,10 @@ end
 
 macro cCall3(function)
     checkStackPointerAlignment(t4, 0xbad0c004)
-    if C_LOOP or C_LOOP_WIN
+    if C_LOOP
         cloopCallSlowPath3 function, a0, a1, a2
     elsif X86_64 or ARM64 or ARM64E or RISCV64
         call function
-    elsif X86_64_WIN
-        # Note: this implementation is only correct if the return type size is > 8 bytes.
-        # See macro cCall2Void for an implementation when the return type <= 8 bytes.
-        # On Win64, when the return type is larger than 8 bytes, we need to allocate space on the stack for the return value.
-        # On entry rcx (a0), should contain a pointer to this stack space. The other parameters are shifted to the right,
-        # rdx (a1) should contain the first argument, r8 (a2) should contain the second argument, and r9 (a3) should contain the third argument.
-        # On return, rax contains a pointer to this stack value, and we then need to copy the 16 byte return value into rax (r0) and rdx (r1)
-        # since the return value is expected to be split between the two.
-        # See http://msdn.microsoft.com/en-us/library/7572ztz4.aspx
-        move a2, a3
-        move a1, a2
-        move a0, a1
-        subp 64, sp
-        move sp, a0
-        addp 32, a0
-        call function
-        move 8[r0], r1
-        move [r0], r0
-        addp 64, sp
     else
         error
     end
@@ -212,17 +166,10 @@ end
 # This barely works. arg3 and arg4 should probably be immediates.
 macro cCall4(function)
     checkStackPointerAlignment(t4, 0xbad0c004)
-    if C_LOOP or C_LOOP_WIN
+    if C_LOOP
         cloopCallSlowPath4 function, a0, a1, a2, a3
     elsif X86_64 or ARM64 or ARM64E or RISCV64
         call function
-    elsif X86_64_WIN
-        # On Win64, rcx, rdx, r8, and r9 are used for passing the first four parameters.
-        # We also need to make room on the stack for all four parameter registers.
-        # See http://msdn.microsoft.com/en-us/library/ms235286.aspx
-        subp 64, sp
-        call function
-        addp 64, sp
     else
         error
     end
@@ -260,7 +207,7 @@ macro doVMEntry(makeCall)
     # Ensure that we have enough additional stack capacity for the incoming args,
     # and the frame for the JS code we're executing. We need to do this check
     # before we start copying the args from the protoCallFrame below.
-    if C_LOOP or C_LOOP_WIN
+    if C_LOOP
         bpaeq t3, VM::m_cloopStackLimit[vm], .stackHeightOK
         move entry, t4
         move vm, t5
@@ -390,8 +337,9 @@ _llint_throw_stack_overflow_error_from_vm_entry:
 
 # a0, a2, t3, t4
 macro makeJavaScriptCall(entry, protoCallFrame, temp1, temp2)
-    addp 16, sp
-    if C_LOOP or C_LOOP_WIN
+_llint_call_javascript:
+    addp CallerFrameAndPCSize, sp
+    if C_LOOP
         cloopCallJSFunction entry
     elsif ARM64E
         move entry, t5
@@ -407,7 +355,7 @@ macro makeJavaScriptCall(entry, protoCallFrame, temp1, temp2)
         global _vmEntryToJavaScriptGateAfter
         _vmEntryToJavaScriptGateAfter:
     end
-    subp 16, sp
+    subp CallerFrameAndPCSize, sp
 end
 
 # a0, a2, t3, t4
@@ -416,14 +364,9 @@ macro makeHostFunctionCall(entry, protoCallFrame, temp1, temp2)
     storep cfr, [sp]
     loadp ProtoCallFrame::globalObject[protoCallFrame], a0
     move sp, a1
-    if C_LOOP or C_LOOP_WIN
+    if C_LOOP
         storep lr, 8[sp]
         cloopCallNative temp1
-    elsif X86_64_WIN
-        # We need to allocate 32 bytes on the stack for the shadow space.
-        subp 32, sp
-        call temp1, HostFunctionPtrTag
-        addp 32, sp
     else
         call temp1, HostFunctionPtrTag
     end
@@ -560,7 +503,7 @@ else
 end
 
 macro cage(basePtr, mask, ptr, scratch)
-    if GIGACAGE_ENABLED and not (C_LOOP or C_LOOP_WIN)
+    if GIGACAGE_ENABLED and not C_LOOP
         loadp basePtr, scratch
         btpz scratch, .done
         andp mask, ptr
@@ -570,7 +513,7 @@ macro cage(basePtr, mask, ptr, scratch)
 end
 
 macro cagePrimitive(basePtr, mask, ptr, scratch)
-    if GIGACAGE_ENABLED and not (C_LOOP or C_LOOP_WIN)
+    if GIGACAGE_ENABLED and not C_LOOP
         loadb GigacageConfig + Gigacage::Config::disablingPrimitiveGigacageIsForbidden, scratch
         btbnz scratch, .doCaging
 
@@ -600,9 +543,6 @@ end
 
 macro loadCagedJSValue(source, dest, scratchOrLength)
     loadp source, dest
-    if GIGACAGE_ENABLED
-        cage(GigacageConfig + Gigacage::Config::basePtrs + GigacageJSValueBasePtrOffset, constexpr Gigacage::jsValueGigacageMask, dest, scratchOrLength)
-    end
 end
 
 macro loadVariable(get, fieldName, valueReg)
@@ -753,13 +693,8 @@ macro structureIDToStructureWithScratch(structureIDThenStructure, scratch)
         lshiftp (constexpr StructureID::encodeShiftAmount), structureIDThenStructure
     elsif ADDRESS64
         andq (constexpr StructureID::structureIDMask), structureIDThenStructure
-        if X86_64_WIN or C_LOOP_WIN
-        leap JSCConfig + constexpr JSC::offsetOfJSCConfigStartOfStructureHeap, scratch
-        loadp [scratch], scratch
-        else
             leap _g_config, scratch
             loadp JSCConfigOffset + constexpr JSC::offsetOfJSCConfigStartOfStructureHeap[scratch], scratch
-        end
         addp scratch, structureIDThenStructure
     end
 end
@@ -791,7 +726,7 @@ macro functionArityCheck(opcodeName, doneLabel)
     lshiftp 3, t3
     subp cfr, t3, t5
     loadp CodeBlock::m_vm[t1], t0
-    if C_LOOP or C_LOOP_WIN
+    if C_LOOP
         bpbeq VM::m_cloopStackLimit[t0], t5, .stackHeightOK
     else
         bpbeq VM::m_softStackLimit[t0], t5, .stackHeightOK
@@ -1313,7 +1248,7 @@ macro binaryOpCustomStore(opcodeName, opcodeStruct, integerOperationAndStore, do
     end)
 end
 
-if X86_64 or X86_64_WIN
+if X86_64
     binaryOpCustomStore(div, OpDiv,
         macro (lhs, rhs, slow, index)
             # Assume t3 is scratchable.
@@ -1371,7 +1306,7 @@ binaryOp(sub, OpSub,
     macro (lhs, rhs, slow) bsubio rhs, lhs, slow end,
     macro (lhs, rhs) subd rhs, lhs end)
 
-if X86_64 or X86_64_WIN
+if X86_64
     llintOpWithReturn(op_mod, OpMod, macro (size, get, dispatch, return)
         get(m_rhs, t0)
         get(m_lhs, t2)
@@ -1711,11 +1646,16 @@ llintOpWithMetadata(op_get_by_id_direct, OpGetByIdDirect, macro (size, get, disp
 .opGetByIdDirectSlow:
     callSlowPath(_llint_slow_path_get_by_id_direct)
     dispatch()
+
+.osrReturnPoint:
+    getterSetterOSRExitReturnPoint(op_get_by_id_direct, size)
+    valueProfile(size, OpGetByIdDirect, m_valueProfile, r0, t2)
+    return(r0)
 end)
 
 # The base object is expected in t3
-macro performGetByIDHelper(opcodeStruct, modeMetadataName, valueProfileName, slowLabel, size, metadata, return)
-    metadata(t2, t1)
+# metadata needs to be loaded in t2
+macro performGetByIDHelper(opcodeStruct, modeMetadataName, valueProfileName, slowLabel, size, return)
     loadb %opcodeStruct%::Metadata::%modeMetadataName%.mode[t2], t1
 
 .opGetByIdDefault:
@@ -1741,8 +1681,7 @@ macro performGetByIDHelper(opcodeStruct, modeMetadataName, valueProfileName, slo
 
 .opGetByIdArrayLength:
     bbneq t1, constexpr GetByIdMode::ArrayLength, .opGetByIdUnset
-    move t3, t0
-    arrayProfile(%opcodeStruct%::Metadata::%modeMetadataName%.arrayLengthMode.arrayProfile, t0, t2, t5)
+    loadb JSCell::m_indexingTypeAndMisc[t3], t0
     btiz t0, IsArray, slowLabel
     btiz t0, IndexingShapeMask, slowLabel
     loadCagedJSValue(JSObject::m_butterfly[t3], t0, t1)
@@ -1764,7 +1703,8 @@ end
 llintOpWithMetadata(op_get_by_id, OpGetById, macro (size, get, dispatch, metadata, return)
     get(m_base, t0)
     loadConstantOrVariableCell(size, t0, t3, .opGetByIdSlow)
-    performGetByIDHelper(OpGetById, m_modeMetadata, m_valueProfile, .opGetByIdSlow, size, metadata, return)
+    metadata(t2, t1)
+    performGetByIDHelper(OpGetById, m_modeMetadata, m_valueProfile, .opGetByIdSlow, size, return)
 
 .opGetByIdSlow:
     callSlowPath(_llint_slow_path_get_by_id)
@@ -1774,7 +1714,24 @@ llintOpWithMetadata(op_get_by_id, OpGetById, macro (size, get, dispatch, metadat
     getterSetterOSRExitReturnPoint(op_get_by_id, size)
     valueProfile(size, OpGetById, m_valueProfile, r0, t2)
     return(r0)
+end)
 
+
+llintOpWithMetadata(op_get_length, OpGetLength, macro (size, get, dispatch, metadata, return)
+    get(m_base, t0)
+    loadConstantOrVariableCell(size, t0, t3, .opGetLengthSlow)
+    metadata(t2, t1)
+    arrayProfile(OpGetLength::Metadata::m_arrayProfile, t3, t2, t5)
+    performGetByIDHelper(OpGetLength, m_modeMetadata, m_valueProfile, .opGetLengthSlow, size, return)
+
+.opGetLengthSlow:
+    callSlowPath(_llint_slow_path_get_length)
+    dispatch()
+
+.osrReturnPoint:
+    getterSetterOSRExitReturnPoint(op_get_length, size)
+    valueProfile(size, OpGetLength, m_valueProfile, r0, t2)
+    return(r0)
 end)
 
 
@@ -1909,6 +1866,7 @@ llintOpWithMetadata(op_get_by_val, OpGetByVal, macro (size, get, dispatch, metad
 
     move t0, t2
     arrayProfile(OpGetByVal::Metadata::m_arrayProfile, t2, t5, t1)
+    loadb JSCell::m_indexingTypeAndMisc[t2], t2
 
     get(m_property, t3)
     loadConstantOrVariableInt32(size, t3, t1, .opGetByValSlow)
@@ -1963,7 +1921,6 @@ llintOpWithMetadata(op_get_by_val, OpGetByVal, macro (size, get, dispatch, metad
     getterSetterOSRExitReturnPoint(op_get_by_val, size)
     valueProfile(size, OpGetByVal, m_valueProfile, r0, t5)
     return(r0)
-
 end)
 
 llintOpWithMetadata(op_get_private_name, OpGetPrivateName, macro (size, get, dispatch, metadata, return)
@@ -2099,6 +2056,7 @@ macro putByValOp(opcodeName, opcodeStruct, osrExitPoint)
         move t1, t2
         metadata(t5, t0)
         arrayProfile(%opcodeStruct%::Metadata::m_arrayProfile, t2, t5, t0)
+        loadb JSCell::m_indexingTypeAndMisc[t2], t2
         get(m_property, t0)
         loadConstantOrVariableInt32(size, t0, t3, .opPutByValSlow)
         sxi2q t3, t3
@@ -2181,8 +2139,11 @@ putByValOp(put_by_val, OpPutByVal, macro (size, dispatch)
     dispatch()
 end)
 
-putByValOp(put_by_val_direct, OpPutByValDirect, macro (a, b) end)
-
+putByValOp(put_by_val_direct, OpPutByValDirect, macro (size, dispatch)
+.osrReturnPoint:
+    getterSetterOSRExitReturnPoint(op_put_by_val_direct, size)
+    dispatch()
+end)
 
 macro llintJumpTrueOrFalseOp(opcodeName, opcodeStruct, miscConditionOp, truthyCellConditionOp)
     llintOpWithJump(op_%opcodeName%, opcodeStruct, macro (size, get, jump, dispatch)
@@ -2540,7 +2501,7 @@ macro callHelper(opcodeName, opcodeStruct, dispatchAfterCall, valueProfileName, 
     loadp %opcodeStruct%::Metadata::m_callLinkInfo.m_callee[t5], t1
     btpz t1, (constexpr CallLinkInfo::polymorphicCalleeMask), .notPolymorphic
     prepareCall(t2, t3, t4, t1, macro(address)
-        loadp %opcodeStruct%::Metadata::m_callLinkInfo.u.dataIC.m_codeBlock[t5], t2
+        loadp %opcodeStruct%::Metadata::m_callLinkInfo.m_codeBlock[t5], t2
         storep t2, address
     end)
     addp %opcodeStruct%::Metadata::m_callLinkInfo, t5, t2 # CallLinkInfo* in t2
@@ -2549,12 +2510,12 @@ macro callHelper(opcodeName, opcodeStruct, dispatchAfterCall, valueProfileName, 
 .notPolymorphic:
     bqneq t0, t1, .opCallSlow
     prepareCall(t2, t3, t4, t1, macro(address)
-        loadp %opcodeStruct%::Metadata::m_callLinkInfo.u.dataIC.m_codeBlock[t5], t2
+        loadp %opcodeStruct%::Metadata::m_callLinkInfo.m_codeBlock[t5], t2
         storep t2, address
     end)
 
 .goPolymorphic:
-    loadp %opcodeStruct%::Metadata::m_callLinkInfo.u.dataIC.m_monomorphicCallDestination[t5], t5
+    loadp %opcodeStruct%::Metadata::m_callLinkInfo.m_monomorphicCallDestination[t5], t5
 .dispatch:
     invokeCall(opcodeName, size, opcodeStruct, valueProfileName, dstVirtualRegister, dispatch, t5, t1, JSEntryPtrTag)
 
@@ -2565,13 +2526,8 @@ macro callHelper(opcodeName, opcodeStruct, dispatchAfterCall, valueProfileName, 
         storep 0, address
     end)
     addp %opcodeStruct%::Metadata::m_callLinkInfo, t5, t2 # CallLinkInfo* in t2
-    if X86_64_WIN or C_LOOP_WIN
-        leap JSCConfig + constexpr JSC::offsetOfJSCConfigDefaultCallThunk, t5
-        loadp [t5], t5
-    else
         leap _g_config, t5
         loadp JSCConfigOffset + constexpr JSC::offsetOfJSCConfigDefaultCallThunk[t5], t5
-    end
     jmp .dispatch
 end
 
@@ -2629,7 +2585,7 @@ macro doCallVarargs(opcodeName, size, get, opcodeStruct, valueProfileName, dstVi
             loadp %opcodeStruct%::Metadata::m_callLinkInfo.m_callee[t5], t1
             btpz t1, (constexpr CallLinkInfo::polymorphicCalleeMask), .notPolymorphic
             prepareCall(t2, t3, t4, t1, macro(address)
-                loadp %opcodeStruct%::Metadata::m_callLinkInfo.u.dataIC.m_codeBlock[t5], t2
+                loadp %opcodeStruct%::Metadata::m_callLinkInfo.m_codeBlock[t5], t2
                 storep t2, address
             end)
             addp %opcodeStruct%::Metadata::m_callLinkInfo, t5, t2 # CallLinkInfo* in t2
@@ -2638,12 +2594,12 @@ macro doCallVarargs(opcodeName, size, get, opcodeStruct, valueProfileName, dstVi
         .notPolymorphic:
             bqneq t0, t1, .opCallSlow
             prepareCall(t2, t3, t4, t1, macro(address)
-                loadp %opcodeStruct%::Metadata::m_callLinkInfo.u.dataIC.m_codeBlock[t5], t2
+                loadp %opcodeStruct%::Metadata::m_callLinkInfo.m_codeBlock[t5], t2
                 storep t2, address
             end)
 
         .goPolymorphic:
-            loadp %opcodeStruct%::Metadata::m_callLinkInfo.u.dataIC.m_monomorphicCallDestination[t5], t5
+            loadp %opcodeStruct%::Metadata::m_callLinkInfo.m_monomorphicCallDestination[t5], t5
         .dispatch:
             invokeCall(opcodeName, size, opcodeStruct, valueProfileName, dstVirtualRegister, dispatch, t5, t1, JSEntryPtrTag)
 
@@ -2654,13 +2610,8 @@ macro doCallVarargs(opcodeName, size, get, opcodeStruct, valueProfileName, dstVi
                 storep 0, address
             end)
             addp %opcodeStruct%::Metadata::m_callLinkInfo, t5, t2 # CallLinkInfo* in t2
-            if X86_64_WIN or C_LOOP_WIN
-                leap JSCConfig + constexpr JSC::offsetOfJSCConfigDefaultCallThunk, t5
-                loadp [t5], t5
-            else
                 leap _g_config, t5
                 loadp JSCConfigOffset + constexpr JSC::offsetOfJSCConfigDefaultCallThunk[t5], t5
-            end
             jmp .dispatch
         .dontUpdateSP:
             jmp _llint_throw_from_slow_path_trampoline
@@ -2702,6 +2653,23 @@ llintOpWithReturn(op_to_property_key, OpToPropertyKey, macro (size, get, dispatc
 
 .opToPropertyKeySlow:
     callSlowPath(_slow_path_to_property_key)
+    dispatch()
+end)
+
+llintOpWithReturn(op_to_property_key_or_number, OpToPropertyKeyOrNumber, macro (size, get, dispatch, return)
+    get(m_src, t2)
+    loadConstantOrVariable(size, t2, t0)
+
+    btqnz t0, numberTag, .done
+    btqnz t0, notCellMask, .opToPropertyKeyOrNumberSlow
+    bbeq JSCell::m_type[t0], SymbolType, .done
+    bbneq JSCell::m_type[t0], StringType, .opToPropertyKeyOrNumberSlow
+
+.done:
+    return(t0)
+
+.opToPropertyKeyOrNumberSlow:
+    callSlowPath(_slow_path_to_property_key_or_number)
     dispatch()
 end)
 
@@ -2791,22 +2759,16 @@ macro nativeCallTrampoline(executableOffsetToFunction)
     loadp JSFunction::m_scope[a0], a0
     loadp JSGlobalObject::m_vm[a0], a1
     storep cfr, VM::topCallFrame[a1]
-    if ARM64 or ARM64E or C_LOOP or C_LOOP_WIN
+    if ARM64 or ARM64E or C_LOOP
         storep lr, ReturnPC[cfr]
     end
     move cfr, a1
     checkStackPointerAlignment(t3, 0xdead0001)
-    if C_LOOP or C_LOOP_WIN
+    if C_LOOP
         cloopCallNative executableOffsetToFunction[a2]
     else
-        if X86_64_WIN
-            subp 32, sp
-            call executableOffsetToFunction[a2], HostFunctionPtrTag
-            addp 32, sp
-        else
             call executableOffsetToFunction[a2], HostFunctionPtrTag
         end
-    end
 
     loadp Callee[cfr], t3
     loadp JSFunction::m_scope[t3], t3
@@ -2829,21 +2791,15 @@ macro internalFunctionCallTrampoline(offsetOfFunction)
     loadp InternalFunction::m_globalObject[a2], a0
     loadp JSGlobalObject::m_vm[a0], a1
     storep cfr, VM::topCallFrame[a1]
-    if ARM64 or ARM64E or C_LOOP or C_LOOP_WIN
+    if ARM64 or ARM64E or C_LOOP
         storep lr, ReturnPC[cfr]
     end
     move cfr, a1
     checkStackPointerAlignment(t3, 0xdead0001)
-    if C_LOOP or C_LOOP_WIN
+    if C_LOOP
         cloopCallNative offsetOfFunction[a2]
     else
-        if X86_64_WIN
-            subp 32, sp
             call offsetOfFunction[a2], HostFunctionPtrTag
-            addp 32, sp
-        else
-            call offsetOfFunction[a2], HostFunctionPtrTag
-        end
     end
 
     loadp Callee[cfr], t3
@@ -3310,7 +3266,8 @@ llintOpWithMetadata(op_iterator_open, OpIteratorOpen, macro (size, get, dispatch
 
     loadVariable(get, m_iterator, t3)
     btqnz t3, notCellMask, .iteratorOpenGenericGetNextSlow
-    performGetByIDHelper(OpIteratorOpen, m_modeMetadata, m_nextValueProfile, .iteratorOpenGenericGetNextSlow, size, metadata, storeNextAndDispatch)
+    metadata(t2, t1)
+    performGetByIDHelper(OpIteratorOpen, m_modeMetadata, m_nextValueProfile, .iteratorOpenGenericGetNextSlow, size, storeNextAndDispatch)
 
 .iteratorOpenGenericGetNextSlow:
     callSlowPath(_llint_slow_path_iterator_open_get_next)
@@ -3370,7 +3327,8 @@ llintOpWithMetadata(op_iterator_next, OpIteratorNext, macro (size, get, dispatch
 
     loadVariable(get, m_value, t3)
     btqnz t3, notCellMask, .getDoneSlow
-    performGetByIDHelper(OpIteratorNext, m_doneModeMetadata, m_doneValueProfile, .getDoneSlow, size, metadata, storeDoneAndJmpToGetValue)
+    metadata(t2, t1)
+    performGetByIDHelper(OpIteratorNext, m_doneModeMetadata, m_doneValueProfile, .getDoneSlow, size, storeDoneAndJmpToGetValue)
 
 .getDoneSlow:
     callSlowPath(_llint_slow_path_iterator_next_get_done)
@@ -3395,7 +3353,8 @@ llintOpWithMetadata(op_iterator_next, OpIteratorNext, macro (size, get, dispatch
     # Reload the next result tmp since the get_by_id above may have clobbered t3.
     loadVariable(get, m_value, t3)
     # We don't need to check if the iterator result is a cell here since we will have thrown an error before.
-    performGetByIDHelper(OpIteratorNext, m_valueModeMetadata, m_valueValueProfile, .getValueSlow, size, metadata, storeValueAndDispatch)
+    metadata(t2, t1)
+    performGetByIDHelper(OpIteratorNext, m_valueModeMetadata, m_valueValueProfile, .getValueSlow, size, storeValueAndDispatch)
 
 .getValueSlow:
     callSlowPath(_llint_slow_path_iterator_next_get_value)
@@ -3498,6 +3457,11 @@ llintOpWithMetadata(op_enumerator_get_by_val, OpEnumeratorGetByVal, macro (size,
 .getSlowPath:
     callSlowPath(_slow_path_enumerator_get_by_val)
     dispatch()
+
+.osrReturnPoint:
+    getterSetterOSRExitReturnPoint(op_enumerator_get_by_val, size)
+    valueProfile(size, OpEnumeratorGetByVal, m_valueProfile, r0, t5)
+    return(r0)
 end)
 
 llintOpWithMetadata(op_enumerator_put_by_val, OpEnumeratorPutByVal, macro (size, get, dispatch, metadata, return)
@@ -3546,6 +3510,10 @@ llintOpWithMetadata(op_enumerator_put_by_val, OpEnumeratorPutByVal, macro (size,
 .putSlowPath:
     callSlowPath(_slow_path_enumerator_put_by_val)
     dispatch()
+
+.osrReturnPoint:
+    getterSetterOSRExitReturnPoint(op_enumerator_put_by_val, size)
+    dispatch()
 end)
 
 macro hasPropertyImpl(opcodeStruct, size, get, dispatch, metadata, return, slowPath)
@@ -3576,10 +3544,29 @@ end
 
 llintOpWithMetadata(op_enumerator_in_by_val, OpEnumeratorInByVal, macro (size, get, dispatch, metadata, return)
     hasPropertyImpl(OpEnumeratorInByVal, size, get, dispatch, metadata, return, _slow_path_enumerator_in_by_val)
+.osrReturnPoint:
+    getterSetterOSRExitReturnPoint(op_enumerator_in_by_val, size)
+    return(r0)
 end)
 
 llintOpWithMetadata(op_enumerator_has_own_property, OpEnumeratorHasOwnProperty, macro (size, get, dispatch, metadata, return)
     hasPropertyImpl(OpEnumeratorHasOwnProperty, size, get, dispatch, metadata, return, _slow_path_enumerator_has_own_property)
+end)
+
+llintOpWithReturn(op_in_by_id, OpInById, macro (size, get, dispatch, return)
+    callSlowPath(_llint_slow_path_in_by_id)
+    dispatch()
+.osrReturnPoint:
+    getterSetterOSRExitReturnPoint(op_in_by_id, size)
+    return(r0)
+end)
+
+llintOpWithReturn(op_in_by_val, OpInByVal, macro (size, get, dispatch, return)
+    callSlowPath(_llint_slow_path_in_by_val)
+    dispatch()
+.osrReturnPoint:
+    getterSetterOSRExitReturnPoint(op_in_by_val, size)
+    return(r0)
 end)
 
 llintOpWithProfile(op_get_internal_field, OpGetInternalField, macro (size, get, dispatch, return)

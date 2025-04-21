@@ -36,6 +36,7 @@
 #include "ServiceWorkerIdentifier.h"
 #include "ServiceWorkerTypes.h"
 #include <wtf/CheckedPtr.h>
+#include <wtf/Identified.h>
 #include <wtf/URLHash.h>
 #include <wtf/WeakPtr.h>
 
@@ -51,15 +52,14 @@ struct ServiceWorkerContextData;
 struct ServiceWorkerJobDataIdentifier;
 enum class WorkerThreadMode : bool;
 
-class SWServerToContextConnection: public CanMakeWeakPtr<SWServerToContextConnection>, public CanMakeCheckedPtr {
+class SWServerToContextConnection: public CanMakeWeakPtr<SWServerToContextConnection>, public CanMakeCheckedPtr<SWServerToContextConnection>, public Identified<SWServerToContextConnectionIdentifier> {
     WTF_MAKE_FAST_ALLOCATED;
+    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(SWServerToContextConnection);
 public:
     WEBCORE_EXPORT virtual ~SWServerToContextConnection();
 
     WEBCORE_EXPORT SWServer* server() const;
     WEBCORE_EXPORT RefPtr<SWServer> protectedServer() const;
-
-    SWServerToContextConnectionIdentifier identifier() const { return m_identifier; }
 
     // This flag gets set when the service worker process is no longer clean (because it has loaded several eTLD+1s).
     bool shouldTerminateWhenPossible() const { return m_shouldTerminateWhenPossible; }
@@ -111,7 +111,6 @@ protected:
 
 private:
     WeakPtr<WebCore::SWServer> m_server;
-    SWServerToContextConnectionIdentifier m_identifier;
     RegistrableDomain m_registrableDomain;
     std::optional<ScriptExecutionContextIdentifier> m_serviceWorkerPageIdentifier;
     bool m_shouldTerminateWhenPossible { false };

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -601,6 +601,12 @@ ext.DO_JCOV = Boolean.parseBoolean(JCOV)
 defineProperty("USE_CYGWIN", "true")
 ext.IS_USE_CYGWIN = Boolean.parseBoolean(USE_CYGWIN)
 
+// Specifies whether to run "chmod -R artifacts/sdk" as the last step of
+// copying the sdk to the artifacts dir. This is only done on Windows;
+// the flag is ignored on other platforms.
+defineProperty("CHMOD_ARTIFACTS", "true")
+ext.IS_CHMOD_ARTIFACTS = Boolean.parseBoolean(CHMOD_ARTIFACTS)
+
 // Define the number of threads to use when compiling (specifically for native compilation, including webkit)
 defineProperty("NUM_COMPILE_THREADS", "${Runtime.runtime.availableProcessors()}")
 
@@ -719,13 +725,16 @@ defineProperty("TEST_ONLY", "false")
 ext.IS_TEST_ONLY = Boolean.parseBoolean(TEST_ONLY) || !buildSdkForTest
 
 ext.IS_TEST_SDK = false
+ext.TEST_SDK_DIR = ""
+
 if (hasProperty("TEST_SDK_PATH")) {
     if (!IS_TEST_ONLY) {
         fail("TEST_ONLY must be set to true when using an external TEST_SDK_PATH for running tests: include -PTEST_ONLY=true")
     }
-    def sdkShimsPath = file("${TEST_SDK_PATH}")
-    def sdkPath = file("${TEST_SDK_PATH}/sdk")
-    def shimsPath = file("${TEST_SDK_PATH}/shims")
+    ext.TEST_SDK_DIR = file("${TEST_SDK_PATH}").absolutePath
+    def sdkShimsPath = file("${TEST_SDK_DIR}")
+    def sdkPath = file("${TEST_SDK_DIR}/sdk")
+    def shimsPath = file("${TEST_SDK_DIR}/shims")
     if (!sdkShimsPath.exists() || !sdkShimsPath.isDirectory() ||
              !sdkPath.exists() || !sdkPath.isDirectory() ||
            !shimsPath.exists() || !shimsPath.isDirectory()) {
@@ -733,7 +742,7 @@ if (hasProperty("TEST_SDK_PATH")) {
     }
     ext.IS_TEST_SDK = true
 } else {
-    defineProperty("TEST_SDK_PATH", "${rootProject.buildDir}")
+    ext.TEST_SDK_DIR = "${rootProject.buildDir}"
 }
 
 // Make sure JDK_HOME/bin/java exists
@@ -992,7 +1001,7 @@ List<String> computeLibraryPath(boolean working) {
     } else {
         def platformPrefix = ""
         def standaloneSdkDirName = "${platformPrefix}sdk"
-        def standaloneSdkDir = "${TEST_SDK_PATH}/${standaloneSdkDirName}"
+        def standaloneSdkDir = "${TEST_SDK_DIR}/${standaloneSdkDirName}"
         def modulesLibName = IS_WINDOWS ? "bin" : "lib"
         def modulesLibsDir = "${standaloneSdkDir}/${modulesLibName}"
         lp << cygpath("${modulesLibsDir}")
@@ -1030,9 +1039,9 @@ List<String> computePatchModuleArgs(List<String> deps, boolean test, boolean inc
                 String moduleName = proj.ext.moduleName
                 File dir;
                 if (test && proj.sourceSets.hasProperty('shims')) {
-                    dir = file("${TEST_SDK_PATH}/shims/${moduleName}")
+                    dir = file("${TEST_SDK_DIR}/shims/${moduleName}")
                 } else {
-                    dir = file("${TEST_SDK_PATH}/sdk/lib/${moduleName}.jar")
+                    dir = file("${TEST_SDK_DIR}/sdk/lib/${moduleName}.jar")
                 }
                 if (mp == null) {
                     mp = dir.path
@@ -1495,6 +1504,9 @@ logger.quiet("OS_NAME: $OS_NAME")
 logger.quiet("OS_ARCH: $OS_ARCH")
 logger.quiet("JAVA_HOME: $JAVA_HOME")
 logger.quiet("JDK_HOME: $JDK_HOME")
+if (IS_TEST_SDK) {
+    logger.quiet("TEST_SDK_PATH: ${TEST_SDK_DIR}")
+}
 
 Version javaVersionInfo = Runtime.version()
 logger.quiet("java.runtime.version: " + javaVersionInfo)
@@ -2116,8 +2128,6 @@ allprojects {
     // By default all of our projects require junit for testing so we can just
     // setup this dependency here.
     dependencies {
-        testImplementation group: "junit", name: "junit", version: "${junitVersion}"
-        testImplementation group: "org.hamcrest", name: "hamcrest-core", version: "${hamcrestVersion}"
         testImplementation group: "org.junit.jupiter", name: "junit-jupiter", version: "${junitJupiterVersion}"
         testImplementation group: "org.junit.jupiter", name: "junit-jupiter-api", version: "${junitJupiterVersion}"
         testImplementation group: "org.junit.jupiter", name: "junit-jupiter-params", version: "${junitJupiterVersion}"
@@ -2127,7 +2137,6 @@ allprojects {
         testRuntimeOnly group: "org.junit.platform", name: "junit-platform-commons", version: "${junitPlatformVersion}"
         testRuntimeOnly group: "org.junit.platform", name: "junit-platform-engine", version: "${junitPlatformVersion}"
         testRuntimeOnly group: "org.junit.platform", name: "junit-platform-launcher", version: "${junitPlatformVersion}"
-        testRuntimeOnly group: "org.junit.vintage", name: "junit-vintage-engine", version: "${junitJupiterVersion}"
 
         if (BUILD_CLOSED && DO_JCOV)  {
             testImplementation name: "jcov"
@@ -2686,7 +2695,7 @@ project(":graphics") {
     processResources.dependsOn processDecoraShaders, processPrismShaders
 
     test {
-        def cssDir = file("${TEST_SDK_PATH}/shims/${moduleName}/javafx")
+        def cssDir = file("${TEST_SDK_DIR}/shims/${moduleName}/javafx")
         jvmArgs enableNativeGraphics
         // FIXME: Remove this when JDK-8334137 is fixed
         if (jdk24OrLater) {
@@ -2779,7 +2788,7 @@ project(":controls") {
     }
 
     test {
-        def cssDir = file("${TEST_SDK_PATH}/shims/${moduleName}/javafx")
+        def cssDir = file("${TEST_SDK_DIR}/shims/${moduleName}/javafx")
         jvmArgs enableNativeGraphics
         // FIXME: Remove this when JDK-8334137 is fixed
         if (jdk24OrLater) {
@@ -3934,11 +3943,27 @@ project(":web") {
                     if (t.name == "win") {
                         // To enable ninja build on Windows
                         environment(WINDOWS_NATIVE_COMPILE_ENVIRONMENT)
-                        // Adds compiler and linker flags if present
-                        def cFlags = webkitProperties.ccFlags?.join(' ') ?: ''
-                        def lFlags = webkitProperties.linkFlags?.join(' ') ?: ''
+                        // Ensure the Clang environment is set up properly
+                        // Set the Clang compiler and linker as webkit has dropped MSVC compiler support
+                        def clangCompiler = "clang-cl.exe"  // Set to the path of clang-cl
+                        def msvcLinker = "link.exe"  // Set to the path of clang-cl
+                        // Define the flags for Clang compilation and MSVC linking
+                        def cFlags = "-shared"
+                        def lFlags = "-shared"
+                        if (!IS_64) {
+                            cFlags += " /clang:-m32"
+                            lFlags += " /machine:x86"
+                        }
+                        // Pass Clang-specific flags
                         cmakeArgs = "$cmakeArgs -DCMAKE_C_FLAGS='${cFlags}' -DCMAKE_CXX_FLAGS='${cFlags}'"
                         cmakeArgs = "$cmakeArgs -DCMAKE_SHARED_LINKER_FLAGS='${lFlags}'"
+
+                        // Specify Clang-CL as the compiler for C and C++
+                        cmakeArgs = "$cmakeArgs -DCMAKE_C_COMPILER=${clangCompiler} -DCMAKE_CXX_COMPILER=${clangCompiler}"
+                        // pass the MSVC bin dir for icu Third party lib
+                        cmakeArgs = "$cmakeArgs -DCMAKE_LINKER=${msvcLinker} -DMSVC_BIN_DIR='${WIN.MSVC_BIN_DIR}'"
+
+
                     } else if (t.name == "mac") {
                         cmakeArgs = " $cmakeArgs -DCMAKE_OSX_DEPLOYMENT_TARGET=$MACOSX_MIN_VERSION -DCMAKE_OSX_SYSROOT=$MACOSX_SDK_PATH"
                     } else if (t.name == "linux") {
@@ -4272,6 +4297,8 @@ project(":systemTests") {
 
         // enable native access for all modules with native code
         jvmArgs enableNativeAll
+
+        maxHeapSize = "1000m"
 
         // FIXME: Remove this when JDK-8334137 is fixed
         if (jdk24OrLater) {
@@ -4948,9 +4975,13 @@ compileTargets { t ->
         def chmodArtifactsSdkTask = task("chmodArtifactsSdk$t.capital", dependsOn: copyArtifactsSdkTask) {
             if (IS_WINDOWS && IS_USE_CYGWIN) {
                 doLast {
-                    exec {
-                        workingDir(sdkArtifactsDir)
-                        commandLine("chmod", "-R", "755", ".")
+                    if (IS_CHMOD_ARTIFACTS) {
+                        exec {
+                            workingDir(sdkArtifactsDir)
+                            commandLine("chmod", "-R", "755", ".")
+                        }
+                    } else {
+                        println "Skipping 'chmod -R', CHMOD_ARTIFACTS=$CHMOD_ARTIFACTS"
                     }
                 }
             }
@@ -5256,7 +5287,7 @@ compileTargets { t ->
     // ============================================================
 
     def standaloneSdkDirName = "${platformPrefix}sdk"
-    def standaloneSdkDir = "${TEST_SDK_PATH}/${standaloneSdkDirName}"
+    def standaloneSdkDir = "${TEST_SDK_DIR}/${standaloneSdkDirName}"
     def standaloneLibDir = "${standaloneSdkDir}/lib"
     def libDest=targetProperties.libDest
     def standaloneNativeDir = "${standaloneSdkDir}/${libDest}"
@@ -5935,9 +5966,9 @@ compileTargets { t ->
                         modnames << project.ext.moduleName
                         File dir;
                         if (project.sourceSets.hasProperty('shims')) {
-                           dir = new File(TEST_SDK_PATH, "shims/${project.ext.moduleName}")
+                           dir = new File(TEST_SDK_DIR, "shims/${project.ext.moduleName}")
                         } else {
-                           dir = new File(TEST_SDK_PATH, "sdk/lib/${project.ext.moduleName}.jar")
+                           dir = new File(TEST_SDK_DIR, "sdk/lib/${project.ext.moduleName}.jar")
                         }
 
                         def dstModuleDir = cygpath(dir.path)

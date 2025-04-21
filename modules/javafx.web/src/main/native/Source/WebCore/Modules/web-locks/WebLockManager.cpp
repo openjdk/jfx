@@ -43,6 +43,7 @@
 #include "WorkerThread.h"
 #include <wtf/CompletionHandler.h>
 #include <wtf/RunLoop.h>
+#include <wtf/text/MakeString.h>
 
 namespace WebCore {
 
@@ -201,7 +202,7 @@ void WebLockManager::request(const String& name, Options&& options, Ref<WebLockG
     }
 
     if (name.length() > WebLock::maxNameLength) {
-        releasePromise->reject(ExceptionCode::NotSupportedError, makeString("Lock name cannot cannot be longer than "_s, WebLock::maxNameLength, " characters"));
+        releasePromise->reject(ExceptionCode::NotSupportedError, makeString("Lock name cannot cannot be longer than "_s, WebLock::maxNameLength, " characters"_s));
         return;
     }
 
@@ -365,11 +366,6 @@ void WebLockManager::clientIsGoingAway()
 bool WebLockManager::virtualHasPendingActivity() const
 {
     return !m_pendingRequests.isEmpty() || !m_releasePromises.isEmpty();
-}
-
-const char* WebLockManager::activeDOMObjectName() const
-{
-    return "WebLockManager";
 }
 
 } // namespace WebCore

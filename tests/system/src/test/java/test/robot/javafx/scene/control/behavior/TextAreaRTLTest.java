@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2024, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -48,7 +48,6 @@ import test.util.Util;
 /**
  * Tests TextArea RTL/LTR behavior.
  */
-@ExtendWith(ScreenshotFailedTestWatcher.class)
 public class TextAreaRTLTest extends TextInputBehaviorRobotTest<TextArea> {
     private Color selectionColor;
 
@@ -191,7 +190,7 @@ public class TextAreaRTLTest extends TextInputBehaviorRobotTest<TextArea> {
             BorderPane pp = new BorderPane(t);
             pp.setManaged(false);
 
-            content.getChildren().add(pp);
+            contentPane.getChildren().add(pp);
 
             pp.layout();
             t.applyCss();
@@ -201,9 +200,9 @@ public class TextAreaRTLTest extends TextInputBehaviorRobotTest<TextArea> {
             try {
                 WritableImage im = pp.snapshot(null, null);
                 selectionColor = im.getPixelReader().getColor(30, 8);
-                content.layout();
+                contentPane.layout();
             } finally {
-                content.getChildren().remove(pp);
+                contentPane.getChildren().remove(pp);
             }
         }
 

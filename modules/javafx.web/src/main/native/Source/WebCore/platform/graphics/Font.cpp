@@ -35,7 +35,6 @@
 #endif
 
 #include "CachedFont.h"
-#include "CharacterProperties.h"
 #include "FontCache.h"
 #include "FontCascade.h"
 #include "FontCustomPlatformData.h"
@@ -43,6 +42,7 @@
 #include <wtf/MathExtras.h>
 #include <wtf/NeverDestroyed.h>
 #include <wtf/text/AtomStringHash.h>
+#include <wtf/text/CharacterProperties.h>
 #include <wtf/text/TextStream.h>
 
 #if ENABLE(OPENTYPE_VERTICAL)
@@ -116,10 +116,10 @@ void Font::initCharWidths()
 
     // If we can't retrieve the width of a '0', fall back to the x height.
     if (m_avgCharWidth <= 0.f)
-        m_avgCharWidth = m_fontMetrics.xHeight();
+        m_avgCharWidth = m_fontMetrics.xHeight().value_or(0);
 
     if (m_maxCharWidth <= 0.f)
-        m_maxCharWidth = std::max(m_avgCharWidth, m_fontMetrics.floatAscent());
+        m_maxCharWidth = std::max(m_avgCharWidth, m_fontMetrics.ascent());
 }
 
 void Font::platformGlyphInit()
@@ -167,9 +167,9 @@ void Font::platformGlyphInit()
         m_fontMetrics.setIdeogramWidth(platformData().size());
 
     m_spaceWidth = widthForGlyph(m_spaceGlyph, SyntheticBoldInclusion::Exclude); // spaceWidth() handles adding in the synthetic bold.
-    auto amountToAdjustLineGap = std::min(m_fontMetrics.floatLineGap(), 0.0f);
-    m_fontMetrics.setLineGap(m_fontMetrics.floatLineGap() - amountToAdjustLineGap);
-    m_fontMetrics.setLineSpacing(m_fontMetrics.floatLineSpacing() - amountToAdjustLineGap);
+    auto amountToAdjustLineGap = std::min(m_fontMetrics.lineGap(), 0.0f);
+    m_fontMetrics.setLineGap(m_fontMetrics.lineGap() - amountToAdjustLineGap);
+    m_fontMetrics.setLineSpacing(m_fontMetrics.lineSpacing() - amountToAdjustLineGap);
     determinePitch();
 }
 
@@ -190,9 +190,9 @@ RenderingResourceIdentifier FontInternalAttributes::ensureRenderingResourceIdent
     return *renderingResourceIdentifier;
 }
 
-static bool fillGlyphPage(GlyphPage& pageToFill, UChar* buffer, unsigned bufferLength, const Font& font)
+static bool fillGlyphPage(GlyphPage& pageToFill, std::span<const UChar> buffer, const Font& font)
 {
-    bool hasGlyphs = pageToFill.fill(buffer, bufferLength);
+    bool hasGlyphs = pageToFill.fill(buffer);
 #if ENABLE(OPENTYPE_VERTICAL)
     if (hasGlyphs && font.verticalData())
         font.verticalData()->substituteWithVerticalGlyphs(&font, &pageToFill);
@@ -400,7 +400,7 @@ static RefPtr<GlyphPage> createAndFillGlyphPage(unsigned pageNumber, const Font&
     // for only 128 out of 256 characters.
     Ref glyphPage = GlyphPage::create(font);
 
-    bool haveGlyphs = fillGlyphPage(glyphPage, buffer.data(), bufferLength, font);
+    bool haveGlyphs = fillGlyphPage(glyphPage, buffer.span().first(bufferLength), font);
     if (!haveGlyphs)
         return nullptr;
 
@@ -561,7 +561,7 @@ RefPtr<Font> Font::systemFallbackFontForCharacterCluster(StringView characterClu
     return SystemFallbackFontCache::forCurrentThread().systemFallbackFontForCharacterCluster(this, characterCluster, description, resolvedEmojiPolicy, isForPlatformFont);
 }
 
-#if !PLATFORM(COCOA) && !USE(FREETYPE)
+#if !PLATFORM(COCOA) && !USE(FREETYPE) && !USE(SKIA)
 bool Font::variantCapsSupportedForSynthesis(FontVariantCaps fontVariantCaps) const
 {
     switch (fontVariantCaps) {

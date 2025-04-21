@@ -55,6 +55,8 @@ inline bool operator==(const ResolvedURL& a, const ResolvedURL& b)
     return a.specifiedURLString == b.specifiedURLString && a.resolvedURL == b.resolvedURL;
 }
 
+bool mayDependOnBaseURL(const ResolvedURL&);
+
 struct CSSParserContext {
     WTF_MAKE_STRUCT_FAST_ALLOCATED;
 
@@ -73,27 +75,20 @@ struct CSSParserContext {
 
     // Settings, excluding those affecting properties.
     bool colorContrastEnabled : 1 { false };
-    bool colorMixEnabled : 1 { false };
-    bool constantPropertiesEnabled : 1 { false };
     bool counterStyleAtRuleImageSymbolsEnabled : 1 { false };
-    bool relativeColorSyntaxEnabled : 1 { false };
     bool springTimingFunctionEnabled : 1 { false };
 #if ENABLE(CSS_TRANSFORM_STYLE_OPTIMIZED_3D)
     bool transformStyleOptimized3DEnabled : 1 { false };
 #endif
-    bool useLegacyBackgroundSizeShorthandBehavior : 1 { false };
-    bool focusVisibleEnabled : 1 { false };
-    bool hasPseudoClassEnabled : 1 { false };
-    bool cascadeLayersEnabled : 1 { false };
-    bool gradientPremultipliedAlphaInterpolationEnabled : 1 { false };
-    bool gradientInterpolationColorSpacesEnabled : 1 { false };
-    bool subgridEnabled : 1 { false };
     bool masonryEnabled : 1 { false };
     bool cssNestingEnabled : 1 { false };
     bool cssPaintingAPIEnabled : 1 { false };
     bool cssScopeAtRuleEnabled : 1 { false };
+    bool cssShapeFunctionEnabled : 1 { false };
     bool cssStartingStyleAtRuleEnabled : 1 { false };
+    bool cssStyleQueriesEnabled : 1 { false };
     bool cssTextUnderlinePositionLeftRightEnabled : 1 { false };
+    bool cssBackgroundClipBorderAreaEnabled : 1 { false };
     bool cssWordBreakAutoPhraseEnabled : 1 { false };
     bool popoverAttributeEnabled : 1 { false };
     bool sidewaysWritingModesEnabled : 1 { false };
@@ -105,13 +100,17 @@ struct CSSParserContext {
 #if ENABLE(SERVICE_CONTROLS)
     bool imageControlsEnabled : 1 { false };
 #endif
+    bool colorLayersEnabled : 1 { false };
     bool lightDarkEnabled : 1 { false };
+    bool targetTextPseudoElementEnabled : 1 { false };
+    bool viewTransitionTypesEnabled : 1 { false };
 
     // Settings, those affecting properties.
     CSSPropertySettings propertySettings;
 
     CSSParserContext(CSSParserMode, const URL& baseURL = URL());
-    WEBCORE_EXPORT CSSParserContext(const Document&, const URL& baseURL = URL(), const String& charset = emptyString());
+    WEBCORE_EXPORT CSSParserContext(const Document&);
+    CSSParserContext(const Document&, const URL& baseURL, const String& charset = emptyString());
     ResolvedURL completeURL(const String&) const;
 
     bool operator==(const CSSParserContext&) const = default;

@@ -23,7 +23,6 @@
 #include "config.h"
 #include "RenderSVGForeignObject.h"
 
-#if ENABLE(LAYER_BASED_SVG_ENGINE)
 #include "GraphicsContext.h"
 #include "HitTestResult.h"
 #include "LayoutRepainter.h"
@@ -36,12 +35,12 @@
 #include "SVGForeignObjectElement.h"
 #include "SVGRenderSupport.h"
 #include "TransformState.h"
-#include <wtf/IsoMallocInlines.h>
 #include <wtf/StackStats.h>
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
-WTF_MAKE_ISO_ALLOCATED_IMPL(RenderSVGForeignObject);
+WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(RenderSVGForeignObject);
 
 RenderSVGForeignObject::RenderSVGForeignObject(SVGForeignObjectElement& element, RenderStyle&& style)
     : RenderSVGBlock(Type::SVGForeignObject, element, WTFMove(style))
@@ -54,6 +53,11 @@ RenderSVGForeignObject::~RenderSVGForeignObject() = default;
 SVGForeignObjectElement& RenderSVGForeignObject::foreignObjectElement() const
 {
     return downcast<SVGForeignObjectElement>(RenderSVGBlock::graphicsElement());
+}
+
+Ref<SVGForeignObjectElement> RenderSVGForeignObject::protectedForeignObjectElement() const
+{
+    return foreignObjectElement();
 }
 
 void RenderSVGForeignObject::paint(PaintInfo& paintInfo, const LayoutPoint& paintOffset)
@@ -92,16 +96,16 @@ void RenderSVGForeignObject::layout()
     StackStats::LayoutCheckPoint layoutCheckPoint;
     ASSERT(needsLayout());
 
-    LayoutRepainter repainter(*this, checkForRepaintDuringLayout());
+    LayoutRepainter repainter(*this);
 
-    auto& useForeignObjectElement = foreignObjectElement();
-    SVGLengthContext lengthContext(&useForeignObjectElement);
+    Ref useForeignObjectElement = foreignObjectElement();
+    SVGLengthContext lengthContext(useForeignObjectElement.ptr());
 
     // Cache viewport boundaries
-    auto x = useForeignObjectElement.x().value(lengthContext);
-    auto y = useForeignObjectElement.y().value(lengthContext);
-    auto width = useForeignObjectElement.width().value(lengthContext);
-    auto height = useForeignObjectElement.height().value(lengthContext);
+    auto x = useForeignObjectElement->x().value(lengthContext);
+    auto y = useForeignObjectElement->y().value(lengthContext);
+    auto width = useForeignObjectElement->width().value(lengthContext);
+    auto height = useForeignObjectElement->height().value(lengthContext);
     m_viewport = { x, y, width, height };
 
     RenderSVGBlock::layout();
@@ -128,9 +132,7 @@ void RenderSVGForeignObject::updateFromStyle()
 
 void RenderSVGForeignObject::applyTransform(TransformationMatrix& transform, const RenderStyle& style, const FloatRect& boundingBox, OptionSet<RenderStyle::TransformOperationOption> options) const
 {
-    applySVGTransform(transform, foreignObjectElement(), style, boundingBox, std::nullopt, std::nullopt, options);
+    applySVGTransform(transform, protectedForeignObjectElement(), style, boundingBox, std::nullopt, std::nullopt, options);
 }
 
 }
-
-#endif // ENABLE(LAYER_BASED_SVG_ENGINE)

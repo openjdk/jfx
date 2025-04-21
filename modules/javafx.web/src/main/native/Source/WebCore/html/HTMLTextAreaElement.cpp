@@ -48,13 +48,13 @@
 #include "TextControlInnerElements.h"
 #include "TextIterator.h"
 #include "TextNodeTraversal.h"
-#include <wtf/IsoMallocInlines.h>
 #include <wtf/Ref.h>
 #include <wtf/StdLibExtras.h>
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
-WTF_MAKE_ISO_ALLOCATED_IMPL(HTMLTextAreaElement);
+WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(HTMLTextAreaElement);
 
 using namespace HTMLNames;
 
@@ -315,9 +315,7 @@ String HTMLTextAreaElement::sanitizeUserInputValue(const String& proposedValue, 
 RefPtr<TextControlInnerTextElement> HTMLTextAreaElement::innerTextElement() const
 {
     RefPtr root = userAgentShadowRoot();
-    if (!root)
-        return nullptr;
-    return childrenOfType<TextControlInnerTextElement>(*root).first();
+    return root ? childrenOfType<TextControlInnerTextElement>(*root).first() : nullptr;
 }
 
 RefPtr<TextControlInnerTextElement> HTMLTextAreaElement::innerTextElementCreatingShadowSubtreeIfNeeded()
@@ -385,19 +383,21 @@ void HTMLTextAreaElement::setValueCommon(const String& newValue, TextFieldEventB
     setFormControlValueMatchesRenderer(true);
 
     auto endOfString = m_value.length();
+    if (selection == TextControlSetValueSelection::SetSelectionToEnd) {
     if (document().focusedElement() == this)
         setSelectionRange(endOfString, endOfString);
-    else if (selection == TextControlSetValueSelection::SetSelectionToEnd) {
+        else {
         // We don't change text selection here but need to update caret to
         // the end of the text value except for initialize.
         cacheSelection(endOfString, endOfString, SelectionHasNoDirection);
+        }
     } else if (shouldClamp)
         cacheSelection(std::min(endOfString, selectionStartValue), std::min(endOfString, selectionEndValue), SelectionHasNoDirection);
 
     setTextAsOfLastFormControlChangeEvent(normalizedValue);
 
-    if (auto* cache = document().existingAXObjectCache())
-        cache->valueChanged(this);
+    if (CheckedPtr cache = document().existingAXObjectCache())
+        cache->valueChanged(*this);
 }
 
 String HTMLTextAreaElement::defaultValue() const
@@ -518,17 +518,22 @@ void HTMLTextAreaElement::updatePlaceholderText()
 {
     auto& placeholderText = attributeWithoutSynchronization(placeholderAttr);
     if (placeholderText.isEmpty()) {
-        if (m_placeholder) {
-            userAgentShadowRoot()->removeChild(*m_placeholder);
+        if (RefPtr placeholder = m_placeholder) {
+            protectedUserAgentShadowRoot()->removeChild(*placeholder);
             m_placeholder = nullptr;
         }
         return;
     }
     if (!m_placeholder) {
         m_placeholder = TextControlPlaceholderElement::create(document());
-        userAgentShadowRoot()->insertBefore(*m_placeholder, innerTextElement()->protectedNextSibling());
+        protectedUserAgentShadowRoot()->insertBefore(*protectedPlaceholderElement(), innerTextElement()->protectedNextSibling());
     }
-    m_placeholder->setInnerText(String { placeholderText });
+    protectedPlaceholderElement()->setInnerText(String { placeholderText });
+}
+
+RefPtr<HTMLElement> HTMLTextAreaElement::protectedPlaceholderElement() const
+{
+    return m_placeholder;
 }
 
 RenderStyle HTMLTextAreaElement::createInnerTextStyle(const RenderStyle& style)

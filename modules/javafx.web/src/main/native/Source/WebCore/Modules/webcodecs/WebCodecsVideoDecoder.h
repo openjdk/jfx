@@ -32,6 +32,7 @@
 #include "JSDOMPromiseDeferredForward.h"
 #include "VideoDecoder.h"
 #include "WebCodecsCodecState.h"
+#include "WebCodecsControlMessage.h"
 #include "WebCodecsEncodedVideoChunkType.h"
 #include "WebCodecsVideoDecoderSupport.h"
 #include <wtf/Deque.h>
@@ -47,7 +48,7 @@ class WebCodecsVideoDecoder
     : public ThreadSafeRefCountedAndCanMakeThreadSafeWeakPtr<WebCodecsVideoDecoder>
     , public ActiveDOMObject
     , public EventTarget {
-    WTF_MAKE_ISO_ALLOCATED(WebCodecsVideoDecoder);
+    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(WebCodecsVideoDecoder);
 public:
     ~WebCodecsVideoDecoder();
 
@@ -61,6 +62,9 @@ public:
     WebCodecsCodecState state() const { return m_state; }
     size_t decodeQueueSize() const { return m_decodeQueueSize; }
 
+    WebCodecsVideoFrameOutputCallback& outputCallbackConcurrently() { return m_output.get(); }
+    WebCodecsErrorCallback& errorCallbackConcurrently() { return m_error.get(); }
+
     ExceptionOr<void> configure(ScriptExecutionContext&, WebCodecsVideoDecoderConfig&&);
     ExceptionOr<void> decode(Ref<WebCodecsEncodedVideoChunk>&&);
     ExceptionOr<void> flush(Ref<DeferredPromise>&&);
@@ -69,22 +73,22 @@ public:
 
     static void isConfigSupported(ScriptExecutionContext&, WebCodecsVideoDecoderConfig&&, Ref<DeferredPromise>&&);
 
-    using ThreadSafeRefCountedAndCanMakeThreadSafeWeakPtr::ref;
-    using ThreadSafeRefCountedAndCanMakeThreadSafeWeakPtr::deref;
+    // ActiveDOMObject.
+    void ref() const final { ThreadSafeRefCountedAndCanMakeThreadSafeWeakPtr::ref(); }
+    void deref() const final { ThreadSafeRefCountedAndCanMakeThreadSafeWeakPtr::deref(); }
 
 private:
     WebCodecsVideoDecoder(ScriptExecutionContext&, Init&&);
 
-    // ActiveDOMObject API.
+    // ActiveDOMObject.
     void stop() final;
-    const char* activeDOMObjectName() const final;
     void suspend(ReasonForSuspension) final;
     bool virtualHasPendingActivity() const final;
 
-    // EventTarget
+    // EventTarget.
     void refEventTarget() final { ref(); }
     void derefEventTarget() final { deref(); }
-    EventTargetInterface eventTargetInterface() const final { return WebCodecsVideoDecoderEventTargetInterfaceType; }
+    enum EventTargetInterfaceType eventTargetInterface() const final { return EventTargetInterfaceType::WebCodecsVideoDecoder; }
     ScriptExecutionContext* scriptExecutionContext() const final { return ActiveDOMObject::scriptExecutionContext(); }
 
     ExceptionOr<void> closeDecoder(Exception&&);
@@ -92,12 +96,11 @@ private:
     void setInternalDecoder(UniqueRef<VideoDecoder>&&);
     void scheduleDequeueEvent();
 
-    void queueControlMessageAndProcess(Function<void()>&&);
+    void queueControlMessageAndProcess(WebCodecsControlMessage<WebCodecsVideoDecoder>&&);
     void processControlMessageQueue();
 
     WebCodecsCodecState m_state { WebCodecsCodecState::Unconfigured };
     size_t m_decodeQueueSize { 0 };
-    size_t m_beingDecodedQueueSize { 0 };
     Ref<WebCodecsVideoFrameOutputCallback> m_output;
     Ref<WebCodecsErrorCallback> m_error;
     std::unique_ptr<VideoDecoder> m_internalDecoder;
@@ -105,9 +108,8 @@ private:
     Deque<Ref<DeferredPromise>> m_pendingFlushPromises;
     size_t m_clearFlushPromiseCount { 0 };
     bool m_isKeyChunkRequired { false };
-    Deque<Function<void()>> m_controlMessageQueue;
+    Deque<WebCodecsControlMessage<WebCodecsVideoDecoder>> m_controlMessageQueue;
     bool m_isMessageQueueBlocked { false };
-    bool m_isFlushing { false };
 };
 
 }

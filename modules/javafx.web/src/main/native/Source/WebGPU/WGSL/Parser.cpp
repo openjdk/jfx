@@ -35,6 +35,7 @@
 #include <wtf/HashSet.h>
 #include <wtf/SetForScope.h>
 #include <wtf/SortedArrayMap.h>
+#include <wtf/text/MakeString.h>
 #include <wtf/text/StringBuilder.h>
 
 namespace WGSL {
@@ -48,7 +49,7 @@ struct TemplateTypes {
 
     static void appendNameTo(StringBuilder& builder)
     {
-        builder.append(toString(TT), ", ");
+        builder.append(toString(TT), ", "_s);
         TemplateTypes<TTs...>::appendNameTo(builder);
     }
 };
@@ -100,12 +101,11 @@ struct TemplateTypes<TT> {
 #define CONSUME_TYPE_NAMED(name, type) \
     auto name##Expected = consumeType(TokenType::type); \
     if (!name##Expected) { \
-        StringBuilder builder; \
-        builder.append("Expected a "); \
-        builder.append(toString(TokenType::type)); \
-        builder.append(", but got a "); \
-        builder.append(toString(name##Expected.error())); \
-        FAIL(builder.toString()); \
+        auto error = makeString("Expected a "_s, \
+            toString(TokenType::type), \
+            ", but got a "_s, \
+            toString(name##Expected.error())); \
+        FAIL(WTFMove(error)); \
     } \
     auto& name = *name##Expected;
 
@@ -113,12 +113,11 @@ struct TemplateTypes<TT> {
     do { \
         auto expectedToken = consumeType(TokenType::type); \
         if (!expectedToken) { \
-            StringBuilder builder; \
-            builder.append("Expected a "); \
-            builder.append(toString(TokenType::type)); \
-            builder.append(", but got a "); \
-            builder.append(toString(expectedToken.error())); \
-            FAIL(builder.toString()); \
+            auto error = makeString("Expected a "_s, \
+                toString(TokenType::type), \
+                ", but got a "_s, \
+                toString(expectedToken.error())); \
+            FAIL(WTFMove(error)); \
         } \
     } while (false)
 
@@ -126,10 +125,9 @@ struct TemplateTypes<TT> {
     auto name##Expected = consumeTypes<__VA_ARGS__>(); \
     if (!name##Expected) { \
         StringBuilder builder; \
-        builder.append("Expected one of ["); \
+        builder.append("Expected one of ["_s); \
         TemplateTypes<__VA_ARGS__>::appendNameTo(builder); \
-        builder.append("], but got a "); \
-        builder.append(toString(name##Expected.error())); \
+        builder.append("], but got a "_s, toString(name##Expected.error())); \
         FAIL(builder.toString()); \
     } \
     auto& name = *name##Expected;
@@ -373,6 +371,7 @@ Result<void> Parser<Lexer>::parseShader()
         case TokenType::KeywordDiagnostic: {
             consume();
             PARSE(diagnostic, Diagnostic);
+            CONSUME_TYPE(Semicolon);
             auto& directive = MAKE_ARENA_NODE(DiagnosticDirective, WTFMove(diagnostic));
             m_shaderModule.directives().append(directive);
             break;
@@ -425,7 +424,7 @@ Result<void> Parser<Lexer>::parseRequireDirective()
         CONSUME_TYPE_NAMED(identifier, Identifier);
         auto* languageFeature = parseLanguageFeature(identifier.ident);
         if (!languageFeature)
-            FAIL("Expected 'readonly_and_readwrite_storage_textures'"_s);
+            FAIL("Expected 'readonly_and_readwrite_storage_textures', 'packed_4x8_integer_dot_product', 'unrestricted_pointer_parameters' or 'pointer_composite_access'"_s);
         m_shaderModule.requiredFeatures().add(*languageFeature);
 
         if (current().type != TokenType::Comma)
@@ -607,6 +606,7 @@ Result<AST::ConstAssert::Ref> Parser<Lexer>::parseConstAssert()
     START_PARSE();
     CONSUME_TYPE(KeywordConstAssert);
     PARSE(test, Expression);
+    CONSUME_TYPE(Semicolon);
     RETURN_ARENA_NODE(ConstAssert, WTFMove(test));
 }
 
@@ -629,11 +629,21 @@ Result<AST::Attribute::Ref> Parser<Lexer>::parseAttribute()
     START_PARSE();
 
     CONSUME_TYPE(Attribute);
+
+    if (current().type == TokenType::KeywordDiagnostic) {
+        consume();
+        PARSE(diagnostic, Diagnostic);
+        RETURN_ARENA_NODE(DiagnosticAttribute, WTFMove(diagnostic));
+    }
+
+
     CONSUME_TYPE_NAMED(ident, Identifier);
 
     if (ident.ident == "group"_s) {
         CONSUME_TYPE(ParenLeft);
         PARSE(group, Expression);
+        if (current().type  == TokenType::Comma)
+            consume();
         CONSUME_TYPE(ParenRight);
         RETURN_ARENA_NODE(GroupAttribute, WTFMove(group));
     }
@@ -641,6 +651,8 @@ Result<AST::Attribute::Ref> Parser<Lexer>::parseAttribute()
     if (ident.ident == "binding"_s) {
         CONSUME_TYPE(ParenLeft);
         PARSE(binding, Expression);
+        if (current().type  == TokenType::Comma)
+            consume();
         CONSUME_TYPE(ParenRight);
         RETURN_ARENA_NODE(BindingAttribute, WTFMove(binding));
     }
@@ -648,6 +660,8 @@ Result<AST::Attribute::Ref> Parser<Lexer>::parseAttribute()
     if (ident.ident == "location"_s) {
         CONSUME_TYPE(ParenLeft);
         PARSE(location, Expression);
+        if (current().type  == TokenType::Comma)
+            consume();
         CONSUME_TYPE(ParenRight);
         RETURN_ARENA_NODE(LocationAttribute, WTFMove(location));
     }
@@ -675,6 +689,8 @@ Result<AST::Attribute::Ref> Parser<Lexer>::parseAttribute()
             break;
         }
 
+        if (current().type  == TokenType::Comma)
+            consume();
         CONSUME_TYPE(ParenRight);
         RETURN_ARENA_NODE(BuiltinAttribute, *builtin);
     }
@@ -709,6 +725,8 @@ Result<AST::Attribute::Ref> Parser<Lexer>::parseAttribute()
     if (ident.ident == "align"_s) {
         CONSUME_TYPE(ParenLeft);
         PARSE(alignment, Expression);
+        if (current().type  == TokenType::Comma)
+            consume();
         CONSUME_TYPE(ParenRight);
         RETURN_ARENA_NODE(AlignAttribute, WTFMove(alignment));
     }
@@ -737,6 +755,8 @@ Result<AST::Attribute::Ref> Parser<Lexer>::parseAttribute()
     if (ident.ident == "size"_s) {
         CONSUME_TYPE(ParenLeft);
         PARSE(size, Expression);
+        if (current().type  == TokenType::Comma)
+            consume();
         CONSUME_TYPE(ParenRight);
         RETURN_ARENA_NODE(SizeAttribute, WTFMove(size));
     }
@@ -744,6 +764,8 @@ Result<AST::Attribute::Ref> Parser<Lexer>::parseAttribute()
     if (ident.ident == "id"_s) {
         CONSUME_TYPE(ParenLeft);
         PARSE(size, Expression);
+        if (current().type  == TokenType::Comma)
+            consume();
         CONSUME_TYPE(ParenRight);
         RETURN_ARENA_NODE(IdAttribute, WTFMove(size));
     }
@@ -756,11 +778,6 @@ Result<AST::Attribute::Ref> Parser<Lexer>::parseAttribute()
 
     if (ident.ident == "const"_s)
         RETURN_ARENA_NODE(ConstAttribute);
-
-    if (ident.ident == "diagnostic"_s) {
-        PARSE(diagnostic, Diagnostic);
-        RETURN_ARENA_NODE(DiagnosticAttribute, WTFMove(diagnostic));
-    }
 
     // https://gpuweb.github.io/gpuweb/wgsl/#pipeline-stage-attributes
     if (ident.ident == "vertex"_s)
@@ -812,8 +829,14 @@ Result<AST::Structure::Ref> Parser<Lexer>::parseStructure(AST::Attribute::List&&
         PARSE(member, StructureMember);
         auto result = seenMembers.add(member.get().name());
         if (!result.isNewEntry)
-            FAIL(makeString("duplicate member '", member.get().name(), "' in struct '", name, "'"));
+            FAIL(makeString("duplicate member '"_s, member.get().name(), "' in struct '"_s, name, '\''));
         members.append(member);
+
+        // https://www.w3.org/TR/WGSL/#limits
+        static constexpr unsigned maximumNumberOfStructMembers = 1023;
+        if (UNLIKELY(members.size() > maximumNumberOfStructMembers))
+            FAIL(makeString("struct cannot have more than "_s, String::number(maximumNumberOfStructMembers), " members"_s));
+
         if (current().type == TokenType::Comma)
             consume();
         else
@@ -821,7 +844,7 @@ Result<AST::Structure::Ref> Parser<Lexer>::parseStructure(AST::Attribute::List&&
     }
 
     if (members.isEmpty())
-        FAIL(makeString("structures must have at least one member"));
+        FAIL("structures must have at least one member"_str);
 
     CONSUME_TYPE(BraceRight);
 
@@ -845,6 +868,13 @@ template<typename Lexer>
 Result<AST::Expression::Ref> Parser<Lexer>::parseTypeName()
 {
     START_PARSE();
+
+    auto scope = SetForScope(m_compositeTypeDepth, m_compositeTypeDepth + 1);
+    //
+    // https://www.w3.org/TR/WGSL/#limits
+    static constexpr unsigned maximumCompositeTypeNestingDepth = 15;
+    if (UNLIKELY(m_compositeTypeDepth > maximumCompositeTypeNestingDepth))
+        FAIL(makeString("composite type may not be nested more than "_s, String::number(maximumCompositeTypeNestingDepth), " levels"_s));
 
     if (current().type == TokenType::Identifier) {
         PARSE(name, Identifier);
@@ -1060,6 +1090,12 @@ Result<AST::Function::Ref> Parser<Lexer>::parseFunction(AST::Attribute::List&& a
     while (current().type != TokenType::ParenRight) {
         PARSE(parameter, Parameter);
         parameters.append(WTFMove(parameter));
+
+        // https://www.w3.org/TR/WGSL/#limits
+        static constexpr unsigned maximumNumberOfFunctionParameters = 255;
+        if (UNLIKELY(parameters.size() > maximumNumberOfFunctionParameters))
+            FAIL(makeString("function cannot have more than "_s, String::number(maximumNumberOfFunctionParameters), " parameters"_s));
+
         if (current().type == TokenType::Comma)
             consume();
         else
@@ -1142,7 +1178,9 @@ Result<AST::Statement::Ref> Parser<Lexer>::parseStatement()
     case TokenType::ParenLeft:
     case TokenType::And:
     case TokenType::Star: {
-        return parseVariableUpdatingStatement();
+        PARSE(variableUpdatingStatement, VariableUpdatingStatement);
+        CONSUME_TYPE(Semicolon);
+        return { variableUpdatingStatement };
     }
     case TokenType::KeywordFor: {
         // FIXME: Handle attributes attached to statement.
@@ -1196,6 +1234,8 @@ Result<AST::CompoundStatement::Ref> Parser<Lexer>::parseCompoundStatement()
 {
     START_PARSE();
 
+    PARSE(attributes, Attributes);
+
     CONSUME_TYPE(BraceLeft);
 
     AST::Statement::List statements;
@@ -1211,7 +1251,7 @@ Result<AST::CompoundStatement::Ref> Parser<Lexer>::parseCompoundStatement()
 
     CONSUME_TYPE(BraceRight);
 
-    RETURN_ARENA_NODE(CompoundStatement, WTFMove(statements));
+    RETURN_ARENA_NODE(CompoundStatement, WTFMove(attributes), WTFMove(statements));
 }
 
 template<typename Lexer>
@@ -1374,6 +1414,7 @@ Result<AST::Statement::Ref> Parser<Lexer>::parseSwitchStatement()
 
     Vector<AST::SwitchClause> clauses;
     std::optional<AST::SwitchClause> defaultClause;
+    unsigned selectorCount = 0;
     while (current().type != TokenType::BraceRight) {
         AST::Expression::List selectors;
         bool hasDefault = false;
@@ -1384,6 +1425,7 @@ Result<AST::Statement::Ref> Parser<Lexer>::parseSwitchStatement()
                     consume();
                     hasDefault = true;
                 } else {
+                    ++selectorCount;
                     PARSE(selector, Expression);
                     selectors.append(WTFMove(selector));
                 }
@@ -1409,6 +1451,11 @@ Result<AST::Statement::Ref> Parser<Lexer>::parseSwitchStatement()
             defaultClause = { WTFMove(selectors), body };
         else
             clauses.append({ WTFMove(selectors), body });
+
+        // https://www.w3.org/TR/WGSL/#limits
+        static constexpr unsigned maximumNumberOfCaseSelectors = 1023;
+        if (UNLIKELY(selectorCount > maximumNumberOfCaseSelectors))
+            FAIL(makeString("switch statement cannot have more than "_s, String::number(maximumNumberOfCaseSelectors), " case selector values"_s));
     }
     CONSUME_TYPE(BraceRight);
 
@@ -1725,27 +1772,27 @@ Result<AST::Expression::Ref> Parser<Lexer>::parsePrimaryExpression()
         RETURN_ARENA_NODE(BoolLiteral, false);
     case TokenType::IntegerLiteral: {
         CONSUME_TYPE_NAMED(lit, IntegerLiteral);
-        RETURN_ARENA_NODE(AbstractIntegerLiteral, lit.literalValue);
+        RETURN_ARENA_NODE(AbstractIntegerLiteral, lit.integerValue);
     }
     case TokenType::IntegerLiteralSigned: {
         CONSUME_TYPE_NAMED(lit, IntegerLiteralSigned);
-        RETURN_ARENA_NODE(Signed32Literal, lit.literalValue);
+        RETURN_ARENA_NODE(Signed32Literal, lit.integerValue);
     }
     case TokenType::IntegerLiteralUnsigned: {
         CONSUME_TYPE_NAMED(lit, IntegerLiteralUnsigned);
-        RETURN_ARENA_NODE(Unsigned32Literal, lit.literalValue);
+        RETURN_ARENA_NODE(Unsigned32Literal, lit.integerValue);
     }
     case TokenType::AbstractFloatLiteral: {
         CONSUME_TYPE_NAMED(lit, AbstractFloatLiteral);
-        RETURN_ARENA_NODE(AbstractFloatLiteral, lit.literalValue);
+        RETURN_ARENA_NODE(AbstractFloatLiteral, lit.floatValue);
     }
     case TokenType::FloatLiteral: {
         CONSUME_TYPE_NAMED(lit, FloatLiteral);
-        RETURN_ARENA_NODE(Float32Literal, lit.literalValue);
+        RETURN_ARENA_NODE(Float32Literal, lit.floatValue);
     }
     case TokenType::HalfLiteral: {
         CONSUME_TYPE_NAMED(lit, HalfLiteral);
-        RETURN_ARENA_NODE(Float16Literal, lit.literalValue);
+        RETURN_ARENA_NODE(Float16Literal, lit.floatValue);
     }
     // TODO: bitcast expression
 
@@ -1777,10 +1824,9 @@ template<typename Lexer>
 Result<AST::Expression::Ref> Parser<Lexer>::parseLHSExpression()
 {
     START_PARSE();
-
-    if (current().type == TokenType::And || current().type == TokenType::Star) {
         CHECK_RECURSION();
 
+    if (current().type == TokenType::And || current().type == TokenType::Star) {
         auto op = toUnaryOperation(current());
         consume();
         PARSE(expression, LHSExpression);

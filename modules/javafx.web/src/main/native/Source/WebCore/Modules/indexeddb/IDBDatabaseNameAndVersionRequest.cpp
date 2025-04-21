@@ -28,11 +28,11 @@
 
 #include "IDBConnectionProxy.h"
 #include "ScriptExecutionContext.h"
-#include <wtf/IsoMallocInlines.h>
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
-WTF_MAKE_ISO_ALLOCATED_IMPL(IDBDatabaseNameAndVersionRequest);
+WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(IDBDatabaseNameAndVersionRequest);
 
 Ref<IDBDatabaseNameAndVersionRequest> IDBDatabaseNameAndVersionRequest::create(ScriptExecutionContext& context, IDBClient::IDBConnectionProxy& connectionProxy, InfoCallback&& callback)
 {
@@ -56,12 +56,6 @@ void IDBDatabaseNameAndVersionRequest::complete(std::optional<Vector<IDBDatabase
 
     if (auto callback = WTFMove(m_callback))
         callback(WTFMove(databases));
-}
-
-const char* IDBDatabaseNameAndVersionRequest::activeDOMObjectName() const
-{
-    ASSERT(canCurrentThreadAccessThreadLocalData(originThread()));
-    return "IDBDatabaseNameAndVersionRequest";
 }
 
 bool IDBDatabaseNameAndVersionRequest::virtualHasPendingActivity() const

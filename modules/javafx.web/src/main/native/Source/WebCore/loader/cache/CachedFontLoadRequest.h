@@ -32,6 +32,7 @@
 #include "FontLoadRequest.h"
 #include "FontSelectionAlgorithm.h"
 #include "ScriptExecutionContext.h"
+#include <wtf/text/MakeString.h>
 
 namespace WebCore {
 
@@ -61,7 +62,18 @@ private:
     bool isLoading() const final { return m_font->isLoading(); }
     bool errorOccurred() const final { return m_font->errorOccurred(); }
 
-    bool ensureCustomFontData() final { return m_font->ensureCustomFontData(); }
+    bool ensureCustomFontData() final
+    {
+        bool result = m_font->ensureCustomFontData();
+        if (!result && m_font->didRefuseToParseCustomFontWithSafeFontParser()) {
+            if (RefPtr context = m_context.get()) {
+                auto message = makeString("[Lockdown Mode] This font wasn't parsed: "_s, m_font->url().string());
+                context->addConsoleMessage(MessageSource::Security, MessageLevel::Info, message);
+            }
+        }
+        return result;
+    }
+
     RefPtr<Font> createFont(const FontDescription& description, bool syntheticBold, bool syntheticItalic, const FontCreationContext& fontCreationContext) final
     {
         return protectedCachedFont()->createFont(description, syntheticBold, syntheticItalic, fontCreationContext);
@@ -83,12 +95,6 @@ private:
     void fontLoaded(CachedFont& font) final
     {
         ASSERT_UNUSED(font, &font == m_font.get());
-        if (protectedCachedFont()->didRefuseToLoadCustomFont()) {
-            if (RefPtr context = m_context.get()) {
-                auto message = makeString("[Lockdown Mode] This font has been blocked: ", m_font->url().string());
-                context->addConsoleMessage(MessageSource::Security, MessageLevel::Info, message);
-            }
-        }
         if (m_fontLoadRequestClient)
             m_fontLoadRequestClient->fontLoaded(*this); // fontLoaded() might destroy this object. Don't deref its members after it.
     }

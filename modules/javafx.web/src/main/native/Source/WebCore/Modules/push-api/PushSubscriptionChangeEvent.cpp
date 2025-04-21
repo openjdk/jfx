@@ -27,11 +27,11 @@
 #include "PushSubscriptionChangeEvent.h"
 
 #include "PushSubscription.h"
-#include <wtf/IsoMallocInlines.h>
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
-WTF_MAKE_ISO_ALLOCATED_IMPL(PushSubscriptionChangeEvent);
+WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(PushSubscriptionChangeEvent);
 
 Ref<PushSubscriptionChangeEvent> PushSubscriptionChangeEvent::create(const AtomString& type, PushSubscriptionChangeEventInit&& initializer, IsTrusted isTrusted)
 {
@@ -46,7 +46,7 @@ Ref<PushSubscriptionChangeEvent> PushSubscriptionChangeEvent::create(const AtomS
 }
 
 PushSubscriptionChangeEvent::PushSubscriptionChangeEvent(const AtomString& type, ExtendableEventInit&& eventInit, RefPtr<PushSubscription>&& newSubscription, RefPtr<PushSubscription>&& oldSubscription, IsTrusted isTrusted)
-    : ExtendableEvent(type, WTFMove(eventInit), isTrusted)
+    : ExtendableEvent(EventInterfaceType::PushSubscriptionChangeEvent, type, WTFMove(eventInit), isTrusted)
     , m_newSubscription(WTFMove(newSubscription))
     , m_oldSubscription(WTFMove(oldSubscription))
 {

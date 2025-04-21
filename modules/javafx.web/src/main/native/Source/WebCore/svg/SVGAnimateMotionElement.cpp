@@ -37,14 +37,14 @@
 #include "SVGPathData.h"
 #include "SVGPathElement.h"
 #include "SVGPathUtilities.h"
-#include <wtf/IsoMallocInlines.h>
 #include <wtf/MathExtras.h>
 #include <wtf/StdLibExtras.h>
+#include <wtf/TZoneMallocInlines.h>
 #include <wtf/text/StringView.h>
 
 namespace WebCore {
 
-WTF_MAKE_ISO_ALLOCATED_IMPL(SVGAnimateMotionElement);
+WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(SVGAnimateMotionElement);
 
 using namespace SVGNames;
 
@@ -126,8 +126,7 @@ void SVGAnimateMotionElement::updateAnimationPath()
     bool foundMPath = false;
 
     for (auto& mPath : childrenOfType<SVGMPathElement>(*this)) {
-        auto pathElement = mPath.pathElement();
-        if (pathElement) {
+        if (RefPtr pathElement = mPath.pathElement()) {
             m_animationPath = pathFromGraphicsElement(*pathElement);
             foundMPath = true;
             break;
@@ -254,16 +253,14 @@ void SVGAnimateMotionElement::applyResultsToTarget()
         return;
 
     auto updateTargetElement = [](SVGElement& element) {
-#if ENABLE(LAYER_BASED_SVG_ENGINE)
         if (element.document().settings().layerBasedSVGEngineEnabled()) {
-            if (auto* layerRenderer = dynamicDowncast<RenderLayerModelObject>(element.renderer()))
+            if (CheckedPtr layerRenderer = dynamicDowncast<RenderLayerModelObject>(element.renderer()))
                 layerRenderer->updateHasSVGTransformFlags();
             // TODO: [LBSE] Avoid relayout upon transform changes (not possible in legacy, but should be in LBSE).
             element.updateSVGRendererForElementChange();
             return;
         }
-#endif
-        if (auto* renderer = element.renderer())
+        if (CheckedPtr renderer = element.renderer())
             renderer->setNeedsTransformUpdate();
         element.updateSVGRendererForElementChange();
     };

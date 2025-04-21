@@ -35,13 +35,11 @@ namespace WebCore {
 // OscillatorNode is an audio generator of periodic waveforms.
 
 class OscillatorNode final : public AudioScheduledSourceNode {
-    WTF_MAKE_ISO_ALLOCATED(OscillatorNode);
+    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(OscillatorNode);
 public:
     static ExceptionOr<Ref<OscillatorNode>> create(BaseAudioContext&, const OscillatorOptions& = { });
 
     virtual ~OscillatorNode();
-
-    const char* activeDOMObjectName() const final { return "OscillatorNode"; }
 
     OscillatorType typeForBindings() const { ASSERT(isMainThread()); return m_type; }
     ExceptionOr<void> setTypeForBindings(OscillatorType);
@@ -68,6 +66,7 @@ private:
     bool propagatesSilence() const final;
 
     float noiseInjectionMultiplier() const final { return 0.01; }
+
     // One of the waveform types defined in the enum.
     OscillatorType m_type; // Only used on the main thread.
 

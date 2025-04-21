@@ -35,7 +35,7 @@ namespace WebCore {
 class WebGLTimerQueryEXT;
 
 class WebGLRenderingContext final : public WebGLRenderingContextBase {
-    WTF_MAKE_ISO_ALLOCATED(WebGLRenderingContext);
+    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(WebGLRenderingContext);
 public:
     static std::unique_ptr<WebGLRenderingContext> create(CanvasBase&, WebGLContextAttributes&&);
 
@@ -53,7 +53,6 @@ public:
     GCGLint maxDrawBuffers() final;
     GCGLint maxColorAttachments() final;
     void initializeDefaultObjects() final;
-    bool validateBlendEquation(const char* functionName, GCGLenum mode) final;
 
     void addMembersToOpaqueRoots(JSC::AbstractSlotVisitor&) final;
 

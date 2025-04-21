@@ -23,7 +23,6 @@
 #include "config.h"
 #include "RenderSVGResourceMarker.h"
 
-#if ENABLE(LAYER_BASED_SVG_ENGINE)
 #include "Element.h"
 #include "ElementIterator.h"
 #include "FloatPoint.h"
@@ -34,14 +33,15 @@
 #include "RenderLayerInlines.h"
 #include "RenderSVGModelObjectInlines.h"
 #include "RenderSVGResourceMarkerInlines.h"
+#include "SVGElementTypeHelpers.h"
 #include "SVGGraphicsElement.h"
 #include "SVGLengthContext.h"
 #include "SVGRenderStyle.h"
-#include <wtf/IsoMallocInlines.h>
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
-WTF_MAKE_ISO_ALLOCATED_IMPL(RenderSVGResourceMarker);
+WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(RenderSVGResourceMarker);
 
 RenderSVGResourceMarker::RenderSVGResourceMarker(SVGMarkerElement& element, RenderStyle&& style)
     : RenderSVGResourceContainer(Type::SVGResourceMarker, element, WTFMove(style))
@@ -58,9 +58,9 @@ void RenderSVGResourceMarker::invalidateMarker()
 
 FloatRect RenderSVGResourceMarker::computeViewport() const
 {
-    auto& useMarkerElement = markerElement();
-    SVGLengthContext lengthContext(&useMarkerElement);
-    return { 0, 0, useMarkerElement.markerWidth().value(lengthContext), useMarkerElement.markerHeight().value(lengthContext) };
+    Ref useMarkerElement = markerElement();
+    SVGLengthContext lengthContext(useMarkerElement.ptr());
+    return { 0, 0, useMarkerElement->markerWidth().value(lengthContext), useMarkerElement->markerHeight().value(lengthContext) };
 }
 
 bool RenderSVGResourceMarker::updateLayoutSizeIfNeeded()
@@ -91,16 +91,16 @@ void RenderSVGResourceMarker::updateLayerTransform()
     ASSERT(hasLayer());
 
     // First update the supplemental layer transform.
-    auto& useMarkerElement = markerElement();
+    Ref useMarkerElement = markerElement();
     auto viewportSize = this->viewportSize();
 
     m_supplementalLayerTransform.makeIdentity();
 
-    if (useMarkerElement.hasAttribute(SVGNames::viewBoxAttr)) {
+    if (useMarkerElement->hasAttribute(SVGNames::viewBoxAttr)) {
         // An empty viewBox disables the rendering -- dirty the visible descendant status!
-        if (useMarkerElement.hasEmptyViewBox())
+        if (useMarkerElement->hasEmptyViewBox())
             layer()->dirtyVisibleContentStatus();
-        else if (auto viewBoxTransform = useMarkerElement.viewBoxToViewTransform(viewportSize.width(), viewportSize.height()); !viewBoxTransform.isIdentity())
+        else if (auto viewBoxTransform = useMarkerElement->viewBoxToViewTransform(viewportSize.width(), viewportSize.height()); !viewBoxTransform.isIdentity())
             m_supplementalLayerTransform = viewBoxTransform;
     }
 
@@ -124,11 +124,11 @@ void RenderSVGResourceMarker::applyTransform(TransformationMatrix& transform, co
 
 LayoutRect RenderSVGResourceMarker::overflowClipRect(const LayoutPoint& location, RenderFragmentContainer*, OverlayScrollbarSizeRelevancy, PaintPhase) const
 {
-    auto& useMarkerElement = markerElement();
+    Ref useMarkerElement = markerElement();
 
     auto clipRect = enclosingLayoutRect(viewport());
-    if (useMarkerElement.hasAttribute(SVGNames::viewBoxAttr)) {
-        if (useMarkerElement.hasEmptyViewBox())
+    if (useMarkerElement->hasAttribute(SVGNames::viewBoxAttr)) {
+        if (useMarkerElement->hasEmptyViewBox())
             return { };
 
         if (!m_supplementalLayerTransform.isIdentity())
@@ -165,5 +165,3 @@ FloatRect RenderSVGResourceMarker::computeMarkerBoundingBox(const SVGBoundingBox
 }
 
 }
-
-#endif // ENABLE(LAYER_BASED_SVG_ENGINE)

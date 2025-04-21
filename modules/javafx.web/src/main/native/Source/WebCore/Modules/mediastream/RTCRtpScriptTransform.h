@@ -32,8 +32,8 @@
 #include <JavaScriptCore/JSCJSValue.h>
 #include <JavaScriptCore/JSObject.h>
 #include <JavaScriptCore/Strong.h>
-#include <wtf/IsoMalloc.h>
 #include <wtf/Lock.h>
+#include <wtf/TZoneMalloc.h>
 #include <wtf/ThreadSafeRefCounted.h>
 
 namespace WebCore {
@@ -45,10 +45,14 @@ class Worker;
 class RTCRtpScriptTransform final
     : public ThreadSafeRefCounted<RTCRtpScriptTransform, WTF::DestructionThread::Main>
     , public ActiveDOMObject {
-    WTF_MAKE_ISO_ALLOCATED(RTCRtpScriptTransform);
+    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(RTCRtpScriptTransform);
 public:
     static ExceptionOr<Ref<RTCRtpScriptTransform>> create(JSC::JSGlobalObject&, Worker&, JSC::JSValue, Vector<JSC::Strong<JSC::JSObject>>&&);
     ~RTCRtpScriptTransform();
+
+    // ActiveDOMObject.
+    void ref() const final { ThreadSafeRefCounted::ref(); }
+    void deref() const final { ThreadSafeRefCounted::deref(); }
 
     void setTransformer(RTCRtpScriptTransformer&);
 
@@ -64,9 +68,6 @@ private:
     void initializeTransformer(RTCRtpTransformBackend&);
     bool setupTransformer(Ref<RTCRtpTransformBackend>&&);
     void clear(RTCRtpScriptTransformer::ClearCallback);
-
-    // ActiveDOMObject
-    const char* activeDOMObjectName() const final { return "RTCRtpScriptTransform"; }
 
     Ref<Worker> m_worker;
 

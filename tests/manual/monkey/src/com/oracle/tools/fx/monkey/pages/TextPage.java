@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2023, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -34,6 +34,7 @@ import javafx.scene.control.ScrollPane.ScrollBarPolicy;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.input.PickResult;
 import javafx.scene.layout.Border;
+import javafx.scene.layout.BorderPane;
 import javafx.scene.text.FontSmoothingType;
 import javafx.scene.text.HitInfo;
 import javafx.scene.text.Text;
@@ -48,8 +49,9 @@ import com.oracle.tools.fx.monkey.sheets.Options;
 import com.oracle.tools.fx.monkey.sheets.ShapePropertySheet;
 import com.oracle.tools.fx.monkey.tools.AccessibilityPropertyViewer;
 import com.oracle.tools.fx.monkey.util.FX;
+import com.oracle.tools.fx.monkey.util.LayoutInfoVisualizer;
 import com.oracle.tools.fx.monkey.util.OptionPane;
-import com.oracle.tools.fx.monkey.util.ShowCharacterRuns;
+import com.oracle.tools.fx.monkey.util.StdoutMouseListener;
 import com.oracle.tools.fx.monkey.util.TestPaneBase;
 
 /**
@@ -58,9 +60,10 @@ import com.oracle.tools.fx.monkey.util.TestPaneBase;
 public class TextPage extends TestPaneBase {
     private final Text text;
     private final ScrollPane scroll;
-    private final BooleanOption showChars;
     private final BooleanOption wrap;
     private final Label hitInfo;
+    private final BorderPane container;
+    private final LayoutInfoVisualizer visualizer;
 
     public TextPage() {
         super("TextPage");
@@ -71,7 +74,7 @@ public class TextPage extends TestPaneBase {
 
         hitInfo = new Label();
 
-        showChars = new BooleanOption("showChars", "show characters", (v) -> updateShowCharacters(v));
+        visualizer = new LayoutInfoVisualizer();
 
         wrap = new BooleanOption("wrap", "wrap width", (v) -> updateWrap(v));
 
@@ -92,34 +95,32 @@ public class TextPage extends TestPaneBase {
         op.option("Text Alignment:", new EnumOption<>("textAlignment", TextAlignment.class, text.textAlignmentProperty()));
         op.option("Text Origin:", new EnumOption<VPos>("textOrigin", VPos.class, text.textOriginProperty()));
         op.option(new BooleanOption("underline", "underline", text.underlineProperty()));
-
         op.separator();
+        op.option(new BooleanOption("showCaretAndRange", visualizer.caretOptionText(), visualizer.showCaretAndRange));
+//        op.option(new BooleanOption("useLegacyAPI", "(use Text API)", visualizer.legacyAPI));
+//        op.option(new BooleanOption("showLines", "show text lines", visualizer.showLines));
+//        op.option(new BooleanOption("showBounds", "show layout bounds", visualizer.showLayoutBounds));
+//        op.option(new BooleanOption("includeLineSpacing", "include lineSpacing", visualizer.includeLineSpace));
+//        op.separator();
         op.option(wrap);
-        op.option(showChars);
         op.option("Text.hitTest:", hitInfo);
 
         ShapePropertySheet.appendTo(op, text);
+
+        container = new BorderPane(text);
 
         scroll = new ScrollPane();
         scroll.setBorder(Border.EMPTY);
         scroll.setHbarPolicy(ScrollBarPolicy.AS_NEEDED);
         scroll.setVbarPolicy(ScrollBarPolicy.AS_NEEDED);
         scroll.setFitToWidth(false);
-        scroll.setContent(new Group(text));
+        scroll.setContent(container);
 
         setContent(scroll);
         setOptions(op);
 
         updateWrap(false);
-        updateShowCharacters(false);
-    }
-
-    private void updateShowCharacters(boolean on) {
-        if (on) {
-            ShowCharacterRuns.createFor(text);
-        } else {
-            ShowCharacterRuns.remove(text);
-        }
+        visualizer.attach(container, text);
     }
 
     private void updateWrap(boolean on) {
@@ -139,7 +140,13 @@ public class TextPage extends TestPaneBase {
 
     private ContextMenu createPopupMenu(PickResult pick) {
         ContextMenu m = new ContextMenu();
-        FX.item(m, "Accessibility Attributes", () -> AccessibilityPropertyViewer.open(pick));
+        FX.item(m, "Accessibility Attributes", () -> {
+            AccessibilityPropertyViewer.open(pick);
+        });
+        StdoutMouseListener.attach(m, text);
+        if (text != pick.getIntersectedNode()) {
+            StdoutMouseListener.attach(m, pick.getIntersectedNode());
+        }
         return m;
     }
 }

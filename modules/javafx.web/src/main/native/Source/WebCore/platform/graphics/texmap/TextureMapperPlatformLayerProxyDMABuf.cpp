@@ -54,7 +54,7 @@ struct TextureMapperPlatformLayerProxyDMABuf::DMABufLayer::EGLImageData {
     ~EGLImageData()
     {
         if (numImages) {
-            auto& platformDisplay = PlatformDisplay::sharedDisplayForCompositing();
+            auto& platformDisplay = PlatformDisplay::sharedDisplay();
             glDeleteTextures(numImages, texture.data());
 
             for (unsigned i = 0; i < numImages; ++i) {
@@ -71,7 +71,11 @@ struct TextureMapperPlatformLayerProxyDMABuf::DMABufLayer::EGLImageData {
     std::array<EGLImageKHR, DMABufFormat::c_maxPlanes> image { EGL_NO_IMAGE_KHR, EGL_NO_IMAGE_KHR, EGL_NO_IMAGE_KHR, EGL_NO_IMAGE_KHR };
 };
 
-TextureMapperPlatformLayerProxyDMABuf::TextureMapperPlatformLayerProxyDMABuf() = default;
+TextureMapperPlatformLayerProxyDMABuf::TextureMapperPlatformLayerProxyDMABuf(ContentType contentType)
+    : TextureMapperPlatformLayerProxy(contentType)
+{
+}
+
 TextureMapperPlatformLayerProxyDMABuf::~TextureMapperPlatformLayerProxyDMABuf() = default;
 
 void TextureMapperPlatformLayerProxyDMABuf::activateOnCompositingThread(Compositor* compositor, TextureMapperLayer* targetLayer)
@@ -161,6 +165,14 @@ void TextureMapperPlatformLayerProxyDMABuf::pushDMABuf(Ref<DMABufLayer>&& dmabuf
         m_pendingLayer->release();
 
     m_pendingLayer = WTFMove(dmabufLayer);
+
+#if HAVE(DISPLAY_LINK)
+    // WebGL changes will cause a composition request during layerFlush. We cannot request
+    // a new compostion here as well or we may trigger two compositions instead of one.
+    if (contentType() == ContentType::WebGL)
+        return;
+#endif
+
     if (m_compositor)
         m_compositor->onNewBufferAvailable();
 }
@@ -177,6 +189,11 @@ void TextureMapperPlatformLayerProxyDMABuf::DMABufLayer::paintToTextureMapper(Te
 {
     if (!m_imageData)
         return;
+
+    if (m_fence) {
+        m_fence->serverWait();
+        m_fence = nullptr;
+    }
 
     static constexpr std::array<GLfloat, 16> s_bt601ConversionMatrix {
         1.164383561643836,  0.0,                1.596026785714286, -0.874202217873451,
@@ -286,7 +303,7 @@ std::unique_ptr<TextureMapperPlatformLayerProxyDMABuf::DMABufLayer::EGLImageData
 {
     using EGLImageData = TextureMapperPlatformLayerProxyDMABuf::DMABufLayer::EGLImageData;
 
-    auto& platformDisplay = PlatformDisplay::sharedDisplayForCompositing();
+    auto& platformDisplay = PlatformDisplay::sharedDisplay();
 
     EGLImageKHR image[DMABufFormat::c_maxPlanes];
     for (unsigned i = 0; i < object.format.numPlanes; ++i) {

@@ -46,6 +46,8 @@
 #include <stdint.h>
 #include <string.h>
 
+PAS_IGNORE_CLANG_WARNINGS_BEGIN("qualifier-requires-header")
+
 #include "pas_utils_prefix.h"
 
 #define PAS_BEGIN_EXTERN_C __PAS_BEGIN_EXTERN_C
@@ -54,7 +56,7 @@
 PAS_BEGIN_EXTERN_C;
 
 #if defined(__has_include)
-#if __has_include(<WebKitAdditions/pas_utils_additions.h>)
+#if __has_include(<WebKitAdditions/pas_utils_additions.h>) && !PAS_ENABLE_TESTING
 #include <WebKitAdditions/pas_utils_additions.h>
 #endif
 #endif
@@ -64,6 +66,7 @@ PAS_BEGIN_EXTERN_C;
 #define PAS_NEVER_INLINE __PAS_NEVER_INLINE
 #define PAS_NO_RETURN __PAS_NO_RETURN
 #define PAS_USED __attribute__((used))
+#define PAS_WARN_UNUSED_RETURN __attribute__((__warn_unused_result__))
 
 #define PAS_COLD /* FIXME: Need some way of triggering cold CC. */
 
@@ -89,6 +92,18 @@ PAS_BEGIN_EXTERN_C;
 #define PAS_ABORT_FUNC_DECL(ID) __PAS_ABORT_FUNC_DECL(ID)
 
 #define PAS_UNUSED_PARAM(variable) __PAS_UNUSED_PARAM(variable)
+
+#define __PAS_UNUSED_1(x) PAS_UNUSED_PARAM(x)
+#define __PAS_UNUSED_2(x, ...) PAS_UNUSED_PARAM(x), __PAS_UNUSED_1(__VA_ARGS__)
+#define __PAS_UNUSED_3(x, ...) PAS_UNUSED_PARAM(x), __PAS_UNUSED_2(__VA_ARGS__)
+#define __PAS_UNUSED_4(x, ...) PAS_UNUSED_PARAM(x), __PAS_UNUSED_3(__VA_ARGS__)
+#define __PAS_UNUSED_5(x, ...) PAS_UNUSED_PARAM(x), __PAS_UNUSED_4(__VA_ARGS__)
+#define __PAS_UNUSED_V_ARITY_IMPL(_1, _2, _3, _4, _5, N, ...) N
+#define __PAS_UNUSED_V_ARITY(...) __PAS_UNUSED_V_ARITY_IMPL(__VA_ARGS__, 5, 4, 3, 2, 1)
+#define __PAS_UNUSED_V_IMPL2(nargs) __PAS_UNUSED_ ## nargs
+#define __PAS_UNUSED_V_IMPL(nargs) __PAS_UNUSED_V_IMPL2(nargs)
+
+#define PAS_UNUSED_V(...) __PAS_UNUSED_V_IMPL(__PAS_UNUSED_V_ARITY(__VA_ARGS__))(__VA_ARGS__)
 
 #define PAS_ARM64 __PAS_ARM64
 #define PAS_ARM64E __PAS_ARM64E
@@ -178,12 +193,11 @@ PAS_BEGIN_EXTERN_C;
 #endif
 
 #ifndef PAS_PROFILE
-#define PAS_PROFILE(...)
+#define PAS_PROFILE(kind, ...) PAS_UNUSED_V(__VA_ARGS__)
 #endif
 
 static PAS_ALWAYS_INLINE void pas_zero_memory(void* memory, size_t size)
 {
-    PAS_PROFILE(memory, ZERO_MEMORY);
     memset(memory, 0, size);
 }
 
@@ -1185,5 +1199,7 @@ enum cpp_initialization_t { cpp_initialization };
 } while (0)
 
 PAS_END_EXTERN_C;
+
+PAS_IGNORE_CLANG_WARNINGS_END // "qualifier-requires-header"
 
 #endif /* PAS_UTILS_H */

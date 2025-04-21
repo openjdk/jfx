@@ -689,7 +689,7 @@ public:
 
     bool trySetArgumentOffset(VM& vm, uint32_t i, ScopeOffset offset)
     {
-        RELEASE_ASSERT_WITH_SECURITY_IMPLICATION(m_arguments);
+        ASSERT_WITH_SECURITY_IMPLICATION(m_arguments);
         auto* maybeCloned = m_arguments->trySet(vm, i, offset);
         if (!maybeCloned)
             return false;

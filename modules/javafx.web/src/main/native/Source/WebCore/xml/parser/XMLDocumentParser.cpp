@@ -53,15 +53,27 @@
 #include "ScriptSourceCode.h"
 #include "StyleScope.h"
 #include "TextResourceDecoder.h"
-#include "TreeDepthLimit.h"
 #include "XMLNSNames.h"
 #include <wtf/Ref.h>
 #include <wtf/Threading.h>
 #include <wtf/Vector.h>
+/*make default value of xml tree depth to 2000 for all platforms*/
+#if PLATFORM(JAVA)
+#ifndef MAX_XML_TREE_DEPTH
+#define MAX_XML_TREE_DEPTH 2000
+#endif
+#endif
 
 namespace WebCore {
 
 using namespace HTMLNames;
+/*Ensure that the maxXMLTreeDepth value is compiler-independent on the
+Windows platform to avoid undefined behavior caused by an MSVC compiler issue.*/
+#if PLATFORM(JAVA)
+const unsigned maxXMLTreeDepth = MAX_XML_TREE_DEPTH;
+#else
+static constexpr unsigned maxXMLTreeDepth = 5000;
+#endif
 
 void XMLDocumentParser::pushCurrentNode(ContainerNode* n)
 {
@@ -71,7 +83,7 @@ void XMLDocumentParser::pushCurrentNode(ContainerNode* n)
         n->ref();
     m_currentNodeStack.append(m_currentNode);
     m_currentNode = n;
-    if (m_currentNodeStack.size() > maxDOMTreeDepth)
+    if (m_currentNodeStack.size() > maxXMLTreeDepth)
         handleError(XMLErrors::fatal, "Excessive node nesting.", textPosition());
 }
 
@@ -157,8 +169,12 @@ bool XMLDocumentParser::updateLeafTextNode()
     if (!m_leafTextNode)
         return true;
 
+    if (isXHTMLDocument())
+        m_leafTextNode->parserAppendData(String::fromUTF8(m_bufferedText.span()));
+    else {
     // This operation might fire mutation event, see below.
-    m_leafTextNode->appendData(String::fromUTF8(m_bufferedText.data(), m_bufferedText.size()));
+        m_leafTextNode->appendData(String::fromUTF8(m_bufferedText.span()));
+    }
     m_bufferedText = { };
 
     m_leafTextNode = nullptr;

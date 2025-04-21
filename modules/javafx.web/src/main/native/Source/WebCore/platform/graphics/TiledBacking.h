@@ -25,8 +25,22 @@
 
 #pragma once
 
+#include "IntPoint.h"
+#include "PlatformLayerIdentifier.h"
+#include "TileGridIdentifier.h"
 #include <wtf/CheckedRef.h>
+#include <wtf/FastMalloc.h>
 #include <wtf/MonotonicTime.h>
+#include <wtf/WeakPtr.h>
+
+namespace WebCore {
+class TiledBackingClient;
+}
+
+namespace WTF {
+template<typename T> struct IsDeprecatedWeakRefSmartPointerException;
+template<> struct IsDeprecatedWeakRefSmartPointerException<WebCore::TiledBackingClient> : std::true_type { };
+}
 
 namespace WebCore {
 
@@ -57,9 +71,40 @@ enum class TiledBackingScrollability : uint8_t {
     VerticallyScrollable    = 1 << 1
 };
 
-class TiledBacking : public CanMakeCheckedPtr {
+using TileIndex = IntPoint;
+class TiledBacking;
+
+class TiledBackingClient : public CanMakeWeakPtr<TiledBackingClient> {
+public:
+    virtual ~TiledBackingClient() = default;
+
+    // paintDirtyRect is in the same coordinate system as tileClip.
+    virtual void willRepaintTile(TiledBacking&, TileGridIdentifier, TileIndex, const FloatRect& tileClip, const FloatRect& paintDirtyRect) = 0;
+    virtual void willRemoveTile(TiledBacking&, TileGridIdentifier, TileIndex) = 0;
+    virtual void willRepaintAllTiles(TiledBacking&, TileGridIdentifier) = 0;
+
+    virtual void didAddGrid(TiledBacking&, TileGridIdentifier) = 0;
+    virtual void willRemoveGrid(TiledBacking&, TileGridIdentifier) = 0;
+
+    virtual void coverageRectDidChange(TiledBacking&, const FloatRect&) = 0;
+    virtual void tilingScaleFactorDidChange(TiledBacking&, float) = 0;
+};
+
+
+class TiledBacking : public CanMakeCheckedPtr<TiledBacking> {
+    WTF_MAKE_FAST_ALLOCATED;
+    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(TiledBacking);
 public:
     virtual ~TiledBacking() = default;
+
+    virtual PlatformLayerIdentifier layerIdentifier() const = 0;
+
+    virtual void setClient(TiledBackingClient*) = 0;
+
+    // Note that the grids switch or change over time.
+    virtual TileGridIdentifier primaryGridIdentifier() const = 0;
+    // There can be a secondary grid when setZoomedOutContentsScale() has been called.
+    virtual std::optional<TileGridIdentifier> secondaryGridIdentifier() const = 0;
 
     virtual void setVisibleRect(const FloatRect&) = 0;
     virtual FloatRect visibleRect() const = 0;
@@ -104,6 +149,8 @@ public:
     virtual void didEndLiveResize() = 0;
 
     virtual IntSize tileSize() const = 0;
+    // The returned rect is in the same coordinate space as the tileClip rect argument to willRepaintTile().
+    virtual FloatRect rectForTile(TileIndex) const = 0;
 
     virtual void revalidateTiles() = 0;
 
@@ -122,6 +169,9 @@ public:
     virtual int bottomMarginHeight() const = 0;
     virtual int leftMarginWidth() const = 0;
     virtual int rightMarginWidth() const = 0;
+
+    // This is the scale used to compute tile sizes; it's contentScale / deviceScaleFactor.
+    virtual float tilingScaleFactor() const  = 0;
 
     virtual void setZoomedOutContentsScale(float) = 0;
     virtual float zoomedOutContentsScale() const = 0;

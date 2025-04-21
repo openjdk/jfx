@@ -37,6 +37,7 @@
 #include "StylePropertiesInlines.h"
 #include "StylePropertyShorthand.h"
 #include <bitset>
+#include <wtf/text/MakeString.h>
 #include <wtf/text/StringBuilder.h>
 
 #ifndef NDEBUG
@@ -52,9 +53,9 @@ constexpr unsigned maxShorthandsForLonghand = 4; // FIXME: Generate this from CS
 
 Ref<ImmutableStyleProperties> StyleProperties::immutableCopyIfNeeded() const
 {
-    if (auto* immutableProperties = dynamicDowncast<ImmutableStyleProperties>(*this))
-        return const_cast<ImmutableStyleProperties&>(*immutableProperties);
-    return downcast<MutableStyleProperties>(*this).immutableCopy();
+    if (m_isMutable)
+        return uncheckedDowncast<MutableStyleProperties>(*this).immutableDeduplicatedCopy();
+    return const_cast<ImmutableStyleProperties&>(uncheckedDowncast<ImmutableStyleProperties>(*this));
 }
 
 String serializeLonghandValue(CSSPropertyID property, const CSSValue& value)
@@ -250,15 +251,11 @@ static constexpr bool canUseShorthandForLonghand(CSSPropertyID shorthandID, CSSP
     case CSSPropertyColumns:
     case CSSPropertyContainer:
     case CSSPropertyFontSynthesis:
-    case CSSPropertyGap:
     case CSSPropertyGridArea:
     case CSSPropertyGridColumn:
     case CSSPropertyGridRow:
     case CSSPropertyMaskPosition:
     case CSSPropertyOffset:
-    case CSSPropertyPlaceContent:
-    case CSSPropertyPlaceItems:
-    case CSSPropertyPlaceSelf:
     case CSSPropertyTextEmphasis:
     case CSSPropertyWebkitTextStroke:
         return false;
@@ -327,7 +324,7 @@ StringBuilder StyleProperties::asTextInternal() const
         else
             result.append(nameLiteral(propertyID));
 
-        result.append(": ", value, property.isImportant() ? " !important" : "", ';');
+        result.append(": "_s, value, property.isImportant() ? " !important"_s : ""_s, ';');
     }
 
     ASSERT(!numDecls ^ !result.isEmpty());
@@ -345,6 +342,24 @@ bool StyleProperties::traverseSubresources(const Function<bool(const CachedResou
     for (auto property : *this) {
         if (property.value()->traverseSubresources(handler))
             return true;
+    }
+    return false;
+}
+
+bool StyleProperties::mayDependOnBaseURL() const
+{
+    bool result = false;
+    Function<IterationStatus(CSSValue&)> func = [&](CSSValue& value) -> IterationStatus {
+        if (value.mayDependOnBaseURL()) {
+            result = true;
+            return IterationStatus::Done;
+        }
+        return value.visitChildren(func);
+    };
+
+    for (auto property : *this) {
+        if (func(*property.value()) == IterationStatus::Done)
+            return result;
     }
     return false;
 }
@@ -378,7 +393,7 @@ Ref<MutableStyleProperties> StyleProperties::copyProperties(std::span<const CSSP
 {
     auto vector = WTF::compactMap(properties, [&](auto& property) -> std::optional<CSSProperty> {
         if (auto value = getPropertyCSSValue(property))
-            return CSSProperty(property, WTFMove(value), false);
+            return CSSProperty(property, WTFMove(value));
         return std::nullopt;
     });
     return MutableStyleProperties::create(WTFMove(vector));
@@ -428,7 +443,7 @@ String StyleProperties::PropertyReference::cssName() const
 
 String StyleProperties::PropertyReference::cssText() const
 {
-    return makeString(cssName(), ": ", WebCore::serializeLonghandValue(id(), *m_value), isImportant() ? " !important;" : ";");
+    return makeString(cssName(), ": "_s, WebCore::serializeLonghandValue(id(), *m_value), isImportant() ? " !important;"_s : ";"_s);
 }
 
 } // namespace WebCore

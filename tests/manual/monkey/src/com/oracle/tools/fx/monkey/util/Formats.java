@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2024, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -24,10 +24,15 @@
  */
 package com.oracle.tools.fx.monkey.util;
 
+import java.text.DecimalFormat;
+import javafx.geometry.Insets;
+
 /**
  * Various formatting methods.
  */
 public class Formats {
+    private static final DecimalFormat FORMAT_2DP = new DecimalFormat("#0.##");
+
     public static String formatDouble(Number value) {
         if (value == null) {
             return "null";
@@ -37,5 +42,21 @@ public class Formats {
             return String.valueOf(value.longValue());
         }
         return String.valueOf(v);
+    }
+
+    public static String format2DP(double v) {
+        return FORMAT_2DP.format(v);
+    }
+
+    public static String formatInsets(Insets v) {
+        if(v == null) {
+            return "null";
+        }
+        return "Insets {" +
+            "T=" + format2DP(v.getTop()) +
+            " R=" + format2DP(v.getRight()) +
+            " B=" + format2DP(v.getBottom()) +
+            " L=" + format2DP(v.getLeft()) +
+            "}";
     }
 }

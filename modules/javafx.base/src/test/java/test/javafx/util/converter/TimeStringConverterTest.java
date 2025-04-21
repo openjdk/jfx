@@ -25,26 +25,23 @@
 
 package test.javafx.util.converter;
 
+import static org.junit.jupiter.api.Assertions.*;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
-import java.util.Arrays;
 import java.util.Calendar;
-import java.util.Collection;
 import java.util.Date;
 import java.util.Locale;
 import java.util.TimeZone;
+import java.util.stream.Stream;
+
 import javafx.util.converter.DateTimeStringConverterShim;
 import javafx.util.converter.TimeStringConverter;
-import static org.junit.Assert.*;
 
-import org.junit.Before;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
 
-/**
- */
-@RunWith(Parameterized.class)
 public class TimeStringConverterTest {
     private static final Date VALID_TIME_WITH_SECONDS;
     private static final Date VALID_TIME_WITHOUT_SECONDS;
@@ -61,109 +58,142 @@ public class TimeStringConverterTest {
         VALID_TIME_WITHOUT_SECONDS = c.getTime();
     }
 
-    @Parameterized.Parameters public static Collection implementations() {
-        return Arrays.asList(new Object[][] {
-            { new TimeStringConverter(),
-              Locale.getDefault(Locale.Category.FORMAT), DateFormat.DEFAULT,
-              VALID_TIME_WITH_SECONDS, null, null },
-
-            { new TimeStringConverter(DateFormat.SHORT),
-              Locale.getDefault(Locale.Category.FORMAT), DateFormat.SHORT,
-              VALID_TIME_WITHOUT_SECONDS, null, null },
-
-            { new TimeStringConverter(Locale.UK),
-              Locale.UK, DateFormat.DEFAULT,
-              VALID_TIME_WITH_SECONDS, null, null },
-
-            { new TimeStringConverter(Locale.UK, DateFormat.SHORT),
-              Locale.UK, DateFormat.SHORT,
-              VALID_TIME_WITHOUT_SECONDS, null, null },
-
-            { new TimeStringConverter("HH mm ss"),
-              Locale.getDefault(Locale.Category.FORMAT), DateFormat.DEFAULT,
-              VALID_TIME_WITH_SECONDS, "HH mm ss", null },
-
-            { new TimeStringConverter(DateFormat.getTimeInstance(DateFormat.FULL)),
-              Locale.getDefault(Locale.Category.FORMAT), DateFormat.DEFAULT,
-              VALID_TIME_WITH_SECONDS, null, DateFormat.getTimeInstance(DateFormat.FULL) },
-        });
+    private static Stream<Arguments> provideAllConverters() {
+        return Stream.of(
+                createTestCase(
+                        new TimeStringConverter(),
+                        Locale.getDefault(Locale.Category.FORMAT),
+                        DateFormat.DEFAULT,
+                        VALID_TIME_WITH_SECONDS,
+                        null,
+                        null
+                ),
+                createTestCase(
+                        new TimeStringConverter(DateFormat.SHORT),
+                        Locale.getDefault(Locale.Category.FORMAT),
+                        DateFormat.SHORT,
+                        VALID_TIME_WITHOUT_SECONDS,
+                        null,
+                        null
+                ),
+                createTestCase(
+                        new TimeStringConverter(Locale.UK),
+                        Locale.UK,
+                        DateFormat.DEFAULT,
+                        VALID_TIME_WITH_SECONDS,
+                        null,
+                        null
+                ),
+                createTestCase(
+                        new TimeStringConverter(Locale.UK, DateFormat.SHORT),
+                        Locale.UK,
+                        DateFormat.SHORT,
+                        VALID_TIME_WITHOUT_SECONDS,
+                        null,
+                        null
+                ),
+                createTestCase(
+                        new TimeStringConverter("HH mm ss"),
+                        Locale.getDefault(Locale.Category.FORMAT),
+                        DateFormat.DEFAULT,
+                        VALID_TIME_WITH_SECONDS,
+                        "HH mm ss",
+                        null
+                ),
+                createTestCase(
+                        new TimeStringConverter(DateFormat.getTimeInstance(DateFormat.FULL)),
+                        Locale.getDefault(Locale.Category.FORMAT),
+                        DateFormat.DEFAULT,
+                        VALID_TIME_WITH_SECONDS,
+                        null,
+                        DateFormat.getTimeInstance(DateFormat.FULL)
+                )
+        );
     }
 
-    private TimeStringConverter converter;
-    private Locale locale;
-    private int timeStyle;
-    private String pattern;
-    private DateFormat dateFormat;
-    private Date validDate;
-    private DateFormat validFormatter;
+    private static Arguments createTestCase(TimeStringConverter converter, Locale locale, int timeStyle, Date validDate, String pattern, DateFormat dateFormat) {
+        DateFormat validFormatter = computeValidFormatter(pattern, dateFormat, timeStyle, locale);
+        return Arguments.of(converter, locale, timeStyle, validDate, pattern, dateFormat, validFormatter);
+    }
 
-    public TimeStringConverterTest(TimeStringConverter converter, Locale locale, int timeStyle, Date validDate, String pattern, DateFormat dateFormat) {
-        this.converter = converter;
-        this.locale = locale;
-        this.timeStyle = timeStyle;
-        this.validDate = validDate;
-        this.pattern = pattern;
-        this.dateFormat = dateFormat;
-
+    private static DateFormat computeValidFormatter(String pattern, DateFormat dateFormat, int timeStyle, Locale locale) {
         if (dateFormat != null) {
-            validFormatter = dateFormat;
+            return dateFormat;
         } else if (pattern != null) {
-            validFormatter = new SimpleDateFormat(pattern);
+            return new SimpleDateFormat(pattern);
         } else {
-            validFormatter = DateFormat.getTimeInstance(timeStyle, locale);
+            return DateFormat.getTimeInstance(timeStyle, locale);
         }
     }
 
-    @Before public void setup() {
+    private static Stream<Arguments> provideConvertersForConstructor() {
+        return provideAllConverters()
+                .map(args -> Arguments.of(args.get()[0], args.get()[1], args.get()[2], args.get()[4], args.get()[5]));
     }
 
-    /*********************************************************************
-     * Test constructors
-     ********************************************************************/
-
-    @Test public void testConstructor() {
+    @ParameterizedTest
+    @MethodSource("provideConvertersForConstructor")
+    void testConstructor(TimeStringConverter converter, Locale locale, int timeStyle, String pattern, DateFormat dateFormat) {
         assertEquals(locale, DateTimeStringConverterShim.getLocale(converter));
         assertEquals(timeStyle, DateTimeStringConverterShim.getTimeStyle(converter));
         assertEquals(pattern, DateTimeStringConverterShim.getPattern(converter));
         assertEquals(dateFormat, DateTimeStringConverterShim.getDateFormatVar(converter));
     }
 
+    private static Stream<Arguments> provideConvertersForGetDateFormat() {
+        return provideAllConverters()
+                .map(args -> Arguments.of(args.get()[0]));
+    }
 
-    /*********************************************************************
-     * Test methods
-     ********************************************************************/
-
-    @Test public void getDateFormat() {
+    @ParameterizedTest
+    @MethodSource("provideConvertersForGetDateFormat")
+    void getDateFormat(TimeStringConverter converter) {
         assertNotNull(DateTimeStringConverterShim.getDateFormat(converter));
     }
 
-    @Test public void getDateFormat_nonNullPattern() {
-        converter = new TimeStringConverter("HH");
-        assertTrue(DateTimeStringConverterShim.getDateFormat(converter)
-                instanceof SimpleDateFormat);
+    @Test
+    void getDateFormat_nonNullPattern() {
+        TimeStringConverter converter = new TimeStringConverter("HH");
+        assertTrue(DateTimeStringConverterShim.getDateFormat(converter) instanceof SimpleDateFormat);
     }
 
+    private static Stream<Arguments> provideConvertersForFromString() {
+        return provideAllConverters()
+                .map(args -> Arguments.of(args.get()[0], args.get()[3], args.get()[6]));
+    }
 
-    /*********************************************************************
-     * Test toString / fromString methods
-     ********************************************************************/
-
-    @Test public void fromString_testValidInput() {
+    @ParameterizedTest
+    @MethodSource("provideConvertersForFromString")
+    void fromString_testValidInput(TimeStringConverter converter, Date validDate, DateFormat validFormatter) {
         String input = validFormatter.format(validDate);
-        assertEquals("Input = "+input, validDate, converter.fromString(input));
+        assertEquals(validDate, converter.fromString(input), "Input = " + input);
     }
 
-    @Test public void fromString_testValidInputWithWhiteSpace() {
+    @ParameterizedTest
+    @MethodSource("provideConvertersForFromString")
+    void fromString_testValidInputWithWhiteSpace(TimeStringConverter converter, Date validDate, DateFormat validFormatter) {
         String input = validFormatter.format(validDate);
-        assertEquals("Input = "+input, validDate, converter.fromString("      " + input + "      "));
+        assertEquals(validDate, converter.fromString("      " + input + "      "), "Input = " + input);
     }
 
-    @Test(expected=RuntimeException.class)
-    public void fromString_testInvalidInput() {
-        converter.fromString("abcdefg");
+    private static Stream<Arguments> provideConvertersForException() {
+        return provideAllConverters()
+                .map(args -> Arguments.of(args.get()[0]));
     }
 
-    @Test public void toString_validOutput() {
+    @ParameterizedTest
+    @MethodSource("provideConvertersForException")
+    void fromString_testInvalidInput(TimeStringConverter converter) {
+        assertThrows(RuntimeException.class, () -> converter.fromString("abcdefg"));
+    }
+
+    private static Stream<Arguments> provideConvertersForToString() {
+        return provideConvertersForFromString();
+    }
+
+    @ParameterizedTest
+    @MethodSource("provideConvertersForToString")
+    void toString_validOutput(TimeStringConverter converter, Date validDate, DateFormat validFormatter) {
         assertEquals(validFormatter.format(validDate), converter.toString(validDate));
     }
 }

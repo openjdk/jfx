@@ -34,20 +34,20 @@
 #include "HTMLElement.h"
 #include "HTMLNames.h"
 #include "MathMLNames.h"
+#include "MouseEvent.h"
 #include "RenderMathMLRow.h"
 #include "RenderTreeUpdater.h"
 #include "SVGElement.h"
-#include <wtf/IsoMallocInlines.h>
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
-WTF_MAKE_ISO_ALLOCATED_IMPL(MathMLSelectElement);
+WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(MathMLSelectElement);
 
 using namespace MathMLNames;
 
 MathMLSelectElement::MathMLSelectElement(const QualifiedName& tagName, Document& document)
     : MathMLRowElement(tagName, document)
-    , m_selectedChild(nullptr)
 {
 }
 
@@ -134,9 +134,9 @@ Element* MathMLSelectElement::getSelectedActionChild()
 {
     ASSERT(hasTagName(mactionTag));
 
-    auto* child = firstElementChild();
+    RefPtr child = firstElementChild();
     if (!child)
-        return child;
+        return nullptr;
 
     // The value of the actiontype attribute is case-sensitive.
     auto& actiontype = attributeWithoutSynchronization(MathMLNames::actiontypeAttr);
@@ -148,17 +148,19 @@ Element* MathMLSelectElement::getSelectedActionChild()
         { }
     } else {
         // For the "toggle" action type or any unknown action type, we rely on the value of the selection attribute to determine the visible child.
-        getSelectedActionChildAndIndex(child);
+        Element* selectedChild;
+        getSelectedActionChildAndIndex(selectedChild);
+        child = selectedChild;
     }
 
-    return child;
+    return child.get();
 }
 
 Element* MathMLSelectElement::getSelectedSemanticsChild()
 {
     ASSERT(hasTagName(semanticsTag));
 
-    auto* child = firstElementChild();
+    RefPtr child = firstElementChild();
     if (!child)
         return nullptr;
 
@@ -167,7 +169,7 @@ Element* MathMLSelectElement::getSelectedSemanticsChild()
         child = child->nextElementSibling();
     } else if (!downcast<MathMLElement>(*child).isSemanticAnnotation()) {
         // The first child is a presentation MathML but not an annotation, so we can just display it.
-        return child;
+        return child.get();
     }
     // Otherwise, the first child is an <annotation> or <annotation-xml> element. This is invalid, but some people use this syntax so we take care of this case too and start the search from this first child.
 
@@ -180,7 +182,7 @@ Element* MathMLSelectElement::getSelectedSemanticsChild()
             if (child->hasAttributeWithoutSynchronization(MathMLNames::srcAttr))
                 continue;
             // Otherwise, we assume it is a text annotation that can always be displayed and we stop here.
-            return child;
+            return child.get();
         }
 
         if (child->hasTagName(MathMLNames::annotation_xmlTag)) {
@@ -190,7 +192,7 @@ Element* MathMLSelectElement::getSelectedSemanticsChild()
             // If the <annotation-xml> element has an encoding attribute describing presentation MathML, SVG or HTML we assume the content can be displayed and we stop here.
             auto& value = child->attributeWithoutSynchronization(MathMLNames::encodingAttr);
             if (isMathMLEncoding(value) || isSVGEncoding(value) || isHTMLEncoding(value))
-                return child;
+                return child.get();
         }
     }
 
@@ -214,7 +216,7 @@ void MathMLSelectElement::updateSelectedChild()
 
 void MathMLSelectElement::defaultEventHandler(Event& event)
 {
-    if (event.type() == eventNames().clickEvent) {
+    if (isAnyClick(event)) {
         if (attributeWithoutSynchronization(MathMLNames::actiontypeAttr) == "toggle"_s) {
             toggle();
             event.setDefaultHandled();

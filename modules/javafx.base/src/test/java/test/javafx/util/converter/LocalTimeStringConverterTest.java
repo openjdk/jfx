@@ -28,24 +28,19 @@ package test.javafx.util.converter;
 import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;
 import java.time.format.FormatStyle;
-import java.util.Arrays;
-import java.util.Collection;
 import java.util.Locale;
+import java.util.stream.Stream;
 
-import javafx.util.converter.LocalTimeStringConverterShim;
 import javafx.util.converter.LocalTimeStringConverter;
+import javafx.util.converter.LocalTimeStringConverterShim;
 
-import static org.junit.Assert.*;
-import org.junit.AfterClass;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
+import static org.junit.jupiter.api.Assertions.*;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
 
-/**
- */
-@RunWith(Parameterized.class)
 public class LocalTimeStringConverterTest {
     private static final LocalTime VALID_TIME_WITH_SECONDS;
     private static final LocalTime VALID_TIME_WITHOUT_SECONDS;
@@ -59,130 +54,120 @@ public class LocalTimeStringConverterTest {
     private static DateTimeFormatter aFormatter = null;
     private static DateTimeFormatter aParser = null;
 
-    // We can only create LocalTimeStringConverter object after Locale is set.
-    // Unfortunately, due to unpredictability of @Parameterized.Parameters methods
-    // in JUnit, we have to allocate it after @BeforeClass sets up Locale and
-    // necessary static fields. Otherwise, the test may collide with other
-    // Local*StringConverter tests and cause unpredictable results.
     private enum LocalTimeStringConverterVariant {
         NO_PARAM,
         WITH_FORMATTER_PARSER,
         WITH_FORMAT_STYLES,
-    };
-
-    @Parameterized.Parameters public static Collection implementations() {
-        return Arrays.asList(new Object[][] {
-            { LocalTimeStringConverterVariant.NO_PARAM,
-              FormatStyle.SHORT, VALID_TIME_WITHOUT_SECONDS },
-
-            { LocalTimeStringConverterVariant.WITH_FORMATTER_PARSER,
-              null, VALID_TIME_WITH_SECONDS },
-
-            { LocalTimeStringConverterVariant.WITH_FORMAT_STYLES,
-              FormatStyle.SHORT, VALID_TIME_WITHOUT_SECONDS },
-        });
     }
 
-    private LocalTimeStringConverterVariant converterVariant;
-    private FormatStyle timeStyle;
-    private LocalTime validTime;
-
-    private LocalTimeStringConverter converter;
-    private Locale locale;
-    private DateTimeFormatter formatter, parser;
-
-    public LocalTimeStringConverterTest(LocalTimeStringConverterVariant converterVariant, FormatStyle timeStyle, LocalTime validTime) {
-        this.converterVariant = converterVariant;
-        this.timeStyle = timeStyle;
-        this.validTime = validTime;
-
-        this.locale = null;
-        this.formatter = null;
-        this.parser = null;
+    static Stream<Arguments> provideTestParameters() {
+        return Stream.of(
+                Arguments.of(LocalTimeStringConverterVariant.NO_PARAM, FormatStyle.SHORT, VALID_TIME_WITHOUT_SECONDS),
+                Arguments.of(LocalTimeStringConverterVariant.WITH_FORMATTER_PARSER, null, VALID_TIME_WITH_SECONDS),
+                Arguments.of(LocalTimeStringConverterVariant.WITH_FORMAT_STYLES, FormatStyle.SHORT, VALID_TIME_WITHOUT_SECONDS)
+        );
     }
 
-    @BeforeClass
+    @BeforeAll
     public static void setupBeforeAll() {
-        // Tests require that default locale is en_US
         oldLocale = Locale.getDefault();
         Locale.setDefault(Locale.US);
 
-        // DateTimeFormatter uses default locale, so we can init this after updating locale
         aFormatter = DateTimeFormatter.ofPattern("HH mm ss");
         aParser = DateTimeFormatter.ofPattern("hh mm ss a");
     }
 
-    @AfterClass
+    @AfterAll
     public static void teardownAfterAll() {
-        // Restore VM's old locale
         Locale.setDefault(oldLocale);
     }
 
-    @Before
-    public void setup() {
-        // Locale is established now, so we can allocate objects depending on it
-        switch (this.converterVariant) {
-        case NO_PARAM:
-            this.converter = new LocalTimeStringConverter();
-            this.locale = Locale.getDefault(Locale.Category.FORMAT);
-            this.formatter = null;
-            this.parser = null;
-            break;
-        case WITH_FORMATTER_PARSER:
-            this.converter = new LocalTimeStringConverter(aFormatter, aParser);
-            this.locale = Locale.getDefault(Locale.Category.FORMAT);
-            this.formatter = aFormatter;
-            this.parser = aParser;
-            break;
-        case WITH_FORMAT_STYLES:
-            this.converter = new LocalTimeStringConverter(FormatStyle.SHORT, Locale.UK);
-            this.locale = Locale.UK;
-            this.formatter = null;
-            this.parser = null;
-            break;
-        default:
-            fail("Invalid converter variant: " + this.converterVariant.toString());
-        }
+    private record ConverterSetup(
+            LocalTimeStringConverter converter,
+            Locale locale,
+            DateTimeFormatter formatter,
+            DateTimeFormatter parser
+    ) {}
+
+    private ConverterSetup setupConverter(
+            LocalTimeStringConverterVariant converterVariant,
+            FormatStyle timeStyle,
+            LocalTime validTime
+    ) {
+        return switch (converterVariant) {
+            case NO_PARAM -> {
+                LocalTimeStringConverter converter = new LocalTimeStringConverter();
+                Locale locale = Locale.getDefault(Locale.Category.FORMAT);
+                yield new ConverterSetup(converter, locale, null, null);
+            }
+            case WITH_FORMATTER_PARSER -> {
+                LocalTimeStringConverter converter = new LocalTimeStringConverter(aFormatter, aParser);
+                Locale locale = Locale.getDefault(Locale.Category.FORMAT);
+                yield new ConverterSetup(converter, locale, aFormatter, aParser);
+            }
+            case WITH_FORMAT_STYLES -> {
+                LocalTimeStringConverter converter = new LocalTimeStringConverter(FormatStyle.SHORT, Locale.UK);
+                yield new ConverterSetup(converter, Locale.UK, null, null);
+            }
+            default -> throw new IllegalArgumentException("Invalid converter variant: " + converterVariant);
+        };
     }
 
-    /*********************************************************************
-     * Test constructors
-     ********************************************************************/
+    @ParameterizedTest
+    @MethodSource("provideTestParameters")
+    void testConstructor(
+            LocalTimeStringConverterVariant converterVariant,
+            FormatStyle timeStyle,
+            LocalTime validTime
+    ) {
+        ConverterSetup setup = setupConverter(converterVariant, timeStyle, validTime);
+        LocalTimeStringConverter converter = setup.converter();
+        Locale locale = setup.locale();
+        DateTimeFormatter formatter = setup.formatter();
+        DateTimeFormatter parser = setup.parser();
 
-    @Test public void testConstructor() {
-        assertEquals(locale,
-                LocalTimeStringConverterShim.getldtConverterLocale(converter));
+        assertEquals(locale, LocalTimeStringConverterShim.getldtConverterLocale(converter));
         assertNull(LocalTimeStringConverterShim.getldtConverterDateStyle(converter));
-        assertEquals((timeStyle != null) ? timeStyle : FormatStyle.SHORT,
-                LocalTimeStringConverterShim.getldtConverterTimeStyle(converter));
+        assertEquals(
+                (timeStyle != null) ? timeStyle : FormatStyle.SHORT,
+                LocalTimeStringConverterShim.getldtConverterTimeStyle(converter)
+        );
         if (formatter != null) {
-            assertEquals(formatter,
-                LocalTimeStringConverterShim.getldtConverterFormatter(converter));
+            assertEquals(formatter, LocalTimeStringConverterShim.getldtConverterFormatter(converter));
         }
         if (parser != null) {
-            assertEquals(parser,
-                LocalTimeStringConverterShim.getldtConverterParser(converter));
+            assertEquals(parser, LocalTimeStringConverterShim.getldtConverterParser(converter));
         } else if (formatter != null) {
-            assertEquals(formatter,
-                LocalTimeStringConverterShim.getldtConverterFormatter(converter));
+            assertEquals(formatter, LocalTimeStringConverterShim.getldtConverterFormatter(converter));
         }
     }
 
+    @ParameterizedTest
+    @MethodSource("provideTestParameters")
+    void toString_to_fromString_testRoundtrip(
+            LocalTimeStringConverterVariant converterVariant,
+            FormatStyle timeStyle,
+            LocalTime validTime
+    ) {
+        ConverterSetup setup = setupConverter(converterVariant, timeStyle, validTime);
+        LocalTimeStringConverter converter = setup.converter();
+        DateTimeFormatter formatter = setup.formatter();
 
-
-    /*********************************************************************
-     * Test toString / fromString methods
-     ********************************************************************/
-
-    @Test public void toString_to_fromString_testRoundtrip() {
         if (formatter == null) {
-            // Only the default formatter/parser can guarantee roundtrip symmetry
             assertEquals(validTime, converter.fromString(converter.toString(validTime)));
         }
     }
 
-    @Test(expected=RuntimeException.class)
-    public void fromString_testInvalidInput() {
-        converter.fromString("abcdefg");
+    @ParameterizedTest
+    @MethodSource("provideTestParameters")
+    void fromString_testInvalidInput(
+            LocalTimeStringConverterVariant converterVariant,
+            FormatStyle timeStyle,
+            LocalTime validTime
+    ) {
+        ConverterSetup setup = setupConverter(converterVariant, timeStyle, validTime);
+        LocalTimeStringConverter converter = setup.converter();
+
+        assertThrows(RuntimeException.class, () -> converter.fromString("abcdefg"));
     }
 }

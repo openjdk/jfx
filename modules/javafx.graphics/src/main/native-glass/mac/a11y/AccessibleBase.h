@@ -26,6 +26,9 @@
 #import <Cocoa/Cocoa.h>
 #import <jni.h>
 
+#define INCREMENT @"AXIncrement"
+#define DECREMENT @"AXDecrement"
+
 @interface AccessibleBase : NSAccessibilityElement {
 @private
 jobject jAccessible;

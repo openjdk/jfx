@@ -36,7 +36,7 @@
 namespace WebCore {
 
 class TouchEvent final : public MouseRelatedEvent {
-    WTF_MAKE_ISO_ALLOCATED(TouchEvent);
+    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(TouchEvent);
 public:
     virtual ~TouchEvent();
 
@@ -70,8 +70,6 @@ public:
     void setChangedTouches(RefPtr<TouchList>&& changedTouches) { m_changedTouches = changedTouches; }
 
     bool isTouchEvent() const override;
-
-    EventInterface eventInterface() const override;
 
 private:
     TouchEvent();

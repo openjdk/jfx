@@ -7,7 +7,7 @@ struct S {
     // CHECK-L: @size value must be non-negative
     @size(-1) y: i32,
 
-    // CHECK-L: @align value must be non-negative
+    // CHECK-L: @align value must be positive
     @align(-1) z: i32,
 
     // CHECK-L: @align value must be a power of two
@@ -20,12 +20,11 @@ struct S {
 // CHECK-L: @binding value must be non-negative
 @group(-1) @binding(-1) var<private> x: i32;
 
-// CHECK-L: @id attribute must only be applied to override variables of scalar type
-// CHECK-L: @id value must be non-negative
+// CHECK-L: @id attribute must only be applied to override variables
 @id(-1) var<private> y: i32;
 
-// CHECK-L: @id attribute must only be applied to override variables of scalar type
-@id(0) override z: array<i32, 1>;
+// CHECK-L: @id value must be non-negative
+@id(-1) override z: i32;
 
 // CHECK-L: @must_use can only be applied to functions that return a value
 @must_use

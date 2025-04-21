@@ -30,12 +30,12 @@
 #include "ElementInlines.h"
 #include "HTMLNames.h"
 #include "SpaceSplitString.h"
-#include <wtf/IsoMallocInlines.h>
 #include <wtf/StdLibExtras.h>
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
-WTF_MAKE_ISO_ALLOCATED_IMPL(CustomElementDefaultARIA);
+WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(CustomElementDefaultARIA);
 
 CustomElementDefaultARIA::CustomElementDefaultARIA() = default;
 CustomElementDefaultARIA::~CustomElementDefaultARIA() = default;
@@ -108,40 +108,39 @@ void CustomElementDefaultARIA::setElementForAttribute(const QualifiedName& name,
     m_map.set(name, WeakPtr<Element, WeakPtrImplWithEventTargetData> { element });
 }
 
-Vector<RefPtr<Element>> CustomElementDefaultARIA::elementsForAttribute(const Element& thisElement, const QualifiedName& name) const
+Vector<Ref<Element>> CustomElementDefaultARIA::elementsForAttribute(const Element& thisElement, const QualifiedName& name) const
 {
-    Vector<RefPtr<Element>> result;
+    Vector<Ref<Element>> result;
     auto it = m_map.find(name);
     if (it == m_map.end())
         return result;
     std::visit(WTF::makeVisitor([&](const AtomString& stringValue) {
-        SpaceSplitString idList { stringValue, SpaceSplitString::ShouldFoldCase::No };
-        result.reserveCapacity(idList.size());
         if (thisElement.isInTreeScope()) {
-            for (unsigned i = 0; i < idList.size(); ++i)
-                result.append(thisElement.treeScope().getElementById(idList[i]));
+            SpaceSplitString idList { stringValue, SpaceSplitString::ShouldFoldCase::No };
+            result = WTF::compactMap(idList, [&](auto& id) {
+                return thisElement.treeScope().getElementById(id);
+            });
         }
     }, [&](const WeakPtr<Element, WeakPtrImplWithEventTargetData>& weakElementValue) {
         RefPtr element = weakElementValue.get();
         if (element && isElementVisible(*element, thisElement))
-            result.append(WTFMove(element));
+            result.append(element.releaseNonNull());
     }, [&](const Vector<WeakPtr<Element, WeakPtrImplWithEventTargetData>>& elements) {
-        result.reserveCapacity(elements.size());
+        result.reserveInitialCapacity(elements.size());
         for (auto& weakElement : elements) {
             if (RefPtr element = weakElement.get(); element && isElementVisible(*element, thisElement))
-                result.append(WTFMove(element));
+                result.append(element.releaseNonNull());
         }
     }), it->value);
     return result;
 }
 
-void CustomElementDefaultARIA::setElementsForAttribute(const QualifiedName& name, std::optional<Vector<RefPtr<Element>>>&& values)
+void CustomElementDefaultARIA::setElementsForAttribute(const QualifiedName& name, std::optional<Vector<Ref<Element>>>&& values)
 {
     Vector<WeakPtr<Element, WeakPtrImplWithEventTargetData>> elements;
     if (values) {
         for (auto& element : *values) {
-            ASSERT(element);
-            elements.append(WeakPtr<Element, WeakPtrImplWithEventTargetData> { *element });
+            elements.append(WeakPtr<Element, WeakPtrImplWithEventTargetData> { element });
         }
     }
     m_map.set(name, WTFMove(elements));

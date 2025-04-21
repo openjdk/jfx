@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 1997, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 1997, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -31,6 +31,8 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.StreamTokenizer;
 import java.io.StringReader;
+import java.nio.charset.Charset;
+import java.nio.charset.CodingErrorAction;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -116,8 +118,34 @@ public class RTFReader extends RTFParser {
      *  for those keywords which simply insert some text. */
     private static final HashMap<String, String> textKeywords = initTextKeywords();
     private static final HashMap<String, char[]> characterSets = initCharacterSets();
+    /** maps String font charset to String code page. */
+    private static HashMap<String, String> fcharsetToCP = initFCharsetToCP();
+    /** maps Integer font numbers to Charset font charset. */
+    private HashMap<Integer, Charset> fcharsetTable = new HashMap<>();
 
-    /* TODO: per-font font encodings ( \fcharset control word ) ? */
+    // Windows charsets
+    private static final int ANSI_CHARSET        = 0;
+    private static final int DEFAULT_CHARSET     = 1;
+    private static final int SYMBOL_CHARSET      = 2;
+    private static final int MAC_CHARSET         = 77;
+    private static final int SHIFTJIS_CHARSET    = 128;
+    private static final int HANGUL_CHARSET      = 129;
+    private static final int JOHAB_CHARSET       = 130;
+    private static final int GB2312_CHARSET      = 134;
+    private static final int CHINESEBIG5_CHARSET = 136;
+    private static final int GREEK_CHARSET       = 161;
+    private static final int TURKISH_CHARSET     = 162;
+    private static final int VIETNAMESE_CHARSET  = 163;
+    private static final int HEBREW_CHARSET      = 177;
+    private static final int ARABIC_CHARSET      = 178;
+    private static final int BALTIC_CHARSET      = 186;
+    private static final int RUSSIAN_CHARSET     = 204;
+    private static final int THAI_CHARSET        = 222;
+    private static final int EASTEUROPE_CHARSET  = 238;
+    private static final int OEM_CHARSET         = 255;
+
+    // Defined for replacement character
+    private static final String REPLACEMENT_CHAR = "\uFFFD";
 
     /**
      * Creates a new RTFReader instance.
@@ -125,7 +153,6 @@ public class RTFReader extends RTFParser {
      */
     public RTFReader(String text) {
         this.text = text;
-        //System.err.println(text); // FIX
 
         parserState = new HashMap<>();
         fontTable = new HashMap<Integer, String>();
@@ -158,6 +185,7 @@ public class RTFReader extends RTFParser {
         m.put("emspace", "\u2003");
         m.put("endash", "\u2013");
         m.put("enspace", "\u2002");
+        m.put("line", "\n");
         m.put("ldblquote", "\u201C");
         m.put("lquote", "\u2018");
         m.put("ltrmark", "\u200E");
@@ -170,6 +198,26 @@ public class RTFReader extends RTFParser {
         // There is no Unicode equivalent to an optional hyphen, as far as I can tell.
         // TODO optional hyphen
         m.put("-", "\u2027");
+        return m;
+    }
+
+    private static HashMap<String, String> initFCharsetToCP() {
+        HashMap<String, String> m = new HashMap<String, String>();
+        m.put("fcharset" + ANSI_CHARSET, "windows-1252");
+        m.put("fcharset" + SHIFTJIS_CHARSET, "ms932");
+        m.put("fcharset" + HANGUL_CHARSET, "ms949");
+        m.put("fcharset" + JOHAB_CHARSET, "ms1361");
+        m.put("fcharset" + GB2312_CHARSET, "ms936");
+        m.put("fcharset" + CHINESEBIG5_CHARSET, "ms950");
+        m.put("fcharset" + GREEK_CHARSET, "windows-1253");
+        m.put("fcharset" + TURKISH_CHARSET, "windows-1254");
+        m.put("fcharset" + VIETNAMESE_CHARSET, "windows-1258");
+        m.put("fcharset" + HEBREW_CHARSET, "windows-1255");
+        m.put("fcharset" + ARABIC_CHARSET, "windows-1256");
+        m.put("fcharset" + BALTIC_CHARSET, "windows-1257");
+        m.put("fcharset" + RUSSIAN_CHARSET, "windows-1251");
+        m.put("fcharset" + THAI_CHARSET, "ms874");
+        m.put("fcharset" + EASTEUROPE_CHARSET, "windows-1250");
         return m;
     }
 
@@ -703,6 +751,25 @@ public class RTFReader extends RTFParser {
                 nextFontNumber = parameter;
                 return true;
             }
+            // For fcharset control word
+            if (keyword.equals("fcharset")) {
+                String fcharset = keyword + parameter;
+                String csName = fcharsetToCP.get(fcharset);
+                Charset cs;
+                if (csName != null) {
+                    try {
+                        cs = Charset.forName(csName);
+                    } catch (IllegalArgumentException iae) {
+                        // Fallback, should not be called
+                        cs = StandardCharsets.ISO_8859_1;
+                    }
+                } else {
+                    // Fallback, fcharset control word number is not defined
+                    cs = StandardCharsets.ISO_8859_1;
+                }
+                fcharsetTable.put(nextFontNumber, cs);
+                return true;
+            }
             return false;
         }
     }
@@ -782,11 +849,11 @@ public class RTFReader extends RTFParser {
             HashMap<Integer, Style> secStyles = new HashMap<>();
             for (StyleDefiningDestination style : definedStyles.values()) {
                 Style defined = style.realize();
-                String stype = (String)defined.getAttribute(STYLE_TYPE);
+                Object stype = defined.getAttribute(STYLE_TYPE);
                 Map<Integer, Style> toMap;
-                if (stype.equals(STYLE_SECTION)) {
+                if (stype == STYLE_SECTION) {
                     toMap = secStyles;
-                } else if (stype.equals(STYLE_CHARACTER)) {
+                } else if (stype == STYLE_CHARACTER) {
                     toMap = chrStyles;
                 } else {
                     toMap = pgfStyles;
@@ -1063,6 +1130,24 @@ public class RTFReader extends RTFParser {
             switch (keyword) {
             case "f":
                 parserState.put(keyword, Integer.valueOf(parameter));
+                // Check lead byte is stored or not
+                if (decoderBB.position() == 1) {
+                    handleText(REPLACEMENT_CHAR);
+                }
+                // Reset decoder byte buffer
+                decoderBB.clear();
+                decoderBB.limit(1);
+                // Check fcharset is used or not
+                Charset cs = fcharsetTable.get(parameter);
+                if (cs != null) {
+                    decoder = cs.newDecoder();
+                    decoder
+                        .onMalformedInput(CodingErrorAction.REPLACE)
+                        .onUnmappableCharacter(CodingErrorAction.REPLACE);
+                } else {
+                    // fcharset is not used, use translationTable
+                    decoder = null;
+                }
                 return true;
             case "cf":
                 parserState.put(keyword, Integer.valueOf(parameter));
@@ -1167,7 +1252,7 @@ public class RTFReader extends RTFParser {
 
             switch (keyword) {
             case "fs":
-                characterAttributes.addAttribute(StyleAttributeMap.FONT_SIZE, (parameter / 2));
+                characterAttributes.addAttribute(StyleAttributeMap.FONT_SIZE, (parameter / 2.0));
                 return true;
             }
 
@@ -1425,6 +1510,12 @@ public class RTFReader extends RTFParser {
             case "\r":
             case "\n":
             case "par":
+                // Check lead byte is stored or not
+                if (decoderBB.position() == 1) {
+                    handleText(REPLACEMENT_CHAR);
+                    decoderBB.clear();
+                    decoderBB.limit(1);
+                }
                 endParagraph();
                 return true;
             case "sect":

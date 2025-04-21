@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2015, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -43,6 +43,10 @@ public class ParentShim extends Parent {
 
     public static <E extends Node> List<E> getManagedChildren(Parent p) {
         return p.getManagedChildren();
+    }
+
+    public static void setNeedsLayout(Parent p, boolean value) {
+        p.setNeedsLayout(value);
     }
 
     public static List<Node> test_getRemoved(Parent p) {
