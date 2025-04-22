@@ -929,8 +929,7 @@ xmlDictQLookup(xmlDictPtr dict, const xmlChar *prefix, const xmlChar *name) {
   #include <windows.h>
   #include <bcrypt.h>
 #else
-  // This block will compile on macOS (and any non-Linux system) if HAVE_GETENTROPY is defined
-  #if defined(HAVE_GETENTROPY) && !defined(__linux__)
+  #if defined(HAVE_GETENTROPY)
     #ifdef HAVE_UNISTD_H
       #include <unistd.h>
     #endif
@@ -970,9 +969,7 @@ xmlInitRandom(void) {
 #else
         int var;
 
-// This block will compile on macOS (and any non-Linux system) if HAVE_GETENTROPY is defined
-// issue : sys/random.h is not found on linux
-#if defined(HAVE_GETENTROPY) && !defined(__linux__)
+#if defined(HAVE_GETENTROPY)
         while (1) {
             if (getentropy(globalRngState, sizeof(globalRngState)) == 0)
                 return;

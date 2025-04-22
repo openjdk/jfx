@@ -26,7 +26,7 @@
 #define HAVE_FTIME 1
 
 /* getentropy */
-#define HAVE_GETENTROPY 0
+/* #undef HAVE_GETENTROPY */
 
 /* Define to 1 if you have the `gettimeofday' function. */
 #define HAVE_GETTIMEOFDAY 1
@@ -94,7 +94,7 @@
 #define HAVE_SYS_MMAN_H 1
 
 /* Define to 1 if you have the <sys/random.h> header file. */
-#define HAVE_SYS_RANDOM_H 0
+/* #define HAVE_SYS_RANDOM_H */
 
 /* Define to 1 if you have the <sys/select.h> header file. */
 /* #undef HAVE_SYS_SELECT_H */
