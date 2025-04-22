@@ -33,6 +33,7 @@ public interface TabAdvancePolicy {
     /**
      * Indicates the start of the layout cycle.
      */
+    // TODO this may not be necessary, double check
     public void reset();
 
     /**

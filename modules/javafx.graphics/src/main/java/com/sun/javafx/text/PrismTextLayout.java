@@ -696,7 +696,6 @@ public class PrismTextLayout implements TextLayout {
         }
         if (tabAdvancePolicy == null || (!tabAdvancePolicy.equals(policy))) {
             tabAdvancePolicy = policy;
-            System.out.println("setTabAdvancePolicy: " + policy);
             relayout();
             return true;
         }

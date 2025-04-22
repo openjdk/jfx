@@ -72,11 +72,10 @@ public class DefaultTabAdvancePolicy implements TabAdvancePolicy {
         // FIX may not need if created upon change!
         float off = computeOffset(flow, ref);
         if(offset != off) {
-            System.out.println(" *** reset. offset=" + offset + " off=" + off);
-            offset = off;
-            return;
+            // remove reset() if this never happens
+            throw new Error(" *** reset. offset=" + offset + " off=" + off);
         }
-        System.out.println("reset. offset=" + offset);
+        //System.out.println("reset. offset=" + offset);
     }
 
     @Override
@@ -95,11 +94,15 @@ public class DefaultTabAdvancePolicy implements TabAdvancePolicy {
     private static float computeOffset(TextFlow flow, Region reference) {
         if (reference != null) {
             Point2D p0 = reference.localToScreen(0, 0);
-            Point2D p1 = flow.localToScreen(flow.snappedLeftInset(), 0);
-            // TODO rtl
-            float v = (float)(p1.getX() - p0.getX());
-            if (!Float.isNaN(v)) {
-                return v;
+            if (p0 != null) {
+                Point2D p1 = flow.localToScreen(flow.snappedLeftInset(), 0);
+                if (p1 != null) {
+                    // TODO rtl
+                    float v = (float)(p1.getX() - p0.getX());
+                    if (!Float.isNaN(v)) {
+                        return v;
+                    }
+                }
             }
         }
         return 0.0f;

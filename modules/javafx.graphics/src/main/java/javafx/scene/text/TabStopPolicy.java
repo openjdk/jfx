@@ -78,12 +78,13 @@ public class TabStopPolicy {
      * Provides default tab stops (beyond the last tab stop specified by {@code #tabStops()},
      * as a fixed repeating distance in pixels from the last tab stop position.
      * The position of default tab stops is computed at regular intervals relative to the leading edge
-     * of the {@link #getReference() reference Rectangle} (or, if the reference rectangle is {@code null),
-     * the leading edge of the {@code TextFlow} this policy is registered with).
+     * of the {@link #getReference() reference Rectangle} or, if the reference rectangle is {@code null},
+     * the leading edge of the {@code TextFlow} this policy is registered with.
      * <p>
-     * The value of {@code 0} disabled the default stops.
+     * The value of 0 disables the default stops.
      *
-     * @return the default tab stops property, in pixels.
+     * @return the default tab stops property
+     * @defaultValue 0
      */
     public final DoubleProperty defaultStopsProperty() {
         return defaultStops;

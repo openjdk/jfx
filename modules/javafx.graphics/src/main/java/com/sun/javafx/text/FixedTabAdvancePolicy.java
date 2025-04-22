@@ -54,7 +54,7 @@ public class FixedTabAdvancePolicy implements TabAdvancePolicy {
     public float nextTabStop(float position) {
         return nextPosition(position, tabAdvance);
     }
-    
+
     static float nextPosition(float position, float tabAdvance) {
         // there is a weird case (tabAdvance=57.6 and position=172.79999)
         // when the original formula
@@ -62,7 +62,7 @@ public class FixedTabAdvancePolicy implements TabAdvancePolicy {
         // returns the same pos=172.79999 next=172.79999
         float n = (position / tabAdvance);
         float f = ((int)(n + Math.ulp(n)) + 1) * tabAdvance;
-        System.out.println("pos=" + position + " next=" + f); // FIX
+        //System.out.println("pos=" + position + " next=" + f); // FIX
         return f;
     }
 

@@ -585,20 +585,6 @@ public class TextFlow extends Pane {
                 {
                     sceneProperty().addListener(monitor);
                     localToSceneTransformProperty().addListener(monitor);
-
-                    // this is painful
-//                    localToSceneTransformProperty().addListener((src, old, cur) -> {
-//                        if (old != null) {
-//                            old.removeEventHandler(TransformChangedEvent.TRANSFORM_CHANGED, monitor);
-//                        }
-//                        if (cur != null) {
-//                            cur.addEventHandler(TransformChangedEvent.TRANSFORM_CHANGED, monitor);
-//                        }
-//                    });
-//                    Transform t = getLocalToSceneTransform();
-//                    if (t != null) {
-//                        t.addEventHandler(TransformChangedEvent.TRANSFORM_CHANGED, monitor);
-//                    }
                 }
 
                 @Override
@@ -638,7 +624,6 @@ public class TextFlow extends Pane {
                 private void updateTabAdvancePolicy() {
                     TextLayout layout = getTextLayout();
                     if (layout.setTabAdvancePolicy(getTabSize(), getTabAdvancePolicy())) {
-                        System.err.println("updateTabAdvancePolicy " + getTabAdvancePolicy()); // FIX
                         requestLayout();
                     }
                 }
