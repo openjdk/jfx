@@ -80,8 +80,6 @@ jmethodID jWindowNotifyDelegatePtr;
 jfieldID jWindowPtr;
 jfieldID jCursorPtr;
 
-jmethodID jGtkWindowNotifyStateChanged;
-
 jmethodID jClipboardContentChanged;
 
 jmethodID jSizeInit;
@@ -268,9 +266,6 @@ JNI_OnLoad(JavaVM *jvm, void *reserved)
     if (env->ExceptionCheck()) return JNI_ERR;
 
     clazz = env->FindClass("com/sun/glass/ui/gtk/GtkWindow");
-    if (env->ExceptionCheck()) return JNI_ERR;
-    jGtkWindowNotifyStateChanged =
-            env->GetMethodID(clazz, "notifyStateChanged", "(I)V");
     if (env->ExceptionCheck()) return JNI_ERR;
 
     clazz = env->FindClass("com/sun/glass/ui/Clipboard");

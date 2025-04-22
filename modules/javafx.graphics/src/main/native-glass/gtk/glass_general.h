@@ -194,8 +194,6 @@ private:
     extern jfieldID jWindowPtr; // com.sun.glass.ui.Window#ptr
     extern jfieldID jCursorPtr; // com.sun.glass.ui.Cursor#ptr
 
-    extern jmethodID jGtkWindowNotifyStateChanged; // com.sun.glass.ui.GtkWindow#notifyStateChanged (I)V
-
     extern jmethodID jClipboardContentChanged; // com.sun.glass.ui.Clipboard#contentChanged ()V
 
     extern jmethodID jSizeInit; // com.sun.class.ui.Size#<init> ()V
@@ -249,6 +247,8 @@ private:
 #define LOG3(msg, param1, param2, param3) {printf(msg, param1, param2, param3);fflush(stdout);}
 #define LOG4(msg, param1, param2, param3, param4) {printf(msg, param1, param2, param3, param4);fflush(stdout);}
 #define LOG5(msg, param1, param2, param3, param4, param5) {printf(msg, param1, param2, param3, param4, param5);fflush(stdout);}
+#define LOG10(msg, param1, param2, param3, param4, param5, param6, param7, param8, param9, param10) \
+    {printf(msg, param1, param2, param3, param4, param5, param6, param7, param8, param9, param10);fflush(stdout);}
 
 #define LOG_STRING_ARRAY(env, array) dump_jstring_array(env, array);
 
@@ -264,6 +264,7 @@ private:
 #define LOG3(msg, param1, param2, param3)
 #define LOG4(msg, param1, param2, param3, param4)
 #define LOG5(msg, param1, param2, param3, param4, param5)
+#define LOG10(msg, param1, param2, param3, param4, param5, param6, param7, param8, param9, param10)
 
 #define LOG_STRING_ARRAY(env, array)
 

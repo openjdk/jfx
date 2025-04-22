@@ -24,6 +24,7 @@
  */
 package com.sun.glass.ui.gtk;
 
+import com.sun.glass.events.ViewEvent;
 import com.sun.glass.ui.Pixels;
 import com.sun.glass.ui.View;
 
@@ -98,8 +99,18 @@ final class GtkView extends View {
     private native void _uploadPixelsByteArray(long viewPtr, byte[] pixels, int offset, int width, int height);
     private native void _uploadPixelsIntArray(long viewPtr, int[] pixels, int offset, int width, int height);
 
+    protected native void enterFullscreenImpl(long ptr, boolean animate, boolean keepRatio, boolean hideCursor);
+
     @Override
-    protected native boolean _enterFullscreen(long ptr, boolean animate, boolean keepRatio, boolean hideCursor);
+    protected boolean _enterFullscreen(long ptr, boolean animate, boolean keepRatio, boolean hideCursor) {
+        enterFullscreenImpl(ptr, animate, keepRatio, hideCursor);
+
+        if (getWindow() != null && !getWindow().isVisible()) {
+            notifyView(ViewEvent.FULLSCREEN_ENTER);
+        }
+
+        return true;
+    }
 
     @Override
     protected native void _exitFullscreen(long ptr, boolean animate);

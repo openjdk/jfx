@@ -25,20 +25,24 @@
 
 package test.robot.javafx.stage;
 
-import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.junit.jupiter.api.Assumptions.assumeTrue;
-import static test.util.Util.TIMEOUT;
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.TimeUnit;
 import javafx.application.Platform;
 import javafx.scene.Scene;
 import javafx.scene.layout.Pane;
 import javafx.scene.paint.Color;
 import javafx.stage.Stage;
 import javafx.stage.StageStyle;
-import org.junit.jupiter.api.Test;
-import com.sun.javafx.PlatformUtil;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.EnumSource;
 import test.robot.testharness.VisualTestBase;
+import test.util.Util;
+
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
+
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static test.util.Util.PARAMETERIZED_TEST_DISPLAY;
+import static test.util.Util.TIMEOUT;
 
 public class StageAttributesTest extends VisualTestBase {
 
@@ -54,7 +58,8 @@ public class StageAttributesTest extends VisualTestBase {
     private Scene topScene;
     private Stage topStage;
 
-    private void setupStages(boolean overlayed, boolean topShown) throws InterruptedException {
+    private void setupStages(boolean overlayed, boolean topShown, StageStyle topStageStyle)
+            throws InterruptedException {
         final CountDownLatch bottomShownLatch = new CountDownLatch(1);
         final CountDownLatch topShownLatch = new CountDownLatch(1);
 
@@ -76,7 +81,7 @@ public class StageAttributesTest extends VisualTestBase {
         runAndWait(() -> {
             // Top stage, will be inconified
             topStage = getStage(true);
-            topStage.initStyle(StageStyle.DECORATED);
+            topStage.initStyle(topStageStyle);
             topScene = new Scene(new Pane(), WIDTH, HEIGHT);
             topScene.setFill(TOP_COLOR);
             topStage.setScene(topScene);
@@ -100,13 +105,10 @@ public class StageAttributesTest extends VisualTestBase {
         sleep(1000);
     }
 
-    @Test
-    public void testIconifiedStage() throws InterruptedException {
-        // Skip on Linux due to:
-        //  - JDK-8316423
-        assumeTrue(!PlatformUtil.isLinux());
-
-        setupStages(true, true);
+    @ParameterizedTest(name = PARAMETERIZED_TEST_DISPLAY)
+    @EnumSource(value = StageStyle.class, mode = EnumSource.Mode.INCLUDE, names = {"DECORATED", "UNDECORATED"})
+    public void testIconifiedStage(StageStyle stageStyle) throws InterruptedException {
+        setupStages(true, true, stageStyle);
 
         runAndWait(() -> {
             Color color = getColor(200, 200);
@@ -125,13 +127,10 @@ public class StageAttributesTest extends VisualTestBase {
         });
     }
 
-    @Test
-    public void testMaximizedStage() throws InterruptedException {
-        // Skip on Linux due to:
-        //  - JDK-8316423
-        assumeTrue(!PlatformUtil.isLinux());
-
-        setupStages(false, true);
+    @ParameterizedTest(name = PARAMETERIZED_TEST_DISPLAY)
+    @EnumSource(value = StageStyle.class, mode = EnumSource.Mode.INCLUDE, names = {"DECORATED", "UNDECORATED"})
+    public void testMaximizedStage(StageStyle stageStyle) throws InterruptedException {
+        setupStages(false, true, stageStyle);
 
         runAndWait(() -> {
             Color color = getColor(200, 200);
@@ -151,6 +150,11 @@ public class StageAttributesTest extends VisualTestBase {
             assertColorEquals(TOP_COLOR, color, TOLERANCE);
         });
 
+        // Do not test decorations for UNDECORATED
+        if (stageStyle.equals(StageStyle.UNDECORATED)) {
+            return;
+        }
+
         // wait a little bit between getColor() calls - on macOS the below one
         // would fail without this wait
         sleep(100);
@@ -163,13 +167,10 @@ public class StageAttributesTest extends VisualTestBase {
         });
     }
 
-    @Test
-    public void testFullScreenStage() throws InterruptedException {
-        // Skip on Linux due to:
-        //  - JDK-8316423
-        assumeTrue(!PlatformUtil.isLinux());
-
-        setupStages(false, true);
+    @ParameterizedTest(name = PARAMETERIZED_TEST_DISPLAY)
+    @EnumSource(value = StageStyle.class, mode = EnumSource.Mode.INCLUDE, names = {"DECORATED", "UNDECORATED"})
+    public void testFullScreenStage(StageStyle stageStyle) throws InterruptedException {
+        setupStages(false, true, stageStyle);
 
         runAndWait(() -> {
             Color color = getColor(200, 200);
@@ -200,13 +201,10 @@ public class StageAttributesTest extends VisualTestBase {
         });
     }
 
-    @Test
-    public void testIconifiedStageBeforeShow() throws InterruptedException {
-        // Skip on Linux due to:
-        //  - JDK-8316423
-        assumeTrue(!PlatformUtil.isLinux());
-
-        setupStages(true, false);
+    @ParameterizedTest(name = PARAMETERIZED_TEST_DISPLAY)
+    @EnumSource(value = StageStyle.class, mode = EnumSource.Mode.INCLUDE, names = {"DECORATED", "UNDECORATED"})
+    public void testIconifiedStageBeforeShow(StageStyle stageStyle) throws InterruptedException {
+        setupStages(true, false, stageStyle);
 
         runAndWait(() -> {
             Color color = getColor(200, 200);
@@ -229,14 +227,10 @@ public class StageAttributesTest extends VisualTestBase {
         });
     }
 
-    @Test
-    public void testMaximizedStageBeforeShow() throws InterruptedException {
-        // Skip on Linux due to:
-        //  - JDK-8316423
-        //  - JDK-8316425
-        assumeTrue(!PlatformUtil.isLinux());
-
-        setupStages(false, false);
+    @ParameterizedTest(name = PARAMETERIZED_TEST_DISPLAY)
+    @EnumSource(value = StageStyle.class, mode = EnumSource.Mode.INCLUDE, names = {"DECORATED", "UNDECORATED"})
+    public void testMaximizedStageBeforeShow(StageStyle stageStyle) throws InterruptedException {
+        setupStages(false, false, stageStyle);
 
         runAndWait(() -> {
             Color color = getColor(200, 200);
@@ -257,6 +251,12 @@ public class StageAttributesTest extends VisualTestBase {
             assertColorEquals(TOP_COLOR, color, TOLERANCE);
         });
 
+
+        // Do not test decorations for UNDECORATED
+        if (stageStyle.equals(StageStyle.UNDECORATED)) {
+            return;
+        }
+
         // wait a little bit between getColor() calls - on macOS the below one
         // would fail without this wait
         sleep(100);
@@ -269,14 +269,10 @@ public class StageAttributesTest extends VisualTestBase {
         });
     }
 
-    @Test
-    public void testFullScreenStageBeforeShow() throws InterruptedException {
-        // Skip on Linux due to:
-        //  - JDK-8316423
-        //  - JDK-8316425
-        assumeTrue(!PlatformUtil.isLinux());
-
-        setupStages(false, false);
+    @ParameterizedTest(name = PARAMETERIZED_TEST_DISPLAY)
+    @EnumSource(value = StageStyle.class, mode = EnumSource.Mode.INCLUDE, names = {"DECORATED", "UNDECORATED"})
+    public void testFullScreenStageBeforeShow(StageStyle stageStyle) throws InterruptedException {
+        setupStages(false, false, stageStyle);
 
         runAndWait(() -> {
             Color color = getColor(200, 200);
@@ -306,5 +302,131 @@ public class StageAttributesTest extends VisualTestBase {
             Color color = getColor((int)topStage.getX() + 5, (int)topStage.getY() + 5);
             assertColorEquals(TOP_COLOR, color, TOLERANCE);
         });
+    }
+
+    @ParameterizedTest(name = PARAMETERIZED_TEST_DISPLAY)
+    @EnumSource(value = StageStyle.class, mode = EnumSource.Mode.INCLUDE, names = {"DECORATED", "UNDECORATED"})
+    void testStageStatePrecedenceOrderIconifiedMaximizedBeforeShow(StageStyle stageStyle) throws InterruptedException {
+        setupStages(false, false, stageStyle);
+
+        Util.doTimeLine(1000,
+                () -> {
+                    Color color = getColor(200, 200);
+                    assertColorEquals(BOTTOM_COLOR, color, TOLERANCE);
+
+                    topStage.setIconified(true);
+                    topStage.setMaximized(true);
+                    topStage.show();
+                },
+                () -> {
+                    assertTrue(topStage.isIconified());
+                    assertTrue(topStage.isMaximized());
+
+                    Color color = getColor(200, 200);
+                    // Should remain iconified
+                    assertColorEquals(BOTTOM_COLOR, color, TOLERANCE);
+                },
+                () -> topStage.setIconified(false),
+                () -> {
+                    assertTrue(topStage.isMaximized());
+                    assertFalse(topStage.isIconified());
+
+                    Color color = getColor(200, 200);
+                    assertColorEquals(TOP_COLOR, color, TOLERANCE);
+                });
+    }
+
+    @ParameterizedTest(name = PARAMETERIZED_TEST_DISPLAY)
+    @EnumSource(value = StageStyle.class, mode = EnumSource.Mode.INCLUDE, names = {"DECORATED", "UNDECORATED"})
+    void testStageStatePrecedenceOrderIconifiedFullScreenBeforeShow(StageStyle stageStyle) throws InterruptedException {
+        setupStages(false, false, stageStyle);
+
+        Util.doTimeLine(1000,
+                () -> {
+                    Color color = getColor(200, 200);
+                    assertColorEquals(BOTTOM_COLOR, color, TOLERANCE);
+
+                    topStage.setIconified(true);
+                    topStage.setFullScreen(true);
+                    topStage.show();
+                },
+                () -> {
+                    assertTrue(topStage.isIconified());
+                    assertTrue(topStage.isFullScreen());
+
+                    Color color = getColor(200, 200);
+                    // Should remain iconified
+                    assertColorEquals(BOTTOM_COLOR, color, TOLERANCE);
+                },
+                () -> topStage.setIconified(false),
+                () -> {
+                    assertTrue(topStage.isFullScreen());
+                    assertFalse(topStage.isIconified());
+
+                    Color color = getColor(200, 200);
+                    assertColorEquals(TOP_COLOR, color, TOLERANCE);
+                });
+    }
+
+    @ParameterizedTest(name = PARAMETERIZED_TEST_DISPLAY)
+    @EnumSource(value = StageStyle.class, mode = EnumSource.Mode.INCLUDE, names = {"DECORATED", "UNDECORATED"})
+    void testStageStatePrecedenceOrderIconifiedMaximizedAfterShow(StageStyle stageStyle) throws InterruptedException {
+        setupStages(true, true, stageStyle);
+
+        Util.doTimeLine(1000,
+                () -> {
+                    Color color = getColor(200, 200);
+                    assertColorEquals(TOP_COLOR, color, TOLERANCE);
+
+                    topStage.setIconified(true);
+                    topStage.setMaximized(true);
+                },
+                () -> {
+                    assertTrue(topStage.isMaximized());
+                    assertTrue(topStage.isIconified());
+
+                    Color color = getColor(200, 200);
+                    // Should remain iconified
+                    assertColorEquals(BOTTOM_COLOR, color, TOLERANCE);
+                },
+                () -> topStage.setIconified(false),
+                () -> {
+                    assertTrue(topStage.isMaximized());
+                    assertFalse(topStage.isIconified());
+
+                    Color color = getColor(200, 200);
+                    assertColorEquals(TOP_COLOR, color, TOLERANCE);
+                });
+    }
+
+    @ParameterizedTest(name = PARAMETERIZED_TEST_DISPLAY)
+    @EnumSource(value = StageStyle.class, mode = EnumSource.Mode.INCLUDE, names = {"DECORATED", "UNDECORATED"})
+    void testStageStatePrecedenceOrderIconifiedFullScreenAfterShow(StageStyle stageStyle) throws InterruptedException {
+        setupStages(true, true, stageStyle);
+
+        Util.doTimeLine(1000,
+                () -> {
+                    Color color = getColor(200, 200);
+                    assertColorEquals(TOP_COLOR, color, TOLERANCE);
+
+                    topStage.setIconified(true);
+                    topStage.setFullScreen(true);
+                },
+                () -> {
+                    assertTrue(topStage.isFullScreen());
+                    assertTrue(topStage.isIconified());
+
+                    Color color = getColor(200, 200);
+                    // Should remain iconified
+                    assertColorEquals(BOTTOM_COLOR, color, TOLERANCE);
+                },
+                () -> topStage.setIconified(false),
+                () -> {
+                    assertTrue(topStage.isFullScreen());
+                    assertFalse(topStage.isIconified());
+
+                    Color color = getColor(200, 200);
+                    assertColorEquals(TOP_COLOR, color, TOLERANCE);
+                });
     }
 }

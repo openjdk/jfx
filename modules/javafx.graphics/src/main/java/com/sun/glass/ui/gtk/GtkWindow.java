@@ -83,10 +83,15 @@ class GtkWindow extends Window {
     protected native void _setLevel(long ptr, int level);
 
     @Override
-    protected native void _setAlpha(long ptr, float alpha);
+    protected void _setAlpha(long ptr, float alpha) {
+        // Not supported
+    }
 
     @Override
-    protected native boolean _setBackground(long ptr, float r, float g, float b);
+    protected boolean _setBackground(long ptr, float r, float g, float b) {
+        //Not supported
+        return false;
+    }
 
     @Override
     protected native void _setEnabled(long ptr, boolean enabled);
@@ -128,16 +133,24 @@ class GtkWindow extends Window {
     @Override
     protected boolean _minimize(long ptr, boolean minimize) {
         minimizeImpl(ptr, minimize);
-        notifyStateChanged(WindowEvent.MINIMIZE);
-        return minimize;
+
+        if (!isVisible()) {
+            notifyStateChanged(WindowEvent.MINIMIZE);
+        }
+
+        return isMinimized();
     }
 
     @Override
     protected boolean _maximize(long ptr, boolean maximize,
                                 boolean wasMaximized) {
         maximizeImpl(ptr, maximize, wasMaximized);
-        notifyStateChanged(WindowEvent.MAXIMIZE);
-        return maximize;
+
+        if (!isVisible()) {
+            notifyStateChanged(WindowEvent.MAXIMIZE);
+        }
+
+        return isMaximized();
     }
 
     protected void notifyStateChanged(final int state) {
