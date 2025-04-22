@@ -199,6 +199,9 @@ HashSet<String, ASCIICaseInsensitiveHash>& MIMETypeRegistry::supportedNonImageMI
             "text/xsl"_s,
             "text/plain"_s,
             "text/"_s,
+#if PLATFORM(JAVA)
+            "application/octet-stream"_s,
+#endif
             "application/xml"_s,
             "application/xhtml+xml"_s,
 #if !PLATFORM(IOS_FAMILY)
