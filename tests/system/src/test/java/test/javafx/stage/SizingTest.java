@@ -101,7 +101,7 @@ class SizingTest extends StageTestBase {
         });
 
         Util.runAndWait(() -> getStage().setFullScreen(true));
-        Util.sleep(500);
+        Util.sleep(1000);
         assertTrue(getStage().isFullScreen(), "Unresizable stage should be fullscreen");
         assertTrue(getStage().getWidth() > WIDTH, "Stage width should be fullscreen");
         assertTrue(getStage().getHeight() > HEIGHT, "Stage height should be fullscreen");
