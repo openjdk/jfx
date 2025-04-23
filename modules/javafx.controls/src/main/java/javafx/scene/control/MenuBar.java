@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,25 +25,21 @@
 
 package javafx.scene.control;
 
-import javafx.css.converter.BooleanConverter;
-
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
-
 import javafx.beans.DefaultProperty;
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.value.ObservableValue;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.css.CssMetaData;
-import javafx.css.StyleableBooleanProperty;
-
-import javafx.scene.control.skin.MenuBarSkin;
-
 import javafx.css.Styleable;
+import javafx.css.StyleableBooleanProperty;
 import javafx.css.StyleableProperty;
+import javafx.css.converter.BooleanConverter;
 import javafx.scene.AccessibleRole;
+import javafx.scene.control.skin.MenuBarSkin;
 
 /**
  * <p>
@@ -161,15 +157,12 @@ public class MenuBar extends Control {
 
                 @Override
                 public void bind(final ObservableValue<? extends Boolean> rawObservable) {
-                    throw new RuntimeException(BIND_MSG);
+                    throw new RuntimeException("cannot uni-directionally bind to the system menu bar - use bindBidrectional instead");
                 }
-
             };
         }
         return useSystemMenuBar;
     }
-    private String BIND_MSG =
-        "cannot uni-directionally bind to the system menu bar - use bindBidrectional instead";
 
     private BooleanProperty useSystemMenuBar;
     public final void setUseSystemMenuBar(boolean value) {
@@ -207,7 +200,7 @@ public class MenuBar extends Control {
 
                 @Override
                 public void bind(final ObservableValue<? extends Boolean> rawObservable) {
-                    throw new RuntimeException(BIND_MSG);
+                    throw new RuntimeException("cannot uni-directionally bind to use default menus - use bindBidirectional instead");
                 }
 
             };
@@ -318,6 +311,4 @@ public class MenuBar extends Control {
     @Override protected Boolean getInitialFocusTraversable() {
         return Boolean.FALSE;
     }
-
 }
-

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2024, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -49,7 +49,7 @@ public class RegionPropertySheet {
         op.option("Pref Height:", Options.forRegion("prefHeight", r.prefHeightProperty()));
         op.option("Pref Width:", Options.forRegion("prefWidth", r.prefWidthProperty()));
         op.option(new BooleanOption("scaleShape", "scale shape", r.scaleShapeProperty()));
-        op.option("Shape: TODO", null); // TODO
+        op.option("Shape:", Options.shape("shape", r, r.shapeProperty()));
         op.option(new BooleanOption("snapToPixel", "snap to pixel", r.snapToPixelProperty()));
 
         NodePropertySheet.appendTo(op, r);

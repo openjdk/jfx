@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -35,7 +35,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.WeakHashMap;
 import java.util.stream.Collectors;
-
+import javafx.application.Platform;
 import javafx.beans.InvalidationListener;
 import javafx.beans.property.DoubleProperty;
 import javafx.beans.property.ObjectProperty;
@@ -77,7 +77,7 @@ import javafx.scene.layout.HBox;
 import javafx.stage.Stage;
 import javafx.stage.Window;
 import javafx.util.Pair;
-
+import javafx.util.Subscription;
 import com.sun.javafx.menu.MenuBase;
 import com.sun.javafx.scene.ParentHelper;
 import com.sun.javafx.scene.SceneHelper;
@@ -130,7 +130,7 @@ public class MenuBarSkin extends SkinBase<MenuBar> {
     private WeakChangeListener<Boolean> weakMenuVisibilityChangeListener;
     private ListenerHelper sceneListenerHelper;
     private IDisconnectable windowFocusHelper;
-
+    private volatile Subscription windowSubscription;
     private boolean pendingDismiss = false;
     private boolean altKeyPressed = false;
 
@@ -228,6 +228,31 @@ public class MenuBarSkin extends SkinBase<MenuBar> {
         weakMenuVisibilityChangeListener = new WeakChangeListener<>(menuVisibilityChangeListener);
 
         ListenerHelper lh = ListenerHelper.get(this);
+
+        if (Platform.isFxApplicationThread()) {
+            if (Toolkit.getToolkit().getSystemMenu().isSupported()) {
+                lh.addInvalidationListener(control.useSystemMenuBarProperty(), (v) -> {
+                    rebuildUI();
+                });
+            }
+        } else {
+            // delay rebuildUI() until after MenuBar becomes a part of the scene graph
+            // this subscription will be removed by cleanUpListeners()
+            windowSubscription = getSkinnable()
+                .sceneProperty()
+                .flatMap(Scene::windowProperty)
+                .subscribe(w -> {
+                    if (w != null) {
+                        if (Toolkit.getToolkit().getSystemMenu().isSupported()) {
+                            lh.addInvalidationListener(control.useSystemMenuBarProperty(), (v) -> {
+                                rebuildUI();
+                            });
+                        }
+                        // this method will unsubscribe on first run
+                        rebuildUI();
+                    }
+                });
+        }
 
         rebuildUI();
         lh.addListChangeListener(control.getMenus(), (v) -> {
@@ -789,6 +814,12 @@ public class MenuBarSkin extends SkinBase<MenuBar> {
     }
 
     private void cleanUpListeners() {
+        Subscription sub = windowSubscription;
+        if (sub != null) {
+            sub.unsubscribe();
+            windowSubscription = null;
+        }
+
         getSkinnable().focusedProperty().removeListener(weakMenuBarFocusedPropertyListener);
 
         for (Menu m : getSkinnable().getMenus()) {
@@ -823,6 +854,9 @@ public class MenuBarSkin extends SkinBase<MenuBar> {
     }
 
     private void rebuildUI() {
+        if (!Platform.isFxApplicationThread()) {
+            return;
+        }
         cleanUpListeners();
 
         if (Toolkit.getToolkit().getSystemMenu().isSupported()) {

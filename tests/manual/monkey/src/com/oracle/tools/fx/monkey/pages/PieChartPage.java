@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2023, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -32,7 +32,10 @@ import javafx.scene.AccessibleAttribute;
 import javafx.scene.Node;
 import javafx.scene.chart.PieChart;
 import javafx.scene.chart.PieChart.Data;
+import javafx.scene.control.Button;
 import javafx.scene.layout.BorderPane;
+import javafx.scene.layout.HBox;
+import javafx.scene.layout.Priority;
 import com.oracle.tools.fx.monkey.Loggers;
 import com.oracle.tools.fx.monkey.options.BooleanOption;
 import com.oracle.tools.fx.monkey.options.DoubleOption;
@@ -96,6 +99,14 @@ public class PieChartPage extends TestPaneBase {
         s.addChoiceSupplier("<3,000 Elements", () -> createData(3_000));
         s.addChoice("<empty>", List.of());
         s.selectFirst();
-        return s;
+
+        Button b = new Button("Reload");
+        b.setOnAction((ev) -> {
+            var v = s.getSelectedValue();
+            data.setAll(v);
+        });
+        HBox hb = new HBox(s, b);
+        HBox.setHgrow(s, Priority.ALWAYS);
+        return hb;
     }
 }

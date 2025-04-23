@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2022, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -214,6 +214,16 @@ public class TableViewPage extends TestPaneBase implements HasSkinnable {
             var cs = columnBuilder();
             for (int i = 1; i < 20; i++) {
                 cs.col("C" + i).pref(30);
+            }
+            return cs.asList();
+        });
+        s.addChoiceSupplier("200", () -> {
+            var cs = columnBuilder();
+            for (int i = 1; i < 200; i++) {
+                cs.col("C" + i);
+                if(i % 2 == 0) {
+                    cs.pref(30 + i);
+                }
             }
             return cs.asList();
         });
