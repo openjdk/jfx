@@ -26,6 +26,8 @@
 #define        GLASS_WINDOW_H
 
 #define USER_PTR_TO_CTX(value) ((WindowContext *) value)
+#define DEFAULT_WIDTH 320
+#define DEFAULT_HEIGHT 200
 
 #include <gtk/gtk.h>
 
@@ -50,22 +52,33 @@ enum WindowType {
     POPUP
 };
 
+enum BoundsType {
+    BOUNDSTYPE_UNKNOWN,
+    BOUNDSTYPE_VIEW,
+    BOUNDSTYPE_WINDOW
+};
+
 static const guint MOUSE_BUTTONS_MASK = (guint) (GDK_BUTTON1_MASK | GDK_BUTTON2_MASK | GDK_BUTTON3_MASK);
 
 struct WindowGeometry {
     WindowGeometry():
-    needs_to_restore_geometry(false),
-    width(-1), height(-1), x(), y(), view_x(), view_y(),
+    width{-1, -1, BOUNDSTYPE_UNKNOWN},
+    height{-1, -1, BOUNDSTYPE_UNKNOWN},
+    x(), y(), view_x(), view_y(),
     gravity_x(), gravity_y(),
     extents(), frame_extents_received(false) {}
 
-    bool needs_to_restore_geometry;
+    struct {
+        int window;
+        int view;
+        BoundsType type;
+    } width;
 
-    // width, height, x, w are not update by user interactions and
-    // may not reflect current geometry.
-    // width / height are content size
-    int width;
-    int height;
+    struct {
+        int window;
+        int view;
+        BoundsType type;
+    } height;
 
     int x;
     int y;
@@ -93,7 +106,7 @@ private:
     WindowType window_type;
     struct WindowContext *owner;
     WindowGeometry geometry;
-    struct _Resizable {// we can't use set/get gtk_window_resizable function
+    struct _Resizable {
         _Resizable(): value(true),
                 minw(-1), minh(-1), maxw(-1), maxh(-1) {}
         bool value; //actual value of resizable for a window
@@ -114,7 +127,6 @@ private:
     jobject jwindow;
     jobject jview{};
 
-    GtkWidget *gtk_widget;
     GdkWindow *gdk_window{};
     GdkWMFunction initial_wmf;
     GdkWMFunction current_wmf;
@@ -123,7 +135,7 @@ private:
     bool is_disabled;
     bool on_top;
     bool can_be_deleted;
-    bool was_mapped;
+    bool mapped;
 
     gint initial_state_mask;
 protected:
@@ -161,6 +173,7 @@ public:
 
     void paint(void*, jint, jint);
     GdkWindow *get_gdk_window();
+    XID get_native_window();
     jobject get_jwindow();
     jobject get_jview();
 
@@ -174,9 +187,11 @@ public:
     void ungrab_focus();
     void ungrab_mouse_drag_focus();
     void set_cursor(GdkCursor*);
+    void set_background(float, float, float);
 
     void process_map();
     void process_focus(GdkEventFocus*);
+    void notify_repaint();
     void notify_repaint(GdkRectangle*);
     void process_mouse_button(GdkEventButton*);
     void process_mouse_motion(GdkEventMotion*);
@@ -184,7 +199,6 @@ public:
     void process_mouse_cross(GdkEventCrossing*);
     void process_key(GdkEventKey*);
     void process_state(GdkEventWindowState*);
-    void process_realize();
     void process_property_notify(GdkEventProperty*);
     void process_configure(GdkEventConfigure*);
     void process_delete();
@@ -204,6 +218,7 @@ public:
     void request_focus();
     void set_focusable(bool);
     void set_title(const char*);
+    void set_alpha(double);
     void set_enabled(bool);
     void set_minimum_size(int, int);
     void set_maximum_size(int, int);
@@ -218,29 +233,22 @@ public:
     void enter_fullscreen();
     void exit_fullscreen();
 
-    GtkWindow *get_gtk_window();
-    void update_window_size_location();
     void update_initial_state();
 
     ~WindowContext();
 
-protected:
-    void applyShapeMask(void*, uint width, uint height);
 private:
+    GdkVisual* find_best_visual();
     void maximize(bool);
     void iconify(bool);
-    void get_view_size(int *, int *);
-    void get_window_size(int *, int *);
-    void resize(int, int);
-    void move(int, int, bool, bool);
-    void move(int, int);
+    void update_window_size();
+    void move_resize(int, int, bool, bool, int, int);
     void add_wmf(GdkWMFunction);
     void remove_wmf(GdkWMFunction);
-    void save_geometry();
     void notify_on_top(bool);
-    void notify_window_resize(int, int, int);
-    void notify_window_move(int, int);
-    void notify_view_resize(int, int);
+    void notify_window_resize(int);
+    void notify_window_move();
+    void notify_view_resize();
     void notify_view_move();
     void notify_current_sizes();
     GdkAtom get_net_frame_extents_atom();
@@ -249,9 +257,8 @@ private:
     void set_cached_extents(GdkRectangle);
     void load_cached_extents();
     bool get_frame_extents_property(int *, int *, int *, int *);
-    void remove_window_constraints();
     void update_window_constraints();
-    void update_window_constraints(int, int);
+    void update_window_constraints(bool);
     void update_ontop_tree(bool);
     bool on_top_inherited();
     bool effective_on_top();

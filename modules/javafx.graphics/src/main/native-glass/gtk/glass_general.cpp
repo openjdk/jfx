@@ -566,22 +566,11 @@ typedef struct _DeviceGrabContext {
 
 gboolean disableGrab = FALSE;
 static gboolean configure_transparent_window(GtkWidget *window);
-static void configure_opaque_window(GtkWidget *window);
 
 gint glass_gdk_visual_get_depth (GdkVisual * visual)
 {
     // gdk_visual_get_depth is GTK 2.2 +
     return gdk_visual_get_depth(visual);
-}
-
-GdkScreen * glass_gdk_window_get_screen(GdkWindow * gdkWindow)
-{
-#ifdef GLASS_GTK3
-        GdkVisual * gdkVisual = gdk_window_get_visual(gdkWindow);
-        return gdk_visual_get_screen(gdkVisual);
-#else
-        return gdk_window_get_screen(gdkWindow);
-#endif
 }
 
 gboolean
@@ -617,56 +606,25 @@ glass_gdk_mouse_devices_ungrab() {
 
 void
 glass_gdk_master_pointer_get_position(gint *x, gint *y) {
-#ifdef GLASS_GTK3
         gdk_device_get_position(gdk_device_manager_get_client_pointer(
                                     gdk_display_get_device_manager(
                                         gdk_display_get_default())), NULL, x, y);
-#else
-        gdk_display_get_pointer(gdk_display_get_default(), NULL, x, y, NULL);
-#endif
 }
 
 gboolean
 glass_gdk_device_is_grabbed(GdkDevice *device) {
-#ifdef GLASS_GTK3
-        return gdk_display_device_is_grabbed(gdk_display_get_default(), device);
-#else
-        (void) device;
-        return gdk_display_pointer_is_grabbed(gdk_display_get_default());
-#endif
+    return gdk_display_device_is_grabbed(gdk_display_get_default(), device);
 }
 
 void
 glass_gdk_device_ungrab(GdkDevice *device) {
-#ifdef GLASS_GTK3
-        gdk_device_ungrab(device, GDK_CURRENT_TIME);
-#else
-        (void) device;
-        gdk_pointer_ungrab(GDK_CURRENT_TIME);
-#endif
+    gdk_device_ungrab(device, GDK_CURRENT_TIME);
 }
 
 
 GdkWindow *
 glass_gdk_device_get_window_at_position(GdkDevice *device, gint *x, gint *y) {
-#ifdef GLASS_GTK3
-        return gdk_device_get_window_at_position(device, x, y);
-#else
-        (void) device;
-        return gdk_display_get_window_at_pointer(gdk_display_get_default(), x, y);
-#endif
-}
-
-void
-glass_gtk_configure_transparency_and_realize(GtkWidget *window,
-                                             gboolean transparent) {
-        gboolean isTransparent = glass_configure_window_transparency(window, transparent);
-        gtk_widget_realize(window);
-}
-
-void
-glass_gtk_window_configure_from_visual(GtkWidget *widget, GdkVisual *visual) {
-    glass_widget_set_visual(widget, visual);
+    return gdk_device_get_window_at_position(device, x, y);
 }
 
 static gboolean
@@ -674,42 +632,22 @@ configure_transparent_window(GtkWidget *window) {
     GdkScreen *default_screen = gdk_screen_get_default();
     GdkDisplay *default_display = gdk_display_get_default();
 
-#ifdef GLASS_GTK3
-        GdkVisual *visual = gdk_screen_get_rgba_visual(default_screen);
-        if (visual
-                && gdk_display_supports_composite(default_display)
-                && gdk_screen_is_composited(default_screen)) {
-            glass_widget_set_visual(window, visual);
-            return TRUE;
-        }
-#else
-        GdkColormap *colormap = gdk_screen_get_rgba_colormap(default_screen);
-        if (colormap
-                && gdk_display_supports_composite(default_display)
-                && gdk_screen_is_composited(default_screen)) {
-            gtk_widget_set_colormap(window, colormap);
-            return TRUE;
-        }
-#endif
+    GdkVisual *visual = gdk_screen_get_rgba_visual(default_screen);
+    if (visual
+            && gdk_display_supports_composite(default_display)
+            && gdk_screen_is_composited(default_screen)) {
+        glass_widget_set_visual(window, visual);
+        return TRUE;
+    }
 
     return FALSE;
 }
 
 void
-glass_gdk_window_get_size(GdkWindow *window, gint *w, gint *h) {
-    *w = gdk_window_get_width(window);
-    *h = gdk_window_get_height(window);
-}
-
-void
 glass_gdk_display_get_pointer(GdkDisplay* display, gint* x, gint *y) {
-#ifdef GLASS_GTK3
-        gdk_device_get_position(
-            gdk_device_manager_get_client_pointer(
-                gdk_display_get_device_manager(display)), NULL , x, y);
-#else
-        gdk_display_get_pointer(display, NULL, x, y, NULL);
-#endif
+    gdk_device_get_position(
+        gdk_device_manager_get_client_pointer(
+            gdk_display_get_device_manager(display)), NULL , x, y);
 }
 
 
@@ -725,17 +663,10 @@ glass_gtk_selection_data_get_data_with_length(
     return gtk_selection_data_get_data(selectionData);
 }
 
-static void
-configure_opaque_window(GtkWidget *window) {
-    (void) window;
-/* We need to pick a visual that really is glx compatible
- * instead of using the default visual
- */
- /* see: JDK-8087516 for why this is commented out
-    glass_widget_set_visual(window,
-                          gdk_screen_get_system_visual(
-                              gdk_screen_get_default()));
-  */
+void glass_print_window_transparency_not_supported() {
+    fprintf(stderr, "Can't create transparent stage, because your screen doesn't support alpha channel."
+           " You need to enable XComposite extension.\n");
+    fflush(stderr);
 }
 
 gboolean
@@ -745,13 +676,9 @@ glass_configure_window_transparency(GtkWidget *window, gboolean transparent) {
             return TRUE;
         }
 
-        fprintf(stderr,"Can't create transparent stage, because your screen doesn't"
-               " support alpha channel."
-               " You need to enable XComposite extension.\n");
-        fflush(stderr);
+        glass_print_window_transparency_not_supported();
     }
 
-    configure_opaque_window(window);
     return FALSE;
 }
 
@@ -762,54 +689,8 @@ glass_pixbuf_from_window(GdkWindow *window,
 {
     GdkPixbuf * ret = NULL;
 
-#ifdef GLASS_GTK3
-        ret = gdk_pixbuf_get_from_window (window, srcx, srcy, width, height);
-#else
-        ret = gdk_pixbuf_get_from_drawable (NULL,
-            window,
-            NULL,
-            srcx, srcy,
-            0, 0,
-            width, height);
-#endif
+     gdk_pixbuf_get_from_window (window, srcx, srcy, width, height);
     return ret;
-}
-
-void
-glass_window_apply_shape_mask(GdkWindow *window,
-    void* data, uint width, uint height)
-{
-#ifdef GLASS_GTK3
-    (void) window;
-    (void) data;
-    (void) width;
-    (void) height;
-#else
-        GdkPixbuf* pixbuf = gdk_pixbuf_new_from_data((guchar *) data,
-                GDK_COLORSPACE_RGB, TRUE, 8, width, height, width * 4, NULL, NULL);
-
-        if (GDK_IS_PIXBUF(pixbuf)) {
-            GdkBitmap* mask = NULL;
-            gdk_pixbuf_render_pixmap_and_mask(pixbuf, NULL, &mask, 128);
-
-            gdk_window_input_shape_combine_mask(window, mask, 0, 0);
-
-            g_object_unref(pixbuf);
-            if (mask) {
-                g_object_unref(mask);
-            }
-        }
-#endif
-}
-
-void
-glass_window_reset_input_shape_mask(GdkWindow *window)
-{
-#ifdef GLASS_GTK3
-        gdk_window_input_shape_combine_region(window, NULL, 0, 0);
-#else
-        gdk_window_input_shape_combine_mask(window, NULL, 0, 0);
-#endif
 }
 
 GdkWindow *
@@ -822,15 +703,10 @@ glass_gdk_drag_context_get_dest_window (GdkDragContext * context)
 void glass_gdk_x11_display_set_window_scale (GdkDisplay *display,
                           gint scale)
 {
-#ifdef GLASS_GTK3
     // Optional call, if it does not exist then GTK3 is not yet
     // doing automatic scaling of coordinates so we do not need
     // to override it.
     wrapped_gdk_x11_display_set_window_scale(display, scale);
-#else
-    (void) display;
-    (void) scale;
-#endif
 }
 
 //-------- Glass utility ----------------------------------------
@@ -838,12 +714,7 @@ void glass_gdk_x11_display_set_window_scale (GdkDisplay *display,
 void
 glass_widget_set_visual(GtkWidget *widget, GdkVisual *visual)
 {
-#ifdef GLASS_GTK3
         gtk_widget_set_visual (widget, visual);
-#else
-        GdkColormap *colormap = gdk_colormap_new(visual, TRUE);
-        gtk_widget_set_colormap (widget, colormap);
-#endif
 }
 
 guint glass_settings_get_guint_opt (const gchar *schema_name,

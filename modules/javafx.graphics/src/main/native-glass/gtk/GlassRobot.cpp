@@ -19,7 +19,7 @@
  * Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA.
  *
  * Please contact Oracle, 500 Oracle Parkway, Redwood Shores, CA 94065 USA
- * or visit www.oracle.com if you need additional information or have any
+ * or visit www.oracle.com if you need additiFonal information or have any
  * questions.
  */
 #include <X11/Xlib.h>
@@ -273,7 +273,7 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_gtk_GtkRobot__1getScreenCapture
     GdkPixbuf *screenshot, *tmp;
     GdkWindow *root_window = gdk_get_default_root_window();
 
-    tmp = glass_pixbuf_from_window(root_window, x, y, width, height);
+    tmp = gdk_pixbuf_get_from_window(root_window, x, y, width, height);
     if (!tmp) {
         return;
     }

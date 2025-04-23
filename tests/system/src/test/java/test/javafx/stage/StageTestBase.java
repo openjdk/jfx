@@ -97,11 +97,11 @@ abstract class StageTestBase {
             assertNull(stage, "Stage is not null");
             stage = new Stage();
             stage.setAlwaysOnTop(true);
+            stage.initStyle(stageStyle);
+            stage.setScene(createScene(stageStyle));
             if (pc != null) {
                 pc.accept(stage);
             }
-            stage.initStyle(stageStyle);
-            stage.setScene(createScene(stageStyle));
             stage.setOnShown(e -> shownLatch.countDown());
             stage.show();
         });
