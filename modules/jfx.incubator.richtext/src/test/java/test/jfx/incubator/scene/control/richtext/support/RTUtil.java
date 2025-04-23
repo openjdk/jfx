@@ -39,6 +39,10 @@ import jfx.incubator.scene.control.richtext.TextPos;
  * Utilities for RichTextArea-based tests.
  */
 public class RTUtil {
+
+    private RTUtil() {
+    }
+
     /**
      * Replaces existing content with the specified non-styled text string.
      *

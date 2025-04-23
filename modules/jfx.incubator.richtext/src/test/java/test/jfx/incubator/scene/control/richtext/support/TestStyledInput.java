@@ -44,7 +44,7 @@ public class TestStyledInput implements StyledInput {
         String[] lines = text.split("\n");
         ArrayList<StyledSegment> ss = new ArrayList<>();
         for (int i = 0; i < lines.length; i++) {
-            if(i > 0) {
+            if (i > 0) {
                 ss.add(StyledSegment.LINE_BREAK);
             }
             ss.add(StyledSegment.of(lines[i]));

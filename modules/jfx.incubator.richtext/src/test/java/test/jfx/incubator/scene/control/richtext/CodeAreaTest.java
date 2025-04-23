@@ -26,6 +26,7 @@
 package test.jfx.incubator.scene.control.richtext;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import java.util.List;
@@ -74,8 +75,9 @@ public class CodeAreaTest {
         assertTrue(control.getModel() == null);
 
         control = new CodeArea(null);
-        control.setModel(new CodeTextModel() {
-        });
+        CodeTextModel m = new CodeTextModel() { };
+        control.setModel(m);
+        assertSame(m, control.getModel());
     }
 
     // properties

@@ -28,6 +28,7 @@ package test.jfx.incubator.scene.control.richtext;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
@@ -44,6 +45,7 @@ import javafx.scene.input.DataFormat;
 import javafx.util.Duration;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import com.sun.jfx.incubator.scene.control.richtext.VFlow;
 import jfx.incubator.scene.control.richtext.RichTextArea;
@@ -87,6 +89,10 @@ public class RichTextAreaTest {
         TUtil.removeUncaughtExceptionHandler();
     }
 
+    private String text() {
+        return RTUtil.getText(control);
+    }
+
     // constructors
 
     @Test
@@ -99,8 +105,10 @@ public class RichTextAreaTest {
         control = new RichTextArea(null);
         assertTrue(control.getModel() == null);
 
+        CustomStyledTextModel m = new CustomStyledTextModel();
         control = new RichTextArea(null);
-        control.setModel(new CustomStyledTextModel());
+        control.setModel(m);
+        assertSame(m, control.getModel());
     }
 
     // properties
@@ -252,12 +260,16 @@ public class RichTextAreaTest {
     public void appendText() {
         TextPos p = control.appendText("a");
         assertEquals(TextPos.ofLeading(0, 1), p);
+        assertEquals("a", text());
     }
 
     @Test
     public void appendTextWithStyles() {
         TextPos p = control.appendText("a", BOLD);
         assertEquals(TextPos.ofLeading(0, 1), p);
+        control.select(p);
+        assertEquals(BOLD, control.getActiveStyleAttributeMap());
+        assertEquals("a", text());
     }
 
     @Test
@@ -303,8 +315,28 @@ public class RichTextAreaTest {
         control.appendText("ax");
         control.selectAll();
         control.copy();
-        String s = Clipboard.getSystemClipboard().getString();
-        assertEquals("ax", s);
+        assertEquals("ax", Clipboard.getSystemClipboard().getString());
+    }
+
+    @Disabled("JDK-8355415")
+    // TODO combine with copy()
+    @Test
+    public void copyExt() {
+        RTUtil.copyToClipboard("");
+        control.appendText("ax");
+        control.selectAll();
+        control.copy();
+        assertEquals("ax", Clipboard.getSystemClipboard().getString());
+
+        // copying an empty selection should not modify the clipboard content
+        control.clearSelection();
+        assertEquals("ax", Clipboard.getSystemClipboard().getString());
+
+        // the following code fails due to JDK-8355415
+        control.appendText("\n1");
+        control.select(new TextPos(0, 2, 1, false), control.getDocumentEnd());
+        control.copy();
+        assertEquals("\n1", Clipboard.getSystemClipboard().getString());
     }
 
     @Test
@@ -325,8 +357,7 @@ public class RichTextAreaTest {
         control.appendText("123");
         control.selectAll();
         control.cut();
-        String s = RTUtil.getText(control);
-        assertEquals("", s);
+        assertEquals("", text());
     }
 
     @Test
@@ -391,6 +422,8 @@ public class RichTextAreaTest {
 
     @Test
     public void getParagraphCount() {
+        assertEquals(1, control.getParagraphCount());
+
         control.appendText("1\n2\n3");
         assertEquals(3, control.getParagraphCount());
 
@@ -406,7 +439,7 @@ public class RichTextAreaTest {
         assertEquals(new TextPos(2, 3, 2, false), control.getParagraphEnd(2));
 
         control.setModel(null);
-        // on second through, maybe this should return null
+        // TODO this should throw an IOOBE
         assertEquals(TextPos.ZERO, control.getParagraphEnd(0));
     }
 
@@ -440,12 +473,13 @@ public class RichTextAreaTest {
         assertTrue(control.hasNonEmptySelection());
     }
 
-//    @Test
-//    public void insertLineBreak() {
-//        control.appendText("123");
-//        control.select(TextPos.ofLeading(0, 1));
-//        control.insertLineBreak();
-//    }
+    @Disabled("JDK-8355415") // FIX
+    @Test
+    public void insertLineBreak() {
+        control.appendText("123");
+        control.select(TextPos.ofLeading(0, 1));
+        control.insertLineBreak();
+    }
 
     @Test
     public void isRedoable() {
@@ -471,6 +505,7 @@ public class RichTextAreaTest {
         control.setModel(new RichTextModel());
         sel = control.getSelection();
         assertEquals(null, sel);
+        assertEquals("", text());
     }
 
     @Test
@@ -479,8 +514,7 @@ public class RichTextAreaTest {
         control.appendText("123");
         control.select(TextPos.ofLeading(0, 1));
         control.paste();
-        String s = RTUtil.getText(control);
-        assertEquals("1-23", s);
+        assertEquals("1-23", text());
     }
 
     @Test
@@ -494,8 +528,7 @@ public class RichTextAreaTest {
         control.appendText("123");
         control.select(TextPos.ofLeading(0, 1));
         control.paste(fmt);
-        String s = RTUtil.getText(control);
-        assertEquals("1a23", s);
+        assertEquals("1a23", text());
     }
 
     @Test
@@ -509,8 +542,7 @@ public class RichTextAreaTest {
         control.appendText("123");
         control.select(TextPos.ofLeading(0, 1));
         control.pastePlainText();
-        String s = RTUtil.getText(control);
-        assertEquals("1plain23", s);
+        assertEquals("1plain23", text());
     }
 
     @Test
@@ -520,12 +552,12 @@ public class RichTextAreaTest {
         ByteArrayOutputStream out = new ByteArrayOutputStream();
         control.write(out);
         byte[] b = out.toByteArray();
-        String text1 = RTUtil.getText(control);
+        String text1 = text();
 
         control = new RichTextArea();
         ByteArrayInputStream in = new ByteArrayInputStream(b);
         control.read(in);
-        String text2 = RTUtil.getText(control);
+        String text2 = text();
         assertEquals(text1, text2);
     }
 
@@ -537,12 +569,12 @@ public class RichTextAreaTest {
         ByteArrayOutputStream out = new ByteArrayOutputStream();
         control.write(fmt, out);
         byte[] b = out.toByteArray();
-        String text1 = RTUtil.getText(control);
+        String text1 = text();
 
         control = new RichTextArea();
         ByteArrayInputStream in = new ByteArrayInputStream(b);
         control.read(fmt, in);
-        String text2 = RTUtil.getText(control);
+        String text2 = text();
         assertEquals(text1, text2);
     }
 
@@ -550,16 +582,28 @@ public class RichTextAreaTest {
     public void redo() {
         control.appendText("123");
         control.undo();
-        assertEquals("", RTUtil.getText(control));
+        assertEquals("", text());
         control.redo();
-        assertEquals("123", RTUtil.getText(control));
+        assertEquals("123", text());
+        // test undo/redo stack
+        control.appendText("4");
+        control.appendText("5");
+        assertEquals("12345", text());
+        control.undo();
+        control.undo();
+        control.undo();
+        assertEquals("", text());
+        control.redo();
+        control.redo();
+        control.redo();
+        assertEquals("12345", text());
     }
 
     @Test
     public void replaceText() {
         control.appendText("1234");
         control.replaceText(TextPos.ofLeading(0, 1), TextPos.ofLeading(0, 3), "-", false);
-        assertEquals("1-4", RTUtil.getText(control));
+        assertEquals("1-4", text());
     }
 
     @Test
@@ -567,7 +611,7 @@ public class RichTextAreaTest {
         TestStyledInput in = TestStyledInput.plainText("-");
         control.appendText("1234");
         control.replaceText(TextPos.ofLeading(0, 1), TextPos.ofLeading(0, 3), in, false);
-        assertEquals("1-4", RTUtil.getText(control));
+        assertEquals("1-4", text());
     }
 
     @Test
@@ -605,9 +649,18 @@ public class RichTextAreaTest {
 
     @Test
     public void undo() {
-        control.appendText("123");
+        control.appendText("1");
         control.undo();
-        assertEquals("", RTUtil.getText(control));
+        assertEquals("", text());
+        // test undo/redo stack
+        control.appendText("2");
+        control.appendText("3");
+        control.appendText("4");
+        assertEquals("234", text());
+        control.undo();
+        control.undo();
+        control.undo();
+        assertEquals("", text());
     }
 
     @Test

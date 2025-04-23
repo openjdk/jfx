@@ -42,10 +42,14 @@ import javafx.beans.property.SimpleObjectProperty;
 public class TUtil {
     private static final Boolean[] BOOLEAN_VALUES = { null, Boolean.TRUE, Boolean.FALSE };
 
+    private TUtil() {
+    }
+
     /** Sets the uncaught exception handler to forward to the thread group */
     public static void setUncaughtExceptionHandler() {
         Thread.currentThread().setUncaughtExceptionHandler((thread, throwable) -> {
             if (throwable instanceof RuntimeException) {
+                // needed for junit framework to fail the test
                 throw (RuntimeException)throwable;
             } else {
                 Thread.currentThread().getThreadGroup().uncaughtException(thread, throwable);
