@@ -213,12 +213,10 @@ void WindowContext::process_map() {
     }
 
     if (geometry.width <= 0) {
-        LOG0("Width was not assingned\n");
         geometry.width = DEFAULT_WIDTH - geometry.extents.width;
     }
 
     if (geometry.height <= 0) {
-        LOG0("Height was not assingned\n");
         geometry.height = DEFAULT_HEIGHT - geometry.extents.height;
     }
 
@@ -972,7 +970,6 @@ void WindowContext::process_state(GdkEventWindowState *event) {
 
     // In case the size or location changed while maximized of fullscreened
     if (restored && geometry.needs_to_restore_geometry) {
-        //Call if later because restore properties will still arrive
         LOG0("restored, call update_window_size_location\n");
         update_window_size_location();
     }
@@ -1059,13 +1056,10 @@ void WindowContext::process_configure(GdkEventConfigure *event) {
     notify_view_resize(cw, ch);
     notify_view_move();
 
-    // The returned values might be inaccurate if _NET_FRAME_EXTENTS has not been received yet.
-    // They will be corrected later if the property is updated. However, since there is no guarantee
-    // that _NET_FRAME_EXTENTS will ever be available, we set the best guess for now.
     int ww = cw;
     int wh = ch;
 
-    // Fullscreen probably has no decorations
+    // Fullscreen usually have no decorations
     if (geometry.view_x > 0) {
         ww += geometry.extents.width;
     }
@@ -1210,7 +1204,7 @@ void WindowContext::set_bounds(int x, int y, bool xSet, bool ySet, int w, int h,
     if (gtk_widget_get_realized(gtk_widget)) {
         GdkWindowState state = gdk_window_get_state(gdk_window);
 
-        // If if is fullscreen, it will be applied later on restore
+        // If it is in fullscreen mode, it will be applied later on restore
         if (!geometry.needs_to_restore_geometry &&
                 (state & GDK_WINDOW_STATE_FULLSCREEN)) {
             LOG0("set_bounds: needs_to_restore_geometry = true\n");
@@ -1219,8 +1213,7 @@ void WindowContext::set_bounds(int x, int y, bool xSet, bool ySet, int w, int h,
 
         if (geometry.needs_to_restore_geometry || (state & GDK_WINDOW_STATE_MAXIMIZED)) {
             LOG0("need to restore geometry of maximized\n");
-            // If fullscreen or maximized, report current geometry to java, because
-            // it won't be applied
+            // Report back to java with current sizes
             if (newW > 0 || newH > 0) {
                 int cw = get_view_width();
                 int ch = get_view_height();
@@ -1275,7 +1268,6 @@ void WindowContext::iconify(bool state) {
 void WindowContext::maximize(bool state) {
     if (state) {
         add_wmf(GDK_FUNC_MAXIMIZE);
-        LOG0("gtk_window_maximize\n");
 
         if (!resizable.value || resizable.maxw != -1 || resizable.maxh != - 1) {
             remove_window_constraints();
@@ -1320,6 +1312,7 @@ void WindowContext::enter_fullscreen() {
 
         if (!resizable.value || resizable.maxw != -1 || resizable.maxh != - 1) {
             remove_window_constraints();
+            process_pending_events();
             // Needs to happen "in the future" because constraints removal are not applied immediately
             gdk_threads_add_idle((GSourceFunc) enter_fullscreen_later, GTK_WINDOW(gtk_widget));
         } else {
@@ -1452,31 +1445,25 @@ void WindowContext::resize(int width, int height) {
     int newW = (width <= 0) ? get_view_width() : width;
     int newH = (height <= 0) ? get_view_height() : height;
 
-    bool constrained = false;
-    bool notify = false;
-
-    // By default, windows that are undecorated and transparent will not respect
+    // Windows that are undecorated or transparent will not respect
     // minimum or maximum size constraints
     if (resizable.minw > 0 && newW < resizable.minw) {
         newW = resizable.minw;
-        constrained = true;
     }
 
     if (resizable.minh > 0 && newH < resizable.minh) {
         newH = resizable.minh;
-        constrained = true;
     }
 
     if (resizable.maxw > 0 && newW > resizable.maxw) {
         newW = resizable.maxw;
-        constrained = true;
     }
 
     if (resizable.maxh > 0 && newH > resizable.maxh) {
         newH = resizable.maxh;
-        constrained = true;
     }
 
+    bool notify = false;
     if (gtk_widget_get_realized(gtk_widget)) {
         gtk_window_resize(GTK_WINDOW(gtk_widget), newW, newH);
 

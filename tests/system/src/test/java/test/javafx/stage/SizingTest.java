@@ -92,7 +92,7 @@ class SizingTest extends StageTestBase {
     @EnumSource(value = StageStyle.class,
             mode = EnumSource.Mode.INCLUDE,
             names = {"DECORATED", "UNDECORATED", "TRANSPARENT"})
-    void testFullscreenUnresizable(StageStyle stageStyle) {
+    void testFullScreenUnresizable(StageStyle stageStyle) {
         setupStageWithStyle(stageStyle, s -> {
             s.initStyle(stageStyle);
             s.setWidth(WIDTH);
