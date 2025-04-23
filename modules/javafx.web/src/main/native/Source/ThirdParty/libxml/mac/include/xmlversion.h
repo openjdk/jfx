@@ -10,47 +10,33 @@
 #ifndef __XML_VERSION_H__
 #define __XML_VERSION_H__
 
-#include <libxml/xmlexports.h>
-
-#ifdef __cplusplus
-extern "C" {
-#endif
-
-/*
- * use those to be sure nothing nasty will happen if
- * your library and includes mismatch
- */
-#ifndef LIBXML2_COMPILING_MSCCDEF
-XMLPUBFUN void xmlCheckVersion(int version);
-#endif /* LIBXML2_COMPILING_MSCCDEF */
-
 /**
  * LIBXML_DOTTED_VERSION:
  *
  * the version string like "1.2.3"
  */
-#define LIBXML_DOTTED_VERSION "@VERSION@"
+#define LIBXML_DOTTED_VERSION "2.13.6"
 
 /**
  * LIBXML_VERSION:
  *
  * the version number: 1.2.3 value is 10203
  */
-#define LIBXML_VERSION @LIBXML_VERSION_NUMBER@
+#define LIBXML_VERSION 21306
 
 /**
  * LIBXML_VERSION_STRING:
  *
  * the version number string, 1.2.3 value is "10203"
  */
-#define LIBXML_VERSION_STRING "@LIBXML_VERSION_NUMBER@"
+#define LIBXML_VERSION_STRING "21306"
 
 /**
  * LIBXML_VERSION_EXTRA:
  *
  * extra version information, used to show a git commit description
  */
-#define LIBXML_VERSION_EXTRA "@LIBXML_VERSION_EXTRA@"
+#define LIBXML_VERSION_EXTRA "-GITv2.13.6"
 
 /**
  * LIBXML_TEST_VERSION:
@@ -58,39 +44,14 @@ XMLPUBFUN void xmlCheckVersion(int version);
  * Macro to check that the libxml version in use is compatible with
  * the version the software has been compiled against
  */
-#define LIBXML_TEST_VERSION xmlCheckVersion(@LIBXML_VERSION_NUMBER@);
-
-#ifndef VMS
-#if @WITH_TRIO@
-/**
- * WITH_TRIO:
- *
- * defined if the trio support need to be configured in
- */
-#define WITH_TRIO
-#else
-/**
- * WITHOUT_TRIO:
- *
- * defined if the trio support should not be configured in
- */
-#define WITHOUT_TRIO
-#endif
-#else /* VMS */
-/**
- * WITH_TRIO:
- *
- * defined if the trio support need to be configured in
- */
-#define WITH_TRIO 1
-#endif /* VMS */
+#define LIBXML_TEST_VERSION xmlCheckVersion(21306);
 
 /**
  * LIBXML_THREAD_ENABLED:
  *
  * Whether the thread support is configured in
  */
-#if @WITH_THREADS@
+#if 1
 #define LIBXML_THREAD_ENABLED
 #endif
 
@@ -99,7 +60,7 @@ XMLPUBFUN void xmlCheckVersion(int version);
  *
  * Whether the allocation hooks are per-thread
  */
-#if @WITH_THREAD_ALLOC@
+#if 0
 #define LIBXML_THREAD_ALLOC_ENABLED
 #endif
 
@@ -108,7 +69,7 @@ XMLPUBFUN void xmlCheckVersion(int version);
  *
  * Whether the DOM like tree manipulation API support is configured in
  */
-#if @WITH_TREE@
+#if 1
 #define LIBXML_TREE_ENABLED
 #endif
 
@@ -117,7 +78,7 @@ XMLPUBFUN void xmlCheckVersion(int version);
  *
  * Whether the serialization/saving support is configured in
  */
-#if @WITH_OUTPUT@
+#if 1
 #define LIBXML_OUTPUT_ENABLED
 #endif
 
@@ -126,7 +87,7 @@ XMLPUBFUN void xmlCheckVersion(int version);
  *
  * Whether the push parsing interfaces are configured in
  */
-#if @WITH_PUSH@
+#if 1
 #define LIBXML_PUSH_ENABLED
 #endif
 
@@ -135,7 +96,7 @@ XMLPUBFUN void xmlCheckVersion(int version);
  *
  * Whether the xmlReader parsing interface is configured in
  */
-#if @WITH_READER@
+#if 1
 #define LIBXML_READER_ENABLED
 #endif
 
@@ -144,7 +105,7 @@ XMLPUBFUN void xmlCheckVersion(int version);
  *
  * Whether the xmlPattern node selection interface is configured in
  */
-#if @WITH_PATTERN@
+#if 1
 #define LIBXML_PATTERN_ENABLED
 #endif
 
@@ -153,7 +114,7 @@ XMLPUBFUN void xmlCheckVersion(int version);
  *
  * Whether the xmlWriter saving interface is configured in
  */
-#if @WITH_WRITER@
+#if 1
 #define LIBXML_WRITER_ENABLED
 #endif
 
@@ -162,7 +123,7 @@ XMLPUBFUN void xmlCheckVersion(int version);
  *
  * Whether the older SAX1 interface is configured in
  */
-#if @WITH_SAX1@
+#if 1
 #define LIBXML_SAX1_ENABLED
 #endif
 
@@ -171,7 +132,7 @@ XMLPUBFUN void xmlCheckVersion(int version);
  *
  * Whether the FTP support is configured in
  */
-#if @WITH_FTP@
+#if 0
 #define LIBXML_FTP_ENABLED
 #endif
 
@@ -180,7 +141,7 @@ XMLPUBFUN void xmlCheckVersion(int version);
  *
  * Whether the HTTP support is configured in
  */
-#if @WITH_HTTP@
+#if 0
 #define LIBXML_HTTP_ENABLED
 #endif
 
@@ -189,7 +150,7 @@ XMLPUBFUN void xmlCheckVersion(int version);
  *
  * Whether the DTD validation support is configured in
  */
-#if @WITH_VALID@
+#if 0
 #define LIBXML_VALID_ENABLED
 #endif
 
@@ -198,7 +159,7 @@ XMLPUBFUN void xmlCheckVersion(int version);
  *
  * Whether the HTML support is configured in
  */
-#if @WITH_HTML@
+#if 1
 #define LIBXML_HTML_ENABLED
 #endif
 
@@ -207,7 +168,7 @@ XMLPUBFUN void xmlCheckVersion(int version);
  *
  * Whether the deprecated APIs are compiled in for compatibility
  */
-#if @WITH_LEGACY@
+#if 0
 #define LIBXML_LEGACY_ENABLED
 #endif
 
@@ -216,7 +177,7 @@ XMLPUBFUN void xmlCheckVersion(int version);
  *
  * Whether the Canonicalization support is configured in
  */
-#if @WITH_C14N@
+#if 0
 #define LIBXML_C14N_ENABLED
 #endif
 
@@ -225,7 +186,7 @@ XMLPUBFUN void xmlCheckVersion(int version);
  *
  * Whether the Catalog support is configured in
  */
-#if @WITH_CATALOG@
+#if 0
 #define LIBXML_CATALOG_ENABLED
 #endif
 
@@ -234,7 +195,7 @@ XMLPUBFUN void xmlCheckVersion(int version);
  *
  * Whether XPath is configured in
  */
-#if @WITH_XPATH@
+#if 1
 #define LIBXML_XPATH_ENABLED
 #endif
 
@@ -243,7 +204,7 @@ XMLPUBFUN void xmlCheckVersion(int version);
  *
  * Whether XPointer is configured in
  */
-#if @WITH_XPTR@
+#if 0
 #define LIBXML_XPTR_ENABLED
 #endif
 
@@ -252,7 +213,7 @@ XMLPUBFUN void xmlCheckVersion(int version);
  *
  * Whether support for XPointer locations is configured in
  */
-#if @WITH_XPTR_LOCS@
+#if 0
 #define LIBXML_XPTR_LOCS_ENABLED
 #endif
 
@@ -261,7 +222,7 @@ XMLPUBFUN void xmlCheckVersion(int version);
  *
  * Whether XInclude is configured in
  */
-#if @WITH_XINCLUDE@
+#if 0
 #define LIBXML_XINCLUDE_ENABLED
 #endif
 
@@ -270,7 +231,7 @@ XMLPUBFUN void xmlCheckVersion(int version);
  *
  * Whether iconv support is available
  */
-#if @WITH_ICONV@
+#if 0
 #define LIBXML_ICONV_ENABLED
 #endif
 
@@ -279,7 +240,7 @@ XMLPUBFUN void xmlCheckVersion(int version);
  *
  * Whether icu support is available
  */
-#if @WITH_ICU@
+#if 1
 #define LIBXML_ICU_ENABLED
 #endif
 
@@ -288,7 +249,7 @@ XMLPUBFUN void xmlCheckVersion(int version);
  *
  * Whether ISO-8859-* support is made available in case iconv is not
  */
-#if @WITH_ISO8859X@
+#if 1
 #define LIBXML_ISO8859X_ENABLED
 #endif
 
@@ -297,26 +258,8 @@ XMLPUBFUN void xmlCheckVersion(int version);
  *
  * Whether Debugging module is configured in
  */
-#if @WITH_DEBUG@
-#define LIBXML_DEBUG_ENABLED
-#endif
-
-/**
- * DEBUG_MEMORY_LOCATION:
- *
- * Whether the memory debugging is configured in
- */
-#if @WITH_MEM_DEBUG@
-#define DEBUG_MEMORY_LOCATION
-#endif
-
-/**
- * LIBXML_DEBUG_RUNTIME:
- *
- * Removed
- */
 #if 0
-#define LIBXML_DEBUG_RUNTIME
+#define LIBXML_DEBUG_ENABLED
 #endif
 
 /**
@@ -324,7 +267,7 @@ XMLPUBFUN void xmlCheckVersion(int version);
  *
  * Whether the Unicode related interfaces are compiled in
  */
-#if @WITH_REGEXPS@
+#if 0
 #define LIBXML_UNICODE_ENABLED
 #endif
 
@@ -333,7 +276,7 @@ XMLPUBFUN void xmlCheckVersion(int version);
  *
  * Whether the regular expressions interfaces are compiled in
  */
-#if @WITH_REGEXPS@
+#if 0
 #define LIBXML_REGEXP_ENABLED
 #endif
 
@@ -342,19 +285,8 @@ XMLPUBFUN void xmlCheckVersion(int version);
  *
  * Whether the automata interfaces are compiled in
  */
-#if @WITH_REGEXPS@
-#define LIBXML_AUTOMATA_ENABLED
-#endif
-
-/**
- * LIBXML_EXPR_ENABLED:
- *
- * Whether the formal expressions interfaces are compiled in
- *
- * This code is unused and disabled unconditionally for now.
- */
 #if 0
-#define LIBXML_EXPR_ENABLED
+#define LIBXML_AUTOMATA_ENABLED
 #endif
 
 /**
@@ -362,7 +294,7 @@ XMLPUBFUN void xmlCheckVersion(int version);
  *
  * Whether the Schemas validation interfaces are compiled in
  */
-#if @WITH_SCHEMAS@
+#if 0
 #define LIBXML_SCHEMAS_ENABLED
 #endif
 
@@ -371,7 +303,7 @@ XMLPUBFUN void xmlCheckVersion(int version);
  *
  * Whether the Schematron validation interfaces are compiled in
  */
-#if @WITH_SCHEMATRON@
+#if 0
 #define LIBXML_SCHEMATRON_ENABLED
 #endif
 
@@ -380,14 +312,14 @@ XMLPUBFUN void xmlCheckVersion(int version);
  *
  * Whether the module interfaces are compiled in
  */
-#if @WITH_MODULES@
+#if 0
 #define LIBXML_MODULES_ENABLED
 /**
  * LIBXML_MODULE_EXTENSION:
  *
  * the string suffix used by dynamic modules (usually shared libraries)
  */
-#define LIBXML_MODULE_EXTENSION "@MODULE_EXTENSION@" 
+#define LIBXML_MODULE_EXTENSION ""
 #endif
 
 /**
@@ -395,7 +327,7 @@ XMLPUBFUN void xmlCheckVersion(int version);
  *
  * Whether the Zlib support is compiled in
  */
-#if @WITH_ZLIB@
+#if 0
 #define LIBXML_ZLIB_ENABLED
 #endif
 
@@ -404,108 +336,12 @@ XMLPUBFUN void xmlCheckVersion(int version);
  *
  * Whether the Lzma support is compiled in
  */
-#if @WITH_LZMA@
+#if 0
 #define LIBXML_LZMA_ENABLED
 #endif
 
-#ifdef __GNUC__
-/** DOC_DISABLE */
+#include <libxml/xmlexports.h>
 
-#ifndef ATTRIBUTE_UNUSED
-# if ((__GNUC__ > 2) || ((__GNUC__ == 2) && (__GNUC_MINOR__ >= 7)))
-#  define ATTRIBUTE_UNUSED __attribute__((unused))
-# else
-#  define ATTRIBUTE_UNUSED
-# endif
-#endif
-
-#ifndef LIBXML_ATTR_ALLOC_SIZE
-# if (!defined(__clang__) && ((__GNUC__ > 4) || ((__GNUC__ == 4) && (__GNUC_MINOR__ >= 3))))
-#  define LIBXML_ATTR_ALLOC_SIZE(x) __attribute__((alloc_size(x)))
-# else
-#  define LIBXML_ATTR_ALLOC_SIZE(x)
-# endif
-#else
-# define LIBXML_ATTR_ALLOC_SIZE(x)
-#endif
-
-#ifndef LIBXML_ATTR_FORMAT
-# if ((__GNUC__ > 3) || ((__GNUC__ == 3) && (__GNUC_MINOR__ >= 3)))
-#  define LIBXML_ATTR_FORMAT(fmt,args) __attribute__((__format__(__printf__,fmt,args)))
-# else
-#  define LIBXML_ATTR_FORMAT(fmt,args)
-# endif
-#else
-# define LIBXML_ATTR_FORMAT(fmt,args)
-#endif
-
-#ifndef XML_DEPRECATED
-#  if defined (IN_LIBXML) || (__GNUC__ * 100 + __GNUC_MINOR__ < 301)
-#    define XML_DEPRECATED
-/* Available since at least GCC 3.1 */
-#  else
-#    define XML_DEPRECATED __attribute__((deprecated))
-#  endif
-#endif
-
-#if defined(__clang__) || (__GNUC__ * 100 + __GNUC_MINOR__ >= 406)
-  #if defined(__clang__) || (__GNUC__ * 100 + __GNUC_MINOR__ >= 800)
-    #define XML_IGNORE_FPTR_CAST_WARNINGS \
-      _Pragma("GCC diagnostic push") \
-      _Pragma("GCC diagnostic ignored \"-Wpedantic\"") \
-      _Pragma("GCC diagnostic ignored \"-Wcast-function-type\"")
-  #else
-    #define XML_IGNORE_FPTR_CAST_WARNINGS \
-      _Pragma("GCC diagnostic push") \
-      _Pragma("GCC diagnostic ignored \"-Wpedantic\"")
-  #endif
-  #define XML_POP_WARNINGS \
-    _Pragma("GCC diagnostic pop")
-#else
-  #define XML_IGNORE_FPTR_CAST_WARNINGS
-  #define XML_POP_WARNINGS
-#endif
-
-#else /* ! __GNUC__ */
-#define ATTRIBUTE_UNUSED
-#define LIBXML_ATTR_ALLOC_SIZE(x)
-#define LIBXML_ATTR_FORMAT(fmt,args)
-#ifndef XML_DEPRECATED
-#  if defined (IN_LIBXML) || !defined (_MSC_VER)
-#    define XML_DEPRECATED
-/* Available since Visual Studio 2005 */
-#  elif defined (_MSC_VER) && (_MSC_VER >= 1400)
-#    define XML_DEPRECATED __declspec(deprecated)
-#  endif
-#endif
-#if defined (_MSC_VER) && (_MSC_VER >= 1400)
-#  define XML_IGNORE_FPTR_CAST_WARNINGS __pragma(warning(push))
-#else
-#  define XML_IGNORE_FPTR_CAST_WARNINGS
-#endif
-#ifndef XML_POP_WARNINGS
-#  if defined (_MSC_VER) && (_MSC_VER >= 1400)
-#    define XML_POP_WARNINGS __pragma(warning(pop))
-#  else
-#    define XML_POP_WARNINGS
-#  endif
-#endif
-#endif /* __GNUC__ */
-
-#define XML_NO_ATTR
-
-#ifdef LIBXML_THREAD_ENABLED
-  #define XML_DECLARE_GLOBAL(name, type, attrs) \
-    attrs XMLPUBFUN type *__##name(void);
-  #define XML_GLOBAL_MACRO(name) (*__##name())
-#else
-  #define XML_DECLARE_GLOBAL(name, type, attrs) \
-    attrs XMLPUBVAR type name;
-#endif
-
-#ifdef __cplusplus
-}
-#endif /* __cplusplus */
 #endif
 
 

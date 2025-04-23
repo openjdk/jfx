@@ -94,13 +94,13 @@ XSLTPUBVAR const int xsltLibxmlVersion;
  */
 
 XSLTPUBFUN void XSLTCALL
-                xsltInit                (void);
+        xsltInit        (void);
 
 /*
  * Global cleanup function.
  */
 XSLTPUBFUN void XSLTCALL
-                xsltCleanupGlobals      (void);
+        xsltCleanupGlobals    (void);
 
 #ifdef __cplusplus
 }
