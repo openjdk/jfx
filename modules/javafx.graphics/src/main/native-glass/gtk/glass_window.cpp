@@ -62,7 +62,11 @@ static gboolean event_realize(GtkWidget *widget, gpointer user_data) {
 
 gboolean enter_fullscreen_later(gpointer data) {
     GtkWindow *window = GTK_WINDOW(data);
-    gtk_window_fullscreen(window);
+
+    // might have been destroyed
+    if (GTK_IS_WINDOW(window)) {
+        gtk_window_fullscreen(window);
+    }
 
     return G_SOURCE_REMOVE;
 }
