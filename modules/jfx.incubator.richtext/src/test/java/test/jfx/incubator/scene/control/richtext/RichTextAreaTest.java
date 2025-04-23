@@ -311,7 +311,7 @@ public class RichTextAreaTest {
 
     @Test
     public void copy() {
-        RTUtil.copyToClipboard("");
+        RTUtil.copyToClipboard("yo");
         control.appendText("123");
         control.selectAll();
         control.copy();
@@ -328,27 +328,11 @@ public class RichTextAreaTest {
         control.select(TextPos.ofLeading(0, 2), TextPos.ofLeading(0, 3));
         control.copy();
         assertEquals("3", Clipboard.getSystemClipboard().getString());
-    }
 
-    // TODO combine with copy()
-    @Disabled("JDK-8355415")
-    @Test
-    public void copyExt() {
-        RTUtil.copyToClipboard("");
-        control.appendText("ax");
-        control.selectAll();
+        control.appendText("\n4");
+        control.select(new TextPos(0, 3, 2, false), control.getDocumentEnd());
         control.copy();
-        assertEquals("ax", Clipboard.getSystemClipboard().getString());
-
-        // copying an empty selection should not modify the clipboard content
-        control.clearSelection();
-        assertEquals("ax", Clipboard.getSystemClipboard().getString());
-
-        // the following code fails due to JDK-8355415
-        control.appendText("\n1");
-        control.select(new TextPos(0, 2, 1, false), control.getDocumentEnd());
-        control.copy();
-        assertEquals("\n1", Clipboard.getSystemClipboard().getString());
+        assertEquals("\n4", Clipboard.getSystemClipboard().getString());
     }
 
     @Test
@@ -485,7 +469,6 @@ public class RichTextAreaTest {
         assertTrue(control.hasNonEmptySelection());
     }
 
-    @Disabled("JDK-8355415") // FIX
     @Test
     public void insertLineBreak() {
         control.appendText("123");
