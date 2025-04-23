@@ -312,14 +312,26 @@ public class RichTextAreaTest {
     @Test
     public void copy() {
         RTUtil.copyToClipboard("");
-        control.appendText("ax");
+        control.appendText("123");
         control.selectAll();
         control.copy();
-        assertEquals("ax", Clipboard.getSystemClipboard().getString());
+        assertEquals("123", Clipboard.getSystemClipboard().getString());
+
+        control.select(TextPos.ZERO, TextPos.ofLeading(0, 1));
+        control.copy();
+        assertEquals("1", Clipboard.getSystemClipboard().getString());
+
+        control.select(TextPos.ofLeading(0, 1), TextPos.ofLeading(0, 2));
+        control.copy();
+        assertEquals("2", Clipboard.getSystemClipboard().getString());
+
+        control.select(TextPos.ofLeading(0, 2), TextPos.ofLeading(0, 3));
+        control.copy();
+        assertEquals("3", Clipboard.getSystemClipboard().getString());
     }
 
-    @Disabled("JDK-8355415")
     // TODO combine with copy()
+    @Disabled("JDK-8355415")
     @Test
     public void copyExt() {
         RTUtil.copyToClipboard("");
