@@ -45,7 +45,6 @@ import javafx.scene.input.DataFormat;
 import javafx.util.Duration;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import com.sun.jfx.incubator.scene.control.richtext.VFlow;
 import jfx.incubator.scene.control.richtext.RichTextArea;
@@ -332,7 +331,8 @@ public class RichTextAreaTest {
         control.appendText("\n4");
         control.select(new TextPos(0, 3, 2, false), control.getDocumentEnd());
         control.copy();
-        assertEquals("\n4", Clipboard.getSystemClipboard().getString());
+        String nl = System.getProperty("line.separator");
+        assertEquals(nl + "4", Clipboard.getSystemClipboard().getString());
     }
 
     @Test
