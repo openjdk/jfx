@@ -84,6 +84,11 @@ public interface TKSceneListener {
             boolean _altDown, boolean _metaDown,
             boolean _direct, boolean _inertia);
 
+    /**
+     * Pass a menu event to the scene to handle.
+     *
+     * @return {@code true} if the event was handled by the scene, {@code false} otherwise
+     */
     public boolean menuEvent(double x, double y, double xAbs, double yAbs,
             boolean isKeyboardTrigger);
 

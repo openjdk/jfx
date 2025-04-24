@@ -37,7 +37,6 @@ import javafx.stage.Modality;
 import javafx.stage.Stage;
 import javafx.util.Subscription;
 import java.util.Objects;
-import java.util.Optional;
 
 public final class HeaderButtonBehavior implements EventHandler<MouseEvent> {
 
@@ -86,30 +85,33 @@ public final class HeaderButtonBehavior implements EventHandler<MouseEvent> {
             return;
         }
 
+        Stage stage = getStage();
+        if (stage == null) {
+            return;
+        }
+
         switch (type) {
-            case CLOSE -> getStage().ifPresent(Stage::close);
-            case ICONIFY -> getStage().ifPresent(stage -> stage.setIconified(true));
-            case MAXIMIZE -> getStage().ifPresent(stage -> {
-                    // On macOS, a non-modal window is put into full-screen mode when the maximize button is clicked,
-                    // but enlarged to cover the desktop when the option key is pressed at the same time.
-                    if (PlatformUtil.isMac() && stage.getModality() == Modality.NONE && !event.isAltDown()) {
-                        stage.setFullScreen(!stage.isFullScreen());
-                    } else {
-                        stage.setMaximized(!stage.isMaximized());
-                    }
-                });
+            case CLOSE -> stage.close();
+            case ICONIFY -> stage.setIconified(true);
+            case MAXIMIZE -> {
+                // On macOS, a non-modal window is put into full-screen mode when the maximize button is clicked,
+                // but enlarged to cover the desktop when the option key is pressed at the same time.
+                if (PlatformUtil.isMac() && stage.getModality() == Modality.NONE && !event.isAltDown()) {
+                    stage.setFullScreen(!stage.isFullScreen());
+                } else {
+                    stage.setMaximized(!stage.isMaximized());
+                }
+            }
         }
     }
 
-    private Optional<Stage> getStage() {
+    private Stage getStage() {
         Scene scene = node.getScene();
         if (scene == null) {
-            return Optional.empty();
+            return null;
         }
 
-        return scene.getWindow() instanceof Stage stage
-            ? Optional.of(stage)
-            : Optional.empty();
+        return scene.getWindow() instanceof Stage stage ? stage : null;
     }
 
     private void onResizableChanged(Boolean resizable) {

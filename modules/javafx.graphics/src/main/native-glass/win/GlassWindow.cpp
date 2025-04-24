@@ -613,7 +613,7 @@ bool GlassWindow::HandleMouseEvents(UINT msg, WPARAM wParam, LPARAM lParam)
     if (handled && msg == WM_RBUTTONUP) {
         // By default, DefWindowProc() sends WM_CONTEXTMENU from WM_LBUTTONUP
         // Since DefWindowProc() is not called, call the mouse menu handler directly
-        HandleViewMenuEvent(GetHWND(), WM_CONTEXTMENU, (WPARAM) GetHWND(), ::GetMessagePos ());
+        HandleViewMenuEvent(GetHWND(), WM_CONTEXTMENU, (WPARAM) GetHWND(), ::GetMessagePos());
         //::DefWindowProc(GetHWND(), msg, wParam, lParam);
     }
 
