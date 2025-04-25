@@ -115,10 +115,10 @@ public enum StageStyle {
      * }</pre>
      *
      * <h4>Color scheme</h4>
-     * The color scheme of the default header buttons is adjusted to the {@link Scene#fillProperty() fill}
-     * of the {@code Scene} to remain easily recognizable. Applications should set the scene fill to a color
-     * that matches the brightness of the user interface, even if the scene fill is not visible because it
-     * is obscured by other controls.
+     * The color scheme of the default header buttons is automatically adjusted to remain easily recognizable
+     * by inspecting the {@link Scene#fillProperty() Scene.fill} property to gauge the brightness of the user
+     * interface. Applications should set the scene fill to a color that matches the user interface of the header
+     * bar area, even if the scene fill is not visible because it is obscured by other controls.
      *
      * <h4>Custom header buttons</h4>
      * If more control over the header buttons is desired, applications can opt out of the default header buttons
