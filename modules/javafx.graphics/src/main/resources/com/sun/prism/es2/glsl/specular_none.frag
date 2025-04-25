@@ -54,5 +54,7 @@ uniform sampler2D specularMap;
 
 vec4 apply_specular()
 {
-    return vec4(0.0,0.0,0.0,0.0);
+    // Use 32 which is default for specular power if specular color is not set
+    // Because pow(0, 0) is undefined (https://www.khronos.org/registry/OpenGL-Refpages/es3.0/html/pow.xhtml)
+    return vec4(0.0,0.0,0.0,32.0);
 }

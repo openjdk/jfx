@@ -44,6 +44,7 @@ import javafx.util.converter.LocalDateTimeStringConverterShim;
 
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
@@ -187,8 +188,7 @@ public class LocalDateTimeStringConverterTest {
         };
     }
 
-    @ParameterizedTest
-    @MethodSource("implementations")
+    @Test
     void converter_with_specified_formatter_and_parser() {
         String formatPattern = "dd MMMM yyyy, HH:mm:ss";
         String parsePattern = "MMMM dd, yyyy, HH:mm:ss";
@@ -199,8 +199,7 @@ public class LocalDateTimeStringConverterTest {
         assertEquals(VALID_LDT_WITH_SECONDS, converter.fromString("January 12, 1985, 12:34:56"));
     }
 
-    @ParameterizedTest
-    @MethodSource("implementations")
+    @Test
     void converter_with_specified_formatter_and_null_parser() {
         String pattern = "dd MMMM yyyy, HH:mm:ss";
         DateTimeFormatter formatter = DateTimeFormatter.ofPattern(pattern);
@@ -209,8 +208,7 @@ public class LocalDateTimeStringConverterTest {
         assertEquals(VALID_LDT_WITH_SECONDS, converter.fromString("12 January 1985, 12:34:56"));
     }
 
-    @ParameterizedTest
-    @MethodSource("implementations")
+    @Test
     void testChronologyConsistency() {
         var converter = new LocalDateTimeStringConverter(FormatStyle.FULL, FormatStyle.MEDIUM,
                 null, JapaneseChronology.INSTANCE);
