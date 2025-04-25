@@ -37,6 +37,9 @@ import javafx.scene.control.Button;
 import javafx.scene.control.CheckBox;
 import javafx.scene.control.ComboBox;
 import javafx.scene.control.Label;
+import javafx.scene.control.Menu;
+import javafx.scene.control.MenuBar;
+import javafx.scene.control.MenuItem;
 import javafx.scene.control.SplitPane;
 import javafx.scene.control.TextField;
 import javafx.scene.layout.Background;
@@ -180,6 +183,23 @@ public final class StageTesterWindow extends Stage {
         sizeComboBox.valueProperty().subscribe(event -> updateMinHeight.run());
         headerBar.minSystemHeightProperty().subscribe(event -> updateMinHeight.run());
 
+        var menuBar = new MenuBar(
+            new Menu("File", null,
+                new MenuItem("New"),
+                new MenuItem("Open"),
+                new MenuItem("Save"),
+                new MenuItem("Close")),
+            new Menu("Edit", null,
+                new MenuItem("Undo"),
+                new MenuItem("Redo"),
+                new MenuItem("Copy"),
+                new MenuItem("Paste")));
+
+        var leadingContent = new HBox(menuBar);
+        HeaderBar.setDraggable(leadingContent, true);
+        HeaderBar.setDraggable(menuBar, false);
+        headerBar.setLeading(leadingContent);
+
         if (customWindowButtons) {
             HeaderBar.setPrefButtonHeight(stage, 0);
         } else {
@@ -199,7 +219,9 @@ public final class StageTesterWindow extends Stage {
                 }
             });
 
-            headerBar.setLeading(adaptiveButtonHeight);
+            HBox.setMargin(adaptiveButtonHeight, new Insets(4));
+            HeaderBar.setDraggable(adaptiveButtonHeight, false);
+            leadingContent.getChildren().add(adaptiveButtonHeight);
         }
 
         var trailingNodes = new HBox(sizeComboBox);
