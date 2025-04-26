@@ -132,7 +132,6 @@ WindowContext::WindowContext(jobject _jwindow, WindowContext* _owner, long _scre
     jwindow = mainEnv->NewGlobalRef(_jwindow);
     initial_wmf = wmf;
     current_wmf = wmf;
-    // Default to white
     is_mouse_entered = false;
     is_disabled = false;
     on_top = false;
