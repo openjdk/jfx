@@ -61,7 +61,8 @@ import javafx.util.Subscription;
  * with the {@link StageStyle#EXTENDED} style. This class enables the <em>click-and-drag to move</em> and
  * <em>double-click to maximize</em> behaviors that are usually afforded by system-provided header bars.
  * The entire {@code HeaderBar} background is draggable by default, but its content is not. Applications
- * can specify draggable content nodes of the {@code HeaderBar} with the {@link #setDraggable} method.
+ * can specify draggable content nodes of the {@code HeaderBar} with the {@link #setDragType(Node, HeaderDragType)}
+ * method.
  * <p>
  * {@code HeaderBar} is a layout container that allows applications to place scene graph nodes in three areas:
  * {@link #leadingProperty() leading}, {@link #centerProperty() center}, and {@link #trailingProperty() trailing}.
@@ -170,35 +171,31 @@ import javafx.util.Subscription;
 public class HeaderBar extends Region {
 
     private static final Dimension2D EMPTY = new Dimension2D(0, 0);
-    private static final String DRAGGABLE = "headerbar-draggable";
+    private static final String DRAG_TYPE = "headerbar-drag-type";
     private static final String BUTTON_TYPE = "headerbar-button-type";
     private static final String ALIGNMENT = "headerbar-alignment";
     private static final String MARGIN = "headerbar-margin";
 
     /**
-     * Specifies whether the child and its subtree is a draggable part of the {@code HeaderBar}.
+     * Specifies whether the child is a draggable part of the {@code HeaderBar}.
      * <p>
-     * If set to a non-null value, the value will apply for the entire subtree of the child unless
-     * another node in the subtree specifies a different value. Setting the value to {@code null}
-     * will remove the flag.
+     * Setting the value to {@code null} will remove the flag.
      *
      * @param child the child node
-     * @param value a {@code Boolean} value indicating whether the child and its subtree is draggable,
-     *              or {@code null} to remove the flag
+     * @param value the {@code HeaderDragType}, or {@code null} to remove the flag
      */
-    public static void setDraggable(Node child, Boolean value) {
-        Pane.setConstraint(child, DRAGGABLE, value);
+    public static void setDragType(Node child, HeaderDragType value) {
+        Pane.setConstraint(child, DRAG_TYPE, value);
     }
 
     /**
-     * Returns whether the child and its subtree is a draggable part of the {@code HeaderBar}.
+     * Returns whether the child is a draggable part of the {@code HeaderBar}.
      *
      * @param child the child node
-     * @return a {@code Boolean} value indicating whether the child and its subtree is draggable,
-     *         or {@code null} if not set
+     * @return the {@code HeaderDragType}, or {@code null} if not set
      */
-    public static Boolean isDraggable(Node child) {
-        return (Boolean)Pane.getConstraint(child, DRAGGABLE);
+    public static HeaderDragType getDragType(Node child) {
+        return (HeaderDragType)Pane.getConstraint(child, DRAG_TYPE);
     }
 
     /**

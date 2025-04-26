@@ -47,6 +47,7 @@ import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.GridPane;
 import javafx.scene.layout.HeaderBar;
 import javafx.scene.layout.HeaderButtonType;
+import javafx.scene.layout.HeaderDragType;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
 import javafx.scene.paint.Color;
@@ -196,8 +197,7 @@ public final class StageTesterWindow extends Stage {
                 new MenuItem("Paste")));
 
         var leadingContent = new HBox(menuBar);
-        HeaderBar.setDraggable(leadingContent, true);
-        HeaderBar.setDraggable(menuBar, false);
+        HeaderBar.setDragType(leadingContent, HeaderDragType.DRAGGABLE);
         headerBar.setLeading(leadingContent);
 
         if (customWindowButtons) {
@@ -220,7 +220,6 @@ public final class StageTesterWindow extends Stage {
             });
 
             HBox.setMargin(adaptiveButtonHeight, new Insets(4));
-            HeaderBar.setDraggable(adaptiveButtonHeight, false);
             leadingContent.getChildren().add(adaptiveButtonHeight);
         }
 

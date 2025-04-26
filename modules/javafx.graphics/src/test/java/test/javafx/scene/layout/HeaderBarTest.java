@@ -26,19 +26,27 @@
 package test.javafx.scene.layout;
 
 import com.sun.javafx.PreviewFeature;
+import com.sun.javafx.scene.SceneHelper;
+import com.sun.javafx.tk.HeaderAreaType;
+import com.sun.javafx.tk.TKSceneListener;
 import javafx.beans.property.DoubleProperty;
 import javafx.beans.property.ObjectProperty;
 import javafx.geometry.Dimension2D;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.Node;
+import javafx.scene.Scene;
 import javafx.scene.layout.HeaderBar;
+import javafx.scene.layout.HeaderDragType;
+import javafx.scene.layout.StackPane;
 import javafx.scene.shape.Rectangle;
+import javafx.stage.Stage;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
+import test.com.sun.javafx.pgstub.StubScene;
 import test.util.ReflectionUtils;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -433,6 +441,146 @@ public class HeaderBarTest {
             assertEquals(y, node.getLayoutY());
             assertEquals(width, bounds.getWidth());
             assertEquals(height, bounds.getHeight());
+        }
+    }
+
+    @Nested
+    class PickingTest {
+        /**
+         * For picking tests, we use a header bar with four nested boxes, arranged from left to right.
+         *
+         * <pre>
+         *     0        50       100      150      200
+         *     ┌────────┬───────────────────────────────────┐
+         *     │  (HB)  │  box1  ┌──────────────────────────┤
+         *     │        │        │  box2  ┌─────────────────┤
+         *     │        │        │        │  box3  ┌────────┤
+         *     │        │        │        │        │  box4  │
+         *     ╞════════╧════════╧════════╧════════╧════════╡
+         *     │                                            │
+         * </pre>
+         */
+        private static class TestHeaderBar extends HeaderBar {
+            final Box box4 = new Box(null, 50, 0, 50, 100);
+            final Box box3 = new Box(box4, 50, 0, 100, 100);
+            final Box box2 = new Box(box3, 50, 0, 150, 100);
+            final Box box1 = new Box(box2, 50, 0, 200, 100);
+
+            TestHeaderBar() {
+                resize(250, 100);
+                setCenter(box1);
+            }
+        }
+
+        private static class Box extends StackPane {
+            Box(Node child, double x, double y, double width, double height) {
+                setManaged(false);
+                resizeRelocate(x, y, width, height);
+
+                if (child != null) {
+                    getChildren().add(child);
+                }
+            }
+        }
+
+        @Test
+         void pickDraggableNode() {
+            var headerBar = new TestHeaderBar();
+            HeaderBar.setDragType(headerBar.box1, HeaderDragType.DRAGGABLE);
+
+            var scene = new Scene(headerBar, 250, 200);
+            var stage = new Stage();
+            stage.setScene(scene);
+            stage.show();
+
+            // 1. HeaderBar is always draggable
+            assertEquals(HeaderAreaType.DRAGBAR, pickHeaderArea(scene, 10, 10));
+
+            // 2. box1 is draggable because its drag type is DRAGGABLE
+            assertEquals(HeaderAreaType.DRAGBAR, pickHeaderArea(scene, 60, 10));
+
+            // 3. box2/box3/box4 are not draggable, because they don't inherit DRAGGABLE from box1
+            assertNull(pickHeaderArea(scene, 110, 10));
+            assertNull(pickHeaderArea(scene, 160, 10));
+            assertNull(pickHeaderArea(scene, 210, 10));
+        }
+
+        @Test
+        void pickDraggableNodeInSubtree() {
+            var headerBar = new TestHeaderBar();
+            HeaderBar.setDragType(headerBar.box1, HeaderDragType.DRAGGABLE_SUBTREE);
+
+            var scene = new Scene(headerBar, 250, 200);
+            var stage = new Stage();
+            stage.setScene(scene);
+            stage.show();
+
+            // 1. HeaderBar is always draggable
+            assertEquals(HeaderAreaType.DRAGBAR, pickHeaderArea(scene, 10, 10));
+
+            // 2. box1 is draggable because its drag type is DRAGGABLE_SUBTREE
+            assertEquals(HeaderAreaType.DRAGBAR, pickHeaderArea(scene, 60, 10));
+
+            // 3. box2/box3/box4 are draggable, because they inherit DRAGGABLE_SUBTREE from box1
+            assertEquals(HeaderAreaType.DRAGBAR, pickHeaderArea(scene, 110, 10));
+            assertEquals(HeaderAreaType.DRAGBAR, pickHeaderArea(scene, 160, 10));
+            assertEquals(HeaderAreaType.DRAGBAR, pickHeaderArea(scene, 210, 10));
+        }
+
+        @Test
+        void stopInheritanceOfDraggableSubtree() {
+            var headerBar = new TestHeaderBar();
+            HeaderBar.setDragType(headerBar.box1, HeaderDragType.DRAGGABLE_SUBTREE);
+            HeaderBar.setDragType(headerBar.box3, HeaderDragType.NONE);
+
+            var scene = new Scene(headerBar, 250, 200);
+            var stage = new Stage();
+            stage.setScene(scene);
+            stage.show();
+
+            // 1. HeaderBar is always draggable
+            assertEquals(HeaderAreaType.DRAGBAR, pickHeaderArea(scene, 10, 10));
+
+            // 2. box1 is draggable because its drag type is DRAGGABLE_SUBTREE
+            assertEquals(HeaderAreaType.DRAGBAR, pickHeaderArea(scene, 60, 10));
+
+            // 3. box2 is draggable, because it inherits DRAGGABLE_SUBTREE from box1
+            assertEquals(HeaderAreaType.DRAGBAR, pickHeaderArea(scene, 110, 10));
+
+            // 4. box3/box4 are not draggable, because NONE stops the inherited DRAGGABLE_SUBTREE
+            assertNull(pickHeaderArea(scene, 160, 10));
+            assertNull(pickHeaderArea(scene, 210, 10));
+        }
+
+        @Test
+        void draggableNodeDoesNotStopInheritanceOfDraggableSubtree() {
+            var headerBar = new TestHeaderBar();
+            HeaderBar.setDragType(headerBar.box1, HeaderDragType.DRAGGABLE_SUBTREE);
+            HeaderBar.setDragType(headerBar.box3, HeaderDragType.DRAGGABLE);
+
+            var scene = new Scene(headerBar, 250, 200);
+            var stage = new Stage();
+            stage.setScene(scene);
+            stage.show();
+
+            // 1. HeaderBar is always draggable
+            assertEquals(HeaderAreaType.DRAGBAR, pickHeaderArea(scene, 10, 10));
+
+            // 2. box1 is draggable because its drag type is DRAGGABLE_SUBTREE
+            assertEquals(HeaderAreaType.DRAGBAR, pickHeaderArea(scene, 60, 10));
+
+            // 3. box2 is draggable, because it inherits DRAGGABLE_SUBTREE from box1
+            assertEquals(HeaderAreaType.DRAGBAR, pickHeaderArea(scene, 110, 10));
+
+            // 4. box3/box4 are draggable, because DRAGGABLE doesn't stop the inherited DRAGGABLE_SUBTREE from box1
+            assertEquals(HeaderAreaType.DRAGBAR, pickHeaderArea(scene, 160, 10));
+            assertEquals(HeaderAreaType.DRAGBAR, pickHeaderArea(scene, 210, 10));
+        }
+
+        private static HeaderAreaType pickHeaderArea(Scene scene, double x, double y) {
+            var peer = (StubScene)SceneHelper.getPeer(scene);
+            TKSceneListener listener = ReflectionUtils.getFieldValue(peer, "listener");
+            return listener.pickHeaderArea(x, y);
         }
     }
 }

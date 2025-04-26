@@ -80,8 +80,10 @@ import javafx.scene.image.WritableImage;
 import javafx.scene.input.*;
 import javafx.scene.layout.HeaderBar;
 import javafx.scene.layout.HeaderButtonType;
+import javafx.scene.layout.HeaderDragType;
 import javafx.scene.paint.Color;
 import javafx.scene.paint.Paint;
+import javafx.scene.transform.NonInvertibleTransformException;
 import javafx.stage.PopupWindow;
 import javafx.stage.Stage;
 import javafx.stage.StageStyle;
@@ -3065,15 +3067,25 @@ public class Scene implements EventTarget {
                 return null;
             }
 
-            pickRay.set(x, y, 1, 0, Double.POSITIVE_INFINITY);
-            var pickResultChooser = new PickResultChooser();
-            root.pickNode(pickRay, pickResultChooser);
-            Node intersectedNode = pickResultChooser.getIntersectedNode();
-            Boolean draggable = intersectedNode instanceof HeaderBar ? true : null;
+            try {
+                Point2D p = root.getLocalToSceneTransform().inverseTransform(x, y);
+                pickRay.set(p.getX(), p.getY(), 1, 0, Double.POSITIVE_INFINITY);
+            } catch (NonInvertibleTransformException e) {
+                return null;
+            }
+
+            var chooser = new PickResultChooser();
+            root.pickNode(pickRay, chooser);
+            Node intersectedNode = chooser.getIntersectedNode();
+            HeaderDragType dragType = intersectedNode instanceof HeaderBar ? HeaderDragType.DRAGGABLE : null;
 
             while (intersectedNode != null) {
                 if (intersectedNode instanceof HeaderBar) {
-                    return draggable == Boolean.TRUE ? HeaderAreaType.DRAGBAR : null;
+                    return dragType == HeaderDragType.DRAGGABLE_SUBTREE
+                        || dragType == HeaderDragType.DRAGGABLE
+                        || HeaderBar.getDragType(chooser.getIntersectedNode()) == HeaderDragType.DRAGGABLE
+                            ? HeaderAreaType.DRAGBAR
+                            : null;
                 }
 
                 if (HeaderBar.getButtonType(intersectedNode) instanceof HeaderButtonType type) {
@@ -3084,8 +3096,10 @@ public class Scene implements EventTarget {
                     };
                 }
 
-                if (draggable == null && HeaderBar.isDraggable(intersectedNode) instanceof Boolean value) {
-                    draggable = value;
+                if (dragType == null
+                        && HeaderBar.getDragType(intersectedNode) instanceof HeaderDragType type
+                        && type != HeaderDragType.DRAGGABLE) {
+                    dragType = type;
                 }
 
                 intersectedNode = intersectedNode.getParent();
