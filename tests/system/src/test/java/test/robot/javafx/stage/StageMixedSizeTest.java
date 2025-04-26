@@ -41,15 +41,16 @@ import static test.util.Util.PARAMETERIZED_TEST_DISPLAY;
 class StageMixedSizeTest extends VisualTestBase {
     private static final Color BACKGROUND_COLOR = Color.YELLOW;
     private static final double TOLERANCE = 0.07;
+    private static final int WAIT = 300;
     private Stage testStage;
 
     @ParameterizedTest(name = PARAMETERIZED_TEST_DISPLAY)
-    @EnumSource(value = StageStyle.class, mode = EnumSource.Mode.INCLUDE, names = {"DECORATED", "UNDECORATED"})
+    @EnumSource(names = {"DECORATED", "UNDECORATED"})
     void testSetWidthOnlyAfterShownOnContentSizeWindow(StageStyle stageStyle) {
         final int finalWidth = 200;
         final int initialContentSize = 300;
 
-        Util.doTimeLine(300,
+        Util.doTimeLine(WAIT,
                 () -> setupContentSizeTestStage(stageStyle, initialContentSize, initialContentSize),
                 () -> testStage.setWidth(finalWidth),
                 () -> assertColorDoesNotEqual(BACKGROUND_COLOR,
@@ -58,12 +59,12 @@ class StageMixedSizeTest extends VisualTestBase {
     }
 
     @ParameterizedTest(name = PARAMETERIZED_TEST_DISPLAY)
-    @EnumSource(value = StageStyle.class, mode = EnumSource.Mode.INCLUDE, names = {"DECORATED", "UNDECORATED"})
+    @EnumSource(names = {"DECORATED", "UNDECORATED"})
     void testSetHeightOnlyAfterShownOnContentSizeWindow(StageStyle stageStyle) {
         final int finalHeight = 200;
         final int initialContentSize = 300;
 
-        Util.doTimeLine(300,
+        Util.doTimeLine(WAIT,
                 () -> setupContentSizeTestStage(stageStyle, initialContentSize, initialContentSize),
                 () -> testStage.setHeight(finalHeight),
                 () -> assertColorDoesNotEqual(BACKGROUND_COLOR,

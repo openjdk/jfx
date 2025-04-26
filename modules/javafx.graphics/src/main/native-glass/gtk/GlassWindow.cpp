@@ -357,8 +357,6 @@ JNIEXPORT jboolean JNICALL Java_com_sun_glass_ui_gtk_GtkWindow__1setMaximumSize
 
     WindowContext* ctx = JLONG_TO_WINDOW_CTX(ptr);
     if (w == 0 || h == 0) return JNI_FALSE;
-    if (w == -1) w = G_MAXSHORT;
-    if (h == -1) h = G_MAXSHORT;
 
     ctx->set_maximum_size(w, h);
     return JNI_TRUE;

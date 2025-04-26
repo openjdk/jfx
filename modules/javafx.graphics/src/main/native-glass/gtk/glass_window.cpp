@@ -46,9 +46,6 @@
 #define MOUSE_FORWARD_BTN 9
 
 #define NONNEGATIVE_OR(val, fallback) (((val) < 0) ? (fallback) : (val))
-#define FIX_CONSTRAINT(value, adjustment) \
-    if ((value) != -1) \
-        (value) = NONNEGATIVE_OR((value) - (adjustment), 1)
 
 #define DEFAULT_WIDTH 320
 #define DEFAULT_HEIGHT 200
@@ -761,8 +758,9 @@ void WindowContext::update_frame_extents() {
                         || geometry.extents.width != (left + right)
                         || geometry.extents.height != (top + bottom);
 
+            LOG1(" ------------------------------------------- frame extents - changed: %d\n", changed);
+
             if (!changed) return;
-            LOG0(" ------------------------------------------- frame extents\n");
 
             GdkRectangle rect = { left, top, (left + right), (top + bottom) };
             set_cached_extents(rect);
@@ -812,11 +810,6 @@ void WindowContext::update_frame_extents() {
             geometry.height = newH;
             geometry.x = x;
             geometry.y = y;
-
-            FIX_CONSTRAINT(resizable.minw, geometry.extents.width);
-            FIX_CONSTRAINT(resizable.maxw, geometry.extents.width);
-            FIX_CONSTRAINT(resizable.minh, geometry.extents.height);
-            FIX_CONSTRAINT(resizable.maxh, geometry.extents.height);
 
             LOG4("Geometry after frame extents: %d, %d - %d, %d\n", geometry.x,
                         geometry.y, geometry.width, geometry.height);
@@ -879,12 +872,16 @@ void WindowContext::load_cached_extents() {
 
     if (window_type == NORMAL && normal_extents.has_value()) {
         geometry.extents = normal_extents.value();
+        LOG4("Loaded Normal Extents: x = %d, y = %d, width = %d, height = %d\n",
+                    geometry.extents.x, geometry.extents.y, geometry.extents.width, geometry.extents.height);
         geometry.frame_extents_received = true;
         return;
     }
 
     if (window_type == UTILITY && utility_extents.has_value()) {
         geometry.extents = utility_extents.value();
+        LOG4("Loaded Utility Extents: x = %d, y = %d, width = %d, height = %d\n",
+                    geometry.extents.x, geometry.extents.y, geometry.extents.width, geometry.extents.height);
         geometry.frame_extents_received = true;
     }
 }
@@ -915,8 +912,8 @@ void WindowContext::process_state(GdkEventWindowState *event) {
     int cw = gdk_window_get_width(gdk_window);
     int ch = gdk_window_get_height(gdk_window);
 
-    int ww = cw + geometry.extents.width;
-    int wh = ch + geometry.extents.height;
+    int ww, wh;
+    get_window_size(&ww, &wh);
 
     LOG4("process_state: cw = %d, ch = %d, ww = %d, wh = %d\n", cw, ch, ww, wh);
 
@@ -1024,6 +1021,24 @@ void WindowContext::notify_view_resize(int width, int height) {
     }
 }
 
+void WindowContext::notify_current_sizes() {
+    int ww, wh, cw, ch;
+
+    get_window_size(&ww, &wh);
+    get_view_size(&cw, &ch);
+
+    GdkWindowState state = (gtk_widget_get_realized(gtk_widget))
+            ? gdk_window_get_state(gdk_window)
+            : (GdkWindowState) 0;
+
+    notify_window_resize((state & GDK_WINDOW_STATE_MAXIMIZED)
+                                ? com_sun_glass_events_WindowEvent_MAXIMIZE
+                                : com_sun_glass_events_WindowEvent_RESIZE,
+                                ww, wh);
+
+    notify_view_resize(cw, ch);
+}
+
 void WindowContext::notify_view_move() {
     if (jview) {
         LOG0("com_sun_glass_events_ViewEvent_MOVE\n");
@@ -1105,7 +1120,9 @@ void WindowContext::remove_window_constraints() {
 }
 
 void WindowContext::update_window_constraints() {
-    update_window_constraints(get_view_width(), get_view_height());
+    int cw, ch;
+    get_view_size(&cw, &ch);
+    update_window_constraints(cw, ch);
 }
 
 void WindowContext::update_window_constraints(int width, int height) {
@@ -1119,13 +1136,18 @@ void WindowContext::update_window_constraints(int width, int height) {
     GdkGeometry hints;
 
     if (resizable.value && !is_disabled) {
-        int min_w = (resizable.minw == -1) ? 1 : resizable.minw;
-        int min_h =  (resizable.minh == -1) ? 1 : resizable.minh;
-
-        hints.min_width = (min_w < 1) ? 1 : min_w;
-        hints.min_height = (min_h < 1) ? 1 : min_h;
-        hints.max_width = (resizable.maxw == -1) ? G_MAXINT : resizable.maxw;
-        hints.max_height = (resizable.maxh == -1) ? G_MAXINT : resizable.maxh;
+        hints.min_width = (resizable.minw == -1)
+                     ? 1
+                     : NONNEGATIVE_OR(resizable.minw - geometry.extents.width, 1);
+        hints.min_height = (resizable.minh == -1)
+                     ? 1
+                     : NONNEGATIVE_OR(resizable.minh - geometry.extents.height, 1);
+        hints.max_width = (resizable.maxw == -1)
+                    ? G_MAXINT
+                    : NONNEGATIVE_OR(resizable.maxw - geometry.extents.width, 1);
+        hints.max_height = (resizable.maxh == -1)
+                    ? G_MAXINT
+                    : NONNEGATIVE_OR(resizable.maxh - geometry.extents.height, 1);
     } else {
         hints.min_width = width;
         hints.min_height = height;
@@ -1192,7 +1214,7 @@ void WindowContext::set_bounds(int x, int y, bool xSet, bool ySet, int w, int h,
     }
 
     if (h > 0) {
-        newH = NONNEGATIVE_OR (h - geometry.extents.height, 1);
+        newH = NONNEGATIVE_OR(h - geometry.extents.height, 1);
     } else if (ch > 0) {
         newH = ch;
     }
@@ -1219,17 +1241,7 @@ void WindowContext::set_bounds(int x, int y, bool xSet, bool ySet, int w, int h,
             LOG0("need to restore geometry of maximized\n");
             // Report back to java with current sizes
             if (newW > 0 || newH > 0) {
-                int cw = get_view_width();
-                int ch = get_view_height();
-
-                int ww = cw + geometry.extents.width;
-                int wh = ch + geometry.extents.height;
-
-                notify_window_resize((state & GDK_WINDOW_STATE_MAXIMIZED)
-                                            ? com_sun_glass_events_WindowEvent_MAXIMIZE
-                                            : com_sun_glass_events_WindowEvent_RESIZE,
-                                            ww, wh);
-                notify_view_resize(cw, ch);
+                notify_current_sizes();
             }
 
             if (xSet || xSet) {
@@ -1243,7 +1255,7 @@ void WindowContext::set_bounds(int x, int y, bool xSet, bool ySet, int w, int h,
     }
 
     // Re-apply the constraints removed for fullscreen / maximize
-    if (!resizable.value || resizable.maxw != -1 || resizable.maxh != - 1) {
+    if (!resizable.value) {
         update_window_constraints(newW, newH);
     }
 
@@ -1273,7 +1285,7 @@ void WindowContext::maximize(bool state) {
     if (state) {
         add_wmf(GDK_FUNC_MAXIMIZE);
 
-        if (!resizable.value || resizable.maxw != -1 || resizable.maxh != - 1) {
+        if (!resizable.value) {
             remove_window_constraints();
             process_pending_events();
         }
@@ -1314,7 +1326,7 @@ void WindowContext::enter_fullscreen() {
         save_geometry();
         geometry.needs_to_restore_geometry = true;
 
-        if (!resizable.value || resizable.maxw != -1 || resizable.maxh != - 1) {
+        if (!resizable.value) {
             remove_window_constraints();
             process_pending_events();
             // Needs to happen "in the future" because constraints removal are not applied immediately
@@ -1358,15 +1370,15 @@ void WindowContext::set_enabled(bool enabled) {
 
 void WindowContext::set_minimum_size(int w, int h) {
     LOG2("set_minimum_size: %d, %d\n", w, h);
-    resizable.minw = NONNEGATIVE_OR(w - geometry.extents.width, 1);
-    resizable.minh = NONNEGATIVE_OR(h - geometry.extents.height, 1);
+    resizable.minw = w;
+    resizable.minh = h;
     update_window_constraints();
 }
 
 void WindowContext::set_maximum_size(int w, int h) {
     LOG2("set_maximum_size: %d, %d\n", w, h);
-    resizable.maxw = NONNEGATIVE_OR(w - geometry.extents.width, 1);
-    resizable.maxh = NONNEGATIVE_OR(h - geometry.extents.height, 1);
+    resizable.maxw = (w == -1) ? -1 : w;
+    resizable.maxh = (h == -1) ? -1 : h;
     update_window_constraints();
 }
 
@@ -1431,65 +1443,81 @@ bool WindowContext::effective_on_top() {
     return on_top;
 }
 
-int WindowContext::get_view_width() {
-    return (gtk_widget_get_realized(gtk_widget))
-                ? gdk_window_get_width(gdk_window)
-                : geometry.width;
+void WindowContext::get_view_size(int *width, int *height) {
+    if (gtk_widget_get_realized(gtk_widget)) {
+        *width = gdk_window_get_width(gdk_window);
+        *height = gdk_window_get_height(gdk_window);
+    } else {
+        *width = geometry.width;
+        *height = geometry.height;
+    }
+
+    LOG2("get_view_size: %d, %d\n", *width, *height);
 }
 
-int WindowContext::get_view_height() {
-    return (gtk_widget_get_realized(gtk_widget))
-               ? gdk_window_get_height(gdk_window)
-               : geometry.height;
+void WindowContext::get_window_size(int *width, int *height) {
+    int ww, wh;
+    get_view_size(&ww, &wh);
+
+    if (gtk_widget_get_realized(gtk_widget)) {
+        gint root_x, root_y, origin_x, origin_y;
+        gdk_window_get_root_origin(gdk_window, &root_x, &root_y);
+        gdk_window_get_origin(gdk_window, &origin_x, &origin_y);
+
+        // Here is detected if there are any decorations as it might vary, for example
+        // if the window is fullscreen
+        if ((origin_x - root_x) > 0) {
+            ww += geometry.extents.width;
+        }
+
+        if ((origin_y - root_y) > 0) {
+            wh += geometry.extents.height;
+        }
+    }
+
+    LOG2("get_window_size: %d, %d\n", ww, wh);
+    *width = ww;
+    *height = wh;
 }
 
 // Values are view size
 void WindowContext::resize(int width, int height) {
-    LOG2("resize: %d, %d\n", width, height);
-    int newW = (width <= 0) ? get_view_width() : width;
-    int newH = (height <= 0) ? get_view_height() : height;
+    LOG2("resize (requested): %d, %d\n", width, height);
+    int current_width, current_height;
+    get_view_size(&current_width, &current_height);
+
+    int newW = (width <= 0) ? current_width : width;
+    int newH = (height <= 0) ? current_height : height;
 
     // Windows that are undecorated or transparent will not respect
     // minimum or maximum size constraints
     if (resizable.minw > 0 && newW < resizable.minw) {
-        newW = resizable.minw;
+        newW = NONNEGATIVE_OR(resizable.minw - geometry.extents.width, 1);
     }
 
     if (resizable.minh > 0 && newH < resizable.minh) {
-        newH = resizable.minh;
+        newH = NONNEGATIVE_OR(resizable.minh - geometry.extents.height, 1);
     }
 
     if (resizable.maxw > 0 && newW > resizable.maxw) {
-        newW = resizable.maxw;
+        newW = NONNEGATIVE_OR(resizable.maxw - geometry.extents.width, 1);
     }
 
     if (resizable.maxh > 0 && newH > resizable.maxh) {
-        newH = resizable.maxh;
+        newH = NONNEGATIVE_OR(resizable.maxh - geometry.extents.height, 1);
     }
 
-    bool notify = false;
+    LOG2("resize (real): %d, %d\n", newW, newH);
+
     if (gtk_widget_get_realized(gtk_widget)) {
         gtk_window_resize(GTK_WINDOW(gtk_widget), newW, newH);
-
         // If not changed, configure event will not happen, so we need to notify here
-        if (get_view_width() == newW && get_view_height() == newH) {
-            notify = true;
-        }
+        if (current_width == newW && current_height == newH)  notify_current_sizes();
     } else {
         gtk_window_set_default_size(GTK_WINDOW(gtk_widget), newW, newH);
         // If the GdkWindow is not yet created, report back to Java, because the configure event
         // won't happen
-        notify = true;
-    }
-
-    if (notify) {
-        int w = newW + geometry.extents.width;
-        int h = newH + geometry.extents.height;
-
-        LOG2("resize -> notify: %d, %d\n", w, h);
-
-        notify_window_resize(com_sun_glass_events_WindowEvent_RESIZE, w, h);
-        notify_view_resize(newW, newH);
+        notify_current_sizes();
     }
 }
 
@@ -1571,8 +1599,8 @@ void WindowContext::set_owner(WindowContext * owner_ctx) {
 
 void WindowContext::update_view_size() {
     if (jview) {
-        int cw = get_view_width();
-        int ch = get_view_height();
+        int cw, ch;
+        get_view_size(&cw, &ch);
 
         if (cw > 0 && ch > 0) {
             notify_view_resize(cw, ch);

@@ -25,7 +25,6 @@
 package test.javafx.stage;
 
 import javafx.geometry.Rectangle2D;
-import javafx.scene.Parent;
 import javafx.scene.layout.Region;
 import javafx.scene.layout.StackPane;
 import javafx.stage.Screen;
@@ -35,7 +34,6 @@ import org.junit.jupiter.params.provider.EnumSource;
 import test.util.Util;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 import static test.util.Util.PARAMETERIZED_TEST_DISPLAY;
 
 class CenterOnScreenTest extends StageTestBase {
@@ -59,32 +57,26 @@ class CenterOnScreenTest extends StageTestBase {
     }
 
     @ParameterizedTest(name = PARAMETERIZED_TEST_DISPLAY)
-    @EnumSource(value = StageStyle.class,
-            mode = EnumSource.Mode.INCLUDE,
-            names = {"DECORATED", "UNDECORATED", "TRANSPARENT"})
+    @EnumSource(names = {"DECORATED", "UNDECORATED", "TRANSPARENT"})
     void testStateCenterOnScreenWhenShown(StageStyle stageStyle) {
         setupStageWithStyle(stageStyle, stage -> {
             stage.setWidth(STAGE_WIDTH);
             stage.setHeight(STAGE_HEIGHT);
         });
-        Util.sleep(300);
+        Util.sleep(MEDIUM_WAIT);
         assertStageCentered(stageStyle, false);
     }
 
     @ParameterizedTest(name = PARAMETERIZED_TEST_DISPLAY)
-    @EnumSource(value = StageStyle.class,
-            mode = EnumSource.Mode.INCLUDE,
-            names = {"DECORATED", "UNDECORATED", "TRANSPARENT"})
+    @EnumSource(names = {"DECORATED", "UNDECORATED", "TRANSPARENT"})
     void testStateCenterOnScreenWhenShownWithSceneSize(StageStyle stageStyle) {
         setupStageWithStyle(stageStyle, null);
-        Util.sleep(500);
+        Util.sleep(MEDIUM_WAIT);
         assertStageCentered(stageStyle, true);
     }
 
     @ParameterizedTest(name = PARAMETERIZED_TEST_DISPLAY)
-    @EnumSource(value = StageStyle.class,
-            mode = EnumSource.Mode.INCLUDE,
-            names = {"DECORATED", "UNDECORATED", "TRANSPARENT"})
+    @EnumSource(names = {"DECORATED", "UNDECORATED", "TRANSPARENT"})
     void testStateCenterOnScreenAfterShown(StageStyle stageStyle) {
         setupStageWithStyle(stageStyle, stage -> {
             stage.setWidth(STAGE_WIDTH);
@@ -93,25 +85,23 @@ class CenterOnScreenTest extends StageTestBase {
             stage.setY(0);
         });
 
-        Util.sleep(500);
+        Util.sleep(MEDIUM_WAIT);
         Util.runAndWait(() -> getStage().centerOnScreen());
-        Util.sleep(500);
+        Util.sleep(MEDIUM_WAIT);
         assertStageCentered(stageStyle, false);
     }
 
     @ParameterizedTest(name = PARAMETERIZED_TEST_DISPLAY)
-    @EnumSource(value = StageStyle.class,
-            mode = EnumSource.Mode.INCLUDE,
-            names = {"DECORATED", "UNDECORATED", "TRANSPARENT"})
+    @EnumSource(names = {"DECORATED", "UNDECORATED", "TRANSPARENT"})
     void testStateCenterOnScreenAfterShownWithSceneSize(StageStyle stageStyle) {
         setupStageWithStyle(stageStyle, stage -> {
             stage.setX(0);
             stage.setY(0);
         });
 
-        Util.sleep(500);
+        Util.sleep(MEDIUM_WAIT);
         Util.runAndWait(() -> getStage().centerOnScreen());
-        Util.sleep(500);
+        Util.sleep(MEDIUM_WAIT);
         assertStageCentered(stageStyle, true);
     }
 
@@ -119,7 +109,7 @@ class CenterOnScreenTest extends StageTestBase {
     private void assertStageCentered(StageStyle stageStyle, boolean useSceneSize) {
         Screen screen = Util.getScreen(getStage());
 
-        double delta = (stageStyle == StageStyle.DECORATED) ? DECORATED_DELTA : 1.0;
+        double delta = (stageStyle == StageStyle.DECORATED) ? DECORATED_DELTA : SIZING_DELTA;
 
         Rectangle2D bounds = screen.getVisualBounds();
         double centerX =

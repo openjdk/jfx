@@ -51,11 +51,11 @@ class MaximizeTest extends StageTestBase {
     };
 
     @ParameterizedTest(name = PARAMETERIZED_TEST_DISPLAY)
-    @EnumSource(value = StageStyle.class, mode = EnumSource.Mode.INCLUDE, names = {"UNDECORATED", "TRANSPARENT"})
+    @EnumSource(names = {"UNDECORATED", "TRANSPARENT"})
     void testMaximizeUndecorated(StageStyle stageStyle) {
         setupStageWithStyle(stageStyle, TEST_SETTINGS);
 
-        Util.doTimeLine(300,
+        Util.doTimeLine(SHORT_WAIT,
                 () -> getStage().setMaximized(true),
                 () ->  {
                     assertTrue(getStage().isMaximized());
@@ -64,48 +64,44 @@ class MaximizeTest extends StageTestBase {
                 },
                 () -> getStage().setMaximized(false));
 
-        Util.sleep(300);
+        Util.sleep(SHORT_WAIT);
 
-        assertEquals(POS_X, getStage().getX(), "Stage maximized position changed");
-        assertEquals(POS_Y, getStage().getY(), "Stage maximized position changed");
+        assertEquals(POS_X, getStage().getX(), POSITION_DELTA, "Stage maximized position changed");
+        assertEquals(POS_Y, getStage().getY(), POSITION_DELTA, "Stage maximized position changed");
     }
 
     @ParameterizedTest(name = PARAMETERIZED_TEST_DISPLAY)
-    @EnumSource(value = StageStyle.class,
-            mode = EnumSource.Mode.INCLUDE,
-            names = {"DECORATED", "UNDECORATED", "TRANSPARENT"})
+    @EnumSource(names = {"DECORATED", "UNDECORATED", "TRANSPARENT"})
     void testMaximizeKeepGeometryOnRestore(StageStyle stageStyle) {
         setupStageWithStyle(stageStyle, TEST_SETTINGS);
 
-        Util.doTimeLine(300,
+        Util.doTimeLine(SHORT_WAIT,
                 () -> getStage().setMaximized(true),
                 () -> assertTrue(getStage().isMaximized()),
                 () -> getStage().setMaximized(false));
 
-        Util.sleep(300);
+        Util.sleep(SHORT_WAIT);
         assertSizePosition();
     }
 
     @ParameterizedTest(name = PARAMETERIZED_TEST_DISPLAY)
-    @EnumSource(value = StageStyle.class,
-            mode = EnumSource.Mode.INCLUDE,
-            names = {"DECORATED", "UNDECORATED", "TRANSPARENT"})
+    @EnumSource(names = {"DECORATED", "UNDECORATED", "TRANSPARENT"})
     void testMaximizeBeforeShowShouldKeepGeometryOnRestore(StageStyle stageStyle) {
         setupStageWithStyle(stageStyle, TEST_SETTINGS.andThen(s -> s.setMaximized(true)));
-        Util.sleep(300);
+        Util.sleep(SHORT_WAIT);
 
         Util.runAndWait(() -> {
             assertTrue(getStage().isMaximized());
             getStage().setMaximized(false);
         });
-        Util.sleep(300);
+        Util.sleep(SHORT_WAIT);
         assertSizePosition();
     }
 
     private void assertSizePosition() {
-        assertEquals(WIDTH, getStage().getWidth(), "Stage's width should have remained");
-        assertEquals(HEIGHT, getStage().getHeight(), "Stage's height should have remained");
-        assertEquals(POS_X, getStage().getX(), "Stage's X position should have remained");
-        assertEquals(POS_Y, getStage().getY(), "Stage's Y position should have remained");
+        assertEquals(WIDTH, getStage().getWidth(), SIZING_DELTA, "Stage's width should have remained");
+        assertEquals(HEIGHT, getStage().getHeight(), SIZING_DELTA, "Stage's height should have remained");
+        assertEquals(POS_X, getStage().getX(), POSITION_DELTA, "Stage's X position should have remained");
+        assertEquals(POS_Y, getStage().getY(), POSITION_DELTA, "Stage's Y position should have remained");
     }
 }

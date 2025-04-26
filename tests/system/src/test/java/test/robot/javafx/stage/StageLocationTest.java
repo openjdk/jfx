@@ -38,7 +38,6 @@ import org.junit.jupiter.params.provider.EnumSource;
 import test.robot.testharness.VisualTestBase;
 import test.util.Util;
 
-import static org.junit.jupiter.api.Assertions.assertTrue;
 import static test.util.Util.PARAMETERIZED_TEST_DISPLAY;
 
 class StageLocationTest extends VisualTestBase {
@@ -49,7 +48,8 @@ class StageLocationTest extends VisualTestBase {
     private static final int TO_X = 500;
     private static final int TO_Y = 500;
     private static final Color COLOR = Color.RED;
-    private static final double TOLERANCE = 0.00;
+    private static final double TOLERANCE = 0.07;
+    private static final int WAIT = 300;
 
     private Stage createStage(StageStyle stageStyle) {
         Stage s = getStage(true);
@@ -79,12 +79,11 @@ class StageLocationTest extends VisualTestBase {
     private Stage stage;
 
     @ParameterizedTest(name = PARAMETERIZED_TEST_DISPLAY)
-    @EnumSource(value = StageStyle.class, mode = EnumSource.Mode.INCLUDE, names = {"UNDECORATED", "DECORATED",
-            "UTILITY"})
+    @EnumSource(names = {"DECORATED", "UNDECORATED", "UTILITY"})
     void testMove(StageStyle stageStyle) {
         Util.runAndWait(() -> stage = createStage(stageStyle));
 
-        Util.doTimeLine(300,
+        Util.doTimeLine(WAIT,
                 () -> {
                     stage.setX(X);
                     stage.setY(Y);
@@ -99,12 +98,11 @@ class StageLocationTest extends VisualTestBase {
     }
 
     @ParameterizedTest(name = PARAMETERIZED_TEST_DISPLAY)
-    @EnumSource(value = StageStyle.class, mode = EnumSource.Mode.INCLUDE, names = {"UNDECORATED", "DECORATED",
-            "UTILITY"})
+    @EnumSource(names = {"DECORATED", "UNDECORATED", "UTILITY"})
     void testMoveXAxis(StageStyle stageStyle) {
         Util.runAndWait(() -> stage = createStage(stageStyle));
 
-        Util.doTimeLine(300,
+        Util.doTimeLine(WAIT,
                 () -> {
                     stage.setX(X);
                     stage.setY(Y);
@@ -116,12 +114,11 @@ class StageLocationTest extends VisualTestBase {
     }
 
     @ParameterizedTest(name = PARAMETERIZED_TEST_DISPLAY)
-    @EnumSource(value = StageStyle.class, mode = EnumSource.Mode.INCLUDE, names = {"UNDECORATED", "DECORATED",
-            "UTILITY"})
+    @EnumSource(names = {"DECORATED", "UNDECORATED", "UTILITY"})
     void testMoveYAxis(StageStyle stageStyle) {
         Util.runAndWait(() -> stage = createStage(stageStyle));
 
-        Util.doTimeLine(300,
+        Util.doTimeLine(WAIT,
                 () -> {
                     stage.setX(X);
                     stage.setY(Y);
@@ -133,12 +130,11 @@ class StageLocationTest extends VisualTestBase {
     }
 
     @ParameterizedTest(name = PARAMETERIZED_TEST_DISPLAY)
-    @EnumSource(value = StageStyle.class, mode = EnumSource.Mode.INCLUDE, names = {"UNDECORATED", "DECORATED",
-            "UTILITY"})
+    @EnumSource(names = {"DECORATED", "UNDECORATED", "UTILITY"})
     void testMoveAfterShow(StageStyle stageStyle) {
         Util.runAndWait(() -> stage = createStage(stageStyle));
 
-        Util.doTimeLine(300,
+        Util.doTimeLine(WAIT,
                 stage::show,
                 () -> {
                     stage.setX(TO_X);

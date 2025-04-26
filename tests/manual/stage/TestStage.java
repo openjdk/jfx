@@ -105,14 +105,20 @@ public class TestStage extends Application {
 
         Button btnResize = new Button("Resize");
         btnResize.setOnAction(e -> {
-            testStage.setWidth(200);
-            testStage.setHeight(200);
+            testStage.setWidth(300);
+            testStage.setHeight(300);
         });
 
         Button btnMaxSize = new Button("Set Max Size");
         btnMaxSize.setOnAction(e -> {
-            testStage.setMaxWidth(100);
-            testStage.setMaxHeight(100);
+            testStage.setMaxWidth(250);
+            testStage.setMaxHeight(250);
+        });
+
+        Button btnUnsetMaxSize = new Button("Unset Max Size");
+        btnUnsetMaxSize.setOnAction(e -> {
+            testStage.setMaxWidth(Double.MAX_VALUE);
+            testStage.setMaxHeight(Double.MAX_VALUE);
         });
 
         Button btnMove = new Button("Move");
@@ -127,7 +133,7 @@ public class TestStage extends Application {
         cbIsResizable.setDisable(true);
 
         FlowPane commandPane = new FlowPane(cbStageStyle, btnShow, btnClose, btnSizeToScene, btnCenterOnScreen,
-                btnResize, btnMaxSize, btnMove, btnIconify, btnMaxminize, btnFullScreen, btnResizable);
+                btnResize, btnMaxSize, btnUnsetMaxSize, btnMove, btnIconify, btnMaxminize, btnFullScreen, btnResizable);
         commandPane.setHgap(5);
         commandPane.setVgap(5);
 
@@ -148,7 +154,6 @@ public class TestStage extends Application {
         createTestStage();
 
         Scene scene = new Scene(root, 500, 600);
-        stage.setAlwaysOnTop(true);
         stage.setTitle("Command Stage");
         stage.setScene(scene);
         stage.show();

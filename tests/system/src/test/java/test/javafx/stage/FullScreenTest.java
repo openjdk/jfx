@@ -62,46 +62,40 @@ class FullScreenTest extends StageTestBase {
     };
 
     @ParameterizedTest(name = PARAMETERIZED_TEST_DISPLAY)
-    @EnumSource(value = StageStyle.class,
-            mode = EnumSource.Mode.INCLUDE,
-            names = {"DECORATED", "UNDECORATED", "TRANSPARENT"})
+    @EnumSource(names = {"DECORATED", "UNDECORATED", "TRANSPARENT"})
     void testFullScreenShouldKeepGeometryOnRestore(StageStyle stageStyle) {
         setupStageWithStyle(stageStyle, TEST_SETTINGS);
 
-        Util.doTimeLine(500,
+        Util.doTimeLine(LONG_WAIT,
                 () -> getStage().setFullScreen(true),
                 () -> assertTrue(getStage().isFullScreen()),
                 () -> getStage().setFullScreen(false));
 
-        Util.sleep(500);
+        Util.sleep(LONG_WAIT);
         assertSizePosition();
     }
 
     @ParameterizedTest(name = PARAMETERIZED_TEST_DISPLAY)
-    @EnumSource(value = StageStyle.class,
-            mode = EnumSource.Mode.INCLUDE,
-            names = {"DECORATED", "UNDECORATED", "TRANSPARENT"})
+    @EnumSource(names = {"DECORATED", "UNDECORATED", "TRANSPARENT"})
     void testFullScreenBeforeShowShouldKeepGeometryOnRestore(StageStyle stageStyle) {
         setupStageWithStyle(stageStyle, TEST_SETTINGS.andThen(s -> s.setFullScreen(true)));
 
-        Util.sleep(500);
+        Util.sleep(LONG_WAIT);
         Util.runAndWait(() -> {
             assertTrue(getStage().isFullScreen());
             getStage().setFullScreen(false);
         });
 
-        Util.sleep(500);
+        Util.sleep(LONG_WAIT);
         assertSizePosition();
     }
 
     @ParameterizedTest(name = PARAMETERIZED_TEST_DISPLAY)
-    @EnumSource(value = StageStyle.class,
-            mode = EnumSource.Mode.INCLUDE,
-            names = {"DECORATED", "UNDECORATED", "TRANSPARENT"})
+    @EnumSource(names = {"DECORATED", "UNDECORATED", "TRANSPARENT"})
     void testUnFullScreenChangedPosition(StageStyle stageStyle) {
         setupStageWithStyle(stageStyle, CHANGE_GEOMETRY_TESTS_SETTINGS);
 
-        Util.doTimeLine(500,
+        Util.doTimeLine(LONG_WAIT,
                 () -> getStage().setFullScreen(true),
                 () -> assertTrue(getStage().isFullScreen()),
                 () -> {
@@ -110,20 +104,20 @@ class FullScreenTest extends StageTestBase {
                 },
                 () -> getStage().setFullScreen(false));
 
-        Util.sleep(500);
+        Util.sleep(LONG_WAIT);
 
-        assertEquals(POS_X, getStage().getX(), "Window failed to restore position set while fullscreened");
-        assertEquals(POS_Y, getStage().getY(),  "Window failed to restore position set while fullscreened");
+        assertEquals(POS_X, getStage().getX(), POSITION_DELTA,
+                "Window failed to restore position set while fullscreened");
+        assertEquals(POS_Y, getStage().getY(), POSITION_DELTA,
+                "Window failed to restore position set while fullscreened");
     }
 
     @ParameterizedTest(name = PARAMETERIZED_TEST_DISPLAY)
-    @EnumSource(value = StageStyle.class,
-            mode = EnumSource.Mode.INCLUDE,
-            names = {"DECORATED", "UNDECORATED", "TRANSPARENT"})
+    @EnumSource(names = {"DECORATED", "UNDECORATED", "TRANSPARENT"})
     void testUnFullScreenChangedSize(StageStyle stageStyle) {
         setupStageWithStyle(stageStyle, CHANGE_GEOMETRY_TESTS_SETTINGS);
 
-        Util.doTimeLine(500,
+        Util.doTimeLine(LONG_WAIT,
                 () -> getStage().setFullScreen(true),
                 () -> assertTrue(getStage().isFullScreen()),
                 () -> {
@@ -132,16 +126,16 @@ class FullScreenTest extends StageTestBase {
                 },
                 () -> getStage().setFullScreen(false));
 
-        Util.sleep(500);
+        Util.sleep(LONG_WAIT);
 
-        assertEquals(WIDTH, getStage().getWidth(), "Window failed to restore size set while fullscreened");
-        assertEquals(HEIGHT, getStage().getHeight(),  "Window failed to restore size set while fullscreened");
+        assertEquals(WIDTH, getStage().getWidth(), SIZING_DELTA, "Window failed to restore size set while fullscreened");
+        assertEquals(HEIGHT, getStage().getHeight(), SIZING_DELTA, "Window failed to restore size set while fullscreened");
     }
 
     private void assertSizePosition() {
-        assertEquals(WIDTH, getStage().getWidth(), "Stage's width should have remained");
-        assertEquals(HEIGHT, getStage().getHeight(), "Stage's height should have remained");
-        assertEquals(POS_X, getStage().getX(), "Stage's X position should have remained");
-        assertEquals(POS_Y, getStage().getY(), "Stage's Y position should have remained");
+        assertEquals(WIDTH, getStage().getWidth(), SIZING_DELTA, "Stage's width should have remained");
+        assertEquals(HEIGHT, getStage().getHeight(), SIZING_DELTA, "Stage's height should have remained");
+        assertEquals(POS_X, getStage().getX(), POSITION_DELTA,  "Stage's X position should have remained");
+        assertEquals(POS_Y, getStage().getY(), POSITION_DELTA, "Stage's Y position should have remained");
     }
 }

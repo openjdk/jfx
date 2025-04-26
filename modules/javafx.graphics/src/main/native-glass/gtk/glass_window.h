@@ -229,8 +229,8 @@ protected:
 private:
     void maximize(bool);
     void iconify(bool);
-    int get_view_width();
-    int get_view_height();
+    void get_view_size(int *, int *);
+    void get_window_size(int *, int *);
     void resize(int, int);
     void move(int, int, bool, bool);
     void move(int, int);
@@ -242,6 +242,7 @@ private:
     void notify_window_move(int, int);
     void notify_view_resize(int, int);
     void notify_view_move();
+    void notify_current_sizes();
     GdkAtom get_net_frame_extents_atom();
     void request_frame_extents();
     void update_frame_extents();
