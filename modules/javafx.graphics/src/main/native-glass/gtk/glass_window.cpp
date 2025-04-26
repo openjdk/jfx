@@ -1202,8 +1202,6 @@ void WindowContext::set_bounds(int x, int y, bool xSet, bool ySet, int w, int h,
     int newW = 0;
     int newH = 0;
 
-    bool realized = gtk_widget_get_realized(gtk_widget);
-
     geometry.gravity_x = gravity_x;
     geometry.gravity_y = gravity_y;
 
