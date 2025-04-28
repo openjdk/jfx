@@ -2275,8 +2275,9 @@ public class Scene implements EventTarget {
       */
     private FocusOwnerProperty focusOwner = new FocusOwnerProperty();
 
-    private class FocusOwnerProperty extends ReadOnlyObjectWrapper<Node> {
-        Node oldFocusOwner;
+    private final class FocusOwnerProperty extends ReadOnlyObjectPropertyBase<Node> {
+        private Node currentValue;
+        private int scope = 0;
 
         /**
          * Stores whether the current focus owner visibly indicates focus.
@@ -2296,50 +2297,61 @@ public class Scene implements EventTarget {
         }
 
         @Override
-        protected void invalidated() {
-            if (oldFocusOwner != null) {
-                oldFocusOwner.setFocusQuietly(false, false);
+        public Node get() {
+            return currentValue;
+        }
+
+        public void set(Node newValue) {
+            if (currentValue != null && currentValue != newValue) {
+                currentValue.setFocusQuietly(false, false);
             }
-            Node value = get();
-            if (value != null) {
-                value.setFocusQuietly(windowFocused, focusVisible);
-                if (value != oldFocusOwner) {
-                    InputMethodStateManager manager = value.getScene().getInputMethodStateManager();
+
+            if (newValue != null) {
+                newValue.setFocusQuietly(windowFocused, focusVisible);
+
+                if (currentValue != newValue) {
+                    InputMethodStateManager manager = newValue.getScene().getInputMethodStateManager();
                     if (manager != null) {
-                        manager.focusOwnerChanged(oldFocusOwner, value);
+                        manager.focusOwnerChanged(currentValue, newValue);
                     }
                 }
             }
-            // for the rest of the method we need to update the oldFocusOwner
+
+            // for the rest of the method we need to update the currentValue
             // and use a local copy of it because the user handlers can cause
             // recurrent calls of requestFocus
-            Node localOldOwner = oldFocusOwner;
-            oldFocusOwner = value;
-            if (localOldOwner != null) {
-                localOldOwner.notifyFocusListeners();
-            }
-            if (value != null) {
-                value.notifyFocusListeners();
-            }
-            PlatformLogger logger = Logging.getFocusLogger();
-            if (logger.isLoggable(Level.FINE)) {
-                if (value == get()) {
-                    logger.fine("Changed focus from "
-                            + localOldOwner + " to " + value);
-                } else {
-                    logger.fine("Changing focus from "
-                            + localOldOwner + " to " + value
-                            + " canceled by nested requestFocus");
+            Node oldValue = currentValue;
+            currentValue = newValue;
+
+            try {
+                scope++;
+
+                if (oldValue != null) {
+                    oldValue.notifyFocusListeners();
                 }
-            }
-            if (accessible != null) {
-                accessible.sendNotification(AccessibleAttribute.FOCUS_NODE);
+
+                if (newValue != null) {
+                    newValue.notifyFocusListeners();
+                }
+            } finally {
+                if (--scope == 0 && currentValue != oldValue) {
+                    if (accessible != null) {
+                        accessible.sendNotification(AccessibleAttribute.FOCUS_NODE);
+                    }
+
+                    PlatformLogger logger = Logging.getFocusLogger();
+                    if (logger.isLoggable(Level.FINE)) {
+                        logger.fine("Changed focus from " + oldValue + " to " + currentValue);
+                    }
+
+                    fireValueChangedEvent();
+                }
             }
         }
     };
 
     public final ReadOnlyObjectProperty<Node> focusOwnerProperty() {
-        return focusOwner.getReadOnlyProperty();
+        return focusOwner;
     }
 
     public final Node getFocusOwner() {
@@ -2350,25 +2362,14 @@ public class Scene implements EventTarget {
         // Cancel IM composition if there is one in progress.
         // This needs to be done before the focus owner is switched as it
         // generates event that needs to be delivered to the old focus owner.
-        if (focusOwner.oldFocusOwner != null) {
+        if (focusOwner.currentValue != null) {
             getInputMethodStateManager().focusOwnerWillChangeForScene(this);
         }
 
         // Store the current focusVisible state of the focus owner in case it needs to be
         // restored when a window loses and re-gains focus.
         focusOwner.focusVisible = focusVisible;
-
-        if (focusOwner.get() != node) {
-            // If the focus owner has changed, FocusOwnerProperty::invalidated will update
-            // the node's focusVisible flag.
-            focusOwner.set(node);
-        } else if (node != null) {
-            // If the focus owner has not changed (i.e. only focusVisible has changed),
-            // FocusOwnerProperty::invalidated will not be called, therefore we need to
-            // update the node's focusVisible flag manually.
-            node.focusVisible.set(focusVisible);
-            node.focusVisible.notifyListeners();
-        }
+        focusOwner.set(node);
     }
 
     // For testing.

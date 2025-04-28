@@ -640,9 +640,9 @@ public abstract class Control extends Region implements Skinnable {
     }
 
     @Override
-    protected Node getFocusDelegate() {
+    protected Node getFocusDelegate(Node hoistingNode) {
         if (skinBase != null) {
-            return skinBase.getFocusDelegate();
+            return skinBase.getFocusDelegate(hoistingNode);
         }
 
         return null;

@@ -107,6 +107,7 @@ import javafx.scene.transform.Transform;
 import javafx.stage.Window;
 import javafx.util.Callback;
 
+import java.lang.ref.WeakReference;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -634,7 +635,7 @@ public abstract sealed class Node
 
             @Override
             public void requestFocusVisible(Node node) {
-                node.requestFocus(true);
+                node.requestFocus(null, true);
             }
 
             @Override
@@ -8249,7 +8250,7 @@ public abstract sealed class Node
         this.focused.set(focused);
         this.focusVisible.set(focused && focusVisible);
 
-        Node delegate = getFocusDelegate();
+        Node delegate = getFocusDelegate(this.focused.getHoistingNode());
         if (delegate != null) {
             delegate.setFocusQuietly(focused, focusVisible);
         }
@@ -8261,7 +8262,7 @@ public abstract sealed class Node
      * are fired on the current node and on all of its parents, if necessary.
      */
     final void notifyFocusListeners() {
-        Node delegate = getFocusDelegate();
+        Node delegate = getFocusDelegate(focused.getHoistingNode());
         if (delegate != null) {
             delegate.notifyFocusListeners();
         }
@@ -8320,7 +8321,11 @@ public abstract sealed class Node
      * @see #requestFocus()
      * @defaultValue false
      */
-    private final FocusPropertyBase focused = new FocusPropertyBase() {
+    private final FocusedProperty focused = new FocusedProperty();
+
+    private final class FocusedProperty extends FocusPropertyBase {
+        private WeakReference<Node> hoistingNode;
+
         @Override
         protected PseudoClass getPseudoClass() {
             return FOCUSED_PSEUDOCLASS_STATE;
@@ -8343,6 +8348,10 @@ public abstract sealed class Node
         @Override
         public void set(boolean value) {
             if (get() != value) {
+                if (!value) {
+                    hoistingNode = null;
+                }
+
                 super.set(value);
 
                 int change = value ? 1 : -1;
@@ -8353,6 +8362,39 @@ public abstract sealed class Node
                     node = node.getParent();
                 } while (node != null);
             }
+        }
+
+        private void setHoistingNode(Node hoistingNode) {
+            this.hoistingNode = new WeakReference<>(hoistingNode);
+        }
+
+        /**
+         * Resolves the hoisting node of this focused node, which is always a descendant of this node.
+         * <p>
+         * Note that the hoisting node is tracked as a snapshot in time, which means that when we are trying
+         * to resolve it, it might already have been removed from the scene graph, or moved to a different
+         * place so that is is no longer a descendant of this node.
+         *
+         * @return the hoisting node, or {@code null} if no hoisting node is tracked or if the tracked
+         *         node is not a descendant of this node
+         */
+        private Node getHoistingNode() {
+            Node hoistingNode = this.hoistingNode != null ? this.hoistingNode.get() : null;
+            if (hoistingNode == null) {
+                return null;
+            }
+
+            Node parent = hoistingNode.getParent();
+            while (parent != null) {
+                if (parent == Node.this) {
+                    return hoistingNode;
+                }
+
+                parent = parent.getParent();
+            }
+
+            this.hoistingNode = null;
+            return null;
         }
     };
 
@@ -8572,10 +8614,12 @@ public abstract sealed class Node
      * <p>
      * Focus delegation is often combined with {@link #isFocusScope() focus scoping}.
      *
+     * @param hoistingNode the descendant of this {@code Node} that hoisted the focus request
+     *                     (not necessarily the focus delegate), or {@code null}
      * @return the focus delegate, which is a descendant of this {@code Node}
      * @since 24
      */
-    Node getFocusDelegate() {
+    Node getFocusDelegate(Node hoistingNode) {
         return null;
     }
 
@@ -8587,7 +8631,7 @@ public abstract sealed class Node
      *         or if the focus delegate is not a descendant of this node
      */
     final Node resolveFocusDelegate() {
-        Node delegate = getFocusDelegate();
+        Node delegate = getFocusDelegate(focused.getHoistingNode());
         if (delegate == null) {
             return null;
         }
@@ -8635,19 +8679,21 @@ public abstract sealed class Node
      * <p>This method will clear the {@link #focusVisible} flag.
      */
     public void requestFocus() {
-        requestFocus(false);
+        requestFocus(null, false);
     }
 
-    private void requestFocus(boolean focusVisible) {
+    private void requestFocus(Node hoistingNode, boolean focusVisible) {
         var scene = getScene();
         if (scene == null) {
             return;
         }
 
+        focused.setHoistingNode(hoistingNode);
+
         if (isHoistFocus()) {
             for (Node node = getParent(); node != null; node = node.getParent()) {
                 if (node.isFocusScope()) {
-                    node.requestFocus(focusVisible);
+                    node.requestFocus(this, focusVisible);
                     return;
                 }
             }
@@ -9078,7 +9124,7 @@ public abstract sealed class Node
 
             // If our parent has a focus delegate, we need to use a special dispatcher that can retarget
             // the event to the focus delegate (even if this node doesn't have an event dispatcher itself).
-            if (curParent != null && curParent.getFocusDelegate() != null) {
+            if (curParent != null && curParent.getFocusDelegate(focused.getHoistingNode()) != null) {
                 tail = tail.prepend(curNode::dispatchRetargetedEvent);
             } else {
                 EventDispatcher dispatcher = curNode.eventDispatcher != null
@@ -9107,7 +9153,7 @@ public abstract sealed class Node
         // Since we are in the capturing phase, we need to retarget the event to the focus delegate.
         if (event.getTarget() == parent) {
             retarget = true;
-            event = event.copyFor(event.getSource(), parent.getFocusDelegate());
+            event = event.copyFor(event.getSource(), parent.getFocusDelegate(focused.getHoistingNode()));
         }
 
         // Dispatch the event to our event dispatcher, or if this node doesn't have one,

@@ -247,7 +247,7 @@ public class SpinnerSkin<T> extends SkinBase<Spinner<T>> {
     }
 
     @Override
-    protected Node getFocusDelegate() {
+    protected Node getFocusDelegate(Node hoistingNode) {
         return textField;
     }
 

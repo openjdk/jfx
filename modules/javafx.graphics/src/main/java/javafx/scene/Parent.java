@@ -1505,7 +1505,7 @@ public abstract non-sealed class Parent extends Node {
     }
 
     @Override
-    protected Node getFocusDelegate() { // Overridden to make the method protected
+    protected Node getFocusDelegate(Node hoistingNode) { // Overridden to make the method protected
         return null;
     }
 

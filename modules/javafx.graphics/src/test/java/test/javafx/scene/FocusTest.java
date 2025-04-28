@@ -28,6 +28,7 @@ package test.javafx.scene;
 import com.sun.javafx.scene.SceneHelper;
 import javafx.event.Event;
 import javafx.event.EventTarget;
+import javafx.scene.NodeShim;
 import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyEvent;
 import test.com.sun.javafx.pgstub.StubScene;
@@ -37,6 +38,7 @@ import com.sun.javafx.tk.Toolkit;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.stream.Stream;
 
 import javafx.scene.Group;
 import javafx.scene.Node;
@@ -1187,7 +1189,7 @@ public class FocusTest {
             }
 
             @Override
-            protected Node getFocusDelegate() {
+            protected Node getFocusDelegate(Node hoistingNode) {
                 return delegate;
             }
 
@@ -1346,6 +1348,16 @@ public class FocusTest {
             protected boolean isFocusScope() {
                 return focusScope;
             }
+
+            Node getHoistingNode() {
+                try {
+                    var method = focusedProperty().getClass().getDeclaredMethod("getHoistingNode");
+                    method.setAccessible(true);
+                    return (Node)method.invoke(focusedProperty(), (Object[])null);
+                } catch (ReflectiveOperationException e) {
+                    throw new AssertionError(e);
+                }
+            }
         }
 
         /**
@@ -1376,10 +1388,14 @@ public class FocusTest {
             node4.requestFocus();
             assertIsFocused(node3);
             assertNotFocused(node1, node2, node4, node5);
+            assertTrue(Stream.of(node1, node2, node4, node5).allMatch(n -> n.getHoistingNode() == null));
+            assertSame(node4, node3.getHoistingNode());
 
             node5.requestFocus();
             assertIsFocused(node3);
             assertNotFocused(node1, node2, node4, node5);
+            assertTrue(Stream.of(node1, node2, node4, node5).allMatch(n -> n.getHoistingNode() == null));
+            assertSame(node5, node3.getHoistingNode());
         }
 
         /**
@@ -1410,10 +1426,16 @@ public class FocusTest {
             node4.requestFocus();
             assertIsFocused(node1);
             assertNotFocused(node2, node3, node4, node5);
+            assertTrue(Stream.of(node2, node4, node5).allMatch(n -> n.getHoistingNode() == null));
+            assertSame(node4, node3.getHoistingNode());
+            assertSame(node3, node1.getHoistingNode());
 
             node5.requestFocus();
             assertIsFocused(node1);
             assertNotFocused(node2, node3, node4, node5);
+            assertTrue(Stream.of(node2, node4, node5).allMatch(n -> n.getHoistingNode() == null));
+            assertSame(node5, node3.getHoistingNode());
+            assertSame(node3, node1.getHoistingNode());
         }
 
         /**
@@ -1444,10 +1466,84 @@ public class FocusTest {
             node4.requestFocus();
             assertIsFocused(node3);
             assertNotFocused(node1, node2, node4, node5);
+            assertTrue(Stream.of(node1, node2, node4, node5).allMatch(n -> n.getHoistingNode() == null));
+            assertSame(node4, node3.getHoistingNode());
 
             node5.requestFocus();
             assertIsFocused(node3);
             assertNotFocused(node1, node2, node4, node5);
+            assertTrue(Stream.of(node1, node2, node4, node5).allMatch(n -> n.getHoistingNode() == null));
+            assertSame(node5, node3.getHoistingNode());
+        }
+
+        /**
+         * When a node hoists a focus request to its focus scope, the receiving node will track the hoisting
+         * node internally. Once the focus scope node loses focus, it will clear the reference to the node
+         * that hoisted the focus request.
+         */
+        @Test
+        void losingFocusClearsTrackedHoistingNode() {
+            N node1, node2, node3;
+
+            // node1 . . . . . . . . . . [focusScope]
+            // └── node2 . . . . . . . . [hoistFocus]
+            //     └── node3 . . . . . . [hoistFocus]
+            scene.setRoot(
+                node1 = new N(true, false,
+                    node2 = new N(false, true,
+                        node3 = new N(false, true, null)
+                    )
+                ));
+
+            node3.requestFocus();
+            assertIsFocused(node1);
+            assertNotFocused(node2, node3);
+            assertTrue(Stream.of(node2, node3).allMatch(n -> n.getHoistingNode() == null));
+            assertSame(node3, node1.getHoistingNode());
+
+            NodeShim.setFocusQuietly(node1, false, false);
+            NodeShim.notifyFocusListeners(node1);
+            assertNotFocused(node1, node2, node3);
+            assertTrue(Stream.of(node1, node2, node3).allMatch(n -> n.getHoistingNode() == null));
+        }
+
+        /**
+         * When a node hoists a focus request to its focus scope, the receiving node will track the hoisting
+         * node internally. If the hoisting node is moved to a different place in the scene graph such that
+         * it is no longer a descendant of the focus scope node, the tracking is cleared.
+         */
+        @Test
+        void hoistingNodeIsNotResolvedWhenMovedOutOfDescendantSubtree() {
+            N node1, node2, node3, node4;
+
+            // node1 . . . . . . . . . . []
+            // └── node2 . . . . . . . . [focusScope]
+            //     └── node3 . . . . . . [hoistFocus]
+            //         └── node4 . . . . [hoistFocus]
+            scene.setRoot(
+                node1 = new N(false, false,
+                    node2 = new N(true, false,
+                        node3 = new N(false, true,
+                            node4 = new N(false, true, null)
+                        )
+                    )
+                ));
+
+            node4.requestFocus();
+            assertIsFocused(node2);
+            assertNotFocused(node1, node3, node4);
+            assertTrue(Stream.of(node1, node3, node4).allMatch(n -> n.getHoistingNode() == null));
+            assertSame(node4, node2.getHoistingNode());
+
+            // node1 . . . . . . . . . . []
+            // └── node2 . . . . . . . . [focusScope]
+            // |   └── node3 . . . . . . [hoistFocus]
+            // └── node4 . . . . . . . . [hoistFocus]
+            node3.getChildren().clear();
+            node1.getChildren().add(node4);
+            assertIsFocused(node2);
+            assertNotFocused(node1, node3, node4);
+            assertTrue(Stream.of(node1, node2, node3, node4).allMatch(n -> n.getHoistingNode() == null));
         }
     }
 }
