@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2023, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,14 +25,14 @@
 package com.oracle.tools.fx.monkey.pages;
 
 import java.util.List;
-import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.AccessibleAttribute;
 import javafx.scene.Node;
 import javafx.scene.control.Button;
 import javafx.scene.control.ContextMenu;
+import javafx.scene.control.MenuButton;
 import javafx.scene.layout.Background;
-import javafx.scene.layout.BorderPane;
+import javafx.scene.layout.Pane;
 import javafx.scene.layout.Priority;
 import javafx.scene.layout.Region;
 import javafx.scene.layout.VBox;
@@ -42,8 +42,10 @@ import com.oracle.tools.fx.monkey.options.BooleanOption;
 import com.oracle.tools.fx.monkey.options.EnumOption;
 import com.oracle.tools.fx.monkey.options.PaneContentOptions;
 import com.oracle.tools.fx.monkey.sheets.Options;
+import com.oracle.tools.fx.monkey.sheets.PropertiesMonitor;
 import com.oracle.tools.fx.monkey.sheets.RegionPropertySheet;
 import com.oracle.tools.fx.monkey.util.FX;
+import com.oracle.tools.fx.monkey.util.Menus;
 import com.oracle.tools.fx.monkey.util.OptionPane;
 import com.oracle.tools.fx.monkey.util.TestPaneBase;
 import com.oracle.tools.fx.monkey.util.Utils;
@@ -67,10 +69,8 @@ public class VBoxPage extends TestPaneBase {
             }
         };
 
-        // TODO menu button
-        Button addButton = FX.button("Add Item", () -> {
-            addItem(box.getChildren());
-        });
+        MenuButton addButton = new MenuButton("Add");
+        PaneContentOptions.addChildOption(addButton.getItems(), box.getChildren(), this::createMenu);
 
         Button clearButton = FX.button("Clear Items", () -> {
             box.getChildren().clear();
@@ -85,9 +85,7 @@ public class VBoxPage extends TestPaneBase {
         op.option("Spacing:", Options.spacing("spacing", box.spacingProperty()));
         RegionPropertySheet.appendTo(op, box);
 
-        BorderPane bp = new BorderPane(box);
-        bp.setPadding(new Insets(0, 10, 0, 0));
-        setContent(bp);
+        setContent(box);
         setOptions(op);
     }
 
@@ -104,17 +102,31 @@ public class VBoxPage extends TestPaneBase {
         Region r = new Region();
         r.setPrefHeight(30);
         r.setMinHeight(10);
-
-        r.setOnContextMenuRequested((ev) -> {
-            ContextMenu m = new ContextMenu();
-            FX.item(m, "height=" + r.getHeight());
-            FX.separator(m);
-            FX.item(m, "min height=" + r.getMinHeight());
-            FX.item(m, "pref height=" + r.getPrefHeight());
-            FX.item(m, "max height=" + r.getMaxHeight());
-            m.show(r, ev.getScreenX(), ev.getScreenY());
-        });
+        createMenu(r);
         return r;
+    }
+
+    private void createMenu(Node n) {
+        FX.setPopupMenu(n, () -> {
+            ContextMenu cm = new ContextMenu();
+            Menus.marginSubMenu(cm, (v) -> VBox.setMargin(n, v), () -> VBox.getMargin(n));
+            Menus.enumSubMenu(cm, "VGrow", Priority.class, true, (v) -> VBox.setVgrow(n, v), () -> VBox.getVgrow(n));
+            if(n instanceof Region r) {
+                FX.separator(cm);
+                Menus.sizeSubMenus(cm, r);
+            }
+            FX.separator(cm);
+            FX.item(cm, "Remove", () -> {
+                if (n.getParent() instanceof Pane p) {
+                    p.getChildren().remove(n);
+                }
+            });
+            FX.separator(cm);
+            FX.item(cm, "Show Properties Monitor...", () -> {
+                PropertiesMonitor.open(n);
+            });
+            return cm;
+        });
     }
 
     private PaneContentOptions.Builder createBuilder() {

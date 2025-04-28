@@ -969,7 +969,7 @@ public abstract non-sealed class Parent extends Node {
         if (needsLayout == null) {
             needsLayout = new ReadOnlyBooleanWrapper(this, "needsLayout", layoutFlag == LayoutFlags.NEEDS_LAYOUT);
         }
-        return needsLayout;
+        return needsLayout.getReadOnlyProperty();
     }
 
     /**
@@ -991,10 +991,13 @@ public abstract non-sealed class Parent extends Node {
     private double minHeightCache = -1;
 
     void setLayoutFlag(LayoutFlags flag) {
+        // Needs to be set before needsLayout is updated, as otherwise a listener that
+        // calls isNeedsLayout() might see the old value.
+        layoutFlag = flag;
+
         if (needsLayout != null) {
             needsLayout.set(flag == LayoutFlags.NEEDS_LAYOUT);
         }
-        layoutFlag = flag;
     }
 
     private void markDirtyLayout(boolean local, boolean forceParentLayout) {

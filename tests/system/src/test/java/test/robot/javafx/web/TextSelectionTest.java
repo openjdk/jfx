@@ -71,6 +71,7 @@ public class TextSelectionTest extends RobotTestBase {
     @Timeout(value=20)
     public void testTextSelection() {
 
+        Util.sleep(200);
         int x = (int)(scene.getWindow().getX() + scene.getX() + 22);
         int y = (int)(scene.getWindow().getY() + scene.getY() + 15);
 
