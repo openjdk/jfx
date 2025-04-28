@@ -106,7 +106,6 @@ public class TableViewContextMenuSortTest {
 
         // macOS only: Ctrl + Left click also triggers the context menu
         if (PlatformUtil.isMac()) {
-            
             Util.runAndWait(() -> {
                 robot.keyPress(KeyCode.ESCAPE);
                 robot.keyRelease(KeyCode.ESCAPE);
