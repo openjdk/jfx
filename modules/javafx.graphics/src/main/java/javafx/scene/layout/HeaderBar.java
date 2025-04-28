@@ -177,7 +177,8 @@ public class HeaderBar extends Region {
     private static final String MARGIN = "headerbar-margin";
 
     /**
-     * Specifies whether the child is a draggable part of the {@code HeaderBar}.
+     * Specifies the {@code HeaderDragType} of the child, indicating whether it is a draggable
+     * part of the {@code HeaderBar}.
      * <p>
      * Setting the value to {@code null} will remove the flag.
      *
@@ -189,7 +190,7 @@ public class HeaderBar extends Region {
     }
 
     /**
-     * Returns whether the child is a draggable part of the {@code HeaderBar}.
+     * Returns the {@code HeaderDragType} of the specified child.
      *
      * @param child the child node
      * @return the {@code HeaderDragType}, or {@code null} if not set
