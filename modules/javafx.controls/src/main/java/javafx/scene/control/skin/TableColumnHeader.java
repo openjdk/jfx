@@ -248,19 +248,19 @@ public class TableColumnHeader extends Region {
         popupTriggeredOnMousePressed = me.isPopupTrigger();
         me.consume();
 
-        header.getTableHeaderRow().columnDragLock = true;
+        header.getTableHeaderRow().columnDragLock = !popupTriggeredOnMousePressed;
 
         // pass focus to the table, so that the user immediately sees
         // the focus rectangle around the table control.
         header.getTableSkin().getSkinnable().requestFocus();
 
-        if (me.isPrimaryButtonDown() && header.isColumnReorderingEnabled()) {
+        if (me.isPrimaryButtonDown() && header.isColumnReorderingEnabled() && !popupTriggeredOnMousePressed) {
             header.columnReorderingStarted(me.getX());
         }
     };
 
     private static final EventHandler<MouseEvent> mouseDraggedHandler = me -> {
-        if (me.isConsumed()) return;
+        if (me.isConsumed() || popupTriggeredOnMousePressed) return;
         me.consume();
 
         TableColumnHeader header = (TableColumnHeader) me.getSource();

@@ -25,6 +25,7 @@
 
 package test.robot.javafx.scene.tableview;
 
+import com.sun.javafx.PlatformUtil;
 import javafx.application.Application;
 import javafx.application.Platform;
 import javafx.beans.property.SimpleStringProperty;
@@ -37,7 +38,9 @@ import javafx.scene.control.MenuItem;
 import javafx.scene.control.TableColumn;
 import javafx.scene.control.TableView;
 import javafx.scene.control.cell.PropertyValueFactory;
+import javafx.scene.input.KeyCode;
 import javafx.scene.input.MouseButton;
+import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.StackPane;
 import javafx.scene.robot.Robot;
 import javafx.stage.Stage;
@@ -51,6 +54,7 @@ import test.util.Util;
 import java.util.List;
 import java.util.Objects;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
@@ -82,6 +86,12 @@ public class TableViewContextMenuSortTest {
         double posX = bounds.getMinX() + 10;
         double posY = bounds.getMinY() + 5;
 
+        AtomicInteger counter = new AtomicInteger();
+        header.addEventFilter(MouseEvent.ANY, e -> {
+            if (e.isPopupTrigger()) {
+                counter.incrementAndGet();
+            }
+        });
         Util.runAndWait(() -> {
             robot.mouseMove((int) posX, (int) posY);
             robot.mousePress(MouseButton.SECONDARY);
@@ -89,8 +99,32 @@ public class TableViewContextMenuSortTest {
         });
         Util.sleep(1000);
 
+        assertEquals(counter.get(), 1);
         for (int i = 0; i < 4; i++) {
             assertEquals(unsortedList.get(i).getName(), table.getItems().get(i).getName());
+        }
+
+        // macOS only: Ctrl + Left click also triggers the context menu
+        if (PlatformUtil.isMac()) {
+            
+            Util.runAndWait(() -> {
+                robot.keyPress(KeyCode.ESCAPE);
+                robot.keyRelease(KeyCode.ESCAPE);
+            });
+            Util.sleep(100);
+
+            Util.runAndWait(() -> {
+                robot.keyPress(KeyCode.CONTROL);
+                robot.mousePress(MouseButton.PRIMARY);
+                robot.mouseRelease(MouseButton.PRIMARY);
+                robot.keyRelease(KeyCode.CONTROL);
+            });
+            Util.sleep(1000);
+
+            assertEquals(counter.get(), 2);
+            for (int i = 0; i < 4; i++) {
+                assertEquals(unsortedList.get(i).getName(), table.getItems().get(i).getName());
+            }
         }
     }
 
