@@ -248,7 +248,7 @@ public class TableColumnHeader extends Region {
         popupTriggeredOnMousePressed = me.isPopupTrigger();
         me.consume();
 
-        header.getTableHeaderRow().columnDragLock = !popupTriggeredOnMousePressed;
+        header.getTableHeaderRow().columnDragLock = true;
 
         // pass focus to the table, so that the user immediately sees
         // the focus rectangle around the table control.
