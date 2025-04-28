@@ -84,9 +84,6 @@ public class RestoreStagePositionTest {
 
     @Test
     public void testUfullscreenPosition() throws Exception {
-        // Disable on Mac until JDK-8176813 is fixed
-        assumeTrue(!PlatformUtil.isMac());
-
         Thread.sleep(200);
         Assertions.assertTrue(stage.isShowing());
         Assertions.assertFalse(stage.isFullScreen());
