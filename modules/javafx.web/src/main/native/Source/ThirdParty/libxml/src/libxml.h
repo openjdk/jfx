@@ -38,11 +38,6 @@
   #define SYSCONFDIR "/etc"
 #endif
 
-#ifdef WITH_TRIO
-  #define TRIO_REPLACE_STDIO
-  #include "trio.h"
-#endif
-
 #if !defined(_WIN32) && \
     !defined(__CYGWIN__) && \
     (defined(__clang__) || \
@@ -53,16 +48,22 @@
 #endif
 
 #if defined(__clang__) || \
-    (defined(__GNUC__) && (__GNUC__ >= 8))
+    (defined(__GNUC__) && (__GNUC__ >= 8) && !defined(__EDG__))
   #define ATTRIBUTE_NO_SANITIZE(arg) __attribute__((no_sanitize(arg)))
 #else
   #define ATTRIBUTE_NO_SANITIZE(arg)
 #endif
 
 #ifdef __clang__
-  #define ATTRIBUTE_NO_SANITIZE_INTEGER \
-    ATTRIBUTE_NO_SANITIZE("unsigned-integer-overflow") \
-    ATTRIBUTE_NO_SANITIZE("unsigned-shift-base")
+  #if (!defined(__apple_build_version__) && __clang_major__ >= 12) || \
+      (defined(__apple_build_version__) && __clang_major__ >= 13)
+    #define ATTRIBUTE_NO_SANITIZE_INTEGER \
+      ATTRIBUTE_NO_SANITIZE("unsigned-integer-overflow") \
+      ATTRIBUTE_NO_SANITIZE("unsigned-shift-base")
+  #else
+    #define ATTRIBUTE_NO_SANITIZE_INTEGER \
+      ATTRIBUTE_NO_SANITIZE("unsigned-integer-overflow")
+  #endif
 #else
   #define ATTRIBUTE_NO_SANITIZE_INTEGER
 #endif
