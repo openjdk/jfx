@@ -42,6 +42,7 @@
 	<classpathentry kind="src" path="/graphics">
 		<attributes>
 			<attribute name="module" value="true"/>
+			<attribute name="add-exports" value="javafx.graphics/com.sun.javafx.tk=jfx.incubator.richtext"/>
 		</attributes>
 	</classpathentry>
 	<classpathentry kind="src" path="/controls">
