@@ -25,15 +25,15 @@ extern "C" {
 XSLTPUBVAR const xmlChar *xsltExtMarker;
 
 XSLTPUBFUN xsltElemPreCompPtr XSLTCALL
-                xsltDocumentComp        (xsltStylesheetPtr style,
-                                         xmlNodePtr inst,
-                                         xsltTransformFunction function);
+        xsltDocumentComp    (xsltStylesheetPtr style,
+                     xmlNodePtr inst,
+                     xsltTransformFunction function);
 
 XSLTPUBFUN void XSLTCALL
-                xsltStylePreCompute     (xsltStylesheetPtr style,
-                                         xmlNodePtr inst);
+        xsltStylePreCompute    (xsltStylesheetPtr style,
+                     xmlNodePtr inst);
 XSLTPUBFUN void XSLTCALL
-                xsltFreeStylePreComps   (xsltStylesheetPtr style);
+        xsltFreeStylePreComps    (xsltStylesheetPtr style);
 
 #ifdef __cplusplus
 }
