@@ -48,6 +48,7 @@
 #include "Logging.h"
 #include "MediaDescription.h"
 #include "MediaSource.h"
+#include "Settings.h"
 #include "SharedBuffer.h"
 #include "SourceBufferList.h"
 #include "SourceBufferPrivate.h"
@@ -62,15 +63,101 @@
 #include <JavaScriptCore/VM.h>
 #include <limits>
 #include <wtf/CheckedArithmetic.h>
-#include <wtf/IsoMallocInlines.h>
 #include <wtf/RunLoop.h>
 #include <wtf/Scope.h>
 #include <wtf/StringPrintStream.h>
+#include <wtf/TZoneMallocInlines.h>
 #include <wtf/WeakPtr.h>
 
 namespace WebCore {
 
-WTF_MAKE_ISO_ALLOCATED_IMPL(SourceBuffer);
+WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(SourceBuffer);
+
+class SourceBufferClientImpl final : public SourceBufferPrivateClient {
+public:
+    static Ref<SourceBufferClientImpl> create(SourceBuffer& parent) { return adoptRef(*new SourceBufferClientImpl(parent)); }
+    Ref<MediaPromise> sourceBufferPrivateDidReceiveInitializationSegment(InitializationSegment&& segment) final
+    {
+        MediaPromise::AutoRejectProducer producer(PlatformMediaError::BufferRemoved);
+        auto promise = producer.promise();
+
+        ensureWeakOnDispatcher([producer = WTFMove(producer), segment = WTFMove(segment)](SourceBuffer& parent) mutable {
+            parent.sourceBufferPrivateDidReceiveInitializationSegment(WTFMove(segment))->chainTo(WTFMove(producer));
+        });
+        return promise;
+    }
+
+    Ref<MediaPromise> sourceBufferPrivateBufferedChanged(const Vector<PlatformTimeRanges>& trackBuffers) final
+    {
+        MediaPromise::AutoRejectProducer producer(PlatformMediaError::BufferRemoved);
+        auto promise = producer.promise();
+
+        ensureWeakOnDispatcher([producer = WTFMove(producer), trackBuffers = trackBuffers](SourceBuffer& parent) mutable {
+            parent.sourceBufferPrivateBufferedChanged(WTFMove(trackBuffers))->chainTo(WTFMove(producer));
+        });
+
+        return promise;
+    }
+
+    void sourceBufferPrivateHighestPresentationTimestampChanged(const MediaTime& time) final
+    {
+        ensureWeakOnDispatcher([time](SourceBuffer& parent) {
+            parent.sourceBufferPrivateHighestPresentationTimestampChanged(time);
+        });
+    }
+
+    Ref<MediaPromise> sourceBufferPrivateDurationChanged(const MediaTime& duration) final
+    {
+        MediaPromise::AutoRejectProducer producer(PlatformMediaError::BufferRemoved);
+        auto promise = producer.promise();
+
+        ensureWeakOnDispatcher([producer = WTFMove(producer), duration](SourceBuffer& parent) mutable {
+            parent.sourceBufferPrivateDurationChanged(duration)->chainTo(WTFMove(producer));
+        });
+
+        return promise;
+    }
+    void sourceBufferPrivateDidDropSample() final
+    {
+        ensureWeakOnDispatcher([](SourceBuffer& parent) {
+            parent.sourceBufferPrivateDidDropSample();
+        });
+    }
+
+    void sourceBufferPrivateDidReceiveRenderingError(int64_t errorCode) final
+    {
+        ensureWeakOnDispatcher([errorCode](SourceBuffer& parent) {
+            parent.sourceBufferPrivateDidReceiveRenderingError(errorCode);
+        });
+    }
+
+    void ensureWeakOnDispatcher(Function<void(SourceBuffer&)>&& function, bool forceAsync = false) const
+    {
+        auto weakWrapper = [function = WTFMove(function), weakParent = m_parent] {
+            if (RefPtr parent = weakParent.get(); parent && !parent->isRemoved())
+                function(*parent);
+        };
+        if (!forceAsync) {
+            ScriptExecutionContext::ensureOnContextThread(m_identifier, [wrapper = WTFMove(weakWrapper)](auto&) {
+                wrapper();
+            });
+            return;
+        }
+        ScriptExecutionContext::postTaskTo(m_identifier, [wrapper = WTFMove(weakWrapper)](auto&) {
+            wrapper();
+        });
+    }
+
+private:
+    explicit SourceBufferClientImpl(SourceBuffer& parent)
+        : m_parent(parent)
+        , m_identifier(parent.scriptExecutionContext()->identifier())
+    {
+    }
+
+    WeakPtr<SourceBuffer> m_parent;
+    const ScriptExecutionContextIdentifier m_identifier;
+};
 
 Ref<SourceBuffer> SourceBuffer::create(Ref<SourceBufferPrivate>&& sourceBufferPrivate, MediaSource& source)
 {
@@ -82,6 +169,7 @@ Ref<SourceBuffer> SourceBuffer::create(Ref<SourceBufferPrivate>&& sourceBufferPr
 SourceBuffer::SourceBuffer(Ref<SourceBufferPrivate>&& sourceBufferPrivate, MediaSource& source)
     : ActiveDOMObject(source.scriptExecutionContext())
     , m_private(WTFMove(sourceBufferPrivate))
+    , m_client(SourceBufferClientImpl::create(*this))
     , m_source(&source)
     , m_opaqueRootProvider([this] { return opaqueRoot(); })
     , m_appendWindowStart(MediaTime::zeroTime())
@@ -89,27 +177,20 @@ SourceBuffer::SourceBuffer(Ref<SourceBufferPrivate>&& sourceBufferPrivate, Media
     , m_appendState(WaitingForSegment)
     , m_buffered(TimeRanges::create())
 #if !RELEASE_LOG_DISABLED
-    , m_logger(m_private->sourceBufferLogger())
+    , m_logger(source.scriptExecutionContext()->isWorkerGlobalScope() ? source.logger() : m_private->sourceBufferLogger())
     , m_logIdentifier(m_private->sourceBufferLogIdentifier())
 #endif
 {
     ALWAYS_LOG(LOGIDENTIFIER);
 
-    m_private->setClient(*this);
+    m_private->setClient(m_client);
+    m_private->setMaximumBufferSize(maximumBufferSize());
 }
 
 SourceBuffer::~SourceBuffer()
 {
     ASSERT(isRemoved());
     ALWAYS_LOG(LOGIDENTIFIER);
-
-    m_private->detach();
-
-    if (m_appendBufferPromise)
-        m_appendBufferPromise.disconnect();
-
-    if (m_removeCodedFramesPromise)
-        m_removeCodedFramesPromise.disconnect();
 }
 
 ExceptionOr<Ref<TimeRanges>> SourceBuffer::buffered()
@@ -226,7 +307,7 @@ ExceptionOr<void> SourceBuffer::setAppendWindowEnd(double newValue)
 
 ExceptionOr<void> SourceBuffer::appendBuffer(const BufferSource& data)
 {
-    return appendBufferInternal(static_cast<const unsigned char*>(data.data()), data.length());
+    return appendBufferInternal(data.span());
 }
 
 void SourceBuffer::resetParserState()
@@ -264,7 +345,7 @@ ExceptionOr<void> SourceBuffer::abort()
         return Exception { ExceptionCode::InvalidStateError };
 
     // 3. If the range removal algorithm is running, then throw an InvalidStateError exception and abort these steps.
-    if (m_removeCodedFramesPromise)
+    if (m_removeCodedFramesPending)
         return Exception { ExceptionCode::InvalidStateError };
 
     // 4. If the sourceBuffer.updating attribute equals true, then run the following steps: ...
@@ -338,17 +419,14 @@ void SourceBuffer::rangeRemoval(const MediaTime& start, const MediaTime& end)
     // 4. Queue a task to fire a simple event named updatestart at this SourceBuffer object.
     scheduleEvent(eventNames().updatestartEvent);
 
-    // 5. Return control to the caller and run the rest of the steps asynchronously.
-    invokeAsync(RunLoop::current(), [protectedThis = Ref { *this }, this, start, end] {
-        if (isRemoved())
-            return MediaPromise::createAndReject(PlatformMediaError::BufferRemoved);
-        // 6. Run the coded frame removal algorithm with start and end as the start and end of the removal range.
-        return m_private->removeCodedFrames(start, end, m_source->currentTime());
-    })->whenSettled(RunLoop::current(), [this, protectedThis = Ref { *this }] {
-        m_removeCodedFramesPromise.complete();
+    m_removeCodedFramesPending = true;
 
-        if (isRemoved())
+    MediaPromise::AutoRejectProducer producer(PlatformMediaError::BufferRemoved);
+    scriptExecutionContext()->enqueueTaskWhenSettled(producer.promise(), TaskSource::MediaElement, [weakThis = WeakPtr { *this }, this](auto&&) {
+        if (!weakThis || isRemoved())
             return;
+
+        m_removeCodedFramesPending = false;
 
         // 7. Set the updating attribute to false.
         m_updating = false;
@@ -360,7 +438,13 @@ void SourceBuffer::rangeRemoval(const MediaTime& start, const MediaTime& end)
         scheduleEvent(eventNames().updateendEvent);
 
         m_source->monitorSourceBuffers();
-    })->track(m_removeCodedFramesPromise);
+    });
+
+    // 5. Return control to the caller and run the rest of the steps asynchronously.
+    m_client->ensureWeakOnDispatcher([producer = WTFMove(producer), this, start, end](SourceBuffer&) mutable {
+        // 6. Run the coded frame removal algorithm with start and end as the start and end of the removal range.
+        m_private->removeCodedFrames(start, end, m_source->currentTime())->chainTo(WTFMove(producer));
+    }, true);
 }
 
 ExceptionOr<void> SourceBuffer::changeType(const String& type)
@@ -383,9 +467,10 @@ ExceptionOr<void> SourceBuffer::changeType(const String& type)
     // the parent media source, then throw a NotSupportedError exception and abort these steps.
     ContentType contentType(type);
 
-    auto& settings = document().settings();
-    if (!contentTypeMeetsContainerAndCodecTypeRequirements(contentType, settings.allowedMediaContainerTypes(), settings.allowedMediaCodecTypes()))
+    if (RefPtr document = dynamicDowncast<Document>(scriptExecutionContext())) {
+        if (!contentTypeMeetsContainerAndCodecTypeRequirements(contentType, document->settings().allowedMediaContainerTypes(), document->settings().allowedMediaCodecTypes()))
         return Exception { ExceptionCode::NotSupportedError };
+    }
 
     if (!m_private->canSwitchToType(contentType))
         return Exception { ExceptionCode::NotSupportedError };
@@ -430,8 +515,8 @@ void SourceBuffer::abortIfUpdating()
         return;
 
     // 4.1. Abort the buffer append algorithm if it is running.
-    if (m_appendBufferPromise)
-        m_appendBufferPromise.disconnect();
+    m_appendBufferOperationId++;
+    m_appendBufferPending = false;
     m_pendingAppendData = nullptr;
     m_private->abort();
 
@@ -455,14 +540,12 @@ void SourceBuffer::removedFromMediaSource()
     if (isRemoved())
         return;
 
-    if (m_removeCodedFramesPromise)
-        m_removeCodedFramesPromise.disconnect();
+    m_removeCodedFramesPending = false;
 
     abortIfUpdating();
 
     m_private->clearTrackBuffers();
     m_private->removedFromMediaSource();
-    m_private->detach();
     m_source = nullptr;
     m_extraMemoryCost = 0;
 }
@@ -484,11 +567,6 @@ bool SourceBuffer::virtualHasPendingActivity() const
     return m_source;
 }
 
-const char* SourceBuffer::activeDOMObjectName() const
-{
-    return "SourceBuffer";
-}
-
 bool SourceBuffer::isRemoved() const
 {
     return !m_source;
@@ -499,7 +577,7 @@ void SourceBuffer::scheduleEvent(const AtomString& eventName)
     queueTaskToDispatchEvent(*this, TaskSource::MediaElement, Event::create(eventName, Event::CanBubble::No, Event::IsCancelable::No));
 }
 
-ExceptionOr<void> SourceBuffer::appendBufferInternal(const unsigned char* data, unsigned size)
+ExceptionOr<void> SourceBuffer::appendBufferInternal(std::span<const uint8_t> data)
 {
     // Section 3.2 appendBuffer()
     // https://dvcs.w3.org/hg/html-media/raw-file/default/media-source/media-source.html#widl-SourceBuffer-appendBuffer-void-ArrayBufferView-data
@@ -514,7 +592,7 @@ ExceptionOr<void> SourceBuffer::appendBufferInternal(const unsigned char* data, 
     if (isRemoved() || m_updating)
         return Exception { ExceptionCode::InvalidStateError };
 
-    ALWAYS_LOG(LOGIDENTIFIER, "size = ", size, ", buffered = ", m_buffered->ranges(), " streaming = ", m_source->streaming());
+    ALWAYS_LOG(LOGIDENTIFIER, "size = ", data.size(), " maximumBufferSize = ", maximumBufferSize(), " buffered = ", m_buffered->ranges(), " streaming = ", m_source->streaming());
 
     // 3. If the readyState attribute of the parent media source is in the "ended" state then run the following steps:
     // 3.1. Set the readyState attribute of the parent media source to "open"
@@ -522,10 +600,10 @@ ExceptionOr<void> SourceBuffer::appendBufferInternal(const unsigned char* data, 
     m_source->openIfInEndedState();
 
     // 4. Run the coded frame eviction algorithm.
-    m_private->evictCodedFrames(size, maximumBufferSize(), m_source->currentTime());
+    bool bufferFull = m_private->evictCodedFrames(data.size(), m_source->currentTime());
 
     // 5. If the buffer full flag equals true, then throw a QuotaExceededError exception and abort these step.
-    if (m_private->isBufferFullFor(size, maximumBufferSize())) {
+    if (bufferFull) {
         ERROR_LOG(LOGIDENTIFIER, "buffer full, failing with ExceptionCode::QuotaExceededError error");
         return Exception { ExceptionCode::QuotaExceededError };
     }
@@ -533,7 +611,7 @@ ExceptionOr<void> SourceBuffer::appendBufferInternal(const unsigned char* data, 
     // NOTE: Return to 3.2 appendBuffer()
     // 3. Add data to the end of the input buffer.
     ASSERT(!m_pendingAppendData);
-    m_pendingAppendData = SharedBuffer::create(data, size);
+    m_pendingAppendData = SharedBuffer::create(data);
 
     // 4. Set the updating attribute to true.
     m_updating = true;
@@ -541,20 +619,33 @@ ExceptionOr<void> SourceBuffer::appendBufferInternal(const unsigned char* data, 
     // 5. Queue a task to fire a simple event named updatestart at this SourceBuffer object.
     scheduleEvent(eventNames().updatestartEvent);
 
+    m_appendBufferPending = true;
     // 6. Asynchronously run the buffer append algorithm.
-    invokeAsync(RunLoop::current(), [protectedThis = Ref { *this }, this]() mutable {
+    MediaPromise::AutoRejectProducer producer(PlatformMediaError::BufferRemoved);
+    scriptExecutionContext()->enqueueTaskWhenSettled(producer.promise(), TaskSource::MediaElement, [weakThis = WeakPtr { *this }, this, id = ++m_appendBufferOperationId](MediaPromise::Result&& result) {
+        if (!weakThis)
+            return;
+
+        if (id != m_appendBufferOperationId)
+            return;
+
+        sourceBufferPrivateAppendComplete(WTFMove(result));
+    });
+
+    // 5. Return control to the caller and run the rest of the steps asynchronously.
+    m_client->ensureWeakOnDispatcher([producer = WTFMove(producer), this, id = m_appendBufferOperationId](SourceBuffer&) mutable {
         // 1. Loop Top: If the input buffer is empty, then jump to the need more data step below.
-        if (!m_pendingAppendData || m_pendingAppendData->isEmpty())
-            return MediaPromise::createAndResolve();
-        return m_private->append(m_pendingAppendData.releaseNonNull());
-    })->whenSettled(RunLoop::current(), *this, &SourceBuffer::sourceBufferPrivateAppendComplete)->track(m_appendBufferPromise);
+        if (id != m_appendBufferOperationId || !m_pendingAppendData || m_pendingAppendData->isEmpty())
+            return producer.resolve();
+        m_private->append(m_pendingAppendData.releaseNonNull())->chainTo(WTFMove(producer));
+    }, true);
 
     return { };
 }
 
 void SourceBuffer::sourceBufferPrivateAppendComplete(MediaPromise::Result&& result)
 {
-    m_appendBufferPromise.complete();
+    m_appendBufferPending = false;
 
     if (isRemoved())
         return;
@@ -602,24 +693,39 @@ void SourceBuffer::sourceBufferPrivateDidReceiveRenderingError(int64_t error)
 
     ERROR_LOG(LOGIDENTIFIER, error);
 
-    if (!isRemoved())
         m_source->streamEndedWithError(MediaSource::EndOfStreamError::Decode);
 }
 
 uint64_t SourceBuffer::maximumBufferSize() const
 {
-    if (isRemoved())
+    if (isRemoved() || !scriptExecutionContext())
         return 0;
 
-    RefPtr element = m_source->mediaElement();
-    if (!element)
-        return 0;
+    if (m_maximumBufferSize)
+        return *m_maximumBufferSize;
 
     size_t platformMaximumBufferSize = m_private->platformMaximumBufferSize();
     if (platformMaximumBufferSize)
         return platformMaximumBufferSize;
 
-    return element->maximumSourceBufferSize(*this);
+    // A good quality 1080p video uses 8,000 kbps and stereo audio uses 384 kbps, so assume 95% for video and 5% for audio.
+    const float bufferBudgetPercentageForVideo = .95;
+    const float bufferBudgetPercentageForAudio = .05;
+
+    size_t maximum = scriptExecutionContext()->settingsValues().maximumSourceBufferSize;
+
+    // Allow a SourceBuffer to buffer as though it is audio-only even if it doesn't have any active tracks (yet).
+    size_t bufferSize = static_cast<size_t>(maximum * bufferBudgetPercentageForAudio);
+    if (hasVideo())
+        bufferSize += static_cast<size_t>(maximum * bufferBudgetPercentageForVideo);
+
+    // FIXME: we might want to modify this algorithm to:
+    // - decrease the maximum size for background tabs
+    // - decrease the maximum size allowed for inactive elements when a process has more than one
+    //   element, eg. so a page with many elements which are played one at a time doesn't keep
+    //   everything buffered after an element has finished playing.
+
+    return bufferSize;
 }
 
 VideoTrackList& SourceBuffer::videoTracks()
@@ -660,11 +766,8 @@ void SourceBuffer::setActive(bool active)
         m_source->sourceBufferDidChangeActiveState(*this, active);
 }
 
-Ref<MediaPromise> SourceBuffer::sourceBufferPrivateDidReceiveInitializationSegment(InitializationSegment&& segment)
+Ref<MediaPromise> SourceBuffer::sourceBufferPrivateDidReceiveInitializationSegment(SourceBufferPrivateClient::InitializationSegment&& segment)
 {
-    if (isRemoved())
-        return MediaPromise::createAndReject(PlatformMediaError::BufferRemoved);
-
     ALWAYS_LOG(LOGIDENTIFIER);
 
     // 3.5.8 Initialization Segment Received (ctd)
@@ -768,7 +871,8 @@ Ref<MediaPromise> SourceBuffer::sourceBufferPrivateDidReceiveInitializationSegme
         // then run the append error algorithm with the decode error parameter set to true and abort these steps.
         // NOTE: This check is the responsibility of the SourceBufferPrivate.
         // appendError will be called once sourceBufferPrivateAppendComplete gets called once the completionHandler is run.
-        if (auto& allowedMediaAudioCodecIDs = document().settings().allowedMediaAudioCodecIDs()) {
+        if (RefPtr document = dynamicDowncast<Document>(scriptExecutionContext())) {
+            if (auto& allowedMediaAudioCodecIDs = document->settings().allowedMediaAudioCodecIDs()) {
             for (auto& audioTrackInfo : segment.audioTracks) {
                 if (audioTrackInfo.description && allowedMediaAudioCodecIDs->contains(FourCC::fromString(audioTrackInfo.description->codec())))
                     continue;
@@ -776,12 +880,13 @@ Ref<MediaPromise> SourceBuffer::sourceBufferPrivateDidReceiveInitializationSegme
             }
         }
 
-        if (auto& allowedMediaVideoCodecIDs = document().settings().allowedMediaVideoCodecIDs()) {
+            if (auto& allowedMediaVideoCodecIDs = document->settings().allowedMediaVideoCodecIDs()) {
             for (auto& videoTrackInfo : segment.videoTracks) {
                 if (videoTrackInfo.description && allowedMediaVideoCodecIDs->contains(FourCC::fromString(videoTrackInfo.description->codec())))
                     continue;
                 return MediaPromise::createAndReject(PlatformMediaError::AppendError);
             }
+        }
         }
 
         // 5.2 For each audio track in the initialization segment, run following steps:
@@ -794,9 +899,11 @@ Ref<MediaPromise> SourceBuffer::sourceBufferPrivateDidReceiveInitializationSegme
             newAudioTrack->setSourceBuffer(this);
 
             // 5.2.3 If audioTracks.length equals 0, then run the following steps:
+            bool enabled = false;
             if (!audioTracks().length()) {
                 // 5.2.3.1 Set the enabled property on new audio track to true.
                 newAudioTrack->setEnabled(true);
+                enabled = true;
 
                 // 5.2.3.2 Set active track flag to true.
                 activeTrackFlag = true;
@@ -812,7 +919,16 @@ Ref<MediaPromise> SourceBuffer::sourceBufferPrivateDidReceiveInitializationSegme
             // 5.2.7 Queue a task to fire a trusted event named addtrack, that does not bubble and is
             // not cancelable, and that uses the TrackEvent interface, at the AudioTrackList object
             // referenced by the audioTracks attribute on the HTMLMediaElement.
-            m_source->mediaElement()->addAudioTrack(newAudioTrack.copyRef());
+            if (isMainThread())
+                m_source->addAudioTrackToElement(WTFMove(newAudioTrack));
+            else {
+                // 11.5.7.7.9 If the parent media source was constructed in a DedicatedWorkerGlobalScope:
+                // Post an internal create track mirror message to [[port to main]] whose implicit handler in Window runs the following steps:
+                // Let mirrored audio track be a new AudioTrack object.
+                // Assign the same property values to mirrored audio track as were determined for new audio track.
+                // Add mirrored audio track to the audioTracks attribute on the HTMLMediaElement.
+                m_source->addAudioTrackMirrorToElement(*audioTrackInfo.track, enabled);
+            }
 
             m_audioCodecs.append(audioTrackInfo.description->codec().toAtomString());
 
@@ -830,9 +946,11 @@ Ref<MediaPromise> SourceBuffer::sourceBufferPrivateDidReceiveInitializationSegme
             newVideoTrack->setSourceBuffer(this);
 
             // 5.3.3 If videoTracks.length equals 0, then run the following steps:
+            bool selected = false;
             if (!videoTracks().length()) {
                 // 5.3.3.1 Set the selected property on new video track to true.
                 newVideoTrack->setSelected(true);
+                selected = true;
 
                 // 5.3.3.2 Set active track flag to true.
                 activeTrackFlag = true;
@@ -848,7 +966,16 @@ Ref<MediaPromise> SourceBuffer::sourceBufferPrivateDidReceiveInitializationSegme
             // 5.3.7 Queue a task to fire a trusted event named addtrack, that does not bubble and is
             // not cancelable, and that uses the TrackEvent interface, at the VideoTrackList object
             // referenced by the videoTracks attribute on the HTMLMediaElement.
-            m_source->mediaElement()->addVideoTrack(newVideoTrack.copyRef());
+            if (isMainThread())
+                m_source->addVideoTrackToElement(WTFMove(newVideoTrack));
+            else {
+                // 11.5.7.7.3.9 If the parent media source was constructed in a DedicatedWorkerGlobalScope:
+                // Post an internal create track mirror message to [[port to main]] whose implicit handler in Window runs the following steps:
+                // Let mirrored audio track be a new VideoTrack object.
+                // Assign the same property values to mirrored video track as were determined for new video track.
+                // Add mirrored video track to the videoTracks attribute on the HTMLMediaElement.
+                m_source->addVideoTrackMirrorToElement(*videoTrackInfo.track, selected);
+            }
 
             m_videoCodecs.append(videoTrackInfo.description->codec().toAtomString());
 
@@ -863,7 +990,7 @@ Ref<MediaPromise> SourceBuffer::sourceBufferPrivateDidReceiveInitializationSegme
             // FIXME: Implement steps 5.4.1-5.4.8.1 as per Editor's Draft 09 January 2015, and reorder this
             // 5.4.1 Let new text track be a new TextTrack object with its properties populated with the
             // appropriate information from the initialization segment.
-            auto newTextTrack = InbandTextTrack::create(document(), textTrackPrivate);
+            auto newTextTrack = InbandTextTrack::create(*scriptExecutionContext(), textTrackPrivate);
             newTextTrack->addClient(*this);
 
             // 5.4.2 If the mode property on new text track equals "showing" or "hidden", then set active
@@ -881,7 +1008,16 @@ Ref<MediaPromise> SourceBuffer::sourceBufferPrivateDidReceiveInitializationSegme
             // 5.4.6 Queue a task to fire a trusted event named addtrack, that does not bubble and is
             // not cancelable, and that uses the TrackEvent interface, at the TextTrackList object
             // referenced by the textTracks attribute on the HTMLMediaElement.
-            m_source->mediaElement()->addTextTrack(newTextTrack.copyRef());
+            if (isMainThread())
+                m_source->addTextTrackToElement(WTFMove(newTextTrack));
+            else {
+                // 11.5.7.7.4.10 If the parent media source was constructed in a DedicatedWorkerGlobalScope:
+                // Post an internal create track mirror message to [[port to main]] whose implicit handler in Window runs the following steps:
+                // Let mirrored text track be a new TextTrack object.
+                // Assign the same property values to mirrored text track as were determined for new text track.
+                // Add mirrored text track to the textTracks attribute on the HTMLMediaElement.
+                m_source->addTextTrackMirrorToElement(textTrackPrivate);
+            }
 
             m_textCodecs.append(textTrackInfo.description->codec().toAtomString());
 
@@ -898,6 +1034,9 @@ Ref<MediaPromise> SourceBuffer::sourceBufferPrivateDidReceiveInitializationSegme
 
         // 5.6 Set first initialization segment flag to true.
         m_receivedFirstInitializationSegment = true;
+
+        if (hasVideo())
+            m_private->setMaximumBufferSize(maximumBufferSize());
     }
 
     // (Note: Issue #155 adds this step after step 5:)
@@ -915,7 +1054,7 @@ Ref<MediaPromise> SourceBuffer::sourceBufferPrivateDidReceiveInitializationSegme
     return MediaPromise::createAndResolve();
 }
 
-bool SourceBuffer::validateInitializationSegment(const InitializationSegment& segment)
+bool SourceBuffer::validateInitializationSegment(const SourceBufferPrivateClient::InitializationSegment& segment)
 {
     // FIXME: ordering of all 3.5.X (X>=7) functions needs to be updated to post-[24 July 2014 Editor's Draft] version
     // 3.5.8 Initialization Segment Received (ctd)
@@ -1124,9 +1263,6 @@ void SourceBuffer::textTrackLanguageChanged(TextTrack& track)
 
 Ref<MediaPromise> SourceBuffer::sourceBufferPrivateDurationChanged(const MediaTime& duration)
 {
-    if (isRemoved())
-        return MediaPromise::createAndReject(PlatformMediaError::BufferRemoved);
-
     m_source->setDurationInternal(duration);
     if (m_textTracks)
         m_textTracks->setDuration(duration);
@@ -1140,32 +1276,7 @@ void SourceBuffer::sourceBufferPrivateHighestPresentationTimestampChanged(const 
 
 void SourceBuffer::sourceBufferPrivateDidDropSample()
 {
-    if (!isRemoved())
-        m_source->mediaElement()->incrementDroppedFrameCount();
-}
-
-bool SourceBuffer::canPlayThroughRange(const PlatformTimeRanges& ranges)
-{
-    if (isRemoved())
-        return false;
-
-    MediaTime duration = m_source->duration();
-    if (!duration.isValid())
-        return false;
-
-    MediaTime currentTime = m_source->currentTime();
-    if (duration <= currentTime)
-        return true;
-
-    // If we have data up to the mediasource's duration or 3s ahead, we can
-    // assume that we can play without interruption.
-    MediaTime bufferedEnd = ranges.maximumBufferedTime();
-    // Same tolerance as contiguousFrameTolerance in SourceBufferPrivate::processMediaSample(),
-    // to account for small errors.
-    const MediaTime tolerance = MediaTime(1, 1000);
-    MediaTime timeAhead = std::min(duration, currentTime + MediaTime(3, 1)) - tolerance;
-
-    return bufferedEnd >= timeAhead;
+    m_source->incrementDroppedFrameCount();
 }
 
 void SourceBuffer::reportExtraMemoryAllocated(uint64_t extraMemory)
@@ -1190,11 +1301,17 @@ void SourceBuffer::reportExtraMemoryAllocated(uint64_t extraMemory)
 
 Ref<SourceBuffer::SamplesPromise> SourceBuffer::bufferedSamplesForTrackId(TrackID trackID)
 {
+    // Internals only API
+    assertIsMainThread();
+
     return m_private->bufferedSamplesForTrackId(trackID);
 }
 
 Ref<SourceBuffer::SamplesPromise> SourceBuffer::enqueuedSamplesForTrackID(TrackID trackID)
 {
+    // Internals only API
+    assertIsMainThread();
+
     return m_private->enqueuedSamplesForTrackID(trackID);
 }
 
@@ -1208,10 +1325,10 @@ void SourceBuffer::setMaximumQueueDepthForTrackID(TrackID trackID, uint64_t maxQ
     m_private->setMaximumQueueDepthForTrackID(trackID, maxQueueDepth);
 }
 
-Document& SourceBuffer::document() const
+Ref<GenericPromise> SourceBuffer::setMaximumSourceBufferSize(uint64_t size)
 {
-    ASSERT(scriptExecutionContext());
-    return downcast<Document>(*scriptExecutionContext());
+    m_maximumBufferSize = size;
+    return m_private->setMaximumBufferSize(size);
 }
 
 ExceptionOr<void> SourceBuffer::setMode(AppendMode newMode)
@@ -1263,13 +1380,12 @@ void SourceBuffer::setShouldGenerateTimestamps(bool flag)
     m_private->setShouldGenerateTimestamps(flag);
 }
 
-Ref<MediaPromise> SourceBuffer::sourceBufferPrivateBufferedChanged(const Vector<PlatformTimeRanges>& trackBuffers, uint64_t extraMemory)
+Ref<MediaPromise> SourceBuffer::sourceBufferPrivateBufferedChanged(Vector<PlatformTimeRanges>&& trackBuffers)
 {
-    reportExtraMemoryAllocated(extraMemory);
-    m_trackBuffers = trackBuffers;
+    reportExtraMemoryAllocated(m_private->totalTrackBufferSizeInBytes());
+    m_trackBuffers = WTFMove(trackBuffers);
 
     updateBuffered();
-
     return MediaPromise::createAndResolve();
 }
 
@@ -1376,7 +1492,7 @@ void SourceBuffer::memoryPressure()
 {
     if (!isManaged())
         return;
-    m_private->memoryPressure(maximumBufferSize(), m_source->currentTime());
+    m_private->memoryPressure(m_source->currentTime());
 }
 
 #if !RELEASE_LOG_DISABLED
@@ -1385,6 +1501,23 @@ WTFLogChannel& SourceBuffer::logChannel() const
     return LogMediaSource;
 }
 #endif
+
+bool SourceBuffer::enabledForContext(ScriptExecutionContext& context)
+{
+    UNUSED_PARAM(context);
+#if ENABLE(MEDIA_SOURCE_IN_WORKERS)
+    if (context.isWorkerGlobalScope())
+        return context.settingsValues().mediaSourceInWorkerEnabled;
+#endif
+
+    ASSERT(context.isDocument());
+    return true;
+}
+
+size_t SourceBuffer::evictableSize() const
+{
+    return m_private->evictionData().evictableSize;
+}
 
 } // namespace WebCore
 

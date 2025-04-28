@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2006-2023 Apple Inc. All rights reserved.
+ * Copyright (C) 2006-2024 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -37,6 +37,7 @@
 #include "CanvasTextAlign.h"
 #include "CanvasTextBaseline.h"
 #include "Color.h"
+#include "Filter.h"
 #include "FloatSize.h"
 #include "FontCascade.h"
 #include "FontSelectorClient.h"
@@ -55,6 +56,7 @@ namespace WebCore {
 
 class ByteArrayPixelBuffer;
 class CachedImage;
+class CanvasLayerContextSwitcher;
 class CanvasGradient;
 class DOMMatrix;
 class FloatRect;
@@ -88,12 +90,16 @@ using CanvasImageSource = std::variant<RefPtr<HTMLImageElement>
     >;
 
 class CanvasRenderingContext2DBase : public CanvasRenderingContext, public CanvasPath {
-    WTF_MAKE_ISO_ALLOCATED(CanvasRenderingContext2DBase);
+    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(CanvasRenderingContext2DBase);
+    friend class CanvasFilterContextSwitcher;
+    friend class CanvasLayerContextSwitcher;
 protected:
     CanvasRenderingContext2DBase(CanvasBase&, CanvasRenderingContext2DSettings&&, bool usesCSSCompatibilityParseMode);
 
 public:
     virtual ~CanvasRenderingContext2DBase();
+
+    bool isAccelerated() const;
 
     const CanvasRenderingContext2DSettings& getContextAttributes() const { return m_settings; }
     using RenderingMode = WebCore::RenderingMode;
@@ -140,8 +146,14 @@ public:
     String globalCompositeOperation() const { return state().globalCompositeOperationString(); }
     void setGlobalCompositeOperation(const String&);
 
+    String filterString() const { return state().filterString; }
+    void setFilterString(const String&);
+
     void save() { ++m_unrealizedSaveCount; }
     void restore();
+
+    void beginLayer();
+    void endLayer();
 
     void scale(double sx, double sy);
     void rotate(double angleInRadians);
@@ -287,8 +299,13 @@ public:
         TextBaseline textBaseline;
         Direction direction;
 
+        String filterString;
+        FilterOperations filterOperations;
+
         String unparsedFont;
         FontProxy font;
+
+        RefPtr<CanvasLayerContextSwitcher> targetSwitcher;
 
         CanvasLineCap canvasLineCap() const;
         CanvasLineJoin canvasLineJoin() const;
@@ -308,7 +325,11 @@ protected:
     void realizeSaves();
     State& modifiableState() { ASSERT(!m_unrealizedSaveCount || m_stateStack.size() >= MaxSaveCount); return m_stateStack.last(); }
 
-    GraphicsContext* drawingContext() const;
+    virtual GraphicsContext* drawingContext() const;
+    virtual GraphicsContext* existingDrawingContext() const;
+    virtual GraphicsContext* effectiveDrawingContext() const;
+    virtual AffineTransform baseTransform() const;
+
     enum class DidDrawOption {
         ApplyTransform = 1 << 0,
         ApplyShadow = 1 << 1,
@@ -339,6 +360,11 @@ protected:
     void didDrawEntireCanvas(OptionSet<DidDrawOption> options = defaultDidDrawOptions());
     void didDraw(bool entireCanvas, const FloatRect&, OptionSet<DidDrawOption> options = defaultDidDrawOptions());
     template<typename RectProvider> void didDraw(bool entireCanvas, RectProvider, OptionSet<DidDrawOption> options = defaultDidDrawOptions());
+
+    virtual std::optional<FilterOperations> setFilterStringWithoutUpdatingStyle(const String&) { return std::nullopt; }
+
+    virtual RefPtr<Filter> createFilter(const FloatRect&) const { return nullptr; }
+    virtual IntOutsets calculateFilterOutsets(const FloatRect&) const { return { }; }
 
     static String normalizeSpaces(const String&);
 
@@ -378,14 +404,17 @@ private:
     bool isEntireBackingStoreDirty() const;
     FloatRect backingStoreBounds() const { return FloatRect { { }, FloatSize { canvasBase().size() } }; }
 
-    PixelFormat pixelFormat() const final;
+    ImageBufferPixelFormat pixelFormat() const final;
     DestinationColorSpace colorSpace() const final;
+    bool willReadFrequently() const final;
 
     void unwindStateStack();
     void realizeSavesLoop();
 
     void setStrokeStyle(CanvasStyle);
+    void setStrokeStyle(std::optional<CanvasStyle>);
     void setFillStyle(CanvasStyle);
+    void setFillStyle(std::optional<CanvasStyle>);
 
     ExceptionOr<RefPtr<CanvasPattern>> createPattern(CachedImage&, RenderElement*, bool repeatX, bool repeatY);
     ExceptionOr<RefPtr<CanvasPattern>> createPattern(HTMLImageElement&, bool repeatX, bool repeatY);
@@ -405,7 +434,7 @@ private:
     ExceptionOr<void> drawImage(SVGImageElement&, const FloatRect& srcRect, const FloatRect& dstRect);
     ExceptionOr<void> drawImage(SVGImageElement&, const FloatRect& srcRect, const FloatRect& dstRect, const CompositeOperator&, const BlendMode&);
     ExceptionOr<void> drawImage(CanvasBase&, const FloatRect& srcRect, const FloatRect& dstRect);
-    ExceptionOr<void> drawImage(Document&, CachedImage*, const RenderObject*, const FloatRect& imageRect, const FloatRect& srcRect, const FloatRect& dstRect, const CompositeOperator&, const BlendMode&, ImageOrientation = ImageOrientation::Orientation::FromImage);
+    ExceptionOr<void> drawImage(Document&, CachedImage&, const RenderObject*, const FloatRect& imageRect, const FloatRect& srcRect, const FloatRect& dstRect, const CompositeOperator&, const BlendMode&, ImageOrientation = ImageOrientation::Orientation::FromImage);
 #if ENABLE(VIDEO)
     ExceptionOr<void> drawImage(HTMLVideoElement&, const FloatRect& srcRect, const FloatRect& dstRect);
 #endif
@@ -432,12 +461,15 @@ private:
     template<class T> IntRect calculateCompositingBufferRect(const T&, IntSize*);
     void compositeBuffer(ImageBuffer&, const IntRect&, CompositeOperator);
 
-    void inflateStrokeRect(FloatRect&) const;
+    FloatRect inflatedStrokeRect(const FloatRect&) const;
 
     template<class T> void fullCanvasCompositedDrawImage(T&, const FloatRect&, const FloatRect&, CompositeOperator);
 
-    bool isAccelerated() const override;
-
+    bool isSurfaceBufferTransparentBlack(SurfaceBuffer) const override;
+#if USE(SKIA)
+    bool delegatesDisplay() const override;
+    RefPtr<GraphicsLayerContentsDisplayDelegate> layerContentsDisplayDelegate() override;
+#endif
     bool hasDeferredOperations() const final;
     void flushDeferredOperations() final;
 

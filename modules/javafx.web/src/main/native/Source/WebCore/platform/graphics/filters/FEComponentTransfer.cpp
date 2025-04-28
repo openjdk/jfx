@@ -33,6 +33,10 @@
 #include "FEComponentTransferCoreImageApplier.h"
 #endif
 
+#if USE(SKIA)
+#include "FEComponentTransferSkiaApplier.h"
+#endif
+
 namespace WebCore {
 
 Ref<FEComponentTransfer> FEComponentTransfer::create(const ComponentTransferFunction& redFunction, const ComponentTransferFunction& greenFunction, const ComponentTransferFunction& blueFunction, const ComponentTransferFunction& alphaFunction, DestinationColorSpace colorSpace)
@@ -65,6 +69,9 @@ bool FEComponentTransfer::operator==(const FEComponentTransfer& other) const
 OptionSet<FilterRenderingMode> FEComponentTransfer::supportedFilterRenderingModes() const
 {
     OptionSet<FilterRenderingMode> modes = FilterRenderingMode::Software;
+#if USE(SKIA)
+    modes.add(FilterRenderingMode::Accelerated);
+#endif
 #if USE(CORE_IMAGE)
     if (FEComponentTransferCoreImageApplier::supportsCoreImageRendering(*this))
         modes.add(FilterRenderingMode::Accelerated);
@@ -76,6 +83,8 @@ std::unique_ptr<FilterEffectApplier> FEComponentTransfer::createAcceleratedAppli
 {
 #if USE(CORE_IMAGE)
     return FilterEffectApplier::create<FEComponentTransferCoreImageApplier>(*this);
+#elif USE(SKIA)
+    return FilterEffectApplier::create<FEComponentTransferSkiaApplier>(*this);
 #else
     return nullptr;
 #endif
@@ -83,7 +92,11 @@ std::unique_ptr<FilterEffectApplier> FEComponentTransfer::createAcceleratedAppli
 
 std::unique_ptr<FilterEffectApplier> FEComponentTransfer::createSoftwareApplier() const
 {
+#if USE(SKIA)
+    return FilterEffectApplier::create<FEComponentTransferSkiaApplier>(*this);
+#else
     return FilterEffectApplier::create<FEComponentTransferSoftwareApplier>(*this);
+#endif
 }
 
 bool FEComponentTransfer::setType(ComponentTransferChannel channel, ComponentTransferType type)
@@ -216,6 +229,81 @@ TextStream& FEComponentTransfer::externalRepresentation(TextStream& ts, FilterRe
 
     ts << "]\n";
     return ts;
+}
+
+FEComponentTransfer::LookupTable FEComponentTransfer::computeLookupTable(const ComponentTransferFunction& function)
+{
+    LookupTable values;
+    for (unsigned i = 0; i < values.size(); ++i)
+        values[i] = i;
+
+    using TransferType = Function<void(const ComponentTransferFunction&)>;
+    TransferType callEffect[] = {
+        // FECOMPONENTTRANSFER_TYPE_UNKNOWN
+        [&](const ComponentTransferFunction&)
+        {
+        },
+        // FECOMPONENTTRANSFER_TYPE_IDENTITY
+        [&](const ComponentTransferFunction&)
+        {
+        },
+        // FECOMPONENTTRANSFER_TYPE_TABLE
+        [&](const ComponentTransferFunction& transferFunction)
+        {
+            const Vector<float>& tableValues = transferFunction.tableValues;
+            unsigned n = tableValues.size();
+            if (n < 1)
+                return;
+            for (unsigned i = 0; i < values.size(); ++i) {
+                double c = i / 255.0;
+                unsigned k = static_cast<unsigned>(c * (n - 1));
+                double v1 = tableValues[k];
+                double v2 = tableValues[std::min((k + 1), (n - 1))];
+                double val = 255.0 * (v1 + (c * (n - 1) - k) * (v2 - v1));
+                val = std::max(0.0, std::min(255.0, val));
+                values[i] = static_cast<uint8_t>(val);
+            }
+        },
+        // FECOMPONENTTRANSFER_TYPE_DISCRETE
+        [&](const ComponentTransferFunction& transferFunction)
+        {
+            const Vector<float>& tableValues = transferFunction.tableValues;
+            unsigned n = tableValues.size();
+            if (n < 1)
+                return;
+            for (unsigned i = 0; i < values.size(); ++i) {
+                unsigned k = static_cast<unsigned>((i * n) / 255.0);
+                k = std::min(k, n - 1);
+                double val = 255 * tableValues[k];
+                val = std::max(0.0, std::min(255.0, val));
+                values[i] = static_cast<uint8_t>(val);
+            }
+        },
+        // FECOMPONENTTRANSFER_TYPE_LINEAR
+        [&](const ComponentTransferFunction& transferFunction)
+        {
+            for (unsigned i = 0; i < values.size(); ++i) {
+                double val = transferFunction.slope * i + 255 * transferFunction.intercept;
+                val = std::max(0.0, std::min(255.0, val));
+                values[i] = static_cast<uint8_t>(val);
+            }
+        },
+        // FECOMPONENTTRANSFER_TYPE_GAMMA
+        [&](const ComponentTransferFunction& transferFunction)
+        {
+            for (unsigned i = 0; i < values.size(); ++i) {
+                double exponent = transferFunction.exponent; // RCVT doesn't like passing a double and a float to pow, so promote this to double
+                double val = 255.0 * (transferFunction.amplitude * pow((i / 255.0), exponent) + transferFunction.offset);
+                val = std::max(0.0, std::min(255.0, val));
+                values[i] = static_cast<uint8_t>(val);
+            }
+        }
+    };
+
+    RELEASE_ASSERT_WITH_SECURITY_IMPLICATION(static_cast<size_t>(function.type) < std::size(callEffect));
+    callEffect[static_cast<size_t>(function.type)](function);
+
+    return values;
 }
 
 } // namespace WebCore

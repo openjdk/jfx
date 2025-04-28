@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2009, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2009, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -51,12 +51,6 @@ public interface FontFactory {
     public String[] getFontFamilyNames();
     public String[] getFontFullNames();
     public String[] getFontFullNames(String family);
-
-    // TODO: JDK-8344114: Consider removing this obsolete method
-    /*
-     * Indicates permission to load an embedded font
-     */
-    public boolean hasPermission();
 
     /**
      * Loads a font from the specified input stream.

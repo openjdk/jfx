@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2023, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -532,7 +532,10 @@ abstract class BitSet<T> extends AbstractSet<T> implements ObservableSet<T> {
         // the Set contract to interact correctly with sets of other types!
         if (obj == this) {
             return true;
+        } else if (obj == null) {
+            return false;
         }
+
         if (getClass() == obj.getClass()) {  // fast path if other is exact same type of BitSet
             return equalsBitSet((BitSet<?>) obj);
         }

@@ -289,10 +289,14 @@ msort_r (void *b, size_t n, size_t s, GCompareDataFunc cmp, void *arg)
  * @compare_func: (scope call): function to compare elements
  * @user_data: data to pass to @compare_func
  *
- * This is just like the standard C qsort() function, but
- * the comparison routine accepts a user data argument.
+ * This is just like the standard C [`qsort()`](man:qsort(3)) function, but
+ * the comparison routine accepts a user data argument
+ * (like [`qsort_r()`](man:qsort_r(3))).
  *
- * This is guaranteed to be a stable sort since version 2.32.
+ * Unlike `qsort()`, this is guaranteed to be a stable sort (since GLib 2.32).
+ *
+ * Deprecated: 2.82: `total_elems` is too small to represent larger arrays; use
+ *   [func@GLib.sort_array] instead
  */
 void
 g_qsort_with_data (gconstpointer    pbase,
@@ -301,5 +305,31 @@ g_qsort_with_data (gconstpointer    pbase,
                    GCompareDataFunc compare_func,
                    gpointer         user_data)
 {
-  msort_r ((gpointer)pbase, total_elems, size, compare_func, user_data);
+  g_sort_array (pbase, total_elems, size, compare_func, user_data);
+}
+
+/**
+ * g_sort_array:
+ * @array: (not nullable) (array length=n_elements): start of array to sort
+ * @n_elements: number of elements in the array
+ * @element_size: size of each element
+ * @compare_func: (scope call): function to compare elements
+ * @user_data: data to pass to @compare_func
+ *
+ * This is just like the standard C [`qsort()`](man:qsort(3)) function, but
+ * the comparison routine accepts a user data argument
+ * (like [`qsort_r()`](man:qsort_r(3))).
+ *
+ * Unlike `qsort()`, this is guaranteed to be a stable sort.
+ *
+ * Since: 2.82
+ */
+void
+g_sort_array (const void       *array,
+              size_t            n_elements,
+              size_t            element_size,
+              GCompareDataFunc  compare_func,
+              void             *user_data)
+{
+  msort_r ((void *) array, n_elements, element_size, compare_func, user_data);
 }

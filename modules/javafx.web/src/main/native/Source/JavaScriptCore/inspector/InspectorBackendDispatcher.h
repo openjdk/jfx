@@ -56,6 +56,7 @@ public:
     class JS_EXPORT_PRIVATE CallbackBase : public RefCounted<CallbackBase> {
     public:
         CallbackBase(Ref<BackendDispatcher>&&, long requestId);
+        virtual ~CallbackBase() { }
 
         bool isActive() const;
         void disable() { m_alreadySent = true; }
@@ -109,7 +110,7 @@ private:
     BackendDispatcher(Ref<FrontendRouter>&&);
 
     template<typename T>
-    T getPropertyValue(JSON::Object*, const String& name, bool required, std::function<T(JSON::Value&)> converter, const char* typeName);
+    WTF_INTERNAL T getPropertyValue(JSON::Object*, const String& name, bool required, std::function<T(JSON::Value&)> converter, ASCIILiteral typeName);
 
     Ref<FrontendRouter> m_frontendRouter;
     HashMap<String, SupplementalBackendDispatcher*> m_dispatchers;

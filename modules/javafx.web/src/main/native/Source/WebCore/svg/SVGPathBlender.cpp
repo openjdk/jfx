@@ -151,6 +151,10 @@ bool SVGPathBlender::blendMoveToSegment(float progress)
     m_consumer->moveTo(blendAnimatedFloatPoint(from.targetPoint, to.targetPoint, progress), false, m_isInFirstHalfOfAnimation ? m_fromMode : m_toMode);
     m_fromCurrentPoint = m_fromMode == AbsoluteCoordinates ? from.targetPoint : m_fromCurrentPoint + from.targetPoint;
     m_toCurrentPoint = m_toMode == AbsoluteCoordinates ? to.targetPoint : m_toCurrentPoint + to.targetPoint;
+
+    m_fromSubpathPoint = m_fromCurrentPoint;
+    m_toSubpathPoint = m_toCurrentPoint;
+
     return true;
 }
 
@@ -352,16 +356,16 @@ bool SVGPathBlender::addAnimatedPath(unsigned repeatCount)
 bool SVGPathBlender::canBlendPaths()
 {
     float progress = 0.5;
-    bool fromSourceHadData = m_fromSource.hasMoreData();
-    while (m_toSource.hasMoreData()) {
+    bool fromSourceHadData = m_fromSource->hasMoreData();
+    while (m_toSource->hasMoreData()) {
         SVGPathSegType fromCommand;
         if (fromSourceHadData) {
-            auto parsedFromCommand = m_fromSource.parseSVGSegmentType();
+            auto parsedFromCommand = m_fromSource->parseSVGSegmentType();
             if (!parsedFromCommand)
                 return false;
             fromCommand = *parsedFromCommand;
         }
-        auto parsedtoCommand = m_toSource.parseSVGSegmentType();
+        auto parsedtoCommand = m_toSource->parseSVGSegmentType();
         if (!parsedtoCommand)
             return false;
         SVGPathSegType toCommand = *parsedtoCommand;
@@ -428,9 +432,9 @@ bool SVGPathBlender::canBlendPaths()
 
         if (!fromSourceHadData)
             continue;
-        if (m_fromSource.hasMoreData() != m_toSource.hasMoreData())
+        if (m_fromSource->hasMoreData() != m_toSource->hasMoreData())
             return false;
-        if (!m_fromSource.hasMoreData() || !m_toSource.hasMoreData())
+        if (!m_fromSource->hasMoreData() || !m_toSource->hasMoreData())
             return true;
     }
 
@@ -441,16 +445,16 @@ bool SVGPathBlender::blendAnimatedPath(float progress)
 {
     m_isInFirstHalfOfAnimation = progress < 0.5f;
 
-    bool fromSourceHadData = m_fromSource.hasMoreData();
-    while (m_toSource.hasMoreData()) {
+    bool fromSourceHadData = m_fromSource->hasMoreData();
+    while (m_toSource->hasMoreData()) {
         SVGPathSegType fromCommand;
         if (fromSourceHadData) {
-            auto parsedFromCommand = m_fromSource.parseSVGSegmentType();
+            auto parsedFromCommand = m_fromSource->parseSVGSegmentType();
             if (!parsedFromCommand)
                 return false;
             fromCommand = *parsedFromCommand;
         }
-        auto parsedToCommand = m_toSource.parseSVGSegmentType();
+        auto parsedToCommand = m_toSource->parseSVGSegmentType();
         if (!parsedToCommand)
             return false;
         SVGPathSegType toCommand = *parsedToCommand;
@@ -486,6 +490,8 @@ bool SVGPathBlender::blendAnimatedPath(float progress)
             break;
         case SVGPathSegType::ClosePath:
             m_consumer->closePath();
+            m_fromCurrentPoint = m_fromSubpathPoint;
+            m_toCurrentPoint = m_toSubpathPoint;
             break;
         case SVGPathSegType::CurveToCubicRel:
         case SVGPathSegType::CurveToCubicAbs:
@@ -518,9 +524,9 @@ bool SVGPathBlender::blendAnimatedPath(float progress)
 
         if (!fromSourceHadData)
             continue;
-        if (m_fromSource.hasMoreData() != m_toSource.hasMoreData())
+        if (m_fromSource->hasMoreData() != m_toSource->hasMoreData())
             return false;
-        if (!m_fromSource.hasMoreData() || !m_toSource.hasMoreData())
+        if (!m_fromSource->hasMoreData() || !m_toSource->hasMoreData())
             return true;
     }
 

@@ -84,7 +84,7 @@ bool writeOriginToFile(const String& filePath, const ClientOrigin& origin)
 
     WTF::Persistence::Encoder encoder;
     encoder << origin;
-    FileSystem::writeToFile(originFileHandle, encoder.buffer(), encoder.bufferSize());
+    FileSystem::writeToFile(originFileHandle, encoder.span());
     return true;
 }
 
@@ -92,10 +92,9 @@ String encodeSecurityOriginForFileName(FileSystem::Salt salt, const SecurityOrig
 {
     auto crypto = PAL::CryptoDigest::create(PAL::CryptoDigest::Algorithm::SHA_256);
     auto originString = origin.toString().utf8();
-    crypto->addBytes(originString.data(), originString.length());
-    crypto->addBytes(salt.data(), salt.size());
-    auto hash = crypto->computeHash();
-    return base64URLEncodeToString(hash.data(), hash.size());
+    crypto->addBytes(originString.span());
+    crypto->addBytes(salt);
+    return base64URLEncodeToString(crypto->computeHash());
 }
 
 } // namespace StorageUtilities

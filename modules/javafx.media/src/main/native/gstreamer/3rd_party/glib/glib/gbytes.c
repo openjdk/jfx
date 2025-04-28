@@ -37,7 +37,7 @@
 #include <string.h>
 
 /**
- * GBytes:
+ * GBytes: (copy-func g_bytes_ref) (free-func g_bytes_unref)
  *
  * A simple refcounted data type representing an immutable sequence of zero or
  * more bytes from an unspecified origin.

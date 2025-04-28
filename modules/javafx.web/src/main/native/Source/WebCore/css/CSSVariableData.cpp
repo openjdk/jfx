@@ -43,15 +43,15 @@ DEFINE_ALLOCATOR_WITH_HEAP_IDENTIFIER(CSSVariableData);
 
 template<typename CharacterType> void CSSVariableData::updateBackingStringsInTokens()
 {
-    auto* currentOffset = m_backingString.characters<CharacterType>();
+    auto currentOffset = m_backingString.span<CharacterType>();
     for (auto& token : m_tokens) {
-        if (!token.hasStringBacking())
+        if (!token.hasStringBacking() || token.isBackedByStringLiteral())
             continue;
             unsigned length = token.value().length();
-        token.updateCharacters(currentOffset, length);
-            currentOffset += length;
+        token.updateCharacters(currentOffset.first(length));
+        currentOffset = currentOffset.subspan(length);
     }
-    ASSERT(currentOffset == m_backingString.characters<CharacterType>() + m_backingString.length());
+    ASSERT(currentOffset.empty());
 }
 
 bool CSSVariableData::operator==(const CSSVariableData& other) const
@@ -60,14 +60,18 @@ bool CSSVariableData::operator==(const CSSVariableData& other) const
 }
 
 CSSVariableData::CSSVariableData(const CSSParserTokenRange& range, const CSSParserContext& context)
-    : m_context(context)
+    : m_tokens(range.span())
+    , m_context(context)
 {
     StringBuilder stringBuilder;
-    m_tokens = WTF::map(range, [&](auto& token) {
-        if (token.hasStringBacking())
+    for (auto& token : m_tokens) {
+        if (!token.hasStringBacking())
+            continue;
+        if (token.tryUseStringLiteralBacking())
+            continue;
             stringBuilder.append(token.value());
-        return token;
-    });
+    }
+
     if (!stringBuilder.isEmpty()) {
     m_backingString = stringBuilder.toString();
     if (m_backingString.is8Bit())
@@ -75,6 +79,11 @@ CSSVariableData::CSSVariableData(const CSSParserTokenRange& range, const CSSPars
     else
             updateBackingStringsInTokens<UChar>();
     }
+}
+
+String CSSVariableData::serialize() const
+{
+    return tokenRange().serialize(CSSParserToken::SerializationMode::CustomProperty);
 }
 
 } // namespace WebCore

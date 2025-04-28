@@ -33,17 +33,18 @@ class RadioNodeList;
 class RenderElement;
 
 class ContainerNode : public Node {
-    WTF_MAKE_ISO_ALLOCATED(ContainerNode);
+    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(ContainerNode);
+    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(ContainerNode);
 public:
     virtual ~ContainerNode();
 
-    Node* firstChild() const { return m_firstChild; }
-    RefPtr<Node> protectedFirstChild() const { return m_firstChild; }
-    static ptrdiff_t firstChildMemoryOffset() { return OBJECT_OFFSETOF(ContainerNode, m_firstChild); }
-    Node* lastChild() const { return m_lastChild; }
-    RefPtr<Node> protectedLastChild() const { return m_lastChild; }
-    static ptrdiff_t lastChildMemoryOffset() { return OBJECT_OFFSETOF(ContainerNode, m_lastChild); }
-    bool hasChildNodes() const { return m_firstChild; }
+    Node* firstChild() const { return m_firstChild.get(); }
+    RefPtr<Node> protectedFirstChild() const { return m_firstChild.get(); }
+    static constexpr ptrdiff_t firstChildMemoryOffset() { return OBJECT_OFFSETOF(ContainerNode, m_firstChild); }
+    Node* lastChild() const { return m_lastChild.get(); }
+    RefPtr<Node> protectedLastChild() const { return m_lastChild.get(); }
+    static constexpr ptrdiff_t lastChildMemoryOffset() { return OBJECT_OFFSETOF(ContainerNode, m_lastChild); }
+    bool hasChildNodes() const { return m_firstChild.get(); }
     bool hasOneChild() const { return m_firstChild && m_firstChild == m_lastChild; }
 
     bool directChildNeedsStyleRecalc() const { return hasStyleFlag(NodeStyleFlag::DirectChildNeedsStyleResolution); }
@@ -59,8 +60,9 @@ public:
     void stringReplaceAll(String&&);
     void replaceAll(Node*);
 
-    ContainerNode& rootNode() const { return downcast<ContainerNode>(Node::rootNode()); }
-    Ref<ContainerNode> protectedRootNode() const { return downcast<ContainerNode>(Node::rootNode()); }
+    ContainerNode& rootNode() const;
+    Ref<ContainerNode> protectedRootNode() const { return rootNode(); }
+    ContainerNode& traverseToRootNode() const;
 
     // These methods are only used during parsing.
     // They don't send DOM mutation events or handle reparenting.
@@ -172,8 +174,8 @@ private:
 
     bool isContainerNode() const = delete;
 
-    Node* m_firstChild { nullptr };
-    Node* m_lastChild { nullptr };
+    CheckedPtr<Node> m_firstChild;
+    CheckedPtr<Node> m_lastChild;
 };
 
 inline ContainerNode::ContainerNode(Document& document, NodeType type, OptionSet<TypeFlag> typeFlags)
@@ -206,7 +208,19 @@ inline Node* Node::lastChild() const
     return containerNode ? containerNode->lastChild() : nullptr;
 }
 
+inline ContainerNode& TreeScope::rootNode() const
+{
+    return m_rootNode.get();
+}
+
 inline Node& Node::rootNode() const
+{
+    if (isInTreeScope())
+        return treeScope().rootNode();
+    return traverseToRootNode();
+}
+
+inline ContainerNode& ContainerNode::rootNode() const
 {
     if (isInTreeScope())
         return treeScope().rootNode();

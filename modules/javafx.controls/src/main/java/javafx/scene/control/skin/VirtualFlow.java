@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -117,6 +117,7 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
      * x new cells that are not yet available into the calculations
      */
     private static final int DEFAULT_IMPROVEMENT = 2;
+    private final Rectangle clipRect;
 
 
 
@@ -330,15 +331,21 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
         sheetChildren = sheet.getChildren();
 
         // --- clipView
-        clipView = new ClippedContainer(this);
-        clipView.setNode(sheet);
+        clipView = new ClippedContainer(sheet);
         getChildren().add(clipView);
+
+        // clipping
+        clipRect = new Rectangle();
+        clipRect.setSmooth(false);
+        clipRect.widthProperty().bind(clipView.widthProperty());
+        clipRect.heightProperty().bind(clipView.heightProperty());
+
+        clipView.setClip(clipRect);
 
         // --- accumCellParent
         accumCellParent = new Group();
         accumCellParent.setVisible(false);
         getChildren().add(accumCellParent);
-
 
         /*
         ** don't allow the ScrollBar to handle the ScrollEvent,
@@ -603,7 +610,7 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
 //        vbar.addChangedListener(ScrollBar.VALUE, listenerY);
 
         ChangeListener<Number> listenerY = (ov, t, t1) -> {
-            clipView.setClipY(isVertical() ? 0 : vbar.getValue());
+            setClipLayoutY(isVertical() ? 0 : vbar.getValue());
         };
         vbar.valueProperty().addListener(listenerY);
 
@@ -1074,7 +1081,7 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
             lastWidth = -1;
             lastHeight = -1;
             releaseCell(accumCell);
-            sheet.getChildren().clear();
+            sheetChildren.clear();
 
             resetIndex(cells);
             resetIndex(pile);
@@ -1131,6 +1138,13 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
                     cell.requestLayout();
                 }
             }
+
+            // Also request layout for cells in the pile. As soon as those are reused (and therefore added),
+            // they will do their layout.
+            for (T cell : pile) {
+                cell.requestLayout();
+            }
+
             needsCellsLayout = false;
             // yes, we return here - if needsCellsLayout was set to true, we
             // only did it to do the above - not rerun the entire layout.
@@ -1909,7 +1923,7 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
     private final void setViewportBreadth(double value) {
         this.viewportBreadth = value;
     }
-    private final double getViewportBreadth() {
+    final double getViewportBreadth() {
         return viewportBreadth;
     }
 
@@ -2407,12 +2421,12 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
         // the hbar isn't visible (fix for JDK-8112383)
         if (isVertical()) {
             if (needBreadthBar) {
-                clipView.setClipX(hbar.getValue());
+                setClipLayoutX(hbar.getValue());
             } else {
                 // all cells are now less than the width of the flow,
                 // so we should shift the hbar/clip such that
                 // everything is visible in the viewport.
-                clipView.setClipX(0);
+                setClipLayoutX(0);
                 hbar.setValue(0);
             }
         }
@@ -2836,6 +2850,11 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
             cell.setVisible(false);
         }
 
+        // Remove all cells that are in the pile and therefore not relevant anymore.
+        if (sheetChildren.size() != cells.size()) {
+            sheetChildren.removeAll(pile);
+        }
+
         // Fix for JDK-8095710: Rather than have the cells do weird things with
         // focus (in particular, have focus jump between cells), we return focus
         // to the VirtualFlow itself.
@@ -3205,6 +3224,18 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
         this.estimatedSize = 1d;
     }
 
+    private void setClipLayoutX(double x) {
+        double snappedX = snapPositionX(x);
+        clipView.setLayoutX(-snappedX);
+        clipRect.setLayoutX(snappedX);
+    }
+
+    private void setClipLayoutY(double y) {
+        double snappedY = snapPositionY(y);
+        clipView.setLayoutY(-snappedY);
+        clipRect.setLayoutY(snappedY);
+    }
+
 //    /**
 //     * Adjust the position based on a chunk of pixels. The position is based
 //     * on the start of the scrollbar position.
@@ -3230,49 +3261,10 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
      */
     static class ClippedContainer extends Region {
 
-        /**
-         * The Node which is embedded within this {@code ClipView}.
-         */
-        private Node node;
-        public Node getNode() { return this.node; }
-        public void setNode(Node n) {
-            this.node = n;
-
-            getChildren().clear();
-            getChildren().add(node);
-        }
-
-        public void setClipX(double clipX) {
-            setLayoutX(-clipX);
-            clipRect.setLayoutX(clipX);
-        }
-
-        public void setClipY(double clipY) {
-            setLayoutY(-clipY);
-            clipRect.setLayoutY(clipY);
-        }
-
-        private final Rectangle clipRect;
-
-        public ClippedContainer(final VirtualFlow<?> flow) {
-            if (flow == null) {
-                throw new IllegalArgumentException("VirtualFlow can not be null");
-            }
-
+        public ClippedContainer(Node node) {
             getStyleClass().add("clipped-container");
 
-            // clipping
-            clipRect = new Rectangle();
-            clipRect.setSmooth(false);
-            setClip(clipRect);
-            // --- clipping
-
-            super.widthProperty().addListener(valueModel -> {
-                clipRect.setWidth(getWidth());
-            });
-            super.heightProperty().addListener(valueModel -> {
-                clipRect.setHeight(getHeight());
-            });
+            getChildren().setAll(node);
         }
     }
 

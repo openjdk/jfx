@@ -32,12 +32,10 @@
 #include "ICOImageDecoder.h"
 #include "JPEGImageDecoder.h"
 #include "PNGImageDecoder.h"
+#include "WEBPImageDecoder.h"
 #endif
 #if USE(AVIF)
 #include "AVIFImageDecoder.h"
-#endif
-#if USE(WEBP)
-#include "WEBPImageDecoder.h"
 #endif
 #if USE(JPEGXL)
 #include "JPEGXLImageDecoder.h"
@@ -66,11 +64,11 @@ static unsigned copyFromSharedBuffer(char* buffer, unsigned bufferLength, const 
     unsigned bytesExtracted = 0;
     for (const auto& element : sharedBuffer) {
         if (bytesExtracted + element.segment->size() <= bufferLength) {
-            memcpy(buffer + bytesExtracted, element.segment->data(), element.segment->size());
+            memcpy(buffer + bytesExtracted, element.segment->span().data(), element.segment->size());
             bytesExtracted += element.segment->size();
         } else {
             ASSERT(bufferLength - bytesExtracted < element.segment->size());
-            memcpy(buffer + bytesExtracted, element.segment->data(), bufferLength - bytesExtracted);
+            memcpy(buffer + bytesExtracted, element.segment->span().data(), bufferLength - bytesExtracted);
             bytesExtracted = bufferLength;
             break;
         }
@@ -108,6 +106,11 @@ static bool matchesCURSignature(char* contents)
 {
     return !memcmp(contents, "\x00\x00\x02\x00", 4);
 }
+
+static bool matchesWebPSignature(char* contents)
+{
+    return !memcmp(contents, "RIFF", 4) && !memcmp(contents + 8, "WEBPVP", 6);
+}
 #endif
 
 #if USE(AVIF)
@@ -126,13 +129,6 @@ static bool matchesAVIFSignature(char* contents, FragmentedSharedBuffer& data)
 #endif
 }
 #endif // USE(AVIF)
-
-#if USE(WEBP)
-static bool matchesWebPSignature(char* contents)
-{
-    return !memcmp(contents, "RIFF", 4) && !memcmp(contents + 8, "WEBPVP", 6);
-}
-#endif
 
 #if USE(JPEGXL)
 static bool matchesJPEGXLSignature(const uint8_t* contents, size_t length)
@@ -171,6 +167,9 @@ RefPtr<ScalableImageDecoder> ScalableImageDecoder::create(FragmentedSharedBuffer
 
     if (matchesBMPSignature(contents))
         return BMPImageDecoder::create(alphaOption, gammaAndColorProfileOption);
+
+    if (matchesWebPSignature(contents))
+        return WEBPImageDecoder::create(alphaOption, gammaAndColorProfileOption);
 #endif
 
 #if USE(AVIF)
@@ -179,11 +178,6 @@ RefPtr<ScalableImageDecoder> ScalableImageDecoder::create(FragmentedSharedBuffer
 #else
     UNUSED_PARAM(alphaOption);
     UNUSED_PARAM(gammaAndColorProfileOption);
-#endif
-
-#if USE(WEBP)
-    if (matchesWebPSignature(contents))
-        return WEBPImageDecoder::create(alphaOption, gammaAndColorProfileOption);
 #endif
 
 #if USE(JPEGXL)

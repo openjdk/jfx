@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2023, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -33,6 +33,7 @@ import javafx.scene.control.ContextMenu;
 import javafx.scene.control.Label;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.input.PickResult;
+import javafx.scene.layout.BorderPane;
 import javafx.scene.text.Font;
 import javafx.scene.text.HitInfo;
 import javafx.scene.text.Text;
@@ -48,6 +49,7 @@ import com.oracle.tools.fx.monkey.sheets.RegionPropertySheet;
 import com.oracle.tools.fx.monkey.tools.AccessibilityPropertyViewer;
 import com.oracle.tools.fx.monkey.util.EnterTextDialog;
 import com.oracle.tools.fx.monkey.util.FX;
+import com.oracle.tools.fx.monkey.util.LayoutInfoVisualizer;
 import com.oracle.tools.fx.monkey.util.OptionPane;
 import com.oracle.tools.fx.monkey.util.ShowCaretPaths;
 import com.oracle.tools.fx.monkey.util.ShowCharacterRuns;
@@ -61,12 +63,12 @@ import com.oracle.tools.fx.monkey.util.Utils;
 public class TextFlowPage extends TestPaneBase {
     private final ActionSelector contentOption;
     private final FontOption fontOption;
-    private final BooleanOption showChars;
-    private final BooleanOption showCaretPaths;
     private final Label pickResult;
     private final Label hitInfo;
     private final Label hitInfo2;
     private final TextFlow textFlow;
+    private final BorderPane container;
+    private final LayoutInfoVisualizer visualizer;
 
     public TextFlowPage() {
         super("TextFlowPage");
@@ -88,6 +90,8 @@ public class TextFlowPage extends TestPaneBase {
 
         hitInfo2 = new Label();
 
+        visualizer = new LayoutInfoVisualizer();
+
         contentOption = new ActionSelector("content");
         contentOption.addButton("Edit", () -> {
             new EnterTextDialog(this, getText(), (s) -> {
@@ -108,10 +112,6 @@ public class TextFlowPage extends TestPaneBase {
             }
         });
 
-        showChars = new BooleanOption("showChars", "show characters", (v) -> updateShowCharacters(v));
-
-        showCaretPaths = new BooleanOption("showCaretPaths", "show caret paths", (v) -> updateShowCaretPaths(v));
-
         OptionPane op = new OptionPane();
         op.section("TextFlow");
         op.option("Content:", contentOption);
@@ -119,11 +119,12 @@ public class TextFlowPage extends TestPaneBase {
         op.option("Line Spacing:", Options.lineSpacing("lineSpacing", textFlow.lineSpacingProperty()));
         op.option("Tab Size:", Options.tabSize("tabSize", textFlow.tabSizeProperty()));
         op.option("Text Alignment:", new EnumOption<>("textAlignment", TextAlignment.class, textFlow.textAlignmentProperty()));
-
         op.separator();
-        op.option(showChars);
-        op.option(showCaretPaths);
-
+        op.option(new BooleanOption("showCaretAndRange", visualizer.caretOptionText(), visualizer.showCaretAndRange));
+//        op.option(new BooleanOption("useLegacyAPI", "(use TextFlow API)", visualizer.legacyAPI));
+//        op.option(new BooleanOption("showLines", "show text lines", visualizer.showLines));
+//        op.option(new BooleanOption("showBounds", "show layout bounds", visualizer.showLayoutBounds));
+//        op.option(new BooleanOption("includeLineSpacing", "include lineSpacing ", visualizer.includeLineSpace));
         op.separator();
         op.option("Pick Result:", pickResult);
         op.option("Text.hitTest:", hitInfo2);
@@ -131,10 +132,13 @@ public class TextFlowPage extends TestPaneBase {
 
         RegionPropertySheet.appendTo(op, textFlow);
 
-        setContent(textFlow);
+        container = new BorderPane(textFlow);
+
+        setContent(container);
         setOptions(op);
 
         fontOption.selectSystemFont();
+        visualizer.attach(container, textFlow);
     }
 
     private void setContent(String text) {
@@ -166,10 +170,11 @@ public class TextFlowPage extends TestPaneBase {
         return new Node[] {
             t("Rich Text: ", f),
             t("BOLD ", f, "-fx-font-weight:bold;"),
-            t("BOLD ", f, "-fx-font-weight:bold;"),
+            t("BOLD900 ", f, "-fx-font-weight:900;"),
             t("BOLD ", f, "-fx-font-weight:bold;"),
             t("italic ", f, "-fx-font-style:italic;"),
             t("underline ", f, "-fx-underline:true;"),
+            t("strike-through ", f, "-fx-strikethrough:true;"),
             t("The quick brown fox jumped over the lazy dog ", f),
             t("The quick brown fox jumped over the lazy dog ", f),
             t("The quick brown fox jumped over the lazy dog ", f),
@@ -183,10 +188,11 @@ public class TextFlowPage extends TestPaneBase {
         return new Node[] {
             t("Rich Text: ", f),
             t("BOLD ", f, "-fx-font-weight:bold;"),
-            t("BOLD ", f, "-fx-font-weight:100; -fx-scale-x:200%;"),
-            t("BOLD ", f, "-fx-font-weight:900;"),
+            t("Weight100-Scale200% ", f, "-fx-font-weight:100; -fx-scale-x:200%;"),
+            t("BOLD900 ", f, "-fx-font-weight:900;"),
             t("italic ", f, "-fx-font-style:italic;"),
             t("underline ", f, "-fx-underline:true;"),
+            t("strike-through ", f, "-fx-strikethrough:true;"),
             t(TextTemplates.TWO_EMOJIS, f),
             t(TextTemplates.CLUSTERS, f)
         };

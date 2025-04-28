@@ -27,12 +27,13 @@
 
 #include "CanvasBase.h"
 #include "GraphicsLayerContentsDisplayDelegate.h"
+#include "ImageBuffer.h"
 #include "ScriptWrappable.h"
 #include <wtf/CheckedRef.h>
 #include <wtf/Forward.h>
-#include <wtf/IsoMalloc.h>
 #include <wtf/Lock.h>
 #include <wtf/Noncopyable.h>
+#include <wtf/TZoneMalloc.h>
 #include <wtf/text/StringHash.h>
 
 namespace WebCore {
@@ -48,19 +49,19 @@ class HTMLVideoElement;
 class ImageBitmap;
 class SVGImageElement;
 class WebGLObject;
-enum class PixelFormat : uint8_t;
+enum class ImageBufferPixelFormat : uint8_t;
 
 class CanvasRenderingContext : public ScriptWrappable, public CanMakeWeakPtr<CanvasRenderingContext> {
     WTF_MAKE_NONCOPYABLE(CanvasRenderingContext);
-    WTF_MAKE_ISO_ALLOCATED(CanvasRenderingContext);
+    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(CanvasRenderingContext);
 public:
     virtual ~CanvasRenderingContext();
 
     static HashSet<CanvasRenderingContext*>& instances() WTF_REQUIRES_LOCK(instancesLock());
     static Lock& instancesLock() WTF_RETURNS_LOCK(s_instancesLock);
 
-    void ref();
-    WEBCORE_EXPORT void deref();
+    WEBCORE_EXPORT void ref() const;
+    WEBCORE_EXPORT void deref() const;
 
     CanvasBase& canvasBase() const { return m_canvas; }
 
@@ -71,7 +72,6 @@ public:
     bool isWebGL() const { return isWebGL1() || isWebGL2(); }
     virtual bool isWebGPU() const { return false; }
     virtual bool isGPUBased() const { return false; }
-    virtual bool isAccelerated() const { return false; }
     virtual bool isBitmapRenderer() const { return false; }
     virtual bool isPlaceholder() const { return false; }
     virtual bool isOffscreen2d() const { return false; }
@@ -90,9 +90,14 @@ public:
     };
 
     // Draws the source buffer to the canvasBase().buffer().
-    virtual void drawBufferToCanvas(SurfaceBuffer) { }
+    virtual RefPtr<ImageBuffer> surfaceBufferToImageBuffer(SurfaceBuffer);
+    virtual bool isSurfaceBufferTransparentBlack(SurfaceBuffer) const;
+    virtual bool delegatesDisplay() const;
     virtual RefPtr<GraphicsLayerContentsDisplayDelegate> layerContentsDisplayDelegate();
     virtual void setContentsToLayer(GraphicsLayer&);
+
+    // Returns the drawing buffer and runs the compositing steps of transferToImageBitmap.
+    virtual RefPtr<ImageBuffer> transferToImageBuffer();
 
     bool hasActiveInspectorCanvasCallTracer() const { return m_hasActiveInspectorCanvasCallTracer; }
     void setHasActiveInspectorCanvasCallTracer(bool hasActiveInspectorCanvasCallTracer) { m_hasActiveInspectorCanvasCallTracer = hasActiveInspectorCanvasCallTracer; }
@@ -108,8 +113,9 @@ public:
     // Swaps the current drawing buffer to display buffer.
     virtual void prepareForDisplay() { }
 
-    virtual PixelFormat pixelFormat() const;
+    virtual ImageBufferPixelFormat pixelFormat() const;
     virtual DestinationColorSpace colorSpace() const;
+    virtual bool willReadFrequently() const;
     virtual OptionSet<ImageBufferOptions> adjustImageBufferOptionsForTesting(OptionSet<ImageBufferOptions> bufferOptions) { return bufferOptions; }
 
     void setIsInPreparationForDisplayOrFlush(bool flag) { m_isInPreparationForDisplayOrFlush = flag; }

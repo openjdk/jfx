@@ -30,6 +30,7 @@
 #include <functional>
 #include <mutex>
 #include <wtf/text/CodePointIterator.h>
+#include <wtf/text/MakeString.h>
 
 namespace WTF {
 
@@ -329,6 +330,7 @@ template<typename CharacterType> ALWAYS_INLINE static bool isInUserInfoEncodeSet
 template<typename CharacterType> ALWAYS_INLINE static bool isPercentOrNonASCII(CharacterType character) { return !isASCII(character) || character == '%'; }
 template<typename CharacterType> ALWAYS_INLINE static bool isSlashQuestionOrHash(CharacterType character) { return character <= '\\' && characterClassTable[character] & SlashQuestionOrHash; }
 template<typename CharacterType> ALWAYS_INLINE static bool isValidSchemeCharacter(CharacterType character) { return character <= 'z' && characterClassTable[character] & ValidScheme; }
+template<typename CharacterType> ALWAYS_INLINE static bool isSpecialCharacterForFragmentDirective(CharacterType character) { return !isASCII(character) || character == ',' || character == '-'; }
 
 template<typename CharacterType>
 ALWAYS_INLINE bool URLParser::isForbiddenHostCodePoint(CharacterType character)
@@ -356,6 +358,11 @@ ALWAYS_INLINE static bool shouldPercentEncodeQueryByte(uint8_t byte, const bool&
 bool URLParser::isInUserInfoEncodeSet(UChar c)
 {
     return WTF::isInUserInfoEncodeSet(c);
+}
+
+bool URLParser::isSpecialCharacterForFragmentDirective(UChar c)
+{
+    return WTF::isSpecialCharacterForFragmentDirective(c);
 }
 
 template<typename CharacterType, URLParser::ReportSyntaxViolation reportSyntaxViolation>
@@ -403,10 +410,10 @@ ALWAYS_INLINE void URLParser::appendToASCIIBuffer(char32_t codePoint)
         m_asciiBuffer.append(codePoint);
 }
 
-ALWAYS_INLINE void URLParser::appendToASCIIBuffer(const char* characters, size_t length)
+ALWAYS_INLINE void URLParser::appendToASCIIBuffer(std::span<const LChar> characters)
 {
     if (UNLIKELY(m_didSeeSyntaxViolation))
-        m_asciiBuffer.append(characters, length);
+        m_asciiBuffer.append(characters);
 }
 
 template<typename CharacterType>
@@ -434,15 +441,15 @@ bool URLParser::copyBaseWindowsDriveLetter(const URL& base)
     if (base.protocolIsFile()) {
         RELEASE_ASSERT(base.m_hostEnd + base.m_portLength < base.m_string.length());
         if (base.m_string.is8Bit()) {
-            const LChar* begin = base.m_string.characters8();
-            CodePointIterator<LChar> c(begin + base.m_hostEnd + base.m_portLength + 1, begin + base.m_string.length());
+            auto characters = base.m_string.span8();
+            CodePointIterator c { characters.subspan(base.m_hostEnd + base.m_portLength + 1) };
             if (isWindowsDriveLetter(c)) {
                 appendWindowsDriveLetter(c);
                 return true;
             }
         } else {
-            const UChar* begin = base.m_string.characters16();
-            CodePointIterator<UChar> c(begin + base.m_hostEnd + base.m_portLength + 1, begin + base.m_string.length());
+            auto characters = base.m_string.span16();
+            CodePointIterator c { characters.subspan(base.m_hostEnd + base.m_portLength + 1) };
             if (isWindowsDriveLetter(c)) {
                 appendWindowsDriveLetter(c);
                 return true;
@@ -483,8 +490,7 @@ void URLParser::percentEncodeByte(uint8_t byte)
     appendToASCIIBuffer(lowerNibbleToASCIIHexDigit(byte));
 }
 
-const char replacementCharacterUTF8PercentEncoded[10] = "%EF%BF%BD";
-const size_t replacementCharacterUTF8PercentEncodedLength = sizeof(replacementCharacterUTF8PercentEncoded) - 1;
+static constexpr auto replacementCharacterUTF8PercentEncoded = "%EF%BF%BD"_s;
 
 template<bool(*isInCodeSet)(char32_t), typename CharacterType>
 ALWAYS_INLINE void URLParser::utf8PercentEncode(const CodePointIterator<CharacterType>& iterator)
@@ -507,7 +513,7 @@ ALWAYS_INLINE void URLParser::utf8PercentEncode(const CodePointIterator<Characte
     UBool isError = false;
     U8_APPEND(buffer, offset, U8_MAX_LENGTH, codePoint, isError);
     if (isError) {
-        appendToASCIIBuffer(replacementCharacterUTF8PercentEncoded, replacementCharacterUTF8PercentEncodedLength);
+        appendToASCIIBuffer(replacementCharacterUTF8PercentEncoded.span8());
         return;
     }
     for (int32_t i = 0; i < offset; ++i)
@@ -535,7 +541,7 @@ ALWAYS_INLINE void URLParser::utf8QueryEncode(const CodePointIterator<CharacterT
     UBool isError = false;
     U8_APPEND(buffer, offset, U8_MAX_LENGTH, codePoint, isError);
     if (isError) {
-        appendToASCIIBuffer(replacementCharacterUTF8PercentEncoded, replacementCharacterUTF8PercentEncodedLength);
+        appendToASCIIBuffer(replacementCharacterUTF8PercentEncoded.span8());
         return;
     }
     for (int32_t i = 0; i < offset; ++i) {
@@ -550,7 +556,7 @@ ALWAYS_INLINE void URLParser::utf8QueryEncode(const CodePointIterator<CharacterT
 template<typename CharacterType>
 void URLParser::encodeNonUTF8Query(const Vector<UChar>& source, const URLTextEncoding& encoding, CodePointIterator<CharacterType> iterator)
 {
-    auto encoded = encoding.encodeForURLParsing(StringView(source.data(), source.size()));
+    auto encoded = encoding.encodeForURLParsing(source.span());
     auto* data = encoded.data();
     size_t length = encoded.size();
 
@@ -793,13 +799,11 @@ void URLParser::copyASCIIStringUntil(const String& string, size_t length)
         return;
     ASSERT(m_asciiBuffer.isEmpty());
     if (string.is8Bit())
-        appendToASCIIBuffer(string.characters8(), length);
+        appendToASCIIBuffer(string.span8().first(length));
     else {
-        const UChar* characters = string.characters16();
-        for (size_t i = 0; i < length; ++i) {
-            UChar c = characters[i];
-            ASSERT_WITH_SECURITY_IMPLICATION(isASCII(c));
-            appendToASCIIBuffer(c);
+        for (auto character : string.span16().first(length)) {
+            ASSERT_WITH_SECURITY_IMPLICATION(isASCII(character));
+            appendToASCIIBuffer(character);
         }
     }
 }
@@ -842,11 +846,7 @@ void URLParser::copyURLPartsUntil(const URL& base, URLPart part, const CodePoint
         m_url.m_schemeEnd = base.m_schemeEnd;
     }
 
-    switch (scheme(StringView(m_asciiBuffer.data(), m_url.m_schemeEnd))) {
-#if PLATFORM(JAVA)
-    case Scheme::JAR:
-        break;
-#endif
+    switch (scheme(m_asciiBuffer.subspan(0, m_url.m_schemeEnd))) {
     case Scheme::WS:
     case Scheme::WSS:
         nonUTF8QueryEncoding = nullptr;
@@ -980,7 +980,7 @@ bool URLParser::shouldPopPath(unsigned newPathAfterLastSlash)
         return true;
 
     ASSERT(m_url.m_pathAfterLastSlash <= m_asciiBuffer.size());
-    CodePointIterator<LChar> componentToPop(&m_asciiBuffer[newPathAfterLastSlash], &m_asciiBuffer[0] + m_url.m_pathAfterLastSlash);
+    CodePointIterator<LChar> componentToPop({ &m_asciiBuffer[newPathAfterLastSlash], &m_asciiBuffer[0] + m_url.m_pathAfterLastSlash });
     if (newPathAfterLastSlash == m_url.m_hostEnd + m_url.m_portLength + 1 && isWindowsDriveLetter(componentToPop))
         return false;
     return true;
@@ -1013,9 +1013,9 @@ void URLParser::syntaxViolation(const CodePointIterator<CharacterType>& iterator
     size_t codeUnitsToCopy = iterator.codeUnitsSince(reinterpret_cast<const CharacterType*>(m_inputBegin));
     RELEASE_ASSERT(codeUnitsToCopy <= m_inputString.length());
     if (m_inputString.is8Bit())
-        m_asciiBuffer.append(m_inputString.characters8(), codeUnitsToCopy);
+        m_asciiBuffer.append(m_inputString.span8().first(codeUnitsToCopy));
     else
-        m_asciiBuffer.append(m_inputString.characters16(), codeUnitsToCopy);
+        m_asciiBuffer.append(m_inputString.span16().first(codeUnitsToCopy));
 }
 
 void URLParser::failure()
@@ -1060,15 +1060,15 @@ bool URLParser::isAtLocalhost(CodePointIterator<CharacterType> iterator)
 bool URLParser::isLocalhost(StringView view)
 {
     if (view.is8Bit())
-        return isAtLocalhost(CodePointIterator<LChar>(view.characters8(), view.characters8() + view.length()));
-    return isAtLocalhost(CodePointIterator<UChar>(view.characters16(), view.characters16() + view.length()));
+        return isAtLocalhost<LChar>(view.span8());
+    return isAtLocalhost<UChar>(view.span16());
 }
 
 ALWAYS_INLINE StringView URLParser::parsedDataView(size_t start, size_t length)
 {
     if (UNLIKELY(m_didSeeSyntaxViolation)) {
         ASSERT(start + length <= m_asciiBuffer.size());
-        return StringView(m_asciiBuffer.data() + start, length);
+        return m_asciiBuffer.subspan(start, length);
     }
     ASSERT(start + length <= m_inputString.length());
     return StringView(m_inputString).substring(start, length);
@@ -1102,11 +1102,13 @@ URLParser::URLParser(String&& input, const URL& base, const URLTextEncoding* non
     }
 
     if (m_inputString.is8Bit()) {
-        m_inputBegin = m_inputString.characters8();
-        parse(m_inputString.characters8(), m_inputString.length(), base, nonUTF8QueryEncoding);
+        auto characters = m_inputString.span8();
+        m_inputBegin = characters.data();
+        parse(characters, base, nonUTF8QueryEncoding);
     } else {
-        m_inputBegin = m_inputString.characters16();
-        parse(m_inputString.characters16(), m_inputString.length(), base, nonUTF8QueryEncoding);
+        auto characters = m_inputString.span16();
+        m_inputBegin = characters.data();
+        parse(characters, base, nonUTF8QueryEncoding);
     }
 
     ASSERT(!m_url.m_isValid
@@ -1117,7 +1119,7 @@ URLParser::URLParser(String&& input, const URL& base, const URLTextEncoding* non
 #if ASSERT_ENABLED
     if (!m_didSeeSyntaxViolation) {
         // Force a syntax violation at the beginning to make sure we get the same result.
-        URLParser parser(makeString(" ", m_inputString), base, nonUTF8QueryEncoding);
+        URLParser parser(makeString(' ', m_inputString), base, nonUTF8QueryEncoding);
         URL parsed = parser.result();
         if (parsed.isValid())
             ASSERT(allValuesEqual(parser.result(), m_url));
@@ -1129,24 +1131,24 @@ URLParser::URLParser(String&& input, const URL& base, const URLTextEncoding* non
 }
 
 template<typename CharacterType>
-void URLParser::parse(const CharacterType* input, const unsigned length, const URL& base, const URLTextEncoding* nonUTF8QueryEncoding)
+void URLParser::parse(std::span<const CharacterType> input, const URL& base, const URLTextEncoding* nonUTF8QueryEncoding)
 {
-    URL_PARSER_LOG("Parsing URL <%s> base <%s>", String(input, length).utf8().data(), base.string().utf8().data());
+    URL_PARSER_LOG("Parsing URL <%s> base <%s>", String(input).utf8().data(), base.string().utf8().data());
     m_url = { };
     ASSERT(m_asciiBuffer.isEmpty());
 
     Vector<UChar> queryBuffer;
 
-    unsigned endIndex = length;
+    auto endIndex = input.size();
     if (UNLIKELY(nonUTF8QueryEncoding == URLTextEncodingSentinelAllowingC0AtEnd))
         nonUTF8QueryEncoding = nullptr;
     else {
         while (UNLIKELY(endIndex && isC0ControlOrSpace(input[endIndex - 1]))) {
-            syntaxViolation(CodePointIterator<CharacterType>(input, input));
+            syntaxViolation<CharacterType>(input);
             endIndex--;
         }
     }
-    CodePointIterator<CharacterType> c(input, input + endIndex);
+    CodePointIterator<CharacterType> c(input.first(endIndex));
     CodePointIterator<CharacterType> authorityOrHostBegin;
     CodePointIterator<CharacterType> queryBegin;
     while (UNLIKELY(!c.atEnd() && isC0ControlOrSpace(*c))) {
@@ -1393,7 +1395,7 @@ void URLParser::parse(const CharacterType* input, const unsigned length, const U
             if (*c == '/' || *c == '\\') {
                 ++c;
                 copyURLPartsUntil(base, URLPart::SchemeEnd, c, nonUTF8QueryEncoding);
-                appendToASCIIBuffer("://", 3);
+                appendToASCIIBuffer("://"_span);
                 if (m_urlIsSpecial)
                     state = State::SpecialAuthorityIgnoreSlashes;
                 else {
@@ -1426,7 +1428,7 @@ void URLParser::parse(const CharacterType* input, const unsigned length, const U
                 }
             } else {
                 syntaxViolation(c);
-                appendToASCIIBuffer("//", 2);
+                appendToASCIIBuffer("//"_span);
             }
             state = State::SpecialAuthorityIgnoreSlashes;
             break;
@@ -1538,7 +1540,7 @@ void URLParser::parse(const CharacterType* input, const unsigned length, const U
                     appendToASCIIBuffer('?');
                     ++c;
                 } else {
-                    appendToASCIIBuffer("///?", 4);
+                    appendToASCIIBuffer("///?"_span);
                     ++c;
                     m_url.m_userStart = currentPosition(c) - 2;
                     m_url.m_userEnd = m_url.m_userStart;
@@ -1560,7 +1562,7 @@ void URLParser::parse(const CharacterType* input, const unsigned length, const U
                     copyURLPartsUntil(base, URLPart::QueryEnd, c, nonUTF8QueryEncoding);
                     appendToASCIIBuffer('#');
                 } else {
-                    appendToASCIIBuffer("///#", 4);
+                    appendToASCIIBuffer("///#"_span);
                     m_url.m_userStart = currentPosition(c) - 2;
                     m_url.m_userEnd = m_url.m_userStart;
                     m_url.m_passwordEnd = m_url.m_userStart;
@@ -1582,14 +1584,14 @@ void URLParser::parse(const CharacterType* input, const unsigned length, const U
                     if (base.isValid() && base.protocolIsFile()) {
                         if (base.host().isEmpty()) {
                             copyURLPartsUntil(base, URLPart::SchemeEnd, c, nonUTF8QueryEncoding);
-                            appendToASCIIBuffer(":///", 4);
+                            appendToASCIIBuffer(":///"_span);
                         } else {
                             copyURLPartsUntil(base, URLPart::PortEnd, c, nonUTF8QueryEncoding);
                             appendToASCIIBuffer('/');
                             copiedHost = true;
                         }
                     } else
-                        appendToASCIIBuffer("///", 3);
+                        appendToASCIIBuffer("///"_span);
                     if (!copiedHost) {
                         m_url.m_userStart = currentPosition(c) - 1;
                         m_url.m_userEnd = m_url.m_userStart;
@@ -1612,7 +1614,7 @@ void URLParser::parse(const CharacterType* input, const unsigned length, const U
                     syntaxViolation(c);
                 if (base.isValid() && base.protocolIsFile()) {
                     copyURLPartsUntil(base, URLPart::SchemeEnd, c, nonUTF8QueryEncoding);
-                    appendToASCIIBuffer(":/", 2);
+                    appendToASCIIBuffer(":/"_span);
                 }
                 appendToASCIIBuffer('/');
                 advance(c);
@@ -1630,7 +1632,7 @@ void URLParser::parse(const CharacterType* input, const unsigned length, const U
                 if (base.isValid() && base.protocolIsFile()) {
                     if (base.host().isEmpty()) {
                         copyURLPartsUntil(base, URLPart::SchemeEnd, c, nonUTF8QueryEncoding);
-                        appendToASCIIBuffer(":///", 4);
+                        appendToASCIIBuffer(":///"_span);
                     } else {
                         copyURLPartsUntil(base, URLPart::PortEnd, c, nonUTF8QueryEncoding);
                         appendToASCIIBuffer('/');
@@ -1638,7 +1640,7 @@ void URLParser::parse(const CharacterType* input, const unsigned length, const U
                     }
                 } else {
                     syntaxViolation(c);
-                    appendToASCIIBuffer("//", 2);
+                    appendToASCIIBuffer("//"_span);
                 }
                 if (!copiedHost) {
                     m_url.m_userStart = currentPosition(c) - 1;
@@ -1673,7 +1675,7 @@ void URLParser::parse(const CharacterType* input, const unsigned length, const U
                         ASSERT(windowsQuirk || parsedDataView(currentPosition(c) - 1) == '/');
                         if (UNLIKELY(*c == '?')) {
                             syntaxViolation(c);
-                            appendToASCIIBuffer("/?", 2);
+                            appendToASCIIBuffer("/?"_span);
                             ++c;
                             if (nonUTF8QueryEncoding) {
                                 queryBegin = c;
@@ -1686,7 +1688,7 @@ void URLParser::parse(const CharacterType* input, const unsigned length, const U
                         }
                         if (UNLIKELY(*c == '#')) {
                             syntaxViolation(c);
-                            appendToASCIIBuffer("/#", 2);
+                            appendToASCIIBuffer("/#"_span);
                             ++c;
                             m_url.m_pathAfterLastSlash = currentPosition(c) - 1;
                             m_url.m_pathEnd = m_url.m_pathAfterLastSlash;
@@ -1926,7 +1928,7 @@ void URLParser::parse(const CharacterType* input, const unsigned length, const U
             break;
         }
         syntaxViolation(c);
-        appendToASCIIBuffer("///", 3);
+        appendToASCIIBuffer("///"_span);
         m_url.m_userStart = currentPosition(c) - 1;
         m_url.m_userEnd = m_url.m_userStart;
         m_url.m_passwordEnd = m_url.m_userStart;
@@ -1944,7 +1946,7 @@ void URLParser::parse(const CharacterType* input, const unsigned length, const U
             if (base.isValid() && base.protocolIsFile()) {
                 if (base.host().isEmpty()) {
                     copyURLPartsUntil(base, URLPart::SchemeEnd, c, nonUTF8QueryEncoding);
-                    appendToASCIIBuffer(":/", 2);
+                    appendToASCIIBuffer(":/"_span);
                 } else {
                     copyURLPartsUntil(base, URLPart::PortEnd, c, nonUTF8QueryEncoding);
                     appendToASCIIBuffer('/');
@@ -1953,7 +1955,7 @@ void URLParser::parse(const CharacterType* input, const unsigned length, const U
             }
             if (!copiedHost) {
                 m_url.m_userStart = currentPosition(c) + 1;
-                appendToASCIIBuffer("//", 2);
+                appendToASCIIBuffer("//"_span);
                 m_url.m_userEnd = m_url.m_userStart;
                 m_url.m_passwordEnd = m_url.m_userStart;
                 m_url.m_hostEnd = m_url.m_userStart;
@@ -2100,7 +2102,7 @@ void URLParser::appendNumberToASCIIBuffer(UnsignedIntegerType number)
         *--p = (number % 10) + '0';
         number /= 10;
     } while (number);
-    appendToASCIIBuffer(p, end - p);
+    appendToASCIIBuffer(std::span { p, static_cast<size_t>(end - p) });
 }
 
 void URLParser::serializeIPv4(IPv4Address address)
@@ -2169,7 +2171,7 @@ void URLParser::serializeIPv6(URLParser::IPv6Address address)
             if (piece)
                 appendToASCIIBuffer(':');
             else
-                appendToASCIIBuffer("::", 2);
+                appendToASCIIBuffer("::"_span);
             while (piece < 8 && !address[piece])
                 piece++;
             if (piece == 8)
@@ -2491,16 +2493,16 @@ std::optional<URLParser::IPv6Address> URLParser::parseIPv6Host(CodePointIterator
 }
 
 template<typename CharacterType>
-URLParser::LCharBuffer URLParser::percentDecode(const LChar* input, size_t length, const CodePointIterator<CharacterType>& iteratorForSyntaxViolationPosition)
+URLParser::LCharBuffer URLParser::percentDecode(std::span<const LChar> input, const CodePointIterator<CharacterType>& iteratorForSyntaxViolationPosition)
 {
     LCharBuffer output;
-    output.reserveInitialCapacity(length);
+    output.reserveInitialCapacity(input.size());
 
-    for (size_t i = 0; i < length; ++i) {
+    for (size_t i = 0; i < input.size(); ++i) {
         uint8_t byte = input[i];
         if (byte != '%')
             output.append(byte);
-        else if (length > 2 && i < length - 2) {
+        else if (input.size() > 2 && i < input.size() - 2) {
             if (isASCIIHexDigit(input[i + 1]) && isASCIIHexDigit(input[i + 2])) {
                 syntaxViolation(iteratorForSyntaxViolationPosition);
                 output.append(toASCIIHexValue(input[i + 1], input[i + 2]));
@@ -2513,16 +2515,16 @@ URLParser::LCharBuffer URLParser::percentDecode(const LChar* input, size_t lengt
     return output;
 }
 
-URLParser::LCharBuffer URLParser::percentDecode(const LChar* input, size_t length)
+URLParser::LCharBuffer URLParser::percentDecode(std::span<const LChar> input)
 {
     LCharBuffer output;
-    output.reserveInitialCapacity(length);
+    output.reserveInitialCapacity(input.size());
 
-    for (size_t i = 0; i < length; ++i) {
+    for (size_t i = 0; i < input.size(); ++i) {
         uint8_t byte = input[i];
         if (byte != '%')
             output.append(byte);
-        else if (length > 2 && i < length - 2) {
+        else if (input.size() > 2 && i < input.size() - 2) {
             if (isASCIIHexDigit(input[i + 1]) && isASCIIHexDigit(input[i + 2])) {
                 output.append(toASCIIHexValue(input[i + 1], input[i + 2]));
                 i += 2;
@@ -2560,14 +2562,14 @@ template<typename CharacterType> std::optional<URLParser::LCharBuffer> URLParser
     if (domain.containsOnlyASCII() && !subdomainStartsWithXNDashDash(domain)) {
         size_t length = domain.length();
         if (domain.is8Bit()) {
-            const LChar* characters = domain.characters8();
+            auto characters = domain.span8();
             ascii.appendUsingFunctor(length, [&](size_t i) {
                 if (UNLIKELY(isASCIIUpper(characters[i])))
                     syntaxViolation(iteratorForSyntaxViolationPosition);
                 return toASCIILower(characters[i]);
             });
         } else {
-            const UChar* characters = domain.characters16();
+            auto characters = domain.span16();
             ascii.appendUsingFunctor(length, [&](size_t i) {
                 if (UNLIKELY(isASCIIUpper(characters[i])))
                     syntaxViolation(iteratorForSyntaxViolationPosition);
@@ -2580,19 +2582,19 @@ template<typename CharacterType> std::optional<URLParser::LCharBuffer> URLParser
     UChar hostnameBuffer[hostnameBufferLength];
     UErrorCode error = U_ZERO_ERROR;
     UIDNAInfo processingDetails = UIDNA_INFO_INITIALIZER;
-    int32_t numCharactersConverted = uidna_nameToASCII(&internationalDomainNameTranscoder(), StringView(domain).upconvertedCharacters(), domain.length(), hostnameBuffer, hostnameBufferLength, &processingDetails, &error);
+    size_t numCharactersConverted = uidna_nameToASCII(&internationalDomainNameTranscoder(), StringView(domain).upconvertedCharacters(), domain.length(), hostnameBuffer, hostnameBufferLength, &processingDetails, &error);
 
     if (U_SUCCESS(error) && !(processingDetails.errors & ~allowedNameToASCIIErrors) && numCharactersConverted) {
 #if ASSERT_ENABLED
-        for (int32_t i = 0; i < numCharactersConverted; ++i) {
+        for (size_t i = 0; i < numCharactersConverted; ++i) {
             ASSERT(isASCII(hostnameBuffer[i]));
             ASSERT(!isASCIIUpper(hostnameBuffer[i]));
         }
 #else
         UNUSED_PARAM(numCharactersConverted);
 #endif // ASSERT_ENABLED
-        ascii.append(hostnameBuffer, numCharactersConverted);
-        if (domain != StringView(ascii.data(), ascii.size()))
+        ascii.append(std::span { hostnameBuffer, numCharactersConverted });
+        if (domain != StringView(ascii.span()))
             syntaxViolation(iteratorForSyntaxViolationPosition);
         return ascii;
     }
@@ -2719,12 +2721,9 @@ bool URLParser::subdomainStartsWithXNDashDash(CodePointIterator<CharacterType> i
 
 bool URLParser::subdomainStartsWithXNDashDash(StringImpl& host)
 {
-    if (host.is8Bit()) {
-        const LChar* begin = host.characters8();
-        return subdomainStartsWithXNDashDash(CodePointIterator<LChar>(begin, begin + host.length()));
-    }
-    const UChar* begin = host.characters16();
-    return subdomainStartsWithXNDashDash(CodePointIterator<UChar>(begin, begin + host.length()));
+    if (host.is8Bit())
+        return subdomainStartsWithXNDashDash<LChar>(host.span8());
+    return subdomainStartsWithXNDashDash<UChar>(host.span16());
 }
 
 static bool dnsNameEndsInNumber(StringView name)
@@ -2861,18 +2860,18 @@ auto URLParser::parseHostAndPort(CodePointIterator<CharacterType> iterator) -> H
             syntaxViolation(hostBegin);
 
         uint8_t buffer[U8_MAX_LENGTH];
-        int32_t offset = 0;
+        size_t offset = 0;
         UBool isError = false;
         U8_APPEND(buffer, offset, U8_MAX_LENGTH, *iterator, isError);
         if (isError)
             return HostParsingResult::InvalidHost;
-        utf8Encoded.append(buffer, offset);
+        utf8Encoded.append(std::span { buffer, offset });
     }
-    LCharBuffer percentDecoded = percentDecode(utf8Encoded.data(), utf8Encoded.size(), hostBegin);
-    String domain = String::fromUTF8(percentDecoded.data(), percentDecoded.size());
+    LCharBuffer percentDecoded = percentDecode(utf8Encoded.span(), hostBegin);
+    String domain = String::fromUTF8(percentDecoded.span());
     if (domain.isNull())
         return HostParsingResult::InvalidHost;
-    if (domain != StringView(percentDecoded.data(), percentDecoded.size()))
+    if (domain != StringView(percentDecoded.span()))
         syntaxViolation(hostBegin);
     auto asciiDomain = domainToASCII(*domain.impl(), hostBegin);
     if (!asciiDomain || hasForbiddenHostCodePoint(asciiDomain.value()))
@@ -2880,7 +2879,7 @@ auto URLParser::parseHostAndPort(CodePointIterator<CharacterType> iterator) -> H
     LCharBuffer& asciiDomainValue = asciiDomain.value();
     const LChar* asciiDomainCharacters = asciiDomainValue.data();
 
-    auto address = parseIPv4Host(hostBegin, CodePointIterator<LChar>(asciiDomainValue.begin(), asciiDomainValue.end()));
+    auto address = parseIPv4Host<CharacterType, LChar>(hostBegin, asciiDomainValue.span());
     if (address) {
         serializeIPv4(address.value());
         m_url.m_hostEnd = currentPosition(iterator);
@@ -2893,7 +2892,7 @@ auto URLParser::parseHostAndPort(CodePointIterator<CharacterType> iterator) -> H
     if (address.error() == IPv4ParsingError::Failure)
         return HostParsingResult::InvalidHost;
 
-    appendToASCIIBuffer(asciiDomainCharacters, asciiDomainValue.size());
+    appendToASCIIBuffer(std::span { asciiDomainCharacters, asciiDomainValue.size() });
     m_url.m_hostEnd = currentPosition(iterator);
     auto hostStart = m_url.hostStart();
     if (UNLIKELY(dnsNameEndsInNumber(parsedDataView(hostStart, m_url.m_hostEnd - hostStart))))
@@ -2910,8 +2909,8 @@ std::optional<String> URLParser::formURLDecode(StringView input)
     auto utf8 = input.utf8(StrictConversion);
     if (utf8.isNull())
         return std::nullopt;
-    auto percentDecoded = percentDecode(utf8.dataAsUInt8Ptr(), utf8.length());
-    return String::fromUTF8ReplacingInvalidSequences(percentDecoded.data(), percentDecoded.size());
+    auto percentDecoded = percentDecode(utf8.span());
+    return String::fromUTF8ReplacingInvalidSequences(percentDecoded.span());
 }
 
 // https://url.spec.whatwg.org/#concept-urlencoded-parser
@@ -2944,9 +2943,7 @@ std::optional<KeyValuePair<String, String>> URLParser::parseQueryNameAndValue(St
 static void serializeURLEncodedForm(const String& input, Vector<LChar>& output)
 {
     auto utf8 = input.utf8(StrictConversion);
-    const char* data = utf8.data();
-    for (size_t i = 0; i < utf8.length(); ++i) {
-        const char byte = data[i];
+    for (char byte : utf8.span()) {
         if (byte == 0x20)
             output.append(0x2B);
         else if (byte == 0x2A

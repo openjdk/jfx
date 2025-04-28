@@ -39,13 +39,13 @@
 #include "RenderLayerScrollableArea.h"
 #include "RenderView.h"
 #include "SecurityOrigin.h"
-#include <wtf/IsoMallocInlines.h>
-#include <wtf/StackStats.h>
 #include <wtf/Ref.h>
+#include <wtf/StackStats.h>
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
-WTF_MAKE_ISO_ALLOCATED_IMPL(RenderWidget);
+WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(RenderWidget);
 
 static HashMap<SingleThreadWeakRef<const Widget>, SingleThreadWeakRef<RenderWidget>>& widgetRendererMap()
 {
@@ -103,7 +103,7 @@ RenderWidget::RenderWidget(Type type, HTMLFrameOwnerElement& element, RenderStyl
 
 void RenderWidget::willBeDestroyed()
 {
-    if (AXObjectCache* cache = document().existingAXObjectCache()) {
+    if (CheckedPtr cache = document().existingAXObjectCache()) {
         cache->childrenChanged(this->parent());
         cache->remove(this);
     }
@@ -194,19 +194,19 @@ void RenderWidget::setWidget(RefPtr<Widget>&& widget)
                     return;
             }
 
-            if (style().visibility() != Visibility::Visible)
+            if (style().usedVisibility() != Visibility::Visible)
                 m_widget->hide();
             else {
                 m_widget->show();
                 repaint();
             }
-            if (auto* cache = document().existingAXObjectCache())
-                cache->onWidgetVisibilityChanged(this);
+            if (CheckedPtr cache = document().existingAXObjectCache())
+                cache->onWidgetVisibilityChanged(*this);
         }
         moveWidgetToParentSoon(*m_widget, &view().frameView());
     }
 
-    if (auto* cache = document().existingAXObjectCache())
+    if (CheckedPtr cache = document().existingAXObjectCache())
         cache->childrenChanged(this);
 }
 
@@ -222,13 +222,13 @@ void RenderWidget::styleDidChange(StyleDifference diff, const RenderStyle* oldSt
 {
     RenderReplaced::styleDidChange(diff, oldStyle);
     if (m_widget) {
-        if (style().visibility() != Visibility::Visible)
+        if (style().usedVisibility() != Visibility::Visible)
             m_widget->hide();
         else
             m_widget->show();
 
-        if (auto* cache = document().existingAXObjectCache())
-            cache->onWidgetVisibilityChanged(this);
+        if (CheckedPtr cache = document().existingAXObjectCache())
+            cache->onWidgetVisibilityChanged(*this);
     }
 }
 
@@ -236,7 +236,7 @@ void RenderWidget::paintContents(PaintInfo& paintInfo, const LayoutPoint& paintO
 {
     if (paintInfo.requireSecurityOriginAccessForWidgets) {
         if (auto contentDocument = frameOwnerElement().contentDocument()) {
-            if (!document().securityOrigin().isSameOriginDomain(contentDocument->securityOrigin()))
+            if (!document().protectedSecurityOrigin()->isSameOriginDomain(contentDocument->securityOrigin()))
                 return;
         }
     }
@@ -326,8 +326,7 @@ void RenderWidget::paint(PaintInfo& paintInfo, const LayoutPoint& paintOffset)
 
         // Push a clip if we have a border radius, since we want to round the foreground content that gets painted.
         paintInfo.context().save();
-        FloatRoundedRect roundedInnerRect = FloatRoundedRect(style().getRoundedInnerBorderFor(borderRect,
-            paddingTop() + borderTop(), paddingBottom() + borderBottom(), paddingLeft() + borderLeft(), paddingRight() + borderRight(), true, true));
+        auto roundedInnerRect = FloatRoundedRect(roundedContentBoxRect(borderRect));
         BackgroundPainter::clipRoundedInnerRect(paintInfo.context(), roundedInnerRect);
     }
 

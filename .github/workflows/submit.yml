@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2020, 2024, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2020, 2025, Oracle and/or its affiliates. All rights reserved.
 # DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
 #
 # This code is free software; you can redistribute it and/or modify it
@@ -58,8 +58,8 @@ jobs:
     name: "Gradle Wrapper Validation"
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
-      - uses: gradle/wrapper-validation-action@v1
+      - uses: actions/checkout@v4
+      - uses: gradle/actions/wrapper-validation@v3
 
 
   linux_x64_build:
@@ -82,7 +82,7 @@ jobs:
 
     steps:
       - name: Checkout the source
-        uses: actions/checkout@v2
+        uses: actions/checkout@v4
         with:
           path: jfx
 
@@ -99,7 +99,7 @@ jobs:
 # FIXME: enable cache for boot JDK
 #      - name: Restore boot JDK from cache
 #        id: bootjdk
-#        uses: actions/cache@v2
+#        uses: actions/cache@v4
 #        with:
 #          path: ~/bootjdk/${{ env.BOOT_JDK_VERSION }}
 #          key: bootjdk-${{ runner.os }}-${{ env.BOOT_JDK_VERSION }}-${{ env.BOOT_JDK_SHA256 }}-v1
@@ -168,7 +168,7 @@ jobs:
 
     steps:
       - name: Checkout the source
-        uses: actions/checkout@v2
+        uses: actions/checkout@v4
         with:
           path: jfx
 
@@ -184,7 +184,7 @@ jobs:
 # FIXME: enable cache for boot JDK
 #      - name: Restore boot JDK from cache
 #        id: bootjdk
-#        uses: actions/cache@v2
+#        uses: actions/cache@v4
 #        with:
 #          path: ~/bootjdk/${{ env.BOOT_JDK_VERSION }}
 #          key: bootjdk-${{ runner.os }}-${{ env.BOOT_JDK_VERSION }}-${{ env.BOOT_JDK_SHA256 }}-v1
@@ -254,7 +254,7 @@ jobs:
 
     steps:
       - name: Checkout the source
-        uses: actions/checkout@v2
+        uses: actions/checkout@v4
         with:
           path: jfx
 
@@ -270,7 +270,7 @@ jobs:
 # FIXME: enable cache for boot JDK
 #      - name: Restore boot JDK from cache
 #        id: bootjdk
-#        uses: actions/cache@v2
+#        uses: actions/cache@v4
 #        with:
 #          path: ~/bootjdk/${{ env.BOOT_JDK_VERSION }}
 #          key: bootjdk-${{ runner.os }}-${{ env.BOOT_JDK_VERSION }}-${{ env.BOOT_JDK_SHA256 }}-v1
@@ -340,14 +340,14 @@ jobs:
 
     steps:
       - name: Checkout the source
-        uses: actions/checkout@v2
+        uses: actions/checkout@v4
         with:
           path: jfx
 
 # FIXME: enable cache for boot JDK
 #      - name: Restore boot JDK from cache
 #        id: bootjdk
-#        uses: actions/cache@v2
+#        uses: actions/cache@v4
 #        with:
 #          path: ~/bootjdk/${{ env.BOOT_JDK_VERSION }}
 #          key: bootjdk-${{ runner.os }}-${{ env.BOOT_JDK_VERSION }}-${{ env.BOOT_JDK_SHA256 }}-v1
@@ -362,7 +362,7 @@ jobs:
 
       - name: Restore cygwin packages from cache
         id: cygwin
-        uses: actions/cache@v2
+        uses: actions/cache@v4
         with:
           path: ~/cygwin/packages
           key: cygwin-packages-${{ runner.os }}-v1
@@ -413,7 +413,8 @@ jobs:
           which java
           java -version
           .\gradlew.bat -version
-          .\gradlew.bat --info all
+          # Skip "chmod" task for GHA builds. See JDK-8354337 for details.
+          .\gradlew.bat --info -PCHMOD_ARTIFACTS=false all
 
       - name: Run JavaFX headless tests
         working-directory: jfx

@@ -103,14 +103,9 @@ AudioTrack* AudioTrackList::getTrackById(TrackID id) const
     return nullptr;
 }
 
-EventTargetInterface AudioTrackList::eventTargetInterface() const
+enum EventTargetInterfaceType AudioTrackList::eventTargetInterface() const
 {
-    return AudioTrackListEventTargetInterfaceType;
-}
-
-const char* AudioTrackList::activeDOMObjectName() const
-{
-    return "AudioTrackList";
+    return EventTargetInterfaceType::AudioTrackList;
 }
 
 } // namespace WebCore

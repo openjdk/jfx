@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -224,7 +224,7 @@
  * class documentation. Some things which should be noted are:
  * <ul>
  *     <li>One <code>Media</code> object may be shared among multiple <code>MediaPlayer</code>s.
- *     <li>One <code>MediaPlayer</code> may be shared amoung multiple <code>MediaView</code>s.
+ *     <li>One <code>MediaPlayer</code> may be shared among multiple <code>MediaView</code>s.
  *     <li>Media may be played directly by a <code>MediaPlayer</code>
  *         without creating a <code>MediaView</code> although a view is required for display.</li>
  *     <li>Instead of <code>MediaPlayer.play()</code>,

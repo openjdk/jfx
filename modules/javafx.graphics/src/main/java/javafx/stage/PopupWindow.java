@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -73,6 +73,7 @@ import javafx.event.EventTarget;
 import javafx.event.EventType;
 import javafx.scene.input.KeyCombination;
 import javafx.scene.input.KeyEvent;
+import javafx.scene.input.InputMethodEvent;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.input.ScrollEvent;
 import javafx.scene.layout.Background;
@@ -370,8 +371,11 @@ public abstract class PopupWindow extends Window {
      * @throws NullPointerException if owner is null
      * @throws IllegalArgumentException if the specified owner window would
      *      create cycle in the window hierarchy
+     * @throws IllegalStateException if this method is called on a thread
+     *      other than the JavaFX Application Thread.
      */
     public void show(Window owner) {
+        Toolkit.getToolkit().checkFxUserThread();
         validateOwnerWindow(owner);
         showImpl(owner);
     }
@@ -399,8 +403,11 @@ public abstract class PopupWindow extends Window {
      * @throws IllegalArgumentException if the specified owner node is not
      *      associated with a Window or when the window would create cycle
      *      in the window hierarchy
+     * @throws IllegalStateException if this method is called on a thread
+     *      other than the JavaFX Application Thread.
      */
     public void show(Node ownerNode, double anchorX, double anchorY) {
+        Toolkit.getToolkit().checkFxUserThread();
         if (ownerNode == null) {
             throw new NullPointerException("The owner node must not be null");
         }
@@ -439,8 +446,11 @@ public abstract class PopupWindow extends Window {
      * @throws NullPointerException if ownerWindow is null
      * @throws IllegalArgumentException if the specified owner window would
      *      create cycle in the window hierarchy
+     * @throws IllegalStateException if this method is called on a thread
+     *      other than the JavaFX Application Thread.
      */
     public void show(Window ownerWindow, double anchorX, double anchorY) {
+        Toolkit.getToolkit().checkFxUserThread();
         validateOwnerWindow(ownerWindow);
 
         updateWindow(anchorX, anchorY);
@@ -500,8 +510,13 @@ public abstract class PopupWindow extends Window {
 
     /**
      * Hide this Popup and all its children
+     *
+     * @throws IllegalStateException if this method is called on a thread
+     *     other than the JavaFX Application Thread.
      */
-    @Override public void hide() {
+    @Override
+    public void hide() {
+        Toolkit.getToolkit().checkFxUserThread();
         for (PopupWindow c : children) {
             if (c.isShowing()) {
                 c.hide();
@@ -544,10 +559,12 @@ public abstract class PopupWindow extends Window {
      */
     private void doVisibleChanged(boolean visible) {
         final Window ownerWindowValue = getOwnerWindow();
+        Scene scene = getScene();
         if (visible) {
             rootWindow = getRootWindow(ownerWindowValue);
 
             startMonitorOwnerEvents(ownerWindowValue);
+            SceneHelper.getInputMethodStateManager(scene).addScene(scene);
             // currently we consider popup window to be focused when it is
             // visible and its owner window is focused (we need to track
             // that through listener on owner window focused property)
@@ -558,6 +575,9 @@ public abstract class PopupWindow extends Window {
             handleAutofixActivation(true, isAutoFix());
             handleAutohideActivation(true, isAutoHide());
         } else {
+            // This may generate events so it must be done while we're
+            // still monitoring owner events.
+            SceneHelper.getInputMethodStateManager(scene).removeScene(scene);
             stopMonitorOwnerEvents(ownerWindowValue);
             unbindOwnerFocusedProperty(ownerWindowValue);
             WindowHelper.setFocused(this, false);
@@ -993,6 +1013,9 @@ public abstract class PopupWindow extends Window {
                 handleKeyEvent((KeyEvent) event);
                 return;
             }
+            else if (event instanceof InputMethodEvent) {
+                handleInputMethodEvent((InputMethodEvent) event);
+            }
 
             final EventType<?> eventType = event.getEventType();
 
@@ -1028,6 +1051,24 @@ public abstract class PopupWindow extends Window {
             if ((event.getEventType() == KeyEvent.KEY_PRESSED)
                     && ESCAPE_KEY_COMBINATION.match(event)) {
                 handleEscapeKeyPressedEvent(event);
+            }
+        }
+
+        private void handleInputMethodEvent(final InputMethodEvent event) {
+            if (event.isConsumed()) {
+                return;
+            }
+
+            final Scene scene = popupWindow.getScene();
+            if (scene != null) {
+                final Node sceneFocusOwner = scene.getFocusOwner();
+                final EventTarget eventTarget =
+                        (sceneFocusOwner != null) ? sceneFocusOwner : scene;
+                if (EventUtil.fireEvent(eventTarget, new DirectEvent(event.copyFor(popupWindow, eventTarget)))
+                        == null) {
+                    event.consume();
+                    return;
+                }
             }
         }
 

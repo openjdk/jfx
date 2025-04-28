@@ -35,9 +35,10 @@ namespace JSC { namespace DFG {
 
 class Phase {
 public:
-    Phase(Graph& graph, const char* name)
+    Phase(Graph& graph, ASCIILiteral name, const bool disableGraphValidation = false)
         : m_graph(graph)
         , m_name(name)
+        , m_disableGraphValidation(disableGraphValidation)
     {
         beginPhase();
     }
@@ -47,7 +48,7 @@ public:
         endPhase();
     }
 
-    const char* name() const { return m_name; }
+    ASCIILiteral name() const { return m_name; }
 
     Graph& graph() { return m_graph; }
 
@@ -66,20 +67,21 @@ protected:
     // This runs validation, and uses the graph dump before the phase if possible.
     void validate();
 
-    const char* m_name;
+    ASCIILiteral m_name;
 
 private:
     // Call these hooks when starting and finishing.
     void beginPhase();
     void endPhase();
 
+    bool m_disableGraphValidation { false };
     CString m_graphDumpBeforePhase;
 };
 
 template<typename PhaseType>
 bool runAndLog(PhaseType& phase)
 {
-    CompilerTimingScope timingScope("DFG", phase.name());
+    CompilerTimingScope timingScope("DFG"_s, phase.name());
 
     bool result = phase.run();
 

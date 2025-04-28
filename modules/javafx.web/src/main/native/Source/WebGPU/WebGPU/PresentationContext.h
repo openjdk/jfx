@@ -29,6 +29,7 @@
 #import <wtf/Ref.h>
 #import <wtf/RefCounted.h>
 #import <wtf/RetainPtr.h>
+#import <wtf/TZoneMalloc.h>
 #import <wtf/TypeCasts.h>
 
 struct WGPUSurfaceImpl {
@@ -41,13 +42,14 @@ namespace WebGPU {
 
 class Adapter;
 class Device;
+class Instance;
 class Texture;
 class TextureView;
 
 class PresentationContext : public WGPUSurfaceImpl, public WGPUSwapChainImpl, public RefCounted<PresentationContext> {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_ALLOCATED(PresentationContext);
 public:
-    static Ref<PresentationContext> create(const WGPUSurfaceDescriptor&);
+    static Ref<PresentationContext> create(const WGPUSurfaceDescriptor&, const Instance&);
     static Ref<PresentationContext> createInvalid()
     {
         return adoptRef(*new PresentationContext());
@@ -66,7 +68,9 @@ public:
 
     virtual bool isPresentationContextIOSurface() const { return false; }
     virtual bool isPresentationContextCoreAnimation() const { return false; }
+    virtual RetainPtr<CGImageRef> getTextureAsNativeImage(uint32_t) { return nullptr; }
 
+    virtual bool isValid() { return false; }
 protected:
     explicit PresentationContext();
 };

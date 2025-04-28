@@ -19,7 +19,7 @@
  */
 
 #pragma once
-#if ENABLE(LAYER_BASED_SVG_ENGINE)
+
 #include "RenderSVGResourceContainer.h"
 #include "SVGUnitTypes.h"
 
@@ -31,12 +31,14 @@ class GraphicsContext;
 class SVGMaskElement;
 
 class RenderSVGResourceMasker final : public RenderSVGResourceContainer {
-    WTF_MAKE_ISO_ALLOCATED(RenderSVGResourceMasker);
+    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(RenderSVGResourceMasker);
+    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(RenderSVGResourceMasker);
 public:
     RenderSVGResourceMasker(SVGMaskElement&, RenderStyle&&);
     virtual ~RenderSVGResourceMasker();
 
     inline SVGMaskElement& maskElement() const;
+    inline Ref<SVGMaskElement> protectedMaskElement() const;
 
     void applyMask(PaintInfo&, const RenderLayerModelObject& targetRenderer, const LayoutPoint& adjustedPaintOffset);
 
@@ -45,13 +47,23 @@ public:
     inline SVGUnitTypes::SVGUnitType maskUnits() const;
     inline SVGUnitTypes::SVGUnitType maskContentUnits() const;
 
+    void invalidateMask()
+    {
+        m_masker.clear();
+    }
+
+    void removeReferencingCSSClient(const RenderElement&) final;
+
+    bool drawContentIntoContext(GraphicsContext&, const FloatRect& objectBoundingBox);
+    bool drawContentIntoContext(GraphicsContext&, const FloatRect& destinationRect, const FloatRect& sourceRect, ImagePaintingOptions);
+
 private:
     void element() const = delete;
 
-    ASCIILiteral renderName() const override { return "RenderSVGResourceMasker"_s; }
+    ASCIILiteral renderName() const final { return "RenderSVGResourceMasker"_s; }
+    HashMap<SingleThreadWeakRef<const RenderLayerModelObject>, RefPtr<ImageBuffer>> m_masker;
 };
 
 }
 
 SPECIALIZE_TYPE_TRAITS_RENDER_OBJECT(RenderSVGResourceMasker, isRenderSVGResourceMasker())
-#endif // ENABLE(LAYER_BASED_SVG_ENGINE)

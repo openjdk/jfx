@@ -41,6 +41,7 @@ import javafx.stage.Stage;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
+import com.sun.javafx.application.PlatformImpl;
 import test.util.Util;
 
 /**
@@ -309,6 +310,54 @@ public class NestedEventLoopTest {
             assertFalse(loopTwoRunning.get());
             assertFalse(loopThreeRunning.get());
             assertEquals(result1, returnedValue1.get());
+        });
+    }
+
+    // Verify that an exception is thrown if we exceed the maximum number of
+    // nested event loops.
+    private void createManyNestedLoops(int n, Object previousLoop, AtomicBoolean exceptionThrown) {
+        if (exceptionThrown.get()) {
+            // Previous run loop was not created.
+            return;
+        }
+
+        if (n <= 0) {
+            // We created all the nested loops successfully. Unwind them.
+            if (previousLoop != null) {
+                Platform.exitNestedEventLoop(previousLoop, null);
+            }
+        } else {
+            final Integer thisLoop = n;
+            Platform.runLater(() -> {
+                createManyNestedLoops(n - 1, thisLoop, exceptionThrown);
+            });
+
+            try {
+                Platform.enterNestedEventLoop(thisLoop);
+            } catch (IllegalStateException ex) {
+                exceptionThrown.set(true);
+            }
+
+            if (previousLoop != null) {
+                Platform.exitNestedEventLoop(previousLoop, null);
+            }
+        }
+    }
+
+    @Test public void maxNestedLoops() {
+        Util.runAndWait(() -> {
+            // Test the exception case first to ensure the system recovers
+            // correctly.
+            AtomicBoolean expectedException = new AtomicBoolean(false);
+            createManyNestedLoops(PlatformImpl.MAX_NESTED_EVENT_LOOPS + 1, null, expectedException);
+            assertFalse(Platform.isNestedLoopRunning());
+
+            AtomicBoolean noExceptionExpected = new AtomicBoolean(false);
+            createManyNestedLoops(PlatformImpl.MAX_NESTED_EVENT_LOOPS, null, noExceptionExpected);
+            assertFalse(Platform.isNestedLoopRunning());
+
+            assertTrue(expectedException.get());
+            assertFalse(noExceptionExpected.get());
         });
     }
 }

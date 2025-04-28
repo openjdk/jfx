@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -40,6 +40,7 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.net.URISyntaxException;
 import java.net.URL;
+import java.nio.charset.StandardCharsets;
 import java.util.Base64;
 import java.util.Collections;
 import java.util.List;
@@ -62,6 +63,7 @@ import javafx.geometry.Pos;
 import javafx.geometry.VPos;
 import javafx.scene.Group;
 import javafx.scene.Scene;
+import javafx.scene.layout.Background;
 import javafx.scene.layout.StackPane;
 import javafx.scene.paint.Color;
 import javafx.scene.paint.Paint;
@@ -73,10 +75,7 @@ import javafx.scene.text.TextAlignment;
 import javafx.stage.Stage;
 
 import org.junit.jupiter.api.Test;
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNull;
-import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.junit.jupiter.api.Assertions.fail;
+import static org.junit.jupiter.api.Assertions.*;
 
 public class StylesheetTest {
 
@@ -778,4 +777,21 @@ public class StylesheetTest {
         assertEquals(Color.BLUE, rect.getFill());
     }
 
+    @Test
+    public void testRootPseudoClassSelectsRootNode() {
+        var root = new StackPane();
+        var _ = new Scene(root);
+
+        root.applyCss();
+        assertNotEquals(Background.fill(Color.RED), root.getBackground());
+
+        root.getStylesheets().add("data:base64," + Base64.getEncoder().encodeToString("""
+            :root {
+                -fx-background-color: red;
+            }
+            """.getBytes(StandardCharsets.UTF_8)));
+
+        root.applyCss();
+        assertEquals(Background.fill(Color.RED), root.getBackground());
+    }
 }

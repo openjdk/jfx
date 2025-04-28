@@ -35,13 +35,13 @@ namespace WebCore {
 
 using namespace HTMLNames;
 
-AccessibilityProgressIndicator::AccessibilityProgressIndicator(RenderObject* renderer)
+AccessibilityProgressIndicator::AccessibilityProgressIndicator(RenderObject& renderer)
     : AccessibilityRenderObject(renderer)
 {
-    ASSERT(is<RenderProgress>(renderer) || is<RenderMeter>(renderer) || is<HTMLProgressElement>(renderer->node()) || is<HTMLMeterElement>(renderer->node()));
+    ASSERT(is<RenderProgress>(renderer) || is<RenderMeter>(renderer) || is<HTMLProgressElement>(renderer.node()) || is<HTMLMeterElement>(renderer.node()));
 }
 
-Ref<AccessibilityProgressIndicator> AccessibilityProgressIndicator::create(RenderObject* renderer)
+Ref<AccessibilityProgressIndicator> AccessibilityProgressIndicator::create(RenderObject& renderer)
 {
     return adoptRef(*new AccessibilityProgressIndicator(renderer));
 }
@@ -58,13 +58,13 @@ String AccessibilityProgressIndicator::valueDescription() const
     if (!description.isEmpty())
         return description;
 
-    auto* meter = meterElement();
+    RefPtr meter = meterElement();
     if (!meter)
         return description;
 
     // The HTML spec encourages authors to include a textual representation of the meter's state in
     // the element's contents. We'll fall back on that if there is not a more accessible alternative.
-    if (auto* nodeObject = dynamicDowncast<AccessibilityNodeObject>(axObjectCache()->getOrCreate(meter)))
+    if (auto* nodeObject = dynamicDowncast<AccessibilityNodeObject>(axObjectCache()->getOrCreate(*meter)))
         description = nodeObject->accessibilityDescriptionForChildren();
 
     if (description.isEmpty())
@@ -72,7 +72,7 @@ String AccessibilityProgressIndicator::valueDescription() const
 
     String gaugeRegionValue = gaugeRegionValueDescription();
     if (!gaugeRegionValue.isEmpty())
-        description = description.isEmpty() ? gaugeRegionValue : description + ", " + gaugeRegionValue;
+        description = description.isEmpty() ? gaugeRegionValue : makeString(description, ", "_s,  gaugeRegionValue);
 
     return description;
 }

@@ -36,6 +36,7 @@
 #include <wtf/RefPtr.h>
 #include <wtf/TypeCasts.h>
 #include <wtf/UniqueArray.h>
+#include <wtf/text/TextStream.h>
 
 namespace WebCore {
 
@@ -77,6 +78,7 @@ public:
     bool isPropertyRule() const { return type() == StyleRuleType::Property; }
     bool isScopeRule() const { return type() == StyleRuleType::Scope; }
     bool isStartingStyleRule() const { return type() == StyleRuleType::StartingStyle; }
+    bool isViewTransitionRule() const { return type() == StyleRuleType::ViewTransition; }
 
     Ref<StyleRuleBase> copy() const;
 
@@ -88,6 +90,8 @@ public:
     Ref<CSSRule> createCSSOMWrapper() const;
 
     WEBCORE_EXPORT void operator delete(StyleRuleBase*, std::destroying_delete_t);
+
+    String debugDescription() const;
 
 protected:
     explicit StyleRuleBase(StyleRuleType, bool hasDocumentSecurityOrigin = false);
@@ -118,6 +122,7 @@ public:
 
     const CSSSelectorList& selectorList() const { return m_selectorList; }
     const StyleProperties& properties() const { return m_properties.get(); }
+    Ref<const StyleProperties> protectedProperties() const;
     MutableStyleProperties& mutableProperties();
 
     bool isSplitRule() const { return m_isSplitRule; }
@@ -139,6 +144,7 @@ public:
     static unsigned averageSizeInBytes();
     void setProperties(Ref<StyleProperties>&&);
 
+    String debugDescription() const;
 protected:
     StyleRule(Ref<StyleProperties>&&, bool hasDocumentSecurityOrigin, CSSSelectorList&&);
     StyleRule(const StyleRule&);
@@ -170,6 +176,7 @@ public:
     const CSSSelectorList& originalSelectorList() const { return m_originalSelectorList; }
     void wrapperAdoptOriginalSelectorList(CSSSelectorList&&);
 
+    String debugDescription() const;
 protected:
     StyleRuleWithNesting(const StyleRuleWithNesting&);
 
@@ -293,6 +300,7 @@ public:
     friend class CSSGroupingRule;
     friend class CSSStyleSheet;
 
+    String debugDescription() const;
 protected:
     StyleRuleGroup(StyleRuleType, Vector<Ref<StyleRuleBase>>&&);
     StyleRuleGroup(const StyleRuleGroup&);
@@ -309,6 +317,7 @@ public:
     const MQ::MediaQueryList& mediaQueries() const { return m_mediaQueries; }
     void setMediaQueries(MQ::MediaQueryList&& queries) { m_mediaQueries = WTFMove(queries); }
 
+    String debugDescription() const;
 private:
     StyleRuleMedia(MQ::MediaQueryList&&, Vector<Ref<StyleRuleBase>>&&);
     StyleRuleMedia(const StyleRuleMedia&);
@@ -494,6 +503,8 @@ inline CompiledSelector& StyleRule::compiledSelectorForListIndex(unsigned index)
 }
 
 #endif
+
+WTF::TextStream& operator<<(WTF::TextStream&, const StyleRuleBase&);
 
 } // namespace WebCore
 

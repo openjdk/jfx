@@ -96,6 +96,16 @@ public:
     virtual bool iterateCodeBlocksForGC(AbstractSlotVisitor&, const Function<void(CodeBlock*)>&);
     virtual bool checkLivenessAndVisitChildren(AbstractSlotVisitor&);
 
+    bool safepointKeepsDependenciesLive() const;
+
+    template<typename Functor>
+    void addMainThreadFinalizationTask(const Functor& functor)
+    {
+        m_mainThreadFinalizationTasks.append(createSharedTask<void()>(functor));
+    }
+
+    void runMainThreadFinalizationTasks();
+
 protected:
     bool computeCompileTimes() const;
     bool reportCompileTimes() const;
@@ -109,6 +119,7 @@ protected:
     VM* m_vm;
     CodeBlock* m_codeBlock;
     JITWorklistThread* m_thread { nullptr };
+    Vector<RefPtr<SharedTask<void()>>> m_mainThreadFinalizationTasks;
 };
 
 } // namespace JSC

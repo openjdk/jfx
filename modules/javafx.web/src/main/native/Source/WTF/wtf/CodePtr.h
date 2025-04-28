@@ -58,7 +58,7 @@ public:
     friend bool operator==(CodePtrBase, CodePtrBase) = default;
 
 protected:
-    WTF_EXPORT_PRIVATE static void dumpWithName(void* executableAddress, void* dataLocation, const char* name, PrintStream& out);
+    WTF_EXPORT_PRIVATE static void dumpWithName(void* executableAddress, void* dataLocation, ASCIILiteral name, PrintStream& out);
 };
 
 template<PtrTag tag, FunctionAttributes attr = FunctionAttributes::None>
@@ -90,6 +90,13 @@ public:
     constexpr CodePtr(Out(*ptr)(In...))
         : m_value(encodeFunc(ptr))
     { }
+
+#if OS(WINDOWS) && (!PLATFORM(JAVA) || !CPU(X86))
+    template<typename Out, typename... In>
+    constexpr CodePtr(Out(SYSV_ABI *ptr)(In...))
+        : m_value(encodeFunc(ptr))
+    { }
+#endif
 
 // MSVC doesn't seem to treat functions with different calling conventions as
 // different types; these methods already defined for fastcall, below.
@@ -204,7 +211,7 @@ public:
     CodePtr& operator+=(size_t sizeInBytes) { return *this = *this + sizeInBytes; }
     CodePtr& operator-=(size_t sizeInBytes) { return *this = *this - sizeInBytes; }
 
-    void dumpWithName(const char* name, PrintStream& out) const
+    void dumpWithName(ASCIILiteral name, PrintStream& out) const
     {
         if (m_value)
             CodePtrBase::dumpWithName(taggedPtr(), dataLocation(), name, out);
@@ -212,7 +219,7 @@ public:
             CodePtrBase::dumpWithName(nullptr, nullptr, name, out);
     }
 
-    void dump(PrintStream& out) const { dumpWithName("CodePtr", out); }
+    void dump(PrintStream& out) const { dumpWithName("CodePtr"_s, out); }
 
     enum EmptyValueTag { EmptyValue };
     enum DeletedValueTag { DeletedValue };

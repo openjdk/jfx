@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2017, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -91,7 +91,8 @@ public class RestoreSceneSizeTest {
     @Test
     public void testUnfullscreenSize() throws Exception {
         // Disable on Mac until JDK-8176813 is fixed
-        assumeTrue(!PlatformUtil.isMac());
+        // Disable on Linux until JDK-8353556 is fixed
+        assumeTrue(!(PlatformUtil.isMac() || PlatformUtil.isLinux()));
 
         Thread.sleep(200);
         final double w = (Math.ceil(WIDTH * scaleX)) / scaleX;

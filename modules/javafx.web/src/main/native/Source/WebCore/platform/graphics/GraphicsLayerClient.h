@@ -108,19 +108,21 @@ public:
     virtual float pageScaleFactor() const { return 1; }
     virtual float zoomedOutPageScaleFactor() const { return 0; }
 
+    virtual std::optional<float> customContentsScale(const GraphicsLayer*) const { return { }; }
+
     virtual float contentsScaleMultiplierForNewTiles(const GraphicsLayer*) const { return 1; }
     virtual bool paintsOpaquelyAtNonIntegralScales(const GraphicsLayer*) const { return false; }
 
     virtual bool isTrackingRepaints() const { return false; }
 
     virtual bool shouldSkipLayerInDump(const GraphicsLayer*, OptionSet<LayerTreeAsTextOptions>) const { return false; }
-    virtual bool shouldDumpPropertyForLayer(const GraphicsLayer*, const char*, OptionSet<LayerTreeAsTextOptions>) const { return true; }
+    virtual bool shouldDumpPropertyForLayer(const GraphicsLayer*, ASCIILiteral, OptionSet<LayerTreeAsTextOptions>) const { return true; }
 
     virtual bool shouldAggressivelyRetainTiles(const GraphicsLayer*) const { return false; }
     virtual bool shouldTemporarilyRetainTileCohorts(const GraphicsLayer*) const { return true; }
 
     virtual bool useGiantTiles() const { return false; }
-    virtual bool useCSS3DTransformInteroperability() const { return false; }
+    virtual bool cssUnprefixedBackdropFilterEnabled() const { return false; }
 
     virtual bool needsPixelAligment() const { return false; }
 

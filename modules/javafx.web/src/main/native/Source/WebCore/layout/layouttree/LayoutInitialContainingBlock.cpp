@@ -26,13 +26,14 @@
 #include "config.h"
 #include "LayoutInitialContainingBlock.h"
 
+#include "RenderObject.h"
 #include "RenderStyle.h"
-#include <wtf/IsoMallocInlines.h>
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 namespace Layout {
 
-WTF_MAKE_ISO_ALLOCATED_IMPL(InitialContainingBlock);
+WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(InitialContainingBlock);
 
 InitialContainingBlock::InitialContainingBlock(RenderStyle&& style, std::unique_ptr<RenderStyle>&& firstLineStyle)
     : ElementBox({ }, WTFMove(style), WTFMove(firstLineStyle), Box::InitialContainingBlockFlag)

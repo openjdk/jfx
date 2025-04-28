@@ -28,12 +28,12 @@
 #include "EventNames.h"
 #include "Node.h"
 #include "PlatformMouseEvent.h"
-#include <wtf/IsoMallocInlines.h>
 #include <wtf/MathExtras.h>
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
-WTF_MAKE_ISO_ALLOCATED_IMPL(WheelEvent);
+WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(WheelEvent);
 
 inline static unsigned determineDeltaMode(const PlatformWheelEvent& event)
 {
@@ -48,10 +48,13 @@ static double wheelDeltaToDelta(int wheelDelta)
     return -static_cast<double>(wheelDelta);
 }
 
-inline WheelEvent::WheelEvent() = default;
+inline WheelEvent::WheelEvent()
+    : MouseEvent(EventInterfaceType::WheelEvent)
+{
+}
 
 inline WheelEvent::WheelEvent(const AtomString& type, const Init& initializer)
-    : MouseEvent(type, initializer)
+    : MouseEvent(EventInterfaceType::WheelEvent, type, initializer, IsTrusted::No)
     , m_wheelDelta(initializer.wheelDeltaX ? initializer.wheelDeltaX : clampTo<int>(-initializer.deltaX), initializer.wheelDeltaY ? initializer.wheelDeltaY : clampTo<int>(-initializer.deltaY))
     , m_deltaX(initializer.deltaX ? initializer.deltaX : wheelDeltaToDelta(initializer.wheelDeltaX))
     , m_deltaY(initializer.deltaY ? initializer.deltaY : wheelDeltaToDelta(initializer.wheelDeltaY))
@@ -61,8 +64,8 @@ inline WheelEvent::WheelEvent(const AtomString& type, const Init& initializer)
 }
 
 inline WheelEvent::WheelEvent(const PlatformWheelEvent& event, RefPtr<WindowProxy>&& view, IsCancelable isCancelable)
-    : MouseEvent(eventNames().wheelEvent, CanBubble::Yes, isCancelable, IsComposed::Yes, event.timestamp().approximateMonotonicTime(), WTFMove(view), 0,
-        event.globalPosition(), event.position() , 0, 0, event.modifiers(), MouseButton::Left, 0, nullptr, 0, SyntheticClickType::NoTap, IsSimulated::No, IsTrusted::Yes)
+    : MouseEvent(EventInterfaceType::WheelEvent, eventNames().wheelEvent, CanBubble::Yes, isCancelable, IsComposed::Yes, event.timestamp().approximateMonotonicTime(), WTFMove(view), 0,
+        event.globalPosition(), event.position() , 0, 0, event.modifiers(), MouseButton::Left, 0, nullptr, 0, SyntheticClickType::NoTap, { }, { }, IsSimulated::No, IsTrusted::Yes)
     , m_wheelDelta(event.wheelTicksX() * TickMultiplier, event.wheelTicksY() * TickMultiplier)
     , m_deltaX(-event.deltaX())
     , m_deltaY(-event.deltaY())
@@ -84,11 +87,6 @@ Ref<WheelEvent> WheelEvent::createForBindings()
 Ref<WheelEvent> WheelEvent::create(const AtomString& type, const Init& initializer)
 {
     return adoptRef(*new WheelEvent(type, initializer));
-}
-
-EventInterface WheelEvent::eventInterface() const
-{
-    return WheelEventInterfaceType;
 }
 
 bool WheelEvent::isWheelEvent() const

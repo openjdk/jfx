@@ -34,11 +34,11 @@
 #include "RenderMathMLMenclose.h"
 #include "RenderMathMLRow.h"
 #include "RenderStyleInlines.h"
-#include <wtf/IsoMallocInlines.h>
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
-WTF_MAKE_ISO_ALLOCATED_IMPL(MathMLRowElement);
+WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(MathMLRowElement);
 
 using namespace MathMLNames;
 
@@ -54,9 +54,11 @@ Ref<MathMLRowElement> MathMLRowElement::create(const QualifiedName& tagName, Doc
 
 void MathMLRowElement::childrenChanged(const ChildChange& change)
 {
-    for (auto child = firstChild(); child; child = child->nextSibling()) {
+    // FIXME: Avoid this invalidation for valid MathMLFractionElement/MathMLScriptsElement.
+    // See https://bugs.webkit.org/show_bug.cgi?id=276828.
+    for (RefPtr child = firstChild(); child; child = child->nextSibling()) {
         if (child->hasTagName(moTag))
-            static_cast<MathMLOperatorElement*>(child)->setOperatorFormDirty();
+            static_cast<MathMLOperatorElement*>(child.get())->setOperatorFormDirty();
     }
 
     MathMLPresentationElement::childrenChanged(change);

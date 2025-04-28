@@ -30,10 +30,10 @@ import javafx.beans.InvalidationListener;
 import javafx.beans.binding.Bindings;
 import javafx.beans.property.*;
 import javafx.util.StringConverter;
-import org.junit.Before;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
 
 import java.text.DateFormat;
 import java.text.ParseException;
@@ -41,10 +41,10 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.Date;
 import java.util.Locale;
+import java.util.stream.Stream;
 
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.*;
 
-@RunWith(Parameterized.class)
 public class BidirectionalBindingWithConversionTest<S, T> {
 
     public static interface Functions<U, V> {
@@ -57,14 +57,14 @@ public class BidirectionalBindingWithConversionTest<S, T> {
         void check1(V obj0, V obj1);
     }
 
-    private final Functions<S, T> func;
-    private final S[] v0;
-    private final T[] v1;
+    private  Functions<S, T> func;
+    private  S[] v0;
+    private  T[] v1;
 
     private PropertyMock<S> op0;
     private PropertyMock<T> op1;
 
-    public BidirectionalBindingWithConversionTest(Functions<S, T> func, S[] v0, T[] v1) {
+    private void setUP(Functions<S, T> func, S[] v0, T[] v1) {
         this.op0 = func.create0();
         this.op1 = func.create1();
         this.func = func;
@@ -72,14 +72,13 @@ public class BidirectionalBindingWithConversionTest<S, T> {
         this.v1 = v1;
     }
 
-    @Before
-    public void setUp() {
+
+    @ParameterizedTest
+    @MethodSource("parameters")
+    public void testBind(Functions<S, T> func, S[] v0, T[] v1) {
+        setUP(func, v0, v1);
         op0.setValue(v0[0]);
         op1.setValue(v1[1]);
-    }
-
-    @Test
-    public void testBind() {
         func.bind(op0, op1);
         System.gc(); // making sure we did not not overdo weak references
         func.check0(v0[1], op0.getValue());
@@ -94,8 +93,12 @@ public class BidirectionalBindingWithConversionTest<S, T> {
         func.check1(v1[3], op1.getValue());
     }
 
-    @Test
-    public void testUnbind() {
+    @ParameterizedTest
+    @MethodSource("parameters")
+    public void testUnbind(Functions<S, T> func, S[] v0, T[] v1) {
+        setUP(func, v0, v1);
+        op0.setValue(v0[0]);
+        op1.setValue(v1[1]);
         // unbind non-existing binding => no-op
         func.unbind(op0, op1);
 
@@ -119,8 +122,12 @@ public class BidirectionalBindingWithConversionTest<S, T> {
         func.check1(v1[3], op1.getValue());
     }
 
-    @Test
-    public void testWeakReferencing() {
+    @ParameterizedTest
+    @MethodSource("parameters")
+    public void testWeakReferencing(Functions<S, T> func, S[] v0, T[] v1) {
+        setUP(func, v0, v1);
+        op0.setValue(v0[0]);
+        op1.setValue(v1[1]);
         func.bind(op0, op1);
         assertEquals(1, op0.getListenerCount());
         assertEquals(1, op1.getListenerCount());
@@ -141,32 +148,47 @@ public class BidirectionalBindingWithConversionTest<S, T> {
         assertEquals(0, op0.getListenerCount());
     }
 
-    @Test(expected=NullPointerException.class)
-    public void testBind_Null_X() {
-        func.bind(null, op1);
+    @ParameterizedTest
+    @MethodSource("parameters")
+    public void testBind_Null_X(Functions<S, T> func, S[] v0, T[] v1) {
+        setUP(func, v0, v1);
+        op0.setValue(v0[0]);
+        op1.setValue(v1[1]);
+        assertThrows(NullPointerException.class, () -> func.bind(null, op1));
     }
 
-    @Test(expected=NullPointerException.class)
-    public void testBind_X_Null() {
-        func.bind(op0, null);
+    public void testBind_X_Null(Functions<S, T> func, S[] v0, T[] v1) {
+        setUP(func, v0, v1);
+        op0.setValue(v0[0]);
+        op1.setValue(v1[1]);
+        assertThrows(NullPointerException.class, () -> func.bind(op0, null));
     }
 
-    @Test(expected=NullPointerException.class)
-    public void testUnbind_Null_X() {
-        func.unbind(null, op1);
+    public void testUnbind_Null_X(Functions<S, T> func, S[] v0, T[] v1) {
+        setUP(func, v0, v1);
+        op0.setValue(v0[0]);
+        op1.setValue(v1[1]);
+        assertThrows(NullPointerException.class, () -> func.unbind(null, op1));
     }
 
-    @Test(expected=NullPointerException.class)
-    public void testUnbind_X_Null() {
-        func.unbind(op0, null);
+    @ParameterizedTest
+    @MethodSource("parameters")
+    public void testUnbind_X_Null(Functions<S, T> func, S[] v0, T[] v1) {
+        setUP(func, v0, v1);
+        op0.setValue(v0[0]);
+        op1.setValue(v1[1]);
+        assertThrows(NullPointerException.class, () ->  func.unbind(op0, null));
     }
 
-    @Test(expected=IllegalArgumentException.class)
-    public void testUnbind_X_Self() {
-        func.unbind(op0, op0);
+    @ParameterizedTest
+    @MethodSource("parameters")
+    public void testUnbind_X_Self(Functions<S, T> func, S[] v0, T[] v1) {
+        setUP(func, v0, v1);
+        op0.setValue(v0[0]);
+        op1.setValue(v1[1]);
+        assertThrows(IllegalArgumentException.class, () ->  func.unbind(op0, op0));
     }
 
-    @Parameterized.Parameters
     public static Collection<Object[]> parameters() {
         final DateFormat format = DateFormat.getDateTimeInstance(DateFormat.FULL, DateFormat.FULL, Locale.US);
         final Date[] dates = new Date[] {new Date(), new Date(0), new Date(Integer.MAX_VALUE), new Date(Long.MAX_VALUE)};

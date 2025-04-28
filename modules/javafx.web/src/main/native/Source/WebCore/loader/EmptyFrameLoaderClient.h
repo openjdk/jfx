@@ -95,8 +95,7 @@ private:
 
     void dispatchDecidePolicyForResponse(const ResourceResponse&, const ResourceRequest&, const String&, FramePolicyFunction&&) final;
     void dispatchDecidePolicyForNewWindowAction(const NavigationAction&, const ResourceRequest&, FormState*, const String&, std::optional<HitTestResult>&&, FramePolicyFunction&&) final;
-    void dispatchDecidePolicyForNavigationAction(const NavigationAction&, const ResourceRequest&, const ResourceResponse& redirectResponse, FormState*, const String&, uint64_t, std::optional<HitTestResult>&&, bool, SandboxFlags, PolicyDecisionMode, FramePolicyFunction&&) final;
-    void broadcastFrameRemovalToOtherProcesses() final;
+    void dispatchDecidePolicyForNavigationAction(const NavigationAction&, const ResourceRequest&, const ResourceResponse& redirectResponse, FormState*, const String&, std::optional<NavigationIdentifier>, std::optional<HitTestResult>&&, bool, SandboxFlags, PolicyDecisionMode, FramePolicyFunction&&) final;
     void broadcastMainFrameURLChangeToOtherProcesses(const URL&) final;
     void cancelPolicyCheck() final;
 
@@ -110,7 +109,7 @@ private:
 
     void setMainFrameDocumentReady(bool) final;
 
-    void startDownload(const ResourceRequest&, const String&) final;
+    void startDownload(const ResourceRequest&, const String&, FromDownloadAttribute = FromDownloadAttribute::No) final;
 
     void willChangeTitle(DocumentLoader*) final;
     void didChangeTitle(DocumentLoader*) final;
@@ -162,7 +161,7 @@ private:
 #if PLATFORM(IOS_FAMILY)
     void didRestoreFrameHierarchyForCachedFrame() final;
 #endif
-    void transitionToCommittedForNewPage() final;
+    void transitionToCommittedForNewPage(InitializingIframe) final;
 
     void didRestoreFromBackForwardCache() final;
 
@@ -184,6 +183,7 @@ private:
 
 #if PLATFORM(COCOA)
     RemoteAXObjectRef accessibilityRemoteObject() final;
+    IntPoint accessibilityRemoteFrameOffset() final;
 #if ENABLE(ACCESSIBILITY_ISOLATED_TREE)
     void setAXIsolatedTreeRoot(WebCore::AXCoreObject*) final;
 #endif

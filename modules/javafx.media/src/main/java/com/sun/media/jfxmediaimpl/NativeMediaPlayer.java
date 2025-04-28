@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2020, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -1456,7 +1456,7 @@ public abstract class NativeMediaPlayer implements MediaPlayer, MarkerStateListe
 
     protected void sendPlayerHaltEvent(String message, double time) {
         // Log the error.  Since these are most likely playback engine message (e.g. GStreamer or PacketVideo),
-        // it makes no sense to propogate it above.
+        // it makes no sense to propagate it above.
         Logger.logMsg(Logger.ERROR, message);
 
         if (eventLoop != null) {

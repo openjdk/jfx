@@ -389,8 +389,7 @@ bool PropertyCondition::isStillValid(Concurrency concurrency, Structure* structu
     return true;
 }
 
-bool PropertyCondition::isWatchableWhenValid(
-    Structure* structure, WatchabilityEffort effort) const
+bool PropertyCondition::isWatchableWhenValid(Structure* structure, WatchabilityEffort effort, Concurrency concurrency) const
 {
     if (structure->transitionWatchpointSetHasBeenInvalidated())
         return false;
@@ -398,7 +397,7 @@ bool PropertyCondition::isWatchableWhenValid(
     switch (m_header.type()) {
     case Replacement: {
         VM& vm = structure->vm();
-        PropertyOffset offset = structure->get(vm, watchabilityToConcurrency(effort), uid());
+        PropertyOffset offset = structure->get(vm, concurrency, uid());
 
         // This method should only be called when some variant of isValid returned true, which
         // implies that we already confirmed that the structure knows of the property. We should
@@ -422,7 +421,7 @@ bool PropertyCondition::isWatchableWhenValid(
         break;
     }
     case Equivalence: {
-        PropertyOffset offset = structure->get(structure->vm(), watchabilityToConcurrency(effort), uid());
+        PropertyOffset offset = structure->get(structure->vm(), concurrency, uid());
 
         // This method should only be called when some variant of isValid returned true, which
         // implies that we already confirmed that the structure knows of the property. We should
@@ -468,18 +467,24 @@ bool PropertyCondition::isWatchableWhenValid(
     return true;
 }
 
-bool PropertyCondition::isWatchableAssumingImpurePropertyWatchpoint(
-    Structure* structure, JSObject* base, WatchabilityEffort effort) const
+bool PropertyCondition::isWatchableAssumingImpurePropertyWatchpoint(Structure* structure, JSObject* base, WatchabilityEffort effort, Concurrency concurrency) const
 {
-    return isStillValidAssumingImpurePropertyWatchpoint(watchabilityToConcurrency(effort), structure, base)
-        && isWatchableWhenValid(structure, effort);
+    return isStillValidAssumingImpurePropertyWatchpoint(concurrency, structure, base) && isWatchableWhenValid(structure, effort, concurrency);
 }
 
-bool PropertyCondition::isWatchable(
-    Structure* structure, JSObject* base, WatchabilityEffort effort) const
+bool PropertyCondition::isWatchableAssumingImpurePropertyWatchpoint(Structure* structure, JSObject* base, WatchabilityEffort effort) const
 {
-    return isStillValid(watchabilityToConcurrency(effort), structure, base)
-        && isWatchableWhenValid(structure, effort);
+    return isWatchableAssumingImpurePropertyWatchpoint(structure, base, effort, watchabilityToConcurrency(effort));
+}
+
+bool PropertyCondition::isWatchable(Structure* structure, JSObject* base, WatchabilityEffort effort) const
+{
+    return isWatchable(structure, base, effort, watchabilityToConcurrency(effort));
+}
+
+bool PropertyCondition::isWatchable(Structure* structure, JSObject* base, WatchabilityEffort effort, Concurrency concurrency) const
+{
+    return isStillValid(concurrency, structure, base) && isWatchableWhenValid(structure, effort, concurrency);
 }
 
 void PropertyCondition::validateReferences(const TrackedReferences& tracked) const

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -48,7 +48,7 @@ public:
     RenderThemeJava();
 
     // A method asking if the theme's controls actually care about redrawing when hovered.
-    bool supportsHover(const RenderStyle&) const override { return true; }
+    bool supportsHover() const override { return true; }
 
 protected:
     bool paintCheckbox(const RenderObject& o, const PaintInfo& i, const FloatRect& r) override;

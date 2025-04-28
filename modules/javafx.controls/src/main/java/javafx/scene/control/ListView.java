@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -1306,6 +1306,14 @@ public class ListView<T> extends Control {
                 while (c.next()) {
                     final T selectedItem = getSelectedItem();
                     final int selectedIndex = getSelectedIndex();
+                    int addedItemOffset = -1;
+
+                    if (c.wasAdded()
+                            && selectedItem != null
+                            && (addedItemOffset = c.getAddedSubList().indexOf(selectedItem)) >= 0
+                            && selectedIndex == c.getFrom() + addedItemOffset) {
+                        doSelectionUpdate = false;
+                    }
 
                     if (listView.getItems() == null || listView.getItems().isEmpty()) {
                         selectedItemChange = c;

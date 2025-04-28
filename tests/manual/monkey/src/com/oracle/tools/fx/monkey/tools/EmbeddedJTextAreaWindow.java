@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2023, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -27,11 +27,15 @@ package com.oracle.tools.fx.monkey.tools;
 import java.awt.BorderLayout;
 import java.awt.ComponentOrientation;
 import java.awt.EventQueue;
+import java.awt.Font;
+import java.awt.GraphicsEnvironment;
+import javax.swing.JComboBox;
 import javax.swing.JPanel;
 import javax.swing.JScrollPane;
 import javax.swing.JTextArea;
 import javax.swing.JTextField;
 import javax.swing.border.EmptyBorder;
+import javax.swing.text.JTextComponent;
 import javafx.embed.swing.SwingNode;
 import javafx.geometry.NodeOrientation;
 import javafx.scene.control.CheckBox;
@@ -71,14 +75,34 @@ public class EmbeddedJTextAreaWindow extends BorderPane {
         setCenter(swingNode);
 
         EventQueue.invokeLater(() -> {
+            int fontSize = 36;
+
             textArea = new JTextArea("Arabic: العربية\nHebrew: עברית");
+            updateFont(textArea, fontSize);
             textField = new JTextField("Arabic: العربية Hebrew: עברית");
+            updateFont(textField, fontSize);
+
+            String[] names = GraphicsEnvironment.getLocalGraphicsEnvironment().getAvailableFontFamilyNames();
+            JComboBox<String> fonts = new JComboBox(names);
+            fonts.addActionListener((ev) -> {
+                String name = (String)fonts.getSelectedItem();
+                Font f = new Font(name, Font.PLAIN, fontSize);
+                textArea.setFont(f);
+                textField.setFont(f);
+            });
+
             JPanel p = new JPanel(new BorderLayout());
             JScrollPane sp = new JScrollPane(textArea);
+            p.add(fonts, BorderLayout.NORTH);
             p.add(sp, BorderLayout.CENTER);
             p.add(textField, BorderLayout.SOUTH);
             p.setBorder(new EmptyBorder(10, 10, 10, 10));
             swingNode.setContent(p);
         });
+    }
+
+    private static void updateFont(JTextComponent c, float size) {
+        Font f = c.getFont().deriveFont(size);
+        c.setFont(f);
     }
 }

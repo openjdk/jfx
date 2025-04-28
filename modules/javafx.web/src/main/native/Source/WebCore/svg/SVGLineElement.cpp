@@ -27,11 +27,11 @@
 #include "NodeName.h"
 #include "RenderSVGShape.h"
 #include "SVGLengthValue.h"
-#include <wtf/IsoMallocInlines.h>
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
-WTF_MAKE_ISO_ALLOCATED_IMPL(SVGLineElement);
+WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(SVGLineElement);
 
 inline SVGLineElement::SVGLineElement(const QualifiedName& tagName, Document& document)
     : SVGGeometryElement(tagName, document, makeUniqueRef<PropertyRegistry>(*this))
@@ -58,16 +58,16 @@ void SVGLineElement::attributeChanged(const QualifiedName& name, const AtomStrin
 
     switch (name.nodeName()) {
     case AttributeNames::x1Attr:
-        m_x1->setBaseValInternal(SVGLengthValue::construct(SVGLengthMode::Width, newValue, parseError));
+        Ref { m_x1 }->setBaseValInternal(SVGLengthValue::construct(SVGLengthMode::Width, newValue, parseError));
         break;
     case AttributeNames::y1Attr:
-        m_y1->setBaseValInternal(SVGLengthValue::construct(SVGLengthMode::Height, newValue, parseError));
+        Ref { m_y1 }->setBaseValInternal(SVGLengthValue::construct(SVGLengthMode::Height, newValue, parseError));
         break;
     case AttributeNames::x2Attr:
-        m_x2->setBaseValInternal(SVGLengthValue::construct(SVGLengthMode::Width, newValue, parseError));
+        Ref { m_x2 }->setBaseValInternal(SVGLengthValue::construct(SVGLengthMode::Width, newValue, parseError));
         break;
     case AttributeNames::y2Attr:
-        m_y2->setBaseValInternal(SVGLengthValue::construct(SVGLengthMode::Height, newValue, parseError));
+        Ref { m_y2 }->setBaseValInternal(SVGLengthValue::construct(SVGLengthMode::Height, newValue, parseError));
         break;
     default:
         break;
@@ -83,14 +83,14 @@ void SVGLineElement::svgAttributeChanged(const QualifiedName& attrName)
         InstanceInvalidationGuard guard(*this);
         updateRelativeLengthsInformation();
 
-#if ENABLE(LAYER_BASED_SVG_ENGINE)
-        if (auto* shape = dynamicDowncast<RenderSVGShape>(renderer()))
+        if (CheckedPtr shape = dynamicDowncast<RenderSVGShape>(renderer()))
             shape->setNeedsShapeUpdate();
-#endif
-        if (auto* shape = dynamicDowncast<LegacyRenderSVGShape>(renderer()))
+
+        if (CheckedPtr shape = dynamicDowncast<LegacyRenderSVGShape>(renderer()))
             shape->setNeedsShapeUpdate();
 
         updateSVGRendererForElementChange();
+        invalidateResourceImageBuffersIfNeeded();
         return;
     }
 

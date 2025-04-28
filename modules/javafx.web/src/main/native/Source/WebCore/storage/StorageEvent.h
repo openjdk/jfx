@@ -33,7 +33,7 @@ namespace WebCore {
 class Storage;
 
 class StorageEvent final : public Event {
-    WTF_MAKE_ISO_ALLOCATED(StorageEvent);
+    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(StorageEvent);
 public:
     static Ref<StorageEvent> create(const AtomString& type, const String& key, const String& oldValue, const String& newValue, const String& url, Storage* storageArea);
     static Ref<StorageEvent> createForBindings();
@@ -59,8 +59,6 @@ public:
 
     // Needed once we support init<blank>EventNS
     // void initStorageEventNS(in DOMString namespaceURI, in DOMString typeArg, in boolean canBubbleArg, in boolean cancelableArg, in DOMString keyArg, in DOMString oldValueArg, in DOMString newValueArg, in DOMString urlArg, Storage storageAreaArg);
-
-    EventInterface eventInterface() const override;
 
 private:
     StorageEvent();

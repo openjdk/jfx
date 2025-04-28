@@ -28,6 +28,7 @@ package test.javafx.scene;
 import javafx.collections.ObservableList;
 import com.sun.javafx.geom.BaseBounds;
 import com.sun.javafx.geom.transform.BaseTransform;
+import com.sun.javafx.scene.AbstractNode;
 import com.sun.javafx.sg.prism.NGGroup;
 import com.sun.javafx.sg.prism.NGNode;
 import javafx.scene.Group;
@@ -679,7 +680,7 @@ public class StructureTest {
     //
     // * A stub node that contains as little functionality as possible.
     // *
-    public static final class StubNode extends Node {
+    public static final class StubNode extends AbstractNode {
         static {
             StubNodeHelper.setStubNodeAccessor(new StubNodeHelper.StubNodeAccessor() {
                 @Override

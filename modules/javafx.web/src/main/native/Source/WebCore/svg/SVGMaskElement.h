@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2005 Alexander Kellett <lypanov@kde.org>
- * Copyright (C) 2018-2019 Apple Inc. All rights reserved.
+ * Copyright (C) 2018-2024 Apple Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Library General Public
@@ -30,7 +30,8 @@ namespace WebCore {
 enum class RepaintRectCalculation : bool;
 
 class SVGMaskElement final : public SVGElement, public SVGTests {
-    WTF_MAKE_ISO_ALLOCATED(SVGMaskElement);
+    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(SVGMaskElement);
+    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(SVGMaskElement);
 public:
     static Ref<SVGMaskElement> create(const QualifiedName&, Document&);
 
@@ -64,6 +65,7 @@ private:
     bool isValid() const final { return SVGTests::isValid(); }
     bool needsPendingResourceHandling() const final { return false; }
     bool selfHasRelativeLengths() const final { return true; }
+    bool supportsFocus() const final { return false; }
 
     Ref<SVGAnimatedLength> m_x { SVGAnimatedLength::create(this, SVGLengthMode::Width, "-10%"_s) };
     Ref<SVGAnimatedLength> m_y { SVGAnimatedLength::create(this, SVGLengthMode::Height, "-10%"_s) };
