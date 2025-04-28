@@ -500,7 +500,7 @@ defineProperty("AWT_TEST", "true")
 ext.IS_AWT_TEST = Boolean.parseBoolean(AWT_TEST);
 
 // Specifies whether to run system tests that depend on SWT (only used when FULL_TEST is also enabled)
-defineProperty("SWT_TEST", "true")
+defineProperty("SWT_TEST", IS_MAC ? "false" : "true")
 ext.IS_SWT_TEST = Boolean.parseBoolean(SWT_TEST);
 
 // Specifies whether to run unstable tests (true) - tests that don't run well with Hudson builds
@@ -3089,11 +3089,6 @@ project(":swt") {
         // FIXME: Remove this when JDK-8334137 is fixed
         if (jdk24OrLater) {
             jvmArgs allowSunMiscUnsafe
-        }
-
-        if (IS_MAC) {
-            enabled = false
-            logger.info("SWT tests are disabled on MAC, because Gradle test runner does not handle -XstartOnFirstThread properly (https://issues.gradle.org/browse/GRADLE-3290).")
         }
     }
 
