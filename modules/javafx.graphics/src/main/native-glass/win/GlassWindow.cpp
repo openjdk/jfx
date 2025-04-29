@@ -850,6 +850,7 @@ LRESULT GlassWindow::HandleNCCalcSizeEvent(UINT msg, WPARAM wParam, LPARAM lPara
     // by adding the border width to the top.
     bool maximized = (::GetWindowLong(GetHWND(), GWL_STYLE) & WS_MAXIMIZE) != 0;
     if (maximized && !m_isInFullScreen) {
+        // Note: there is no SM_CYPADDEDBORDER
         newSize.top += ::GetSystemMetrics(SM_CXPADDEDBORDER) + ::GetSystemMetrics(SM_CYSIZEFRAME);
     }
 
@@ -911,8 +912,25 @@ BOOL GlassWindow::HandleNCHitTestEvent(SHORT x, SHORT y, LRESULT& result)
     JNIEnv* env = GetEnv();
     jint res = env->CallIntMethod(m_grefThis, javaIDs.WinWindow.nonClientHitTest, pt.x, pt.y);
     CheckAndClearException(env);
-    result = LRESULT(res);
 
+    // The left, right, and bottom resize borders are outside of the client area and are provided for free.
+    // In contrast, the top resize border is not outside, but inside the client area and below user controls.
+    // For example, if a control extends to the top of the client area, it covers the resize border at that
+    // location. We know that the cursor is on top of the caption area (and not on top of a control) when
+    // the nonClientHitTest() function returns HTCAPTION (instead of HTCLIENT). In this case, we apply the
+    // default resize border.
+    if (res == HTCAPTION) {
+        // Note: there is no SM_CYPADDEDBORDER
+        int topBorderHeight = ::GetSystemMetrics(SM_CXPADDEDBORDER) + ::GetSystemMetrics(SM_CYSIZEFRAME);
+        RECT windowRect;
+
+        if (::GetWindowRect(GetHWND(), &windowRect) && y < windowRect.top + topBorderHeight) {
+            result = LRESULT(HTTOP);
+            return TRUE;
+        }
+    }
+
+    result = LRESULT(res);
     return TRUE;
 }
 
