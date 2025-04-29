@@ -1008,6 +1008,8 @@ JNIEXPORT jboolean JNICALL Java_com_sun_glass_ui_mac_MacWindow__1maximize
     {
         GlassWindow *window = getGlassWindow(env, jPtr);
         window->suppressWindowResizeEvent = YES;
+        window->suppressWindowMoveEvent = YES;
+        NSRect oldFrame = window->nsWindow.frame;
 
         if ((maximize == JNI_TRUE) && (isZoomed == JNI_FALSE))
         {
@@ -1016,23 +1018,38 @@ JNIEXPORT jboolean JNICALL Java_com_sun_glass_ui_mac_MacWindow__1maximize
             if ([window->nsWindow styleMask] != NSWindowStyleMaskBorderless)
             {
                 [window->nsWindow zoom:nil];
-                // windowShouldZoom will be called automatically in this case
             }
             else
             {
                 NSRect visibleRect = [[window _getScreen] visibleFrame];
-                [window _setWindowFrameWithRect:NSMakeRect(visibleRect.origin.x, visibleRect.origin.y, visibleRect.size.width, visibleRect.size.height) withDisplay:JNI_TRUE withAnimate:JNI_TRUE];
-
-                // calling windowShouldZoom will send Java maximize event
-                [window windowShouldZoom:window->nsWindow toFrame:[window->nsWindow frame]];
+                [window _setWindowFrameWithRect:visibleRect withDisplay:JNI_TRUE withAnimate:JNI_TRUE];
             }
         }
         else if ((maximize == JNI_FALSE) && (isZoomed == JNI_TRUE))
         {
-            [window _restorePreZoomedRect];
+            if (window->nsWindow.styleMask & NSWindowStyleMaskTitled) {
+                // The system restores titled windows correctly and will use
+                // the user state tracked by the system which may be more
+                // up-to-date than the preZoomedRect we stashed away.
+                [window->nsWindow zoom:nil];
+            } else {
+                [window->nsWindow setFrame: window->preZoomedRect display:YES animate:YES];
+            }
         }
 
         window->suppressWindowResizeEvent = NO;
+        window->suppressWindowMoveEvent = NO;
+
+        NSRect newFrame = window->nsWindow.frame;
+        if (!NSEqualRects(newFrame, oldFrame)) {
+            NSRect flipFrame = [window _flipFrame];
+            int type = com_sun_glass_events_WindowEvent_RESTORE;
+            if (window->nsWindow.isZoomed) {
+                type = com_sun_glass_events_WindowEvent_MAXIMIZE;
+            }
+            [window _sendJavaWindowMoveEventForFrame:flipFrame];
+            [window _sendJavaWindowResizeEvent:type forFrame:flipFrame];
+        }
     }
     GLASS_POOL_EXIT;
     GLASS_CHECK_EXCEPTION(env);
