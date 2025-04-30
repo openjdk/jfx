@@ -67,21 +67,18 @@ public class DefaultTabAdvancePolicy implements TabAdvancePolicy {
     @Override
     public void reset() {
         offset = computeOffset(flow, ref);
-        System.out.println("reset. offset=" + offset); // FIX
     }
 
     @Override
     public float nextTabStop(float position) {
-        float next = n(position);
-        System.out.println("nextTabStop offset=" + offset + " pos=" + position + " next=" + next); // FIX
-        return next;
-    }
-    private float n(float position) {
         for (int i = 0; i < stops.length; i++) {
             double p = stops[i] + offset;
             if (position < p) {
                 return (float)(p);
             }
+        }
+        if (defaultStops == 0.0f) {
+            return -1.0f;
         }
         return FixedTabAdvancePolicy.nextPosition(position - offset, defaultStops) + offset;
     }
@@ -90,7 +87,7 @@ public class DefaultTabAdvancePolicy implements TabAdvancePolicy {
     private static float computeOffset(TextFlow flow, Region reference) {
         Scene s1 = flow.getScene();
         Scene s2 = reference.getScene();
-        if((s1 == null) || (s1 != s2)) {
+        if ((s1 == null) || (s1 != s2)) {
             return 0.0f;
         }
 
@@ -111,7 +108,7 @@ public class DefaultTabAdvancePolicy implements TabAdvancePolicy {
                 x1 = (float)p.getX();
             }
         }
-        
+
         return x0 - x1;
     }
 
