@@ -1236,9 +1236,9 @@ static jstring convertNSStringToJString(id aString, int length)
     NSWindow* window =  [self->nsView window];
     NSUInteger mask = [window styleMask];
     if (resizable) {
-        mask |= NSResizableWindowMask;
+        mask |= NSWindowStyleMaskResizable;
     } else {
-        mask &= ~(NSUInteger)NSResizableWindowMask;
+        mask &= ~(NSUInteger)NSWindowStyleMaskResizable;
     }
     [window setStyleMask: mask];
 }
