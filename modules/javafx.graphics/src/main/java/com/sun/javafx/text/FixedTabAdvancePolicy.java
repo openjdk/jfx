@@ -56,14 +56,15 @@ public class FixedTabAdvancePolicy implements TabAdvancePolicy {
     }
 
     static float nextPosition(float position, float tabAdvance) {
+        if (tabAdvance == 0.0) {
+            return -1.0f;
+        }
         // there is a weird case (tabAdvance=57.6 and position=172.79999)
         // when the original formula
         // float f = ((int)(position / tabAdvance) + 1) * tabAdvance;
         // returns the same pos=172.79999 next=172.79999
         float n = (position / tabAdvance);
-        float f = ((int)(n + Math.ulp(n)) + 1) * tabAdvance;
-        //System.out.println("pos=" + position + " next=" + f); // FIX
-        return f;
+        return ((int)(n + Math.ulp(n)) + 1) * tabAdvance;
     }
 
     @Override

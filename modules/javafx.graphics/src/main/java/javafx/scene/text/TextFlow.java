@@ -53,7 +53,6 @@ import javafx.scene.AccessibleRole;
 import javafx.scene.Node;
 import javafx.scene.layout.Pane;
 import javafx.scene.shape.PathElement;
-import javafx.scene.transform.Transform;
 import javafx.scene.transform.TransformChangedEvent;
 import com.sun.javafx.geom.BaseBounds;
 import com.sun.javafx.geom.Point2D;
@@ -532,7 +531,9 @@ public class TextFlow extends Pane {
                 @Override public CssMetaData getCssMetaData() {
                     return StyleableProperties.TAB_SIZE;
                 }
-                @Override protected void invalidated() {
+
+                @Override
+                protected void invalidated() {
                     TextLayout layout = getTextLayout();
                     if (layout.setTabAdvancePolicy(getTabSize(), getTabAdvancePolicy())) {
                         requestLayout();
@@ -567,9 +568,11 @@ public class TextFlow extends Pane {
     public final ObjectProperty<TabStopPolicy> tabStopPolicyProperty() {
         if (tabStopPolicy == null) {
             tabStopPolicy = new SimpleObjectProperty<>() {
+
                 class Monitor implements InvalidationListener, EventHandler<TransformChangedEvent> {
+
                     @Override
-                    public void invalidated(Observable observable) {
+                    public void invalidated(Observable p) {
                         updateTabAdvancePolicy();
                     }
 
@@ -610,9 +613,11 @@ public class TextFlow extends Pane {
 
                     TabStopPolicy p = get();
                     if (p != null) {
+                        // FIX does this create a memory leak?
                         p.tabStops().addListener(monitor);
                         p.defaultStopsProperty().addListener(monitor);
                         if (p.getReference() != null) {
+                            // FIX does this create a memory leak?
                             p.getReference().localToSceneTransformProperty().addListener(monitor);
                             p.getReference().sceneProperty().addListener(monitor);
                         }

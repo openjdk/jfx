@@ -1254,7 +1254,10 @@ public class PrismTextLayout implements TextLayout {
 
             if (run.isTab()) {
                 float tabStop = tabAdvancePolicy.nextTabStop(lineWidth);
-                // TODO if no more stops?
+                if (tabStop <= 0.0f) {
+                    // some large value guaranteed to exceed any reasonable text layout width
+                    tabStop = 1e10f;
+                }
                 run.setWidth(tabStop - lineWidth);
             }
 

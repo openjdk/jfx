@@ -53,7 +53,8 @@ public class TabStopPolicy {
     /**
      * The reference {@code Region} provides the leading {@code x} coordinate for this {@code TabStopPolicy}.
      * A non-null reference ensures that the tab stops are aligned within a document which is represented by
-     * more than one {@code TextFlow} instance.
+     * more than one {@code TextFlow} instance.  The reference {@code Region} and all the {@code TextFlow}
+     * instances that use this tab stop policy must belong to the same {@code Scene}.
      * <p>
      * A null reference node results in the leading edge to be set to the leading edge of the {@code TextFlow}
      * being laid out.

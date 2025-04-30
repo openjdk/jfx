@@ -27,6 +27,7 @@ package com.sun.javafx.text;
 
 import java.util.List;
 import javafx.geometry.Point2D;
+import javafx.scene.Scene;
 import javafx.scene.layout.Region;
 import javafx.scene.text.TabStop;
 import javafx.scene.text.TabStopPolicy;
@@ -38,25 +39,21 @@ import com.sun.javafx.scene.text.TabAdvancePolicy;
  * to {@code TabAdvancePolicy} that the text layout can use.
  */
 public class DefaultTabAdvancePolicy implements TabAdvancePolicy {
-    private float offset;
+    private final TextFlow flow;
+    private final Region ref;
     private final float[] stops;
     private final float defaultStops;
-    TextFlow flow;
-    Region ref;
+    private float offset;
 
-    private DefaultTabAdvancePolicy(TextFlow flow, Region ref, float offset, float[] tabs, float defaultStops) {
-        // FIX
+    private DefaultTabAdvancePolicy(TextFlow flow, Region ref, float[] tabs, float defaultStops) {
         this.flow = flow;
         this.ref = ref;
-        //
-        this.offset = offset;
         this.stops = tabs;
         this.defaultStops = defaultStops;
     }
 
     public static DefaultTabAdvancePolicy of(TextFlow flow, TabStopPolicy p) {
         Region ref = p.getReference();
-        float offset = computeOffset(flow, ref);
         List<TabStop> tabs = p.tabStops();
         float[] stops = new float[tabs.size()];
         for (int i = 0; i < stops.length; i++) {
@@ -64,48 +61,58 @@ public class DefaultTabAdvancePolicy implements TabAdvancePolicy {
             stops[i] = (float)stop.getPosition();
         }
         float defaultStops = (float)p.getDefaultStops();
-        return new DefaultTabAdvancePolicy(flow, ref, offset, stops, defaultStops);
+        return new DefaultTabAdvancePolicy(flow, ref, stops, defaultStops);
     }
 
     @Override
     public void reset() {
-        // FIX may not need if created upon change!
-        float off = computeOffset(flow, ref);
-        if(offset != off) {
-            // remove reset() if this never happens
-            throw new Error(" *** reset. offset=" + offset + " off=" + off);
-        }
-        //System.out.println("reset. offset=" + offset);
+        offset = computeOffset(flow, ref);
+        System.out.println("reset. offset=" + offset); // FIX
     }
 
     @Override
     public float nextTabStop(float position) {
-        position = (float)Math.max(0, position + offset);
+        float next = n(position);
+        System.out.println("nextTabStop offset=" + offset + " pos=" + position + " next=" + next); // FIX
+        return next;
+    }
+    private float n(float position) {
         for (int i = 0; i < stops.length; i++) {
-            double p = stops[i];
+            double p = stops[i] + offset;
             if (position < p) {
-                return (float)(p - offset);
+                return (float)(p);
             }
         }
-        return FixedTabAdvancePolicy.nextPosition(position, defaultStops) - offset;
+        return FixedTabAdvancePolicy.nextPosition(position - offset, defaultStops) + offset;
     }
 
     // this could be a method in the base class (change interface to an abstract class)
     private static float computeOffset(TextFlow flow, Region reference) {
+        Scene s1 = flow.getScene();
+        Scene s2 = reference.getScene();
+        if((s1 == null) || (s1 != s2)) {
+            return 0.0f;
+        }
+
+        // TODO rtl
+        float x0 = 0.0f;
         if (reference != null) {
-            Point2D p0 = reference.localToScreen(0, 0);
-            if (p0 != null) {
-                Point2D p1 = flow.localToScreen(flow.snappedLeftInset(), 0);
-                if (p1 != null) {
-                    // TODO rtl
-                    float v = (float)(p1.getX() - p0.getX());
-                    if (!Float.isNaN(v)) {
-                        return v;
-                    }
+            Point2D p = reference.localToScene(0.0, 0.0);
+            if (p != null) {
+                if (!Double.isNaN(p.getX())) {
+                    x0 = (float)p.getX();
                 }
             }
         }
-        return 0.0f;
+        float x1 = 0.0f;
+        Point2D p = flow.localToScene(flow.snappedLeftInset(), 0.0);
+        if (p != null) {
+            if (!Double.isNaN(p.getX())) {
+                x1 = (float)p.getX();
+            }
+        }
+        
+        return x0 - x1;
     }
 
     @Override
