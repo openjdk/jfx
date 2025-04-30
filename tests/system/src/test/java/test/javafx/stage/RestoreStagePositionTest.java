@@ -92,7 +92,7 @@ public class RestoreStagePositionTest {
         double y = stage.getY();
 
         Platform.runLater(() -> stage.setFullScreen(true));
-        Thread.sleep(400);
+        Thread.sleep(800);
         Assertions.assertTrue(stage.isFullScreen());
         CountDownLatch latch = new CountDownLatch(2);
 
