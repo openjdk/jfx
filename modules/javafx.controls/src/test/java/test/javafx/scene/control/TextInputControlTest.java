@@ -43,10 +43,13 @@ import javafx.scene.input.Clipboard;
 import javafx.scene.input.ClipboardContent;
 import javafx.scene.input.KeyCode;
 import javafx.scene.layout.StackPane;
+import javafx.scene.paint.Paint;
 import javafx.scene.text.Font;
+import javafx.scene.text.Text;
 import javafx.stage.Stage;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 import org.junit.jupiter.params.provider.MethodSource;
 import com.sun.javafx.tk.Toolkit;
 import test.com.sun.javafx.pgstub.StubToolkit;
@@ -210,6 +213,36 @@ public class TextInputControlTest {
         Scene s = new Scene(textInput);
         textInput.applyCss();
         assertEquals(Font.font("Amble", 24), textInput.getFont());
+    }
+
+    @ParameterizedTest
+    @CsvSource({
+            "#999999, 333333",
+            "#222222, ffffff",
+            "#777777, 000000"
+    })
+    public void testHighlightTextFillForAccentColors(String accentColor, String expectedTextColor) {
+        for (Class<?> type : parameters()) {
+            setup(type);
+            textInput.setText("This is a text");
+            textInput.selectAll();
+
+            StackPane root = new StackPane(textInput);
+            Scene scene = new Scene(root, 400, 200);
+            Stage stage = new Stage();
+            stage.setScene(scene);
+            stage.show();
+
+            scene.getRoot().setStyle("-fx-accent: " + accentColor + ";");
+            textInput.requestFocus();
+            Toolkit.getToolkit().firePulse();
+
+            Text internalText = (Text) textInput.lookup(".text");
+            Paint fill = internalText.getSelectionFill();
+
+            String resolved = fill.toString().toLowerCase();
+            assertTrue(resolved.contains(expectedTextColor));
+        }
     }
 
     /******************************************************
