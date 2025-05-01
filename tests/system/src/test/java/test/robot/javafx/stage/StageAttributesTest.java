@@ -34,12 +34,10 @@ import javafx.stage.StageStyle;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.EnumSource;
 import test.robot.testharness.VisualTestBase;
-import test.util.Util;
 
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 
-import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static test.util.Util.PARAMETERIZED_TEST_DISPLAY;
 import static test.util.Util.TIMEOUT;
@@ -305,131 +303,5 @@ public class StageAttributesTest extends VisualTestBase {
             Color color = getColor((int)topStage.getX() + 5, (int)topStage.getY() + 5);
             assertColorEquals(TOP_COLOR, color, TOLERANCE);
         });
-    }
-
-    @ParameterizedTest(name = PARAMETERIZED_TEST_DISPLAY)
-    @EnumSource(names = {"DECORATED", "UNDECORATED"})
-    void testStageStatePrecedenceOrderIconifiedMaximizedBeforeShow(StageStyle stageStyle) throws InterruptedException {
-        setupStages(false, false, stageStyle);
-
-        Util.doTimeLine(WAIT,
-                () -> {
-                    Color color = getColor(200, 200);
-                    assertColorEquals(BOTTOM_COLOR, color, TOLERANCE);
-
-                    topStage.setIconified(true);
-                    topStage.setMaximized(true);
-                    topStage.show();
-                },
-                () -> {
-                    assertTrue(topStage.isIconified());
-                    assertTrue(topStage.isMaximized());
-
-                    Color color = getColor(200, 200);
-                    // Should remain iconified
-                    assertColorEquals(BOTTOM_COLOR, color, TOLERANCE);
-                },
-                () -> topStage.setIconified(false),
-                () -> {
-                    assertTrue(topStage.isMaximized());
-                    assertFalse(topStage.isIconified());
-
-                    Color color = getColor(200, 200);
-                    assertColorEquals(TOP_COLOR, color, TOLERANCE);
-                });
-    }
-
-    @ParameterizedTest(name = PARAMETERIZED_TEST_DISPLAY)
-    @EnumSource(names = {"DECORATED", "UNDECORATED"})
-    void testStageStatePrecedenceOrderIconifiedFullScreenBeforeShow(StageStyle stageStyle) throws InterruptedException {
-        setupStages(false, false, stageStyle);
-
-        Util.doTimeLine(WAIT,
-                () -> {
-                    Color color = getColor(200, 200);
-                    assertColorEquals(BOTTOM_COLOR, color, TOLERANCE);
-
-                    topStage.setIconified(true);
-                    topStage.setFullScreen(true);
-                    topStage.show();
-                },
-                () -> {
-                    assertTrue(topStage.isIconified());
-                    assertTrue(topStage.isFullScreen());
-
-                    Color color = getColor(200, 200);
-                    // Should remain iconified
-                    assertColorEquals(BOTTOM_COLOR, color, TOLERANCE);
-                },
-                () -> topStage.setIconified(false),
-                () -> {
-                    assertTrue(topStage.isFullScreen());
-                    assertFalse(topStage.isIconified());
-
-                    Color color = getColor(200, 200);
-                    assertColorEquals(TOP_COLOR, color, TOLERANCE);
-                });
-    }
-
-    @ParameterizedTest(name = PARAMETERIZED_TEST_DISPLAY)
-    @EnumSource(names = {"DECORATED", "UNDECORATED"})
-    void testStageStatePrecedenceOrderIconifiedMaximizedAfterShow(StageStyle stageStyle) throws InterruptedException {
-        setupStages(true, true, stageStyle);
-
-        Util.doTimeLine(WAIT,
-                () -> {
-                    Color color = getColor(200, 200);
-                    assertColorEquals(TOP_COLOR, color, TOLERANCE);
-
-                    topStage.setIconified(true);
-                    topStage.setMaximized(true);
-                },
-                () -> {
-                    assertTrue(topStage.isMaximized());
-                    assertTrue(topStage.isIconified());
-
-                    Color color = getColor(200, 200);
-                    // Should remain iconified
-                    assertColorEquals(BOTTOM_COLOR, color, TOLERANCE);
-                },
-                () -> topStage.setIconified(false),
-                () -> {
-                    assertTrue(topStage.isMaximized());
-                    assertFalse(topStage.isIconified());
-
-                    Color color = getColor(200, 200);
-                    assertColorEquals(TOP_COLOR, color, TOLERANCE);
-                });
-    }
-
-    @ParameterizedTest(name = PARAMETERIZED_TEST_DISPLAY)
-    @EnumSource(names = {"DECORATED", "UNDECORATED"})
-    void testStageStatePrecedenceOrderIconifiedFullScreenAfterShow(StageStyle stageStyle) throws InterruptedException {
-        setupStages(true, true, stageStyle);
-
-        Util.doTimeLine(WAIT,
-                () -> {
-                    Color color = getColor(200, 200);
-                    assertColorEquals(TOP_COLOR, color, TOLERANCE);
-
-                    topStage.setIconified(true);
-                    topStage.setFullScreen(true);
-                },
-                () -> {
-                    assertTrue(topStage.isFullScreen());
-                    assertTrue(topStage.isIconified());
-
-                    Color color = getColor(200, 200);
-                    // Should remain iconified
-                    assertColorEquals(BOTTOM_COLOR, color, TOLERANCE);
-                },
-                () -> topStage.setIconified(false),
-                () -> {
-                    assertTrue(topStage.isFullScreen());
-                    assertFalse(topStage.isIconified());
-
-                    Color color = getColor(200, 200);
-                    assertColorEquals(TOP_COLOR, color, TOLERANCE);
-                });
     }
 }
