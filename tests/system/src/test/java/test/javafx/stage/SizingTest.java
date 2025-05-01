@@ -354,17 +354,13 @@ class SizingTest extends StageTestBase {
         assertEquals(NEW_HEIGHT, getStage().getHeight(), SIZING_DELTA,
                 "Scene height should match the new stage height");
 
-        Util.runAndWait(() -> {
-            StackPane stackPane = new StackPane();
-            stackPane.setPrefSize(WIDTH, HEIGHT);
-       });
+        Util.runAndWait(() -> getStage().setScene(new Scene(new StackPane(), WIDTH, HEIGHT)));
+
+        Util.sleep(MEDIUM_WAIT);
 
         assertEquals(NEW_WIDTH, getStage().getWidth(), SIZING_DELTA,
-                "Scene width should match the new stage width");
+                "Scene width should remain unchanged after setting a new scene");
         assertEquals(NEW_HEIGHT, getStage().getHeight(), SIZING_DELTA,
-                "Scene height should match the new stage height");
-
+                "Scene height should remain unchanged after setting a new scene");
     }
-
-
 }
