@@ -83,7 +83,6 @@ import javafx.scene.layout.HeaderButtonType;
 import javafx.scene.layout.HeaderDragType;
 import javafx.scene.paint.Color;
 import javafx.scene.paint.Paint;
-import javafx.scene.transform.NonInvertibleTransformException;
 import javafx.stage.PopupWindow;
 import javafx.stage.Stage;
 import javafx.stage.StageStyle;
@@ -3058,32 +3057,17 @@ public class Scene implements EventTarget {
             }
         }
 
-        private final PickRay pickRay = new PickRay();
-
         @Override
         public HeaderAreaType pickHeaderArea(double x, double y) {
-            Node root = Scene.this.getRoot();
-            if (root == null) {
-                return null;
-            }
-
-            try {
-                Point2D p = root.getLocalToSceneTransform().inverseTransform(x, y);
-                pickRay.set(p.getX(), p.getY(), 1, 0, Double.POSITIVE_INFINITY);
-            } catch (NonInvertibleTransformException e) {
-                return null;
-            }
-
-            var chooser = new PickResultChooser();
-            root.pickNode(pickRay, chooser);
-            Node intersectedNode = chooser.getIntersectedNode();
+            PickResult result = pick(x, y);
+            Node intersectedNode = result.getIntersectedNode();
             HeaderDragType dragType = intersectedNode instanceof HeaderBar ? HeaderDragType.DRAGGABLE : null;
 
             while (intersectedNode != null) {
                 if (intersectedNode instanceof HeaderBar) {
                     return dragType == HeaderDragType.DRAGGABLE_SUBTREE
                         || dragType == HeaderDragType.DRAGGABLE
-                        || HeaderBar.getDragType(chooser.getIntersectedNode()) == HeaderDragType.DRAGGABLE
+                        || HeaderBar.getDragType(result.getIntersectedNode()) == HeaderDragType.DRAGGABLE
                             ? HeaderAreaType.DRAGBAR
                             : null;
                 }
