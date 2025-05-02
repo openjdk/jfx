@@ -532,7 +532,11 @@ struct _GstDynamicTypeFactoryClass {
 struct _GstClockEntryImpl
 {
   GstClockEntry entry;
+#if defined (GSTREAMER_LITE) && defined(LINUX)
+  GWeakRef clock;
+#else // GSTREAMER_LITE
   GWeakRef *clock;
+#endif // GSTREAMER_LITE
   GDestroyNotify destroy_entry;
   gpointer padding[21];                 /* padding for allowing e.g. systemclock
                                          * to add data in lieu of overridable
