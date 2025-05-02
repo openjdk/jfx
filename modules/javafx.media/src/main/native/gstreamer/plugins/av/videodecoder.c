@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -199,7 +199,7 @@ static void videodecoder_dispose(GObject* object)
 {
     VideoDecoder *decoder = VIDEODECODER(object);
 
-    basedecoder_close_decoder(decoder);
+    basedecoder_close_decoder(BASEDECODER(decoder));
 
     G_OBJECT_CLASS(parent_class)->dispose(object);
 }
@@ -545,7 +545,7 @@ static gboolean videodecoder_convert_frame(VideoDecoder *decoder)
         return FALSE;
 
     int ret = decoder->sws_scale_func(decoder->sws_context,
-                                      base->frame->data,
+                                      (const uint8_t * const*)base->frame->data,
                                       base->frame->linesize,
                                       0,
                                       base->frame->height,
