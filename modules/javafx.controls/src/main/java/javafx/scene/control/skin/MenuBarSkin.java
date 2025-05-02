@@ -202,17 +202,12 @@ public class MenuBarSkin extends SkinBase<MenuBar> {
      *
      * @param control The control that this skin should be installed onto.
      */
-    public MenuBarSkin(MenuBar control) {
+    public MenuBarSkin(final MenuBar control) {
         super(control);
 
         container = new HBox();
         container.getStyleClass().add("container");
         getChildren().add(container);
-    }
-
-    @Override
-    public void install() {
-        MenuBar control = getSkinnable();
 
         menuBarFocusedPropertyListener = (ov, t, t1) -> {
             unSelectMenus();
@@ -657,27 +652,30 @@ public class MenuBarSkin extends SkinBase<MenuBar> {
      *                                                                         *
      **************************************************************************/
 
+    /** {@inheritDoc} */
     @Override
     public void dispose() {
-        if (Platform.isFxApplicationThread()) {
-            if (getSkinnable() == null) {
-                return;
-            }
-
-            if (sceneListenerHelper != null) {
-                sceneListenerHelper.disconnect();
-                sceneListenerHelper = null;
-            }
-
-            cleanUpListeners();
-            cleanUpSystemMenu();
-            getChildren().remove(container);
-
-            // call super.dispose last since it sets control to null
-            super.dispose();
-        } else {
-            Platform.runLater(this::dispose);
+        if (getSkinnable() == null) {
+            return;
         }
+
+        if (sceneListenerHelper != null) {
+            sceneListenerHelper.disconnect();
+            sceneListenerHelper = null;
+        }
+
+        cleanUpListeners();
+
+        if (Platform.isFxApplicationThread()) {
+            cleanUpSystemMenu();
+        } else {
+            Platform.runLater(this::cleanUpSystemMenu);
+        }
+
+        getChildren().remove(container);
+
+        // call super.dispose last since it sets control to null
+        super.dispose();
     }
 
     // Return empty insets when "container" is empty, which happens
@@ -1026,6 +1024,7 @@ public class MenuBarSkin extends SkinBase<MenuBar> {
         getSkinnable().requestLayout();
     }
 
+    // always called in the fx application thread
     private void cleanUpSystemMenu() {
         if (sceneChangeListener != null && getSkinnable() != null) {
             getSkinnable().sceneProperty().removeListener(sceneChangeListener);
