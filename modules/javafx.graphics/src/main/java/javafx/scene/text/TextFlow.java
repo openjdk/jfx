@@ -256,7 +256,7 @@ public class TextFlow extends Pane {
      * @return an array of {@code PathElement} which can be used to create a {@code Shape}
      * @since 25
      */
-    public final PathElement[] strikeThroughShape(int start, int end) {
+    public final PathElement[] getStrikeThroughShape(int start, int end) {
         return getRange(start, end, TextLayout.TYPE_STRIKETHROUGH);
     }
 
@@ -716,16 +716,11 @@ public class TextFlow extends Pane {
     }
 
     /**
-     * Returns the object which provides a view into the text layout for this node, which allows for querying
-     * the details of the layout.
+     * Returns the object which provides a snapshot of the text layout geometry for this node.
      * <p>
      * While there is no general guarantee that successive invocations of this method return the same instance,
      * it is safe to either cache this object or call this method each time, since the information obtained from
      * this lightweight object remains valid until the next layout cycle.
-     * <p>
-     * The information obtained after the next layout cycle might be different as a result
-     * of actions such as resizing of the container, or modification of certain properties.
-     * For example updating the text or the font might change the layout, but a change of color would not.
      *
      * @return the layout information
      * @since 25

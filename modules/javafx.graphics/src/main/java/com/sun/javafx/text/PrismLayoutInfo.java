@@ -53,7 +53,7 @@ public abstract non-sealed class PrismLayoutInfo extends LayoutInfo {
     }
 
     @Override
-    public Rectangle2D getBounds(boolean includeLineSpacing) {
+    public Rectangle2D getLogicalBounds(boolean includeLineSpacing) {
         BaseBounds b = layout.getBounds();
         Insets m = insets();
         double dx = m.getLeft(); // TODO rtl?
@@ -95,18 +95,18 @@ public abstract non-sealed class PrismLayoutInfo extends LayoutInfo {
     }
 
     @Override
-    public List<Rectangle2D> selectionShape(int start, int end, boolean includeLineSpacing) {
+    public List<Rectangle2D> getSelectionGeometry(int start, int end, boolean includeLineSpacing) {
         double sp = includeLineSpacing ? lineSpacing() : 0.0;
         return getGeometry(start, end, TextLayout.TYPE_TEXT, sp);
     }
 
     @Override
-    public List<Rectangle2D> strikeThroughShape(int start, int end) {
+    public List<Rectangle2D> getStrikeThroughGeometry(int start, int end) {
         return getGeometry(start, end, TextLayout.TYPE_STRIKETHROUGH, 0.0);
     }
 
     @Override
-    public List<Rectangle2D> underlineShape(int start, int end) {
+    public List<Rectangle2D> getUnderlineGeometry(int start, int end) {
         return getGeometry(start, end, TextLayout.TYPE_UNDERLINE, 0.0);
     }
 
@@ -127,7 +127,7 @@ public abstract non-sealed class PrismLayoutInfo extends LayoutInfo {
     }
 
     @Override
-    public CaretInfo caretInfo(int charIndex, boolean leading) {
+    public CaretInfo caretInfoAt(int charIndex, boolean leading) {
         Insets m = insets();
         double dx = m.getLeft(); // TODO RTL?
         double dy = m.getTop();

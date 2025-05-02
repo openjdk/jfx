@@ -29,13 +29,11 @@ import javafx.geometry.Rectangle2D;
 import com.sun.javafx.text.PrismLayoutInfo;
 
 /**
- * Provides a view into the text layout used in a {@code Text} or a {@code TextFlow} node,
- * with purpose of querying the details of the layout such as break up of the text into lines,
- * as well as geometry of other shapes derived from the layout (selection, underline, etc.).
+ * Provides a snapshot of the text layout geometry in a {@code Text} or a {@code TextFlow} node,
+ * such as break up of the text into lines, as well as other shapes derived from the layout
+ * (selection, underline, etc.).
  * <p>
- * The information obtained via this object may change after the next layout cycle, which may come as a result
- * of actions such as resizing of the container, or modification of certain properties.
- * For example updating the text or the font might change the layout, but a change of color would not.
+ * The information in this object is valid until the next layout cycle.
  *
  * @since 25
  */
@@ -54,7 +52,7 @@ public abstract sealed class LayoutInfo permits PrismLayoutInfo {
      * @param includeLineSpacing determines whether the line spacing after last text line should be included
      * @return the layout bounds
      */
-    public abstract Rectangle2D getBounds(boolean includeLineSpacing);
+    public abstract Rectangle2D getLogicalBounds(boolean includeLineSpacing);
 
     /**
      * Returns the number of text lines in the layout.
@@ -78,7 +76,7 @@ public abstract sealed class LayoutInfo permits PrismLayoutInfo {
      * @param includeLineSpacing determines whether the result includes the line spacing
      * @return the {@code TextLineInfo} object
      * @throws IndexOutOfBoundsException if the index is out of range
-     *     {@code (index < 0 || index > getTextLineCount())}
+     *     {@code (index < 0 || index >= getTextLineCount())}
      */
     public abstract TextLineInfo getTextLine(int index, boolean includeLineSpacing);
 
@@ -91,7 +89,7 @@ public abstract sealed class LayoutInfo permits PrismLayoutInfo {
      * @param includeLineSpacing determines whether the result includes the line spacing
      * @return the immutable list of {@code Rectangle2D} objects
      */
-    public abstract List<Rectangle2D> selectionShape(int start, int end, boolean includeLineSpacing);
+    public abstract List<Rectangle2D> getSelectionGeometry(int start, int end, boolean includeLineSpacing);
 
     /**
      * Returns the geometry of the strike-through shape, as an immutable list of {@code Rectangle2D} objects,
@@ -101,7 +99,7 @@ public abstract sealed class LayoutInfo permits PrismLayoutInfo {
      * @param end the end offset
      * @return the immutable list of {@code Rectangle2D} objects
      */
-    public abstract List<Rectangle2D> strikeThroughShape(int start, int end);
+    public abstract List<Rectangle2D> getStrikeThroughGeometry(int start, int end);
 
     /**
      * Returns the geometry of the underline shape, as an immutable list of {@code Rectangle2D} objects,
@@ -111,7 +109,7 @@ public abstract sealed class LayoutInfo permits PrismLayoutInfo {
      * @param end the end offset
      * @return the immutable list of {@code Rectangle2D} objects
      */
-    public abstract List<Rectangle2D> underlineShape(int start, int end);
+    public abstract List<Rectangle2D> getUnderlineGeometry(int start, int end);
 
     /**
      * Returns the information related to the caret at the specified character index and the character bias.
@@ -120,5 +118,5 @@ public abstract sealed class LayoutInfo permits PrismLayoutInfo {
      * @param leading whether the caret is biased on the leading edge of the character
      * @return the {@code CaretInfo} object
      */
-    public abstract CaretInfo caretInfo(int charIndex, boolean leading);
+    public abstract CaretInfo caretInfoAt(int charIndex, boolean leading);
 }

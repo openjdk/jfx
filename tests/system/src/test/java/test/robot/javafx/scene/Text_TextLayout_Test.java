@@ -76,7 +76,7 @@ public class Text_TextLayout_Test {
         waitForIdle();
         LayoutInfo la = text.getLayoutInfo();
 
-        CaretInfo ci = la.caretInfo(0, true);
+        CaretInfo ci = la.caretInfoAt(0, true);
 
         // caret is one line
         assertEquals(ci.getSegmentCount(), 1);
@@ -90,7 +90,7 @@ public class Text_TextLayout_Test {
 
         // caret at the end
         int len = textLength();
-        ci = la.caretInfo(len - 1, false);
+        ci = la.caretInfoAt(len - 1, false);
         assertEquals(ci.getSegmentCount(), 1);
         Rectangle2D r2 = ci.getSegmentAt(0);
 
@@ -109,8 +109,8 @@ public class Text_TextLayout_Test {
         waitForIdle();
         LayoutInfo la = text.getLayoutInfo();
 
-        Rectangle2D r0 = la.getBounds(false);
-        Rectangle2D r1 = la.getBounds(true);
+        Rectangle2D r0 = la.getLogicalBounds(false);
+        Rectangle2D r1 = la.getLogicalBounds(true);
 
         // non-empty
         assertTrue((r0.getWidth() > 0) && (r0.getHeight() > 0));
@@ -194,7 +194,7 @@ public class Text_TextLayout_Test {
         // spacing = 0
 
         int len = textLength();
-        List<Rectangle2D> ss = la.selectionShape(0, len, false);
+        List<Rectangle2D> ss = la.getSelectionGeometry(0, len, false);
         assertEquals(ss.size(), 3);
         Rectangle2D s0 = ss.get(0);
         Rectangle2D s1 = ss.get(1);
@@ -220,7 +220,7 @@ public class Text_TextLayout_Test {
         });
         waitForIdle();
 
-        List<Rectangle2D> SS = la.selectionShape(0, len, true);
+        List<Rectangle2D> SS = la.getSelectionGeometry(0, len, true);
         assertEquals(ss.size(), 3);
         Rectangle2D S0 = SS.get(0);
         Rectangle2D S1 = SS.get(1);
@@ -252,7 +252,7 @@ public class Text_TextLayout_Test {
         LayoutInfo la = text.getLayoutInfo();
 
         int len = textLength();
-        List<Rectangle2D> ss = la.strikeThroughShape(0, len);
+        List<Rectangle2D> ss = la.getStrikeThroughGeometry(0, len);
         assertEquals(ss.size(), 3);
         Rectangle2D s0 = ss.get(0);
         Rectangle2D s1 = ss.get(1);
@@ -280,7 +280,7 @@ public class Text_TextLayout_Test {
         LayoutInfo la = text.getLayoutInfo();
 
         int len = textLength();
-        List<Rectangle2D> ss = la.underlineShape(0, len);
+        List<Rectangle2D> ss = la.getUnderlineGeometry(0, len);
         assertEquals(ss.size(), 3);
         Rectangle2D s0 = ss.get(0);
         Rectangle2D s1 = ss.get(1);
@@ -309,7 +309,7 @@ public class Text_TextLayout_Test {
         assertThrows(IndexOutOfBoundsException.class, () -> la.getTextLine(-1, true));
         assertThrows(IndexOutOfBoundsException.class, () -> la.getTextLine(la.getTextLineCount(), true));
 
-        CaretInfo ci = la.caretInfo(0, true);
+        CaretInfo ci = la.caretInfoAt(0, true);
         assertThrows(IndexOutOfBoundsException.class, () -> ci.getSegmentAt(-1));
         assertThrows(IndexOutOfBoundsException.class, () -> ci.getSegmentAt(ci.getSegmentCount()));
     }
