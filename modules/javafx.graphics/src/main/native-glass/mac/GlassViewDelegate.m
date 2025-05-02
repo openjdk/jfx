@@ -1239,15 +1239,13 @@ static jstring convertNSStringToJString(id aString, int length)
 - (void)setResizableForFullscreen:(BOOL)resizable
 {
     NSWindow* window =  [self->nsView window];
-    if (!((GlassWindow*) window)->isResizable) {
-        NSUInteger mask = [window styleMask];
-        if (resizable) {
-            mask |= NSResizableWindowMask;
-        } else {
-            mask &= ~(NSUInteger)NSResizableWindowMask;
-        }
-        [window setStyleMask: mask];
+    NSUInteger mask = [window styleMask];
+    if (resizable) {
+        mask |= NSWindowStyleMaskResizable;
+    } else {
+        mask &= ~(NSUInteger)NSWindowStyleMaskResizable;
     }
+    [window setStyleMask: mask];
 }
 
 /*
