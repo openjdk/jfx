@@ -859,15 +859,19 @@
         preference, and evaluates to <code>true</code> if the user has indicated the <code>reduce</code> preference.
     <p>Media features can be combined using boolean algebra (<code>not</code>, <code>and</code>, <code>or</code>):
     <ul>
-        <li>Any media feature can be negated by placing the <code>not</code> operator before it.
+        <li>Any media feature can be negated by placing the <code>not</code> operator before it:<br/>
+            <code>not (prefers-color-scheme: light)</code>
         <li>Two or more media features can be chained together, such that the query is only true if <em>all</em> the
-            media features are true, by placing the <code>and</code> operator between them.
+            media features are true, by placing the <code>and</code> operator between them:<br/>
+            <code>(prefers-color-scheme: dark) and (prefers-reduced-motion) and (prefers-reduced-transparency)</code>
         <li>Two or more media features can be chained together, such that the query is true if <em>any</em> of the
-            media features are true, by placing the <code>or</code> operator between them.
+            media features are true, by placing the <code>or</code> operator between them:<br/>
+            <code>(prefers-color-scheme: dark) or (prefers-reduced-motion) or (prefers-reduced-transparency)</code>
         <li>Expressions can be grouped by wrapping them in parentheses.
         <li>It is invalid to mix different boolean operators at the same "level" of a media query. For example,
-            <code>(prefers-color-scheme: dark) and (prefers-reduced-motion) or (prefers-reduced-transparency)</code>
-            is illegal, as it is unclear what was meant. In this case, parentheses must be used to group expressions.
+            the following expression is invalid, as it is unclear what was meant:<br/>
+            <code>(prefers-color-scheme: dark) and (prefers-reduced-motion) or (prefers-reduced-transparency)</code><br/>
+            In this case, parentheses must be used to group expressions.
     </ul>
     <table class="cssmisctable">
         <caption>Available media features</caption>
