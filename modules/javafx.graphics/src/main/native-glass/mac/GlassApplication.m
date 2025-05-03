@@ -99,9 +99,12 @@ jint JNICALL JNI_OnLoad(JavaVM *vm, void *reserved)
 }
 
 - (id)initWithRunnable:(jobject)runnable;
+- (void)maybeRun;
 - (void)run;
 
 @end
+
+static NSMutableArray<GlassRunnable*> *deferredRunnables = nil;
 
 @implementation GlassRunnable
 
@@ -132,6 +135,27 @@ jint JNICALL JNI_OnLoad(JavaVM *vm, void *reserved)
     [pool drain];
 }
 
+- (void)maybeRun
+{
+    if (isFullScreenExitingLoop) {
+        if (deferredRunnables == nil) {
+            deferredRunnables = [[NSMutableArray alloc] initWithCapacity: 2];
+        }
+        [deferredRunnables addObject: self];
+    } else {
+        [self run];
+    }
+}
+
++ (void)rescheduleDeferredRunnables
+{
+    if (deferredRunnables != nil) {
+        for (GlassRunnable *runnable in deferredRunnables) {
+            [runnable performSelectorOnMainThread:@selector(maybeRun) withObject:nil waitUntilDone:NO modes:runLoopModes];
+        }
+        [deferredRunnables removeAllObjects];
+    }
+}
 @end
 
 @implementation NSApplicationFX
@@ -805,6 +829,7 @@ jint JNICALL JNI_OnLoad(JavaVM *vm, void *reserved)
         (*env)->ExceptionClear(env);
     }
     isFullScreenExitingLoop = NO;
+    [GlassRunnable rescheduleDeferredRunnables];
 }
 
 + (void)leaveFullScreenExitingLoopIfNeeded
@@ -1113,7 +1138,7 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_mac_MacApplication__1submitForLater
     if (jEnv != NULL)
     {
         GlassRunnable *runnable = [[GlassRunnable alloc] initWithRunnable:(*env)->NewGlobalRef(env, jRunnable)];
-        [runnable performSelectorOnMainThread:@selector(run) withObject:nil waitUntilDone:NO modes:runLoopModes];
+        [runnable performSelectorOnMainThread:@selector(maybeRun) withObject:nil waitUntilDone:NO modes:runLoopModes];
     }
 }
 
