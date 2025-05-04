@@ -48,6 +48,12 @@ final class ViewSceneOverlay {
         this.painter = painter;
     }
 
+    public void reapplyCSS() {
+        if (root != null) {
+            NodeHelper.reapplyCSS(root);
+        }
+    }
+
     public void processCSS() {
         if (root != null) {
             NodeHelper.processCSS(root);

@@ -165,6 +165,13 @@ class ViewScene extends GlassScene {
     }
 
     @Override
+    public void reapplyOverlayCSS() {
+        if (viewSceneOverlay != null) {
+            viewSceneOverlay.reapplyCSS();
+        }
+    }
+
+    @Override
     public void processOverlayCSS() {
         if (viewSceneOverlay != null) {
             viewSceneOverlay.processCSS();

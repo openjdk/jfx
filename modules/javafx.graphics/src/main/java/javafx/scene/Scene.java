@@ -1672,16 +1672,11 @@ public class Scene implements EventTarget {
         @Override
         protected void onChanged(Change<String> c) {
             StyleManager.getInstance().stylesheetsChanged(Scene.this, c);
-            // JDK-8110059 - if stylesheet is removed, reset styled properties to
-            // their initial value.
-            c.reset();
-            while(c.next()) {
-                if (c.wasRemoved() == false) {
-                    continue;
-                }
-                break; // no point in resetting more than once...
-            }
             getRoot().reapplyCSS();
+
+            if (peer != null) {
+                peer.reapplyOverlayCSS();
+            }
         }
     };
 
@@ -1745,6 +1740,10 @@ public class Scene implements EventTarget {
                 @Override protected void invalidated() {
                     StyleManager.getInstance().forget(Scene.this);
                     getRoot().reapplyCSS();
+
+                    if (peer != null) {
+                        peer.reapplyOverlayCSS();
+                    }
                 }
             };
         }

@@ -86,6 +86,8 @@ public interface TKScene {
 
     public TKClipboard createDragboard(boolean isDragSource);
 
+    default void reapplyOverlayCSS() {}
+
     default void processOverlayCSS() {}
 
     default void layoutOverlay() {}
