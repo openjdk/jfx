@@ -22,24 +22,62 @@
  * or visit www.oracle.com if you need additional information or have any
  * questions.
  */
+/*
+ * Copyright (c) 2025 Oracle and/or its affiliates. All rights reserved.
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ * This code is free software; you can redistribute it and/or modify it
+ * under the terms of the GNU General Public License version 2 only, as
+ * published by the Free Software Foundation.  Oracle designates this
+ * particular file as subject to the "Classpath" exception as provided
+ * by Oracle in the LICENSE file that accompanied this code.
+ *
+ * This code is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
+ * version 2 for more details (a copy is included in the LICENSE file that
+ * accompanied this code).
+ *
+ * You should have received a copy of the GNU General Public License version
+ * 2 along with this work; if not, write to the Free Software Foundation,
+ * Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA.
+ *
+ * Please contact Oracle, 500 Oracle Parkway, Redwood Shores, CA 94065 USA
+ * or visit www.oracle.com if you need additional information or have any
+ * questions.
+ */
 
+import javafx.animation.AnimationTimer;
 import javafx.application.Application;
 import javafx.beans.binding.Bindings;
 import javafx.beans.property.ObjectProperty;
+import javafx.beans.property.ReadOnlyBooleanProperty;
+import javafx.beans.property.ReadOnlyDoubleProperty;
+import javafx.beans.property.ReadOnlyObjectProperty;
+import javafx.beans.property.ReadOnlyProperty;
+import javafx.beans.property.ReadOnlyStringProperty;
 import javafx.beans.property.SimpleObjectProperty;
+import javafx.beans.value.ChangeListener;
 import javafx.collections.FXCollections;
+import javafx.collections.ObservableList;
+import javafx.geometry.HPos;
 import javafx.geometry.Insets;
+import javafx.geometry.Pos;
+import javafx.geometry.Rectangle2D;
+import javafx.scene.Node;
 import javafx.scene.Scene;
+import javafx.scene.control.Alert;
 import javafx.scene.control.Button;
-import javafx.scene.control.ButtonType;
 import javafx.scene.control.CheckBox;
 import javafx.scene.control.ComboBox;
 import javafx.scene.control.ContextMenu;
-import javafx.scene.control.Dialog;
+import javafx.scene.control.Control;
 import javafx.scene.control.Label;
 import javafx.scene.control.MenuItem;
+import javafx.scene.control.ScrollPane;
 import javafx.scene.control.Spinner;
 import javafx.scene.control.SpinnerValueFactory;
+import javafx.scene.control.Tab;
 import javafx.scene.control.TextField;
 import javafx.scene.control.TitledPane;
 import javafx.scene.control.Tooltip;
@@ -48,184 +86,113 @@ import javafx.scene.layout.BackgroundFill;
 import javafx.scene.layout.CornerRadii;
 import javafx.scene.layout.FlowPane;
 import javafx.scene.layout.GridPane;
+import javafx.scene.layout.HBox;
+import javafx.scene.layout.Priority;
 import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
 import javafx.scene.paint.Color;
+import javafx.stage.FileChooser;
+import javafx.stage.Modality;
+import javafx.stage.Screen;
 import javafx.stage.Stage;
 import javafx.stage.StageStyle;
+import javafx.util.StringConverter;
 
+import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Optional;
+import java.util.function.Consumer;
+import java.util.function.DoubleConsumer;
 
 public class TestStage extends Application {
-    private List<Stage> stages = new ArrayList<>();
-    private Stage currentStage = null;
+    private final ObservableList<Stage> stages = FXCollections.observableArrayList();
     private int stageCounter = 0;
 
-    private final Label lblWidth = new Label();
-    private final Label lblHeight = new Label();
-    private final Label lblMinWidth = new Label();
-    private final Label lblMinHeight = new Label();
-    private final Label lblMaxWidth = new Label();
-    private final Label lblMaxHeight = new Label();
-    private final Label lblX = new Label();
-    private final Label lblY = new Label();
-    private final Label lblSceneWidth = new Label();
-    private final Label lblSceneHeight = new Label();
-    private final Label lblSceneX = new Label();
-    private final Label lblSceneY = new Label();
-    private final Label lblCurrentStage = new Label();
-    private final ComboBox<StageStyle> cbStageStyle = new ComboBox<>(FXCollections.observableArrayList(StageStyle.values()));
-    private final CheckBox cbIsFullScreen = new CheckBox("Is FullScreen");
-    private final CheckBox cbIsMaximized = new CheckBox("Is Maximized");
-    private final CheckBox cbIsIconified = new CheckBox("Is Iconified");
-    private final CheckBox cbIsResizable = new CheckBox("Is Resizable");
+    private final ComboBox<StageStyle> cbStageStyle =
+            new ComboBox<>(FXCollections.observableArrayList(StageStyle.values()));
+    private final ComboBox<Modality> cbModality = new ComboBox<>(FXCollections.observableArrayList(Modality.values()));
+    private final ComboBox<Stage> cbOwner = new ComboBox<>();
 
-    private final Button btnMaxminize = new Button("Maximize");
-    private final Button btnFullScreen = new Button("FullScreen");
-    private final Button btnIconify = new Button("Iconify");
-    private final Button btnResizable = new Button("Resizable");
     private final Button btnToFront = new Button("To Front");
     private final Button btnToBack = new Button("To Back");
     private final Button btnCreate = new Button("Create");
-    private final Button btnSelectNone = new Button("Select None");
-    private final Button btnHide = new Button("Hide");
+    private final Button btnCreateShow = new Button("Create/Show");
+    private final Button btnSelectLast = new Button("Select Last");
+    private final Button btnSelectPrevious = new Button("◀");
+    private final Button btnSelectNone = new Button("None");
+    private final Button btnSelectNext = new Button("▶");
+    private final Button btnHide = new Button("Hide/Close");
     private final Button btnShow = new Button("Show");
-    private final Button btnSizeToScene = new Button("Size to scene");
-    private final Button btnCenterOnScreen = new Button("Center on screen");
-    private final Button btnResize = new Button("Resize");
-    private final Button btnMaxSize = new Button("Set Max Size");
-    private final Button btnUnsetMaxSize = new Button("Unset Max Size");
-    private final Button btnMove = new Button("Move");
+    private final Button btnSizeToScene = new Button("Size to Scene");
+    private final Button btnCenterOnScreen = new Button("Center on Screen");
     private final Button btnFocus = new Button("Focus");
-    private final Button btnStack = new Button("Stack");
+    private final PropertyEditor propertyEditor = new PropertyEditor();
 
     private final ObjectProperty<StageStyle> initStyle = new SimpleObjectProperty<>(StageStyle.DECORATED);
+    private final ObjectProperty<Modality> initModality = new SimpleObjectProperty<>(Modality.NONE);
+    private final ObjectProperty<Stage> initOwner = new SimpleObjectProperty<>(null);
+    private Stage currentStage = null;
 
+    private static final double MAX_WIDTH = 7680;
+    private static final double MAX_HEIGHT = 4320;
 
     private void updateCommandButtonsState() {
-        boolean noStagesCreated = stages.isEmpty();
+        boolean disabled = stages.isEmpty() || currentStage == null;
 
-        btnShow.setDisable(noStagesCreated);
-        btnHide.setDisable(noStagesCreated);
-        btnSizeToScene.setDisable(noStagesCreated);
-        btnCenterOnScreen.setDisable(noStagesCreated);
-        btnResize.setDisable(noStagesCreated);
-        btnMaxSize.setDisable(noStagesCreated);
-        btnUnsetMaxSize.setDisable(noStagesCreated);
-        btnMove.setDisable(noStagesCreated);
-        btnIconify.setDisable(noStagesCreated);
-        btnMaxminize.setDisable(noStagesCreated);
-        btnFullScreen.setDisable(noStagesCreated);
-        btnResizable.setDisable(noStagesCreated);
-        btnToFront.setDisable(noStagesCreated);
-        btnToBack.setDisable(noStagesCreated);
-        btnFocus.setDisable(noStagesCreated);
-        btnSelectNone.setDisable(noStagesCreated);
-        btnStack.setDisable(noStagesCreated);
+        btnShow.setDisable(disabled);
+        btnHide.setDisable(disabled);
+        btnSizeToScene.setDisable(disabled);
+        btnCenterOnScreen.setDisable(disabled);
+        btnToFront.setDisable(disabled);
+        btnToBack.setDisable(disabled);
+        btnFocus.setDisable(disabled);
+        btnSelectNone.setDisable(disabled);
+
+        btnSelectLast.setDisable(stages.isEmpty() || currentStage == stages.getLast());
+        btnSelectNext.setDisable(stages.isEmpty() || currentStage == null || currentStage == stages.getLast());
+        btnSelectPrevious.setDisable(stages.isEmpty() || currentStage == null  || currentStage == stages.getFirst());
     }
 
     private void updateBindings() {
         if (currentStage == null) {
-            cbIsMaximized.selectedProperty().unbind();
-            cbIsFullScreen.selectedProperty().unbind();
-            cbIsIconified.selectedProperty().unbind();
-            cbIsResizable.selectedProperty().unbind();
-            lblWidth.textProperty().unbind();
-            lblHeight.textProperty().unbind();
-            lblMinWidth.textProperty().unbind();
-            lblMinHeight.textProperty().unbind();
-            lblMaxWidth.textProperty().unbind();
-            lblMaxHeight.textProperty().unbind();
-            lblX.textProperty().unbind();
-            lblY.textProperty().unbind();
-            lblSceneWidth.textProperty().unbind();
-            lblSceneHeight.textProperty().unbind();
-            lblSceneX.textProperty().unbind();
-            lblSceneY.textProperty().unbind();
-            lblCurrentStage.textProperty().unbind();
-
-
-            cbIsMaximized.setSelected(false);
-            cbIsFullScreen.setSelected(false);
-            cbIsIconified.setSelected(false);
-            cbIsResizable.setSelected(false);
-            lblWidth.setText("Width: 0.00");
-            lblHeight.setText("Height: 0.00");
-            lblMinWidth.setText("Min Width: 0.00");
-            lblMinHeight.setText("Min Height: 0.00");
-            lblMaxWidth.setText("Max Width: 0.00");
-            lblMaxHeight.setText("Max Height: 0.00");
-            lblX.setText("X: 0.00");
-            lblY.setText("Y: 0.00");
-            lblSceneWidth.setText("Width: 0.00");
-            lblSceneHeight.setText("Height: 0.00");
-            lblSceneX.setText("X: 0.00");
-            lblSceneY.setText("Y: 0.00");
-            lblCurrentStage.setText("Current Stage: None");
+            propertyEditor.unbind();
         } else {
-            Scene scene = currentStage.getScene();
-
-            cbIsMaximized.selectedProperty().bind(currentStage.maximizedProperty());
-            cbIsFullScreen.selectedProperty().bind(currentStage.fullScreenProperty());
-            cbIsIconified.selectedProperty().bind(currentStage.iconifiedProperty());
-            cbIsResizable.selectedProperty().bind(currentStage.resizableProperty());
-
-
-            lblWidth.textProperty().bind(Bindings.format("Width: %.2f", currentStage.widthProperty()));
-            lblHeight.textProperty().bind(Bindings.format("Height: %.2f", currentStage.heightProperty()));
-            lblMinWidth.textProperty().bind(Bindings.format("Min Width: %.2f", currentStage.minWidthProperty()));
-            lblMinHeight.textProperty().bind(Bindings.format("Min Height: %.2f", currentStage.minHeightProperty()));
-            lblMaxWidth.textProperty().bind(Bindings.format("Max Width: %.2f", currentStage.maxWidthProperty()));
-            lblMaxHeight.textProperty().bind(Bindings.format("Max Height: %.2f", currentStage.maxHeightProperty()));
-            lblX.textProperty().bind(Bindings.format("X: %.2f", currentStage.xProperty()));
-            lblY.textProperty().bind(Bindings.format("Y: %.2f", currentStage.yProperty()));
-            lblCurrentStage.textProperty().bind(Bindings.format("Current Stage: %s", currentStage.titleProperty()));
-
-            if (scene != null) {
-                lblSceneWidth.textProperty().bind(Bindings.format("Width: %.2f", scene.widthProperty()));
-                lblSceneHeight.textProperty().bind(Bindings.format("Height: %.2f", scene.heightProperty()));
-                lblSceneX.textProperty().bind(Bindings.format("X: %.2f", scene.xProperty()));
-                lblSceneY.textProperty().bind(Bindings.format("Y: %.2f", scene.yProperty()));
-            }
+            propertyEditor.bindToStage(currentStage);
         }
     }
 
-    private final CheckBox cbAlwaysOnTop = new CheckBox("Command Always On Top");
+    private final CheckBox cbCommandAlwaysOnTop = new CheckBox("Command Always On Top");
 
     @Override
     public void start(Stage stage) {
         cbStageStyle.getSelectionModel().select(StageStyle.DECORATED);
+        cbModality.getSelectionModel().select(Modality.NONE);
+        cbOwner.itemsProperty().bind(Bindings.createObjectBinding(() -> {
+            ObservableList<Stage> listWithNull = FXCollections.observableArrayList();
+            listWithNull.add(null);
+            listWithNull.addAll(stages);
+            return listWithNull;
+        }, stages));
+
+        cbOwner.setConverter(new StringConverter<>() {
+            @Override
+            public String toString(Stage stage) {
+                if (stage == null) {
+                    return "None";
+                }
+
+                return stage.getTitle();
+            }
+
+            @Override
+            public Stage fromString(String string) {
+                return null;
+            }
+        });
+
         initStyle.bind(cbStageStyle.valueProperty());
-        stage.setAlwaysOnTop(true);
-
-        cbAlwaysOnTop.setSelected(stage.isAlwaysOnTop());
-        cbAlwaysOnTop.setOnAction(e -> stage.setAlwaysOnTop(cbAlwaysOnTop.isSelected()));
-
-        btnMaxminize.setOnAction(e -> {
-            if (currentStage != null) {
-                currentStage.setMaximized(!currentStage.isMaximized());
-            }
-        });
-
-        btnFullScreen.setOnAction(e -> {
-            if (currentStage != null) {
-                currentStage.setFullScreen(!currentStage.isFullScreen());
-            }
-        });
-
-        btnIconify.setOnAction(e -> {
-            if (currentStage != null) {
-                currentStage.setIconified(!currentStage.isIconified());
-            }
-        });
-
-        btnResizable.setOnAction(e -> {
-            if (currentStage != null) {
-                currentStage.setResizable(!currentStage.isResizable());
-            }
-        });
+        initModality.bind(cbModality.valueProperty());
+        initOwner.bind(cbOwner.valueProperty());
 
         btnToFront.setOnAction(e -> {
             if (currentStage != null) {
@@ -241,14 +208,56 @@ public class TestStage extends Application {
 
         btnCreate.setOnAction(e -> createTestStage());
 
+        btnCreateShow.setOnAction(e -> {
+            createTestStage();
+            currentStage.show();
+        });
+
         btnSelectNone.setOnAction(e -> {
             currentStage = null;
             updateBindings();
+            updateCommandButtonsState();
+        });
+
+        btnSelectLast.setOnAction(e -> {
+            currentStage = stages.get(stages.size() - 1);
+            updateBindings();
+            updateCommandButtonsState();
+        });
+
+        btnSelectNext.setOnAction(e -> {
+            if (!stages.isEmpty()) {
+                int index = stages.indexOf(currentStage);
+                if (index < stages.size() - 1) {
+                    currentStage = stages.get(index + 1);
+                    updateBindings();
+                    updateCommandButtonsState();
+                }
+            }
+        });
+
+        btnSelectPrevious.setOnAction(e -> {
+            if (!stages.isEmpty()) {
+                int index = stages.indexOf(currentStage);
+                if (index > 0) {
+                    currentStage = stages.get(index - 1);
+                    updateBindings();
+                    updateCommandButtonsState();
+                }
+            }
         });
 
         btnHide.setOnAction(e -> {
             if (currentStage != null) {
+                boolean isShowing = currentStage.isShowing();
                 currentStage.hide();
+
+                if (!isShowing) {
+                    stages.remove(currentStage);
+                    currentStage = stages.isEmpty() ? null : stages.getLast();
+                    updateCommandButtonsState();
+                    updateBindings();
+                }
             }
         });
 
@@ -270,134 +279,83 @@ public class TestStage extends Application {
             }
         });
 
-        btnResize.setOnAction(e -> {
-            if (currentStage != null) {
-                double[] dimensions = showValuesDialog(
-                        "Resize Stage",
-                        "Width:",
-                        "Height:",
-                        currentStage.getWidth(),
-                        currentStage.getHeight(),
-                        50,
-                        2000);
-
-                if (dimensions != null) {
-                    currentStage.setWidth(dimensions[0]);
-                    currentStage.setHeight(dimensions[1]);
-                }
-            }
-        });
-
-        btnMaxSize.setOnAction(e -> {
-            if (currentStage != null) {
-                double[] dimensions = showValuesDialog(
-                        "Set Max Size",
-                        "Max Width:",
-                        "Max Height:",
-                        currentStage.getMaxWidth(),
-                        currentStage.getMaxHeight(),
-                        50,
-                        2000);
-
-                if (dimensions != null) {
-                    currentStage.setMaxWidth(dimensions[0]);
-                    currentStage.setMaxHeight(dimensions[1]);
-                }
-            }
-        });
-
-        btnUnsetMaxSize.setOnAction(e -> {
-            if (currentStage != null) {
-                currentStage.setMaxWidth(Double.MAX_VALUE);
-                currentStage.setMaxHeight(Double.MAX_VALUE);
-            }
-        });
-
-        btnMove.setOnAction(e -> {
-            if (currentStage != null) {
-                double[] position = showValuesDialog(
-                        "Move Stage",
-                        "X Position:",
-                        "Y Position:",
-                        currentStage.getX(),
-                        currentStage.getY(),
-                        0,
-                        3000);
-
-                if (position != null) {
-                    currentStage.setX(position[0]);
-                    currentStage.setY(position[1]);
-                }
-            }
-        });
-
         btnFocus.setOnAction(e -> {
             if (currentStage != null) {
                 currentStage.requestFocus();
             }
         });
 
-        btnStack.setOnAction(e -> {
-            if (!stages.isEmpty()) {
-                double xOffset = 0;
-                double yOffset = 0;
-
-                for (Stage stageWindow : stages) {
-                    stageWindow.setX(xOffset);
-                    stageWindow.setY(yOffset);
-                    stageWindow.show();
-                    xOffset += 50;
-                    yOffset += 50;
-                }
-            }
-        });
-
         updateCommandButtonsState();
 
-        cbIsMaximized.setDisable(true);
-        cbIsFullScreen.setDisable(true);
-        cbIsIconified.setDisable(true);
-        cbIsResizable.setDisable(true);
+        FlowPane flow0 = new FlowPane(label("Style: ", cbStageStyle), label("Modality: ", cbModality),
+                label("Owner: ", cbOwner));
+        FlowPane flow1 = new FlowPane(btnCreate, btnShow, btnCreateShow, btnHide);
+        FlowPane flow2 = new FlowPane(btnCenterOnScreen, btnSizeToScene);
+        FlowPane flow3 = new FlowPane(btnToFront, btnToBack, btnSelectNone, btnSelectLast, btnSelectPrevious,
+                btnSelectNext, btnFocus);
 
-        FlowPane commandPane = new FlowPane(cbStageStyle, btnCreate, btnShow, btnHide, btnSizeToScene,
-                btnCenterOnScreen, btnResize, btnMaxSize, btnUnsetMaxSize, btnMove, btnIconify, btnMaxminize,
-                btnFullScreen, btnResizable, btnToFront, btnToBack, btnStack, btnFocus, btnSelectNone, cbAlwaysOnTop);
-        commandPane.setHgap(5);
-        commandPane.setVgap(5);
+        List.of(flow0, flow1, flow2, flow3).forEach(flow -> {
+            flow.setHgap(5);
+            flow.setVgap(5);
+        });
 
+        VBox commandPane = new VBox(cbCommandAlwaysOnTop, flow0, flow1, flow2, flow3);
+        commandPane.setSpacing(5);
+        commandPane.setFillWidth(true);
 
-        VBox stagePropertiesBox = new VBox(
-                lblCurrentStage,
-                cbIsIconified, cbIsMaximized,
-                cbIsFullScreen, cbIsResizable,
-                lblMinWidth, lblMinHeight, lblMaxWidth, lblMaxHeight,
-                lblWidth, lblHeight, lblX, lblY
-        );
-        stagePropertiesBox.setSpacing(5);
+        TitledPane commandPaneTitledPane = new TitledPane("Commands", commandPane);
+        commandPaneTitledPane.setCollapsible(false);
 
-        VBox scenePropertiesBox = new VBox(
-                lblSceneWidth, lblSceneHeight, lblSceneX, lblSceneY
-        );
-        scenePropertiesBox.setSpacing(5);
+        TitledPane editorTitledPane = new TitledPane("Properties", propertyEditor);
+        editorTitledPane.setCollapsible(false);
 
-        TitledPane stagePropertiesPane = new TitledPane("Stage Properties:", stagePropertiesBox);
-        stagePropertiesPane.setCollapsible(false);
-
-        TitledPane scenePropertiesPane = new TitledPane("Scene Properties:", scenePropertiesBox);
-        scenePropertiesPane.setCollapsible(false);
+        Tab editorTab = new Tab("Edit");
+        editorTab.setClosable(false);
+        editorTab.setContent(editorTitledPane);
 
         VBox root = new VBox(
-                commandPane,
-                stagePropertiesPane,
-                scenePropertiesPane
+                commandPaneTitledPane,
+                editorTitledPane
         );
         root.setSpacing(5);
         root.setFillWidth(true);
 
-        Scene scene = new Scene(root, 500, 600);
+
+        Scene scene = new Scene(root);
         stage.setTitle("Command Stage");
         stage.setScene(scene);
+        stage.setOnShown(e -> {
+            Rectangle2D stageBounds = new Rectangle2D(
+                    stage.getX(),
+                    stage.getY(),
+                    stage.getWidth(),
+                    stage.getHeight()
+            );
+
+            Screen currentScreen = Screen.getScreens()
+                    .stream()
+                    .filter(screen -> screen.getVisualBounds().intersects(stageBounds))
+                    .findFirst()
+                    .orElse(Screen.getPrimary());
+
+            Rectangle2D visualBounds = currentScreen.getVisualBounds();
+            stage.setHeight(visualBounds.getHeight());
+
+            double x = visualBounds.getMaxX() - stage.getWidth();
+            double y = visualBounds.getMaxY() - stage.getHeight();
+
+            stage.setX(x);
+            stage.setY(y);
+        });
+        stage.setWidth(500);
         stage.show();
+    }
+
+    private HBox label(String label, Control control) {
+        HBox hbox = new HBox(new Label(label), control);
+        hbox.setSpacing(5);
+        hbox.setAlignment(Pos.CENTER_LEFT);
+        return hbox;
     }
 
     private void createTestStage() {
@@ -428,6 +386,8 @@ public class TestStage extends Application {
 
         newStage.setScene(testScene);
         newStage.initStyle(initStyle.getValue());
+        newStage.initModality(initModality.getValue());
+        newStage.initOwner(initOwner.getValue());
         newStage.setTitle("Test Stage " + stageCounter);
 
         newStage.focusedProperty().addListener((obs, oldVal, newVal) -> {
@@ -443,7 +403,7 @@ public class TestStage extends Application {
         newStage.setOnHidden(e -> {
             stages.remove(newStage);
             if (currentStage == newStage) {
-                currentStage = stages.isEmpty() ? null : stages.get(stages.size() - 1);
+                currentStage = stages.isEmpty() ? null : stages.getLast();
                 updateBindings();
             }
             updateCommandButtonsState();
@@ -453,101 +413,284 @@ public class TestStage extends Application {
         updateCommandButtonsState();
     }
 
-    private double[] showValuesDialog(String title, String firstLabel, String secondLabel,
-                                      double defaultFirst, double defaultSecond,
-                                      double minValue, double maxValue) {
-        Dialog<double[]> dialog = new Dialog<>();
-        dialog.setTitle(title);
-        dialog.setHeaderText("Enter values:");
-
-        dialog.getDialogPane().getButtonTypes().addAll(ButtonType.OK, ButtonType.CANCEL);
-
-        Spinner<Double> firstSpinner = new Spinner<>();
-        SpinnerValueFactory.DoubleSpinnerValueFactory firstValueFactory =
-                new SpinnerValueFactory.DoubleSpinnerValueFactory(minValue, maxValue, defaultFirst, 1.0);
-        firstSpinner.setValueFactory(firstValueFactory);
-        firstSpinner.setEditable(true);
-
-        Spinner<Double> secondSpinner = new Spinner<>();
-        SpinnerValueFactory.DoubleSpinnerValueFactory secondValueFactory =
-                new SpinnerValueFactory.DoubleSpinnerValueFactory(minValue, maxValue, defaultSecond, 1.0);
-        secondSpinner.setValueFactory(secondValueFactory);
-        secondSpinner.setEditable(true);
-
-        GridPane grid = new GridPane();
-        grid.setHgap(10);
-        grid.setVgap(10);
-        grid.setPadding(new Insets(20, 150, 10, 10));
-
-        grid.add(new Label(firstLabel), 0, 0);
-        grid.add(firstSpinner, 1, 0);
-        grid.add(new Label(secondLabel), 0, 1);
-        grid.add(secondSpinner, 1, 1);
-
-        dialog.getDialogPane().setContent(grid);
-
-        dialog.setResultConverter(dialogButton -> {
-            if (dialogButton == ButtonType.OK) {
-                return new double[] {firstSpinner.getValue(), secondSpinner.getValue()};
-            }
-            return null;
-        });
-
-        Optional<double[]> result = dialog.showAndWait();
-        return result.orElse(null);
-    }
-
     public static void main(String[] args) {
         launch(TestStage.class, args);
     }
 
     private void createSceneWithTextField() {
-        if (currentStage != null) {
-            StackPane root = new StackPane();
+        StackPane root = new StackPane();
 
-            TextField textField = new TextField();
-            textField.setPromptText("Enter text here");
+        TextField textField = new TextField();
+        textField.setPromptText("Enter text here");
 
-            root.getChildren().add(textField);
-            setupContextMenu(root);
-            Scene scene = new Scene(root, 300, 200);
+        root.getChildren().add(textField);
+        setupContextMenu(root);
+        Scene scene = new Scene(root, 300, 200);
 
-            currentStage.setScene(scene);
-            updateSceneBindings(scene);
-        }
+        currentStage.setScene(scene);
     }
 
     private void createSceneWithTooltipBox() {
-        if (currentStage != null) {
-            StackPane root = new StackPane();
+        StackPane root = new StackPane();
 
-            StackPane coloredBox = new StackPane();
-            coloredBox.setBackground(Background.fill(Color.CORNFLOWERBLUE));
+        StackPane coloredBox = new StackPane();
+        coloredBox.setBackground(Background.fill(Color.CORNFLOWERBLUE));
 
-            Tooltip tooltip = new Tooltip("The quick brown fox jumps over the lazy dog.");
-            Tooltip.install(coloredBox, tooltip);
-            root.getChildren().add(coloredBox);
-            setupContextMenu(root);
-            Scene scene = new Scene(root, 300, 200);
-            currentStage.setScene(scene);
-            updateSceneBindings(scene);
+        Tooltip tooltip = new Tooltip("The quick brown fox jumps over the lazy dog.");
+        Tooltip.install(coloredBox, tooltip);
+        root.getChildren().add(coloredBox);
+        setupContextMenu(root);
+        Scene scene = new Scene(root, 300, 200);
+        currentStage.setScene(scene);
+    }
+
+    private void createRainbowSceneAnimation() {
+        Label fpsLabel = new Label("FPS: 0");
+        fpsLabel.setStyle("-fx-font-size: 20; -fx-text-fill: white; -fx-background-color: rgba(0,0,0,0.5); -fx-padding: 5;");
+
+        StackPane root = new StackPane();
+        root.getChildren().add(fpsLabel);
+        StackPane.setAlignment(fpsLabel, Pos.TOP_RIGHT);
+
+        Scene scene = new Scene(root, 600, 400);
+
+        final double[] hue = {0};
+
+        AnimationTimer timer = new AnimationTimer() {
+            private long lastFpsTime = 0;
+            private int frameCount = 0;
+
+            @Override
+            public void handle(long now) {
+                hue[0] += 0.5;
+                if (hue[0] >= 360) {
+                    hue[0] = 0;
+                }
+                Color color = Color.hsb(hue[0], 1.0, 1.0);
+                root.setBackground(new Background(new BackgroundFill(color, CornerRadii.EMPTY, Insets.EMPTY)));
+
+                frameCount++;
+                if (lastFpsTime == 0) {
+                    lastFpsTime = now;
+                } else if (now - lastFpsTime >= 1_000_000_000) {
+                    double fps = frameCount * 1e9 / (now - lastFpsTime);
+                    fpsLabel.setText(String.format("FPS: %.1f", fps));
+                    frameCount = 0;
+                    lastFpsTime = now;
+                }
+            }
+        };
+
+        timer.start();
+        setupContextMenu(root);
+
+        currentStage.setScene(scene);
+    }
+
+    private void createAlert(boolean windowModal) {
+        Alert alert = new Alert(Alert.AlertType.INFORMATION);
+        alert.setTitle("Alert");
+        alert.setHeaderText("The quick brown fox jumps over the lazy dog.");
+
+        if (windowModal) {
+            alert.initModality(Modality.WINDOW_MODAL);
+            alert.initOwner(currentStage);
+        }
+
+        alert.showAndWait();
+    }
+
+    private void createFileOpen() {
+        FileChooser fileChooser = new FileChooser();
+        fileChooser.setTitle("Open Resource File");
+        fileChooser.getExtensionFilters().addAll(
+                new FileChooser.ExtensionFilter("All Files", "*.*")
+        );
+        File file = fileChooser.showOpenDialog(currentStage);
+
+        if (file != null) {
+            new Alert(Alert.AlertType.INFORMATION, "File selected: " + file.getAbsolutePath()).showAndWait();
+        } else {
+            new Alert(Alert.AlertType.WARNING, "No file selected").showAndWait();
         }
     }
 
-    private void updateSceneBindings(Scene scene) {
-        lblSceneWidth.textProperty().bind(Bindings.format("Width: %.2f", scene.widthProperty()));
-        lblSceneHeight.textProperty().bind(Bindings.format("Height: %.2f", scene.heightProperty()));
-        lblSceneX.textProperty().bind(Bindings.format("X: %.2f", scene.xProperty()));
-        lblSceneY.textProperty().bind(Bindings.format("Y: %.2f", scene.yProperty()));
+    private void setupContextMenu(Node root) {
+        ContextMenu contextMenu = new ContextMenu();
+        MenuItem textFieldMenuItem = new MenuItem("Scene with TextField");
+        textFieldMenuItem.setOnAction(e -> createSceneWithTextField());
+        MenuItem tooltipBoxMenuItem = new MenuItem("Scene with Tooltip Box");
+        tooltipBoxMenuItem.setOnAction(e -> createSceneWithTooltipBox());
+        MenuItem rainbowSceneMenuItem = new MenuItem("Rainbow Scene");
+        rainbowSceneMenuItem.setOnAction(e -> createRainbowSceneAnimation());
+        MenuItem alertMenuItem = new MenuItem("Alert - Application Modal");
+        alertMenuItem.setOnAction(e -> createAlert(false));
+        MenuItem alertWindowModalMenuItem = new MenuItem("Alert - Window Modal");
+        alertWindowModalMenuItem.setOnAction(e -> createAlert(true));
+        MenuItem fileOpenMenuItem = new MenuItem("File Open");
+        fileOpenMenuItem.setOnAction(e -> createFileOpen());
+
+
+        contextMenu.getItems().addAll(textFieldMenuItem, tooltipBoxMenuItem,
+                rainbowSceneMenuItem, alertMenuItem, alertWindowModalMenuItem, fileOpenMenuItem);
+        root.setOnContextMenuRequested(e -> contextMenu.show(root, e.getScreenX(), e.getScreenY()));
     }
 
-    private void setupContextMenu(StackPane root) {
-        ContextMenu contextMenu = new ContextMenu();
-        MenuItem textFieldMenuItem = new MenuItem("Create Scene with TextField");
-        textFieldMenuItem.setOnAction(e -> createSceneWithTextField());
-        MenuItem tooltipBoxMenuItem = new MenuItem("Create Scene with Tooltip Box");
-        tooltipBoxMenuItem.setOnAction(e -> createSceneWithTooltipBox());
-        contextMenu.getItems().addAll(textFieldMenuItem, tooltipBoxMenuItem);
-        root.setOnContextMenuRequested(e -> contextMenu.show(root, e.getScreenX(), e.getScreenY()));
+    class PropertyEditor extends VBox {
+        private final PropertyEditorPane stagePane = new PropertyEditorPane("Stage");
+        private final PropertyEditorPane scenePane = new PropertyEditorPane("Scene");
+
+        private final ObjectProperty<Scene> sceneProperty = new SimpleObjectProperty<>();
+
+        PropertyEditor() {
+            getChildren().addAll(stagePane, scenePane);
+            stagePane.setMaxHeight(550);
+            setFillWidth(true);
+        }
+
+        public void bindToStage(Stage stage) {
+            unbind();
+
+            stagePane.addStringProperty("Title", stage.titleProperty(), stage::setTitle);
+            stagePane.addBooleanProperty("Always OnTop", stage.alwaysOnTopProperty(), stage::setAlwaysOnTop);
+            stagePane.addBooleanProperty("FullScreen", stage.fullScreenProperty(), stage::setFullScreen);
+            stagePane.addBooleanProperty("Maximized", stage.maximizedProperty(), stage::setMaximized);
+            stagePane.addBooleanProperty("Iconified", stage.iconifiedProperty(), stage::setIconified);
+            stagePane.addBooleanProperty("Resizeable", stage.resizableProperty(), stage::setResizable);
+            stagePane.addDoublePropery("X", stage.xProperty(), stage::setX, 0, MAX_WIDTH * 2, 1.0);
+            stagePane.addDoublePropery("Y", stage.yProperty(), stage::setY, 0, MAX_HEIGHT * 2, 1.0);
+            stagePane.addDoublePropery("Width", stage.widthProperty(), stage::setWidth, 1, MAX_WIDTH, 1.0);
+            stagePane.addDoublePropery("Height", stage.heightProperty(), stage::setHeight, 1, MAX_HEIGHT, 1.0);
+            stagePane.addDoublePropery("Min Width", stage.minWidthProperty(), stage::setMinWidth, 1, MAX_WIDTH, 1.0);
+            stagePane.addDoublePropery("Min Height", stage.minHeightProperty(), stage::setMinHeight, 1, MAX_HEIGHT,
+                    1.0);
+            stagePane.addDoublePropery("Max Width", stage.maxWidthProperty(), stage::setMaxWidth, 1, Double.MAX_VALUE,
+                    1.0);
+            stagePane.addDoublePropery("Max Height", stage.maxHeightProperty(), stage::setMaxHeight, 1,
+                    Double.MAX_VALUE, 1.0);
+            stagePane.addDoublePropery("RenderScale X", stage.renderScaleXProperty(), stage::setRenderScaleX, 0, 2,
+                    0.25);
+            stagePane.addDoublePropery("RenderScale Y", stage.renderScaleYProperty(), stage::setRenderScaleY, 0, 2,
+                    0.25);
+            stagePane.addDoublePropery("Opacity", stage.opacityProperty(), stage::setOpacity, 0, 1, 0.1);
+
+            sceneProperty.bind(stage.sceneProperty());
+            bindScene(stage.getScene());
+
+            sceneProperty.addListener((obs, oldScene, newScene) -> {
+                if (newScene != null) {
+                    bindScene(newScene);
+                }
+            });
+        }
+
+        private void bindScene(Scene scene) {
+            scenePane.unbind();
+            scenePane.addDoubleLabelProperty("X", scene.xProperty());
+            scenePane.addDoubleLabelProperty("Y", scene.yProperty());
+            scenePane.addDoubleLabelProperty("Width", scene.widthProperty());
+            scenePane.addDoubleLabelProperty("Height", scene.heightProperty());
+        }
+
+        public void unbind() {
+            scenePane.unbind();
+            stagePane.unbind();
+        }
+    }
+
+    class PropertyEditorPane extends TitledPane {
+        private int currentRow = 0;
+        private final List<Runnable> clearChangeListeners = new ArrayList<>();
+        private final GridPane gridPane = new GridPane();
+
+        PropertyEditorPane(String title) {
+            setText(title);
+            ScrollPane propertiesScrollPane = new ScrollPane(propertyEditor);
+            propertiesScrollPane.setFitToWidth(true);
+            propertiesScrollPane.setHbarPolicy(ScrollPane.ScrollBarPolicy.NEVER);
+            propertiesScrollPane.setContent(gridPane);
+
+            gridPane.setHgap(5);
+            gridPane.setVgap(5);
+            gridPane.setPadding(new Insets(10));
+
+            setContent(propertiesScrollPane);
+        }
+
+        private <T> void addListener(ReadOnlyProperty<T> property, ChangeListener<T> changeListener) {
+            property.addListener(changeListener);
+            clearChangeListeners.add(() -> property.removeListener(changeListener));
+        }
+
+        private void addLabel(String label) {
+            Label lbl = new Label(label);
+            gridPane.add(lbl, 0, currentRow);
+            GridPane.setHgrow(lbl, Priority.SOMETIMES);
+            GridPane.setHalignment(lbl, HPos.RIGHT);
+        }
+
+        public void addDoubleLabelProperty(String label, ReadOnlyDoubleProperty property) {
+            addLabel(label);
+            Label lbl = new Label();
+            lbl.textProperty().bind(property.asString("%.2f"));
+            gridPane.add(lbl, 1, currentRow);
+            GridPane.setHgrow(lbl, Priority.ALWAYS);
+            currentRow++;
+        }
+
+        public void addDoublePropery(String label, ReadOnlyDoubleProperty property, DoubleConsumer setConsumer,
+                                      double min, double max,
+                                      double amountToStepBy) {
+            addLabel(label);
+            Spinner<Double> spinner = new Spinner<>();
+            spinner.setEditable(true);
+            SpinnerValueFactory.DoubleSpinnerValueFactory spinnerValueFactory =
+                    new SpinnerValueFactory.DoubleSpinnerValueFactory(min, max, property.get(), amountToStepBy);
+            spinner.setValueFactory(spinnerValueFactory);
+            gridPane.add(spinner, 1, currentRow);
+            GridPane.setHgrow(spinner, Priority.ALWAYS);
+
+            addListener(property, (obs, oldValue, newValue) -> {
+                if (!newValue.equals(spinner.getValue())) {
+                    spinnerValueFactory.setValue((Double) newValue);
+                }
+            });
+
+            spinner.valueProperty().addListener((observable, oldValue, newValue) -> {
+                if (!newValue.equals(oldValue)) {
+                    setConsumer.accept(newValue);
+                }
+            });
+
+            currentRow++;
+        }
+
+        public void addStringProperty(String label, ReadOnlyStringProperty property, Consumer<String> setConsumer) {
+            addLabel(label);
+            TextField textField = new TextField(property.get());
+            gridPane.add(textField, 1, currentRow);
+            GridPane.setHgrow(textField, Priority.ALWAYS);
+
+            addListener(property, (obs, oldValue, newValue) -> textField.setText(newValue));
+            textField.setOnAction(e -> setConsumer.accept(textField.getText()));
+            currentRow++;
+        }
+
+        public void addBooleanProperty(String label, ReadOnlyBooleanProperty property, Consumer<Boolean> setConsumer) {
+            addLabel(label);
+            CheckBox checkBox = new CheckBox();
+            checkBox.setSelected(property.get());
+            gridPane.add(checkBox, 1, currentRow);
+
+            addListener(property, (obs, oldValue, newValue) -> checkBox.setSelected(newValue));
+            checkBox.setOnAction(e -> setConsumer.accept(checkBox.isSelected()));
+            currentRow++;
+        }
+
+        public void unbind() {
+            clearChangeListeners.forEach(Runnable::run);
+            gridPane.getChildren().clear();
+            currentRow = 0;
+        }
     }
 }

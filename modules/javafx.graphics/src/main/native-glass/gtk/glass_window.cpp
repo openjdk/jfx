@@ -361,7 +361,7 @@ void WindowContext::process_delete() {
 
 void WindowContext::notify_repaint() {
     if (jview) {
-        LOG0("jViewNotifyRepaint\n");
+//        LOG0("jViewNotifyRepaint\n");
         mainEnv->CallVoidMethod(jview, jViewNotifyRepaint, 0, 0,
                             geometry.width.view, geometry.height.view);
         CHECK_JNI_EXCEPTION(mainEnv)
@@ -370,6 +370,7 @@ void WindowContext::notify_repaint() {
 
 void WindowContext::notify_repaint(GdkRectangle *rect) {
     if (jview) {
+//        LOG4("jViewNotifyRepaint %d, %d, %d, %d\n", rect->x, rect->y, rect->width, rect->height);
         mainEnv->CallVoidMethod(jview, jViewNotifyRepaint, rect->x, rect->y, rect->width, rect->height);
         CHECK_JNI_EXCEPTION(mainEnv)
     }
@@ -1239,6 +1240,7 @@ void WindowContext::set_maximized(bool state) {
         initial_state_mask = state
             ? (initial_state_mask | GDK_WINDOW_STATE_MAXIMIZED)
             : (initial_state_mask & ~GDK_WINDOW_STATE_MAXIMIZED);
+        notify_window_resize(GDK_WINDOW_STATE_MAXIMIZED);
     }
 }
 
@@ -1249,6 +1251,8 @@ void WindowContext::enter_fullscreen() {
         gdk_window_fullscreen(gdk_window);
     } else {
         initial_state_mask |= GDK_WINDOW_STATE_FULLSCREEN;
+        mainEnv->CallVoidMethod(jview, jViewNotifyView, com_sun_glass_events_ViewEvent_FULLSCREEN_ENTER);
+        CHECK_JNI_EXCEPTION(mainEnv)
     }
 }
 

@@ -140,11 +140,6 @@ class GtkWindow extends Window {
     protected boolean _maximize(long ptr, boolean maximize,
                                 boolean wasMaximized) {
         maximizeImpl(ptr, maximize, wasMaximized);
-
-        if (!isVisible()) {
-            notifyStateChanged(WindowEvent.MAXIMIZE);
-        }
-
         return isMaximized();
     }
 
