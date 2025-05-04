@@ -90,9 +90,6 @@ public class RestoreSceneSizeTest {
 
     @Test
     public void testUnfullscreenSize() throws Exception {
-        // Disable on Mac until JDK-8176813 is fixed
-        assumeTrue(!PlatformUtil.isMac());
-
         Thread.sleep(200);
         final double w = (Math.ceil(WIDTH * scaleX)) / scaleX;
         final double h = (Math.ceil(HEIGHT * scaleY)) / scaleY;
