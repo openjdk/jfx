@@ -211,7 +211,7 @@ GdkVisual* WindowContext::find_best_visual() {
     }
 
     if (prismVisual != NULL) {
-        LOG0("Using prism visual");
+        LOG0("Using prism visual\n");
         return prismVisual;
     }
 

@@ -47,13 +47,11 @@
  * questions.
  */
 
-import javafx.animation.AnimationTimer;
 import javafx.application.Application;
 import javafx.beans.binding.Bindings;
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.ReadOnlyBooleanProperty;
 import javafx.beans.property.ReadOnlyDoubleProperty;
-import javafx.beans.property.ReadOnlyObjectProperty;
 import javafx.beans.property.ReadOnlyProperty;
 import javafx.beans.property.ReadOnlyStringProperty;
 import javafx.beans.property.SimpleObjectProperty;
@@ -444,49 +442,6 @@ public class TestStage extends Application {
         currentStage.setScene(scene);
     }
 
-    private void createRainbowSceneAnimation() {
-        Label fpsLabel = new Label("FPS: 0");
-        fpsLabel.setStyle("-fx-font-size: 20; -fx-text-fill: white; -fx-background-color: rgba(0,0,0,0.5); -fx-padding: 5;");
-
-        StackPane root = new StackPane();
-        root.getChildren().add(fpsLabel);
-        StackPane.setAlignment(fpsLabel, Pos.TOP_RIGHT);
-
-        Scene scene = new Scene(root, 600, 400);
-
-        final double[] hue = {0};
-
-        AnimationTimer timer = new AnimationTimer() {
-            private long lastFpsTime = 0;
-            private int frameCount = 0;
-
-            @Override
-            public void handle(long now) {
-                hue[0] += 0.5;
-                if (hue[0] >= 360) {
-                    hue[0] = 0;
-                }
-                Color color = Color.hsb(hue[0], 1.0, 1.0);
-                root.setBackground(new Background(new BackgroundFill(color, CornerRadii.EMPTY, Insets.EMPTY)));
-
-                frameCount++;
-                if (lastFpsTime == 0) {
-                    lastFpsTime = now;
-                } else if (now - lastFpsTime >= 1_000_000_000) {
-                    double fps = frameCount * 1e9 / (now - lastFpsTime);
-                    fpsLabel.setText(String.format("FPS: %.1f", fps));
-                    frameCount = 0;
-                    lastFpsTime = now;
-                }
-            }
-        };
-
-        timer.start();
-        setupContextMenu(root);
-
-        currentStage.setScene(scene);
-    }
-
     private void createAlert(boolean windowModal) {
         Alert alert = new Alert(Alert.AlertType.INFORMATION);
         alert.setTitle("Alert");
@@ -521,8 +476,6 @@ public class TestStage extends Application {
         textFieldMenuItem.setOnAction(e -> createSceneWithTextField());
         MenuItem tooltipBoxMenuItem = new MenuItem("Scene with Tooltip Box");
         tooltipBoxMenuItem.setOnAction(e -> createSceneWithTooltipBox());
-        MenuItem rainbowSceneMenuItem = new MenuItem("Rainbow Scene");
-        rainbowSceneMenuItem.setOnAction(e -> createRainbowSceneAnimation());
         MenuItem alertMenuItem = new MenuItem("Alert - Application Modal");
         alertMenuItem.setOnAction(e -> createAlert(false));
         MenuItem alertWindowModalMenuItem = new MenuItem("Alert - Window Modal");
@@ -531,8 +484,8 @@ public class TestStage extends Application {
         fileOpenMenuItem.setOnAction(e -> createFileOpen());
 
 
-        contextMenu.getItems().addAll(textFieldMenuItem, tooltipBoxMenuItem,
-                rainbowSceneMenuItem, alertMenuItem, alertWindowModalMenuItem, fileOpenMenuItem);
+        contextMenu.getItems().addAll(textFieldMenuItem, tooltipBoxMenuItem, alertMenuItem, alertWindowModalMenuItem,
+                fileOpenMenuItem);
         root.setOnContextMenuRequested(e -> contextMenu.show(root, e.getScreenX(), e.getScreenY()));
     }
 
