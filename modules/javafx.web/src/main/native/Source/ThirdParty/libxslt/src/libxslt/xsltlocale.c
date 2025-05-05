@@ -49,10 +49,10 @@
 #define ISALPHA(c) ((unsigned)(TOUPPER(c) - 'A') < 26)
 
 /*without terminating null character*/
-#define XSLTMAX_ISO639LANGLEN           8
-#define XSLTMAX_ISO3166CNTRYLEN         8
-                                        /* <lang>-<cntry> */
-#define XSLTMAX_LANGTAGLEN              (XSLTMAX_ISO639LANGLEN+1+XSLTMAX_ISO3166CNTRYLEN)
+#define XSLTMAX_ISO639LANGLEN        8
+#define XSLTMAX_ISO3166CNTRYLEN        8
+                    /* <lang>-<cntry> */
+#define XSLTMAX_LANGTAGLEN        (XSLTMAX_ISO639LANGLEN+1+XSLTMAX_ISO3166CNTRYLEN)
 
 static const xmlChar* xsltDefaultRegion(const xmlChar *localeName);
 
@@ -76,7 +76,7 @@ xslt_locale_WINAPI(const xmlChar *languageTag) {
     xsltRFC1766Info *p = xsltLocaleList;
 
     for (k=0; k<xsltLocaleListSize; k++, p++)
-        if (xmlStrcmp(p->tag, languageTag) == 0)
+    if (xmlStrcmp(p->tag, languageTag) == 0)
             return(&p->lcid);
     return(NULL);
 }
@@ -121,26 +121,26 @@ xsltNewLocale(const xmlChar *languageTag, int lowerFirst ATTRIBUTE_UNUSED) {
     /* Convert something like "pt-br" to "pt_BR.UTF-8" */
 
     if (languageTag == NULL)
-        return(NULL);
+    return(NULL);
 
     for (i=0; i<XSLTMAX_ISO639LANGLEN && ISALPHA(*p); ++i)
-        *q++ = TOLOWER(*p++);
+    *q++ = TOLOWER(*p++);
 
     if (i == 0)
-        return(NULL);
+    return(NULL);
 
     llen = i;
 
     if (*p) {
-        if (*p++ != '-')
-            return(NULL);
+    if (*p++ != '-')
+        return(NULL);
         *q++ = '_';
 
-        for (i=0; i<XSLTMAX_ISO3166CNTRYLEN && ISALPHA(*p); ++i)
-            *q++ = TOUPPER(*p++);
+    for (i=0; i<XSLTMAX_ISO3166CNTRYLEN && ISALPHA(*p); ++i)
+        *q++ = TOUPPER(*p++);
 
-        if (i == 0 || *p)
-            return(NULL);
+    if (i == 0 || *p)
+        return(NULL);
 
         memcpy(q, ".UTF-8", 7);
         locale = newlocale(LC_ALL_MASK, localeName, NULL);
@@ -192,21 +192,21 @@ xsltNewLocale(const xmlChar *languageTag, int lowerFirst ATTRIBUTE_UNUSED) {
     xsltEnumSupportedLocales();
 
     for (i=0; i<XSLTMAX_ISO639LANGLEN && ISALPHA(*p); ++i)
-        *q++ = TOLOWER(*p++);
+    *q++ = TOLOWER(*p++);
     if (i == 0) goto end;
 
     llen = i;
     *q++ = '-';
     if (*p) { /*if country tag is given*/
-        if (*p++ != '-') goto end;
+    if (*p++ != '-') goto end;
 
-        for (i=0; i<XSLTMAX_ISO3166CNTRYLEN && ISALPHA(*p); ++i)
-            *q++ = TOUPPER(*p++);
-        if (i == 0 || *p) goto end;
+    for (i=0; i<XSLTMAX_ISO3166CNTRYLEN && ISALPHA(*p); ++i)
+        *q++ = TOUPPER(*p++);
+    if (i == 0 || *p) goto end;
 
-        *q = '\0';
-        locale = xslt_locale_WINAPI(localeName);
-        if (locale != (xsltLocale)0) goto end;
+    *q = '\0';
+    locale = xslt_locale_WINAPI(localeName);
+    if (locale != (xsltLocale)0) goto end;
     }
     /* Try to find most common country for language */
     region = xsltDefaultRegion(localeName);
@@ -402,15 +402,15 @@ xsltStrxfrm(void *vlocale, const xmlChar *string)
     xstrlen = strxfrm_l(NULL, (const char *)string, 0, vlocale) + 1;
     xstr = (xmlChar *) xmlMalloc(xstrlen);
     if (xstr == NULL) {
-        xsltTransformError(NULL, NULL, NULL,
-            "xsltStrxfrm : out of memory error\n");
-        return(NULL);
+    xsltTransformError(NULL, NULL, NULL,
+        "xsltStrxfrm : out of memory error\n");
+    return(NULL);
     }
 
     r = strxfrm_l((char *)xstr, (const char *)string, xstrlen, vlocale);
 
     if (r >= xstrlen) {
-        xsltTransformError(NULL, NULL, NULL, "xsltStrxfrm : strxfrm failed\n");
+    xsltTransformError(NULL, NULL, NULL, "xsltStrxfrm : strxfrm failed\n");
         xmlFree(xstr);
         return(NULL);
     }
@@ -527,13 +527,13 @@ xsltIterateSupportedLocales(LPSTR lcid) {
     if (--l < 1) goto end;
 
     {  /*fill results*/
-        xmlChar    *q = p->tag;
-        memcpy(q, iso639lang, k);
-        q += k;
-        *q++ = '-';
-        memcpy(q, iso3136ctry, l);
-        q += l;
-        *q = '\0';
+    xmlChar    *q = p->tag;
+    memcpy(q, iso639lang, k);
+    q += k;
+    *q++ = '-';
+    memcpy(q, iso3136ctry, l);
+    q += l;
+    *q = '\0';
     }
     ++count;
 end:
@@ -545,14 +545,14 @@ static void
 xsltEnumSupportedLocales(void) {
     xmlRMutexLock(xsltLocaleMutex);
     if (xsltLocaleListSize <= 0) {
-        size_t len;
+    size_t len;
 
-        EnumSystemLocalesA(xsltCountSupportedLocales, LCID_SUPPORTED);
+    EnumSystemLocalesA(xsltCountSupportedLocales, LCID_SUPPORTED);
 
-        len = xsltLocaleListSize * sizeof(xsltRFC1766Info);
-        xsltLocaleList = xmlMalloc(len);
-        memset(xsltLocaleList, 0, len);
-        EnumSystemLocalesA(xsltIterateSupportedLocales, LCID_SUPPORTED);
+    len = xsltLocaleListSize * sizeof(xsltRFC1766Info);
+    xsltLocaleList = xmlMalloc(len);
+    memset(xsltLocaleList, 0, len);
+    EnumSystemLocalesA(xsltIterateSupportedLocales, LCID_SUPPORTED);
     }
     xmlRMutexUnlock(xsltLocaleMutex);
 }
