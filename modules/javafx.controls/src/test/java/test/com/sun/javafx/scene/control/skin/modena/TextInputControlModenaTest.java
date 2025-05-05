@@ -90,7 +90,6 @@ public class TextInputControlModenaTest {
         });
     }
 
-
     private void removeUncaughtExceptionHandler() {
         Thread.currentThread().setUncaughtExceptionHandler(null);
     }
@@ -136,4 +135,5 @@ public class TextInputControlModenaTest {
             assertTrue(resolved.contains(expectedTextColor));
         }
     }
+
 }
