@@ -99,6 +99,7 @@ import javafx.util.StringConverter;
 import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Consumer;
 import java.util.function.DoubleConsumer;
 
@@ -603,14 +604,20 @@ public class TestStage extends Application {
             gridPane.add(spinner, 1, currentRow);
             GridPane.setHgrow(spinner, Priority.ALWAYS);
 
+            AtomicBoolean suppressListener = new AtomicBoolean(false);
             addListener(property, (obs, oldValue, newValue) -> {
                 if (!newValue.equals(spinner.getValue())) {
-                    spinnerValueFactory.setValue((Double) newValue);
+                    try {
+                        suppressListener.set(true);
+                        spinnerValueFactory.setValue((Double) newValue);
+                    } finally {
+                        suppressListener.set(false);
+                    }
                 }
             });
 
             spinner.valueProperty().addListener((observable, oldValue, newValue) -> {
-                if (!newValue.equals(oldValue)) {
+                if (!newValue.equals(oldValue) && !suppressListener.get()) {
                     setConsumer.accept(newValue);
                 }
             });
