@@ -292,6 +292,38 @@ public class CssParser_mediaQuery_Test {
     }
 
     @Test
+    void unbalancedParenthesisEvaluatesToFalse() {
+        Stylesheet stylesheet = new CssParser().parse("""
+            @media (prefers-reduced-motion: reduce),
+                   (prefers-color-scheme: dark,
+                   (prefers-reduced-transparency: reduce) {
+                .foo { bar: baz; }
+            }
+            """);
+
+        var mediaRule = RuleHelper.getMediaRule(stylesheet.getRules().getFirst());
+        assertEquals(
+            List.of(
+                new FunctionExpression<>("prefers-reduced-motion", "reduce", _ -> null, true),
+                new ConstantExpression(false) // the rest of the query is malformed and evaluates to false
+            ),
+            mediaRule.getQueries());
+    }
+
+    @Test
+    void invalidCombinationOfConjunctionAndNegationEvaluatesToFalse() {
+        Stylesheet stylesheet = new CssParser().parse("""
+            @media (prefers-reduced-motion: reduce) and not (prefers-color-scheme: dark) {
+                .foo { bar: baz; }
+            }
+            """);
+
+        var mediaRule = RuleHelper.getMediaRule(stylesheet.getRules().getFirst());
+        assertEquals(1, mediaRule.getQueries().size());
+        assertEquals(new ConstantExpression(false), mediaRule.getQueries().getFirst());
+    }
+
+    @Test
     void parserRecoversWhenMediaQueryIsMalformed() {
         Stylesheet stylesheet = new CssParser().parse("""
             @media (#123foo=malformed-query), (prefers-reduced-motion: reduce) {
@@ -306,5 +338,20 @@ public class CssParser_mediaQuery_Test {
                 new FunctionExpression<>("prefers-reduced-motion", "reduce", _ -> null, true)
             ),
             mediaRule.getQueries());
+    }
+
+    @Test
+    void parserRecoversFromUnbalancedCurlyBrace() {
+        Stylesheet stylesheet = new CssParser().parse("""
+            @media (prefers-color-scheme: dark) {{
+                .foo { bar: baz; }
+            }
+
+            .foo { qux: quux; }
+            """);
+
+        assertEquals(2, stylesheet.getRules().size());
+        assertEquals(List.of(), stylesheet.getRules().get(0).getDeclarations());
+        assertEquals("qux", stylesheet.getRules().get(1).getDeclarations().getFirst().getProperty());
     }
 }
