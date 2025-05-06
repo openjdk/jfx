@@ -139,7 +139,6 @@ private:
 
     gint initial_state_mask;
 protected:
-protected:
     /*
      * sm_grab_window points to WindowContext holding a mouse grab.
      * It is mostly used for popup windows.
@@ -280,7 +279,7 @@ public:
         if (ctx != nullptr) {
             ctx->decrement_events_counter();
             if (ctx->is_dead() && ctx->get_events_count() == 0) {
-                LOG0("EventsCounterHelper: delete ctx\n");
+                LOG("EventsCounterHelper: delete ctx\n");
                 delete ctx;
             }
             ctx = NULL;

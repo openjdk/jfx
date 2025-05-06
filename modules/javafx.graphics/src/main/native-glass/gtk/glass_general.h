@@ -241,15 +241,13 @@ private:
     extern jmethodID jColorRgb; // javafx.scene.paint.Color#rgb(IIID)Ljavafx/scene/paint/Color;
 
 #ifdef VERBOSE
+#define LOG(msg, ...) { printf(msg, ##__VA_ARGS__); fflush(stdout); }
 #define LOG0(msg) {printf(msg);fflush(stdout);}
 #define LOG1(msg, param) {printf(msg, param);fflush(stdout);}
 #define LOG2(msg, param1, param2) {printf(msg, param1, param2);fflush(stdout);}
 #define LOG3(msg, param1, param2, param3) {printf(msg, param1, param2, param3);fflush(stdout);}
 #define LOG4(msg, param1, param2, param3, param4) {printf(msg, param1, param2, param3, param4);fflush(stdout);}
 #define LOG5(msg, param1, param2, param3, param4, param5) {printf(msg, param1, param2, param3, param4, param5);fflush(stdout);}
-#define LOG6(msg, param1, param2, param3, param4, param5, param6) {printf(msg, param1, param2, param3, param4, param5, param6);fflush(stdout);}
-#define LOG10(msg, param1, param2, param3, param4, param5, param6, param7, param8, param9, param10) \
-    {printf(msg, param1, param2, param3, param4, param5, param6, param7, param8, param9, param10);fflush(stdout);}
 
 #define LOG_STRING_ARRAY(env, array) dump_jstring_array(env, array);
 
@@ -265,8 +263,6 @@ private:
 #define LOG3(msg, param1, param2, param3)
 #define LOG4(msg, param1, param2, param3, param4)
 #define LOG5(msg, param1, param2, param3, param4, param5)
-#define LOG6(msg, param1, param2, param3, param4, param5, param6)
-#define LOG10(msg, param1, param2, param3, param4, param5, param6, param7, param8, param9, param10)
 
 #define LOG_STRING_ARRAY(env, array)
 

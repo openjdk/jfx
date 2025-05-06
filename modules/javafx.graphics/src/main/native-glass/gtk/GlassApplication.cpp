@@ -486,6 +486,7 @@ static void process_events(GdkEvent* event, gpointer data)
                     gtk_main_do_event(event);
                     break;
                 case GDK_CONFIGURE:
+                    // Let gtk handle it first, so state values are updated
                     gtk_main_do_event(event);
                     ctx->process_configure(&event->configure);
                     break;
@@ -505,7 +506,7 @@ static void process_events(GdkEvent* event, gpointer data)
                     ctx->notify_repaint(&event->expose.area);
                     break;
                 case GDK_WINDOW_STATE:
-                    // Let gtk handle it first, so state functions are updated
+                    // Let gtk handle it first, so state values are updated
                     gtk_main_do_event(event);
                     ctx->process_state(&event->window_state);
                     break;
