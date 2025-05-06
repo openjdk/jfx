@@ -42,16 +42,12 @@ public final class MediaQuerySerializer {
 
     private MediaQuerySerializer() {}
 
-    /**
-     * The order of {@code QueryType} enum values is important!
-     * It is part of the binary serialization protocol for media query expressions.
-     */
     private enum QueryType {
-        CONSTANT,
-        FUNCTION,
-        CONJUNCTION,
-        DISJUNCTION,
-        NEGATION;
+        CONSTANT(1),
+        FUNCTION(2),
+        CONJUNCTION(3),
+        DISJUNCTION(4),
+        NEGATION(5);
 
         static QueryType of(MediaQuery expression) {
             return switch (expression) {
@@ -63,13 +59,29 @@ public final class MediaQuerySerializer {
             };
         }
 
-        static final QueryType[] VALUES = values();
+        static QueryType of(int serializedId) {
+            for (QueryType value : VALUES) {
+                if (value.serializedId == serializedId) {
+                    return value;
+                }
+            }
+
+            throw new IllegalArgumentException("serializedId");
+        }
+
+        QueryType(int serializedId) {
+            this.serializedId = serializedId;
+        }
+
+        private final int serializedId;
+
+        private static final QueryType[] VALUES = values();
     }
 
     public static void writeBinary(MediaQuery mediaQuery,
                                    DataOutputStream os,
                                    StyleConverter.StringStore stringStore) throws IOException {
-        os.writeByte(QueryType.of(mediaQuery).ordinal());
+        os.writeByte(QueryType.of(mediaQuery).serializedId);
 
         switch (mediaQuery) {
             case ConstantExpression expr ->
@@ -101,7 +113,7 @@ public final class MediaQuerySerializer {
     }
 
     public static MediaQuery readBinary(DataInputStream is, String[] strings) throws IOException {
-        return switch (QueryType.VALUES[is.readByte()]) {
+        return switch (QueryType.of(is.readByte())) {
             case FUNCTION -> {
                 String featureName = strings[is.readInt()];
                 int featureValueIdx = is.readInt();
