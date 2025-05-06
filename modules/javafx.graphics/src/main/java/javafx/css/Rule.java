@@ -381,6 +381,7 @@ final public class Rule {
     {
         MediaRule mediaRule = null;
 
+        // see Stylesheet.BINARY_CSS_VERSION
         if (bssVersion >= 7) {
             boolean hasMediaRule = is.readBoolean();
             if (hasMediaRule) {
@@ -395,6 +396,7 @@ final public class Rule {
             selectors.add(s);
         }
 
+        // see Stylesheet.BINARY_CSS_VERSION
         if (bssVersion < 4) {
             short nDeclarations = is.readShort();
             List<Declaration> declarations = new ArrayList<>(nDeclarations);

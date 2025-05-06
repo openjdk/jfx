@@ -47,6 +47,15 @@ import java.util.function.Predicate;
  */
 public final class MediaQueryParser {
 
+    private static final Predicate<Token> IDENT = token -> token.getType() == CssLexer.IDENT;
+    private static final Predicate<Token> LPAREN = token -> token.getType() == CssLexer.LPAREN;
+    private static final Predicate<Token> RPAREN = token -> token.getType() == CssLexer.RPAREN;
+    private static final Predicate<Token> COLON = token -> token.getType() == CssLexer.COLON;
+    private static final Predicate<Token> NOT_COMMA = token -> token.getType() != CssLexer.COMMA;
+    private static final Predicate<Token> NOT_KEYWORD = token -> equalsIdentIgnoreCase(token, "not");
+    private static final Predicate<Token> AND_KEYWORD = token -> equalsIdentIgnoreCase(token, "and");
+    private static final Predicate<Token> OR_KEYWORD = token -> equalsIdentIgnoreCase(token, "or");
+
     private final BiConsumer<Token, String> errorHandler;
 
     /**
@@ -269,15 +278,6 @@ public final class MediaQueryParser {
             return null;
         }
     }
-
-    private static final Predicate<Token> IDENT = token -> token.getType() == CssLexer.IDENT;
-    private static final Predicate<Token> LPAREN = token -> token.getType() == CssLexer.LPAREN;
-    private static final Predicate<Token> RPAREN = token -> token.getType() == CssLexer.RPAREN;
-    private static final Predicate<Token> COLON = token -> token.getType() == CssLexer.COLON;
-    private static final Predicate<Token> NOT_COMMA = token -> token.getType() != CssLexer.COMMA;
-    private static final Predicate<Token> NOT_KEYWORD = token -> equalsIdentIgnoreCase(token, "not");
-    private static final Predicate<Token> AND_KEYWORD = token -> equalsIdentIgnoreCase(token, "and");
-    private static final Predicate<Token> OR_KEYWORD = token -> equalsIdentIgnoreCase(token, "or");
 
     private static boolean equalsIdentIgnoreCase(Token token, String value) {
         return token.getType() == CssLexer.IDENT && value.equalsIgnoreCase(token.getText());

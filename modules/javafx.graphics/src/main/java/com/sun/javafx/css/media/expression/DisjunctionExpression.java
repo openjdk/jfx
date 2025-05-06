@@ -64,6 +64,6 @@ public record DisjunctionExpression(MediaQuery left, MediaQuery right) implement
 
     @Override
     public String toString() {
-        return "(" + left.toString() + " or " + right.toString() + ")";
+        return "(" + left + " or " + right + ")";
     }
 }

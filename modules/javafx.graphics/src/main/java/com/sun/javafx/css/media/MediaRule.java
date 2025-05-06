@@ -40,18 +40,16 @@ public final class MediaRule {
 
     private final List<MediaQuery> queries;
     private final MediaRule parent;
-    private final int hash;
 
     public MediaRule(List<MediaQuery> queries, MediaRule parent) {
         this.queries = List.copyOf(queries);
         this.parent = parent;
-        this.hash = queries.hashCode();
     }
 
     /**
-     * Returns the list of media queries.
+     * Returns the unmodifiable list of media queries.
      *
-     * @return the list of media queries
+     * @return the unmodifiable list of media queries
      */
     public List<MediaQuery> getQueries() {
         return queries;
@@ -114,17 +112,8 @@ public final class MediaRule {
         }
 
         boolean hasParent = stream.readBoolean();
+        MediaRule parentRule = hasParent ? readBinary(stream, strings) : null;
 
-        return new MediaRule(List.of(queries), hasParent ? readBinary(stream, strings) : null);
-    }
-
-    @Override
-    public boolean equals(Object obj) {
-        return obj instanceof MediaRule rule && rule.getQueries().equals(queries);
-    }
-
-    @Override
-    public int hashCode() {
-        return hash;
+        return new MediaRule(List.of(queries), parentRule);
     }
 }

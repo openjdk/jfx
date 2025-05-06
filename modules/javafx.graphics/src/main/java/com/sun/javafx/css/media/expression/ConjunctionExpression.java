@@ -64,6 +64,6 @@ public record ConjunctionExpression(MediaQuery left, MediaQuery right) implement
 
     @Override
     public String toString() {
-        return "(" + left.toString() + " and " + right.toString() + ")";
+        return "(" + left + " and " + right + ")";
     }
 }
