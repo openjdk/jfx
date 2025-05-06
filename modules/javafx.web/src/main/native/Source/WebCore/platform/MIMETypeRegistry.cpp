@@ -199,9 +199,6 @@ HashSet<String, ASCIICaseInsensitiveHash>& MIMETypeRegistry::supportedNonImageMI
             "text/xsl"_s,
             "text/plain"_s,
             "text/"_s,
-#if PLATFORM(JAVA)
-            "application/octet-stream"_s,
-#endif
             "application/xml"_s,
             "application/xhtml+xml"_s,
 #if !PLATFORM(IOS_FAMILY)
@@ -404,6 +401,15 @@ String MIMETypeRegistry::mimeTypeForPath(StringView path)
         if (result.length())
             return result;
     }
+
+#if PLATFORM(JAVA)
+    // File Scheme "file:///" is already checked in URLLoader.cpp
+    if (path.endsWith("md"_s)) {
+        static NeverDestroyed<const String> defaultMIMEType(MAKE_STATIC_STRING_IMPL("text/plain"));
+        return defaultMIMEType;
+    }
+#endif
+
     return defaultMIMEType();
 }
 

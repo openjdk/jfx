@@ -62,9 +62,6 @@ static const ExtensionMap extensionMap [] = {
     { "xbm"_s, "image/x-xbitmap"_s },
     { "xml"_s, "text/xml"_s },
     { "xsl"_s, "text/xsl"_s },
-#if PLATFORM(JAVA)
-    { "md"_s, "application/octet-stream"_s},
-#endif
     { "xht"_s, "application/xhtml+xml"_s },
     { "xhtml"_s, "application/xhtml+xml"_s },
     { "wml"_s, "text/vnd.wap.wml"_s },
