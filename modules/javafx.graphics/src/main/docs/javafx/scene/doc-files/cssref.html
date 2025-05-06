@@ -860,17 +860,42 @@
     <p>Media features can be combined using boolean algebra (<code>not</code>, <code>and</code>, <code>or</code>):
     <ul>
         <li>Any media feature can be negated by placing the <code>not</code> operator before it:<br/>
-            <code>not (prefers-color-scheme: light)</code>
+            <code>
+                &nbsp;&nbsp;&nbsp;&nbsp;@media not (prefers-color-scheme: light) { ... }</br>
+            </code>
+            <br/>
         <li>Two or more media features can be chained together, such that the query is only true if <em>all</em> the
             media features are true, by placing the <code>and</code> operator between them:<br/>
-            <code>(prefers-color-scheme: dark) and (prefers-reduced-motion) and (prefers-reduced-transparency)</code>
+            <code>
+                &nbsp;&nbsp;&nbsp;&nbsp;@media (prefers-color-scheme: dark) and</br>
+                &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; (prefers-reduced-motion) and</br>
+                &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; (prefers-reduced-transparency) { ... }</br>
+            </code>
+            <br/>
         <li>Two or more media features can be chained together, such that the query is true if <em>any</em> of the
             media features are true, by placing the <code>or</code> operator between them:<br/>
-            <code>(prefers-color-scheme: dark) or (prefers-reduced-motion) or (prefers-reduced-transparency)</code>
-        <li>Expressions can be grouped by wrapping them in parentheses.
+            <code>
+                &nbsp;&nbsp;&nbsp;&nbsp;@media (prefers-color-scheme: dark) or</br>
+                &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; (prefers-reduced-motion) or</br>
+                &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; (prefers-reduced-transparency) { ... }<br/>
+            </code>
+            <br/>
+        <li>Expressions can be grouped by wrapping them in parentheses:<br/>
+            <code>
+                &nbsp;&nbsp;&nbsp;&nbsp;@media (prefers-color-scheme: dark) and<br/>
+                &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; ((prefers-reduced-motion) or (prefers-reduced-transparency)) { ... }</br>
+                &nbsp;&nbsp;&nbsp;&nbsp;<br/>
+                &nbsp;&nbsp;&nbsp;&nbsp;@media (prefers-color-scheme: dark) and (not (prefers-reduced-motion)) { ... }</br>
+            </code>
+            <br/>
         <li>It is invalid to mix different boolean operators at the same "level" of a media query. For example,
             the following expression is invalid, as it is unclear what was meant:<br/>
-            <code>(prefers-color-scheme: dark) and (prefers-reduced-motion) or (prefers-reduced-transparency)</code><br/>
+            <code>
+                &nbsp;&nbsp;&nbsp;&nbsp;@media (prefers-color-scheme: dark) and</br>
+                &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; (prefers-reduced-motion) or</br>
+                &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; (prefers-reduced-transparency) { ... }</br>
+            </code>
+            <br/>
             In this case, parentheses must be used to group expressions.
     </ul>
     <table class="cssmisctable">
