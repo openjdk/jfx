@@ -34,7 +34,6 @@ import javafx.beans.property.ReadOnlyBooleanProperty;
 import javafx.beans.property.ReadOnlyBooleanPropertyBase;
 import javafx.beans.property.ReadOnlyObjectProperty;
 import javafx.beans.property.ReadOnlyObjectPropertyBase;
-import javafx.beans.property.ReadOnlyObjectWrapper;
 import javafx.beans.property.ReadOnlyProperty;
 import javafx.scene.paint.Color;
 import java.util.HashMap;
@@ -121,7 +120,7 @@ final class PreferenceProperties {
     }
 
     public ReadOnlyObjectProperty<ColorScheme> colorSchemeProperty() {
-        return colorScheme.getReadOnlyProperty();
+        return colorScheme;
     }
 
     public ColorScheme getColorScheme() {
@@ -178,12 +177,14 @@ final class PreferenceProperties {
                 }
             }
 
-            colorScheme.update();
-
-            for (DeferredProperty<?> property : deferredProperties.values()) {
-                property.fireValueChangedIfNecessary();
-            }
+            colorScheme.updateEffectiveValue();
         }
+
+        for (DeferredProperty<?> property : deferredProperties.values()) {
+            property.fireValueChangedIfNecessary();
+        }
+
+        colorScheme.fireValueChangeIfNecessary();
     }
 
     /**
@@ -223,6 +224,8 @@ final class PreferenceProperties {
 
         @Override
         public T get() {
+            // We need to synchronized on 'mutex' to see 'effectiveValue', because get() may be called
+            // on a thread other than the FX application thread.
             synchronized (mutex) {
                 return effectiveValue;
             }
@@ -235,23 +238,24 @@ final class PreferenceProperties {
         @SuppressWarnings("unchecked")
         public void setPlatformValue(Object value) {
             // No need to synchronize here, because the update() method already synchronizes on 'mutex'.
-            Toolkit.getToolkit().checkFxUserThread();
             Class<?> expectedType = defaultValue.getClass();
             this.platformValue = expectedType.isInstance(value) ? (T) value : null;
             updateEffectiveValue();
         }
 
         public void setValueOverride(T value) {
+            // This method may be called by user code, so make sure that we are on the FX application thread.
             Toolkit.getToolkit().checkFxUserThread();
 
             synchronized (mutex) {
                 this.overrideValue = value;
                 updateEffectiveValue();
-                fireValueChangedIfNecessary();
             }
+
+            fireValueChangedIfNecessary();
         }
 
-        // This method must only be called when synchronized on 'mutex'.
+        // This method must only be called on the FX application thread.
         public void fireValueChangedIfNecessary() {
             if (!Objects.equals(lastEffectiveValue, effectiveValue)) {
                 lastEffectiveValue = effectiveValue;
@@ -268,51 +272,60 @@ final class PreferenceProperties {
         }
     }
 
-    private final class ColorSchemeProperty extends ReadOnlyObjectWrapper<ColorScheme> {
-        private ColorScheme colorSchemeOverride;
+    private final class ColorSchemeProperty extends ReadOnlyObjectPropertyBase<ColorScheme> {
+        private ColorScheme overrideValue;
+        private ColorScheme effectiveValue = ColorScheme.LIGHT;
+        private ColorScheme lastEffectiveValue = ColorScheme.LIGHT;
 
-        ColorSchemeProperty() {
-            super(bean, "colorScheme");
-        }
-
-        public void setValueOverride(ColorScheme colorScheme) {
-            synchronized (mutex) {
-                colorSchemeOverride = colorScheme;
-                update();
-            }
-        }
-
-        public void update() {
-            synchronized (mutex) {
-                if (colorSchemeOverride != null) {
-                    super.set(colorSchemeOverride);
-                } else {
-                    Color background = backgroundColor.get();
-                    Color foreground = foregroundColor.get();
-                    boolean isDark = Utils.calculateBrightness(background) < Utils.calculateBrightness(foreground);
-                    super.set(isDark ? ColorScheme.DARK : ColorScheme.LIGHT);
-                }
-            }
+        @Override
+        public Object getBean() {
+            return bean;
         }
 
         @Override
-        public ReadOnlyObjectProperty<ColorScheme> getReadOnlyProperty() {
-            synchronized (mutex) {
-                return super.getReadOnlyProperty();
-            }
+        public String getName() {
+            return "colorScheme";
         }
 
         @Override
         public ColorScheme get() {
+            // We need to synchronized on 'mutex' to see 'effectiveValue', because get() may be called
+            // on a thread other than the FX application thread.
             synchronized (mutex) {
-                return super.get();
+                return effectiveValue;
             }
         }
 
-        @Override
-        public void set(ColorScheme newValue) {
-            // Make sure that we only set the value in the update() method.
-            throw new UnsupportedOperationException();
+        public void setValueOverride(ColorScheme colorScheme) {
+            // This method may be called by user code, so make sure that we are on the FX application thread.
+            Toolkit.getToolkit().checkFxUserThread();
+
+            synchronized (mutex) {
+                overrideValue = colorScheme;
+                updateEffectiveValue();
+            }
+
+            fireValueChangeIfNecessary();
+        }
+
+        // This method must only be called when synchronized on 'mutex'.
+        public void updateEffectiveValue() {
+            if (overrideValue != null) {
+                effectiveValue = overrideValue;
+            } else {
+                Color background = backgroundColor.get();
+                Color foreground = foregroundColor.get();
+                boolean isDark = Utils.calculateBrightness(background) < Utils.calculateBrightness(foreground);
+                effectiveValue = isDark ? ColorScheme.DARK : ColorScheme.LIGHT;
+            }
+        }
+
+        // This method must only be called on the FX application thread.
+        public void fireValueChangeIfNecessary() {
+            if (lastEffectiveValue != effectiveValue) {
+                lastEffectiveValue = effectiveValue;
+                fireValueChangedEvent();
+            }
         }
     }
 
