@@ -30,6 +30,7 @@ import com.sun.javafx.css.media.expression.ConjunctionExpression;
 import com.sun.javafx.css.media.expression.ConstantExpression;
 import com.sun.javafx.css.media.expression.DisjunctionExpression;
 import com.sun.javafx.css.media.expression.FunctionExpression;
+import com.sun.javafx.css.media.expression.NegationExpression;
 import javafx.application.ColorScheme;
 import javafx.css.CssParser;
 import javafx.css.Stylesheet;
@@ -52,6 +53,21 @@ public class CssParser_mediaQuery_Test {
         assertEquals(1, mediaRule.getQueries().size());
         assertEquals(
             new FunctionExpression<>("prefers-color-scheme", "light", _ -> null, ColorScheme.LIGHT),
+            mediaRule.getQueries().getFirst());
+    }
+
+    @Test
+    void parseNegatedMediaQuery() {
+        Stylesheet stylesheet = new CssParser().parse("""
+            @media not (prefers-color-scheme: light) {
+                .foo { bar: baz; }
+            }
+            """);
+
+        var mediaRule = RuleHelper.getMediaRule(stylesheet.getRules().getFirst());
+        assertEquals(1, mediaRule.getQueries().size());
+        assertEquals(
+            new NegationExpression(new FunctionExpression<>("prefers-color-scheme", "light", _ -> null, ColorScheme.LIGHT)),
             mediaRule.getQueries().getFirst());
     }
 
