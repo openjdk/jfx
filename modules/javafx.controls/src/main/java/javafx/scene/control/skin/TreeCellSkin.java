@@ -226,6 +226,7 @@ public class TreeCellSkin<T> extends CellSkinBase<TreeCell<T>> {
                     for (IndexedCell cell : flow.cells) {
                         if (cell == null || cell.isEmpty()) continue;
                         cell.requestLayout();
+                        cell.layout();
                     }
                 }
 
