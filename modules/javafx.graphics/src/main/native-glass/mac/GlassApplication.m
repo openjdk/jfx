@@ -78,6 +78,11 @@ static NSString* JavaRunLoopMode = @"AWTRunLoopMode";
 // don't deadlock.
 static NSArray<NSString*> *runLoopModes = nil;
 
+// Custom event that is provided by AWT to allow libraries like
+// JavaFX to forward native events to AWT even if AWT runs in
+// embedded mode.
+static NSString* awtEmbeddedEvent = @"AWTEmbeddedEvent";
+
 #ifdef STATIC_BUILD
 jint JNICALL JNI_OnLoad_glass(JavaVM *vm, void *reserved)
 #else
@@ -483,7 +488,7 @@ jint JNICALL JNI_OnLoad(JavaVM *vm, void *reserved)
         };
 
         [[NSNotificationCenter defaultCenter]
-                postNotificationName:@"EmbeddedEvent"
+                postNotificationName:awtEmbeddedEvent
                 object:nil
                 userInfo:userInfo];
     }
