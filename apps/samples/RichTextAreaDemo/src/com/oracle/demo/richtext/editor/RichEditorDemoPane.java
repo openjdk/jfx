@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023, 2024, Oracle and/or its affiliates.
+ * Copyright (c) 2023, 2025, Oracle and/or its affiliates.
  * All rights reserved. Use is subject to license terms.
  *
  * This file is available and licensed under the following license:
@@ -39,6 +39,7 @@ import javafx.scene.control.ContextMenu;
 import javafx.scene.control.ToolBar;
 import javafx.scene.input.KeyCode;
 import javafx.scene.layout.BorderPane;
+import javafx.scene.layout.VBox;
 import javafx.scene.text.Font;
 import com.oracle.demo.richtext.common.TextStyle;
 import com.oracle.demo.richtext.editor.settings.EndKey;
@@ -55,6 +56,7 @@ import jfx.incubator.scene.control.richtext.TextPos;
 public class RichEditorDemoPane extends BorderPane {
     public final RichTextArea editor;
     public final Actions actions;
+    private final Ruler ruler;
     private final ComboBox<String> fontName;
     private final ComboBox<Integer> fontSize;
     private final ColorPicker textColor;
@@ -62,6 +64,9 @@ public class RichEditorDemoPane extends BorderPane {
 
     public RichEditorDemoPane() {
         FX.name(this, "RichEditorDemoPane");
+
+        ruler = new Ruler();
+        FX.setPopupMenu(ruler, this::createRulerPopupMenu);
 
         editor = new RichTextArea();
         // custom function
@@ -123,7 +128,7 @@ public class RichEditorDemoPane extends BorderPane {
             editor.requestFocus();
         });
 
-        setTop(createToolBar());
+        setTop(new VBox(createToolBar(), ruler));
         setCenter(editor);
 
         actions.textStyleProperty().addListener((s,p,c) -> {
@@ -172,6 +177,12 @@ public class RichEditorDemoPane extends BorderPane {
         FX.item(m, "Italic", actions.italic);
         FX.item(m, "Strike Through", actions.strikeThrough);
         FX.item(m, "Underline", actions.underline);
+        return m;
+    }
+
+    private ContextMenu createRulerPopupMenu() {
+        ContextMenu m = new ContextMenu();
+        FX.item(m, "Options..."); // TODO
         return m;
     }
 
