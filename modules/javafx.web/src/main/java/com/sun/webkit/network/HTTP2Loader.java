@@ -86,7 +86,6 @@ final class HTTP2Loader extends URLLoaderBase {
     private volatile boolean canceled = false;
 
     private final CompletableFuture<Void> response;
-    private static boolean httpMDurl;
     // Use singleton instance of HttpClient to get the maximum benefits
     private final static HttpClient HTTP_CLIENT = HttpClient.newBuilder()
                 .version(Version.HTTP_2)  // this is the default
@@ -456,12 +455,6 @@ final class HTTP2Loader extends URLLoaderBase {
     }
 
     private static String getContentType(final HttpResponse.ResponseInfo rsp) {
-        // JDK-8260020
-        // At Present we http scheme and .md file
-        if (httpMDurl == true) {
-            return rsp.headers().firstValue("content-type").orElse("text/plain");
-        }
-
         return rsp.headers().firstValue("content-type").orElse("application/octet-stream");
     }
 
@@ -492,12 +485,6 @@ final class HTTP2Loader extends URLLoaderBase {
     }
 
     private void didReceiveResponse(final HttpResponse.ResponseInfo rsp) {
-        // Only http and .md check
-        if(this.url.startsWith("http") && this.url.startsWith("https") == false && this.url.endsWith("md"))
-            httpMDurl = true;
-        else
-            httpMDurl = false;
-
         callBackIfNotCanceled(() -> {
             twkDidReceiveResponse(
                     rsp.statusCode(),

@@ -401,15 +401,6 @@ String MIMETypeRegistry::mimeTypeForPath(StringView path)
         if (result.length())
             return result;
     }
-
-#if PLATFORM(JAVA)
-    // File Scheme "file:///" is already checked in URLLoader.cpp
-    if (path.endsWith("md"_s)) {
-        static NeverDestroyed<const String> defaultMIMEType(MAKE_STATIC_STRING_IMPL("text/plain"));
-        return defaultMIMEType;
-    }
-#endif
-
     return defaultMIMEType();
 }
 

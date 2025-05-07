@@ -928,6 +928,9 @@ bool FrameLoaderClientJava::canShowMIMEType(const String& mimeType) const
         && PluginDatabase::installedPlugins()->isMIMETypeRegistered(type))
         return true;
 #endif
+    //if (mimeType.endsWith( "application/octet-stream"_s))
+    if (equalLettersIgnoringASCIICase(mimeType, "application/octet-stream"_s))
+        return true;
 
     return false;
 }
