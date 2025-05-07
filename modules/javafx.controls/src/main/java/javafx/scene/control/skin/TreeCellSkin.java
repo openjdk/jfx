@@ -36,7 +36,8 @@ import javafx.beans.property.DoubleProperty;
 import javafx.geometry.HPos;
 import javafx.geometry.VPos;
 import javafx.scene.Node;
-import javafx.scene.control.Control;
+import javafx.scene.Parent;
+import javafx.scene.control.IndexedCell;
 import javafx.scene.control.TreeCell;
 import javafx.scene.control.TreeItem;
 import javafx.scene.control.TreeView;
@@ -207,7 +208,7 @@ public class TreeCellSkin<T> extends CellSkinBase<TreeCell<T>> {
         boolean disclosureVisible = disclosureNode != null && treeItem != null && ! treeItem.isLeaf();
 
         final double defaultDisclosureWidth = maxDisclosureWidthMap.containsKey(tree) ?
-                maxDisclosureWidthMap.get(tree) : 20;   // JDK-8119169: default width of default disclosure node
+                maxDisclosureWidthMap.get(tree) : 18;   // JDK-8119169: default width of default disclosure node
         double disclosureWidth = defaultDisclosureWidth;
 
         if (disclosureVisible) {
@@ -219,6 +220,12 @@ public class TreeCellSkin<T> extends CellSkinBase<TreeCell<T>> {
                 disclosureWidth = disclosureNode.prefWidth(h);
                 if (disclosureWidth > defaultDisclosureWidth) {
                     maxDisclosureWidthMap.put(tree, disclosureWidth);
+
+                    final VirtualFlow<?> flow = getVirtualFlow();
+                    for (IndexedCell cell : flow.cells) {
+                        if (cell == null || cell.isEmpty()) continue;
+                        cell.requestLayout();
+                    }
                 }
 
                 double ph = disclosureNode.prefHeight(disclosureWidth);
@@ -244,6 +251,17 @@ public class TreeCellSkin<T> extends CellSkinBase<TreeCell<T>> {
         }
 
         layoutLabelInArea(x, y, w, h);
+    }
+
+    VirtualFlow<?> getVirtualFlow() {
+        Parent p = getSkinnable();
+        while (p != null) {
+            if (p instanceof VirtualFlow) {
+                return (VirtualFlow<?>) p;
+            }
+            p = p.getParent();
+        }
+        return null;
     }
 
     /** {@inheritDoc} */
