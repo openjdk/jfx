@@ -86,15 +86,15 @@
 }
 
 .squiggly-css {
-	-fx-stroke-width:0.6;
-	-fx-stroke: blue;
+    -fx-stroke-width:0.6;
+    -fx-stroke: blue;
 }
 
 .highlight1 {
-	-fx-fill:red;
+    -fx-fill:red;
 }
 
 .highlight2 {
-	-fx-stroke-width:1;
-	-fx-stroke-fill:black;
+    -fx-stroke-width:1;
+    -fx-stroke-fill:black;
 }
