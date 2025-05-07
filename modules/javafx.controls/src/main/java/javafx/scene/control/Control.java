@@ -595,6 +595,11 @@ public abstract class Control extends Region implements Skinnable {
         }
     }
 
+    @Override
+    protected boolean isFocusScope() {
+        return true;
+    }
+
     /* *************************************************************************
      * Implementation of layout bounds for the Control. We want to preserve    *
      * the lazy semantics of layout bounds. So whenever the width/height       *
@@ -631,6 +636,15 @@ public abstract class Control extends Region implements Skinnable {
      * @since JavaFX 8.0
      */
     protected Skin<?> createDefaultSkin() {
+        return null;
+    }
+
+    @Override
+    protected Node getFocusDelegate(Node hoistingNode) {
+        if (skinBase != null) {
+            return skinBase.getFocusDelegate(hoistingNode);
+        }
+
         return null;
     }
 
