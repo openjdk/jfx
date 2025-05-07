@@ -1060,7 +1060,7 @@ public class TextAreaSkin extends TextInputControlSkin<TextArea> {
 
     private void updateTextNodeCaretPos(int pos) {
         Text textNode = getTextNode();
-        if (isForwardBias()) {
+        if (pos == 0 || isForwardBias()) {
             textNode.setCaretPosition(pos);
         } else {
             textNode.setCaretPosition(pos - 1);
