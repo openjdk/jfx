@@ -90,8 +90,8 @@ jobs:
         run: |
           set -x
           sudo apt-get update
-          sudo apt-get install ant libgl1-mesa-dev libx11-dev libxxf86vm-dev libxt-dev pkg-config libgtk2.0-dev libgtk-3-dev libxtst-dev gcc-13 g++-13
-          sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-13 100 --slave /usr/bin/g++ g++ /usr/bin/g++-13
+          sudo apt-get install ant libgl1-mesa-dev libx11-dev libxxf86vm-dev libxt-dev pkg-config libgtk2.0-dev libgtk-3-dev libxtst-dev gcc-14 g++-14
+          sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-14 100 --slave /usr/bin/g++ g++ /usr/bin/g++-14
           mkdir -p "${HOME}/build-tools"
           # wget -O "${HOME}/build-tools/${ANT_FILENAME}" "${ANT_URL}"
           # tar -zxf "${HOME}/build-tools/${ANT_FILENAME}" -C "${HOME}/build-tools"
