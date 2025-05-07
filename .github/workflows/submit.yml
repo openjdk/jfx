@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2020, 2024, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2020, 2025, Oracle and/or its affiliates. All rights reserved.
 # DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
 #
 # This code is free software; you can redistribute it and/or modify it
@@ -59,7 +59,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: gradle/wrapper-validation-action@v1
+      - uses: gradle/actions/wrapper-validation@v3
 
 
   linux_x64_build:
@@ -90,8 +90,8 @@ jobs:
         run: |
           set -x
           sudo apt-get update
-          sudo apt-get install ant libgl1-mesa-dev libx11-dev libxxf86vm-dev libxt-dev pkg-config libgtk2.0-dev libgtk-3-dev libxtst-dev gcc-13 g++-13
-          sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-13 100 --slave /usr/bin/g++ g++ /usr/bin/g++-13
+          sudo apt-get install ant libgl1-mesa-dev libx11-dev libxxf86vm-dev libxt-dev pkg-config libgtk2.0-dev libgtk-3-dev libxtst-dev gcc-14 g++-14
+          sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-14 100 --slave /usr/bin/g++ g++ /usr/bin/g++-14
           mkdir -p "${HOME}/build-tools"
           # wget -O "${HOME}/build-tools/${ANT_FILENAME}" "${ANT_URL}"
           # tar -zxf "${HOME}/build-tools/${ANT_FILENAME}" -C "${HOME}/build-tools"
@@ -413,7 +413,8 @@ jobs:
           which java
           java -version
           .\gradlew.bat -version
-          .\gradlew.bat --info all
+          # Skip "chmod" task for GHA builds. See JDK-8354337 for details.
+          .\gradlew.bat --info -PCHMOD_ARTIFACTS=false all
 
       - name: Run JavaFX headless tests
         working-directory: jfx

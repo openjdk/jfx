@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2023, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -73,16 +73,21 @@ public class HtmlStyledOutput implements StyledOutput {
             break;
         case TEXT:
             StyleAttributeMap a = seg.getStyleAttributeMap(resolver);
-            boolean div = ((a != null) && (!a.isEmpty()));
-            if (div) {
+            String styles;
+            if ((a != null) && (!a.isEmpty())) {
+                styles = extractStyles(a);
+            } else {
+                styles = null;
+            }
+            if (styles != null) {
                 wr.write("<span style='");
-                writeAttributes(a);
+                wr.write(styles);
                 wr.write("'>");
             }
             String text = seg.getText();
             String encoded = encode(text);
             wr.write(encoded);
-            if (div) {
+            if (styles != null) {
                 wr.write("</span>");
             }
             break;
@@ -93,7 +98,8 @@ public class HtmlStyledOutput implements StyledOutput {
         }
     }
 
-    private void writeAttributes(StyleAttributeMap attrs) throws IOException {
+    private String extractStyles(StyleAttributeMap attrs) {
+        StringBuilder sb = new StringBuilder();
         boolean sp = false;
         for (StyleAttribute a : attrs.getAttributes()) {
             Object v = attrs.get(a);
@@ -101,20 +107,26 @@ public class HtmlStyledOutput implements StyledOutput {
                 Key k = createKey(attrs, a, v);
                 if (k != null) {
                     if (sp) {
-                        wr.write(' ');
+                        sb.append(' ');
                     } else {
                         sp = true;
                     }
 
                     Val val = styles.get(k);
-                    if (inlineStyles) {
-                        wr.write(val.css);
-                    } else {
-                        wr.write(val.name);
+                    if (val != null) {
+                        if (inlineStyles) {
+                            sb.append(val.css);
+                        } else {
+                            sb.append(val.name);
+                        }
                     }
                 }
             }
         }
+        if (sb.length() == 0) {
+            return null;
+        }
+        return sb.toString();
     }
 
     /**
@@ -310,21 +322,21 @@ public class HtmlStyledOutput implements StyledOutput {
 
     private static String createCss(StyleAttribute a, Object v) {
         if (a == StyleAttributeMap.BOLD) {
-            return "font-weight: bold;";
+            return Boolean.TRUE.equals(v) ? "font-weight: bold;" : null;
         } else if (a == StyleAttributeMap.FONT_FAMILY) {
             return "font-family: \"" + encodeFontFamily(v.toString()) + "\";";
         } else if (a == StyleAttributeMap.FONT_SIZE) {
-            return "font-size: " + v + "pt;";
+            return "font-size: " + v + "px;";
         } else if (a == StyleAttributeMap.ITALIC) {
-            return "font-style: italic;";
-        } else if (a == StyleAttributeMap.STRIKE_THROUGH) {
+            return Boolean.TRUE.equals(v) ? "font-style: italic;" : null;
+        } else if (a == StyleAttributeMap.STRIKE_THROUGH && Boolean.TRUE.equals(v)) {
             return "text-decoration: line-through;";
         } else if (a == StyleAttributeMap.TEXT_COLOR) {
             return "color: " + RichUtils.toWebColor((Color)v) + ";";
         } else if (a == StyleAttributeMap.UNDERLINE) {
-            return "text-decoration: underline;";
+            return Boolean.TRUE.equals(v) ? "text-decoration: underline;" : null;
         } else if (a == SS_AND_UNDERLINE) {
-            return "text-decoration: line-through underline;";
+            return Boolean.TRUE.equals(v) ? "text-decoration: line-through underline;" : null;
         } else {
             return null;
         }

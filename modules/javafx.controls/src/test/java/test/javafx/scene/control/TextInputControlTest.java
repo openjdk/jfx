@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -105,39 +105,6 @@ public class TextInputControlTest {
     public void textDefaultsToEmptyString(Class<?> type) {
         setup(type);
         assertEquals("", textInput.getText());
-    }
-
-    @ParameterizedTest
-    @MethodSource("parameters")
-    public void bindPromptTextWithoutLineBreaks(Class<?> type) {
-        setup(type);
-        String promptWithoutLinebreaks = "Prompt without\tlinebreaks";
-        StringProperty promptProperty = new SimpleStringProperty(promptWithoutLinebreaks);
-        textInput.promptTextProperty().bind(promptProperty);
-        assertEquals(promptWithoutLinebreaks, textInput.getPromptText());
-        textInput.promptTextProperty().unbind();
-    }
-
-    @ParameterizedTest
-    @MethodSource("parameters")
-    public void bindPromptTextWithLineBreaks(Class<?> type) {
-        setup(type);
-        String promptWithLinebreaks = "Prompt\nwith\nLineBreaks\nand\nmixed\tcharacters \uD83C\uDF0D";
-        StringProperty promptProperty = new SimpleStringProperty(promptWithLinebreaks);
-        textInput.promptTextProperty().bind(promptProperty);
-        String expectedPromptWithoutLineBreaks = promptWithLinebreaks.replace("\n", "");
-        assertEquals(expectedPromptWithoutLineBreaks, textInput.getPromptText());
-        textInput.promptTextProperty().unbind();
-    }
-
-    @ParameterizedTest
-    @MethodSource("parameters")
-    public void bindPromptTextWithNull(Class<?> type) {
-        setup(type);
-        StringProperty promptPropertyNull = new SimpleStringProperty(null);
-        textInput.promptTextProperty().bind(promptPropertyNull);
-        assertNull(textInput.getPromptText());
-        textInput.promptTextProperty().unbind();
     }
 
     @ParameterizedTest

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -314,22 +314,15 @@ public abstract class TextInputControl extends Control {
      * @defaultValue An empty String
      * @since JavaFX 2.2
      */
-    private StringProperty promptText = new SimpleStringProperty(this, "promptText", "") {
-        @Override protected void invalidated() {
-            // Strip out newlines
-            String txt = get();
-            if (txt != null && txt.contains("\n")) {
-                txt = txt.replace("\n", "");
-                if (isBound()) {
-                    unbind();
-                }
-                set(txt);
-            }
+    private StringProperty promptText;
+    public final StringProperty promptTextProperty() {
+        if (promptText == null) {
+            promptText = new SimpleStringProperty(this, "promptText", "");
         }
-    };
-    public final StringProperty promptTextProperty() { return promptText; }
-    public final String getPromptText() { return promptText.get(); }
-    public final void setPromptText(String value) { promptText.set(value); }
+        return promptText;
+    }
+    public final String getPromptText() { return promptText == null ? "" : promptText.get();  }
+    public final void setPromptText(String value) { promptTextProperty().set(value); }
 
 
     /**

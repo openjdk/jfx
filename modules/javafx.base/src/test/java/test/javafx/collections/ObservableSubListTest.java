@@ -25,33 +25,26 @@
 
 package test.javafx.collections;
 
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
 
 import java.util.*;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 
-import static org.junit.Assert.*;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
+import static org.junit.jupiter.api.Assertions.*;
 
 /**
  * Tests for sublists of ObservableList.
  *
  */
-@RunWith(Parameterized.class)
 public class ObservableSubListTest {
-    final Callable<ObservableList<String>> listFactory;
+    Callable<ObservableList<String>> listFactory;
     ObservableList<String> list;
     List<String> sublist;
     private MockListObserver<String> mlo;
 
-    public ObservableSubListTest(final Callable<ObservableList<String>> listFactory) {
-        this.listFactory = listFactory;
-    }
-
-    @Parameterized.Parameters
     public static Collection createParameters() {
         Object[][] data = new Object[][] {
             { TestedObservableLists.ARRAY_LIST },
@@ -63,8 +56,7 @@ public class ObservableSubListTest {
         return Arrays.asList(data);
     }
 
-    @Before
-    public void setup() throws Exception {
+    private void setup(Callable<ObservableList<String>> listFactory) throws Exception {
         list = listFactory.call();
         mlo = new MockListObserver<>();
         list.addListener(mlo);
@@ -85,29 +77,39 @@ public class ObservableSubListTest {
         mlo.clear();
     }
 
-    @Test(expected = IllegalArgumentException.class)
-    public void testBadRange() {
-        list.subList(3, 2);
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    void testBadRange(Callable<ObservableList<String>> listFactory) throws Exception {
+        setup(listFactory);
+        assertThrows(IllegalArgumentException.class, () -> list.subList(3, 2));
     }
 
-    @Test(expected = IndexOutOfBoundsException.class)
-    public void testRangeTooLow() {
-        list.subList(-2, 4);
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    void testRangeTooLow(Callable<ObservableList<String>> listFactory) throws Exception {
+        setup(listFactory);
+        assertThrows(IndexOutOfBoundsException.class, () -> list.subList(-2, 4));
     }
 
-    @Test(expected = IndexOutOfBoundsException.class)
-    public void testRangeTooHigh() {
-        list.subList(3, 7);
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    void testRangeTooHigh(Callable<ObservableList<String>> listFactory) throws Exception {
+        setup(listFactory);
+        assertThrows(IndexOutOfBoundsException.class, () -> list.subList(3, 7));
     }
 
-    @Test
-    public void testWidestRange() {
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    public void testWidestRange(Callable<ObservableList<String>> listFactory) throws Exception {
+        setup(listFactory);
         List<String> sub = list.subList(0, 6);
         assertEquals("[a, b, c, d, e, f]", sub.toString());
     }
 
-    @Test
-    public void testAdd() {
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    public void testAdd(Callable<ObservableList<String>> listFactory) throws Exception {
+        setup(listFactory);
         sublist.add("X");
         assertEquals("[b, c, d, e, X]", sublist.toString());
         assertEquals("[a, b, c, d, e, X, f]", list.toString());
@@ -115,8 +117,10 @@ public class ObservableSubListTest {
         mlo.check1AddRemove(list, null, 5, 6);
     }
 
-    @Test
-    public void testAddAll() {
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    public void testAddAll(Callable<ObservableList<String>> listFactory) throws Exception {
+        setup(listFactory);
         sublist.addAll(1, Arrays.asList("X", "Y", "Z"));
         assertEquals("[b, X, Y, Z, c, d, e]", sublist.toString());
         assertEquals("[a, b, X, Y, Z, c, d, e, f]", list.toString());
@@ -124,8 +128,10 @@ public class ObservableSubListTest {
         mlo.check1AddRemove(list, null, 2, 5);
     }
 
-    @Test
-    public void testClear() {
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    public void testClear(Callable<ObservableList<String>> listFactory) throws Exception {
+        setup(listFactory);
         sublist.clear();
         assertEquals("[]", sublist.toString());
         assertEquals("[a, f]", list.toString());
@@ -134,101 +140,129 @@ public class ObservableSubListTest {
     }
 
     @SuppressWarnings("unlikely-arg-type")
-    @Test
-    public void testContains() {
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    public void testContains(Callable<ObservableList<String>> listFactory) throws Exception {
+        setup(listFactory);
         assertTrue(sublist.contains("c"));
         assertFalse(sublist.contains("a"));
         assertFalse(sublist.contains(null));
         assertFalse(sublist.contains(Integer.valueOf(7)));
     }
 
-    @Test
-    public void testContainsAll() {
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    public void testContainsAll(Callable<ObservableList<String>> listFactory) throws Exception {
+        setup(listFactory);
         assertTrue(sublist.containsAll(Arrays.asList("b", "c")));
         assertFalse(sublist.containsAll(Arrays.asList("a", "b")));
     }
 
-    @Test
-    public void testContainsNull() {
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    public void testContainsNull(Callable<ObservableList<String>> listFactory) throws Exception {
+        setup(listFactory);
         list.add(3, null);
         sublist = list.subList(1, 5);
         assertTrue(sublist.contains(null));
     }
 
     @SuppressWarnings("unlikely-arg-type")
-    @Test
-    public void testEqualsOnAnotherType() {
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    public void testEqualsOnAnotherType(Callable<ObservableList<String>> listFactory) throws Exception {
+        setup(listFactory);
         assertFalse(sublist.equals(Integer.valueOf(7)));
     }
 
-    @Test
-    public void testEqualsOnLongerList() {
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    public void testEqualsOnLongerList(Callable<ObservableList<String>> listFactory) throws Exception {
+        setup(listFactory);
         List<String> other = Arrays.asList("b", "c", "d", "e", "f");
         assertFalse(sublist.equals(other));
         assertTrue(other.hashCode() != sublist.hashCode());
     }
 
-    @Test
-    public void testEqualsOnShorterList() {
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    public void testEqualsOnShorterList(Callable<ObservableList<String>> listFactory) throws Exception {
+        setup(listFactory);
         List<String> other = Arrays.asList("b", "c", "d");
         assertFalse(sublist.equals(other));
         assertTrue(other.hashCode() != sublist.hashCode());
     }
 
-    @Test
-    public void testEquals() {
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    public void testEquals(Callable<ObservableList<String>> listFactory) throws Exception {
+        setup(listFactory);
         List<String> other = Arrays.asList("b", "c", "d", "e");
         assertTrue(sublist.equals(other));
         assertEquals(other.hashCode(), sublist.hashCode());
     }
 
-    @Test
-    public void testEqualsWithNull() {
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    public void testEqualsWithNull(Callable<ObservableList<String>> listFactory) throws Exception {
+        setup(listFactory);
         sublist.add(2, null);
         List<String> other = Arrays.asList("b", "c", null, "e");
         assertFalse(sublist.equals(other));
         assertTrue(other.hashCode() != sublist.hashCode());
     }
 
-    @Test
-    public void testEqualsWithNullOnLongerList() {
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    public void testEqualsWithNullOnLongerList(Callable<ObservableList<String>> listFactory) throws Exception {
+        setup(listFactory);
         sublist.add(2, null);
         List<String> other = Arrays.asList("b", "c", null, "d", "e");
         assertTrue(sublist.equals(other));
         assertEquals(other.hashCode(), sublist.hashCode());
     }
 
-    @Test
-    public void testEqualsWithNullOnShorterList() {
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    public void testEqualsWithNullOnShorterList(Callable<ObservableList<String>> listFactory) throws Exception {
+        setup(listFactory);
         sublist.add(2, null);
         List<String> other = Arrays.asList("b", "c", null);
         assertFalse(sublist.equals(other));
         assertTrue(other.hashCode() != sublist.hashCode());
     }
 
-    @Test
-    public void testIndexOf() {
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    public void testIndexOf(Callable<ObservableList<String>> listFactory) throws Exception {
+        setup(listFactory);
         assertEquals(2, sublist.indexOf("d"));
         assertEquals(-1, sublist.indexOf("a"));
     }
 
-    @Test
-    public void testIndexOfWithNull() {
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    public void testIndexOfWithNull(Callable<ObservableList<String>> listFactory) throws Exception {
+        setup(listFactory);
         sublist.add(2, null);
         assertEquals(3, sublist.indexOf("d"));
         assertEquals(2, sublist.indexOf(null));
         assertEquals(-1, sublist.indexOf("f"));
     }
 
-    @Test
-    public void testIsEmpty() {
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    public void testIsEmpty(Callable<ObservableList<String>> listFactory) throws Exception {
+        setup(listFactory);
         assertFalse(sublist.isEmpty());
         List<String> otherSublist = list.subList(2, 2);
         assertTrue(otherSublist.isEmpty());
     }
 
-    @Test
-    public void testLastIndexOf() {
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    public void testLastIndexOf(Callable<ObservableList<String>> listFactory) throws Exception {
+        setup(listFactory);
         list = FXCollections.observableList(new ArrayList<String>());
         list.addAll(Arrays.asList("a", null, "a", null, "a", null, "a"));
         sublist = list.subList(1, 5);
@@ -237,8 +271,10 @@ public class ObservableSubListTest {
         assertEquals(2, sublist.lastIndexOf(null));
     }
 
-    @Test
-    public void testRemoveAll() {
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    public void testRemoveAll(Callable<ObservableList<String>> listFactory) throws Exception {
+        setup(listFactory);
         list = FXCollections.observableList(new ArrayList<String>());
         list.addAll(Arrays.asList("a", "b", "c", "a", "b", "c"));
         sublist = list.subList(2, 4);
@@ -251,8 +287,10 @@ public class ObservableSubListTest {
         mlo.check1AddRemove(list, Arrays.asList("c", "a"), 2, 2);
     }
 
-    @Test
-    public void testRemoveIndex() {
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    public void testRemoveIndex(Callable<ObservableList<String>> listFactory) throws Exception {
+        setup(listFactory);
         String s = sublist.remove(2);
         assertEquals("d", s);
         assertEquals(3, sublist.size());
@@ -261,8 +299,10 @@ public class ObservableSubListTest {
         mlo.check1AddRemove(list, Collections.singletonList("d"), 3, 3);
     }
 
-    @Test
-    public void testRemoveNull() {
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    public void testRemoveNull(Callable<ObservableList<String>> listFactory) throws Exception {
+        setup(listFactory);
         sublist.add(2, null);
         assertTrue(sublist.remove(null));
         assertEquals(4, sublist.size());
@@ -270,8 +310,10 @@ public class ObservableSubListTest {
         assertEquals("[a, b, c, d, e, f]", list.toString());
     }
 
-    @Test
-    public void testRemoveObjectExists() {
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    public void testRemoveObjectExists(Callable<ObservableList<String>> listFactory) throws Exception {
+        setup(listFactory);
         assertTrue(sublist.remove("b"));
         assertEquals(3, sublist.size());
         assertEquals("[c, d, e]", sublist.toString());
@@ -279,8 +321,10 @@ public class ObservableSubListTest {
         mlo.check1AddRemove(list, Collections.singletonList("b"), 1, 1);
     }
 
-    @Test
-    public void testRemoveObjectNotExists() {
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    public void testRemoveObjectNotExists(Callable<ObservableList<String>> listFactory) throws Exception {
+        setup(listFactory);
         assertFalse(sublist.remove("f"));
         assertEquals(4, sublist.size());
         assertEquals("[b, c, d, e]", sublist.toString());
@@ -288,8 +332,10 @@ public class ObservableSubListTest {
         mlo.check0();
     }
 
-    @Test
-    public void testRetainAll() {
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    public void testRetainAll(Callable<ObservableList<String>> listFactory) throws Exception {
+        setup(listFactory);
         list = FXCollections.observableList(new ArrayList<String>());
         list.addAll(Arrays.asList("a", "b", "c", "a", "b", "c"));
         list.addListener(mlo);
@@ -302,8 +348,10 @@ public class ObservableSubListTest {
         mlo.check1AddRemove(list, Collections.singletonList("a"), 3, 3);
     }
 
-    @Test
-    public void testSet() {
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    public void testSet(Callable<ObservableList<String>> listFactory) throws Exception {
+        setup(listFactory);
         String s = sublist.set(2, "X");
         assertEquals("d", s);
         assertEquals("[b, c, X, e]", sublist.toString());
@@ -311,22 +359,28 @@ public class ObservableSubListTest {
         mlo.check1AddRemove(list, Collections.singletonList("d"), 3, 4);
     }
 
-    @Test
-    public void testSize() {
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    public void testSize(Callable<ObservableList<String>> listFactory) throws Exception {
+        setup(listFactory);
         assertEquals(4, sublist.size());
         List<String> otherSublist = list.subList(3, 3);
         assertEquals(0, otherSublist.size());
     }
 
-    @Test
-    public void testSubSubList() {
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    public void testSubSubList(Callable<ObservableList<String>> listFactory) throws Exception {
+        setup(listFactory);
         List<String> subsublist = sublist.subList(1, 3);
         assertEquals(2, subsublist.size());
         assertEquals("[c, d]", subsublist.toString());
     }
 
-    @Test
-    public void testSubSubListAdd() {
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    public void testSubSubListAdd(Callable<ObservableList<String>> listFactory) throws Exception {
+        setup(listFactory);
         List<String> subsublist = sublist.subList(1, 3);
         subsublist.add(1, "X");
         // sublist is now invalid
@@ -334,8 +388,10 @@ public class ObservableSubListTest {
         assertEquals("[a, b, c, X, d, e, f]", list.toString());
     }
 
-    @Test
-    public void testSubSubListRemove() {
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    public void testSubSubListRemove(Callable<ObservableList<String>> listFactory) throws Exception {
+        setup(listFactory);
         List<String> subsublist = sublist.subList(1, 3);
         assertEquals("c", subsublist.remove(0));
         // sublist is now invalid
@@ -343,8 +399,10 @@ public class ObservableSubListTest {
         assertEquals("[a, b, d, e, f]", list.toString());
     }
 
-    @Test
-    public void testSubSubListSet() {
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    public void testSubSubListSet(Callable<ObservableList<String>> listFactory) throws Exception {
+        setup(listFactory);
         List<String> subsublist = sublist.subList(1, 3);
         String s = subsublist.set(1, "X");
         assertEquals("d", s);
@@ -353,8 +411,10 @@ public class ObservableSubListTest {
         assertEquals("[a, b, c, X, e, f]", list.toString());
     }
 
-    @Test
-    public void testToString() {
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    public void testToString(Callable<ObservableList<String>> listFactory) throws Exception {
+        setup(listFactory);
         List<String> sub0 = list.subList(3, 3);
         List<String> sub1 = list.subList(3, 4);
         List<String> sub2 = list.subList(2, 5);
@@ -364,93 +424,127 @@ public class ObservableSubListTest {
         assertEquals("[c, d, e]", sub2.toString());
     }
 
-    @Test
-    public void testConcurrencyGet() {
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    public void testConcurrencyGet(Callable<ObservableList<String>> listFactory) throws Exception {
+        setup(listFactory);
         list.add("x");
         try { sublist.get(0); } catch (ConcurrentModificationException e) {return;}
         fail("Expected ConcurrentModificationException");
     }
-    @Test
-    public void testConcurrencyAdd() {
+
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    public void testConcurrencyAdd(Callable<ObservableList<String>> listFactory) throws Exception {
+        setup(listFactory);
         list.add("x");
         try { sublist.add("y"); } catch (ConcurrentModificationException e) {return;}
         fail("Expected ConcurrentModificationException");
     }
-    @Test
-    public void testConcurrencyAddAll() {
+
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    public void testConcurrencyAddAll(Callable<ObservableList<String>> listFactory) throws Exception {
+        setup(listFactory);
         list.add("x");
         try { sublist.addAll(Collections.singleton("y")); } catch (ConcurrentModificationException e) {return;}
         fail("Expected ConcurrentModificationException");
     }
-    @Test
-    public void testConcurrencyClear() {
+
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    public void testConcurrencyClear(Callable<ObservableList<String>> listFactory) throws Exception {
+        setup(listFactory);
         list.add("x");
         try { sublist.addAll(Collections.singleton("y")); } catch (ConcurrentModificationException e) {return;}
         fail("Expected ConcurrentModificationException");
     }
-    @Test
-    public void testConcurrencyContains() {
+
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    public void testConcurrencyContains(Callable<ObservableList<String>> listFactory) throws Exception {
+        setup(listFactory);
         list.add("x");
         try { sublist.contains("x"); } catch (ConcurrentModificationException e) {return;}
         fail("Expected ConcurrentModificationException");
     }
-    @Test
-    public void testConcurrencyContainsAll() {
+
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    public void testConcurrencyContainsAll(Callable<ObservableList<String>> listFactory) throws Exception {
+        setup(listFactory);
         list.add("x");
         try { sublist.containsAll(Collections.singletonList("x")); } catch (ConcurrentModificationException e) {return;}
         fail("Expected ConcurrentModificationException");
     }
 
-    @Test
-    public void testConcurrencyIsEmpty() {
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    public void testConcurrencyIsEmpty(Callable<ObservableList<String>> listFactory) throws Exception {
+        setup(listFactory);
         list.add("x");
         try { sublist.isEmpty(); } catch (ConcurrentModificationException e) {return;}
         fail("Expected ConcurrentModificationException");
     }
 
-    @Test
-    public void testConcurrencyIterator() {
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    public void testConcurrencyIterator(Callable<ObservableList<String>> listFactory) throws Exception {
+        setup(listFactory);
         list.add("x");
         try { sublist.iterator().next(); } catch (ConcurrentModificationException e) {return;}
         fail("Expected ConcurrentModificationException");
     }
 
-    @Test
-    public void testConcurrencyRemove() {
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    public void testConcurrencyRemove(Callable<ObservableList<String>> listFactory) throws Exception {
+        setup(listFactory);
         list.add("x");
         try { sublist.remove("y"); } catch (ConcurrentModificationException e) {return;}
         fail("Expected ConcurrentModificationException");
     }
 
-    @Test
-    public void testConcurrencyRemove0() {
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    public void testConcurrencyRemove0(Callable<ObservableList<String>> listFactory) throws Exception {
+        setup(listFactory);
         list.add("x");
         try { sublist.remove(0); } catch (ConcurrentModificationException e) {return;}
         fail("Expected ConcurrentModificationException");
     }
 
-    @Test
-    public void testConcurrencySet() {
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    public void testConcurrencySet(Callable<ObservableList<String>> listFactory) throws Exception {
+        setup(listFactory);
         list.add("x");
         try { sublist.set(0, "y"); } catch (ConcurrentModificationException e) {return;}
         fail("Expected ConcurrentModificationException");
     }
 
-    @Test
-    public void testConcurrencyRemoveAll() {
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    public void testConcurrencyRemoveAll(Callable<ObservableList<String>> listFactory) throws Exception {
+        setup(listFactory);
         list.add("x");
         try { sublist.removeAll(Arrays.asList("c", "d")); } catch (ConcurrentModificationException e) {return;}
         fail("Expected ConcurrentModificationException");
     }
 
-    @Test
-    public void testConcurrencyRetainAll() {
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    public void testConcurrencyRetainAll(Callable<ObservableList<String>> listFactory) throws Exception {
+        setup(listFactory);
         list.add("x");
         try { sublist.retainAll(Arrays.asList("c", "d")); } catch (ConcurrentModificationException e) {return;}
         fail("Expected ConcurrentModificationException");
     }
-    @Test
-    public void testConcurrencyRetainSize() {
+
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    public void testConcurrencyRetainSize(Callable<ObservableList<String>> listFactory) throws Exception {
+        setup(listFactory);
         list.add("x");
         try { sublist.size(); } catch (ConcurrentModificationException e) {return;}
         fail("Expected ConcurrentModificationException");
