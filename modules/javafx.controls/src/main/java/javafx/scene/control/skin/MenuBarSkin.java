@@ -665,7 +665,13 @@ public class MenuBarSkin extends SkinBase<MenuBar> {
         }
 
         cleanUpListeners();
-        cleanUpSystemMenu();
+
+        if (Platform.isFxApplicationThread()) {
+            cleanUpSystemMenu();
+        } else {
+            Platform.runLater(this::cleanUpSystemMenu);
+        }
+
         getChildren().remove(container);
 
         // call super.dispose last since it sets control to null
@@ -1018,6 +1024,7 @@ public class MenuBarSkin extends SkinBase<MenuBar> {
         getSkinnable().requestLayout();
     }
 
+    // always called in the fx application thread
     private void cleanUpSystemMenu() {
         if (sceneChangeListener != null && getSkinnable() != null) {
             getSkinnable().sceneProperty().removeListener(sceneChangeListener);
