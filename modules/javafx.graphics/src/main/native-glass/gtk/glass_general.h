@@ -257,6 +257,7 @@ private:
 #define ERROR3(msg, param1, param2, param3) {fprintf(stderr, msg, param1, param2, param3);fflush(stderr);}
 #define ERROR4(msg, param1, param2, param3, param4) {fprintf(stderr, msg, param1, param2, param3, param4);fflush(stderr);}
 #else
+#define LOG(msg, ...)
 #define LOG0(msg)
 #define LOG1(msg, param)
 #define LOG2(msg, param1, param2)
