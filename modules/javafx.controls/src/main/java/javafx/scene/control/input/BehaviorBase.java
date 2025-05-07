@@ -22,7 +22,7 @@
  * or visit www.oracle.com if you need additional information or have any
  * questions.
  */
-package com.sun.jfx.incubator.scene.control.input;
+package javafx.scene.control.input;
 
 import java.util.function.BooleanSupplier;
 import javafx.event.Event;
@@ -32,9 +32,6 @@ import javafx.scene.TraversalDirection;
 import javafx.scene.control.Control;
 import javafx.scene.input.KeyCode;
 import com.sun.javafx.PlatformUtil;
-import com.sun.jfx.incubator.scene.control.input.SkinInputMap.Stateful;
-import jfx.incubator.scene.control.input.FunctionTag;
-import jfx.incubator.scene.control.input.KeyBinding;
 
 /**
  * This class provides convenient foundation for custom Control developers intended to simplify writing
@@ -62,6 +59,7 @@ import jfx.incubator.scene.control.input.KeyBinding;
  * }</pre>
  *
  * @param <C> the type of the control
+ * @since 999 TODO
  */
 public abstract class BehaviorBase<C extends Control> {
     private final C control;
