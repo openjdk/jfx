@@ -25,6 +25,9 @@
 
 #import "JFXProgressIndicatorAccessibility.h"
 
+/*
+ * Implementation of the accessibility functionality for ProgressBar and ProgressIndicator controls.
+ */
 @implementation JFXProgressIndicatorAccessibility
 
 - (NSAccessibilityRole)accessibilityRole
@@ -34,26 +37,22 @@
 
 - (NSString * _Nullable)accessibilityLabel
 {
-    //NSLog(@"Label: %@", [super accessibilityLabel]);
     return [super accessibilityLabel];
 }
 
 - (NSString * _Nullable)accessibilityTitle
 {
-    //NSLog(@"Title: %@", [super accessibilityTitle]);
     return [super accessibilityTitle];
 }
 
 - (id)accessibilityTitleUIElement
 {
-    //NSLog(@"accessibilityTitleUIElement: %@", [super accessibilityTitleUIElement]);
     return [super accessibilityTitleUIElement];
 }
 
 - (id)accessibilityValue
 {
     NSNumber *val = (NSNumber *) [super accessibilityValue];
-    //NSLog(@"Actual value: %@", val);
     return [NSNumber numberWithDouble:[val doubleValue]];
 }
 
@@ -67,3 +66,4 @@
     return [super accessibilityParent];
 }
 @end
+

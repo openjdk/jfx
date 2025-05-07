@@ -36,3 +36,4 @@
 - (NSRect)accessibilityFrame;
 - (id)accessibilityTitleUIElement;
 @end
+

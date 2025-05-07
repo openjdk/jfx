@@ -33,7 +33,6 @@
 
 - (NSArray *)accessibilityChildren
 {
-    //NSLog(@"Group: accessibilityChildren");
     return [super accessibilityChildren];
 }
 
@@ -48,3 +47,4 @@
 }
 
 @end
+
