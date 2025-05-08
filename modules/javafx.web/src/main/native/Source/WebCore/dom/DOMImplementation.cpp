@@ -165,6 +165,11 @@ Ref<Document> DOMImplementation::createDocument(const String& contentType, Local
     if (equalLettersIgnoringASCIICase(contentType, "text/plain"_s))
         return TextDocument::create(frame, settings, url, documentIdentifier);
 
+#if PLATFORM(JAVA)
+    if (equalLettersIgnoringASCIICase(contentType, "application/octet-stream"_s))
+        return TextDocument::create(frame, settings, url, documentIdentifier);
+#endif
+
 #if ENABLE(PDFJS)
     if (frame && settings.pdfJSViewerEnabled() && MIMETypeRegistry::isPDFMIMEType(contentType))
         return PDFDocument::create(*frame, url);
