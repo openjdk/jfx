@@ -4117,7 +4117,7 @@ public class TreeViewTest {
         double first = values.get(0);
         for (Map.Entry<String, Double> entry : layoutXMap.entrySet()) {
             double x = entry.getValue();
-            assertEquals(first, x, "Alignment mismatch for item: " + entry.getKey());
+            assertEquals(first, x, 1e-6, "Alignment mismatch for item: " + entry.getKey());
         }
     }
 

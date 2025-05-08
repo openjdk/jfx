@@ -222,12 +222,13 @@ public class TreeCellSkin<T> extends CellSkinBase<TreeCell<T>> {
                 if (disclosureWidth > defaultDisclosureWidth) {
                     maxDisclosureWidthMap.put(tree, disclosureWidth);
 
-                    final VirtualFlow<?> flow = getVirtualFlow();
+                    VirtualFlow<?> flow = getVirtualFlow();
                     if (flow != null) {
                         for (IndexedCell cell : flow.cells) {
-                            if (cell == null || cell.isEmpty()) continue;
-                            cell.requestLayout();
-                            cell.layout();
+                            if (cell != null || !cell.isEmpty()) {
+                                cell.requestLayout();
+                                cell.layout();
+                            }
                         }
                     }
                 }
