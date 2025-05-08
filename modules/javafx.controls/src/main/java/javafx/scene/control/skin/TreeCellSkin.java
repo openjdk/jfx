@@ -223,10 +223,12 @@ public class TreeCellSkin<T> extends CellSkinBase<TreeCell<T>> {
                     maxDisclosureWidthMap.put(tree, disclosureWidth);
 
                     final VirtualFlow<?> flow = getVirtualFlow();
-                    for (IndexedCell cell : flow.cells) {
-                        if (cell == null || cell.isEmpty()) continue;
-                        cell.requestLayout();
-                        cell.layout();
+                    if (flow != null) {
+                        for (IndexedCell cell : flow.cells) {
+                            if (cell == null || cell.isEmpty()) continue;
+                            cell.requestLayout();
+                            cell.layout();
+                        }
                     }
                 }
 
@@ -258,8 +260,8 @@ public class TreeCellSkin<T> extends CellSkinBase<TreeCell<T>> {
     VirtualFlow<?> getVirtualFlow() {
         Parent p = getSkinnable();
         while (p != null) {
-            if (p instanceof VirtualFlow) {
-                return (VirtualFlow<?>) p;
+            if (p instanceof VirtualFlow vf) {
+                return vf;
             }
             p = p.getParent();
         }
