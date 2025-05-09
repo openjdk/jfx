@@ -225,7 +225,7 @@ public class TreeCellSkin<T> extends CellSkinBase<TreeCell<T>> {
                     VirtualFlow<?> flow = getVirtualFlow();
                     if (flow != null) {
                         for (IndexedCell cell : flow.cells) {
-                            if (cell != null || !cell.isEmpty()) {
+                            if (cell != null && !cell.isEmpty()) {
                                 cell.requestLayout();
                                 cell.layout();
                             }
