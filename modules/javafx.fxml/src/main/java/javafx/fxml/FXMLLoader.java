@@ -314,8 +314,12 @@ public class FXMLLoader {
                     ObservableValue<Object> propertyModel = targetAdapter.getPropertyModel(attribute.name);
                     Class<?> type = targetAdapter.getType(attribute.name);
 
-                    if (propertyModel instanceof Property<?>) {
-                        ((Property<Object>) propertyModel).bind(new ExpressionValue(namespace, expression, type));
+                    if (propertyModel instanceof Property<Object> property) {
+                        ExpressionValue expressionValue = new ExpressionValue(namespace, expression, type);
+                        Runnable doBind = () -> {
+                            property.bind(expressionValue);
+                        };
+                        deferredBindings.add(doBind);
                     }
                 }
             } else if (isBidirectionalBindingExpression(value)) {
@@ -1885,6 +1889,8 @@ public class FXMLLoader {
 
     private ScriptEngineManager scriptEngineManager = null;
 
+    private final List<Runnable> deferredBindings = new ArrayList<>();
+
     private static ClassLoader defaultClassLoader = null;
 
     private static final Pattern extraneousWhitespacePattern = Pattern.compile("\\s+");
@@ -2633,6 +2639,12 @@ public class FXMLLoader {
                 }
             } catch (XMLStreamException exception) {
                 throw constructLoadException(exception);
+            }
+            // Bind any deferred bindings
+            try {
+                deferredBindings.forEach(Runnable::run);
+            } finally {
+                deferredBindings.clear();
             }
 
             if (controller != null) {

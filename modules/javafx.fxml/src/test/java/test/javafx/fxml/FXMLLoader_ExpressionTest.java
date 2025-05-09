@@ -309,6 +309,25 @@ public class FXMLLoader_ExpressionTest {
     }
 
     @Test
+    public void testInternalBinding() throws IOException {
+        /*
+            Test binding of a property to another property in the same FXML file.
+         */
+        FXMLLoader fxmlLoader = new FXMLLoader(getClass().getResource("expression_binding_internal.fxml"));
+        fxmlLoader.load();
+
+        Widget childWidget1 = (Widget)fxmlLoader.getNamespace().get("childWidget1");
+        Widget childWidget2 = (Widget)fxmlLoader.getNamespace().get("childWidget2");
+        Widget childWidget3 = (Widget)fxmlLoader.getNamespace().get("childWidget3");
+        assertEquals("0", childWidget2.getName());
+        assertEquals(10, childWidget3.getNumber());
+
+        childWidget1.setNumber(5);
+        assertEquals("10", childWidget2.getName());
+        assertEquals(5, childWidget3.getNumber());
+    }
+
+    @Test
     public void testEscapeSequences() throws IOException {
         System.err.println("Below warning about - deprecated escape sequence - is expected from this test.");
 
