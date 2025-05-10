@@ -500,7 +500,7 @@ defineProperty("AWT_TEST", "true")
 ext.IS_AWT_TEST = Boolean.parseBoolean(AWT_TEST);
 
 // Specifies whether to run system tests that depend on SWT (only used when FULL_TEST is also enabled)
-defineProperty("SWT_TEST", IS_MAC ? "false" : "true")
+defineProperty("SWT_TEST", (IS_MAC || IS_LINUX) ? "false" : "true")
 ext.IS_SWT_TEST = Boolean.parseBoolean(SWT_TEST);
 
 // Specifies whether to run unstable tests (true) - tests that don't run well with Hudson builds
