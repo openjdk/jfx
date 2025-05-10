@@ -48,9 +48,9 @@ static const xmlChar *xsltComputingGlobalVarMarker =
 #define XSLT_TCTXT_VARIABLE(c) ((xsltStackElemPtr) (c)->contextVariable)
 
 /************************************************************************
- *                                                                      *
- *  Result Value Tree (Result Tree Fragment) interfaces                 *
- *                                                                      *
+ *                                    *
+ *  Result Value Tree (Result Tree Fragment) interfaces            *
+ *                                    *
  ************************************************************************/
 /**
  * xsltCreateRVT:
@@ -71,28 +71,28 @@ xsltCreateRVT(xsltTransformContextPtr ctxt)
     * Answer: It is called by the EXSLT module.
     */
     if (ctxt == NULL)
-        return(NULL);
+    return(NULL);
 
     /*
     * Reuse a RTF from the cache if available.
     */
     if (ctxt->cache->RVT) {
-        container = ctxt->cache->RVT;
-        ctxt->cache->RVT = (xmlDocPtr) container->next;
-        /* clear the internal pointers */
-        container->next = NULL;
-        container->prev = NULL;
-        if (ctxt->cache->nbRVT > 0)
-            ctxt->cache->nbRVT--;
+    container = ctxt->cache->RVT;
+    ctxt->cache->RVT = (xmlDocPtr) container->next;
+    /* clear the internal pointers */
+    container->next = NULL;
+    container->prev = NULL;
+    if (ctxt->cache->nbRVT > 0)
+        ctxt->cache->nbRVT--;
 #ifdef XSLT_DEBUG_PROFILE_CACHE
-        ctxt->cache->dbgReusedRVTs++;
+    ctxt->cache->dbgReusedRVTs++;
 #endif
-        return(container);
+    return(container);
     }
 
     container = xmlNewDoc(NULL);
     if (container == NULL)
-        return(NULL);
+    return(NULL);
     container->dict = ctxt->dict;
     xmlDictReference(container->dict);
     XSLT_MARK_RES_TREE_FRAG(container);
@@ -120,7 +120,7 @@ int
 xsltRegisterTmpRVT(xsltTransformContextPtr ctxt, xmlDocPtr RVT)
 {
     if ((ctxt == NULL) || (RVT == NULL))
-        return(-1);
+    return(-1);
 
     RVT->prev = NULL;
     RVT->compression = XSLT_RVT_LOCAL;
@@ -131,14 +131,14 @@ xsltRegisterTmpRVT(xsltTransformContextPtr ctxt, xmlDocPtr RVT)
     * var/param itself.
     */
     if (ctxt->contextVariable != NULL) {
-        RVT->next = (xmlNodePtr) XSLT_TCTXT_VARIABLE(ctxt)->fragment;
-        XSLT_TCTXT_VARIABLE(ctxt)->fragment = RVT;
-        return(0);
+    RVT->next = (xmlNodePtr) XSLT_TCTXT_VARIABLE(ctxt)->fragment;
+    XSLT_TCTXT_VARIABLE(ctxt)->fragment = RVT;
+    return(0);
     }
 
     RVT->next = (xmlNodePtr) ctxt->tmpRVT;
     if (ctxt->tmpRVT != NULL)
-        ctxt->tmpRVT->prev = (xmlNodePtr) RVT;
+    ctxt->tmpRVT->prev = (xmlNodePtr) RVT;
     ctxt->tmpRVT = RVT;
     return(0);
 }
@@ -157,10 +157,10 @@ xsltRegisterTmpRVT(xsltTransformContextPtr ctxt, xmlDocPtr RVT)
  */
 int
 xsltRegisterLocalRVT(xsltTransformContextPtr ctxt,
-                     xmlDocPtr RVT)
+             xmlDocPtr RVT)
 {
     if ((ctxt == NULL) || (RVT == NULL))
-        return(-1);
+    return(-1);
 
     RVT->prev = NULL;
     RVT->compression = XSLT_RVT_LOCAL;
@@ -172,11 +172,11 @@ xsltRegisterLocalRVT(xsltTransformContextPtr ctxt,
     * freed before we leave the scope of a var.
     */
     if ((ctxt->contextVariable != NULL) &&
-        (XSLT_TCTXT_VARIABLE(ctxt)->flags & XSLT_VAR_IN_SELECT))
+    (XSLT_TCTXT_VARIABLE(ctxt)->flags & XSLT_VAR_IN_SELECT))
     {
-        RVT->next = (xmlNodePtr) XSLT_TCTXT_VARIABLE(ctxt)->fragment;
-        XSLT_TCTXT_VARIABLE(ctxt)->fragment = RVT;
-        return(0);
+    RVT->next = (xmlNodePtr) XSLT_TCTXT_VARIABLE(ctxt)->fragment;
+    XSLT_TCTXT_VARIABLE(ctxt)->fragment = RVT;
+    return(0);
     }
     /*
     * Store the fragment in the scope of the current instruction.
@@ -185,7 +185,7 @@ xsltRegisterLocalRVT(xsltTransformContextPtr ctxt,
     */
     RVT->next = (xmlNodePtr) ctxt->localRVT;
     if (ctxt->localRVT != NULL)
-        ctxt->localRVT->prev = (xmlNodePtr) RVT;
+    ctxt->localRVT->prev = (xmlNodePtr) RVT;
     ctxt->localRVT = RVT;
     return(0);
 }
@@ -233,7 +233,7 @@ xsltExtensionInstructionResultFinalize(
 int
 xsltExtensionInstructionResultRegister(
         xsltTransformContextPtr ctxt ATTRIBUTE_UNUSED,
-        xmlXPathObjectPtr obj ATTRIBUTE_UNUSED)
+    xmlXPathObjectPtr obj ATTRIBUTE_UNUSED)
 {
     return(0);
 }
@@ -261,7 +261,7 @@ xsltFlagRVTs(xsltTransformContextPtr ctxt, xmlXPathObjectPtr obj, int val) {
     xmlDocPtr doc;
 
     if ((ctxt == NULL) || (obj == NULL))
-        return(-1);
+    return(-1);
 
     /*
     * OPTIMIZE TODO: If no local variables/params and no local tree
@@ -270,45 +270,45 @@ xsltFlagRVTs(xsltTransformContextPtr ctxt, xmlXPathObjectPtr obj, int val) {
     */
 
     if ((obj->type != XPATH_NODESET) && (obj->type != XPATH_XSLT_TREE))
-        return(0);
+    return(0);
     if ((obj->nodesetval == NULL) || (obj->nodesetval->nodeNr == 0))
-        return(0);
+    return(0);
 
     for (i = 0; i < obj->nodesetval->nodeNr; i++) {
-        cur = obj->nodesetval->nodeTab[i];
-        if (cur->type == XML_NAMESPACE_DECL) {
-            /*
-            * The XPath module sets the owner element of a ns-node on
-            * the ns->next field.
-            */
-            if ((((xmlNsPtr) cur)->next != NULL) &&
-                (((xmlNsPtr) cur)->next->type == XML_ELEMENT_NODE))
-            {
-                cur = (xmlNodePtr) ((xmlNsPtr) cur)->next;
-                doc = cur->doc;
-            } else {
-                xsltTransformError(ctxt, NULL, ctxt->inst,
-                    "Internal error in xsltFlagRVTs(): "
-                    "Cannot retrieve the doc of a namespace node.\n");
-                return(-1);
-            }
+    cur = obj->nodesetval->nodeTab[i];
+    if (cur->type == XML_NAMESPACE_DECL) {
+        /*
+        * The XPath module sets the owner element of a ns-node on
+        * the ns->next field.
+        */
+        if ((((xmlNsPtr) cur)->next != NULL) &&
+        (((xmlNsPtr) cur)->next->type == XML_ELEMENT_NODE))
+        {
+        cur = (xmlNodePtr) ((xmlNsPtr) cur)->next;
+        doc = cur->doc;
         } else {
-            doc = cur->doc;
+        xsltTransformError(ctxt, NULL, ctxt->inst,
+            "Internal error in xsltFlagRVTs(): "
+            "Cannot retrieve the doc of a namespace node.\n");
+        return(-1);
         }
-        if (doc == NULL) {
-            xsltTransformError(ctxt, NULL, ctxt->inst,
-                "Internal error in xsltFlagRVTs(): "
-                "Cannot retrieve the doc of a node.\n");
-            return(-1);
-        }
-        if (doc->name && (doc->name[0] == ' ') &&
+    } else {
+        doc = cur->doc;
+    }
+    if (doc == NULL) {
+        xsltTransformError(ctxt, NULL, ctxt->inst,
+        "Internal error in xsltFlagRVTs(): "
+        "Cannot retrieve the doc of a node.\n");
+        return(-1);
+    }
+    if (doc->name && (doc->name[0] == ' ') &&
             doc->compression != XSLT_RVT_GLOBAL) {
-            /*
-            * This is a result tree fragment.
-            * We store ownership information in the @compression field.
-            * TODO: How do we know if this is a doc acquired via the
-            *  document() function?
-            */
+        /*
+        * This is a result tree fragment.
+        * We store ownership information in the @compression field.
+        * TODO: How do we know if this is a doc acquired via the
+        *  document() function?
+        */
 #ifdef WITH_XSLT_DEBUG_VARIABLE
             XSLT_TRACE(ctxt, XSLT_TRACE_VARIABLES,
                        xsltGenericDebug(xsltGenericDebugContext,
@@ -321,7 +321,7 @@ xsltFlagRVTs(xsltTransformContextPtr ctxt, xmlXPathObjectPtr obj, int val) {
                     doc->compression = XSLT_RVT_LOCAL;
             } else if (val == XSLT_RVT_GLOBAL) {
                 if (doc->compression != XSLT_RVT_LOCAL) {
-                    xmlGenericError(xmlGenericErrorContext,
+            xmlGenericError(xmlGenericErrorContext,
                             "xsltFlagRVTs: Invalid transition %d => GLOBAL\n",
                             doc->compression);
                     doc->compression = XSLT_RVT_GLOBAL;
@@ -331,9 +331,9 @@ xsltFlagRVTs(xsltTransformContextPtr ctxt, xmlXPathObjectPtr obj, int val) {
                 /* Will be registered as persistant in xsltReleaseLocalRVTs. */
                 doc->compression = XSLT_RVT_GLOBAL;
             } else if (val == XSLT_RVT_FUNC_RESULT) {
-                doc->compression = val;
+            doc->compression = val;
             }
-        }
+    }
     }
 
     return(0);
@@ -351,52 +351,52 @@ void
 xsltReleaseRVT(xsltTransformContextPtr ctxt, xmlDocPtr RVT)
 {
     if (RVT == NULL)
-        return;
+    return;
 
     if (ctxt && (ctxt->cache->nbRVT < 40)) {
-        /*
-        * Store the Result Tree Fragment.
-        * Free the document info.
-        */
-        if (RVT->_private != NULL) {
-            xsltFreeDocumentKeys((xsltDocumentPtr) RVT->_private);
-            xmlFree(RVT->_private);
-            RVT->_private = NULL;
-        }
-        /*
-        * Clear the document tree.
-        */
-        if (RVT->children != NULL) {
-            xmlFreeNodeList(RVT->children);
-            RVT->children = NULL;
-            RVT->last = NULL;
-        }
-        if (RVT->ids != NULL) {
-            xmlFreeIDTable((xmlIDTablePtr) RVT->ids);
-            RVT->ids = NULL;
-        }
+    /*
+    * Store the Result Tree Fragment.
+    * Free the document info.
+    */
+    if (RVT->_private != NULL) {
+        xsltFreeDocumentKeys((xsltDocumentPtr) RVT->_private);
+        xmlFree(RVT->_private);
+        RVT->_private = NULL;
+    }
+    /*
+    * Clear the document tree.
+    */
+    if (RVT->children != NULL) {
+        xmlFreeNodeList(RVT->children);
+        RVT->children = NULL;
+        RVT->last = NULL;
+    }
+    if (RVT->ids != NULL) {
+        xmlFreeIDTable((xmlIDTablePtr) RVT->ids);
+        RVT->ids = NULL;
+    }
 
-        /*
-        * Reset the ownership information.
-        */
-        RVT->compression = 0;
+    /*
+    * Reset the ownership information.
+    */
+    RVT->compression = 0;
 
-        RVT->next = (xmlNodePtr) ctxt->cache->RVT;
-        ctxt->cache->RVT = RVT;
+    RVT->next = (xmlNodePtr) ctxt->cache->RVT;
+    ctxt->cache->RVT = RVT;
 
-        ctxt->cache->nbRVT++;
+    ctxt->cache->nbRVT++;
 
 #ifdef XSLT_DEBUG_PROFILE_CACHE
-        ctxt->cache->dbgCachedRVTs++;
+    ctxt->cache->dbgCachedRVTs++;
 #endif
-        return;
+    return;
     }
     /*
     * Free it.
     */
     if (RVT->_private != NULL) {
-        xsltFreeDocumentKeys((xsltDocumentPtr) RVT->_private);
-        xmlFree(RVT->_private);
+    xsltFreeDocumentKeys((xsltDocumentPtr) RVT->_private);
+    xmlFree(RVT->_private);
     }
     xmlFreeDoc(RVT);
 }
@@ -422,7 +422,7 @@ xsltRegisterPersistRVT(xsltTransformContextPtr ctxt, xmlDocPtr RVT)
     RVT->prev = NULL;
     RVT->next = (xmlNodePtr) ctxt->persistRVT;
     if (ctxt->persistRVT != NULL)
-        ctxt->persistRVT->prev = (xmlNodePtr) RVT;
+    ctxt->persistRVT->prev = (xmlNodePtr) RVT;
     ctxt->persistRVT = RVT;
     return(0);
 }
@@ -441,19 +441,19 @@ xsltFreeRVTs(xsltTransformContextPtr ctxt)
     xmlDocPtr cur, next;
 
     if (ctxt == NULL)
-        return;
+    return;
     /*
     * Local fragments.
     */
     cur = ctxt->localRVT;
     while (cur != NULL) {
         next = (xmlDocPtr) cur->next;
-        if (cur->_private != NULL) {
-            xsltFreeDocumentKeys(cur->_private);
-            xmlFree(cur->_private);
-        }
-        xmlFreeDoc(cur);
-        cur = next;
+    if (cur->_private != NULL) {
+        xsltFreeDocumentKeys(cur->_private);
+        xmlFree(cur->_private);
+    }
+    xmlFreeDoc(cur);
+    cur = next;
     }
     ctxt->localRVT = NULL;
     /*
@@ -462,12 +462,12 @@ xsltFreeRVTs(xsltTransformContextPtr ctxt)
     cur = ctxt->tmpRVT;
     while (cur != NULL) {
         next = (xmlDocPtr) cur->next;
-        if (cur->_private != NULL) {
-            xsltFreeDocumentKeys(cur->_private);
-            xmlFree(cur->_private);
-        }
-        xmlFreeDoc(cur);
-        cur = next;
+    if (cur->_private != NULL) {
+        xsltFreeDocumentKeys(cur->_private);
+        xmlFree(cur->_private);
+    }
+    xmlFreeDoc(cur);
+    cur = next;
     }
     ctxt->tmpRVT = NULL;
     /*
@@ -476,20 +476,20 @@ xsltFreeRVTs(xsltTransformContextPtr ctxt)
     cur = ctxt->persistRVT;
     while (cur != NULL) {
         next = (xmlDocPtr) cur->next;
-        if (cur->_private != NULL) {
-            xsltFreeDocumentKeys(cur->_private);
-            xmlFree(cur->_private);
-        }
-        xmlFreeDoc(cur);
-        cur = next;
+    if (cur->_private != NULL) {
+        xsltFreeDocumentKeys(cur->_private);
+        xmlFree(cur->_private);
+    }
+    xmlFreeDoc(cur);
+    cur = next;
     }
     ctxt->persistRVT = NULL;
 }
 
 /************************************************************************
- *                                                                      *
- *                      Module interfaces                               *
- *                                                                      *
+ *                                    *
+ *            Module interfaces                *
+ *                                    *
  ************************************************************************/
 
 /**
@@ -507,20 +507,20 @@ xsltNewStackElem(xsltTransformContextPtr ctxt)
     * Reuse a stack item from the cache if available.
     */
     if (ctxt && ctxt->cache->stackItems) {
-        ret = ctxt->cache->stackItems;
-        ctxt->cache->stackItems = ret->next;
-        ret->next = NULL;
-        ctxt->cache->nbStackItems--;
+    ret = ctxt->cache->stackItems;
+    ctxt->cache->stackItems = ret->next;
+    ret->next = NULL;
+    ctxt->cache->nbStackItems--;
 #ifdef XSLT_DEBUG_PROFILE_CACHE
-        ctxt->cache->dbgReusedVars++;
+    ctxt->cache->dbgReusedVars++;
 #endif
-        return(ret);
+    return(ret);
     }
     ret = (xsltStackElemPtr) xmlMalloc(sizeof(xsltStackElem));
     if (ret == NULL) {
-        xsltTransformError(NULL, NULL, NULL,
-                "xsltNewStackElem : malloc failed\n");
-        return(NULL);
+    xsltTransformError(NULL, NULL, NULL,
+        "xsltNewStackElem : malloc failed\n");
+    return(NULL);
     }
     memset(ret, 0, sizeof(xsltStackElem));
     ret->context = ctxt;
@@ -541,9 +541,9 @@ xsltCopyStackElem(xsltStackElemPtr elem) {
 
     cur = (xsltStackElemPtr) xmlMalloc(sizeof(xsltStackElem));
     if (cur == NULL) {
-        xsltTransformError(NULL, NULL, NULL,
-                "xsltCopyStackElem : malloc failed\n");
-        return(NULL);
+    xsltTransformError(NULL, NULL, NULL,
+        "xsltCopyStackElem : malloc failed\n");
+    return(NULL);
     }
     memset(cur, 0, sizeof(xsltStackElem));
     cur->context = elem->context;
@@ -564,21 +564,21 @@ xsltCopyStackElem(xsltStackElemPtr elem) {
 static void
 xsltFreeStackElem(xsltStackElemPtr elem) {
     if (elem == NULL)
-        return;
+    return;
     if (elem->value != NULL)
-        xmlXPathFreeObject(elem->value);
+    xmlXPathFreeObject(elem->value);
     /*
     * Release the list of temporary Result Tree Fragments.
     */
     if (elem->context) {
-        xmlDocPtr cur;
+    xmlDocPtr cur;
 
-        while (elem->fragment != NULL) {
-            cur = elem->fragment;
-            elem->fragment = (xmlDocPtr) cur->next;
+    while (elem->fragment != NULL) {
+        cur = elem->fragment;
+        elem->fragment = (xmlDocPtr) cur->next;
 
             if (cur->compression == XSLT_RVT_LOCAL) {
-                xsltReleaseRVT(elem->context, cur);
+        xsltReleaseRVT(elem->context, cur);
             } else if (cur->compression == XSLT_RVT_FUNC_RESULT) {
                 xsltRegisterLocalRVT(elem->context, cur);
                 cur->compression = XSLT_RVT_FUNC_RESULT;
@@ -587,25 +587,25 @@ xsltFreeStackElem(xsltStackElemPtr elem) {
                         "xsltFreeStackElem: Unexpected RVT flag %d\n",
                         cur->compression);
             }
-        }
+    }
     }
     /*
     * Cache or free the variable structure.
     */
     if (elem->context && (elem->context->cache->nbStackItems < 50)) {
-        /*
-        * Store the item in the cache.
-        */
-        xsltTransformContextPtr ctxt = elem->context;
-        memset(elem, 0, sizeof(xsltStackElem));
-        elem->context = ctxt;
-        elem->next = ctxt->cache->stackItems;
-        ctxt->cache->stackItems = elem;
-        ctxt->cache->nbStackItems++;
+    /*
+    * Store the item in the cache.
+    */
+    xsltTransformContextPtr ctxt = elem->context;
+    memset(elem, 0, sizeof(xsltStackElem));
+    elem->context = ctxt;
+    elem->next = ctxt->cache->stackItems;
+    ctxt->cache->stackItems = elem;
+    ctxt->cache->nbStackItems++;
 #ifdef XSLT_DEBUG_PROFILE_CACHE
-        ctxt->cache->dbgCachedVars++;
+    ctxt->cache->dbgCachedVars++;
 #endif
-        return;
+    return;
     }
     xmlFree(elem);
 }
@@ -627,9 +627,9 @@ xsltFreeStackElemList(xsltStackElemPtr elem) {
     xsltStackElemPtr next;
 
     while (elem != NULL) {
-        next = elem->next;
-        xsltFreeStackElem(elem);
-        elem = next;
+    next = elem->next;
+    xsltFreeStackElem(elem);
+    elem = next;
     }
 }
 
@@ -641,19 +641,14 @@ xsltFreeStackElemList(xsltStackElemPtr elem) {
  *
  * Locate an element in the stack based on its name.
  */
-#if 0 /* TODO: Those seem to have been used for debugging. */
-static int stack_addr = 0;
-static int stack_cmp = 0;
-#endif
-
 static xsltStackElemPtr
 xsltStackLookup(xsltTransformContextPtr ctxt, const xmlChar *name,
-                const xmlChar *nameURI) {
+            const xmlChar *nameURI) {
     int i;
     xsltStackElemPtr cur;
 
     if ((ctxt == NULL) || (name == NULL) || (ctxt->varsNr == 0))
-        return(NULL);
+    return(NULL);
 
     /*
      * Do the lookup from the top of the stack, but
@@ -662,16 +657,13 @@ xsltStackLookup(xsltTransformContextPtr ctxt, const xmlChar *name,
      * come from the disctionnary and hence pointer comparison.
      */
     for (i = ctxt->varsNr; i > ctxt->varsBase; i--) {
-        cur = ctxt->varsTab[i-1];
-        while (cur != NULL) {
-            if ((cur->name == name) && (cur->nameURI == nameURI)) {
-#if 0
-                stack_addr++;
-#endif
-                return(cur);
-            }
-            cur = cur->next;
+    cur = ctxt->varsTab[i-1];
+    while (cur != NULL) {
+        if ((cur->name == name) && (cur->nameURI == nameURI)) {
+        return(cur);
         }
+        cur = cur->next;
+    }
     }
 
     /*
@@ -683,16 +675,13 @@ xsltStackLookup(xsltTransformContextPtr ctxt, const xmlChar *name,
         nameURI = xmlDictLookup(ctxt->dict, nameURI, -1);
 
     for (i = ctxt->varsNr; i > ctxt->varsBase; i--) {
-        cur = ctxt->varsTab[i-1];
-        while (cur != NULL) {
-            if ((cur->name == name) && (cur->nameURI == nameURI)) {
-#if 0
-                stack_cmp++;
-#endif
-                return(cur);
-            }
-            cur = cur->next;
+    cur = ctxt->varsTab[i-1];
+    while (cur != NULL) {
+        if ((cur->name == name) && (cur->nameURI == nameURI)) {
+        return(cur);
         }
+        cur = cur->next;
+    }
     }
 
     return(NULL);
@@ -717,20 +706,20 @@ xsltStackLookup(xsltTransformContextPtr ctxt, const xmlChar *name,
  */
 static int
 xsltCheckStackElem(xsltTransformContextPtr ctxt, const xmlChar *name,
-                   const xmlChar *nameURI) {
+               const xmlChar *nameURI) {
     xsltStackElemPtr cur;
 
     if ((ctxt == NULL) || (name == NULL))
-        return(-1);
+    return(-1);
 
     cur = xsltStackLookup(ctxt, name, nameURI);
     if (cur == NULL)
         return(0);
     if (cur->comp != NULL) {
         if (cur->comp->type == XSLT_FUNC_WITHPARAM)
-            return(3);
-        else if (cur->comp->type == XSLT_FUNC_PARAM)
-            return(2);
+        return(3);
+    else if (cur->comp->type == XSLT_FUNC_PARAM)
+        return(2);
     }
 
     return(1);
@@ -754,10 +743,10 @@ static int
 xsltAddStackElem(xsltTransformContextPtr ctxt, xsltStackElemPtr elem)
 {
     if ((ctxt == NULL) || (elem == NULL))
-        return(-1);
+    return(-1);
 
     do {
-        if (ctxt->varsNr >= ctxt->varsMax) {
+    if (ctxt->varsNr >= ctxt->varsMax) {
             xsltStackElemPtr *tmp;
             int newMax = ctxt->varsMax == 0 ? 10 : 2 * ctxt->varsMax;
 
@@ -769,11 +758,11 @@ xsltAddStackElem(xsltTransformContextPtr ctxt, xsltStackElemPtr elem)
             }
             ctxt->varsTab = tmp;
             ctxt->varsMax = newMax;
-        }
-        ctxt->varsTab[ctxt->varsNr++] = elem;
-        ctxt->vars = elem;
+    }
+    ctxt->varsTab[ctxt->varsNr++] = elem;
+    ctxt->vars = elem;
 
-        elem = elem->next;
+    elem = elem->next;
     } while (elem != NULL);
 
     return(0);
@@ -795,9 +784,9 @@ xsltAddStackElemList(xsltTransformContextPtr ctxt, xsltStackElemPtr elems)
 }
 
 /************************************************************************
- *                                                                      *
- *                      Module interfaces                               *
- *                                                                      *
+ *                                    *
+ *            Module interfaces                *
+ *                                    *
  ************************************************************************/
 
 /**
@@ -812,11 +801,11 @@ xsltAddStackElemList(xsltTransformContextPtr ctxt, xsltStackElemPtr elems)
  */
 static xmlXPathObjectPtr
 xsltEvalVariable(xsltTransformContextPtr ctxt, xsltStackElemPtr variable,
-                 xsltStylePreCompPtr castedComp)
+             xsltStylePreCompPtr castedComp)
 {
 #ifdef XSLT_REFACTORED
     xsltStyleItemVariablePtr comp =
-        (xsltStyleItemVariablePtr) castedComp;
+    (xsltStyleItemVariablePtr) castedComp;
 #else
     xsltStylePreCompPtr comp = castedComp;
 #endif
@@ -824,7 +813,7 @@ xsltEvalVariable(xsltTransformContextPtr ctxt, xsltStackElemPtr variable,
     xmlNodePtr oldInst;
 
     if ((ctxt == NULL) || (variable == NULL))
-        return(NULL);
+    return(NULL);
 
     /*
     * A variable or parameter are evaluated on demand; thus the
@@ -835,197 +824,197 @@ xsltEvalVariable(xsltTransformContextPtr ctxt, xsltStackElemPtr variable,
 
 #ifdef WITH_XSLT_DEBUG_VARIABLE
     XSLT_TRACE(ctxt,XSLT_TRACE_VARIABLES,xsltGenericDebug(xsltGenericDebugContext,
-        "Evaluating variable '%s'\n", variable->name));
+    "Evaluating variable '%s'\n", variable->name));
 #endif
     if (variable->select != NULL) {
-        xmlXPathCompExprPtr xpExpr = NULL;
-        xmlDocPtr oldXPDoc;
-        xmlNodePtr oldXPContextNode;
-        int oldXPProximityPosition, oldXPContextSize, oldXPNsNr;
-        xmlNsPtr *oldXPNamespaces;
-        xmlXPathContextPtr xpctxt = ctxt->xpathCtxt;
-        xsltStackElemPtr oldVar = ctxt->contextVariable;
+    xmlXPathCompExprPtr xpExpr = NULL;
+    xmlDocPtr oldXPDoc;
+    xmlNodePtr oldXPContextNode;
+    int oldXPProximityPosition, oldXPContextSize, oldXPNsNr;
+    xmlNsPtr *oldXPNamespaces;
+    xmlXPathContextPtr xpctxt = ctxt->xpathCtxt;
+    xsltStackElemPtr oldVar = ctxt->contextVariable;
 
-        if ((comp != NULL) && (comp->comp != NULL)) {
-            xpExpr = comp->comp;
-        } else {
-            xpExpr = xmlXPathCtxtCompile(ctxt->xpathCtxt, variable->select);
-        }
-        if (xpExpr == NULL)
-            return(NULL);
-        /*
-        * Save context states.
-        */
-        oldXPDoc = xpctxt->doc;
-        oldXPContextNode = xpctxt->node;
-        oldXPProximityPosition = xpctxt->proximityPosition;
-        oldXPContextSize = xpctxt->contextSize;
-        oldXPNamespaces = xpctxt->namespaces;
-        oldXPNsNr = xpctxt->nsNr;
+    if ((comp != NULL) && (comp->comp != NULL)) {
+        xpExpr = comp->comp;
+    } else {
+        xpExpr = xmlXPathCtxtCompile(ctxt->xpathCtxt, variable->select);
+    }
+    if (xpExpr == NULL)
+        return(NULL);
+    /*
+    * Save context states.
+    */
+    oldXPDoc = xpctxt->doc;
+    oldXPContextNode = xpctxt->node;
+    oldXPProximityPosition = xpctxt->proximityPosition;
+    oldXPContextSize = xpctxt->contextSize;
+    oldXPNamespaces = xpctxt->namespaces;
+    oldXPNsNr = xpctxt->nsNr;
 
-        xpctxt->node = ctxt->node;
-        /*
-        * OPTIMIZE TODO: Lame try to set the context doc.
-        *   Get rid of this somehow in xpath.c.
-        */
-        if ((ctxt->node->type != XML_NAMESPACE_DECL) &&
-            ctxt->node->doc)
-            xpctxt->doc = ctxt->node->doc;
-        /*
-        * BUG TODO: The proximity position and the context size will
-        *  potentially be wrong.
-        *  Example:
-        *  <xsl:template select="foo">
-        *    <xsl:variable name="pos" select="position()"/>
-        *    <xsl:for-each select="bar">
-        *      <xsl:value-of select="$pos"/>
-        *    </xsl:for-each>
-        *  </xsl:template>
-        *  Here the proximity position and context size are changed
-        *  to the context of <xsl:for-each select="bar">, but
-        *  the variable needs to be evaluated in the context of
-        *  <xsl:template select="foo">.
-        */
-        if (comp != NULL) {
+    xpctxt->node = ctxt->node;
+    /*
+    * OPTIMIZE TODO: Lame try to set the context doc.
+    *   Get rid of this somehow in xpath.c.
+    */
+    if ((ctxt->node->type != XML_NAMESPACE_DECL) &&
+        ctxt->node->doc)
+        xpctxt->doc = ctxt->node->doc;
+    /*
+    * BUG TODO: The proximity position and the context size will
+    *  potentially be wrong.
+    *  Example:
+    *  <xsl:template select="foo">
+    *    <xsl:variable name="pos" select="position()"/>
+    *    <xsl:for-each select="bar">
+    *      <xsl:value-of select="$pos"/>
+    *    </xsl:for-each>
+    *  </xsl:template>
+    *  Here the proximity position and context size are changed
+    *  to the context of <xsl:for-each select="bar">, but
+    *  the variable needs to be evaluated in the context of
+    *  <xsl:template select="foo">.
+    */
+    if (comp != NULL) {
 
 #ifdef XSLT_REFACTORED
-            if (comp->inScopeNs != NULL) {
-                xpctxt->namespaces = comp->inScopeNs->list;
-                xpctxt->nsNr = comp->inScopeNs->xpathNumber;
-            } else {
-                xpctxt->namespaces = NULL;
-                xpctxt->nsNr = 0;
-            }
-#else
-            xpctxt->namespaces = comp->nsList;
-            xpctxt->nsNr = comp->nsNr;
-#endif
+        if (comp->inScopeNs != NULL) {
+        xpctxt->namespaces = comp->inScopeNs->list;
+        xpctxt->nsNr = comp->inScopeNs->xpathNumber;
         } else {
-            xpctxt->namespaces = NULL;
-            xpctxt->nsNr = 0;
+        xpctxt->namespaces = NULL;
+        xpctxt->nsNr = 0;
         }
+#else
+        xpctxt->namespaces = comp->nsList;
+        xpctxt->nsNr = comp->nsNr;
+#endif
+    } else {
+        xpctxt->namespaces = NULL;
+        xpctxt->nsNr = 0;
+    }
 
-        /*
-        * We need to mark that we are "selecting" a var's value;
-        * if any tree fragments are created inside the expression,
-        * then those need to be stored inside the variable; otherwise
-        * we'll eventually free still referenced fragments, before
-        * we leave the scope of the variable.
-        */
-        ctxt->contextVariable = variable;
-        variable->flags |= XSLT_VAR_IN_SELECT;
+    /*
+    * We need to mark that we are "selecting" a var's value;
+    * if any tree fragments are created inside the expression,
+    * then those need to be stored inside the variable; otherwise
+    * we'll eventually free still referenced fragments, before
+    * we leave the scope of the variable.
+    */
+    ctxt->contextVariable = variable;
+    variable->flags |= XSLT_VAR_IN_SELECT;
 
-        result = xmlXPathCompiledEval(xpExpr, xpctxt);
+    result = xmlXPathCompiledEval(xpExpr, xpctxt);
 
-        variable->flags ^= XSLT_VAR_IN_SELECT;
-        /*
-        * Restore Context states.
-        */
-        ctxt->contextVariable = oldVar;
+    variable->flags ^= XSLT_VAR_IN_SELECT;
+    /*
+    * Restore Context states.
+    */
+    ctxt->contextVariable = oldVar;
 
-        xpctxt->doc = oldXPDoc;
-        xpctxt->node = oldXPContextNode;
-        xpctxt->contextSize = oldXPContextSize;
-        xpctxt->proximityPosition = oldXPProximityPosition;
-        xpctxt->namespaces = oldXPNamespaces;
-        xpctxt->nsNr = oldXPNsNr;
+    xpctxt->doc = oldXPDoc;
+    xpctxt->node = oldXPContextNode;
+    xpctxt->contextSize = oldXPContextSize;
+    xpctxt->proximityPosition = oldXPProximityPosition;
+    xpctxt->namespaces = oldXPNamespaces;
+    xpctxt->nsNr = oldXPNsNr;
 
-        if ((comp == NULL) || (comp->comp == NULL))
-            xmlXPathFreeCompExpr(xpExpr);
-        if (result == NULL) {
-            xsltTransformError(ctxt, NULL,
-                (comp != NULL) ? comp->inst : NULL,
-                "Failed to evaluate the expression of variable '%s'.\n",
-                variable->name);
-            ctxt->state = XSLT_STATE_STOPPED;
+    if ((comp == NULL) || (comp->comp == NULL))
+        xmlXPathFreeCompExpr(xpExpr);
+    if (result == NULL) {
+        xsltTransformError(ctxt, NULL,
+        (comp != NULL) ? comp->inst : NULL,
+        "Failed to evaluate the expression of variable '%s'.\n",
+        variable->name);
+        ctxt->state = XSLT_STATE_STOPPED;
 
 #ifdef WITH_XSLT_DEBUG_VARIABLE
 #ifdef LIBXML_DEBUG_ENABLED
-        } else {
-            if ((xsltGenericDebugContext == stdout) ||
-                (xsltGenericDebugContext == stderr))
-                xmlXPathDebugDumpObject((FILE *)xsltGenericDebugContext,
-                                        result, 0);
-#endif
-#endif
-        }
     } else {
-        if (variable->tree == NULL) {
-            result = xmlXPathNewCString("");
-        } else {
-            if (variable->tree) {
-                xmlDocPtr container;
-                xmlNodePtr oldInsert;
-                xmlDocPtr  oldOutput;
+        if ((xsltGenericDebugContext == stdout) ||
+        (xsltGenericDebugContext == stderr))
+        xmlXPathDebugDumpObject((FILE *)xsltGenericDebugContext,
+                    result, 0);
+#endif
+#endif
+    }
+    } else {
+    if (variable->tree == NULL) {
+        result = xmlXPathNewCString("");
+    } else {
+        if (variable->tree) {
+        xmlDocPtr container;
+        xmlNodePtr oldInsert;
+        xmlDocPtr  oldOutput;
                 const xmlChar *oldLastText;
                 int oldLastTextSize, oldLastTextUse;
-                xsltStackElemPtr oldVar = ctxt->contextVariable;
+        xsltStackElemPtr oldVar = ctxt->contextVariable;
 
-                /*
-                * Generate a result tree fragment.
-                */
-                container = xsltCreateRVT(ctxt);
-                if (container == NULL)
-                    goto error;
-                /*
-                * NOTE: Local Result Tree Fragments of params/variables
-                * are not registered globally anymore; the life-time
-                * is not directly dependant of the param/variable itself.
-                *
-                * OLD: xsltRegisterTmpRVT(ctxt, container);
-                */
-                /*
-                * Attach the Result Tree Fragment to the variable;
-                * when the variable is freed, it will also free
-                * the Result Tree Fragment.
-                */
-                variable->fragment = container;
+        /*
+        * Generate a result tree fragment.
+        */
+        container = xsltCreateRVT(ctxt);
+        if (container == NULL)
+            goto error;
+        /*
+        * NOTE: Local Result Tree Fragments of params/variables
+        * are not registered globally anymore; the life-time
+        * is not directly dependant of the param/variable itself.
+        *
+        * OLD: xsltRegisterTmpRVT(ctxt, container);
+        */
+        /*
+        * Attach the Result Tree Fragment to the variable;
+        * when the variable is freed, it will also free
+        * the Result Tree Fragment.
+        */
+        variable->fragment = container;
                 container->compression = XSLT_RVT_LOCAL;
 
-                oldOutput = ctxt->output;
-                oldInsert = ctxt->insert;
+        oldOutput = ctxt->output;
+        oldInsert = ctxt->insert;
                 oldLastText = ctxt->lasttext;
                 oldLastTextSize = ctxt->lasttsize;
                 oldLastTextUse = ctxt->lasttuse;
 
-                ctxt->output = container;
-                ctxt->insert = (xmlNodePtr) container;
-                ctxt->contextVariable = variable;
-                /*
-                * Process the sequence constructor (variable->tree).
-                * The resulting tree will be held by @container.
-                */
-                xsltApplyOneTemplate(ctxt, ctxt->node, variable->tree,
-                    NULL, NULL);
+        ctxt->output = container;
+        ctxt->insert = (xmlNodePtr) container;
+        ctxt->contextVariable = variable;
+        /*
+        * Process the sequence constructor (variable->tree).
+        * The resulting tree will be held by @container.
+        */
+        xsltApplyOneTemplate(ctxt, ctxt->node, variable->tree,
+            NULL, NULL);
 
-                ctxt->contextVariable = oldVar;
-                ctxt->insert = oldInsert;
-                ctxt->output = oldOutput;
+        ctxt->contextVariable = oldVar;
+        ctxt->insert = oldInsert;
+        ctxt->output = oldOutput;
                 ctxt->lasttext = oldLastText;
                 ctxt->lasttsize = oldLastTextSize;
                 ctxt->lasttuse = oldLastTextUse;
 
-                result = xmlXPathNewValueTree((xmlNodePtr) container);
-            }
-            if (result == NULL) {
-                result = xmlXPathNewCString("");
-            } else {
+        result = xmlXPathNewValueTree((xmlNodePtr) container);
+        }
+        if (result == NULL) {
+        result = xmlXPathNewCString("");
+        } else {
                 /*
                  * This stops older libxml2 versions from freeing the nodes
                  * in the tree.
                  */
-                result->boolval = 0;
-            }
+            result->boolval = 0;
+        }
 #ifdef WITH_XSLT_DEBUG_VARIABLE
 #ifdef LIBXML_DEBUG_ENABLED
 
-            if ((xsltGenericDebugContext == stdout) ||
-                (xsltGenericDebugContext == stderr))
-                xmlXPathDebugDumpObject((FILE *)xsltGenericDebugContext,
-                                        result, 0);
+        if ((xsltGenericDebugContext == stdout) ||
+        (xsltGenericDebugContext == stderr))
+        xmlXPathDebugDumpObject((FILE *)xsltGenericDebugContext,
+                    result, 0);
 #endif
 #endif
-        }
+    }
     }
 
 error:
@@ -1057,14 +1046,14 @@ xsltEvalGlobalVariable(xsltStackElemPtr elem, xsltTransformContextPtr ctxt)
 #endif
 
     if ((ctxt == NULL) || (elem == NULL))
-        return(NULL);
+    return(NULL);
     if (elem->computed)
-        return(elem->value);
+    return(elem->value);
 
 
 #ifdef WITH_XSLT_DEBUG_VARIABLE
     XSLT_TRACE(ctxt,XSLT_TRACE_VARIABLES,xsltGenericDebug(xsltGenericDebugContext,
-        "Evaluating global variable %s\n", elem->name));
+    "Evaluating global variable %s\n", elem->name));
 #endif
 
 #ifdef WITH_DEBUGGER
@@ -1088,91 +1077,91 @@ xsltEvalGlobalVariable(xsltStackElemPtr elem, xsltTransformContextPtr ctxt)
     *  are provided by the user.
     */
     if (elem->select != NULL) {
-        xmlXPathCompExprPtr xpExpr = NULL;
-        xmlDocPtr oldXPDoc;
-        xmlNodePtr oldXPContextNode;
-        int oldXPProximityPosition, oldXPContextSize, oldXPNsNr;
-        xmlNsPtr *oldXPNamespaces;
-        xmlXPathContextPtr xpctxt = ctxt->xpathCtxt;
+    xmlXPathCompExprPtr xpExpr = NULL;
+    xmlDocPtr oldXPDoc;
+    xmlNodePtr oldXPContextNode;
+    int oldXPProximityPosition, oldXPContextSize, oldXPNsNr;
+    xmlNsPtr *oldXPNamespaces;
+    xmlXPathContextPtr xpctxt = ctxt->xpathCtxt;
 
-        if ((comp != NULL) && (comp->comp != NULL)) {
-            xpExpr = comp->comp;
-        } else {
-            xpExpr = xmlXPathCtxtCompile(ctxt->xpathCtxt, elem->select);
-        }
-        if (xpExpr == NULL)
-            goto error;
+    if ((comp != NULL) && (comp->comp != NULL)) {
+        xpExpr = comp->comp;
+    } else {
+        xpExpr = xmlXPathCtxtCompile(ctxt->xpathCtxt, elem->select);
+    }
+    if (xpExpr == NULL)
+        goto error;
 
 
-        if (comp != NULL)
-            ctxt->inst = comp->inst;
-        else
-            ctxt->inst = NULL;
-        /*
-        * SPEC XSLT 1.0:
-        * "At top-level, the expression or template specifying the
-        *  variable value is evaluated with the same context as that used
-        *  to process the root node of the source document: the current
-        *  node is the root node of the source document and the current
-        *  node list is a list containing just the root node of the source
-        *  document."
-        */
-        /*
-        * Save context states.
-        */
-        oldXPDoc = xpctxt->doc;
-        oldXPContextNode = xpctxt->node;
-        oldXPProximityPosition = xpctxt->proximityPosition;
-        oldXPContextSize = xpctxt->contextSize;
-        oldXPNamespaces = xpctxt->namespaces;
-        oldXPNsNr = xpctxt->nsNr;
+    if (comp != NULL)
+        ctxt->inst = comp->inst;
+    else
+        ctxt->inst = NULL;
+    /*
+    * SPEC XSLT 1.0:
+    * "At top-level, the expression or template specifying the
+    *  variable value is evaluated with the same context as that used
+    *  to process the root node of the source document: the current
+    *  node is the root node of the source document and the current
+    *  node list is a list containing just the root node of the source
+    *  document."
+    */
+    /*
+    * Save context states.
+    */
+    oldXPDoc = xpctxt->doc;
+    oldXPContextNode = xpctxt->node;
+    oldXPProximityPosition = xpctxt->proximityPosition;
+    oldXPContextSize = xpctxt->contextSize;
+    oldXPNamespaces = xpctxt->namespaces;
+    oldXPNsNr = xpctxt->nsNr;
 
-        xpctxt->node = ctxt->initialContextNode;
-        xpctxt->doc = ctxt->initialContextDoc;
-        xpctxt->contextSize = 1;
-        xpctxt->proximityPosition = 1;
+    xpctxt->node = ctxt->initialContextNode;
+    xpctxt->doc = ctxt->initialContextDoc;
+    xpctxt->contextSize = 1;
+    xpctxt->proximityPosition = 1;
 
-        if (comp != NULL) {
+    if (comp != NULL) {
 
 #ifdef XSLT_REFACTORED
-            if (comp->inScopeNs != NULL) {
-                xpctxt->namespaces = comp->inScopeNs->list;
-                xpctxt->nsNr = comp->inScopeNs->xpathNumber;
-            } else {
-                xpctxt->namespaces = NULL;
-                xpctxt->nsNr = 0;
-            }
-#else
-            xpctxt->namespaces = comp->nsList;
-            xpctxt->nsNr = comp->nsNr;
-#endif
+        if (comp->inScopeNs != NULL) {
+        xpctxt->namespaces = comp->inScopeNs->list;
+        xpctxt->nsNr = comp->inScopeNs->xpathNumber;
         } else {
-            xpctxt->namespaces = NULL;
-            xpctxt->nsNr = 0;
+        xpctxt->namespaces = NULL;
+        xpctxt->nsNr = 0;
         }
+#else
+        xpctxt->namespaces = comp->nsList;
+        xpctxt->nsNr = comp->nsNr;
+#endif
+    } else {
+        xpctxt->namespaces = NULL;
+        xpctxt->nsNr = 0;
+    }
 
-        result = xmlXPathCompiledEval(xpExpr, xpctxt);
+    result = xmlXPathCompiledEval(xpExpr, xpctxt);
 
-        /*
-        * Restore Context states.
-        */
-        xpctxt->doc = oldXPDoc;
-        xpctxt->node = oldXPContextNode;
-        xpctxt->contextSize = oldXPContextSize;
-        xpctxt->proximityPosition = oldXPProximityPosition;
-        xpctxt->namespaces = oldXPNamespaces;
-        xpctxt->nsNr = oldXPNsNr;
+    /*
+    * Restore Context states.
+    */
+    xpctxt->doc = oldXPDoc;
+    xpctxt->node = oldXPContextNode;
+    xpctxt->contextSize = oldXPContextSize;
+    xpctxt->proximityPosition = oldXPProximityPosition;
+    xpctxt->namespaces = oldXPNamespaces;
+    xpctxt->nsNr = oldXPNsNr;
 
-        if ((comp == NULL) || (comp->comp == NULL))
-            xmlXPathFreeCompExpr(xpExpr);
-        if (result == NULL) {
-            if (comp == NULL)
-                xsltTransformError(ctxt, NULL, NULL,
-                    "Evaluating global variable %s failed\n", elem->name);
-            else
-                xsltTransformError(ctxt, NULL, comp->inst,
-                    "Evaluating global variable %s failed\n", elem->name);
-            ctxt->state = XSLT_STATE_STOPPED;
+    if ((comp == NULL) || (comp->comp == NULL))
+        xmlXPathFreeCompExpr(xpExpr);
+    if (result == NULL) {
+        if (comp == NULL)
+        xsltTransformError(ctxt, NULL, NULL,
+            "Evaluating global variable %s failed\n", elem->name);
+        else
+        xsltTransformError(ctxt, NULL, comp->inst,
+            "Evaluating global variable %s failed\n", elem->name);
+        ctxt->state = XSLT_STATE_STOPPED;
             goto error;
         }
 
@@ -1184,86 +1173,79 @@ xsltEvalGlobalVariable(xsltStackElemPtr elem, xsltTransformContextPtr ctxt)
 
 #ifdef WITH_XSLT_DEBUG_VARIABLE
 #ifdef LIBXML_DEBUG_ENABLED
-        if ((xsltGenericDebugContext == stdout) ||
-            (xsltGenericDebugContext == stderr))
-            xmlXPathDebugDumpObject((FILE *)xsltGenericDebugContext,
-                                    result, 0);
+    if ((xsltGenericDebugContext == stdout) ||
+        (xsltGenericDebugContext == stderr))
+        xmlXPathDebugDumpObject((FILE *)xsltGenericDebugContext,
+                    result, 0);
 #endif
 #endif
     } else {
-        if (elem->tree == NULL) {
-            result = xmlXPathNewCString("");
+    if (elem->tree == NULL) {
+        result = xmlXPathNewCString("");
+    } else {
+        xmlDocPtr container;
+        xmlNodePtr oldInsert;
+        xmlDocPtr  oldOutput, oldXPDoc;
+        /*
+        * Generate a result tree fragment.
+        */
+        container = xsltCreateRVT(ctxt);
+        if (container == NULL)
+        goto error;
+        /*
+        * Let the lifetime of the tree fragment be handled by
+        * the Libxslt's garbage collector.
+        */
+        xsltRegisterPersistRVT(ctxt, container);
+
+        oldOutput = ctxt->output;
+        oldInsert = ctxt->insert;
+
+        oldXPDoc = ctxt->xpathCtxt->doc;
+
+        ctxt->output = container;
+        ctxt->insert = (xmlNodePtr) container;
+
+        ctxt->xpathCtxt->doc = ctxt->initialContextDoc;
+        /*
+        * Process the sequence constructor.
+        */
+        xsltApplyOneTemplate(ctxt, ctxt->node, elem->tree, NULL, NULL);
+
+        ctxt->xpathCtxt->doc = oldXPDoc;
+
+        ctxt->insert = oldInsert;
+        ctxt->output = oldOutput;
+
+        result = xmlXPathNewValueTree((xmlNodePtr) container);
+        if (result == NULL) {
+        result = xmlXPathNewCString("");
         } else {
-            xmlDocPtr container;
-            xmlNodePtr oldInsert;
-            xmlDocPtr  oldOutput, oldXPDoc;
-            /*
-            * Generate a result tree fragment.
-            */
-            container = xsltCreateRVT(ctxt);
-            if (container == NULL)
-                goto error;
-            /*
-            * Let the lifetime of the tree fragment be handled by
-            * the Libxslt's garbage collector.
-            */
-            xsltRegisterPersistRVT(ctxt, container);
-
-            oldOutput = ctxt->output;
-            oldInsert = ctxt->insert;
-
-            oldXPDoc = ctxt->xpathCtxt->doc;
-
-            ctxt->output = container;
-            ctxt->insert = (xmlNodePtr) container;
-
-            ctxt->xpathCtxt->doc = ctxt->initialContextDoc;
-            /*
-            * Process the sequence constructor.
-            */
-            xsltApplyOneTemplate(ctxt, ctxt->node, elem->tree, NULL, NULL);
-
-            ctxt->xpathCtxt->doc = oldXPDoc;
-
-            ctxt->insert = oldInsert;
-            ctxt->output = oldOutput;
-
-            result = xmlXPathNewValueTree((xmlNodePtr) container);
-            if (result == NULL) {
-                result = xmlXPathNewCString("");
-            } else {
                 /*
                  * This stops older libxml2 versions from freeing the nodes
                  * in the tree.
                  */
-                result->boolval = 0;
-            }
+            result->boolval = 0;
+        }
 #ifdef WITH_XSLT_DEBUG_VARIABLE
 #ifdef LIBXML_DEBUG_ENABLED
-            if ((xsltGenericDebugContext == stdout) ||
-                (xsltGenericDebugContext == stderr))
-                xmlXPathDebugDumpObject((FILE *)xsltGenericDebugContext,
-                                        result, 0);
+        if ((xsltGenericDebugContext == stdout) ||
+        (xsltGenericDebugContext == stderr))
+        xmlXPathDebugDumpObject((FILE *)xsltGenericDebugContext,
+                    result, 0);
 #endif
 #endif
-        }
+    }
     }
 
 error:
     elem->name = oldVarName;
     ctxt->inst = oldInst;
     if (result != NULL) {
-        elem->value = result;
-        elem->computed = 1;
+    elem->value = result;
+    elem->computed = 1;
     }
     return(result);
-}
-
-static void
-xsltEvalGlobalVariableWrapper(void *payload, void *data,
-                              const xmlChar *name ATTRIBUTE_UNUSED) {
-    xsltEvalGlobalVariable((xsltStackElemPtr) payload,
-                           (xsltTransformContextPtr) data);
 }
 
 /**
@@ -1278,74 +1260,87 @@ xsltEvalGlobalVariableWrapper(void *payload, void *data,
 int
 xsltEvalGlobalVariables(xsltTransformContextPtr ctxt) {
     xsltStackElemPtr elem;
+    xsltStackElemPtr head = NULL;
     xsltStylesheetPtr style;
 
     if ((ctxt == NULL) || (ctxt->document == NULL))
-        return(-1);
+    return(-1);
 
 #ifdef WITH_XSLT_DEBUG_VARIABLE
     XSLT_TRACE(ctxt,XSLT_TRACE_VARIABLES,xsltGenericDebug(xsltGenericDebugContext,
-        "Registering global variables\n"));
+    "Registering global variables\n"));
 #endif
     /*
      * Walk the list from the stylesheets and populate the hash table
      */
     style = ctxt->style;
     while (style != NULL) {
-        elem = style->variables;
+    elem = style->variables;
 
 #ifdef WITH_XSLT_DEBUG_VARIABLE
-        if ((style->doc != NULL) && (style->doc->URL != NULL)) {
-            XSLT_TRACE(ctxt,XSLT_TRACE_VARIABLES,xsltGenericDebug(xsltGenericDebugContext,
-                             "Registering global variables from %s\n",
-                             style->doc->URL));
-        }
+    if ((style->doc != NULL) && (style->doc->URL != NULL)) {
+        XSLT_TRACE(ctxt,XSLT_TRACE_VARIABLES,xsltGenericDebug(xsltGenericDebugContext,
+                 "Registering global variables from %s\n",
+                     style->doc->URL));
+    }
 #endif
 
-        while (elem != NULL) {
-            xsltStackElemPtr def;
+    while (elem != NULL) {
+        xsltStackElemPtr def;
 
-            /*
-             * Global variables are stored in the variables pool.
-             */
-            def = (xsltStackElemPtr)
-                    xmlHashLookup2(ctxt->globalVars,
-                                 elem->name, elem->nameURI);
-            if (def == NULL) {
+        /*
+         * Global variables are stored in the variables pool.
+         */
+        def = (xsltStackElemPtr)
+            xmlHashLookup2(ctxt->globalVars,
+                         elem->name, elem->nameURI);
+        if (def == NULL) {
 
-                def = xsltCopyStackElem(elem);
-                if (xmlHashAddEntry2(ctxt->globalVars,
-                                     elem->name, elem->nameURI, def) < 0) {
+        def = xsltCopyStackElem(elem);
+        if (xmlHashAddEntry2(ctxt->globalVars,
+                     elem->name, elem->nameURI, def) < 0) {
                     xmlGenericError(xmlGenericErrorContext,
                                     "hash update failed\n");
                     xsltFreeStackElem(def);
                     return(-1);
                 }
-            } else if ((elem->comp != NULL) &&
-                       (elem->comp->type == XSLT_FUNC_VARIABLE)) {
-                /*
-                 * Redefinition of variables from a different stylesheet
-                 * should not generate a message.
-                 */
-                if ((elem->comp->inst != NULL) &&
-                    (def->comp != NULL) && (def->comp->inst != NULL) &&
-                    (elem->comp->inst->doc == def->comp->inst->doc))
-                {
-                    xsltTransformError(ctxt, style, elem->comp->inst,
-                        "Global variable %s already defined\n", elem->name);
-                    if (style != NULL) style->errors++;
-                }
-            }
-            elem = elem->next;
+                def->next = head;
+                head = def;
+        } else if ((elem->comp != NULL) &&
+               (elem->comp->type == XSLT_FUNC_VARIABLE)) {
+        /*
+         * Redefinition of variables from a different stylesheet
+         * should not generate a message.
+         */
+        if ((elem->comp->inst != NULL) &&
+            (def->comp != NULL) && (def->comp->inst != NULL) &&
+            (elem->comp->inst->doc == def->comp->inst->doc))
+        {
+            xsltTransformError(ctxt, style, elem->comp->inst,
+            "Global variable %s already defined\n", elem->name);
+            if (style != NULL) style->errors++;
         }
+        }
+        elem = elem->next;
+    }
 
-        style = xsltNextImport(style);
+    style = xsltNextImport(style);
     }
 
     /*
-     * This part does the actual evaluation
+     * This part does the actual evaluation. Note that scanning the hash
+     * table would result in a non-deterministic order, leading to
+     * non-deterministic generated IDs.
      */
-    xmlHashScan(ctxt->globalVars, xsltEvalGlobalVariableWrapper, ctxt);
+    elem = head;
+    while (elem != NULL) {
+        xsltStackElemPtr next;
+
+        xsltEvalGlobalVariable(elem, ctxt);
+        next = elem->next;
+        elem->next = NULL;
+        elem = next;
+    }
 
     return(0);
 }
@@ -1367,61 +1362,54 @@ xsltEvalGlobalVariables(xsltTransformContextPtr ctxt) {
  */
 static int
 xsltRegisterGlobalVariable(xsltStylesheetPtr style, const xmlChar *name,
-                     const xmlChar *ns_uri, const xmlChar *sel,
-                     xmlNodePtr tree, xsltStylePreCompPtr comp,
-                     const xmlChar *value) {
+             const xmlChar *ns_uri, const xmlChar *sel,
+             xmlNodePtr tree, xsltStylePreCompPtr comp,
+             const xmlChar *value) {
     xsltStackElemPtr elem, tmp;
     if (style == NULL)
-        return(-1);
+    return(-1);
     if (name == NULL)
-        return(-1);
+    return(-1);
     if (comp == NULL)
-        return(-1);
+    return(-1);
 
 #ifdef WITH_XSLT_DEBUG_VARIABLE
     if (comp->type == XSLT_FUNC_PARAM)
-        xsltGenericDebug(xsltGenericDebugContext,
-                         "Defining global param %s\n", name);
+    xsltGenericDebug(xsltGenericDebugContext,
+             "Defining global param %s\n", name);
     else
-        xsltGenericDebug(xsltGenericDebugContext,
-                         "Defining global variable %s\n", name);
+    xsltGenericDebug(xsltGenericDebugContext,
+             "Defining global variable %s\n", name);
 #endif
 
     elem = xsltNewStackElem(NULL);
     if (elem == NULL)
-        return(-1);
+    return(-1);
     elem->comp = comp;
     elem->name = xmlDictLookup(style->dict, name, -1);
     elem->select = xmlDictLookup(style->dict, sel, -1);
     if (ns_uri)
-        elem->nameURI = xmlDictLookup(style->dict, ns_uri, -1);
+    elem->nameURI = xmlDictLookup(style->dict, ns_uri, -1);
     elem->tree = tree;
     tmp = style->variables;
-    if (tmp == NULL) {
-        elem->next = NULL;
-        style->variables = elem;
-    } else {
-        while (tmp != NULL) {
-            if ((elem->comp->type == XSLT_FUNC_VARIABLE) &&
-                (tmp->comp->type == XSLT_FUNC_VARIABLE) &&
-                (xmlStrEqual(elem->name, tmp->name)) &&
-                ((elem->nameURI == tmp->nameURI) ||
-                 (xmlStrEqual(elem->nameURI, tmp->nameURI))))
-            {
-                xsltTransformError(NULL, style, comp->inst,
-                "redefinition of global variable %s\n", elem->name);
-                style->errors++;
-            }
-            if (tmp->next == NULL)
-                break;
-            tmp = tmp->next;
+    while (tmp != NULL) {
+        if ((elem->comp->type == XSLT_FUNC_VARIABLE) &&
+            (tmp->comp->type == XSLT_FUNC_VARIABLE) &&
+            (xmlStrEqual(elem->name, tmp->name)) &&
+            ((elem->nameURI == tmp->nameURI) ||
+             (xmlStrEqual(elem->nameURI, tmp->nameURI))))
+        {
+            xsltTransformError(NULL, style, comp->inst,
+            "redefinition of global variable %s\n", elem->name);
+            style->errors++;
         }
-        elem->next = NULL;
-        tmp->next = elem;
+        tmp = tmp->next;
     }
+    elem->next = style->variables;;
+    style->variables = elem;
     if (value != NULL) {
-        elem->computed = 1;
-        elem->value = xmlXPathNewString(value);
+    elem->computed = 1;
+    elem->value = xmlXPathNewString(value);
     }
     return(0);
 }
@@ -1460,9 +1448,9 @@ xsltRegisterGlobalVariable(xsltStylesheetPtr style, const xmlChar *name,
 static
 int
 xsltProcessUserParamInternal(xsltTransformContextPtr ctxt,
-                             const xmlChar * name,
-                             const xmlChar * value,
-                             int eval) {
+                     const xmlChar * name,
+                 const xmlChar * value,
+                 int eval) {
 
     xsltStylesheetPtr style;
     const xmlChar *prefix;
@@ -1475,17 +1463,17 @@ xsltProcessUserParamInternal(xsltTransformContextPtr ctxt,
     void *res_ptr;
 
     if (ctxt == NULL)
-        return(-1);
+    return(-1);
     if (name == NULL)
-        return(0);
+    return(0);
     if (value == NULL)
-        return(0);
+    return(0);
 
     style = ctxt->style;
 
 #ifdef WITH_XSLT_DEBUG_VARIABLE
     XSLT_TRACE(ctxt,XSLT_TRACE_VARIABLES,xsltGenericDebug(xsltGenericDebugContext,
-            "Evaluating user parameter %s=%s\n", name, value));
+        "Evaluating user parameter %s=%s\n", name, value));
 #endif
 
     /*
@@ -1523,30 +1511,30 @@ xsltProcessUserParamInternal(xsltTransformContextPtr ctxt,
     }
 
     if (name == NULL)
-        return (-1);
+    return (-1);
 
     res_ptr = xmlHashLookup2(ctxt->globalVars, name, href);
     if (res_ptr != 0) {
-        xsltTransformError(ctxt, style, NULL,
-            "Global parameter %s already defined\n", name);
+    xsltTransformError(ctxt, style, NULL,
+        "Global parameter %s already defined\n", name);
     }
     if (ctxt->globalVars == NULL)
-        ctxt->globalVars = xmlHashCreate(20);
+    ctxt->globalVars = xmlHashCreate(20);
 
     /*
      * do not overwrite variables with parameters from the command line
      */
     while (style != NULL) {
         elem = ctxt->style->variables;
-        while (elem != NULL) {
-            if ((elem->comp != NULL) &&
-                (elem->comp->type == XSLT_FUNC_VARIABLE) &&
-                (xmlStrEqual(elem->name, name)) &&
-                (xmlStrEqual(elem->nameURI, href))) {
-                return(0);
-            }
-            elem = elem->next;
+    while (elem != NULL) {
+        if ((elem->comp != NULL) &&
+            (elem->comp->type == XSLT_FUNC_VARIABLE) &&
+        (xmlStrEqual(elem->name, name)) &&
+        (xmlStrEqual(elem->nameURI, href))) {
+        return(0);
         }
+            elem = elem->next;
+    }
         style = xsltNextImport(style);
     }
     style = ctxt->style;
@@ -1559,63 +1547,63 @@ xsltProcessUserParamInternal(xsltTransformContextPtr ctxt,
     result = NULL;
     if (eval != 0) {
         xpExpr = xmlXPathCtxtCompile(ctxt->xpathCtxt, value);
-        if (xpExpr != NULL) {
-            xmlDocPtr oldXPDoc;
-            xmlNodePtr oldXPContextNode;
-            int oldXPProximityPosition, oldXPContextSize, oldXPNsNr;
-            xmlNsPtr *oldXPNamespaces;
-            xmlXPathContextPtr xpctxt = ctxt->xpathCtxt;
+    if (xpExpr != NULL) {
+        xmlDocPtr oldXPDoc;
+        xmlNodePtr oldXPContextNode;
+        int oldXPProximityPosition, oldXPContextSize, oldXPNsNr;
+        xmlNsPtr *oldXPNamespaces;
+        xmlXPathContextPtr xpctxt = ctxt->xpathCtxt;
 
-            /*
-            * Save context states.
-            */
-            oldXPDoc = xpctxt->doc;
-            oldXPContextNode = xpctxt->node;
-            oldXPProximityPosition = xpctxt->proximityPosition;
-            oldXPContextSize = xpctxt->contextSize;
-            oldXPNamespaces = xpctxt->namespaces;
-            oldXPNsNr = xpctxt->nsNr;
+        /*
+        * Save context states.
+        */
+        oldXPDoc = xpctxt->doc;
+        oldXPContextNode = xpctxt->node;
+        oldXPProximityPosition = xpctxt->proximityPosition;
+        oldXPContextSize = xpctxt->contextSize;
+        oldXPNamespaces = xpctxt->namespaces;
+        oldXPNsNr = xpctxt->nsNr;
 
-            /*
-            * SPEC XSLT 1.0:
-            * "At top-level, the expression or template specifying the
-            *  variable value is evaluated with the same context as that used
-            *  to process the root node of the source document: the current
-            *  node is the root node of the source document and the current
-            *  node list is a list containing just the root node of the source
-            *  document."
-            */
-            xpctxt->doc = ctxt->initialContextDoc;
-            xpctxt->node = ctxt->initialContextNode;
-            xpctxt->contextSize = 1;
-            xpctxt->proximityPosition = 1;
-            /*
-            * There is really no in scope namespace for parameters on the
-            * command line.
-            */
-            xpctxt->namespaces = NULL;
-            xpctxt->nsNr = 0;
+        /*
+        * SPEC XSLT 1.0:
+        * "At top-level, the expression or template specifying the
+        *  variable value is evaluated with the same context as that used
+        *  to process the root node of the source document: the current
+        *  node is the root node of the source document and the current
+        *  node list is a list containing just the root node of the source
+        *  document."
+        */
+        xpctxt->doc = ctxt->initialContextDoc;
+        xpctxt->node = ctxt->initialContextNode;
+        xpctxt->contextSize = 1;
+        xpctxt->proximityPosition = 1;
+        /*
+        * There is really no in scope namespace for parameters on the
+        * command line.
+        */
+        xpctxt->namespaces = NULL;
+        xpctxt->nsNr = 0;
 
-            result = xmlXPathCompiledEval(xpExpr, xpctxt);
+        result = xmlXPathCompiledEval(xpExpr, xpctxt);
 
-            /*
-            * Restore Context states.
-            */
-            xpctxt->doc = oldXPDoc;
-            xpctxt->node = oldXPContextNode;
-            xpctxt->contextSize = oldXPContextSize;
-            xpctxt->proximityPosition = oldXPProximityPosition;
-            xpctxt->namespaces = oldXPNamespaces;
-            xpctxt->nsNr = oldXPNsNr;
+        /*
+        * Restore Context states.
+        */
+        xpctxt->doc = oldXPDoc;
+        xpctxt->node = oldXPContextNode;
+        xpctxt->contextSize = oldXPContextSize;
+        xpctxt->proximityPosition = oldXPProximityPosition;
+        xpctxt->namespaces = oldXPNamespaces;
+        xpctxt->nsNr = oldXPNsNr;
 
-            xmlXPathFreeCompExpr(xpExpr);
-        }
-        if (result == NULL) {
-            xsltTransformError(ctxt, style, NULL,
-                "Evaluating user parameter %s failed\n", name);
-            ctxt->state = XSLT_STATE_STOPPED;
-            return(-1);
-        }
+        xmlXPathFreeCompExpr(xpExpr);
+    }
+    if (result == NULL) {
+        xsltTransformError(ctxt, style, NULL,
+        "Evaluating user parameter %s failed\n", name);
+        ctxt->state = XSLT_STATE_STOPPED;
+        return(-1);
+    }
     }
 
     /*
@@ -1633,25 +1621,25 @@ xsltProcessUserParamInternal(xsltTransformContextPtr ctxt,
 #ifdef LIBXML_DEBUG_ENABLED
     if ((xsltGenericDebugContext == stdout) ||
         (xsltGenericDebugContext == stderr))
-            xmlXPathDebugDumpObject((FILE *)xsltGenericDebugContext,
-                                    result, 0);
+        xmlXPathDebugDumpObject((FILE *)xsltGenericDebugContext,
+                    result, 0);
 #endif
 #endif
 
     elem = xsltNewStackElem(NULL);
     if (elem != NULL) {
-        elem->name = name;
-        elem->select = xmlDictLookup(ctxt->dict, value, -1);
-        if (href != NULL)
-            elem->nameURI = xmlDictLookup(ctxt->dict, href, -1);
-        elem->tree = NULL;
-        elem->computed = 1;
-        if (eval == 0) {
-            elem->value = xmlXPathNewString(value);
-        }
-        else {
-            elem->value = result;
-        }
+    elem->name = name;
+    elem->select = xmlDictLookup(ctxt->dict, value, -1);
+    if (href != NULL)
+        elem->nameURI = xmlDictLookup(ctxt->dict, href, -1);
+    elem->tree = NULL;
+    elem->computed = 1;
+    if (eval == 0) {
+        elem->value = xmlXPathNewString(value);
+    }
+    else {
+        elem->value = result;
+    }
     }
 
     /*
@@ -1660,9 +1648,9 @@ xsltProcessUserParamInternal(xsltTransformContextPtr ctxt,
 
     res = xmlHashAddEntry2(ctxt->globalVars, name, href, elem);
     if (res != 0) {
-        xsltFreeStackElem(elem);
-        xsltTransformError(ctxt, style, NULL,
-            "Global parameter %s already defined\n", name);
+    xsltFreeStackElem(elem);
+    xsltTransformError(ctxt, style, NULL,
+        "Global parameter %s already defined\n", name);
     }
     return(0);
 }
@@ -1689,12 +1677,12 @@ xsltEvalUserParams(xsltTransformContextPtr ctxt, const char **params) {
     const xmlChar *value;
 
     if (params == NULL)
-        return(0);
+    return(0);
     while (params[indx] != NULL) {
-        name = (const xmlChar *) params[indx++];
-        value = (const xmlChar *) params[indx++];
-        if (xsltEvalOneUserParam(ctxt, name, value) != 0)
-            return(-1);
+    name = (const xmlChar *) params[indx++];
+    value = (const xmlChar *) params[indx++];
+    if (xsltEvalOneUserParam(ctxt, name, value) != 0)
+        return(-1);
     }
     return 0;
 }
@@ -1719,12 +1707,12 @@ xsltQuoteUserParams(xsltTransformContextPtr ctxt, const char **params) {
     const xmlChar *value;
 
     if (params == NULL)
-        return(0);
+    return(0);
     while (params[indx] != NULL) {
-        name = (const xmlChar *) params[indx++];
-        value = (const xmlChar *) params[indx++];
-        if (xsltQuoteOneUserParam(ctxt, name, value) != 0)
-            return(-1);
+    name = (const xmlChar *) params[indx++];
+    value = (const xmlChar *) params[indx++];
+    if (xsltQuoteOneUserParam(ctxt, name, value) != 0)
+        return(-1);
     }
     return 0;
 }
@@ -1749,10 +1737,10 @@ xsltQuoteUserParams(xsltTransformContextPtr ctxt, const char **params) {
 
 int
 xsltEvalOneUserParam(xsltTransformContextPtr ctxt,
-                     const xmlChar * name,
-                     const xmlChar * value) {
+             const xmlChar * name,
+             const xmlChar * value) {
     return xsltProcessUserParamInternal(ctxt, name, value,
-                                        1 /* xpath eval ? */);
+                                1 /* xpath eval ? */);
 }
 
 /**
@@ -1770,10 +1758,10 @@ xsltEvalOneUserParam(xsltTransformContextPtr ctxt,
 
 int
 xsltQuoteOneUserParam(xsltTransformContextPtr ctxt,
-                         const xmlChar * name,
-                         const xmlChar * value) {
+             const xmlChar * name,
+             const xmlChar * value) {
     return xsltProcessUserParamInternal(ctxt, name, value,
-                                        0 /* xpath eval ? */);
+                    0 /* xpath eval ? */);
 }
 
 /**
@@ -1788,12 +1776,12 @@ xsltQuoteOneUserParam(xsltTransformContextPtr ctxt,
  */
 static xsltStackElemPtr
 xsltBuildVariable(xsltTransformContextPtr ctxt,
-                  xsltStylePreCompPtr castedComp,
-                  xmlNodePtr tree)
+          xsltStylePreCompPtr castedComp,
+          xmlNodePtr tree)
 {
 #ifdef XSLT_REFACTORED
     xsltStyleBasicItemVariablePtr comp =
-        (xsltStyleBasicItemVariablePtr) castedComp;
+    (xsltStyleBasicItemVariablePtr) castedComp;
 #else
     xsltStylePreCompPtr comp = castedComp;
 #endif
@@ -1801,23 +1789,23 @@ xsltBuildVariable(xsltTransformContextPtr ctxt,
 
 #ifdef WITH_XSLT_DEBUG_VARIABLE
     XSLT_TRACE(ctxt,XSLT_TRACE_VARIABLES,xsltGenericDebug(xsltGenericDebugContext,
-                     "Building variable %s", comp->name));
+             "Building variable %s", comp->name));
     if (comp->select != NULL)
-        XSLT_TRACE(ctxt,XSLT_TRACE_VARIABLES,xsltGenericDebug(xsltGenericDebugContext,
-                         " select %s", comp->select));
+    XSLT_TRACE(ctxt,XSLT_TRACE_VARIABLES,xsltGenericDebug(xsltGenericDebugContext,
+             " select %s", comp->select));
     XSLT_TRACE(ctxt,XSLT_TRACE_VARIABLES,xsltGenericDebug(xsltGenericDebugContext, "\n"));
 #endif
 
     elem = xsltNewStackElem(ctxt);
     if (elem == NULL)
-        return(NULL);
+    return(NULL);
     elem->comp = (xsltStylePreCompPtr) comp;
     elem->name = comp->name;
     elem->select = comp->select;
     elem->nameURI = comp->ns;
     elem->tree = tree;
     elem->value = xsltEvalVariable(ctxt, elem,
-        (xsltStylePreCompPtr) comp);
+    (xsltStylePreCompPtr) comp);
     elem->computed = 1;
     return(elem);
 }
@@ -1835,12 +1823,12 @@ xsltBuildVariable(xsltTransformContextPtr ctxt,
  */
 static int
 xsltRegisterVariable(xsltTransformContextPtr ctxt,
-                     xsltStylePreCompPtr castedComp,
-                     xmlNodePtr tree, int isParam)
+             xsltStylePreCompPtr castedComp,
+             xmlNodePtr tree, int isParam)
 {
 #ifdef XSLT_REFACTORED
     xsltStyleBasicItemVariablePtr comp =
-        (xsltStyleBasicItemVariablePtr) castedComp;
+    (xsltStyleBasicItemVariablePtr) castedComp;
 #else
     xsltStylePreCompPtr comp = castedComp;
     int present;
@@ -1856,24 +1844,24 @@ xsltRegisterVariable(xsltTransformContextPtr ctxt,
 #else
     present = xsltCheckStackElem(ctxt, comp->name, comp->ns);
     if (isParam == 0) {
-        if ((present != 0) && (present != 3)) {
-            /* TODO: report QName. */
-            xsltTransformError(ctxt, NULL, comp->inst,
-                "XSLT-variable: Redefinition of variable '%s'.\n", comp->name);
-            return(0);
-        }
-    } else if (present != 0) {
-        if ((present == 1) || (present == 2)) {
-            /* TODO: report QName. */
-            xsltTransformError(ctxt, NULL, comp->inst,
-                "XSLT-param: Redefinition of parameter '%s'.\n", comp->name);
-            return(0);
-        }
-#ifdef WITH_XSLT_DEBUG_VARIABLE
-        XSLT_TRACE(ctxt,XSLT_TRACE_VARIABLES,xsltGenericDebug(xsltGenericDebugContext,
-                 "param %s defined by caller\n", comp->name));
-#endif
+    if ((present != 0) && (present != 3)) {
+        /* TODO: report QName. */
+        xsltTransformError(ctxt, NULL, comp->inst,
+        "XSLT-variable: Redefinition of variable '%s'.\n", comp->name);
         return(0);
+    }
+    } else if (present != 0) {
+    if ((present == 1) || (present == 2)) {
+        /* TODO: report QName. */
+        xsltTransformError(ctxt, NULL, comp->inst,
+        "XSLT-param: Redefinition of parameter '%s'.\n", comp->name);
+        return(0);
+    }
+#ifdef WITH_XSLT_DEBUG_VARIABLE
+    XSLT_TRACE(ctxt,XSLT_TRACE_VARIABLES,xsltGenericDebug(xsltGenericDebugContext,
+         "param %s defined by caller\n", comp->name));
+#endif
+    return(0);
     }
 #endif /* else of XSLT_REFACTORED */
 
@@ -1898,7 +1886,7 @@ xsltRegisterVariable(xsltTransformContextPtr ctxt,
  */
 static xmlXPathObjectPtr
 xsltGlobalVariableLookup(xsltTransformContextPtr ctxt, const xmlChar *name,
-                         const xmlChar *ns_uri) {
+                 const xmlChar *ns_uri) {
     xsltStackElemPtr elem;
     xmlXPathObjectPtr ret = NULL;
 
@@ -1906,29 +1894,29 @@ xsltGlobalVariableLookup(xsltTransformContextPtr ctxt, const xmlChar *name,
      * Lookup the global variables in XPath global variable hash table
      */
     if ((ctxt->xpathCtxt == NULL) || (ctxt->globalVars == NULL))
-        return(NULL);
+    return(NULL);
     elem = (xsltStackElemPtr)
-            xmlHashLookup2(ctxt->globalVars, name, ns_uri);
+        xmlHashLookup2(ctxt->globalVars, name, ns_uri);
     if (elem == NULL) {
 #ifdef WITH_XSLT_DEBUG_VARIABLE
-        XSLT_TRACE(ctxt,XSLT_TRACE_VARIABLES,xsltGenericDebug(xsltGenericDebugContext,
-                         "global variable not found %s\n", name));
+    XSLT_TRACE(ctxt,XSLT_TRACE_VARIABLES,xsltGenericDebug(xsltGenericDebugContext,
+             "global variable not found %s\n", name));
 #endif
-        return(NULL);
+    return(NULL);
     }
     /*
     * URGENT TODO: Move the detection of recursive definitions
     * to compile-time.
     */
     if (elem->computed == 0) {
-        if (elem->name == xsltComputingGlobalVarMarker) {
-            xsltTransformError(ctxt, NULL, elem->comp->inst,
-                "Recursive definition of %s\n", name);
-            return(NULL);
-        }
-        ret = xsltEvalGlobalVariable(elem, ctxt);
+    if (elem->name == xsltComputingGlobalVarMarker) {
+        xsltTransformError(ctxt, NULL, elem->comp->inst,
+        "Recursive definition of %s\n", name);
+        return(NULL);
+    }
+    ret = xsltEvalGlobalVariable(elem, ctxt);
     } else
-        ret = elem->value;
+    ret = elem->value;
     return(xmlXPathObjectCopy(ret));
 }
 
@@ -1945,29 +1933,29 @@ xsltGlobalVariableLookup(xsltTransformContextPtr ctxt, const xmlChar *name,
  */
 xmlXPathObjectPtr
 xsltVariableLookup(xsltTransformContextPtr ctxt, const xmlChar *name,
-                   const xmlChar *ns_uri) {
+           const xmlChar *ns_uri) {
     xsltStackElemPtr elem;
 
     if (ctxt == NULL)
-        return(NULL);
+    return(NULL);
 
     elem = xsltStackLookup(ctxt, name, ns_uri);
     if (elem == NULL) {
-        return(xsltGlobalVariableLookup(ctxt, name, ns_uri));
+    return(xsltGlobalVariableLookup(ctxt, name, ns_uri));
     }
     if (elem->computed == 0) {
 #ifdef WITH_XSLT_DEBUG_VARIABLE
-        XSLT_TRACE(ctxt,XSLT_TRACE_VARIABLES,xsltGenericDebug(xsltGenericDebugContext,
-                         "uncomputed variable %s\n", name));
+    XSLT_TRACE(ctxt,XSLT_TRACE_VARIABLES,xsltGenericDebug(xsltGenericDebugContext,
+                 "uncomputed variable %s\n", name));
 #endif
         elem->value = xsltEvalVariable(ctxt, elem, NULL);
-        elem->computed = 1;
+    elem->computed = 1;
     }
     if (elem->value != NULL)
-        return(xmlXPathObjectCopy(elem->value));
+    return(xmlXPathObjectCopy(elem->value));
 #ifdef WITH_XSLT_DEBUG_VARIABLE
     XSLT_TRACE(ctxt,XSLT_TRACE_VARIABLES,xsltGenericDebug(xsltGenericDebugContext,
-                     "variable not found %s\n", name));
+             "variable not found %s\n", name));
 #endif
     return(NULL);
 }
@@ -1998,7 +1986,7 @@ xsltParseStylesheetCallerParam(xsltTransformContextPtr ctxt, xmlNodePtr inst)
     xsltStackElemPtr param = NULL;
 
     if ((ctxt == NULL) || (inst == NULL) || (inst->type != XML_ELEMENT_NODE))
-        return(NULL);
+    return(NULL);
 
 #ifdef XSLT_REFACTORED
     comp = (xsltStyleBasicItemVariablePtr) inst->psvi;
@@ -2008,30 +1996,30 @@ xsltParseStylesheetCallerParam(xsltTransformContextPtr ctxt, xmlNodePtr inst)
 
     if (comp == NULL) {
         xsltTransformError(ctxt, NULL, inst,
-            "Internal error in xsltParseStylesheetCallerParam(): "
-            "The XSLT 'with-param' instruction was not compiled.\n");
+        "Internal error in xsltParseStylesheetCallerParam(): "
+        "The XSLT 'with-param' instruction was not compiled.\n");
         return(NULL);
     }
     if (comp->name == NULL) {
-        xsltTransformError(ctxt, NULL, inst,
-            "Internal error in xsltParseStylesheetCallerParam(): "
-            "XSLT 'with-param': The attribute 'name' was not compiled.\n");
-        return(NULL);
+    xsltTransformError(ctxt, NULL, inst,
+        "Internal error in xsltParseStylesheetCallerParam(): "
+        "XSLT 'with-param': The attribute 'name' was not compiled.\n");
+    return(NULL);
     }
 
 #ifdef WITH_XSLT_DEBUG_VARIABLE
     XSLT_TRACE(ctxt,XSLT_TRACE_VARIABLES,xsltGenericDebug(xsltGenericDebugContext,
-            "Handling xsl:with-param %s\n", comp->name));
+        "Handling xsl:with-param %s\n", comp->name));
 #endif
 
     if (comp->select == NULL) {
-        tree = inst->children;
+    tree = inst->children;
     } else {
 #ifdef WITH_XSLT_DEBUG_VARIABLE
-        XSLT_TRACE(ctxt,XSLT_TRACE_VARIABLES,xsltGenericDebug(xsltGenericDebugContext,
-            "        select %s\n", comp->select));
+    XSLT_TRACE(ctxt,XSLT_TRACE_VARIABLES,xsltGenericDebug(xsltGenericDebugContext,
+        "        select %s\n", comp->select));
 #endif
-        tree = inst;
+    tree = inst;
     }
 
     param = xsltBuildVariable(ctxt, (xsltStylePreCompPtr) comp, tree);
@@ -2057,7 +2045,7 @@ xsltParseGlobalVariable(xsltStylesheetPtr style, xmlNodePtr cur)
 #endif
 
     if ((cur == NULL) || (style == NULL) || (cur->type != XML_ELEMENT_NODE))
-        return;
+    return;
 
 #ifdef XSLT_REFACTORED
     /*
@@ -2070,15 +2058,15 @@ xsltParseGlobalVariable(xsltStylesheetPtr style, xmlNodePtr cur)
     comp = (xsltStylePreCompPtr) cur->psvi;
 #endif
     if (comp == NULL) {
-        xsltTransformError(NULL, style, cur,
-             "xsl:variable : compilation failed\n");
-        return;
+    xsltTransformError(NULL, style, cur,
+         "xsl:variable : compilation failed\n");
+    return;
     }
 
     if (comp->name == NULL) {
-        xsltTransformError(NULL, style, cur,
-            "xsl:variable : missing name attribute\n");
-        return;
+    xsltTransformError(NULL, style, cur,
+        "xsl:variable : missing name attribute\n");
+    return;
     }
 
     /*
@@ -2093,12 +2081,12 @@ xsltParseGlobalVariable(xsltStylesheetPtr style, xmlNodePtr cur)
     }
 #ifdef WITH_XSLT_DEBUG_VARIABLE
     xsltGenericDebug(xsltGenericDebugContext,
-        "Registering global variable %s\n", comp->name);
+    "Registering global variable %s\n", comp->name);
 #endif
 
     xsltRegisterGlobalVariable(style, comp->name, comp->ns,
-        comp->select, cur->children, (xsltStylePreCompPtr) comp,
-        NULL);
+    comp->select, cur->children, (xsltStylePreCompPtr) comp,
+    NULL);
 }
 
 /**
@@ -2119,7 +2107,7 @@ xsltParseGlobalParam(xsltStylesheetPtr style, xmlNodePtr cur) {
 #endif
 
     if ((cur == NULL) || (style == NULL) || (cur->type != XML_ELEMENT_NODE))
-        return;
+    return;
 
 #ifdef XSLT_REFACTORED
     /*
@@ -2132,15 +2120,15 @@ xsltParseGlobalParam(xsltStylesheetPtr style, xmlNodePtr cur) {
     comp = (xsltStylePreCompPtr) cur->psvi;
 #endif
     if (comp == NULL) {
-        xsltTransformError(NULL, style, cur,
-             "xsl:param : compilation failed\n");
-        return;
+    xsltTransformError(NULL, style, cur,
+         "xsl:param : compilation failed\n");
+    return;
     }
 
     if (comp->name == NULL) {
-        xsltTransformError(NULL, style, cur,
-            "xsl:param : missing name attribute\n");
-        return;
+    xsltTransformError(NULL, style, cur,
+        "xsl:param : missing name attribute\n");
+    return;
     }
 
     /*
@@ -2156,12 +2144,12 @@ xsltParseGlobalParam(xsltStylesheetPtr style, xmlNodePtr cur) {
 
 #ifdef WITH_XSLT_DEBUG_VARIABLE
     xsltGenericDebug(xsltGenericDebugContext,
-        "Registering global param %s\n", comp->name);
+    "Registering global param %s\n", comp->name);
 #endif
 
     xsltRegisterGlobalVariable(style, comp->name, comp->ns,
-        comp->select, cur->children, (xsltStylePreCompPtr) comp,
-        NULL);
+    comp->select, cur->children, (xsltStylePreCompPtr) comp,
+    NULL);
 }
 
 /**
@@ -2182,25 +2170,25 @@ xsltParseStylesheetVariable(xsltTransformContextPtr ctxt, xmlNodePtr inst)
 #endif
 
     if ((inst == NULL) || (ctxt == NULL) || (inst->type != XML_ELEMENT_NODE))
-        return;
+    return;
 
     comp = inst->psvi;
     if (comp == NULL) {
         xsltTransformError(ctxt, NULL, inst,
-            "Internal error in xsltParseStylesheetVariable(): "
-            "The XSLT 'variable' instruction was not compiled.\n");
+        "Internal error in xsltParseStylesheetVariable(): "
+        "The XSLT 'variable' instruction was not compiled.\n");
         return;
     }
     if (comp->name == NULL) {
-        xsltTransformError(ctxt, NULL, inst,
-            "Internal error in xsltParseStylesheetVariable(): "
-            "The attribute 'name' was not compiled.\n");
-        return;
+    xsltTransformError(ctxt, NULL, inst,
+        "Internal error in xsltParseStylesheetVariable(): "
+        "The attribute 'name' was not compiled.\n");
+    return;
     }
 
 #ifdef WITH_XSLT_DEBUG_VARIABLE
     XSLT_TRACE(ctxt,XSLT_TRACE_VARIABLES,xsltGenericDebug(xsltGenericDebugContext,
-        "Registering variable '%s'\n", comp->name));
+    "Registering variable '%s'\n", comp->name));
 #endif
 
     xsltRegisterVariable(ctxt, (xsltStylePreCompPtr) comp, inst->children, 0);
@@ -2224,19 +2212,19 @@ xsltParseStylesheetParam(xsltTransformContextPtr ctxt, xmlNodePtr cur)
 #endif
 
     if ((cur == NULL) || (ctxt == NULL) || (cur->type != XML_ELEMENT_NODE))
-        return;
+    return;
 
     comp = cur->psvi;
     if ((comp == NULL) || (comp->name == NULL)) {
-        xsltTransformError(ctxt, NULL, cur,
-            "Internal error in xsltParseStylesheetParam(): "
-            "The XSLT 'param' declaration was not compiled correctly.\n");
-        return;
+    xsltTransformError(ctxt, NULL, cur,
+        "Internal error in xsltParseStylesheetParam(): "
+        "The XSLT 'param' declaration was not compiled correctly.\n");
+    return;
     }
 
 #ifdef WITH_XSLT_DEBUG_VARIABLE
     XSLT_TRACE(ctxt,XSLT_TRACE_VARIABLES,xsltGenericDebug(xsltGenericDebugContext,
-        "Registering param %s\n", comp->name));
+    "Registering param %s\n", comp->name));
 #endif
 
     xsltRegisterVariable(ctxt, (xsltStylePreCompPtr) comp, cur->children, 1);
@@ -2268,16 +2256,16 @@ xsltFreeGlobalVariables(xsltTransformContextPtr ctxt) {
  */
 xmlXPathObjectPtr
 xsltXPathVariableLookup(void *ctxt, const xmlChar *name,
-                        const xmlChar *ns_uri) {
+                    const xmlChar *ns_uri) {
     xsltTransformContextPtr tctxt;
     xmlXPathObjectPtr valueObj = NULL;
 
     if ((ctxt == NULL) || (name == NULL))
-        return(NULL);
+    return(NULL);
 
 #ifdef WITH_XSLT_DEBUG_VARIABLE
     XSLT_TRACE(((xsltTransformContextPtr)ctxt),XSLT_TRACE_VARIABLES,xsltGenericDebug(xsltGenericDebugContext,
-            "Lookup variable '%s'\n", name));
+        "Lookup variable '%s'\n", name));
 #endif
 
     tctxt = (xsltTransformContextPtr) ctxt;
@@ -2290,90 +2278,84 @@ xsltXPathVariableLookup(void *ctxt, const xmlChar *name,
     * come from the disctionnary and hence pointer comparison.
     */
     if (tctxt->varsNr != 0) {
-        int i;
-        xsltStackElemPtr variable = NULL, cur;
+    int i;
+    xsltStackElemPtr variable = NULL, cur;
 
+    for (i = tctxt->varsNr; i > tctxt->varsBase; i--) {
+        cur = tctxt->varsTab[i-1];
+        if ((cur->name == name) && (cur->nameURI == ns_uri)) {
+        variable = cur;
+        goto local_variable_found;
+        }
+        cur = cur->next;
+    }
+    /*
+    * Redo the lookup with interned strings to avoid string comparison.
+    *
+    * OPTIMIZE TODO: The problem here is, that if we request a
+    *  global variable, then this will be also executed.
+    */
+    {
+        const xmlChar *tmpName = name, *tmpNsName = ns_uri;
+
+        name = xmlDictLookup(tctxt->dict, name, -1);
+        if (ns_uri)
+        ns_uri = xmlDictLookup(tctxt->dict, ns_uri, -1);
+        if ((tmpName != name) || (tmpNsName != ns_uri)) {
         for (i = tctxt->varsNr; i > tctxt->varsBase; i--) {
             cur = tctxt->varsTab[i-1];
             if ((cur->name == name) && (cur->nameURI == ns_uri)) {
-#if 0
-                stack_addr++;
-#endif
-                variable = cur;
-                goto local_variable_found;
-            }
-            cur = cur->next;
-        }
-        /*
-        * Redo the lookup with interned strings to avoid string comparison.
-        *
-        * OPTIMIZE TODO: The problem here is, that if we request a
-        *  global variable, then this will be also executed.
-        */
-        {
-            const xmlChar *tmpName = name, *tmpNsName = ns_uri;
-
-            name = xmlDictLookup(tctxt->dict, name, -1);
-            if (ns_uri)
-                ns_uri = xmlDictLookup(tctxt->dict, ns_uri, -1);
-            if ((tmpName != name) || (tmpNsName != ns_uri)) {
-                for (i = tctxt->varsNr; i > tctxt->varsBase; i--) {
-                    cur = tctxt->varsTab[i-1];
-                    if ((cur->name == name) && (cur->nameURI == ns_uri)) {
-#if 0
-                        stack_cmp++;
-#endif
-                        variable = cur;
-                        goto local_variable_found;
-                    }
-                }
+            variable = cur;
+            goto local_variable_found;
             }
         }
+        }
+    }
 
 local_variable_found:
 
-        if (variable) {
-            if (variable->computed == 0) {
+    if (variable) {
+        if (variable->computed == 0) {
 
 #ifdef WITH_XSLT_DEBUG_VARIABLE
-                XSLT_TRACE(tctxt,XSLT_TRACE_VARIABLES,xsltGenericDebug(xsltGenericDebugContext,
-                    "uncomputed variable '%s'\n", name));
+        XSLT_TRACE(tctxt,XSLT_TRACE_VARIABLES,xsltGenericDebug(xsltGenericDebugContext,
+            "uncomputed variable '%s'\n", name));
 #endif
-                variable->value = xsltEvalVariable(tctxt, variable, NULL);
-                variable->computed = 1;
-            }
-            if (variable->value != NULL) {
-                valueObj = xmlXPathObjectCopy(variable->value);
-            }
-            return(valueObj);
+        variable->value = xsltEvalVariable(tctxt, variable, NULL);
+        variable->computed = 1;
         }
+        if (variable->value != NULL) {
+        valueObj = xmlXPathObjectCopy(variable->value);
+        }
+        return(valueObj);
+    }
     }
     /*
     * Global variables/params --------------------------------------------
     */
     if (tctxt->globalVars) {
-        valueObj = xsltGlobalVariableLookup(tctxt, name, ns_uri);
+    valueObj = xsltGlobalVariableLookup(tctxt, name, ns_uri);
     }
 
     if (valueObj == NULL) {
 
 #ifdef WITH_XSLT_DEBUG_VARIABLE
     XSLT_TRACE(tctxt,XSLT_TRACE_VARIABLES,xsltGenericDebug(xsltGenericDebugContext,
-                     "variable not found '%s'\n", name));
+             "variable not found '%s'\n", name));
 #endif
 
-        if (ns_uri) {
-            xsltTransformError(tctxt, NULL, tctxt->inst,
-                "Variable '{%s}%s' has not been declared.\n", ns_uri, name);
-        } else {
-            xsltTransformError(tctxt, NULL, tctxt->inst,
-                "Variable '%s' has not been declared.\n", name);
-        }
+    if (ns_uri) {
+        xsltTransformError(tctxt, NULL, tctxt->inst,
+        "Variable '{%s}%s' has not been declared.\n", ns_uri, name);
+    } else {
+        xsltTransformError(tctxt, NULL, tctxt->inst,
+        "Variable '%s' has not been declared.\n", name);
+    }
     } else {
 
 #ifdef WITH_XSLT_DEBUG_VARIABLE
-        XSLT_TRACE(tctxt,XSLT_TRACE_VARIABLES,xsltGenericDebug(xsltGenericDebugContext,
-            "found variable '%s'\n", name));
+    XSLT_TRACE(tctxt,XSLT_TRACE_VARIABLES,xsltGenericDebug(xsltGenericDebugContext,
+        "found variable '%s'\n", name));
 #endif
     }
 

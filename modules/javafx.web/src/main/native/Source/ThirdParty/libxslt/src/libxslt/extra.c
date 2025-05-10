@@ -35,9 +35,9 @@
 #endif
 
 /************************************************************************
- *                                                                      *
- *              Handling of XSLT debugging                              *
- *                                                                      *
+ *                                    *
+ *        Handling of XSLT debugging                *
+ *                                    *
  ************************************************************************/
 
 /**
@@ -110,9 +110,9 @@ xsltDebug(xsltTransformContextPtr ctxt, xmlNodePtr node ATTRIBUTE_UNUSED,
 }
 
 /************************************************************************
- *                                                                      *
- *              Classic extensions as described by M. Kay               *
- *                                                                      *
+ *                                    *
+ *        Classic extensions as described by M. Kay        *
+ *                                    *
  ************************************************************************/
 
 /**
@@ -128,21 +128,21 @@ xsltDebug(xsltTransformContextPtr ctxt, xmlNodePtr node ATTRIBUTE_UNUSED,
 void
 xsltFunctionNodeSet(xmlXPathParserContextPtr ctxt, int nargs){
     if (nargs != 1) {
-        xsltTransformError(xsltXPathGetTransformContext(ctxt), NULL, NULL,
-                "node-set() : expects one result-tree arg\n");
-        ctxt->error = XPATH_INVALID_ARITY;
-        return;
+    xsltTransformError(xsltXPathGetTransformContext(ctxt), NULL, NULL,
+        "node-set() : expects one result-tree arg\n");
+    ctxt->error = XPATH_INVALID_ARITY;
+    return;
     }
     if ((ctxt->value == NULL) ||
-        ((ctxt->value->type != XPATH_XSLT_TREE) &&
-         (ctxt->value->type != XPATH_NODESET))) {
-        xsltTransformError(xsltXPathGetTransformContext(ctxt), NULL, NULL,
-            "node-set() invalid arg expecting a result tree\n");
-        ctxt->error = XPATH_INVALID_TYPE;
-        return;
+    ((ctxt->value->type != XPATH_XSLT_TREE) &&
+     (ctxt->value->type != XPATH_NODESET))) {
+    xsltTransformError(xsltXPathGetTransformContext(ctxt), NULL, NULL,
+        "node-set() invalid arg expecting a result tree\n");
+    ctxt->error = XPATH_INVALID_TYPE;
+    return;
     }
     if (ctxt->value->type == XPATH_XSLT_TREE) {
-        ctxt->value->type = XPATH_NODESET;
+    ctxt->value->type = XPATH_NODESET;
     }
 }
 
@@ -166,32 +166,32 @@ xsltRegisterExtras(xsltTransformContextPtr ctxt ATTRIBUTE_UNUSED) {
 void
 xsltRegisterAllExtras (void) {
     xsltRegisterExtModuleFunction((const xmlChar *) "node-set",
-                                  XSLT_LIBXSLT_NAMESPACE,
-                                  xsltFunctionNodeSet);
+                  XSLT_LIBXSLT_NAMESPACE,
+                  xsltFunctionNodeSet);
     xsltRegisterExtModuleFunction((const xmlChar *) "node-set",
-                                  XSLT_SAXON_NAMESPACE,
-                                  xsltFunctionNodeSet);
+                  XSLT_SAXON_NAMESPACE,
+                  xsltFunctionNodeSet);
     xsltRegisterExtModuleFunction((const xmlChar *) "node-set",
-                                  XSLT_XT_NAMESPACE,
-                                  xsltFunctionNodeSet);
+                  XSLT_XT_NAMESPACE,
+                  xsltFunctionNodeSet);
     xsltRegisterExtModuleElement((const xmlChar *) "debug",
-                                 XSLT_LIBXSLT_NAMESPACE,
-                                 NULL,
-                                 xsltDebug);
+                 XSLT_LIBXSLT_NAMESPACE,
+                 NULL,
+                 xsltDebug);
     xsltRegisterExtModuleElement((const xmlChar *) "output",
-                                 XSLT_SAXON_NAMESPACE,
-                                 xsltDocumentComp,
-                                 xsltDocumentElem);
+                 XSLT_SAXON_NAMESPACE,
+                 xsltDocumentComp,
+                 xsltDocumentElem);
     xsltRegisterExtModuleElement((const xmlChar *) "write",
-                                 XSLT_XALAN_NAMESPACE,
-                                 xsltDocumentComp,
-                                 xsltDocumentElem);
+                 XSLT_XALAN_NAMESPACE,
+                 xsltDocumentComp,
+                 xsltDocumentElem);
     xsltRegisterExtModuleElement((const xmlChar *) "document",
-                                 XSLT_XT_NAMESPACE,
-                                 xsltDocumentComp,
-                                 xsltDocumentElem);
+                 XSLT_XT_NAMESPACE,
+                 xsltDocumentComp,
+                 xsltDocumentElem);
     xsltRegisterExtModuleElement((const xmlChar *) "document",
-                                 XSLT_NAMESPACE,
-                                 xsltDocumentComp,
-                                 xsltDocumentElem);
+                 XSLT_NAMESPACE,
+                 xsltDocumentComp,
+                 xsltDocumentElem);
 }
