@@ -500,6 +500,7 @@ defineProperty("AWT_TEST", "true")
 ext.IS_AWT_TEST = Boolean.parseBoolean(AWT_TEST);
 
 // Specifies whether to run system tests that depend on SWT (only used when FULL_TEST is also enabled)
+// JDK-8356687 and JDK-8356688 track the disablement of the SWT tests on both platforms.
 defineProperty("SWT_TEST", (IS_MAC || IS_LINUX) ? "false" : "true")
 ext.IS_SWT_TEST = Boolean.parseBoolean(SWT_TEST);
 
