@@ -342,9 +342,9 @@ public class HeaderBar extends Region {
     /**
      * Creates a new {@code HeaderBar} with the specified children.
      *
-     * @param leading the leading node
-     * @param center the center node
-     * @param trailing the trailing node
+     * @param leading the leading node, or {@code null}
+     * @param center the center node, or {@code null}
+     * @param trailing the trailing node, or {@code null}
      */
     public HeaderBar(Node leading, Node center, Node trailing) {
         this();
