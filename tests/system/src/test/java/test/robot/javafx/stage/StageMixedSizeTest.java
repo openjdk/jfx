@@ -25,6 +25,7 @@
 
 package test.robot.javafx.stage;
 
+import javafx.application.Platform;
 import javafx.scene.Scene;
 import javafx.scene.layout.StackPane;
 import javafx.scene.paint.Color;
@@ -34,6 +35,8 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.EnumSource;
 import test.robot.testharness.VisualTestBase;
 import test.util.Util;
+
+import java.util.concurrent.CountDownLatch;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static test.util.Util.PARAMETERIZED_TEST_DISPLAY;
@@ -50,8 +53,9 @@ class StageMixedSizeTest extends VisualTestBase {
         final int finalWidth = 200;
         final int initialContentSize = 300;
 
+        setupContentSizeTestStage(stageStyle, initialContentSize, initialContentSize);
+
         Util.doTimeLine(WAIT,
-                () -> setupContentSizeTestStage(stageStyle, initialContentSize, initialContentSize),
                 () -> testStage.setWidth(finalWidth),
                 () -> assertColorDoesNotEqual(BACKGROUND_COLOR,
                         getColor(initialContentSize - 10, initialContentSize / 2), TOLERANCE),
@@ -64,8 +68,9 @@ class StageMixedSizeTest extends VisualTestBase {
         final int finalHeight = 200;
         final int initialContentSize = 300;
 
+        setupContentSizeTestStage(stageStyle, initialContentSize, initialContentSize);
+
         Util.doTimeLine(WAIT,
-                () -> setupContentSizeTestStage(stageStyle, initialContentSize, initialContentSize),
                 () -> testStage.setHeight(finalHeight),
                 () -> assertColorDoesNotEqual(BACKGROUND_COLOR,
                         getColor(initialContentSize / 2, initialContentSize - 10), TOLERANCE),
@@ -73,12 +78,20 @@ class StageMixedSizeTest extends VisualTestBase {
     }
 
     private void setupContentSizeTestStage(StageStyle stageStyle, int width, int height) {
-        testStage = getStage(true);
-        testStage.initStyle(stageStyle);
-        Scene scene = new Scene(new StackPane(), width, height, BACKGROUND_COLOR);
-        testStage.setScene(scene);
-        testStage.setX(0);
-        testStage.setY(0);
-        testStage.show();
+        CountDownLatch shownLatch = new CountDownLatch(1);
+
+        Util.runAndWait(() -> {
+                    testStage = getStage(true);
+                    testStage.initStyle(stageStyle);
+                    Scene scene = new Scene(new StackPane(), width, height, BACKGROUND_COLOR);
+                    testStage.setScene(scene);
+                    testStage.setX(0);
+                    testStage.setY(0);
+                    testStage.setOnShown(e -> Platform.runLater(shownLatch::countDown));
+                    testStage.show();
+                });
+
+        Util.await(shownLatch);
+        Util.sleep(WAIT);
     }
 }

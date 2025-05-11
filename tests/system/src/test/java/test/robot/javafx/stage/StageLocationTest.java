@@ -24,6 +24,7 @@
  */
 package test.robot.javafx.stage;
 
+import javafx.application.Platform;
 import javafx.beans.binding.Bindings;
 import javafx.beans.property.ReadOnlyDoubleProperty;
 import javafx.scene.Scene;
@@ -37,6 +38,8 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.EnumSource;
 import test.robot.testharness.VisualTestBase;
 import test.util.Util;
+
+import java.util.concurrent.CountDownLatch;
 
 import static test.util.Util.PARAMETERIZED_TEST_DISPLAY;
 
@@ -81,14 +84,19 @@ class StageLocationTest extends VisualTestBase {
     @ParameterizedTest(name = PARAMETERIZED_TEST_DISPLAY)
     @EnumSource(names = {"DECORATED", "UNDECORATED", "UTILITY"})
     void testMove(StageStyle stageStyle) {
-        Util.runAndWait(() -> stage = createStage(stageStyle));
+        CountDownLatch shownLatch = new CountDownLatch(1);
+        Util.runAndWait(() -> {
+            stage = createStage(stageStyle);
+            stage.setX(X);
+            stage.setY(Y);
+            stage.setOnShown(e -> Platform.runLater(shownLatch::countDown));
+            stage.show();
+        });
+
+        Util.await(shownLatch);
+        Util.sleep(WAIT);
 
         Util.doTimeLine(WAIT,
-                () -> {
-                    stage.setX(X);
-                    stage.setY(Y);
-                },
-                stage::show,
                 () -> assertColorEquals(COLOR, X + 100, Y + 100),
                 () -> {
                     stage.setX(TO_X);
@@ -100,14 +108,19 @@ class StageLocationTest extends VisualTestBase {
     @ParameterizedTest(name = PARAMETERIZED_TEST_DISPLAY)
     @EnumSource(names = {"DECORATED", "UNDECORATED", "UTILITY"})
     void testMoveXAxis(StageStyle stageStyle) {
-        Util.runAndWait(() -> stage = createStage(stageStyle));
+        CountDownLatch shownLatch = new CountDownLatch(1);
+        Util.runAndWait(() -> {
+            stage = createStage(stageStyle);
+            stage.setX(X);
+            stage.setY(Y);
+            stage.setOnShown(e -> Platform.runLater(shownLatch::countDown));
+            stage.show();
+        });
+
+        Util.await(shownLatch);
+        Util.sleep(WAIT);
 
         Util.doTimeLine(WAIT,
-                () -> {
-                    stage.setX(X);
-                    stage.setY(Y);
-                },
-                stage::show,
                 () -> assertColorEquals(COLOR, X + 100, Y + 100),
                 () -> stage.setX(TO_X),
                 () -> assertColorEquals(COLOR, TO_X + 100, Y + 100));
@@ -116,14 +129,20 @@ class StageLocationTest extends VisualTestBase {
     @ParameterizedTest(name = PARAMETERIZED_TEST_DISPLAY)
     @EnumSource(names = {"DECORATED", "UNDECORATED", "UTILITY"})
     void testMoveYAxis(StageStyle stageStyle) {
-        Util.runAndWait(() -> stage = createStage(stageStyle));
+        CountDownLatch shownLatch = new CountDownLatch(1);
+        Util.runAndWait(() -> {
+            stage = createStage(stageStyle);
+            stage.setX(X);
+            stage.setY(Y);
+            stage.setOnShown(e -> Platform.runLater(shownLatch::countDown));
+            stage.show();
+        });
+
+
+        Util.await(shownLatch);
+        Util.sleep(WAIT);
 
         Util.doTimeLine(WAIT,
-                () -> {
-                    stage.setX(X);
-                    stage.setY(Y);
-                },
-                stage::show,
                 () -> assertColorEquals(COLOR, X + 100, Y + 100),
                 () -> stage.setY(TO_Y),
                 () -> assertColorEquals(COLOR, X + 100, TO_Y + 100));
@@ -132,10 +151,19 @@ class StageLocationTest extends VisualTestBase {
     @ParameterizedTest(name = PARAMETERIZED_TEST_DISPLAY)
     @EnumSource(names = {"DECORATED", "UNDECORATED", "UTILITY"})
     void testMoveAfterShow(StageStyle stageStyle) {
-        Util.runAndWait(() -> stage = createStage(stageStyle));
+        CountDownLatch shownLatch = new CountDownLatch(1);
+        Util.runAndWait(() -> {
+            stage = createStage(stageStyle);
+            stage.setX(X);
+            stage.setY(Y);
+            stage.setOnShown(e -> Platform.runLater(shownLatch::countDown));
+            stage.show();
+        });
+
+        Util.await(shownLatch);
+        Util.sleep(WAIT);
 
         Util.doTimeLine(WAIT,
-                stage::show,
                 () -> {
                     stage.setX(TO_X);
                     stage.setY(TO_Y);

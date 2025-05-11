@@ -55,9 +55,12 @@ import javafx.beans.property.ReadOnlyDoubleProperty;
 import javafx.beans.property.ReadOnlyProperty;
 import javafx.beans.property.ReadOnlyStringProperty;
 import javafx.beans.property.SimpleObjectProperty;
+import javafx.beans.property.SimpleStringProperty;
+import javafx.beans.property.StringProperty;
 import javafx.beans.value.ChangeListener;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
+import javafx.event.Event;
 import javafx.geometry.HPos;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
@@ -86,6 +89,7 @@ import javafx.scene.layout.FlowPane;
 import javafx.scene.layout.GridPane;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Priority;
+import javafx.scene.layout.Region;
 import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
 import javafx.scene.paint.Color;
@@ -308,10 +312,6 @@ public class TestStage extends Application {
         TitledPane editorTitledPane = new TitledPane("Properties", propertyEditor);
         editorTitledPane.setCollapsible(false);
 
-        Tab editorTab = new Tab("Edit");
-        editorTab.setClosable(false);
-        editorTab.setContent(editorTitledPane);
-
         VBox root = new VBox(
                 commandPaneTitledPane,
                 editorTitledPane
@@ -362,28 +362,6 @@ public class TestStage extends Application {
 
         stageCounter++;
 
-        Scene testScene;
-        StackPane root;
-        if (initStyle.getValue() == StageStyle.TRANSPARENT) {
-            root = new StackPane();
-            BackgroundFill fill = new BackgroundFill(
-                    Color.HOTPINK.deriveColor(0, 1, 1, 0.5),
-                    CornerRadii.EMPTY,
-                    Insets.EMPTY
-            );
-            root.setBackground(new Background(fill));
-
-            testScene = new Scene(root, 300, 300);
-            testScene.setFill(Color.TRANSPARENT);
-        } else {
-            root = new StackPane();
-            root.setBackground(Background.EMPTY);
-            testScene = new Scene(root, 300, 300, Color.HOTPINK);
-        }
-
-        setupContextMenu(root);
-
-        newStage.setScene(testScene);
         newStage.initStyle(initStyle.getValue());
         newStage.initModality(initModality.getValue());
         newStage.initOwner(initOwner.getValue());
@@ -393,11 +371,13 @@ public class TestStage extends Application {
             if (newVal) {
                 currentStage = newStage;
                 updateBindings();
+                updateCommandButtonsState();
             }
         });
 
         stages.add(newStage);
         currentStage = newStage;
+        createDefaultScene();
 
         newStage.setOnHidden(e -> {
             stages.remove(newStage);
@@ -414,6 +394,48 @@ public class TestStage extends Application {
 
     public static void main(String[] args) {
         launch(TestStage.class, args);
+    }
+
+    private Label createLabel(String prefix, ReadOnlyProperty<?> property) {
+        Label label = new Label();
+        label.textProperty().bind(Bindings.concat(prefix, Bindings.convert(property)));
+        return label;
+    }
+
+    private void createDefaultScene() {
+        Scene scene;
+
+        StringProperty lastEvent = new SimpleStringProperty();
+
+        Label ownerLabel = new Label("Owner: NONE");
+        if (currentStage.getOwner() instanceof Stage owner) {
+            ownerLabel.setText("Owner: " + owner.getTitle());
+        }
+
+        VBox root = new VBox(createLabel("Focused: ", currentStage.focusedProperty()),
+                            new Label("Modality: " + currentStage.getModality()),
+                            ownerLabel,
+                            createLabel("Last Event: ", lastEvent));
+        root.setBackground(Background.EMPTY);
+
+
+        if (currentStage.getStyle() == StageStyle.TRANSPARENT) {
+            BackgroundFill fill = new BackgroundFill(
+                    Color.HOTPINK.deriveColor(0, 1, 1, 0.5),
+                    CornerRadii.EMPTY,
+                    Insets.EMPTY
+            );
+            root.setBackground(new Background(fill));
+
+            scene = new Scene(root, 300, 300);
+            scene.setFill(Color.TRANSPARENT);
+        } else {
+            scene = new Scene(root, 300, 300, Color.HOTPINK);
+        }
+
+        currentStage.addEventHandler(Event.ANY, e -> lastEvent.set(e.getEventType().getName()));
+        setupContextMenu(root);
+        currentStage.setScene(scene);
     }
 
     private void createSceneWithTextField() {
@@ -473,6 +495,9 @@ public class TestStage extends Application {
 
     private void setupContextMenu(Node root) {
         ContextMenu contextMenu = new ContextMenu();
+
+        MenuItem defaultSceneMenuItem = new MenuItem("Default Scene");
+        defaultSceneMenuItem.setOnAction(e -> createDefaultScene());
         MenuItem textFieldMenuItem = new MenuItem("Scene with TextField");
         textFieldMenuItem.setOnAction(e -> createSceneWithTextField());
         MenuItem tooltipBoxMenuItem = new MenuItem("Scene with Tooltip Box");
@@ -485,8 +510,8 @@ public class TestStage extends Application {
         fileOpenMenuItem.setOnAction(e -> createFileOpen());
 
 
-        contextMenu.getItems().addAll(textFieldMenuItem, tooltipBoxMenuItem, alertMenuItem, alertWindowModalMenuItem,
-                fileOpenMenuItem);
+        contextMenu.getItems().addAll(defaultSceneMenuItem, textFieldMenuItem, tooltipBoxMenuItem,
+                alertMenuItem, alertWindowModalMenuItem, fileOpenMenuItem);
         root.setOnContextMenuRequested(e -> contextMenu.show(root, e.getScreenX(), e.getScreenY()));
     }
 
@@ -511,6 +536,7 @@ public class TestStage extends Application {
             stagePane.addBooleanProperty("Maximized", stage.maximizedProperty(), stage::setMaximized);
             stagePane.addBooleanProperty("Iconified", stage.iconifiedProperty(), stage::setIconified);
             stagePane.addBooleanProperty("Resizeable", stage.resizableProperty(), stage::setResizable);
+            stagePane.addBooleanProperty("Focused", stage.focusedProperty(), null);
             stagePane.addDoublePropery("X", stage.xProperty(), stage::setX, 0, MAX_WIDTH * 2, 1.0);
             stagePane.addDoublePropery("Y", stage.yProperty(), stage::setY, 0, MAX_HEIGHT * 2, 1.0);
             stagePane.addDoublePropery("Width", stage.widthProperty(), stage::setWidth, 1, MAX_WIDTH, 1.0);
@@ -616,11 +642,15 @@ public class TestStage extends Application {
                 }
             });
 
-            spinner.valueProperty().addListener((observable, oldValue, newValue) -> {
-                if (!newValue.equals(oldValue) && !suppressListener.get()) {
-                    setConsumer.accept(newValue);
-                }
-            });
+            if (setConsumer != null) {
+                spinner.valueProperty().addListener((observable, oldValue, newValue) -> {
+                    if (!newValue.equals(oldValue) && !suppressListener.get()) {
+                        setConsumer.accept(newValue);
+                    }
+                });
+            } else {
+                spinner.setDisable(true);
+            }
 
             currentRow++;
         }
@@ -632,7 +662,12 @@ public class TestStage extends Application {
             GridPane.setHgrow(textField, Priority.ALWAYS);
 
             addListener(property, (obs, oldValue, newValue) -> textField.setText(newValue));
-            textField.setOnAction(e -> setConsumer.accept(textField.getText()));
+
+            if (setConsumer != null) {
+                textField.setOnAction(e -> setConsumer.accept(textField.getText()));
+            } else {
+                textField.setDisable(true);
+            }
             currentRow++;
         }
 
@@ -643,7 +678,12 @@ public class TestStage extends Application {
             gridPane.add(checkBox, 1, currentRow);
 
             addListener(property, (obs, oldValue, newValue) -> checkBox.setSelected(newValue));
-            checkBox.setOnAction(e -> setConsumer.accept(checkBox.isSelected()));
+
+            if (setConsumer != null) {
+                checkBox.setOnAction(e -> setConsumer.accept(checkBox.isSelected()));
+            } else {
+                checkBox.setDisable(true);
+            }
             currentRow++;
         }
 

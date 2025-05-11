@@ -190,6 +190,7 @@ public:
 
     void process_map();
     void process_focus(GdkEventFocus*);
+    void process_focus(bool);
     void notify_repaint();
     void notify_repaint(GdkRectangle*);
     void process_mouse_button(GdkEventButton*);
