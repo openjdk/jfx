@@ -37,10 +37,14 @@ import java.util.Comparator;
 import java.util.List;
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.SimpleObjectProperty;
+import javafx.geometry.HPos;
+import javafx.geometry.Insets;
+import javafx.geometry.VPos;
 import javafx.scene.Node;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.input.PickResult;
 import javafx.scene.layout.Background;
+import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.Pane;
 import javafx.scene.paint.Color;
 import javafx.scene.shape.ClosePath;
@@ -52,26 +56,36 @@ import javafx.scene.shape.StrokeLineJoin;
 import javafx.scene.text.TabStop;
 import javafx.scene.text.TabStopPolicy;
 import javafx.util.Subscription;
+import jfx.incubator.scene.control.richtext.RichTextArea;
+import jfx.incubator.scene.control.richtext.SelectionSegment;
 
 /**
  * Ruler: a TabStopPolicy visual editor.
  */
-public class Ruler extends Pane {
+public class Ruler extends BorderPane {
 
+    private final RichTextArea editor;
     private final SimpleObjectProperty<TabStopPolicy> policy;
     private int seq;
     private List<Tick> ticks;
     private Tick clickedStop;
     private boolean dragged;
     private boolean modified;
+    private Pane tickPane;
     private static final double HEIGHT = 12;
     private static final double HALFWIDTH = 4;
     private static final double TOO_CLOSE = 2;
 
-    public Ruler() {
+    public Ruler(RichTextArea editor) {
+        this.editor = editor;
         setPrefHeight(HEIGHT);
-        setBackground(Background.fill(Color.WHITE));
+        setBackground(Background.fill(Color.gray(0.7)));
         getStyleClass().add("ruler");
+        
+        tickPane = new Pane();
+        tickPane.setBackground(Background.fill(Color.WHITE));
+        tickPane.getStyleClass().add("reference");
+        setCenter(tickPane);
 
         policy = new SimpleObjectProperty<>(this, "tabStopPolicy") {
             private Subscription sub;
@@ -91,10 +105,14 @@ public class Ruler extends Pane {
         };
 
         widthProperty().subscribe(this::update);
+        editor.contentPaddingProperty().subscribe(this::update);
+        editor.modelProperty().subscribe(this::update);
 
         addEventHandler(MouseEvent.MOUSE_PRESSED, this::handleMousePressed);
         addEventHandler(MouseEvent.MOUSE_RELEASED, this::handleMouseReleased);
         addEventHandler(MouseEvent.MOUSE_DRAGGED, this::handleMouseDragged);
+
+        editor.selectionProperty().subscribe(this::handleSelection);
     }
 
     public final void setTabStopPolicy(TabStopPolicy p) {
@@ -149,10 +167,17 @@ public class Ruler extends Pane {
 
     @Override
     protected void layoutChildren() {
+        Insets m = editor.getContentPadding();
+        if (m != null) {
+            m = new Insets(0, m.getRight(), 0, m.getLeft());
+        }
+        layoutInArea(tickPane, 0, 0, getWidth(), getHeight(), 0, m, true, true, HPos.CENTER, VPos.CENTER);
+
+        // TODO model!  watch for default tabs which should be a part of the model
         if (ticks == null) {
             TabStopPolicy p = policy.get();
             ticks = createTicks(p);
-            getChildren().setAll(ticks);
+            tickPane.getChildren().setAll(ticks);
         }
     }
 
@@ -182,6 +207,10 @@ public class Ruler extends Pane {
         return false;
     }
 
+    private void handleSelection(SelectionSegment sel) {
+        // TODO update tab stop policy
+    }
+
     private void handleMousePressed(MouseEvent ev) {
         double x = ev.getX();
         dragged = false;
@@ -200,13 +229,13 @@ public class Ruler extends Pane {
         if (clickedStop == null) {
             double x = ev.getX();
             Tick t = createTabStop(new TabStop(x));
-            getChildren().add(t);
+            tickPane.getChildren().add(t);
             ticks.add(t);
             modified = true;
         } else {
             boolean remove = (dragged && deduplicate()) | (!dragged);
             if (remove) {
-                getChildren().remove(clickedStop);
+                tickPane.getChildren().remove(clickedStop);
                 ticks.remove(clickedStop);
                 modified = true;
             }
@@ -285,6 +314,7 @@ public class Ruler extends Pane {
         return rv;
     }
 
+    /** Visual representation of a tab stop */
     private static class Tick extends Path {
         public double position;
         public TabStop tabStop;

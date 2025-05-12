@@ -44,6 +44,7 @@ import javafx.scene.text.Font;
 import com.oracle.demo.richtext.common.TextStyle;
 import com.oracle.demo.richtext.editor.settings.EndKey;
 import com.oracle.demo.richtext.util.FX;
+import com.oracle.demo.richtext.util.FxAction;
 import jfx.incubator.scene.control.input.KeyBinding;
 import jfx.incubator.scene.control.richtext.RichTextArea;
 import jfx.incubator.scene.control.richtext.TextPos;
@@ -65,14 +66,14 @@ public class RichEditorDemoPane extends BorderPane {
     public RichEditorDemoPane() {
         FX.name(this, "RichEditorDemoPane");
 
-        ruler = new Ruler();
-        FX.setPopupMenu(ruler, this::createRulerPopupMenu);
-
         editor = new RichTextArea();
         // custom function
         editor.getInputMap().register(KeyBinding.shortcut(KeyCode.W), () -> {
             System.out.println("Custom function: W key is pressed");
         });
+
+        ruler = new Ruler(editor);
+        FX.setPopupMenu(ruler, this::createRulerPopupMenu);
 
         actions = new Actions(editor);
         editor.setContextMenu(createContextMenu());
@@ -115,7 +116,7 @@ public class RichEditorDemoPane extends BorderPane {
         FX.tooltip(textColor, "Text Color");
         // FIX there is no API for this!  why is this a property of a skin, not the control??
         // https://stackoverflow.com/questions/21246137/remove-text-from-colour-picker
-        textColor.setStyle("-fx-color-label-visible: false ;");
+        textColor.setStyle("-fx-color-label-visible: false;");
         textColor.setOnAction((ev) -> {
             actions.setTextColor(textColor.getValue());
         });
@@ -182,7 +183,7 @@ public class RichEditorDemoPane extends BorderPane {
 
     private ContextMenu createRulerPopupMenu() {
         ContextMenu m = new ContextMenu();
-        FX.item(m, "Options..."); // TODO
+        FX.item(m, "Tab Options...", new FxAction(this::showTabOptions));
         return m;
     }
 
@@ -238,5 +239,9 @@ public class RichEditorDemoPane extends BorderPane {
             --i;
         }
         return i;
+    }
+
+    private void showTabOptions() {
+        // TODO
     }
 }
