@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2023, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -38,6 +38,7 @@ import java.util.Comparator;
 import java.util.HashMap;
 import javafx.scene.input.DataFormat;
 import javafx.scene.paint.Color;
+import javafx.scene.text.TabStop;
 import javafx.scene.text.TextAlignment;
 import javafx.util.StringConverter;
 import javafx.util.converter.DoubleStringConverter;
@@ -112,6 +113,7 @@ public class RichTextFormatHandler extends DataFormatHandler {
     private static final StringConverter<ParagraphDirection> DIRECTION_CONVERTER = Converters.paragraphDirectionConverter();
     private static final DoubleStringConverter DOUBLE_CONVERTER = new DoubleStringConverter();
     private static final StringConverter<String> STRING_CONVERTER = Converters.stringConverter();
+    private static final StringConverter<TabStop[]> TAB_STOPS_CONVERTER = Converters.tabStopsConverter();
     private static final StringConverter<TextAlignment> TEXT_ALIGNMENT_CONVERTER = Converters.textAlignmentConverter();
     // String -> Handler
     // StyleAttribute -> Handler
@@ -138,6 +140,7 @@ public class RichTextFormatHandler extends DataFormatHandler {
         addHandler(StyleAttributeMap.SPACE_LEFT, "spaceLeft", DOUBLE_CONVERTER);
         addHandler(StyleAttributeMap.SPACE_RIGHT, "spaceRight", DOUBLE_CONVERTER);
         addHandlerBoolean(StyleAttributeMap.STRIKE_THROUGH, "ss");
+        addHandler(StyleAttributeMap.TAB_STOPS, "tabs", TAB_STOPS_CONVERTER);
         addHandler(StyleAttributeMap.TEXT_ALIGNMENT, "alignment", TEXT_ALIGNMENT_CONVERTER);
         addHandler(StyleAttributeMap.TEXT_COLOR, "tc", COLOR_CONVERTER);
         addHandlerBoolean(StyleAttributeMap.UNDERLINE, "u");

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2022, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -37,8 +37,11 @@ import javafx.scene.paint.Color;
 import javafx.scene.shape.LineTo;
 import javafx.scene.shape.MoveTo;
 import javafx.scene.shape.PathElement;
+import javafx.scene.text.TabStop;
+import javafx.scene.text.TabStopPolicy;
 import javafx.scene.text.TextFlow;
 import com.sun.jfx.incubator.scene.control.richtext.util.RichUtils;
+import jfx.incubator.scene.control.richtext.model.StyleAttributeMap;
 
 /**
  * Provides a visual representation of a paragraph.
@@ -425,5 +428,20 @@ public final class TextCell extends BorderPane {
             }
         }
         return null;
+    }
+
+    public void setParagraphAttributes(StyleAttributeMap a) {
+        Double firstLineIndent = a.getFirstLineIndent();
+        if (firstLineIndent != null) {
+            add(new FirstLineIndentSpacer(firstLineIndent));
+        }
+
+        TabStop[] tabStops = a.getTabStops();
+        if (tabStops != null) {
+            TabStopPolicy p = new TabStopPolicy(null); // TODO ref
+            p.tabStops().setAll(tabStops);
+            // TODO p.setDefaultStops();
+            flow().setTabStopPolicy(p);
+        }
     }
 }

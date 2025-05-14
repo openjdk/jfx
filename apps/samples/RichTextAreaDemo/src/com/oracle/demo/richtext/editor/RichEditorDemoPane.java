@@ -41,13 +41,17 @@ import javafx.scene.input.KeyCode;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.VBox;
 import javafx.scene.text.Font;
+import javafx.scene.text.TabStop;
+import javafx.scene.text.TabStopPolicy;
 import com.oracle.demo.richtext.common.TextStyle;
 import com.oracle.demo.richtext.editor.settings.EndKey;
 import com.oracle.demo.richtext.util.FX;
 import com.oracle.demo.richtext.util.FxAction;
 import jfx.incubator.scene.control.input.KeyBinding;
 import jfx.incubator.scene.control.richtext.RichTextArea;
+import jfx.incubator.scene.control.richtext.SelectionSegment;
 import jfx.incubator.scene.control.richtext.TextPos;
+import jfx.incubator.scene.control.richtext.model.StyleAttributeMap;
 
 /**
  * Main Panel.
@@ -62,6 +66,7 @@ public class RichEditorDemoPane extends BorderPane {
     private final ComboBox<Integer> fontSize;
     private final ColorPicker textColor;
     private final ComboBox<TextStyle> textStyle;
+    private TabStopPolicy tabPolicy;
 
     public RichEditorDemoPane() {
         FX.name(this, "RichEditorDemoPane");
@@ -73,6 +78,10 @@ public class RichEditorDemoPane extends BorderPane {
         });
 
         ruler = new Ruler(editor);
+        ruler.setOnChange(this::handleTabStopChange);
+        tabPolicy = new TabStopPolicy(ruler); // TODO or ticks bar?
+        ruler.setTabStopPolicy(tabPolicy);
+        
         FX.setPopupMenu(ruler, this::createRulerPopupMenu);
 
         actions = new Actions(editor);
@@ -243,5 +252,20 @@ public class RichEditorDemoPane extends BorderPane {
 
     private void showTabOptions() {
         // TODO
+    }
+
+    private void handleTabStopChange() {
+        // TODO update default tabs if changed
+        // TODO update TAB_STOPS attributes of all selected paragraphs (or the paragraph at the caret)
+        SelectionSegment sel = editor.getSelection();
+        if (sel != null) {
+            // TODO for now, just the caret
+            TextPos p = sel.getCaret();
+            if (p != null) {
+                TabStop[] ts = tabPolicy.tabStops().toArray(TabStop[]::new);
+                StyleAttributeMap a = StyleAttributeMap.builder().set(StyleAttributeMap.TAB_STOPS, ts).build();
+                editor.applyStyle(p, p, a);
+            }
+        }
     }
 }

@@ -85,6 +85,9 @@ public class DefaultTabAdvancePolicy implements TabAdvancePolicy {
 
     // this could be a method in the base class (change interface to an abstract class)
     private static float computeOffset(TextFlow flow, Region reference) {
+        if ((flow == null) || (reference == null)) {
+            return 0.0f;
+        }
         Scene s1 = flow.getScene();
         Scene s2 = reference.getScene();
         if ((s1 == null) || (s1 != s2)) {

@@ -64,6 +64,10 @@ import jfx.incubator.scene.control.richtext.SelectionSegment;
  */
 public class Ruler extends BorderPane {
 
+    private static final double HEIGHT = 12;
+    private static final double HALFWIDTH = 4;
+    private static final double TOO_CLOSE = 2;
+
     private final RichTextArea editor;
     private final SimpleObjectProperty<TabStopPolicy> policy;
     private int seq;
@@ -72,16 +76,15 @@ public class Ruler extends BorderPane {
     private boolean dragged;
     private boolean modified;
     private Pane tickPane;
-    private static final double HEIGHT = 12;
-    private static final double HALFWIDTH = 4;
-    private static final double TOO_CLOSE = 2;
+    private SelectionSegment selection;
+    private SimpleObjectProperty<Runnable> onChange;
 
     public Ruler(RichTextArea editor) {
         this.editor = editor;
         setPrefHeight(HEIGHT);
-        setBackground(Background.fill(Color.gray(0.7)));
+        setBackground(Background.fill(Color.gray(0.8)));
         getStyleClass().add("ruler");
-        
+
         tickPane = new Pane();
         tickPane.setBackground(Background.fill(Color.WHITE));
         tickPane.getStyleClass().add("reference");
@@ -107,12 +110,11 @@ public class Ruler extends BorderPane {
         widthProperty().subscribe(this::update);
         editor.contentPaddingProperty().subscribe(this::update);
         editor.modelProperty().subscribe(this::update);
-
-        addEventHandler(MouseEvent.MOUSE_PRESSED, this::handleMousePressed);
-        addEventHandler(MouseEvent.MOUSE_RELEASED, this::handleMouseReleased);
-        addEventHandler(MouseEvent.MOUSE_DRAGGED, this::handleMouseDragged);
-
         editor.selectionProperty().subscribe(this::handleSelection);
+
+        tickPane.addEventHandler(MouseEvent.MOUSE_PRESSED, this::handleMousePressed);
+        tickPane.addEventHandler(MouseEvent.MOUSE_RELEASED, this::handleMouseReleased);
+        tickPane.addEventHandler(MouseEvent.MOUSE_DRAGGED, this::handleMouseDragged);
     }
 
     public final void setTabStopPolicy(TabStopPolicy p) {
@@ -121,6 +123,21 @@ public class Ruler extends BorderPane {
 
     public final ObjectProperty<TabStopPolicy> tabStopPolicyProperty() {
         return policy;
+    }
+
+    public final ObjectProperty<Runnable> onChangeProperty() {
+        if (onChange == null) {
+            onChange = new SimpleObjectProperty<>();
+        }
+        return onChange;
+    }
+
+    public final void setOnChange(Runnable action) {
+        onChangeProperty().set(action);
+    }
+
+    public final Runnable getOnChange() {
+        return onChange == null ? null : onChange.get();
     }
 
     private void update() {
@@ -208,7 +225,13 @@ public class Ruler extends BorderPane {
     }
 
     private void handleSelection(SelectionSegment sel) {
+        this.selection = sel;
         // TODO update tab stop policy
+        if(sel == null) {
+            // use model's default tab stops
+        } else {
+            // single selection vs multiple selection
+        }
     }
 
     private void handleMousePressed(MouseEvent ev) {
@@ -242,9 +265,15 @@ public class Ruler extends BorderPane {
         }
         clickedStop = null;
         dragged = false;
+
         if (modified) {
             List<TabStop> ts = toTabStops();
             p.tabStops().setAll(ts);
+            modified = false;
+            Runnable r = getOnChange();
+            if (r != null) {
+                r.run();
+            }
         }
         ev.consume();
     }
