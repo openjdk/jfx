@@ -1022,7 +1022,7 @@ JNIEXPORT jboolean JNICALL Java_com_sun_glass_ui_mac_MacWindow__1maximize
                 [window->nsWindow zoom:nil];
             } else {
                 NSRect visibleRect = [[window _getScreen] visibleFrame];
-                [window _setWindowFrameWithRect:visibleRect withDisplay:JNI_TRUE withAnimate:JNI_TRUE];
+                [window->nsWindow setFrame:visibleRect display:YES animate:YES];
             }
         }
         else if ((maximize == JNI_FALSE) && (isZoomed == JNI_TRUE)) {
