@@ -53,7 +53,7 @@
     BOOL handlingKeyEvent;
     BOOL didCommitText;
     BOOL isHiDPIAware;
-
+    unichar insertTextChar;
     NSEvent *lastKeyEvent;
 }
 

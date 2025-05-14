@@ -247,6 +247,7 @@
         self->imEnabled = NO;
         self->handlingKeyEvent = NO;
         self->didCommitText = NO;
+        self->insertTextChar = 0;
 
         lastKeyEvent = nil;
     }
@@ -513,6 +514,7 @@
 
     handlingKeyEvent = YES;
     didCommitText = NO;
+    insertTextChar = 0;
     BOOL hadMarkedText = (nsAttrBuffer.length > 0);
     BOOL inputContextHandledEvent = (imEnabled && [self.inputContext handleEvent:theEvent]);
     handlingKeyEvent = NO;
@@ -532,7 +534,7 @@
         ;
     } else if (!inputContextHandledEvent || (nsAttrBuffer.length == 0)) {
         [GlassApplication registerKeyEvent:theEvent];
-        wasConsumed = [self->_delegate sendJavaKeyEvent:theEvent isDown:YES];
+        wasConsumed = [self->_delegate sendJavaKeyEvent:theEvent isDown:YES character:insertTextChar];
     }
 
     return wasConsumed;
@@ -547,7 +549,7 @@
 - (void)keyUp:(NSEvent *)theEvent
 {
     KEYLOG("keyUp");
-    [self->_delegate sendJavaKeyEvent:theEvent isDown:NO];
+    [self->_delegate sendJavaKeyEvent:theEvent isDown:NO character:insertTextChar];
 }
 
 - (void)flagsChanged:(NSEvent *)theEvent
@@ -785,6 +787,20 @@
     if ([self->nsAttrBuffer length] > 0 || [aString length] > 1) {
         self->didCommitText = YES;
         [self commitString: aString];
+    }
+
+    // The Keyman input method sends different characters to keyDown than to
+    // insertText. If the layout is Hebrew the NSEvent sent to keyDown will
+    // contain Roman characters but Hebrew will be sent to insertText. Like
+    // AWT we special-case this layout.
+    if ([self.inputContext.selectedKeyboardInputSource containsString: @"keyman"]) {
+        if ([aString isKindOfClass: [NSString class]]) {
+            NSString* nsString = (NSString*)aString;
+            // Longer strings are sent out above as commits.
+            if (nsString.length == 1) {
+                self->insertTextChar = [nsString characterAtIndex: 0];
+            }
+        }
     }
 
     // If a user tries to enter an invalid character using a dead key
