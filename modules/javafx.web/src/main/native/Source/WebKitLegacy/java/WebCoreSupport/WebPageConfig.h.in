@@ -25,6 +25,13 @@
 
 #pragma once
 
+#cmakedefine WEBVIEW_RELEASE_VERSION "@WEBVIEW_RELEASE_VERSION@"
+
+#if !defined(WEBVIEW_RELEASE_VERSION)
+#error "WebView release version not defined"
+#endif
+
+
 #cmakedefine JAVAFX_RELEASE_VERSION "@JAVAFX_RELEASE_VERSION@"
 
 #if !defined(JAVAFX_RELEASE_VERSION)
