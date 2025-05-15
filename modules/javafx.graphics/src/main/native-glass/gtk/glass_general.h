@@ -227,7 +227,7 @@ private:
     extern jmethodID jApplicationReportException; // reportException(Ljava/lang/Throwable;)V
     extern jmethodID jApplicationGetApplication; // GetApplication()()Lcom/sun/glass/ui/Application;
     extern jmethodID jApplicationGetName; // getName()Ljava/lang/String;
-    extern jmethodID jApplicationNotifyPreferencesChanged; // notifyPreferencesChanged(Ljava/util/Map;)V
+    extern jmethodID jApplicationNotifyPreferencesChanged; // notifyPreferencesChanged(Ljava/util/Map;I)V
 
     extern jclass jObjectCls; // java.lang.Object
     extern jmethodID jObjectEquals; // java.lang.Object#equals(Ljava/lang/Object;)Z

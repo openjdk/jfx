@@ -61,14 +61,19 @@ public:
      * Collect the specified platform preferences and notify the JavaFX application when a preference has changed.
      * The change notification includes all specified preferences, not only the changed preferences.
      */
-    bool updatePreferences(PreferenceType) const;
+    bool updatePreferences(PreferenceType, bool delayedChangesExpected) const;
 
     /**
      * Handles the WM_SETTINGCHANGE message.
-    */
+     */
     bool onSettingChanged(WPARAM, LPARAM) const;
 
 private:
+    /**
+     * Suggested aggregation delay for changes that come in over a period of time.
+     */
+    static constexpr int SUGGESTED_DELAY_MILLIS = 1000;
+
     JNIEnv* env;
     jobject application;
     bool initialized;
@@ -88,6 +93,7 @@ private:
     void querySystemColors(jobject properties) const;
     void querySystemParameters(jobject properties) const;
     void queryUISettings(jobject properties) const;
+    void queryUIColors(jobject properties) const;
     void queryNetworkInformation(jobject properties) const;
 
     void putString(jobject properties, const char* key, const char* value) const;

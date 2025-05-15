@@ -28,6 +28,7 @@ package com.sun.javafx.application;
 import com.sun.javafx.PlatformUtil;
 import com.sun.javafx.PreviewFeature;
 import com.sun.javafx.SecurityUtil;
+import com.sun.javafx.application.preferences.DelayedChangeAggregator;
 import com.sun.javafx.application.preferences.PlatformPreferences;
 import com.sun.javafx.application.preferences.PreferenceMapping;
 import com.sun.javafx.css.StyleManager;
@@ -57,6 +58,7 @@ import javafx.application.Application;
 import javafx.application.ConditionalFeature;
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.SimpleBooleanProperty;
+import javafx.collections.MapChangeListener;
 import javafx.scene.Scene;
 
 public class PlatformImpl {
@@ -918,6 +920,7 @@ public class PlatformImpl {
     }
 
     private static PlatformPreferences platformPreferences;
+    private static DelayedChangeAggregator platformPreferencesAggregator;
 
     public static PlatformPreferences getPlatformPreferences() {
         if (platformPreferences == null) {
@@ -937,7 +940,12 @@ public class PlatformImpl {
                                        Map<String, PreferenceMapping<?, ?>> platformKeyMappings,
                                        Map<String, Object> preferences) {
         platformPreferences = new PlatformPreferences(platformKeys, platformKeyMappings);
+        platformPreferences.addListener(PlatformImpl::checkHighContrastThemeChanged);
         platformPreferences.update(preferences);
+        platformPreferencesAggregator = new DelayedChangeAggregator(
+            platformPreferences::update,
+            Toolkit.getToolkit().getPrimaryTimer()::nanos,
+            PlatformImpl::runLater);
     }
 
     /**
@@ -948,17 +956,19 @@ public class PlatformImpl {
      * was removed, the corresponding key is mapped to {@code null}.
      *
      * @param preferences a map that includes the changed preferences
+     * @param suggestedDelayMillis a suggestion from the native implementation to delay the publication of
+     *                             changed preferences for the specified amount of time, because more changes
+     *                             may be coming
      */
-    public static void updatePreferences(Map<String, Object> preferences) {
+    public static void updatePreferences(Map<String, Object> preferences, int suggestedDelayMillis) {
         if (isFxApplicationThread()) {
-            checkHighContrastThemeChanged(preferences);
-            platformPreferences.update(preferences);
+            platformPreferencesAggregator.update(preferences, suggestedDelayMillis);
         } else {
             // Make a defensive copy in case the caller of this method decides to re-use or
             // modify its preferences map after the method returns. Don't use Map.copyOf
             // because the preferences map may contain null values.
             Map<String, Object> preferencesCopy = new HashMap<>(preferences);
-            runLater(() -> updatePreferences(preferencesCopy));
+            runLater(() -> updatePreferences(preferencesCopy, suggestedDelayMillis));
         }
     }
 
@@ -974,11 +984,15 @@ public class PlatformImpl {
     }
 
     // This method will be removed when StyleThemes are added.
-    private static void checkHighContrastThemeChanged(Map<String, Object> preferences) {
-        if (Boolean.TRUE.equals(preferences.get("Windows.SPI.HighContrast"))) {
-            setAccessibilityTheme(preferences.get("Windows.SPI.HighContrastColorScheme") instanceof String s ? s : null);
-        } else {
-            setAccessibilityTheme(null);
+    private static void checkHighContrastThemeChanged(MapChangeListener.Change<? extends String, ?> change) {
+        if (change.getKey().equals("Windows.SPI.HighContrast")
+                || change.getKey().equals("Windows.SPI.HighContrastColorScheme")) {
+            setAccessibilityTheme(
+                platformPreferences
+                    .getBoolean("Windows.SPI.HighContrast")
+                    .filter(Boolean::booleanValue)
+                    .flatMap(_ -> platformPreferences.getString("Windows.SPI.HighContrastColorScheme"))
+                    .orElse(null));
         }
     }
 

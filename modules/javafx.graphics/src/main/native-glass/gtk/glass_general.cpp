@@ -350,7 +350,7 @@ JNI_OnLoad(JavaVM *jvm, void *reserved)
     if (env->ExceptionCheck()) return JNI_ERR;
     jApplicationGetName = env->GetMethodID(jApplicationCls, "getName", "()Ljava/lang/String;");
     if (env->ExceptionCheck()) return JNI_ERR;
-    jApplicationNotifyPreferencesChanged = env->GetMethodID(jApplicationCls, "notifyPreferencesChanged", "(Ljava/util/Map;)V");
+    jApplicationNotifyPreferencesChanged = env->GetMethodID(jApplicationCls, "notifyPreferencesChanged", "(Ljava/util/Map;I)V");
     if (env->ExceptionCheck()) return JNI_ERR;
 
     clazz = env->FindClass("java/lang/Object");

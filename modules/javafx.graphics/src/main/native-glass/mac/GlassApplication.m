@@ -967,7 +967,7 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_mac_MacApplication__1initIDs
     if ((*env)->ExceptionCheck(env)) return;
 
     javaIDs.MacApplication.notifyPreferencesChanged = (*env)->GetMethodID(
-            env, jClass, "notifyPreferencesChanged", "(Ljava/util/Map;)V");
+            env, jClass, "notifyPreferencesChanged", "(Ljava/util/Map;I)V");
     if ((*env)->ExceptionCheck(env)) return;
 
     if (jRunnableRun == NULL)
