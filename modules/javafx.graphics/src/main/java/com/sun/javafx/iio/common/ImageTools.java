@@ -146,6 +146,24 @@ public class ImageTools {
         return result.toString();
     }
 
+    public static boolean hasScaledName(String path) {
+        int slash = path.lastIndexOf('/');
+        String name = (slash < 0) ? path : path.substring(slash + 1);
+        int at = name.lastIndexOf('@');
+        if (at < 0) return false;
+
+        int dot = name.lastIndexOf('.');
+        String scale = (dot < 0) ? name.substring(at + 1) : name.substring(at + 1, dot);
+        if (!scale.endsWith("x")) return false;
+
+        try {
+            Integer.valueOf(scale.substring(0, scale.length() - 1));
+        } catch (NumberFormatException ignored) {
+            return false;
+        }
+        return true;
+    }
+
     public static InputStream createInputStream(String input) throws IOException {
         InputStream stream = null;
 
