@@ -942,10 +942,7 @@ public class PlatformImpl {
         platformPreferences = new PlatformPreferences(platformKeys, platformKeyMappings);
         platformPreferences.addListener(PlatformImpl::checkHighContrastThemeChanged);
         platformPreferences.update(preferences);
-        platformPreferencesAggregator = new DelayedChangeAggregator(
-            platformPreferences::update,
-            Toolkit.getToolkit().getPrimaryTimer()::nanos,
-            PlatformImpl::runLater);
+        platformPreferencesAggregator = new DelayedChangeAggregator(platformPreferences::update);
     }
 
     /**

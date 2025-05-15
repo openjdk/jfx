@@ -25,34 +25,25 @@
 
 package com.sun.javafx.application.preferences;
 
+import com.sun.javafx.tk.Toolkit;
+import javafx.animation.AnimationTimer;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.concurrent.Executor;
 import java.util.function.Consumer;
-import java.util.function.LongSupplier;
 
 /**
  * Aggregates multiple subsequent sets of changes into a single changeset, and notifies a consumer.
  * Due to its delayed nature, the consumer may not be notified immediately when a changeset arrives.
- * <p>
- * This class is not thread-safe and can only safely be used on a single thread; this applies to the
- * {@link #update(Map, int)}} method as well as the delayed executor.
  */
-public final class DelayedChangeAggregator {
+public class DelayedChangeAggregator extends AnimationTimer {
 
-    private final Executor delayedExecutor;
-    private final LongSupplier nanoTimeSupplier;
     private final Consumer<Map<String, Object>> changeConsumer;
     private final Map<String, Object> currentChangeSet;
     private long elapsedTimeNanos;
-    private int serial;
+    private boolean running;
 
-    public DelayedChangeAggregator(Consumer<Map<String, Object>> changeConsumer,
-                                   LongSupplier nanoTimeSupplier,
-                                   Executor delayedExecutor) {
+    public DelayedChangeAggregator(Consumer<Map<String, Object>> changeConsumer) {
         this.changeConsumer = changeConsumer;
-        this.nanoTimeSupplier = nanoTimeSupplier;
-        this.delayedExecutor = delayedExecutor;
         this.currentChangeSet = new HashMap<>();
     }
 
@@ -66,24 +57,30 @@ public final class DelayedChangeAggregator {
      */
     public void update(Map<String, Object> changeset, int delayMillis) {
         if (delayMillis > 0 || !currentChangeSet.isEmpty()) {
-            int currentSerial = ++serial;
-            long newElapsedTimeNanos = nanoTimeSupplier.getAsLong() + (long)delayMillis * 1000000;
+            long newElapsedTimeNanos = now() + (long)delayMillis * 1000000;
             elapsedTimeNanos = Math.max(elapsedTimeNanos, newElapsedTimeNanos);
             currentChangeSet.putAll(changeset);
-            delayedExecutor.execute(() -> update(currentSerial));
+
+            if (!running) {
+                running = true;
+                start();
+            }
         } else {
             changeConsumer.accept(changeset);
         }
     }
 
-    private void update(int expectedSerial) {
-        if (expectedSerial == serial) {
-            if (nanoTimeSupplier.getAsLong() < elapsedTimeNanos) {
-                delayedExecutor.execute(() -> update(expectedSerial));
-            } else {
-                changeConsumer.accept(currentChangeSet);
-                currentChangeSet.clear();
-            }
+    @Override
+    public void handle(long now) {
+        if (now >= elapsedTimeNanos) {
+            stop();
+            running = false;
+            changeConsumer.accept(currentChangeSet);
+            currentChangeSet.clear();
         }
+    }
+
+    protected long now() {
+        return Toolkit.getToolkit().getPrimaryTimer().nanos();
     }
 }

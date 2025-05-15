@@ -26,12 +26,9 @@
 package test.com.sun.javafx.application.preferences;
 
 import com.sun.javafx.application.preferences.DelayedChangeAggregator;
-import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
-import java.util.concurrent.Executor;
-import java.util.function.LongSupplier;
+import java.util.function.Consumer;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -44,7 +41,7 @@ public class DelayedChangeAggregatorTest {
     @Test
     void changeSetIsAppliedImmediately() {
         var consumer = new HashMap<String, Object>();
-        var aggregator = new DelayedChangeAggregator(consumer::putAll, () -> 0, Runnable::run);
+        var aggregator = new TestDelayedChangeAggregator(consumer::putAll);
         aggregator.update(Map.of("testKey", "testValue"), 0);
         assertEquals(Map.of("testKey", "testValue"), consumer);
     }
@@ -52,7 +49,7 @@ public class DelayedChangeAggregatorTest {
     @Test
     void subsequentChangeSetsAreAppliedImmediately() {
         var consumer = new HashMap<String, Object>();
-        var aggregator = new DelayedChangeAggregator(consumer::putAll, () -> 0, Runnable::run);
+        var aggregator = new TestDelayedChangeAggregator(consumer::putAll);
         aggregator.update(Map.of("testKey1", "testValue1"), 0);
         assertEquals(Map.of("testKey1", "testValue1"), consumer);
         aggregator.update(Map.of("testKey2", "testValue2"), 0);
@@ -61,54 +58,51 @@ public class DelayedChangeAggregatorTest {
 
     @Test
     void changeSetIsAppliedWithDelay() {
-        var executor = new ExecutorImpl();
         var consumer = new HashMap<String, Object>();
-        var aggregator = new DelayedChangeAggregator(consumer::putAll, executor, executor);
+        var aggregator = new TestDelayedChangeAggregator(consumer::putAll);
 
         aggregator.update(Map.of("testKey", "testValue"), SHORT_DELAY);
         assertEquals(Map.of(), consumer);
 
         // Advance the time half-way through the delay period.
-        executor.setTime(SHORT_DELAY / 2);
+        aggregator.setTime(SHORT_DELAY / 2);
         assertEquals(Map.of(), consumer);
 
         // Advance the time to a millisecond before the end of the delay period.
-        executor.setTime(SHORT_DELAY - 1);
+        aggregator.setTime(SHORT_DELAY - 1);
         assertEquals(Map.of(), consumer);
 
         // When the delay period has elapsed, the change is applied.
-        executor.setTime(SHORT_DELAY);
+        aggregator.setTime(SHORT_DELAY);
         assertEquals(Map.of("testKey", "testValue"), consumer);
     }
 
     @Test
     void subsequentChangeSetsAreAppliedWithDelay() {
-        var executor = new ExecutorImpl();
         var consumer = new HashMap<String, Object>();
-        var aggregator = new DelayedChangeAggregator(consumer::putAll, executor, executor);
+        var aggregator = new TestDelayedChangeAggregator(consumer::putAll);
 
         aggregator.update(Map.of("testKey1", "testValue1"), SHORT_DELAY);
         assertEquals(Map.of(), consumer);
 
-        executor.setTime(SHORT_DELAY / 2);
+        aggregator.setTime(SHORT_DELAY / 2);
         aggregator.update(Map.of("testKey2", "testValue2"), SHORT_DELAY);
         assertEquals(Map.of(), consumer);
 
-        executor.setTime((int)(SHORT_DELAY * 1.5));
+        aggregator.setTime((int)(SHORT_DELAY * 1.5));
         assertEquals(Map.of("testKey1", "testValue1", "testKey2", "testValue2"), consumer);
     }
 
     @Test
     void changeSetWithShortDelayWaitsForLastChangeSetWithLongDelay() {
-        var executor = new ExecutorImpl();
         var consumer = new HashMap<String, Object>();
-        var aggregator = new DelayedChangeAggregator(consumer::putAll, executor, executor);
+        var aggregator = new TestDelayedChangeAggregator(consumer::putAll);
 
         aggregator.update(Map.of("testKey1", "testValue1"), LONG_DELAY);
         assertEquals(Map.of(), consumer);
 
         // Advance the time half-way through the delay period.
-        executor.setTime(LONG_DELAY / 2);
+        aggregator.setTime(LONG_DELAY / 2);
         assertEquals(Map.of(), consumer);
 
         // The new changeset waits for the current changeset's delay period to elapse.
@@ -116,33 +110,35 @@ public class DelayedChangeAggregatorTest {
         assertEquals(Map.of(), consumer);
 
         // Advance to the end of the first delay period. Both changesets are applied.
-        executor.setTime(LONG_DELAY);
+        aggregator.setTime(LONG_DELAY);
         assertEquals(Map.of("testKey1", "testValue1", "testKey2", "testValue2"), consumer);
     }
 
-    private static class ExecutorImpl implements Executor, LongSupplier {
-        final List<Runnable> commands = new ArrayList<>();
-        long nanos;
+    private static class TestDelayedChangeAggregator extends DelayedChangeAggregator {
+        private long nanos;
 
-        @Override
-        public void execute(Runnable command) {
-            commands.add(command);
-        }
-
-        void run() {
-            var copy = List.copyOf(commands);
-            commands.clear();
-            copy.forEach(Runnable::run);
-        }
-
-        @Override
-        public long getAsLong() {
-            return nanos;
+        public TestDelayedChangeAggregator(Consumer<Map<String, Object>> changeConsumer) {
+            super(changeConsumer);
         }
 
         void setTime(int millis) {
             nanos = (long)millis * 1000000;
-            run();
+            handle(nanos);
+        }
+
+        @Override
+        protected long now() {
+            return nanos;
+        }
+
+        @Override
+        public void start() {
+            // no-op
+        }
+
+        @Override
+        public void stop() {
+            // no-op
         }
     }
 }
