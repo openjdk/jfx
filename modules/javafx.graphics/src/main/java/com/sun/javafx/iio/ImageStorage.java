@@ -451,6 +451,7 @@ public class ImageStorage {
                     }
 
                     if (theStream == null) {
+                        // not the case, find the highest available scale
                         for (int imageScale = Math.round(devPixelScale); imageScale >= 2; --imageScale) {
                             try {
                                 String scaledName = ImageTools.getScaledImageName(input, imageScale);
