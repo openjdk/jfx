@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2023, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -90,18 +90,31 @@ PlatformSupport::PlatformSupport(JNIEnv* env, jobject application)
         RO_CHECKED("RoActivateInstance",
                    RoActivateInstance(hstring("Windows.UI.ViewManagement.UISettings"), (IInspectable**)&settings));
 
+        ComPtr<IUISettings4> settings4;
+        RO_CHECKED("IUISettings::QueryInterface<IUISettings4>",
+                   settings->QueryInterface<IUISettings4>(&settings4));
+
         ComPtr<IUISettings5> settings5;
         RO_CHECKED("IUISettings::QueryInterface<IUISettings5>",
                    settings->QueryInterface<IUISettings5>(&settings5));
 
-        EventRegistrationToken token;
+        EventRegistrationToken unusedToken1;
+        settings4->add_AdvancedEffectsEnabledChanged(
+            Callback<ITypedEventHandler<UISettings*, IInspectable*>>(
+                [this](IUISettings*, IInspectable*) {
+                    updatePreferences(PT_UI_SETTINGS, false);
+                    return S_OK;
+                }).Get(),
+            &unusedToken1);
+
+        EventRegistrationToken unusedToken2;
         settings5->add_AutoHideScrollBarsChanged(
             Callback<ITypedEventHandler<UISettings*, UISettingsAutoHideScrollBarsChangedEventArgs*>>(
                 [this](IUISettings*, IUISettingsAutoHideScrollBarsChangedEventArgs*) {
-                    updatePreferences(PT_UI_SETTINGS);
+                    updatePreferences(PT_UI_SETTINGS, false);
                     return S_OK;
                 }).Get(),
-            &token);
+            &unusedToken2);
     } catch (RoException const&) {
         // If an activation exception occurs, it probably means that we're on a Windows system
         // that doesn't support the UISettings API. This is not a problem, it simply means that
@@ -123,7 +136,7 @@ PlatformSupport::PlatformSupport(JNIEnv* env, jobject application)
         networkInformation->add_NetworkStatusChanged(
             Callback<INetworkStatusChangedEventHandler>(
                 [this](IInspectable*) {
-                    updatePreferences(PT_NETWORK_INFORMATION);
+                    updatePreferences(PT_NETWORK_INFORMATION, false);
                     return S_OK;
                 }).Get(),
             &token);
@@ -150,6 +163,7 @@ jobject PlatformSupport::collectPreferences(PreferenceType preferenceType) const
 
     if (preferenceType & PT_SYSTEM_COLORS) {
         querySystemColors(prefs);
+        queryUIColors(prefs);
     }
 
     if (preferenceType & PT_SYSTEM_PARAMS) {
@@ -167,7 +181,7 @@ jobject PlatformSupport::collectPreferences(PreferenceType preferenceType) const
     return prefs;
 }
 
-bool PlatformSupport::updatePreferences(PreferenceType preferenceType) const
+bool PlatformSupport::updatePreferences(PreferenceType preferenceType, bool delayedChangesExpected) const
 {
     if (!initialized) {
         return false;
@@ -185,7 +199,8 @@ bool PlatformSupport::updatePreferences(PreferenceType preferenceType) const
             javaClasses.Collections, javaIDs.Collections.unmodifiableMap, newPreferences);
 
         if (!CheckAndClearException(env)) {
-            env->CallVoidMethod(application, javaIDs.Application.notifyPreferencesChangedMID, unmodifiablePreferences);
+            env->CallVoidMethod(application, javaIDs.Application.notifyPreferencesChangedMID,
+                                unmodifiablePreferences, delayedChangesExpected ? SUGGESTED_DELAY_MILLIS : 0);
             env->DeleteLocalRef(unmodifiablePreferences);
             env->DeleteLocalRef(newPreferences);
             CheckAndClearException(env);
@@ -202,14 +217,14 @@ bool PlatformSupport::onSettingChanged(WPARAM wParam, LPARAM lParam) const
 {
     switch ((UINT)wParam) {
         case SPI_SETHIGHCONTRAST:
-            return updatePreferences(PreferenceType(PT_SYSTEM_PARAMS | PT_UI_SETTINGS));
+            return updatePreferences(PT_SYSTEM_PARAMS, true);
 
         case SPI_SETCLIENTAREAANIMATION:
-            return updatePreferences(PT_SYSTEM_PARAMS);
+            return updatePreferences(PT_SYSTEM_PARAMS, false);
     }
 
     if (lParam != NULL && wcscmp(LPCWSTR(lParam), L"ImmersiveColorSet") == 0) {
-        return updatePreferences(PT_UI_SETTINGS);
+        return updatePreferences(PT_SYSTEM_COLORS, false);
     }
 
     return false;
@@ -249,7 +264,7 @@ void PlatformSupport::querySystemColors(jobject properties) const
     putColor(properties, "Windows.SysColor.COLOR_WINDOWTEXT", GetSysColor(COLOR_WINDOWTEXT));
 }
 
-void PlatformSupport::queryUISettings(jobject properties) const
+void PlatformSupport::queryUIColors(jobject properties) const
 {
     if (!this->settings) {
         return;
@@ -284,6 +299,13 @@ void PlatformSupport::queryUISettings(jobject properties) const
         putColor(properties, "Windows.UIColor.AccentLight2", accentLight2);
         putColor(properties, "Windows.UIColor.AccentLight3", accentLight3);
     } catch (RoException const&) {
+        return;
+    }
+}
+
+void PlatformSupport::queryUISettings(jobject properties) const
+{
+    if (!this->settings) {
         return;
     }
 
