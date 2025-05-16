@@ -79,7 +79,7 @@ public class RichEditorDemoPane extends BorderPane {
 
         ruler = new Ruler(editor);
         ruler.setOnChange(this::handleTabStopChange);
-        tabPolicy = new TabStopPolicy(ruler); // TODO or ticks bar?
+        tabPolicy = new TabStopPolicy();
         ruler.setTabStopPolicy(tabPolicy);
 
         FX.setPopupMenu(ruler, this::createRulerPopupMenu);

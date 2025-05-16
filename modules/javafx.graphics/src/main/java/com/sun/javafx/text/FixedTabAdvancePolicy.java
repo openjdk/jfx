@@ -45,11 +45,7 @@ public class FixedTabAdvancePolicy implements TabAdvancePolicy {
     }
 
     @Override
-    public void reset() {
-    }
-
-    @Override
-    public float nextTabStop(float position) {
+    public float nextTabStop(float offset, float position) {
         if (tabAdvance == 0.0) {
             return -1.0f;
         }

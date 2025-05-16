@@ -39,30 +39,11 @@ import javafx.scene.layout.Region;
 public class TabStopPolicy {
     private final ObservableList<TabStop> tabStops = FXCollections.observableArrayList();
     private final SimpleDoubleProperty defaultStops = new SimpleDoubleProperty(0.0);
-    private final Region reference;
 
     /**
      * Constructs a new {@code TabStopPolicy} instance.
-     *
-     * @param reference the node which provides the leading edge for the document layout (can be null)
      */
-    public TabStopPolicy(Region reference) {
-        this.reference = reference;
-    }
-
-    /**
-     * The reference {@code Region} provides the leading {@code x} coordinate for this {@code TabStopPolicy}.
-     * A non-null reference ensures that the tab stops are aligned within a document which is represented by
-     * more than one {@code TextFlow} instance.  The reference {@code Region} and all the {@code TextFlow}
-     * instances that use this tab stop policy must belong to the same {@code Scene}.
-     * <p>
-     * A null reference node results in the leading edge to be set to the leading edge of the {@code TextFlow}
-     * being laid out.
-     *
-     * @return the reference region
-     */
-    public final Region getReference() {
-        return reference;
+    public TabStopPolicy() {
     }
 
     /**

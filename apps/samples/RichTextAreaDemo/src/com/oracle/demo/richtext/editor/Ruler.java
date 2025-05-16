@@ -281,7 +281,7 @@ public class Ruler extends BorderPane {
     private void handleMouseDragged(MouseEvent ev) {
         // update the tabstop being dragged
         if (clickedStop != null) {
-            double x = ev.getX();
+            double x = Math.max(0, ev.getX());
             clickedStop.position = x;
             clickedStop.tabStop = new TabStop(x);
             clickedStop.getElements().setAll(createTabStopPathElements(x));
@@ -330,7 +330,10 @@ public class Ruler extends BorderPane {
         // ticks cannot be null at this point
         for (Tick t : ticks) {
             if (t.isTabStop()) {
-                rv.add(t.tabStop);
+                TabStop ts = t.tabStop;
+                if (ts.getPosition() > 0.1) {
+                    rv.add(ts);
+                }
             }
         }
         // sort

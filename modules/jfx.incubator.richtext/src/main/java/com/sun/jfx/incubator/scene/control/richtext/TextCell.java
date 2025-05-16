@@ -438,7 +438,7 @@ public final class TextCell extends BorderPane {
 
         TabStop[] tabStops = a.getTabStops();
         if (tabStops != null) {
-            TabStopPolicy p = new TabStopPolicy(null); // TODO ref
+            TabStopPolicy p = new TabStopPolicy();
             p.tabStops().setAll(tabStops);
             // TODO p.setDefaultStops();
             flow().setTabStopPolicy(p);

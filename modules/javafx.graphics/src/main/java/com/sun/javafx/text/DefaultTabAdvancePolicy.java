@@ -40,20 +40,16 @@ import com.sun.javafx.scene.text.TabAdvancePolicy;
  */
 public class DefaultTabAdvancePolicy implements TabAdvancePolicy {
     private final TextFlow flow;
-    private final Region ref;
     private final float[] stops;
     private final float defaultStops;
-    private float offset;
 
-    private DefaultTabAdvancePolicy(TextFlow flow, Region ref, float[] tabs, float defaultStops) {
+    private DefaultTabAdvancePolicy(TextFlow flow, float[] tabs, float defaultStops) {
         this.flow = flow;
-        this.ref = ref;
         this.stops = tabs;
         this.defaultStops = defaultStops;
     }
 
     public static DefaultTabAdvancePolicy of(TextFlow flow, TabStopPolicy p) {
-        Region ref = p.getReference();
         List<TabStop> tabs = p.tabStops();
         float[] stops = new float[tabs.size()];
         for (int i = 0; i < stops.length; i++) {
@@ -61,16 +57,11 @@ public class DefaultTabAdvancePolicy implements TabAdvancePolicy {
             stops[i] = (float)stop.getPosition();
         }
         float defaultStops = (float)p.getDefaultStops();
-        return new DefaultTabAdvancePolicy(flow, ref, stops, defaultStops);
+        return new DefaultTabAdvancePolicy(flow, stops, defaultStops);
     }
 
     @Override
-    public void reset() {
-        offset = computeOffset(flow, ref);
-    }
-
-    @Override
-    public float nextTabStop(float position) {
+    public float nextTabStop(float offset, float position) {
         for (int i = 0; i < stops.length; i++) {
             double p = stops[i] + offset;
             if (position < p) {
@@ -84,6 +75,7 @@ public class DefaultTabAdvancePolicy implements TabAdvancePolicy {
     }
 
     // this could be a method in the base class (change interface to an abstract class)
+    // FIX remove
     private static float computeOffset(TextFlow flow, Region reference) {
         if ((flow == null) || (reference == null)) {
             return 0.0f;
@@ -119,7 +111,6 @@ public class DefaultTabAdvancePolicy implements TabAdvancePolicy {
     public String toString() {
         StringBuilder sb = new StringBuilder(64);
         sb.append("DefaultTabAdvancePolicy{");
-        sb.append("offset=").append(offset);
         sb.append(", stops=[");
         for (int i = 0; i < stops.length; i++) {
             if (i > 0) {

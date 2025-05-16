@@ -65,6 +65,7 @@ import javafx.geometry.VPos;
 import javafx.scene.AccessibleAttribute;
 import javafx.scene.AccessibleRole;
 import javafx.scene.Node;
+import javafx.scene.layout.Region;
 import javafx.scene.paint.Color;
 import javafx.scene.paint.Paint;
 import javafx.scene.shape.LineTo;
@@ -279,13 +280,26 @@ public non-sealed class Text extends Shape {
     TextSpan getTextSpan() {
         if (textSpan == null) {
             textSpan = new TextSpan() {
-                @Override public String getText() {
+                @Override
+                public String getText() {
                     return getTextInternal();
                 }
-                @Override public Object getFont() {
+
+                @Override
+                public Object getFont() {
                     return getFontInternal();
                 }
-                @Override public RectBounds getBounds() {
+
+                @Override
+                public RectBounds getBounds() {
+                    return null;
+                }
+
+                @Override
+                public Region getLayoutRootRegion() {
+                    if (getParent() instanceof TextFlow f) {
+                        return f;
+                    }
                     return null;
                 }
             };

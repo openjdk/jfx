@@ -31,6 +31,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Hashtable;
 import java.util.concurrent.atomic.AtomicBoolean;
+import javafx.scene.layout.Region;
 import javafx.scene.shape.LineTo;
 import javafx.scene.shape.MoveTo;
 import javafx.scene.shape.PathElement;
@@ -1240,20 +1241,20 @@ public class PrismTextLayout implements TextLayout {
             layoutCache = null;
         }
 
-        if (tabAdvancePolicy != null) {
-            tabAdvancePolicy.reset();
-        }
-
         float lineWidth = 0;
         int startIndex = 0;
         int startOffset = 0;
+        float layoutShift = Float.NaN;
         ArrayList<PrismTextLine> linesList = new ArrayList<>();
         for (int i = 0; i < runCount; i++) {
             TextRun run = runs[i];
             shape(run, chars, layout);
 
             if (run.isTab()) {
-                float tabStop = tabAdvancePolicy.nextTabStop(lineWidth);
+                if (Float.isNaN(layoutShift)) {
+                    layoutShift = computeLayoutShift(run.getTextSpan());
+                }
+                float tabStop = tabAdvancePolicy.nextTabStop(layoutShift, lineWidth);
                 if (tabStop <= 0.0f) {
                     // some large value guaranteed to exceed any reasonable text layout width
                     tabStop = 1e10f;
@@ -1677,5 +1678,16 @@ public class PrismTextLayout implements TextLayout {
             }
         }
         line.setSideBearings(lsb, rsb);
+    }
+
+    private float computeLayoutShift(TextSpan span) {
+        if (span != null) {
+            Region root = span.getLayoutRootRegion();
+            if (root != null) {
+                // TODO ltr
+                return -(float)root.snappedLeftInset();
+            }
+        }
+        return 0.0f;
     }
 }
