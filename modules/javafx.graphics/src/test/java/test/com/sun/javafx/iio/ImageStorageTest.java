@@ -91,6 +91,14 @@ public class ImageStorageTest {
         assertEquals(50, frames1x[0].getHeight());
     }
 
+    @Test
+    public void testImageLoadRequestedScaleDoesNotExist() throws ImageStorageException {
+        final String path2x = getResourcePath("lightblue@1x.png").replace("lightblue@1x.png", "lightblue@2x.png");
+        assertThrows(ImageStorageException.class,
+            () -> { new ImageStorage().loadAll(path2x, null, 0, 0, true, 1.0f, true); },
+            "Expected loadAll() to throw with requested scale resource not existing");
+    }
+
     @ParameterizedTest
     @ValueSource(ints = {1, 2, 3, 4})
     public void testImageNames(int scale) {
