@@ -25,10 +25,10 @@
 
 #pragma once
 
-#cmakedefine WEBVIEW_RELEASE_VERSION "@WEBVIEW_RELEASE_VERSION@"
+#cmakedefine WEBVIEW_BROWSER_VERSION "@WEBVIEW_BROWSER_VERSION@"
 
-#if !defined(WEBVIEW_RELEASE_VERSION)
-#error "WebView release version not defined"
+#if !defined(WEBVIEW_BROWSER_VERSION)
+#error "WebView browser version not defined"
 #endif
 
 
