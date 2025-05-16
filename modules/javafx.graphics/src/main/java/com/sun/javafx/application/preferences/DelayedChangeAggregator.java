@@ -75,8 +75,12 @@ public class DelayedChangeAggregator extends AnimationTimer {
         if (now >= elapsedTimeNanos) {
             stop();
             running = false;
-            changeConsumer.accept(currentChangeSet);
-            currentChangeSet.clear();
+
+            try {
+                changeConsumer.accept(currentChangeSet);
+            } finally {
+                currentChangeSet.clear();
+            }
         }
     }
 
