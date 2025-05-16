@@ -63,6 +63,8 @@ public abstract class AbstractPrimaryTimer {
     private final int PULSE_DURATION_NS = getPulseDuration(1000000000);
     private final int PULSE_DURATION_TICKS = getPulseDuration((int)TickCalculation.fromMillis(1000));
 
+    // This property is used to control the number of exceptions that can be thrown by a timer callback
+    // before we stop logging them to prevent spamming the log.
     private static final String FAILING_TIMER_THRESHOLD_PROP = "com.sun.scenario.animation.failingTimerThreshold";
     public static final int FAILING_TIMER_THRESHOLD = Settings.getInt(FAILING_TIMER_THRESHOLD_PROP, 100);
 
@@ -371,8 +373,14 @@ public abstract class AbstractPrimaryTimer {
         void handleException(Throwable e) {
             if (exceptionsThrown < FAILING_TIMER_THRESHOLD) {
                 exceptionsThrown++;
-                Thread thread = Thread.currentThread();
-                thread.getUncaughtExceptionHandler().uncaughtException(thread, e);
+
+                try {
+                    Thread thread = Thread.currentThread();
+                    thread.getUncaughtExceptionHandler().uncaughtException(thread, e);
+                } catch (Throwable ignored) {
+                    // The uncaught exception handler shouldn't throw exceptions, but if it does,
+                    // we will swallow it to prevent it from bubbling up.
+                }
             } else if (exceptionsThrown == FAILING_TIMER_THRESHOLD) {
                 exceptionsThrown++;
 
