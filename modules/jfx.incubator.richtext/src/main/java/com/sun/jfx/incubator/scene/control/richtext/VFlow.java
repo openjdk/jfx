@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2022, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -791,10 +791,7 @@ public class VFlow extends Pane implements StyleResolver, StyledTextModel.Listen
 
             // first line indent operates on TextCell and not its content
             if (pa != null) {
-                Double firstLineIndent = pa.getFirstLineIndent();
-                if (firstLineIndent != null) {
-                    cell.add(new FirstLineIndentSpacer(firstLineIndent));
-                }
+                cell.setParagraphAttributes(pa);
             }
 
             // highlights

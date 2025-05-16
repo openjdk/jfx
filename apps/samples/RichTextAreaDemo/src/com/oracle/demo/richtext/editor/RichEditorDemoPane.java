@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023, 2024, Oracle and/or its affiliates.
+ * Copyright (c) 2023, 2025, Oracle and/or its affiliates.
  * All rights reserved. Use is subject to license terms.
  *
  * This file is available and licensed under the following license:
@@ -39,13 +39,19 @@ import javafx.scene.control.ContextMenu;
 import javafx.scene.control.ToolBar;
 import javafx.scene.input.KeyCode;
 import javafx.scene.layout.BorderPane;
+import javafx.scene.layout.VBox;
 import javafx.scene.text.Font;
+import javafx.scene.text.TabStop;
+import javafx.scene.text.TabStopPolicy;
 import com.oracle.demo.richtext.common.TextStyle;
 import com.oracle.demo.richtext.editor.settings.EndKey;
 import com.oracle.demo.richtext.util.FX;
+import com.oracle.demo.richtext.util.FxAction;
 import jfx.incubator.scene.control.input.KeyBinding;
 import jfx.incubator.scene.control.richtext.RichTextArea;
+import jfx.incubator.scene.control.richtext.SelectionSegment;
 import jfx.incubator.scene.control.richtext.TextPos;
+import jfx.incubator.scene.control.richtext.model.StyleAttributeMap;
 
 /**
  * Main Panel.
@@ -55,10 +61,12 @@ import jfx.incubator.scene.control.richtext.TextPos;
 public class RichEditorDemoPane extends BorderPane {
     public final RichTextArea editor;
     public final Actions actions;
+    private final Ruler ruler;
     private final ComboBox<String> fontName;
     private final ComboBox<Integer> fontSize;
     private final ColorPicker textColor;
     private final ComboBox<TextStyle> textStyle;
+    private TabStopPolicy tabPolicy;
 
     public RichEditorDemoPane() {
         FX.name(this, "RichEditorDemoPane");
@@ -68,6 +76,13 @@ public class RichEditorDemoPane extends BorderPane {
         editor.getInputMap().register(KeyBinding.shortcut(KeyCode.W), () -> {
             System.out.println("Custom function: W key is pressed");
         });
+
+        ruler = new Ruler(editor);
+        ruler.setOnChange(this::handleTabStopChange);
+        tabPolicy = new TabStopPolicy();
+        ruler.setTabStopPolicy(tabPolicy);
+
+        FX.setPopupMenu(ruler, this::createRulerPopupMenu);
 
         actions = new Actions(editor);
         editor.setContextMenu(createContextMenu());
@@ -110,7 +125,7 @@ public class RichEditorDemoPane extends BorderPane {
         FX.tooltip(textColor, "Text Color");
         // FIX there is no API for this!  why is this a property of a skin, not the control??
         // https://stackoverflow.com/questions/21246137/remove-text-from-colour-picker
-        textColor.setStyle("-fx-color-label-visible: false ;");
+        textColor.setStyle("-fx-color-label-visible: false;");
         textColor.setOnAction((ev) -> {
             actions.setTextColor(textColor.getValue());
         });
@@ -123,7 +138,7 @@ public class RichEditorDemoPane extends BorderPane {
             editor.requestFocus();
         });
 
-        setTop(createToolBar());
+        setTop(new VBox(createToolBar(), ruler));
         setCenter(editor);
 
         actions.textStyleProperty().addListener((s,p,c) -> {
@@ -172,6 +187,12 @@ public class RichEditorDemoPane extends BorderPane {
         FX.item(m, "Italic", actions.italic);
         FX.item(m, "Strike Through", actions.strikeThrough);
         FX.item(m, "Underline", actions.underline);
+        return m;
+    }
+
+    private ContextMenu createRulerPopupMenu() {
+        ContextMenu m = new ContextMenu();
+        FX.item(m, "Tab Options...", new FxAction(this::showTabOptions));
         return m;
     }
 
@@ -227,5 +248,24 @@ public class RichEditorDemoPane extends BorderPane {
             --i;
         }
         return i;
+    }
+
+    private void showTabOptions() {
+        // TODO
+    }
+
+    private void handleTabStopChange() {
+        // TODO update default tabs if changed
+        // TODO update TAB_STOPS attributes of all selected paragraphs (or the paragraph at the caret)
+        SelectionSegment sel = editor.getSelection();
+        if (sel != null) {
+            // TODO for now, just the caret
+            TextPos p = sel.getCaret();
+            if (p != null) {
+                TabStop[] ts = tabPolicy.tabStops().toArray(TabStop[]::new);
+                StyleAttributeMap a = StyleAttributeMap.builder().set(StyleAttributeMap.TAB_STOPS, ts).build();
+                editor.applyStyle(p, p, a);
+            }
+        }
     }
 }
