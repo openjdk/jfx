@@ -35,6 +35,8 @@ import java.io.InputStream;
 import java.net.URL;
 import java.nio.ByteBuffer;
 import java.util.Locale;
+import java.util.regex.Pattern;
+import java.util.regex.Matcher;
 
 /**
  * A set of format-independent convenience methods useful in image loading
@@ -46,6 +48,11 @@ public class ImageTools {
      * The percentage increment between progress report updates.
      */
     public static final int PROGRESS_INTERVAL = 5;
+
+    /**
+     * Regex pattern for hasScaledName
+     */
+    private static final Pattern SCALED_FILE_PATTERN = Pattern.compile(".*@[1-9][0-9]?x(\\.[^\\.]+)?");
 
     /**
      * See the general contract of the <code>readFully</code>
@@ -147,21 +154,7 @@ public class ImageTools {
     }
 
     public static boolean hasScaledName(String path) {
-        int slash = path.lastIndexOf('/');
-        String name = (slash < 0) ? path : path.substring(slash + 1);
-        int at = name.lastIndexOf('@');
-        if (at < 0) return false;
-
-        int dot = name.lastIndexOf('.');
-        String scale = (dot < 0) ? name.substring(at + 1) : name.substring(at + 1, dot);
-        if (!scale.endsWith("x")) return false;
-
-        try {
-            Integer.valueOf(scale.substring(0, scale.length() - 1));
-        } catch (NumberFormatException ignored) {
-            return false;
-        }
-        return true;
+        return SCALED_FILE_PATTERN.matcher(path).matches();
     }
 
     public static InputStream createInputStream(String input) throws IOException {
