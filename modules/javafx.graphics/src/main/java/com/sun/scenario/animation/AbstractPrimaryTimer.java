@@ -63,10 +63,9 @@ public abstract class AbstractPrimaryTimer {
     private final int PULSE_DURATION_NS = getPulseDuration(1000000000);
     private final int PULSE_DURATION_TICKS = getPulseDuration((int)TickCalculation.fromMillis(1000));
 
-    // This property is used to control the number of exceptions that can be thrown by a timer callback
-    // before we stop logging them to prevent spamming the log.
-    private static final String FAILING_TIMER_THRESHOLD_PROP = "com.sun.scenario.animation.failingTimerThreshold";
-    public static final int FAILING_TIMER_THRESHOLD = Settings.getInt(FAILING_TIMER_THRESHOLD_PROP, 100);
+    // The number of exceptions that can be thrown by a timer callback before we stop sending
+    // them to the uncaught exception handler to prevent spamming the log.
+    public static final int FAILING_TIMER_THRESHOLD = 100;
 
     // This PropertyChangeListener is added to Settings to listen for changes
     // to the nogap and fullspeed properties.
@@ -386,9 +385,7 @@ public abstract class AbstractPrimaryTimer {
 
                 if (Logging.getJavaFXLogger().isLoggable(System.Logger.Level.WARNING)) {
                     Logging.getJavaFXLogger().warning(
-                        "Too many exceptions thrown by " + type().getSimpleName() + ", ignoring further exceptions." +
-                        " The cut-off number can be set with the system property " + FAILING_TIMER_THRESHOLD_PROP +
-                        " (current = " + FAILING_TIMER_THRESHOLD + ").");
+                        "Too many exceptions thrown by " + type().getSimpleName() + ", ignoring further exceptions.");
                 }
             }
         }
