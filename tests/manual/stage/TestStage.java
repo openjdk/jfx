@@ -78,7 +78,6 @@ import javafx.scene.control.MenuItem;
 import javafx.scene.control.ScrollPane;
 import javafx.scene.control.Spinner;
 import javafx.scene.control.SpinnerValueFactory;
-import javafx.scene.control.Tab;
 import javafx.scene.control.TextField;
 import javafx.scene.control.TitledPane;
 import javafx.scene.control.Tooltip;
@@ -89,7 +88,6 @@ import javafx.scene.layout.FlowPane;
 import javafx.scene.layout.GridPane;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Priority;
-import javafx.scene.layout.Region;
 import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
 import javafx.scene.paint.Color;
@@ -513,6 +511,12 @@ public class TestStage extends Application {
         contextMenu.getItems().addAll(defaultSceneMenuItem, textFieldMenuItem, tooltipBoxMenuItem,
                 alertMenuItem, alertWindowModalMenuItem, fileOpenMenuItem);
         root.setOnContextMenuRequested(e -> contextMenu.show(root, e.getScreenX(), e.getScreenY()));
+
+        root.setOnMousePressed(e -> {
+            if (contextMenu.isShowing()) {
+                contextMenu.hide();
+            }
+        });
     }
 
     class PropertyEditor extends VBox {

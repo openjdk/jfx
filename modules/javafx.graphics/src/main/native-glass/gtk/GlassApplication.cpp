@@ -552,7 +552,6 @@ static void process_events(GdkEvent* event, gpointer data)
         }
     } else {
 
-        //FIXME: Those do not work anymore
         if (window == gdk_screen_get_root_window(gdk_screen_get_default())) {
             if (event->any.type == GDK_PROPERTY_NOTIFY) {
                 if (event->property.atom == gdk_atom_intern_static_string("_NET_WORKAREA")

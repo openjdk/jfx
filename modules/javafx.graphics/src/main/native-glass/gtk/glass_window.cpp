@@ -135,33 +135,27 @@ WindowContext::WindowContext(jobject _jwindow, WindowContext* _owner, long _scre
     load_cached_extents();
     update_window_size();
 
-    GdkWindowAttributesType attr_types = (GdkWindowAttributesType) (GDK_WA_VISUAL);
+    int attr_mask = GDK_WA_VISUAL;
     GdkWindowAttr attributes;
     attributes.visual = find_best_visual();
     attributes.wclass = GDK_INPUT_OUTPUT;
     attributes.event_mask = GDK_FILTERED_EVENTS_MASK;
     attributes.width = DEFAULT_WIDTH;
     attributes.height = DEFAULT_HEIGHT;
+    attributes.window_type = (window_type == POPUP) ? GDK_WINDOW_TEMP : GDK_WINDOW_TOPLEVEL;
 
-    if (window_type == POPUP) {
-        attributes.window_type = GDK_WINDOW_TEMP;
-        attr_types = (GdkWindowAttributesType) (attr_types | GDK_WA_NOREDIR);
-        attributes.override_redirect = TRUE;
-    } else {
-        attributes.window_type = GDK_WINDOW_TOPLEVEL;
-        if (gchar* app_name = get_application_name()) {
-            attributes.wmclass_name = app_name;
-            attributes.wmclass_class = app_name;
-            attr_types = (GdkWindowAttributesType) (attr_types | GDK_WA_WMCLASS);
-        }
+    if (gchar* app_name = get_application_name()) {
+        attributes.wmclass_name = app_name;
+        attributes.wmclass_class = app_name;
+        attr_mask |= GDK_WA_WMCLASS;
     }
 
     if (window_type == UTILITY) {
         attributes.type_hint = GDK_WINDOW_TYPE_HINT_UTILITY;
-        attr_types = (GdkWindowAttributesType) (attr_types | GDK_WA_TYPE_HINT);
+        attr_mask |=  GDK_WA_TYPE_HINT;
     }
 
-    gdk_window = gdk_window_new(gdk_get_default_root_window(), &attributes, attr_types);
+    gdk_window = gdk_window_new(gdk_get_default_root_window(), &attributes, attr_mask);
 
     if (frame_type == TITLED) {
         request_frame_extents();
@@ -270,7 +264,7 @@ void WindowContext::process_map() {
 }
 
 void WindowContext::process_focus(GdkEventFocus *event) {
-    LOG("process_focus: %d\n", event->in);
+    LOG("process_focus (keyboard): %d\n", event->in);
     if (im_ctx.enabled && im_ctx.ctx) {
         if (event->in) {
             gtk_im_context_focus_in(im_ctx.ctx);
@@ -281,6 +275,7 @@ void WindowContext::process_focus(GdkEventFocus *event) {
 }
 
 void WindowContext::process_focus(bool focus_in) {
+    LOG("process_focus (state): %d\n", focus_in);
     if (focus_in && WindowContext::sm_grab_window == this) {
         ungrab_focus();
     }
@@ -677,6 +672,7 @@ bool WindowContext::set_view(jobject view) {
 }
 
 bool WindowContext::grab_mouse_drag_focus() {
+    LOG("grab_mouse_drag_focus\n");
     if (glass_gdk_mouse_devices_grab_with_cursor(
             gdk_window, gdk_window_get_cursor(gdk_window), FALSE)) {
         WindowContext::sm_mouse_drag_window = this;
@@ -687,6 +683,11 @@ bool WindowContext::grab_mouse_drag_focus() {
 }
 
 void WindowContext::ungrab_mouse_drag_focus() {
+    if (!WindowContext::sm_mouse_drag_window) {
+        return;
+    }
+
+    LOG("ungrab_mouse_drag_focus\n");
     WindowContext::sm_mouse_drag_window = NULL;
     glass_gdk_mouse_devices_ungrab();
     if (WindowContext::sm_grab_window) {
@@ -695,6 +696,7 @@ void WindowContext::ungrab_mouse_drag_focus() {
 }
 
 bool WindowContext::grab_focus() {
+    LOG("grab_focus\n");
     if (WindowContext::sm_mouse_drag_window
             || glass_gdk_mouse_devices_grab(gdk_window)) {
         WindowContext::sm_grab_window = this;
@@ -705,9 +707,11 @@ bool WindowContext::grab_focus() {
 }
 
 void WindowContext::ungrab_focus() {
+    LOG("ungrab_focus\n");
     if (!WindowContext::sm_mouse_drag_window) {
         glass_gdk_mouse_devices_ungrab();
     }
+
     WindowContext::sm_grab_window = NULL;
 
     if (jwindow) {
