@@ -26,9 +26,6 @@
 package com.sun.javafx.text;
 
 import java.util.List;
-import javafx.geometry.Point2D;
-import javafx.scene.Scene;
-import javafx.scene.layout.Region;
 import javafx.scene.text.TabStop;
 import javafx.scene.text.TabStopPolicy;
 import javafx.scene.text.TextFlow;
@@ -72,39 +69,6 @@ public class DefaultTabAdvancePolicy implements TabAdvancePolicy {
             return -1.0f;
         }
         return FixedTabAdvancePolicy.nextPosition(position - offset, defaultStops) + offset;
-    }
-
-    // this could be a method in the base class (change interface to an abstract class)
-    // FIX remove
-    private static float computeOffset(TextFlow flow, Region reference) {
-        if ((flow == null) || (reference == null)) {
-            return 0.0f;
-        }
-        Scene s1 = flow.getScene();
-        Scene s2 = reference.getScene();
-        if ((s1 == null) || (s1 != s2)) {
-            return 0.0f;
-        }
-
-        // TODO rtl
-        float x0 = 0.0f;
-        if (reference != null) {
-            Point2D p = reference.localToScene(0.0, 0.0);
-            if (p != null) {
-                if (!Double.isNaN(p.getX())) {
-                    x0 = (float)p.getX();
-                }
-            }
-        }
-        float x1 = 0.0f;
-        Point2D p = flow.localToScene(flow.snappedLeftInset(), 0.0);
-        if (p != null) {
-            if (!Double.isNaN(p.getX())) {
-                x1 = (float)p.getX();
-            }
-        }
-
-        return x0 - x1;
     }
 
     @Override

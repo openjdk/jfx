@@ -1256,8 +1256,7 @@ public class PrismTextLayout implements TextLayout {
                 }
                 float tabStop = tabAdvancePolicy.nextTabStop(layoutShift, lineWidth);
                 if (tabStop <= 0.0f) {
-                    // some large value guaranteed to exceed any reasonable text layout width
-                    tabStop = 1e10f;
+                    tabStop = lineWidth + getSpaceAdvance();
                 }
                 run.setWidth(tabStop - lineWidth);
             }
@@ -1684,6 +1683,7 @@ public class PrismTextLayout implements TextLayout {
         if (span != null) {
             Region root = span.getLayoutRootRegion();
             if (root != null) {
+                // FIX does not work, or tabs are not supplied correctly by the Ruler
                 // TODO ltr
                 return -(float)root.snappedLeftInset();
             }

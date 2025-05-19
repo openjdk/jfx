@@ -256,7 +256,6 @@ public class RichEditorDemoPane extends BorderPane {
 
     private void handleTabStopChange() {
         // TODO update default tabs if changed
-        // TODO update TAB_STOPS attributes of all selected paragraphs (or the paragraph at the caret)
         SelectionSegment sel = editor.getSelection();
         if (sel != null) {
             // TODO for now, just the caret
