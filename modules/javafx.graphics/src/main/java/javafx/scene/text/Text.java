@@ -84,7 +84,6 @@ import com.sun.javafx.scene.shape.ShapeHelper;
 import com.sun.javafx.scene.shape.TextHelper;
 import com.sun.javafx.scene.text.FontHelper;
 import com.sun.javafx.scene.text.GlyphList;
-import com.sun.javafx.scene.text.TabAdvancePolicy;
 import com.sun.javafx.scene.text.TextLayout;
 import com.sun.javafx.scene.text.TextLayoutFactory;
 import com.sun.javafx.scene.text.TextLine;
@@ -92,7 +91,6 @@ import com.sun.javafx.scene.text.TextSpan;
 import com.sun.javafx.sg.prism.NGNode;
 import com.sun.javafx.sg.prism.NGShape;
 import com.sun.javafx.sg.prism.NGText;
-import com.sun.javafx.text.FixedTabAdvancePolicy;
 import com.sun.javafx.tk.Toolkit;
 
 /**

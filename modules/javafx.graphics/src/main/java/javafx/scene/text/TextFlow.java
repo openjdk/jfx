@@ -524,7 +524,7 @@ public class TextFlow extends Pane {
      * <p>
      * Note that this method should not be used to control the tab placement when multiple {@code Text} nodes
      * with different fonts are contained within this {@code TextFlow}.
-     * Instead, {@link #setTabStopPolicy(TabStopPolicy)} should be used.
+     * In this case, the {@link #setTabStopPolicy(TabStopPolicy)} should be used instead.
      *
      * @defaultValue 8
      *
@@ -646,7 +646,7 @@ public class TextFlow extends Pane {
     }
 
     private TabAdvancePolicy getTabAdvancePolicy() {
-        // isolate the public tab stop policy from the internal tab advance policy
+        // isolates the public tab stop policy from the internal tab advance policy
         TabStopPolicy p = getTabStopPolicy();
         return p == null ? null : DefaultTabAdvancePolicy.of(this, p);
     }

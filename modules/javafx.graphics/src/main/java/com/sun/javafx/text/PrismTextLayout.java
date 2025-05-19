@@ -1683,7 +1683,6 @@ public class PrismTextLayout implements TextLayout {
         if (span != null) {
             Region root = span.getLayoutRootRegion();
             if (root != null) {
-                // FIX does not work, or tabs are not supplied correctly by the Ruler
                 // TODO ltr
                 return -(float)root.snappedLeftInset();
             }
