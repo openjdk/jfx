@@ -31,16 +31,12 @@ package com.sun.javafx.scene.text;
 public interface TabAdvancePolicy {
 
     /**
-     * This method is called at the start of each text layout cycle.
-     */
-    public void reset();
-
-    /**
      * Provides the next tab stop for the given position.
      * A value of 0 or less indicates that there are no more stops.
      *
+     * @param offset the offset of the text layout relative to the owner {@code Node} edge
      * @param position the current position
      * @return the next tab stop
      */
-    public float nextTabStop(float position);
+    public float nextTabStop(float offset, float position);
 }

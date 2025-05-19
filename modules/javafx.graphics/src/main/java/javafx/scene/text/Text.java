@@ -93,6 +93,93 @@ import com.sun.javafx.sg.prism.NGShape;
 import com.sun.javafx.sg.prism.NGText;
 import com.sun.javafx.text.FixedTabAdvancePolicy;
 import com.sun.javafx.tk.Toolkit;
+import javafx.scene.layout.Region;
+import javafx.scene.paint.Color;
+import javafx.scene.paint.Paint;
+import javafx.scene.shape.LineTo;
+import javafx.scene.shape.MoveTo;
+import javafx.scene.shape.PathElement;
+import javafx.scene.shape.Shape;
+import javafx.scene.shape.StrokeType;
+import com.sun.javafx.geom.BaseBounds;
+import com.sun.javafx.geom.Path2D;
+import com.sun.javafx.geom.RectBounds;
+import com.sun.javafx.geom.TransformedShape;
+import com.sun.javafx.geom.transform.BaseTransform;
+import com.sun.javafx.scene.DirtyBits;
+import com.sun.javafx.scene.NodeHelper;
+import com.sun.javafx.scene.shape.ShapeHelper;
+import com.sun.javafx.scene.shape.TextHelper;
+import com.sun.javafx.scene.text.FontHelper;
+import com.sun.javafx.scene.text.GlyphList;
+import com.sun.javafx.scene.text.TabAdvancePolicy;
+import com.sun.javafx.scene.text.TextLayout;
+import com.sun.javafx.scene.text.TextLayoutFactory;
+import com.sun.javafx.scene.text.TextLine;
+import com.sun.javafx.scene.text.TextSpan;
+import com.sun.javafx.sg.prism.NGNode;
+import com.sun.javafx.sg.prism.NGShape;
+import com.sun.javafx.sg.prism.NGText;
+import com.sun.javafx.text.FixedTabAdvancePolicy;
+import com.sun.javafx.tk.Toolkit;
+import javafx.scene.layout.Region;
+import javafx.scene.paint.Color;
+import javafx.scene.paint.Paint;
+import javafx.scene.shape.LineTo;
+import javafx.scene.shape.MoveTo;
+import javafx.scene.shape.PathElement;
+import javafx.scene.shape.Shape;
+import javafx.scene.shape.StrokeType;
+import com.sun.javafx.geom.BaseBounds;
+import com.sun.javafx.geom.Path2D;
+import com.sun.javafx.geom.RectBounds;
+import com.sun.javafx.geom.TransformedShape;
+import com.sun.javafx.geom.transform.BaseTransform;
+import com.sun.javafx.scene.DirtyBits;
+import com.sun.javafx.scene.NodeHelper;
+import com.sun.javafx.scene.shape.ShapeHelper;
+import com.sun.javafx.scene.shape.TextHelper;
+import com.sun.javafx.scene.text.FontHelper;
+import com.sun.javafx.scene.text.GlyphList;
+import com.sun.javafx.scene.text.TabAdvancePolicy;
+import com.sun.javafx.scene.text.TextLayout;
+import com.sun.javafx.scene.text.TextLayoutFactory;
+import com.sun.javafx.scene.text.TextLine;
+import com.sun.javafx.scene.text.TextSpan;
+import com.sun.javafx.sg.prism.NGNode;
+import com.sun.javafx.sg.prism.NGShape;
+import com.sun.javafx.sg.prism.NGText;
+import com.sun.javafx.text.FixedTabAdvancePolicy;
+import com.sun.javafx.tk.Toolkit;
+import javafx.scene.layout.Region;
+import javafx.scene.paint.Color;
+import javafx.scene.paint.Paint;
+import javafx.scene.shape.LineTo;
+import javafx.scene.shape.MoveTo;
+import javafx.scene.shape.PathElement;
+import javafx.scene.shape.Shape;
+import javafx.scene.shape.StrokeType;
+import com.sun.javafx.geom.BaseBounds;
+import com.sun.javafx.geom.Path2D;
+import com.sun.javafx.geom.RectBounds;
+import com.sun.javafx.geom.TransformedShape;
+import com.sun.javafx.geom.transform.BaseTransform;
+import com.sun.javafx.scene.DirtyBits;
+import com.sun.javafx.scene.NodeHelper;
+import com.sun.javafx.scene.shape.ShapeHelper;
+import com.sun.javafx.scene.shape.TextHelper;
+import com.sun.javafx.scene.text.FontHelper;
+import com.sun.javafx.scene.text.GlyphList;
+import com.sun.javafx.scene.text.TabAdvancePolicy;
+import com.sun.javafx.scene.text.TextLayout;
+import com.sun.javafx.scene.text.TextLayoutFactory;
+import com.sun.javafx.scene.text.TextLine;
+import com.sun.javafx.scene.text.TextSpan;
+import com.sun.javafx.sg.prism.NGNode;
+import com.sun.javafx.sg.prism.NGShape;
+import com.sun.javafx.sg.prism.NGText;
+import com.sun.javafx.text.FixedTabAdvancePolicy;
+import com.sun.javafx.tk.Toolkit;
 
 /**
  * The {@code Text} class defines a node that displays a text.
@@ -279,13 +366,26 @@ public non-sealed class Text extends Shape {
     TextSpan getTextSpan() {
         if (textSpan == null) {
             textSpan = new TextSpan() {
-                @Override public String getText() {
+                @Override
+                public String getText() {
                     return getTextInternal();
                 }
-                @Override public Object getFont() {
+
+                @Override
+                public Object getFont() {
                     return getFontInternal();
                 }
-                @Override public RectBounds getBounds() {
+
+                @Override
+                public RectBounds getBounds() {
+                    return null;
+                }
+
+                @Override
+                public Region getLayoutRootRegion() {
+                    if (getParent() instanceof TextFlow f) {
+                        return f;
+                    }
                     return null;
                 }
             };

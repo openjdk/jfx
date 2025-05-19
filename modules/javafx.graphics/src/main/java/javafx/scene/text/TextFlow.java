@@ -52,6 +52,7 @@ import javafx.scene.AccessibleAttribute;
 import javafx.scene.AccessibleRole;
 import javafx.scene.Node;
 import javafx.scene.layout.Pane;
+import javafx.scene.layout.Region;
 import javafx.scene.shape.PathElement;
 import javafx.scene.transform.TransformChangedEvent;
 import com.sun.javafx.geom.BaseBounds;
@@ -400,6 +401,14 @@ public class TextFlow extends Pane {
         public Node getNode() {
             return node;
         }
+
+        @Override
+        public Region getLayoutRootRegion() {
+            if (node.getParent() instanceof TextFlow f) {
+                return f;
+            }
+            return null;
+        }
     }
 
     TextLayout getTextLayout() {
@@ -605,10 +614,6 @@ public class TextFlow extends Pane {
                     if (old != null) {
                         old.tabStops().removeListener(monitor);
                         old.defaultStopsProperty().removeListener(monitor);
-                        if (old.getReference() != null) {
-                            old.getReference().localToSceneTransformProperty().removeListener(monitor);
-                            old.getReference().sceneProperty().removeListener(monitor);
-                        }
                     }
 
                     TabStopPolicy p = get();
@@ -616,11 +621,6 @@ public class TextFlow extends Pane {
                         // FIX does this create a memory leak?
                         p.tabStops().addListener(monitor);
                         p.defaultStopsProperty().addListener(monitor);
-                        if (p.getReference() != null) {
-                            // FIX does this create a memory leak?
-                            p.getReference().localToSceneTransformProperty().addListener(monitor);
-                            p.getReference().sceneProperty().addListener(monitor);
-                        }
                     }
                     old = p;
                     updateTabAdvancePolicy();
