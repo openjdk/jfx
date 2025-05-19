@@ -219,7 +219,7 @@ public interface TextLayout {
      * A non-{@code null} policy will override the fixed tab size.
      *
      * @param tabSize the tab size
-     * @param policy the tab advance policy, cannot be null
+     * @param policy the tab advance policy, or null
      * @return returns true if the call modifies the layout internal state
      */
     public boolean setTabAdvancePolicy(int tabSize, TabAdvancePolicy policy);
