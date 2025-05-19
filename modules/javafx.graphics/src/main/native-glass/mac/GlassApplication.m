@@ -78,6 +78,11 @@ static NSString* JavaRunLoopMode = @"AWTRunLoopMode";
 // don't deadlock.
 static NSArray<NSString*> *runLoopModes = nil;
 
+// Custom event that is provided by AWT to allow libraries like
+// JavaFX to forward native events to AWT even if AWT runs in
+// embedded mode.
+static NSString* awtEmbeddedEvent = @"AWTEmbeddedEvent";
+
 #ifdef STATIC_BUILD
 jint JNICALL JNI_OnLoad_glass(JavaVM *vm, void *reserved)
 #else
@@ -496,6 +501,21 @@ static NSMutableArray<GlassRunnable*> *deferredRunnables = nil;
     // NOP
 
     return YES;
+}
+
+- (void) application:(NSApplication *)theApplication openURLs:(NSArray<NSURL *> *)urls
+{
+    for (NSURL* url in urls) {
+         NSDictionary *userInfo = @{
+            @"name": @"openURL",
+            @"url": url.absoluteString
+        };
+
+        [[NSNotificationCenter defaultCenter]
+                postNotificationName:awtEmbeddedEvent
+                object:nil
+                userInfo:userInfo];
+    }
 }
 
 - (BOOL)applicationShouldOpenUntitledFile:(NSApplication *)sender

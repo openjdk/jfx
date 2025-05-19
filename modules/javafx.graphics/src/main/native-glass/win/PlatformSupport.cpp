@@ -202,6 +202,8 @@ bool PlatformSupport::onSettingChanged(WPARAM wParam, LPARAM lParam) const
 {
     switch ((UINT)wParam) {
         case SPI_SETHIGHCONTRAST:
+            return updatePreferences(PreferenceType(PT_SYSTEM_PARAMS | PT_UI_SETTINGS));
+
         case SPI_SETCLIENTAREAANIMATION:
             return updatePreferences(PT_SYSTEM_PARAMS);
     }
