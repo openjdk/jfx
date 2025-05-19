@@ -52,7 +52,7 @@ public class ImageTools {
     /**
      * Regex pattern for hasScaledName
      */
-    private static final Pattern SCALED_FILE_PATTERN = Pattern.compile(".*@[1-9][0-9]?x(\\.[^\\.]+)?");
+    private static final Pattern SCALED_FILE_PATTERN = Pattern.compile(".*@[1-9][0-9]?x(?:\\.[^\\.]+)?");
 
     /**
      * See the general contract of the <code>readFully</code>

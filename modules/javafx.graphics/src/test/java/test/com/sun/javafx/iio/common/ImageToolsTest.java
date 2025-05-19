@@ -150,5 +150,7 @@ public class ImageToolsTest {
         assertFalse(ImageTools.hasScaledName("image@somewhere"));
         assertFalse(ImageTools.hasScaledName("image@3ish"));
         assertFalse(ImageTools.hasScaledName("image@4ix"));
+        assertFalse(ImageTools.hasScaledName("image@0x"));
+        assertFalse(ImageTools.hasScaledName("image@-1x"));
     }
 }
