@@ -84,7 +84,7 @@ public class RichEditorDemoPane extends BorderPane {
 
         FX.setPopupMenu(ruler, this::createRulerPopupMenu);
 
-        actions = new Actions(editor);
+        actions = new Actions(editor, ruler);
         editor.setContextMenu(createContextMenu());
 
         fontName = new ComboBox<>();
@@ -146,6 +146,7 @@ public class RichEditorDemoPane extends BorderPane {
         });
 
         Settings.endKey.subscribe(this::setEndKey);
+        Settings.contentPadding.bindBidirectional(editor.contentPaddingProperty());
     }
 
     private ToolBar createToolBar() {

@@ -121,6 +121,10 @@ public class Ruler extends BorderPane {
         policy.set(p);
     }
 
+    public final TabStopPolicy getTabStopPolicy() {
+        return policy.get();
+    }
+
     public final ObjectProperty<TabStopPolicy> tabStopPolicyProperty() {
         return policy;
     }
