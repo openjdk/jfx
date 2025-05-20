@@ -440,7 +440,7 @@ public final class StyleAttributeMap {
         StyleAttributeMapHelper.setAccessor(new StyleAttributeMapHelper.Accessor() {
             @Override
             public StyleAttributeMap filterAttributes(StyleAttributeMap ss, boolean isParagraph) {
-                return ss.filterAttributes(isParagraph);
+                return (ss == null ? null : ss.filterAttributes(isParagraph));
             }
         });
     }
