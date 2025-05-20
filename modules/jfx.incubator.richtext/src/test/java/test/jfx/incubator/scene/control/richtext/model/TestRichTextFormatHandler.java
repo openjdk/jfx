@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2023, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -46,50 +46,58 @@ import jfx.incubator.scene.control.richtext.model.StyledSegment;
  * Tests RichTextFormatHandler.
  */
 public class TestRichTextFormatHandler {
-    private static final boolean DEBUG = true;
+    private static final boolean DEBUG = false;
 
     @Test
-    public void testRoundTrip() throws IOException {
-        Object[] ss = {
-            List.of(
-                p(
-                    a(StyleAttributeMap.BACKGROUND, Color.RED),
-                    a(StyleAttributeMap.BULLET, "⌘"),
-                    a(StyleAttributeMap.FIRST_LINE_INDENT, 10.0),
-                    a(StyleAttributeMap.LINE_SPACING, 11.0),
-                    a(StyleAttributeMap.PARAGRAPH_DIRECTION, ParagraphDirection.RIGHT_TO_LEFT)
-                ),
-                s("bold", StyleAttributeMap.BOLD),
-                s("font family", a(StyleAttributeMap.FONT_FAMILY, "Arial")),
-                s("font size", a(StyleAttributeMap.FONT_SIZE, 12.0)),
-                s("italic", StyleAttributeMap.ITALIC),
-                nl(),
+    public void testBasicAttributes() throws IOException {
+        testRoundTrip(
+            s("bold", StyleAttributeMap.BOLD),
+            s("font family", a(StyleAttributeMap.FONT_FAMILY, "Arial")),
+            s("font size", a(StyleAttributeMap.FONT_SIZE, 12.0)),
+            s("italic", StyleAttributeMap.ITALIC),
+            p(
+                a(StyleAttributeMap.BACKGROUND, Color.RED),
+                a(StyleAttributeMap.BULLET, "⌘"),
+                a(StyleAttributeMap.FIRST_LINE_INDENT, 10.0),
+                a(StyleAttributeMap.LINE_SPACING, 11.0),
+                a(StyleAttributeMap.PARAGRAPH_DIRECTION, ParagraphDirection.RIGHT_TO_LEFT)
+            ),
+            nl(),
 
-                p(
-                    a(StyleAttributeMap.SPACE_ABOVE, 13.0),
-                    a(StyleAttributeMap.SPACE_BELOW, 14.0),
-                    a(StyleAttributeMap.SPACE_LEFT, 15.0),
-                    a(StyleAttributeMap.SPACE_RIGHT, 16.0),
-                    a(StyleAttributeMap.TEXT_ALIGNMENT, TextAlignment.CENTER),
-                    a(StyleAttributeMap.PARAGRAPH_DIRECTION, ParagraphDirection.LEFT_TO_RIGHT)
-                ),
-                s("strike through", StyleAttributeMap.STRIKE_THROUGH),
-                s("text color", a(StyleAttributeMap.TEXT_COLOR, Color.GREEN)),
-                s("underline", StyleAttributeMap.UNDERLINE),
-                nl(),
+            s("strike through", StyleAttributeMap.STRIKE_THROUGH),
+            s("text color", a(StyleAttributeMap.TEXT_COLOR, Color.GREEN)),
+            s("underline", StyleAttributeMap.UNDERLINE),
+            p(
+                a(StyleAttributeMap.SPACE_ABOVE, 13.0),
+                a(StyleAttributeMap.SPACE_BELOW, 14.0),
+                a(StyleAttributeMap.SPACE_LEFT, 15.0),
+                a(StyleAttributeMap.SPACE_RIGHT, 16.0),
+                a(StyleAttributeMap.TEXT_ALIGNMENT, TextAlignment.CENTER),
+                a(StyleAttributeMap.PARAGRAPH_DIRECTION, ParagraphDirection.LEFT_TO_RIGHT)
+            ),
+            nl(),
 
-                s("combined", StyleAttributeMap.ITALIC, a(StyleAttributeMap.TEXT_COLOR, Color.RED), StyleAttributeMap.UNDERLINE),
-                nl()
+            s("combined", StyleAttributeMap.ITALIC, a(StyleAttributeMap.TEXT_COLOR, Color.RED), StyleAttributeMap.UNDERLINE),
+            nl()
+        );
+    }
 
-                // TODO test escapes in text, attribute names, attribute values
-            )
-        };
+    // JDK-8357393
+    @Test
+    public void testEmptyCharAttributeToken() throws IOException {
+        testRoundTrip(
+            s("normal"),
+            s("BOLD", StyleAttributeMap.BOLD),
+            s("normal")
+        );
+    }
 
-        RichTextFormatHandler handler = RichTextFormatHandler.getInstance();
-
-        for (Object x : ss) {
-            testRoundTrip(handler, (List<StyledSegment>)x);
-        }
+    @Test
+    public void testEmptyParagraphAttributeToken() throws IOException {
+        testRoundTrip(
+            s("normal"),
+            p()
+        );
     }
 
     @Test
@@ -119,7 +127,7 @@ public class TestRichTextFormatHandler {
         out.consume(StyledSegment.of("{|%}"));
         out.flush();
         String s = wr.toString();
-        String expected = "%7B%7C%25%7D";
+        String expected = "{}%7B%7C%25%7D";
         Assertions.assertEquals(expected, s);
     }
 
@@ -171,7 +179,8 @@ public class TestRichTextFormatHandler {
         return StyledSegment.LINE_BREAK;
     }
 
-    private void testRoundTrip(RichTextFormatHandler handler, List<StyledSegment> input) throws IOException {
+    private void testRoundTrip(StyledSegment ... input) throws IOException {
+        RichTextFormatHandler handler = RichTextFormatHandler.getInstance();
         // export to string
         int ct = 0;
         StringWriter wr = new StringWriter();
@@ -201,13 +210,17 @@ public class TestRichTextFormatHandler {
         }
 
         // check segments for equality
-        Assertions.assertEquals(input.size(), segments.size());
-        for (int i = 0; i < input.size(); i++) {
-            StyledSegment is = input.get(i);
+        int sz = input.length;
+        Assertions.assertEquals(sz, segments.size());
+        for (int i = 0; i < sz; i++) {
+            StyledSegment is = input[i];
             StyledSegment rs = segments.get(i);
             Assertions.assertEquals(is.getType(), rs.getType());
             Assertions.assertEquals(is.getText(), rs.getText());
-            Assertions.assertEquals(is.getStyleAttributeMap(null), rs.getStyleAttributeMap(null));
+            // empty and null attributes are equivalent for this test
+            StyleAttributeMap im = normalize(is.getStyleAttributeMap(null));
+            StyleAttributeMap rm = normalize(rs.getStyleAttributeMap(null));
+            Assertions.assertEquals(im, rm);
         }
 
         // export to a string again
@@ -247,5 +260,14 @@ public class TestRichTextFormatHandler {
 
         String result = wr.toString();
         Assertions.assertEquals(text, result);
+    }
+
+    private StyleAttributeMap normalize(StyleAttributeMap a) {
+        if (a != null) {
+            if (a.isEmpty()) {
+                return null;
+            }
+        }
+        return a;
     }
 }
