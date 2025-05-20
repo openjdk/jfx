@@ -990,10 +990,12 @@ public class VFlow extends Pane implements StyleResolver, StyledTextModel.Listen
             boolean moveDown = (ix > getOrigin().index());
             setOrigin(or);
             c = getCaretInfo();
-            if (moveDown) {
-                scrollVerticalPixels(c.getMaxY() - c.getMinY() - getViewPortHeight());
+            if (c != null) {
+                if (moveDown) {
+                    scrollVerticalPixels(c.getMaxY() - c.getMinY() - getViewPortHeight());
+                }
+                checkForExcessiveWhitespaceAtTheEnd();
             }
-            checkForExcessiveWhitespaceAtTheEnd();
             reflow = true;
         } else {
             // block scroll, if needed
