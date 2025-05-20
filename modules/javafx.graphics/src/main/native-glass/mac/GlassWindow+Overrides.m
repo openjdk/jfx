@@ -32,7 +32,6 @@
 
 #import "GlassMacros.h"
 #import "GlassWindow.h"
-#import "GlassTouches.h"
 #import "GlassWindow+Java.h"
 #import "GlassWindow+Overrides.h"
 #import "GlassViewDelegate.h"
