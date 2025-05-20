@@ -645,6 +645,10 @@ public final class Renderer implements MarlinRenderer, MarlinConst {
             }
         }
 
+        // KCR FIXME: can we can set "used" to 0 first? This would allow
+        // OffHeapArray::resize to avoid the copy.
+//        edges.setUsed(0);
+
         // At last: resize back off-heap edges to initial size
         if (edges.getLength() != INITIAL_EDGES_CAPACITY) {
             // note: may throw OOME:

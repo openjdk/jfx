@@ -26,45 +26,44 @@
 package com.sun.marlin;
 
 import static com.sun.marlin.MarlinConst.LOG_UNSAFE_MALLOC;
-import java.lang.reflect.Field;
-import sun.misc.Unsafe;
+import java.lang.foreign.Arena;
+import java.lang.foreign.MemorySegment;
+import java.lang.foreign.ValueLayout;
+import java.nio.ByteOrder;
 
-// KCR FIXME: We must replace the terminally deprecated sun.misc.Unsafe
-// memory access methods; see JDK-8334137
-@SuppressWarnings("removal")
 final class OffHeapArray  {
 
-    // unsafe reference
-    private static final Unsafe UNSAFE;
+    private Arena arena;
+
     // size of int / float
     static final int SIZE_INT;
+    // FFM stuff
+    private static final ValueLayout.OfByte BYTE_LAYOUT = ValueLayout.JAVA_BYTE;
+    private static final ValueLayout.OfInt INT_LAYOUT = ValueLayout.JAVA_INT.withOrder(ByteOrder.BIG_ENDIAN);
 
     static {
-        try {
-            final Field field = Unsafe.class.getDeclaredField("theUnsafe");
-            field.setAccessible(true);
-            UNSAFE = (Unsafe) field.get(null);
-        } catch (Exception e) {
-            throw new InternalError("Unable to get sun.misc.Unsafe instance", e);
-        }
-
-        SIZE_INT = Unsafe.ARRAY_INT_INDEX_SCALE;
+        // KCR FIXME: get this from FFM
+        SIZE_INT = 4;
     }
 
     /* members */
-    private long address;
+    private MemorySegment segment;
+//    private long address;
     private long length;
     private int used;
 
     OffHeapArray(final Object parent, final long len) {
+        arena = Arena.ofShared();
+
         // note: may throw OOME:
-        this.address = UNSAFE.allocateMemory(len);
+        // KCR FIXME: Set a MemoryLayout
+        this.segment = arena.allocate(len);
         this.length  = len;
         this.used    = 0;
         if (LOG_UNSAFE_MALLOC) {
             MarlinUtils.logInfo(System.currentTimeMillis()
                                 + ": OffHeapArray.allocateMemory =   "
-                                + len + " to addr = " + this.address);
+                                + len + " for segment = " + this.segment);
         }
 
         // Register a cleaning function to ensure freeing off-heap memory:
@@ -111,45 +110,57 @@ final class OffHeapArray  {
      * @throws OutOfMemoryError if the allocation is refused by the system
      */
     void resize(final long len) {
-        // note: may throw OOME:
-        this.address = UNSAFE.reallocateMemory(address, len);
+        Arena newArena = Arena.ofShared();
+        MemorySegment newSegment = newArena.allocate(len);
+
+        // KCR FIXME: We can probably limit the copy to "used" bytes, which
+        // should be set to zero (although it currently isn't) when resizing
+        // down to default size, which is done in dispose()
+        MemorySegment.copy(segment, 0, newSegment, 0, Math.min(this.length, len));
+//        if (this.used > 0) {
+//            MemorySegment.copy(segment, 0, newSegment, 0, Math.min(this.used, len));
+//        }
+
+        this.arena.close();
+        this.arena = newArena;
+        this.segment = newSegment;
         this.length  = len;
+
         if (LOG_UNSAFE_MALLOC) {
             MarlinUtils.logInfo(System.currentTimeMillis()
                                 + ": OffHeapArray.reallocateMemory = "
-                                + len + " to addr = " + this.address);
+                                + len + " for segment = " + this.segment);
         }
     }
 
     void free() {
-        UNSAFE.freeMemory(this.address);
+        arena.close();
         if (LOG_UNSAFE_MALLOC) {
             MarlinUtils.logInfo(System.currentTimeMillis()
                                 + ": OffHeapArray.freeMemory =       "
                                 + this.length
-                                + " at addr = " + this.address);
+                                + " for segment = " + this.segment);
         }
-        this.address = 0L;
     }
 
     void fill(final byte val) {
-        UNSAFE.setMemory(this.address, this.length, val);
+        segment.fill(val);
     }
 
     void putByte(long offset, byte val) {
-        UNSAFE.putByte(address + offset, val);
+        segment.set(BYTE_LAYOUT, offset, val);
     }
 
     void putInt(long offset, int val) {
-        UNSAFE.putInt(address + offset, val);
+        segment.set(INT_LAYOUT, offset, val);
     }
 
     byte getByte(long offset) {
-        return UNSAFE.getByte(address + offset);
+        return segment.get(BYTE_LAYOUT, offset);
     }
 
     int getInt(long offset) {
-        return UNSAFE.getInt(address + offset);
+        return segment.get(INT_LAYOUT, offset);
     }
 
 }

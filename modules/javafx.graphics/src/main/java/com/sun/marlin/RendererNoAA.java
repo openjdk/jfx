@@ -618,6 +618,10 @@ public final class RendererNoAA implements MarlinRenderer, MarlinConst {
             edgeBucketCounts = edgeBucketCounts_ref.putArray(edgeBucketCounts, 0, 0);
         }
 
+        // KCR FIXME: can we can set "used" to 0 first? This would allow
+        // OffHeapArray::resize to avoid the copy.
+//        edges.setUsed(0);
+
         // At last: resize back off-heap edges to initial size
         if (edges.getLength() != INITIAL_EDGES_CAPACITY) {
             // note: may throw OOME:
