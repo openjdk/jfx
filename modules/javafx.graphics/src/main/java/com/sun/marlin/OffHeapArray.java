@@ -29,16 +29,13 @@ import static com.sun.marlin.MarlinConst.LOG_UNSAFE_MALLOC;
 import java.lang.reflect.Field;
 import sun.misc.Unsafe;
 
-/**
- *
- */
-// FIXME: We must replace the terminally deprecated sun.misc.Unsafe
+// KCR FIXME: We must replace the terminally deprecated sun.misc.Unsafe
 // memory access methods; see JDK-8334137
 @SuppressWarnings("removal")
 final class OffHeapArray  {
 
     // unsafe reference
-    static final Unsafe UNSAFE;
+    private static final Unsafe UNSAFE;
     // size of int / float
     static final int SIZE_INT;
 
@@ -55,9 +52,9 @@ final class OffHeapArray  {
     }
 
     /* members */
-    long address;
-    long length;
-    int  used;
+    private long address;
+    private long length;
+    private int used;
 
     OffHeapArray(final Object parent, final long len) {
         // note: may throw OOME:
@@ -72,6 +69,40 @@ final class OffHeapArray  {
 
         // Register a cleaning function to ensure freeing off-heap memory:
         MarlinUtils.getCleaner().register(parent, this::free);
+    }
+
+    /**
+     * Gets the length of this array.
+     *
+     * @return the length in bytes
+     */
+    long getLength() {
+        return length;
+    }
+
+    /**
+     * Gets the number of bytes currently being used. Always <= length
+     * @return number of used bytes
+     */
+    int getUsed() {
+        return used;
+    }
+
+    /**
+     * Sets the number of bytes currently being used. Always <= length
+     * @param used number of used bytes
+     */
+    void setUsed(int used) {
+        this.used = used;
+    }
+
+    /**
+     * Increments the number of bytes currently being used.
+     * Curr used + incr used must be <= length
+     * @param used number of used bytes to increment
+     */
+    void incrementUsed(int used) {
+        this.used += used;
     }
 
     /*
@@ -104,4 +135,21 @@ final class OffHeapArray  {
     void fill(final byte val) {
         UNSAFE.setMemory(this.address, this.length, val);
     }
+
+    void putByte(long offset, byte val) {
+        UNSAFE.putByte(address + offset, val);
+    }
+
+    void putInt(long offset, int val) {
+        UNSAFE.putInt(address + offset, val);
+    }
+
+    byte getByte(long offset) {
+        return UNSAFE.getByte(address + offset);
+    }
+
+    int getInt(long offset) {
+        return UNSAFE.getInt(address + offset);
+    }
+
 }

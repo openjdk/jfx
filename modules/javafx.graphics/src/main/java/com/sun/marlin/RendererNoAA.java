@@ -26,11 +26,7 @@
 package com.sun.marlin;
 
 import static com.sun.marlin.OffHeapArray.SIZE_INT;
-import sun.misc.Unsafe;
 
-// FIXME: We must replace the terminally deprecated sun.misc.Unsafe
-// memory access methods; see JDK-8334137
-@SuppressWarnings("removal")
 public final class RendererNoAA implements MarlinRenderer, MarlinConst {
 
     static final boolean DISABLE_RENDER = false;
@@ -372,15 +368,15 @@ public final class RendererNoAA implements MarlinRenderer, MarlinConst {
         final OffHeapArray _edges = edges;
 
         // get free pointer (ie length in bytes)
-        final int edgePtr = _edges.used;
+        final int edgePtr = _edges.getUsed();
 
         // use substraction to avoid integer overflow:
-        if (_edges.length - edgePtr < _SIZEOF_EDGE_BYTES) {
+        if (_edges.getLength() - edgePtr < _SIZEOF_EDGE_BYTES) {
             // suppose _edges.length > _SIZEOF_EDGE_BYTES
             // so doubling size is enough to add needed bytes
             // note: throw IOOB if neededSize > 2Gb:
             final long edgeNewSize = ArrayCacheConst.getNewLargeSize(
-                                        _edges.length,
+                                        _edges.getLength(),
                                         edgePtr + _SIZEOF_EDGE_BYTES);
 
             if (DO_STATS) {
@@ -390,9 +386,8 @@ public final class RendererNoAA implements MarlinRenderer, MarlinConst {
         }
 
 
-        final Unsafe _unsafe = OffHeapArray.UNSAFE;
         final long SIZE_INT = 4L;
-        long addr   = _edges.address + edgePtr;
+        long addr   = edgePtr;
 
         // The x value must be bumped up to its position at the next HPC we will evaluate.
         // "firstcrossing" is the (sub)pixel number where the next crossing occurs
@@ -422,18 +417,18 @@ public final class RendererNoAA implements MarlinRenderer, MarlinConst {
                                      + 0x7FFFFFFFL;
         // curx:
         // last bit corresponds to the orientation
-        _unsafe.putInt(addr, (((int) (x1_fixed_biased >> 31L)) & ALL_BUT_LSB) | or);
+        _edges.putInt(addr, (((int) (x1_fixed_biased >> 31L)) & ALL_BUT_LSB) | or);
         addr += SIZE_INT;
-        _unsafe.putInt(addr,  ((int)  x1_fixed_biased) >>> 1);
+        _edges.putInt(addr,  ((int)  x1_fixed_biased) >>> 1);
         addr += SIZE_INT;
 
         // inlined scalb(slope, 32):
         final long slope_fixed = (long) (POWER_2_TO_32 * slope);
 
         // last bit set to 0 to keep orientation:
-        _unsafe.putInt(addr, (((int) (slope_fixed >> 31L)) & ALL_BUT_LSB));
+        _edges.putInt(addr, (((int) (slope_fixed >> 31L)) & ALL_BUT_LSB));
         addr += SIZE_INT;
-        _unsafe.putInt(addr,  ((int)  slope_fixed) >>> 1);
+        _edges.putInt(addr,  ((int)  slope_fixed) >>> 1);
         addr += SIZE_INT;
 
         final int[] _edgeBuckets      = edgeBuckets;
@@ -446,10 +441,10 @@ public final class RendererNoAA implements MarlinRenderer, MarlinConst {
         final int bucketIdx = firstCrossing - _boundsMinY;
 
         // pointer from bucket
-        _unsafe.putInt(addr, _edgeBuckets[bucketIdx]);
+        _edges.putInt(addr, _edgeBuckets[bucketIdx]);
         addr += SIZE_INT;
         // y max (exclusive)
-        _unsafe.putInt(addr,  lastCrossing);
+        _edges.putInt(addr,  lastCrossing);
 
         // Update buckets:
         // directly the edge struct "pointer"
@@ -459,7 +454,7 @@ public final class RendererNoAA implements MarlinRenderer, MarlinConst {
         _edgeBucketCounts[lastCrossing - _boundsMinY] |= 0x1;
 
         // update free pointer (ie length in bytes)
-        _edges.used += _SIZEOF_EDGE_BYTES;
+        _edges.incrementUsed(_SIZEOF_EDGE_BYTES);
 
         if (DO_MONITORS) {
             rdrCtx.stats.mon_rdr_addLine.stop();
@@ -572,7 +567,7 @@ public final class RendererNoAA implements MarlinRenderer, MarlinConst {
         // reset used mark:
         edgeCount = 0;
         activeEdgeMaxUsed = 0;
-        edges.used = 0;
+        edges.setUsed(0);
 
         // reset bbox:
         bboxX0 = 0;
@@ -588,10 +583,10 @@ public final class RendererNoAA implements MarlinRenderer, MarlinConst {
     public void dispose() {
         if (DO_STATS) {
             rdrCtx.stats.stat_rdr_activeEdges.add(activeEdgeMaxUsed);
-            rdrCtx.stats.stat_rdr_edges.add(edges.used);
-            rdrCtx.stats.stat_rdr_edges_count.add(edges.used / SIZEOF_EDGE_BYTES);
-            rdrCtx.stats.hist_rdr_edges_count.add(edges.used / SIZEOF_EDGE_BYTES);
-            rdrCtx.stats.totalOffHeap += edges.length;
+            rdrCtx.stats.stat_rdr_edges.add(edges.getUsed());
+            rdrCtx.stats.stat_rdr_edges_count.add(edges.getUsed() / SIZEOF_EDGE_BYTES);
+            rdrCtx.stats.hist_rdr_edges_count.add(edges.getUsed() / SIZEOF_EDGE_BYTES);
+            rdrCtx.stats.totalOffHeap += edges.getLength();
         }
         // Return arrays:
         crossings = crossings_ref.putArray(crossings);
@@ -624,7 +619,7 @@ public final class RendererNoAA implements MarlinRenderer, MarlinConst {
         }
 
         // At last: resize back off-heap edges to initial size
-        if (edges.length != INITIAL_EDGES_CAPACITY) {
+        if (edges.getLength() != INITIAL_EDGES_CAPACITY) {
             // note: may throw OOME:
             edges.resize(INITIAL_EDGES_CAPACITY);
         }
@@ -753,8 +748,6 @@ public final class RendererNoAA implements MarlinRenderer, MarlinConst {
         final int _ERR_STEP_MAX  = ERR_STEP_MAX;
 
         // unsafe I/O:
-        final Unsafe _unsafe = OffHeapArray.UNSAFE;
-        final long    addr0  = _edges.address;
         long addr;
 
         final int _MIN_VALUE = Integer.MIN_VALUE;
@@ -820,13 +813,13 @@ public final class RendererNoAA implements MarlinRenderer, MarlinConst {
                 if ((bucketcount & 0x1) != 0) {
                     // eviction in active edge list
                     // cache edges[] address + offset
-                    addr = addr0 + _OFF_YMAX;
+                    addr = _OFF_YMAX;
 
                     for (i = 0, newCount = 0; i < prevNumCrossings; i++) {
                         // get the pointer to the edge
                         ecur = _edgePtrs[i];
                         // random access so use unsafe:
-                        if (_unsafe.getInt(addr + ecur) > y) {
+                        if (_edges.getInt(addr + ecur) > y) {
                             _edgePtrs[newCount++] = ecur;
                         }
                     }
@@ -869,7 +862,7 @@ public final class RendererNoAA implements MarlinRenderer, MarlinConst {
                     }
 
                     // cache edges[] address + offset
-                    addr = addr0 + _OFF_NEXT;
+                    addr = _OFF_NEXT;
 
                     // add new edges to active edge list:
                     for (ecur = _edgeBuckets[bucket];
@@ -878,7 +871,7 @@ public final class RendererNoAA implements MarlinRenderer, MarlinConst {
                         // store the pointer to the edge
                         _edgePtrs[numCrossings] = ecur;
                         // random access so use unsafe:
-                        ecur = _unsafe.getInt(addr + ecur);
+                        ecur = _edges.getInt(addr + ecur);
                     }
 
                     if (crossingsLen < numCrossings) {
@@ -944,25 +937,25 @@ public final class RendererNoAA implements MarlinRenderer, MarlinConst {
                            if it is removed from AEL for coming or last scanline */
 
                         // random access so use unsafe:
-                        addr = addr0 + ecur; // ecur + OFF_F_CURX
+                        addr = ecur; // ecur + OFF_F_CURX
 
                         // get current crossing:
-                        curx = _unsafe.getInt(addr);
+                        curx = _edges.getInt(addr);
 
                         // update crossing with orientation at last bit:
                         cross = curx;
 
                         // Increment x using DDA (fixed point):
-                        curx += _unsafe.getInt(addr + _OFF_BUMP_X);
+                        curx += _edges.getInt(addr + _OFF_BUMP_X);
 
                         // Increment error:
-                        err  =  _unsafe.getInt(addr + _OFF_ERROR)
-                              + _unsafe.getInt(addr + _OFF_BUMP_ERR);
+                        err  =  _edges.getInt(addr + _OFF_ERROR)
+                              + _edges.getInt(addr + _OFF_BUMP_ERR);
 
                         // Manual carry handling:
                         // keep sign and carry bit only and ignore last bit (preserve orientation):
-                        _unsafe.putInt(addr,               curx - ((err >> 30) & _ALL_BUT_LSB));
-                        _unsafe.putInt(addr + _OFF_ERROR, (err & _ERR_STEP_MAX));
+                        _edges.putInt(addr,               curx - ((err >> 30) & _ALL_BUT_LSB));
+                        _edges.putInt(addr + _OFF_ERROR, (err & _ERR_STEP_MAX));
 
                         if (DO_STATS) {
                             rdrCtx.stats.stat_rdr_crossings_updates.add(numCrossings);
@@ -1051,25 +1044,25 @@ public final class RendererNoAA implements MarlinRenderer, MarlinConst {
                            if it is removed from AEL for coming or last scanline */
 
                         // random access so use unsafe:
-                        addr = addr0 + ecur; // ecur + OFF_F_CURX
+                        addr = ecur; // ecur + OFF_F_CURX
 
                         // get current crossing:
-                        curx = _unsafe.getInt(addr);
+                        curx = _edges.getInt(addr);
 
                         // update crossing with orientation at last bit:
                         cross = curx;
 
                         // Increment x using DDA (fixed point):
-                        curx += _unsafe.getInt(addr + _OFF_BUMP_X);
+                        curx += _edges.getInt(addr + _OFF_BUMP_X);
 
                         // Increment error:
-                        err  =  _unsafe.getInt(addr + _OFF_ERROR)
-                              + _unsafe.getInt(addr + _OFF_BUMP_ERR);
+                        err  =  _edges.getInt(addr + _OFF_ERROR)
+                              + _edges.getInt(addr + _OFF_BUMP_ERR);
 
                         // Manual carry handling:
                         // keep sign and carry bit only and ignore last bit (preserve orientation):
-                        _unsafe.putInt(addr,               curx - ((err >> 30) & _ALL_BUT_LSB));
-                        _unsafe.putInt(addr + _OFF_ERROR, (err & _ERR_STEP_MAX));
+                        _edges.putInt(addr,               curx - ((err >> 30) & _ALL_BUT_LSB));
+                        _edges.putInt(addr + _OFF_ERROR, (err & _ERR_STEP_MAX));
 
                         if (DO_STATS) {
                             rdrCtx.stats.stat_rdr_crossings_updates.add(numCrossings);

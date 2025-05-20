@@ -28,11 +28,7 @@ package com.sun.marlin;
 import com.sun.prism.impl.shape.MaskData;
 import java.nio.ByteBuffer;
 import java.util.Arrays;
-import sun.misc.Unsafe;
 
-// FIXME: We must replace the terminally deprecated sun.misc.Unsafe
-// memory access methods; see JDK-8334137
-@SuppressWarnings("removal")
 public final class MaskMarlinAlphaConsumer implements MarlinAlphaConsumer {
     int x, y, width, height;
     final byte alphas[];
@@ -105,17 +101,13 @@ public final class MaskMarlinAlphaConsumer implements MarlinAlphaConsumer {
     static final OffHeapArray ALPHA_MAP_UNSAFE_NO_AA;
 
     static {
-        final Unsafe _unsafe = OffHeapArray.UNSAFE;
-
         // AA:
         byte[] _ALPHA_MAP = buildAlphaMap(MarlinConst.MAX_AA_ALPHA);
         ALPHA_MAP = _ALPHA_MAP; // Keep alive the OffHeapArray
         ALPHA_MAP_UNSAFE = new OffHeapArray(ALPHA_MAP, ALPHA_MAP.length); // 1K
 
-        long addr = ALPHA_MAP_UNSAFE.address;
-
         for (int i = 0; i < _ALPHA_MAP.length; i++) {
-            _unsafe.putByte(addr + i, _ALPHA_MAP[i]);
+            ALPHA_MAP_UNSAFE.putByte(i, _ALPHA_MAP[i]);
         }
 
         // NoAA:
@@ -123,10 +115,8 @@ public final class MaskMarlinAlphaConsumer implements MarlinAlphaConsumer {
         ALPHA_MAP_NO_AA = _ALPHA_MAP_NO_AA; // Keep alive the OffHeapArray
         ALPHA_MAP_UNSAFE_NO_AA = new OffHeapArray(ALPHA_MAP_NO_AA, ALPHA_MAP_NO_AA.length);
 
-        addr = ALPHA_MAP_UNSAFE_NO_AA.address;
-
         for (int i = 0; i < _ALPHA_MAP_NO_AA.length; i++) {
-            _unsafe.putByte(addr + i, _ALPHA_MAP_NO_AA[i]);
+            ALPHA_MAP_UNSAFE_NO_AA.putByte(i, _ALPHA_MAP_NO_AA[i]);
         }
     }
 
@@ -166,9 +156,6 @@ public final class MaskMarlinAlphaConsumer implements MarlinAlphaConsumer {
         final int w = width;
         final int off = (pix_y - y) * w;
 
-        final Unsafe _unsafe = OffHeapArray.UNSAFE;
-        final long addr_alpha = ALPHA_MAP_USED.address;
-
         final int from = pix_from - x;
 
         // skip useless pixels above boundary
@@ -188,7 +175,7 @@ public final class MaskMarlinAlphaConsumer implements MarlinAlphaConsumer {
             while (i < ato) {
                 curAlpha += alphaDeltas[i];
 
-                out[off + i] = _unsafe.getByte(addr_alpha + curAlpha); // [0..255]
+                out[off + i] = ALPHA_MAP_USED.getByte(curAlpha); // [0..255]
                 i++;
             }
 
@@ -205,7 +192,7 @@ public final class MaskMarlinAlphaConsumer implements MarlinAlphaConsumer {
             while (i < ato) {
                 curAlpha += alphaDeltas[i];
 
-                out[off + i] = _unsafe.getByte(addr_alpha + curAlpha); // [0..255]
+                out[off + i] = ALPHA_MAP_USED.getByte(curAlpha); // [0..255]
                 i++;
             }
 
@@ -229,9 +216,6 @@ public final class MaskMarlinAlphaConsumer implements MarlinAlphaConsumer {
         final byte[] out = this.alphas;
         final int w = width;
         final int off = (pix_y - y) * w;
-
-        final Unsafe _unsafe = OffHeapArray.UNSAFE;
-        final long addr_alpha = ALPHA_MAP_USED.address;
 
         final int from = pix_from - x;
 
@@ -290,7 +274,7 @@ public final class MaskMarlinAlphaConsumer implements MarlinAlphaConsumer {
                                 if (curAlpha == 0) {
                                     i = cx;
                                 } else {
-                                    val = _unsafe.getByte(addr_alpha + curAlpha);
+                                    val = ALPHA_MAP_USED.getByte(curAlpha);
                                     do {
                                         out[off + i] = val;
                                         i++;
@@ -307,7 +291,7 @@ public final class MaskMarlinAlphaConsumer implements MarlinAlphaConsumer {
 
             // Process remaining span:
             if (curAlpha != 0) {
-                val = _unsafe.getByte(addr_alpha + curAlpha);
+                val = ALPHA_MAP_USED.getByte(curAlpha);
                 while (i < ato) {
                     out[off + i] = val;
                     i++;
@@ -345,7 +329,7 @@ public final class MaskMarlinAlphaConsumer implements MarlinAlphaConsumer {
 
                             // fill span:
                             if (cx != i) {
-                                val = _unsafe.getByte(addr_alpha + curAlpha);
+                                val = ALPHA_MAP_USED.getByte(curAlpha);
                                 do {
                                     out[off + i] = val;
                                     i++;
@@ -361,7 +345,7 @@ public final class MaskMarlinAlphaConsumer implements MarlinAlphaConsumer {
 
             // Process remaining span:
             if (curAlpha != 0) {
-                val = _unsafe.getByte(addr_alpha + curAlpha);
+                val = ALPHA_MAP_USED.getByte(curAlpha);
                 while (i < ato) {
                     out[off + i] = val;
                     i++;
