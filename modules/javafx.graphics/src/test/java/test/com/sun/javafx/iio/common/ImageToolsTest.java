@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2018, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2018, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -126,5 +126,31 @@ public class ImageToolsTest {
         assertThrows(IllegalArgumentException.class, () -> ImageTools.validateMaxDimensions(Integer.MAX_VALUE - 1, Integer.MAX_VALUE - 1, 1));
         assertThrows(IllegalArgumentException.class, () -> ImageTools.validateMaxDimensions(Integer.MAX_VALUE, Integer.MAX_VALUE, 1));
         assertThrows(IllegalArgumentException.class, () -> ImageTools.validateMaxDimensions(Integer.MAX_VALUE, Integer.MAX_VALUE, 3));
+    }
+
+    @Test
+    public void testGetScaledImageName() {
+        String nameWithoutPath = "image.png";
+        String nameWithPath = "/home/path/test/for/testing/image.png";
+        String expectedWithoutPath = "image@3x.png";
+        String expectedWithPath = "/home/path/test/for/testing/image@4x.png";
+
+        assertEquals(expectedWithoutPath, ImageTools.getScaledImageName(nameWithoutPath, 3));
+        assertEquals(expectedWithPath, ImageTools.getScaledImageName(nameWithPath, 4));
+    }
+
+    @Test
+    public void testHasScaledName() {
+        assertTrue(ImageTools.hasScaledName("image@3x.png"));
+        assertTrue(ImageTools.hasScaledName("/home/path/test/for/testing/image@2x.png"));
+        assertTrue(ImageTools.hasScaledName("image@5x"));
+        assertFalse(ImageTools.hasScaledName("image.png"));
+        assertFalse(ImageTools.hasScaledName("/home/path/test/for/testing/image.png"));
+        assertFalse(ImageTools.hasScaledName("image"));
+        assertFalse(ImageTools.hasScaledName("image@somewhere"));
+        assertFalse(ImageTools.hasScaledName("image@3ish"));
+        assertFalse(ImageTools.hasScaledName("image@4ix"));
+        assertFalse(ImageTools.hasScaledName("image@0x"));
+        assertFalse(ImageTools.hasScaledName("image@-1x"));
     }
 }

@@ -182,7 +182,9 @@ LRESULT GlassApplication::WindowProc(UINT msg, WPARAM wParam, LPARAM lParam)
         case WM_THEMECHANGED:
         case WM_SYSCOLORCHANGE:
         case WM_DWMCOLORIZATIONCOLORCHANGED:
-            if (m_platformSupport.updatePreferences(PlatformSupport::PT_SYSTEM_COLORS)) {
+            if (m_platformSupport.updatePreferences(
+                    PlatformSupport::PreferenceType(PlatformSupport::PT_SYSTEM_COLORS |
+                                                    PlatformSupport::PT_UI_SETTINGS))) {
                 return 0;
             }
             break;
