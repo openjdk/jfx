@@ -28,7 +28,6 @@ package test.jfx.incubator.scene.control.richtext.model;
 import java.io.IOException;
 import java.io.StringWriter;
 import java.util.ArrayList;
-import java.util.List;
 import javafx.scene.paint.Color;
 import javafx.scene.text.TextAlignment;
 import org.junit.jupiter.api.Assertions;
@@ -46,7 +45,7 @@ import jfx.incubator.scene.control.richtext.model.StyledSegment;
  * Tests RichTextFormatHandler.
  */
 public class TestRichTextFormatHandler {
-    private static final boolean DEBUG = false;
+    private static boolean DEBUG = false;
 
     @Test
     public void testBasicAttributes() throws IOException {
@@ -98,6 +97,13 @@ public class TestRichTextFormatHandler {
             s("normal"),
             p()
         );
+    }
+
+    @Test
+    public void testUnknownAttributes() throws IOException {
+        testReadWrite("{unknown}text{!UNKNOWN}\n", "{}text{}\n");
+        testReadWrite("{unknown}text{!UNKNOWN}{!alignment|R}\n", "{}text{!alignment|R}\n");
+        testReadWrite("{unknown}{b}text\n", "{b}text\n");
     }
 
     @Test
@@ -179,6 +185,30 @@ public class TestRichTextFormatHandler {
         return StyledSegment.LINE_BREAK;
     }
 
+    private void testReadWrite(String input, String expected) throws IOException {
+        RichTextFormatHandler handler = RichTextFormatHandler.getInstance();
+        ArrayList<StyledSegment> segments = new ArrayList<>();
+
+        StyledInput in = handler.createStyledInput(input, null);
+        StyledSegment seg;
+        while ((seg = in.nextSegment()) != null) {
+            if (DEBUG) {
+                System.out.println(seg);
+            }
+            segments.add(seg);
+        }
+
+        StringWriter wr = new StringWriter();
+        StyledOutput out = RichTextFormatHandlerHelper.createStyledOutput(handler, null, wr);
+        for (StyledSegment s : segments) {
+            out.consume(s);
+        }
+        out.flush();
+
+        String result = wr.toString();
+        Assertions.assertEquals(expected, result);
+    }
+
     private void testRoundTrip(StyledSegment ... input) throws IOException {
         RichTextFormatHandler handler = RichTextFormatHandler.getInstance();
         // export to string
@@ -237,29 +267,6 @@ public class TestRichTextFormatHandler {
 
         // relying on stable order of attributes
         Assertions.assertEquals(exported, result);
-    }
-
-    private void testRoundTrip_DELETE(RichTextFormatHandler handler, String text) throws IOException {
-        ArrayList<StyledSegment> segments = new ArrayList<>();
-
-        StyledInput in = handler.createStyledInput(text, null);
-        StyledSegment seg;
-        while ((seg = in.nextSegment()) != null) {
-            segments.add(seg);
-            if (DEBUG) {
-                System.out.println(seg);
-            }
-        }
-
-        StringWriter wr = new StringWriter();
-        StyledOutput out = RichTextFormatHandlerHelper.createStyledOutput(handler, null, wr);
-        for (StyledSegment s : segments) {
-            out.consume(s);
-        }
-        out.flush();
-
-        String result = wr.toString();
-        Assertions.assertEquals(text, result);
     }
 
     private StyleAttributeMap normalize(StyleAttributeMap a) {
