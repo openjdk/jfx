@@ -2088,13 +2088,14 @@ public non-sealed class Text extends Shape {
     }
 
     /**
-     * Returns the object which provides a snapshot of the text layout geometry for this node.
+     * Returns a copy of the of the text layout geometry for this node. This copy is a snapshot
+     * of the text layout at the time the method is called.
      * <p>
      * While there is no general guarantee that successive invocations of this method return the same instance,
      * it is safe to either cache this object or call this method each time, since the information obtained from
      * this lightweight object remains valid until the next layout cycle.
      *
-     * @return the layout information
+     * @return a copy of the layout information
      * @since 25
      */
     public final LayoutInfo getLayoutInfo() {

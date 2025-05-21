@@ -29,7 +29,7 @@ import javafx.geometry.Rectangle2D;
 import com.sun.javafx.text.PrismLayoutInfo;
 
 /**
- * Provides a snapshot of the text layout geometry in a {@code Text} or a {@code TextFlow} node,
+ * Holds a snapshot of the text layout geometry in a {@code Text} or a {@code TextFlow} node,
  * such as break up of the text into lines, as well as other shapes derived from the layout
  * (selection, underline, etc.).
  * <p>
