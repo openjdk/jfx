@@ -113,13 +113,11 @@ final class OffHeapArray  {
         Arena newArena = Arena.ofShared();
         MemorySegment newSegment = newArena.allocate(len);
 
-        // KCR FIXME: We can probably limit the copy to "used" bytes, which
-        // should be set to zero (although it currently isn't) when resizing
-        // down to default size, which is done in dispose()
-        MemorySegment.copy(segment, 0, newSegment, 0, Math.min(this.length, len));
-//        if (this.used > 0) {
-//            MemorySegment.copy(segment, 0, newSegment, 0, Math.min(this.used, len));
-//        }
+        // KCR: Double-check this
+        // If there are any bytes in use, copy them to the newly reallocated array
+        if (this.used > 0) {
+            MemorySegment.copy(segment, 0, newSegment, 0, Math.min(this.used, len));
+        }
 
         this.arena.close();
         this.arena = newArena;
