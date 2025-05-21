@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2023, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -86,6 +86,9 @@ import jfx.incubator.scene.control.richtext.TextPos;
  * }
  * </pre>
  *
+ * A special token <code>{}</code> denotes an empty character attribute map,
+ * while <code>{!}</code> does the same for an empty paragraph attribute map.
+ * <p>
  * Attribute sequences are further deduplicated, using a single {number} token
  * which specifies the index into the list of unique sets of attributes.
  * Paragraph attribute sets are treated as separate from the segment attrubite sets.
