@@ -336,6 +336,11 @@ public class TreeTableViewSkin<T> extends TableViewSkinBase<T, TreeItem<T>, Tree
         // optimised in the future when time permits.
         flow.setCellCount(newCount);
 
+        TreeItem<T> root = getSkinnable().getRoot();
+        if (root == null || root.getValue() == null) {
+            requestRebuildCells();
+        }
+
         if (newCount != oldCount) {
             // The following line is (perhaps temporarily) disabled to
             // resolve two issues: JDK-8155798 and JDK-8147483.
