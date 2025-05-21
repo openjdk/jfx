@@ -25,7 +25,7 @@
 
 package com.sun.marlin;
 
-import static com.sun.marlin.MarlinConst.LOG_UNSAFE_MALLOC;
+import static com.sun.marlin.MarlinConst.LOG_OFF_HEAP_MALLOC;
 import java.lang.foreign.Arena;
 import java.lang.foreign.MemorySegment;
 import java.lang.foreign.ValueLayout;
@@ -64,7 +64,7 @@ final class OffHeapArray  {
     OffHeapArray(final Object parent, final long len) {
         // KCR: BEGIN DEBUG
         instance = instanceCount.incrementAndGet();
-        if (LOG_UNSAFE_MALLOC) {
+        if (LOG_OFF_HEAP_MALLOC) {
             System.err.println("OffHeapArray::<init> : " +
                     "instance = " + instance +
                     ", thread = " + Thread.currentThread());
@@ -78,7 +78,7 @@ final class OffHeapArray  {
         this.segment = arena.allocate(len);
         this.length  = len;
         this.used    = 0;
-        if (LOG_UNSAFE_MALLOC) {
+        if (LOG_OFF_HEAP_MALLOC) {
             MarlinUtils.logInfo(System.currentTimeMillis()
                                 + ": OffHeapArray.allocateMemory =   "
                                 + len + " for segment = " + this.segment);
@@ -129,7 +129,7 @@ final class OffHeapArray  {
      */
     void resize(final long len) {
         // KCR: BEGIN DEBUG
-        if (LOG_UNSAFE_MALLOC) {
+        if (LOG_OFF_HEAP_MALLOC) {
             System.err.println("OffHeapArray::resize : instance = " + instance + " len = " + len +
                     " [was: " + this.length + ", used = " + used + "]");
         }
@@ -149,7 +149,7 @@ final class OffHeapArray  {
         this.segment = newSegment;
         this.length  = len;
 
-        if (LOG_UNSAFE_MALLOC) {
+        if (LOG_OFF_HEAP_MALLOC) {
             MarlinUtils.logInfo(System.currentTimeMillis()
                                 + ": OffHeapArray.reallocateMemory = "
                                 + len + " for segment = " + this.segment);
@@ -158,7 +158,7 @@ final class OffHeapArray  {
 
     void free() {
         arena.close();
-        if (LOG_UNSAFE_MALLOC) {
+        if (LOG_OFF_HEAP_MALLOC) {
             MarlinUtils.logInfo(System.currentTimeMillis()
                                 + ": OffHeapArray.freeMemory =       "
                                 + this.length

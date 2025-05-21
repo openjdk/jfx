@@ -88,35 +88,35 @@ public final class MaskMarlinAlphaConsumer implements MarlinAlphaConsumer {
 
     @Override
     public void setMaxAlpha(int maxalpha) {
-        ALPHA_MAP_USED = (maxalpha == 1) ? ALPHA_MAP_UNSAFE_NO_AA : ALPHA_MAP_UNSAFE;
+        ALPHA_MAP_USED = (maxalpha == 1) ? ALPHA_MAP_OFF_HEAP_NO_AA : ALPHA_MAP_OFF_HEAP;
     }
 
     // The alpha map used by this object (taken out of our map cache) to convert
     // pixel coverage counts (which are in the range [0, maxalpha])
     // into alpha values, which are in [0,255]).
     static final byte[] ALPHA_MAP;
-    static final OffHeapArray ALPHA_MAP_UNSAFE;
+    static final OffHeapArray ALPHA_MAP_OFF_HEAP;
 
     static final byte[] ALPHA_MAP_NO_AA;
-    static final OffHeapArray ALPHA_MAP_UNSAFE_NO_AA;
+    static final OffHeapArray ALPHA_MAP_OFF_HEAP_NO_AA;
 
     static {
         // AA:
         byte[] _ALPHA_MAP = buildAlphaMap(MarlinConst.MAX_AA_ALPHA);
         ALPHA_MAP = _ALPHA_MAP; // Keep alive the OffHeapArray
-        ALPHA_MAP_UNSAFE = new OffHeapArray(ALPHA_MAP, ALPHA_MAP.length); // 1K
+        ALPHA_MAP_OFF_HEAP = new OffHeapArray(ALPHA_MAP, ALPHA_MAP.length); // 1K
 
         for (int i = 0; i < _ALPHA_MAP.length; i++) {
-            ALPHA_MAP_UNSAFE.putByte(i, _ALPHA_MAP[i]);
+            ALPHA_MAP_OFF_HEAP.putByte(i, _ALPHA_MAP[i]);
         }
 
         // NoAA:
         byte[] _ALPHA_MAP_NO_AA = buildAlphaMap(1);
         ALPHA_MAP_NO_AA = _ALPHA_MAP_NO_AA; // Keep alive the OffHeapArray
-        ALPHA_MAP_UNSAFE_NO_AA = new OffHeapArray(ALPHA_MAP_NO_AA, ALPHA_MAP_NO_AA.length);
+        ALPHA_MAP_OFF_HEAP_NO_AA = new OffHeapArray(ALPHA_MAP_NO_AA, ALPHA_MAP_NO_AA.length);
 
         for (int i = 0; i < _ALPHA_MAP_NO_AA.length; i++) {
-            ALPHA_MAP_UNSAFE_NO_AA.putByte(i, _ALPHA_MAP_NO_AA[i]);
+            ALPHA_MAP_OFF_HEAP_NO_AA.putByte(i, _ALPHA_MAP_NO_AA[i]);
         }
     }
 

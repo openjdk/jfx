@@ -778,7 +778,7 @@ public final class Renderer implements MarlinRenderer, MarlinConst {
         final int _ALL_BUT_LSB   = ALL_BUT_LSB;
         final int _ERR_STEP_MAX  = ERR_STEP_MAX;
 
-        // unsafe I/O:
+        // off-heap I/O:
         long addr;
         final int _SUBPIXEL_LG_POSITIONS_X = SUBPIXEL_LG_POSITIONS_X;
         final int _SUBPIXEL_LG_POSITIONS_Y = SUBPIXEL_LG_POSITIONS_Y;
@@ -855,7 +855,7 @@ public final class Renderer implements MarlinRenderer, MarlinConst {
                     for (i = 0, newCount = 0; i < prevNumCrossings; i++) {
                         // get the pointer to the edge
                         ecur = _edgePtrs[i];
-                        // random access so use unsafe:
+                        // random access so use off-heap:
                         if (_edges.getInt(addr + ecur) > y) {
                             _edgePtrs[newCount++] = ecur;
                         }
@@ -907,7 +907,7 @@ public final class Renderer implements MarlinRenderer, MarlinConst {
                     {
                         // store the pointer to the edge
                         _edgePtrs[numCrossings] = ecur;
-                        // random access so use unsafe:
+                        // random access so use off-heap:
                         ecur = _edges.getInt(addr + ecur);
                     }
 
@@ -973,7 +973,7 @@ public final class Renderer implements MarlinRenderer, MarlinConst {
                         /* note: it is faster to always update edges even
                            if it is removed from AEL for coming or last scanline */
 
-                        // random access so use unsafe:
+                        // random access so use off-heap:
                         addr = ecur; // ecur + OFF_F_CURX
 
                         // get current crossing:
@@ -1080,7 +1080,7 @@ public final class Renderer implements MarlinRenderer, MarlinConst {
                         /* note: it is faster to always update edges even
                            if it is removed from AEL for coming or last scanline */
 
-                        // random access so use unsafe:
+                        // random access so use off-heap:
                         addr = ecur; // ecur + OFF_F_CURX
 
                         // get current crossing:
