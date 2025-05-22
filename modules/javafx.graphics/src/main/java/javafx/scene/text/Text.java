@@ -1119,9 +1119,10 @@ public non-sealed class Text extends Shape {
      * @return an array of {@code PathElement} which can be used to create a {@code Shape}
      * @since 25
      */
-    public final PathElement[] getStrikeThroughShape(int start, int end) {
-        return getRange(start, end, TextLayout.TYPE_STRIKETHROUGH);
-    }
+// TODO
+//    public final PathElement[] getStrikeThroughShape(int start, int end) {
+//        return getRange(start, end, TextLayout.TYPE_STRIKETHROUGH);
+//    }
 
     private float getYAdjustment(BaseBounds bounds) {
         VPos origin = getTextOrigin();
