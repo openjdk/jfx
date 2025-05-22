@@ -128,32 +128,11 @@ public abstract non-sealed class PrismLayoutInfo extends LayoutInfo {
 
     @Override
     public CaretInfo caretInfoAt(int charIndex, boolean leading) {
+        TextLayout.CaretGeometry g = layout.getCaretGeometry(charIndex, leading);
         Insets m = insets();
         double dx = m.getLeft(); // TODO RTL?
         double dy = m.getTop();
-        float[] c = layout.getCaretGeometry(charIndex, leading);
-
-        Rectangle2D[] parts;
-        if (c.length == 3) {
-            // [x, y, h] - corresponds to a single line from (x, y) to (x, y + h)
-            double x = c[0] + dx;
-            double y = c[1] + dy;
-            double h = c[2];
-            parts = new Rectangle2D[] {
-                new Rectangle2D(x, y, 0.0, h)
-            };
-        } else {
-            // [x, y, x2, h] - corresponds to a split caret drawn as two lines, the first line
-            // drawn from (x, y) to (x, y + h/2), the second line drawn from (x2, y + h/2) to (x2, y + h).
-            double x = c[0] + dx;
-            double y = c[1] + dy;
-            double x2 = c[2] + dx;
-            double h2 = c[3] / 2.0;
-            parts = new Rectangle2D[] {
-                new Rectangle2D(x, y, 0.0, h2),
-                new Rectangle2D(x2, y + h2, 0.0, h2)
-            };
-        }
+        Rectangle2D[] parts = TextUtils.getCaretRectangles(g, dx, dy);
         return new PrismCaretInfo(parts);
     }
 }

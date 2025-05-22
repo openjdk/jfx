@@ -31,8 +31,6 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Hashtable;
 import java.util.concurrent.atomic.AtomicBoolean;
-import javafx.scene.shape.LineTo;
-import javafx.scene.shape.MoveTo;
 import javafx.scene.shape.PathElement;
 import com.sun.javafx.font.CharToGlyphMapper;
 import com.sun.javafx.font.FontResource;
@@ -314,7 +312,7 @@ public class PrismTextLayout implements TextLayout {
     }
 
     @Override
-    public float[] getCaretGeometry(int offset, boolean isLeading) {
+    public TextLayout.CaretGeometry getCaretGeometry(int offset, boolean isLeading) {
         ensureLayout();
         int lineIndex = 0;
         int lineCount = getLineCount();
@@ -404,22 +402,22 @@ public class PrismTextLayout implements TextLayout {
                             lineX2 = getMirroringWidth() - lineX2;
                         }
                         // split caret
-                        return new float[] {
+                        return new TextLayout.CaretGeometry.Split(
                             lineX,
                             lineY,
                             lineX2,
                             lineHeight
-                        };
+                        );
                     }
                 }
             }
         }
         // regular caret
-        return new float[] {
+        return new TextLayout.CaretGeometry.Single(
             lineX,
             lineY,
             lineHeight
-        };
+        );
     }
 
     @Override

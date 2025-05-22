@@ -95,33 +95,43 @@ public final class TextUtils {
         return new Rectangle2D(b.getMinX() + dx, dy, w, b.getHeight() + lineSpacing);
     }
 
-    public static PathElement[] getCaretShape(float[] c, double dx, double dy) {
-        if (c == null) {
-            return null;
-        } else if (c.length == 3) {
-            // [x, y, h] - corresponds to a single line from (x, y) to (x, y + h)
-            double x = c[0] + dx;
-            double y = c[1] + dy;
-            double h = c[2];
-
+    public static PathElement[] getCaretPathElements(TextLayout.CaretGeometry g, double dx, double dy) {
+        switch (g) {
+        case TextLayout.CaretGeometry.Single s:
+            double x = s.x() + dx;
+            double y = s.y() + dy;
             return new PathElement[] {
                 new MoveTo(x, y),
-                new LineTo(x, y + h)
+                new LineTo(x, y + s.height())
             };
-        } else {
-            // [x, y, x2, h] - corresponds to a split caret drawn as two lines, the first line
-            // drawn from (x, y) to (x, y + h/2), the second line drawn from (x2, y + h/2) to (x2, y + h).
-            double x = c[0] + dx;
-            double y = c[1] + dy;
-            double x2 = c[2] + dx;
-            double h = c[3];
-            double y2 = y + h/2.0;
-
+        case TextLayout.CaretGeometry.Split s:
+            double x1 = s.x1() + dx;
+            double x2 = s.x2() + dx;
+            double y1 = s.y() + dy;
+            double y2 = y1 + s.height() / 2.0;
             return new PathElement[] {
-                new MoveTo(x, y),
-                new LineTo(x, y2),
+                new MoveTo(x1, y1),
+                new LineTo(x1, y2),
                 new MoveTo(x2, y2),
-                new LineTo(x2, y + h)
+                new LineTo(x2, y1 + s.height())
+            };
+        }
+    }
+
+    public static Rectangle2D[] getCaretRectangles(TextLayout.CaretGeometry g, double dx, double dy) {
+        switch (g) {
+        case TextLayout.CaretGeometry.Single s:
+            return new Rectangle2D[] {
+                new Rectangle2D(s.x() + dx, s.y() + dy, 0.0, s.height())
+            };
+        case TextLayout.CaretGeometry.Split s:
+            double x1 = s.x1() + dx;
+            double x2 = s.x2() + dx;
+            double y = s.y() + dy;
+            double h2 = s.height() / 2.0;
+            return new Rectangle2D[] {
+                new Rectangle2D(x1, y, 0.0, h2),
+                new Rectangle2D(x2, y + h2, 0.0, h2)
             };
         }
     }
