@@ -1111,19 +1111,6 @@ public non-sealed class Text extends Shape {
         return getRange(start, end, TextLayout.TYPE_UNDERLINE);
     }
 
-    /**
-     * Returns the shape for the strike-through in local coordinates.
-     *
-     * @param start the beginning character index for the range
-     * @param end the end character index (non-inclusive) for the range
-     * @return an array of {@code PathElement} which can be used to create a {@code Shape}
-     * @since 25
-     */
-// TODO
-//    public final PathElement[] getStrikeThroughShape(int start, int end) {
-//        return getRange(start, end, TextLayout.TYPE_STRIKETHROUGH);
-//    }
-
     private float getYAdjustment(BaseBounds bounds) {
         VPos origin = getTextOrigin();
         if (origin == null) origin = DEFAULT_TEXT_ORIGIN;
