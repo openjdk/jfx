@@ -118,6 +118,7 @@ INCLUDES = $(addprefix -I$(SRCBASE_DIR)/glib/,$(DIRLIST)) \
 
 CFLAGS =   -DWIN32 \
            -D_WINDOWS \
+           -D_DISABLE_CONSTEXPR_MUTEX_CONSTRUCTOR \
            -D_USRDLL \
            -DGLIB_COMPILATION \
            -DGSTREAMER_LITE \
