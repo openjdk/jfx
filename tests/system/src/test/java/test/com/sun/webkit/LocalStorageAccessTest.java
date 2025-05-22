@@ -67,11 +67,6 @@ public class LocalStorageAccessTest {
         final List<String> cmd = new ArrayList<>();
         cmd.add(workerJavaCmd);
 
-        // FIXME: Remove this when JDK-8334137 is fixed
-        if (Runtime.version().feature() >= 24) {
-            cmd.add("--sun-misc-unsafe-memory-access=allow");
-        }
-
         cmd.addAll(List.of(
             "--enable-native-access=ALL-UNNAMED",
             "-cp", appModulePath + "/mymod",

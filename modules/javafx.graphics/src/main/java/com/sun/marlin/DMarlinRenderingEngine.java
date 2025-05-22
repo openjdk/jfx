@@ -219,8 +219,8 @@ public final class DMarlinRenderingEngine implements MarlinConst
                 + MarlinConst.USE_LOGGER);
         logInfo("prism.marlin.logCreateContext = "
                 + MarlinConst.LOG_CREATE_CONTEXT);
-        logInfo("prism.marlin.logUnsafeMalloc  = "
-                + MarlinConst.LOG_UNSAFE_MALLOC);
+        logInfo("prism.marlin.logOffHeapMalloc  = "
+                + MarlinConst.LOG_OFF_HEAP_MALLOC);
 
         // quality settings
         logInfo("prism.marlin.curve_len_err    = "

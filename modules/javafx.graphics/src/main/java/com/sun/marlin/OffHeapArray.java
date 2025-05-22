@@ -25,53 +25,101 @@
 
 package com.sun.marlin;
 
-import static com.sun.marlin.MarlinConst.LOG_UNSAFE_MALLOC;
-import java.lang.reflect.Field;
-import sun.misc.Unsafe;
+import static com.sun.marlin.MarlinConst.LOG_OFF_HEAP_MALLOC;
+import java.lang.foreign.Arena;
+import java.lang.foreign.MemorySegment;
+import java.lang.foreign.ValueLayout;
+import java.nio.ByteOrder;
 
-/**
- *
- */
-// FIXME: We must replace the terminally deprecated sun.misc.Unsafe
-// memory access methods; see JDK-8334137
-@SuppressWarnings("removal")
+// KCR: BEGIN DEBUG
+import java.util.concurrent.atomic.AtomicInteger;
+// KCR: END DEBUG
+
 final class OffHeapArray  {
 
-    // unsafe reference
-    static final Unsafe UNSAFE;
+    private Arena arena;
+
     // size of int / float
     static final int SIZE_INT;
+    // FFM stuff
+    private static final ValueLayout.OfByte BYTE_LAYOUT = ValueLayout.JAVA_BYTE;
+    private static final ValueLayout.OfInt INT_LAYOUT = ValueLayout.JAVA_INT.withOrder(ByteOrder.BIG_ENDIAN);
 
     static {
-        try {
-            final Field field = Unsafe.class.getDeclaredField("theUnsafe");
-            field.setAccessible(true);
-            UNSAFE = (Unsafe) field.get(null);
-        } catch (Exception e) {
-            throw new InternalError("Unable to get sun.misc.Unsafe instance", e);
-        }
-
-        SIZE_INT = Unsafe.ARRAY_INT_INDEX_SCALE;
+        // KCR FIXME: get this from FFM
+        SIZE_INT = 4;
     }
 
     /* members */
-    long address;
-    long length;
-    int  used;
+    private MemorySegment segment;
+//    private long address;
+    private long length;
+    private int used;
+
+    // KCR: BEGIN DEBUG
+    private static final AtomicInteger instanceCount = new AtomicInteger(0);
+    private final int instance;
+    // KCR: END DEBUG
 
     OffHeapArray(final Object parent, final long len) {
+        // KCR: BEGIN DEBUG
+        instance = instanceCount.incrementAndGet();
+        if (LOG_OFF_HEAP_MALLOC) {
+            System.err.println("OffHeapArray::<init> : " +
+                    "instance = " + instance +
+                    ", thread = " + Thread.currentThread());
+        }
+        // KCR: END DEBUG
+
+        arena = Arena.ofShared();
+
         // note: may throw OOME:
-        this.address = UNSAFE.allocateMemory(len);
+        // KCR FIXME: Set a MemoryLayout
+        this.segment = arena.allocate(len);
         this.length  = len;
         this.used    = 0;
-        if (LOG_UNSAFE_MALLOC) {
+        if (LOG_OFF_HEAP_MALLOC) {
             MarlinUtils.logInfo(System.currentTimeMillis()
                                 + ": OffHeapArray.allocateMemory =   "
-                                + len + " to addr = " + this.address);
+                                + len + " for segment = " + this.segment);
         }
 
         // Register a cleaning function to ensure freeing off-heap memory:
         MarlinUtils.getCleaner().register(parent, this::free);
+    }
+
+    /**
+     * Gets the length of this array.
+     *
+     * @return the length in bytes
+     */
+    long getLength() {
+        return length;
+    }
+
+    /**
+     * Gets the number of bytes currently being used. Always <= length
+     * @return number of used bytes
+     */
+    int getUsed() {
+        return used;
+    }
+
+    /**
+     * Sets the number of bytes currently being used. Always <= length
+     * @param used number of used bytes
+     */
+    void setUsed(int used) {
+        this.used = used;
+    }
+
+    /**
+     * Increments the number of bytes currently being used.
+     * Curr used + incr used must be <= length
+     * @param used number of used bytes to increment
+     */
+    void incrementUsed(int used) {
+        this.used += used;
     }
 
     /*
@@ -80,28 +128,62 @@ final class OffHeapArray  {
      * @throws OutOfMemoryError if the allocation is refused by the system
      */
     void resize(final long len) {
-        // note: may throw OOME:
-        this.address = UNSAFE.reallocateMemory(address, len);
+        // KCR: BEGIN DEBUG
+        if (LOG_OFF_HEAP_MALLOC) {
+            System.err.println("OffHeapArray::resize : instance = " + instance + " len = " + len +
+                    " [was: " + this.length + ", used = " + used + "]");
+        }
+        // KCR: END DEBUG
+
+        Arena newArena = Arena.ofShared();
+        MemorySegment newSegment = newArena.allocate(len);
+
+        // KCR: Double-check this
+        // If there are any bytes in use, copy them to the newly reallocated array
+        if (this.used > 0) {
+            MemorySegment.copy(segment, 0, newSegment, 0, Math.min(this.used, len));
+        }
+
+        this.arena.close();
+        this.arena = newArena;
+        this.segment = newSegment;
         this.length  = len;
-        if (LOG_UNSAFE_MALLOC) {
+
+        if (LOG_OFF_HEAP_MALLOC) {
             MarlinUtils.logInfo(System.currentTimeMillis()
                                 + ": OffHeapArray.reallocateMemory = "
-                                + len + " to addr = " + this.address);
+                                + len + " for segment = " + this.segment);
         }
     }
 
     void free() {
-        UNSAFE.freeMemory(this.address);
-        if (LOG_UNSAFE_MALLOC) {
+        arena.close();
+        if (LOG_OFF_HEAP_MALLOC) {
             MarlinUtils.logInfo(System.currentTimeMillis()
                                 + ": OffHeapArray.freeMemory =       "
                                 + this.length
-                                + " at addr = " + this.address);
+                                + " for segment = " + this.segment);
         }
-        this.address = 0L;
     }
 
     void fill(final byte val) {
-        UNSAFE.setMemory(this.address, this.length, val);
+        segment.fill(val);
     }
+
+    void putByte(long offset, byte val) {
+        segment.set(BYTE_LAYOUT, offset, val);
+    }
+
+    void putInt(long offset, int val) {
+        segment.set(INT_LAYOUT, offset, val);
+    }
+
+    byte getByte(long offset) {
+        return segment.get(BYTE_LAYOUT, offset);
+    }
+
+    int getInt(long offset) {
+        return segment.get(INT_LAYOUT, offset);
+    }
+
 }
