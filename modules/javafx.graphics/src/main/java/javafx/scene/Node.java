@@ -107,6 +107,7 @@ import javafx.scene.transform.Transform;
 import javafx.stage.Window;
 import javafx.util.Callback;
 
+import java.lang.ref.WeakReference;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -634,7 +635,7 @@ public abstract sealed class Node
 
             @Override
             public void requestFocusVisible(Node node) {
-                node.requestFocusVisible();
+                node.requestFocus(null, true);
             }
 
             @Override
@@ -8248,6 +8249,11 @@ public abstract sealed class Node
     final void setFocusQuietly(boolean focused, boolean focusVisible) {
         this.focused.set(focused);
         this.focusVisible.set(focused && focusVisible);
+
+        Node delegate = getFocusDelegate(this.focused.getHoistingNode());
+        if (delegate != null) {
+            delegate.setFocusQuietly(focused, focusVisible);
+        }
     }
 
     /**
@@ -8256,6 +8262,11 @@ public abstract sealed class Node
      * are fired on the current node and on all of its parents, if necessary.
      */
     final void notifyFocusListeners() {
+        Node delegate = getFocusDelegate(focused.getHoistingNode());
+        if (delegate != null) {
+            delegate.notifyFocusListeners();
+        }
+
         focused.notifyListeners();
         focusVisible.notifyListeners();
 
@@ -8310,7 +8321,11 @@ public abstract sealed class Node
      * @see #requestFocus()
      * @defaultValue false
      */
-    private final FocusPropertyBase focused = new FocusPropertyBase() {
+    private final FocusedProperty focused = new FocusedProperty();
+
+    private final class FocusedProperty extends FocusPropertyBase {
+        private WeakReference<Node> hoistingNode;
+
         @Override
         protected PseudoClass getPseudoClass() {
             return FOCUSED_PSEUDOCLASS_STATE;
@@ -8333,6 +8348,10 @@ public abstract sealed class Node
         @Override
         public void set(boolean value) {
             if (get() != value) {
+                if (!value) {
+                    hoistingNode = null;
+                }
+
                 super.set(value);
 
                 int change = value ? 1 : -1;
@@ -8343,6 +8362,39 @@ public abstract sealed class Node
                     node = node.getParent();
                 } while (node != null);
             }
+        }
+
+        private void setHoistingNode(Node hoistingNode) {
+            this.hoistingNode = new WeakReference<>(hoistingNode);
+        }
+
+        /**
+         * Resolves the hoisting node of this focused node, which is always a descendant of this node.
+         * <p>
+         * Note that the hoisting node is tracked as a snapshot in time, which means that when we are trying
+         * to resolve it, it might already have been removed from the scene graph, or moved to a different
+         * place so that is is no longer a descendant of this node.
+         *
+         * @return the hoisting node, or {@code null} if no hoisting node is tracked or if the tracked
+         *         node is not a descendant of this node
+         */
+        private Node getHoistingNode() {
+            Node hoistingNode = this.hoistingNode != null ? this.hoistingNode.get() : null;
+            if (hoistingNode == null) {
+                return null;
+            }
+
+            Node parent = hoistingNode.getParent();
+            while (parent != null) {
+                if (parent == Node.this) {
+                    return hoistingNode;
+                }
+
+                parent = parent.getParent();
+            }
+
+            this.hoistingNode = null;
+            return null;
         }
     };
 
@@ -8487,6 +8539,117 @@ public abstract sealed class Node
     }
 
     /**
+     * Specifies whether this {@code Node} should hoist focus requests to its closest focus scope.
+     * When this property is set to {@code true}, calling the {@link #requestFocus()} method has no
+     * effect on this node, but is equivalent to requesting focus for the closest ancestor for which
+     * {@link #isFocusScope()} is {@code true}.
+     *
+     * @since 24
+     */
+    private BooleanProperty hoistFocus;
+
+    public final boolean isHoistFocus() {
+        return hoistFocus == null ? false : hoistFocus.get();
+    }
+
+    public final void setHoistFocus(boolean value) {
+        if (value || hoistFocus != null) {
+            hoistFocusProperty().set(value);
+        }
+    }
+
+    public final BooleanProperty hoistFocusProperty() {
+        if (hoistFocus == null) {
+            hoistFocus = new BooleanPropertyBase() {
+                @Override
+                public Object getBean() {
+                    return Node.this;
+                }
+
+                @Override
+                public String getName() {
+                    return "hoistFocus";
+                }
+            };
+        }
+
+        return hoistFocus;
+    }
+
+    /**
+     * Indicates whether this {@code Node} is eligible to receive focus when a child node {@link #hoistFocus hoists}
+     * a focus request. A node that receives a focus hoisting request may decide to hoist the request even further
+     * up the scene graph.
+     * <p>
+     * Focus scoping is a technique employed by controls that need to isolate their internal structure (which may
+     * be defined by a skin) from their external representation. Consider a control with an internal structure
+     * that contains an interactive and independently focusable control. When a user clicks on the internal
+     * interactive control, it is often desired that the external representation receive the input focus, so
+     * that users of the control can reason about it as a monolith instead of a composite with unknown parts.
+     * <p>
+     * Focus scoping is often combined with {@link #getFocusDelegate() focus delegation}.
+     *
+     * @return {@code true} if this {@code Node} is eligible to receive hoisted focus requests;
+     *         {@code false} otherwise
+     * @since 24
+     */
+    boolean isFocusScope() {
+        return false;
+    }
+
+    /**
+     * Gets the focus delegate for this {@code Node}, which must be a descendant of this {@code Node}.
+     * <p>
+     * Focus delegation allows nodes to delegate events targeted at them to one of their descendants. This is
+     * a technique employed by controls that need to isolate their internal structure (which may be defined by
+     * a skin) from their external representation. The external representation delegates the input focus to an
+     * internal control by returning the internal control from the {@link #getFocusDelegate()} method. In this
+     * case, when the external control receives the input focus, the internal control is focused as well. When
+     * an input event is sent to the focused control, the external control receives the event first. If the
+     * event is not consumed, it is dispatched to the focus delegate. A focus delegate might delegate the input
+     * focus even further, forming a chain of focus delegates.
+     * <p>
+     * If an implementation returns a node from this method that is not a descendant of this {@code Node},
+     * JavaFX ignores the returned value and treats this {@code Node} as having no focus delegate.
+     * <p>
+     * Focus delegation is often combined with {@link #isFocusScope() focus scoping}.
+     *
+     * @param hoistingNode the descendant of this {@code Node} that hoisted the focus request
+     *                     (not necessarily the focus delegate), or {@code null}
+     * @return the focus delegate, which is a descendant of this {@code Node}
+     * @since 24
+     */
+    Node getFocusDelegate(Node hoistingNode) {
+        return null;
+    }
+
+    /**
+     * Resolves a chain of focus delegates.
+     * This method also verifies that a focus delegate is a descendant of this node.
+     *
+     * @return the final focus delegate, or {@code null} if this node has no focus delegate,
+     *         or if the focus delegate is not a descendant of this node
+     */
+    final Node resolveFocusDelegate() {
+        Node delegate = getFocusDelegate(focused.getHoistingNode());
+        if (delegate == null) {
+            return null;
+        }
+
+        Node parent = delegate.getParent();
+        while (parent != this && parent != null) {
+            parent = parent.getParent();
+        }
+
+        if (parent == null) {
+            return null;
+        }
+
+        Node nextDelegate = delegate.resolveFocusDelegate();
+        return nextDelegate != null ? nextDelegate : delegate;
+    }
+
+    /**
      * Called when something has changed on this node that *may* have made the
      * scene's focus dirty. This covers the cases where this node is the focus
      * owner and it may have lost eligibility, or it's traversable and it may
@@ -8516,19 +8679,27 @@ public abstract sealed class Node
      * <p>This method will clear the {@link #focusVisible} flag.
      */
     public void requestFocus() {
-        if (getScene() != null) {
-            getScene().requestFocus(this, false);
-        }
+        requestFocus(null, false);
     }
 
-    /**
-     * Requests focus as if by calling {@link #requestFocus()}, and additionally
-     * sets the {@link #focusVisible} flag.
-     */
-    private void requestFocusVisible() {
-        if (getScene() != null) {
-            getScene().requestFocus(this, true);
+    private void requestFocus(Node hoistingNode, boolean focusVisible) {
+        var scene = getScene();
+        if (scene == null) {
+            return;
         }
+
+        focused.setHoistingNode(hoistingNode);
+
+        if (isHoistFocus()) {
+            for (Node node = getParent(); node != null; node = node.getParent()) {
+                if (node.isFocusScope()) {
+                    node.requestFocus(this, focusVisible);
+                    return;
+                }
+            }
+        }
+
+        scene.requestFocus(this, focusVisible);
     }
 
     /**
@@ -8946,18 +9117,25 @@ public abstract sealed class Node
         tail = tail.prepend(preprocessMouseEventDispatcher);
 
         // prepend all event dispatchers from this node to the root
-        Node curNode = this;
-        do {
-            if (curNode.eventDispatcher != null) {
-                final EventDispatcher eventDispatcherValue =
-                        curNode.eventDispatcher.get();
-                if (eventDispatcherValue != null) {
-                    tail = tail.prepend(eventDispatcherValue);
+        for (Node curNode = this, curParent = getParent();
+             curNode != null;
+             curNode = curParent != null ? curParent : curNode.getSubScene(),
+             curParent = curNode != null ? curNode.getParent() : null) {
+
+            // If our parent has a focus delegate, we need to use a special dispatcher that can retarget
+            // the event to the focus delegate (even if this node doesn't have an event dispatcher itself).
+            if (curParent != null && curParent.getFocusDelegate(focused.getHoistingNode()) != null) {
+                tail = tail.prepend(curNode::dispatchRetargetedEvent);
+            } else {
+                EventDispatcher dispatcher = curNode.eventDispatcher != null
+                    ? curNode.eventDispatcher.get()
+                    : null;
+
+                if (dispatcher != null) {
+                    tail = tail.prepend(dispatcher);
                 }
             }
-            final Node curParent = curNode.getParent();
-            curNode = curParent != null ? curParent : curNode.getSubScene();
-        } while (curNode != null);
+        }
 
         if (getScene() != null) {
             // prepend scene's dispatch chain
@@ -8965,6 +9143,36 @@ public abstract sealed class Node
         }
 
         return tail;
+    }
+
+    private Event dispatchRetargetedEvent(Event event, EventDispatchChain tail) {
+        Node parent = getParent();
+        boolean retarget = false;
+
+        // Focus delegation is the only scenario in which the event target may be the parent node.
+        // Since we are in the capturing phase, we need to retarget the event to the focus delegate.
+        if (event.getTarget() == parent) {
+            retarget = true;
+            event = event.copyFor(event.getSource(), parent.getFocusDelegate(focused.getHoistingNode()));
+        }
+
+        // Dispatch the event to our event dispatcher, or if this node doesn't have one,
+        // directly to the rest of the event dispatch chain.
+        EventDispatcher dispatcher = eventDispatcher != null ? eventDispatcher.get() : null;
+        if (dispatcher != null) {
+            event = dispatcher.dispatchEvent(event, tail);
+        } else {
+            event = tail.dispatchEvent(event);
+        }
+
+        // The event was consumed, nothing left to do.
+        if (event == null) {
+            return null;
+        }
+
+        // Now we are in the bubbling phase. If we retargeted the capturing event earlier,
+        // we now need to retarget the bubbling event back to its original target.
+        return retarget ? event.copyFor(event.getSource(), parent) : event;
     }
 
     // PENDING_DOC_REVIEW
