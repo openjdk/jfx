@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2023, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -38,11 +38,13 @@ import java.util.Comparator;
 import java.util.HashMap;
 import javafx.scene.input.DataFormat;
 import javafx.scene.paint.Color;
+import javafx.scene.text.TabStop;
 import javafx.scene.text.TextAlignment;
 import javafx.util.StringConverter;
 import javafx.util.converter.DoubleStringConverter;
 import com.sun.jfx.incubator.scene.control.richtext.Converters;
 import com.sun.jfx.incubator.scene.control.richtext.RichTextFormatHandlerHelper;
+import com.sun.jfx.incubator.scene.control.richtext.StyleAttributeMapHelper;
 import jfx.incubator.scene.control.richtext.StyleResolver;
 import jfx.incubator.scene.control.richtext.TextPos;
 
@@ -55,8 +57,8 @@ import jfx.incubator.scene.control.richtext.TextPos;
  * PARAGRAPH[]
  *
  * PARAGRAPH: {
- *     PARAGRAPH_ATTRIBUTE[]*,
  *     TEXT_SEGMENT[],
+ *     PARAGRAPH_ATTRIBUTE[]*,
  *     "\n"
  * }
  *
@@ -80,10 +82,14 @@ import jfx.incubator.scene.control.richtext.TextPos;
  * }
  *
  * TEXT_SEGMENT: {
- *     ATTRIBUTE[]*
+ *     ATTRIBUTE[]* or {}
  *     (text string with escaped special characters)
  * }
  * </pre>
+ *
+ * A special token <code>{}</code> denotes an empty character attribute map,
+ * while <code>{!}</code> does the same for an empty paragraph attribute map.
+ * <p>
  * Attribute sequences are further deduplicated, using a single {number} token
  * which specifies the index into the list of unique sets of attributes.
  * Paragraph attribute sets are treated as separate from the segment attrubite sets.
@@ -112,6 +118,7 @@ public class RichTextFormatHandler extends DataFormatHandler {
     private static final StringConverter<ParagraphDirection> DIRECTION_CONVERTER = Converters.paragraphDirectionConverter();
     private static final DoubleStringConverter DOUBLE_CONVERTER = new DoubleStringConverter();
     private static final StringConverter<String> STRING_CONVERTER = Converters.stringConverter();
+    private static final StringConverter<TabStop[]> TAB_STOPS_CONVERTER = Converters.tabStopsConverter();
     private static final StringConverter<TextAlignment> TEXT_ALIGNMENT_CONVERTER = Converters.textAlignmentConverter();
     // String -> Handler
     // StyleAttribute -> Handler
@@ -138,6 +145,7 @@ public class RichTextFormatHandler extends DataFormatHandler {
         addHandler(StyleAttributeMap.SPACE_LEFT, "spaceLeft", DOUBLE_CONVERTER);
         addHandler(StyleAttributeMap.SPACE_RIGHT, "spaceRight", DOUBLE_CONVERTER);
         addHandlerBoolean(StyleAttributeMap.STRIKE_THROUGH, "ss");
+        addHandler(StyleAttributeMap.TAB_STOPS, "tabs", TAB_STOPS_CONVERTER);
         addHandler(StyleAttributeMap.TEXT_ALIGNMENT, "alignment", TEXT_ALIGNMENT_CONVERTER);
         addHandler(StyleAttributeMap.TEXT_COLOR, "tc", COLOR_CONVERTER);
         addHandlerBoolean(StyleAttributeMap.UNDERLINE, "u");
@@ -303,6 +311,7 @@ public class RichTextFormatHandler extends DataFormatHandler {
         }
 
         private void emitAttributes(StyleAttributeMap attrs, boolean forParagraph) throws IOException {
+            attrs = StyleAttributeMapHelper.filter(attrs, forParagraph);
             if ((attrs != null) && (!attrs.isEmpty())) {
                 Integer num = styles.get(attrs);
                 if (num == null) {
@@ -357,9 +366,14 @@ public class RichTextFormatHandler extends DataFormatHandler {
                     wr.write(String.valueOf(num));
                     wr.write('}');
                 }
-            } else if (forParagraph) {
-                // this special token clears the paragraph attributes
-                wr.write("{!}");
+            } else {
+                if (forParagraph) {
+                    // this special token clears the paragraph attributes
+                    wr.write("{!}");
+                } else {
+                    // special token indicates the next text segment
+                    wr.write("{}");
+                }
             }
         }
 
@@ -462,7 +476,7 @@ public class RichTextFormatHandler extends DataFormatHandler {
                 String text = decodeText();
                 return StyledSegment.of(text);
             } catch (IOException e) {
-                err(e);
+                log(e);
                 return null;
             }
         }
@@ -498,13 +512,9 @@ public class RichTextFormatHandler extends DataFormatHandler {
                 }
                 String s = text.substring(index, ix);
                 if (s.length() == 0) {
-                    if (forParagraph) {
-                        index = ix + 1;
-                        // special token clears paragraph attributes
-                        return StyleAttributeMap.EMPTY;
-                    } else {
-                        throw err("empty attribute name");
-                    }
+                    index = ix + 1;
+                    // either {} or {!} clears signifies empty attributes
+                    return StyleAttributeMap.EMPTY;
                 }
                 int n = parseStyleNumber(s);
                 if (n < 0) {

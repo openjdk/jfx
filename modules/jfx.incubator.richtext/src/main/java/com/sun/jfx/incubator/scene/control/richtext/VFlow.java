@@ -791,10 +791,7 @@ public class VFlow extends Pane implements StyleResolver, StyledTextModel.Listen
 
             // first line indent operates on TextCell and not its content
             if (pa != null) {
-                Double firstLineIndent = pa.getFirstLineIndent();
-                if (firstLineIndent != null) {
-                    cell.add(new FirstLineIndentSpacer(firstLineIndent));
-                }
+                cell.setParagraphAttributes(pa);
             }
 
             // highlights
