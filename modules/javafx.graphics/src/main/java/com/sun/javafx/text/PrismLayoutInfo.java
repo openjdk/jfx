@@ -28,7 +28,6 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
-import javafx.geometry.Insets;
 import javafx.geometry.Rectangle2D;
 import javafx.scene.text.CaretInfo;
 import javafx.scene.text.LayoutInfo;
@@ -44,7 +43,9 @@ public abstract non-sealed class PrismLayoutInfo extends LayoutInfo {
 
     protected abstract double lineSpacing();
 
-    protected abstract Insets insets();
+    protected abstract double dx();
+    
+    protected abstract double dy();
 
     private final TextLayout layout;
 
@@ -55,9 +56,8 @@ public abstract non-sealed class PrismLayoutInfo extends LayoutInfo {
     @Override
     public Rectangle2D getLogicalBounds(boolean includeLineSpacing) {
         BaseBounds b = layout.getBounds();
-        Insets m = insets();
-        double dx = m.getLeft(); // TODO rtl?
-        double dy = m.getTop();
+        double dx = dx();
+        double dy = dy();
         double sp = includeLineSpacing ? lineSpacing() : 0.0;
         return TextUtils.toRectangle2D(b, dx, dy, sp);
     }
@@ -70,9 +70,8 @@ public abstract non-sealed class PrismLayoutInfo extends LayoutInfo {
     @Override
     public List<TextLineInfo> getTextLines(boolean includeLineSpacing) {
         TextLine[] lines = layout.getLines();
-        Insets m = insets();
-        double dx = m.getLeft(); // TODO rtl?
-        double dy = m.getTop();
+        double dx = dx();
+        double dy = dy();
         double sp = includeLineSpacing ? lineSpacing() : 0.0;
         int sz = lines.length;
 
@@ -87,9 +86,8 @@ public abstract non-sealed class PrismLayoutInfo extends LayoutInfo {
     public TextLineInfo getTextLine(int index, boolean includeLineSpacing) {
         TextLine[] lines = layout.getLines();
         Objects.checkIndex(index, lines.length);
-        Insets m = insets();
-        double dx = m.getLeft(); // TODO rtl?
-        double dy = m.getTop();
+        double dx = dx();
+        double dy = dy();
         double sp = includeLineSpacing ? lineSpacing() : 0.0;
         return TextUtils.toLineInfo(lines[index], dx, dy, sp);
     }
@@ -111,9 +109,8 @@ public abstract non-sealed class PrismLayoutInfo extends LayoutInfo {
     }
 
     private List<Rectangle2D> getGeometry(int start, int end, int type, double lineSpacing) {
-        Insets m = insets();
-        double dx = m.getLeft(); // TODO RTL?
-        double dy = m.getTop();
+        double dx = dx();
+        double dy = dy();
 
         ArrayList<Rectangle2D> rv = new ArrayList<>();
         layout.getRange(start, end, type, (left, top, right, bottom) -> {
@@ -129,9 +126,8 @@ public abstract non-sealed class PrismLayoutInfo extends LayoutInfo {
     @Override
     public CaretInfo caretInfoAt(int charIndex, boolean leading) {
         TextLayout.CaretGeometry g = layout.getCaretGeometry(charIndex, leading);
-        Insets m = insets();
-        double dx = m.getLeft(); // TODO RTL?
-        double dy = m.getTop();
+        double dx = dx();
+        double dy = dy();
         Rectangle2D[] parts = TextUtils.getCaretRectangles(g, dx, dy);
         return new PrismCaretInfo(parts);
     }
