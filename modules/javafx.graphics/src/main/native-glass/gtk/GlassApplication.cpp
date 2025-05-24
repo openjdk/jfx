@@ -482,13 +482,13 @@ static void process_events(GdkEvent* event, gpointer data)
         try {
             switch (event->type) {
                 case GDK_PROPERTY_NOTIFY:
-                    // let gtk handle it first to prevent a glitch
-                    gtk_main_do_event(event);
                     ctx->process_property_notify(&event->property);
+                    gtk_main_do_event(event);
                     break;
                 case GDK_CONFIGURE:
-                    ctx->process_configure(&event->configure);
+                    // Let gtk handle it first, so state values are updated
                     gtk_main_do_event(event);
+                    ctx->process_configure(&event->configure);
                     break;
                 case GDK_FOCUS_CHANGE:
                     ctx->process_focus(&event->focus_change);
@@ -503,11 +503,12 @@ static void process_events(GdkEvent* event, gpointer data)
                     break;
                 case GDK_EXPOSE:
                 case GDK_DAMAGE:
-                    ctx->process_expose(&event->expose);
+                    ctx->notify_repaint(&event->expose.area);
                     break;
                 case GDK_WINDOW_STATE:
-                    ctx->process_state(&event->window_state);
+                    // Let gtk handle it first, so state values are updated
                     gtk_main_do_event(event);
+                    ctx->process_state(&event->window_state);
                     break;
                 case GDK_BUTTON_PRESS:
                 case GDK_BUTTON_RELEASE:
@@ -535,7 +536,8 @@ static void process_events(GdkEvent* event, gpointer data)
                     process_dnd_target(ctx, &event->dnd);
                     break;
                 case GDK_MAP:
-                    // fall-through
+                    ctx->process_map();
+                    break;
                 case GDK_UNMAP:
                 case GDK_CLIENT_EVENT:
                 case GDK_VISIBILITY_NOTIFY:
