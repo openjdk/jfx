@@ -44,7 +44,6 @@
 #import "GlassHelper.h"
 #import "GlassStatics.h"
 #import "GlassPasteboard.h"
-#import "GlassTouches.h"
 
 #pragma clang diagnostic ignored "-Wdeprecated-declarations"
 
@@ -197,8 +196,6 @@ static jint getSwipeDirFromEvent(NSEvent *theEvent)
 
     [self->nativeFullScreenModeWindow release];
     self->nativeFullScreenModeWindow = nil;
-
-    [GlassTouches stopTracking:self];
 
     GET_MAIN_JENV_NOWARN;
 
@@ -416,13 +413,11 @@ static jint getSwipeDirFromEvent(NSEvent *theEvent)
 
         case NSMouseEntered:
             type = com_sun_glass_events_MouseEvent_ENTER;
-            [GlassTouches startTracking:self];
             self->lastTrackingNumber = [theEvent trackingNumber];
             break;
 
         case NSMouseExited:
             type = com_sun_glass_events_MouseEvent_EXIT;
-            [GlassTouches stopTracking:self];
             self->lastTrackingNumber = [theEvent trackingNumber];
             break;
 
