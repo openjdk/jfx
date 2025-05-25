@@ -6568,7 +6568,7 @@ public class Scene implements EventTarget {
          * <table class="striped">
          *     <caption>Media Feature</caption>
          *     <tbody>
-         *         <tr><th>Name</th><td><code>prefers-persistent-scrollbars</code></td></tr>
+         *         <tr><th>Name</th><td><code>-fx-prefers-persistent-scrollbars</code></td></tr>
          *         <tr><th>For</th><td><code>@media</code></td></tr>
          *         <tr><th>Value</th><td><code>no-preference</code> | <code>persistent</code></td></tr>
          *         <tr><th>Boolean Context</th>

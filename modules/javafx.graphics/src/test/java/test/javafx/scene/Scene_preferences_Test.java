@@ -74,10 +74,6 @@ public class Scene_preferences_Test {
                 prefs -> prefs.setColorScheme(ColorScheme.LIGHT),
                 prefs -> prefs.setColorScheme(ColorScheme.DARK)),
             new TestRun(
-                "prefers-persistent-scrollbars",
-                prefs -> prefs.setPersistentScrollBars(false),
-                prefs -> prefs.setPersistentScrollBars(true)),
-            new TestRun(
                 "prefers-reduced-motion",
                 prefs -> prefs.setReducedMotion(false),
                 prefs -> prefs.setReducedMotion(true)),
@@ -88,7 +84,11 @@ public class Scene_preferences_Test {
             new TestRun(
                 "prefers-reduced-data",
                 prefs -> prefs.setReducedData(false),
-                prefs -> prefs.setReducedData(true))
+                prefs -> prefs.setReducedData(true)),
+            new TestRun(
+                "-fx-prefers-persistent-scrollbars",
+                prefs -> prefs.setPersistentScrollBars(false),
+                prefs -> prefs.setPersistentScrollBars(true))
         );
     }
 

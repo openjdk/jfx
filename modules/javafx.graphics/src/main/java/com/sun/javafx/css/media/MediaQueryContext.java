@@ -63,7 +63,7 @@ public sealed interface MediaQueryContext permits ScenePreferences {
     boolean isReducedData();
 
     /**
-     * Provides the value for the {@code prefers-persistent-scrollbars} media feature.
+     * Provides the value for the {@code -fx-prefers-persistent-scrollbars} media feature.
      *
      * @return {@code true} if the application should use persistent scroll bars
      */

@@ -178,7 +178,7 @@ public class CssParser_mediaQuery_Test {
         Stylesheet stylesheet = new CssParser().parse("""
             @media (prefers-color-scheme: light) or
                    (prefers-reduced-motion: reduce) or
-                   (prefers-persistent-scrollbars: persistent) {
+                   (-fx-prefers-persistent-scrollbars: persistent) {
                 .foo { bar: baz; }
             }
             """);
@@ -190,7 +190,7 @@ public class CssParser_mediaQuery_Test {
                 new DisjunctionExpression(
                     new FunctionExpression<>("prefers-color-scheme", "light", _ -> null, ColorScheme.LIGHT),
                     new FunctionExpression<>("prefers-reduced-motion", "reduce", _ -> false, true)),
-                new FunctionExpression<>("prefers-persistent-scrollbars", "persistent", _ -> false, true)
+                new FunctionExpression<>("-fx-prefers-persistent-scrollbars", "persistent", _ -> false, true)
             ),
             mediaRule.getQueries().getFirst()
         );
@@ -244,7 +244,7 @@ public class CssParser_mediaQuery_Test {
     @Test
     void parsePrefersPersistentScrollBars_booleanContext() {
         Stylesheet stylesheet = new CssParser().parse("""
-            @media (prefers-persistent-scrollbars) {
+            @media (-fx-prefers-persistent-scrollbars) {
                 .foo { bar: baz; }
             }
             """);
@@ -252,7 +252,7 @@ public class CssParser_mediaQuery_Test {
         var mediaRule = RuleHelper.getMediaRule(stylesheet.getRules().getFirst());
         assertEquals(1, mediaRule.getQueries().size());
         assertEquals(
-            new FunctionExpression<>("prefers-persistent-scrollbars", null, _ -> null, true),
+            new FunctionExpression<>("-fx-prefers-persistent-scrollbars", null, _ -> null, true),
             mediaRule.getQueries().getFirst());
     }
 

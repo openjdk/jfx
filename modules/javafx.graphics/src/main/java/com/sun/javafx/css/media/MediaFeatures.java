@@ -57,7 +57,7 @@ final class MediaFeatures {
                 featureName,
                 checkNotNullValue(featureName, featureValue),
                 MediaQueryContext::getColorScheme,
-                ColorScheme.valueOf(featureValue.toUpperCase(Locale.ROOT)));
+                enumValue(ColorScheme::valueOf, featureName, featureValue));
 
             case "prefers-reduced-motion" -> booleanPreferenceExpression(
                 featureName, featureValue, "reduce", MediaQueryContext::isReducedMotion);
@@ -68,7 +68,7 @@ final class MediaFeatures {
             case "prefers-reduced-data" -> booleanPreferenceExpression(
                 featureName, featureValue, "reduce", MediaQueryContext::isReducedData);
 
-            case "prefers-persistent-scrollbars" -> booleanPreferenceExpression(
+            case "-fx-prefers-persistent-scrollbars" -> booleanPreferenceExpression(
                 featureName, featureValue, "persistent", MediaQueryContext::isPersistentScrollBars);
 
             default -> throw new IllegalArgumentException(
@@ -99,5 +99,14 @@ final class MediaFeatures {
         }
 
         return featureValue;
+    }
+
+    private static <T extends Enum<T>> T enumValue(Function<String, T> func, String featureName, String featureValue) {
+        try {
+            return func.apply(featureValue.toUpperCase(Locale.ROOT));
+        } catch (IllegalArgumentException e) {
+            throw new IllegalArgumentException(
+                String.format("Unknown value <%s> for media feature <%s>", featureValue, featureName));
+        }
     }
 }
