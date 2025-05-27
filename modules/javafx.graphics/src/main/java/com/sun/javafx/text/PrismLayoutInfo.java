@@ -44,7 +44,7 @@ public abstract non-sealed class PrismLayoutInfo extends LayoutInfo {
     protected abstract double lineSpacing();
 
     protected abstract double dx();
-    
+
     protected abstract double dy();
 
     private final TextLayout layout;
