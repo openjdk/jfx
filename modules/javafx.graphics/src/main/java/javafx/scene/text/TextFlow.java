@@ -722,8 +722,13 @@ public class TextFlow extends Pane {
             }
 
             @Override
-            public Insets insets() {
-                return getInsets();
+            protected double dx() {
+                return snappedLeftInset();
+            }
+
+            @Override
+            protected double dy() {
+                return snappedTopInset();
             }
         };
     }

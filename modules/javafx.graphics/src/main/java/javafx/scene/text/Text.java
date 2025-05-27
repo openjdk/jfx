@@ -59,7 +59,6 @@ import javafx.css.converter.EnumConverter;
 import javafx.css.converter.SizeConverter;
 import javafx.geometry.BoundingBox;
 import javafx.geometry.Bounds;
-import javafx.geometry.Insets;
 import javafx.geometry.NodeOrientation;
 import javafx.geometry.Point2D;
 import javafx.geometry.VPos;
@@ -2093,8 +2092,13 @@ public non-sealed class Text extends Shape {
             }
 
             @Override
-            public Insets insets() {
-                return Insets.EMPTY;
+            protected double dx() {
+                return getLayoutBounds().getMinX();
+            }
+
+            @Override
+            protected double dy() {
+                return getLayoutBounds().getMinY();
             }
         };
     }
