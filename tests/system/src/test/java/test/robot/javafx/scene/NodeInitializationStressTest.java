@@ -24,8 +24,9 @@
  */
 package test.robot.javafx.scene;
 
-import static org.junit.Assume.assumeFalse;
 import static org.junit.jupiter.api.Assertions.fail;
+import static org.junit.jupiter.api.Assumptions.assumeFalse;
+
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
@@ -751,9 +752,13 @@ public class NodeInitializationStressTest extends RobotTestBase {
         assumeFalse(SKIP_TEST);
         test(() -> {
             MenuBar c = new MenuBar();
-            // exercise skin installation and disposal code paths
-            c.setSkin(new MenuBarSkin(c));
-            c.setSkin(new MenuBarSkin(c));
+            if (nextBoolean()) {
+                c.setSkin(new MenuBarSkin(c));
+                if (nextBoolean()) {
+                    // exercise skin installation and disposal code paths
+                    c.setSkin(new MenuBarSkin(c));
+                }
+            }
             c.setUseSystemMenuBar(nextBoolean());
             return c;
         }, (c) -> {

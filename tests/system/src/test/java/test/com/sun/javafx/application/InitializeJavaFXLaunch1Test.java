@@ -29,16 +29,11 @@ import java.util.concurrent.TimeUnit;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
-import com.sun.javafx.PlatformUtil;
-import test.util.Util;
-
-import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 public class InitializeJavaFXLaunch1Test extends InitializeJavaFXLaunchBase {
 
     @BeforeAll
     public static void initialize() throws Exception {
-        assumeTrue(!PlatformUtil.isLinux() || Util.isOnWayland()); // JDK-8353644
         InitializeJavaFXLaunchBase.initializeApplicationLaunch();
     }
 
