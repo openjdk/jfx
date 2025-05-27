@@ -44,6 +44,7 @@ public class MouseLocationOnScreenTest {
     static CountDownLatch startupLatch = new CountDownLatch(1);
     static Robot robot;
     private static int DELAY_TIME = 1;
+    private static int VALIDATE_COUNT = 5;
 
     public static class TestApp extends Application {
 
@@ -118,6 +119,21 @@ public class MouseLocationOnScreenTest {
      * returned by robot are same
      */
     static void validate(Robot robot, int x, int y) {
+        boolean equalValue = false;
+        for (int i = 0; i < VALIDATE_COUNT; i++) {
+            // Making delay and check at 1 ms and every 2 ms gap onwards
+            Util.sleep(i == 0 ? DELAY_TIME : DELAY_TIME + 1);
+            if (x == (int)robot.getMouseX() &&
+                y == (int)robot.getMouseY()) {
+                equalValue = true;
+                break;
+            }
+        }
+
+        if (!equalValue) {
+            // Delay for 500ms more
+            Util.sleep(500);
+        }
         Assertions.assertEquals(x, (int) robot.getMouseX());
         Assertions.assertEquals(y, (int) robot.getMouseY());
     }
@@ -126,7 +142,6 @@ public class MouseLocationOnScreenTest {
         for (int x = x1; x <= x2; x++) {
             for (int y = y1; y <= y2; y++) {
                 robot.mouseMove(x, y);
-                Util.sleep(DELAY_TIME);
                 validate(robot, x, y);
             }
         }
@@ -138,14 +153,12 @@ public class MouseLocationOnScreenTest {
         double dy = (y1 - y0) / dmax;
 
         robot.mouseMove(x0, y0);
-        Util.sleep(DELAY_TIME);
         validate(robot, x0, y0);
 
         for (int i = 1; i <= dmax; i++) {
             int x = (int) (x0 + dx * i);
             int y = (int) (y0 + dy * i);
             robot.mouseMove(x, y);
-            Util.sleep(DELAY_TIME);
             validate(robot, x, y);
         }
     }

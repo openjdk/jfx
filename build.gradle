@@ -500,7 +500,8 @@ defineProperty("AWT_TEST", "true")
 ext.IS_AWT_TEST = Boolean.parseBoolean(AWT_TEST);
 
 // Specifies whether to run system tests that depend on SWT (only used when FULL_TEST is also enabled)
-defineProperty("SWT_TEST", "true")
+// JDK-8356687 and JDK-8356688 track the disablement of the SWT tests on both platforms.
+defineProperty("SWT_TEST", (IS_MAC || IS_LINUX) ? "false" : "true")
 ext.IS_SWT_TEST = Boolean.parseBoolean(SWT_TEST);
 
 // Specifies whether to run unstable tests (true) - tests that don't run well with Hudson builds
@@ -601,6 +602,12 @@ ext.DO_JCOV = Boolean.parseBoolean(JCOV)
 defineProperty("USE_CYGWIN", "true")
 ext.IS_USE_CYGWIN = Boolean.parseBoolean(USE_CYGWIN)
 
+// Specifies whether to run "chmod -R artifacts/sdk" as the last step of
+// copying the sdk to the artifacts dir. This is only done on Windows;
+// the flag is ignored on other platforms.
+defineProperty("CHMOD_ARTIFACTS", "true")
+ext.IS_CHMOD_ARTIFACTS = Boolean.parseBoolean(CHMOD_ARTIFACTS)
+
 // Define the number of threads to use when compiling (specifically for native compilation, including webkit)
 defineProperty("NUM_COMPILE_THREADS", "${Runtime.runtime.availableProcessors()}")
 
@@ -615,6 +622,9 @@ defineProperty("HUDSON_BUILD_NUMBER","0000")
 defineProperty("PROMOTED_BUILD_NUMBER", "0")
 defineProperty("MILESTONE_FCS", "false")
 ext.IS_MILESTONE_FCS = Boolean.parseBoolean(MILESTONE_FCS)
+
+// The following property used to define WebView Browser Version
+defineProperty("WEBVIEW_VERSION", "18.4")
 
 // The following properties define the product name for Oracle JDK and OpenJDK
 // for VersionInfo and the DLL manifest.
@@ -2122,8 +2132,6 @@ allprojects {
     // By default all of our projects require junit for testing so we can just
     // setup this dependency here.
     dependencies {
-        testImplementation group: "junit", name: "junit", version: "${junitVersion}"
-        testImplementation group: "org.hamcrest", name: "hamcrest-core", version: "${hamcrestVersion}"
         testImplementation group: "org.junit.jupiter", name: "junit-jupiter", version: "${junitJupiterVersion}"
         testImplementation group: "org.junit.jupiter", name: "junit-jupiter-api", version: "${junitJupiterVersion}"
         testImplementation group: "org.junit.jupiter", name: "junit-jupiter-params", version: "${junitJupiterVersion}"
@@ -2133,7 +2141,6 @@ allprojects {
         testRuntimeOnly group: "org.junit.platform", name: "junit-platform-commons", version: "${junitPlatformVersion}"
         testRuntimeOnly group: "org.junit.platform", name: "junit-platform-engine", version: "${junitPlatformVersion}"
         testRuntimeOnly group: "org.junit.platform", name: "junit-platform-launcher", version: "${junitPlatformVersion}"
-        testRuntimeOnly group: "org.junit.vintage", name: "junit-vintage-engine", version: "${junitJupiterVersion}"
 
         if (BUILD_CLOSED && DO_JCOV)  {
             testImplementation name: "jcov"
@@ -3079,20 +3086,13 @@ project(":swt") {
     }
 
     test {
-        //enabled = IS_FULL_TEST && IS_SWT_TEST
-        enabled = false // FIXME: JIGSAW -- support this with modules
-        logger.info("JIGSAW Testing disabled for swt")
+        enabled = IS_FULL_TEST && IS_SWT_TEST
 
         jvmArgs enableNativeGraphics
 
         // FIXME: Remove this when JDK-8334137 is fixed
         if (jdk24OrLater) {
             jvmArgs allowSunMiscUnsafe
-        }
-
-        if (IS_MAC) {
-            enabled = false
-            logger.info("SWT tests are disabled on MAC, because Gradle test runner does not handle -XstartOnFirstThread properly (https://issues.gradle.org/browse/GRADLE-3290).")
         }
     }
 
@@ -4016,6 +4016,7 @@ project(":web") {
                     } else {
                         targetCpuBitDepthSwitch = "--32-bit"
                     }
+                    cmakeArgs += " -DWEBVIEW_BROWSER_VERSION=${WEBVIEW_VERSION}"
                     cmakeArgs += " -DJAVAFX_RELEASE_VERSION=${jfxReleaseMajorVersion}"
                     commandLine("perl", "$projectDir/src/main/native/Tools/Scripts/build-webkit",
                         "--java", "--icu-unicode", targetCpuBitDepthSwitch,
@@ -4972,9 +4973,13 @@ compileTargets { t ->
         def chmodArtifactsSdkTask = task("chmodArtifactsSdk$t.capital", dependsOn: copyArtifactsSdkTask) {
             if (IS_WINDOWS && IS_USE_CYGWIN) {
                 doLast {
-                    exec {
-                        workingDir(sdkArtifactsDir)
-                        commandLine("chmod", "-R", "755", ".")
+                    if (IS_CHMOD_ARTIFACTS) {
+                        exec {
+                            workingDir(sdkArtifactsDir)
+                            commandLine("chmod", "-R", "755", ".")
+                        }
+                    } else {
+                        println "Skipping 'chmod -R', CHMOD_ARTIFACTS=$CHMOD_ARTIFACTS"
                     }
                 }
             }
