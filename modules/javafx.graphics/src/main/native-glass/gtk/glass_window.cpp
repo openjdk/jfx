@@ -1411,14 +1411,8 @@ void WindowContext::move_resize(int x, int y, bool xSet, bool ySet, int width, i
         newH = NONNEGATIVE_OR(resizable.maxh - geometry.extents.height, 1);
     }
 
-    if (mapped && geometry.width.view == newW && geometry.height.view == newH) {
-        // No change
-        newW = -1;
-        newH = -1;
-    } else {
-        geometry.width.view = newW;
-        geometry.height.view = newH;
-    }
+    geometry.width.view = newW;
+    geometry.height.view = newH;
 
     update_window_size();
 
