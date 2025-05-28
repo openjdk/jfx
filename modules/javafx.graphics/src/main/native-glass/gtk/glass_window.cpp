@@ -1430,7 +1430,7 @@ void WindowContext::move_resize(int x, int y, bool xSet, bool ySet, int width, i
     if (ySet) geometry.y = y;
 
     LOG("gdk_window_move_resize: x,y: %d,%d / cw,ch: %d,%d / ww,wh: %d,%d\n",
-        geometry.x, geometry.y, newW, newH, geometry.width.window, geometry.width.window);
+        geometry.x, geometry.y, newW, newH, geometry.width.window, geometry.height.window);
 
     gdk_window_move_resize(gdk_window, geometry.x, geometry.y, newW, newH);
 
