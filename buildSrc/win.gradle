@@ -118,6 +118,7 @@ def sourceDateEpoch = System.getenv("SOURCE_DATE_EPOCH")
 
 // Common set of flags for all modules
 def ccFlags = ["/nologo", "/W3", "/EHsc", "/c",
+        "/D_DISABLE_CONSTEXPR_MUTEX_CONSTRUCTOR",
         "/D_STATIC_CPPLIB", "/D_DISABLE_DEPRECATE_STATIC_CPPLIB", "/DINLINE=__inline",
         "/DUNICODE", "/D_UNICODE", "/DWIN32", "/DIAL", "/D_LITTLE_ENDIAN", "/DWIN32_LEAN_AND_MEAN",
         "/I$JDK_HOME/include", "/I$JDK_HOME/include/win32",
