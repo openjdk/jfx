@@ -293,8 +293,8 @@ public class TextFlow extends Pane {
      * @param includeLineSpacing determines whether the result includes the line spacing
      * @return an array of {@code PathElement} which can be used to create a {@code Shape}
      * @since 25
+     * @see LayoutInfo#getSelectionGeometry(int, int, boolean)
      */
-    // TODO see also LayoutInfo.getSelectionGeometry
     public final PathElement[] getRangeShape(int start, int end, boolean includeLineSpacing) {
         double lineSpacing = includeLineSpacing ? getLineSpacing() : 0.0;
         return getRange(start, end, TextLayout.TYPE_TEXT, true, lineSpacing);
@@ -321,8 +321,8 @@ public class TextFlow extends Pane {
      * @param end the end character index (non-inclusive) for the range
      * @return an array of {@code PathElement} which can be used to create a {@code Shape}
      * @since 25
+     * @see LayoutInfo#getUnderlineGeometry(int, int)
      */
-    // TODO see also LayoutInfo.getUnderlineGeometry
     public final PathElement[] getUnderlineShape(int start, int end) {
         return getRange(start, end, TextLayout.TYPE_UNDERLINE, true, 0.0);
     }
@@ -334,8 +334,8 @@ public class TextFlow extends Pane {
      * @param end the end character index (non-inclusive) for the range
      * @return an array of {@code PathElement} which can be used to create a {@code Shape}
      * @since 25
+     * @see LayoutInfo#getStrikeThroughGeometry(int, int)
      */
-    // TODO see also LayoutInfo.getStrikeThroughGeometry
     public final PathElement[] getStrikeThroughShape(int start, int end) {
         return getRange(start, end, TextLayout.TYPE_STRIKETHROUGH, true, 0.0);
     }
