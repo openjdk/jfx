@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -57,6 +57,8 @@ import com.sun.javafx.scene.text.TextFlowHelper;
 import com.sun.javafx.scene.text.TextLayout;
 import com.sun.javafx.scene.text.TextLayoutFactory;
 import com.sun.javafx.scene.text.TextSpan;
+import com.sun.javafx.text.PrismLayoutInfo;
+import com.sun.javafx.text.TextUtils;
 import com.sun.javafx.tk.Toolkit;
 
 /**
@@ -191,11 +193,15 @@ public class TextFlow extends Pane {
 
     /**
      * Maps local point to {@link HitInfo} in the content.
+     * <p>
+     * NOTE: this method may return incorrect value with non-empty border or padding.
      *
      * @param point the specified point to be tested
      * @return a {@code HitInfo} representing the character index found
      * @since 9
+     * @deprecated replaced by {@code getHitInfo()}
      */
+    @Deprecated(since="25")
     public final HitInfo hitTest(javafx.geometry.Point2D point) {
         if (point != null) {
             TextLayout layout = getTextLayout();
@@ -209,15 +215,74 @@ public class TextFlow extends Pane {
     }
 
     /**
+     * Maps local point to {@link HitInfo} in the content.
+     *
+     * @param point the specified point to be tested
+     * @return a {@code HitInfo} representing the character index found
+     * @since 25
+     */
+    public final HitInfo getHitInfo(javafx.geometry.Point2D point) {
+        if (point != null) {
+            TextLayout layout = getTextLayout();
+            double x = point.getX() - snappedLeftInset();
+            double y = point.getY() - snappedTopInset();
+            TextLayout.Hit h = layout.getHitInfo((float)x, (float)y);
+            return new HitInfo(h.getCharIndex(), h.getInsertionIndex(), h.isLeading());
+        } else {
+            return null;
+        }
+    }
+
+    /**
      * Returns shape of caret in local coordinates.
+     * <p>
+     * NOTE: this method does not account for padding/borders.
      *
      * @param charIndex the character index for the caret
      * @param leading whether the caret is biased on the leading edge of the character
      * @return an array of {@code PathElement} which can be used to create a {@code Shape}
      * @since 9
+     * @deprecated replaced by {@code getCaretShape()}
      */
+    @Deprecated(since="25")
     public PathElement[] caretShape(int charIndex, boolean leading) {
-        return getTextLayout().getCaretShape(charIndex, leading, 0, 0);
+        TextLayout.CaretGeometry g = getTextLayout().getCaretGeometry(charIndex, leading);
+        return TextUtils.getCaretPathElements(g, 0.0, 0.0);
+    }
+
+    /**
+     * Returns shape of caret in local coordinates.
+     *
+     * @param charIndex the character index for the caret
+     * @param leading whether the caret is biased on the leading edge of the character
+     * @return an array of {@code PathElement} which can be used to create a {@code Shape}
+     * @since 25
+     */
+    public PathElement[] getCaretShape(int charIndex, boolean leading) {
+        TextLayout.CaretGeometry g = getTextLayout().getCaretGeometry(charIndex, leading);
+        double dx = snappedLeftInset();
+        double dy = snappedTopInset();
+        return TextUtils.getCaretPathElements(g, dx, dy);
+    }
+
+    /**
+     * Returns shape for the range of the text in local coordinates.
+     * <p>
+     * NOTES:
+     * <ul>
+     * <li>this method may return incorrect values with non-empty padding or border
+     * <li>the shapes returned do not include line spacing
+     * </ul>
+     *
+     * @param start the beginning character index for the range
+     * @param end the end character index (non-inclusive) for the range
+     * @return an array of {@code PathElement} which can be used to create a {@code Shape}
+     * @since 9
+     * @deprecated replaced by {@code getRangeShape()}
+     */
+    @Deprecated(since="25")
+    public final PathElement[] rangeShape(int start, int end) {
+        return getRange(start, end, TextLayout.TYPE_TEXT, false, 0.0);
     }
 
     /**
@@ -225,11 +290,14 @@ public class TextFlow extends Pane {
      *
      * @param start the beginning character index for the range
      * @param end the end character index (non-inclusive) for the range
+     * @param includeLineSpacing determines whether the result includes the line spacing
      * @return an array of {@code PathElement} which can be used to create a {@code Shape}
-     * @since 9
+     * @since 25
+     * @see LayoutInfo#getSelectionGeometry(int, int, boolean)
      */
-    public final PathElement[] rangeShape(int start, int end) {
-        return getRange(start, end, TextLayout.TYPE_TEXT);
+    public final PathElement[] getRangeShape(int start, int end, boolean includeLineSpacing) {
+        double lineSpacing = includeLineSpacing ? getLineSpacing() : 0.0;
+        return getRange(start, end, TextLayout.TYPE_TEXT, true, lineSpacing);
     }
 
     /**
@@ -239,9 +307,37 @@ public class TextFlow extends Pane {
      * @param end the end character index (non-inclusive) for the range
      * @return an array of {@code PathElement} which can be used to create a {@code Shape}
      * @since 21
+     * @deprecated replaced by {@code getUnderlineShape()}
      */
+    @Deprecated(since="25")
     public final PathElement[] underlineShape(int start, int end) {
-        return getRange(start, end, TextLayout.TYPE_UNDERLINE);
+        return getRange(start, end, TextLayout.TYPE_UNDERLINE, false, 0.0);
+    }
+
+    /**
+     * Returns the shape for the underline in local coordinates.
+     *
+     * @param start the beginning character index for the range
+     * @param end the end character index (non-inclusive) for the range
+     * @return an array of {@code PathElement} which can be used to create a {@code Shape}
+     * @since 25
+     * @see LayoutInfo#getUnderlineGeometry(int, int)
+     */
+    public final PathElement[] getUnderlineShape(int start, int end) {
+        return getRange(start, end, TextLayout.TYPE_UNDERLINE, true, 0.0);
+    }
+
+    /**
+     * Returns the shape for the strike-through in local coordinates.
+     *
+     * @param start the beginning character index for the range
+     * @param end the end character index (non-inclusive) for the range
+     * @return an array of {@code PathElement} which can be used to create a {@code Shape}
+     * @since 25
+     * @see LayoutInfo#getStrikeThroughGeometry(int, int)
+     */
+    public final PathElement[] getStrikeThroughShape(int start, int end) {
+        return getRange(start, end, TextLayout.TYPE_STRIKETHROUGH, true, 0.0);
     }
 
     @Override
@@ -364,9 +460,18 @@ public class TextFlow extends Pane {
         inLayout = false;
     }
 
-    private PathElement[] getRange(int start, int end, int type) {
+    private PathElement[] getRange(int start, int end, int type, boolean accountForInsets, double lineSpacing) {
+        double dx;
+        double dy;
+        if(accountForInsets) {
+            dx = snappedLeftInset();
+            dy = snappedTopInset();
+        } else {
+            dx = 0.0;
+            dy = 0.0;
+        }
         TextLayout layout = getTextLayout();
-        return layout.getRange(start, end, type, 0, 0);
+        return TextUtils.getRange(layout, start, end, type, dx, dy, lineSpacing);
     }
 
     private static class EmbeddedSpan implements TextSpan {
@@ -697,5 +802,35 @@ public class TextFlow extends Pane {
                 return f.getTextLayout();
             }
         });
+    }
+
+    /**
+     * Returns a copy of the of the text layout geometry for this node. This copy is a snapshot
+     * of the text layout at the time the method is called.
+     * <p>
+     * While there is no general guarantee that successive invocations of this method return the same instance,
+     * it is safe to either cache this object or call this method each time, since the information obtained from
+     * this lightweight object remains valid until the next layout cycle.
+     *
+     * @return a copy of the layout information
+     * @since 25
+     */
+    public final LayoutInfo getLayoutInfo() {
+        return new PrismLayoutInfo(getTextLayout()) {
+            @Override
+            public double lineSpacing() {
+                return getLineSpacing();
+            }
+
+            @Override
+            protected double dx() {
+                return snappedLeftInset();
+            }
+
+            @Override
+            protected double dy() {
+                return snappedTopInset();
+            }
+        };
     }
 }
