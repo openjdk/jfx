@@ -34,7 +34,6 @@
 #import "GlassKey.h"
 #import "GlassScreen.h"
 #import "GlassWindow.h"
-#import "GlassTouches.h"
 #import "PlatformSupport.h"
 
 #import "ProcessInfo.h"
@@ -750,9 +749,6 @@ static NSMutableArray<GlassRunnable*> *deferredRunnables = nil;
 
             // enter runloop, this will not return until terminated
             [NSApp run];
-
-            // Abort listerning to global touch input events
-            [GlassTouches terminate];
 
             GLASS_CHECK_EXCEPTION(jEnv);
 
