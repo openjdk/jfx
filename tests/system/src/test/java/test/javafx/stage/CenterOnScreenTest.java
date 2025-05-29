@@ -58,7 +58,7 @@ class CenterOnScreenTest extends StageTestBase {
 
     @ParameterizedTest(name = PARAMETERIZED_TEST_DISPLAY)
     @EnumSource(names = {"DECORATED", "UNDECORATED", "TRANSPARENT"})
-    void testStateCenterOnScreenWhenShown(StageStyle stageStyle) {
+    void testStageCenterOnScreenWhenShown(StageStyle stageStyle) {
         setupStageWithStyle(stageStyle, stage -> {
             stage.setWidth(STAGE_WIDTH);
             stage.setHeight(STAGE_HEIGHT);
@@ -69,7 +69,7 @@ class CenterOnScreenTest extends StageTestBase {
 
     @ParameterizedTest(name = PARAMETERIZED_TEST_DISPLAY)
     @EnumSource(names = {"DECORATED", "UNDECORATED", "TRANSPARENT"})
-    void testStateCenterOnScreenWhenShownWithSceneSize(StageStyle stageStyle) {
+    void testStageCenterOnScreenWhenShownWithSceneSize(StageStyle stageStyle) {
         setupStageWithStyle(stageStyle, null);
         Util.sleep(MEDIUM_WAIT);
         assertStageCentered(stageStyle, true);
@@ -77,7 +77,7 @@ class CenterOnScreenTest extends StageTestBase {
 
     @ParameterizedTest(name = PARAMETERIZED_TEST_DISPLAY)
     @EnumSource(names = {"DECORATED", "UNDECORATED", "TRANSPARENT"})
-    void testStateCenterOnScreenAfterShown(StageStyle stageStyle) {
+    void testStageCenterOnScreenAfterShown(StageStyle stageStyle) {
         setupStageWithStyle(stageStyle, stage -> {
             stage.setWidth(STAGE_WIDTH);
             stage.setHeight(STAGE_HEIGHT);
@@ -93,7 +93,7 @@ class CenterOnScreenTest extends StageTestBase {
 
     @ParameterizedTest(name = PARAMETERIZED_TEST_DISPLAY)
     @EnumSource(names = {"DECORATED", "UNDECORATED", "TRANSPARENT"})
-    void testStateCenterOnScreenAfterShownWithSceneSize(StageStyle stageStyle) {
+    void testStageCenterOnScreenAfterShownWithSceneSize(StageStyle stageStyle) {
         setupStageWithStyle(stageStyle, stage -> {
             stage.setX(0);
             stage.setY(0);
