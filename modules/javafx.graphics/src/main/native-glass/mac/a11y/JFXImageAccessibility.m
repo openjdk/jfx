@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017, 2019, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -23,17 +23,28 @@
  * questions.
  */
 
-#pragma once
+#import "JFXImageAccessibility.h"
 
-#cmakedefine WEBVIEW_BROWSER_VERSION "@WEBVIEW_BROWSER_VERSION@"
+@implementation JFXImageAccessibility
+- (NSAccessibilityRole)accessibilityRole
+{
+    return NSAccessibilityImageRole;
+}
 
-#if !defined(WEBVIEW_BROWSER_VERSION)
-#error "WebView browser version not defined"
-#endif
+- (NSString *)accessibilityLabel
+{
+//    NSLog(@"JFXImageAccessibility accessibilityLabel id %@", [super accessibilityLabel]);
+    return [super accessibilityLabel];
+}
 
+- (NSRect)accessibilityFrame
+{
+    return [super accessibilityFrame];
+}
 
-#cmakedefine JAVAFX_RELEASE_VERSION "@JAVAFX_RELEASE_VERSION@"
+- (id)accessibilityParent
+{
+    return [super accessibilityParent];
+}
 
-#if !defined(JAVAFX_RELEASE_VERSION)
-#error "JavaFX release version not defined"
-#endif
+@end
