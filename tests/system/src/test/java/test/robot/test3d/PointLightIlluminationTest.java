@@ -42,7 +42,6 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
-import com.sun.javafx.PlatformUtil;
 import test.robot.testharness.VisualTestBase;
 
 /**
@@ -68,36 +67,9 @@ public class PointLightIlluminationTest extends VisualTestBase {
     private static final double COLOR_TOLERANCE    = 0.07;
     private static volatile Scene testScene = null;
 
-    // Used to skip failing tests on macOS 14 or later on aarch64 until JDK-8318985 is fixed
-    private boolean isMacAarch64MacOS14;
-
-    private static int getFirstInt(String input) {
-        String str = input;
-        if (str == null) {
-            return -1;
-        }
-        str = str.trim();
-        if (str.isEmpty() || !Character.isDigit(str.charAt(0))) {
-            return -1;
-        }
-        str = str.split("\\D+")[0];
-        return Integer.parseInt(str);
-    }
-
     @BeforeEach
     public void setupEach() {
         assumeTrue(Platform.isSupported(ConditionalFeature.SCENE3D));
-
-        // JDK-8318985
-        isMacAarch64MacOS14 = false;
-        if (PlatformUtil.isMac() &&
-                "aarch64".equals(System.getProperty("os.arch"))) {
-
-            int majorVer = getFirstInt(System.getProperty("os.version"));
-            if (majorVer >= 14) {
-                isMacAarch64MacOS14 = true;
-            }
-        }
 
         // Use the same test scene for all tests
         if (testScene == null) {
@@ -124,7 +96,6 @@ public class PointLightIlluminationTest extends VisualTestBase {
 
     @Test
     public void sphereUpperLeftPixelColorShouldBeDarkRed() {
-        assumeTrue(!isMacAarch64MacOS14); // JDK-8318985
         runAndWait(() -> {
             Color color = getColor(testScene, LEFT_CORNER_X, UPPER_CORNER_Y);
             assertColorEquals(Color.DARKRED, color, COLOR_TOLERANCE);
@@ -133,7 +104,6 @@ public class PointLightIlluminationTest extends VisualTestBase {
 
     @Test
     public void sphereUpperRightPixelColorShouldBeDarkRed() {
-        assumeTrue(!isMacAarch64MacOS14); // JDK-8318985
         runAndWait(() -> {
             Color color = getColor(testScene, RIGHT_CORNER_X, UPPER_CORNER_Y);
             assertColorEquals(Color.DARKRED, color, COLOR_TOLERANCE);
@@ -142,7 +112,6 @@ public class PointLightIlluminationTest extends VisualTestBase {
 
     @Test
     public void sphereLowerRightPixelColorShouldBeDarkRed() {
-        assumeTrue(!isMacAarch64MacOS14); // JDK-8318985
         runAndWait(() -> {
             Color color = getColor(testScene, RIGHT_CORNER_X, LOWER_CORNER_Y);
             assertColorEquals(Color.DARKRED, color, COLOR_TOLERANCE);
@@ -151,7 +120,6 @@ public class PointLightIlluminationTest extends VisualTestBase {
 
     @Test
     public void sphereLowerLeftPixelColorShouldBeDarkRed() {
-        assumeTrue(!isMacAarch64MacOS14); // JDK-8318985
         runAndWait(() -> {
             Color color = getColor(testScene, LEFT_CORNER_X, LOWER_CORNER_Y);
             assertColorEquals(Color.DARKRED, color, COLOR_TOLERANCE);
