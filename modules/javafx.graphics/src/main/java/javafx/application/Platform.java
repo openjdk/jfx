@@ -613,7 +613,17 @@ public final class Platform {
          * Specifies whether applications should always show scroll bars. If not set, an application may
          * choose to hide scroll bars that are not actively used, or make them smaller or less noticeable.
          * <p>
-         * If the platform does not report this preference, this property defaults to {@code false}.
+         * This property corresponds to the following CSS media feature:
+         * <table class="striped">
+         *     <caption>Media Feature</caption>
+         *     <tbody>
+         *         <tr><th>Name</th><td><code>-fx-prefers-persistent-scrollbars</code></td></tr>
+         *         <tr><th>Value</th><td><code>no-preference</code> | <code>persistent</code></td></tr>
+         *         <tr><th>Boolean Context</th>
+         *             <td><code>no-preference</code> evaluates as <code>false</code></td>
+         *         </tr>
+         *     </tbody>
+         * </table>
          *
          * @return the {@code persistentScrollBars} property
          * @defaultValue {@code false}
@@ -627,7 +637,17 @@ public final class Platform {
          * Specifies whether applications should minimize the amount of non-essential animations,
          * reducing discomfort for users who experience motion sickness or vertigo.
          * <p>
-         * If the platform does not report this preference, this property defaults to {@code false}.
+         * This property corresponds to the following CSS media feature:
+         * <table class="striped">
+         *     <caption>Media Feature</caption>
+         *     <tbody>
+         *         <tr><th>Name</th><td><code>prefers-reduced-motion</code></td></tr>
+         *         <tr><th>Value</th><td><code>no-preference</code> | <code>reduce</code></td></tr>
+         *         <tr><th>Boolean Context</th>
+         *             <td><code>no-preference</code> evaluates as <code>false</code></td>
+         *         </tr>
+         *     </tbody>
+         * </table>
          *
          * @return the {@code reducedMotion} property
          * @defaultValue {@code false}
@@ -641,7 +661,17 @@ public final class Platform {
          * Specifies whether applications should minimize the amount of transparent or translucent
          * layer effects, which can help to increase contrast and readability for some users.
          * <p>
-         * If the platform does not report this preference, this property defaults to {@code false}.
+         * This property corresponds to the following CSS media feature:
+         * <table class="striped">
+         *     <caption>Media Feature</caption>
+         *     <tbody>
+         *         <tr><th>Name</th><td><code>prefers-reduced-transparency</code></td></tr>
+         *         <tr><th>Value</th><td><code>no-preference</code> | <code>reduce</code></td></tr>
+         *         <tr><th>Boolean Context</th>
+         *             <td><code>no-preference</code> evaluates as <code>false</code></td>
+         *         </tr>
+         *     </tbody>
+         * </table>
          *
          * @return the {@code reducedTransparency} property
          * @defaultValue {@code false}
@@ -655,7 +685,17 @@ public final class Platform {
          * Specifies whether applications should minimize the amount of internet traffic, which users
          * might request because they are on a metered network or a limited data plan.
          * <p>
-         * If the platform does not report this preference, this property defaults to {@code false}.
+         * This property corresponds to the following CSS media feature:
+         * <table class="striped">
+         *     <caption>Media Feature</caption>
+         *     <tbody>
+         *         <tr><th>Name</th><td><code>prefers-reduced-data</code></td></tr>
+         *         <tr><th>Value</th><td><code>no-preference</code> | <code>reduce</code></td></tr>
+         *         <tr><th>Boolean Context</th>
+         *             <td><code>no-preference</code> evaluates as <code>false</code></td>
+         *         </tr>
+         *     </tbody>
+         * </table>
          *
          * @return the {@code reducedData} property
          * @defaultValue {@code false}
@@ -669,7 +709,15 @@ public final class Platform {
          * The platform color scheme, which specifies whether applications should prefer light text on
          * dark backgrounds, or dark text on light backgrounds.
          * <p>
-         * If the platform does not report color preferences, this property defaults to {@code LIGHT}.
+         * This property corresponds to the following CSS media feature:
+         * <table class="striped">
+         *     <caption>Media Feature</caption>
+         *     <tbody>
+         *         <tr><th>Name</th><td><code>prefers-color-scheme</code></td></tr>
+         *         <tr><th>Value</th><td><code>light</code> | <code>dark</code></td></tr>
+         *         <tr><th>Boolean Context</th><td>not applicable</td></tr>
+         *     </tbody>
+         * </table>
          *
          * @return the {@code colorScheme} property
          * @defaultValue {@link ColorScheme#LIGHT}
@@ -680,8 +728,6 @@ public final class Platform {
 
         /**
          * The color used for background regions.
-         * <p>
-         * If the platform does not report a background color, this property defaults to {@code WHITE}.
          *
          * @return the {@code backgroundColor} property
          * @defaultValue {@link Color#WHITE}
@@ -692,8 +738,6 @@ public final class Platform {
 
         /**
          * The color used for foreground elements like text.
-         * <p>
-         * If the platform does not report a foreground color, this property defaults to {@code BLACK}.
          *
          * @return the {@code foregroundColor} property
          * @defaultValue {@link Color#BLACK}
@@ -706,9 +750,6 @@ public final class Platform {
          * The accent color, which can be used to highlight the active or important part of a
          * control and make it stand out from the rest of the user interface. It is usually a
          * vivid color that contrasts with the foreground and background colors.
-         * <p>
-         * If the platform does not report an accent color, this property defaults to vivid blue
-         * (corresponding to the hex color value {@code #157EFB}).
          *
          * @return the {@code accentColor} property
          * @defaultValue {@code #157EFB}
