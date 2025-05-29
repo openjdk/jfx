@@ -6523,12 +6523,12 @@ public class Scene implements EventTarget {
     }
 
     /**
-     * Contains preferences of the scene that can be queried with {@code @media} CSS rules.
+     * Contains scene preferences that can override {@link Platform.Preferences platform} preferences.
      * <p>
      * All preferences are <em>null-coalesting</em> properties: if set to {@code null} (using the setter method,
      * {@link Property#setValue(Object)}, or with a binding), the property evalutes to the value of the corresponding
-     * platform-provided preference (see {@link Platform.Preferences}. Likewise, specifying a non-null value for any
-     * given property will override the platform-provided value.
+     * platform-provided preference. Likewise, specifying a non-null value for any given property will override the
+     * platform-provided value.
      *
      * @see Platform.Preferences
      * @since 25
@@ -6538,17 +6538,6 @@ public class Scene implements EventTarget {
         /**
          * Specifies whether the scene should prefer light text on dark backgrounds, or dark text
          * on light backgrounds.
-         * <p>
-         * This property corresponds to the following CSS media feature:
-         * <table class="striped">
-         *     <caption>Media Feature</caption>
-         *     <tbody>
-         *         <tr><th>Name</th><td><code>prefers-color-scheme</code></td></tr>
-         *         <tr><th>For</th><td><code>@media</code></td></tr>
-         *         <tr><th>Value</th><td><code>light</code> | <code>dark</code></td></tr>
-         *         <tr><th>Boolean Context</th><td>not applicable</td></tr>
-         *     </tbody>
-         * </table>
          *
          * @return the {@code colorScheme} property
          * @defaultValue {@link Platform.Preferences#getColorScheme()}
@@ -6563,19 +6552,6 @@ public class Scene implements EventTarget {
         /**
          * Specifies whether applications should always show scroll bars. If set to {@code false}, applications
          * may choose to hide scroll bars that are not actively used, or make them smaller or less noticeable.
-         * <p>
-         * This property corresponds to the following CSS media feature:
-         * <table class="striped">
-         *     <caption>Media Feature</caption>
-         *     <tbody>
-         *         <tr><th>Name</th><td><code>-fx-prefers-persistent-scrollbars</code></td></tr>
-         *         <tr><th>For</th><td><code>@media</code></td></tr>
-         *         <tr><th>Value</th><td><code>no-preference</code> | <code>persistent</code></td></tr>
-         *         <tr><th>Boolean Context</th>
-         *             <td><code>no-preference</code> evaluates as <code>false</code></td>
-         *         </tr>
-         *     </tbody>
-         * </table>
          *
          * @return the {@code persistentScrollBars} property
          * @defaultValue {@link Platform.Preferences#isPersistentScrollBars()}
@@ -6604,19 +6580,6 @@ public class Scene implements EventTarget {
         /**
          * Specifies whether the scene should minimize the amount of non-essential animations,
          * reducing discomfort for users who experience motion sickness or vertigo.
-         * <p>
-         * This property corresponds to the following CSS media feature:
-         * <table class="striped">
-         *     <caption>Media Feature</caption>
-         *     <tbody>
-         *         <tr><th>Name</th><td><code>prefers-reduced-motion</code></td></tr>
-         *         <tr><th>For</th><td><code>@media</code></td></tr>
-         *         <tr><th>Value</th><td><code>no-preference</code> | <code>reduce</code></td></tr>
-         *         <tr><th>Boolean Context</th>
-         *             <td><code>no-preference</code> evaluates as <code>false</code></td>
-         *         </tr>
-         *     </tbody>
-         * </table>
          *
          * @return the {@code reducedMotion} property
          * @defaultValue {@link Platform.Preferences#isReducedMotion()}
@@ -6645,19 +6608,6 @@ public class Scene implements EventTarget {
         /**
          * Specifies whether the scene should minimize the amount of transparent or translucent
          * layer effects, which can help to increase contrast and readability for some users.
-         * <p>
-         * This property corresponds to the following CSS media feature:
-         * <table class="striped">
-         *     <caption>Media Feature</caption>
-         *     <tbody>
-         *         <tr><th>Name</th><td><code>prefers-reduced-transparency</code></td></tr>
-         *         <tr><th>For</th><td><code>@media</code></td></tr>
-         *         <tr><th>Value</th><td><code>no-preference</code> | <code>reduce</code></td></tr>
-         *         <tr><th>Boolean Context</th>
-         *             <td><code>no-preference</code> evaluates as <code>false</code></td>
-         *         </tr>
-         *     </tbody>
-         * </table>
          *
          * @return the {@code reducedTransparency} property
          * @defaultValue {@link Platform.Preferences#isReducedTransparency()}
@@ -6686,19 +6636,6 @@ public class Scene implements EventTarget {
         /**
          * Specifies whether the scene should minimize the amount of internet traffic, which users
          * might request because they are on a metered network or a limited data plan.
-         * <p>
-         * This property corresponds to the following CSS media feature:
-         * <table class="striped">
-         *     <caption>Media Feature</caption>
-         *     <tbody>
-         *         <tr><th>Name</th><td><code>prefers-reduced-data</code></td></tr>
-         *         <tr><th>For</th><td><code>@media</code></td></tr>
-         *         <tr><th>Value</th><td><code>no-preference</code> | <code>reduce</code></td></tr>
-         *         <tr><th>Boolean Context</th>
-         *             <td><code>no-preference</code> evaluates as <code>false</code></td>
-         *         </tr>
-         *     </tbody>
-         * </table>
          *
          * @return the {@code reducedData} property
          * @defaultValue {@link Platform.Preferences#isReducedData()}
