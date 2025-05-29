@@ -6536,20 +6536,6 @@ public class Scene implements EventTarget {
     public sealed interface Preferences permits ScenePreferences {
 
         /**
-         * Specifies whether the scene should prefer light text on dark backgrounds, or dark text
-         * on light backgrounds.
-         *
-         * @return the {@code colorScheme} property
-         * @defaultValue {@link Platform.Preferences#getColorScheme()}
-         * @see Platform.Preferences#colorSchemeProperty()
-         */
-        ObjectProperty<ColorScheme> colorSchemeProperty();
-
-        ColorScheme getColorScheme();
-
-        void setColorScheme(ColorScheme colorScheme);
-
-        /**
          * Specifies whether applications should always show scroll bars. If set to {@code false}, applications
          * may choose to hide scroll bars that are not actively used, or make them smaller or less noticeable.
          *
@@ -6660,5 +6646,19 @@ public class Scene implements EventTarget {
          * @see #isReducedData()
          */
         void setReducedData(Boolean value);
+
+        /**
+         * Specifies whether the scene should prefer light text on dark backgrounds, or dark text
+         * on light backgrounds.
+         *
+         * @return the {@code colorScheme} property
+         * @defaultValue {@link Platform.Preferences#getColorScheme()}
+         * @see Platform.Preferences#colorSchemeProperty()
+         */
+        ObjectProperty<ColorScheme> colorSchemeProperty();
+
+        ColorScheme getColorScheme();
+
+        void setColorScheme(ColorScheme colorScheme);
     }
 }
