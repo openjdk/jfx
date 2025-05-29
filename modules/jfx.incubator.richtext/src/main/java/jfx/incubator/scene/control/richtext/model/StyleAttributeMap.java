@@ -83,7 +83,10 @@ public final class StyleAttributeMap {
     /** Strike-through text attribute. */
     public static final StyleAttribute<Boolean> STRIKE_THROUGH = new StyleAttribute<>("STRIKE_THROUGH", Boolean.class, false);
 
-    /** Tab stops paragraph attribute. */
+    /**
+     * Tab stops paragraph attribute.
+     * @since 25
+     */
     public static final StyleAttribute<TabStop[]> TAB_STOPS = new StyleAttribute<>("TAB_STOPS", TabStop[].class, true);
 
     /** Text alignment paragraph attribute. */
