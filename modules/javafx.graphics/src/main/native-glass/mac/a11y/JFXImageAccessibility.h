@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -23,24 +23,12 @@
  * questions.
  */
 
-#import <Cocoa/Cocoa.h>
-#import <jni.h>
+#import <AppKit/AppKit.h>
+#import "AccessibleBase.h"
 
-#import "GlassViewDelegate.h"
+@interface JFXImageAccessibility : AccessibleBase <NSAccessibilityImage> {
 
-// Helper class to handle system wide touch input events
-@interface GlassTouches : NSObject
-{
-@private
-    GlassViewDelegate*      curConsumer;
-    CFMachPortRef           eventTap;
-    CFRunLoopSourceRef      runLoopSource;
-    NSMutableDictionary*    touches;
-    jlong                   lastTouchId;
-}
-
-+ (void)startTracking:(GlassViewDelegate *)delegate;
-+ (void)stopTracking:(GlassViewDelegate *)delegate;
-+ (void)terminate;
-
+};
+- (NSAccessibilityRole)accessibilityRole;
+- (NSString *)accessibilityLabel;
 @end

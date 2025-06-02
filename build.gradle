@@ -497,7 +497,8 @@ defineProperty("AWT_TEST", "true")
 ext.IS_AWT_TEST = Boolean.parseBoolean(AWT_TEST);
 
 // Specifies whether to run system tests that depend on SWT (only used when FULL_TEST is also enabled)
-defineProperty("SWT_TEST", "true")
+// JDK-8356687 and JDK-8356688 track the disablement of the SWT tests on both platforms.
+defineProperty("SWT_TEST", (IS_MAC || IS_LINUX) ? "false" : "true")
 ext.IS_SWT_TEST = Boolean.parseBoolean(SWT_TEST);
 
 // Specifies whether to run unstable tests (true) - tests that don't run well with Hudson builds
@@ -618,6 +619,9 @@ defineProperty("HUDSON_BUILD_NUMBER","0000")
 defineProperty("PROMOTED_BUILD_NUMBER", "0")
 defineProperty("MILESTONE_FCS", "false")
 ext.IS_MILESTONE_FCS = Boolean.parseBoolean(MILESTONE_FCS)
+
+// The following property used to define WebView Browser Version
+defineProperty("WEBVIEW_VERSION", "18.4")
 
 // The following properties define the product name for Oracle JDK and OpenJDK
 // for VersionInfo and the DLL manifest.
@@ -3057,16 +3061,10 @@ project(":swt") {
     }
 
     test {
-        //enabled = IS_FULL_TEST && IS_SWT_TEST
-        enabled = false // FIXME: JIGSAW -- support this with modules
-        logger.info("JIGSAW Testing disabled for swt")
+        enabled = IS_FULL_TEST && IS_SWT_TEST
 
         jvmArgs enableNativeGraphics
 
-        if (IS_MAC) {
-            enabled = false
-            logger.info("SWT tests are disabled on MAC, because Gradle test runner does not handle -XstartOnFirstThread properly (https://issues.gradle.org/browse/GRADLE-3290).")
-        }
     }
 
     addValidateSourceSets(project, sourceSets)
@@ -3980,6 +3978,7 @@ project(":web") {
                     } else {
                         targetCpuBitDepthSwitch = "--32-bit"
                     }
+                    cmakeArgs += " -DWEBVIEW_BROWSER_VERSION=${WEBVIEW_VERSION}"
                     cmakeArgs += " -DJAVAFX_RELEASE_VERSION=${jfxReleaseMajorVersion}"
                     commandLine("perl", "$projectDir/src/main/native/Tools/Scripts/build-webkit",
                         "--java", "--icu-unicode", targetCpuBitDepthSwitch,
