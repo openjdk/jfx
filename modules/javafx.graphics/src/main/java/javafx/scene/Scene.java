@@ -6255,7 +6255,7 @@ public class Scene implements EventTarget {
     final ScenePreferences preferences = new ScenePreferences(this);
 
     /**
-     * Gets the scene preferences that can be queried with {@code @media} CSS rules.
+     * Gets the scene preferences that can override {@link Platform.Preferences platform} preferences.
      *
      * @return the {@code Preferences} instance
      * @since 25
