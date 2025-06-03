@@ -1411,8 +1411,8 @@ void WindowContextTop::show_system_menu(int x, int y) {
     GdkEventButton* buttonEvent = (GdkEventButton*)event;
     buttonEvent->x_root = rx;
     buttonEvent->y_root = ry;
-    buttonEvent->window = g_object_ref(gdk_window);
-    buttonEvent->device = g_object_ref(device);
+    buttonEvent->window = (GdkWindow*)g_object_ref(gdk_window);
+    buttonEvent->device = (GdkDevice*)g_object_ref(device);
 
     gdk_window_show_window_menu(gdk_window, event);
     gdk_event_free(event);
