@@ -164,6 +164,11 @@ public class TreeTableViewSkin<T> extends TableViewSkinBase<T, TreeItem<T>, Tree
             }
             // fix for JDK-8094887
             control.edit(-1, null);
+
+            if (root == null || root.getValue() == null) {
+                requestRebuildCells();
+            }
+
             updateItemCount();
         });
 
@@ -335,11 +340,6 @@ public class TreeTableViewSkin<T> extends TableViewSkinBase<T, TreeItem<T>, Tree
         // memory leak in VirtualFlow.sheet.children. This can probably be
         // optimised in the future when time permits.
         flow.setCellCount(newCount);
-
-        TreeItem<T> root = getSkinnable().getRoot();
-        if (root == null || root.getValue() == null) {
-            requestRebuildCells();
-        }
 
         if (newCount != oldCount) {
             // The following line is (perhaps temporarily) disabled to
