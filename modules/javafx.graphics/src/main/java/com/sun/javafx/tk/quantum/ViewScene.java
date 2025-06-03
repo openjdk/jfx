@@ -36,23 +36,24 @@ import com.sun.javafx.sg.prism.NGNode;
 import com.sun.javafx.tk.Toolkit;
 import com.sun.prism.GraphicsPipeline;
 import javafx.scene.Parent;
+import javafx.scene.Scene;
 
 class ViewScene extends GlassScene {
 
     private static final String UNSUPPORTED_FORMAT =
         "Transparent windows only supported for BYTE_BGRA_PRE format on LITTLE_ENDIAN machines";
 
-    private final javafx.scene.Scene fxScene;
+    private Scene scene;
     private View platformView;
     private ViewPainter painter;
     private PaintRenderJob paintRenderJob;
     private ViewSceneOverlay viewSceneOverlay;
     private Parent overlayRoot;
 
-    public ViewScene(javafx.scene.Scene fxScene, boolean depthBuffer, boolean msaa) {
+    public ViewScene(Scene scene, boolean depthBuffer, boolean msaa) {
         super(depthBuffer, msaa);
 
-        this.fxScene = fxScene;
+        this.scene = scene;
         this.platformView = Application.GetApplication().createView();
         this.platformView.setEventHandler(new GlassViewEventHandler(this));
     }
@@ -85,8 +86,8 @@ class ViewScene extends GlassScene {
                 painter = new PresentingPainter(this);
             }
 
-            if (fxScene != null) {
-                viewSceneOverlay = new ViewSceneOverlay(fxScene, painter);
+            if (scene != null) {
+                viewSceneOverlay = new ViewSceneOverlay(scene, painter);
                 viewSceneOverlay.setRoot(overlayRoot);
             } else {
                 viewSceneOverlay = null;
@@ -113,6 +114,7 @@ class ViewScene extends GlassScene {
                 painter = null;
                 paintRenderJob = null;
                 viewSceneOverlay = null;
+                scene = null;
                 return null;
             });
         }

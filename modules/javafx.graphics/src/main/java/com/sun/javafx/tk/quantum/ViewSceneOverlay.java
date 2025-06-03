@@ -29,6 +29,7 @@ import com.sun.javafx.scene.NodeHelper;
 import com.sun.javafx.scene.SceneHelper;
 import javafx.scene.Node;
 import javafx.scene.Parent;
+import javafx.scene.Scene;
 import javafx.scene.SubScene;
 
 /**
@@ -37,14 +38,14 @@ import javafx.scene.SubScene;
  */
 final class ViewSceneOverlay {
 
-    private final javafx.scene.Scene fxScene;
+    private final Scene scene;
     private final ViewPainter painter;
     private Parent root;
     private boolean rootDirty;
     private double width, height;
 
-    ViewSceneOverlay(javafx.scene.Scene fxScene, ViewPainter painter) {
-        this.fxScene = fxScene;
+    ViewSceneOverlay(Scene scene, ViewPainter painter) {
+        this.scene = scene;
         this.painter = painter;
     }
 
@@ -66,11 +67,11 @@ final class ViewSceneOverlay {
     }
 
     public void layout() {
-        if (fxScene == null) {
+        if (scene == null) {
             return;
         }
 
-        var window = fxScene.getWindow();
+        var window = scene.getWindow();
 
         if (root != null && window != null) {
             root.resize(width, height);
@@ -91,7 +92,7 @@ final class ViewSceneOverlay {
         this.root = root;
 
         if (root != null) {
-            NodeHelper.setScenes(root, fxScene, null);
+            NodeHelper.setScenes(root, scene, null);
         }
 
         rootDirty = true;
@@ -106,7 +107,7 @@ final class ViewSceneOverlay {
                 painter.setOverlayRoot(NodeHelper.getPeer(root));
             } else {
                 painter.setOverlayRoot(null);
-                SceneHelper.getPeer(fxScene).entireSceneNeedsRepaint();
+                SceneHelper.getPeer(scene).entireSceneNeedsRepaint();
             }
         }
     }
