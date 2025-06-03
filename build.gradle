@@ -4645,6 +4645,7 @@ task javadoc(type: Javadoc, dependsOn: createMSPfile) {
     options.tags("implSpec:a:Implementation Requirements:")
     options.tags("implNote:a:Implementation Note:")
     options.tags("interpolationType:a:Interpolation Type:")
+    options.tags("mediaFeature:a:Media Feature:")
     options.tags("param")
     options.tags("return")
     options.tags("throws")
