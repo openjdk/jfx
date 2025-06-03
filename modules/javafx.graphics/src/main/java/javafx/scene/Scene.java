@@ -4463,23 +4463,8 @@ public class Scene implements EventTarget {
 
     public final ObjectProperty<EventHandler<? super ContextMenuEvent>> onContextMenuRequestedProperty() {
         if (onContextMenuRequested == null) {
-            onContextMenuRequested = new ObjectPropertyBase<>() {
-
-                @Override
-                protected void invalidated() {
-                    setEventHandler(ContextMenuEvent.CONTEXT_MENU_REQUESTED, get());
-                }
-
-                @Override
-                public Object getBean() {
-                    return Scene.this;
-                }
-
-                @Override
-                public String getName() {
-                    return "onContextMenuRequested";
-                }
-            };
+            onContextMenuRequested = new EventHandlerProperty<>(
+                "onContextMenuRequested", ContextMenuEvent.CONTEXT_MENU_REQUESTED);
         }
         return onContextMenuRequested;
     }
@@ -4506,23 +4491,7 @@ public class Scene implements EventTarget {
 
     public final ObjectProperty<EventHandler<? super MouseEvent>> onMouseClickedProperty() {
         if (onMouseClicked == null) {
-            onMouseClicked = new ObjectPropertyBase<>() {
-
-                @Override
-                protected void invalidated() {
-                    setEventHandler(MouseEvent.MOUSE_CLICKED, get());
-                }
-
-                @Override
-                public Object getBean() {
-                    return Scene.this;
-                }
-
-                @Override
-                public String getName() {
-                    return "onMouseClicked";
-                }
-            };
+            onMouseClicked = new EventHandlerProperty<>("onMouseClicked", MouseEvent.MOUSE_CLICKED);
         }
         return onMouseClicked;
     }
@@ -4543,23 +4512,7 @@ public class Scene implements EventTarget {
 
     public final ObjectProperty<EventHandler<? super MouseEvent>> onMouseDraggedProperty() {
         if (onMouseDragged == null) {
-            onMouseDragged = new ObjectPropertyBase<>() {
-
-                @Override
-                protected void invalidated() {
-                    setEventHandler(MouseEvent.MOUSE_DRAGGED, get());
-                }
-
-                @Override
-                public Object getBean() {
-                    return Scene.this;
-                }
-
-                @Override
-                public String getName() {
-                    return "onMouseDragged";
-                }
-            };
+            onMouseDragged = new EventHandlerProperty<>("onMouseDragged", MouseEvent.MOUSE_DRAGGED);
         }
         return onMouseDragged;
     }
@@ -4579,23 +4532,7 @@ public class Scene implements EventTarget {
 
     public final ObjectProperty<EventHandler<? super MouseEvent>> onMouseEnteredProperty() {
         if (onMouseEntered == null) {
-            onMouseEntered = new ObjectPropertyBase<>() {
-
-                @Override
-                protected void invalidated() {
-                    setEventHandler(MouseEvent.MOUSE_ENTERED, get());
-                }
-
-                @Override
-                public Object getBean() {
-                    return Scene.this;
-                }
-
-                @Override
-                public String getName() {
-                    return "onMouseEntered";
-                }
-            };
+            onMouseEntered = new EventHandlerProperty<>("onMouseEntered", MouseEvent.MOUSE_ENTERED);
         }
         return onMouseEntered;
     }
@@ -4615,23 +4552,7 @@ public class Scene implements EventTarget {
 
     public final ObjectProperty<EventHandler<? super MouseEvent>> onMouseExitedProperty() {
         if (onMouseExited == null) {
-            onMouseExited = new ObjectPropertyBase<>() {
-
-                @Override
-                protected void invalidated() {
-                    setEventHandler(MouseEvent.MOUSE_EXITED, get());
-                }
-
-                @Override
-                public Object getBean() {
-                    return Scene.this;
-                }
-
-                @Override
-                public String getName() {
-                    return "onMouseExited";
-                }
-            };
+            onMouseExited = new EventHandlerProperty<>("onMouseExited", MouseEvent.MOUSE_EXITED);
         }
         return onMouseExited;
     }
@@ -4652,23 +4573,7 @@ public class Scene implements EventTarget {
 
     public final ObjectProperty<EventHandler<? super MouseEvent>> onMouseMovedProperty() {
         if (onMouseMoved == null) {
-            onMouseMoved = new ObjectPropertyBase<>() {
-
-                @Override
-                protected void invalidated() {
-                    setEventHandler(MouseEvent.MOUSE_MOVED, get());
-                }
-
-                @Override
-                public Object getBean() {
-                    return Scene.this;
-                }
-
-                @Override
-                public String getName() {
-                    return "onMouseMoved";
-                }
-            };
+            onMouseMoved = new EventHandlerProperty<>("onMouseMoved", MouseEvent.MOUSE_MOVED);
         }
         return onMouseMoved;
     }
@@ -4689,23 +4594,7 @@ public class Scene implements EventTarget {
 
     public final ObjectProperty<EventHandler<? super MouseEvent>> onMousePressedProperty() {
         if (onMousePressed == null) {
-            onMousePressed = new ObjectPropertyBase<>() {
-
-                @Override
-                protected void invalidated() {
-                    setEventHandler(MouseEvent.MOUSE_PRESSED, get());
-                }
-
-                @Override
-                public Object getBean() {
-                    return Scene.this;
-                }
-
-                @Override
-                public String getName() {
-                    return "onMousePressed";
-                }
-            };
+            onMousePressed = new EventHandlerProperty<>("onMousePressed", MouseEvent.MOUSE_PRESSED);
         }
         return onMousePressed;
     }
@@ -4726,23 +4615,7 @@ public class Scene implements EventTarget {
 
     public final ObjectProperty<EventHandler<? super MouseEvent>> onMouseReleasedProperty() {
         if (onMouseReleased == null) {
-            onMouseReleased = new ObjectPropertyBase<>() {
-
-                @Override
-                protected void invalidated() {
-                    setEventHandler(MouseEvent.MOUSE_RELEASED, get());
-                }
-
-                @Override
-                public Object getBean() {
-                    return Scene.this;
-                }
-
-                @Override
-                public String getName() {
-                    return "onMouseReleased";
-                }
-            };
+            onMouseReleased = new EventHandlerProperty<>("onMouseReleased", MouseEvent.MOUSE_RELEASED);
         }
         return onMouseReleased;
     }
@@ -4763,23 +4636,7 @@ public class Scene implements EventTarget {
 
     public final ObjectProperty<EventHandler<? super MouseEvent>> onDragDetectedProperty() {
         if (onDragDetected == null) {
-            onDragDetected = new ObjectPropertyBase<>() {
-
-                @Override
-                protected void invalidated() {
-                    setEventHandler(MouseEvent.DRAG_DETECTED, get());
-                }
-
-                @Override
-                public Object getBean() {
-                    return Scene.this;
-                }
-
-                @Override
-                public String getName() {
-                    return "onDragDetected";
-                }
-            };
+            onDragDetected = new EventHandlerProperty<>("onDragDetected", MouseEvent.DRAG_DETECTED);
         }
         return onDragDetected;
     }
@@ -4801,23 +4658,7 @@ public class Scene implements EventTarget {
 
     public final ObjectProperty<EventHandler<? super MouseDragEvent>> onMouseDragOverProperty() {
         if (onMouseDragOver == null) {
-            onMouseDragOver = new ObjectPropertyBase<>() {
-
-                @Override
-                protected void invalidated() {
-                    setEventHandler(MouseDragEvent.MOUSE_DRAG_OVER, get());
-                }
-
-                @Override
-                public Object getBean() {
-                    return Scene.this;
-                }
-
-                @Override
-                public String getName() {
-                    return "onMouseDragOver";
-                }
-            };
+            onMouseDragOver = new EventHandlerProperty<>("onMouseDragOver", MouseDragEvent.MOUSE_DRAG_OVER);
         }
         return onMouseDragOver;
     }
@@ -4839,23 +4680,7 @@ public class Scene implements EventTarget {
 
     public final ObjectProperty<EventHandler<? super MouseDragEvent>> onMouseDragReleasedProperty() {
         if (onMouseDragReleased == null) {
-            onMouseDragReleased = new ObjectPropertyBase<>() {
-
-                @Override
-                protected void invalidated() {
-                    setEventHandler(MouseDragEvent.MOUSE_DRAG_RELEASED, get());
-                }
-
-                @Override
-                public Object getBean() {
-                    return Scene.this;
-                }
-
-                @Override
-                public String getName() {
-                    return "onMouseDragReleased";
-                }
-            };
+            onMouseDragReleased = new EventHandlerProperty<>("onMouseDragReleased", MouseDragEvent.MOUSE_DRAG_RELEASED);
         }
         return onMouseDragReleased;
     }
@@ -4877,23 +4702,7 @@ public class Scene implements EventTarget {
 
     public final ObjectProperty<EventHandler<? super MouseDragEvent>> onMouseDragEnteredProperty() {
         if (onMouseDragEntered == null) {
-            onMouseDragEntered = new ObjectPropertyBase<>() {
-
-                @Override
-                protected void invalidated() {
-                    setEventHandler(MouseDragEvent.MOUSE_DRAG_ENTERED, get());
-                }
-
-                @Override
-                public Object getBean() {
-                    return Scene.this;
-                }
-
-                @Override
-                public String getName() {
-                    return "onMouseDragEntered";
-                }
-            };
+            onMouseDragEntered = new EventHandlerProperty<>("onMouseDragEntered", MouseDragEvent.MOUSE_DRAG_ENTERED);
         }
         return onMouseDragEntered;
     }
@@ -4915,23 +4724,7 @@ public class Scene implements EventTarget {
 
     public final ObjectProperty<EventHandler<? super MouseDragEvent>> onMouseDragExitedProperty() {
         if (onMouseDragExited == null) {
-            onMouseDragExited = new ObjectPropertyBase<>() {
-
-                @Override
-                protected void invalidated() {
-                    setEventHandler(MouseDragEvent.MOUSE_DRAG_EXITED, get());
-                }
-
-                @Override
-                public Object getBean() {
-                    return Scene.this;
-                }
-
-                @Override
-                public String getName() {
-                    return "onMouseDragExited";
-                }
-            };
+            onMouseDragExited = new EventHandlerProperty<>("onMouseDragExited", MouseDragEvent.MOUSE_DRAG_EXITED);
         }
         return onMouseDragExited;
     }
@@ -4959,23 +4752,7 @@ public class Scene implements EventTarget {
 
     public final ObjectProperty<EventHandler<? super ScrollEvent>> onScrollStartedProperty() {
         if (onScrollStarted == null) {
-            onScrollStarted = new ObjectPropertyBase<>() {
-
-                @Override
-                protected void invalidated() {
-                    setEventHandler(ScrollEvent.SCROLL_STARTED, get());
-                }
-
-                @Override
-                public Object getBean() {
-                    return Scene.this;
-                }
-
-                @Override
-                public String getName() {
-                    return "onScrollStarted";
-                }
-            };
+            onScrollStarted = new EventHandlerProperty<>("onScrollStarted", ScrollEvent.SCROLL_STARTED);
         }
         return onScrollStarted;
     }
@@ -4995,23 +4772,7 @@ public class Scene implements EventTarget {
 
     public final ObjectProperty<EventHandler<? super ScrollEvent>> onScrollProperty() {
         if (onScroll == null) {
-            onScroll = new ObjectPropertyBase<>() {
-
-                @Override
-                protected void invalidated() {
-                    setEventHandler(ScrollEvent.SCROLL, get());
-                }
-
-                @Override
-                public Object getBean() {
-                    return Scene.this;
-                }
-
-                @Override
-                public String getName() {
-                    return "onScroll";
-                }
-            };
+            onScroll = new EventHandlerProperty<>("onScroll", ScrollEvent.SCROLL);
         }
         return onScroll;
     }
@@ -5032,23 +4793,7 @@ public class Scene implements EventTarget {
 
     public final ObjectProperty<EventHandler<? super ScrollEvent>> onScrollFinishedProperty() {
         if (onScrollFinished == null) {
-            onScrollFinished = new ObjectPropertyBase<>() {
-
-                @Override
-                protected void invalidated() {
-                    setEventHandler(ScrollEvent.SCROLL_FINISHED, get());
-                }
-
-                @Override
-                public Object getBean() {
-                    return Scene.this;
-                }
-
-                @Override
-                public String getName() {
-                    return "onScrollFinished";
-                }
-            };
+            onScrollFinished = new EventHandlerProperty<>("onScrollFinished", ScrollEvent.SCROLL_FINISHED);
         }
         return onScrollFinished;
     }
@@ -5069,23 +4814,7 @@ public class Scene implements EventTarget {
 
     public final ObjectProperty<EventHandler<? super RotateEvent>> onRotationStartedProperty() {
         if (onRotationStarted == null) {
-            onRotationStarted = new ObjectPropertyBase<>() {
-
-                @Override
-                protected void invalidated() {
-                    setEventHandler(RotateEvent.ROTATION_STARTED, get());
-                }
-
-                @Override
-                public Object getBean() {
-                    return Scene.this;
-                }
-
-                @Override
-                public String getName() {
-                    return "onRotationStarted";
-                }
-            };
+            onRotationStarted = new EventHandlerProperty<>("onRotationStarted", RotateEvent.ROTATION_STARTED);
         }
         return onRotationStarted;
     }
@@ -5106,23 +4835,7 @@ public class Scene implements EventTarget {
 
     public final ObjectProperty<EventHandler<? super RotateEvent>> onRotateProperty() {
         if (onRotate == null) {
-            onRotate = new ObjectPropertyBase<>() {
-
-                @Override
-                protected void invalidated() {
-                    setEventHandler(RotateEvent.ROTATE, get());
-                }
-
-                @Override
-                public Object getBean() {
-                    return Scene.this;
-                }
-
-                @Override
-                public String getName() {
-                    return "onRotate";
-                }
-            };
+            onRotate = new EventHandlerProperty<>("onRotate", RotateEvent.ROTATE);
         }
         return onRotate;
     }
@@ -5143,23 +4856,7 @@ public class Scene implements EventTarget {
 
     public final ObjectProperty<EventHandler<? super RotateEvent>> onRotationFinishedProperty() {
         if (onRotationFinished == null) {
-            onRotationFinished = new ObjectPropertyBase<>() {
-
-                @Override
-                protected void invalidated() {
-                    setEventHandler(RotateEvent.ROTATION_FINISHED, get());
-                }
-
-                @Override
-                public Object getBean() {
-                    return Scene.this;
-                }
-
-                @Override
-                public String getName() {
-                    return "onRotationFinished";
-                }
-            };
+            onRotationFinished = new EventHandlerProperty<>("onRotationFinished", RotateEvent.ROTATION_FINISHED);
         }
         return onRotationFinished;
     }
@@ -5180,23 +4877,7 @@ public class Scene implements EventTarget {
 
     public final ObjectProperty<EventHandler<? super ZoomEvent>> onZoomStartedProperty() {
         if (onZoomStarted == null) {
-            onZoomStarted = new ObjectPropertyBase<>() {
-
-                @Override
-                protected void invalidated() {
-                    setEventHandler(ZoomEvent.ZOOM_STARTED, get());
-                }
-
-                @Override
-                public Object getBean() {
-                    return Scene.this;
-                }
-
-                @Override
-                public String getName() {
-                    return "onZoomStarted";
-                }
-            };
+            onZoomStarted = new EventHandlerProperty<>("onZoomStarted", ZoomEvent.ZOOM_STARTED);
         }
         return onZoomStarted;
     }
@@ -5217,23 +4898,7 @@ public class Scene implements EventTarget {
 
     public final ObjectProperty<EventHandler<? super ZoomEvent>> onZoomProperty() {
         if (onZoom == null) {
-            onZoom = new ObjectPropertyBase<>() {
-
-                @Override
-                protected void invalidated() {
-                    setEventHandler(ZoomEvent.ZOOM, get());
-                }
-
-                @Override
-                public Object getBean() {
-                    return Scene.this;
-                }
-
-                @Override
-                public String getName() {
-                    return "onZoom";
-                }
-            };
+            onZoom = new EventHandlerProperty<>("onZoom", ZoomEvent.ZOOM);
         }
         return onZoom;
     }
@@ -5254,23 +4919,7 @@ public class Scene implements EventTarget {
 
     public final ObjectProperty<EventHandler<? super ZoomEvent>> onZoomFinishedProperty() {
         if (onZoomFinished == null) {
-            onZoomFinished = new ObjectPropertyBase<>() {
-
-                @Override
-                protected void invalidated() {
-                    setEventHandler(ZoomEvent.ZOOM_FINISHED, get());
-                }
-
-                @Override
-                public Object getBean() {
-                    return Scene.this;
-                }
-
-                @Override
-                public String getName() {
-                    return "onZoomFinished";
-                }
-            };
+            onZoomFinished = new EventHandlerProperty<>("onZoomFinished", ZoomEvent.ZOOM_FINISHED);
         }
         return onZoomFinished;
     }
@@ -5292,23 +4941,7 @@ public class Scene implements EventTarget {
 
     public final ObjectProperty<EventHandler<? super SwipeEvent>> onSwipeUpProperty() {
         if (onSwipeUp == null) {
-            onSwipeUp = new ObjectPropertyBase<>() {
-
-                @Override
-                protected void invalidated() {
-                    setEventHandler(SwipeEvent.SWIPE_UP, get());
-                }
-
-                @Override
-                public Object getBean() {
-                    return Scene.this;
-                }
-
-                @Override
-                public String getName() {
-                    return "onSwipeUp";
-                }
-            };
+            onSwipeUp = new EventHandlerProperty<>("onSwipeUp", SwipeEvent.SWIPE_UP);
         }
         return onSwipeUp;
     }
@@ -5330,23 +4963,7 @@ public class Scene implements EventTarget {
 
     public final ObjectProperty<EventHandler<? super SwipeEvent>> onSwipeDownProperty() {
         if (onSwipeDown == null) {
-            onSwipeDown = new ObjectPropertyBase<>() {
-
-                @Override
-                protected void invalidated() {
-                    setEventHandler(SwipeEvent.SWIPE_DOWN, get());
-                }
-
-                @Override
-                public Object getBean() {
-                    return Scene.this;
-                }
-
-                @Override
-                public String getName() {
-                    return "onSwipeDown";
-                }
-            };
+            onSwipeDown = new EventHandlerProperty<>("onSwipeDown", SwipeEvent.SWIPE_DOWN);
         }
         return onSwipeDown;
     }
@@ -5368,23 +4985,7 @@ public class Scene implements EventTarget {
 
     public final ObjectProperty<EventHandler<? super SwipeEvent>> onSwipeLeftProperty() {
         if (onSwipeLeft == null) {
-            onSwipeLeft = new ObjectPropertyBase<>() {
-
-                @Override
-                protected void invalidated() {
-                    setEventHandler(SwipeEvent.SWIPE_LEFT, get());
-                }
-
-                @Override
-                public Object getBean() {
-                    return Scene.this;
-                }
-
-                @Override
-                public String getName() {
-                    return "onSwipeLeft";
-                }
-            };
+            onSwipeLeft = new EventHandlerProperty<>("onSwipeLeft", SwipeEvent.SWIPE_LEFT);
         }
         return onSwipeLeft;
     }
@@ -5406,23 +5007,7 @@ public class Scene implements EventTarget {
 
     public final ObjectProperty<EventHandler<? super SwipeEvent>> onSwipeRightProperty() {
         if (onSwipeRight == null) {
-            onSwipeRight = new ObjectPropertyBase<>() {
-
-                @Override
-                protected void invalidated() {
-                    setEventHandler(SwipeEvent.SWIPE_RIGHT, get());
-                }
-
-                @Override
-                public Object getBean() {
-                    return Scene.this;
-                }
-
-                @Override
-                public String getName() {
-                    return "onSwipeRight";
-                }
-            };
+            onSwipeRight = new EventHandlerProperty<>("onSwipeRight", SwipeEvent.SWIPE_RIGHT);
         }
         return onSwipeRight;
     }
@@ -5449,23 +5034,7 @@ public class Scene implements EventTarget {
 
     public final ObjectProperty<EventHandler<? super TouchEvent>> onTouchPressedProperty() {
         if (onTouchPressed == null) {
-            onTouchPressed = new ObjectPropertyBase<>() {
-
-                @Override
-                protected void invalidated() {
-                    setEventHandler(TouchEvent.TOUCH_PRESSED, get());
-                }
-
-                @Override
-                public Object getBean() {
-                    return Scene.this;
-                }
-
-                @Override
-                public String getName() {
-                    return "onTouchPressed";
-                }
-            };
+            onTouchPressed = new EventHandlerProperty<>("onTouchPressed", TouchEvent.TOUCH_PRESSED);
         }
         return onTouchPressed;
     }
@@ -5486,23 +5055,7 @@ public class Scene implements EventTarget {
 
     public final ObjectProperty<EventHandler<? super TouchEvent>> onTouchMovedProperty() {
         if (onTouchMoved == null) {
-            onTouchMoved = new ObjectPropertyBase<>() {
-
-                @Override
-                protected void invalidated() {
-                    setEventHandler(TouchEvent.TOUCH_MOVED, get());
-                }
-
-                @Override
-                public Object getBean() {
-                    return Scene.this;
-                }
-
-                @Override
-                public String getName() {
-                    return "onTouchMoved";
-                }
-            };
+            onTouchMoved = new EventHandlerProperty<>("onTouchMoved", TouchEvent.TOUCH_MOVED);
         }
         return onTouchMoved;
     }
@@ -5523,23 +5076,7 @@ public class Scene implements EventTarget {
 
     public final ObjectProperty<EventHandler<? super TouchEvent>> onTouchReleasedProperty() {
         if (onTouchReleased == null) {
-            onTouchReleased = new ObjectPropertyBase<>() {
-
-                @Override
-                protected void invalidated() {
-                    setEventHandler(TouchEvent.TOUCH_RELEASED, get());
-                }
-
-                @Override
-                public Object getBean() {
-                    return Scene.this;
-                }
-
-                @Override
-                public String getName() {
-                    return "onTouchReleased";
-                }
-            };
+            onTouchReleased = new EventHandlerProperty<>("onTouchReleased", TouchEvent.TOUCH_RELEASED);
         }
         return onTouchReleased;
     }
@@ -5561,23 +5098,7 @@ public class Scene implements EventTarget {
 
     public final ObjectProperty<EventHandler<? super TouchEvent>> onTouchStationaryProperty() {
         if (onTouchStationary == null) {
-            onTouchStationary = new ObjectPropertyBase<>() {
-
-                @Override
-                protected void invalidated() {
-                    setEventHandler(TouchEvent.TOUCH_STATIONARY, get());
-                }
-
-                @Override
-                public Object getBean() {
-                    return Scene.this;
-                }
-
-                @Override
-                public String getName() {
-                    return "onTouchStationary";
-                }
-            };
+            onTouchStationary = new EventHandlerProperty<>("onTouchStationary", TouchEvent.TOUCH_STATIONARY);
         }
         return onTouchStationary;
     }
@@ -5688,23 +5209,7 @@ public class Scene implements EventTarget {
      */
     public final ObjectProperty<EventHandler<? super DragEvent>> onDragEnteredProperty() {
         if (onDragEntered == null) {
-            onDragEntered = new ObjectPropertyBase<>() {
-
-                @Override
-                protected void invalidated() {
-                    setEventHandler(DragEvent.DRAG_ENTERED, get());
-                }
-
-                @Override
-                public Object getBean() {
-                    return Scene.this;
-                }
-
-                @Override
-                public String getName() {
-                    return "onDragEntered";
-                }
-            };
+            onDragEntered = new EventHandlerProperty<>("onDragEntered", DragEvent.DRAG_ENTERED);
         }
         return onDragEntered;
     }
@@ -5726,23 +5231,7 @@ public class Scene implements EventTarget {
      */
     public final ObjectProperty<EventHandler<? super DragEvent>> onDragExitedProperty() {
         if (onDragExited == null) {
-            onDragExited = new ObjectPropertyBase<>() {
-
-                @Override
-                protected void invalidated() {
-                    setEventHandler(DragEvent.DRAG_EXITED, get());
-                }
-
-                @Override
-                public Object getBean() {
-                    return Scene.this;
-                }
-
-                @Override
-                public String getName() {
-                    return "onDragExited";
-                }
-            };
+            onDragExited = new EventHandlerProperty<>("onDragExited", DragEvent.DRAG_EXITED);
         }
         return onDragExited;
     }
@@ -5765,23 +5254,7 @@ public class Scene implements EventTarget {
      */
     public final ObjectProperty<EventHandler<? super DragEvent>> onDragOverProperty() {
         if (onDragOver == null) {
-            onDragOver = new ObjectPropertyBase<>() {
-
-                @Override
-                protected void invalidated() {
-                    setEventHandler(DragEvent.DRAG_OVER, get());
-                }
-
-                @Override
-                public Object getBean() {
-                    return Scene.this;
-                }
-
-                @Override
-                public String getName() {
-                    return "onDragOver";
-                }
-            };
+            onDragOver = new EventHandlerProperty<>("onDragOver", DragEvent.DRAG_OVER);
         }
         return onDragOver;
     }
@@ -5837,23 +5310,7 @@ public class Scene implements EventTarget {
      */
     public final ObjectProperty<EventHandler<? super DragEvent>> onDragDroppedProperty() {
         if (onDragDropped == null) {
-            onDragDropped = new ObjectPropertyBase<>() {
-
-                @Override
-                protected void invalidated() {
-                    setEventHandler(DragEvent.DRAG_DROPPED, get());
-                }
-
-                @Override
-                public Object getBean() {
-                    return Scene.this;
-                }
-
-                @Override
-                public String getName() {
-                    return "onDragDropped";
-                }
-            };
+            onDragDropped = new EventHandlerProperty<>("onDragDropped", DragEvent.DRAG_DROPPED);
         }
         return onDragDropped;
     }
@@ -5886,23 +5343,7 @@ public class Scene implements EventTarget {
      */
     public final ObjectProperty<EventHandler<? super DragEvent>> onDragDoneProperty() {
         if (onDragDone == null) {
-            onDragDone = new ObjectPropertyBase<>() {
-
-                @Override
-                protected void invalidated() {
-                    setEventHandler(DragEvent.DRAG_DONE, get());
-                }
-
-                @Override
-                public Object getBean() {
-                    return Scene.this;
-                }
-
-                @Override
-                public String getName() {
-                    return "onDragDone";
-                }
-            };
+            onDragDone = new EventHandlerProperty<>("onDragDone", DragEvent.DRAG_DONE);
         }
         return onDragDone;
     }
@@ -6002,23 +5443,7 @@ public class Scene implements EventTarget {
 
     public final ObjectProperty<EventHandler<? super KeyEvent>> onKeyPressedProperty() {
         if (onKeyPressed == null) {
-            onKeyPressed = new ObjectPropertyBase<>() {
-
-                @Override
-                protected void invalidated() {
-                    setEventHandler(KeyEvent.KEY_PRESSED, get());
-                }
-
-                @Override
-                public Object getBean() {
-                    return Scene.this;
-                }
-
-                @Override
-                public String getName() {
-                    return "onKeyPressed";
-                }
-            };
+            onKeyPressed = new EventHandlerProperty<>("onKeyPressed", KeyEvent.KEY_PRESSED);
         }
         return onKeyPressed;
     }
@@ -6041,23 +5466,7 @@ public class Scene implements EventTarget {
 
     public final ObjectProperty<EventHandler<? super KeyEvent>> onKeyReleasedProperty() {
         if (onKeyReleased == null) {
-            onKeyReleased = new ObjectPropertyBase<>() {
-
-                @Override
-                protected void invalidated() {
-                    setEventHandler(KeyEvent.KEY_RELEASED, get());
-                }
-
-                @Override
-                public Object getBean() {
-                    return Scene.this;
-                }
-
-                @Override
-                public String getName() {
-                    return "onKeyReleased";
-                }
-            };
+            onKeyReleased = new EventHandlerProperty<>("onKeyReleased", KeyEvent.KEY_RELEASED);
         }
         return onKeyReleased;
     }
@@ -6081,26 +5490,9 @@ public class Scene implements EventTarget {
         return onKeyTyped == null ? null : onKeyTyped.get();
     }
 
-    public final ObjectProperty<EventHandler<? super KeyEvent>> onKeyTypedProperty(
-    ) {
+    public final ObjectProperty<EventHandler<? super KeyEvent>> onKeyTypedProperty() {
         if (onKeyTyped == null) {
-            onKeyTyped = new ObjectPropertyBase<>() {
-
-                @Override
-                protected void invalidated() {
-                    setEventHandler(KeyEvent.KEY_TYPED, get());
-                }
-
-                @Override
-                public Object getBean() {
-                    return Scene.this;
-                }
-
-                @Override
-                public String getName() {
-                    return "onKeyTyped";
-                }
-            };
+            onKeyTyped = new EventHandlerProperty<>("onKeyTyped", KeyEvent.KEY_TYPED);
         }
         return onKeyTyped;
     }
@@ -6134,23 +5526,8 @@ public class Scene implements EventTarget {
 
     public final ObjectProperty<EventHandler<? super InputMethodEvent>> onInputMethodTextChangedProperty() {
         if (onInputMethodTextChanged == null) {
-            onInputMethodTextChanged = new ObjectPropertyBase<>() {
-
-                @Override
-                protected void invalidated() {
-                    setEventHandler(InputMethodEvent.INPUT_METHOD_TEXT_CHANGED, get());
-                }
-
-                @Override
-                public Object getBean() {
-                    return Scene.this;
-                }
-
-                @Override
-                public String getName() {
-                    return "onInputMethodTextChanged";
-                }
-            };
+            onInputMethodTextChanged = new EventHandlerProperty<>(
+                "onInputMethodTextChanged", InputMethodEvent.INPUT_METHOD_TEXT_CHANGED);
         }
         return onInputMethodTextChanged;
     }
@@ -6235,6 +5612,31 @@ public class Scene implements EventTarget {
         private void set(Node n, Scene s) {
             node = n;
             scene = s;
+        }
+    }
+
+    private final class EventHandlerProperty<T extends Event> extends ObjectPropertyBase<EventHandler<? super T>> {
+        private final String name;
+        private final EventType<T> eventType;
+
+        EventHandlerProperty(String name, EventType<T> eventType) {
+            this.name = name;
+            this.eventType = eventType;
+        }
+
+        @Override
+        public Object getBean() {
+            return Scene.this;
+        }
+
+        @Override
+        public String getName() {
+            return name;
+        }
+
+        @Override
+        protected void invalidated() {
+            setEventHandler(eventType, get());
         }
     }
 
