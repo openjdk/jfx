@@ -25,7 +25,6 @@
 
 package test.javafx.scene.layout;
 
-import com.sun.javafx.PreviewFeature;
 import com.sun.javafx.scene.SceneHelper;
 import com.sun.javafx.tk.HeaderAreaType;
 import com.sun.javafx.tk.TKSceneListener;
@@ -58,7 +57,6 @@ public class HeaderBarTest {
 
     @BeforeEach
     void setup() {
-        PreviewFeature.enableForTesting();
         headerBar = new HeaderBar();
     }
 
