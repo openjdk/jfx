@@ -251,7 +251,7 @@ public class HeaderBar extends Region {
      * Setting the preferred height to zero hides the system-provided header buttons, allowing applications to
      * use custom header buttons instead (see {@link #setButtonType(Node, HeaderButtonType)}).
      * <p>
-     * The default value {@code #USE_DEFAULT_SIZE} indicates that the platform should choose the button height.
+     * The default value {@code USE_DEFAULT_SIZE} indicates that the platform should choose the button height.
      *
      * @param stage the {@code Stage}
      * @param height the preferred height, or 0 to hide the system-provided header buttons
