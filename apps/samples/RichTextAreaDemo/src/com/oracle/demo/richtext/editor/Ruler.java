@@ -75,6 +75,7 @@ public class Ruler extends BorderPane {
     private Tick clickedStop;
     private boolean dragged;
     private boolean modified;
+    private boolean popup;
     private Pane tickPane;
     private SelectionSegment selection;
     private SimpleObjectProperty<Runnable> onChange;
@@ -239,18 +240,26 @@ public class Ruler extends BorderPane {
     }
 
     private void handleMousePressed(MouseEvent ev) {
-        double x = ev.getX();
-        dragged = false;
-        modified = false;
-        clickedStop = findTabStop(ev);
-        ev.consume();
+        popup = ev.isPopupTrigger();
+        if (!popup) {
+            double x = ev.getX();
+            dragged = false;
+            modified = false;
+            clickedStop = findTabStop(ev);
+            ev.consume();
+        }
     }
 
     private void handleMouseReleased(MouseEvent ev) {
+        if (popup || ev.isPopupTrigger()) {
+            return;
+        }
+
         TabStopPolicy p = policy.get();
         if (p == null) {
             return;
         }
+
         // was dragged? update tab stops
         // was tabstop? remove
         if (clickedStop == null) {

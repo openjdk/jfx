@@ -123,7 +123,6 @@ public class RichEditorDemoPane extends BorderPane {
         textColor = new ColorPicker();
         // TODO save/restore custom colors
         FX.tooltip(textColor, "Text Color");
-        // FIX there is no API for this!  why is this a property of a skin, not the control??
         // https://stackoverflow.com/questions/21246137/remove-text-from-colour-picker
         textColor.setStyle("-fx-color-label-visible: false;");
         textColor.setOnAction((ev) -> {
