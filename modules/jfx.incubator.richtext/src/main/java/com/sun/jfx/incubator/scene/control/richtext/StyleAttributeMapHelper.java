@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2024, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -52,20 +52,39 @@ public class StyleAttributeMapHelper {
     /**
      * Returns a new StyleAttributeMap instance which contains only the character attributes,
      * or null if no character attributes found.
+     *
      * @param ss the style attribute map
-     * @return the instance
+     * @return the instance of StyleAttributeMap, or null
      */
     public static StyleAttributeMap getCharacterAttrs(StyleAttributeMap ss) {
         return accessor.filterAttributes(ss, false);
     }
 
     /**
-     * Returns a new StyleAttributeMap instance which contains only the paragraph attributes.,
+     * Returns a new StyleAttributeMap instance which contains only the paragraph attributes,
      * or null if no paragraph attributes found.
+     *
      * @param ss the style attribute map
-     * @return the instance
+     * @return the instance of StyleAttributeMap, or null
      */
     public static StyleAttributeMap getParagraphAttrs(StyleAttributeMap ss) {
         return accessor.filterAttributes(ss, true);
+    }
+
+    /**
+     * Returns a new StyleAttributeMap instance which contains only paragraph attributes
+     * when {@code forParagraph=true}, or character attributes when {@code forParagraph=false},
+     * or null when no attributes of the specified type are found.
+     *
+     * @param ss the style attribute map
+     * @param forParagraph determines which attributes to retain
+     * @return the instance of StyleAttributeMap, or null
+     */
+    public static StyleAttributeMap filter(StyleAttributeMap ss, boolean forParagraph) {
+        if (forParagraph) {
+            return StyleAttributeMapHelper.getParagraphAttrs(ss);
+        } else {
+            return StyleAttributeMapHelper.getCharacterAttrs(ss);
+        }
     }
 }
