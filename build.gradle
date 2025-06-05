@@ -2182,6 +2182,8 @@ allprojects {
         systemProperty 'unstable.test', IS_UNSTABLE_TEST
         systemProperty 'junit.jupiter.execution.timeout.test.method.default', JUNIT_TEST_TIMEOUT
         systemProperty 'junit.jupiter.execution.timeout.lifecycle.method.default', JUNIT_LIFECYCLE_TIMEOUT
+        systemProperty 'javafx.enablePreview', 'true'
+        systemProperty 'javafx.suppressPreviewWarning', 'true'
     }
 
     compileTestJava {
