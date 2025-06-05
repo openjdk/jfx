@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2022, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -993,10 +993,12 @@ public class VFlow extends Pane implements StyleResolver, StyledTextModel.Listen
             boolean moveDown = (ix > getOrigin().index());
             setOrigin(or);
             c = getCaretInfo();
-            if (moveDown) {
-                scrollVerticalPixels(c.getMaxY() - c.getMinY() - getViewPortHeight());
+            if (c != null) {
+                if (moveDown) {
+                    scrollVerticalPixels(c.getMaxY() - c.getMinY() - getViewPortHeight());
+                }
+                checkForExcessiveWhitespaceAtTheEnd();
             }
-            checkForExcessiveWhitespaceAtTheEnd();
             reflow = true;
         } else {
             // block scroll, if needed
