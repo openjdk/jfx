@@ -258,11 +258,12 @@ public class RichEditorDemoPane extends BorderPane {
         // TODO update default tabs if changed
         SelectionSegment sel = editor.getSelection();
         if (sel != null) {
-            // TODO for now, just the caret
-            TextPos p = sel.getCaret();
-            if (p != null) {
-                TabStop[] ts = tabPolicy.tabStops().toArray(TabStop[]::new);
-                StyleAttributeMap a = StyleAttributeMap.builder().set(StyleAttributeMap.TAB_STOPS, ts).build();
+            TabStop[] ts = tabPolicy.tabStops().toArray(TabStop[]::new);
+            StyleAttributeMap a = StyleAttributeMap.builder().set(StyleAttributeMap.TAB_STOPS, ts).build();
+            int min = sel.getMin().index();
+            int max = sel.getMax().index();
+            for (int ix = min; ix <= max; ix++) {
+                TextPos p = TextPos.ofLeading(ix, 0);
                 editor.applyStyle(p, p, a);
             }
         }
