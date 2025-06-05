@@ -31,10 +31,6 @@ import java.lang.foreign.MemorySegment;
 import java.lang.foreign.ValueLayout;
 import java.nio.ByteOrder;
 
-// KCR: BEGIN DEBUG
-import java.util.concurrent.atomic.AtomicInteger;
-// KCR: END DEBUG
-
 final class OffHeapArray  {
 
     private Arena arena;
@@ -56,21 +52,7 @@ final class OffHeapArray  {
     private long length;
     private int used;
 
-    // KCR: BEGIN DEBUG
-    private static final AtomicInteger instanceCount = new AtomicInteger(0);
-    private final int instance;
-    // KCR: END DEBUG
-
     OffHeapArray(final Object parent, final long len) {
-        // KCR: BEGIN DEBUG
-        instance = instanceCount.incrementAndGet();
-        if (LOG_OFF_HEAP_MALLOC) {
-            System.err.println("OffHeapArray::<init> : " +
-                    "instance = " + instance +
-                    ", thread = " + Thread.currentThread());
-        }
-        // KCR: END DEBUG
-
         arena = Arena.ofShared();
 
         // note: may throw OOME:
@@ -128,13 +110,6 @@ final class OffHeapArray  {
      * @throws OutOfMemoryError if the allocation is refused by the system
      */
     void resize(final long len) {
-        // KCR: BEGIN DEBUG
-        if (LOG_OFF_HEAP_MALLOC) {
-            System.err.println("OffHeapArray::resize : instance = " + instance + " len = " + len +
-                    " [was: " + this.length + ", used = " + used + "]");
-        }
-        // KCR: END DEBUG
-
         Arena newArena = Arena.ofShared();
         MemorySegment newSegment = newArena.allocate(len);
 
