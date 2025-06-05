@@ -28,17 +28,17 @@ package com.sun.glass.ui.gtk;
 import java.util.Locale;
 
 /**
- * The window manager of the current desktop environment.
+ * Linux desktop environments.
  */
-enum WindowManager {
+enum DesktopEnvironment {
     UNKNOWN,
     GNOME,
     KDE;
 
     /**
-     * Returns the window manager of the current desktop environment.
+     * Returns the current desktop environment.
      */
-    public static WindowManager current() {
+    public static DesktopEnvironment current() {
         var result = parse(System.getenv("XDG_CURRENT_DESKTOP"));
         if (result != UNKNOWN) {
             return result;
@@ -56,7 +56,7 @@ enum WindowManager {
         return UNKNOWN;
     }
 
-    private static WindowManager parse(String value) {
+    private static DesktopEnvironment parse(String value) {
         if (value == null) {
             return UNKNOWN;
         }

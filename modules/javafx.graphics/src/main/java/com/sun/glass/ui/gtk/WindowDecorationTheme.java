@@ -56,11 +56,11 @@ enum WindowDecorationTheme {
     private final String stylesheet;
 
     /**
-     * Determines the best window decoration theme for the current window manager theme.
+     * Determines the best window decoration theme for the current platform theme and desktop environment.
      * <p>
-     * Since we can't ship decorations for all possible window manager themes, we need to choose the
-     * theme most similar to the native window manager theme. If we can't choose a theme by name, we
-     * fall back to choosing a theme by determining the current window manager.
+     * Since we can't ship decorations for all possible platform themes, we need to choose the theme most
+     * similar to the platform theme. If we can't choose a theme by name, we fall back to choosing a theme
+     * by determining the current desktop environment.
      */
     public static WindowDecorationTheme findBestTheme() {
         return PlatformImpl.getPlatformPreferences()
@@ -74,7 +74,7 @@ enum WindowDecorationTheme {
 
                 return null;
             })
-            .orElse(switch (WindowManager.current()) {
+            .orElse(switch (DesktopEnvironment.current()) {
                 case GNOME -> WindowDecorationTheme.GNOME;
                 case KDE -> WindowDecorationTheme.KDE;
                 default -> WindowDecorationTheme.GNOME;
