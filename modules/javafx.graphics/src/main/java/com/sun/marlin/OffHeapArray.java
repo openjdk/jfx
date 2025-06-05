@@ -36,28 +36,23 @@ final class OffHeapArray  {
     private Arena arena;
 
     // size of int / float
-    static final int SIZE_INT;
-    // FFM stuff
-    private static final ValueLayout.OfByte BYTE_LAYOUT = ValueLayout.JAVA_BYTE;
-    private static final ValueLayout.OfInt INT_LAYOUT = ValueLayout.JAVA_INT.withOrder(ByteOrder.BIG_ENDIAN);
+    static final int SIZE_INT = 4;
 
-    static {
-        // KCR FIXME: get this from FFM
-        SIZE_INT = 4;
-    }
+    // FFM stuff
+    private static final int ALIGNMENT = 16;
+    private static final ValueLayout.OfByte BYTE_LAYOUT = ValueLayout.JAVA_BYTE;
+    private static final ValueLayout.OfInt INT_LAYOUT = ValueLayout.JAVA_INT;
 
     /* members */
     private MemorySegment segment;
-//    private long address;
     private long length;
     private int used;
 
     OffHeapArray(final Object parent, final long len) {
-        arena = Arena.ofShared();
+        arena = Arena.ofConfined();
 
         // note: may throw OOME:
-        // KCR FIXME: Set a MemoryLayout
-        this.segment = arena.allocate(len);
+        this.segment = arena.allocate(len, ALIGNMENT);
         this.length  = len;
         this.used    = 0;
         if (LOG_OFF_HEAP_MALLOC) {
@@ -113,7 +108,6 @@ final class OffHeapArray  {
         Arena newArena = Arena.ofShared();
         MemorySegment newSegment = newArena.allocate(len);
 
-        // KCR: Double-check this
         // If there are any bytes in use, copy them to the newly reallocated array
         if (this.used > 0) {
             MemorySegment.copy(segment, 0, newSegment, 0, Math.min(this.used, len));

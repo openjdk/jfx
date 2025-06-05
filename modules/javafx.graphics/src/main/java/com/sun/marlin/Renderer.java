@@ -645,7 +645,6 @@ public final class Renderer implements MarlinRenderer, MarlinConst {
             }
         }
 
-        // KCR: Double-check this
         // Clear used bytes in edges array
         edges.setUsed(0);
 

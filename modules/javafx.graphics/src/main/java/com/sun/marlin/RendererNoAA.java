@@ -618,7 +618,6 @@ public final class RendererNoAA implements MarlinRenderer, MarlinConst {
             edgeBucketCounts = edgeBucketCounts_ref.putArray(edgeBucketCounts, 0, 0);
         }
 
-        // KCR: Double-check this
         // Clear used bytes in edges array
         edges.setUsed(0);
 
