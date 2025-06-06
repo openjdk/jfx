@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -39,10 +39,9 @@ package javafx.animation;
  *                 {@link #interpolate(Object, double)} method.</td>
  *         </tr>
  *         <tr><td style="vertical-align: top"><a id="linear" style="white-space: nowrap">linear</a></td>
- *             <td>Two components are combined by linear interpolation such that {@code t = 0} produces
- *                 the start value, {@code t = 1} produces the end value, and {@code 0 < t < 1} produces
- *                 {@code (1 - t) * start + t * end}. This interpolation type is usually applicable for
- *                 numeric components.</td>
+ *             <td>Two components are combined by linear interpolation such that the intermediate value is
+ *                 produced by computing {@code (1 - t) * start + t * end}. This interpolation type is usually
+ *                 applicable for numeric components.</td>
  *         </tr>
  *         <tr><td style="vertical-align: top"><a id="discrete" style="white-space: nowrap">discrete</a></td>
  *             <td>If two components cannot be meaningfully combined, the intermediate component value
@@ -70,18 +69,16 @@ public interface Interpolatable<T> {
 
     /**
      * Returns an intermediate value between the value of this {@code Interpolatable} and the specified
-     * {@code endValue} using the linear interpolation factor {@code t}, ranging from 0 (inclusive)
-     * to 1 (inclusive).
+     * {@code endValue} using the linear interpolation factor {@code t}. The interpolation factor can
+     * be any finite value.
      * <p>
      * The returned value might not be a new instance; the implementation might also return one of the
      * two existing instances if the intermediate value would be equal to one of the existing values.
      * However, this is an optimization and applications should not assume any particular identity
      * of the returned value.
      *
-     * @implSpec An implementation is not required to reject interpolation factors less than 0 or larger
-     *           than 1, but this specification gives no meaning to values returned outside of this range.
-     *           For example, an implementation might clamp the interpolation factor to [0..1], or it might
-     *           continue the linear interpolation outside of this range.
+     * @implSpec An implementation must accept any interpolation factor, but it can return a clamped
+     *           intermediate value that falls within its value range.
      *
      * @param endValue the target value
      * @param t the interpolation factor

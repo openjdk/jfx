@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2024, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -94,15 +94,16 @@ public class CssTransitionsTest extends Application {
     private Region createTransitionTimingFunctionTab() {
         return createContent("""
             .rect {
-              -fx-min-width: 100;
+              -fx-min-width: 150;
               -fx-min-height: 50;
-              -fx-background-color: red;
-              transition-property: -fx-min-width;
+              -fx-background-color: purple;
+              transition-property: -fx-min-width, -fx-background-color;
               transition-duration: 2s;
             }
 
             .rect:hover {
-              -fx-min-width: 300;
+              -fx-min-width: 400;
+              -fx-background-color: green;
             }
 
             #rect1 { transition-timing-function: linear; }
@@ -110,12 +111,14 @@ public class CssTransitionsTest extends Application {
             #rect3 { transition-timing-function: ease-in; }
             #rect4 { transition-timing-function: ease-out; }
             #rect5 { transition-timing-function: ease-in-out; }
+            #rect6 { transition-timing-function: cubic-bezier(0.34, 2.2, 0.64, 1); }
             """,
-            new RectInfo("#rect1", "rect1"),
-            new RectInfo("#rect2", "rect2"),
-            new RectInfo("#rect3", "rect3"),
-            new RectInfo("#rect4", "rect4"),
-            new RectInfo("#rect5", "rect5"));
+            new RectInfo("#rect1", "rect1", Color.WHITE),
+            new RectInfo("#rect2", "rect2", Color.WHITE),
+            new RectInfo("#rect3", "rect3", Color.WHITE),
+            new RectInfo("#rect4", "rect4", Color.WHITE),
+            new RectInfo("#rect4", "rect5", Color.WHITE),
+            new RectInfo("#rect5", "rect6", Color.WHITE));
     }
 
     private Region createBackgroundTransitionsTab() {
@@ -204,13 +207,18 @@ public class CssTransitionsTest extends Application {
             rect.setAlignment(Pos.TOP_LEFT);
             rect.getStyleClass().add("rect");
             rect.setPadding(new Insets(5));
+            rect.setTextFill(rectInfo.textFill());
             container.getChildren().add(rect);
         }
 
         return container;
     }
 
-    private record RectInfo(String caption, String id) {}
+    private record RectInfo(String caption, String id, Color textFill) {
+        public RectInfo(String caption, String id) {
+            this(caption, id, Color.BLACK);
+        }
+    }
 
     public static void main(String[] args) {
         Application.launch(args);
