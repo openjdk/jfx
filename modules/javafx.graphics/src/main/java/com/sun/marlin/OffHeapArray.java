@@ -105,7 +105,7 @@ final class OffHeapArray  {
      * @throws OutOfMemoryError if the allocation is refused by the system
      */
     void resize(final long len) {
-        Arena newArena = Arena.ofShared();
+        Arena newArena = Arena.ofConfined();
         MemorySegment newSegment = newArena.allocate(len);
 
         // If there are any bytes in use, copy them to the newly reallocated array
