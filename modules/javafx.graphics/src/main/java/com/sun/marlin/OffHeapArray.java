@@ -25,53 +25,77 @@
 
 package com.sun.marlin;
 
-import static com.sun.marlin.MarlinConst.LOG_UNSAFE_MALLOC;
-import java.lang.reflect.Field;
-import sun.misc.Unsafe;
+import static com.sun.marlin.MarlinConst.LOG_OFF_HEAP_MALLOC;
+import java.lang.foreign.Arena;
+import java.lang.foreign.MemorySegment;
+import java.lang.foreign.ValueLayout;
 
-/**
- *
- */
-// FIXME: We must replace the terminally deprecated sun.misc.Unsafe
-// memory access methods; see JDK-8334137
-@SuppressWarnings("removal")
 final class OffHeapArray  {
 
-    // unsafe reference
-    static final Unsafe UNSAFE;
+    private Arena arena;
+
     // size of int / float
-    static final int SIZE_INT;
+    static final int SIZE_INT = 4;
 
-    static {
-        try {
-            final Field field = Unsafe.class.getDeclaredField("theUnsafe");
-            field.setAccessible(true);
-            UNSAFE = (Unsafe) field.get(null);
-        } catch (Exception e) {
-            throw new InternalError("Unable to get sun.misc.Unsafe instance", e);
-        }
-
-        SIZE_INT = Unsafe.ARRAY_INT_INDEX_SCALE;
-    }
+    // FFM stuff
+    private static final int ALIGNMENT = 16;
+    private static final ValueLayout.OfByte BYTE_LAYOUT = ValueLayout.JAVA_BYTE;
+    private static final ValueLayout.OfInt INT_LAYOUT = ValueLayout.JAVA_INT;
 
     /* members */
-    long address;
-    long length;
-    int  used;
+    private MemorySegment segment;
+    private long length;
+    private int used;
 
     OffHeapArray(final Object parent, final long len) {
+        arena = Arena.ofConfined();
+
         // note: may throw OOME:
-        this.address = UNSAFE.allocateMemory(len);
+        this.segment = arena.allocate(len, ALIGNMENT);
         this.length  = len;
         this.used    = 0;
-        if (LOG_UNSAFE_MALLOC) {
+        if (LOG_OFF_HEAP_MALLOC) {
             MarlinUtils.logInfo(System.currentTimeMillis()
                                 + ": OffHeapArray.allocateMemory =   "
-                                + len + " to addr = " + this.address);
+                                + len + " for segment = " + this.segment);
         }
 
         // Register a cleaning function to ensure freeing off-heap memory:
         MarlinUtils.getCleaner().register(parent, this::free);
+    }
+
+    /**
+     * Gets the length of this array.
+     *
+     * @return the length in bytes
+     */
+    long getLength() {
+        return length;
+    }
+
+    /**
+     * Gets the number of bytes currently being used. Always <= length
+     * @return number of used bytes
+     */
+    int getUsed() {
+        return used;
+    }
+
+    /**
+     * Sets the number of bytes currently being used. Always <= length
+     * @param used number of used bytes
+     */
+    void setUsed(int used) {
+        this.used = used;
+    }
+
+    /**
+     * Increments the number of bytes currently being used.
+     * Curr used + incr used must be <= length
+     * @param used number of used bytes to increment
+     */
+    void incrementUsed(int used) {
+        this.used += used;
     }
 
     /*
@@ -80,28 +104,54 @@ final class OffHeapArray  {
      * @throws OutOfMemoryError if the allocation is refused by the system
      */
     void resize(final long len) {
-        // note: may throw OOME:
-        this.address = UNSAFE.reallocateMemory(address, len);
+        Arena newArena = Arena.ofConfined();
+        MemorySegment newSegment = newArena.allocate(len, ALIGNMENT);
+
+        // If there are any bytes in use, copy them to the newly reallocated array
+        if (this.used > 0) {
+            MemorySegment.copy(segment, 0, newSegment, 0, Math.min(this.used, len));
+        }
+
+        this.arena.close();
+        this.arena = newArena;
+        this.segment = newSegment;
         this.length  = len;
-        if (LOG_UNSAFE_MALLOC) {
+
+        if (LOG_OFF_HEAP_MALLOC) {
             MarlinUtils.logInfo(System.currentTimeMillis()
                                 + ": OffHeapArray.reallocateMemory = "
-                                + len + " to addr = " + this.address);
+                                + len + " for segment = " + this.segment);
         }
     }
 
     void free() {
-        UNSAFE.freeMemory(this.address);
-        if (LOG_UNSAFE_MALLOC) {
+        arena.close();
+        if (LOG_OFF_HEAP_MALLOC) {
             MarlinUtils.logInfo(System.currentTimeMillis()
                                 + ": OffHeapArray.freeMemory =       "
                                 + this.length
-                                + " at addr = " + this.address);
+                                + " for segment = " + this.segment);
         }
-        this.address = 0L;
     }
 
     void fill(final byte val) {
-        UNSAFE.setMemory(this.address, this.length, val);
+        segment.fill(val);
     }
+
+    void putByte(long offset, byte val) {
+        segment.set(BYTE_LAYOUT, offset, val);
+    }
+
+    void putInt(long offset, int val) {
+        segment.set(INT_LAYOUT, offset, val);
+    }
+
+    byte getByte(long offset) {
+        return segment.get(BYTE_LAYOUT, offset);
+    }
+
+    int getInt(long offset) {
+        return segment.get(INT_LAYOUT, offset);
+    }
+
 }

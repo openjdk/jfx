@@ -344,9 +344,6 @@ ext.MAVEN_GROUP_ID = "org.openjfx"
 ext.enableNativeGraphics='--enable-native-access=javafx.graphics'
 ext.enableNativeAll='--enable-native-access=javafx.graphics,javafx.media,javafx.web'
 
-// FIXME: Remove this when JDK-8334137 is fixed
-ext.allowSunMiscUnsafe = '--sun-misc-unsafe-memory-access=allow'
-
 // Verify that the architecture & OS are supported configurations. Note that
 // at present building on PI is not supported, but we would only need to make
 // some changes on assumptions on what should be built (like SWT / Swing) and
@@ -1199,11 +1196,6 @@ void writeArgsFile(boolean isCompile, File dest, List<String> libpath, List<Stri
         if (!isCompile) {
             dest << enableNativeAll
             dest << "\n"
-            // FIXME: Remove this when JDK-8334137 is fixed
-            if (jdk24OrLater) {
-                dest << allowSunMiscUnsafe
-                dest << "\n"
-            }
         }
     }
 }
@@ -2301,10 +2293,6 @@ project(":graphics") {
     project.ext.moduleRuntime = true
     project.ext.moduleName = "javafx.graphics"
 
-    // FIXME: Remove this setting when JDK-8334137 is fixed
-    // Disable javac -Werror until we stop using sun.misc.Unsafe
-    project.ext.disableJavacWerror = true
-
     getConfigurations().create("antlr");
 
     sourceSets {
@@ -2701,10 +2689,6 @@ project(":graphics") {
     test {
         def cssDir = file("${TEST_SDK_DIR}/shims/${moduleName}/javafx")
         jvmArgs enableNativeGraphics
-        // FIXME: Remove this when JDK-8334137 is fixed
-        if (jdk24OrLater) {
-            jvmArgs allowSunMiscUnsafe
-        }
         jvmArgs "-Djavafx.toolkit=test.com.sun.javafx.pgstub.StubToolkit",
             "-DCSS_META_DATA_TEST_DIR=$cssDir"
         enableAssertions = true
@@ -2794,10 +2778,6 @@ project(":controls") {
     test {
         def cssDir = file("${TEST_SDK_DIR}/shims/${moduleName}/javafx")
         jvmArgs enableNativeGraphics
-        // FIXME: Remove this when JDK-8334137 is fixed
-        if (jdk24OrLater) {
-            jvmArgs allowSunMiscUnsafe
-        }
         jvmArgs "-Djavafx.toolkit=test.com.sun.javafx.pgstub.StubToolkit",
             "-DCSS_META_DATA_TEST_DIR=$cssDir"
     }
@@ -3020,11 +3000,6 @@ project(":swing") {
         enabled = IS_FULL_TEST && IS_AWT_TEST
 
         jvmArgs enableNativeGraphics
-
-        // FIXME: Remove this when JDK-8334137 is fixed
-        if (jdk24OrLater) {
-            jvmArgs allowSunMiscUnsafe
-        }
     }
 
     if (COMPILE_SWING) {
@@ -3090,10 +3065,6 @@ project(":swt") {
 
         jvmArgs enableNativeGraphics
 
-        // FIXME: Remove this when JDK-8334137 is fixed
-        if (jdk24OrLater) {
-            jvmArgs allowSunMiscUnsafe
-        }
     }
 
     addValidateSourceSets(project, sourceSets)
@@ -3139,10 +3110,6 @@ project(":fxml") {
         // tracker and this attempts to fire up the toolkit and this looks for native libraries and fails,
         // we have to use the stub toolkit for now.
         jvmArgs enableNativeGraphics
-        // FIXME: Remove this when JDK-8334137 is fixed
-        if (jdk24OrLater) {
-            jvmArgs allowSunMiscUnsafe
-        }
         jvmArgs "-Djavafx.toolkit=test.com.sun.javafx.pgstub.StubToolkit"
         // FIXME: change this to also allow JDK 9 boot jdk
         classpath += files("$JDK_HOME/jre/lib/ext/nashorn.jar")
@@ -3885,11 +3852,6 @@ project(":web") {
         // enable native access for all modules with native code
         jvmArgs enableNativeAll
 
-        // FIXME: Remove this when JDK-8334137 is fixed
-        if (jdk24OrLater) {
-            jvmArgs allowSunMiscUnsafe
-        }
-
         // Run web tests in headless mode
         systemProperty 'glass.platform', 'Monocle'
         systemProperty 'monocle.platform', 'Headless'
@@ -4297,11 +4259,6 @@ project(":systemTests") {
         jvmArgs enableNativeAll
 
         maxHeapSize = "1000m"
-
-        // FIXME: Remove this when JDK-8334137 is fixed
-        if (jdk24OrLater) {
-            jvmArgs allowSunMiscUnsafe
-        }
 
         // Parse testPatchModuleArgs looking for "*module-path".
         // Save path if found so we can pass it to the module launcher tests

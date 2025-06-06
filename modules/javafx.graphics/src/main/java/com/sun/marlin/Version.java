@@ -27,7 +27,7 @@ package com.sun.marlin;
 
 public final class Version {
 
-    private static final String VERSION = "marlinFX-0.9.4.6-Unsafe-OpenJFX";
+    private static final String VERSION = "marlinFX-0.9.4.6-FFM-OpenJFX";
 
     public static String getVersion() {
         return VERSION;
