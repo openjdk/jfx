@@ -105,7 +105,7 @@ final class OffHeapArray  {
      */
     void resize(final long len) {
         Arena newArena = Arena.ofConfined();
-        MemorySegment newSegment = newArena.allocate(len);
+        MemorySegment newSegment = newArena.allocate(len, ALIGNMENT);
 
         // If there are any bytes in use, copy them to the newly reallocated array
         if (this.used > 0) {
