@@ -29,7 +29,6 @@ import static com.sun.marlin.MarlinConst.LOG_OFF_HEAP_MALLOC;
 import java.lang.foreign.Arena;
 import java.lang.foreign.MemorySegment;
 import java.lang.foreign.ValueLayout;
-import java.nio.ByteOrder;
 
 final class OffHeapArray  {
 
