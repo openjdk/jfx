@@ -693,21 +693,26 @@ void DeleteSelectionCommand::handleGeneralDelete()
             if (firstPositionInOrBeforeNode(node.get()) >= m_downstreamEnd) {
                 // NodeTraversal::nextSkippingChildren just blew past the end position, so stop deleting
                 node = nullptr;
-            } else if (!m_downstreamEnd.deprecatedNode()->isDescendantOf(*node)) {
-                RefPtr<Node> nextNode = NodeTraversal::nextSkippingChildren(*node);
+                continue;
+            }
+            if (!m_downstreamEnd.deprecatedNode()->isDescendantOf(*node)) {
+                RefPtr parentNode = node->parentNode();
+                if (!parentNode || canHaveChildrenForEditing(*parentNode)) {
+                    RefPtr nextNode = NodeTraversal::nextSkippingChildren(*node);
                 // if we just removed a node from the end container, update end position so the
                 // check above will work
                 updatePositionForNodeRemoval(m_downstreamEnd, *node);
                 removeNode(*node);
                 node = nextNode.get();
-            } else {
+                    continue;
+                }
+            }
                 RefPtr lastDescendant { node->lastDescendant() };
                 if (m_downstreamEnd.deprecatedNode() == lastDescendant && m_downstreamEnd.deprecatedEditingOffset() >= caretMaxOffset(*lastDescendant)) {
                     removeNode(*node);
                     node = nullptr;
                 } else
                     node = NodeTraversal::next(*node);
-            }
         }
 
         if (!m_downstreamEnd.isNull() && !m_downstreamEnd.isOrphan() && m_downstreamEnd.deprecatedNode() != startNode
@@ -746,7 +751,7 @@ void DeleteSelectionCommand::handleGeneralDelete()
 
 void DeleteSelectionCommand::fixupWhitespace()
 {
-    document().updateLayoutIgnorePendingStylesheets();
+    protectedDocument()->updateLayoutIgnorePendingStylesheets();
     // FIXME: isRenderedCharacter should be removed, and we should use VisiblePosition::characterAfter and VisiblePosition::characterBefore
     if (m_leadingWhitespace.isNotNull() && !m_leadingWhitespace.isRenderedCharacter()) {
         if (RefPtr textNode = dynamicDowncast<Text>(*m_leadingWhitespace.deprecatedNode())) {

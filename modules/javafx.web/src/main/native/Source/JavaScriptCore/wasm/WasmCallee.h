@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2016-2023 Apple Inc. All rights reserved.
+ * Copyright (C) 2016-2024 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -30,6 +30,7 @@
 #include "JITCompilation.h"
 #include "NativeCallee.h"
 #include "RegisterAtOffsetList.h"
+#include "StackAlignment.h"
 #include "WasmCompilationMode.h"
 #include "WasmFormat.h"
 #include "WasmFunctionCodeBlockGenerator.h"
@@ -54,15 +55,17 @@ namespace Wasm {
 
 class Callee : public NativeCallee {
     WTF_MAKE_TZONE_ALLOCATED(Callee);
+    friend class JSC::LLIntOffsetsExtractor;
 public:
     IndexOrName indexOrName() const { return m_indexOrName; }
+    uint32_t index() const { return m_index; }
     CompilationMode compilationMode() const { return m_compilationMode; }
 
     CodePtr<WasmEntryPtrTag> entrypoint() const;
     RegisterAtOffsetList* calleeSaveRegisters();
     std::tuple<void*, void*> range() const;
 
-    const HandlerInfo* handlerForIndex(Instance&, unsigned, const Tag*);
+    const HandlerInfo* handlerForIndex(JSWebAssemblyInstance&, unsigned, const Tag*);
 
     bool hasExceptionHandlers() const { return !m_exceptionHandlers.isEmpty(); }
 
@@ -82,22 +85,27 @@ protected:
 private:
     const CompilationMode m_compilationMode;
     const IndexOrName m_indexOrName;
+    const uint32_t m_index;
 
 protected:
     FixedVector<HandlerInfo> m_exceptionHandlers;
 };
 
-#if ENABLE(JIT)
 class JITCallee : public Callee {
     WTF_MAKE_TZONE_ALLOCATED(JITCallee);
 public:
     friend class Callee;
     FixedVector<UnlinkedWasmToWasmCall>& wasmToWasmCallsites() { return m_wasmToWasmCallsites; }
 
+#if ENABLE(JIT)
+    void setEntrypoint(Wasm::Entrypoint&&);
+#endif
+
 protected:
     JS_EXPORT_PRIVATE JITCallee(Wasm::CompilationMode);
     JS_EXPORT_PRIVATE JITCallee(Wasm::CompilationMode, size_t, std::pair<const Name*, RefPtr<NameSection>>&&);
 
+#if ENABLE(JIT)
     std::tuple<void*, void*> rangeImpl() const
     {
         void* start = m_entrypoint.compilation->codeRef().executableMemory()->start().untaggedPtr();
@@ -108,70 +116,127 @@ protected:
     CodePtr<WasmEntryPtrTag> entrypointImpl() const { return m_entrypoint.compilation->code().retagged<WasmEntryPtrTag>(); }
 
     RegisterAtOffsetList* calleeSaveRegistersImpl() { return &m_entrypoint.calleeSaveRegisters; }
-
-    void setEntrypoint(Wasm::Entrypoint&&);
+#else
+    std::tuple<void*, void*> rangeImpl() const { return { nullptr, nullptr }; }
+    CodePtr<WasmEntryPtrTag> entrypointImpl() const { return { }; }
+    RegisterAtOffsetList* calleeSaveRegistersImpl() { return nullptr; }
+#endif
 
     FixedVector<UnlinkedWasmToWasmCall> m_wasmToWasmCallsites;
+#if ENABLE(JIT)
     Wasm::Entrypoint m_entrypoint;
+#endif
 };
 
-class JSEntrypointCallee final : public JITCallee {
+class JSEntrypointCallee : public Callee {
     WTF_MAKE_TZONE_ALLOCATED(JSEntrypointCallee);
-public:
-    static Ref<JSEntrypointCallee> create()
-    {
-        return adoptRef(*new JSEntrypointCallee);
-    }
-
-    using JITCallee::setEntrypoint;
-
-private:
-    JSEntrypointCallee()
-        : JITCallee(Wasm::CompilationMode::JSEntrypointMode)
-    {
-    }
+protected:
+    JS_EXPORT_PRIVATE JSEntrypointCallee(Wasm::CompilationMode mode) : Callee(mode) { }
 };
 
-#else
-
-class JSEntrypointCallee final : public Callee {
-    WTF_MAKE_TZONE_ALLOCATED(JSEntrypointCallee);
+class JSEntrypointJITCallee final : public JSEntrypointCallee {
+    WTF_MAKE_TZONE_ALLOCATED(JSEntrypointJITCallee);
 public:
     friend class Callee;
 
-    static Ref<JSEntrypointCallee> create()
+#if ENABLE(JIT)
+    void setEntrypoint(Wasm::Entrypoint&&);
+#endif
+
+    static inline Ref<JSEntrypointJITCallee> create()
     {
-        return adoptRef(*new JSEntrypointCallee);
+        return adoptRef(*new JSEntrypointJITCallee);
     }
 
 private:
-    JSEntrypointCallee()
-        : Callee(Wasm::CompilationMode::JSEntrypointMode)
+    inline JSEntrypointJITCallee()
+        : JSEntrypointCallee(Wasm::CompilationMode::JSEntrypointJITMode)
     {
     }
 
+#if ENABLE(JIT)
     std::tuple<void*, void*> rangeImpl() const
     {
-        return { nullptr, nullptr };
+        void* start = m_entrypoint.compilation->codeRef().executableMemory()->start().untaggedPtr();
+        void* end = m_entrypoint.compilation->codeRef().executableMemory()->end().untaggedPtr();
+        return { start, end };
     }
 
-    CodePtr<WasmEntryPtrTag> entrypointImpl() const { return { }; }
+    CodePtr<WasmEntryPtrTag> entrypointImpl() const { return m_entrypoint.compilation->code().retagged<WasmEntryPtrTag>(); }
 
+    RegisterAtOffsetList* calleeSaveRegistersImpl() { return &m_entrypoint.calleeSaveRegisters; }
+#else
+    std::tuple<void*, void*> rangeImpl() const { return { nullptr, nullptr }; }
+    CodePtr<WasmEntryPtrTag> entrypointImpl() const { return { }; }
     RegisterAtOffsetList* calleeSaveRegistersImpl() { return nullptr; }
+#endif
+
+#if ENABLE(JIT)
+    Wasm::Entrypoint m_entrypoint;
+#endif
 };
-#endif // ENABLE(JIT)
+
+class JITLessJSEntrypointCallee final : public JSEntrypointCallee {
+    WTF_MAKE_TZONE_ALLOCATED(JITLessJSEntrypointCallee);
+public:
+    static inline Ref<JITLessJSEntrypointCallee> create(unsigned frameSize, TypeIndex typeIndex, bool usesSIMD)
+    {
+        return adoptRef(*new JITLessJSEntrypointCallee(frameSize, typeIndex, usesSIMD));
+    }
+
+    inline bool hasReplacement() const { return !!m_replacementCallee; }
+
+    inline void setReplacement(RefPtr<Wasm::Callee> callee)
+    {
+        // Note that we can compile the same function with multiple memory modes, which can cause the JS->Wasm stub generator to
+        // race. That's fine, both stubs should do the same thing.
+        if (m_replacementCallee)
+            return;
+        ASSERT(callee);
+        m_replacementCallee = WTFMove(callee);
+    }
+
+    CodePtr<WasmEntryPtrTag> entrypointImpl() const;
+    JS_EXPORT_PRIVATE RegisterAtOffsetList* calleeSaveRegistersImpl();
+    std::tuple<void*, void*> rangeImpl() const { return { nullptr, nullptr }; }
+
+    static constexpr ptrdiff_t offsetOfIdent() { return OBJECT_OFFSETOF(JITLessJSEntrypointCallee, ident); }
+    static constexpr ptrdiff_t offsetOfWasmCallee() { return OBJECT_OFFSETOF(JITLessJSEntrypointCallee, wasmCallee); }
+    static constexpr ptrdiff_t offsetOfWasmFunctionPrologue() { return OBJECT_OFFSETOF(JITLessJSEntrypointCallee, wasmFunctionPrologue); }
+    static constexpr ptrdiff_t offsetOfFrameSize() { return OBJECT_OFFSETOF(JITLessJSEntrypointCallee, frameSize); }
+
+    // Space for callee-saves; Not included in frameSize
+    static constexpr unsigned SpillStackSpaceAligned = WTF::roundUpToMultipleOf<stackAlignmentBytes()>(3 * sizeof(UCPURegister));
+    // Extra space used to return argument register values from cpp before they get filled. Included in frameSize
+    static constexpr unsigned RegisterStackSpaceAligned = WTF::roundUpToMultipleOf<stackAlignmentBytes()>(
+        FPRInfo::numberOfArgumentRegisters * bytesForWidth(Width::Width64) + GPRInfo::numberOfArgumentRegisters * sizeof(UCPURegister));
+
+    const unsigned ident { 0xBF };
+    const unsigned frameSize;
+    // This must be initialized after the callee is created unfortunately.
+    EncodedJSValue wasmCallee;
+    const TypeIndex typeIndex;
+    // In the JIT case, we want to always call the llint prologue from a jit function.
+    // In the no-jit case, we dont' care.
+    CodePtr<WasmEntryPtrTag> wasmFunctionPrologue;
+
+private:
+    JITLessJSEntrypointCallee(unsigned frameSize, TypeIndex, bool);
+
+    RefPtr<Wasm::Callee> m_replacementCallee { nullptr };
+};
 
 class WasmToJSCallee final : public Callee {
     WTF_MAKE_TZONE_ALLOCATED(WasmToJSCallee);
 public:
     friend class Callee;
+    friend class JSC::LLIntOffsetsExtractor;
 
-    static Ref<WasmToJSCallee> create()
-    {
-        return adoptRef(*new WasmToJSCallee);
-    }
+    WasmToJSCallee(size_t index, std::pair<const Name*, RefPtr<NameSection>>&& name) : Callee(Wasm::CompilationMode::WasmToJSMode, index, WTFMove(name)) { };
+    static WasmToJSCallee& singleton();
 
 private:
+
     WasmToJSCallee();
 
     std::tuple<void*, void*> rangeImpl() const
@@ -185,6 +250,7 @@ private:
 };
 
 #if ENABLE(JIT)
+
 class JSToWasmICCallee final : public JITCallee {
     WTF_MAKE_TZONE_ALLOCATED(JSToWasmICCallee);
 public:
@@ -294,6 +360,7 @@ private:
 #if ENABLE(WEBASSEMBLY_OMGJIT)
 
 class OMGCallee final : public OptimizingJITCallee {
+    WTF_MAKE_TZONE_ALLOCATED(OMGCallee);
 public:
     static Ref<OMGCallee> create(size_t index, std::pair<const Name*, RefPtr<NameSection>>&& name)
     {
@@ -312,7 +379,6 @@ private:
 #endif // ENABLE(WEBASSEMBLY_OMGJIT)
 
 #if ENABLE(WEBASSEMBLY_BBQJIT)
-
 
 class BBQCallee final : public OptimizingJITCallee {
     WTF_MAKE_TZONE_ALLOCATED(BBQCallee);
@@ -470,6 +536,7 @@ public:
     unsigned m_numRethrowSlotsToAlloc;
     unsigned m_numLocals;
     unsigned m_numArgumentsOnStack;
+    unsigned m_maxFrameSizeInV128;
 
     IPIntTierUpCounter m_tierUpCounter;
 };

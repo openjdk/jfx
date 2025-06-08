@@ -36,7 +36,7 @@
 namespace WebCore {
 
 class GPUUncapturedErrorEvent final : public Event {
-    WTF_MAKE_ISO_ALLOCATED(GPUUncapturedErrorEvent);
+    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(GPUUncapturedErrorEvent);
 public:
     virtual ~GPUUncapturedErrorEvent() = default;
 
@@ -46,7 +46,6 @@ public:
     }
 
     GPUError error() const;
-    EventInterface eventInterface() const override;
 
 private:
     GPUUncapturedErrorEvent(const AtomString&, GPUUncapturedErrorEventInit&&);

@@ -76,12 +76,9 @@ public class HTMLEditorApp extends Application {
         htmlEditor = new HTMLEditor();
         htmlEditor.setHtmlText(INITIAL_TEXT);
 
-        ScrollPane htmlSP = new ScrollPane();
-        htmlSP.setFitToWidth(true);
-        htmlSP.setPrefWidth(htmlEditor.prefWidth(-1)); // Workaround of JDK-8096877
-        htmlSP.setPrefHeight(245);
-        htmlSP.setVbarPolicy(ScrollBarPolicy.NEVER);
-        htmlSP.setContent(htmlEditor);
+        VBox htmlVB = new VBox();
+        htmlVB.setPrefHeight(245);
+        htmlVB.getChildren().add(htmlEditor);
 
         final Label htmlLabel = new Label();
         htmlLabel.setWrapText(true);
@@ -99,7 +96,7 @@ public class HTMLEditorApp extends Application {
         VBox vRoot = new VBox();
         vRoot.setAlignment(Pos.CENTER);
         vRoot.setSpacing(5);
-        vRoot.getChildren().addAll(htmlSP, showHTMLButton, scrollPane);
+        vRoot.getChildren().addAll(htmlVB, showHTMLButton, scrollPane);
 
         return vRoot;
     }

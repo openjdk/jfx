@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -273,7 +273,7 @@ public final class Robot {
      * on the screen. For example, in HiDPI mode on the Mac (aka Retina display) the
      * pixels are doubled, and thus a screen capture of an area of size (10x10) pixels
      * will result in an {@code Image} with dimensions (20x20). Calling code should
-     * use the returned images's {@link Image#getWidth()} and {@link Image#getHeight()}
+     * use the returned image's {@link Image#getWidth()} and {@link Image#getHeight()}
      * methods to determine the actual image size.
      * <p>
      * If {@code scaleToFit} is {@literal true}, the returned {@code Image} is of
@@ -357,7 +357,7 @@ public final class Robot {
      * on the screen. For example, in HiDPI mode on the Mac (aka Retina display) the
      * pixels are doubled, and thus a screen capture of an area of size (10x10) pixels
      * will result in an {@code Image} with dimensions (20x20). Calling code should
-     * use the returned images's {@link Image#getWidth()} and {@link Image#getHeight()}
+     * use the returned image's {@link Image#getWidth()} and {@link Image#getHeight()}
      * methods to determine the actual image size.
      * <p>
      * If {@code scaleToFit} is {@literal true}, the returned {@code Image} is of

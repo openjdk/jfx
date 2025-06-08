@@ -41,6 +41,7 @@
 #include <wtf/persistence/PersistentCoders.h>
 
 #if PLATFORM(COCOA)
+#include <wtf/cf/VectorCF.h>
 #include <wtf/spi/cocoa/SecuritySPI.h>
 #endif
 
@@ -319,35 +320,13 @@ std::optional<WebCore::ResourceRequest> Coder<WebCore::ResourceRequest>::decodeF
 
 } // namespace WTF::Persistence
 
-namespace WTF {
-
-// FIXME: Remove this when WebKit::NetworkCache::Storage::version is incremented.
-enum class LegacyCertificateInfoType {
-    None,
-    CertificateChain,
-    Trust,
-};
-
-template<> struct EnumTraitsForPersistence<LegacyCertificateInfoType> {
-    using values = EnumValues<
-        LegacyCertificateInfoType,
-        LegacyCertificateInfoType::None,
-        LegacyCertificateInfoType::CertificateChain,
-        LegacyCertificateInfoType::Trust
-    >;
-};
-
-} // namespace WTF
-
 namespace WTF::Persistence {
 
 static void encodeCFData(Encoder& encoder, CFDataRef data)
 {
-    uint64_t length = CFDataGetLength(data);
-    const uint8_t* bytePtr = CFDataGetBytePtr(data);
-
-    encoder << length;
-    encoder.encodeFixedLengthData({ bytePtr, static_cast<size_t>(length) });
+    auto dataSpan = span(data);
+    encoder << static_cast<uint64_t>(dataSpan.size());
+    encoder.encodeFixedLengthData(dataSpan);
 }
 
 static std::optional<RetainPtr<CFDataRef>> decodeCFData(Decoder& decoder)
@@ -398,58 +377,18 @@ static std::optional<RetainPtr<SecTrustRef>> decodeSecTrustRef(Decoder& decoder)
     return trust;
 }
 
-static std::optional<RetainPtr<CFArrayRef>> decodeCertificateChain(Decoder& decoder)
-{
-    std::optional<uint64_t> size;
-    decoder >> size;
-    if (!size)
-        return std::nullopt;
-
-    auto array = adoptCF(CFArrayCreateMutable(0, 0, &kCFTypeArrayCallBacks));
-
-    for (size_t i = 0; i < *size; ++i) {
-        auto data = decodeCFData(decoder);
-        if (!data)
-            return std::nullopt;
-
-        auto certificate = adoptCF(SecCertificateCreateWithData(0, data->get()));
-        CFArrayAppendValue(array.get(), certificate.get());
-    }
-
-    return { WTFMove(array) };
-}
-
 void Coder<WebCore::CertificateInfo>::encodeForPersistence(Encoder& encoder, const WebCore::CertificateInfo& certificateInfo)
 {
-    encoder << LegacyCertificateInfoType::Trust;
     encodeSecTrustRef(encoder, certificateInfo.trust().get());
 }
 
 std::optional<WebCore::CertificateInfo> Coder<WebCore::CertificateInfo>::decodeForPersistence(Decoder& decoder)
 {
-    std::optional<LegacyCertificateInfoType> certificateInfoType;
-    decoder >> certificateInfoType;
-    if (!certificateInfoType)
-        return std::nullopt;
-
-    switch (*certificateInfoType) {
-    case LegacyCertificateInfoType::Trust: {
         auto trust = decodeSecTrustRef(decoder);
         if (!trust)
             return std::nullopt;
 
         return WebCore::CertificateInfo(WTFMove(*trust));
-    }
-    case LegacyCertificateInfoType::CertificateChain: {
-        auto certificateChain = decodeCertificateChain(decoder);
-        if (!certificateChain)
-            return std::nullopt;
-        return WebCore::CertificateInfo(WebCore::CertificateInfo::secTrustFromCertificateChain(certificateChain->get()));
-    }
-    case LegacyCertificateInfoType::None:
-        // Do nothing.
-        return WebCore::CertificateInfo();
-    }
 }
 
 #elif USE(CURL)

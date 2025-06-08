@@ -1,7 +1,7 @@
 /*
  * Copyright (C) 2009 Apple Inc. All rights reserved.
  * Copyright (C) 2009, 2011 Google Inc.  All rights reserved.
- * Copyright (c) 2012, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2025, Oracle and/or its affiliates. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -59,9 +59,9 @@ public:
     void didClose();
 
 protected:
-    void platformSend(const uint8_t* data, size_t length, Function<void(bool)>&&) final;
+    void platformSend(std::span<const uint8_t> data, Function<void(bool)>&&) final;
     std::optional<size_t> platformSendInternal(const uint8_t*, size_t);
-    void platformSendHandshake(const uint8_t* data, size_t length, const std::optional<CookieRequestHeaderFieldProxy>&, Function<void(bool, bool)>&&) final;
+    void platformSendHandshake(std::span<const uint8_t> data, const std::optional<CookieRequestHeaderFieldProxy>&, Function<void(bool, bool)>&&) final;
     void platformClose() final;
     size_t bufferedAmount() final;
     bool sendPendingData();

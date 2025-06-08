@@ -28,8 +28,6 @@
 #include "BExport.h"
 #include "GigacageConfig.h"
 
-#if BENABLE(UNIFIED_AND_FREEZABLE_CONFIG_RECORD)
-
 namespace WebConfig {
 
 // FIXME: Other than OS(DARWIN) || PLATFORM(PLAYSTATION), CeilingOnPageSize is
@@ -41,16 +39,6 @@ alignas(ConfigAlignment) BEXPORT Slot g_config[ConfigSizeToProtect / sizeof(Slot
 
 } // namespace WebConfig
 
-#else // !BENABLE(UNIFIED_AND_FREEZABLE_CONFIG_RECORD)
-
-namespace Gigacage {
-
-Config g_gigacageConfig;
-
-} // namespace Gigacage
-
-#endif // BENABLE(UNIFIED_AND_FREEZABLE_CONFIG_RECORD)
-
 extern "C" {
 
 BEXPORT void* mbmalloc(size_t);
@@ -61,12 +49,12 @@ BEXPORT void mbscavenge();
 
 void* mbmalloc(size_t size)
 {
-    return bmalloc::api::malloc(size);
+    return bmalloc::api::malloc(size, bmalloc::CompactAllocationMode::NonCompact);
 }
 
 void* mbmemalign(size_t alignment, size_t size)
 {
-    return bmalloc::api::memalign(alignment, size);
+    return bmalloc::api::memalign(alignment, size, bmalloc::CompactAllocationMode::NonCompact);
 }
 
 void mbfree(void* p, size_t)
@@ -76,7 +64,7 @@ void mbfree(void* p, size_t)
 
 void* mbrealloc(void* p, size_t, size_t size)
 {
-    return bmalloc::api::realloc(p, size);
+    return bmalloc::api::realloc(p, size, bmalloc::CompactAllocationMode::NonCompact);
 }
 
 void mbscavenge()

@@ -30,8 +30,9 @@
 
 #include "PictureInPictureObserver.h"
 #include "Supplementable.h"
-#include <wtf/IsoMalloc.h>
 #include <wtf/LoggerHelper.h>
+#include <wtf/TZoneMalloc.h>
+#include <wtf/WeakRef.h>
 
 namespace WebCore {
 
@@ -46,7 +47,7 @@ class HTMLVideoElementPictureInPicture
     , private LoggerHelper
 #endif
 {
-    WTF_MAKE_ISO_ALLOCATED(HTMLVideoElementPictureInPicture);
+    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(HTMLVideoElementPictureInPicture);
 public:
     HTMLVideoElementPictureInPicture(HTMLVideoElement&);
     static HTMLVideoElementPictureInPicture* from(HTMLVideoElement&);
@@ -68,7 +69,7 @@ public:
 #if !RELEASE_LOG_DISABLED
     const Logger& logger() const final { return m_logger.get(); }
     const void* logIdentifier() const final { return m_logIdentifier; }
-    const char* logClassName() const final { return "HTMLVideoElementPictureInPicture"; }
+    ASCIILiteral logClassName() const final { return "HTMLVideoElementPictureInPicture"_s; }
     WTFLogChannel& logChannel() const final;
 #endif
 
@@ -78,7 +79,7 @@ private:
     bool m_autoPictureInPicture { false };
     bool m_disablePictureInPicture { false };
 
-    HTMLVideoElement& m_videoElement;
+    WeakRef<HTMLVideoElement> m_videoElement;
     RefPtr<PictureInPictureWindow> m_pictureInPictureWindow;
     RefPtr<DeferredPromise> m_enterPictureInPicturePromise;
     RefPtr<DeferredPromise> m_exitPictureInPicturePromise;

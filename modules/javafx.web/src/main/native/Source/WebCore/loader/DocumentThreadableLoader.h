@@ -41,7 +41,7 @@
 #include <wtf/WeakPtr.h>
 
 namespace WebCore {
-    class CachedRawResource;
+class CachedRawResource;
     class ContentSecurityPolicy;
     class Document;
     class ThreadableLoaderClient;
@@ -92,7 +92,7 @@ namespace WebCore {
         void redirectReceived(CachedResource&, ResourceRequest&&, const ResourceResponse&, CompletionHandler<void(ResourceRequest&&)>&&) override;
         void finishedTimingForWorkerLoad(CachedResource&, const ResourceTiming&) override;
         void finishedTimingForWorkerLoad(const ResourceTiming&);
-        void notifyFinished(CachedResource&, const NetworkLoadMetrics&) override;
+        void notifyFinished(CachedResource&, const NetworkLoadMetrics&, LoadWillContinueInAnotherProcess) override;
 
         void didReceiveResponse(ResourceLoaderIdentifier, const ResourceResponse&);
         void didReceiveData(ResourceLoaderIdentifier, const SharedBuffer&);
@@ -109,6 +109,7 @@ namespace WebCore {
         bool isAllowedByContentSecurityPolicy(const URL&, ContentSecurityPolicy::RedirectResponseReceived, const URL& preRedirectURL = URL());
         bool isResponseAllowedByContentSecurityPolicy(const ResourceResponse&);
 
+        Ref<SecurityOrigin> topOrigin() const;
         SecurityOrigin& securityOrigin() const;
         Ref<SecurityOrigin> protectedSecurityOrigin() const;
         const ContentSecurityPolicy& contentSecurityPolicy() const;

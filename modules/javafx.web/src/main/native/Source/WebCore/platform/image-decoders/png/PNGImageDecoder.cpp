@@ -42,10 +42,13 @@
 #include "PNGImageDecoder.h"
 
 #include "Color.h"
-#include "PlatformDisplay.h"
 #include <png.h>
 #include <wtf/StdLibExtras.h>
 #include <wtf/UniqueArray.h>
+
+#if USE(LCMS)
+#include "LCMSUniquePtr.h"
+#endif
 
 #if defined(PNG_LIBPNG_VER_MAJOR) && defined(PNG_LIBPNG_VER_MINOR) && (PNG_LIBPNG_VER_MAJOR > 1 || (PNG_LIBPNG_VER_MAJOR == 1 && PNG_LIBPNG_VER_MINOR >= 4))
 #define JMPBUF(png_ptr) png_jmpbuf(png_ptr)
@@ -157,7 +160,7 @@ public:
         auto bytesToUse = data.size() - bytesToSkip;
         m_readOffset += bytesToUse;
         m_currentBufferSize = m_readOffset;
-        png_process_data(m_png, m_info, reinterpret_cast<png_bytep>(const_cast<uint8_t*>(data.data() + bytesToSkip)), bytesToUse);
+        png_process_data(m_png, m_info, reinterpret_cast<png_bytep>(const_cast<uint8_t*>(data.span().subspan(bytesToSkip).data())), bytesToUse);
         // We explicitly specify the superclass encodedDataStatus() because we
         // merely want to check if we've managed to set the size, not
         // (recursively) trigger additional decoding if we haven't.
@@ -381,10 +384,9 @@ void PNGImageDecoder::headerAvailable()
         int compressionType;
         if (png_get_iCCP(png, info, &iccProfileTitle, &compressionType, &iccProfileData, &iccProfileDataSize)) {
             auto iccProfile = LCMSProfilePtr(cmsOpenProfileFromMem(iccProfileData, iccProfileDataSize));
-            if (iccProfile) {
-                auto* displayProfile = PlatformDisplay::sharedDisplay().colorProfile();
-                if (cmsGetColorSpace(iccProfile.get()) == cmsSigRgbData && cmsGetColorSpace(displayProfile) == cmsSigRgbData)
-                    m_iccTransform = LCMSTransformPtr(cmsCreateTransform(iccProfile.get(), TYPE_BGRA_8, displayProfile, TYPE_BGRA_8, INTENT_RELATIVE_COLORIMETRIC, 0));
+            if (iccProfile && cmsGetColorSpace(iccProfile.get()) == cmsSigRgbData) {
+                auto srgbProfile = LCMSProfilePtr(cmsCreate_sRGBProfile());
+                m_iccTransform = LCMSTransformPtr(cmsCreateTransform(iccProfile.get(), TYPE_BGRA_8, srgbProfile.get(), TYPE_BGRA_8, INTENT_RELATIVE_COLORIMETRIC, 0));
             }
         }
     }

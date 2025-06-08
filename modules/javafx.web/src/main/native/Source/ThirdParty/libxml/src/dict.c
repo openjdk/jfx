@@ -19,11 +19,13 @@
 #define IN_LIBXML
 #include "libxml.h"
 
+#include <errno.h>
 #include <limits.h>
+#include <stdlib.h>
 #include <string.h>
-#include <time.h>
 
 #include "private/dict.h"
+#include "private/globals.h"
 #include "private/threads.h"
 
 #include <libxml/parser.h>
@@ -141,11 +143,11 @@ xmlDictAddString(xmlDictPtr dict, const xmlChar *name, unsigned int namelen) {
 
     pool = dict->strings;
     while (pool != NULL) {
-        if ((size_t)(pool->end - pool->free) > namelen)
-            goto found_pool;
-        if (pool->size > size) size = pool->size;
+    if ((size_t)(pool->end - pool->free) > namelen)
+        goto found_pool;
+    if (pool->size > size) size = pool->size;
         limit += pool->size;
-        pool = pool->next;
+    pool = pool->next;
     }
     /*
      * Not found, need to allocate
@@ -169,15 +171,15 @@ xmlDictAddString(xmlDictPtr dict, const xmlChar *name, unsigned int namelen) {
             else
                 return(NULL);
         }
-        pool = (xmlDictStringsPtr) xmlMalloc(sizeof(xmlDictStrings) + size);
-        if (pool == NULL)
-            return(NULL);
-        pool->size = size;
-        pool->nbStrings = 0;
-        pool->free = &pool->array[0];
-        pool->end = &pool->array[size];
-        pool->next = dict->strings;
-        dict->strings = pool;
+    pool = (xmlDictStringsPtr) xmlMalloc(sizeof(xmlDictStrings) + size);
+    if (pool == NULL)
+        return(NULL);
+    pool->size = size;
+    pool->nbStrings = 0;
+    pool->free = &pool->array[0];
+    pool->end = &pool->array[size];
+    pool->next = dict->strings;
+    dict->strings = pool;
     }
 found_pool:
     ret = pool->free;
@@ -211,11 +213,11 @@ xmlDictAddQString(xmlDictPtr dict, const xmlChar *prefix, unsigned int plen,
 
     pool = dict->strings;
     while (pool != NULL) {
-        if ((size_t)(pool->end - pool->free) > namelen + plen + 1)
-            goto found_pool;
-        if (pool->size > size) size = pool->size;
+    if ((size_t)(pool->end - pool->free) > namelen + plen + 1)
+        goto found_pool;
+    if (pool->size > size) size = pool->size;
         limit += pool->size;
-        pool = pool->next;
+    pool = pool->next;
     }
     /*
      * Not found, need to allocate
@@ -226,18 +228,18 @@ xmlDictAddQString(xmlDictPtr dict, const xmlChar *prefix, unsigned int plen,
         }
 
         if (size == 0) size = 1000;
-        else size *= 4; /* exponential growth */
+    else size *= 4; /* exponential growth */
         if (size < 4 * (namelen + plen + 1))
-            size = 4 * (namelen + plen + 1); /* just in case ! */
-        pool = (xmlDictStringsPtr) xmlMalloc(sizeof(xmlDictStrings) + size);
-        if (pool == NULL)
-            return(NULL);
-        pool->size = size;
-        pool->nbStrings = 0;
-        pool->free = &pool->array[0];
-        pool->end = &pool->array[size];
-        pool->next = dict->strings;
-        dict->strings = pool;
+        size = 4 * (namelen + plen + 1); /* just in case ! */
+    pool = (xmlDictStringsPtr) xmlMalloc(sizeof(xmlDictStrings) + size);
+    if (pool == NULL)
+        return(NULL);
+    pool->size = size;
+    pool->nbStrings = 0;
+    pool->free = &pool->array[0];
+    pool->end = &pool->array[size];
+    pool->next = dict->strings;
+    dict->strings = pool;
     }
 found_pool:
     ret = pool->free;
@@ -300,7 +302,7 @@ xmlDictCreateSub(xmlDictPtr sub) {
     if ((dict != NULL) && (sub != NULL)) {
         dict->seed = sub->seed;
         dict->subdict = sub;
-        xmlDictReference(dict->subdict);
+    xmlDictReference(dict->subdict);
     }
     return(dict);
 }
@@ -334,7 +336,7 @@ xmlDictFree(xmlDictPtr dict) {
     xmlDictStringsPtr pool, nextp;
 
     if (dict == NULL)
-        return;
+    return;
 
     /* decrement the counter, it may be shared by a parser and docs */
     xmlMutexLock(&xmlDictMutex);
@@ -351,13 +353,13 @@ xmlDictFree(xmlDictPtr dict) {
     }
 
     if (dict->table) {
-        xmlFree(dict->table);
+    xmlFree(dict->table);
     }
     pool = dict->strings;
     while (pool != NULL) {
         nextp = pool->next;
-        xmlFree(pool);
-        pool = nextp;
+    xmlFree(pool);
+    pool = nextp;
     }
     xmlFree(dict);
 }
@@ -377,12 +379,12 @@ xmlDictOwns(xmlDictPtr dict, const xmlChar *str) {
     xmlDictStringsPtr pool;
 
     if ((dict == NULL) || (str == NULL))
-        return(-1);
+    return(-1);
     pool = dict->strings;
     while (pool != NULL) {
         if ((str >= &pool->array[0]) && (str <= pool->free))
-            return(1);
-        pool = pool->next;
+        return(1);
+    pool = pool->next;
     }
     if (dict->subdict)
         return(xmlDictOwns(dict->subdict, str));
@@ -401,7 +403,7 @@ xmlDictOwns(xmlDictPtr dict, const xmlChar *str) {
 int
 xmlDictSize(xmlDictPtr dict) {
     if (dict == NULL)
-        return(-1);
+    return(-1);
     if (dict->subdict)
         return(dict->nbElems + dict->subdict->nbElems);
     return(dict->nbElems);
@@ -422,7 +424,7 @@ xmlDictSetLimit(xmlDictPtr dict, size_t limit) {
     size_t ret;
 
     if (dict == NULL)
-        return(0);
+    return(0);
     ret = dict->limit;
     dict->limit = limit;
     return(ret);
@@ -443,11 +445,11 @@ xmlDictGetUsage(xmlDictPtr dict) {
     size_t limit = 0;
 
     if (dict == NULL)
-        return(0);
+    return(0);
     pool = dict->strings;
     while (pool != NULL) {
         limit += pool->size;
-        pool = pool->next;
+    pool = pool->next;
     }
     return(limit);
 }
@@ -508,6 +510,15 @@ xmlDictHashQName(unsigned seed, const xmlChar *prefix, const xmlChar *name,
     return(h2 | MAX_HASH_SIZE);
 }
 
+/**
+ * xmlDictComputeHash:
+ * @dict:  dictionary
+ * @string:  C string
+ *
+ * Compute the hash value of a C string.
+ *
+ * Returns the hash value.
+ */
 unsigned
 xmlDictComputeHash(const xmlDict *dict, const xmlChar *string) {
     size_t len;
@@ -516,6 +527,15 @@ xmlDictComputeHash(const xmlDict *dict, const xmlChar *string) {
 
 #define HASH_ROL31(x,n) ((x) << (n) | ((x) & 0x7FFFFFFF) >> (31 - (n)))
 
+/**
+ * xmlDictCombineHash:
+ * @v1:  first hash value
+ * @v2: second hash value
+ *
+ * Combine two hash values.
+ *
+ * Returns the combined hash value.
+ */
 ATTRIBUTE_NO_SANITIZE_INTEGER
 unsigned
 xmlDictCombineHash(unsigned v1, unsigned v2) {
@@ -684,7 +704,7 @@ xmlDictLookupInternal(xmlDictPtr dict, const xmlChar *prefix,
     int found = 0;
 
     if ((dict == NULL) || (name == NULL))
-        return(NULL);
+    return(NULL);
 
     maxLen = (maybeLen < 0) ? SIZE_MAX : (size_t) maybeLen;
 
@@ -904,30 +924,88 @@ xmlDictQLookup(xmlDictPtr dict, const xmlChar *prefix, const xmlChar *name) {
  * Pseudo-random generator
  */
 
+#ifdef _WIN32
+  #define WIN32_LEAN_AND_MEAN
+  #include <windows.h>
+  #include <bcrypt.h>
+#else
+  #if defined(HAVE_GETENTROPY)
+    #ifdef HAVE_UNISTD_H
+      #include <unistd.h>
+    #endif
+    #ifdef HAVE_SYS_RANDOM_H
+      #include <sys/random.h>
+    #endif
+  #endif
+  #include <time.h>
+#endif
+
 static xmlMutex xmlRngMutex;
 
 static unsigned globalRngState[2];
 
-#ifdef XML_THREAD_LOCAL
-static XML_THREAD_LOCAL int localRngInitialized = 0;
-static XML_THREAD_LOCAL unsigned localRngState[2];
-#endif
-
+/*
+ * xmlInitRandom:
+ *
+ * Initialize the PRNG.
+ */
 ATTRIBUTE_NO_SANITIZE_INTEGER
 void
 xmlInitRandom(void) {
-    int var;
-
     xmlInitMutex(&xmlRngMutex);
 
-    /* TODO: Get seed values from system PRNG */
+    {
+#ifdef _WIN32
+        NTSTATUS status;
 
-    globalRngState[0] = (unsigned) time(NULL) ^
-                        HASH_ROL((unsigned) (size_t) &xmlInitRandom, 8);
-    globalRngState[1] = HASH_ROL((unsigned) (size_t) &xmlRngMutex, 16) ^
-                        HASH_ROL((unsigned) (size_t) &var, 24);
+        status = BCryptGenRandom(NULL, (unsigned char *) globalRngState,
+                                 sizeof(globalRngState),
+                                 BCRYPT_USE_SYSTEM_PREFERRED_RNG);
+        if (!BCRYPT_SUCCESS(status)) {
+            fprintf(stderr, "libxml2: BCryptGenRandom failed with "
+                    "error code %lu\n", GetLastError());
+            abort();
+        }
+#else
+        int var;
+
+#if defined(HAVE_GETENTROPY)
+        while (1) {
+            if (getentropy(globalRngState, sizeof(globalRngState)) == 0)
+                return;
+
+            /*
+             * This most likely means that libxml2 was compiled on
+             * a system supporting certain system calls and is running
+             * on a system that doesn't support these calls, as can
+             * be the case on Linux.
+             */
+            if (errno == ENOSYS)
+                break;
+
+            if (errno != EINTR) {
+                fprintf(stderr, "libxml2: getentropy failed with "
+                        "error code %d\n", errno);
+                abort();
+            }
+        }
+#endif
+
+        globalRngState[0] =
+                (unsigned) time(NULL) ^
+                HASH_ROL((unsigned) ((size_t) &xmlInitRandom & 0xFFFFFFFF), 8);
+        globalRngState[1] =
+                HASH_ROL((unsigned) ((size_t) &xmlRngMutex & 0xFFFFFFFF), 16) ^
+                HASH_ROL((unsigned) ((size_t) &var & 0xFFFFFFFF), 24);
+#endif
+    }
 }
 
+/*
+ * xmlCleanupRandom:
+ *
+ * Clean up PRNG globals.
+ */
 void
 xmlCleanupRandom(void) {
     xmlCleanupMutex(&xmlRngMutex);
@@ -947,19 +1025,15 @@ xoroshiro64ss(unsigned *s) {
     return(result & 0xFFFFFFFF);
 }
 
+/*
+ * xmlGlobalRandom:
+ *
+ * Generate a pseudo-random value using the global PRNG.
+ *
+ * Returns a random value.
+ */
 unsigned
-xmlRandom(void) {
-#ifdef XML_THREAD_LOCAL
-    if (!localRngInitialized) {
-        xmlMutexLock(&xmlRngMutex);
-        localRngState[0] = xoroshiro64ss(globalRngState);
-        localRngState[1] = xoroshiro64ss(globalRngState);
-        localRngInitialized = 1;
-        xmlMutexUnlock(&xmlRngMutex);
-    }
-
-    return(xoroshiro64ss(localRngState));
-#else
+xmlGlobalRandom(void) {
     unsigned ret;
 
     xmlMutexLock(&xmlRngMutex);
@@ -967,6 +1041,21 @@ xmlRandom(void) {
     xmlMutexUnlock(&xmlRngMutex);
 
     return(ret);
+}
+
+/*
+ * xmlRandom:
+ *
+ * Generate a pseudo-random value using the thread-local PRNG.
+ *
+ * Returns a random value.
+ */
+unsigned
+xmlRandom(void) {
+#ifdef LIBXML_THREAD_ENABLED
+    return(xoroshiro64ss(xmlGetLocalRngState()));
+#else
+    return(xmlGlobalRandom());
 #endif
 }
 

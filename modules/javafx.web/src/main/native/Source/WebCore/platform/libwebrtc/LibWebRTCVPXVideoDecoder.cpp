@@ -29,6 +29,7 @@
 #if USE(LIBWEBRTC) && PLATFORM(COCOA)
 
 #include "CVUtilities.h"
+#include "IOSurface.h"
 #include "LibWebRTCDav1dDecoder.h"
 #include "Logging.h"
 #include "VideoFrameLibWebRTC.h"
@@ -36,15 +37,16 @@
 #include <wtf/NeverDestroyed.h>
 #include <wtf/ThreadSafeRefCounted.h>
 #include <wtf/WorkQueue.h>
-#include <wtf/text/StringConcatenateNumbers.h>
+#include <wtf/text/MakeString.h>
 
 ALLOW_UNUSED_PARAMETERS_BEGIN
 ALLOW_COMMA_BEGIN
 
+#include <webrtc/api/environment/environment_factory.h>
 #include <webrtc/modules/video_coding/codecs/vp8/include/vp8.h>
 #include <webrtc/modules/video_coding/codecs/vp9/include/vp9.h>
-#include <webrtc/sdk/WebKit/WebKitDecoder.h>
 #include <webrtc/system_wrappers/include/cpu_info.h>
+#include <webrtc/webkit_sdk/WebKit/WebKitDecoder.h>
 
 ALLOW_COMMA_END
 ALLOW_UNUSED_PARAMETERS_END
@@ -55,7 +57,11 @@ namespace WebCore {
 
 static WorkQueue& vpxDecoderQueue()
 {
-    static NeverDestroyed<Ref<WorkQueue>> queue(WorkQueue::create("VPx VideoDecoder Queue"));
+    static std::once_flag onceKey;
+    static LazyNeverDestroyed<Ref<WorkQueue>> queue;
+    std::call_once(onceKey, [] {
+        queue.construct(WorkQueue::create("VPx VideoDecoder Queue"_s));
+    });
     return queue.get();
 }
 
@@ -70,7 +76,8 @@ public:
 private:
     LibWebRTCVPXInternalVideoDecoder(LibWebRTCVPXVideoDecoder::Type, const VideoDecoder::Config&, VideoDecoder::OutputCallback&&, VideoDecoder::PostTaskCallback&&);
     int32_t Decoded(webrtc::VideoFrame&) final;
-    CVPixelBufferPoolRef pixelBufferPool(size_t width, size_t height, OSType);
+    CVPixelBufferPoolRef pixelBufferPool(size_t width, size_t height, OSType) WTF_REQUIRES_LOCK(m_pixelBufferPoolLock);
+    CVPixelBufferRef createPixelBuffer(size_t width, size_t height, webrtc::BufferType);
 
     VideoDecoder::OutputCallback m_outputCallback;
     VideoDecoder::PostTaskCallback m_postTaskCallback;
@@ -79,7 +86,9 @@ private:
     std::optional<uint64_t> m_duration;
     bool m_isClosed { false };
     bool m_useIOSurface { false };
-    RetainPtr<CVPixelBufferPoolRef> m_pixelBufferPool;
+    ProcessIdentity m_resourceOwner;
+    RetainPtr<CVPixelBufferPoolRef> m_pixelBufferPool WTF_GUARDED_BY_LOCK(m_pixelBufferPoolLock);
+    Lock m_pixelBufferPoolLock;
     size_t m_pixelBufferPoolWidth { 0 };
     size_t m_pixelBufferPoolHeight { 0 };
     OSType m_pixelBufferPoolType;
@@ -146,7 +155,7 @@ void LibWebRTCVPXInternalVideoDecoder::decode(std::span<const uint8_t> data, boo
             return;
 
         if (error)
-            protectedThis->m_outputCallback(makeUnexpected(makeString("VPx decoding failed with error ", error)));
+            protectedThis->m_outputCallback(makeUnexpected(makeString("VPx decoding failed with error "_s, error)));
 
         callback({ });
     });
@@ -156,13 +165,15 @@ static UniqueRef<webrtc::VideoDecoder> createInternalDecoder(LibWebRTCVPXVideoDe
 {
     switch (type) {
     case LibWebRTCVPXVideoDecoder::Type::VP8:
-        return makeUniqueRefFromNonNullUniquePtr(webrtc::VP8Decoder::Create());
+        return makeUniqueRefFromNonNullUniquePtr(webrtc::CreateVp8Decoder(webrtc::EnvironmentFactory().Create()));
     case LibWebRTCVPXVideoDecoder::Type::VP9:
         return makeUniqueRefFromNonNullUniquePtr(webrtc::VP9Decoder::Create());
     case LibWebRTCVPXVideoDecoder::Type::VP9_P2:
         return makeUniqueRefFromNonNullUniquePtr(webrtc::VP9Decoder::Create());
+#if ENABLE(AV1)
     case LibWebRTCVPXVideoDecoder::Type::AV1:
         return createLibWebRTCDav1dDecoder();
+#endif
     }
 }
 
@@ -171,6 +182,7 @@ LibWebRTCVPXInternalVideoDecoder::LibWebRTCVPXInternalVideoDecoder(LibWebRTCVPXV
     , m_postTaskCallback(WTFMove(postTaskCallback))
     , m_internalDecoder(createInternalDecoder(type))
     , m_useIOSurface(config.pixelBuffer == VideoDecoder::HardwareBuffer::Yes)
+    , m_resourceOwner(config.resourceOwner)
 {
     m_internalDecoder->RegisterDecodeCompleteCallback(this);
     webrtc::VideoDecoder::Settings settings;
@@ -195,14 +207,8 @@ CVPixelBufferPoolRef LibWebRTCVPXInternalVideoDecoder::pixelBufferPool(size_t wi
     return m_pixelBufferPool.get();
 }
 
-int32_t LibWebRTCVPXInternalVideoDecoder::Decoded(webrtc::VideoFrame& frame)
+CVPixelBufferRef LibWebRTCVPXInternalVideoDecoder::createPixelBuffer(size_t width, size_t height, webrtc::BufferType bufferType)
 {
-    m_postTaskCallback([protectedThis = Ref { *this }, colorSpace = VideoFrameLibWebRTC::colorSpaceFromFrame(frame), buffer = frame.video_frame_buffer(), timestamp = m_timestamp, duration = m_duration]() mutable {
-        if (protectedThis->m_isClosed)
-            return;
-
-        auto videoFrame = VideoFrameLibWebRTC::create({ }, false, VideoFrame::Rotation::None, WTFMove(colorSpace), WTFMove(buffer), [protectedThis](auto& buffer) {
-            return adoptCF(webrtc::createPixelBufferFromFrameBuffer(buffer, [protectedThis](size_t width, size_t height, webrtc::BufferType bufferType) -> CVPixelBufferRef {
                 OSType pixelBufferType;
                 switch (bufferType) {
                 case webrtc::BufferType::I420:
@@ -217,14 +223,35 @@ int32_t LibWebRTCVPXInternalVideoDecoder::Decoded(webrtc::VideoFrame& frame)
 
                 CVPixelBufferRef pixelBuffer = nullptr;
                 CVReturn status = kCVReturnError;
-                if (auto bufferPool = protectedThis->pixelBufferPool(width, height, pixelBufferType))
+
+    {
+        Locker locker(m_pixelBufferPoolLock);
+        if (auto bufferPool = pixelBufferPool(width, height, pixelBufferType))
                     status = CVPixelBufferPoolCreatePixelBuffer(nullptr, bufferPool, &pixelBuffer);
+    }
 
                 if (status != kCVReturnSuccess || !pixelBuffer) {
                     RELEASE_LOG_ERROR(Media, "Failed creating a pixel buffer for converting a VPX frame with error %d", status);
                     return nullptr;
                 }
+
+    if (m_resourceOwner) {
+        if (auto surface = CVPixelBufferGetIOSurface(pixelBuffer))
+            IOSurface::setOwnershipIdentity(surface, m_resourceOwner);
+    }
+
                 return pixelBuffer;
+}
+
+int32_t LibWebRTCVPXInternalVideoDecoder::Decoded(webrtc::VideoFrame& frame)
+{
+    m_postTaskCallback([protectedThis = Ref { *this }, colorSpace = VideoFrameLibWebRTC::colorSpaceFromFrame(frame), buffer = frame.video_frame_buffer(), timestamp = m_timestamp, duration = m_duration]() mutable {
+        if (protectedThis->m_isClosed)
+            return;
+
+        auto videoFrame = VideoFrameLibWebRTC::create({ }, false, VideoFrame::Rotation::None, WTFMove(colorSpace), WTFMove(buffer), [protectedThis] (auto& buffer) {
+            return adoptCF(webrtc::createPixelBufferFromFrameBuffer(buffer, [protectedThis] (size_t width, size_t height, webrtc::BufferType bufferType) -> CVPixelBufferRef {
+                return protectedThis->createPixelBuffer(width, height, bufferType);
             }));
         });
 

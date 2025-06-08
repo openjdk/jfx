@@ -36,7 +36,7 @@
 #include "ResizeObserverOptions.h"
 #include "WebCoreOpaqueRootInlines.h"
 #include <JavaScriptCore/AbstractSlotVisitorInlines.h>
-#include <wtf/IsoMallocInlines.h>
+#include <wtf/TZoneMallocInlines.h>
 #include <wtf/text/TextStream.h>
 
 namespace WebCore {
@@ -51,7 +51,7 @@ Ref<ResizeObserver> ResizeObserver::createNativeObserver(Document& document, Nat
     return adoptRef(*new ResizeObserver(document, { WTFMove(nativeCallback) }));
 }
 
-WTF_MAKE_ISO_ALLOCATED_IMPL(ResizeObserver);
+WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(ResizeObserver);
 
 ResizeObserver::ResizeObserver(Document& document, JSOrNativeResizeObserverCallback&& callback)
     : m_document(document)
@@ -143,7 +143,7 @@ size_t ResizeObserver::gatherObservations(size_t deeperThan)
                 LOG_WITH_STREAM(ResizeObserver, stream << "ResizeObserver " << this << " gatherObservations - recording observation " << observation.get());
 
                 m_activeObservations.append(observation.get());
-                m_activeObservationTargets.append(*observation->target());
+                m_activeObservationTargets.append(*observation->protectedTarget());
                 minObservedDepth = std::min(depth, minObservedDepth);
             } else
                 m_hasSkippedObservations = true;
@@ -177,7 +177,7 @@ void ResizeObserver::deliverObservations()
     if (!jsCallback->hasCallback())
         return;
 
-    auto* context = jsCallback->scriptExecutionContext();
+    RefPtr context = jsCallback->scriptExecutionContext();
     if (!context)
         return;
 
@@ -193,8 +193,10 @@ bool ResizeObserver::isReachableFromOpaqueRoots(JSC::AbstractSlotVisitor& visito
             return true;
     }
     for (auto& target : m_activeObservationTargets) {
+        SUPPRESS_UNCOUNTED_ARG {
         if (containsWebCoreOpaqueRoot(visitor, target.get()))
             return true;
+    }
     }
     return !m_targetsWaitingForFirstObservation.isEmpty();
 }
@@ -212,7 +214,7 @@ bool ResizeObserver::removeTarget(Element& target)
 void ResizeObserver::removeAllTargets()
 {
     for (auto& observation : m_observations) {
-        bool removed = removeTarget(*observation->target());
+        bool removed = removeTarget(*observation->protectedTarget());
         ASSERT_UNUSED(removed, removed);
     }
     m_activeObservationTargets.clear();

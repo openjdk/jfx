@@ -25,6 +25,7 @@
 
 #include "config.h"
 #include "DFGFinalizer.h"
+#include "JITCode.h"
 #include <wtf/TZoneMallocInlines.h>
 
 #if ENABLE(DFG_JIT)
@@ -38,8 +39,12 @@ Finalizer::Finalizer(Plan& plan)
 {
 }
 
-Finalizer::~Finalizer()
+Finalizer::~Finalizer() = default;
+
+
+RefPtr<JSC::JITCode> Finalizer::jitCode()
 {
+    return nullptr;
 }
 
 } } // namespace JSC::DFG

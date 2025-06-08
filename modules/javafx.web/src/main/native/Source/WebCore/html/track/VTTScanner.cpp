@@ -39,10 +39,10 @@ VTTScanner::VTTScanner(const String& line)
     , m_is8Bit(line.is8Bit())
 {
     if (m_is8Bit) {
-        m_data.characters8 = line.characters8();
+        m_data.characters8 = line.span8().data();
         m_end.characters8 = m_data.characters8 + line.length();
     } else {
-        m_data.characters16 = line.characters16();
+        m_data.characters16 = line.span16().data();
         m_end.characters16 = m_data.characters16 + line.length();
     }
 }
@@ -55,18 +55,18 @@ bool VTTScanner::scan(char c)
     return true;
 }
 
-bool VTTScanner::scan(const LChar* characters, size_t charactersCount)
+bool VTTScanner::scan(std::span<const LChar> characters)
 {
     unsigned matchLength = m_is8Bit ? m_end.characters8 - m_data.characters8 : m_end.characters16 - m_data.characters16;
-    if (matchLength < charactersCount)
+    if (matchLength < characters.size())
         return false;
     bool matched;
     if (m_is8Bit)
-        matched = equal(m_data.characters8, characters, charactersCount);
+        matched = equal(m_data.characters8, characters);
     else
-        matched = equal(m_data.characters16, characters, charactersCount);
+        matched = equal(m_data.characters16, characters);
     if (matched)
-        advance(charactersCount);
+        advance(characters.size());
     return matched;
 }
 
@@ -81,9 +81,9 @@ bool VTTScanner::scanRun(const Run& run, const String& toMatch)
         return false;
     bool matched;
     if (m_is8Bit)
-        matched = equal(toMatch.impl(), m_data.characters8, matchLength);
+        matched = equal(toMatch.impl(), { m_data.characters8, matchLength });
     else
-        matched = equal(toMatch.impl(), m_data.characters16, matchLength);
+        matched = equal(toMatch.impl(), { m_data.characters16, matchLength });
     if (matched)
         seekTo(run.end());
     return matched;
@@ -105,9 +105,9 @@ String VTTScanner::extractString(const Run& run)
     ASSERT(run.end() <= end());
     String s;
     if (m_is8Bit)
-        s = String(m_data.characters8, run.length());
+        s = std::span { m_data.characters8, run.length() };
     else
-        s = String(m_data.characters16, run.length());
+        s = std::span { m_data.characters16, run.length() };
     seekTo(run.end());
     return s;
 }
@@ -129,9 +129,9 @@ unsigned VTTScanner::scanDigits(unsigned& number)
     StringView string;
     unsigned numDigits = runOfDigits.length();
     if (m_is8Bit)
-        string = { m_data.characters8, numDigits };
+        string = std::span { m_data.characters8, numDigits };
     else
-        string = { m_data.characters16, numDigits };
+        string = std::span { m_data.characters16, numDigits };
 
     // Since these are ASCII digits, the only failure mode is overflow, so use the maximum unsigned value.
     number = parseInteger<unsigned>(string).value_or(std::numeric_limits<unsigned>::max());
@@ -163,9 +163,9 @@ bool VTTScanner::scanFloat(float& number, bool* isNegative)
     size_t lengthOfFloat = Run(integerRun.start(), position(), m_is8Bit).length();
     bool validNumber;
     if (m_is8Bit)
-        number = charactersToFloat(integerRun.start(), lengthOfFloat, &validNumber);
+        number = charactersToFloat({ integerRun.start(), lengthOfFloat }, &validNumber);
     else
-        number = charactersToFloat(reinterpret_cast<const UChar*>(integerRun.start()), lengthOfFloat, &validNumber);
+        number = charactersToFloat({ reinterpret_cast<const UChar*>(integerRun.start()), lengthOfFloat }, &validNumber);
 
     if (!validNumber)
         number = std::numeric_limits<float>::max();

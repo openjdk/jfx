@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -2090,6 +2090,32 @@ assertEquals(0, firstCell.getIndex());
         assertEquals(-snappedNewValue, layoutY, 0.0);
 
         loader.dispose();
+    }
+
+    @Test
+    public void testSheetChildrenAreAlwaysTheAmountOfVisibleCells() {
+        flow = new VirtualFlowShim<>();
+        flow.setFixedCellSize(24);
+        flow.setCellFactory(fw -> new CellStub(flow));
+        flow.setCellCount(20);
+
+        flow.resize(250, 240);
+        pulse();
+
+        assertEquals(10, flow.sheetChildren.size());
+        assertEquals(flow.cells, flow.sheetChildren);
+
+        flow.resize(250, 480);
+        pulse();
+
+        assertEquals(20, flow.sheetChildren.size());
+        assertEquals(flow.cells, flow.sheetChildren);
+
+        flow.resize(250, 240);
+        pulse();
+
+        assertEquals(10, flow.sheetChildren.size());
+        assertEquals(flow.cells, flow.sheetChildren);
     }
 
 }

@@ -29,7 +29,7 @@
 namespace WebCore {
 
 class BeforeUnloadEvent final : public Event {
-    WTF_MAKE_ISO_ALLOCATED(BeforeUnloadEvent);
+    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(BeforeUnloadEvent);
 public:
     static Ref<BeforeUnloadEvent> create()
     {
@@ -49,7 +49,6 @@ private:
     BeforeUnloadEvent();
     BeforeUnloadEvent(ForBindingsFlag);
 
-    EventInterface eventInterface() const final { return BeforeUnloadEventInterfaceType; }
     bool isBeforeUnloadEvent() const final;
 
     String m_returnValue;

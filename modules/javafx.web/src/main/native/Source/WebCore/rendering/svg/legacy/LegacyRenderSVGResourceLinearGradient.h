@@ -28,12 +28,14 @@ namespace WebCore {
 class SVGLinearGradientElement;
 
 class LegacyRenderSVGResourceLinearGradient final : public LegacyRenderSVGResourceGradient {
-    WTF_MAKE_ISO_ALLOCATED(LegacyRenderSVGResourceLinearGradient);
+    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(LegacyRenderSVGResourceLinearGradient);
+    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(LegacyRenderSVGResourceLinearGradient);
 public:
     LegacyRenderSVGResourceLinearGradient(SVGLinearGradientElement&, RenderStyle&&);
     virtual ~LegacyRenderSVGResourceLinearGradient();
 
     inline SVGLinearGradientElement& linearGradientElement() const;
+    inline Ref<SVGLinearGradientElement> protectedLinearGradientElement() const;
 
     FloatPoint startPoint(const LinearGradientAttributes&) const;
     FloatPoint endPoint(const LinearGradientAttributes&) const;

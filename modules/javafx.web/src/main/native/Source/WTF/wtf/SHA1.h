@@ -38,6 +38,14 @@
 #include <CommonCrypto/CommonDigest.h>
 #endif
 
+#ifdef __OBJC__
+#include <objc/objc.h>
+#endif
+
+#if USE(CF)
+typedef const struct __CFString * CFStringRef;
+#endif
+
 // On Cocoa platforms, CoreUtils.h has a SHA1() macro that sometimes get included above here.
 #ifdef SHA1
 #undef SHA1
@@ -59,13 +67,17 @@ public:
 
     void addBytes(const CString& input)
     {
-        addBytes(input.bytes());
+        addBytes(input.span());
     }
 
-    void addBytes(const uint8_t* input, size_t length)
-    {
-        addBytes(std::span(input, length));
-    }
+    WTF_EXPORT_PRIVATE void addUTF8Bytes(StringView);
+
+#if USE(CF)
+    WTF_EXPORT_PRIVATE void addUTF8Bytes(CFStringRef);
+#ifdef __OBJC__
+    void addUTF8Bytes(NSString *string) { addUTF8Bytes((__bridge CFStringRef)string); }
+#endif
+#endif
 
     // Size of the SHA1 hash
     WTF_EXPORT_PRIVATE static constexpr size_t hashSize = 20;

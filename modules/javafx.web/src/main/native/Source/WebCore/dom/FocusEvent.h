@@ -34,7 +34,7 @@ namespace WebCore {
 class Node;
 
 class FocusEvent final : public UIEvent {
-    WTF_MAKE_ISO_ALLOCATED(FocusEvent);
+    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(FocusEvent);
 public:
     static Ref<FocusEvent> create(const AtomString& type, CanBubble canBubble, IsCancelable cancelable, RefPtr<WindowProxy>&& view, int detail, RefPtr<EventTarget>&& relatedTarget)
     {
@@ -58,11 +58,10 @@ public:
     EventTarget* relatedTarget() const final { return m_relatedTarget.get(); }
 
 private:
-    FocusEvent() = default;
+    FocusEvent();
     FocusEvent(const AtomString& type, CanBubble, IsCancelable, RefPtr<WindowProxy>&&, int, RefPtr<EventTarget>&&);
     FocusEvent(const AtomString& type, const Init&);
 
-    EventInterface eventInterface() const final;
     bool isFocusEvent() const final;
 
     void setRelatedTarget(RefPtr<EventTarget>&& relatedTarget) final { m_relatedTarget = WTFMove(relatedTarget); }

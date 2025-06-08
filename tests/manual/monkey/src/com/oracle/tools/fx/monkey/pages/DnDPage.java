@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2024, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -154,16 +154,6 @@ public class DnDPage extends TestPaneBase {
         op.addChoiceSupplier("16 x 128", () -> ImageTools.createImage(16, 128));
         op.addChoiceSupplier("256 x 256", () -> ImageTools.createImage(256, 256));
         op.addChoiceSupplier("4096 x 4096", () -> ImageTools.createImage(4096, 4096));
-        op.addChoiceSupplier("<snapshot>", () -> {
-            try {
-                // FIX windows throws Errors if this check is not done
-                if(source.getScene() != null) {
-                    return source.snapshot(null, null);
-                }
-            } catch(Throwable e) {
-            }
-            return null;
-        });
         op.selectFirst();
         return op;
     }

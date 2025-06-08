@@ -31,20 +31,11 @@
 #include <wtf/Gigacage.h>
 
 #if ENABLE(C_LOOP)
-#if !OS(WINDOWS)
 #define OFFLINE_ASM_C_LOOP 1
-#define OFFLINE_ASM_C_LOOP_WIN 0
-#else
-#define OFFLINE_ASM_C_LOOP 0
-#define OFFLINE_ASM_C_LOOP_WIN 1
-#endif
-#define OFFLINE_ASM_X86 0
-#define OFFLINE_ASM_X86_WIN 0
 #define OFFLINE_ASM_ARMv7 0
 #define OFFLINE_ASM_ARM64 0
 #define OFFLINE_ASM_ARM64E 0
 #define OFFLINE_ASM_X86_64 0
-#define OFFLINE_ASM_X86_64_WIN 0
 #define OFFLINE_ASM_ARMv7k 0
 #define OFFLINE_ASM_ARMv7s 0
 #define OFFLINE_ASM_RISCV64 0
@@ -52,19 +43,6 @@
 #else // ENABLE(C_LOOP)
 
 #define OFFLINE_ASM_C_LOOP 0
-#define OFFLINE_ASM_C_LOOP_WIN 0
-
-#if CPU(X86) && !COMPILER(MSVC)
-#define OFFLINE_ASM_X86 1
-#else
-#define OFFLINE_ASM_X86 0
-#endif
-
-#if CPU(X86) && COMPILER(MSVC)
-#define OFFLINE_ASM_X86_WIN 1
-#else
-#define OFFLINE_ASM_X86_WIN 0
-#endif
 
 #ifdef __ARM_ARCH_7K__
 #define OFFLINE_ASM_ARMv7k 1
@@ -84,16 +62,10 @@
 #define OFFLINE_ASM_ARMv7 0
 #endif
 
-#if CPU(X86_64) && !COMPILER(MSVC)
+#if CPU(X86_64)
 #define OFFLINE_ASM_X86_64 1
 #else
 #define OFFLINE_ASM_X86_64 0
-#endif
-
-#if CPU(X86_64) && COMPILER(MSVC)
-#define OFFLINE_ASM_X86_64_WIN 1
-#else
-#define OFFLINE_ASM_X86_64_WIN 0
 #endif
 
 #if CPU(ARM64)

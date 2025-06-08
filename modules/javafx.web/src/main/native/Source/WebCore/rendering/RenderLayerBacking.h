@@ -131,7 +131,7 @@ public:
         case ScrollCoordinationRole::ScrollingProxy:
             // These nodeIDs are stored in m_ancestorClippingStack.
             ASSERT_NOT_REACHED();
-            return 0;
+            return { };
         case ScrollCoordinationRole::FrameHosting:
             return m_frameHostingNodeID;
         case ScrollCoordinationRole::PluginHosting:
@@ -141,7 +141,7 @@ public:
         case ScrollCoordinationRole::Positioning:
             return m_positioningNodeID;
         }
-        return 0;
+        return { };
     }
 
     void setScrollingNodeIDForRole(ScrollingNodeID, ScrollCoordinationRole);
@@ -152,6 +152,7 @@ public:
 
     GraphicsLayer* parentForSublayers() const;
     GraphicsLayer* childForSuperlayers() const;
+    GraphicsLayer* childForSuperlayersExcludingViewTransitions() const;
 
     // RenderLayers with backing normally short-circuit paintLayer() because
     // their content is rendered via callbacks from GraphicsLayer. However, the document
@@ -240,12 +241,12 @@ public:
 
     bool isTrackingRepaints() const override;
     bool shouldSkipLayerInDump(const GraphicsLayer*, OptionSet<LayerTreeAsTextOptions>) const override;
-    bool shouldDumpPropertyForLayer(const GraphicsLayer*, const char* propertyName, OptionSet<LayerTreeAsTextOptions>) const override;
+    bool shouldDumpPropertyForLayer(const GraphicsLayer*, ASCIILiteral propertyName, OptionSet<LayerTreeAsTextOptions>) const override;
 
     bool shouldAggressivelyRetainTiles(const GraphicsLayer*) const override;
     bool shouldTemporarilyRetainTileCohorts(const GraphicsLayer*) const override;
     bool useGiantTiles() const override;
-    bool useCSS3DTransformInteroperability() const override;
+    bool cssUnprefixedBackdropFilterEnabled() const override;
     void logFilledVisibleFreshTile(unsigned) override;
     bool needsPixelAligment() const override { return !m_isMainFrameRenderViewLayer; }
 
@@ -438,11 +439,11 @@ private:
     LayoutSize m_subpixelOffsetFromRenderer; // This is the subpixel distance between the primary graphics layer and the associated renderer's bounds.
     LayoutSize m_compositedBoundsOffsetFromGraphicsLayer; // This is the subpixel distance between the primary graphics layer and the render layer bounds.
 
-    ScrollingNodeID m_viewportConstrainedNodeID { 0 };
-    ScrollingNodeID m_scrollingNodeID { 0 };
-    ScrollingNodeID m_frameHostingNodeID { 0 };
-    ScrollingNodeID m_pluginHostingNodeID { 0 };
-    ScrollingNodeID m_positioningNodeID { 0 };
+    ScrollingNodeID m_viewportConstrainedNodeID;
+    ScrollingNodeID m_scrollingNodeID;
+    ScrollingNodeID m_frameHostingNodeID;
+    ScrollingNodeID m_pluginHostingNodeID;
+    ScrollingNodeID m_positioningNodeID;
 
     bool m_artificiallyInflatedBounds { false }; // bounds had to be made non-zero to make transform-origin work
     bool m_isMainFrameRenderViewLayer { false };
@@ -460,7 +461,7 @@ private:
 };
 
 enum CanvasCompositingStrategy {
-    UnacceleratedCanvas,
+    CanvasPaintedToEnclosingLayer,
     CanvasPaintedToLayer,
     CanvasAsLayerContents
 };

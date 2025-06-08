@@ -33,13 +33,11 @@
 namespace WebCore {
 
 class RTCTransformEvent final : public Event {
-    WTF_MAKE_ISO_ALLOCATED(RTCTransformEvent);
+    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(RTCTransformEvent);
 public:
     static Ref<RTCTransformEvent> create(const AtomString& type, Ref<RTCRtpScriptTransformer>&&, IsTrusted = IsTrusted::No);
 
     RTCRtpScriptTransformer& transformer();
-
-    EventInterface eventInterface() const final;
 
 private:
     RTCTransformEvent(const AtomString& type, Ref<RTCRtpScriptTransformer>&&, IsTrusted);

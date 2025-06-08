@@ -143,7 +143,7 @@ public:
     void linkProgram(PlatformGLObject) final;
     void pixelStorei(GCGLenum pname, GCGLint param) final;
     void polygonOffset(GCGLfloat factor, GCGLfloat units) final;
-    void readPixels(IntRect, GCGLenum format, GCGLenum type, std::span<uint8_t> data, GCGLint alignment, GCGLint rowLength) final;
+    void readPixels(IntRect, GCGLenum format, GCGLenum type, std::span<uint8_t> data, GCGLint packAlignment, GCGLint packRowLength, GCGLboolean packReverseRowOrder) final;
     void readPixelsBufferObject(IntRect, GCGLenum format, GCGLenum type, GCGLintptr offset, GCGLint alignment, GCGLint rowLength) final;
     void renderbufferStorage(GCGLenum target, GCGLenum internalformat, GCGLsizei width, GCGLsizei height) final;
     void sampleCoverage(GCGLclampf value, GCGLboolean invert) final;
@@ -288,12 +288,14 @@ public:
     GCGLuint getUniformBlockIndex(PlatformGLObject program, const String& uniformBlockName) final;
     String getActiveUniformBlockName(PlatformGLObject program, GCGLuint uniformBlockIndex) final;
     void uniformBlockBinding(PlatformGLObject program, GCGLuint uniformBlockIndex, GCGLuint uniformBlockBinding) final;
-    void getActiveUniformBlockiv(GCGLuint program, GCGLuint uniformBlockIndex, GCGLenum pname, std::span<GCGLint> params) final;
-    std::optional<EGLImageAttachResult> createAndBindEGLImage(GCGLenum, EGLImageSource) override;
-    void destroyEGLImage(GCEGLImage) final;
-    GCEGLSync createEGLSync(ExternalEGLSyncEvent) override;
-    bool destroyEGLSync(GCEGLSync) final;
-    void clientWaitEGLSyncWithFlush(GCEGLSync, uint64_t) final;
+    void getActiveUniformBlockiv(PlatformGLObject program, GCGLuint uniformBlockIndex, GCGLenum pname, std::span<GCGLint> params) final;
+#if ENABLE(WEBXR)
+    GCGLExternalImage createExternalImage(ExternalImageSource&&, GCGLenum internalFormat, GCGLint layer) override;
+    void deleteExternalImage(GCGLExternalImage) final;
+    void bindExternalImage(GCGLenum target, GCGLExternalImage) override;
+    GCGLExternalSync createExternalSync(ExternalSyncSource&&) override;
+#endif
+    void deleteExternalSync(GCGLExternalSync) final;
     void multiDrawArraysANGLE(GCGLenum mode, GCGLSpanTuple<const GCGLint, const GCGLsizei> firstsAndCounts) final;
     void multiDrawArraysInstancedANGLE(GCGLenum mode, GCGLSpanTuple<const GCGLint, const GCGLsizei, const GCGLsizei> firstsCountsAndInstanceCounts) final;
     void multiDrawElementsANGLE(GCGLenum mode, GCGLSpanTuple<const GCGLsizei, const GCGLsizei> countsAndOffsets, GCGLenum type) final;
@@ -329,7 +331,6 @@ public:
     void polygonModeANGLE(GCGLenum face, GCGLenum mode) final;
     void polygonOffsetClampEXT(GCGLfloat factor, GCGLfloat units, GCGLfloat clamp) final;
     void renderbufferStorageMultisampleANGLE(GCGLenum target, GCGLsizei samples, GCGLenum internalformat, GCGLsizei width, GCGLsizei height) final;
-    void blitFramebufferANGLE(GCGLint srcX0, GCGLint srcY0, GCGLint srcX1, GCGLint srcY1, GCGLint dstX0, GCGLint dstY0, GCGLint dstX1, GCGLint dstY1, GCGLbitfield mask, GCGLenum filter) final;
 
     PlatformGLObject createBuffer() final;
     PlatformGLObject createFramebuffer() final;
@@ -345,15 +346,18 @@ public:
     void deleteTexture(PlatformGLObject) final;
     void simulateEventForTesting(SimulatedEventForTesting) override;
     void drawSurfaceBufferToImageBuffer(SurfaceBuffer, ImageBuffer&) override;
-    RefPtr<PixelBuffer> drawingBufferToPixelBuffer(FlipY) override;
+    RefPtr<PixelBuffer> drawingBufferToPixelBuffer(FlipY);
 
     RefPtr<PixelBuffer> readRenderingResultsForPainting();
 
     virtual void withBufferAsNativeImage(SurfaceBuffer, Function<void(NativeImage&)>);
 
+    // Returns the span of valid data read on success.
+    bool getBufferSubDataWithStatus(GCGLenum target, GCGLintptr offset, std::span<uint8_t> data);
+
     // Reads pixels from positive pixel coordinates with tight packing.
     // Returns columns, rows of executed read on success.
-    std::optional<IntSize> readPixelsWithStatus(IntRect, GCGLenum format, GCGLenum type, std::span<uint8_t> data);
+    std::optional<IntSize> readPixelsWithStatus(IntRect, GCGLenum format, GCGLenum type, GCGLboolean packReverseRowOrder, std::span<uint8_t> data);
 
     void addError(GCGLErrorCode);
 protected:
@@ -382,6 +386,7 @@ protected:
     void validateDepthStencil(ASCIILiteral packedDepthStencilExtension);
     void validateAttributes();
 
+    bool getBufferSubDataImpl(GCGLenum target, GCGLintptr offset, std::span<uint8_t> data);
     std::optional<IntSize> readPixelsImpl(IntRect, GCGLenum format, GCGLenum type, GCGLsizei bufSize, uint8_t* data, bool readingToPixelBufferObject);
 
     // Did the most recent drawing operation leave the GPU in an acceptable state?
@@ -408,7 +413,7 @@ protected:
 
     // Only for non-WebGL 2.0 contexts.
     GCGLenum adjustWebGL1TextureInternalFormat(GCGLenum internalformat, GCGLenum format, GCGLenum type);
-    void setPackParameters(GCGLint alignment, GCGLint rowLength);
+    void setPackParameters(GCGLint alignment, GCGLint rowLength, GCGLboolean reverseRowOrder);
     bool validateClearBufferv(GCGLenum buffer, size_t valuesSize);
 
     HashSet<String> m_availableExtensions;
@@ -439,10 +444,15 @@ protected:
     GCGLContext m_contextObj { nullptr };
     GCGLConfig m_configObj { nullptr };
 #if USE(TEXTURE_MAPPER)
-    GCEGLSuface m_surfaceObj { nullptr };
+    GCEGLSurface m_surfaceObj { nullptr };
 #endif
     GCGLint m_packAlignment { 4 };
     GCGLint m_packRowLength { 0 };
+    GCGLboolean m_packReverseRowOrder { false };
+    uint32_t m_nextExternalImageName { 0 };
+    uint32_t m_nextExternalSyncName { 0 };
+    HashMap<uint32_t, void*, IntHash<uint32_t>, WTF::UnsignedWithZeroKeyHashTraits<uint32_t>> m_eglImages;
+    HashMap<uint32_t, void*, IntHash<uint32_t>, WTF::UnsignedWithZeroKeyHashTraits<uint32_t>> m_eglSyncs;
 };
 
 

@@ -72,6 +72,8 @@ static JSC_DECLARE_HOST_FUNCTION(typedArrayViewProtoFuncWith);
         return functionName<JSFloat64Array>(vm, globalObject, callFrame);                       \
     case Float32ArrayType:                                                                      \
         return functionName<JSFloat32Array>(vm, globalObject, callFrame);                       \
+    case Float16ArrayType:                                                                      \
+        return functionName<JSFloat16Array>(vm, globalObject, callFrame);                       \
     case Int8ArrayType:                                                                         \
         return functionName<JSInt8Array>(vm, globalObject, callFrame);                          \
     case Uint8ArrayType:                                                                        \
@@ -406,6 +408,8 @@ JSC_DEFINE_HOST_FUNCTION(typedArrayViewProtoGetterFuncToStringTag, (JSGlobalObje
         return JSValue::encode(jsNontrivialString(vm, "Float64Array"_s));
     case Float32ArrayType:
         return JSValue::encode(jsNontrivialString(vm, "Float32Array"_s));
+    case Float16ArrayType:
+        return JSValue::encode(jsNontrivialString(vm, "Float16Array"_s));
     case Int8ArrayType:
         return JSValue::encode(jsNontrivialString(vm, "Int8Array"_s));
     case Uint8ArrayType:
@@ -476,7 +480,7 @@ void JSTypedArrayViewPrototype::finishCreation(VM& vm, JSGlobalObject* globalObj
     JSC_NATIVE_INTRINSIC_GETTER_WITHOUT_TRANSITION(vm.propertyNames->byteLength, typedArrayViewProtoGetterFuncByteLength, PropertyAttribute::DontEnum | PropertyAttribute::ReadOnly, TypedArrayByteLengthIntrinsic);
     JSC_NATIVE_INTRINSIC_GETTER_WITHOUT_TRANSITION(vm.propertyNames->byteOffset, typedArrayViewProtoGetterFuncByteOffset, PropertyAttribute::DontEnum | PropertyAttribute::ReadOnly, TypedArrayByteOffsetIntrinsic);
     JSC_NATIVE_FUNCTION_WITHOUT_TRANSITION("copyWithin"_s, typedArrayViewProtoFuncCopyWithin, static_cast<unsigned>(PropertyAttribute::DontEnum), 2, ImplementationVisibility::Public);
-    JSC_NATIVE_FUNCTION_WITHOUT_TRANSITION(vm.propertyNames->builtinNames().sortPublicName(), typedArrayViewProtoFuncSort, static_cast<unsigned>(PropertyAttribute::DontEnum), 1, ImplementationVisibility::Public);
+    JSC_NATIVE_FUNCTION_WITHOUT_TRANSITION(vm.propertyNames->sort, typedArrayViewProtoFuncSort, static_cast<unsigned>(PropertyAttribute::DontEnum), 1, ImplementationVisibility::Public);
     JSC_BUILTIN_FUNCTION_WITHOUT_TRANSITION("every"_s, typedArrayPrototypeEveryCodeGenerator, static_cast<unsigned>(PropertyAttribute::DontEnum));
     JSC_BUILTIN_FUNCTION_WITHOUT_TRANSITION("filter"_s, typedArrayPrototypeFilterCodeGenerator, static_cast<unsigned>(PropertyAttribute::DontEnum));
     JSC_NATIVE_INTRINSIC_FUNCTION_WITHOUT_TRANSITION(vm.propertyNames->builtinNames().entriesPublicName(), typedArrayProtoViewFuncEntries, static_cast<unsigned>(PropertyAttribute::DontEnum), 0, ImplementationVisibility::Public, TypedArrayEntriesIntrinsic);

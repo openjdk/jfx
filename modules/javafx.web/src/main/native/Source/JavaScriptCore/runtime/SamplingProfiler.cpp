@@ -52,7 +52,7 @@
 #include <wtf/RefPtr.h>
 #include <wtf/StackTrace.h>
 #include <wtf/TZoneMallocInlines.h>
-#include <wtf/text/StringBuilder.h>
+#include <wtf/text/MakeString.h>
 
 namespace JSC {
 
@@ -320,9 +320,7 @@ SamplingProfiler::SamplingProfiler(VM& vm, Ref<Stopwatch>&& stopwatch)
     vm.heap.objectSpace().enablePreciseAllocationTracking();
 }
 
-SamplingProfiler::~SamplingProfiler()
-{
-}
+SamplingProfiler::~SamplingProfiler() = default;
 
 void SamplingProfiler::createThreadIfNecessary()
 {
@@ -332,7 +330,7 @@ void SamplingProfiler::createThreadIfNecessary()
         return;
 
     RefPtr<SamplingProfiler> profiler = this;
-    m_thread = Thread::create("jsc.sampling-profiler.thread", [profiler] {
+    m_thread = Thread::create("jsc.sampling-profiler.thread"_s, [profiler] {
         profiler->timerLoop();
     });
 }
@@ -368,11 +366,11 @@ void SamplingProfiler::takeSample(Seconds& stackTraceProcessingTime)
 
         Locker machineThreadsLocker { m_vm.heap.machineThreads().getLock() };
         Locker codeBlockSetLocker { m_vm.heap.codeBlockSet().getLock() };
-        std::optional<LockHolder> executableAllocatorLocker;
+        std::optional<Locker<Lock>> executableAllocatorLocker;
         if (Options::useJIT())
             executableAllocatorLocker.emplace(ExecutableAllocator::singleton().getLock());
 
-        std::optional<LockHolder> wasmCalleesLocker;
+        std::optional<Locker<Lock>> wasmCalleesLocker;
 #if ENABLE(WEBASSEMBLY)
         if (Wasm::isSupported())
             wasmCalleesLocker.emplace(NativeCalleeRegistry::singleton().getLock());
@@ -1050,7 +1048,8 @@ static String tierName(SamplingProfiler::StackFrame& frame)
                 return Tiers::wasmllint;
             case Wasm::CompilationMode::IPIntMode:
                 return Tiers::ipint;
-            case Wasm::CompilationMode::JSEntrypointMode:
+            case Wasm::CompilationMode::JSEntrypointJITMode:
+            case Wasm::CompilationMode::JITLessJSEntrypointMode:
             case Wasm::CompilationMode::JSToWasmICMode:
             case Wasm::CompilationMode::WasmToJSMode:
                 // Just say "Wasm" for now.
@@ -1092,9 +1091,16 @@ Ref<JSON::Value> SamplingProfiler::stackTracesAsJSON()
         result->setString("name"_s, stackFrame.displayName(m_vm));
         result->setString("location"_s, descriptionForLocation(stackFrame.semanticLocation, stackFrame.wasmCompilationMode, stackFrame.wasmOffset));
         result->setString("category"_s, tierName(stackFrame));
+        uint32_t flags = 0;
+        if (stackFrame.frameType == SamplingProfiler::FrameType::Executable && stackFrame.executable) {
+            if (auto* executable = jsDynamicCast<FunctionExecutable*>(stackFrame.executable); executable && executable->isBuiltinFunction())
+                flags = 1;
+        }
+        result->setDouble("flags"_s, flags);
+
         if (std::optional<std::pair<StackFrame::CodeLocation, CodeBlock*>> machineLocation = stackFrame.machineLocation) {
             auto inliner = JSON::Object::create();
-            inliner->setString("name"_s, String::fromUTF8(machineLocation->second->inferredName()));
+            inliner->setString("name"_s, String::fromUTF8(machineLocation->second->inferredName().span()));
             inliner->setString("location"_s, descriptionForLocation(machineLocation->first, std::nullopt, BytecodeIndex()));
             inliner->setString("category"_s, tierName(stackFrame));
             result->setValue("inliner"_s, WTFMove(inliner));
@@ -1271,7 +1277,7 @@ void SamplingProfiler::reportTopBytecodes(PrintStream& out)
         auto frameDescription = makeString(frame.displayName(m_vm), descriptionForLocation(frame.semanticLocation, frame.wasmCompilationMode, frame.wasmOffset));
         if (std::optional<std::pair<StackFrame::CodeLocation, CodeBlock*>> machineLocation = frame.machineLocation) {
             frameDescription = makeString(frameDescription, " <-- "_s,
-                machineLocation->second->inferredName().data(), descriptionForLocation(machineLocation->first, std::nullopt, BytecodeIndex()));
+                span(machineLocation->second->inferredName().data()), descriptionForLocation(machineLocation->first, std::nullopt, BytecodeIndex()));
         }
         bytecodeCounts.add(frameDescription, 0).iterator->value++;
 

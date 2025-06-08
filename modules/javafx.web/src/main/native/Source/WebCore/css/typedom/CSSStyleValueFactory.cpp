@@ -50,8 +50,9 @@
 #include "StylePropertiesInlines.h"
 #include "StylePropertyShorthand.h"
 #include <wtf/FixedVector.h>
-#include <wtf/IsoMallocInlines.h>
 #include <wtf/NeverDestroyed.h>
+#include <wtf/TZoneMallocInlines.h>
+#include <wtf/text/MakeString.h>
 #include <wtf/text/StringBuilder.h>
 #include <wtf/text/StringView.h>
 
@@ -72,11 +73,10 @@ ExceptionOr<RefPtr<CSSValue>> CSSStyleValueFactory::extractCSSValue(const CSSPro
 {
     auto styleDeclaration = MutableStyleProperties::create();
 
-    constexpr bool important = true;
-    CSSParser::ParseResult parseResult = CSSParser::parseValue(styleDeclaration, propertyID, cssText, important, parserContext);
+    CSSParser::ParseResult parseResult = CSSParser::parseValue(styleDeclaration, propertyID, cssText, IsImportant::Yes, parserContext);
 
     if (parseResult == CSSParser::ParseResult::Error)
-        return Exception { ExceptionCode::TypeError, makeString(cssText, " cannot be parsed.") };
+        return Exception { ExceptionCode::TypeError, makeString(cssText, " cannot be parsed."_s) };
 
     return styleDeclaration->getPropertyCSSValue(propertyID);
 }
@@ -85,11 +85,10 @@ ExceptionOr<RefPtr<CSSStyleValue>> CSSStyleValueFactory::extractShorthandCSSValu
 {
     auto styleDeclaration = MutableStyleProperties::create();
 
-    constexpr bool important = true;
-    CSSParser::ParseResult parseResult = CSSParser::parseValue(styleDeclaration, propertyID, cssText, important, parserContext);
+    CSSParser::ParseResult parseResult = CSSParser::parseValue(styleDeclaration, propertyID, cssText, IsImportant::Yes, parserContext);
 
     if (parseResult == CSSParser::ParseResult::Error)
-        return Exception { ExceptionCode::TypeError, makeString(cssText, " cannot be parsed.") };
+        return Exception { ExceptionCode::TypeError, makeString(cssText, " cannot be parsed."_s) };
 
     return constructStyleValueForShorthandSerialization(styleDeclaration->getPropertyValue(propertyID), parserContext);
 }

@@ -25,11 +25,11 @@
 #include "SVGElementTypeHelpers.h"
 #include "SVGGlyphRefElement.h"
 #include "SVGNames.h"
-#include <wtf/IsoMallocInlines.h>
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
-WTF_MAKE_ISO_ALLOCATED_IMPL(SVGAltGlyphItemElement);
+WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(SVGAltGlyphItemElement);
 
 inline SVGAltGlyphItemElement::SVGAltGlyphItemElement(const QualifiedName& tagName, Document& document)
     : SVGElement(tagName, document, makeUniqueRef<PropertyRegistry>(*this))
@@ -53,9 +53,9 @@ bool SVGAltGlyphItemElement::hasValidGlyphElements(Vector<String>& glyphNames) c
     // Here we fill glyphNames and return true only if all referenced glyphs are valid and
     // there is at least one glyph.
 
-    for (auto& glyphRef : childrenOfType<SVGGlyphRefElement>(*this)) {
+    for (Ref glyphRef : childrenOfType<SVGGlyphRefElement>(*this)) {
         String referredGlyphName;
-        if (glyphRef.hasValidGlyphElement(referredGlyphName))
+        if (glyphRef->hasValidGlyphElement(referredGlyphName))
             glyphNames.append(referredGlyphName);
         else {
             glyphNames.clear();

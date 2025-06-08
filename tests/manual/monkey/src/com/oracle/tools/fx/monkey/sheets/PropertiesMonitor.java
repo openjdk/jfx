@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2024, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -32,11 +32,21 @@ import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Iterator;
+import javafx.animation.KeyFrame;
+import javafx.animation.Timeline;
+import javafx.application.Platform;
 import javafx.beans.Observable;
+import javafx.beans.binding.Bindings;
+import javafx.beans.property.SimpleBooleanProperty;
 import javafx.beans.property.SimpleObjectProperty;
 import javafx.beans.property.SimpleStringProperty;
 import javafx.beans.value.ObservableValue;
+import javafx.collections.MapChangeListener;
 import javafx.collections.ObservableList;
+import javafx.collections.ObservableMap;
 import javafx.collections.ObservableSet;
 import javafx.event.EventDispatcher;
 import javafx.event.EventHandler;
@@ -48,53 +58,85 @@ import javafx.scene.control.TreeTableView;
 import javafx.scene.layout.Background;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.paint.Color;
+import javafx.util.Duration;
 import com.oracle.tools.fx.monkey.util.OptionWindow;
 import com.oracle.tools.fx.monkey.util.Utils;
 
 /**
- * Monitors Public Properties
+ * Monitors Public Properties or Platform Preferences.
  */
 public class PropertiesMonitor extends BorderPane {
+    private static final long HIGHLIGHT_DURATION = 3_000;
     private final TreeTableView<Entry> table;
+    private static Timeline timeline;
+    private static HashSet<Entry> highlighted = new HashSet<>();
 
-    public PropertiesMonitor(Node owner) {
+    private PropertiesMonitor(boolean wideKey, TreeItem<Entry> root, Runnable onHiding) {
         table = new TreeTableView<>();
-        table.setColumnResizePolicy(TreeTableView.CONSTRAINED_RESIZE_POLICY_FLEX_NEXT_COLUMN);
+        table.setColumnResizePolicy(TreeTableView.CONSTRAINED_RESIZE_POLICY_SUBSEQUENT_COLUMNS);
         {
             TreeTableColumn<Entry, String> c = new TreeTableColumn<>("Name");
-            c.setCellFactory((tc) -> createCell());
+            c.setCellFactory((tc) -> createCell(false));
             c.setCellValueFactory((f) -> new SimpleStringProperty(f.getValue().getValue().getName()));
-            c.setPrefWidth(120);
+            c.setPrefWidth(wideKey ? 300 : 120);
             table.getColumns().add(c);
         }
         {
             TreeTableColumn<Entry, String> c = new TreeTableColumn<>("Type");
-            c.setCellFactory((tc) -> createCell());
+            c.setCellFactory((tc) -> createCell(false));
             c.setCellValueFactory((f) -> new SimpleStringProperty(f.getValue().getValue().getType()));
             c.setPrefWidth(100);
             table.getColumns().add(c);
         }
         {
             TreeTableColumn<Entry, Object> c = new TreeTableColumn<>("Value");
-            c.setCellFactory((tc) -> createCell());
-            c.setCellValueFactory((f) -> f.getValue().getValue().getValue());
+            c.setCellFactory((tc) -> createCell(true));
+            c.setCellValueFactory((f) -> f.getValue().getValue().valueProperty());
             c.setPrefWidth(300);
             table.getColumns().add(c);
         }
         table.setShowRoot(false);
-        table.setRoot(collectProperties(owner));
+        table.setRoot(root);
         setCenter(table);
+
+        // disconnect listeners on window hiding
+        if (onHiding != null) {
+            sceneProperty().addListener((s, p, scene) -> {
+                if (scene != null) {
+                    if (scene.getWindow() == null) {
+                        scene.windowProperty().addListener((s2, p2, win) -> {
+                            if (win != null) {
+                                win.setOnHiding((ev) -> {
+                                    onHiding.run();
+                                });
+                            }
+                        });
+                    } else {
+                        scene.getWindow().setOnHiding((ev) -> {
+                            onHiding.run();
+                        });
+                    }
+                }
+            });
+        }
     }
 
     public static void open(Node node) {
         if (node != null) {
             String name = node.getClass().getSimpleName();
-            PropertiesMonitor p = new PropertiesMonitor(node);
+            TreeItem<Entry> root = collectProperties(node);
+            PropertiesMonitor p = new PropertiesMonitor(false, root, null);
             OptionWindow.open(node, "Properties: " + name, 800, 900, p);
         }
     }
 
-    private TreeTableCell createCell() {
+    public static void openPreferences(Object parent) {
+        PrefRoot root = new PrefRoot();
+        PropertiesMonitor p = new PropertiesMonitor(true, root, root::disconnect);
+        OptionWindow.open(parent, "Platform Preferences Monitor", 1190, 900, p);
+    }
+
+    private TreeTableCell createCell(boolean trackChanges) {
         return new TreeTableCell<Object, Object>() {
             @Override
             protected void updateItem(Object item, boolean empty) {
@@ -110,11 +152,24 @@ public class PropertiesMonitor extends BorderPane {
                     super.setText(item.toString());
                     super.setGraphic(null);
                 }
+
                 Object x = getTableRow().getItem();
                 if (x instanceof Entry en) {
                     boolean hdr = en.isHeader();
+                    backgroundProperty().unbind();
                     setBackground(hdr ? Background.fill(Color.rgb(0, 0, 0, 0.1)) : null);
                     setStyle(hdr ? "-fx-font-weight:bold;" : "-fx-font-weight:normal;");
+                    if (trackChanges) {
+                        backgroundProperty().bind(Bindings.createObjectBinding(
+                            () -> {
+                                return
+                                    en.highlightedProperty().get() ?
+                                    Background.fill(Color.rgb(255, 255, 0, 0.5)) :
+                                    null;
+                            },
+                            en.highlightedProperty())
+                        );
+                    }
                 }
             }
         };
@@ -138,7 +193,7 @@ public class PropertiesMonitor extends BorderPane {
             BeanInfo inf = Introspector.getBeanInfo(n.getClass());
             PropertyDescriptor[] ps = inf.getPropertyDescriptors();
             for (PropertyDescriptor p: ps) {
-                Entry en = createEntry(n, p);
+                Entry en = createEntry(n.getClass(), n, p);
                 if (en != null) {
                     a.add(en);
                 }
@@ -146,13 +201,8 @@ public class PropertiesMonitor extends BorderPane {
 
             a.add(new Entry("styleClass", "ObservableList", n.getStyleClass()));
             a.add(new Entry("pseudoClassStates", "ObservableSet", n.getPseudoClassStates()));
+            a.add(new Entry("properties", "ObservableMap", n.getProperties()));
 
-            Collections.sort(a, new Comparator<Entry>() {
-                @Override
-                public int compare(Entry a, Entry b) {
-                    return a.getName().compareTo(b.getName());
-                }
-            });
         } catch (IntrospectionException e) {
             e.printStackTrace();
         }
@@ -169,12 +219,23 @@ public class PropertiesMonitor extends BorderPane {
         ti.setExpanded(expand);
         root.getChildren().add(ti);
 
+        addSorted(ti, a);
+    }
+
+    static void addSorted(TreeItem<Entry> item, ArrayList<Entry> a) {
+        Collections.sort(a, new Comparator<Entry>() {
+            @Override
+            public int compare(Entry a, Entry b) {
+                return a.getName().compareTo(b.getName());
+            }
+        });
+
         for (Entry en: a) {
-            ti.getChildren().add(new TreeItem<>(en));
+            item.getChildren().add(new TreeItem<>(en));
         }
     }
 
-    private static Entry createEntry(Node n, PropertyDescriptor pd) {
+    private static Entry createEntry(Class<?> cs, Object n, PropertyDescriptor pd) {
         Class<?> t = pd.getPropertyType();
         if (t == null) {
             return null;
@@ -188,13 +249,13 @@ public class PropertiesMonitor extends BorderPane {
         String name = pd.getName();
         String pname = name + "Property";
         try {
-            Method m = n.getClass().getMethod(pname);
+            Method m = cs.getMethod(pname);
             if (m != null) {
                 Object v = m.invoke(n);
                 if (v instanceof ObservableValue val) {
                     Class<?> tp = pd.getPropertyType();
                     String type = tp == null ? "<null>" : tp.getSimpleName();
-                    return new Entry(pd.getName(), type, val);
+                    return new Entry(name, type, val);
                 }
             }
         } catch (Throwable e) {
@@ -203,16 +264,73 @@ public class PropertiesMonitor extends BorderPane {
         return null;
     }
 
+    private static void highlight(Entry en) {
+        if (en.setHighlight()) {
+            highlighted.add(en);
+            if (timeline == null) {
+                timeline = new Timeline(
+                    new KeyFrame(Duration.millis(250), (ev) -> {
+                        clearExpiredHighlights();
+                    }));
+                timeline.setCycleCount(Timeline.INDEFINITE);
+                timeline.play();
+            }
+        }
+    }
+
+    private static void clearExpiredHighlights() {
+        Iterator<Entry> it = highlighted.iterator();
+        while (it.hasNext()) {
+            Entry en = it.next();
+            if (en.checkHighlightExpired()) {
+                it.remove();
+            }
+        }
+        if (highlighted.isEmpty()) {
+            timeline.stop();
+            timeline = null;
+        }
+    }
+
+    // a name-value or a header
     static class Entry {
         private final String name;
-        private final String type;
+        private String type;
         private final Observable prop;
         private SimpleObjectProperty<Object> value;
+        private SimpleBooleanProperty highlighted;
+        private long expiration = -1;
 
         public Entry(String name, String type, Observable p) {
             this.name = name;
             this.type = type;
             this.prop = p;
+        }
+
+        public SimpleBooleanProperty highlightedProperty() {
+            if (highlighted == null) {
+                highlighted = new SimpleBooleanProperty();
+            }
+            return highlighted;
+        }
+
+        public boolean setHighlight() {
+            if(expiration < 0) {
+                // suppress first initialization
+                expiration = 0;
+                return false;
+            }
+            highlightedProperty().set(true);
+            expiration = System.currentTimeMillis() + HIGHLIGHT_DURATION;
+            return true;
+        }
+
+        public boolean checkHighlightExpired() {
+            if (System.currentTimeMillis() >= expiration) {
+                highlightedProperty().set(false);
+                return true;
+            }
+            return false;
         }
 
         public boolean isHeader() {
@@ -223,7 +341,7 @@ public class PropertiesMonitor extends BorderPane {
             return name;
         }
 
-        public SimpleObjectProperty<Object> getValue() {
+        public SimpleObjectProperty<Object> valueProperty() {
             if (value == null) {
                 value = new SimpleObjectProperty<>();
 
@@ -244,6 +362,11 @@ public class PropertiesMonitor extends BorderPane {
                             setValue(p.toString());
                         });
                         setValue(p.toString());
+                    } else if (prop instanceof ObservableMap p) {
+                        p.addListener((Observable x) -> {
+                            setValue(p.toString());
+                        });
+                        setValue(p.toString());
                     }
                 }
             }
@@ -255,16 +378,98 @@ public class PropertiesMonitor extends BorderPane {
                 // do not set nodes!
                 x = x.getClass().getSimpleName();
             }
-            value.set(x);
+            valueProperty().set(x);
+            highlight(this);
         }
 
         public String getType() {
             return type;
         }
 
+        public void setType(String s) {
+            type = s;
+        }
+
         @Override
         public String toString() {
             return getName();
+        }
+    }
+
+    // for use with Platform Preferences
+    static class PrefRoot
+        extends TreeItem<Entry>
+        implements MapChangeListener<String, Object>
+    {
+        private HashMap<String,Entry> props = new HashMap<>();
+
+        public PrefRoot() {
+            super(null);
+
+            TreeItem<Entry> ti = new TreeItem<>(new Entry("Platform", null, null));
+            ti.setExpanded(true);
+            getChildren().add(ti);
+            {
+                Entry en = new Entry("accessibilityActive", "Boolean", Platform.accessibilityActiveProperty());
+                ti.getChildren().add(new TreeItem<>(en));
+            }
+
+            Platform.Preferences pref = Platform.getPreferences();
+
+            ti = new TreeItem<>(new Entry("Platform.Preferences", null, null));
+            ti.setExpanded(true);
+            getChildren().add(ti);
+            {
+                ArrayList<Entry> a = new ArrayList<>();
+                try {
+                    BeanInfo inf = Introspector.getBeanInfo(Platform.Preferences.class);
+                    PropertyDescriptor[] ps = inf.getPropertyDescriptors();
+                    for (PropertyDescriptor p: ps) {
+                        Entry en = createEntry(Platform.Preferences.class, pref, p);
+                        if (en != null) {
+                            a.add(en);
+                        }
+                    }
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
+                addSorted(ti, a);
+            }
+
+            ti = new TreeItem<>(new Entry("All Properties", null, null));
+            ti.setExpanded(true);
+            getChildren().add(ti);
+            {
+                ArrayList<Entry> a = new ArrayList<>();
+                for (String k: pref.keySet()) {
+                    Object v = pref.get(k);
+                    SimpleObjectProperty p = new SimpleObjectProperty(v);
+                    String type = v == null ? "<null>" : v.getClass().getSimpleName();
+                    Entry en = new Entry(k, type, p);
+                    props.put(k, en);
+                    a.add(en);
+                }
+                addSorted(ti, a);
+            }
+
+            pref.addListener(this);
+        }
+
+        public void disconnect() {
+            Platform.getPreferences().removeListener(this);
+        }
+
+        @Override
+        public void onChanged(Change<? extends String, ? extends Object> change) {
+            String key = change.getKey();
+            Entry en = props.get(key);
+            if (en != null) {
+                Object v = Platform.getPreferences().get(key);
+                if (v != null) {
+                    en.setType(v.getClass().getSimpleName());
+                }
+                en.setValue(v);
+            }
         }
     }
 }

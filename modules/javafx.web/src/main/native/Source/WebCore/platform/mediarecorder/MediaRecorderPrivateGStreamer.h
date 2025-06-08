@@ -54,7 +54,7 @@ public:
     void stopRecording(CompletionHandler<void()>&&);
     void pauseRecording(CompletionHandler<void()>&&);
     void resumeRecording(CompletionHandler<void()>&&);
-    const String& mimeType() const;
+    const String& mimeType() const { return m_mimeType; }
 
     void setSelectTracksCallback(SelectTracksCallback&& callback) { m_selectTracksCallback = WTFMove(callback); }
 
@@ -63,16 +63,18 @@ private:
 
     void setSource(GstElement*);
     void setSink(GstElement*);
+    void configureAudioEncoder(GstElement*);
     void configureVideoEncoder(GstElement*);
 
     GRefPtr<GstEncodingContainerProfile> containerProfile();
     MediaStreamPrivate& stream() const { return m_stream; }
     void processSample(GRefPtr<GstSample>&&);
-    void notifyPosition(GstClockTime position) { m_position = GST_TIME_AS_SECONDS(position); }
+    void notifyPosition(GstClockTime);
     void notifyEOS();
 
     GRefPtr<GstEncodingProfile> m_audioEncodingProfile;
     GRefPtr<GstEncodingProfile> m_videoEncodingProfile;
+    String m_videoCodec;
     GRefPtr<GstTranscoder> m_transcoder;
     GRefPtr<GstTranscoderSignalAdapter> m_signalAdapter;
     GRefPtr<GstElement> m_pipeline;
@@ -81,18 +83,21 @@ private:
     Condition m_eosCondition;
     Lock m_eosLock;
     bool m_eos WTF_GUARDED_BY_LOCK(m_eosLock);
-    double m_position { 0 };
 
     Lock m_dataLock;
     SharedBufferBuilder m_data WTF_GUARDED_BY_LOCK(m_dataLock);
+    MediaTime m_position WTF_GUARDED_BY_LOCK(m_dataLock) { MediaTime::invalidTime() };
+    double m_timeCode WTF_GUARDED_BY_LOCK(m_dataLock) { 0 };
 
     MediaStreamPrivate& m_stream;
     const MediaRecorderPrivateOptions& m_options;
+    String m_mimeType;
     std::optional<SelectTracksCallback> m_selectTracksCallback;
 };
 
 class MediaRecorderPrivateGStreamer final : public MediaRecorderPrivate {
     WTF_MAKE_FAST_ALLOCATED;
+    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(MediaRecorderPrivateGStreamer);
 public:
     static std::unique_ptr<MediaRecorderPrivateGStreamer> create(MediaStreamPrivate&, const MediaRecorderPrivateOptions&);
     explicit MediaRecorderPrivateGStreamer(Ref<MediaRecorderPrivateBackend>&&);
@@ -101,7 +106,6 @@ public:
     static bool isTypeSupported(const ContentType&);
 
 private:
-    explicit MediaRecorderPrivateGStreamer(Ref<MediaRecorderPrivateBackend>&&);
     void videoFrameAvailable(VideoFrame&, VideoFrameTimeMetadata) final { };
     void audioSamplesAvailable(const WTF::MediaTime&, const PlatformAudioData&, const AudioStreamDescription&, size_t) final { };
 

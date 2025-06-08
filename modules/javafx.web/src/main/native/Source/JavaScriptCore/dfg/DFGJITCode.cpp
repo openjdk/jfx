@@ -46,6 +46,7 @@ JITData::JITData(unsigned stubInfoSize, unsigned poolSize, const JITCode& jitCod
         switch (entry.type()) {
         case LinkerIR::Type::HavingABadTimeWatchpointSet:
         case LinkerIR::Type::MasqueradesAsUndefinedWatchpointSet:
+        case LinkerIR::Type::ArrayBufferDetachWatchpointSet:
         case LinkerIR::Type::ArrayIteratorProtocolWatchpointSet:
         case LinkerIR::Type::NumberToStringWatchpointSet:
         case LinkerIR::Type::StructureCacheClearedWatchpointSet:
@@ -84,16 +85,12 @@ static bool attemptToWatch(CodeBlock* codeBlock, WatchpointSet& set, CodeBlockJe
 
 bool JITData::tryInitialize(VM& vm, CodeBlock* codeBlock, const JITCode& jitCode)
 {
-    // We share the same layout for particular fields in all JITData to make our data IC assume this.
-    ASSERT(BaselineJITData::offsetOfGlobalObject() == JITData::offsetOfGlobalObject());
-    ASSERT(BaselineJITData::offsetOfStackOffset() == JITData::offsetOfStackOffset());
-
     m_globalObject = codeBlock->globalObject();
     m_stackOffset = codeBlock->stackPointerOffset() * sizeof(Register);
 
     for (unsigned index = 0; index < jitCode.m_unlinkedStubInfos.size(); ++index) {
         const UnlinkedStructureStubInfo& unlinkedStubInfo = jitCode.m_unlinkedStubInfos[index];
-        stubInfo(index).initializeFromDFGUnlinkedStructureStubInfo(unlinkedStubInfo);
+        stubInfo(index).initializeFromDFGUnlinkedStructureStubInfo(codeBlock, unlinkedStubInfo);
     }
 
     unsigned indexOfWatchpoints = 0;
@@ -121,6 +118,11 @@ bool JITData::tryInitialize(VM& vm, CodeBlock* codeBlock, const JITCode& jitCode
         case LinkerIR::Type::MasqueradesAsUndefinedWatchpointSet: {
             auto& watchpoint = m_watchpoints[indexOfWatchpoints++];
             success &= attemptToWatch(codeBlock, m_globalObject->masqueradesAsUndefinedWatchpointSet(), watchpoint);
+            break;
+        }
+        case LinkerIR::Type::ArrayBufferDetachWatchpointSet: {
+            auto& watchpoint = m_watchpoints[indexOfWatchpoints++];
+            success &= attemptToWatch(codeBlock, m_globalObject->arrayBufferDetachWatchpointSet(), watchpoint);
             break;
         }
         case LinkerIR::Type::ArrayIteratorProtocolWatchpointSet: {
@@ -185,9 +187,7 @@ JITCode::JITCode(bool isUnlinked)
 {
 }
 
-JITCode::~JITCode()
-{
-}
+JITCode::~JITCode() = default;
 
 CommonData* JITCode::dfgCommon()
 {
@@ -204,7 +204,7 @@ JITCode* JITCode::dfg()
     return this;
 }
 
-void JITCode::shrinkToFit(const ConcurrentJSLocker&)
+void JITCode::shrinkToFit()
 {
     common.shrinkToFit();
     minifiedDFG.prepareAndShrink();

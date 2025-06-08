@@ -32,12 +32,15 @@
 
 #include "CSSParserEnum.h"
 #include "CSSParserIdioms.h"
+#include "CSSPropertyParserConsumer+Ident.h"
+#include "CSSPropertyParserConsumer+Primitives.h"
 #include "CSSSelector.h"
 #include "CSSSelectorInlines.h"
 #include "CSSTokenizer.h"
 #include "CommonAtomStrings.h"
 #include "Document.h"
 #include "MutableCSSSelector.h"
+#include "PseudoElementIdentifier.h"
 #include "SelectorPseudoTypeMap.h"
 #include <memory>
 #include <wtf/OptionSet.h>
@@ -276,6 +279,27 @@ static FixedVector<PossiblyQuotedIdentifier> consumeLangArgumentList(CSSParserTo
     return FixedVector<PossiblyQuotedIdentifier> { WTFMove(list) };
 }
 
+static std::optional<FixedVector<PossiblyQuotedIdentifier>> consumeCommaSeparatedCustomIdentList(CSSParserTokenRange& range)
+{
+    Vector<PossiblyQuotedIdentifier> customIdents { };
+
+    do {
+        auto ident = CSSPropertyParserHelpers::consumeCustomIdentRaw(range, /* shouldLowercase */ true);
+        if (ident.isEmpty())
+            return std::nullopt;
+
+        customIdents.append({ AtomString { WTFMove(ident) }, false });
+    } while (CSSPropertyParserHelpers::consumeCommaIncludingWhitespace(range));
+
+    if (!range.atEnd())
+        return std::nullopt;
+
+    // The parsing code guarantees there has to be at least one custom ident.
+    ASSERT(!customIdents.isEmpty());
+
+    return FixedVector<PossiblyQuotedIdentifier> { WTFMove(customIdents) };
+}
+
 enum class CompoundSelectorFlag {
     HasPseudoElementForRightmostCompound = 1 << 0,
 };
@@ -453,6 +477,11 @@ static bool isPseudoClassValidAfterPseudoElement(CSSSelector::PseudoClass pseudo
         return isScrollbarPseudoClass(pseudoClass);
     case CSSSelector::PseudoElement::Selection:
         return pseudoClass == CSSSelector::PseudoClass::WindowInactive;
+    case CSSSelector::PseudoElement::ViewTransitionGroup:
+    case CSSSelector::PseudoElement::ViewTransitionImagePair:
+    case CSSSelector::PseudoElement::ViewTransitionNew:
+    case CSSSelector::PseudoElement::ViewTransitionOld:
+        return pseudoClass == CSSSelector::PseudoClass::OnlyChild;
     case CSSSelector::PseudoElement::UserAgentPart:
     case CSSSelector::PseudoElement::UserAgentPartLegacyAlias:
     case CSSSelector::PseudoElement::WebKitUnknown:
@@ -750,10 +779,9 @@ std::unique_ptr<MutableCSSSelector> CSSSelectorParser::consumePseudo(CSSParserTo
         return selector;
     }
 
+    ASSERT(token.type() == FunctionToken);
     CSSParserTokenRange block = range.consumeBlock();
     block.consumeWhitespace();
-    if (token.type() != FunctionToken)
-        return nullptr;
 
     if (selector->match() == CSSSelector::Match::PseudoClass) {
         switch (selector->pseudoClass()) {
@@ -848,6 +876,13 @@ std::unique_ptr<MutableCSSSelector> CSSSelectorParser::consumePseudo(CSSParserTo
             selector->setArgument(ident.value().toAtomString());
             return selector;
         }
+        case CSSSelector::PseudoClass::ActiveViewTransitionType: {
+            auto typeList = consumeCommaSeparatedCustomIdentList(block);
+            if (!typeList)
+                return nullptr;
+            selector->setArgumentList(WTFMove(*typeList));
+            return selector;
+        }
         default:
             break;
         }
@@ -876,15 +911,41 @@ std::unique_ptr<MutableCSSSelector> CSSSelectorParser::consumePseudo(CSSParserTo
         case CSSSelector::PseudoElement::ViewTransitionImagePair:
         case CSSSelector::PseudoElement::ViewTransitionOld:
         case CSSSelector::PseudoElement::ViewTransitionNew: {
-            auto& ident = block.consumeIncludingWhitespace();
-            if (!block.atEnd())
-                return nullptr;
+            Vector<PossiblyQuotedIdentifier> nameAndClasses;
+
+            // Check for implicit universal selector.
+            if (m_context.viewTransitionClassesEnabled && block.peek().type() == DelimiterToken && block.peek().delimiter() == '.')
+                nameAndClasses.append({ starAtom() });
+
+            // Parse name or explicit universal selector.
+            if (nameAndClasses.isEmpty()) {
+                const auto& ident = block.consume();
             if (ident.type() == IdentToken && isValidCustomIdentifier(ident.id()))
-                selector->setArgumentList({ { ident.value().toAtomString() } });
+                    nameAndClasses.append({ ident.value().toAtomString() });
             else if (ident.type() == DelimiterToken && ident.delimiter() == '*')
-                selector->setArgumentList({ { starAtom() } });
+                    nameAndClasses.append({ starAtom() });
             else
                 return nullptr;
+            }
+
+            // Parse classes.
+            if (m_context.viewTransitionClassesEnabled) {
+                while (!block.atEnd() && !CSSTokenizer::isWhitespace(block.peek().type())) {
+                    if (block.peek().type() != DelimiterToken || block.consume().delimiter() != '.')
+                        return nullptr;
+
+                    if (block.peek().type() != IdentToken)
+                        return nullptr;
+                    nameAndClasses.append({ block.consume().value().toAtomString() });
+                }
+            }
+
+            block.consumeWhitespace();
+
+            if (!block.atEnd())
+                return nullptr;
+
+            selector->setArgumentList(FixedVector<PossiblyQuotedIdentifier> { WTFMove(nameAndClasses) });
             return selector;
         }
 
@@ -918,7 +979,7 @@ std::unique_ptr<MutableCSSSelector> CSSSelectorParser::consumePseudo(CSSParserTo
 CSSSelector::Relation CSSSelectorParser::consumeCombinator(CSSParserTokenRange& range)
 {
     auto fallbackResult = CSSSelector::Relation::Subselector;
-    while (range.peek().type() == WhitespaceToken) {
+    while (CSSTokenizer::isWhitespace(range.peek().type())) {
         range.consume();
         fallbackResult = CSSSelector::Relation::DescendantSpace;
     }
@@ -1122,7 +1183,7 @@ void CSSSelectorParser::prependTypeSelectorIfNeeded(const AtomString& namespaceP
     // ::cue), we need a universal selector to set the combinator
     // (relation) on in the cases where there are no simple selectors preceding
     // the pseudo element.
-    bool isHostPseudo = compoundSelector.isHostPseudoSelector();
+    bool isHostPseudo = compoundSelector.isHostPseudoClass();
     if (isHostPseudo && elementName.isNull() && namespacePrefix.isNull())
         return;
     if (tag != anyQName() || isHostPseudo || isShadowDOM)
@@ -1206,6 +1267,73 @@ CSSSelectorList CSSSelectorParser::resolveNestingParent(const CSSSelectorList& n
 
     auto final = CSSSelectorList { WTFMove(result) };
     return final;
+}
+
+static std::optional<Style::PseudoElementIdentifier> pseudoElementIdentifierFor(CSSSelectorPseudoElement type)
+{
+    auto pseudoId = CSSSelector::pseudoId(type);
+    if (pseudoId == PseudoId::None)
+        return { };
+    return Style::PseudoElementIdentifier { pseudoId };
+}
+
+// FIXME: It's probably worth investigating if more logic can be shared with
+// CSSSelectorParser::consumePseudo(), though note that the requirements are subtly different.
+std::pair<bool, std::optional<Style::PseudoElementIdentifier>> CSSSelectorParser::parsePseudoElement(const String& input, const CSSSelectorParserContext& context)
+{
+    auto tokenizer = CSSTokenizer { input };
+    auto range = tokenizer.tokenRange();
+    auto token = range.consume();
+    if (token.type() != ColonToken)
+        return { };
+    token = range.consume();
+    if (token.type() == IdentToken) {
+        if (!range.atEnd())
+            return { };
+        auto pseudoClassOrElement = findPseudoClassAndCompatibilityElementName(token.value());
+        if (!pseudoClassOrElement.compatibilityPseudoElement)
+            return { };
+        ASSERT(CSSSelector::isPseudoElementEnabled(*pseudoClassOrElement.compatibilityPseudoElement, token.value(), context));
+        return { true, pseudoElementIdentifierFor(*pseudoClassOrElement.compatibilityPseudoElement) };
+    }
+    if (token.type() != ColonToken)
+        return { };
+    token = range.peek();
+    if (token.type() != IdentToken && token.type() != FunctionToken)
+        return { };
+    auto pseudoElement = CSSSelector::parsePseudoElementName(token.value(), context);
+    if (!pseudoElement)
+        return { };
+    if (token.type() == IdentToken) {
+        range.consume();
+        if (!range.atEnd() || CSSSelector::pseudoElementRequiresArgument(*pseudoElement))
+            return { };
+        return { true, pseudoElementIdentifierFor(*pseudoElement) };
+    }
+    ASSERT(token.type() == FunctionToken);
+    auto block = range.consumeBlock();
+    if (!range.atEnd())
+        return { };
+    block.consumeWhitespace();
+    switch (*pseudoElement) {
+    case CSSSelector::PseudoElement::Highlight: {
+        auto& ident = block.consumeIncludingWhitespace();
+        if (ident.type() != IdentToken || !block.atEnd())
+            return { };
+        return { true, Style::PseudoElementIdentifier { PseudoId::Highlight, ident.value().toAtomString() } };
+    }
+    case CSSSelector::PseudoElement::ViewTransitionGroup:
+    case CSSSelector::PseudoElement::ViewTransitionImagePair:
+    case CSSSelector::PseudoElement::ViewTransitionOld:
+    case CSSSelector::PseudoElement::ViewTransitionNew: {
+        auto& ident = block.consumeIncludingWhitespace();
+        if (ident.type() != IdentToken || !isValidCustomIdentifier(ident.id()) || !block.atEnd())
+            return { };
+        return { true, Style::PseudoElementIdentifier { CSSSelector::pseudoId(*pseudoElement), ident.value().toAtomString() } };
+    }
+    default:
+        return { };
+    }
 }
 
 } // namespace WebCore

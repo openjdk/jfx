@@ -52,18 +52,19 @@
 #include <wtf/CompletionHandler.h>
 #include <wtf/Function.h>
 #include <wtf/HashMap.h>
-#include <wtf/IsoMallocInlines.h>
 #include <wtf/MainThread.h>
 #include <wtf/Ref.h>
 #include <wtf/Seconds.h>
+#include <wtf/TZoneMallocInlines.h>
 #include <wtf/URL.h>
 #include <wtf/Vector.h>
 #include <wtf/WallTime.h>
+#include <wtf/text/MakeString.h>
 #include <wtf/text/WTFString.h>
 
 namespace WebCore {
 
-WTF_MAKE_ISO_ALLOCATED_IMPL(CookieStore);
+WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(CookieStore);
 
 class CookieStore::MainThreadBridge : public ThreadSafeRefCounted<MainThreadBridge, WTF::DestructionThread::Main> {
 public:
@@ -84,6 +85,7 @@ private:
     void ensureOnMainThread(Function<void(ScriptExecutionContext&)>&&);
     void ensureOnContextThread(Function<void(CookieStore&)>&&);
 
+    RefPtr<CookieStore> protectedCookieStore() const { return m_cookieStore.get(); }
     WeakPtr<CookieStore, WeakPtrImplWithEventTargetData> m_cookieStore;
     ScriptExecutionContextIdentifier m_contextIdentifier;
 };
@@ -98,7 +100,7 @@ void CookieStore::MainThreadBridge::ensureOnMainThread(Function<void(ScriptExecu
 {
     ASSERT(m_cookieStore);
 
-    RefPtr context = m_cookieStore->scriptExecutionContext();
+    RefPtr context = protectedCookieStore()->scriptExecutionContext();
     if (!context)
         return;
     ASSERT(context->isContextThread());
@@ -133,7 +135,7 @@ void CookieStore::MainThreadBridge::get(CookieStoreGetOptions&& options, Functio
             return;
         }
 
-        auto& cookieJar = page->cookieJar();
+        Ref cookieJar = page->cookieJar();
         auto resultHandler = [this, protectedThis = WTFMove(protectedThis), completionHandler = WTFMove(completionHandler)] (std::optional<Vector<Cookie>>&& cookies) mutable {
             ensureOnContextThread([completionHandler = WTFMove(completionHandler), cookies = crossThreadCopy(WTFMove(cookies))](CookieStore& cookieStore) mutable {
                 if (!cookies)
@@ -143,7 +145,7 @@ void CookieStore::MainThreadBridge::get(CookieStoreGetOptions&& options, Functio
             });
         };
 
-        cookieJar.getCookiesAsync(document, document->url(), options, WTFMove(resultHandler));
+        cookieJar->getCookiesAsync(document, document->url(), options, WTFMove(resultHandler));
     };
 
     ensureOnMainThread(WTFMove(getCookies));
@@ -272,7 +274,7 @@ void CookieStore::get(CookieStoreGetOptions&& options, Ref<DeferredPromise>&& pr
         promise->resolve<IDLDictionary<CookieListItem>>(CookieListItem(WTFMove(cookies[0])));
     };
 
-    m_mainThreadBridge->get(WTFMove(options), WTFMove(completionHandler));
+    protectedMainThreadBridge()->get(WTFMove(options), WTFMove(completionHandler));
 }
 
 void CookieStore::getAll(String&& name, Ref<DeferredPromise>&& promise)
@@ -331,7 +333,7 @@ void CookieStore::getAll(CookieStoreGetOptions&& options, Ref<DeferredPromise>&&
         }));
     };
 
-    m_mainThreadBridge->getAll(WTFMove(options), WTFMove(url), WTFMove(completionHandler));
+    protectedMainThreadBridge()->getAll(WTFMove(options), WTFMove(url), WTFMove(completionHandler));
 }
 
 void CookieStore::set(String&& name, String&& value, Ref<DeferredPromise>&& promise)
@@ -382,7 +384,7 @@ void CookieStore::set(CookieInit&& options, Ref<DeferredPromise>&& promise)
 
         // FIXME: <rdar://85515842> Obtain the encoded length without allocating and encoding.
         if (cookie.domain.utf8().length() > maximumAttributeValueSize) {
-            promise->reject(Exception { ExceptionCode::TypeError, makeString("The size of the domain must not be greater than ", maximumAttributeValueSize, " bytes") });
+            promise->reject(Exception { ExceptionCode::TypeError, makeString("The size of the domain must not be greater than "_s, maximumAttributeValueSize, " bytes"_s) });
             return;
         }
     }
@@ -395,11 +397,11 @@ void CookieStore::set(CookieInit&& options, Ref<DeferredPromise>&& promise)
         }
 
         if (!cookie.path.endsWith('/'))
-            cookie.path = cookie.path + '/';
+            cookie.path = makeString(cookie.path, '/');
 
         // FIXME: <rdar://85515842> Obtain the encoded length without allocating and encoding.
         if (cookie.path.utf8().length() > maximumAttributeValueSize) {
-            promise->reject(Exception { ExceptionCode::TypeError, makeString("The size of the path must not be greater than ", maximumAttributeValueSize, " bytes") });
+            promise->reject(Exception { ExceptionCode::TypeError, makeString("The size of the path must not be greater than "_s, maximumAttributeValueSize, " bytes"_s) });
             return;
         }
     }
@@ -431,7 +433,7 @@ void CookieStore::set(CookieInit&& options, Ref<DeferredPromise>&& promise)
             promise->resolve();
     };
 
-    m_mainThreadBridge->set(WTFMove(options), WTFMove(cookie), WTFMove(completionHandler));
+    protectedMainThreadBridge()->set(WTFMove(options), WTFMove(cookie), WTFMove(completionHandler));
 }
 
 void CookieStore::remove(String&& name, Ref<DeferredPromise>&& promise)
@@ -510,11 +512,6 @@ void CookieStore::cookiesDeleted(const String& host, const Vector<Cookie>& cooki
     queueTaskToDispatchEvent(*this, TaskSource::DOMManipulation, CookieChangeEvent::create(eventNames().changeEvent, WTFMove(eventInit), CookieChangeEvent::IsTrusted::Yes));
 }
 
-const char* CookieStore::activeDOMObjectName() const
-{
-    return "CookieStore";
-}
-
 void CookieStore::stop()
 {
     // FIXME: This should work for service worker contexts as well.
@@ -541,9 +538,9 @@ bool CookieStore::virtualHasPendingActivity() const
     return m_hasChangeEventListener;
 }
 
-EventTargetInterface CookieStore::eventTargetInterface() const
+enum EventTargetInterfaceType CookieStore::eventTargetInterface() const
 {
-    return CookieStoreEventTargetInterfaceType;
+    return EventTargetInterfaceType::CookieStore;
 }
 
 ScriptExecutionContext* CookieStore::scriptExecutionContext() const
@@ -572,18 +569,23 @@ void CookieStore::eventListenersDidChange()
         return;
 
 #if HAVE(COOKIE_CHANGE_LISTENER_API)
-    auto& cookieJar = page->cookieJar();
+    Ref cookieJar = page->cookieJar();
     auto host = document->url().host().toString();
     if (m_hasChangeEventListener)
-        cookieJar.addChangeListener(host, *this);
+        cookieJar->addChangeListener(host, *this);
     else
-        cookieJar.removeChangeListener(host, *this);
+        cookieJar->removeChangeListener(host, *this);
 #endif
 }
 
 RefPtr<DeferredPromise> CookieStore::takePromise(uint64_t promiseIdentifier)
 {
     return m_promises.take(promiseIdentifier);
+}
+
+Ref<CookieStore::MainThreadBridge> CookieStore::protectedMainThreadBridge() const
+{
+    return m_mainThreadBridge;
 }
 
 }

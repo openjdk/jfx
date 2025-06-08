@@ -56,6 +56,13 @@ struct ScrollToOptions {
 
 ScrollToOptions* toScrollToOptions(JSContextRef, JSValueRef);
 
+struct TextExtractionOptions {
+    bool clipToBounds { false };
+    bool includeRects { false };
+};
+
+TextExtractionOptions* toTextExtractionOptions(JSContextRef, JSValueRef);
+
 class UIScriptController : public JSWrappable {
 public:
     static Ref<UIScriptController> create(UIScriptContext&);
@@ -76,6 +83,7 @@ public:
     virtual void doAfterNextStablePresentationUpdate(JSValueRef callback) { doAfterPresentationUpdate(callback); }
     virtual void ensurePositionInformationIsUpToDateAt(long, long, JSValueRef callback) { doAsyncTask(callback); }
     virtual void doAfterVisibleContentRectUpdate(JSValueRef callback) { doAsyncTask(callback); }
+    virtual void doAfterNextVisibleContentRectAndStablePresentationUpdate(JSValueRef callback) { doAsyncTask(callback); }
 
     virtual void doAfterDoubleTapDelay(JSValueRef callback) { doAsyncTask(callback); }
 
@@ -127,7 +135,7 @@ public:
     virtual bool isWindowContentViewFirstResponder() const { notImplemented(); return false; }
     virtual bool isWebContentFirstResponder() const { notImplemented(); return false; }
 
-    virtual void setInlinePrediction(JSStringRef) { notImplemented(); }
+    virtual void setInlinePrediction(JSStringRef, unsigned) { notImplemented(); }
     virtual void acceptInlinePrediction() { notImplemented(); }
 
     virtual void removeViewFromWindow(JSValueRef) { notImplemented(); }
@@ -167,7 +175,7 @@ public:
     virtual JSRetainPtr<JSStringRef> uiViewTreeAsText() const { notImplemented(); return nullptr; }
     virtual JSRetainPtr<JSStringRef> caLayerTreeAsText() const { notImplemented(); return nullptr; }
 
-    virtual JSRetainPtr<JSStringRef> scrollbarStateForScrollingNodeID(unsigned long long, bool) const { notImplemented(); return nullptr; }
+    virtual JSRetainPtr<JSStringRef> scrollbarStateForScrollingNodeID(unsigned long long, unsigned long long, bool) const { notImplemented(); return nullptr; }
 
     // Touches
 
@@ -405,6 +413,14 @@ public:
 
     virtual uint64_t currentImageAnalysisRequestID() const { return 0; }
     virtual void installFakeMachineReadableCodeResultsForImageAnalysis() { }
+
+    // Text Extraction
+    virtual void requestTextExtraction(JSValueRef, TextExtractionOptions*) { notImplemented(); }
+
+    // Element Targeting
+    virtual void requestRenderedTextForFrontmostTarget(int, int, JSValueRef) { notImplemented(); }
+    virtual void adjustVisibilityForFrontmostTarget(int, int, JSValueRef) { notImplemented(); }
+    virtual void resetVisibilityAdjustments(JSValueRef) { notImplemented(); }
 
 protected:
     explicit UIScriptController(UIScriptContext&);

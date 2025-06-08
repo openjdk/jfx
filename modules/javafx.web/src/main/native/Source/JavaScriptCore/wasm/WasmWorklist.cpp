@@ -41,17 +41,6 @@ namespace WasmWorklistInternal {
 static constexpr bool verbose = false;
 }
 
-const char* Worklist::priorityString(Priority priority)
-{
-    switch (priority) {
-    case Priority::Preparation: return "Preparation";
-    case Priority::Shutdown: return "Shutdown";
-    case Priority::Compilation: return "Compilation";
-    case Priority::Synchronous: return "Synchronous";
-    }
-    RELEASE_ASSERT_NOT_REACHED();
-}
-
 void Worklist::dump(PrintStream& out) const
 {
     out.print("Queue Size = ", m_queue.size());
@@ -130,9 +119,9 @@ private:
         return complete(Locker { *worklist.m_lock });
     }
 
-    const char* name() const final
+    ASCIILiteral name() const final
     {
-        return "Wasm Worklist Helper Thread";
+        return "Wasm Worklist Helper Thread"_s;
     }
 
 public:

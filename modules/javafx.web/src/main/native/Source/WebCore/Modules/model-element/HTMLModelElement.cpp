@@ -29,6 +29,8 @@
 #if ENABLE(MODEL_ELEMENT)
 
 #include "CachedResourceLoader.h"
+#include "DOMMatrixReadOnly.h"
+#include "DOMPointReadOnly.h"
 #include "DOMPromiseProxy.h"
 #include "Document.h"
 #include "DocumentInlines.h"
@@ -36,6 +38,7 @@
 #include "ElementInlines.h"
 #include "EventHandler.h"
 #include "EventNames.h"
+#include "FloatPoint3D.h"
 #include "GraphicsLayer.h"
 #include "GraphicsLayerCA.h"
 #include "HTMLModelElementCamera.h"
@@ -61,20 +64,25 @@
 #include "RenderLayerModelObject.h"
 #include "RenderModel.h"
 #include "RenderReplaced.h"
-#include <wtf/IsoMallocInlines.h>
 #include <wtf/Seconds.h>
+#include <wtf/TZoneMallocInlines.h>
 #include <wtf/URL.h>
 
 namespace WebCore {
 
 using namespace HTMLNames;
 
-WTF_MAKE_ISO_ALLOCATED_IMPL(HTMLModelElement);
+WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(HTMLModelElement);
 
 HTMLModelElement::HTMLModelElement(const QualifiedName& tagName, Document& document)
     : HTMLElement(tagName, document, { TypeFlag::HasCustomStyleResolveCallbacks, TypeFlag::HasDidMoveToNewDocument })
     , ActiveDOMObject(document)
     , m_readyPromise { makeUniqueRef<ReadyPromise>(*this, &HTMLModelElement::readyPromiseResolve) }
+#if ENABLE(MODEL_PROCESS)
+    , m_entityTransform(DOMMatrixReadOnly::create(TransformationMatrix::identity, DOMMatrixReadOnly::Is2D::No))
+    , m_boundingBoxCenter(DOMPointReadOnly::create({ }))
+    , m_boundingBoxExtents(DOMPointReadOnly::create({ }))
+#endif
 {
 }
 
@@ -152,6 +160,12 @@ void HTMLModelElement::setSourceURL(const URL& url)
     if (m_modelPlayer)
         m_modelPlayer = nullptr;
 
+#if ENABLE(MODEL_PROCESS)
+    m_entityTransform = DOMMatrixReadOnly::create(TransformationMatrix::identity, DOMMatrixReadOnly::Is2D::No);
+    m_boundingBoxCenter = DOMPointReadOnly::create({ });
+    m_boundingBoxExtents = DOMPointReadOnly::create({ });
+#endif
+
     if (!m_readyPromise->isFulfilled())
         m_readyPromise->reject(Exception { ExceptionCode::AbortError });
 
@@ -171,7 +185,7 @@ void HTMLModelElement::setSourceURL(const URL& url)
     auto request = createPotentialAccessControlRequest(ResourceRequest { m_sourceURL }, WTFMove(options), document(), crossOriginAttribute);
     request.setInitiator(*this);
 
-    auto resource = document().cachedResourceLoader().requestModelResource(WTFMove(request));
+    auto resource = document().protectedCachedResourceLoader()->requestModelResource(WTFMove(request));
     if (!resource.has_value()) {
         ActiveDOMObject::queueTaskToDispatchEvent(*this, TaskSource::DOMManipulation, Event::create(eventNames().errorEvent, Event::CanBubble::No, Event::IsCancelable::No));
         if (!m_readyPromise->isFulfilled())
@@ -222,13 +236,13 @@ void HTMLModelElement::dataReceived(CachedResource& resource, const SharedBuffer
     m_data.append(buffer);
 }
 
-void HTMLModelElement::notifyFinished(CachedResource& resource, const NetworkLoadMetrics&)
+void HTMLModelElement::notifyFinished(CachedResource& resource, const NetworkLoadMetrics&, LoadWillContinueInAnotherProcess)
 {
     auto invalidateResourceHandleAndUpdateRenderer = [&] {
         m_resource->removeClient(*this);
         m_resource = nullptr;
 
-        if (auto* renderer = this->renderer())
+        if (CheckedPtr renderer = this->renderer())
             renderer->updateFromElement();
     };
 
@@ -284,6 +298,11 @@ void HTMLModelElement::createModelPlayer()
         return;
 
     ASSERT(document().page());
+#if ENABLE(MODEL_PROCESS)
+    m_entityTransform = DOMMatrixReadOnly::create(TransformationMatrix::identity, DOMMatrixReadOnly::Is2D::No);
+    m_boundingBoxCenter = DOMPointReadOnly::create({ });
+    m_boundingBoxExtents = DOMPointReadOnly::create({ });
+#endif
     m_modelPlayer = document().page()->modelPlayerProvider().createModelPlayer(*this);
     if (!m_modelPlayer) {
         if (!m_readyPromise->isFulfilled())
@@ -308,6 +327,13 @@ PlatformLayer* HTMLModelElement::platformLayer() const
     return nullptr;
 }
 
+std::optional<LayerHostingContextIdentifier> HTMLModelElement::layerHostingContextIdentifier() const
+{
+    if (m_modelPlayer)
+        return m_modelPlayer->layerHostingContextIdentifier();
+    return std::nullopt;
+}
+
 void HTMLModelElement::sizeMayHaveChanged()
 {
     if (m_modelPlayer)
@@ -316,11 +342,20 @@ void HTMLModelElement::sizeMayHaveChanged()
         createModelPlayer();
 }
 
+void HTMLModelElement::didUpdateLayerHostingContextIdentifier(ModelPlayer& modelPlayer, LayerHostingContextIdentifier identifier)
+{
+    ASSERT_UNUSED(modelPlayer, &modelPlayer == m_modelPlayer);
+    ASSERT_UNUSED(identifier, identifier.toUInt64() > 0);
+
+    if (CheckedPtr renderer = this->renderer())
+        renderer->updateFromElement();
+}
+
 void HTMLModelElement::didFinishLoading(ModelPlayer& modelPlayer)
 {
     ASSERT_UNUSED(modelPlayer, &modelPlayer == m_modelPlayer);
 
-    if (auto* renderer = this->renderer())
+    if (CheckedPtr renderer = this->renderer())
         renderer->updateFromElement();
 
     m_readyPromise->resolve(*this);
@@ -352,6 +387,61 @@ PlatformLayerIdentifier HTMLModelElement::platformLayerID()
 
     return graphicsLayer->contentsLayerIDForModel();
 }
+
+// MARK: - Background Color support.
+
+void HTMLModelElement::applyBackgroundColor(Color color)
+{
+    if (m_modelPlayer)
+        m_modelPlayer->setBackgroundColor(color);
+}
+
+#if ENABLE(MODEL_PROCESS)
+const DOMMatrixReadOnly& HTMLModelElement::entityTransform() const
+{
+    return m_entityTransform.get();
+}
+
+ExceptionOr<void> HTMLModelElement::setEntityTransform(const DOMMatrixReadOnly& transform)
+{
+    auto player = m_modelPlayer;
+    if (!player) {
+        ASSERT_NOT_REACHED();
+        return Exception { ExceptionCode::UnknownError };
+    }
+
+    TransformationMatrix matrix = transform.transformationMatrix();
+
+    if (!player->supportsTransform(matrix))
+        return Exception { ExceptionCode::NotSupportedError };
+
+    m_entityTransform = DOMMatrixReadOnly::create(matrix, DOMMatrixReadOnly::Is2D::No);
+    player->setEntityTransform(matrix);
+
+    return { };
+}
+
+void HTMLModelElement::didUpdateEntityTransform(ModelPlayer&, const TransformationMatrix& transform)
+{
+    m_entityTransform = DOMMatrixReadOnly::create(transform, DOMMatrixReadOnly::Is2D::No);
+}
+
+const DOMPointReadOnly& HTMLModelElement::boundingBoxCenter() const
+{
+    return m_boundingBoxCenter;
+}
+
+const DOMPointReadOnly& HTMLModelElement::boundingBoxExtents() const
+{
+    return m_boundingBoxExtents;
+}
+
+void HTMLModelElement::didUpdateBoundingBox(ModelPlayer&, const FloatPoint3D& center, const FloatPoint3D& extents)
+{
+    m_boundingBoxCenter = DOMPointReadOnly::fromFloatPoint(center);
+    m_boundingBoxExtents = DOMPointReadOnly::fromFloatPoint(extents);
+}
+#endif // ENABLE(MODEL_PROCESS)
 
 // MARK: - Fullscreen support.
 
@@ -660,11 +750,6 @@ void HTMLModelElement::setIsMuted(bool isMuted, DOMPromiseDeferred<void>&& promi
         else
             promise.reject();
     });
-}
-
-const char* HTMLModelElement::activeDOMObjectName() const
-{
-    return "HTMLModelElement";
 }
 
 bool HTMLModelElement::virtualHasPendingActivity() const

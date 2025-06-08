@@ -45,7 +45,8 @@ class LayoutState;
 }
 
 class RenderView final : public RenderBlockFlow {
-    WTF_MAKE_ISO_ALLOCATED(RenderView);
+    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(RenderView);
+    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(RenderView);
 public:
     RenderView(Document&, RenderStyle&&);
     virtual ~RenderView();
@@ -73,8 +74,8 @@ public:
 
     float zoomFactor() const;
 
-    LocalFrameView& frameView() const { return m_frameView; }
-    Ref<LocalFrameView> protectedFrameView() const { return m_frameView; }
+    LocalFrameView& frameView() const { return m_frameView.get(); }
+    Ref<LocalFrameView> protectedFrameView() const { return m_frameView.get(); }
 
     Layout::InitialContainingBlock& initialContainingBlock() { return m_initialContainingBlock.get(); }
     const Layout::InitialContainingBlock& initialContainingBlock() const { return m_initialContainingBlock.get(); }
@@ -234,7 +235,7 @@ private:
 
     void updateInitialContainingBlockSize();
 
-    LocalFrameView& m_frameView;
+    CheckedRef<LocalFrameView> m_frameView;
 
     // Include this RenderView.
     uint64_t m_rendererCount { 1 };

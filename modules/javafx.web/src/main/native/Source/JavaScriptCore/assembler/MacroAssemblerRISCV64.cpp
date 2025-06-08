@@ -28,12 +28,13 @@
 
 #if ENABLE(ASSEMBLER) && CPU(RISCV64)
 
+#include "OperationResult.h"
 #include "ProbeContext.h"
 #include <wtf/InlineASM.h>
 
 namespace JSC {
 
-JSC_DECLARE_JIT_OPERATION(ctiMasmProbeTrampoline, void, ());
+JSC_DECLARE_NOEXCEPT_JIT_OPERATION(ctiMasmProbeTrampoline, void, ());
 JSC_ANNOTATE_JIT_OPERATION_PROBE(ctiMasmProbeTrampoline);
 
 using namespace RISCV64Registers;
@@ -266,6 +267,7 @@ static_assert(!(RA_RESTORATION_SIZE & 0xf));
 asm(
     ".text" "\n"
     ".globl " SYMBOL_STRING(ctiMasmProbeTrampoline) "\n"
+    ".attribute arch, \"rv64gc\"" "\n"
     HIDE_SYMBOL(ctiMasmProbeTrampoline) "\n"
     SYMBOL_STRING(ctiMasmProbeTrampoline) ":" "\n"
 

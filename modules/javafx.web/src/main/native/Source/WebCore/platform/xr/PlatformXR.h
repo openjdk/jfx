@@ -39,11 +39,25 @@
 #include <wtf/MachSendRight.h>
 #endif
 
+namespace PlatformXR {
+class TrackingAndRenderingClient;
+}
+
+namespace WTF {
+template<typename T> struct IsDeprecatedWeakRefSmartPointerException;
+template<> struct IsDeprecatedWeakRefSmartPointerException<PlatformXR::TrackingAndRenderingClient> : std::true_type { };
+}
+
 namespace WebCore {
 class SecurityOriginData;
 }
 
 namespace PlatformXR {
+
+enum class Layout : uint8_t {
+    Shared,
+    Layered,
+};
 
 enum class SessionMode : uint8_t {
     Inline,
@@ -244,12 +258,43 @@ struct FrameData {
             Vector<WebCore::FloatPoint> bounds;
         };
 
-        struct LayerData {
 #if PLATFORM(COCOA)
-            std::tuple<MachSendRight, bool> colorTexture = { MachSendRight(), false };
-            std::tuple<MachSendRight, bool> depthStencilBuffer = { MachSendRight(), false };
-        std::tuple<MachSendRight, uint64_t> completionSyncEvent;
+    struct RateMapDescription {
+        WebCore::IntSize screenSize = { 0, 0 };
+        Vector<float> horizontalSamplesLeft;
+        Vector<float> horizontalSamplesRight;
+        // Vertical samples is shared by both horizontalSamples
+        Vector<float> verticalSamples;
+    };
+
+    static constexpr auto LayerSetupSizeMax = std::numeric_limits<uint16_t>::max();
+    struct LayerSetupData {
+        std::array<std::array<uint16_t, 2>, 2> physicalSize;
+        std::array<WebCore::IntRect, 2> viewports;
+        RateMapDescription foveationRateMapDesc;
+        MachSendRight completionSyncEvent;
+    };
+
+    struct ExternalTexture {
+        MachSendRight handle;
+        bool isSharedTexture { false };
+    };
+
+    struct ExternalTextureData {
+        size_t reusableTextureIndex = 0;
+        ExternalTexture colorTexture;
+        ExternalTexture depthStencilBuffer;
+    };
+#endif
+
+        struct LayerData {
+        WTF_MAKE_STRUCT_FAST_ALLOCATED;
+#if PLATFORM(COCOA)
+        std::optional<LayerSetupData> layerSetup = { std::nullopt };
+        uint64_t renderingFrameIndex { 0 };
+        std::optional<ExternalTextureData> textureData;
 #else
+        WebCore::IntSize framebufferSize;
             PlatformGLObject opaqueTexture { 0 };
 #endif
         };
@@ -297,7 +342,7 @@ struct FrameData {
         std::optional<Pose> floorTransform;
         StageParameters stageParameters;
         Vector<View> views;
-        HashMap<LayerHandle, LayerData> layers;
+    HashMap<LayerHandle, UniqueRef<LayerData>> layers;
         Vector<InputSource> inputSources;
 
         FrameData copy() const;
@@ -335,6 +380,7 @@ public:
 
     virtual void initializeTrackingAndRendering(const WebCore::SecurityOriginData&, SessionMode, const FeatureList&) = 0;
     virtual void shutDownTrackingAndRendering() = 0;
+    virtual void didCompleteShutdownTriggeredBySystem() { }
     TrackingAndRenderingClient* trackingAndRenderingClient() const { return m_trackingAndRenderingClient.get(); }
     void setTrackingAndRenderingClient(WeakPtr<TrackingAndRenderingClient>&& client) { m_trackingAndRenderingClient = WTFMove(client); }
 

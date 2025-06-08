@@ -37,6 +37,7 @@
 #include "DFGInsertionSet.h"
 #include "DFGPhase.h"
 #include "JSCInlines.h"
+#include "StructureID.h"
 #include <wtf/CommaPrinter.h>
 #include <wtf/HashSet.h>
 
@@ -71,7 +72,7 @@ template<PhaseMode mode>
 class StoreBarrierInsertionPhase : public Phase {
 public:
     StoreBarrierInsertionPhase(Graph& graph)
-        : Phase(graph, mode == PhaseMode::Fast ? "fast store barrier insertion" : "global store barrier insertion")
+        : Phase(graph, mode == PhaseMode::Fast ? "fast store barrier insertion"_s : "global store barrier insertion"_s)
         , m_insertionSet(graph)
     {
     }
@@ -237,6 +238,7 @@ private:
             case PutByValAlias: {
                 switch (m_node->arrayMode().modeForPut().type()) {
                 case Array::Generic:
+                case Array::Float16Array:
                 case Array::BigInt64Array:
                 case Array::BigUint64Array: {
                     Edge child1 = m_graph.varArgChild(m_node, 0);

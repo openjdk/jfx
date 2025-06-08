@@ -40,13 +40,13 @@
 #include "JSCDATASection.h"
 #include "JSComment.h"
 #include "JSDOMBinding.h"
+#include "JSDOMWindowCustom.h"
 #include "JSDocument.h"
 #include "JSDocumentFragment.h"
 #include "JSDocumentType.h"
 #include "JSEventListener.h"
 #include "JSHTMLElement.h"
 #include "JSHTMLElementWrapperFactory.h"
-#include "JSLocalDOMWindowCustom.h"
 #include "JSMathMLElementWrapperFactory.h"
 #include "JSProcessingInstruction.h"
 #include "JSSVGElementWrapperFactory.h"
@@ -67,28 +67,21 @@ namespace WebCore {
 using namespace JSC;
 using namespace HTMLNames;
 
-bool JSNodeOwner::isReachableFromOpaqueRoots(JSC::Handle<JSC::Unknown> handle, void*, AbstractSlotVisitor& visitor, const char** reason)
+bool JSNodeOwner::isReachableFromOpaqueRoots(JSC::Handle<JSC::Unknown> handle, void*, AbstractSlotVisitor& visitor, ASCIILiteral* reason)
 {
     auto& node = jsCast<JSNode*>(handle.slot()->asCell())->wrapped();
     if (!node.isConnected()) {
-        if (GCReachableRefMap::contains(node)) {
+        if (GCReachableRefMap::contains(node) || node.isInCustomElementReactionQueue()) {
             if (UNLIKELY(reason))
-                *reason = "Node is scheduled to be used in an async script invocation)";
+                *reason = "Node is scheduled to be used in an async script invocation)"_s;
             return true;
         }
     }
 
     if (UNLIKELY(reason))
-        *reason = "Connected node";
+        *reason = "Connected node"_s;
 
     return containsWebCoreOpaqueRoot(visitor, node);
-}
-
-JSScope* JSNode::pushEventHandlerScope(JSGlobalObject* lexicalGlobalObject, JSScope* node) const
-{
-    if (inherits<JSHTMLElement>())
-        return jsCast<const JSHTMLElement*>(this)->pushEventHandlerScope(lexicalGlobalObject, node);
-    return node;
 }
 
 template<typename Visitor>

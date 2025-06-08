@@ -50,6 +50,7 @@
 #include "WorkerInitializationData.h"
 #include "WorkerThread.h"
 #include <JavaScriptCore/IdentifiersFactory.h>
+#include <wtf/text/MakeString.h>
 
 namespace WebCore {
 
@@ -66,7 +67,7 @@ static WorkerParameters generateWorkerParameters(const WorkerFetchResult& worker
         workerFetchResult.responseURL,
         document.url(),
         workerOptions.name,
-        "sharedworker:" + Inspector::IdentifiersFactory::createIdentifier(),
+        makeString("sharedworker:"_s, Inspector::IdentifiersFactory::createIdentifier()),
         WTFMove(initializationData.userAgent),
         platformStrategies()->loaderStrategy()->isOnLine(),
         workerFetchResult.contentSecurityPolicy,
