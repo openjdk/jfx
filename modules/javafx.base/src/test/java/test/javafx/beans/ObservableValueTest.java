@@ -57,6 +57,7 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -64,10 +65,28 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
 
 public class ObservableValueTest {
-    private static final int[] PATTERN = new int[] {1, 2, 0, 50, 3, 7};
+
+    /**
+     * These are counts for the number of listeners added to a property
+     * or binding. The test code switches between these numbers, and checks
+     * if all listeners function as expected. Various combinations are used
+     * here as the implementation also switches between various states
+     * depending on the number of listeners attached, so some exhaustive
+     * checking is needed to ensure all works correct.
+     */
+    private static final int[] LISTENER_COUNTS = new int[] {1, 2, 0, 50, 3, 7};
 
     /*
-     * ObservableValue cases to test:
+     * ObservableValue cases to test. There is a case for each type of
+     * property and binding (for good coverage and to ensure they all
+     * work correctly and nothing was missed). Each case uses two
+     * values that it switches between to see if a change and/or
+     * invalidation occurs as expected.
+     *
+     * The binding variants also have two helper functions, one that
+     * creates a binding derived from the main observable (which will
+     * be tested against) and one that modifies the original observable
+     * (as the binding can't be modified directly).
      */
     static Stream<Arguments> inputs() {
         List<Case<?, ?>> cases = List.of(
@@ -87,13 +106,20 @@ public class ObservableValueTest {
             Case.of(new SimpleFloatProperty(), 0.5f, 1.0f, p -> p.add(2), (p, v) -> p.setValue(v.floatValue() - 2)),
             Case.of(new SimpleDoubleProperty(), 0.5, 1.0, p -> p.add(2), (p, v) -> p.setValue(v.doubleValue() - 2)),
             Case.of(new SimpleStringProperty(), "A!", "B!", p -> p.concat("!"), (p, v) -> p.setValue(v.substring(0, 1))),
-            Case.of(new SimpleObjectProperty<>(), "A!", "B!", p -> Bindings.createObjectBinding(() -> (p.get() + "!").intern(), p), (p, v) -> p.setValue(v.substring(0, 1).intern())),  // intern() used to make sure ObjectBinding equality check works for this test
+            Case.of(
+                new SimpleObjectProperty<>(),
+                "A!",
+                "B!",
+                p -> Bindings.createObjectBinding(() -> (p.get() + "!").intern(), p),
+                (p, v) -> p.setValue(v.substring(0, 1).intern()) // intern() used to make sure ObjectBinding equality check works for this test
+            ),
 
             // cases for lazy bindings:
             Case.of(new SimpleObjectProperty<>(), 10, 12, p -> p.map(x -> x * 2), (p, v) -> p.setValue(v / 2))
         );
 
-        return cases.stream().map(c -> Arguments.of(new Action<>(c.observableValue), c.primaryValue, c.alternativeValue, c.valueSetter));
+        return cases.stream()
+            .map(c -> Arguments.of(new Action<>(c.observableValue), c.primaryValue, c.alternativeValue, c.valueSetter));
     }
 
     /*
@@ -116,14 +142,17 @@ public class ObservableValueTest {
     @ParameterizedTest
     @MethodSource("inputs")
     <T> void shouldIgnoreRemovingNonExistingListener(Action<T> action) {
-        for (int[] counts : new Combinations(PATTERN)) {
-            int invalidationListenerCount = counts[0];
-            int changeListenerCount = counts[1];
+        for (ListenerCounts counts : new Combinations(LISTENER_COUNTS)) {
+            // set up a specific combination of invalidation and change listeners:
+            action.setListenerCounts(counts);
 
-            action.setListenerCounts(invalidationListenerCount, changeListenerCount);
+            /*
+             * Remove some listeners that were never added; nothing is expected, so only an
+             * exception thrown here is a failure.
+             */
 
-            action.removeListener(obs -> {});
-            action.removeListener((obs, old, current) -> {});
+            assertDoesNotThrow(() -> action.removeListener(obs -> {}));
+            assertDoesNotThrow(() -> action.removeListener((obs, old, current) -> {}));
         }
     }
 
@@ -135,11 +164,12 @@ public class ObservableValueTest {
     @ParameterizedTest
     @MethodSource("inputs")
     <T> void shouldSendCorrectEventsWithSeveralInvalidationAndChangeListeners(Action<T> action, T value1, T value2, Consumer<T> valueSetter) {
-        for (int[] counts : new Combinations(PATTERN)) {
-            int invalidationListenerCount = counts[0];
-            int changeListenerCount = counts[1];
+        for (ListenerCounts counts : new Combinations(LISTENER_COUNTS)) {
+            int invalidationListenerCount = counts.invalidationListeners;
+            int changeListenerCount = counts.changeListeners;
 
-            action.setListenerCounts(invalidationListenerCount, changeListenerCount);
+            // set up a specific combination of invalidation and change listeners:
+            action.setListenerCounts(counts);
 
             valueSetter.accept(value2);
             action.assertEvents(
@@ -149,17 +179,17 @@ public class ObservableValueTest {
 
             if (changeListenerCount == 0) {
                 valueSetter.accept(value1);
-                action.assertEvents();  // when there are no change listeners, setting a different value (while invalid) should not trigger any events
+                action.assertNoEvents();  // no change listeners, and already invalid, expect nothing
             }
 
             valueSetter.accept(value2);
-            action.assertEvents();
+            action.assertNoEvents();
 
             assertEquals(value2, action.getValue());
-            action.assertEvents();
+            action.assertNoEvents();
 
             valueSetter.accept(value2);
-            action.assertEvents();
+            action.assertNoEvents();
 
             valueSetter.accept(value1);
             action.assertEvents(
@@ -172,19 +202,21 @@ public class ObservableValueTest {
     @ParameterizedTest
     @MethodSource("inputs")
     <T> void shouldSendCorrectEventsWithSeveralInvalidationAndChangeListenersThatThrowExceptions(Action<T> action, T value1, T value2, Consumer<T> valueSetter) {
-        AtomicInteger exceptions = new AtomicInteger();
         UncaughtExceptionHandler oldExceptionHandler = Thread.currentThread().getUncaughtExceptionHandler();
+        AtomicInteger exceptions = new AtomicInteger();
 
         try {
+            // Temporarily replace exception handler in order to check for thrown exceptions:
             Thread.currentThread().setUncaughtExceptionHandler((t, e) -> exceptions.addAndGet(1));
 
-            for (int[] counts : new Combinations(PATTERN)) {
-                int invalidationListenerCount = counts[0];
-                int changeListenerCount = counts[1];
+            for (ListenerCounts counts : new Combinations(LISTENER_COUNTS)) {
+                int invalidationListenerCount = counts.invalidationListeners;
+                int changeListenerCount = counts.changeListeners;
 
                 exceptions.set(0);
 
-                action.setThrowingListenerCounts(invalidationListenerCount, changeListenerCount);
+                // set up a specific combination of invalidation and change listeners:
+                action.setThrowingListenerCounts(counts);
 
                 assertEquals(0, exceptions.getAndSet(0));
 
@@ -197,20 +229,20 @@ public class ObservableValueTest {
 
                 if (changeListenerCount == 0) {
                     valueSetter.accept(value1);
-                    action.assertEvents();  // when there are no change listeners, setting a different value (while invalid) should not trigger any events
+                    action.assertNoEvents();  // no change listeners, and already invalid, expect nothing
                     assertEquals(0, exceptions.getAndSet(0));
                 }
 
                 valueSetter.accept(value2);
-                action.assertEvents();
+                action.assertNoEvents();
                 assertEquals(0, exceptions.getAndSet(0));
 
                 assertEquals(value2, action.getValue());
-                action.assertEvents();
+                action.assertNoEvents();
                 assertEquals(0, exceptions.getAndSet(0));
 
                 valueSetter.accept(value2);
-                action.assertEvents();
+                action.assertNoEvents();
                 assertEquals(0, exceptions.getAndSet(0));
 
                 valueSetter.accept(value1);
@@ -232,21 +264,21 @@ public class ObservableValueTest {
     @ParameterizedTest
     @MethodSource("inputs")
     <T> void shouldSendCorrectNestedEvents(Action<T> action, T value1, T value2, Consumer<T> valueSetter) {
-        List<Record> records = new ArrayList<>();
+        List<Change> changes = new ArrayList<>();
 
         /*
          * Create three listeners, with the "middle" one modifying the value back to value1.
          */
 
-        action.addListener((obs, old, current) -> records.add(new Record.Change("A", old, current)));
+        action.addListener((obs, old, current) -> changes.add(new Change("A", old, current)));
         action.addListener((obs, old, current) -> {
-            records.add(new Record.Change("B", old, current));
+            changes.add(new Change("B", old, current));
 
             if (current.equals(value2)) {
                 valueSetter.accept(value1);
             }
         });
-        action.addListener((obs, old, current) -> records.add(new Record.Change("C", old, current)));
+        action.addListener((obs, old, current) -> changes.add(new Change("C", old, current)));
 
         /*
          * Start test:
@@ -254,7 +286,7 @@ public class ObservableValueTest {
 
         valueSetter.accept(value2);
 
-        assertConsistentChangeSequence(records, value1, value1, Set.of(value1, value2));
+        assertConsistentChangeSequence(changes, value1, value1, Set.of(value1, value2));
     }
 
     /*
@@ -264,14 +296,14 @@ public class ObservableValueTest {
     @ParameterizedTest
     @MethodSource("inputs")
     <T> void shouldSendCorrectNestedEventsWithOneListener(Action<T> action, T value1, T value2, Consumer<T> valueSetter) {
-        List<Record> records = new ArrayList<>();
+        List<Change> changes = new ArrayList<>();
 
         /*
          * Create one listener, which modifies the value back to value1.
          */
 
         action.addListener((obs, old, current) -> {
-            records.add(new Record.Change("B", old, current));
+            changes.add(new Change("B", old, current));
 
             if (current.equals(value2)) {
                 valueSetter.accept(value1);
@@ -284,7 +316,7 @@ public class ObservableValueTest {
 
         valueSetter.accept(value2);
 
-        assertConsistentChangeSequence(records, value1, value2, Set.of(value1, value2));
+        assertConsistentChangeSequence(changes, value1, value2, Set.of(value1, value2));
     }
 
     /*
@@ -294,25 +326,25 @@ public class ObservableValueTest {
     @ParameterizedTest
     @MethodSource("inputs")
     <T> void shouldSendCorrectNestedEventsWhenFirstListenerRemoved(Action<T> action, T value1, T value2, Consumer<T> valueSetter) {
-        List<Record> records = new ArrayList<>();
+        List<Change> changes = new ArrayList<>();
 
         /*
          * Create three listeners, with the "middle" one removing the first listener and modifying the
          * value back to value1.
          */
 
-        ChangeListener<? super T> firstListener = (obs, old, current) -> records.add(new Record.Change("A", old, current));
+        ChangeListener<? super T> firstListener = (obs, old, current) -> changes.add(new Change("A", old, current));
 
         action.addListener(firstListener);
         action.addListener((obs, old, current) -> {
-            records.add(new Record.Change("B", old, current));
+            changes.add(new Change("B", old, current));
 
             if (Objects.equals(current, value2)) {
                 action.removeListener(firstListener);
                 valueSetter.accept(value1);
             }
         });
-        action.addListener((obs, old, current) -> records.add(new Record.Change("C", old, current)));
+        action.addListener((obs, old, current) -> changes.add(new Change("C", old, current)));
 
         /*
          * Start test:
@@ -320,7 +352,7 @@ public class ObservableValueTest {
 
         valueSetter.accept(value2);
 
-        assertConsistentChangeSequence(records, value1, value1, Set.of(value1, value2));
+        assertConsistentChangeSequence(changes, value1, value1, Set.of(value1, value2));
     }
 
     @ParameterizedTest
@@ -481,7 +513,7 @@ public class ObservableValueTest {
     }
 
     private static void assertCalls(Consumer<Integer> step, AtomicInteger calls, int... expectedCalls) {
-        for(int i = 0; i < expectedCalls.length; i++) {
+        for (int i = 0; i < expectedCalls.length; i++) {
             step.accept(i);
             assertEquals(expectedCalls[i], calls.getAndSet(0));
         }
@@ -490,7 +522,7 @@ public class ObservableValueTest {
     static class Action<T> implements ObservableValue<T> {
         private final List<InvalidationListener> invalidationListeners = new ArrayList<>();
         private final List<ChangeListener<Object>> changeListeners = new ArrayList<>();
-        private final List<String> records = new ArrayList<>();
+        private final List<String> eventRecords = new ArrayList<>();
         private final ObservableValue<T> observableValue;
 
         Action(ObservableValue<T> observableValue) {
@@ -522,37 +554,98 @@ public class ObservableValueTest {
             return observableValue.getValue();
         }
 
-        void setListenerCounts(int invalidationListenerCount, int changeListenerCount) {
-            for(int i = invalidationListeners.size() - 1; i >= invalidationListenerCount; --i) {
+        /**
+         * Sets the number of listeners to the given values. This function will add
+         * more listeners if the number of listeners is lower than the given value, and
+         * will remove listeners if the number of listeners is higher than the given value.
+         * The end result is that the exact number of listeners given is present on the
+         * {@link ObservableValue} currently under test.
+         *
+         * @param counts the number of invalidation and change listeners, cannot be {@code null}
+         */
+        void setListenerCounts(ListenerCounts counts) {
+            int invalidationListenerCount = counts.invalidationListeners;
+            int changeListenerCount = counts.changeListeners;
+
+            for (int i = invalidationListeners.size() - 1; i >= invalidationListenerCount; --i) {
                 InvalidationListener invalidationListener = invalidationListeners.get(i);
 
                 invalidationListeners.remove(invalidationListener);
                 observableValue.removeListener(invalidationListener);
             }
 
-            for(int i = changeListeners.size() - 1; i >= changeListenerCount; --i) {
+            for (int i = changeListeners.size() - 1; i >= changeListenerCount; --i) {
                 ChangeListener<Object> changeListener = changeListeners.get(i);
 
                 changeListeners.remove(changeListener);
                 observableValue.removeListener(changeListener);
             }
 
-            for(int i = invalidationListeners.size(); i < invalidationListenerCount; i++) {
+            for (int i = invalidationListeners.size(); i < invalidationListenerCount; i++) {
+                int j = i;
+
+                InvalidationListener invalidationListener = obs -> eventRecords.add("Invalidation of " + j);
+
+                invalidationListeners.add(invalidationListener);
+                observableValue.addListener(invalidationListener);
+            }
+
+            for (int i = changeListeners.size(); i < changeListenerCount; i++) {
+                int j = i;
+
+                ChangeListener<Object> changeListener = (obs, old, current) ->
+                    eventRecords.add("Change of " + j + " from " + old + " to " + current);
+
+                changeListeners.add(changeListener);
+                observableValue.addListener(changeListener);
+            }
+        }
+
+        /**
+         * Sets the number of throwing listeners to the given values. This function will add
+         * more listeners if the number of listeners is lower than the given value, and
+         * will remove listeners if the number of listeners is higher than the given value.
+         * The end result is that the exact number of listeners given is present on the
+         * {@link ObservableValue} currently under test.
+         *
+         * @param counts the number of invalidation and change listeners, cannot be {@code null}
+         */
+        void setThrowingListenerCounts(ListenerCounts counts) {
+            int invalidationListenerCount = counts.invalidationListeners;
+            int changeListenerCount = counts.changeListeners;
+
+            for (int i = invalidationListeners.size() - 1; i >= invalidationListenerCount; --i) {
+                InvalidationListener invalidationListener = invalidationListeners.get(i);
+
+                invalidationListeners.remove(invalidationListener);
+                observableValue.removeListener(invalidationListener);
+            }
+
+            for (int i = changeListeners.size() - 1; i >= changeListenerCount; --i) {
+                ChangeListener<Object> changeListener = changeListeners.get(i);
+
+                changeListeners.remove(changeListener);
+                observableValue.removeListener(changeListener);
+            }
+
+            for (int i = invalidationListeners.size(); i < invalidationListenerCount; i++) {
                 int j = i;
 
                 InvalidationListener invalidationListener = obs -> {
-                    records.add("Invalidation of " + j);
+                    eventRecords.add("Invalidation of " + j);
+                    throw new RuntimeException("this listener throws an exception");
                 };
 
                 invalidationListeners.add(invalidationListener);
                 observableValue.addListener(invalidationListener);
             }
 
-            for(int i = changeListeners.size(); i < changeListenerCount; i++) {
+            for (int i = changeListeners.size(); i < changeListenerCount; i++) {
                 int j = i;
 
                 ChangeListener<Object> changeListener = (obs, old, current) -> {
-                    records.add("Change of " + j + " from " + old + " to " + current);
+                    eventRecords.add("Change of " + j + " from " + old + " to " + current);
+                    throw new RuntimeException("this listener throws an exception");
                 };
 
                 changeListeners.add(changeListener);
@@ -560,76 +653,60 @@ public class ObservableValueTest {
             }
         }
 
-        void setThrowingListenerCounts(int invalidationListenerCount, int changeListenerCount) {
-            for(int i = invalidationListeners.size() - 1; i >= invalidationListenerCount; --i) {
-                InvalidationListener invalidationListener = invalidationListeners.get(i);
-
-                invalidationListeners.remove(invalidationListener);
-                observableValue.removeListener(invalidationListener);
-            }
-
-            for(int i = changeListeners.size() - 1; i >= changeListenerCount; --i) {
-                ChangeListener<Object> changeListener = changeListeners.get(i);
-
-                changeListeners.remove(changeListener);
-                observableValue.removeListener(changeListener);
-            }
-
-            for(int i = invalidationListeners.size(); i < invalidationListenerCount; i++) {
-                int j = i;
-
-                InvalidationListener invalidationListener = obs -> {
-                    records.add("Invalidation of " + j);
-                    throw new RuntimeException("boo");
-                };
-
-                invalidationListeners.add(invalidationListener);
-                observableValue.addListener(invalidationListener);
-            }
-
-            for(int i = changeListeners.size(); i < changeListenerCount; i++) {
-                int j = i;
-
-                ChangeListener<Object> changeListener = (obs, old, current) -> {
-                    records.add("Change of " + j + " from " + old + " to " + current);
-                    throw new RuntimeException("boo");
-                };
-
-                changeListeners.add(changeListener);
-                observableValue.addListener(changeListener);
-            }
+        /**
+         * Asserts that no events occurred at all since the last
+         * check.
+         */
+        void assertNoEvents() {
+            assertEvents();  // called without any expected templates
         }
 
+        /**
+         * Asserts that the given events occurred. If no events are given, then
+         * checks if no events occurred. The events are stored as strings and follow
+         * the formats:
+         *
+         * <ul>
+         * <li>{@code Change of (property) from (old value) to (new value)}</li>
+         * <li>{@code Invalidation of (property)}</li>
+         * </ul>
+         *
+         * <p>The place holders {@code %c} and {@code %i} indicate the property
+         * involved, so to verify that <b>all</b> change listeners changed from 2 to 5, pass
+         * the template: {@code Change of %c from 2 to 5}
+         *
+         * @param expectedTemplates expected event templates, cannot be {@code null} but can be empty
+         */
         void assertEvents(String... expectedTemplates) {
-            for(String expectedTemplate : expectedTemplates) {
-                if(expectedTemplate == null) {
+            for (String expectedTemplate : expectedTemplates) {
+                if (expectedTemplate == null) {
                     continue;
                 }
 
-                if(expectedTemplate.contains("%c")) {
-                    if(changeListeners.isEmpty()) {
+                if (expectedTemplate.contains("%c")) {
+                    if (changeListeners.isEmpty()) {
                         fail("Expected \"" + expectedTemplate + "\" to match at least once, but it didn't for: " + this);
                     }
 
-                    for(int i = 0; i < changeListeners.size(); i++) {
+                    for (int i = 0; i < changeListeners.size(); i++) {
                         String expected = expectedTemplate.replaceAll("%c", "" + i);
-                        assertTrue(records.remove(expected), () -> "Expected \"" + expected + "\" but found none for: " + this);
+                        assertTrue(eventRecords.remove(expected), () -> "Expected \"" + expected + "\" but found none for: " + this);
                     }
                 }
-                else if(expectedTemplate.contains("%i")) {
-                    if(invalidationListeners.isEmpty()) {
+                else if (expectedTemplate.contains("%i")) {
+                    if (invalidationListeners.isEmpty()) {
                         fail("Expected \"" + expectedTemplate + "\" to match at least once, but it didn't for: " + this);
                     }
 
-                    for(int i = 0; i < invalidationListeners.size(); i++) {
+                    for (int i = 0; i < invalidationListeners.size(); i++) {
                         String expected = expectedTemplate.replaceAll("%i", "" + i);
-                        assertTrue(records.remove(expected), () -> "Expected \"" + expected + "\" but found none for: " + this);
+                        assertTrue(eventRecords.remove(expected), () -> "Expected \"" + expected + "\" but found none for: " + this);
                     }
                 }
             }
 
-            if(!records.isEmpty()) {
-                fail("Did not expect: " + records + " for: " + this);
+            if (!eventRecords.isEmpty()) {
+                fail("Did not expect: " + eventRecords + " for: " + this);
             }
         }
 
@@ -639,25 +716,54 @@ public class ObservableValueTest {
         }
     }
 
+    /**
+     * Defines a test case for a specific property or binding type. To make a valid
+     * test case there are two different valid values needed (to trigger a change)
+     * and a way to change the value of the property or binding involved. For properties
+     * this is a straight-forward setter call, while for bindings this involves creating
+     * a helper base property that can be modified to affect the binding's value.
+     *
+     * @param <P> the property or binding type
+     * @param <T> the value type it can hold
+     */
     static class Case<P extends Property<T>, T> {
         final T primaryValue;
         final T alternativeValue;
         final Consumer<T> valueSetter;
         final ObservableValue<? super T> observableValue;
 
-        public Case(P property, T primaryValue, T alternativeValue, Function<P, ObservableValue<? super T>> modifier, BiConsumer<P, T> valueSetter) {
+        /**
+         * Creates a new test case.
+         *
+         * @param property a (base) property to hold values, for property tests this is the property tested against;
+         *   for bindings, this is the property bound against and manipulated to change the binding value
+         * @param primaryValue a valid value for the property
+         * @param alternativeValue an alternative valid value for the property
+         * @param creator creates the observable value to manipulate; this will be the same as the property for
+         *   property tests, for bindings it will be a derived value from the base property given
+         * @param valueSetter a function that changes the value of the property; this is just the setter for
+         *   property tests, while for bindings it changes the base property in such a way that it undoes the
+         *   effect of the binding (ie. if the binding added 2 to an integer property, the setter must subtract 2)
+         */
+        Case(P property, T primaryValue, T alternativeValue, Function<P, ObservableValue<? super T>> creator, BiConsumer<P, T> valueSetter) {
             this.primaryValue = primaryValue;
             this.alternativeValue = alternativeValue;
             this.valueSetter = (T v) -> valueSetter.accept(property, v);
-            this.observableValue = modifier.apply(property);
+            this.observableValue = creator.apply(property);
 
             this.valueSetter.accept(primaryValue);
         }
 
+        /*
+         * Static convenience method to create a binding test case:
+         */
         static <P extends Property<T>, T> Case<P, T> of(P property, T primaryValue, T alternativeValue, Function<P, ObservableValue<? super T>> modifier, BiConsumer<P, T> valueSetter) {
             return new Case<>(property, primaryValue, alternativeValue, modifier, valueSetter);
         }
 
+        /*
+         * Static convenience method to create a property test case:
+         */
         static <P extends Property<T>, T> Case<P, T> of(P property, T primaryValue, T alternativeValue) {
             return new Case<>(property, primaryValue, alternativeValue, p -> p, (p, v) -> p.setValue(v));
         }
@@ -668,20 +774,14 @@ public class ObservableValueTest {
      * does not only return all possible pair combinations, but also different transitions between
      * two pairs. Effectively, given x values it returns x^3 combinations.
      */
-    private static class Combinations implements Iterable<int[]> {
-        private final int[] values;
-
-        public Combinations(int[] values) {
-            this.values = values;
-        }
-
+    record Combinations(int[] values) implements Iterable<ListenerCounts> {
         @Override
-        public Iterator<int[]> iterator() {
+        public Iterator<ListenerCounts> iterator() {
             return new Combinator(values);
         }
     }
 
-    private static class Combinator implements Iterator<int[]> {
+    private static class Combinator implements Iterator<ListenerCounts> {
         private final int[] values;
         private final int m;
 
@@ -700,17 +800,17 @@ public class ObservableValueTest {
         }
 
         @Override
-        public int[] next() {
-            if(!hasNext()) {
+        public ListenerCounts next() {
+            if (!hasNext()) {
                 throw new NoSuchElementException();
             }
 
-            int[] next = new int[] {values[x], values[(y + s) % m]};
+            ListenerCounts next = new ListenerCounts(values[x], values[(y + s) % m]);
 
-            if(++s == m) {
+            if (++s == m) {
                 s = 0;
 
-                if(++x == m) {
+                if (++x == m) {
                     x = 0;
                     y++;
                 }
@@ -720,65 +820,77 @@ public class ObservableValueTest {
         }
     }
 
-    sealed interface Record {
-        String identifier();
+    record ListenerCounts(int invalidationListeners, int changeListeners) {}
 
-        record Added(String identifier) implements Record {}
-        record Removed(String identifier) implements Record {}
-        record Change(String identifier, Object old, Object current) implements Record {
-            @Override
-            public String toString() {
-                return "[" + identifier + ": Changed from " + old + " to " + current + "]";
-            }
+    /**
+     * A record of a change event received by a specific listener.
+     *
+     * @param identifier a listener identifier
+     * @param old the old (previous) value received
+     * @param current the current value (new value) received
+     */
+    record Change(String identifier, Object old, Object current) {
+        @Override
+        public String toString() {
+            return "[" + identifier + ": Changed from " + old + " to " + current + "]";
         }
     }
 
-    private static void assertConsistentChangeSequence(List<Record> records, Object expectedFirstValue, Object expectedLastValue, Set<Object> inputValidValues) {
+    /**
+     * Given a list of changes that occurred, verifies that these changes follow the following
+     * rules:
+     *
+     * <ul>
+     * <li>Each change changes the value to a different value (old value != new value)</li>
+     * <li>Each change has an old value equal to the previous' change new value</li>
+     * <li>Each change changes to one of the expected valid input values given</li>
+     * </ul>
+     *
+     * @param changes a list of changes, cannot be {@code null}
+     * @param expectedFirstValue first value the property held
+     * @param expectedLastValue last value the property should hold
+     * @param inputValidValues allowed valid values
+     */
+    private static void assertConsistentChangeSequence(List<Change> changes, Object expectedFirstValue, Object expectedLastValue, Set<Object> inputValidValues) {
         Set<Object> validValues = new HashSet<>(inputValidValues);  // convert to regular set as Set#of is being obnoxious about calling contains(null)
 
-        for (String identifier : records.stream().map(Record::identifier).distinct().toList()) {
-            List<Record> filtered = records.stream().filter(c -> c.identifier().equals(identifier)).toList();
+        // loop over all unique listeners (given by identifier):
+        for (String identifier : changes.stream().map(Change::identifier).distinct().toList()) {
+            // filter change list for the specific listener being checked:
+            List<Change> filtered = changes.stream().filter(c -> c.identifier().equals(identifier)).toList();
 
             // ensure they are actual changes, not same values:
-            for (Record r : filtered) {
-                if (r instanceof Record.Change c) {
-                    assertNotEquals(c.old, c.current, c + " was not a change!");
-                }
+            for (Change c : filtered) {
+                assertNotEquals(c.old, c.current, c + " was not a change!");
             }
 
-            Record previous = null;
+            Change previous = null;
 
             // ensure previous new value is next old value:
-            for (Record r : filtered) {
-                if (r instanceof Record.Change c) {
-                    // Checks if values make sense at all:
-                    assertTrue(validValues.contains(c.old), c + " has an unexpected old value; valid values are " + validValues);
-                    assertTrue(validValues.contains(c.current), c + " has an unexpected current value; valid values are " + validValues);
+            for (Change c : filtered) {
+                // Checks if values make sense at all:
+                assertTrue(validValues.contains(c.old), c + " has an unexpected old value; valid values are " + validValues);
+                assertTrue(validValues.contains(c.current), c + " has an unexpected current value; valid values are " + validValues);
 
-                    if (previous != null) {
-                        if (previous instanceof Record.Change pc) {
-                            assertEquals(c.old, pc.current, pc + " was followed by " + c + " with incorrect old value");
-                        }
-                    }
+                if (previous != null) {
+                    assertEquals(c.old, previous.current, previous + " was followed by " + c + " with incorrect old value");
                 }
 
-                previous = r;
+                previous = c;
             }
 
-            List<Record.Change> changesOnly = filtered.stream()
-                .filter(Record.Change.class::isInstance)
-                .map(Record.Change.class::cast)
-                .toList();
-
-            changesOnly.stream()
+            // ensure old value of first change matches expected initial value:
+            changes.stream()
                 .findFirst()
-                .ifPresent(c -> c.old.equals(expectedFirstValue));
+                .ifPresent(c -> assertEquals(c.old, expectedFirstValue));
 
-            changesOnly.stream()
+            // ensure new value of last change matches expected last value:
+            changes.stream()
                 .reduce((first, second) -> second)
-                .ifPresent(c -> c.current.equals(expectedLastValue));
+                .ifPresent(c -> assertEquals(c.current, expectedLastValue));
 
-            if (!Objects.equals(expectedFirstValue, expectedLastValue) && changesOnly.isEmpty()) {
+            // ensure there were changes if the first and last value were different:
+            if (!Objects.equals(expectedFirstValue, expectedLastValue) && changes.isEmpty()) {
                 fail("Records for " + identifier + " did not contain any changes, but did expect a change from " + expectedFirstValue + " to " + expectedLastValue);
             }
         }
