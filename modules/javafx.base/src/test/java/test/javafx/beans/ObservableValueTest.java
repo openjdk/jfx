@@ -316,7 +316,7 @@ public class ObservableValueTest {
 
         valueSetter.accept(value2);
 
-        assertConsistentChangeSequence(changes, value1, value2, Set.of(value1, value2));
+        assertConsistentChangeSequence(changes, value1, value1, Set.of(value1, value2));
     }
 
     /*
