@@ -73,57 +73,6 @@ class SizingTest extends StageTestBase {
     }
 
     @ParameterizedTest(name = PARAMETERIZED_TEST_DISPLAY)
-    @EnumSource(names = {"DECORATED", "UNDECORATED", "TRANSPARENT"})
-    void testMaximizeUnresizable(StageStyle stageStyle) {
-        setupStageWithStyle(stageStyle, s -> {
-            s.setWidth(WIDTH);
-            s.setHeight(HEIGHT);
-            s.setResizable(false);
-        });
-        Util.runAndWait(() -> getStage().setMaximized(true));
-        Util.sleep(MEDIUM_WAIT);
-
-        assertTrue(getStage().isMaximized(), "Unresizable stage should be maximized");
-        assertTrue(getStage().getWidth() > WIDTH, "Stage width should be maximized");
-        assertTrue(getStage().getHeight() > HEIGHT, "Stage height should be maximized");
-    }
-
-    @ParameterizedTest(name = PARAMETERIZED_TEST_DISPLAY)
-    @EnumSource(names = {"DECORATED", "UNDECORATED", "TRANSPARENT"})
-    void testFullScreenUnresizable(StageStyle stageStyle) {
-        setupStageWithStyle(stageStyle, s -> {
-            s.setWidth(WIDTH);
-            s.setHeight(HEIGHT);
-            s.setResizable(false);
-        });
-
-        Util.runAndWait(() -> getStage().setFullScreen(true));
-        Util.sleep(LONG_WAIT);
-        assertTrue(getStage().isFullScreen(), "Unresizable stage should be fullscreen");
-        assertTrue(getStage().getWidth() > WIDTH, "Stage width should be fullscreen");
-        assertTrue(getStage().getHeight() > HEIGHT, "Stage height should be fullscreen");
-    }
-
-    @ParameterizedTest(name = PARAMETERIZED_TEST_DISPLAY)
-    @EnumSource(names = {"DECORATED", "UNDECORATED", "TRANSPARENT", "UTILITY"})
-    void testResizeUnresizable(StageStyle stageStyle) {
-        setupStageWithStyle(stageStyle, s -> {
-            s.setWidth(WIDTH);
-            s.setHeight(HEIGHT);
-            s.setResizable(false);
-        });
-
-        Util.runAndWait(() -> {
-            getStage().setWidth(NEW_WIDTH);
-            getStage().setHeight(NEW_HEIGHT);
-        });
-        Util.sleep(MEDIUM_WAIT);
-
-        assertEquals(NEW_WIDTH, getStage().getWidth(), SIZING_DELTA, "Stage should have resized");
-        assertEquals(NEW_HEIGHT, getStage().getHeight(), SIZING_DELTA, "Stage should have resized");
-    }
-
-    @ParameterizedTest(name = PARAMETERIZED_TEST_DISPLAY)
     @EnumSource(names = {"DECORATED", "UNDECORATED", "TRANSPARENT", "UTILITY"})
     void testMaxSize(StageStyle stageStyle) {
         setupStageWithStyle(stageStyle, s -> {

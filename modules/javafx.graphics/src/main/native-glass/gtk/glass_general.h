@@ -28,11 +28,8 @@
 #include <jni.h>
 
 #include <stdint.h>
-#include <X11/Xlib.h>
 #include <gdk/gdk.h>
-#include <gdk/gdkx.h>
 #include <gtk/gtk.h>
-
 #include "wrapped.h"
 
 #if GTK_CHECK_VERSION(3, 0, 0)
@@ -51,6 +48,10 @@
 
 #define GDK_FILTERED_EVENTS_MASK static_cast<GdkEventMask>(GDK_ALL_EVENTS_MASK \
                 & ~GDK_TOUCH_MASK)
+
+#define ALPHA_CHANNEL_ERROR_MSG \
+    "Can't create transparent stage, because your screen doesn't support alpha channel. " \
+    "You need to enable XComposite extension.\n"
 
 #define JLONG_TO_PTR(value) ((void*)(intptr_t)(value))
 #define PTR_TO_JLONG(value) ((jlong)(intptr_t)(value))
@@ -276,22 +277,22 @@ private:
 
 #define LOG_EXCEPTION(env) check_and_clear_exception(env);
 
-    gchar* get_application_name();
-    void glass_throw_exception(JNIEnv * env,
-            const char * exceptionClass,
-            const char * exceptionMessage);
-    int glass_throw_oom(JNIEnv * env, const char * exceptionMessage);
-    void dump_jstring_array(JNIEnv*, jobjectArray);
+gchar* get_application_name();
+void glass_throw_exception(JNIEnv * env,
+        const char * exceptionClass,
+        const char * exceptionMessage);
+int glass_throw_oom(JNIEnv * env, const char * exceptionMessage);
+void dump_jstring_array(JNIEnv*, jobjectArray);
 
-    guint8* convert_BGRA_to_RGBA(const int* pixels, int stride, int height);
+guint8* convert_BGRA_to_RGBA(const int* pixels, int stride, int height);
 
-    gboolean check_and_clear_exception(JNIEnv *env);
+gboolean check_and_clear_exception(JNIEnv *env);
 
-    jboolean is_display_valid();
+jboolean is_display_valid();
 
-    gsize get_files_count(gchar **uris);
+gsize get_files_count(gchar **uris);
 
-    jobject uris_to_java(JNIEnv *env, gchar **uris, gboolean files);
+jobject uris_to_java(JNIEnv *env, gchar **uris, gboolean files);
 
 
 #ifdef __cplusplus

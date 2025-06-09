@@ -26,6 +26,7 @@
 
 #include <jni.h>
 #include <gtk/gtk.h>
+#include <X11/Xlib.h>
 
 char const * const GDK_WINDOW_DATA_CONTEXT = "glass_window_context";
 
@@ -663,12 +664,6 @@ glass_gtk_selection_data_get_data_with_length(
     return gtk_selection_data_get_data(selectionData);
 }
 
-void glass_print_window_transparency_not_supported() {
-    fprintf(stderr, "Can't create transparent stage, because your screen doesn't support alpha channel."
-           " You need to enable XComposite extension.\n");
-    fflush(stderr);
-}
-
 gboolean
 glass_configure_window_transparency(GtkWidget *window, gboolean transparent) {
     if (transparent) {
@@ -676,7 +671,8 @@ glass_configure_window_transparency(GtkWidget *window, gboolean transparent) {
             return TRUE;
         }
 
-        glass_print_window_transparency_not_supported();
+        fprintf(stderr, ALPHA_CHANNEL_ERROR_MSG);
+        fflush(stderr);
     }
 
     return FALSE;

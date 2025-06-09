@@ -37,6 +37,7 @@
 
 #include <cairo.h>
 #include <gdk/gdk.h>
+#include <gdk/gdkx.h>
 
 #include <string.h>
 #include <algorithm>
@@ -200,7 +201,8 @@ GdkVisual* WindowContext::find_best_visual() {
         if (rgbaVisual) {
             return rgbaVisual;
         } else {
-            glass_print_window_transparency_not_supported();
+            fprintf(stderr, ALPHA_CHANNEL_ERROR_MSG);
+            fflush(stderr);
         }
     }
 
@@ -812,7 +814,6 @@ void WindowContext::update_frame_extents() {
 
             // Here the user might change the desktop theme and in consequence
             // change decoration sizes.
-
             if (geometry.width.type == BOUNDSTYPE_WINDOW) {
                 // Re-add the extents and then subtract the new
                 newW = newW
@@ -1104,10 +1105,6 @@ void WindowContext::process_configure(GdkEventConfigure *event) {
 }
 
 void WindowContext::update_window_constraints() {
-    update_window_constraints(false);
-}
-
-void WindowContext::update_window_constraints(bool ignored_resizable) {
     // Not ready to re-apply the constraints
     if (!is_window_floating(gdk_window_get_state(gdk_window))
         || !is_window_floating((GdkWindowState) initial_state_mask)) {
@@ -1117,7 +1114,7 @@ void WindowContext::update_window_constraints(bool ignored_resizable) {
 
     GdkGeometry hints;
 
-    if ((resizable.value || ignored_resizable) && !is_disabled) {
+    if (resizable.value && !is_disabled) {
         hints.min_width = (resizable.minw == -1)
                      ? 1
                      : NONNEGATIVE_OR(resizable.minw - geometry.extents.width, 1);
@@ -1226,7 +1223,6 @@ void WindowContext::iconify(bool state) {
 void WindowContext::maximize(bool state) {
     if (state) {
         add_wmf(GDK_FUNC_MAXIMIZE);
-        update_window_constraints(true);
         gdk_window_maximize(gdk_window);
     } else {
         gdk_window_unmaximize(gdk_window);
@@ -1259,7 +1255,6 @@ void WindowContext::set_maximized(bool state) {
 void WindowContext::enter_fullscreen() {
     LOG("enter_fullscreen\n");
     if (mapped) {
-        update_window_constraints(true);
         gdk_window_fullscreen(gdk_window);
     } else {
         initial_state_mask |= GDK_WINDOW_STATE_FULLSCREEN;
@@ -1387,7 +1382,6 @@ void WindowContext::update_window_size() {
     }
 }
 
-// Values are view size
 void WindowContext::move_resize(int x, int y, bool xSet, bool ySet, int width, int height) {
     LOG("move_resize: x,y: %d,%d / cw,ch: %d,%d\n", x, y, width, height);
     int newW = (width > 0) ? width : geometry.width.view;
@@ -1428,7 +1422,6 @@ void WindowContext::move_resize(int x, int y, bool xSet, bool ySet, int width, i
 
     gdk_window_move_resize(gdk_window, geometry.x, geometry.y, newW, newH);
 
-    // Or else let to process_configure
     if (!mapped) {
         notify_window_move();
         notify_current_sizes();
@@ -1495,4 +1488,3 @@ WindowContext::~WindowContext() {
     disableIME();
     gdk_window_destroy(gdk_window);
 }
-

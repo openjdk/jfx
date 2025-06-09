@@ -30,6 +30,7 @@
 #define DEFAULT_HEIGHT 200
 
 #include <gtk/gtk.h>
+#include <X11/Xlib.h>
 
 #include <jni.h>
 #include <set>
@@ -229,10 +230,8 @@ public:
     void set_level(int);
     void set_owner(WindowContext*);
     void update_view_size();
-
     void enter_fullscreen();
     void exit_fullscreen();
-
     void update_initial_state();
 
     ~WindowContext();
@@ -258,7 +257,6 @@ private:
     void load_cached_extents();
     bool get_frame_extents_property(int *, int *, int *, int *);
     void update_window_constraints();
-    void update_window_constraints(bool);
     void update_ontop_tree(bool);
     bool on_top_inherited();
     bool effective_on_top();

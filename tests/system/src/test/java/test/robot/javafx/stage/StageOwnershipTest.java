@@ -36,6 +36,7 @@ import javafx.stage.Modality;
 import javafx.stage.Screen;
 import javafx.stage.Stage;
 import javafx.stage.StageStyle;
+import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.EnumSource;
@@ -54,8 +55,8 @@ import static test.util.Util.PARAMETERIZED_TEST_DISPLAY;
 import static test.util.Util.TIMEOUT;
 
 class StageOwnershipTest extends VisualTestBase {
-    private static final int WIDTH = 200;
-    private static final int HEIGHT = 200;
+    private static final int WIDTH = 300;
+    private static final int HEIGHT = 300;
     private static final double BOUNDS_EDGE_DELTA = 75;
     private Stage topStage;
     private Stage bottomStage;
@@ -64,6 +65,7 @@ class StageOwnershipTest extends VisualTestBase {
     private static final Color COLOR0 = Color.RED;
     private static final Color COLOR1 = Color.ORANGE;
     private static final Color COLOR2 = Color.YELLOW;
+    private static final Color COLOR3 = Color.GREEN;
     private static final int X_DELTA = 15; // shadows
     private static final int Y_DELTA = 75; // shadows + decoration
 
@@ -220,6 +222,7 @@ class StageOwnershipTest extends VisualTestBase {
     private Stage stage0;
     private Stage stage1;
     private Stage stage2;
+    private Stage stage3;
 
     @ParameterizedTest(name = PARAMETERIZED_TEST_DISPLAY)
     @MethodSource("getTestsParams")
@@ -294,4 +297,37 @@ class StageOwnershipTest extends VisualTestBase {
                 });
     }
 
+    // See JDK8220272
+    @Test
+    void testWindowShowOrder() {
+        CountDownLatch shownLatch = new CountDownLatch(1);
+        Util.runAndWait(() -> {
+            stage0 = createStage(StageStyle.DECORATED, COLOR0, null, null, -1, -1);
+            stage1 = createStage(StageStyle.DECORATED, COLOR1, stage0, null, -1, -1);
+            stage2 = createStage(StageStyle.DECORATED, COLOR2, stage0, null, -1, -1);
+            stage3 = createStage(StageStyle.DECORATED, COLOR3, stage2, Modality.WINDOW_MODAL, -1, -1);
+
+            stage0.setTitle("First Stage");
+            stage1.setTitle("Second Stage");
+            stage2.setTitle("Third Stage");
+            stage3.setTitle("Last Stage");
+
+            stage0.setOnShown(e -> Platform.runLater(shownLatch::countDown));
+            stage0.show();
+        });
+
+        Util.sleep(WAIT_TIME);
+        Util.await(shownLatch);
+
+        Util.doTimeLine(WAIT_TIME,
+                () -> {
+                    stage1.show();
+                    stage2.show();
+                    stage3.show();
+                },
+                () -> {
+                    assertTrue(stage3.isFocused());
+                    assertColorEquals(COLOR3, stage3);
+                });
+    }
 }
