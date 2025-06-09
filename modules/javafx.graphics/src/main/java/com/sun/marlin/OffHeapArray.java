@@ -30,7 +30,7 @@ import java.lang.foreign.Arena;
 import java.lang.foreign.MemorySegment;
 import java.lang.foreign.ValueLayout;
 
-final class OffHeapArray  {
+final class OffHeapArray {
 
     private Arena arena;
 
@@ -44,7 +44,6 @@ final class OffHeapArray  {
 
     /* members */
     private MemorySegment segment;
-    private long length;
     private int used;
 
     OffHeapArray(final Object parent, final long len) {
@@ -52,7 +51,6 @@ final class OffHeapArray  {
 
         // note: may throw OOME:
         this.segment = arena.allocate(len, ALIGNMENT);
-        this.length  = len;
         this.used    = 0;
         if (LOG_OFF_HEAP_MALLOC) {
             MarlinUtils.logInfo(System.currentTimeMillis()
@@ -69,7 +67,7 @@ final class OffHeapArray  {
      * @return the length in bytes
      */
     long getLength() {
-        return length;
+        return segment.byteSize();
     }
 
     /**
@@ -98,7 +96,7 @@ final class OffHeapArray  {
     }
 
     /*
-     * As realloc may change the address, updating address is MANDATORY
+     * Reallocate the array, copying "used" bytes from the existng array.
      * @param len new array length
      * @throws OutOfMemoryError if the allocation is refused by the system
      */
@@ -116,7 +114,6 @@ final class OffHeapArray  {
         this.arena.close();
         this.arena = newArena;
         this.segment = newSegment;
-        this.length  = len;
 
         if (LOG_OFF_HEAP_MALLOC) {
             MarlinUtils.logInfo(System.currentTimeMillis()
@@ -130,7 +127,7 @@ final class OffHeapArray  {
         if (LOG_OFF_HEAP_MALLOC) {
             MarlinUtils.logInfo(System.currentTimeMillis()
                                 + ": OffHeapArray.freeMemory =       "
-                                + this.length
+                                + this.segment.byteSize()
                                 + " for segment = " + this.segment);
         }
     }
@@ -154,5 +151,4 @@ final class OffHeapArray  {
     int getInt(long offset) {
         return segment.get(INT_LAYOUT, offset);
     }
-
 }
