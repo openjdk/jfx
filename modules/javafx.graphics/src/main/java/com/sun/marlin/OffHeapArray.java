@@ -66,7 +66,6 @@ final class OffHeapArray  {
 
     /**
      * Gets the length of this array.
-     *
      * @return the length in bytes
      */
     long getLength() {
@@ -91,11 +90,11 @@ final class OffHeapArray  {
 
     /**
      * Increments the number of bytes currently being used.
-     * Curr used + incr used must be <= length
-     * @param used number of used bytes to increment
+     * Current used + increment must be <= length
+     * @param increment number of used bytes to increment
      */
-    void incrementUsed(int used) {
-        this.used += used;
+    void incrementUsed(int increment) {
+        this.used += increment;
     }
 
     /*
@@ -105,6 +104,8 @@ final class OffHeapArray  {
      */
     void resize(final long len) {
         Arena newArena = Arena.ofConfined();
+
+        // note: may throw OOME:
         MemorySegment newSegment = newArena.allocate(len, ALIGNMENT);
 
         // If there are any bytes in use, copy them to the newly reallocated array
