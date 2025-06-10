@@ -25,7 +25,6 @@
 #ifndef GLASS_WINDOW_H
 #define        GLASS_WINDOW_H
 
-#define USER_PTR_TO_CTX(value) ((WindowContext *) value)
 #define DEFAULT_WIDTH 320
 #define DEFAULT_HEIGHT 200
 

@@ -48,7 +48,6 @@
 
 #define NONNEGATIVE_OR(val, fallback) (((val) < 0) ? (fallback) : (val))
 
-
 void destroy_and_delete_ctx(WindowContext* ctx) {
     LOG("destroy_and_delete_ctx\n");
     if (ctx) {
@@ -257,8 +256,6 @@ void WindowContext::process_map() {
     LOG("--------------------------------------------------------> mapped\n");
     move_resize(geometry.x, geometry.y, true, true, geometry.width.view, geometry.height.view);
     mapped = true;
-
-    gdk_window_set_startup_id(gdk_window, NULL);
 
     if (initial_state_mask != 0) {
         update_initial_state();
@@ -940,14 +937,13 @@ void WindowContext::process_state(GdkEventWindowState *event) {
     if (event->changed_mask & GDK_WINDOW_STATE_FOCUSED) {
         process_focus(event->new_window_state & GDK_WINDOW_STATE_FOCUSED);
 
-        if (event->new_window_state == GDK_WINDOW_STATE_FOCUSED) return;
+        if (event->changed_mask == GDK_WINDOW_STATE_FOCUSED) return;
     }
 
     if (event->changed_mask & GDK_WINDOW_STATE_ABOVE) {
         notify_on_top(event->new_window_state & GDK_WINDOW_STATE_ABOVE);
 
-        // Only state mask
-        if (event->new_window_state == GDK_WINDOW_STATE_ABOVE) return;
+        if (event->changed_mask == GDK_WINDOW_STATE_ABOVE) return;
     }
 
     if ((event->changed_mask & (GDK_WINDOW_STATE_MAXIMIZED | GDK_WINDOW_STATE_ICONIFIED))
@@ -971,7 +967,7 @@ void WindowContext::process_state(GdkEventWindowState *event) {
     }
 
     // If only iconified, no further processing
-    if (event->new_window_state == GDK_WINDOW_STATE_ICONIFIED) return;
+    if (event->changed_mask == GDK_WINDOW_STATE_ICONIFIED) return;
 
     if (event->changed_mask & GDK_WINDOW_STATE_MAXIMIZED
         && (event->new_window_state & GDK_WINDOW_STATE_MAXIMIZED) == 0) {

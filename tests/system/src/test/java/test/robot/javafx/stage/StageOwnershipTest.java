@@ -55,8 +55,8 @@ import static test.util.Util.PARAMETERIZED_TEST_DISPLAY;
 import static test.util.Util.TIMEOUT;
 
 class StageOwnershipTest extends VisualTestBase {
-    private static final int WIDTH = 300;
-    private static final int HEIGHT = 300;
+    private static final int WIDTH = 200;
+    private static final int HEIGHT = 200;
     private static final double BOUNDS_EDGE_DELTA = 75;
     private Stage topStage;
     private Stage bottomStage;
@@ -296,38 +296,4 @@ class StageOwnershipTest extends VisualTestBase {
                     assertColorEquals(COLOR2, stage2);
                 });
     }
-
-    // See JDK8220272
-    @Test
-    void testWindowShowOrder() {
-        CountDownLatch shownLatch = new CountDownLatch(1);
-        Util.runAndWait(() -> {
-            stage0 = createStage(StageStyle.DECORATED, COLOR0, null, null, -1, -1);
-            stage1 = createStage(StageStyle.DECORATED, COLOR1, stage0, null, -1, -1);
-            stage2 = createStage(StageStyle.DECORATED, COLOR2, stage0, null, -1, -1);
-            stage3 = createStage(StageStyle.DECORATED, COLOR3, stage2, Modality.WINDOW_MODAL, -1, -1);
-
-            stage0.setTitle("First Stage");
-            stage1.setTitle("Second Stage");
-            stage2.setTitle("Third Stage");
-            stage3.setTitle("Last Stage");
-
-            stage0.setOnShown(e -> Platform.runLater(shownLatch::countDown));
-            stage0.show();
-        });
-
-        Util.sleep(WAIT_TIME);
-        Util.await(shownLatch);
-
-        Util.doTimeLine(WAIT_TIME,
-                () -> {
-                    stage1.show();
-                    stage2.show();
-                    stage3.show();
-                },
-                () -> {
-                    assertTrue(stage3.isFocused());
-                    assertColorEquals(COLOR3, stage3);
-                });
-    }
-}
+   }
