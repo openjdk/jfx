@@ -113,9 +113,13 @@ class ViewScene extends GlassScene {
                 updateSceneState();
                 painter = null;
                 paintRenderJob = null;
-                viewSceneOverlay.dispose();
-                viewSceneOverlay = null;
                 scene = null;
+
+                if (viewSceneOverlay != null) {
+                    viewSceneOverlay.dispose();
+                    viewSceneOverlay = null;
+                }
+
                 return null;
             });
         }
