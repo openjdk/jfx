@@ -35,6 +35,7 @@ import java.util.function.Consumer;
 import javafx.application.Application;
 import javafx.application.Platform;
 import javafx.geometry.Rectangle2D;
+import javafx.geometry.VPos;
 import javafx.scene.Group;
 import javafx.scene.Scene;
 import javafx.scene.robot.Robot;
@@ -317,6 +318,7 @@ public class Text_TextLayout_Test {
     private void setText(String s) {
         Util.runAndWait(() -> {
             text = new Text(s);
+            text.setTextOrigin(VPos.TOP);
             text.setFont(new Font(FONT_SIZE));
             root.getChildren().setAll(text);
         });
