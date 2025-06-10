@@ -53,10 +53,10 @@ public class HeaderButtonOverlayTest {
     @Test
     void rightPlacement_stretchAlignment() {
         var overlay = new HeaderButtonOverlay(getStylesheet("""
-                .header-button-container { -fx-button-placement: right;
-                                           -fx-button-default-height: 20;
-                                           -fx-button-vertical-alignment: stretch; }
-                .header-button { -fx-pref-width: 20; }
+                .-FX-INTERNAL-header-button-container { -fx-button-placement: right;
+                                                       -fx-button-default-height: 20;
+                                                       -fx-button-vertical-alignment: stretch; }
+                .-FX-INTERNAL-header-button { -fx-pref-width: 20; }
             """), false, false);
 
         var unused = new Scene(overlay);
@@ -79,10 +79,10 @@ public class HeaderButtonOverlayTest {
     @Test
     void rightPlacement_stretchAlignment_rightToLeft() {
         var overlay = new HeaderButtonOverlay(getStylesheet("""
-                .header-button-container { -fx-button-placement: right;
-                                           -fx-button-default-height: 20;
-                                           -fx-button-vertical-alignment: stretch; }
-                .header-button { -fx-pref-width: 20; }
+                .-FX-INTERNAL-header-button-container { -fx-button-placement: right;
+                                                        -fx-button-default-height: 20;
+                                                        -fx-button-vertical-alignment: stretch; }
+                .-FX-INTERNAL-header-button { -fx-pref-width: 20; }
             """), false, true);
 
         var unused = new Scene(overlay);
@@ -107,10 +107,10 @@ public class HeaderButtonOverlayTest {
     @Test
     void rightPlacement_centerAlignment() {
         var overlay = new HeaderButtonOverlay(getStylesheet("""
-                .header-button-container { -fx-button-placement: right;
-                                           -fx-button-default-height: 20;
-                                           -fx-button-vertical-alignment: center; }
-                .header-button { -fx-pref-width: 20; -fx-pref-height: 10; }
+                .-FX-INTERNAL-header-button-container { -fx-button-placement: right;
+                                                        -fx-button-default-height: 20;
+                                                        -fx-button-vertical-alignment: center; }
+                .-FX-INTERNAL-header-button { -fx-pref-width: 20; -fx-pref-height: 10; }
             """), false, false);
 
         var unused = new Scene(overlay);
@@ -134,10 +134,10 @@ public class HeaderButtonOverlayTest {
     @Test
     void rightPlacement_centerAlignment_rightToLeft() {
         var overlay = new HeaderButtonOverlay(getStylesheet("""
-                .header-button-container { -fx-button-placement: right;
-                                           -fx-button-default-height: 20;
-                                           -fx-button-vertical-alignment: center; }
-                .header-button { -fx-pref-width: 20; -fx-pref-height: 10; }
+                .-FX-INTERNAL-header-button-container { -fx-button-placement: right;
+                                                        -fx-button-default-height: 20;
+                                                        -fx-button-vertical-alignment: center; }
+                .-FX-INTERNAL-header-button { -fx-pref-width: 20; -fx-pref-height: 10; }
             """), false, true);
 
         var unused = new Scene(overlay);
@@ -161,10 +161,10 @@ public class HeaderButtonOverlayTest {
     @Test
     void leftPlacement_stretchAlignment() {
         var overlay = new HeaderButtonOverlay(getStylesheet("""
-                .header-button-container { -fx-button-placement: left;
-                                           -fx-button-default-height: 20;
-                                           -fx-button-vertical-alignment: stretch; }
-                .header-button { -fx-pref-width: 20; }
+                .-FX-INTERNAL-header-button-container { -fx-button-placement: left;
+                                                        -fx-button-default-height: 20;
+                                                        -fx-button-vertical-alignment: stretch; }
+                .-FX-INTERNAL-header-button { -fx-pref-width: 20; }
             """), false, false);
 
         var unused = new Scene(overlay);
@@ -187,10 +187,10 @@ public class HeaderButtonOverlayTest {
     @Test
     void leftPlacement_stretchAlignment_rightToLeft() {
         var overlay = new HeaderButtonOverlay(getStylesheet("""
-                .header-button-container { -fx-button-placement: left;
-                                           -fx-button-default-height: 20;
-                                           -fx-button-vertical-alignment: stretch; }
-                .header-button { -fx-pref-width: 20; }
+                .-FX-INTERNAL-header-button-container { -fx-button-placement: left;
+                                                        -fx-button-default-height: 20;
+                                                        -fx-button-vertical-alignment: stretch; }
+                .-FX-INTERNAL-header-button { -fx-pref-width: 20; }
             """), false, true);
 
         var unused = new Scene(overlay);
@@ -215,10 +215,10 @@ public class HeaderButtonOverlayTest {
     @Test
     void leftPlacement_centerAlignment() {
         var overlay = new HeaderButtonOverlay(getStylesheet("""
-                .header-button-container { -fx-button-placement: left;
-                                           -fx-button-default-height: 20;
-                                           -fx-button-vertical-alignment: center; }
-                .header-button { -fx-pref-width: 20; -fx-pref-height: 10; }
+                .-FX-INTERNAL-header-button-container { -fx-button-placement: left;
+                                                        -fx-button-default-height: 20;
+                                                        -fx-button-vertical-alignment: center; }
+                .-FX-INTERNAL-header-button { -fx-pref-width: 20; -fx-pref-height: 10; }
             """), false, false);
 
         var unused = new Scene(overlay);
@@ -242,10 +242,10 @@ public class HeaderButtonOverlayTest {
     @Test
     void leftPlacement_centerAlignment_rightToLeft() {
         var overlay = new HeaderButtonOverlay(getStylesheet("""
-                .header-button-container { -fx-button-placement: left;
-                                           -fx-button-default-height: 20;
-                                           -fx-button-vertical-alignment: center; }
-                .header-button { -fx-pref-width: 20; -fx-pref-height: 10; }
+                .-FX-INTERNAL-header-button-container { -fx-button-placement: left;
+                                                        -fx-button-default-height: 20;
+                                                        -fx-button-vertical-alignment: center; }
+                .-FX-INTERNAL-header-button { -fx-pref-width: 20; -fx-pref-height: 10; }
             """), false, true);
 
         var unused = new Scene(overlay);
@@ -269,11 +269,11 @@ public class HeaderButtonOverlayTest {
     @Test
     void customButtonOrder() {
         var overlay = new HeaderButtonOverlay(getStylesheet("""
-                .header-button-container { -fx-button-vertical-alignment: stretch; }
-                .header-button { -fx-pref-width: 20; -fx-pref-height: 10; }
-                .iconify-button { -fx-button-order: 5; }
-                .maximize-button { -fx-button-order: 1; }
-                .close-button { -fx-button-order: 3; }
+                .-FX-INTERNAL-header-button-container { -fx-button-vertical-alignment: stretch; }
+                .-FX-INTERNAL-header-button { -fx-pref-width: 20; -fx-pref-height: 10; }
+                .-FX-INTERNAL-iconify-button { -fx-button-order: 5; }
+                .-FX-INTERNAL-maximize-button { -fx-button-order: 1; }
+                .-FX-INTERNAL-close-button { -fx-button-order: 3; }
             """), false, false);
 
         var unused = new Scene(overlay);
@@ -282,11 +282,11 @@ public class HeaderButtonOverlayTest {
         overlay.applyCss();
         overlay.layout();
 
-        assertTrue(children.get(0).getStyleClass().contains("iconify-button"));
+        assertTrue(children.get(0).getStyleClass().contains("-FX-INTERNAL-iconify-button"));
         assertLayoutBounds(children.get(0), 180, 0, 20, 10);
-        assertTrue(children.get(1).getStyleClass().contains("maximize-button"));
+        assertTrue(children.get(1).getStyleClass().contains("-FX-INTERNAL-maximize-button"));
         assertLayoutBounds(children.get(1), 140, 0, 20, 10);
-        assertTrue(children.get(2).getStyleClass().contains("close-button"));
+        assertTrue(children.get(2).getStyleClass().contains("-FX-INTERNAL-close-button"));
         assertLayoutBounds(children.get(2), 160, 0, 20, 10);
     }
 
@@ -296,11 +296,11 @@ public class HeaderButtonOverlayTest {
     @Test
     void customButtonOrder_rightToLeft() {
         var overlay = new HeaderButtonOverlay(getStylesheet("""
-                .header-button-container { -fx-button-vertical-alignment: stretch; }
-                .header-button { -fx-pref-width: 20; -fx-pref-height: 10; }
-                .iconify-button { -fx-button-order: 5; }
-                .maximize-button { -fx-button-order: 1; }
-                .close-button { -fx-button-order: 3; }
+                .-FX-INTERNAL-header-button-container { -fx-button-vertical-alignment: stretch; }
+                .-FX-INTERNAL-header-button { -fx-pref-width: 20; -fx-pref-height: 10; }
+                .-FX-INTERNAL-iconify-button { -fx-button-order: 5; }
+                .-FX-INTERNAL-maximize-button { -fx-button-order: 1; }
+                .-FX-INTERNAL-close-button { -fx-button-order: 3; }
             """), false, true);
 
         var unused = new Scene(overlay);
@@ -310,30 +310,30 @@ public class HeaderButtonOverlayTest {
         overlay.applyCss();
         overlay.layout();
 
-        assertTrue(children.get(0).getStyleClass().contains("iconify-button"));
+        assertTrue(children.get(0).getStyleClass().contains("-FX-INTERNAL-iconify-button"));
         assertLayoutBounds(children.get(0), 0, 0, 20, 10);
-        assertTrue(children.get(1).getStyleClass().contains("maximize-button"));
+        assertTrue(children.get(1).getStyleClass().contains("-FX-INTERNAL-maximize-button"));
         assertLayoutBounds(children.get(1), 40, 0, 20, 10);
-        assertTrue(children.get(2).getStyleClass().contains("close-button"));
+        assertTrue(children.get(2).getStyleClass().contains("-FX-INTERNAL-close-button"));
         assertLayoutBounds(children.get(2), 20, 0, 20, 10);
     }
 
     @Test
     void utilityDecorationIsOnlyCloseButton() {
         var overlay = new HeaderButtonOverlay(getStylesheet("""
-                .header-button { -fx-pref-width: 20; -fx-pref-height: 10; }
+                .-FX-INTERNAL-header-button { -fx-pref-width: 20; -fx-pref-height: 10; }
             """), true, false);
 
         var children = overlay.getChildrenUnmodifiable();
         assertEquals(1, children.size());
-        assertTrue(children.getFirst().getStyleClass().contains("close-button"));
+        assertTrue(children.getFirst().getStyleClass().contains("-FX-INTERNAL-close-button"));
     }
 
     @Test
     void activePseudoClassCorrespondsToStageFocusedProperty() {
         var overlay = new HeaderButtonOverlay(getStylesheet("""
-                .header-button-container { -fx-button-placement: right; }
-                .header-button { -fx-pref-width: 20; -fx-pref-height: 10; }
+                .-FX-INTERNAL-header-button-container { -fx-button-placement: right; }
+                .-FX-INTERNAL-header-button { -fx-pref-width: 20; -fx-pref-height: 10; }
             """), false, false);
 
         var scene = new Scene(overlay);
@@ -358,8 +358,8 @@ public class HeaderButtonOverlayTest {
     @Test
     void maximizeButtonIsDisabledWhenStageIsNotResizable() {
         var overlay = new HeaderButtonOverlay(getStylesheet("""
-                .header-button-container { -fx-button-placement: right; }
-                .header-button { -fx-pref-width: 20; -fx-pref-height: 10; }
+                .-FX-INTERNAL-header-button-container { -fx-button-placement: right; }
+                .-FX-INTERNAL-header-button { -fx-pref-width: 20; -fx-pref-height: 10; }
             """), false, false);
 
         var scene = new Scene(overlay);
@@ -368,7 +368,7 @@ public class HeaderButtonOverlayTest {
         stage.show();
 
         var maxButton = overlay.getChildrenUnmodifiable().get(1);
-        assertTrue(maxButton.getStyleClass().contains("maximize-button"));
+        assertTrue(maxButton.getStyleClass().contains("-FX-INTERNAL-maximize-button"));
         assertTrue(stage.isResizable());
         assertFalse(maxButton.isDisabled());
 
@@ -382,8 +382,8 @@ public class HeaderButtonOverlayTest {
     @Test
     void restoreStyleClassIsPresentWhenStageIsMaximized() {
         var overlay = new HeaderButtonOverlay(getStylesheet("""
-                .header-button-container { -fx-button-placement: right; }
-                .header-button { -fx-pref-width: 20; -fx-pref-height: 10; }
+                .-FX-INTERNAL-header-button-container { -fx-button-placement: right; }
+                .-FX-INTERNAL-header-button { -fx-pref-width: 20; -fx-pref-height: 10; }
             """), false, false);
 
         var scene = new Scene(overlay);
@@ -392,7 +392,7 @@ public class HeaderButtonOverlayTest {
         stage.show();
 
         var maxButton = overlay.getChildrenUnmodifiable().get(1);
-        assertTrue(maxButton.getStyleClass().contains("maximize-button"));
+        assertTrue(maxButton.getStyleClass().contains("-FX-INTERNAL-maximize-button"));
         assertFalse(maxButton.getStyleClass().contains("restore"));
 
         stage.setMaximized(true);
@@ -405,8 +405,8 @@ public class HeaderButtonOverlayTest {
     @Test
     void darkStyleClassIsPresentWhenSceneFillIsDark() {
         var overlay = new HeaderButtonOverlay(getStylesheet("""
-                .header-button-container { -fx-button-placement: right; }
-                .header-button { -fx-pref-width: 20; -fx-pref-height: 10; }
+                .-FX-INTERNAL-header-button-container { -fx-button-placement: right; }
+                .-FX-INTERNAL-header-button { -fx-pref-width: 20; -fx-pref-height: 10; }
             """), false, false);
 
         var scene = new Scene(overlay);
@@ -424,8 +424,8 @@ public class HeaderButtonOverlayTest {
     @Test
     void pickButtonAtCoordinates() {
         var overlay = new HeaderButtonOverlay(getStylesheet("""
-                .header-button-container { -fx-button-placement: right; -fx-button-vertical-alignment: stretch; }
-                .header-button { -fx-pref-width: 20; -fx-pref-height: 10; }
+                .-FX-INTERNAL-header-button-container { -fx-button-placement: right; -fx-button-vertical-alignment: stretch; }
+                .-FX-INTERNAL-header-button { -fx-pref-width: 20; -fx-pref-height: 10; }
             """), false, false);
 
         var unused = new Scene(overlay);

@@ -23,89 +23,89 @@
  * questions.
  */
 
-.header-button-container {
+.-FX-INTERNAL-header-button-container {
     -fx-button-placement: right;
     -fx-button-vertical-alignment: center;
     -fx-button-default-height: 36;
 }
 
-.iconify-button,
-.maximize-button,
-.close-button {
+.-FX-INTERNAL-iconify-button,
+.-FX-INTERNAL-maximize-button,
+.-FX-INTERNAL-close-button {
     -fx-background-color: transparent;
     -fx-background-radius: 13;
     -fx-background-insets: 8;
     -fx-pref-width: 36;
 }
 
-.iconify-button > .glyph,
-.maximize-button > .glyph,
-.close-button > .glyph {
+.-FX-INTERNAL-iconify-button > .-FX-INTERNAL-glyph,
+.-FX-INTERNAL-maximize-button > .-FX-INTERNAL-glyph,
+.-FX-INTERNAL-close-button > .-FX-INTERNAL-glyph {
     -fx-background-color: #1d1d1e;
     -fx-background-insets: 8 -8 -8 8;
     -fx-scale-shape: false;
     -fx-position-shape: false;
 }
 
-.iconify-button.dark > .glyph,
-.maximize-button.dark > .glyph,
-.close-button.dark > .glyph {
+.-FX-INTERNAL-iconify-button.dark > .-FX-INTERNAL-glyph,
+.-FX-INTERNAL-maximize-button.dark > .-FX-INTERNAL-glyph,
+.-FX-INTERNAL-close-button.dark > .-FX-INTERNAL-glyph {
     -fx-background-color: #ced0d6;
 }
 
-.iconify-button:hover,
-.maximize-button:hover,
-.close-button:hover {
+.-FX-INTERNAL-iconify-button:hover,
+.-FX-INTERNAL-maximize-button:hover,
+.-FX-INTERNAL-close-button:hover {
     -fx-background-color: #27292d;
 }
 
-.iconify-button.dark:hover,
-.maximize-button.dark:hover,
-.close-button.dark:hover {
+.-FX-INTERNAL-iconify-button.dark:hover,
+.-FX-INTERNAL-maximize-button.dark:hover,
+.-FX-INTERNAL-close-button.dark:hover {
     -fx-background-color: #dfe1e6;
 }
 
-.iconify-button:hover > .glyph,
-.maximize-button:hover > .glyph,
-.close-button:hover > .glyph {
+.-FX-INTERNAL-iconify-button:hover > .-FX-INTERNAL-glyph,
+.-FX-INTERNAL-maximize-button:hover > .-FX-INTERNAL-glyph,
+.-FX-INTERNAL-close-button:hover > .-FX-INTERNAL-glyph {
     -fx-background-color: #ced0d6;
 }
 
-.iconify-button.dark:hover > .glyph,
-.maximize-button.dark:hover > .glyph,
-.close-button.dark:hover > .glyph {
+.-FX-INTERNAL-iconify-button.dark:hover > .-FX-INTERNAL-glyph,
+.-FX-INTERNAL-maximize-button.dark:hover > .-FX-INTERNAL-glyph,
+.-FX-INTERNAL-close-button.dark:hover > .-FX-INTERNAL-glyph {
     -fx-background-color: #393b40;
 }
 
-.iconify-button:pressed,
-.maximize-button:pressed,
-.close-button:pressed {
+.-FX-INTERNAL-iconify-button:pressed,
+.-FX-INTERNAL-maximize-button:pressed,
+.-FX-INTERNAL-close-button:pressed {
     -fx-background-color: #474b52 !important;
 }
 
-.iconify-button.dark:pressed,
-.maximize-button.dark:pressed,
-.close-button.dark:pressed {
+.-FX-INTERNAL-iconify-button.dark:pressed,
+.-FX-INTERNAL-maximize-button.dark:pressed,
+.-FX-INTERNAL-close-button.dark:pressed {
     -fx-background-color: #6c7076 !important;
 }
 
-.maximize-button:disabled {
+.-FX-INTERNAL-maximize-button:disabled {
     -fx-managed: false;
     visibility: hidden;
 }
 
-.iconify-button > .glyph {
+.-FX-INTERNAL-iconify-button > .-FX-INTERNAL-glyph {
     -fx-shape: "m 5,7.5 a 0.5,0.5 0 0 0 -0.3535,0.1465 0.5,0.5 0 0 0 0,0.707 l 5,5 a 0.5001,0.5001 0 0 0 0.707,0 l 5,-5 a 0.5,0.5 0 0 0 0,-0.707 0.5,0.5 0 0 0 -0.707,0 L 10,12.293 5.3535,7.6465 A 0.5,0.5 0 0 0 5,7.5 Z";
 }
 
-.maximize-button > .glyph {
+.-FX-INTERNAL-maximize-button > .-FX-INTERNAL-glyph {
     -fx-shape: "m 9.6465,6.6465 -5,5 a 0.5,0.5 0 0 0 0,0.707 0.5,0.5 0 0 0 0.707,0 L 10,7.707 14.6465,12.3535 a 0.5,0.5 0 0 0 0.707,0 0.5,0.5 0 0 0 0,-0.707 l -5,-5 a 0.5001,0.5001 0 0 0 -0.707,0 z";
 }
 
-.maximize-button.restore > .glyph {
+.-FX-INTERNAL-maximize-button.restore > .-FX-INTERNAL-glyph {
     -fx-shape: "m 9.6465,5.1465 -4.5,4.5 a 0.5001,0.5001 0 0 0 0,0.707 l 4.5,4.5 a 0.5001,0.5001 0 0 0 0.707,0 l 4.5,-4.5 a 0.5001,0.5001 0 0 0 0,-0.707 l -4.5,-4.5 a 0.5001,0.5001 0 0 0 -0.707,0 z M 10,6.207 13.793,10 10,13.793 6.207,10 Z";
 }
 
-.close-button > .glyph {
+.-FX-INTERNAL-close-button > .-FX-INTERNAL-glyph {
     -fx-shape: "m 6,5.5 a 0.5,0.5 0 0 0 -0.3535,0.1465 0.5,0.5 0 0 0 0,0.707 L 9.293,10 5.6465,13.6465 a 0.5,0.5 0 0 0 0,0.707 0.5,0.5 0 0 0 0.707,0 L 10,10.707 l 3.6465,3.6465 a 0.5,0.5 0 0 0 0.707,0 0.5,0.5 0 0 0 0,-0.707 L 10.707,10 14.3535,6.3535 a 0.5,0.5 0 0 0 0,-0.707 0.5,0.5 0 0 0 -0.707,0 L 10,9.293 6.3535,5.6465 A 0.5,0.5 0 0 0 6,5.5 Z";
 }

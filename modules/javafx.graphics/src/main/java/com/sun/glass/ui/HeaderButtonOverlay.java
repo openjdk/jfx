@@ -70,16 +70,16 @@ import java.util.stream.Stream;
  *
  * <h2>Substructure</h2>
  * <ul>
- *     <li>{@link Region} — {@code header-button-container}
+ *     <li>{@link Region} — {@code -FX-INTERNAL-header-button-container}
  *     <ul>
- *         <li>{@link Region} — {@code header-button}, {@code iconify-button}
- *         <li>{@link Region} — {@code header-button}, {@code maximize-button}
- *         <li>{@link Region} — {@code header-button}, {@code close-button}
+ *         <li>{@link Region} — {@code -FX-INTERNAL-header-button}, {@code -FX-INTERNAL-iconify-button}
+ *         <li>{@link Region} — {@code -FX-INTERNAL-header-button}, {@code -FX-INTERNAL-maximize-button}
+ *         <li>{@link Region} — {@code -FX-INTERNAL-header-button}, {@code -FX-INTERNAL-close-button}
  *     </ul>
  * </ul>
  *
  * <table style="white-space: nowrap">
- *     <caption>CSS properties of {@code header-button-container}</caption>
+ *     <caption>CSS properties of {@code -FX-INTERNAL-header-button-container}</caption>
  *     <thead>
  *         <tr><th>CSS property</th><th>Values</th><th>Default</th><th>Comment</th></tr>
  *     </thead>
@@ -108,7 +108,9 @@ import java.util.stream.Stream;
  * </table>
  *
  * <table style="white-space: nowrap">
- *     <caption>CSS properties of {@code iconify-button}, {@code maximize-button}, {@code close-button}</caption>
+ *     <caption>CSS properties of {@code -FX-INTERNAL-iconify-button}, {@code -FX-INTERNAL-maximize-button},
+ *              {@code -FX-INTERNAL-close-button}
+ *     </caption>
  *     <thead>
  *         <tr><th>CSS property</th><th>Values</th><th>Default</th><th>Comment</th></tr>
  *     </thead>
@@ -133,7 +135,7 @@ import java.util.stream.Stream;
  *                 as determined by {@link Utils#calculateAverageBrightness(Paint)} is less than 0.5
  *             </td>
  *         </tr>
- *         <tr><th>.restore</th><th>{@code maximize-button}</th><td style="white-space: break-line">
+ *         <tr><th>.restore</th><th>{@code -FX-INTERNAL-maximize-button}</th><td style="white-space: break-line">
  *             This style class will be present if {@link Stage#isMaximized()} is {@code true}</td>
  *         </tr>
  *     </tbody>
@@ -258,9 +260,9 @@ public class HeaderButtonOverlay extends Region {
      * This list is automatically updated by the implementation of {@link ButtonRegion#buttonOrder}.
      */
     private final List<ButtonRegion> orderedButtons = new ArrayList<>(3);
-    private final ButtonRegion iconifyButton = new ButtonRegion(HeaderButtonType.ICONIFY, "iconify-button", 0);
-    private final ButtonRegion maximizeButton = new ButtonRegion(HeaderButtonType.MAXIMIZE, "maximize-button", 1);
-    private final ButtonRegion closeButton = new ButtonRegion(HeaderButtonType.CLOSE, "close-button", 2);
+    private final ButtonRegion iconifyButton = new ButtonRegion(HeaderButtonType.ICONIFY, "-FX-INTERNAL-iconify-button", 0);
+    private final ButtonRegion maximizeButton = new ButtonRegion(HeaderButtonType.MAXIMIZE, "-FX-INTERNAL-maximize-button", 1);
+    private final ButtonRegion closeButton = new ButtonRegion(HeaderButtonType.CLOSE, "-FX-INTERNAL-close-button", 2);
     private final Subscription subscriptions;
     private final boolean utility;
     private final boolean rightToLeft;
@@ -305,7 +307,7 @@ public class HeaderButtonOverlay extends Region {
             prefButtonHeight.subscribe(this::requestLayout),
             buttonDefaultHeight.subscribe(this::requestLayout));
 
-        getStyleClass().setAll("header-button-container");
+        getStyleClass().setAll("-FX-INTERNAL-header-button-container");
 
         if (utility) {
             iconifyButton.managedProperty().bind(ObjectConstant.valueOf(false));
@@ -649,9 +651,9 @@ public class HeaderButtonOverlay extends Region {
             this.type = type;
             orderedButtons.add(this);
             buttonOrder.set(order);
-            glyph.getStyleClass().setAll("glyph");
+            glyph.getStyleClass().setAll("-FX-INTERNAL-glyph");
             getChildren().add(glyph);
-            getStyleClass().setAll("header-button", styleClass);
+            getStyleClass().setAll("-FX-INTERNAL-header-button", styleClass);
         }
 
         public HeaderButtonType getButtonType() {
