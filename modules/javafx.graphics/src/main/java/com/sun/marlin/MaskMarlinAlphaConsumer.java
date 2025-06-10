@@ -39,6 +39,10 @@ public final class MaskMarlinAlphaConsumer implements MarlinAlphaConsumer {
     int fastFillThreshold;
 
     public MaskMarlinAlphaConsumer(int alphalen) {
+        if (ALPHA_MAP == null) {
+            initAlphaMaps();
+        }
+
         this.alphas = new byte[alphalen];
         alphabuffer = ByteBuffer.wrap(alphas);
     }
@@ -94,13 +98,13 @@ public final class MaskMarlinAlphaConsumer implements MarlinAlphaConsumer {
     // The alpha map used by this object (taken out of our map cache) to convert
     // pixel coverage counts (which are in the range [0, maxalpha])
     // into alpha values, which are in [0,255]).
-    static final byte[] ALPHA_MAP;
-    static final OffHeapArray ALPHA_MAP_OFF_HEAP;
+    static byte[] ALPHA_MAP;
+    static OffHeapArray ALPHA_MAP_OFF_HEAP;
 
-    static final byte[] ALPHA_MAP_NO_AA;
-    static final OffHeapArray ALPHA_MAP_OFF_HEAP_NO_AA;
+    static byte[] ALPHA_MAP_NO_AA;
+    static OffHeapArray ALPHA_MAP_OFF_HEAP_NO_AA;
 
-    static {
+    static void initAlphaMaps() {
         // AA:
         byte[] _ALPHA_MAP = buildAlphaMap(MarlinConst.MAX_AA_ALPHA);
         ALPHA_MAP = _ALPHA_MAP; // Keep alive the OffHeapArray
