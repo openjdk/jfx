@@ -504,6 +504,11 @@ public abstract sealed class Node
             }
 
             @Override
+            public void setParent(Node node, Parent parent) {
+                node.setParent(parent);
+            }
+
+            @Override
             public void updateBounds(Node node) {
                 node.updateBounds();
             }

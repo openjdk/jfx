@@ -31,6 +31,7 @@ import javafx.scene.Node;
 import javafx.scene.Parent;
 import javafx.scene.Scene;
 import javafx.scene.SubScene;
+import javafx.util.Subscription;
 
 /**
  * Shows an overlay over a {@link javafx.scene.Scene}.
@@ -40,6 +41,7 @@ final class ViewSceneOverlay {
 
     private final Scene scene;
     private final ViewPainter painter;
+    private final Subscription subscription;
     private Parent root;
     private boolean rootDirty;
     private double width, height;
@@ -47,6 +49,11 @@ final class ViewSceneOverlay {
     ViewSceneOverlay(Scene scene, ViewPainter painter) {
         this.scene = scene;
         this.painter = painter;
+        this.subscription = scene.rootProperty().subscribe(this::onSceneRootChanged);
+    }
+
+    public void dispose() {
+        subscription.unsubscribe();
     }
 
     public void reapplyCSS() {
@@ -86,12 +93,14 @@ final class ViewSceneOverlay {
         }
 
         if (this.root != null) {
+            NodeHelper.setParent(this.root, null);
             NodeHelper.setScenes(this.root, null, null);
         }
 
         this.root = root;
 
         if (root != null) {
+            NodeHelper.setParent(root, scene.getRoot());
             NodeHelper.setScenes(root, scene, null);
         }
 
@@ -125,6 +134,12 @@ final class ViewSceneOverlay {
 
         if (node.getClip() != null) {
             syncPeer(node.getClip());
+        }
+    }
+
+    private void onSceneRootChanged(Parent sceneRoot) {
+        if (root != null) {
+            NodeHelper.setParent(root, sceneRoot);
         }
     }
 }

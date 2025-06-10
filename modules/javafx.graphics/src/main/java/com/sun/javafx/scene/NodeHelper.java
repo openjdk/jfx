@@ -46,6 +46,7 @@ import javafx.css.Styleable;
 import javafx.css.StyleableProperty;
 import javafx.geometry.Bounds;
 import javafx.scene.Node;
+import javafx.scene.Parent;
 import javafx.scene.Scene;
 import javafx.scene.SubScene;
 import javafx.scene.text.Font;
@@ -193,6 +194,10 @@ public abstract class NodeHelper {
 
     public static void setScenes(Node node, Scene newScene, SubScene newSubScene) {
         nodeAccessor.setScenes(node, newScene, newSubScene);
+    }
+
+    public static void setParent(Node node, Parent parent) {
+        nodeAccessor.setParent(node, parent);
     }
 
     public static void updateBounds(Node node) {
@@ -368,6 +373,7 @@ public abstract class NodeHelper {
         boolean isDirty(Node node, DirtyBits dirtyBit);
         boolean isDirtyEmpty(Node node);
         void setScenes(Node node, Scene newScene, SubScene newSubScene);
+        void setParent(Node node, Parent parent);
         void updateBounds(Node node);
         void syncPeer(Node node);
         <P extends NGNode> P getPeer(Node node);
