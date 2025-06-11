@@ -214,7 +214,7 @@ public final class RendererContext extends ReentrantContext implements MarlinCon
         if (DO_STATS) {
             stats.totalOffHeapInitial += initialSize;
         }
-        return new OffHeapArray(cleanerObj, initialSize);
+        return new OffHeapArray(cleanerObj, initialSize, false);
     }
 
     ArrayCacheIntClean.Reference newCleanIntArrayRef(final int initialSize) {

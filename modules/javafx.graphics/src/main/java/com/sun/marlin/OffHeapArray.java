@@ -48,18 +48,6 @@ final class OffHeapArray {
     private int used;
 
     /**
-     * Creates an OffHeapArray of the specified length using a confined arena.
-     * All access to this array must be done on the same thread that constructed it.
-     *
-     * @param parent the object that will be used to register a cleaner to
-     * free the off-heap array when {@code parent} becomes phantom reachable
-     * @param len the number of bytes to allocate
-     */
-    OffHeapArray(final Object parent, final long len) {
-        this(parent, len, false);
-    }
-
-    /**
      * Creates an OffHeapArray of the specified length using either the global
      * arena or a confined arena. If the global arena is specified, the array
      * may be accessed on any thread, but it must not be resized or freed.
@@ -76,11 +64,8 @@ final class OffHeapArray {
     OffHeapArray(final Object parent, final long len, boolean global) {
         this.global = global;
 
-        if (global) {
-            arena = Arena.global();
-        } else {
-            arena = Arena.ofConfined();
-        }
+        // Allocate the specified type of arena
+        this.arena = global ? Arena.global() : Arena.ofConfined();
 
         // note: may throw OOME:
         this.segment = arena.allocate(len, ALIGNMENT);
@@ -88,7 +73,8 @@ final class OffHeapArray {
         if (LOG_OFF_HEAP_MALLOC) {
             MarlinUtils.logInfo(System.currentTimeMillis()
                                 + ": OffHeapArray.allocateMemory =   "
-                                + len + " for segment = " + this.segment);
+                                + len + " for segment = " + this.segment
+                                + " global = " + global);
         }
 
         if (!global) {
@@ -162,10 +148,6 @@ final class OffHeapArray {
     }
 
     void free() {
-        if (global) {
-            throw new UnsupportedOperationException("Cannot free a global OffHeapArray");
-        }
-
         arena.close();
         if (LOG_OFF_HEAP_MALLOC) {
             MarlinUtils.logInfo(System.currentTimeMillis()
