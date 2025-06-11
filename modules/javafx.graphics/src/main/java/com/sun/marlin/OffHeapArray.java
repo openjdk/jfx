@@ -32,6 +32,7 @@ import java.lang.foreign.ValueLayout;
 
 final class OffHeapArray {
 
+    private final boolean global;
     private Arena arena;
 
     // size of int / float
@@ -46,8 +47,40 @@ final class OffHeapArray {
     private MemorySegment segment;
     private int used;
 
+    /**
+     * Creates an OffHeapArray of the specified length using a confined arena.
+     * All access to this array must be done on the same thread that constructed it.
+     *
+     * @param parent the object that will be used to register a cleaner to
+     * free the off-heap array when {@code parent} becomes phantom reachable
+     * @param len the number of bytes to allocate
+     */
     OffHeapArray(final Object parent, final long len) {
-        arena = Arena.ofConfined();
+        this(parent, len, false);
+    }
+
+    /**
+     * Creates an OffHeapArray of the specified length using either the global
+     * arena or a confined arena. If the global arena is specified, the array
+     * may be accessed on any thread, but it must not be resized or freed.
+     * If a confined arena is specified, all access to this array must be done
+     * on the same thread that constructed it.
+     *
+     * @param parent the object that will be used to register a cleaner to
+     * free the off-heap array when {@code parent} becomes phantom reachable;
+     * this is unused if the global arena is specified
+     * @param len the number of bytes to allocate
+     * @param global if {@code true} use the global arena, otherwise use a
+     * confined arena
+     */
+    OffHeapArray(final Object parent, final long len, boolean global) {
+        this.global = global;
+
+        if (global) {
+            arena = Arena.global();
+        } else {
+            arena = Arena.ofConfined();
+        }
 
         // note: may throw OOME:
         this.segment = arena.allocate(len, ALIGNMENT);
@@ -58,8 +91,10 @@ final class OffHeapArray {
                                 + len + " for segment = " + this.segment);
         }
 
-        // Register a cleaning function to ensure freeing off-heap memory:
-        MarlinUtils.getCleaner().register(parent, this::free);
+        if (!global) {
+            // Register a cleaning function to ensure freeing off-heap memory:
+            MarlinUtils.getCleaner().register(parent, this::free);
+        }
     }
 
     /**
@@ -101,6 +136,10 @@ final class OffHeapArray {
      * @throws OutOfMemoryError if the allocation is refused by the system
      */
     void resize(final long len) {
+        if (global) {
+            throw new UnsupportedOperationException("Cannot resize a global OffHeapArray");
+        }
+
         Arena newArena = Arena.ofConfined();
 
         // note: may throw OOME:
@@ -123,6 +162,10 @@ final class OffHeapArray {
     }
 
     void free() {
+        if (global) {
+            throw new UnsupportedOperationException("Cannot free a global OffHeapArray");
+        }
+
         arena.close();
         if (LOG_OFF_HEAP_MALLOC) {
             MarlinUtils.logInfo(System.currentTimeMillis()

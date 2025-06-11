@@ -104,7 +104,7 @@ public final class MaskMarlinAlphaConsumer implements MarlinAlphaConsumer {
         // AA:
         byte[] _ALPHA_MAP = buildAlphaMap(MarlinConst.MAX_AA_ALPHA);
         ALPHA_MAP = _ALPHA_MAP; // Keep alive the OffHeapArray
-        ALPHA_MAP_OFF_HEAP = new OffHeapArray(ALPHA_MAP, ALPHA_MAP.length); // 1K
+        ALPHA_MAP_OFF_HEAP = new OffHeapArray(ALPHA_MAP, ALPHA_MAP.length, true); // 1K
 
         for (int i = 0; i < _ALPHA_MAP.length; i++) {
             ALPHA_MAP_OFF_HEAP.putByte(i, _ALPHA_MAP[i]);
@@ -113,7 +113,7 @@ public final class MaskMarlinAlphaConsumer implements MarlinAlphaConsumer {
         // NoAA:
         byte[] _ALPHA_MAP_NO_AA = buildAlphaMap(1);
         ALPHA_MAP_NO_AA = _ALPHA_MAP_NO_AA; // Keep alive the OffHeapArray
-        ALPHA_MAP_OFF_HEAP_NO_AA = new OffHeapArray(ALPHA_MAP_NO_AA, ALPHA_MAP_NO_AA.length);
+        ALPHA_MAP_OFF_HEAP_NO_AA = new OffHeapArray(ALPHA_MAP_NO_AA, ALPHA_MAP_NO_AA.length, true);
 
         for (int i = 0; i < _ALPHA_MAP_NO_AA.length; i++) {
             ALPHA_MAP_OFF_HEAP_NO_AA.putByte(i, _ALPHA_MAP_NO_AA[i]);
