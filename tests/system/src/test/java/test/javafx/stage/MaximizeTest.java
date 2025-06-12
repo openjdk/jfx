@@ -72,7 +72,7 @@ class MaximizeTest extends StageTestBase {
 
     @ParameterizedTest(name = PARAMETERIZED_TEST_DISPLAY)
     @EnumSource(names = {"DECORATED", "UNDECORATED", "TRANSPARENT"})
-    void testMaximizeKeepGeometryOnRestore(StageStyle stageStyle) {
+    void testMaximizeShouldKeepGeometryOnRestore(StageStyle stageStyle) {
         setupStageWithStyle(stageStyle, TEST_SETTINGS);
 
         Util.doTimeLine(SHORT_WAIT,

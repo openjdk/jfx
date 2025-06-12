@@ -66,7 +66,8 @@ struct WindowGeometry {
     height{-1, -1, BOUNDSTYPE_UNKNOWN},
     x(), y(), view_x(), view_y(),
     gravity_x(), gravity_y(),
-    extents(), frame_extents_received(false) {}
+    extents(), frame_extents_received(false),
+    needs_to_update_frame_extents(false) {}
 
     struct {
         int window;
@@ -92,6 +93,7 @@ struct WindowGeometry {
     GdkRectangle extents;
 
     bool frame_extents_received;
+    bool needs_to_update_frame_extents;
 };
 
 class WindowContext;
