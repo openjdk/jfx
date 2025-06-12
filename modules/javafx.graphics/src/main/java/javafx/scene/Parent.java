@@ -1954,6 +1954,11 @@ public abstract non-sealed class Parent extends Node {
      * Called by node whenever the visibility of the node changes.
      */
     void childVisibilityChanged(Node node) {
+        // See comment above in childBoundsChanged(Node)
+        if (!childSet.contains(node)) {
+            return;
+        }
+
         if (node.isVisible()) {
             childIncluded(node);
         } else {
