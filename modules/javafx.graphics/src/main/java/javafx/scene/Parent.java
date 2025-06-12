@@ -1929,7 +1929,7 @@ public abstract non-sealed class Parent extends Node {
 
         // When we have a scene overlay (like the full-screen notification message or default window buttons
         // of an extended stage), the scene root is the parent of the overlay node. However, the overlay node
-        // is not contained in the scene root's children list, because it is not a publicly accessibly part of
+        // is not contained in the scene root's children list, because it is not a publicly accessible part of
         // the scene graph. When this method is called on the root node, we need to check whether the supposed
         // child is actually contained in the children list.
         if (!childSet.contains(node)) {
