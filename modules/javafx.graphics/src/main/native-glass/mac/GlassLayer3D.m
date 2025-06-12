@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -24,9 +24,10 @@
  */
 
 #import "GlassLayer3D.h"
-
 #import "GlassMacros.h"
 #import "GlassScreen.h"
+#import "GlassLayerCGL3D.h"
+#import "GlassLayerMTL3D.h"
 
 //#define VERBOSE
 #ifndef VERBOSE
@@ -39,23 +40,36 @@
 
 static NSArray *allModes = nil;
 
-- (id)initWithSharedContext:(CGLContextObj)ctx
-           andClientContext:(CGLContextObj)clCtx
-             withHiDPIAware:(BOOL)HiDPIAware
-             withIsSwPipe:(BOOL)isSwPipe
+- (id)initGlassLayer:(NSObject*)ctx
+    andClientContext:(NSObject*)clCtx
+         mtlQueuePtr:(long)mtlCommandQueuePtr
+      withHiDPIAware:(BOOL)HiDPIAware
+        withIsSwPipe:(BOOL)isSwPipe
 {
-    LOG("GlassLayer3D initWithSharedContext]");
+    LOG("GlassLayer3D initGlassLayer]");
     self = [super init];
     if (self != nil)
     {
-        self->_painterOffscreen = [[GlassOffscreen alloc] initWithContext:clCtx andIsSwPipe:isSwPipe];
-        self->_glassOffscreen = [[GlassOffscreen alloc] initWithContext:ctx andIsSwPipe:isSwPipe];
-        [self->_glassOffscreen setLayer:self];
+        if (mtlCommandQueuePtr != 0l) { // MTL
+            GlassLayerMTL3D* mtlLayer = [[GlassLayerMTL3D alloc]
+                init:mtlCommandQueuePtr
+                withIsSwPipe:isSwPipe];
+            self->painterOffScreen = [mtlLayer getPainterOffscreen];
+            self->glassOffScreen = nil;
+            [self addSublayer:mtlLayer];
+        } else {
+            GlassLayerCGL3D* cglLayer = [[GlassLayerCGL3D alloc]
+                initWithSharedContext:(CGLContextObj)ctx
+                     andClientContext:(CGLContextObj)clCtx
+                       withHiDPIAware:HiDPIAware
+                         withIsSwPipe:isSwPipe];
+            self->painterOffScreen = [cglLayer getPainterOffscreen];
+            self->glassOffScreen = [cglLayer getGlassOffscreen];
+            [self addSublayer:cglLayer];
+        }
+        self->isHiDPIAware = HiDPIAware;
         LOG("   GlassLayer3D context: %p", ctx);
 
-        self->isHiDPIAware = HiDPIAware;
-
-        [self setAsynchronous:NO];
         [self setAutoresizingMask:(kCALayerWidthSizable|kCALayerHeightSizable)];
         [self setContentsGravity:kCAGravityTopLeft];
 
@@ -77,114 +91,49 @@ static NSArray *allModes = nil;
                                                   NSEventTrackingRunLoopMode,
                                                   NSModalPanelRunLoopMode, nil] retain];
         }
-
-        self.colorspace = CGColorSpaceCreateWithName(kCGColorSpaceSRGB);
     }
     return self;
 }
 
 - (void)dealloc
 {
-    [self->_glassOffscreen release];
-    self->_glassOffscreen = nil;
-
-    [self->_painterOffscreen release];
-    self->_painterOffscreen = nil;
-
     [super dealloc];
 }
 
 - (void)notifyScaleFactorChanged:(CGFloat)scale
 {
     if (self->isHiDPIAware) {
-        if ([self respondsToSelector:@selector(setContentsScale:)]) {
-            [self setContentsScale: scale];
+        if ([self.sublayers[0] respondsToSelector:@selector(setContentsScale:)]) {
+            [self.sublayers[0] setContentsScale: scale];
         }
     }
 }
 
-//- (void)setBounds:(CGRect)bounds
-//{
-//    LOG("GlassLayer3D setBounds:%s", [NSStringFromRect(NSRectFromCGRect(bounds)) UTF8String]);
-//    [super setBounds:bounds];
-//}
-
-- (BOOL)canDrawInCGLContext:(CGLContextObj)glContext pixelFormat:(CGLPixelFormatObj)pixelFormat forLayerTime:(CFTimeInterval)timeInterval displayTime:(const CVTimeStamp *)timeStamp
+- (void)end
 {
-    return [self->_glassOffscreen isDirty];
+    [self->painterOffScreen flush:self->glassOffScreen];
 }
 
-- (CGLContextObj)copyCGLContextForPixelFormat:(CGLPixelFormatObj)pixelFormat
+- (void)bindForWidth:(unsigned int)width andHeight:(unsigned int)height
 {
-    return CGLRetainContext([self->_glassOffscreen getContext]);
-}
-
-- (CGLPixelFormatObj)copyCGLPixelFormatForDisplayMask:(uint32_t)mask
-{
-    return CGLRetainPixelFormat(CGLGetPixelFormat([self->_glassOffscreen getContext]));
-}
-
-- (void)drawInCGLContext:(CGLContextObj)glContext pixelFormat:(CGLPixelFormatObj)pixelFormat forLayerTime:(CFTimeInterval)timeInterval displayTime:(const CVTimeStamp *)timeStamp
-{
-    // glContext is already set as current by now and locked by Quartz internaly
-    LOG("GlassLayer3D drawInCGLContext]");
-    LOG("   current context: %p", CGLGetCurrentContext());
-#ifdef VERBOSE
-    {
-        GLint fbo = 0; // default to screen
-        glGetIntegerv(GL_FRAMEBUFFER_BINDING_EXT, (GLint*)&fbo);
-        LOG("   fbo: %d", fbo);
-    }
-#endif
-    // the viewport is already set for us here, so just blit
-
-#if 0
-    // this will stretch the offscreen to cover all the surface
-    // ie., live resizing "appears" better, but the blit area is not at 1:1 scale
-    [self->_glassOffscreen blit];
-#else
-    // we blit only in the area we rendered in
-    GLint params[] = { 0, 0, 0, 0 };
-    glGetIntegerv(GL_VIEWPORT, params);
-    if ((params[2] > 0) && ((params[3] > 0)))
-    {
-        [self->_glassOffscreen blitForWidth:(GLuint)params[2] andHeight:(GLuint)params[3]];
-    }
-#endif
-
-    // the default implementation of the method flushes the context.
-    [super drawInCGLContext:glContext pixelFormat:pixelFormat forLayerTime:timeInterval displayTime:timeStamp];
-    LOG("\n");
-}
-
-- (void)flush
-{
-    [(GlassOffscreen*)_glassOffscreen blitFromOffscreen:(GlassOffscreen*)_painterOffscreen];
-    if ([NSThread isMainThread]) {
-        [[self->_glassOffscreen getLayer] setNeedsDisplay];
-    } else {
-        [[self->_glassOffscreen getLayer] performSelectorOnMainThread:@selector(setNeedsDisplay)
-                                                           withObject:nil
-                                                        waitUntilDone:NO
-                                                                modes:allModes];
-    }
+    [self->painterOffScreen bindForWidth:width andHeight:height];
 }
 
 - (GlassOffscreen*)getPainterOffscreen
 {
-    return self->_painterOffscreen;
+    return self->painterOffScreen;
 }
 
-- (GlassOffscreen*)getGlassOffscreen
+- (void)pushPixels:(void*)pixels
+         withWidth:(unsigned int)width
+         withHeight:(unsigned int)height
+         withScaleX:(float)scalex
+         withScaleY:(float)scaley
+         ofView:(NSView*)view
 {
-    return self->_glassOffscreen;
-}
-
-- (void)hostOffscreen:(GlassOffscreen*)offscreen
-{
-    [self->_glassOffscreen release];
-    self->_glassOffscreen = [offscreen retain];
-    [self->_glassOffscreen setLayer:self];
+    [self->painterOffScreen pushPixels:pixels withWidth:width
+        withHeight:height withScaleX:scalex withScaleY:scaley
+        ofView:view];
 }
 
 @end
