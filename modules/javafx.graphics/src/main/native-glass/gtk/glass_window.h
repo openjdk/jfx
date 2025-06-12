@@ -244,6 +244,7 @@ private:
     void add_wmf(GdkWMFunction);
     void remove_wmf(GdkWMFunction);
     void notify_on_top(bool);
+    void notify_fullscreen(bool);
     void notify_window_resize(int);
     void notify_window_move();
     void notify_view_resize();

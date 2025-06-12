@@ -46,7 +46,9 @@
 #define MOUSE_BACK_BTN 8
 #define MOUSE_FORWARD_BTN 9
 
-#define NONNEGATIVE_OR(val, fallback) (((val) < 0) ? (fallback) : (val))
+constexpr int nonnegative_or(int val, int fallback) {
+    return (val < 0) ? fallback : val;
+}
 
 void destroy_and_delete_ctx(WindowContext* ctx) {
     LOG("destroy_and_delete_ctx\n");
@@ -825,8 +827,8 @@ void WindowContext::update_frame_extents() {
                     - rect.height;
             }
 
-            newW = NONNEGATIVE_OR(newW, 1);
-            newH = NONNEGATIVE_OR(newH, 1);
+            newW = nonnegative_or(newW, 1);
+            newH = nonnegative_or(newH, 1);
 
             LOG("extents received -> new view size: %d, %d\n", newW, newH);
             int x = geometry.x;
@@ -836,12 +838,12 @@ void WindowContext::update_frame_extents() {
             // accounting decorations
             if (geometry.gravity_x > 0 && x > 0) {
                 x -= geometry.gravity_x * (float) (geometry.extents.width);
-                x = NONNEGATIVE_OR(x, 0);
+                x = nonnegative_or(x, 0);
             }
 
             if (geometry.gravity_y > 0 && y > 0) {
                 y -= geometry.gravity_y  * (float) (geometry.extents.height);
-                y = NONNEGATIVE_OR(y, 0);
+                y = nonnegative_or(y, 0);
             }
 
             geometry.extents = rect;
@@ -976,13 +978,9 @@ void WindowContext::process_state(GdkEventWindowState *event) {
 
     if (jview && event->changed_mask & GDK_WINDOW_STATE_FULLSCREEN) {
         if (event->new_window_state & GDK_WINDOW_STATE_FULLSCREEN) {
-            LOG("com_sun_glass_events_ViewEvent_FULLSCREEN_ENTER\n");
-            mainEnv->CallVoidMethod(jview, jViewNotifyView, com_sun_glass_events_ViewEvent_FULLSCREEN_ENTER);
-            CHECK_JNI_EXCEPTION(mainEnv)
+            notify_fullscreen(true);
         } else {
-            LOG("com_sun_glass_events_ViewEvent_FULLSCREEN_EXIT\n");
-            mainEnv->CallVoidMethod(jview, jViewNotifyView, com_sun_glass_events_ViewEvent_FULLSCREEN_EXIT);
-            CHECK_JNI_EXCEPTION(mainEnv)
+            notify_fullscreen(false);
         }
     }
 
@@ -990,6 +988,18 @@ void WindowContext::process_state(GdkEventWindowState *event) {
     // Since FullScreen (or custom modes of maximized) can undecorate the
     // window, request view position change
     notify_view_move();
+}
+
+void WindowContext::notify_fullscreen(bool enter) {
+    if (enter) {
+        LOG("com_sun_glass_events_ViewEvent_FULLSCREEN_ENTER\n");
+        mainEnv->CallVoidMethod(jview, jViewNotifyView, com_sun_glass_events_ViewEvent_FULLSCREEN_ENTER);
+        CHECK_JNI_EXCEPTION(mainEnv)
+    } else {
+        LOG("com_sun_glass_events_ViewEvent_FULLSCREEN_EXIT\n");
+        mainEnv->CallVoidMethod(jview, jViewNotifyView, com_sun_glass_events_ViewEvent_FULLSCREEN_EXIT);
+        CHECK_JNI_EXCEPTION(mainEnv)
+    }
 }
 
 void WindowContext::notify_window_resize(int state) {
@@ -1113,16 +1123,16 @@ void WindowContext::update_window_constraints() {
     if (resizable.value && !is_disabled) {
         hints.min_width = (resizable.minw == -1)
                      ? 1
-                     : NONNEGATIVE_OR(resizable.minw - geometry.extents.width, 1);
+                     : nonnegative_or(resizable.minw - geometry.extents.width, 1);
         hints.min_height = (resizable.minh == -1)
                      ? 1
-                     : NONNEGATIVE_OR(resizable.minh - geometry.extents.height, 1);
+                     : nonnegative_or(resizable.minh - geometry.extents.height, 1);
         hints.max_width = (resizable.maxw == -1)
                     ? G_MAXINT
-                    : NONNEGATIVE_OR(resizable.maxw - geometry.extents.width, 1);
+                    : nonnegative_or(resizable.maxw - geometry.extents.width, 1);
         hints.max_height = (resizable.maxh == -1)
                     ? G_MAXINT
-                    : NONNEGATIVE_OR(resizable.maxh - geometry.extents.height, 1);
+                    : nonnegative_or(resizable.maxh - geometry.extents.height, 1);
     } else {
         hints.min_width = geometry.width.view;
         hints.min_height = geometry.height.view;
@@ -1178,7 +1188,7 @@ void WindowContext::set_bounds(int x, int y, bool xSet, bool ySet, int w, int h,
 
     if (w > 0) {
         geometry.width.type = BOUNDSTYPE_WINDOW;
-        newW = NONNEGATIVE_OR(w - geometry.extents.width, 1);
+        newW = nonnegative_or(w - geometry.extents.width, 1);
     } else if (cw > 0) {
         // once set to window, stick with it
         if (BOUNDSTYPE_UNKNOWN) geometry.width.type = BOUNDSTYPE_VIEW;
@@ -1187,7 +1197,7 @@ void WindowContext::set_bounds(int x, int y, bool xSet, bool ySet, int w, int h,
 
     if (h > 0) {
         geometry.height.type = BOUNDSTYPE_WINDOW;
-        newH = NONNEGATIVE_OR(h - geometry.extents.height, 1);
+        newH = nonnegative_or(h - geometry.extents.height, 1);
     } else if (ch > 0) {
         // once set to window, stick with it
         if (BOUNDSTYPE_UNKNOWN) geometry.height.type = BOUNDSTYPE_VIEW;
@@ -1251,11 +1261,16 @@ void WindowContext::set_maximized(bool state) {
 void WindowContext::enter_fullscreen() {
     LOG("enter_fullscreen\n");
     if (mapped) {
+        if (owner) {
+            // Report back that it's not fullscreen
+            notify_fullscreen(false);
+            return;
+        }
+
         gdk_window_fullscreen(gdk_window);
     } else {
         initial_state_mask |= GDK_WINDOW_STATE_FULLSCREEN;
-        mainEnv->CallVoidMethod(jview, jViewNotifyView, com_sun_glass_events_ViewEvent_FULLSCREEN_ENTER);
-        CHECK_JNI_EXCEPTION(mainEnv)
+        notify_fullscreen(true);
     }
 }
 
@@ -1386,19 +1401,19 @@ void WindowContext::move_resize(int x, int y, bool xSet, bool ySet, int width, i
     // Windows that are undecorated or transparent will not respect
     // minimum or maximum size constraints
     if (resizable.minw > 0 && newW < resizable.minw) {
-        newW = NONNEGATIVE_OR(resizable.minw - geometry.extents.width, 1);
+        newW = nonnegative_or(resizable.minw - geometry.extents.width, 1);
     }
 
     if (resizable.maxw > 0 && newW > resizable.maxw) {
-        newW = NONNEGATIVE_OR(resizable.maxw - geometry.extents.width, 1);
+        newW = nonnegative_or(resizable.maxw - geometry.extents.width, 1);
     }
 
     if (resizable.minh > 0 && newH < resizable.minh) {
-        newH = NONNEGATIVE_OR(resizable.minh - geometry.extents.height, 1);
+        newH = nonnegative_or(resizable.minh - geometry.extents.height, 1);
     }
 
     if (resizable.maxh > 0 && newH > resizable.maxh) {
-        newH = NONNEGATIVE_OR(resizable.maxh - geometry.extents.height, 1);
+        newH = nonnegative_or(resizable.maxh - geometry.extents.height, 1);
     }
 
     geometry.width.view = newW;
