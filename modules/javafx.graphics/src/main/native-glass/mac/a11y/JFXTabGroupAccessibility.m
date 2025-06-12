@@ -54,7 +54,8 @@
     GET_MAIN_JENV;
     if (env == NULL) return NULL;
     jresult = (jobject)(*env)->CallLongMethod(env, [self getJAccessible],
-                                                  jAccessibilityAttributeValue, (jlong)@"AXTabs");
+                                              jAccessibilityAttributeValue,
+                                              (jlong)@"AXTabs");
     GLASS_CHECK_EXCEPTION(env);
     return variantToID(env, jresult);
 }
