@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2009, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2009, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -238,6 +238,16 @@ public class ES2ResourceFactory extends BaseShaderFactory {
                 maxTexCoordIndex, isPixcoordUsed);
 
         return shader;
+    }
+
+    @Override
+    public Shader createShader(String shaderName,
+            Map<String, Integer> samplers,
+            Map<String, Integer> params,
+            int maxTexCoordIndex,
+            boolean isPixcoordUsed,
+            boolean isPerVertexColorUsed) {
+        throw new UnsupportedOperationException("Not supported for ES2 pipeline");
     }
 
     private static String createVertexShaderCode(boolean includePerVertexColor,

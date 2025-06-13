@@ -37,7 +37,6 @@
 #import "GlassView.h"
 #import "GlassScreen.h"
 #import "GlassApplication.h"
-#import "GlassLayer3D.h"
 #import "GlassHelper.h"
 
 #pragma clang diagnostic ignored "-Wdeprecated-declarations"
