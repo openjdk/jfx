@@ -25,6 +25,11 @@
 
 ext.LINUX = [:]
 
+def gtk3MinMinorVersion = "20"
+def gtk3MinMicroVersion = "0"
+
+def gtk3MinVersion = "3.%s.%s".formatted(gtk3MinMinorVersion, gtk3MinMicroVersion)
+
 // Declare whether this particular target file applies to the current system
 LINUX.canBuild = IS_LINUX;
 if (!LINUX.canBuild) return;
@@ -82,11 +87,23 @@ if (hasProperty('toolchainDir')) {
     toolchainDir = ""
 }
 
-def gtk3CCFlags = [ "-Wno-deprecated-declarations" ];
+def gtk3CCFlags = [ "-Wno-deprecated-declarations",
+                    "-DGTK_3_MIN_MINOR_VERSION="+gtk3MinMinorVersion,
+                    "-DGTK_3_MIN_MICRO_VERSION="+gtk3MinMicroVersion];
 def gtk3LinkFlags = [ ];
 
 setupTools("linux_gtk3",
     { propFile ->
+        def checkGTK3Version = exec {
+            commandLine "${toolchainDir}pkg-config", "--exists", "gtk+-3.0 >= " + gtk3MinVersion
+            ignoreExitValue = true
+        }
+
+        if (checkGTK3Version.exitValue != 0) {
+            throw new IllegalStateException("GTK3 " + gtk3MinVersion + "+ development packages not found."
+                    + " If GTK3 packages are installed, please remove the build directory and try again.")
+        }
+
         ByteArrayOutputStream results2 = new ByteArrayOutputStream();
         exec {
             commandLine("${toolchainDir}pkg-config", "--cflags", "gtk+-3.0", "gthread-2.0", "xtst", "gio-unix-2.0")
@@ -109,8 +126,6 @@ setupTools("linux_gtk3",
         if (cflagsGTK3 && libsGTK3) {
             gtk3CCFlags.addAll(cflagsGTK3.split(" "))
             gtk3LinkFlags.addAll(libsGTK3.split(" "))
-        } else {
-            throw new IllegalStateException("GTK3 development packages not found. If GTK3 packages are installed, please remove the build directory and try again.")
         }
     }
 )
