@@ -1927,6 +1927,15 @@ public abstract non-sealed class Parent extends Node {
             return;
         }
 
+        // When we have a scene overlay (like the full-screen notification message or default window buttons
+        // of an extended stage), the scene root is the parent of the overlay node. However, the overlay node
+        // is not contained in the scene root's children list, because it is not a publicly accessible part of
+        // the scene graph. When this method is called on the root node, we need to check whether the supposed
+        // child is actually contained in the children list.
+        if (!childSet.contains(node)) {
+            return;
+        }
+
         cachedBoundsInvalid = true;
 
         // mark the node such that the parent knows that the child's bounds
@@ -1945,6 +1954,11 @@ public abstract non-sealed class Parent extends Node {
      * Called by node whenever the visibility of the node changes.
      */
     void childVisibilityChanged(Node node) {
+        // See comment above in childBoundsChanged(Node)
+        if (!childSet.contains(node)) {
+            return;
+        }
+
         if (node.isVisible()) {
             childIncluded(node);
         } else {

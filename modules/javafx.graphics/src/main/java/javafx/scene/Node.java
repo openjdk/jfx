@@ -500,6 +500,21 @@ public abstract sealed class Node
             }
 
             @Override
+            public void setScenes(Node node, Scene newScene, SubScene newSubScene) {
+                node.setScenes(newScene, newSubScene);
+            }
+
+            @Override
+            public void setParent(Node node, Parent parent) {
+                node.setParent(parent);
+            }
+
+            @Override
+            public void updateBounds(Node node) {
+                node.updateBounds();
+            }
+
+            @Override
             public void syncPeer(Node node) {
                 node.syncPeer();
             }

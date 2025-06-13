@@ -81,6 +81,9 @@ import javafx.event.*;
 import javafx.geometry.*;
 import javafx.scene.image.WritableImage;
 import javafx.scene.input.*;
+import javafx.scene.layout.HeaderBar;
+import javafx.scene.layout.HeaderButtonType;
+import javafx.scene.layout.HeaderDragType;
 import javafx.scene.paint.Color;
 import javafx.scene.paint.Paint;
 import javafx.stage.PopupWindow;
@@ -590,6 +593,10 @@ public class Scene implements EventTarget {
     }
 
     private void doCSSPass() {
+        if (peer != null) {
+            peer.processOverlayCSS();
+        }
+
         final Parent sceneRoot = getRoot();
         //
         // JDK-8120624: when the tree is synchronized, the dirty bits are
@@ -639,6 +646,10 @@ public class Scene implements EventTarget {
     }
 
     void doLayoutPass() {
+        if (peer != null) {
+            peer.layoutOverlay();
+        }
+
         final Parent r = getRoot();
         if (r != null) {
             r.layout();
@@ -1664,16 +1675,11 @@ public class Scene implements EventTarget {
         @Override
         protected void onChanged(Change<String> c) {
             StyleManager.getInstance().stylesheetsChanged(Scene.this, c);
-            // JDK-8110059 - if stylesheet is removed, reset styled properties to
-            // their initial value.
-            c.reset();
-            while(c.next()) {
-                if (c.wasRemoved() == false) {
-                    continue;
-                }
-                break; // no point in resetting more than once...
-            }
             getRoot().reapplyCSS();
+
+            if (peer != null) {
+                peer.reapplyOverlayCSS();
+            }
         }
     };
 
@@ -1737,6 +1743,10 @@ public class Scene implements EventTarget {
                 @Override protected void invalidated() {
                     StyleManager.getInstance().forget(Scene.this);
                     getRoot().reapplyCSS();
+
+                    if (peer != null) {
+                        peer.reapplyOverlayCSS();
+                    }
                 }
             };
         }
@@ -1937,7 +1947,7 @@ public class Scene implements EventTarget {
         mouseHandler.process(e, false);
     }
 
-    private void processMenuEvent(double x2, double y2, double xAbs, double yAbs, boolean isKeyboardTrigger) {
+    private boolean processMenuEvent(double x2, double y2, double xAbs, double yAbs, boolean isKeyboardTrigger) {
         EventTarget eventTarget = null;
         Scene.inMousePick = true;
         if (isKeyboardTrigger) {
@@ -1971,12 +1981,16 @@ public class Scene implements EventTarget {
             }
         }
 
+        boolean handled = false;
+
         if (eventTarget != null) {
             ContextMenuEvent context = new ContextMenuEvent(ContextMenuEvent.CONTEXT_MENU_REQUESTED,
                     x2, y2, xAbs, yAbs, isKeyboardTrigger, res);
-            Event.fireEvent(eventTarget, context);
+            handled = EventUtil.fireEvent(eventTarget, context) == null;
         }
         Scene.inMousePick = false;
+
+        return handled;
     }
 
     private void processGestureEvent(GestureEvent e, TouchGesture gesture) {
@@ -2524,6 +2538,10 @@ public class Scene implements EventTarget {
 
             Scene.inSynchronizer = true;
 
+            if (peer != null) {
+                peer.synchronizeOverlay();
+            }
+
             // if dirtyNodes is null then that means this Scene has not yet been
             // synchronized, and so we will simply synchronize every node in the
             // scene and then create the dirty nodes array list
@@ -2784,9 +2802,9 @@ public class Scene implements EventTarget {
         }
 
         @Override
-        public void menuEvent(double x, double y, double xAbs, double yAbs,
+        public boolean menuEvent(double x, double y, double xAbs, double yAbs,
                 boolean isKeyboardTrigger) {
-            Scene.this.processMenuEvent(x, y, xAbs,yAbs, isKeyboardTrigger);
+            return Scene.this.processMenuEvent(x, y, xAbs,yAbs, isKeyboardTrigger);
         }
 
         @Override
@@ -3039,6 +3057,41 @@ public class Scene implements EventTarget {
                 // gesture finished
                 touchEventSetId = 0;
             }
+        }
+
+        @Override
+        public HeaderAreaType pickHeaderArea(double x, double y) {
+            PickResult result = pick(x, y);
+            Node intersectedNode = result.getIntersectedNode();
+            HeaderDragType dragType = intersectedNode instanceof HeaderBar ? HeaderDragType.DRAGGABLE : null;
+
+            while (intersectedNode != null) {
+                if (intersectedNode instanceof HeaderBar) {
+                    return dragType == HeaderDragType.DRAGGABLE_SUBTREE
+                        || dragType == HeaderDragType.DRAGGABLE
+                        || HeaderBar.getDragType(result.getIntersectedNode()) == HeaderDragType.DRAGGABLE
+                            ? HeaderAreaType.DRAGBAR
+                            : null;
+                }
+
+                if (HeaderBar.getButtonType(intersectedNode) instanceof HeaderButtonType type) {
+                    return switch (type) {
+                        case ICONIFY -> HeaderAreaType.ICONIFY;
+                        case MAXIMIZE -> HeaderAreaType.MAXIMIZE;
+                        case CLOSE -> HeaderAreaType.CLOSE;
+                    };
+                }
+
+                if (dragType == null
+                        && HeaderBar.getDragType(intersectedNode) instanceof HeaderDragType type
+                        && type != HeaderDragType.DRAGGABLE) {
+                    dragType = type;
+                }
+
+                intersectedNode = intersectedNode.getParent();
+            }
+
+            return null;
         }
 
         @Override
