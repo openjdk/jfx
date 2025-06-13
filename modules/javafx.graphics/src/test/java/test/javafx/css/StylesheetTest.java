@@ -25,8 +25,11 @@
 
 package test.javafx.css;
 
+import com.sun.javafx.css.RuleHelper;
 import com.sun.javafx.css.SimpleSelector;
 import com.sun.javafx.css.StyleManager;
+import com.sun.javafx.css.media.expression.FunctionExpression;
+import javafx.application.ColorScheme;
 import javafx.css.StyleConverter.StringStore;
 import javafx.css.converter.EnumConverter;
 import javafx.css.converter.StringConverter;
@@ -793,5 +796,24 @@ public class StylesheetTest {
 
         root.applyCss();
         assertEquals(Background.fill(Color.RED), root.getBackground());
+    }
+
+    @Test
+    void serializeStylesheetWithMediaRule() throws IOException {
+        byte[] data = convertCssTextToBinary("""
+            .rect { -fx-fill: blue; }
+            @media (prefers-color-scheme: dark) {
+                .rect { -fx-fill: red; }
+            }
+            """);
+
+        var stylesheet = Stylesheet.loadBinary(new ByteArrayInputStream(data));
+        assertEquals(2, stylesheet.getRules().size());
+        assertNull(RuleHelper.getMediaRule(stylesheet.getRules().get(0)));
+
+        var mediaRule = RuleHelper.getMediaRule(stylesheet.getRules().get(1));
+        assertEquals(
+            new FunctionExpression<>("prefers-color-scheme", "dark", _ -> null, ColorScheme.DARK),
+            mediaRule.getQueries().getFirst());
     }
 }
