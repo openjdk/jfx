@@ -68,8 +68,6 @@ void checkGtkVersion(JNIEnv* env, jint reqMajor) {
         if (uoe != nullptr) {
             env->ThrowNew(uoe, oss.str().c_str());
         }
-
-        return;
     }
 }
 
