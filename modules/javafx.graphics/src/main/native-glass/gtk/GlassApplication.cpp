@@ -511,6 +511,7 @@ static void process_events(GdkEvent* event, gpointer data)
                     ctx->process_state(&event->window_state);
                     break;
                 case GDK_BUTTON_PRESS:
+                case GDK_2BUTTON_PRESS:
                 case GDK_BUTTON_RELEASE:
                     ctx->process_mouse_button(&event->button);
                     break;
