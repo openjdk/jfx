@@ -227,8 +227,9 @@ Please also follow these formatting guidelines:
 * The rest is left to Java coding standards
 * Avoid making changes that are unrelated to the bug you are fixing. This includes fixing minor errors such as warnings, spacing / indentation, spelling errors, etc, in code that you aren't otherwise modifying as part of your fix.
 * Disable &ldquo;auto-format on save&rdquo; to prevent your IDE from making unnecessary formatting changes. This makes reviews much harder as it generates unnecessary diffs. If your IDE supports formatting only modified chunks, that is fine to do.
-* Wildcard imports &ndash; for example, `import java.util.*;` &ndash; are forbidden and may cause the build to fail. Please attempt to configure your IDE so it doesn't generate wildcard imports. An exception to this rule is that wildcard static imports in test classes are allowed, for example, `import static org.junit.Assert.*;`.
+* Wildcard imports &ndash; for example, `import java.util.*;` &ndash; are forbidden and may cause the build to fail. Please attempt to configure your IDE so it doesn't generate wildcard imports. An exception to this rule is that wildcard static imports in test classes are allowed, for example, `import static org.junit.jupiter.api.Assertions.*;`.
 * Don't worry too much about import order. Try not to change it but don't worry about fighting your IDE to stop it from doing so.
+* Tests are written using [JUnit5](https://junit.org/junit5/).
 
 New code should be formatted consistently in accordance with the above guidelines. However, please do not reformat existing code as part of a bug fix. This makes more changes for code reviewers to track and review, and can lead to merge conflicts.
 
