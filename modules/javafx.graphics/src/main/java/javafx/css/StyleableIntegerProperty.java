@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -134,7 +134,7 @@ public abstract class StyleableIntegerProperty
         public void onUpdate(double progress) {
             // Integers are interpolated in real number space and rounded to the nearest integer.
             StyleableIntegerProperty.super.set(
-                progress < 1 ? (int)Math.round(startValue + (endValue - startValue) * progress) : endValue);
+                progress != 1 ? (int)Math.round(startValue + (endValue - startValue) * progress) : endValue);
         }
 
         @Override

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -80,19 +80,33 @@ public class InsetsTest {
         }
 
         @Test
-        public void interpolationFactorSmallerThanOrEqualToZeroReturnsStartInstance() {
+        public void interpolationFactorZeroReturnsStartInstance() {
             var startValue = new Insets(2, 4, 6, 8);
             var endValue = new Insets(4, 8, 12, 16);
             assertSame(startValue, startValue.interpolate(endValue, 0));
-            assertSame(startValue, startValue.interpolate(endValue, -1));
         }
 
         @Test
-        public void interpolationFactorGreaterThanOrEqualToOneReturnsEndInstance() {
+        public void interpolationFactorOneReturnsEndInstance() {
             var startValue = new Insets(2, 4, 6, 8);
             var endValue = new Insets(4, 8, 12, 16);
             assertSame(endValue, startValue.interpolate(endValue, 1));
-            assertSame(endValue, startValue.interpolate(endValue, 1.5));
+        }
+
+        @Test
+        public void interpolationFactorLessThanZero() {
+            var startValue = new Insets(2, 4, 6, 8);
+            var endValue = new Insets(4, 8, 12, 16);
+            var expected = new Insets(-2, -4, -6, -8);
+            assertEquals(expected, startValue.interpolate(endValue, -2));
+        }
+
+        @Test
+        public void interpolationFactorGreaterThanOne() {
+            var startValue = new Insets(2, 4, 6, 8);
+            var endValue = new Insets(4, 8, 12, 16);
+            var expected = new Insets(6, 12, 18, 24);
+            assertEquals(expected, startValue.interpolate(endValue, 2));
         }
     }
 }
