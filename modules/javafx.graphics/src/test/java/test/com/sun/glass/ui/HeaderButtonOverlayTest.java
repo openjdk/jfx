@@ -36,6 +36,8 @@ import javafx.scene.layout.HeaderButtonType;
 import javafx.scene.paint.Color;
 import javafx.stage.Stage;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.EnumSource;
 import test.util.ReflectionUtils;
 import java.nio.charset.StandardCharsets;
 import java.util.Base64;
@@ -57,7 +59,7 @@ public class HeaderButtonOverlayTest {
                                                        -fx-button-default-height: 20;
                                                        -fx-button-vertical-alignment: stretch; }
                 .-FX-INTERNAL-header-button { -fx-pref-width: 20; }
-            """), false, false);
+            """), false, false, false);
 
         var unused = new Scene(overlay);
         var children = overlay.getChildrenUnmodifiable();
@@ -83,7 +85,7 @@ public class HeaderButtonOverlayTest {
                                                         -fx-button-default-height: 20;
                                                         -fx-button-vertical-alignment: stretch; }
                 .-FX-INTERNAL-header-button { -fx-pref-width: 20; }
-            """), false, true);
+            """), false, false, true);
 
         var unused = new Scene(overlay);
         var children = overlay.getChildrenUnmodifiable();
@@ -111,7 +113,7 @@ public class HeaderButtonOverlayTest {
                                                         -fx-button-default-height: 20;
                                                         -fx-button-vertical-alignment: center; }
                 .-FX-INTERNAL-header-button { -fx-pref-width: 20; -fx-pref-height: 10; }
-            """), false, false);
+            """), false, false, false);
 
         var unused = new Scene(overlay);
         var children = overlay.getChildrenUnmodifiable();
@@ -138,7 +140,7 @@ public class HeaderButtonOverlayTest {
                                                         -fx-button-default-height: 20;
                                                         -fx-button-vertical-alignment: center; }
                 .-FX-INTERNAL-header-button { -fx-pref-width: 20; -fx-pref-height: 10; }
-            """), false, true);
+            """), false, false, true);
 
         var unused = new Scene(overlay);
         var children = overlay.getChildrenUnmodifiable();
@@ -165,7 +167,7 @@ public class HeaderButtonOverlayTest {
                                                         -fx-button-default-height: 20;
                                                         -fx-button-vertical-alignment: stretch; }
                 .-FX-INTERNAL-header-button { -fx-pref-width: 20; }
-            """), false, false);
+            """), false, false, false);
 
         var unused = new Scene(overlay);
         var children = overlay.getChildrenUnmodifiable();
@@ -191,7 +193,7 @@ public class HeaderButtonOverlayTest {
                                                         -fx-button-default-height: 20;
                                                         -fx-button-vertical-alignment: stretch; }
                 .-FX-INTERNAL-header-button { -fx-pref-width: 20; }
-            """), false, true);
+            """), false, false, true);
 
         var unused = new Scene(overlay);
         var children = overlay.getChildrenUnmodifiable();
@@ -219,7 +221,7 @@ public class HeaderButtonOverlayTest {
                                                         -fx-button-default-height: 20;
                                                         -fx-button-vertical-alignment: center; }
                 .-FX-INTERNAL-header-button { -fx-pref-width: 20; -fx-pref-height: 10; }
-            """), false, false);
+            """), false, false, false);
 
         var unused = new Scene(overlay);
         var children = overlay.getChildrenUnmodifiable();
@@ -246,7 +248,7 @@ public class HeaderButtonOverlayTest {
                                                         -fx-button-default-height: 20;
                                                         -fx-button-vertical-alignment: center; }
                 .-FX-INTERNAL-header-button { -fx-pref-width: 20; -fx-pref-height: 10; }
-            """), false, true);
+            """), false, false, true);
 
         var unused = new Scene(overlay);
         var children = overlay.getChildrenUnmodifiable();
@@ -274,7 +276,7 @@ public class HeaderButtonOverlayTest {
                 .-FX-INTERNAL-iconify-button { -fx-button-order: 5; }
                 .-FX-INTERNAL-maximize-button { -fx-button-order: 1; }
                 .-FX-INTERNAL-close-button { -fx-button-order: 3; }
-            """), false, false);
+            """), false, false, false);
 
         var unused = new Scene(overlay);
         var children = overlay.getChildrenUnmodifiable();
@@ -301,7 +303,7 @@ public class HeaderButtonOverlayTest {
                 .-FX-INTERNAL-iconify-button { -fx-button-order: 5; }
                 .-FX-INTERNAL-maximize-button { -fx-button-order: 1; }
                 .-FX-INTERNAL-close-button { -fx-button-order: 3; }
-            """), false, true);
+            """), false, false, true);
 
         var unused = new Scene(overlay);
         var children = overlay.getChildrenUnmodifiable();
@@ -322,11 +324,59 @@ public class HeaderButtonOverlayTest {
     void utilityDecorationIsOnlyCloseButton() {
         var overlay = new HeaderButtonOverlay(getStylesheet("""
                 .-FX-INTERNAL-header-button { -fx-pref-width: 20; -fx-pref-height: 10; }
-            """), true, false);
+            """), false, true, false);
 
         var children = overlay.getChildrenUnmodifiable();
         assertEquals(1, children.size());
         assertTrue(children.getFirst().getStyleClass().contains("-FX-INTERNAL-close-button"));
+    }
+
+    enum ButtonDisabledStateTest {
+        RESIZABLE(true, false, false, false),
+        UNRESIZABLE(false, false, false, true),
+        MODAL_RESIZABLE(true, true, true, false),
+        MODAL_UNRESIZABLE(false, true, true, true);
+
+        ButtonDisabledStateTest(boolean resizable, boolean modal, boolean iconifyDisabled, boolean maximizeDisabled) {
+            this.resizable = resizable;
+            this.modal = modal;
+            this.iconifyDisabled = iconifyDisabled;
+            this.maximizeDisabled = maximizeDisabled;
+        }
+
+        final boolean resizable;
+        final boolean modal;
+        final boolean iconifyDisabled;
+        final boolean maximizeDisabled;
+    }
+
+    /**
+     * Tests the disabled states of the iconify and maximize buttons for all combinations
+     * of resizable and modal window attributes.
+     */
+    @ParameterizedTest
+    @EnumSource(ButtonDisabledStateTest.class)
+    void buttonDisabledStateIsCorrect(ButtonDisabledStateTest test) {
+        var overlay = new HeaderButtonOverlay(getStylesheet("""
+                .-FX-INTERNAL-header-button { -fx-pref-width: 20; -fx-pref-height: 10; }
+            """), test.modal, false, false);
+
+        var scene = new Scene(overlay);
+        var stage = new Stage();
+        stage.setScene(scene);
+        stage.setResizable(test.resizable);
+
+        var children = overlay.getChildrenUnmodifiable();
+        assertEquals(3, children.size());
+
+        assertTrue(children.get(0).getStyleClass().contains("-FX-INTERNAL-iconify-button"));
+        assertEquals(test.iconifyDisabled, children.get(0).isDisabled());
+
+        assertTrue(children.get(1).getStyleClass().contains("-FX-INTERNAL-maximize-button"));
+        assertEquals(test.maximizeDisabled, children.get(1).isDisabled());
+
+        assertTrue(children.get(2).getStyleClass().contains("-FX-INTERNAL-close-button"));
+        assertFalse(children.get(2).isDisabled());
     }
 
     @Test
@@ -334,7 +384,7 @@ public class HeaderButtonOverlayTest {
         var overlay = new HeaderButtonOverlay(getStylesheet("""
                 .-FX-INTERNAL-header-button-container { -fx-button-placement: right; }
                 .-FX-INTERNAL-header-button { -fx-pref-width: 20; -fx-pref-height: 10; }
-            """), false, false);
+            """), false, false, false);
 
         var scene = new Scene(overlay);
         var stage = new Stage();
@@ -360,7 +410,7 @@ public class HeaderButtonOverlayTest {
         var overlay = new HeaderButtonOverlay(getStylesheet("""
                 .-FX-INTERNAL-header-button-container { -fx-button-placement: right; }
                 .-FX-INTERNAL-header-button { -fx-pref-width: 20; -fx-pref-height: 10; }
-            """), false, false);
+            """), false, false, false);
 
         var scene = new Scene(overlay);
         var stage = new Stage();
@@ -384,7 +434,7 @@ public class HeaderButtonOverlayTest {
         var overlay = new HeaderButtonOverlay(getStylesheet("""
                 .-FX-INTERNAL-header-button-container { -fx-button-placement: right; }
                 .-FX-INTERNAL-header-button { -fx-pref-width: 20; -fx-pref-height: 10; }
-            """), false, false);
+            """), false, false, false);
 
         var scene = new Scene(overlay);
         var stage = new Stage();
@@ -407,7 +457,7 @@ public class HeaderButtonOverlayTest {
         var overlay = new HeaderButtonOverlay(getStylesheet("""
                 .-FX-INTERNAL-header-button-container { -fx-button-placement: right; }
                 .-FX-INTERNAL-header-button { -fx-pref-width: 20; -fx-pref-height: 10; }
-            """), false, false);
+            """), false, false, false);
 
         var scene = new Scene(overlay);
 
@@ -426,7 +476,7 @@ public class HeaderButtonOverlayTest {
         var overlay = new HeaderButtonOverlay(getStylesheet("""
                 .-FX-INTERNAL-header-button-container { -fx-button-placement: right; -fx-button-vertical-alignment: stretch; }
                 .-FX-INTERNAL-header-button { -fx-pref-width: 20; -fx-pref-height: 10; }
-            """), false, false);
+            """), false, false, false);
 
         var unused = new Scene(overlay);
         overlay.resize(200, 100);

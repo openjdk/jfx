@@ -26,7 +26,6 @@
 package com.sun.glass.ui;
 
 import com.sun.glass.events.MouseEvent;
-import com.sun.javafx.binding.ObjectConstant;
 import com.sun.javafx.util.Utils;
 import javafx.beans.property.DoubleProperty;
 import javafx.beans.property.ObjectProperty;
@@ -264,12 +263,15 @@ public class HeaderButtonOverlay extends Region {
     private final ButtonRegion maximizeButton = new ButtonRegion(HeaderButtonType.MAXIMIZE, "-FX-INTERNAL-maximize-button", 1);
     private final ButtonRegion closeButton = new ButtonRegion(HeaderButtonType.CLOSE, "-FX-INTERNAL-close-button", 2);
     private final Subscription subscriptions;
+    private final boolean modal;
     private final boolean utility;
     private final boolean rightToLeft;
 
     private Node buttonAtMouseDown;
 
-    public HeaderButtonOverlay(ObservableValue<String> stylesheet, boolean utility, boolean rightToLeft) {
+    public HeaderButtonOverlay(ObservableValue<String> stylesheet, boolean modal,
+                               boolean utility, boolean rightToLeft) {
+        this.modal = modal;
         this.utility = utility;
         this.rightToLeft = rightToLeft;
 
@@ -310,10 +312,7 @@ public class HeaderButtonOverlay extends Region {
         getStyleClass().setAll("-FX-INTERNAL-header-button-container");
 
         if (utility) {
-            iconifyButton.managedProperty().bind(ObjectConstant.valueOf(false));
-            maximizeButton.managedProperty().bind(ObjectConstant.valueOf(false));
             getChildren().add(closeButton);
-            getStyleClass().add(UTILITY_STYLE_CLASS);
         } else {
             getChildren().addAll(iconifyButton, maximizeButton, closeButton);
         }
@@ -450,6 +449,9 @@ public class HeaderButtonOverlay extends Region {
     }
 
     private void onResizableChanged(boolean resizable) {
+        boolean utilityStyle = utility || (modal && !resizable);
+        toggleStyleClass(this, UTILITY_STYLE_CLASS, utilityStyle);
+        iconifyButton.setDisable(utility || modal);
         maximizeButton.setDisable(!resizable);
     }
 

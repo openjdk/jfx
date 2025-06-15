@@ -56,8 +56,8 @@ public class WinHeaderButtonOverlay extends HeaderButtonOverlay {
         { 2.5, 0.95 },
     };
 
-    public WinHeaderButtonOverlay(boolean utility, boolean rightToLeft) {
-        super(getStylesheet(), utility, rightToLeft);
+    public WinHeaderButtonOverlay(boolean modal, boolean utility, boolean rightToLeft) {
+        super(getStylesheet(), modal, utility, rightToLeft);
 
         var windowProperty = sceneProperty().flatMap(Scene::windowProperty);
 
