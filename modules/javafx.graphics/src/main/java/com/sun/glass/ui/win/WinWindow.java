@@ -378,7 +378,7 @@ class WinWindow extends Window {
      */
     private HeaderButtonOverlay createHeaderButtonOverlay() {
         var overlay = new WinHeaderButtonOverlay(
-            isUtilityWindow(),
+            isModal(), isUtilityWindow(),
             (getStyleMask() & RIGHT_TO_LEFT) != 0);
 
         overlay.prefButtonHeightProperty().bind(prefHeaderButtonHeightProperty());
