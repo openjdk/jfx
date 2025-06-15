@@ -40,8 +40,9 @@ package javafx.animation;
  *         </tr>
  *         <tr><td style="vertical-align: top"><a id="linear" style="white-space: nowrap">linear</a></td>
  *             <td>Two components are combined by linear interpolation such that the intermediate value is
- *                 produced by computing {@code (1 - t) * start + t * end}. This interpolation type is usually
- *                 applicable for numeric components.</td>
+ *                 produced by computing {@code (1 - t) * start + t * end}. Note that this formula produces
+ *                 values less than {@code start} for {@code t < 0} and values greater than {@code end} for
+ *                 {@code t > 1}. This interpolation type is usually applicable for numeric components.</td>
  *         </tr>
  *         <tr><td style="vertical-align: top"><a id="discrete" style="white-space: nowrap">discrete</a></td>
  *             <td>If two components cannot be meaningfully combined, the intermediate component value
