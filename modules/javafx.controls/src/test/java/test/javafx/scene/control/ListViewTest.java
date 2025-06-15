@@ -672,7 +672,7 @@ public class ListViewTest {
         ObservableList<String> mod = FXCollections.observableArrayList();
         String value = System.currentTimeMillis()+"";
         mod.add(value);
-        
+
         listView.setItems(mod);
         Toolkit.getToolkit().firePulse();
 
