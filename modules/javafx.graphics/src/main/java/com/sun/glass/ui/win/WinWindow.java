@@ -289,9 +289,6 @@ class WinWindow extends Window {
     @Override native protected void _setIcon(long ptr, Pixels pixels);
     @Override native protected void _toFront(long ptr);
     @Override native protected void _toBack(long ptr);
-    @Override native protected void _enterModal(long ptr);
-    @Override native protected void _enterModalWithWindow(long dialog, long window);
-    @Override native protected void _exitModal(long ptr);
     @Override native protected boolean _grabFocus(long ptr);
     @Override native protected void _ungrabFocus(long ptr);
     @Override native protected void _setCursor(long ptr, Cursor cursor);
