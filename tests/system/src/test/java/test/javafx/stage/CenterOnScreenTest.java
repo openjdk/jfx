@@ -57,8 +57,8 @@ class CenterOnScreenTest extends StageTestBase {
     }
 
     @ParameterizedTest(name = PARAMETERIZED_TEST_DISPLAY)
-    @EnumSource(names = {"DECORATED", "UNDECORATED", "TRANSPARENT"})
-    void testStageCenterOnScreenWhenShown(StageStyle stageStyle) {
+    @EnumSource(names = {"DECORATED", "EXTENDED", "UNDECORATED", "TRANSPARENT"})
+    void centerOnScreenWhenShown(StageStyle stageStyle) {
         setupStageWithStyle(stageStyle, stage -> {
             stage.setWidth(STAGE_WIDTH);
             stage.setHeight(STAGE_HEIGHT);
@@ -68,16 +68,16 @@ class CenterOnScreenTest extends StageTestBase {
     }
 
     @ParameterizedTest(name = PARAMETERIZED_TEST_DISPLAY)
-    @EnumSource(names = {"DECORATED", "UNDECORATED", "TRANSPARENT"})
-    void testStageCenterOnScreenWhenShownWithSceneSize(StageStyle stageStyle) {
+    @EnumSource(names = {"DECORATED", "EXTENDED", "UNDECORATED", "TRANSPARENT"})
+    void centerOnScreenWhenShownWithSceneSize(StageStyle stageStyle) {
         setupStageWithStyle(stageStyle, null);
         Util.sleep(MEDIUM_WAIT);
         assertStageCentered(stageStyle, true);
     }
 
     @ParameterizedTest(name = PARAMETERIZED_TEST_DISPLAY)
-    @EnumSource(names = {"DECORATED", "UNDECORATED", "TRANSPARENT"})
-    void testStageCenterOnScreenAfterShown(StageStyle stageStyle) {
+    @EnumSource(names = {"DECORATED", "EXTENDED", "UNDECORATED", "TRANSPARENT"})
+    void centerOnScreenAfterShown(StageStyle stageStyle) {
         setupStageWithStyle(stageStyle, stage -> {
             stage.setWidth(STAGE_WIDTH);
             stage.setHeight(STAGE_HEIGHT);
@@ -92,8 +92,8 @@ class CenterOnScreenTest extends StageTestBase {
     }
 
     @ParameterizedTest(name = PARAMETERIZED_TEST_DISPLAY)
-    @EnumSource(names = {"DECORATED", "UNDECORATED", "TRANSPARENT"})
-    void testStageCenterOnScreenAfterShownWithSceneSize(StageStyle stageStyle) {
+    @EnumSource(names = {"DECORATED", "EXTENDED", "UNDECORATED", "TRANSPARENT"})
+    void centerOnScreenAfterShownWithSceneSize(StageStyle stageStyle) {
         setupStageWithStyle(stageStyle, stage -> {
             stage.setX(0);
             stage.setY(0);
@@ -104,7 +104,6 @@ class CenterOnScreenTest extends StageTestBase {
         Util.sleep(MEDIUM_WAIT);
         assertStageCentered(stageStyle, true);
     }
-
 
     private void assertStageCentered(StageStyle stageStyle, boolean useSceneSize) {
         Screen screen = Util.getScreen(getStage());

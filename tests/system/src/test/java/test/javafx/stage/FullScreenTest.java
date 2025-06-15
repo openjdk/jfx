@@ -39,8 +39,8 @@ import static test.util.Util.PARAMETERIZED_TEST_DISPLAY;
 class FullScreenTest extends StageTestBase {
     private static final int POS_X = 100;
     private static final int POS_Y = 150;
-    private static final int WIDTH = 100;
-    private static final int HEIGHT = 150;
+    private static final int WIDTH = 200;
+    private static final int HEIGHT = 250;
 
     private static final Consumer<Stage> TEST_SETTINGS = s -> {
         s.setWidth(WIDTH);
@@ -50,8 +50,8 @@ class FullScreenTest extends StageTestBase {
     };
 
     @ParameterizedTest(name = PARAMETERIZED_TEST_DISPLAY)
-    @EnumSource(names = {"DECORATED", "UNDECORATED", "TRANSPARENT"})
-    void testFullScreenShouldKeepGeometryOnRestore(StageStyle stageStyle) {
+    @EnumSource(names = {"DECORATED", "UNDECORATED", "EXTENDED", "TRANSPARENT"})
+    void fullScreenShouldKeepGeometryOnRestore(StageStyle stageStyle) {
         setupStageWithStyle(stageStyle, TEST_SETTINGS);
 
         Util.doTimeLine(LONG_WAIT,
@@ -64,8 +64,8 @@ class FullScreenTest extends StageTestBase {
     }
 
     @ParameterizedTest(name = PARAMETERIZED_TEST_DISPLAY)
-    @EnumSource(names = {"DECORATED", "UNDECORATED", "TRANSPARENT"})
-    void testFullScreenBeforeShowShouldKeepGeometryOnRestore(StageStyle stageStyle) {
+    @EnumSource(names = {"DECORATED", "UNDECORATED", "EXTENDED", "TRANSPARENT"})
+    void fullScreenBeforeShowShouldKeepGeometryOnRestore(StageStyle stageStyle) {
         setupStageWithStyle(stageStyle, TEST_SETTINGS.andThen(s -> s.setFullScreen(true)));
 
         Util.sleep(LONG_WAIT);

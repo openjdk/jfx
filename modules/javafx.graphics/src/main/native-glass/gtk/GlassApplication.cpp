@@ -517,7 +517,6 @@ static void process_events(GdkEvent* event, gpointer data)
                     break;
                 case GDK_MOTION_NOTIFY:
                     ctx->process_mouse_motion(&event->motion);
-                    gdk_event_request_motions(&event->motion);
                     break;
                 case GDK_SCROLL:
                     ctx->process_mouse_scroll(&event->scroll);

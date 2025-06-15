@@ -52,7 +52,6 @@ class SizingTest extends StageTestBase {
     private static final int NEW_WIDTH = 450;
     private static final int NEW_HEIGHT = 450;
 
-
     protected Label createLabel(String prefix, ReadOnlyDoubleProperty property) {
         Label label = new Label();
         label.textProperty().bind(Bindings.concat(prefix, Bindings.convert(property)));
@@ -73,8 +72,8 @@ class SizingTest extends StageTestBase {
     }
 
     @ParameterizedTest(name = PARAMETERIZED_TEST_DISPLAY)
-    @EnumSource(names = {"DECORATED", "UNDECORATED", "TRANSPARENT", "UTILITY"})
-    void testMaxSize(StageStyle stageStyle) {
+    @EnumSource(names = {"DECORATED", "UNDECORATED", "EXTENDED", "TRANSPARENT", "UTILITY"})
+    void maxSize(StageStyle stageStyle) {
         setupStageWithStyle(stageStyle, s -> {
             s.setMaxWidth(MAX_WIDTH);
             s.setMaxHeight(MAX_HEIGHT);
@@ -111,8 +110,8 @@ class SizingTest extends StageTestBase {
     }
 
     @ParameterizedTest(name = PARAMETERIZED_TEST_DISPLAY)
-    @EnumSource(names = {"DECORATED", "UNDECORATED", "TRANSPARENT", "UTILITY"})
-    void testMaxWidth(StageStyle stageStyle) {
+    @EnumSource(names = {"DECORATED", "UNDECORATED", "EXTENDED", "TRANSPARENT", "UTILITY"})
+    void maxWidth(StageStyle stageStyle) {
         setupStageWithStyle(stageStyle, s -> {
             s.initStyle(stageStyle);
             s.setMaxWidth(MAX_WIDTH);
@@ -133,8 +132,8 @@ class SizingTest extends StageTestBase {
     }
 
     @ParameterizedTest(name = PARAMETERIZED_TEST_DISPLAY)
-    @EnumSource(names = {"DECORATED", "UNDECORATED", "TRANSPARENT", "UTILITY"})
-    void testMaxHeight(StageStyle stageStyle) {
+    @EnumSource(names = {"DECORATED", "UNDECORATED", "EXTENDED", "TRANSPARENT", "UTILITY"})
+    void maxHeight(StageStyle stageStyle) {
         setupStageWithStyle(stageStyle, s -> s.setMaxHeight(MAX_HEIGHT));
 
         Util.sleep(MEDIUM_WAIT);
@@ -152,8 +151,8 @@ class SizingTest extends StageTestBase {
     }
 
     @ParameterizedTest(name = PARAMETERIZED_TEST_DISPLAY)
-    @EnumSource(names = {"DECORATED", "UNDECORATED", "TRANSPARENT", "UTILITY"})
-    void testMinSize(StageStyle stageStyle) {
+    @EnumSource(names = {"DECORATED", "UNDECORATED", "EXTENDED", "TRANSPARENT", "UTILITY"})
+    void minSize(StageStyle stageStyle) {
         setupStageWithStyle(stageStyle, s -> {
             s.setMinWidth(MIN_WIDTH);
             s.setMinHeight(MIN_HEIGHT);
@@ -175,8 +174,8 @@ class SizingTest extends StageTestBase {
     }
 
     @ParameterizedTest(name = PARAMETERIZED_TEST_DISPLAY)
-    @EnumSource(names = {"DECORATED", "UNDECORATED", "TRANSPARENT", "UTILITY"})
-    void testMinWidth(StageStyle stageStyle) {
+    @EnumSource(names = {"DECORATED", "UNDECORATED", "EXTENDED", "TRANSPARENT", "UTILITY"})
+    void minWidth(StageStyle stageStyle) {
         setupStageWithStyle(stageStyle, s -> s.setMinWidth(MIN_WIDTH));
 
         Util.sleep(MEDIUM_WAIT);
@@ -194,8 +193,8 @@ class SizingTest extends StageTestBase {
     }
 
     @ParameterizedTest(name = PARAMETERIZED_TEST_DISPLAY)
-    @EnumSource(names = {"DECORATED", "UNDECORATED", "TRANSPARENT", "UTILITY"})
-    void testMinHeight(StageStyle stageStyle) {
+    @EnumSource(names = {"DECORATED", "UNDECORATED", "EXTENDED", "TRANSPARENT", "UTILITY"})
+    void minHeight(StageStyle stageStyle) {
         setupStageWithStyle(stageStyle, s -> s.setMinHeight(MIN_HEIGHT));
 
         Util.sleep(MEDIUM_WAIT);
@@ -213,8 +212,8 @@ class SizingTest extends StageTestBase {
     }
 
     @ParameterizedTest(name = PARAMETERIZED_TEST_DISPLAY)
-    @EnumSource(names = {"DECORATED", "UNDECORATED", "TRANSPARENT", "UTILITY"})
-    void testNoSize(StageStyle stageStyle) {
+    @EnumSource(names = {"DECORATED", "UNDECORATED", "EXTENDED", "TRANSPARENT", "UTILITY"})
+    void noSize(StageStyle stageStyle) {
         setupStageWithStyle(stageStyle, null);
 
         Util.sleep(MEDIUM_WAIT);
@@ -224,8 +223,8 @@ class SizingTest extends StageTestBase {
     }
 
     @ParameterizedTest(name = PARAMETERIZED_TEST_DISPLAY)
-    @EnumSource(names = {"DECORATED", "UNDECORATED", "TRANSPARENT", "UTILITY"})
-    void testNoHeight(StageStyle stageStyle) {
+    @EnumSource(names = {"DECORATED", "UNDECORATED", "EXTENDED", "TRANSPARENT", "UTILITY"})
+    void noHeight(StageStyle stageStyle) {
         setupStageWithStyle(stageStyle, s -> s.setWidth(WIDTH));
 
         Util.sleep(MEDIUM_WAIT);
@@ -235,8 +234,8 @@ class SizingTest extends StageTestBase {
     }
 
     @ParameterizedTest(name = PARAMETERIZED_TEST_DISPLAY)
-    @EnumSource(names = {"DECORATED", "UNDECORATED", "TRANSPARENT", "UTILITY"})
-    void testNoWidth(StageStyle stageStyle) {
+    @EnumSource(names = {"DECORATED", "UNDECORATED", "EXTENDED", "TRANSPARENT", "UTILITY"})
+    void noWidth(StageStyle stageStyle) {
         setupStageWithStyle(stageStyle, s -> s.setHeight(HEIGHT));
 
         Util.sleep(MEDIUM_WAIT);
@@ -246,7 +245,7 @@ class SizingTest extends StageTestBase {
     }
 
     @Test
-    void testSceneSizeOnly() {
+    void sceneSizeOnly() {
         setupStageWithStyle(StageStyle.DECORATED, s -> s.setScene(new Scene(new StackPane(), WIDTH, HEIGHT)));
 
         Util.sleep(MEDIUM_WAIT);
@@ -258,7 +257,7 @@ class SizingTest extends StageTestBase {
     }
 
     @Test
-    void testSceneWidthWithWindowHeight() {
+    void sceneWidthWithWindowHeight() {
         setupStageWithStyle(StageStyle.DECORATED, s -> {
             s.setScene(new Scene(new StackPane(), WIDTH, HEIGHT));
             s.setHeight(NEW_HEIGHT);
@@ -272,7 +271,7 @@ class SizingTest extends StageTestBase {
     }
 
     @Test
-    void testSceneHeightWithWindowWidth() {
+    void sceneHeightWithWindowWidth() {
         setupStageWithStyle(StageStyle.DECORATED, s -> {
             s.setScene(new Scene(new StackPane(), WIDTH, HEIGHT));
             s.setWidth(NEW_WIDTH);
@@ -286,7 +285,7 @@ class SizingTest extends StageTestBase {
     }
 
     @Test
-    void testSceneSizeThenStageSize() {
+    void sceneSizeThenStageSize() {
         setupStageWithStyle(StageStyle.DECORATED, s -> s.setScene(new Scene(new StackPane(), WIDTH, HEIGHT)));
 
         Util.sleep(MEDIUM_WAIT);

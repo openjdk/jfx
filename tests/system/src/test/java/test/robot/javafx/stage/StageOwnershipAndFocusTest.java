@@ -174,14 +174,14 @@ class StageOwnershipAndFocusTest extends VisualTestBase {
     }
 
     private static Stream<Arguments> getTestsParams() {
-        return Stream.of(StageStyle.DECORATED, StageStyle.UNDECORATED)
+        return Stream.of(StageStyle.DECORATED, StageStyle.UNDECORATED, StageStyle.EXTENDED)
                 .flatMap(stageStyle -> Stream.of(Modality.APPLICATION_MODAL, Modality.WINDOW_MODAL)
                         .map(modality -> Arguments.of(stageStyle, modality)));
     }
 
     @ParameterizedTest(name = PARAMETERIZED_TEST_DISPLAY)
     @MethodSource("getTestsParams")
-    void testOpeningModalChildStageWhileMaximizedShouldHaveFocus(StageStyle stageStyle, Modality modality)
+    void openingModalChildStageWhileMaximizedShouldHaveFocus(StageStyle stageStyle, Modality modality)
             throws InterruptedException {
         setupBottomStage();
         setupTopStage(bottomStage, stageStyle, modality);
@@ -201,7 +201,7 @@ class StageOwnershipAndFocusTest extends VisualTestBase {
 
     @ParameterizedTest(name = PARAMETERIZED_TEST_DISPLAY)
     @MethodSource("getTestsParams")
-    void testOpeningModalChildStageWhileFullSceenShouldHaveFocus(StageStyle stageStyle, Modality modality)
+    void openingModalChildStageWhileFullSceenShouldHaveFocus(StageStyle stageStyle, Modality modality)
             throws InterruptedException {
         setupBottomStage();
         setupTopStage(bottomStage, stageStyle, modality);
@@ -226,7 +226,7 @@ class StageOwnershipAndFocusTest extends VisualTestBase {
 
     @ParameterizedTest(name = PARAMETERIZED_TEST_DISPLAY)
     @MethodSource("getTestsParams")
-    void testClosingModalWindowShouldFocusParent(StageStyle style, Modality modality) {
+    void closingModalWindowShouldFocusParent(StageStyle style, Modality modality) {
         CountDownLatch shownLatch = new CountDownLatch(1);
         Util.runAndWait(() -> {
             stage0 = createStage(style, COLOR0, null, null, 100, 100);
@@ -263,8 +263,8 @@ class StageOwnershipAndFocusTest extends VisualTestBase {
     }
 
     @ParameterizedTest(name = PARAMETERIZED_TEST_DISPLAY)
-    @EnumSource(names = {"DECORATED", "UNDECORATED"})
-    void testIconifyParentShouldHideChildren(StageStyle style) {
+    @EnumSource(names = {"DECORATED", "UNDECORATED", "EXTENDED"})
+    void iconifyParentShouldHideChildren(StageStyle style) {
         CountDownLatch shownLatch = new CountDownLatch(3);
         Util.runAndWait(() -> {
             stage0 = createStage(style, COLOR0, null, null, 100, 100);
@@ -298,7 +298,7 @@ class StageOwnershipAndFocusTest extends VisualTestBase {
     }
 
     private static Stream<Arguments> getFullScreenOnChildTestParameters() {
-        return Stream.of(StageStyle.DECORATED)
+        return Stream.of(StageStyle.DECORATED, StageStyle.UNDECORATED, StageStyle.EXTENDED)
                 .flatMap(stageStyle -> Stream.of(Modality.NONE, Modality.WINDOW_MODAL)
                         .map(modality -> Arguments.of(stageStyle, modality)));
     }
@@ -306,7 +306,7 @@ class StageOwnershipAndFocusTest extends VisualTestBase {
 
     @ParameterizedTest(name = PARAMETERIZED_TEST_DISPLAY)
     @MethodSource("getFullScreenOnChildTestParameters")
-    void testFullScreenOnChildAfterShowShouldNotBeAllowed(StageStyle style, Modality modality) {
+    void fullScreenOnChildAfterShowShouldNotBeAllowed(StageStyle style, Modality modality) {
         CountDownLatch stage0Latch = new CountDownLatch(1);
         Util.runAndWait(() -> {
                     stage0 = createStage(style, COLOR0, null, null, 0, 0);
@@ -340,7 +340,7 @@ class StageOwnershipAndFocusTest extends VisualTestBase {
 
     @ParameterizedTest(name = PARAMETERIZED_TEST_DISPLAY)
     @MethodSource("getFullScreenOnChildTestParameters")
-    void testFullScreenOnChildBeforeShowShouldNotBeAllowed(StageStyle style, Modality modality) {
+    void fullScreenOnChildBeforeShowShouldNotBeAllowed(StageStyle style, Modality modality) {
         CountDownLatch stage0Latch = new CountDownLatch(1);
         Util.runAndWait(() -> {
                     stage0 = createStage(style, COLOR0, null, null, 0, 0);

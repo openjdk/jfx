@@ -51,8 +51,8 @@ class MaximizeTest extends StageTestBase {
     };
 
     @ParameterizedTest(name = PARAMETERIZED_TEST_DISPLAY)
-    @EnumSource(names = {"UNDECORATED", "TRANSPARENT"})
-    void testMaximizeUndecorated(StageStyle stageStyle) {
+    @EnumSource(names = {"UNDECORATED", "EXTENDED", "TRANSPARENT"})
+    void maximizeUndecorated(StageStyle stageStyle) {
         setupStageWithStyle(stageStyle, TEST_SETTINGS);
 
         Util.doTimeLine(SHORT_WAIT,
@@ -71,8 +71,8 @@ class MaximizeTest extends StageTestBase {
     }
 
     @ParameterizedTest(name = PARAMETERIZED_TEST_DISPLAY)
-    @EnumSource(names = {"DECORATED", "UNDECORATED", "TRANSPARENT"})
-    void testMaximizeShouldKeepGeometryOnRestore(StageStyle stageStyle) {
+    @EnumSource(names = {"DECORATED", "UNDECORATED", "EXTENDED", "TRANSPARENT"})
+    void maximizeShouldKeepGeometryOnRestore(StageStyle stageStyle) {
         setupStageWithStyle(stageStyle, TEST_SETTINGS);
 
         Util.doTimeLine(SHORT_WAIT,
@@ -85,8 +85,8 @@ class MaximizeTest extends StageTestBase {
     }
 
     @ParameterizedTest(name = PARAMETERIZED_TEST_DISPLAY)
-    @EnumSource(names = {"DECORATED", "UNDECORATED", "TRANSPARENT"})
-    void testMaximizeBeforeShowShouldKeepGeometryOnRestore(StageStyle stageStyle) {
+    @EnumSource(names = {"DECORATED", "UNDECORATED", "EXTENDED", "TRANSPARENT"})
+    void maximizeBeforeShowShouldKeepGeometryOnRestore(StageStyle stageStyle) {
         setupStageWithStyle(stageStyle, TEST_SETTINGS.andThen(s -> s.setMaximized(true)));
         Util.sleep(SHORT_WAIT);
 

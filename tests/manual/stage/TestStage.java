@@ -90,6 +90,8 @@ import javafx.scene.layout.HBox;
 import javafx.scene.layout.Priority;
 import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
+import javafx.scene.layout.HeaderBar;
+import javafx.scene.layout.HeaderDragType;
 import javafx.scene.paint.Color;
 import javafx.stage.FileChooser;
 import javafx.stage.Modality;
@@ -410,11 +412,23 @@ public class TestStage extends Application {
             ownerLabel.setText("Owner: " + owner.getTitle());
         }
 
-        VBox root = new VBox(createLabel("Focused: ", currentStage.focusedProperty()),
+        VBox root = new VBox();
+        if (currentStage.getStyle() == StageStyle.EXTENDED) {
+            HeaderBar headerbar = new HeaderBar();
+            Label headerLabel = new Label();
+            var headerPane = new StackPane(headerLabel);
+            headerLabel.textProperty().bind(currentStage.titleProperty());
+            headerbar.setCenter(headerPane);
+            headerbar.setDragType(headerPane, HeaderDragType.DRAGGABLE_SUBTREE);
+            root.getChildren().add(headerbar);
+        }
+
+        root.getChildren().addAll(createLabel("Focused: ", currentStage.focusedProperty()),
                             new Label("Modality: " + currentStage.getModality()),
                             ownerLabel,
                             createLabel("Last Event: ", lastEvent));
         root.setBackground(Background.EMPTY);
+
 
 
         if (currentStage.getStyle() == StageStyle.TRANSPARENT) {

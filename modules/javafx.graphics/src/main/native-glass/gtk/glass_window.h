@@ -28,6 +28,9 @@
 #define DEFAULT_WIDTH 320
 #define DEFAULT_HEIGHT 200
 
+#define GETTER(type, name) \
+    type get_##name() const { return name; }
+
 #include <gtk/gtk.h>
 #include <X11/Xlib.h>
 
@@ -43,7 +46,8 @@
 enum WindowFrameType {
     TITLED,
     UNTITLED,
-    TRANSPARENT
+    TRANSPARENT,
+    EXTENDED
 };
 
 enum WindowType {
@@ -103,19 +107,9 @@ private:
     static std::optional<GdkRectangle> normal_extents;
     static std::optional<GdkRectangle> utility_extents;
 
-    jlong screen;
-    WindowFrameType frame_type;
-    WindowType window_type;
-    struct WindowContext *owner;
-    WindowGeometry geometry;
-    struct _Resizable {
-        _Resizable(): value(true),
-                minw(-1), minh(-1), maxw(-1), maxh(-1) {}
-        bool value; //actual value of resizable for a window
-        int minw, minh, maxw, maxh; //minimum and maximum window width/height;
-    } resizable;
-
-    struct ImContext {
+    struct _ImContext {
+        _ImContext(): ctx(nullptr), enabled(false), on_preedit(false),
+                     send_keypress(false), on_key_event(false) {}
         GtkIMContext *ctx;
         bool enabled;
         bool on_preedit;
@@ -124,23 +118,40 @@ private:
     } im_ctx;
 
     size_t events_processing_cnt{};
-
     std::set<WindowContext*> children;
+
     jobject jwindow;
     jobject jview{};
 
+    struct WindowContext *owner;
+    jlong screen;
+
+    bool is_mouse_entered{false};
+    bool is_disabled{false};
+    bool on_top{false};
+    bool can_be_deleted{false};
+    bool mapped{false};
+    gint initial_state_mask{0};
+
+    WindowFrameType frame_type;
+    WindowType window_type;
+    WindowGeometry geometry;
+
+    struct _Resizable {
+        _Resizable(): value(true),
+                minw(-1), minh(-1), maxw(-1), maxh(-1), sysminw(-1), sysminh(-1) {}
+        bool value; //actual value of resizable for a window
+        int minw, minh, maxw, maxh; //minimum and maximum window width/height;
+        int sysminw, sysminh; // size of window button area of EXTENDED windows
+    } resizable;
     GdkWindow *gdk_window{};
+
     GdkWMFunction initial_wmf;
     GdkWMFunction current_wmf;
 
-    bool is_mouse_entered;
-    bool is_disabled;
-    bool on_top;
-    bool can_be_deleted;
-    bool mapped;
+    GdkCursor* gdk_cursor{};
+    GdkCursor* gdk_cursor_override{};
 
-    gint initial_state_mask;
-protected:
     /*
      * sm_grab_window points to WindowContext holding a mouse grab.
      * It is mostly used for popup windows.
@@ -159,9 +170,16 @@ protected:
      * should be reported during this drag.
      */
     static WindowContext* sm_mouse_drag_window;
-
 public:
-    WindowContext(jobject, WindowContext*, long, WindowFrameType, WindowType, GdkWMFunction);
+    WindowContext() = delete;
+    WindowContext(jobject, WindowContext* _owner, long _screen,
+                  WindowFrameType _frame_type, WindowType type, GdkWMFunction wmf);
+
+    GETTER(jobject, jwindow)
+    GETTER(jobject, jview)
+    GETTER(WindowFrameType, frame_type);
+    GETTER(WindowType, window_type);
+    GETTER(WindowGeometry, geometry);
 
     bool isEnabled();
     bool hasIME();
@@ -175,19 +193,19 @@ public:
     void paint(void*, jint, jint);
     GdkWindow *get_gdk_window();
     XID get_native_window();
-    jobject get_jwindow();
-    jobject get_jview();
 
     void add_child(WindowContext*);
     void remove_child(WindowContext*);
     void set_visible(bool);
     bool is_visible();
+    bool is_resizable();
     bool set_view(jobject);
     bool grab_focus();
     bool grab_mouse_drag_focus();
     void ungrab_focus();
     void ungrab_mouse_drag_focus();
     void set_cursor(GdkCursor*);
+    void set_cursor_override(GdkCursor*);
     void set_background(float, float, float);
 
     void process_map();
@@ -195,8 +213,8 @@ public:
     void process_focus(bool);
     void notify_repaint();
     void notify_repaint(GdkRectangle*);
-    void process_mouse_button(GdkEventButton*);
-    void process_mouse_motion(GdkEventMotion*);
+    virtual void process_mouse_button(GdkEventButton*, bool synthesized = false);
+    virtual void process_mouse_motion(GdkEventMotion*);
     void process_mouse_scroll(GdkEventScroll*);
     void process_mouse_cross(GdkEventCrossing*);
     void process_key(GdkEventKey*);
@@ -227,15 +245,17 @@ public:
     void set_icon(GdkPixbuf*);
     void to_front();
     void to_back();
-    void set_modal(bool, WindowContext* parent = NULL);
+    void set_modal(bool, WindowContext* parent = nullptr);
     void set_level(int);
     void set_owner(WindowContext*);
     void update_view_size();
     void enter_fullscreen();
     void exit_fullscreen();
     void update_initial_state();
+    void show_system_menu(int, int);
+    void set_system_minimum_size(int, int);
 
-    ~WindowContext();
+    virtual ~WindowContext();
 
 private:
     GdkVisual* find_best_visual();
@@ -264,6 +284,27 @@ private:
     bool effective_on_top();
 };
 
+class WindowContextExtended;
+
+class WindowContextExtended : public WindowContext {
+public:
+    WindowContextExtended(jobject jwin,
+                          WindowContext* owner,
+                          long screen,
+                          WindowFrameType frameType,
+                          WindowType windowType,
+                          GdkWMFunction wmf)
+        : WindowContext(jwin, owner, screen, frameType, windowType, wmf)
+    {
+        LOG("WindowContextExtended\n")
+    }
+
+public:
+    void process_mouse_button(GdkEventButton*, bool synthesized = false) override;
+    void process_mouse_motion(GdkEventMotion*) override;
+    bool get_window_edge(int x, int y, GdkWindowEdge*);
+};
+
 void destroy_and_delete_ctx(WindowContext* ctx);
 
 class EventsCounterHelper {
@@ -283,7 +324,7 @@ public:
                 LOG("EventsCounterHelper: delete ctx\n");
                 delete ctx;
             }
-            ctx = NULL;
+            ctx = nullptr;
         }
     }
 };

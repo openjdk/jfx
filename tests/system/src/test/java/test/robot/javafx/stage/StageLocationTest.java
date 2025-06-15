@@ -82,8 +82,8 @@ class StageLocationTest extends VisualTestBase {
     private Stage stage;
 
     @ParameterizedTest(name = PARAMETERIZED_TEST_DISPLAY)
-    @EnumSource(names = {"DECORATED", "UNDECORATED", "UTILITY"})
-    void testMove(StageStyle stageStyle) {
+    @EnumSource(names = {"DECORATED", "UNDECORATED",  "EXTENDED", "UTILITY"})
+    void moveXY(StageStyle stageStyle) {
         CountDownLatch shownLatch = new CountDownLatch(1);
         Util.runAndWait(() -> {
             stage = createStage(stageStyle);
@@ -106,8 +106,8 @@ class StageLocationTest extends VisualTestBase {
     }
 
     @ParameterizedTest(name = PARAMETERIZED_TEST_DISPLAY)
-    @EnumSource(names = {"DECORATED", "UNDECORATED", "UTILITY"})
-    void testMoveXAxis(StageStyle stageStyle) {
+    @EnumSource(names = {"DECORATED", "UNDECORATED", "EXTENDED", "UTILITY"})
+    void moveX(StageStyle stageStyle) {
         CountDownLatch shownLatch = new CountDownLatch(1);
         Util.runAndWait(() -> {
             stage = createStage(stageStyle);
@@ -127,8 +127,8 @@ class StageLocationTest extends VisualTestBase {
     }
 
     @ParameterizedTest(name = PARAMETERIZED_TEST_DISPLAY)
-    @EnumSource(names = {"DECORATED", "UNDECORATED", "UTILITY"})
-    void testMoveYAxis(StageStyle stageStyle) {
+    @EnumSource(names = {"DECORATED", "UNDECORATED", "EXTENDED", "UTILITY"})
+    void moveY(StageStyle stageStyle) {
         CountDownLatch shownLatch = new CountDownLatch(1);
         Util.runAndWait(() -> {
             stage = createStage(stageStyle);
@@ -149,8 +149,8 @@ class StageLocationTest extends VisualTestBase {
     }
 
     @ParameterizedTest(name = PARAMETERIZED_TEST_DISPLAY)
-    @EnumSource(names = {"DECORATED", "UNDECORATED", "UTILITY"})
-    void testMoveAfterShow(StageStyle stageStyle) {
+    @EnumSource(names = {"DECORATED", "UNDECORATED", "EXTENDED", "UTILITY"})
+    void moveAfterShow(StageStyle stageStyle) {
         CountDownLatch shownLatch = new CountDownLatch(1);
         Util.runAndWait(() -> {
             stage = createStage(stageStyle);

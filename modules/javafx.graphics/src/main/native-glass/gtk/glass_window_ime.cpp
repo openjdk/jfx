@@ -147,7 +147,7 @@ void WindowContext::updateCaretPos() {
                                       jViewNotifyInputMethodCandidateRelativePosRequest,
                                       0);
 
-    nativePos = mainEnv->GetDoubleArrayElements(pos, NULL);
+    nativePos = mainEnv->GetDoubleArrayElements(pos, nullptr);
 
     GdkRectangle rect;
     if (nativePos) {
@@ -186,9 +186,9 @@ void WindowContext::enableOrResetIME() {
 }
 
 void WindowContext::disableIME() {
-    if (im_ctx.ctx != NULL) {
+    if (im_ctx.ctx != nullptr) {
         g_object_unref(im_ctx.ctx);
-        im_ctx.ctx = NULL;
+        im_ctx.ctx = nullptr;
     }
 
     im_ctx.enabled = false;
