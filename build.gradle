@@ -2886,7 +2886,7 @@ project(":incubator.input") {
     modulePath += File.pathSeparator + "${rootProject.projectDir}/modules/javafx.graphics/build/classes/java/main"
     modulePath += File.pathSeparator + "${rootProject.projectDir}/modules/javafx.base/build/classes/java/main"
 
-    addMavenPublication(project, [ 'graphics' , 'controls'])
+    addMavenPublication(project, [ 'controls' ])
 
     addValidateSourceSets(project, sourceSets)
 }
@@ -2945,7 +2945,7 @@ project(":incubator.richtext") {
     modulePath += File.pathSeparator + "${rootProject.projectDir}/modules/javafx.graphics/build/classes/java/main"
     modulePath += File.pathSeparator + "${rootProject.projectDir}/modules/javafx.base/build/classes/java/main"
 
-    addMavenPublication(project, [ 'graphics' , 'controls'])
+    addMavenPublication(project, [ 'controls', 'incubator.input' ])
 
     addValidateSourceSets(project, sourceSets)
 }
