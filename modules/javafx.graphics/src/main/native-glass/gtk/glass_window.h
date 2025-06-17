@@ -70,7 +70,8 @@ struct WindowGeometry {
     height{-1, -1, BOUNDSTYPE_UNKNOWN},
     x(-1), y(-1), view_x(0), view_y(0),
     gravity_x(), gravity_y(),
-    extents(), frame_extents_received(false),
+    extents{0, 0, 0, 0},
+    frame_extents_received(false),
     needs_to_update_frame_extents(false) {}
 
     struct {
@@ -199,6 +200,7 @@ public:
     void remove_child(WindowContext*);
     void set_visible(bool);
     bool is_visible();
+    bool is_iconified();
     bool is_resizable();
     bool is_maximized();
     bool is_fullscreen();

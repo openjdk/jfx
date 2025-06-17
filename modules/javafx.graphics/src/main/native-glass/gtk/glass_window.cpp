@@ -82,6 +82,7 @@ static bool gdk_visual_is_rgba(GdkVisual *visual) {
             && blue_mask == 0x0000ff);
 }
 
+// Iconified not considered here
 static bool is_state_floating(GdkWindowState state) {
     return (state & (GDK_WINDOW_STATE_MAXIMIZED | GDK_WINDOW_STATE_FULLSCREEN)) == 0;
 }
@@ -992,7 +993,7 @@ void WindowContext::process_state(GdkEventWindowState *event) {
         notify_fullscreen(event->new_window_state & GDK_WINDOW_STATE_FULLSCREEN);
     }
 
-    notify_view_resize();
+    //notify_view_resize();
 
     // Since FullScreen (or custom modes of maximized) can undecorate the
     // window, request view position change
@@ -1049,11 +1050,9 @@ void WindowContext::notify_view_resize() {
 }
 
 void WindowContext::notify_current_sizes() {
-    GdkWindowState state = gdk_window_get_state(gdk_window);
-
-    notify_window_resize((state & GDK_WINDOW_STATE_MAXIMIZED)
-                                ? com_sun_glass_events_WindowEvent_MAXIMIZE
-                                : com_sun_glass_events_WindowEvent_RESIZE);
+    notify_window_resize(is_maximized()
+                            ? com_sun_glass_events_WindowEvent_MAXIMIZE
+                            : com_sun_glass_events_WindowEvent_RESIZE);
 
     notify_view_resize();
 }
@@ -1071,13 +1070,7 @@ void WindowContext::process_configure(GdkEventConfigure *event) {
     LOG("Configure Event - send_event: %d, x: %d, y: %d, width: %d, height: %d\n",
             event->send_event, event->x, event->y, event->width, event->height);
 
-    GdkWindowState state = gdk_window_get_state(gdk_window);
-
-    if (state & GDK_WINDOW_STATE_ICONIFIED) {
-        return;
-    }
-
-    if (!event->send_event) {
+    if (mapped && !event->send_event) {
         gdk_window_invalidate_rect(gdk_window, nullptr, false);
     }
 
@@ -1097,7 +1090,7 @@ void WindowContext::process_configure(GdkEventConfigure *event) {
         x = root_x;
         y = root_y;
 
-        view_moved = !mapped || view_x != geometry.view_x || view_y != geometry.view_y;
+        view_moved = view_x != geometry.view_x || view_y != geometry.view_y;
         geometry.view_x = view_x;
         geometry.view_y = view_y;
     } else {
@@ -1105,7 +1098,7 @@ void WindowContext::process_configure(GdkEventConfigure *event) {
         y = event->y;
     }
 
-    bool window_moved = !mapped || x != geometry.x || y != geometry.y;
+    bool moved = (x != geometry.x) || (y != geometry.y);
 
     int ww = event->width;
     int wh = event->height;
@@ -1119,7 +1112,6 @@ void WindowContext::process_configure(GdkEventConfigure *event) {
         wh += geometry.extents.height;
     }
 
-    bool window_resized = !mapped || ww != geometry.width.window || wh != geometry.height.window;
 
     if (mapped) {
         geometry.x = x;
@@ -1128,20 +1120,14 @@ void WindowContext::process_configure(GdkEventConfigure *event) {
         geometry.height.view = event->height;
         geometry.width.window = ww;
         geometry.height.window = wh;
+
+        notify_window_move();
+        notify_current_sizes();
+
+        if (view_moved) {
+            notify_view_move();
+        }
     }
-
-    LOG("resized: %d, moved: %d, view_moved: %d\n", window_resized, window_moved, view_moved);
-
-    if (window_moved) notify_window_move();
-
-    if (window_resized) {
-        notify_window_resize((state & GDK_WINDOW_STATE_MAXIMIZED)
-                                ? com_sun_glass_events_WindowEvent_MAXIMIZE
-                                : com_sun_glass_events_WindowEvent_RESIZE);
-        notify_view_resize();
-    }
-
-    if (view_moved) notify_view_move();
 
     glong to_screen = getScreenPtrForLocation(event->x, event->y);
     if (to_screen != -1 && to_screen != screen) {
@@ -1212,6 +1198,10 @@ bool WindowContext::is_fullscreen() {
     return gdk_window_get_state(gdk_window) & GDK_WINDOW_STATE_FULLSCREEN;
 }
 
+bool WindowContext::is_iconified() {
+    return gdk_window_get_state(gdk_window) & GDK_WINDOW_STATE_ICONIFIED;
+}
+
 bool WindowContext::is_floating() {
     return is_state_floating(gdk_window_get_state(gdk_window));
 }
@@ -1266,8 +1256,9 @@ void WindowContext::set_bounds(int x, int y, bool xSet, bool ySet, int w, int h,
         newH = ch;
     }
 
-    // Ignore when maximized / fullscreen
-    if (!is_floating()) {
+    // Ignore when maximized / fullscreen (not floating)
+    // Report back to java to correct the values
+    if (mapped && !is_floating()) {
         notify_current_sizes();
         notify_window_move();
         return;
