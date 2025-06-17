@@ -65,7 +65,8 @@ public final class HeaderButtonBehavior implements EventHandler<Event> {
         if (type != HeaderButtonType.CLOSE) {
             subscription = Subscription.combine(subscription,
                 stage.subscribe(this::onStageChanged),
-                stage.flatMap(Stage::resizableProperty).subscribe(this::onResizableChanged));
+                stage.flatMap(Stage::resizableProperty).subscribe(this::onResizableChanged),
+                () -> { if (getStage() instanceof Stage s) s.removeEventFilter(WindowEvent.WINDOW_SHOWING, this); });
         }
 
         if (type == HeaderButtonType.MAXIMIZE) {
@@ -84,10 +85,6 @@ public final class HeaderButtonBehavior implements EventHandler<Event> {
 
     public void dispose() {
         subscription.unsubscribe();
-
-        if (getStage() instanceof Stage stage) {
-            stage.removeEventFilter(WindowEvent.WINDOW_SHOWING, this);
-        }
     }
 
     @Override
