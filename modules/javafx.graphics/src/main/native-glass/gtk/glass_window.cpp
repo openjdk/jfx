@@ -82,9 +82,9 @@ static bool gdk_visual_is_rgba(GdkVisual *visual) {
             && blue_mask == 0x0000ff);
 }
 
-static gboolean is_window_floating(GdkWindowState state) {
-    return !(state & GDK_WINDOW_STATE_MAXIMIZED)
-        && !(state & GDK_WINDOW_STATE_FULLSCREEN);
+static bool is_state_floating(GdkWindowState state) {
+    return (state & GDK_WINDOW_STATE_MAXIMIZED) == 0
+            && (state & GDK_WINDOW_STATE_FULLSCREEN) == 0;
 }
 
 static inline jint gdk_button_number_to_mouse_button(guint button) {
@@ -819,7 +819,7 @@ void WindowContext::update_frame_extents() {
             GdkRectangle rect = { left, top, (left + right), (top + bottom) };
             set_cached_extents(rect);
 
-            if (!is_window_floating(gdk_window_get_state(gdk_window))) {
+            if (!is_floating()) {
                 // Delay for then window is restored
                 geometry.needs_to_update_frame_extents = true;
                 LOG("Frame extents will be updated on restore");
@@ -1137,8 +1137,7 @@ void WindowContext::process_configure(GdkEventConfigure *event) {
 void WindowContext::update_window_constraints() {
     LOG("update_window_constraints\n")
     // Not ready to re-apply the constraints
-    if (!is_window_floating(gdk_window_get_state(gdk_window))
-        || !is_window_floating((GdkWindowState) initial_state_mask)) {
+    if (!is_floating() || !is_state_floating((GdkWindowState) initial_state_mask)) {
         LOG("not floating: update_window_constraints ignored\n");
         return;
     }
@@ -1181,6 +1180,18 @@ void WindowContext::set_resizable(bool res) {
 
 bool WindowContext::is_resizable() {
     return resizable.value;
+}
+
+bool WindowContext::is_maximized() {
+    return gdk_window_get_state(gdk_window) & GDK_WINDOW_STATE_MAXIMIZED;
+}
+
+bool WindowContext::is_fullscreen() {
+    return gdk_window_get_state(gdk_window) & GDK_WINDOW_STATE_FULLSCREEN;
+}
+
+bool WindowContext::is_floating() {
+    return is_state_floating(gdk_window_get_state(gdk_window));
 }
 
 void WindowContext::set_visible(bool visible) {
@@ -1233,10 +1244,8 @@ void WindowContext::set_bounds(int x, int y, bool xSet, bool ySet, int w, int h,
         newH = ch;
     }
 
-    GdkWindowState state = gdk_window_get_state(gdk_window);
-
     // Ignore when maximized / fullscreen
-    if (!is_window_floating(state)) {
+    if (!is_floating()) {
         notify_current_sizes();
         notify_window_move();
         return;
@@ -1560,6 +1569,14 @@ WindowContext::~WindowContext() {
     gdk_window_destroy(gdk_window);
 }
 
+
+WindowContextExtended::WindowContextExtended(jobject jwin,
+                                             WindowContext* owner,
+                                             long screen,
+                                             GdkWMFunction wmf)
+                           : WindowContext(jwin, owner, screen, EXTENDED, NORMAL, wmf) {
+}
+
 /*
  * Handles mouse button events of EXTENDED windows and adds the window behaviors for non-client
  * regions that are usually provided by the window manager. Note that a full-screen window has
@@ -1569,9 +1586,7 @@ void WindowContextExtended::process_mouse_button(GdkEventButton* event, bool syn
     LOG("WindowContextExtended::process_mouse_button\n");
     // Non-EXTENDED or full-screen windows don't have additional behaviors, so we delegate
     // directly to the base implementation.
-    GdkWindowState state = gdk_window_get_state(get_gdk_window());
-    bool is_maximized = (state & GDK_WINDOW_STATE_MAXIMIZED);
-    if (is_maximized || get_frame_type() != EXTENDED || get_jwindow() == nullptr) {
+    if (is_fullscreen() || get_frame_type() != EXTENDED || get_jwindow() == nullptr) {
         WindowContext::process_mouse_button(event);
         return;
     }
@@ -1583,7 +1598,7 @@ void WindowContextExtended::process_mouse_button(GdkEventButton* event, bool syn
         CHECK_JNI_EXCEPTION(mainEnv);
 
         if (dragArea) {
-            set_maximized(!is_maximized);
+            set_maximized(!is_maximized());
         }
 
         // We don't process the GDK_2BUTTON_PRESS event in the base implementation.
@@ -1592,7 +1607,7 @@ void WindowContextExtended::process_mouse_button(GdkEventButton* event, bool syn
 
     if (event->button == 1 && event->type == GDK_BUTTON_PRESS) {
         GdkWindowEdge edge;
-        bool shouldStartResizeDrag = is_resizable() && !is_maximized && get_window_edge(event->x, event->y, &edge);
+        bool shouldStartResizeDrag = is_resizable() && !is_maximized() && get_window_edge(event->x, event->y, &edge);
 
         // Clicking on a window edge starts a move-resize operation.
         if (shouldStartResizeDrag) {
@@ -1640,10 +1655,10 @@ void WindowContextExtended::process_mouse_motion(GdkEventMotion* event) {
     GdkWindowEdge edge;
 
     // Call the base implementation for client area events.
-    if (get_frame_type() != EXTENDED
-        || !is_window_floating(gdk_window_get_state(get_gdk_window()))
-        || !is_resizable()
-        || !get_window_edge(event->x, event->y, &edge)) {
+    if (!is_floating()
+            || get_frame_type() != EXTENDED
+            || !is_resizable()
+            || !get_window_edge(event->x, event->y, &edge)) {
         set_cursor_override(nullptr);
         WindowContext::process_mouse_motion(event);
         return;
@@ -1687,20 +1702,23 @@ void WindowContextExtended::process_mouse_motion(GdkEventMotion* event) {
  */
 bool WindowContextExtended::get_window_edge(int x, int y, GdkWindowEdge* window_edge) {
     GdkWindowEdge edge;
+    gint width, height;
 
     WindowGeometry geometry = get_geometry();
+    width = geometry.width.view;
+    height = geometry.height.view;
 
     if (x <= RESIZE_BORDER_WIDTH) {
         if (y <= 2 * RESIZE_BORDER_WIDTH) edge = GDK_WINDOW_EDGE_NORTH_WEST;
-        else if (y >= geometry.height.view - 2 * RESIZE_BORDER_WIDTH) edge = GDK_WINDOW_EDGE_SOUTH_WEST;
+        else if (y >= height - 2 * RESIZE_BORDER_WIDTH) edge = GDK_WINDOW_EDGE_SOUTH_WEST;
         else edge = GDK_WINDOW_EDGE_WEST;
-    } else if (x >= geometry.width.view - RESIZE_BORDER_WIDTH) {
+    } else if (x >= width - RESIZE_BORDER_WIDTH) {
         if (y <= 2 * RESIZE_BORDER_WIDTH) edge = GDK_WINDOW_EDGE_NORTH_EAST;
-        else if (y >= geometry.height.view - 2 * RESIZE_BORDER_WIDTH) edge = GDK_WINDOW_EDGE_SOUTH_EAST;
+        else if (y >= height - 2 * RESIZE_BORDER_WIDTH) edge = GDK_WINDOW_EDGE_SOUTH_EAST;
         else edge = GDK_WINDOW_EDGE_EAST;
     } else if (y <= RESIZE_BORDER_WIDTH) {
         edge = GDK_WINDOW_EDGE_NORTH;
-    } else if (y >= geometry.height.view - RESIZE_BORDER_WIDTH) {
+    } else if (y >= height - RESIZE_BORDER_WIDTH) {
         edge = GDK_WINDOW_EDGE_SOUTH;
     } else {
         return false;

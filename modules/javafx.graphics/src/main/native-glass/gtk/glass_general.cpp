@@ -29,6 +29,7 @@
 #include <X11/Xlib.h>
 
 char const * const GDK_WINDOW_DATA_CONTEXT = "glass_window_context";
+char const * const GDK_WINDOW_DATA_EDGE = "glass_window_edge";
 
 jclass jStringCls;
 jclass jByteBufferCls;

@@ -101,6 +101,7 @@ struct WindowGeometry {
 };
 
 class WindowContext;
+class WindowContextExtended;
 
 class WindowContext: public DeletedMemDebug<0xCC> {
 private:
@@ -199,11 +200,12 @@ public:
     void set_visible(bool);
     bool is_visible();
     bool is_resizable();
+    bool is_maximized();
+    bool is_fullscreen();
+    bool is_floating();
     bool set_view(jobject);
     bool grab_focus();
-    bool grab_mouse_drag_focus();
     void ungrab_focus();
-    void ungrab_mouse_drag_focus();
     void set_cursor(GdkCursor*);
     void set_cursor_override(GdkCursor*);
     void set_background(float, float, float);
@@ -251,7 +253,6 @@ public:
     void update_view_size();
     void enter_fullscreen();
     void exit_fullscreen();
-    void update_initial_state();
     void show_system_menu(int, int);
     void set_system_minimum_size(int, int);
 
@@ -282,27 +283,25 @@ private:
     void update_ontop_tree(bool);
     bool on_top_inherited();
     bool effective_on_top();
-};
 
-class WindowContextExtended;
+    void update_initial_state();
+    bool grab_mouse_drag_focus();
+    void ungrab_mouse_drag_focus();
+};
 
 class WindowContextExtended : public WindowContext {
 public:
+    WindowContextExtended() = delete;
     WindowContextExtended(jobject jwin,
                           WindowContext* owner,
                           long screen,
-                          WindowFrameType frameType,
-                          WindowType windowType,
-                          GdkWMFunction wmf)
-        : WindowContext(jwin, owner, screen, frameType, windowType, wmf)
-    {
-        LOG("WindowContextExtended\n")
-    }
+                          GdkWMFunction wmf);
 
-public:
     void process_mouse_button(GdkEventButton*, bool synthesized = false) override;
     void process_mouse_motion(GdkEventMotion*) override;
-    bool get_window_edge(int x, int y, GdkWindowEdge*);
+
+private:
+    bool get_window_edge(int, int, GdkWindowEdge*);
 };
 
 void destroy_and_delete_ctx(WindowContext* ctx);
