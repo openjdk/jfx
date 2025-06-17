@@ -993,9 +993,12 @@ void WindowContext::process_state(GdkEventWindowState *event) {
     }
 
     notify_view_resize();
+
     // Since FullScreen (or custom modes of maximized) can undecorate the
     // window, request view position change
-    notify_view_move();
+    if (frame_type == TITLED) {
+        notify_view_move();
+    }
 
     bool restored = (event->changed_mask & (GDK_WINDOW_STATE_MAXIMIZED | GDK_WINDOW_STATE_FULLSCREEN))
                     && ((event->new_window_state & (GDK_WINDOW_STATE_MAXIMIZED | GDK_WINDOW_STATE_FULLSCREEN)) == 0);
@@ -1078,16 +1081,31 @@ void WindowContext::process_configure(GdkEventConfigure *event) {
         gdk_window_invalidate_rect(gdk_window, nullptr, false);
     }
 
-    int root_x, root_y, origin_x, origin_y;
-    gdk_window_get_root_origin(gdk_window, &root_x, &root_y);
-    gdk_window_get_origin(gdk_window, &origin_x, &origin_y);
+    int x, y;
+    bool view_moved = false;
 
-    // view_x and view_y represent the position of the content relative to the left corner of the window,
-    // taking into account window decorations (such as title bars and borders) applied by the window manager
-    // and might vary by window state.
-    geometry.view_x = origin_x - root_x;
-    geometry.view_y = origin_y - root_y;
-    LOG("view x, y: %d, %d\n", geometry.view_x, geometry.view_y);
+    if (frame_type == TITLED) {
+        // view_x and view_y represent the position of the content relative to the left corner of the window,
+        // taking into account window decorations (such as title bars and borders) applied by the window manager
+        // and might vary by window state.
+        int root_x, root_y;
+        gdk_window_get_root_origin(gdk_window, &root_x, &root_y);
+
+        int view_x = event->x - root_x;
+        int view_y = event->y - root_y;
+
+        x = root_x;
+        y = root_y;
+
+        view_moved = !mapped || view_x != geometry.view_x || view_y != geometry.view_y;
+        geometry.view_x = view_x;
+        geometry.view_y = view_y;
+    } else {
+        x = event->x;
+        y = event->y;
+    }
+
+    bool window_moved = !mapped || x != geometry.x || y != geometry.y;
 
     int ww = event->width;
     int wh = event->height;
@@ -1101,22 +1119,29 @@ void WindowContext::process_configure(GdkEventConfigure *event) {
         wh += geometry.extents.height;
     }
 
+    bool window_resized = !mapped || ww != geometry.width.window || wh != geometry.height.window;
+
     if (mapped) {
-        geometry.x = root_x;
-        geometry.y = root_y;
+        geometry.x = x;
+        geometry.y = y;
         geometry.width.view = event->width;
         geometry.height.view = event->height;
         geometry.width.window = ww;
         geometry.height.window = wh;
     }
 
-    notify_window_resize((state & GDK_WINDOW_STATE_MAXIMIZED)
-                            ? com_sun_glass_events_WindowEvent_MAXIMIZE
-                            : com_sun_glass_events_WindowEvent_RESIZE);
-    notify_view_resize();
+    LOG("resized: %d, moved: %d, view_moved: %d\n", window_resized, window_moved, view_moved);
 
-    notify_window_move();
-    notify_view_move();
+    if (window_moved) notify_window_move();
+
+    if (window_resized) {
+        notify_window_resize((state & GDK_WINDOW_STATE_MAXIMIZED)
+                                ? com_sun_glass_events_WindowEvent_MAXIMIZE
+                                : com_sun_glass_events_WindowEvent_RESIZE);
+        notify_view_resize();
+    }
+
+    if (view_moved) notify_view_move();
 
     glong to_screen = getScreenPtrForLocation(event->x, event->y);
     if (to_screen != -1 && to_screen != screen) {
