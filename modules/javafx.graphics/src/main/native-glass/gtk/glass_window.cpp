@@ -83,8 +83,7 @@ static bool gdk_visual_is_rgba(GdkVisual *visual) {
 }
 
 static bool is_state_floating(GdkWindowState state) {
-    return (state & GDK_WINDOW_STATE_MAXIMIZED) == 0
-            && (state & GDK_WINDOW_STATE_FULLSCREEN) == 0;
+    return (state & (GDK_WINDOW_STATE_MAXIMIZED | GDK_WINDOW_STATE_FULLSCREEN)) == 0;
 }
 
 static inline jint gdk_button_number_to_mouse_button(guint button) {
@@ -489,8 +488,6 @@ void WindowContext::process_mouse_motion(GdkEventMotion *event) {
                 JNI_FALSE);
         CHECK_JNI_EXCEPTION(mainEnv)
     }
-
-    gdk_event_request_motions(event);
 }
 
 void WindowContext::process_mouse_scroll(GdkEventScroll *event) {
