@@ -43,11 +43,14 @@ import javafx.scene.text.CaretInfo;
 import javafx.scene.text.Font;
 import javafx.scene.text.LayoutInfo;
 import javafx.scene.text.Text;
+import javafx.scene.text.TextFlow;
 import javafx.scene.text.TextLineInfo;
 import javafx.stage.Stage;
 import javafx.stage.StageStyle;
 import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import test.util.Util;
 
