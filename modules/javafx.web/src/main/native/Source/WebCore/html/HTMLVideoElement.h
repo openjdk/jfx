@@ -192,8 +192,7 @@ private:
         }
 
         unsigned identifier { 0 };
-        Ref<VideoFrameRequestCallback> callback;
-        bool cancelled { false };
+        RefPtr<VideoFrameRequestCallback> callback;
     };
     Vector<UniqueRef<VideoFrameRequest>> m_videoFrameRequests;
     Vector<UniqueRef<VideoFrameRequest>> m_servicedVideoFrameRequests;

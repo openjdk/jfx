@@ -164,6 +164,11 @@ public class TreeTableViewSkin<T> extends TableViewSkinBase<T, TreeItem<T>, Tree
             }
             // fix for JDK-8094887
             control.edit(-1, null);
+
+            if (root == null || root.getValue() == null) {
+                requestRebuildCells();
+            }
+
             updateItemCount();
         });
 

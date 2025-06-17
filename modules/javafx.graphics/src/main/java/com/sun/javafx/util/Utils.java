@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -36,6 +36,9 @@ import javafx.geometry.VPos;
 import javafx.scene.Node;
 import javafx.scene.Scene;
 import javafx.scene.paint.Color;
+import javafx.scene.paint.LinearGradient;
+import javafx.scene.paint.Paint;
+import javafx.scene.paint.RadialGradient;
 import javafx.scene.paint.Stop;
 import javafx.stage.Screen;
 import javafx.stage.Stage;
@@ -215,10 +218,35 @@ public class Utils {
      **************************************************************************/
 
     /**
-     * Calculates a perceptual brightness for a color between 0.0 black and 1.0 while
+     * Calculates a perceptual brightness for a color between 0.0 (black) and 1.0 (white).
      */
     public static double calculateBrightness(Color color) {
           return  (0.3*color.getRed()) + (0.59*color.getGreen()) + (0.11*color.getBlue());
+    }
+
+    /**
+     * Calculates an average perceptual brightness for a paint between 0.0 (black) and 1.0 (white).
+     * <p>
+     * The average brightness of gradient paints only takes into account the colors of gradient stops,
+     * but not the distribution of the gradient stops across the paint area.
+     * <p>
+     * The brightness of {@code ImagePattern} paints is 1.0 by convention.
+     */
+    public static double calculateAverageBrightness(Paint paint) {
+        return switch (paint) {
+            case Color color -> calculateBrightness(color);
+            case LinearGradient gradient -> calculateAverageGradientBrightness(gradient.getStops());
+            case RadialGradient gradient -> calculateAverageGradientBrightness(gradient.getStops());
+            default -> 1.0;
+        };
+    }
+
+    private static double calculateAverageGradientBrightness(List<Stop> stops) {
+        return stops.stream()
+            .map(Stop::getColor)
+            .mapToDouble(Utils::calculateBrightness)
+            .average()
+            .orElse(1.0);
     }
 
     /**

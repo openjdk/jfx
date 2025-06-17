@@ -58,6 +58,9 @@ public:
 private:
     MutationEvent();
     MutationEvent(const AtomString& type, CanBubble, IsCancelable, Node* relatedNode, const String& prevValue, const String& newValue);
+#if PLATFORM(JAVA) // FIXME-java: used in JavaEvent.cpp, or enable RTTI
+    bool isMutationEvent() const override final { return true; }
+#endif
 
     RefPtr<Node> m_relatedNode;
     String m_prevValue;

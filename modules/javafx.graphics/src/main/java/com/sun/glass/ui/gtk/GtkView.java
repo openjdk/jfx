@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -24,8 +24,10 @@
  */
 package com.sun.glass.ui.gtk;
 
+import com.sun.glass.ui.HeaderButtonOverlay;
 import com.sun.glass.ui.Pixels;
 import com.sun.glass.ui.View;
+import com.sun.javafx.tk.HeaderAreaType;
 
 import java.nio.Buffer;
 import java.nio.ByteBuffer;
@@ -135,5 +137,35 @@ final class GtkView extends View {
 
             notifyInputMethod(str, attBounds, attBounds, attValues, 0, cursor, 0);
         }
+    }
+
+    @Override
+    protected void notifyMenu(int x, int y, int xAbs, int yAbs, boolean isKeyboardTrigger) {
+        // If all of the following conditions are satisfied, we open a system menu at the specified coordinates:
+        // 1. The application didn't consume the menu event.
+        // 2. The window is an EXTENDED window and is not in full-screen mode.
+        // 3. The menu event occurred on a draggable area.
+        if (!handleMenuEvent(x, y, xAbs, yAbs, isKeyboardTrigger)) {
+            var window = (GtkWindow)getWindow();
+            if (!window.isExtendedWindow() || isInFullscreen()) {
+                return;
+            }
+
+            double wx = x / window.getPlatformScaleX();
+            double wy = y / window.getPlatformScaleY();
+
+            EventHandler eventHandler = getEventHandler();
+            if (eventHandler != null && eventHandler.pickHeaderArea(wx, wy) == HeaderAreaType.DRAGBAR) {
+                window.showSystemMenu(x, y);
+            }
+        }
+    }
+
+    @Override
+    protected boolean handleNonClientMouseEvent(long time, int type, int button, int x, int y, int xAbs, int yAbs,
+                                                int modifiers, int clickCount) {
+        return getWindow() instanceof GtkWindow window
+            && window.headerButtonOverlayProperty().get() instanceof HeaderButtonOverlay overlay
+            && overlay.handleMouseEvent(type, button, x / window.getPlatformScaleX(), y / window.getPlatformScaleY());
     }
 }

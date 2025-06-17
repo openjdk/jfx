@@ -2,7 +2,7 @@
 
 <!--
 /*
- * Copyright (c) 2012, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -737,7 +737,7 @@
         <th class="propertyname" scope="row">transition</th>
         <td class="value">
             &lt;single-transition&gt;#
-            <br/><br/>
+            <br><br>
             <strong>where</strong> &lt;single&#8209;transition&gt; = [ none | all | &lt;custom&#8209;ident&gt; ] ||
             <a href="#typeduration" class="typelink">&lt;duration&gt;</a> ||
             <a href="#typeeasingfunction" class="typelink">&lt;easing&#8209;function&gt;</a> ||
@@ -765,14 +765,14 @@
     <h4>Example</h4>
     <p>A button that smoothly changes its opacity on mouse-hover can be defined in a stylesheet like this:</p>
     <p class="example">
-        .button {</br>
-        &nbsp;&nbsp;&nbsp; -fx-opacity: 0.8;</br>
-        &nbsp;&nbsp;&nbsp; transition-property: -fx-opacity;</br>
-        &nbsp;&nbsp;&nbsp; transition-duration: 0.5s;</br>
-        }</br>
-        </br>
-        .button:hover {</br>
-        &nbsp;&nbsp;&nbsp; -fx-opacity: 1;</br>
+        .button {<br>
+        &nbsp;&nbsp;&nbsp; -fx-opacity: 0.8;<br>
+        &nbsp;&nbsp;&nbsp; transition-property: -fx-opacity;<br>
+        &nbsp;&nbsp;&nbsp; transition-duration: 0.5s;<br>
+        }<br>
+        <br>
+        .button:hover {<br>
+        &nbsp;&nbsp;&nbsp; -fx-opacity: 1;<br>
         }
     </p>
 
@@ -1679,12 +1679,12 @@
 
     <h3><a id="typeeasingfunction">&lt;easing-function&gt;</a></h3>
     <p class="grammar">linear | &lt;cubic-bezier-easing-function&gt; | &lt;step-easing-function&gt; | &lt;fx-easing-function&gt;</p>
-    <p><strong>Linear</strong> <span class="grammar" style="font-size: smaller;">linear</span><br/>
+    <p><strong>Linear</strong> <span class="grammar" style="font-size: smaller;">linear</span><br>
        The linear easing function is a simple linear mapping from the input progress value to the output progress value.</p>
     <figure style="display: inline-block">
         <img src="easing-linear.svg" width="200" alt="Linear easing function">
     </figure>
-    <p><strong>Cubic Bézier Easing Functions</strong> <span class="grammar" style="font-size: smaller;">&lt;cubic-bezier-easing-function&gt;</span></br></p>
+    <p><strong>Cubic Bézier Easing Functions</strong> <span class="grammar" style="font-size: smaller;">&lt;cubic-bezier-easing-function&gt;</span><br></p>
     <p class="grammar">ease | ease-in | ease-out | ease-in-out | cubic-bezier(<a href="#typenumber" class="typelink">&lt;number&nbsp;[0,1]&gt;</a>, <a href="#typenumber" class="typelink">&lt;number&gt;</a>, <a href="#typenumber" class="typelink">&lt;number&nbsp;[0,1]&gt;</a>, <a href="#typenumber" class="typelink">&lt;number&gt;</a>)</p>
     <p>The values have the following meaning:</p>
     <table style="margin-left: 40px;">
@@ -1730,11 +1730,11 @@
         <tr>
             <td style="width: 120px; vertical-align: top"><span class="grammar">steps</span></td>
             <td>defines a step function with <a href="#typenumber" class="typelink">&lt;integer&gt;</a> intervals
-                and an optional <span class="grammar">&lt;step-position&gt;</span>;<br/>if omitted,
+                and an optional <span class="grammar">&lt;step-position&gt;</span>;<br>if omitted,
                 <span class="grammar">end</span> is implied</span>
             </td>
         </tr>
-        <tr><td><br/></td></tr>
+        <tr><td><br></td></tr>
         <tr>
             <td style="width: 120px; vertical-align: top"><span class="grammar">jump-start</span></td>
             <td>the interval starts with a rise point when the input progress value is 0</td>
@@ -1778,7 +1778,7 @@
         <img src="easing-stepboth.svg" width="200" alt="jump-both easing function">
         <figcaption style="margin-left: 30px" class="grammar">steps(3, jump-both)</figcaption>
     </figure>
-    <p><strong>SMIL 3.0 Easing Functions</strong> <span class="grammar" style="font-size: smaller;">&lt;fx-easing-function&gt;</span></br></p>
+    <p><strong>SMIL 3.0 Easing Functions</strong> <span class="grammar" style="font-size: smaller;">&lt;fx-easing-function&gt;</span><br></p>
     <p class="grammar">-fx-ease-in | -fx-ease-out | -fx-ease-both</p>
     <p>The values have the following meaning:</p>
     <table style="margin-left: 40px;">

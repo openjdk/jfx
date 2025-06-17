@@ -37,8 +37,26 @@ ImageFrame::ImageFrame()
 ImageFrame::ImageFrame(Ref<NativeImage>&& nativeImage)
     : m_nativeImage(WTFMove(nativeImage))
 {
+#if PLATFORM(JAVA)
+/* Ref: Webkit 619.1 javafx.web/src/main/native/Source/WebCore/platform/graphics/ImageSource.cpp refactoring in 620.1
+ *
+ * In the case of the canvas pattern using a transform property filled with an SVGMatrix()
+ * created by an SVG element, `frame.m_nativeImage->size()` calls `NativeImage::size()`
+ * from NativeImageJava.cpp.
+ *
+ * In this scenario, `*m_platformImage->getImage().get()` may be invalid,
+ * as the image decoder has already populated `frame.m_size` during image metadata caching.
+ *
+ * To avoid potential invalid accesses and unintended size resets, only update `m_size`
+ * if the frame does not already have a valid native image.
+ */
+    if (!hasNativeImage() && m_nativeImage)
+        m_size = m_nativeImage->size();
+#else
     m_size = m_nativeImage->size();
+#endif
     m_hasAlpha = m_nativeImage->hasAlpha();
+
 }
 
 ImageFrame::~ImageFrame()

@@ -42,6 +42,8 @@ public:
     DocumentFontLoader(Document&);
     ~DocumentFontLoader();
 
+    void ref() const { m_document->ref(); }
+    void deref() const { m_document->deref(); }
     CachedFont* cachedFont(URL&&, bool, bool, LoadedFromOpaqueSource);
     void beginLoadingFontSoon(CachedFont&);
 

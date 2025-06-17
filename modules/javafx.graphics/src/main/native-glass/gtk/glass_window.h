@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2023, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -44,7 +44,8 @@ enum WindowManager {
 enum WindowFrameType {
     TITLED,
     UNTITLED,
-    TRANSPARENT
+    TRANSPARENT,
+    EXTENDED
 };
 
 enum WindowType {
@@ -111,12 +112,14 @@ public:
     virtual void paint(void* data, jint width, jint height) = 0;
     virtual WindowGeometry get_geometry() = 0;
 
+    virtual void show_system_menu(int x, int y) = 0;
     virtual void enter_fullscreen() = 0;
     virtual void exit_fullscreen() = 0;
     virtual void set_visible(bool) = 0;
     virtual bool is_visible() = 0;
     virtual void set_bounds(int, int, bool, bool, int, int, int, int, float, float) = 0;
     virtual void set_resizable(bool) = 0;
+    virtual bool is_resizable() = 0;
     virtual void request_focus() = 0;
     virtual void set_focusable(bool)= 0;
     virtual bool grab_focus() = 0;
@@ -126,6 +129,7 @@ public:
     virtual void set_title(const char*) = 0;
     virtual void set_alpha(double) = 0;
     virtual void set_enabled(bool) = 0;
+    virtual void set_system_minimum_size(int, int) = 0;
     virtual void set_minimum_size(int, int) = 0;
     virtual void set_maximum_size(int, int) = 0;
     virtual void set_minimized(bool) = 0;
@@ -145,7 +149,7 @@ public:
     virtual void process_destroy() = 0;
     virtual void process_delete() = 0;
     virtual void process_expose(GdkEventExpose*) = 0;
-    virtual void process_mouse_button(GdkEventButton*) = 0;
+    virtual void process_mouse_button(GdkEventButton*, bool synthesized = false) = 0;
     virtual void process_mouse_motion(GdkEventMotion*) = 0;
     virtual void process_mouse_scroll(GdkEventScroll*) = 0;
     virtual void process_mouse_cross(GdkEventCrossing*) = 0;
@@ -169,6 +173,7 @@ public:
     virtual void increment_events_counter() = 0;
     virtual void decrement_events_counter() = 0;
     virtual size_t get_events_count() = 0;
+    virtual bool get_window_edge(int x, int y, GdkWindowEdge*) = 0;
     virtual bool is_dead() = 0;
     virtual ~WindowContext() {}
 };
@@ -191,6 +196,8 @@ protected:
     jobject jview;
     GtkWidget* gtk_widget;
     GdkWindow* gdk_window = NULL;
+    GdkCursor* gdk_cursor = NULL;
+    GdkCursor* gdk_cursor_override = NULL;
     GdkWMFunction gdk_windowManagerFunctions;
 
     bool is_iconified;
@@ -234,12 +241,14 @@ public:
     void remove_child(WindowContextTop*);
     void set_visible(bool);
     bool is_visible();
+    bool is_resizable();
     bool set_view(jobject);
     bool grab_focus();
     bool grab_mouse_drag_focus();
     void ungrab_focus();
     void ungrab_mouse_drag_focus();
     void set_cursor(GdkCursor*);
+    void set_cursor_override(GdkCursor*);
     void set_level(int) {}
     void set_background(float, float, float);
 
@@ -247,7 +256,7 @@ public:
     void process_destroy();
     void process_delete();
     void process_expose(GdkEventExpose*);
-    void process_mouse_button(GdkEventButton*);
+    void process_mouse_button(GdkEventButton*, bool synthesized = false);
     void process_mouse_motion(GdkEventMotion*);
     void process_mouse_scroll(GdkEventScroll*);
     void process_mouse_cross(GdkEventCrossing*);
@@ -259,6 +268,7 @@ public:
     void increment_events_counter();
     void decrement_events_counter();
     size_t get_events_count();
+    bool get_window_edge(int x, int y, GdkWindowEdge*);
     bool is_dead();
 
     ~WindowContextBase();
@@ -274,9 +284,10 @@ class WindowContextTop: public WindowContextBase {
     WindowGeometry geometry;
     struct _Resizable {// we can't use set/get gtk_window_resizable function
         _Resizable(): value(true),
-                minw(-1), minh(-1), maxw(-1), maxh(-1) {}
+                minw(-1), minh(-1), maxw(-1), maxh(-1), sysminw(-1), sysminh(-1) {}
         bool value; //actual value of resizable for a window
         int minw, minh, maxw, maxh; //minimum and maximum window width/height;
+        int sysminw, sysminh; // size of window button area of EXTENDED windows
     } resizable;
 
     bool on_top;
@@ -294,6 +305,8 @@ public:
     void process_state(GdkEventWindowState*);
     void process_configure(GdkEventConfigure*);
     void process_destroy();
+    void process_mouse_motion(GdkEventMotion*);
+    void process_mouse_button(GdkEventButton*, bool synthesized = false);
     void work_around_compiz_state();
 
     WindowGeometry get_geometry();
@@ -302,11 +315,13 @@ public:
     void set_maximized(bool);
     void set_bounds(int, int, bool, bool, int, int, int, int, float, float);
     void set_resizable(bool);
+    bool is_resizable();
     void request_focus();
     void set_focusable(bool);
     void set_title(const char*);
     void set_alpha(double);
     void set_enabled(bool);
+    void set_system_minimum_size(int, int);
     void set_minimum_size(int, int);
     void set_maximum_size(int, int);
     void set_icon(GdkPixbuf*);
@@ -319,6 +334,7 @@ public:
     void update_view_size();
     void notify_view_resize();
 
+    void show_system_menu(int x, int y);
     void enter_fullscreen();
     void exit_fullscreen();
 
@@ -341,6 +357,7 @@ private:
     bool effective_on_top();
     void notify_window_move();
     void notify_window_resize();
+    bool get_window_edge(int x, int y, GdkWindowEdge*);
     WindowContextTop(WindowContextTop&);
     WindowContextTop& operator= (const WindowContextTop&);
 };

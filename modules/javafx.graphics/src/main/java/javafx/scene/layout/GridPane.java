@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -1447,8 +1447,13 @@ public class GridPane extends Pane {
             Node child = managed.get(i);
             int start = getNodeRowIndex(child);
             int end = getNodeRowEndConvertRemaining(child);
-            double childPrefAreaHeight = computeChildPrefAreaHeight(child, isNodePositionedByBaseline(child) ? rowPrefBaselineComplement[start] : -1, getMargin(child),
-                    widths == null ? -1 : getTotalWidthOfNodeColumns(child, widths));
+            double childPrefAreaHeight = computeChildPrefAreaHeight(
+                child,
+                isNodePositionedByBaseline(child) ? rowPrefBaselineComplement[start] : -1,
+                getMargin(child),
+                widths == null ? -1 : getTotalWidthOfNodeColumns(child, widths),
+                false
+            );
             if (start == end && !result.isPreset(start)) {
                 double min = getRowMinHeight(start);
                 double max = getRowMaxHeight(start);
@@ -1490,8 +1495,13 @@ public class GridPane extends Pane {
             Node child = managed.get(i);
             int start = getNodeRowIndex(child);
             int end = getNodeRowEndConvertRemaining(child);
-            double childMinAreaHeight = computeChildMinAreaHeight(child, isNodePositionedByBaseline(child) ? rowMinBaselineComplement[start] : -1, getMargin(child),
-                             widths == null ? -1 : getTotalWidthOfNodeColumns(child, widths));
+            double childMinAreaHeight = computeChildMinAreaHeight(
+                child,
+                isNodePositionedByBaseline(child) ? rowMinBaselineComplement[start] : -1,
+                getMargin(child),
+                widths == null ? -1 : getTotalWidthOfNodeColumns(child, widths),
+                false
+            );
             if (start == end && !result.isPreset(start)) {
                 result.setMaxSize(start, childMinAreaHeight);
             } else if (start != end){
@@ -1581,17 +1591,20 @@ public class GridPane extends Pane {
             Node child = managed.get(i);
             int start = getNodeColumnIndex(child);
             int end = getNodeColumnEndConvertRemaining(child);
+            double childPrefAreaWidth = computeChildPrefAreaWidth(
+                child,
+                getBaselineComplementForChild(child),
+                getMargin(child),
+                heights == null ? -1 : getTotalHeightOfNodeRows(child, heights),
+                false
+            );
             if (start == end && !result.isPreset(start)) {
                 double min = getColumnMinWidth(start);
                 double max = getColumnMaxWidth(start);
-                result.setMaxSize(start, boundedSize(min < 0 ? 0 : min, computeChildPrefAreaWidth(child,
-                        getBaselineComplementForChild(child), getMargin(child),
-                        heights == null ? -1 : getTotalHeightOfNodeRows(child, heights), false),
+                result.setMaxSize(start, boundedSize(min < 0 ? 0 : min, childPrefAreaWidth,
                         max < 0 ? Double.MAX_VALUE : max));
             } else if (start != end) {
-                result.setMaxMultiSize(start, end + 1, computeChildPrefAreaWidth(child, getBaselineComplementForChild(child),
-                        getMargin(child),
-                        heights == null ? -1 : getTotalHeightOfNodeRows(child, heights), false));
+                result.setMaxMultiSize(start, end + 1, childPrefAreaWidth);
             }
         }
         return result;
@@ -1627,14 +1640,17 @@ public class GridPane extends Pane {
             Node child = managed.get(i);
             int start = getNodeColumnIndex(child);
             int end = getNodeColumnEndConvertRemaining(child);
+            double childMinAreaWidth = computeChildMinAreaWidth(
+                child,
+                getBaselineComplementForChild(child),
+                getMargin(child),
+                heights == null ? -1 : getTotalHeightOfNodeRows(child, heights),
+                false
+            );
             if (start == end && !result.isPreset(start)) {
-                result.setMaxSize(start, computeChildMinAreaWidth(child, getBaselineComplementForChild(child),
-                        getMargin(child),
-                        heights == null ? -1 : getTotalHeightOfNodeRows(child, heights),false));
+                result.setMaxSize(start, childMinAreaWidth);
             } else if (start != end){
-                result.setMaxMultiSize(start, end + 1, computeChildMinAreaWidth(child, getBaselineComplementForChild(child),
-                        getMargin(child),
-                        heights == null ? -1 : getTotalHeightOfNodeRows(child, heights), false));
+                result.setMaxMultiSize(start, end + 1, childMinAreaWidth);
             }
         }
         return result;
