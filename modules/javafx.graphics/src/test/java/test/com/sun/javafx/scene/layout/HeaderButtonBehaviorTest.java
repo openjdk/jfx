@@ -40,27 +40,34 @@ import static org.junit.jupiter.api.Assertions.*;
 public class HeaderButtonBehaviorTest {
 
     enum ButtonDisabledStateTest {
-        RESIZABLE(true, false, false, false),
-        UNRESIZABLE(false, false, false, true),
-        MODAL_RESIZABLE(true, true, true, false),
-        MODAL_UNRESIZABLE(false, true, true, true);
+        RESIZABLE(true, false, false, false, false),
+        UNRESIZABLE(false, false, false, false, true),
+        MODAL_RESIZABLE(true, true, false, true, false),
+        MODAL_UNRESIZABLE(false, true, false, true, true),
+        OWNER_RESIZABLE(true, false, true, true, false),
+        OWNER_UNRESIZABLE(false, false, true, true, true),
+        OWNER_MODAL_RESIZABLE(true, true, true, true, false),
+        OWNER_MODAL_UNRESIZABLE(false, true, true, true, true);
 
-        ButtonDisabledStateTest(boolean resizable, boolean modal, boolean iconifyDisabled, boolean maximizeDisabled) {
+        ButtonDisabledStateTest(boolean resizable, boolean modal, boolean hasOwner,
+                                boolean iconifyDisabled, boolean maximizeDisabled) {
             this.resizable = resizable;
             this.modal = modal;
+            this.hasOwner = hasOwner;
             this.iconifyDisabled = iconifyDisabled;
             this.maximizeDisabled = maximizeDisabled;
         }
 
         final boolean resizable;
         final boolean modal;
+        final boolean hasOwner;
         final boolean iconifyDisabled;
         final boolean maximizeDisabled;
     }
 
     /**
      * Tests the disabled states of the iconify and maximize buttons for all combinations
-     * of resizable and modal window attributes.
+     * of resizable, modal, and owner window attributes.
      */
     @ParameterizedTest
     @EnumSource(ButtonDisabledStateTest.class)
@@ -74,10 +81,15 @@ public class HeaderButtonBehaviorTest {
         stage.initModality(test.modal ? Modality.WINDOW_MODAL : Modality.NONE);
         stage.setResizable(test.resizable);
         stage.setScene(new Scene(new Group(iconify, maximize, close)));
-        stage.show();
 
+        if (test.hasOwner) {
+            stage.initOwner(new Stage());
+        }
+
+        stage.show();
         assertEquals(test.iconifyDisabled, iconify.isDisabled());
         assertEquals(test.maximizeDisabled, maximize.isDisabled());
         assertFalse(close.isDisabled());
+        stage.close();
     }
 }
