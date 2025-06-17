@@ -26,6 +26,7 @@
 ext.LINUX = [:]
 
 // Glass Gtk is built with GTK+ 3. It is not compatible with other major GTK versions (e.g., GTK 2 or GTK 4).
+// Requires GTK+ 3.20.0 or newer
 def gtk3MinMinorVersion = "20"
 def gtk3MinMicroVersion = "0"
 def gtk3MinVersion = "3.%s.%s".formatted(gtk3MinMinorVersion, gtk3MinMicroVersion)
