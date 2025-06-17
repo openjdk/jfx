@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -73,6 +73,9 @@ abstract class GlassStage implements TKStage {
     @Override public void setTKStageListener(final TKStageListener listener) {
         this.stageListener = listener;
     }
+
+    @Override
+    public void setPrefHeaderButtonHeight(double height) {}
 
     protected final GlassScene getScene() {
         return scene;

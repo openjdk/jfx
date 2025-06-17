@@ -42,7 +42,7 @@ import javafx.geometry.Rectangle2D;
  *     The ascent of the line is the max ascent of all fonts in the line.
  *   <li>
  *     {@code width} - the width of the line.
- *     The width for the line is sum of all the run widths in the line, it is not
+ *     The width of the line is sum of all the run widths in the line, it is not
  *     affect by the wrapping width but it will include any changes caused by
  *     justification.
  *   <li>

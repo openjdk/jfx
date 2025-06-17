@@ -44,6 +44,7 @@ INCLUDES = -I$(SRCBASE_DIR) \
 
 CFLAGS =   -DWIN32 \
            -D_WINDOWS \
+           -D_DISABLE_CONSTEXPR_MUTEX_CONSTRUCTOR \
            -D_USRDLL \
            -DGSTREAMER_LITE \
            -DGOBJECT_EXPORTS \
