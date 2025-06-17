@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -23,24 +23,41 @@
  * questions.
  */
 
-#import <Cocoa/Cocoa.h>
-#import <jni.h>
+#import "JFXTabGroupAccessibility.h"
+#import "GlassMacros.h"
+#import "GlassAccessible.h"
 
-#import "GlassViewDelegate.h"
-
-// Helper class to handle system wide touch input events
-@interface GlassTouches : NSObject
+@implementation JFXTabGroupAccessibility
+- (NSAccessibilityRole)accessibilityRole
 {
-@private
-    GlassViewDelegate*      curConsumer;
-    CFMachPortRef           eventTap;
-    CFRunLoopSourceRef      runLoopSource;
-    NSMutableDictionary*    touches;
-    jlong                   lastTouchId;
+    return NSAccessibilityTabGroupRole;
 }
 
-+ (void)startTracking:(GlassViewDelegate *)delegate;
-+ (void)stopTracking:(GlassViewDelegate *)delegate;
-+ (void)terminate;
+- (NSArray *)accessibilityChildren
+{
+    return [super accessibilityChildren];
+}
+
+- (NSRect)accessibilityFrame
+{
+    return [super accessibilityFrame];
+}
+
+- (id)accessibilityParent
+{
+    return [super accessibilityParent];
+}
+
+- (NSArray *)accessibilityTabs
+{
+    jobject jresult = NULL;
+    GET_MAIN_JENV;
+    if (env == NULL) return NULL;
+    jresult = (jobject)(*env)->CallLongMethod(env, [self getJAccessible],
+                                              jAccessibilityAttributeValue,
+                                              (jlong)@"AXTabs");
+    GLASS_CHECK_EXCEPTION(env);
+    return variantToID(env, jresult);
+}
 
 @end
