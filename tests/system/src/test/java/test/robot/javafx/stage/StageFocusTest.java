@@ -26,6 +26,7 @@
 package test.robot.javafx.stage;
 
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
 
 import javafx.application.Application;
 import javafx.application.Platform;
@@ -47,13 +48,14 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 public class StageFocusTest {
 
     static CountDownLatch startupLatch;
+    static CountDownLatch eventReceivedLatch;
 
     static final double STAGE_SIZE = 200;
 
     static final double STAGE_X = 100;
     static final double STAGE_Y = 100;
 
-    static boolean receivedEvent = false;
+    static Stage theStage = null;
 
     Robot robot;
 
@@ -62,12 +64,15 @@ public class StageFocusTest {
         public void start(Stage stage) {
             Platform.setImplicitExit(false);
 
+            theStage = stage;
+
             Group root = new Group();
             Scene scene = new Scene(root, STAGE_SIZE, STAGE_SIZE);
             scene.setFill(Color.LIGHTGREEN);
             scene.setOnKeyPressed(e -> {
-                if (e.getCode() == KeyCode.A)
-                    receivedEvent = true;
+                if (e.getCode() == KeyCode.A) {
+                    eventReceivedLatch.countDown();
+                }
             });
 
             stage.setScene(scene);
@@ -85,6 +90,7 @@ public class StageFocusTest {
     @BeforeAll
     public static void setupOnce() throws Exception {
         startupLatch = new CountDownLatch(1);
+        eventReceivedLatch = new CountDownLatch(1);
         Util.launch(startupLatch, TestApp.class);
     }
 
@@ -105,12 +111,18 @@ public class StageFocusTest {
      * Stage being actually shown and on foreground work fine.
      */
     @Test
-    public void testStageHasFocusAfterShow() {
+    public void testStageHasFocusAfterShow() throws InterruptedException {
+        // ensures UI finished showing the Stage
         Util.sleep(250);
+        assertTrue(theStage.isFocused());
+
         Util.runAndWait(() -> {
             robot.keyPress(KeyCode.A);
         });
-        assertTrue(receivedEvent, "Expected key press has NOT been received! Stage did not have focus after showing. Some tests might fail because of this." +
-                                  "If that is the case, try re-running the tests with '--no-daemon' flag in Gradle.");
+        assertTrue(
+            eventReceivedLatch.await(2000, TimeUnit.MILLISECONDS),
+            "Event received latch timed out! Stage most probably did not have focus after showing. Some tests might fail because of this." +
+            "If that is the case, try re-running the tests with '--no-daemon' flag in Gradle."
+        );
     }
 }
