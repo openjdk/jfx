@@ -566,9 +566,9 @@ public class TextFlow extends Pane {
     }
 
     /**
-     * {@code TabAdvancePolicy} determines the tab stop positions within this {@code TextFlow}.
+     * {@code TabStopPolicy} determines the tab stop positions within this {@code TextFlow}.
      * <p>
-     * A non-null {@code TabAdvancePolicy} overrides values set by {@link #setTabSize(int)},
+     * A non-null {@code TabStopPolicy} overrides values set by {@link #setTabSize(int)},
      * as well as any values set by {@link Text#setTabSize(int)} in individual {@code Text} instances within
      * this {@code TextFlow}.
      *
@@ -610,7 +610,7 @@ public class TextFlow extends Pane {
 
                 @Override
                 public String getName() {
-                    return "tabAdvancePolicy";
+                    return "tabStopPolicy";
                 }
 
                 @Override

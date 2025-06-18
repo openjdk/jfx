@@ -36,7 +36,7 @@ import javafx.scene.layout.Region;
  *
  * @since 999 TODO
  */
-public class TabStopPolicy {
+public final class TabStopPolicy {
     private final ObservableList<TabStop> tabStops = FXCollections.observableArrayList();
     private final SimpleDoubleProperty defaultStops = new SimpleDoubleProperty(0.0);
 
@@ -47,10 +47,9 @@ public class TabStopPolicy {
     }
 
     /**
-     * Specifies the unmodifiable list of tab stops, sorted by position from smallest to largest.
-     * The list can be changed using
+     * The list of tab stops.
      *
-     * @return the non-null, unmodifiable list of tab stops, sorted by position
+     * @return the non-null, list of tab stops
      */
     public final ObservableList<TabStop> tabStops() {
         return tabStops;

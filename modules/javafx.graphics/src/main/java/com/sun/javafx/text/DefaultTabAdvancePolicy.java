@@ -25,6 +25,7 @@
 
 package com.sun.javafx.text;
 
+import java.util.Arrays;
 import java.util.List;
 import javafx.scene.text.TabStop;
 import javafx.scene.text.TabStopPolicy;
@@ -53,6 +54,7 @@ public class DefaultTabAdvancePolicy implements TabAdvancePolicy {
             TabStop stop = tabs.get(i);
             stops[i] = (float)stop.getPosition();
         }
+        Arrays.sort(stops);
         float defaultStops = (float)p.getDefaultStops();
         return new DefaultTabAdvancePolicy(flow, stops, defaultStops);
     }
