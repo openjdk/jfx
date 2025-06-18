@@ -41,7 +41,7 @@ public final class TabStopPolicy {
     private final SimpleDoubleProperty defaultStops = new SimpleDoubleProperty(0.0);
 
     /**
-     * Constructs a new {@code TabStopPolicy} instance.
+     * Constructs a new {@code TabStopPolicy} instance, with an empty list of stops.
      */
     public TabStopPolicy() {
     }
@@ -49,7 +49,7 @@ public final class TabStopPolicy {
     /**
      * The list of tab stops.
      *
-     * @return the non-null, list of tab stops
+     * @return the non-null list of tab stops
      */
     public final ObservableList<TabStop> tabStops() {
         return tabStops;
@@ -57,11 +57,11 @@ public final class TabStopPolicy {
 
     /**
      * Provides default tab stops (beyond the last tab stop specified by {@code #tabStops()},
-     * as a fixed repeating distance in pixels from the last tab stop position.
+     * as a fixed repeating distance in pixels for tabs after the last tab stop position.
      * The position of default tab stops is computed at regular intervals relative to
      * the leading edge of the {@code TextFlow} this policy is registered with.
      * <p>
-     * The value of less than or equal 0 disables the default stops.
+     * A value of less than or equal 0 disables the default stops.
      *
      * @return the default tab stops property
      * @defaultValue 0
