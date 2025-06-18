@@ -67,6 +67,7 @@ class GlassWindowEventHandler extends Window.EventHandler implements Supplier<Vo
                 QuantumToolkit.runWithRenderLock(() -> {
                     GlassScene scene = stage.getScene();
                     if (scene != null) {
+                        scene.entireSceneNeedsRepaint();
                         scene.updateSceneState();
                     }
                     return null;
