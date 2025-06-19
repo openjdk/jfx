@@ -55,7 +55,7 @@ class MaximizeTest extends StageTestBase {
     void maximizeUndecorated(StageStyle stageStyle) {
         setupStageWithStyle(stageStyle, TEST_SETTINGS);
 
-        Util.doTimeLine(SHORT_WAIT,
+        Util.doTimeLine(MEDIUM_WAIT,
                 () -> getStage().setMaximized(true),
                 () ->  {
                     assertTrue(getStage().isMaximized());
@@ -64,7 +64,7 @@ class MaximizeTest extends StageTestBase {
                 },
                 () -> getStage().setMaximized(false));
 
-        Util.sleep(SHORT_WAIT);
+        Util.sleep(MEDIUM_WAIT);
 
         assertEquals(POS_X, getStage().getX(), POSITION_DELTA, "Stage maximized position changed");
         assertEquals(POS_Y, getStage().getY(), POSITION_DELTA, "Stage maximized position changed");
@@ -75,12 +75,12 @@ class MaximizeTest extends StageTestBase {
     void maximizeShouldKeepGeometryOnRestore(StageStyle stageStyle) {
         setupStageWithStyle(stageStyle, TEST_SETTINGS);
 
-        Util.doTimeLine(SHORT_WAIT,
+        Util.doTimeLine(MEDIUM_WAIT,
                 () -> getStage().setMaximized(true),
                 () -> assertTrue(getStage().isMaximized()),
                 () -> getStage().setMaximized(false));
 
-        Util.sleep(SHORT_WAIT);
+        Util.sleep(MEDIUM_WAIT);
         assertSizePosition();
     }
 
@@ -88,13 +88,13 @@ class MaximizeTest extends StageTestBase {
     @EnumSource(names = {"DECORATED", "UNDECORATED", "EXTENDED", "TRANSPARENT"})
     void maximizeBeforeShowShouldKeepGeometryOnRestore(StageStyle stageStyle) {
         setupStageWithStyle(stageStyle, TEST_SETTINGS.andThen(s -> s.setMaximized(true)));
-        Util.sleep(SHORT_WAIT);
+        Util.sleep(MEDIUM_WAIT);
 
         Util.runAndWait(() -> {
             assertTrue(getStage().isMaximized());
             getStage().setMaximized(false);
         });
-        Util.sleep(SHORT_WAIT);
+        Util.sleep(MEDIUM_WAIT);
         assertSizePosition();
     }
 

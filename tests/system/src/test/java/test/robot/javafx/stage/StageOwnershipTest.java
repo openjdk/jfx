@@ -201,7 +201,7 @@ class StageOwnershipTest extends VisualTestBase {
 
     @ParameterizedTest(name = PARAMETERIZED_TEST_DISPLAY)
     @MethodSource("getTestsParams")
-    void openingModalChildStageWhileFullSceenShouldHaveFocus(StageStyle stageStyle, Modality modality)
+    void openingModalChildStageWhileFullScreenShouldHaveFocus(StageStyle stageStyle, Modality modality)
             throws InterruptedException {
         setupBottomStage();
         setupTopStage(bottomStage, stageStyle, modality);
