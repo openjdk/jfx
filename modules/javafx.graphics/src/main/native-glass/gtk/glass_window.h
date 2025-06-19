@@ -43,6 +43,88 @@
 #include "glass_view.h"
 #include "glass_general.h"
 
+#include <iostream>
+#include <functional>
+
+template<typename T>
+class Observable {
+private:
+    T value;
+    std::function<void(const T&)> onChange;
+
+public:
+    Observable(const T& initialValue = T()) : value(initialValue) {}
+
+    void set(const T& newValue) {
+        if (value != newValue) {
+            value = newValue;
+            invalidate();
+        }
+    }
+
+    void invalidate() {
+        if (onChange) {
+            onChange(value);
+        }
+    }
+
+    const T& get() const {
+        return value;
+    }
+
+    operator T() const {
+        return value;
+    }
+
+    Observable<T>& operator=(const T& newValue) {
+        set(newValue);
+        return *this;
+    }
+
+    void setOnChange(std::function<void(const T&)> callback) {
+        onChange = callback;
+    }
+};
+
+struct Rectangle {
+    int x, y, width, height;
+
+    bool operator!=(const Rectangle& other) const {
+        return x != other.x || y != other.y
+               || width != other.width || height != other.height;
+    }
+
+    bool operator==(const Rectangle& other) const {
+        return x == other.x && y == other.y
+               && width == other.width && height == other.height;
+    }
+};
+
+struct Size {
+    int width, height;
+
+    bool operator!=(const Size& other) const {
+        return width != other.width || height != other.height;
+    }
+
+    bool operator==(const Size& other) const {
+        return width == other.width && height == other.height;
+    }
+};
+
+struct Point {
+    int x, y;
+
+    bool operator!=(const Point& other) const {
+        return x != other.x || y != other.y;
+    }
+
+    bool operator==(const Point& other) const {
+        return x == other.x && y == other.y;
+    }
+};
+
+
 enum WindowFrameType {
     TITLED,
     UNTITLED,
@@ -64,50 +146,14 @@ enum BoundsType {
 
 static const guint MOUSE_BUTTONS_MASK = (guint) (GDK_BUTTON1_MASK | GDK_BUTTON2_MASK | GDK_BUTTON3_MASK);
 
-struct WindowGeometry {
-    WindowGeometry():
-    width{-1, -1, BOUNDSTYPE_UNKNOWN},
-    height{-1, -1, BOUNDSTYPE_UNKNOWN},
-    x(-1), y(-1), view_x(0), view_y(0),
-    gravity_x(), gravity_y(),
-    extents{0, 0, 0, 0},
-    frame_extents_received(false),
-    needs_to_update_frame_extents(false) {}
-
-    struct {
-        int window;
-        int view;
-        BoundsType type;
-    } width;
-
-    struct {
-        int window;
-        int view;
-        BoundsType type;
-    } height;
-
-    int x;
-    int y;
-
-    int view_x;
-    int view_y;
-
-    float gravity_x;
-    float gravity_y;
-
-    GdkRectangle extents;
-
-    bool frame_extents_received;
-    bool needs_to_update_frame_extents;
-};
 
 class WindowContext;
 class WindowContextExtended;
 
 class WindowContext: public DeletedMemDebug<0xCC> {
 private:
-    static std::optional<GdkRectangle> normal_extents;
-    static std::optional<GdkRectangle> utility_extents;
+    static std::optional<Rectangle> normal_extents;
+    static std::optional<Rectangle> utility_extents;
 
     struct _ImContext {
         _ImContext(): ctx(nullptr), enabled(false), on_preedit(false),
@@ -137,7 +183,6 @@ private:
 
     WindowFrameType frame_type;
     WindowType window_type;
-    WindowGeometry geometry;
 
     struct _Resizable {
         _Resizable(): value(true),
@@ -146,6 +191,7 @@ private:
         int minw, minh, maxw, maxh; //minimum and maximum window width/height;
         int sysminw, sysminh; // size of window button area of EXTENDED windows
     } resizable;
+
     GdkWindow *gdk_window{};
 
     GdkWMFunction initial_wmf;
@@ -153,6 +199,18 @@ private:
 
     GdkCursor* gdk_cursor{};
     GdkCursor* gdk_cursor_override{};
+
+    Observable<Point> view_position = Point{-1, -1};
+    Observable<Size> view_size = Size{-1, -1};
+    Observable<Size> window_size= Size{-1, -1};
+    Observable<Point> window_location = Point{-1, -1};
+    Observable<Rectangle> window_extents = Rectangle{0, 0, 0, 0};
+    bool frame_extents_received{false};
+    bool needs_to_update_frame_extents{false};
+    float gravity_x{0};
+    float gravity_y{0};
+    BoundsType width_type{BOUNDSTYPE_UNKNOWN};
+    BoundsType height_type{BOUNDSTYPE_UNKNOWN};
 
     /*
      * sm_grab_window points to WindowContext holding a mouse grab.
@@ -172,6 +230,7 @@ private:
      * should be reported during this drag.
      */
     static WindowContext* sm_mouse_drag_window;
+
 public:
     WindowContext() = delete;
     WindowContext(jobject, WindowContext* _owner, long _screen,
@@ -181,7 +240,9 @@ public:
     GETTER(jobject, jview)
     GETTER(WindowFrameType, frame_type);
     GETTER(WindowType, window_type);
-    GETTER(WindowGeometry, geometry);
+
+    Size get_view_size();
+    Point get_view_position();
 
     bool isEnabled();
     bool hasIME();
@@ -233,8 +294,6 @@ public:
     size_t get_events_count();
     bool is_dead();
 
-    WindowGeometry get_geometry();
-
     void set_minimized(bool);
     void set_maximized(bool);
     void set_bounds(int, int, bool, bool, int, int, int, int, float, float);
@@ -278,7 +337,7 @@ private:
     GdkAtom get_net_frame_extents_atom();
     void request_frame_extents();
     void update_frame_extents();
-    void set_cached_extents(GdkRectangle);
+    void set_cached_extents(Rectangle);
     void load_cached_extents();
     bool get_frame_extents_property(int *, int *, int *, int *);
     void update_window_constraints();

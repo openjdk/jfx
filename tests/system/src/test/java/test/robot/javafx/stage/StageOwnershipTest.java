@@ -55,7 +55,7 @@ import static test.util.Util.PARAMETERIZED_TEST_DISPLAY;
 import static test.util.Util.TIMEOUT;
 
 @Timeout(value = TIMEOUT, unit = TimeUnit.MILLISECONDS)
-class StageOwnershipAndFocusTest extends VisualTestBase {
+class StageOwnershipTest extends VisualTestBase {
     private static final int WIDTH = 200;
     private static final int HEIGHT = 200;
     private static final double BOUNDS_EDGE_DELTA = 75;
@@ -268,8 +268,8 @@ class StageOwnershipAndFocusTest extends VisualTestBase {
         CountDownLatch shownLatch = new CountDownLatch(3);
         Util.runAndWait(() -> {
             stage0 = createStage(style, COLOR0, null, null, 100, 100);
-            stage1 = createStage(style, COLOR1, stage0, null, 150, 150);
-            stage2 = createStage(style, COLOR2, stage1, null, 200, 200);
+            stage1 = createStage(style, COLOR1, stage0, null, 200, 150);
+            stage2 = createStage(style, COLOR2, stage1, null, 300, 200);
 
             List.of(stage0, stage1, stage2).forEach(stage -> {
                 stage.setOnShown(e -> Platform.runLater(shownLatch::countDown));
