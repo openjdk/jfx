@@ -32,15 +32,7 @@
 #include <gtk/gtk.h>
 #include "wrapped.h"
 
-#if GTK_CHECK_VERSION(3, 0, 0)
-#if ! GTK_CHECK_VERSION(3, 8, 0)
-#error GTK development version is not the minimum 3.8
-#endif
 #define GLASS_GTK3
-#endif
-
-#define GTK_3_MIN_MINOR_VERSION 8
-#define GTK_3_MIN_MICRO_VERSION 0
 
 #ifndef GDK_TOUCH_MASK
 #define GDK_TOUCH_MASK (1 << 22)
