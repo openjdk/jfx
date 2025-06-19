@@ -278,6 +278,10 @@ void WindowContext::process_map() {
 
 void WindowContext::process_focus(GdkEventFocus *event) {
     LOG("process_focus (keyboard): %d\n", event->in);
+    if (!event->in && WindowContext::sm_grab_window == this) {
+        ungrab_focus();
+    }
+
     if (im_ctx.enabled && im_ctx.ctx) {
         if (event->in) {
             gtk_im_context_focus_in(im_ctx.ctx);
@@ -289,10 +293,6 @@ void WindowContext::process_focus(GdkEventFocus *event) {
 
 void WindowContext::process_focus(bool focus_in) {
     LOG("process_focus (state): %d\n", focus_in);
-    if (focus_in && WindowContext::sm_grab_window == this) {
-        ungrab_focus();
-    }
-
     if (jwindow) {
         if (focus_in && !isEnabled()) {
             // when the user tries to activate a disabled window, send FOCUS_DISABLED
@@ -733,6 +733,7 @@ void WindowContext::ungrab_focus() {
     WindowContext::sm_grab_window = nullptr;
 
     if (jwindow) {
+        LOG("jWindowNotifyFocusUngrab\n");
         mainEnv->CallVoidMethod(jwindow, jWindowNotifyFocusUngrab);
         CHECK_JNI_EXCEPTION(mainEnv)
     }
@@ -835,7 +836,7 @@ void WindowContext::update_frame_extents() {
             Rectangle new_extents = { left, top, (left + right), (top + bottom) };
             bool changed = old_extents != new_extents;
 
-            LOG(" ------------------------------------------- frame extents - changed: %d\n", changed);
+            LOG("------------------------------------------- frame extents - changed: %d\n", changed);
 
             if (!changed) return;
 
