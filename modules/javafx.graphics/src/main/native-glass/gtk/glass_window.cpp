@@ -1309,12 +1309,6 @@ void WindowContext::set_maximized(bool state) {
 void WindowContext::enter_fullscreen() {
     LOG("enter_fullscreen\n");
     if (mapped) {
-        if (owner) {
-            // Report back that it's not fullscreen
-            notify_fullscreen(false);
-            return;
-        }
-
         gdk_window_fullscreen(gdk_window);
     } else {
         initial_state_mask |= GDK_WINDOW_STATE_FULLSCREEN;

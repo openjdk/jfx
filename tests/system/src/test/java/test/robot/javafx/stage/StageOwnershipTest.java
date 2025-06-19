@@ -206,7 +206,7 @@ class StageOwnershipTest extends VisualTestBase {
         setupBottomStage();
         setupTopStage(bottomStage, stageStyle, modality);
 
-        Util.doTimeLine(WAIT_TIME,
+        Util.doTimeLine(LONG_WAIT_TIME,
                 () -> bottomStage.setFullScreen(true),
                 topStage::show,
                 () -> {
@@ -295,79 +295,5 @@ class StageOwnershipTest extends VisualTestBase {
                     assertColorEquals(COLOR1, stage1);
                     assertColorEquals(COLOR2, stage2);
                 });
-    }
-
-    private static Stream<Arguments> getFullScreenOnChildTestParameters() {
-        return Stream.of(StageStyle.DECORATED, StageStyle.UNDECORATED, StageStyle.EXTENDED)
-                .flatMap(stageStyle -> Stream.of(Modality.NONE, Modality.WINDOW_MODAL)
-                        .map(modality -> Arguments.of(stageStyle, modality)));
-    }
-
-
-    @ParameterizedTest(name = PARAMETERIZED_TEST_DISPLAY)
-    @MethodSource("getFullScreenOnChildTestParameters")
-    void fullScreenOnChildAfterShowShouldNotBeAllowed(StageStyle style, Modality modality) {
-        CountDownLatch stage0Latch = new CountDownLatch(1);
-        Util.runAndWait(() -> {
-                    stage0 = createStage(style, COLOR0, null, null, 0, 0);
-                    stage0.setWidth(WIDTH * 3);
-                    stage0.setHeight(HEIGHT * 3);
-
-                    stage0.setOnShown(e -> Platform.runLater(stage0Latch::countDown));
-                    stage0.show();
-                });
-        Util.await(stage0Latch);
-        Util.sleep(WAIT_TIME);
-
-        CountDownLatch stage1Latch = new CountDownLatch(1);
-        Util.runAndWait(() -> {
-            stage1 = createStage(style, COLOR1, stage0, modality, 0, 0);
-            stage1.setOnShown(e -> Platform.runLater(stage1Latch::countDown));
-            stage1.show();
-        });
-
-        Util.await(stage1Latch);
-        Util.sleep(WAIT_TIME);
-
-        Util.doTimeLine(LONG_WAIT_TIME,
-                () -> stage1.setFullScreen(true),
-                () -> {
-                    assertFalse(stage1.isFullScreen());
-                    Color color = getColor(WIDTH * 2, HEIGHT * 2);
-                    assertColorEquals(COLOR0, color, TOLERANCE);
-                });
-    }
-
-    @ParameterizedTest(name = PARAMETERIZED_TEST_DISPLAY)
-    @MethodSource("getFullScreenOnChildTestParameters")
-    void fullScreenOnChildBeforeShowShouldNotBeAllowed(StageStyle style, Modality modality) {
-        CountDownLatch stage0Latch = new CountDownLatch(1);
-        Util.runAndWait(() -> {
-                    stage0 = createStage(style, COLOR0, null, null, 0, 0);
-                    stage0.setWidth(WIDTH * 3);
-                    stage0.setHeight(HEIGHT * 3);
-
-                    stage0.setOnShown(e -> Platform.runLater(stage0Latch::countDown));
-                    stage0.show();
-                });
-        Util.await(stage0Latch);
-        Util.sleep(WAIT_TIME);
-
-        CountDownLatch stage1Latch = new CountDownLatch(1);
-        Util.runAndWait(() -> {
-            stage1 = createStage(style, COLOR1, stage0, modality, 0, 0);
-            stage1.setFullScreen(true);
-            stage1.setOnShown(e -> Platform.runLater(stage1Latch::countDown));
-            stage1.show();
-        });
-
-        Util.await(stage1Latch);
-        Util.sleep(LONG_WAIT_TIME);
-
-        Util.runAndWait(() -> {
-            assertFalse(stage1.isFullScreen());
-            Color color = getColor(WIDTH * 2, HEIGHT * 2);
-            assertColorEquals(COLOR0, color, TOLERANCE);
-        });
     }
 }
