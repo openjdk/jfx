@@ -92,6 +92,8 @@ public class TreeTableViewMouseInputTest {
     private TreeItem<String> child9;            // 12
     private TreeItem<String> child10;           // 13
 
+    private StageLoader stageLoader;
+
     @BeforeEach
     public void setup() {
         root = new TreeItem<>("Root");             // 0
@@ -148,6 +150,9 @@ public class TreeTableViewMouseInputTest {
 
     @AfterEach
     public void tearDown() {
+        if (stageLoader != null) {
+            stageLoader.dispose();
+        }
         if (tableView.getSkin() != null) {
             tableView.getSkin().dispose();
         }
@@ -224,6 +229,8 @@ public class TreeTableViewMouseInputTest {
 
         sm.clearAndSelect(9);
 
+        stageLoader = new StageLoader(tableView);
+
         // select all from 9 - 7
         VirtualFlowTestUtils.clickOnRow(tableView, 7, KeyModifier.SHIFT);
         assertTrue(isSelected(7,8,9), debug());
@@ -238,6 +245,8 @@ public class TreeTableViewMouseInputTest {
         sm.setSelectionMode(SelectionMode.MULTIPLE);
 
         sm.clearAndSelect(5);
+
+        stageLoader = new StageLoader(tableView);
 
         // select all from 5 - 7
         VirtualFlowTestUtils.clickOnRow(tableView, 7, KeyModifier.SHIFT);
@@ -267,6 +276,8 @@ public class TreeTableViewMouseInputTest {
         assertEquals(0,rt30394_count);
         assertFalse(fm.isFocused(0));
 
+        stageLoader = new StageLoader(tableView);
+
         // select the first row with the shift key held down. The focus event
         // should only fire once - for focus on 0 (never -1 as this bug shows).
         VirtualFlowTestUtils.clickOnRow(tableView, 0, KeyModifier.SHIFT);
@@ -278,6 +289,8 @@ public class TreeTableViewMouseInputTest {
     @Test public void test_rt32119() {
         sm.setSelectionMode(SelectionMode.MULTIPLE);
         sm.clearSelection();
+
+        stageLoader = new StageLoader(tableView);
 
         // select rows 2, 3, and 4
         VirtualFlowTestUtils.clickOnRow(tableView, 2);
@@ -310,6 +323,8 @@ public class TreeTableViewMouseInputTest {
         col0.setMaxWidth(10);
         tableView.getColumns().add(col0);
 
+        stageLoader = new StageLoader(tableView);
+
         // select rows 1, 2, 3, 4, and 5
         VirtualFlowTestUtils.clickOnRow(tableView, 1, true);
         VirtualFlowTestUtils.clickOnRow(tableView, 5, true, KeyModifier.SHIFT);
@@ -326,6 +341,8 @@ public class TreeTableViewMouseInputTest {
         for (int i = 0; i < items; i++) {
             root.getChildren().add(new TreeItem<>("Row " + i));
         }
+
+        stageLoader = new StageLoader(tableView);
 
         final int selectRow = 3;
 
@@ -350,6 +367,8 @@ public class TreeTableViewMouseInputTest {
             root.getChildren().add(new TreeItem<>("Row " + i));
         }
 
+        stageLoader = new StageLoader(tableView);
+
         final int selectRow = 3;
 
         tableView.setShowRoot(false);
@@ -370,6 +389,8 @@ public class TreeTableViewMouseInputTest {
         for (int i = 0; i < items; i++) {
             root.getChildren().add(new TreeItem<>("Row " + i));
         }
+
+        stageLoader = new StageLoader(tableView);
 
         final int selectRow = 3;
 
@@ -394,6 +415,8 @@ public class TreeTableViewMouseInputTest {
             root.getChildren().add(new TreeItem<>("Row " + i));
         }
 
+        stageLoader = new StageLoader(tableView);
+
         final int selectRow = 3;
 
         tableView.setShowRoot(false);
@@ -414,6 +437,8 @@ public class TreeTableViewMouseInputTest {
         for (int i = 0; i < items; i++) {
             root.getChildren().add(new TreeItem<>("Row " + i));
         }
+
+        stageLoader = new StageLoader(tableView);
 
         final MultipleSelectionModel sm = tableView.getSelectionModel();
         sm.setSelectionMode(SelectionMode.MULTIPLE);
@@ -440,10 +465,10 @@ public class TreeTableViewMouseInputTest {
         for (int i = 0; i < items; i++) {
             root.getChildren().add(new TreeItem<>("Row " + i));
         }
-
-//        StageLoader sl = new StageLoader(tableView);
-
         tableView.setShowRoot(true);
+
+        stageLoader = new StageLoader(tableView);
+
         final MultipleSelectionModel sm = tableView.getSelectionModel();
         sm.setSelectionMode(SelectionMode.MULTIPLE);
         sm.clearAndSelect(0);
@@ -473,8 +498,10 @@ public class TreeTableViewMouseInputTest {
             root.getChildren().add(new TreeItem<>("Row " + i));
         }
         tableView.setRoot(root);
-
         tableView.setShowRoot(true);
+
+        stageLoader = new StageLoader(tableView);
+
         final MultipleSelectionModel sm = tableView.getSelectionModel();
         sm.setSelectionMode(SelectionMode.MULTIPLE);
         sm.clearAndSelect(0);
@@ -544,8 +571,10 @@ public class TreeTableViewMouseInputTest {
             root.getChildren().add(new TreeItem<>("Row " + i));
         }
         tableView.setRoot(root);
-
         tableView.setShowRoot(true);
+
+        stageLoader = new StageLoader(tableView);
+
         final MultipleSelectionModel sm = tableView.getSelectionModel();
         sm.setSelectionMode(SelectionMode.MULTIPLE);
         sm.clearAndSelect(0);
@@ -580,6 +609,8 @@ public class TreeTableViewMouseInputTest {
         sm.setSelectionMode(SelectionMode.MULTIPLE);
         sm.setCellSelectionEnabled(false);
 
+        stageLoader = new StageLoader(tableView);
+
         VirtualFlowTestUtils.clickOnRow(tableView, 1);
         assertEquals(1, sm.getSelectedCells().size());
 
@@ -601,6 +632,8 @@ public class TreeTableViewMouseInputTest {
         sm.setSelectionMode(SelectionMode.MULTIPLE);
         sm.setCellSelectionEnabled(true);
 
+        stageLoader = new StageLoader(tableView);
+
         VirtualFlowTestUtils.clickOnRow(tableView, 1);
         assertEquals(1, sm.getSelectedCells().size());
 
@@ -617,6 +650,8 @@ public class TreeTableViewMouseInputTest {
             root.getChildren().add(new TreeItem<>("Row " + i));
         }
         tableView.setRoot(root);
+
+        stageLoader = new StageLoader(tableView);
 
         final MultipleSelectionModel sm = tableView.getSelectionModel();
         final FocusModel fm = tableView.getFocusModel();
@@ -642,6 +677,8 @@ public class TreeTableViewMouseInputTest {
         tableView.setMinWidth(1000);
         tableView.setMinWidth(1000);
 
+        stageLoader = new StageLoader(tableView);
+
         TreeTableRow row = (TreeTableRow) VirtualFlowTestUtils.getCell(tableView, 4);
         assertNotNull(row);
         assertNull(row.getItem());
@@ -660,6 +697,8 @@ public class TreeTableViewMouseInputTest {
             root.getChildren().add(new TreeItem<>("Row " + i));
         }
         tableView.setRoot(root);
+
+        stageLoader = new StageLoader(tableView);
 
         // expand
         assertFalse(root.isExpanded());
@@ -745,6 +784,8 @@ public class TreeTableViewMouseInputTest {
 
         table.getColumns().addAll(firstNameCol, lastNameCol, emailCol);
 
+        stageLoader = new StageLoader(table);
+
         sm.select(0, firstNameCol);
 
         assertTrue(sm.isSelected(0, firstNameCol));
@@ -813,6 +854,8 @@ public class TreeTableViewMouseInputTest {
 
         table.getColumns().addAll(firstNameCol, lastNameCol, emailCol);
 
+        stageLoader = new StageLoader(table);
+
         sm = table.getSelectionModel();
         sm.setCellSelectionEnabled(false);
         sm.setSelectionMode(SelectionMode.MULTIPLE);
@@ -879,6 +922,8 @@ public class TreeTableViewMouseInputTest {
         emailCol.setCellValueFactory(new TreeItemPropertyValueFactory<Person, String>("email"));
 
         table.getColumns().addAll(firstNameCol, lastNameCol, emailCol);
+
+        stageLoader = new StageLoader(table);
 
         sm = table.getSelectionModel();
         sm.setCellSelectionEnabled(true);
@@ -961,6 +1006,8 @@ public class TreeTableViewMouseInputTest {
         emailCol.setCellValueFactory(new TreeItemPropertyValueFactory<Person, String>("email"));
 
         table.getColumns().addAll(firstNameCol, lastNameCol, emailCol);
+
+        stageLoader = new StageLoader(table);
 
         TreeTableView.TreeTableViewSelectionModel<Person> sm = table.getSelectionModel();
         sm.setCellSelectionEnabled(cellSelection);
@@ -1057,6 +1104,8 @@ public class TreeTableViewMouseInputTest {
             List<?> copy = new ArrayList<>(sm.getSelectedItems());
             assertFalse(copy.contains(null));
         });
+
+        stageLoader = new StageLoader(table);
 
         // select all
         VirtualFlowTestUtils.clickOnRow(table, 0, true, KeyModifier.getShortcutKey());
