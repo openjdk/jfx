@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -22,24 +22,35 @@
  * or visit www.oracle.com if you need additional information or have any
  * questions.
  */
-#ifndef GLASS_KEY_H
-#define        GLASS_KEY_H
 
-#include <jni.h>
+#ifndef SCANCODES_H
+#define SCANCODES_H
 
-#include <gtk/gtk.h>
+#define SCANCODE_A 30
+#define SCANCODE_B 48
+#define SCANCODE_C 46
+#define SCANCODE_D 32
+#define SCANCODE_E 18
+#define SCANCODE_F 33
+#define SCANCODE_G 34
+#define SCANCODE_H 35
+#define SCANCODE_I 23
+#define SCANCODE_J 36
+#define SCANCODE_K 37
+#define SCANCODE_L 38
+#define SCANCODE_M 50
+#define SCANCODE_N 49
+#define SCANCODE_O 24
+#define SCANCODE_P 25
+#define SCANCODE_Q 16
+#define SCANCODE_R 19
+#define SCANCODE_S 31
+#define SCANCODE_T 20
+#define SCANCODE_U 22
+#define SCANCODE_V 47
+#define SCANCODE_W 17
+#define SCANCODE_X 45
+#define SCANCODE_Y 21
+#define SCANCODE_Z 44
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-jint gdk_keyval_to_glass(guint keyval);
-jint get_glass_key(GdkEventKey* e);
-jint glass_key_to_modifier(jint glassKey);
-jint gdk_modifier_mask_to_glass(guint mask);
-gint find_gdk_keyval_for_glass_keycode(jint code);
-gint find_gdk_keycode_for_keyval(gint keyval);
-gint find_scancode_for_gdk_keyval(gint keyval);
-#ifdef __cplusplus
-}
-#endif
-#endif        /* GLASS_KEY_H */
+#endif //SCANCODES_H
