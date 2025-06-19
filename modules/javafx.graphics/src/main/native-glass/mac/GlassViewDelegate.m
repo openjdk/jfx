@@ -1134,6 +1134,11 @@ static jint getSwipeDirFromEvent(NSEvent *theEvent)
     return YES;
 }
 
+- (void)performWindowDrag
+{
+    [[nsView window] performWindowDragWithEvent:[NSApp currentEvent]];
+}
+
 static jstring convertNSStringToJString(id aString, int length)
 {
     GET_MAIN_JENV;

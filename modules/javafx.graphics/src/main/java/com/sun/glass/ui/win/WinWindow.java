@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2023, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,6 +25,8 @@
 package com.sun.glass.ui.win;
 
 import com.sun.glass.ui.Cursor;
+import com.sun.glass.ui.HeaderButtonMetrics;
+import com.sun.glass.ui.HeaderButtonOverlay;
 import com.sun.glass.ui.Pixels;
 import com.sun.glass.ui.Screen;
 import com.sun.glass.ui.View;
@@ -40,10 +42,10 @@ class WinWindow extends Window {
 
     public static final long ANCHOR_NO_CAPTURE = (1L << 63);
 
-    float fxReqWidth;
-    float fxReqHeight;
-    int pfReqWidth;
-    int pfReqHeight;
+    private float fxReqWidth;
+    private float fxReqHeight;
+    private int pfReqWidth;
+    private int pfReqHeight;
 
     private native static void _initIDs();
     static {
@@ -52,6 +54,10 @@ class WinWindow extends Window {
 
     protected WinWindow(Window owner, Screen screen, int styleMask) {
         super(owner, screen, styleMask);
+
+        if (isExtendedWindow()) {
+            prefHeaderButtonHeightProperty().subscribe(this::onPrefHeaderButtonHeightChanged);
+        }
     }
 
     @Override
@@ -114,6 +120,10 @@ class WinWindow extends Window {
                 ph = iTop + iBot + (int) Math.ceil(fx_ch * platformScaleY);
             }
             fxReqHeight = fx_ch;
+
+            int maxW = getMaximumWidth(), maxH = getMaximumHeight();
+            pw = Math.max(Math.min(pw, maxW > 0 ? maxW : Integer.MAX_VALUE), getMinimumWidth());
+            ph = Math.max(Math.min(ph, maxH > 0 ? maxH : Integer.MAX_VALUE), getMinimumHeight());
 
             long anchor = _getAnchor(getRawHandle());
             int resizeMode = (anchor == ANCHOR_NO_CAPTURE)
@@ -257,6 +267,7 @@ class WinWindow extends Window {
 
     native private long _getInsets(long ptr);
     native private long _getAnchor(long ptr);
+    native private void _showSystemMenu(long ptr, int x, int y);
     @Override native protected long _createWindow(long ownerPtr, long screenPtr, int mask);
     @Override native protected boolean _close(long ptr);
     @Override native protected boolean _setView(long ptr, View view);
@@ -315,10 +326,110 @@ class WinWindow extends Window {
 
     @Override public void close() {
         if (!deferredClosing) {
+            if (headerButtonOverlay.get() instanceof HeaderButtonOverlay overlay) {
+                overlay.dispose();
+            }
+
             super.close();
         } else {
             closingRequested = true;
             setVisible(false);
         }
+    }
+
+    /**
+     * Opens a system menu at the specified coordinates.
+     *
+     * @param x the X coordinate in physical pixels
+     * @param y the Y coordinate in physical pixels
+     */
+    public void showSystemMenu(int x, int y) {
+        _showSystemMenu(getRawHandle(), x, y);
+    }
+
+    /**
+     * Creates or disposes the {@link HeaderButtonOverlay} when the preferred header button height has changed.
+     * <p>
+     * If the preferred height is zero, the overlay is disposed; if the preferred height is non-zero, the
+     * {@link #headerButtonOverlay} and {@link #headerButtonMetrics} properties will hold the overlay and
+     * its metrics.
+     *
+     * @param height the preferred header button height
+     */
+    private void onPrefHeaderButtonHeightChanged(Number height) {
+        // Return early if we can keep the existing overlay instance.
+        if (height.doubleValue() != 0 && headerButtonOverlay.get() != null) {
+            return;
+        }
+
+        if (headerButtonOverlay.get() instanceof HeaderButtonOverlay overlay) {
+            overlay.dispose();
+        }
+
+        if (height.doubleValue() == 0) {
+            headerButtonOverlay.set(null);
+            headerButtonMetrics.set(HeaderButtonMetrics.EMPTY);
+        } else {
+            HeaderButtonOverlay overlay = createHeaderButtonOverlay();
+            overlay.metricsProperty().subscribe(headerButtonMetrics::set);
+            headerButtonOverlay.set(overlay);
+        }
+    }
+
+    /**
+     * Creates a new {@code HeaderButtonOverlay} instance.
+     */
+    private HeaderButtonOverlay createHeaderButtonOverlay() {
+        var overlay = new WinHeaderButtonOverlay(
+            isUtilityWindow(),
+            (getStyleMask() & RIGHT_TO_LEFT) != 0);
+
+        overlay.prefButtonHeightProperty().bind(prefHeaderButtonHeightProperty());
+        return overlay;
+    }
+
+    /**
+     * Classifies the window region at the specified physical coordinate.
+     * <p>
+     * This method is called from native code.
+     *
+     * @param x the X coordinate in physical pixels
+     * @param y the Y coordinate in physical pixels
+     */
+    @SuppressWarnings("unused")
+    private int nonClientHitTest(int x, int y) {
+        // https://learn.microsoft.com/en-us/windows/win32/inputdev/wm-nchittest
+        enum HT {
+            CLIENT(1), CAPTION(2), MINBUTTON(8), MAXBUTTON(9), CLOSE(20);
+            HT(int value) { this.value = value; }
+            final int value;
+        }
+
+        // A full-screen window has no non-client area.
+        if (view == null || view.isInFullscreen() || !isExtendedWindow()) {
+            return HT.CLIENT.value;
+        }
+
+        double wx = x / platformScaleX;
+        double wy = y / platformScaleY;
+
+        // If the cursor is over one of the window buttons (minimize, maximize, close), we need to
+        // report the value of HTMINBUTTON, HTMAXBUTTON, or HTCLOSE back to the native layer.
+        switch (headerButtonOverlay.get() instanceof HeaderButtonOverlay overlay ? overlay.buttonAt(wx, wy) : null) {
+            case ICONIFY: return HT.MINBUTTON.value;
+            case MAXIMIZE: return HT.MAXBUTTON.value;
+            case CLOSE: return HT.CLOSE.value;
+            case null: break;
+        }
+
+        // Otherwise, test if the cursor is over a draggable area and return HTCAPTION.
+        View.EventHandler eventHandler = view.getEventHandler();
+        return switch (eventHandler != null ? eventHandler.pickHeaderArea(wx, wy) : null) {
+            case DRAGBAR -> HT.CAPTION.value;
+            case ICONIFY -> HT.MINBUTTON.value;
+            case MAXIMIZE -> HT.MAXBUTTON.value;
+            case CLOSE -> HT.CLOSE.value;
+            case null -> HT.CLIENT.value;
+        };
     }
 }
