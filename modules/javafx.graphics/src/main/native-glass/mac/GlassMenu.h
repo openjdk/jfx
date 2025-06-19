@@ -30,6 +30,7 @@
 {
 @public
         NSMenu        *menu;
+        NSMutableSet  *ownedMenus;
 }
 
 - (id)init;
