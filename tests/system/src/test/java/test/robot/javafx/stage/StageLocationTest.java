@@ -34,15 +34,19 @@ import javafx.scene.layout.VBox;
 import javafx.scene.paint.Color;
 import javafx.stage.Stage;
 import javafx.stage.StageStyle;
+import org.junit.jupiter.api.Timeout;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.EnumSource;
 import test.robot.testharness.VisualTestBase;
 import test.util.Util;
 
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
 
 import static test.util.Util.PARAMETERIZED_TEST_DISPLAY;
+import static test.util.Util.TIMEOUT;
 
+@Timeout(value = TIMEOUT, unit= TimeUnit.MILLISECONDS)
 class StageLocationTest extends VisualTestBase {
     private static final int WIDTH = 300;
     private static final int HEIGHT = 300;
