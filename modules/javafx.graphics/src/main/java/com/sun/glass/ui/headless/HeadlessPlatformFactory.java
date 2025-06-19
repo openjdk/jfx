@@ -97,7 +97,7 @@ public class HeadlessPlatformFactory extends PlatformFactory {
 
         @Override
         protected boolean isOwner() {
-            throw new UnsupportedOperationException("Not supported yet.")
+            throw new UnsupportedOperationException("Not supported yet.");
         }
 
         @Override
