@@ -186,7 +186,7 @@ private:
 
     struct _Resizable {
         _Resizable(): value(true),
-                minw(-1), minh(-1), maxw(-1), maxh(-1), sysminw(-1), sysminh(-1) {}
+                minw(1), minh(1), maxw(G_MAXINT), maxh(G_MAXINT), sysminw(-1), sysminh(-1) {}
         bool value; //actual value of resizable for a window
         int minw, minh, maxw, maxh; //minimum and maximum window width/height;
         int sysminw, sysminh; // size of window button area of EXTENDED windows
@@ -205,7 +205,6 @@ private:
     Observable<Size> window_size= Size{-1, -1};
     Observable<Point> window_location = Point{-1, -1};
     Observable<Rectangle> window_extents = Rectangle{0, 0, 0, 0};
-    bool frame_extents_received{false};
     bool needs_to_update_frame_extents{false};
     float gravity_x{0};
     float gravity_y{0};

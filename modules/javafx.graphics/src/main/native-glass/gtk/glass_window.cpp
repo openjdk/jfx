@@ -831,9 +831,9 @@ void WindowContext::update_frame_extents() {
 
     if (get_frame_extents_property(&top, &left, &bottom, &right)) {
         if (top > 0 || right > 0 || bottom > 0 || left > 0) {
-            Rectangle extents = window_extents.get();
+            Rectangle old_extents = window_extents.get();
             Rectangle new_extents = { left, top, (left + right), (top + bottom) };
-            bool changed = extents == new_extents;
+            bool changed = old_extents != new_extents;
 
             LOG(" ------------------------------------------- frame extents - changed: %d\n", changed);
 
@@ -856,16 +856,12 @@ void WindowContext::update_frame_extents() {
             // change decoration sizes.
             if (width_type == BOUNDSTYPE_WINDOW) {
                 // Re-add the extents and then subtract the new
-                newW = newW
-                    + ((frame_extents_received) ? extents.width : 0)
-                    - new_extents.width;
+                newW = newW + old_extents.width - new_extents.width;
             }
 
             if (height_type == BOUNDSTYPE_WINDOW) {
                 // Re-add the extents and then subtract the new
-                newH = newH
-                    + ((frame_extents_received) ? extents.height : 0)
-                    - new_extents.height;
+                newH = newH + old_extents.height - new_extents.height;
             }
 
             newW = nonnegative_or(newW, 1);
@@ -890,7 +886,6 @@ void WindowContext::update_frame_extents() {
             }
 
             window_extents.set(new_extents);
-            frame_extents_received = true;
             view_size.set({newW, newH});
             window_location.set({x, y});
             move_resize(x, y, true, true, newW, newH);
@@ -937,13 +932,11 @@ void WindowContext::load_cached_extents() {
 
     if (window_type == NORMAL && normal_extents.has_value()) {
         window_extents.set(normal_extents.value());
-        frame_extents_received = true;
         return;
     }
 
     if (window_type == UTILITY && utility_extents.has_value()) {
         window_extents.set(utility_extents.value());
-        frame_extents_received = true;
     }
 }
 
@@ -1160,15 +1153,10 @@ void WindowContext::update_window_constraints() {
 
         Rectangle extents = window_extents.get();
 
-        hints.min_width = (w == -1) ? 1 : nonnegative_or(w - extents.width, 1);
-        hints.min_height = (h == -1) ? 1 : nonnegative_or(h - extents.height, 1);
-
-        hints.max_width = (resizable.maxw == -1)
-                    ? G_MAXINT
-                    : nonnegative_or(resizable.maxw - extents.width, 1);
-        hints.max_height = (resizable.maxh == -1)
-                    ? G_MAXINT
-                    : nonnegative_or(resizable.maxh - extents.height, 1);
+        hints.min_width = nonnegative_or(w - extents.width, w);
+        hints.min_height = nonnegative_or(h - extents.height, h);
+        hints.max_width = nonnegative_or(resizable.maxw - extents.width, resizable.maxw);
+        hints.max_height = nonnegative_or(resizable.maxh - extents.height, resizable.maxh);
     } else {
         Size size = view_size.get();
         hints.min_width = size.width;
@@ -1383,8 +1371,8 @@ void WindowContext::set_system_minimum_size(int w, int h) {
 
 void WindowContext::set_maximum_size(int w, int h) {
     LOG("set_maximum_size: %d, %d\n", w, h);
-    resizable.maxw = (w == -1) ? -1 : w;
-    resizable.maxh = (h == -1) ? -1 : h;
+    resizable.maxw = (w == -1) ? G_MAXINT : w;
+    resizable.maxh = (h == -1) ? G_MAXINT : h;
     update_window_constraints();
 }
 
