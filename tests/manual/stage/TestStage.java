@@ -93,6 +93,7 @@ import javafx.scene.layout.VBox;
 import javafx.scene.layout.HeaderBar;
 import javafx.scene.layout.HeaderDragType;
 import javafx.scene.paint.Color;
+import javafx.scene.image.Image;
 import javafx.stage.FileChooser;
 import javafx.stage.Modality;
 import javafx.stage.Screen;
@@ -429,8 +430,6 @@ public class TestStage extends Application {
                             createLabel("Last Event: ", lastEvent));
         root.setBackground(Background.EMPTY);
 
-
-
         if (currentStage.getStyle() == StageStyle.TRANSPARENT) {
             BackgroundFill fill = new BackgroundFill(
                     Color.HOTPINK.deriveColor(0, 1, 1, 0.5),
@@ -505,6 +504,21 @@ public class TestStage extends Application {
         }
     }
 
+    private void setStageIcon() {
+        FileChooser fileChooser = new FileChooser();
+        fileChooser.setTitle("Choose Icon Image");
+        fileChooser.getExtensionFilters().addAll(
+                new FileChooser.ExtensionFilter("Image Files", "*.png", "*.jpg", "*.jpeg", "*.gif")
+        );
+
+        File file = fileChooser.showOpenDialog(currentStage);
+        if (file != null) {
+            Image icon = new Image(file.toURI().toString());
+            currentStage.getIcons().clear();
+            currentStage.getIcons().add(icon);
+        }
+    }
+
     private void setupContextMenu(Node root) {
         ContextMenu contextMenu = new ContextMenu();
 
@@ -520,10 +534,11 @@ public class TestStage extends Application {
         alertWindowModalMenuItem.setOnAction(e -> createAlert(true));
         MenuItem fileOpenMenuItem = new MenuItem("File Open");
         fileOpenMenuItem.setOnAction(e -> createFileOpen());
-
+        MenuItem iconMenuItem = new MenuItem("Set Stage Icon");
+        iconMenuItem.setOnAction(e -> setStageIcon());
 
         contextMenu.getItems().addAll(defaultSceneMenuItem, textFieldMenuItem, tooltipBoxMenuItem,
-                alertMenuItem, alertWindowModalMenuItem, fileOpenMenuItem);
+                alertMenuItem, alertWindowModalMenuItem, fileOpenMenuItem, iconMenuItem);
         root.setOnContextMenuRequested(e -> contextMenu.show(root, e.getScreenX(), e.getScreenY()));
 
         root.setOnMousePressed(e -> {
