@@ -34,12 +34,12 @@ import java.util.Map;
  * <p>
  *
  * For a given keyboard layout each key is assigned a code which does not
- * vary (the modifiers do not change a key's code). For keys that generate
- * printable characters the code will usually be based on the unmodified
- * character. The exceptions are {@link KeyCode#A} through {@link KeyCode#Z}
- * which are assigned to keys even on layouts which don't generate those
- * letters (such as Greek). This ensures that common letter-based shortcuts
- * are always available.
+ * vary (it is not affected by the state of the modifier keys). For keys that
+ * generate printable characters the code will usually be based on the
+ * character generated when no modifier key is held down. The exceptions are
+ * {@link KeyCode#A} through{@link KeyCode#Z} which are assigned to keys even
+ * on layouts which don't generate those letters (such as Greek). This
+ * ensures that common letter-based shortcuts are accessible on all layouts.
  *
  * <p>
  *
