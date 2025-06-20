@@ -107,7 +107,7 @@ public class StageAttributesTest extends VisualTestBase {
     }
 
     @ParameterizedTest(name = PARAMETERIZED_TEST_DISPLAY)
-    @EnumSource(value = StageStyle.class, mode = EnumSource.Mode.INCLUDE, names = {"DECORATED", "UNDECORATED"})
+    @EnumSource(names = {"DECORATED", "UNDECORATED"})
     public void testIconifiedStage(StageStyle stageStyle) throws InterruptedException {
         setupStages(true, true, stageStyle);
 

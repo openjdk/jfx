@@ -28,6 +28,9 @@
 #define DEFAULT_WIDTH 320
 #define DEFAULT_HEIGHT 200
 
+//  Native Windows wider or taller than 32767 pixels are not supported
+#define MAX_WINDOW_SIZE 32767
+
 #define GETTER(type, name) \
     type get_##name() const { return name; }
 
@@ -66,6 +69,11 @@ public:
         if (onChange) {
             onChange(value);
         }
+    }
+
+    // This resets the value without notifying
+    void reset(const T& newValue) {
+        value = newValue;
     }
 
     const T& get() const {
@@ -109,6 +117,12 @@ struct Size {
 
     bool operator==(const Size& other) const {
         return width == other.width && height == other.height;
+    }
+
+    Size max(const Size& other) const {
+        int w = std::max(other.width, width);
+        int h = std::max(other.height, height);
+        return {w, h};
     }
 };
 
@@ -184,14 +198,6 @@ private:
     WindowFrameType frame_type;
     WindowType window_type;
 
-    struct _Resizable {
-        _Resizable(): value(true),
-                minw(1), minh(1), maxw(G_MAXINT), maxh(G_MAXINT), sysminw(-1), sysminh(-1) {}
-        bool value; //actual value of resizable for a window
-        int minw, minh, maxw, maxh; //minimum and maximum window width/height;
-        int sysminw, sysminh; // size of window button area of EXTENDED windows
-    } resizable;
-
     GdkWindow *gdk_window{};
 
     GdkWMFunction initial_wmf;
@@ -200,9 +206,13 @@ private:
     GdkCursor* gdk_cursor{};
     GdkCursor* gdk_cursor_override{};
 
+    Observable<Size> minimum_size = Size{1, 1};
+    Observable<Size> maximum_size = Size{G_MAXINT, G_MAXINT};
+    Observable<Size> sys_min_size = Size{1, 1};
+    Observable<bool> resizable{true};
     Observable<Point> view_position = Point{-1, -1};
     Observable<Size> view_size = Size{-1, -1};
-    Observable<Size> window_size= Size{-1, -1};
+    Observable<Size> window_size = Size{-1, -1};
     Observable<Point> window_location = Point{-1, -1};
     Observable<Rectangle> window_extents = Rectangle{0, 0, 0, 0};
     bool needs_to_update_frame_extents{false};

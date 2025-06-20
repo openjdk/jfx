@@ -49,9 +49,6 @@
 // Resize border width of EXTENDED windows
 #define RESIZE_BORDER_WIDTH 5
 
-constexpr int nonnegative_or(int val, int fallback) {
-    return (val < 0) ? fallback : val;
-}
 
 void destroy_and_delete_ctx(WindowContext* ctx) {
     LOG("destroy_and_delete_ctx\n");
@@ -128,8 +125,6 @@ WindowContext::WindowContext(jobject _jwindow, WindowContext* _owner, long _scre
         initial_wmf = GDK_FUNC_ALL;
     }
 
-    load_cached_extents();
-
     int attr_mask = GDK_WA_VISUAL;
     GdkWindowAttr attributes;
     attributes.visual = find_best_visual();
@@ -205,6 +200,24 @@ WindowContext::WindowContext(jobject _jwindow, WindowContext* _owner, long _scre
         update_window_constraints();
         update_window_size();
     });
+
+    resizable.setOnChange([this](const bool& resizable) {
+        update_window_constraints();
+    });
+
+    minimum_size.setOnChange([this](const Size& size) {
+        update_window_constraints();
+    });
+
+    sys_min_size.setOnChange([this](const Size& size) {
+        update_window_constraints();
+    });
+
+    maximum_size.setOnChange([this](const Size& size) {
+        update_window_constraints();
+    });
+
+    load_cached_extents();
 }
 
 GdkVisual* WindowContext::find_best_visual() {
@@ -684,8 +697,8 @@ bool WindowContext::set_view(jobject view) {
 
     if (view) {
         jview = mainEnv->NewGlobalRef(view);
-        view_size.invalidate();
-        view_position.invalidate();
+        view_size.reset({-1, -1});
+        view_position.reset({-1, -1});
     } else {
         jview = nullptr;
     }
@@ -868,8 +881,8 @@ void WindowContext::update_frame_extents() {
                 newH = newH + old_extents.height - new_extents.height;
             }
 
-            newW = nonnegative_or(newW, 1);
-            newH = nonnegative_or(newH, 1);
+            newW = std::clamp(newW, 1, MAX_WINDOW_SIZE);
+            newH = std::clamp(newH, 1, MAX_WINDOW_SIZE);
 
             LOG("extents received -> new view size: %d, %d\n", newW, newH);
 
@@ -881,12 +894,10 @@ void WindowContext::update_frame_extents() {
             // accounting decorations
             if (gravity_x > 0 && x > 0) {
                 x -= gravity_x * (float) (new_extents.width);
-                x = nonnegative_or(x, 0);
             }
 
             if (gravity_y > 0 && y > 0) {
                 y -= gravity_y  * (float) (new_extents.height);
-                y = nonnegative_or(y, 0);
             }
 
             window_extents.set(new_extents);
@@ -1152,21 +1163,26 @@ void WindowContext::update_window_constraints() {
     GdkGeometry hints;
 
     if (is_resizable() && !is_disabled) {
-        int w = std::max(resizable.sysminw, resizable.minw);
-        int h = std::max(resizable.sysminh, resizable.minh);
+        Size min = minimum_size.get().max(sys_min_size.get());
 
         Rectangle extents = window_extents.get();
 
-        hints.min_width = nonnegative_or(w - extents.width, w);
-        hints.min_height = nonnegative_or(h - extents.height, h);
-        hints.max_width = nonnegative_or(resizable.maxw - extents.width, resizable.maxw);
-        hints.max_height = nonnegative_or(resizable.maxh - extents.height, resizable.maxh);
+        hints.min_width = std::clamp(min.width - extents.width, 1, MAX_WINDOW_SIZE);
+        hints.min_height = std::clamp(min.height - extents.height, 1, MAX_WINDOW_SIZE);
+
+        Size max = maximum_size.get();
+
+        hints.max_width = std::clamp(max.width - extents.width, 1, MAX_WINDOW_SIZE);
+        hints.max_height = std::clamp(max.height - extents.height, 1, MAX_WINDOW_SIZE);
     } else {
         Size size = view_size.get();
-        hints.min_width = size.width;
-        hints.min_height = size.height;
-        hints.max_width = size.width;
-        hints.max_height = size.height;
+        int w = std::clamp(size.width, 1, MAX_WINDOW_SIZE);
+        int h = std::clamp(size.height, 1, MAX_WINDOW_SIZE);
+
+        hints.min_width = w;
+        hints.min_height = h;
+        hints.max_width = w;
+        hints.max_height = h;
     }
 
     LOG("geometry hints: min w,h: %d, %d - max w,h: %d, %d\n", hints.min_width,
@@ -1179,12 +1195,11 @@ void WindowContext::update_window_constraints() {
 
 void WindowContext::set_resizable(bool res) {
     LOG("set_resizable: %d\n", res);
-    resizable.value = res;
-    update_window_constraints();
+    resizable.set(res);
 }
 
 bool WindowContext::is_resizable() {
-    return resizable.value;
+    return resizable.get();
 }
 
 bool WindowContext::is_maximized() {
@@ -1237,7 +1252,7 @@ void WindowContext::set_bounds(int x, int y, bool xSet, bool ySet, int w, int h,
 
     if (w > 0) {
         width_type = BOUNDSTYPE_WINDOW;
-        newW = nonnegative_or(w - window_extents.get().width, 1);
+        newW = std::clamp(w - window_extents.get().width, 1, MAX_WINDOW_SIZE);
     } else if (cw > 0) {
         // once set to window, stick with it
         if (width_type == BOUNDSTYPE_UNKNOWN) {
@@ -1248,7 +1263,7 @@ void WindowContext::set_bounds(int x, int y, bool xSet, bool ySet, int w, int h,
 
     if (h > 0) {
         height_type = BOUNDSTYPE_WINDOW;
-        newH = nonnegative_or(h - window_extents.get().height, 1);
+        newH = std::clamp(h - window_extents.get().height, 1, MAX_WINDOW_SIZE);
     } else if (ch > 0) {
         // once set to window, stick with it
         if (width_type == BOUNDSTYPE_UNKNOWN) {
@@ -1355,23 +1370,20 @@ void WindowContext::set_enabled(bool enabled) {
 
 void WindowContext::set_minimum_size(int w, int h) {
     LOG("set_minimum_size: %d, %d\n", w, h);
-    resizable.minw = w;
-    resizable.minh = h;
-    update_window_constraints();
+    minimum_size.set({w, h});
 }
 
 void WindowContext::set_system_minimum_size(int w, int h) {
     LOG("set_system_minimum_size: %d,%d\n", w, h)
-    resizable.sysminw = w;
-    resizable.sysminh = h;
-    update_window_constraints();
+    sys_min_size.set({w, h});
 }
 
 void WindowContext::set_maximum_size(int w, int h) {
     LOG("set_maximum_size: %d, %d\n", w, h);
-    resizable.maxw = (w == -1) ? G_MAXINT : w;
-    resizable.maxh = (h == -1) ? G_MAXINT : h;
-    update_window_constraints();
+    int maxw = (w == -1) ? G_MAXINT : w;
+    int maxh = (h == -1) ? G_MAXINT : h;
+
+    maximum_size.set({maxw, maxh});
 }
 
 void WindowContext::set_icon(GdkPixbuf* icon) {
@@ -1451,23 +1463,29 @@ void WindowContext::move_resize(int x, int y, bool xSet, bool ySet, int width, i
     Rectangle extents = window_extents.get();
     int boundsW = newW, boundsH = newH;
 
+    Size max_size = maximum_size.get();
+    Size min_size = minimum_size.get().max(sys_min_size.get());
+
     // Windows that are undecorated or transparent will not respect
     // minimum or maximum size constraints
-    if (resizable.minw > 0 && newW < resizable.minw) {
-        boundsW = nonnegative_or(resizable.minw - extents.width, 1);
+    if (min_size.width > 0 && newW < min_size.width) {
+        boundsW = min_size.width - extents.width;
     }
 
-    if (resizable.maxw > 0 && newW > resizable.maxw) {
-        boundsW = nonnegative_or(resizable.maxw - extents.width, 1);
+    if (max_size.width > 0 && newW > max_size.width) {
+        boundsW = max_size.height - extents.width;
     }
 
-    if (resizable.minh > 0 && newH < resizable.minh) {
-        boundsH = nonnegative_or(resizable.minh - extents.height, 1);
+    if (min_size.height > 0 && newH < min_size.height) {
+        boundsH = min_size.height - extents.height;
     }
 
-    if (resizable.maxh > 0 && newH > resizable.maxh) {
-        boundsH = nonnegative_or(resizable.maxh - extents.height, 1);
+    if (max_size.height > 0 && newH > max_size.height) {
+        boundsH = max_size.height - extents.height;
     }
+
+    boundsW = std::clamp(boundsW, 1, MAX_WINDOW_SIZE);
+    boundsH = std::clamp(boundsH, 1, MAX_WINDOW_SIZE);
 
     Size current_size = view_size.get();
 
