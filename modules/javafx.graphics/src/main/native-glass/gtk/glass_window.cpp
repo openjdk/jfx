@@ -175,7 +175,7 @@ WindowContext::WindowContext(jobject _jwindow, WindowContext* _owner, long _scre
     if (owner) {
         owner->add_child(this);
         if (on_top_inherited()) {
-            gdk_window_set_keep_above(gdk_window, TRUE);
+            gdk_window_set_keep_above(gdk_window, true);
         }
     }
 
@@ -669,6 +669,7 @@ bool WindowContext::is_visible() {
 }
 
 bool WindowContext::set_view(jobject view) {
+    LOG("set_view\n");
     if (jview) {
         mainEnv->CallVoidMethod(jview, jViewNotifyMouse,
                 com_sun_glass_events_MouseEvent_EXIT,
@@ -683,16 +684,18 @@ bool WindowContext::set_view(jobject view) {
 
     if (view) {
         jview = mainEnv->NewGlobalRef(view);
+        view_size.invalidate();
+        view_position.invalidate();
     } else {
         jview = nullptr;
     }
-    return TRUE;
+    return true;
 }
 
 bool WindowContext::grab_mouse_drag_focus() {
     LOG("grab_mouse_drag_focus\n");
     if (glass_gdk_mouse_devices_grab_with_cursor(
-            gdk_window, gdk_window_get_cursor(gdk_window), FALSE)) {
+            gdk_window, gdk_window_get_cursor(gdk_window), false)) {
         WindowContext::sm_mouse_drag_window = this;
         return true;
     } else {
@@ -743,10 +746,10 @@ void WindowContext::set_cursor(GdkCursor* cursor) {
     if (!is_in_drag()) {
         if (WindowContext::sm_mouse_drag_window) {
             glass_gdk_mouse_devices_grab_with_cursor(
-                    WindowContext::sm_mouse_drag_window->get_gdk_window(), cursor, FALSE);
+                    WindowContext::sm_mouse_drag_window->get_gdk_window(), cursor, false);
         } else if (WindowContext::sm_grab_window) {
             glass_gdk_mouse_devices_grab_with_cursor(
-                    WindowContext::sm_grab_window->get_gdk_window(), cursor, TRUE);
+                    WindowContext::sm_grab_window->get_gdk_window(), cursor, true);
         }
     }
 
@@ -900,10 +903,10 @@ bool WindowContext::get_frame_extents_property(int *top, int *left,
 
     if (gdk_property_get(gdk_window,
             get_net_frame_extents_atom(),
-            gdk_atom_intern("CARDINAL", FALSE),
+            gdk_atom_intern("CARDINAL", false),
             0,
             sizeof (unsigned long) * 4,
-            FALSE,
+            false,
             nullptr,
             nullptr,
             nullptr,
@@ -1333,7 +1336,7 @@ void WindowContext::request_focus() {
 }
 
 void WindowContext::set_focusable(bool focusable) {
-    gdk_window_set_accept_focus(gdk_window, focusable ? TRUE : FALSE);
+    gdk_window_set_accept_focus(gdk_window, focusable ? true : false);
 }
 
 void WindowContext::set_title(const char* title) {
@@ -1396,12 +1399,12 @@ void WindowContext::set_modal(bool modal, WindowContext* parent) {
             gdk_window_set_transient_for(gdk_window, parent->get_gdk_window());
         }
     }
-    gdk_window_set_modal_hint(gdk_window, modal ? TRUE : FALSE);
+    gdk_window_set_modal_hint(gdk_window, modal ? true : false);
 }
 
 void WindowContext::update_ontop_tree(bool on_top) {
     bool effective_on_top = on_top || this->on_top;
-    gdk_window_set_keep_above(gdk_window, effective_on_top ? TRUE : FALSE);
+    gdk_window_set_keep_above(gdk_window, effective_on_top ? true : false);
     for (std::set<WindowContext*>::iterator it = children.begin(); it != children.end(); ++it) {
         (*it)->update_ontop_tree(effective_on_top);
     }
@@ -1510,7 +1513,7 @@ void WindowContext::notify_on_top(bool top) {
     if (top != effective_on_top() && jwindow) {
         if (on_top_inherited() && !top) {
             // Disallow user's "on top" handling on windows that inherited the property
-            gdk_window_set_keep_above(gdk_window, TRUE);
+            gdk_window_set_keep_above(gdk_window, true);
         } else {
             on_top = top;
             update_ontop_tree(top);
