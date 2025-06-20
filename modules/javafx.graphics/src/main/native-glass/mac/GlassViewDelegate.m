@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -44,7 +44,6 @@
 #import "GlassHelper.h"
 #import "GlassStatics.h"
 #import "GlassPasteboard.h"
-#import "GlassTouches.h"
 
 #pragma clang diagnostic ignored "-Wdeprecated-declarations"
 
@@ -197,8 +196,6 @@ static jint getSwipeDirFromEvent(NSEvent *theEvent)
 
     [self->nativeFullScreenModeWindow release];
     self->nativeFullScreenModeWindow = nil;
-
-    [GlassTouches stopTracking:self];
 
     GET_MAIN_JENV_NOWARN;
 
@@ -416,13 +413,11 @@ static jint getSwipeDirFromEvent(NSEvent *theEvent)
 
         case NSMouseEntered:
             type = com_sun_glass_events_MouseEvent_ENTER;
-            [GlassTouches startTracking:self];
             self->lastTrackingNumber = [theEvent trackingNumber];
             break;
 
         case NSMouseExited:
             type = com_sun_glass_events_MouseEvent_EXIT;
-            [GlassTouches stopTracking:self];
             self->lastTrackingNumber = [theEvent trackingNumber];
             break;
 
@@ -907,7 +902,7 @@ static jint getSwipeDirFromEvent(NSEvent *theEvent)
     int y = (int)draggingLocation.y;
 
     int xAbs = (int)([info draggingLocation].x + [self->nsView window].frame.origin.x);
-    int yAbs = (int)([[self->nsView window] screen].frame.size.height - [self->nsView window].frame.origin.y
+    int yAbs = (int)([[NSScreen screens] objectAtIndex: 0].frame.size.height - [self->nsView window].frame.origin.y
                      - [info draggingLocation].y);
 
     int mask;
@@ -1140,6 +1135,11 @@ static jint getSwipeDirFromEvent(NSEvent *theEvent)
     return YES;
 }
 
+- (void)performWindowDrag
+{
+    [[nsView window] performWindowDragWithEvent:[NSApp currentEvent]];
+}
+
 static jstring convertNSStringToJString(id aString, int length)
 {
     GET_MAIN_JENV;
@@ -1234,15 +1234,13 @@ static jstring convertNSStringToJString(id aString, int length)
 - (void)setResizableForFullscreen:(BOOL)resizable
 {
     NSWindow* window =  [self->nsView window];
-    if (!((GlassWindow*) window)->isResizable) {
-        NSUInteger mask = [window styleMask];
-        if (resizable) {
-            mask |= NSResizableWindowMask;
-        } else {
-            mask &= ~(NSUInteger)NSResizableWindowMask;
-        }
-        [window setStyleMask: mask];
+    NSUInteger mask = [window styleMask];
+    if (resizable) {
+        mask |= NSWindowStyleMaskResizable;
+    } else {
+        mask &= ~(NSUInteger)NSWindowStyleMaskResizable;
     }
+    [window setStyleMask: mask];
 }
 
 /*

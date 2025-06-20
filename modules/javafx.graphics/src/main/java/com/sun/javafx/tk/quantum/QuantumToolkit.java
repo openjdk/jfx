@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -619,10 +619,17 @@ public final class QuantumToolkit extends Toolkit {
         return stage;
     }
 
+    private boolean maxNestedEventLoopsHit() {
+        if (eventLoopMap == null) {
+            return false;
+        }
+        return eventLoopMap.size() >= PlatformImpl.MAX_NESTED_EVENT_LOOPS;
+    }
+
     @Override public boolean canStartNestedEventLoop() {
         checkFxUserThread();
 
-        return inPulse == 0;
+        return inPulse == 0 && !maxNestedEventLoopsHit();
     }
 
     @Override public Object enterNestedEventLoop(Object key) {
@@ -633,7 +640,12 @@ public final class QuantumToolkit extends Toolkit {
         }
 
         if (!canStartNestedEventLoop()) {
-            throw new IllegalStateException("Cannot enter nested loop during animation or layout processing");
+            if (maxNestedEventLoopsHit()) {
+                throw new IllegalStateException("Exceeded limit on number of nested event loops (" +
+                    PlatformImpl.MAX_NESTED_EVENT_LOOPS + ")");
+            } else {
+                throw new IllegalStateException("Cannot enter nested loop during animation or layout processing");
+            }
         }
 
         if (eventLoopMap == null) {
@@ -1220,6 +1232,8 @@ public final class QuantumToolkit extends Toolkit {
                 return Application.GetApplication().supportsTransparentWindows();
             case UNIFIED_WINDOW:
                 return Application.GetApplication().supportsUnifiedWindows();
+            case EXTENDED_WINDOW:
+                return Application.GetApplication().supportsExtendedWindows();
             case TWO_LEVEL_FOCUS:
                 return Application.GetApplication().hasTwoLevelFocus();
             case VIRTUAL_KEYBOARD:

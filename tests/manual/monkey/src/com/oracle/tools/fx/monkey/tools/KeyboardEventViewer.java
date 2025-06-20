@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2023, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -27,11 +27,14 @@ package com.oracle.tools.fx.monkey.tools;
 import javafx.scene.control.Button;
 import javafx.scene.control.TextArea;
 import javafx.scene.control.ToolBar;
+import javafx.scene.input.Clipboard;
+import javafx.scene.input.ClipboardContent;
 import javafx.scene.input.InputMethodEvent;
 import javafx.scene.input.InputMethodTextRun;
 import javafx.scene.input.KeyEvent;
 import javafx.scene.layout.BorderPane;
 import com.oracle.tools.fx.monkey.util.FX;
+import com.oracle.tools.fx.monkey.util.Native2Ascii;
 
 /**
  * Keyboard / InputMethod Event Viewer
@@ -49,7 +52,12 @@ public class KeyboardEventViewer extends BorderPane {
 
         Button clearButton = FX.button("Clear", this::clear);
 
-        ToolBar tp = new ToolBar(clearButton);
+        Button copyButton = FX.button("Copy", this::copy);
+
+        ToolBar tp = new ToolBar(
+            copyButton,
+            clearButton
+        );
 
         setCenter(textField);
         setTop(tp);
@@ -57,8 +65,18 @@ public class KeyboardEventViewer extends BorderPane {
         textField.requestFocus();
     }
 
-    private void clear() {
+    void clear() {
         textField.clear();
+    }
+
+    void copy() {
+        String s = textField.getSelectedText();
+        if (s.length() == 0) {
+            s = textField.getText();
+        }
+        ClipboardContent cc = new ClipboardContent();
+        cc.putString(s);
+        Clipboard.getSystemClipboard().setContent(cc);
     }
 
     private void handleKeyboardEvent(KeyEvent ev) {
@@ -66,7 +84,7 @@ public class KeyboardEventViewer extends BorderPane {
         sb.append("KeyEvent{");
         sb.append("type=").append(ev.getEventType());
         sb.append(", character=").append(fmt(ev.getCharacter()));
-        sb.append(", text=").append(ev.getText());
+        sb.append(", text=").append(fmt(ev.getText()));
         sb.append(", code=").append(ev.getCode());
 
         if (ev.isShiftDown()) {
@@ -122,26 +140,42 @@ public class KeyboardEventViewer extends BorderPane {
     private static String fmt(String s) {
         if (s == null) {
             return "<null>";
-        } else if (s.length() == 1) {
-            char c = s.charAt(0);
-            if (c > 0x20) {
-                return s;
+        }
+
+        boolean ascii = true;
+        boolean printable = true;
+
+        int len = s.length();
+        for (int i = 0; i < len; i++) {
+            char c = s.charAt(i);
+            if (c < 0x20) {
+                printable = false;
+                ascii = false;
+            }
+            if (c > 0x7f) {
+                ascii = false;
             }
         }
 
+        if (ascii && printable) {
+            return s;
+        }
+
         StringBuilder sb = new StringBuilder();
-        sb.append('<');
         for (int i = 0; i < s.length(); i++) {
             char c = s.charAt(i);
-            sb.append("\\u");
-            sb.append(hex(c >> 4));
-            sb.append(hex(c));
+            if (c < 0x20) {
+                Native2Ascii.escape(sb, c);
+            } else {
+                sb.append(c);
+            }
         }
-        sb.append('>');
-        return sb.toString();
-    }
 
-    private static char hex(int nibble) {
-        return "0123456789ABCDEF".charAt(nibble & 0x0f);
+        if (!ascii) {
+            sb.append(" <");
+            sb.append(Native2Ascii.native2ascii(s));
+            sb.append(">");
+        }
+        return sb.toString();
     }
 }

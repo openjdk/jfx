@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -523,21 +523,25 @@ bool fileIDsAreEqual(std::optional<PlatformFileID> a, std::optional<PlatformFile
 
 int overwriteEntireFile(const String& path, std::span<const uint8_t>)
 {
+    fprintf(stderr, "overwriteEntireFile(const String& path, std::span<const uint8_t>) NOT IMPLEMENTED\n");
     return 0;
 }
 
 int64_t writeToFile(PlatformFileHandle, std::span<const uint8_t> data)
 {
+     fprintf(stderr, "writeToFile(PlatformFileHandle, std::span<const uint8_t> data) NOT IMPLEMENTED\n");
      return 0;
 }
 
 int64_t readFromFile(PlatformFileHandle, std::span<uint8_t> data)
 {
+      fprintf(stderr, "readFromFile(PlatformFileHandle, std::span<uint8_t> data) NOT IMPLEMENTED\n");
       return 0;
 }
 
 std::pair<String, PlatformFileHandle> openTemporaryFile(StringView prefix, StringView suffix)
 {
+     fprintf(stderr, "openTemporaryFile(StringView prefix, StringView suffix) return { String(), nullptr}\n");
      return { String(), nullptr};
 }
 

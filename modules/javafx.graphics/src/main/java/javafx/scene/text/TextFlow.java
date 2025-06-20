@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -57,6 +57,8 @@ import com.sun.javafx.scene.text.TextFlowHelper;
 import com.sun.javafx.scene.text.TextLayout;
 import com.sun.javafx.scene.text.TextLayoutFactory;
 import com.sun.javafx.scene.text.TextSpan;
+import com.sun.javafx.text.PrismLayoutInfo;
+import com.sun.javafx.text.TextUtils;
 import com.sun.javafx.tk.Toolkit;
 
 /**
@@ -217,7 +219,9 @@ public class TextFlow extends Pane {
      * @since 9
      */
     public PathElement[] caretShape(int charIndex, boolean leading) {
-        return getTextLayout().getCaretShape(charIndex, leading, 0, 0);
+        TextLayout.CaretGeometry g = getTextLayout().getCaretGeometry(charIndex, leading);
+        // TODO padding JDK-8341438?
+        return TextUtils.getCaretPathElements(g, 0.0, 0.0);
     }
 
     /**
@@ -366,7 +370,7 @@ public class TextFlow extends Pane {
 
     private PathElement[] getRange(int start, int end, int type) {
         TextLayout layout = getTextLayout();
-        return layout.getRange(start, end, type, 0, 0);
+        return TextUtils.getRange(layout, start, end, type, 0, 0);
     }
 
     private static class EmbeddedSpan implements TextSpan {
@@ -697,5 +701,35 @@ public class TextFlow extends Pane {
                 return f.getTextLayout();
             }
         });
+    }
+
+    /**
+     * Returns a copy of the of the text layout geometry for this node. This copy is a snapshot
+     * of the text layout at the time the method is called.
+     * <p>
+     * While there is no general guarantee that successive invocations of this method return the same instance,
+     * it is safe to either cache this object or call this method each time, since the information obtained from
+     * this lightweight object remains valid until the next layout cycle.
+     *
+     * @return a copy of the layout information
+     * @since 25
+     */
+    public final LayoutInfo getLayoutInfo() {
+        return new PrismLayoutInfo(getTextLayout()) {
+            @Override
+            public double lineSpacing() {
+                return getLineSpacing();
+            }
+
+            @Override
+            protected double dx() {
+                return snappedLeftInset();
+            }
+
+            @Override
+            protected double dy() {
+                return snappedTopInset();
+            }
+        };
     }
 }

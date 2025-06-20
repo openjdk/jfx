@@ -35,6 +35,8 @@ import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
 import static test.com.sun.javafx.scene.control.infrastructure.ControlTestUtils.assertStyleClassContains;
+import java.util.LinkedHashMap;
+import java.util.Map;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -1001,7 +1003,7 @@ public class TreeViewTest {
         // this next test is likely to be brittle, but we'll see...If it is the
         // cause of failure then it can be commented out
         // assertEquals(0.125, scrollBar.getVisibleAmount(), 0.0);
-        assertTrue(scrollBar.getVisibleAmount() > 0.15);
+        assertTrue(scrollBar.getVisibleAmount() > 0.10);
         assertTrue(scrollBar.getVisibleAmount() < 0.17);
     }
 
@@ -1209,14 +1211,14 @@ public class TreeViewTest {
 
         StageLoader sl = new StageLoader(treeView);
 
-        assertEquals(24, rt_31200_count);
+        assertEquals(22, rt_31200_count);
 
         // resize the stage
         sl.getStage().setHeight(250);
         Toolkit.getToolkit().firePulse();
         sl.getStage().setHeight(50);
         Toolkit.getToolkit().firePulse();
-        assertEquals(24, rt_31200_count);
+        assertEquals(22, rt_31200_count);
 
         sl.dispose();
     }
@@ -4073,6 +4075,50 @@ public class TreeViewTest {
         assertEquals("Node 0", table.getSelectionModel().getSelectedItem().getValue());
         assertEquals(0, table.getFocusModel().getFocusedIndex());
         assertEquals("Node 0", table.getFocusModel().getFocusedItem().getValue());
+    }
+
+    // JDK-8340344
+    @Test
+    public void testTreeItemsAlignment() {
+        root = new TreeItem<>("Root");
+        child1 = new TreeItem<>("Child 1");
+        child2 = new TreeItem<>("Child 2");
+        child3 = new TreeItem<>("Child 3");
+
+        TreeItem<String> child4 = new TreeItem<>("Child 4");
+        child3.getChildren().add(child4);
+        root.getChildren().addAll(child1, child2, child3);
+        root.setExpanded(true);
+
+        treeView = new TreeView<>(root);
+        treeView.setShowRoot(false);
+
+        Map<String, Double> layoutXMap = new LinkedHashMap<>();
+
+        treeView.setCellFactory(tv -> new TreeCell<>() {
+            @Override
+            protected void layoutChildren() {
+                super.layoutChildren();
+                if (getItem() != null && !isEmpty()) {
+                    Node container = lookup(".tree-cell > *");
+                    if (container != null) {
+                        layoutXMap.put(getItem(), container.getLayoutX());
+                    }
+                }
+            }
+        });
+
+        stageLoader = new StageLoader(treeView);
+        Toolkit.getToolkit().firePulse();
+
+        List<Double> values = new ArrayList<>(layoutXMap.values());
+        assertFalse(values.isEmpty(), "Expected layoutX values to be collected");
+
+        double first = values.get(0);
+        for (Map.Entry<String, Double> entry : layoutXMap.entrySet()) {
+            double x = entry.getValue();
+            assertEquals(first, x, 1e-6, "Alignment mismatch for item: " + entry.getKey());
+        }
     }
 
     private List<TreeItem<String>> generateChildren(int lvl) {

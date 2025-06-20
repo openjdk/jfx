@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2023, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -35,15 +35,7 @@
 
 #include "wrapped.h"
 
-#if GTK_CHECK_VERSION(3, 0, 0)
-#if ! GTK_CHECK_VERSION(3, 8, 0)
-#error GTK development version is not the minimum 3.8
-#endif
 #define GLASS_GTK3
-#endif
-
-#define GTK_3_MIN_MINOR_VERSION 8
-#define GTK_3_MIN_MICRO_VERSION 0
 
 #ifndef GDK_TOUCH_MASK
 #define GDK_TOUCH_MASK (1 << 22)
@@ -194,7 +186,8 @@ private:
     extern jfieldID jWindowPtr; // com.sun.glass.ui.Window#ptr
     extern jfieldID jCursorPtr; // com.sun.glass.ui.Cursor#ptr
 
-    extern jmethodID jGtkWindowNotifyStateChanged; // com.sun.glass.ui.GtkWindow#notifyStateChanged (I)V
+    extern jmethodID jGtkWindowNotifyStateChanged; // com.sun.glass.ui.gtk.GtkWindow#notifyStateChanged (I)V
+    extern jmethodID jGtkWindowDragAreaHitTest; //com.sun.glass.ui.gtk.GtkWindow#dragAreaHitTest (II)Z
 
     extern jmethodID jClipboardContentChanged; // com.sun.glass.ui.Clipboard#contentChanged ()V
 

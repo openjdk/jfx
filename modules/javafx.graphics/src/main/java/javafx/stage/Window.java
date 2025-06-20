@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -945,24 +945,9 @@ public class Window implements EventTarget {
     public final EventHandler<WindowEvent> getOnCloseRequest() {
         return (onCloseRequest != null) ? onCloseRequest.get() : null;
     }
-    public final ObjectProperty<EventHandler<WindowEvent>>
-            onCloseRequestProperty() {
+    public final ObjectProperty<EventHandler<WindowEvent>> onCloseRequestProperty() {
         if (onCloseRequest == null) {
-            onCloseRequest = new ObjectPropertyBase<>() {
-                @Override protected void invalidated() {
-                    setEventHandler(WindowEvent.WINDOW_CLOSE_REQUEST, get());
-                }
-
-                @Override
-                public Object getBean() {
-                    return Window.this;
-                }
-
-                @Override
-                public String getName() {
-                    return "onCloseRequest";
-                }
-            };
+            onCloseRequest = new EventHandlerProperty<>("onCloseRequest", WindowEvent.WINDOW_CLOSE_REQUEST);
         }
         return onCloseRequest;
     }
@@ -977,21 +962,7 @@ public class Window implements EventTarget {
     }
     public final ObjectProperty<EventHandler<WindowEvent>> onShowingProperty() {
         if (onShowing == null) {
-            onShowing = new ObjectPropertyBase<>() {
-                @Override protected void invalidated() {
-                    setEventHandler(WindowEvent.WINDOW_SHOWING, get());
-                }
-
-                @Override
-                public Object getBean() {
-                    return Window.this;
-                }
-
-                @Override
-                public String getName() {
-                    return "onShowing";
-                }
-            };
+            onShowing = new EventHandlerProperty<>("onShowing", WindowEvent.WINDOW_SHOWING);
         }
         return onShowing;
     }
@@ -1006,21 +977,7 @@ public class Window implements EventTarget {
     }
     public final ObjectProperty<EventHandler<WindowEvent>> onShownProperty() {
         if (onShown == null) {
-            onShown = new ObjectPropertyBase<>() {
-                @Override protected void invalidated() {
-                    setEventHandler(WindowEvent.WINDOW_SHOWN, get());
-                }
-
-                @Override
-                public Object getBean() {
-                    return Window.this;
-                }
-
-                @Override
-                public String getName() {
-                    return "onShown";
-                }
-            };
+            onShown = new EventHandlerProperty<>("onShown", WindowEvent.WINDOW_SHOWN);
         }
         return onShown;
     }
@@ -1035,21 +992,7 @@ public class Window implements EventTarget {
     }
     public final ObjectProperty<EventHandler<WindowEvent>> onHidingProperty() {
         if (onHiding == null) {
-            onHiding = new ObjectPropertyBase<>() {
-                @Override protected void invalidated() {
-                    setEventHandler(WindowEvent.WINDOW_HIDING, get());
-                }
-
-                @Override
-                public Object getBean() {
-                    return Window.this;
-                }
-
-                @Override
-                public String getName() {
-                    return "onHiding";
-                }
-            };
+            onHiding = new EventHandlerProperty<>("onHiding", WindowEvent.WINDOW_HIDING);
         }
         return onHiding;
     }
@@ -1067,21 +1010,7 @@ public class Window implements EventTarget {
     }
     public final ObjectProperty<EventHandler<WindowEvent>> onHiddenProperty() {
         if (onHidden == null) {
-            onHidden = new ObjectPropertyBase<>() {
-                @Override protected void invalidated() {
-                    setEventHandler(WindowEvent.WINDOW_HIDDEN, get());
-                }
-
-                @Override
-                public Object getBean() {
-                    return Window.this;
-                }
-
-                @Override
-                public String getName() {
-                    return "onHidden";
-                }
-            };
+            onHidden = new EventHandlerProperty<>("onHidden", WindowEvent.WINDOW_HIDDEN);
         }
         return onHidden;
     }
@@ -1594,6 +1523,31 @@ public class Window implements EventTarget {
                 Toolkit.getToolkit().requestNextPulse();
                 dirty = true;
             }
+        }
+    }
+
+    private final class EventHandlerProperty<T extends Event> extends ObjectPropertyBase<EventHandler<T>> {
+        private final String name;
+        private final EventType<T> eventType;
+
+        EventHandlerProperty(String name, EventType<T> eventType) {
+            this.name = name;
+            this.eventType = eventType;
+        }
+
+        @Override
+        public Object getBean() {
+            return Window.this;
+        }
+
+        @Override
+        public String getName() {
+            return name;
+        }
+
+        @Override
+        protected void invalidated() {
+            setEventHandler(eventType, get());
         }
     }
 }

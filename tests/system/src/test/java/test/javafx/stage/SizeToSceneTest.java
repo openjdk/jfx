@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2024, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -34,12 +34,14 @@ import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
+import com.sun.javafx.PlatformUtil;
 import test.util.Util;
 
 import java.util.concurrent.CountDownLatch;
 import java.util.function.Consumer;
 
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 class SizeToSceneTest {
 
@@ -118,6 +120,7 @@ class SizeToSceneTest {
 
     @Test
     void testInitialSizeOnMaximizedThenSizeToScene() {
+        assumeTrue(!PlatformUtil.isLinux()); // JDK-8353612
         createAndShowStage(stage -> {
             stage.setMaximized(true);
             stage.sizeToScene();
@@ -129,6 +132,7 @@ class SizeToSceneTest {
 
     @Test
     void testInitialSizeOnFullscreenThenSizeToScene() {
+        assumeTrue(!PlatformUtil.isLinux()); // JDK-8353612
         createAndShowStage(stage -> {
             stage.setFullScreen(true);
             stage.sizeToScene();
@@ -140,6 +144,7 @@ class SizeToSceneTest {
 
     @Test
     void testInitialSizeOnSizeToSceneThenMaximized() {
+        assumeTrue(!PlatformUtil.isLinux()); // JDK-8353612
         createAndShowStage(stage -> {
             stage.sizeToScene();
             stage.setMaximized(true);
@@ -151,6 +156,7 @@ class SizeToSceneTest {
 
     @Test
     void testInitialSizeOnSizeToSceneThenFullscreen() {
+        assumeTrue(!PlatformUtil.isLinux()); // JDK-8353612
         createAndShowStage(stage -> {
             stage.sizeToScene();
             stage.setFullScreen(true);
@@ -162,6 +168,7 @@ class SizeToSceneTest {
 
     @Test
     void testInitialSizeAfterShowSizeToSceneThenFullscreen() {
+        assumeTrue(!PlatformUtil.isLinux()); // JDK-8353612
         createAndShowStage(stage -> {
             stage.show();
 
@@ -174,6 +181,7 @@ class SizeToSceneTest {
 
     @Test
     void testInitialSizeAfterShowSizeToSceneThenMaximized() {
+        assumeTrue(!PlatformUtil.isLinux()); // JDK-8353612
         createAndShowStage(stage -> {
             stage.show();
 
@@ -186,6 +194,7 @@ class SizeToSceneTest {
 
     @Test
     void testInitialSizeAfterShowFullscreenThenSizeToScene() {
+        assumeTrue(!PlatformUtil.isLinux()); // JDK-8353612
         createAndShowStage(stage -> {
             stage.show();
 
@@ -198,6 +207,7 @@ class SizeToSceneTest {
 
     @Test
     void testInitialSizeAfterShowMaximizedThenSizeToScene() {
+        assumeTrue(!PlatformUtil.isLinux()); // JDK-8353612
         createAndShowStage(stage -> {
             stage.show();
 

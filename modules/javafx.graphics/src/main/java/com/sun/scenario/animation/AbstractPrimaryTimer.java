@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2007, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2007, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -26,8 +26,10 @@
 package com.sun.scenario.animation;
 
 import java.util.Arrays;
+import javafx.animation.AnimationTimer;
 import javafx.util.Callback;
 import com.sun.javafx.animation.TickCalculation;
+import com.sun.javafx.util.Logging;
 import com.sun.scenario.DelayedRunnable;
 import com.sun.scenario.Settings;
 import com.sun.scenario.animation.shared.PulseReceiver;
@@ -61,6 +63,10 @@ public abstract class AbstractPrimaryTimer {
     private final int PULSE_DURATION_NS = getPulseDuration(1000000000);
     private final int PULSE_DURATION_TICKS = getPulseDuration((int)TickCalculation.fromMillis(1000));
 
+    // The number of exceptions that can be thrown by a timer callback before we stop sending
+    // them to the uncaught exception handler to prevent spamming the log.
+    public static final int FAILING_TIMER_THRESHOLD = 100;
+
     // This PropertyChangeListener is added to Settings to listen for changes
     // to the nogap and fullspeed properties.
     private static Callback<String, Void> pcl = key -> {
@@ -79,13 +85,15 @@ public abstract class AbstractPrimaryTimer {
         return null;
     };
 
-    private PulseReceiver receivers[] = new PulseReceiver[2];
+    @SuppressWarnings("unchecked")
+    private ReceiverRecord<PulseReceiver>[] receivers = new ReceiverRecord[2];
     private int receiversLength;
     private boolean receiversLocked;
 
     // synchronize to update frameJobList and frameJobs
-    private TimerReceiver animationTimers[] = new TimerReceiver[2]; // frameJobList
-                                                                     // snapshot
+    @SuppressWarnings("unchecked")
+    private ReceiverRecord<TimerReceiver>[] animationTimers = new ReceiverRecord[2]; // frameJobList
+                                                                                     // snapshot
     private int animationTimersLength;
     private boolean animationTimersLocked;
 
@@ -146,7 +154,7 @@ public abstract class AbstractPrimaryTimer {
             receivers = Arrays.copyOf(receivers, needMoreSize ? receivers.length * 3 / 2 + 1 : receivers.length);
             receiversLocked = false;
         }
-        receivers[receiversLength++] = target;
+        receivers[receiversLength++] = ReceiverRecord.ofPulseReceiver(target);
         if (receiversLength == 1) {
             theMainLoop.updateAnimationRunnable();
         }
@@ -158,7 +166,7 @@ public abstract class AbstractPrimaryTimer {
             receiversLocked = false;
         }
         for (int i = 0; i < receiversLength; ++i) {
-            if (target == receivers[i]) {
+            if (target == receivers[i].receiver()) {
                 if (i == receiversLength - 1) {
                     receivers[i] = null;
                 } else {
@@ -180,7 +188,7 @@ public abstract class AbstractPrimaryTimer {
             animationTimers = Arrays.copyOf(animationTimers, needMoreSize ? animationTimers.length * 3 / 2 + 1 : animationTimers.length);
             animationTimersLocked = false;
         }
-        animationTimers[animationTimersLength++] = timer;
+        animationTimers[animationTimersLength++] = ReceiverRecord.ofAnimationTimer(timer);
         if (animationTimersLength == 1) {
             theMainLoop.updateAnimationRunnable();
         }
@@ -192,7 +200,7 @@ public abstract class AbstractPrimaryTimer {
             animationTimersLocked = false;
         }
         for (int i = 0; i < animationTimersLength; ++i) {
-            if (timer == animationTimers[i]) {
+            if (timer == animationTimers[i].receiver()) {
                 if (i == animationTimersLength - 1) {
                     animationTimers[i] = null;
                 } else {
@@ -308,29 +316,78 @@ public abstract class AbstractPrimaryTimer {
             debugNanos += fixedPulseLength;
             now = debugNanos;
         }
-        final PulseReceiver receiversSnapshot[] = receivers;
+
+        final ReceiverRecord<PulseReceiver>[] receiversSnapshot = receivers;
         final int rLength = receiversLength;
-        try {
-            receiversLocked = true;
-            for (int i = 0; i < rLength; i++) {
-                receiversSnapshot[i].timePulse(TickCalculation.fromNano(now));
+        receiversLocked = true;
+
+        for (int i = 0; i < rLength; i++) {
+            try {
+                receiversSnapshot[i].receiver().timePulse(TickCalculation.fromNano(now));
+            } catch (Throwable e) {
+                receiversSnapshot[i].handleException(e);
             }
-        } finally {
-            receiversLocked = false;
         }
+
+        receiversLocked = false;
         recordAnimationEnd();
 
-        final TimerReceiver animationTimersSnapshot[] = animationTimers;
+        final ReceiverRecord<TimerReceiver>[] animationTimersSnapshot = animationTimers;
         final int aTLength = animationTimersLength;
-        try {
-            animationTimersLocked = true;
-            // After every frame, call any frame jobs
-            for (int i = 0; i < aTLength; i++) {
-                animationTimersSnapshot[i].handle(now);
+        animationTimersLocked = true;
+
+        // After every frame, call any frame jobs
+        for (int i = 0; i < aTLength; i++) {
+            try {
+                animationTimersSnapshot[i].receiver().handle(now);
+            } catch (Throwable e) {
+                animationTimersSnapshot[i].handleException(e);
             }
-        } finally {
-            animationTimersLocked = false;
         }
+
+        animationTimersLocked = false;
     }
 
+    private static abstract class ReceiverRecord<T> {
+
+        static ReceiverRecord<TimerReceiver> ofAnimationTimer(TimerReceiver receiver) {
+            return new ReceiverRecord<>() {
+                @Override TimerReceiver receiver() { return receiver; }
+                @Override Class<?> type() { return AnimationTimer.class; }
+            };
+        }
+
+        static ReceiverRecord<PulseReceiver> ofPulseReceiver(PulseReceiver receiver) {
+            return new ReceiverRecord<>() {
+                @Override PulseReceiver receiver() { return receiver; }
+                @Override Class<?> type() { return PulseReceiver.class; }
+            };
+        }
+
+        abstract T receiver();
+        abstract Class<?> type();
+
+        int exceptionsThrown;
+
+        void handleException(Throwable e) {
+            if (exceptionsThrown < FAILING_TIMER_THRESHOLD) {
+                exceptionsThrown++;
+
+                try {
+                    Thread thread = Thread.currentThread();
+                    thread.getUncaughtExceptionHandler().uncaughtException(thread, e);
+                } catch (Throwable ignored) {
+                    // The uncaught exception handler shouldn't throw exceptions, but if it does,
+                    // we will swallow it to prevent it from bubbling up.
+                }
+            } else if (exceptionsThrown == FAILING_TIMER_THRESHOLD) {
+                exceptionsThrown++;
+
+                if (Logging.getJavaFXLogger().isLoggable(System.Logger.Level.WARNING)) {
+                    Logging.getJavaFXLogger().warning(
+                        "Too many exceptions thrown by " + type().getSimpleName() + ", ignoring further exceptions.");
+                }
+            }
+        }
+    }
 }
