@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2025, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -23,25 +23,28 @@
  * questions.
  */
 
-#import <Cocoa/Cocoa.h>
 #import <OpenGL/gl.h>
 #import <OpenGL/OpenGL.h>
 
-#import "GlassView.h"
-#import "GlassLayer3D.h"
+#import "GlassOffscreen.h"
 
-// 3D version of Glass providing OpenGL context through CAOpenGLLayer
-@interface GlassViewCGL3D : NSOpenGLView
+// GlassLayerCGL is not subclass of GlassLayer, it is a subLayer
+// and it handles CALayer's OpenGL specific drawing logic
+@interface GlassLayerCGL : CAOpenGLLayer
 {
-    GlassLayer3D* layer;
+    GlassOffscreen *_glassOffscreen;
+    GlassOffscreen *_painterOffscreen;
 
-    CGFloat             _backgroundR;
-    CGFloat             _backgroundG;
-    CGFloat             _backgroundB;
-    CGFloat             _backgroundA;
+    BOOL isHiDPIAware;
 }
 
-- (GlassLayer3D*)getLayer;
-- (id)initWithFrame:(NSRect)frame withJview:(jobject)jView withJproperties:(jobject)jproperties;
+- (id)initWithSharedContext:(CGLContextObj)ctx
+           andClientContext:(CGLContextObj)clCtx
+             withHiDPIAware:(BOOL)HiDPIAware
+             withIsSwPipe:(BOOL)isSwPipe;
+
+- (GlassOffscreen*)getPainterOffscreen;
+- (GlassOffscreen*)getGlassOffscreen;
+- (void)hostOffscreen:(GlassOffscreen*)offscreen;
 
 @end

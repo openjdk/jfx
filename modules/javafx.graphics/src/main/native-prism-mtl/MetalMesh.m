@@ -125,8 +125,8 @@ typedef struct
 {
     id<MTLDevice> device = [context getDevice];
     for (int i = 0; i < BUFFER_SIZE; i++) {
-        vertexBuffer[i] = [[device newBufferWithLength:size
-            options:MTLResourceStorageModeShared] autorelease];
+        vertexBuffer[i] = [device newBufferWithLength:size
+            options:MTLResourceStorageModeShared];
     }
 }
 
@@ -142,8 +142,8 @@ typedef struct
 {
     id<MTLDevice> device = [context getDevice];
     for (int i = 0; i < BUFFER_SIZE; i++) {
-        indexBuffer[i] = [[device newBufferWithLength:size
-            options:MTLResourceStorageModeShared] autorelease];
+        indexBuffer[i] = [device newBufferWithLength:size
+            options:MTLResourceStorageModeShared];
     }
 }
 

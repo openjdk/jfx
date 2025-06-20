@@ -25,7 +25,7 @@
 
 #import "GlassMacros.h"
 #import "GlassScreen.h"
-#import "GlassLayerCGL3D.h"
+#import "GlassLayerCGL.h"
 #import "GlassCGLOffscreen.h"
 
 //#define VERBOSE
@@ -35,21 +35,21 @@
     #define LOG(MSG, ...) GLASS_LOG(MSG, ## __VA_ARGS__);
 #endif
 
-@implementation GlassLayerCGL3D
+@implementation GlassLayerCGL
 
 - (id)initWithSharedContext:(CGLContextObj)ctx
            andClientContext:(CGLContextObj)clCtx
              withHiDPIAware:(BOOL)HiDPIAware
              withIsSwPipe:(BOOL)isSwPipe
 {
-    LOG("GlassLayerCGL3D initWithSharedContext]");
+    LOG("GlassLayerCGL initWithSharedContext]");
     self = [super init];
     if (self != nil)
     {
         self->_painterOffscreen = (GlassOffscreen*)[[GlassCGLOffscreen alloc] initWithContext:clCtx andIsSwPipe:isSwPipe];
         self->_glassOffscreen = (GlassOffscreen*)[[GlassCGLOffscreen alloc] initWithContext:ctx andIsSwPipe:isSwPipe];
         [self->_glassOffscreen setLayer:self];
-        LOG("   GlassLayerCGL3D context: %p", ctx);
+        LOG("   GlassLayerCGL context: %p", ctx);
 
         self->isHiDPIAware = HiDPIAware;
 
@@ -95,7 +95,7 @@
 - (void)drawInCGLContext:(CGLContextObj)glContext pixelFormat:(CGLPixelFormatObj)pixelFormat forLayerTime:(CFTimeInterval)timeInterval displayTime:(const CVTimeStamp *)timeStamp
 {
     // glContext is already set as current by now and locked by Quartz internaly
-    LOG("GlassLayerCGL3D drawInCGLContext]");
+    LOG("GlassLayerCGL drawInCGLContext]");
     LOG("   current context: %p", CGLGetCurrentContext());
 #ifdef VERBOSE
     {

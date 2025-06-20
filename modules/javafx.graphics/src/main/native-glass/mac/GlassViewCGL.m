@@ -31,7 +31,7 @@
 #import "com_sun_glass_ui_mac_MacGestureSupport.h"
 #import "GlassKey.h"
 #import "GlassMacros.h"
-#import "GlassViewCGL3D.h"
+#import "GlassViewCGL.h"
 #import "GlassApplication.h"
 
 //#define VERBOSE
@@ -75,7 +75,7 @@
 // http://developer.apple.com/library/mac/#technotes/tn2085/_index.html
 //#define ENABLE_MULTITHREADED_GL
 
-@implementation GlassViewCGL3D
+@implementation GlassViewCGL
 
 - (CGLPixelFormatObj)_createPixelFormatWithDepth:(CGLPixelFormatAttribute)depth
 {
@@ -204,7 +204,7 @@
         }
     }
 
-    self->layer = [[GlassLayer3D alloc] initGlassLayer:(NSObject*)sharedCGL
+    self->layer = [[GlassLayer alloc] initGlassLayer:(NSObject*)sharedCGL
         andClientContext:(NSObject*)clientCGL mtlQueuePtr:0l
         withHiDPIAware:isHiDPIAware withIsSwPipe:isSwPipe];
     // https://developer.apple.com/library/mac/documentation/Cocoa/Reference/ApplicationKit/Classes/nsview_Class/Reference/NSView.html#//apple_ref/occ/instm/NSView/setWantsLayer:
@@ -217,7 +217,7 @@
 
 - (id)initWithFrame:(NSRect)frame withJview:(jobject)jView withJproperties:(jobject)jproperties
 {
-    LOG("GlassViewCGL3D initWithFrame:withJview:withJproperties");
+    LOG("GlassViewCGL initWithFrame:withJview:withJproperties");
 
     NSOpenGLPixelFormatAttribute pixelFormatAttributes[] =
     {
@@ -228,7 +228,7 @@
     if (!pFormat)
     {
         pFormat = [NSOpenGLView defaultPixelFormat];
-        LOG("GlassViewCGL3D initWithFrame: initWithAttributes failed! Set pixel format to default pixel format");
+        LOG("GlassViewCGL initWithFrame: initWithAttributes failed! Set pixel format to default pixel format");
     }
     self = [super initWithFrame:frame pixelFormat:pFormat];
     if (self != nil)
@@ -254,7 +254,7 @@
     }
 }
 
-- (GlassLayer3D*)getLayer
+- (GlassLayer*)getLayer
 {
     return self->layer;
 }

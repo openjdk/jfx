@@ -25,7 +25,7 @@
 
 #import "GlassOffscreen.h"
 
-@interface GlassLayer3D : CALayer
+@interface GlassLayer : CALayer
 {
     GlassOffscreen *painterOffScreen;
     GlassOffscreen *glassOffScreen;

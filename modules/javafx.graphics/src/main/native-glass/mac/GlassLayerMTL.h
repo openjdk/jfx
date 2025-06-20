@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2025, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2024, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -23,26 +23,25 @@
  * questions.
  */
 
-#import <OpenGL/gl.h>
-#import <OpenGL/OpenGL.h>
-
+#import <Metal/Metal.h>
+#import <QuartzCore/CAMetalLayer.h>
 #import "GlassOffscreen.h"
 
-@interface GlassLayerCGL3D : CAOpenGLLayer
+// GlassLayerMTL is not subclass of GlassLayer, it is a subLayer
+// and it handles CALayer's Metal specific drawing logic
+@interface GlassLayerMTL : CAMetalLayer
 {
-    GlassOffscreen *_glassOffscreen;
     GlassOffscreen *_painterOffscreen;
 
     BOOL isHiDPIAware;
+    id<MTLCommandQueue> _blitCommandQueue;
 }
 
-- (id)initWithSharedContext:(CGLContextObj)ctx
-           andClientContext:(CGLContextObj)clCtx
-             withHiDPIAware:(BOOL)HiDPIAware
-             withIsSwPipe:(BOOL)isSwPipe;
+- (id) init:(long)mtlCommandQueuePtr
+       withIsSwPipe:(BOOL)isSwPipe;
+
+- (void) blitToScreen;
 
 - (GlassOffscreen*)getPainterOffscreen;
-- (GlassOffscreen*)getGlassOffscreen;
-- (void)hostOffscreen:(GlassOffscreen*)offscreen;
-
+- (void)display;
 @end

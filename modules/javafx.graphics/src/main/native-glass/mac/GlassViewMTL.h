@@ -23,23 +23,19 @@
  * questions.
  */
 
-#import <Metal/Metal.h>
-#import <QuartzCore/CAMetalLayer.h>
-#import "GlassOffscreen.h"
+#import <Cocoa/Cocoa.h>
 
-@interface GlassLayerMTL3D : CAMetalLayer
+#import "GlassView.h"
+#import "GlassLayer.h"
+
+// GlassViewMTL is not subclass of GlassView3D, it is a subView
+// and it handles NSView's Metal specific drawing logic
+@interface GlassViewMTL : NSView
 {
-    GlassOffscreen *_painterOffscreen;
-
-    BOOL isHiDPIAware;
-    id<MTLCommandQueue> _blitCommandQueue;
+    GlassLayer* layer;
 }
 
-- (id) init:(long)mtlCommandQueuePtr
-       withIsSwPipe:(BOOL)isSwPipe;
+- (GlassLayer*)getLayer;
+- (id)initWithFrame:(NSRect)frame withJview:(jobject)jView withJproperties:(jobject)jproperties;
 
-- (void) blitToScreen;
-
-- (GlassOffscreen*)getPainterOffscreen;
-- (void)display;
 @end

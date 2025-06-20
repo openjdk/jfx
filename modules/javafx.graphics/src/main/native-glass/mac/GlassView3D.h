@@ -26,13 +26,15 @@
 #import <Cocoa/Cocoa.h>
 
 #import "GlassView.h"
-#import "GlassLayer3D.h"
+#import "GlassLayer.h"
 
+// GlassView3D is subView of GlassHostView and it performs event
+// handling tasks related to both OpenGL and Metal pipeline
 @interface GlassView3D : NSView <GlassView, NSTextInputClient>
 {
     GlassViewDelegate   *_delegate;
     NSTrackingArea      *_trackingArea;
-    GlassLayer3D *layer;
+    GlassLayer *layer;
 
     NSView *subView;
 

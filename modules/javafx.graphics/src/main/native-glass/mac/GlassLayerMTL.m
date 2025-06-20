@@ -25,7 +25,7 @@
 
 #import "GlassMacros.h"
 #import "GlassScreen.h"
-#import "GlassLayerMTL3D.h"
+#import "GlassLayerMTL.h"
 #import "GlassMTLOffscreen.h"
 
 //#define VERBOSE
@@ -35,7 +35,7 @@
     #define LOG(MSG, ...) GLASS_LOG(MSG, ## __VA_ARGS__);
 #endif
 
-@implementation GlassLayerMTL3D
+@implementation GlassLayerMTL
 
 - (id) init:(long)mtlCommandQueuePtr
        withIsSwPipe:(BOOL)isSwPipe

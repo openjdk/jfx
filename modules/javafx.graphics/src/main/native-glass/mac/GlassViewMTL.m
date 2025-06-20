@@ -31,7 +31,7 @@
 #import "com_sun_glass_ui_mac_MacGestureSupport.h"
 #import "GlassKey.h"
 #import "GlassMacros.h"
-#import "GlassViewMTL3D.h"
+#import "GlassViewMTL.h"
 #import "GlassApplication.h"
 #import "GlassScreen.h"
 
@@ -73,7 +73,7 @@
 #define SHARE_GL_CONTEXT
 //#define DEBUG_COLORS
 
-@implementation GlassViewMTL3D
+@implementation GlassViewMTL
 
 - (void)_initialize3dWithJproperties:(jobject)jproperties
 {
@@ -119,11 +119,11 @@
     }
 
     if (mtlCommandQueuePtr == 0l) {
-        LOG("GlassViewMTL3D _initialize3dWithJproperties : using software pipeline");
+        LOG("GlassViewMTL _initialize3dWithJproperties : using software pipeline");
         isSwPipe = YES;
     }
 
-    self->layer = [[GlassLayer3D alloc] initGlassLayer:nil
+    self->layer = [[GlassLayer alloc] initGlassLayer:nil
         andClientContext:nil mtlQueuePtr:mtlCommandQueuePtr
         withHiDPIAware:YES withIsSwPipe:isSwPipe];
 
@@ -143,7 +143,7 @@
 
 - (id)initWithFrame:(NSRect)frame withJview:(jobject)jView withJproperties:(jobject)jproperties
 {
-    LOG("GlassViewMTL3D initWithFrame:withJview:withJproperties");
+    LOG("GlassViewMTL initWithFrame:withJview:withJproperties");
 
     self = [super initWithFrame: frame];
     if (self != nil)
@@ -166,7 +166,7 @@
     //[self->_delegate viewDidMoveToWindow];
 }
 
-- (GlassLayer3D*)getLayer
+- (GlassLayer*)getLayer
 {
     return self->layer;
 }

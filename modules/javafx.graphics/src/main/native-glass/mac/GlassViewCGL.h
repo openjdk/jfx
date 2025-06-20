@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024, 2025, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -24,17 +24,25 @@
  */
 
 #import <Cocoa/Cocoa.h>
+#import <OpenGL/gl.h>
+#import <OpenGL/OpenGL.h>
 
 #import "GlassView.h"
-#import "GlassLayer3D.h"
+#import "GlassLayer.h"
 
-// 3D version of Glass for Metal using CAMetalLayer
-@interface GlassViewMTL3D : NSView
+// GlassViewCGL is not subclass of GlassView3D, it is a subView
+// and it handles NSView's OpenGL specific drawing logic
+@interface GlassViewCGL : NSOpenGLView
 {
-    GlassLayer3D* layer;
+    GlassLayer* layer;
+
+    CGFloat             _backgroundR;
+    CGFloat             _backgroundG;
+    CGFloat             _backgroundB;
+    CGFloat             _backgroundA;
 }
 
-- (GlassLayer3D*)getLayer;
+- (GlassLayer*)getLayer;
 - (id)initWithFrame:(NSRect)frame withJview:(jobject)jView withJproperties:(jobject)jproperties;
 
 @end

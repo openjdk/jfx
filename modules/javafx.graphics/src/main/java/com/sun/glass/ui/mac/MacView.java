@@ -136,11 +136,6 @@ final class MacView extends View {
         return ptr;
     }
 
-    native protected long _getNativeLayer(long ptr);
-    public long getNativeLayer() {
-        return _getNativeLayer(getNativeView());
-    }
-
     protected void notifyInputMethodMac(String str, int attrib, int length,
                                             int cursor, int selStart, int selLength) {
         byte atts[] = new byte[1];

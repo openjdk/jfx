@@ -23,11 +23,11 @@
  * questions.
  */
 
-#import "GlassLayer3D.h"
+#import "GlassLayer.h"
 #import "GlassMacros.h"
 #import "GlassScreen.h"
-#import "GlassLayerCGL3D.h"
-#import "GlassLayerMTL3D.h"
+#import "GlassLayerCGL.h"
+#import "GlassLayerMTL.h"
 
 //#define VERBOSE
 #ifndef VERBOSE
@@ -36,7 +36,7 @@
     #define LOG(MSG, ...) GLASS_LOG(MSG, ## __VA_ARGS__);
 #endif
 
-@implementation GlassLayer3D
+@implementation GlassLayer
 
 static NSArray *allModes = nil;
 
@@ -46,19 +46,19 @@ static NSArray *allModes = nil;
       withHiDPIAware:(BOOL)HiDPIAware
         withIsSwPipe:(BOOL)isSwPipe
 {
-    LOG("GlassLayer3D initGlassLayer]");
+    LOG("GlassLayer initGlassLayer]");
     self = [super init];
     if (self != nil)
     {
         if (mtlCommandQueuePtr != 0l) { // MTL
-            GlassLayerMTL3D* mtlLayer = [[GlassLayerMTL3D alloc]
+            GlassLayerMTL* mtlLayer = [[GlassLayerMTL alloc]
                 init:mtlCommandQueuePtr
                 withIsSwPipe:isSwPipe];
             self->painterOffScreen = [mtlLayer getPainterOffscreen];
             self->glassOffScreen = nil;
             [self addSublayer:mtlLayer];
         } else {
-            GlassLayerCGL3D* cglLayer = [[GlassLayerCGL3D alloc]
+            GlassLayerCGL* cglLayer = [[GlassLayerCGL alloc]
                 initWithSharedContext:(CGLContextObj)ctx
                      andClientContext:(CGLContextObj)clCtx
                        withHiDPIAware:HiDPIAware
@@ -68,7 +68,7 @@ static NSArray *allModes = nil;
             [self addSublayer:cglLayer];
         }
         self->isHiDPIAware = HiDPIAware;
-        LOG("   GlassLayer3D context: %p", ctx);
+        LOG("   GlassLayer context: %p", ctx);
 
         [self setAutoresizingMask:(kCALayerWidthSizable|kCALayerHeightSizable)];
         [self setContentsGravity:kCAGravityTopLeft];

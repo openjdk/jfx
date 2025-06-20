@@ -338,40 +338,13 @@ JNIEXPORT jlong JNICALL Java_com_sun_glass_ui_mac_MacView__1getNativeFrameBuffer
     GLASS_POOL_ENTER;
     {
         GlassView3D<GlassView> *view = getGlassView(env, jPtr);
-        GlassLayer3D *layer = (GlassLayer3D*)[view getLayer];
+        GlassLayer *layer = (GlassLayer*)[view getLayer];
         fb = (jlong) [[layer getPainterOffscreen] fbo];
     }
     GLASS_POOL_EXIT;
     GLASS_CHECK_EXCEPTION(env);
 
     return fb;
-}
-
-/*
- * Class:     com_sun_glass_ui_mac_MacView
- * Method:    _getNativeLayer
- * Signature: (J)J
- */
-JNIEXPORT jlong JNICALL Java_com_sun_glass_ui_mac_MacView__1getNativeLayer
-(JNIEnv *env, jobject jView, jlong jPtr)
-{
-    LOG("Java_com_sun_glass_ui_mac_MacView__1_getNativeLayer");
-    LOG("   view: %p", jPtr);
-    if (!jPtr) return 0L;
-
-    jlong ptr = 0L;
-
-    GLASS_ASSERT_MAIN_JAVA_THREAD(env);
-    GLASS_POOL_ENTER;
-    {
-        GlassView3D<GlassView> *view = getGlassView(env, jPtr);
-        CALayer *layer = [view getLayer];
-        ptr = ptr_to_jlong(layer);
-    }
-    GLASS_POOL_EXIT;
-    GLASS_CHECK_EXCEPTION(env);
-
-    return ptr;
 }
 
 /*
@@ -496,9 +469,9 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_mac_MacView__1begin
 
     GLASS_ASSERT_MAIN_JAVA_THREAD(env);
     NSView<GlassView> *view = getGlassView(env, jPtr);
-    //GLASS_POOL_PUSH; // it will be popped by "_end"
+    GLASS_POOL_PUSH; // it will be popped by "_end"
     {
-    //    [view retain];
+        [view retain];
 //        [view lockFocus];
         [view begin];
     }
@@ -520,9 +493,9 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_mac_MacView__1end
     {
         [view end];
 //        [view unlockFocus];
-    //    [view release];
+        [view release];
     }
-    //GLASS_POOL_POP; // it was pushed by "_begin"*/
+    GLASS_POOL_POP; // it was pushed by "_begin"*/
 }
 
 /*
