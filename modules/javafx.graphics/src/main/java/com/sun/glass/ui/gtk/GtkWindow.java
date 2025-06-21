@@ -115,15 +115,6 @@ class GtkWindow extends Window {
     @Override
     protected native void _toBack(long ptr);
 
-    @Override
-    protected native void _enterModal(long ptr);
-
-    @Override
-    protected native void _enterModalWithWindow(long dialog, long window);
-
-    @Override
-    protected native void _exitModal(long ptr);
-
     protected native long _getNativeWindowImpl(long ptr);
 
     private native void _showSystemMenu(long ptr, int x, int y);
@@ -255,7 +246,7 @@ class GtkWindow extends Window {
     private HeaderButtonOverlay createHeaderButtonOverlay() {
         var overlay = new HeaderButtonOverlay(
             PlatformThemeObserver.getInstance().stylesheetProperty(),
-            isUtilityWindow(),
+            isModal() || getOwner() != null, isUtilityWindow(),
             (getStyleMask() & RIGHT_TO_LEFT) != 0);
 
         // Set the system-defined absolute minimum size to the size of the window buttons area,
