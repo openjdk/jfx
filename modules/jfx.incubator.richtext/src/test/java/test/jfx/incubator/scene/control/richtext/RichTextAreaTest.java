@@ -345,7 +345,7 @@ public class RichTextAreaTest {
         String s = Clipboard.getSystemClipboard().getString();
         assertEquals(null, s);
         Object v = Clipboard.getSystemClipboard().getContent(fmt);
-        assertEquals("a{!}", v);
+        assertEquals("{}a{!}", v);
     }
 
     @Test
@@ -665,7 +665,7 @@ public class RichTextAreaTest {
         ByteArrayOutputStream out = new ByteArrayOutputStream();
         control.write(out);
         byte[] b = out.toByteArray();
-        assertEquals("1 {b}bold{!}", new String(b, StandardCharsets.US_ASCII));
+        assertEquals("{}1 {b}bold{!}", new String(b, StandardCharsets.US_ASCII));
     }
 
     @Test
