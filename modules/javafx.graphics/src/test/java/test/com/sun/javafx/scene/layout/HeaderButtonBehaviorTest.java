@@ -25,13 +25,19 @@
 
 package test.com.sun.javafx.scene.layout;
 
+import javafx.event.Event;
 import javafx.scene.Group;
 import javafx.scene.Node;
 import javafx.scene.Scene;
+import javafx.scene.input.MouseButton;
+import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.HeaderBar;
 import javafx.scene.layout.HeaderButtonType;
+import javafx.scene.layout.Region;
 import javafx.stage.Modality;
 import javafx.stage.Stage;
+import javafx.stage.WindowEvent;
+import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.EnumSource;
 
@@ -90,6 +96,29 @@ public class HeaderButtonBehaviorTest {
         assertEquals(test.iconifyDisabled, iconify.isDisabled());
         assertEquals(test.maximizeDisabled, maximize.isDisabled());
         assertFalse(close.isDisabled());
+        stage.close();
+    }
+
+    /**
+     * Tests that clicking the close button fires the {@link WindowEvent#WINDOW_CLOSE_REQUEST} event.
+     */
+    @Test
+    void closeButtonFiresWindowCloseRequestEvent() {
+        var stage = new Stage();
+        var button = new Region();
+        button.resize(10, 10);
+        HeaderBar.setButtonType(button, HeaderButtonType.CLOSE);
+        stage.setScene(new Scene(button));
+        stage.show();
+
+        boolean[] flag = new boolean[1];
+        stage.setOnCloseRequest(_ -> flag[0] = true);
+
+        Event.fireEvent(button, new MouseEvent(
+            MouseEvent.MOUSE_RELEASED, 0, 0, 0, 0, MouseButton.PRIMARY, 1,
+            false, false, false, false, false, false, false, false, false, false, null));
+
+        assertTrue(flag[0]);
         stage.close();
     }
 }

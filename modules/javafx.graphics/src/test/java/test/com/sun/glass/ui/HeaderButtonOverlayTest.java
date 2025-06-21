@@ -25,6 +25,7 @@
 
 package test.com.sun.glass.ui;
 
+import com.sun.glass.events.MouseEvent;
 import com.sun.glass.ui.HeaderButtonOverlay;
 import com.sun.javafx.binding.ObjectConstant;
 import javafx.beans.value.ObservableValue;
@@ -35,6 +36,7 @@ import javafx.scene.Scene;
 import javafx.scene.layout.HeaderButtonType;
 import javafx.scene.paint.Color;
 import javafx.stage.Stage;
+import javafx.stage.WindowEvent;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.EnumSource;
@@ -488,6 +490,30 @@ public class HeaderButtonOverlayTest {
         assertEquals(HeaderButtonType.ICONIFY, overlay.buttonAt(140, 0));
         assertEquals(HeaderButtonType.MAXIMIZE, overlay.buttonAt(165, 5));
         assertEquals(HeaderButtonType.CLOSE, overlay.buttonAt(181, 10));
+    }
+
+    /**
+     * Tests that clicking the close button fires the {@link WindowEvent#WINDOW_CLOSE_REQUEST} event.
+     */
+    @Test
+    void closeButtonFiresWindowCloseRequestEvent() {
+        var overlay = new HeaderButtonOverlay(getStylesheet("""
+                .-FX-INTERNAL-header-button-container { -fx-button-placement: right; -fx-button-vertical-alignment: stretch; }
+                .-FX-INTERNAL-header-button { -fx-pref-width: 20; -fx-pref-height: 10; }
+            """), false, false, false);
+
+        var stage = new Stage();
+        var scene = new Scene(overlay);
+        stage.setScene(scene);
+        overlay.resize(200, 100);
+        overlay.applyCss();
+        overlay.layout();
+
+        var flag = new boolean[1];
+        stage.setOnCloseRequest(_ -> flag[0] = true);
+        overlay.handleMouseEvent(MouseEvent.DOWN, MouseEvent.BUTTON_LEFT, 181, 10);
+        overlay.handleMouseEvent(MouseEvent.UP, MouseEvent.BUTTON_LEFT, 181, 10);
+        assertTrue(flag[0]);
     }
 
     private static ObservableValue<String> getStylesheet(String text) {

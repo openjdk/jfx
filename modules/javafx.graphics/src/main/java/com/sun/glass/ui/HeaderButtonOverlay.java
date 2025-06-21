@@ -44,6 +44,7 @@ import javafx.css.StyleableDoubleProperty;
 import javafx.css.StyleableIntegerProperty;
 import javafx.css.StyleableObjectProperty;
 import javafx.css.StyleableProperty;
+import javafx.event.Event;
 import javafx.geometry.Dimension2D;
 import javafx.geometry.HPos;
 import javafx.geometry.Insets;
@@ -56,6 +57,7 @@ import javafx.scene.layout.Region;
 import javafx.scene.paint.Paint;
 import javafx.stage.Stage;
 import javafx.stage.StageStyle;
+import javafx.stage.WindowEvent;
 import javafx.util.Subscription;
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -437,7 +439,7 @@ public class HeaderButtonOverlay extends Region {
             switch (buttonType) {
                 case ICONIFY -> stage.setIconified(true);
                 case MAXIMIZE -> stage.setMaximized(!stage.isMaximized());
-                case CLOSE -> stage.close();
+                case CLOSE -> Event.fireEvent(stage, new WindowEvent(stage, WindowEvent.WINDOW_CLOSE_REQUEST));
             }
         }
     }

@@ -107,7 +107,7 @@ public final class HeaderButtonBehavior implements EventHandler<Event> {
         }
 
         switch (type) {
-            case CLOSE -> stage.close();
+            case CLOSE -> Event.fireEvent(stage, new WindowEvent(stage, WindowEvent.WINDOW_CLOSE_REQUEST));
             case ICONIFY -> stage.setIconified(true);
             case MAXIMIZE -> {
                 // On macOS, a non-modal window is put into full-screen mode when the maximize button is clicked,
