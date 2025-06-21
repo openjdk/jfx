@@ -471,8 +471,7 @@ static jlong _createWindowCommonDo(JNIEnv *env, jobject jWindow, jlong jOwnerPtr
         {
             window->owner = getGlassWindow(env, jOwnerPtr)->nsWindow; // not retained (use weak reference?)
         }
-        window->isResizable = NO;
-        window->isDecorated = isTitled || isExtended;
+
         /* 10.7 full screen window support */
         if ([NSWindow instancesRespondToSelector:@selector(toggleFullScreen:)]) {
             NSWindowCollectionBehavior behavior = [window->nsWindow collectionBehavior];
@@ -502,10 +501,12 @@ static jlong _createWindowCommonDo(JNIEnv *env, jobject jWindow, jlong jOwnerPtr
             [window->nsWindow setOpaque:YES];
         }
 
+        window->isDecorated = isTitled || isExtended;
         window->isTransparent = isTransparent;
         window->isSizeAssigned = NO;
         window->isLocationAssigned = NO;
-
+        window->isResizable = NO;
+        [window _setResizable:NO]; // actual value will be set later with a separate JNI downcall
     }
     [pool drain];
 
@@ -1161,10 +1162,7 @@ JNIEXPORT jboolean JNICALL Java_com_sun_glass_ui_mac_MacWindow__1setResizable
     GLASS_POOL_ENTER;
     {
         GlassWindow *window = getGlassWindow(env, jPtr);
-        if (window->isResizable != jResizable)
-        {
-            [window performSelectorOnMainThread:@selector(_setResizable) withObject:nil waitUntilDone:YES];
-        }
+        [window _setResizable:jResizable];
     }
     GLASS_POOL_EXIT;
     GLASS_CHECK_EXCEPTION(env);
