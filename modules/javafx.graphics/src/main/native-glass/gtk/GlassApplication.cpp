@@ -509,7 +509,7 @@ static void process_events(GdkEvent* event, gpointer data)
                     break;
                 case GDK_EXPOSE:
                 case GDK_DAMAGE:
-                    ctx->notify_repaint(&event->expose.area);
+                    ctx->process_expose(&event->expose);
                     break;
                 case GDK_WINDOW_STATE:
                     // Let gtk handle it first, so state values are updated

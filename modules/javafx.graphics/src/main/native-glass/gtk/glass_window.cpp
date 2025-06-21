@@ -273,6 +273,11 @@ bool WindowContext::isEnabled() {
     }
 }
 
+void WindowContext::process_expose(GdkEventExpose* event) {
+    GdkRectangle r = event->area;
+    notify_repaint({ r.x, r.y, r.width, r.height });
+}
+
 void WindowContext::process_map() {
     // We need only first map
     if (mapped || window_type == POPUP) return;
@@ -389,16 +394,13 @@ void WindowContext::process_delete() {
 }
 
 void WindowContext::notify_repaint() {
-    if (jview) {
-        Size size = view_size.get();
-        mainEnv->CallVoidMethod(jview, jViewNotifyRepaint, 0, 0, size.width, size.height);
-        CHECK_JNI_EXCEPTION(mainEnv)
-    }
+    Size size = view_size.get();
+    notify_repaint({ 0, 0, size.width, size.height });
 }
 
-void WindowContext::notify_repaint(GdkRectangle *rect) {
+void WindowContext::notify_repaint(Rectangle rect) {
     if (jview) {
-        mainEnv->CallVoidMethod(jview, jViewNotifyRepaint, rect->x, rect->y, rect->width, rect->height);
+        mainEnv->CallVoidMethod(jview, jViewNotifyRepaint, rect.x, rect.y, rect.width, rect.height);
         CHECK_JNI_EXCEPTION(mainEnv)
     }
 }

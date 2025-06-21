@@ -283,10 +283,9 @@ public:
     void set_background(float, float, float);
 
     void process_map();
+    void process_expose(GdkEventExpose*);
     void process_focus(GdkEventFocus*);
     void process_focus(bool);
-    void notify_repaint();
-    void notify_repaint(GdkRectangle*);
     virtual void process_mouse_button(GdkEventButton*, bool synthesized = false);
     virtual void process_mouse_motion(GdkEventMotion*);
     void process_mouse_scroll(GdkEventScroll*);
@@ -343,6 +342,8 @@ private:
     void notify_view_resize();
     void notify_view_move();
     void notify_current_sizes();
+    void notify_repaint();
+    void notify_repaint(Rectangle);
     GdkAtom get_net_frame_extents_atom();
     void request_frame_extents();
     void update_frame_extents();
