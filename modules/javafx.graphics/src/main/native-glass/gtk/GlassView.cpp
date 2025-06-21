@@ -269,13 +269,15 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_gtk_GtkView__1uploadPixelsByteArray
     }
 }
 
+
 /*
  * Class:     com_sun_glass_ui_gtk_GtkView
- * Method:    enterFullscreenImpl
- * Signature: (JZZZ)V
+ * Method:    _enterFullscreen
+ * Signature: (JZZZ)Z
  */
-JNIEXPORT void JNICALL Java_com_sun_glass_ui_gtk_GtkView_enterFullscreenImpl
-  (JNIEnv * env, jobject obj, jlong ptr, jboolean animate, jboolean keepRation, jboolean hideCursor) {
+JNIEXPORT jboolean JNICALL Java_com_sun_glass_ui_gtk_GtkView__1enterFullscreen
+    (JNIEnv * env, jobject obj, jlong ptr, jboolean animate, jboolean keepRation, jboolean hideCursor) {
+
     (void)animate;
     (void)keepRation;
     (void)hideCursor;
@@ -284,6 +286,8 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_gtk_GtkView_enterFullscreenImpl
     if (view->current_window) {
         view->current_window->enter_fullscreen();
     }
+
+    return JNI_TRUE;
 }
 
 /*

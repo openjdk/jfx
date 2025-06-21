@@ -1626,7 +1626,7 @@ void WindowContextExtended::process_mouse_button(GdkEventButton* event, bool syn
     LOG("WindowContextExtended::process_mouse_button\n");
     // Non-EXTENDED or full-screen windows don't have additional behaviors, so we delegate
     // directly to the base implementation.
-    if (is_fullscreen() || get_frame_type() != EXTENDED || get_jwindow() == nullptr) {
+    if (is_fullscreen() || get_jwindow() == nullptr) {
         WindowContext::process_mouse_button(event);
         return;
     }
@@ -1696,7 +1696,6 @@ void WindowContextExtended::process_mouse_motion(GdkEventMotion* event) {
 
     // Call the base implementation for client area events.
     if (!is_floating()
-            || get_frame_type() != EXTENDED
             || !is_resizable()
             || !get_window_edge(event->x, event->y, &edge)) {
         set_cursor_override(nullptr);

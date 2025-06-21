@@ -29,7 +29,6 @@
 #include <X11/Xlib.h>
 
 char const * const GDK_WINDOW_DATA_CONTEXT = "glass_window_context";
-char const * const GDK_WINDOW_DATA_EDGE = "glass_window_edge";
 
 jclass jStringCls;
 jclass jByteBufferCls;
@@ -693,7 +692,7 @@ glass_pixbuf_from_window(GdkWindow *window,
 {
     GdkPixbuf * ret = NULL;
 
-     gdk_pixbuf_get_from_window (window, srcx, srcy, width, height);
+    gdk_pixbuf_get_from_window (window, srcx, srcy, width, height);
     return ret;
 }
 
