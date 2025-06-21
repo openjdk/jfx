@@ -1332,7 +1332,6 @@ void WindowContext::enter_fullscreen() {
         gdk_window_fullscreen(gdk_window);
     } else {
         initial_state_mask |= GDK_WINDOW_STATE_FULLSCREEN;
-        notify_fullscreen(true);
     }
 }
 
