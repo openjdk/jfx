@@ -337,15 +337,16 @@ public class HeaderButtonOverlayTest {
         MODAL_RESIZABLE(true, true, true, false),
         MODAL_UNRESIZABLE(false, true, true, true);
 
-        ButtonDisabledStateTest(boolean resizable, boolean modal, boolean iconifyDisabled, boolean maximizeDisabled) {
+        ButtonDisabledStateTest(boolean resizable, boolean modalOrOwned,
+                                boolean iconifyDisabled, boolean maximizeDisabled) {
             this.resizable = resizable;
-            this.modal = modal;
+            this.modalOrOwned = modalOrOwned;
             this.iconifyDisabled = iconifyDisabled;
             this.maximizeDisabled = maximizeDisabled;
         }
 
         final boolean resizable;
-        final boolean modal;
+        final boolean modalOrOwned;
         final boolean iconifyDisabled;
         final boolean maximizeDisabled;
     }
@@ -359,7 +360,7 @@ public class HeaderButtonOverlayTest {
     void buttonDisabledStateIsCorrect(ButtonDisabledStateTest test) {
         var overlay = new HeaderButtonOverlay(getStylesheet("""
                 .-FX-INTERNAL-header-button { -fx-pref-width: 20; -fx-pref-height: 10; }
-            """), test.modal, false, false);
+            """), test.modalOrOwned, false, false);
 
         var scene = new Scene(overlay);
         var stage = new Stage();

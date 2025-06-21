@@ -155,11 +155,11 @@ public final class HeaderButtonBehavior implements EventHandler<Event> {
     private void updateButtonDisableState(Stage stage) {
         if (!node.disableProperty().isBound()) {
             boolean utility = stage.getStyle() == StageStyle.UTILITY;
-            boolean modal = stage.getOwner() != null || stage.getModality() != Modality.NONE;
+            boolean modalOrOwned = stage.getOwner() != null || stage.getModality() != Modality.NONE;
             boolean resizable = stage.isResizable();
 
             switch (type) {
-                case ICONIFY -> node.setDisable(utility || modal);
+                case ICONIFY -> node.setDisable(utility || modalOrOwned);
                 case MAXIMIZE -> node.setDisable(!resizable);
             }
         }

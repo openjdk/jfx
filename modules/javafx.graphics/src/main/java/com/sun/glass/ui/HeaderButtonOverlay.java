@@ -263,15 +263,15 @@ public class HeaderButtonOverlay extends Region {
     private final ButtonRegion maximizeButton = new ButtonRegion(HeaderButtonType.MAXIMIZE, "-FX-INTERNAL-maximize-button", 1);
     private final ButtonRegion closeButton = new ButtonRegion(HeaderButtonType.CLOSE, "-FX-INTERNAL-close-button", 2);
     private final Subscription subscriptions;
-    private final boolean modal;
+    private final boolean modalOrOwned;
     private final boolean utility;
     private final boolean rightToLeft;
 
     private Node buttonAtMouseDown;
 
-    public HeaderButtonOverlay(ObservableValue<String> stylesheet, boolean modal,
+    public HeaderButtonOverlay(ObservableValue<String> stylesheet, boolean modalOrOwned,
                                boolean utility, boolean rightToLeft) {
-        this.modal = modal;
+        this.modalOrOwned = modalOrOwned;
         this.utility = utility;
         this.rightToLeft = rightToLeft;
 
@@ -449,9 +449,9 @@ public class HeaderButtonOverlay extends Region {
     }
 
     private void onResizableChanged(boolean resizable) {
-        boolean utilityStyle = utility || (modal && !resizable);
+        boolean utilityStyle = utility || (modalOrOwned && !resizable);
         toggleStyleClass(this, UTILITY_STYLE_CLASS, utilityStyle);
-        iconifyButton.setDisable(utility || modal);
+        iconifyButton.setDisable(utility || modalOrOwned);
         maximizeButton.setDisable(!resizable);
     }
 
