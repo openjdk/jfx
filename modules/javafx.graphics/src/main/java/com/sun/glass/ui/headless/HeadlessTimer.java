@@ -8,7 +8,7 @@ import java.util.concurrent.TimeUnit;
 public class HeadlessTimer extends Timer {
 
     private static ScheduledThreadPoolExecutor scheduler;
-    private ScheduledFuture task;
+    private ScheduledFuture<?> task;
 
     HeadlessTimer(final Runnable runnable) {
         super(runnable);

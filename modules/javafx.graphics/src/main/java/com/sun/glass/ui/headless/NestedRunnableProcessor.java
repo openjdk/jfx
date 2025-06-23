@@ -57,7 +57,6 @@ public class NestedRunnableProcessor implements Runnable {
             try {
                 runnableQueue.take().run();
             } catch (Throwable e) {
-                e.printStackTrace();
                 Application.reportException(e);
             }
         }

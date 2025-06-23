@@ -49,7 +49,7 @@ public class HeadlessPlatformFactory extends PlatformFactory {
 
     }
 
-    class HeadlessSystemClipboard extends SystemClipboard {
+    static class HeadlessSystemClipboard extends SystemClipboard {
 
         HashMap<String, Object> cacheData;
         int supportedActions;
@@ -89,7 +89,7 @@ public class HeadlessPlatformFactory extends PlatformFactory {
         }
     }
 
-    class HeadlessDnDClipboard extends SystemClipboard {
+    static class HeadlessDnDClipboard extends SystemClipboard {
 
         HeadlessDnDClipboard() {
             super(Clipboard.DND);

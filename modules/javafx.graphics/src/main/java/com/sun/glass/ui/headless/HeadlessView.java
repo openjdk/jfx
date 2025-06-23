@@ -43,7 +43,7 @@ public class HeadlessView extends View {
 
     @Override
     protected void _setParent(long ptr, long parentPtr) {
-        parentPtr = parentPtr;
+        this.parentPtr = parentPtr;
     }
 
     @Override
@@ -74,10 +74,6 @@ public class HeadlessView extends View {
         HeadlessWindow window = (HeadlessWindow)this.getWindow();
         this.pixels = pixels;
         window.blit(pixels);
-    }
-
-    Pixels getPixels() {
-        return this.pixels;
     }
 
     @Override

@@ -102,8 +102,6 @@ public class HeadlessWindow extends Window {
             this.originalWidth = this.width;
             this.originalX = this.x;
             this.originalY = this.y;
-            newX = 0;
-            newY = 0;
             newWidth = screen.getWidth();
             newHeight = screen.getHeight();
             setState(State.MAXIMIZED);
@@ -256,7 +254,10 @@ public class HeadlessWindow extends Window {
     }
 
     @Override
-    protected void _requestInput(long ptr, String text, int type, double width, double height, double Mxx, double Mxy, double Mxz, double Mxt, double Myx, double Myy, double Myz, double Myt, double Mzx, double Mzy, double Mzz, double Mzt) {
+    protected void _requestInput(long ptr, String text, int type, double width, double height,
+            double Mxx, double Mxy, double Mxz, double Mxt,
+            double Myx, double Myy, double Myz, double Myt,
+            double Mzx, double Mzy, double Mzz, double Mzt) {
         throw new UnsupportedOperationException("Not supported yet.");
     }
 
@@ -303,8 +304,8 @@ public class HeadlessWindow extends Window {
     }
 
     public Color getColor(int lx, int ly) {
-        int mx = lx;// + getX();
-        int my = ly;// + getY();
+        int mx = lx;
+        int my = ly;
         int idx = 1000 * my + mx;
         int rgba = frameBuffer.asIntBuffer().get(idx);
         int a = (rgba >> 24) & 0xFF;
@@ -346,8 +347,6 @@ public class HeadlessWindow extends Window {
             for (int j = 0; j < pixels.getWidth(); j++) {
                 int idx = rowIdx * stride + offsetX + j;
                 int val = intBuffer.get(i * pixels.getWidth() + j);
-                if (val != 0) {
-                }
                 frameBuffer.asIntBuffer().put(idx, val);
             }
         }

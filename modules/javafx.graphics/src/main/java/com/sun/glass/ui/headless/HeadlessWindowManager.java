@@ -19,13 +19,4 @@ public class HeadlessWindowManager {
         }
     }
 
-    private HeadlessWindow getFocusedWindow() {
-        List<Window> windows = Window.getWindows().stream()
-                .filter(win -> win.getView()!= null)
-                .filter(win -> !win.isClosed())
-                .filter(win -> win.isFocused()).toList();
-        if (windows.isEmpty()) return null;
-        if (windows.size() == 1) return (HeadlessWindow)windows.get(0);
-        return (HeadlessWindow)windows.get(windows.size() -1);
-    }
 }

@@ -60,7 +60,6 @@ public class HeadlessRobot extends GlassRobot {
             if (keyval.length > 0) {
                 view.notifyKey(KeyEvent.TYPED, 0, keyval, mods);
             }
-
         }
     }
 
@@ -216,7 +215,7 @@ public class HeadlessRobot extends GlassRobot {
                 if (oldView != null) {
                     int owx = oldWindow.getX();
                     int owy = oldWindow.getY();
-                    oldView.notifyMouse(MouseEvent.EXIT, MouseEvent.BUTTON_NONE, (int)mouseX-owx, (int)mouseY-owy, (int)mouseX, (int)mouseY, modifiers, true, true);
+                    oldView.notifyMouse(MouseEvent.EXIT, MouseEvent.BUTTON_NONE, (int) mouseX - owx, (int) mouseY - owy, (int) mouseX, (int) mouseY, modifiers, true, true);
                 }
             }
         }
@@ -377,10 +376,10 @@ public class HeadlessRobot extends GlassRobot {
 
     private int getKeyModifiers() {
         int answer = 0;
-        if (this.specialKeys.keyControl) answer = answer | KeyEvent.MODIFIER_CONTROL;
-        if (this.specialKeys.keyShift) answer = answer | KeyEvent.MODIFIER_SHIFT;
-        if (this.specialKeys.keyCommand) answer = answer | KeyEvent.MODIFIER_COMMAND;
-        if (this.specialKeys.keyAlt) answer = answer | KeyEvent.MODIFIER_ALT;
+        if (this.specialKeys.keyControl) answer |= KeyEvent.MODIFIER_CONTROL;
+        if (this.specialKeys.keyShift) answer |= KeyEvent.MODIFIER_SHIFT;
+        if (this.specialKeys.keyCommand) answer |= KeyEvent.MODIFIER_COMMAND;
+        if (this.specialKeys.keyAlt) answer |= KeyEvent.MODIFIER_ALT;
         return answer;
     }
 

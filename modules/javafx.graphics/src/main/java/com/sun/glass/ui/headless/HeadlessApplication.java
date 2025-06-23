@@ -24,9 +24,9 @@ public class HeadlessApplication extends Application {
     private HeadlessRobot activeRobot = null;
     ByteBuffer frameBuffer;
 
-    private final int MULTICLICK_MAX_X = 20;
-    private final int MULTICLICK_MAX_Y = 20;
-    private final long MULTICLICK_TIME = 500;
+    private static final int MULTICLICK_MAX_X = 20;
+    private static final int MULTICLICK_MAX_Y = 20;
+    private static final long MULTICLICK_TIME = 500;
 
     @Override
     protected void runLoop(Runnable launchable) {
@@ -170,7 +170,8 @@ public class HeadlessApplication extends Application {
     }
 
     @Override
-    protected CommonDialogs.FileChooserResult staticCommonDialogs_showFileChooser(Window owner, String folder, String filename, String title, int type, boolean multipleMode, CommonDialogs.ExtensionFilter[] extensionFilters, int defaultFilterIndex) {
+    protected CommonDialogs.FileChooserResult staticCommonDialogs_showFileChooser(Window owner, String folder, String filename, String title, int type,
+            boolean multipleMode, CommonDialogs.ExtensionFilter[] extensionFilters, int defaultFilterIndex) {
         throw new UnsupportedOperationException("Not supported yet.");
     }
 
