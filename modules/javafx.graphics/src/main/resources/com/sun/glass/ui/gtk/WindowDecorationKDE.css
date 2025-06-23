@@ -89,7 +89,10 @@
     -fx-background-color: #6c7076 !important;
 }
 
-.-FX-INTERNAL-maximize-button:disabled {
+.-FX-INTERNAL-iconify-button:disabled,
+.-FX-INTERNAL-maximize-button:disabled,
+.-FX-INTERNAL-header-button-container.utility > .-FX-INTERNAL-iconify-button,
+.-FX-INTERNAL-header-button-container.utility > .-FX-INTERNAL-maximize-button {
     -fx-managed: false;
     visibility: hidden;
 }
