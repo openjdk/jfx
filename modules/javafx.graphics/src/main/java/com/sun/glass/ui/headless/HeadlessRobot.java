@@ -285,12 +285,14 @@ public class HeadlessRobot extends GlassRobot {
     }
 
     int getGlassEventButton(MouseButton button) {
-        if (button == MouseButton.SECONDARY) return MouseEvent.BUTTON_RIGHT;
-        if (button == MouseButton.PRIMARY) return MouseEvent.BUTTON_LEFT;
-        if (button == MouseButton.MIDDLE) return MouseEvent.BUTTON_OTHER;
-        if (button == MouseButton.BACK) return MouseEvent.BUTTON_BACK;
-        if (button == MouseButton.FORWARD) return MouseEvent.BUTTON_FORWARD;
-        return MouseEvent.BUTTON_NONE;
+        return switch (button) {
+            case NONE -> MouseEvent.BUTTON_NONE;
+            case PRIMARY -> MouseEvent.BUTTON_LEFT;
+            case MIDDLE -> MouseEvent.BUTTON_OTHER;
+            case SECONDARY -> MouseEvent.BUTTON_RIGHT;
+            case BACK -> MouseEvent.BUTTON_BACK;
+            case FORWARD -> MouseEvent.BUTTON_FORWARD;
+        };
     }
 
     private void processSpecialKeys(int c, boolean on) {
