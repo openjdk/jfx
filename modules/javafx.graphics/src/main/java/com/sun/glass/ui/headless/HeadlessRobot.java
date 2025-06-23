@@ -258,23 +258,14 @@ public class HeadlessRobot extends GlassRobot {
     int getModifiers(MouseButton... buttons) {
         int modifiers = KeyEvent.MODIFIER_NONE;
         for (int i = 0; i < buttons.length; i++) {
-            switch (buttons[i]) {
-                case PRIMARY:
-                    modifiers |= KeyEvent.MODIFIER_BUTTON_PRIMARY;
-                    break;
-                case MIDDLE:
-                    modifiers |= KeyEvent.MODIFIER_BUTTON_MIDDLE;
-                    break;
-                case SECONDARY:
-                    modifiers |= KeyEvent.MODIFIER_BUTTON_SECONDARY;
-                    break;
-                case BACK:
-                    modifiers |= KeyEvent.MODIFIER_BUTTON_BACK;
-                    break;
-                case FORWARD:
-                    modifiers |= KeyEvent.MODIFIER_BUTTON_FORWARD;
-                    break;
-            }
+            modifiers |= switch (buttons[i]) {
+                case NONE -> KeyEvent.MODIFIER_NONE;
+                case PRIMARY -> KeyEvent.MODIFIER_BUTTON_PRIMARY;
+                case MIDDLE -> KeyEvent.MODIFIER_BUTTON_MIDDLE;
+                case SECONDARY -> KeyEvent.MODIFIER_BUTTON_SECONDARY;
+                case BACK -> KeyEvent.MODIFIER_BUTTON_BACK;
+                case FORWARD -> KeyEvent.MODIFIER_BUTTON_FORWARD;
+            };
         }
         return modifiers;
     }
