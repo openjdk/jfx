@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -182,9 +182,11 @@ LRESULT GlassApplication::WindowProc(UINT msg, WPARAM wParam, LPARAM lParam)
         case WM_THEMECHANGED:
         case WM_SYSCOLORCHANGE:
         case WM_DWMCOLORIZATIONCOLORCHANGED:
+            // Usually, the WM_THEMECHANGED and WM_SYSCOLORCHANGE messages are followed by other
+            // messages or WinRT callbacks that may change platform preferences.
             if (m_platformSupport.updatePreferences(
-                    PlatformSupport::PreferenceType(PlatformSupport::PT_SYSTEM_COLORS |
-                                                    PlatformSupport::PT_UI_SETTINGS))) {
+                    PlatformSupport::PreferenceType(PlatformSupport::PT_SYSTEM_COLORS | PlatformSupport::PT_SYSTEM_PARAMS),
+                    /* delayedChangesExpected: */ msg == WM_THEMECHANGED || msg == WM_SYSCOLORCHANGE)) {
                 return 0;
             }
             break;
@@ -332,7 +334,7 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_win_WinApplication_initIDs
     if (CheckAndClearException(env)) return;
 
     javaIDs.Application.notifyPreferencesChangedMID =
-        env->GetMethodID(cls, "notifyPreferencesChanged", "(Ljava/util/Map;)V");
+        env->GetMethodID(cls, "notifyPreferencesChanged", "(Ljava/util/Map;I)V");
     ASSERT(javaIDs.Application.notifyPreferencesChangedMID);
     if (CheckAndClearException(env)) return;
 
