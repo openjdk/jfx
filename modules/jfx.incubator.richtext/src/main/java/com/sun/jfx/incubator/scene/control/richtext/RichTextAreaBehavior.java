@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2022, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -40,6 +40,8 @@ import javafx.geometry.Rectangle2D;
 import javafx.scene.control.ContextMenu;
 import javafx.scene.control.MenuItem;
 import javafx.scene.control.SeparatorMenuItem;
+import javafx.scene.control.input.BehaviorBase;
+import javafx.scene.control.input.KeyBinding;
 import javafx.scene.input.Clipboard;
 import javafx.scene.input.ClipboardContent;
 import javafx.scene.input.ContextMenuEvent;
@@ -54,9 +56,7 @@ import javafx.stage.Screen;
 import javafx.util.Duration;
 import com.sun.javafx.PlatformUtil;
 import com.sun.javafx.util.Utils;
-import com.sun.jfx.incubator.scene.control.input.BehaviorBase;
 import com.sun.jfx.incubator.scene.control.richtext.util.RichUtils;
-import jfx.incubator.scene.control.input.KeyBinding;
 import jfx.incubator.scene.control.richtext.RichTextArea;
 import jfx.incubator.scene.control.richtext.TextPos;
 import jfx.incubator.scene.control.richtext.model.DataFormatHandler;
