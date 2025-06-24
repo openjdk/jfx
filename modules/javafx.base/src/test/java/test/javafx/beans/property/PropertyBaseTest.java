@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2015, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -155,12 +155,15 @@ public class PropertyBaseTest<T> {
 
         Property<T> p1 = factory.createProperty();
         Property<T> p2 = factory.createProperty();
-        p1.bind(observable);
-        p2.bind(observable);
-        assertEquals(2, ExpressionHelperUtility.getInvalidationListeners(observable).size());
+        Property<T> p3 = factory.createProperty();
+        p1.bind(observable); // creates SingleInvalidation
+        p2.bind(observable); // creates Generic with 2 listeners
+        p3.bind(observable); // one extra as ListenerHelper has different semantics
+        assertEquals(3, ExpressionHelperUtility.getInvalidationListeners(observable).size());
 
         p1 = null;
         p2 = null;
+        p3 = null;
         System.gc();
 
         property.bind(observable);

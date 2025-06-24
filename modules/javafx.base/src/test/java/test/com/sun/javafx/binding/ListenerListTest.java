@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,25 +25,19 @@
 
 package test.com.sun.javafx.binding;
 
-import com.sun.javafx.binding.Logging;
-import org.junit.jupiter.api.Test;
-import test.util.memory.JMemoryBuddy;
+import com.sun.javafx.binding.ListenerList;
 
-public class TestLogging {
+import javafx.beans.value.ObservableValue;
 
-    @Test
-    public void testExceptionCollectableAfterLogging() {
+public class ListenerListTest extends ListenerListTestBase<ListenerList<Object>> {
 
-        JMemoryBuddy.memoryTest(checker -> {
-            Throwable e = new Exception();
+    @Override
+    protected ListenerList<Object> create(Object listener1, Object listener2) {
+        return new ListenerList<>(listener1, listener2);
+    }
 
-            // This is the value that is used in the application
-            // other test might set it to true
-            Logging.setKeepLastLogRecord(false);
-
-            Logging.getLogger().warning("test", e);
-
-            checker.assertCollectable(e);
-        });
+    @Override
+    protected <T> void notifyListeners(ListenerList<Object> list, ObservableValue<? extends T> property, T oldValue) {
+        list.notifyListeners(property, oldValue);
     }
 }
