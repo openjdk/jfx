@@ -67,7 +67,6 @@ import javafx.scene.control.TreeTableView.TreeTableViewSelectionModel;
 import javafx.scene.control.TreeTableViewShim;
 import javafx.scene.control.TreeView;
 import javafx.scene.control.TreeViewShim;
-import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -114,6 +113,8 @@ public class MultipleSelectionModelImplTest {
     // TableView
     private TableView tableView;
 
+    private StageLoader stageLoader;
+
     private static Collection<Class<? extends MultipleSelectionModel>> parameters() {
         return List.of(
             ListViewShim.get_ListViewBitSetSelectionModel_class(),
@@ -123,8 +124,12 @@ public class MultipleSelectionModelImplTest {
         );
     }
 
-    @AfterAll
-    public static void tearDownClass() throws Exception {    }
+    @AfterEach
+    public void cleanup() {
+        if (stageLoader != null) {
+            stageLoader.dispose();
+        }
+    }
 
     // @BeforeEach
     // junit5 does not support parameterized class-level tests yet
@@ -1111,6 +1116,7 @@ public class MultipleSelectionModelImplTest {
         setUp(c);
         msModel().setSelectionMode(SelectionMode.MULTIPLE);
 
+        stageLoader = new StageLoader(currentControl);
         IndexedCell cell_3 = VirtualFlowTestUtils.getCell(currentControl, 3);
         assertNotNull(cell_3);
         assertFalse(cell_3.isSelected());
