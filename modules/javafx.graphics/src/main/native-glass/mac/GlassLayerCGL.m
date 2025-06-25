@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -23,10 +23,10 @@
  * questions.
  */
 
-#import "GlassLayer3D.h"
-
 #import "GlassMacros.h"
 #import "GlassScreen.h"
+#import "GlassLayerCGL.h"
+#import "GlassCGLOffscreen.h"
 
 //#define VERBOSE
 #ifndef VERBOSE
@@ -35,23 +35,21 @@
     #define LOG(MSG, ...) GLASS_LOG(MSG, ## __VA_ARGS__);
 #endif
 
-@implementation GlassLayer3D
-
-static NSArray *allModes = nil;
+@implementation GlassLayerCGL
 
 - (id)initWithSharedContext:(CGLContextObj)ctx
            andClientContext:(CGLContextObj)clCtx
              withHiDPIAware:(BOOL)HiDPIAware
              withIsSwPipe:(BOOL)isSwPipe
 {
-    LOG("GlassLayer3D initWithSharedContext]");
+    LOG("GlassLayerCGL initWithSharedContext]");
     self = [super init];
     if (self != nil)
     {
-        self->_painterOffscreen = [[GlassOffscreen alloc] initWithContext:clCtx andIsSwPipe:isSwPipe];
-        self->_glassOffscreen = [[GlassOffscreen alloc] initWithContext:ctx andIsSwPipe:isSwPipe];
+        self->_painterOffscreen = (GlassOffscreen*)[[GlassCGLOffscreen alloc] initWithContext:clCtx andIsSwPipe:isSwPipe];
+        self->_glassOffscreen = (GlassOffscreen*)[[GlassCGLOffscreen alloc] initWithContext:ctx andIsSwPipe:isSwPipe];
         [self->_glassOffscreen setLayer:self];
-        LOG("   GlassLayer3D context: %p", ctx);
+        LOG("   GlassLayerCGL context: %p", ctx);
 
         self->isHiDPIAware = HiDPIAware;
 
@@ -59,24 +57,9 @@ static NSArray *allModes = nil;
         [self setAutoresizingMask:(kCALayerWidthSizable|kCALayerHeightSizable)];
         [self setContentsGravity:kCAGravityTopLeft];
 
-        // Initially the view is not in any window yet, so using the
-        // screens[0]'s scale is a good starting point (this is most probably
-        // the notebook's main LCD display which is HiDPI-capable).
-        // Note that mainScreen is the screen with the current app bar focus
-        // in Mavericks and later OS so it will likely not match the screen
-        // we initially show windows on if an app is started from an external
-        // monitor.
-        [self notifyScaleFactorChanged:GetScreenScaleFactor([[NSScreen screens] objectAtIndex:0])];
-
         [self setMasksToBounds:YES];
         [self setNeedsDisplayOnBoundsChange:YES];
         [self setAnchorPoint:CGPointMake(0.0f, 0.0f)];
-
-        if (allModes == nil) {
-            allModes = [[NSArray arrayWithObjects:NSDefaultRunLoopMode,
-                                                  NSEventTrackingRunLoopMode,
-                                                  NSModalPanelRunLoopMode, nil] retain];
-        }
 
         self.colorspace = CGColorSpaceCreateWithName(kCGColorSpaceSRGB);
     }
@@ -94,21 +77,6 @@ static NSArray *allModes = nil;
     [super dealloc];
 }
 
-- (void)notifyScaleFactorChanged:(CGFloat)scale
-{
-    if (self->isHiDPIAware) {
-        if ([self respondsToSelector:@selector(setContentsScale:)]) {
-            [self setContentsScale: scale];
-        }
-    }
-}
-
-//- (void)setBounds:(CGRect)bounds
-//{
-//    LOG("GlassLayer3D setBounds:%s", [NSStringFromRect(NSRectFromCGRect(bounds)) UTF8String]);
-//    [super setBounds:bounds];
-//}
-
 - (BOOL)canDrawInCGLContext:(CGLContextObj)glContext pixelFormat:(CGLPixelFormatObj)pixelFormat forLayerTime:(CFTimeInterval)timeInterval displayTime:(const CVTimeStamp *)timeStamp
 {
     return [self->_glassOffscreen isDirty];
@@ -116,18 +84,18 @@ static NSArray *allModes = nil;
 
 - (CGLContextObj)copyCGLContextForPixelFormat:(CGLPixelFormatObj)pixelFormat
 {
-    return CGLRetainContext([self->_glassOffscreen getContext]);
+    return CGLRetainContext([(GlassCGLOffscreen*)self->_glassOffscreen getContext]);
 }
 
 - (CGLPixelFormatObj)copyCGLPixelFormatForDisplayMask:(uint32_t)mask
 {
-    return CGLRetainPixelFormat(CGLGetPixelFormat([self->_glassOffscreen getContext]));
+    return CGLRetainPixelFormat(CGLGetPixelFormat([(GlassCGLOffscreen*)self->_glassOffscreen getContext]));
 }
 
 - (void)drawInCGLContext:(CGLContextObj)glContext pixelFormat:(CGLPixelFormatObj)pixelFormat forLayerTime:(CFTimeInterval)timeInterval displayTime:(const CVTimeStamp *)timeStamp
 {
     // glContext is already set as current by now and locked by Quartz internaly
-    LOG("GlassLayer3D drawInCGLContext]");
+    LOG("GlassLayerCGL drawInCGLContext]");
     LOG("   current context: %p", CGLGetCurrentContext());
 #ifdef VERBOSE
     {
@@ -155,19 +123,6 @@ static NSArray *allModes = nil;
     // the default implementation of the method flushes the context.
     [super drawInCGLContext:glContext pixelFormat:pixelFormat forLayerTime:timeInterval displayTime:timeStamp];
     LOG("\n");
-}
-
-- (void)flush
-{
-    [(GlassOffscreen*)_glassOffscreen blitFromOffscreen:(GlassOffscreen*)_painterOffscreen];
-    if ([NSThread isMainThread]) {
-        [[self->_glassOffscreen getLayer] setNeedsDisplay];
-    } else {
-        [[self->_glassOffscreen getLayer] performSelectorOnMainThread:@selector(setNeedsDisplay)
-                                                           withObject:nil
-                                                        waitUntilDone:NO
-                                                                modes:allModes];
-    }
 }
 
 - (GlassOffscreen*)getPainterOffscreen
