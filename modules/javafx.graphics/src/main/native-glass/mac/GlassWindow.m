@@ -837,7 +837,7 @@ JNIEXPORT jboolean JNICALL Java_com_sun_glass_ui_mac_MacWindow__1setView
             CALayer *layer = [window->view getLayer];
             LOG("   layer: %p", layer);
             // TODO : Move below logic to CGL specific View/Layer class
-            if (([layer isKindOfClass:[CAOpenGLLayer class]] == YES) &&
+            if (([layer.sublayers[0] isKindOfClass:[CAOpenGLLayer class]] == YES) &&
                 (([window->nsWindow styleMask] & NSWindowStyleMaskTexturedBackground) == NO))
             {
                 [((CAOpenGLLayer*)layer) setOpaque:[window->nsWindow isOpaque]];
