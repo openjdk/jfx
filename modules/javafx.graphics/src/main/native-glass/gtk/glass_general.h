@@ -128,7 +128,6 @@ private:
     } RunnableContext;
 
     extern char const * const GDK_WINDOW_DATA_CONTEXT;
-    extern char const * const GDK_WINDOW_DATA_EDGE;
 
     GdkCursor* get_native_cursor(int type);
 
