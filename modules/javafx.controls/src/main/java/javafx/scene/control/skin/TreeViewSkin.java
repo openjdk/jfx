@@ -116,6 +116,7 @@ public class TreeViewSkin<T> extends VirtualContainerBase<TreeView<T>, TreeCell<
             // had changed. So, here we just watch for the case where the number
             // of items being added is equal to the number of items being removed.
             markItemCountDirty();
+            requestRebuildCells();
             getSkinnable().requestLayout();
         } else if (e.getEventType().equals(TreeItem.valueChangedEvent())) {
             // Fix for JDK-8114657 and JDK-8114610.
@@ -251,6 +252,10 @@ public class TreeViewSkin<T> extends VirtualContainerBase<TreeView<T>, TreeCell<
     /** {@inheritDoc} */
     @Override protected void layoutChildren(final double x, final double y, final double w, final double h) {
         super.layoutChildren(x, y, w, h);
+        if (needCellsReconfigured) {
+            flow.reconfigureCells();
+        }
+        needCellsReconfigured = false;
         flow.resizeRelocate(x, y, w, h);
     }
 
@@ -391,16 +396,20 @@ public class TreeViewSkin<T> extends VirtualContainerBase<TreeView<T>, TreeCell<
         return getSkinnable().getExpandedItemCount();
     }
 
+    private boolean needCellsReconfigured = false;
+
     /** {@inheritDoc} */
     @Override protected void updateItemCount() {
-//        int oldCount = flow.getCellCount();
+        int oldCount = flow.getCellCount();
         int newCount = getItemCount();
 
-        // if this is not called even when the count is the same, we get a
-        // memory leak in VirtualFlow.sheet.children. This can probably be
-        // optimised in the future when time permits.
-        requestRebuildCells();
         flow.setCellCount(newCount);
+
+        if (newCount == oldCount) {
+            needCellsReconfigured = true;
+        } else if (oldCount == 0) {
+            requestRebuildCells();
+        }
 
         // Ideally we would be more nuanced above, toggling a cheaper needs*
         // field, but if we do we hit issues such as those identified in
