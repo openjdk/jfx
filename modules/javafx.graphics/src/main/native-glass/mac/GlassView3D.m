@@ -483,6 +483,8 @@
             (uch == com_sun_glass_events_KeyEvent_VK_PERIOD ||
              uch == com_sun_glass_events_KeyEvent_VK_EQUALS))
         {
+            [GlassApplication registerKeyEvent:theEvent];
+
             GET_MAIN_JENV;
 
             jcharArray jKeyChars = GetJavaKeyChars(env, theEvent);
