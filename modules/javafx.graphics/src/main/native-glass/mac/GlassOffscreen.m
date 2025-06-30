@@ -24,7 +24,6 @@
  */
 
 #import "GlassOffscreen.h"
-//#import "GlassPBuffer.h"
 
 //#define VERBOSE
 #ifndef VERBOSE
@@ -76,7 +75,8 @@
     return 0;
 }
 
-- (void)bindForWidth:(unsigned int)width andHeight:(unsigned int)height
+- (void)bindForWidth:(unsigned int)width
+           andHeight:(unsigned int)height
 {
 }
 
@@ -90,10 +90,10 @@
 
 - (void)pushPixels:(void*)pixels
          withWidth:(unsigned int)width
-         withHeight:(unsigned int)height
-         withScaleX:(float)scalex
-         withScaleY:(float)scaley
-         ofView:(NSView*)view
+        withHeight:(unsigned int)height
+        withScaleX:(float)scalex
+        withScaleY:(float)scaley
+            ofView:(NSView*)view
 {
 }
 
@@ -101,7 +101,8 @@
 {
 }
 
-- (void)blitForWidth:(unsigned int)width andHeight:(unsigned int)height
+- (void)blitForWidth:(unsigned int)width
+           andHeight:(unsigned int)height
 {
 }
 

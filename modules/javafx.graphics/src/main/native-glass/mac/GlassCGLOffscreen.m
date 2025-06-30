@@ -24,21 +24,13 @@
  */
 
 #import "GlassCGLOffscreen.h"
-//#import "GlassPBuffer.h"
-
-//#define VERBOSE
-#ifndef VERBOSE
-    #define LOG(MSG, ...)
-#else
-    #define LOG(MSG, ...) GLASS_LOG(MSG, ## __VA_ARGS__);
-#endif
 
 @implementation GlassCGLOffscreen
 
 static NSArray *allModes = nil;
 
 - (id)initWithContext:(CGLContextObj)ctx
-            andIsSwPipe:(BOOL)isSwPipe;
+          andIsSwPipe:(BOOL)isSwPipe
 {
     self = [super init];
     if (self != nil)
@@ -53,7 +45,7 @@ static NSArray *allModes = nil;
             if (self->_fbo == nil)
             {
                 // TODO: implement PBuffer if needed
-                //self->_fbo = [[GlassPBuffer alloc] init];
+                // self->_fbo = [[GlassPBuffer alloc] init];
             }
             [(GlassCGLFrameBufferObject*)self->_fbo setIsSwPipe:(BOOL)isSwPipe];
         }
@@ -67,7 +59,7 @@ static NSArray *allModes = nil;
     return self;
 }
 
-- (CGLContextObj)getContext;
+- (CGLContextObj)getContext
 {
     return self->_ctx;
 }
@@ -77,17 +69,13 @@ static NSArray *allModes = nil;
     if (self->_texture != 0)
     {
         [self bindForWidth:(GLuint)[self->glassView bounds].size.width
-            andHeight:(GLuint)[self->glassView bounds].size.height];
-        {
-            glDeleteTextures(1, &self->_texture);
-        }
+                 andHeight:(GLuint)[self->glassView bounds].size.height];
+        glDeleteTextures(1, &self->_texture);
         [self unbind];
     }
     [self setContext];
-    {
-        [(NSObject*)self->_fbo release];
-        self->_fbo = NULL;
-    }
+    [(NSObject*)self->_fbo release];
+    self->_fbo = NULL;
     [self unsetContext];
 
     CGLReleaseContext(self->_ctx);
@@ -124,7 +112,8 @@ static NSArray *allModes = nil;
     CGLUnlockContext(self->_ctx);
 }
 
-- (void)bindForWidth:(GLuint)width andHeight:(GLuint)height
+- (void)bindForWidth:(GLuint)width
+           andHeight:(GLuint)height
 {
     assert(self->_drawCounter >= 0);
     if (self->_drawCounter == 0)
@@ -149,19 +138,19 @@ static NSArray *allModes = nil;
             [[(GlassCGLOffscreen*)glassOffScreen getLayer] setNeedsDisplay];
         } else {
             [[(GlassCGLOffscreen*)glassOffScreen getLayer] performSelectorOnMainThread:@selector(setNeedsDisplay)
-                                                           withObject:nil
-                                                        waitUntilDone:NO
-                                                                modes:allModes];
+                                                                            withObject:nil
+                                                                         waitUntilDone:NO
+                                                                                 modes:allModes];
         }
     }
 }
 
 - (void)pushPixels:(void*)pixels
          withWidth:(unsigned int)width
-         withHeight:(unsigned int)height
-         withScaleX:(float)scalex
-         withScaleY:(float)scaley
-         ofView:(NSView*)view
+        withHeight:(unsigned int)height
+        withScaleX:(float)scalex
+        withScaleY:(float)scaley
+            ofView:(NSView*)view
 {
     assert(self->_drawCounter > 0);
 
@@ -184,7 +173,8 @@ static NSArray *allModes = nil;
         glTexParameteri(GL_TEXTURE_RECTANGLE_EXT, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
         glTexParameteri(GL_TEXTURE_RECTANGLE_EXT, GL_TEXTURE_WRAP_S, GL_CLAMP);
         glTexParameteri(GL_TEXTURE_RECTANGLE_EXT, GL_TEXTURE_WRAP_T, GL_CLAMP);
-        glTexImage2D(GL_TEXTURE_RECTANGLE_EXT, 0, GL_RGBA8, (GLsizei)self->_textureWidth, (GLsizei)self->_textureHeight, 0, GL_BGRA, GL_UNSIGNED_INT_8_8_8_8_REV, pixels);
+        glTexImage2D(GL_TEXTURE_RECTANGLE_EXT, 0, GL_RGBA8, (GLsizei)self->_textureWidth, (GLsizei)self->_textureHeight,
+                        0, GL_BGRA, GL_UNSIGNED_INT_8_8_8_8_REV, pixels);
     }
 
     glEnable(GL_TEXTURE_RECTANGLE_EXT);
@@ -192,7 +182,8 @@ static NSArray *allModes = nil;
     {
         if (uploaded == NO)
         {
-            glTexSubImage2D(GL_TEXTURE_RECTANGLE_EXT, 0, 0, 0, (GLsizei)self->_textureWidth, (GLsizei)self->_textureHeight, GL_BGRA, GL_UNSIGNED_INT_8_8_8_8_REV, pixels);
+            glTexSubImage2D(GL_TEXTURE_RECTANGLE_EXT, 0, 0, 0, (GLsizei)self->_textureWidth, (GLsizei)self->_textureHeight,
+                                GL_BGRA, GL_UNSIGNED_INT_8_8_8_8_REV, pixels);
         }
 
         GLfloat w = self->_textureWidth;
@@ -250,7 +241,8 @@ static NSArray *allModes = nil;
     return [self->_fbo texture];
 }
 
-- (void)blitForWidth:(GLuint)width andHeight:(GLuint)height
+- (void)blitForWidth:(GLuint)width
+           andHeight:(GLuint)height
 {
     {
 #if 1
@@ -279,7 +271,8 @@ static NSArray *allModes = nil;
         }
         glClear(GL_COLOR_BUFFER_BIT);
 #endif
-        [self->_fbo blitForWidth:width andHeight:height];
+        [self->_fbo blitForWidth:width
+                       andHeight:height];
 
         self->_dirty = GL_FALSE;
     }
@@ -292,7 +285,8 @@ static NSArray *allModes = nil;
 
 - (void)blit
 {
-    [self blitForWidth:[self->_fbo width] andHeight:[self->_fbo height]];
+    [self blitForWidth:[self->_fbo width]
+             andHeight:[self->_fbo height]];
 }
 
 - (void)blitFromOffscreen:(GlassCGLOffscreen*)other_offscreen

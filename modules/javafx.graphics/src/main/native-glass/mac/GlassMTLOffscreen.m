@@ -24,7 +24,6 @@
  */
 
 #import "GlassMTLOffscreen.h"
-//#import "GlassPBuffer.h"
 
 //#define VERBOSE
 #ifndef VERBOSE
@@ -39,20 +38,18 @@ static NSArray *allModes = nil;
 
 - (id)initWithContext:(id<MTLDevice>)device
          commandQueue:(id<MTLCommandQueue>)commandQueue
-            andIsSwPipe:(BOOL)isSwPipe;
+          andIsSwPipe:(BOOL)isSwPipe
 {
     self = [super init];
     if (self != nil)
     {
-        {
-            self->_fbo = [[GlassMTLFrameBufferObject alloc] init];
-            if (self->_fbo == nil)
-            {
-                // TODO: implement PBuffer if needed
-                //self->_fbo = [[GlassPBuffer alloc] init];
-            }
-            [(GlassMTLFrameBufferObject*)self->_fbo setIsSwPipe:(BOOL)isSwPipe];
-        }
+        self->_fbo = [[GlassMTLFrameBufferObject alloc] init];
+        // if (self->_fbo == nil)
+        // {
+        //     TODO: implement PBuffer if needed
+        //     self->_fbo = [[GlassPBuffer alloc] init];
+        // }
+        [(GlassMTLFrameBufferObject*)self->_fbo setIsSwPipe:(BOOL)isSwPipe];
         if (allModes == nil) {
             allModes = [[NSArray arrayWithObjects:NSDefaultRunLoopMode,
                                               NSEventTrackingRunLoopMode,
@@ -66,11 +63,8 @@ static NSArray *allModes = nil;
 
 - (void)dealloc
 {
-    {
-        [(NSObject*)self->_fbo release];
-        self->_fbo = NULL;
-    }
-
+    [(NSObject*)self->_fbo release];
+    self->_fbo = nil;
     [super dealloc];
 }
 
@@ -84,22 +78,23 @@ static NSArray *allModes = nil;
     return [self->_fbo height];
 }
 
-- (void)unbind{
-    //no-op in case of MTL
+- (void)unbind
+{
+    // no-op in case of MTL
 }
 
 - (jlong)fbo
 {
-    //NSLog(@"Glass fbo = %@", [self->_fbo texture]);
+    // NSLog(@"Glass fbo = %@", [self->_fbo texture]);
     return ptr_to_jlong((void *)[self->_fbo texture]);
-
-    //return [self->_fbo fbo];
 }
 
-- (void)bindForWidth:(unsigned int)width andHeight:(unsigned int)height
+- (void)bindForWidth:(unsigned int)width
+           andHeight:(unsigned int)height
 {
-    //NSLog(@"GlassMTLOffscreen -------- w x h : %d x %d", width, height);
-    [self->_fbo bindForWidth:width andHeight:height];
+    // NSLog(@"GlassMTLOffscreen -------- w x h : %d x %d", width, height);
+    [self->_fbo bindForWidth:width
+                   andHeight:height];
     CGSize s = {width, height};
     [(CAMetalLayer*)[self getLayer] setDrawableSize:s];
 }
@@ -109,11 +104,11 @@ static NSArray *allModes = nil;
     return [self->_fbo texture];
 }
 
-- (void)blitForWidth:(unsigned int)width andHeight:(unsigned int)height
+- (void)blitForWidth:(unsigned int)width
+           andHeight:(unsigned int)height
 {
-    {
-        [self->_fbo blitForWidth:width andHeight:height];
-    }
+    [self->_fbo blitForWidth:width
+                   andHeight:height];
 }
 
 - (void)flush:(GlassOffscreen*)glassOffScreen
@@ -122,18 +117,18 @@ static NSArray *allModes = nil;
         [[self getLayer] setNeedsDisplay];
     } else {
         [[self getLayer] performSelectorOnMainThread:@selector(setNeedsDisplay)
-                                                           withObject:nil
-                                                        waitUntilDone:NO
-                                                            modes:allModes];
+                                          withObject:nil
+                                       waitUntilDone:NO
+                                               modes:allModes];
     }
 }
 
 - (void)pushPixels:(void*)pixels
          withWidth:(unsigned int)width
-         withHeight:(unsigned int)height
-         withScaleX:(float)scalex
-         withScaleY:(float)scaley
-         ofView:(NSView*)view
+        withHeight:(unsigned int)height
+        withScaleX:(float)scalex
+        withScaleY:(float)scaley
+            ofView:(NSView*)view
 {
     id<MTLTexture> backBufferTex = [self->_fbo texture];
 
@@ -151,24 +146,22 @@ static NSArray *allModes = nil;
         id <MTLBlitCommandEncoder> blitEncoder = [commandBuf blitCommandEncoder];
 
         id<MTLBuffer> buff = [[self->mtlDevice newBufferWithBytes:pixels
-                                      length:width*height*4
-                                      options:0] autorelease];
-            [blitEncoder copyFromBuffer:buff
-                      sourceOffset:(NSUInteger)0
-                 sourceBytesPerRow:(NSUInteger)width * 4
-               sourceBytesPerImage:(NSUInteger)width * height * 4
-                        sourceSize:MTLSizeMake(width, height, 1)
-                         toTexture:backBufferTex
-                  destinationSlice:(NSUInteger)0
-                  destinationLevel:(NSUInteger)0
-                 destinationOrigin:MTLOriginMake(0, 0, 0)];
+                                                           length:(width * height * 4)
+                                                          options:0] autorelease];
+        [blitEncoder copyFromBuffer:buff
+                       sourceOffset:(NSUInteger)0
+                  sourceBytesPerRow:(NSUInteger)width * 4
+                sourceBytesPerImage:(NSUInteger)width * height * 4
+                         sourceSize:MTLSizeMake(width, height, 1)
+                          toTexture:backBufferTex
+                   destinationSlice:(NSUInteger)0
+                   destinationLevel:(NSUInteger)0
+                  destinationOrigin:MTLOriginMake(0, 0, 0)];
 
-            if (backBufferTex.usage == MTLTextureUsageRenderTarget) {
-                [blitEncoder synchronizeTexture:backBufferTex slice:0 level:0];
-            }
-
+        if (backBufferTex.usage == MTLTextureUsageRenderTarget) {
+            [blitEncoder synchronizeTexture:backBufferTex slice:0 level:0];
+        }
         [blitEncoder endEncoding];
-
         [commandBuf commit];
         [commandBuf waitUntilCompleted];
     }
@@ -182,15 +175,14 @@ static NSArray *allModes = nil;
 
 - (void)blit
 {
-    [self blitForWidth:[self->_fbo width] andHeight:[self->_fbo height]];
+    [self blitForWidth:[self->_fbo width]
+             andHeight:[self->_fbo height]];
 }
 
 // TODO: MTL: This just creates another texture and doesn't do any blit
-- (void)blitFromOffscreen:(GlassMTLOffscreen*) other_offscreen
+- (void)blitFromOffscreen:(GlassMTLOffscreen*)other_offscreen
 {
-    {
-        [(GlassMTLFrameBufferObject*)self->_fbo blitFromFBO:(GlassMTLFrameBufferObject*)other_offscreen->_fbo];
-    }
+    [(GlassMTLFrameBufferObject*)self->_fbo blitFromFBO:(GlassMTLFrameBufferObject*)other_offscreen->_fbo];
 }
 
 @end

@@ -23,8 +23,6 @@
  * questions.
  */
 
-//#import <Cocoa/Cocoa.h>
-
 #import "common.h"
 #import "com_sun_glass_ui_View.h"
 #import "com_sun_glass_ui_mac_MacView.h"

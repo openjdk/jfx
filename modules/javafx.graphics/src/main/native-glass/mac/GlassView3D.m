@@ -89,8 +89,8 @@
     {
         jobject mtlCommandQueueKey = (*env)->NewStringUTF(env, "mtlCommandQueue");
         jobject mtlCommandQueueValue = (*env)->CallObjectMethod(env, jproperties, jMapGetMethod, mtlCommandQueueKey);
-        //NSLog(@"---- mtlCommandQueueKey = %p", mtlCommandQueueKey);
-        //NSLog(@"---- mtlCommandQueueValue = %p", mtlCommandQueueValue);
+        // NSLog(@"---- mtlCommandQueueKey = %p", mtlCommandQueueKey);
+        // NSLog(@"---- mtlCommandQueueValue = %p", mtlCommandQueueValue);
         GLASS_CHECK_EXCEPTION(env);
         if (mtlCommandQueueValue != NULL)
         {
@@ -98,10 +98,10 @@
             GLASS_CHECK_EXCEPTION(env);
             if (jmtlQueuePtr != 0)
             {
-                //NSLog(@"--- GLASS metal command queue ptr = %ld", jmtlQueuePtr);
+                // NSLog(@"--- GLASS metal command queue ptr = %ld", jmtlQueuePtr);
 
-                //TODO: MTL: This enables sharing of MTLCommandQueue between PRISM and GLASS, if needed.
-                //Note : Currently, PRISM and GLASS create their own dedicated MTLCommandQueue
+                // This enables sharing of MTLCommandQueue between PRISM and GLASS, if needed.
+                // Note : Currently, PRISM and GLASS create their own dedicated MTLCommandQueue
                 mtlCommandQueuePtr = jmtlQueuePtr;
             }
         }

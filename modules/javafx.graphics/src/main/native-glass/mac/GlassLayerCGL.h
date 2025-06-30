@@ -41,7 +41,7 @@
 - (id)initWithSharedContext:(CGLContextObj)ctx
            andClientContext:(CGLContextObj)clCtx
              withHiDPIAware:(BOOL)HiDPIAware
-             withIsSwPipe:(BOOL)isSwPipe;
+               withIsSwPipe:(BOOL)isSwPipe;
 
 - (GlassOffscreen*)getPainterOffscreen;
 - (GlassOffscreen*)getGlassOffscreen;

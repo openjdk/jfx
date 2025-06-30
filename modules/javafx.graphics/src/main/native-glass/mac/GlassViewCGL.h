@@ -36,13 +36,16 @@
 {
     GlassLayer* layer;
 
-    CGFloat             _backgroundR;
-    CGFloat             _backgroundG;
-    CGFloat             _backgroundB;
-    CGFloat             _backgroundA;
+    CGFloat _backgroundR;
+    CGFloat _backgroundG;
+    CGFloat _backgroundB;
+    CGFloat _backgroundA;
 }
 
 - (GlassLayer*)getLayer;
-- (id)initWithFrame:(NSRect)frame withJview:(jobject)jView withJproperties:(jobject)jproperties;
+
+- (id)initWithFrame:(NSRect)frame
+          withJview:(jobject)jView
+    withJproperties:(jobject)jproperties;
 
 @end

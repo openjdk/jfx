@@ -23,8 +23,6 @@
  * questions.
  */
 
-#import <Cocoa/Cocoa.h>
-
 #import "GlassView.h"
 #import "GlassLayer.h"
 

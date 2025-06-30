@@ -23,9 +23,6 @@
  * questions.
  */
 
-#import <Cocoa/Cocoa.h>
-#import "common.h"
-
 #import <OpenGL/gl.h>
 #import <OpenGL/OpenGL.h>
 #import "GlassOffscreen.h"
@@ -49,7 +46,7 @@
 }
 
 - (id)initWithContext:(CGLContextObj)ctx
-            andIsSwPipe:(BOOL)isSwPipe;
+          andIsSwPipe:(BOOL)isSwPipe;
 - (CGLContextObj)getContext;
 - (GLuint)texture;
 

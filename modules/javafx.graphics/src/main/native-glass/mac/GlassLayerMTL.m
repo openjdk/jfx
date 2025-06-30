@@ -28,13 +28,6 @@
 #import "GlassLayerMTL.h"
 #import "GlassMTLOffscreen.h"
 
-//#define VERBOSE
-#ifndef VERBOSE
-    #define LOG(MSG, ...)
-#else
-    #define LOG(MSG, ...) GLASS_LOG(MSG, ## __VA_ARGS__);
-#endif
-
 @implementation GlassLayerMTL
 
 - (id) init:(long)mtlCommandQueuePtr
@@ -43,7 +36,7 @@
     self = [super init];
     isHiDPIAware = true; // TODO : pass in this from view
 
-    [self setAutoresizingMask:(kCALayerWidthSizable|kCALayerHeightSizable)];
+    [self setAutoresizingMask:(kCALayerWidthSizable | kCALayerHeightSizable)];
     [self setContentsGravity:kCAGravityTopLeft];
 
     [self setMasksToBounds:YES];
@@ -62,7 +55,9 @@
     } else {
         self->_blitCommandQueue = [self.device newCommandQueue];
     }
-    self->_painterOffscreen = (GlassOffscreen*)[[GlassMTLOffscreen alloc] initWithContext:self.device commandQueue:self->_blitCommandQueue andIsSwPipe:isSwPipe];
+    self->_painterOffscreen = (GlassOffscreen*)[[GlassMTLOffscreen alloc] initWithContext:self.device
+                                                                             commandQueue:self->_blitCommandQueue
+                                                                              andIsSwPipe:isSwPipe];
     [self->_painterOffscreen setLayer:self];
 
     self.colorspace = CGColorSpaceCreateWithName(kCGColorSpaceSRGB);
@@ -104,12 +99,12 @@ static int nextDrawableCount = 0;
     int height = [self->_painterOffscreen height];
 
     if (width <= 0 || height <= 0) {
-        //NSLog(@"Layer --------- backing texture not ready yet--- skipping blit.");
+        // NSLog(@"Layer --------- backing texture not ready yet--- skipping blit.");
         return;
     }
 
     if (nextDrawableCount > 2) {
-        //NSLog(@"Layer --------- previous drawing in progress.. skipping blit to screen.");
+        // NSLog(@"Layer --------- previous drawing in progress.. skipping blit to screen.");
         return;
     }
 
@@ -127,25 +122,29 @@ static int nextDrawableCount = 0;
 
         id <MTLBlitCommandEncoder> blitEncoder = [commandBuf blitCommandEncoder];
 
-        MTLRegion region = {{0,0,0}, {width, height, 1}};
+        MTLRegion region = {{0, 0, 0}, {width, height, 1}};
 
         if (backBufferTex.usage == MTLTextureUsageRenderTarget) {
             [blitEncoder synchronizeTexture:backBufferTex slice:0 level:0];
         }
-        [blitEncoder
-                copyFromTexture:backBufferTex sourceSlice:0 sourceLevel:0
-                sourceOrigin:MTLOriginMake(0, 0, 0)
-                sourceSize:MTLSizeMake(width, height, 1)
-                toTexture:mtlDrawable.texture destinationSlice:0 destinationLevel:0 destinationOrigin:MTLOriginMake(0, 0, 0)];
-        [blitEncoder endEncoding];
+        [blitEncoder copyFromTexture:backBufferTex
+                         sourceSlice:0
+                         sourceLevel:0
+                        sourceOrigin:MTLOriginMake(0, 0, 0)
+                          sourceSize:MTLSizeMake(width, height, 1)
+                           toTexture:mtlDrawable.texture
+                    destinationSlice:0
+                    destinationLevel:0
+                   destinationOrigin:MTLOriginMake(0, 0, 0)];
 
+        [blitEncoder endEncoding];
         [commandBuf presentDrawable:mtlDrawable];
         [commandBuf addCompletedHandler:^(id <MTLCommandBuffer> commandBuf) {
             nextDrawableCount--;
         }];
 
         [commandBuf commit];
-        //[commandBuf waitUntilCompleted];
+        // [commandBuf waitUntilCompleted];
     }
 }
 

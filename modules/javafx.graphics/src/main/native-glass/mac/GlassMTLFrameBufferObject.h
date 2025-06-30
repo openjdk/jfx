@@ -23,7 +23,6 @@
  * questions.
  */
 
-#import <Foundation/Foundation.h>
 #import <Metal/Metal.h>
 
 @interface GlassMTLFrameBufferObject : NSObject
@@ -40,7 +39,9 @@
 - (void)setIsSwPipe:(BOOL)isSwPipe;
 - (unsigned int)width;
 - (unsigned int)height;
-- (void)bindForWidth:(unsigned int)width andHeight:(unsigned int)height;
-- (void)blitForWidth:(unsigned int)width andHeight:(unsigned int)height;
+- (void)bindForWidth:(unsigned int)width
+           andHeight:(unsigned int)height;
+- (void)blitForWidth:(unsigned int)width
+           andHeight:(unsigned int)height;
 
 @end

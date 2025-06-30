@@ -24,7 +24,6 @@
  */
 
 #import "GlassMacros.h"
-#import "GlassScreen.h"
 #import "GlassLayerCGL.h"
 #import "GlassCGLOffscreen.h"
 
@@ -40,21 +39,23 @@
 - (id)initWithSharedContext:(CGLContextObj)ctx
            andClientContext:(CGLContextObj)clCtx
              withHiDPIAware:(BOOL)HiDPIAware
-             withIsSwPipe:(BOOL)isSwPipe
+               withIsSwPipe:(BOOL)isSwPipe
 {
     LOG("GlassLayerCGL initWithSharedContext]");
     self = [super init];
     if (self != nil)
     {
-        self->_painterOffscreen = (GlassOffscreen*)[[GlassCGLOffscreen alloc] initWithContext:clCtx andIsSwPipe:isSwPipe];
-        self->_glassOffscreen = (GlassOffscreen*)[[GlassCGLOffscreen alloc] initWithContext:ctx andIsSwPipe:isSwPipe];
+        self->_painterOffscreen = (GlassOffscreen*)[[GlassCGLOffscreen alloc] initWithContext:clCtx
+                                                                                  andIsSwPipe:isSwPipe];
+        self->_glassOffscreen = (GlassOffscreen*)[[GlassCGLOffscreen alloc] initWithContext:ctx
+                                                                                andIsSwPipe:isSwPipe];
         [self->_glassOffscreen setLayer:self];
         LOG("   GlassLayerCGL context: %p", ctx);
 
         self->isHiDPIAware = HiDPIAware;
 
         [self setAsynchronous:NO];
-        [self setAutoresizingMask:(kCALayerWidthSizable|kCALayerHeightSizable)];
+        [self setAutoresizingMask:(kCALayerWidthSizable | kCALayerHeightSizable)];
         [self setContentsGravity:kCAGravityTopLeft];
 
         [self setMasksToBounds:YES];
@@ -77,7 +78,10 @@
     [super dealloc];
 }
 
-- (BOOL)canDrawInCGLContext:(CGLContextObj)glContext pixelFormat:(CGLPixelFormatObj)pixelFormat forLayerTime:(CFTimeInterval)timeInterval displayTime:(const CVTimeStamp *)timeStamp
+- (BOOL)canDrawInCGLContext:(CGLContextObj)glContext
+                pixelFormat:(CGLPixelFormatObj)pixelFormat
+               forLayerTime:(CFTimeInterval)timeInterval
+                displayTime:(const CVTimeStamp *)timeStamp
 {
     return [self->_glassOffscreen isDirty];
 }
@@ -92,7 +96,10 @@
     return CGLRetainPixelFormat(CGLGetPixelFormat([(GlassCGLOffscreen*)self->_glassOffscreen getContext]));
 }
 
-- (void)drawInCGLContext:(CGLContextObj)glContext pixelFormat:(CGLPixelFormatObj)pixelFormat forLayerTime:(CFTimeInterval)timeInterval displayTime:(const CVTimeStamp *)timeStamp
+- (void)drawInCGLContext:(CGLContextObj)glContext
+             pixelFormat:(CGLPixelFormatObj)pixelFormat
+            forLayerTime:(CFTimeInterval)timeInterval
+             displayTime:(const CVTimeStamp *)timeStamp
 {
     // glContext is already set as current by now and locked by Quartz internaly
     LOG("GlassLayerCGL drawInCGLContext]");
@@ -121,7 +128,10 @@
 #endif
 
     // the default implementation of the method flushes the context.
-    [super drawInCGLContext:glContext pixelFormat:pixelFormat forLayerTime:timeInterval displayTime:timeStamp];
+    [super drawInCGLContext:glContext
+                pixelFormat:pixelFormat
+               forLayerTime:timeInterval
+                displayTime:timeStamp];
     LOG("\n");
 }
 

@@ -51,18 +51,16 @@ static NSArray *allModes = nil;
     if (self != nil)
     {
         if (mtlCommandQueuePtr != 0l) { // MTL
-            GlassLayerMTL* mtlLayer = [[GlassLayerMTL alloc]
-                init:mtlCommandQueuePtr
-                withIsSwPipe:isSwPipe];
+            GlassLayerMTL* mtlLayer = [[GlassLayerMTL alloc] init:mtlCommandQueuePtr
+                                                     withIsSwPipe:isSwPipe];
             self->painterOffScreen = [mtlLayer getPainterOffscreen];
             self->glassOffScreen = nil;
             [self addSublayer:mtlLayer];
         } else {
-            GlassLayerCGL* cglLayer = [[GlassLayerCGL alloc]
-                initWithSharedContext:(CGLContextObj)ctx
-                     andClientContext:(CGLContextObj)clCtx
-                       withHiDPIAware:HiDPIAware
-                         withIsSwPipe:isSwPipe];
+            GlassLayerCGL* cglLayer = [[GlassLayerCGL alloc] initWithSharedContext:(CGLContextObj)ctx
+                                                                  andClientContext:(CGLContextObj)clCtx
+                                                                    withHiDPIAware:HiDPIAware
+                                                                      withIsSwPipe:isSwPipe];
             self->painterOffScreen = [cglLayer getPainterOffscreen];
             self->glassOffScreen = [cglLayer getGlassOffscreen];
             [self addSublayer:cglLayer];
@@ -70,7 +68,7 @@ static NSArray *allModes = nil;
         self->isHiDPIAware = HiDPIAware;
         LOG("   GlassLayer context: %p", ctx);
 
-        [self setAutoresizingMask:(kCALayerWidthSizable|kCALayerHeightSizable)];
+        [self setAutoresizingMask:(kCALayerWidthSizable | kCALayerHeightSizable)];
         [self setContentsGravity:kCAGravityTopLeft];
 
         // Initially the view is not in any window yet, so using the
@@ -114,9 +112,11 @@ static NSArray *allModes = nil;
     [self->painterOffScreen flush:self->glassOffScreen];
 }
 
-- (void)bindForWidth:(unsigned int)width andHeight:(unsigned int)height
+- (void)bindForWidth:(unsigned int)width
+           andHeight:(unsigned int)height
 {
-    [self->painterOffScreen bindForWidth:width andHeight:height];
+    [self->painterOffScreen bindForWidth:width
+                               andHeight:height];
 }
 
 - (GlassOffscreen*)getPainterOffscreen
@@ -126,14 +126,17 @@ static NSArray *allModes = nil;
 
 - (void)pushPixels:(void*)pixels
          withWidth:(unsigned int)width
-         withHeight:(unsigned int)height
-         withScaleX:(float)scalex
-         withScaleY:(float)scaley
-         ofView:(NSView*)view
+        withHeight:(unsigned int)height
+        withScaleX:(float)scalex
+        withScaleY:(float)scaley
+            ofView:(NSView*)view
 {
-    [self->painterOffScreen pushPixels:pixels withWidth:width
-        withHeight:height withScaleX:scalex withScaleY:scaley
-        ofView:view];
+    [self->painterOffScreen pushPixels:pixels
+                             withWidth:width
+                            withHeight:height
+                            withScaleX:scalex
+                            withScaleY:scaley
+                                ofView:view];
 }
 
 @end

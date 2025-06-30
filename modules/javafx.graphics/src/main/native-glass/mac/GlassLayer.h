@@ -39,14 +39,15 @@
         withIsSwPipe:(BOOL)isSwPipe;
 
 - (GlassOffscreen*)getPainterOffscreen;
-- (void)bindForWidth:(unsigned int)width andHeight:(unsigned int)height;
+- (void)bindForWidth:(unsigned int)width
+           andHeight:(unsigned int)height;
 - (void)end;
 - (void)pushPixels:(void*)pixels
          withWidth:(unsigned int)width
-         withHeight:(unsigned int)height
-         withScaleX:(float)scalex
-         withScaleY:(float)scaley
-         ofView:(NSView*)view;
+        withHeight:(unsigned int)height
+        withScaleX:(float)scalex
+        withScaleY:(float)scaley
+            ofView:(NSView*)view;
 
 - (void)notifyScaleFactorChanged:(CGFloat)scale;
 

@@ -24,36 +24,36 @@
  */
 
 #import <Cocoa/Cocoa.h>
-
 #import "common.h"
-#import "GlassOffscreen.h"
 
 @interface GlassOffscreen : NSObject
 {
-    float                     _backgroundR;
-    float                     _backgroundG;
-    float                     _backgroundB;
-    float                     _backgroundA;
-    CALayer*              _layer;
+    float    _backgroundR;
+    float    _backgroundG;
+    float    _backgroundB;
+    float    _backgroundA;
+    CALayer* _layer;
 }
 
 - (void)setBackgroundColor:(NSColor*)color;
 - (jlong)fbo;
 - (unsigned int)width;
 - (unsigned int)height;
-- (void)bindForWidth:(unsigned int)width andHeight:(unsigned int)height;
+- (void)bindForWidth:(unsigned int)width
+           andHeight:(unsigned int)height;
 - (void)unbind;
 - (void)blit;
-- (void)blitForWidth:(unsigned int)width andHeight:(unsigned int)height;
+- (void)blitForWidth:(unsigned int)width
+           andHeight:(unsigned int)height;
 - (unsigned char)isDirty;
 - (void)blitFromOffscreen:(GlassOffscreen*)other_offscreen;
 - (void)flush:(GlassOffscreen*)glassOffScreen;
 - (void)pushPixels:(void*)pixels
          withWidth:(unsigned int)width
-         withHeight:(unsigned int)height
-         withScaleX:(float)scalex
-         withScaleY:(float)scaley
-         ofView:(NSView*)view;
+        withHeight:(unsigned int)height
+        withScaleX:(float)scalex
+        withScaleY:(float)scaley
+            ofView:(NSView*)view;
 - (CALayer*)getLayer;
 - (void)setLayer:(CALayer*)new_layer;
 @end

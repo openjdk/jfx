@@ -24,8 +24,6 @@
  */
 
 #import "GlassMTLFrameBufferObject.h"
-#import "GlassMacros.h"
-#import "GlassApplication.h"
 
 //#define VERBOSE
 #ifndef VERBOSE
@@ -38,15 +36,16 @@
 
 - (void)_destroyFbo
 {
-    if (self->_texture != 0)
+    if (self->_texture != nil)
     {
         LOG("GlassMTLFrameBufferObject releasing FBO :%lu", self->_texture);
         [self->_texture release];
-        self->_texture = 0;
+        self->_texture = nil;
     }
 }
 
-- (void)_createFboIfNeededForWidth:(unsigned int)width andHeight:(unsigned int)height
+- (void)_createFboIfNeededForWidth:(unsigned int)width
+                         andHeight:(unsigned int)height
 {
     if ((self->_width != width) || (self->_height != height))
     {
@@ -56,15 +55,14 @@
 
     if (self->_texture == nil) {
         @autoreleasepool {
-            // Create a texture ----------
+            // Create a texture
             id<MTLDevice> device = MTLCreateSystemDefaultDevice();
 
             MTLTextureDescriptor *texDescriptor =
-                    [MTLTextureDescriptor texture2DDescriptorWithPixelFormat: MTLPixelFormatBGRA8Unorm
-                                                                    width:width
-                                                                    height:height
-                                                                    mipmapped:false];
-
+                    [MTLTextureDescriptor texture2DDescriptorWithPixelFormat:MTLPixelFormatBGRA8Unorm
+                                                                       width:width
+                                                                      height:height
+                                                                   mipmapped:false];
             texDescriptor.storageMode = MTLStorageModeManaged;
             texDescriptor.usage = MTLTextureUsageRenderTarget;
 
@@ -83,8 +81,7 @@
     {
         self->_width = 0;
         self->_height = 0;
-        self->_texture = 0;
-        //self->_fbo = 0;
+        self->_texture = nil;
         self->_isSwPipe = NO;
     }
     return self;
@@ -92,11 +89,7 @@
 
 - (void)dealloc
 {
-   //[self _assertContext];
-    {
-        [self _destroyFbo];
-    }
-
+    [self _destroyFbo];
     [super dealloc];
 }
 
@@ -110,7 +103,8 @@
     return self->_height;
 }
 
-- (void)bindForWidth:(unsigned int)width andHeight:(unsigned int)height
+- (void)bindForWidth:(unsigned int)width
+           andHeight:(unsigned int)height
 {
     LOG("           GlassMTLFrameBufferObject bindForWidth:%d andHeight:%d", width, height);
     {
@@ -128,9 +122,10 @@
     }
 }
 
-- (void)blitForWidth:(unsigned int)width andHeight:(unsigned int)height
+- (void)blitForWidth:(unsigned int)width
+           andHeight:(unsigned int)height
 {
-    //TODO: MTL:
+    // TODO: MTL: check if implementation required
 }
 
 - (void)blitFromFBO:(GlassMTLFrameBufferObject*)other_fbo

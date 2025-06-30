@@ -24,15 +24,9 @@
  */
 
 #import "common.h"
-#import "com_sun_glass_events_DndEvent.h"
-#import "com_sun_glass_events_KeyEvent.h"
-#import "com_sun_glass_events_MouseEvent.h"
 #import "com_sun_glass_ui_View_Capability.h"
-#import "com_sun_glass_ui_mac_MacGestureSupport.h"
-#import "GlassKey.h"
 #import "GlassMacros.h"
 #import "GlassViewCGL.h"
-#import "GlassApplication.h"
 
 //#define VERBOSE
 #ifndef VERBOSE
@@ -41,39 +35,8 @@
     #define LOG(MSG, ...) GLASS_LOG(MSG, ## __VA_ARGS__);
 #endif
 
-//#define MOUSEVERBOSE
-#ifndef MOUSEVERBOSE
-    #define MOUSELOG(MSG, ...)
-#else
-    #define MOUSELOG(MSG, ...) GLASS_LOG(MSG, ## __VA_ARGS__);
-#endif
-
-//#define KEYVERBOSE
-#ifndef KEYVERBOSE
-    #define KEYLOG(MSG, ...)
-#else
-    #define KEYLOG(MSG, ...) GLASS_LOG(MSG, ## __VA_ARGS__);
-#endif
-
-//#define DNDVERBOSE
-#ifndef DNDVERBOSE
-    #define DNDLOG(MSG, ...)
-#else
-    #define DNDLOG(MSG, ...) GLASS_LOG(MSG, ## __VA_ARGS__);
-#endif
-
-//#define IMVERBOSE
-#ifndef IMVERBOSE
-    #define IMLOG(MSG, ...)
-#else
-    #define IMLOG(MSG, ...) GLASS_LOG(MSG, ## __VA_ARGS__);
-#endif
-
-#define SHARE_GL_CONTEXT
-//#define DEBUG_COLORS
-
 // http://developer.apple.com/library/mac/#technotes/tn2085/_index.html
-//#define ENABLE_MULTITHREADED_GL
+// #define ENABLE_MULTITHREADED_GL
 
 @implementation GlassViewCGL
 
@@ -110,7 +73,8 @@
     return pix;
 }
 
-- (CGLContextObj)_createContextWithShared:(CGLContextObj)share withFormat:(CGLPixelFormatObj)format
+- (CGLContextObj)_createContextWithShared:(CGLContextObj)share
+                               withFormat:(CGLPixelFormatObj)format
 {
     CGLContextObj ctx = NULL;
     {
@@ -181,7 +145,8 @@
     if (clientCGL == NULL)
     {
         CGLPixelFormatObj clientPixelFormat = [self _createPixelFormatWithDepth:(CGLPixelFormatAttribute)depthBits];
-        clientCGL = [self _createContextWithShared:sharedCGL withFormat:clientPixelFormat];
+        clientCGL = [self _createContextWithShared:sharedCGL
+                                        withFormat:clientPixelFormat];
     }
     if (sharedCGL == NULL)
     {
@@ -205,17 +170,19 @@
     }
 
     self->layer = [[GlassLayer alloc] initGlassLayer:(NSObject*)sharedCGL
-        andClientContext:(NSObject*)clientCGL mtlQueuePtr:0l
-        withHiDPIAware:isHiDPIAware withIsSwPipe:isSwPipe];
+                                    andClientContext:(NSObject*)clientCGL
+                                         mtlQueuePtr:0l
+                                      withHiDPIAware:isHiDPIAware
+                                        withIsSwPipe:isSwPipe];
     // https://developer.apple.com/library/mac/documentation/Cocoa/Reference/ApplicationKit/Classes/nsview_Class/Reference/NSView.html#//apple_ref/occ/instm/NSView/setWantsLayer:
     // the order of the following 2 calls is important: here we indicate we want a layer-hosting view
-    {
-        [self setLayer:self->layer];
-        [self setWantsLayer:YES];
-    }
+    [self setLayer:self->layer];
+    [self setWantsLayer:YES];
 }
 
-- (id)initWithFrame:(NSRect)frame withJview:(jobject)jView withJproperties:(jobject)jproperties
+- (id)initWithFrame:(NSRect)frame
+          withJview:(jobject)jView
+    withJproperties:(jobject)jproperties
 {
     LOG("GlassViewCGL initWithFrame:withJview:withJproperties");
 
@@ -241,7 +208,6 @@
 - (void)dealloc
 {
     [self->layer release];
-
     [super dealloc];
 }
 

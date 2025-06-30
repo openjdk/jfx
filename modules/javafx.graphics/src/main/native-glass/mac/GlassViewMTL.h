@@ -23,9 +23,6 @@
  * questions.
  */
 
-#import <Cocoa/Cocoa.h>
-
-#import "GlassView.h"
 #import "GlassLayer.h"
 
 // GlassViewMTL is not subclass of GlassView3D, it is a subView
@@ -36,6 +33,8 @@
 }
 
 - (GlassLayer*)getLayer;
-- (id)initWithFrame:(NSRect)frame withJview:(jobject)jView withJproperties:(jobject)jproperties;
+- (id)initWithFrame:(NSRect)frame
+          withJview:(jobject)jView
+    withJproperties:(jobject)jproperties;
 
 @end

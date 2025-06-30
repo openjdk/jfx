@@ -23,8 +23,6 @@
  * questions.
  */
 
-#import "common.h"
-#import <Cocoa/Cocoa.h>
 #import <Metal/Metal.h>
 #import <QuartzCore/CAMetalLayer.h>
 
@@ -33,14 +31,15 @@
 
 @interface GlassMTLOffscreen : GlassOffscreen
 {
-    GlassMTLFrameBufferObject*  _fbo;
+    GlassMTLFrameBufferObject* _fbo;
     id<MTLDevice> mtlDevice;
     id<MTLCommandQueue> offScreenCommandQueue;
 }
 
 - (id)initWithContext:(id<MTLDevice>)device
          commandQueue:(id<MTLCommandQueue>)commandQueue
-            andIsSwPipe:(BOOL)isSwPipe;
+          andIsSwPipe:(BOOL)isSwPipe;
+
 - (id<MTLTexture>)getMTLTexture;
 
 @end

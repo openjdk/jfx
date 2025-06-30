@@ -23,17 +23,9 @@
  * questions.
  */
 
-#import "common.h"
-#import "com_sun_glass_events_DndEvent.h"
-#import "com_sun_glass_events_KeyEvent.h"
-#import "com_sun_glass_events_MouseEvent.h"
 #import "com_sun_glass_ui_View_Capability.h"
-#import "com_sun_glass_ui_mac_MacGestureSupport.h"
-#import "GlassKey.h"
 #import "GlassMacros.h"
 #import "GlassViewMTL.h"
-#import "GlassApplication.h"
-#import "GlassScreen.h"
 
 //#define VERBOSE
 #ifndef VERBOSE
@@ -41,37 +33,6 @@
 #else
     #define LOG(MSG, ...) GLASS_LOG(MSG, ## __VA_ARGS__);
 #endif
-
-//#define MOUSEVERBOSE
-#ifndef MOUSEVERBOSE
-    #define MOUSELOG(MSG, ...)
-#else
-    #define MOUSELOG(MSG, ...) GLASS_LOG(MSG, ## __VA_ARGS__);
-#endif
-
-//#define KEYVERBOSE
-#ifndef KEYVERBOSE
-    #define KEYLOG(MSG, ...)
-#else
-    #define KEYLOG(MSG, ...) GLASS_LOG(MSG, ## __VA_ARGS__);
-#endif
-
-//#define DNDVERBOSE
-#ifndef DNDVERBOSE
-    #define DNDLOG(MSG, ...)
-#else
-    #define DNDLOG(MSG, ...) GLASS_LOG(MSG, ## __VA_ARGS__);
-#endif
-
-//#define IMVERBOSE
-#ifndef IMVERBOSE
-    #define IMLOG(MSG, ...)
-#else
-    #define IMLOG(MSG, ...) GLASS_LOG(MSG, ## __VA_ARGS__);
-#endif
-
-#define SHARE_GL_CONTEXT
-//#define DEBUG_COLORS
 
 @implementation GlassViewMTL
 
