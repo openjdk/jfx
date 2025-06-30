@@ -467,52 +467,6 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_gtk_GtkWindow__1toBack
 }
 
 /*
- * Class:     com_sun_glass_ui_gtk_GtkWindow
- * Method:    _enterModal
- * Signature: (J)V
- */
-JNIEXPORT void JNICALL Java_com_sun_glass_ui_gtk_GtkWindow__1enterModal
-  (JNIEnv * env, jobject obj, jlong ptr)
-{
-    (void)env;
-    (void)obj;
-
-    WindowContext* ctx = JLONG_TO_WINDOW_CTX(ptr);
-    ctx->set_modal(true);
-}
-
-/*
- * Class:     com_sun_glass_ui_gtk_GtkWindow
- * Method:    _enterModalWithWindow
- * Signature: (JJ)V
- */
-JNIEXPORT void JNICALL Java_com_sun_glass_ui_gtk_GtkWindow__1enterModalWithWindow
-  (JNIEnv * env, jobject obj, jlong ptrDialog, jlong ptrWindow)
-{
-    (void)env;
-    (void)obj;
-
-    WindowContext* ctx = JLONG_TO_WINDOW_CTX(ptrDialog);
-    WindowContext* parent_ctx = JLONG_TO_WINDOW_CTX(ptrWindow);
-    ctx->set_modal(true, parent_ctx);
-}
-
-/*
- * Class:     com_sun_glass_ui_gtk_GtkWindow
- * Method:    _exitModal
- * Signature: (J)V
- */
-JNIEXPORT void JNICALL Java_com_sun_glass_ui_gtk_GtkWindow__1exitModal
-  (JNIEnv * env, jobject obj, jlong ptr)
-{
-    (void)env;
-    (void)obj;
-
-    WindowContext* ctx = JLONG_TO_WINDOW_CTX(ptr);
-    ctx->set_modal(false);
-}
-
-/*
  * Class:     com_sun_glass_ui_gtk_GtkCursor
  * Method:    _setCursorType
  * Signature: (JI)V

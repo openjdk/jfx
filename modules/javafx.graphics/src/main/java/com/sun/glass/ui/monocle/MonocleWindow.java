@@ -392,28 +392,6 @@ final class MonocleWindow extends Window {
         MonocleWindowManager.getInstance().ungrabFocus(this);
     }
 
-    /**
-     * The functions below are used when the platform support modality natively.
-     * Currently only GTK is using it. This functionality is disabled by
-     * default. In order to enable it this class need to override Window::
-     * supportsPlatformModality() to return true.
-     *
-     */
-    @Override
-    protected void _enterModal(long ptr) {
-        throw new UnsupportedOperationException();
-    }
-
-    @Override
-    protected void _enterModalWithWindow(long dialog, long window) {
-        throw new UnsupportedOperationException();
-    }
-
-    @Override
-    protected void _exitModal(long ptr) {
-        throw new UnsupportedOperationException();
-    }
-
     @Override
     protected void notifyClose() {
         super.notifyClose();
