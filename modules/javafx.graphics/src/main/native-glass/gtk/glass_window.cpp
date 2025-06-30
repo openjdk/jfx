@@ -1001,9 +1001,6 @@ void WindowContext::process_state(GdkEventWindowState *event) {
     if (event->changed_mask & GDK_WINDOW_STATE_ICONIFIED
         && (event->new_window_state & GDK_WINDOW_STATE_ICONIFIED) == 0) {
         remove_wmf(GDK_FUNC_MINIMIZE);
-
-        //FIXME: remove when 8351867 is fixed
-        notify_repaint();
     }
 
     // If only iconified, no further processing
