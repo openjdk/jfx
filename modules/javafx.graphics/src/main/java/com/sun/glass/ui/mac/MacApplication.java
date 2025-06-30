@@ -219,6 +219,18 @@ final class MacApplication extends Application implements InvokeLaterDispatcher.
     native private void _hideOtherApplications();
     native private void _unhideAllApplications();
 
+    @Override public void hideApplication() {
+        _hide();
+    }
+
+    @Override public void hideOtherApplications() {
+        _hideOtherApplications();
+    }
+
+    @Override public void showAllApplications() {
+        _unhideAllApplications();
+    }
+
     public void installAppleMenu(MenuBar menubar) {
         this.appleMenu = createMenu("Apple");
 
@@ -263,7 +275,7 @@ final class MacApplication extends Application implements InvokeLaterDispatcher.
         }, 'q', KeyEvent.MODIFIER_COMMAND);
         this.appleMenu.add(quitMenu);
 
-        menubar.add(this.appleMenu);
+        menubar.insert(this.appleMenu, 0);
     }
 
     public Menu getAppleMenu() {
@@ -274,6 +286,12 @@ final class MacApplication extends Application implements InvokeLaterDispatcher.
         installAppleMenu(menubar);
     }
 
+    @Override public void removeDefaultMenus(MenuBar menubar) {
+        if (appleMenu != null) {
+            menubar.remove(appleMenu);
+            appleMenu = null;
+        }
+    }
 
     // FACTORY METHODS
 
