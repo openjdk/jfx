@@ -31,6 +31,7 @@ import com.sun.javafx.event.EventHandlerManager;
 import com.sun.javafx.event.EventRedirector;
 
 import javafx.stage.Window;
+import javafx.stage.PopupWindow;
 
 /**
  * An {@code EventDispatcher} for {@code Window}. It is formed by a chain
@@ -44,23 +45,37 @@ public class WindowEventDispatcher extends CompositeEventDispatcher {
 
     private final EventHandlerManager eventHandlerManager;
 
+    private final WindowSystemMenuHandler systemMenuHandler;
+
     public WindowEventDispatcher(final Window window) {
         this(new EventRedirector(window),
              new WindowCloseRequestHandler(window),
-             new EventHandlerManager(window));
-
+             new EventHandlerManager(window),
+             new WindowSystemMenuHandler(window));
     }
 
-    public WindowEventDispatcher(
+    public WindowEventDispatcher(final PopupWindow popupWindow) {
+        this(new EventRedirector(popupWindow),
+             new WindowCloseRequestHandler(popupWindow),
+             new EventHandlerManager(popupWindow),
+             null);
+    }
+
+    private WindowEventDispatcher(
             final EventRedirector eventRedirector,
             final WindowCloseRequestHandler windowCloseRequestHandler,
-            final EventHandlerManager eventHandlerManager) {
+            final EventHandlerManager eventHandlerManager,
+            final WindowSystemMenuHandler systemMenuHandler) {
         this.eventRedirector = eventRedirector;
         this.windowCloseRequestHandler = windowCloseRequestHandler;
         this.eventHandlerManager = eventHandlerManager;
+        this.systemMenuHandler = systemMenuHandler;
 
         eventRedirector.insertNextDispatcher(windowCloseRequestHandler);
         windowCloseRequestHandler.insertNextDispatcher(eventHandlerManager);
+        if (systemMenuHandler != null) {
+            eventHandlerManager.insertNextDispatcher(systemMenuHandler);
+        }
     }
 
     public final EventRedirector getEventRedirector() {
@@ -82,6 +97,9 @@ public class WindowEventDispatcher extends CompositeEventDispatcher {
 
     @Override
     public BasicEventDispatcher getLastDispatcher() {
+        if (systemMenuHandler != null) {
+            return systemMenuHandler;
+        }
         return eventHandlerManager;
     }
 }

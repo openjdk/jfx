@@ -62,9 +62,11 @@ public class MenuDoubleShortcutTest {
         // We provide an explanation of what happened. Since we only see this
         // explanation on failure it is worded accordingly.
         IGNORED("Key press event triggered no actions"),
-        FIREDTWICE("Key press event fired scene action and also a menu bar item"),
         FIREDMENUITEM("Key press event fired menu bar item instead of scene action"),
-        FIREDSCENE("Key press event fired scene action instead of menu bar item");
+        FIREDSCENE("Key press event fired scene action instead of menu bar item"),
+        FIREDBOTH("Key press event fired scene action and also a menu bar item"),
+        FIREDMENUITEMTWICE("Key press event fired menu bar item twice"),
+        FIREDSCENETWICE("Key press event fired scene action twice");
 
         private String explanation;
         TestResult(String e) {
@@ -150,14 +152,14 @@ public class MenuDoubleShortcutTest {
 
     public static class TestApp extends Application {
 
-        private boolean sceneAcceleratorFired = false;
-        private boolean menuBarItemFired = false;
+        private int sceneAcceleratorFiredCount = 0;
+        private int menuBarItemFiredCount = 0;
 
         private MenuItem createMenuItem(KeyCombination accelerator) {
             MenuItem menuItem = new MenuItem(accelerator.getName() + " menu item");
             menuItem.setAccelerator(accelerator);
             menuItem.setOnAction(e -> {
-                menuBarItemFired = true;
+                menuBarItemFiredCount += 1;
                 e.consume();
             });
             return menuItem;
@@ -180,10 +182,10 @@ public class MenuDoubleShortcutTest {
 
             Scene scene = new Scene(new VBox(menuBar, label), 200, 200);
             scene.getAccelerators().put(menuBarAndSceneAccelerator, () -> {
-                sceneAcceleratorFired = true;
+                sceneAcceleratorFiredCount += 1;
             });
             scene.getAccelerators().put(sceneOnlyAccelerator, () -> {
-                sceneAcceleratorFired = true;
+                sceneAcceleratorFiredCount += 1;
             });
 
             stage.setScene(scene);
@@ -196,8 +198,8 @@ public class MenuDoubleShortcutTest {
         }
 
         public void testKey(KeyCode code) {
-            sceneAcceleratorFired = false;
-            menuBarItemFired = false;
+            sceneAcceleratorFiredCount = 0;
+            menuBarItemFiredCount = 0;
             Platform.runLater(() -> {
                 KeyCode shortcutCode = (PlatformUtil.isMac() ? KeyCode.COMMAND : KeyCode.CONTROL);
                 Robot robot = new Robot();
@@ -209,11 +211,17 @@ public class MenuDoubleShortcutTest {
         }
 
         public TestResult testResult() {
-            if (sceneAcceleratorFired && menuBarItemFired) {
-                return TestResult.FIREDTWICE;
-            } else if (sceneAcceleratorFired) {
+            if (menuBarItemFiredCount > 1) {
+                return TestResult.FIREDMENUITEMTWICE;
+            }
+            else if (sceneAcceleratorFiredCount > 1) {
+                return TestResult.FIREDSCENETWICE;
+            }
+            else if (sceneAcceleratorFiredCount == 1 && menuBarItemFiredCount == 1) {
+                return TestResult.FIREDBOTH;
+            } else if (sceneAcceleratorFiredCount == 1) {
                 return TestResult.FIREDSCENE;
-            } else if (menuBarItemFired) {
+            } else if (menuBarItemFiredCount == 1) {
                 return TestResult.FIREDMENUITEM;
             }
             return TestResult.IGNORED;

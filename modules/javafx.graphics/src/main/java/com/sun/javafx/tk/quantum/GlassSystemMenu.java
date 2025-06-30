@@ -120,6 +120,13 @@ class GlassSystemMenu implements TKSystemMenu {
         }
     }
 
+    @Override
+    public void handleKeyEvent(javafx.scene.input.KeyEvent event) {
+        if (glassSystemMenuBar.handleKeyEvent()) {
+            event.consume();
+        }
+    }
+
     // Clear the menu to prevent a memory leak, as outlined in JDK-8094232
     private void clearMenu(Menu menu) {
         ListChangeListener<MenuItemBase> lcl = menuListeners.get(menu);

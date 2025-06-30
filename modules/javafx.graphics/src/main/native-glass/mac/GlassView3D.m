@@ -504,7 +504,9 @@
         }
     }
 
+    [GlassApplication setMenuKeyEvent: theEvent];
     BOOL result = [self handleKeyDown: theEvent];
+    [GlassApplication setMenuKeyEvent: nil];
     return result;
 }
 

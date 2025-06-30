@@ -71,6 +71,8 @@
 
 + (void)registerKeyEvent:(NSEvent*)event;
 + (jint)getKeyCodeForChar:(jchar)c;
++ (void)setMenuKeyEvent:(NSEvent*)event;
++ (BOOL)handleMenuKeyEvent;
 
 + (BOOL)syncRenderingDisabled;
 

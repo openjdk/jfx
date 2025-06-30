@@ -32,6 +32,7 @@
 #import "GlassMenu.h"
 #import "GlassHelper.h"
 #import "GlassKey.h"
+#import "GlassApplication.h"
 
 #pragma clang diagnostic ignored "-Wdeprecated-declarations"
 
@@ -378,6 +379,31 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_mac_MacMenuBarDelegate__1remove
     }
     GLASS_POOL_EXIT;
     GLASS_CHECK_EXCEPTION(env);
+}
+
+/*
+ * Class:     com_sun_glass_ui_mac_MacMenuBarDelegate
+ * Method:    _handleKeyEvent
+ * Signature: (J)Z
+ */
+JNIEXPORT jboolean JNICALL Java_com_sun_glass_ui_mac_MacMenuBarDelegate__1handleKeyEvent
+  (JNIEnv *env, jobject jMenuDelegate, jlong jMenubarPtr)
+{
+    LOG("Java_com_sun_glass_ui_mac_MacMenuBarDelegate__1handleKeyEvent");
+
+    jboolean result = false;
+
+    GLASS_ASSERT_MAIN_JAVA_THREAD(env);
+    GLASS_POOL_ENTER;
+    {
+        if ([GlassApplication handleMenuKeyEvent]) {
+            result = true;
+        }
+    }
+    GLASS_POOL_EXIT;
+    GLASS_CHECK_EXCEPTION(env);
+
+    return result;
 }
 
 /*

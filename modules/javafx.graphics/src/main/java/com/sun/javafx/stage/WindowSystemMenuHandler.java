@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2013, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -23,27 +23,29 @@
  * questions.
  */
 
-package com.sun.javafx.tk;
+package com.sun.javafx.stage;
+import com.sun.javafx.tk.Toolkit;
 
-import java.util.List;
-
-import com.sun.javafx.menu.MenuBase;
+import com.sun.javafx.event.BasicEventDispatcher;
+import javafx.event.Event;
+import javafx.stage.Window;
 import javafx.scene.input.KeyEvent;
 
-/**
- * We use this interface to access the Glass native system menu
- */
-public interface TKSystemMenu {
+public final class WindowSystemMenuHandler extends BasicEventDispatcher {
+    private final Window window;
+    private final boolean active;
 
-    /**
-     * Check whether top level global system menubar support is
-     * available on this OS.  Currently supported on Mac OSX only.
-     *
-     * @return  whether top-level global system menus are supported
-     */
-    public boolean isSupported();
+    public WindowSystemMenuHandler(final Window window) {
+        this.window = window;
+        var systemMenu = Toolkit.getToolkit().getSystemMenu();
+        this.active = (systemMenu != null && systemMenu.isSupported());
+    }
 
-    public void setMenus(List<MenuBase> menus);
-
-    public void handleKeyEvent(KeyEvent event);
+    @Override
+    public Event dispatchBubblingEvent(Event event) {
+        if (active && event.getEventType() == KeyEvent.KEY_PRESSED && (event instanceof KeyEvent)) {
+            Toolkit.getToolkit().getSystemMenu().handleKeyEvent((KeyEvent)event);
+        }
+        return event;
+    }
 }
