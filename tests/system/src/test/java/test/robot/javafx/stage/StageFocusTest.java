@@ -38,6 +38,7 @@ import javafx.scene.robot.Robot;
 import javafx.stage.Stage;
 import javafx.stage.WindowEvent;
 import test.util.Util;
+import test.robot.testharness.VisualTestBase;
 
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
@@ -45,63 +46,26 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-public class StageFocusTest {
+
+public class StageFocusTest extends VisualTestBase {
 
     static CountDownLatch startupLatch;
     static CountDownLatch eventReceivedLatch;
 
-    static final double STAGE_SIZE = 200;
+    static final int STAGE_SIZE = 200;
 
-    static final double STAGE_X = 100;
-    static final double STAGE_Y = 100;
+    static final int STAGE_X = 100;
+    static final int STAGE_Y = 100;
 
-    static Stage theStage = null;
+    static final int TIMEOUT = 2000; // ms
+    static final double TOLERANCE = 0.07;
 
-    Robot robot;
-
-    public static class TestApp extends Application {
-        @Override
-        public void start(Stage stage) {
-            Platform.setImplicitExit(false);
-
-            theStage = stage;
-
-            Group root = new Group();
-            Scene scene = new Scene(root, STAGE_SIZE, STAGE_SIZE);
-            scene.setFill(Color.LIGHTGREEN);
-            scene.setOnKeyPressed(e -> {
-                if (e.getCode() == KeyCode.A) {
-                    eventReceivedLatch.countDown();
-                }
-            });
-
-            stage.setScene(scene);
-            stage.addEventHandler(WindowEvent.WINDOW_SHOWN, e -> {
-                Platform.runLater(() -> {
-                    stage.setX(STAGE_X);
-                    stage.setY(STAGE_Y);
-                    startupLatch.countDown();
-                });
-            });
-            stage.show();
-        }
-    }
+    private Stage theStage = null;
 
     @BeforeAll
     public static void setupOnce() throws Exception {
         startupLatch = new CountDownLatch(1);
         eventReceivedLatch = new CountDownLatch(1);
-        Util.launch(startupLatch, TestApp.class);
-    }
-
-    @AfterAll
-    public static void teardown() {
-        Util.shutdown();
-    }
-
-    @BeforeEach
-    public void setup() {
-        Util.runAndWait(() -> robot = new Robot());
     }
 
     /**
@@ -112,16 +76,55 @@ public class StageFocusTest {
      */
     @Test
     public void testStageHasFocusAfterShow() throws InterruptedException {
-        // ensures UI finished showing the Stage
-        Util.sleep(250);
-        assertTrue(theStage.isFocused());
-
         Util.runAndWait(() -> {
-            robot.keyPress(KeyCode.A);
+            theStage = getStage(false);
+
+            Group root = new Group();
+            Scene scene = new Scene(root, STAGE_SIZE, STAGE_SIZE);
+            scene.setFill(Color.LIGHTGREEN);
+            scene.setOnKeyPressed(e -> {
+                if (e.getCode() == KeyCode.A) {
+                    eventReceivedLatch.countDown();
+                }
+            });
+
+            theStage.setScene(scene);
+            theStage.addEventHandler(WindowEvent.WINDOW_SHOWN, e -> {
+                Platform.runLater(() -> {
+                    theStage.setX(STAGE_X);
+                    theStage.setY(STAGE_Y);
+                    startupLatch.countDown();
+                });
+            });
+            theStage.show();
+        });
+
+        assertTrue(startupLatch.await(TIMEOUT, TimeUnit.MILLISECONDS), "Timeout waiting for test stage to be shown");
+
+        // check if isFocused returns true
+        assertTrue(
+            theStage.isFocused(),
+            "Stage.isFocused() returned false! Stage does not have focus after showing. Some tests might fail because of this. " +
+            "If that is the case, try re-running the tests with '--no-daemon' flag in Gradle."
+        );
+
+        // give UI a bit of time to finish showing transition
+        // ex. on Windows above latch is set despite the UI still "animating" the show
+        sleep(500);
+
+        // check if window is on top
+        Util.runAndWait(() -> {
+            Color color = getColor(STAGE_SIZE / 2, STAGE_SIZE / 2);
+            assertColorEquals(Color.LIGHTGREEN, color, TOLERANCE);
+        });
+
+        // check if we actually have focus and key presses are registered by the app
+        Util.runAndWait(() -> {
+            getRobot().keyPress(KeyCode.A);
         });
         assertTrue(
-            eventReceivedLatch.await(2000, TimeUnit.MILLISECONDS),
-            "Event received latch timed out! Stage most probably did not have focus after showing. Some tests might fail because of this." +
+            eventReceivedLatch.await(TIMEOUT, TimeUnit.MILLISECONDS),
+            "Event received latch timed out! Stage most probably did not have focus after showing. Some tests might fail because of this. " +
             "If that is the case, try re-running the tests with '--no-daemon' flag in Gradle."
         );
     }
