@@ -34,7 +34,6 @@
 #import "GlassKey.h"
 #import "GlassScreen.h"
 #import "GlassWindow.h"
-#import "GlassTouches.h"
 #import "PlatformSupport.h"
 
 #import "ProcessInfo.h"
@@ -78,6 +77,11 @@ static NSString* JavaRunLoopMode = @"AWTRunLoopMode";
 // don't deadlock.
 static NSArray<NSString*> *runLoopModes = nil;
 
+// Custom event that is provided by AWT to allow libraries like
+// JavaFX to forward native events to AWT even if AWT runs in
+// embedded mode.
+static NSString* awtEmbeddedEvent = @"AWTEmbeddedEvent";
+
 #ifdef STATIC_BUILD
 jint JNICALL JNI_OnLoad_glass(JavaVM *vm, void *reserved)
 #else
@@ -99,9 +103,12 @@ jint JNICALL JNI_OnLoad(JavaVM *vm, void *reserved)
 }
 
 - (id)initWithRunnable:(jobject)runnable;
+- (void)maybeRun;
 - (void)run;
 
 @end
+
+static NSMutableArray<GlassRunnable*> *deferredRunnables = nil;
 
 @implementation GlassRunnable
 
@@ -132,6 +139,27 @@ jint JNICALL JNI_OnLoad(JavaVM *vm, void *reserved)
     [pool drain];
 }
 
+- (void)maybeRun
+{
+    if (isFullScreenExitingLoop) {
+        if (deferredRunnables == nil) {
+            deferredRunnables = [[NSMutableArray alloc] initWithCapacity: 2];
+        }
+        [deferredRunnables addObject: self];
+    } else {
+        [self run];
+    }
+}
+
++ (void)rescheduleDeferredRunnables
+{
+    if (deferredRunnables != nil) {
+        for (GlassRunnable *runnable in deferredRunnables) {
+            [runnable performSelectorOnMainThread:@selector(maybeRun) withObject:nil waitUntilDone:NO modes:runLoopModes];
+        }
+        [deferredRunnables removeAllObjects];
+    }
+}
 @end
 
 @implementation NSApplicationFX
@@ -474,6 +502,21 @@ jint JNICALL JNI_OnLoad(JavaVM *vm, void *reserved)
     return YES;
 }
 
+- (void) application:(NSApplication *)theApplication openURLs:(NSArray<NSURL *> *)urls
+{
+    for (NSURL* url in urls) {
+         NSDictionary *userInfo = @{
+            @"name": @"openURL",
+            @"url": url.absoluteString
+        };
+
+        [[NSNotificationCenter defaultCenter]
+                postNotificationName:awtEmbeddedEvent
+                object:nil
+                userInfo:userInfo];
+    }
+}
+
 - (BOOL)applicationShouldOpenUntitledFile:(NSApplication *)sender
 {
     LOG("GlassApplication:applicationShouldOpenUntitledFile");
@@ -707,9 +750,6 @@ jint JNICALL JNI_OnLoad(JavaVM *vm, void *reserved)
             // enter runloop, this will not return until terminated
             [NSApp run];
 
-            // Abort listerning to global touch input events
-            [GlassTouches terminate];
-
             GLASS_CHECK_EXCEPTION(jEnv);
 
             (*jEnv)->CallVoidMethod(jEnv, self->jApplication, javaIDs.MacApplication.notifyApplicationDidTerminate);
@@ -805,6 +845,7 @@ jint JNICALL JNI_OnLoad(JavaVM *vm, void *reserved)
         (*env)->ExceptionClear(env);
     }
     isFullScreenExitingLoop = NO;
+    [GlassRunnable rescheduleDeferredRunnables];
 }
 
 + (void)leaveFullScreenExitingLoopIfNeeded
@@ -1113,7 +1154,7 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_mac_MacApplication__1submitForLater
     if (jEnv != NULL)
     {
         GlassRunnable *runnable = [[GlassRunnable alloc] initWithRunnable:(*env)->NewGlobalRef(env, jRunnable)];
-        [runnable performSelectorOnMainThread:@selector(run) withObject:nil waitUntilDone:NO modes:runLoopModes];
+        [runnable performSelectorOnMainThread:@selector(maybeRun) withObject:nil waitUntilDone:NO modes:runLoopModes];
     }
 }
 

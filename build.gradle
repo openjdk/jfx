@@ -344,9 +344,6 @@ ext.MAVEN_GROUP_ID = "org.openjfx"
 ext.enableNativeGraphics='--enable-native-access=javafx.graphics'
 ext.enableNativeAll='--enable-native-access=javafx.graphics,javafx.media,javafx.web'
 
-// FIXME: Remove this when JDK-8334137 is fixed
-ext.allowSunMiscUnsafe = '--sun-misc-unsafe-memory-access=allow'
-
 // Verify that the architecture & OS are supported configurations. Note that
 // at present building on PI is not supported, but we would only need to make
 // some changes on assumptions on what should be built (like SWT / Swing) and
@@ -500,7 +497,8 @@ defineProperty("AWT_TEST", "true")
 ext.IS_AWT_TEST = Boolean.parseBoolean(AWT_TEST);
 
 // Specifies whether to run system tests that depend on SWT (only used when FULL_TEST is also enabled)
-defineProperty("SWT_TEST", "true")
+// JDK-8356687 and JDK-8356688 track the disablement of the SWT tests on both platforms.
+defineProperty("SWT_TEST", (IS_MAC || IS_LINUX) ? "false" : "true")
 ext.IS_SWT_TEST = Boolean.parseBoolean(SWT_TEST);
 
 // Specifies whether to run unstable tests (true) - tests that don't run well with Hudson builds
@@ -621,6 +619,9 @@ defineProperty("HUDSON_BUILD_NUMBER","0000")
 defineProperty("PROMOTED_BUILD_NUMBER", "0")
 defineProperty("MILESTONE_FCS", "false")
 ext.IS_MILESTONE_FCS = Boolean.parseBoolean(MILESTONE_FCS)
+
+// The following property used to define WebView Browser Version
+defineProperty("WEBVIEW_VERSION", "18.4")
 
 // The following properties define the product name for Oracle JDK and OpenJDK
 // for VersionInfo and the DLL manifest.
@@ -1195,11 +1196,6 @@ void writeArgsFile(boolean isCompile, File dest, List<String> libpath, List<Stri
         if (!isCompile) {
             dest << enableNativeAll
             dest << "\n"
-            // FIXME: Remove this when JDK-8334137 is fixed
-            if (jdk24OrLater) {
-                dest << allowSunMiscUnsafe
-                dest << "\n"
-            }
         }
     }
 }
@@ -2178,6 +2174,8 @@ allprojects {
         systemProperty 'unstable.test', IS_UNSTABLE_TEST
         systemProperty 'junit.jupiter.execution.timeout.test.method.default', JUNIT_TEST_TIMEOUT
         systemProperty 'junit.jupiter.execution.timeout.lifecycle.method.default', JUNIT_LIFECYCLE_TIMEOUT
+        systemProperty 'javafx.enablePreview', 'true'
+        systemProperty 'javafx.suppressPreviewWarning', 'true'
     }
 
     compileTestJava {
@@ -2296,10 +2294,6 @@ project(":graphics") {
     project.ext.includeSources = true
     project.ext.moduleRuntime = true
     project.ext.moduleName = "javafx.graphics"
-
-    // FIXME: Remove this setting when JDK-8334137 is fixed
-    // Disable javac -Werror until we stop using sun.misc.Unsafe
-    project.ext.disableJavacWerror = true
 
     getConfigurations().create("antlr");
 
@@ -2697,10 +2691,6 @@ project(":graphics") {
     test {
         def cssDir = file("${TEST_SDK_DIR}/shims/${moduleName}/javafx")
         jvmArgs enableNativeGraphics
-        // FIXME: Remove this when JDK-8334137 is fixed
-        if (jdk24OrLater) {
-            jvmArgs allowSunMiscUnsafe
-        }
         jvmArgs "-Djavafx.toolkit=test.com.sun.javafx.pgstub.StubToolkit",
             "-DCSS_META_DATA_TEST_DIR=$cssDir"
         enableAssertions = true
@@ -2790,10 +2780,6 @@ project(":controls") {
     test {
         def cssDir = file("${TEST_SDK_DIR}/shims/${moduleName}/javafx")
         jvmArgs enableNativeGraphics
-        // FIXME: Remove this when JDK-8334137 is fixed
-        if (jdk24OrLater) {
-            jvmArgs allowSunMiscUnsafe
-        }
         jvmArgs "-Djavafx.toolkit=test.com.sun.javafx.pgstub.StubToolkit",
             "-DCSS_META_DATA_TEST_DIR=$cssDir"
     }
@@ -2900,7 +2886,7 @@ project(":incubator.input") {
     modulePath += File.pathSeparator + "${rootProject.projectDir}/modules/javafx.graphics/build/classes/java/main"
     modulePath += File.pathSeparator + "${rootProject.projectDir}/modules/javafx.base/build/classes/java/main"
 
-    addMavenPublication(project, [ 'graphics' , 'controls'])
+    addMavenPublication(project, [ 'controls' ])
 
     addValidateSourceSets(project, sourceSets)
 }
@@ -2959,7 +2945,7 @@ project(":incubator.richtext") {
     modulePath += File.pathSeparator + "${rootProject.projectDir}/modules/javafx.graphics/build/classes/java/main"
     modulePath += File.pathSeparator + "${rootProject.projectDir}/modules/javafx.base/build/classes/java/main"
 
-    addMavenPublication(project, [ 'graphics' , 'controls'])
+    addMavenPublication(project, [ 'controls', 'incubator.input' ])
 
     addValidateSourceSets(project, sourceSets)
 }
@@ -3016,11 +3002,6 @@ project(":swing") {
         enabled = IS_FULL_TEST && IS_AWT_TEST
 
         jvmArgs enableNativeGraphics
-
-        // FIXME: Remove this when JDK-8334137 is fixed
-        if (jdk24OrLater) {
-            jvmArgs allowSunMiscUnsafe
-        }
     }
 
     if (COMPILE_SWING) {
@@ -3082,21 +3063,10 @@ project(":swt") {
     }
 
     test {
-        //enabled = IS_FULL_TEST && IS_SWT_TEST
-        enabled = false // FIXME: JIGSAW -- support this with modules
-        logger.info("JIGSAW Testing disabled for swt")
+        enabled = IS_FULL_TEST && IS_SWT_TEST
 
         jvmArgs enableNativeGraphics
 
-        // FIXME: Remove this when JDK-8334137 is fixed
-        if (jdk24OrLater) {
-            jvmArgs allowSunMiscUnsafe
-        }
-
-        if (IS_MAC) {
-            enabled = false
-            logger.info("SWT tests are disabled on MAC, because Gradle test runner does not handle -XstartOnFirstThread properly (https://issues.gradle.org/browse/GRADLE-3290).")
-        }
     }
 
     addValidateSourceSets(project, sourceSets)
@@ -3142,10 +3112,6 @@ project(":fxml") {
         // tracker and this attempts to fire up the toolkit and this looks for native libraries and fails,
         // we have to use the stub toolkit for now.
         jvmArgs enableNativeGraphics
-        // FIXME: Remove this when JDK-8334137 is fixed
-        if (jdk24OrLater) {
-            jvmArgs allowSunMiscUnsafe
-        }
         jvmArgs "-Djavafx.toolkit=test.com.sun.javafx.pgstub.StubToolkit"
         // FIXME: change this to also allow JDK 9 boot jdk
         classpath += files("$JDK_HOME/jre/lib/ext/nashorn.jar")
@@ -3888,11 +3854,6 @@ project(":web") {
         // enable native access for all modules with native code
         jvmArgs enableNativeAll
 
-        // FIXME: Remove this when JDK-8334137 is fixed
-        if (jdk24OrLater) {
-            jvmArgs allowSunMiscUnsafe
-        }
-
         // Run web tests in headless mode
         systemProperty 'glass.platform', 'Monocle'
         systemProperty 'monocle.platform', 'Headless'
@@ -4019,6 +3980,7 @@ project(":web") {
                     } else {
                         targetCpuBitDepthSwitch = "--32-bit"
                     }
+                    cmakeArgs += " -DWEBVIEW_BROWSER_VERSION=${WEBVIEW_VERSION}"
                     cmakeArgs += " -DJAVAFX_RELEASE_VERSION=${jfxReleaseMajorVersion}"
                     commandLine("perl", "$projectDir/src/main/native/Tools/Scripts/build-webkit",
                         "--java", "--icu-unicode", targetCpuBitDepthSwitch,
@@ -4299,11 +4261,6 @@ project(":systemTests") {
         jvmArgs enableNativeAll
 
         maxHeapSize = "1000m"
-
-        // FIXME: Remove this when JDK-8334137 is fixed
-        if (jdk24OrLater) {
-            jvmArgs allowSunMiscUnsafe
-        }
 
         // Parse testPatchModuleArgs looking for "*module-path".
         // Save path if found so we can pass it to the module launcher tests

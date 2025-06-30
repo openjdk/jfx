@@ -51,6 +51,9 @@
 #define MOUSE_BACK_BTN 8
 #define MOUSE_FORWARD_BTN 9
 
+// Resize border width of EXTENDED windows
+#define RESIZE_BORDER_WIDTH 5
+
 WindowContext * WindowContextBase::sm_grab_window = NULL;
 WindowContext * WindowContextBase::sm_mouse_drag_window = NULL;
 
@@ -259,7 +262,12 @@ static inline jint gtk_button_number_to_mouse_button(guint button) {
     }
 }
 
-void WindowContextBase::process_mouse_button(GdkEventButton* event) {
+void WindowContextBase::process_mouse_button(GdkEventButton* event, bool synthesized) {
+    // We only handle single press/release events here.
+    if (event->type != GDK_BUTTON_PRESS && event->type != GDK_BUTTON_RELEASE) {
+        return;
+    }
+
     bool press = event->type == GDK_BUTTON_PRESS;
     guint state = event->state;
     guint mask = 0;
@@ -324,7 +332,7 @@ void WindowContextBase::process_mouse_button(GdkEventButton* event) {
                 (jint) event->x_root, (jint) event->y_root,
                 gdk_modifier_mask_to_glass(state),
                 (event->button == 3 && press) ? JNI_TRUE : JNI_FALSE,
-                JNI_FALSE);
+                synthesized);
         CHECK_JNI_EXCEPTION(mainEnv)
 
         if (jview && event->button == 3 && press) {
@@ -557,6 +565,10 @@ bool WindowContextBase::is_visible() {
     return gtk_widget_get_visible(gtk_widget);
 }
 
+bool WindowContextBase::is_resizable() {
+    return false;
+}
+
 bool WindowContextBase::set_view(jobject view) {
     if (jview) {
         mainEnv->CallVoidMethod(jview, jViewNotifyMouse,
@@ -628,12 +640,35 @@ void WindowContextBase::set_cursor(GdkCursor* cursor) {
                     WindowContextBase::sm_grab_window->get_gdk_window(), cursor, TRUE);
         }
     }
-    gdk_window_set_cursor(gdk_window, cursor);
+
+    gdk_cursor = cursor;
+
+    if (gdk_cursor_override == NULL) {
+        gdk_window_set_cursor(gdk_window, cursor);
+    }
+}
+
+void WindowContextBase::set_cursor_override(GdkCursor* cursor) {
+    if (gdk_cursor_override == cursor) {
+        return;
+    }
+
+    gdk_cursor_override = cursor;
+
+    if (cursor != NULL) {
+        gdk_window_set_cursor(gdk_window, cursor);
+    } else {
+        gdk_window_set_cursor(gdk_window, gdk_cursor);
+    }
 }
 
 void WindowContextBase::set_background(float r, float g, float b) {
     GdkRGBA rgba = {r, g, b, 1.};
     gtk_widget_override_background_color(gtk_widget, GTK_STATE_FLAG_NORMAL, &rgba);
+}
+
+bool WindowContextBase::get_window_edge(int x, int y, GdkWindowEdge* window_edge) {
+    return false;
 }
 
 WindowContextBase::~WindowContextBase() {
@@ -722,7 +757,7 @@ WindowContextTop::WindowContextTop(jobject _jwindow, WindowContext* _owner, long
         }
     }
 
-    if (type == UTILITY) {
+    if (type == UTILITY && frame_type != EXTENDED) {
         gtk_window_set_type_hint(GTK_WINDOW(gtk_widget), GDK_WINDOW_TYPE_HINT_UTILITY);
     }
 
@@ -1011,11 +1046,12 @@ void WindowContextTop::update_window_constraints() {
 
     GdkGeometry hints;
 
-    if (resizable.value && !is_disabled) {
-        int min_w = (resizable.minw == -1) ? 1
-                      : resizable.minw - geometry.extents.left - geometry.extents.right;
-        int min_h =  (resizable.minh == -1) ? 1
-                      : resizable.minh - geometry.extents.top - geometry.extents.bottom;
+    if (is_resizable() && !is_disabled) {
+        int w = std::max(resizable.sysminw, resizable.minw);
+        int h = std::max(resizable.sysminh, resizable.minh);
+
+        int min_w = (w == -1) ? 1 : w - geometry.extents.left - geometry.extents.right;
+        int min_h =  (h == -1) ? 1 : h - geometry.extents.top - geometry.extents.bottom;
 
         hints.min_width = (min_w < 1) ? 1 : min_w;
         hints.min_height = (min_h < 1) ? 1 : min_h;
@@ -1042,6 +1078,10 @@ void WindowContextTop::update_window_constraints() {
 void WindowContextTop::set_resizable(bool res) {
     resizable.value = res;
     update_window_constraints();
+}
+
+bool WindowContextTop::is_resizable() {
+    return resizable.value;
 }
 
 void WindowContextTop::set_visible(bool visible) {
@@ -1196,6 +1236,12 @@ void WindowContextTop::set_enabled(bool enabled) {
     update_window_constraints();
 }
 
+void WindowContextTop::set_system_minimum_size(int w, int h) {
+    resizable.sysminw = w;
+    resizable.sysminh = h;
+    update_window_constraints();
+}
+
 void WindowContextTop::set_minimum_size(int w, int h) {
     resizable.minw = (w <= 0) ? 1 : w;
     resizable.minh = (h <= 0) ? 1 : h;
@@ -1344,6 +1390,183 @@ void WindowContextTop::notify_window_move() {
             CHECK_JNI_EXCEPTION(mainEnv)
         }
     }
+}
+
+void WindowContextTop::show_system_menu(int x, int y) {
+    GdkDisplay* display = gdk_display_get_default();
+    if (!display) {
+        return;
+    }
+
+    GdkSeat* seat = gdk_display_get_default_seat(display);
+    GdkDevice* device = gdk_seat_get_pointer(seat);
+    if (!device) {
+        return;
+    }
+
+    gint rx = 0, ry = 0;
+    gdk_window_get_root_coords(gdk_window, x, y, &rx, &ry);
+
+    GdkEvent* event = (GdkEvent*)gdk_event_new(GDK_BUTTON_PRESS);
+    GdkEventButton* buttonEvent = (GdkEventButton*)event;
+    buttonEvent->x_root = rx;
+    buttonEvent->y_root = ry;
+    buttonEvent->window = (GdkWindow*)g_object_ref(gdk_window);
+    buttonEvent->device = (GdkDevice*)g_object_ref(device);
+
+    gdk_window_show_window_menu(gdk_window, event);
+    gdk_event_free(event);
+}
+
+/*
+ * Handles mouse button events of EXTENDED windows and adds the window behaviors for non-client
+ * regions that are usually provided by the window manager. Note that a full-screen window has
+ * no non-client regions.
+ */
+void WindowContextTop::process_mouse_button(GdkEventButton* event, bool synthesized) {
+    // Non-EXTENDED or full-screen windows don't have additional behaviors, so we delegate
+    // directly to the base implementation.
+    if (is_fullscreen || frame_type != EXTENDED || jwindow == NULL) {
+        WindowContextBase::process_mouse_button(event);
+        return;
+    }
+
+    // Double-clicking on the drag area maximizes the window (or restores its size).
+    if (is_resizable() && event->type == GDK_2BUTTON_PRESS) {
+        jboolean dragArea = mainEnv->CallBooleanMethod(
+            jwindow, jGtkWindowDragAreaHitTest, (jint)event->x, (jint)event->y);
+        CHECK_JNI_EXCEPTION(mainEnv);
+
+        if (dragArea) {
+            set_maximized(!is_maximized);
+        }
+
+        // We don't process the GDK_2BUTTON_PRESS event in the base implementation.
+        return;
+    }
+
+    if (event->button == 1 && event->type == GDK_BUTTON_PRESS) {
+        GdkWindowEdge edge;
+        bool shouldStartResizeDrag = is_resizable() && !is_maximized && get_window_edge(event->x, event->y, &edge);
+
+        // Clicking on a window edge starts a move-resize operation.
+        if (shouldStartResizeDrag) {
+            // Send a synthetic PRESS + RELEASE to FX. This allows FX to do things that need to be done
+            // prior to resizing the window, like closing a popup menu. We do this because we won't be
+            // sending events to FX once the resize operation has started.
+            WindowContextBase::process_mouse_button(event, true);
+            event->type = GDK_BUTTON_RELEASE;
+            WindowContextBase::process_mouse_button(event, true);
+
+            gint rx = 0, ry = 0;
+            gdk_window_get_root_coords(get_gdk_window(), event->x, event->y, &rx, &ry);
+            gtk_window_begin_resize_drag(get_gtk_window(), edge, 1, rx, ry, event->time);
+            return;
+        }
+
+        bool shouldStartMoveDrag = mainEnv->CallBooleanMethod(
+            jwindow, jGtkWindowDragAreaHitTest, (jint)event->x, (jint)event->y);
+        CHECK_JNI_EXCEPTION(mainEnv);
+
+        // Clicking on a draggable area starts a move-drag operation.
+        if (shouldStartMoveDrag) {
+            // Send a synthetic PRESS + RELEASE to FX.
+            WindowContextBase::process_mouse_button(event, true);
+            event->type = GDK_BUTTON_RELEASE;
+            WindowContextBase::process_mouse_button(event, true);
+
+            gint rx = 0, ry = 0;
+            gdk_window_get_root_coords(get_gdk_window(), event->x, event->y, &rx, &ry);
+            gtk_window_begin_move_drag(get_gtk_window(), 1, rx, ry, event->time);
+            return;
+        }
+    }
+
+    // Call the base implementation for client area events.
+    WindowContextBase::process_mouse_button(event);
+}
+
+/*
+ * Handles mouse motion events of EXTENDED windows and changes the cursor when it is on top
+ * of the internal resize border. Note that a full-screen window or maximized window has no
+ * resize border.
+ */
+void WindowContextTop::process_mouse_motion(GdkEventMotion* event) {
+    GdkWindowEdge edge;
+
+    // Call the base implementation for client area events.
+    if (is_fullscreen
+            || is_maximized
+            || frame_type != EXTENDED
+            || !is_resizable()
+            || !get_window_edge(event->x, event->y, &edge)) {
+        set_cursor_override(NULL);
+        WindowContextBase::process_mouse_motion(event);
+        return;
+    }
+
+    static const struct Cursors {
+        GdkCursor* NORTH = gdk_cursor_new(GDK_TOP_SIDE);
+        GdkCursor* NORTH_EAST = gdk_cursor_new(GDK_TOP_RIGHT_CORNER);
+        GdkCursor* EAST = gdk_cursor_new(GDK_RIGHT_SIDE);
+        GdkCursor* SOUTH_EAST = gdk_cursor_new(GDK_BOTTOM_RIGHT_CORNER);
+        GdkCursor* SOUTH = gdk_cursor_new(GDK_BOTTOM_SIDE);
+        GdkCursor* SOUTH_WEST = gdk_cursor_new(GDK_BOTTOM_LEFT_CORNER);
+        GdkCursor* WEST = gdk_cursor_new(GDK_LEFT_SIDE);
+        GdkCursor* NORTH_WEST = gdk_cursor_new(GDK_TOP_LEFT_CORNER);
+    } cursors;
+
+    GdkCursor* cursor = NULL;
+
+    switch (edge) {
+        case GDK_WINDOW_EDGE_NORTH: cursor = cursors.NORTH; break;
+        case GDK_WINDOW_EDGE_NORTH_EAST: cursor = cursors.NORTH_EAST; break;
+        case GDK_WINDOW_EDGE_EAST: cursor = cursors.EAST; break;
+        case GDK_WINDOW_EDGE_SOUTH_EAST: cursor = cursors.SOUTH_EAST; break;
+        case GDK_WINDOW_EDGE_SOUTH: cursor = cursors.SOUTH; break;
+        case GDK_WINDOW_EDGE_SOUTH_WEST: cursor = cursors.SOUTH_WEST; break;
+        case GDK_WINDOW_EDGE_WEST: cursor = cursors.WEST; break;
+        case GDK_WINDOW_EDGE_NORTH_WEST: cursor = cursors.NORTH_WEST; break;
+    }
+
+    set_cursor_override(cursor);
+
+    // If the cursor is not on a resize border, call the base handler.
+    if (cursor == NULL) {
+        WindowContextBase::process_mouse_motion(event);
+    }
+}
+
+/*
+ * Determines the GdkWindowEdge at the specified coordinate; returns true if the coordinate
+ * identifies a window edge, false otherwise.
+ */
+bool WindowContextTop::get_window_edge(int x, int y, GdkWindowEdge* window_edge) {
+    GdkWindowEdge edge;
+    gint width, height;
+    gtk_window_get_size(get_gtk_window(), &width, &height);
+
+    if (x <= RESIZE_BORDER_WIDTH) {
+        if (y <= 2 * RESIZE_BORDER_WIDTH) edge = GDK_WINDOW_EDGE_NORTH_WEST;
+        else if (y >= height - 2 * RESIZE_BORDER_WIDTH) edge = GDK_WINDOW_EDGE_SOUTH_WEST;
+        else edge = GDK_WINDOW_EDGE_WEST;
+    } else if (x >= width - RESIZE_BORDER_WIDTH) {
+        if (y <= 2 * RESIZE_BORDER_WIDTH) edge = GDK_WINDOW_EDGE_NORTH_EAST;
+        else if (y >= height - 2 * RESIZE_BORDER_WIDTH) edge = GDK_WINDOW_EDGE_SOUTH_EAST;
+        else edge = GDK_WINDOW_EDGE_EAST;
+    } else if (y <= RESIZE_BORDER_WIDTH) {
+        edge = GDK_WINDOW_EDGE_NORTH;
+    } else if (y >= height - RESIZE_BORDER_WIDTH) {
+        edge = GDK_WINDOW_EDGE_SOUTH;
+    } else {
+        return false;
+    }
+
+    if (window_edge != NULL) {
+        *window_edge = edge;
+    }
+
+    return true;
 }
 
 void WindowContextTop::process_destroy() {
