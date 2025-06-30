@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -4059,8 +4059,13 @@ final public class CssParser {
                 Term arg = term.firstArg;
 
                 for (int j = 0; j < 4; ++j, arg = arg.nextArg) {
-                    if (arg == null || arg.token == null || arg.token.getType() != CssLexer.NUMBER
-                            || (args[j] = Double.parseDouble(arg.token.getText())) < 0 || args[j] > 1) {
+                    if (arg == null || arg.token == null || arg.token.getType() != CssLexer.NUMBER) {
+                        error(arg != null ? arg : term,  "Expected \'<number>\'");
+                    } else {
+                        args[j] = Double.parseDouble(arg.token.getText());
+                    }
+
+                    if (j % 2 == 0 && (args[j] < 0 || args[j] > 1)) {
                         error(arg != null ? arg : term,  "Expected \'<number [0,1]>\'");
                     }
                 }
