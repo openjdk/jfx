@@ -31,9 +31,12 @@
 #include <gdk/gdkkeysyms.h>
 #include <X11/XKBlib.h>
 
+#include "scancodes.h"
 #include <map>
 
 static gboolean key_initialized = FALSE;
+static gboolean key_initialized_remote_desktop = FALSE;
+extern gboolean isRemoteDesktop;
 
 // Map from keyval to Java KeyCode
 static GHashTable *keymap;
@@ -43,6 +46,9 @@ static GHashTable *keymap;
 // backward from KeyCode to keyvalue. This map is consulted first to resolve
 // the ambiguity.
 static std::map<jint, guint32> robot_java_to_keyval;
+
+// GDK_KEY_{A..Z} to scancode map for QWERTY layout
+static std::map<gint, guint32> keyval_to_scancode;
 
 // As the user types we build a map from character to Java KeyCode. We use
 // this map in getKeyCodeForChar which ensures we only reference keys that
@@ -260,6 +266,83 @@ static void initialize_key()
     robot_java_to_keyval[com_sun_glass_events_KeyEvent_VK_ALT_GRAPH]  = GLASS_GDK_KEY_CONSTANT(ISO_Level3_Shift);
 }
 
+static void initialize_key_remote_desktop() {
+    keyval_to_scancode[GLASS_GDK_KEY_CONSTANT(a)] = SCANCODE_A;
+    keyval_to_scancode[GLASS_GDK_KEY_CONSTANT(b)] = SCANCODE_B;
+    keyval_to_scancode[GLASS_GDK_KEY_CONSTANT(c)] = SCANCODE_C;
+    keyval_to_scancode[GLASS_GDK_KEY_CONSTANT(d)] = SCANCODE_D;
+    keyval_to_scancode[GLASS_GDK_KEY_CONSTANT(e)] = SCANCODE_E;
+    keyval_to_scancode[GLASS_GDK_KEY_CONSTANT(f)] = SCANCODE_F;
+    keyval_to_scancode[GLASS_GDK_KEY_CONSTANT(g)] = SCANCODE_G;
+    keyval_to_scancode[GLASS_GDK_KEY_CONSTANT(h)] = SCANCODE_H;
+    keyval_to_scancode[GLASS_GDK_KEY_CONSTANT(i)] = SCANCODE_I;
+    keyval_to_scancode[GLASS_GDK_KEY_CONSTANT(j)] = SCANCODE_J;
+    keyval_to_scancode[GLASS_GDK_KEY_CONSTANT(k)] = SCANCODE_K;
+    keyval_to_scancode[GLASS_GDK_KEY_CONSTANT(l)] = SCANCODE_L;
+    keyval_to_scancode[GLASS_GDK_KEY_CONSTANT(m)] = SCANCODE_M;
+    keyval_to_scancode[GLASS_GDK_KEY_CONSTANT(n)] = SCANCODE_N;
+    keyval_to_scancode[GLASS_GDK_KEY_CONSTANT(o)] = SCANCODE_O;
+    keyval_to_scancode[GLASS_GDK_KEY_CONSTANT(p)] = SCANCODE_P;
+    keyval_to_scancode[GLASS_GDK_KEY_CONSTANT(q)] = SCANCODE_Q;
+    keyval_to_scancode[GLASS_GDK_KEY_CONSTANT(r)] = SCANCODE_R;
+    keyval_to_scancode[GLASS_GDK_KEY_CONSTANT(s)] = SCANCODE_S;
+    keyval_to_scancode[GLASS_GDK_KEY_CONSTANT(t)] = SCANCODE_T;
+    keyval_to_scancode[GLASS_GDK_KEY_CONSTANT(u)] = SCANCODE_U;
+    keyval_to_scancode[GLASS_GDK_KEY_CONSTANT(v)] = SCANCODE_V;
+    keyval_to_scancode[GLASS_GDK_KEY_CONSTANT(w)] = SCANCODE_W;
+    keyval_to_scancode[GLASS_GDK_KEY_CONSTANT(x)] = SCANCODE_X;
+    keyval_to_scancode[GLASS_GDK_KEY_CONSTANT(y)] = SCANCODE_Y;
+    keyval_to_scancode[GLASS_GDK_KEY_CONSTANT(z)] = SCANCODE_Z;
+
+    keyval_to_scancode[GLASS_GDK_KEY_CONSTANT(A)] = SCANCODE_A;
+    keyval_to_scancode[GLASS_GDK_KEY_CONSTANT(B)] = SCANCODE_B;
+    keyval_to_scancode[GLASS_GDK_KEY_CONSTANT(C)] = SCANCODE_C;
+    keyval_to_scancode[GLASS_GDK_KEY_CONSTANT(D)] = SCANCODE_D;
+    keyval_to_scancode[GLASS_GDK_KEY_CONSTANT(E)] = SCANCODE_E;
+    keyval_to_scancode[GLASS_GDK_KEY_CONSTANT(F)] = SCANCODE_F;
+    keyval_to_scancode[GLASS_GDK_KEY_CONSTANT(G)] = SCANCODE_G;
+    keyval_to_scancode[GLASS_GDK_KEY_CONSTANT(H)] = SCANCODE_H;
+    keyval_to_scancode[GLASS_GDK_KEY_CONSTANT(I)] = SCANCODE_I;
+    keyval_to_scancode[GLASS_GDK_KEY_CONSTANT(J)] = SCANCODE_J;
+    keyval_to_scancode[GLASS_GDK_KEY_CONSTANT(K)] = SCANCODE_K;
+    keyval_to_scancode[GLASS_GDK_KEY_CONSTANT(L)] = SCANCODE_L;
+    keyval_to_scancode[GLASS_GDK_KEY_CONSTANT(M)] = SCANCODE_M;
+    keyval_to_scancode[GLASS_GDK_KEY_CONSTANT(N)] = SCANCODE_N;
+    keyval_to_scancode[GLASS_GDK_KEY_CONSTANT(O)] = SCANCODE_O;
+    keyval_to_scancode[GLASS_GDK_KEY_CONSTANT(P)] = SCANCODE_P;
+    keyval_to_scancode[GLASS_GDK_KEY_CONSTANT(Q)] = SCANCODE_Q;
+    keyval_to_scancode[GLASS_GDK_KEY_CONSTANT(R)] = SCANCODE_R;
+    keyval_to_scancode[GLASS_GDK_KEY_CONSTANT(S)] = SCANCODE_S;
+    keyval_to_scancode[GLASS_GDK_KEY_CONSTANT(T)] = SCANCODE_T;
+    keyval_to_scancode[GLASS_GDK_KEY_CONSTANT(U)] = SCANCODE_U;
+    keyval_to_scancode[GLASS_GDK_KEY_CONSTANT(V)] = SCANCODE_V;
+    keyval_to_scancode[GLASS_GDK_KEY_CONSTANT(W)] = SCANCODE_W;
+    keyval_to_scancode[GLASS_GDK_KEY_CONSTANT(X)] = SCANCODE_X;
+    keyval_to_scancode[GLASS_GDK_KEY_CONSTANT(Y)] = SCANCODE_Y;
+    keyval_to_scancode[GLASS_GDK_KEY_CONSTANT(Z)] = SCANCODE_Z;
+
+    robot_java_to_keyval[com_sun_glass_events_KeyEvent_VK_NUMPAD0] = GLASS_GDK_KEY_CONSTANT(KP_Insert);
+    robot_java_to_keyval[com_sun_glass_events_KeyEvent_VK_NUMPAD1] = GLASS_GDK_KEY_CONSTANT(KP_End);
+    robot_java_to_keyval[com_sun_glass_events_KeyEvent_VK_NUMPAD2] = GLASS_GDK_KEY_CONSTANT(KP_Down);
+    robot_java_to_keyval[com_sun_glass_events_KeyEvent_VK_NUMPAD3] = GLASS_GDK_KEY_CONSTANT(KP_Page_Down);
+    robot_java_to_keyval[com_sun_glass_events_KeyEvent_VK_NUMPAD4] = GLASS_GDK_KEY_CONSTANT(KP_Left);
+    robot_java_to_keyval[com_sun_glass_events_KeyEvent_VK_NUMPAD5] = GLASS_GDK_KEY_CONSTANT(KP_Begin);
+    robot_java_to_keyval[com_sun_glass_events_KeyEvent_VK_NUMPAD6] = GLASS_GDK_KEY_CONSTANT(KP_Right);
+    robot_java_to_keyval[com_sun_glass_events_KeyEvent_VK_NUMPAD7] = GLASS_GDK_KEY_CONSTANT(KP_Home);
+    robot_java_to_keyval[com_sun_glass_events_KeyEvent_VK_NUMPAD8] = GLASS_GDK_KEY_CONSTANT(KP_Up);
+    robot_java_to_keyval[com_sun_glass_events_KeyEvent_VK_NUMPAD9] = GLASS_GDK_KEY_CONSTANT(KP_Page_Up);
+    robot_java_to_keyval[com_sun_glass_events_KeyEvent_VK_DECIMAL] = GLASS_GDK_KEY_CONSTANT(KP_Delete);
+    robot_java_to_keyval[com_sun_glass_events_KeyEvent_VK_WINDOWS] = GLASS_GDK_KEY_CONSTANT(Super_L);
+    robot_java_to_keyval[com_sun_glass_events_KeyEvent_VK_CONTEXT_MENU] = GLASS_GDK_KEY_CONSTANT(Menu);
+    robot_java_to_keyval[com_sun_glass_events_KeyEvent_VK_CLEAR] = GLASS_GDK_KEY_CONSTANT(KP_Begin);
+
+    // javafx/scene/input/KeyCode.java
+    robot_java_to_keyval[0xE0] = GLASS_GDK_KEY_CONSTANT(KP_Up);    // Numpad Up
+    robot_java_to_keyval[0xE1] = GLASS_GDK_KEY_CONSTANT(KP_Down);  // Numpad Down
+    robot_java_to_keyval[0xE2] = GLASS_GDK_KEY_CONSTANT(KP_Left);  // Numpad Left
+    robot_java_to_keyval[0xE3] = GLASS_GDK_KEY_CONSTANT(KP_Right); // Numpad Right
+}
+
 static void keys_changed_signal(GdkKeymap* k, gpointer data) {
     char_to_java_code.clear();
 }
@@ -277,6 +360,11 @@ static void init_keymap() {
         // On some versions of X11 this is the actual signal emitted
         g_signal_connect(G_OBJECT(gdk_keymap), "keys_changed",
                          G_CALLBACK(keys_changed_signal), nullptr);
+    }
+
+    if (isRemoteDesktop && !key_initialized_remote_desktop) {
+        initialize_key_remote_desktop();
+        key_initialized_remote_desktop = TRUE;
     }
 }
 
@@ -345,6 +433,7 @@ jint get_glass_key(GdkEventKey* e) {
 
 gint find_gdk_keyval_for_glass_keycode(jint code) {
     gint result = -1;
+    init_keymap();
 
     auto i = robot_java_to_keyval.find(code);
     if (i != robot_java_to_keyval.end()) {
@@ -353,7 +442,6 @@ gint find_gdk_keyval_for_glass_keycode(jint code) {
 
     GHashTableIter iter;
     gpointer key, value;
-    init_keymap();
     g_hash_table_iter_init(&iter, keymap);
     while (g_hash_table_iter_next(&iter, &key, &value)) {
         if (code == GPOINTER_TO_INT(value)) {
@@ -362,6 +450,15 @@ gint find_gdk_keyval_for_glass_keycode(jint code) {
         }
     }
     return result;
+}
+
+gint find_scancode_for_gdk_keyval(gint keyval) {
+    init_keymap();
+    auto i = keyval_to_scancode.find(keyval);
+    if (i != keyval_to_scancode.end()) {
+        return i->second;
+    }
+    return -1;
 }
 
 static bool keyval_requires_numlock(gint keyval) {
