@@ -327,6 +327,7 @@ JNIEXPORT void JNICALL Java_com_sun_media_jfxmediaimpl_platform_osx_OSXMediaPlay
     if ([scheme caseInsensitiveCompare:@"jar"] == NSOrderedSame ||
         [scheme caseInsensitiveCompare:@"jrt"] == NSOrderedSame) {
         CJavaInputStreamCallbacks *callbacks = new (nothrow) CJavaInputStreamCallbacks();
+        jobject jConnectionHolder = CLocator::CreateConnectionHolder(env, jLocator);
         if (callbacks == NULL) {
             [mediaURL release];
             LOGGER_WARNMSG("OSXMediaPlayer: Unable to create CJavaInputStreamCallbacks\n");
@@ -335,7 +336,7 @@ JNIEXPORT void JNICALL Java_com_sun_media_jfxmediaimpl_platform_osx_OSXMediaPlay
             return;
         }
 
-        if (!callbacks->Init(env, jLocator)) {
+        if (!callbacks->Init(env, jConnectionHolder)) {
             [mediaURL release];
             delete callbacks;
             LOGGER_WARNMSG("OSXMediaPlayer: callbacks->Init() failed\n");
