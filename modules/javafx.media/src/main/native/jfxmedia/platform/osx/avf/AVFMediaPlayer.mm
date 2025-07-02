@@ -803,8 +803,16 @@ static CVReturn displayLinkCallback(CVDisplayLinkRef displayLink,
         }
 
         NSMutableData* readData = nil;
+        bool isRandomAccess = locatorStream->GetCallbacks()->IsRandomAccess();
+        int64_t pos = 0;
+        int size = 65536;
         while (requestedLength > 0) {
-            unsigned int blockSize = locatorStream->GetCallbacks()->ReadNextBlock();
+            unsigned int blockSize = -1;
+            if (isRandomAccess) {
+                blockSize = locatorStream->GetCallbacks()->ReadBlock(pos, size);
+            } else {
+                blockSize = locatorStream->GetCallbacks()->ReadNextBlock();
+            }
             if (blockSize <= 0) {
                 break;
             }
@@ -818,6 +826,7 @@ static CVReturn displayLinkCallback(CVDisplayLinkRef displayLink,
             [loadingRequest.dataRequest respondWithData:readData];
 
             requestedLength -= readSize;
+            pos += readSize;
         }
 
         [loadingRequest finishLoading];
