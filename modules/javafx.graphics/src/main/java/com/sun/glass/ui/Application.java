@@ -84,7 +84,7 @@ public abstract class Application {
         // currently used only on Mac OS X
         public void handleQuitAction(Application app, long time) {
         }
-        public void handlePreferencesChanged(Map<String, Object> preferences) {
+        public void handlePreferencesChanged(Map<String, Object> preferences, int suggestedDelayMillis) {
         }
     }
 
@@ -255,10 +255,10 @@ public abstract class Application {
         }
     }
 
-    protected void notifyPreferencesChanged(Map<String, Object> preferences) {
+    protected void notifyPreferencesChanged(Map<String, Object> preferences, int suggestedDelayMillis) {
         EventHandler handler = getEventHandler();
         if (handler != null) {
-            handler.handlePreferencesChanged(preferences);
+            handler.handlePreferencesChanged(preferences, suggestedDelayMillis);
         }
     }
 
