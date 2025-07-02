@@ -91,6 +91,8 @@ import com.sun.javafx.scene.text.TextSpan;
 import com.sun.javafx.sg.prism.NGNode;
 import com.sun.javafx.sg.prism.NGShape;
 import com.sun.javafx.sg.prism.NGText;
+import com.sun.javafx.text.PrismLayoutInfo;
+import com.sun.javafx.text.TextUtils;
 import com.sun.javafx.tk.Toolkit;
 
 /**
@@ -1072,9 +1074,9 @@ public non-sealed class Text extends Shape {
         int length = getTextInternal().length();
         if (0 <= start && start < end  && end <= length) {
             TextLayout layout = getTextLayout();
-            float x = (float)getX();
-            float y = (float)getY() - getYRendering();
-            return layout.getRange(start, end, type, x, y);
+            double dx = getX();
+            double dy = getY() - getYRendering();
+            return TextUtils.getRange(layout, start, end, type, dx, dy);
         }
         return EMPTY_PATH_ELEMENT_ARRAY;
     }
@@ -1089,9 +1091,10 @@ public non-sealed class Text extends Shape {
      */
     public final PathElement[] caretShape(int charIndex, boolean caretBias) {
         if (0 <= charIndex && charIndex <= getTextInternal().length()) {
-            float x = (float)getX();
-            float y = (float)getY() - getYRendering();
-            return getTextLayout().getCaretShape(charIndex, caretBias, x, y);
+            double dx = getX();
+            double dy = getY() - getYRendering();
+            TextLayout.CaretGeometry g = getTextLayout().getCaretGeometry(charIndex, caretBias);
+            return TextUtils.getCaretPathElements(g, dx, dy);
         } else {
             return null;
         }
@@ -1853,18 +1856,18 @@ public non-sealed class Text extends Shape {
         final ReadOnlyObjectProperty<PathElement[]> caretShapeProperty() {
             if (caretShape == null) {
                 caretBinding = new ObjectBinding<>() {
-                    {bind(caretPositionProperty(), caretBiasProperty());}
-                    @Override protected PathElement[] computeValue() {
+                    {
+                        bind(caretPositionProperty(), caretBiasProperty());
+                    }
+
+                    @Override
+                    protected PathElement[] computeValue() {
                         int pos = getCaretPosition();
-                        int length = getTextInternal().length();
-                        if (0 <= pos && pos <= length) {
-                            boolean bias = isCaretBias();
-                            float x = (float)getX();
-                            float y = (float)getY() - getYRendering();
-                            TextLayout layout = getTextLayout();
-                            return layout.getCaretShape(pos, bias, x, y);
+                        PathElement[] pe = caretShape(pos, isCaretBias());
+                        if (pe == null) {
+                            return EMPTY_PATH_ELEMENT_ARRAY;
                         }
-                        return EMPTY_PATH_ELEMENT_ARRAY;
+                        return pe;
                     }
                 };
                 caretShape = new SimpleObjectProperty<>(Text.this, "caretShape");
@@ -2082,5 +2085,35 @@ public non-sealed class Text extends Shape {
             }
             default: return super.queryAccessibleAttribute(attribute, parameters);
         }
+    }
+
+    /**
+     * Returns a copy of the of the text layout geometry for this node. This copy is a snapshot
+     * of the text layout at the time the method is called.
+     * <p>
+     * While there is no general guarantee that successive invocations of this method return the same instance,
+     * it is safe to either cache this object or call this method each time, since the information obtained from
+     * this lightweight object remains valid until the next layout cycle.
+     *
+     * @return a copy of the layout information
+     * @since 25
+     */
+    public final LayoutInfo getLayoutInfo() {
+        return new PrismLayoutInfo(getTextLayout()) {
+            @Override
+            public double lineSpacing() {
+                return getLineSpacing();
+            }
+
+            @Override
+            protected double dx() {
+                return getLayoutBounds().getMinX();
+            }
+
+            @Override
+            protected double dy() {
+                return getLayoutBounds().getMinY();
+            }
+        };
     }
 }

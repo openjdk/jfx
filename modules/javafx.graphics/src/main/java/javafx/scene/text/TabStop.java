@@ -26,13 +26,10 @@ package javafx.scene.text;
 
 /**
  * This class encapsulates an immutable single tab stop within the {@link TabStopPolicy}.
- * <p>
- * A tab stop is at a specified distance from the
- * left margin, aligns text in a specified way, and has a specified leader.
  *
  * @since 999 TODO
  */
-public class TabStop {
+public final class TabStop {
     private final double position;
 
     /**

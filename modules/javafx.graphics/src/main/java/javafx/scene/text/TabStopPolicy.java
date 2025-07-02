@@ -36,21 +36,20 @@ import javafx.scene.layout.Region;
  *
  * @since 999 TODO
  */
-public class TabStopPolicy {
+public final class TabStopPolicy {
     private final ObservableList<TabStop> tabStops = FXCollections.observableArrayList();
     private final SimpleDoubleProperty defaultStops = new SimpleDoubleProperty(0.0);
 
     /**
-     * Constructs a new {@code TabStopPolicy} instance.
+     * Constructs a new {@code TabStopPolicy} instance, with an empty list of stops.
      */
     public TabStopPolicy() {
     }
 
     /**
-     * Specifies the unmodifiable list of tab stops, sorted by position from smallest to largest.
-     * The list can be changed using
+     * The list of tab stops.
      *
-     * @return the non-null, unmodifiable list of tab stops, sorted by position
+     * @return the non-null list of tab stops
      */
     public final ObservableList<TabStop> tabStops() {
         return tabStops;
@@ -58,11 +57,11 @@ public class TabStopPolicy {
 
     /**
      * Provides default tab stops (beyond the last tab stop specified by {@code #tabStops()},
-     * as a fixed repeating distance in pixels from the last tab stop position.
+     * as a fixed repeating distance in pixels for tabs after the last tab stop position.
      * The position of default tab stops is computed at regular intervals relative to
      * the leading edge of the {@code TextFlow} this policy is registered with.
      * <p>
-     * The value of less than or equal 0 disables the default stops.
+     * A value of less than or equal 0 disables the default stops.
      *
      * @return the default tab stops property
      * @defaultValue 0
