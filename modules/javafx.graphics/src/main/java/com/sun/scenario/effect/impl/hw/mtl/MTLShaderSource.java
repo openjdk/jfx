@@ -31,6 +31,7 @@ import java.io.InputStream;
 
 public class MTLShaderSource implements ShaderSource {
 
+    @Override
     public InputStream loadSource(String name) {
         // MSL shaders are compilend and linked into a MTLLibrary at build time.
         // At runtime, shaders get loaded from that library as needed.
@@ -38,6 +39,7 @@ public class MTLShaderSource implements ShaderSource {
         return null;
     }
 
+    @Override
     public AccelType getAccelType() {
         return AccelType.METAL;
     }

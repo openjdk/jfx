@@ -107,6 +107,7 @@ public class MTLRTTexture extends MTLTexture<MTLTextureData>
                 width, height, false);
     }
 
+    @Override
     public long getNativeHandle() {
         return nTexPtr;
     }

@@ -124,6 +124,7 @@ public class MTLContext extends BaseShaderContext {
         pContext = nInitialize(shaderLibBuffer);
     }
 
+    @Override
     public MTLResourceFactory getResourceFactory() {
         return resourceFactory;
     }

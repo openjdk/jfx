@@ -129,6 +129,7 @@ class DummyResourceFactory extends BaseShaderFactory {
         return new DummyShader(context, params);
     }
 
+    @Override
     public Shader createStockShader(String name) {
         return new DummyShader(context, name);
     }
