@@ -32,6 +32,8 @@ import javafx.application.Application;
 import javafx.application.Platform;
 import javafx.scene.Group;
 import javafx.scene.Scene;
+import javafx.scene.image.PixelReader;
+import javafx.scene.image.WritableImage;
 import javafx.scene.input.KeyCode;
 import javafx.scene.paint.Color;
 import javafx.scene.robot.Robot;
@@ -60,6 +62,8 @@ public class StageFocusTest extends VisualTestBase {
     static final int TIMEOUT = 2000; // ms
     static final double TOLERANCE = 0.07;
 
+    static final Color SCENE_COLOR = Color.LIGHTGREEN;
+
     private Stage theStage = null;
 
     @BeforeAll
@@ -81,7 +85,7 @@ public class StageFocusTest extends VisualTestBase {
 
             Group root = new Group();
             Scene scene = new Scene(root, STAGE_SIZE, STAGE_SIZE);
-            scene.setFill(Color.LIGHTGREEN);
+            scene.setFill(SCENE_COLOR);
             scene.setOnKeyPressed(e -> {
                 if (e.getCode() == KeyCode.A) {
                     eventReceivedLatch.countDown();
@@ -114,8 +118,14 @@ public class StageFocusTest extends VisualTestBase {
 
         // check if window is on top
         Util.runAndWait(() -> {
-            Color color = getColor(STAGE_SIZE / 2, STAGE_SIZE / 2);
-            assertColorEquals(Color.LIGHTGREEN, color, TOLERANCE);
+            WritableImage capture = getRobot().getScreenCapture(null, STAGE_X, STAGE_Y, STAGE_SIZE, STAGE_SIZE, false);
+            PixelReader captureReader = capture.getPixelReader();
+            for (int x = 0; x < STAGE_SIZE; ++x) {
+                for (int y = 0; y < STAGE_SIZE; ++y) {
+                    Color color = captureReader.getColor(x, y);
+                    assertColorEquals(SCENE_COLOR, color, TOLERANCE);
+                }
+            }
         });
 
         // check if we actually have focus and key presses are registered by the app
