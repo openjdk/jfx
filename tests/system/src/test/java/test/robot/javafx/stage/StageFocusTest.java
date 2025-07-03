@@ -38,9 +38,9 @@ import javafx.scene.input.KeyCode;
 import javafx.scene.paint.Color;
 import javafx.scene.robot.Robot;
 import javafx.stage.Stage;
+import javafx.stage.StageStyle;
 import javafx.stage.WindowEvent;
 import test.util.Util;
-import test.robot.testharness.VisualTestBase;
 
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
@@ -49,7 +49,7 @@ import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 
-public class StageFocusTest extends VisualTestBase {
+public class StageFocusTest {
 
     static CountDownLatch startupLatch;
     static CountDownLatch eventReceivedLatch;
@@ -59,29 +59,20 @@ public class StageFocusTest extends VisualTestBase {
     static final int STAGE_X = 100;
     static final int STAGE_Y = 100;
 
-    static final int TIMEOUT = 2000; // ms
+    static final int TIMEOUT = 5000; // ms
     static final double TOLERANCE = 0.07;
 
     static final Color SCENE_COLOR = Color.LIGHTGREEN;
 
-    private Stage theStage = null;
+    static Stage theStage;
+    static Robot robot;
 
-    @BeforeAll
-    public static void setupOnce() throws Exception {
-        startupLatch = new CountDownLatch(1);
-        eventReceivedLatch = new CountDownLatch(1);
-    }
+    public static class TestApp extends Application {
+        @Override
+        public void start(Stage primaryStage) {
+            Platform.setImplicitExit(false);
 
-    /**
-     * Checks whether Stage is actually shown when calling show()
-     *
-     * Meant as a "canary" test of sorts to ensure other tests relying on
-     * Stage being actually shown and on foreground work fine.
-     */
-    @Test
-    public void testStageHasFocusAfterShow() throws InterruptedException {
-        Util.runAndWait(() -> {
-            theStage = getStage(false);
+            theStage = primaryStage;
 
             Group root = new Group();
             Scene scene = new Scene(root, STAGE_SIZE, STAGE_SIZE);
@@ -92,33 +83,73 @@ public class StageFocusTest extends VisualTestBase {
                 }
             });
 
+            theStage.initStyle(StageStyle.UNDECORATED);
+            theStage.setX(STAGE_X);
+            theStage.setY(STAGE_Y);
             theStage.setScene(scene);
             theStage.addEventHandler(WindowEvent.WINDOW_SHOWN, e -> {
-                Platform.runLater(() -> {
-                    theStage.setX(STAGE_X);
-                    theStage.setY(STAGE_Y);
-                    startupLatch.countDown();
-                });
+                startupLatch.countDown();
             });
             theStage.show();
-        });
+        }
+    }
 
+    @BeforeAll
+    public static void setupOnce() throws Exception {
+        startupLatch = new CountDownLatch(1);
+        eventReceivedLatch = new CountDownLatch(1);
+
+        Util.launch(startupLatch, TestApp.class);
         assertTrue(startupLatch.await(TIMEOUT, TimeUnit.MILLISECONDS), "Timeout waiting for test stage to be shown");
 
+        Util.runAndWait(() -> robot = new Robot());
+    }
+
+    @AfterAll
+    public static void doTeardownOnce() {
+        Util.shutdown();
+    }
+
+    private String colorToString(Color c) {
+        int r = (int)(c.getRed() * 255.0);
+        int g = (int)(c.getGreen() * 255.0);
+        int b = (int)(c.getBlue() * 255.0);
+        int a = (int)(c.getOpacity() * 255.0);
+        return "rgba(" + r + "," + g + "," + b + "," + a + ")";
+    }
+
+    private void assertColorEquals(Color expected, Color actual, double delta) {
+        double deltaRed = Math.abs(expected.getRed() - actual.getRed());
+        double deltaGreen = Math.abs(expected.getGreen() - actual.getGreen());
+        double deltaBlue = Math.abs(expected.getBlue() - actual.getBlue());
+        double deltaOpacity = Math.abs(expected.getOpacity() - actual.getOpacity());
+        assertTrue(deltaRed <= delta && deltaGreen <= delta && deltaBlue <= delta && deltaOpacity <= delta,
+            "Color " + colorToString(actual) + " did not match color " + colorToString(expected));
+    }
+
+    /**
+     * Checks whether Stage is actually shown when calling show()
+     *
+     * Meant as a "canary" test of sorts to ensure other tests relying on
+     * Stage being actually shown and on foreground work fine.
+     */
+    @Test
+    public void testStageHasFocusAfterShow() throws InterruptedException {
         // check if isFocused returns true
         assertTrue(
             theStage.isFocused(),
-            "Stage.isFocused() returned false! Stage does not have focus after showing. Some tests might fail because of this. " +
-            "If that is the case, try re-running the tests with '--no-daemon' flag in Gradle."
+            "Stage.isFocused() returned false! Stage does not have focus after showing. " +
+            "Some tests might fail because of this. Try re-running the tests with '--no-daemon' flag in Gradle."
         );
 
         // give UI a bit of time to finish showing transition
         // ex. on Windows above latch is set despite the UI still "animating" the show
-        sleep(500);
+        Thread.sleep(500);
 
         // check if window is on top
         Util.runAndWait(() -> {
-            WritableImage capture = getRobot().getScreenCapture(null, STAGE_X, STAGE_Y, STAGE_SIZE, STAGE_SIZE, false);
+            System.err.println("Checking if on top");
+            WritableImage capture = robot.getScreenCapture(null, STAGE_X, STAGE_Y, STAGE_SIZE, STAGE_SIZE, false);
             PixelReader captureReader = capture.getPixelReader();
             for (int x = 0; x < STAGE_SIZE; ++x) {
                 for (int y = 0; y < STAGE_SIZE; ++y) {
@@ -126,16 +157,18 @@ public class StageFocusTest extends VisualTestBase {
                     assertColorEquals(SCENE_COLOR, color, TOLERANCE);
                 }
             }
+            System.err.println("Checking if on top done");
         });
 
         // check if we actually have focus and key presses are registered by the app
         Util.runAndWait(() -> {
-            getRobot().keyPress(KeyCode.A);
+            System.err.println("Pressing A!");
+            robot.keyPress(KeyCode.A);
         });
         assertTrue(
             eventReceivedLatch.await(TIMEOUT, TimeUnit.MILLISECONDS),
-            "Event received latch timed out! Stage most probably did not have focus after showing. Some tests might fail because of this. " +
-            "If that is the case, try re-running the tests with '--no-daemon' flag in Gradle."
+            "The Stage did not receive the key stroke generated by Robot! This might happen if the Stage did not receive focus after showing. " +
+            "Some tests might fail because of this. Try re-running the tests with '--no-daemon' flag in Gradle."
         );
     }
 }
