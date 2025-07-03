@@ -50,14 +50,7 @@
 
 - (NSArray *)accessibilityTabs
 {
-    jobject jresult = NULL;
-    GET_MAIN_JENV;
-    if (env == NULL) return NULL;
-    jresult = (jobject)(*env)->CallLongMethod(env, [self getJAccessible],
-                                              jAccessibilityAttributeValue,
-                                              (jlong)@"AXTabs");
-    GLASS_CHECK_EXCEPTION(env);
-    return variantToID(env, jresult);
+    return [self requestNodeAttribute:@"AXTabs"];
 }
 
 @end
