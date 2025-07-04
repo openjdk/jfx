@@ -25,6 +25,8 @@
 
 package test.robot.javafx.stage;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 
@@ -43,64 +45,53 @@ import javafx.stage.WindowEvent;
 import test.util.Util;
 
 import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.FieldSource;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 
 
+// NOTE: This test does NOT extend VisualTestBase, as the focus issues mostly happen
+// on primaryStage delivered via Application.start()
 public class StageFocusTest {
-
-    static CountDownLatch startupLatch;
-    static CountDownLatch eventReceivedLatch;
+    static CountDownLatch launchLatch = new CountDownLatch(1);
 
     static final int STAGE_SIZE = 200;
 
     static final int STAGE_X = 100;
     static final int STAGE_Y = 100;
 
-    static final int TIMEOUT = 5000; // ms
+    static final int TIMEOUT = 2000; // ms
     static final double TOLERANCE = 0.07;
 
     static final Color SCENE_COLOR = Color.LIGHTGREEN;
 
-    static Stage theStage;
+    static List<Stage> testStages = new ArrayList<Stage>();
     static Robot robot;
+
+    // NOTE: junit5 (at least the version we use) does not support parameterized class-level tests yet
+    // As such, Before/AfterEach need to be hacked this way
+    private Stage currentTestStage = null;
 
     public static class TestApp extends Application {
         @Override
         public void start(Stage primaryStage) {
             Platform.setImplicitExit(false);
+            assertNotNull(primaryStage);
 
-            theStage = primaryStage;
-
-            Group root = new Group();
-            Scene scene = new Scene(root, STAGE_SIZE, STAGE_SIZE);
-            scene.setFill(SCENE_COLOR);
-            scene.setOnKeyPressed(e -> {
-                if (e.getCode() == KeyCode.A) {
-                    eventReceivedLatch.countDown();
-                }
-            });
-
-            theStage.initStyle(StageStyle.UNDECORATED);
-            theStage.setX(STAGE_X);
-            theStage.setY(STAGE_Y);
-            theStage.setScene(scene);
-            theStage.addEventHandler(WindowEvent.WINDOW_SHOWN, e -> {
-                startupLatch.countDown();
-            });
-            theStage.show();
+            testStages.add(primaryStage);
+            testStages.add(new Stage());
+            launchLatch.countDown();
         }
     }
 
-    @BeforeAll
-    public static void setupOnce() throws Exception {
-        startupLatch = new CountDownLatch(1);
-        eventReceivedLatch = new CountDownLatch(1);
 
-        Util.launch(startupLatch, TestApp.class);
-        assertTrue(startupLatch.await(TIMEOUT, TimeUnit.MILLISECONDS), "Timeout waiting for test stage to be shown");
+    @BeforeAll
+    public static void setupOnce() throws InterruptedException {
+        Util.launch(launchLatch, TestApp.class);
+        assertTrue(launchLatch.await(TIMEOUT, TimeUnit.MILLISECONDS), "Timeout waiting for test stage to be shown");
 
         Util.runAndWait(() -> robot = new Robot());
     }
@@ -108,6 +99,17 @@ public class StageFocusTest {
     @AfterAll
     public static void doTeardownOnce() {
         Util.shutdown();
+    }
+
+    // @BeforeEach
+    public void setupEach(Stage stage) {
+        currentTestStage = stage;
+    }
+
+    @AfterEach
+    public void doTeardownEach() throws InterruptedException {
+        hideTestStage(currentTestStage);
+        currentTestStage = null;
     }
 
     private String colorToString(Color c) {
@@ -127,17 +129,68 @@ public class StageFocusTest {
             "Color " + colorToString(actual) + " did not match color " + colorToString(expected));
     }
 
+    private void initTestStage(Stage stage, CountDownLatch eventReceivedLatch) throws InterruptedException {
+        CountDownLatch showLatch = new CountDownLatch(1);
+
+        Util.runAndWait(() -> {
+            Group root = new Group();
+            Scene scene = new Scene(root, STAGE_SIZE, STAGE_SIZE);
+            scene.setFill(SCENE_COLOR);
+            scene.setOnKeyPressed(e -> {
+                if (e.getCode() == KeyCode.A) {
+                    eventReceivedLatch.countDown();
+                }
+            });
+
+            stage.initStyle(StageStyle.UNDECORATED);
+            stage.setX(STAGE_X);
+            stage.setY(STAGE_Y);
+            stage.setScene(scene);
+            stage.addEventHandler(WindowEvent.WINDOW_SHOWN, e -> {
+                showLatch.countDown();
+            });
+            stage.show();
+        });
+
+        assertTrue(showLatch.await(TIMEOUT, TimeUnit.MILLISECONDS), "Timeout waiting for test stage to be shown");
+    }
+
+    private void hideTestStage(Stage stage) throws InterruptedException {
+        CountDownLatch hiddenLatch = new CountDownLatch(1);
+
+        Util.runAndWait(() -> {
+            stage.addEventHandler(WindowEvent.WINDOW_HIDDEN, e -> {
+                hiddenLatch.countDown();
+            });
+            stage.hide();
+        });
+
+        assertTrue(hiddenLatch.await(TIMEOUT, TimeUnit.MILLISECONDS), "Timeout waiting for test stage to hide");
+    }
+
     /**
      * Checks whether Stage is actually shown when calling show()
      *
      * Meant as a "canary" test of sorts to ensure other tests relying on
      * Stage being actually shown and on foreground work fine.
+     *
+     * This checks both the Stage provided by Application.start() as well as
+     * a newly created Stage.
      */
-    @Test
-    public void testStageHasFocusAfterShow() throws InterruptedException {
+    @ParameterizedTest
+    @FieldSource("testStages")
+    public void testStageHasFocusAfterShow(Stage stage) throws InterruptedException {
+        // TODO once we upgrade JUnit5 and have parameterized class-level tests
+        //      this can be removed and be an actual @BeforeEach
+        setupEach(stage);
+
+        // initialize and show test stage
+        CountDownLatch eventReceivedLatch = new CountDownLatch(1);
+        initTestStage(stage, eventReceivedLatch);
+
         // check if isFocused returns true
         assertTrue(
-            theStage.isFocused(),
+            stage.isFocused(),
             "Stage.isFocused() returned false! Stage does not have focus after showing. " +
             "Some tests might fail because of this. Try re-running the tests with '--no-daemon' flag in Gradle."
         );
@@ -148,7 +201,6 @@ public class StageFocusTest {
 
         // check if window is on top
         Util.runAndWait(() -> {
-            System.err.println("Checking if on top");
             WritableImage capture = robot.getScreenCapture(null, STAGE_X, STAGE_Y, STAGE_SIZE, STAGE_SIZE, false);
             PixelReader captureReader = capture.getPixelReader();
             for (int x = 0; x < STAGE_SIZE; ++x) {
@@ -157,12 +209,10 @@ public class StageFocusTest {
                     assertColorEquals(SCENE_COLOR, color, TOLERANCE);
                 }
             }
-            System.err.println("Checking if on top done");
         });
 
         // check if we actually have focus and key presses are registered by the app
         Util.runAndWait(() -> {
-            System.err.println("Pressing A!");
             robot.keyPress(KeyCode.A);
         });
         assertTrue(
