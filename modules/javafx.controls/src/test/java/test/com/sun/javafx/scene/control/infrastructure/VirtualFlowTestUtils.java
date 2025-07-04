@@ -343,6 +343,11 @@ public class VirtualFlowTestUtils {
 
         flow = (VirtualFlow<?>)control.lookup("#virtual-flow");
 
+        if (flow == null) {
+            throw new IllegalArgumentException("VirtualFlow could not be found for: " + control + ". "
+                    + "Make sure that the Control is inside a Scene.");
+        }
+
         return flow;
     }
 
