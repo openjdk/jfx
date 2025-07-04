@@ -40,7 +40,7 @@ static NSMutableDictionary * rolesMap;
      * All JavaFX roles and corresponding available properties are defined in
      * enum javafx.scene.AccessibleRole
      */
-    rolesMap = [[NSMutableDictionary alloc] initWithCapacity:11];
+    rolesMap = [[NSMutableDictionary alloc] initWithCapacity:16];
 
     [rolesMap setObject:@"JFXButtonAccessibility" forKey:@"BUTTON"];
     [rolesMap setObject:@"JFXButtonAccessibility" forKey:@"DECREMENT_BUTTON"];
@@ -55,6 +55,11 @@ static NSMutableDictionary * rolesMap;
     [rolesMap setObject:@"JFXStaticTextAccessibility" forKey:@"TEXT"];
     [rolesMap setObject:@"JFXStepperAccessibility" forKey:@"SPINNER"];
     [rolesMap setObject:@"JFXSliderAccessibility" forKey:@"SLIDER"];
+    [rolesMap setObject:@"JFXProgressIndicatorAccessibility" forKey:@"PROGRESS_INDICATOR"];
+    [rolesMap setObject:@"JFXImageAccessibility" forKey:@"IMAGE"];
+    [rolesMap setObject:@"JFXImageAccessibility" forKey:@"IMAGE_VIEW"];
+    [rolesMap setObject:@"JFXTabGroupAccessibility" forKey:@"TAB_PANE"];
+    [rolesMap setObject:@"JFXTabGroupAccessibility" forKey:@"PAGINATION"];
 
 }
 
@@ -172,6 +177,27 @@ static NSMutableDictionary * rolesMap;
     return variantToID(env, jresult);
 }
 
+- (NSArray *)accessibilityChildren
+{
+    jobject jresult = NULL;
+    GET_MAIN_JENV;
+    if (env == NULL) return NULL;
+    jresult = (jobject)(*env)->CallLongMethod(env, self->jAccessible,
+                                              jAccessibilityAttributeValue, (jlong)@"AXChildren");
+    GLASS_CHECK_EXCEPTION(env);
+    return variantToID(env, jresult);
+}
+
+- (id)accessibilityRoleDescription
+{
+    jobject jresult = NULL;
+    GET_MAIN_JENV;
+    if (env == NULL) return NULL;
+    jresult = (jobject)(*env)->CallLongMethod(env, self->jAccessible, jAccessibilityAttributeValue,
+                                              (jlong)@"AXRoleDescription");
+    GLASS_CHECK_EXCEPTION(env);
+    return variantToID(env, jresult);
+}
 
 
 // Actions support

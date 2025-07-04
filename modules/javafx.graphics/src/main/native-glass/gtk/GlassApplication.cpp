@@ -28,6 +28,7 @@
 #include <gdk/gdkx.h>
 #include <gtk/gtk.h>
 #include <glib.h>
+#include <sstream>
 
 #include <cstdlib>
 #include <com_sun_glass_ui_gtk_GtkApplication.h>
@@ -51,6 +52,24 @@ JNIEnv* mainEnv; // Use only with main loop thread!!!
 PlatformSupport* platformSupport = NULL;
 
 extern gboolean disableGrab;
+
+void checkGtkVersion(JNIEnv* env, jint reqMajor) {
+    // Major version is checked before loading
+    // GTK_3_MIN_MINOR_VERSION and GTK_3_MIN_MICRO_VERSION comes from the build system
+    if (reqMajor == 3
+        && gtk_check_version(reqMajor, GTK_3_MIN_MINOR_VERSION, GTK_3_MIN_MICRO_VERSION)) {
+
+        std::ostringstream oss;
+        oss << "Minimum GTK version required is " << reqMajor << "." << GTK_3_MIN_MINOR_VERSION
+            << "." << GTK_3_MIN_MICRO_VERSION << ". System has " << gtk_major_version << "."
+            << gtk_minor_version << "." << gtk_micro_version << ".";
+
+        jclass uoe = env->FindClass("java/lang/UnsupportedOperationException");
+        if (uoe != nullptr) {
+            env->ThrowNew(uoe, oss.str().c_str());
+        }
+    }
+}
 
 static gboolean call_runnable (gpointer data)
 {
@@ -114,20 +133,7 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_gtk_GtkApplication__1initGTK
     gdk_threads_enter();
     gtk_init(NULL, NULL);
 
-    // Major version is checked before loading
-    if (version == 3
-        && gtk_check_version(version, GTK_3_MIN_MINOR_VERSION, GTK_3_MIN_MICRO_VERSION)) {
-        char message[100];
-        snprintf(message, sizeof(message),
-                 "Minimum GTK version required is %d.%d.%d. System has %d.%d.%d.",
-                 version, GTK_3_MIN_MINOR_VERSION, GTK_3_MIN_MICRO_VERSION,
-                 gtk_major_version, gtk_minor_version, gtk_micro_version);
-
-        jclass uoe = env->FindClass("java/lang/UnsupportedOperationException");
-        env->ThrowNew(uoe, message);
-
-        return;
-    }
+    checkGtkVersion(env, version);
 }
 
 /*
@@ -510,6 +516,7 @@ static void process_events(GdkEvent* event, gpointer data)
                     gtk_main_do_event(event);
                     break;
                 case GDK_BUTTON_PRESS:
+                case GDK_2BUTTON_PRESS:
                 case GDK_BUTTON_RELEASE:
                     ctx->process_mouse_button(&event->button);
                     break;
