@@ -2282,11 +2282,20 @@ public class Scene implements EventTarget {
     }
 
     /**
-      * The scene's current focus owner node. This node's "focused"
-      * variable might be false if this scene has no window, or if the
-      * window is inactive (window.focused == false).
-      * @since JavaFX 2.2
-      */
+     * The focus owner of this {@code Scene} is the primary focus principal that receives the input focus when the
+     * scene is shown in a {@link Window} and the window is {@link Window#focusedProperty() focused}.
+     * <p>
+     * The primary focus principal is usually the node for which input focus was {@link Node#requestFocus() requested}.
+     * However, when a control uses {@link Parent#getFocusDelegate(Node) focus delegation}, the primary focus principal
+     * is the outermost node that delegates focus to one of its descendants. Note that in a chain of delegation, all
+     * nodes but the last node are focus principals (meaning that they delegate focus), but only the root node of the
+     * chain is the focus owner.
+     * <p>
+     * The focus owner is retained even when the window loses focus, so that the input focus can be restored when the
+     * window is focused again.
+     *
+     * @since JavaFX 2.2
+     */
     private FocusOwnerProperty focusOwner = new FocusOwnerProperty();
 
     private final class FocusOwnerProperty extends ReadOnlyObjectPropertyBase<Node> {

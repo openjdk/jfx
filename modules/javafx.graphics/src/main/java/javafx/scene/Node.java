@@ -8328,12 +8328,18 @@ public abstract sealed class Node
     }
 
     /**
-     * Indicates whether this {@code Node} currently has the input focus.
-     * To have the input focus, a node must be the {@code Scene}'s focus
-     * owner, and the scene must be in a {@code Stage} that is visible
-     * and active. See {@link #requestFocus()} for more information.
+     * Indicates whether this {@code Node} is currently focused. The node may be focused because it acquired
+     * the input focus with {@link #requestFocus()}, mouse or touch interaction, focus traversal, or because
+     * the input focus was {@link #getFocusDelegate(Node) delegated} to this node.
+     * <p>
+     * In addition, the focused flag can also be manually set with the {@link #setFocused(boolean)} method.
+     * This is strongly discouraged, because it can break the expectation that a focused node has the input focus.
+     * Note that a node can only have the input focus if it is shown in a {@link Window} and the window is
+     * {@link Window#showingProperty() showing} and {@link Window#focusedProperty() focused}.
+     * <p>
+     * If this node has the input focus and is the primary focus principal, it is the
+     * {@link Scene#focusOwnerProperty() focus owner} of its {@code Scene}.
      *
-     * @see #requestFocus()
      * @defaultValue false
      */
     private final FocusedProperty focused = new FocusedProperty();
@@ -8385,10 +8391,6 @@ public abstract sealed class Node
 
         /**
          * Resolves the hoisting node of this focused node, which is always a descendant of this node.
-         * <p>
-         * Note that the hoisting node is tracked as a snapshot in time, which means that when we are trying
-         * to resolve it, it might already have been removed from the scene graph, or moved to a different
-         * place so that is is no longer a descendant of this node.
          *
          * @return the hoisting node, or {@code null} if no hoisting node is tracked or if the tracked
          *         node is not a descendant of this node
@@ -8399,6 +8401,10 @@ public abstract sealed class Node
                 return null;
             }
 
+            // Note that the hoisting node is tracked as a snapshot in time, which means that when we are trying
+            // to resolve it, it might already have been removed from the scene graph, or moved to a different
+            // place so that is is no longer a descendant of this node. We need to walk up the scene graph to
+            // find out whether the hoisting node is still a descendant of this node.
             Node parent = hoistingNode.getParent();
             while (parent != null) {
                 if (parent == Node.this) {
@@ -8456,8 +8462,8 @@ public abstract sealed class Node
     }
 
     /**
-     * Indicates whether this {@code Node} or any of its descendants currently
-     * has the input focus.
+     * Indicates whether this {@code Node} or any of its descendants are currently
+     * {@link #focusedProperty() focused}.
      *
      * @defaultValue false
      * @since 19
@@ -8554,12 +8560,13 @@ public abstract sealed class Node
     }
 
     /**
-     * Specifies whether this {@code Node} should hoist focus requests to its closest focus scope.
-     * When this property is set to {@code true}, calling the {@link #requestFocus()} method has no
-     * effect on this node, but is equivalent to requesting focus for the closest ancestor for which
-     * {@link #isFocusScope()} is {@code true}.
+     * Specifies whether this {@code Node} should hoist focus requests to the root of its closest focus scope.
+     * <p>
+     * When this property is set to {@code true}, calling the {@link #requestFocus()} method has no effect on
+     * this node, but is equivalent to requesting focus for the closest ancestor for which {@link #isFocusScope()}
+     * returns {@code true}.
      *
-     * @since 24
+     * @since 26
      */
     private BooleanProperty hoistFocus;
 
@@ -8592,21 +8599,19 @@ public abstract sealed class Node
     }
 
     /**
-     * Indicates whether this {@code Node} is eligible to receive focus when a child node {@link #hoistFocus hoists}
-     * a focus request. A node that receives a focus hoisting request may decide to hoist the request even further
-     * up the scene graph.
+     * Indicates whether this {@code Node} is the root of a focus scope, making it eligible to receive a focus request
+     * that was {@link #hoistFocus hoisted} by a descendant node. A hoisted focus request bubbles up the scene graph
+     * until it is consumed by the root of a focus scope as if by calling {@link #requestFocus()}. In this way, the
+     * root of the focus scope will be the receiver of the focus request.
      * <p>
-     * Focus scoping is a technique employed by controls that need to isolate their internal structure (which may
-     * be defined by a skin) from their external representation. Consider a control with an internal structure
-     * that contains an interactive and independently focusable control. When a user clicks on the internal
-     * interactive control, it is often desired that the external representation receive the input focus, so
-     * that users of the control can reason about it as a monolith instead of a composite with unknown parts.
+     * Focus scopes can be nested, and the root node of a focus scope can also hoist focus requests itself by setting
+     * its {@code hoistFocus} flag. In this way, a focus request can potentially bubble up through several focus scopes.
      * <p>
      * Focus scoping is often combined with {@link #getFocusDelegate() focus delegation}.
      *
      * @return {@code true} if this {@code Node} is eligible to receive hoisted focus requests;
      *         {@code false} otherwise
-     * @since 24
+     * @since 26
      */
     boolean isFocusScope() {
         return false;
@@ -8615,24 +8620,35 @@ public abstract sealed class Node
     /**
      * Gets the focus delegate for this {@code Node}, which must be a descendant of this {@code Node}.
      * <p>
-     * Focus delegation allows nodes to delegate events targeted at them to one of their descendants. This is
-     * a technique employed by controls that need to isolate their internal structure (which may be defined by
-     * a skin) from their external representation. The external representation delegates the input focus to an
-     * internal control by returning the internal control from the {@link #getFocusDelegate()} method. In this
-     * case, when the external control receives the input focus, the internal control is focused as well. When
-     * an input event is sent to the focused control, the external control receives the event first. If the
-     * event is not consumed, it is dispatched to the focus delegate. A focus delegate might delegate the input
-     * focus even further, forming a chain of focus delegates.
+     * Focus delegation allows nodes to delegate events targeted at them to one of their descendants instead.
+     * This is a technique used by controls that need to isolate their internal structure from their external
+     * representation, making the external representation appear as a monolithic entity (a "black box").
      * <p>
-     * If an implementation returns a node from this method that is not a descendant of this {@code Node},
-     * JavaFX ignores the returned value and treats this {@code Node} as having no focus delegate.
+     * Consider a value spinner control, which consists of a numeric text field and a set of buttons to increase
+     * or decrease its value. Users of this control should be able to treat the control as a monolithic entity
+     * that can be focused as a whole (instead of its contituent parts) and be the source and target of events.
+     * It would be surprising for users of the value spinner control to find out that, in order for it to receive
+     * keyboard events, the internal text field must be focused, but the control as a whole would not be.
+     * In particular, this would also imply that a listener installed on the control would not see input events
+     * being targeted at the control, but at the internal text field instead.
+     * <p>
+     * Focus delegation solves this problem by having the node that represents the control as a whole be the
+     * <em>focus principal</em>, which means that it is the primary receiver of input focus, and it is the source and
+     * target of input events. The focus principal, being aware of its internal structure, delegates focus to one of
+     * its descendants by returning the corresponding descendant node from this method. When the focus principal then
+     * receives focus, the internal delegate is focused as well. Similarly, when an input event is received by the
+     * focus principal, it is re-targeted at the internal delegate (unless the focus principal consumes the event).
+     * A focus delegate might be a focus principal itself, forming a chain of focus delegation.
+     * <p>
+     * If an implementation returns a node from this method that is not a descendant, JavaFX ignores the returned
+     * node and treats this node as having no focus delegate.
      * <p>
      * Focus delegation is often combined with {@link #isFocusScope() focus scoping}.
      *
      * @param hoistingNode the descendant of this {@code Node} that hoisted the focus request
      *                     (not necessarily the focus delegate), or {@code null}
      * @return the focus delegate, which is a descendant of this {@code Node}
-     * @since 24
+     * @since 26
      */
     Node getFocusDelegate(Node hoistingNode) {
         return null;
@@ -8682,16 +8698,19 @@ public abstract sealed class Node
     }
 
     /**
-     * Requests that this {@code Node} get the input focus, and that this
-     * {@code Node}'s top-level ancestor become the focused window. To be
-     * eligible to receive the focus, the node must be part of a scene, it and
-     * all of its ancestors must be visible, and it must not be disabled.
-     * If this node is eligible, this function will cause it to become this
-     * {@code Scene}'s "focus owner". Each scene has at most one focus owner
-     * node. The focus owner will not actually have the input focus, however,
-     * unless the scene belongs to a {@code Stage} that is both visible
-     * and active.
-     * <p>This method will clear the {@link #focusVisible} flag.
+     * Requests that this {@code Node} receive the input focus, and that this node's window become the
+     * {@link Window#focusedProperty() focused} window. A node is only eligible to receive the input focus if it is
+     * part of a {@link Scene}, the node and all of its ancestors are {@link #visibleProperty() visible}, and it is
+     * not {@link #disabledProperty() disabled}.
+     * <p>
+     * If this node {@link #hoistFocusProperty() hoists} the focus request, calling this method is equivalent to
+     * calling {@code requestFocus()} on the root of the closest {@link #isFocusScope() focus scope}; if there is
+     * no focus scope, the method call on this node proceeds as usual.
+     * <p>
+     * If this node doesn't hoist the focus request (or if there is no focus scope) and successfully receives the
+     * input focus, it will also be the {@link Scene#focusOwnerProperty() focus owner} of its {@code Scene}.
+     * <p>
+     * This method will clear the {@link #focusVisible} flag.
      */
     public void requestFocus() {
         requestFocus(null, false);
