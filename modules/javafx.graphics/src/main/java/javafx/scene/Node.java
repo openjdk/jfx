@@ -27,6 +27,7 @@ package javafx.scene;
 
 
 import com.sun.javafx.geometry.BoundsUtils;
+import com.sun.javafx.scene.DelegatingEventDispatcher;
 import com.sun.javafx.scene.traversal.TraversalMethod;
 import javafx.application.Platform;
 import javafx.beans.InvalidationListener;
@@ -9158,8 +9159,9 @@ public abstract sealed class Node
 
             // If our parent has a focus delegate, we need to use a special dispatcher that can retarget
             // the event to the focus delegate (even if this node doesn't have an event dispatcher itself).
-            if (curParent != null && curParent.getFocusDelegate(focused.getHoistingNode()) != null) {
-                tail = tail.prepend(curNode::dispatchRetargetedEvent);
+            if (curParent != null && curParent.getFocusDelegate(focused.getHoistingNode()) instanceof Node delegate) {
+                EventDispatcher dispatcher = curNode.eventDispatcher != null ? curNode.eventDispatcher.get() : null;
+                tail = tail.prepend(new DelegatingEventDispatcher(curParent, delegate, dispatcher));
             } else {
                 EventDispatcher dispatcher = curNode.eventDispatcher != null
                     ? curNode.eventDispatcher.get()
@@ -9177,36 +9179,6 @@ public abstract sealed class Node
         }
 
         return tail;
-    }
-
-    private Event dispatchRetargetedEvent(Event event, EventDispatchChain tail) {
-        Node parent = getParent();
-        boolean retarget = false;
-
-        // Focus delegation is the only scenario in which the event target may be the parent node.
-        // Since we are in the capturing phase, we need to retarget the event to the focus delegate.
-        if (event.getTarget() == parent) {
-            retarget = true;
-            event = event.copyFor(event.getSource(), parent.getFocusDelegate(focused.getHoistingNode()));
-        }
-
-        // Dispatch the event to our event dispatcher, or if this node doesn't have one,
-        // directly to the rest of the event dispatch chain.
-        EventDispatcher dispatcher = eventDispatcher != null ? eventDispatcher.get() : null;
-        if (dispatcher != null) {
-            event = dispatcher.dispatchEvent(event, tail);
-        } else {
-            event = tail.dispatchEvent(event);
-        }
-
-        // The event was consumed, nothing left to do.
-        if (event == null) {
-            return null;
-        }
-
-        // Now we are in the bubbling phase. If we retargeted the capturing event earlier,
-        // we now need to retarget the bubbling event back to its original target.
-        return retarget ? event.copyFor(event.getSource(), parent) : event;
     }
 
     // PENDING_DOC_REVIEW
