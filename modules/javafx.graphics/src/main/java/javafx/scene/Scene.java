@@ -1984,10 +1984,9 @@ public class Scene implements EventTarget {
         boolean handled = false;
 
         if (eventTarget != null) {
-            Node delegate = eventTarget instanceof Node node ? node.resolveFocusDelegate() : null;
             ContextMenuEvent context = new ContextMenuEvent(ContextMenuEvent.CONTEXT_MENU_REQUESTED,
                     x2, y2, xAbs, yAbs, isKeyboardTrigger, res);
-            handled = EventUtil.fireEvent(eventTarget, delegate, context) == null;
+            handled = eventTarget.dispatchEvent(context) == null;
         }
         Scene.inMousePick = false;
 
@@ -2255,8 +2254,7 @@ public class Scene implements EventTarget {
 
         // send the key event to the current focus owner or to scene if
         // the focus owner is not set
-        Node delegate = eventTarget instanceof Node node ? node.resolveFocusDelegate() : null;
-        return EventUtil.fireEvent(eventTarget, delegate, e) == null;
+        return eventTarget.dispatchEvent(e) == null;
     }
 
     void requestFocus(Node node, boolean focusVisible) {
@@ -2403,7 +2401,7 @@ public class Scene implements EventTarget {
     private void processInputMethodEvent(InputMethodEvent e) {
         Node node = getFocusOwner();
         if (node != null) {
-            EventUtil.fireEvent(node, node.resolveFocusDelegate(), e);
+            node.dispatchEvent(e);
         }
     }
 

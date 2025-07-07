@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -156,15 +156,13 @@ public class TextFieldBehavior extends TextInputControlBehavior<TextField> {
 
     @Override protected void fire(KeyEvent event) {
         TextField textField = getNode();
-        EventHandler<ActionEvent> onAction = textField.getOnAction();
-        // use textField as target to prevent immediate copy in dispatch
-        ActionEvent actionEvent = new ActionEvent(textField, textField);
-
         textField.commitValue();
-        textField.fireEvent(actionEvent);
-        // fix of JDK-8207759: reverted logic
-        // mapping not auto-consume and consume if handled by action
-        if (onAction != null || actionEvent.isConsumed()) {
+
+        // We consume the KeyEvent (ENTER) that caused the text field to fire the ActionEvent
+        // only if the ActionEvent was consumed. This seems to be a strange behavior and should
+        // be examined in the future.
+        ActionEvent actionEvent = new ActionEvent(textField, textField);
+        if (textField.dispatchEvent(actionEvent) == null) {
             event.consume();
         }
     }

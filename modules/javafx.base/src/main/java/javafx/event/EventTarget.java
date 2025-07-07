@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2023, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -24,6 +24,8 @@
  */
 
 package javafx.event;
+
+import com.sun.javafx.event.EventUtil;
 
 // PENDING_DOC_REVIEW
 /**
@@ -54,6 +56,24 @@ public interface EventTarget {
      * @return the resulting event dispatch chain for this target
      */
     EventDispatchChain buildEventDispatchChain(EventDispatchChain tail);
+
+    /**
+     * Dispatches the specified event to this event target. The event travels through the event dispatch
+     * chain that was constructed with {@link #buildEventDispatchChain(EventDispatchChain)}.
+     * <p>
+     * This method returns {@code null} to indicate that the event was consumed by an event handler in the
+     * event dispatch chain. If a non-{@code null} value is returned, it represents the unconsumed event
+     * after being processed by the event dispatch chain. The returned event object will most likely not be
+     * the same instance as the event object that was passed into this method, as the event may be copied,
+     * replaced, or transformed as it travels through the event dispatch chain.
+     *
+     * @param event the event to dispatch
+     * @return the processed event, or {@code null} if the event was consumed
+     * @since 26
+     */
+    default Event dispatchEvent(Event event) {
+        return EventUtil.fireEvent(this, event);
+    }
 
     /**
      * Registers an event handler for this target.

@@ -25,8 +25,8 @@
 
 package com.sun.javafx.event;
 
+import java.util.Objects;
 import java.util.concurrent.atomic.AtomicBoolean;
-
 import javafx.event.Event;
 import javafx.event.EventDispatchChain;
 import javafx.event.EventTarget;
@@ -53,6 +53,9 @@ public final class EventUtil {
      * @return the event after processing, or {@code null}
      */
     public static Event fireEvent(EventTarget eventTarget, EventTarget delegateTarget, Event event) {
+        Objects.requireNonNull(eventTarget, "Event target cannot be null");
+        Objects.requireNonNull(event, "Event cannot be null");
+
         if (event.getTarget() != eventTarget) {
             event = event.copyFor(event.getSource(), eventTarget);
         }

@@ -24,13 +24,14 @@
  */
 package com.sun.javafx.scene.control.behavior;
 
+import com.sun.javafx.scene.control.ListenerHelper;
+import com.sun.javafx.scene.control.inputmap.InputMap;
 import javafx.animation.KeyFrame;
 import javafx.animation.Timeline;
 import javafx.event.ActionEvent;
 import javafx.event.EventHandler;
 import javafx.scene.control.Spinner;
 import javafx.scene.control.SpinnerValueFactory;
-import com.sun.javafx.scene.control.inputmap.InputMap;
 import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyEvent;
 import javafx.util.Duration;
@@ -45,6 +46,7 @@ public class SpinnerBehavior<T> extends BehaviorBase<Spinner<T>> {
     private static final double INITIAL_DURATION_MS = 750;
 
     private final InputMap<Spinner<T>> spinnerInputMap;
+    private final ListenerHelper listenerHelper = new ListenerHelper();
 
     private static final int STEP_AMOUNT = 1;
 
@@ -66,21 +68,6 @@ public class SpinnerBehavior<T> extends BehaviorBase<Spinner<T>> {
         }
     };
 
-    private final EventHandler<KeyEvent> spinnerKeyHandler = e -> {
-        boolean arrowsAreVertical = arrowsAreVertical();
-        KeyCode increment = arrowsAreVertical ? KeyCode.UP : KeyCode.RIGHT;
-        KeyCode decrement = arrowsAreVertical ? KeyCode.DOWN : KeyCode.LEFT;
-
-        if (e.getCode() == increment) {
-            increment(1);
-            e.consume();
-        }
-        else if (e.getCode() == decrement) {
-            decrement(1);
-            e.consume();
-        }
-    };
-
     /***************************************************************************
      *                                                                         *
      * Constructors                                                            *
@@ -94,12 +81,25 @@ public class SpinnerBehavior<T> extends BehaviorBase<Spinner<T>> {
         // InputMap installed on the control, if it is non-null, allowing us to pick up any user-specified mappings)
         spinnerInputMap = createInputMap();
 
-        spinner.addEventFilter(KeyEvent.KEY_PRESSED, spinnerKeyHandler);
+        listenerHelper.addEventFilter(spinner, KeyEvent.KEY_PRESSED, e -> {
+            boolean arrowsAreVertical = arrowsAreVertical();
+            KeyCode increment = arrowsAreVertical ? KeyCode.UP : KeyCode.RIGHT;
+            KeyCode decrement = arrowsAreVertical ? KeyCode.DOWN : KeyCode.LEFT;
+
+            if (e.getCode() == increment) {
+                increment(1);
+                e.consume();
+            }
+            else if (e.getCode() == decrement) {
+                decrement(1);
+                e.consume();
+            }
+        });
     }
 
     @Override
     public void dispose() {
-        getNode().removeEventFilter(KeyEvent.KEY_PRESSED, spinnerKeyHandler);
+        listenerHelper.disconnect();
         super.dispose();
     }
 

@@ -25,7 +25,7 @@
 
 package javafx.scene;
 
-
+import com.sun.javafx.event.EventUtil;
 import com.sun.javafx.geometry.BoundsUtils;
 import com.sun.javafx.scene.DelegatingEventDispatcher;
 import com.sun.javafx.scene.traversal.TraversalMethod;
@@ -9196,7 +9196,11 @@ public abstract sealed class Node
      * @param event the event to fire
      */
     public final void fireEvent(Event event) {
+        dispatchEvent(event);
+    }
 
+    @Override
+    public final Event dispatchEvent(Event event) {
         /* Log input events.  We do a coarse filter for at least the FINE
          * level and then granularize from there.
          */
@@ -9216,7 +9220,7 @@ public abstract sealed class Node
             }
         }
 
-        Event.fireEvent(this, event);
+        return EventUtil.fireEvent(this, resolveFocusDelegate(), event);
     }
 
 

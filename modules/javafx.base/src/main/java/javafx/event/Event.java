@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,10 +25,9 @@
 
 package javafx.event;
 
-import java.util.EventObject;
-
-import com.sun.javafx.event.EventUtil;
 import java.io.IOException;
+import java.util.EventObject;
+import java.util.Objects;
 import javafx.beans.NamedArg;
 
 // PENDING_DOC_REVIEW
@@ -188,14 +187,9 @@ public class Event extends EventObject implements Cloneable {
      * @throws NullPointerException if eventTarget or event is null
      */
     public static void fireEvent(EventTarget eventTarget, Event event) {
-        if (eventTarget == null) {
-            throw new NullPointerException("Event target must not be null!");
-        }
+        Objects.requireNonNull(eventTarget, "Event target cannot be null");
+        Objects.requireNonNull(event, "Event cannot be null");
 
-        if (event == null) {
-            throw new NullPointerException("Event must not be null!");
-        }
-
-        EventUtil.fireEvent(eventTarget, event);
+        eventTarget.dispatchEvent(event);
     }
 }
