@@ -475,35 +475,15 @@
     // as it is passed through as two calls to performKeyEquivalent, which in turn
     // create extra KeyEvents.
     //
-    NSString *chars = [theEvent charactersIgnoringModifiers];
-    if ([theEvent type] == NSEventTypeKeyDown && [chars length] > 0)
-    {
-        unichar uch = [chars characterAtIndex:0];
-        if ([theEvent modifierFlags] & NSEventModifierFlagCommand &&
-            (uch == com_sun_glass_events_KeyEvent_VK_PERIOD ||
-             uch == com_sun_glass_events_KeyEvent_VK_EQUALS))
-        {
-            [GlassApplication registerKeyEvent:theEvent];
-
-            GET_MAIN_JENV;
-
-            jcharArray jKeyChars = GetJavaKeyChars(env, theEvent);
-            jint jModifiers = GetJavaModifiers(theEvent);
-
-            (*env)->CallBooleanMethod(env, self->_delegate->jView, jViewNotifyKeyAndReturnConsumed,
-                                      com_sun_glass_events_KeyEvent_PRESS,
-                                      uch, jKeyChars, jModifiers);
-            (*env)->CallBooleanMethod(env, self->_delegate->jView, jViewNotifyKeyAndReturnConsumed,
-                                      com_sun_glass_events_KeyEvent_TYPED,
-                                      uch, jKeyChars, jModifiers);
-            (*env)->CallBooleanMethod(env, self->_delegate->jView, jViewNotifyKeyAndReturnConsumed,
-                                   com_sun_glass_events_KeyEvent_RELEASE,
-                                   uch, jKeyChars, jModifiers);
-            (*env)->DeleteLocalRef(env, jKeyChars);
-
-            GLASS_CHECK_EXCEPTION(env);
-            return YES;
-        }
+    // If the user presses Command-"=" on a US keyboard the OS will send that
+    // to performKeyEquivalent. If it isn't handled it will then send
+    // Command-"+". This allows a user to invoke Command-"+" without using
+    // the Shift key. The OS does this for any key where + is the shifted
+    // character above =. It does something similar with the period key;
+    // Command-"." leads to Escape for dismissing dialogs. Here we detect and
+    // ignore the second key event.
+    if (theEvent != NSApp.currentEvent && NSApp.currentEvent == lastKeyEvent) {
+        return YES;
     }
 
     BOOL result = [self handleKeyDown: theEvent];

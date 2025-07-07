@@ -28,7 +28,6 @@ import java.util.Locale;
 import java.util.Optional;
 import java.util.Timer;
 import java.util.TimerTask;
-import java.util.concurrent.atomic.AtomicReference;
 import javafx.application.Application;
 import javafx.application.Platform;
 import javafx.event.EventHandler;
@@ -39,7 +38,6 @@ import javafx.scene.control.ChoiceBox;
 import javafx.scene.control.TextArea;
 import javafx.scene.input.KeyCharacterCombination;
 import javafx.scene.input.KeyCode;
-import javafx.scene.input.KeyCombination;
 import javafx.scene.input.KeyEvent;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Priority;
@@ -532,9 +530,10 @@ public class KeyboardTest extends Application {
     }
 
     /*
-     * A test run can exclude KeyCharacterCombinations entirely, process only
-     * those on the main keyboard (excluding the numeric keypad), or cover
-     * the entire layout.
+     * KeyCharacterCombinations should really work on the numeric keypad but
+     * currently don't on Windows and Linux. The tests can exclude combinations
+     * entirely, exclude just the numeric keypad, or cover both the main
+     * keyboard and the keypad.
      */
     private enum CombinationScope {
         NONE("without combinations"),
@@ -623,6 +622,8 @@ public class KeyboardTest extends Application {
 
         private void start(Runnable atEnd) {
             runAtEnd = atEnd;
+
+            log.clear();
 
             Optional<Boolean> capsLockOn = Platform.isKeyLocked(KeyCode.CAPS);
             Optional<Boolean> numLockOn = Platform.isKeyLocked(KeyCode.NUM_LOCK);
@@ -807,105 +808,6 @@ public class KeyboardTest extends Application {
         }
     }
 
-    // Here we try to find one case where a shortcut references a symbol that
-    // is normally generated using Shift. In particular we're testing whether
-    // Cmd + "+" works as expected on the US English layout on the Mac. The
-    // OS special-cases this combination and so does JavaFX. In any case
-    // Shortcut + "+" is a very common shortcut and deserves a test.
-    private void testShiftedShortcut(Layout layout, Node focusNode, Logging log) {
-        KeyData testCase = null;
-
-        // Find a test case, favoring "+".
-        for (KeyData d : layout.getKeys()) {
-            if (!d.code.isKeypadKey()) {
-                if (d.comboChar == "+") {
-                    testCase = d;
-                    break;
-                }
-                else if (d.comboChar == ">") {
-                    testCase = d;
-                }
-            }
-        }
-
-        if (testCase != null) {
-            final var data = testCase;
-
-            focusNode.requestFocus();
-
-            Object eventLoop = new Object();
-            Object success = new Object();
-            Object nomatch = new Object();
-            Object timeout = new Object();
-
-            var modifierKeyCode = onMac ? KeyCode.COMMAND : KeyCode.CONTROL;
-            var acceleratorKeyCode = data.code;
-            var combination = new KeyCharacterCombination(data.comboChar, KeyCombination.SHORTCUT_DOWN);
-
-            var testResult = new AtomicReference<Object>(nomatch);
-
-            // We will send two key press events, one for the modifier and the
-            // second for the accelerator.
-
-            // If we never see the modifier released something has gone wrong.
-            var timeoutTask = new TimerTask() {
-                @Override
-                public void run() {
-                    Platform.runLater(() -> {
-                        Platform.exitNestedEventLoop(eventLoop, timeout);
-                    });
-                }
-            };
-
-            // Here we test if the character key press matches our combination.
-            final EventHandler<KeyEvent> pressedHandler = (e -> {
-                if (e.getCode() == acceleratorKeyCode) {
-                    if (combination.match(e)) {
-                        testResult.set(success);
-                    }
-                }
-            });
-
-            // The test is over when the modifier is released.
-            final EventHandler<KeyEvent> releasedHandler = (e -> {
-                if (e.getCode() == modifierKeyCode) {
-                    timeoutTask.cancel();
-                    Platform.runLater(() -> {
-                        Platform.exitNestedEventLoop(eventLoop, testResult.get());
-                    });
-                }
-            });
-
-            focusNode.addEventFilter(KeyEvent.KEY_PRESSED, pressedHandler);
-            focusNode.addEventFilter(KeyEvent.KEY_RELEASED, releasedHandler);
-
-            final var timer = new Timer();
-            timer.schedule(timeoutTask, 100);
-
-            final Robot robot = new Robot();
-            robot.keyPress(modifierKeyCode);
-            robot.keyPress(acceleratorKeyCode);
-            robot.keyRelease(acceleratorKeyCode);
-            robot.keyRelease(modifierKeyCode);
-
-            // Wait for the final event to arrive or the timout to fire
-            Object result = Platform.enterNestedEventLoop(eventLoop);
-
-            focusNode.removeEventFilter(KeyEvent.KEY_PRESSED, pressedHandler);
-            focusNode.removeEventFilter(KeyEvent.KEY_RELEASED, releasedHandler);
-
-            timeoutTask.cancel();
-            timer.cancel();
-
-            if (result.equals(nomatch)) {
-                log.addLine("Failed: Shortcut + " + data.comboChar + " did not match event");
-            }
-            else if (result.equals(timeout)) {
-                log.addLine("Failed: Timeout waiting for shortcut test to finish");
-            }
-        }
-    }
-
     private class TextLogging implements Logging {
         private final TextArea textArea;
         public TextLogging(TextArea ta) {
@@ -936,20 +838,13 @@ public class KeyboardTest extends Application {
 
         ChoiceBox<CombinationScope> combinationChoice = new ChoiceBox<>();
         combinationChoice.getItems().setAll(CombinationScope.values());
-        combinationChoice.setValue(CombinationScope.ALL);
+        combinationChoice.setValue(CombinationScope.NONE);
 
         Button testButton = new Button("Run test");
         testButton.setOnAction(b -> {
             testButton.setDisable(true);
-            logger.clear();
             Layout layout = layoutChoice.getValue();
             CombinationScope comboScope = combinationChoice.getValue();
-            // Some platforms learn the layout as events are received. We
-            // perform this test first before the system learns the layout
-            // from all the events the TestRunner throws at it.
-            if (comboScope != CombinationScope.NONE) {
-                testShiftedShortcut(layout, logArea, logger);
-            }
             TestRunner testRunner = new TestRunner(layout, comboScope, logArea, logger);
             testRunner.start(() -> {
                 testButton.setDisable(false);
