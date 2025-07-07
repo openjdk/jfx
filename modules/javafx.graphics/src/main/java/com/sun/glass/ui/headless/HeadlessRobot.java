@@ -18,7 +18,7 @@ public class HeadlessRobot extends GlassRobot {
     final int multiplierX = 40;
     final int multiplierY = 40;
     private final HeadlessApplication application;
-    private Window activeWindow = null;
+    private HeadlessWindow activeWindow = null;
 
     private double mouseX, mouseY;
 
@@ -176,7 +176,7 @@ public class HeadlessRobot extends GlassRobot {
     @Override
     public void getScreenCapture(int x, int y, int width, int height, int[] data, boolean scaleToFit) {
         checkWindowFocused();
-        ((HeadlessWindow)activeWindow).getScreenCapture(x, y, width, height, data, scaleToFit);
+        activeWindow.getScreenCapture(x, y, width, height, data, scaleToFit);
     }
 
     private void checkActiveWindowExists() {

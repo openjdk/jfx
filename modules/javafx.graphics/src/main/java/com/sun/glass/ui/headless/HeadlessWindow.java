@@ -9,12 +9,12 @@ import com.sun.glass.ui.View;
 import com.sun.glass.ui.Window;
 import java.nio.ByteBuffer;
 import java.nio.IntBuffer;
-import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicLong;
 import javafx.scene.paint.Color;
 
 public class HeadlessWindow extends Window {
 
-    private static final AtomicInteger ptrCount = new AtomicInteger(0);
+    private static final AtomicLong ptrCount = new AtomicLong(0);
     private long ptr;
     private final HeadlessWindowManager windowManager;
 
@@ -28,6 +28,8 @@ public class HeadlessWindow extends Window {
     private final ByteBuffer frameBuffer;
     private HeadlessView currentView;
     private HeadlessRobot robot;
+
+    private final int stride = 1000;
 
     public HeadlessWindow(HeadlessWindowManager wm, Window owner, Screen screen, ByteBuffer frameBuffer, int styleMask) {
         super(owner, screen, styleMask);
@@ -284,19 +286,14 @@ public class HeadlessWindow extends Window {
     public Color getColor(int lx, int ly) {
         int mx = lx;
         int my = ly;
-        int idx = 1000 * my + mx;
+        int idx = stride * my + mx;
         int rgba = frameBuffer.asIntBuffer().get(idx);
         int a = (rgba >> 24) & 0xFF;
         int r = (rgba >> 16) & 0xFF;
         int g = (rgba >> 8) & 0xFF;
         int b = rgba & 0xFF;
 
-        Color color = Color.color(
-                r / 255.0,
-                g / 255.0,
-                b / 255.0,
-                a / 255.0
-        );
+        Color color = Color.rgb(r, g, b, a);
         return color;
     }
 
@@ -304,7 +301,7 @@ public class HeadlessWindow extends Window {
         for (int i = 0; i < height; i++) {
             for (int j = 0; j < width; j++) {
                 int idx = i * width + j;
-                int fidx = (y + i) * 1000 + x + j;
+                int fidx = (y + i) * stride + x + j;
                 int val = frameBuffer.asIntBuffer().get(fidx);
                 data[idx] = val;
             }
@@ -316,7 +313,6 @@ public class HeadlessWindow extends Window {
         int pH = pixels.getHeight();
         int offsetX = this.getX();
         int offsetY = this.getY();
-        int stride = 1000;
 
         IntBuffer intBuffer = (IntBuffer) pixels.getBuffer();
 
@@ -331,7 +327,6 @@ public class HeadlessWindow extends Window {
     }
 
     void clearRect(int x0, int w0, int y0, int h0) {
-        int stride = 1000;
         for (int i = 0; i < h0; i++) {
             int rowIdx = y0 + i;
             for (int j = 0; j < w0; j++) {

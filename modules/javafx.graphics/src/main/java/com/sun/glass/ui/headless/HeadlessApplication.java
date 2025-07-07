@@ -19,7 +19,7 @@ public class HeadlessApplication extends Application {
 
     private final NestedRunnableProcessor processor = new NestedRunnableProcessor();
     private final HeadlessWindowManager windowManager = new HeadlessWindowManager();
-    private Screen[] screens = null;
+    private Screen[] screens;
     private HeadlessRobot activeRobot = null;
     ByteBuffer frameBuffer;
 
