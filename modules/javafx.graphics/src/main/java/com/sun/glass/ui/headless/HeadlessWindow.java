@@ -293,7 +293,7 @@ public class HeadlessWindow extends Window {
         int g = (rgba >> 8) & 0xFF;
         int b = rgba & 0xFF;
 
-        Color color = Color.rgb(r, g, b, a);
+        Color color = Color.rgb(r, g, b, a/255.);
         return color;
     }
 
