@@ -51,6 +51,10 @@ public interface EventTarget {
      * <p>
      * The caller shouldn't assume that the initial chain remains unchanged nor
      * that the returned value will reference a different chain.
+     * <p>
+     * While the event dispatch chain returned from this method could be used to dispatch an event,
+     * doing so is strongly discouraged. Dispatching an event correctly may require cooperation of
+     * the event target, which is only guaranteed when using the {@link #dispatchEvent(Event)} method.
      *
      * @param tail the initial chain to build from
      * @return the resulting event dispatch chain for this target
