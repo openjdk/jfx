@@ -7,7 +7,6 @@ import com.sun.glass.ui.Pixels;
 import com.sun.glass.ui.Screen;
 import com.sun.glass.ui.View;
 import com.sun.glass.ui.Window;
-import java.nio.Buffer;
 import java.nio.ByteBuffer;
 import java.nio.IntBuffer;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -24,16 +23,8 @@ public class HeadlessWindow extends Window {
     private int maxWidth = -1;
     private int maxHeight = -1;
     private int originalX, originalY, originalWidth, originalHeight;
-
-    private boolean resizable;
     private boolean visible;
-    private boolean isFocusable;
-    private boolean enabled;
-    private boolean closed;
-    private float bg_r, bg_g, bg_b;
-    private float alpha;
-    private Pixels icon;
-    private Cursor cursor;
+
     private final ByteBuffer frameBuffer;
     private HeadlessView currentView;
     private HeadlessRobot robot;
@@ -52,7 +43,6 @@ public class HeadlessWindow extends Window {
 
     @Override
     protected boolean _close(long ptr) {
-        this.closed = true;
         this.notifyDestroy();
         if (this.robot != null) {
             this.robot.windowRemoved(this);
@@ -155,7 +145,6 @@ public class HeadlessWindow extends Window {
 
     @Override
     protected boolean _setResizable(long ptr, boolean resizable) {
-        this.resizable = resizable;
         return true;
     }
 
@@ -167,7 +156,6 @@ public class HeadlessWindow extends Window {
 
     @Override
     protected void _setFocusable(long ptr, boolean isFocusable) {
-        this.isFocusable = isFocusable;
     }
 
     @Override
@@ -190,20 +178,15 @@ public class HeadlessWindow extends Window {
 
     @Override
     protected void _setAlpha(long ptr, float alpha) {
-        this.alpha = alpha;
     }
 
     @Override
     protected boolean _setBackground(long ptr, float r, float g, float b) {
-        this.bg_r = r;
-        this.bg_g = g;
-        this.bg_b = b;
         return true;
     }
 
     @Override
     protected void _setEnabled(long ptr, boolean enabled) {
-        this.enabled = enabled;
     }
 
     @Override
@@ -222,12 +205,10 @@ public class HeadlessWindow extends Window {
 
     @Override
     protected void _setIcon(long ptr, Pixels pixels) {
-        this.icon = pixels;
     }
 
     @Override
     protected void _setCursor(long ptr, Cursor cursor) {
-        this.cursor = cursor;
     }
 
     @Override
@@ -292,12 +273,10 @@ public class HeadlessWindow extends Window {
 
     private void notifyResizeAndMove(int x, int y, int width, int height) {
         HeadlessView view = (HeadlessView) getView();
-        //   if (getWidth() != width || getHeight() != height) {
         notifyResize(WindowEvent.RESIZE, width, height);
         if (view != null) {
             view.notifyResize(width, height);
         }
-        //  }
         if (getX() != x || getY() != y) {
             notifyMove(x, y);
         }

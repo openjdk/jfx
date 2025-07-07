@@ -209,7 +209,7 @@ public class HeadlessRobot extends GlassRobot {
         if (activeWindow != oldWindow) {
             HeadlessView view = (HeadlessView)activeWindow.getView();
             int modifiers = 0;
-            view.notifyMouse(MouseEvent.ENTER, MouseEvent.BUTTON_NONE, (int)mouseX-wx, (int)mouseY-wy, (int)mouseX, (int)mouseY, modifiers, true, true);
+            view.notifyMouse(MouseEvent.ENTER, MouseEvent.BUTTON_NONE, (int) mouseX - wx, (int) mouseY - wy, (int) mouseX, (int) mouseY, modifiers, true, true);
             if (oldWindow != null) {
                 HeadlessView oldView = (HeadlessView)oldWindow.getView();
                 if (oldView != null) {
