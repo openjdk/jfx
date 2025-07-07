@@ -264,14 +264,14 @@ LRESULT FullScreenWindow::WindowProc(UINT msg, WPARAM wParam, LPARAM lParam)
         case WM_ACTIVATE:
             {
                 // The fActive shouldn't be WA_INACTIVE && the window shouldn't be minimized:
-                const bool isFocusGained = LOWORD(wParam) != WA_INACTIVE && HIWORD(wParam) == 0;
+                const bool isActive = LOWORD(wParam) != WA_INACTIVE && HIWORD(wParam) == 0;
 
-                if (!isFocusGained && IsCommonDialogOwner()) {
+                if (!isActive && IsCommonDialogOwner()) {
                     // Remain in full screen while a file dialog is showing
                     break;
                 }
 
-                HWND hWndInsertAfter = isFocusGained ? HWND_TOPMOST : HWND_BOTTOM;
+                HWND hWndInsertAfter = isActive ? HWND_TOPMOST : HWND_BOTTOM;
 
                 if (m_bgWindow) {
                     ::SetWindowPos(m_bgWindow->GetHWND(), hWndInsertAfter, 0, 0, 0, 0,
@@ -282,14 +282,14 @@ LRESULT FullScreenWindow::WindowProc(UINT msg, WPARAM wParam, LPARAM lParam)
 
                 GlassWindow * window = GlassWindow::FromHandle(m_oldViewParent);
                 if (window) {
-                    window->HandleActivateEvent(isFocusGained ?
+                    window->HandleActivateEvent(isActive ?
                         com_sun_glass_events_WindowEvent_FOCUS_GAINED :
                         com_sun_glass_events_WindowEvent_FOCUS_LOST);
 
                     // Child windows don't have a taskbar button, therefore
                     // we force exiting from the FS mode if the window looses
                     // focus.
-                    if (!isFocusGained) {
+                    if (!isActive) {
                         ExitFullScreenMode(FALSE);
                     }
                 }
