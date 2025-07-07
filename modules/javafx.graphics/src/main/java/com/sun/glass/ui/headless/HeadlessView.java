@@ -7,22 +7,17 @@ import java.util.Map;
 
 public class HeadlessView extends View {
 
-    private Map capabilities;
     private int x = 0;
     private int y = 0;
     private long parentPtr = 0;
     private Pixels pixels;
 
-    private boolean imeEnabled;
-
     @Override
     protected void _enableInputMethodEvents(long ptr, boolean enable) {
-        this.imeEnabled = enable;
     }
 
     @Override
     protected long _create(Map capabilities) {
-        this.capabilities = capabilities;
         return 1;
     }
 

@@ -247,7 +247,7 @@ public class HeadlessWindow extends Window {
         throw new UnsupportedOperationException("Not supported yet.");
     }
 
-    boolean setFullscreen(boolean full) {
+    void setFullscreen(boolean full) {
         int newX = 0;
         int newY = 0;
         int newWidth = 0;
@@ -268,7 +268,6 @@ public class HeadlessWindow extends Window {
             newY = this.originalY;
         }
         notifyResizeAndMove(newX, newY, newWidth, newHeight);
-        return full;
     }
 
     private void notifyResizeAndMove(int x, int y, int width, int height) {

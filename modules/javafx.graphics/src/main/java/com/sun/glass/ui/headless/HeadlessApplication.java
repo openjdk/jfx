@@ -20,7 +20,6 @@ public class HeadlessApplication extends Application {
     private final NestedRunnableProcessor processor = new NestedRunnableProcessor();
     private final HeadlessWindowManager windowManager = new HeadlessWindowManager();
     private Screen[] screens = null;
-    private HeadlessCursor cursor;
     private HeadlessRobot activeRobot = null;
     ByteBuffer frameBuffer;
 
@@ -78,8 +77,7 @@ public class HeadlessApplication extends Application {
 
     @Override
     public Cursor createCursor(int type) {
-        this.cursor = new HeadlessCursor(type);
-        return this.cursor;
+        return new HeadlessCursor(type);
     }
 
     @Override
