@@ -197,7 +197,7 @@ public abstract class SkinBase<C extends Control> implements Skin<C> {
      * @param hoistingNode the descendant of this skin that hoisted the focus request
      *                     (not necessarily the focus delegate), or {@code null}
      * @return the focus delegate
-     * @since 24
+     * @since 26
      */
     protected Node getFocusDelegate(Node hoistingNode) {
         return null;
