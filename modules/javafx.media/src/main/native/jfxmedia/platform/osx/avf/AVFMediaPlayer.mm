@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2014, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -780,10 +780,6 @@ static CVReturn displayLinkCallback(CVDisplayLinkRef displayLink,
     }
 
     if (dataRequest != nil) {
-        long position = locatorStream->GetCallbacks()->Seek(dataRequest.requestedOffset);
-        if (position != dataRequest.requestedOffset) {
-            return NO;
-        }
 
         // If requestsAllDataToEndOfResource is YES, than requestedLength is
         // invalid and we need to provide all data to the end of file.
@@ -804,12 +800,19 @@ static CVReturn displayLinkCallback(CVDisplayLinkRef displayLink,
 
         NSMutableData* readData = nil;
         bool isRandomAccess = locatorStream->GetCallbacks()->IsRandomAccess();
-        int64_t pos = 0;
-        int size = 65536;
+        int64_t position = -1;
+        if (isRandomAccess) {
+            position = dataRequest.requestedOffset;
+        } else {
+            position = locatorStream->GetCallbacks()->Seek(dataRequest.requestedOffset);
+            if (position != dataRequest.requestedOffset) {
+                return NO;
+            }
+        }
         while (requestedLength > 0) {
             unsigned int blockSize = -1;
             if (isRandomAccess) {
-                blockSize = locatorStream->GetCallbacks()->ReadBlock(pos, size);
+                blockSize = locatorStream->GetCallbacks()->ReadBlock(position, requestedLength);
             } else {
                 blockSize = locatorStream->GetCallbacks()->ReadNextBlock();
             }
@@ -826,7 +829,7 @@ static CVReturn displayLinkCallback(CVDisplayLinkRef displayLink,
             [loadingRequest.dataRequest respondWithData:readData];
 
             requestedLength -= readSize;
-            pos += readSize;
+            position += readSize;
         }
 
         [loadingRequest finishLoading];

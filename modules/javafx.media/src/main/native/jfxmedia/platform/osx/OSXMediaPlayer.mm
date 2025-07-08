@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -328,7 +328,8 @@ JNIEXPORT void JNICALL Java_com_sun_media_jfxmediaimpl_platform_osx_OSXMediaPlay
         [scheme caseInsensitiveCompare:@"jrt"] == NSOrderedSame) {
         CJavaInputStreamCallbacks *callbacks = new (nothrow) CJavaInputStreamCallbacks();
         jobject jConnectionHolder = CLocator::CreateConnectionHolder(env, jLocator);
-        if (callbacks == NULL) {
+        if (callbacks == NULL  || jConnectionHolder == NULL) {
+            if (callbacks) delete callbacks;
             [mediaURL release];
             LOGGER_WARNMSG("OSXMediaPlayer: Unable to create CJavaInputStreamCallbacks\n");
             ThrowJavaException(env, "com/sun/media/jfxmedia/MediaException",
