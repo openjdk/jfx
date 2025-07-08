@@ -612,9 +612,11 @@ public final class Platform {
         /**
          * Specifies whether applications should always show scroll bars. If not set, an application may
          * choose to hide scroll bars that are not actively used, or make them smaller or less noticeable.
+         * <p>
+         * This property corresponds to the <a href="../scene/doc-files/cssref.html#mediafeatures">
+         * {@code -fx-prefers-persistent-scrollbars}</a> media feature.
          *
          * @return the {@code persistentScrollBars} property
-         * @mediaFeature <a href="../scene/doc-files/cssref.html#mediafeatures">{@code -fx-prefers-persistent-scrollbars}</a>
          * @defaultValue {@code false}
          * @since 24
          */
@@ -625,9 +627,11 @@ public final class Platform {
         /**
          * Specifies whether applications should minimize the amount of non-essential animations,
          * reducing discomfort for users who experience motion sickness or vertigo.
+         * <p>
+         * This property corresponds to the <a href="../scene/doc-files/cssref.html#mediafeatures">
+         * {@code prefers-reduced-motion}</a> media feature.
          *
          * @return the {@code reducedMotion} property
-         * @mediaFeature <a href="../scene/doc-files/cssref.html#mediafeatures">{@code prefers-reduced-motion}</a>
          * @defaultValue {@code false}
          * @since 24
          */
@@ -638,9 +642,11 @@ public final class Platform {
         /**
          * Specifies whether applications should minimize the amount of transparent or translucent
          * layer effects, which can help to increase contrast and readability for some users.
+         * <p>
+         * This property corresponds to the <a href="../scene/doc-files/cssref.html#mediafeatures">
+         * {@code prefers-reduced-transparency}</a> media feature.
          *
          * @return the {@code reducedTransparency} property
-         * @mediaFeature <a href="../scene/doc-files/cssref.html#mediafeatures">{@code prefers-reduced-transparency}</a>
          * @defaultValue {@code false}
          * @since 24
          */
@@ -651,9 +657,11 @@ public final class Platform {
         /**
          * Specifies whether applications should minimize the amount of internet traffic, which users
          * might request because they are on a metered network or a limited data plan.
+         * <p>
+         * This property corresponds to the <a href="../scene/doc-files/cssref.html#mediafeatures">
+         * {@code prefers-reduced-data}</a> media feature.
          *
          * @return the {@code reducedData} property
-         * @mediaFeature <a href="../scene/doc-files/cssref.html#mediafeatures">{@code prefers-reduced-data}</a>
          * @defaultValue {@code false}
          * @since 24
          */
@@ -664,9 +672,11 @@ public final class Platform {
         /**
          * The platform color scheme, which specifies whether applications should prefer light text on
          * dark backgrounds, or dark text on light backgrounds.
+         * <p>
+         * This property corresponds to the <a href="../scene/doc-files/cssref.html#mediafeatures">
+         * {@code prefers-color-scheme}</a> media feature.
          *
          * @return the {@code colorScheme} property
-         * @mediaFeature <a href="../scene/doc-files/cssref.html#mediafeatures">{@code prefers-color-scheme}</a>
          * @defaultValue {@link ColorScheme#LIGHT}
          */
         ReadOnlyObjectProperty<ColorScheme> colorSchemeProperty();

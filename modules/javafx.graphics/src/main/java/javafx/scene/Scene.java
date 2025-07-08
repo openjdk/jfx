@@ -5993,9 +5993,11 @@ public class Scene implements EventTarget {
         /**
          * Specifies whether applications should always show scroll bars. If set to {@code false}, applications
          * may choose to hide scroll bars that are not actively used, or make them smaller or less noticeable.
+         * <p>
+         * This property corresponds to the <a href="../scene/doc-files/cssref.html#mediafeatures">
+         * {@code -fx-prefers-persistent-scrollbars}</a> media feature.
          *
          * @return the {@code persistentScrollBars} property
-         * @mediaFeature <a href="doc-files/cssref.html#mediafeatures">{@code -fx-prefers-persistent-scrollbars}</a>
          * @defaultValue {@link Platform.Preferences#isPersistentScrollBars()}
          * @see Platform.Preferences#persistentScrollBarsProperty()
          */
@@ -6022,9 +6024,11 @@ public class Scene implements EventTarget {
         /**
          * Specifies whether the scene should minimize the amount of non-essential animations,
          * reducing discomfort for users who experience motion sickness or vertigo.
+         * <p>
+         * This property corresponds to the <a href="../scene/doc-files/cssref.html#mediafeatures">
+         * {@code prefers-reduced-motion}</a> media feature.
          *
          * @return the {@code reducedMotion} property
-         * @mediaFeature <a href="doc-files/cssref.html#mediafeatures">{@code prefers-reduced-motion}</a>
          * @defaultValue {@link Platform.Preferences#isReducedMotion()}
          * @see Platform.Preferences#reducedMotionProperty()
          */
@@ -6051,9 +6055,11 @@ public class Scene implements EventTarget {
         /**
          * Specifies whether the scene should minimize the amount of transparent or translucent
          * layer effects, which can help to increase contrast and readability for some users.
+         * <p>
+         * This property corresponds to the <a href="../scene/doc-files/cssref.html#mediafeatures">
+         * {@code prefers-reduced-transparency}</a> media feature.
          *
          * @return the {@code reducedTransparency} property
-         * @mediaFeature <a href="doc-files/cssref.html#mediafeatures">{@code prefers-reduced-transparency}</a>
          * @defaultValue {@link Platform.Preferences#isReducedTransparency()}
          * @see Platform.Preferences#reducedTransparencyProperty()
          */
@@ -6080,9 +6086,11 @@ public class Scene implements EventTarget {
         /**
          * Specifies whether the scene should minimize the amount of internet traffic, which users
          * might request because they are on a metered network or a limited data plan.
+         * <p>
+         * This property corresponds to the <a href="../scene/doc-files/cssref.html#mediafeatures">
+         * {@code prefers-reduced-data}</a> media feature.
          *
          * @return the {@code reducedData} property
-         * @mediaFeature <a href="doc-files/cssref.html#mediafeatures">{@code prefers-reduced-data}</a>
          * @defaultValue {@link Platform.Preferences#isReducedData()}
          * @see Platform.Preferences#reducedDataProperty()
          */
@@ -6109,9 +6117,11 @@ public class Scene implements EventTarget {
         /**
          * Specifies whether the scene should prefer light text on dark backgrounds, or dark text
          * on light backgrounds.
+         * <p>
+         * This property corresponds to the <a href="../scene/doc-files/cssref.html#mediafeatures">
+         * {@code prefers-color-scheme}</a> media feature.
          *
          * @return the {@code colorScheme} property
-         * @mediaFeature <a href="doc-files/cssref.html#mediafeatures">{@code prefers-color-scheme}</a>
          * @defaultValue {@link Platform.Preferences#getColorScheme()}
          * @see Platform.Preferences#colorSchemeProperty()
          */
