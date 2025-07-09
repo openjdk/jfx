@@ -528,7 +528,7 @@ public class TextFlow extends Pane {
      * <p>
      * Note that this method should not be used to control the tab placement when multiple {@code Text} nodes
      * with different fonts are contained within this {@code TextFlow}.
-     * In this case, the {@link #setTabStopPolicy(TabStopPolicy)} should be used instead.
+     * In this case, {@link #setTabStopPolicy(TabStopPolicy)} should be used instead.
      *
      * @defaultValue 8
      *
@@ -566,7 +566,7 @@ public class TextFlow extends Pane {
     }
 
     /**
-     * {@code TabStopPolicy} determines the tab stop positions within this {@code TextFlow}.
+     * Determines the tab stop positions within this {@code TextFlow}.
      * <p>
      * A non-null {@code TabStopPolicy} overrides values set by {@link #setTabSize(int)},
      * as well as any values set by {@link Text#setTabSize(int)} in individual {@code Text} instances within
@@ -617,14 +617,14 @@ public class TextFlow extends Pane {
                 protected void invalidated() {
                     if (old != null) {
                         old.tabStops().removeListener(monitor);
-                        old.defaultInterval().removeListener(monitor);
+                        old.defaultIntervalProperty().removeListener(monitor);
                     }
 
                     TabStopPolicy p = get();
                     if (p != null) {
                         // FIX does this create a memory leak?
                         p.tabStops().addListener(monitor);
-                        p.defaultInterval().addListener(monitor);
+                        p.defaultIntervalProperty().addListener(monitor);
                     }
                     old = p;
                     updateTabAdvancePolicy();

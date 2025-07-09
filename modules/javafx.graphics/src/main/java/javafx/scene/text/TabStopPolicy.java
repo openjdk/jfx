@@ -56,16 +56,17 @@ public final class TabStopPolicy {
     }
 
     /**
-     * Specifies the default tab stop interval (beyond the last tab stop provided by {@code #tabStops()}),
-     * as a fixed repeating distance (in pixels) to the next tab stop computed at regular intervals
-     * relative to the leading edge of the {@code TextFlow} node.
+     * Specifies the default tab stop interval for tabs beyond the last stop provided
+     * by {@code #tabStops()}.  This is a fixed repeating distance (in pixels) to the
+     * next tab stop computed at regular intervals relative to the leading edge
+     * of the {@code TextFlow} node.
      * <p>
      * A value of less than or equal 0 disables the default interval.
      *
      * @return the default tab interval property
      * @defaultValue 0
      */
-    public final DoubleProperty defaultInterval() {
+    public final DoubleProperty defaultIntervalProperty() {
         return defaultInterval;
     }
 
