@@ -34,7 +34,7 @@ import javafx.scene.layout.Region;
 /**
  * The TabStopPolicy determines the tab stop positions within the text layout.
  *
- * @since 999 TODO
+ * @since 25
  */
 public final class TabStopPolicy {
     private final ObservableList<TabStop> tabStops = FXCollections.observableArrayList();
