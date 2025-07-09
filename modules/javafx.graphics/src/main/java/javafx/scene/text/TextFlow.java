@@ -194,7 +194,7 @@ public class TextFlow extends Pane {
     /**
      * Maps local point to {@link HitInfo} in the content.
      * <p>
-     * NOTE: this method may return incorrect value with non-empty border or padding.
+     * NOTE: this method does not take border or padding into account.
      *
      * @param point the specified point to be tested
      * @return a {@code HitInfo} representing the character index found
@@ -236,7 +236,7 @@ public class TextFlow extends Pane {
     /**
      * Returns shape of caret in local coordinates.
      * <p>
-     * NOTE: this method does not account for padding/borders.
+     * NOTE: this method does not take border or padding into account.
      *
      * @param charIndex the character index for the caret
      * @param leading whether the caret is biased on the leading edge of the character
@@ -270,7 +270,7 @@ public class TextFlow extends Pane {
      * <p>
      * NOTES:
      * <ul>
-     * <li>this method may return incorrect values with non-empty padding or border
+     * <li>this method does not take border or padding into account
      * <li>the shapes returned do not include line spacing
      * </ul>
      *
@@ -302,6 +302,8 @@ public class TextFlow extends Pane {
 
     /**
      * Returns the shape for the underline in local coordinates.
+     * <p>
+     * NOTE: this method does not take border or padding into account.
      *
      * @param start the beginning character index for the range
      * @param end the end character index (non-inclusive) for the range

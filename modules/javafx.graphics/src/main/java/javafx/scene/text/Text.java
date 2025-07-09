@@ -1088,8 +1088,7 @@ public non-sealed class Text extends Shape {
 
     /**
      * Returns the shape for the range of the text in local coordinates.
-     * <p>
-     * NOTE: this shapes returned do not include line spacing.
+     * The returned value does not include line spacing.
      *
      * @param start the beginning character index for the range
      * @param end the end character index (non-inclusive) for the range
