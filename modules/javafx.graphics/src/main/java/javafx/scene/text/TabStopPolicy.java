@@ -57,7 +57,7 @@ public final class TabStopPolicy {
 
     /**
      * Specifies the default tab stop interval for tabs beyond the last stop provided
-     * by {@code #tabStops()}.  This is a fixed repeating distance (in pixels) to the
+     * by {@link #tabStops()}.  This is a fixed repeating distance (in pixels) to the
      * next tab stop computed at regular intervals relative to the leading edge
      * of the {@code TextFlow} node.
      * <p>
