@@ -39,12 +39,12 @@ import com.sun.javafx.scene.text.TabAdvancePolicy;
 public class DefaultTabAdvancePolicy implements TabAdvancePolicy {
     private final TextFlow flow;
     private final float[] stops;
-    private final float defaultStops;
+    private final float interval;
 
-    private DefaultTabAdvancePolicy(TextFlow flow, float[] tabs, float defaultStops) {
+    private DefaultTabAdvancePolicy(TextFlow flow, float[] tabs, float interval) {
         this.flow = flow;
         this.stops = tabs;
-        this.defaultStops = defaultStops;
+        this.interval = interval;
     }
 
     public static DefaultTabAdvancePolicy of(TextFlow flow, TabStopPolicy p) {
@@ -55,8 +55,8 @@ public class DefaultTabAdvancePolicy implements TabAdvancePolicy {
             stops[i] = (float)stop.getPosition();
         }
         Arrays.sort(stops);
-        float defaultStops = (float)p.getDefaultStops();
-        return new DefaultTabAdvancePolicy(flow, stops, defaultStops);
+        float interval = (float)p.getDefaultInterval();
+        return new DefaultTabAdvancePolicy(flow, stops, interval);
     }
 
     @Override
@@ -67,10 +67,10 @@ public class DefaultTabAdvancePolicy implements TabAdvancePolicy {
                 return (float)(p);
             }
         }
-        if (defaultStops == 0.0f) {
+        if (interval <= 0.0f) {
             return -1.0f;
         }
-        return FixedTabAdvancePolicy.nextPosition(position - offset, defaultStops) + offset;
+        return FixedTabAdvancePolicy.nextPosition(position - offset, interval) + offset;
     }
 
     @Override
@@ -84,7 +84,7 @@ public class DefaultTabAdvancePolicy implements TabAdvancePolicy {
             }
             sb.append(stops[i]);
         }
-        sb.append("], defaultStops=").append(defaultStops);
+        sb.append("], interval=").append(interval);
         sb.append("}");
         return sb.toString();
     }

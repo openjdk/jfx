@@ -617,14 +617,14 @@ public class TextFlow extends Pane {
                 protected void invalidated() {
                     if (old != null) {
                         old.tabStops().removeListener(monitor);
-                        old.defaultStopsProperty().removeListener(monitor);
+                        old.defaultInterval().removeListener(monitor);
                     }
 
                     TabStopPolicy p = get();
                     if (p != null) {
                         // FIX does this create a memory leak?
                         p.tabStops().addListener(monitor);
-                        p.defaultStopsProperty().addListener(monitor);
+                        p.defaultInterval().addListener(monitor);
                     }
                     old = p;
                     updateTabAdvancePolicy();
