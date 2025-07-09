@@ -199,7 +199,7 @@ public class TextFlow extends Pane {
      * @param point the specified point to be tested
      * @return a {@code HitInfo} representing the character index found
      * @since 9
-     * @deprecated replaced by {@code getHitInfo()}
+     * @deprecated replaced by {@link #getHitInfo()}
      */
     @Deprecated(since="25")
     public final HitInfo hitTest(javafx.geometry.Point2D point) {
@@ -242,7 +242,7 @@ public class TextFlow extends Pane {
      * @param leading whether the caret is biased on the leading edge of the character
      * @return an array of {@code PathElement} which can be used to create a {@code Shape}
      * @since 9
-     * @deprecated replaced by {@code getCaretShape()}
+     * @deprecated replaced by {@link #getCaretShape()}
      */
     @Deprecated(since="25")
     public PathElement[] caretShape(int charIndex, boolean leading) {
@@ -278,7 +278,7 @@ public class TextFlow extends Pane {
      * @param end the end character index (non-inclusive) for the range
      * @return an array of {@code PathElement} which can be used to create a {@code Shape}
      * @since 9
-     * @deprecated replaced by {@code getRangeShape()}
+     * @deprecated replaced by {@link #getRangeShape()}
      */
     @Deprecated(since="25")
     public final PathElement[] rangeShape(int start, int end) {
@@ -309,7 +309,7 @@ public class TextFlow extends Pane {
      * @param end the end character index (non-inclusive) for the range
      * @return an array of {@code PathElement} which can be used to create a {@code Shape}
      * @since 21
-     * @deprecated replaced by {@code getUnderlineShape()}
+     * @deprecated replaced by {@link #getUnderlineShape()}
      */
     @Deprecated(since="25")
     public final PathElement[] underlineShape(int start, int end) {
