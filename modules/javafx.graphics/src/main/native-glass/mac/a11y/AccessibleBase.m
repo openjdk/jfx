@@ -96,7 +96,8 @@ static NSMutableDictionary * rolesMap;
     [super dealloc];
 }
 
-- (jobject)getJAccessible {
+- (jobject)getJAccessible
+{
     return self->jAccessible;
 }
 
