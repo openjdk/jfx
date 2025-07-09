@@ -108,10 +108,9 @@ static NSMutableDictionary * rolesMap;
  */
 - (id)requestNodeAttribute:(NSString *)attribute
 {
-    jobject jresult = NULL;
     GET_MAIN_JENV;
     if (env == NULL) return NULL;
-    jresult = (jobject)(*env)->CallLongMethod(env, [self getJAccessible],
+    jobject jresult = (jobject)(*env)->CallLongMethod(env, [self getJAccessible],
                                               jAccessibilityAttributeValue, (jlong)attribute);
     GLASS_CHECK_EXCEPTION(env);
     return variantToID(env, jresult);
