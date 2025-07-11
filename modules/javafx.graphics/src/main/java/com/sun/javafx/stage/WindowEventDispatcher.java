@@ -25,13 +25,16 @@
 
 package com.sun.javafx.stage;
 
+import com.sun.javafx.tk.Toolkit;
+
 import com.sun.javafx.event.BasicEventDispatcher;
 import com.sun.javafx.event.CompositeEventDispatcher;
 import com.sun.javafx.event.EventHandlerManager;
 import com.sun.javafx.event.EventRedirector;
 
+import javafx.event.Event;
+import javafx.scene.input.KeyEvent;
 import javafx.stage.Window;
-import javafx.stage.PopupWindow;
 
 /**
  * An {@code EventDispatcher} for {@code Window}. It is formed by a chain
@@ -39,25 +42,55 @@ import javafx.stage.PopupWindow;
  * and then through {@code EventHandlerManager}.
  */
 public class WindowEventDispatcher extends CompositeEventDispatcher {
+
+    static class SystemMenuHandler extends BasicEventDispatcher {
+        private enum SupportedState {
+            TRUE,
+            FALSE,
+            UNKNOWN
+        };
+
+        private SupportedState supported = SupportedState.UNKNOWN;
+
+        @Override
+        public Event dispatchBubblingEvent(Event event) {
+            if (supported == SupportedState.UNKNOWN) {
+                var systemMenu = Toolkit.getToolkit().getSystemMenu();
+                if (systemMenu != null && systemMenu.isSupported()) {
+                    supported = SupportedState.TRUE;
+                } else {
+                    supported = SupportedState.FALSE;
+                }
+            }
+            if (supported == SupportedState.TRUE && event.getEventType() == KeyEvent.KEY_PRESSED && (event instanceof KeyEvent)) {
+               Toolkit.getToolkit().getSystemMenu().handleKeyEvent((KeyEvent)event);
+            }
+            return event;
+        }
+    }
+
     private final EventRedirector eventRedirector;
 
     private final WindowCloseRequestHandler windowCloseRequestHandler;
 
     private final EventHandlerManager eventHandlerManager;
 
-    private final WindowSystemMenuHandler systemMenuHandler;
+    private final SystemMenuHandler systemMenuHandler;
 
     public WindowEventDispatcher(final Window window) {
         this(new EventRedirector(window),
              new WindowCloseRequestHandler(window),
              new EventHandlerManager(window),
-             new WindowSystemMenuHandler(window));
+             new SystemMenuHandler());
     }
 
-    public WindowEventDispatcher(final PopupWindow popupWindow) {
-        this(new EventRedirector(popupWindow),
-             new WindowCloseRequestHandler(popupWindow),
-             new EventHandlerManager(popupWindow),
+    public WindowEventDispatcher(
+            final EventRedirector eventRedirector,
+            final WindowCloseRequestHandler windowCloseRequestHandler,
+            final EventHandlerManager eventHandlerManager) {
+        this(eventRedirector,
+             windowCloseRequestHandler,
+             eventHandlerManager,
              null);
     }
 
@@ -65,7 +98,7 @@ public class WindowEventDispatcher extends CompositeEventDispatcher {
             final EventRedirector eventRedirector,
             final WindowCloseRequestHandler windowCloseRequestHandler,
             final EventHandlerManager eventHandlerManager,
-            final WindowSystemMenuHandler systemMenuHandler) {
+            final SystemMenuHandler systemMenuHandler) {
         this.eventRedirector = eventRedirector;
         this.windowCloseRequestHandler = windowCloseRequestHandler;
         this.eventHandlerManager = eventHandlerManager;
