@@ -55,15 +55,16 @@ public final class TextUtils {
      * @param type the type of geometry to query
      * @param dx the x offset to add to each path element
      * @param dy the y offset to add to each path element
+     * @param lineSpacing the line spacing (applies only to TYPE_TEXT)
      * @return the array of {@code PathElement}s
      */
-    public static PathElement[] getRange(TextLayout layout, int start, int end, int type, double dx, double dy) {
+    public static PathElement[] getRange(TextLayout layout, int start, int end, int type, double dx, double dy, double lineSpacing) {
         ArrayList<PathElement> a = new ArrayList<>();
         layout.getRange(start, end, type, (left, top, right, bottom) -> {
             double leftEdge = left + dx;
             double rightEdge = right + dx;
             double topEdge = top + dy;
-            double bottomEdge = bottom + dy;
+            double bottomEdge = bottom + dy + lineSpacing;
             a.add(new MoveTo(leftEdge, topEdge));
             a.add(new LineTo(rightEdge, topEdge));
             a.add(new LineTo(rightEdge, bottomEdge));
