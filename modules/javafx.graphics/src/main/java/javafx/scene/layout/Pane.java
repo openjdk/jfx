@@ -26,9 +26,17 @@
 package javafx.scene.layout;
 
 import com.sun.javafx.scene.layout.PaneHelper;
+
+import java.util.Objects;
+
 import javafx.beans.DefaultProperty;
 import javafx.collections.ObservableList;
+import javafx.css.CssMetaData;
+import javafx.css.StyleOrigin;
+import javafx.css.Styleable;
+import javafx.css.StyleableObjectProperty;
 import javafx.scene.Node;
+import javafx.scene.Parent;
 
 /**
  * Base class for layout panes which need to expose the children list as public
@@ -102,6 +110,136 @@ public class Pane extends Region {
     static {
         PaneHelper.setPaneAccessor(new PaneHelper.PaneAccessor() {
         });
+    }
+
+    /**
+     * Gets the property for a child constraint.
+     *
+     * @param <T> type of the constraint
+     * @param child a child node, cannot be {@code null}
+     * @param cssMetaData a CSS meta data instance, cannot be {@code null}
+     * @throws NullPointerException when any argument is {@code null}
+     */
+    static <T> StyleableObjectProperty<T> childConstraintProperty(Node child, CssMetaData<Styleable, T> cssMetaData) {
+        Objects.requireNonNull(cssMetaData, "cssMetaData");
+
+        @SuppressWarnings("unchecked")
+        StyleableObjectProperty<T> castProperty = (StyleableObjectProperty<T>) child.getProperties()
+            .computeIfAbsent(cssMetaData, k -> createChildConstraintProperty(child, cssMetaData));
+
+        return castProperty;
+    }
+
+    private static <T> StyleableObjectProperty<T> createChildConstraintProperty(Node node, CssMetaData<Styleable, T> cssMetaData) {
+        String name = cssMetaData.getProperty();
+
+        if (name.startsWith("-fx-")) {
+            name = name.substring(4);
+        }
+
+        String propertyName = name + " (parent property)";
+
+        return new StyleableObjectProperty<>() {
+
+            /*
+             * If in the future these properties are made available to the user,
+             * consider carefully the life cycle surrounding bindings/listeners
+             * as these properties should only exist while its Node lives under
+             * a specific Parent.
+             */
+
+            @Override
+            public void applyStyle(StyleOrigin origin, T newValue) {
+                super.applyStyle(origin, newValue);
+
+                if (origin == null && Objects.equals(cssMetaData.getInitialValue(node), newValue)) {
+
+                    /*
+                     * The property was fully reset to its initial state. This happens when the
+                     * property was set only by CSS, and the style that set it no longer applies.
+                     * The CSS engine will restore the property to its initial value then,
+                     * including setting origin to null.
+                     *
+                     * Note that users can't do this with the current API's; if a user sets a
+                     * property to a value, the style origin will be USER, even if reset to
+                     * its initial value. So in cases where the property was manually set the
+                     * property will never be removed from the properties map.
+                     */
+
+                    node.getProperties().remove(cssMetaData);
+                }
+            }
+
+            @Override
+            public void invalidated() {
+                if (node.getParent() instanceof Parent p) {
+                    p.requestLayout();
+                }
+            }
+
+            @Override
+            public CssMetaData<Styleable, T> getCssMetaData() {
+                return cssMetaData;
+            }
+
+            @Override
+            public Object getBean() {
+                return node;
+            }
+
+            @Override
+            public String getName() {
+                return propertyName;
+            }
+        };
+    }
+
+    /**
+     * Set the value of a child constraint.
+     *
+     * @param <T> type of the constraint
+     * @param child a child node, cannot be {@code null}
+     * @param cssMetaData a CSS meta data instance, cannot be {@code null}
+     * @param value a value to set, can be {@code null}
+     * @throws NullPointerException when {@code node} or {@cssMetaData} is {@code null}
+     */
+    static <T> void setChildConstraint(Node child, CssMetaData<Styleable, T> cssMetaData, T value) {
+        childConstraintProperty(child, cssMetaData).set(value);
+    }
+
+    /**
+     * Get the value of a child constraint. If the constraint was unset, returns
+     * a default value based on the initial value specified in the CSS meta data.
+     *
+     * @param <T> type of the constraint
+     * @param child a child node, cannot be {@code null}
+     * @param cssMetaData a CSS meta data instance, cannot be {@code null}
+     * @return the current value of the child constraint, can be {@code null} if
+     *     it was unset and the default value was {@code null}
+     * @throws NullPointerException when any argument is {@code null}
+     */
+    static <T> T getChildConstraint(Node child, CssMetaData<Styleable, T> cssMetaData) {
+        Objects.requireNonNull(cssMetaData, "cssMetaData");
+
+        if (child.hasProperties()) {  // implicit null check for child
+            Object value = child.getProperties().get(cssMetaData);
+
+            if (value instanceof StyleableObjectProperty<?> p) {
+                @SuppressWarnings("unchecked")
+                StyleableObjectProperty<T> castProperty = (StyleableObjectProperty<T>) p;
+
+                return castProperty.getValue();
+            }
+
+            if (value != null) {
+                @SuppressWarnings("unchecked")
+                T castValue = (T) value;
+
+                return castValue;
+            }
+        }
+
+        return cssMetaData.getInitialValue(child);
     }
 
     static void setConstraint(Node node, Object key, Object value) {
