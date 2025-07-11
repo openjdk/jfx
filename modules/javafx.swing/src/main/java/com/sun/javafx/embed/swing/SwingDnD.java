@@ -333,7 +333,7 @@ final public class SwingDnD {
             return;
         }
 
-        e.rejectDrop(); 
+        e.rejectDrop();
     }
 
     public static TransferMode dropActionToTransferMode(final int dropAction) {
