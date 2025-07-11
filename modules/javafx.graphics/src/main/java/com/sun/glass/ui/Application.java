@@ -334,6 +334,11 @@ public abstract class Application {
         // To override in subclasses
     }
 
+    public void removeDefaultMenus(MenuBar menubar) {
+        checkEventThread();
+        // To override in subclasses
+    }
+
     public EventHandler getEventHandler() {
         //checkEventThread(); // Glass (Mac)
         // When an app is closing, Mac calls notify- Will/DidHide, Will/DidResignActive
@@ -818,6 +823,21 @@ public abstract class Application {
      * and if so, emits a warning.
      */
     public void checkPlatformPreferencesSupport() {}
+
+    /**
+     * Hides the current application. Only implemented on Mac.
+     */
+    public void hideApplication() {}
+
+    /**
+     * Hides all other applications. Only implemented on Mac.
+     */
+    public void hideOtherApplications() {}
+
+    /**
+     * Undoes the effects of hideOtherApplications. Only implemented on Mac.
+     */
+    public void showAllApplications() {}
 
     private static native void _overrideNativeWindowHandle(Class lwFrameWrapperClass,
                                                            Object frame,
