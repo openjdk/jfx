@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -212,34 +212,30 @@ extern NSSize maxScreenDimensions;
     s_grabWindow = window;
 }
 
-- (void)_setResizable
+- (void)_setResizable:(bool)resizable
 {
-    NSUInteger mask = [self->nsWindow styleMask];
-    if ((mask & NSWindowStyleMaskResizable) != 0)
-    {
-        if (self->isDecorated == YES)
-        {
-            mask &= ~(NSUInteger)NSWindowStyleMaskResizable;
-            [self->nsWindow setStyleMask: mask];
-            [self->nsWindow setShowsResizeIndicator:NO];
+    self->isResizable = resizable;
 
-            NSButton *zoomButton = [self->nsWindow standardWindowButton:NSWindowZoomButton];
-            [zoomButton setEnabled:NO];
-        }
-        self->isResizable = NO;
+    if (self->isDecorated == NO) {
+        return;
     }
-    else
-    {
-        if (self->isDecorated == YES)
-        {
-            mask |= NSWindowStyleMaskResizable;
-            [self->nsWindow setStyleMask: mask];
-            [self->nsWindow setShowsResizeIndicator:YES];
 
-            NSButton *zoomButton = [self->nsWindow standardWindowButton:NSWindowZoomButton];
-            [zoomButton setEnabled:YES];
-        }
-        self->isResizable = YES;
+    NSUInteger mask = [self->nsWindow styleMask];
+
+    if (resizable) {
+        mask |= NSWindowStyleMaskResizable;
+        [self->nsWindow setStyleMask: mask];
+        [self->nsWindow setShowsResizeIndicator:YES];
+
+        NSButton *zoomButton = [self->nsWindow standardWindowButton:NSWindowZoomButton];
+        [zoomButton setEnabled:YES];
+    } else {
+        mask &= ~(NSUInteger)NSWindowStyleMaskResizable;
+        [self->nsWindow setStyleMask: mask];
+        [self->nsWindow setShowsResizeIndicator:NO];
+
+        NSButton *zoomButton = [self->nsWindow standardWindowButton:NSWindowZoomButton];
+        [zoomButton setEnabled:NO];
     }
 }
 
