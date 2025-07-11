@@ -4571,11 +4571,23 @@ task createMSPfile() {
     }
 }
 
-task createOverviewFile(type: Copy) {
-    from "${rootProject.projectDir}/overview.html"
-    into rootProject.buildDir
-    filter { line ->
-        line.replaceAll("@JAVADOC_VERSION@", jfxReleaseMajorVersion)
+task createOverviewFile() {
+    def srcDir = rootProject.projectDir
+    def dstDir = rootProject.buildDir
+    def fileName = "overview.html"
+
+    inputs.file(new File(srcDir, fileName))
+    outputs.file(new File(dstDir, fileName))
+
+    doLast {
+        copy {
+            from "$srcDir/$fileName"
+            into dstDir
+
+            filter { line ->
+                line.replaceAll("@JAVADOC_VERSION@", jfxReleaseMajorVersion)
+            }
+        }
     }
 }
 
