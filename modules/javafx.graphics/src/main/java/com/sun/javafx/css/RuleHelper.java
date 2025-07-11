@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -22,47 +22,32 @@
  * or visit www.oracle.com if you need additional information or have any
  * questions.
  */
-package com.sun.javafx.css.parser;
 
-public class TokenShim {
+package com.sun.javafx.css;
 
-    public static final int EOF = Token.EOF;
-    public static final int INVALID = Token.INVALID;
-    public static final int SKIP = Token.SKIP;
+import com.sun.javafx.util.Utils;
+import com.sun.javafx.css.media.MediaRule;
+import javafx.css.Rule;
 
-    public final static TokenShim EOF_TOKEN = new TokenShim(Token.EOF_TOKEN);
-    public final static TokenShim INVALID_TOKEN = new TokenShim(Token.INVALID_TOKEN);
-    public final static TokenShim SKIP_TOKEN = new TokenShim(Token.SKIP_TOKEN);
+public final class RuleHelper {
 
-    private final Token token;
+    private RuleHelper() {}
 
-    public TokenShim(int type, String text, int line, int offset) {
-        token = new Token(type, text, line, offset);
+    static {
+        Utils.forceInit(Rule.class);
     }
 
-    public TokenShim(int type, String text) {
-        token = new Token(type, text);
+    private static Accessor accessor;
+
+    public static void setAccessor(Accessor accessor) {
+        RuleHelper.accessor = accessor;
     }
 
-    public TokenShim(Token t) {
-        token = t;
+    public static MediaRule getMediaRule(Rule rule) {
+        return accessor.getMediaRule(rule);
     }
 
-    public int getType() {
-        return token.getType();
+    public interface Accessor {
+        MediaRule getMediaRule(Rule rule);
     }
-
-    public int getLine() {
-        return token.getLine();
-    }
-
-    public int getOffset() {
-        return token.getOffset();
-    }
-
-    public String getText() {
-        return token.getText();
-    }
-
-
 }
