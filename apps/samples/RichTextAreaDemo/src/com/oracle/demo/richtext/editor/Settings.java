@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024, Oracle and/or its affiliates.
+ * Copyright (c) 2024, 2025, Oracle and/or its affiliates.
  * All rights reserved. Use is subject to license terms.
  *
  * This file is available and licensed under the following license:
@@ -33,6 +33,7 @@
 package com.oracle.demo.richtext.editor;
 
 import javafx.beans.property.SimpleObjectProperty;
+import javafx.geometry.Insets;
 import com.oracle.demo.richtext.editor.settings.EndKey;
 
 /**
@@ -41,5 +42,9 @@ import com.oracle.demo.richtext.editor.settings.EndKey;
  * NOTE: these settings are not persisted across launches due to limitations of FxSettings in this project.
  */
 public final class Settings {
+    // navigation
     public static final SimpleObjectProperty<EndKey> endKey = new SimpleObjectProperty<>(EndKey.END_OF_TEXT);
+
+    // view
+    public static final SimpleObjectProperty<Insets> contentPadding = new SimpleObjectProperty<>(new Insets(10));
 }
