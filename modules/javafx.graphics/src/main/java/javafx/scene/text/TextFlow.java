@@ -465,7 +465,7 @@ public class TextFlow extends Pane {
     private PathElement[] getRange(int start, int end, int type, boolean accountForInsets, double lineSpacing) {
         double dx;
         double dy;
-        if(accountForInsets) {
+        if (accountForInsets) {
             dx = snappedLeftInset();
             dy = snappedTopInset();
         } else {
