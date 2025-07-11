@@ -27,6 +27,7 @@ package test.com.sun.javafx.text;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assumptions.assumeTrue;
+import javafx.scene.layout.Region;
 import javafx.scene.text.Font;
 import org.junit.jupiter.api.Test;
 import com.sun.javafx.font.PGFont;
@@ -54,6 +55,11 @@ public class TextHitInfoTest {
 
         @Override
         public RectBounds getBounds() {
+            return null;
+        }
+
+        @Override
+        public Region getLayoutRootRegion() {
             return null;
         }
     }
