@@ -23,54 +23,32 @@
  * questions.
  */
 
-package com.sun.javafx.css.media.expression;
+package com.sun.javafx.css.media;
 
-import com.sun.javafx.css.media.MediaQuery;
-import com.sun.javafx.css.media.MediaQueryCache;
-import com.sun.javafx.css.media.MediaQueryContext;
-import java.util.Objects;
+import java.lang.ref.WeakReference;
+import java.util.Map;
+import java.util.WeakHashMap;
 
 /**
- * Evaluates to a constant boolean value.
+ * A cache for {@link MediaQuery} instances that is used to deduplicate media queries. More specifically,
+ * this cache ensures that only a single instance of any distinct media query exists at any point in time.
+ * This cache holds weak references, ensuring that media queries that are no longer in use will be eligible
+ * for garbage collection.
  */
-public final class ConstantExpression implements MediaQuery {
+public final class MediaQueryCache {
 
-    private final boolean value;
+    private MediaQueryCache() {}
 
-    private ConstantExpression(boolean value) {
-        this.value = value;
-    }
+    private static final Map<MediaQuery, WeakReference<MediaQuery>> CACHE = new WeakHashMap<>();
 
-    public static ConstantExpression of(boolean value) {
-        return MediaQueryCache.getCachedMediaQuery(new ConstantExpression(value));
-    }
+    @SuppressWarnings("unchecked")
+    public static synchronized <T extends MediaQuery> T getCachedMediaQuery(T query) {
+        if (CACHE.get(query) instanceof WeakReference<MediaQuery> wref
+                && wref.get() instanceof MediaQuery cachedQuery) {
+            return (T)cachedQuery;
+        }
 
-    public boolean value() {
-        return value;
-    }
-
-    @Override
-    public int getContextAwareness() {
-        return DEFAULT_AWARENESS;
-    }
-
-    @Override
-    public boolean evaluate(MediaQueryContext context) {
-        return value;
-    }
-
-    @Override
-    public boolean equals(Object obj) {
-        return obj instanceof ConstantExpression other && value == other.value ;
-    }
-
-    @Override
-    public int hashCode() {
-        return Objects.hash(ConstantExpression.class, value);
-    }
-
-    @Override
-    public String toString() {
-        return "(" + value + ")";
+        CACHE.put(query, new WeakReference<>(query));
+        return query;
     }
 }

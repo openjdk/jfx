@@ -25,52 +25,31 @@
 
 package com.sun.javafx.css.media.expression;
 
-import com.sun.javafx.css.media.MediaQuery;
 import com.sun.javafx.css.media.MediaQueryCache;
+import com.sun.javafx.css.media.SizeQueryType;
 import com.sun.javafx.css.media.MediaQueryContext;
-import java.util.Objects;
+import javafx.css.Size;
 
 /**
- * Logical negation of the specified expression.
+ * Evaluates whether a media feature is less than a specified value.
  */
-public final class NegationExpression implements MediaQuery {
+public final class LessExpression extends RangeExpression {
 
-    private final MediaQuery expression;
-
-    private NegationExpression(MediaQuery expression) {
-        this.expression = Objects.requireNonNull(expression, "expression cannot be null");
+    private LessExpression(SizeQueryType featureType, Size featureValue) {
+        super(featureType, featureValue);
     }
 
-    public static NegationExpression of(MediaQuery expression) {
-        return MediaQueryCache.getCachedMediaQuery(new NegationExpression(expression));
-    }
-
-    public MediaQuery getExpression() {
-        return expression;
-    }
-
-    @Override
-    public int getContextAwareness() {
-        return expression.getContextAwareness();
-    }
-
-    @Override
-    public boolean equals(Object obj) {
-        return obj instanceof NegationExpression other && expression.equals(other.expression) ;
-    }
-
-    @Override
-    public int hashCode() {
-        return Objects.hash(NegationExpression.class, expression);
+    public static LessExpression of(SizeQueryType featureType, Size featureValue) {
+        return MediaQueryCache.getCachedMediaQuery(new LessExpression(featureType, featureValue));
     }
 
     @Override
     public boolean evaluate(MediaQueryContext context) {
-        return !expression.evaluate(context);
+        return getFeatureType().getSupplier().get(context) < getFeatureValue().pixels();
     }
 
     @Override
     public String toString() {
-        return "not " + expression;
+        return "(" + getFeatureName() + " < " + getFeatureValue() + ")";
     }
 }

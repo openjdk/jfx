@@ -26,26 +26,63 @@
 package com.sun.javafx.css.media.expression;
 
 import com.sun.javafx.css.media.MediaQuery;
+import com.sun.javafx.css.media.MediaQueryCache;
 import com.sun.javafx.css.media.MediaQueryContext;
 import java.util.Objects;
 import java.util.function.Function;
 
 /**
  * Evaluates to {@code true} if the return value of the specified function is equal to {@code value}.
- *
- * @param featureName the feature name
- * @param featureValue the feature value, or {@code null} to indicate a boolean context
- * @param function the evaluation function
- * @param value the expected return value of the function
  */
-public record FunctionExpression<T>(String featureName,
-                                    String featureValue,
-                                    Function<MediaQueryContext, T> function,
-                                    T value) implements MediaQuery {
+public final class FunctionExpression<T> implements MediaQuery {
 
-    public FunctionExpression {
-        Objects.requireNonNull(featureName, "featureName cannot be null");
-        Objects.requireNonNull(function, "function cannot be null");
+    private final String featureName;
+    private final String featureValue;
+    private final Function<MediaQueryContext, T> function;
+    private final T value;
+    private final int contextAwareness;
+
+    /**
+     * Creates a new {@code FunctionExpression}.
+     *
+     * @param featureName the feature name
+     * @param featureValue the feature value, or {@code null} to indicate a boolean context
+     * @param function the evaluation function
+     * @param value the expected return value of the function+
+     * @param contextAwareness the context awareness of the function, see {@link MediaQuery#getContextAwareness()}
+     */
+    private FunctionExpression(String featureName,
+                               String featureValue,
+                               Function<MediaQueryContext, T> function,
+                               T value,
+                               int contextAwareness) {
+        this.featureName = Objects.requireNonNull(featureName, "featureName cannot be null");
+        this.featureValue = featureValue;
+        this.function = Objects.requireNonNull(function, "function cannot be null");
+        this.value = value;
+        this.contextAwareness = contextAwareness;
+    }
+
+    public static <T> FunctionExpression<T> of(String featureName,
+                                               String featureValue,
+                                               Function<MediaQueryContext, T> function,
+                                               T value,
+                                               int contextAwareness) {
+        return MediaQueryCache.getCachedMediaQuery(
+            new FunctionExpression<>(featureName, featureValue, function, value, contextAwareness));
+    }
+
+    public String getFeatureName() {
+        return featureName;
+    }
+
+    public String getFeatureValue() {
+        return featureValue;
+    }
+
+    @Override
+    public int getContextAwareness() {
+        return contextAwareness;
     }
 
     @Override
