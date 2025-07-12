@@ -42,17 +42,28 @@ import javafx.scene.control.TreeTableView;
 import javafx.scene.control.TreeTableView.TreeTableViewSelectionModel;
 import javafx.scene.control.skin.TableColumnHeader;
 import javafx.scene.input.MouseEvent;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import com.sun.javafx.tk.Toolkit;
 import test.com.sun.javafx.scene.control.infrastructure.KeyModifier;
 import test.com.sun.javafx.scene.control.infrastructure.MouseEventFirer;
-import test.com.sun.javafx.scene.control.infrastructure.VirtualFlowTestUtils;
+import test.com.sun.javafx.scene.control.infrastructure.StageLoader;
 
 /**
  * Tests for:
  * - NPE with null selection model JDK-8187145
  */
 public class TreeAndTableViewTest {
+
+    private StageLoader stageLoader;
+
+    @AfterEach
+    public void cleanup() {
+        if (stageLoader != null) {
+            stageLoader.dispose();
+        }
+    }
+
     /** Sorting TableView with a null selection model should not generate an NPE */
     @Test
     public void test_TableView_jdk_8187145() {
@@ -69,8 +80,7 @@ public class TreeAndTableViewTest {
             ""
             );
 
-        // important: actually creates cells
-        VirtualFlowTestUtils.getCell(table, 0);
+        stageLoader = new StageLoader(table);
 
         // row selection mode
         TableViewSelectionModel<String> oldSelectionModel = table.getSelectionModel();
@@ -143,8 +153,7 @@ public class TreeAndTableViewTest {
             createTreeTableColumn("C2")
             );
 
-        // important: actually creates cells
-        VirtualFlowTestUtils.getCell(tree, 0);
+        stageLoader = new StageLoader(tree);
 
         // row selection mode
         TreeTableViewSelectionModel<String> oldSelectionModel = tree.getSelectionModel();
@@ -215,14 +224,6 @@ public class TreeAndTableViewTest {
         TableColumn c = new TableColumn(name);
         c.setCellValueFactory((f) -> new SimpleStringProperty("..."));
         return c;
-    }
-
-    protected static <T extends Node> List<T> collectNodes(Node root, String selector, Class<T> type) {
-        return (List<T>)root.
-            lookupAll(selector).
-            stream().
-            filter((n) -> (n.getClass().isAssignableFrom(type))).
-            collect(Collectors.toList());
     }
 
     protected static boolean containsPseudoclass(Node n, String pseudoclass) {
