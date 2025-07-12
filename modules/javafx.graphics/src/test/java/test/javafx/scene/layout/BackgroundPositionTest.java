@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -236,19 +236,37 @@ public class BackgroundPositionTest {
         }
 
         @Test
-        public void interpolationFactorSmallerThanOrEqualToZeroReturnsStartInstance() {
+        public void interpolationFactorZeroReturnsStartInstance() {
             var startValue = new BackgroundPosition(Side.LEFT, 0, false, Side.TOP, 0, false);
             var endValue = new BackgroundPosition(Side.LEFT, 10, false, Side.TOP, 20, false);
             assertSame(startValue, startValue.interpolate(endValue, 0));
-            assertSame(startValue, startValue.interpolate(endValue, -0.5));
         }
 
         @Test
-        public void interpolationFactorGreaterThanOrEqualToOneReturnsEndInstance() {
+        public void interpolationFactorOneReturnsEndInstance() {
             var startValue = new BackgroundPosition(Side.LEFT, 0, false, Side.TOP, 0, false);
             var endValue = new BackgroundPosition(Side.LEFT, 10, false, Side.TOP, 20, false);
             assertSame(endValue, startValue.interpolate(endValue, 1));
-            assertSame(endValue, startValue.interpolate(endValue, 1.5));
+        }
+
+        @Test
+        public void interpolationFactorLessThanZero() {
+            var startValue = new BackgroundPosition(Side.LEFT, 5, false, Side.TOP, 10, false);
+            var endValue = new BackgroundPosition(Side.LEFT, 10, false, Side.TOP, 20, false);
+            assertEquals(new BackgroundPosition(Side.LEFT, 0, false, Side.TOP, 0, false),
+                         startValue.interpolate(endValue, -1));
+            assertEquals(new BackgroundPosition(Side.LEFT, -5, false, Side.TOP, -10, false),
+                         startValue.interpolate(endValue, -2));
+        }
+
+        @Test
+        public void interpolationFactorGreaterThanOne() {
+            var startValue = new BackgroundPosition(Side.LEFT, 5, false, Side.TOP, 10, false);
+            var endValue = new BackgroundPosition(Side.LEFT, 10, false, Side.TOP, 20, false);
+            assertEquals(new BackgroundPosition(Side.LEFT, 15, false, Side.TOP, 30, false),
+                         startValue.interpolate(endValue, 2));
+            assertEquals(new BackgroundPosition(Side.LEFT, 20, false, Side.TOP, 40, false),
+                         startValue.interpolate(endValue, 3));
         }
 
         @Test
