@@ -64,9 +64,10 @@ public class Stylesheet {
      * binary stream changes. This number does not correlate with JavaFX versions.
      * Version 5: persist @font-face
      * Version 6: converter classes moved to public package
-     * Version 7: media queries
+     * Version 7: user-preference media queries
+     * Version 8: viewport characteristics media queries
      */
-    final static int BINARY_CSS_VERSION = 7;
+    final static int BINARY_CSS_VERSION = 8;
 
     private final String url;
     /**

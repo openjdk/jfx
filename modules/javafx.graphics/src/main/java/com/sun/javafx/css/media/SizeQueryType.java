@@ -23,54 +23,39 @@
  * questions.
  */
 
-package com.sun.javafx.css.media.expression;
+package com.sun.javafx.css.media;
 
-import com.sun.javafx.css.media.MediaQuery;
-import com.sun.javafx.css.media.MediaQueryCache;
-import com.sun.javafx.css.media.MediaQueryContext;
-import java.util.Objects;
+public enum SizeQueryType {
 
-/**
- * Evaluates to a constant boolean value.
- */
-public final class ConstantExpression implements MediaQuery {
+    WIDTH("width", MediaQueryContext::getWidth),
+    HEIGHT("height", MediaQueryContext::getHeight),
+    ASPECT_RATIO("aspect-ratio", context -> context.getWidth() / context.getHeight());
 
-    private final boolean value;
-
-    private ConstantExpression(boolean value) {
-        this.value = value;
+    SizeQueryType(String featureName, SizeSupplier supplier) {
+        this.featureName = featureName;
+        this.supplier = supplier;
     }
 
-    public static ConstantExpression of(boolean value) {
-        return MediaQueryCache.getCachedMediaQuery(new ConstantExpression(value));
+    public static SizeQueryType of(String name) {
+        for (SizeQueryType value : VALUES) {
+            if (value.featureName.equals(name)) {
+                return value;
+            }
+        }
+
+        throw new IllegalArgumentException(String.format("Unknown media feature <%s>", name));
     }
 
-    public boolean value() {
-        return value;
+    private final String featureName;
+    private final SizeSupplier supplier;
+
+    public String getFeatureName() {
+        return featureName;
     }
 
-    @Override
-    public int getContextAwareness() {
-        return DEFAULT_AWARENESS;
+    public SizeSupplier getSupplier() {
+        return supplier;
     }
 
-    @Override
-    public boolean evaluate(MediaQueryContext context) {
-        return value;
-    }
-
-    @Override
-    public boolean equals(Object obj) {
-        return obj instanceof ConstantExpression other && value == other.value ;
-    }
-
-    @Override
-    public int hashCode() {
-        return Objects.hash(ConstantExpression.class, value);
-    }
-
-    @Override
-    public String toString() {
-        return "(" + value + ")";
-    }
+    private static final SizeQueryType[] VALUES = values();
 }

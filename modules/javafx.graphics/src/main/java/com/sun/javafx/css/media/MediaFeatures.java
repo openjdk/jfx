@@ -25,8 +25,12 @@
 
 package com.sun.javafx.css.media;
 
+import com.sun.javafx.css.media.expression.ConjunctionExpression;
 import com.sun.javafx.css.media.expression.FunctionExpression;
+import com.sun.javafx.css.media.expression.RangeExpression;
 import javafx.application.ColorScheme;
+import javafx.css.Size;
+import javafx.css.SizeUnits;
 import java.util.Locale;
 import java.util.function.Function;
 
@@ -38,42 +42,145 @@ final class MediaFeatures {
     private MediaFeatures() {}
 
     /**
-     * Returns a {@code MediaQuery} that evaluates the specified feature.
+     * Returns a {@code MediaQuery} that evaluates the specified feature in a discrete context.
      *
      * @param featureName the name of the media feature
      * @param featureValue the value of the media feature, or {@code null} to indicate no value
      * @throws IllegalArgumentException if {@code featureName} or {@code featureValue} is invalid
      * @return the {@code MediaQuery}
      */
-    public static MediaQuery featureQueryExpression(String featureName, String featureValue) {
-        featureName = featureName.toLowerCase(Locale.ROOT).intern();
-
-        if (featureValue != null) {
-            featureValue = featureValue.toLowerCase(Locale.ROOT).intern();
-        }
+    public static MediaQuery discreteQueryExpression(String featureName, String featureValue) {
+        featureName = lowerCaseTextValue(featureName);
 
         return switch (featureName) {
-            case "prefers-color-scheme" -> new FunctionExpression<>(
+            // Discrete min-/max-features are just features in a range context in disguise.
+            case "min-width" -> rangeQueryExpression(SizeQueryType.WIDTH, featureValue,
+                                                     ComparisonOp.GREATER_OR_EQUAL.getExpressionSupplier());
+
+            case "max-width" -> rangeQueryExpression(SizeQueryType.WIDTH, featureValue,
+                                                     ComparisonOp.LESS_OR_EQUAL.getExpressionSupplier());
+
+            case "min-height" -> rangeQueryExpression(SizeQueryType.HEIGHT, featureValue,
+                                                      ComparisonOp.GREATER_OR_EQUAL.getExpressionSupplier());
+
+            case "max-height" -> rangeQueryExpression(SizeQueryType.HEIGHT, featureValue,
+                                                      ComparisonOp.LESS_OR_EQUAL.getExpressionSupplier());
+
+            case "min-aspect-ratio" -> rangeQueryExpression(SizeQueryType.ASPECT_RATIO, featureValue,
+                                                            ComparisonOp.GREATER_OR_EQUAL.getExpressionSupplier());
+
+            case "max-aspect-ratio" -> rangeQueryExpression(SizeQueryType.ASPECT_RATIO, featureValue,
+                                                            ComparisonOp.LESS_OR_EQUAL.getExpressionSupplier());
+
+            // We have to account for range-based features used in a discrete context (e.g. "width: 500px").
+            // This is unusual because in most cases these features will be evaluated in a range context, which
+            // is handled in rangeQueryExpression().
+            case "width",
+                 "height",
+                 "aspect-ratio" -> rangeQueryExpression(SizeQueryType.of(featureName),
+                                                        featureValue, ComparisonOp.EQUAL.getExpressionSupplier());
+
+            // Portrait if height >= width, landscape otherwise.
+            case "orientation" -> {
+                boolean portrait = switch (checkNotNullValue(featureName, lowerCaseTextValue(featureValue))) {
+                    case "landscape" -> false;
+                    case "portrait" -> true;
+                    default -> throw unknownValue("orientation", featureValue);
+                };
+
+                yield FunctionExpression.of(
+                    featureName, featureValue,
+                    context -> portrait
+                        ? context.getWidth() <= context.getHeight()
+                        : context.getWidth() > context.getHeight(),
+                    true, MediaQuery.VIEWPORT_SIZE_AWARE);
+            }
+
+            // We only support "standalone" and "fullscreen" display modes, not "minimal-ui" and "browser".
+            case "display-mode" -> {
+                boolean fullscreen = switch (checkNotNullValue(featureName, lowerCaseTextValue(featureValue))) {
+                    case "standalone" -> false;
+                    case "fullscreen" -> true;
+                    default -> throw unknownValue("display-mode", featureValue);
+                };
+
+                yield FunctionExpression.of(
+                    featureName, featureValue,
+                    context -> context.isFullScreen() == fullscreen,
+                    true, MediaQuery.FULLSCREEN_AWARE);
+            }
+
+            case "prefers-color-scheme" -> FunctionExpression.of(
                 featureName,
-                checkNotNullValue(featureName, featureValue),
+                checkNotNullValue(featureName, lowerCaseTextValue(featureValue)),
                 MediaQueryContext::getColorScheme,
-                enumValue(ColorScheme::valueOf, featureName, featureValue));
+                enumValue(ColorScheme::valueOf, featureName, featureValue),
+                MediaQuery.DEFAULT_AWARENESS);
 
             case "prefers-reduced-motion" -> booleanPreferenceExpression(
-                featureName, featureValue, "reduce", MediaQueryContext::isReducedMotion);
+                featureName, lowerCaseTextValue(featureValue), "reduce", MediaQueryContext::isReducedMotion);
 
             case "prefers-reduced-transparency" -> booleanPreferenceExpression(
-                featureName, featureValue, "reduce", MediaQueryContext::isReducedTransparency);
+                featureName, lowerCaseTextValue(featureValue), "reduce", MediaQueryContext::isReducedTransparency);
 
             case "prefers-reduced-data" -> booleanPreferenceExpression(
-                featureName, featureValue, "reduce", MediaQueryContext::isReducedData);
+                featureName, lowerCaseTextValue(featureValue), "reduce", MediaQueryContext::isReducedData);
 
             case "-fx-prefers-persistent-scrollbars" -> booleanPreferenceExpression(
-                featureName, featureValue, "persistent", MediaQueryContext::isPersistentScrollBars);
+                featureName, lowerCaseTextValue(featureValue), "persistent", MediaQueryContext::isPersistentScrollBars);
 
             default -> throw new IllegalArgumentException(
                 String.format("Unknown media feature <%s>", featureName));
         };
+    }
+
+    /**
+     * Returns a {@code MediaQuery} that evaluates the specified feature in a range context.
+     *
+     * @param featureName the name of the media feature
+     * @param featureValue the value of the media feature
+     * @param comparison the comparison operator
+     * @throws IllegalArgumentException if {@code featureName} or {@code featureValue} is invalid,
+     *                                  or if {@code comparison} is {@code null}
+     * @return the {@code MediaQuery}
+     */
+    public static MediaQuery rangeQueryExpression(String featureName,
+                                                  String featureValue,
+                                                  ComparisonOp comparison) {
+        return rangeQueryExpression(SizeQueryType.of(lowerCaseTextValue(featureName)),
+                                    featureValue, comparison.getExpressionSupplier());
+    }
+
+    /**
+     * Returns a {@code MediaQuery} that evaluates the specified feature as an interval in a range context.
+     *
+     * @param featureName the name of the media feature
+     * @param featureValue1 the first value of the media feature
+     * @param featureValue2 the second value of the media feature
+     * @param comparison1 the first comparison operator
+     * @param comparison2 the second comparison operator
+     * @throws IllegalArgumentException if {@code featureName}, {@code featureValue1}, or {@code featureValue2} is invalid,
+     *                                  or if {@code comparison1} or {@code comparison2} is {@code null}
+     * @return the {@code MediaQuery}
+     */
+    public static MediaQuery rangeQueryExpression(String featureName,
+                                                  String featureValue1,
+                                                  String featureValue2,
+                                                  ComparisonOp comparison1,
+                                                  ComparisonOp comparison2) {
+        return ConjunctionExpression.of(
+            rangeQueryExpression(featureName, featureValue1, comparison1.flipped()),
+            rangeQueryExpression(featureName, featureValue2, comparison2));
+    }
+
+    private static MediaQuery rangeQueryExpression(SizeQueryType featureType,
+                                                   String featureValue,
+                                                   RangeExpression.Supplier supplier) {
+        Size size = lengthValue(
+            featureType.getFeatureName(),
+            checkNotNullValue(featureType.getFeatureName(), featureValue));
+
+        return supplier.rangeExpression(featureType, size);
     }
 
     private static MediaQuery booleanPreferenceExpression(String featureName,
@@ -81,18 +188,17 @@ final class MediaFeatures {
                                                           String trueValue,
                                                           Function<MediaQueryContext, Boolean> argument) {
         if ("no-preference".equals(featureValue)) {
-            return new FunctionExpression<>(featureName, featureValue, argument, false);
+            return FunctionExpression.of(featureName, featureValue, argument, false, MediaQuery.DEFAULT_AWARENESS);
         }
 
         if (featureValue == null || trueValue.equals(featureValue)) {
-            return new FunctionExpression<>(featureName, featureValue, argument, true);
+            return FunctionExpression.of(featureName, featureValue, argument, true, MediaQuery.DEFAULT_AWARENESS);
         }
 
-        throw new IllegalArgumentException(
-            String.format("Unknown value <%s> for media feature <%s>", featureValue, featureName));
+        throw unknownValue(featureName, featureValue);
     }
 
-    private static String checkNotNullValue(String featureName, String featureValue) {
+    private static <T> T checkNotNullValue(String featureName, T featureValue) {
         if (featureValue == null) {
             throw new IllegalArgumentException(
                 String.format("Media feature <%s> cannot be evaluated in a boolean context", featureName));
@@ -105,8 +211,46 @@ final class MediaFeatures {
         try {
             return func.apply(featureValue.toUpperCase(Locale.ROOT));
         } catch (IllegalArgumentException e) {
-            throw new IllegalArgumentException(
-                String.format("Unknown value <%s> for media feature <%s>", featureValue, featureName));
+            throw unknownValue(featureName, featureValue);
         }
+    }
+
+    private static String lowerCaseTextValue(String text) {
+        return text != null ? text.toLowerCase(Locale.ROOT).intern() : null;
+    }
+
+    private static Size lengthValue(String featureName, String text) {
+        int unitIndex = -1;
+
+        for (int i = 0; i < text.length(); i++) {
+            if (!Character.isDigit(text.charAt(i))) {
+                unitIndex = i;
+                break;
+            }
+        }
+
+        if (unitIndex == -1) {
+            return new Size(Double.parseDouble(text), SizeUnits.PX);
+        }
+
+        double value = Double.parseDouble(text.substring(0, unitIndex));
+
+        return new Size(value, switch (text.substring(unitIndex).toLowerCase(Locale.ROOT)) {
+            case "px" -> SizeUnits.PX;
+            case "em" -> SizeUnits.EM;
+            case "ex" -> SizeUnits.EX;
+            case "cm" -> SizeUnits.CM;
+            case "mm" -> SizeUnits.MM;
+            case "in" -> SizeUnits.IN;
+            case "pt" -> SizeUnits.PT;
+            case "pc" -> SizeUnits.PC;
+            default -> throw new IllegalArgumentException(
+                String.format("Invalid value <%s> for media feature <%s>", text, featureName));
+        });
+    }
+
+    private static RuntimeException unknownValue(String featureName, String featureValue) {
+        return new IllegalArgumentException(
+            String.format("Unknown value <%s> for media feature <%s>", featureValue, featureName));
     }
 }

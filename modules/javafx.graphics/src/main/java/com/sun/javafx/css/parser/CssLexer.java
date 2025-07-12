@@ -49,6 +49,8 @@ public final class CssLexer {
     public static final int RAD = 25;
     public static final int TURN = 26;
     public static final int GREATER = 27;
+    public static final int LESS = 48;
+    public static final int EQUALS = 49;
     public static final int LBRACE = 28;
     public static final int RBRACE = 29;
     public static final int SEMI = 30;
@@ -870,8 +872,17 @@ public final class CssLexer {
                         break;
 
                     case '>':
-
                         token = new Token(GREATER,">", line, offset);
+                        offset = pos;
+                        break;
+
+                    case '<':
+                        token = new Token(LESS,"<", line, offset);
+                        offset = pos;
+                        break;
+
+                    case '=':
+                        token = new Token(EQUALS,"=", line, offset);
                         offset = pos;
                         break;
 

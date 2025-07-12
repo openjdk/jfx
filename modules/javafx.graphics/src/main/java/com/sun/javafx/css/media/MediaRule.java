@@ -81,7 +81,14 @@ public final class MediaRule {
         }
 
         for (int i = 0, max = queries.size(); i < max; i++) {
-            if (queries.get(i).evaluate(context)) {
+            MediaQuery query = queries.get(i);
+            boolean value = query.evaluate(context);
+            int contextAwareness = query.getContextAwareness();
+            if (contextAwareness != MediaQuery.DEFAULT_AWARENESS) {
+                context.registerContextAwareQuery(query, contextAwareness, value);
+            }
+
+            if (value) {
                 return true;
             }
         }

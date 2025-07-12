@@ -30,6 +30,7 @@ import com.sun.javafx.css.media.expression.ConstantExpression;
 import com.sun.javafx.css.media.expression.FunctionExpression;
 import com.sun.javafx.css.media.expression.NegationExpression;
 import com.sun.javafx.css.media.expression.DisjunctionExpression;
+import com.sun.javafx.css.media.expression.RangeExpression;
 
 /**
  * {@code MediaQuery} is the runtime representation of a CSS media query expression.
@@ -42,7 +43,32 @@ public sealed interface MediaQuery
                 ConjunctionExpression,
                 DisjunctionExpression,
                 FunctionExpression,
-                NegationExpression {
+                NegationExpression,
+                RangeExpression {
+
+    /**
+     * Indicates that the media query does not probe any of the more specific aspects of
+     * the media query context.
+     */
+    int DEFAULT_AWARENESS = 0;
+
+    /**
+     * Indicates that the media query probes the viewport size (width or height).
+     */
+    int VIEWPORT_SIZE_AWARE = 1;
+
+    /**
+     * Indicates that the media query probes the full-screen state.
+     */
+    int FULLSCREEN_AWARE = 2;
+
+    /**
+     * Gets the context awareness flags of this media query, indicating which aspects of the
+     * media query context are probed by the query.
+     *
+     * @return a bitwise combination of context awareness flags
+     */
+    int getContextAwareness();
 
     /**
      * Evaluates this media query against the provided context.

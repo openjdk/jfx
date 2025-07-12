@@ -27,26 +27,92 @@ package com.sun.javafx.scene;
 
 import com.sun.javafx.application.PlatformImpl;
 import com.sun.javafx.beans.property.NullCoalescingPropertyBase;
+import com.sun.javafx.css.media.MediaQuery;
 import com.sun.javafx.css.media.MediaQueryContext;
+import java.util.IdentityHashMap;
 import java.util.List;
+import java.util.Map;
 import javafx.application.ColorScheme;
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.value.ObservableValue;
 import javafx.scene.Node;
 import javafx.scene.Scene;
+import javafx.stage.Stage;
 import javafx.stage.Window;
 
-public final class ScenePreferences implements Scene.Preferences, MediaQueryContext {
+public final class SceneContext implements Scene.Preferences, MediaQueryContext {
 
     private final Scene scene;
 
-    public ScenePreferences(Scene scene) {
+    /**
+     * All media queries are interned, such that only a single instance exists for each distinct
+     * media query. This allows us to use an IdentityHashMap instead of a regular HashMap, saving
+     * us deep equality comparisons on a hot path.
+     */
+    private final Map<MediaQuery, Boolean> viewportSizeAwareQueries = new IdentityHashMap<>();
+    private final Map<MediaQuery, Boolean> fullScreenAwareQueries = new IdentityHashMap<>();
+
+    public SceneContext(Scene scene) {
         this.scene = scene;
 
         scene.windowProperty()
             .flatMap(Window::showingProperty)
             .orElse(false)
             .subscribe(this::onShowingChanged);
+
+        scene.windowProperty()
+            .map(w -> w instanceof Stage stage ? stage : null)
+            .flatMap(Stage::fullScreenProperty)
+            .subscribe(this::onFullScreenChanged);
+    }
+
+    /**
+     * Called by {@link Node} when CSS is reapplied for the root node.
+     */
+    public void notifyReapplyCSS() {
+        // Clear the registered context-aware queries, as they will be re-registered on the next CSS pass
+        // if they are evaluated (i.e. at least one selector that depends on the media query matches).
+        viewportSizeAwareQueries.clear();
+        fullScreenAwareQueries.clear();
+    }
+
+    /**
+     * Called by {@link Scene} when its size has changed.
+     */
+    public void notifySizeChanged() {
+        // We evaluate all queries that we know could potentially change when the scene size has changed.
+        boolean changed = viewportSizeAwareQueries.entrySet().stream()
+            .anyMatch(entry -> entry.getKey().evaluate(this) != entry.getValue());
+
+        if (changed && scene.getRoot() instanceof Node root) {
+            NodeHelper.scheduleReapplyCSS(root);
+        }
+    }
+
+    @Override
+    public void registerContextAwareQuery(MediaQuery query, int contextAwareness, boolean currentValue) {
+        if ((contextAwareness & MediaQuery.VIEWPORT_SIZE_AWARE) != 0) {
+            viewportSizeAwareQueries.put(query, currentValue);
+        }
+
+        if ((contextAwareness & MediaQuery.FULLSCREEN_AWARE) != 0) {
+            fullScreenAwareQueries.put(query, currentValue);
+        }
+    }
+
+    @Override
+    public double getWidth() {
+        return scene.getWidth();
+    }
+
+    @Override
+    public double getHeight() {
+        return scene.getHeight();
+    }
+
+    @Override
+    public boolean isFullScreen() {
+        return scene.getWindow() instanceof Stage stage && stage.isFullScreen();
     }
 
     private final MediaProperty<ColorScheme> colorScheme = new MediaProperty<>(
@@ -150,6 +216,16 @@ public final class ScenePreferences implements Scene.Preferences, MediaQueryCont
         }
     }
 
+    private void onFullScreenChanged() {
+        // We evaluate all queries that we know could potentially change when the full-screen state has changed.
+        boolean changed = fullScreenAwareQueries.entrySet().stream()
+            .anyMatch(entry -> entry.getKey().evaluate(this) != entry.getValue());
+
+        if (changed && scene.getRoot() instanceof Node root) {
+            NodeHelper.scheduleReapplyCSS(root);
+        }
+    }
+
     /**
      * Property implementation for media features that causes CSS to be re-applied when the property
      * value is changed. This is required to re-evaluate media queries in stylesheets.
@@ -176,7 +252,7 @@ public final class ScenePreferences implements Scene.Preferences, MediaQueryCont
         protected void onInvalidated() {
             Node root = scene.getRoot();
             if (root != null) {
-                NodeHelper.reapplyCSS(root);
+                NodeHelper.scheduleReapplyCSS(root);
             }
         }
     }

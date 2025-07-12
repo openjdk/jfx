@@ -28,6 +28,7 @@ package test.javafx.css;
 import com.sun.javafx.css.RuleHelper;
 import com.sun.javafx.css.SimpleSelector;
 import com.sun.javafx.css.StyleManager;
+import com.sun.javafx.css.media.MediaQuery;
 import com.sun.javafx.css.media.expression.FunctionExpression;
 import javafx.application.ColorScheme;
 import javafx.css.StyleConverter.StringStore;
@@ -813,7 +814,7 @@ public class StylesheetTest {
 
         var mediaRule = RuleHelper.getMediaRule(stylesheet.getRules().get(1));
         assertEquals(
-            new FunctionExpression<>("prefers-color-scheme", "dark", _ -> null, ColorScheme.DARK),
+            FunctionExpression.of("prefers-color-scheme", "dark", _ -> null, ColorScheme.DARK, MediaQuery.DEFAULT_AWARENESS),
             mediaRule.getQueries().getFirst());
     }
 }

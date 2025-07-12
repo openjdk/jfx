@@ -62,6 +62,10 @@
                 font-size: 16px;
                 margin: 18px 0px 10px 0px;
             }
+            h5 {
+                font-size: 14px;
+                margin: 18px 0px 10px 0px;
+            }
             ul.contents li {
                 font-size: 12px;
                 font-weight:bold;
@@ -842,21 +846,50 @@
         </figure>
     <p>A <strong>media query</strong> consists of one or more <strong>media features</strong>.
         A media feature tests a single, specific feature of the <code>Scene</code>.
+        Syntactically, media features resemble CSS properties: they consist of a feature name, a colon, and a value to
+        test for. Media features are always enclosed in parentheses. They may also be written in boolean form as just a
+        feature name, or in range form using arithmetic comparison operators.
         <figure style="margin: 0">
             <img src="media-feature.svg" width="430" alt="Media Feature">
             <figcaption style="float: left; margin-top: 16px">
                 <span class="grammar">&lt;media-feature&gt;:</span>
             </figcaption>
         </figure>
-    <p>Syntactically, media features resemble CSS properties: they consist of a feature name, a colon, and a value to
-        test for. Media features are always enclosed in parentheses. They may also be written in boolean form as just a
-        feature name. In this case, the media feature is evaluated in a <strong>boolean context</strong>. This is a
-        convenient shorthand for features that have a reasonable default value. A media feature that is evaluated in a
-        boolean context evaluates to <code>true</code> if it would be <code>true</code> for any value <em>other</em>
-        than the reasonable default value.
+    <h5>Evaluating Media Features in a Boolean Context</h5>
+    <p>If the colon and value is omitted, the media feature is evaluated in a boolean context.
+        This is a convenient shorthand for features that have a reasonable default value. A media feature that is
+        evaluated in a boolean context evaluates to <code>true</code> if it would be <code>true</code> for any value
+        <em>other</em> than the reasonable default value.
     <p>For example, the <code>prefers-reduced-motion</code> media feature has a default value of <code>no-preference</code>.
         When evaluated in a boolean context, the media feature evaluates to <code>false</code> if the user has indicated no
         preference, and evaluates to <code>true</code> if the user has indicated the <code>reduce</code> preference.
+    <h5>Evaluating Media Features in a Range Context</h5>
+    <p>A media feature with a range type can be evaluated in a range context with two forms:
+        <ol>
+            <li>The <strong>basic form</strong> consists of a feature name, an arithmetic comparison operator,
+                and a value. For example:<br>
+                <code>
+                    (width > 600px)<br>
+                    (500px <= height)<br>
+                </code>
+                <br>
+            <li>The <strong>interval form</strong> consists of a feature name, nested between two comparison
+                operators and two values. For example:<br>
+                <code>
+                    (400px >= width >= 600px)<br>
+                    (10em < height <= 20em)<br>
+                </code>
+        </ol>
+        Rather than evaluating media features in a range context, they can also be evaluated in a discrete context by
+        writing the feature name with a "min-" or "max-" prefix:
+        <ul>
+            <li>Using the "min-" prefix on a feature name is equivalent to using the <code>>=</code> operator, for example:<br>
+                <code>(min-height: 500px)</code> is equivalent to <code>(height >= 500px)</code><br>
+                <br>
+            <li>Using the "max-" prefix on a feature name is equivalent to using the <code><=</code> operator, for example:<br>
+                <code>(max-width: 600px)</code> is equivalent to <code>(width <= 600px)</code><br>
+        </ul>
+    <h5>Combining Media Features</h5>
     <p>Media features can be combined using boolean algebra (<code>not</code>, <code>and</code>, <code>or</code>):
     <ul>
         <li>Any media feature can be negated by placing the <code>not</code> operator before it:<br>
@@ -898,39 +931,79 @@
             <br>
             In this case, parentheses must be used to group expressions.
     </ul>
-    <table class="cssmisctable" id="mediafeatures">
+    <table class="csspropertytable" id="mediafeatures">
         <caption>Available media features</caption>
-        <thead>
-            <tr>
-                <th>Media feature</th>
-                <th>Values</th>
-                <th>Boolean Context</th>
-            </tr>
-        </thead>
         <tbody>
+            <tr>
+                <th class="propertyname subheader">Viewport Characteristics</th>
+                <th class="subheader">Value</th>
+                <th class="subheader">Type</th>
+                <th class="subheader">Comments</th>
+            </tr>
+            <tr>
+                <td class="value">width</td>
+                <td class="value"><a href="#typelength" class="typeref">&lt;length&gt;</a></td>
+                <td>range</td>
+                <td></td>
+            </tr>
+            <tr>
+                <td class="value">height</td>
+                <td class="value"><a href="#typelength" class="typeref">&lt;length&gt;</a></td>
+                <td>range</td>
+                <td></td>
+            </tr>
+            <tr>
+                <td class="value">aspect-ratio</td>
+                <td class="value"><a href="#typenumber" class="typeref">&lt;number&gt;</a></td>
+                <td>range</td>
+                <td>aspect ratio = width / height</td>
+            </tr>
+            <tr>
+                <td class="value">orientation</td>
+                <td class="value">portrait | landscape</td>
+                <td>discrete</td>
+                <td>portrait if height >= width, landscape otherwise</td>
+            </tr>
+            <tr>
+                <td class="value">display-mode</td>
+                <td class="value">fullscreen | standalone</td>
+                <td>discrete</td>
+                <td></td>
+            </tr>
+            <tr>
+                <th class="propertyname subheader">User Preference</th>
+                <th class="subheader">Value</th>
+                <th class="subheader">Type</th>
+                <th class="subheader">Comments</th>
+            </tr>
             <tr>
                 <td class="value">prefers-color-scheme</td>
                 <td class="value">light | dark</td>
-                <td>not applicable</td>
+                <td>discrete</td>
+                <td></td>
             </tr>
             <tr>
                 <td class="value">prefers-reduced-data</td>
                 <td class="value">no-preference | reduce</td>
+                <td>discrete</td>
                 <td><code>no-preference</code> evaluates as <code>false</code></td>
             </tr>
             <tr>
                 <td class="value">prefers-reduced-motion</td>
                 <td class="value">no-preference | reduce</td>
+                <td>discrete</td>
                 <td><code>no-preference</code> evaluates as <code>false</code></td>
             </tr>
             <tr>
                 <td class="value">prefers-reduced-transparency</td>
                 <td class="value">no-preference | reduce</td>
+                <td>discrete</td>
                 <td><code>no-preference</code> evaluates as <code>false</code></td>
             </tr>
             <tr>
                 <td class="value">-fx-prefers-persistent-scrollbars</td>
                 <td class="value">no-preference | persistent</td>
+                <td>discrete</td>
                 <td><code>no-preference</code> evaluates as <code>false</code></td>
             </tr>
         </tbody>

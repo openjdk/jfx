@@ -23,54 +23,9 @@
  * questions.
  */
 
-package com.sun.javafx.css.media.expression;
+package com.sun.javafx.css.media;
 
-import com.sun.javafx.css.media.MediaQuery;
-import com.sun.javafx.css.media.MediaQueryCache;
-import com.sun.javafx.css.media.MediaQueryContext;
-import java.util.Objects;
+public interface SizeSupplier {
 
-/**
- * Evaluates to a constant boolean value.
- */
-public final class ConstantExpression implements MediaQuery {
-
-    private final boolean value;
-
-    private ConstantExpression(boolean value) {
-        this.value = value;
-    }
-
-    public static ConstantExpression of(boolean value) {
-        return MediaQueryCache.getCachedMediaQuery(new ConstantExpression(value));
-    }
-
-    public boolean value() {
-        return value;
-    }
-
-    @Override
-    public int getContextAwareness() {
-        return DEFAULT_AWARENESS;
-    }
-
-    @Override
-    public boolean evaluate(MediaQueryContext context) {
-        return value;
-    }
-
-    @Override
-    public boolean equals(Object obj) {
-        return obj instanceof ConstantExpression other && value == other.value ;
-    }
-
-    @Override
-    public int hashCode() {
-        return Objects.hash(ConstantExpression.class, value);
-    }
-
-    @Override
-    public String toString() {
-        return "(" + value + ")";
-    }
+    double get(MediaQueryContext context);
 }
