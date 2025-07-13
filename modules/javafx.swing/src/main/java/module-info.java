@@ -36,6 +36,7 @@
 module javafx.swing {
     requires java.datatransfer;
     requires javafx.base;
+    requires javafx.controls;
     requires jdk.unsupported.desktop;
 
     requires transitive java.desktop;

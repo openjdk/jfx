@@ -40,7 +40,8 @@ module javafx.controls {
     exports javafx.scene.control.skin;
 
     exports com.sun.javafx.scene.control to
-        javafx.web;
+        javafx.web,
+        javafx.swing;
     exports com.sun.javafx.scene.control.behavior to
         javafx.web;
     exports com.sun.javafx.scene.control.inputmap to
