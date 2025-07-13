@@ -25,15 +25,20 @@
 
 package com.sun.javafx.css.media.expression;
 
+import com.sun.javafx.css.media.ContextAwareness;
 import com.sun.javafx.css.media.MediaQuery;
 import com.sun.javafx.css.media.MediaQueryCache;
 import com.sun.javafx.css.media.MediaQueryContext;
+import java.util.EnumSet;
 import java.util.Objects;
+import java.util.Set;
 
 /**
  * Evaluates to a constant boolean value.
  */
 public final class ConstantExpression implements MediaQuery {
+
+    private static final Set<ContextAwareness> NONE = EnumSet.noneOf(ContextAwareness.class);
 
     private final boolean value;
 
@@ -50,8 +55,8 @@ public final class ConstantExpression implements MediaQuery {
     }
 
     @Override
-    public int getContextAwareness() {
-        return DEFAULT_AWARENESS;
+    public Set<ContextAwareness> getContextAwareness() {
+        return NONE;
     }
 
     @Override

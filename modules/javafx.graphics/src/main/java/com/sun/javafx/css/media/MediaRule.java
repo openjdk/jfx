@@ -83,10 +83,7 @@ public final class MediaRule {
         for (int i = 0, max = queries.size(); i < max; i++) {
             MediaQuery query = queries.get(i);
             boolean value = query.evaluate(context);
-            int contextAwareness = query.getContextAwareness();
-            if (contextAwareness != MediaQuery.DEFAULT_AWARENESS) {
-                context.registerContextAwareQuery(query, contextAwareness, value);
-            }
+            context.notifyQueryEvaluated(query, value);
 
             if (value) {
                 return true;

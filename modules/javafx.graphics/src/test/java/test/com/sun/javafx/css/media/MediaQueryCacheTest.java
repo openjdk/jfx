@@ -51,7 +51,7 @@ public class MediaQueryCacheTest {
         CONJUNCTION(() -> ConjunctionExpression.of(ConstantExpression.of(true), ConstantExpression.of(false))),
         DISJUNCTION(() -> DisjunctionExpression.of(ConstantExpression.of(true), ConstantExpression.of(false))),
         CONSTANT(() -> ConstantExpression.of(true)),
-        FUNCTION(() -> FunctionExpression.of("test", "value", _ -> 0, 0, MediaQuery.DEFAULT_AWARENESS)),
+        FUNCTION(() -> FunctionExpression.of("test", "value", _ -> 0, 0)),
         NEGATION(() -> NegationExpression.of(ConstantExpression.of(true))),
         GREATER(() -> GreaterExpression.of(SizeQueryType.WIDTH, new Size(1, SizeUnits.PX))),
         GREATER_OR_EQUAL(() -> GreaterOrEqualExpression.of(SizeQueryType.WIDTH, new Size(1, SizeUnits.PX))),

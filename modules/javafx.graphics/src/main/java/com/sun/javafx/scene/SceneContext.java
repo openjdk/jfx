@@ -27,11 +27,14 @@ package com.sun.javafx.scene;
 
 import com.sun.javafx.application.PlatformImpl;
 import com.sun.javafx.beans.property.NullCoalescingPropertyBase;
+import com.sun.javafx.css.media.ContextAwareness;
 import com.sun.javafx.css.media.MediaQuery;
 import com.sun.javafx.css.media.MediaQueryContext;
+import com.sun.javafx.css.media.MediaRule;
 import java.util.IdentityHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import javafx.application.ColorScheme;
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.value.ObservableValue;
@@ -89,13 +92,21 @@ public final class SceneContext implements Scene.Preferences, MediaQueryContext 
         }
     }
 
+    /**
+     * Called by {@link MediaRule} when a media query has been evaluated.
+     */
     @Override
-    public void registerContextAwareQuery(MediaQuery query, int contextAwareness, boolean currentValue) {
-        if ((contextAwareness & MediaQuery.VIEWPORT_SIZE_AWARE) != 0) {
+    public void notifyQueryEvaluated(MediaQuery query, boolean currentValue) {
+        Set<ContextAwareness> contextAwareness = query.getContextAwareness();
+        if (contextAwareness.isEmpty()) {
+            return;
+        }
+
+        if (contextAwareness.contains(ContextAwareness.VIEWPORT_SIZE)) {
             viewportSizeAwareQueries.put(query, currentValue);
         }
 
-        if ((contextAwareness & MediaQuery.FULLSCREEN_AWARE) != 0) {
+        if (contextAwareness.contains(ContextAwareness.FULLSCREEN)) {
             fullScreenAwareQueries.put(query, currentValue);
         }
     }

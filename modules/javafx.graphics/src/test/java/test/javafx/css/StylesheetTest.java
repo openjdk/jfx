@@ -814,7 +814,7 @@ public class StylesheetTest {
 
         var mediaRule = RuleHelper.getMediaRule(stylesheet.getRules().get(1));
         assertEquals(
-            FunctionExpression.of("prefers-color-scheme", "dark", _ -> null, ColorScheme.DARK, MediaQuery.DEFAULT_AWARENESS),
+            FunctionExpression.of("prefers-color-scheme", "dark", _ -> null, ColorScheme.DARK),
             mediaRule.getQueries().getFirst());
     }
 }

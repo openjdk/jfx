@@ -49,7 +49,6 @@ import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
 
-import static com.sun.javafx.css.media.MediaQuery.DEFAULT_AWARENESS;
 import static org.junit.jupiter.api.Assertions.*;
 
 public class MediaQuerySerializerTest {
@@ -74,11 +73,11 @@ public class MediaQuerySerializerTest {
 
     @Test
     void serializeFunctionExpression() throws IOException {
-        var expected = FunctionExpression.of("prefers-reduced-motion", "reduce", _ -> null, true, DEFAULT_AWARENESS);
+        var expected = FunctionExpression.of("prefers-reduced-motion", "reduce", _ -> null, true);
         var actual = deserialize(serialize(expected));
         assertEquals(expected, actual);
 
-        expected = FunctionExpression.of("prefers-reduced-motion", null, _ -> null, true, DEFAULT_AWARENESS);
+        expected = FunctionExpression.of("prefers-reduced-motion", null, _ -> null, true);
         actual = deserialize(serialize(expected));
         assertEquals(expected, actual);
     }
@@ -143,12 +142,12 @@ public class MediaQuerySerializerTest {
     void serializeComplexExpression() throws IOException {
         var expected = ConjunctionExpression.of(
             DisjunctionExpression.of(
-                FunctionExpression.of("prefers-reduced-motion", "reduce", _ -> null, true, DEFAULT_AWARENESS),
-                FunctionExpression.of("prefers-reduced-transparency", "no-preference", _ -> null, false, DEFAULT_AWARENESS)
+                FunctionExpression.of("prefers-reduced-motion", "reduce", _ -> null, true),
+                FunctionExpression.of("prefers-reduced-transparency", "no-preference", _ -> null, false)
             ),
             ConjunctionExpression.of(
                 NegationExpression.of(
-                    FunctionExpression.of("prefers-reduced-motion", null, _ -> null, true, DEFAULT_AWARENESS)
+                    FunctionExpression.of("prefers-reduced-motion", null, _ -> null, true)
                 ),
                 ConstantExpression.of(true)
             )

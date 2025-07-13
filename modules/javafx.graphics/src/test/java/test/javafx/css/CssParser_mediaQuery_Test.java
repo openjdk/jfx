@@ -45,7 +45,6 @@ import javafx.css.Stylesheet;
 import java.util.List;
 import org.junit.jupiter.api.Test;
 
-import static com.sun.javafx.css.media.MediaQuery.DEFAULT_AWARENESS;
 import static org.junit.jupiter.api.Assertions.*;
 
 public class CssParser_mediaQuery_Test {
@@ -61,7 +60,7 @@ public class CssParser_mediaQuery_Test {
         var mediaRule = RuleHelper.getMediaRule(stylesheet.getRules().getFirst());
         assertEquals(1, mediaRule.getQueries().size());
         assertEquals(
-            FunctionExpression.of("prefers-color-scheme", "light", _ -> null, ColorScheme.LIGHT, DEFAULT_AWARENESS),
+            FunctionExpression.of("prefers-color-scheme", "light", _ -> null, ColorScheme.LIGHT),
             mediaRule.getQueries().getFirst());
     }
 
@@ -76,7 +75,7 @@ public class CssParser_mediaQuery_Test {
         var mediaRule = RuleHelper.getMediaRule(stylesheet.getRules().getFirst());
         assertEquals(1, mediaRule.getQueries().size());
         assertEquals(
-            NegationExpression.of(FunctionExpression.of("prefers-color-scheme", "light", _ -> null, ColorScheme.LIGHT, DEFAULT_AWARENESS)),
+            NegationExpression.of(FunctionExpression.of("prefers-color-scheme", "light", _ -> null, ColorScheme.LIGHT)),
             mediaRule.getQueries().getFirst());
     }
 
@@ -96,10 +95,10 @@ public class CssParser_mediaQuery_Test {
         assertEquals(1, outerMediaRule.getQueries().size());
         assertNull(outerMediaRule.getParent());
         assertEquals(
-            FunctionExpression.of("prefers-color-scheme", "light", _ -> null, ColorScheme.LIGHT, DEFAULT_AWARENESS),
+            FunctionExpression.of("prefers-color-scheme", "light", _ -> null, ColorScheme.LIGHT),
             innerMediaRule.getQueries().getFirst());
         assertEquals(
-            FunctionExpression.of("prefers-reduced-motion", "reduce", _ -> null, true, DEFAULT_AWARENESS),
+            FunctionExpression.of("prefers-reduced-motion", "reduce", _ -> null, true),
             outerMediaRule.getQueries().getFirst());
     }
 
@@ -116,9 +115,9 @@ public class CssParser_mediaQuery_Test {
         var mediaRule = RuleHelper.getMediaRule(stylesheet.getRules().getFirst());
         assertEquals(
             List.of(
-                FunctionExpression.of("prefers-color-scheme", "dark", _ -> null, ColorScheme.DARK, DEFAULT_AWARENESS),
-                FunctionExpression.of("prefers-reduced-motion", null, _ -> null, true, DEFAULT_AWARENESS),
-                FunctionExpression.of("prefers-reduced-transparency", "no-preference", _ -> null, false, DEFAULT_AWARENESS)
+                FunctionExpression.of("prefers-color-scheme", "dark", _ -> null, ColorScheme.DARK),
+                FunctionExpression.of("prefers-reduced-motion", null, _ -> null, true),
+                FunctionExpression.of("prefers-reduced-transparency", "no-preference", _ -> null, false)
             ),
             mediaRule.getQueries());
     }
@@ -135,8 +134,8 @@ public class CssParser_mediaQuery_Test {
         assertEquals(1, mediaRule.getQueries().size());
         assertEquals(
             List.of(ConjunctionExpression.of(
-                FunctionExpression.of("prefers-color-scheme", "light", _ -> null, ColorScheme.LIGHT, DEFAULT_AWARENESS),
-                FunctionExpression.of("prefers-reduced-motion", "reduce", _ -> null, true, DEFAULT_AWARENESS)
+                FunctionExpression.of("prefers-color-scheme", "light", _ -> null, ColorScheme.LIGHT),
+                FunctionExpression.of("prefers-reduced-motion", "reduce", _ -> null, true)
             )),
             mediaRule.getQueries());
     }
@@ -156,9 +155,9 @@ public class CssParser_mediaQuery_Test {
         assertEquals(
             ConjunctionExpression.of(
                 ConjunctionExpression.of(
-                    FunctionExpression.of("prefers-color-scheme", "light", _ -> null, ColorScheme.LIGHT, DEFAULT_AWARENESS),
-                    FunctionExpression.of("prefers-reduced-motion", "reduce", _ -> false, true, DEFAULT_AWARENESS)),
-                FunctionExpression.of("prefers-reduced-transparency", "no-preference", _ -> false, false, DEFAULT_AWARENESS)
+                    FunctionExpression.of("prefers-color-scheme", "light", _ -> null, ColorScheme.LIGHT),
+                    FunctionExpression.of("prefers-reduced-motion", "reduce", _ -> false, true)),
+                FunctionExpression.of("prefers-reduced-transparency", "no-preference", _ -> false, false)
             ),
             mediaRule.getQueries().getFirst()
         );
@@ -176,8 +175,8 @@ public class CssParser_mediaQuery_Test {
         assertEquals(1, mediaRule.getQueries().size());
         assertEquals(
             DisjunctionExpression.of(
-                FunctionExpression.of("prefers-color-scheme", "light", _ -> null, ColorScheme.LIGHT, DEFAULT_AWARENESS),
-                FunctionExpression.of("prefers-reduced-motion", "reduce", _ -> null, true, DEFAULT_AWARENESS)
+                FunctionExpression.of("prefers-color-scheme", "light", _ -> null, ColorScheme.LIGHT),
+                FunctionExpression.of("prefers-reduced-motion", "reduce", _ -> null, true)
             ),
             mediaRule.getQueries().getFirst());
     }
@@ -197,9 +196,9 @@ public class CssParser_mediaQuery_Test {
         assertEquals(
             DisjunctionExpression.of(
                 DisjunctionExpression.of(
-                    FunctionExpression.of("prefers-color-scheme", "light", _ -> null, ColorScheme.LIGHT, DEFAULT_AWARENESS),
-                    FunctionExpression.of("prefers-reduced-motion", "reduce", _ -> false, true, DEFAULT_AWARENESS)),
-                FunctionExpression.of("-fx-prefers-persistent-scrollbars", "persistent", _ -> false, true, DEFAULT_AWARENESS)
+                    FunctionExpression.of("prefers-color-scheme", "light", _ -> null, ColorScheme.LIGHT),
+                    FunctionExpression.of("prefers-reduced-motion", "reduce", _ -> false, true)),
+                FunctionExpression.of("-fx-prefers-persistent-scrollbars", "persistent", _ -> false, true)
             ),
             mediaRule.getQueries().getFirst()
         );
@@ -231,7 +230,7 @@ public class CssParser_mediaQuery_Test {
         var mediaRule = RuleHelper.getMediaRule(stylesheet.getRules().getFirst());
         assertEquals(1, mediaRule.getQueries().size());
         assertEquals(
-            FunctionExpression.of("prefers-reduced-motion", null, _ -> null, true, DEFAULT_AWARENESS),
+            FunctionExpression.of("prefers-reduced-motion", null, _ -> null, true),
             mediaRule.getQueries().getFirst());
     }
 
@@ -246,7 +245,7 @@ public class CssParser_mediaQuery_Test {
         var mediaRule = RuleHelper.getMediaRule(stylesheet.getRules().getFirst());
         assertEquals(1, mediaRule.getQueries().size());
         assertEquals(
-            FunctionExpression.of("prefers-reduced-transparency", null, _ -> null, true, DEFAULT_AWARENESS),
+            FunctionExpression.of("prefers-reduced-transparency", null, _ -> null, true),
             mediaRule.getQueries().getFirst());
     }
 
@@ -261,7 +260,7 @@ public class CssParser_mediaQuery_Test {
         var mediaRule = RuleHelper.getMediaRule(stylesheet.getRules().getFirst());
         assertEquals(1, mediaRule.getQueries().size());
         assertEquals(
-            FunctionExpression.of("-fx-prefers-persistent-scrollbars", null, _ -> null, true, DEFAULT_AWARENESS),
+            FunctionExpression.of("-fx-prefers-persistent-scrollbars", null, _ -> null, true),
             mediaRule.getQueries().getFirst());
     }
 
@@ -345,7 +344,7 @@ public class CssParser_mediaQuery_Test {
         var mediaRule = RuleHelper.getMediaRule(stylesheet.getRules().getFirst());
         assertEquals(
             List.of(
-                FunctionExpression.of("prefers-reduced-motion", "reduce", _ -> null, true, DEFAULT_AWARENESS),
+                FunctionExpression.of("prefers-reduced-motion", "reduce", _ -> null, true),
                 ConstantExpression.of(false) // the rest of the query is malformed and evaluates to false
             ),
             mediaRule.getQueries());
@@ -376,7 +375,7 @@ public class CssParser_mediaQuery_Test {
         assertEquals(
             List.of(
                 ConstantExpression.of(false), // the malformed query evaluates to false
-                FunctionExpression.of("prefers-reduced-motion", "reduce", _ -> null, true, DEFAULT_AWARENESS)
+                FunctionExpression.of("prefers-reduced-motion", "reduce", _ -> null, true)
             ),
             mediaRule.getQueries());
     }

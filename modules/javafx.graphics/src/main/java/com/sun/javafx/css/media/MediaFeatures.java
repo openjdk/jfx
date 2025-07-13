@@ -93,7 +93,7 @@ final class MediaFeatures {
                     context -> portrait
                         ? context.getWidth() <= context.getHeight()
                         : context.getWidth() > context.getHeight(),
-                    true, MediaQuery.VIEWPORT_SIZE_AWARE);
+                    true, ContextAwareness.VIEWPORT_SIZE);
             }
 
             // We only support "standalone" and "fullscreen" display modes, not "minimal-ui" and "browser".
@@ -107,15 +107,14 @@ final class MediaFeatures {
                 yield FunctionExpression.of(
                     featureName, featureValue,
                     context -> context.isFullScreen() == fullscreen,
-                    true, MediaQuery.FULLSCREEN_AWARE);
+                    true, ContextAwareness.FULLSCREEN);
             }
 
             case "prefers-color-scheme" -> FunctionExpression.of(
                 featureName,
                 checkNotNullValue(featureName, lowerCaseTextValue(featureValue)),
                 MediaQueryContext::getColorScheme,
-                enumValue(ColorScheme::valueOf, featureName, featureValue),
-                MediaQuery.DEFAULT_AWARENESS);
+                enumValue(ColorScheme::valueOf, featureName, featureValue));
 
             case "prefers-reduced-motion" -> booleanPreferenceExpression(
                 featureName, lowerCaseTextValue(featureValue), "reduce", MediaQueryContext::isReducedMotion);
@@ -188,11 +187,11 @@ final class MediaFeatures {
                                                           String trueValue,
                                                           Function<MediaQueryContext, Boolean> argument) {
         if ("no-preference".equals(featureValue)) {
-            return FunctionExpression.of(featureName, featureValue, argument, false, MediaQuery.DEFAULT_AWARENESS);
+            return FunctionExpression.of(featureName, featureValue, argument, false);
         }
 
         if (featureValue == null || trueValue.equals(featureValue)) {
-            return FunctionExpression.of(featureName, featureValue, argument, true, MediaQuery.DEFAULT_AWARENESS);
+            return FunctionExpression.of(featureName, featureValue, argument, true);
         }
 
         throw unknownValue(featureName, featureValue);

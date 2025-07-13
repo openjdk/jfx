@@ -25,10 +25,12 @@
 
 package com.sun.javafx.css.media.expression;
 
+import com.sun.javafx.css.media.ContextAwareness;
 import com.sun.javafx.css.media.MediaQuery;
 import com.sun.javafx.css.media.MediaQueryCache;
 import com.sun.javafx.css.media.MediaQueryContext;
 import java.util.Objects;
+import java.util.Set;
 import java.util.function.Function;
 
 /**
@@ -39,11 +41,23 @@ public final class FunctionExpression<T> implements MediaQuery {
     private final String featureName;
     private final String featureValue;
     private final Function<MediaQueryContext, T> function;
+    private final Set<ContextAwareness> contextAwareness;
     private final T value;
-    private final int contextAwareness;
+
+    private FunctionExpression(String featureName,
+                               String featureValue,
+                               Function<MediaQueryContext, T> function,
+                               T value,
+                               ContextAwareness... contextAwareness) {
+        this.featureName = Objects.requireNonNull(featureName, "featureName cannot be null");
+        this.featureValue = featureValue;
+        this.function = Objects.requireNonNull(function, "function cannot be null");
+        this.contextAwareness = ContextAwareness.of(contextAwareness);
+        this.value = value;
+    }
 
     /**
-     * Creates a new {@code FunctionExpression}.
+     * Returns an interned {@code FunctionExpression}.
      *
      * @param featureName the feature name
      * @param featureValue the feature value, or {@code null} to indicate a boolean context
@@ -51,23 +65,11 @@ public final class FunctionExpression<T> implements MediaQuery {
      * @param value the expected return value of the function+
      * @param contextAwareness the context awareness of the function, see {@link MediaQuery#getContextAwareness()}
      */
-    private FunctionExpression(String featureName,
-                               String featureValue,
-                               Function<MediaQueryContext, T> function,
-                               T value,
-                               int contextAwareness) {
-        this.featureName = Objects.requireNonNull(featureName, "featureName cannot be null");
-        this.featureValue = featureValue;
-        this.function = Objects.requireNonNull(function, "function cannot be null");
-        this.value = value;
-        this.contextAwareness = contextAwareness;
-    }
-
     public static <T> FunctionExpression<T> of(String featureName,
                                                String featureValue,
                                                Function<MediaQueryContext, T> function,
                                                T value,
-                                               int contextAwareness) {
+                                               ContextAwareness... contextAwareness) {
         return MediaQueryCache.getCachedMediaQuery(
             new FunctionExpression<>(featureName, featureValue, function, value, contextAwareness));
     }
@@ -81,7 +83,7 @@ public final class FunctionExpression<T> implements MediaQuery {
     }
 
     @Override
-    public int getContextAwareness() {
+    public Set<ContextAwareness> getContextAwareness() {
         return contextAwareness;
     }
 

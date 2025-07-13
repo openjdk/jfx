@@ -91,7 +91,7 @@ public sealed interface MediaQueryContext permits SceneContext {
     double getHeight();
 
     /**
-     * Registers the specified query with the media query context and provides its current value.
+     * Notifies the media query context that a query has been evaluated and provides its current value.
      * <p>
      * The context can then re-evaluate the query at its own discretion and compare the evaluated value with
      * the stored value to determine if it is necessary to re-apply CSS. This is an optimization to minimize
@@ -101,8 +101,7 @@ public sealed interface MediaQueryContext permits SceneContext {
      * the case when a range-based query changes its value.
      *
      * @param query the query
-     * @param contextAwareness the context-awareness flags
      * @param currentValue the query value
      */
-    void registerContextAwareQuery(MediaQuery query, int contextAwareness, boolean currentValue);
+    void notifyQueryEvaluated(MediaQuery query, boolean currentValue);
 }
