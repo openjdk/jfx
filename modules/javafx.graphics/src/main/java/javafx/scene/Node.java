@@ -131,6 +131,7 @@ import com.sun.javafx.css.TransitionDefinition;
 import com.sun.javafx.css.TransitionDefinitionConverter;
 import com.sun.javafx.css.TransitionDefinitionCssMetaData;
 import com.sun.javafx.css.TransitionTimer;
+import com.sun.javafx.css.media.MediaQueryContext;
 import javafx.css.Selector;
 import javafx.css.Style;
 import javafx.css.converter.BooleanConverter;
@@ -690,6 +691,11 @@ public abstract sealed class Node
             @Override
             public TransitionTimer findTransitionTimer(Node node, String propertyName) {
                 return node.findTransitionTimer(propertyName);
+            }
+
+            @Override
+            public MediaQueryContext getMediaQueryContext(Node node) {
+                return node.getMediaQueryContext();
             }
         });
     }
@@ -10130,6 +10136,11 @@ public abstract sealed class Node
 
     void clearInitialCssStateFlag() {
         initialCssState = false;
+    }
+
+    private MediaQueryContext getMediaQueryContext() {
+        Scene scene = getScene();
+        return scene != null ? scene.preferences : null;
     }
 
     /**
