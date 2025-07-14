@@ -901,6 +901,7 @@ public abstract class PopupWindow extends Window {
         return new WindowEventDispatcher(new PopupEventRedirector(this),
                                          new WindowCloseRequestHandler(this),
                                          new EventHandlerManager(this));
+
     }
 
     @Override

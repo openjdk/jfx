@@ -62,8 +62,8 @@ public class WindowEventDispatcher extends CompositeEventDispatcher {
                     supported = SupportedState.FALSE;
                 }
             }
-            if (supported == SupportedState.TRUE && event.getEventType() == KeyEvent.KEY_PRESSED && (event instanceof KeyEvent)) {
-               Toolkit.getToolkit().getSystemMenu().handleKeyEvent((KeyEvent)event);
+            if (supported == SupportedState.TRUE && event.getEventType() == KeyEvent.KEY_PRESSED && event instanceof KeyEvent ke) {
+               Toolkit.getToolkit().getSystemMenu().handleKeyEvent(ke);
             }
             return event;
         }
