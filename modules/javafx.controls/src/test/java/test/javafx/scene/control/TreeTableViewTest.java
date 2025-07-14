@@ -1728,6 +1728,8 @@ public class TreeTableViewTest {
 
         table.getColumns().addAll(firstNameCol, lastNameCol, emailCol);
 
+        stageLoader = new StageLoader(table);
+
         VirtualFlowTestUtils.assertRowsNotEmpty(table, 0, 6); // rows 0 - 6 should be filled
         VirtualFlowTestUtils.assertRowsEmpty(table, 6, -1); // rows 6+ should be empty
 
@@ -1736,6 +1738,7 @@ public class TreeTableViewTest {
         root.getChildren().setAll(
                 new TreeItem(new Person("*_*Emma", "Jones", "emma.jones@example.com")),
                 new TreeItem(new Person("_Michael", "Brown", "michael.brown@example.com")));
+        Toolkit.getToolkit().firePulse();
 
         VirtualFlowTestUtils.assertRowsNotEmpty(table, 0, 3); // rows 0 - 3 should be filled
         VirtualFlowTestUtils.assertRowsEmpty(table, 3, -1); // rows 3+ should be empty
@@ -2164,6 +2167,8 @@ public class TreeTableViewTest {
 
         table.getColumns().addAll(firstNameCol, lastNameCol, emailCol);
 
+        stageLoader = new StageLoader(table);
+
         // test the state before we hide and re-add a column
         VirtualFlowTestUtils.assertCellTextEquals(table, 0, "Jacob", "Smith", "jacob.smith@example.com");
         VirtualFlowTestUtils.assertCellTextEquals(table, 1, "Isabella", "Johnson", "isabella.johnson@example.com");
@@ -2173,6 +2178,7 @@ public class TreeTableViewTest {
 
         // hide the last name column, and test cells again
         table.getColumns().remove(lastNameCol);
+        Toolkit.getToolkit().firePulse();
         VirtualFlowTestUtils.assertCellTextEquals(table, 0, "Jacob", "jacob.smith@example.com");
         VirtualFlowTestUtils.assertCellTextEquals(table, 1, "Isabella", "isabella.johnson@example.com");
         VirtualFlowTestUtils.assertCellTextEquals(table, 2, "Ethan", "ethan.williams@example.com");
@@ -2185,6 +2191,7 @@ public class TreeTableViewTest {
         // some of the last name values will not be where we expect them to be.
         // This is clearly not ideal!
         table.getColumns().add(1, lastNameCol);
+        Toolkit.getToolkit().firePulse();
         VirtualFlowTestUtils.assertCellTextEquals(table, 0, "Jacob", "Smith", "jacob.smith@example.com");
         VirtualFlowTestUtils.assertCellTextEquals(table, 1, "Isabella", "Johnson", "isabella.johnson@example.com");
         VirtualFlowTestUtils.assertCellTextEquals(table, 2, "Ethan", "Williams", "ethan.williams@example.com");
@@ -2227,6 +2234,7 @@ public class TreeTableViewTest {
 
         table.getColumns().add(firstNameCol);
 
+        stageLoader = new StageLoader(table);
         Toolkit.getToolkit().firePulse();
 
         // we want the vertical scrollbar
@@ -2443,6 +2451,8 @@ public class TreeTableViewTest {
         firstNameCol.setCellFactory(CheckBoxTreeTableCell.forTreeTableColumn(param -> new ReadOnlyBooleanWrapper(true)));
         tableView.getColumns().add(firstNameCol);
 
+        stageLoader = new StageLoader(tableView);
+
         // because only the first row has data, all other rows should be
         // empty (and not contain check boxes - we just check the first four here)
         VirtualFlowTestUtils.assertRowsNotEmpty(tableView, 0, 1);
@@ -2463,6 +2473,8 @@ public class TreeTableViewTest {
         firstNameCol.setEditable(true);
 
         treeTableView.getColumns().add(firstNameCol);
+
+        stageLoader = new StageLoader(treeTableView);
 
         IndexedCell cell = VirtualFlowTestUtils.getCell(treeTableView, 1, 0);
         assertEquals("TEST", cell.getText());
@@ -2488,6 +2500,8 @@ public class TreeTableViewTest {
 
         treeTableView.getColumns().add(firstNameCol);
 
+        stageLoader = new StageLoader(treeTableView);
+
         IndexedCell cell = VirtualFlowTestUtils.getCell(treeTableView, 0, 0);
         assertEquals("Root", cell.getText());
 
@@ -2502,6 +2516,8 @@ public class TreeTableViewTest {
         firstNameCol.setCellValueFactory(param -> new ReadOnlyStringWrapper(param.getValue().getValue()));
 
         treeTableView.getColumns().add(firstNameCol);
+
+        stageLoader = new StageLoader(treeTableView);
 
         IndexedCell cell = VirtualFlowTestUtils.getCell(treeTableView, 0);
         assertEquals("Root", cell.getItem());
@@ -2526,11 +2542,15 @@ public class TreeTableViewTest {
 
         treeTableView.getColumns().add(firstNameCol);
 
+        stageLoader = new StageLoader(treeTableView);
+
         TreeTableRow cell = (TreeTableRow) VirtualFlowTestUtils.getCell(treeTableView, 0);
         assertEquals("Root", cell.getItem());
 
         // set the first graphic - which we expect to see as a child of the cell
         root.setGraphic(graphic1);
+        Toolkit.getToolkit().firePulse();
+
         cell = (TreeTableRow) VirtualFlowTestUtils.getCell(treeTableView, 0);
         boolean matchGraphic1 = false;
         boolean matchGraphic2 = false;
@@ -2547,6 +2567,8 @@ public class TreeTableViewTest {
 
         // set the second graphic - which we also expect to see - but of course graphic1 should not be a child any longer
         root.setGraphic(graphic2);
+        Toolkit.getToolkit().firePulse();
+
         cell = (TreeTableRow) VirtualFlowTestUtils.getCell(treeTableView, 0);
         matchGraphic1 = false;
         matchGraphic2 = false;
@@ -2703,6 +2725,8 @@ public class TreeTableViewTest {
         col.setCellValueFactory(param -> new ReadOnlyObjectWrapper<>(param.getValue().getValue()));
         treeTableView.getColumns().add(col);
 
+        stageLoader = new StageLoader(treeTableView);
+
         // test pre-conditions
         assertEquals(0, sm.getSelectedCells().size());
         assertEquals(0, sm.getSelectedItems().size());
@@ -2791,6 +2815,8 @@ public class TreeTableViewTest {
             }
         });
 
+        stageLoader = new StageLoader(treeTableView);
+
         // First four rows have content, so the graphic should show.
         // All other rows have no content, so graphic should not show.
 
@@ -2829,6 +2855,8 @@ public class TreeTableViewTest {
                 };
             }
         });
+
+        stageLoader = new StageLoader(treeTableView);
 
         // First two rows have content, so the graphic should show.
         // All other rows have no content, so graphic should not show.
@@ -4363,6 +4391,8 @@ public class TreeTableViewTest {
         assertEquals(one, sm.getSelectedItem());
         assertTrue(sm.isSelected(4), debug());
 
+        stageLoader = new StageLoader(treeTableView);
+
         // this line would create a NPE
         VirtualFlowTestUtils.clickOnRow(treeTableView, 4, true);
 
@@ -5289,7 +5319,7 @@ public class TreeTableViewTest {
 
         TreeTableViewFocusModel<String> fm = stringTreeView.getFocusModel();
 
-        StageLoader sl = new StageLoader(stringTreeView);
+        stageLoader = new StageLoader(stringTreeView);
 
         // test pre-conditions
         assertTrue(sm.isEmpty());
@@ -5335,8 +5365,6 @@ public class TreeTableViewTest {
         assertTrue(TreeTableCellBehavior.hasNonDefaultAnchor(stringTreeView));
         assertEquals(1, anchor.getRow());
         assertEquals(column, anchor.getTableColumn());
-
-        sl.dispose();
     }
 
     private final ObservableList<TreeItem<String>> rt_39256_list = FXCollections.observableArrayList();
@@ -6336,6 +6364,8 @@ public class TreeTableViewTest {
         c2.setCellValueFactory(cdf -> new ReadOnlyStringWrapper(cdf.getValue().getValue()));
         t.getColumns().addAll(c1, c2);
 
+        stageLoader = new StageLoader(t);
+
         final int startIndex = toRight ? 0 : 2;
         final int endIndex = toRight ? 2 : 0;
         final TreeTableColumn<String,String> startColumn = toBottom ? c1 : c2;
@@ -6890,6 +6920,8 @@ public class TreeTableViewTest {
         sm.setSelectionMode(SelectionMode.MULTIPLE);
         sm.setCellSelectionEnabled(true);
 
+        stageLoader = new StageLoader(table);
+
         assertEquals(0, sm.getSelectedItems().size());
 
         sm.select(1, firstNameCol);
@@ -7009,6 +7041,8 @@ public class TreeTableViewTest {
         sm.setSelectionMode(SelectionMode.MULTIPLE);
         sm.setCellSelectionEnabled(true);
 
+        stageLoader = new StageLoader(table);
+
         // Call change::toString
         table.getSelectionModel().getSelectedItems().addListener((ListChangeListener<TreeItem<Person>>) Object::toString);
 
@@ -7053,6 +7087,8 @@ public class TreeTableViewTest {
 
         TreeTableView.TreeTableViewSelectionModel<String> sm = stringTreeView.getSelectionModel();
         sm.setSelectionMode(SelectionMode.MULTIPLE);
+
+        stageLoader = new StageLoader(stringTreeView);
 
         // test pre-conditions
         assertTrue(sm.isEmpty());
