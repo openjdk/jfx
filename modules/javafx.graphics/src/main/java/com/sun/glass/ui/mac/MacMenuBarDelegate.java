@@ -53,10 +53,10 @@ class MacMenuBarDelegate implements MenuBarDelegate {
         return true;
     }
 
-    private native boolean _handleKeyEvent(long menubarPtr);
+    private native boolean _handleKeyEvent(long menubarPtr, int code, int modifiers);
     @Override
-    public boolean handleKeyEvent() {
-        return _handleKeyEvent(ptr);
+    public boolean handleKeyEvent(int code, int modifiers) {
+        return _handleKeyEvent(ptr, code, modifiers);
     }
 
     @Override public long getNativeMenu() {

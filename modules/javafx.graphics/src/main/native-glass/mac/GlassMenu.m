@@ -384,10 +384,10 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_mac_MacMenuBarDelegate__1remove
 /*
  * Class:     com_sun_glass_ui_mac_MacMenuBarDelegate
  * Method:    _handleKeyEvent
- * Signature: (J)Z
+ * Signature: (JII)Z
  */
 JNIEXPORT jboolean JNICALL Java_com_sun_glass_ui_mac_MacMenuBarDelegate__1handleKeyEvent
-  (JNIEnv *env, jobject jMenuDelegate, jlong jMenubarPtr)
+  (JNIEnv *env, jobject jMenuDelegate, jlong jMenubarPtr, jint code, jint modifiers)
 {
     LOG("Java_com_sun_glass_ui_mac_MacMenuBarDelegate__1handleKeyEvent");
 
@@ -396,7 +396,7 @@ JNIEXPORT jboolean JNICALL Java_com_sun_glass_ui_mac_MacMenuBarDelegate__1handle
     GLASS_ASSERT_MAIN_JAVA_THREAD(env);
     GLASS_POOL_ENTER;
     {
-        if ([GlassApplication handleMenuKeyEvent]) {
+        if ([GlassApplication handleMenuKeyEventForCode: code modifiers: modifiers]) {
             result = true;
         }
     }

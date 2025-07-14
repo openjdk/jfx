@@ -32,7 +32,7 @@ public interface MenuBarDelegate {
     public boolean remove(MenuDelegate menu, int pos);
     public long getNativeMenu();
     // Returns true if the key event was processed
-    default public boolean handleKeyEvent() {
+    default public boolean handleKeyEvent(int code, int modifiers) {
         return false;
     }
 }

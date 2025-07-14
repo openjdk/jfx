@@ -471,43 +471,13 @@
 {
     KEYLOG("performKeyEquivalent");
 
-    // JDK-8093711, JDK-8094601 Command-EQUALS and Command-DOT needs special casing on Mac
-    // as it is passed through as two calls to performKeyEquivalent, which in turn
-    // create extra KeyEvents.
-    //
-    NSString *chars = [theEvent charactersIgnoringModifiers];
-    if ([theEvent type] == NSEventTypeKeyDown && [chars length] > 0)
-    {
-        unichar uch = [chars characterAtIndex:0];
-        if ([theEvent modifierFlags] & NSEventModifierFlagCommand &&
-            (uch == com_sun_glass_events_KeyEvent_VK_PERIOD ||
-             uch == com_sun_glass_events_KeyEvent_VK_EQUALS))
-        {
-            GET_MAIN_JENV;
-
-            jcharArray jKeyChars = GetJavaKeyChars(env, theEvent);
-            jint jModifiers = GetJavaModifiers(theEvent);
-
-            (*env)->CallBooleanMethod(env, self->_delegate->jView, jViewNotifyKeyAndReturnConsumed,
-                                      com_sun_glass_events_KeyEvent_PRESS,
-                                      uch, jKeyChars, jModifiers);
-            (*env)->CallBooleanMethod(env, self->_delegate->jView, jViewNotifyKeyAndReturnConsumed,
-                                      com_sun_glass_events_KeyEvent_TYPED,
-                                      uch, jKeyChars, jModifiers);
-            (*env)->CallBooleanMethod(env, self->_delegate->jView, jViewNotifyKeyAndReturnConsumed,
-                                   com_sun_glass_events_KeyEvent_RELEASE,
-                                   uch, jKeyChars, jModifiers);
-            (*env)->DeleteLocalRef(env, jKeyChars);
-
-            GLASS_CHECK_EXCEPTION(env);
-            return YES;
-        }
-    }
-
+    // We can return YES here unconditionally. If the scene graph wants to
+    // invoke the system menu it will call handleKeyEvent in the
+    // MenuBarDelegate while the KeyEvent is being dispatched.
     [GlassApplication setMenuKeyEvent: theEvent];
-    BOOL result = [self handleKeyDown: theEvent];
+    [self handleKeyDown: theEvent];
     [GlassApplication setMenuKeyEvent: nil];
-    return result;
+    return YES;
 }
 
 - (BOOL)handleKeyDown:(NSEvent *)theEvent

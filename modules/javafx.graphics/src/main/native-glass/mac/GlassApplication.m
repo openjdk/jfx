@@ -921,13 +921,15 @@ static void inputDidChangeCallback(CFNotificationCenterRef center, void *observe
     }
 }
 
-+ (BOOL)handleMenuKeyEvent
++ (BOOL)handleMenuKeyEventForCode:(jint)code modifiers:(jint)modifiers;
 {
     BOOL result = NO;
     if (menuKeyEvent != nil) {
-        result = [NSApp.mainMenu performKeyEquivalent: menuKeyEvent];
-        [menuKeyEvent release];
-        menuKeyEvent = nil;
+        if (code == GetJavaKeyCode(menuKeyEvent) && modifiers == GetJavaKeyModifiers(menuKeyEvent)) {
+            result = [NSApp.mainMenu performKeyEquivalent: menuKeyEvent];
+            [menuKeyEvent release];
+            menuKeyEvent = nil;
+        }
     }
     return result;
 }
