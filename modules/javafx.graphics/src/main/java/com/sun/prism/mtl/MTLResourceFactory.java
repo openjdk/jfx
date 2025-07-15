@@ -138,7 +138,7 @@ public class MTLResourceFactory extends BaseShaderFactory {
     @Override
     public Texture createTexture(PixelFormat formatHint, Texture.Usage usageHint,
                                  Texture.WrapMode wrapMode, int w, int h) {
-        return createTexture(formatHint, usageHint, wrapMode, w,h, false);
+        return createTexture(formatHint, usageHint, wrapMode, w, h, false);
     }
 
     @Override
@@ -414,8 +414,8 @@ public class MTLResourceFactory extends BaseShaderFactory {
         return MTLMesh.create(context);
     }
 
-    static void releaseTexture(MTLContext context, long resource) {
-        nReleaseTexture(context.getContextHandle(), resource);
+    static void releaseTexture(long resource) {
+        nReleaseTexture(resource);
     }
 
     // Native methods
@@ -423,5 +423,5 @@ public class MTLResourceFactory extends BaseShaderFactory {
     static native long nCreateTexture(long pContext, int format, int hint, boolean isRTT,
                                       int width, int height, int samples, boolean useMipmap);
 
-    static native void nReleaseTexture(long context, long pTexture);
+    static native void nReleaseTexture(long pTexture);
 }

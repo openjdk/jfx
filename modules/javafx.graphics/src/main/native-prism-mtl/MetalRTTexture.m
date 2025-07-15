@@ -133,16 +133,37 @@
     }
 }
 
+- (void) initRTT:(int*)arr
+{
+    id<MTLTexture> tex = [self getTexture];
+    MTLRegion region = {{0, 0, 0}, {tex.width, tex.height, 1}};
+    [tex replaceRegion:region
+           mipmapLevel:0
+             withBytes:arr
+           bytesPerRow:tex.width * 4];
+}
+
+- (void) readPixels:(int*)pDst
+{
+    int* texContent = (int*)[[self getPixelBuffer] contents];
+    for (NSUInteger i = 0; i < contentHeight; i++) {
+        for (NSUInteger j = 0; j < contentWidth; j++) {
+            pDst[i * contentWidth + j] = texContent[i * physicalWidth + j];
+        }
+    }
+}
+
+- (void) readPixelsFromRTT:(int*)pDst
+{
+    int *texContent = (int*)[[self getPixelBuffer] contents];
+    memcpy(pDst, texContent, contentWidth * contentHeight * 4);
+}
+
 - (id<MTLTexture>) getTexture { return [super getTexture]; }
 - (id<MTLTexture>) getDepthTexture { return depthTexture; }
 - (BOOL) isMSAAEnabled { return isMSAA; }
 - (id<MTLTexture>) getMSAATexture { return msaaTexture; }
 - (id<MTLTexture>) getDepthMSAATexture { return depthMSAATexture; }
-
-- (NSUInteger) getPhysicalWidth  { return physicalWidth;  }
-- (NSUInteger) getPhysicalHeight { return physicalHeight; }
-- (NSUInteger) getContentWidth   { return contentWidth;   }
-- (NSUInteger) getContentHeight  { return contentHeight;  }
 
 - (void) dealloc {
     if (depthTexture != nil) {
@@ -210,16 +231,9 @@ JNIEXPORT void JNICALL Java_com_sun_prism_mtl_MTLRTTexture_nInitRTT
     (JNIEnv *env, jclass class, jlong jTexPtr, jintArray pixData)
 {
     MetalRTTexture* rtt = (MetalRTTexture*) jlong_to_ptr(jTexPtr);
-    id<MTLTexture> tex = [rtt getTexture];
+    int* arr = (*env)->GetIntArrayElements(env, pixData, NULL);
 
-    jint* arr = (*env)->GetIntArrayElements(env, pixData, NULL);
-
-    MTLRegion region = {{0,0,0}, {tex.width, tex.height, 1}};
-
-    [tex replaceRegion:region
-           mipmapLevel:0
-             withBytes:arr
-           bytesPerRow:tex.width * 4];
+    [rtt initRTT:arr];
 
     (*env)->ReleaseIntArrayElements(env, pixData, arr, 0);
 }
@@ -233,12 +247,8 @@ JNIEXPORT void JNICALL Java_com_sun_prism_mtl_MTLRTTexture_nReadPixelsFromRTT
     (JNIEnv *env, jclass class, jlong jTexPtr, jobject pixData)
 {
     MetalRTTexture* rtt = (MetalRTTexture*) jlong_to_ptr(jTexPtr);
-    int *texContent = (int*)[[rtt getPixelBuffer] contents];
-    NSUInteger cw = [rtt getContentWidth];
-    NSUInteger ch = [rtt getContentHeight];
-
     int* pDst = (int*) (*env)->GetDirectBufferAddress(env, pixData);
-    memcpy(pDst, texContent, cw * ch * 4);
+    [rtt readPixelsFromRTT:pDst];
 }
 
 /*
@@ -250,17 +260,9 @@ JNIEXPORT void JNICALL Java_com_sun_prism_mtl_MTLRTTexture_nReadPixels
     (JNIEnv *env, jclass class, jlong jTexPtr, jintArray pixData)
 {
     MetalRTTexture* rtt = (MetalRTTexture*) jlong_to_ptr(jTexPtr);
-    int* texContent = (int*)[[rtt getPixelBuffer] contents];
-    NSUInteger pw = [rtt getPhysicalWidth];
-    NSUInteger ph = [rtt getPhysicalHeight];
-    NSUInteger cw = [rtt getContentWidth];
-    NSUInteger ch = [rtt getContentHeight];
-
     int* pDst = (*env)->GetIntArrayElements(env, pixData, nil);
-    for (NSUInteger i = 0; i < ch; i++) {
-        for (NSUInteger j = 0; j < cw; j++) {
-            pDst[i * cw + j] = texContent[i * pw + j];
-        }
-    }
+
+    [rtt readPixels:pDst];
+
     (*env)->ReleaseIntArrayElements(env, pixData, pDst, 0);
 }

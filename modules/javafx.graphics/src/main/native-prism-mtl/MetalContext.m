@@ -847,6 +847,33 @@
     return commandQueue;
 }
 
+- (void) blit:(id<MTLTexture>)src srcX0:(int)srcX0 srcY0:(int)srcY0 srcX1:(int)srcX1 srcY1:(int)srcY1
+       dstTex:(id<MTLTexture>)dst dstX0:(int)dstX0 dstY0:(int)dstY0 dstX1:(int)dstX1 dstY1:(int)dstY1
+{
+    [self endCurrentRenderEncoder];
+
+    id<MTLCommandBuffer> commandBuffer = [self getCurrentCommandBuffer];
+    @autoreleasepool {
+        id<MTLBlitCommandEncoder> blitEncoder = [commandBuffer blitCommandEncoder];
+        if (src.usage == MTLTextureUsageRenderTarget) {
+            [blitEncoder synchronizeTexture:src slice:0 level:0];
+        }
+        if (dst.usage == MTLTextureUsageRenderTarget) {
+            [blitEncoder synchronizeTexture:dst slice:0 level:0];
+        }
+        [blitEncoder copyFromTexture:src
+                         sourceSlice:(NSUInteger)0
+                         sourceLevel:(NSUInteger)0
+                        sourceOrigin:MTLOriginMake(0, 0, 0)
+                          sourceSize:MTLSizeMake(src.width, src.height, src.depth)
+                           toTexture:dst
+                    destinationSlice:(NSUInteger)0
+                    destinationLevel:(NSUInteger)0
+                   destinationOrigin:MTLOriginMake(0, 0, 0)];
+        [blitEncoder endEncoding];
+    }
+}
+
 @end // MetalContext
 
 
@@ -1432,28 +1459,8 @@ JNIEXPORT void JNICALL Java_com_sun_prism_mtl_MTLContext_nBlit
     id<MTLTexture> src = [srcRTT getTexture];
     id<MTLTexture> dst = [dstRTT getTexture];
 
-    [pCtx endCurrentRenderEncoder];
-
-    id<MTLCommandBuffer> commandBuffer = [pCtx getCurrentCommandBuffer];
-    @autoreleasepool {
-        id<MTLBlitCommandEncoder> blitEncoder = [commandBuffer blitCommandEncoder];
-        if (src.usage == MTLTextureUsageRenderTarget) {
-            [blitEncoder synchronizeTexture:src slice:0 level:0];
-        }
-        if (dst.usage == MTLTextureUsageRenderTarget) {
-            [blitEncoder synchronizeTexture:dst slice:0 level:0];
-        }
-        [blitEncoder copyFromTexture:src
-                         sourceSlice:(NSUInteger)0
-                         sourceLevel:(NSUInteger)0
-                        sourceOrigin:MTLOriginMake(0, 0, 0)
-                          sourceSize:MTLSizeMake(src.width, src.height, src.depth)
-                           toTexture:dst
-                    destinationSlice:(NSUInteger)0
-                    destinationLevel:(NSUInteger)0
-                   destinationOrigin:MTLOriginMake(0, 0, 0)];
-        [blitEncoder endEncoding];
-    }
+    [pCtx blit:src srcX0:srcX0 srcY0:srcY0 srcX1:srcX1 srcY1:srcY1
+        dstTex:dst dstX0:dstX0 dstY0:dstY0 dstX1:dstX1 dstY1:dstY1];
 }
 
 /*
@@ -1537,12 +1544,11 @@ JNIEXPORT jlong JNICALL Java_com_sun_prism_mtl_MTLResourceFactory_nCreateTexture
 /*
  * Class:     com_sun_prism_mtl_MTLResourceFactory
  * Method:    nReleaseTexture
- * Signature: (JJ)V
+ * Signature: (J)V
  */
 JNIEXPORT void JNICALL Java_com_sun_prism_mtl_MTLResourceFactory_nReleaseTexture
-    (JNIEnv *env, jclass class, jlong pContext, jlong pTexture)
+    (JNIEnv *env, jclass class, jlong pTexture)
 {
-    MetalContext* context = (MetalContext*)jlong_to_ptr(pContext);
     MetalTexture* pTex = (MetalTexture*)jlong_to_ptr(pTexture);
     [pTex release];
     pTex = nil;

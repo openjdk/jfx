@@ -192,14 +192,11 @@ NSString *GPUTraceFilename = @"file:///tmp/fx_metal.gputrace";
 
 - (id<MTLComputePipelineState>) getComputePipelineStateWithFunc:(NSString*)funcName
 {
-    NSError* error;
-
-    id<MTLFunction> kernelFunction = [shaderLib newFunctionWithName:funcName];
-
     if (uyvy422ToRGBAState == nil) {
-        uyvy422ToRGBAState =  [[context getDevice] newComputePipelineStateWithFunction:kernelFunction
+        NSError* error;
+        id<MTLFunction> kernelFunction = [self getFunction:funcName];
+        uyvy422ToRGBAState = [[context getDevice] newComputePipelineStateWithFunction:kernelFunction
                                                                        error:&error];
-
         NSAssert(uyvy422ToRGBAState, @"Failed to create compute pipeline state: %@", error);
     }
 

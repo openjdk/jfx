@@ -63,6 +63,24 @@ enum PFormat {
                     pixelFormat:(NSUInteger)format
                       useMipMap:(BOOL)useMipMap;
 
+- (void) updateTexture:(void*)pixels
+                  dstX:(int)dstX
+                  dstY:(int)dstY
+                  srcX:(int)srcX
+                  srcY:(int)srcY
+                 width:(int)w
+                height:(int)h
+            scanStride:(int)scanStride;
+
+- (void) updateTextureYUV422:(char*)pixels
+                        dstX:(int)dstX
+                        dstY:(int)dstY
+                        srcX:(int)srcX
+                        srcY:(int)srcY
+                       width:(int)w
+                      height:(int)h
+                  scanStride:(int)scanStride;
+
 - (void) dealloc;
 
 @end

@@ -190,6 +190,9 @@ typedef enum VertexInputIndex {
 - (id<MTLBuffer>) getTransientBufferWithLength:(NSUInteger)length;
 - (id<MTLBuffer>) getTransientBufferWithBytes:(const void *)pointer length:(NSUInteger)length;
 
+- (void) blit:(id<MTLTexture>)src srcX0:(int)srcX0 srcY0:(int)srcY0 srcX1:(int)srcX1 srcY1:(int)srcY1
+       dstTex:(id<MTLTexture>)dst dstX0:(int)dstX0 dstY0:(int)dstY0 dstX1:(int)dstX1 dstY1:(int)dstY1;
+
 @end
 
 #endif

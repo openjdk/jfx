@@ -36,7 +36,7 @@ public class MTLRTTextureData extends MTLTextureData {
             if (mtlContext.isCurrentRTT(pTexture)) {
                 mtlContext.flushVertexBuffer();
             }
-            MTLResourceFactory.releaseTexture(mtlContext, pTexture);
+            MTLResourceFactory.releaseTexture(pTexture);
             pTexture = 0L;
         }
     }

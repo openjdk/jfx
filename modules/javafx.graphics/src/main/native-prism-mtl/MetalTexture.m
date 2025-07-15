@@ -26,6 +26,8 @@
 #import "MetalTexture.h"
 #import "MetalPipelineManager.h"
 
+// ** HELPER METHODS **
+
 static unsigned int getPixelSize(enum MTLPixelFormat pixelFormat)
 {
     switch (pixelFormat) {
@@ -38,6 +40,42 @@ static unsigned int getPixelSize(enum MTLPixelFormat pixelFormat)
         default:
             return 0;
     }
+}
+
+static NSMutableDictionary *getBufferAndOffset(MetalContext* context, unsigned int length)
+{
+    NSMutableDictionary<NSNumber *, id<MTLBuffer>> *bufferOffsetDict = [NSMutableDictionary dictionary];
+    id<MTLBuffer> pixelMTLBuf = nil;
+    int offset = [[context getDataRingBuffer] reserveBytes:length];
+    if (offset < 0) {
+        pixelMTLBuf = [context getTransientBufferWithLength:length];
+        offset = 0;
+    } else {
+        pixelMTLBuf = [[context getDataRingBuffer] getBuffer];
+    }
+
+    [bufferOffsetDict setObject:pixelMTLBuf forKey:@(offset)];
+    return bufferOffsetDict;
+}
+
+static NSMutableDictionary *copyPixelDataToRingBuffer(MetalContext* context, void* pixels,
+    int srcx, int srcy, int w, int h, int scanStride, MTLPixelFormat pixelFormat)
+{
+    unsigned int pixelSize = getPixelSize(pixelFormat);
+    unsigned int length = pixelSize * w * h;
+    NSMutableDictionary<NSNumber *, id<MTLBuffer>> *bufferOffsetDict = getBufferAndOffset(context, length);
+    NSNumber *offset = [[bufferOffsetDict allKeys] firstObject];
+    id<MTLBuffer> dstBuf = [[bufferOffsetDict allValues] firstObject];
+
+    void *dstBufOffset = dstBuf.contents + [offset intValue];
+    unsigned int rowLength = pixelSize * w;
+    void *pixelsSrcOffset = pixels + srcy * scanStride + srcx * pixelSize;
+
+    for (int i = 0; i < h; i++) {
+        memcpy(dstBufOffset + (rowLength * i), pixelsSrcOffset + (scanStride * i), rowLength);
+    }
+
+    return bufferOffsetDict;
 }
 
 @implementation MetalTexture
@@ -128,174 +166,22 @@ static unsigned int getPixelSize(enum MTLPixelFormat pixelFormat)
     return [context getPixelBuffer];
 }
 
-- (id<MTLTexture>) getTexture
+- (void) updateTexture:(void*)pixels
+                  dstX:(int)dstX
+                  dstY:(int)dstY
+                  srcX:(int)srcX
+                  srcY:(int)srcY
+                 width:(int)w
+                height:(int)h
+            scanStride:(int)scanStride
 {
-    return texture;
-}
-
-- (MTLPixelFormat) getPixelFormat
-{
-    return pixelFormat;
-}
-
-- (BOOL) isMipmapped
-{
-    return mipmapped;
-}
-
-- (void) dealloc
-{
-    if (texture != nil) {
-        [texture release];
-        texture = nil;
-    }
-    [super dealloc];
-}
-
-@end // MetalTexture
-
-// ** HELPER METHODS **
-
-static NSMutableDictionary *getBufferAndOffset(MetalContext* context, unsigned int length)
-{
-    NSMutableDictionary<NSNumber *, id<MTLBuffer>> *bufferOffsetDict = [NSMutableDictionary dictionary];
-    id<MTLBuffer> pixelMTLBuf = nil;
-    int offset = [[context getDataRingBuffer] reserveBytes:length];
-    if (offset < 0) {
-        pixelMTLBuf = [context getTransientBufferWithLength:length];
-        offset = 0;
-    } else {
-        pixelMTLBuf = [[context getDataRingBuffer] getBuffer];
-    }
-
-    [bufferOffsetDict setObject:pixelMTLBuf forKey:@(offset)];
-    return bufferOffsetDict;
-}
-
-static NSMutableDictionary *copyPixelDataToRingBuffer(MetalContext* context, void* pixels,
-    int srcx, int srcy, int w, int h, int scanStride, MTLPixelFormat pixelFormat)
-{
-    unsigned int pixelSize = getPixelSize(pixelFormat);
-    unsigned int length = pixelSize * w * h;
-    NSMutableDictionary<NSNumber *, id<MTLBuffer>> *bufferOffsetDict = getBufferAndOffset(context, length);
-    NSNumber *offset = [[bufferOffsetDict allKeys] firstObject];
-    id<MTLBuffer> dstBuf = [[bufferOffsetDict allValues] firstObject];
-
-    void *dstBufOffset = dstBuf.contents + [offset intValue];
-    unsigned int rowLength = pixelSize * w;
-    void *pixelsSrcOffset = pixels + srcy * scanStride + srcx * pixelSize;
-
-    for (int i = 0; i < h; i++) {
-        memcpy(dstBufOffset + (rowLength * i), pixelsSrcOffset + (scanStride * i), rowLength);
-    }
-
-    return bufferOffsetDict;
-}
-
-
-// ** JNI METHODS **
-
-/*
- * Class:     com_sun_prism_mtl_MTLTexture
- * Method:    nUpdate
- * Signature: (JJLjava/nio/ByteBuffer;[BIIIIIII)J
- */
-JNIEXPORT jlong JNICALL Java_com_sun_prism_mtl_MTLTexture_nUpdate
-    (JNIEnv *env, jclass jClass, jlong ctx, jlong nTexturePtr, jobject buf,
-    jbyteArray pixData, jint dstx, jint dsty, jint srcx, jint srcy,
-    jint w, jint h, jint scanStride)
-{
-    MetalContext* context = (MetalContext*)jlong_to_ptr(ctx);
-    MetalTexture* mtlTex  = (MetalTexture*)jlong_to_ptr(nTexturePtr);
-
-    jint length = pixData?
-        (*env)->GetArrayLength(env, pixData) :
-        (jint)((*env)->GetDirectBufferCapacity(env, buf));
-    length *= sizeof(jbyte);
-
-    jbyte* pixels = (jbyte*)((pixData != NULL) ?
-        (*env)->GetPrimitiveArrayCritical(env, pixData, NULL) :
-        (*env)->GetDirectBufferAddress(env, buf));
-
-    id<MTLTexture> tex = [mtlTex getTexture];
-    MTLPixelFormat pixelFormat = [mtlTex getPixelFormat];
-
-    NSMutableDictionary* bufferOffsetDict = copyPixelDataToRingBuffer(context, pixels, srcx, srcy,
+    NSMutableDictionary* bufferOffsetDict = copyPixelDataToRingBuffer(context, pixels, srcX, srcY,
                                                                     w, h, scanStride, pixelFormat);
     int offset = [[[bufferOffsetDict allKeys] firstObject] intValue];
     id<MTLBuffer> pixelMTLBuf = [[bufferOffsetDict allValues] firstObject];
 
-    if (pixData != NULL) {
-        (*env)->ReleasePrimitiveArrayCritical(env, pixData, pixels, 0);
-    }
-
     [context endCurrentRenderEncoder];
     id<MTLCommandBuffer> commandBuffer = [context getCurrentCommandBuffer];
-    @autoreleasepool {
-        id<MTLBlitCommandEncoder> blitEncoder = [commandBuffer blitCommandEncoder];
-
-        [blitEncoder copyFromBuffer:pixelMTLBuf
-                       sourceOffset:(NSUInteger)offset
-                  sourceBytesPerRow:(NSUInteger)w * getPixelSize(pixelFormat)
-                sourceBytesPerImage:(NSUInteger)0 // 0 for 2D image
-                         sourceSize:MTLSizeMake(w, h, 1)
-                          toTexture:tex
-                   destinationSlice:(NSUInteger)0
-                   destinationLevel:(NSUInteger)0
-                  destinationOrigin:MTLOriginMake(dstx, dsty, 0)];
-
-        if (tex.usage == MTLTextureUsageRenderTarget) {
-            [blitEncoder synchronizeTexture:tex slice:0 level:0];
-        }
-
-        if ([mtlTex isMipmapped]) {
-            [blitEncoder generateMipmapsForTexture:tex];
-        }
-
-        [blitEncoder endEncoding];
-    }
-
-    // TODO: MTL: add error detection and return appropriate jlong
-    return 0;
-}
-
-/*
- * Class:     com_sun_prism_mtl_MTLTexture
- * Method:    nUpdateFloat
- * Signature: (JJLjava/nio/FloatBuffer;[FIIIIIII)J
- */
-JNIEXPORT jlong JNICALL Java_com_sun_prism_mtl_MTLTexture_nUpdateFloat
-    (JNIEnv *env, jclass jClass, jlong ctx, jlong nTexturePtr, jobject buf,
-    jfloatArray pixData, jint dstx, jint dsty, jint srcx, jint srcy,
-    jint w, jint h, jint scanStride)
-{
-    MetalContext* context = (MetalContext*)jlong_to_ptr(ctx);
-    MetalTexture* mtlTex  = (MetalTexture*)jlong_to_ptr(nTexturePtr);
-
-    jint length = pixData ?
-        (*env)->GetArrayLength(env, pixData) :
-        (jint)((*env)->GetDirectBufferCapacity(env, buf));
-    length *= sizeof(jfloat);
-
-    jfloat *pixels = (jfloat*)((pixData != NULL) ?
-        (*env)->GetPrimitiveArrayCritical(env, pixData, NULL) :
-        (*env)->GetDirectBufferAddress(env, buf));
-
-    id<MTLTexture> texture = [mtlTex getTexture];
-    MTLPixelFormat pixelFormat = [mtlTex getPixelFormat];
-
-    NSMutableDictionary* bufferOffsetDict = copyPixelDataToRingBuffer(context, pixels, srcx, srcy,
-                                                                    w, h, scanStride, pixelFormat);
-    int offset = [[[bufferOffsetDict allKeys] firstObject] intValue];
-    id<MTLBuffer> pixelMTLBuf = [[bufferOffsetDict allValues] firstObject];
-
-    if (pixData != NULL) {
-        (*env)->ReleasePrimitiveArrayCritical(env, pixData, pixels, 0);
-    }
-
-    [context endCurrentRenderEncoder];
-    id<MTLCommandBuffer> commandBuffer = [context getCurrentCommandBuffer];
-
     @autoreleasepool {
         id<MTLBlitCommandEncoder> blitEncoder = [commandBuffer blitCommandEncoder];
 
@@ -307,102 +193,30 @@ JNIEXPORT jlong JNICALL Java_com_sun_prism_mtl_MTLTexture_nUpdateFloat
                           toTexture:texture
                    destinationSlice:(NSUInteger)0
                    destinationLevel:(NSUInteger)0
-                  destinationOrigin:MTLOriginMake(dstx, dsty, 0)];
+                  destinationOrigin:MTLOriginMake(dstX, dstY, 0)];
 
-        if ([mtlTex isMipmapped]) {
-            [blitEncoder generateMipmapsForTexture:texture];
-        }
         if (texture.usage == MTLTextureUsageRenderTarget) {
             [blitEncoder synchronizeTexture:texture slice:0 level:0];
         }
 
-        [blitEncoder endEncoding];
-    }
-
-    // TODO: MTL: add error detection and return appropriate jlong
-    return 0;
-}
-
-/*
- * Class:     com_sun_prism_mtl_MTLTexture
- * Method:    nUpdateInt
- * Signature: (JJLjava/nio/IntBuffer;[IIIIIIII)J
- */
-JNIEXPORT jlong JNICALL Java_com_sun_prism_mtl_MTLTexture_nUpdateInt
-    (JNIEnv *env, jclass jClass, jlong ctx, jlong nTexturePtr, jobject buf,
-    jintArray pixData, jint dstx, jint dsty, jint srcx, jint srcy,
-    jint w, jint h, jint scanStride)
-{
-    MetalContext* context = (MetalContext*)jlong_to_ptr(ctx);
-    MetalTexture* mtlTex  = (MetalTexture*)jlong_to_ptr(nTexturePtr);
-
-    jint length = pixData ?
-        (*env)->GetArrayLength(env, pixData) :
-        (jint)((*env)->GetDirectBufferCapacity(env, buf));
-    length *= sizeof(jint);
-
-    jint *pixels = (jint*)((pixData != NULL) ?
-        (*env)->GetPrimitiveArrayCritical(env, pixData, NULL) :
-        (*env)->GetDirectBufferAddress(env, buf));
-
-    id<MTLTexture> texture = [mtlTex getTexture];
-    MTLPixelFormat pixelFormat = [mtlTex getPixelFormat];
-
-    NSMutableDictionary* bufferOffsetDict = copyPixelDataToRingBuffer(context, pixels, srcx, srcy,
-                                                                    w, h, scanStride, pixelFormat);
-    int offset = [[[bufferOffsetDict allKeys] firstObject] intValue];
-    id<MTLBuffer> pixelMTLBuf = [[bufferOffsetDict allValues] firstObject];
-
-    if (pixData != NULL) {
-        (*env)->ReleasePrimitiveArrayCritical(env, pixData, pixels, 0);
-    }
-
-    [context endCurrentRenderEncoder];
-    id<MTLCommandBuffer> commandBuffer = [context getCurrentCommandBuffer];
-
-    @autoreleasepool {
-        id<MTLBlitCommandEncoder> blitEncoder = [commandBuffer blitCommandEncoder];
-
-        [blitEncoder copyFromBuffer:pixelMTLBuf
-                       sourceOffset:(NSUInteger)offset
-                  sourceBytesPerRow:(NSUInteger)w * getPixelSize(pixelFormat)
-                sourceBytesPerImage:(NSUInteger)0 // 0 for 2D image
-                         sourceSize:MTLSizeMake(w, h, 1)
-                          toTexture:texture
-                   destinationSlice:(NSUInteger)0
-                   destinationLevel:(NSUInteger)0
-                  destinationOrigin:MTLOriginMake(dstx, dsty, 0)];
-
-        if ([mtlTex isMipmapped]) {
+        if ([self isMipmapped]) {
             [blitEncoder generateMipmapsForTexture:texture];
         }
-        if (texture.usage == MTLTextureUsageRenderTarget) {
-            [blitEncoder synchronizeTexture:texture slice:0 level:0];
-        }
 
         [blitEncoder endEncoding];
     }
-
-    // TODO: MTL: add error detection and return appropriate jlong
-    return 0;
 }
 
-/*
- * Class:     com_sun_prism_mtl_MTLTexture
- * Method:    nUpdateInt
- * Signature: (JJ[BIIIIIII)J
- */
-JNIEXPORT jlong JNICALL Java_com_sun_prism_mtl_MTLTexture_nUpdateYUV422
-    (JNIEnv *env, jclass jClass, jlong ctx, jlong nTexturePtr, jbyteArray pixData,
-    jint dstx, jint dsty, jint srcx, jint srcy, jint w, jint h, jint scanStride)
+- (void) updateTextureYUV422:(char*)pixels
+                        dstX:(int)dstX
+                        dstY:(int)dstY
+                        srcX:(int)srcX
+                        srcY:(int)srcY
+                       width:(int)w
+                      height:(int)h
+                  scanStride:(int)scanStride
 {
-    MetalContext* context = (MetalContext*)jlong_to_ptr(ctx);
-    MetalTexture* mtlTex  = (MetalTexture*)jlong_to_ptr(nTexturePtr);
-
-    id<MTLTexture> tex = [mtlTex getTexture];
-    jbyte* pixels = (*env)->GetByteArrayElements(env, pixData, 0);
-    jbyte* p = pixels;
-
+    id<MTLTexture> tex = [self getTexture];
     @autoreleasepool {
         id<MTLDevice> device = [context getDevice];
 
@@ -410,7 +224,7 @@ JNIEXPORT jlong JNICALL Java_com_sun_prism_mtl_MTLTexture_nUpdateYUV422
                                                      options:MTLResourceStorageModeManaged] autorelease];
         for (int row = 0; row < h; row++) {
             // Copy each row in srcBuff
-            memcpy(srcBuff.contents + (row * w * 2), (char*) pixels, w * 2);
+            memcpy(srcBuff.contents + (row * w * 2), pixels, w * 2);
             pixels += (w * 2);
             pixels += scanStride - (w * 2);
         }
@@ -449,8 +263,168 @@ JNIEXPORT jlong JNICALL Java_com_sun_prism_mtl_MTLTexture_nUpdateYUV422
 
         [context commitCurrentCommandBuffer];
     }
+}
 
-    pixels = p;
+- (id<MTLTexture>) getTexture
+{
+    return texture;
+}
+
+- (MTLPixelFormat) getPixelFormat
+{
+    return pixelFormat;
+}
+
+- (BOOL) isMipmapped
+{
+    return mipmapped;
+}
+
+- (void) dealloc
+{
+    if (texture != nil) {
+        [texture release];
+        texture = nil;
+    }
+    [super dealloc];
+}
+
+@end // MetalTexture
+
+
+// ** JNI METHODS **
+
+/*
+ * Class:     com_sun_prism_mtl_MTLTexture
+ * Method:    nUpdate
+ * Signature: (JLjava/nio/ByteBuffer;[BIIIIIII)J
+ */
+JNIEXPORT jlong JNICALL Java_com_sun_prism_mtl_MTLTexture_nUpdate
+    (JNIEnv *env, jclass jClass, jlong nTexturePtr, jobject buf,
+    jbyteArray pixData, jint dstx, jint dsty, jint srcx, jint srcy,
+    jint width, jint height, jint scanStride)
+{
+    MetalTexture* mtlTex  = (MetalTexture*)jlong_to_ptr(nTexturePtr);
+
+    jint length = pixData?
+        (*env)->GetArrayLength(env, pixData) :
+        (jint)((*env)->GetDirectBufferCapacity(env, buf));
+    length *= sizeof(jbyte);
+
+    jbyte* pixels = (jbyte*)((pixData != NULL) ?
+        (*env)->GetPrimitiveArrayCritical(env, pixData, NULL) :
+        (*env)->GetDirectBufferAddress(env, buf));
+
+    [mtlTex updateTexture:pixels
+                     dstX:dstx
+                     dstY:dsty
+                     srcX:srcx
+                     srcY:srcy
+                    width:width
+                   height:height
+               scanStride:scanStride];
+
+    if (pixData != NULL) {
+        (*env)->ReleasePrimitiveArrayCritical(env, pixData, pixels, 0);
+    }
+
+    // TODO: MTL: add error detection and return appropriate jlong
+    return 0;
+}
+
+/*
+ * Class:     com_sun_prism_mtl_MTLTexture
+ * Method:    nUpdateFloat
+ * Signature: (JLjava/nio/FloatBuffer;[FIIIIIII)J
+ */
+JNIEXPORT jlong JNICALL Java_com_sun_prism_mtl_MTLTexture_nUpdateFloat
+    (JNIEnv *env, jclass jClass, jlong nTexturePtr, jobject buf,
+    jfloatArray pixData, jint dstx, jint dsty, jint srcx, jint srcy,
+    jint width, jint height, jint scanStride)
+{
+    MetalTexture* mtlTex  = (MetalTexture*)jlong_to_ptr(nTexturePtr);
+
+    jint length = pixData ?
+        (*env)->GetArrayLength(env, pixData) :
+        (jint)((*env)->GetDirectBufferCapacity(env, buf));
+    length *= sizeof(jfloat);
+
+    jfloat *pixels = (jfloat*)((pixData != NULL) ?
+        (*env)->GetPrimitiveArrayCritical(env, pixData, NULL) :
+        (*env)->GetDirectBufferAddress(env, buf));
+
+    [mtlTex updateTexture:pixels
+                     dstX:dstx
+                     dstY:dsty
+                     srcX:srcx
+                     srcY:srcy
+                    width:width
+                   height:height
+               scanStride:scanStride];
+
+    if (pixData != NULL) {
+        (*env)->ReleasePrimitiveArrayCritical(env, pixData, pixels, 0);
+    }
+    // TODO: MTL: add error detection and return appropriate jlong
+    return 0;
+}
+
+/*
+ * Class:     com_sun_prism_mtl_MTLTexture
+ * Method:    nUpdateInt
+ * Signature: (JLjava/nio/IntBuffer;[IIIIIIII)J
+ */
+JNIEXPORT jlong JNICALL Java_com_sun_prism_mtl_MTLTexture_nUpdateInt
+    (JNIEnv *env, jclass jClass, jlong nTexturePtr, jobject buf,
+    jintArray pixData, jint dstx, jint dsty, jint srcx, jint srcy,
+    jint width, jint height, jint scanStride)
+{
+    MetalTexture* mtlTex  = (MetalTexture*)jlong_to_ptr(nTexturePtr);
+
+    jint length = pixData ?
+        (*env)->GetArrayLength(env, pixData) :
+        (jint)((*env)->GetDirectBufferCapacity(env, buf));
+    length *= sizeof(jint);
+
+    jint *pixels = (jint*)((pixData != NULL) ?
+        (*env)->GetPrimitiveArrayCritical(env, pixData, NULL) :
+        (*env)->GetDirectBufferAddress(env, buf));
+
+    [mtlTex updateTexture:pixels
+                     dstX:dstx
+                     dstY:dsty
+                     srcX:srcx
+                     srcY:srcy
+                    width:width
+                   height:height
+               scanStride:scanStride];
+
+    if (pixData != NULL) {
+        (*env)->ReleasePrimitiveArrayCritical(env, pixData, pixels, 0);
+    }// TODO: MTL: add error detection and return appropriate jlong
+    return 0;
+}
+
+/*
+ * Class:     com_sun_prism_mtl_MTLTexture
+ * Method:    nUpdateInt
+ * Signature: (J[BIIIIIII)J
+ */
+JNIEXPORT jlong JNICALL Java_com_sun_prism_mtl_MTLTexture_nUpdateYUV422
+    (JNIEnv *env, jclass jClass, jlong nTexturePtr, jbyteArray pixData,
+    jint dstx, jint dsty, jint srcx, jint srcy, jint w, jint h, jint scanStride)
+{
+    MetalTexture* mtlTex  = (MetalTexture*)jlong_to_ptr(nTexturePtr);
+    jbyte* pixels = (*env)->GetByteArrayElements(env, pixData, 0);
+
+    [mtlTex updateTextureYUV422:(char*)pixels
+                           dstX:dstx
+                           dstY:dsty
+                           srcX:srcx
+                           srcY:srcy
+                          width:w
+                         height:h
+                     scanStride:scanStride];
 
     (*env)->ReleaseByteArrayElements(env, pixData, pixels, 0);
 

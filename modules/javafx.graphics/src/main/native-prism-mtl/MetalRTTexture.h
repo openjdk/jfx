@@ -43,11 +43,6 @@
     BOOL lastDepthMSAA;
 }
 
-- (NSUInteger) getContentWidth;
-- (NSUInteger) getContentHeight;
-- (NSUInteger) getPhysicalWidth;
-- (NSUInteger) getPhysicalHeight;
-
 - (id<MTLTexture>) getTexture;
 - (id<MTLTexture>) getDepthTexture;
 - (id<MTLTexture>) getDepthMSAATexture;
@@ -65,6 +60,10 @@
                   ofPhysicalWidth:(NSUInteger)pw
                  ofPhysicalHeight:(NSUInteger)ph
                            mtlTex:(long)pTex;
+
+- (void) initRTT:(int*)arr;
+- (void) readPixels:(int*)pDst;
+- (void) readPixelsFromRTT:(int*)pDst;
 
 - (void) createDepthTexture;
 - (void) dealloc;
