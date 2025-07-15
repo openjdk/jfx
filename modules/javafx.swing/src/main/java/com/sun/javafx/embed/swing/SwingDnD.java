@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2025, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -71,8 +71,6 @@ final public class SwingDnD {
 
     private final DragSource dragSource;
     private final DragSourceListener dragSourceListener;
-
-    private final DropTarget dropTarget;
 
     // swingDragSource and fxDropTarget are used when DnD is initiated from
     // Swing or external process, i.e. this SwingDnD is used as a drop target
@@ -196,51 +194,23 @@ final public class SwingDnD {
                             dropActionToTransferMode(e.getDropAction()));
                     try {
                         applyDropResult(lastTransferMode, e);
-                        Transferable transferable = e.getTransferable();
-                        String droppedText = (String) transferable.getTransferData(DataFlavor.stringFlavor);
-                        javafx.embed.swing.JFXPanel jfxPanel = (javafx.embed.swing.JFXPanel)comp;
-
-                        if (jfxPanel.getScene().getFocusOwner() instanceof javafx.scene.control.TextField tf) {
-                            javafx.scene.control.skin.TextFieldSkin skin = (javafx.scene.control.skin.TextFieldSkin) tf.getSkin();
-                            if (skin != null) {
-                                // Get HitInfo at mouse coordinates relative to the TextField
-                                Point pt = e.getLocation();
-                                javafx.scene.text.HitInfo hit = skin.getIndex(pt.x, pt.y);
-                                int index = hit.getInsertionIndex();
-                                tf.insertText(index, droppedText);
-                            }
-                        }
                     } catch (InvalidDnDOperationException ignore) {
                         // This means the JDK doesn't contain a fix for 8029979 yet.
                         // DnD still works, but a drag source won't know about
                         // the actual drop result reported by the FX app from
                         // its drop() handler. It will use the dropResult from
                         // the last call to dragOver() instead.
-                    } catch (Exception ex) {
-                        e.dropComplete(false);
-                        return;
                     }
                 } finally {
-                    e.dropComplete(true);
+                    e.dropComplete(lastTransferMode != null);
                     endDnD();
                     lastTransferMode = null;
                 }
             }
-
-            @Override
-            public void dropActionChanged(final DropTargetDragEvent dtde) {
-            }
         };
+        comp.setDropTarget(new DropTarget(comp,
+                DnDConstants.ACTION_COPY | DnDConstants.ACTION_MOVE | DnDConstants.ACTION_LINK, dtl));
 
-        dropTarget = new DropTarget(comp,
-                DnDConstants.ACTION_COPY | DnDConstants.ACTION_MOVE | DnDConstants.ACTION_LINK, dtl);
-
-        comp.setDropTarget(dropTarget);
-
-    }
-
-    public DropTarget getDropTarget() {
-        return dropTarget;
     }
 
     public void addNotify() {
@@ -317,23 +287,21 @@ final public class SwingDnD {
     private void applyDragResult(final TransferMode dragResult,
                                  final DropTargetDragEvent e)
     {
-        if (e.isDataFlavorSupported(DataFlavor.javaFileListFlavor) || e.isDataFlavorSupported(DataFlavor.stringFlavor)) {
-            e.acceptDrag(e.getDropAction());
-            return;
+        if (dragResult == null) {
+            e.rejectDrag();
+        } else {
+            e.acceptDrag(transferModeToDropAction(dragResult));
         }
-
-        e.rejectDrag();
     }
 
     private void applyDropResult(final TransferMode dropResult,
                                  final DropTargetDropEvent e)
     {
-        if (e.isDataFlavorSupported(DataFlavor.javaFileListFlavor) || e.isDataFlavorSupported(DataFlavor.stringFlavor)) {
-            e.acceptDrop(e.getDropAction());
-            return;
+        if (dropResult == null) {
+            e.rejectDrop();
+        } else {
+            e.acceptDrop(transferModeToDropAction(dropResult));
         }
-
-        e.rejectDrop();
     }
 
     public static TransferMode dropActionToTransferMode(final int dropAction) {
