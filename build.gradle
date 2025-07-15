@@ -2785,13 +2785,14 @@ project(":graphics") {
                       compileMSLPhongVS,
                       compileMSLPhongPS)
             doLast {
+                mkdir "$buildDir/msl/com/sun/prism/mtl/msl"
                 def shaderFiles = fileTree(dir: "$buildDir/msl", include: "**/*.air")
                 exec {
                     commandLine("${metalLinker}")
                     shaderFiles.each { shaderFile ->
                         args += shaderFile
                     }
-                    args += [ "-o", "$buildDir/msl/jfxshaders.metallib" ]
+                    args += [ "-o", "$buildDir/msl/com/sun/prism/mtl/msl/jfxshaders.metallib" ]
                 }
             }
         }
@@ -2799,7 +2800,7 @@ project(":graphics") {
 
         // Copy metallib file as resource
         def copyMetalLib = project.task("copyMetalLib", type: Copy, dependsOn: linkMSLShader) {
-            from "$buildDir/msl/jfxshaders.metallib"
+            from "$buildDir/msl/com/sun/prism/mtl/msl/jfxshaders.metallib"
             into "${project.moduleDir}/com/sun/prism/mtl/msl"
         }
 
