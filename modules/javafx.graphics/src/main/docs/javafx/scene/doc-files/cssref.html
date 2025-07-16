@@ -869,25 +869,25 @@
             <li>The <strong>basic form</strong> consists of a feature name, an arithmetic comparison operator,
                 and a value. For example:<br>
                 <code>
-                    (width > 600px)<br>
-                    (500px <= height)<br>
+                    (width &gt; 600px)<br>
+                    (500px &lt;= height)<br>
                 </code>
                 <br>
             <li>The <strong>interval form</strong> consists of a feature name, nested between two comparison
                 operators and two values. For example:<br>
                 <code>
-                    (400px >= width >= 600px)<br>
-                    (10em < height <= 20em)<br>
+                    (400px &gt;= width &gt;= 600px)<br>
+                    (10em &lt; height &lt;= 20em)<br>
                 </code>
         </ol>
         Rather than evaluating media features in a range context, they can also be evaluated in a discrete context by
         writing the feature name with a "min-" or "max-" prefix:
         <ul>
-            <li>Using the "min-" prefix on a feature name is equivalent to using the <code>>=</code> operator, for example:<br>
-                <code>(min-height: 500px)</code> is equivalent to <code>(height >= 500px)</code><br>
+            <li>Using the "min-" prefix on a feature name is equivalent to using the <code>&gt;=</code> operator, for example:<br>
+                <code>(min-height: 500px)</code> is equivalent to <code>(height &gt;= 500px)</code><br>
                 <br>
-            <li>Using the "max-" prefix on a feature name is equivalent to using the <code><=</code> operator, for example:<br>
-                <code>(max-width: 600px)</code> is equivalent to <code>(width <= 600px)</code><br>
+            <li>Using the "max-" prefix on a feature name is equivalent to using the <code>&lt;=</code> operator, for example:<br>
+                <code>(max-width: 600px)</code> is equivalent to <code>(width &lt;= 600px)</code><br>
         </ul>
     <h5>Combining Media Features</h5>
     <p>Media features can be combined using boolean algebra (<code>not</code>, <code>and</code>, <code>or</code>):
@@ -962,7 +962,7 @@
                 <td class="value">orientation</td>
                 <td class="value">portrait | landscape</td>
                 <td>discrete</td>
-                <td>portrait if height >= width, landscape otherwise</td>
+                <td>portrait if height &gt;= width, landscape otherwise</td>
             </tr>
             <tr>
                 <td class="value">display-mode</td>
