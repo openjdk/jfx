@@ -37,35 +37,56 @@ import javafx.geometry.Point2D;
 
 
 /**
- * This class represents an {@code Affine} object that rotates coordinates
- * around an anchor point. This operation is equivalent to translating the
- * coordinates so that the anchor point is at the origin (S1), then rotating them
- * about the new origin (S2), and finally translating so that the
- * intermediate origin is restored to the coordinates of the original
- * anchor point (S3).
+ * This class represents an {@code Affine} object that computes new
+ * coordinates for a point {@code p} being rotated by an angle {@code t},
+ * according to the right-hand rule, around an oriented axis {@code v}
+ * anchored at a pivot (or anchor) point {@code q}. The oriented axis
+ * can be represented by a vector (possibly of length 1), and thus can be
+ * specified by a {@code Point2D} for the 2D case and a {@code Point3D}
+ * for the 3D case.
  * <p>
- * The matrix representing the rotation transformation around an axis {@code (x,y,z)}
- * by an angle {@code t} is as follows:
+ * The above transformation is equivalent to chaining the following
+ * transformations:
+ * <ol>
+ *   <li>computing new coordinates for {@code p} under a translation
+ *       that maps {@code q} to the new origin, then</li>
+ *   <li>computing new coordinates for {@code p} under a rotation
+ *       around the axis given by {@code v}, rooted at the origin,
+ *       by angle {@code t}, according to the right-hand rule,
+ *       and finally</li>
+ *   <li>computing new coordinates for {@code p} under a translation
+ *       that maps the origin back to anchor point {@code q}.</li>
+ * </ol>
+ * As expected, the coordinates of the anchor point (and any point on
+ * the oriented axis going through the anchor point) do not change
+ * under that transformation.
+ * <p>
+ * For example, the matrix representing the 2D rotation around the
+ * oriented axis given by {@code Z}, anchored at pivot point
+ * {@code (x,y)} by angle {@code t}, according to the right-hand rule
+ * is as follows:
  * <pre>
  *              [   cos(t)   -sin(t)   0   x-x*cos(t)+y*sin(t)   ]
  *              [   sin(t)    cos(t)   0   y-x*sin(t)-y*cos(t)   ]
  *              [     0         0      1           z             ]
  * </pre>
+ * Note that {@code (x,y,0,0)} is transformed into {@code (x,y,0)}.
  * <p>
- * For example, to rotate a text 30 degrees around the Z-axis at
- * anchor point of (50,30):
+ * The transformation matrix for the equivalent 3D rotation is much
+ * more complex and is given by <i>Rodrigues' Rotation Formula</i> (q.v.)
+ * <p>
+ * To rotate a text by 12 degree around the Z-axis at anchor point (55,33):
  * <pre>{@code
  * Text text = new Text("This is a test");
  * text.setX(10);
  * text.setY(50);
  * text.setFont(new Font(20));
  *
- * text.getTransforms().add(new Rotate(30, 50, 30));
+ * text.getTransforms().add(new Rotate(12, 55, 33));
  * }</pre>
  *
  * @since JavaFX 2.0
  */
-
 public class Rotate extends Transform {
 
     /**
