@@ -471,8 +471,7 @@ static jlong _createWindowCommonDo(JNIEnv *env, jobject jWindow, jlong jOwnerPtr
         {
             window->owner = getGlassWindow(env, jOwnerPtr)->nsWindow; // not retained (use weak reference?)
         }
-        window->isResizable = NO;
-        window->isDecorated = isTitled || isExtended;
+
         /* 10.7 full screen window support */
         if ([NSWindow instancesRespondToSelector:@selector(toggleFullScreen:)]) {
             NSWindowCollectionBehavior behavior = [window->nsWindow collectionBehavior];
@@ -502,10 +501,12 @@ static jlong _createWindowCommonDo(JNIEnv *env, jobject jWindow, jlong jOwnerPtr
             [window->nsWindow setOpaque:YES];
         }
 
+        window->isDecorated = isTitled || isExtended;
         window->isTransparent = isTransparent;
         window->isSizeAssigned = NO;
         window->isLocationAssigned = NO;
-
+        window->isResizable = NO;
+        [window _setResizable:NO]; // actual value will be set later with a separate JNI downcall
     }
     [pool drain];
 
@@ -1161,10 +1162,7 @@ JNIEXPORT jboolean JNICALL Java_com_sun_glass_ui_mac_MacWindow__1setResizable
     GLASS_POOL_ENTER;
     {
         GlassWindow *window = getGlassWindow(env, jPtr);
-        if (window->isResizable != jResizable)
-        {
-            [window performSelectorOnMainThread:@selector(_setResizable) withObject:nil waitUntilDone:YES];
-        }
+        [window _setResizable:jResizable];
     }
     GLASS_POOL_EXIT;
     GLASS_CHECK_EXCEPTION(env);
@@ -1399,69 +1397,6 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_mac_MacWindow__1toBack
     {
         GlassWindow *window = getGlassWindow(env, jPtr);
         [window->nsWindow orderBack:nil];
-    }
-    GLASS_POOL_EXIT;
-    GLASS_CHECK_EXCEPTION(env);
-}
-
-
-/*
- * Class:     com_sun_glass_ui_mac_MacWindow
- * Method:    _enterModal
- * Signature: (J)V
- */
-JNIEXPORT void JNICALL Java_com_sun_glass_ui_mac_MacWindow__1enterModal
-(JNIEnv *env, jobject jWindow, jlong jPtr)
-{
-    LOG("Java_com_sun_glass_ui_mac_MacWindow__1enterModal");
-    if (!jPtr) return;
-
-    GLASS_ASSERT_MAIN_JAVA_THREAD(env);
-    GLASS_POOL_ENTER;
-    {
-        GlassWindow *window = getGlassWindow(env, jPtr);
-        [NSApp runModalForWindow:window->nsWindow];
-    }
-    GLASS_POOL_EXIT;
-    GLASS_CHECK_EXCEPTION(env);
-}
-
-/*
- * Class:     com_sun_glass_ui_mac_MacWindow
- * Method:    _enterModalWithWindow
- * Signature: (JJ)V
- */
-JNIEXPORT void JNICALL Java_com_sun_glass_ui_mac_MacWindow__1enterModalWithWindow
-(JNIEnv *env, jobject jWindow, jlong jDialogPtr, jlong jWindowPtr)
-{
-    LOG("Java_com_sun_glass_ui_mac_MacWindow__1enterModalWithWindow");
-
-    GLASS_ASSERT_MAIN_JAVA_THREAD(env);
-    GLASS_POOL_ENTER;
-    {
-        //GlassWindow *window = getGlassWindow(env, jDialogPtr);
-        // TODO: implement _enterModalWithWindow
-    }
-    GLASS_POOL_EXIT;
-    GLASS_CHECK_EXCEPTION(env);
-}
-
-/*
- * Class:     com_sun_glass_ui_mac_MacWindow
- * Method:    _exitModal
- * Signature: (J)V
- */
-JNIEXPORT void JNICALL Java_com_sun_glass_ui_mac_MacWindow__1exitModal
-(JNIEnv *env, jobject jWindow, jlong jPtr)
-{
-    LOG("Java_com_sun_glass_ui_mac_MacWindow__1exitModal");
-    if (!jPtr) return;
-
-    GLASS_ASSERT_MAIN_JAVA_THREAD(env);
-    GLASS_POOL_ENTER;
-    {
-        GlassWindow *window = getGlassWindow(env, jPtr);
-        [NSApp stop:window->nsWindow];
     }
     GLASS_POOL_EXIT;
     GLASS_CHECK_EXCEPTION(env);
