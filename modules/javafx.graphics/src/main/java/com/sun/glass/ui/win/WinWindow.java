@@ -265,6 +265,13 @@ class WinWindow extends Window {
         return true;
     }
 
+    private native void _setDarkFrame(long ptr, boolean value);
+
+    @Override
+    public void setDarkFrame(boolean value) {
+        _setDarkFrame(getRawHandle(), value);
+    }
+
     native private long _getInsets(long ptr);
     native private long _getAnchor(long ptr);
     native private void _showSystemMenu(long ptr, int x, int y);
