@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2025, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,38 +25,18 @@
 
 package com.sun.javafx.scene.text;
 
-import javafx.scene.layout.Region;
-import com.sun.javafx.geom.RectBounds;
-
 /**
- * Represents a sequence of characters all using the same font, or
- * an embedded object if no font is supplied.
- * <p>
- * A text span can contain line breaks if the text should span multiple
- * lines.
+ * TabAdvancePolicy provides the next tab advance for any given position within the TextLayout.
  */
-public interface TextSpan {
-    /**
-     * The text for the span, can be empty but not null.
-     */
-    public String getText();
+public interface TabAdvancePolicy {
 
     /**
-     * The font for the span, if null the span is handled as embedded object.
-     */
-    public Object getFont();
-
-    /**
-     * The bounds for embedded object, only used when the font returns null.
-     * The text for a embedded object should be a single char ("\uFFFC" is
-     * recommended).
-     */
-    public RectBounds getBounds();
-
-    /**
-     * Returns the {@code Region} which contains the layout for this TextSpan.
+     * Provides the next tab stop for the given position.
+     * A value of 0 or less indicates that there are no more stops.
      *
-     * @return the layout root, or null
+     * @param offset the offset of the text layout relative to the owner {@code Node} edge
+     * @param position the current position
+     * @return the next tab stop
      */
-    public Region getLayoutRootRegion();
+    public float nextTabStop(float offset, float position);
 }

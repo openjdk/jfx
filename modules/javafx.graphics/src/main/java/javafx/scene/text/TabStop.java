@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2025, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -22,41 +22,47 @@
  * or visit www.oracle.com if you need additional information or have any
  * questions.
  */
-
-package com.sun.javafx.scene.text;
-
-import javafx.scene.layout.Region;
-import com.sun.javafx.geom.RectBounds;
+package javafx.scene.text;
 
 /**
- * Represents a sequence of characters all using the same font, or
- * an embedded object if no font is supplied.
- * <p>
- * A text span can contain line breaks if the text should span multiple
- * lines.
+ * This class encapsulates an immutable single tab stop within the {@link TabStopPolicy}.
+ *
+ * @since 25
  */
-public interface TextSpan {
-    /**
-     * The text for the span, can be empty but not null.
-     */
-    public String getText();
+public final class TabStop {
+    private final double position;
 
     /**
-     * The font for the span, if null the span is handled as embedded object.
-     */
-    public Object getFont();
-
-    /**
-     * The bounds for embedded object, only used when the font returns null.
-     * The text for a embedded object should be a single char ("\uFFFC" is
-     * recommended).
-     */
-    public RectBounds getBounds();
-
-    /**
-     * Returns the {@code Region} which contains the layout for this TextSpan.
+     * Constructs a new tab stop with the specified position.
      *
-     * @return the layout root, or null
+     * @param position the position in pixels
      */
-    public Region getLayoutRootRegion();
+    public TabStop(double position) {
+        this.position = position;
+    }
+
+    /**
+     * Returns the position, in pixels, of the tab.
+     * @return the position of the tab
+     */
+    public final double getPosition() {
+        return position;
+    }
+
+    @Override
+    public boolean equals(Object x) {
+        if (x == this) {
+            return true;
+        } else if (x instanceof TabStop p) {
+            return position == p.position;
+        }
+        return false;
+    }
+
+    @Override
+    public int hashCode() {
+        int h = TabStop.class.hashCode();
+        h = 31 * h + Double.hashCode(position);
+        return h;
+    }
 }
