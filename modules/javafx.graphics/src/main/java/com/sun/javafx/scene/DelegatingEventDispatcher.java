@@ -47,12 +47,10 @@ public final class DelegatingEventDispatcher implements EventDispatcher {
 
     @Override
     public Event dispatchEvent(Event event, EventDispatchChain tail) {
-        boolean retarget = false;
-
         // Focus delegation is the only scenario in which the event target may be the parent node.
         // Since we are in the capturing phase, we need to retarget the event to the focus delegate.
-        if (event.getTarget() == parent) {
-            retarget = true;
+        boolean retarget = event.getTarget() == parent;
+        if (retarget) {
             event = event.copyFor(event.getSource(), delegate);
         }
 

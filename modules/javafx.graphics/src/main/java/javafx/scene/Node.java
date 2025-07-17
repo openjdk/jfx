@@ -8369,11 +8369,11 @@ public abstract sealed class Node
      *         node or any of its descendants received focus by delegation, we clear all focus bits in the delegation
      *         chain from this node down.
      *
-     *     <li>Re-evaluate the delegation chain and update delegated focus bits<br>
+     *     <li>Re-evaluate the delegation chain and update delegated focus bits:<br>
      *         Since the parent of this node changed, the delegation chain must be re-evaluated from the last ascendant
      *         that delegated focus to this node or any of its descendants.
      *
-     *     <li>Notify focus listeners<br>
+     *     <li>Notify focus listeners:<br>
      *         We notify the focus listeners only after the focus states of all participating nodes were updated.
      *         This is the last step and ensures that listeners will not see inconsistent transient focus states.
      * </ol>
