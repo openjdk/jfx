@@ -98,6 +98,10 @@ public class NodeShim {
         n.notifyFocusListeners();
     }
 
+    public static Node resolveFocusDelegate(Node n) {
+        return n.resolveFocusDelegate();
+    }
+
     public static List<TransitionDefinition> getTransitionDefinitions(Node n) {
         return n.getTransitionDefinitions();
     }

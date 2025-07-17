@@ -25,6 +25,7 @@
 
 package test.javafx.scene;
 
+import com.sun.javafx.scene.NodeHelper;
 import com.sun.javafx.scene.SceneHelper;
 import javafx.event.Event;
 import javafx.event.EventTarget;
@@ -1178,14 +1179,42 @@ public class FocusTest {
             final Node delegate;
             final String name;
 
+            N() {
+                this(null, (Node)null, null);
+            }
+
+            N(String name) {
+                this(name, (Node)null, null);
+            }
+
+            N(String name, Node child) {
+                this(name, child, null);
+            }
+
             N(String name, Node child, Node delegate) {
-                super(child == null ? new Node[0] : new Node[] { child });
-                this.delegate = delegate;
-                this.name = name;
+                this(name, child == null ? new Node[0] : new Node[] { child }, delegate);
+            }
+
+            N(Node child) {
+                this(null, new Node[] { child }, null);
+            }
+
+            N(Node[] children) {
+                this(null, children, null);
+            }
+
+            N(Node[] children, Node delegate) {
+                this(null, children, delegate);
             }
 
             N(Node child, Node delegate) {
                 this(null, child, delegate);
+            }
+
+            N(String name, Node[] children, Node delegate) {
+                super(children);
+                this.delegate = delegate;
+                this.name = name;
             }
 
             @Override
@@ -1232,9 +1261,9 @@ public class FocusTest {
                     node2 = new N(
                         node3 = new N(
                             node4 = new N(
-                                node5 = new N(null, null), null
+                                node5 = new N()
                             ), node5
-                        ), null
+                        )
                     ), node3
                 ));
 
@@ -1266,9 +1295,9 @@ public class FocusTest {
                     node2 = new N(
                         node3 = new N(
                             node4 = new N(
-                                node5 = new N(null, null), null
+                                node5 = new N()
                             ), node5
-                        ), null
+                        )
                     ), node3
                 ));
 
@@ -1302,9 +1331,9 @@ public class FocusTest {
                     node2 = new N("node2",
                         node3 = new N("node3",
                             node4 = new N("node4",
-                                node5 = new N("node5",null, null), null
+                                node5 = new N("node5")
                             ), node5
-                        ), null
+                        )
                     ), node3
                 ));
 
@@ -1331,6 +1360,241 @@ public class FocusTest {
                 trace
             );
         }
+
+        /**
+         * After {@link Node#requestFocus()} is called on a node that is already focused, the event dispatch
+         * chain constructed when an event is dispatched reflects the new chain of focus delegates.
+         */
+        @Test
+        void eventDispatchChainReflectsChangedFocusDelegatesAfterFocusRequest() {
+            final N node1, node2, node3, node4a, node4b, node5a, node5b;
+            final boolean[] switchDelegate = new boolean[1];
+
+            // node1 . . . . . . . . . focusDelegate = node3, focusOwner
+            // └── node2
+            //     └── node3 . . . . . focusDelegate = node5a/b
+            //         └── node4a
+            //         |   └── node5a
+            //         └── node4b
+            //             └── node5b
+            scene.setRoot(
+                node1 = new N("node1",
+                    node2 = new N("node2",
+                        node3 = new N("node3",
+                            new Node[] {
+                                node4a = new N("node4a",
+                                    node5a = new N("node5a")
+                                ),
+                                node4b = new N("node4b",
+                                    node5b = new N("node5b")
+                                )
+                            }, node5a
+                        ) {
+                            @Override
+                            protected Node getFocusDelegate(Node hoistingNode) {
+                                return switchDelegate[0] ? node5b : node5a;
+                            }
+                        }
+                    ), node3
+                ));
+
+            var trace = new Trace(node1, node2, node3, node4a, node4b, node5a, node5b);
+
+            node1.requestFocus();
+            SceneShim.processKeyEvent(
+                scene, new KeyEvent(KeyEvent.KEY_PRESSED, null, null, KeyCode.A, false, false, false, false));
+
+            assertEquals(
+                List.of(
+                    "EventFilter[source=node1, target=node1]", // <-- target is node1 (focusOwner)
+                    "EventFilter[source=node2, target=node3]", // <-- change target to node3 (delegate)
+                    "EventFilter[source=node3, target=node3]",
+                    "EventFilter[source=node4a, target=node5a]", // <-- change target to node5a (delegate)
+                    "EventFilter[source=node5a, target=node5a]",
+                    "EventHandler[source=node5a, target=node5a]",
+                    "EventHandler[source=node4a, target=node5a]",
+                    "EventHandler[source=node3, target=node3]", // <-- change target back to node3
+                    "EventHandler[source=node2, target=node3]",
+                    "EventHandler[source=node1, target=node1]" // <-- change target back to node1
+                ),
+                trace
+            );
+
+            switchDelegate[0] = true;
+            trace.clear();
+
+            node1.requestFocus();
+            SceneShim.processKeyEvent(
+                scene, new KeyEvent(KeyEvent.KEY_PRESSED, null, null, KeyCode.A, false, false, false, false));
+
+            assertEquals(
+                List.of(
+                    "EventFilter[source=node1, target=node1]", // <-- target is node1 (focusOwner)
+                    "EventFilter[source=node2, target=node3]", // <-- change target to node3 (delegate)
+                    "EventFilter[source=node3, target=node3]",
+                    "EventFilter[source=node4b, target=node5b]", // <-- change target to node5b (delegate)
+                    "EventFilter[source=node5b, target=node5b]",
+                    "EventHandler[source=node5b, target=node5b]",
+                    "EventHandler[source=node4b, target=node5b]",
+                    "EventHandler[source=node3, target=node3]", // <-- change target back to node3
+                    "EventHandler[source=node2, target=node3]",
+                    "EventHandler[source=node1, target=node1]" // <-- change target back to node1
+                ),
+                trace
+            );
+        }
+
+        /**
+         * When {@link Node#requestFocus()} is called on a node that is already focused, focus delegates
+         * and focused states are re-evaluated for the entire chain of focus delegation.
+         */
+        @Test
+        void focusDelegatesAreReevaluatedWhenFocusIsRequestedAgain() {
+            final N node1, node2, node3, node4a, node4b, node5a, node5b;
+            final boolean[] switchDelegate = new boolean[1];
+
+            // node1 . . . . . . . . . focusDelegate = node3, focusOwner
+            // └── node2
+            //     └── node3 . . . . . focusDelegate = node5a/b
+            //         └── node4a
+            //         |   └── node5a
+            //         └── node4b
+            //             └── node5b
+            scene.setRoot(
+                node1 = new N(
+                    node2 = new N(
+                        node3 = new N(
+                            new Node[] {
+                                node4a = new N(
+                                    node5a = new N()
+                                ),
+                                node4b = new N(
+                                    node5b = new N()
+                                )
+                            }, node5a
+                        ) {
+                            @Override
+                            protected Node getFocusDelegate(Node hoistingNode) {
+                                return switchDelegate[0] ? node5b : node5a;
+                            }
+                        }
+                    ), node3
+                ));
+
+            node1.requestFocus();
+            assertIsFocused(node1, node3, node5a);
+            assertNotFocused(node2, node4a, node4b);
+            assertSame(node5a, NodeShim.resolveFocusDelegate(node1));
+
+            switchDelegate[0] = true;
+            node1.requestFocus();
+            assertIsFocused(node1, node3, node5b);
+            assertNotFocused(node2, node4a, node4b);
+            assertSame(node5b, NodeShim.resolveFocusDelegate(node1));
+        }
+
+        /**
+         * When a node that acquired focus by delegation is removed from the scene graph, its focus bits are
+         * cleared (and those of its descendants). This ensures that a focus delegation chain is only valid
+         * within a scene graph.
+         */
+        @Test
+        void focusIsClearedOnDelegateNodeWhenRemovedFromSceneGraph() {
+            N node1, node2, node3, node4, node5;
+
+            // node1 . . . . . . . . . focusDelegate = node3
+            // └── node2
+            //     └── node3 . . . . . focusDelegate = node4
+            //         └── node4 . . . focusDelegate = node5
+            //             └── node5
+            scene.setRoot(
+                node1 = new N(
+                    node2 = new N(
+                        node3 = new N(
+                            node4 = new N(
+                                node5 = new N(), node5
+                            ), node4
+                        )
+                    ), node3
+                ));
+
+            node1.requestFocus();
+            assertIsFocused(node3, node4, node5);
+            assertIsFocused(scene, node1);
+            assertNotFocused(node2);
+
+            node3.getChildren().clear();
+            assertNotFocused(node4, node5);
+        }
+
+        /**
+         * When a node that acquired focus by delegation is moved to a sibling branch of the scene graph,
+         * the focus delegation chain is re-evaluated and focus bits are effectively retained. Note that
+         * moving a node to a different branch in the scene graph removes the node before inserting it again.
+         * Focus listeners will see a transient state where focus bits are cleared on the removed node.
+         */
+        @Test
+        void focusIsRetainedWhenDelegateIsMovedToSiblingSubtree() {
+            N node1, node2a, node2b, node3, node4, node5;
+
+            // node1 . . . . . . . . . focusDelegate = node4
+            // └── node2a
+            // |   └── node3
+            // |       └── node4 . . . focusDelegate = node5
+            // |           └── node5
+            // └── node2b
+            scene.setRoot(
+                node1 = new N(
+                    new Node[] {
+                        node2a = new N(
+                            node3 = new N(
+                                node4 = new N(
+                                    node5 = new N(), node5
+                                )
+                            )
+                        ),
+                        node2b = new N()
+                    }, node4
+                ));
+
+            List<Boolean> node4FocusedTrace = new ArrayList<>(),
+                          node4FocusVisibleTrace = new ArrayList<>(),
+                          node4FocusWithinTrace = new ArrayList<>();
+            node4.focusedProperty().subscribe(node4FocusedTrace::addLast);
+            node4.focusVisibleProperty().subscribe(node4FocusVisibleTrace::addLast);
+            node4.focusWithinProperty().subscribe(node4FocusWithinTrace::addLast);
+
+            List<Boolean> node5FocusedTrace = new ArrayList<>(),
+                          node5FocusVisibleTrace = new ArrayList<>(),
+                          node5FocusWithinTrace = new ArrayList<>();
+            node5.focusedProperty().subscribe(node5FocusedTrace::addLast);
+            node5.focusVisibleProperty().subscribe(node5FocusVisibleTrace::addLast);
+            node5.focusWithinProperty().subscribe(node5FocusWithinTrace::addLast);
+
+            node1.requestFocus();
+
+            assertIsFocused(node4, node5);
+            assertIsFocused(scene, node1);
+            assertNotFocused(node2a, node2b, node3);
+            assertEquals(List.of(false, true), node4FocusedTrace);
+            assertEquals(List.of(false), node4FocusVisibleTrace);
+            assertEquals(List.of(false, true), node4FocusWithinTrace);
+            assertEquals(List.of(false, true), node5FocusedTrace);
+            assertEquals(List.of(false), node5FocusVisibleTrace);
+            assertEquals(List.of(false, true), node5FocusWithinTrace);
+
+            node2b.getChildren().add(node3);
+
+            assertIsFocused(node4, node5);
+            assertIsFocused(scene, node1);
+            assertNotFocused(node2a, node2b, node3);
+            assertEquals(List.of(false, true, false, true), node4FocusedTrace);
+            assertEquals(List.of(false), node4FocusVisibleTrace);
+            assertEquals(List.of(false, true, false, true), node4FocusWithinTrace);
+            assertEquals(List.of(false, true, false, true), node5FocusedTrace);
+            assertEquals(List.of(false), node5FocusVisibleTrace);
+            assertEquals(List.of(false, true, false, true), node5FocusWithinTrace);
+        }
     }
 
     @Nested
@@ -1351,9 +1615,9 @@ public class FocusTest {
 
             Node getHoistingNode() {
                 try {
-                    var method = focusedProperty().getClass().getDeclaredMethod("getHoistingNode");
+                    var method = Node.class.getDeclaredMethod("getHoistingNode");
                     method.setAccessible(true);
-                    return (Node)method.invoke(focusedProperty(), (Object[])null);
+                    return (Node)method.invoke(this, (Object[])null);
                 } catch (ReflectiveOperationException e) {
                     throw new AssertionError(e);
                 }

@@ -1037,7 +1037,7 @@ public abstract sealed class Node
                     final Parent newParent = get();
 
                     // Update the focus bits before calling reapplyCss(), as the focus bits can affect CSS styling.
-                    updateParentsFocusWithin(oldParent, newParent);
+                    updateFocus(oldParent, newParent);
 
                     if (newParent != null) {
                         if (nodeTransformation != null && nodeTransformation.listenerReasons > 0) {
@@ -6826,6 +6826,8 @@ public abstract sealed class Node
         private DoubleProperty viewOrder;
         private TransitionTimerCollection transitionTimers;
         private TransitionDefinitionCollection transitionDefinitions;
+        private WeakReference<Node> hoistingNode;
+        private WeakReference<Node> delegateNode;
 
         public double getViewOrder() {
             return (viewOrder == null) ? DEFAULT_VIEW_ORDER : viewOrder.get();
@@ -7295,6 +7297,54 @@ public abstract sealed class Node
 
         public boolean canSetEffect() {
             return (effect == null) || !effect.isBound();
+        }
+
+        public void setHoistingNode(Node hoistingNode) {
+            this.hoistingNode = new WeakReference<>(hoistingNode);
+        }
+
+        public Node getHoistingNode() {
+            Node node = getDescendantNode(hoistingNode, true);
+            if (node == null) {
+                hoistingNode = null;
+            }
+
+            return node;
+        }
+
+        public void setDelegateNode(Node delegateNode) {
+            this.delegateNode = new WeakReference<>(delegateNode);
+        }
+
+        public Node getDelegateNode(boolean verifyParent) {
+            Node node = getDescendantNode(delegateNode, verifyParent);
+            if (node == null) {
+                delegateNode = null;
+            }
+
+            return node;
+        }
+
+        private Node getDescendantNode(WeakReference<Node> nodeRef, boolean verifyParent) {
+            Node node = nodeRef != null ? nodeRef.get() : null;
+            if (node == null) {
+                return null;
+            }
+
+            if (!verifyParent) {
+                return node;
+            }
+
+            Node parent = node.getParent();
+            while (parent != null) {
+                if (parent == Node.this) {
+                    return node;
+                }
+
+                parent = parent.getParent();
+            }
+
+            return null;
         }
     }
 
@@ -8266,9 +8316,18 @@ public abstract sealed class Node
         this.focused.set(focused);
         this.focusVisible.set(focused && focusVisible);
 
-        Node delegate = getFocusDelegate(this.focused.getHoistingNode());
-        if (delegate != null) {
-            delegate.setFocusQuietly(focused, focusVisible);
+        if (focused) {
+            Node delegate = getFocusDelegate(getHoistingNode());
+            setDelegateNode(delegate);
+
+            if (delegate != null) {
+                delegate.setFocusQuietly(focused, focusVisible);
+            }
+        } else {
+            Node delegate = getDelegateNode();
+            if (delegate != null) {
+                delegate.setFocusQuietly(false, false);
+            }
         }
     }
 
@@ -8278,7 +8337,7 @@ public abstract sealed class Node
      * are fired on the current node and on all of its parents, if necessary.
      */
     final void notifyFocusListeners() {
-        Node delegate = getFocusDelegate(focused.getHoistingNode());
+        Node delegate = getDelegateNode();
         if (delegate != null) {
             delegate.notifyFocusListeners();
         }
@@ -8294,37 +8353,173 @@ public abstract sealed class Node
     }
 
     /**
-     * Called when the current node was removed from or added to the scene graph.
-     * If the current node has the focusWithin bit, we also need to clear and set the focusWithin bits of this
-     * node's old and new parents. Note that a scene graph can have more than a single focused node, for example
-     * when a PopupWindow is used to present a branch of the scene graph. Since we need to preserve multi-level
-     * focus, we need to adjust the focus-within count on all parents of the node.
+     * Updates the focus state when the current node was removed from or added to the scene graph.
+     * <p>
+     * This is a complex operation that consists of four steps:
+     * <ol>
+     *     <li>Update the focus-within bits of the old and new parents:<br>
+     *         If the current node has the focusWithin bit, we also need to clear and set the focusWithin bits of this
+     *         node's old and new parents. Note that a scene graph can have more than a single focused node, for example
+     *         when a PopupWindow is used to present a branch of the scene graph, or when a node acquires focus by
+     *         delegation. Since we need to preserve multi-level focus, we need to adjust the focus-within count on all
+     *         old and new parents of the node.
+     *
+     *     <li>Clear delegated focus bits:<br>
+     *         Usually, the focus bits are not cleared when a node is removed from the scene graph. However, when this
+     *         node or any of its descendants received focus by delegation, we clear all focus bits in the delegation
+     *         chain from this node down.
+     *
+     *     <li>Re-evaluate the delegation chain and update delegated focus bits<br>
+     *         Since the parent of this node changed, the delegation chain must be re-evaluated from the last ascendant
+     *         that delegated focus to this node or any of its descendants.
+     *
+     *     <li>Notify focus listeners<br>
+     *         We notify the focus listeners only after the focus states of all participating nodes were updated.
+     *         This is the last step and ensures that listeners will not see inconsistent transient focus states.
+     * </ol>
      */
-    private void updateParentsFocusWithin(Node oldParent, Node newParent) {
-        if (!focusWithin.get()) {
-            return;
+    private void updateFocus(Node oldParent, Node newParent) {
+        class UpdateFocusImpl {
+            static void updateParentsFocusWithin(Node thisNode, Node oldParent, Node newParent) {
+                if (!thisNode.focusWithin.get()) {
+                    return;
+                }
+
+                Node parent = oldParent;
+                while (parent != null) {
+                    parent.focusWithin.adjust(-thisNode.focusWithin.count);
+                    parent = parent.getParent();
+                }
+
+                parent = newParent;
+                while (parent != null) {
+                    parent.focusWithin.adjust(thisNode.focusWithin.count);
+                    parent = parent.getParent();
+                };
+            }
+
+            static Node clearDelegatedFocus(Node thisNode, Node oldParent) {
+                Node principal = oldParent;
+                Node delegate = null;
+
+                while (principal != null && delegate == null) {
+                    delegate = principal.miscProperties != null
+                        ? principal.miscProperties.getDelegateNode(false)
+                        : null;
+
+                    principal = principal.getParent();
+                }
+
+                if (delegate == thisNode) {
+                    delegate.setFocusQuietly(false, false);
+                    return delegate;
+                }
+
+                if (delegate != null) {
+                    Node parent = delegate.getParent();
+
+                    while (parent != thisNode && parent != null) {
+                        parent = parent.getParent();
+                    }
+
+                    if (parent == thisNode) {
+                        delegate.setFocusQuietly(false, false);
+                        return delegate;
+                    }
+                }
+
+                return null;
+            }
+
+            static Node updateDelegatedFocus(Node newParent) {
+                if (newParent == null) {
+                    return null;
+                }
+
+                Node focusedParent = newParent;
+                while (focusedParent != null && !focusedParent.isFocused()) {
+                    focusedParent = focusedParent.getParent();
+                }
+
+                if (focusedParent != null) {
+                    focusedParent.setFocusQuietly(true, focusedParent.isFocusVisible());
+                    return focusedParent;
+                }
+
+                return null;
+            }
+
+            static void notifyFocusListeners(Node node) {
+                if (node != null) {
+                    node.notifyFocusListeners();
+                }
+            }
         }
 
-        Node node = oldParent;
-        while (node != null) {
-            node.focusWithin.adjust(-focusWithin.count);
-            node = node.getParent();
+        UpdateFocusImpl.updateParentsFocusWithin(this, oldParent, newParent);
+        Node delegate = UpdateFocusImpl.clearDelegatedFocus(this, oldParent);
+        Node focusedParent = UpdateFocusImpl.updateDelegatedFocus(newParent);
+        UpdateFocusImpl.notifyFocusListeners(delegate);
+        UpdateFocusImpl.notifyFocusListeners(focusedParent);
+        UpdateFocusImpl.notifyFocusListeners(oldParent);
+        UpdateFocusImpl.notifyFocusListeners(newParent);
+    }
+
+    /**
+     * Gets the tracked hoisting node of this node, which is always a descendant of this node.
+     * <p>
+     * Note that the hoisting node is tracked as a snapshot in time, which means that when we are trying
+     * to resolve it, it might already have been removed from the scene graph, or moved to a different
+     * place so that is is no longer a descendant of this node.
+     *
+     * @return the hoisting node, or {@code null} if no hoisting node is tracked or if the tracked
+     *         node is not a descendant of this node
+     */
+    private Node getHoistingNode() {
+        return miscProperties != null ? miscProperties.getHoistingNode() : null;
+    }
+
+    /**
+     * Sets the hoisting node for this node.
+     * <p>
+     * Note that the hoisting node is tracked as a weak reference.
+     *
+     * @param node the hoisting node
+     */
+    private void setHoistingNode(Node node) {
+        if (miscProperties != null) {
+            miscProperties.setHoistingNode(node);
+        } else if (node != null) {
+            getMiscProperties().setHoistingNode(node);
         }
+    }
 
-        node = newParent;
-        while (node != null) {
-            node.focusWithin.adjust(focusWithin.count);
-            node = node.getParent();
-        };
+    /**
+     * Gets the tracked delegate node of this node, which is always a descendant of this node.
+     * <p>
+     * Note that the delegate node is tracked as a snapshot in time, which means that when we are trying
+     * to resolve it, it might already have been removed from the scene graph, or moved to a different
+     * place so that is is no longer a descendant of this node.
+     *
+     * @return the delegate node, or {@code null} if no delegate node is tracked or if the tracked
+     *         node is not a descendant of this node
+     */
+    private Node getDelegateNode() {
+        return miscProperties != null ? miscProperties.getDelegateNode(true) : null;
+    }
 
-        // Since focus changes are atomic, we only fire change notifications after
-        // all changes are committed on all old and new parents.
-        if (oldParent != null) {
-            oldParent.notifyFocusListeners();
-        }
-
-        if (newParent != null) {
-            newParent.notifyFocusListeners();
+    /**
+     * Sets the delegate node for this node.
+     * <p>
+     * Note that the delegate node is tracked as a weak reference.
+     *
+     * @param node the delegate node
+     */
+    private void setDelegateNode(Node node) {
+        if (miscProperties != null) {
+            miscProperties.setDelegateNode(node);
+        } else if (node != null) {
+            getMiscProperties().setDelegateNode(node);
         }
     }
 
@@ -8346,8 +8541,6 @@ public abstract sealed class Node
     private final FocusedProperty focused = new FocusedProperty();
 
     private final class FocusedProperty extends FocusPropertyBase {
-        private WeakReference<Node> hoistingNode;
-
         @Override
         protected PseudoClass getPseudoClass() {
             return FOCUSED_PSEUDOCLASS_STATE;
@@ -8371,7 +8564,7 @@ public abstract sealed class Node
         public void set(boolean value) {
             if (get() != value) {
                 if (!value) {
-                    hoistingNode = null;
+                    setHoistingNode(null);
                 }
 
                 super.set(value);
@@ -8384,39 +8577,6 @@ public abstract sealed class Node
                     node = node.getParent();
                 } while (node != null);
             }
-        }
-
-        private void setHoistingNode(Node hoistingNode) {
-            this.hoistingNode = new WeakReference<>(hoistingNode);
-        }
-
-        /**
-         * Resolves the hoisting node of this focused node, which is always a descendant of this node.
-         *
-         * @return the hoisting node, or {@code null} if no hoisting node is tracked or if the tracked
-         *         node is not a descendant of this node
-         */
-        private Node getHoistingNode() {
-            Node hoistingNode = this.hoistingNode != null ? this.hoistingNode.get() : null;
-            if (hoistingNode == null) {
-                return null;
-            }
-
-            // Note that the hoisting node is tracked as a snapshot in time, which means that when we are trying
-            // to resolve it, it might already have been removed from the scene graph, or moved to a different
-            // place so that is is no longer a descendant of this node. We need to walk up the scene graph to
-            // find out whether the hoisting node is still a descendant of this node.
-            Node parent = hoistingNode.getParent();
-            while (parent != null) {
-                if (parent == Node.this) {
-                    return hoistingNode;
-                }
-
-                parent = parent.getParent();
-            }
-
-            this.hoistingNode = null;
-            return null;
         }
     };
 
@@ -8656,29 +8816,24 @@ public abstract sealed class Node
     }
 
     /**
-     * Resolves a chain of focus delegates.
-     * This method also verifies that a focus delegate is a descendant of this node.
+     * Resolves a chain of focus delegates and returns the final focus delegate.
      *
      * @return the final focus delegate, or {@code null} if this node has no focus delegate,
      *         or if the focus delegate is not a descendant of this node
      */
-    final Node resolveFocusDelegate() {
-        Node delegate = getFocusDelegate(focused.getHoistingNode());
+    Node resolveFocusDelegate() {
+        Node delegate = getDelegateNode();
         if (delegate == null) {
             return null;
         }
 
-        Node parent = delegate.getParent();
-        while (parent != this && parent != null) {
-            parent = parent.getParent();
-        }
+        Node node;
+        do {
+            node = delegate;
+            delegate = node.getDelegateNode();
+        } while (delegate != null);
 
-        if (parent == null) {
-            return null;
-        }
-
-        Node nextDelegate = delegate.resolveFocusDelegate();
-        return nextDelegate != null ? nextDelegate : delegate;
+        return node;
     }
 
     /**
@@ -8723,7 +8878,7 @@ public abstract sealed class Node
             return;
         }
 
-        focused.setHoistingNode(hoistingNode);
+        setHoistingNode(hoistingNode);
 
         if (isHoistFocus()) {
             for (Node node = getParent(); node != null; node = node.getParent()) {
@@ -9159,7 +9314,7 @@ public abstract sealed class Node
 
             // If our parent has a focus delegate, we need to use a special dispatcher that can retarget
             // the event to the focus delegate (even if this node doesn't have an event dispatcher itself).
-            if (curParent != null && curParent.getFocusDelegate(focused.getHoistingNode()) instanceof Node delegate) {
+            if (curParent != null && curParent.getDelegateNode() instanceof Node delegate) {
                 EventDispatcher dispatcher = curNode.eventDispatcher != null ? curNode.eventDispatcher.get() : null;
                 tail = tail.prepend(new DelegatingEventDispatcher(curParent, delegate, dispatcher));
             } else {
