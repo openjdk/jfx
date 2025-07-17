@@ -191,4 +191,8 @@ public abstract class VirtualContainerBase<C extends Control, I extends IndexedC
         flow.rebuildCells();
     }
 
+    void requestRecreateCells() {
+        flow.recreateCells();
+    }
+
 }
