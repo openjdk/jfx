@@ -49,6 +49,8 @@ import javafx.scene.control.ButtonType;
 import javafx.scene.control.Dialog;
 import javafx.scene.input.DataFormat;
 import javafx.scene.paint.Color;
+import javafx.scene.text.TabStop;
+import javafx.scene.text.TabStopPolicy;
 import javafx.stage.FileChooser;
 import javafx.stage.Window;
 import com.oracle.demo.richtext.common.Styles;
@@ -103,13 +105,15 @@ public class Actions {
     public final FxAction wrapText = new FxAction();
 
     private final RichTextArea control;
+    private final Ruler ruler;
     private final ReadOnlyBooleanWrapper modified = new ReadOnlyBooleanWrapper();
     private final ReadOnlyObjectWrapper<File> file = new ReadOnlyObjectWrapper<>();
     private final SimpleObjectProperty<StyleAttributeMap> styles = new SimpleObjectProperty<>();
     private final SimpleObjectProperty<TextStyle> textStyle = new SimpleObjectProperty<>();
 
-    public Actions(RichTextArea control) {
+    public Actions(RichTextArea control, Ruler ruler) {
         this.control = control;
+        this.ruler = ruler;
 
         // undo/redo actions
         redo.disabledProperty().bind(control.redoableProperty().not());
@@ -206,6 +210,18 @@ public class Actions {
         italic.setSelected(a.getBoolean(StyleAttributeMap.ITALIC), false);
         underline.setSelected(a.getBoolean(StyleAttributeMap.UNDERLINE), false);
         strikeThrough.setSelected(a.getBoolean(StyleAttributeMap.STRIKE_THROUGH), false);
+
+        if (ruler != null) {
+            TabStopPolicy tp = ruler.getTabStopPolicy();
+            if (tp != null) {
+                TabStop[] ts = a.get(StyleAttributeMap.TAB_STOPS);
+                if (ts == null) {
+                    tp.tabStops().clear();
+                } else {
+                    tp.tabStops().setAll(ts);
+                }
+            }
+        }
     }
 
     private void toggle(StyleAttribute<Boolean> attr) {
