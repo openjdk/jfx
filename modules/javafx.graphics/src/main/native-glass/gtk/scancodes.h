@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -22,47 +22,35 @@
  * or visit www.oracle.com if you need additional information or have any
  * questions.
  */
-package com.sun.javafx.css.parser;
 
-public class TokenShim {
+#ifndef SCANCODES_H
+#define SCANCODES_H
 
-    public static final int EOF = Token.EOF;
-    public static final int INVALID = Token.INVALID;
-    public static final int SKIP = Token.SKIP;
+#define SCANCODE_A 30
+#define SCANCODE_B 48
+#define SCANCODE_C 46
+#define SCANCODE_D 32
+#define SCANCODE_E 18
+#define SCANCODE_F 33
+#define SCANCODE_G 34
+#define SCANCODE_H 35
+#define SCANCODE_I 23
+#define SCANCODE_J 36
+#define SCANCODE_K 37
+#define SCANCODE_L 38
+#define SCANCODE_M 50
+#define SCANCODE_N 49
+#define SCANCODE_O 24
+#define SCANCODE_P 25
+#define SCANCODE_Q 16
+#define SCANCODE_R 19
+#define SCANCODE_S 31
+#define SCANCODE_T 20
+#define SCANCODE_U 22
+#define SCANCODE_V 47
+#define SCANCODE_W 17
+#define SCANCODE_X 45
+#define SCANCODE_Y 21
+#define SCANCODE_Z 44
 
-    public final static TokenShim EOF_TOKEN = new TokenShim(Token.EOF_TOKEN);
-    public final static TokenShim INVALID_TOKEN = new TokenShim(Token.INVALID_TOKEN);
-    public final static TokenShim SKIP_TOKEN = new TokenShim(Token.SKIP_TOKEN);
-
-    private final Token token;
-
-    public TokenShim(int type, String text, int line, int offset) {
-        token = new Token(type, text, line, offset);
-    }
-
-    public TokenShim(int type, String text) {
-        token = new Token(type, text);
-    }
-
-    public TokenShim(Token t) {
-        token = t;
-    }
-
-    public int getType() {
-        return token.getType();
-    }
-
-    public int getLine() {
-        return token.getLine();
-    }
-
-    public int getOffset() {
-        return token.getOffset();
-    }
-
-    public String getText() {
-        return token.getText();
-    }
-
-
-}
+#endif //SCANCODES_H

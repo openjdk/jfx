@@ -25,20 +25,27 @@
 
 package test.javafx.scene.text;
 
-import javafx.scene.text.Text;
-import javafx.scene.text.TextFlow;
-import javafx.scene.layout.VBox;
-import javafx.scene.Scene;
-import javafx.stage.Stage;
-import test.com.sun.javafx.pgstub.StubToolkit;
-
-import com.sun.javafx.tk.Toolkit;
-
-import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import javafx.geometry.Bounds;
+import javafx.geometry.Insets;
+import javafx.geometry.Point2D;
+import javafx.scene.Scene;
+import javafx.scene.layout.VBox;
+import javafx.scene.shape.Path;
+import javafx.scene.shape.PathElement;
+import javafx.scene.text.Font;
+import javafx.scene.text.HitInfo;
+import javafx.scene.text.Text;
+import javafx.scene.text.TextFlow;
+import javafx.stage.Stage;
+import org.junit.jupiter.api.Test;
+import com.sun.javafx.tk.Toolkit;
+import test.com.sun.javafx.pgstub.StubToolkit;
 
 public class TextFlowTest {
+
+    private static final double EPSILON = 0.00001;
 
     @Test
     public void testTabSize() {
@@ -111,6 +118,130 @@ public class TextFlowTest {
         } finally {
             stage.hide();
         }
+    }
 
+    private static Text text(String text) {
+        Text t = new Text(text);
+        t.setFont(new Font("System", 12.0));
+        return t;
+    }
+
+    // new StubTextLayout generates prodictable text shapes
+    private static void checkNear(PathElement[] em, double ex, double ey, double ew, double eh) {
+        Bounds b = new Path(em).getBoundsInLocal();
+        double x = b.getMinX();
+        double y = b.getMinY();
+        double w = b.getWidth();
+        double h = b.getHeight();
+        assertEquals(ex, x, EPSILON);
+        assertEquals(ey, y, EPSILON);
+        assertEquals(ew, w, EPSILON);
+        assertEquals(eh, h, EPSILON);
+    }
+
+    private void checkNear(HitInfo h, int expectedCharIndex, boolean expectedLeading, int expectedInsert) {
+        assertEquals(expectedCharIndex, h.getCharIndex());
+        assertEquals(expectedLeading, h.isLeading());
+        assertEquals(expectedInsert, h.getInsertionIndex());
+    }
+
+    @Test
+    public void caretShape() {
+        int first = 0;
+        int second = 6;
+
+        TextFlow f = new TextFlow(text("01234\n56789"));
+        checkNear(f.caretShape(first, true), -1, -1, 2, 14);
+        checkNear(f.caretShape(second, true), -1, 11, 2, 14);
+        checkNear(f.getCaretShape(first, true), -1, -1, 2, 14);
+        checkNear(f.getCaretShape(second, true), -1, 11, 2, 14);
+
+        f.setPadding(new Insets(100));
+        // legacy implementation accounts for no insets
+        checkNear(f.caretShape(first, true), -1, -1, 2, 14);
+        checkNear(f.caretShape(second, true), -1, 11, 2, 14);
+        // new implementation accounts for insets
+        checkNear(f.getCaretShape(first, true), 99, 99, 2, 14);
+        checkNear(f.getCaretShape(second, true), 99, 111, 2, 14);
+
+        f.setLineSpacing(50);
+        // legacy implementation accounts neither for insets nor line spacing
+        checkNear(f.caretShape(first, true), -1, -1, 2, 14);
+        checkNear(f.caretShape(second, true), -1, 61, 2, 14);
+        // new implementation accounts for insets and line spacing
+        checkNear(f.getCaretShape(first, true), 99, 99, 2, 14);
+        checkNear(f.getCaretShape(second, true), 99, 161, 2, 14);
+    }
+
+    @Test
+    public void hitInfo() {
+        double first = 0;
+        double second = 12;
+        double padding = 100;
+        double lineSpacing = 50;
+
+        TextFlow f = new TextFlow(text("01234\n56789"));
+        checkNear(f.hitTest(new Point2D(0, first)), 0, true, 0);
+        checkNear(f.hitTest(new Point2D(0, second)), 6, true, 6);
+        checkNear(f.getHitInfo(new Point2D(0, first)), 0, true, 0);
+        checkNear(f.getHitInfo(new Point2D(0, second)), 6, true, 6);
+
+        f.setPadding(new Insets(padding));
+        // legacy implementation accounts for no insets
+        checkNear(f.hitTest(new Point2D(padding, padding + first)), 11, false, 12);
+        checkNear(f.hitTest(new Point2D(padding, padding + second)), 11, false, 12);
+        // new implementation accounts for insets
+        checkNear(f.getHitInfo(new Point2D(padding, padding + first)), 0, true, 0);
+        checkNear(f.getHitInfo(new Point2D(padding, padding + second)), 6, true, 6);
+
+        f.setLineSpacing(lineSpacing);
+        // legacy implementation accounts neither for insets nor line spacing
+        checkNear(f.hitTest(new Point2D(padding, padding + first)), 10, false, 11);
+        checkNear(f.hitTest(new Point2D(padding, padding + second)), 10, false, 11);
+        // new implementation accounts for insets and line spacing
+        checkNear(f.getHitInfo(new Point2D(padding, padding + first)), 0, true, 0);
+        checkNear(f.getHitInfo(new Point2D(padding, padding + lineSpacing + second)), 6, true, 6);
+    }
+
+    @Test
+    public void rangeShape() {
+        TextFlow f = new TextFlow(text("01234\n56789"));
+        checkNear(f.rangeShape(0, 10), -1, -1, 62, 26);
+        checkNear(f.getRangeShape(0, 10, false), -1, -1, 62, 26);
+        checkNear(f.getRangeShape(0, 10, true), -1, -1, 62, 26);
+
+        f.setPadding(new Insets(100));
+        // legacy implementation accounts for no insets
+        checkNear(f.rangeShape(0, 10), -1, -1, 62, 26);
+        // new implementation accounts for insets
+        checkNear(f.getRangeShape(0, 10, false), 99, 99, 62, 26);
+        checkNear(f.getRangeShape(0, 10, true), 99, 99, 62, 26);
+
+        f.setLineSpacing(50);
+        // legacy implementation accounts neither for insets nor line spacing
+        checkNear(f.rangeShape(0, 10), -1, -1, 62, 76);
+        // new implementation accounts for insets and line spacing
+        checkNear(f.getRangeShape(0, 10, false), 99, 99, 62, 76);
+        checkNear(f.getRangeShape(0, 10, true), 99, 99, 62, 126);
+    }
+
+    @Test
+    public void strikeThroughShape() {
+        TextFlow f = new TextFlow(text("01234567890"));
+        checkNear(f.getStrikeThroughShape(0, 10), -1, 8.6, 122, 3);
+
+        f.setPadding(new Insets(100));
+        checkNear(f.getStrikeThroughShape(0, 10), 99, 108.6, 122, 3);
+    }
+
+    @Test
+    public void underlineShape() {
+        TextFlow f = new TextFlow(text("01234567890"));
+        checkNear(f.underlineShape(0, 10), -1, 9.6, 122, 3);
+        checkNear(f.getUnderlineShape(0, 10), -1, 9.6, 122, 3);
+
+        f.setPadding(new Insets(100));
+        checkNear(f.underlineShape(0, 10), -1, 9.6, 122, 3);
+        checkNear(f.getUnderlineShape(0, 10), 99, 109.6, 122, 3);
     }
 }
