@@ -44,6 +44,8 @@ import javafx.scene.Scene;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
 import javafx.scene.control.TextField;
+import javafx.scene.input.Dragboard;
+import javafx.scene.input.TransferMode;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Priority;
 import javafx.scene.layout.VBox;
@@ -125,6 +127,28 @@ public class DragDropOntoJavaFXControlInJFXPanelTest {
                         new HBox(10, passButton, failButton));
                         Scene scene = new Scene(rootNode);
                         panel.setScene(scene);
+
+                        textField.setOnDragOver(event -> {
+                            if (event.getGestureSource() != textField &&
+                                    event.getDragboard().hasString()) {
+                                event.acceptTransferModes(TransferMode.COPY_OR_MOVE);
+                            }
+
+                            event.consume();
+                        });
+
+                        textField.setOnDragDropped(event -> {
+                            Dragboard db = event.getDragboard();
+                            boolean success = false;
+                            if (db.hasString()) {
+                                textField.setText(db.getString());
+                                success = true;
+                            }
+                            event.setDropCompleted(success);
+
+                            event.consume();
+                        });
+
                     }
                 });
 
