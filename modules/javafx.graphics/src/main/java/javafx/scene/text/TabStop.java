@@ -27,7 +27,7 @@ package javafx.scene.text;
 /**
  * This class encapsulates an immutable single tab stop within the {@link TabStopPolicy}.
  *
- * @since 999 TODO
+ * @since 25
  */
 public final class TabStop {
     private final double position;

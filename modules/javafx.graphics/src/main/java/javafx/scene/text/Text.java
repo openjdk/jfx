@@ -1070,13 +1070,13 @@ public non-sealed class Text extends Shape {
         return start;
     }
 
-    private PathElement[] getRange(int start, int end, int type) {
+    private PathElement[] getRange(int start, int end, int type, double lineSpacing) {
         int length = getTextInternal().length();
         if (0 <= start && start < end  && end <= length) {
             TextLayout layout = getTextLayout();
             double dx = getX();
             double dy = getY() - getYRendering();
-            return TextUtils.getRange(layout, start, end, type, dx, dy);
+            return TextUtils.getRange(layout, start, end, type, dx, dy, lineSpacing);
         }
         return EMPTY_PATH_ELEMENT_ARRAY;
     }
@@ -1102,14 +1102,31 @@ public non-sealed class Text extends Shape {
 
     /**
      * Returns the shape for the range of the text in local coordinates.
+     * The returned value does not include line spacing.
      *
      * @param start the beginning character index for the range
      * @param end the end character index (non-inclusive) for the range
      * @return an array of {@code PathElement} which can be used to create a {@code Shape}
      * @since 9
+     * @see #getRangeShape(int, int, boolean)
      */
     public final PathElement[] rangeShape(int start, int end) {
-        return getRange(start, end, TextLayout.TYPE_TEXT);
+        return getRange(start, end, TextLayout.TYPE_TEXT, 0.0);
+    }
+
+    /**
+     * Returns the shape for the range of the text in local coordinates,
+     * with or without line spacing.
+     *
+     * @param start the beginning character index for the range
+     * @param end the end character index (non-inclusive) for the range
+     * @param includeLineSpacing whether the shapes include line spacing
+     * @return an array of {@code PathElement} which can be used to create a {@code Shape}
+     * @since 25
+     */
+    public final PathElement[] getRangeShape(int start, int end, boolean includeLineSpacing) {
+        double lineSpacing = includeLineSpacing ? getLineSpacing() : 0.0;
+        return getRange(start, end, TextLayout.TYPE_TEXT, lineSpacing);
     }
 
     /**
@@ -1121,7 +1138,19 @@ public non-sealed class Text extends Shape {
      * @since 9
      */
     public final PathElement[] underlineShape(int start, int end) {
-        return getRange(start, end, TextLayout.TYPE_UNDERLINE);
+        return getRange(start, end, TextLayout.TYPE_UNDERLINE, 0.0);
+    }
+
+    /**
+     * Returns the shape for the strike-through in local coordinates.
+     *
+     * @param start the beginning character index for the range
+     * @param end the end character index (non-inclusive) for the range
+     * @return an array of {@code PathElement} which can be used to create a {@code Shape}
+     * @since 25
+     */
+    public final PathElement[] getStrikeThroughShape(int start, int end) {
+        return getRange(start, end, TextLayout.TYPE_STRIKETHROUGH, 0.0);
     }
 
     private float getYAdjustment(BaseBounds bounds) {
@@ -1783,7 +1812,7 @@ public non-sealed class Text extends Shape {
                     @Override protected PathElement[] computeValue() {
                         int start = getSelectionStart();
                         int end = getSelectionEnd();
-                        return getRange(start, end, TextLayout.TYPE_TEXT);
+                        return getRange(start, end, TextLayout.TYPE_TEXT, 0.0);
                     }
               };
               selectionShape = new SimpleObjectProperty<>(Text.this, "selectionShape");

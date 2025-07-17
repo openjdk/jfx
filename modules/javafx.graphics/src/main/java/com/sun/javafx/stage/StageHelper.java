@@ -25,7 +25,6 @@
 
 package com.sun.javafx.stage;
 
-import com.sun.glass.ui.HeaderButtonMetrics;
 import com.sun.javafx.util.Utils;
 import javafx.beans.value.ObservableValue;
 import javafx.stage.Stage;

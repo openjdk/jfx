@@ -25,10 +25,10 @@
 
 package javafx.scene.layout;
 
-import com.sun.glass.ui.HeaderButtonMetrics;
 import com.sun.javafx.PreviewFeature;
 import com.sun.javafx.geom.Vec2d;
 import com.sun.javafx.scene.layout.HeaderButtonBehavior;
+import com.sun.javafx.stage.HeaderButtonMetrics;
 import com.sun.javafx.stage.StageHelper;
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.BooleanPropertyBase;

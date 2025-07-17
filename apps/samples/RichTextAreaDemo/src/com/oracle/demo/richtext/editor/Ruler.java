@@ -103,7 +103,7 @@ public class Ruler extends BorderPane {
                 TabStopPolicy p = get();
                 if (p != null) {
                     sub = p.tabStops().subscribe(Ruler.this::update);
-                    sub.and(p.defaultStopsProperty().subscribe(Ruler.this::update));
+                    sub.and(p.defaultIntervalProperty().subscribe(Ruler.this::update));
                 }
             }
         };
@@ -168,7 +168,7 @@ public class Ruler extends BorderPane {
         }
 
         // default stops
-        double defaultStops = p.getDefaultStops();
+        double defaultStops = p.getDefaultInterval();
         if (defaultStops > 0.0) {
             for (;;) {
                 x = nextPosition(x, defaultStops);
