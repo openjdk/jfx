@@ -67,6 +67,7 @@ static jfieldID  jPixelsScaleYField = 0;
     if (self != nil)
     {
         self->menu = [[NSMenu allocWithZone:NSDefaultMallocZone()] initWithTitle:@"Menubar"];
+        self->ownedMenus = [[NSMutableSet allocWithZone:NSDefaultMallocZone()] init];
     }
     return self;
 }
@@ -297,6 +298,23 @@ static jfieldID  jPixelsScaleYField = 0;
 
 #pragma mark --- JNI
 
+void updateMenuBar(GlassMenubar *menubar) {
+    NSUInteger index = [menubar->menu numberOfItems] - 1;
+
+    // remove all menus at the end that are not owned by javafx
+    while (index > 0) {
+        NSMenuItem *item = [menubar->menu itemAtIndex:index];
+
+        if (![menubar->ownedMenus containsObject:item]) {
+            [menubar->menu removeItemAtIndex:index--];
+        } else {
+            break;
+        }
+    }
+
+    [[NSApp mainMenu] update];
+}
+
 /*
  * Class:     com_sun_glass_ui_mac_MacMenuBarDelegate
  * Method:    _createMenuBar
@@ -337,6 +355,8 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_mac_MacMenuBarDelegate__1insert
         GlassMenubar *menubar = (GlassMenubar *)jlong_to_ptr(jMenubarPtr);
         GlassMenu *glassmenu = (GlassMenu *)jlong_to_ptr(jMenuPtr);
 
+        [menubar->ownedMenus addObject:glassmenu->item];
+
         [menubar->menu insertItem:glassmenu->item atIndex:jPos];
         [menubar->menu setSubmenu:glassmenu->menu forItem:glassmenu->item];
 
@@ -348,7 +368,7 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_mac_MacMenuBarDelegate__1insert
             [NSApp performSelector:@selector(setAppleMenu:) withObject:glassmenu->item];
         }
 
-        [[NSApp mainMenu] update];
+        updateMenuBar(menubar);
     }
     GLASS_POOL_EXIT;
     GLASS_CHECK_EXCEPTION(env);
@@ -370,11 +390,15 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_mac_MacMenuBarDelegate__1remove
     {
         GlassMenubar *menubar = (GlassMenubar *)jlong_to_ptr(jMenubarPtr);
         GlassMenu *glassmenu = (GlassMenu *)jlong_to_ptr(jMenuPtr);
+
+        [menubar->ownedMenus removeObject:glassmenu->item];
+
         if ([menubar->menu indexOfItem: glassmenu->item] != -1) {
             [menubar->menu removeItem:glassmenu->item];
             [glassmenu release];
         }
-        [[NSApp mainMenu] update];
+
+        updateMenuBar(menubar);
     }
     GLASS_POOL_EXIT;
     GLASS_CHECK_EXCEPTION(env);
