@@ -329,12 +329,10 @@ public class MSLBackend extends SLBackend {
             fragmentShaderHeader.append("    float2 texCoord0;\n");
             fragmentShaderHeader.append("    float2 texCoord1;\n");
             fragmentShaderHeader.append("};\n\n");
+            fragmentShaderHeader.append("#endif\n");
 
-            try {
-                FileWriter fragmentShaderHeaderFile = new FileWriter(headerFilesDir + FRAGMENT_SHADER_HEADER_FILE_NAME);
+            try (FileWriter fragmentShaderHeaderFile = new FileWriter(headerFilesDir + FRAGMENT_SHADER_HEADER_FILE_NAME)) {
                 fragmentShaderHeaderFile.write(fragmentShaderHeader.toString());
-                fragmentShaderHeaderFile.write("#endif\n");
-                fragmentShaderHeaderFile.close();
             } catch (IOException e) {
                 System.err.println("IOException occurred while creating " + FRAGMENT_SHADER_HEADER_FILE_NAME +
                     ": " + e.getMessage());
@@ -342,8 +340,7 @@ public class MSLBackend extends SLBackend {
             }
         }
 
-        try {
-            FileWriter objCHeaderFile = new FileWriter(headerFilesDir + objCHeaderFileName);
+        try (FileWriter objCHeaderFile = new FileWriter(headerFilesDir + objCHeaderFileName)) {
 
             if (!hasTextureVar) {
                 String unusedUniform = "UNUSED";
@@ -410,20 +407,20 @@ public class MSLBackend extends SLBackend {
 
             objCHeaderFile.write(objCHeader.toString());
 
-            objCHeaderFile.write("NSDictionary* get" + shaderType + "Dict(NSString* inShaderName) {\n");
-            objCHeaderFile.write("    MSL_LOG(@\"get" + shaderType + "Dict \");\n");
+            StringBuilder getShaderDictFunc = new StringBuilder();
+            getShaderDictFunc.append("NSDictionary* get" + shaderType + "Dict(NSString* inShaderName) {\n");
+            getShaderDictFunc.append("    MSL_LOG(@\"get" + shaderType + "Dict \");\n");
             for (String aShaderName : shaderFunctionNameList) {
-                objCHeaderFile.write("    if ([inShaderName isEqualToString:@\"" + aShaderName + "\"]) {\n");
-                objCHeaderFile.write("        MSL_LOG(@\"get" + shaderType + "Dict() : calling -> get" + aShaderName + "_Uniform_VarID_Dict()\");\n");
-                objCHeaderFile.write("        return get" + aShaderName + "_Uniform_VarID_Dict();\n");
-                objCHeaderFile.write("    }\n");
+                getShaderDictFunc.append("    if ([inShaderName isEqualToString:@\"" + aShaderName + "\"]) {\n");
+                getShaderDictFunc.append("        MSL_LOG(@\"get" + shaderType + "Dict() : calling -> get" + aShaderName + "_Uniform_VarID_Dict()\");\n");
+                getShaderDictFunc.append("        return get" + aShaderName + "_Uniform_VarID_Dict();\n");
+                getShaderDictFunc.append("    }\n");
             }
-
-            objCHeaderFile.write("    return nil;\n");
-            objCHeaderFile.write("};\n\n");
+            getShaderDictFunc.append("    return nil;\n");
+            getShaderDictFunc.append("};\n\n");
+            objCHeaderFile.write(getShaderDictFunc.toString());
 
             objCHeaderFile.write("#endif\n");
-            objCHeaderFile.close();
         } catch (IOException e) {
             System.err.println("An error occurred.");
             e.printStackTrace();

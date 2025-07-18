@@ -169,8 +169,8 @@ public class MTLContext extends BaseShaderContext {
         targetHeight = target.getPhysicalHeight();
 
         // Validate the camera before getting its computed data
-        if (camera instanceof NGDefaultCamera) {
-            ((NGDefaultCamera) camera).validate(targetWidth, targetHeight);
+        if (camera instanceof NGDefaultCamera ngDefCam) {
+            ngDefCam.validate(targetWidth, targetHeight);
             projViewTx = adjustClipSpace(camera.getProjViewTx(projViewTx));
             MTLLog.Debug("MTLContext.updateRenderTarget() projViewTx:2:-->\n" + projViewTx);
         } else {
@@ -335,8 +335,7 @@ public class MTLContext extends BaseShaderContext {
         nCommitCurrentCommandBuffer(pContext);
     }
 
-    public long getMetalCommandQueue()
-    {
+    public long getMetalCommandQueue() {
         return nGetCommandQueue(pContext);
     }
 
@@ -345,8 +344,6 @@ public class MTLContext extends BaseShaderContext {
         // There are no Metal rendering pipeline states changed as a
         // result of this call, hence the method is no-op.
         // But overriding the method here for any future reference.
-        // if (checkDisposed()) return;
-        // nSetDeviceParametersFor2D(pContext);
     }
 
     @Override
@@ -354,8 +351,6 @@ public class MTLContext extends BaseShaderContext {
         // There are no Metal rendering pipeline states changed as a
         // result of this call, hence the method is no-op.
         // But overriding the method here for any future reference.
-        // if (checkDisposed()) return;
-        // nSetDeviceParametersFor3D(pContext);
     }
 
     long createMTLMesh() {

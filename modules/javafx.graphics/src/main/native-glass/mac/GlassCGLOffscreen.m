@@ -137,10 +137,11 @@ static NSArray *allModes = nil;
         if ([NSThread isMainThread]) {
             [[(GlassCGLOffscreen*)glassOffScreen getLayer] setNeedsDisplay];
         } else {
-            [[(GlassCGLOffscreen*)glassOffScreen getLayer] performSelectorOnMainThread:@selector(setNeedsDisplay)
-                                                                            withObject:nil
-                                                                         waitUntilDone:NO
-                                                                                 modes:allModes];
+            [[(GlassCGLOffscreen*)glassOffScreen getLayer]
+                performSelectorOnMainThread:@selector(setNeedsDisplay)
+                                 withObject:nil
+                              waitUntilDone:NO
+                                      modes:allModes];
         }
     }
 }

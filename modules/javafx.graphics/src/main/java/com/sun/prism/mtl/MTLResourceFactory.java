@@ -68,9 +68,15 @@ public class MTLResourceFactory extends BaseShaderFactory {
         if (val > max) {
             return 0;
         }
+
+        // check if number is power of 2
+        if ((val & (val - 1)) == 0) {
+            return val;
+        }
+
         int i = 1;
         while (i < val) {
-            i *= 2;
+            i <<= 1; // i *= 2;
         }
         return i;
     }
@@ -79,13 +85,10 @@ public class MTLResourceFactory extends BaseShaderFactory {
         return context;
     }
 
-    private void checkTextureSize(int width, int height, MediaFrame frame) {
+    private void checkTextureSize(int width, int height) {
         int maxSize = getMaximumTextureSize();
         if (width <= 0 || height <= 0 ||
             width > maxSize || height > maxSize) {
-            if (frame != null) {
-                frame.releaseFrame();
-            }
             throw new RuntimeException("Illegal texture dimensions (" + width + "x" + height + ")");
         }
     }
@@ -166,7 +169,7 @@ public class MTLResourceFactory extends BaseShaderFactory {
             alloch = h;
         }
 
-        checkTextureSize(allocw, alloch, null);
+        checkTextureSize(allocw, alloch);
 
         int bpp = formatHint.getBytesPerPixelUnit();
         if (allocw >= (Integer.MAX_VALUE / alloch / bpp)) {
@@ -180,7 +183,7 @@ public class MTLResourceFactory extends BaseShaderFactory {
         }
 
         long pResource = nCreateTexture(context.getContextHandle() ,
-                (int) formatHint.ordinal(), (int) usageHint.ordinal(),
+                formatHint.ordinal(), usageHint.ordinal(),
                 false, allocw, alloch, 0, useMipmap);
 
         if (pResource == 0L) {
@@ -199,80 +202,78 @@ public class MTLResourceFactory extends BaseShaderFactory {
     public Texture createTexture(MediaFrame frame) {
         frame.holdFrame();
 
-        int width = frame.getWidth();
-        int height = frame.getHeight();
-        int texWidth = frame.getEncodedWidth();
-        int texHeight = frame.getEncodedHeight();
-        PixelFormat texFormat = frame.getPixelFormat();
+        try {
+            int width = frame.getWidth();
+            int height = frame.getHeight();
+            int texWidth = frame.getEncodedWidth();
+            int texHeight = frame.getEncodedHeight();
+            PixelFormat texFormat = frame.getPixelFormat();
 
-        checkTextureSize(texWidth, texHeight, frame);
+            checkTextureSize(texWidth, texHeight);
 
-        int bpp = texFormat.getBytesPerPixelUnit();
-        if (texWidth >= (Integer.MAX_VALUE / texHeight / bpp)) {
-            frame.releaseFrame();
-            throw new RuntimeException("Illegal texture dimensions (" + texWidth + "x" + texHeight + ")");
-        }
-
-        if (texFormat == PixelFormat.MULTI_YCbCr_420) {
-            // Create a MultiTexture
-            MultiTexture tex = new MultiTexture(texFormat, WrapMode.CLAMP_TO_EDGE, width, height);
-
-            // create/add the subtextures
-            // Textures: 0 = luma, 1 = Chroma blue, 2 = Chroma red, 3 = alpha
-            for (int index = 0; index < frame.planeCount(); index++) {
-                int subWidth = texWidth;
-                int subHeight =  texHeight;
-
-                if (index == PixelFormat.YCBCR_PLANE_CHROMABLUE
-                        || index == PixelFormat.YCBCR_PLANE_CHROMARED)
-                {
-                    subWidth /= 2;
-                    subHeight /= 2;
-                }
-
-                Texture subTex = createTexture(PixelFormat.BYTE_ALPHA, Usage.DYNAMIC, WrapMode.CLAMP_TO_EDGE,
-                                                  subWidth, subHeight);
-
-                if (subTex == null) {
-                    tex.dispose();
-                    frame.releaseFrame();
-                    return null;
-                }
-
-                tex.setTexture(subTex, index);
+            int bpp = texFormat.getBytesPerPixelUnit();
+            if (texWidth >= (Integer.MAX_VALUE / texHeight / bpp)) {
+                throw new RuntimeException("Illegal texture dimensions (" + texWidth + "x" + texHeight + ")");
             }
 
-            // Note : Solid_TexuteYV12.metal shader that is used to render this pixel format
-            // expects 4 texture parameters
-            // Generate alpha texture artificially if it is unavailable in the MediaFrame
-            if (frame.planeCount() == 3) {
+            if (texFormat == PixelFormat.MULTI_YCbCr_420) {
+                // Create a MultiTexture
+                MultiTexture tex = new MultiTexture(texFormat, WrapMode.CLAMP_TO_EDGE, width, height);
 
-                Texture subTex = createTexture(PixelFormat.BYTE_ALPHA, Usage.DYNAMIC, WrapMode.CLAMP_TO_EDGE,
-                                               texWidth, texHeight);
+                // create/add the subtextures
+                // Textures: 0 = luma, 1 = Chroma blue, 2 = Chroma red, 3 = alpha
+                for (int index = 0; index < frame.planeCount(); index++) {
+                    int subWidth = texWidth;
+                    int subHeight =  texHeight;
 
-                if (subTex == null) {
-                    tex.dispose();
-                    frame.releaseFrame();
-                    return null;
+                    if (index == PixelFormat.YCBCR_PLANE_CHROMABLUE
+                            || index == PixelFormat.YCBCR_PLANE_CHROMARED)
+                    {
+                        subWidth /= 2;
+                        subHeight /= 2;
+                    }
+
+                    Texture subTex = createTexture(PixelFormat.BYTE_ALPHA, Usage.DYNAMIC, WrapMode.CLAMP_TO_EDGE,
+                                                      subWidth, subHeight);
+
+                    if (subTex == null) {
+                        tex.dispose();
+                        return null;
+                    }
+
+                    tex.setTexture(subTex, index);
                 }
 
-                byte arr[] = new byte[texWidth * texHeight];
-                Arrays.fill(arr, (byte)255);
-                ByteBuffer pixels = ByteBuffer.wrap(arr);
-                subTex.update(pixels, PixelFormat.BYTE_ALPHA, 0, 0, 0, 0,
-                              texWidth, texHeight, texWidth, true);
+                // Note : Solid_TexuteYV12.metal shader that is used to render this pixel format
+                // expects 4 texture parameters
+                // Generate alpha texture artificially if it is unavailable in the MediaFrame
+                if (frame.planeCount() == 3) {
 
-                tex.setTexture(subTex, 3);
-            }
+                    Texture subTex = createTexture(PixelFormat.BYTE_ALPHA, Usage.DYNAMIC, WrapMode.CLAMP_TO_EDGE,
+                                                   texWidth, texHeight);
 
-            frame.releaseFrame();
+                    if (subTex == null) {
+                        tex.dispose();
+                        return null;
+                    }
+
+                    byte arr[] = new byte[texWidth * texHeight];
+                    Arrays.fill(arr, (byte)255);
+                    ByteBuffer pixels = ByteBuffer.wrap(arr);
+                    subTex.update(pixels, PixelFormat.BYTE_ALPHA, 0, 0, 0, 0,
+                                  texWidth, texHeight, texWidth, true);
+
+                    tex.setTexture(subTex, 3);
+                }
+                return tex;
+            } // PixelFormat.MULTI_YCbCr_420
+
+            Texture tex = createTexture(texFormat, Usage.DEFAULT, WrapMode.CLAMP_TO_EDGE, texWidth, texHeight);
+
             return tex;
-        } // PixelFormat.MULTI_YCbCr_420
-
-        Texture tex = createTexture(texFormat, Usage.DEFAULT, WrapMode.CLAMP_TO_EDGE, texWidth, texHeight);
-
-        frame.releaseFrame();
-        return tex;
+        } finally {
+            frame.releaseFrame();
+        }
     }
 
     @Override
@@ -351,7 +352,7 @@ public class MTLResourceFactory extends BaseShaderFactory {
             createh = nextPowerOfTwo(createh, Integer.MAX_VALUE);
         }
 
-        checkTextureSize(createw, createh, null);
+        checkTextureSize(createw, createh);
 
         PixelFormat format = PixelFormat.INT_ARGB_PRE;
         int bpp = format.getBytesPerPixelUnit();
@@ -386,14 +387,14 @@ public class MTLResourceFactory extends BaseShaderFactory {
         if (checkDisposed()) {
             return null;
         }
-        checkTextureSize(pState.getRenderWidth(), pState.getRenderHeight(), null);
+        checkTextureSize(pState.getRenderWidth(), pState.getRenderHeight());
         return new MTLSwapChain(getContext(), pState);
     }
 
     @Override
     public void dispose() {
-        super.dispose();
         context.dispose();
+        super.dispose();
     }
 
     @Override

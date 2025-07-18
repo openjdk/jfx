@@ -63,9 +63,11 @@ static NSArray *allModes = nil;
 
 - (void)dealloc
 {
-    [(NSObject*)self->_fbo release];
-    self->_fbo = nil;
-    [super dealloc];
+    if (self->_fbo != nil) {
+        [(NSObject*)self->_fbo release];
+        self->_fbo = nil;
+        [super dealloc];
+    }
 }
 
 - (unsigned int)width

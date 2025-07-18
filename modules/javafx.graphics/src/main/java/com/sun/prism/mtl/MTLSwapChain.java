@@ -139,14 +139,7 @@ public class MTLSwapChain implements MTLRenderTarget, Presentable, GraphicsResou
                 getContext().flushVertexBuffer();
                 stableBackbuffer.dispose();
                 stableBackbuffer = null;
-            } /*else {
-                // RT-27554
-                // TODO: this implementation was done to make sure there is a
-                // context current for the hardware backbuffer before we start
-                // attempting to use the FBO associated with the
-                // RTTexture "backbuffer"...
-                MTLGraphics.create(pContext, this);
-            }*/
+            }
             w = pState.getRenderWidth();
             h = pState.getRenderHeight();
 

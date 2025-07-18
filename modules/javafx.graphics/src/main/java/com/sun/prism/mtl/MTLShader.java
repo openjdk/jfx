@@ -54,7 +54,7 @@ public class MTLShader implements Shader {
         if (nMetalShaderRef != 0) {
             shaderMap.put(fragmentFunctionName, this);
         } else {
-            throw new AssertionError("Failed to create Shader");
+            throw new InternalError("Failed to create the Shader : " + fragmentFunctionName);
         }
         uniformNameIdMap = nGetUniformNameIdMap(nMetalShaderRef);
     }
