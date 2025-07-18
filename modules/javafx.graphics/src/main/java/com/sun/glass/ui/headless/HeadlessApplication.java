@@ -138,12 +138,6 @@ public class HeadlessApplication extends Application {
         if (this.screens == null) {
             float scaleX = 1.f;
             float scaleY = 1.f;
-            String scale = System.getProperty("glass.gtk.uiScale");
-            if (scale != null && !scale.isBlank()) {
-                float scaleFloat = Float.parseFloat(scale);
-                scaleX = scaleFloat;
-                scaleY = scaleFloat;
-            }
             Screen screen = new Screen(0, 32, 0, 0, screenWidth, screenHeight, 0, 0, screenWidth, screenHeight, 0, 0, screenWidth, screenHeight, 100, 100, 1f, 1f, scaleX, scaleY);
             this.screens = new Screen[1];
             this.screens[0] = screen;
