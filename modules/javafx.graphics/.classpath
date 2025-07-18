@@ -5,6 +5,7 @@
 	<classpathentry kind="src" path="build/gensrc/jsl-decora"/>
 	<classpathentry kind="src" path="build/hlsl/Decora"/>
 	<classpathentry kind="src" path="build/hlsl/Prism"/>
+	<classpathentry kind="src" path="build/msl/"/>
 	<classpathentry kind="src" output="testbin" path="src/shims/java">
 		<attributes>
 			<attribute name="test" value="true"/>
