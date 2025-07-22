@@ -26,7 +26,6 @@
 package com.sun.glass.ui;
 
 import javafx.geometry.Dimension2D;
-import javafx.scene.layout.HeaderBar;
 import javafx.stage.StageStyle;
 import java.util.Objects;
 
@@ -37,7 +36,6 @@ import java.util.Objects;
  * @param rightInset the size of the right inset
  * @param minHeight the minimum height of the window buttons
  * @see HeaderButtonOverlay
- * @see HeaderBar
  */
 public record HeaderButtonMetrics(Dimension2D leftInset, Dimension2D rightInset, double minHeight) {
 

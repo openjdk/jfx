@@ -147,6 +147,10 @@
         self->handlingKeyEvent = NO;
         self->didCommitText = NO;
         lastKeyEvent = nil;
+
+        keymanActive = NO;
+        sendKeyEvent = NO;
+        insertTextChar = 0;
     }
     //self->_delegate = [[GlassViewDelegate alloc] initWithView:view withJview:jView];
     return self;
@@ -392,6 +396,16 @@
 
     handlingKeyEvent = YES;
     didCommitText = NO;
+
+    // The Keyman input method expects us to ignore key events that don't lead
+    // to NSTextInputClient calls. For Keyman the NSEvent refers to some
+    // internal Roman layout and not the chosen Keyman layout. The correct
+    // Keyman character will be passed to insertText. We detect this input
+    // method using the same method as AWT.
+    keymanActive = [self.inputContext.selectedKeyboardInputSource containsString: @"keyman"];
+    sendKeyEvent = NO;
+    insertTextChar = 0;
+
     BOOL hadMarkedText = (nsAttrBuffer.length > 0);
     BOOL inputContextHandledEvent = (imEnabled && [self.inputContext handleEvent:theEvent]);
     handlingKeyEvent = NO;
@@ -409,10 +423,22 @@
         // (ESC can do that). In either case we don't want to generate a key
         // event.
         ;
+    }
+    else if (keymanActive) {
+        // We do not call registerKeyEvent: for keyman which means shortcuts
+        // based on symbols and punctuation (like Cmd++) will not work
+        // correctly. We don't see changes to the Keyman layout so
+        // registerKeyEvent: would accumulate stale information. Keyman does
+        // not set marked text so we don't need to check nsAttrBuffer.
+        if (sendKeyEvent) {
+            wasConsumed = [self->_delegate sendJavaKeyEvent:theEvent isDown:YES character:insertTextChar];
+        }
     } else if (!inputContextHandledEvent || (nsAttrBuffer.length == 0)) {
         [GlassApplication registerKeyEvent:theEvent];
-        wasConsumed = [self->_delegate sendJavaKeyEvent:theEvent isDown:YES];
+        wasConsumed = [self->_delegate sendJavaKeyEvent:theEvent isDown:YES character:0];
     }
+
+    keymanActive = NO;
 
     return wasConsumed;
 }
@@ -426,7 +452,7 @@
 - (void)keyUp:(NSEvent *)theEvent
 {
     KEYLOG("keyUp");
-    [self->_delegate sendJavaKeyEvent:theEvent isDown:NO];
+    [self->_delegate sendJavaKeyEvent:theEvent isDown:NO character:insertTextChar];
 }
 
 - (void)flagsChanged:(NSEvent *)theEvent
@@ -554,7 +580,7 @@
  */
 
 // Utility function, not part of protocol
-- (void)commitString:(NSString*)aString
+- (void)commitString:(id)aString
 {
     [self->_delegate notifyInputMethod:aString attr:4 length:(int)[aString length] cursor:(int)[aString length] selectedRange: NSMakeRange(NSNotFound, 0)];
 }
@@ -565,6 +591,9 @@
     // According to Apple an NSResponder will send this up the responder chain
     // but a text input client should not. So we ignore this which avoids an
     // annoying beep.
+    if (keymanActive) {
+        sendKeyEvent = YES;
+    }
 }
 
 - (void) insertText:(id)aString replacementRange:(NSRange)replacementRange
@@ -573,6 +602,18 @@
     if ([self->nsAttrBuffer length] > 0 || [aString length] > 1) {
         self->didCommitText = YES;
         [self commitString: aString];
+    }
+
+    if (keymanActive) {
+        if ([aString isKindOfClass: [NSString class]]) {
+            NSString* nsString = (NSString*)aString;
+            // A longer string would be sent out above as an InputMethod
+            // commit rather than a multi-unit KeyEvent.
+            if (nsString.length == 1) {
+                insertTextChar = [nsString characterAtIndex: 0];
+                sendKeyEvent = YES;
+            }
+        }
     }
 
     // If a user tries to enter an invalid character using a dead key

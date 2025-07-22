@@ -42,8 +42,12 @@
     BOOL didCommitText;
 
     BOOL isHiDPIAware;
-
     NSEvent *lastKeyEvent;
+
+    // These fields track state for the Keyman input method.
+    BOOL keymanActive;
+    BOOL sendKeyEvent;
+    unichar insertTextChar;
 }
 
 - (GlassViewDelegate*)delegate;
