@@ -237,6 +237,8 @@ class ES2SwapChain implements ES2RenderTarget, Presentable, GraphicsResource {
 
     @Override
     public int getFboID() {
+        // The nativeDestHandle holds the value returned by glGenFramebuffersEXT.
+        // Since glGenFramebuffersEXT returns a value of type GLuint, this type cast is safe.
         return (int)nativeDestHandle;
     }
 
