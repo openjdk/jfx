@@ -156,8 +156,6 @@ public class MTLContext extends BaseShaderContext {
 
     @Override
     protected State updateRenderTarget(RenderTarget target, NGCamera camera, boolean depthTest) {
-        MTLLog.Debug("MTLContext.updateRenderTarget() :target = " + target + ", camera = " + camera + ", depthTest = " + depthTest);
-        MTLLog.Debug("MTLContext.updateRenderTarget() projViewTx:1:-->\n" + projViewTx);
         renderTarget = (MTLRTTexture)target;
         int res = nUpdateRenderTarget(pContext, renderTarget.getNativeHandle(), depthTest);
 
@@ -172,7 +170,6 @@ public class MTLContext extends BaseShaderContext {
         if (camera instanceof NGDefaultCamera ngDefCam) {
             ngDefCam.validate(targetWidth, targetHeight);
             projViewTx = adjustClipSpace(camera.getProjViewTx(projViewTx));
-            MTLLog.Debug("MTLContext.updateRenderTarget() projViewTx:2:-->\n" + projViewTx);
         } else {
             projViewTx = adjustClipSpace(camera.getProjViewTx(projViewTx));
             double vw = camera.getViewWidth();
@@ -180,7 +177,6 @@ public class MTLContext extends BaseShaderContext {
             if (targetWidth != vw || targetHeight != vh) {
                 projViewTx.scale(vw / targetWidth, vh / targetHeight, 1.0);
             }
-            MTLLog.Debug("MTLContext.updateRenderTarget() projViewTx:3:-->\n" + projViewTx);
         }
 
         // Set projection view matrix
@@ -238,7 +234,6 @@ public class MTLContext extends BaseShaderContext {
 
     @Override
     protected void updateShaderTransform(Shader shader, BaseTransform xform) {
-        MTLLog.Debug("MTLContext.updateShaderTransform() :shader = " + shader + ", xform = " + xform);
         if (xform == null) {
             xform = BaseTransform.IDENTITY_TRANSFORM;
         }
@@ -325,9 +320,6 @@ public class MTLContext extends BaseShaderContext {
 
     @Override
     protected void renderQuads(float[] coordArray, byte[] colorArray, int numVertices) {
-        MTLLog.Debug("numVertices = " + numVertices);
-        MTLLog.Debug("coordArray : length = " + coordArray.length);
-        MTLLog.Debug("colorArray : length = " + colorArray.length);
         nDrawIndexedQuads(getContextHandle(), coordArray, colorArray, numVertices);
     }
 

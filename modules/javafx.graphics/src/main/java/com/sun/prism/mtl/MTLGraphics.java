@@ -36,25 +36,21 @@ public class MTLGraphics extends BaseShaderGraphics {
     private MTLGraphics(MTLContext context, RenderTarget target) {
         super(context, target);
         this.context = context;
-        MTLLog.Debug("MTLGraphics(): context = " + context + ", target = " + target);
     }
 
     static MTLGraphics create(MTLContext context, RenderTarget target) {
         if (target == null) {
             return null;
         }
-        MTLLog.Debug("MTLGraphics.create(): context = " + context + ", target = " + target);
         return new MTLGraphics(context, target);
     }
 
     @Override
     public void clear(Color color) {
-        MTLLog.Debug("MTLGraphics.clear(): color = " + color);
         float r = color.getRedPremult();
         float g = color.getGreenPremult();
         float b = color.getBluePremult();
         float a = color.getAlpha();
-        MTLLog.Debug("MTLGraphics.clear(): r = " + r + ", g = " + g + ", b = " + b + ", a = " + a);
 
         context.validateClearOp(this);
         getRenderTarget().setOpaque(color.isOpaque());
