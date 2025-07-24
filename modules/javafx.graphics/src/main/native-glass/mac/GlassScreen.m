@@ -135,20 +135,22 @@ jobjectArray createJavaScreens(JNIEnv* env) {
                                                       jScreenClass,
                                                       NULL);
     GLASS_CHECK_EXCEPTION(env);
-    maxScreenDimensions = NSMakeSize(0.f,0.f);
-    for (NSUInteger index = 0; index < [screens count]; index++) {
-        NSRect screenRect = [[screens objectAtIndex:index] frame];
+    if (screenArray != NULL) {
+        maxScreenDimensions = NSMakeSize(0.f,0.f);
+        for (NSUInteger index = 0; index < [screens count]; index++) {
+            NSRect screenRect = [[screens objectAtIndex:index] frame];
 
-        if (screenRect.size.width > maxScreenDimensions.width) {
-            maxScreenDimensions.width = screenRect.size.width;
-        }
-        if (screenRect.size.height > maxScreenDimensions.height) {
-            maxScreenDimensions.height = screenRect.size.height;
-        }
+            if (screenRect.size.width > maxScreenDimensions.width) {
+                maxScreenDimensions.width = screenRect.size.width;
+            }
+            if (screenRect.size.height > maxScreenDimensions.height) {
+                maxScreenDimensions.height = screenRect.size.height;
+            }
 
-        jobject javaScreen = createJavaScreen(env, [screens objectAtIndex:index]);
-        (*env)->SetObjectArrayElement(env, screenArray, index, javaScreen);
-        GLASS_CHECK_EXCEPTION(env);
+            jobject javaScreen = createJavaScreen(env, [screens objectAtIndex:index]);
+            (*env)->SetObjectArrayElement(env, screenArray, index, javaScreen);
+            GLASS_CHECK_EXCEPTION(env);
+        }
     }
 
     return screenArray;
