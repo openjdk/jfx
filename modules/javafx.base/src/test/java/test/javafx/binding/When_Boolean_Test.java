@@ -25,6 +25,8 @@
 
 package test.javafx.binding;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+
 import javafx.beans.binding.Binding;
 import javafx.beans.binding.Bindings;
 import javafx.beans.property.BooleanProperty;
@@ -74,6 +76,6 @@ public class When_Boolean_Test extends WhenTestBase<Boolean, BooleanProperty> {
     }
     @Override
     public void check(Boolean expected, Binding<Boolean> binding) {
-        org.junit.Assert.assertEquals(expected, binding.getValue());
+        assertEquals(expected, binding.getValue());
     }
 }

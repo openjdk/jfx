@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2024, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -31,13 +31,13 @@ import javafx.scene.Node;
 import javafx.scene.control.ScrollPane;
 import javafx.scene.control.ScrollPane.ScrollBarPolicy;
 import javafx.scene.control.skin.ScrollPaneSkin;
-import javafx.scene.image.Image;
-import javafx.scene.image.ImageView;
 import com.oracle.tools.fx.monkey.Loggers;
 import com.oracle.tools.fx.monkey.options.BooleanOption;
 import com.oracle.tools.fx.monkey.options.EnumOption;
 import com.oracle.tools.fx.monkey.options.ObjectOption;
 import com.oracle.tools.fx.monkey.sheets.ControlPropertySheet;
+import com.oracle.tools.fx.monkey.sheets.Options;
+import com.oracle.tools.fx.monkey.util.CustomPane;
 import com.oracle.tools.fx.monkey.util.HasSkinnable;
 import com.oracle.tools.fx.monkey.util.ImageTools;
 import com.oracle.tools.fx.monkey.util.OptionPane;
@@ -65,21 +65,21 @@ public class ScrollPanePage extends TestPaneBase implements HasSkinnable {
         op.section("ScrollPane");
         op.option("Content:", createContentOptions("content", control.contentProperty()));
         op.option(new BooleanOption("fitToHeight", "fit to height", control.fitToHeightProperty()));
-        op.option(new BooleanOption("fitToWidth", "fit to width", control.fitToHeightProperty()));
+        op.option(new BooleanOption("fitToWidth", "fit to width", control.fitToWidthProperty()));
         op.option("HBar Policy:", new EnumOption<ScrollBarPolicy>("hbarPolicy", true, ScrollBarPolicy.class, control.hbarPolicyProperty()));
-        op.option("HMax: TODO", null); // TODO
-        op.option("HMin: TODO", null); // TODO
-        op.option("HValue: TODO", null); // TODO
-        op.option("Min Viewport Height: TODO", null); // TODO
-        op.option("Min Viewport Width: TODO", null); // TODO
+        op.option("HMax:", Options.doubleOption("hmax", control.hmaxProperty()));
+        op.option("HMin:", Options.doubleOption("hmin", control.hminProperty()));
+        op.option("HValue:", Options.doubleOption("hvalue", control.hvalueProperty()));
+        op.option("Min Viewport Height:", Options.doubleOption("minViewportHeight", control.minViewportHeightProperty()));
+        op.option("Min Viewport Width:", Options.doubleOption("minViewportWidth", control.minViewportWidthProperty()));
         op.option(new BooleanOption("pannable", "pannable", control.pannableProperty()));
-        op.option("Pref Viewport Height: TODO", null); // TODO
-        op.option("Pref Viewport Width: TODO", null); // TODO
+        op.option("Pref Viewport Height:", Options.doubleOption("prefViewportHeight", control.prefViewportHeightProperty()));
+        op.option("Pref Viewport Width:", Options.doubleOption("prefViewportWidth", control.prefViewportWidthProperty()));
         op.option("VBar Policy:", new EnumOption<ScrollBarPolicy>("vbarPolicy", true, ScrollBarPolicy.class, control.vbarPolicyProperty()));
-        op.option("Viewport Bounds: TODO", null); // TODO
-        op.option("VMax: TODO", null); // TODO
-        op.option("VMin: TODO", null); // TODO
-        op.option("VValue: TODO", null); // TODO
+        op.option("Viewport Bounds:", Options.boundsOption("viewportBounds", control.viewportBoundsProperty()));
+        op.option("VMax:", Options.doubleOption("vmax", control.vmaxProperty()));
+        op.option("VMin:", Options.doubleOption("vmin", control.vminProperty()));
+        op.option("VValue:", Options.doubleOption("vvalue", control.vvalueProperty()));
         ControlPropertySheet.appendTo(op, control);
 
         setContent(control);
@@ -109,6 +109,7 @@ public class ScrollPanePage extends TestPaneBase implements HasSkinnable {
         op.addChoiceSupplier("1,000 x 1,000", mk(1_000, 1_000));
         op.addChoiceSupplier("1,000 x 50", mk(1_000, 50));
         op.addChoiceSupplier("50 x 1,000", mk(50, 1_000));
+        op.addChoiceSupplier("Panel", CustomPane::create);
         op.addChoice("<null>", null);
         op.select(3);
         return op;

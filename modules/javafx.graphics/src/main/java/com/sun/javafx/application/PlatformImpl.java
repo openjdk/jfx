@@ -917,13 +917,9 @@ public class PlatformImpl {
         }
     }
 
-    private static PlatformPreferences platformPreferences;
+    private static final PlatformPreferences platformPreferences = new PlatformPreferences();
 
     public static PlatformPreferences getPlatformPreferences() {
-        if (platformPreferences == null) {
-            throw new IllegalStateException("Toolkit not initialized");
-        }
-
         return platformPreferences;
     }
 
@@ -936,7 +932,7 @@ public class PlatformImpl {
     public static void initPreferences(Map<String, Class<?>> platformKeys,
                                        Map<String, PreferenceMapping<?, ?>> platformKeyMappings,
                                        Map<String, Object> preferences) {
-        platformPreferences = new PlatformPreferences(platformKeys, platformKeyMappings);
+        platformPreferences.initialize(platformKeys, platformKeyMappings);
         platformPreferences.update(preferences);
     }
 
@@ -982,4 +978,8 @@ public class PlatformImpl {
         }
     }
 
+    /**
+     * The maximum number of nested event loops.
+     */
+    public static final int MAX_NESTED_EVENT_LOOPS = 200;
 }

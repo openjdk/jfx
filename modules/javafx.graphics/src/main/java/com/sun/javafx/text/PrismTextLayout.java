@@ -31,8 +31,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Hashtable;
 import java.util.concurrent.atomic.AtomicBoolean;
-import javafx.scene.shape.LineTo;
-import javafx.scene.shape.MoveTo;
+import javafx.scene.layout.Region;
 import javafx.scene.shape.PathElement;
 import com.sun.javafx.font.CharToGlyphMapper;
 import com.sun.javafx.font.FontResource;
@@ -48,7 +47,9 @@ import com.sun.javafx.geom.Shape;
 import com.sun.javafx.geom.transform.BaseTransform;
 import com.sun.javafx.geom.transform.Translate2D;
 import com.sun.javafx.scene.text.GlyphList;
+import com.sun.javafx.scene.text.TabAdvancePolicy;
 import com.sun.javafx.scene.text.TextLayout;
+import com.sun.javafx.scene.text.TextLine;
 import com.sun.javafx.scene.text.TextSpan;
 
 /**
@@ -72,7 +73,7 @@ public class PrismTextLayout implements TextLayout {
     private PGFont font;        /* Single font text (null for rich text) */
     private FontStrike strike;  /* cached strike of font (identity) */
     private Integer cacheKey;
-    private TextLine[] lines;
+    private PrismTextLine[] lines;
     private TextRun[] runs;
     private int runCount;
     private BaseBounds logicalBounds;
@@ -82,7 +83,7 @@ public class PrismTextLayout implements TextLayout {
     private LayoutCache layoutCache;
     private Shape shape;
     private int flags;
-    private int tabSize = DEFAULT_TAB_SIZE;
+    private TabAdvancePolicy tabAdvancePolicy;
 
     public PrismTextLayout(int maxCacheSize) {
         this.maxCacheSize = maxCacheSize;
@@ -235,7 +236,7 @@ public class PrismTextLayout implements TextLayout {
     }
 
     @Override
-    public com.sun.javafx.scene.text.TextLine[] getLines() {
+    public TextLine[] getLines() {
         ensureLayout();
         return lines;
     }
@@ -269,7 +270,7 @@ public class PrismTextLayout implements TextLayout {
         float bottom = Float.NEGATIVE_INFINITY;
         if (filter != null) {
             for (int i = 0; i < lines.length; i++) {
-                TextLine line = lines[i];
+                PrismTextLine line = lines[i];
                 TextRun[] lineRuns = line.getRuns();
                 for (int j = 0; j < lineRuns.length; j++) {
                     TextRun run = lineRuns[j];
@@ -295,7 +296,7 @@ public class PrismTextLayout implements TextLayout {
         } else {
             top = bottom = 0;
             for (int i = 0; i < lines.length; i++) {
-                TextLine line = lines[i];
+                PrismTextLine line = lines[i];
                 RectBounds lineBounds = line.getBounds();
                 float lineLeft = lineBounds.getMinX() + line.getLeftSideBearing();
                 if (lineLeft < left) left = lineLeft;
@@ -314,13 +315,12 @@ public class PrismTextLayout implements TextLayout {
     }
 
     @Override
-    public PathElement[] getCaretShape(int offset, boolean isLeading,
-                                       float x, float y) {
+    public TextLayout.CaretGeometry getCaretGeometry(int offset, boolean isLeading) {
         ensureLayout();
         int lineIndex = 0;
         int lineCount = getLineCount();
         while (lineIndex < lineCount - 1) {
-            TextLine line = lines[lineIndex];
+            PrismTextLine line = lines[lineIndex];
             int lineEnd = line.getStart() + line.getLength();
             if (lineEnd > offset) break;
             lineIndex++;
@@ -328,7 +328,7 @@ public class PrismTextLayout implements TextLayout {
         int splitCaretOffset = -1;
         int level = 0;
         float lineX = 0, lineY = 0, lineHeight = 0;
-        TextLine line = lines[lineIndex];
+        PrismTextLine line = lines[lineIndex];
         TextRun[] runs = line.getRuns();
         int runCount = runs.length;
         int runIndex = -1;
@@ -386,8 +386,7 @@ public class PrismTextLayout implements TextLayout {
         if (isMirrored()) {
             lineX = getMirroringWidth() - lineX;
         }
-        lineX += x;
-        lineY += y;
+
         if (splitCaretOffset != -1) {
             for (int i = 0; i < runs.length; i++) {
                 TextRun run = runs[i];
@@ -405,21 +404,23 @@ public class PrismTextLayout implements TextLayout {
                         if (isMirrored()) {
                             lineX2 = getMirroringWidth() - lineX2;
                         }
-                        lineX2 += x;
-                        PathElement[] result = new PathElement[4];
-                        result[0] = new MoveTo(lineX, lineY);
-                        result[1] = new LineTo(lineX, lineY + lineHeight / 2);
-                        result[2] = new MoveTo(lineX2, lineY + lineHeight / 2);
-                        result[3] = new LineTo(lineX2, lineY + lineHeight);
-                        return result;
+                        // split caret
+                        return new TextLayout.CaretGeometry.Split(
+                            lineX,
+                            lineY,
+                            lineX2,
+                            lineHeight
+                        );
                     }
                 }
             }
         }
-        PathElement[] result = new PathElement[2];
-        result[0] = new MoveTo(lineX, lineY);
-        result[1] = new LineTo(lineX, lineY + lineHeight);
-        return result;
+        // regular caret
+        return new TextLayout.CaretGeometry.Single(
+            lineX,
+            lineY,
+            lineHeight
+        );
     }
 
     @Override
@@ -434,7 +435,7 @@ public class PrismTextLayout implements TextLayout {
             charIndex = getCharCount();
             insertionIndex = charIndex + 1;
         } else {
-            TextLine line = lines[lineIndex];
+            PrismTextLine line = lines[lineIndex];
             TextRun[] runs = line.getRuns();
             RectBounds bounds = line.getBounds();
             TextRun run = null;
@@ -482,15 +483,14 @@ public class PrismTextLayout implements TextLayout {
     }
 
     @Override
-    public PathElement[] getRange(int start, int end, int type,
-                                  float x, float y) {
+    public void getRange(int start, int end, int type, GeometryCallback client) {
         ensureLayout();
         int lineCount = getLineCount();
         ArrayList<PathElement> result = new ArrayList<>();
         float lineY = 0;
 
         for  (int lineIndex = 0; lineIndex < lineCount; lineIndex++) {
-            TextLine line = lines[lineIndex];
+            PrismTextLine line = lines[lineIndex];
             RectBounds lineBounds = line.getBounds();
             int lineStart = line.getStart();
             if (lineStart >= end) break;
@@ -579,11 +579,7 @@ public class PrismTextLayout implements TextLayout {
                                 l = width - l;
                                 r = width - r;
                             }
-                            result.add(new MoveTo(x + l,  y + top));
-                            result.add(new LineTo(x + r, y + top));
-                            result.add(new LineTo(x + r, y + bottom));
-                            result.add(new LineTo(x + l,  y + bottom));
-                            result.add(new LineTo(x + l,  y + top));
+                            client.addRectangle(l, top, r, bottom);
                         }
                         left = runLeft;
                         right = runRight;
@@ -596,11 +592,7 @@ public class PrismTextLayout implements TextLayout {
                             l = width - l;
                             r = width - r;
                         }
-                        result.add(new MoveTo(x + l,  y + top));
-                        result.add(new LineTo(x + r, y + top));
-                        result.add(new LineTo(x + r, y + bottom));
-                        result.add(new LineTo(x + l,  y + bottom));
-                        result.add(new LineTo(x + l,  y + top));
+                        client.addRectangle(l, top, r, bottom);
                     }
                 }
                 lineX += runWidth;
@@ -608,7 +600,6 @@ public class PrismTextLayout implements TextLayout {
             }
             lineY += lineBounds.getHeight() + spacing;
         }
-        return result.toArray(new PathElement[result.size()]);
     }
 
     @Override
@@ -631,7 +622,7 @@ public class PrismTextLayout implements TextLayout {
             firstBaseline = -lines[0].getBounds().getMinY();
         }
         for (int i = 0; i < lines.length; i++) {
-            TextLine line = lines[i];
+            PrismTextLine line = lines[i];
             TextRun[] runs = line.getRuns();
             RectBounds bounds = line.getBounds();
             float baseline = -bounds.getMinY();
@@ -687,12 +678,13 @@ public class PrismTextLayout implements TextLayout {
     }
 
     @Override
-    public boolean setTabSize(int spaces) {
-        if (spaces < 1) {
-            spaces = 1;
+    public boolean setTabAdvancePolicy(int tabSize, TabAdvancePolicy policy) {
+        if (policy == null) {
+            float spaceAdvance = getSpaceAdvance();
+            policy = new FixedTabAdvancePolicy(tabSize, spaceAdvance);
         }
-        if (tabSize != spaces) {
-            tabSize = spaces;
+        if (tabAdvancePolicy == null || (!tabAdvancePolicy.equals(policy))) {
+            tabAdvancePolicy = policy;
             relayout();
             return true;
         }
@@ -938,7 +930,7 @@ public class PrismTextLayout implements TextLayout {
         }
     }
 
-    private TextLine createLine(int start, int end, int startOffset, float collapsedSpaceWidth) {
+    private PrismTextLine createLine(int start, int end, int startOffset, float collapsedSpaceWidth) {
         int count = end - start + 1;
 
         assert count > 0 : "number of TextRuns in a TextLine cannot be less than one: " + count;
@@ -963,8 +955,7 @@ public class PrismTextLayout implements TextLayout {
         width -= collapsedSpaceWidth;
 
         if (width > layoutWidth) layoutWidth = width;
-        return new TextLine(startOffset, length, lineRuns,
-                            width, ascent, descent, leading);
+        return new PrismTextLine(startOffset, length, lineRuns, width, ascent, descent, leading);
     }
 
     /**
@@ -996,7 +987,7 @@ public class PrismTextLayout implements TextLayout {
         return trailingSpaceWidth;
     }
 
-    private void reorderLine(TextLine line) {
+    private void reorderLine(PrismTextLine line) {
         TextRun[] runs = line.getRuns();
         int length = runs.length;
         if (length > 0 && runs[length - 1].isLinebreak()) {
@@ -1083,23 +1074,21 @@ public class PrismTextLayout implements TextLayout {
         }
     }
 
-    private float getTabAdvance() {
-        float spaceAdvance = 0;
+    private float getSpaceAdvance() {
         if (spans != null) {
-            /* Rich text case - use the first font (for now) */
+            // TextFlow case - use the first font
             for (int i = 0; i < spans.length; i++) {
                 TextSpan span = spans[i];
                 PGFont font = (PGFont)span.getFont();
                 if (font != null) {
                     FontStrike strike = font.getStrike(IDENTITY);
-                    spaceAdvance = strike.getCharAdvance(' ');
-                    break;
+                    return strike.getCharAdvance(' ');
                 }
             }
+            return 0.0f;
         } else {
-            spaceAdvance = strike.getCharAdvance(' ');
+            return strike.getCharAdvance(' ');
         }
-        return tabSize * spaceAdvance;
     }
 
     /*
@@ -1210,9 +1199,10 @@ public class PrismTextLayout implements TextLayout {
             layout = glyphLayout();
         }
 
-        float tabAdvance = 0;
         if ((flags & FLAGS_HAS_TABS) != 0) {
-            tabAdvance = getTabAdvance();
+            if (tabAdvancePolicy == null) {
+                setTabAdvancePolicy(TextLayout.DEFAULT_TAB_SIZE, null);
+            }
         }
 
         BreakIterator boundary = null;
@@ -1242,12 +1232,20 @@ public class PrismTextLayout implements TextLayout {
         float lineWidth = 0;
         int startIndex = 0;
         int startOffset = 0;
-        ArrayList<TextLine> linesList = new ArrayList<>();
+        float layoutShift = Float.NaN;
+        ArrayList<PrismTextLine> linesList = new ArrayList<>();
         for (int i = 0; i < runCount; i++) {
             TextRun run = runs[i];
             shape(run, chars, layout);
+
             if (run.isTab()) {
-                float tabStop = ((int)(lineWidth / tabAdvance) +1) * tabAdvance;
+                if (Float.isNaN(layoutShift)) {
+                    layoutShift = computeLayoutShift(run.getTextSpan());
+                }
+                float tabStop = tabAdvancePolicy.nextTabStop(layoutShift, lineWidth);
+                if (tabStop <= 0.0f) {
+                    tabStop = lineWidth + getSpaceAdvance();
+                }
                 run.setWidth(tabStop - lineWidth);
             }
 
@@ -1369,7 +1367,7 @@ public class PrismTextLayout implements TextLayout {
 
             lineWidth += runWidth;
             if (run.isBreak()) {
-                TextLine line = createLine(startIndex, i, startOffset, computeTrailingSpaceWidth(runs[i]));
+                PrismTextLine line = createLine(startIndex, i, startOffset, computeTrailingSpaceWidth(runs[i]));
                 linesList.add(line);
                 startIndex = i + 1;
                 startOffset += line.getLength();
@@ -1379,7 +1377,7 @@ public class PrismTextLayout implements TextLayout {
         if (layout != null) layout.dispose();
 
         linesList.add(createLine(startIndex, runCount - 1, startOffset, 0));
-        lines = new TextLine[linesList.size()];
+        lines = new PrismTextLine[linesList.size()];
         linesList.toArray(lines);
 
         float fullWidth = wrapWidth > 0 ? wrapWidth : layoutWidth;  // layoutWidth = widest line, wrapWidth is user set
@@ -1394,7 +1392,7 @@ public class PrismTextLayout implements TextLayout {
         }
         if (textAlignment == ALIGN_CENTER) align = 0.5f;
         for (int i = 0; i < lines.length; i++) {
-            TextLine line = lines[i];
+            PrismTextLine line = lines[i];
             int lineStart = line.getStart();
             RectBounds bounds = line.getBounds();
 
@@ -1528,7 +1526,7 @@ public class PrismTextLayout implements TextLayout {
         Metrics metrics = strike.getMetrics();
         float size = strike.getSize();
         for (int i = 0; i < lines.length; i++) {
-            TextLine line = lines[i];
+            PrismTextLine line = lines[i];
             TextRun[] runs = line.getRuns();
             for (int j = 0; j < runs.length; j++) {
                 TextRun run = runs[j];
@@ -1582,7 +1580,7 @@ public class PrismTextLayout implements TextLayout {
         return visualBounds;
     }
 
-    private void computeSideBearings(TextLine line) {
+    private void computeSideBearings(PrismTextLine line) {
         TextRun[] runs = line.getRuns();
         if (runs.length == 0) return;
         float bounds[] = new float[4];
@@ -1667,5 +1665,16 @@ public class PrismTextLayout implements TextLayout {
             }
         }
         line.setSideBearings(lsb, rsb);
+    }
+
+    private float computeLayoutShift(TextSpan span) {
+        if (span != null) {
+            Region root = span.getLayoutRootRegion();
+            if (root != null) {
+                // TODO ltr
+                return -(float)root.snappedLeftInset();
+            }
+        }
+        return 0.0f;
     }
 }

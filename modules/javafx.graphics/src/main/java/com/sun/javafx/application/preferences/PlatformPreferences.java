@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2023, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -58,13 +58,13 @@ public final class PlatformPreferences extends AbstractMap<String, Object> imple
      * used to catch misuse of typed getters even if the preferences map doesn't contain
      * the preference mapping at runtime.
      */
-    private final Map<String, Class<?>> platformKeys;
+    private final Map<String, Class<?>> platformKeys = new HashMap<>();
 
     /**
      * Contains mappings from platform-specific keys to well-known keys, which are used
      * in the implementation of the property-based API in {@link PreferenceProperties}.
      */
-    private final Map<String, PreferenceMapping<?, ?>> platformKeyMappings;
+    private final Map<String, PreferenceMapping<?, ?>> platformKeyMappings = new HashMap<>();
 
     /**
      * Contains the current set of effective preferences, i.e. the set of preferences that
@@ -80,17 +80,17 @@ public final class PlatformPreferences extends AbstractMap<String, Object> imple
     private final List<MapChangeListener<? super String, Object>> mapChangeListeners = new CopyOnWriteArrayList<>();
 
     /**
-     * Initializes a new {@code PlatformPreferences} instance with the given platform-specific keys and key mappings.
+     * Initializes this {@code PlatformPreferences} instance with the given platform-specific keys and key mappings.
      *
      * @param platformKeys the platform-specific keys and the types of their values
      * @param platformKeyMappings the platform-specific key mappings
      * @throws NullPointerException if {@code platformKeys} or {@code platformKeyMappings} is {@code null} or
      *                              contains {@code null} keys or values
      */
-    public PlatformPreferences(Map<String, Class<?>> platformKeys,
-                               Map<String, PreferenceMapping<?, ?>> platformKeyMappings) {
-        this.platformKeys = Map.copyOf(platformKeys);
-        this.platformKeyMappings = Map.copyOf(platformKeyMappings);
+    public void initialize(Map<String, Class<?>> platformKeys,
+                           Map<String, PreferenceMapping<?, ?>> platformKeyMappings) {
+        this.platformKeys.putAll(platformKeys);
+        this.platformKeyMappings.putAll(platformKeyMappings);
     }
 
     @Override

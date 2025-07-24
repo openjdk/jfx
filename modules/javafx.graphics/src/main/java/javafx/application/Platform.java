@@ -288,6 +288,12 @@ public final class Platform {
      * It must not be called during animation or layout processing.
      * </p>
      *
+     * There is a finite limit on the depth of the nested event loop stack. An
+     * exception will be thrown if this limit is exceeded. Applications that
+     * want to avoid an exception can call
+     * {@link #canStartNestedEventLoop canStartNestedEventLoop} to check
+     * whether it is possible to start one.
+     *
      * @param key the Object that identifies the nested event loop, which
      * must not be null
      *
@@ -301,6 +307,9 @@ public final class Platform {
      *
      * @throws IllegalStateException if this method is called on a thread
      * other than the JavaFX Application Thread.
+     *
+     * @throws IllegalStateException if this call would exceed the maximum
+     * number of nested event loops.
      *
      * @return the value passed into the corresponding call to exitEventLoop
      *
@@ -604,7 +613,8 @@ public final class Platform {
          * Specifies whether applications should always show scroll bars. If not set, an application may
          * choose to hide scroll bars that are not actively used, or make them smaller or less noticeable.
          * <p>
-         * If the platform does not report this preference, this property defaults to {@code false}.
+         * This property corresponds to the <a href="../scene/doc-files/cssref.html#mediafeatures">
+         * {@code -fx-prefers-persistent-scrollbars}</a> media feature.
          *
          * @return the {@code persistentScrollBars} property
          * @defaultValue {@code false}
@@ -618,7 +628,8 @@ public final class Platform {
          * Specifies whether applications should minimize the amount of non-essential animations,
          * reducing discomfort for users who experience motion sickness or vertigo.
          * <p>
-         * If the platform does not report this preference, this property defaults to {@code false}.
+         * This property corresponds to the <a href="../scene/doc-files/cssref.html#mediafeatures">
+         * {@code prefers-reduced-motion}</a> media feature.
          *
          * @return the {@code reducedMotion} property
          * @defaultValue {@code false}
@@ -632,7 +643,8 @@ public final class Platform {
          * Specifies whether applications should minimize the amount of transparent or translucent
          * layer effects, which can help to increase contrast and readability for some users.
          * <p>
-         * If the platform does not report this preference, this property defaults to {@code false}.
+         * This property corresponds to the <a href="../scene/doc-files/cssref.html#mediafeatures">
+         * {@code prefers-reduced-transparency}</a> media feature.
          *
          * @return the {@code reducedTransparency} property
          * @defaultValue {@code false}
@@ -646,7 +658,8 @@ public final class Platform {
          * Specifies whether applications should minimize the amount of internet traffic, which users
          * might request because they are on a metered network or a limited data plan.
          * <p>
-         * If the platform does not report this preference, this property defaults to {@code false}.
+         * This property corresponds to the <a href="../scene/doc-files/cssref.html#mediafeatures">
+         * {@code prefers-reduced-data}</a> media feature.
          *
          * @return the {@code reducedData} property
          * @defaultValue {@code false}
@@ -660,7 +673,8 @@ public final class Platform {
          * The platform color scheme, which specifies whether applications should prefer light text on
          * dark backgrounds, or dark text on light backgrounds.
          * <p>
-         * If the platform does not report color preferences, this property defaults to {@code LIGHT}.
+         * This property corresponds to the <a href="../scene/doc-files/cssref.html#mediafeatures">
+         * {@code prefers-color-scheme}</a> media feature.
          *
          * @return the {@code colorScheme} property
          * @defaultValue {@link ColorScheme#LIGHT}
@@ -671,8 +685,6 @@ public final class Platform {
 
         /**
          * The color used for background regions.
-         * <p>
-         * If the platform does not report a background color, this property defaults to {@code WHITE}.
          *
          * @return the {@code backgroundColor} property
          * @defaultValue {@link Color#WHITE}
@@ -683,8 +695,6 @@ public final class Platform {
 
         /**
          * The color used for foreground elements like text.
-         * <p>
-         * If the platform does not report a foreground color, this property defaults to {@code BLACK}.
          *
          * @return the {@code foregroundColor} property
          * @defaultValue {@link Color#BLACK}
@@ -697,9 +707,6 @@ public final class Platform {
          * The accent color, which can be used to highlight the active or important part of a
          * control and make it stand out from the rest of the user interface. It is usually a
          * vivid color that contrasts with the foreground and background colors.
-         * <p>
-         * If the platform does not report an accent color, this property defaults to vivid blue
-         * (corresponding to the hex color value {@code #157EFB}).
          *
          * @return the {@code accentColor} property
          * @defaultValue {@code #157EFB}

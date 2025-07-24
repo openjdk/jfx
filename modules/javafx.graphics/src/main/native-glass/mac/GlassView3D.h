@@ -53,8 +53,12 @@
     BOOL handlingKeyEvent;
     BOOL didCommitText;
     BOOL isHiDPIAware;
-
     NSEvent *lastKeyEvent;
+
+    // These fields track state for the Keyman input method.
+    BOOL keymanActive;
+    BOOL sendKeyEvent;
+    unichar insertTextChar;
 }
 
 - (id)initWithFrame:(NSRect)frame withJview:(jobject)jView withJproperties:(jobject)jproperties;

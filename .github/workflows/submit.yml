@@ -59,7 +59,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: gradle/actions/wrapper-validation@v3
+      - uses: gradle/actions/wrapper-validation@v4
 
 
   linux_x64_build:
@@ -73,9 +73,9 @@ jobs:
       # BOOT_JDK_FILENAME: "${{ fromJson(needs.prerequisites.outputs.dependencies).LINUX_X64_BOOT_JDK_FILENAME }}"
       # BOOT_JDK_URL: "${{ fromJson(needs.prerequisites.outputs.dependencies).LINUX_X64_BOOT_JDK_URL }}"
       # BOOT_JDK_SHA256: "${{ fromJson(needs.prerequisites.outputs.dependencies).LINUX_X64_BOOT_JDK_SHA256 }}"
-      BOOT_JDK_VERSION: "23"
-      BOOT_JDK_FILENAME: "jdk-23_linux-x64_bin.tar.gz"
-      BOOT_JDK_URL: "https://download.oracle.com/java/23/archive/jdk-23_linux-x64_bin.tar.gz"
+      BOOT_JDK_VERSION: "24.0.1"
+      BOOT_JDK_FILENAME: "jdk-24.0.1_linux-x64_bin.tar.gz"
+      BOOT_JDK_URL: "https://download.oracle.com/java/24/archive/jdk-24.0.1_linux-x64_bin.tar.gz"
       # ANT_DIR: "apache-ant-1.10.5"
       # ANT_FILENAME: "apache-ant-1.10.5.tar.gz"
       # ANT_URL: "https://archive.apache.org/dist/ant/binaries/apache-ant-1.10.5-bin.tar.gz"
@@ -90,8 +90,8 @@ jobs:
         run: |
           set -x
           sudo apt-get update
-          sudo apt-get install ant libgl1-mesa-dev libx11-dev libxxf86vm-dev libxt-dev pkg-config libgtk2.0-dev libgtk-3-dev libxtst-dev gcc-13 g++-13
-          sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-13 100 --slave /usr/bin/g++ g++ /usr/bin/g++-13
+          sudo apt-get install ant libgl1-mesa-dev libx11-dev libxxf86vm-dev libxt-dev pkg-config libgtk2.0-dev libgtk-3-dev libxtst-dev gcc-14 g++-14
+          sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-14 100 --slave /usr/bin/g++ g++ /usr/bin/g++-14
           mkdir -p "${HOME}/build-tools"
           # wget -O "${HOME}/build-tools/${ANT_FILENAME}" "${ANT_URL}"
           # tar -zxf "${HOME}/build-tools/${ANT_FILENAME}" -C "${HOME}/build-tools"
@@ -158,9 +158,9 @@ jobs:
       # BOOT_JDK_FILENAME: "${{ fromJson(needs.prerequisites.outputs.dependencies).LINUX_X64_BOOT_JDK_FILENAME }}"
       # BOOT_JDK_URL: "${{ fromJson(needs.prerequisites.outputs.dependencies).LINUX_X64_BOOT_JDK_URL }}"
       # BOOT_JDK_SHA256: "${{ fromJson(needs.prerequisites.outputs.dependencies).LINUX_X64_BOOT_JDK_SHA256 }}"
-      BOOT_JDK_VERSION: "23"
-      BOOT_JDK_FILENAME: "jdk-23_macos-x64_bin.tar.gz"
-      BOOT_JDK_URL: "https://download.oracle.com/java/23/archive/jdk-23_macos-x64_bin.tar.gz"
+      BOOT_JDK_VERSION: "24.0.1"
+      BOOT_JDK_FILENAME: "jdk-24.0.1_macos-x64_bin.tar.gz"
+      BOOT_JDK_URL: "https://download.oracle.com/java/24/archive/jdk-24.0.1_macos-x64_bin.tar.gz"
       # Disabled due to timeout downloading ant; use ant installed on system
       #ANT_DIR: "apache-ant-1.10.5"
       #ANT_FILENAME: "apache-ant-1.10.5.tar.gz"
@@ -212,7 +212,8 @@ jobs:
           java -version
           which ant
           ant -version
-          sudo xcode-select --switch /Applications/Xcode_14.3.1.app/Contents/Developer
+          # We want to use Xcode 15.4, but 15.2 is the highest that the GHA macOS 13 runner supports
+          sudo xcode-select --switch /Applications/Xcode_15.2.app/Contents/Developer
           xcodebuild -version
 
       - name: Build JavaFX artifacts
@@ -244,9 +245,9 @@ jobs:
       # BOOT_JDK_FILENAME: "${{ fromJson(needs.prerequisites.outputs.dependencies).LINUX_X64_BOOT_JDK_FILENAME }}"
       # BOOT_JDK_URL: "${{ fromJson(needs.prerequisites.outputs.dependencies).LINUX_X64_BOOT_JDK_URL }}"
       # BOOT_JDK_SHA256: "${{ fromJson(needs.prerequisites.outputs.dependencies).LINUX_X64_BOOT_JDK_SHA256 }}"
-      BOOT_JDK_VERSION: "23"
-      BOOT_JDK_FILENAME: "jdk-23_macos-aarch64_bin.tar.gz"
-      BOOT_JDK_URL: "https://download.oracle.com/java/23/archive/jdk-23_macos-aarch64_bin.tar.gz"
+      BOOT_JDK_VERSION: "24.0.1"
+      BOOT_JDK_FILENAME: "jdk-24.0.1_macos-aarch64_bin.tar.gz"
+      BOOT_JDK_URL: "https://download.oracle.com/java/24/archive/jdk-24.0.1_macos-aarch64_bin.tar.gz"
       # Disabled due to timeout downloading ant; use ant installed on system
       #ANT_DIR: "apache-ant-1.10.5"
       #ANT_FILENAME: "apache-ant-1.10.5.tar.gz"
@@ -298,8 +299,7 @@ jobs:
           java -version
           which ant
           ant -version
-          # We want to use Xcode 14, but GHA removed it from the macOS 14 runners
-          # sudo xcode-select --switch /Applications/Xcode_14.3.1.app/Contents/Developer
+          sudo xcode-select --switch /Applications/Xcode_15.4.app/Contents/Developer
           xcodebuild -version
 
       - name: Build JavaFX artifacts
@@ -331,9 +331,9 @@ jobs:
       # BOOT_JDK_FILENAME: "${{ fromJson(needs.prerequisites.outputs.dependencies).LINUX_X64_BOOT_JDK_FILENAME }}"
       # BOOT_JDK_URL: "${{ fromJson(needs.prerequisites.outputs.dependencies).LINUX_X64_BOOT_JDK_URL }}"
       # BOOT_JDK_SHA256: "${{ fromJson(needs.prerequisites.outputs.dependencies).LINUX_X64_BOOT_JDK_SHA256 }}"
-      BOOT_JDK_VERSION: "23"
-      BOOT_JDK_FILENAME: "jdk-23_windows-x64_bin.zip"
-      BOOT_JDK_URL: "https://download.oracle.com/java/23/archive/jdk-23_windows-x64_bin.zip"
+      BOOT_JDK_VERSION: "24.0.1"
+      BOOT_JDK_FILENAME: "jdk-24.0.1_windows-x64_bin.zip"
+      BOOT_JDK_URL: "https://download.oracle.com/java/24/archive/jdk-24.0.1_windows-x64_bin.zip"
       ANT_DIR: "apache-ant-1.10.5"
       ANT_FILENAME: "apache-ant-1.10.5.tar.gz"
       ANT_URL: "https://archive.apache.org/dist/ant/binaries/apache-ant-1.10.5-bin.tar.gz"
@@ -413,7 +413,8 @@ jobs:
           which java
           java -version
           .\gradlew.bat -version
-          .\gradlew.bat --info all
+          # Skip "chmod" task for GHA builds. See JDK-8354337 for details.
+          .\gradlew.bat --info -PCHMOD_ARTIFACTS=false all
 
       - name: Run JavaFX headless tests
         working-directory: jfx

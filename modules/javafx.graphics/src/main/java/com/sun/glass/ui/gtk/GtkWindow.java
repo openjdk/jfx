@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2023, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -26,15 +26,22 @@ package com.sun.glass.ui.gtk;
 
 import com.sun.glass.ui.Cursor;
 import com.sun.glass.events.WindowEvent;
+import com.sun.glass.ui.HeaderButtonMetrics;
 import com.sun.glass.ui.Pixels;
 import com.sun.glass.ui.Screen;
 import com.sun.glass.ui.View;
 import com.sun.glass.ui.Window;
+import com.sun.glass.ui.HeaderButtonOverlay;
+import com.sun.javafx.tk.HeaderAreaType;
 
 class GtkWindow extends Window {
 
     public GtkWindow(Window owner, Screen screen, int styleMask) {
         super(owner, screen, styleMask);
+
+        if (isExtendedWindow()) {
+            prefHeaderButtonHeightProperty().subscribe(this::onPrefHeaderButtonHeightChanged);
+        }
     }
 
     @Override
@@ -91,6 +98,8 @@ class GtkWindow extends Window {
     @Override
     protected native void _setEnabled(long ptr, boolean enabled);
 
+    private native boolean _setSystemMinimumSize(long ptr, int width, int height);
+
     @Override
     protected native boolean _setMinimumSize(long ptr, int width, int height);
 
@@ -116,6 +125,8 @@ class GtkWindow extends Window {
     protected native void _exitModal(long ptr);
 
     protected native long _getNativeWindowImpl(long ptr);
+
+    private native void _showSystemMenu(long ptr, int x, int y);
 
     private native boolean isVisible(long ptr);
 
@@ -197,5 +208,95 @@ class GtkWindow extends Window {
     public long getRawHandle() {
         long ptr = super.getRawHandle();
         return ptr == 0L ? 0L : _getNativeWindowImpl(ptr);
+    }
+
+    /**
+     * Opens a system menu at the specified coordinates.
+     *
+     * @param x the X coordinate in physical pixels
+     * @param y the Y coordinate in physical pixels
+     */
+    public void showSystemMenu(int x, int y) {
+        _showSystemMenu(super.getRawHandle(), x, y);
+    }
+
+    /**
+     * Creates or disposes the {@link HeaderButtonOverlay} when the preferred header button height has changed.
+     * <p>
+     * If the preferred height is zero, the overlay is disposed; if the preferred height is non-zero, the
+     * {@link #headerButtonOverlay} and {@link #headerButtonMetrics} properties will hold the overlay and
+     * its metrics.
+     *
+     * @param height the preferred header button height
+     */
+    private void onPrefHeaderButtonHeightChanged(Number height) {
+        // Return early if we can keep the existing overlay instance.
+        if (height.doubleValue() != 0 && headerButtonOverlay.get() != null) {
+            return;
+        }
+
+        if (headerButtonOverlay.get() instanceof HeaderButtonOverlay overlay) {
+            overlay.dispose();
+        }
+
+        if (height.doubleValue() == 0) {
+            headerButtonOverlay.set(null);
+            headerButtonMetrics.set(HeaderButtonMetrics.EMPTY);
+        } else {
+            HeaderButtonOverlay overlay = createHeaderButtonOverlay();
+            overlay.metricsProperty().subscribe(headerButtonMetrics::set);
+            headerButtonOverlay.set(overlay);
+        }
+    }
+
+    /**
+     * Creates a new {@code HeaderButtonOverlay} instance.
+     */
+    private HeaderButtonOverlay createHeaderButtonOverlay() {
+        var overlay = new HeaderButtonOverlay(
+            PlatformThemeObserver.getInstance().stylesheetProperty(),
+            isUtilityWindow(),
+            (getStyleMask() & RIGHT_TO_LEFT) != 0);
+
+        // Set the system-defined absolute minimum size to the size of the window buttons area,
+        // regardless of whether the application has specified a smaller minimum size.
+        overlay.metricsProperty().subscribe(metrics -> {
+            int w = (int)(metrics.totalInsetWidth() * platformScaleX);
+            int h = (int)(metrics.maxInsetHeight() * platformScaleY);
+            _setSystemMinimumSize(super.getRawHandle(), w, h);
+        });
+
+        overlay.prefButtonHeightProperty().bind(prefHeaderButtonHeightProperty());
+        return overlay;
+    }
+
+    /**
+     * Returns whether the window is draggable at the specified coordinate.
+     * <p>
+     * This method is called from native code.
+     *
+     * @param x the X coordinate in physical pixels
+     * @param y the Y coordinate in physical pixels
+     */
+    @SuppressWarnings("unused")
+    private boolean dragAreaHitTest(int x, int y) {
+        // A full-screen window has no draggable area.
+        if (view == null || view.isInFullscreen() || !isExtendedWindow()) {
+            return false;
+        }
+
+        double wx = x / platformScaleX;
+        double wy = y / platformScaleY;
+
+        if (headerButtonOverlay.get() instanceof HeaderButtonOverlay overlay && overlay.buttonAt(wx, wy) != null) {
+            return false;
+        }
+
+        View.EventHandler eventHandler = view.getEventHandler();
+        if (eventHandler == null) {
+            return false;
+        }
+
+        return eventHandler.pickHeaderArea(wx, wy) == HeaderAreaType.DRAGBAR;
     }
 }
