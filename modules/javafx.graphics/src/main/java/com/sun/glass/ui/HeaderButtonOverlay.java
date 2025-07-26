@@ -26,7 +26,6 @@
 package com.sun.glass.ui;
 
 import com.sun.glass.events.MouseEvent;
-import com.sun.javafx.binding.ObjectConstant;
 import com.sun.javafx.util.Utils;
 import javafx.beans.property.DoubleProperty;
 import javafx.beans.property.ObjectProperty;
@@ -45,6 +44,7 @@ import javafx.css.StyleableDoubleProperty;
 import javafx.css.StyleableIntegerProperty;
 import javafx.css.StyleableObjectProperty;
 import javafx.css.StyleableProperty;
+import javafx.event.Event;
 import javafx.geometry.Dimension2D;
 import javafx.geometry.HPos;
 import javafx.geometry.Insets;
@@ -57,6 +57,7 @@ import javafx.scene.layout.Region;
 import javafx.scene.paint.Paint;
 import javafx.stage.Stage;
 import javafx.stage.StageStyle;
+import javafx.stage.WindowEvent;
 import javafx.util.Subscription;
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -264,12 +265,15 @@ public class HeaderButtonOverlay extends Region {
     private final ButtonRegion maximizeButton = new ButtonRegion(HeaderButtonType.MAXIMIZE, "-FX-INTERNAL-maximize-button", 1);
     private final ButtonRegion closeButton = new ButtonRegion(HeaderButtonType.CLOSE, "-FX-INTERNAL-close-button", 2);
     private final Subscription subscriptions;
+    private final boolean modalOrOwned;
     private final boolean utility;
     private final boolean rightToLeft;
 
     private Node buttonAtMouseDown;
 
-    public HeaderButtonOverlay(ObservableValue<String> stylesheet, boolean utility, boolean rightToLeft) {
+    public HeaderButtonOverlay(ObservableValue<String> stylesheet, boolean modalOrOwned,
+                               boolean utility, boolean rightToLeft) {
+        this.modalOrOwned = modalOrOwned;
         this.utility = utility;
         this.rightToLeft = rightToLeft;
 
@@ -310,10 +314,7 @@ public class HeaderButtonOverlay extends Region {
         getStyleClass().setAll("-FX-INTERNAL-header-button-container");
 
         if (utility) {
-            iconifyButton.managedProperty().bind(ObjectConstant.valueOf(false));
-            maximizeButton.managedProperty().bind(ObjectConstant.valueOf(false));
             getChildren().add(closeButton);
-            getStyleClass().add(UTILITY_STYLE_CLASS);
         } else {
             getChildren().addAll(iconifyButton, maximizeButton, closeButton);
         }
@@ -438,7 +439,7 @@ public class HeaderButtonOverlay extends Region {
             switch (buttonType) {
                 case ICONIFY -> stage.setIconified(true);
                 case MAXIMIZE -> stage.setMaximized(!stage.isMaximized());
-                case CLOSE -> stage.close();
+                case CLOSE -> Event.fireEvent(stage, new WindowEvent(stage, WindowEvent.WINDOW_CLOSE_REQUEST));
             }
         }
     }
@@ -450,6 +451,9 @@ public class HeaderButtonOverlay extends Region {
     }
 
     private void onResizableChanged(boolean resizable) {
+        boolean utilityStyle = utility || (modalOrOwned && !resizable);
+        toggleStyleClass(this, UTILITY_STYLE_CLASS, utilityStyle);
+        iconifyButton.setDisable(utility || modalOrOwned);
         maximizeButton.setDisable(!resizable);
     }
 
