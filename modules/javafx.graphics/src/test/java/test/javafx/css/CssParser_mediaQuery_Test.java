@@ -106,8 +106,14 @@ public class CssParser_mediaQuery_Test {
     void parseMediaQueryList() {
         Stylesheet stylesheet = new CssParser().parse("""
             @media (prefers-color-scheme: dark),
+                   (prefers-color-scheme: LIGHT),
                    (prefers-reduced-motion),
-                   (prefers-reduced-transparency: no-preference) {
+                   (prefers-Reduced-MOTION),
+                   (prefers-reduced-transparency: no-preference),
+                   (prefers-reduced-transparency: NO-PREFERENCE),
+                   (width >= 100px),
+                   (HEIGHT < 1000Px),
+                   (max-HEIGHT: 500PX) {
                 .foo { bar: baz; }
             }
             """);
@@ -116,8 +122,14 @@ public class CssParser_mediaQuery_Test {
         assertEquals(
             List.of(
                 FunctionExpression.of("prefers-color-scheme", "dark", _ -> null, ColorScheme.DARK),
+                FunctionExpression.of("prefers-color-scheme", "light", _ -> null, ColorScheme.LIGHT),
                 FunctionExpression.of("prefers-reduced-motion", null, _ -> null, true),
-                FunctionExpression.of("prefers-reduced-transparency", "no-preference", _ -> null, false)
+                FunctionExpression.of("prefers-reduced-motion", null, _ -> null, true),
+                FunctionExpression.of("prefers-reduced-transparency", "no-preference", _ -> null, false),
+                FunctionExpression.of("prefers-reduced-transparency", "no-preference", _ -> null, false),
+                GreaterOrEqualExpression.of(SizeQueryType.WIDTH, new Size(100, SizeUnits.PX)),
+                LessExpression.of(SizeQueryType.HEIGHT, new Size(1000, SizeUnits.PX)),
+                LessOrEqualExpression.of(SizeQueryType.HEIGHT, new Size(500, SizeUnits.PX))
             ),
             mediaRule.getQueries());
     }
