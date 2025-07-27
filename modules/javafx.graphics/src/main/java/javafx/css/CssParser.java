@@ -27,6 +27,8 @@ package javafx.css;
 
 import com.sun.javafx.css.Combinator;
 import com.sun.javafx.css.CompoundSelector;
+import com.sun.javafx.css.media.MediaRule;
+import com.sun.javafx.css.parser.CssLexer;
 import com.sun.javafx.css.FontFaceImpl;
 import com.sun.javafx.css.InterpolatorConverter;
 import com.sun.javafx.css.ParsedValueImpl;
@@ -34,6 +36,7 @@ import com.sun.javafx.css.SimpleSelector;
 import com.sun.javafx.css.StyleManager;
 import com.sun.javafx.css.TransitionDefinition;
 import com.sun.javafx.css.TransitionDefinitionConverter;
+import com.sun.javafx.css.media.MediaQueryParser;
 import com.sun.javafx.util.Utils;
 import javafx.animation.Interpolator;
 import javafx.css.converter.BooleanConverter;
@@ -288,6 +291,7 @@ final public class CssParser {
                 if (declarations != null && !declarations.isEmpty()) {
                     final Selector selector = Selector.getUniversalSelector();
                     final Rule rule = new Rule(
+                        null, // inline styles don't have media rules
                         Collections.singletonList(selector),
                         declarations
                     );
@@ -4157,6 +4161,8 @@ final public class CssParser {
     private static Stack<String> imports;
 
     private void parse(Stylesheet stylesheet, CssLexer lexer) {
+        MediaRule mediaRule = null;
+        int expectedRBraces = 0;
 
         // need to read the first token
         currentToken = nextToken(lexer);
@@ -4240,11 +4246,45 @@ final public class CssParser {
 
                 continue;
 
+            } else if ("media".equals(keyword)) {
+                mediaRule = mediaRule(lexer, mediaRule);
+
+                if (currentToken != null) {
+                    if (currentToken.getType() == CssLexer.LBRACE) {
+                        expectedRBraces++;
+                    }
+
+                    currentToken = nextToken(lexer);
+                    break; // break out of the loop here, as we might encounter a selector next
+                }
+            } else {
+                // Skip the unexpected at-rule.
+                skipAtRule(lexer);
             }
         }
 
         while ((currentToken != null) &&
                (currentToken.getType() != Token.EOF)) {
+
+            if (currentToken.getType() == CssLexer.AT_KEYWORD) {
+                currentToken = lexer.nextToken();
+                String keyword = currentToken.getText().toLowerCase(Locale.ROOT);
+                if ("media".equals(keyword)) {
+                    mediaRule = mediaRule(lexer, mediaRule);
+
+                    if (currentToken != null) {
+                        if (currentToken.getType() == CssLexer.LBRACE) {
+                            expectedRBraces++;
+                        }
+
+                        currentToken = nextToken(lexer);
+                        continue;
+                    }
+                } else {
+                    // Skip the unexpected at-rule.
+                    skipAtRule(lexer);
+                }
+            }
 
             List<Selector> selectors = selectors(lexer);
             if (selectors == null) return;
@@ -4287,12 +4327,92 @@ final public class CssParser {
                 return;
             }
 
-            stylesheet.getRules().add(new Rule(selectors, declarations));
+            stylesheet.getRules().add(new Rule(mediaRule, selectors, declarations));
 
             currentToken = nextToken(lexer);
 
+            while (expectedRBraces > 0) {
+                if (!consumeRBrace(lexer)) {
+                    return;
+                }
+
+                if (mediaRule != null) {
+                    mediaRule = mediaRule.getParent();
+                }
+
+                currentToken = nextToken(lexer);
+                expectedRBraces--;
+            }
         }
+
         currentToken = null;
+    }
+
+    private void skipAtRule(CssLexer lexer) {
+        String msg = MessageFormat.format(
+            "Unexpected at-rule [{0,number,#},{1,number,#}]",
+            currentToken.getLine(), currentToken.getOffset());
+
+        ParseError error = createError(msg);
+        if (LOGGER.isLoggable(Level.WARNING)) {
+            LOGGER.warning(error.toString());
+        }
+
+        reportError(error);
+
+        while ((currentToken = lexer.nextToken()) != null
+                && currentToken.getType() != CssLexer.SEMI
+                && currentToken.getType() != CssLexer.RBRACE) {
+            // Skip forward to the next SEMI or RBRACE.
+        }
+    }
+
+    private boolean consumeRBrace(CssLexer lexer) {
+        if (currentToken == null || currentToken.getType() != CssLexer.RBRACE) {
+            int line = currentToken != null ? currentToken.getLine() : -1;
+            int pos = currentToken != null ? currentToken.getOffset() : -1;
+            String msg = String.format("Expected RBRACE at [%d,%d]", line, pos);
+            ParseError error = createError(msg);
+            if (LOGGER.isLoggable(Level.WARNING)) {
+                LOGGER.warning(error.toString());
+            }
+
+            reportError(error);
+            currentToken = null;
+            return false;
+        }
+
+        currentToken = lexer.nextToken();
+        return true;
+    }
+
+    private MediaRule mediaRule(CssLexer lexer, MediaRule mediaRule) {
+        // The media query expression contains all tokens (except for WS and NL) up to the
+        // next SEMI or LBRACE. We collect all of these tokens and hand them over to the
+        // special-purpose MediaQueryParser.
+        List<Token> mediaQueryTokens = new ArrayList<>();
+        while ((currentToken = lexer.nextToken()) != null
+                && currentToken.getType() != CssLexer.SEMI
+                && currentToken.getType() != CssLexer.LBRACE) {
+            if (currentToken.getType() != CssLexer.WS && currentToken.getType() != CssLexer.NL) {
+                mediaQueryTokens.add(currentToken);
+            }
+        }
+
+        var mediaQueryParser = new MediaQueryParser((token, errorMsg) -> {
+            String formattedErrorMsg = token != null
+                ? String.format("%s at [%d,%d]", errorMsg, token.getLine(), token.getOffset())
+                : errorMsg;
+
+            ParseError error = createError(formattedErrorMsg);
+            if (LOGGER.isLoggable(Level.WARNING)) {
+                LOGGER.warning(error.toString());
+            }
+
+            reportError(error);
+        });
+
+        return new MediaRule(mediaQueryParser.parseMediaQueryList(mediaQueryTokens), mediaRule);
     }
 
     private FontFace fontFace(CssLexer lexer) {

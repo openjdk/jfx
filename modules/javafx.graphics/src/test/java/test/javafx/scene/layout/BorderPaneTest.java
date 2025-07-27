@@ -343,12 +343,25 @@ public class BorderPaneTest {
         MockBiased bottom = new MockBiased(Orientation.HORIZONTAL, 200, 20); // 300 x 13.333
         borderpane.setBottom(bottom);
 
+        /*
+         * Note: there is a mix of horizontal and vertical biased children. The BorderPane
+         * will favor the bias of the center node above all (see its implementation). This
+         * means the VERTICAL biased controls will have their bias ignored as they differ
+         * from the center's bias.
+         */
+
         assertEquals(40/*l*/ + 60/*r*/ + 200/*c*/, borderpane.prefWidth(-1), 1e-100);
         assertEquals(240 /* l + r + c*/, borderpane.prefHeight(-1), 1e-10);
         assertEquals(110, borderpane.minWidth(-1), 1e-100); /* min center + 2x pref width (l, r) */
         assertEquals(20 /*t*/ + 200 /*c*/ + 20 /*b*/, borderpane.minHeight(-1), 1e-10);
         assertEquals(110, borderpane.minWidth(240), 1e-100);
-        assertEquals(20 /*t*/ + 200 /*c*/ + 20 /*b*/, borderpane.minHeight(300), 1e-10);
+
+        // Top: at a width of 300, the biased control becomes 7 high (6.666)
+        // Bottom: at a width of 300, the biased control becomes 14 high (13.333)
+        // Center: At a width of 300, the biased control becomes 134 high (200 * 200 / 300)
+        // Left/Right: bias differs from center, so the simple height value is used (100 for left, 200 for right)
+
+        assertEquals(7 /*t*/ + Math.max(134 /*c*/, Math.max(100 /*l*/, 200 /*r*/)) + 14 /*b*/, borderpane.minHeight(300), 1e-10);
 
         borderpane.resize(300, 240);
         borderpane.layout();
@@ -454,9 +467,23 @@ public class BorderPaneTest {
         MockResizable bottom = new MockResizable(400, 100);
         borderpane.setBottom(bottom);
 
-        // Preferred height should be preferred height of top + bottom, plus max of left/center/right
-        // In other words: 100 + max(100, 100, 100) + 100
-        assertEquals(300, borderpane.prefHeight(500), 1e-200);
+        /*
+         * Preferred height calculation is always top + bottom + max(left, center, right).
+         * It proceeds as follows:
+         * - Top is biased, and with a width of 500, the top height is 40 ( = 200 * 100 / 500)
+         * - Bottom is unbiased, and has a preferred height of 100
+         * - Left and Right are unbiased, and have a preferred height of 100
+         * - Center is biased. The width for the bias calculation is 500 minus the preferred widths
+         *   of the left and right controls: 500 - 100 - 100 = 300
+         * - With a width of 300 for the biased calculation, the center height becomes 67 ( = 200 * 100 / 300)
+         *
+         * Adding those together: top(40) + bottom(100) + max(left(100), right(100), center(67)) = 240
+         *
+         * The center's height is ignored in this as for the width available it would be lower than
+         * the preferred height of either the left or right control.
+         */
+
+        assertEquals(240, borderpane.prefHeight(500), 1e-200);
         borderpane.resize(500, 300);
         borderpane.layout();
 
@@ -533,13 +560,23 @@ public class BorderPaneTest {
         MockResizable bottom = new MockResizable(400, 100);
         borderpane.setBottom(bottom);
 
-        // The preferred height of the center pane at 100 pixels wide (which
-        // is what is left over from the given 300 pixels after subtracting the
-        // left and right preferred widths) will be 200. The middle area will
-        // then contribute 200 pixels to the preferred height of the BorderPane
-        // as the left and right areas only need 100 pixels of height. The top
-        // and bottom areas contribute 100 pixels each. 100 + 200 + 100 = 400.
-        assertEquals(400, borderpane.prefHeight(300), 1e-200);
+        /*
+         * Preferred height calculation is always top + bottom + max(left, center, right).
+         * It proceeds as follows:
+         * - Top is biased, and with a width of 300, the top height is 67 ( = 200 * 100 / 300)
+         * - Bottom is unbiased, and has a preferred height of 100
+         * - Left and Right are unbiased, and have a preferred height of 100
+         * - Center is biased. The width for the bias calculation is 300 minus the preferred widths
+         *   of the left and right controls: 300 - 100 - 100 = 100
+         * - With a width of 100 for the biased calculation, the center height becomes 200 ( = 200 * 100 / 100)
+         *
+         * Adding those together: top(67) + bottom(100) + max(left(100), right(100), center(200)) = 367
+         *
+         * The center's height is now overriding the height of the left and right controls as
+         * with the low amount of width available, it needs to become higher.
+         */
+
+        assertEquals(367, borderpane.prefHeight(300), 1e-200);
         borderpane.resize(300, 400);
         borderpane.layout();
 
