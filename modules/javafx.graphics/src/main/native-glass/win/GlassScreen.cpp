@@ -603,7 +603,7 @@ jobjectArray GlassScreen::CreateJavaScreens(JNIEnv *env)
     jclass screenCls = GetScreenCls(env);
 
     jobjectArray jScreens = env->NewObjectArray(numMonitors, screenCls, NULL);
-    if (CheckAndClearException(env)) {
+    if (CheckAndClearException(env) || jScreens == NULL) {
         free(g_MonitorInfos.pMonitorInfos);
         g_MonitorInfos.numInfos = g_MonitorInfos.maxInfos = 0;
         g_MonitorInfos.pMonitorInfos = NULL;
