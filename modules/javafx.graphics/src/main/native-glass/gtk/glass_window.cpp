@@ -1032,15 +1032,11 @@ void WindowContext::process_state(GdkEventWindowState *event) {
 }
 
 void WindowContext::notify_fullscreen(bool enter) {
-    if (enter) {
-        LOG("com_sun_glass_events_ViewEvent_FULLSCREEN_ENTER\n");
-        mainEnv->CallVoidMethod(jview, jViewNotifyView, com_sun_glass_events_ViewEvent_FULLSCREEN_ENTER);
-        CHECK_JNI_EXCEPTION(mainEnv)
-    } else {
-        LOG("com_sun_glass_events_ViewEvent_FULLSCREEN_EXIT\n");
-        mainEnv->CallVoidMethod(jview, jViewNotifyView, com_sun_glass_events_ViewEvent_FULLSCREEN_EXIT);
-        CHECK_JNI_EXCEPTION(mainEnv)
-    }
+    LOG("com_sun_glass_events_ViewEvent_FULLSCREEN_%s\n", enter ? "ENTER" : "EXIT");
+    mainEnv->CallVoidMethod(jview, jViewNotifyView, enter
+                                        ? com_sun_glass_events_ViewEvent_FULLSCREEN_ENTER
+                                        : com_sun_glass_events_ViewEvent_FULLSCREEN_EXIT);
+    CHECK_JNI_EXCEPTION(mainEnv)
 }
 
 void WindowContext::notify_window_resize(int state) {
@@ -1356,7 +1352,7 @@ void WindowContext::set_title(const char* title) {
     gdk_window_set_title(gdk_window, title);
 }
 
-// This only works o Xorg
+// This only works on Xorg
 void WindowContext::set_alpha(double alpha) {
     gdk_window_set_opacity(gdk_window, (gdouble)alpha);
 }
