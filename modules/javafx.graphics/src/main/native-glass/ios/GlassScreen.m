@@ -87,9 +87,11 @@ jobjectArray createJavaScreens(JNIEnv* env) {
                                                       mat_jScreenClass,
                                                       NULL);
 
-    for (NSUInteger index = 0; index < [screens count]; index++) {
-        jobject javaScreen = createJavaScreen(env, [screens objectAtIndex:index]);
-        (*env)->SetObjectArrayElement(env, screenArray, index, javaScreen);
+    if (screenArray != NULL) {
+        for (NSUInteger index = 0; index < [screens count]; index++) {
+            jobject javaScreen = createJavaScreen(env, [screens objectAtIndex:index]);
+            (*env)->SetObjectArrayElement(env, screenArray, index, javaScreen);
+        }
     }
 
     return screenArray;

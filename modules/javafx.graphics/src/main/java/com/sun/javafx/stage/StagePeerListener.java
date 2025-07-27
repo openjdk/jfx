@@ -25,9 +25,7 @@
 
 package com.sun.javafx.stage;
 
-import com.sun.glass.ui.HeaderButtonMetrics;
 import javafx.stage.Stage;
-
 
 public class StagePeerListener extends WindowPeerListener {
     private final Stage stage;

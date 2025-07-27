@@ -65,6 +65,7 @@ import javafx.geometry.VPos;
 import javafx.scene.AccessibleAttribute;
 import javafx.scene.AccessibleRole;
 import javafx.scene.Node;
+import javafx.scene.layout.Region;
 import javafx.scene.paint.Color;
 import javafx.scene.paint.Paint;
 import javafx.scene.shape.LineTo;
@@ -279,13 +280,26 @@ public non-sealed class Text extends Shape {
     TextSpan getTextSpan() {
         if (textSpan == null) {
             textSpan = new TextSpan() {
-                @Override public String getText() {
+                @Override
+                public String getText() {
                     return getTextInternal();
                 }
-                @Override public Object getFont() {
+
+                @Override
+                public Object getFont() {
                     return getFontInternal();
                 }
-                @Override public RectBounds getBounds() {
+
+                @Override
+                public RectBounds getBounds() {
+                    return null;
+                }
+
+                @Override
+                public Region getLayoutRootRegion() {
+                    if (getParent() instanceof TextFlow f) {
+                        return f;
+                    }
                     return null;
                 }
             };
@@ -315,7 +329,7 @@ public non-sealed class Text extends Shape {
             } else {
                 layout.setDirection(TextLayout.DIRECTION_LTR);
             }
-            layout.setTabSize(getTabSize());
+            layout.setTabAdvancePolicy(getTabSize(), null);
         }
         return layout;
     }
@@ -1942,7 +1956,7 @@ public non-sealed class Text extends Shape {
                     @Override protected void invalidated() {
                         if (!isSpan()) {
                             TextLayout layout = getTextLayout();
-                            if (layout.setTabSize(get())) {
+                            if (layout.setTabAdvancePolicy(getTabSize(), null)) {
                                 needsTextLayout();
                             }
                             NodeHelper.markDirty(Text.this, DirtyBits.TEXT_ATTRS);
