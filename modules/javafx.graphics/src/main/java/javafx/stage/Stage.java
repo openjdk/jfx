@@ -42,12 +42,12 @@ import javafx.scene.image.Image;
 import javafx.scene.input.KeyCombination;
 import javafx.scene.layout.HeaderBar;
 
-import com.sun.glass.ui.HeaderButtonMetrics;
 import com.sun.javafx.PreviewFeature;
 import com.sun.javafx.application.PlatformImpl;
 import com.sun.javafx.collections.VetoableListDecorator;
 import com.sun.javafx.collections.TrackableObservableList;
 import com.sun.javafx.scene.SceneHelper;
+import com.sun.javafx.stage.HeaderButtonMetrics;
 import com.sun.javafx.stage.StageHelper;
 import com.sun.javafx.stage.StagePeerListener;
 import com.sun.javafx.tk.TKStage;

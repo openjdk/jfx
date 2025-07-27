@@ -924,7 +924,7 @@ BOOL GlassWindow::HandleNCHitTestEvent(SHORT x, SHORT y, LRESULT& result)
         int topBorderHeight = ::GetSystemMetrics(SM_CXPADDEDBORDER) + ::GetSystemMetrics(SM_CYSIZEFRAME);
         RECT windowRect;
 
-        if (::GetWindowRect(GetHWND(), &windowRect) && y < windowRect.top + topBorderHeight) {
+        if (m_isResizable && ::GetWindowRect(GetHWND(), &windowRect) && y < windowRect.top + topBorderHeight) {
             result = LRESULT(HTTOP);
             return TRUE;
         }

@@ -42,6 +42,7 @@ import com.sun.glass.ui.Window.Level;
 import com.sun.javafx.PlatformUtil;
 import com.sun.javafx.iio.common.PushbroomScaler;
 import com.sun.javafx.iio.common.ScalerFactory;
+import com.sun.javafx.stage.HeaderButtonMetrics;
 import com.sun.javafx.stage.StagePeerListener;
 import com.sun.javafx.tk.FocusCause;
 import com.sun.javafx.tk.TKScene;
@@ -233,7 +234,9 @@ public class WindowStage extends GlassStage {
 
     private void notifyHeaderButtonMetricsChanged() {
         if (stageListener instanceof StagePeerListener listener && platformWindow != null) {
-            listener.changedHeaderButtonMetrics(platformWindow.headerButtonMetricsProperty().get());
+            var metrics = platformWindow.headerButtonMetricsProperty().get();
+            listener.changedHeaderButtonMetrics(
+                new HeaderButtonMetrics(metrics.leftInset(), metrics.rightInset(), metrics.minHeight()));
         }
     }
 

@@ -4571,7 +4571,27 @@ task createMSPfile() {
     }
 }
 
-task javadoc(type: Javadoc, dependsOn: createMSPfile) {
+task createOverviewFile() {
+    def srcDir = rootProject.projectDir
+    def dstDir = rootProject.buildDir
+    def fileName = "overview.html"
+
+    inputs.file(new File(srcDir, fileName))
+    outputs.file(new File(dstDir, fileName))
+
+    doLast {
+        copy {
+            from "$srcDir/$fileName"
+            into dstDir
+
+            filter { line ->
+                line.replaceAll("@JAVADOC_VERSION@", jfxReleaseMajorVersion)
+            }
+        }
+    }
+}
+
+task javadoc(type: Javadoc, dependsOn: [createMSPfile, createOverviewFile]) {
     group = "Basic"
     description = "Generates the JavaDoc for all the public API"
     executable = JAVADOC
@@ -4619,6 +4639,9 @@ task javadoc(type: Javadoc, dependsOn: createMSPfile) {
     options.addStringOption("-since-label").setValue("New API since JavaFX 9")
     options.addStringOption("Xmaxwarns").setValue("1000")
     options.addStringOption("Xmaxerrs").setValue("1000")
+
+    String overviewFile = "$buildDir/overview.html"
+    options.addStringOption("overview").setValue(overviewFile)
 
     String draftMsg = IS_MILESTONE_FCS ? "" : "<br><b>DRAFT ${RELEASE_VERSION_LONG}</b>"
     String javadocTitleImpl = javadocTitle

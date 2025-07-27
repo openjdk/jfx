@@ -23,38 +23,20 @@
  * questions.
  */
 
-package com.sun.glass.ui;
-
-import javafx.geometry.Dimension2D;
-import javafx.stage.StageStyle;
-import java.util.Objects;
+package com.sun.javafx.scene.text;
 
 /**
- * Provides metrics about the header buttons of {@link StageStyle#EXTENDED} windows.
- *
- * @param leftInset the size of the left inset
- * @param rightInset the size of the right inset
- * @param minHeight the minimum height of the window buttons
- * @see HeaderButtonOverlay
+ * TabAdvancePolicy provides the next tab advance for any given position within the TextLayout.
  */
-public record HeaderButtonMetrics(Dimension2D leftInset, Dimension2D rightInset, double minHeight) {
+public interface TabAdvancePolicy {
 
-    public static HeaderButtonMetrics EMPTY = new HeaderButtonMetrics(new Dimension2D(0, 0), new Dimension2D(0, 0), 0);
-
-    public HeaderButtonMetrics {
-        Objects.requireNonNull(leftInset);
-        Objects.requireNonNull(rightInset);
-
-        if (minHeight < 0) {
-            throw new IllegalArgumentException("minHeight cannot be negative");
-        }
-    }
-
-    public double totalInsetWidth() {
-        return leftInset.getWidth() + rightInset.getWidth();
-    }
-
-    public double maxInsetHeight() {
-        return Math.max(leftInset.getHeight(), rightInset.getHeight());
-    }
+    /**
+     * Provides the next tab stop for the given position.
+     * A value of 0 or less indicates that there are no more stops.
+     *
+     * @param offset the offset of the text layout relative to the owner {@code Node} edge
+     * @param position the current position
+     * @return the next tab stop
+     */
+    public float nextTabStop(float offset, float position);
 }

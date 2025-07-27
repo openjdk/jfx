@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2023, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -47,8 +47,7 @@ static NSMutableDictionary * rolesMap;
     [rolesMap setObject:@"JFXButtonAccessibility" forKey:@"INCREMENT_BUTTON"];
     [rolesMap setObject:@"JFXButtonAccessibility" forKey:@"SPLIT_MENU_BUTTON"];
     [rolesMap setObject:@"JFXRadiobuttonAccessibility" forKey:@"RADIO_BUTTON"];
-//  Requires TAB_GROUP to be implemented first
-//  [rolesMap setObject:@"JFXRadiobuttonAccessibility" forKey:@"TAB_ITEM"];
+    [rolesMap setObject:@"JFXRadiobuttonAccessibility" forKey:@"TAB_ITEM"];
     [rolesMap setObject:@"JFXRadiobuttonAccessibility" forKey:@"PAGE_ITEM"];
     [rolesMap setObject:@"JFXCheckboxAccessibility" forKey:@"CHECK_BOX"];
     [rolesMap setObject:@"JFXCheckboxAccessibility" forKey:@"TOGGLE_BUTTON"];
@@ -102,41 +101,39 @@ static NSMutableDictionary * rolesMap;
     return self->jAccessible;
 }
 
-- (id)accessibilityValue
+/*
+ * Request accessibility attribute by name from JavaFX Node. Returns attribute value
+ * converted to the native format or NULL if attribute with that name does not exist.
+ * Code that uses this function needs to convert NULL to the default value of a certain type where required.
+ */
+- (id)requestNodeAttribute:(NSString *)attribute
 {
-    jobject jresult = NULL;
     GET_MAIN_JENV;
     if (env == NULL) return NULL;
-    jresult = (jobject)(*env)->CallLongMethod(env, self->jAccessible, jAccessibilityAttributeValue, (jlong)@"AXValue");
+    jobject jresult = (jobject)(*env)->CallLongMethod(env, [self getJAccessible],
+                                              jAccessibilityAttributeValue, (jlong)attribute);
     GLASS_CHECK_EXCEPTION(env);
     return variantToID(env, jresult);
+}
+
+- (id)accessibilityValue
+{
+    return [self requestNodeAttribute:@"AXValue"];
 }
 
 - (id)accessibilityMinValue
 {
-    jobject jresult = NULL;
-    GET_MAIN_JENV;
-    if (env == NULL) return NULL;
-    jresult = (jobject)(*env)->CallLongMethod(env, self->jAccessible,
-                                              jAccessibilityAttributeValue, (jlong)@"AXMinValue");
-    GLASS_CHECK_EXCEPTION(env);
-    return variantToID(env, jresult);
+    return [self requestNodeAttribute:@"AXMinValue"];
 }
 
 - (id)accessibilityMaxValue
 {
-    jobject jresult = NULL;
-    GET_MAIN_JENV;
-    if (env == NULL) return NULL;
-    jresult = (jobject)(*env)->CallLongMethod(env, self->jAccessible,
-                                              jAccessibilityAttributeValue, (jlong)@"AXMaxValue");
-    GLASS_CHECK_EXCEPTION(env);
-    return variantToID(env, jresult);
+    return [self requestNodeAttribute:@"AXMaxValue"];
 }
 
 - (NSString *)accessibilityLabel
 {
-    // Use the same value that is set for accessibilityTitle - some component
+    // Use the same value that is set for accessibilityTitle - some components
     // do not have titles and request it as a label
     return [self accessibilityTitle];
 }
@@ -144,59 +141,29 @@ static NSMutableDictionary * rolesMap;
 - (id)accessibilityParent
 {
     if (parent == nil) {
-        jobject jresult = NULL;
-        GET_MAIN_JENV;
-        if (env == NULL) return NULL;
-        jresult = (jobject)(*env)->CallLongMethod(env, self->jAccessible, jAccessibilityAttributeValue,
-                                                  (jlong) @"AXParent");
-        GLASS_CHECK_EXCEPTION(env);
-        parent = variantToID(env, jresult);
+        parent = [self requestNodeAttribute:@"AXParent"];
     }
     return parent;
 }
 
 - (id)accessibilityTitle
 {
-    jobject jresult = NULL;
-    GET_MAIN_JENV;
-    if (env == NULL) return NULL;
-    jresult = (jobject)(*env)->CallLongMethod(env, self->jAccessible,
-                                              jAccessibilityAttributeValue, (jlong)@"AXTitle");
-    GLASS_CHECK_EXCEPTION(env);
-    return variantToID(env, jresult);
+    return [self requestNodeAttribute:@"AXTitle"];
 }
 
 - (id)accessibilityTitleUIElement
 {
-    jobject jresult = NULL;
-    GET_MAIN_JENV;
-    if (env == NULL) return NULL;
-    jresult = (jobject)(*env)->CallLongMethod(env, self->jAccessible, jAccessibilityAttributeValue,
-                                              (jlong)@"AXTitleUIElement");
-    GLASS_CHECK_EXCEPTION(env);
-    return variantToID(env, jresult);
+    return [self requestNodeAttribute:@"AXTitleUIElement"];
 }
 
 - (NSArray *)accessibilityChildren
 {
-    jobject jresult = NULL;
-    GET_MAIN_JENV;
-    if (env == NULL) return NULL;
-    jresult = (jobject)(*env)->CallLongMethod(env, self->jAccessible,
-                                              jAccessibilityAttributeValue, (jlong)@"AXChildren");
-    GLASS_CHECK_EXCEPTION(env);
-    return variantToID(env, jresult);
+    return [self requestNodeAttribute:@"AXChildren"];
 }
 
 - (id)accessibilityRoleDescription
 {
-    jobject jresult = NULL;
-    GET_MAIN_JENV;
-    if (env == NULL) return NULL;
-    jresult = (jobject)(*env)->CallLongMethod(env, self->jAccessible, jAccessibilityAttributeValue,
-                                              (jlong)@"AXRoleDescription");
-    GLASS_CHECK_EXCEPTION(env);
-    return variantToID(env, jresult);
+    return [self requestNodeAttribute:@"AXRoleDescription"];
 }
 
 
@@ -219,15 +186,13 @@ static NSMutableDictionary * rolesMap;
 
 - (NSRect)accessibilityFrame
 {
-    jobject jresult = NULL;
-    GET_MAIN_JENV;
-    if (env == NULL) return NSZeroRect;
-    jresult = (jobject)(*env)->CallLongMethod(env, self->jAccessible, jAccessibilityAttributeValue, (jlong)@"AXPosition");
-    GLASS_CHECK_EXCEPTION(env);
-    NSPoint position = [variantToID(env, jresult) pointValue];
-    jresult = (jobject)(*env)->CallLongMethod(env, self->jAccessible, jAccessibilityAttributeValue, (jlong)@"AXSize");
-    GLASS_CHECK_EXCEPTION(env);
-    NSSize size = [variantToID(env, jresult) sizeValue];
+    id p = [self requestNodeAttribute:@"AXPosition"];
+    id s = [self requestNodeAttribute:@"AXSize"];
+    if (p == NULL || s == NULL) {
+        return NSZeroRect;
+    }
+    NSPoint position = [p pointValue];
+    NSSize size = [s sizeValue];
     return NSMakeRect(position.x, position.y, size.width, size.height);
 }
 
@@ -244,13 +209,12 @@ static NSMutableDictionary * rolesMap;
 
 - (BOOL)isAccessibilityFocused
 {
-    jobject jresult = NULL;
-    GET_MAIN_JENV;
-    if (env == NULL) return NO;
-    jresult = (jobject)(*env)->CallLongMethod(env, self->jAccessible, jAccessibilityAttributeValue, (jlong)@"AXFocused");
-    GLASS_CHECK_EXCEPTION(env);
-
-    return [variantToID(env, jresult) boolValue];
+    id retval = [self requestNodeAttribute:@"AXFocused"];
+    if (retval == NULL) {
+        return NO;
+    } else {
+        return [retval boolValue];
+    }
 }
 
 - (void)setAccessibilityFocused:(BOOL)value

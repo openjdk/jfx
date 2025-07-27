@@ -22,39 +22,47 @@
  * or visit www.oracle.com if you need additional information or have any
  * questions.
  */
-
-package com.sun.glass.ui;
-
-import javafx.geometry.Dimension2D;
-import javafx.stage.StageStyle;
-import java.util.Objects;
+package javafx.scene.text;
 
 /**
- * Provides metrics about the header buttons of {@link StageStyle#EXTENDED} windows.
+ * This class encapsulates an immutable single tab stop within the {@link TabStopPolicy}.
  *
- * @param leftInset the size of the left inset
- * @param rightInset the size of the right inset
- * @param minHeight the minimum height of the window buttons
- * @see HeaderButtonOverlay
+ * @since 25
  */
-public record HeaderButtonMetrics(Dimension2D leftInset, Dimension2D rightInset, double minHeight) {
+public final class TabStop {
+    private final double position;
 
-    public static HeaderButtonMetrics EMPTY = new HeaderButtonMetrics(new Dimension2D(0, 0), new Dimension2D(0, 0), 0);
+    /**
+     * Constructs a new tab stop with the specified position.
+     *
+     * @param position the position in pixels
+     */
+    public TabStop(double position) {
+        this.position = position;
+    }
 
-    public HeaderButtonMetrics {
-        Objects.requireNonNull(leftInset);
-        Objects.requireNonNull(rightInset);
+    /**
+     * Returns the position, in pixels, of the tab.
+     * @return the position of the tab
+     */
+    public final double getPosition() {
+        return position;
+    }
 
-        if (minHeight < 0) {
-            throw new IllegalArgumentException("minHeight cannot be negative");
+    @Override
+    public boolean equals(Object x) {
+        if (x == this) {
+            return true;
+        } else if (x instanceof TabStop p) {
+            return position == p.position;
         }
+        return false;
     }
 
-    public double totalInsetWidth() {
-        return leftInset.getWidth() + rightInset.getWidth();
-    }
-
-    public double maxInsetHeight() {
-        return Math.max(leftInset.getHeight(), rightInset.getHeight());
+    @Override
+    public int hashCode() {
+        int h = TabStop.class.hashCode();
+        h = 31 * h + Double.hashCode(position);
+        return h;
     }
 }
