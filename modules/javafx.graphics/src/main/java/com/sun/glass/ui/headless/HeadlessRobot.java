@@ -250,7 +250,6 @@ public class HeadlessRobot extends GlassRobot {
                 .filter(win -> !win.isClosed())
                 .filter(win -> !win.isMinimized()).toList();
         if (windows.isEmpty()) return null;
-        if (windows.size() == 1) return (HeadlessWindow)windows.get(0);
         return (HeadlessWindow)windows.get(windows.size() -1);
     }
 
@@ -260,7 +259,6 @@ public class HeadlessRobot extends GlassRobot {
                 .filter(win -> !win.isClosed())
                 .filter(win -> win.isFocused()).toList();
         if (windows.isEmpty()) return null;
-        if (windows.size() == 1) return (HeadlessWindow)windows.get(0);
         return (HeadlessWindow)windows.get(windows.size() -1);
     }
 
