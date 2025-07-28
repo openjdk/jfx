@@ -246,21 +246,6 @@ public class HeadlessWindow extends Window {
     }
 
     @Override
-    protected void _enterModal(long ptr) {
-        throw new UnsupportedOperationException("Not supported yet.");
-    }
-
-    @Override
-    protected void _enterModalWithWindow(long dialog, long window) {
-        throw new UnsupportedOperationException("Not supported yet.");
-    }
-
-    @Override
-    protected void _exitModal(long ptr) {
-        throw new UnsupportedOperationException("Not supported yet.");
-    }
-
-    @Override
     protected void _requestInput(long ptr, String text, int type, double width, double height,
             double Mxx, double Mxy, double Mxz, double Mxt,
             double Myx, double Myy, double Myz, double Myt,
