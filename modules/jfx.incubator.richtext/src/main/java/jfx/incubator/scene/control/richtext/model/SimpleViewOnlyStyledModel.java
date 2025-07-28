@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2022, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -188,6 +188,22 @@ public class SimpleViewOnlyStyledModel extends StyledTextModelViewOnlyBase {
     }
 
     /**
+     * Adds a highlight of the given color to the specified range within the last paragraph,
+     * with the specified style name(s).
+     *
+     * @param start the start offset
+     * @param length the length of the highlight
+     * @param css the highlight style name(s)
+     * @return this model instance
+     * @since 25
+     */
+    public SimpleViewOnlyStyledModel highlight(int start, int length, String ... css) {
+        Paragraph p = lastParagraph();
+        p.addHighlight(start, length, css);
+        return this;
+    }
+
+    /**
      * Adds a wavy underline (typically used as a spell checker indicator) to the specified range within the last paragraph.
      *
      * @param start the start offset
@@ -198,6 +214,22 @@ public class SimpleViewOnlyStyledModel extends StyledTextModelViewOnlyBase {
     public SimpleViewOnlyStyledModel addWavyUnderline(int start, int length, Color c) {
         Paragraph p = lastParagraph();
         p.addSquiggly(start, length, c);
+        return this;
+    }
+
+    /**
+     * Adds a wavy underline (typically used as a spell checker indicator)
+     * to the specified range within the last paragraph, with the specified style name(s).
+     *
+     * @param start the start offset
+     * @param length the length of the highlight
+     * @param css the highlight style name(s)
+     * @return this model instance
+     * @since 25
+     */
+    public SimpleViewOnlyStyledModel addWavyUnderline(int start, int length, String ... css) {
+        Paragraph p = lastParagraph();
+        p.addSquiggly(start, length, css);
         return this;
     }
 
@@ -295,7 +327,7 @@ public class SimpleViewOnlyStyledModel extends StyledTextModelViewOnlyBase {
         if (index < paragraphs.size()) {
             int off = pos.offset();
             Paragraph par = paragraphs.get(index);
-            StyleAttributeMap pa = par.getParagraphAttributes();
+            StyleAttributeMap pa = par.paragraphAttributes;
             StyleAttributeMap a = par.getStyleAttrs(r, off);
             if (pa == null) {
                 return a;
@@ -409,6 +441,13 @@ public class SimpleViewOnlyStyledModel extends StyledTextModelViewOnlyBase {
             });
         }
 
+        void addHighlight(int start, int length, String[] css) {
+            int end = start + length;
+            highlights().add((cell) -> {
+                cell.addHighlight(start, end, css);
+            });
+        }
+
         /**
          * Adds a squiggly line (as seen in a spell checker) with the given color.
          * @param start the start offset
@@ -419,6 +458,13 @@ public class SimpleViewOnlyStyledModel extends StyledTextModelViewOnlyBase {
             int end = start + length;
             highlights().add((cell) -> {
                 cell.addSquiggly(start, end, color);
+            });
+        }
+
+        void addSquiggly(int start, int length, String[] css) {
+            int end = start + length;
+            highlights().add((cell) -> {
+                cell.addSquiggly(start, end, css);
             });
         }
 
@@ -492,14 +538,6 @@ public class SimpleViewOnlyStyledModel extends StyledTextModelViewOnlyBase {
          */
         void setParagraphAttributes(StyleAttributeMap a) {
             paragraphAttributes = a;
-        }
-
-        /**
-         * Returns the paragraph attributes.
-         * @return the paragraph attributes, can be null
-         */
-        StyleAttributeMap getParagraphAttributes() {
-            return paragraphAttributes;
         }
 
         // for use by SimpleReadOnlyStyledModel
