@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -22,47 +22,39 @@
  * or visit www.oracle.com if you need additional information or have any
  * questions.
  */
-package com.sun.javafx.css.parser;
 
-public class TokenShim {
+package com.sun.glass.ui;
 
-    public static final int EOF = Token.EOF;
-    public static final int INVALID = Token.INVALID;
-    public static final int SKIP = Token.SKIP;
+import javafx.geometry.Dimension2D;
+import javafx.stage.StageStyle;
+import java.util.Objects;
 
-    public final static TokenShim EOF_TOKEN = new TokenShim(Token.EOF_TOKEN);
-    public final static TokenShim INVALID_TOKEN = new TokenShim(Token.INVALID_TOKEN);
-    public final static TokenShim SKIP_TOKEN = new TokenShim(Token.SKIP_TOKEN);
+/**
+ * Provides metrics about the header buttons of {@link StageStyle#EXTENDED} windows.
+ *
+ * @param leftInset the size of the left inset
+ * @param rightInset the size of the right inset
+ * @param minHeight the minimum height of the window buttons
+ * @see HeaderButtonOverlay
+ */
+public record HeaderButtonMetrics(Dimension2D leftInset, Dimension2D rightInset, double minHeight) {
 
-    private final Token token;
+    public static HeaderButtonMetrics EMPTY = new HeaderButtonMetrics(new Dimension2D(0, 0), new Dimension2D(0, 0), 0);
 
-    public TokenShim(int type, String text, int line, int offset) {
-        token = new Token(type, text, line, offset);
+    public HeaderButtonMetrics {
+        Objects.requireNonNull(leftInset);
+        Objects.requireNonNull(rightInset);
+
+        if (minHeight < 0) {
+            throw new IllegalArgumentException("minHeight cannot be negative");
+        }
     }
 
-    public TokenShim(int type, String text) {
-        token = new Token(type, text);
+    public double totalInsetWidth() {
+        return leftInset.getWidth() + rightInset.getWidth();
     }
 
-    public TokenShim(Token t) {
-        token = t;
+    public double maxInsetHeight() {
+        return Math.max(leftInset.getHeight(), rightInset.getHeight());
     }
-
-    public int getType() {
-        return token.getType();
-    }
-
-    public int getLine() {
-        return token.getLine();
-    }
-
-    public int getOffset() {
-        return token.getOffset();
-    }
-
-    public String getText() {
-        return token.getText();
-    }
-
-
 }

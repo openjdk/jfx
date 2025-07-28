@@ -29,10 +29,17 @@
 
 #include <gtk/gtk.h>
 
+#ifdef __cplusplus
+extern "C" {
+#endif
 jint gdk_keyval_to_glass(guint keyval);
 jint get_glass_key(GdkEventKey* e);
 jint glass_key_to_modifier(jint glassKey);
 jint gdk_modifier_mask_to_glass(guint mask);
 gint find_gdk_keyval_for_glass_keycode(jint code);
 gint find_gdk_keycode_for_keyval(gint keyval);
+gint find_scancode_for_gdk_keyval(gint keyval);
+#ifdef __cplusplus
+}
+#endif
 #endif        /* GLASS_KEY_H */

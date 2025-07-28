@@ -240,8 +240,8 @@ public final class MarlinProperties {
         return getBoolean("prism.marlin.logCreateContext", "false");
     }
 
-    public static boolean isLogUnsafeMalloc() {
-        return getBoolean("prism.marlin.logUnsafeMalloc", "false");
+    public static boolean isLogOffHeapMalloc() {
+        return getBoolean("prism.marlin.logOffHeapMalloc", "false");
     }
 
     // quality settings
