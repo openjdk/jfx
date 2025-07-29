@@ -187,6 +187,6 @@ g_win32_clear_com (com_interface **com_obj)
 }
 #endif
 
-#endif	 /* G_PLATFORM_WIN32 */
+#endif   /* G_PLATFORM_WIN32 */
 
 #endif /* __G_WIN32_H__ */

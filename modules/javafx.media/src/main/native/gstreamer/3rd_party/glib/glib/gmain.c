@@ -3424,7 +3424,7 @@ g_main_dispatch (GMainContext *context)
     if (cb_funcs)
       cb_funcs->ref (cb_data);
 
-	  if ((g_atomic_int_get (&source->flags) & G_SOURCE_CAN_RECURSE) == 0)
+    if ((g_atomic_int_get (&source->flags) & G_SOURCE_CAN_RECURSE) == 0)
       block_source (source);
 
           was_in_call = g_atomic_int_or (&source->flags,

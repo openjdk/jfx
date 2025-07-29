@@ -1750,7 +1750,7 @@ type_iface_retrieve_holder_info_Wm (TypeNode *iface,
       iholder->info = g_memdup2 (&tmp_info, sizeof (tmp_info));
     }
 
-  return iholder;	/* we don't modify write lock upon returning NULL */
+  return iholder; /* we don't modify write lock upon returning NULL */
 }
 
 static void
