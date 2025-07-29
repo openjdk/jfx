@@ -50,7 +50,7 @@ public class MacPasteboardTest {
 
     @BeforeAll
     public static void setup() throws Exception {
-        if (PlatformUtil.isMac()) {
+        if (PlatformUtil.isMac() && !PlatformUtil.isHeadless()) {
             Platform.startup(() -> {
                 macPasteboardShim = new MacPasteboardShim();
                 startupLatch.countDown();
@@ -60,7 +60,7 @@ public class MacPasteboardTest {
 
     @AfterAll
     public static void teardown() {
-        if (PlatformUtil.isMac()) {
+        if (PlatformUtil.isMac() && !PlatformUtil.isHeadless()) {
             Platform.exit();
         }
     }
