@@ -91,8 +91,6 @@ public class StageFocusTest {
     @BeforeAll
     public static void setupOnce() throws InterruptedException {
         Util.launch(launchLatch, TestApp.class);
-        assertTrue(launchLatch.await(TIMEOUT, TimeUnit.MILLISECONDS), "Timeout waiting for test stage to be shown");
-
         Util.runAndWait(() -> robot = new Robot());
     }
 
