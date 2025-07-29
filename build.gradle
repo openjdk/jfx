@@ -1714,8 +1714,8 @@ void addJSL(Project project, String name, String pkg, List<String> addExports, C
         enabled = IS_WINDOWS
         description = "Compile $name HLSL files into .obj files"
         matches = ".*\\.hlsl"
-        output project.file("$project.buildDir/hlsl/$name/$pkg")
-        source project.file("$project.buildDir/gensrc/jsl-$lowerName/$pkg")
+        output project.file("$project.buildDir/hlsl/$name/$pkg/d3d/hlsl")
+        source project.file("$project.buildDir/gensrc/jsl-$lowerName/$pkg/d3d/hlsl")
     }
 
     // Metal shaders
@@ -1725,8 +1725,8 @@ void addJSL(Project project, String name, String pkg, List<String> addExports, C
         enabled = IS_MAC
         description = "Compile $name MSL files into .air files"
         matches = ".*\\.metal"
-        output project.file("$project.buildDir/msl/$name/$pkg")
-        source project.file("$project.buildDir/gensrc/jsl-$lowerName/$pkg")
+        output project.file("$project.buildDir/msl/$name/$pkg/mtl/msl")
+        source project.file("$project.buildDir/gensrc/jsl-$lowerName/$pkg/mtl/msl")
     }
     project.compileMSLShaders.dependsOn(compileMSLShaders)
 
@@ -2580,10 +2580,9 @@ project(":graphics") {
 
     def modulePath = "${project.sourceSets.main.java.getDestinationDirectory().get().getAsFile()}"
     modulePath += File.pathSeparator + "${rootProject.projectDir}/modules/javafx.base/build/classes/java/main"
-    def outPkg = IS_WINDOWS ? "com/sun/scenario/effect/impl/hw/d3d/hlsl" : (IS_MAC ? "com/sun/scenario/effect/impl/hw/mtl/msl" : "")
 
     // The GenAllDecoraShader.java class generates all the Decora shaders
-    addJSL(project, "Decora", outPkg, decoraAddExports) { sourceDir, destinationDir ->
+    addJSL(project, "Decora", "com/sun/scenario/effect/impl/hw", decoraAddExports) { sourceDir, destinationDir ->
         [[fileName: "GenAllDecoraShaders", generator: "GenAllDecoraShaders", outputs: "-all"]].each { settings ->
             javaexec {
                 executable = JAVA
@@ -2676,8 +2675,7 @@ project(":graphics") {
     }
 
     // Prism JSL
-    outPkg = IS_WINDOWS ? "com/sun/prism/d3d/hlsl" : (IS_MAC ? "com/sun/prism/mtl/msl" : "")
-    addJSL(project, "Prism", outPkg, null) { sourceDir, destinationDir ->
+    addJSL(project, "Prism", "com/sun/prism", null) { sourceDir, destinationDir ->
         def inputFiles = fileTree(dir: sourceDir)
         inputFiles.include "**/*.jsl"
         inputFiles.each { file ->
