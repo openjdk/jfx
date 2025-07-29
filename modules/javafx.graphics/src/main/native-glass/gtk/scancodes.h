@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -23,24 +23,34 @@
  * questions.
  */
 
-#import <Cocoa/Cocoa.h>
-#import <jni.h>
+#ifndef SCANCODES_H
+#define SCANCODES_H
 
-#import "GlassViewDelegate.h"
+#define SCANCODE_A 30
+#define SCANCODE_B 48
+#define SCANCODE_C 46
+#define SCANCODE_D 32
+#define SCANCODE_E 18
+#define SCANCODE_F 33
+#define SCANCODE_G 34
+#define SCANCODE_H 35
+#define SCANCODE_I 23
+#define SCANCODE_J 36
+#define SCANCODE_K 37
+#define SCANCODE_L 38
+#define SCANCODE_M 50
+#define SCANCODE_N 49
+#define SCANCODE_O 24
+#define SCANCODE_P 25
+#define SCANCODE_Q 16
+#define SCANCODE_R 19
+#define SCANCODE_S 31
+#define SCANCODE_T 20
+#define SCANCODE_U 22
+#define SCANCODE_V 47
+#define SCANCODE_W 17
+#define SCANCODE_X 45
+#define SCANCODE_Y 21
+#define SCANCODE_Z 44
 
-// Helper class to handle system wide touch input events
-@interface GlassTouches : NSObject
-{
-@private
-    GlassViewDelegate*      curConsumer;
-    CFMachPortRef           eventTap;
-    CFRunLoopSourceRef      runLoopSource;
-    NSMutableDictionary*    touches;
-    jlong                   lastTouchId;
-}
-
-+ (void)startTracking:(GlassViewDelegate *)delegate;
-+ (void)stopTracking:(GlassViewDelegate *)delegate;
-+ (void)terminate;
-
-@end
+#endif //SCANCODES_H

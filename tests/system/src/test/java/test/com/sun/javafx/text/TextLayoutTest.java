@@ -30,6 +30,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assumptions.assumeTrue;
 import java.util.Arrays;
 import java.util.List;
+import javafx.scene.layout.Region;
 import javafx.scene.text.Font;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
@@ -70,6 +71,11 @@ public class TextLayoutTest {
 
         @Override
         public RectBounds getBounds() {
+            return null;
+        }
+
+        @Override
+        public Region getLayoutRootRegion() {
             return null;
         }
     }

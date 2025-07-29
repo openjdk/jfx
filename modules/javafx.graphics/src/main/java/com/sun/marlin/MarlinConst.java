@@ -37,11 +37,11 @@ public interface MarlinConst {
     // log new RendererContext
     static final boolean LOG_CREATE_CONTEXT = ENABLE_LOGS
         && MarlinProperties.isLogCreateContext();
-    // log misc.Unsafe alloc/realloc/free
-    static final boolean LOG_UNSAFE_MALLOC = ENABLE_LOGS
-        && MarlinProperties.isLogUnsafeMalloc();
-    // do check unsafe alignment:
-    static final boolean DO_CHECK_UNSAFE = false;
+    // log off-heap alloc/realloc/free
+    static final boolean LOG_OFF_HEAP_MALLOC = ENABLE_LOGS
+        && MarlinProperties.isLogOffHeapMalloc();
+    // do check off-heap alignment:
+    static final boolean DO_CHECK_OFF_HEAP = false;
 
     // do statistics
     static final boolean DO_STATS = ENABLE_LOGS && MarlinProperties.isDoStats();

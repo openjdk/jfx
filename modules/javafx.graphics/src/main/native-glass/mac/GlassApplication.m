@@ -34,7 +34,6 @@
 #import "GlassKey.h"
 #import "GlassScreen.h"
 #import "GlassWindow.h"
-#import "GlassTouches.h"
 #import "PlatformSupport.h"
 
 #import "ProcessInfo.h"
@@ -77,6 +76,11 @@ static NSString* JavaRunLoopMode = @"AWTRunLoopMode";
 // on the AppKit thread (which it does for IME callbacks) so that we
 // don't deadlock.
 static NSArray<NSString*> *runLoopModes = nil;
+
+// Custom event that is provided by AWT to allow libraries like
+// JavaFX to forward native events to AWT even if AWT runs in
+// embedded mode.
+static NSString* awtEmbeddedEvent = @"AWTEmbeddedEvent";
 
 #ifdef STATIC_BUILD
 jint JNICALL JNI_OnLoad_glass(JavaVM *vm, void *reserved)
@@ -498,6 +502,21 @@ static NSMutableArray<GlassRunnable*> *deferredRunnables = nil;
     return YES;
 }
 
+- (void) application:(NSApplication *)theApplication openURLs:(NSArray<NSURL *> *)urls
+{
+    for (NSURL* url in urls) {
+         NSDictionary *userInfo = @{
+            @"name": @"openURL",
+            @"url": url.absoluteString
+        };
+
+        [[NSNotificationCenter defaultCenter]
+                postNotificationName:awtEmbeddedEvent
+                object:nil
+                userInfo:userInfo];
+    }
+}
+
 - (BOOL)applicationShouldOpenUntitledFile:(NSApplication *)sender
 {
     LOG("GlassApplication:applicationShouldOpenUntitledFile");
@@ -730,9 +749,6 @@ static NSMutableArray<GlassRunnable*> *deferredRunnables = nil;
 
             // enter runloop, this will not return until terminated
             [NSApp run];
-
-            // Abort listerning to global touch input events
-            [GlassTouches terminate];
 
             GLASS_CHECK_EXCEPTION(jEnv);
 
