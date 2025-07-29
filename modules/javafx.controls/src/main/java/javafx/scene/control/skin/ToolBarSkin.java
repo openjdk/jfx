@@ -192,6 +192,9 @@ public class ToolBarSkin extends SkinBase<ToolBar> {
                     // The current focus owner is a child of some Toolbar's item
                     Parent item = owner.getParent();
                     while (!boxChildren.contains(item)) {
+                        if (item == null) {
+                            return null;
+                        }
                         item = item.getParent();
                     }
                     Node selected = context.selectInSubtree(item, owner, dir);
