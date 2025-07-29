@@ -359,8 +359,6 @@ public class TreeCellSkin<T> extends CellSkinBase<TreeCell<T>> {
     }
 
     private void updateDisclosureNode() {
-//        JDK-8341281 : Root TreeItem with null value breaks TreeTableView
-//        if (getSkinnable().isEmpty()) return;
 
         Node disclosureNode = getSkinnable().getDisclosureNode();
         if (disclosureNode == null) return;
