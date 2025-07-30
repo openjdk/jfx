@@ -33,7 +33,7 @@ import com.sun.prism.impl.TextureResourcePool;
 class MTLVramPool extends BaseResourcePool<MTLTextureData>
                implements TextureResourcePool<MTLTextureData> {
 
-    private static MTLVramPool theInstance = new MTLVramPool();
+    private static final MTLVramPool theInstance = new MTLVramPool();
 
     public static MTLVramPool getInstance() {
         return theInstance;
@@ -45,8 +45,7 @@ class MTLVramPool extends BaseResourcePool<MTLTextureData>
 
     @Override
     public long estimateTextureSize(int width, int height, PixelFormat format) {
-        return ((long) width) * ((long) height) *
-               ((long) format.getBytesPerPixelUnit());
+        return (long) width * height * format.getBytesPerPixelUnit();
     }
 
     @Override

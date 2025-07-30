@@ -110,7 +110,7 @@ class MTLMeshView extends BaseMeshView {
         return count;
     }
 
-    static class MTLMeshViewDisposerRecord implements Disposer.Record {
+    private static class MTLMeshViewDisposerRecord implements Disposer.Record {
 
         private final MTLContext context;
         private long nativeHandle;

@@ -2700,7 +2700,7 @@ project(":graphics") {
                 mkdir "$buildDir/msl"
                 exec {
                     commandLine("${metalCompiler}")
-                    args += [ "-std=macos-metal2.4" ]
+                    args += [ "-std=${mslVersion}" ]
                     args += [ "-c" ]
                     args += [ "$PASSTHROUGH_VS_SRC" ]
                     args += [ "-o" ]
@@ -2716,7 +2716,7 @@ project(":graphics") {
                 mkdir "$buildDir/msl"
                 exec {
                     commandLine("${metalCompiler}")
-                    args += [ "-std=macos-metal2.4" ]
+                    args += [ "-std=${mslVersion}" ]
                     args += [ "-c" ]
                     args += [ "$CLEAR_RTT_VFS_SRC" ]
                     args += [ "-o" ]
@@ -2732,7 +2732,7 @@ project(":graphics") {
                 mkdir "$buildDir/msl"
                 exec {
                     commandLine("${metalCompiler}")
-                    args += [ "-std=macos-metal2.4" ]
+                    args += [ "-std=${mslVersion}" ]
                     args += [ "-c" ]
                     args += [ "$COMPUTE_KERNELS_SRC" ]
                     args += [ "-o" ]
@@ -2748,7 +2748,7 @@ project(":graphics") {
                 mkdir "$buildDir/msl"
                 exec {
                     commandLine("${metalCompiler}")
-                    args += [ "-std=macos-metal2.4" ]
+                    args += [ "-std=${mslVersion}" ]
                     args += [ "-c" ]
                     args += [ "$PHONG_VS_SRC" ]
                     args += [ "-o" ]
@@ -2764,7 +2764,7 @@ project(":graphics") {
                 mkdir "$buildDir/msl"
                 exec {
                     commandLine("${metalCompiler}")
-                    args += [ "-std=macos-metal2.4" ]
+                    args += [ "-std=${mslVersion}" ]
                     args += [ "-c" ]
                     args += [ "$PHONG_PS_SRC" ]
                     args += [ "-o" ]

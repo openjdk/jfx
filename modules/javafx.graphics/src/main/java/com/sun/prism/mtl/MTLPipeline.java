@@ -62,7 +62,7 @@ public class MTLPipeline extends GraphicsPipeline {
 
     @Override
     public boolean init() {
-        Map devDetails = new HashMap();
+        Map<String, Long> devDetails = new HashMap<>();
         setDeviceDetails(devDetails);
         return true;
     }
@@ -121,21 +121,17 @@ public class MTLPipeline extends GraphicsPipeline {
 
     @Override
     public boolean supportsShaderType(ShaderType type) {
-        switch (type) {
-            case MSL: // Metal Shading Language
-                return true;
-            default:
-                return false;
-        }
+        return switch (type) {
+            case MSL -> true;
+            default -> false;
+        };
     }
 
     @Override
     public boolean supportsShaderModel(ShaderModel model) {
-        switch (model) {
-            case SM3:
-                return true;
-            default:
-                return false;
-        }
+        return switch (model) {
+            case SM3 -> true;
+            default -> false;
+        };
     }
 }

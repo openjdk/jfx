@@ -28,14 +28,10 @@ package com.sun.prism.mtl;
 import com.sun.prism.impl.Disposer;
 import java.util.Objects;
 
-public class MTLTextureData implements Disposer.Record {
+class MTLTextureData implements Disposer.Record {
     protected final MTLContext mtlContext;
     protected long pTexture;
     private long size;
-
-    private MTLTextureData() {
-        mtlContext = null;
-    }
 
     MTLTextureData(MTLContext context, long texPtr, long textureSize) {
         Objects.requireNonNull(context);

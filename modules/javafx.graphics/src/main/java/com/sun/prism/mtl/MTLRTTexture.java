@@ -42,15 +42,15 @@ import java.nio.Buffer;
 import java.nio.IntBuffer;
 
 
-public class MTLRTTexture extends MTLTexture<MTLTextureData>
+class MTLRTTexture extends MTLTexture<MTLTextureData>
                        implements RTTexture, ReadbackRenderTarget {
-    private int[] pixels;
-    private int  rttWidth;
-    private int  rttHeight;
-    private long nTexPtr;
+    private final int[] pixels;
+    private final int  rttWidth;
+    private final int  rttHeight;
+    private final long nTexPtr;
 
     private boolean opaque;
-    private boolean MSAA;
+    private final boolean MSAA;
 
     private MTLRTTexture(MTLContext context, MTLTextureResource<MTLTextureData> resource,
                          WrapMode wrapMode,
@@ -86,7 +86,7 @@ public class MTLRTTexture extends MTLTexture<MTLTextureData>
                 contentWidth, contentHeight,
                 wrapMode, msaa);
         MTLTextureData textData = new MTLRTTextureData(context, nPtr, size);
-        MTLTextureResource resource = new MTLTextureResource(textData, true);
+        MTLTextureResource<MTLTextureData> resource = new MTLTextureResource<>(textData, true);
         return new MTLRTTexture(context, resource, wrapMode,
                 physicalWidth, physicalHeight,
                 0, 0,
@@ -98,7 +98,7 @@ public class MTLRTTexture extends MTLTexture<MTLTextureData>
         long nPtr = nCreateRT2(context.getContextHandle(), pTex, width, height);
 
         MTLTextureData textData = new MTLFBOTextureData(context, nPtr, size);
-        MTLTextureResource resource = new MTLTextureResource(textData, false);
+        MTLTextureResource<MTLTextureData> resource = new MTLTextureResource<>(textData, false);
 
         return new MTLRTTexture(context, resource, WrapMode.CLAMP_NOT_NEEDED,
                 width, height,
@@ -129,8 +129,8 @@ public class MTLRTTexture extends MTLTexture<MTLTextureData>
     public boolean readPixels(Buffer pix) {
         // The call from Canvas rendering expects IntBuffer, which is implemented here.
         // In future, if needed, need to implement pix as ByteBuffer
-        if (pix instanceof IntBuffer) {
-            nReadPixelsFromRTT(nTexPtr, (IntBuffer)pix);
+        if (pix instanceof IntBuffer pixBuf) {
+            nReadPixelsFromRTT(nTexPtr, pixBuf);
             // pix = IntBuffer.wrap(pixels);
             return true;
         }

@@ -34,7 +34,7 @@ import java.nio.IntBuffer;
 import java.util.HashMap;
 import java.util.Map;
 
-public class MTLShader implements Shader {
+class MTLShader implements Shader {
 
     private long nMetalShaderRef;
     private final MTLContext context;
@@ -43,7 +43,7 @@ public class MTLShader implements Shader {
     private final Map<String, Integer> uniformNameIdMap;
     private final Map<Integer, WeakReference<Object>> textureIdRefMap = new HashMap<>();
 
-    private static Map<String, MTLShader> shaderMap = new HashMap<>();
+    private static final Map<String, MTLShader> shaderMap = new HashMap<>();
     private static MTLShader currentEnabledShader;
 
     private MTLShader(MTLContext context, String fragmentFunctionName) {
@@ -80,9 +80,7 @@ public class MTLShader implements Shader {
     }
 
     private void storeSamplers(Map<String, Integer> samplers) {
-        for (Map.Entry<String, Integer> entry : samplers.entrySet()) {
-            this.samplers.put(entry.getValue(), entry.getKey());
-        }
+        samplers.forEach((name, id) -> this.samplers.put(id, name));
     }
 
     @Override
@@ -102,11 +100,7 @@ public class MTLShader implements Shader {
 
     @Override
     public boolean isValid() {
-        if (nMetalShaderRef != 0) {
-            return true;
-        } else {
-            return false;
-        }
+        return nMetalShaderRef != 0;
     }
 
     public static void setTexture(int texUnit, Texture tex, boolean isLinear, int wrapMode) {

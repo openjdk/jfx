@@ -35,10 +35,10 @@ import java.nio.ByteBuffer;
 import java.nio.FloatBuffer;
 import java.nio.IntBuffer;
 
-public class MTLTexture<T extends MTLTextureData> extends BaseTexture<MTLTextureResource<T>> {
+class MTLTexture<T extends MTLTextureData> extends BaseTexture<MTLTextureResource<T>> {
 
     private final MTLContext context;
-    private long texPtr;
+    private final long texPtr;
 
     MTLTexture(MTLContext context, MTLTextureResource<T> resource,
                PixelFormat format, WrapMode wrapMode,

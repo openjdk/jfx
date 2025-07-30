@@ -25,7 +25,7 @@
 
 package com.sun.prism.mtl;
 
-public class MTLFBOTextureData extends MTLTextureData {
+class MTLFBOTextureData extends MTLTextureData {
     MTLFBOTextureData(MTLContext context, long texPtr, long size) {
         super(context, texPtr, size);
     }

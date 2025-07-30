@@ -27,9 +27,9 @@ package com.sun.prism.mtl;
 
 import com.sun.prism.impl.DisposerManagedResource;
 
-public class MTLTextureResource<T extends MTLTextureData> extends DisposerManagedResource<T> {
+class MTLTextureResource<T extends MTLTextureData> extends DisposerManagedResource<T> {
 
-    boolean canDispose;
+    private final boolean canDispose;
 
     MTLTextureResource(T resource, boolean canDispose) {
         super(resource, MTLVramPool.getInstance(), resource);

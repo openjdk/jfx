@@ -47,26 +47,26 @@ import java.io.BufferedInputStream;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 
-public class MTLContext extends BaseShaderContext {
+class MTLContext extends BaseShaderContext {
 
     public static final int NUM_QUADS = PrismSettings.superShader ? 4096 : 256;
 
-    public static final int MTL_COMPMODE_CLEAR           = 0;
-    public static final int MTL_COMPMODE_SRC             = 1;
-    public static final int MTL_COMPMODE_SRCOVER         = 2;
-    public static final int MTL_COMPMODE_DSTOUT          = 3;
-    public static final int MTL_COMPMODE_ADD             = 4;
+    private static final int MTL_COMPMODE_CLEAR   = 0;
+    private static final int MTL_COMPMODE_SRC     = 1;
+    private static final int MTL_COMPMODE_SRCOVER = 2;
+    private static final int MTL_COMPMODE_DSTOUT  = 3;
+    private static final int MTL_COMPMODE_ADD     = 4;
 
-    public static final int MTL_SAMPLER_ADDR_MODE_NOP                    = -1;
+    private static final int MTL_SAMPLER_ADDR_MODE_NOP                   = -1;
     // CLAMP_TO_EDGE
-    public static final int MTL_SAMPLER_ADDR_MODE_CLAMP_TO_EDGE          = 0; // MTLSamplerAddressModeClampToEdge
-    public static final int MTL_SAMPLER_ADDR_MODE_MIRR_CLAMP_TO_EDGE     = 1; // MTLSamplerAddressModeMirrorClampToEdge
+    private static final int MTL_SAMPLER_ADDR_MODE_CLAMP_TO_EDGE         = 0; // MTLSamplerAddressModeClampToEdge
+    private static final int MTL_SAMPLER_ADDR_MODE_MIRR_CLAMP_TO_EDGE    = 1; // MTLSamplerAddressModeMirrorClampToEdge
     // REPEAT
-    public static final int MTL_SAMPLER_ADDR_MODE_REPEAT                 = 2; // MTLSamplerAddressModeRepeat
-    public static final int MTL_SAMPLER_ADDR_MODE_MIRR_REPEAT            = 3; // MTLSamplerAddressModeMirrorRepeat
+    private static final int MTL_SAMPLER_ADDR_MODE_REPEAT                = 2; // MTLSamplerAddressModeRepeat
+    private static final int MTL_SAMPLER_ADDR_MODE_MIRR_REPEAT           = 3; // MTLSamplerAddressModeMirrorRepeat
     // CLAMP_TO_ZERO
-    public static final int MTL_SAMPLER_ADDR_MODE_CLAMP_TO_ZERO          = 4; // MTLSamplerAddressModeClampToZero
-    public static final int MTL_SAMPLER_ADDR_MODE_CLAMP_TO_BORDER_COLOR  = 5; // MTLSamplerAddressModeClampToBorderColor
+    private static final int MTL_SAMPLER_ADDR_MODE_CLAMP_TO_ZERO         = 4; // MTLSamplerAddressModeClampToZero
+    private static final int MTL_SAMPLER_ADDR_MODE_CLAMP_TO_BORDER_COLOR = 5; // MTLSamplerAddressModeClampToBorderColor
 
     private State state;
     private final long pContext;
@@ -94,7 +94,7 @@ public class MTLContext extends BaseShaderContext {
 
     static {
         final String shaderLibName = "msl/jfxshaders.metallib";
-        final Class clazz = MTLContext.class;
+        final Class<MTLContext> clazz = MTLContext.class;
 
         // Get the native shader library as a stream resource and read it into
         // an NIO ByteBuffer. This will be passed to the native MetalContext
@@ -312,7 +312,7 @@ public class MTLContext extends BaseShaderContext {
         // we resolve the texture while rendering itself,
         // implement or change in future if necessary
         long dstNativeHandle = dstRTT == null ? 0L : ((MTLTexture)dstRTT).getNativeHandle();
-        long srcNativeHandle = ((MTLTexture)srcRTT).getNativeHandle();
+        long srcNativeHandle = ((MTLTexture<?>)srcRTT).getNativeHandle();
         nBlit(pContext, srcNativeHandle, dstNativeHandle,
             srcX0, srcY0, srcX1, srcY1,
             dstX0, dstY0, dstX1, dstY1);

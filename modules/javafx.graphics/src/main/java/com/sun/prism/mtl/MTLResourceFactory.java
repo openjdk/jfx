@@ -41,7 +41,6 @@ import com.sun.prism.Texture;
 import com.sun.prism.impl.PrismSettings;
 import com.sun.prism.impl.TextureResourcePool;
 import com.sun.prism.impl.ps.BaseShaderFactory;
-import com.sun.prism.mtl.MTLContext;
 import com.sun.prism.ps.Shader;
 import com.sun.prism.ps.ShaderFactory;
 
@@ -51,9 +50,11 @@ import java.lang.reflect.Method;
 import java.nio.ByteBuffer;
 import java.util.Arrays;
 import java.util.Map;
+import java.util.Objects;
 
 
-public class MTLResourceFactory extends BaseShaderFactory {
+class MTLResourceFactory extends BaseShaderFactory {
+
     private final MTLContext context;
 
     MTLResourceFactory(Screen screen) {
@@ -101,6 +102,7 @@ public class MTLResourceFactory extends BaseShaderFactory {
             return createShader(pixelShaderName, samplers, params, maxTexCoordIndex,
                                 isPixcoordUsed, isPerVertexColorUsed);
         } catch (Exception e) {
+            e.printStackTrace();
             throw new UnsupportedOperationException("Failed to create a prism shader");
         }
     }
@@ -109,21 +111,18 @@ public class MTLResourceFactory extends BaseShaderFactory {
     public Shader createShader(String shaderName, Map<String, Integer> samplers,
                                Map<String, Integer> params, int maxTexCoordIndex,
                                boolean isPixcoordUsed, boolean isPerVertexColorUsed) {
-        Shader shader = MTLShader.createShader(getContext(), shaderName, samplers,
+        return MTLShader.createShader(getContext(), shaderName, samplers,
                 params, maxTexCoordIndex, isPixcoordUsed, isPerVertexColorUsed);
-        return shader;
     }
 
     @Override
     public Shader createStockShader(String shaderName) {
-        if (shaderName == null) {
-            throw new IllegalArgumentException("Shader name must be non-null");
-        }
+        Objects.requireNonNull(shaderName, "Shader name must be non-null");
         try {
             if (PrismSettings.verbose) {
                 System.err.println("MTLResourceFactory: Prism - createStockShader: " + shaderName);
             }
-            Class klass = Class.forName("com.sun.prism.shader." + shaderName + "_Loader");
+            Class<?> klass = Class.forName("com.sun.prism.shader." + shaderName + "_Loader");
             Method m = klass.getMethod("loadShader", new Class[] {ShaderFactory.class, String.class, InputStream.class});
             InputStream nameStream = new ByteArrayInputStream(shaderName.getBytes());
             return (Shader) m.invoke(null, new Object[]{this, shaderName, nameStream});
@@ -134,7 +133,7 @@ public class MTLResourceFactory extends BaseShaderFactory {
     }
 
     @Override
-    public TextureResourcePool getTextureResourcePool() {
+    public TextureResourcePool<?> getTextureResourcePool() {
         return MTLVramPool.getInstance();
     }
 
@@ -191,7 +190,7 @@ public class MTLResourceFactory extends BaseShaderFactory {
         }
 
         MTLTextureData textData = new MTLTextureData(context, pResource, size);
-        MTLTextureResource resource = new MTLTextureResource(textData, true);
+        MTLTextureResource<MTLTextureData> resource = new MTLTextureResource(textData, true);
 
         // contentX and contentY is set as 0 unlike D3D/ES2.
         // The wrap mode are addressed, can be mapped to D3D/ES2 only if necessary.
@@ -344,8 +343,6 @@ public class MTLResourceFactory extends BaseShaderFactory {
     public RTTexture createRTTexture(int width, int height, Texture.WrapMode wrapMode, boolean msaa) {
         int createw = width;
         int createh = height;
-        int cx = 0;
-        int cy = 0;
 
         if (PrismSettings.forcePow2) {
             createw = nextPowerOfTwo(createw, Integer.MAX_VALUE);

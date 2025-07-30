@@ -29,7 +29,7 @@ import com.sun.prism.RenderTarget;
 import com.sun.prism.impl.ps.BaseShaderGraphics;
 import com.sun.prism.paint.Color;
 
-public class MTLGraphics extends BaseShaderGraphics {
+class MTLGraphics extends BaseShaderGraphics {
 
     private final MTLContext context;
 

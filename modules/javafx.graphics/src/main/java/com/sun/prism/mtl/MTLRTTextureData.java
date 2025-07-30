@@ -25,7 +25,8 @@
 
 package com.sun.prism.mtl;
 
-public class MTLRTTextureData extends MTLTextureData {
+class MTLRTTextureData extends MTLTextureData {
+
     MTLRTTextureData(MTLContext context, long texPtr, long size) {
         super(context, texPtr, size);
     }

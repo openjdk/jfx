@@ -49,10 +49,13 @@ import java.util.Map;
 import java.util.Set;
 import static java.util.Map.entry;
 
+/*
+ * Class that generates Metal shaders from JSL.
+ */
+
 public class MSLBackend extends SLBackend {
 
     private static String headerFilesDir = null;
-    private static StringBuilder fragmentShaderHeader;
     private static final String FRAGMENT_SHADER_HEADER_FILE_NAME = "FragmentShaderCommon.h";
     private static final StringBuilder objCHeader = new StringBuilder();
     private static String objCHeaderFileName;
@@ -61,10 +64,9 @@ public class MSLBackend extends SLBackend {
     private static final List<String> shaderFunctionNameList = new ArrayList<>();
 
     private String shaderFunctionName;
-    private String textureSamplerName;
     private String sampleTexFuncName;
     private String uniformStructName;
-    private List<String> uniformNames;
+    private final List<String> uniformNames = new ArrayList<>();
     private String uniformIDsEnumName;
     private String uniformIDs;
     private int uniformIDCount;
@@ -73,14 +75,14 @@ public class MSLBackend extends SLBackend {
     private boolean isPrismShader;
     private boolean hasTextureVar;
 
-    private List<String> helperFunctions;
+    private final List<String> helperFunctions = new ArrayList<>();;
     private static final String MTL_HEADERS_DIR = "/mtl-headers/";
     private static final String MAIN = "void main() {";
 
     private static final Map<String, String> QUAL_MAP = Map.of(
         "param", "constant");
 
-    private static Map<String, String> texSamplerMap = new HashMap<>();
+    private static final Map<String, String> texSamplerMap = new HashMap<>();
 
     private static final Map<String, String> TYPE_MAP = Map.of(
         "sampler",  "texture2d<float>",
@@ -178,26 +180,24 @@ public class MSLBackend extends SLBackend {
 
     @Override
     protected String getQualifier(Qualifier q) {
-        String qual = QUAL_MAP.get(q.toString());
-        return (qual != null) ? qual : q.toString();
+        String qualifier = q.toString();
+        return QUAL_MAP.getOrDefault(qualifier, qualifier);
     }
 
     @Override
     protected String getType(Type t) {
-        String type = TYPE_MAP.get(t.toString());
-        return (type != null) ? type : t.toString();
+        String type = t.toString();
+        return TYPE_MAP.getOrDefault(type, type);
     }
 
     @Override
     protected String getVar(String v) {
-        String s = VAR_MAP.get(v);
-        return (s != null) ? s : v;
+        return VAR_MAP.getOrDefault(v, v);
     }
 
     @Override
     protected String getFuncName(String f) {
-        String s = FUNC_MAP.get(f);
-        return (s != null) ? s : f;
+        return FUNC_MAP.getOrDefault(f, f);
     }
 
     @Override
@@ -253,56 +253,60 @@ public class MSLBackend extends SLBackend {
     public void visitVarDecl(VarDecl d) {
         Variable var = d.getVariable();
         Qualifier qual = var.getQualifier();
-        if (qual == Qualifier.CONST) { // example. const int i = 10;
-            // const variables are converted into macro.
-            // reason: In MSL, only the program scoped variables can be declared as constant(address space).
-            // Function scope variables cannot be declared as constant.
-            // In our shaders, there is one function scope variable 'const float third'
-            // which causes a compilation error if all const are replaced with constant.
-            // So alternate approach is to use macros for all const variables.
-            output("#define " + var.getName());
-            output(" (");
-            scan(d.getInit());
-            output(")\n");
-        } else if (qual == Qualifier.PARAM) { // These are uniform variables.
-            // In MSL, uniform variables can be declared by using function_constant attribute.
-            // function_constant variables can only be scalar or vector type.
-            // User defined type or array of scalar or vector cannot be declared as function_constants.
-            // So we combine all uniform variables into a struct named Uniforms.
-            String aUniform = "";
-            Precision precision = var.getPrecision();
-            if (precision != null) {
-                String precisionStr = getPrecision(precision);
-                if (precisionStr != null) {
-                    aUniform += precisionStr + " ";
+        switch (qual) {
+            case Qualifier.CONST -> {
+                // example: const int i = 10;
+                // const variables are converted into macro.
+                // reason: In MSL, only the program scoped variables can be declared as constant(address space).
+                // Function scope variables cannot be declared as constant.
+                // In our shaders, there is one function scope variable 'const float third'
+                // which causes a compilation error if all const are replaced with constant.
+                // So alternate approach is to use macros for all const variables.
+                output("#define " + var.getName());
+                output(" (");
+                scan(d.getInit());
+                output(")\n");
+            }
+            case Qualifier.PARAM -> {
+                // These are uniform variables.
+                // In MSL, uniform variables can be declared by using function_constant attribute.
+                // function_constant variables can only be scalar or vector type.
+                // User defined type or array of scalar or vector cannot be declared as function_constants.
+                // So we combine all uniform variables into a struct named Uniforms.
+                String aUniform = "";
+                Precision precision = var.getPrecision();
+                if (precision != null) {
+                    String precisionStr = getPrecision(precision);
+                    if (precisionStr != null) {
+                        aUniform += precisionStr + " ";
+                    }
                 }
-            }
-            if (getType(var.getType()).contains("texture2d")) {
-                hasTextureVar = true;
-                texSamplerMap.put(var.getName(), "sampler" + texSamplerMap.size());
-            }
-            uniformNames.add(var.getName());
-            aUniform += getType(var.getType()) + " " + var.getName();
-            if (var.isArray()) {
-                aUniform += "[" + var.getArraySize() + "]";
-            }
-
-            if (!uniformIDs.contains(var.getName())) {
-                uniformIDs += "    " + shaderFunctionName + "_" + var.getName() + "_ID = " + uniformIDCount + ",\n";
+                if (getType(var.getType()).contains("texture2d")) {
+                    hasTextureVar = true;
+                    texSamplerMap.put(var.getName(), "sampler" + texSamplerMap.size());
+                }
+                uniformNames.add(var.getName());
+                aUniform += getType(var.getType()) + " " + var.getName();
                 if (var.isArray()) {
-                    uniformIDCount += var.getArraySize();
-                } else {
-                    uniformIDCount++;
+                    aUniform += "[" + var.getArraySize() + "]";
+                }
+
+                if (!uniformIDs.contains(var.getName())) {
+                    uniformIDs += "    " + shaderFunctionName + "_" + var.getName() + "_ID = " + uniformIDCount + ",\n";
+                    if (var.isArray()) {
+                        uniformIDCount += var.getArraySize();
+                    } else {
+                        uniformIDCount++;
+                    }
+                }
+                if (!uniformsForShaderFile.contains(var.getName())) {
+                    uniformsForShaderFile += "    " + aUniform + ";\n";
+                }
+                if (!uniformsForObjCFiles.contains(var.getName())) {
+                    uniformsForObjCFiles += "    " + aUniform + ";\n";
                 }
             }
-            if (!uniformsForShaderFile.contains(var.getName())) {
-                uniformsForShaderFile += "    " + aUniform + ";\n";
-            }
-            if (!uniformsForObjCFiles.contains(var.getName())) {
-                uniformsForObjCFiles += "    " + aUniform + ";\n";
-            }
-        } else {
-            super.visitVarDecl(d);
+            case null -> super.visitVarDecl(d);
         }
     }
 
@@ -313,32 +317,6 @@ public class MSLBackend extends SLBackend {
 
     private void updateCommonHeaders() {
         String shaderType = isPrismShader ? "PRISM" : "DECORA";
-
-        if (fragmentShaderHeader == null) {
-            fragmentShaderHeader = new StringBuilder();
-            fragmentShaderHeader.append("#ifndef FRAGMENT_COMMON_H\n");
-            fragmentShaderHeader.append("#define FRAGMENT_COMMON_H\n\n");
-            fragmentShaderHeader.append("#pragma clang diagnostic ignored \"-Wunused\"\n\n");
-            fragmentShaderHeader.append("#include <simd/simd.h>\n");
-            fragmentShaderHeader.append("#include <metal_stdlib>\n\n");
-            fragmentShaderHeader.append("using namespace metal;\n\n");
-
-            fragmentShaderHeader.append("struct VS_OUTPUT {\n");
-            fragmentShaderHeader.append("    float4 position [[ position ]];\n");
-            fragmentShaderHeader.append("    float4 fragColor;\n");
-            fragmentShaderHeader.append("    float2 texCoord0;\n");
-            fragmentShaderHeader.append("    float2 texCoord1;\n");
-            fragmentShaderHeader.append("};\n\n");
-            fragmentShaderHeader.append("#endif\n");
-
-            try (FileWriter fragmentShaderHeaderFile = new FileWriter(headerFilesDir + FRAGMENT_SHADER_HEADER_FILE_NAME)) {
-                fragmentShaderHeaderFile.write(fragmentShaderHeader.toString());
-            } catch (IOException e) {
-                System.err.println("IOException occurred while creating " + FRAGMENT_SHADER_HEADER_FILE_NAME +
-                    ": " + e.getMessage());
-                e.printStackTrace();
-            }
-        }
 
         try (FileWriter objCHeaderFile = new FileWriter(headerFilesDir + objCHeaderFileName)) {
 
@@ -495,20 +473,51 @@ public class MSLBackend extends SLBackend {
         if (headerFilesDir == null) {
             headerFilesDir = genMetalShaderPath.substring(0, genMetalShaderPath.indexOf("jsl-"));
             headerFilesDir += MTL_HEADERS_DIR;
+            writeFragmentShaderHeader();
         }
         isPrismShader = genMetalShaderPath.contains("jsl-prism");
         resetVariables();
     }
 
+    private void writeFragmentShaderHeader() {
+        String fragmentShaderHeader = """
+        #ifndef FRAGMENT_COMMON_H
+        #define FRAGMENT_COMMON_H
+
+        #pragma clang diagnostic ignored "-Wunused"
+
+        #include <simd/simd.h>
+        #include <metal_stdlib>
+
+        using namespace metal;
+
+        struct VS_OUTPUT {
+            float4 position [[ position ]];
+            float4 fragColor;
+            float2 texCoord0;
+            float2 texCoord1;
+        };
+
+        #endif
+        """;
+
+        try (FileWriter fragmentShaderHeaderFile = new FileWriter(headerFilesDir + FRAGMENT_SHADER_HEADER_FILE_NAME)) {
+            fragmentShaderHeaderFile.write(fragmentShaderHeader);
+        } catch (IOException e) {
+            System.err.println("IOException occurred while creating " + FRAGMENT_SHADER_HEADER_FILE_NAME +
+                ": " + e.getMessage());
+            e.printStackTrace();
+        }
+    }
+
     private void resetVariables() {
         uniformStructName = shaderFunctionName + "_Uniforms";
         uniformIDsEnumName = shaderFunctionName + "_ArgumentBufferID";
-        textureSamplerName = shaderFunctionName + "_textureSampler";
         sampleTexFuncName = shaderFunctionName + "_SampleTexture";
 
-        texSamplerMap = new HashMap<>();
-        helperFunctions = new ArrayList<>();
-        uniformNames = new ArrayList<>();
+        texSamplerMap.clear();
+        helperFunctions.clear();
+        uniformNames.clear();
         uniformsForShaderFile = "";
         uniformsForObjCFiles = "";
         uniformIDs = "";
@@ -522,10 +531,7 @@ public class MSLBackend extends SLBackend {
         // already have a texture variable.
         hasTextureVar = false;
 
-        if (isPrismShader) {
-            objCHeaderFileName = PRISM_SHADER_HEADER_FILE_NAME;
-        } else {
-            objCHeaderFileName = DECORA_SHADER_HEADER_FILE_NAME;
-        }
+        objCHeaderFileName = isPrismShader ? PRISM_SHADER_HEADER_FILE_NAME :
+                                                DECORA_SHADER_HEADER_FILE_NAME;
     }
 }

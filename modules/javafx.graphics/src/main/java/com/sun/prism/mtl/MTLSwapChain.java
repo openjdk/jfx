@@ -27,7 +27,6 @@ package com.sun.prism.mtl;
 
 import com.sun.glass.ui.Screen;
 import com.sun.javafx.geom.Rectangle;
-import com.sun.prism.CompositeMode;
 import com.sun.prism.Graphics;
 import com.sun.prism.GraphicsResource;
 import com.sun.prism.Presentable;
@@ -36,7 +35,7 @@ import com.sun.prism.impl.PrismSettings;
 
 public class MTLSwapChain implements MTLRenderTarget, Presentable, GraphicsResource {
 
-    private PresentableState pState;
+    private final PresentableState pState;
     private final MTLContext pContext;
     private MTLRTTexture stableBackbuffer;
     private final float pixelScaleFactorX;
@@ -56,7 +55,6 @@ public class MTLSwapChain implements MTLRenderTarget, Presentable, GraphicsResou
 
     @Override
     public boolean lockResources(PresentableState state) {
-
         if (this.pState != state ||
             pixelScaleFactorX != state.getRenderScaleX() ||
             pixelScaleFactorY != state.getRenderScaleY()) {
@@ -84,7 +82,7 @@ public class MTLSwapChain implements MTLRenderTarget, Presentable, GraphicsResou
     public boolean prepare(Rectangle dirtyregion) {
         MTLContext context = getContext();
         context.flushVertexBuffer();
-        MTLGraphics g = (MTLGraphics) MTLGraphics.create(context, stableBackbuffer);
+        MTLGraphics g = MTLGraphics.create(context, stableBackbuffer);
         if (g == null) {
             return false;
         }
@@ -123,7 +121,6 @@ public class MTLSwapChain implements MTLRenderTarget, Presentable, GraphicsResou
 
     @Override
     public Graphics createGraphics() {
-
         if (pState.getNativeFrameBuffer() == 0) {
             System.err.println("Native backbuffer texture from Glass is nil.");
             return null;
@@ -145,7 +142,7 @@ public class MTLSwapChain implements MTLRenderTarget, Presentable, GraphicsResou
 
             long pTex = pState.getNativeFrameBuffer();
 
-            stableBackbuffer = (MTLRTTexture)MTLRTTexture.create(getContext(), pTex, w, h, 0);
+            stableBackbuffer = MTLRTTexture.create(getContext(), pTex, w, h, 0);
             if (PrismSettings.dirtyOptsEnabled) {
                 stableBackbuffer.contentsUseful();
             }

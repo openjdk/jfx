@@ -31,7 +31,7 @@ import java.lang.reflect.Method;
 
 public class GenAllDecoraShaders {
 
-    static String [][] compileShaders = {
+    private static final String [][] compileShaders = {
             {"CompileJSL", "-all", "ColorAdjust"},
             {"CompileJSL", "-all", "Brightpass"},
             {"CompileJSL", "-all", "SepiaTone"},
