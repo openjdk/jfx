@@ -673,13 +673,11 @@ public class ToolBarSkin extends SkinBase<ToolBar> {
     }
 
     private double getToolbarLength(ToolBar toolbar) {
-        double length;
         if (getSkinnable().getOrientation() == Orientation.VERTICAL) {
-            length = snapSizeY(toolbar.getHeight()) - snappedTopInset() - snappedBottomInset() + getSpacing();
+            return snapSizeY(snapSizeY(toolbar.getHeight()) - snappedTopInset() - snappedBottomInset() + getSpacing());
         } else {
-            length = snapSizeX(toolbar.getWidth()) - snappedLeftInset() - snappedRightInset() + getSpacing();
+            return snapSizeX(snapSizeX(toolbar.getWidth()) - snappedLeftInset() - snappedRightInset() + getSpacing());
         }
-        return length;
     }
 
     /**
@@ -689,11 +687,6 @@ public class ToolBarSkin extends SkinBase<ToolBar> {
      * @return the index of the first node that does not fit in the toolbar, or the size of the items list else
      */
     private int getOverflowNodeIndex(double length) {
-        if (getSkinnable().getOrientation() == Orientation.VERTICAL) {
-            length = snapSizeY(length);
-        } else {
-            length = snapSizeX(length);
-        }
         ObservableList<Node> items = getSkinnable().getItems();
         int overflowIndex = items.size();
         double x = 0;
