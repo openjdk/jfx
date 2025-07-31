@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -26,17 +26,26 @@
 package test.javafx.scene.control.skin;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import javafx.beans.value.ObservableValue;
 import javafx.geometry.Insets;
 import javafx.geometry.Orientation;
+import javafx.scene.AccessibleAttribute;
+import javafx.scene.Scene;
 import javafx.scene.control.Button;
 import javafx.scene.control.ToolBar;
 import javafx.scene.control.skin.ToolBarSkin;
+import javafx.scene.layout.HBox;
+import javafx.scene.layout.Pane;
+import javafx.scene.shape.Rectangle;
+import javafx.stage.Stage;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import com.sun.javafx.binding.DoubleConstant;
 
 /**
- * This fails with IllegalStateException because of the toolkit's check for the FX application thread
+ * Tests the ToolBarSkin.
  */
 public class ToolBarSkinTest {
     private ToolBar toolbar;
@@ -51,19 +60,60 @@ public class ToolBarSkinTest {
         // computed but wasn't expected will be caught.
         toolbar.setPadding(new Insets(10, 10, 10, 10));
         toolbar.setSkin(skin);
-
     }
 
-    @Test public void horizontalMaxHeightTracksPreferred() {
+    @Test
+    public void horizontalMaxHeightTracksPreferred() {
         toolbar.setOrientation(Orientation.HORIZONTAL);
         toolbar.setPrefHeight(100);
         assertEquals(100, toolbar.maxHeight(-1), 0);
     }
 
-    @Test public void verticalMaxWidthTracksPreferred() {
+    @Test
+    public void verticalMaxWidthTracksPreferred() {
         toolbar.setOrientation(Orientation.VERTICAL);
         toolbar.setPrefWidth(100);
         assertEquals(100, toolbar.maxWidth(-1), 0);
+    }
+
+    @Test
+    public void overflowMenuNotShowingWithDifferentRenderScales() {
+        double[] renderScales = {
+            1.0,
+            1.25,
+            1.5,
+            1.75,
+            2.0,
+            2.25
+        };
+
+        Rectangle rect = new Rectangle(100, 100);
+        ToolBar toolBar = new ToolBar(rect);
+        toolBar.setSkin(new ToolBarSkin(toolBar));
+
+        for (var orientation : Orientation.values()) {
+            toolBar.setOrientation(orientation);
+
+            for (double scale : renderScales) {
+                Stage stage = new Stage();
+                stage.renderScaleXProperty().bind(DoubleConstant.valueOf(scale));
+                stage.renderScaleYProperty().bind(DoubleConstant.valueOf(scale));
+                stage.setScene(new Scene(new HBox(toolBar), 600, 600));
+                stage.show();
+
+                try {
+                    assertOverflowNotShown(toolBar);
+                } finally {
+                    stage.hide();
+                }
+            }
+        }
+    }
+
+    private static void assertOverflowNotShown(ToolBar tb) {
+        Pane p = (Pane)tb.queryAccessibleAttribute(AccessibleAttribute.OVERFLOW_BUTTON);
+        assertNotNull(p, "failed to obtain the overflow button");
+        assertFalse(p.isVisible(), "the overflow button is expected to be hidden");
     }
 
     public static final class ToolBarSkinMock extends ToolBarSkin {
