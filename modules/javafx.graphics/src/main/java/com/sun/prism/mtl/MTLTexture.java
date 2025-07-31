@@ -87,6 +87,106 @@ class MTLTexture<T extends MTLTextureData> extends BaseTexture<MTLTextureResourc
         return new MTLTexture(this, newMode);
     }
 
+    private void updateTextureInt(Buffer buffer, PixelFormat format,
+                                int dstx, int dsty,
+                                int srcx, int srcy,
+                                int srcw, int srch,
+                                int srcscan) {
+        if (format == PixelFormat.INT_ARGB_PRE) {
+            IntBuffer buf = (IntBuffer) buffer;
+            int[] arr = buf.hasArray() ? buf.array() : null;
+            nUpdateInt(getNativeHandle(), buf, arr,
+                       dstx, dsty, srcx, srcy, srcw, srch, srcscan);
+        } else {
+            throw new IllegalArgumentException("Unsupported INT PixelFormat: " + format);
+        }
+    }
+
+    private void updateTextureFloat(Buffer buffer, PixelFormat format,
+                                int dstx, int dsty,
+                                int srcx, int srcy,
+                                int srcw, int srch,
+                                int srcscan) {
+        if (format == PixelFormat.FLOAT_XYZW) {
+            FloatBuffer buf = (FloatBuffer) buffer;
+            float[] arr = buf.hasArray() ? buf.array() : null;
+            nUpdateFloat(getNativeHandle(), buf, arr,
+                         dstx, dsty, srcx, srcy, srcw, srch, srcscan);
+        } else {
+            throw new IllegalArgumentException("Unsupported FLOAT PixelFormat: " + format);
+        }
+    }
+
+    private void updateTextureByte(Buffer buffer, PixelFormat format,
+                                int dstx, int dsty,
+                                int srcx, int srcy,
+                                int srcw, int srch,
+                                int srcscan) {
+        ByteBuffer buf = (ByteBuffer) buffer;
+        buf.rewind();
+        byte[] arr = buf.hasArray() ? buf.array() : null;
+
+        switch (format) {
+            case PixelFormat.BYTE_BGRA_PRE,
+                 PixelFormat.BYTE_ALPHA ->
+                nUpdate(getNativeHandle(), buf, arr,
+                        dstx, dsty, srcx, srcy, srcw, srch, srcscan);
+
+            case PixelFormat.BYTE_RGB -> {
+                // Convert 24-bit RGB to 32-bit BGRA
+                // Metal does not support 24-bit format
+                // hence `arr` data needs to be converted to BGRA format
+                byte[] arr32Bit = new byte[srcw * srch * 4];
+                int dstIndex = 0;
+                int index = 0;
+
+                int rowStride = srcw * 3;
+                int totalBytes = srch * rowStride;
+
+                for (int rowIndex = 0; rowIndex < totalBytes; rowIndex += rowStride) {
+                    for (int colIndex = 0; colIndex < rowStride; colIndex += 3) {
+                        index = rowIndex + colIndex;
+                        arr32Bit[dstIndex++] = arr[index + 2];
+                        arr32Bit[dstIndex++] = arr[index + 1];
+                        arr32Bit[dstIndex++] = arr[index];
+                        arr32Bit[dstIndex++] = (byte)255;
+                    }
+                }
+                nUpdate(getNativeHandle(), null, arr32Bit,
+                        dstx, dsty, srcx, srcy, srcw, srch, srcw * 4);
+            }
+
+            case PixelFormat.BYTE_GRAY -> {
+                // Suitable 8-bit native formats are MTLPixelFormatA8Unorm & MTLPixelFormatR8Unorm.
+                // These formats do not work well with our generated shader - Texture_RGB.
+                // hence `arr` data is converted to BGRA format here.
+                // In future, if needed for performance reason:
+                // Texture_RGB shader can be tweaked to fill up R,G,B fields from single byte grayscale value.
+                // Care must be taken not to break current behavior of this shader.
+                byte[] arr32Bit = new byte[srcw * srch * 4];
+                int dstIndex = 0;
+                int index = 0;
+                int totalBytes = srch * srcw;
+
+                for (int rowIndex = 0; rowIndex < totalBytes; rowIndex += srcw) {
+                    for (int colIndex = 0; colIndex < srcw; colIndex++) {
+                        index = rowIndex + colIndex;
+                        arr32Bit[dstIndex++] = arr[index];
+                        arr32Bit[dstIndex++] = arr[index];
+                        arr32Bit[dstIndex++] = arr[index];
+                        arr32Bit[dstIndex++] = (byte) 255;
+                    }
+                }
+                nUpdate(getNativeHandle(), null, arr32Bit,
+                        dstx, dsty, srcx, srcy, srcw, srch, srcw * 4);
+            }
+
+            case PixelFormat.MULTI_YCbCr_420,
+                 PixelFormat.BYTE_APPLE_422 ->
+                throw new IllegalArgumentException("Unsupported PixelFormat " + format);
+        }
+    }
+
     @Override
     public void update(Buffer buffer, PixelFormat format,
                         int dstx, int dsty,
@@ -95,93 +195,14 @@ class MTLTexture<T extends MTLTextureData> extends BaseTexture<MTLTextureResourc
                         int srcscan, boolean skipFlush) {
 
         switch (format.getDataType()) {
-            case PixelFormat.DataType.INT -> {
-                if (format == PixelFormat.INT_ARGB_PRE) {
-                    IntBuffer buf = (IntBuffer) buffer;
-                    int[] arr = buf.hasArray() ? buf.array() : null;
-                    nUpdateInt(getNativeHandle(), buf, arr,
-                               dstx, dsty, srcx, srcy, srcw, srch, srcscan);
-                } else {
-                    throw new IllegalArgumentException("Unsupported INT PixelFormat: " + format);
-                }
-            }
+            case PixelFormat.DataType.INT -> updateTextureInt(buffer, format,
+                dstx, dsty, srcx, srcy, srcw, srch, srcscan);
 
-            case PixelFormat.DataType.FLOAT -> {
-                if (format == PixelFormat.FLOAT_XYZW) {
-                    FloatBuffer buf = (FloatBuffer) buffer;
-                    float[] arr = buf.hasArray() ? buf.array() : null;
-                    nUpdateFloat(getNativeHandle(), buf, arr,
-                                 dstx, dsty, srcx, srcy, srcw, srch, srcscan);
-                } else {
-                    throw new IllegalArgumentException("Unsupported FLOAT PixelFormat: " + format);
-                }
-            }
+            case PixelFormat.DataType.FLOAT -> updateTextureFloat(buffer, format,
+                dstx, dsty, srcx, srcy, srcw, srch, srcscan);
 
-            case PixelFormat.DataType.BYTE -> {
-                ByteBuffer buf = (ByteBuffer) buffer;
-                buf.rewind();
-                byte[] arr = buf.hasArray() ? buf.array() : null;
-
-                switch (format) {
-                    case PixelFormat.BYTE_BGRA_PRE,
-                         PixelFormat.BYTE_ALPHA ->
-                        nUpdate(getNativeHandle(), buf, arr,
-                                dstx, dsty, srcx, srcy, srcw, srch, srcscan);
-
-                    case PixelFormat.BYTE_RGB -> {
-                        // Convert 24-bit RGB to 32-bit BGRA
-                        // Metal does not support 24-bit format
-                        // hence `arr` data needs to be converted to BGRA format
-                        byte[] arr32Bit = new byte[srcw * srch * 4];
-                        int dstIndex = 0;
-                        int index = 0;
-
-                        int rowStride = srcw * 3;
-                        int totalBytes = srch * rowStride;
-
-                        for (int rowIndex = 0; rowIndex < totalBytes; rowIndex += rowStride) {
-                            for (int colIndex = 0; colIndex < rowStride; colIndex += 3) {
-                                index = rowIndex + colIndex;
-                                arr32Bit[dstIndex++] = arr[index + 2];
-                                arr32Bit[dstIndex++] = arr[index + 1];
-                                arr32Bit[dstIndex++] = arr[index];
-                                arr32Bit[dstIndex++] = (byte)255;
-                            }
-                        }
-                        nUpdate(getNativeHandle(), null, arr32Bit,
-                                dstx, dsty, srcx, srcy, srcw, srch, srcw * 4);
-                    }
-
-                    case PixelFormat.BYTE_GRAY -> {
-                        // Suitable 8-bit native formats are MTLPixelFormatA8Unorm & MTLPixelFormatR8Unorm.
-                        // These formats do not work well with our generated shader - Texture_RGB.
-                        // hence `arr` data is converted to BGRA format here.
-                        // In future, if needed for performance reason:
-                        // Texture_RGB shader can be tweaked to fill up R,G,B fields from single byte grayscale value.
-                        // Care must be taken not to break current behavior of this shader.
-                        byte[] arr32Bit = new byte[srcw * srch * 4];
-                        int dstIndex = 0;
-                        int index = 0;
-                        int totalBytes = srch * srcw;
-
-                        for (int rowIndex = 0; rowIndex < totalBytes; rowIndex += srcw) {
-                            for (int colIndex = 0; colIndex < srcw; colIndex++) {
-                                index = rowIndex + colIndex;
-                                arr32Bit[dstIndex++] = arr[index];
-                                arr32Bit[dstIndex++] = arr[index];
-                                arr32Bit[dstIndex++] = arr[index];
-                                arr32Bit[dstIndex++] = (byte) 255;
-                            }
-                        }
-                        nUpdate(getNativeHandle(), null, arr32Bit,
-                                dstx, dsty, srcx, srcy, srcw, srch, srcw * 4);
-                    }
-
-                    case PixelFormat.MULTI_YCbCr_420,
-                         PixelFormat.BYTE_APPLE_422 ->
-                        throw new IllegalArgumentException("Unsupported PixelFormat " + format);
-                }
-            }
+            case PixelFormat.DataType.BYTE -> updateTextureByte(buffer, format,
+                dstx, dsty, srcx, srcy, srcw, srch, srcscan);
         }
     }
 
