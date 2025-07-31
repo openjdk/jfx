@@ -673,13 +673,11 @@ public class ToolBarSkin extends SkinBase<ToolBar> {
     }
 
     private double getToolbarLength(ToolBar toolbar) {
-        double length;
         if (getSkinnable().getOrientation() == Orientation.VERTICAL) {
-            length = snapSizeY(toolbar.getHeight()) - snappedTopInset() - snappedBottomInset() + getSpacing();
+            return snapSizeY(snapSizeY(toolbar.getHeight()) - snappedTopInset() - snappedBottomInset() + getSpacing());
         } else {
-            length = snapSizeX(toolbar.getWidth()) - snappedLeftInset() - snappedRightInset() + getSpacing();
+            return snapSizeX(snapSizeX(toolbar.getWidth()) - snappedLeftInset() - snappedRightInset() + getSpacing());
         }
-        return length;
     }
 
     /**
