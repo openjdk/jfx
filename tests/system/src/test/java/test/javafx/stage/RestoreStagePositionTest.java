@@ -126,8 +126,8 @@ public class RestoreStagePositionTest {
         double x = stage.getX();
         double y = stage.getY();
 
-        Platform.runLater(() -> stage.setMaximized(true));
-        Thread.sleep(800);
+        Util.runAndWait(() -> stage.setMaximized(true));
+        Util.waitForIdle(stage.getScene());
         Assertions.assertTrue(stage.isMaximized());
         CountDownLatch latch = new CountDownLatch(2);
 

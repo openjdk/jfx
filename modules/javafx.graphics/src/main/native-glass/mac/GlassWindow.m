@@ -1038,24 +1038,29 @@ JNIEXPORT jboolean JNICALL Java_com_sun_glass_ui_mac_MacWindow__1maximize
     {
         GlassWindow *window = getGlassWindow(env, jPtr);
 
-        window->suppressWindowResizeEvent = YES;
-        window->suppressWindowMoveEvent = YES;
-
         NSRect oldFrame = window->nsWindow.frame;
         int eventType = com_sun_glass_events_WindowEvent_RESTORE;
 
-        if ((maximize == JNI_TRUE) && (isZoomed == JNI_FALSE)) {
+        window->suppressWindowResizeEvent = YES;
+        window->suppressWindowMoveEvent = YES;
+
+        if ((maximize == JNI_TRUE) && (isZoomed == JNI_FALSE))
+        {
             window->preZoomedRect = oldFrame;
             eventType = com_sun_glass_events_WindowEvent_MAXIMIZE;
 
-            if ([window->nsWindow styleMask] != NSWindowStyleMaskBorderless) {
+            if ([window->nsWindow styleMask] != NSWindowStyleMaskBorderless)
+            {
                 [window->nsWindow zoom:nil];
-            } else {
+            }
+            else
+            {
                 NSRect visibleRect = [[window _getScreen] visibleFrame];
                 [window->nsWindow setFrame:visibleRect display:YES animate:YES];
             }
         }
-        else if ((maximize == JNI_FALSE) && (isZoomed == JNI_TRUE)) {
+        else if ((maximize == JNI_FALSE) && (isZoomed == JNI_TRUE))
+        {
             // Platform unzooming only works reliably for titled windows. For
             // untitled windows the unzoom location can be wildly off. We want
             // to use platform unzoom when we can since it uses the platform's
