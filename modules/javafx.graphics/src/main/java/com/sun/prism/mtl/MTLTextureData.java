@@ -34,7 +34,7 @@ class MTLTextureData implements Disposer.Record {
     private long size;
 
     MTLTextureData(MTLContext context, long texPtr, long textureSize) {
-        Objects.requireNonNull(context);
+        Objects.requireNonNull(context, "MTLContext must not be null");
         if (texPtr == 0L) {
             throw new IllegalArgumentException("Texture cannot be null");
         }

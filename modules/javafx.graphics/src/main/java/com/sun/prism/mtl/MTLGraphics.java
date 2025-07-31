@@ -39,10 +39,7 @@ class MTLGraphics extends BaseShaderGraphics {
     }
 
     static MTLGraphics create(MTLContext context, RenderTarget target) {
-        if (target == null) {
-            return null;
-        }
-        return new MTLGraphics(context, target);
+        return target == null ? null : new MTLGraphics(context, target);
     }
 
     @Override

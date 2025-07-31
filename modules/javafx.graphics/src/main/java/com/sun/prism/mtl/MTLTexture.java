@@ -95,7 +95,7 @@ class MTLTexture<T extends MTLTextureData> extends BaseTexture<MTLTextureResourc
                         int srcscan, boolean skipFlush) {
 
         switch (format.getDataType()) {
-            case PixelFormat.DataType.INT:
+            case PixelFormat.DataType.INT -> {
                 if (format == PixelFormat.INT_ARGB_PRE) {
                     IntBuffer buf = (IntBuffer) buffer;
                     int[] arr = buf.hasArray() ? buf.array() : null;
@@ -104,9 +104,9 @@ class MTLTexture<T extends MTLTextureData> extends BaseTexture<MTLTextureResourc
                 } else {
                     throw new IllegalArgumentException("Unsupported INT PixelFormat: " + format);
                 }
-                break;
+            }
 
-            case PixelFormat.DataType.FLOAT:
+            case PixelFormat.DataType.FLOAT -> {
                 if (format == PixelFormat.FLOAT_XYZW) {
                     FloatBuffer buf = (FloatBuffer) buffer;
                     float[] arr = buf.hasArray() ? buf.array() : null;
@@ -115,21 +115,20 @@ class MTLTexture<T extends MTLTextureData> extends BaseTexture<MTLTextureResourc
                 } else {
                     throw new IllegalArgumentException("Unsupported FLOAT PixelFormat: " + format);
                 }
-                break;
+            }
 
-            case PixelFormat.DataType.BYTE:
+            case PixelFormat.DataType.BYTE -> {
                 ByteBuffer buf = (ByteBuffer) buffer;
                 buf.rewind();
                 byte[] arr = buf.hasArray() ? buf.array() : null;
 
                 switch (format) {
-                    case PixelFormat.BYTE_BGRA_PRE:
-                    case PixelFormat.BYTE_ALPHA:
+                    case PixelFormat.BYTE_BGRA_PRE,
+                         PixelFormat.BYTE_ALPHA ->
                         nUpdate(getNativeHandle(), buf, arr,
                                 dstx, dsty, srcx, srcy, srcw, srch, srcscan);
-                        break;
 
-                    case PixelFormat.BYTE_RGB:
+                    case PixelFormat.BYTE_RGB -> {
                         // Convert 24-bit RGB to 32-bit BGRA
                         // Metal does not support 24-bit format
                         // hence `arr` data needs to be converted to BGRA format
@@ -151,19 +150,19 @@ class MTLTexture<T extends MTLTextureData> extends BaseTexture<MTLTextureResourc
                         }
                         nUpdate(getNativeHandle(), null, arr32Bit,
                                 dstx, dsty, srcx, srcy, srcw, srch, srcw * 4);
-                        break;
+                    }
 
-                    case PixelFormat.BYTE_GRAY:
+                    case PixelFormat.BYTE_GRAY -> {
                         // Suitable 8-bit native formats are MTLPixelFormatA8Unorm & MTLPixelFormatR8Unorm.
                         // These formats do not work well with our generated shader - Texture_RGB.
                         // hence `arr` data is converted to BGRA format here.
                         // In future, if needed for performance reason:
                         // Texture_RGB shader can be tweaked to fill up R,G,B fields from single byte grayscale value.
                         // Care must be taken not to break current behavior of this shader.
-                        arr32Bit = new byte[srcw * srch * 4];
-                        dstIndex = 0;
-                        index = 0;
-                        totalBytes = srch * srcw;
+                        byte[] arr32Bit = new byte[srcw * srch * 4];
+                        int dstIndex = 0;
+                        int index = 0;
+                        int totalBytes = srch * srcw;
 
                         for (int rowIndex = 0; rowIndex < totalBytes; rowIndex += srcw) {
                             for (int colIndex = 0; colIndex < srcw; colIndex++) {
@@ -176,16 +175,13 @@ class MTLTexture<T extends MTLTextureData> extends BaseTexture<MTLTextureResourc
                         }
                         nUpdate(getNativeHandle(), null, arr32Bit,
                                 dstx, dsty, srcx, srcy, srcw, srch, srcw * 4);
-                        break;
-                    case PixelFormat.MULTI_YCbCr_420:
-                    case PixelFormat.BYTE_APPLE_422:
-                    default:
+                    }
+
+                    case PixelFormat.MULTI_YCbCr_420,
+                         PixelFormat.BYTE_APPLE_422 ->
                         throw new IllegalArgumentException("Unsupported PixelFormat " + format);
                 }
-                break;
-
-            default:
-                throw new IllegalArgumentException("Unsupported PixelFormat DataType: " + format);
+            }
         }
     }
 
@@ -201,7 +197,7 @@ class MTLTexture<T extends MTLTextureData> extends BaseTexture<MTLTextureResourc
         frame.holdFrame();
 
         ByteBuffer pixels = frame.getBufferForPlane(0);
-        byte[] arr = pixels.hasArray()? pixels.array(): null;
+        byte[] arr = pixels.hasArray() ? pixels.array() : null;
         if (arr == null) {
             arr = new byte[pixels.remaining()];
             pixels.get(arr);

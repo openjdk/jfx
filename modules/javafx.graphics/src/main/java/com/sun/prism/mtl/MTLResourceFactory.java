@@ -117,7 +117,7 @@ class MTLResourceFactory extends BaseShaderFactory {
 
     @Override
     public Shader createStockShader(String shaderName) {
-        Objects.requireNonNull(shaderName, "Shader name must be non-null");
+        Objects.requireNonNull(shaderName, "Shader name not be null");
         try {
             if (PrismSettings.verbose) {
                 System.err.println("MTLResourceFactory: Prism - createStockShader: " + shaderName);
@@ -256,7 +256,7 @@ class MTLResourceFactory extends BaseShaderFactory {
                         return null;
                     }
 
-                    byte arr[] = new byte[texWidth * texHeight];
+                    byte[] arr = new byte[texWidth * texHeight];
                     Arrays.fill(arr, (byte)255);
                     ByteBuffer pixels = ByteBuffer.wrap(arr);
                     subTex.update(pixels, PixelFormat.BYTE_ALPHA, 0, 0, 0, 0,
@@ -277,20 +277,17 @@ class MTLResourceFactory extends BaseShaderFactory {
 
     @Override
     public boolean isFormatSupported(PixelFormat format) {
-        switch (format) {
-            case BYTE_RGB:
-            case BYTE_GRAY:
-            case BYTE_ALPHA:
-            case BYTE_BGRA_PRE:
-            case INT_ARGB_PRE:
-            case FLOAT_XYZW:
-            case BYTE_APPLE_422:
-                return true;
+        return switch (format) {
+            case BYTE_RGB,
+                 BYTE_GRAY,
+                 BYTE_ALPHA,
+                 BYTE_BGRA_PRE,
+                 BYTE_APPLE_422,
+                 INT_ARGB_PRE,
+                 FLOAT_XYZW -> true;
 
-            case MULTI_YCbCr_420:
-            default:
-                return false;
-        }
+            case MULTI_YCbCr_420 -> false;
+        };
     }
 
     @Override

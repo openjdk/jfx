@@ -53,8 +53,7 @@ public class MTLPipeline extends GraphicsPipeline {
         theInstance = new MTLPipeline();
     }
 
-    private MTLPipeline() {
-    }
+    private MTLPipeline() {}
 
     public static MTLPipeline getInstance() {
         return theInstance;
@@ -88,7 +87,7 @@ public class MTLPipeline extends GraphicsPipeline {
             mtlResourceFactory = new MTLResourceFactory(screen);
 
             // This enables sharing of MTLCommandQueue between PRISM and GLASS
-            Map devDetails = MTLPipeline.getInstance().getDeviceDetails();
+            Map<String, Long> devDetails = MTLPipeline.getInstance().getDeviceDetails();
             devDetails.put("mtlCommandQueue",
                                 mtlResourceFactory.getContext().getMetalCommandQueue());
         }

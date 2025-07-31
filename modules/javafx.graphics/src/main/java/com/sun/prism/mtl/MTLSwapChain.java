@@ -55,7 +55,7 @@ public class MTLSwapChain implements MTLRenderTarget, Presentable, GraphicsResou
 
     @Override
     public boolean lockResources(PresentableState state) {
-        if (this.pState != state ||
+        if (pState != state ||
             pixelScaleFactorX != state.getRenderScaleX() ||
             pixelScaleFactorY != state.getRenderScaleY()) {
             return true;
@@ -150,6 +150,9 @@ public class MTLSwapChain implements MTLRenderTarget, Presentable, GraphicsResou
         }
 
         Graphics g = MTLGraphics.create(getContext(), stableBackbuffer);
+        if (g == null) {
+            return null;
+        }
         g.scale(pixelScaleFactorX, pixelScaleFactorY);
         return g;
     }

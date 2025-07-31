@@ -107,7 +107,7 @@ class MTLShader implements Shader {
         if (currentEnabledShader.textureIdRefMap.get(texUnit) != null &&
             currentEnabledShader.textureIdRefMap.get(texUnit).get() == tex) return;
 
-        currentEnabledShader.textureIdRefMap.put(texUnit, new WeakReference(tex));
+        currentEnabledShader.textureIdRefMap.put(texUnit, new WeakReference<>(tex));
         MTLTexture mtlTex = (MTLTexture)tex;
         nSetTexture(currentEnabledShader.nMetalShaderRef, texUnit,
                 currentEnabledShader.uniformNameIdMap.get(currentEnabledShader.samplers.get(texUnit)),
@@ -188,7 +188,7 @@ class MTLShader implements Shader {
     // Native methods
 
     private static native long nCreateMetalShader(long context, String fragFuncName);
-    private static native Map  nGetUniformNameIdMap(long nMetalShader);
+    private static native Map<String, Integer>  nGetUniformNameIdMap(long nMetalShader);
     private static native void nEnable(long nMetalShader);
     private static native void nDisable(long nMetalShader);
 

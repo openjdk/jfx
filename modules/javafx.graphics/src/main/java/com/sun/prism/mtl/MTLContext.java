@@ -93,19 +93,19 @@ class MTLContext extends BaseShaderContext {
     public final static int CULL_NONE  = 112;
 
     static {
-        final String shaderLibName = "msl/jfxshaders.metallib";
-        final Class<MTLContext> clazz = MTLContext.class;
-
-        // Get the native shader library as a stream resource and read it into
-        // an NIO ByteBuffer. This will be passed to the native MetalContext
-        // initialization, which will load the shader library for each device.
         try {
+            final String shaderLibName = "msl/jfxshaders.metallib";
+            final Class<?> clazz = Class.forName("com.sun.prism.mtl.MTLContext");
+
+            // Get the native shader library as a stream resource and read it into
+            // an NIO ByteBuffer. This will be passed to the native MetalContext
+            // initialization, which will load the shader library for each device.
             try (var in = new BufferedInputStream(clazz.getResourceAsStream(shaderLibName))) {
                 byte[] data = in.readAllBytes();
                 shaderLibBuffer = ByteBuffer.allocateDirect(data.length);
                 shaderLibBuffer.put(data);
             }
-        } catch (IOException ex) {
+        } catch (ClassNotFoundException | IOException ex) {
             throw new RuntimeException(ex);
         }
     }
@@ -209,25 +209,18 @@ class MTLContext extends BaseShaderContext {
         int wrapMode;
         if (tex != null) {
             linear = tex.getLinearFiltering();
-            switch (tex.getWrapMode()) {
-                case CLAMP_NOT_NEEDED:
-                    wrapMode = MTL_SAMPLER_ADDR_MODE_NOP;
-                    break;
-                case CLAMP_TO_EDGE:
-                case CLAMP_TO_EDGE_SIMULATED:
-                case CLAMP_TO_ZERO_SIMULATED:
-                    wrapMode = MTL_SAMPLER_ADDR_MODE_CLAMP_TO_EDGE;
-                    break;
-                case CLAMP_TO_ZERO:
-                    wrapMode = MTL_SAMPLER_ADDR_MODE_CLAMP_TO_ZERO;
-                    break;
-                case REPEAT:
-                case REPEAT_SIMULATED:
-                    wrapMode = MTL_SAMPLER_ADDR_MODE_REPEAT;
-                    break;
-                default:
-                    throw new InternalError("Unrecognized wrap mode: " + tex.getWrapMode());
-            }
+            wrapMode = switch (tex.getWrapMode()) {
+                case CLAMP_NOT_NEEDED -> MTL_SAMPLER_ADDR_MODE_NOP;
+
+                case CLAMP_TO_EDGE,
+                     CLAMP_TO_EDGE_SIMULATED,
+                     CLAMP_TO_ZERO_SIMULATED -> MTL_SAMPLER_ADDR_MODE_CLAMP_TO_EDGE;
+
+                case CLAMP_TO_ZERO -> MTL_SAMPLER_ADDR_MODE_CLAMP_TO_ZERO;
+
+                case REPEAT,
+                     REPEAT_SIMULATED -> MTL_SAMPLER_ADDR_MODE_REPEAT;
+            };
             MTLShader.setTexture(texUnit, tex, linear, wrapMode);
         }
     }
@@ -275,31 +268,13 @@ class MTLContext extends BaseShaderContext {
 
     @Override
     protected void updateCompositeMode(CompositeMode mode) {
-        int mtlCompMode;
-        switch (mode) {
-            case CLEAR:
-                mtlCompMode = MTL_COMPMODE_CLEAR;
-                break;
-
-            case SRC:
-                mtlCompMode = MTL_COMPMODE_SRC;
-                break;
-
-            case SRC_OVER:
-                mtlCompMode = MTL_COMPMODE_SRCOVER;
-                break;
-
-            case DST_OUT:
-                mtlCompMode = MTL_COMPMODE_DSTOUT;
-                break;
-
-            case ADD:
-                mtlCompMode = MTL_COMPMODE_ADD;
-                break;
-
-            default:
-                throw new InternalError("Unrecognized composite mode: " + mode);
-        }
+        int mtlCompMode = switch (mode) {
+            case CLEAR    -> MTL_COMPMODE_CLEAR;
+            case SRC      -> MTL_COMPMODE_SRC;
+            case SRC_OVER -> MTL_COMPMODE_SRCOVER;
+            case DST_OUT  -> MTL_COMPMODE_DSTOUT;
+            case ADD      -> MTL_COMPMODE_ADD;
+        };
         nSetCompositeMode(getContextHandle(), mtlCompMode);
     }
 
@@ -311,8 +286,8 @@ class MTLContext extends BaseShaderContext {
         // to resolve MSAA texture into non-MSAA texture, because in case of Metal
         // we resolve the texture while rendering itself,
         // implement or change in future if necessary
-        long dstNativeHandle = dstRTT == null ? 0L : ((MTLTexture)dstRTT).getNativeHandle();
-        long srcNativeHandle = ((MTLTexture<?>)srcRTT).getNativeHandle();
+        long dstNativeHandle = (dstRTT instanceof MTLTexture mtl) ? mtl.getNativeHandle() : 0L;
+        long srcNativeHandle = (srcRTT instanceof MTLTexture mtl) ? mtl.getNativeHandle() : 0L;
         nBlit(pContext, srcNativeHandle, dstNativeHandle,
             srcX0, srcY0, srcX1, srcY1,
             dstX0, dstY0, dstX1, dstY1);
