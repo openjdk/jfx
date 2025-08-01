@@ -148,7 +148,7 @@ class MTLPhongMaterial extends BasePhongMaterial {
 
         @Override
         public void dispose() {
-            if (nativeHandle != 0L) {
+            if (nativeHandle != 0L && !context.isDisposed()) {
                 traceDispose();
                 context.releaseMTLPhongMaterial(nativeHandle);
                 nativeHandle = 0L;

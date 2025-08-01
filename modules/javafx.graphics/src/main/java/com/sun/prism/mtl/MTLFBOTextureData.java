@@ -32,7 +32,7 @@ class MTLFBOTextureData extends MTLTextureData {
 
     @Override
     public void dispose() {
-        if (pTexture != 0L) {
+        if (pTexture != 0L && !mtlContext.isDisposed()) {
             if (mtlContext.isCurrentRTT(pTexture)) {
                 mtlContext.flushVertexBuffer();
             }

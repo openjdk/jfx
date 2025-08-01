@@ -124,7 +124,7 @@ class MTLMeshView extends BaseMeshView {
 
         @Override
         public void dispose() {
-            if (nativeHandle != 0L) {
+            if (nativeHandle != 0L && !context.isDisposed()) {
                 traceDispose();
                 context.releaseMTLMeshView(nativeHandle);
                 nativeHandle = 0L;
