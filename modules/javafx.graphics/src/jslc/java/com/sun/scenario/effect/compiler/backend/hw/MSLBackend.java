@@ -169,11 +169,6 @@ public class MSLBackend extends SLBackend {
         "ddy",     "dfdy",
         "intcast", "int");
 
-    // Set of functions apart from CoreSymbols.getFunctions(), that are used by our fragment shaders.
-    private static final Set<String> libraryFunctionsUsedInShader = Set.of(
-        "min", "max", "mix", "pow", "normalize", "abs", "fract",
-        "dot", "clamp", "sqrt", "ceil", "floor", "sign", "sampleTex");
-
     public MSLBackend(JSLParser parser, JSLVisitor visitor) {
         super(parser, visitor);
     }
@@ -213,8 +208,7 @@ public class MSLBackend extends SLBackend {
             if (first) {
                 // For every user defined function, pass reference to 4 samplers and
                 // reference to the uniforms struct.
-                if (!CoreSymbols.getFunctions().contains(getFuncName(e.getFunction().getName())) &&
-                        !libraryFunctionsUsedInShader.contains(getFuncName(e.getFunction().getName()))) {
+                if (!CoreSymbols.getFunctions().contains(e.getFunction())) {
                     output("sampler0, sampler1, sampler2, sampler3, uniforms, ");
                 }
                 first = false;
@@ -235,8 +229,7 @@ public class MSLBackend extends SLBackend {
         for (Param param : func.getParams()) {
             if (first) {
                 // Add 4 sampler variables and "device <Uniforms>& uniforms" as the parameter to all user defined functions.
-                if (!CoreSymbols.getFunctions().contains(getFuncName(d.getFunction().getName())) &&
-                        !libraryFunctionsUsedInShader.contains(getFuncName(d.getFunction().getName()))) {
+                if (!CoreSymbols.getFunctions().contains(d.getFunction())) {
                     output("sampler sampler0, sampler sampler1, sampler sampler2, sampler sampler3, device " + uniformStructName + "& uniforms,\n");
                 }
                 first = false;
@@ -459,6 +452,7 @@ public class MSLBackend extends SLBackend {
                     sampleTexFuncName + "(" + entry.getValue() + ", uniforms." + entry.getKey());
             }
         }
+        // Remove the un-required samplers out of the 4 samplers added to all user defined functions
         for (int i = texSamplerMap.size(); i < 4; i++) {
             shader = shader.replaceAll("sampler sampler" + i + ", ", "");
             shader = shader.replaceAll("sampler" + i + ", ", "");
