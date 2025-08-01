@@ -36,7 +36,9 @@ import javafx.beans.property.DoubleProperty;
 import javafx.geometry.HPos;
 import javafx.geometry.VPos;
 import javafx.scene.Node;
+import javafx.scene.Parent;
 import javafx.scene.control.Control;
+import javafx.scene.control.IndexedCell;
 import javafx.scene.control.TreeCell;
 import javafx.scene.control.TreeItem;
 import javafx.scene.control.TreeView;
@@ -219,6 +221,21 @@ public class TreeCellSkin<T> extends CellSkinBase<TreeCell<T>> {
                 disclosureWidth = disclosureNode.prefWidth(h);
                 if (disclosureWidth > defaultDisclosureWidth) {
                     maxDisclosureWidthMap.put(tree, disclosureWidth);
+
+                    int indexWithDisclosureNode = getSkinnable().getIndex();
+                    VirtualFlow<?> flow = getVirtualFlow();
+                    if (flow != null) {
+                        for (IndexedCell cell : flow.cells) {
+                            if (cell != null) {
+                                if (cell.getIndex() >= indexWithDisclosureNode) {
+                                    break;
+                                } else if (!cell.isEmpty()) {
+                                    cell.requestLayout();
+                                    cell.layout();
+                                }
+                            }
+                        }
+                    }
                 }
 
                 double ph = disclosureNode.prefHeight(disclosureWidth);
@@ -244,6 +261,17 @@ public class TreeCellSkin<T> extends CellSkinBase<TreeCell<T>> {
         }
 
         layoutLabelInArea(x, y, w, h);
+    }
+
+    VirtualFlow<?> getVirtualFlow() {
+        Parent p = getSkinnable();
+        while (p != null) {
+            if (p instanceof VirtualFlow vf) {
+                return vf;
+            }
+            p = p.getParent();
+        }
+        return null;
     }
 
     /** {@inheritDoc} */
@@ -331,8 +359,6 @@ public class TreeCellSkin<T> extends CellSkinBase<TreeCell<T>> {
     }
 
     private void updateDisclosureNode() {
-        if (getSkinnable().isEmpty()) return;
-
         Node disclosureNode = getSkinnable().getDisclosureNode();
         if (disclosureNode == null) return;
 

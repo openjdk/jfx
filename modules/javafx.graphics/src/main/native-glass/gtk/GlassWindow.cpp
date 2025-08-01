@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2023, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -40,6 +40,9 @@ static WindowFrameType glass_mask_to_window_frame_type(jint mask) {
     }
     if (mask & com_sun_glass_ui_gtk_GtkWindow_TITLED) {
         return TITLED;
+    }
+    if (mask & com_sun_glass_ui_gtk_GtkWindow_EXTENDED) {
+        return EXTENDED;
     }
     return UNTITLED;
 }
@@ -377,6 +380,23 @@ JNIEXPORT jboolean JNICALL Java_com_sun_glass_ui_gtk_GtkWindow__1setMinimumSize
 
 /*
  * Class:     com_sun_glass_ui_gtk_GtkWindow
+ * Method:    _setSystemMinimumSize
+ * Signature: (JII)Z
+ */
+JNIEXPORT jboolean JNICALL Java_com_sun_glass_ui_gtk_GtkWindow__1setSystemMinimumSize
+  (JNIEnv * env, jobject obj, jlong ptr, jint w, jint h)
+{
+    (void)env;
+    (void)obj;
+
+    WindowContext* ctx = JLONG_TO_WINDOW_CTX(ptr);
+    if (w < 0 || h < 0) return JNI_FALSE;
+    ctx->set_system_minimum_size(w, h);
+    return JNI_TRUE;
+}
+
+/*
+ * Class:     com_sun_glass_ui_gtk_GtkWindow
  * Method:    _setMaximumSize
  * Signature: (JII)Z
  */
@@ -447,52 +467,6 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_gtk_GtkWindow__1toBack
 }
 
 /*
- * Class:     com_sun_glass_ui_gtk_GtkWindow
- * Method:    _enterModal
- * Signature: (J)V
- */
-JNIEXPORT void JNICALL Java_com_sun_glass_ui_gtk_GtkWindow__1enterModal
-  (JNIEnv * env, jobject obj, jlong ptr)
-{
-    (void)env;
-    (void)obj;
-
-    WindowContext* ctx = JLONG_TO_WINDOW_CTX(ptr);
-    ctx->set_modal(true);
-}
-
-/*
- * Class:     com_sun_glass_ui_gtk_GtkWindow
- * Method:    _enterModalWithWindow
- * Signature: (JJ)V
- */
-JNIEXPORT void JNICALL Java_com_sun_glass_ui_gtk_GtkWindow__1enterModalWithWindow
-  (JNIEnv * env, jobject obj, jlong ptrDialog, jlong ptrWindow)
-{
-    (void)env;
-    (void)obj;
-
-    WindowContext* ctx = JLONG_TO_WINDOW_CTX(ptrDialog);
-    WindowContext* parent_ctx = JLONG_TO_WINDOW_CTX(ptrWindow);
-    ctx->set_modal(true, parent_ctx);
-}
-
-/*
- * Class:     com_sun_glass_ui_gtk_GtkWindow
- * Method:    _exitModal
- * Signature: (J)V
- */
-JNIEXPORT void JNICALL Java_com_sun_glass_ui_gtk_GtkWindow__1exitModal
-  (JNIEnv * env, jobject obj, jlong ptr)
-{
-    (void)env;
-    (void)obj;
-
-    WindowContext* ctx = JLONG_TO_WINDOW_CTX(ptr);
-    ctx->set_modal(false);
-}
-
-/*
  * Class:     com_sun_glass_ui_gtk_GtkCursor
  * Method:    _setCursorType
  * Signature: (JI)V
@@ -522,6 +496,21 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_gtk_GtkWindow__1setCustomCursor
     GdkCursor *cursor = (GdkCursor*)JLONG_TO_PTR(env->GetLongField(jCursor, jCursorPtr));
 
     ctx->set_cursor(cursor);
+}
+
+/*
+ * Class:     com_sun_glass_ui_gtk_GtkWindow
+ * Method:    _showSystemMenu
+ * Signature: (JII)V
+ */
+JNIEXPORT void JNICALL Java_com_sun_glass_ui_gtk_GtkWindow__1showSystemMenu
+    (JNIEnv * env, jobject obj, jlong ptr, jint x, jint y)
+{
+    (void)env;
+    (void)obj;
+
+    WindowContext* ctx = JLONG_TO_WINDOW_CTX(ptr);
+    ctx->show_system_menu(x, y);
 }
 
 /*

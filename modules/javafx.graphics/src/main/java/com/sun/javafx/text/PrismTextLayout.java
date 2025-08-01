@@ -31,8 +31,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Hashtable;
 import java.util.concurrent.atomic.AtomicBoolean;
-import javafx.scene.shape.LineTo;
-import javafx.scene.shape.MoveTo;
+import javafx.scene.layout.Region;
 import javafx.scene.shape.PathElement;
 import com.sun.javafx.font.CharToGlyphMapper;
 import com.sun.javafx.font.FontResource;
@@ -48,7 +47,9 @@ import com.sun.javafx.geom.Shape;
 import com.sun.javafx.geom.transform.BaseTransform;
 import com.sun.javafx.geom.transform.Translate2D;
 import com.sun.javafx.scene.text.GlyphList;
+import com.sun.javafx.scene.text.TabAdvancePolicy;
 import com.sun.javafx.scene.text.TextLayout;
+import com.sun.javafx.scene.text.TextLine;
 import com.sun.javafx.scene.text.TextSpan;
 
 /**
@@ -82,7 +83,7 @@ public class PrismTextLayout implements TextLayout {
     private LayoutCache layoutCache;
     private Shape shape;
     private int flags;
-    private int tabSize = DEFAULT_TAB_SIZE;
+    private TabAdvancePolicy tabAdvancePolicy;
 
     public PrismTextLayout(int maxCacheSize) {
         this.maxCacheSize = maxCacheSize;
@@ -235,7 +236,7 @@ public class PrismTextLayout implements TextLayout {
     }
 
     @Override
-    public com.sun.javafx.scene.text.TextLine[] getLines() {
+    public TextLine[] getLines() {
         ensureLayout();
         return lines;
     }
@@ -314,8 +315,7 @@ public class PrismTextLayout implements TextLayout {
     }
 
     @Override
-    public PathElement[] getCaretShape(int offset, boolean isLeading,
-                                       float x, float y) {
+    public TextLayout.CaretGeometry getCaretGeometry(int offset, boolean isLeading) {
         ensureLayout();
         int lineIndex = 0;
         int lineCount = getLineCount();
@@ -386,8 +386,7 @@ public class PrismTextLayout implements TextLayout {
         if (isMirrored()) {
             lineX = getMirroringWidth() - lineX;
         }
-        lineX += x;
-        lineY += y;
+
         if (splitCaretOffset != -1) {
             for (int i = 0; i < runs.length; i++) {
                 TextRun run = runs[i];
@@ -405,21 +404,23 @@ public class PrismTextLayout implements TextLayout {
                         if (isMirrored()) {
                             lineX2 = getMirroringWidth() - lineX2;
                         }
-                        lineX2 += x;
-                        PathElement[] result = new PathElement[4];
-                        result[0] = new MoveTo(lineX, lineY);
-                        result[1] = new LineTo(lineX, lineY + lineHeight / 2);
-                        result[2] = new MoveTo(lineX2, lineY + lineHeight / 2);
-                        result[3] = new LineTo(lineX2, lineY + lineHeight);
-                        return result;
+                        // split caret
+                        return new TextLayout.CaretGeometry.Split(
+                            lineX,
+                            lineY,
+                            lineX2,
+                            lineHeight
+                        );
                     }
                 }
             }
         }
-        PathElement[] result = new PathElement[2];
-        result[0] = new MoveTo(lineX, lineY);
-        result[1] = new LineTo(lineX, lineY + lineHeight);
-        return result;
+        // regular caret
+        return new TextLayout.CaretGeometry.Single(
+            lineX,
+            lineY,
+            lineHeight
+        );
     }
 
     @Override
@@ -482,8 +483,7 @@ public class PrismTextLayout implements TextLayout {
     }
 
     @Override
-    public PathElement[] getRange(int start, int end, int type,
-                                  float x, float y) {
+    public void getRange(int start, int end, int type, GeometryCallback client) {
         ensureLayout();
         int lineCount = getLineCount();
         ArrayList<PathElement> result = new ArrayList<>();
@@ -579,11 +579,7 @@ public class PrismTextLayout implements TextLayout {
                                 l = width - l;
                                 r = width - r;
                             }
-                            result.add(new MoveTo(x + l,  y + top));
-                            result.add(new LineTo(x + r, y + top));
-                            result.add(new LineTo(x + r, y + bottom));
-                            result.add(new LineTo(x + l,  y + bottom));
-                            result.add(new LineTo(x + l,  y + top));
+                            client.addRectangle(l, top, r, bottom);
                         }
                         left = runLeft;
                         right = runRight;
@@ -596,11 +592,7 @@ public class PrismTextLayout implements TextLayout {
                             l = width - l;
                             r = width - r;
                         }
-                        result.add(new MoveTo(x + l,  y + top));
-                        result.add(new LineTo(x + r, y + top));
-                        result.add(new LineTo(x + r, y + bottom));
-                        result.add(new LineTo(x + l,  y + bottom));
-                        result.add(new LineTo(x + l,  y + top));
+                        client.addRectangle(l, top, r, bottom);
                     }
                 }
                 lineX += runWidth;
@@ -608,7 +600,6 @@ public class PrismTextLayout implements TextLayout {
             }
             lineY += lineBounds.getHeight() + spacing;
         }
-        return result.toArray(new PathElement[result.size()]);
     }
 
     @Override
@@ -687,12 +678,13 @@ public class PrismTextLayout implements TextLayout {
     }
 
     @Override
-    public boolean setTabSize(int spaces) {
-        if (spaces < 1) {
-            spaces = 1;
+    public boolean setTabAdvancePolicy(int tabSize, TabAdvancePolicy policy) {
+        if (policy == null) {
+            float spaceAdvance = getSpaceAdvance();
+            policy = new FixedTabAdvancePolicy(tabSize, spaceAdvance);
         }
-        if (tabSize != spaces) {
-            tabSize = spaces;
+        if (tabAdvancePolicy == null || (!tabAdvancePolicy.equals(policy))) {
+            tabAdvancePolicy = policy;
             relayout();
             return true;
         }
@@ -1082,23 +1074,21 @@ public class PrismTextLayout implements TextLayout {
         }
     }
 
-    private float getTabAdvance() {
-        float spaceAdvance = 0;
+    private float getSpaceAdvance() {
         if (spans != null) {
-            /* Rich text case - use the first font (for now) */
+            // TextFlow case - use the first font
             for (int i = 0; i < spans.length; i++) {
                 TextSpan span = spans[i];
                 PGFont font = (PGFont)span.getFont();
                 if (font != null) {
                     FontStrike strike = font.getStrike(IDENTITY);
-                    spaceAdvance = strike.getCharAdvance(' ');
-                    break;
+                    return strike.getCharAdvance(' ');
                 }
             }
+            return 0.0f;
         } else {
-            spaceAdvance = strike.getCharAdvance(' ');
+            return strike.getCharAdvance(' ');
         }
-        return tabSize * spaceAdvance;
     }
 
     /*
@@ -1209,9 +1199,10 @@ public class PrismTextLayout implements TextLayout {
             layout = glyphLayout();
         }
 
-        float tabAdvance = 0;
         if ((flags & FLAGS_HAS_TABS) != 0) {
-            tabAdvance = getTabAdvance();
+            if (tabAdvancePolicy == null) {
+                setTabAdvancePolicy(TextLayout.DEFAULT_TAB_SIZE, null);
+            }
         }
 
         BreakIterator boundary = null;
@@ -1241,12 +1232,20 @@ public class PrismTextLayout implements TextLayout {
         float lineWidth = 0;
         int startIndex = 0;
         int startOffset = 0;
+        float layoutShift = Float.NaN;
         ArrayList<PrismTextLine> linesList = new ArrayList<>();
         for (int i = 0; i < runCount; i++) {
             TextRun run = runs[i];
             shape(run, chars, layout);
+
             if (run.isTab()) {
-                float tabStop = ((int)(lineWidth / tabAdvance) +1) * tabAdvance;
+                if (Float.isNaN(layoutShift)) {
+                    layoutShift = computeLayoutShift(run.getTextSpan());
+                }
+                float tabStop = tabAdvancePolicy.nextTabStop(layoutShift, lineWidth);
+                if (tabStop <= 0.0f) {
+                    tabStop = lineWidth + getSpaceAdvance();
+                }
                 run.setWidth(tabStop - lineWidth);
             }
 
@@ -1666,5 +1665,16 @@ public class PrismTextLayout implements TextLayout {
             }
         }
         line.setSideBearings(lsb, rsb);
+    }
+
+    private float computeLayoutShift(TextSpan span) {
+        if (span != null) {
+            Region root = span.getLayoutRootRegion();
+            if (root != null) {
+                // TODO ltr
+                return -(float)root.snappedLeftInset();
+            }
+        }
+        return 0.0f;
     }
 }

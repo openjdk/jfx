@@ -50,7 +50,7 @@ public class MacPasteboardTest {
 
     @BeforeAll
     public static void setup() throws Exception {
-        if (PlatformUtil.isMac()) {
+        if (PlatformUtil.isMac() && !PlatformUtil.isHeadless()) {
             Platform.startup(() -> {
                 macPasteboardShim = new MacPasteboardShim();
                 startupLatch.countDown();
@@ -60,14 +60,14 @@ public class MacPasteboardTest {
 
     @AfterAll
     public static void teardown() {
-        if (PlatformUtil.isMac()) {
+        if (PlatformUtil.isMac() && !PlatformUtil.isHeadless()) {
             Platform.exit();
         }
     }
 
     @Test
     public void testValidLocalImageURLMacPasteboard() throws Exception {
-        assumeTrue(PlatformUtil.isMac());
+        assumeTrue(PlatformUtil.isMac() && !PlatformUtil.isHeadless());
         final String localImage = getClass().getResource("blue.png").toURI().toURL().toString();
         runAndWait(() -> {
             macPasteboardShim.pushMacPasteboard(new HashMap<>(Map.of(Clipboard.URI_TYPE, localImage)));
@@ -82,7 +82,7 @@ public class MacPasteboardTest {
 
     @Test
     public void testDataBase64ImageMacPasteboard() {
-        assumeTrue(PlatformUtil.isMac());
+        assumeTrue(PlatformUtil.isMac() && !PlatformUtil.isHeadless());
         final String encodedImage = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABQAAAAKCAIAAAA7N+mxAAAAAXNSR0IArs4c6QAAAAR"
                 + "nQU1BAACxjwv8YQUAAAAJcEhZcwAADsMAAA7DAcdvqGQAAAAcSURBVChTY/jPwADBZACyNMHAqGYSwZDU/P8/ABieT81GAGKoAAAAAElFTkSuQmCC";
         runAndWait(() -> {
@@ -94,7 +94,7 @@ public class MacPasteboardTest {
 
     @Test
     public void testNotAnImageURLMacPasteboard() {
-        assumeTrue(PlatformUtil.isMac());
+        assumeTrue(PlatformUtil.isMac() && !PlatformUtil.isHeadless());
         final String invalidImage = "not.an.image.url";
         runAndWait(() -> {
             macPasteboardShim.pushMacPasteboard(new HashMap<>(Map.of(Clipboard.URI_TYPE, invalidImage)));
