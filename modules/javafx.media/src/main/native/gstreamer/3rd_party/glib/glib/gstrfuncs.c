@@ -1627,29 +1627,6 @@ g_ascii_strup (const gchar *str,
 }
 
 /**
- * g_str_is_ascii:
- * @str: a string
- *
- * Determines if a string is pure ASCII. A string is pure ASCII if it
- * contains no bytes with the high bit set.
- *
- * Returns: true if @str is ASCII
- *
- * Since: 2.40
- */
-gboolean
-g_str_is_ascii (const gchar *str)
-{
-  gsize i;
-
-  for (i = 0; str[i]; i++)
-    if (str[i] & 0x80)
-      return FALSE;
-
-  return TRUE;
-}
-
-/**
  * g_strdown:
  * @string: the string to convert
  *
@@ -2232,14 +2209,14 @@ out:
  * It replaces the following special characters in the string @source
  * with their corresponding C escape sequence:
  *
- *  Symbol | Escape
- * ---|---
- *  [U+0008 Backspace](https://en.wikipedia.org/wiki/Backspace) | `\b`
- *  [U+000C Form Feed](https://en.wikipedia.org/wiki/Form_feed) | `\f`
- *  [U+000A Line Feed](https://en.wikipedia.org/wiki/Newline) | `\n`
- *  [U+000D Carriage Return](https://en.wikipedia.org/wiki/Carriage_return) | `\r`
- *  [U+0009 Horizontal Tabulation](https://en.wikipedia.org/wiki/Tab_character) | `\t`
- *  [U+000B Vertical Tabulation](https://en.wikipedia.org/wiki/Vertical_Tab) | `\v`
+ * | Symbol                                                                      | Escape |
+ * |-----------------------------------------------------------------------------|--------|
+ * | [U+0008 Backspace](https://en.wikipedia.org/wiki/Backspace)                 | `\b`   |
+ * | [U+000C Form Feed](https://en.wikipedia.org/wiki/Form_feed)                 | `\f`   |
+ * | [U+000A Line Feed](https://en.wikipedia.org/wiki/Newline)                   | `\n`   |
+ * | [U+000D Carriage Return](https://en.wikipedia.org/wiki/Carriage_return)     | `\r`   |
+ * | [U+0009 Horizontal Tabulation](https://en.wikipedia.org/wiki/Tab_character) | `\t`   |
+ * | [U+000B Vertical Tabulation](https://en.wikipedia.org/wiki/Vertical_Tab)    | `\v`   |
  *
  * It also inserts a backslash (`\`) before any backslash or a double quote (`"`).
  * Additionally all characters in the range 0x01-0x1F (everything
@@ -3298,10 +3275,6 @@ g_strv_contains (const gchar * const *strv,
  *
  * Checks if two arrays of strings contain exactly the same elements in
  * exactly the same order.
- *
- * Elements are compared using [func@GLib.str_equal]. To match independently
- * of order, sort the arrays first (using [func@GLib.qsort_with_data]
- * or similar).
  *
  * Elements are compared using [func@GLib.str_equal]. To match independently
  * of order, sort the arrays first (using [func@GLib.qsort_with_data]

@@ -24,7 +24,10 @@
 # define WINVER 0x0500
 #endif
 
-#define STRICT
+#ifndef STRICT
+# define STRICT
+#endif
+
 #include <windows.h>
 #include <errno.h>
 #include <string.h>
