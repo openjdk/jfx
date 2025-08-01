@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -23,28 +23,31 @@
  * questions.
  */
 
-#import <OpenGL/gl.h>
-#import <OpenGL/OpenGL.h>
-
 #import "GlassOffscreen.h"
 
-@interface GlassLayer3D : CAOpenGLLayer
+@interface GlassLayer : CALayer
 {
-    GlassOffscreen *_glassOffscreen;
-    GlassOffscreen *_painterOffscreen;
-
+    GlassOffscreen *painterOffScreen;
+    GlassOffscreen *glassOffScreen;
     BOOL isHiDPIAware;
 }
 
-- (id)initWithSharedContext:(CGLContextObj)ctx
-           andClientContext:(CGLContextObj)clCtx
-             withHiDPIAware:(BOOL)HiDPIAware
-             withIsSwPipe:(BOOL)isSwPipe;
+- (id)initGlassLayer:(NSObject*)ctx
+    andClientContext:(NSObject*)clCtx
+         mtlQueuePtr:(long)mtlCommandQueuePtr
+      withHiDPIAware:(BOOL)HiDPIAware
+        withIsSwPipe:(BOOL)isSwPipe;
 
 - (GlassOffscreen*)getPainterOffscreen;
-- (GlassOffscreen*)getGlassOffscreen;
-- (void)hostOffscreen:(GlassOffscreen*)offscreen;
-- (void)flush;
+- (void)bindForWidth:(unsigned int)width
+           andHeight:(unsigned int)height;
+- (void)end;
+- (void)pushPixels:(void*)pixels
+         withWidth:(unsigned int)width
+        withHeight:(unsigned int)height
+        withScaleX:(float)scalex
+        withScaleY:(float)scaley
+            ofView:(NSView*)view;
 
 - (void)notifyScaleFactorChanged:(CGFloat)scale;
 
