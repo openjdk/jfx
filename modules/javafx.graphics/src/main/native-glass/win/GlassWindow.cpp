@@ -383,17 +383,17 @@ LRESULT GlassWindow::WindowProc(UINT msg, WPARAM wParam, LPARAM lParam)
         case WM_ACTIVATE:
             {
                 // The fActive shouldn't be WA_INACTIVE && the window shouldn't be minimized:
-                const bool isFocusGained = LOWORD(wParam) != WA_INACTIVE && HIWORD(wParam) == 0;
+                const bool isActive = LOWORD(wParam) != WA_INACTIVE && HIWORD(wParam) == 0;
 
                 if (IsInFullScreenMode()) {
-                    HWND hWndInsertAfter = isFocusGained ? HWND_TOPMOST : HWND_BOTTOM;
+                    HWND hWndInsertAfter = isActive ? HWND_TOPMOST : HWND_BOTTOM;
                     ::SetWindowPos(GetHWND(), hWndInsertAfter, 0, 0, 0, 0,
                             SWP_ASYNCWINDOWPOS | SWP_NOACTIVATE | SWP_NOMOVE | SWP_NOOWNERZORDER | SWP_NOSIZE);
                 }
                 if (!GetDelegateWindow()) {
-                    HandleActivateEvent(isFocusGained ?
-                            com_sun_glass_events_WindowEvent_FOCUS_GAINED :
-                            com_sun_glass_events_WindowEvent_FOCUS_LOST);
+                    HandleActivateEvent(isActive ?
+                         com_sun_glass_events_WindowEvent_FOCUS_GAINED :
+                         com_sun_glass_events_WindowEvent_FOCUS_LOST);
                 }
             }
             // Let the DefWindowProc() set the focus to this window
@@ -411,12 +411,12 @@ LRESULT GlassWindow::WindowProc(UINT msg, WPARAM wParam, LPARAM lParam)
             break;
         case WM_SETFOCUS:
             if (!GetDelegateWindow()) {
-                SetFocused(true);
+                HandleFocusEvent(com_sun_glass_events_WindowEvent_FOCUS_GAINED);
             }
             break;
         case WM_KILLFOCUS:
             if (!GetDelegateWindow()) {
-                SetFocused(false);
+                HandleFocusEvent(com_sun_glass_events_WindowEvent_FOCUS_LOST);
             }
             break;
         case WM_GETMINMAXINFO:
@@ -810,11 +810,22 @@ void GlassWindow::HandleSizeEvent(int type, RECT *pRect)
 
 void GlassWindow::HandleActivateEvent(jint event)
 {
-    const bool active = event != com_sun_glass_events_WindowEvent_FOCUS_LOST;
+    const bool focus = event != com_sun_glass_events_WindowEvent_FOCUS_LOST;
 
-    if (!active) {
+    if (!focus) {
         UngrabFocus();
     }
+
+    HandleFocusEvent(event);
+}
+
+void GlassWindow::HandleFocusEvent(jint event)
+{
+    const bool focus = event != com_sun_glass_events_WindowEvent_FOCUS_LOST;
+
+    if (focus == m_isFocused) return;
+
+    SetFocused(focus);
 
     JNIEnv* env = GetEnv();
     env->CallVoidMethod(m_grefThis, javaIDs.Window.notifyFocus, event);
@@ -1869,13 +1880,15 @@ JNIEXPORT jboolean JNICALL Java_com_sun_glass_ui_win_WinWindow__1setVisible
             }
         }
 
-
-        ::ShowWindow(hWnd, visible ? SW_SHOW : SW_HIDE);
+        ::ShowWindow(hWnd, visible ? SW_SHOWNA : SW_HIDE);
 
         if (visible) {
             if (pWindow) {
                 if (pWindow->IsFocusable()) {
-                    ::SetForegroundWindow(hWnd);
+                    BOOL success = ::SetForegroundWindow(hWnd);
+                    if (success == FALSE) {
+                        pWindow->HandleFocusEvent(com_sun_glass_events_WindowEvent_FOCUS_LOST);
+                    }
                 } else {
                     // JDK-8112905:
                     // On some latest platform versions, unfocusable windows
