@@ -119,9 +119,6 @@ public class RestoreStagePositionTest {
 
     @Test
     public void testDemaximizedPosition() throws Exception {
-        // Disable on Mac until JDK-8089230 is fixed
-        assumeTrue(!PlatformUtil.isMac());
-
         Thread.sleep(200);
         Assertions.assertTrue(stage.isShowing());
         Assertions.assertFalse(stage.isMaximized());
@@ -129,8 +126,8 @@ public class RestoreStagePositionTest {
         double x = stage.getX();
         double y = stage.getY();
 
-        Platform.runLater(() -> stage.setMaximized(true));
-        Thread.sleep(200);
+        Util.runAndWait(() -> stage.setMaximized(true));
+        Util.waitForIdle(stage.getScene());
         Assertions.assertTrue(stage.isMaximized());
         CountDownLatch latch = new CountDownLatch(2);
 
