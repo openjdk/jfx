@@ -31,4 +31,8 @@ public interface MenuBarDelegate {
     // removes a submenu at {@code pos} which delegate is {@code menu} parameter
     public boolean remove(MenuDelegate menu, int pos);
     public long getNativeMenu();
+    // Returns true if the key event was processed
+    public default boolean handleKeyEvent(int code, int modifiers) {
+        return false;
+    }
 }

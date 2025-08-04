@@ -28,7 +28,7 @@ package com.sun.javafx.tk;
 import java.util.List;
 
 import com.sun.javafx.menu.MenuBase;
-
+import javafx.scene.input.KeyEvent;
 
 /**
  * We use this interface to access the Glass native system menu
@@ -45,4 +45,5 @@ public interface TKSystemMenu {
 
     public void setMenus(List<MenuBase> menus);
 
+    public void handleKeyEvent(KeyEvent event);
 }

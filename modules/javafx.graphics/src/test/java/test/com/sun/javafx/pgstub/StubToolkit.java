@@ -960,6 +960,10 @@ public class StubToolkit extends Toolkit {
             this.menus = menus;
         }
 
+        @Override
+        public void handleKeyEvent(KeyEvent keyEvent) {
+        }
+
         // make menus accessible to unit tests
         public List<MenuBase> getMenus() {
             return menus;
