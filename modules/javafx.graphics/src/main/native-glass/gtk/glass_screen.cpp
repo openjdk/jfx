@@ -209,10 +209,12 @@ jobjectArray rebuild_screens(JNIEnv* env) {
     JNI_EXCEPTION_TO_CPP(env)
     LOG1("Available monitors: %d\n", n_monitors)
 
-    int i;
-    for (i=0; i < n_monitors; i++) {
-        env->SetObjectArrayElement(jscreens, i, createJavaScreen(env, default_gdk_screen, i));
-        JNI_EXCEPTION_TO_CPP(env)
+    if (jscreens != NULL) {
+        int i;
+        for (i=0; i < n_monitors; i++) {
+            env->SetObjectArrayElement(jscreens, i, createJavaScreen(env, default_gdk_screen, i));
+            JNI_EXCEPTION_TO_CPP(env)
+        }
     }
 
     return jscreens;

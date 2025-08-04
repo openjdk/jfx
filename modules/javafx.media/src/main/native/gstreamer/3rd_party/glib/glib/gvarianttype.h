@@ -36,7 +36,7 @@ typedef struct _GVariantType GVariantType;
 /**
  * G_VARIANT_TYPE_BOOLEAN:
  *
- * The type of a value that can be either %TRUE or %FALSE.
+ * The type of a value that can be either true or false.
  **/
 #define G_VARIANT_TYPE_BOOLEAN              ((const GVariantType *) "b")
 
@@ -58,6 +58,7 @@ typedef struct _GVariantType GVariantType;
  * G_VARIANT_TYPE_UINT16:
  *
  * The type of an integer value that can range from 0 to 65535.
+ *
  * There were about this many people living in Toronto in the 1870s.
  **/
 #define G_VARIANT_TYPE_UINT16               ((const GVariantType *) "q")
@@ -74,7 +75,8 @@ typedef struct _GVariantType GVariantType;
  * G_VARIANT_TYPE_UINT32:
  *
  * The type of an integer value that can range from 0 to 4294967295.
- * That's one number for everyone who was around in the late 1970s.
+ *
+ * That’s one number for everyone who was around in the late 1970s.
  **/
 #define G_VARIANT_TYPE_UINT32               ((const GVariantType *) "u")
 
@@ -90,18 +92,21 @@ typedef struct _GVariantType GVariantType;
  * G_VARIANT_TYPE_UINT64:
  *
  * The type of an integer value that can range from 0
- * to 18446744073709551615 (inclusive).  That's a really big number,
- * but a Rubik's cube can have a bit more than twice as many possible
- * positions.
+ * to 18446744073709551615 (inclusive).
+ *
+ * That’s a really big number, but a Rubik’s cube can have a bit more than
+ * twice as many possible positions.
  **/
 #define G_VARIANT_TYPE_UINT64               ((const GVariantType *) "t")
 
 /**
  * G_VARIANT_TYPE_DOUBLE:
  *
- * The type of a double precision IEEE754 floating point number.
- * These guys go up to about 1.80e308 (plus and minus) but miss out on
- * some numbers in between.  In any case, that's far greater than the
+ * The type of a double precision
+ * [IEEE 754 floating point number](https://en.wikipedia.org/wiki/IEEE_754).
+ *
+ * These go up to about 1.80e308 (plus and minus) but miss out on
+ * some numbers in between.  In any case, that’s far greater than the
  * estimated number of fundamental particles in the observable
  * universe.
  **/
@@ -110,32 +115,39 @@ typedef struct _GVariantType GVariantType;
 /**
  * G_VARIANT_TYPE_STRING:
  *
- * The type of a string.  "" is a string.  %NULL is not a string.
+ * The type of a string.
+ *
+ * `""` is a string.  `NULL` is not a string.
  **/
 #define G_VARIANT_TYPE_STRING               ((const GVariantType *) "s")
 
 /**
  * G_VARIANT_TYPE_OBJECT_PATH:
  *
- * The type of a D-Bus object reference.  These are strings of a
- * specific format used to identify objects at a given destination on
- * the bus.
+ * The type of a
+ * [D-Bus object path](https://dbus.freedesktop.org/doc/dbus-specification.html#message-protocol-marshaling-object-path).
+ *
+ * These are strings of a specific format used to identify objects at a given
+ * destination on the bus.
  *
  * If you are not interacting with D-Bus, then there is no reason to make
  * use of this type.  If you are, then the D-Bus specification contains a
- * precise description of valid object paths.
+ * [precise description of valid object paths](https://dbus.freedesktop.org/doc/dbus-specification.html#message-protocol-marshaling-object-path).
  **/
 #define G_VARIANT_TYPE_OBJECT_PATH          ((const GVariantType *) "o")
 
 /**
  * G_VARIANT_TYPE_SIGNATURE:
  *
- * The type of a D-Bus type signature.  These are strings of a specific
- * format used as type signatures for D-Bus methods and messages.
+ * The type of a
+ * [D-Bus type signature](https://dbus.freedesktop.org/doc/dbus-specification.html#type-system).
+ *
+ * These are strings of a specific format used as type signatures for D-Bus
+ * methods and messages.
  *
  * If you are not interacting with D-Bus, then there is no reason to make
  * use of this type.  If you are, then the D-Bus specification contains a
- * precise description of valid signature strings.
+ * [precise description of valid signature strings](https://dbus.freedesktop.org/doc/dbus-specification.html#type-system).
  **/
 #define G_VARIANT_TYPE_SIGNATURE            ((const GVariantType *) "g")
 
@@ -150,7 +162,7 @@ typedef struct _GVariantType GVariantType;
 /**
  * G_VARIANT_TYPE_HANDLE:
  *
- * The type of a 32bit signed integer value, that by convention, is used
+ * The type of a 32-bit signed integer value, that by convention, is used
  * as an index into an array of file descriptors that are sent alongside
  * a D-Bus message.
  *
@@ -162,8 +174,9 @@ typedef struct _GVariantType GVariantType;
 /**
  * G_VARIANT_TYPE_UNIT:
  *
- * The empty tuple type.  Has only one instance.  Known also as "triv"
- * or "void".
+ * The empty tuple type.
+ *
+ * Has only one instance.  Known also as ‘triv’ or ‘void’.
  **/
 #define G_VARIANT_TYPE_UNIT                 ((const GVariantType *) "()")
 
@@ -186,7 +199,7 @@ typedef struct _GVariantType GVariantType;
 /**
  * G_VARIANT_TYPE_MAYBE:
  *
- * An indefinite type that is a supertype of every maybe type.
+ * An indefinite type that is a supertype of every ‘maybe’ type.
  **/
 #define G_VARIANT_TYPE_MAYBE                ((const GVariantType *) "m*")
 
@@ -216,7 +229,7 @@ typedef struct _GVariantType GVariantType;
 /**
  * G_VARIANT_TYPE_DICTIONARY:
  *
- * An indefinite type that is a supertype of every dictionary type --
+ * An indefinite type that is a supertype of every dictionary type —
  * that is, any array type that has an element type equal to any
  * dictionary entry type.
  **/
@@ -239,8 +252,10 @@ typedef struct _GVariantType GVariantType;
 /**
  * G_VARIANT_TYPE_BYTESTRING:
  *
- * The type of an array of bytes.  This type is commonly used to pass
- * around strings that may not be valid utf8.  In that case, the
+ * The type of an array of bytes.
+ *
+ * This type is commonly used to pass around strings that may not be valid
+ * UTF-8, such as file system paths.  In that case, the
  * convention is that the nul terminator character should be included as
  * the last character in the array.
  **/
@@ -257,7 +272,7 @@ typedef struct _GVariantType GVariantType;
  * G_VARIANT_TYPE_VARDICT:
  *
  * The type of a dictionary mapping strings to variants (the ubiquitous
- * "a{sv}" type).
+ * `a{sv}` type).
  *
  * Since: 2.30
  **/
@@ -266,19 +281,20 @@ typedef struct _GVariantType GVariantType;
 
 /**
  * G_VARIANT_TYPE:
- * @type_string: a well-formed #GVariantType type string
+ * @type_string: a well-formed [type@GLib.VariantType] type string
  *
- * Converts a string to a const #GVariantType.  Depending on the
- * current debugging level, this function may perform a runtime check
- * to ensure that @string is a valid GVariant type string.
+ * Converts a string to a const [type@GLib.VariantType].
+ *
+ * Depending on the current debugging level, this function may perform a runtime
+ * check to ensure that @string is a valid [type@GLib.Variant] type string.
  *
  * It is always a programmer error to use this macro with an invalid
- * type string. If in doubt, use g_variant_type_string_is_valid() to
+ * type string. If in doubt, use [func@GLib.variant_type_string_is_valid] to
  * check if the string is valid.
  *
  * Since 2.24
  **/
-#ifndef G_DISABLE_CHECKS
+#ifndef G_DISABLE_CAST_CHECKS
 # define G_VARIANT_TYPE(type_string)            (g_variant_type_checked_ ((type_string)))
 #else
 # define G_VARIANT_TYPE(type_string)            ((const GVariantType *) (type_string))
@@ -286,7 +302,7 @@ typedef struct _GVariantType GVariantType;
 
 /* type string checking */
 GLIB_AVAILABLE_IN_ALL
-gboolean                        g_variant_type_string_is_valid          (const gchar         *type_string);
+gboolean                        g_variant_type_string_is_valid          (const gchar         *type_string) G_GNUC_CONST;
 GLIB_AVAILABLE_IN_ALL
 gboolean                        g_variant_type_string_scan              (const gchar         *string,
                                                                          const gchar         *limit,
@@ -310,21 +326,21 @@ gchar *                         g_variant_type_dup_string               (const G
 
 /* classification */
 GLIB_AVAILABLE_IN_ALL
-gboolean                        g_variant_type_is_definite              (const GVariantType  *type);
+gboolean                        g_variant_type_is_definite              (const GVariantType  *type) G_GNUC_CONST;
 GLIB_AVAILABLE_IN_ALL
-gboolean                        g_variant_type_is_container             (const GVariantType  *type);
+gboolean                        g_variant_type_is_container             (const GVariantType  *type) G_GNUC_CONST;
 GLIB_AVAILABLE_IN_ALL
-gboolean                        g_variant_type_is_basic                 (const GVariantType  *type);
+gboolean                        g_variant_type_is_basic                 (const GVariantType  *type) G_GNUC_CONST;
 GLIB_AVAILABLE_IN_ALL
-gboolean                        g_variant_type_is_maybe                 (const GVariantType  *type);
+gboolean                        g_variant_type_is_maybe                 (const GVariantType  *type) G_GNUC_CONST;
 GLIB_AVAILABLE_IN_ALL
-gboolean                        g_variant_type_is_array                 (const GVariantType  *type);
+gboolean                        g_variant_type_is_array                 (const GVariantType  *type) G_GNUC_CONST;
 GLIB_AVAILABLE_IN_ALL
-gboolean                        g_variant_type_is_tuple                 (const GVariantType  *type);
+gboolean                        g_variant_type_is_tuple                 (const GVariantType  *type) G_GNUC_CONST;
 GLIB_AVAILABLE_IN_ALL
-gboolean                        g_variant_type_is_dict_entry            (const GVariantType  *type);
+gboolean                        g_variant_type_is_dict_entry            (const GVariantType  *type) G_GNUC_CONST;
 GLIB_AVAILABLE_IN_ALL
-gboolean                        g_variant_type_is_variant               (const GVariantType  *type);
+gboolean                        g_variant_type_is_variant               (const GVariantType  *type) G_GNUC_CONST;
 
 /* for hash tables */
 GLIB_AVAILABLE_IN_ALL
@@ -336,21 +352,21 @@ gboolean                        g_variant_type_equal                    (gconstp
 /* subtypes */
 GLIB_AVAILABLE_IN_ALL
 gboolean                        g_variant_type_is_subtype_of            (const GVariantType  *type,
-                                                                         const GVariantType  *supertype);
+                                                                         const GVariantType  *supertype) G_GNUC_CONST;
 
 /* type iterator interface */
 GLIB_AVAILABLE_IN_ALL
-const GVariantType *            g_variant_type_element                  (const GVariantType  *type);
+const GVariantType *            g_variant_type_element                  (const GVariantType  *type) G_GNUC_CONST;
 GLIB_AVAILABLE_IN_ALL
-const GVariantType *            g_variant_type_first                    (const GVariantType  *type);
+const GVariantType *            g_variant_type_first                    (const GVariantType  *type) G_GNUC_CONST;
 GLIB_AVAILABLE_IN_ALL
-const GVariantType *            g_variant_type_next                     (const GVariantType  *type);
+const GVariantType *            g_variant_type_next                     (const GVariantType  *type) G_GNUC_CONST;
 GLIB_AVAILABLE_IN_ALL
-gsize                           g_variant_type_n_items                  (const GVariantType  *type);
+gsize                           g_variant_type_n_items                  (const GVariantType  *type) G_GNUC_CONST;
 GLIB_AVAILABLE_IN_ALL
-const GVariantType *            g_variant_type_key                      (const GVariantType  *type);
+const GVariantType *            g_variant_type_key                      (const GVariantType  *type) G_GNUC_CONST;
 GLIB_AVAILABLE_IN_ALL
-const GVariantType *            g_variant_type_value                    (const GVariantType  *type);
+const GVariantType *            g_variant_type_value                    (const GVariantType  *type) G_GNUC_CONST;
 
 /* constructors */
 GLIB_AVAILABLE_IN_ALL

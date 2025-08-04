@@ -101,12 +101,12 @@
     -fx-background-color: white;
 }
 
-.-FX-INTERNAL-maximize-button:disabled {
-    -fx-background-color: transparent;
-}
-
-.-FX-INTERNAL-maximize-button:disabled > .-FX-INTERNAL-glyph {
-    -fx-background-color: #777;
+.-FX-INTERNAL-iconify-button:disabled,
+.-FX-INTERNAL-maximize-button:disabled,
+.-FX-INTERNAL-header-button-container.utility > .-FX-INTERNAL-iconify-button,
+.-FX-INTERNAL-header-button-container.utility > .-FX-INTERNAL-maximize-button {
+    -fx-managed: false;
+    visibility: hidden;
 }
 
 .-FX-INTERNAL-iconify-button > .-FX-INTERNAL-glyph {
