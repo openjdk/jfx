@@ -1694,8 +1694,10 @@ void addJSL(Project project, String name, String pkg, List<String> addExports, C
 
     def generateShaders = project.task("generate${name}Shaders",
             dependsOn: compileCompilers) {
-        doFirst {
-            mkdir "$project.buildDir/gensrc/mtl-headers"
+        if (IS_MAC) {
+            doFirst {
+                mkdir "$project.buildDir/gensrc/mtl-headers"
+            }
         }
         description = "Generate $name shaders from JSL"
         def sourceDir = project.file("src/main/jsl-$lowerName")

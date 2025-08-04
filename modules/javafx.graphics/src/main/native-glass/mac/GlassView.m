@@ -493,7 +493,7 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_mac_MacView__1end
 //        [view unlockFocus];
         [view release];
     }
-    GLASS_POOL_POP; // it was pushed by "_begin"*/
+    GLASS_POOL_POP; // it was pushed by "_begin"
 }
 
 /*

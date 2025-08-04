@@ -37,7 +37,7 @@ class MTLRTTextureData extends MTLTextureData {
             if (mtlContext.isCurrentRTT(pTexture)) {
                 mtlContext.flushVertexBuffer();
             }
-            super.dispose();
         }
+        super.dispose();
     }
 }

@@ -93,10 +93,10 @@ class MTLContext extends BaseShaderContext {
     public final static int CULL_NONE  = 112;
 
     static {
-        try {
-            final String shaderLibName = "msl/jfxshaders.metallib";
-            final Class<?> clazz = Class.forName("com.sun.prism.mtl.MTLContext");
+        final String shaderLibName = "msl/jfxshaders.metallib";
+        final Class<?> clazz = MTLContext.class;
 
+        try {
             // Get the native shader library as a stream resource and read it into
             // an NIO ByteBuffer. This will be passed to the native MetalContext
             // initialization, which will load the shader library for each device.
@@ -105,7 +105,7 @@ class MTLContext extends BaseShaderContext {
                 shaderLibBuffer = ByteBuffer.allocateDirect(data.length);
                 shaderLibBuffer.put(data);
             }
-        } catch (ClassNotFoundException | IOException ex) {
+        } catch (IOException ex) {
             throw new RuntimeException(ex);
         }
     }

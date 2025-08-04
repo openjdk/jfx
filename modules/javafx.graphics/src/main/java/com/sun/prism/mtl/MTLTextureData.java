@@ -43,10 +43,6 @@ class MTLTextureData implements Disposer.Record {
         size = textureSize;
     }
 
-    public void setResource(long resource) {
-        pTexture = resource;
-    }
-
     public long getResource() {
         return pTexture;
     }

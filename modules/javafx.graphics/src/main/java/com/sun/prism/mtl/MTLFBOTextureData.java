@@ -36,7 +36,8 @@ class MTLFBOTextureData extends MTLTextureData {
             if (mtlContext.isCurrentRTT(pTexture)) {
                 mtlContext.flushVertexBuffer();
             }
-            // release of native MetalTexture will be handled by Glass
+            // Release of native MetalTexture will be handled by Glass,
+            // so no need to call super.dispose()
             pTexture = 0L;
         }
     }
