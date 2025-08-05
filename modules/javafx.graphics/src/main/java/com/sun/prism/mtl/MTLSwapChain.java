@@ -159,11 +159,13 @@ public class MTLSwapChain implements MTLRenderTarget, Presentable, GraphicsResou
 
     @Override
     public boolean isOpaque() {
+        // JDK-8364672
         return false;
     }
 
     @Override
     public void setOpaque(boolean opaque) {
+        // JDK-8364672
     }
 
     @Override
