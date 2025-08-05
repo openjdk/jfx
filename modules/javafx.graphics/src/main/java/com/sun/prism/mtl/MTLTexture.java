@@ -124,13 +124,7 @@ class MTLTexture<T extends MTLTextureData> extends BaseTexture<MTLTextureResourc
                                 int srcscan) {
         ByteBuffer buf = (ByteBuffer) buffer;
         buf.rewind();
-        byte[] arr;
-        if (buf.hasArray()) {
-            arr = buf.array();
-        } else {
-            arr = new byte[buf.remaining()];
-            buf.get(arr);
-        }
+        byte[] arr = buf.hasArray() ? buf.array() : null;
 
         switch (format) {
             case PixelFormat.BYTE_BGRA_PRE,
@@ -142,6 +136,10 @@ class MTLTexture<T extends MTLTextureData> extends BaseTexture<MTLTextureResourc
                 // Convert 24-bit RGB to 32-bit BGRA
                 // Metal does not support 24-bit format
                 // hence `arr` data needs to be converted to BGRA format
+                if (arr == null) {
+                    arr = new byte[buf.remaining()];
+                    buf.get(arr);
+                }
                 byte[] arr32Bit = new byte[srcw * srch * 4];
                 int dstIndex = 0;
                 int index = 0;
@@ -169,6 +167,10 @@ class MTLTexture<T extends MTLTextureData> extends BaseTexture<MTLTextureResourc
                 // In future, if needed for performance reason:
                 // Texture_RGB shader can be tweaked to fill up R,G,B fields from single byte grayscale value.
                 // Care must be taken not to break current behavior of this shader.
+                if (arr == null) {
+                    arr = new byte[buf.remaining()];
+                    buf.get(arr);
+                }
                 byte[] arr32Bit = new byte[srcw * srch * 4];
                 int dstIndex = 0;
                 int index = 0;
