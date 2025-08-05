@@ -55,7 +55,7 @@ final class Platform {
                 else if (userPlatform.equals("ios"))
                    type = IOS;
                 else if (userPlatform.equals("headless"))
-                    type = HEADLESS;
+                   type = HEADLESS;
                 else
                    type = userPlatform;
                 return type;
