@@ -32,6 +32,7 @@ final class Platform {
     public static final String WINDOWS = "Win";
     public static final String GTK = "Gtk";
     public static final String IOS = "Ios";
+    public static final String HEADLESS = "Headless";
     public static final String UNKNOWN = "unknown";
 
     static private String type = null;
@@ -53,6 +54,8 @@ final class Platform {
                    type = GTK;
                 else if (userPlatform.equals("ios"))
                    type = IOS;
+                else if (userPlatform.equals("headless"))
+                    type = HEADLESS;
                 else
                    type = userPlatform;
                 return type;
