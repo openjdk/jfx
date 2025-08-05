@@ -190,11 +190,11 @@ class MTLResourceFactory extends BaseShaderFactory {
         }
 
         MTLTextureData textData = new MTLTextureData(context, pResource, size);
-        MTLTextureResource<MTLTextureData> resource = new MTLTextureResource(textData, true);
+        MTLTextureResource<MTLTextureData> resource = new MTLTextureResource<>(textData, true);
 
         // contentX and contentY is set as 0 unlike D3D/ES2.
         // The wrap mode are addressed, can be mapped to D3D/ES2 only if necessary.
-        return new MTLTexture(getContext(), resource, formatHint, wrapMode, allocw, alloch, 0, 0, allocw, alloch, useMipmap);
+        return new MTLTexture<MTLTextureData>(getContext(), resource, formatHint, wrapMode, allocw, alloch, 0, 0, allocw, alloch, useMipmap);
     }
 
     @Override

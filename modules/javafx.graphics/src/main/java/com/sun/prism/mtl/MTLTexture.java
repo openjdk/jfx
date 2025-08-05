@@ -76,7 +76,7 @@ class MTLTexture<T extends MTLTextureData> extends BaseTexture<MTLTextureResourc
     }
 
     // We don't handle mipmap in shared texture yet.
-    private MTLTexture(MTLTexture sharedTex, WrapMode newMode) {
+    private MTLTexture(MTLTexture<T> sharedTex, WrapMode newMode) {
         super(sharedTex, newMode, false);
         this.context = sharedTex.context;
         this.texPtr = sharedTex.texPtr;
@@ -84,7 +84,7 @@ class MTLTexture<T extends MTLTextureData> extends BaseTexture<MTLTextureResourc
 
     @Override
     protected Texture createSharedTexture(WrapMode newMode) {
-        return new MTLTexture(this, newMode);
+        return new MTLTexture<T>(this, newMode);
     }
 
     private void updateTextureInt(Buffer buffer, PixelFormat format,
@@ -124,7 +124,13 @@ class MTLTexture<T extends MTLTextureData> extends BaseTexture<MTLTextureResourc
                                 int srcscan) {
         ByteBuffer buf = (ByteBuffer) buffer;
         buf.rewind();
-        byte[] arr = buf.hasArray() ? buf.array() : null;
+        byte[] arr;
+        if (buf.hasArray()) {
+            arr = buf.array();
+        } else {
+            arr = new byte[buf.remaining()];
+            buf.get(arr);
+        }
 
         switch (format) {
             case PixelFormat.BYTE_BGRA_PRE,

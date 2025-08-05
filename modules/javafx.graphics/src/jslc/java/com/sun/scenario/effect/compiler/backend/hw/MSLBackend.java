@@ -75,7 +75,7 @@ public class MSLBackend extends SLBackend {
     private boolean isPrismShader;
     private boolean hasTextureVar;
 
-    private final List<String> helperFunctions = new ArrayList<>();;
+    private final List<String> helperFunctions = new ArrayList<>();
     private static final String MTL_HEADERS_DIR = "/mtl-headers/";
     private static final String MAIN = "void main() {";
 

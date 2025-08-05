@@ -108,7 +108,7 @@ class MTLShader implements Shader {
             currentEnabledShader.textureIdRefMap.get(texUnit).get() == tex) return;
 
         currentEnabledShader.textureIdRefMap.put(texUnit, new WeakReference<>(tex));
-        MTLTexture mtlTex = (MTLTexture)tex;
+        MTLTexture<?> mtlTex = (MTLTexture<?>)tex;
         nSetTexture(currentEnabledShader.nMetalShaderRef, texUnit,
                 currentEnabledShader.uniformNameIdMap.get(currentEnabledShader.samplers.get(texUnit)),
                 mtlTex.getNativeHandle(), isLinear, wrapMode);
